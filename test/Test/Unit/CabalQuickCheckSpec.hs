@@ -3,6 +3,7 @@
 module Test.Unit.CabalQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
@@ -36,7 +37,7 @@ tests = testGroup "Cabal QuickCheck Properties"
 
 utilsProperties :: TestTree
 utilsProperties = testGroup "Utils Properties"
-  [ fastProperty "trim removes leading and trailing whitespace" prop_trim_whitespace
+  [ fastProperty "trim removes leading L.and trailing whitespace" prop_trim_whitespace
   , fastProperty "trim is idempotent" prop_trim_idempotent
   , fastProperty "splitBy preserves order" prop_splitBy_order
   , fastProperty "splitByCollapsed removes empty segments" prop_splitByCollapsed_empty
@@ -86,8 +87,8 @@ listProperties = testGroup "List Properties"
 
 stringProperties :: TestTree
 stringProperties = testGroup "String Properties"
-  [ fastProperty "concat with length property" prop_concat_length
-  , fastProperty "reverse twice returns original" prop_reverse_twice
+  [ fastProperty "L.concat with L.length property" prop_concat_length
+  , fastProperty "L.reverse twice returns original" prop_reverse_twice
   ]
 
 mapProperties :: TestTree
@@ -101,7 +102,7 @@ prop_trim_whitespace :: String -> Property
 prop_trim_whitespace s =
   let trimmed = trim s
   in not (null trimmed) ==> 
-     property (not (isSpace (head trimmed)) && not (isSpace (last trimmed)))
+     property (not (isSpace (L.head trimmed)) && not (isSpace (last trimmed)))
 
 prop_trim_idempotent :: String -> Property
 prop_trim_idempotent s =
@@ -112,18 +113,18 @@ prop_splitBy_order :: Char -> String -> Property
 prop_splitBy_order delim s =
   let parts = splitBy delim s
       joined = intercalate [delim] parts
-  in property $ length joined >= length s
+  in property $ L.length joined >= L.length s
 
 prop_splitByCollapsed_empty :: Char -> String -> Property
 prop_splitByCollapsed_empty delim s =
   let parts = splitByCollapsed delim s
-  in property $ all (not . null) parts
+  in property $ L.all (not . null) parts
 
 prop_breakOn_correct :: String -> String -> Property
 prop_breakOn_correct pat s =
   not (null pat) ==> 
   let (before, after) = breakOn pat s
-      expected = pat `isInfixOf` s
+      expected = pat `L.isInfixOf` s
   in property $ (null after) == not expected
 
 -- SourceLocation Properties
@@ -163,13 +164,13 @@ prop_semanticir_module s =
   not (null s) ==> 
   let mockModule = GoAst.GoModule [] Nothing [] []
       semanticIR = SemanticIR Parser.TypusFile{Parser.tfDirectives=Parser.defaultFileDirectives, Parser.tfBuildTags=[], Parser.tfBlocks=[], Parser.tfSyntaxErrors=[]} mockModule []
-  in property $ length (GoAst.gmDecls (semanticModule semanticIR)) >= 0
+  in property $ L.length (GoAst.gmDecls (semanticModule semanticIR)) >= 0
 
 -- Parser Properties
 prop_parser_roundtrip :: String -> Property
 prop_parser_roundtrip s =
-  length s < 100 ==> 
-  property $ length s == length (concat $ replicate 1 s)
+  L.length s < 100 ==> 
+  property $ L.length s == L.length (L.concat $ replicate 1 s)
 
 -- TypeChecker Properties
 prop_type_equality_reflexive :: String -> Property
@@ -211,28 +212,28 @@ prop_symbol_lookup_none symbolName =
 prop_gomodule_structure :: String -> Property
 prop_gomodule_structure s =
   let mockModule = GoAst.GoModule [] Nothing [] []
-  in property $ length (GoAst.gmDecls mockModule) >= 0
+  in property $ L.length (GoAst.gmDecls mockModule) >= 0
 
 -- List Properties
 prop_sort_preserves :: [Int] -> Property
 prop_sort_preserves xs =
   let sorted = sort xs
-  in property $ sort sorted === sorted .&&. length sorted === length xs
+  in property $ sort sorted === sorted .&&. L.length sorted === L.length xs
 
 prop_nub_removes_duplicates :: [Int] -> Property
 prop_nub_removes_duplicates xs =
   let unique = nub xs
-  in property $ length unique <= length xs .&&. sort (nub unique) === sort unique
+  in property $ L.length unique <= L.length xs .&&. sort (nub unique) === sort unique
 
 -- String Properties
 prop_concat_length :: String -> String -> Property
 prop_concat_length s1 s2 =
   let combined = s1 ++ s2
-  in property $ length combined === length s1 + length s2
+  in property $ L.length combined === L.length s1 + L.length s2
 
 prop_reverse_twice :: String -> Property
 prop_reverse_twice s =
-  property $ reverse (reverse s) === s
+  property $ L.reverse (L.reverse s) === s
 
 -- Map Properties
 prop_map_insert_lookup :: Int -> String -> Map.Map Int String -> Property
@@ -252,4 +253,4 @@ intercalate _ [x] = x
 intercalate sep (x:xs) = x ++ sep ++ intercalate sep xs
 
 isInfixOf :: String -> String -> Bool
-isInfixOf pat s = pat `elem` [take (length pat) (drop i s) | i <- [0..length s - length pat]]
+L.isInfixOf pat s = pat `elem` [take (L.length pat) (drop i s) | i <- [0..L.length s - L.length pat]]

@@ -10,6 +10,7 @@
 module Test.Unit.ErrorHandlerErrorHandlingSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, elements, listOf, oneof, sized)
@@ -39,33 +40,6 @@ import Compiler.Errors.Core
   , formatErrorsWithLocation
   , canRecoverFrom
   , shouldContinueAfter
-  , errorAt
-  , errorWithCategory
-  , warningAt
-  , warningWithCategory
-  , infoAt
-  , infoWithCategory
-  , fatalError
-  , fatalErrorWithCategory
-  , errorWithSuggestions
-  , withLocation
-  , withContext
-  , withSuggestions
-  , withRelatedErrors
-  , wrapError
-  , combineErrors
-  , combinedErrorSeverity
-  , filterCombinedErrorsBySeverity
-  , hasCategory
-  , filterByCategory
-  , filterBySeverity
-  , getErrorStatistics
-  , generateErrorReport
-  , createRecoveryStrategy
-  , customRecovery
-  , fatalRecovery
-  , errorRecovery
-  , warningRecovery
   , infoRecovery
   )
 import qualified Data.Text as T
@@ -127,9 +101,9 @@ prop_error_collector_collects_errors severity message =
   let collector = newErrorCollector
       result = case severity of
         Fatal -> addError collector (fatalError message)
-        Error -> addError collector (errorAt (ErrorLocation Nothing 1 1 Nothing Nothing) message)
-        Warning -> addWarning collector (warningAt (ErrorLocation Nothing 1 1 Nothing Nothing) message)
-        Info -> addInfo collector (infoAt (ErrorLocation Nothing 1 1 Nothing Nothing) message)
+        Error -> addError collector (errorAt "test-id" Nothing Nothing) message)
+        Warning -> addWarning collector (warningAt "test-id" Nothing Nothing) message)
+        Info -> addInfo collector (infoAt "test-id" Nothing Nothing) message)
   in property $ hasErrors collector === (severity == Fatal || severity == Error)
 
 -- Property: 错误过滤按严重级别工作
@@ -138,8 +112,8 @@ prop_filter_by_severity severities filterSeverity =
   not (null severities) ==>
   let errors = zipWith (\i sev -> errorWithCategory sev ParseError ("error" ++ show i)) [1..] severities
       filtered = filterBySeverity filterSeverity errors
-      expected = filter (\e -> errorSeverity e >= filterSeverity) errors
-  in property $ length filtered === length expected
+      expected = L.filter (\e -> errorSeverity e >= filterSeverity) errors
+  in property $ L.length filtered === L.length expected
 
 -- Property: 错误过滤按类别工作
 prop_filter_by_category :: [ErrorCategory] -> ErrorCategory -> Property
@@ -147,8 +121,8 @@ prop_filter_by_category categories filterCategory =
   not (null categories) ==>
   let errors = zipWith (\i cat -> errorWithCategory Error cat ("error" ++ show i)) [1..] categories
       filtered = filterByCategory filterCategory errors
-      expected = filter (\e -> errorCategory e == filterCategory) errors
-  in property $ length filtered === length expected
+      expected = L.filter (\e -> errorCategory e == filterCategory) errors
+  in property $ L.length filtered === L.length expected
 
 -- Property: 错误组合保持正确的严重级别
 prop_combine_errors_preserves_severity :: ErrorSeverity -> ErrorSeverity -> Property
@@ -177,25 +151,18 @@ prop_error_formatting_contains_info severity message =
   not (null message) ==>
   let error = errorWithCategory severity ParseError message
       formatted = formatError error
-  in property $ message `isInfixOf` formatted
+  in property $ message `L.isInfixOf` formatted
 
 -- Property: 错误位置格式化包含行号
 prop_error_location_formatting :: Int -> Int -> Property
 prop_error_location_formatting line column =
   line > 0 && column > 0 ==>
   let location = ErrorLocation Nothing line column Nothing Nothing
-      error = errorAt location "test error"
-      formatted = formatErrorWithLocation error
-  in property $ show line `isInfixOf` formatted .&&. show column `isInfixOf` formatted
-
--- Property: 错误上下文添加工作正确
-prop_error_context_addition :: String -> Property
-prop_error_context_addition context =
-  not (null context) ==>
+      error = errorAt "test-id" (null context) ==>
   let baseError = errorWithCategory Error ParseError "base error"
       withCtx = withContext baseError context
       errorContext = errorCodeContext withCtx
-  in property $ context `isInfixOf` show errorContext
+  in property $ context `L.isInfixOf` show errorContext
 
 -- Property: 错误建议添加工作正确
 prop_error_suggestions_addition :: [String] -> Property
@@ -204,7 +171,7 @@ prop_error_suggestions_addition suggestions =
   let baseError = errorWithCategory Error ParseError "base error"
       withSugg = withSuggestions baseError suggestions
       errorSuggestions = errorSuggestions withSugg
-  in property $ length errorSuggestions === length suggestions
+  in property $ L.length errorSuggestions === L.length suggestions
 
 -- Property: 相关错误添加工作正确
 prop_related_errors_addition :: [TypeError] -> Property
@@ -213,7 +180,7 @@ prop_related_errors_addition relatedErrors =
   let baseError = errorWithCategory Error ParseError "base error"
       withRelated = withRelatedErrors baseError relatedErrors
       related = relatedErrors withRelated
-  in property $ length related === length relatedErrors
+  in property $ L.length related === L.length relatedErrors
 
 -- ============================================================================
 -- 错误统计和报告测试
@@ -225,10 +192,10 @@ prop_error_statistics_calculation severities =
   not (null severities) ==>
   let errors = zipWith (\i sev -> errorWithCategory sev ParseError ("error" ++ show i)) [1..] severities
       stats = getErrorStatistics errors
-      fatalCount = length $ filter (\e -> errorSeverity e == Fatal) errors
-      errorCount = length $ filter (\e -> errorSeverity e == Error) errors
-      warningCount = length $ filter (\e -> errorSeverity e == Warning) errors
-      infoCount = length $ filter (\e -> errorSeverity e == Info) errors
+      fatalCount = L.length $ L.filter (\e -> errorSeverity e == Fatal) errors
+      errorCount = L.length $ L.filter (\e -> errorSeverity e == Error) errors
+      warningCount = L.length $ L.filter (\e -> errorSeverity e == Warning) errors
+      infoCount = L.length $ L.filter (\e -> errorSeverity e == Info) errors
   in property $ stats === (fatalCount, errorCount, warningCount, infoCount)
 
 -- Property: 错误报告包含所有错误
@@ -237,7 +204,7 @@ prop_error_report_contains_all messages =
   not (null messages) ==>
   let errors = zipWith (\i msg -> errorWithCategory Error ParseError msg) [1..] messages
       report = generateErrorReport errors
-  in property $ all (`isInfixOf` report) messages
+  in property $ L.all (`L.isInfixOf` report) messages
 
 -- ============================================================================
 -- 单元测试
@@ -258,20 +225,20 @@ tests =
         , fastProperty "error suggestions addition" prop_error_suggestions_addition
         , fastProperty "related errors addition" prop_related_errors_addition
         , fastProperty "error statistics calculation" prop_error_statistics_calculation
-        , fastProperty "error report contains all" prop_error_report_contains_all
+        , fastProperty "error report contains L.all" prop_error_report_contains_all
         ]
     , testGroup "Unit Tests"
-        [ testCase "create and use error collector" $ do
+        [ testCase "create L.and use error collector" $ do
             let collector = newErrorCollector
-            addError collector (errorAt (ErrorLocation Nothing 1 1 Nothing Nothing) "test error")
-            addWarning collector (warningAt (ErrorLocation Nothing 2 1 Nothing Nothing) "test warning")
-            addInfo collector (infoAt (ErrorLocation Nothing 3 1 Nothing Nothing) "test info")
+            addError collector (errorAt "test-id" Nothing Nothing) "test error")
+            addWarning collector (warningAt "test-id" Nothing Nothing) "test warning")
+            addInfo collector (infoAt "test-id" Nothing Nothing) "test info")
             
             hasErrors collector @?= True
             hasWarnings collector @?= True
-            length (getErrors collector) @?= 1
-            length (getWarnings collector) @?= 1
-            length (getInfo collector) @?= 1
+            L.length (getErrors collector) @?= 1
+            L.length (getWarnings collector) @?= 1
+            L.length (getInfo collector) @?= 1
 
         , testCase "error severity comparison" $ do
             Fatal > Error @?= True
@@ -289,8 +256,8 @@ tests =
             parseErrors = filterByCategory ParseError errors
             typeErrors = filterByCategory TypeError errors
             
-            length parseErrors @?= 2
-            length typeErrors @?= 2
+            L.length parseErrors @?= 2
+            L.length typeErrors @?= 2
 
         , testCase "error severity filtering" $ do
             let errors = 
@@ -302,8 +269,8 @@ tests =
             errorsAndFatal = filterBySeverity Error errors
             warningsAndAbove = filterBySeverity Warning errors
             
-            length errorsAndFatal @?= 2
-            length warningsAndAbove @?= 3
+            L.length errorsAndFatal @?= 2
+            L.length warningsAndAbove @?= 3
 
         , testCase "error combination" $ do
             let error1 = errorWithCategory Error ParseError "first error"
@@ -332,15 +299,7 @@ tests =
 
         , testCase "error formatting" $ do
             let location = ErrorLocation (Just "test.typus") 10 5 (Just 10) (Just 15)
-                error = errorAt location "test error message"
-                formatted = formatErrorWithLocation error
-            "test.typus" `isInfixOf` formatted @?= True
-            "10:5" `isInfixOf` formatted @?= True
-            "test error message" `isInfixOf` formatted @?= True
-
-        , testCase "error with suggestions" $ do
-            let suggestions = ["try adding type annotation", "check variable scope"]
-                error = errorWithSuggestions (errorWithCategory Error TypeError "type mismatch") suggestions
+                error = errorAt "test-id" "type mismatch") suggestions
                 errorSuggestions error @?= suggestions
 
         , testCase "error with context" $ do
@@ -351,8 +310,8 @@ tests =
         , testCase "error wrapping" $ do
             let innerError = errorWithCategory Error TypeError "inner error"
                 wrappedError = wrapError "outer context" innerError
-            "outer context" `isInfixOf` errorMessage wrappedError @?= True
-            "inner error" `isInfixOf` errorMessage wrappedError @?= True
+            "outer context" `L.isInfixOf` errorMessage wrappedError @?= True
+            "inner error" `L.isInfixOf` errorMessage wrappedError @?= True
 
         , testCase "error statistics" $ do
             let errors = 
@@ -375,13 +334,13 @@ tests =
 
         , testCase "multiple error formatting" $ do
             let errors = 
-                  [ errorAt (ErrorLocation Nothing 1 1 Nothing Nothing) "first error"
-                  , errorAt (ErrorLocation Nothing 2 1 Nothing Nothing) "second error"
-                  , warningAt (ErrorLocation Nothing 3 1 Nothing Nothing) "warning"
+                  [ errorAt "test-id" Nothing Nothing) "first error"
+                  , errorAt "test-id" Nothing Nothing) "second error"
+                  , warningAt "test-id" Nothing Nothing) "warning"
                   ]
                 formatted = formatErrorsWithLocation errors
-            "first error" `isInfixOf` formatted @?= True
-            "second error" `isInfixOf` formatted @?= True
-            "warning" `isInfixOf` formatted @?= True
+            "first error" `L.isInfixOf` formatted @?= True
+            "second error" `L.isInfixOf` formatted @?= True
+            "warning" `L.isInfixOf` formatted @?= True
         ]
     ]

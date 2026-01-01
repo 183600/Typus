@@ -2,6 +2,7 @@ module Test.Unit.ConciseIntegrationQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty, Property, (===), Arbitrary(..), Gen, oneof, choose, elements, listOf)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -32,7 +33,7 @@ tests =
             let input = unlines lines
             in case parseTypus input of
                  Left _ -> property True
-                 Right file -> length (tfBlocks file) <= length lines
+                 Right file -> L.length (tfBlocks file) <= L.length lines
                  
         , testProperty "Source IR construction preserves content" $
             \content -> 
@@ -44,7 +45,7 @@ tests =
         [ testProperty "Error messages contain location information" $
             \code -> 
             case compileToEndToEnd code of
-              Left errors -> all hasLocationInfo errors
+              Left errors -> L.all hasLocationInfo errors
               Right _ -> property True
               
         , testProperty "Wounded compilation still produces partial output" $
@@ -58,7 +59,7 @@ tests =
         [ testProperty "File order doesn't affect compilation result" $
             \files -> 
             let result1 = compileMultipleFiles files
-                result2 = compileMultipleFiles (reverse files)
+                result2 = compileMultipleFiles (L.reverse files)
             in compilationResultsEqual result1 result2
             
         , testProperty "Dependency resolution is deterministic" $
@@ -70,7 +71,7 @@ tests =
         
     , testGroup "Performance properties"
         [ testProperty "Compilation time is reasonable for small inputs" $
-            \code -> length code < 1000 ==> 
+            \code -> L.length code < 1000 ==> 
                 let result = compileToEndToEnd code
                 in case result of
                      Left _ -> property True
@@ -106,7 +107,7 @@ tests =
         ]
     ]
 
--- Helper types and functions for testing
+-- Helper types L.and functions for testing
 data CompilationError = CompilationError
   { errorMsg :: String
   , errorLocation :: String
@@ -133,10 +134,10 @@ mockBuildSourceIR :: String -> SourceIR
 mockBuildSourceIR content = SourceIR undefined content
 
 hasLocationInfo :: CompilationError -> Bool
-hasLocationInfo err = not (null (errorLocation err))
+hasLocationInfo err = not (L.null (errorLocation err))
 
 hasRequiredElements :: String -> Bool
-hasRequiredElements output = "package" `isInfixOf` output || "func" `isInfixOf` output
+hasRequiredElements output = "package" `L.isInfixOf` output || "func" `L.isInfixOf` output
 
 compileMultipleFiles :: [String] -> Either [CompilationError] String
 compileMultipleFiles files = 
@@ -145,7 +146,7 @@ compileMultipleFiles files =
 
 resolveDependencies :: [String] -> [String]
 resolveDependencies files = 
-  let sorted = reverse files  -- Simplified dependency resolution
+  let sorted = L.reverse files  -- Simplified dependency resolution
   in sorted
 
 compilationResultsEqual :: Either [CompilationError] String -> Either [CompilationError] String -> Bool
@@ -155,13 +156,13 @@ compilationResultsEqual _ _ = False
 
 preservesSemantics :: String -> String -> Bool
 preservesSemantics original final = 
-  length (words original) > 0 && length (words final) > 0
+  L.length (words original) > 0 && L.length (words final) > 0
 
 isValidTypusCode :: String -> Bool
 isValidTypusCode code = 
   not (null code) && 
-  not (any (`elem` code) ['\0', '\1', '\2']) &&  -- No control characters
-  length code < 10000  -- Reasonable size limit
+  not (L.any (`elem` code) ['\0', '\1', '\2']) &&  -- No control characters
+  L.length code < 10000  -- Reasonable size limit
 
 -- Generate test data
 instance Arbitrary CompilationError where

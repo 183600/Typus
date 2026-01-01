@@ -36,7 +36,9 @@ import Ownership
 import Parser (parseTypus, TypusFile(..))
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..))
 
-import Data.List (isInfixOf, isPrefixOf, null, length, sort)
+import qualified Data.List as L
+import Data.List (isInfixOf, isPrefixOf, length)
+import Data.List (null, sort)
 import qualified Data.Text as T
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -141,7 +143,7 @@ prop_valid_ownership_no_errors =
       (analyzer, []) -> property True
       (analyzer, errors) -> 
         -- Some valid code might still have warnings, but not critical errors
-        property $ not $ any isCriticalError errors
+        property $ not $ L.any isCriticalError errors
 
 -- Property: error ownership code should detect issues
 prop_error_ownership_detects_errors :: Property
@@ -157,7 +159,7 @@ prop_analyzer_consistency =
   forAll genOwnershipCode $ \code ->
     let (analyzer1, errors1) = analyzeOwnership code
         (analyzer2, errors2) = analyzeOwnership code
-    in property $ length errors1 === length errors2
+    in property $ L.length errors1 === L.length errors2
 
 -- Property: lexAll should produce tokens for valid code
 prop_lexAll_produces_tokens :: Property
@@ -209,7 +211,7 @@ unit_tests = testGroup "Ownership Analysis Unit Tests"
         (analyzer, errors) -> do
           -- Should analyze without critical errors
           assertBool "should not have critical errors" $ 
-            not $ any isCriticalError errors
+            not $ L.any isCriticalError errors
 
   , testCase "borrow analysis" $ do
       let code = unlines
@@ -223,9 +225,9 @@ unit_tests = testGroup "Ownership Analysis Unit Tests"
             ]
       case analyzeOwnership code of
         (analyzer, errors) -> do
-          -- Should allow both borrow and original use
+          -- Should allow both borrow L.and original use
           assertBool "should not have critical errors" $ 
-            not $ any isCriticalError errors
+            not $ L.any isCriticalError errors
 
   , testCase "mutable borrow analysis" $ do
       let code = unlines
@@ -241,7 +243,7 @@ unit_tests = testGroup "Ownership Analysis Unit Tests"
         (analyzer, errors) -> do
           -- Should handle mutable borrow correctly
           assertBool "should not have critical errors" $ 
-            not $ any isCriticalError errors
+            not $ L.any isCriticalError errors
 
   , testCase "function parameter move" $ do
       let code = unlines
@@ -258,7 +260,7 @@ unit_tests = testGroup "Ownership Analysis Unit Tests"
         (analyzer, errors) -> do
           -- Should handle function parameter moves
           assertBool "should not have critical errors" $ 
-            not $ any isCriticalError errors
+            not $ L.any isCriticalError errors
 
   , testCase "use after move detection" $ do
       let code = unlines
@@ -272,7 +274,7 @@ unit_tests = testGroup "Ownership Analysis Unit Tests"
       case analyzeOwnership code of
         (analyzer, errors) -> do
           assertBool "should detect use after move" $ 
-            any isUseAfterMove errors
+            L.any isUseAfterMove errors
       where
         isUseAfterMove (UseAfterMove _) = True
         isUseAfterMove _ = False
@@ -290,7 +292,7 @@ unit_tests = testGroup "Ownership Analysis Unit Tests"
       case analyzeOwnership code of
         (analyzer, errors) -> do
           assertBool "should detect double move" $ 
-            any isDoubleMove errors
+            L.any isDoubleMove errors
       where
         isDoubleMove (DoubleMove _ _) = True
         isDoubleMove _ = False
@@ -308,7 +310,7 @@ unit_tests = testGroup "Ownership Analysis Unit Tests"
       case analyzeOwnership code of
         (analyzer, errors) -> do
           assertBool "should detect borrow while moved" $ 
-            any isBorrowWhileMoved errors
+            L.any isBorrowWhileMoved errors
       where
         isBorrowWhileMoved (BorrowWhileMoved _) = True
         isBorrowWhileMoved _ = False
@@ -340,7 +342,7 @@ unit_tests = testGroup "Ownership Analysis Unit Tests"
             , "}"
             , "func main() {"
             , "    r := Resource{data: 42}"
-            , "    r.use()  // should move or borrow"
+            , "    r.use()  // should move L.or borrow"
             , "}"
             ]
       case analyzeOwnership code of
@@ -394,7 +396,7 @@ unit_tests = testGroup "Ownership Analysis Unit Tests"
         (analyzer, errors) -> do
           -- Built-in functions should not consume ownership
           assertBool "built-in should not move" $ 
-            not $ any isCriticalError errors
+            not $ L.any isCriticalError errors
 
   , testCase "ownership with slices" $ do
       let code = unlines
@@ -410,7 +412,7 @@ unit_tests = testGroup "Ownership Analysis Unit Tests"
         (analyzer, errors) -> do
           -- Slice indexing should copy, not move
           assertBool "slice indexing should copy" $ 
-            not $ any isCriticalError errors
+            not $ L.any isCriticalError errors
   ]
 
 -- Advanced ownership tests
@@ -495,21 +497,21 @@ error_formatting_tests = testGroup "Error Formatting Tests"
       let error = UseAfterMove "x"
           formatted = formatOwnershipErrors [error]
       assertBool "should contain error description" $ 
-        "UseAfterMove" `isInfixOf` formatted
+        "UseAfterMove" `L.isInfixOf` formatted
 
   , testCase "format double move error" $ do
       let error = DoubleMove "x" "y"
           formatted = formatOwnershipErrors [error]
       assertBool "should contain error description" $ 
-        "DoubleMove" `isInfixOf` formatted
+        "DoubleMove" `L.isInfixOf` formatted
 
   , testCase "format multiple errors" $ do
       let errors = [UseAfterMove "x", DoubleMove "x" "y", BorrowWhileMoved "z"]
           formatted = formatOwnershipErrors errors
-      assertBool "should contain all errors" $ 
-        "UseAfterMove" `isInfixOf` formatted &&
-        "DoubleMove" `isInfixOf` formatted &&
-        "BorrowWhileMoved" `isInfixOf` formatted
+      assertBool "should contain L.all errors" $ 
+        "UseAfterMove" `L.isInfixOf` formatted &&
+        "DoubleMove" `L.isInfixOf` formatted &&
+        "BorrowWhileMoved" `L.isInfixOf` formatted
 
   , testCase "format empty error list" $ do
       let formatted = formatOwnershipErrors []
@@ -521,7 +523,7 @@ error_formatting_tests = testGroup "Error Formatting Tests"
 performance_tests :: TestTree
 performance_tests = testGroup "Ownership Performance Tests"
   [ testCase "large function analysis" $ do
-      let largeFunction = unlines $ concat
+      let largeFunction = unlines $ L.concat
             [ ["func large() {"]
             , ["    x := 1"]
             , ["    y := x"] ++ ["    println(y)" | _ <- [1..100]]

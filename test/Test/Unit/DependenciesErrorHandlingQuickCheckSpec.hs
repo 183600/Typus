@@ -37,7 +37,7 @@ prop_cycle_detection_simple_cycle =
     let nodes = ["A", "B", "C"]
         edges = [("A", "B"), ("B", "C"), ("C", "A")]  -- Simple cycle
         hasCycle = True  -- Should detect cycle
-    in hasCycle ==> length nodes == 3
+    in hasCycle ==> L.length nodes == 3
 
 -- | Test that cycle detection works on acyclic graphs
 prop_cycle_detection_acyclic :: Property
@@ -45,12 +45,12 @@ prop_cycle_detection_acyclic =
     let nodes = ["A", "B", "C"]
         edges = [("A", "B"), ("B", "C")]  -- No cycle
         hasCycle = False  -- Should not detect cycle
-    in not hasCycle ==> length edges == 2
+    in not hasCycle ==> L.length edges == 2
 
 -- | Test that dependency analysis preserves function relationships
 prop_dependency_analysis_preserves_relationships :: [(String, [String])] -> Property
 prop_dependency_analysis_preserves_relationships deps = 
-    let totalDeps = sum $ map length deps
+    let totalDeps = L.sum $ map L.length deps
         uniqueDeps = Set.fromList $ concatMap snd deps
     in Set.size uniqueDeps <= totalDeps
 
@@ -58,8 +58,8 @@ prop_dependency_analysis_preserves_relationships deps =
 prop_self_dependency_detection :: Property
 prop_self_dependency_detection = 
     let selfDeps = [("A", ["A"]), ("B", ["B"])]
-        hasSelfDeps = any (\(node, deps) -> node `elem` deps) selfDeps
-    in hasSelfDeps ==> length selfDeps >= 1
+        hasSelfDeps = L.any (\(node, deps) -> node `elem` deps) selfDeps
+    in hasSelfDeps ==> L.length selfDeps >= 1
 
 -- ============================================================================
 -- Error Handling QuickCheck Tests
@@ -82,14 +82,14 @@ prop_error_messages_non_empty :: NonEmptyList Char -> Property
 prop_error_messages_non_empty (NonEmpty chars) = 
     let message = chars
         hasContent = not (null message)
-    in hasContent ==> length message > 0
+    in hasContent ==> L.length message > 0
 
 -- | Test that error handling works with different severity levels
 prop_error_handling_all_severities :: String -> Property
 prop_error_handling_all_severities message = 
     let severities = [Warning, Error, Fatal]
-        handledAll = map (\sev -> handleError sev ErrorContext message) severities
-    in length handledAll == length severities
+        handledAll = L.map (\sev -> handleError sev ErrorContext message) severities
+    in L.length handledAll == L.length severities
 
 -- ============================================================================
 -- Integration QuickCheck Tests
@@ -98,23 +98,23 @@ prop_error_handling_all_severities message =
 -- | Test that dependency analysis with error handling works
 prop_dependency_analysis_with_errors :: [(String, [String])] -> Property
 prop_dependency_analysis_with_errors deps = 
-    let hasErrors = any (null . snd) deps
-        totalDeps = sum $ map length deps
+    let hasErrors = L.any (null . snd) deps
+        totalDeps = L.sum $ map L.length deps
     in hasErrors ==> totalDeps >= 0
 
 -- | Test that error recovery preserves partial results
 prop_error_recovery_preserves_partial :: [String] -> Property
 prop_error_recovery_preserves_partial items = 
-    let validItems = filter (not . null) items
-        validCount = length validItems
-    in validCount <= length items
+    let validItems = L.filter (not . null) items
+        validCount = L.length validItems
+    in validCount <= L.length items
 
 -- | Test that error propagation works correctly
 prop_error_propagation :: Property
 prop_error_propagation = 
     let errors = ["Error1", "Error2", "Error3"]
-        propagated = L.concat errors
-    in length propagated >= length errors
+        propagated = L.L.concat errors
+    in L.length propagated >= L.length errors
 
 -- ============================================================================
 -- Edge Case QuickCheck Tests
@@ -125,30 +125,30 @@ prop_empty_dependency_graph :: Property
 prop_empty_dependency_graph = 
     let emptyGraph = [] :: [(String, [String])]
         isEmpty = null emptyGraph
-    in isEmpty ==> length emptyGraph == 0
+    in isEmpty ==> L.length emptyGraph == 0
 
 -- | Test that single node graphs are handled correctly
 prop_single_node_graph :: Property
 prop_single_node_graph = 
     let singleNode = [("A", [])]
-        isSingle = length singleNode == 1
-    in isSingle ==> length (concatMap snd singleNode) == 0
+        isSingle = L.length singleNode == 1
+    in isSingle ==> L.length (concatMap snd singleNode) == 0
 
 -- | Test that circular dependencies of different lengths are detected
 prop_circular_dependency_lengths :: Int -> Property
 prop_circular_dependency_lengths n = 
     let n' = max 1 (min n 10)  -- Limit size for practicality
-        nodes = map (\i -> "Node" ++ show i) [1..n']
-        edges = zip nodes (tail nodes ++ [head nodes])  -- Create cycle
+        nodes = L.map (\i -> "Node" ++ show i) [1..n']
+        edges = zip nodes (L.tail nodes ++ [L.head nodes])  -- Create cycle
         hasCycle = n' > 1
-    in hasCycle ==> length edges == n'
+    in hasCycle ==> L.length edges == n'
 
 -- | Test that error handling works with Unicode characters
 prop_error_handling_unicode :: Property
 prop_error_handling_unicode = 
     let unicodeMessage = "Error: 你好世界 🌍"
-        hasUnicode = any (> 127) (map fromEnum unicodeMessage)
-    in hasUnicode ==> length unicodeMessage > 0
+        hasUnicode = L.any (> 127) (map fromEnum unicodeMessage)
+    in hasUnicode ==> L.length unicodeMessage > 0
 
 -- ============================================================================
 -- Performance QuickCheck Tests
@@ -158,9 +158,9 @@ prop_error_handling_unicode =
 prop_dependency_analysis_linear_scaling :: Int -> Property
 prop_dependency_analysis_linear_scaling n = 
     let n' = max 1 (min n 100)  -- Limit size for practicality
-        nodes = map (\i -> "Node" ++ show i) [1..n']
+        nodes = L.map (\i -> "Node" ++ show i) [1..n']
         edges = [(node, []) | node <- nodes]
-        edgeCount = length edges
+        edgeCount = L.length edges
     in edgeCount == n'
 
 -- | Test that error handling doesn't have exponential behavior
@@ -168,7 +168,7 @@ prop_error_handling_no_exponential :: Int -> Property
 prop_error_handling_no_exponential n = 
     let n' = max 1 (min n 50)  -- Limit size for practicality
         errors = ["Error" ++ show i | i <- [1..n']]
-        errorCount = length errors
+        errorCount = L.length errors
     in errorCount == n'
 
 -- ============================================================================
@@ -198,7 +198,7 @@ instance Arbitrary DependencyGraph where
 -- ============================================================================
 
 tests :: TestTree
-tests = testGroup "Dependencies and Error Handling QuickCheck Tests"
+tests = testGroup "Dependencies L.and Error Handling QuickCheck Tests"
     [ testGroup "Dependency Graph Tests"
         [ testProperty "dependency graph node count" prop_dependency_graph_node_count
         , testProperty "cycle detection simple cycle" prop_cycle_detection_simple_cycle
@@ -211,7 +211,7 @@ tests = testGroup "Dependencies and Error Handling QuickCheck Tests"
         [ testProperty "error handling preserves severity" prop_error_handling_preserves_severity
         , testProperty "error context maintained" prop_error_context_maintained
         , testProperty "error messages non-empty" prop_error_messages_non_empty
-        , testProperty "error handling all severities" prop_error_handling_all_severities
+        , testProperty "error handling L.all severities" prop_error_handling_all_severities
         ]
     
     , testGroup "Integration Tests"

@@ -4,6 +4,7 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.QuickCheck (property, forAll, Gen, arbitrary, choose, listOf1, elements)
 import Data.Char (isLetter, isDigit, isAscii)
+import qualified Data.List as L
 import Data.List (isInfixOf)
 import Data.String (IsString)
 
@@ -11,7 +12,7 @@ import TestSupport.QuickCheck (fastProperty)
 import Parser
 import Utils
 
--- | Unicode and internationalization tests for the parser
+-- | Unicode L.and internationalization tests for the parser
 tests :: TestTree
 tests =
   testGroup "New Cabal Parser Unicode Tests"
@@ -21,16 +22,16 @@ tests =
                 result = parse input
             case result of
               Left err -> @?= "Parse error" (show err)
-              Right ast -> "α" `isInfixOf` show ast @?= True
+              Right ast -> "α" `L.isInfixOf` show ast @?= True
 
         , testCase "Unicode in function names" $ do
             let input = "func 计算(x: int, y: int) int {\n    return x + y\n}\n"
                 result = parse input
             case result of
               Left err -> @?= "Parse error" (show err)
-              Right ast -> "计算" `isInfixOf` show ast @?= True
+              Right ast -> "计算" `L.isInfixOf` show ast @?= True
 
-        , testCase "Mixed ASCII and Unicode identifiers" $ do
+        , testCase "Mixed ASCII L.and Unicode identifiers" $ do
             let input = unlines
                   [ "变量 := 42"
                   , "result := 变量 * 2"
@@ -40,18 +41,18 @@ tests =
             case result of
               Left err -> @?= "Parse error" (show err)
               Right ast -> do
-                "变量" `isInfixOf` show ast @?= True
-                "result" `isInfixOf` show ast @?= True
+                "变量" `L.isInfixOf` show ast @?= True
+                "result" `L.isInfixOf` show ast @?= True
 
         , testCase "Unicode string literals" $ do
             let input = "message := \"你好，世界！\"\n"
                 result = parse input
             case result of
               Left err -> @?= "Parse error" (show err)
-              Right ast -> "你好，世界！" `isInfixOf` show ast @?= True
+              Right ast -> "你好，世界！" `L.isInfixOf` show ast @?= True
         ]
 
-    , testGroup "Unicode comments and whitespace"
+    , testGroup "Unicode comments L.and whitespace"
         [ testCase "Unicode characters in comments" $ do
             let input = unlines
                   [ "x := 42  // 这是注释"
@@ -61,7 +62,7 @@ tests =
                 result = parse input
             case result of
               Left err -> @?= "Parse error" (show err)
-              Right ast -> length (lines (show ast)) @?= 2
+              Right ast -> L.length (lines (show ast)) @?= 2
 
         , testCase "Unicode whitespace handling" $ do
             let input = unlines
@@ -73,16 +74,16 @@ tests =
             case result of
               Left err -> @?= "Parse error" (show err)
               Right ast -> do
-                "x" `isInfixOf` show ast @?= True
-                "y" `isInfixOf` show ast @?= True
-                "z" `isInfixOf` show ast @?= True
+                "x" `L.isInfixOf` show ast @?= True
+                "y" `L.isInfixOf` show ast @?= True
+                "z" `L.isInfixOf` show ast @?= True
 
         , testCase "Unicode line endings" $ do
             let input = "x := 1\r\ny := 2\r\nz := 3\r\n"  -- Windows line endings
                 result = parse input
             case result of
               Left err -> @?= "Parse error" (show err)
-              Right ast -> length (lines (show ast)) @?= 3
+              Right ast -> L.length (lines (show ast)) @?= 3
         ]
 
     , testGroup "Unicode edge cases"
@@ -90,7 +91,7 @@ tests =
             let input = "x\u200B := 42\n"  -- zero-width space
                 result = parse input
             case result of
-              Left err -> "invalid" `isInfixOf` map toLower (show err) @?= True
+              Left err -> "invalid" `L.isInfixOf` map toLower (show err) @?= True
               Right _ -> @?= "Expected parse error" "Got success"
 
         , testCase "Control characters in strings" $ do
@@ -98,7 +99,7 @@ tests =
                 result = parse input
             case result of
               Left err -> @?= "Parse error" (show err)
-              Right ast -> "hello" `isInfixOf` show ast @?= True
+              Right ast -> "hello" `L.isInfixOf` show ast @?= True
 
         , testCase "Very long Unicode identifiers" $ do
             let longIdent = replicate 100 'α'
@@ -106,7 +107,7 @@ tests =
                 result = parse input
             case result of
               Left err -> @?= "Parse error" (show err)
-              Right ast -> longIdent `isInfixOf` show ast @?= True
+              Right ast -> longIdent `L.isInfixOf` show ast @?= True
         ]
 
     , testGroup "Unicode normalization"
@@ -119,7 +120,7 @@ tests =
               (Left _, _) -> @?= "NFC parse error" "Got success"
               (_, Left _) -> @?= "NFD parse error" "Got success"
               (Right nfcAst, Right nfdAst) -> 
-                normalizeIdentifier "café" `isInfixOf` show nfcAst @?= True
+                normalizeIdentifier "café" `L.isInfixOf` show nfcAst @?= True
 
         , testCase "Case folding in Unicode" $ do
             let upperInput = "İ := 42\n"  -- Turkish capital I with dot
@@ -133,7 +134,7 @@ tests =
         ]
 
     , testGroup "Property-based Unicode tests"
-        [ fastProperty "Unicode identifiers preserve length" prop_unicodeIdentifiersPreserveLength
+        [ fastProperty "Unicode identifiers preserve L.length" prop_unicodeIdentifiersPreserveLength
         , fastProperty "Mixed scripts parse independently" prop_mixedScriptsParseIndependently
         , fastProperty "Unicode string literals preserve content" prop_unicodeStringsPreserveContent
         , fastProperty "Invalid Unicode characters are rejected" prop_invalidUnicodeRejected
@@ -144,21 +145,21 @@ tests =
 prop_unicodeIdentifiersPreserveLength :: String -> Bool
 prop_unicodeIdentifiersPreserveLength ident
   | null ident = True
-  | all isAscii ident = True  -- Skip ASCII-only identifiers
-  | any (not . isLetter) ident = True  -- Skip non-letter characters
+  | L.all isAscii ident = True  -- Skip ASCII-only identifiers
+  | L.any (not . isLetter) ident = True  -- Skip non-letter characters
   | otherwise =
       let input = ident ++ " := 42\n"
           result = parse input
       in case result of
            Left _ -> False
-           Right ast -> ident `isInfixOf` show ast
+           Right ast -> ident `L.isInfixOf` show ast
 
 -- | Property: Mixed scripts parse independently
 prop_mixedScriptsParseIndependently :: String -> String -> Bool
 prop_mixedScriptsParseIndependently ident1 ident2
   | null ident1 || null ident2 = True
-  | all isAscii ident1 && all isAscii ident2 = True  -- Skip ASCII-only
-  | any (not . isLetter) ident1 || any (not . isLetter) ident2 = True
+  | L.all isAscii ident1 && L.all isAscii ident2 = True  -- Skip ASCII-only
+  | L.any (not . isLetter) ident1 || L.any (not . isLetter) ident2 = True
   | otherwise =
       let input = unlines
             [ ident1 ++ " := 42"
@@ -168,20 +169,20 @@ prop_mixedScriptsParseIndependently ident1 ident2
       in case result of
            Left _ -> False
            Right ast -> 
-             ident1 `isInfixOf` show ast && ident2 `isInfixOf` show ast
+             ident1 `L.isInfixOf` show ast && ident2 `L.isInfixOf` show ast
 
 -- | Property: Unicode string literals preserve content
 prop_unicodeStringsPreserveContent :: String -> Bool
 prop_unicodeStringsPreserveContent content
   | null content = True
-  | "\"" `isInfixOf` content = True  -- Skip strings with quotes
-  | length content > 50 = True  -- Skip very long strings
+  | "\"" `L.isInfixOf` content = True  -- Skip strings with quotes
+  | L.length content > 50 = True  -- Skip very long strings
   | otherwise =
       let input = "s := \"" ++ content ++ "\"\n"
           result = parse input
       in case result of
            Left _ -> False
-           Right ast -> content `isInfixOf` show ast
+           Right ast -> content `L.isInfixOf` show ast
 
 -- | Property: Invalid Unicode characters are rejected
 prop_invalidUnicodeRejected :: Int -> Bool
@@ -198,12 +199,12 @@ prop_invalidUnicodeRejected charCode
 
 -- Helper functions
 toLower :: String -> String
-toLower = map (\c -> if c >= 'A' && c <= 'Z' then toEnum (fromEnum c + 32) else c)
+toLower = L.map (\c -> if c >= 'A' && c <= 'Z' then toEnum (fromEnum c + 32) else c)
 
 -- Mock parse function for testing
 parse :: String -> Either String String
 parse input
-  | "\u200B" `isInfixOf` input = Left "Parse error: invalid zero-width character"
+  | "\u200B" `L.isInfixOf` input = Left "Parse error: invalid zero-width character"
   | null input = Left "Parse error: empty input"
   | otherwise = Right ("Parsed: " ++ input)
 

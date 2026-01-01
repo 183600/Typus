@@ -1,6 +1,7 @@
 module Test.Unit.NewParserBasicPropertiesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Arbitrary(..), Gen, oneof, choose, listOf, elements, suchThat)
@@ -93,13 +94,13 @@ genDirectivePair = do
 genFileDirectiveContent :: Gen String
 genFileDirectiveContent = do
     pairs <- listOf genDirectivePair
-    return $ "//! " ++ unwords (map (\(k, v) -> k ++ ":" ++ v) pairs)
+    return $ "//! " ++ unwords (L.map (\(k, v) -> k ++ ":" ++ v) pairs)
 
 -- Generate block directive content
 genBlockDirectiveContent :: Gen String
 genBlockDirectiveContent = do
     pairs <- listOf genDirectivePair
-    return $ "{//! " ++ unwords (map (\(k, v) -> k ++ ":" ++ v) pairs) ++ "}"
+    return $ "{//! " ++ unwords (L.map (\(k, v) -> k ++ ":" ++ v) pairs) ++ "}"
 
 -- Generate valid code content
 genCodeContent :: Gen String
@@ -116,8 +117,8 @@ genCodeContent = do
 
 prop_fileDirectiveParserValid :: [(String, String)] -> Property
 prop_fileDirectiveParserValid pairs =
-    not (null pairs) && all (all isValidIdentifier . uncurry (:)) pairs ==>
-    let content = "//! " ++ unwords (map (\(k, v) -> k ++ ":" ++ v) pairs)
+    not (null pairs) && L.all (L.all isValidIdentifier . uncurry (:)) pairs ==>
+    let content = "//! " ++ unwords (L.map (\(k, v) -> k ++ ":" ++ v) pairs)
         result = parseTypus content
     in case result of
         Left _ -> False  -- Should parse valid input
@@ -125,8 +126,8 @@ prop_fileDirectiveParserValid pairs =
 
 prop_blockDirectiveParserValid :: [(String, String)] -> Property
 prop_blockDirectiveParserValid pairs =
-    not (null pairs) && all (all isValidIdentifier . uncurry (:)) pairs ==>
-    let content = "{//! " ++ unwords (map (\(k, v) -> k ++ ":" ++ v) pairs) ++ "}\n" ++ "some code"
+    not (null pairs) && L.all (L.all isValidIdentifier . uncurry (:)) pairs ==>
+    let content = "{//! " ++ unwords (L.map (\(k, v) -> k ++ ":" ++ v) pairs) ++ "}\n" ++ "some code"
         result = parseTypus content
     in case result of
         Left _ -> False  -- Should parse valid input
@@ -134,8 +135,8 @@ prop_blockDirectiveParserValid pairs =
 
 prop_directiveParsingPreservesOrder :: [(String, String)] -> Property
 prop_directiveParsingPreservesOrder pairs =
-    not (null pairs) && all (all isValidIdentifier . uncurry (:)) pairs ==>
-    let content = "//! " ++ unwords (map (\(k, v) -> k ++ ":" ++ v) pairs)
+    not (null pairs) && L.all (L.all isValidIdentifier . uncurry (:)) pairs ==>
+    let content = "//! " ++ unwords (L.map (\(k, v) -> k ++ ":" ++ v) pairs)
         result = parseTypus content
     in case result of
         Left _ -> False
@@ -152,7 +153,7 @@ prop_parseLineCapturesContent lineContent =
         result = parseTypus content
     in case result of
         Left _ -> False
-        Right typusFile -> not (null (tfBlocks typusFile)) || not (null (tfBuildTags typusFile))
+        Right typusFile -> not (L.null (tfBlocks typusFile)) || not (L.null (tfBuildTags typusFile))
 
 prop_parseLineTracksSpan :: String -> Property
 prop_parseLineTracksSpan lineContent =
@@ -165,7 +166,7 @@ prop_parseLineTracksSpan lineContent =
 
 prop_parseDocumentPreservesLineCount :: [String] -> Property
 prop_parseDocumentPreservesLineCount lines' =
-    all (not . any (`elem` ['\n', '\r'])) lines' ==>
+    L.all (not . L.any (`elem` ['\n', '\r'])) lines' ==>
     let content = unlines lines'
         result = parseTypus content
     in case result of
@@ -178,8 +179,8 @@ prop_parseDocumentPreservesLineCount lines' =
 
 prop_buildTypusFilePreservesDirectives :: [(String, String)] -> Property
 prop_buildTypusFilePreservesDirectives pairs =
-    not (null pairs) && all (all isValidIdentifier . uncurry (:)) pairs ==>
-    let content = "//! " ++ unwords (map (\(k, v) -> k ++ ":" ++ v) pairs) ++ "\n" ++ "code"
+    not (null pairs) && L.all (L.all isValidIdentifier . uncurry (:)) pairs ==>
+    let content = "//! " ++ unwords (L.map (\(k, v) -> k ++ ":" ++ v) pairs) ++ "\n" ++ "code"
         result = parseTypus content
     in case result of
         Left _ -> False
@@ -192,11 +193,11 @@ prop_buildTypusFileCreatesBlocks codeContent =
         result = parseTypus content
     in case result of
         Left _ -> False
-        Right typusFile -> not (null (tfBlocks typusFile))
+        Right typusFile -> not (L.null (tfBlocks typusFile))
 
 prop_parseTypusRoundtrip :: String -> Property
 prop_parseTypusRoundtrip content =
-    length content < 1000 && all (`elem` ['\n', '\r', '\t', ' '] ++ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "{}[]();:,./\\|-_+*=") content ==>
+    L.length content < 1000 && L.all (`elem` ['\n', '\r', '\t', ' '] ++ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "{}[]();:,./\\|-_+*=") content ==>
     let result = parseTypus content
     in case result of
         Left _ -> True  -- Parsing may fail for invalid content
@@ -208,7 +209,7 @@ prop_parseTypusRoundtrip content =
 
 prop_parseTypusHandlesMalformed :: String -> Property
 prop_parseTypusHandlesMalformed content =
-    length content < 500 ==>  -- Keep it reasonable
+    L.length content < 500 ==>  -- Keep it reasonable
     let result = parseTypus content
     in case result of
         Left _ -> True  -- Gracefully handles malformed input
@@ -216,11 +217,11 @@ prop_parseTypusHandlesMalformed content =
 
 prop_syntaxValidationPreservesContent :: String -> Property
 prop_syntaxValidationPreservesContent content =
-    length content < 1000 ==>
+    L.length content < 1000 ==>
     let result = parseTypus content
     in case result of
         Left _ -> True
-        Right typusFile -> length (tfSyntaxErrors typusFile) >= 0  -- Syntax errors are counted
+        Right typusFile -> L.length (tfSyntaxErrors typusFile) >= 0  -- Syntax errors are counted
 
 -- ============================================================================
 -- Properties for Directive Validation
@@ -228,15 +229,15 @@ prop_syntaxValidationPreservesContent content =
 
 prop_identifierValidationCorrectness :: String -> Property
 prop_identifierValidationCorrectness identifier =
-    length identifier < 20 ==>
+    L.length identifier < 20 ==>
     let isValid = isValidIdentifier identifier
-        hasValidChars = all (\c -> isAlphaNum c || c == '_' || c == '-') identifier
-        hasValidStart = not (null identifier) && isAlphaNum (head identifier)
+        hasValidChars = L.all (\c -> isAlphaNum c || c == '_' || c == '-') identifier
+        hasValidStart = not (null identifier) && isAlphaNum (L.head identifier)
     in isValid == (hasValidChars && hasValidStart)
 
 prop_directiveFormatValidation :: String -> String -> Property
 prop_directiveFormatValidation key value =
-    length key < 20 && length value < 20 ==>
+    L.length key < 20 && L.length value < 20 ==>
     let isValidFormat = isValidIdentifier key && isValidIdentifier value
         hasCorrectFormat = ':' `elem` (key ++ value) || not (null key && null value)
     in isValidFormat ==> hasCorrectFormat
@@ -248,6 +249,6 @@ prop_directiveFormatValidation key value =
 -- Check if a string is a valid identifier
 isValidIdentifier :: String -> Bool
 isValidIdentifier [] = False
-isValidIdentifier (c:cs) = isAlphaNum c && all isValidChar cs
+isValidIdentifier (c:cs) = isAlphaNum c && L.all isValidChar cs
   where
     isValidChar ch = isAlphaNum ch || ch == '_' || ch == '-'

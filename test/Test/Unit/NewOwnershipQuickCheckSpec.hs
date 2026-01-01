@@ -33,6 +33,7 @@ import Ownership
 import Parser (TypusFile(..), CodeBlock(..), defaultFileDirectives, defaultBlockDirectives)
 import SourceLocation (Located(..), SourcePos(..), SourceSpan(..))
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isInfixOf)
 import Data.Maybe (isJust, isNothing)
 import Data.Char (isAlphaNum)
@@ -54,19 +55,19 @@ tests = testGroup "New Ownership QuickCheck Tests"
 prop_new_analyzer :: Property
 prop_new_analyzer =
   let analyzer = newOwnershipAnalyzer
-  in property $ analyzer `seq` True -- Should not crash and create valid analyzer
+  in property $ analyzer `seq` True -- Should not crash L.and create valid analyzer
 
 -- Property: lexAll handles basic Go code
 prop_lex_basic :: String -> Property
 prop_lex_basic code =
-  length code <= 50 ==> 
+  L.length code <= 50 ==> 
   let tokens = lexAll code
-  in property $ length tokens >= 0 -- Should produce some tokens or empty list
+  in property $ L.length tokens >= 0 -- Should produce some tokens L.or empty list
 
 -- Property: parseProgram handles simple programs
 prop_parse_simple :: String -> Property
 prop_parse_simple program =
-  length program <= 30 ==> 
+  L.length program <= 30 ==> 
   let tokens = lexAll program
       parseResult = parseProgram tokens
   in property $ parseResult `seq` True -- Should not crash during parsing
@@ -74,7 +75,7 @@ prop_parse_simple program =
 -- Property: analyzeOwnership processes ownership
 prop_analyze_ownership :: String -> Property
 prop_analyze_ownership code =
-  length code <= 40 ==> 
+  L.length code <= 40 ==> 
   let tokens = lexAll code
       parseResult = parseProgram tokens
       analyzer = newOwnershipAnalyzer
@@ -103,12 +104,12 @@ prop_builtin_functions :: Property
 prop_builtin_functions =
   let builtins = builtInFunctions
   in property $ not (null builtins) .&&.
-     all (\func -> not (null func)) builtins
+     L.all (\func -> not (null func)) builtins
 
 -- Property: Error formatting preserves information
 prop_error_formatting :: String -> Property
 prop_error_formatting errorMsg =
-  length errorMsg <= 30 ==>
+  L.length errorMsg <= 30 ==>
   let error = OwnershipError "OWN001" (T.pack errorMsg) Nothing Nothing
       formatted = formatOwnershipErrors [error]
-  in property $ not (null formatted) .&&. errorMsg `isInfixOf` formatted
+  in property $ not (null formatted) .&&. errorMsg `L.isInfixOf` formatted

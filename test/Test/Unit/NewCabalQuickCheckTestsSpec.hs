@@ -44,7 +44,9 @@ import Utils
 
 import Data.Char (isSpace, isAlpha, isDigit)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, isInfixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort, nub)
 
 -- ============================================================================
 -- SourceLocation Properties
@@ -87,7 +89,7 @@ prop_spanBetween_valid pos1 pos2 =
 -- Property: mergeSpans contains both original spans
 prop_mergeSpans_contains :: Int -> Int -> Int -> Int -> Int -> Int -> Property
 prop_mergeSpans_contains l1 c1 l2 c2 l3 c3 =
-  all (>= 1) [l1, c1, l2, c2, l3, c3] && all (<= 1000) [l1, c1, l2, c2, l3, c3] ==>
+  L.all (>= 1) [l1, c1, l2, c2, l3, c3] && L.all (<= 1000) [l1, c1, l2, c2, l3, c3] ==>
   let span1 = SourceSpan (SourcePos l1 c1) (SourcePos l2 c2)
       span2 = SourceSpan (SourcePos l3 c3) (SourcePos (l3 + 1) 1)
       merged = mergeSpans span1 span2
@@ -106,29 +108,29 @@ prop_comment_preservation :: String -> String -> Property
 prop_comment_preservation code comment =
   not ('"' `elem` code) && not ('\'' `elem` code) &&
   not ('"' `elem` comment) && not ('\'' `elem` comment) &&
-  not ("/*" `isInfixOf` code) && not ("*/" `isInfixOf` code) ==>
+  not ("/*" `L.isInfixOf` code) && not ("*/" `L.isInfixOf` code) ==>
   let withComments = code ++ " /* " ++ comment ++ " */ " ++ code ++ " // " ++ comment
       withoutComments = removeComments withComments
-  in code `isInfixOf` withoutComments
+  in code `L.isInfixOf` withoutComments
 
 -- Property: String parsing roundtrip
 prop_string_roundtrip :: String -> Property
 prop_string_roundtrip content =
   not ('\'' `elem` content) && not ('"' `elem` content) && not ('\n' `elem` content) ==>
   let quoted = "\"" ++ content ++ "\""
-      unquoted = if "//" `isInfixOf` quoted 
+      unquoted = if "//" `L.isInfixOf` quoted 
                  then removeLineComments quoted 
                  else quoted
-  in content `isInfixOf` unquoted
+  in content `L.isInfixOf` unquoted
 
 -- Property: Directive parsing consistency
 prop_directive_consistency :: String -> Property
 prop_directive_consistency directive =
   not (' ' `elem` directive) && not ('\n' `elem` directive) &&
-  all isAlpha directive ==>
+  L.all isAlpha directive ==>
   let withDirective = "// @ownership:" ++ directive ++ "\ncode()"
       processed = removeLineComments withDirective
-  in "code()" `isInfixOf` processed
+  in "code()" `L.isInfixOf` processed
 
 -- ============================================================================
 -- Advanced Utils Properties
@@ -147,9 +149,9 @@ prop_complex_pipeline prefix middle suffix =
                   |> normalizeIndentation
                   |> splitByComma
       rejoined = Data.List.intercalate "," processed
-  in length rejoined <= length input .&&.
-     not ("/* block */" `isInfixOf` rejoined) .&&.
-     not ("// line" `isInfixOf` rejoined)
+  in L.length rejoined <= L.length input .&&.
+     not ("/* block */" `L.isInfixOf` rejoined) .&&.
+     not ("// line" `L.isInfixOf` rejoined)
 
 -- Property: Unicode handling in string operations
 prop_unicode_handling :: String -> Property
@@ -158,30 +160,30 @@ prop_unicode_handling content =
       trimmed = trim unicodeContent
       split = splitBy ' ' unicodeContent
   in property $ 
-    (if not (null content) then "测试🚀café" `isInfixOf` trimmed else True) .&&.
-    length split >= 1 .&&.
-    all (notElem ' ') split
+    (if not (null content) then "测试🚀café" `L.isInfixOf` trimmed else True) .&&.
+    L.length split >= 1 .&&.
+    L.all (L.notElem ' ') split
 
 -- Property: Performance with large inputs
 prop_large_input_performance :: Int -> String -> Property
 prop_large_input_performance multiplier base =
   multiplier > 0 && multiplier <= 100 ==> -- Limit for testing
-  let largeInput = concat (replicate multiplier (base ++ ","))
+  let largeInput = L.concat (replicate multiplier (base ++ ","))
       processed = splitByComma largeInput
       processedTrimmed = map trim processed
-  in property $ length processed >= multiplier .&&.
-     sum (map length processedTrimmed) <= length largeInput
+  in property $ L.length processed >= multiplier .&&.
+     L.sum (map L.length processedTrimmed) <= L.length largeInput
 
 -- Property: Indentation normalization preserves structure
 prop_indentation_structure :: [Int] -> Property
 prop_indentation_structure indentLevels =
-  not (null indentLevels) && all (>= 0) indentLevels && all (<= 20) indentLevels ==>
+  not (null indentLevels) && L.all (>= 0) indentLevels && L.all (<= 20) indentLevels ==>
   let lines' = zipWith (\level content -> replicate level ' ' ++ "line" ++ show level) indentLevels [1..]
       content = unlines lines'
       normalized = normalizeIndentation content
       normalizedLines = lines normalized
-  in property $ length normalizedLines === length lines' .&&.
-     all (not . null . trim) normalizedLines
+  in property $ L.length normalizedLines === L.length lines' .&&.
+     L.all (not . null . trim) normalizedLines
 
 -- Property: String splitting edge cases
 prop_splitting_edge_cases :: String -> Char -> Property
@@ -189,9 +191,9 @@ prop_splitting_edge_cases input delim =
   let edgeCaseInput = input ++ [delim, delim] ++ input ++ [delim] ++ "" ++ input
       regularSplit = splitBy delim edgeCaseInput
       collapsedSplit = splitByCollapsed delim edgeCaseInput
-  in property $ length regularSplit >= length collapsedSplit .&&.
-     all (not . null) collapsedSplit .&&.
-     sum (map length regularSplit) >= sum (map length collapsedSplit)
+  in property $ L.length regularSplit >= L.length collapsedSplit .&&.
+     L.all (not . null) collapsedSplit .&&.
+     L.sum (map L.length regularSplit) >= L.sum (map L.length collapsedSplit)
 
 -- ============================================================================
 -- Compiler Integration Properties
@@ -201,14 +203,14 @@ prop_splitting_edge_cases input delim =
 prop_compilation_semantics :: String -> Property
 prop_compilation_semantics code =
   not ('"' `elem` code) && not ('\'' `elem` code) &&
-  not ("/*" `isInfixOf` code) && not ("*/" `isInfixOf` code) ==>
+  not ("/*" `L.isInfixOf` code) && not ("*/" `L.isInfixOf` code) ==>
   let withComments = code ++ " // comment\n /* block */ " ++ code
       processed = removeComments withComments
       codeLines = lines (trim code)
       processedLines = lines (trim processed)
-  in property $ length processedLines >= length codeLines .&&.
-     all (not . null) processedLines .&&.
-     any (`isInfixOf` processed) codeLines
+  in property $ L.length processedLines >= L.length codeLines .&&.
+     L.all (not . null) processedLines .&&.
+     L.any (`L.isInfixOf` processed) codeLines
 
 -- Property: Error location tracking consistency
 prop_error_location_consistency :: Int -> Int -> Property

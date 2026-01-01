@@ -5,6 +5,7 @@ import Test.Tasty
 import Test.Tasty.QuickCheck
 import Utils (trim, splitBy, splitByCollapsed, removeComments, normalizeIndentation, breakOn)
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 
 -- | Test trim function properties
@@ -15,13 +16,13 @@ prop_trim_no_leading_trailing_spaces :: String -> Bool
 prop_trim_no_leading_trailing_spaces s = 
     let trimmed = trim s
     in null trimmed || 
-       (not (isSpace (head trimmed)) && not (isSpace (last trimmed)))
+       (not (isSpace (L.head trimmed)) && not (isSpace (last trimmed)))
 
 prop_trim_removes_only_whitespace :: String -> Bool
 prop_trim_removes_only_whitespace s =
     let trimmed = trim s
-        originalNonSpaces = filter (not . isSpace) s
-        trimmedNonSpaces = filter (not . isSpace) trimmed
+        originalNonSpaces = L.filter (not . isSpace) s
+        trimmedNonSpaces = L.filter (not . isSpace) trimmed
     in originalNonSpaces == trimmedNonSpaces
 
 -- | Test splitBy function properties
@@ -31,16 +32,16 @@ prop_splitby_empty_string c = splitBy c "" == [""]
 prop_splitby_concatenates_to_original :: Char -> String -> Property
 prop_splitby_concatenates_to_original c s = 
     let parts = splitBy c s
-        reconstructed = concat (map (++ [c]) (init parts) ++ [last parts])
-    in length parts > 0 ==> reconstructed == s
+        reconstructed = L.concat (L.map (++ [c]) (init parts) ++ [last parts])
+    in L.length parts > 0 ==> reconstructed == s
 
 prop_splitby_preserves_empty_segments :: Char -> String -> Bool
 prop_splitby_preserves_empty_segments c s =
     let parts = splitBy c s
         doubleC = [c, c]
-        hasDoubleC = doubleC `isInfixOf` s
+        hasDoubleC = doubleC `L.isInfixOf` s
     in if hasDoubleC
-       then any null parts
+       then L.any null parts
        else True
 
 -- | Test splitByCollapsed vs splitBy relationship
@@ -48,36 +49,36 @@ prop_splitby_collapsed_removes_empties :: Char -> String -> Bool
 prop_splitby_collapsed_removes_empties c s =
     let normal = splitBy c s
         collapsed = splitByCollapsed c s
-    in all (not . null) collapsed
+    in L.all (not . null) collapsed
 
 prop_splitby_collapsed_subset_of_normal :: Char -> String -> Bool
 prop_splitby_collapsed_subset_of_normal c s =
     let normal = splitBy c s
         collapsed = splitByCollapsed c s
-        nonEmptyNormal = filter (not . null) normal
+        nonEmptyNormal = L.filter (not . null) normal
     in collapsed == nonEmptyNormal
 
 -- | Test removeComments function properties
 prop_remove_comments_preserves_non_comment_code :: String -> Bool
 prop_remove_comments_preserves_non_comment_code s =
     let withoutComments = removeComments s
-        -- Count non-comment, non-whitespace characters before and after
-        originalCodeChars = length $ filter (not . (`elem` " \t\n\r/")) s
-        codeCharsAfter = length $ filter (not . (`elem` " \t\n\r/")) withoutComments
+        -- Count non-comment, non-whitespace characters before L.and after
+        originalCodeChars = L.length $ L.filter (not . (`elem` " \t\n\r/")) s
+        codeCharsAfter = L.length $ L.filter (not . (`elem` " \t\n\r/")) withoutComments
     in codeCharsAfter <= originalCodeChars
 
 prop_remove_comments_removes_line_comments :: String -> Property
 prop_remove_comments_removes_line_comments s =
     let withComment = s ++ "// this is a comment\nmore code"
         withoutComments = removeComments withComment
-    in "// this is a comment" `isInfixOf` withComment ==> 
-       not ("// this is a comment" `isInfixOf` withoutComments)
+    in "// this is a comment" `L.isInfixOf` withComment ==> 
+       not ("// this is a comment" `L.isInfixOf` withoutComments)
 
 prop_remove_comments_preserves_string_literals :: String -> Property
 prop_remove_comments_preserves_string_literals s =
     let stringWithLiteral = s ++ "\"code with // not a comment\""
         withoutComments = removeComments stringWithLiteral
-    in "\"code with // not a comment\"" `isInfixOf` withoutComments
+    in "\"code with // not a comment\"" `L.isInfixOf` withoutComments
 
 -- | Test normalizeIndentation function properties
 prop_normalize_indentation_preserves_relative_structure :: String -> Bool
@@ -88,37 +89,37 @@ prop_normalize_indentation_preserves_relative_structure s =
         
         -- Check that non-empty lines preserve their relative indentation differences
         indentDifferences orig = 
-            case filter (not . all isSpace) orig of
+            case L.filter (not . L.all isSpace) orig of
                 [] -> []
-                lines' -> zipWith (-) (map (length . takeWhile isSpace) (tail lines')) 
-                                    (map (length . takeWhile isSpace) lines')
+                lines' -> zipWith (-) (L.map (L.length . takeWhile isSpace) (L.tail lines')) 
+                                    (L.map (L.length . takeWhile isSpace) lines')
         
         origDiffs = indentDifferences originalLines
         normDiffs = indentDifferences normalizedLines
-    in length origDiffs <= 1 || length normDiffs <= 1 || 
-       take (min (length origDiffs) 5) origDiffs == take (min (length normDiffs) 5) normDiffs
+    in L.length origDiffs <= 1 || L.length normDiffs <= 1 || 
+       take (min (L.length origDiffs) 5) origDiffs == take (min (L.length normDiffs) 5) normDiffs
 
 prop_normalize_indentation_no_leading_empty_lines :: String -> Bool
 prop_normalize_indentation_no_leading_empty_lines s =
     let normalized = normalizeIndentation s
         lines' = lines normalized
-        firstNonEmpty = dropWhile all isSpace lines'
+        firstNonEmpty = dropWhile L.all isSpace lines'
     in null firstNonEmpty || 
-       (head firstNonEmpty /= "" && not (isSpace (head (head firstNonEmpty))))
+       (L.head firstNonEmpty /= "" && not (isSpace (L.head (L.head firstNonEmpty))))
 
 -- | Test breakOn function properties
 prop_breakon_finds_pattern :: String -> String -> Property
 prop_breakon_finds_pattern s pat =
-    not (null pat) && pat `isInfixOf` s ==>
+    not (null pat) && pat `L.isInfixOf` s ==>
     let (before, after) = breakOn pat s
-    in pat `isInfixOf` s && (before ++ pat ++ after) == s
+    in pat `L.isInfixOf` s && (before ++ pat ++ after) == s
 
 prop_breakon_empty_pattern :: String -> Bool
 prop_breakon_empty_pattern s = breakOn "" s == ("", s)
 
 prop_breakon_pattern_not_found :: String -> String -> Property
 prop_breakon_pattern_not_found s pat =
-    not (null pat) && not (pat `isInfixOf` s) ==>
+    not (null pat) && not (pat `L.isInfixOf` s) ==>
     let (before, after) = breakOn pat s
     in before == s && after == ""
 
@@ -132,7 +133,7 @@ prop_trim_then_normalize_consistency s =
 prop_split_roundtrip_with_join :: Char -> String -> Property
 prop_split_roundtrip_with_join c s = 
     let parts = splitBy c s
-    in length parts > 0 ==> concat (intersperse [c] parts) == s
+    in L.length parts > 0 ==> L.concat (intersperse [c] parts) == s
   where
     intersperse _ [] = []
     intersperse _ [x] = [x]
@@ -144,13 +145,13 @@ prop_trim_unicode_handling s =
     let withUnicode = s ++ "  中文测试  "
         trimmed = trim withUnicode
     in not (null trimmed) ==> 
-       last trimmed `notElem` " \t\n\r" && head trimmed `notElem` " \t\n\r"
+       last trimmed `notElem` " \t\n\r" && L.head trimmed `notElem` " \t\n\r"
 
 prop_splitby_special_characters :: String -> Bool
 prop_splitby_special_characters s =
     let specialChars = ",.;\n\t:"
-        testChar c = length (splitBy c s) >= 1
-    in all testChar specialChars
+        testChar c = L.length (splitBy c s) >= 1
+    in L.all testChar specialChars
 
 tests :: TestTree
 tests = testGroup "Utils Properties QuickCheck Tests"

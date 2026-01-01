@@ -1,6 +1,7 @@
 module Test.Unit.ConciseParserQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Property, (===), Arbitrary(..), Gen, oneof, listOf, elements)
 import Data.Char (isSpace)
 import qualified Data.Text as T
@@ -22,17 +23,17 @@ tests =
             let input = unlines lines
             in case parseTypus input of
                  Left _ -> property True
-                 Right file -> length (tfBlocks file) <= length lines
+                 Right file -> L.length (tfBlocks file) <= L.length lines
                  
         , testProperty "parseTypus handles whitespace-only lines" $
             \ws -> case parseTypus ws of
                      Left _ -> property True
-                     Right file -> all (all isSpace . unlines . map cbLines . (:[])) (tfBlocks file)
+                     Right file -> L.all (L.all isSpace . unlines . map cbLines . (:[])) (tfBlocks file)
                      
         , testProperty "parseTypus result contains syntax errors list" $
             \input -> case parseTypus input of
                         Left _ -> property True
-                        Right file -> length (tfSyntaxErrors file) >= 0
+                        Right file -> L.length (tfSyntaxErrors file) >= 0
         ]
         
     , testGroup "Directive parsing"

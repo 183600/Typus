@@ -53,7 +53,7 @@ testSplitByEdgeCases = testCase "splitBy function edge cases" $ do
   assertEqual "no delimiter" ["abc"] (splitBy ',' "abc")
   
   -- 开头和结尾的分隔符
-  assertEqual "leading and trailing" ["", "a", "b", ""] (splitBy ',a,b,')
+  assertEqual "leading L.and trailing" ["", "a", "b", ""] (splitBy ',a,b,')
   
   -- 连续分隔符
   assertEqual "consecutive delimiters" ["a", "", "", "b"] (splitBy ',a,,,b,')

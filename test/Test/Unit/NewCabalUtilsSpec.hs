@@ -14,7 +14,9 @@ import Test.Tasty.HUnit (testCase, assertBool, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
 import Data.Char (isSpace, isAlphaNum)
-import Data.List (isPrefixOf, isInfixOf, intercalate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (intercalate)
 
 import Utils
   ( trim
@@ -61,17 +63,17 @@ tests =
             
         , fastProperty "trim: no leading/trailing whitespace" $
             \s -> let t = trim s
-                   in null t || (not (isSpace (head t)) && not (isSpace (last t)))
+                   in null t || (not (isSpace (L.head t)) && not (isSpace (last t)))
                    
-        , fastProperty "splitBy: length equals delimiter count + 1" $
+        , fastProperty "splitBy: L.length equals delimiter count + 1" $
             \c s -> let segments = splitBy c s
-                     in length segments >= 1 && 
-                        (if null s then length segments == 1
-                         else length segments == countChar c s + 1)
+                     in L.length segments >= 1 && 
+                        (if null s then L.length segments == 1
+                         else L.length segments == countChar c s + 1)
                         
         , fastProperty "splitByCollapsed: never returns empty segments" $
-            \c s -> not (null (splitByCollapsed c s)) || 
-                    all (not . null) (splitByCollapsed c s)
+            \c s -> not (L.null (splitByCollapsed c s)) || 
+                    L.all (not . null) (splitByCollapsed c s)
                     
         , fastProperty "splitByComma: roundtrip with intercalate" $
             \xs -> let csv = intercalate "," xs
@@ -79,10 +81,10 @@ tests =
                    in parsed === xs
                    
         , fastProperty "removeLineComments: preserves non-commented lines" $
-            \s -> not ("//" `isInfixOf` s) ==> removeLineComments s === s
+            \s -> not ("//" `L.isInfixOf` s) ==> removeLineComments s === s
         ]
     ]
 
 -- Helper function to count character occurrences
 countChar :: Char -> String -> Int
-countChar c = length . filter (== c)
+countChar c = L.length . L.filter (== c)

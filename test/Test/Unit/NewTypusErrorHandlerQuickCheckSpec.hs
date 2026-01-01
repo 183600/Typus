@@ -10,6 +10,7 @@
 module Test.Unit.NewTypusErrorHandlerQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import TestSupport.Arbitrary
@@ -34,7 +35,7 @@ prop_error_handler_formats_messages message =
   let error = TypeError message ErrorError ErrorLocationUnknown emptyContext
       result = handleError error
       formattedMessage = getErrorMessage result
-      hasOriginalMessage = message `isInfixOf` formattedMessage
+      hasOriginalMessage = message `L.isInfixOf` formattedMessage
   in property $ hasOriginalMessage
 
 -- Property: Error handler adds context information
@@ -44,16 +45,16 @@ prop_error_handler_adds_context message contextInfo =
       error = TypeError message ErrorError ErrorLocationUnknown context
       result = handleError error
       formattedMessage = getErrorMessage result
-      hasContext = contextInfo `isInfixOf` formattedMessage
+      hasContext = contextInfo `L.isInfixOf` formattedMessage
   in property $ not (null contextInfo) ==> hasContext
 
 -- Property: Error handler handles multiple errors
 prop_error_handler_handles_multiple :: [String] -> Property
 prop_error_handler_handles_multiple messages =
-  let errors = map (\msg -> TypeError msg ErrorError ErrorLocationUnknown emptyContext) messages
+  let errors = L.map (\msg -> TypeError msg ErrorError ErrorLocationUnknown emptyContext) messages
       results = map handleError errors
-      resultCount = length results
-      errorCount = length messages
+      resultCount = L.length results
+      errorCount = L.length messages
   in classify (not (null messages)) "has multiple errors" $
      property $ resultCount === errorCount
 
@@ -75,7 +76,7 @@ getErrorMessage :: String -> String
 getErrorMessage msg = msg  -- Simplified for test
 
 isInfixOf :: String -> String -> Bool
-isInfixOf = undefined  -- Simplified for test
+L.isInfixOf = undefined  -- Simplified for test
 
 emptyContext :: ErrorContext
 emptyContext = ErrorContext ""

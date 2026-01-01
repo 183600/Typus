@@ -6,6 +6,7 @@
 module Test.Unit.TypeInferenceBoundaryTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertBool, assertEqual, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Gen, arbitrary, choose, listOf, elements, oneof, sized, suchThat)
@@ -75,7 +76,7 @@ genInferenceTypeVarName = elements
 -- Generate type expressions for boundary testing
 genBoundaryTypeExpr :: Gen TypeExpr
 genBoundaryTypeExpr = oneof
-  [ SimpleT <$> elements ["int", "string", "bool", "void", "any"]
+  [ SimpleT <$> elements ["int", "string", "bool", "void", "L.any"]
   , GenericT <$> elements ["List", "Maybe", "Either"] <*> listOf genBoundaryTypeExpr
   , FuncT <$> listOf ((,) <$> (T.pack <$> genInferenceTypeVarName) <*> genBoundaryTypeExpr) <*> genBoundaryTypeExpr
   , RefineT <$> genBoundaryTypeExpr <*> listOf genBoundaryConstraint
@@ -122,8 +123,8 @@ genEdgeCaseTypeExpr = oneof
   [ pure $ SimpleT ""  -- Empty type name
   , GenericT "" <$> listOf genBoundaryTypeExpr  -- Empty generic name
   , FuncT [] <$> genBoundaryTypeExpr  -- Function with no parameters
-  , FuncT (replicate 10 ("x", SimpleT "int")) <$> genBoundaryTypeExpr  -- Many parameters
-  , RefineT (SimpleT "int") <$> replicate 20 genBoundaryConstraint  -- Many constraints
+  , FuncT (replicate 10 ("x", SimpleT (T.pack "int"))) <$> genBoundaryTypeExpr  -- Many parameters
+  , RefineT (SimpleT (T.pack "int")) <$> replicate 20 genBoundaryConstraint  -- Many constraints
   ]
 
 -- ============================================================================
@@ -134,25 +135,25 @@ genEdgeCaseTypeExpr = oneof
 testSimpleTypeInference :: TestTree
 testSimpleTypeInference = testGroup "Simple Type Inference"
   [ testCase "infer basic variable type" $ do
-      let stmt = SVarDecl "x" (SimpleT "int")
+      let stmt = SVarDecl (T.pack "x") (SimpleT (T.pack "int"))
           checker = newDependentTypeChecker
       case inferStatement stmt checker of
         Left _ -> assertBool "Should infer basic type" False
         Right (inferredType, updatedChecker) -> do
           case inferredType of
-            SimpleT "int" -> assertBool "Correct type inferred" True
+            SimpleT (T.pack "int") -> assertBool "Correct type inferred" True
             _ -> assertBool "Should infer int type" False
           
   , testCase "infer function type" $ do
-      let stmt = SFuncDecl "add" [("x", SimpleT "int"), ("y", SimpleT "int")] (Just $ SimpleT "int")
+      let stmt = SFuncDecl "add" [("x", SimpleT (T.pack "int")), ("y", SimpleT (T.pack "int"))] (Just $ SimpleT (T.pack "int"))
           checker = newDependentTypeChecker
       case inferStatement stmt checker of
         Left _ -> assertBool "Should infer function type" False
         Right (inferredType, _) -> do
           case inferredType of
             FuncT params ret -> do
-              length params @?= 2
-              ret @?= SimpleT "int"
+              L.length params @?= 2
+              ret @?= SimpleT (T.pack "int")
             _ -> assertBool "Should infer function type" False
   ]
 
@@ -160,28 +161,28 @@ testSimpleTypeInference = testGroup "Simple Type Inference"
 testTypeInferenceBoundaries :: TestTree
 testTypeInferenceBoundaries = testGroup "Type Inference Boundaries"
   [ testCase "infer deeply nested types" $ do
-      let nestedType = GenericT "List" [GenericT "Maybe" [SimpleT "int"]]
-          stmt = SVarDecl "x" nestedType
+      let nestedType = GenericT "List" [GenericT "Maybe" [SimpleT (T.pack "int")]]
+          stmt = SVarDecl (T.pack "x") nestedType
           checker = newDependentTypeChecker
       case inferStatement stmt checker of
         Left _ -> assertBool "Should handle nested types" False
         Right (inferredType, _) -> 
           assertBool "Should infer nested type structure" $ 
             case inferredType of
-              GenericT "List" [GenericT "Maybe" [SimpleT "int"]] -> True
+              GenericT "List" [GenericT "Maybe" [SimpleT (T.pack "int")]] -> True
               _ -> False
               
   , testCase "infer types with many constraints" $ do
-      let constraints = [SizeGT "x" 0, SizeGE "x" 1, PredC "positive" [SimpleT "x"]]
-          refinedType = RefineT (SimpleT "int") constraints
-          stmt = SVarDecl "x" refinedType
+      let constraints = [SizeGT "x" 0, SizeGE "x" 1, PredC "positive" [SimpleT (T.pack "x")]]
+          refinedType = RefineT (SimpleT (T.pack "int")) constraints
+          stmt = SVarDecl (T.pack "x") refinedType
           checker = newDependentTypeChecker
       case inferStatement stmt checker of
         Left _ -> assertBool "Should handle many constraints" False
         Right (inferredType, _) -> 
           assertBool "Should preserve constraints" $
             case inferredType of
-              RefineT _ cs -> length cs >= 3
+              RefineT _ cs -> L.length cs >= 3
               _ -> False
   ]
 
@@ -189,7 +190,7 @@ testTypeInferenceBoundaries = testGroup "Type Inference Boundaries"
 testTypeUnificationBoundaries :: TestTree
 testTypeUnificationBoundaries = testGroup "Type Unification Boundaries"
   [ testCase "unify complex generic types" $ do
-      let type1 = GenericT "List" [SimpleT "int"]
+      let type1 = GenericT "List" [SimpleT (T.pack "int")]
           type2 = GenericT "List" [TVVar "a"]
           checker = newDependentTypeChecker
       case unifyTypes type1 type2 checker of
@@ -198,8 +199,8 @@ testTypeUnificationBoundaries = testGroup "Type Unification Boundaries"
           assertBool "Should produce substitution" $ not $ Map.null substitution
           
   , testCase "unify recursive types" $ do
-      let recursiveType = GenericT "Tree" [GenericT "Tree" [SimpleT "int"]]
-          simpleType = GenericT "Tree" [SimpleT "int"]
+      let recursiveType = GenericT "Tree" [GenericT "Tree" [SimpleT (T.pack "int")]]
+          simpleType = GenericT "Tree" [SimpleT (T.pack "int")]
           checker = newDependentTypeChecker
       case unifyTypes recursiveType simpleType checker of
         Left _ -> assertBool "Should handle recursive types" True  -- May fail appropriately
@@ -241,7 +242,7 @@ testTypeInstantiationBoundaries = testGroup "Type Instantiation Boundaries"
           
   , testCase "instantiate with complex substitutions" $ do
       let typeVar = TVVar "a"
-          substitution = Map.fromList [("a", GenericT "List" [SimpleT "int"])]
+          substitution = Map.fromList [("a", GenericT "List" [SimpleT (T.pack "int")])]
           checker = newDependentTypeChecker
       case applyTypeSubstitution substitution typeVar checker of
         Left _ -> assertBool "Should apply complex substitutions" False
@@ -254,7 +255,7 @@ testScopeManagementBoundaries :: TestTree
 testScopeManagementBoundaries = testGroup "Scope Management Boundaries"
   [ testCase "deeply nested scopes" $ do
       let checker = newDependentTypeChecker
-          nestedScopes = foldl (\acc _ -> pushScope acc) checker [1..100]
+          nestedScopes = L.foldl (\acc _ -> pushScope acc) checker [1..100]
       case popScope nestedScopes of
         Left _ -> assertBool "Should handle deep nesting" False
         Right (finalChecker, _) -> 
@@ -262,8 +263,8 @@ testScopeManagementBoundaries = testGroup "Scope Management Boundaries"
           
   , testCase "shadowing in nested scopes" $ do
       let checker = newDependentTypeChecker
-          stmt1 = SVarDecl "x" (SimpleT "int")
-          stmt2 = SVarDecl "x" (SimpleT "string")
+          stmt1 = SVarDecl (T.pack "x") (SimpleT (T.pack "int"))
+          stmt2 = SVarDecl (T.pack "x") (SimpleT (T.pack "string"))
       case inferStatement stmt1 checker of
         Left _ -> assertBool "Should infer first declaration" False
         Right (_, checker1) -> do
@@ -293,7 +294,7 @@ prop_type_inference_deterministic stmt =
 -- Property: Type inference preserves type structure
 prop_inference_preserves_structure :: TypeExpr -> Property
 prop_inference_preserves_structure typeExpr =
-  let stmt = SVarDecl "x" typeExpr
+  let stmt = SVarDecl (T.pack "x") typeExpr
       checker = newDependentTypeChecker
   in case inferStatement stmt checker of
        Left _ -> property True  -- May fail for complex types
@@ -301,7 +302,7 @@ prop_inference_preserves_structure typeExpr =
          property $ case (typeExpr, inferredType) of
            (SimpleT name, SimpleT inferredName) -> name === inferredName
            (GenericT name args, GenericT inferredName inferredArgs) -> 
-             name === inferredName .&&. length args === length inferredArgs
+             name === inferredName .&&. L.length args === L.length inferredArgs
            _ -> property True  -- Complex types may differ but should be related
 
 -- Property: Type unification is symmetric
@@ -360,7 +361,7 @@ prop_scope_operations_reversible =
 prop_complex_types_no_crash :: Property
 prop_complex_types_no_crash =
   forAll (genComplexTypeExpr 3) $ \complexType ->
-    let stmt = SVarDecl "x" complexType
+    let stmt = SVarDecl (T.pack "x") complexType
         checker = newDependentTypeChecker
     in case inferStatement stmt checker of
          Left _ -> property True  -- May fail appropriately
@@ -370,7 +371,7 @@ prop_complex_types_no_crash =
 prop_edge_case_types_no_crash :: Property
 prop_edge_case_types_no_crash =
   forAll genEdgeCaseTypeExpr $ \edgeType ->
-    let stmt = SVarDecl "x" edgeType
+    let stmt = SVarDecl (T.pack "x") edgeType
         checker = newDependentTypeChecker
     in case inferStatement stmt checker of
          Left _ -> property True  -- May fail appropriately
@@ -388,7 +389,7 @@ prop_empty_program_inference =
 -- Property: Type inference handles large programs
 prop_large_program_inference :: Property
 prop_large_program_inference =
-  let stmts = take 100 $ repeat (SVarDecl "x" (SimpleT "int"))
+  let stmts = take 100 $ repeat (SVarDecl (T.pack "x") (SimpleT (T.pack "int")))
       program = Program stmts
       checker = newDependentTypeChecker
   in case inferProgram program checker of
@@ -399,7 +400,7 @@ prop_large_program_inference =
 prop_constraint_solving_preserves :: [Constraint] -> Property
 prop_constraint_solving_preserves constraints =
   let checker = newDependentTypeChecker
-      checkerWithConstraints = foldr (\c acc -> 
+      checkerWithConstraints = L.foldr (\c acc -> 
         case addConstraint (convertConstraint c) acc of
           Left _ -> acc
           Right updated -> updated) checker constraints

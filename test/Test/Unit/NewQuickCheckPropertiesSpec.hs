@@ -28,7 +28,9 @@ import Parser (parseTypus, TypusFile(..))
 import Compiler (compile)
 import Data.Char (isSpace, toLower, isAlphaNum)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, tails, isInfixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (tails, sort, nub)
 import qualified Data.Text as T
 
 -- ============================================================================
@@ -51,15 +53,15 @@ prop_splitBy_preserves_content delim s =
 prop_splitByCollapsed_no_empty :: Char -> String -> Property
 prop_splitByCollapsed_no_empty delim s =
   let parts = splitByCollapsed delim s
-  in not (null parts) ==> all (not . null) parts
+  in not (null parts) ==> L.all (not . null) parts
 
--- Property: breakOn either finds the pattern or returns original string
+-- Property: breakOn either finds the pattern L.or returns original string
 prop_breakOn_correctness :: String -> String -> Property
 prop_breakOn_correctness pat s =
   let (before, after) = breakOn pat s
   in if null pat
      then before === "" &&. after === s
-     else if pat `isInfixOf` s
+     else if pat `L.isInfixOf` s
           then before ++ pat ++ after === s
           else before === s &&. after === ""
 
@@ -67,17 +69,17 @@ prop_breakOn_correctness pat s =
 prop_removeComments_preserves_code :: String -> Property
 prop_removeComments_preserves_code s =
   let withoutComments = removeComments s
-      -- Count non-comment, non-whitespace characters before and after
-      countCodeChars = length . filter (\c -> not (isSpace c) && c /= '/')
+      -- Count non-comment, non-whitespace characters before L.and after
+      countCodeChars = L.length . L.filter (\c -> not (isSpace c) && c /= '/')
       originalCodeChars = countCodeChars s
       newCodeChars = countCodeChars withoutComments
   in newCodeChars <= originalCodeChars
 
--- Property: removeComments eliminates // and /* */ style comments
+-- Property: removeComments eliminates // L.and /* */ style comments
 prop_removeComments_removes_comment_markers :: String -> Property
 prop_removeComments_removes_comment_markers s =
   let withoutComments = removeComments s
-  in not ("//" `isInfixOf` withoutComments) &&. not ("/*" `isInfixOf` withoutComments)
+  in not ("//" `L.isInfixOf` withoutComments) &&. not ("/*" `L.isInfixOf` withoutComments)
 
 -- ============================================================================
 -- Parser Module Properties
@@ -86,13 +88,13 @@ prop_removeComments_removes_comment_markers s =
 -- Property: parseTypus preserves line count (approximately)
 prop_parseTypus_preserves_structure :: String -> Property
 prop_parseTypus_preserves_structure s =
-  let originalLines = length $ lines s
+  let originalLines = L.length $ lines s
       result = parseTypus s
   in case result of
        Left _ -> property True -- Parsing failures are acceptable
        Right typusFile ->
          let codeBlocks = tfCodeBlocks typusFile
-             totalBlockLines = sum $ map (length . lines . cbContent) codeBlocks
+             totalBlockLines = L.sum $ L.map (L.length . lines . cbContent) codeBlocks
          in classify (originalLines > 0) "non-empty input" $
             totalBlockLines <= originalLines + 10 -- Allow some tolerance for directives
 
@@ -115,8 +117,8 @@ prop_parseTypus_round_trip_simple s =
        Right typusFile ->
          let blocks = tfCodeBlocks typusFile
          in not (null blocks) ==> 
-            let content = cbContent (head blocks)
-            in "package main" `isInfixOf` content &&. "func main()" `isInfixOf` content
+            let content = cbContent (L.head blocks)
+            in "package main" `L.isInfixOf` content &&. "func main()" `L.isInfixOf` content
 
 -- ============================================================================
 -- Compiler Module Properties
@@ -131,7 +133,7 @@ prop_compile_preserves_function_names s =
        Left _ -> property True -- Compilation failures are acceptable
        Right goCode ->
          let funcName = if null s then "main" else s
-         in "func " ++ funcName ++ "(" `isInfixOf` goCode
+         in "func " ++ funcName ++ "(" `L.isInfixOf` goCode
 
 -- Property: compilation produces valid Go package structure
 prop_compile_produces_package :: String -> Property
@@ -141,7 +143,7 @@ prop_compile_produces_package s =
   in case result of
        Left _ -> property True
        Right goCode ->
-         "package main" `isInfixOf` goCode
+         "package main" `L.isInfixOf` goCode
 
 -- ============================================================================
 -- Custom Generators

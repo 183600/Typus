@@ -10,6 +10,7 @@
 module Test.Unit.NewOwnershipTransferConsistencySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -48,7 +49,7 @@ tests =
               (errors, []) -> assertFailure $ "Expected analysis results, got errors: " ++ show errors
               (errors, transfers) -> do
                 -- Should have 2 ownership transfers
-                length transfers @?= 2
+                L.length transfers @?= 2
                 -- Transfers should form a consistent chain
                 let fromVars = sort $ map transferFrom transfers
                     toVars = sort $ map transferTo transfers
@@ -68,9 +69,9 @@ tests =
             case result of
               (errors, []) -> assertFailure $ "Expected analysis results, got errors: " ++ show errors
               (errors, transfers) -> do
-                length transfers @?= 1  -- Only z := y is a transfer
-                transferFrom (head transfers) @?= "y"
-                transferTo (head transfers) @?= "z"
+                L.length transfers @?= 1  -- Only z := y is a transfer
+                transferFrom (L.head transfers) @?= "y"
+                transferTo (L.head transfers) @?= "z"
         ]
         
     , testGroup "Ownership transfer cycles detection"
@@ -88,7 +89,7 @@ tests =
               (errors, transfers) -> do
                 -- Should detect ownership inconsistency
                 let cycleErrors = filter isCycleError errors
-                length cycleErrors @>= 1
+                L.length cycleErrors @>= 1
           where
             isCycleError (UseAfterMove _) = True
             isCycleError (DoubleMove _ _) = True
@@ -110,7 +111,7 @@ tests =
               (errors, transfers) -> do
                 -- Should detect multiple ownership issues
                 let moveErrors = filter isMoveError errors
-                length moveErrors @>= 1
+                L.length moveErrors @>= 1
           where
             isMoveError (UseAfterMove _) = True
             isMoveError (DoubleMove _ _) = True
@@ -133,8 +134,8 @@ tests =
               (errors, transfers) -> do
                 -- Should not have borrow-related errors
                 let borrowErrors = filter isBorrowError errors
-                length borrowErrors @?= 0
-                length transfers @?= 1  -- z := y transfer
+                L.length borrowErrors @?= 0
+                L.length transfers @?= 1  -- z := y transfer
           where
             isBorrowError (BorrowWhileMoved _) = True
             isBorrowError (MutBorrowWhileBorrowed _) = True
@@ -157,8 +158,8 @@ tests =
               (errors, transfers) -> do
                 -- Should allow mutable operations through transferred borrow
                 let mutBorrowErrors = filter isMutBorrowError errors
-                length mutBorrowErrors @?= 0
-                length transfers @?= 1
+                L.length mutBorrowErrors @?= 0
+                L.length transfers @?= 1
           where
             isMutBorrowError (MutBorrowWhileBorrowed _) = True
             isMutBorrowError (UseWhileMutBorrowed _) = True
@@ -183,7 +184,7 @@ tests =
               (errors, transfers) -> do
                 -- Should detect cross-function transfer
                 let crossFunctionErrors = filter isCrossFunctionError errors
-                length crossFunctionErrors @>= 1
+                L.length crossFunctionErrors @>= 1
           where
             isCrossFunctionError (CrossFunctionMove _ _) = True
             isCrossFunctionError (ParameterMoveMismatch _) = True
@@ -207,7 +208,7 @@ tests =
               (errors, transfers) -> do
                 -- Should allow borrow transfer without ownership loss
                 let borrowErrors = filter isBorrowError errors
-                length borrowErrors @?= 0
+                L.length borrowErrors @?= 0
         ]
         
     , testGroup "Transfer consistency with control flow"
@@ -230,7 +231,7 @@ tests =
               (errors, transfers) -> do
                 -- Should handle conditional transfers correctly
                 let controlFlowErrors = filter isControlFlowError errors
-                length controlFlowErrors @?= 0
+                L.length controlFlowErrors @?= 0
           where
             isControlFlowError (ControlFlowError _) = True
             isControlFlowError _ = False
@@ -251,9 +252,9 @@ tests =
               (errors, transfers) -> do
                 -- Should handle loop transfers correctly
                 let loopErrors = filter isLoopError errors
-                length loopErrors @?= 0
+                L.length loopErrors @?= 0
                 -- Should have transfers for each iteration
-                length transfers @>= 1
+                L.length transfers @>= 1
           where
             isLoopError (LoopOwnershipError _) = True
             isLoopError _ = False
@@ -273,7 +274,7 @@ tests =
                 result = analyzeOwnership analyzer code
             case result of
               (errors, transfers) -> do
-                -- Build transfer graph and check for cycles
+                -- Build transfer graph L.and check for cycles
                 let graph = buildTransferGraph transfers
                     hasCycles = detectGraphCycles graph
                 hasCycles @?= False
@@ -293,7 +294,7 @@ tests =
             case result of
               (errors, transfers) -> do
                 -- Should maintain consistent ownership chain
-                length transfers @?= 3
+                L.length transfers @?= 3
                 let chain = buildTransferChain transfers
                 validateOwnershipChain chain @?= True
         ]
@@ -302,7 +303,7 @@ tests =
 -- Helper functions for transfer analysis
 buildTransferGraph :: [OwnershipTransfer] -> Map.Map String [String]
 buildTransferGraph transfers = 
-    Map.fromListWith (++) $ map (\t -> (transferFrom t, [transferTo t])) transfers
+    Map.fromListWith (++) $ L.map (\t -> (transferFrom t, [transferTo t])) transfers
 
 detectGraphCycles :: Map.Map String [String] -> Bool
 detectGraphCycles graph = 
@@ -321,12 +322,12 @@ detectGraphCycles graph =
 
 buildTransferChain :: [OwnershipTransfer] -> [(String, String)]
 buildTransferChain transfers = 
-    map (\t -> (transferFrom t, transferTo t)) transfers
+    L.map (\t -> (transferFrom t, transferTo t)) transfers
 
 validateOwnershipChain :: [(String, String)] -> Bool
 validateOwnershipChain chain = 
     let sources = map fst chain
         targets = map snd chain
         -- Check that each target appears as source at most once
-        targetCounts = map (\t -> length $ filter (== t) targets) (nub targets)
-    in all (<= 1) targetCounts
+        targetCounts = L.map (\t -> L.length $ L.filter (== t) targets) (nub targets)
+    in L.all (<= 1) targetCounts

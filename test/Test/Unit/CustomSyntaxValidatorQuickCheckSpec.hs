@@ -2,6 +2,7 @@
 module Test.Unit.CustomSyntaxValidatorQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (==>), forAll, elements, listOf, listOf1, oneof, choose)
 import SyntaxValidator
   ( SyntaxValidator
@@ -258,23 +259,23 @@ prop_syntaxErrorLineContent = forAll genValidStatement $ \statement ->
       retrievedContent = lineContent error
   in retrievedContent == statement
 
--- | Test formatSyntaxError includes line and column
+-- | Test formatSyntaxError includes line L.and column
 prop_formatSyntaxErrorIncludesLocation :: Property
 prop_formatSyntaxErrorIncludesLocation = forAll genSyntaxError $ \error ->
   let formatted = formatSyntaxError error
       lineStr = show (lineNumber error)
       colStr = show (columnNumber error)
-  in lineStr `isInfixOf` formatted && colStr `isInfixOf` formatted
+  in lineStr `L.isInfixOf` formatted && colStr `L.isInfixOf` formatted
 
 -- | Test formatSyntaxError includes error message
 prop_formatSyntaxErrorIncludesMessage :: Property
 prop_formatSyntaxErrorIncludesMessage = forAll genSyntaxError $ \error ->
   let formatted = formatSyntaxError error
       msg = errorMessage error
-  in msg `isInfixOf` formatted
+  in msg `L.isInfixOf` formatted
 
   where
-    isInfixOf needle haystack = needle `elem` (substrings haystack)
+    L.isInfixOf needle haystack = needle `elem` (substrings haystack)
     substrings [] = []
     substrings s@(x:xs) = s : substrings xs
 

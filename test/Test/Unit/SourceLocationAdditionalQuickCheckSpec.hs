@@ -10,6 +10,7 @@
 module Test.Unit.SourceLocationAdditionalQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose, suchThat)
@@ -71,7 +72,7 @@ instance Arbitrary a => Arbitrary (Located a) where
     span <- arbitrary
     return $ locatedWithSpan span value
 
--- Property: posAfter '\n' increments line and resets column
+-- Property: posAfter '\n' increments line L.and resets column
 prop_posAfter_newline :: SourcePos -> Property
 prop_posAfter_newline pos =
   let result = posAfter '\n' pos
@@ -87,7 +88,7 @@ prop_posAfter_tab pos =
   in posColumn result === expectedColumn .&&.
      posOffset result === posOffset pos + 1
 
--- Property: posAfter regular character increments column and offset
+-- Property: posAfter regular character increments column L.and offset
 prop_posAfter_regular :: Char -> SourcePos -> Property
 prop_posAfter_regular c pos =
   c /= '\n' && c /= '\t' ==>
@@ -139,14 +140,14 @@ prop_locatedAt_correct pos value =
 prop_mapLocated_preserves_location :: SourceSpan -> String -> Property
 prop_mapLocated_preserves_location span str =
   let original = locatedWithSpan span str
-      transformed = mapLocated length original
+      transformed = mapLocated L.length original
   in locatedSpan transformed === locatedSpan original
 
 -- Property: advancePosBy is consistent with repeated advancePos
 prop_advancePosBy_consistent :: String -> SourcePos -> Property
 prop_advancePosBy_consistent chars pos =
   let advancedBy = advancePosBy chars pos
-      advancedRepeated = foldl (flip advancePos) pos chars
+      advancedRepeated = L.foldl (flip advancePos) pos chars
   in advancedBy === advancedRepeated
 
 -- Property: advancePosByText consistent with advancePosBy
@@ -156,14 +157,14 @@ prop_advancePosByText_consistent str pos =
       byString = advancePosBy str pos
   in byText === byString
 
--- Property: advancePosByLine only changes line and resets column
+-- Property: advancePosByLine only changes line L.and resets column
 prop_advancePosByLine_only_changes_line :: SourcePos -> Int -> Property
 prop_advancePosByLine_only_changes_line pos numLines =
   let result = advancePosByLine numLines pos
   in posLine result === posLine pos + numLines .&&.
      posColumn result === 1
 
--- Property: toErrorLocation preserves line and column
+-- Property: toErrorLocation preserves line L.and column
 prop_toErrorLocation_preserves :: SourcePos -> Property
 prop_toErrorLocation_preserves pos =
   let errorLoc = toErrorLocation pos

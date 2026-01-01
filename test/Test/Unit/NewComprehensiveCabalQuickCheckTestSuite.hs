@@ -7,6 +7,7 @@
 module Test.Unit.NewComprehensiveCabalQuickCheckTestSuite (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertBool, assertFailure)
 import Test.QuickCheck (property, forAll, Gen, (==>), Arbitrary(..), choose, listOf, elements)
 import qualified Test.QuickCheck as QC
@@ -26,7 +27,7 @@ splitLines :: String -> [String]
 splitLines = lines
 
 trimWhitespace :: String -> String
-trimWhitespace = reverse . dropWhile (`elem` " \t\n\r") . reverse . dropWhile (`elem` " \t\n\r")
+trimWhitespace = L.reverse . dropWhile (`elem` " \t\n\r") . L.reverse . dropWhile (`elem` " \t\n\r")
 
 normalizeIndentation :: String -> String
 normalizeIndentation = id  -- Simplified implementation
@@ -35,7 +36,7 @@ unlines :: [String] -> String
 unlines = Prelude.unlines
 
 isInfixOf :: String -> String -> Bool
-isInfixOf = Prelude.isInfixOf
+L.isInfixOf = Prelude.L.isInfixOf
 
 spanLength :: SourceSpan -> Int
 spanLength span = 
@@ -58,14 +59,14 @@ testSourceLocationMathProperties = fastProperty "SourceSpan mathematical propert
         start2 = spanStart span2
         end2 = spanEnd span2
     in
-    -- Property 1: Span length is non-negative
+    -- Property 1: Span L.length is non-negative
     spanLength span1 >= 0 &&
     spanLength span2 >= 0 &&
     
-    -- Property 2: If spans are equal, their starts and ends are equal
+    -- Property 2: If spans are equal, their starts L.and ends are equal
     (span1 == span2) ==> (start1 == start2 && end1 == end2) &&
     
-    -- Property 3: Start position comes before or at end position
+    -- Property 3: Start position comes before L.or at end position
     (posLine start1 <= posLine end1) &&
     (posLine start2 <= posLine end2) &&
     
@@ -103,7 +104,7 @@ testParserIdempotency = fastProperty "Parser is idempotent for valid code" $
           Left _ -> property False  -- Should not fail on second parse
           Right secondParse -> 
             -- The structure should be the same (simplified comparison)
-            length (tfBlocks firstParse) == length (tfBlocks secondParse)
+            L.length (tfBlocks firstParse) == L.length (tfBlocks secondParse)
 
 genValidTypusCode :: Gen String
 genValidTypusCode = do
@@ -135,10 +136,10 @@ testUtilsStringProcessing = fastProperty "Utils string processing properties" $
     (not (null s)) ==> (unlines lines == s) &&
     
     -- Property 2: trimWhitespace removes leading/trailing whitespace
-    (trimmed == dropWhile (`elem` " \t\n\r") (reverse (dropWhile (`elem` " \t\n\r") (reverse s)))) &&
+    (trimmed == dropWhile (`elem` " \t\n\r") (L.reverse (dropWhile (`elem` " \t\n\r") (L.reverse s)))) &&
     
     -- Property 3: normalizeIndentation preserves non-empty lines
-    (length (filter (not . null) (lines normalized)) == length (filter (not . null) lines))
+    (L.length (L.filter (not . null) (lines normalized)) == L.length (L.filter (not . null) lines))
 
 genString :: Gen String
 genString = do
@@ -160,11 +161,11 @@ testSimpleDataStructureProperties = fastProperty "Simple data structure properti
     let combined = data1 ++ data2
     in
     -- Property 1: Length is additive
-    length combined == length data1 + length data2 &&
+    L.length combined == L.length data1 + L.length data2 &&
     
     -- Property 2: Order is preserved for concatenation
-    take (length data1) combined == data1 &&
-    drop (length data1) combined == data2
+    take (L.length data1) combined == data1 &&
+    drop (L.length data1) combined == data2
 
 genSimpleData :: Gen [Int]
 genSimpleData = listOf (choose (0, 100))
@@ -180,7 +181,7 @@ testParserErrorRecovery = fastProperty "Parser error recovery properties" $
       Left _ -> property True  -- Invalid code, skip
       Right parsed -> 
         -- Property: Parsing valid code should produce a result
-        not (null $ tfBlocks parsed) || null code  -- Empty code is allowed
+        not (L.null $ tfBlocks parsed) || null code  -- Empty code is allowed
 
 -- ============================================================================
 -- Test 6: Basic Math Properties
@@ -190,8 +191,8 @@ testBasicMathProperties :: TestTree
 testBasicMathProperties = fastProperty "Basic mathematical properties hold" $
   forAll genSmallInt $ \x ->
   forAll genSmallInt $ \y ->
-    let sum = x + y
-        product = x * y
+    let L.sum = x + y
+        L.product = x * y
     in
     -- Property 1: Addition is commutative
     x + y == y + x &&
@@ -212,10 +213,10 @@ genSmallInt = choose (0, 50)
 testListProcessingProperties :: TestTree
 testListProcessingProperties = fastProperty "List processing properties hold" $
   forAll genSimpleData $ \xs ->
-    let reversed = reverse xs
-        doubleReversed = reverse reversed
+    let reversed = L.reverse xs
+        doubleReversed = L.reverse reversed
     in
-    -- Property: Reverse is involutive (reverse . reverse = id)
+    -- Property: Reverse is involutive (L.reverse . L.reverse = id)
     xs == doubleReversed
 
 -- ============================================================================
@@ -225,8 +226,8 @@ testListProcessingProperties = fastProperty "List processing properties hold" $
 testStringProcessingProperties :: TestTree
 testStringProcessingProperties = fastProperty "String processing properties hold" $
   forAll genNonEmptyString $ \s ->
-    let reversed = reverse s
-        doubleReversed = reverse reversed
+    let reversed = L.reverse s
+        doubleReversed = L.reverse reversed
     in
     -- Property: Reverse is involutive for strings
     s == doubleReversed

@@ -3,6 +3,7 @@
 module Test.Unit.NewCabalSourceLocationQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), counterexample, forAll, choose, listOf1, positive)
 import SourceLocation
@@ -17,7 +18,7 @@ tests =
     , testProperty "spanFrom creates valid spans" prop_spanFromValid
     , testProperty "mergeSpans is commutative" prop_mergeSpansCommutative
     , testProperty "locatedAt preserves position" prop_locatedAtPreservesPosition
-    , testProperty "advancePos updates line and column correctly" prop_advancePosCorrectness
+    , testProperty "advancePos updates line L.and column correctly" prop_advancePosCorrectness
     , testProperty "emptySpan is invalid" prop_emptySpanInvalid
     , testProperty "spanBetween creates correct span" prop_spanBetweenCorrect
     ]
@@ -38,13 +39,13 @@ prop_sourcePosOrdering pos1 pos2 =
 -- | posAfter should advance position correctly
 prop_posAfterAdvances :: SourcePos -> String -> Property
 prop_posAfterAdvances pos text =
-  forAll (choose (0, length text)) $ \len ->
+  forAll (choose (0, L.length text)) $ \len ->
     let substring = take len text
         result = posAfter pos substring
-        expectedLines = length $ filter (== '\n') substring
+        expectedLines = L.length $ L.filter (== '\n') substring
         expectedCol = if expectedLines == 0
-                     then sourceColumn pos + length substring
-                     else length $ takeWhile (/= '\n') $ reverse substring
+                     then sourceColumn pos + L.length substring
+                     else L.length $ takeWhile (/= '\n') $ L.reverse substring
     in counterexample ("pos: " ++ show pos ++ ", text: " ++ show substring) $
        if expectedLines == 0
        then sourceLine result === sourceLine pos && sourceColumn result === expectedCol
@@ -71,7 +72,7 @@ prop_locatedAtPreservesPosition pos value =
   let located = locatedAt pos value
   in locatedPos located == pos
 
--- | advancePos should update line and column correctly
+-- | advancePos should update line L.and column correctly
 prop_advancePosCorrectness :: SourcePos -> Char -> Bool
 prop_advancePosCorrectness pos char =
   let result = advancePos pos char

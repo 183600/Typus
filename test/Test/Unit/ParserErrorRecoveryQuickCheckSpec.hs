@@ -4,7 +4,9 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, property, Arbitrary(..), Gen, oneof, listOf, elements, choose, suchThat)
 import Data.Char (isAlphaNum, isSpace)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (sort)
 import qualified Data.Set as Set
 
 import Parser (parseTypus, TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..))
@@ -29,7 +31,7 @@ tests =
 -- Parser Error Recovery Properties
 -- ============================================================================
 
--- Property: Parser recovers from mismatched braces and continues parsing
+-- Property: Parser recovers from mismatched braces L.and continues parsing
 prop_mismatchedBraceRecovery :: String -> Bool
 prop_mismatchedBraceRecovery input =
   let malformedInput = input ++ createMismatchedBraces
@@ -37,9 +39,9 @@ prop_mismatchedBraceRecovery input =
   in case parseResult of
     Left _ -> True  -- Error is expected
     Right typusFile -> 
-      -- Should recover and still parse some content
+      -- Should recover L.and still parse some content
       let blocks = tfBlocks typusFile
-      in length blocks >= 0  -- Should not crash and may recover some blocks
+      in L.length blocks >= 0  -- Should not crash L.and may recover some blocks
 
 -- Property: Parser handles unterminated strings gracefully
 prop_unterminatedStringRecovery :: String -> Bool
@@ -49,7 +51,7 @@ prop_unterminatedStringRecovery input =
   in case parseResult of
     Left _ -> True  -- Error is expected
     Right typusFile -> 
-      -- Should recover and continue parsing after string
+      -- Should recover L.and continue parsing after string
       let hasValidStructure = validateBasicStructure typusFile
       in hasValidStructure
 
@@ -61,7 +63,7 @@ prop_invalidDirectiveRecovery input =
   in case parseResult of
     Left _ -> True  -- Error is expected
     Right typusFile -> 
-      -- Should recover and parse remaining content
+      -- Should recover L.and parse remaining content
       let directives = tfDirectives typusFile
       in directives == defaultFileDirectives || directives /= defaultFileDirectives
 
@@ -75,9 +77,9 @@ prop_structurePreservationWithErrors input =
     Right typusFile -> 
       -- Should maintain basic TypusFile structure
       let hasValidFields = 
-            not (null (show (tfDirectives typusFile))) &&
-            length (tfBuildTags typusFile) >= 0 &&
-            length (tfBlocks typusFile) >= 0
+            not (L.null (show (tfDirectives typusFile))) &&
+            L.length (tfBuildTags typusFile) >= 0 &&
+            L.length (tfBlocks typusFile) >= 0
       in hasValidFields
 
 -- Property: Parser error positions are accurate within input bounds
@@ -102,7 +104,7 @@ prop_cascadingErrorHandling input =
     Right typusFile -> 
       -- Should recover as much as possible
       let recoveredBlocks = tfBlocks typusFile
-      in length recoveredBlocks >= 0
+      in L.length recoveredBlocks >= 0
 
 -- Property: Parser recovers from malformed block directives
 prop_blockDirectiveRecovery :: String -> Bool
@@ -112,9 +114,9 @@ prop_blockDirectiveRecovery input =
   in case parseResult of
     Left _ -> True  -- Error is expected
     Right typusFile -> 
-      -- Should recover and parse surrounding content
+      -- Should recover L.and parse surrounding content
       let blocks = tfBlocks typusFile
-          hasValidBlocks = all validateBlock blocks
+          hasValidBlocks = L.all validateBlock blocks
       in hasValidBlocks
 
 -- Property: Parser maintains valid AST invariants even on error
@@ -164,22 +166,22 @@ validateBasicStructure typusFile =
   let directives = tfDirectives typusFile
       buildTags = tfBuildTags typusFile
       blocks = tfBlocks typusFile
-  in length buildTags >= 0 && length blocks >= 0
+  in L.length buildTags >= 0 && L.length blocks >= 0
 
 validateBlock :: CodeBlock -> Bool
 validateBlock block = 
   let directives = cbDirectives block
       content = cbContent block
-  in length content >= 0
+  in L.length content >= 0
 
 containsValidPosition :: String -> Bool
 containsValidPosition errorMsg = 
-  any (`isInfixOf` errorMsg) ["line", "position", "at"]
+  L.any (`L.isInfixOf` errorMsg) ["line", "position", "at"]
 
 checkASTInvariants :: TypusFile -> Bool
 checkASTInvariants typusFile = 
   let blocks = tfBlocks typusFile
-      allBlocksValid = all validateBlock blocks
+      allBlocksValid = L.all validateBlock blocks
   in allBlocksValid
 
 -- Mock defaultFileDirectives if not available

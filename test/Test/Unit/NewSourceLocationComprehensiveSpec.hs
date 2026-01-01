@@ -10,6 +10,7 @@
 module Test.Unit.NewSourceLocationComprehensiveSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Gen, Arbitrary, arbitrary, oneof, elements, listOf, resize, choose)
@@ -169,7 +170,7 @@ prop_advance_pos_by_string =
   forAll arbitrary $ \pos ->
   forAll (listOf (elements "abc\n\t")) $ \chars ->
     let advanced = advancePosBy chars pos
-        manual = foldl (flip advancePos) pos chars
+        manual = L.foldl (flip advancePos) pos chars
     in property $ advanced === manual
 
 -- Property: advancePosByText handles Text correctly
@@ -182,7 +183,7 @@ prop_advance_pos_by_text =
         manual = advancePosBy chars pos
     in property $ advanced === manual
 
--- Property: advancePosByLine changes line and resets column
+-- Property: advancePosByLine changes line L.and resets column
 prop_advance_pos_by_line :: Property
 prop_advance_pos_by_line =
   forAll arbitrary $ \pos ->
@@ -201,7 +202,7 @@ prop_location_tracker_position =
           getCurrentPos
     in property $ result === initialPos
 
--- Property: markSpanStart and markSpanEnd work together
+-- Property: markSpanStart L.and markSpanEnd work together
 prop_span_marking :: Property
 prop_span_marking =
   forAll arbitrary $ \startPos ->
@@ -360,9 +361,9 @@ tests =
         , fastProperty "mapLocated preserves location" prop_map_located_preservation
         , fastProperty "advancePosBy processes strings correctly" prop_advance_pos_by_string
         , fastProperty "advancePosByText handles Text correctly" prop_advance_pos_by_text
-        , fastProperty "advancePosByLine changes line and resets column" prop_advance_pos_by_line
+        , fastProperty "advancePosByLine changes line L.and resets column" prop_advance_pos_by_line
         , fastProperty "LocationTracker maintains correct position" prop_location_tracker_position
-        , fastProperty "markSpanStart and markSpanEnd work together" prop_span_marking
+        , fastProperty "markSpanStart L.and markSpanEnd work together" prop_span_marking
         , fastProperty "toErrorLocation converts positions correctly" prop_to_error_location_position
         , fastProperty "toErrorLocationWithSpan converts spans correctly" prop_to_error_location_span
         , fastProperty "SourcePos ordering works correctly" prop_source_pos_ordering

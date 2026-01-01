@@ -91,7 +91,7 @@ testTypeErrorRecovery = do
   case recovery of
     Just (strategy, recoveredCode) -> do
       assertEqual "recovery strategy" InsertTypeCast strategy
-      assertBool "recovered code contains cast" $ "cast" `L.isInfixOf` recoveredCode
+      assertBool "recovered code contains cast" $ "cast" `L.L.isInfixOf` recoveredCode
     Nothing -> assertFailure "Expected recovery for type error"
 
 -- | Unit tests for semantic error recovery
@@ -107,7 +107,7 @@ testSemanticErrorRecovery = do
   case recovery of
     Just (strategy, recoveredCode) -> do
       assertEqual "recovery strategy" DeclareVariable strategy
-      assertBool "recovered code contains declaration" $ "declare" `L.isInfixOf` recoveredCode
+      assertBool "recovered code contains declaration" $ "declare" `L.L.isInfixOf` recoveredCode
     Nothing -> assertFailure "Expected recovery for semantic error"
 
 -- | Unit tests for enhanced error recovery
@@ -124,8 +124,8 @@ testEnhancedErrorRecovery = do
       suggestions = suggestFixes error
   case recovery of
     Just enhancedRecovery -> do
-      assertBool "recovery provides suggestions" $ not $ null $ recoverySuggestions enhancedRecovery
-      assertBool "suggestions contain type annotation" $ any ("type annotation" `L.isInfixOf`) suggestions
+      assertBool "recovery provides suggestions" $ not $ L.null $ recoverySuggestions enhancedRecovery
+      assertBool "suggestions contain type annotation" $ L.any ("type annotation" `L.L.isInfixOf`) suggestions
     Nothing -> assertFailure "Expected enhanced recovery"
 
 -- | Unit tests for recovery strategy selection
@@ -143,7 +143,7 @@ testRecoveryStrategySelection = do
   assertBool "cannot apply wrong strategy to type error" $ not $ canRecover typeError DeclareVariable
   assertBool "cannot apply wrong strategy to semantic error" $ not $ canRecover semanticError SkipToken
 
--- Helper types and functions
+-- Helper types L.and functions
 data Error = Error
   { errorMessage :: String
   , errorType :: ErrorType

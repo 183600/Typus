@@ -10,6 +10,7 @@
 module Test.Unit.SourceLocationCoreQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -44,7 +45,7 @@ import SourceLocation
   )
 
 import Data.Text (Text)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 import Compiler.Errors.Core (ErrorLocation(..))
 
 -- ============================================================================
@@ -71,12 +72,12 @@ genSourcePos = do
   offset <- genOffset
   return $ SourcePos line column offset
 
--- Generate a source position with valid offset based on line and column
+-- Generate a source position with valid offset based on line L.and column
 genValidSourcePos :: Gen SourcePos
 genValidSourcePos = do
   line <- genLine
   column <- genColumn
-  -- Approximate offset based on line and column (assuming ~80 chars per line)
+  -- Approximate offset based on line L.and column (assuming ~80 chars per line)
   let offset = (line - 1) * 80 + (column - 1)
   return $ SourcePos line column offset
 
@@ -150,14 +151,14 @@ prop_posAfter_tab pos =
      posColumn newPos === expectedColumn .&&.
      posOffset newPos === posOffset pos + 1
 
--- Property: posAt creates position with correct line and column
+-- Property: posAt creates position with correct line L.and column
 prop_posAt_correct :: Int -> Int -> Property
 prop_posAt_correct line col =
   line > 0 && col > 0 ==>
   let pos = posAt line col
   in posLine pos === line .&&. posColumn pos === col .&&. posOffset pos === 0
 
--- Property: posAtLineCol creates position with correct line, column, and offset
+-- Property: posAtLineCol creates position with correct line, column, L.and offset
 prop_posAtLineCol_correct :: Int -> Int -> Int -> Property
 prop_posAtLineCol_correct line col offset =
   line > 0 && col > 0 && offset >= 0 ==>
@@ -178,7 +179,7 @@ prop_advancePosBy_empty pos =
 prop_advancePosBy_consistent :: SourcePos -> String -> Property
 prop_advancePosBy_consistent pos str =
   let advanced = advancePosBy str pos
-      manualAdv = foldl (flip advancePos) pos str
+      manualAdv = L.foldl (flip advancePos) pos str
   in advanced === manualAdv
 
 -- Property: advancePosByText is consistent with advancePosBy
@@ -186,7 +187,7 @@ prop_advancePosByText_consistent :: SourcePos -> Text -> Property
 prop_advancePosByText_consistent pos text =
   advancePosByText text pos === advancePosBy (T.unpack text) pos
 
--- Property: advancePosByLine advances line number and resets column
+-- Property: advancePosByLine advances line number L.and resets column
 prop_advancePosByLine_correct :: SourcePos -> Int -> Property
 prop_advancePosByLine_correct pos numLines =
   numLines >= 0 ==>
@@ -199,7 +200,7 @@ prop_advancePosByLine_correct pos numLines =
 -- SourceSpan Properties
 -- ============================================================================
 
--- Property: emptySpan creates span with same start and end
+-- Property: emptySpan creates span with same start L.and end
 prop_emptySpan_properties :: SourcePos -> Property
 prop_emptySpan_properties pos =
   let span = emptySpan pos
@@ -210,13 +211,13 @@ prop_spanFrom_equals_emptySpan :: SourcePos -> Property
 prop_spanFrom_equals_emptySpan pos =
   spanFrom pos === emptySpan pos
 
--- Property: spanTo creates span with same start and end
+-- Property: spanTo creates span with same start L.and end
 prop_spanTo_properties :: SourcePos -> Property
 prop_spanTo_properties pos =
   let span = spanTo pos
   in spanStart span === pos .&&. spanEnd span === pos
 
--- Property: spanBetween creates span with correct start and end
+-- Property: spanBetween creates span with correct start L.and end
 prop_spanBetween_correct :: SourcePos -> SourcePos -> Property
 prop_spanBetween_correct start end =
   let span = spanBetween start end
@@ -253,7 +254,7 @@ prop_isValidSpan_invalid start end =
 -- Located Properties
 -- ============================================================================
 
--- Property: locatedAt creates located value with correct position and span
+-- Property: locatedAt creates located value with correct position L.and span
 prop_locatedAt_correct :: SourcePos -> Int -> Property
 prop_locatedAt_correct pos value =
   let located = locatedAt pos value
@@ -343,10 +344,10 @@ prop_mergeSpans_contains_originals span1 span2 =
 -- Property: Located values maintain structure through mapping
 prop_mapLocated_preserves_structure :: SourcePos -> [Int] -> Property
 prop_mapLocated_preserves_structure pos values =
-  let locateds = map (`locatedAt` pos) values
-      mapped = map (mapLocated (*2)) locateds
-  in conjoin [locPos (mapped !! i) === pos | i <- [0..length values-1]] .&&.
-     conjoin [locSpan (mapped !! i) === locSpan (locateds !! i) | i <- [0..length values-1]]
+  let locateds = L.map (`locatedAt` pos) values
+      mapped = L.map (mapLocated (*2)) locateds
+  in conjoin [locPos (mapped !! i) === pos | i <- [0..L.length values-1]] .&&.
+     conjoin [locSpan (mapped !! i) === locSpan (locateds !! i) | i <- [0..L.length values-1]]
 
 -- Property: Complex position advancement scenario
 prop_complex_position_advancement :: SourcePos -> String -> String -> String -> Property
@@ -357,7 +358,7 @@ prop_complex_position_advancement pos str1 str2 str3 =
       directPos = advancePosBy (str1 ++ str2 ++ str3) pos
   in pos3 === directPos
 
--- Property: Span creation and manipulation consistency
+-- Property: Span creation L.and manipulation consistency
 prop_span_manipulation_consistency :: SourcePos -> SourcePos -> Property
 prop_span_manipulation_consistency start end =
   let span1 = spanBetween start end
@@ -387,9 +388,9 @@ tests = testGroup "SourceLocation Core QuickCheck Tests"
     ]
 
   , testGroup "SourceSpan Properties"
-    [ fastProperty "emptySpan has same start and end" prop_emptySpan_properties
+    [ fastProperty "emptySpan has same start L.and end" prop_emptySpan_properties
     , fastProperty "spanFrom equals emptySpan" prop_spanFrom_equals_emptySpan
-    , fastProperty "spanTo has same start and end" prop_spanTo_properties
+    , fastProperty "spanTo has same start L.and end" prop_spanTo_properties
     , fastProperty "spanBetween creates correct span" prop_spanBetween_correct
     , fastProperty "mergeSpans creates covering span" prop_mergeSpans_correct
     , fastProperty "mergeSpans is commutative" prop_mergeSpans_commutative

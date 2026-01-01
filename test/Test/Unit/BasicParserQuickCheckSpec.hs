@@ -19,7 +19,9 @@ import Parser (parseTypus, TypusFile(..))
 import Utils (trim, splitBy, removeComments)
 import Data.Char (isSpace, isLetter, isDigit)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, isInfixOf, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort)
 
 -- Property: Parser handles empty input gracefully
 prop_parser_empty_input :: Property
@@ -27,26 +29,26 @@ prop_parser_empty_input =
   let result = parseTypus ""
   in property $ case result of
     Left _ -> property True
-    Right ast -> property $ null (tfBlocks ast)
+    Right ast -> property $ L.null (tfBlocks ast)
 
 -- Property: Parser handles whitespace-only input
 prop_parser_whitespace_input :: String -> Property
 prop_parser_whitespace_input ws =
-  all isSpace ws ==>
+  L.all isSpace ws ==>
   let result = parseTypus ws
   in property $ case result of
     Left _ -> property True
-    Right ast -> property $ null (tfBlocks ast) || all isSpace (show ast)
+    Right ast -> property $ L.null (tfBlocks ast) || L.all isSpace (show ast)
 
 -- Property: Parser preserves identifiers
 prop_parser_preserves_identifiers :: String -> Property
 prop_parser_preserves_identifiers ident =
-  not (null ident) && all (\c -> isLetter c || isDigit c || c == '_') ident ==>
+  not (null ident) && L.all (\c -> isLetter c || isDigit c || c == '_') ident ==>
   let input = "var " ++ ident ++ " = 42"
       result = parseTypus input
   in property $ case result of
     Left _ -> property False
-    Right ast -> property $ ident `isInfixOf` show ast
+    Right ast -> property $ ident `L.isInfixOf` show ast
 
 -- Property: Parser handles numeric literals
 prop_parser_numeric_literals :: Integer -> Property
@@ -56,17 +58,17 @@ prop_parser_numeric_literals num =
       result = parseTypus input
   in property $ case result of
     Left _ -> property False
-    Right ast -> property $ show num `isInfixOf` show ast
+    Right ast -> property $ show num `L.isInfixOf` show ast
 
 -- Property: Parser handles string literals
 prop_parser_string_literals :: String -> Property
 prop_parser_string_literals content =
-  not (any (`elem` "\\\"\\n\\r") content) ==> -- Avoid problematic characters
+  not (L.any (`elem` "\\\"\\n\\r") content) ==> -- Avoid problematic characters
   let input = "var s = \"" ++ content ++ "\""
       result = parseTypus input
   in property $ case result of
     Left _ -> property False
-    Right ast -> property $ content `isInfixOf` show ast
+    Right ast -> property $ content `L.isInfixOf` show ast
 
 -- Property: Parser handles comments correctly
 prop_parser_handles_comments :: String -> String -> Property
@@ -76,7 +78,7 @@ prop_parser_handles_comments code comment =
       result = parseTypus input
   in property $ case result of
     Left _ -> property False
-    Right ast -> property $ "x" `isInfixOf` show ast
+    Right ast -> property $ "x" `L.isInfixOf` show ast
 
 -- Property: Parser handles block comments
 prop_parser_handles_block_comments :: String -> String -> Property
@@ -87,23 +89,23 @@ prop_parser_handles_block_comments before after =
       result = parseTypus input
   in property $ case result of
     Left _ -> property False
-    Right ast -> property $ before `isInfixOf` show ast .&&. after `isInfixOf` show ast
+    Right ast -> property $ before `L.isInfixOf` show ast .&&. after `L.isInfixOf` show ast
 
 -- Property: Parser handles multiple statements
 prop_parser_multiple_statements :: [String] -> Property
 prop_parser_multiple_statements statements =
-  not (null statements) && all (not . null) statements ==>
+  not (null statements) && L.all (not . null) statements ==>
   let input = Data.List.unlines statements
       result = parseTypus input
   in property $ case result of
     Left _ -> property False
-    Right ast -> property $ length (lines input) <= length (show ast)
+    Right ast -> property $ L.length (lines input) <= L.length (show ast)
 
 -- Property: Parser position tracking
 prop_parser_position_tracking :: String -> Property
 prop_parser_position_tracking content =
   let lines' = lines content
-      lineCount = length lines'
+      lineCount = L.length lines'
       result = parseTypus content
   in property $ case result of
     Left _ -> property True
@@ -112,12 +114,12 @@ prop_parser_position_tracking content =
 -- Property: Parser error recovery
 prop_parser_error_recovery :: String -> Property
 prop_parser_error_recovery malformed =
-  not (null malformed) && malformed `isInfixOf` "syntax error" ==>
+  not (null malformed) && malformed `L.isInfixOf` "syntax error" ==>
   let input = malformed ++ "\nvar x = 42"
       result = parseTypus input
   in property $ case result of
     Left _ -> property True -- Expected to fail but should recover
-    Right ast -> property $ "x" `isInfixOf` show ast
+    Right ast -> property $ "x" `L.isInfixOf` show ast
 
 -- Property: Parser handles nested structures
 prop_parser_nested_structures :: Int -> Property
@@ -128,7 +130,7 @@ prop_parser_nested_structures depth =
       result = parseTypus content
   in property $ case result of
     Left _ -> property $ depth > 3 -- May fail for deeper nesting
-    Right ast -> property $ "x" `isInfixOf` show ast
+    Right ast -> property $ "x" `L.isInfixOf` show ast
 
 -- Property: Parser handles operator precedence
 prop_parser_operator_precedence :: Int -> Int -> Int -> Property
@@ -143,56 +145,56 @@ prop_parser_operator_precedence a b c =
 -- Property: Parser handles function declarations
 prop_parser_function_declarations :: String -> Property
 prop_parser_function_declarations funcName =
-  not (null funcName) && all (\c -> isLetter c || c == '_') funcName ==>
+  not (null funcName) && L.all (\c -> isLetter c || c == '_') funcName ==>
   let input = "func " ++ funcName ++ "() { return 42 }"
       result = parseTypus input
   in property $ case result of
     Left _ -> property False
-    Right ast -> property $ funcName `isInfixOf` show ast
+    Right ast -> property $ funcName `L.isInfixOf` show ast
 
 -- Property: Parser handles function calls
 prop_parser_function_calls :: String -> [Int] -> Property
 prop_parser_function_calls funcName args =
-  not (null funcName) && all (\c -> isLetter c || c == '_') funcName && length args <= 3 ==>
+  not (null funcName) && L.all (\c -> isLetter c || c == '_') funcName && L.length args <= 3 ==>
   let argsStr = Data.List.intercalate ", " (map show args)
       input = funcName ++ "(" ++ argsStr ++ ")"
       result = parseTypus input
   in property $ case result of
     Left _ -> property False
-    Right ast -> property $ funcName `isInfixOf` show ast
+    Right ast -> property $ funcName `L.isInfixOf` show ast
 
 -- Property: Parser handles variable assignments
 prop_parser_variable_assignments :: String -> Int -> Property
 prop_parser_variable_assignments varName value =
-  not (null varName) && all (\c -> isLetter c || c == '_') varName ==>
+  not (null varName) && L.all (\c -> isLetter c || c == '_') varName ==>
   let input = varName ++ " = " ++ show value
       result = parseTypus input
   in property $ case result of
     Left _ -> property False
-    Right ast -> property $ varName `isInfixOf` show ast .&&. show value `isInfixOf` show ast
+    Right ast -> property $ varName `L.isInfixOf` show ast .&&. show value `L.isInfixOf` show ast
 
 -- Property: Parser handles type annotations
 prop_parser_type_annotations :: String -> String -> Property
 prop_parser_type_annotations varName typeName =
   not (null varName) && not (null typeName) &&
-  all (\c -> isLetter c || c == '_') varName &&
-  all isLetter typeName ==>
+  L.all (\c -> isLetter c || c == '_') varName &&
+  L.all isLetter typeName ==>
   let input = "var " ++ varName ++ " " ++ typeName ++ " = 42"
       result = parseTypus input
   in property $ case result of
     Left _ -> property False
-    Right ast -> property $ property $ varName `isInfixOf` show ast .&&. typeName `isInfixOf` show ast
+    Right ast -> property $ property $ varName `L.isInfixOf` show ast .&&. typeName `L.isInfixOf` show ast
 
 -- Property: Parser handles complex expressions
 prop_parser_complex_expressions :: [Int] -> Property
 prop_parser_complex_expressions values =
-  not (null values) && length values <= 5 ==> -- Limit complexity
+  not (null values) && L.length values <= 5 ==> -- Limit complexity
   let exprStr = Data.List.intercalate " + " (map show values)
       input = "var result = " ++ exprStr
       result = parseTypus input
   in property $ case result of
     Left _ -> property False
-    Right ast -> property $ "result" `isInfixOf` show ast
+    Right ast -> property $ "result" `L.isInfixOf` show ast
 
 -- Property: Parser idempotency with valid code
 prop_parser_idempotency :: String -> Property

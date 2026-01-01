@@ -23,7 +23,9 @@ import SourceLocation (SourcePos(..), ErrorLocation(..))
 
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import qualified Data.Map.Strict as Map
 
@@ -162,9 +164,9 @@ test_type_mismatch_detection = do
         Right result -> assertFailure "Expected type mismatch error"
         Left errors -> do
           assertBool "Should detect type mismatch" (not (null errors))
-          let firstError = head errors
+          let firstError = L.head errors
               message = ceMessage firstError
-          assertBool "Error message should mention type mismatch" ("type" `isInfixOf` message)
+          assertBool "Error message should mention type mismatch" ("type" `L.isInfixOf` message)
 
 test_variable_declaration_typing :: IO ()
 test_variable_declaration_typing = do
@@ -297,9 +299,9 @@ test_function_type_mismatch = do
         Right result -> assertFailure "Expected function type mismatch error"
         Left errors -> do
           assertBool "Should detect function type mismatch" (not (null errors))
-          let firstError = head errors
+          let firstError = L.head errors
               message = ceMessage firstError
-          assertBool "Error should mention type mismatch" ("type" `isInfixOf` message)
+          assertBool "Error should mention type mismatch" ("type" `L.isInfixOf` message)
 
 -- ============================================================================
 -- Advanced Type Features Tests
@@ -364,7 +366,7 @@ test_dependent_type_handling = do
         , "}"
         , "func main() {"
         , "    v := vector(3, [3]int{1, 2, 3})"
-        , "    return v.length"
+        , "    return v.L.length"
         , "}"
         ]
       parseResult = parseTypus content
@@ -475,7 +477,7 @@ test_continue_after_errors = do
         Right result -> assertFailure "Expected multiple type errors"
         Left errors -> do
           -- Should find multiple errors
-          assertBool "Should find multiple type errors" (length errors >= 2)
+          assertBool "Should find multiple type errors" (L.length errors >= 2)
 
 test_helpful_error_messages :: IO ()
 test_helpful_error_messages = do
@@ -496,10 +498,10 @@ test_helpful_error_messages = do
         Right result -> assertFailure "Expected type error"
         Left errors -> do
           assertBool "Should have errors" (not (null errors))
-          let firstError = head errors
+          let firstError = L.head errors
               message = ceMessage firstError
               location = ceLocation firstError
-          assertBool "Error message should be helpful" (length message > 10)
+          assertBool "Error message should be helpful" (L.length message > 10)
           assertBool "Error should have location information" (line location > 0)
 
 test_cascading_error_handling :: IO ()
@@ -522,8 +524,8 @@ test_cascading_error_handling = do
           -- Should report undefined variable but avoid excessive cascading
           assertBool "Should report undefined variable" (not (null errors))
           let errorMessages = map ceMessage errors
-              undefinedErrors = filter ("undefined" `isInfixOf`) errorMessages
-          assertBool "Should focus on primary error" (length undefinedErrors >= 1)
+              undefinedErrors = L.filter ("undefined" `L.isInfixOf`) errorMessages
+          assertBool "Should focus on primary error" (L.length undefinedErrors >= 1)
 
 test_state_maintenance :: IO ()
 test_state_maintenance = do
@@ -567,9 +569,9 @@ test_undefined_type_handling = do
         Right result -> assertFailure "Expected undefined type error"
         Left errors -> do
           assertBool "Should detect undefined type" (not (null errors))
-          let firstError = head errors
+          let firstError = L.head errors
               message = ceMessage firstError
-          assertBool "Error should mention undefined type" ("UndefinedType" `isInfixOf` message)
+          assertBool "Error should mention undefined type" ("UndefinedType" `L.isInfixOf` message)
 
 test_circular_type_definitions :: IO ()
 test_circular_type_definitions = do
@@ -599,7 +601,7 @@ test_circular_type_definitions = do
 
 test_deep_type_hierarchies :: IO ()
 test_deep_type_hierarchies = do
-  let typeDefinitions = concat $ map (\i -> "type Type" ++ show i ++ " struct { field Type" ++ show (i+1) ++ " }\n") [1..100]
+  let typeDefinitions = L.concat $ L.map (\i -> "type Type" ++ show i ++ " struct { field Type" ++ show (i+1) ++ " }\n") [1..100]
       content = typeDefinitions ++ "func main() { return Type1{} }\n"
       parseResult = parseTypus content
   case parseResult of
@@ -615,7 +617,7 @@ test_deep_type_hierarchies = do
 
 test_type_checker_limits :: IO ()
 test_type_checker_limits = do
-  let manyVariables = concat $ map (\i -> "    var" ++ show i ++ " := " ++ show i ++ "\n") [1..1000]
+  let manyVariables = L.concat $ L.map (\i -> "    var" ++ show i ++ " := " ++ show i ++ "\n") [1..1000]
       content = "func main() {\n" ++ manyVariables ++ "    return var1\n}\n"
       parseResult = parseTypus content
   case parseResult of
@@ -670,7 +672,7 @@ prop_type_errors_consistent =
            let compileResult = compileTypus typusFile
            in case compileResult of
                 Right _ -> property True
-                Left errors -> length errors > 0
+                Left errors -> L.length errors > 0
 
 prop_type_inference_preserves_semantics :: Property
 prop_type_inference_preserves_semantics =

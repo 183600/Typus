@@ -7,6 +7,7 @@ import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck as QC
 import Utils (trim, splitBy, splitByCollapsed, splitByComma, removeLineComments)
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf)
 
 -- ============================================================================
@@ -22,21 +23,21 @@ prop_trim_no_internal_change :: String -> Bool
 prop_trim_no_internal_change s = 
     let trimmed = trim s
         leadingRemoved = dropWhile isSpace s
-        trailingRemoved = reverse (dropWhile isSpace (reverse leadingRemoved))
+        trailingRemoved = L.reverse (dropWhile isSpace (L.reverse leadingRemoved))
     in trimmed == trailingRemoved
 
 -- | Test that splitBy preserves empty segments
 prop_splitBy_preserves_empty :: Char -> String -> Bool
 prop_splitBy_preserves_empty delim s = 
     let result = splitBy delim s
-        expectedCount = length (filter (== delim) s) + 1
-    in length result == expectedCount
+        expectedCount = L.length (L.filter (== delim) s) + 1
+    in L.length result == expectedCount
 
 -- | Test that splitByCollapsed removes empty segments
 prop_splitByCollapsed_removes_empty :: Char -> String -> Bool
 prop_splitByCollapsed_removes_empty delim s = 
     let result = splitByCollapsed delim s
-    in all (not . null) result
+    in L.all (not . null) result
 
 -- | Test that splitByComma is equivalent to splitBy ','
 prop_splitByComma_equals_splitBy :: String -> Bool
@@ -46,13 +47,13 @@ prop_splitByComma_equals_splitBy s = splitByComma s == splitBy ',' s
 prop_splitBy_roundtrip :: Char -> String -> Bool
 prop_splitBy_roundtrip delim s = 
     let parts = splitBy delim s
-    in concat parts ++ replicate (length (filter (== delim) s)) [delim] == s
+    in L.concat parts ++ replicate (L.length (L.filter (== delim) s)) [delim] == s
 
 -- | Test that removeLineComments only removes // comments
 prop_removeLineComments_preserves_non_comments :: String -> Bool
 prop_removeLineComments_preserves_non_comments s = 
     let withoutComments = removeLineComments s
-        hasNoCommentMarkers = not ("//" `isPrefixOf` withoutComments)
+        hasNoCommentMarkers = not ("//" `L.isPrefixOf` withoutComments)
     in hasNoCommentMarkers
 
 -- | Test that trim of empty string is empty

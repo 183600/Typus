@@ -10,6 +10,7 @@
 module Test.Unit.SourceLocationMathComprehensiveSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -32,7 +33,7 @@ import SourceLocation
   )
 
 -- | Comprehensive QuickCheck tests for SourceLocation mathematical operations
--- This module tests the mathematical properties and boundary conditions of source location handling
+-- This module tests the mathematical properties L.and boundary conditions of source location handling
 
 -- Property: startPos has correct coordinates
 prop_startPos_values :: Property
@@ -131,7 +132,7 @@ prop_spanOverlaps_symmetric :: SourceSpan -> SourceSpan -> Property
 prop_spanOverlaps_symmetric span1 span2 =
   spanOverlaps span1 span2 === spanOverlaps span2 span1
 
--- Property: spanOverlaps implies spanContains or reverse
+-- Property: spanOverlaps implies spanContains L.or L.reverse
 prop_spanOverlaps_implies_contains :: SourceSpan -> SourceSpan -> Property
 prop_spanOverlaps_implies_contains span1 span2 =
   spanOverlaps span1 span2 ==>
@@ -177,8 +178,8 @@ prop_sourcePos_ordering pos1 pos2 =
 -- Property: spanLength is non-negative
 prop_spanLength_non_negative :: SourceSpan -> Property
 prop_spanLength_non_negative span =
-  let length = spanLength span
-  in length >= 0
+  let L.length = spanLength span
+  in L.length >= 0
 
 -- Property: spanContains for identical positions
 prop_spanContains_identical_positions :: SourcePos -> Property
@@ -209,11 +210,11 @@ prop_posAdd_negative_column pos deltaCol =
 
 -- Property: spanOverlaps for adjacent spans
 prop_spanOverlaps_adjacent :: Int -> Int -> Int -> Property
-prop_spanOverlaps_adjacent line startCol length =
-  line > 0 && startCol > 0 && length > 0 ==>
+prop_spanOverlaps_adjacent line startCol L.length =
+  line > 0 && startCol > 0 && L.length > 0 ==>
   let pos1 = SourcePos line startCol
-      pos2 = SourcePos line (startCol + length - 1)
-      pos3 = SourcePos line (startCol + length)
+      pos2 = SourcePos line (startCol + L.length - 1)
+      pos3 = SourcePos line (startCol + L.length)
       span1 = SourceSpan pos1 pos2
       span2 = SourceSpan pos3 pos3
   in spanOverlaps span1 span2 === False
@@ -245,7 +246,7 @@ tests = testGroup "SourceLocation Math Comprehensive QuickCheck tests"
   , fastProperty "spanContains is reflexive" prop_spanContains_reflexive
   , fastProperty "spanContains is transitive" prop_spanContains_transitive
   , fastProperty "spanOverlaps is symmetric" prop_spanOverlaps_symmetric
-  , fastProperty "spanOverlaps implies spanContains or reverse" prop_spanOverlaps_implies_contains
+  , fastProperty "spanOverlaps implies spanContains L.or L.reverse" prop_spanOverlaps_implies_contains
   , fastProperty "spanMerge contains both original spans" prop_spanMerge_contains_both
   , fastProperty "spanMerge is commutative" prop_spanMerge_commutative
   , fastProperty "spanMerge is associative" prop_spanMerge_associative

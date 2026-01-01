@@ -22,15 +22,16 @@ import ErrorHandler (runErrorHandler)
 
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Maybe (isNothing, isJust, fromMaybe, catMaybes)
 import Data.Char (isControl, isAscii, ord, chr)
 import Control.Exception (try, SomeException, evaluate)
 
--- | Boundary condition and edge case tests
+-- | Boundary condition L.and edge case tests
 tests :: TestTree
 tests = testGroup "Boundary Condition Tests"
-  [ testGroup "Empty and Null Input Tests"
+  [ testGroup "Empty L.and Null Input Tests"
     [ testCase "empty string parsing" test_empty_string_parsing
     , testCase "null character handling" test_null_character_handling
     , testCase "whitespace only inputs" test_whitespace_only_inputs
@@ -38,8 +39,8 @@ tests = testGroup "Boundary Condition Tests"
     ]
 
   , testGroup "Size Limit Tests"
-    [ testCase "maximum string length" test_maximum_string_length
-    , testCase "minimum string length" test_minimum_string_length
+    [ testCase "L.maximum string L.length" test_maximum_string_length
+    , testCase "L.minimum string L.length" test_minimum_string_length
     , testCase "boundary sizes" test_boundary_sizes
     , fastProperty "size scaling behavior" prop_size_scaling_behavior
     ]
@@ -85,7 +86,7 @@ tests = testGroup "Boundary Condition Tests"
   ]
 
 -- ============================================================================
--- Empty and Null Input Tests
+-- Empty L.and Null Input Tests
 -- ============================================================================
 
 test_empty_string_parsing :: IO ()
@@ -95,7 +96,7 @@ test_empty_string_parsing = do
   case result of
     Left err -> assertFailure $ "Parse failed on empty input: " ++ show err
     Right file -> do
-      assertBool "Empty input should produce empty file" $ null (tfBlocks file)
+      assertBool "Empty input should produce empty file" $ L.null (tfBlocks file)
       assertBool "Empty input should have default directives" $ True
 
 test_null_character_handling :: IO ()
@@ -105,7 +106,7 @@ test_null_character_handling = do
   case result of
     Left err -> assertFailure $ "Parse failed on null character: " ++ show err
     Right file -> do
-      assertBool "Should handle null characters" $ not (null (tfBlocks file))
+      assertBool "Should handle null characters" $ not (L.null (tfBlocks file))
 
 test_whitespace_only_inputs :: IO ()
 test_whitespace_only_inputs = do
@@ -133,7 +134,7 @@ prop_empty_input_consistency =
       trim2 = trim emptyContent
   in case (parse1, parse2) of
        (Right f1, Right f2) -> property $ 
-         length (tfBlocks f1) == length (tfBlocks f2) && trim1 == trim2
+         L.length (tfBlocks f1) == L.length (tfBlocks f2) && trim1 == trim2
        _ -> property True
 
 -- ============================================================================
@@ -146,7 +147,7 @@ test_maximum_string_length = do
       largeContent = take maxSize $ cycle "func test() { return 42; }\n"
       result = parseTypus largeContent "large.typus"
   case result of
-    Right file -> assertBool "Should handle large strings" $ not (null (tfBlocks file))
+    Right file -> assertBool "Should handle large strings" $ not (L.null (tfBlocks file))
     Left _ -> return ()  -- May fail due to size limits, which is acceptable
 
 test_minimum_string_length :: IO ()
@@ -178,7 +179,7 @@ prop_size_scaling_behavior size =
   let content = take size $ cycle "func test() { return 42; }"
       result = parseTypus content "scaling.typus"
   in case result of
-       Right file -> property $ length (tfBlocks file) >= 0
+       Right file -> property $ L.length (tfBlocks file) >= 0
        Left _ -> property $ size > 1000  -- Large inputs may fail
 
 -- ============================================================================
@@ -240,7 +241,7 @@ prop_character_edge_cases char =
   let content = "func test() { return \"" ++ [char] ++ "\"; }"
       result = parseTypus content "edge-char.typus"
   in case result of
-       Right file -> property $ length (tfBlocks file) >= 0
+       Right file -> property $ L.length (tfBlocks file) >= 0
        Left _ -> property $ isControl char  -- Control chars may fail
 
 -- ============================================================================
@@ -302,7 +303,7 @@ test_deeply_nested_structures = do
       nestedContent = unlines $ replicate maxDepth "    func nested() { return 42; }"
       result = parseTypus nestedContent "deep.typus"
   case result of
-    Right file -> assertBool "Should handle deeply nested structures" $ not (null (tfBlocks file))
+    Right file -> assertBool "Should handle deeply nested structures" $ not (L.null (tfBlocks file))
     Left _ -> return ()  -- May fail due to depth limits
 
 test_wide_structures :: IO ()
@@ -311,7 +312,7 @@ test_wide_structures = do
       wideContent = "func wide() { " ++ unwords (replicate maxWidth "x") ++ " }"
       result = parseTypus wideContent "wide.typus"
   case result of
-    Right file -> assertBool "Should handle wide structures" $ not (null (tfBlocks file))
+    Right file -> assertBool "Should handle wide structures" $ not (L.null (tfBlocks file))
     Left _ -> return ()  -- May fail due to width limits
 
 test_empty_structures :: IO ()
@@ -327,7 +328,7 @@ test_empty_structures = do
     testEmptyStructure content = do
       let result = parseTypus content "empty-struct.typus"
       case result of
-        Right file -> assertBool "Should handle empty structures" $ not (null (tfBlocks file))
+        Right file -> assertBool "Should handle empty structures" $ not (L.null (tfBlocks file))
         Left _ -> return ()
 
 prop_structure_complexity_limits :: Int -> Property
@@ -336,7 +337,7 @@ prop_structure_complexity_limits complexity =
   let content = unlines $ replicate complexity "func test() { return 42; }"
       result = parseTypus content "complexity.typus"
   in case result of
-       Right file -> property $ length (tfBlocks file) >= 0
+       Right file -> property $ L.length (tfBlocks file) >= 0
        Left _ -> property $ complexity > 100  -- High complexity may fail
 
 -- ============================================================================
@@ -365,7 +366,7 @@ prop_memory_usage_boundaries size =
   size > 0 && size <= 10000 ==>
   let content = replicate size 'x'
       result = trim content
-  in property $ length result <= size
+  in property $ L.length result <= size
 
 -- ============================================================================
 -- Time Boundary Tests
@@ -425,14 +426,14 @@ test_exception_recovery = do
       result = parseTypus mixedContent "recovery.typus"
   case result of
     Right file -> do
-      assertBool "Should recover from exceptions" $ not (null (tfBlocks file))
+      assertBool "Should recover from exceptions" $ not (L.null (tfBlocks file))
       let syntaxErrors = tfSyntaxErrors file
       assertBool "Should record errors" $ not (null syntaxErrors)
     Left _ -> return ()  -- May fail entirely
 
 prop_exception_safety :: String -> Property
 prop_exception_safety content =
-  length content <= 100 ==>
+  L.length content <= 100 ==>
   let result = try $ evaluate $ parseTypus content "safety.typus"
   in case result of
        Right (Right _) -> property True  -- Success

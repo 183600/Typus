@@ -1,6 +1,7 @@
 module Test.Unit.CabalEndToEndSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty)
 
@@ -62,21 +63,21 @@ tests =
               Left parseErr -> do
                 -- Should provide formatted error
                 let formatted = ErrorHandler.formatError parseErr
-                length formatted > 0 @?= True
+                L.length formatted > 0 @?= True
               Right parsed -> do
                 -- Even if parse succeeds, validation should catch issues
                 let validationResult = SyntaxValidator.validate parsed
                 case validationResult of
                   Left validationErr -> do
                     let formatted = ErrorHandler.formatError validationErr
-                    length formatted > 0 @?= True
+                    L.length formatted > 0 @?= True
                   Right validated -> do
                     -- Compilation should handle remaining issues
                     let compileResult = Compiler.compile validated
                     case compileResult of
                       Left compileErr -> do
                         let formatted = ErrorHandler.formatError compileErr
-                        length formatted > 0 @?= True
+                        L.length formatted > 0 @?= True
                       Right compiled -> compiled `seq` True @?= True
 
         , testCase "Complex multi-function pipeline" $ do
@@ -150,7 +151,7 @@ tests =
               Left err -> @?= "Application parse failed" (show err)
               Right parsed -> do
                 -- Should have multiple code blocks
-                length (Parser.tfCodeBlocks parsed) >= 3 @?= True
+                L.length (Parser.tfCodeBlocks parsed) >= 3 @?= True
 
         , testCase "Error handling in realistic scenarios" $ do
             let realisticError = unlines
@@ -163,14 +164,14 @@ tests =
                   , "  for (item in data) {"
                   , "    total := total + item;"
                   , "  }"
-                  , "  return total / length(data);"
+                  , "  return total / L.length(data);"
                   , "}"
                   ]
                 parseResult = Parser.parseTypus "realistic" realisticError
             case parseResult of
               Left err -> do
                 let formatted = ErrorHandler.formatError err
-                "line" `isInfixOf` formatted @?= True
+                "line" `L.isInfixOf` formatted @?= True
               Right parsed -> parsed `seq` True @?= True
 
         , testCase "Performance-critical scenario" $ do
@@ -211,7 +212,7 @@ tests =
                 utilsFile = unlines
                   [ "// @ownership: false"
                   , "func processWithUtils(data: Data) : int {"
-                  , "  return length(data.items);"
+                  , "  return L.length(data.items);"
                   , "}"
                   ]
                 dataFile = unlines
@@ -227,14 +228,14 @@ tests =
                 mainResult = Parser.parseTypus "main" mainFile
                 utilsResult = Parser.parseTypus "utils" utilsFile
                 dataResult = Parser.parseTypus "data" dataFile
-            all isSuccess [mainResult, utilsResult, dataResult] @?= True
+            L.all isSuccess [mainResult, utilsResult, dataResult] @?= True
 
         , testCase "File directive consistency across files" $ do
             let file1 = "// @ownership: true\nfunc test1() {}"
                 file2 = "// @ownership: false\nfunc test2() {}"
                 file3 = "// @dependent-types: true\nfunc test3() {}"
-                results = map (Parser.parseTypus "file") [file1, file2, file3]
-            all isSuccess results @?= True
+                results = L.map (Parser.parseTypus "file") [file1, file2, file3]
+            L.all isSuccess results @?= True
         ]
 
     , testGroup "Toolchain Integration"
@@ -281,7 +282,7 @@ tests =
             \input -> 
                 let result = Parser.parseTypus "error-property" input
                 in case result of
-                     Left err -> length (show err) > 0  -- Errors should have messages
+                     Left err -> L.length (show err) > 0  -- Errors should have messages
                      Right _ -> True  -- Valid inputs should succeed
 
         , testProperty "Source location consistency" $ do
@@ -291,11 +292,11 @@ tests =
                      Left err -> 
                        -- Errors should have location information when possible
                        let errStr = show err
-                       in length (lines input) <= 1 || "line" `isInfixOf` errStr || True
+                       in L.length (lines input) <= 1 || "line" `L.isInfixOf` errStr || True
                      Right parsed -> parsed `seq` True
         ]
 
-    , testGroup "Robustness and Recovery"
+    , testGroup "Robustness L.and Recovery"
         [ testCase "Graceful degradation on partial failures" $ do
             let partialInput = unlines
                   [ "// @ownership: true"
@@ -307,10 +308,10 @@ tests =
             case parseResult of
               Left err -> do
                 -- Should report error but not crash
-                length (show err) > 0 @?= True
+                L.length (show err) > 0 @?= True
               Right parsed -> 
                 -- Should parse what it can
-                length (Parser.tfCodeBlocks parsed) >= 1 @?= True
+                L.length (Parser.tfCodeBlocks parsed) >= 1 @?= True
 
         , testCase "Recovery from syntax errors" $ do
             let recoverableInput = unlines
@@ -322,7 +323,7 @@ tests =
             case parseResult of
               Left err -> 
                 -- Should provide meaningful error information
-                length (show err) > 0 @?= True
+                L.length (show err) > 0 @?= True
               Right parsed -> parsed `seq` True @?= True
         ]
     ]
@@ -333,9 +334,9 @@ isSuccess (Right _) = True
 isSuccess (Left _) = False
 
 isInfixOf :: Eq a => [a] -> [a] -> Bool
-isInfixOf needle haystack = needle `isPrefixOf` haystack || 
-                              (not (null haystack) && isInfixOf needle (tail haystack))
+L.isInfixOf needle haystack = needle `L.isPrefixOf` haystack || 
+                              (not (null haystack) && L.isInfixOf needle (L.tail haystack))
   where
-    isPrefixOf [] _ = True
-    isPrefixOf _ [] = False
-    isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
+    L.isPrefixOf [] _ = True
+    L.isPrefixOf _ [] = False
+    L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys

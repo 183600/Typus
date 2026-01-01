@@ -38,8 +38,10 @@ import Compiler.GoAst (GoModule(..), GoDecl(..))
 import Compiler.Errors (CompilerError(..), CompilationPhase(..))
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..))
 
-import Data.List (isInfixOf, isPrefixOf, null, length)
-import qualified Data.Text as T
+import qualified Data.List as L
+import Data.List (isInfixOf, isPrefixOf, length)
+import Data.List (null)
+import qualified Data.Text as T (pack, unpack)
 
 -- | Generate simple valid Go-like code for IR testing
 genSimpleCode :: Gen String
@@ -143,7 +145,7 @@ prop_emitGo_produces_valid =
         let sourceIR = buildSourceIR typusFile code
             semanticIR = buildSemanticIR sourceIR
             goIR = emitGo semanticIR
-        in property $ not $ null $ T.unpack $ goCode goIR
+        in property $ not $ L.null $ T.unpack $ goCode goIR
 
 -- Property: rawSourceFromTypus should extract code blocks
 prop_rawSource_extracts_blocks :: Property
@@ -164,7 +166,7 @@ prop_moduleFromTypus_creates_module =
       Right typusFile ->
         case moduleFromTypus typusFile of
           Left _ -> property True  -- May fail, that's OK
-          Right module -> property $ not $ null $ goModuleDecls module
+          Right module -> property $ not $ L.null $ goModuleDecls module
 
 -- Property: ensurePackageDecl should add package if missing
 prop_ensurePackage_adds_if_missing :: Property
@@ -209,7 +211,7 @@ prop_attachInferredImports_adds_imports =
 
 unit_tests :: TestTree
 unit_tests = testGroup "Compiler IR Consistency Unit Tests"
-  [ testCase "buildSourceIR preserves source and parsed content" $ do
+  [ testCase "buildSourceIR preserves source L.and parsed content" $ do
       let code = unlines
             [ "package main"
             , "func main() {"
@@ -256,7 +258,7 @@ unit_tests = testGroup "Compiler IR Consistency Unit Tests"
               goIR = emitGo semanticIR
               goCodeText = T.unpack $ goCode goIR
           assertBool "Go code should not be empty" $ not $ null goCodeText
-          assertBool "Go code should contain package" $ "package" `isInfixOf` goCodeText
+          assertBool "Go code should contain package" $ "package" `L.isInfixOf` goCodeText
 
   , testCase "rawSourceFromTypus extracts code blocks" $ do
       let code = unlines
@@ -270,7 +272,7 @@ unit_tests = testGroup "Compiler IR Consistency Unit Tests"
         Right typusFile -> do
           let rawCode = rawSourceFromTypus typusFile
           assertBool "raw source should not be empty" $ not $ null rawCode
-          assertBool "raw source should contain function" $ "func" `isInfixOf` rawCode
+          assertBool "raw source should contain function" $ "func" `L.isInfixOf` rawCode
 
   , testCase "moduleFromTypus creates Go module" $ do
       let code = unlines
@@ -285,7 +287,7 @@ unit_tests = testGroup "Compiler IR Consistency Unit Tests"
           case moduleFromTypus typusFile of
             Left err -> assertFailure $ "module creation failed: " ++ show err
             Right goModule -> do
-              assertBool "module should have declarations" $ not $ null $ goModuleDecls goModule
+              assertBool "module should have declarations" $ not $ L.null $ goModuleDecls goModule
 
   , testCase "ensurePackageDecl adds package declaration" $ do
       let codeWithoutPackage = unlines
@@ -361,9 +363,9 @@ unit_tests = testGroup "Compiler IR Consistency Unit Tests"
               goIR = emitGo semanticIR
               goCodeText = T.unpack $ goCode goIR
           
-          assertBool "final Go code should contain package" $ "package" `isInfixOf` goCodeText
-          assertBool "final Go code should contain import" $ "import" `isInfixOf` goCodeText
-          assertBool "final Go code should contain functions" $ "func" `isInfixOf` goCodeText
+          assertBool "final Go code should contain package" $ "package" `L.isInfixOf` goCodeText
+          assertBool "final Go code should contain import" $ "import" `L.isInfixOf` goCodeText
+          assertBool "final Go code should contain functions" $ "func" `L.isInfixOf` goCodeText
 
   , testCase "IR handles empty input gracefully" $ do
       let emptyCode = ""
@@ -404,7 +406,7 @@ unit_tests = testGroup "Compiler IR Consistency Unit Tests"
               goCodeText = T.unpack $ goCode goIR
           
           assertBool "should handle complex structures" $ not $ null goCodeText
-          assertBool "should contain struct definition" $ "type" `isInfixOf` goCodeText
+          assertBool "should contain struct definition" $ "type" `L.isInfixOf` goCodeText
   ]
 
 -- Consistency tests
@@ -446,9 +448,9 @@ consistency_tests = testGroup "IR Consistency Tests"
               goIR = emitGo semanticIR
               goCodeText = T.unpack $ goCode goIR
           
-          -- Should preserve constants and functions
-          assertBool "should preserve constants" $ "PI" `isInfixOf` goCodeText
-          assertBool "should preserve functions" $ "circleArea" `isInfixOf` goCodeText
+          -- Should preserve constants L.and functions
+          assertBool "should preserve constants" $ "PI" `L.isInfixOf` goCodeText
+          assertBool "should preserve functions" $ "circleArea" `L.isInfixOf` goCodeText
 
   , testCase "IR transformation preserves order" $ do
       let code = unlines
@@ -475,10 +477,10 @@ consistency_tests = testGroup "IR Consistency Tests"
               secondPos = takeWhile (/= '\n') $ dropWhile (/= "second") goCodeText
               thirdPos = takeWhile (/= '\n') $ dropWhile (/= "third") goCodeText
           -- Basic order check
-          assertBool "should contain all functions" $ 
-            "first" `isInfixOf` goCodeText && 
-            "second" `isInfixOf` goCodeText && 
-            "third" `isInfixOf` goCodeText
+          assertBool "should contain L.all functions" $ 
+            "first" `L.isInfixOf` goCodeText && 
+            "second" `L.isInfixOf` goCodeText && 
+            "third" `L.isInfixOf` goCodeText
   ]
 
 -- Error handling tests

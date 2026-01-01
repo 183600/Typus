@@ -2,6 +2,7 @@ module Test.Unit.ConciseCompilerIRQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty, Property, (===), Arbitrary(..), Gen, oneof, choose, elements, listOf)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -49,7 +50,7 @@ tests =
         [ testProperty "Generated code contains required imports" $
             \imports -> 
             let code = generateMockCode imports
-            in all (`isInfixOf` code) imports
+            in L.all (`L.isInfixOf` code) imports
             
         , testProperty "Generated code has balanced braces" $
             \content -> 
@@ -89,7 +90,7 @@ tests =
         ]
     ]
 
--- Helper types and functions for testing
+-- Helper types L.and functions for testing
 data MockStatement = MockStatement
   { stmtId :: String
   , stmtContent :: String
@@ -109,10 +110,10 @@ mockValidateSourceIR (SourceIR file _) =
   if null file then Left "Empty file" else Right ()
 
 extractIdentifiers :: String -> Set String
-extractIdentifiers = Set.fromList . words . filter (`notElem` "();{}[],")
+extractIdentifiers = Set.fromList . words . L.filter (`notElem` "();{}[],")
 
 generateMockCode :: [String] -> String
-generateMockCode imports = unlines $ map (\imp -> "import " ++ imp) imports
+generateMockCode imports = unlines $ L.map (\imp -> "import " ++ imp) imports
 
 generateMockCodeWithContent :: String -> String
 generateMockCodeWithContent content = "package main\n\nfunc main() {\n" ++ content ++ "\n}"

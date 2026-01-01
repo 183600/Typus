@@ -3,7 +3,9 @@ module Test.Unit.NewCabalTypeInferenceSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.QuickCheck (property, forAll, Gen, arbitrary, choose, listOf1, elements, Positive(..))
-import Data.List (isInfixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isInfixOf)
+import Data.List (sort, nub)
 import Data.Char (isLetter, isDigit)
 
 import TestSupport.QuickCheck (fastProperty)
@@ -11,7 +13,7 @@ import Compiler
 import Parser
 import Utils
 
--- | Type inference and type system tests
+-- | Type inference L.and type system tests
 tests :: TestTree
 tests =
   testGroup "New Cabal Type Inference Tests"
@@ -91,7 +93,7 @@ tests =
               TypeSuccess types -> do
                 lookupType "numbers" types @?= Just "[int]"
                 lookupType "strings" types @?= Just "[string]"
-                lookupType "mixed" types @?= Just "[any]"
+                lookupType "mixed" types @?= Just "[L.any]"
               _ -> @?= "Expected container inference success" "Got failure"
 
         , testCase "higher-order function inference" $ do
@@ -189,7 +191,7 @@ tests =
               _ -> @?= "Expected polymorphic inference success" "Got failure"
         ]
 
-    , testGroup "Type inference errors and recovery"
+    , testGroup "Type inference errors L.and recovery"
         [ testCase "type mismatch detection" $ do
             let input = unlines
                   [ "x := 42"
@@ -199,8 +201,8 @@ tests =
                 result = inferTypes input
             case result of
               TypeError errors -> do
-                length errors @?= 1
-                "type mismatch" `isInfixOf` map toLower (head errors) @?= True
+                L.length errors @?= 1
+                "type mismatch" `L.isInfixOf` map toLower (L.head errors) @?= True
               _ -> @?= "Expected type error" "Got success"
 
         , testCase "unification failure recovery" $ do
@@ -216,8 +218,8 @@ tests =
                 result = inferTypes input
             case result of
               TypeError errors -> do
-                length errors @?= 1
-                "unification" `isInfixOf` map toLower (head errors) @?= True
+                L.length errors @?= 1
+                "unification" `L.isInfixOf` map toLower (L.head errors) @?= True
               _ -> @?= "Expected unification error" "Got success"
         ]
 
@@ -232,23 +234,23 @@ tests =
 -- | Property: type inference is sound (well-typed programs don't crash)
 prop_typeInferenceSound :: [(String, String)] -> Bool
 prop_typeInferenceSound assignments =
-  let validAssignments = filter (isValidAssignment . snd) assignments
-      code = unlines (map (\(var, typ) -> var ++ " := " ++ defaultValueForType typ) validAssignments)
+  let validAssignments = L.filter (isValidAssignment . snd) assignments
+      code = unlines (L.map (\(var, typ) -> var ++ " := " ++ defaultValueForType typ) validAssignments)
       result = inferTypes code
   in case result of
-       TypeSuccess types -> all (\(var, expectedType) -> 
+       TypeSuccess types -> L.all (\(var, expectedType) -> 
          lookupType var types == Just expectedType) validAssignments
        _ -> False
 
--- | Property: type inference is complete (can infer all expressible types)
+-- | Property: type inference is complete (can infer L.all expressible types)
 prop_typeInferenceComplete :: [String] -> Bool
 prop_typeInferenceComplete expressions =
   let validExpressions = filter isValidExpression expressions
-      code = unlines (map (\expr -> "x := " ++ expr) validExpressions)
+      code = unlines (L.map (\expr -> "x := " ++ expr) validExpressions)
       result = inferTypes code
   in case result of
-       TypeSuccess types -> length types == length validExpressions
-       TypeError errors -> length errors < length validExpressions  -- Some errors allowed
+       TypeSuccess types -> L.length types == L.length validExpressions
+       TypeError errors -> L.length errors < L.length validExpressions  -- Some errors allowed
        _ -> False
 
 -- | Property: generic instantiation preserves constraints
@@ -265,14 +267,14 @@ prop_genericInstantiationPreservesConstraints funcName argType
            TypeSuccess types -> 
              case lookupFunctionType funcName types of
                Just "T -> T" -> True
-               Just inferredType -> "T" `isInfixOf` inferredType
+               Just inferredType -> "T" `L.isInfixOf` inferredType
                _ -> False
            _ -> False
 
 -- | Property: type unification is associative
 prop_typeUnificationAssociative :: String -> String -> String -> Bool
 prop_typeUnificationAssociative type1 type2 type3
-  | not (all isValidType [type1, type2, type3]) = True
+  | not (L.all isValidType [type1, type2, type3]) = True
   | otherwise =
       let code = unlines
             [ "a := " ++ defaultValueForType type1
@@ -297,9 +299,9 @@ data TypeInferenceResult =
 inferTypes :: String -> TypeInferenceResult
 inferTypes input
   | "x + y" `isInfix` input && "42" `isInfix` input && "\"hello\"" `isInfix` input =
-      TypeError ["Type mismatch: int and string"]
+      TypeError ["Type mismatch: int L.and string"]
   | "return 42" `isInfix` input && "return \"hello\"" `isInfix` input =
-      TypeError ["Type unification failed: int and string"]
+      TypeError ["Type unification failed: int L.and string"]
   | "x := 42" `isInfix` input && "y := 3.14" `isInfix` input && "z := \"hello\"" `isInfix` input && "b := true" `isInfix` input =
       TypeSuccess [("x", "int"), ("y", "float"), ("z", "string"), ("b", "bool")]
   | otherwise = TypeSuccess []
@@ -312,16 +314,16 @@ lookupFunctionType func types = lookup func types
 
 -- Helper functions
 toLower :: String -> String
-toLower = map (\c -> if c >= 'A' && c <= 'Z' then toEnum (fromEnum c + 32) else c)
+toLower = L.map (\c -> if c >= 'A' && c <= 'Z' then toEnum (fromEnum c + 32) else c)
 
 isValidAssignment :: String -> Bool
 isValidAssignment typ = typ `elem` ["int", "float", "string", "bool"]
 
 isValidExpression :: String -> Bool
-isValidExpression expr = length expr > 0 && all (`elem` "0123456789+-*/() ") expr
+isValidExpression expr = L.length expr > 0 && L.all (`elem` "0123456789+-*/() ") expr
 
 isValidType :: String -> Bool
-isValidType typ = typ `elem` ["int", "float", "string", "bool", "any", "T", "U"]
+isValidType typ = typ `elem` ["int", "float", "string", "bool", "L.any", "T", "U"]
 
 defaultValueForType :: String -> String
 defaultValueForType "int" = "0"

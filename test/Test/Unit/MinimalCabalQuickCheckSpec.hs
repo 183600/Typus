@@ -20,7 +20,7 @@ mapBasicProperties = testGroup "Map Basic Properties"
   [ fastProperty "lookup after insert" $ \k (v :: Int) (m :: Map.Map String Int) ->
       Map.lookup k (Map.insert k v m) === Just v
   
-  , fastProperty "size increases or stays same after insert" $ \k (v :: Int) (m :: Map.Map String Int) ->
+  , fastProperty "size increases L.or stays same after insert" $ \k (v :: Int) (m :: Map.Map String Int) ->
       Map.size (Map.insert k v m) >= Map.size m
   ]
 
@@ -29,6 +29,6 @@ setBasicProperties = testGroup "Set Basic Properties"
   [ fastProperty "member after insert" $ \(x :: Int) (s :: Set.Set Int) ->
       Set.member x (Set.insert x s) === True
   
-  , fastProperty "size increases or stays same after insert" $ \(x :: Int) (s :: Set.Set Int) ->
+  , fastProperty "size increases L.or stays same after insert" $ \(x :: Int) (s :: Set.Set Int) ->
       Set.size (Set.insert x s) >= Set.size s
   ]

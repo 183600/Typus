@@ -14,6 +14,7 @@ import Test.QuickCheck
   )
 
 import Ownership (OwnershipType(..), OwnershipError(..), OwnershipAnalyzer(..), newOwnershipAnalyzer)
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 -- Missing type definitions for generic ownership tests
@@ -32,7 +33,7 @@ data GenericType = GenericType String Type deriving (Eq, Show)
 
 data GenericOwnership = GenericOwnership Bool deriving (Eq, Show)
 
--- Ord instances for OwnershipType and OwnershipError are now defined in Ownership.Common.Types
+-- Ord instances for OwnershipType L.and OwnershipError are now defined in Ownership.Common.Types
 
 -- Property: OwnershipType with owner name
 prop_owned_preserves_name :: String -> Property
@@ -158,7 +159,7 @@ prop_dangling_borrow_detection borrow target =
 -- Property: Ownership transfer chain
 prop_ownership_transfer_chain :: [String] -> Property
 prop_ownership_transfer_chain chain =
-  length chain >= 2 ==> 
+  L.length chain >= 2 ==> 
   property $ True -- This would need actual transfer chain tracking
 
 -- Property: Borrow scope validation
@@ -233,9 +234,9 @@ prop_ownershiptype_show_contains_name name =
       shownOwned = show owned
       shownBorrowed = show borrowed
       shownMutBorrowed = show mutBorrowed
-  in property $ name `isInfixOf` shownOwned &&
-                name `isInfixOf` shownBorrowed && 
-                name `isInfixOf` shownMutBorrowed
+  in property $ name `L.isInfixOf` shownOwned &&
+                name `L.isInfixOf` shownBorrowed && 
+                name `L.isInfixOf` shownMutBorrowed
 
 -- Property: UseAfterMove error
 prop_useaftermove :: String -> Property
@@ -399,9 +400,9 @@ prop_ownershiperror_show_contains_var varName =
       shownUseAfterMove = show useAfterMove
       shownBorrowWhileMoved = show borrowWhileMoved
       shownOutOfScope = show outOfScope
-  in property $ varName `isInfixOf` shownUseAfterMove &&
-                varName `isInfixOf` shownBorrowWhileMoved && 
-                varName `isInfixOf` shownOutOfScope
+  in property $ varName `L.isInfixOf` shownUseAfterMove &&
+                varName `L.isInfixOf` shownBorrowWhileMoved && 
+                varName `L.isInfixOf` shownOutOfScope
 
 -- Property: OwnershipError show contains message
 prop_ownershiperror_show_contains_message :: String -> Property
@@ -412,9 +413,9 @@ prop_ownershiperror_show_contains_message message =
       shownBorrowError = show borrowError
       shownParseError = show parseError
       shownControlFlowError = show controlFlowError
-  in property $ message `isInfixOf` shownBorrowError &&
-     message `isInfixOf` shownParseError &&
-     message `isInfixOf` shownControlFlowError
+  in property $ message `L.isInfixOf` shownBorrowError &&
+     message `L.isInfixOf` shownParseError &&
+     message `L.isInfixOf` shownControlFlowError
 
 -- Property: OwnershipAnalyzer constructor
 prop_newownershipanalyzer :: Property
@@ -434,7 +435,7 @@ prop_ownershipanalyzer_show :: Property
 prop_ownershipanalyzer_show =
   let analyzer = newOwnershipAnalyzer
       shown = show analyzer
-  in property $ "OwnershipAnalyzer" `isInfixOf` shown
+  in property $ "OwnershipAnalyzer" `L.isInfixOf` shown
 
 -- Property: OwnershipType with empty name
 prop_ownershiptype_empty_name :: Property
@@ -610,7 +611,7 @@ prop_ownership_state_transitions initialState transitions =
 -- Property: Ownership analyzer performance
 prop_ownership_analyzer_performance :: [(String, OwnershipType)] -> [String] -> Property
 prop_ownership_analyzer_performance ownershipState operations =
-  length ownershipState <= 100 ==> -- Limit for performance
+  L.length ownershipState <= 100 ==> -- Limit for performance
   let analysisResult = performOwnershipAnalysis ownershipState operations
   in property $ analysisCompletesInReasonableTime analysisResult
 
@@ -701,14 +702,14 @@ prop_borrowing_conflict_resolution ownershipState conflicts =
 -- Property: Ownership analysis optimization
 prop_ownership_analysis_optimization :: [(String, OwnershipType)] -> [String] -> Property
 prop_ownership_analysis_optimization ownershipState operations =
-  length ownershipState <= 50 ==> -- Limit for optimization testing
+  L.length ownershipState <= 50 ==> -- Limit for optimization testing
   let optimized = optimizeOwnershipAnalysis ownershipState operations
   in property $ optimizationIsCorrect optimized ownershipState operations
 
 -- Helper functions for advanced tests
 isValidOwnershipLifecycle :: [OwnershipType] -> String -> Bool
 isValidOwnershipLifecycle lifecycle varName = 
-  not (null lifecycle) && all isValidOwnershipType lifecycle
+  not (null lifecycle) && L.all isValidOwnershipType lifecycle
 
 isValidOwnershipType :: OwnershipType -> Bool
 isValidOwnershipType (Owned name) = not (null name)
@@ -749,25 +750,25 @@ propagateOwnershipErrors :: [OwnershipError] -> [String] -> [OwnershipError]
 propagateOwnershipErrors errors _ = errors -- Simplified
 
 errorPropagationMaintainsInfo :: [OwnershipError] -> [OwnershipError] -> [String] -> Bool
-errorPropagationMaintainsInfo propagated base _ = length propagated >= length base
+errorPropagationMaintainsInfo propagated base _ = L.length propagated >= L.length base
 
 simulateOwnershipOperations :: [(String, OwnershipType)] -> [String] -> [(String, OwnershipType)]
 simulateOwnershipOperations state _ = state -- Simplified
 
 finalStateIsValid :: [(String, OwnershipType)] -> [(String, OwnershipType)] -> [String] -> Bool
-finalStateIsValid final initial _ = length final == length initial
+finalStateIsValid final initial _ = L.length final == L.length initial
 
 inferOwnershipTypes :: [String] -> [(String, OwnershipType)]
 inferOwnershipTypes vars = zip vars (repeat (Owned "inferred")) -- Simplified
 
 inferenceIsConsistent :: [(String, OwnershipType)] -> [OwnershipType] -> [String] -> Bool
-inferenceIsConsistent inferred _ vars = length inferred == length vars
+inferenceIsConsistent inferred _ vars = L.length inferred == L.length vars
 
 analyzeLifetimes :: [(String, Int)] -> [(String, Int)] -> [(String, Bool)]
-analyzeLifetimes lifetimes _ = map (\(name, _) -> (name, True)) lifetimes -- Simplified
+analyzeLifetimes lifetimes _ = L.map (\(name, _) -> (name, True)) lifetimes -- Simplified
 
 lifetimeAnalysisIsCorrect :: [(String, Bool)] -> [(String, Int)] -> [(String, Int)] -> Bool
-lifetimeAnalysisIsCorrect analysis lifetimes _ = length analysis == length lifetimes
+lifetimeAnalysisIsCorrect analysis lifetimes _ = L.length analysis == L.length lifetimes
 
 checkOwnershipConstraints :: [(String, OwnershipType)] -> [(String, String)] -> Bool
 checkOwnershipConstraints _ _ = True -- Simplified
@@ -797,20 +798,20 @@ attemptOwnershipErrorRecovery :: [OwnershipError] -> [(String, OwnershipType)] -
 attemptOwnershipErrorRecovery _ state = Just state -- Simplified
 
 recoveryAttemptsAreValid :: Maybe [(String, OwnershipType)] -> [OwnershipError] -> [(String, OwnershipType)] -> Bool
-recoveryAttemptsAreValid (Just recovered) _ original = length recovered == length original
+recoveryAttemptsAreValid (Just recovered) _ original = L.length recovered == L.length original
 recoveryAttemptsAreValid Nothing _ _ = False
 
 inferOwnershipFromUsage :: [String] -> [(String, String)] -> [(String, OwnershipType)]
 inferOwnershipFromUsage expressions _ = zip expressions (repeat (Owned "inferred")) -- Simplified
 
 typeInferenceIsConsistent :: [(String, OwnershipType)] -> [String] -> [(String, String)] -> Bool
-typeInferenceIsConsistent inferred expressions _ = length inferred == length expressions
+typeInferenceIsConsistent inferred expressions _ = L.length inferred == L.length expressions
 
 trackBorrowingLifetimes :: [(String, Int)] -> [(String, Int, String)] -> [(String, Int)]
 trackBorrowingLifetimes lifetimes _ = lifetimes -- Simplified
 
 lifetimeTrackingIsCorrect :: [(String, Int)] -> [(String, Int)] -> [(String, Int, String)] -> Bool
-lifetimeTrackingIsCorrect tracking original _ = length tracking == length original
+lifetimeTrackingIsCorrect tracking original _ = L.length tracking == L.length original
 
 detectOwnershipMoves :: [(String, OwnershipType)] -> [String] -> [(String, OwnershipError)]
 detectOwnershipMoves _ _ = [] -- Simplified
@@ -822,25 +823,25 @@ analyzeOwnershipAliases :: [(String, OwnershipType)] -> [(String, String)] -> [(
 analyzeOwnershipAliases _ aliases = aliases -- Simplified
 
 aliasAnalysisIsCorrect :: [(String, String)] -> [(String, OwnershipType)] -> [(String, String)] -> Bool
-aliasAnalysisIsCorrect analysis _ original = length analysis == length original
+aliasAnalysisIsCorrect analysis _ original = L.length analysis == L.length original
 
 analyzeComplexBorrowingPatterns :: [(String, OwnershipType)] -> [[String]] -> [String]
-analyzeComplexBorrowingPatterns _ patterns = concat patterns -- Simplified
+analyzeComplexBorrowingPatterns _ patterns = L.concat patterns -- Simplified
 
 patternAnalysisIsCorrect :: [String] -> [(String, OwnershipType)] -> [[String]] -> Bool
-patternAnalysisIsCorrect analysis _ patterns = length analysis == sum (map length patterns)
+patternAnalysisIsCorrect analysis _ patterns = L.length analysis == L.sum (map L.length patterns)
 
 createOwnershipValidationChain :: [OwnershipType] -> [String] -> [Bool]
-createOwnershipValidationChain types _ = map (const True) types -- Simplified
+createOwnershipValidationChain types _ = L.map (const True) types -- Simplified
 
 validationChainIsCorrect :: [Bool] -> [OwnershipType] -> [String] -> Bool
-validationChainIsCorrect chain types _ = length chain == length types
+validationChainIsCorrect chain types _ = L.length chain == L.length types
 
 preserveErrorContext :: [OwnershipError] -> [String] -> [OwnershipError]
 preserveErrorContext errors _ = errors -- Simplified
 
 contextPreservationIsCorrect :: [OwnershipError] -> [OwnershipError] -> [String] -> Bool
-contextPreservationIsCorrect preserved original _ = length preserved == length original
+contextPreservationIsCorrect preserved original _ = L.length preserved == L.length original
 
 checkOwnershipStateConsistency :: [(String, OwnershipType)] -> Bool
 checkOwnershipStateConsistency _ = True -- Simplified
@@ -849,16 +850,16 @@ consistencyCheckIsCorrect :: Bool -> [(String, OwnershipType)] -> Bool
 consistencyCheckIsCorrect result _ = result
 
 analyzeBorrowingScopeNesting :: [(String, Int)] -> [(String, Int, Int)] -> [(String, Bool)]
-analyzeBorrowingScopeNesting scopes _ = map (\(name, _) -> (name, True)) scopes -- Simplified
+analyzeBorrowingScopeNesting scopes _ = L.map (\(name, _) -> (name, True)) scopes -- Simplified
 
 nestingAnalysisIsCorrect :: [(String, Bool)] -> [(String, Int)] -> [(String, Int, Int)] -> Bool
-nestingAnalysisIsCorrect analysis scopes _ = length analysis == length scopes
+nestingAnalysisIsCorrect analysis scopes _ = L.length analysis == L.length scopes
 
 analyzeOwnershipTransferChains :: String -> [String] -> [OwnershipType] -> [String]
 analyzeOwnershipTransferChains initial chain _ = initial : chain -- Simplified
 
 transferChainAnalysisIsCorrect :: [String] -> String -> [String] -> [OwnershipType] -> Bool
-transferChainAnalysisIsCorrect analysis initial chain _ = head analysis == initial && length analysis >= length chain
+transferChainAnalysisIsCorrect analysis initial chain _ = L.head analysis == initial && L.length analysis >= L.length chain
 
 checkOwnershipTypeCompatibility :: OwnershipType -> OwnershipType -> Bool
 checkOwnershipTypeCompatibility _ _ = True -- Simplified
@@ -870,19 +871,19 @@ classifyOwnershipErrors :: [OwnershipError] -> [(OwnershipError, String)]
 classifyOwnershipErrors errors = zip errors (repeat "general") -- Simplified
 
 errorClassificationIsCorrect :: [(OwnershipError, String)] -> [OwnershipError] -> Bool
-errorClassificationIsCorrect classified original = length classified == length original
+errorClassificationIsCorrect classified original = L.length classified == L.length original
 
 resolveBorrowingConflicts :: [(String, OwnershipType)] -> [(String, String, String)] -> [(String, OwnershipType)]
 resolveBorrowingConflicts state _ = state -- Simplified
 
 conflictResolutionIsCorrect :: [(String, OwnershipType)] -> [(String, OwnershipType)] -> [(String, String, String)] -> Bool
-conflictResolutionIsCorrect resolution original _ = length resolution == length original
+conflictResolutionIsCorrect resolution original _ = L.length resolution == L.length original
 
 optimizeOwnershipAnalysis :: [(String, OwnershipType)] -> [String] -> [(String, OwnershipType)]
 optimizeOwnershipAnalysis state _ = state -- Simplified
 
 optimizationIsCorrect :: [(String, OwnershipType)] -> [(String, OwnershipType)] -> [String] -> Bool
-optimizationIsCorrect optimized original _ = length optimized == length original
+optimizationIsCorrect optimized original _ = L.length optimized == L.length original
 
 traceOwnershipLifecycle :: String -> [OwnershipType] -> [OwnershipType]
 traceOwnershipLifecycle _ transitions = transitions
@@ -915,7 +916,7 @@ prop_concurrent_ownership_patterns :: [String] -> Property
 prop_concurrent_ownership_patterns variableNames =
   let concurrentScenarios = map generateConcurrentScenario variableNames
       ownershipResults = map analyzeConcurrentOwnership concurrentScenarios
-  in property $ all isValidConcurrentOwnership ownershipResults
+  in property $ L.all isValidConcurrentOwnership ownershipResults
 
 -- Property: Ownership in control flow
 prop_control_flow_ownership :: [String] -> Property
@@ -1056,7 +1057,7 @@ isValidConcurrentOwnership :: ConcurrentOwnership -> Bool
 isValidConcurrentOwnership (ConcurrentOwnership valid) = valid
 
 buildControlFlowGraph :: [String] -> ControlFlowGraph
-buildControlFlowGraph branches = ControlFlowGraph (length branches)
+buildControlFlowGraph branches = ControlFlowGraph (L.length branches)
 
 analyzeOwnershipFlow :: ControlFlowGraph -> OwnershipFlow
 analyzeOwnershipFlow _ = OwnershipFlow True

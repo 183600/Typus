@@ -47,7 +47,7 @@ prop_compilation_preserves_basic_structure (SimpleExpression expr) =
        Right parsed -> 
          case compileTypus parsed of
            Left err -> counterexample ("Compilation failed: " ++ err) $ property False
-           Right result -> property $ not $ null $ crGoCode result
+           Right result -> property $ not $ L.null $ crGoCode result
 
 -- Property: Compilation generates valid Go package declaration
 prop_compilation_generates_package :: SimpleExpression -> Property
@@ -60,7 +60,7 @@ prop_compilation_generates_package (SimpleExpression expr) =
            Left err -> counterexample ("Compilation failed: " ++ err) $ property False
            Right result -> 
              let goCode = crGoCode result
-             in property $ "package main" `List.isInfixOf` goCode
+             in property $ "package main" `List.L.isInfixOf` goCode
 
 -- Property: Compilation handles multiple functions
 prop_compilation_handles_multiple_functions :: Property
@@ -76,8 +76,8 @@ prop_compilation_handles_multiple_functions =
            Left err -> counterexample ("Compilation failed: " ++ err) $ property False
            Right result -> 
              let goCode = crGoCode result
-                 hasAdd = "func add" `List.isInfixOf` goCode
-                 hasMain = "func main" `List.isInfixOf` goCode
+                 hasAdd = "func add" `List.L.isInfixOf` goCode
+                 hasMain = "func main" `List.L.isInfixOf` goCode
              in property $ hasAdd .&&. hasMain
 
 -- Property: Compilation preserves return types
@@ -91,7 +91,7 @@ prop_compilation_preserves_return_types (SimpleExpression expr) =
            Left err -> counterexample ("Compilation failed: " ++ err) $ property False
            Right result -> 
              let goCode = crGoCode result
-             in property $ "int" `List.isInfixOf` goCode
+             in property $ "int" `List.L.isInfixOf` goCode
 
 tests :: TestTree
 tests = testGroup "Cabal Compiler QuickCheck Tests"

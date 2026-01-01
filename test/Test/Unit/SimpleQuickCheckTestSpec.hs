@@ -3,6 +3,7 @@
 module Test.Unit.SimpleQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), property)
 import qualified Data.Map as Map
@@ -38,9 +39,9 @@ basicMathTests = testGroup "Basic Math Properties"
 
 basicListTests :: TestTree
 basicListTests = testGroup "Basic List Properties"
-  [ fastProperty "reverse of reverse is original" prop_reverse_reverse
-  , fastProperty "sort preserves length" prop_sort_preserves_length
-  , fastProperty "concat of empty list is identity" prop_concat_empty
+  [ fastProperty "L.reverse of L.reverse is original" prop_reverse_reverse
+  , fastProperty "sort preserves L.length" prop_sort_preserves_length
+  , fastProperty "L.concat of empty list is identity" prop_concat_empty
   ]
 
 basicMapTests :: TestTree
@@ -60,7 +61,7 @@ prop_trim_empty = trim "" === ""
 
 prop_trim_whitespace_only :: String -> Property
 prop_trim_whitespace_only s =
-  let wsOnly = all (`elem` " \t\n\r") s
+  let wsOnly = L.all (`elem` " \t\n\r") s
   in wsOnly ==> trim s === ""
 
 prop_splitBy_empty_delim :: String -> Property
@@ -79,10 +80,10 @@ prop_multiplication_distributive :: Int -> Int -> Int -> Property
 prop_multiplication_distributive x y z = x * (y + z) === (x * y) + (x * z)
 
 prop_reverse_reverse :: [Int] -> Property
-prop_reverse_reverse xs = reverse (reverse xs) === xs
+prop_reverse_reverse xs = L.reverse (L.reverse xs) === xs
 
 prop_sort_preserves_length :: [Int] -> Property
-prop_sort_preserves_length xs = length (sort xs) === length xs
+prop_sort_preserves_length xs = L.length (sort xs) === L.length xs
 
 prop_concat_empty :: [Int] -> Property
 prop_concat_empty xs = [] ++ xs === xs

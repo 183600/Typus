@@ -13,7 +13,9 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
-import Data.List (isInfixOf, null, length, sort)
+import qualified Data.List as L
+import Data.List (isInfixOf, length)
+import Data.List (null, sort)
 import Data.Maybe (isJust, isNothing)
 
 import DependentTypesParser
@@ -33,12 +35,12 @@ import DependentTypesParser
   )
 
 -- | Comprehensive QuickCheck tests for Dependent Types validation
--- This module tests dependent type parsing, validation, and constraint checking
+-- This module tests dependent type parsing, validation, L.and constraint checking
 
 -- Property: TypeRef construction maintains invariants
 prop_typeRef_construction :: String -> [String] -> Property
 prop_typeRef_construction name args =
-  not (null name) && all (not . null) args ==>
+  not (null name) && L.all (not . null) args ==>
   let typeRef = TypeRef name args
   in refName typeRef === name && refArgs typeRef === args
 
@@ -54,10 +56,10 @@ prop_typeRef_equality name args =
 -- Property: TypeRef Show is readable
 prop_typeRef_show :: String -> [String] -> Property
 prop_typeRef_show name args =
-  not (null name) && length args <= 3 ==>
+  not (null name) && L.length args <= 3 ==>
   let typeRef = TypeRef name args
       shown = show typeRef
-  in name `isInfixOf` shown
+  in name `L.isInfixOf` shown
 
 -- Property: runDependentTypesParser handles empty input
 prop_runDependentTypesParser_empty :: Property
@@ -75,7 +77,7 @@ prop_runDependentTypesParser_simple typeName =
       result = runDependentTypesParser input
   in case result of
     Left _ -> property False
-    Right (types, errors, parser) -> length types >= 1 && null errors
+    Right (types, errors, parser) -> L.length types >= 1 && null errors
 
 -- Property: parseDependentType handles basic type
 prop_parseDependentType_basic :: String -> Property
@@ -117,11 +119,11 @@ prop_validateDependentTypeSyntax_invalid =
 prop_typeRef_nested_generics :: String -> String -> String -> Property
 prop_typeRef_nested_generics outer inner innermost =
   not (null outer) && not (null inner) && not (null innermost) &&
-  all (not . null) [outer, inner, innermost] ==>
+  L.all (not . null) [outer, inner, innermost] ==>
   let innerRef = TypeRef inner [TypeRef innermost []]
       outerRef = TypeRef outer [innerRef]
       shown = show outerRef
-  in outer `isInfixOf` shown && inner `isInfixOf` shown && innermost `isInfixOf` shown
+  in outer `L.isInfixOf` shown && inner `L.isInfixOf` shown && innermost `L.isInfixOf` shown
 
 -- Property: Field construction maintains invariants
 prop_field_construction :: String -> String -> Property
@@ -169,7 +171,7 @@ prop_parseDependentType_generic typeName param =
 prop_parseDependentType_constraints :: String -> String -> String -> Property
 prop_parseDependentType_constraints typeName field constraint =
   not (null typeName) && not (null field) && not (null constraint) &&
-  all (not . null) [typeName, field, constraint] ==>
+  L.all (not . null) [typeName, field, constraint] ==>
   let input = "type " ++ typeName ++ " = struct { " ++ field ++ ": int } where " ++ constraint
       result = parseDependentType input
   in case result of
@@ -182,7 +184,7 @@ prop_dependentTypeError_information errorMsg =
   not (null errorMsg) ==>
   let error = SyntaxError errorMsg 1 ""
       shown = show error
-  in errorMsg `isInfixOf` shown
+  in errorMsg `L.isInfixOf` shown
 
 -- Property: multiple type definitions are parsed correctly
 prop_multiple_type_definitions :: String -> String -> Property
@@ -193,7 +195,7 @@ prop_multiple_type_definitions type1 type2 =
       result = runDependentTypesParser input
   in case result of
     Left _ -> property False
-    Right (types, errors, parser) -> length types >= 2 && null errors
+    Right (types, errors, parser) -> L.length types >= 2 && null errors
 
 -- Property: type alias parsing
 prop_type_alias_parsing :: String -> String -> Property
@@ -204,24 +206,24 @@ prop_type_alias_parsing aliasName originalType =
       result = runDependentTypesParser input
   in case result of
     Left _ -> property False
-    Right (types, errors, parser) -> length types >= 1
+    Right (types, errors, parser) -> L.length types >= 1
 
 -- Property: function type parsing
 prop_function_type_parsing :: String -> String -> String -> Property
 prop_function_type_parsing funcName paramType returnType =
   not (null funcName) && not (null paramType) && not (null returnType) &&
-  all (not . null) [funcName, paramType, returnType] ==>
+  L.all (not . null) [funcName, paramType, returnType] ==>
   let input = "func " ++ funcName ++ "(" ++ paramType ++ ") -> " ++ returnType
       result = runDependentTypesParser input
   in case result of
     Left _ -> property False
-    Right (types, errors, parser) -> length types >= 1
+    Right (types, errors, parser) -> L.length types >= 1
 
 -- Property: complex struct with multiple fields
 prop_complex_struct_fields :: String -> [String] -> Property
 prop_complex_struct_fields structName fieldNames =
-  not (null structName) && not (null fieldNames) && length fieldNames <= 3 ==>
-  let fieldDefs = unwords $ map (\f -> f ++ ": int") fieldNames
+  not (null structName) && not (null fieldNames) && L.length fieldNames <= 3 ==>
+  let fieldDefs = unwords $ L.map (\f -> f ++ ": int") fieldNames
       input = "type " ++ structName ++ " = struct { " ++ fieldDefs ++ " }"
       result = parseDependentType input
   in case result of
@@ -232,12 +234,12 @@ prop_complex_struct_fields structName fieldNames =
 prop_nested_struct_types :: String -> String -> String -> Property
 prop_nested_struct_types outerName innerName fieldName =
   not (null outerName) && not (null innerName) && not (null fieldName) &&
-  all (not . null) [outerName, innerName, fieldName] ==>
+  L.all (not . null) [outerName, innerName, fieldName] ==>
   let input = "type " ++ innerName ++ " = struct { " ++ fieldName ++ ": int }\ntype " ++ outerName ++ " = struct { value: " ++ innerName ++ " }"
       result = runDependentTypesParser input
   in case result of
     Left _ -> property False
-    Right (types, errors, parser) -> length types >= 2
+    Right (types, errors, parser) -> L.length types >= 2
 
 -- Property: constraint validation preserves semantics
 prop_constraint_validation :: String -> String -> Property
@@ -245,7 +247,7 @@ prop_constraint_validation operator value =
   not (null operator) && not (null value) ==>
   let constraint = TypeConstraint operator value
       shown = show constraint
-  in operator `isInfixOf` shown && value `isInfixOf` shown
+  in operator `L.isInfixOf` shown && value `L.isInfixOf` shown
 
 -- Property: parser handles comments gracefully
 prop_parser_handles_comments :: String -> String -> Property
@@ -265,7 +267,7 @@ prop_parser_error_recovery invalidType validType =
       result = runDependentTypesParser input
   in case result of
     Left _ -> property False
-    Right (types, errors, parser) -> length types >= 1
+    Right (types, errors, parser) -> L.length types >= 1
 
 tests :: TestTree
 tests = testGroup "Dependent Types Validation Comprehensive QuickCheck tests"

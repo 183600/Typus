@@ -10,6 +10,7 @@
 module Test.Unit.SourceLocationBoundaryQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertBool, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -71,7 +72,7 @@ prop_pos_advancement_monotonic text pos =
 -- Property: Line advancement is correct for newlines
 prop_line_advancement_correct :: String -> SourcePos -> Property
 prop_line_advancement_correct text pos =
-  let newlineCount = length $ filter (== '\n') text
+  let newlineCount = L.length $ L.filter (== '\n') text
       finalPos = advancePosByText pos (T.pack text)
       expectedLine = posLine pos + newlineCount
   in property $ posLine finalPos == expectedLine
@@ -80,13 +81,13 @@ prop_line_advancement_correct text pos =
 prop_column_resets_after_newlines :: String -> SourcePos -> Property
 prop_column_resets_after_newlines text pos =
   let finalPos = advancePosByText pos (T.pack text)
-      lastNewlineIndex = length text - length (dropWhile (/= '\n') (reverse text))
+      lastNewlineIndex = L.length text - L.length (dropWhile (/= '\n') (L.reverse text))
       hasNewline = '\n' `elem` text
   in hasNewline ==>
   let afterLastNewline = drop lastNewlineIndex text
       expectedCol = if null afterLastNewline 
                    then 1 
-                   else 1 + length (takeWhile (/= '\n') afterLastNewline)
+                   else 1 + L.length (takeWhile (/= '\n') afterLastNewline)
   in property $ posColumn finalPos == expectedCol
 
 -- Property: Span validity is consistent
@@ -139,9 +140,9 @@ prop_multi_line_position_tracking lines' pos =
   not (null lines') ==>
   let text = T.unlines lines'
       finalPos = advancePosByText pos text
-      expectedLine = posLine pos + length lines' - 1
+      expectedLine = posLine pos + L.length lines' - 1
       lastLine = last lines'
-      expectedCol = if null lastLine then 1 else length lastLine + 1
+      expectedCol = if null lastLine then 1 else L.length lastLine + 1
   in property $ posLine finalPos == expectedLine && posColumn finalPos == expectedCol
 
 -- Property: Offset calculation is consistent
@@ -149,7 +150,7 @@ prop_offset_calculation_consistent :: String -> SourcePos -> Property
 prop_offset_calculation_consistent text pos =
   let finalPos = advancePosByText pos (T.pack text)
       startOffset = posOffset pos
-      expectedOffset = startOffset + length text
+      expectedOffset = startOffset + L.length text
   in property $ posOffset finalPos == expectedOffset
 
 tests :: TestTree

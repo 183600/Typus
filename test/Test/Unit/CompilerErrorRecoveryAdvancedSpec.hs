@@ -23,7 +23,9 @@ import Utils
 
 import Data.Char (isSpace, isLetter, isDigit)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, isInfixOf, intercalate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (intercalate)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 
 -- | Advanced tests for compiler error recovery mechanisms
@@ -70,8 +72,8 @@ tests =
 -- Property: Error recovery preserves valid code structure
 prop_error_recovery_preserves_structure :: String -> String -> Property
 prop_error_recovery_preserves_structure validPrefix errorSuffix =
-  let hasValidPrefix = not (null validPrefix) && all (\c -> isLetter c || isSpace c) (take 10 validPrefix)
-      hasErrorSuffix = not (null errorSuffix) && any (not . isLetter) errorSuffix
+  let hasValidPrefix = not (null validPrefix) && L.all (\c -> isLetter c || isSpace c) (take 10 validPrefix)
+      hasErrorSuffix = not (null errorSuffix) && L.any (not . isLetter) errorSuffix
   in classify hasValidPrefix "has valid prefix" $
      classify hasErrorSuffix "has error suffix" $
      property $ True -- Placeholder for actual property test
@@ -79,20 +81,20 @@ prop_error_recovery_preserves_structure validPrefix errorSuffix =
 -- Property: Multiple syntax errors are recovered independently
 prop_multiple_syntax_errors_recovery :: [String] -> Property
 prop_multiple_syntax_errors_recovery errorSegments =
-  not (null errorSegments) && length errorSegments <= 5 ==>
+  not (null errorSegments) && L.length errorSegments <= 5 ==>
   let combinedCode = intercalate "\n" errorSegments
       recoveredResults = map recoverFromSyntaxError errorSegments
-  in property $ length recoveredResults === length errorSegments
+  in property $ L.length recoveredResults === L.length errorSegments
 
 -- Property: Error recovery maintains line numbers
 prop_error_recovery_maintains_line_numbers :: [String] -> Property
 prop_error_recovery_maintains_line_numbers codeLines =
-  not (null codeLines) && length codeLines <= 20 ==>
+  not (null codeLines) && L.length codeLines <= 20 ==>
   let code = intercalate "\n" codeLines
       recoveredCode = recoverFromSyntaxError code
       originalLines = lines code
       recoveredLines = lines recoveredCode
-  in property $ length recoveredLines >= length originalLines - 1
+  in property $ L.length recoveredLines >= L.length originalLines - 1
 
 -- Property: Type inference continues after type errors
 prop_type_inference_continues_after_errors :: String -> String -> Property
@@ -108,12 +110,12 @@ prop_type_error_recovery_preserves_environment code =
   not (null code) ==> 
   let typeEnv = buildTypeEnvironment code
       recoveredEnv = recoverTypeEnvironment code
-  in property $ length recoveredEnv >= length typeEnv - 1
+  in property $ L.length recoveredEnv >= L.length typeEnv - 1
 
 -- Property: Ownership analysis continues after move errors
 prop_ownership_analysis_continues_after_errors :: String -> Property
 prop_ownership_analysis_continues_after_errors code =
-  not (null code) && length code <= 100 ==>
+  not (null code) && L.length code <= 100 ==>
   let ownershipResult = performOwnershipAnalysis code
   in property $ isJust ownershipResult
 
@@ -123,12 +125,12 @@ prop_ownership_error_recovery_preserves_state code =
   not (null code) ==> 
   let ownershipState = getOwnershipState code
       recoveredState = recoverOwnershipState code
-  in property $ length recoveredState >= length ownershipState - 1
+  in property $ L.length recoveredState >= L.length ownershipState - 1
 
 -- Property: Dependent type checking continues after constraint failures
 prop_dependent_type_checking_continues :: String -> Property
 prop_dependent_type_checking_continues code =
-  not (null code) && length code <= 100 ==>
+  not (null code) && L.length code <= 100 ==>
   let checkingResult = performDependentTypeChecking code
   in property $ isJust checkingResult
 
@@ -138,7 +140,7 @@ prop_dependent_type_error_recovery_preserves_constraints code =
   not (null code) ==> 
   let constraints = getTypeConstraints code
       recoveredConstraints = recoverTypeConstraints code
-  in property $ length recoveredConstraints >= length constraints - 1
+  in property $ L.length recoveredConstraints >= L.length constraints - 1
 
 -- Property: Primary error detection prevents cascading errors
 prop_primary_error_prevents_cascading :: String -> Property
@@ -146,14 +148,14 @@ prop_primary_error_prevents_cascading code =
   not (null code) ==> 
   let primaryErrors = detectPrimaryErrors code
       allErrors = detectAllErrors code
-  in property $ length primaryErrors <= length allErrors
+  in property $ L.length primaryErrors <= L.length allErrors
 
 -- Property: Error recovery isolates error contexts
 prop_error_recovery_isolates_contexts :: [String] -> Property
 prop_error_recovery_isolates_contexts codeBlocks =
-  not (null codeBlocks) && length codeBlocks <= 5 ==>
+  not (null codeBlocks) && L.length codeBlocks <= 5 ==>
   let isolatedResults = map isolateErrorContext codeBlocks
-  in property $ length isolatedResults === length codeBlocks
+  in property $ L.length isolatedResults === L.length codeBlocks
 
 -- Test cases for specific error recovery scenarios
 
@@ -218,7 +220,7 @@ test_cascading_syntax_error_prevention = do
   let codeWithPotentialCascading = "func test() {\n  if true {\n    let x = 5\n  // missing brace\n  let y = 10\n  println(y)\n}"
       primaryErrors = detectPrimaryErrors codeWithPotentialCascading
       allErrors = detectAllErrors codeWithPotentialCascading
-      cascadingPrevented = length allErrors <= length primaryErrors + 2
+      cascadingPrevented = L.length allErrors <= L.length primaryErrors + 2
   cascadingPrevented @?= True
 
 test_cascading_type_error_prevention :: IO ()
@@ -226,7 +228,7 @@ test_cascading_type_error_prevention = do
   let codeWithPotentialCascading = "func test() {\n  let x: Int = \"string\"\n  let y: String = x + 5\n  let z: Bool = y\n}"
       primaryErrors = detectPrimaryErrors codeWithPotentialCascading
       allErrors = detectAllErrors codeWithPotentialCascading
-      cascadingPrevented = length allErrors <= length primaryErrors + 3
+      cascadingPrevented = L.length allErrors <= L.length primaryErrors + 3
   cascadingPrevented @?= True
 
 -- Helper functions (placeholders for actual implementation)
@@ -270,4 +272,4 @@ isolateErrorContext :: String -> String
 isolateErrorContext code = code -- Placeholder
 
 countBraces :: String -> Int
-countBraces code = length (filter (== '{') code) - length (filter (== '}') code)
+countBraces code = L.length (L.filter (== '{') code) - L.length (L.filter (== '}') code)

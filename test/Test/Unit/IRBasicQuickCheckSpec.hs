@@ -4,6 +4,7 @@
 module Test.Unit.IRBasicQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
@@ -24,7 +25,7 @@ irTransformationProperties = testGroup "IR Transformation Properties"
       nodes === nodes
   
   , fastProperty "transformation preserves node count" $ \(nodes :: [String]) ->
-      length nodes === length nodes
+      L.length nodes === L.length nodes
   
   , fastProperty "transformation is deterministic" $ \(nodes :: [String]) ->
       let t1 = nodes
@@ -34,9 +35,9 @@ irTransformationProperties = testGroup "IR Transformation Properties"
 
 irOptimizationProperties :: TestTree
 irOptimizationProperties = testGroup "IR Optimization Properties"
-  [ fastProperty "optimization reduces or maintains size" $ \(nodes :: [String]) ->
+  [ fastProperty "optimization reduces L.or maintains size" $ \(nodes :: [String]) ->
       let optimized = nub nodes
-      in length optimized <= length nodes
+      in L.length optimized <= L.length nodes
   
   , fastProperty "optimization preserves semantics" $ \(nodes :: [String]) ->
       sort (nub nodes) === sort (nub (nub nodes))
@@ -51,8 +52,8 @@ irValidationProperties :: TestTree
 irValidationProperties = testGroup "IR Validation Properties"
   [ fastProperty "valid IR has no duplicate definitions" $ \(defs :: [String]) ->
       let unique = nub defs
-      in length unique === length (nub unique)
+      in L.length unique === L.length (nub unique)
   
   , fastProperty "IR node references are valid" $ \(refs :: [String]) (defs :: [String]) ->
-      all (`elem` (defs ++ refs)) refs ==> property True
+      L.all (`elem` (defs ++ refs)) refs ==> property True
   ]

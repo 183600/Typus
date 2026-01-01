@@ -13,13 +13,14 @@ import SyntaxValidator
   , ErrorType(..)
   , validateSyntax
   )
+import qualified Data.List as L
 import Data.List (isInfixOf)
 import Data.Char (isAlphaNum, isLetter, isAlpha, isDigit, isPrint)
 
 -- Local implementation of isValidType since it's not exported from SyntaxValidator
 isValidType :: String -> Bool
 isValidType "" = False
-isValidType (c:cs) = isAlpha c && all isValidTypeChar cs
+isValidType (c:cs) = isAlpha c && L.all isValidTypeChar cs
   where
     isValidTypeChar ch = isAlphaNum ch || ch == '_'
 
@@ -30,7 +31,7 @@ isValidIdentifier name =
         && not (isReservedName name)
         && case name of
             [] -> False
-            (c : _) -> not (isDigit c) && all isAllowed name
+            (c : _) -> not (isDigit c) && L.all isAllowed name
   where
     isAllowed char = isAsciiAlphaNum char || char == '_'
     isAsciiAlphaNum char = (char >= 'a' && char <= 'z') || 
@@ -61,7 +62,7 @@ isValidIdentifier name =
                    , "float64"
                    ]
 
--- Property: SyntaxError with message and position
+-- Property: SyntaxError with message L.and position
 prop_syntaxerror_preserves :: String -> Int -> Int -> Property
 prop_syntaxerror_preserves message line col =
   let err = SyntaxError MissingBrace message line col ""
@@ -98,18 +99,18 @@ prop_syntaxerror_show err =
 -- Property: SyntaxError show contains message
 prop_syntaxerror_show_contains_message :: String -> Int -> Int -> Property
 prop_syntaxerror_show_contains_message message line col =
-  not (null message) && all (\c -> isPrint c && c /= '"' && c /= '\\') message && any isPrint message ==>
+  not (null message) && L.all (\c -> isPrint c && c /= '"' && c /= '\\') message && L.any isPrint message ==>
   let err = SyntaxError MissingBrace message line col ""
       shown = show err
-  in property $ not (null shown) && "SyntaxError" `isInfixOf` shown
+  in property $ not (null shown) && "SyntaxError" `L.isInfixOf` shown
 
 -- Property: SyntaxError show contains position
 prop_syntaxerror_show_contains_position :: String -> Int -> Int -> Property
 prop_syntaxerror_show_contains_position message line col =
   let err = SyntaxError MissingParenthesis message line col ""
       shown = show err
-  in property $ show line `isInfixOf` shown &&
-     show col `isInfixOf` shown
+  in property $ show line `L.isInfixOf` shown &&
+     show col `L.isInfixOf` shown
 
 -- Property: SyntaxError with empty message
 prop_syntaxerror_empty_message :: Int -> Int -> Property
@@ -155,8 +156,8 @@ prop_syntaxerror_unicode line col =
 -- Property: isValidIdentifier with valid identifiers
 prop_isvalididentifier_valid :: String -> Property
 prop_isvalididentifier_valid name =
-  not (null name) && isLetter (unsafeHead name) && all isAlphaNum (unsafeTail name) ==> 
-  if all isAscii name 
+  not (null name) && isLetter (unsafeHead name) && L.all isAlphaNum (unsafeTail name) ==> 
+  if L.all isAscii name 
   then isValidIdentifier name === True
   else isValidIdentifier name === False
   where
@@ -186,7 +187,7 @@ prop_isvalididentifier_letters_only =
   let name = "testIdentifier"
   in property $ isValidIdentifier name === True
 
--- Property: isValidIdentifier with letters and numbers
+-- Property: isValidIdentifier with letters L.and numbers
 prop_isvalididentifier_alphanumeric :: Property
 prop_isvalididentifier_alphanumeric =
   let name = "test123Identifier456"
@@ -303,7 +304,7 @@ prop_syntaxerror_ordering_by_line msg line1 line2 =
       result = compare err1 err2
   in (line1 <= line2) ==> (result == LT || result == EQ)
 
--- Property: SyntaxError ordering by column when messages and lines equal
+-- Property: SyntaxError ordering by column when messages L.and lines equal
 prop_syntaxerror_ordering_by_column :: String -> Int -> Int -> Int -> Property
 prop_syntaxerror_ordering_by_column msg line col1 col2 =
   let err1 = SyntaxError InvalidIdentifier msg line col1 ""
@@ -352,7 +353,7 @@ prop_validatesyntax_comments =
       errors = validateSyntax code
   in property $ null errors
 
--- Property: validateSyntax with mixed valid and invalid
+-- Property: validateSyntax with mixed valid L.and invalid
 prop_validatesyntax_mixed :: Property
 prop_validatesyntax_mixed =
   let code = "package main\nfunc valid() {}\nfunc invalid {\n"  -- Last function is invalid
@@ -361,7 +362,7 @@ prop_validatesyntax_mixed =
 
 tests :: TestTree
 tests = testGroup "SyntaxValidator QuickCheck tests"
-  [ fastProperty "SyntaxError with message and position" prop_syntaxerror_preserves
+  [ fastProperty "SyntaxError with message L.and position" prop_syntaxerror_preserves
   , fastProperty "SyntaxError equality" prop_syntaxerror_eq
   , fastProperty "SyntaxError ordering" prop_syntaxerror_ordering
   , fastProperty "SyntaxError show" prop_syntaxerror_show
@@ -377,7 +378,7 @@ tests = testGroup "SyntaxValidator QuickCheck tests"
   , fastProperty "isValidIdentifier with invalid identifiers" prop_isvalididentifier_invalid_start
   , fastProperty "isValidIdentifier with empty string" prop_isvalididentifier_empty
   , fastProperty "isValidIdentifier with only letters" prop_isvalididentifier_letters_only
-  , fastProperty "isValidIdentifier with letters and numbers" prop_isvalididentifier_alphanumeric
+  , fastProperty "isValidIdentifier with letters L.and numbers" prop_isvalididentifier_alphanumeric
   , fastProperty "isValidIdentifier with special characters" prop_isvalididentifier_special_chars
   , fastProperty "isValidIdentifier with spaces" prop_isvalididentifier_spaces
   , fastProperty "isValidIdentifier with Unicode" prop_isvalididentifier_unicode
@@ -394,7 +395,7 @@ tests = testGroup "SyntaxValidator QuickCheck tests"
   , fastProperty "SyntaxError with same message different position" prop_syntaxerror_same_message_different_position
   , fastProperty "SyntaxError ordering by message" prop_syntaxerror_ordering_by_message
   , fastProperty "SyntaxError ordering by line when messages equal" prop_syntaxerror_ordering_by_line
-  , fastProperty "SyntaxError ordering by column when messages and lines equal" prop_syntaxerror_ordering_by_column
+  , fastProperty "SyntaxError ordering by column when messages L.and lines equal" prop_syntaxerror_ordering_by_column
   , fastProperty "isValidIdentifier with single character" prop_isvalididentifier_single_char
   , fastProperty "isValidIdentifier with single number" prop_isvalididentifier_single_number
   , fastProperty "isValidType with single character" prop_isvalidtype_single_char
@@ -402,5 +403,5 @@ tests = testGroup "SyntaxValidator QuickCheck tests"
   , fastProperty "isValidType with consecutive underscores" prop_isvalidtype_consecutive_underscores
   , fastProperty "validateSyntax with only whitespace" prop_validatesyntax_whitespace
   , fastProperty "validateSyntax with comments only" prop_validatesyntax_comments
-  , fastProperty "validateSyntax with mixed valid and invalid" prop_validatesyntax_mixed
+  , fastProperty "validateSyntax with mixed valid L.and invalid" prop_validatesyntax_mixed
   ]

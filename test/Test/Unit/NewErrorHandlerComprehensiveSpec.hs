@@ -10,11 +10,13 @@
 module Test.Unit.NewErrorHandlerComprehensiveSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Gen, Arbitrary, arbitrary, oneof, elements, listOf, resize, choose)
 import Data.Char (isAlphaNum, isAlpha)
-import Data.List (sort, isPrefixOf, isInfixOf)
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort)
 import qualified Data.Text as T
 import qualified Data.Map.Strict as Map
 
@@ -44,40 +46,6 @@ import Compiler.Errors.Core
   , formatErrorsWithLocation
   , canRecoverFrom
   , shouldContinueAfter
-  , errorAt
-  , errorAtWithTimestamp
-  , errorWithCategory
-  , warningAt
-  , warningWithCategory
-  , infoAt
-  , infoWithCategory
-  , fatalError
-  , fatalErrorWithCategory
-  , errorWithSuggestions
-  , withLocation
-  , withContext
-  , withSuggestions
-  , withRelatedErrors
-  , withTimestamp
-  , withUTCTimestamp
-  , wrapError
-  , combineErrors
-  , combinedErrorSeverity
-  , filterCombinedErrorsBySeverity
-  , hasCategory
-  , filterByCategory
-  , filterBySeverity
-  , getErrorStatistics
-  , generateErrorReport
-  , formatTimestamp
-  , getCurrentTimestamp
-  , createRecoveryStrategy
-  , customRecovery
-  , fatalRecovery
-  , errorRecovery
-  , warningRecovery
-  , infoRecovery
-  , getErrorLine
   , getErrorColumn
   )
 
@@ -142,7 +110,7 @@ instance Arbitrary TypeError where
     relatedErrors <- listOf arbitrary
     errorChain <- listOf arbitrary
     timestamp <- arbitrary
-    return $ TypeError errorId severity category message location context recovery suggestions relatedErrors errorChain timestamp
+    return $ TypeError errId errorId severity category message location context recovery suggestions relatedErrors errorChain timestamp
 
 -- Generate valid error IDs
 validErrorId :: Gen String
@@ -184,20 +152,20 @@ prop_error_collector_separation =
         errorMessages = getErrors allErrors
         warningMessages = getWarnings allErrors
         infoMessages = getInfo allErrors
-    in property $ all (\e -> severity e `elem` [Error, Fatal]) errorMessages .&&.
+    in property $ L.all (\e -> severity e `elem` [Error, Fatal]) errorMessages .&&.
                all (\e -> severity e == Warning) warningMessages .&&.
                all (\e -> severity e == Info) infoMessages .&&.
-               length allErrors == length errorMessages + length warningMessages + length infoMessages
+               length allErrors == L.length errorMessages + L.length warningMessages + L.length infoMessages
 
--- Property: hasErrors and hasWarnings work correctly
+-- Property: hasErrors L.and hasWarnings work correctly
 prop_error_detection :: Property
 prop_error_detection =
   forAll (listOf arbitrary) $ \errors ->
     let allErrors = getAllMessages errors
         hasErr = hasErrors allErrors
         hasWarn = hasWarnings allErrors
-        errorCount = length $ getErrors allErrors
-        warningCount = length $ getWarnings allErrors
+        errorCount = L.length $ getErrors allErrors
+        warningCount = L.length $ getWarnings allErrors
     in property $ hasErr === (errorCount > 0) .&&.
                hasWarn === (warningCount > 0)
 
@@ -207,7 +175,7 @@ prop_category_filtering =
   forAll arbitrary $ \category ->
   forAll (listOf arbitrary) $ \errors ->
     let filtered = filterByCategory category errors
-        hasMatchingCategory = any (\e -> category e == category) errors
+        hasMatchingCategory = L.any (\e -> category e == category) errors
     in property $ (not (null filtered)) === hasMatchingCategory .&&.
                all (\e -> category e == category) filtered
 
@@ -217,7 +185,7 @@ prop_severity_filtering =
   forAll arbitrary $ \severity ->
   forAll (listOf arbitrary) $ \errors ->
     let filtered = filterBySeverity severity errors
-        hasMatchingSeverity = any (\e -> severity e == severity) errors
+        hasMatchingSeverity = L.any (\e -> severity e == severity) errors
     in property $ (not (null filtered)) === hasMatchingSeverity .&&.
                all (\e -> severity e == severity) filtered
 
@@ -244,9 +212,9 @@ prop_error_formatting =
           Error -> "ERROR"
           Warning -> "WARNING"
           Info -> "INFO"
-    in property $ errorId `isInfixOf` formatted .&&.
-               severityStr `isInfixOf` formatted .&&.
-               msg `isInfixOf` formatted
+    in property $ errorId `L.isInfixOf` formatted .&&.
+               severityStr `L.isInfixOf` formatted .&&.
+               msg `L.isInfixOf` formatted
 
 -- Property: error recovery strategies are consistent
 prop_recovery_consistency :: Property
@@ -284,7 +252,7 @@ prop_error_wrapping =
   forAll errorMessage $ \wrapperMessage ->
     let wrapped = wrapError wrapperMessage originalError
     in property $ originalError `elem` errorChain wrapped .&&.
-               T.pack wrapperMessage `isInfixOf` message wrapped
+               T.pack wrapperMessage `L.isInfixOf` message wrapped
 
 -- Property: error combination preserves severity
 prop_error_combination :: Property
@@ -326,9 +294,9 @@ prop_error_statistics :: Property
 prop_error_statistics =
   forAll (listOf arbitrary) $ \errors ->
     let stats = getErrorStatistics errors
-        errorCount = length $ getErrors errors
-        warningCount = length $ getWarnings errors
-        infoCount = length $ getInfo errors
+        errorCount = L.length $ getErrors errors
+        warningCount = L.length $ getWarnings errors
+        infoCount = L.length $ getInfo errors
     in property $ Map.size stats >= 0
 
 -- ============================================================================
@@ -392,11 +360,11 @@ test_error_formatting =
                          (ErrorLocation Nothing 5 10 Nothing Nothing) 
                          emptyContext errorRecovery [T.pack "Check types"] [] [] Nothing
         formatted = formatError error
-    "TYPE001" `isInfixOf` formatted @?= True
-    "ERROR" `isInfixOf` formatted @?= True
-    "TypeChecking" `isInfixOf` formatted @?= True
-    "Type mismatch" `isInfixOf` formatted @?= True
-    "Check types" `isInfixOf` formatted @?= True
+    "TYPE001" `L.isInfixOf` formatted @?= True
+    "ERROR" `L.isInfixOf` formatted @?= True
+    "TypeChecking" `L.isInfixOf` formatted @?= True
+    "Type mismatch" `L.isInfixOf` formatted @?= True
+    "Check types" `L.isInfixOf` formatted @?= True
 
 -- Test recovery strategies
 test_recovery_strategies :: TestTree
@@ -441,7 +409,7 @@ tests =
     [ testGroup "Property-based tests"
         [ fastProperty "Error severity ordering is consistent" prop_severity_ordering
         , fastProperty "Error collector correctly separates errors by severity" prop_error_collector_separation
-        , fastProperty "hasErrors and hasWarnings work correctly" prop_error_detection
+        , fastProperty "hasErrors L.and hasWarnings work correctly" prop_error_detection
         , fastProperty "error filtering by category works" prop_category_filtering
         , fastProperty "error filtering by severity works" prop_severity_filtering
         , fastProperty "error location helpers work correctly" prop_error_location_helpers

@@ -15,6 +15,7 @@ import Test.Tasty.HUnit (testCase, (@?=), assertBool, assertFailure)
 import qualified Data.Text as T
 import Data.Char (isSpace, isLetter, isDigit, isPunctuation, ord)
 import qualified Data.List as L
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 
 import SourceLocation
@@ -49,7 +50,7 @@ import Utils
   , breakOn
   )
 
--- | Boundary condition tests for edge cases and error scenarios
+-- | Boundary condition tests for edge cases L.and error scenarios
 tests :: TestTree
 tests =
   testGroup "NewCabalBoundaryConditions"
@@ -100,7 +101,7 @@ tests =
                 result = trim input
             result @?= ""
 
-        , testCase "trim with null bytes and control characters" $ do
+        , testCase "trim with null bytes L.and control characters" $ do
             let input = "\0\1\2\3 content \4\5\6\7"
                 result = trim input
             result @?= "\0\1\2\3 content \4\5\6\7"
@@ -111,10 +112,10 @@ tests =
         , testCase "splitBy with delimiter at boundaries" $ do
             splitBy ',' ",start,end," @?= ["", "start", "end", ""]
 
-        , testCase "splitBy with all delimiters" $ do
+        , testCase "splitBy with L.all delimiters" $ do
             splitBy ',' ",,," @?= ["", "", "", "", ""]
 
-        , testCase "splitByCollapsed with all delimiters" $ do
+        , testCase "splitByCollapsed with L.all delimiters" $ do
             splitByCollapsed ',' ",,," @?= []
 
         , testCase "removeComments with malformed block comments" $ do
@@ -141,7 +142,7 @@ tests =
             let input = "\tline1\n  \tline2\n\t  line3"
                 result = normalizeIndentation input
                 lines' = lines result
-            length lines' @?= 3
+            L.length lines' @?= 3
 
         , testCase "breakOn with empty pattern" $ do
             let (before, after) = breakOn "" "content"
@@ -154,7 +155,7 @@ tests =
             after @?= ""
         ]
 
-    , testGroup "Unicode and internationalization edge cases"
+    , testGroup "Unicode L.and internationalization edge cases"
         [ testCase "Unicode whitespace handling in trim" $ do
             let input = "\160\128\129content\130\131"
                 result = trim input
@@ -178,7 +179,7 @@ tests =
             posOffset finalPos @?= 7   -- But 3 chars + 1 newline = 4 bytes offset
         ]
 
-    , testGroup "Performance and memory boundary cases"
+    , testGroup "Performance L.and memory boundary cases"
         [ testCase "very long single line" $ do
             let longLine = replicate 100000 'a'
                 finalPos = advancePosBy longLine startPos
@@ -193,19 +194,19 @@ tests =
             posColumn finalPos @?= 1
 
         , testCase "deep nesting of comments" $ do
-            let nested = concat $ replicate 1000 "/*"
-                content = nested ++ "content" ++ concat (replicate 1000 "*/")
+            let nested = L.concat $ replicate 1000 "/*"
+                content = nested ++ "content" ++ L.concat (replicate 1000 "*/")
                 result = removeComments content
             result @?= "content"
 
         , testCase "extreme indentation levels" $ do
-            let deepIndent = concat $ replicate 1000 "  "
+            let deepIndent = L.concat $ replicate 1000 "  "
                 content = deepIndent ++ "content"
                 result = normalizeIndentation content
             result @?= "content"
         ]
 
-    , testGroup "Error recovery and robustness"
+    , testGroup "Error recovery L.and robustness"
         [ testCase "malformed escape sequences in comments" $ do
             let input = "code /* comment with \\x unbalanced */ more"
                 result = removeComments input
@@ -215,7 +216,7 @@ tests =
             let input = "line1\r\nline2\nline3\rline4"
                 result = normalizeIndentation input
                 lines' = lines result
-            length lines' @?= 4
+            L.length lines' @?= 4
 
         , testCase "null characters in various contexts" $ do
             let input = "before\0middle\0after"
@@ -231,11 +232,11 @@ tests =
         , testCase "binary data mixed with text" $ do
             let binary = map chr [0..255] ++ "text" ++ map chr [128..255]
                 result = trim binary
-            length result @?= length binary
+            L.length result @?= L.length binary
           where chr = toEnum . fromEnum
         ]
 
-    , testGroup "Consistency and invariant tests"
+    , testGroup "Consistency L.and invariant tests"
         [ testCase "position advancement consistency" $ do
             let text = "hello\nworld"
                 pos1 = advancePosBy text startPos
@@ -249,7 +250,7 @@ tests =
                 merged = mergeSpans span span
             merged @?= span
 
-        , testCase "split and join roundtrip with special chars" $ do
+        , testCase "split L.and join roundtrip with special chars" $ do
             let input = "a,b,,c,\n,d"
                 parts = splitBy ',' input
                 rejoined = L.intercalate "," parts

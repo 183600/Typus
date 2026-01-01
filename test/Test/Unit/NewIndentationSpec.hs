@@ -3,6 +3,7 @@
 module Test.Unit.NewIndentationSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), counterexample)
 
@@ -48,7 +49,7 @@ testMixedIndentation = testCase "Mixed indentation characters" $ do
   let mixed1 = "  \tline1\n    \tline2\n\t  line3"
   let expected1 = "line1\n  line2\nline3"
   result1 <- return $ normalizeIndentation mixed1
-  assertBool "mixed spaces and tabs" (expected1 == result1)
+  assertBool "mixed spaces L.and tabs" (expected1 == result1)
   
   -- 不一致的混合缩进
   let mixed2 = "   line1\n\t line2\n  \tline3"
@@ -81,11 +82,11 @@ testUnicodeIndentation = testCase "Unicode whitespace indentation" $ do
   let mixedUnicode = " \x2000line1\n  \x00A0line2"
   let expected3 = "line1\n line2"
   result3 <- return $ normalizeIndentation mixedUnicode
-  assertBool "mixed Unicode and regular spaces" (expected3 == result3)
+  assertBool "mixed Unicode L.and regular spaces" (expected3 == result3)
 
 -- | 测试空行和只有空白字符的行
 testEmptyAndWhitespaceLines :: TestTree
-testEmptyAndWhitespaceLines = testCase "Empty and whitespace-only lines" $ do
+testEmptyAndWhitespaceLines = testCase "Empty L.and whitespace-only lines" $ do
   -- 包含空行
   let withEmpty = "  line1\n\n  line2\n  \n  line3"
   let expected = "line1\n\nline2\n\nline3"
@@ -101,7 +102,7 @@ testEmptyAndWhitespaceLines = testCase "Empty and whitespace-only lines" $ do
   let surrounded = "\n  \n  line1\n  line2\n  \n\n"
   let expected3 = "\n\nline1\nline2\n\n\n"
   result3 <- return $ normalizeIndentation surrounded
-  assertBool "empty lines at start and end" (expected3 == result3)
+  assertBool "empty lines at start L.and end" (expected3 == result3)
 
 -- | 测试复杂的缩进场景
 testComplexIndentationScenarios :: TestTree
@@ -133,26 +134,26 @@ testIndentationProperties :: TestTree
 testIndentationProperties = testGroup "Indentation Properties"
   [ testProperty "normalizeIndentation preserves relative indentation" $ \str ->
       let lines' = lines str
-          nonEmptyLines = filter (not . null . trim) lines'
+          nonEmptyLines = L.filter (not . null . trim) lines'
           commonIndent = if null nonEmptyLines then "" else findCommonIndent nonEmptyLines
           result = normalizeIndentation str
           resultLines = lines result
-          resultNonEmpty = filter (not . null . trim) resultLines
+          resultNonEmpty = L.filter (not . null . trim) resultLines
       in if null nonEmptyLines 
          then property True
-         else all (not . isPrefixOf commonIndent . takeWhile isSpace) resultNonEmpty
+         else L.all (not . L.isPrefixOf commonIndent . takeWhile isSpace) resultNonEmpty
          
   , testProperty "normalizeIndentation preserves line count" $ \str ->
       let originalLines = lines str
           resultLines = lines (normalizeIndentation str)
-      in length originalLines === length resultLines
+      in L.length originalLines === L.length resultLines
       
   , testProperty "normalizeIndentation preserves non-empty content" $ \str ->
       let originalLines = lines str
           resultLines = lines (normalizeIndentation str)
           originalContent = map trim originalLines
           resultContent = map trim resultLines
-      in filter (not . null) originalContent === filter (not . null) resultContent
+      in L.filter (not . null) originalContent === L.filter (not . null) resultContent
       
   , testProperty "normalizeIndentation handles empty string" $ \() ->
       let empty = "" :: String
@@ -169,8 +170,8 @@ testIndentationProperties = testGroup "Indentation Properties"
 findCommonIndent :: [String] -> String
 findCommonIndent [] = ""
 findCommonIndent strings = 
-  let nonEmpty = filter (not . null) strings
-      indents = map (takeWhile isSpace) nonEmpty
+  let nonEmpty = L.filter (not . null) strings
+      indents = L.map (takeWhile isSpace) nonEmpty
   in if null indents then "" else commonPrefix indents
 
 -- | 查找列表的公共前缀

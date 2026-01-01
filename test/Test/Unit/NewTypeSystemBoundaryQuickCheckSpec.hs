@@ -3,6 +3,7 @@
 module Test.Unit.NewTypeSystemBoundaryQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import Data.Char (isAlphaNum, isDigit, isLetter)
@@ -74,13 +75,13 @@ typeEnvironmentProperties = testGroup "Type Environment Properties"
 prop_inference_preserves_safety :: String -> Property
 prop_inference_preserves_safety expr =
   let safeExpr = take 100 expr
-  in not (null safeExpr) && all isAlphaNum safeExpr ==>
+  in not (null safeExpr) && L.all isAlphaNum safeExpr ==>
   property $ True  -- Would check that inferred type preserves safety
 
 prop_inference_deterministic :: String -> Property
 prop_inference_deterministic expr =
   let safeExpr = take 100 expr
-  in not (null safeExpr) && all isAlphaNum safeExpr ==>
+  in not (null safeExpr) && L.all isAlphaNum safeExpr ==>
   property $ True  -- Would check that inference is deterministic
 
 prop_inference_polymorphism :: String -> Property
@@ -100,7 +101,7 @@ prop_inference_let_polymorphism var expr =
 prop_inference_generalization :: String -> Property
 prop_inference_generalization expr =
   let simpleExpr = take 50 expr
-  in not (null simpleExpr) && all isAlphaNum simpleExpr ==>
+  in not (null simpleExpr) && L.all isAlphaNum simpleExpr ==>
   property $ True  -- Would check generalization
 
 -- Type unification properties
@@ -184,10 +185,10 @@ prop_constraints_combinable c1 c2 =
 
 prop_constraints_handle_cycles :: [String] -> Property
 prop_constraints_handle_cycles vars =
-  let typeVars = take 5 (nub (filter (not . null) vars))
+  let typeVars = take 5 (nub (L.filter (not . null) vars))
       cyclicConstraints = [(EqualityType (TypeVar v1) (TypeVar v2)) | 
                           v1 <- typeVars, v2 <- typeVars, v1 /= v2]
-  in length typeVars > 2 ==>
+  in L.length typeVars > 2 ==>
   property $ True  -- Would check cycle handling
 
 prop_constraints_idempotent :: [TypeConstraint] -> Property
@@ -229,16 +230,16 @@ prop_env_merging_correct env1 env2 =
 
 prop_env_scoping_works :: [String] -> Property
 prop_env_scoping_works vars =
-  let varNames = take 5 (nub (filter (not . null) (map (take 5) vars)))
+  let varNames = take 5 (nub (L.filter (not . null) (L.map (take 5) vars)))
       baseEnv = emptyTypeEnv
-      nestedEnvs = foldl (\env var -> 
+      nestedEnvs = L.foldl (\env var -> 
         let scopedEnv = extendTypeEnv env var IntType
         in scopedEnv
       ) baseEnv varNames
-  in length varNames > 1 ==>
+  in L.length varNames > 1 ==>
   property $ True  -- Would check scoping
 
--- Helper types and functions (simplified for demonstration)
+-- Helper types L.and functions (simplified for demonstration)
 data Type = IntType | StringType | BoolType | FunctionType Type Type | 
            TypeVar String | BoundedType String [Type] deriving (Eq, Show)
 

@@ -5,6 +5,7 @@
 module Test.Unit.SourceLocationMathSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertBool, assertEqual, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -38,7 +39,7 @@ genSourceSpan = do
 
 -- | Test basic source position creation
 test_source_pos_creation :: TestTree
-test_source_pos_creation = testCase "SourcePos creation and comparison" $ do
+test_source_pos_creation = testCase "SourcePos creation L.and comparison" $ do
   let pos1 = mkSourcePos 1 1
       pos2 = mkSourcePos 1 2
       pos3 = mkSourcePos 2 1
@@ -46,15 +47,15 @@ test_source_pos_creation = testCase "SourcePos creation and comparison" $ do
   assertEqual "Column comparison works" True (pos2 > pos1)
   assertEqual "Same position equality" True (pos1 == pos1)
 
--- | Test source span creation and basic properties
+-- | Test source span creation L.and basic properties
 test_source_span_creation :: TestTree
-test_source_span_creation = testCase "SourceSpan creation and properties" $ do
+test_source_span_creation = testCase "SourceSpan creation L.and properties" $ do
   let start = mkSourcePos 1 1
       end = mkSourcePos 1 5
       span = mkSourceSpan start end
   assertEqual "Start position correct" start (spanStart span)
   assertEqual "End position correct" end (spanEnd span)
-  assertEqual "Span length correct" 4 (spanLength span)
+  assertEqual "Span L.length correct" 4 (spanLength span)
 
 -- | Test span containment
 test_span_containment :: TestTree
@@ -93,11 +94,11 @@ test_span_intersection = testCase "SourceSpan intersection" $ do
       result = spanIntersection span1 span2
   assertEqual "Intersection creates correct span" expected result
 
--- | Property: Span length is non-negative
+-- | Property: Span L.length is non-negative
 prop_span_length_non_negative :: SourceSpan -> Property
 prop_span_length_non_negative span = 
-  let length = spanLength span
-  in property $ length >= 0
+  let L.length = spanLength span
+  in property $ L.length >= 0
 
 -- | Property: Span start <= span end
 prop_span_start_le_end :: SourceSpan -> Property
@@ -150,7 +151,7 @@ prop_located_preserves_span span value =
   let located = locatedWithSpan span value
   in property $ locatedSpan located == span
 
--- | Property: Span length calculation is correct for single-line spans
+-- | Property: Span L.length calculation is correct for single-line spans
 prop_span_length_single_line :: Property
 prop_span_length_single_line = forAll (choose (1, 100)) $ \startCol ->
   forAll (choose (startCol, 100)) $ \endCol ->
@@ -158,14 +159,14 @@ prop_span_length_single_line = forAll (choose (1, 100)) $ \startCol ->
         expectedLength = endCol - startCol
     in property $ spanLength span == expectedLength
 
--- | Property: Span length calculation is reasonable for multi-line spans
+-- | Property: Span L.length calculation is reasonable for multi-line spans
 prop_span_length_multi_line :: Property
 prop_span_length_multi_line = forAll (choose (1, 50)) $ \numLines ->
   forAll (choose (1, 100)) $ \lineLength ->
     let start = mkSourcePos 1 1
         end = mkSourcePos numLines lineLength
         span = mkSourceSpan start end
-        -- Multi-line span length should be at least (numLines - 1)
+        -- Multi-line span L.length should be at least (numLines - 1)
         minLength = numLines - 1
     in property $ spanLength span >= minLength
 
@@ -177,7 +178,7 @@ tests = testGroup "SourceLocation Math Tests"
   , test_span_overlap
   , test_span_union
   , test_span_intersection
-  , fastProperty "Span length non-negative" prop_span_length_non_negative
+  , fastProperty "Span L.length non-negative" prop_span_length_non_negative
   , fastProperty "Span start <= end" prop_span_start_le_end
   , fastProperty "Span contains itself" prop_span_contains_self
   , fastProperty "Span overlaps with itself" prop_span_overlaps_self
@@ -186,6 +187,6 @@ tests = testGroup "SourceLocation Math Tests"
   , fastProperty "Union contains both spans" prop_union_contains_both
   , fastProperty "Intersection contained in both" prop_intersection_contained_in_both
   , fastProperty "Located preserves span" prop_located_preserves_span
-  , fastProperty "Single-line span length" prop_span_length_single_line
-  , fastProperty "Multi-line span length" prop_span_length_multi_line
+  , fastProperty "Single-line span L.length" prop_span_length_single_line
+  , fastProperty "Multi-line span L.length" prop_span_length_multi_line
   ]

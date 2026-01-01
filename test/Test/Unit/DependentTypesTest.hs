@@ -3,6 +3,7 @@
 module Main where
 
 import Dependencies (
+import qualified Data.List as L
     DependentTypeChecker,
     DependentTypeError(..),
     TypeVar(..),
@@ -92,7 +93,7 @@ testSemanticAnalysis = do
     if null errors
         then putStrLn "  Semantic analysis passed with no errors"
         else do
-            putStrLn $ "  Semantic analysis found " ++ show (length errors) ++ " errors:"
+            putStrLn $ "  Semantic analysis found " ++ show (L.length errors) ++ " errors:"
             mapM_ (\err -> putStrLn $ "    " ++ show err) (take 5 errors)
 
 -- 测试约束求解
@@ -124,7 +125,7 @@ testTypeChecking = do
     if null errors
         then putStrLn "  Type checking passed with no errors"
         else do
-            putStrLn $ "  Type checking found " ++ show (length errors) ++ " errors:"
+            putStrLn $ "  Type checking found " ++ show (L.length errors) ++ " errors:"
             mapM_ (\err -> putStrLn $ "    " ++ show err) (take 5 errors)
 
 -- 检查一些类型的辅助函数

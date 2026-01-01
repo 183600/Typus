@@ -6,6 +6,7 @@ import Test.Tasty
 import Test.Tasty.QuickCheck
 import Utils
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isSuffixOf)
 
 -- | Test string utility functions with QuickCheck properties
@@ -13,13 +14,13 @@ testStringUtilsProperties :: TestTree
 testStringUtilsProperties = testGroup "String Utils Properties"
   [ testProperty "trim idempotent" propTrimIdempotent
   , testProperty "trim removes only whitespace" propTrimRemovesOnlyWhitespace
-  , testProperty "splitBy consistency with concat" propSplitByConsistency
+  , testProperty "splitBy consistency with L.concat" propSplitByConsistency
   , testProperty "splitByComma equals splitBy ','" propSplitByCommaEqualsSplitBy
   , testProperty "splitByCollapsed removes empty segments" propSplitByCollapsedRemovesEmpty
   , testProperty "removeLineComments preserves non-comment lines" propRemoveLineCommentsPreservesNonComment
   , testProperty "removeComments preserves string literals" propRemoveCommentsPreservesStringLiterals
   , testProperty "normalizeIndentation preserves relative indentation" propNormalizeIndentationPreservesRelative
-  , testProperty "breakOn finds substring or returns original" propBreakOnBehavior
+  , testProperty "breakOn finds substring L.or returns original" propBreakOnBehavior
   ]
 
 -- | trim applied twice is the same as trim applied once
@@ -30,17 +31,17 @@ propTrimIdempotent s = trim (trim s) == trim s
 propTrimRemovesOnlyWhitespace :: String -> Bool
 propTrimRemovesOnlyWhitespace s = 
   let trimmed = trim s
-      originalLength = length s
-      trimmedLength = length trimmed
-      leadingWhitespace = length $ takeWhile isSpace s
-      trailingWhitespace = length $ takeWhile isSpace (reverse s)
+      originalLength = L.length s
+      trimmedLength = L.length trimmed
+      leadingWhitespace = L.length $ takeWhile isSpace s
+      trailingWhitespace = L.length $ takeWhile isSpace (L.reverse s)
   in originalLength - trimmedLength == leadingWhitespace + trailingWhitespace
 
--- | splitBy followed by concat with delimiter should reconstruct original (for non-empty delimiter)
+-- | splitBy followed by L.concat with delimiter should reconstruct original (for non-empty delimiter)
 propSplitByConsistency :: Char -> String -> Property
 propSplitByConsistency delim s = delim /= 'undefined' ==> 
   let parts = splitBy delim s
-      reconstructed = concat $ map (++ [delim]) (init parts) ++ [last parts]
+      reconstructed = L.concat $ L.map (++ [delim]) (init parts) ++ [last parts]
   in if null parts
      then s == ""
      else reconstructed == s
@@ -53,15 +54,15 @@ propSplitByCommaEqualsSplitBy s = splitByComma s == splitBy ',' s
 propSplitByCollapsedRemovesEmpty :: Char -> String -> Property
 propSplitByCollapsedRemovesEmpty delim s = delim /= 'undefined' ==>
   let parts = splitByCollapsed delim s
-  in all (not . null) parts
+  in L.all (not . null) parts
 
 -- | removeLineComments should not modify lines without //
 propRemoveLineCommentsPreservesNonComment :: String -> Property
 propRemoveLineCommentsPreservesNonComment s = 
-  let linesWithoutComment = filter (not . (isPrefixOf "//")) (lines s)
+  let linesWithoutComment = L.filter (not . (L.isPrefixOf "//")) (lines s)
       processed = removeLineComments s
       processedLines = lines processed
-  in all (`elem` processedLines) linesWithoutComment
+  in L.all (`elem` processedLines) linesWithoutComment
 
 -- | removeComments should preserve the content of string literals
 propRemoveCommentsPreservesStringLiterals :: String -> Property
@@ -69,7 +70,7 @@ propRemoveCommentsPreservesStringLiterals s =
   let stringLiterals = extractStringLiterals s
       processed = removeComments s
       processedLiterals = extractStringLiterals processed
-  in all (`elem` processedLiterals) stringLiterals
+  in L.all (`elem` processedLiterals) stringLiterals
   where
     extractStringLiterals :: String -> [String]
     extractStringLiterals = extract []
@@ -83,8 +84,8 @@ propRemoveCommentsPreservesStringLiterals s =
         extractLiteral :: String -> (String, String)
         extractLiteral = go []
           where
-            go acc [] = (reverse acc, [])
-            go acc ('"':xs) = (reverse acc, xs)
+            go acc [] = (L.reverse acc, [])
+            go acc ('"':xs) = (L.reverse acc, xs)
             go acc ('\\':x:xs) = go (x:'\\':acc) xs
             go acc (x:xs) = go (x:acc) xs
 
@@ -92,38 +93,38 @@ propRemoveCommentsPreservesStringLiterals s =
 propNormalizeIndentationPreservesRelative :: String -> Property
 propNormalizeIndentationPreservesRelative s =
   let ls = lines s
-      nonEmptyLines = filter (not . all isSpace) ls
-  in length nonEmptyLines >= 2 ==>
+      nonEmptyLines = L.filter (not . L.all isSpace) ls
+  in L.length nonEmptyLines >= 2 ==>
      let normalized = normalizeIndentation s
          normalizedLines = lines normalized
-         originalIndents = map (length . takeWhile isSpace) nonEmptyLines
-         normalizedIndents = map (length . takeWhile isSpace) 
-                            (filter (not . all isSpace) normalizedLines)
+         originalIndents = L.map (L.length . takeWhile isSpace) nonEmptyLines
+         normalizedIndents = L.map (L.length . takeWhile isSpace) 
+                            (L.filter (not . L.all isSpace) normalizedLines)
      in if null originalIndents || null normalizedIndents
         then True
-        else all (>= 0) (zipWith (-) (tail normalizedIndents) (tail originalIndents))
+        else L.all (>= 0) (zipWith (-) (L.tail normalizedIndents) (L.tail originalIndents))
 
--- | breakOn should either find the pattern and split, or return original string
+-- | breakOn should either find the pattern L.and split, L.or return original string
 propBreakOnBehavior :: String -> String -> Bool
 propBreakOnBehavior pat s
   | null pat = breakOn pat s == ("", s)
-  | pat `isPrefixOf` s = 
+  | pat `L.isPrefixOf` s = 
       let (before, after) = breakOn pat s
       in null before && s == pat ++ after
-  | pat `isInfixOf` s = 
+  | pat `L.isInfixOf` s = 
       let (before, after) = breakOn pat s
       in s == before ++ pat ++ after
   | otherwise = 
       let (before, after) = breakOn pat s
       in before == s && after == ""
   where
-    isInfixOf needle haystack = needle `isPrefixOf` dropWhile (/= head needle) haystack
+    L.isInfixOf needle haystack = needle `L.isPrefixOf` dropWhile (/= L.head needle) haystack
 
 -- | Additional tests for edge cases
 testStringUtilsEdgeCases :: TestTree
 testStringUtilsEdgeCases = testGroup "String Utils Edge Cases"
   [ testCase "trim empty string" $ trim "" @?= ""
-  , testCase "trim all whitespace" $ trim "   \t\n  " @?= ""
+  , testCase "trim L.all whitespace" $ trim "   \t\n  " @?= ""
   , testCase "splitBy empty string" $ splitBy ',' "" @?= [""]
   , testCase "removeComments nested blocks" $ 
       removeComments "/* outer /* inner */ still outer */ end" @?= "  end"

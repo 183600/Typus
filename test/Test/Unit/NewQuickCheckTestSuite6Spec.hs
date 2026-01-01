@@ -1,6 +1,7 @@
 module Test.Unit.NewQuickCheckTestSuite6Spec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.QuickCheck (Property, (==>), forAll, Gen, arbitrary, choose, oneof, elements)
 import Data.Text (Text)
@@ -19,21 +20,21 @@ tests =
   testGroup "NewQuickCheckTestSuite6 - Dependencies Analysis"
     [ testGroup "AST operations"
         [ testCase "Program AST construction" $ do
-            let program = Program [SVarDecl "x" (SimpleT "int")]
+            let program = Program [SVarDecl (T.pack "x") (SimpleT (T.pack "int"))]
             case program of
-              Program stmts -> length stmts @?= 1
+              Program stmts -> L.length stmts @?= 1
               
         , testCase "Statement equality works" $ do
-            let stmt1 = SVarDecl "x" (SimpleT "int")
-                stmt2 = SVarDecl "x" (SimpleT "int")
-                stmt3 = SVarDecl "y" (SimpleT "int")
+            let stmt1 = SVarDecl (T.pack "x") (SimpleT (T.pack "int"))
+                stmt2 = SVarDecl (T.pack "x") (SimpleT (T.pack "int"))
+                stmt3 = SVarDecl (T.pack "y") (SimpleT (T.pack "int"))
             stmt1 @?= stmt2
             stmt1 /= stmt3 @?= True
             
         , testCase "TypeExpr construction" $ do
-            let simpleType = SimpleT "int"
-                genericType = GenericT "List" [SimpleT "int"]
-                funcType = FuncT [("x", SimpleT "int")] (SimpleT "bool")
+            let simpleType = SimpleT (T.pack "int")
+                genericType = GenericT "List" [SimpleT (T.pack "int")]
+                funcType = FuncT [("x", SimpleT (T.pack "int"))] (SimpleT (T.pack "bool"))
             show simpleType `contains` "int" @?= True
             show genericType `contains` "List" @?= True
             show funcType `contains` "FuncT" @?= True
@@ -42,7 +43,7 @@ tests =
             let sizeGT = SizeGT "arr" 0
                 sizeGE = SizeGE "arr" 1
                 range = RangeC "x" 0 100
-                pred = PredC "Valid" [SimpleT "int"]
+                pred = PredC "Valid" [SimpleT (T.pack "int")]
             show sizeGT `contains` "SizeGT" @?= True
             show sizeGE `contains` "SizeGE" @?= True
             show range `contains` "RangeC" @?= True
@@ -59,7 +60,7 @@ tests =
             let node1 = DependencyNode "A" ["B"]
                 node2 = DependencyNode "B" []
                 graph = DependencyGraph (Map.fromList [("A", node1), ("B", node2)])
-            length (graphNodes graph) @?= 2
+            L.length (graphNodes graph) @?= 2
         ]
 
     [,testGroup "TypeVar operations"
@@ -123,8 +124,8 @@ tests =
             let typeDefs = Map.singleton "Int" (TypeDefDecl [] [])
                 constraints = [Equal (TVVar "a") (TVVar "b")]
                 env = TypeEnv typeDefs constraints
-            length (typeDefinitions env) @?= 1
-            length (pendingConstraints env) @?= 1
+            L.length (typeDefinitions env) @?= 1
+            L.length (pendingConstraints env) @?= 1
             
         , testCase "preludeTypeDefs contains basic types" $ do
             let prelude = preludeTypeDefs
@@ -134,7 +135,7 @@ tests =
     , testGroup "DependentTypeChecker operations"
         [ testCase "newDependentTypeChecker creates checker" $ do
             let checker = newDependentTypeChecker
-            length (tcErrors checker) @?= 0
+            L.length (tcErrors checker) @?= 0
             Map.size (typeDefinitions (dtcTypeEnv checker)) @?= 0
             
         , testCase "newDependentTypeCheckerWithTypes uses provided types" $ do
@@ -154,7 +155,7 @@ tests =
             let checker = newDependentTypeChecker
                 constraint = Equal (TVVar "a") (TVVar "b")
                 checker' = addConstraint constraint checker
-            length (pendingConstraints (dtcTypeEnv checker')) @?= 1
+            L.length (pendingConstraints (dtcTypeEnv checker')) @?= 1
             
         , testCase "lookupTypeDef finds existing type" $ do
             let typeDef = TypeDefDecl [] []
@@ -181,7 +182,7 @@ tests =
 
     , testGroup "Type conversion"
         [ testCase "convertTypeExpr handles simple types" $ do
-            let typeExpr = SimpleT "int"
+            let typeExpr = SimpleT (T.pack "int")
                 checker = newDependentTypeChecker
                 result = convertTypeExpr typeExpr checker
             case result of
@@ -192,7 +193,7 @@ tests =
     , testGroup "QuickCheck properties"
         [ fastProperty "TypeVar ordering is consistent" prop_typeVarOrderingConsistent
         , fastProperty "TypeConstraint ordering is consistent" prop_typeConstraintOrderingConsistent
-        , fastProperty "DependencyNode preserves name and dependencies" prop_dependencyNodePreservesFields
+        , fastProperty "DependencyNode preserves name L.and dependencies" prop_dependencyNodePreservesFields
         , fastProperty "Statement equality is reflexive" prop_statementEqualityReflexive
         , fastProperty "TypeExpr equality is symmetric" prop_typeExprEqualitySymmetric
         ]
@@ -200,7 +201,7 @@ tests =
 
 -- Helper function to check if string contains substring
 contains :: String -> String -> Bool
-contains needle haystack = needle `isInfixOf` haystack
+contains needle haystack = needle `L.isInfixOf` haystack
 
 -- ============================================================================
 -- QuickCheck Properties
@@ -281,5 +282,5 @@ genDependencyNode = do
 genValidIdentifier :: Gen String
 genValidIdentifier = do
     first <- elements ['a'..'z']
-    rest <- arbitrary `suchThat` all (`elem` ['a'..'z'] ++ ['0'..'9'] ++ "_")
+    rest <- arbitrary `suchThat` L.all (`elem` ['a'..'z'] ++ ['0'..'9'] ++ "_")
     return (first : rest)

@@ -28,6 +28,7 @@ import Parser
 import SourceLocation (SourcePos(..), startPos)
 import Utils (trim)
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 import qualified Data.Text as T
 
@@ -37,31 +38,31 @@ prop_parse_empty_string =
   let result = parseTypus "" startPos
   in case result of
     Left _ -> property False
-    Right file -> property $ null (tfBlocks file)
+    Right file -> property $ L.null (tfBlocks file)
 
 -- Property: Parsing string with only whitespace returns file with empty blocks
 prop_parse_whitespace_only :: String -> Property
 prop_parse_whitespace_only input =
-  all isSpace input ==>
+  L.all isSpace input ==>
   let result = parseTypus input startPos
   in case result of
     Left _ -> property False
-    Right file -> property $ null (tfBlocks file)
+    Right file -> property $ L.null (tfBlocks file)
 
 -- Property: Parsing string with only comments returns file with empty blocks
 prop_parse_comments_only :: String -> Property
 prop_parse_comments_only comment =
-  not (null comment) && not (any (`elem` comment) "\"'\\") ==>
+  not (null comment) && not (L.any (`elem` comment) "\"'\\") ==>
   let commentLine = "// " ++ comment
       result = parseTypus commentLine startPos
   in case result of
     Left _ -> property False
-    Right file -> property $ null (tfBlocks file)
+    Right file -> property $ L.null (tfBlocks file)
 
 -- Property: Parsing well-formed directive block succeeds
 prop_parse_well_formed_directive :: String -> String -> Property
 prop_parse_well_formed_directive directiveName content =
-  not (null directiveName) && not (any (`elem` directiveName) "{}\"'\\") ==>
+  not (null directiveName) && not (L.any (`elem` directiveName) "{}\"'\\") ==>
   let directiveBlock = unlines
         [ "#[" ++ directiveName ++ "]"
         , "{"
@@ -71,12 +72,12 @@ prop_parse_well_formed_directive directiveName content =
       result = parseTypus directiveBlock startPos
   in case result of
     Left _ -> property False
-    Right file -> property $ not (null (tfBlocks file))
+    Right file -> property $ not (L.null (tfBlocks file))
 
 -- Property: Parsing unterminated directive block fails
 prop_parse_unterminated_directive :: String -> String -> Property
 prop_parse_unterminated_directive directiveName content =
-  not (null directiveName) && not (any (`elem` directiveName) "{}\"'\\") ==>
+  not (null directiveName) && not (L.any (`elem` directiveName) "{}\"'\\") ==>
   let unterminatedBlock = unlines
         [ "#[" ++ directiveName ++ "]"
         , "{"
@@ -85,7 +86,7 @@ prop_parse_unterminated_directive directiveName content =
         ]
       result = parseTypus unterminatedBlock startPos
   in case result of
-    Left err -> property $ "Unclosed directive block" `isInfixOf` err
+    Left err -> property $ "Unclosed directive block" `L.isInfixOf` err
     Right _ -> property False
 
 -- Property: Parsing mismatched braces fails
@@ -105,7 +106,7 @@ prop_parse_mismatched_braces content =
 -- Property: Parsing directive with boolean values
 prop_parse_boolean_directive :: String -> Bool -> Property
 prop_parse_boolean_directive directiveName value =
-  not (null directiveName) && not (any (`elem` directiveName) "{}\"'\\") ==>
+  not (null directiveName) && not (L.any (`elem` directiveName) "{}\"'\\") ==>
   let boolStr = if value then "on" else "off"
       directiveBlock = unlines
         [ "#[" ++ directiveName ++ "]"
@@ -116,15 +117,15 @@ prop_parse_boolean_directive directiveName value =
       result = parseTypus directiveBlock startPos
   in case result of
     Left _ -> property False
-    Right file -> property $ not (null (tfBlocks file))
+    Right file -> property $ not (L.null (tfBlocks file))
 
 -- Property: Parsing multiple directive blocks
 prop_parse_multiple_directives :: [String] -> [String] -> Property
 prop_parse_multiple_directives directiveNames contents =
-  not (null directiveNames) && all (not . null) directiveNames &&
-  all (not . any (`elem` "{}\"'\\")) directiveNames &&
-  length directiveNames == length contents ==>
-  let directiveBlocks = concat $ zipWith makeDirectiveBlock directiveNames contents
+  not (null directiveNames) && L.all (not . null) directiveNames &&
+  L.all (not . L.any (`elem` "{}\"'\\")) directiveNames &&
+  L.length directiveNames == L.length contents ==>
+  let directiveBlocks = L.concat $ zipWith makeDirectiveBlock directiveNames contents
       result = parseTypus directiveBlocks startPos
       makeDirectiveBlock name content = unlines
         [ "#[" ++ name ++ "]"
@@ -135,12 +136,12 @@ prop_parse_multiple_directives directiveNames contents =
         ]
   in case result of
     Left _ -> property False
-    Right file -> property $ length (tfBlocks file) == length directiveNames
+    Right file -> property $ L.length (tfBlocks file) == L.length directiveNames
 
 -- Property: Parsing directive with nested braces in strings
 prop_parse_nested_braces_in_strings :: String -> Property
 prop_parse_nested_braces_in_strings content =
-  not (any (`elem` content) "\"\\") ==>
+  not (L.any (`elem` content) "\"\\") ==>
   let stringWithBraces = "\"{ nested { braces } in string }\""
       directiveBlock = unlines
         [ "#[test]"
@@ -152,12 +153,12 @@ prop_parse_nested_braces_in_strings content =
       result = parseTypus directiveBlock startPos
   in case result of
     Left _ -> property False
-    Right file -> property $ not (null (tfBlocks file))
+    Right file -> property $ not (L.null (tfBlocks file))
 
 -- Property: Parsing directive with comments inside
 prop_parse_comments_in_directive :: String -> String -> Property
 prop_parse_comments_in_directive content comment =
-  not (any (`elem` comment) "\"'\\") ==>
+  not (L.any (`elem` comment) "\"'\\") ==>
   let directiveBlock = unlines
         [ "#[test]"
         , "{"
@@ -169,12 +170,12 @@ prop_parse_comments_in_directive content comment =
       result = parseTypus directiveBlock startPos
   in case result of
     Left _ -> property False
-    Right file -> property $ not (null (tfBlocks file))
+    Right file -> property $ not (L.null (tfBlocks file))
 
 -- Property: Parsing empty directive block
 prop_parse_empty_directive :: String -> Property
 prop_parse_empty_directive directiveName =
-  not (null directiveName) && not (any (`elem` directiveName) "{}\"'\\") ==>
+  not (null directiveName) && not (L.any (`elem` directiveName) "{}\"'\\") ==>
   let emptyDirective = unlines
         [ "#[" ++ directiveName ++ "]"
         , "{"
@@ -183,13 +184,13 @@ prop_parse_empty_directive directiveName =
       result = parseTypus emptyDirective startPos
   in case result of
     Left _ -> property False
-    Right file -> property $ not (null (tfBlocks file))
+    Right file -> property $ not (L.null (tfBlocks file))
 
 -- Property: Parsing directive with invalid boolean value fails
 prop_parse_invalid_boolean :: String -> String -> Property
 prop_parse_invalid_boolean directiveName invalidValue =
   not (null directiveName) && not (null invalidValue) &&
-  not (any (`elem` directiveName) "{}\"'\\") &&
+  not (L.any (`elem` directiveName) "{}\"'\\") &&
   invalidValue `notElem` ["on", "off", "true", "false"] ==>
   let directiveBlock = unlines
         [ "#[" ++ directiveName ++ "]"
@@ -199,15 +200,15 @@ prop_parse_invalid_boolean directiveName invalidValue =
         ]
       result = parseTypus directiveBlock startPos
   in case result of
-    Left err -> property $ "Invalid boolean value" `isInfixOf` err
+    Left err -> property $ "Invalid boolean value" `L.isInfixOf` err
     Right _ -> property False
 
 -- Property: Parsing directive with unknown key fails gracefully
 prop_parse_unknown_directive :: String -> String -> Property
 prop_parse_unknown_directive directiveName unknownKey =
   not (null directiveName) && not (null unknownKey) &&
-  not (any (`elem` directiveName) "{}\"'\\") &&
-  not (any (`elem` unknownKey) "{}\"'\\") ==>
+  not (L.any (`elem` directiveName) "{}\"'\\") &&
+  not (L.any (`elem` unknownKey) "{}\"'\\") ==>
   let directiveBlock = unlines
         [ "#[" ++ directiveName ++ "]"
         , "{"
@@ -217,19 +218,19 @@ prop_parse_unknown_directive directiveName unknownKey =
       result = parseTypus directiveBlock startPos
   in case result of
     Left _ -> property True  -- Should fail gracefully
-    Right file -> property $ not (null (tfBlocks file))  -- Or succeed with partial parsing
+    Right file -> property $ not (L.null (tfBlocks file))  -- Or succeed with partial parsing
 
 -- Property: Parsing preserves line numbers
 prop_parse_preserves_line_numbers :: [String] -> Property
 prop_parse_preserves_line_numbers lines =
-  not (null lines) && all (not . any (`elem` "{}\"'\\")) lines ==>
+  not (null lines) && L.all (not . L.any (`elem` "{}\"'\\")) lines ==>
   let content = unlines lines
       result = parseTypus content startPos
   in case result of
     Left _ -> property False
     Right file -> 
       case tfBlocks file of
-        [] -> property $ length lines <= 1  -- No blocks if only comments/whitespace
+        [] -> property $ L.length lines <= 1  -- No blocks if only comments/whitespace
         (block:_) -> property $ True  -- Basic check that parsing succeeded
 
 -- Property: Parsing handles unicode content
@@ -244,13 +245,13 @@ prop_parse_unicode_content unicodeContent =
       result = parseTypus directiveBlock startPos
   in case result of
     Left _ -> property False
-    Right file -> property $ not (null (tfBlocks file))
+    Right file -> property $ not (L.null (tfBlocks file))
 
 -- Property: Parsing handles very long lines
 prop_parse_long_lines :: Int -> String -> Property
-prop_parse_long_lines length baseContent =
-  length > 0 && length <= 1000 && not (any (`elem` baseContent) "{}\"'\\") ==>
-  let longContent = baseContent ++ concat (replicate length "x")
+prop_parse_long_lines L.length baseContent =
+  L.length > 0 && L.length <= 1000 && not (L.any (`elem` baseContent) "{}\"'\\") ==>
+  let longContent = baseContent ++ L.concat (replicate L.length "x")
       directiveBlock = unlines
         [ "#[long_line_test]"
         , "{"
@@ -260,7 +261,7 @@ prop_parse_long_lines length baseContent =
       result = parseTypus directiveBlock startPos
   in case result of
     Left _ -> property False
-    Right file -> property $ not (null (tfBlocks file))
+    Right file -> property $ not (L.null (tfBlocks file))
 
 tests :: TestTree
 tests = testGroup "Enhanced Parser Error Handling QuickCheck"

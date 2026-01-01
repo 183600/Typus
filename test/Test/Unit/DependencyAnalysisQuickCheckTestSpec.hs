@@ -10,6 +10,7 @@
 module Test.Unit.DependencyAnalysisQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -154,7 +155,7 @@ prop_typeConstraint_show_contains_type =
           TypeSizeGE _ _ -> "TypeSizeGE"
           TypeSizeGT _ _ -> "TypeSizeGT"
           TypeRange _ _ _ -> "TypeRange"
-    in constraintType `isInfixOf` showStr
+    in constraintType `L.isInfixOf` showStr
 
 -- 属性：DependentTypeError的Show实例应该包含错误类型
 prop_dependentTypeError_show_contains_type :: Property
@@ -171,7 +172,7 @@ prop_dependentTypeError_show_contains_type =
           AmbiguousType _ -> "AmbiguousType"
           ParseError _ -> "ParseError"
           SemanticError _ -> "SemanticError"
-    in errorType `isInfixOf` showStr
+    in errorType `L.isInfixOf` showStr
 
 -- 属性：newDependentTypeChecker应该创建有效的检查器
 prop_newDependentTypeChecker_valid :: Property
@@ -179,7 +180,7 @@ prop_newDependentTypeChecker_valid =
   let checker = newDependentTypeChecker
   in case checker of
        DependentTypeChecker typeEnv errors ->
-         Map.null (typeDefinitions typeEnv) === True &&
+         Map.L.null (typeDefinitions typeEnv) === True &&
          null errors === True
 
 -- 属性：newDependentTypeCheckerWithTypes应该创建包含指定类型的检查器
@@ -298,14 +299,14 @@ prop_typeConstraint_list_sortable :: Property
 prop_typeConstraint_list_sortable =
   forAll (listOf genTypeConstraint) $ \constraints ->
     let sortedConstraints = sort constraints
-    in length sortedConstraints === length constraints
+    in L.length sortedConstraints === L.length constraints
 
 -- 属性：依赖类型错误列表应该可以排序
 prop_dependentTypeError_list_sortable :: Property
 prop_dependentTypeError_list_sortable =
   forAll (listOf genDependentTypeError) $ \errors ->
     let sortedErrors = sort errors
-    in length sortedErrors === length errors
+    in L.length sortedErrors === L.length errors
 
 tests :: TestTree
 tests =
@@ -320,7 +321,7 @@ tests =
     , fastProperty "lookupTypeDef not found" prop_lookupTypeDef_not_found
     , fastProperty "addConstraint adds to env" prop_addConstraint_adds_to_env
     , fastProperty "addError adds to checker" prop_addError_adds_to_checker
-    , fastProperty "getDependentTypeErrors returns all" prop_getDependentTypeErrors_returns_all
+    , fastProperty "getDependentTypeErrors returns L.all" prop_getDependentTypeErrors_returns_all
     , fastProperty "TypeVar ordering consistent" prop_typeVar_ordering_consistent
     , fastProperty "TypeConstraint equality" prop_typeConstraint_equality
     , fastProperty "DependentTypeError equality" prop_dependentTypeError_equality

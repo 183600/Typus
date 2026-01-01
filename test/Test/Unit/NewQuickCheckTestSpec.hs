@@ -3,6 +3,7 @@
 module Test.Unit.NewQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
@@ -29,8 +30,8 @@ coreDataStructureTests :: TestTree
 coreDataStructureTests = testGroup "Core Data Structure Properties"
   [ fastProperty "Map insert then lookup returns the inserted value" prop_map_insert_lookup
   , fastProperty "Set insert then member returns True" prop_set_insert_member
-  , fastProperty "Map union preserves all key-value pairs" prop_map_union_preserves
-  , fastProperty "Set union preserves all elements" prop_set_union_preserves
+  , fastProperty "Map union preserves L.all key-value pairs" prop_map_union_preserves
+  , fastProperty "Set union preserves L.all elements" prop_set_union_preserves
   ]
 
 parserUtilityTests :: TestTree
@@ -84,7 +85,7 @@ prop_map_union_preserves kvs1 kvs2 =
   let m1 = Map.fromList kvs1
       m2 = Map.fromList kvs2
       munion = Map.union m1 m2
-  in property $ all (\k -> Map.member k munion) (Map.keys m2)
+  in property $ L.all (\k -> Map.member k munion) (Map.keys m2)
 
 prop_set_union_preserves :: [Int] -> [Int] -> Property
 prop_set_union_preserves xs ys =
@@ -92,8 +93,8 @@ prop_set_union_preserves xs ys =
       s2 = Set.fromList ys
       sunion = Set.union s1 s2
   in conjoin
-    [ all (`Set.member` sunion) xs
-    , all (`Set.member` sunion) ys
+    [ L.all (`Set.member` sunion) xs
+    , L.all (`Set.member` sunion) ys
     ]
 
 -- Parser Utility Properties
@@ -113,7 +114,7 @@ prop_codeblock_reflexive cb =
 prop_typusfile_order_preserved :: [CodeBlock] -> Property
 prop_typusfile_order_preserved blocks =
   let tf = TypusFile defaultFileDirectives [] blocks []
-  in length (tfBlocks tf) === length blocks
+  in L.length (tfBlocks tf) === L.length blocks
 
 -- Source Location Properties
 
@@ -164,10 +165,10 @@ prop_splitbycomma_empty =
 prop_trim_behavior :: String -> Property
 prop_trim_behavior s =
   let trimmed = trim s
-      hasLeading = not (null s) && isSpace (head s)
+      hasLeading = not (null s) && isSpace (L.head s)
       hasTrailing = not (null s) && isSpace (last s)
   in if hasLeading || hasTrailing
-     then property (length trimmed < length s)
+     then property (L.length trimmed < L.length s)
      else trimmed === s
 
 prop_remove_comments_preserves :: String -> Property
@@ -180,7 +181,7 @@ prop_normalize_indentation_lines s =
   let normalized = normalizeIndentation s
       originalLines = lines s
       normalizedLines = lines normalized
-  in length originalLines === length normalizedLines
+  in L.length originalLines === L.length normalizedLines
 
 -- Compilation Properties
 
@@ -194,6 +195,6 @@ prop_whitespace_compiles =
 
 prop_identifier_parsing :: String -> Property
 prop_identifier_parsing s =
-  let filtered = filter (\c -> isAlpha c || isDigit c || c == '_') s
-      startsWithAlpha = not (null filtered) && isAlpha (head filtered)
+  let filtered = L.filter (\c -> isAlpha c || isDigit c || c == '_') s
+      startsWithAlpha = not (null filtered) && isAlpha (L.head filtered)
   in (not (null filtered) && startsWithAlpha) ==> property True

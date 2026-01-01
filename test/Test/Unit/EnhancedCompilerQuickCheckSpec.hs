@@ -11,6 +11,7 @@ import Compiler.Errors (CompilerError(..))
 import Compiler.TypeChecker (TypeCheckDiagnostic(..))
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 -- ============================================================================
@@ -113,13 +114,13 @@ prop_errorRenderingPreservesInfo err =
 prop_errorAnalysisIdentifiesPatterns :: [CompilerError] -> Bool
 prop_errorAnalysisIdentifiesPatterns errors =
   let analysis = analyzeErrors errors
-  in length analysis >= 0  -- Should produce analysis
+  in L.length analysis >= 0  -- Should produce analysis
 
 -- Property: type error detection is accurate
 prop_typeErrorDetectionAccurate :: [TypeCheckDiagnostic] -> Bool
 prop_typeErrorDetectionAccurate diagnostics =
   let hasErrors = hasTypeErrors diagnostics
-      hasActualErrors = any isErrorDiagnostic diagnostics
+      hasActualErrors = L.any isErrorDiagnostic diagnostics
   in hasErrors == hasActualErrors
   where
     isErrorDiagnostic (TypeError _) = True
@@ -163,7 +164,7 @@ prop_ownershipCheckingConservative typusFile =
 prop_declarationExtractionComplete :: String -> Bool
 prop_declarationExtractionComplete code =
   let declarations = extractDeclarations code
-  in length declarations >= 0  -- Should find declarations
+  in L.length declarations >= 0  -- Should find declarations
 
 -- ============================================================================
 -- Code Generation Properties
@@ -227,7 +228,7 @@ prop_compilerMaintainsSourceLocation typusFile =
     Left _ -> True
 
 -- ============================================================================
--- Helper Functions and Generators
+-- Helper Functions L.and Generators
 -- ============================================================================
 
 -- Generate simple typus files for testing

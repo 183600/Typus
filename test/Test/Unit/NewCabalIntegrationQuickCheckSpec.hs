@@ -21,7 +21,9 @@ import SourceLocation (SourcePos(..), SourceSpan(..), Located(..))
 import Compiler.Errors.Core (TypeError(..), ErrorSeverity(..), ErrorCategory(..))
 import Utils (trim, removeComments)
 
-import Data.List (isInfixOf, isPrefixOf, nub, sort)
+import qualified Data.List as L
+import Data.List (isInfixOf, isPrefixOf)
+import Data.List (nub, sort)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)
@@ -160,7 +162,7 @@ instance Arbitrary MockIRInstruction where
 instance Arbitrary MockIR where
   arbitrary = do
     instructions <- listOf1 arbitrary
-    entry <- choose (0, length instructions - 1)
+    entry <- choose (0, L.length instructions - 1)
     exports <- Set.fromList <$> listOf (elements ["main", "func1", "func2"])
     return $ MockIR instructions entry exports
 
@@ -274,7 +276,7 @@ prop_parse_errors_propagated :: MockCompilationPipeline -> Property
 prop_parse_errors_propagated pipeline =
   let parseResult = pipelineParseResult pipeline
       parseErrors = parseErrors parseResult
-      errorCount = length parseErrors
+      errorCount = L.length parseErrors
   in property $ errorCount >= 0
 
 -- Property: Analysis errors are accumulated
@@ -282,7 +284,7 @@ prop_analysis_errors_accumulated :: MockCompilationPipeline -> Property
 prop_analysis_errors_accumulated pipeline =
   let analysisResult = pipelineAnalysisResult pipeline
       analysisErrors = analysisErrors analysisResult
-      errorCount = length analysisErrors
+      errorCount = L.length analysisErrors
   in property $ errorCount >= 0
 
 -- Property: Compile errors are preserved
@@ -290,7 +292,7 @@ prop_compile_errors_preserved :: MockCompilationPipeline -> Property
 prop_compile_errors_preserved pipeline =
   let compileResult = pipelineCompileResult pipeline
       compileErrors = compileErrors compileResult
-      errorCount = length compileErrors
+      errorCount = L.length compileErrors
   in property $ errorCount >= 0
 
 -- Property: AST structure is preserved through pipeline
@@ -298,7 +300,7 @@ prop_ast_structure_preserved :: MockCompilationPipeline -> Property
 prop_ast_structure_preserved pipeline =
   let parseResult = pipelineParseResult pipeline
       ast = parseAST parseResult
-      nodeCount = length (astNodes ast)
+      nodeCount = L.length (astNodes ast)
   in property $ nodeCount >= 0
 
 -- Property: Symbol table is maintained through analysis
@@ -316,7 +318,7 @@ prop_ir_generated_on_success pipeline =
   let compileResult = pipelineCompileResult pipeline
       compileSuccess' = compileSuccess compileResult
       ir = compileIR compileResult
-      instructionCount = length (irInstructions ir)
+      instructionCount = L.length (irInstructions ir)
   in classify compileSuccess' "compile succeeded" $
      classify (not compileSuccess') "compile failed" $
      property $ instructionCount >= 0
@@ -327,7 +329,7 @@ prop_error_locations_preserved pipeline =
   let parseResult = pipelineParseResult pipeline
       parseErrors = parseErrors parseResult
       errorLocations = map parseErrorLocation parseErrors
-  in property $ length errorLocations === length parseErrors
+  in property $ L.length errorLocations === L.length parseErrors
 
 -- Property: Pipeline stages are ordered correctly
 prop_pipeline_stages_ordered :: MockCompilationPipeline -> Property
@@ -345,7 +347,7 @@ prop_warnings_preserved :: MockCompilationPipeline -> Property
 prop_warnings_preserved pipeline =
   let analysisResult = pipelineAnalysisResult pipeline
       warnings = analysisWarnings analysisResult
-      warningCount = length warnings
+      warningCount = L.length warnings
   in property $ warningCount >= 0
 
 -- Property: Output is generated only on successful compilation
@@ -354,7 +356,7 @@ prop_output_generated_on_success pipeline =
   let compileResult = pipelineCompileResult pipeline
       compileSuccess' = compileSuccess compileResult
       output = compileOutput compileResult
-      outputLength = length output
+      outputLength = L.length output
   in classify compileSuccess' "compile succeeded" $
      classify (not compileSuccess') "compile failed" $
      property $ outputLength >= 0
@@ -374,7 +376,7 @@ prop_ast_imports_preserved pipeline =
   let parseResult = pipelineParseResult pipeline
       ast = parseAST parseResult
       imports = astImports ast
-      importCount = length imports
+      importCount = L.length imports
   in property $ importCount >= 0
 
 -- Property: AST exports are preserved
@@ -383,7 +385,7 @@ prop_ast_exports_preserved pipeline =
   let parseResult = pipelineParseResult pipeline
       ast = parseAST parseResult
       exports = astExports ast
-      exportCount = length exports
+      exportCount = L.length exports
   in property $ exportCount >= 0
 
 -- Property: Pipeline handles empty source gracefully
@@ -402,7 +404,7 @@ prop_error_types_preserved pipeline =
   let analysisResult = pipelineAnalysisResult pipeline
       analysisErrors = analysisErrors analysisResult
       errorTypes = map analysisErrorType analysisErrors
-  in property $ length errorTypes === length analysisErrors
+  in property $ L.length errorTypes === L.length analysisErrors
 
 -- Property: Pipeline is deterministic
 prop_pipeline_deterministic :: MockCompilationPipeline -> Property
@@ -418,7 +420,7 @@ prop_compilation_output_valid pipeline =
       ir = compileIR compileResult
       instructions = irInstructions ir
       validOpcodes = ["MOV", "ADD", "SUB", "CALL", "RET", "JMP"]
-      allValid = all (\instr -> irOpcode instr `elem` validOpcodes) instructions
+      allValid = L.all (\instr -> irOpcode instr `elem` validOpcodes) instructions
   in property $ allValid .||. null instructions
 
 tests :: TestTree

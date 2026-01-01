@@ -19,8 +19,10 @@ import Compiler (compile, generateGoCode)
 import Parser (parseTypus, TypusFile(..))
 import Utils (trim, normalizeIndentation)
 
-import Data.List (isInfixOf, isPrefixOf, length, sort)
-import qualified Data.Text as T
+import qualified Data.List as L
+import Data.List (isInfixOf, isPrefixOf, length)
+import Data.List (sort)
+import qualified Data.Text as T (pack, unpack)
 import System.CPUTime (getCPUTime)
 import Text.Printf (printf)
 
@@ -57,7 +59,7 @@ test_parser_performance_large_files =
         let duration = fromIntegral (end - start) / (10^12)
         let codeBlocks = tfCodeBlocks typusFile
         assertBool "Should parse large file successfully" $
-          length codeBlocks >= 100
+          L.length codeBlocks >= 100
         assertBool ("Parsing should complete within reasonable time (took " ++ 
                    printf "%.3f" duration ++ "s)") $
           duration < 5.0  -- Should complete within 5 seconds
@@ -77,11 +79,11 @@ test_compiler_performance_complex_types =
           , "  result := Matrix(a, c){}"
           , "  for i := 0; i < a; i++ {"
           , "    for j := 0; j < c; j++ {"
-          , "      sum := 0.0"
+          , "      L.sum := 0.0"
           , "      for k := 0; k < b; k++ {"
-          , "        sum += m.data[i*b+k] * n.data[k*c+j]"
+          , "        L.sum += m.data[i*b+k] * n.data[k*c+j]"
           , "      }"
-          , "      result.data[i*c+j] = sum"
+          , "      result.data[i*c+j] = L.sum"
           , "    }"
           , "  }"
           , "  return result"
@@ -104,7 +106,7 @@ test_compiler_performance_complex_types =
             let duration = fromIntegral (end - start) / (10^12)
             let goCode = generateGoCode result
             assertBool "Should compile complex types successfully" $
-              T.length goCode > 0
+              T.L.length goCode > 0
             assertBool ("Compilation should complete within reasonable time (took " ++
                        printf "%.3f" duration ++ "s)") $
               duration < 3.0
@@ -160,8 +162,8 @@ test_memory_usage_recursive_structures =
             let duration = fromIntegral (end - start) / (10^12)
             let goCode = generateGoCode result
             assertBool "Should compile recursive structures" $
-              T.unpack goCode `isInfixOf` "Node" &&
-              T.unpack goCode `isInfixOf` "createTree"
+              T.unpack goCode `L.isInfixOf` "Node" &&
+              T.unpack goCode `L.isInfixOf` "createTree"
             assertBool ("Recursive compilation should be efficient (took " ++
                        printf "%.3f" duration ++ "s)") $
               duration < 2.0
@@ -206,7 +208,7 @@ test_string_processing_performance =
             let duration = fromIntegral (end - start) / (10^12)
             let goCode = generateGoCode result
             assertBool "Should compile string processing" $
-              T.length goCode > 0
+              T.L.length goCode > 0
             assertBool ("String processing compilation should be fast (took " ++
                        printf "%.3f" duration ++ "s)") $
               duration < 1.0
@@ -273,7 +275,7 @@ test_multiple_modules_performance =
             let duration = fromIntegral (end - start) / (10^12)
             let goCode = generateGoCode result
             assertBool "Should compile multi-module project" $
-              T.length goCode > 0
+              T.L.length goCode > 0
             assertBool ("Multi-module compilation should be efficient (took " ++
                        printf "%.3f" duration ++ "s)") $
               duration < 2.0
@@ -313,7 +315,7 @@ test_optimization_performance =
             let duration = fromIntegral (end - start) / (10^12)
             let goCode = generateGoCode result
             assertBool "Should optimize code effectively" $
-              T.unpack goCode `isInfixOf` "fibonacci"
+              T.unpack goCode `L.isInfixOf` "fibonacci"
             assertBool ("Optimization should complete in reasonable time (took " ++
                        printf "%.3f" duration ++ "s)") $
               duration < 3.0
@@ -322,7 +324,7 @@ test_optimization_performance =
 prop_large_input_linear_performance :: Int -> Property
 prop_large_input_linear_performance complexity =
   complexity >= 1 && complexity <= 100 ==>
-  let nestedCode = unlines $ concat $ replicate complexity ["if true {"]
+  let nestedCode = unlines $ L.concat $ replicate complexity ["if true {"]
         source = unlines $ ["package main", "func test() {"] ++ 
                          nestedCode ++ 
                          replicate complexity "}" ++ 

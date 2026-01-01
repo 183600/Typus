@@ -10,6 +10,7 @@
 module Test.Unit.NewCabalMathPropertiesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -40,7 +41,7 @@ import Data.Char (ord)
 prop_pos_advance_commutative :: Int -> Int -> String -> Property
 prop_pos_advance_commutative line col chars =
   let pos = SourcePos line col
-      pos1 = advancePosBy pos (length chars)
+      pos1 = advancePosBy pos (L.length chars)
       pos2 = foldl advancePos pos chars
   in counterexample "Advanced positions should match" $
      pos1 === pos2
@@ -49,7 +50,7 @@ prop_pos_advance_commutative line col chars =
 prop_pos_advance_monotonic :: Int -> Int -> String -> Property
 prop_pos_advance_monotonic line col chars =
   let pos = SourcePos line col
-      advanced = advancePosBy pos (length chars)
+      advanced = advancePosBy pos (L.length chars)
       isMonotonic = (sourceLine advanced > sourceLine pos) ||
                    (sourceLine advanced == sourceLine pos && sourceColumn advanced >= sourceColumn pos)
   in counterexample "Position advancement should be monotonic" $
@@ -106,7 +107,7 @@ prop_pos_newline_reset line col charsInLine =
       newlinePos = advancePos pos '\n'
       expectedColumn = 1
       expectedLine = line + 1
-  in counterexample "Newline should reset column to 1 and increment line" $
+  in counterexample "Newline should reset column to 1 L.and increment line" $
      sourceColumn newlinePos === expectedColumn .&&.
      sourceLine newlinePos === expectedLine
 
@@ -134,7 +135,7 @@ prop_pos_creation_constraints line col =
   let pos = posAtLineCol line col
       validLine = line >= 1
       validColumn = col >= 1
-  in (validLine && validColumn) ==> counterexample "Valid position should have positive line and column" $
+  in (validLine && validColumn) ==> counterexample "Valid position should have positive line L.and column" $
      sourceLine pos >= 1 .&&. sourceColumn pos >= 1
 
 tests :: TestTree

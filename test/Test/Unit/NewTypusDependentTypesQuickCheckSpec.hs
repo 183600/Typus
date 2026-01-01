@@ -10,6 +10,7 @@
 module Test.Unit.NewTypusDependentTypesQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import TestSupport.Arbitrary
@@ -30,12 +31,12 @@ prop_dependent_type_preserves_dimension dim typeName =
 -- Property: Vector type constraints are respected
 prop_vector_constraints_respected :: Int -> [Int] -> Property
 prop_vector_constraints_respected vecSize indices =
-  let validIndices = filter (\i -> i >= 0 && i < vecSize) indices
-      invalidIndices = filter (\i -> i < 0 || i >= vecSize) indices
+  let validIndices = L.filter (\i -> i >= 0 && i < vecSize) indices
+      invalidIndices = L.filter (\i -> i < 0 || i >= vecSize) indices
       allValid = null invalidIndices
   in classify (not (null validIndices)) "has valid indices" $
      classify (not (null invalidIndices)) "has invalid indices" $
-     property $ allValid ==> (length validIndices <= vecSize)
+     property $ allValid ==> (L.length validIndices <= vecSize)
 
 -- Property: Dependent type equality is structural
 prop_dependent_type_equality_structural :: Int -> String -> Property

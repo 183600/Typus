@@ -1,6 +1,7 @@
 module Test.Unit.UserAddedSourceLocationMathSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), Gen, choose, oneof, listOf, elements)
 import TestSupport.QuickCheck (fastProperty)
@@ -41,7 +42,7 @@ tests =
   testGroup "UserAdded SourceLocation Math Properties"
     [ testGroup "Position arithmetic properties"
         [ fastProperty "advancing position by empty string leaves position unchanged" prop_advanceEmptyString
-        , fastProperty "advancing position by newline increments line and resets column" prop_advanceNewline
+        , fastProperty "advancing position by newline increments line L.and resets column" prop_advanceNewline
         , fastProperty "advancing position by tab advances to next tab stop" prop_advanceTab
         , fastProperty "position advancement is associative" prop_advanceAssociative
         ]
@@ -51,7 +52,7 @@ tests =
         , fastProperty "mergeSpans is associative" prop_mergeSpansAssociative
         , fastProperty "mergeSpans contains both original spans" prop_mergeSpansContains
         , fastProperty "spanBetween creates valid span" prop_spanBetweenValid
-        , fastProperty "emptySpan has zero length" prop_emptySpanZeroLength
+        , fastProperty "emptySpan has zero L.length" prop_emptySpanZeroLength
         ]
 
     , testGroup "Located values properties"
@@ -86,7 +87,7 @@ prop_advanceEmptyString :: SourcePos -> Bool
 prop_advanceEmptyString pos =
   advancePosBy "" pos == pos
 
--- | Property: advancing position by newline increments line and resets column
+-- | Property: advancing position by newline increments line L.and resets column
 prop_advanceNewline :: SourcePos -> Bool
 prop_advanceNewline pos =
   let newPos = advancePosBy "\n" pos
@@ -139,7 +140,7 @@ prop_spanBetweenValid pos1 pos2 =
   let span = spanBetween pos1 pos2
   in isValidSpan span
 
--- | Property: emptySpan has zero length
+-- | Property: emptySpan has zero L.length
 prop_emptySpanZeroLength :: Bool
 prop_emptySpanZeroLength =
   let start = sourceSpanStart emptySpan

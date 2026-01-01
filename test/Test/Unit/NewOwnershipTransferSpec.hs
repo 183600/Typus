@@ -78,14 +78,14 @@ tests =
                 result = lexAll input
             case result of
               Left _ -> assertBool "Should lex identifiers" False
-              Right tokens -> length tokens @?= 3
+              Right tokens -> L.length tokens @?= 3
 
         , testCase "lexAll handles ownership keywords" $ do
             let input = "owned shared borrowed"
                 result = lexAll input
             case result of
               Left _ -> assertBool "Should lex ownership keywords" False
-              Right tokens -> length tokens @?= 3
+              Right tokens -> L.length tokens @?= 3
 
         , fastProperty "lexAll is deterministic" prop_lexAllDeterministic
         , fastProperty "lexAll preserves token order" prop_lexAllPreservesOrder
@@ -140,9 +140,9 @@ tests =
         , testCase "formatOwnershipErrors produces readable output" $ do
             let errors = [OwnershipError "Test error" startPos OwnershipTransferError]
                 formatted = formatOwnershipErrors errors
-            formatted `assertBool` ("Test error" `T.isInfixOf` formatted)
+            formatted `assertBool` ("Test error" `L.isInfixOf` formatted)
 
-        , fastProperty "error formatting preserves all errors" prop_errorFormattingPreservesAll
+        , fastProperty "error formatting preserves L.all errors" prop_errorFormattingPreservesAll
         ]
 
     , testGroup "Built-in functions properties"
@@ -153,7 +153,7 @@ tests =
         , fastProperty "built-in functions are unique" prop_builtInFunctionsUnique
         ]
 
-    , testGroup "Edge cases and robustness"
+    , testGroup "Edge cases L.and robustness"
         [ testCase "handles deeply nested ownership transfers" $ do
             analyzer <- newOwnershipAnalyzer
             let nestedInput = unlines 
@@ -200,7 +200,7 @@ prop_ownershipTypesDistinct :: Property
 prop_ownershipTypesDistinct =
   let types = [Owned, Shared, Borrowed]
       pairs = [(x, y) | x <- types, y <- types, x /= y]
-  in all (\(x, y) -> x /= y) pairs
+  in L.all (\(x, y) -> x /= y) pairs
 
 -- Property: ownership transfer is deterministic
 prop_ownershipTransferDeterministic :: OwnershipType -> OwnershipType -> SourcePos -> Property
@@ -215,7 +215,7 @@ prop_ownershipTransferPreservesOrder from1 to1 to2 pos =
   let transfer1 = OwnershipTransfer from1 to1 pos
       transfer2 = OwnershipTransfer from1 to2 pos
       transfers = [transfer1, transfer2]
-  in length transfers == 2 && head transfers == transfer1
+  in L.length transfers == 2 && L.head transfers == transfer1
 
 -- Property: lexAll is deterministic
 prop_lexAllDeterministic :: String -> Property
@@ -229,7 +229,7 @@ prop_lexAllPreservesOrder :: String -> Property
 prop_lexAllPreservesOrder input =
   case lexAll input of
     Left _ -> property False
-    Right tokens -> length tokens >= 0  -- Basic sanity check
+    Right tokens -> L.length tokens >= 0  -- Basic sanity check
 
 -- Property: parseProgram is deterministic
 prop_parseProgramDeterministic :: String -> Property
@@ -261,19 +261,19 @@ prop_analyzeOwnershipScales (Positive n) =
                   Left _ -> False
                   Right _ -> True
 
--- Property: error formatting preserves all errors
+-- Property: error formatting preserves L.all errors
 prop_errorFormattingPreservesAll :: Positive Int -> Property
 prop_errorFormattingPreservesAll (Positive n) =
   let errors = [OwnershipError ("Error " ++ show i) startPos OwnershipTransferError | i <- [1..n]]
       formatted = formatOwnershipErrors errors
-  in all (\e -> errorMessage e `T.isInfixOf` formatted) errors
+  in L.all (\e -> errorMessage e `L.isInfixOf` formatted) errors
 
 -- Property: built-in functions are unique
 prop_builtInFunctionsUnique :: Property
 prop_builtInFunctionsUnique =
   let builtins = builtInFunctions
       uniqueBuiltins = List.nub builtins
-  in length builtins == length uniqueBuiltins
+  in L.length builtins == L.length uniqueBuiltins
 
 -- Property: ownership transfer follows type system rules
 prop_ownershipTransferTypeRules :: OwnershipType -> OwnershipType -> Property
@@ -308,7 +308,7 @@ prop_ownershipErrorsConsistent input =
     result1 <- analyzeOwnership analyzer input
     result2 <- analyzeOwnership analyzer input
     return $ case (result1, result2) of
-               (Left errors1, Left errors2) -> length errors1 == length errors2
+               (Left errors1, Left errors2) -> L.length errors1 == L.length errors2
                (Right _, Right _) -> True
                _ -> False
 

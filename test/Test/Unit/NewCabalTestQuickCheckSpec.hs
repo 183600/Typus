@@ -3,11 +3,13 @@
 module Test.Unit.NewCabalTestQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Data.List (sort, nub, isPrefixOf, isSuffixOf)
+import Data.List (isPrefixOf, isSuffixOf)
+import Data.List (sort, nub)
 
 import Parser (FileDirectives(..), BlockDirectives(..))
 import SourceLocation (SourcePos(..), SourceSpan(..), posLine, posColumn, posOffset, spanStart, spanEnd)
@@ -23,12 +25,12 @@ prop_splitBy_join_roundtrip :: Char -> NonEmptyList Char -> Property
 prop_splitBy_join_roundtrip delim (NonEmpty s) =
   delim `notElem` s ==>
   let parts = splitBy delim s
-  in length parts === 1 .&&. head parts === s
+  in L.length parts === 1 .&&. L.head parts === s
 
 prop_splitByCollapsed_no_empty :: Char -> String -> Property
 prop_splitByCollapsed_no_empty delim s =
   let parts = splitByCollapsed delim s
-  in property $ all (not . null) parts
+  in property $ L.all (not . null) parts
 
 prop_map_insert_lookup :: Int -> String -> Map.Map Int String -> Property
 prop_map_insert_lookup k v m =
@@ -43,7 +45,7 @@ prop_sort_preserves_elements xs =
   property $ sort xs `elem` permutations xs
   where
     permutations [] = [[]]
-    permutations ys = [x:ps | x <- ys, ps <- permutations (filter (/= x) ys)]
+    permutations ys = [x:ps | x <- ys, ps <- permutations (L.filter (/= x) ys)]
 
 prop_nub_idempotent :: [Int] -> Property
 prop_nub_idempotent xs =
@@ -64,7 +66,7 @@ prop_sourcespan_valid span =
 
 prop_breakOn_prefix :: String -> String -> Property
 prop_breakOn_prefix needle haystack =
-  needle `isPrefixOf` haystack ==>
+  needle `L.isPrefixOf` haystack ==>
   let (before, after) = breakOn needle haystack
   in before === "" .&&. after === haystack
 

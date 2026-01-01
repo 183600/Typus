@@ -19,6 +19,7 @@ import Compiler.TypeChecker
   , TypeCheckDiagnostic(..)
   )
 import qualified Data.Map.Strict as Map
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 -- Missing type definitions for advanced type checking tests
@@ -53,7 +54,7 @@ prop_type_eq :: Type -> Type -> Property
 prop_type_eq t1 t2 =
   property $ (t1 == t2) == (t1 == t2) -- Reflexivity of equality
 
--- Property: FunctionParam with all fields
+-- Property: FunctionParam with L.all fields
 prop_functionparam_all :: Property
 prop_functionparam_all =
   forAll (resize 5 arbitrary) $ \name ->
@@ -70,7 +71,7 @@ prop_functionsig_param_count =
   forAll (resize 3 arbitrary) $ \params ->
   forAll (resize 3 arbitrary) $ \returnType ->
   let sig = FunctionSignature params [returnType]
-  in length (fsParams sig) === length params
+  in L.length (fsParams sig) === L.length params
 
 -- Property: FunctionSignature return type preservation
 prop_functionsig_return_type :: Property
@@ -84,7 +85,7 @@ prop_functionsig_return_type =
 prop_callexpr_arg_count :: String -> [Type] -> Property
 prop_callexpr_arg_count funcName args =
   let call = CallExpr funcName (map show args)
-  in property $ length (callArgs call) === length args
+  in property $ L.length (callArgs call) === L.length args
 
 -- Property: CallExpr function name preservation
 prop_callexpr_func_name :: String -> [Type] -> Property
@@ -243,7 +244,7 @@ prop_functionparam_with_name =
      (fpType param === typ) .&&.
      (fpVariadic param === variadic)
 
--- Property: FunctionSignature with params and returns
+-- Property: FunctionSignature with params L.and returns
 prop_functionsignature_params_returns :: Property
 prop_functionsignature_params_returns =
   forAll (resize 3 arbitrary) $ \params ->
@@ -257,7 +258,7 @@ prop_functionsignature_empty_params :: Property
 prop_functionsignature_empty_params =
   forAll (resize 3 arbitrary) $ \returns ->
   let sig = FunctionSignature [] returns
-  in property $ (null (fsParams sig)) .&&.
+  in property $ (L.null (fsParams sig)) .&&.
      (fsReturns sig === returns)
 
 -- Property: FunctionSignature with empty returns
@@ -265,15 +266,15 @@ prop_functionsignature_empty_returns :: [FunctionParam] -> Property
 prop_functionsignature_empty_returns params =
   let sig = FunctionSignature params []
   in property $ (fsParams sig === params) .&&.
-     (null (fsReturns sig))
+     (L.null (fsReturns sig))
 
 -- Property: FunctionSignature with both empty
 prop_functionsignature_empty_both :: Property
 prop_functionsignature_empty_both =
   let sig = FunctionSignature [] []
-  in property $ (null (fsParams sig)) .&&. (null (fsReturns sig))
+  in property $ (L.null (fsParams sig)) .&&. (L.null (fsReturns sig))
 
--- Property: TypeEnv with var and function types
+-- Property: TypeEnv with var L.and function types
 prop_typeenv_vars_functions :: [(String, Type)] -> [(String, FunctionSignature)] -> Property
 prop_typeenv_vars_functions varPairs funcPairs =
   let varMap = Map.fromList varPairs
@@ -286,23 +287,23 @@ prop_typeenv_vars_functions varPairs funcPairs =
 prop_typeenv_empty :: Property
 prop_typeenv_empty =
   let env = TypeEnv Map.empty Map.empty
-  in property $ (Map.null (varTypes env)) .&&. (Map.null (functionTypes env))
+  in property $ (Map.L.null (varTypes env)) .&&. (Map.L.null (functionTypes env))
 
 -- Property: TypeEnv with only vars
 prop_typeenv_only_vars :: [(String, Type)] -> Property
 prop_typeenv_only_vars varPairs =
   let varMap = Map.fromList varPairs
       env = TypeEnv varMap Map.empty
-  in property $ (varTypes env === varMap) .&&. (Map.null (functionTypes env))
+  in property $ (varTypes env === varMap) .&&. (Map.L.null (functionTypes env))
 
 -- Property: TypeEnv with only functions
 prop_typeenv_only_functions :: [(String, FunctionSignature)] -> Property
 prop_typeenv_only_functions funcPairs =
   let funcMap = Map.fromList funcPairs
       env = TypeEnv Map.empty funcMap
-  in property $ (Map.null (varTypes env)) .&&. (functionTypes env === funcMap)
+  in property $ (Map.L.null (varTypes env)) .&&. (functionTypes env === funcMap)
 
--- Property: CallExpr with name and args
+-- Property: CallExpr with name L.and args
 prop_callexpr_name_args :: String -> [String] -> Property
 prop_callexpr_name_args name args =
   let expr = CallExpr name args
@@ -314,16 +315,16 @@ prop_callexpr_no_args :: String -> Property
 prop_callexpr_no_args name =
   let expr = CallExpr name []
   in property $ (callName expr === name) .&&.
-     (null (callArgs expr))
+     (L.null (callArgs expr))
 
 -- Property: CallExpr with empty name
 prop_callexpr_empty_name :: [String] -> Property
 prop_callexpr_empty_name args =
   let expr = CallExpr "" args
-  in property $ (null (callName expr)) .&&.
+  in property $ (L.null (callName expr)) .&&.
      (callArgs expr === args)
 
--- Property: TypeError with context and message
+-- Property: TypeError with context L.and message
 prop_typeerror_context_message :: Maybe String -> String -> Property
 prop_typeerror_context_message context message =
   let err = TypeError context message
@@ -344,7 +345,7 @@ prop_typeerror_with_context context message =
   in property $ (teContext err === Just context) .&&.
      (teMessage err === message)
 
--- Property: TypeCheckDiagnostic with context and message
+-- Property: TypeCheckDiagnostic with context L.and message
 prop_typecheckdiagnostic_context_message :: Maybe String -> String -> Property
 prop_typecheckdiagnostic_context_message context message =
   let diag = TypeCheckDiagnostic context message
@@ -443,7 +444,7 @@ prop_typename_show name =
 prop_unknowntype_show :: Property
 prop_unknowntype_show =
   let shown = show UnknownType
-  in property $ "UnknownType" `isInfixOf` shown
+  in property $ "UnknownType" `L.isInfixOf` shown
 
 -- Property: FunctionParam show
 prop_functionparam_show :: Maybe String -> Type -> Bool -> Property
@@ -483,8 +484,8 @@ prop_typecheckdiagnostic_show context message =
 -- Property: TypeEnv with duplicate keys (last wins)
 prop_typeenv_duplicate_keys :: String -> Type -> Type -> String -> FunctionSignature -> FunctionSignature -> Property
 prop_typeenv_duplicate_keys varName type1 type2 funcName sig1 sig2 =
-  (length (fsParams sig1) <= 3 && length (fsParams sig2) <= 3 &&
-   length (fsReturns sig1) <= 3 && length (fsReturns sig2) <= 3) ==>
+  (L.length (fsParams sig1) <= 3 && L.length (fsParams sig2) <= 3 &&
+   L.length (fsReturns sig1) <= 3 && L.length (fsReturns sig2) <= 3) ==>
   let varMap = Map.fromList [(varName, type1), (varName, type2)]
       funcMap = Map.fromList [(funcName, sig1), (funcName, sig2)]
       env = TypeEnv varMap funcMap
@@ -507,7 +508,7 @@ prop_callexpr_multiple_args name arg1 arg2 arg3 =
   let args = [arg1, arg2, arg3]
       expr = CallExpr name args
   in property $ callArgs expr === args .&&.
-     length (callArgs expr) === 3
+     L.length (callArgs expr) === 3
 
 -- Property: TypeError with empty message
 prop_typeerror_empty_message :: Maybe String -> Property
@@ -547,7 +548,7 @@ prop_functionsignature_different_params params1 params2 returns =
 -- Property: FunctionSignature with different returns
 prop_functionsignature_different_returns :: [FunctionParam] -> [Type] -> [Type] -> Property
 prop_functionsignature_different_returns params returns1 returns2 =
-  (length returns1 <= 5 && length returns2 <= 5) ==>
+  (L.length returns1 <= 5 && L.length returns2 <= 5) ==>
   let s1 = FunctionSignature params returns1
       s2 = FunctionSignature params returns2
   in property $ (s1 == s2) === (returns1 == returns2)
@@ -559,9 +560,9 @@ prop_type_consistency_function_signatures :: [FunctionParam] -> [Type] -> Proper
 prop_type_consistency_function_signatures params returns =
   let _sig = FunctionSignature params returns
       paramTypes = map fpType params
-  in property $ length paramTypes === length params .&&.
-     all isValidType paramTypes .&&.
-     all isValidType returns
+  in property $ L.length paramTypes === L.length params .&&.
+     L.all isValidType paramTypes .&&.
+     L.all isValidType returns
 
 -- Property: Type environment lookup consistency
 prop_typeenv_lookup_consistency :: [(String, Type)] -> [(String, FunctionSignature)] -> String -> Property
@@ -594,25 +595,25 @@ prop_typeerror_propagation context message extraInfo =
 -- Property: Type check diagnostic chaining
 prop_typecheckdiagnostic_chaining :: Maybe String -> [String] -> Property
 prop_typecheckdiagnostic_chaining context messages =
-  let diagnostics = map (TypeCheckDiagnostic context) messages
+  let diagnostics = L.map (TypeCheckDiagnostic context) messages
       contexts = map tcdContext diagnostics
       messages' = map tcdMessage diagnostics
-  in property $ all (== context) contexts .&&.
-     length messages' === length messages .&&.
+  in property $ L.all (== context) contexts .&&.
+     L.length messages' === L.length messages .&&.
      messages' === messages
 
 -- Property: Complex type expression handling
 prop_complex_type_expressions :: [String] -> Property
 prop_complex_type_expressions typeNames =
   let complexTypes = map buildComplexType typeNames
-  in property $ all isValidComplexType complexTypes
+  in property $ L.all isValidComplexType complexTypes
 
 -- Property: Type inference consistency (extended)
 prop_type_inference_consistency_extended :: [Type] -> [String] -> Property
 prop_type_inference_consistency_extended types identifiers =
   let inferredTypes = zipWith inferType identifiers types
-  in property $ length inferredTypes === length types .&&.
-     all isValidType inferredTypes
+  in property $ L.length inferredTypes === L.length types .&&.
+     L.all isValidType inferredTypes
 
 -- Property: Function signature compatibility
 prop_function_signature_compatibility :: FunctionSignature -> FunctionSignature -> Property
@@ -644,7 +645,7 @@ prop_generic_type_parameters paramNames concreteTypes =
 prop_type_constraint_validation :: [Type] -> [String] -> Property
 prop_type_constraint_validation types constraints =
   let constrainedTypes = zipWith addConstraint types constraints
-  in property $ all isValidConstrainedType constrainedTypes
+  in property $ L.all isValidConstrainedType constrainedTypes
 
 -- Property: Type substitution correctness
 prop_type_substitution_correctness :: Type -> [(String, Type)] -> Property
@@ -673,8 +674,8 @@ prop_functionparam_type_inference :: [FunctionParam] -> [Type] -> Property
 prop_functionparam_type_inference params _expectedTypes =
   let inferredTypes = inferParameterTypes params
       paramTypes = map fpType params
-  in property (length inferredTypes === length params .&&.
-     all (\(inferred, param) -> inferred == param) 
+  in property (L.length inferredTypes === L.length params .&&.
+     L.all (\(inferred, param) -> inferred == param) 
          (zip inferredTypes paramTypes))
 
 -- Property: Return type validation
@@ -687,7 +688,7 @@ prop_return_type_validation signature =
 -- Property: Type environment scoping
 prop_typeenv_scoping :: [(String, Type)] -> [(String, Type)] -> Property
 prop_typeenv_scoping outerVars innerVars =
-  let hasNoDuplicateKeys xs = length xs == length (Map.fromList xs)
+  let hasNoDuplicateKeys xs = L.length xs == L.length (Map.fromList xs)
   in hasNoDuplicateKeys outerVars && hasNoDuplicateKeys innerVars ==>
      let outerEnv = TypeEnv (Map.fromList outerVars) Map.empty
          innerEnv = TypeEnv (Map.fromList innerVars) Map.empty
@@ -724,7 +725,7 @@ prop_typeenv_consistency_checks env =
 prop_type_inference_with_constraints :: [Type] -> [(String, Type)] -> Property
 prop_type_inference_with_constraints baseTypes constraints =
   let inferred = inferTypesWithConstraints baseTypes constraints
-  in property $ all isValidType inferred .&&. constraintsSatisfied inferred constraints
+  in property $ L.all isValidType inferred .&&. constraintsSatisfied inferred constraints
 
 -- Property: Function signature normalization
 prop_function_signature_normalization :: FunctionSignature -> Property
@@ -749,17 +750,17 @@ prop_advanced_type_equality type1 type2 =
 isValidType :: Type -> Bool
 isValidType (TypeName _) = True
 isValidType UnknownType = True
-isValidType (TypeFunction params ret) = all isValidType params && isValidType ret
-isValidType (TypeRecord fields) = all (isValidType . snd) fields
-isValidType (TypeUnion types) = all isValidType types
+isValidType (TypeFunction params ret) = L.all isValidType params && isValidType ret
+isValidType (TypeRecord fields) = L.all (isValidType . snd) fields
+isValidType (TypeUnion types) = L.all isValidType types
 
 isValidFunctionParam :: FunctionParam -> Bool
 isValidFunctionParam param = isValidType (fpType param)
 
 isValidFunctionSignature :: FunctionSignature -> Bool
 isValidFunctionSignature sig = 
-  all isValidFunctionParam (fsParams sig) &&
-  all isValidType (fsReturns sig)
+  L.all isValidFunctionParam (fsParams sig) &&
+  L.all isValidType (fsReturns sig)
 
 isValidComplexType :: Type -> Bool
 isValidComplexType = isValidType -- Simplified
@@ -774,12 +775,12 @@ isValidConstrainedType :: Type -> Bool
 isValidConstrainedType = isValidType -- Simplified
 
 isValidTypeError :: TypeError -> Bool
-isValidTypeError err = not (null (teMessage err))
+isValidTypeError err = not (L.null (teMessage err))
 
 isValidTypeEnv :: TypeEnv -> Bool
 isValidTypeEnv env = 
-  all isValidType (Map.elems (varTypes env)) &&
-  all isValidFunctionSignature (Map.elems (functionTypes env))
+  L.all isValidType (Map.elems (varTypes env)) &&
+  L.all isValidFunctionSignature (Map.elems (functionTypes env))
 
 buildComplexType :: String -> Type
 buildComplexType name = TypeName name
@@ -789,8 +790,8 @@ inferType _ typ = typ
 
 areSignaturesCompatible :: FunctionSignature -> FunctionSignature -> Bool
 areSignaturesCompatible sig1 sig2 = 
-  length (fsParams sig1) == length (fsParams sig2) &&
-  length (fsReturns sig1) == length (fsReturns sig2)
+  L.length (fsParams sig1) == L.length (fsParams sig2) &&
+  L.length (fsReturns sig1) == L.length (fsReturns sig2)
 
 signatureCompatibilityHolds :: FunctionSignature -> FunctionSignature -> Bool
 signatureCompatibilityHolds sig1 sig2 = areSignaturesCompatible sig1 sig2
@@ -839,9 +840,9 @@ isCompatibleType t1 t2 = t1 == t2
 validateReturnTypes :: [Type] -> [Type] -> Bool
 validateReturnTypes [] actual = null actual
 validateReturnTypes expected actual
-  | all isEmptyType expected = True  -- Empty types are compatible with anything
-  | otherwise = length expected == length actual &&
-                all (uncurry isCompatibleType) (zip expected actual)
+  | L.all isEmptyType expected = True  -- Empty types are compatible with anything
+  | otherwise = L.length expected == L.length actual &&
+                L.all (uncurry isCompatibleType) (zip expected actual)
   where
     isEmptyType (TypeName "") = True
     isEmptyType UnknownType = True
@@ -854,10 +855,10 @@ isValidScopedEnvironment :: TypeEnv -> [(String, Type)] -> [(String, Type)] -> B
 isValidScopedEnvironment scoped outer inner = 
   isValidTypeEnv scoped &&
   let innerKeys = map fst inner
-      outerNotOverridden = filter (\(k, _) -> k `notElem` innerKeys && not (null k)) outer
-      validInner = filter (\(k, _) -> not (null k)) inner
-  in all (\(k, v) -> Map.lookup k (varTypes scoped) == Just v) outerNotOverridden &&
-     all (\(k, v) -> Map.lookup k (varTypes scoped) == Just v) validInner
+      outerNotOverridden = L.filter (\(k, _) -> k `notElem` innerKeys && not (null k)) outer
+      validInner = L.filter (\(k, _) -> not (null k)) inner
+  in L.all (\(k, v) -> Map.lookup k (varTypes scoped) == Just v) outerNotOverridden &&
+     L.all (\(k, v) -> Map.lookup k (varTypes scoped) == Just v) validInner
 
 formatTypeError :: TypeError -> [String] -> String
 formatTypeError err details = teMessage err ++ " " ++ unwords details
@@ -866,14 +867,14 @@ isValidErrorMessage :: String -> Bool
 isValidErrorMessage msg = not (null msg)
 
 containsAllDetails :: String -> [String] -> Bool
-containsAllDetails msg details = all (`isInfixOf` msg) details
+containsAllDetails msg details = L.all (`L.isInfixOf` msg) details
 
 aggregateDiagnostics :: [TypeCheckDiagnostic] -> [TypeCheckDiagnostic]
 aggregateDiagnostics = id -- Simplified
 
 isValidDiagnosticAggregation :: [TypeCheckDiagnostic] -> [TypeCheckDiagnostic] -> Bool
 isValidDiagnosticAggregation aggregated original = 
-  length aggregated == length original
+  L.length aggregated == L.length original
 
 analyzeComplexSignature :: FunctionSignature -> String
 analyzeComplexSignature _ = "analysis" -- Simplified
@@ -922,10 +923,10 @@ isGenericEquality _ _ = False -- Simplified
 -- Property: Type inference for complex expressions
 prop_type_inference_complex_expressions :: [Type] -> [String] -> Property
 prop_type_inference_complex_expressions types operators =
-  not (null types) && not (null operators) && all (not . null) operators ==>
+  not (null types) && not (null operators) && L.all (not . null) operators ==>
   let expressions = zipWith (\t op -> "expr1 " ++ op ++ " expr2 :: " ++ show t) types operators
       inferredTypes = map inferComplexType expressions
-  in property $ all isValidInferredType inferredTypes
+  in property $ L.all isValidInferredType inferredTypes
 
 
 
@@ -967,13 +968,13 @@ prop_typeenv_scoping_rules :: [(String, Type)] -> [(String, Type)] -> Property
 prop_typeenv_scoping_rules outerBindings innerBindings =
   let outerEnv = TypeEnv (Map.fromList outerBindings) Map.empty
       innerEnv = extendScope outerEnv innerBindings
-      shadowedKeys = map fst $ filter (\(k, _) -> k `elem` map fst outerBindings) innerBindings
-  in property $ all (isShadowed innerEnv) shadowedKeys
+      shadowedKeys = map fst $ L.filter (\(k, _) -> k `elem` map fst outerBindings) innerBindings
+  in property $ L.all (isShadowed innerEnv) shadowedKeys
 
 -- Property: Type error recovery strategies
 prop_type_error_recovery :: [Type] -> Type -> Property
 prop_type_error_recovery problematicTypes expectedType =
-  let errors = map (\t -> TypeError (Just ("Error with " ++ show t)) ("Type mismatch")) problematicTypes
+  let errors = L.map (\t -> TypeError (Just ("Error with " ++ show t)) ("Type mismatch")) problematicTypes
       recovery = attemptErrorRecovery errors expectedType
   in property $ isValidRecovery recovery expectedType
 
@@ -1009,7 +1010,7 @@ prop_higher_kinded_types :: [String] -> [Type] -> Property
 prop_higher_kinded_types typeConstructors typeArgs =
   let higherKinded = zipWith typeConstructor typeConstructors typeArgs
       normalized = normalizeHigherKinded higherKinded
-  in property $ all isValidHigherKinded normalized
+  in property $ L.all isValidHigherKinded normalized
 
 -- Property: Type-level computation correctness
 prop_type_level_computation :: [Type] -> Property
@@ -1036,11 +1037,11 @@ prop_partial_type_inference knownType possibleTypes =
 -- Property: Type environment consistency across operations
 prop_typeenv_operation_consistency :: TypeEnv -> [String] -> [Type] -> Property
 prop_typeenv_operation_consistency initialEnv keys types =
-  let validKeys = filter (not . null) keys
-      validPairs = take (min (length validKeys) (length types)) (zip validKeys types)
+  let validKeys = L.filter (not . null) keys
+      validPairs = take (min (L.length validKeys) (L.length types)) (zip validKeys types)
   in not (null validPairs) ==>
-     let finalEnv = foldl (\env (k, t) -> extendTypeEnv env k t) initialEnv validPairs
-         allKeysPresent = all (\(k, _) -> Map.member k (varTypes finalEnv)) validPairs
+     let finalEnv = L.foldl (\env (k, t) -> extendTypeEnv env k t) initialEnv validPairs
+         allKeysPresent = L.all (\(k, _) -> Map.member k (varTypes finalEnv)) validPairs
      in property $ allKeysPresent
 
 -- Property: Generic specialization correctness
@@ -1061,7 +1062,7 @@ prop_type_inference_with_errors validTypes errors =
 -- Property: Type checking of polymorphic functions
 prop_polymorphic_function_checking :: [Type] -> Type -> Property
 prop_polymorphic_function_checking argTypes returnType =
-  let polyFunc = TypeFunction (map (\t -> case t of TypeName s -> TypeName s; _ -> TypeName "generic") argTypes) returnType
+  let polyFunc = TypeFunction (L.map (\t -> case t of TypeName s -> TypeName s; _ -> TypeName "generic") argTypes) returnType
       checkResult = checkPolymorphicFunction polyFunc argTypes
   in property $ isValidPolymorphicCheck checkResult
 
@@ -1082,8 +1083,8 @@ prop_type_level_verification programTypes =
 -- Helper functions for type checker tests
 inferComplexType :: String -> Type
 inferComplexType expr 
-  | "int" `isInfixOf` expr = TypeName "int"
-  | "::" `isInfixOf` expr = 
+  | "int" `L.isInfixOf` expr = TypeName "int"
+  | "::" `L.isInfixOf` expr = 
       let typeStr = dropWhile (/= ':') expr
           typeName = dropWhile (== ' ') $ dropWhile (== ':') $ dropWhile (== ' ') $ drop 1 typeStr
       in if null typeName then UnknownType else TypeName typeName
@@ -1098,7 +1099,7 @@ instantiateGenericType :: String -> [Type] -> Type
 instantiateGenericType _name args = TypeFunction args UnknownType
 
 isValidInstantiation :: Type -> [Type] -> Bool
-isValidInstantiation (TypeFunction args _) expectedArgs = length args == length expectedArgs
+isValidInstantiation (TypeFunction args _) expectedArgs = L.length args == L.length expectedArgs
 isValidInstantiation _ _ = False
 
 unifyTypesWithConstraints :: Type -> Type -> TypeConstraintSet -> UnificationResult
@@ -1124,10 +1125,10 @@ checkContravariance :: Type -> Type -> Bool
 checkContravariance _ _ = True -- Simplified
 
 generateRecursiveDefinitions :: [String] -> [Type]
-generateRecursiveDefinitions names = map (TypeName . ("Rec" ++)) names
+generateRecursiveDefinitions names = L.map (TypeName . ("Rec" ++)) names
 
 detectRecursion :: Type -> Bool
-detectRecursion (TypeName name) = "Rec" `isInfixOf` name
+detectRecursion (TypeName name) = "Rec" `L.isInfixOf` name
 detectRecursion _ = False
 
 extendScope :: TypeEnv -> [(String, Type)] -> TypeEnv
@@ -1144,10 +1145,10 @@ isValidRecovery RecoverySuccess _ = True
 isValidRecovery _ _ = False
 
 generateComplexExpression :: Int -> String
-generateComplexExpression n = concat $ replicate n "complex_expr + "
+generateComplexExpression n = L.concat $ replicate n "complex_expr + "
 
 estimateInferenceTime :: String -> Int
-estimateInferenceTime expr = length (words expr) * 2
+estimateInferenceTime expr = L.length (words expr) * 2
 
 buildConstraintSystem :: [String] -> [Type] -> ConstraintSystem
 buildConstraintSystem constraints types = ConstraintSystem constraints types
@@ -1258,14 +1259,14 @@ tests = testGroup "TypeChecker QuickCheck tests"
   [ fastProperty "TypeName preserves name" prop_typename_preserves
   , fastProperty "UnknownType is always UnknownType" prop_unknowntype_constant
   , fastProperty "Type equality" prop_type_eq
-  , fastProperty "FunctionParam with all fields" prop_functionparam_all
+  , fastProperty "FunctionParam with L.all fields" prop_functionparam_all
   , fastProperty "FunctionParam with no name" prop_functionparam_no_name
   , fastProperty "FunctionParam with name" prop_functionparam_with_name
-  , fastProperty "FunctionSignature with params and returns" prop_functionsignature_params_returns
+  , fastProperty "FunctionSignature with params L.and returns" prop_functionsignature_params_returns
   , fastProperty "FunctionSignature with empty params" prop_functionsignature_empty_params
   , fastProperty "FunctionSignature with empty returns" prop_functionsignature_empty_returns
   , fastProperty "FunctionSignature with both empty" prop_functionsignature_empty_both
-  , fastProperty "TypeEnv with var and function types" prop_typeenv_vars_functions
+  , fastProperty "TypeEnv with var L.and function types" prop_typeenv_vars_functions
   , fastProperty "TypeEnv with empty maps" prop_typeenv_empty
   , fastProperty "TypeEnv with only vars" prop_typeenv_only_vars
   , fastProperty "TypeEnv with only functions" prop_typeenv_only_functions
@@ -1280,13 +1281,13 @@ tests = testGroup "TypeChecker QuickCheck tests"
   , fastProperty "TypeRecord field ordering" prop_typerecord_field_ordering
   , fastProperty "TypeUnion variant preservation" prop_typeunion_variant_preservation
   , fastProperty "TypeIntersection consistency" prop_typeintersection_consistency
-  , fastProperty "CallExpr with name and args" prop_callexpr_name_args
+  , fastProperty "CallExpr with name L.and args" prop_callexpr_name_args
   , fastProperty "CallExpr with no args" prop_callexpr_no_args
   , fastProperty "CallExpr with empty name" prop_callexpr_empty_name
-  , fastProperty "TypeError with context and message" prop_typeerror_context_message
+  , fastProperty "TypeError with context L.and message" prop_typeerror_context_message
   , fastProperty "TypeError with no context" prop_typeerror_no_context
   , fastProperty "TypeError with context" prop_typeerror_with_context
-  , fastProperty "TypeCheckDiagnostic with context and message" prop_typecheckdiagnostic_context_message
+  , fastProperty "TypeCheckDiagnostic with context L.and message" prop_typecheckdiagnostic_context_message
   , fastProperty "TypeCheckDiagnostic with no context" prop_typecheckdiagnostic_no_context
   , fastProperty "TypeCheckDiagnostic with context" prop_typecheckdiagnostic_with_context
   , fastProperty "FunctionParam equality" prop_functionparam_eq

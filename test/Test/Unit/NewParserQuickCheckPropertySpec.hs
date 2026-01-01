@@ -10,6 +10,7 @@ import Test.Tasty.HUnit
 
 import Parser
 import SourceLocation (SourceSpan(..), SourcePos(..), locatedWithSpan)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 import Data.Char (isSpace)
 import Control.Arrow ((&&&))
@@ -41,14 +42,14 @@ directiveProperties = testGroup "Directive properties"
     \invalidVal -> 
       let invalidInputs = ["maybe", "yes", "no", "1", "0", invalidVal]
           results = map parseBool invalidInputs
-      in all isLeft results
+      in L.all isLeft results
   
-  , testProperty "defaultFileDirectives has all Nothing values" $
+  , testProperty "defaultFileDirectives has L.all Nothing values" $
     \_ -> fdOwnership defaultFileDirectives === Nothing &&
           fdDependentTypes defaultFileDirectives === Nothing &&
           fdConstraints defaultFileDirectives === Nothing
   
-  , testProperty "defaultBlockDirectives has all Nothing values" $
+  , testProperty "defaultBlockDirectives has L.all Nothing values" $
     \_ -> bdOwnership defaultBlockDirectives === Nothing &&
           bdDependentTypes defaultBlockDirectives === Nothing &&
           bdConstraints defaultBlockDirectives === Nothing
@@ -60,13 +61,13 @@ parserUtilityProperties = testGroup "Parser utility properties"
   [ testProperty "trimRight removes trailing whitespace" $
     \str -> 
       let trimmed = trimRight (str ++ "   \n\r")
-      in not (any (`elem` [' ', '\n', '\r']) (reverse trimmed))
+      in not (L.any (`elem` [' ', '\n', '\r']) (L.reverse trimmed))
   
   , testProperty "trimRight preserves non-whitespace suffix" $
     \str suffix -> 
       let input = str ++ suffix
           trimmed = trimRight input
-      in suffix `isPrefixOf` trimmed || null suffix
+      in suffix `L.isPrefixOf` trimmed || null suffix
   
   , testProperty "curlyDelta counts braces correctly" $
     \openCount closeCount -> 
@@ -88,7 +89,7 @@ parserUtilityProperties = testGroup "Parser utility properties"
           delta = curlyDelta input
       in delta === 0
   
-  , testProperty "leadingIndentation counts leading spaces and tabs" $
+  , testProperty "leadingIndentation counts leading spaces L.and tabs" $
     \spaces tabs content -> 
       let indent = replicate spaces ' ' ++ replicate tabs '\t'
           input = indent ++ content
@@ -116,14 +117,14 @@ parsingProperties = testGroup "Parsing properties"
       let input = content
       in case parseTypus input of
         Left _ -> property True
-        Right file -> any (\block -> content `isInfixOf` cbContent block) (tfBlocks file)
+        Right file -> L.any (\block -> content `L.isInfixOf` cbContent block) (tfBlocks file)
   
   , testProperty "parseTypus handles whitespace-only input" $
     \whitespace -> 
       let input = replicate 100 whitespace
       in case parseTypus input of
         Left _ -> property True
-        Right file -> all (null . cbContent) (tfBlocks file)
+        Right file -> L.all (null . cbContent) (tfBlocks file)
   
   , testProperty "parseTypus can parse simple file directives" $
     \ownershipVal dependentTypesVal -> 
@@ -142,7 +143,7 @@ parsingProperties = testGroup "Parsing properties"
       let input = "//go:build " ++ tag1 ++ "\n// +build " ++ tag2 ++ "\n"
       in case parseTypus input of
         Left _ -> property True
-        Right file -> length (tfBuildTags file) >= 2
+        Right file -> L.length (tfBuildTags file) >= 2
   ]
 
 -- | Properties for CodeBlock
@@ -198,14 +199,14 @@ edgeCaseProperties = testGroup "Parser edge case properties"
       let input = "//! " ++ malformedDirective ++ "\n"
       in case parseTypus input of
         Left _ -> property True
-        Right _ -> property True  -- Should either fail or parse gracefully
+        Right _ -> property True  -- Should either fail L.or parse gracefully
   
   , testProperty "parseTypus handles mixed line endings" $
     \content1 content2 -> 
       let input = content1 ++ "\r\n" ++ content2 ++ "\n" ++ content1 ++ "\r"
       in case parseTypus input of
         Left _ -> property True
-        Right file -> not (null (tfBlocks file)) || not (null content1 ++ content2)
+        Right file -> not (L.null (tfBlocks file)) || not (null content1 ++ content2)
   
   , testProperty "curlyDelta handles nested structures" $
     \nestingLevel -> 
@@ -236,7 +237,7 @@ roundTripProperties = testGroup "Parser round-trip properties"
         Left _ -> property True
         Right file -> 
           let reconstructed = unlines (map cbContent (tfBlocks file))
-          in content `isInfixOf` reconstructed || null content
+          in content `L.isInfixOf` reconstructed || null content
   
   , testProperty "Directive preservation round-trip" $
     \ownershipVal -> 

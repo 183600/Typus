@@ -7,6 +7,7 @@ import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, ioProp
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
 import Utils (trim, splitBy, splitByComma, removeComments, removeLineComments, normalizeIndentation, breakOn)
 import Data.Char (isSpace, isAlphaNum)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 import Control.Exception (evaluate, try, SomeException)
 
@@ -27,7 +28,7 @@ tests = testGroup "Utils Boundary QuickCheck Tests"
   , testProperty "breakOn handles empty pattern" prop_break_on_empty_pattern
   , testProperty "breakOn consistency with split" prop_break_on_consistency
   , testCase "removeComments handles malformed comments" test_remove_comments_malformed
-  , testCase "normalizeIndentation handles all whitespace" test_normalize_indentation_all_whitespace
+  , testCase "normalizeIndentation handles L.all whitespace" test_normalize_indentation_all_whitespace
   , testCase "splitBy handles Unicode characters" test_split_by_unicode
   ]
 
@@ -41,7 +42,7 @@ prop_trim_idempotent s = trim (trim s) === trim s
 prop_trim_only_whitespace :: String -> Property
 prop_trim_only_whitespace s = 
   let trimmed = trim s
-      leadingRemoved = null s || not (isSpace (head s)) || isSpace (head trimmed)
+      leadingRemoved = null s || not (isSpace (L.head s)) || isSpace (L.head trimmed)
       trailingRemoved = null trimmed || not (isSpace (last trimmed))
   in counterexample ("Original: " ++ show s ++ ", Trimmed: " ++ show trimmed) $
      leadingRemoved .&&. trailingRemoved
@@ -57,9 +58,9 @@ prop_split_by_empty_delimiter s =
 prop_split_by_preserves_empty :: Char -> String -> Property
 prop_split_by_preserves_empty delim s = 
   let parts = splitBy delim s
-      expectedCount = length s + 1
+      expectedCount = L.length s + 1
   in counterexample ("String: " ++ show s ++ ", Parts: " ++ show parts) $
-     length parts === expectedCount
+     L.length parts === expectedCount
 
 -- ============================================================================
 -- Comment Removal Properties
@@ -70,7 +71,7 @@ prop_remove_comments_nested =
   forAll genNestedComments $ \s ->
     let result = removeComments s
     in counterexample ("Original: " ++ s ++ ", Result: " ++ result) $
-       not ("/*" `isInfixOf` result) .&&. not ("*/" `isInfixOf` result)
+       not ("/*" `L.isInfixOf` result) .&&. not ("*/" `L.isInfixOf` result)
 
 prop_remove_comments_preserves_strings :: Property
 prop_remove_comments_preserves_strings = 
@@ -78,7 +79,7 @@ prop_remove_comments_preserves_strings =
     let result = removeComments s
         strings = extractStringLiterals s
     in counterexample ("Original: " ++ s ++ ", Result: " ++ result) $
-       all (`isInfixOf` result) strings
+       L.all (`L.isInfixOf` result) strings
 
 prop_remove_line_comments_edge_cases :: Property
 prop_remove_line_comments_edge_cases = 
@@ -87,7 +88,7 @@ prop_remove_line_comments_edge_cases =
         lines' = lines s
         resultLines = lines result
     in counterexample ("Original: " ++ s ++ ", Result: " ++ result) $
-       length resultLines === length lines'
+       L.length resultLines === L.length lines'
 
 -- ============================================================================
 -- Indentation Properties
@@ -99,9 +100,9 @@ prop_normalize_indentation_relative =
     let result = normalizeIndentation s
         originalLines = lines s
         resultLines = lines result
-    in counterexample ("Original lines: " ++ show (length originalLines) ++ 
-                      ", Result lines: " ++ show (length resultLines)) $
-       length originalLines === length resultLines
+    in counterexample ("Original lines: " ++ show (L.length originalLines) ++ 
+                      ", Result lines: " ++ show (L.length resultLines)) $
+       L.length originalLines === L.length resultLines
 
 -- ============================================================================
 -- BreakOn Properties
@@ -115,7 +116,7 @@ prop_break_on_consistency :: String -> String -> Property
 prop_break_on_consistency s pat = 
   let (before, after) = breakOn pat s
       reconstructed = before ++ pat ++ after
-  in if pat `isInfixOf` s
+  in if pat `L.isInfixOf` s
      then reconstructed === s
      else counterexample ("Pattern not found in string") True
 
@@ -136,8 +137,8 @@ test_normalize_indentation_all_whitespace = do
   let whitespaceInputs = ["   ", "\t\t", "  \t  ", "\n\n\n", "   \n\t  \n   "]
   mapM_ (\s -> do
     let result = normalizeIndentation s
-    assertBool ("Should handle all whitespace: " ++ show s) $ 
-      all isSpace result || null result) whitespaceInputs
+    assertBool ("Should handle L.all whitespace: " ++ show s) $ 
+      L.all isSpace result || null result) whitespaceInputs
 
 test_split_by_unicode :: IO ()
 test_split_by_unicode = do

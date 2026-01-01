@@ -4,6 +4,7 @@
 module Test.Unit.FreshCabalQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
@@ -38,12 +39,12 @@ utilsProperties = testGroup "Utils Module Properties"
   , fastProperty "splitBy preserves concatenation" $ \c s ->
       c /= '\0' ==>
       let parts = splitBy c s
-      in concat parts === filter (/= c) s .||. length parts > 1
+      in L.concat parts === L.filter (/= c) s .||. L.length parts > 1
   
   , fastProperty "splitByCollapsed removes empty strings" $ \c s ->
       c /= '\0' ==>
       let parts = splitByCollapsed c s
-      in all (not . null) parts
+      in L.all (not . null) parts
   
   , fastProperty "removeLineComments preserves non-comment lines" $ \s ->
       not ("//" `elem` [s]) ==>
@@ -52,7 +53,7 @@ utilsProperties = testGroup "Utils Module Properties"
 
 sourceLocationProperties :: TestTree
 sourceLocationProperties = testGroup "SourceLocation Properties"
-  [ fastProperty "SourcePos has positive line and column" $ \pos ->
+  [ fastProperty "SourcePos has positive line L.and column" $ \pos ->
       posLine pos > 0 && posColumn pos > 0 && posOffset pos >= 0
   
   , fastProperty "SourceSpan ordering is valid" $ \sp ->
@@ -76,13 +77,13 @@ listProperties = testGroup "List Properties"
   
   , fastProperty "nub removes duplicates" $ \(xs :: [Int]) ->
       let unique = nub xs
-      in all (\g -> length g == 1) (group (sort unique))
+      in L.all (\g -> L.length g == 1) (group (sort unique))
   
-  , fastProperty "reverse twice is identity" $ \(xs :: [Int]) ->
-      reverse (reverse xs) === xs
+  , fastProperty "L.reverse twice is identity" $ \(xs :: [Int]) ->
+      L.reverse (L.reverse xs) === xs
   
-  , fastProperty "length of concatenation equals sum of lengths" $ \(xs :: [Int]) (ys :: [Int]) ->
-      length (xs ++ ys) === length xs + length ys
+  , fastProperty "L.length of concatenation equals L.sum of lengths" $ \(xs :: [Int]) (ys :: [Int]) ->
+      L.length (xs ++ ys) === L.length xs + L.length ys
   ]
 
 mapProperties :: TestTree

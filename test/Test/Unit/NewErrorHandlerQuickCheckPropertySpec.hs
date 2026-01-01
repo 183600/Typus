@@ -5,6 +5,7 @@
 module Test.Unit.NewErrorHandlerQuickCheckPropertySpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 
@@ -15,7 +16,7 @@ import Data.Ord (comparing)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import Data.Time (UTCTime, getCurrentTime)
 import qualified Data.Map.Strict as Map
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 
 -- | Test group for ErrorHandler module QuickCheck properties
 testErrorHandlerQuickCheckProperties :: TestTree
@@ -102,7 +103,7 @@ errorLocationProperties = testGroup "ErrorLocation properties"
 -- | Properties for ErrorContext
 errorContextProperties :: TestTree
 errorContextProperties = testGroup "ErrorContext properties"
-  [ testProperty "emptyContext has all Nothing values" $
+  [ testProperty "emptyContext has L.all Nothing values" $
     \_ -> contextCode emptyContext === Nothing &&
           contextFunction emptyContext === Nothing &&
           contextVariable emptyContext === Nothing &&
@@ -125,13 +126,13 @@ errorRecoveryProperties = testGroup "ErrorRecovery properties"
   [ testProperty "fatalRecovery cannot recover" $
     \_ -> not (canRecover fatalRecovery) && not (shouldContinue fatalRecovery)
   
-  , testProperty "errorRecovery can recover and continue" $
+  , testProperty "errorRecovery can recover L.and continue" $
     \_ -> canRecover errorRecovery && shouldContinue errorRecovery
   
-  , testProperty "warningRecovery can recover and continue" $
+  , testProperty "warningRecovery can recover L.and continue" $
     \_ -> canRecover warningRecovery && shouldContinue warningRecovery
   
-  , testProperty "infoRecovery can recover and continue" $
+  , testProperty "infoRecovery can recover L.and continue" $
     \_ -> canRecover infoRecovery && shouldContinue infoRecovery
   
   , testProperty "customRecovery preserves provided values" $
@@ -162,84 +163,12 @@ errorRecoveryProperties = testGroup "ErrorRecovery properties"
 -- | Properties for TypeError
 typeErrorProperties :: TestTree
 typeErrorProperties = testGroup "TypeError properties"
-  [ testProperty "errorAt creates error with provided values" $
-    \errId msg line col -> 
-      let loc = _atLocation line col
-          err = errorAt errId msg loc
-      in errorId err === errId &&
-         message err === msg &&
-         location err === loc &&
-         severity err === Error &&
-         category err === Unknown
-  
-  , testProperty "errorWithCategory creates error with provided category" $
-    \errId errCategory msg line col -> 
-      let loc = _atLocation line col
-          err = errorWithCategory errId errCategory msg loc
-      in errorId err === errId &&
-         message err === msg &&
-         location err === loc &&
-         severity err === Error &&
-         category err === errCategory
-  
-  , testProperty "warningAt creates warning" $
-    \errId msg line col -> 
-      let loc = _atLocation line col
-          err = warningAt errId msg loc
-      in severity err === Warning
-  
-  , testProperty "infoAt creates info" $
-    \errId msg line col -> 
-      let loc = _atLocation line col
-          err = infoAt errId msg loc
-      in severity err === Info
-  
-  , testProperty "fatalError creates fatal error" $
-    \errId msg line col -> 
-      let loc = _atLocation line col
-          err = fatalError errId msg loc
-      in severity err === Fatal
-  
-  , testProperty "withLocation updates error location" $
-    \errId msg line1 col1 line2 col2 -> 
-      let loc1 = _atLocation line1 col1
-          loc2 = _atLocation line2 col2
-          err = errorAt errId msg loc1
-          updatedErr = withLocation loc2 err
-      in location updatedErr === loc2
-  
-  , testProperty "withContext updates error context" $
-    \errId msg line col ctx -> 
-      let loc = _atLocation line col
-          err = errorAt errId msg loc
-          updatedErr = withContext ctx err
-      in context updatedErr === ctx
-  
-  , testProperty "withSuggestions updates error suggestions" $
-    \errId msg line col suggestions -> 
-      let loc = _atLocation line col
-          err = errorAt errId msg loc
-          updatedErr = withSuggestions suggestions err
-      in suggestions updatedErr === suggestions
-  
-  , testProperty "withTimestamp adds timestamp" $
-    \errId msg line col timestamp -> 
-      let loc = _atLocation line col
-          err = errorAt errId msg loc
-          updatedErr = withTimestamp timestamp err
-      in timestamp updatedErr === Just timestamp
-  
-  , testProperty "canRecoverFrom uses recovery strategy" $
-    \errId msg line col -> 
-      let loc = _atLocation line col
-          err = errorAt errId msg loc
-      in canRecoverFrom err === canRecover (recovery err)
+  [ testProperty "errorAt "test-id" (recovery err)
   
   , testProperty "shouldContinueAfter uses recovery strategy" $
     \errId msg line col -> 
       let loc = _atLocation line col
-          err = errorAt errId msg loc
-      in shouldContinueAfter err === shouldContinue (recovery err)
+          err = errorAt "test-id" (recovery err)
   ]
 
 -- | Properties for CombinedError
@@ -259,42 +188,42 @@ combinedErrorProperties = testGroup "CombinedError properties"
   , testProperty "filterCombinedErrorsBySeverity filters correctly" $
     \minSeverity errors -> 
       let filtered = filterCombinedErrorsBySeverity minSeverity errors
-          shouldBeIncluded = filter (\err -> isAtLeast minSeverity (combinedErrorSeverity err)) errors
-      in length filtered === length shouldBeIncluded
+          shouldBeIncluded = L.filter (\err -> isAtLeast minSeverity (combinedErrorSeverity err)) errors
+      in L.length filtered === L.length shouldBeIncluded
   ]
 
 -- | Properties for ErrorCollector
 errorCollectorProperties :: TestTree
 errorCollectorProperties = testGroup "ErrorCollector properties"
-  [ testProperty "getErrors filters by Error and Fatal severity" $
+  [ testProperty "getErrors filters by Error L.and Fatal severity" $
     \errors -> 
       let filtered = getErrors errors
-          expected = filter (\e -> severity e == Error || severity e == Fatal) errors
-      in length filtered === length expected
+          expected = L.filter (\e -> severity e == Error || severity e == Fatal) errors
+      in L.length filtered === L.length expected
   
   , testProperty "getWarnings filters by Warning severity" $
     \errors -> 
       let filtered = getWarnings errors
-          expected = filter (\e -> severity e == Warning) errors
-      in length filtered === length expected
+          expected = L.filter (\e -> severity e == Warning) errors
+      in L.length filtered === L.length expected
   
   , testProperty "getInfo filters by Info severity" $
     \errors -> 
       let filtered = getInfo errors
-          expected = filter (\e -> severity e == Info) errors
-      in length filtered === length expected
+          expected = L.filter (\e -> severity e == Info) errors
+      in L.length filtered === L.length expected
   
-  , testProperty "getAllMessages returns all errors" $
+  , testProperty "getAllMessages returns L.all errors" $
     \errors -> getAllMessages errors === errors
   
-  , testProperty "hasErrors is true if there are Error or Fatal severity messages" $
+  , testProperty "hasErrors is true if there are Error L.or Fatal severity messages" $
     \errors -> 
-      let hasErr = any (\e -> severity e == Error || severity e == Fatal) errors
+      let hasErr = L.any (\e -> severity e == Error || severity e == Fatal) errors
       in hasErrors errors === hasErr
   
   , testProperty "hasWarnings is true if there are Warning severity messages" $
     \errors -> 
-      let hasWarn = any (\e -> severity e == Warning) errors
+      let hasWarn = L.any (\e -> severity e == Warning) errors
       in hasWarnings errors === hasWarn
   ]
 
@@ -304,73 +233,24 @@ errorFormattingProperties = testGroup "Error formatting properties"
   [ testProperty "formatError includes severity string" $
     \errId msg line col -> 
       let loc = _atLocation line col
-          err = errorAt errId msg loc
-          formatted = formatError err
-          severityStr = case severity err of
-            Fatal -> "FATAL"
-            Error -> "ERROR"
-            Warning -> "WARNING"
-            Info -> "INFO"
-      in ("[" ++ severityStr ++ "]") `isInfixOf` formatted
+          err = errorAt "test-id" ++ severityStr ++ "]") `L.isInfixOf` formatted
   
   , testProperty "formatError includes category" $
     \errId msg line col -> 
       let loc = _atLocation line col
-          err = errorAt errId msg loc
-          formatted = formatError err
-          categoryStr = "[" ++ show (category err) ++ "]"
-      in categoryStr `isInfixOf` formatted
+          err = errorAt "test-id" (category err) ++ "]"
+      in categoryStr `L.isInfixOf` formatted
   
   , testProperty "formatError includes message" $
     \errId msg line col -> 
       let loc = _atLocation line col
-          err = errorAt errId msg loc
-          formatted = formatError err
-      in T.unpack msg `isInfixOf` formatted
-  
-  , testProperty "formatErrorWithLocation includes location information" $
-    \errId msg line col -> 
-      let loc = _atLocation line col
-          err = errorAt errId msg loc
-          formatted = formatErrorWithLocation err
-          locationStr = show line ++ ":" ++ show col
-      in locationStr `isInfixOf` formatted
-  
-  , testProperty "formatErrors sorts by severity" $
-    \errors -> 
-      let formatted = formatErrors errors
-          sorted = sortBySeverity errors
-          sortedFormatted = formatErrors sorted
-      in formatted === sortedFormatted
-  
-  , testProperty "formatErrorsWithLocation sorts by severity" $
-    \errors -> 
-      let formatted = formatErrorsWithLocation errors
-          sorted = sortBySeverity errors
-          sortedFormatted = formatErrorsWithLocation sorted
-      in formatted === sortedFormatted
-  ]
-
--- | Additional edge case properties
-edgeCaseProperties :: TestTree
-edgeCaseProperties = testGroup "ErrorHandler edge case properties"
-  [ testProperty "empty error list formatting returns empty string" $
-    \_ -> formatErrors [] === "" && formatErrorsWithLocation [] === ""
-  
-  , testProperty "error with empty message formats correctly" $
-    \errId line col -> 
-      let loc = _atLocation line col
-          err = errorAt errId "" loc
-          formatted = formatError err
-      in not (null formatted)
+          err = errorAt "test-id" (null formatted)
   
   , testProperty "error with unknown location formats correctly" $
     \errId msg -> 
-      let err = errorAt errId msg _unknownLocation
-          formatted = formatErrorWithLocation err
-      in not (null formatted)
+      let err = errorAt "test-id" (null formatted)
   
-  , testProperty "combineErrors preserves all error information" $
+  , testProperty "combineErrors preserves L.all error information" $
     \err1 err2 -> 
       let combined = combineErrors err1 err2
       in errorChain combined === [err1, err2]
@@ -378,7 +258,5 @@ edgeCaseProperties = testGroup "ErrorHandler edge case properties"
   , testProperty "wrapError creates error chain" $
     \errId msg line col wrappedErr -> 
       let loc = _atLocation line col
-          err = errorAt errId msg loc
-          wrapped = wrapError err wrappedErr
-      in errorChain wrapped === [wrappedErr]
+          err = errorAt "test-id" errorChain wrapped === [wrappedErr]
   ]

@@ -4,6 +4,7 @@
 module Test.Unit.TypeSystemSpec (tests) where
 
 import Control.Monad.State (execState, runState)
+import qualified Data.List as L
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Test.Tasty (TestTree, testGroup)
@@ -33,12 +34,12 @@ tests =
 
     , testCase "checkType reports unknown types" $ do
         let (_, checker') = runState (TS.checkType (TS.TVCon "Unknown")) TS.newDependentTypeChecker
-        assertBool "expected unresolved type error" (not (null (TS.getDependentTypeErrors checker')))
+        assertBool "expected unresolved type error" (not (L.null (TS.getDependentTypeErrors checker')))
 
     , testCase "checkTypeInstantiation validates type arity" $ do
         let checkerWithList = execState (TS.addType "List" ["T"] []) TS.newDependentTypeChecker
             (_, checker') = runState (TS.checkTypeInstantiation "List" [TS.TVCon "int", TS.TVCon "string"]) checkerWithList
-        assertBool "expected arity error" (not (null (TS.getDependentTypeErrors checker')))
+        assertBool "expected arity error" (not (L.null (TS.getDependentTypeErrors checker')))
 
     , testCase "checkTypeInstantiation accepts valid instantiation" $ do
         let checkerWithList = execState (TS.addType "List" ["T"] []) TS.newDependentTypeChecker
@@ -49,7 +50,7 @@ tests =
         let withConstraint = execState (TS.addConstraint (TS.Equal (TS.TVCon "int") (TS.TVCon "string"))) TS.newDependentTypeChecker
             (result, checker') = runState TS.solveConstraints withConstraint
         assertBool "expected solveConstraints failure" (not result)
-        assertBool "expected mismatch recorded" (not (null (TS.getDependentTypeErrors checker')))
+        assertBool "expected mismatch recorded" (not (L.null (TS.getDependentTypeErrors checker')))
 
     , testCase "unify produces substitutions" $ do
         case TS.unify [(TS.TVVar "T", TS.TVCon "int")] of
@@ -66,9 +67,9 @@ tests =
             params = Set.fromList ["T"]
             typeExpr =
               RefineT
-                (GenericT "Vector" [SimpleT "T"])
+                (GenericT "Vector" [SimpleT (T.pack "T")])
                 [ SizeGE "values" 2
-                , PredC "Ordered" [SimpleT "T"]
+                , PredC "Ordered" [SimpleT (T.pack "T")]
                 ]
             (tv, constraints) = TS.convertTypeExprAndRefinements params typeExpr
         tv @?= TS.TVApp "Vector" [TS.TVVar "T"]
@@ -82,8 +83,8 @@ tests =
             params = Set.fromList ["Element"]
             constraint =
               PredC "EnsureOrder"
-                [ GenericT "List" [SimpleT "Element"]
-                , SimpleT "Standalone"
+                [ GenericT "List" [SimpleT (T.pack "Element")]
+                , SimpleT (T.pack "Standalone")
                 ]
         TS.convertConstraint params constraint
           @?= TS.Predicate "EnsureOrder"
@@ -96,8 +97,8 @@ tests =
             params = Set.fromList ["T"]
             funcType =
               FuncT
-                [("input", SimpleT "T")]
-                (RefineT (SimpleT "Result") [SizeGT "input" 0])
+                [("input", SimpleT (T.pack "T"))]
+                (RefineT (SimpleT (T.pack "Result")) [SizeGT "input" 0])
             (tv, constraints) = TS.convertTypeExprAndRefinements params funcType
         tv @?= TS.TVFun [TS.TVVar "T"] (TS.TVCon "Result")
         constraints @?=

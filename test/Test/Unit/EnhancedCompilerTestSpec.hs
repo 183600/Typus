@@ -1,5 +1,6 @@
 module Test.Unit.EnhancedCompilerTestSpec (tests) where
 
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ((@?=), assertBool, assertFailure, testCase)
@@ -60,7 +61,7 @@ tests =
             case result of
               Left errs -> 
                 assertBool "should detect missing package" 
-                         (any (\e -> "package" `isInfixOf` renderCompilationError e) errs)
+                         (L.any (\e -> "package" `L.isInfixOf` renderCompilationError e) errs)
               Right _ -> assertFailure "expected compilation to fail"
 
     , testCase "handles type mismatch errors" $ do
@@ -78,7 +79,7 @@ tests =
             case result of
               Left errs -> 
                 assertBool "should detect type mismatch" 
-                         (any (\e -> "type" `isInfixOf` renderCompilationError e) errs)
+                         (L.any (\e -> "type" `L.isInfixOf` renderCompilationError e) errs)
               Right _ -> assertFailure "expected compilation to fail with type error"
 
     , testCase "extracts function declarations correctly" $ do
@@ -97,11 +98,11 @@ tests =
           Right typusFile -> do
             let declarations = extractDeclarations typusFile
             assertBool "should extract function declarations" 
-                     (length declarations >= 2)
+                     (L.length declarations >= 2)
             assertBool "should find add function" 
-                     (any ("add" `isInfixOf`) declarations)
+                     (L.any ("add" `L.isInfixOf`) declarations)
             assertBool "should find multiply function" 
-                     (any ("multiply" `isInfixOf`) declarations)
+                     (L.any ("multiply" `L.isInfixOf`) declarations)
 
     , testCase "extracts function calls correctly" $ do
         let source = unlines
@@ -120,11 +121,11 @@ tests =
           Right typusFile -> do
             let functionCalls = extractFunctionCalls typusFile
             assertBool "should extract function calls" 
-                     (length functionCalls >= 3)
+                     (L.length functionCalls >= 3)
             assertBool "should find helper call" 
-                     (any ("helper" `isInfixOf`) functionCalls)
+                     (L.any ("helper" `L.isInfixOf`) functionCalls)
             assertBool "should find println calls" 
-                     (any ("println" `isInfixOf`) functionCalls)
+                     (L.any ("println" `L.isInfixOf`) functionCalls)
 
     , testCase "builds type environment from pairs" $ do
         let typePairs = 
@@ -134,11 +135,11 @@ tests =
               ]
         let typeEnv = buildTypeEnvFromPairs typePairs
         assertBool "type environment should contain x" 
-                 ("x" `isInfixOf` typeEnv)
+                 ("x" `L.isInfixOf` typeEnv)
         assertBool "type environment should contain y" 
-                 ("y" `isInfixOf` typeEnv)
+                 ("y" `L.isInfixOf` typeEnv)
         assertBool "type environment should contain z" 
-                 ("z" `isInfixOf` typeEnv)
+                 ("z" `L.isInfixOf` typeEnv)
 
     , testCase "identifies method declarations" $ do
         let source = unlines
@@ -161,11 +162,11 @@ tests =
             let declarations = extractDeclarations typusFile
             let methods = filter isMethodDeclaration declarations
             assertBool "should identify method declarations" 
-                     (length methods == 2)
+                     (L.length methods == 2)
             assertBool "should find Increment method" 
-                     (any ("Increment" `isInfixOf`) methods)
+                     (L.any ("Increment" `L.isInfixOf`) methods)
             assertBool "should find Value method" 
-                     (any ("Value" `isInfixOf`) methods)
+                     (L.any ("Value" `L.isInfixOf`) methods)
 
     , testCase "detects malformed syntax" $ do
         let source = unlines
@@ -190,11 +191,11 @@ tests =
               ]
         let formatted = formatCompilerErrors errors
         assertBool "should include line numbers" 
-                 (any ("1:" `isInfixOf`) formatted)
+                 (L.any ("1:" `L.isInfixOf`) formatted)
         assertBool "should include error types" 
-                 (any ("syntax error" `isInfixOf`) formatted)
+                 (L.any ("syntax error" `L.isInfixOf`) formatted)
         assertBool "should include type errors" 
-                 (any ("type mismatch" `isInfixOf`) formatted)
+                 (L.any ("type mismatch" `L.isInfixOf`) formatted)
 
     , testCase "generates detailed error report" $ do
         let source = unlines
@@ -212,12 +213,12 @@ tests =
               Left errs -> do
                 let report = generateDetailedReport errs
                 assertBool "report should contain error summary" 
-                         (any ("Error" `isInfixOf`) report)
+                         (L.any ("Error" `L.isInfixOf`) report)
                 assertBool "report should contain suggestions" 
-                         (length report > 50)  -- Should be a detailed report
+                         (L.length report > 50)  -- Should be a detailed report
               Right _ -> assertFailure "expected compilation to fail"
 
-    , testCase "analyzes errors and provides statistics" $ do
+    , testCase "analyzes errors L.and provides statistics" $ do
         let errors = 
               [ CompilerError ParseError (SourceSpan 1 1 1 10) "syntax error"
               , CompilerError TypeError (SourceSpan 2 5 2 15) "type mismatch"
@@ -226,11 +227,11 @@ tests =
               ]
         let analysis = analyzeErrors errors
         assertBool "should count type errors" 
-                 (any ("type" `isInfixOf`) analysis)
+                 (L.any ("type" `L.isInfixOf`) analysis)
         assertBool "should count parse errors" 
-                 (any ("parse" `isInfixOf`) analysis)
+                 (L.any ("parse" `L.isInfixOf`) analysis)
         assertBool "should count dependency errors" 
-                 (any ("dependency" `isInfixOf`) analysis)
+                 (L.any ("dependency" `L.isInfixOf`) analysis)
 
     , testCase "checks for type errors" $ do
         let source = unlines
@@ -272,7 +273,7 @@ tests =
                 assertBool "should provide type diagnostics" 
                          (not $ null diagnostics)
                 assertBool "diagnostics should mention function arguments" 
-                         (any (\d -> "argument" `isInfixOf` show d) diagnostics)
+                         (L.any (\d -> "argument" `L.isInfixOf` show d) diagnostics)
               Right _ -> assertFailure "expected compilation to fail"
 
     , testCase "generates Go code for simple program" $ do
@@ -291,9 +292,9 @@ tests =
               Left errs -> assertFailure $ "compile failed: " <> unlines (map renderCompilationError errs)
               Right goCode -> do
                 assertBool "generated Go code should contain package main" 
-                         ("package main" `isInfixOf` goCode)
+                         ("package main" `L.isInfixOf` goCode)
                 assertBool "generated Go code should contain main function" 
-                         ("func main" `isInfixOf` goCode)
+                         ("func main" `L.isInfixOf` goCode)
                 assertBool "generated Go code should contain variable declaration" 
-                         ("x :=" `isInfixOf` goCode)
+                         ("x :=" `L.isInfixOf` goCode)
     ]

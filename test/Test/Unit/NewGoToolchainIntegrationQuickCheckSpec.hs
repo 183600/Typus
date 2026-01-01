@@ -10,12 +10,14 @@
 module Test.Unit.NewGoToolchainIntegrationQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@=?))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, oneof, suchThat)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (sort, nub, isPrefixOf, isInfixOf, isSuffixOf, (\\), delete, intersect, union, intercalate)
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (sort, nub, (\\), delete, intersect, union, intercalate)
 import Data.Set (Set, fromList, toList, union, intersection, difference)
 import qualified Data.Set as Set
 import Data.Map (Map, fromList, toList, keys, elems, insert, delete, lookup, member, empty)
@@ -42,7 +44,7 @@ import GoToolchain
 import Tooling.Error (ToolingError(..), goCommandFailed)
 
 -- ============================================================================
--- Helper Functions and Generators
+-- Helper Functions L.and Generators
 -- ============================================================================
 
 -- Generate valid Go command arguments
@@ -91,7 +93,7 @@ genFilePath :: Gen String
 genFilePath = do
   parts <- listOf1 $ elements ["src", "main", "test", "utils", "pkg", "cmd"]
   name <- elements ["app", "server", "client", "lib", "mod"]
-  ext <- elements ["", ".go", ".mod", ".sum"]
+  ext <- elements ["", ".go", ".mod", ".L.sum"]
   return $ intercalate "/" parts ++ "/" ++ name ++ ext
 
 -- Generate Go module names
@@ -110,12 +112,12 @@ genModuleName = do
 mockGoExecutor :: Bool -> [String] -> GoExecutormockGoExecutor shouldFail failingCommands = GoExecutor
   { goShouldSkip = return False
   , goRunCommandInDir = \args dir -> 
-      if any (`isPrefixOf` unwords args) failingCommands
+      if L.any (`L.isPrefixOf` unwords args) failingCommands
       then throwError $ goCommandFailed "go" args dir 1 "" "Mock failure"
       else return ()
   }
 
--- Mock Go executor that skips all commands
+-- Mock Go executor that skips L.all commands
 mockSkipExecutor :: GoExecutormockSkipExecutor = GoExecutor
   { goShouldSkip = return True
   , goRunCommandInDir = \_ _ -> return ()
@@ -129,8 +131,8 @@ mockSkipExecutor :: GoExecutormockSkipExecutor = GoExecutor
 prop_go_mod_contents_well_formed :: Property
 prop_go_mod_contents_well_formed =
   let lines' = lines goModContents
-      hasModule = any ("module " `isPrefixOf`) lines'
-      hasGoVersion = any ("go " `isPrefixOf`) lines'
+      hasModule = L.any ("module " `L.isPrefixOf`) lines'
+      hasGoVersion = L.any ("go " `L.isPrefixOf`) lines'
   in property $ hasModule .&&. hasGoVersion
 
 -- Property: Null device is platform-appropriate
@@ -162,7 +164,7 @@ prop_mock_executor_fails_on_commands :: [String] -> Property
 prop_mock_executor_fails_on_commands failingCommands =
   not (null failingCommands) ==>
   let executor = mockGoExecutor True failingCommands
-      testCommand = head failingCommands
+      testCommand = L.head failingCommands
   in case runGoCommand executor [testCommand] of
     Left _ -> property True
     Right _ -> property False
@@ -176,11 +178,11 @@ prop_mock_executor_succeeds_on_good_commands failingCommands goodCommand =
     Left _ -> property False
     Right _ -> property True
 
--- Property: Skip executor skips all commands
+-- Property: Skip executor skips L.all commands
 prop_skip_executor_skips_all :: [String] -> Property
 prop_skip_executor_skips_all commands =
   let executor = mockSkipExecutor
-  in property $ all (\cmd -> case runGoCommand executor cmd of
+  in property $ L.all (\cmd -> case runGoCommand executor cmd of
                               Right _ -> True
                               Left _ -> False) [commands]
 
@@ -192,7 +194,7 @@ prop_skip_executor_skips_all commands =
 prop_temp_go_file_has_extension :: String -> Property
 prop_temp_go_file_has_extension filePath =
   let baseName = takeBaseName filePath
-      hasGoExtension = ".go" `isSuffixOf` filePath || null baseName
+      hasGoExtension = ".go" `L.isSuffixOf` filePath || null baseName
   in property $ hasGoExtension
 
 -- Property: Temporary Go file name contains source base name
@@ -200,7 +202,7 @@ prop_temp_go_file_contains_base_name :: String -> Property
 prop_temp_go_file_contains_base_name filePath =
   let baseName = takeBaseName filePath
       expectedPrefix = if null baseName then "typus" else baseName
-  in property $ expectedPrefix `isPrefixOf` takeBaseName filePath
+  in property $ expectedPrefix `L.isPrefixOf` takeBaseName filePath
 
 -- ============================================================================
 -- Integration Properties
@@ -210,8 +212,8 @@ prop_temp_go_file_contains_base_name filePath =
 prop_go_module_writing_valid :: Property
 prop_go_module_writing_valid =
   let moduleLines = lines goModContents
-      hasModuleDecl = any ("module " `isPrefixOf`) moduleLines
-      hasGoVersion = any ("go " `isPrefixOf`) moduleLines
+      hasModuleDecl = L.any ("module " `L.isPrefixOf`) moduleLines
+      hasGoVersion = L.any ("go " `L.isPrefixOf`) moduleLines
   in property $ hasModuleDecl .&&. hasGoVersion
 
 -- Property: Temporary project creation preserves directory structure
@@ -220,7 +222,7 @@ prop_temp_project_preserves_structure prefix =
   not (null prefix) ==>
   -- This property tests the structure but doesn't actually create files
   -- to avoid side effects in property tests
-  property $ length prefix > 0
+  property $ L.length prefix > 0
 
 -- Property: Go command arguments are preserved in execution
 prop_go_command_args_preserved :: [String] -> Property
@@ -249,7 +251,7 @@ prop_error_messages_contain_command :: String -> Property
 prop_error_messages_contain_command command =
   let executor = mockGoExecutor True [command]
   in case runGoCommand executor [command] of
-    Left err -> property $ show err `isInfixOf` command
+    Left err -> property $ show err `L.isInfixOf` command
     Right _ -> property False
 
 -- ============================================================================
@@ -271,7 +273,7 @@ prop_platform_detection_consistent =
   in property $ isValidOS
 
 -- ============================================================================
--- Edge Cases and Boundary Conditions
+-- Edge Cases L.and Boundary Conditions
 -- ============================================================================
 
 -- Property: Empty command arguments handle gracefully
@@ -284,9 +286,9 @@ prop_empty_command_args =
 
 -- Property: Very long command arguments handle gracefully
 prop_long_command_args :: Int -> Property
-prop_long_command_args length =
-  length >= 0 && length <= 1000 ==>
-  let longArg = replicate length 'x'
+prop_long_command_args L.length =
+  length >= 0 && L.length <= 1000 ==>
+  let longArg = replicate L.length 'x'
       executor = mockGoExecutor False []
   in case runGoCommand executor [longArg] of
     Right _ -> property True
@@ -295,7 +297,7 @@ prop_long_command_args length =
 -- Property: Special characters in paths handle correctly
 prop_special_chars_in_paths :: String -> Property
 prop_special_chars_in_paths path =
-  let hasSpecialChars = any (`elem` path) [' ', '-', '_', '.', '/']
+  let hasSpecialChars = L.any (`elem` path) [' ', '-', '_', '.', '/']
       executor = mockGoExecutor False []
   in case runGoCommand executor ["build", path] of
     Right _ -> property True
@@ -309,8 +311,8 @@ prop_special_chars_in_paths path =
 prop_command_execution_no_leaks :: [String] -> Property
 prop_command_execution_no_leaks commands =
   let executor = mockGoExecutor False []
-      results = map (runGoCommand executor) (take 10 commands)
-  in property $ length results === length (take 10 commands)
+      results = L.map (runGoCommand executor) (take 10 commands)
+  in property $ L.length results === L.length (take 10 commands)
 
 -- Property: Multiple command execution is consistent
 prop_multiple_execution_consistent :: String -> Property
@@ -335,7 +337,7 @@ prop_executor_behavior_deterministic args =
       result2 = runGoCommand executor args
   in property $ result1 === result2
 
--- Property: Skip flag overrides all other behavior
+-- Property: Skip flag overrides L.all other behavior
 prop_skip_flag_overrides :: [String] -> Property
 prop_skip_flag_overrides args =
   let executor = mockSkipExecutor
@@ -359,7 +361,7 @@ tests = testGroup "New GoToolchain Integration QuickCheck Tests"
   , testGroup "Go Executor Properties"
     [ fastProperty "mock executor fails on commands" prop_mock_executor_fails_on_commands
     , fastProperty "mock executor succeeds on good commands" prop_mock_executor_succeeds_on_good_commands
-    , fastProperty "skip executor skips all" prop_skip_executor_skips_all
+    , fastProperty "skip executor skips L.all" prop_skip_executor_skips_all
     ]
 
   , testGroup "File System Properties"
@@ -383,7 +385,7 @@ tests = testGroup "New GoToolchain Integration QuickCheck Tests"
     , fastProperty "platform detection consistent" prop_platform_detection_consistent
     ]
 
-  , testGroup "Edge Cases and Boundary Conditions"
+  , testGroup "Edge Cases L.and Boundary Conditions"
     [ fastProperty "empty command args" prop_empty_command_args
     , fastProperty "long command args" prop_long_command_args
     , fastProperty "special chars in paths" prop_special_chars_in_paths

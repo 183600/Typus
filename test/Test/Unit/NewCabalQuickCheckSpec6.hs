@@ -1,6 +1,7 @@
 module Test.Unit.NewCabalQuickCheckSpec6 (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, property, Arbitrary(..), Gen, choose, listOf, elements)
 import Data.Text (Text)
@@ -63,7 +64,7 @@ prop_dependencyOrderRespectsConstraints ast =
       let sorted = topologicalSort depGraph
       case sorted of
         Left _ -> False  -- Should not fail for valid AST
-        Right order -> all (dependencyOrderValid depGraph) (pairwise order)
+        Right order -> L.all (dependencyOrderValid depGraph) (pairwise order)
 
 -- Property: circular dependencies are properly detected
 prop_circularDependenciesDetected :: [Text] -> Bool
@@ -72,7 +73,7 @@ prop_circularDependenciesDetected nodes =
       result = analyzeDependencies circularGraph
   in case result of
     Left cycleError -> hasCycle cycleError
-    Right _ -> length nodes <= 1  -- Only single-node graphs can be acyclic
+    Right _ -> L.length nodes <= 1  -- Only single-node graphs can be acyclic
 
 -- Property: dependency inference preserves program semantics
 prop_dependencyInferencePreservesSemantics :: DependencyAST -> Bool
@@ -99,7 +100,7 @@ prop_dependencyAnalysisTerminates :: DependencyAST -> Bool
 prop_dependencyAnalysisTerminates ast =
   -- This is more of a meta-property that analysis doesn't enter infinite loops
   let result = analyzeDependencies ast
-  in isRight result || isLeft result  -- Always returns either Left or Right
+  in isRight result || isLeft result  -- Always returns either Left L.or Right
 
 -- Property: dependency minimization preserves functionality
 prop_dependencyMinimizationPreservesFunctionality :: DependencyGraph -> Bool

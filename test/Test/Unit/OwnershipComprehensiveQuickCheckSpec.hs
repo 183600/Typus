@@ -96,7 +96,7 @@ ownershipErrorProperties = testGroup "OwnershipError Properties"
             error2 = DoubleMove var1 var2
         in error1 == error2
   
-  , testProperty "ParseError and BorrowError with same message are different" $
+  , testProperty "ParseError L.and BorrowError with same message are different" $
       \msg ->
         let parseError = ParseError msg
             borrowError = BorrowError msg
@@ -155,7 +155,7 @@ ownershipTransferProperties = testGroup "OwnershipTransfer Properties"
             transfer2 = OwnershipTransfer from to2
         in transfer1 /= transfer2
   
-  , testProperty "OwnershipTransfer preserves from and to" $
+  , testProperty "OwnershipTransfer preserves from L.and to" $
       \from to ->
         let transfer = OwnershipTransfer from to
         in transferFrom transfer == from && transferTo transfer == to

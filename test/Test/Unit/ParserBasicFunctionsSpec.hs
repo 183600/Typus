@@ -5,6 +5,7 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, assertEqual, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck ((===), Property, forAll, Gen, elements, listOf, choose)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isSuffixOf)
 
 import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..))
@@ -20,7 +21,7 @@ testParserBasicFunctions = testGroup "Parser Basic Functions"
   , testFileStructureValidation
   ]
 
--- | Test TypusFile creation and properties
+-- | Test TypusFile creation L.and properties
 testTypusFileCreation :: TestTree
 testTypusFileCreation = testGroup "TypusFile Creation"
   [ fastProperty "empty file has no blocks" prop_emptyFileNoBlocks
@@ -29,7 +30,7 @@ testTypusFileCreation = testGroup "TypusFile Creation"
   , testCase "file with build tags" testFileWithBuildTags
   ]
 
--- | Test CodeBlock parsing and validation
+-- | Test CodeBlock parsing L.and validation
 testCodeBlockParsing :: TestTree
 testCodeBlockParsing = testGroup "CodeBlock Parsing"
   [ fastProperty "code block preserves content" prop_codeBlockPreservesContent
@@ -61,7 +62,7 @@ testFileStructureValidation = testGroup "File Structure Validation"
 prop_emptyFileNoBlocks :: FileDirectives -> Property
 prop_emptyFileNoBlocks directives =
   let file = TypusFile directives [] [] []
-  in null (typusBlocks file) === True
+  in L.null (typusBlocks file) === True
 
 prop_filePreservesBlockOrder :: [CodeBlock] -> Property
 prop_filePreservesBlockOrder blocks =
@@ -77,7 +78,7 @@ prop_codeBlockPreservesContent content directives =
 prop_codeBlockValidSpan :: String -> BlockDirectives -> Property
 prop_codeBlockValidSpan content directives =
   let start = SourcePos 1 1 0
-      end = SourcePos 1 (length content + 1) (length content)
+      end = SourcePos 1 (L.length content + 1) (L.length content)
       span = SourceSpan start end
       block = CodeBlock directives content span
   in codeBlockSpan block === span
@@ -85,9 +86,9 @@ prop_codeBlockValidSpan content directives =
 prop_fileDirectivesParsed :: Maybe Bool -> Maybe Bool -> Maybe Bool -> Property
 prop_fileDirectivesParsed ownership dependent constraints =
   let directives = FileDirectives 
-        (fmap (Located (SourcePos 1 1 0) (SourceSpan (SourcePos 1 1 0) (SourcePos 1 1 0)))) 
-        (fmap (Located (SourcePos 2 1 0) (SourceSpan (SourcePos 2 1 0) (SourcePos 2 1 0))))
-        (fmap (Located (SourcePos 3 1 0) (SourceSpan (SourcePos 3 1 0) (SourcePos 3 1 0))))
+        (fL.map (Located (SourcePos 1 1 0) (SourceSpan (SourcePos 1 1 0) (SourcePos 1 1 0)))) 
+        (fL.map (Located (SourcePos 2 1 0) (SourceSpan (SourcePos 2 1 0) (SourcePos 2 1 0))))
+        (fL.map (Located (SourcePos 3 1 0) (SourceSpan (SourcePos 3 1 0) (SourcePos 3 1 0))))
   in case (fileOwnership directives, fileDependentTypes directives, fileConstraints directives) of
        (Just (Located ownershipVal _ _), Just (Located dependentVal _ _), Just (Located constraintsVal _ _)) ->
          ownershipVal === ownership && dependentVal === dependent && constraintsVal === constraints
@@ -96,9 +97,9 @@ prop_fileDirectivesParsed ownership dependent constraints =
 prop_blockDirectivesParsed :: Maybe Bool -> Maybe Bool -> Maybe Bool -> Property
 prop_blockDirectivesParsed ownership dependent constraints =
   let directives = BlockDirectives
-        (fmap (Located (SourcePos 1 1 0) (SourceSpan (SourcePos 1 1 0) (SourcePos 1 1 0))))
-        (fmap (Located (SourcePos 2 1 0) (SourceSpan (SourcePos 2 1 0) (SourcePos 2 1 0))))
-        (fmap (Located (SourcePos 3 1 0) (SourceSpan (SourcePos 3 1 0) (SourcePos 3 1 0))))
+        (fL.map (Located (SourcePos 1 1 0) (SourceSpan (SourcePos 1 1 0) (SourcePos 1 1 0))))
+        (fL.map (Located (SourcePos 2 1 0) (SourceSpan (SourcePos 2 1 0) (SourcePos 2 1 0))))
+        (fL.map (Located (SourcePos 3 1 0) (SourceSpan (SourcePos 3 1 0) (SourcePos 3 1 0))))
   in case (blockOwnership directives, blockDependentTypes directives, blockConstraints directives) of
        (Just (Located ownershipVal _ _), Just (Located dependentVal _ _), Just (Located constraintsVal _ _)) ->
          ownershipVal === ownership && dependentVal === dependent && constraintsVal === constraints
@@ -107,7 +108,7 @@ prop_blockDirectivesParsed ownership dependent constraints =
 prop_validFileAccepted :: TypusFile -> Property
 prop_validFileAccepted file =
   let hasValidDirectives = isValidDirectives (typusDirectives file)
-      hasValidBlocks = all isValidBlock (typusBlocks file)
+      hasValidBlocks = L.all isValidBlock (typusBlocks file)
   in hasValidDirectives && hasValidBlocks === True
 
 prop_invalidSpansDetected :: SourcePos -> SourcePos -> Property
@@ -173,7 +174,7 @@ testOwnershipDirective = do
       ownership = Located True (SourcePos 1 1 0) (SourceSpan (SourcePos 1 1 0) (SourcePos 1 17 17))
       directives = FileDirectives (Just ownership) Nothing Nothing
   
-  assertBool "directive should be recognized" $ isPrefixOf "ownership:" directive
+  assertBool "directive should be recognized" $ L.isPrefixOf "ownership:" directive
   assertEqual "ownership should be enabled" (Just ownership) (fileOwnership directives)
 
 testDependentTypesDirective :: IO ()
@@ -182,15 +183,15 @@ testDependentTypesDirective = do
       dependent = Located False (SourcePos 1 1 0) (SourceSpan (SourcePos 1 1 0) (SourcePos 1 24 24))
       directives = FileDirectives Nothing (Just dependent) Nothing
   
-  assertBool "directive should be recognized" $ isPrefixOf "dependent_types:" directive
+  assertBool "directive should be recognized" $ L.isPrefixOf "dependent_types:" directive
   assertEqual "dependent types should be disabled" (Just dependent) (fileDependentTypes directives)
 
 testCombinedDirectives :: IO ()
 testCombinedDirectives = do
   let directive = "//! ownership: on, dependent_types: on"
-      parts = words $ map (\c -> if c == ',' then ' ' else c) $ drop 3 directive
-      ownershipEnabled = any (== "ownership:on") parts
-      dependentEnabled = any (== "dependent_types:on") parts
+      parts = words $ L.map (\c -> if c == ',' then ' ' else c) $ drop 3 directive
+      ownershipEnabled = L.any (== "ownership:on") parts
+      dependentEnabled = L.any (== "dependent_types:on") parts
   
   assertBool "ownership should be enabled" ownershipEnabled
   assertBool "dependent types should be enabled" dependentEnabled
@@ -247,7 +248,7 @@ spanContains (SourceSpan start end) (SourceSpan innerStart innerEnd) =
 
 isValidDirectives :: FileDirectives -> Bool
 isValidDirectives (FileDirectives ownership dependent constraints) =
-  all isValidLocatedDirective [ownership, dependent, constraints]
+  L.all isValidLocatedDirective [ownership, dependent, constraints]
   where
     isValidLocatedDirective Nothing = True
     isValidLocatedDirective (Located _ span _) = isValidSpan span
@@ -258,7 +259,7 @@ isValidBlock (CodeBlock directives _ span) =
 
 isValidBlockDirectives :: BlockDirectives -> Bool
 isValidBlockDirectives (BlockDirectives ownership dependent constraints) =
-  all isValidLocatedDirective [ownership, dependent, constraints]
+  L.all isValidLocatedDirective [ownership, dependent, constraints]
   where
     isValidLocatedDirective Nothing = True
     isValidLocatedDirective (Located _ span _) = isValidSpan span
@@ -273,14 +274,14 @@ isValidSpan (SourceSpan start end) =
 isValidFile :: TypusFile -> Bool
 isValidFile file = 
   isValidDirectives (typusDirectives file) &&
-  all isValidBlock (typusBlocks file)
+  L.all isValidBlock (typusBlocks file)
 
 hasConsistentDirectives :: TypusFile -> Bool
 hasConsistentDirectives file =
   let fileDirs = typusDirectives file
       blocks = typusBlocks file
       blockDirs = map codeBlockDirectives blocks
-  in all isValidBlockDirectives blockDirs
+  in L.all isValidBlockDirectives blockDirs
 
 -- | Test collection
 tests :: TestTree

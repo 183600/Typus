@@ -20,7 +20,8 @@ defaultErrorHandler = MockErrorHandler
 handleError :: MockErrorHandler -> a -> Maybe String
 handleError _ _ = Just "handled"
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos, spanFrom)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
+import qualified Data.List as L
 import Data.List (isInfixOf)
 import Data.Maybe (isNothing, isJust)
 
@@ -55,7 +56,7 @@ test_analyzeErrors_empty :: IO ()
 test_analyzeErrors_empty = do
     let errors = []
         analysis = analyzeErrors errors
-    assertEqual "Empty error analysis" 0 (length analysis)
+    assertEqual "Empty error analysis" 0 (L.length analysis)
 
 test_analyzeErrors_by_phase :: IO ()
 test_analyzeErrors_by_phase = do
@@ -64,10 +65,10 @@ test_analyzeErrors_by_phase = do
                  , OwnershipError (T.pack "ownership error") (spanFrom startPos)
                  ]
         analysis = analyzeErrors errors
-    assertEqual "Should have 3 errors" 3 (length analysis)
-    assertBool "Should have parse errors" (any ((== ParsePhase) . errorPhase) analysis)
-    assertBool "Should have type errors" (any ((== TypeCheckPhase) . errorPhase) analysis)
-    assertBool "Should have ownership errors" (any ((== OwnershipPhase) . errorPhase) analysis)
+    assertEqual "Should have 3 errors" 3 (L.length analysis)
+    assertBool "Should have parse errors" (L.any ((== ParsePhase) . errorPhase) analysis)
+    assertBool "Should have type errors" (L.any ((== TypeCheckPhase) . errorPhase) analysis)
+    assertBool "Should have ownership errors" (L.any ((== OwnershipPhase) . errorPhase) analysis)
 
 -- ============================================================================
 -- Error Handler Tests
@@ -76,7 +77,7 @@ test_analyzeErrors_by_phase = do
 test_default_handler_creation :: IO ()
 test_default_handler_creation = do
     let handler = defaultErrorHandler
-    assertBool "Default handler should be created" (not (null (show handler)))
+    assertBool "Default handler should be created" (not (L.null (show handler)))
 
 test_error_handling_workflow :: IO ()
 test_error_handling_workflow = do
@@ -95,9 +96,9 @@ test_error_message_formatting = do
                  , TypeError (T.pack "type mismatch") (spanFrom (SourcePos 2 10))
                  ]
     assertBool "Parse error should contain position" 
-        (any (\e -> "line 1" `isInfixOf` T.unpack (errorMessage e)) errors)
+        (L.any (\e -> "line 1" `L.isInfixOf` T.unpack (errorMessage e)) errors)
     assertBool "Type error should contain position"
-        (any (\e -> "line 2" `isInfixOf` T.unpack (errorMessage e)) errors)
+        (L.any (\e -> "line 2" `L.isInfixOf` T.unpack (errorMessage e)) errors)
 
 -- ============================================================================
 -- Arbitrary Instances for QuickCheck
@@ -132,13 +133,13 @@ instance Arbitrary CompilerError where
 elements :: [a] -> Gen a
 elements [] = error "elements: empty list"
 elements xs = do
-  idx <- arbitrary `suchThat` (\i -> i >= 0 && i < length xs)
+  idx <- arbitrary `suchThat` (\i -> i >= 0 && i < L.length xs)
   return (xs !! idx)
 
 oneof :: [Gen a] -> Gen a
 oneof [] = error "oneof: empty list"
 oneof gens = do
-  idx <- arbitrary `suchThat` (\i -> i >= 0 && i < length gens)
+  idx <- arbitrary `suchThat` (\i -> i >= 0 && i < L.length gens)
   (gens !! idx)
 
 suchThat :: Gen a -> (a -> Bool) -> Gen a
@@ -151,7 +152,7 @@ gen `suchThat` p = do
 -- ============================================================================
 
 tests :: TestTree
-tests = testGroup "Compiler and Error Handler Test Suite"
+tests = testGroup "Compiler L.and Error Handler Test Suite"
   [ testGroup "Compiler Error Tests"
       [ fastProperty "Compiler error has valid phase" prop_compiler_error_has_phase
       , fastProperty "Compiler error has non-empty message" prop_compiler_error_has_message

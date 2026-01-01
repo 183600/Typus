@@ -1,6 +1,7 @@
 module Test.Unit.SourceLocationSpec (tests) where
 
 import qualified Data.Text as T
+import qualified Data.List as L
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 
@@ -38,7 +39,7 @@ tests :: TestTree
 tests =
   testGroup "SourceLocation"
     [ testGroup "Position arithmetic"
-        [ testCase "posAfter newline increments the line and resets the column" $ do
+        [ testCase "posAfter newline increments the line L.and resets the column" $ do
             let initial = SourcePos 3 5 17
                 next = posAfter '\n' initial
             next @?= SourcePos 4 1 18
@@ -52,7 +53,7 @@ tests =
             let finalPos = advancePosByText (T.pack "ab\ncd") startPos
             finalPos @?= SourcePos 2 3 5
 
-        , testCase "advancePosByLine bumps the line number and resets the column" $ do
+        , testCase "advancePosByLine bumps the line number L.and resets the column" $ do
             let initial = SourcePos 10 7 99
                 advanced = advancePosByLine 3 initial
             advanced @?= SourcePos 13 1 99
@@ -63,7 +64,7 @@ tests =
             let pos = SourcePos 4 2 11
             spanFrom pos @?= emptySpan pos
 
-        , testCase "spanTo produces a zero-length span ending at the position" $ do
+        , testCase "spanTo produces a zero-L.length span ending at the position" $ do
             let pos = SourcePos 5 8 23
             spanTo pos @?= SourceSpan pos pos
 
@@ -72,7 +73,7 @@ tests =
                 end = SourcePos 2 1 10
             spanBetween start end @?= SourceSpan start end
 
-        , testCase "mergeSpans chooses the earliest start and latest end" $ do
+        , testCase "mergeSpans chooses the earliest start L.and latest end" $ do
             let spanA = SourceSpan (SourcePos 3 4 10) (SourcePos 3 10 16)
                 spanB = SourceSpan (SourcePos 1 1 0) (SourcePos 2 5 8)
                 merged = mergeSpans spanA spanB
@@ -95,9 +96,9 @@ tests =
         , testCase "mapLocated transforms the payload while preserving the span" $ do
             let testSpan = SourceSpan (SourcePos 1 1 0) (SourcePos 1 5 4)
                 loc = Located "value" (spanStart testSpan) testSpan
-                mapped = mapLocated length loc
+                mapped = mapLocated L.length loc
             locatedSpan mapped @?= testSpan
-            locatedValue mapped @?= length (locatedValue loc)
+            locatedValue mapped @?= L.length (locatedValue loc)
         ]
 
     , testGroup "Location tracking state" $ 

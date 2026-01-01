@@ -3,6 +3,7 @@ module Test.Unit.NewCabalIntegrationQuickCheckTestSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), counterexample, forAll, oneof, elements, listOf, suchThat)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Maybe (isJust, isNothing)
 import Data.Either (isLeft, isRight)
@@ -102,7 +103,7 @@ prop_compileTypusHandlesParsed code =
     Left _ -> property True  -- Skip if parsing fails
     Right file -> 
       let result = compileTypus file
-      in isRight result || isLeft result  -- Either success or failure is acceptable
+      in isRight result || isLeft result  -- Either success L.or failure is acceptable
   where
     isRight (Right _) = True
     isRight (Left _) = False

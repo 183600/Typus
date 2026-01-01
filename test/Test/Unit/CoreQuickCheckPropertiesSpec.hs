@@ -2,6 +2,7 @@
 module Test.Unit.CoreQuickCheckPropertiesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (==>))
 
 import Utils (trim, splitBy, splitByCollapsed)
@@ -18,7 +19,7 @@ tests = testGroup "Core QuickCheck Properties"
 testUtilsProperties :: TestTree
 testUtilsProperties = testGroup "Utils Properties"
   [ testProperty "trim idempotent" propTrimIdempotent
-  , testProperty "splitBy length preservation" propSplitByLengthPreservation
+  , testProperty "splitBy L.length preservation" propSplitByLengthPreservation
   , testProperty "splitByCollapsed removes empty" propSplitByCollapsedRemovesEmpty
   , testProperty "trim split consistency" propTrimSplitConsistency
   ]
@@ -44,21 +45,21 @@ propSplitByLengthPreservation :: Char -> String -> Property
 propSplitByLengthPreservation delim str =
   let parts = splitBy delim str
       rejoined = concatMap (++ [delim]) (init parts) ++ last parts
-  in length rejoined == length str + length parts - 1
+  in L.length rejoined == L.length str + L.length parts - 1
 
 -- | splitByCollapsed should never return empty strings
 propSplitByCollapsedRemovesEmpty :: Char -> String -> Property
 propSplitByCollapsedRemovesEmpty delim str =
   let parts = splitByCollapsed delim str
-  in all (not . null) parts
+  in L.all (not . null) parts
 
--- | trim and split should be consistent for whitespace-separated values
+-- | trim L.and split should be consistent for whitespace-separated values
 propTrimSplitConsistency :: String -> Property
 propTrimSplitConsistency str =
   let trimmed = trim str
       parts = splitBy ' ' trimmed
-      nonEmptyParts = filter (not . null) parts
-  in all (not . null . trim) nonEmptyParts
+      nonEmptyParts = L.filter (not . null) parts
+  in L.all (not . null . trim) nonEmptyParts
 
 -- ============================================================================
 -- SourceLocation Properties
@@ -74,7 +75,7 @@ propPositionAdvancementLineConsistency pos char =
      then newLine == oldLine + 1
      else newLine == oldLine
 
--- | Span validity should depend on proper ordering of start and end positions
+-- | Span validity should depend on proper ordering of start L.and end positions
 propSpanValidityOrdering :: SourcePos -> SourcePos -> Property
 propSpanValidityOrdering start end =
   let span = spanBetween start end

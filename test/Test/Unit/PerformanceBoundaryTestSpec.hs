@@ -1,6 +1,7 @@
 module Test.Unit.PerformanceBoundaryTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, choose, sized)
@@ -34,7 +35,7 @@ import Parser
 import Data.Char (isSpace)
 import Data.List (replicate)
 
--- | Performance boundary and stress tests
+-- | Performance boundary L.and stress tests
 tests :: TestTree
 tests =
   testGroup "Performance Boundary Tests"
@@ -45,14 +46,14 @@ tests =
             result @?= "content"
 
         , testCase "splitBy handles large numbers of segments" $ do
-            let largeInput = concat $ replicate 1000 "segment,"
+            let largeInput = L.concat $ replicate 1000 "segment,"
             let parts = splitBy ',' largeInput
-            length parts @?= 1001  -- 1000 segments + empty at end
+            L.length parts @?= 1001  -- 1000 segments + empty at end
 
         , testCase "splitByCollapsed handles repetitive delimiters" $ do
-            let repetitiveInput = concat $ replicate 1000 "a,,"
+            let repetitiveInput = L.concat $ replicate 1000 "a,,"
             let parts = splitByCollapsed ',' repetitiveInput
-            length parts @?= 1000
+            L.length parts @?= 1000
 
         , testCase "removeComments handles large comment blocks" $ do
             let largeComment = "/* " ++ replicate 50000 'x' ++ " */"
@@ -62,17 +63,17 @@ tests =
         , testCase "removeLineComments handles many lines" $ do
             let manyLines = unlines $ replicate 1000 "code // comment"
             let result = removeLineComments manyLines
-            length (lines result) @?= 1000
+            L.length (lines result) @?= 1000
 
         , testCase "normalizeIndentation handles deeply indented code" $ do
-            let deepIndent = unlines $ map (\i -> replicate i ' ' ++ "line") [1..1000]
+            let deepIndent = unlines $ L.map (\i -> replicate i ' ' ++ "line") [1..1000]
             let result = normalizeIndentation deepIndent
-            length (lines result) @?= 1000
+            L.length (lines result) @?= 1000
 
         , testCase "breakOn handles large patterns" $ do
             let largeText = replicate 10000 'a' ++ "PATTERN" ++ replicate 10000 'b'
             let (before, after) = breakOn "PATTERN" largeText
-            length before @?= 10000
+            L.length before @?= 10000
             after @?= replicate 10000 'b'
         ]
 
@@ -94,7 +95,7 @@ tests =
             let largeContent = replicate 10000 'x'
             let pos = posAt 1 1
             let located = locatedAt pos largeContent
-            length (locatedValue located) @?= 10000
+            L.length (locatedValue located) @?= 10000
 
         , testCase "multiple position updates" $ do
             let positions = scanl posAfter startPos $ take 10000 $ cycle "hello"
@@ -108,7 +109,7 @@ tests =
             case parseTypus largeFile of
               Left err -> assertBool ("Should parse large file: " ++ show err) False
               Right typusFile -> do
-                length (tfBlocks typusFile) @?= 1000
+                L.length (tfBlocks typusFile) @?= 1000
 
         , testCase "parse files with many directives" $ do
             let manyDirectives = unlines $ 
@@ -119,7 +120,7 @@ tests =
             case parseTypus manyDirectives of
               Left err -> assertBool ("Should parse many directives: " ++ show err) False
               Right typusFile -> do
-                length (tfBuildTags typusFile) >= 1 @?= True
+                L.length (tfBuildTags typusFile) >= 1 @?= True
 
         , testCase "parse deeply nested comment structures" $ do
             let nestedComments = unlines $
@@ -138,26 +139,26 @@ tests =
             case parseTypus unicodeContent of
               Left err -> assertBool ("Should parse unicode content: " ++ show err) False
               Right typusFile -> do
-                length (tfBlocks typusFile) @?= 500
+                L.length (tfBlocks typusFile) @?= 500
         ]
 
     , testGroup "Memory efficiency tests"
         [ testCase "trim doesn't leak memory with repeated calls" $ do
             let inputs = [replicate n ' ' ++ "content" ++ replicate n ' ' | n <- [1..1000]]
             let results = map trim inputs
-            length results @?= 1000
-            map head results @?= replicate 1000 'c'
+            L.length results @?= 1000
+            map L.head results @?= replicate 1000 'c'
 
         , testCase "splitBy handles memory efficiently with many splits" $ do
-            let input = concat $ replicate 10000 "a,"
+            let input = L.concat $ replicate 10000 "a,"
             let parts = splitBy ',' input
-            length parts @?= 10001
-            sum (map length parts) @?= 10000
+            L.length parts @?= 10001
+            L.sum (map L.length parts) @?= 10000
 
         , testCase "parser doesn't accumulate memory over multiple parses" $ do
             let parseFile n = parseTypus $ "//! ownership=true\ncode " ++ show n
             let results = map parseFile [1..100]
-            length [Right r | r <- results] @?= 100  -- All should succeed
+            L.length [Right r | r <- results] @?= 100  -- All should succeed
 
         , testCase "source location tracking doesn't grow unbounded" $ do
             let positions = iterate (posAfter 'x') startPos
@@ -170,10 +171,10 @@ tests =
         [ testCase "extreme line lengths" $ do
             let extremeLine = "//! " ++ replicate 100000 'a' ++ " = value"
             case parseTypus extremeLine of
-              Left err -> assertBool ("Should handle extreme line length: " ++ show err) False
+              Left err -> assertBool ("Should handle extreme line L.length: " ++ show err) False
               Right _ -> return ()
 
-        , testCase "maximum nesting depth" $ do
+        , testCase "L.maximum nesting depth" $ do
             let nestedContent = unlines $ 
                   ["/*" ++ replicate n ' ' | n <- [1..1000]] ++
                   ["nested content"] ++
@@ -185,17 +186,17 @@ tests =
         , testCase "rapid repeated operations" $ do
             let testString = "   test string with // comments   "
             let results = replicate 10000 $ trim testString
-            head results @?= "test string with // comments"
+            L.head results @?= "test string with // comments"
 
         , testCase "concurrent-style parsing simulation" $ do
             let files = ["//! ownership=true\ncode" ++ show n | n <- [1..100]]
             let parseResults = map parseTypus files
-            let successCount = length [Right r | r <- parseResults]
+            let successCount = L.length [Right r | r <- parseResults]
             successCount @?= 100
         ]
 
-    , testGroup "Regression and boundary tests"
-        [ testCase "zero-length edge cases" $ do
+    , testGroup "Regression L.and boundary tests"
+        [ testCase "zero-L.length edge cases" $ do
             trim "" @?= ""
             splitBy ' ' "" @?= [""]
             removeComments "" @?= ""
@@ -208,13 +209,13 @@ tests =
             splitBy 'a' "a" @?= ["", ""]
             case parseTypus "a" of
               Left err -> assertBool ("Should parse single char: " ++ show err) False
-              Right typusFile -> length (tfBlocks typusFile) @?= 1
+              Right typusFile -> L.length (tfBlocks typusFile) @?= 1
 
-        , testCase "maximum reasonable values" $ do
+        , testCase "L.maximum reasonable values" $ do
             let maxContent = unlines $ replicate 10000 $ 
                   "//! ownership=true\n" ++ replicate 100 'x'
             case parseTypus maxContent of
               Left err -> assertBool ("Should handle max content: " ++ show err) False
-              Right typusFile -> length (tfBlocks typusFile) @?= 10000
+              Right typusFile -> L.length (tfBlocks typusFile) @?= 10000
         ]
     ]

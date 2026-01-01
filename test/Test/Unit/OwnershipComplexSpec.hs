@@ -145,7 +145,7 @@ tests =
                 _ -> assertBool "Expected constraint violation error" False
         ]
 
-    , testGroup "Ownership and lifetimes"
+    , testGroup "Ownership L.and lifetimes"
         [ testCase "tracks lifetime relationships" $ do
             let input = unlines
                   [ "func lifetimeExample() {"
@@ -280,7 +280,7 @@ tests =
         , fastProperty "lifetime analysis prevents use-after-free" prop_lifetimePreventsUseAfterFree
         ]
 
-    , testGroup "Edge cases and regression tests"
+    , testGroup "Edge cases L.and regression tests"
         [ testCase "handles circular ownership gracefully" $ do
             let input = unlines
                   [ "type Node struct {"
@@ -323,32 +323,32 @@ data OwnershipResult = Transfer String String | Borrow String | Use String
 
 analyzeOwnership :: String -> Either OwnershipError [OwnershipResult]
 analyzeOwnership input
-    | "transform" `List.isInfixOf` input = Right [Transfer "data" "transform", Transfer "transformed" "analyze"]
-    | "inner()" `List.isInfixOf` input = Left (OwnershipViolation "data used after move")
-    | "s.field" `List.isInfixOf` input = Right [Borrow "s.field", Use "field", Use "s"]
-    | "if x {" `List.isInfixOf` input = Right [ConditionalMove "data" ["process", "transform"]]
-    | "pair.0" `List.isInfixOf` input = Right [PartialMove "pair" ["pair.0"], Use "pair.1"]
-    | "i == 5" `List.isInfixOf` input = Right [LoopBorrow "data", EarlyExitMove "data"]
-    | "processGeneric" `List.isInfixOf` input = Right [GenericMove "T" "data" "result"]
-    | "Moveable" `List.isInfixOf` input = Right [ConstrainedMove "T" "Moveable" "movable"]
-    | "Copyable" `List.isInfixOf` input && "move(item)" `List.isInfixOf` input = Left (GenericConstraintViolation "T")
-    | "&owner.data" `List.isInfixOf` input = Right [BorrowWithLifetime "borrowed" "owner"]
-    | "&temp.data" `List.isInfixOf` input = Left (LifetimeViolation "temp")
-    | "root.createChild()" `List.isInfixOf` input = Right [LifetimeHierarchy ["root", "child", "grandchild"]]
-    | "ch <- data" `List.isInfixOf` input = Right [ChannelMove "data" "received"]
-    | "go func()" `List.isInfixOf` input && "modify(data)" `List.isInfixOf` input = Left (ConcurrentAccessViolation "data")
-    | "mutex.Lock()" `List.isInfixOf` input = Right [ProtectedAccess "data" "mutex"]
+    | "transform" `List.L.isInfixOf` input = Right [Transfer "data" "transform", Transfer "transformed" "analyze"]
+    | "inner()" `List.L.isInfixOf` input = Left (OwnershipViolation "data used after move")
+    | "s.field" `List.L.isInfixOf` input = Right [Borrow "s.field", Use "field", Use "s"]
+    | "if x {" `List.L.isInfixOf` input = Right [ConditionalMove "data" ["process", "transform"]]
+    | "pair.0" `List.L.isInfixOf` input = Right [PartialMove "pair" ["pair.0"], Use "pair.1"]
+    | "i == 5" `List.L.isInfixOf` input = Right [LoopBorrow "data", EarlyExitMove "data"]
+    | "processGeneric" `List.L.isInfixOf` input = Right [GenericMove "T" "data" "result"]
+    | "Moveable" `List.L.isInfixOf` input = Right [ConstrainedMove "T" "Moveable" "movable"]
+    | "Copyable" `List.L.isInfixOf` input && "move(item)" `List.L.isInfixOf` input = Left (GenericConstraintViolation "T")
+    | "&owner.data" `List.L.isInfixOf` input = Right [BorrowWithLifetime "borrowed" "owner"]
+    | "&temp.data" `List.L.isInfixOf` input = Left (LifetimeViolation "temp")
+    | "root.createChild()" `List.L.isInfixOf` input = Right [LifetimeHierarchy ["root", "child", "grandchild"]]
+    | "ch <- data" `List.L.isInfixOf` input = Right [ChannelMove "data" "received"]
+    | "go func()" `List.L.isInfixOf` input && "modify(data)" `List.L.isInfixOf` input = Left (ConcurrentAccessViolation "data")
+    | "mutex.Lock()" `List.L.isInfixOf` input = Right [ProtectedAccess "data" "mutex"]
     | otherwise = Right []
 
 optimizeOwnership :: String -> String
 optimizeOwnership input
-    | "data := createData()" `List.isInfixOf` input = 
+    | "data := createData()" `List.L.isInfixOf` input = 
         "func optimized() {\n    return process(createData())\n}"
     | otherwise = input
 
 analyzeMoveElision :: String -> Either OwnershipError (OwnershipResult)
 analyzeMoveElision input
-    | "return data" `List.isInfixOf` input = Right (ElideMove "data")
+    | "return data" `List.L.isInfixOf` input = Right (ElideMove "data")
     | otherwise = Right (ElideMove "unknown")
 
 optimizeBorrowing :: String -> String
@@ -360,7 +360,7 @@ optimizeCode = id  // Simplified optimization
 -- Property-based tests
 prop_ownershipDeterministic :: String -> Property
 prop_ownershipDeterministic input =
-    length input < 100 ==> 
+    L.length input < 100 ==> 
     let result1 = analyzeOwnership input
         result2 = analyzeOwnership input
     in result1 == result2
@@ -369,13 +369,13 @@ prop_moveTransitive :: (String, String, String) -> Property
 prop_moveTransitive (from, middle, to) =
     not (null from && null middle && null to) ==>
     let moves = [Transfer from middle, Transfer middle to]
-    in length moves == 2
+    in L.length moves == 2
 
 prop_borrowPreservesOriginal :: String -> Property
 prop_borrowPreservesOriginal input =
-    length input < 50 ==> 
+    L.length input < 50 ==> 
     case analyzeOwnership input of
-        Right results -> any isBorrow results
+        Right results -> L.any isBorrow results
         _ -> True
   where
     isBorrow (Borrow _) = True
@@ -383,7 +383,7 @@ prop_borrowPreservesOriginal input =
 
 prop_lifetimePreventsUseAfterFree :: String -> Property
 prop_lifetimePreventsUseAfterFree input =
-    "&temp.data" `List.isInfixOf` input ==>
+    "&temp.data" `List.L.isInfixOf` input ==>
     case analyzeOwnership input of
         Left (LifetimeViolation _) -> True
         _ -> False

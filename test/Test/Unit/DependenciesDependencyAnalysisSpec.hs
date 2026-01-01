@@ -49,6 +49,7 @@ import Dependencies
   , initialTypeEnvironment
   )
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 
 -- ============================================================================
@@ -237,7 +238,7 @@ tests =
               Left err -> assertFailure $ "Type check failed: " ++ show err
               Right _ -> return ()
 
-        , testCase "add and solve equality constraint" $ do
+        , testCase "add L.and solve equality constraint" $ do
             let checker = newDependentTypeChecker
                 constraint = EqualityConstraint (TypeConstructor "Int") (TypeConstructor "Int")
                 _ = addConstraint checker constraint
@@ -278,7 +279,7 @@ tests =
               Left err -> assertFailure $ "Type inference failed: " ++ show err
               Right _ -> return ()
 
-        , testCase "create and use type variable" $ do
+        , testCase "create L.and use type variable" $ do
             let typeVar = newTypeVariable
                 checker = newDependentTypeChecker
                 freshVar = getFreshTypeVar checker
@@ -314,9 +315,9 @@ tests =
         , testCase "get dependent type errors" $ do
             let checker = newDependentTypeChecker
                 errors = getDependentTypeErrors checker
-            length errors @?= 0  -- Should be empty initially
+            L.length errors @?= 0  -- Should be empty initially
 
-        , testCase "generalize and instantiate types" $ do
+        , testCase "generalize L.and instantiate types" $ do
             let typeEnv = initialTypeEnvironment
                 typeExpr = TypeVar (TypeVar "a")
                 scheme = generalize typeEnv typeExpr

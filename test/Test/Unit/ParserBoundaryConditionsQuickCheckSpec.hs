@@ -5,7 +5,9 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), Gen, oneof, elements, listOf, sized, choose, forAll)
 import Data.Char (isAlphaNum, isLetter, isDigit, isSpace)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, null, length)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf, length)
+import Data.List (null)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import qualified Data.Text as T
 
@@ -169,7 +171,7 @@ propBlockDirectivesOverride fileOwnership fileDependent fileConstraints
 propCodeBlockSpanConsistency :: String -> Int -> Int -> Bool
 propCodeBlockSpanConsistency content startLine startCol =
   let start = SourcePos (abs startLine `mod` 1000 + 1) (abs startCol `mod` 1000 + 1)
-      end = SourcePos (sourcePosLine start) (sourcePosColumn start + length content `mod` 1000)
+      end = SourcePos (sourcePosLine start) (sourcePosColumn start + L.length content `mod` 1000)
       span = SourceSpan start end
       codeBlock = CodeBlock defaultBlockDirectives content span
   in sourcePosLine (spanStart (cbSpan codeBlock)) <= sourcePosLine (spanEnd (cbSpan codeBlock))
@@ -178,7 +180,7 @@ propCodeBlockSpanConsistency content startLine startCol =
 propCodeBlockContentPreservation :: String -> Bool
 propCodeBlockContentPreservation content =
   let start = SourcePos 1 1
-      end = SourcePos 1 (length content + 1)
+      end = SourcePos 1 (L.length content + 1)
       span = SourceSpan start end
       codeBlock = CodeBlock defaultBlockDirectives content span
   in cbContent codeBlock == content
@@ -205,7 +207,7 @@ propTypusFileBlockOrdering :: [String] -> Bool
 propTypusFileBlockOrdering contents =
   let blocks = zipWith (\i content -> 
         CodeBlock defaultBlockDirectives content 
-          (SourceSpan (SourcePos i 1) (SourcePos i (length content + 1)))) 
+          (SourceSpan (SourcePos i 1) (SourcePos i (L.length content + 1)))) 
         [1..] contents
       typusFile = TypusFile defaultFileDirectives [] blocks []
       extractedContents = map cbContent (tfBlocks typusFile)
@@ -215,12 +217,12 @@ propTypusFileBlockOrdering contents =
 propTypusFileSyntaxErrorCollection :: [String] -> Bool
 propTypusFileSyntaxErrorCollection errors =
   let typusFile = TypusFile defaultFileDirectives [] [] errors
-  in length (tfSyntaxErrors typusFile) == length errors
+  in L.length (tfSyntaxErrors typusFile) == L.length errors
 
 -- | TypusFile构建标签保持
 propTypusFileBuildTagPreservation :: [String] -> Bool
 propTypusFileBuildTagPreservation tags =
-  let locatedTags = map (`Located` 0) tags
+  let locatedTags = L.map (`Located` 0) tags
       typusFile = TypusFile defaultFileDirectives locatedTags [] []
       extractedTags = map locatedValue (tfBuildTags typusFile)
   in extractedTags == tags
@@ -239,7 +241,7 @@ propEmptyInputParsing =
 -- | 仅空白字符输入
 propWhitespaceOnlyInput :: String -> Bool
 propWhitespaceOnlyInput input =
-  let whitespaceOnly = all isSpace input
+  let whitespaceOnly = L.all isSpace input
   in if whitespaceOnly
      then case parseTypus input of
             Left _ -> True
@@ -260,18 +262,18 @@ propUnicodeContentParsing content =
   let unicodeInput = content ++ " αβγδεζηθ\n"
   in case parseTypus unicodeInput of
        Left _ -> True  -- 解析失败是可接受的
-       Right file -> not (null (tfBlocks file)) ==> 
-                     any (isInfixOf "αβγδεζηθ" . cbContent) (tfBlocks file)
+       Right file -> not (L.null (tfBlocks file)) ==> 
+                     L.any (L.isInfixOf "αβγδεζηθ" . cbContent) (tfBlocks file)
 
 -- | 非常长的行
 propVeryLongLines :: Int -> String -> Bool
 propVeryLongLines n baseContent =
-  let longContent = baseContent ++ concat (replicate (abs n `mod` 1000) "x")
+  let longContent = baseContent ++ L.concat (replicate (abs n `mod` 1000) "x")
       input = longContent ++ "\n"
   in case parseTypus input of
        Left _ -> True
-       Right file -> not (null (tfBlocks file)) ==> 
-                     length (cbContent (head (tfBlocks file))) >= length baseContent
+       Right file -> not (L.null (tfBlocks file)) ==> 
+                     L.length (cbContent (L.head (tfBlocks file))) >= L.length baseContent
 
 -- | 深度嵌套块
 propDeeplyNestedBlocks :: Int -> Bool
@@ -282,7 +284,7 @@ propDeeplyNestedBlocks depth =
       input = createNestedBlocks nestedDepth
   in case parseTypus input of
        Left _ -> True
-       Right file -> length (tfBlocks file) >= 0  -- 至少没有崩溃
+       Right file -> L.length (tfBlocks file) >= 0  -- 至少没有崩溃
 
 -- ============================================================================
 -- Parser Stress Tests
@@ -293,16 +295,16 @@ propLargeFileParsing :: Int -> Bool
 propLargeFileParsing size =
   let fileSize = abs size `mod` 1000 + 1
       lines = replicate fileSize "content line\n"
-      input = concat lines
+      input = L.concat lines
   in case parseTypus input of
        Left _ -> True
-       Right file -> length (tfBlocks file) <= fileSize
+       Right file -> L.length (tfBlocks file) <= fileSize
 
 -- | 多指令
 propManyDirectives :: Int -> Bool
 propManyDirectives count =
   let directiveCount = abs count `mod` 50 + 1
-      directives = concat (replicate directiveCount "//! directive:value\n")
+      directives = L.concat (replicate directiveCount "//! directive:value\n")
       content = directives ++ "content\n"
   in case parseTypus content of
        Left _ -> True
@@ -319,7 +321,7 @@ propMixedContentTypes directives code comments =
        Right file -> True  -- 只要没有崩溃就算通过
 
 -- ============================================================================
--- Helper Functions and Generators
+-- Helper Functions L.and Generators
 -- ============================================================================
 
 -- 生成标识符

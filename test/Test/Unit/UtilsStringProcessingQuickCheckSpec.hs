@@ -1,6 +1,7 @@
 module Test.Unit.UtilsStringProcessingQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, elements, listOf, chooseInt, vectorOf, suchThat, Positive(..), NonNegative(..))
 import TestSupport.QuickCheck (fastProperty)
@@ -135,7 +136,7 @@ prop_trimIdempotent input =
 prop_trimRemovesLeading :: String -> Bool
 prop_trimRemovesLeading input =
     let trimmed = trim input
-        leadingRemoved = null trimmed || head trimmed `notElem` " \t\n\r"
+        leadingRemoved = null trimmed || L.head trimmed `notElem` " \t\n\r"
     in leadingRemoved
 
 prop_trimRemovesTrailing :: String -> Bool
@@ -148,20 +149,20 @@ prop_trimPreservesInternal :: String -> String -> String -> Bool
 prop_trimPreservesInternal prefix middle suffix =
     let input = prefix ++ "  " ++ middle ++ "  " ++ suffix
         trimmed = trim input
-    in middle `isInfixOf` trimmed || (null prefix && null suffix && trimmed == middle)
+    in middle `L.isInfixOf` trimmed || (null prefix && null suffix && trimmed == middle)
 
 -- Split Properties
 
 prop_splitByPreservesEmpty :: Char -> String -> Bool
 prop_splitByPreservesEmpty delim input =
     let result = splitBy delim input
-        expectedCount = length (filter (== delim) input) + 1
-    in length result == expectedCount
+        expectedCount = L.length (L.filter (== delim) input) + 1
+    in L.length result == expectedCount
 
 prop_splitByCollapsedRemovesEmpty :: Char -> String -> Bool
 prop_splitByCollapsedRemovesEmpty delim input =
     let result = splitByCollapsed delim input
-    in all (not . null) result
+    in L.all (not . null) result
 
 prop_splitByCommaDelegates :: String -> Bool
 prop_splitByCommaDelegates input =
@@ -172,13 +173,13 @@ prop_splitByCommaDelegates input =
 prop_splitByCommaCollapsedRemovesEmpty :: String -> Bool
 prop_splitByCommaCollapsedRemovesEmpty input =
     let result = splitByCommaCollapsed input
-    in all (not . null) result
+    in L.all (not . null) result
 
 prop_splitByConsistentWithDelimiterCount :: Char -> String -> Bool
 prop_splitByConsistentWithDelimiterCount delim input =
     let result = splitBy delim input
-        delimCount = length (filter (== delim) input)
-    in length result == delimCount + 1
+        delimCount = L.length (L.filter (== delim) input)
+    in L.length result == delimCount + 1
 
 -- Comment Removal Properties
 
@@ -186,28 +187,28 @@ prop_removeLineCommentsRespectsStrings :: String -> String -> Bool
 prop_removeLineCommentsRespectsStrings code comment =
     let input = "value := \"" ++ code ++ "\" // " ++ comment ++ "\n"
         result = removeLineComments input
-    in ("\"" ++ code ++ "\"") `isInfixOf` result
+    in ("\"" ++ code ++ "\"") `L.isInfixOf` result
 
 prop_removeLineCommentsRespectsChars :: String -> String -> Bool
 prop_removeLineCommentsRespectsChars code comment =
     let input = "value := '" ++ code ++ "' // " ++ comment ++ "\n"
         result = removeLineComments input
-    in ("'" ++ code ++ "'") `isInfixOf` result
+    in ("'" ++ code ++ "'") `L.isInfixOf` result
 
 prop_removeCommentsRemovesBlocks :: String -> String -> Bool
 prop_removeCommentsRemovesBlocks before after =
     let input = before ++ "/* block comment */" ++ after
         result = removeComments input
     in "block comment" `notInfixOf` result &&
-       before `isInfixOf` result &&
-       after `isInfixOf` result
+       before `L.isInfixOf` result &&
+       after `L.isInfixOf` result
 
 prop_removeCommentsPreservesLines :: String -> String -> String -> Bool
 prop_removeCommentsPreservesLines line1 comment line2 =
     let input = line1 ++ "/* " ++ comment ++ " */\n" ++ line2
         result = removeComments input
-        lineCount1 = length (lines input)
-        lineCount2 = length (lines result)
+        lineCount1 = L.length (lines input)
+        lineCount2 = L.length (lines result)
     in lineCount2 <= lineCount1
 
 prop_removeCommentsHandlesNested :: String -> String -> String -> Bool
@@ -216,39 +217,39 @@ prop_removeCommentsHandlesNested outer inner after =
         result = removeComments input
     in "outer" `notInfixOf` result && 
        inner `notInfixOf` result &&
-       after `isInfixOf` result
+       after `L.isInfixOf` result
 
 -- Indentation Properties
 
 prop_normalizeIndentationRemovesCommon :: String -> Bool
 prop_normalizeIndentationRemovesCommon input =
     let lines' = lines input
-        nonEmptyLines = filter (not . all isSpace) lines'
-        hasCommonIndent = length nonEmptyLines > 1
+        nonEmptyLines = L.filter (not . L.all isSpace) lines'
+        hasCommonIndent = L.length nonEmptyLines > 1
     in if hasCommonIndent
        then let normalized = normalizeIndentation input
                 normalizedLines = lines normalized
-                nonEmptyNormalized = filter (not . all isSpace) normalizedLines
-            in all (not . isPrefixOf "    ") nonEmptyNormalized
+                nonEmptyNormalized = L.filter (not . L.all isSpace) normalizedLines
+            in L.all (not . L.isPrefixOf "    ") nonEmptyNormalized
        else True
   where
     isSpace c = c `elem` " \t"
-    isPrefixOf prefix str = take (length prefix) str == prefix
+    L.isPrefixOf prefix str = take (L.length prefix) str == prefix
 
 prop_normalizeIndentationPreservesRelative :: String -> Bool
 prop_normalizeIndentationPreservesRelative input =
     let originalLines = lines input
         normalizedLines = lines (normalizeIndentation input)
-        originalIndentLevels = map (length . takeWhile isSpace) originalLines
-        normalizedIndentLevels = map (length . takeWhile isSpace) normalizedLines
-    in length originalIndentLevels == length normalizedIndentLevels
+        originalIndentLevels = L.map (L.length . takeWhile isSpace) originalLines
+        normalizedIndentLevels = L.map (L.length . takeWhile isSpace) normalizedLines
+    in L.length originalIndentLevels == L.length normalizedIndentLevels
 
 prop_forceSingleTabIndentationEnforcesTabs :: String -> Bool
 prop_forceSingleTabIndentationEnforcesTabs input =
     let result = forceSingleTabIndentation input
         lines' = lines result
-        nonEmptyLines = filter (not . null) lines'
-    in all (`isPrefixOf` "\t") nonEmptyLines
+        nonEmptyLines = L.filter (not . null) lines'
+    in L.all (`L.isPrefixOf` "\t") nonEmptyLines
 
 prop_fixIndentationIsAlias :: String -> Bool
 prop_fixIndentationIsAlias input =
@@ -261,9 +262,9 @@ prop_fixIndentationIsAlias input =
 prop_breakOnFindsPattern :: String -> String -> Bool
 prop_breakOnFindsPattern pattern haystack =
     let result = breakOn pattern haystack
-    in if pattern `isInfixOf` haystack
+    in if pattern `L.isInfixOf` haystack
        then let (prefix, suffix) = result
-            in not (null suffix) && pattern `isPrefixOf` suffix
+            in not (null suffix) && pattern `L.isPrefixOf` suffix
        else result == (haystack, "")
 
 prop_breakOnReturnsOriginal :: String -> String -> Bool
@@ -283,7 +284,7 @@ prop_breakOnHandlesPatternAtStart pattern haystack =
     let haystackWithPattern = pattern ++ haystack
         result = breakOn pattern haystackWithPattern
         (prefix, suffix) = result
-    in null prefix && pattern `isPrefixOf` suffix
+    in null prefix && pattern `L.isPrefixOf` suffix
 
 prop_breakOnHandlesPatternAtEnd :: String -> String -> Bool
 prop_breakOnHandlesPatternAtEnd pattern haystack =
@@ -300,7 +301,7 @@ prop_handlesLongStrings n base =
         trimmed = trim longString
         split = splitBy ',' longString
         commentsRemoved = removeLineComments longString
-    in not (null trimmed) && length split >= 1 && not (null commentsRemoved)
+    in not (null trimmed) && L.length split >= 1 && not (null commentsRemoved)
 
 prop_handlesUnicode :: String -> Bool
 prop_handlesUnicode base =
@@ -308,7 +309,7 @@ prop_handlesUnicode base =
         trimmed = trim unicodeString
         split = splitBy ' ' unicodeString
         commentsRemoved = removeLineComments unicodeString
-    in not (null trimmed) && length split >= 1 && not (null commentsRemoved)
+    in not (null trimmed) && L.length split >= 1 && not (null commentsRemoved)
 
 prop_handlesEmptyStrings :: Bool
 prop_handlesEmptyStrings =
@@ -340,7 +341,7 @@ prop_splitByIsLinear :: String -> Char -> Bool
 prop_splitByIsLinear input delim =
     -- This is a simplified property - in reality we'd measure performance
     let result = splitBy delim input
-    in length result >= 1
+    in L.length result >= 1
 
 prop_commentRemovalIsLinear :: String -> Bool
 prop_commentRemovalIsLinear input =
@@ -351,13 +352,13 @@ prop_commentRemovalIsLinear input =
 
 -- Helper functions
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` [take (length haystack - length needle + 1) (drop i haystack) | i <- [0..length haystack - length needle]]
+L.isInfixOf needle haystack = needle `elem` [take (L.length haystack - L.length needle + 1) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
 
 notInfixOf :: String -> String -> Bool
-notInfixOf needle haystack = not (isInfixOf needle haystack)
+notInfixOf needle haystack = not (L.isInfixOf needle haystack)
 
 isPrefixOf :: String -> String -> Bool
-isPrefixOf prefix str = take (length prefix) str == prefix
+L.isPrefixOf prefix str = take (L.length prefix) str == prefix
 
 isSpace :: Char -> Bool
 isSpace c = c `elem` " \t\n\r"

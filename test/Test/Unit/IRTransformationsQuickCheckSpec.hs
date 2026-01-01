@@ -3,6 +3,7 @@
 module Test.Unit.IRTransformationsQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
@@ -58,7 +59,7 @@ prop_go_modules_well_formed module =
 
 prop_go_declarations_structure :: [GoDecl] -> Property
 prop_go_declarations_structure decls =
-  property $ length decls <= 10 ==> True -- Declarations should maintain structure
+  property $ L.length decls <= 10 ==> True -- Declarations should maintain structure
 
 -- Go module optimization properties
 prop_module_preserves_semantics :: GoModule -> Property

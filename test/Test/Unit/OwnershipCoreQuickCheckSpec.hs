@@ -30,7 +30,9 @@ import Ownership
   , builtInFunctions
   )
 
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, intercalate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (intercalate)
 import Data.Char (isAlpha, isAlphaNum, isSpace)
 
 -- ============================================================================
@@ -194,7 +196,7 @@ prop_ownership_error_show :: Property
 prop_ownership_error_show =
   forAll genOwnershipError $ \error ->
     let errorStr = show error
-    in not (null errorStr) .&&. length errorStr > 5
+    in not (null errorStr) .&&. L.length errorStr > 5
 
 -- Property: OwnershipTransfer shows correctly
 prop_ownership_transfer_show :: Property
@@ -209,7 +211,7 @@ prop_use_after_move_show =
   forAll genVarName $ \var ->
     let error = UseAfterMove var
         errorStr = show error
-    in "UseAfterMove " `isPrefixOf` errorStr .&&. var `isSuffixOf` errorStr
+    in "UseAfterMove " `L.isPrefixOf` errorStr .&&. var `L.isSuffixOf` errorStr
 
 -- Property: DoubleMove error shows correctly
 prop_double_move_show :: Property
@@ -218,9 +220,9 @@ prop_double_move_show =
     forAll genVarName $ \var2 ->
       let error = DoubleMove var1 var2
           errorStr = show error
-      in "DoubleMove " `isPrefixOf` errorStr .&&. 
-         var1 `isInfixOf` errorStr .&&. 
-         var2 `isInfixOf` errorStr
+      in "DoubleMove " `L.isPrefixOf` errorStr .&&. 
+         var1 `L.isInfixOf` errorStr .&&. 
+         var2 `L.isInfixOf` errorStr
 
 -- Property: OwnershipTransfer constructor works correctly
 prop_ownership_transfer_constructor :: Property
@@ -241,8 +243,8 @@ prop_built_in_functions_valid_identifiers :: Property
 prop_built_in_functions_valid_identifiers =
   let builtIns = builtInFunctions
       isValidIdentifier [] = False
-      isValidIdentifier (c:cs) = isAlpha c && all isAlphaNum cs
-  in all isValidIdentifier builtIns
+      isValidIdentifier (c:cs) = isAlpha c && L.all isAlphaNum cs
+  in L.all isValidIdentifier builtIns
 
 -- Property: formatOwnershipErrors handles empty list
 prop_format_ownership_errors_empty :: Property
@@ -264,7 +266,7 @@ prop_format_ownership_errors_includes_info =
   forAll (listOf1 genOwnershipError) $ \errors ->
     let formatted = formatOwnershipErrors errors
         errorStrings = map show errors
-    in all (`isInfixOf` formatted) errorStrings
+    in L.all (`L.isInfixOf` formatted) errorStrings
 
 -- Property: lexAll handles empty input
 prop_lex_all_empty :: Property
@@ -277,7 +279,7 @@ prop_lex_all_simple :: Property
 prop_lex_all_simple =
   forAll genOwnershipCode $ \code ->
     let result = lexAll code
-    in length result >= 0
+    in L.length result >= 0
 
 -- Property: parseProgram handles empty input
 prop_parse_program_empty :: Property
@@ -314,7 +316,7 @@ prop_analyze_ownership_use_after_move =
         result = analyzeOwnership analyzer code
     in case result of
       Left _ -> property True
-      Right errors -> any isUseAfterMove errors
+      Right errors -> L.any isUseAfterMove errors
   where
     isUseAfterMove (UseAfterMove _) = True
     isUseAfterMove _ = False
@@ -327,7 +329,7 @@ prop_analyze_ownership_double_move =
         result = analyzeOwnership analyzer code
     in case result of
       Left _ -> property True
-      Right errors -> any isDoubleMove errors
+      Right errors -> L.any isDoubleMove errors
   where
     isDoubleMove (DoubleMove _ _) = True
     isDoubleMove _ = False
@@ -360,7 +362,7 @@ prop_analyze_ownership_debug_verbose =
         result = analyzeOwnershipDebug analyzer code
     in case result of
       Left _ -> property True
-      Right (errors, debug) -> length debug >= 0
+      Right (errors, debug) -> L.length debug >= 0
 
 -- Property: OwnershipType equality works correctly
 prop_ownership_type_equality :: Property
@@ -432,7 +434,7 @@ tests = testGroup "Ownership Core QuickCheck Tests"
     , fastProperty "format ownership errors includes info" prop_format_ownership_errors_includes_info
     ]
 
-  , testGroup "Lexing and Parsing Properties"
+  , testGroup "Lexing L.and Parsing Properties"
     [ fastProperty "lexAll empty" prop_lex_all_empty
     , fastProperty "lexAll simple" prop_lex_all_simple
     , fastProperty "parseProgram empty" prop_parse_program_empty

@@ -8,6 +8,7 @@ import Dependencies
 import SourceLocation (SourcePos(..), startPos)
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isInfixOf)
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -55,9 +56,9 @@ tests =
 -- Property: type environment operations are consistent
 prop_typeEnvironmentConsistent :: [(String, String)] -> Bool
 prop_typeEnvironmentConsistent pairs =
-  let env = foldl (\e (name, typ) -> addType e name (parseTypeExpr typ)) initialTypeEnvironment pairs
-      lookupResults = map (\(name, _) -> checkType env name) pairs
-  in all (\result -> case result of
+  let env = L.foldl (\e (name, typ) -> addType e name (parseTypeExpr typ)) initialTypeEnvironment pairs
+      lookupResults = L.map (\(name, _) -> checkType env name) pairs
+  in L.all (\result -> case result of
         Left _ -> True  -- May fail for invalid types
         Right _ -> True) lookupResults
   where
@@ -68,7 +69,7 @@ prop_typeVariableGenerationUnique :: Int -> Bool
 prop_typeVariableGenerationUnique count =
   let state = TypeInferenceState Map.empty 0
       vars = [newTypeVariable state | _ <- [1..count]]
-  in length vars == count && all distinct vars
+  in L.length vars == count && L.all distinct vars
   where
     distinct [] = True
     distinct (x:xs) = x `notElem` xs && distinct xs
@@ -81,11 +82,11 @@ prop_typeSubstitutionSound typ substitutions =
   in -- Basic soundness check - result should be a valid type expression
      case result of
        TypeVar _ -> True
-       TypeApp _ args -> all isValidTypeExpr args
+       TypeApp _ args -> L.all isValidTypeExpr args
        _ -> True
   where
     isValidTypeExpr (TypeVar _) = True
-    isValidTypeExpr (TypeApp _ args) = all isValidTypeExpr args
+    isValidTypeExpr (TypeApp _ args) = L.all isValidTypeExpr args
     isValidTypeExpr _ = True
 
 -- Property: type unification is correct
@@ -119,7 +120,7 @@ prop_typeGeneralizationPreservesMeaning typ env =
   in -- Instances should be equivalent in structure
      case (instance1, instance2) of
        (TypeVar _, TypeVar _) -> True
-       (TypeApp name1 args1, TypeApp name2 args2) -> name1 == name2 && length args1 == length args2
+       (TypeApp name1 args1, TypeApp name2 args2) -> name1 == name2 && L.length args1 == L.length args2
        _ -> True
 
 -- Property: type instantiation is sound
@@ -129,7 +130,7 @@ prop_typeInstantiationSound scheme =
   in -- Should produce a valid type expression
      case instance of
        TypeVar _ -> True
-       TypeApp _ args -> all isValidTypeExpr args
+       TypeApp _ args -> L.all isValidTypeExpr args
        _ -> True
 
 -- Property: type checking is conservative
@@ -193,11 +194,11 @@ prop_astSemanticsValidationSound ast =
 -- Property: statement validation is compositional
 prop_statementValidationCompositional :: [Statement] -> Bool
 prop_statementValidationCompositional statements =
-  let individualResults = map (validateStatement initialTypeEnvironment) statements
+  let individualResults = L.map (validateStatement initialTypeEnvironment) statements
       combinedResult = validateStatement initialTypeEnvironment (StatementList statements)
   in -- Should be consistent with individual validation
      case combinedResult of
-       Left _ -> any isLeft individualResults
+       Left _ -> L.any isLeft individualResults
        Right _ -> True
   where
     isLeft (Left _) = True
@@ -238,7 +239,7 @@ prop_typeCheckerHandlesEdgeCases =
     _ -> True  -- Should handle both cases
 
 -- ============================================================================
--- Helper Functions and Generators
+-- Helper Functions L.and Generators
 -- ============================================================================
 
 -- Simplified type expressions for testing
@@ -289,7 +290,7 @@ newTypeVariable (TypeInferenceState _ counter) = TypeVar $ "'t" ++ show counter
 
 applyTypeSubstitution :: Map String TypeExpr -> TypeExpr -> TypeExpr
 applyTypeSubstitution subst (TypeVar name) = Map.findWithDefault (TypeVar name) name subst
-applyTypeSubstitution subst (TypeApp name args) = TypeApp name (map (applyTypeSubstitution subst) args)
+applyTypeSubstitution subst (TypeApp name args) = TypeApp name (L.map (applyTypeSubstitution subst) args)
 
 unifyTypes :: TypeExpr -> TypeExpr -> Either String (Map String TypeExpr)
 unifyTypes t1 t2 = Right Map.empty  -- Simplified
@@ -322,7 +323,7 @@ analyzeDependentTypes _ ast = Right []  -- Simplified
 
 isValidTypeExpr :: TypeExpr -> Bool
 isValidTypeExpr (TypeVar _) = True
-isValidTypeExpr (TypeApp _ args) = all isValidTypeExpr args
+isValidTypeExpr (TypeApp _ args) = L.all isValidTypeExpr args
 
 instance Arbitrary TypeExpr where
   arbitrary = oneof

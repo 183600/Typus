@@ -4,6 +4,7 @@
 module Test.Unit.SimpleTypeCheckerQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (==>), property)
 import qualified Data.Map as Map
@@ -16,7 +17,7 @@ import qualified Data.Map as Map
 prop_typeenv_consistent_after_additions :: Map.Map String Int -> [(String, Int)] -> Property
 prop_typeenv_consistent_after_additions initialEnv typesToAdd =
   not (null typesToAdd) ==> 
-  let envWithAdditions = foldl (\env (name, typ) -> 
+  let envWithAdditions = L.foldl (\env (name, typ) -> 
         Map.insert name typ env) initialEnv typesToAdd
   in property $ isConsistentTypeEnv envWithAdditions
 
@@ -31,20 +32,20 @@ prop_type_lookup_consistent env name typ =
 prop_function_typechecking_preserves_signatures :: Map.Map String [Int] -> [Int] -> Property
 prop_function_typechecking_preserves_signatures env signatures =
   not (null signatures) ==> 
-  let envWithFunctions = foldl (\e sig -> 
+  let envWithFunctions = L.foldl (\e sig -> 
         Map.insert ("function_" ++ show sig) [sig] e) env signatures
-      checkedSignatures = map (checkFunctionSignature envWithFunctions) signatures
-  in property $ all isRight checkedSignatures
+      checkedSignatures = L.map (checkFunctionSignature envWithFunctions) signatures
+  in property $ L.all isRight checkedSignatures
 
 -- Property: Variable type checking respects scope
 prop_variable_typechecking_respects_scope :: Map.Map String Int -> [(String, Int)] -> Property
 prop_variable_typechecking_respects_scope env varTypes =
   not (null varTypes) ==> 
-  let scopedEnv = foldl (\e (name, typ) -> 
+  let scopedEnv = L.foldl (\e (name, typ) -> 
         Map.insert name typ e) env varTypes
       varNames = map fst varTypes
-      lookupResults = map (`Map.lookup` scopedEnv) varNames
-  in property $ all isJust lookupResults
+      lookupResults = L.map (`Map.lookup` scopedEnv) varNames
+  in property $ L.all isJust lookupResults
 
 -- Property: Expression type checking is deterministic
 prop_expression_typechecking_deterministic :: Map.Map String Int -> String -> Property
@@ -77,13 +78,13 @@ prop_generic_instantiation_correct genericName typeArgs =
 -- Property: Type inference respects constraints
 prop_type_inference_respects_constraints :: Map.Map String Int -> [String] -> [Int] -> Property
 prop_type_inference_respects_constraints env expressions expectedTypes =
-  length expressions == length expectedTypes ==> 
-  let inferredTypes = map (inferExpressionType env) expressions
+  L.length expressions == L.length expectedTypes ==> 
+  let inferredTypes = L.map (inferExpressionType env) expressions
       validInferences = zipWith (\inferred expected -> 
         case inferred of
           Just typ -> isCompatible typ expected
           Nothing -> False) inferredTypes expectedTypes
-  in property $ and validInferences
+  in property $ L.and validInferences
 
 -- Property: Type checking catches type mismatches
 prop_typechecking_catches_mismatches :: Map.Map String Int -> Int -> Int -> Property
@@ -96,8 +97,8 @@ prop_typechecking_catches_mismatches _ expectedType actualType =
 -- Property: Function parameter checking is strict
 prop_function_parameter_checking_strict :: [Int] -> [Int] -> Property
 prop_function_parameter_checking_strict signature argTypes =
-  let paramCount = length signature
-      argCount = length argTypes
+  let paramCount = L.length signature
+      argCount = L.length argTypes
       isValid = checkFunctionParameters signature argTypes
       paramsCompatible = areParameterTypesCompatible signature argTypes
   in property $ if paramCount == argCount 
@@ -119,7 +120,7 @@ prop_type_variable_binding_scope bindings varName varType =
       lookupResult = Map.lookup varName extendedBindings
   in property $ lookupResult == Just varType
 
--- Property: Type equality is reflexive and symmetric
+-- Property: Type equality is reflexive L.and symmetric
 prop_type_equality_properties :: Int -> Int -> Property
 prop_type_equality_properties type1 type2 =
   let isEqual12 = typesEqual type1 type2
@@ -128,7 +129,7 @@ prop_type_equality_properties type1 type2 =
   in property $ isEqual12 == isEqual21 && isEqual11
 
 -- ============================================================================
--- Edge Case and Stress Tests
+-- Edge Case L.and Stress Tests
 -- ============================================================================
 
 -- Property: Extremely deep type nesting
@@ -198,10 +199,10 @@ areTypesCompatible :: Int -> Int -> Bool
 areTypesCompatible _ _ = True  -- Simplified for testing
 
 checkFunctionParameters :: [Int] -> [Int] -> Bool
-checkFunctionParameters signature argTypes = length signature == length argTypes
+checkFunctionParameters signature argTypes = L.length signature == L.length argTypes
 
 areParameterTypesCompatible :: [Int] -> [Int] -> Bool
-areParameterTypesCompatible signature argTypes = length signature == length argTypes
+areParameterTypesCompatible signature argTypes = L.length signature == L.length argTypes
 
 inferFunctionReturnType :: Map.Map String Int -> String -> Maybe Int
 inferFunctionReturnType _ _ = Just 42  -- Simplified for testing
@@ -218,7 +219,7 @@ validateType _ = True  -- Simplified for testing
 
 generateLargeTypeEnvironment :: Int -> Map.Map String Int
 generateLargeTypeEnvironment size = 
-  Map.fromList $ zip (map (\i -> "Type" ++ show i) [1..size]) [1..size]
+  Map.fromList $ zip (L.map (\i -> "Type" ++ show i) [1..size]) [1..size]
 
 generateComplexExpression :: Int -> String
 generateComplexExpression complexity = 
@@ -255,7 +256,7 @@ tests = testGroup "Simple TypeChecker QuickCheck Tests"
   , fastProperty "Function parameter checking is strict" prop_function_parameter_checking_strict
   , fastProperty "Return type checking is enforced" prop_return_type_checking_enforced
   , fastProperty "Type variable binding respects scope" prop_type_variable_binding_scope
-  , fastProperty "Type equality is reflexive and symmetric" prop_type_equality_properties
+  , fastProperty "Type equality is reflexive L.and symmetric" prop_type_equality_properties
   , fastProperty "Extremely deep type nesting" prop_deep_type_nesting
   , fastProperty "Type checking with large environments" prop_large_environments
   , fastProperty "Type inference performance" prop_type_inference_performance

@@ -14,6 +14,7 @@ import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
 import Data.Char (isSpace, isAlpha, isDigit)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 
 import SyntaxValidator
@@ -48,7 +49,7 @@ tests =
                 result = validateSyntax code defaultValidationConfig
             case result of
                 ValidationResult (error:_) warnings -> 
-                    assertBool "Should detect syntax error" $ "parenthesis" `isInfixOf` (map toLower (show error))
+                    assertBool "Should detect syntax error" $ "parenthesis" `L.isInfixOf` (map toLower (show error))
                 ValidationResult [] warnings -> 
                     assertBool "Should detect syntax error" False
 
@@ -57,7 +58,7 @@ tests =
                 result = validateSyntax code defaultValidationConfig
             case result of
                 ValidationResult errors (warning:_) -> 
-                    assertBool "Should detect unused variable" $ "unused" `isInfixOf` (map toLower (show warning))
+                    assertBool "Should detect unused variable" $ "unused" `L.isInfixOf` (map toLower (show warning))
                 ValidationResult errors [] -> 
                     assertBool "Should detect unused variable" False
 
@@ -103,8 +104,8 @@ prop_syntax_validation_deterministic code =
       result2 = validateSyntax code defaultValidationConfig
   in case (result1, result2) of
        (ValidationResult errors1 warnings1, ValidationResult errors2 warnings2) -> 
-         property $ length errors1 === length errors2 .&&.
-                    length warnings1 === length warnings2
+         property $ L.length errors1 === L.length errors2 .&&.
+                    L.length warnings1 === L.length warnings2
 
 -- 语法错误的局部性：语法错误应该指向具体的位置
 prop_syntax_error_locality :: String -> Int -> Int -> Property
@@ -134,19 +135,19 @@ prop_syntax_warning_consistency code =
 prop_syntax_validation_completeness :: String -> Property
 prop_syntax_validation_completeness code =
   let isValidSyntax = not (null code) && 
-                      all (`elem` "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789(){};,: \n\t") code
+                      L.all (`elem` "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789(){};,: \n\t") code
       result = validateSyntax code defaultValidationConfig
   in isValidSyntax ==> 
      case result of
        ValidationResult errors warnings -> 
-         property $ length errors === 0  -- 有效语法不应该有错误
+         property $ L.length errors === 0  -- 有效语法不应该有错误
 
 -- 语法验证的健全性：无效的语法应该被检测出来
 prop_syntax_validation_soundness :: String -> Property
 prop_syntax_validation_soundness code =
-  let hasObviousErrors = "func (" `isInfixOf` code || 
-                         "return" `isInfixOf` code && not ("func" `isInfixOf` code) ||
-                         "{{" `isInfixOf` code || "}}" `isInfixOf` code
+  let hasObviousErrors = "func (" `L.isInfixOf` code || 
+                         "return" `L.isInfixOf` code && not ("func" `L.isInfixOf` code) ||
+                         "{{" `L.isInfixOf` code || "}}" `L.isInfixOf` code
       result = validateSyntax code defaultValidationConfig
   in hasObviousErrors ==>
      case result of
@@ -157,8 +158,8 @@ prop_syntax_validation_soundness code =
 
 -- 辅助函数
 toLower :: String -> String
-toLower = map (\c -> if c >= 'A' && c <= 'Z' then toEnum (fromEnum c + 32) else c)
+toLower = L.map (\c -> if c >= 'A' && c <= 'Z' then toEnum (fromEnum c + 32) else c)
 
 sort :: Ord a => [a] -> [a]
 sort [] = []
-sort (x:xs) = sort (filter (< x) xs) ++ [x] ++ sort (filter (>= x) xs)
+sort (x:xs) = sort (L.filter (< x) xs) ++ [x] ++ sort (L.filter (>= x) xs)

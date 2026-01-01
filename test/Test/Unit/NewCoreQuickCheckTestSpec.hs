@@ -10,6 +10,7 @@
 module Test.Unit.NewCoreQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen)
@@ -32,25 +33,25 @@ prop_trim_idempotent str =
       trimmedTwice = trim trimmedOnce
   in property $ trimmedOnce === trimmedTwice
 
--- Property 2: splitBy and splitByCollapsed relationship
+-- Property 2: splitBy L.and splitByCollapsed relationship
 prop_splitBy_collapsed_relationship :: Char -> String -> Property
 prop_splitBy_collapsed_relationship delim str =
   let regular = splitBy delim str
       collapsed = splitByCollapsed delim str
-      regularLength = length regular
-      collapsedLength = length collapsed
+      regularLength = L.length regular
+      collapsedLength = L.length collapsed
   in property $ collapsedLength <= regularLength .&&. 
-     (if null (filter (== delim) str) then regularLength === collapsedLength else property True)
+     (if L.null (L.filter (== delim) str) then regularLength === collapsedLength else property True)
 
 -- Property 3: removeLineComments preserves non-comment content
 prop_removeLineComments_preserves_content :: String -> String -> Property
 prop_removeLineComments_preserves_content prefix suffix =
   -- Avoid strings with quotes that might confuse comment removal
-  not (any (`elem` "\"'" ) prefix) && not (any (`elem` "\"'" ) suffix) ==>
+  not (L.any (`elem` "\"'" ) prefix) && not (L.any (`elem` "\"'" ) suffix) ==>
   let content = prefix ++ "\nreal code\n" ++ suffix
       withComment = content ++ "// comment\nmore code"
       cleaned = removeLineComments withComment
-  in property $ "real code" `isInfixOf` cleaned .&&. "more code" `isInfixOf` cleaned
+  in property $ "real code" `L.isInfixOf` cleaned .&&. "more code" `L.isInfixOf` cleaned
 
 -- Property 4: normalizeIndentation preserves line count
 prop_normalizeIndentation_preserves_lines :: [String] -> Property
@@ -60,7 +61,7 @@ prop_normalizeIndentation_preserves_lines lineList =
       normalized = normalizeIndentation input
       inputLines = lines input
       normalizedLines = lines normalized
-  in property $ length inputLines === length normalizedLines
+  in property $ L.length inputLines === L.length normalizedLines
 
 -- ============================================================================
 -- Core Property Tests for SourceLocation Module
@@ -126,7 +127,7 @@ prop_sourcepos_offset_consistent line col =
 tests :: TestTree
 tests = testGroup "New Core QuickCheck Tests"
   [ fastProperty "trim is idempotent" prop_trim_idempotent
-  , fastProperty "splitBy and splitByCollapsed relationship" prop_splitBy_collapsed_relationship
+  , fastProperty "splitBy L.and splitByCollapsed relationship" prop_splitBy_collapsed_relationship
   , fastProperty "removeLineComments preserves content" prop_removeLineComments_preserves_content
   , fastProperty "normalizeIndentation preserves line count" prop_normalizeIndentation_preserves_lines
   , fastProperty "posAfter increments line for newline" prop_posAfter_newline_increments_line

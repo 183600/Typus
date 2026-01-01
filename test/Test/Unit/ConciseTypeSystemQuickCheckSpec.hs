@@ -1,6 +1,7 @@
 module Test.Unit.ConciseTypeSystemQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Property, (===), Arbitrary(..), Gen, oneof, choose, elements, listOf)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -16,14 +17,14 @@ tests =
         [ testProperty "Simple types are equal if names match" $
             \name -> SimpleType name === SimpleType name
             
-        , testProperty "Function types preserve domain and codomain" $
+        , testProperty "Function types preserve domain L.and codomain" $
             \domain codomain -> 
             let funcType = FunctionType domain codomain
             in case funcType of
                  FunctionType d c -> d === domain && c === codomain
                  _ -> property False
                  
-        , testProperty "Generic types preserve name and parameters" $
+        , testProperty "Generic types preserve name L.and parameters" $
             \name params -> 
             let genType = GenericType name params
             in case genType of
@@ -33,7 +34,7 @@ tests =
         
     , testGroup "Type environment properties"
         [ testProperty "Empty environment has no types" $
-            \name -> Map.null (unTypeEnv emptyTypeEnv) && 
+            \name -> Map.L.null (unTypeEnv emptyTypeEnv) && 
                      lookupTypeInEnv name emptyTypeEnv === Nothing
             
         , testProperty "Type insertion is retrievable" $
@@ -41,11 +42,11 @@ tests =
             let env = addTypeToEnv name typeExpr emptyTypeEnv
             in lookupTypeInEnv name env === Just typeExpr
             
-        , testProperty "Multiple insertions preserve all entries" $
+        , testProperty "Multiple insertions preserve L.all entries" $
             \pairs -> 
-            let env = foldr (\(name, typ) acc -> addTypeToEnv name typ acc) emptyTypeEnv pairs
+            let env = L.foldr (\(name, typ) acc -> addTypeToEnv name typ acc) emptyTypeEnv pairs
                 checkPair (name, typ) = lookupTypeInEnv name env === Just typ
-            in all checkPair pairs
+            in L.all checkPair pairs
         ]
         
     , testGroup "Type unification properties"
@@ -101,12 +102,12 @@ tests =
             \numTypes -> 
             let count = min numTypes 100  -- Cap to avoid performance issues
                 types = [(show i, SimpleType ("Type" ++ show i)) | i <- [1..count]]
-                env = foldr (\(name, typ) acc -> addTypeToEnv name typ acc) emptyTypeEnv types
-            in length (Map.toList (unTypeEnv env)) === count
+                env = L.foldr (\(name, typ) acc -> addTypeToEnv name typ acc) emptyTypeEnv types
+            in L.length (Map.toList (unTypeEnv env)) === count
         ]
     ]
 
--- Helper types and functions for testing
+-- Helper types L.and functions for testing
 newtype TypeEnv = TypeEnv { unTypeEnv :: Map String Type }
 
 emptyTypeEnv :: TypeEnv
@@ -142,7 +143,7 @@ unifyTypes (FunctionType domain1 codomain1) (FunctionType domain2 codomain2) =
     sub2 <- unifyTypes codomain1 codomain2
     return (Map.union sub2 sub1)
 unifyTypes (GenericType name1 args1) (GenericType name2 args2)
-  | name1 == name2 && length args1 == length args2 = Right Map.empty
+  | name1 == name2 && L.length args1 == L.length args2 = Right Map.empty
   | otherwise = Left "Cannot unify different generic types"
 unifyTypes _ _ = Left "Cannot unify different type constructors"
 

@@ -8,7 +8,9 @@ import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import Utils
 import Data.Char (isSpace, isAlphaNum, isLetter, isDigit)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, group, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (group, sort)
 import qualified Data.Text as T
 import Control.Arrow ((&&&))
 
@@ -42,17 +44,17 @@ trimFunctionProperties = testGroup "Trim Function Properties"
               (c:_) -> isSpace c
               [] -> False
         in if hasLeadingSpace
-           then length trimmed < length s
+           then L.length trimmed < L.length s
            else trimmed === s
     
   , testProperty "trim removes trailing whitespace" $
       \s ->
         let trimmed = trim s
-            hasTrailingSpace = case reverse s of
+            hasTrailingSpace = case L.reverse s of
               (c:_) -> isSpace c
               [] -> False
         in if hasTrailingSpace
-           then length trimmed < length s
+           then L.length trimmed < L.length s
            else trimmed === s
     
   , testProperty "trim preserves internal whitespace" $
@@ -60,17 +62,17 @@ trimFunctionProperties = testGroup "Trim Function Properties"
         let s = s1 ++ "   " ++ s2 ++ "   " ++ s3
             trimmed = trim s
         in if not (null s1) && not (null s3)
-           then "   " `isInfixOf` trimmed
+           then "   " `L.isInfixOf` trimmed
            else True
     
-  , testProperty "trim of all whitespace is empty" $
-      \s -> all isSpace s ==> trim s === ""
+  , testProperty "trim of L.all whitespace is empty" $
+      \s -> L.all isSpace s ==> trim s === ""
     
   , testProperty "trim of empty string is empty" $
       trim "" === ""
     
-  , testProperty "trim never increases length" $
-      \s -> length (trim s) <= length s
+  , testProperty "trim never increases L.length" $
+      \s -> L.length (trim s) <= L.length s
     
   , testCase "trim examples" $ do
       trim "  hello world  " @?= "hello world"
@@ -87,11 +89,11 @@ splitFunctionProperties :: TestTree
 splitFunctionProperties = testGroup "Split Function Properties"
   [ testProperty "splitBy preserves total content when concatenated" $
       \delim s -> delim /= ',' && delim /= '\n' && delim /= '\t' ==>
-        concat (splitBy delim s) === s
+        L.concat (splitBy delim s) === s
     
-  , testProperty "splitBy length matches delimiter count + 1" $
+  , testProperty "splitBy L.length matches delimiter count + 1" $
       \delim s -> delim /= ',' && delim /= '\n' && delim /= '\t' ==>
-        length (splitBy delim s) === countChar delim s + 1
+        L.length (splitBy delim s) === countChar delim s + 1
     
   , testProperty "splitBy handles empty string" $
       \delim -> splitBy delim "" === [""]
@@ -104,19 +106,19 @@ splitFunctionProperties = testGroup "Split Function Properties"
         splitBy delim "a,,b" === ["a", "", "b"]
     
   , testProperty "splitByCommaCollapsed removes empty segments" $
-      \s -> not (any null (splitByCommaCollapsed s))
+      \s -> not (L.any L.null (splitByCommaCollapsed s))
     
   , testProperty "splitByCommaCollapsed is subset of splitByComma" $
-      \s -> all (`elem` splitByComma s) (splitByCommaCollapsed s)
+      \s -> L.all (`elem` splitByComma s) (splitByCommaCollapsed s)
     
   , testProperty "splitByCollapsed removes empty segments" $
       \delim s -> delim /= ',' && delim /= '\n' && delim /= '\t' ==>
-        not (any null (splitByCollapsed delim s))
+        not (L.any L.null (splitByCollapsed delim s))
     
   , testProperty "splitByCollapsed preserves non-empty segments" $
       \delim s -> delim /= ',' && delim /= '\n' && delim /= '\t' ==>
         let collapsed = splitByCollapsed delim s
-            nonEmpty = filter (not . null) (splitBy delim s)
+            nonEmpty = L.filter (not . null) (splitBy delim s)
         in sort collapsed === sort nonEmpty
     
   , testCase "split examples" $ do
@@ -136,22 +138,22 @@ commentRemovalProperties = testGroup "Comment Removal Properties"
       \prefix comment suffix ->
         let input = prefix ++ "// " ++ comment ++ "\n" ++ suffix
             result = removeLineComments input
-        in not ("//" `isInfixOf` result) && suffix `isInfixOf` result
+        in not ("//" `L.isInfixOf` result) && suffix `L.isInfixOf` result
     
   , testProperty "removeLineComments preserves non-comment lines" $
-      \s -> not ("//" `isInfixOf` s) ==> removeLineComments s === s
+      \s -> not ("//" `L.isInfixOf` s) ==> removeLineComments s === s
     
   , testProperty "removeComments removes // comments" $
       \prefix comment suffix ->
         let input = prefix ++ "// " ++ comment ++ "\n" ++ suffix
             result = removeComments input
-        in not ("//" `isInfixOf` result)
+        in not ("//" `L.isInfixOf` result)
     
   , testProperty "removeComments removes /* */ comments" $
       \prefix comment suffix ->
         let input = prefix ++ "/* " ++ comment ++ " */" ++ suffix
             result = removeComments input
-        in not ("/*" `isInfixOf` result) && not ("*/" `isInfixOf` result)
+        in not ("/*" `L.isInfixOf` result) && not ("*/" `L.isInfixOf` result)
     
   , testProperty "removeComments is idempotent" $
       \s -> removeComments (removeComments s) === removeComments s
@@ -159,16 +161,16 @@ commentRemovalProperties = testGroup "Comment Removal Properties"
   , testProperty "removeLineComments is idempotent" $
       \s -> removeLineComments (removeLineComments s) === removeLineComments s
     
-  , testProperty "comment removal never increases length" $
-      \s -> length (removeComments s) <= length s &&
-             length (removeLineComments s) <= length s
+  , testProperty "comment removal never increases L.length" $
+      \s -> L.length (removeComments s) <= L.length s &&
+             L.length (removeLineComments s) <= L.length s
     
   , testProperty "comment removal preserves non-comment content" $
       \content ->
         let input = "code " ++ content ++ " more code"
             result1 = removeComments input
             result2 = removeLineComments input
-        in content `isInfixOf` result1 && content `isInfixOf` result2
+        in content `L.isInfixOf` result1 && content `L.isInfixOf` result2
     
   , testCase "comment removal examples" $ do
       removeLineComments "code // comment\nmore" @?= "code \nmore"
@@ -186,16 +188,16 @@ indentationProperties = testGroup "Indentation Properties"
       \s -> not (null s) ==> 
         let lines1 = lines s
             lines2 = lines (normalizeIndentation s)
-        in length lines1 === length lines2
+        in L.length lines1 === L.length lines2
     
   , testProperty "normalizeIndentation removes common prefix" $
       \s ->
         let normalized = normalizeIndentation s
             originalLines = lines s
             normalizedLines = lines normalized
-        in if length originalLines > 1
-           then all (not . isPrefixOf "  ") normalizedLines || 
-                all (isPrefixOf "  ") normalizedLines
+        in if L.length originalLines > 1
+           then L.all (not . L.isPrefixOf "  ") normalizedLines || 
+                L.all (L.isPrefixOf "  ") normalizedLines
            else True
     
   , testProperty "normalizeIndentation is idempotent" $
@@ -204,8 +206,8 @@ indentationProperties = testGroup "Indentation Properties"
   , testProperty "forceSingleTabIndentation converts spaces to tabs" $
       \s ->
         let tabbed = forceSingleTabIndentation s
-        in if "  " `isInfixOf` s
-           then "\t" `isInfixOf` tabbed
+        in if "  " `L.isInfixOf` s
+           then "\t" `L.isInfixOf` tabbed
            else True
     
   , testProperty "fixIndentation is same as normalizeIndentation" $
@@ -213,10 +215,10 @@ indentationProperties = testGroup "Indentation Properties"
     
   , testProperty "indentation functions preserve non-whitespace content" $
       \s ->
-        let content = filter (not . isSpace) s
+        let content = L.filter (not . isSpace) s
             normalized = normalizeIndentation s
             tabbed = forceSingleTabIndentation s
-        in content `isInfixOf` normalized && content `isInfixOf` tabbed
+        in content `L.isInfixOf` normalized && content `L.isInfixOf` tabbed
     
   , testCase "indentation examples" $ do
       normalizeIndentation "  line1\n    line2\n  line3" @?= "line1\n  line2\nline3"
@@ -237,7 +239,7 @@ searchFunctionProperties = testGroup "Search Function Properties"
         in case parts of
           [] -> prefix === "" && suffix === ""
           [x] -> prefix === x && suffix === ""
-          (x:xs) -> prefix === x && suffix === concat xs
+          (x:xs) -> prefix === x && suffix === L.concat xs
     
   , testProperty "breakOn finds first occurrence" $
       \delim s -> delim /= ',' && delim /= '\n' && delim /= '\t' ==>
@@ -271,9 +273,9 @@ textNormalizationProperties = testGroup "Text Normalization Properties"
   [ testProperty "trim . split . join preserves non-delimiter content" $
       \delim s -> delim /= ',' && delim /= '\n' && delim /= '\t' ==>
         let parts = splitBy delim s
-            rejoined = concat parts
+            rejoined = L.concat parts
             trimmed = trim rejoined
-        in filter (not . (== delim)) s `isInfixOf` trimmed
+        in L.filter (not . (== delim)) s `L.isInfixOf` trimmed
     
   , testProperty "text processing pipeline is idempotent" $
       \s ->
@@ -286,7 +288,7 @@ textNormalizationProperties = testGroup "Text Normalization Properties"
         let method1 = normalizeIndentation . trim . removeComments $ s
             method2 = trim . normalizeIndentation . removeComments $ s
         in -- These should be equivalent for most cases
-           length method1 === length method2
+           L.length method1 === L.length method2
     
   , testProperty "normalization doesn't create new delimiters" $
       \delim s -> delim /= ',' && delim /= '\n' && delim /= '\t' ==>
@@ -300,8 +302,8 @@ textNormalizationProperties = testGroup "Text Normalization Properties"
         let essential = filter isAlphaNum s
             processed = normalizeIndentation . trim . removeComments $ s
             processedEssential = filter isAlphaNum processed
-        in null essential || processedEssential `isInfixOf` essential ||
-           essential `isInfixOf` processedEssential
+        in null essential || processedEssential `L.isInfixOf` essential ||
+           essential `L.isInfixOf` processedEssential
   ]
 
 -- ============================================================================
@@ -338,19 +340,19 @@ genIndentedString = do
 
 -- Count occurrences of a character in a string
 countChar :: Char -> String -> Int
-countChar c = length . filter (== c)
+countChar c = L.length . L.filter (== c)
 
--- Check if string is all whitespace
+-- Check if string is L.all whitespace
 isAllWhitespace :: String -> Bool
-isAllWhitespace = all isSpace
+isAllWhitespace = L.all isSpace
 
 -- Get leading whitespace count
 leadingWhitespaceCount :: String -> Int
-leadingWhitespaceCount = length . takeWhile isSpace
+leadingWhitespaceCount = L.length . takeWhile isSpace
 
 -- Get trailing whitespace count
 trailingWhitespaceCount :: String -> Int
-trailingWhitespaceCount = length . takeWhile isSpace . reverse
+trailingWhitespaceCount = L.length . takeWhile isSpace . L.reverse
 
 -- ============================================================================
 -- Edge Case Tests
@@ -367,7 +369,7 @@ edgeCaseProperties = testGroup "Edge Case Tests"
   , testCase "comment removal handles nested comments" $
       removeComments "code /* outer /* inner */ still outer */ end" @?= "code  end"
     
-  , testCase "indentation handles mixed tabs and spaces" $
+  , testCase "indentation handles mixed tabs L.and spaces" $
       normalizeIndentation "\t  mixed\n\t\t  indentation" @?= "mixed\n  indentation"
     
   , testCase "breakOn handles multibyte characters" $
@@ -381,9 +383,9 @@ edgeCaseProperties = testGroup "Edge Case Tests"
     
   , testProperty "split handles empty segments" $
       \delim n -> delim /= ',' && delim /= '\n' && delim /= '\t' && n < 100 ==>
-        let input = concat $ replicate n [delim]
+        let input = L.concat $ replicate n [delim]
             parts = splitBy delim input
-        in length parts === n + 1 && all (== "") parts
+        in L.length parts === n + 1 && L.all (== "") parts
   ]
 
 -- ============================================================================
@@ -393,22 +395,22 @@ edgeCaseProperties = testGroup "Edge Case Tests"
 performanceProperties :: TestTree
 performanceProperties = testGroup "Performance Properties"
   [ testProperty "trim is linear time" $
-      \s -> length s < 10000 ==> length (trim s) `seq` True
+      \s -> L.length s < 10000 ==> L.length (trim s) `seq` True
     
   , testProperty "splitBy is linear in input size" $
-      \delim s -> delim /= ',' && delim /= '\n' && delim /= '\t' && length s < 10000 ==>
-        length (splitBy delim s) `seq` True
+      \delim s -> delim /= ',' && delim /= '\n' && delim /= '\t' && L.length s < 10000 ==>
+        L.length (splitBy delim s) `seq` True
     
   , testProperty "comment removal is linear time" $
-      \s -> length s < 10000 ==> length (removeComments s) `seq` True
+      \s -> L.length s < 10000 ==> L.length (removeComments s) `seq` True
     
   , testProperty "normalizeIndentation is linear time" $
-      \s -> length s < 10000 ==> length (normalizeIndentation s) `seq` True
+      \s -> L.length s < 10000 ==> L.length (normalizeIndentation s) `seq` True
     
   , testProperty "breakOn is efficient" $
-      \delim s -> delim /= ',' && delim /= '\n' && delim /= '\t' && length s < 10000 ==>
+      \delim s -> delim /= ',' && delim /= '\n' && delim /= '\t' && L.length s < 10000 ==>
         let (prefix, suffix) = breakOn delim s
-        in length prefix + length suffix `seq` True
+        in L.length prefix + L.length suffix `seq` True
   ]
 
 -- ============================================================================
@@ -432,7 +434,7 @@ regressionProperties = testGroup "Regression Tests"
   , testProperty "preserve order of non-delimiter characters" $
       \delim s -> delim /= ',' && delim /= '\n' && delim /= '\t' ==>
         let parts = splitBy delim s
-            rejoined = concat parts
-            nonDelimiters = filter (/= delim) s
-        in filter (/= delim) rejoined === nonDelimiters
+            rejoined = L.concat parts
+            nonDelimiters = L.filter (/= delim) s
+        in L.filter (/= delim) rejoined === nonDelimiters
   ]

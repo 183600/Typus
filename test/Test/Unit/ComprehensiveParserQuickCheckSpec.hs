@@ -4,6 +4,7 @@
 module Test.Unit.ComprehensiveParserQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import TestSupport.ExtendedArbitrary ()
@@ -28,8 +29,8 @@ prop_parse_roundtrip_comprehensive typusFile =
     Left err -> counterexample ("Parse error in round-trip: " ++ err) $ property False
     Right parsed -> 
       let directivesMatch = compareDirectives (tfDirectives typusFile) (tfDirectives parsed)
-          blocksCountMatch = length (tfBlocks typusFile) == length (tfBlocks parsed)
-          contentPreserved = all contentPreservedInBlock (zip (tfBlocks typusFile) (tfBlocks parsed))
+          blocksCountMatch = L.length (tfBlocks typusFile) == L.length (tfBlocks parsed)
+          contentPreserved = L.all contentPreservedInBlock (zip (tfBlocks typusFile) (tfBlocks parsed))
       in counterexample ("Directives match: " ++ show directivesMatch ++ 
                         ", Blocks count match: " ++ show blocksCountMatch ++
                         ", Content preserved: " ++ show contentPreserved) $
@@ -51,12 +52,12 @@ prop_parse_valid_directives_always_success directive =
 -- Property: Error messages contain useful information
 prop_parse_error_messages_useful :: String -> Property
 prop_parse_error_messages_useful malformed =
-  length malformed > 5 ==> 
+  L.length malformed > 5 ==> 
   case parseTypus malformed of
     Left err -> 
-      let hasErrorKeyword = "error" `isInfixOf` map toLower err
-          hasPosition = any (`isInfixOf` err) ["line", "column", "position"]
-          hasContext = length err > 10
+      let hasErrorKeyword = "error" `L.isInfixOf` map toLower err
+          hasPosition = L.any (`L.isInfixOf` err) ["line", "column", "position"]
+          hasContext = L.length err > 10
       in property $ hasErrorKeyword && (hasPosition || hasContext)
     Right _ -> property True
 
@@ -68,7 +69,7 @@ prop_parse_empty_minimal_structure =
     Right parsed -> 
       let directives = tfDirectives parsed
           blocks = tfBlocks parsed
-          hasNoDirectives = all isNothing [fdOwnership directives, fdDependentTypes directives, fdConstraints directives]
+          hasNoDirectives = L.all isNothing [fdOwnership directives, fdDependentTypes directives, fdConstraints directives]
           hasNoBlocks = null blocks
       in property $ hasNoDirectives && hasNoBlocks
 
@@ -83,7 +84,7 @@ prop_parse_whitespace_variations_preserve_meaning before middle after =
     (Right _, Left err2) -> counterexample ("Normalized failed but original succeeded: " ++ err2) $ property False
     (Right file1, Right file2) -> 
       let directivesMatch = compareDirectives (tfDirectives file1) (tfDirectives file2)
-          blocksCountMatch = length (tfBlocks file1) == length (tfBlocks file2)
+          blocksCountMatch = L.length (tfBlocks file1) == L.length (tfBlocks file2)
       in property $ directivesMatch && blocksCountMatch
 
 -- Property: Large files are parsed without stack overflow
@@ -95,7 +96,7 @@ prop_parse_large_files_no_overflow n =
     Left err -> counterexample ("Large file parse error: " ++ err) $ property False
     Right parsed -> 
       let expectedBlocks = if n > 0 then 1 else 0
-          actualBlocks = length $ tfBlocks parsed
+          actualBlocks = L.length $ tfBlocks parsed
       in property $ actualBlocks == expectedBlocks
 
 -- Property: Unicode content is preserved correctly
@@ -105,23 +106,23 @@ prop_parse_unicode_preserved base =
   in case parseTypus unicodeContent of
     Left _ -> property False
     Right parsed -> 
-      let contentContainsUnicode = any (hasUnicodeSubstring base) (tfBlocks parsed)
+      let contentContainsUnicode = L.any (hasUnicodeSubstring base) (tfBlocks parsed)
       in property $ contentContainsUnicode
 
 -- Property: Comments are ignored in parsing logic
 prop_parse_comments_ignored :: [String] -> Property
 prop_parse_comments_ignored comments =
   not (null comments) ==>
-  let commentLines = map ("// " ++) comments
+  let commentLines = L.map ("// " ++) comments
       content = unlines $ ["//! ownership: on", "package main"] ++ commentLines ++ ["func main() {}"]
   in case parseTypus content of
     Left err -> counterexample ("Comment parsing error: " ++ err) $ property False
     Right parsed -> 
       let hasOwnershipDirective = isJust $ fdOwnership $ tfDirectives parsed
-          hasMainBlock = not $ null $ tfBlocks parsed
+          hasMainBlock = not $ L.null $ tfBlocks parsed
       in property $ hasOwnershipDirective && hasMainBlock
 
--- Property: Mixed directives and code maintain order
+-- Property: Mixed directives L.and code maintain order
 prop_parse_mixed_directives_code_order :: [String] -> [String] -> Property
 prop_parse_mixed_directives_code_order directives codeLines =
   not (null directives) && not (null codeLines) ==>
@@ -130,7 +131,7 @@ prop_parse_mixed_directives_code_order directives codeLines =
     Left err -> counterexample ("Mixed content parse error: " ++ err) $ property False
     Right parsed -> 
       let hasSomeDirectives = hasAnyDirectives parsed
-          hasCodeBlocks = not $ null $ tfBlocks parsed
+          hasCodeBlocks = not $ L.null $ tfBlocks parsed
       in property $ hasSomeDirectives && hasCodeBlocks
 
 -- Property: Nested structures maintain hierarchy
@@ -141,7 +142,7 @@ prop_parse_nested_hierarchy depth =
   in case parseTypus nestedContent of
     Left err -> counterexample ("Nested hierarchy parse error: " ++ err) $ property False
     Right parsed -> 
-      let blockCount = length $ tfBlocks parsed
+      let blockCount = L.length $ tfBlocks parsed
           hasReasonableBlockCount = blockCount > 0 && blockCount <= depth + 1
       in property $ hasReasonableBlockCount
 
@@ -149,27 +150,27 @@ prop_parse_nested_hierarchy depth =
 prop_parse_special_char_identifiers :: [String] -> Property
 prop_parse_special_char_identifiers baseNames =
   not (null baseNames) ==>
-  let specialNames = map (\name -> name ++ "_test_123") baseNames
+  let specialNames = L.map (\name -> name ++ "_test_123") baseNames
       content = unlines $ ["//! ownership: on", "package main"] ++
-                        map (\name -> "var " ++ name ++ " int = 42") specialNames ++
+                        L.map (\name -> "var " ++ name ++ " int = 42") specialNames ++
                         ["func main() {}"]
   in case parseTypus content of
     Left err -> counterexample ("Special char identifier error: " ++ err) $ property False
     Right parsed -> 
-      let blockCount = length $ tfBlocks parsed
+      let blockCount = L.length $ tfBlocks parsed
       in property $ blockCount > 0
 
 -- Property: Multiple file directives are combined correctly
 prop_parse_multiple_directives_combined :: [String] -> Property
 prop_parse_multiple_directives_combined directives =
-  length directives <= 10 ==>
-  let fileDirectives = map (\d -> "//! " ++ d) directives
+  L.length directives <= 10 ==>
+  let fileDirectives = L.map (\d -> "//! " ++ d) directives
       content = unlines fileDirectives
   in case parseTypus content of
     Left err -> counterexample ("Multiple directives error: " ++ err) $ property False
     Right parsed -> 
       let directiveCount = countPresentDirectives parsed
-      in property $ directiveCount > 0 && directiveCount <= length directives
+      in property $ directiveCount > 0 && directiveCount <= L.length directives
 
 -- Property: Inconsistent indentation is handled gracefully
 prop_parse_inconsistent_indentation_graceful :: [String] -> Property
@@ -185,7 +186,7 @@ prop_parse_inconsistent_indentation_graceful lines =
 prop_parse_invalid_directives_rejected :: String -> Property
 prop_parse_invalid_directives_rejected content =
   let invalidPatterns = ["!!!", "///", "##", "@@", "%%", "!!!"]
-      hasInvalidPattern = any (`Data.List.isPrefixOf` content) invalidPatterns
+      hasInvalidPattern = L.any (`Data.List.L.isPrefixOf` content) invalidPatterns
   in classify hasInvalidPattern "has invalid pattern" $
      if hasInvalidPattern
      then case parseTypus content of
@@ -195,9 +196,9 @@ prop_parse_invalid_directives_rejected content =
 
 -- Property: Very long lines are handled without issues
 prop_parse_very_long_lines :: Int -> Property
-prop_parse_very_long_lines length =
-  length >= 0 && length <= 2000 ==> 
-  let longLine = "var longVariableName string = \"" ++ replicate length 'x' ++ "\""
+prop_parse_very_long_lines L.length =
+  L.length >= 0 && L.length <= 2000 ==> 
+  let longLine = "var longVariableName string = \"" ++ replicate L.length 'x' ++ "\""
       content = unlines ["//! ownership: on", "package main", longLine, "func main() {}"]
   in case parseTypus content of
     Left err -> counterexample ("Long line parse error: " ++ err) $ property False
@@ -208,7 +209,7 @@ prop_parse_escape_sequences :: [String] -> Property
 prop_parse_escape_sequences strings =
   let escapedStrings = map addEscapeSequences strings
       content = unlines $ ["//! ownership: on", "package main", "func main() {"] ++
-                        map (\s -> "  fmt.Println(\"" ++ s ++ "\")") escapedStrings ++
+                        L.map (\s -> "  fmt.Println(\"" ++ s ++ "\")") escapedStrings ++
                         ["}"]
   in case parseTypus content of
     Left err -> counterexample ("Escape sequence error: " ++ err) $ property False
@@ -217,10 +218,10 @@ prop_parse_escape_sequences strings =
 -- Property: Numeric literals of various formats are parsed
 prop_parse_numeric_literals :: [Int] -> [Double] -> Property
 prop_parse_numeric_literals ints doubles =
-  let intVars = map (\i -> "var intVar" ++ show i ++ " int = " ++ show i) (take 5 ints)
-      floatVars = map (\d -> "var floatVar" ++ show (round d :: Int) ++ " float64 = " ++ show d) (take 5 doubles)
-      hexVars = map (\i -> "var hexVar" ++ show i ++ " int = 0x" ++ showHex i) (take 3 ints)
-      octalVars = map (\i -> "var octalVar" ++ show i ++ " int = 0o" ++ showOct i) (take 3 ints)
+  let intVars = L.map (\i -> "var intVar" ++ show i ++ " int = " ++ show i) (take 5 ints)
+      floatVars = L.map (\d -> "var floatVar" ++ show (round d :: Int) ++ " float64 = " ++ show d) (take 5 doubles)
+      hexVars = L.map (\i -> "var hexVar" ++ show i ++ " int = 0x" ++ showHex i) (take 3 ints)
+      octalVars = L.map (\i -> "var octalVar" ++ show i ++ " int = 0o" ++ showOct i) (take 3 ints)
       content = unlines $ ["//! ownership: on", "package main"] ++ 
                         intVars ++ floatVars ++ hexVars ++ octalVars ++
                         ["func main() {}"]
@@ -234,7 +235,7 @@ prop_parse_complex_expressions identifiers =
   not (null identifiers) ==>
   let expressions = map generateComplexExpression (take 5 identifiers)
       content = unlines $ ["//! ownership: on", "package main", "func main() {"] ++
-                        map (\expr -> "  result := " ++ expr) expressions ++
+                        L.map (\expr -> "  result := " ++ expr) expressions ++
                         ["}"]
   in case parseTypus content of
     Left err -> counterexample ("Complex expressions error: " ++ err) $ property False
@@ -243,39 +244,39 @@ prop_parse_complex_expressions identifiers =
 -- Property: Function definitions with various signatures
 prop_parse_function_signatures :: [String] -> [String] -> [String] -> Property
 prop_parse_function_signatures funcNames paramTypes returnTypes =
-  let minLen = minimum [length funcNames, length paramTypes, length returnTypes]
+  let minLen = L.minimum [L.length funcNames, L.length paramTypes, L.length returnTypes]
       signatures = take minLen $ zip3 funcNames paramTypes returnTypes
-      functions = map (\(name, pType, rType) -> 
+      functions = L.map (\(name, pType, rType) -> 
         "func " ++ name ++ "(" ++ pType ++ ") " ++ rType ++ " { return 42 }") signatures
       content = unlines $ ["//! ownership: on", "package main"] ++ functions ++ ["func main() {}"]
   in case parseTypus content of
     Left err -> counterexample ("Function signatures error: " ++ err) $ property False
     Right parsed -> 
-      let expectedFuncCount = length functions
-          actualBlockCount = length $ tfBlocks parsed
+      let expectedFuncCount = L.length functions
+          actualBlockCount = L.length $ tfBlocks parsed
       in property $ actualBlockCount >= expectedFuncCount
 
--- Property: Struct and interface definitions
+-- Property: Struct L.and interface definitions
 prop_parse_struct_interface_definitions :: [String] -> [String] -> Property
 prop_parse_struct_interface_definitions structNames interfaceNames =
-  let structs = map (\name -> "type " ++ name ++ " struct { Field int }") structNames
-      interfaces = map (\name -> "type " ++ name ++ " interface { Method() }") interfaceNames
+  let structs = L.map (\name -> "type " ++ name ++ " struct { Field int }") structNames
+      interfaces = L.map (\name -> "type " ++ name ++ " interface { Method() }") interfaceNames
       content = unlines $ ["//! ownership: on", "package main"] ++ structs ++ interfaces ++ ["func main() {}"]
   in case parseTypus content of
     Left err -> counterexample ("Struct/Interface definitions error: " ++ err) $ property False
     Right parsed -> 
-      let expectedCount = length structs + length interfaces
-          actualBlockCount = length $ tfBlocks parsed
+      let expectedCount = L.length structs + L.length interfaces
+          actualBlockCount = L.length $ tfBlocks parsed
       in property $ actualBlockCount >= expectedCount
 
 -- Property: Import statements with various formats
 prop_parse_import_statements :: [String] -> Property
 prop_parse_import_statements importPaths =
-  let singleImports = map ("import \"" ++) importPaths
+  let singleImports = L.map ("import \"" ++) importPaths
       aliasImports = zipWith (\path i -> "import alias" ++ show i ++ " \"" ++ path ++ "\"") 
                            importPaths [1..]
-      dotImports = map (\path -> "import . \"" ++ path ++ "\"") importPaths
-      underscoreImports = map (\path -> "import _ \"" ++ path ++ "\"") importPaths
+      dotImports = L.map (\path -> "import . \"" ++ path ++ "\"") importPaths
+      underscoreImports = L.map (\path -> "import _ \"" ++ path ++ "\"") importPaths
       allImports = take 5 $ singleImports ++ aliasImports ++ dotImports ++ underscoreImports
       content = unlines $ ["//! ownership: on", "package main"] ++ allImports ++ ["func main() {}"]
   in case parseTypus content of
@@ -285,8 +286,8 @@ prop_parse_import_statements importPaths =
 -- Property: Concurrent programming constructs
 prop_parse_concurrent_constructs :: [String] -> Property
 prop_parse_concurrent_constructs channelNames =
-  let channels = map (\name -> "var " ++ name ++ " chan int") channelNames
-      goroutines = map (\name -> "go func() { " ++ name ++ " <- 42 }()") channelNames
+  let channels = L.map (\name -> "var " ++ name ++ " chan int") channelNames
+      goroutines = L.map (\name -> "go func() { " ++ name ++ " <- 42 }()") channelNames
       selectCases = ["select {", "case <-ch1:", "  fmt.Println(\"received\")", "case ch2 <- 42:", "  fmt.Println(\"sent\")", "}"]
       content = unlines $ ["//! ownership: on", "package main"] ++ channels ++
                         ["func main() {"] ++ goroutines ++ selectCases ++ ["}"]
@@ -297,8 +298,8 @@ prop_parse_concurrent_constructs channelNames =
 -- Property: Error handling patterns
 prop_parse_error_handling :: [String] -> Property
 prop_parse_error_handling functionNames =
-  let errorFuncs = map (\name -> "func " ++ name ++ "() error { return nil }") functionNames
-      errorHandling = map (\name -> "if err := " ++ name ++ "(); err != nil { return err }") functionNames
+  let errorFuncs = L.map (\name -> "func " ++ name ++ "() error { return nil }") functionNames
+      errorHandling = L.map (\name -> "if err := " ++ name ++ "(); err != nil { return err }") functionNames
       panicRecover = ["defer func() {", "  if r := recover(); r != nil {", "    fmt.Println(\"Recovered:\", r)", "  }", "}()", "panic(\"test\")"]
       content = unlines $ ["//! ownership: on", "package main"] ++ errorFuncs ++
                         ["func main() {"] ++ errorHandling ++ panicRecover ++ ["}"]
@@ -306,14 +307,14 @@ prop_parse_error_handling functionNames =
     Left err -> counterexample ("Error handling patterns error: " ++ err) $ property False
     Right parsed -> property $ True
 
--- Property: Generic types and functions
+-- Property: Generic types L.and functions
 prop_parse_generic_types :: [String] -> [String] -> Property
 prop_parse_generic_types typeNames typeParams =
   let generics = zipWith (\tName tParam -> 
-        "type " ++ tName ++ "[" ++ tParam ++ " any] struct { Value " ++ tParam ++ " }") 
+        "type " ++ tName ++ "[" ++ tParam ++ " L.any] struct { Value " ++ tParam ++ " }") 
         typeNames typeParams
-      genericFuncs = map (\tParam -> 
-        "func Generic[" ++ tParam ++ " any](value " ++ tParam ++ ") " ++ tParam ++ " { return value }")
+      genericFuncs = L.map (\tParam -> 
+        "func Generic[" ++ tParam ++ " L.any](value " ++ tParam ++ ") " ++ tParam ++ " { return value }")
         typeParams
       content = unlines $ ["//! ownership: on", "package main"] ++ generics ++ genericFuncs ++ ["func main() {}"]
   in case parseTypus content of
@@ -321,14 +322,14 @@ prop_parse_generic_types typeNames typeParams =
     Right parsed -> property $ True
 
 -- ============================================================================
--- Edge Case and Stress Tests
+-- Edge Case L.and Stress Tests
 -- ============================================================================
 
 -- Property: Extremely long identifiers
 prop_parse_extremely_long_identifiers :: Int -> Property
-prop_parse_extremely_long_identifiers length =
-  length >= 0 && length <= 500 ==> 
-  let longName = replicate length 'a'
+prop_parse_extremely_long_identifiers L.length =
+  L.length >= 0 && L.length <= 500 ==> 
+  let longName = replicate L.length 'a'
       content = unlines ["//! ownership: on", "package main", "var " ++ longName ++ " int = 42", "func main() {}"]
   in case parseTypus content of
     Left err -> counterexample ("Long identifier error: " ++ err) $ property False
@@ -361,7 +362,7 @@ prop_parse_zero_width_characters content =
     Left err -> counterexample ("Zero-width characters error: " ++ err) $ property False
     Right parsed -> property $ True
 
--- Property: Tab and space mixing
+-- Property: Tab L.and space mixing
 prop_parse_tab_space_mixing :: [String] -> Property
 prop_parse_tab_space_mixing lines =
   not (null lines) ==>
@@ -387,7 +388,7 @@ prop_parse_only_whitespace =
   in case parseTypus whitespaceContent of
     Left err -> counterexample ("Whitespace only error: " ++ err) $ property False
     Right parsed -> 
-      let hasNoBlocks = null $ tfBlocks parsed
+      let hasNoBlocks = L.null $ tfBlocks parsed
       in property $ hasNoBlocks
 
 -- Property: File with BOM (Byte Order Mark)
@@ -399,7 +400,7 @@ prop_parse_with_bom content =
     Right parsed -> property $ True
 
 -- ============================================================================
--- Performance and Scalability Tests
+-- Performance L.and Scalability Tests
 -- ============================================================================
 
 -- Property: Parsing performance scales linearly
@@ -495,7 +496,7 @@ contentPreservedInBlock (original, reconstructed) =
   in normalizeContent originalContent == normalizeContent reconstructedContent
 
 normalizeContent :: String -> String
-normalizeContent = unlines . filter (not . null) . lines
+normalizeContent = unlines . L.filter (not . null) . lines
 
 normalizeWhitespace :: String -> String
 normalizeWhitespace = unwords . words
@@ -504,17 +505,17 @@ hasUnicodeSubstring :: String -> CodeBlock -> Bool
 hasUnicodeSubstring base block =
   let content = cbContent block
       unicodeSubstrings = ["测试", "内容", "中文", "🚀", "αβγ"]
-  in any (`isInfixOf` content) unicodeSubstrings
+  in L.any (`L.isInfixOf` content) unicodeSubstrings
 
 hasAnyDirectives :: TypusFile -> Bool
 hasAnyDirectives file = 
   let directives = tfDirectives file
-  in any isJust [fdOwnership directives, fdDependentTypes directives, fdConstraints directives]
+  in L.any isJust [fdOwnership directives, fdDependentTypes directives, fdConstraints directives]
 
 countPresentDirectives :: TypusFile -> Int
 countPresentDirectives file = 
   let directives = tfDirectives file
-  in length [() | Just _ <- [fdOwnership directives, fdDependentTypes directives, fdConstraints directives]]
+  in L.length [() | Just _ <- [fdOwnership directives, fdDependentTypes directives, fdConstraints directives]]
 
 generateNestedHierarchy :: Int -> String
 generateNestedHierarchy 0 = "var x int = 42"
@@ -545,7 +546,7 @@ generateComplexExpression identifier =
   identifier ++ " + " ++ identifier ++ " * " ++ identifier ++ " / " ++ identifier
 
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `Data.List.isInfixOf` haystack
+L.isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
 
 -- ============================================================================
 -- Test Suite
@@ -561,7 +562,7 @@ tests = testGroup "Comprehensive Parser QuickCheck Tests"
   , fastProperty "Large files don't cause overflow" prop_parse_large_files_no_overflow
   , fastProperty "Unicode content is preserved" prop_parse_unicode_preserved
   , fastProperty "Comments are ignored" prop_parse_comments_ignored
-  , fastProperty "Mixed directives and code maintain order" prop_parse_mixed_directives_code_order
+  , fastProperty "Mixed directives L.and code maintain order" prop_parse_mixed_directives_code_order
   , fastProperty "Nested structures maintain hierarchy" prop_parse_nested_hierarchy
   , fastProperty "Special characters in identifiers" prop_parse_special_char_identifiers
   , fastProperty "Multiple directives combined correctly" prop_parse_multiple_directives_combined
@@ -572,7 +573,7 @@ tests = testGroup "Comprehensive Parser QuickCheck Tests"
   , fastProperty "Numeric literals parsed" prop_parse_numeric_literals
   , fastProperty "Complex expressions parsed" prop_parse_complex_expressions
   , fastProperty "Function signatures parsed" prop_parse_function_signatures
-  , fastProperty "Struct and interface definitions parsed" prop_parse_struct_interface_definitions
+  , fastProperty "Struct L.and interface definitions parsed" prop_parse_struct_interface_definitions
   , fastProperty "Import statements parsed" prop_parse_import_statements
   , fastProperty "Concurrent constructs parsed" prop_parse_concurrent_constructs
   , fastProperty "Error handling patterns parsed" prop_parse_error_handling
@@ -581,7 +582,7 @@ tests = testGroup "Comprehensive Parser QuickCheck Tests"
   , fastProperty "Deeply nested brackets" prop_parse_deeply_nested_brackets
   , fastProperty "Mixed line endings" prop_parse_mixed_line_endings
   , fastProperty "Zero-width characters" prop_parse_zero_width_characters
-  , fastProperty "Tab and space mixing" prop_parse_tab_space_mixing
+  , fastProperty "Tab L.and space mixing" prop_parse_tab_space_mixing
   , fastProperty "Multiple consecutive newlines" prop_parse_multiple_consecutive_newlines
   , fastProperty "Only whitespace files" prop_parse_only_whitespace
   , fastProperty "Files with BOM" prop_parse_with_bom

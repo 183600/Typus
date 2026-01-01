@@ -36,7 +36,9 @@ import Parser
 
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, nub, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (nub, sort)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -219,7 +221,7 @@ prop_integrated_compile_result_contains_required_fields =
 
 prop_analysis_result_contains_errors_and_warnings :: AnalysisResult -> Property
 prop_analysis_result_contains_errors_and_warnings result =
-  in property $ length (arErrors result) >= 0 .&&.
+  in property $ L.length (arErrors result) >= 0 .&&.
                length (arWarnings result) >= 0
 
 prop_analysis_result_may_contain_optional_analyses :: AnalysisResult -> Property
@@ -235,14 +237,14 @@ prop_analysis_result_may_contain_optional_analyses result =
 
 prop_combined_error_contains_required_fields :: CombinedError -> Property
 prop_combined_error_contains_required_fields error =
-  in property $ T.length (ceMessage error) > 0 .&&.
-               T.length (ceLocation error) > 0 .&&.
+  in property $ T.L.length (ceMessage error) > 0 .&&.
+               T.L.length (ceLocation error) > 0 .&&.
                length (ceSuggestions error) >= 0
 
 prop_combined_error_suggestions_are_helpful :: CombinedError -> Property
 prop_combined_error_suggestions_are_helpful error =
   let suggestions = ceSuggestions error
-  in property $ all (T.length .> 0) suggestions
+  in property $ L.all (T.L.length .> 0) suggestions
 
 -- ============================================================================
 -- Properties for Error Conversion
@@ -253,13 +255,13 @@ prop_analysis_to_combined_preserves_error_types result =
   let combined = analysisToCombined result
       originalErrors = arErrors result
       originalWarnings = arWarnings result
-  in property $ length combined >= 0
+  in property $ L.length combined >= 0
 
 prop_analysis_to_combined_maintains_severity_order :: AnalysisResult -> Property
 prop_analysis_to_combined_maintains_severity_order result =
   let combined = analysisToCombined result
       severities = map ceSeverity combined
-  in property $ length severities >= 0
+  in property $ L.length severities >= 0
 
 -- ============================================================================
 -- Properties for Result Formatting
@@ -270,20 +272,20 @@ prop_format_compilation_result_includes_summary =
   let config = defaultCompilerConfig
       result = compileWithIntegratedAnalyzers config "func main() {}"
       formatted = formatCompilationResult result
-  in property $ T.length formatted >= 0
+  in property $ T.L.length formatted >= 0
 
 prop_get_detailed_analysis_summary_provides_details :: Property
 prop_get_detailed_analysis_summary_provides_details =
   let config = defaultCompilerConfig
       result = compileWithIntegratedAnalyzers config "func main() {}"
       summary = getDetailedAnalysisSummary result
-  in property $ T.length summary >= 0
+  in property $ T.L.length summary >= 0
 
 prop_show_combined_error_includes_message :: CombinedError -> Property
 prop_show_combined_error_includes_message error =
   let shown = showCombinedError error
       message = ceMessage error
-  in property $ message `T.isInfixOf` shown
+  in property $ message `L.isInfixOf` shown
 
 -- ============================================================================
 -- Properties for Integration Robustness
@@ -301,7 +303,7 @@ prop_integrated_compiler_handles_large_files :: Int -> Property
 prop_integrated_compiler_handles_large_files multiplier =
   multiplier > 0 && multiplier <= 100 ==> 
   let baseCode = "func test() { return " ++ show multiplier ++ " }\n"
-      largeCode = concat (replicate multiplier baseCode)
+      largeCode = L.concat (replicate multiplier baseCode)
       config = defaultCompilerConfig
       result = compileWithIntegratedAnalyzers config largeCode
   in property $ True  -- Basic test that large files don't crash
@@ -378,7 +380,7 @@ tests = testGroup "Core IntegratedCompiler QuickCheck Tests"
     ]
 
   , testGroup "AnalysisResult Properties"
-    [ fastProperty "analysis result contains errors and warnings" prop_analysis_result_contains_errors_and_warnings
+    [ fastProperty "analysis result contains errors L.and warnings" prop_analysis_result_contains_errors_and_warnings
     , fastProperty "analysis result may contain optional analyses" prop_analysis_result_may_contain_optional_analyses
     ]
 

@@ -20,8 +20,10 @@ import Compiler (compile, generateGoCode)
 import Parser (parseTypus, TypusFile(..))
 import GoToolchain (runGoCode)
 
-import Data.List (isInfixOf, isPrefixOf, length, sort)
-import qualified Data.Text as T
+import qualified Data.List as L
+import Data.List (isInfixOf, isPrefixOf, length)
+import Data.List (sort)
+import qualified Data.Text as T (pack, unpack)
 
 -- Test 1: End-to-end compilation of simple program
 test_end_to_end_simple_program :: TestTree
@@ -43,9 +45,9 @@ test_end_to_end_simple_program =
             let goCode = generateGoCode result
             -- Should generate valid Go code
             assertBool "Should generate Go code" $
-              T.unpack goCode `isInfixOf` "package main" &&
-              T.unpack goCode `isInfixOf` "func main" &&
-              T.unpack goCode `isInfixOf` "Hello, World"
+              T.unpack goCode `L.isInfixOf` "package main" &&
+              T.unpack goCode `L.isInfixOf` "func main" &&
+              T.unpack goCode `L.isInfixOf` "Hello, World"
 
 -- Test 2: End-to-end compilation with ownership
 test_end_to_end_ownership :: TestTree
@@ -72,13 +74,13 @@ test_end_to_end_ownership =
           Left compileErr -> do
             -- May fail on ownership analysis
             assertBool "Should handle ownership analysis" $
-              any (`isInfixOf` show compileErr) 
+              L.any (`L.isInfixOf` show compileErr) 
                 ["ownership", "move", "borrow"]
           Right result -> do
             let goCode = generateGoCode result
             -- Should generate Go code with ownership annotations
             assertBool "Should generate Go code with ownership" $
-              T.length goCode > 0
+              T.L.length goCode > 0
 
 -- Test 3: End-to-end compilation with dependent types
 test_end_to_end_dependent_types :: TestTree
@@ -102,13 +104,13 @@ test_end_to_end_dependent_types =
           Left compileErr -> do
             -- May fail on dependent type compilation
             assertBool "Should handle dependent type compilation" $
-              any (`isInfixOf` show compileErr) 
+              L.any (`L.isInfixOf` show compileErr) 
                 ["dependent", "type", "Vector"]
           Right result -> do
             let goCode = generateGoCode result
             -- Should generate Go code with runtime checks
             assertBool "Should generate Go code with runtime checks" $
-              T.length goCode > 0
+              T.L.length goCode > 0
 
 -- Test 4: End-to-end compilation with complex features
 test_end_to_end_complex_features :: TestTree
@@ -136,13 +138,13 @@ test_end_to_end_complex_features =
           Left compileErr -> do
             -- May fail on complex feature interaction
             assertBool "Should handle complex feature interaction" $
-              any (`isInfixOf` show compileErr) 
+              L.any (`L.isInfixOf` show compileErr) 
                 ["ownership", "dependent", "SafeArray"]
           Right result -> do
             let goCode = generateGoCode result
             -- Should generate comprehensive Go code
             assertBool "Should generate comprehensive Go code" $
-              T.length goCode > 0
+              T.L.length goCode > 0
 
 -- Test 5: End-to-end compilation error handling
 test_end_to_end_error_handling :: TestTree
@@ -163,13 +165,13 @@ test_end_to_end_error_handling =
       Left err -> do
         -- Should handle parsing errors gracefully
         assertBool "Should handle parsing errors" $
-          length err > 0
+          L.length err > 0
       Right typusFile -> do
         case compile typusFile of
           Left compileErr -> do
             -- Should provide comprehensive error information
             assertBool "Should provide comprehensive error information" $
-              any (`isInfixOf` show compileErr) 
+              L.any (`L.isInfixOf` show compileErr) 
                 ["type", "error", "string", "int"]
           Right _ -> do
             assertFailure "Expected compilation error for type mismatch"
@@ -177,7 +179,7 @@ test_end_to_end_error_handling =
 -- QuickCheck property: End-to-end compilation is consistent
 prop_end_to_end_consistent :: String -> Property
 prop_end_to_end_consistent code =
-  length code < 100 ==>  -- Keep code reasonable
+  L.length code < 100 ==>  -- Keep code reasonable
   let source = unlines
         [ "package main"
         , "func main() {"
@@ -222,8 +224,8 @@ test_end_to_end_performance =
             let goCode = generateGoCode result
             -- Should generate efficient Go code
             assertBool "Should generate efficient Go code" $
-              T.unpack goCode `isInfixOf` "fibonacci" &&
-              T.length goCode > 100  -- Should have substantial content
+              T.unpack goCode `L.isInfixOf` "fibonacci" &&
+              T.L.length goCode > 100  -- Should have substantial content
 
 -- Test 7: End-to-end compilation with imports
 test_end_to_end_imports :: TestTree
@@ -240,7 +242,7 @@ test_end_to_end_imports =
       Left err -> do
         -- Should handle import directives
         assertBool "Should handle import directives" $
-          any (`isInfixOf` err) ["import", "fmt"]
+          L.any (`L.isInfixOf` err) ["import", "fmt"]
       Right typusFile -> do
         case compile typusFile of
           Left compileErr -> do
@@ -249,13 +251,13 @@ test_end_to_end_imports =
             let goCode = generateGoCode result
             -- Should include import in generated code
             assertBool "Should include imports in generated code" $
-              T.unpack goCode `isInfixOf` "import" &&
-              T.unpack goCode `isInfixOf` "fmt"
+              T.unpack goCode `L.isInfixOf` "import" &&
+              T.unpack goCode `L.isInfixOf` "fmt"
 
 -- QuickCheck property: End-to-end compilation preserves semantics
 prop_end_to_end_preserves_semantics :: String -> Property
 prop_end_to_end_preserves_semantics expr =
-  length expr < 50 ==>  -- Keep expressions reasonable
+  L.length expr < 50 ==>  -- Keep expressions reasonable
   let source = unlines
         [ "package main"
         , "func main() {"
@@ -270,7 +272,7 @@ prop_end_to_end_preserves_semantics expr =
            Left _ -> property True  -- Compilation errors are acceptable
            Right result -> 
              let goCode = generateGoCode result
-             in property $ T.length goCode > 0  -- Should generate some code
+             in property $ T.L.length goCode > 0  -- Should generate some code
 
 tests :: TestTree
 tests =

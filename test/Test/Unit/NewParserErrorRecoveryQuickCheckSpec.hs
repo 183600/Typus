@@ -1,6 +1,7 @@
 module Test.Unit.NewParserErrorRecoveryQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), counterexample, forAll, oneof, elements, listOf, suchThat)
 
@@ -60,7 +61,7 @@ prop_handlesEmptyInput =
 -- | Parser should handle whitespace-only input
 prop_handlesWhitespaceOnly :: String -> Property
 prop_handlesWhitespaceOnly str =
-  let whitespaceOnly = all (`elem` " \t\n\r") str
+  let whitespaceOnly = L.all (`elem` " \t\n\r") str
       result = parseTypus str
   in counterexample ("input=" ++ show str ++ ", result=" ++ show result) $
      if whitespaceOnly
@@ -77,7 +78,7 @@ prop_handlesMalformedDirectives prefix =
   in counterexample ("directive=" ++ malformedDirective ++ ", result=" ++ show result) $
      case result of
        Left _ -> property False  -- Should not crash completely
-       Right _ -> property True   -- Should recover and return something
+       Right _ -> property True   -- Should recover L.and return something
 
 -- | Parser should recover from syntax errors
 prop_recoversFromSyntaxErrors :: String -> String -> Property
@@ -87,7 +88,7 @@ prop_recoversFromSyntaxErrors validCode errorPart =
   in counterexample ("input=" ++ show input ++ ", result=" ++ show result) $
      case result of
        Left _ -> property False
-       Right typusFile -> property True  -- Should recover and parse what it can
+       Right typusFile -> property True  -- Should recover L.and parse what it can
 
 -- | Parser should preserve partial structure on errors
 prop_preservesPartialStructure :: String -> String -> Property
@@ -111,16 +112,16 @@ prop_preservesPartialStructure validDirective validCode =
 prop_alwaysReturnsTypusFile :: String -> Property
 prop_alwaysReturnsTypusFile input =
   let result = parseTypus input
-  in counterexample ("input length=" ++ show (length input)) $
+  in counterexample ("input L.length=" ++ show (L.length input)) $
      case result of
-       Left _ -> property False  -- Should recover and return Right
+       Left _ -> property False  -- Should recover L.and return Right
        Right (TypusFile {}) -> property True
 
 -- | Syntax errors should be collected not thrown
 prop_syntaxErrorsCollected :: String -> Property
 prop_syntaxErrorsCollected input =
   let result = parseTypus input
-  in counterexample ("input length=" ++ show (length input)) $
+  in counterexample ("input L.length=" ++ show (L.length input)) $
      case result of
        Left _ -> property False
        Right typusFile -> property True  -- Syntax errors should be in tfSyntaxErrors
@@ -135,7 +136,7 @@ prop_validBlocksParsedDespiteErrors validBlock errorPart =
        Left _ -> property False
        Right typusFile -> 
          -- Should have at least one block despite errors
-         property (not (null (tfBlocks typusFile)))
+         property (not (L.null (tfBlocks typusFile)))
 
 -- | File directives should be parsed when valid
 prop_fileDirectivesParsedWhenValid :: String -> Property
@@ -169,7 +170,7 @@ prop_handlesExtremelyLongLines n =
   let longLine = replicate (min n 10000) 'a'
       input = longLine ++ "\n//! ownership: true\nmore code"
       result = parseTypus input
-  in counterexample ("line length=" ++ show (length longLine)) $
+  in counterexample ("line L.length=" ++ show (L.length longLine)) $
      case result of
        Left _ -> property False
        Right _ -> property True
@@ -188,7 +189,7 @@ prop_handlesDeeplyNestedStructures depth =
 -- | Parser should handle unicode characters
 prop_handlesUnicodeCharacters :: String -> Property
 prop_handlesUnicodeCharacters unicodeStr =
-  let hasUnicode = any (> '\127') unicodeStr
+  let hasUnicode = L.any (> '\127') unicodeStr
       input = "//! ownership: true\n" ++ unicodeStr ++ "\nmore code"
       result = parseTypus input
   in counterexample ("unicode=" ++ show unicodeStr) $
@@ -204,7 +205,7 @@ prop_handlesMixedLineEndings content =
   let mixedEndings = concatMap (\c -> if c == '\n' then "\r\n" else [c]) content
       input = "//! ownership: true\n" ++ mixedEndings
       result = parseTypus input
-  in counterexample ("content length=" ++ show (length content)) $
+  in counterexample ("content L.length=" ++ show (L.length content)) $
      case result of
        Left _ -> property False
        Right _ -> property True
@@ -218,7 +219,7 @@ prop_parsingIsDeterministic :: String -> Property
 prop_parsingIsDeterministic input =
   let result1 = parseTypus input
       result2 = parseTypus input
-  in counterexample ("input length=" ++ show (length input)) $
+  in counterexample ("input L.length=" ++ show (L.length input)) $
      case (result1, result2) of
        (Right r1, Right r2) -> r1 === r2
        (Left e1, Left e2) -> e1 === e2
@@ -241,8 +242,8 @@ prop_handlesIncrementalInput part1 part2 =
 prop_errorPositionsWithinBounds :: String -> Property
 prop_errorPositionsWithinBounds input =
   let result = parseTypus input
-      inputLen = length input
-  in counterexample ("input length=" ++ show inputLen ++ ", result=" ++ show result) $
+      inputLen = L.length input
+  in counterexample ("input L.length=" ++ show inputLen ++ ", result=" ++ show result) $
      case result of
        Left err -> 
          -- Error message should reference positions within bounds

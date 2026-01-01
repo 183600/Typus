@@ -10,6 +10,7 @@ import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
   ( Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), choose, vectorOf, elements )
 import Control.Monad (replicateM, when)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Char (isSpace, isDigit, isAlpha)
 
@@ -76,11 +77,11 @@ prop_debug_config_field_independence enabled1 logLevel1 showTime1 showLocation1 
      (enabled1 /= enabled2 || logLevel1 /= logLevel2 || showTime1 /= showTime2 || showLocation1 /= showLocation2) ==>
      property $ config1 /= config2
 
--- Property: Debug config show and read consistency (basic)
+-- Property: Debug config show L.and read consistency (basic)
 prop_debug_config_show_read_consistency :: DebugConfig -> Property
 prop_debug_config_show_read_consistency config =
   let configStr = show config
-      hasExpectedFields = "DebugConfig" `isInfixOf` configStr
+      hasExpectedFields = "DebugConfig" `L.isInfixOf` configStr
   in property $ hasExpectedFields === True
 
 -- Property: Debug config handles extreme values
@@ -94,7 +95,7 @@ prop_debug_config_extreme_values =
 -- Property: Debug config sequence of modifications
 prop_debug_config_modification_sequence :: DebugConfig -> [Bool] -> [Int] -> Property
 prop_debug_config_modification_sequence initial enableds logLevels =
-  let validLevels = filter (\l -> l >= 0 && l <= 4) logLevels
+  let validLevels = L.filter (\l -> l >= 0 && l <= 4) logLevels
       modifyConfig config (enabled, level) = config { dcEnabled = enabled, dcLogLevel = level }
       finalConfig = foldl modifyConfig initial (zip enableds validLevels)
       lastEnabled = if null enableds then dcEnabled initial else last enableds

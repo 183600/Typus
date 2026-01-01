@@ -13,7 +13,9 @@ import DependentTypesParser
   , validateDependentTypeSyntax
   )
 import qualified Data.Map.Strict as Map
-import Data.List (isInfixOf, isPrefixOf, nub)
+import qualified Data.List as L
+import Data.List (isInfixOf, isPrefixOf)
+import Data.List (nub)
 import Data.Char (isSpace, isAlphaNum)
 
 -- ============================================================================
@@ -29,7 +31,7 @@ tests = testGroup "Dependent Type System QuickCheck Tests"
   , testProperty "parseTypeDeclaration handles constraints" prop_parse_constraints
   , testProperty "TypeRef equality is structural" prop_type_ref_equality
   , testProperty "TypeConstraint parsing is consistent" prop_constraint_parsing_consistent
-  , testProperty "Field parsing preserves names and types" prop_field_parsing_preserves_structure
+  , testProperty "Field parsing preserves names L.and types" prop_field_parsing_preserves_structure
   , testProperty "TypeParameter parsing handles defaults" prop_type_parameter_defaults
   , testProperty "dependent type definitions are unique in scope" prop_dependent_types_unique_in_scope
   , testProperty "nested generic types are parsed correctly" prop_nested_generic_types
@@ -71,7 +73,7 @@ prop_parse_simple_types =
        case result of
          Left _ -> False
          Right (TypeDecl name params body constraints) -> 
-           name `isInfixOf` typeDecl && null params
+           name `L.isInfixOf` typeDecl && null params
          Right _ -> False
 
 prop_parse_generic_types :: Property
@@ -82,7 +84,7 @@ prop_parse_generic_types =
        case result of
          Left _ -> False
          Right (TypeDecl name params body constraints) -> 
-           name `isInfixOf` typeDecl && not (null params)
+           name `L.isInfixOf` typeDecl && not (null params)
          Right _ -> False
 
 prop_parse_constraints :: Property
@@ -93,7 +95,7 @@ prop_parse_constraints =
        case result of
          Left _ -> False
          Right (TypeDecl name params body constraints) -> 
-           name `isInfixOf` typeDecl && not (null constraints)
+           name `L.isInfixOf` typeDecl && not (null constraints)
          Right _ -> False
 
 -- ============================================================================
@@ -135,7 +137,7 @@ prop_field_parsing_preserves_structure =
        case result of
          Left _ -> False
          Right (TypeDecl _ _ (StructBody fields) _) -> 
-           not (null fields) && any (`isInfixOf` fieldStr) (map fieldName fields)
+           not (null fields) && L.any (`L.isInfixOf` fieldStr) (map fieldName fields)
          Right _ -> False
 
 -- ============================================================================
@@ -151,7 +153,7 @@ prop_type_parameter_defaults =
        case result of
          Left _ -> False
          Right (TypeDecl _ params _ _) -> 
-           not (null params) && any (`isInfixOf` paramStr) (map paramName params)
+           not (null params) && L.any (`L.isInfixOf` paramStr) (map paramName params)
          Right _ -> False
 
 -- ============================================================================
@@ -163,12 +165,12 @@ prop_dependent_types_unique_in_scope =
   forAll genMultipleTypeDecls $ \typeDecls ->
     let input = unlines typeDecls
         result = runDependentTypesParser input
-    in counterexample ("Multiple types: " ++ show (length typeDecls)) $
+    in counterexample ("Multiple types: " ++ show (L.length typeDecls)) $
        case result of
          Left _ -> True
          Right (defs, parser) -> 
            let names = map getTypeName defs
-           in length names == length (nub names)
+           in L.length names == L.length (nub names)
 
 -- ============================================================================
 -- Nested Generic Properties
@@ -182,7 +184,7 @@ prop_nested_generic_types =
        case result of
          Left _ -> True  -- May fail for complex nesting
          Right (TypeDecl name params body constraints) -> 
-           any hasNestedArgs params
+           L.any hasNestedArgs params
          Right _ -> False
 
 -- ============================================================================
@@ -197,7 +199,7 @@ prop_complex_constraints =
        case result of
          Left _ -> True  -- May fail for complex constraints
          Right (TypeDecl _ _ _ constraints) -> 
-           all isValidConstraint constraints
+           L.all isValidConstraint constraints
          Right _ -> False
 
 -- ============================================================================
@@ -220,7 +222,7 @@ test_dependent_type_edge_cases = do
       result2 = parseTypeDeclaration deeplyNested
   case result2 of
     Left _ -> assertBool "Deeply nested generics should not crash" True
-    Right (TypeDecl _ params _ _) -> assertBool "Should parse nested generics" $ length params > 0
+    Right (TypeDecl _ params _ _) -> assertBool "Should parse nested generics" $ L.length params > 0
     Right _ -> assertBool "Should parse as type declaration" False
   
   -- Test with Unicode identifiers
@@ -228,7 +230,7 @@ test_dependent_type_edge_cases = do
       result3 = parseTypeDeclaration unicodeType
   case result3 of
     Left _ -> assertBool "Unicode identifiers should not crash" True
-    Right (TypeDecl name _ _ _) -> assertBool "Should handle Unicode" $ "世界" `isInfixOf` name
+    Right (TypeDecl name _ _ _) -> assertBool "Should handle Unicode" $ "世界" `L.isInfixOf` name
     Right _ -> assertBool "Should parse as type declaration" False
 
 test_constraint_validation :: IO ()
@@ -272,10 +274,10 @@ getName = \case
   DependentFunction name _ _ _ -> name
 
 hasNestedArgs :: TypeParameter -> Bool
-hasNestedArgs param = any hasNestedTypeRef (paramConstraints param)
+hasNestedArgs param = L.any hasNestedTypeRef (paramConstraints param)
   where
     hasNestedTypeRef :: TypeConstraint -> Bool
-    hasNestedTypeRef (TypeClassConstraint _ typeref) = not (null (refArgs typeref))
+    hasNestedTypeRef (TypeClassConstraint _ typeref) = not (L.null (refArgs typeref))
     hasNestedTypeRef _ = False
 
 isValidConstraint :: TypeConstraint -> Bool
@@ -353,7 +355,7 @@ genComplexConstraintDecl = do
   name <- genTypeName
   param <- genTypeParameterName
   constraints <- listOf1 genComplexConstraint
-  let constraintStr = concat $ intersperse " & " constraints
+  let constraintStr = L.concat $ intersperse " & " constraints
   return $ "type " ++ name ++ "<" ++ param ++ "> where " ++ constraintStr ++ " struct { }"
 
 genSimpleConstraint :: Gen String

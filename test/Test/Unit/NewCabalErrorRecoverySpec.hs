@@ -3,7 +3,9 @@ module Test.Unit.NewCabalErrorRecoverySpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.QuickCheck (property, forAll, Gen, arbitrary, choose, listOf1, elements)
-import Data.List (isInfixOf, isPrefixOf, tails)
+import qualified Data.List as L
+import Data.List (isInfixOf, isPrefixOf)
+import Data.List (tails)
 import Data.Char (isLetter, isDigit)
 
 import TestSupport.QuickCheck (fastProperty)
@@ -11,7 +13,7 @@ import ErrorHandler
 import Parser
 import Utils
 
--- | Error recovery and resilience tests for compilation pipeline
+-- | Error recovery L.and resilience tests for compilation pipeline
 tests :: TestTree
 tests =
   testGroup "New Cabal Error Recovery Tests"
@@ -25,9 +27,9 @@ tests =
                 result = parseWithErrorRecovery input
             case result of
               ParseRecovered warnings ast -> do
-                length warnings @?= 1
-                "semicolon" `isInfixOf` map toLower (head warnings) @?= True
-                length ast @?= 3  -- Should recover all three statements
+                L.length warnings @?= 1
+                "semicolon" `L.isInfixOf` map toLower (L.head warnings) @?= True
+                L.length ast @?= 3  -- Should recover L.all three statements
               _ -> @?= "Expected recovery" "Got failure"
 
         , testCase "unmatched brace recovery" $ do
@@ -41,9 +43,9 @@ tests =
                 result = parseWithErrorRecovery input
             case result of
               ParseRecovered warnings ast -> do
-                length warnings @?= 1
-                "brace" `isInfixOf` map toLower (head warnings) @?= True
-                length ast @?= 2  -- Should recover both function and next statement
+                L.length warnings @?= 1
+                "brace" `L.isInfixOf` map toLower (L.head warnings) @?= True
+                L.length ast @?= 2  -- Should recover both function L.and next statement
               _ -> @?= "Expected recovery" "Got failure"
 
         , testCase "multiple syntax errors" $ do
@@ -55,8 +57,8 @@ tests =
                 result = parseWithErrorRecovery input
             case result of
               ParseRecovered warnings ast -> do
-                length warnings @?= 2
-                length ast @?= 3  -- Should recover all statements
+                L.length warnings @?= 2
+                L.length ast @?= 3  -- Should recover L.all statements
               _ -> @?= "Expected recovery" "Got failure"
         ]
 
@@ -70,9 +72,9 @@ tests =
                 result = typeCheckWithErrorRecovery input
             case result of
               TypeCheckRecovered warnings types -> do
-                length warnings @?= 1
-                "type" `isInfixOf` map toLower (head warnings) @?= True
-                length types @?= 3
+                L.length warnings @?= 1
+                "type" `L.isInfixOf` map toLower (L.head warnings) @?= True
+                L.length types @?= 3
               _ -> @?= "Expected recovery" "Got failure"
 
         , testCase "undefined function recovery" $ do
@@ -83,9 +85,9 @@ tests =
                 result = typeCheckWithErrorRecovery input
             case result of
               TypeCheckRecovered warnings types -> do
-                length warnings @?= 1
-                "undefined" `isInfixOf` map toLower (head warnings) @?= True
-                length types @?= 2
+                L.length warnings @?= 1
+                "undefined" `L.isInfixOf` map toLower (L.head warnings) @?= True
+                L.length types @?= 2
               _ -> @?= "Expected recovery" "Got failure"
 
         , testCase "circular dependency detection" $ do
@@ -97,9 +99,9 @@ tests =
                 result = typeCheckWithErrorRecovery input
             case result of
               TypeCheckRecovered warnings types -> do
-                length warnings @?= 1
-                "circular" `isInfixOf` map toLower (head warnings) @?= True
-                length types @?= 3
+                L.length warnings @?= 1
+                "circular" `L.isInfixOf` map toLower (L.head warnings) @?= True
+                L.length types @?= 3
               _ -> @?= "Expected recovery" "Got failure"
         ]
 
@@ -113,9 +115,9 @@ tests =
                 result = analyzeWithErrorRecovery input
             case result of
               SemanticRecovered warnings analysis -> do
-                length warnings @?= 1
-                "unused" `isInfixOf` map toLower (head warnings) @?= True
-                length analysis @?= 3
+                L.length warnings @?= 1
+                "unused" `L.isInfixOf` map toLower (L.head warnings) @?= True
+                L.length analysis @?= 3
               _ -> @?= "Expected recovery" "Got failure"
 
         , testCase "dead code detection" $ do
@@ -129,9 +131,9 @@ tests =
                 result = analyzeWithErrorRecovery input
             case result of
               SemanticRecovered warnings analysis -> do
-                length warnings @?= 1
-                "dead" `isInfixOf` map toLower (head warnings) @?= True
-                length analysis @?= 1
+                L.length warnings @?= 1
+                "dead" `L.isInfixOf` map toLower (L.head warnings) @?= True
+                L.length analysis @?= 1
               _ -> @?= "Expected recovery" "Got failure"
         ]
 
@@ -147,7 +149,7 @@ tests =
             case result of
               PanicRecovered skipped ast -> do
                 skipped @?= 1  -- Skipped one line
-                length ast @?= 2  -- Recovered remaining statements
+                L.length ast @?= 2  -- Recovered remaining statements
               _ -> @?= "Expected panic recovery" "Got failure"
 
         , testCase "error cascading prevention" $ do
@@ -159,8 +161,8 @@ tests =
                 result = typeCheckWithErrorRecovery input
             case result of
               TypeCheckRecovered warnings types -> do
-                length warnings @?= 1  -- Only one error, not cascading
-                length types @?= 3
+                L.length warnings @?= 1  -- Only one error, not cascading
+                L.length types @?= 3
               _ -> @?= "Expected cascading prevention" "Got failure"
         ]
 
@@ -178,8 +180,8 @@ prop_recoveryPreservesStructure input =
   let result = parseWithErrorRecovery input
   in case result of
        ParseRecovered warnings ast -> 
-         let originalLines = length (lines input)
-             recoveredLines = length ast
+         let originalLines = L.length (lines input)
+             recoveredLines = L.length ast
          in recoveredLines <= originalLines && recoveredLines >= originalLines `div` 2
        _ -> True
 
@@ -189,7 +191,7 @@ prop_errorLocalizationAccurate input =
   let result = parseWithErrorRecovery input
   in case result of
        ParseRecovered warnings ast -> 
-         all (\warning -> hasValidLocation warning input) warnings
+         L.all (\warning -> hasValidLocation warning input) warnings
        _ -> True
 
 -- | Property: recovery is deterministic
@@ -199,7 +201,7 @@ prop_recoveryDeterministic input =
       result2 = parseWithErrorRecovery input
   in case (result1, result2) of
        (ParseRecovered w1 a1, ParseRecovered w2 a2) -> 
-         length w1 == length w2 && length a1 == length a2
+         L.length w1 == L.length w2 && L.length a1 == L.length a2
        _ -> True
 
 -- | Property: warnings are informative
@@ -208,7 +210,7 @@ prop_warningsInformative input =
   let result = parseWithErrorRecovery input
   in case result of
        ParseRecovered warnings ast -> 
-         all (\warning -> length warning > 10 && any (`isInfixOf` warning) 
+         L.all (\warning -> L.length warning > 10 && L.any (`L.isInfixOf` warning) 
            ["error", "warning", "semicolon", "brace", "type"]) warnings
        _ -> True
 
@@ -235,7 +237,7 @@ data SemanticResult =
 -- Mock functions for testing
 parseWithErrorRecovery :: String -> ParseResult
 parseWithErrorRecovery input
-  | "!!!" `isInfixOf` input = PanicRecovered 1 ["y := 24", "z := x + y"]
+  | "!!!" `L.isInfixOf` input = PanicRecovered 1 ["y := 24", "z := x + y"]
   | "y :== 24" `isInfix` input = 
       ParseRecovered ["Missing semicolon", "Invalid operator"] ["x := 42", "y := 24", "z := x + y"]
   | "x := 42" `isInfix` input && "y := 24" `isInfix` input && not (";" `isInfix` input) =
@@ -250,7 +252,7 @@ typeCheckWithErrorRecovery input
       TypeCheckRecovered ["Undefined function 'unknown_func'"] ["error", "int"]
   | "return a()" `isInfix` input && "return b()" `isInfix` input && "return c()" `isInfix` input =
       TypeCheckRecovered ["Circular dependency detected"] ["int", "int", "int"]
-  | otherwise = TypeCheckSuccess (replicate (length (lines input)) "int")
+  | otherwise = TypeCheckSuccess (replicate (L.length (lines input)) "int")
 
 analyzeWithErrorRecovery :: String -> SemanticResult
 analyzeWithErrorRecovery input
@@ -258,7 +260,7 @@ analyzeWithErrorRecovery input
       SemanticRecovered ["Variable 'x' is unused"] ["var", "var", "expr"]
   | "return 42" `isInfix` input && "return x" `isInfix` input =
       SemanticRecovered ["Dead code detected"] ["func"]
-  | otherwise = SemanticSuccess (replicate (length (lines input)) "stmt")
+  | otherwise = SemanticSuccess (replicate (L.length (lines input)) "stmt")
 
 parseWithPanicMode :: String -> ParseResult
 parseWithPanicMode input
@@ -267,8 +269,8 @@ parseWithPanicMode input
 
 -- Helper functions
 toLower :: String -> String
-toLower = map (\c -> if c >= 'A' && c <= 'Z' then toEnum (fromEnum c + 32) else c)
+toLower = L.map (\c -> if c >= 'A' && c <= 'Z' then toEnum (fromEnum c + 32) else c)
 
 hasValidLocation :: String -> String -> Bool
 hasValidLocation warning input = 
-  "line" `isInfixOf` warning || "column" `isInfix` warning || "position" `isInfixOf` warning
+  "line" `L.isInfixOf` warning || "column" `isInfix` warning || "position" `L.isInfixOf` warning

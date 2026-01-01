@@ -1,6 +1,7 @@
 module Test.Unit.NewCabalQuickCheckSpec4 (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, property, Arbitrary(..), Gen, choose, listOf, elements)
 import Data.Text (Text)
@@ -104,7 +105,7 @@ prop_peepholeOptimizationImproves program =
       optimizedInstructions = extractInstructions optimized
       originalResult = interpretProgram program
       optimizedResult = interpretProgram optimized
-  in length optimizedInstructions <= length originalInstructions && 
+  in L.length optimizedInstructions <= L.length originalInstructions && 
      originalResult == optimizedResult
 
 -- Property: optimization maintains variable scope rules

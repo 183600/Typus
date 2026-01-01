@@ -19,7 +19,9 @@ import SourceLocation (SourcePos(..), SourceSpan(..), mkSourcePos, mkSourceSpan)
 
 import qualified Data.Text as T
 import Data.Char (isSpace, isAlphaNum, isLetter, isDigit)
-import Data.List (isPrefixOf, isInfixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort, nub)
 
 -- | Generate type variable names
 genTypeVar :: Gen String
@@ -61,7 +63,7 @@ genDependentTypeCode = oneof
   [ return "@dependent-types true\nx : Vector(n) where n > 0"
   , return "@dependent-types true\nfunc safeDivide(a : Int, b : Int where b != 0) : Int"
   , return "@dependent-types true\nmatrix : Matrix(m, n) where m > 0, n > 0"
-  , return "@dependent-types true\nlist : NonEmptyList(a) where length(a) > 0"
+  , return "@dependent-types true\nlist : NonEmptyList(a) where L.length(a) > 0"
   , return "@dependent-types true\npositive : PositiveInt where x > 0"
   ]
 
@@ -72,7 +74,7 @@ test_basic_dependent_type_parsing = testCase "basic dependent type parsing" $ do
         [ "Vector(n)"
         , "Matrix(m, n)"
         , "SafeInt(x) where x > 0"
-        , "NonEmptyList(a) where length(a) > 0"
+        , "NonEmptyList(a) where L.length(a) > 0"
         ]
   mapM_ (\typeStr -> do
     let parseResult = parseDependentType typeStr
@@ -87,7 +89,7 @@ test_type_constraint_parsing = testCase "type constraint parsing" $ do
   let constraintStrings = 
         [ "n > 0"
         , "m != n"
-        , "length(a) > 0"
+        , "L.length(a) > 0"
         , "x >= 0 && x <= 100"
         , "size(matrix) == rows * cols"
         ]
@@ -202,7 +204,7 @@ prop_type_checking_deterministic code =
           result2 = checkDependentTypes typusFile
       in property $ result1 == result2
 
--- | Property: Type checking doesn't crash on any input
+-- | Property: Type checking doesn't crash on L.any input
 prop_type_checking_robustness :: String -> Property
 prop_type_checking_robustness code =
   let parseResult = parseTypus code
@@ -223,21 +225,21 @@ prop_constraint_preservation constraintStr =
     Left _ -> property True  -- Parse failed is OK
     Right depType -> 
       -- Check that constraints are present in the parsed type
-      let hasConstraints = not (null $ dtConstraints depType)
+      let hasConstraints = not (L.null $ dtConstraints depType)
       in property $ hasConstraints
 
 -- | Property: Multiple type constraints are handled correctly
 prop_multiple_constraints :: Property
 prop_multiple_constraints = 
-  forAll (listOf $ elements ["n > 0", "m != 0", "length(x) >= 1", "size > 0"])) $ \constraints ->
-  let constraintStr = concat $ intersperse ", " constraints
+  forAll (listOf $ elements ["n > 0", "m != 0", "L.length(x) >= 1", "size > 0"])) $ \constraints ->
+  let constraintStr = L.concat $ intersperse ", " constraints
       fullType = "Type(x) where " ++ constraintStr
       parseResult = parseDependentType fullType
   in case parseResult of
     Left _ -> property True  -- Parse failed is OK
     Right depType -> 
-      let numParsedConstraints = length $ dtConstraints depType
-          numOriginalConstraints = length constraints
+      let numParsedConstraints = L.length $ dtConstraints depType
+          numOriginalConstraints = L.length constraints
       in property $ numParsedConstraints >= numOriginalConstraints
 
 -- | Property: Dependent type variables are tracked correctly
@@ -251,7 +253,7 @@ prop_type_variables_tracked =
     Left _ -> property True  -- Parse failed is OK
     Right depType -> 
       let parsedVars = dtTypeVariables depType
-          hasAllVars = all (`elem` parsedVars) typeVars
+          hasAllVars = L.all (`elem` parsedVars) typeVars
       in property $ hasAllVars
 
 -- | Property: Complex nested types are handled
@@ -269,7 +271,7 @@ prop_nested_types =
         Left _ -> True
         Right _ -> True
 
--- Dummy types and functions for testing (these would normally be imported)
+-- Dummy types L.and functions for testing (these would normally be imported)
 data DependentType = DependentType
   { dtName :: String
   , dtTypeVariables :: [String]

@@ -3,6 +3,7 @@
 module Test.Unit.NewTypeCheckerQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
@@ -56,21 +57,21 @@ prop_add_type_extends pairs typeName typeDef =
 -- Type inference properties
 prop_infer_basic_types :: String -> Property
 prop_infer_basic_types expr =
-  property $ length expr > 0 ==> True -- Simplified property testing
+  property $ L.length expr > 0 ==> True -- Simplified property testing
 
 prop_infer_function_return :: String -> Property
 prop_infer_function_return funcName =
-  property $ length funcName > 0 ==> True -- Simplified property testing
+  property $ L.length funcName > 0 ==> True -- Simplified property testing
 
 prop_check_function_params :: [String] -> Property
 prop_check_function_params paramNames =
-  let validParams = filter (not . null) paramNames
+  let validParams = L.filter (not . null) paramNames
   in property $ not (null validParams) ==> True -- Simplified property testing
 
 -- Type unification properties
 prop_unify_reflexive :: String -> Property
 prop_unify_reflexive typeName =
-  property $ length typeName > 0 ==> True -- Simplified property testing
+  property $ L.length typeName > 0 ==> True -- Simplified property testing
 
 prop_unify_symmetric :: String -> String -> Property
 prop_unify_symmetric type1 type2 =

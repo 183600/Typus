@@ -2,6 +2,7 @@
 module Test.Unit.SourceLocationMathPrecisionQuickCheckSpec (tests) where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 
@@ -59,11 +60,11 @@ prop_tabAdvancementFollowsEightSpaceRule pos =
                      " Expected: " ++ show expectedColumn)
      (posColumn newPos === expectedColumn)
 
--- | Test that newline resets column to 1 and increments line
+-- | Test that newline resets column to 1 L.and increments line
 prop_newlineResetsColumnAndIncrementsLine :: SourcePos -> Property
 prop_newlineResetsColumnAndIncrementsLine pos =
   let newPos = posAfter '\n' pos
-  in counterexample ("Newline doesn't reset column to 1 and increment line. " ++
+  in counterexample ("Newline doesn't reset column to 1 L.and increment line. " ++
                      "Original: " ++ show pos ++ 
                      " New: " ++ show newPos)
      (posColumn newPos === 1 .&&. posLine newPos === posLine pos + 1)
@@ -72,7 +73,7 @@ prop_newlineResetsColumnAndIncrementsLine pos =
 prop_advancePosByTextIsCumulative :: String -> SourcePos -> Property
 prop_advancePosByTextIsCumulative text pos =
   let finalPos = advancePosByText text pos
-      manualPos = foldl (flip posAfter) pos text
+      manualPos = L.foldl (flip posAfter) pos text
   in counterexample ("Text advancement not cumulative. Text: " ++ show text ++
                      " Final: " ++ show finalPos ++
                      " Manual: " ++ show manualPos)
@@ -115,8 +116,8 @@ prop_posAtLineColConsistency line col offset =
 -- | Test that advancePosBy handles multi-character strings correctly
 prop_advancePosByHandlesMultipleChars :: String -> SourcePos -> Property
 prop_advancePosByHandlesMultipleChars text pos =
-  let advanced = advancePosBy (length text) pos
-      manual = foldl (flip posAfter) pos text
+  let advanced = advancePosBy (L.length text) pos
+      manual = L.foldl (flip posAfter) pos text
   in counterexample ("advancePosBy doesn't handle multiple chars correctly. " ++
                      "Text: " ++ show text ++
                      " Advanced: " ++ show advanced ++
@@ -145,7 +146,7 @@ prop_locatedValuesPreserveSpans value span =
                      " Located: " ++ show located)
      (locatedSpan located === span)
 
--- | Test that span start is always before or equal to span end
+-- | Test that span start is always before L.or equal to span end
 prop_spanStartBeforeEnd :: SourceSpan -> Property
 prop_spanStartBeforeEnd span =
   let start = spanStart span
@@ -155,11 +156,11 @@ prop_spanStartBeforeEnd span =
      (posLine start < posLine end .||.
       (posLine start === posLine end .&&. posColumn start <= posColumn end))
 
--- | Test that empty span has start and end at same position
+-- | Test that empty span has start L.and end at same position
 prop_emptySpanHasSameStartEnd :: SourcePos -> Property
 prop_emptySpanHasSameStartEnd pos =
   let span = spanFrom pos
-  in counterexample ("Empty span doesn't have same start and end. " ++
+  in counterexample ("Empty span doesn't have same start L.and end. " ++
                      "Position: " ++ show pos ++
                      " Span: " ++ show span)
      (spanStart span === spanEnd span)
@@ -178,8 +179,8 @@ prop_mergeWithEmptySpanPreservesOriginal span =
 prop_positionCalculationConsistency :: String -> Property
 prop_positionCalculationConsistency text =
   let pos1 = advancePosByText text startPos
-      pos2 = foldl (flip posAfter) startPos text
-      pos3 = advancePosBy (length text) startPos
+      pos2 = L.foldl (flip posAfter) startPos text
+      pos3 = advancePosBy (L.length text) startPos
   in counterexample ("Position calculation inconsistent across methods. " ++
                      "Text: " ++ show text ++
                      " Method1: " ++ show pos1 ++
@@ -207,7 +208,7 @@ tests :: TestTree
 tests = testGroup "Source Location Math Precision QuickCheck Tests"
   [ testProperty "Position advancement is consistent for single characters" prop_posAfterConsistency
   , testProperty "Tab advancement follows 8-space rule" prop_tabAdvancementFollowsEightSpaceRule
-  , testProperty "Newline resets column to 1 and increments line" prop_newlineResetsColumnAndIncrementsLine
+  , testProperty "Newline resets column to 1 L.and increments line" prop_newlineResetsColumnAndIncrementsLine
   , testProperty "Text advancement is cumulative" prop_advancePosByTextIsCumulative
   , testProperty "Span merging creates valid spans" prop_mergeSpansCreatesValidSpans
   , testProperty "Span between positions is ordered correctly" prop_spanBetweenIsOrdered
@@ -215,8 +216,8 @@ tests = testGroup "Source Location Math Precision QuickCheck Tests"
   , testProperty "advancePosBy handles multiple chars correctly" prop_advancePosByHandlesMultipleChars
   , testProperty "advancePosByLine advances by correct number of lines" prop_advancePosByLineAdvancesByLines
   , testProperty "Located values preserve their spans" prop_locatedValuesPreserveSpans
-  , testProperty "Span start is before or equal to span end" prop_spanStartBeforeEnd
-  , testProperty "Empty span has same start and end" prop_emptySpanHasSameStartEnd
+  , testProperty "Span start is before L.or equal to span end" prop_spanStartBeforeEnd
+  , testProperty "Empty span has same start L.and end" prop_emptySpanHasSameStartEnd
   , testProperty "Merge with empty span preserves original" prop_mergeWithEmptySpanPreservesOriginal
   , testProperty "Position calculation is consistent across methods" prop_positionCalculationConsistency
   , testProperty "locatedAt creates correct spans" prop_locatedAtCreatesCorrectSpans

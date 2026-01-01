@@ -2,6 +2,7 @@
 module Test.Unit.NewQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
   ( Property
@@ -19,7 +20,8 @@ import Test.QuickCheck
   , suchThat
   , vectorOf
   )
-import Data.List (sort, nub, isInfixOf, isPrefixOf)
+import Data.List (isInfixOf, isPrefixOf)
+import Data.List (sort, nub)
 import Data.Char (isAlpha, isAlphaNum, isDigit)
 import qualified Data.Text as T
 import qualified Data.Map.Strict as Map
@@ -31,18 +33,6 @@ import Compiler.Errors.Core
   , ErrorLocation(..)
   , ErrorContext(..)
   , emptyContext
-  , errorAt
-  , errorWithCategory
-  , warningAt
-  , infoAt
-  , withLocation
-  , withContext
-  , withSuggestions
-  , formatError
-  , formatErrors
-  , filterBySeverity
-  , filterByCategory
-  , getErrorStatistics
   , _atLocation
   )
 import SourceLocation
@@ -83,42 +73,42 @@ tests =
     [ fastProperty "error formatting preserves error ID" $
         \errId -> 
           let loc = _atLocation 1 1
-              err = errorAt errId (T.pack "test message") loc
+              err = errorAt "test-id" "test message") loc
               formatted = formatError err
-          in errId `isInfixOf` formatted
+          in errId `L.isInfixOf` formatted
 
     , fastProperty "error formatting includes severity" $
         \severity ->
           let loc = _atLocation 1 1
-              err = (errorAt "TEST001" (T.pack "test message") loc) { severity = severity }
+              err = (errorAt "test-id" "test message") loc) { severity = severity }
               formatted = formatError err
               severityStr = case severity of
                 Fatal -> "FATAL"
                 Error -> "ERROR"
                 Warning -> "WARNING"
                 Info -> "INFO"
-          in severityStr `isInfixOf` formatted
+          in severityStr `L.isInfixOf` formatted
 
     , fastProperty "error filtering by severity works correctly" $
         \errors severity ->
           let filtered = filterBySeverity severity errors
-              expected = filter (\e -> severity e == severity) errors
-          in length filtered === length expected
+              expected = L.filter (\e -> severity e == severity) errors
+          in L.length filtered === L.length expected
 
     , fastProperty "error filtering by category works correctly" $
         \errors category ->
           let filtered = filterByCategory category errors
-              expected = filter (\e -> category e == category) errors
-          in length filtered === length expected
+              expected = L.filter (\e -> category e == category) errors
+          in L.length filtered === L.length expected
 
     , fastProperty "error statistics are consistent" $
         \errors ->
           let stats = getErrorStatistics errors
-              total = length errors
-              fatalCount = length $ filter (\e -> severity e == Fatal) errors
-              errorCount = length $ filter (\e -> severity e == Error) errors
-              warningCount = length $ filter (\e -> severity e == Warning) errors
-              infoCount = length $ filter (\e -> severity e == Info) errors
+              total = L.length errors
+              fatalCount = L.length $ L.filter (\e -> severity e == Fatal) errors
+              errorCount = L.length $ L.filter (\e -> severity e == Error) errors
+              warningCount = L.length $ L.filter (\e -> severity e == Warning) errors
+              infoCount = L.length $ L.filter (\e -> severity e == Info) errors
           in total >= fatalCount + errorCount + warningCount + infoCount
 
     , fastProperty "source position advancement is consistent" $
@@ -163,27 +153,27 @@ tests =
             Right _ -> property True
             Left _ -> property True
 
-    , fastProperty "string trim removes leading and trailing whitespace" $
+    , fastProperty "string trim removes leading L.and trailing whitespace" $
         \s ->
           let trimmed = trim s
-              hasLeading = not (null s) && isSpace (head s)
+              hasLeading = not (null s) && isSpace (L.head s)
               hasTrailing = not (null s) && isSpace (last s)
           in if hasLeading || hasTrailing
-             then not (null trimmed) ==> (not (isSpace (head trimmed)) && not (isSpace (last trimmed)))
+             then not (null trimmed) ==> (not (isSpace (L.head trimmed)) && not (isSpace (last trimmed)))
              else property True
 
     , fastProperty "string split by delimiter preserves content" $
         \s delim ->
           let parts = splitBy delim s
-              rejoined = concat $ intersperse [delim] parts
+              rejoined = L.concat $ intersperse [delim] parts
           in rejoined === s
 
     , fastProperty "comment removal preserves non-comment content" $
         \code ->
           let withoutComments = removeComments code
-              hasComments = "//" `isInfixOf` code || "/*" `isInfixOf` code
+              hasComments = "//" `L.isInfixOf` code || "/*" `L.isInfixOf` code
           in if hasComments
-             then length withoutComments <= length code
+             then L.length withoutComments <= L.length code
              else withoutComments === code
 
     , fastProperty "error context preserves function information" $
@@ -196,7 +186,7 @@ tests =
         \suggestions ->
           let loc = _atLocation 1 1
               err = errorAt "TEST001" (T.pack "test") loc `withSuggestions` (map T.pack suggestions)
-          in length (suggestions err) === length suggestions
+          in L.length (suggestions err) === L.length suggestions
 
     , fastProperty "parsing roundtrip preserves directives" $
         \directives ->
@@ -213,7 +203,7 @@ tests =
         \errors ->
           let formatted = formatErrors errors
               lines' = lines formatted
-          in length lines' >= length errors
+          in L.length lines' >= L.length errors
 
     , fastProperty "error location updates work correctly" $
         \line col ->
@@ -226,12 +216,12 @@ tests =
     , fastProperty "type environment preserves variable types" $
         \pairs ->
           let env = buildTypeEnvFromPairs pairs
-          in all (\(key, typ) -> lookupVariable key env == Just typ) pairs
+          in L.all (\(key, typ) -> lookupVariable key env == Just typ) pairs
 
     , fastProperty "error severity ordering is consistent" $
         \errors ->
           let sortedBySeverity = sort errors
-              isOrdered = all (\(e1, e2) -> severity e1 <= severity e2) (zip sortedBySeverity (drop 1 sortedBySeverity))
+              isOrdered = L.all (\(e1, e2) -> severity e1 <= severity e2) (zip sortedBySeverity (drop 1 sortedBySeverity))
           in property isOrdered
 
     , fastProperty "parsing handles empty input gracefully" $
@@ -245,14 +235,14 @@ tests =
           let source = "package main\nfunc " ++ funcName ++ "() {}\n"
           in case parseTypus source of
             Left _ -> isValidIdentifier funcName ==> property False
-            Right typusFile -> not (null $ tfBlocks typusFile)
+            Right typusFile -> not (L.null $ tfBlocks typusFile)
 
     , fastProperty "error messages are preserved through formatting" $
         \message ->
           let loc = _atLocation 1 1
-              err = errorAt "TEST001" (T.pack message) loc
+              err = errorAt "test-id" (T.pack message) loc
               formatted = formatError err
-          in message `isInfixOf` formatted
+          in message `L.isInfixOf` formatted
 
     , fastProperty "type constraint unification is deterministic" $
         \constraint ->
@@ -266,18 +256,18 @@ tests =
               offsets = map posOffset positions
           in offsets == sort offsets
 
-    , fastProperty "error statistics sum to total" $
+    , fastProperty "error statistics L.sum to total" $
         \errors ->
           let stats = getErrorStatistics errors
-              totalFromStats = sum $ Map.elems stats
-          in totalFromStats >= length errors
+              totalFromStats = L.sum $ Map.elems stats
+          in totalFromStats >= L.length errors
 
     , fastProperty "parsing preserves build tags" $
         \buildTags ->
-          let source = unlines $ map (\tag -> "//go:build " ++ tag) buildTags ++ ["package main"]
+          let source = unlines $ L.map (\tag -> "//go:build " ++ tag) buildTags ++ ["package main"]
           in case parseTypus source of
             Left _ -> property True
-            Right typusFile -> length (tfBuildTags typusFile) >= length buildTags
+            Right typusFile -> L.length (tfBuildTags typusFile) >= L.length buildTags
 
     , fastProperty "type compatibility handles basic types" $
         \typeName1 typeName2 ->
@@ -294,7 +284,7 @@ tests =
     ]
   where
     isValidIdentifier [] = False
-    isValidIdentifier (c:cs) = isAlpha c && all isAlphaNum cs
+    isValidIdentifier (c:cs) = isAlpha c && L.all isAlphaNum cs
     
     intersperse _ [] = []
     intersperse _ [x] = [x]

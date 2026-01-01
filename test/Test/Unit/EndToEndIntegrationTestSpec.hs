@@ -29,8 +29,10 @@ import Utils (trim, normalizeIndentation, removeComments)
 import IntegratedCompiler (runFullCompilation, CompilationResult(..))
 import AnalyzerIntegration (runFullAnalysis, AnalysisResult(..))
 
-import Data.List (isInfixOf, isPrefixOf, null, length, intercalate)
-import qualified Data.Text as T
+import qualified Data.List as L
+import Data.List (isInfixOf, isPrefixOf, length)
+import Data.List (null, intercalate)
+import qualified Data.Text as T (pack, unpack)
 
 -- | Generate complete Typus programs for end-to-end testing
 genCompleteProgram :: Gen String
@@ -230,7 +232,7 @@ unit_tests = testGroup "End-to-End Integration Unit Tests"
             Right result -> do
               assertBool "should handle functions" $ True
 
-  , testCase "program with structs and methods" $ do
+  , testCase "program with structs L.and methods" $ do
       let program = unlines
             [ "package main"
             , "type Counter struct {"
@@ -254,7 +256,7 @@ unit_tests = testGroup "End-to-End Integration Unit Tests"
           case compile typusFile of
             Left err -> assertFailure $ "compile failed: " ++ show err
             Right result -> do
-              assertBool "should handle structs and methods" $ True
+              assertBool "should handle structs L.and methods" $ True
 
   , testCase "ownership analysis integration" $ do
       let program = unlines
@@ -315,8 +317,8 @@ unit_tests = testGroup "End-to-End Integration Unit Tests"
               goIR = emitGo semanticIR
               goCode = T.unpack $ goCode goIR
           assertBool "should generate Go code" $ not $ null goCode
-          assertBool "should contain package declaration" $ "package" `isInfixOf` goCode
-          assertBool "should contain function definitions" $ "func" `isInfixOf` goCode
+          assertBool "should contain package declaration" $ "package" `L.isInfixOf` goCode
+          assertBool "should contain function definitions" $ "func" `L.isInfixOf` goCode
 
   , testCase "full compilation with imports" $ do
       let program = unlines
@@ -332,7 +334,7 @@ unit_tests = testGroup "End-to-End Integration Unit Tests"
       case runFullCompilation program of
         CompilationSuccess goCode -> do
           assertBool "should generate Go code" $ not $ null goCode
-          assertBool "should contain import" $ "import" `isInfixOf` goCode
+          assertBool "should contain import" $ "import" `L.isInfixOf` goCode
         CompilationFailure errors -> do
           assertFailure $ "compilation failed: " ++ show errors
 
@@ -359,7 +361,7 @@ unit_tests = testGroup "End-to-End Integration Unit Tests"
           -- Analysis might fail due to experimental features
           assertBool "should provide error information" $ not $ null errors
 
-  , testCase "error handling and recovery" $ do
+  , testCase "error handling L.and recovery" $ do
       let program = unlines
             [ "package main"
             , "func broken() {"
@@ -406,7 +408,7 @@ unit_tests = testGroup "End-to-End Integration Unit Tests"
       case runFullCompilation program of
         CompilationSuccess goCode -> do
           assertBool "should handle complex programs" $ not $ null goCode
-          assertBool "should contain multiple imports" $ "fmt" `isInfixOf` goCode && "strings" `isInfixOf` goCode
+          assertBool "should contain multiple imports" $ "fmt" `L.isInfixOf` goCode && "strings" `L.isInfixOf` goCode
         CompilationFailure errors -> do
           assertFailure $ "complex program compilation failed: " ++ show errors
   ]
@@ -441,16 +443,16 @@ advanced_tests = testGroup "Advanced Integration Tests"
       case runFullCompilation program of
         CompilationSuccess goCode -> do
           assertBool "should handle concurrent features" $ 
-            "go" `isInfixOf` goCode && "chan" `isInfixOf` goCode
+            "go" `L.isInfixOf` goCode && "chan" `L.isInfixOf` goCode
         CompilationFailure errors -> return ()  -- May fail due to complexity
 
   , testCase "generic types" $ do
       let program = unlines
             [ "package main"
-            , "type Container[T any] struct {"
+            , "type Container[T L.any] struct {"
             , "    value T"
             , "}"
-            , "func New[T any](v T) Container[T] {"
+            , "func New[T L.any](v T) Container[T] {"
             , "    return Container[T]{value: v}"
             , "}"
             , "func (c Container[T]) Get() T {"
@@ -466,7 +468,7 @@ advanced_tests = testGroup "Advanced Integration Tests"
       case runFullCompilation program of
         CompilationSuccess goCode -> do
           assertBool "should handle generic types" $ 
-            "Container" `isInfixOf` goCode
+            "Container" `L.isInfixOf` goCode
         CompilationFailure errors -> return ()  -- May fail due to generics
 
   , testCase "interface integration" $ do
@@ -491,7 +493,7 @@ advanced_tests = testGroup "Advanced Integration Tests"
       case runFullCompilation program of
         CompilationSuccess goCode -> do
           assertBool "should handle interfaces" $ 
-            "interface" `isInfixOf` goCode
+            "interface" `L.isInfixOf` goCode
         CompilationFailure errors -> return ()  -- May fail due to interfaces
   ]
 
@@ -500,7 +502,7 @@ advanced_tests = testGroup "Advanced Integration Tests"
 performance_tests :: TestTree
 performance_tests = testGroup "Performance Tests"
   [ testCase "large program compilation" $ do
-      let largeFunction = unlines $ concat
+      let largeFunction = unlines $ L.concat
             [ ["func large() {"]
             , ["    x := 1"] ++
              ["    y := x + i" | i <- [1..100]] ++
@@ -521,7 +523,7 @@ performance_tests = testGroup "Performance Tests"
         CompilationFailure errors -> return ()  -- May fail due to size
 
   , testCase "many small functions" $ do
-      let smallFunctions = unlines $ concat
+      let smallFunctions = unlines $ L.concat
             [ ["func small" ++ show i ++ "() int { return " ++ show i ++ " }" | i <- [1..50]]
             ]
           program = unlines

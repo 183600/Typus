@@ -10,6 +10,7 @@
 module Test.Unit.NewCabalDependencyCycleSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -45,7 +46,8 @@ import Dependencies
   )
 
 import SourceLocation (SourcePos(..), startPos)
-import Data.List (nub, sort, length, delete)
+import Data.List (length)
+import Data.List (nub, sort, delete)
 import Data.Set (Set, toList, fromList, size)
 import qualified Data.Set as Set
 
@@ -60,7 +62,7 @@ prop_dependent_type_checker_creation =
 prop_type_environment_initially_empty :: Property
 prop_type_environment_initially_empty =
   let env = initialTypeEnvironment
-      result = length (show env)
+      result = L.length (show env)
   in counterexample "Type environment should be initially empty" $
      result >= 0  -- Just check it has a string representation
 
@@ -75,7 +77,7 @@ prop_type_variable_creation_deterministic =
 -- Property: Type scheme generalization preserves structure
 prop_type_scheme_generalization_preserves :: String -> Property
 prop_type_scheme_generalization_preserves typeName =
-  let typeLength = length typeName
+  let typeLength = L.length typeName
       result = typeLength
   in counterexample "Type scheme generalization should preserve structure" $
      result >= 0
@@ -83,37 +85,37 @@ prop_type_scheme_generalization_preserves typeName =
 -- Property: Type instantiation is consistent
 prop_type_instantiation_consistent :: TypeScheme -> Property
 prop_type_instantiation_consistent scheme =
-  let result = length (show scheme)
+  let result = L.length (show scheme)
   in counterexample "Type instantiation should be consistent" $
      result >= 0
 
 -- Property: Type unification is symmetric
 prop_type_unification_symmetric :: TypeExpr -> TypeExpr -> Property
 prop_type_unification_symmetric type1 type2 =
-  let result1 = length (show type1)
-      result2 = length (show type2)
+  let result1 = L.length (show type1)
+      result2 = L.length (show type2)
   in counterexample "Type unification should be symmetric" $
      property True  -- Simplified - just check it doesn't crash
 
 -- Property: Type substitution preserves structure
 prop_type_substitution_preserves :: Substitution -> TypeExpr -> Property
 prop_type_substitution_preserves substitution typeExpr =
-  let result = length (show substitution) + length (show typeExpr)
+  let result = L.length (show substitution) + L.length (show typeExpr)
   in counterexample "Type substitution should preserve structure" $
      result >= 0
 
 -- Property: Constraint solving is deterministic
 prop_constraint_solving_deterministic :: [TypeConstraint] -> Property
 prop_constraint_solving_deterministic constraints =
-  let result1 = length (show constraints)
-      result2 = length (show constraints)
+  let result1 = L.length (show constraints)
+      result2 = L.length (show constraints)
   in counterexample "Constraint solving should be deterministic" $
      result1 === result2
 
 -- Property: Type inference handles simple cases
 prop_type_inference_simple :: String -> Property
 prop_type_inference_simple input =
-  let inputLength = length input
+  let inputLength = L.length input
       result = inputLength
   in counterexample "Type inference should handle simple cases" $
      result >= 0
@@ -121,15 +123,15 @@ prop_type_inference_simple input =
 -- Property: AST validation preserves structure
 prop_ast_validation_preserves :: AST -> Property
 prop_ast_validation_preserves ast =
-  let result = length (show ast)
+  let result = L.length (show ast)
   in counterexample "AST validation should preserve structure" $
      result >= 0
 
 -- Property: Type checking is consistent
 prop_type_checking_consistent :: TypeExpr -> TypeExpr -> Property
 prop_type_checking_consistent type1 type2 =
-  let result1 = length (show type1)
-      result2 = length (show type2)
+  let result1 = L.length (show type1)
+      result2 = L.length (show type2)
   in counterexample "Type checking should be consistent" $
      property True  -- Simplified - just check it doesn't crash
 
@@ -137,7 +139,7 @@ prop_type_checking_consistent type1 type2 =
 prop_error_handling_robust :: DependentTypeError -> Property
 prop_error_handling_robust error =
   let errorMsg = show error
-      hasContent = length errorMsg > 0
+      hasContent = L.length errorMsg > 0
   in counterexample "Error handling should be robust" $
      property hasContent
 

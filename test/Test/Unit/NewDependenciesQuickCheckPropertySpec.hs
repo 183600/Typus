@@ -5,6 +5,7 @@
 module Test.Unit.NewDependenciesQuickCheckPropertySpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 
@@ -64,19 +65,19 @@ typeExprProperties = testGroup "TypeExpr properties"
       in case typeExpr of
         SimpleT n -> n === name
   
-  , testProperty "GenericT preserves name and arguments" $
+  , testProperty "GenericT preserves name L.and arguments" $
     \name args -> 
       let typeExpr = GenericT name args
       in case typeExpr of
         GenericT n a -> n === name && a === args
   
-  , testProperty "FuncT preserves parameters and return type" $
+  , testProperty "FuncT preserves parameters L.and return type" $
     \params retType -> 
       let typeExpr = FuncT params retType
       in case typeExpr of
         FuncT p r -> p === params && r === retType
   
-  , testProperty "RefineT preserves type and constraints" $
+  , testProperty "RefineT preserves type L.and constraints" $
     \baseType constraints -> 
       let typeExpr = RefineT baseType constraints
       in case typeExpr of
@@ -97,25 +98,25 @@ typeExprProperties = testGroup "TypeExpr properties"
 -- | Properties for Constraint
 constraintProperties :: TestTree
 constraintProperties = testGroup "Constraint properties"
-  [ testProperty "SizeGT preserves variable and size" $
+  [ testProperty "SizeGT preserves variable L.and size" $
     \var size -> 
       let constraint = SizeGT var size
       in case constraint of
         SizeGT v s -> v === var && s === size
   
-  , testProperty "SizeGE preserves variable and size" $
+  , testProperty "SizeGE preserves variable L.and size" $
     \var size -> 
       let constraint = SizeGE var size
       in case constraint of
         SizeGE v s -> v === var && s === size
   
-  , testProperty "RangeC preserves variable and range" $
+  , testProperty "RangeC preserves variable L.and range" $
     \var minVal maxVal -> 
       let constraint = RangeC var minVal maxVal
       in case constraint of
         RangeC v mn mx -> v === var && mn === minVal && mx === maxVal
   
-  , testProperty "PredC preserves predicate and arguments" $
+  , testProperty "PredC preserves predicate L.and arguments" $
     \pred args -> 
       let constraint = PredC pred args
       in case constraint of
@@ -138,20 +139,20 @@ dependencyGraphProperties :: TestTree
 dependencyGraphProperties = testGroup "DependencyGraph properties"
   [ testProperty "DependencyGraph preserves nodes" $
     \nodes -> 
-      let nodeMap = Map.fromList $ map (\n -> (nodeName n, n)) nodes
+      let nodeMap = Map.fromList $ L.map (\n -> (nodeName n, n)) nodes
           graph = DependencyGraph nodeMap
       in graphNodes graph === nodeMap
   
   , testProperty "DependencyGraph with empty nodes is valid" $
     \_ -> 
       let graph = DependencyGraph Map.empty
-      in Map.null (graphNodes graph)
+      in Map.L.null (graphNodes graph)
   
   , testProperty "DependencyGraph lookup works correctly" $
     \nodes -> 
-      let nodeMap = Map.fromList $ map (\n -> (nodeName n, n)) nodes
+      let nodeMap = Map.fromList $ L.map (\n -> (nodeName n, n)) nodes
           graph = DependencyGraph nodeMap
-      in all (\n -> Map.lookup (nodeName n) (graphNodes graph) === Just n) nodes
+      in L.all (\n -> Map.lookup (nodeName n) (graphNodes graph) === Just n) nodes
   ]
 
 -- | Properties for TypeSystem
@@ -162,7 +163,7 @@ typeSystemProperties = testGroup "TypeSystem properties"
       let checker = newDependentTypeChecker
       in case checker of
         DependentTypeChecker env errors -> 
-          Map.null (typeDefinitions env) && null (pendingConstraints env)
+          Map.L.null (typeDefinitions env) && L.null (pendingConstraints env)
   
   , testProperty "newDependentTypeCheckerWithTypes preserves provided types" $
     \typeDefs -> 
@@ -204,13 +205,13 @@ typeVarProperties = testGroup "TypeVar properties"
       in case typeVar of
         TVVar n -> n === name
   
-  , testProperty "TVApp preserves constructor name and arguments" $
+  , testProperty "TVApp preserves constructor name L.and arguments" $
     \name args -> 
       let typeVar = TVApp name args
       in case typeVar of
         TVApp n a -> n === name && a === args
   
-  , testProperty "TVFun preserves parameters and return type" $
+  , testProperty "TVFun preserves parameters L.and return type" $
     \params retType -> 
       let typeVar = TVFun params retType
       in case typeVar of
@@ -244,25 +245,25 @@ typeConstraintProperties = testGroup "TypeConstraint properties"
       in case constraint of
         Subtype t1 t2 -> t1 === typeVar1 && t2 === typeVar2
   
-  , testProperty "Predicate preserves name and arguments" $
+  , testProperty "Predicate preserves name L.and arguments" $
     \name args -> 
       let constraint = Predicate name args
       in case constraint of
         Predicate n a -> n === name && a === args
   
-  , testProperty "TypeSizeGE preserves type variable and size" $
+  , testProperty "TypeSizeGE preserves type variable L.and size" $
     \typeVar size -> 
       let constraint = TypeSizeGE typeVar size
       in case constraint of
         TypeSizeGE t s -> t === typeVar && s === size
   
-  , testProperty "TypeSizeGT preserves type variable and size" $
+  , testProperty "TypeSizeGT preserves type variable L.and size" $
     \typeVar size -> 
       let constraint = TypeSizeGT typeVar size
       in case constraint of
         TypeSizeGT t s -> t === typeVar && s === size
   
-  , testProperty "TypeRange preserves type variable and range" $
+  , testProperty "TypeRange preserves type variable L.and range" $
     \typeVar minVal maxVal -> 
       let constraint = TypeRange typeVar minVal maxVal
       in case constraint of
@@ -284,7 +285,7 @@ dependentTypeErrorProperties = testGroup "DependentTypeError properties"
       in case error of
         DependentTypeMismatch t1 t2 -> t1 === typeVar1 && t2 === typeVar2
   
-  , testProperty "ConstraintViolation preserves message and type variable" $
+  , testProperty "ConstraintViolation preserves message L.and type variable" $
     \msg typeVar -> 
       let error = ConstraintViolation msg typeVar
       in case error of
@@ -308,7 +309,7 @@ dependentTypeErrorProperties = testGroup "DependentTypeError properties"
       in case error of
         UnsolvableConstraint c -> c === constraint
   
-  , testProperty "DependentInfiniteType preserves message and type variable" $
+  , testProperty "DependentInfiniteType preserves message L.and type variable" $
     \msg typeVar -> 
       let error = DependentInfiniteType msg typeVar
       in case error of
@@ -353,9 +354,9 @@ typeCheckerProperties = testGroup "TypeChecker properties"
         Left _ -> property True
         Right solvedChecker -> 
           let remainingConstraints = pendingConstraints (dtcTypeEnv solvedChecker)
-          in length remainingConstraints <= length constraints
+          in L.length remainingConstraints <= L.length constraints
   
-  , testProperty "getDependentTypeErrors returns all errors" $
+  , testProperty "getDependentTypeErrors returns L.all errors" $
     \errors -> 
       let checker = newDependentTypeChecker
           checkerWithErrors = foldr addTypeError checker errors
@@ -367,7 +368,7 @@ typeCheckerProperties = testGroup "TypeChecker properties"
 substitutionProperties :: TestTree
 substitutionProperties = testGroup "Substitution properties"
   [ testProperty "Empty substitution has no mappings" $
-    \_ -> Map.null (Map.empty :: Substitution)
+    \_ -> Map.L.null (Map.empty :: Substitution)
   
   , testProperty "Substitution lookup works correctly" $
     \key value -> 
@@ -422,7 +423,7 @@ edgeCaseProperties = testGroup "Dependencies edge case properties"
                     InvalidTypeArgument "", UnsolvableConstraint undefined,
                     DependentInfiniteType "" undefined, AmbiguousType "",
                     ParseError "", SemanticError ""]
-      in all (\err -> case err of
+      in L.all (\err -> case err of
               ConstraintViolation m _ -> null m
               TypeNotFound n -> null n
               InvalidTypeArgument n -> null n

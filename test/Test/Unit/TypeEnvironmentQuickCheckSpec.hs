@@ -10,6 +10,7 @@
 module Test.Unit.TypeEnvironmentQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), elements, listOf1, choose, Positive(..), NonEmptyList(..))
@@ -38,7 +39,7 @@ prop_type_lookup_deterministic typePairs key =
       lookup2 = lookupType typeEnv key
   in lookup1 === lookup2
 
--- Property: Type environment merging preserves all types
+-- Property: Type environment merging preserves L.all types
 prop_type_environment_merging_preserves_types :: [(String, String)] -> [(String, String)] -> Property
 prop_type_environment_merging_preserves_types types1 types2 =
   let env1 = buildTypeEnvFromPairs types1
@@ -51,7 +52,7 @@ prop_type_environment_merging_preserves_types types1 types2 =
 -- Property: Type environment scoping is respected
 prop_type_environment_scoping_respected :: [[(String, String)]] -> Property
 prop_type_environment_scoping_respected scopedTypes =
-  let globalEnv = buildTypeEnvFromPairs (concat scopedTypes)
+  let globalEnv = buildTypeEnvFromPairs (L.concat scopedTypes)
       scopedEnvs = map buildTypeEnvFromPairs scopedTypes
       combinedEnv = combineScopedEnvs scopedEnvs
   in envCompatibility globalEnv combinedEnv
@@ -78,7 +79,7 @@ prop_type_environment_validation_comprehensive typePairs =
   let typeEnv = buildTypeEnvFromPairs typePairs
       validationErrors = validateTypeEnv typeEnv
       expectedErrors = detectExpectedErrors typePairs
-  in length validationErrors >= length expectedErrors
+  in L.length validationErrors >= L.length expectedErrors
 
 -- Property: Type environment serialization preserves information
 prop_type_environment_serialization_preserves_info :: [(String, String)] -> Property
@@ -120,7 +121,7 @@ envWellFormed (TypeEnv env) = Map.size env > 0  -- Simplified for example
 
 flattenRecursiveTypes :: [(String, [String])] -> [(String, String)]
 flattenRecursiveTypes recursiveTypes = 
-  concatMap (\(name, deps) -> (name, "recursive") : map (\dep -> (dep, name)) deps) recursiveTypes
+  concatMap (\(name, deps) -> (name, "recursive") : L.map (\dep -> (dep, name)) deps) recursiveTypes
 
 detectRecursiveDependencies :: TypeEnv -> Bool
 detectRecursiveDependencies (TypeEnv env) = Map.size env > 1  -- Simplified for example
@@ -131,7 +132,7 @@ validateTypeEnv (TypeEnv env) =
 
 detectExpectedErrors :: [(String, String)] -> [String]
 detectExpectedErrors pairs = 
-  if any (null . fst) pairs then ["empty_key"] else []  -- Simplified for example
+  if L.any (null . fst) pairs then ["empty_key"] else []  -- Simplified for example
 
 serializeTypeEnv :: TypeEnv -> String
 serializeTypeEnv (TypeEnv env) = show $ Map.toList env

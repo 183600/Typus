@@ -1,6 +1,7 @@
 module Test.Unit.OwnershipSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit ( (@?=), assertBool, testCase )
 
 import Ownership (OwnershipError(..), analyzeOwnership)
@@ -35,7 +36,7 @@ tests =
               ]
             errors = analyzeOwnership source
         assertBool ("expected at least one ownership error, got: " <> show errors) (not (null errors))
-        let hasUseAfterMove = any (\e -> case e of UseAfterMove v -> v == "data"; _ -> False) errors
+        let hasUseAfterMove = L.any (\e -> case e of UseAfterMove v -> v == "data"; _ -> False) errors
         assertBool ("expected UseAfterMove error for 'data', got: " <> show errors) hasUseAfterMove
 
     , testCase "detects borrow while mutable borrow is active" $ do
@@ -155,7 +156,7 @@ tests =
               ]
         analyzeOwnership source @?= []
 
-    , testCase "mutex locking and unlocking are treated as safe usages" $ do
+    , testCase "mutex locking L.and unlocking are treated as safe usages" $ do
         let source = unlines
               [ "package main"
               , ""
@@ -345,8 +346,8 @@ tests =
               , ""
               , "func main() {"
               , "    data := \"payload\""
-              , "    length := len(data)"
-              , "    println(length)"
+              , "    L.length := len(data)"
+              , "    println(L.length)"
               , "    println(data)"
               , "}"
               ]

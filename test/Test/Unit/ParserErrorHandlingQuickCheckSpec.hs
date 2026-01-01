@@ -20,6 +20,8 @@ import qualified Data.List as L
 import Data.Char (isSpace, isAlpha, isDigit, isPunctuation)
 import Data.Maybe (isJust, isNothing, catMaybes)
 import Control.Monad (foldM)
+import qualified Data.List as L
+import Data.List (isInfixOf)
 
 import SourceLocation
 import Utils
@@ -107,32 +109,32 @@ tests =
 
 prop_unbalanced_brackets_detected :: String -> Property
 prop_unbalanced_brackets_detected input =
-  let openCount = length (filter (`elem` "({[") input)
-      closeCount = length (filter (`elem` ")}]") input)
+  let openCount = L.length (L.filter (`elem` "({[") input)
+      closeCount = L.length (L.filter (`elem` ")}]") input)
       isUnbalanced = openCount /= closeCount
   in classify isUnbalanced "has unbalanced brackets" $
      property $ isUnbalanced ==> isUnbalanced
 
 prop_unclosed_strings_detected :: String -> Property
 prop_unclosed_strings_detected input =
-  let quoteCount = length (filter (== '"') input)
+  let quoteCount = L.length (L.filter (== '"') input)
       hasOddQuotes = odd quoteCount
-      hasEscapedQuotes = "\\\"" `L.isInfixOf` input
+      hasEscapedQuotes = "\\\"" `L.L.isInfixOf` input
   in classify hasOddQuotes "has odd quote count" $
      property $ hasOddQuotes && not hasEscapedQuotes ==> hasOddQuotes
 
 prop_invalid_characters_reported :: String -> Property
 prop_invalid_characters_reported input =
-  let invalidChars = filter (\c -> not (isPrint c) && not (isSpace c)) input
+  let invalidChars = L.filter (\c -> not (isPrint c) && not (isSpace c)) input
       hasInvalid = not (null invalidChars)
   in classify hasInvalid "has invalid characters" $
-     property $ hasInvalid ==> length invalidChars > 0
+     property $ hasInvalid ==> L.length invalidChars > 0
 
 prop_malformed_numbers_detected :: String -> Property
 prop_malformed_numbers_detected input =
-  let hasDigits = any isDigit input
+  let hasDigits = L.any isDigit input
       malformedPatterns = ["123.", ".abc", "1.2.3", "0xGZ"]
-      hasMalformed = any (`L.isInfixOf` input) malformedPatterns
+      hasMalformed = L.any (`L.L.isInfixOf` input) malformedPatterns
   in classify hasMalformed "has malformed numbers" $
      property $ hasDigits && hasMalformed ==> hasMalformed
 
@@ -148,7 +150,7 @@ prop_incomplete_statements_flagged input =
 
 prop_error_positions_within_bounds :: String -> Property
 prop_error_positions_within_bounds input =
-  let inputLength = length input
+  let inputLength = L.length input
       errorPos = if null input then 1 else min inputLength (max 1 (inputLength `div` 2))
   in property $ errorPos >= 1 .&&. errorPos <= inputLength
 
@@ -157,11 +159,11 @@ prop_error_locations_point_to_errors input =
   let errorIndices = findIndices (\c -> c `elem` ")}]") input
       hasErrors = not (null errorIndices)
   in classify hasErrors "has detectable errors" $
-     property $ hasErrors ==> all (\i -> i >= 0 && i < length input) errorIndices
+     property $ hasErrors ==> L.all (\i -> i >= 0 && i < L.length input) errorIndices
 
 prop_multiline_errors_correct_spans :: String -> Property
 prop_multiline_errors_correct_spans input =
-  let lineCount = length (lines input)
+  let lineCount = L.length (lines input)
       hasMultipleLines = lineCount > 1
   in classify hasMultipleLines "has multiple lines" $
      property $ hasMultipleLines ==> lineCount >= 2
@@ -170,58 +172,73 @@ prop_error_locations_monotonic :: [Int] -> Property
 prop_error_locations_monotonic positions =
   not (null positions) ==>
   let sortedPositions = L.sort positions
-      isMonotonic = all (uncurry (<=)) (zip sortedPositions (tail sortedPositions))
+      isMonotonic = L.all (uncurry (<=)) (zip sortedPositions (L.tail sortedPositions))
   in property $ isMonotonic
 
 prop_error_recovery_preserves_context :: String -> String -> Property
 prop_error_recovery_preserves_context before after =
   let original = before ++ " ERROR " ++ after
       recovered = before ++ " RECOVERED " ++ after
-  in property $ length recovered >= length before + length after
+  in property $ L.length recovered >= L.length before + L.length after
 
 -- Error recovery properties
 
 prop_error_recovery_makes_progress :: String -> Property
 prop_error_recovery_makes_progress input =
-  let inputLength = length input
+  let inputLength = L.length input
       recoveryProgress = min inputLength (max 1 (inputLength `div` 10))
   in property $ recoveryProgress > 0 .&&. recoveryProgress <= inputLength
 
 prop_recovery_no_new_errors :: String -> Property
 prop_recovery_no_new_errors input =
-  let originalErrors = length (filter (`elem` ")}]") input)
-      recoveredInput = replace "ERROR" "FIXED" input
-      newErrors = length (filter (`elem` ")}]") recoveredInput)
+  let originalErrors = L.length (L.filter (`elem` ")}]") input)
+      replaceStr old new [] = []
+      replaceStr old new (x:xs) = 
+        if take (L.length old) (x:xs) == old
+        then new ++ drop (L.length old) (x:xs)
+        else x : replaceStr old new xs
+      recoveredInput = replaceStr "ERROR" "FIXED" input
+      newErrors = L.length (L.filter (`elem` ")}]") recoveredInput)
   in property $ newErrors <= originalErrors + 5 -- Allow some tolerance
 
 prop_recovery_preserves_valid_tokens :: String -> Property
 prop_recovery_preserves_valid_tokens input =
-  let validTokens = length (filter isAlpha input)
-      recoveredInput = replace "INVALID" "VALID" input
-      preservedTokens = length (filter isAlpha recoveredInput)
+  let validTokens = L.length (filter isAlpha input)
+      replaceStr old new [] = []
+      replaceStr old new (x:xs) = 
+        if take (L.length old) (x:xs) == old
+        then new ++ drop (L.length old) (x:xs)
+        else x : replaceStr old new xs
+      recoveredInput = replaceStr "INVALID" "VALID" input
+      preservedTokens = L.length (filter isAlpha recoveredInput)
   in property $ preservedTokens >= validTokens - 2
 
 prop_recovery_handles_cascading :: String -> Property
 prop_recovery_handles_cascading input =
-  let errorCount = length (filter (`elem` "ERROR") (words input))
+  let errorCount = L.length (L.filter (`elem` "ERROR") (words input))
       hasCascading = errorCount > 1
   in classify hasCascading "has cascading errors" $
      property $ hasCascading ==> errorCount >= 2
 
 prop_recovery_maintains_state :: String -> Property
 prop_recovery_maintains_state input =
-  let stateBefore = length input
-      recoveredState = length (replace "ERROR" "FIXED" input)
+  let stateBefore = L.length input
+      replaceStr old new [] = []
+      replaceStr old new (x:xs) = 
+        if take (L.length old) (x:xs) == old
+        then new ++ drop (L.length old) (x:xs)
+        else x : replaceStr old new xs
+      recoveredState = L.length (replaceStr "ERROR" "FIXED" input)
   in property $ abs (recoveredState - stateBefore) <= stateBefore `div` 2
 
 -- Error message quality
 
 prop_error_messages_contain_location :: String -> Property
 prop_error_messages_contain_location input =
-  let lineNum = length (lines input)
-      colNum = if null input then 0 else length (head (lines input))
+  let lineNum = L.length (lines input)
+      colNum = if null input then 0 else L.length (L.head (lines input))
       errorMessage = "Error at line " ++ show lineNum ++ ", column " ++ show colNum
-  in property $ "line" `L.isInfixOf` errorMessage .&&. "column" `L.isInfixOf` errorMessage
+  in property $ "line" `L.L.isInfixOf` errorMessage .&&. "column" `L.L.isInfixOf` errorMessage
 
 prop_error_messages_suggest_fixes :: String -> Property
 prop_error_messages_suggest_fixes input =
@@ -229,59 +246,59 @@ prop_error_messages_suggest_fixes input =
       suggestion = if hasUnmatchedBrace 
                    then "Add missing closing brace '}'"
                    else "Check syntax"
-  in property $ length suggestion > 0
+  in property $ L.length suggestion > 0
 
 prop_error_messages_not_verbose :: String -> Property
 prop_error_messages_not_verbose input =
   let errorMessage = "Syntax error: unexpected token"
-      messageLength = length errorMessage
+      messageLength = L.length errorMessage
   in property $ messageLength <= 100
 
 prop_error_messages_contextual :: String -> Property
 prop_error_messages_contextual input =
-  let hasNumberError = any isDigit input && any (not . isDigit) input
+  let hasNumberError = L.any isDigit input && L.any (not . isDigit) input
       contextMessage = if hasNumberError
                        then "Invalid number format"
                        else "Syntax error"
-  in property $ length contextMessage > 0
+  in property $ L.length contextMessage > 0
 
 prop_error_messages_avoid_jargon :: String -> Property
 prop_error_messages_avoid_jargon input =
   let technicalTerms = ["AST", "lexer", "parser", "tokenization"]
       simpleMessage = "Found a problem in the code structure"
-      hasJargon = any (`L.isInfixOf` simpleMessage) technicalTerms
+      hasJargon = L.any (`L.L.isInfixOf` simpleMessage) technicalTerms
   in property $ not hasJargon
 
 -- Error propagation
 
 prop_errors_propagate_correctly :: String -> Property
 prop_errors_propagate_correctly input =
-  let errorCount = length (filter (`elem` "ERROR") (words input))
+  let errorCount = L.length (L.filter (`elem` "ERROR") (words input))
       propagatedErrors = min errorCount 10
   in property $ propagatedErrors <= errorCount
 
 prop_child_errors_not_obscure :: String -> Property
 prop_child_errors_not_obscure input =
-  let parentErrors = length (filter (== "PARENT_ERROR") (words input))
-      childErrors = length (filter (== "CHILD_ERROR") (words input))
+  let parentErrors = L.length (L.filter (== "PARENT_ERROR") (words input))
+      childErrors = L.length (L.filter (== "CHILD_ERROR") (words input))
   in property $ parentErrors >= 0 .&&. childErrors >= 0
 
 prop_error_context_preserved :: String -> Property
 prop_error_context_preserved input =
-  let contextSize = min 50 (length input)
+  let contextSize = min 50 (L.length input)
       hasContext = contextSize > 0
   in property $ hasContext ==> contextSize > 0
 
 prop_error_severity_escalated :: [Int] -> Property
 prop_error_severity_escalated severities =
-  let maxSeverity = if null severities then 0 else maximum severities
+  let maxSeverity = if null severities then 0 else L.maximum severities
       escalatedSeverity = min (maxSeverity + 1) 10
   in property $ escalatedSeverity >= maxSeverity
 
 prop_error_chains_maintained :: String -> Property
 prop_error_chains_maintained input =
   let errorChain = L.intercalate " -> " (replicate 3 "error")
-      hasChain = " -> " `L.isInfixOf` errorChain
+      hasChain = " -> " `L.L.isInfixOf` errorChain
   in property $ hasChain
 
 -- Robustness properties
@@ -289,27 +306,27 @@ prop_error_chains_maintained input =
 prop_parser_handles_empty_input :: Property
 prop_parser_handles_empty_input =
   let emptyInput = ""
-      result = length emptyInput
+      result = L.length emptyInput
   in property $ result == 0
 
 prop_parser_handles_long_tokens :: Int -> Property
-prop_parser_handles_long_tokens length =
-  length >= 0 && length <= 1000 ==>
-  let longToken = replicate length 'a'
-      result = length longToken
-  in property $ result == length
+prop_parser_handles_long_tokens L.length =
+  L.length >= 0 && L.length <= 1000 ==>
+  let longToken = replicate L.length 'a'
+      result = L.length longToken
+  in property $ result == L.length
 
 prop_parser_handles_unicode :: String -> Property
 prop_parser_handles_unicode input =
   let unicodeInput = input ++ "测试🚀"
-      hasUnicode = any (> '\127') unicodeInput
+      hasUnicode = L.any (> '\127') unicodeInput
   in classify hasUnicode "has unicode characters" $
-     property $ length unicodeInput >= length input
+     property $ L.length unicodeInput >= L.length input
 
 prop_parser_handles_mixed_endings :: String -> Property
 prop_parser_handles_mixed_endings input =
   let mixedEndings = input ++ "\r\n" ++ input ++ "\n" ++ input ++ "\r"
-      lineCount = length (lines mixedEndings)
+      lineCount = L.length (lines mixedEndings)
   in property $ lineCount >= 3
 
 prop_parser_handles_null_bytes :: String -> Property
@@ -317,82 +334,82 @@ prop_parser_handles_null_bytes input =
   let withNull = input ++ "\0" ++ input
       hasNull = '\0' `elem` withNull
   in classify hasNull "has null bytes" $
-     property $ length withNull >= length input * 2 - 1
+     property $ L.length withNull >= L.length input * 2 - 1
 
 -- Performance under errors
 
 prop_error_detection_linear :: String -> Property
 prop_error_detection_linear input =
-  let inputLength = length input
+  let inputLength = L.length input
       detectionSteps = inputLength -- Simplified linear detection
   in property $ detectionSteps <= inputLength * 2
 
 prop_error_recovery_bounded :: String -> Property
 prop_error_recovery_bounded input =
-  let inputLength = length input
+  let inputLength = L.length input
       recoverySteps = min inputLength (inputLength `div` 10)
   in property $ recoverySteps <= inputLength
 
 prop_multiple_errors_bounded :: String -> Property
 prop_multiple_errors_bounded input =
-  let errorCount = length (filter (`elem` "ERROR") (words input))
+  let errorCount = L.length (L.filter (`elem` "ERROR") (words input))
       boundedProcessing = errorCount * 10
-  in property $ boundedProcessing <= length input * 5
+  in property $ boundedProcessing <= L.length input * 5
 
 prop_error_reporting_efficient :: String -> Property
 prop_error_reporting_efficient input =
-  let errorCount = length (filter (`elem` "error") (words input))
+  let errorCount = L.length (L.filter (`elem` "error") (words input))
       reportSize = errorCount * 100 -- Simplified report size
-  in property $ reportSize <= length input * 10
+  in property $ reportSize <= L.length input * 10
 
 -- Edge case handling
 
 prop_parser_handles_whitespace_only :: Property
 prop_parser_handles_whitespace_only =
   let whitespaceOnly = "   \t\n\r   "
-      isWhitespace = all isSpace whitespaceOnly
+      isWhitespace = L.all isSpace whitespaceOnly
   in property $ isWhitespace
 
 prop_parser_handles_punctuation_only :: Property
 prop_parser_handles_punctuation_only =
   let punctuationOnly = "!@#$%^&*()_+-=[]{}|;':\",./<>?"
-      isPunctuation = all isPunctuation punctuationOnly
+      isPunctuation = L.all isPunctuation punctuationOnly
   in property $ isPunctuation
 
 prop_parser_handles_nested :: Int -> Property
 prop_parser_handles_nested depth =
   depth >= 0 && depth <= 10 ==>
-  let nestedInput = concat (replicate depth "(") ++ "content" ++ concat (replicate depth ")")
+  let nestedInput = L.concat (replicate depth "(") ++ "content" ++ L.concat (replicate depth ")")
       balancedDepth = depth
   in property $ balancedDepth >= 0
 
 prop_parser_handles_ambiguous :: String -> Property
 prop_parser_handles_ambiguous input =
   let ambiguousPatterns = ["if then", "do while", "for each"]
-      isAmbiguous = any (`L.isInfixOf` input) ambiguousPatterns
+      isAmbiguous = L.any (`L.L.isInfixOf` input) ambiguousPatterns
   in classify isAmbiguous "has ambiguous patterns" $
-     property $ isAmbiguous ==> length input > 0
+     property $ isAmbiguous ==> L.length input > 0
 
 prop_parser_handles_incomplete_unicode :: String -> Property
 prop_parser_handles_incomplete_unicode input =
   let incompleteUnicode = input ++ "\xE2" -- Incomplete UTF-8 sequence
-      hasIncomplete = any (> '\127') incompleteUnicode
+      hasIncomplete = L.any (> '\127') incompleteUnicode
   in classify hasIncomplete "has incomplete unicode" $
-     property $ length incompleteUnicode >= length input
+     property $ L.length incompleteUnicode >= L.length input
 
 -- Error classification
 
 prop_syntax_errors_classified :: String -> Property
 prop_syntax_errors_classified input =
   let syntaxErrorPatterns = [";;", "if)", "(}", "]["]
-      hasSyntaxError = any (`L.isInfixOf` input) syntaxErrorPatterns
+      hasSyntaxError = L.any (`L.L.isInfixOf` input) syntaxErrorPatterns
   in classify hasSyntaxError "has syntax errors" $
-     property $ hasSyntaxError ==> length input > 0
+     property $ hasSyntaxError ==> L.length input > 0
 
 prop_lexical_syntax_distinction :: String -> Property
 prop_lexical_syntax_distinction input =
-  let lexicalErrors = filter (\c -> not (isPrint c) && not (isSpace c)) input
-      syntaxErrors = filter (`elem` ")}]") input
+  let lexicalErrors = L.filter (\c -> not (isPrint c) && not (isSpace c)) input
+      syntaxErrors = L.filter (`elem` ")}]") input
       hasLexical = not (null lexicalErrors)
       hasSyntax = not (null syntaxErrors)
   in classify (hasLexical && hasSyntax) "has both error types" $
@@ -401,29 +418,29 @@ prop_lexical_syntax_distinction input =
 prop_semantic_errors_detected :: String -> Property
 prop_semantic_errors_detected input =
   let semanticPatterns = ["undefined variable", "type mismatch", "function not found"]
-      hasSemanticError = any (`L.isInfixOf` input) semanticPatterns
+      hasSemanticError = L.any (`L.L.isInfixOf` input) semanticPatterns
   in classify hasSemanticError "has semantic errors" $
-     property $ hasSemanticError ==> length input > 0
+     property $ hasSemanticError ==> L.length input > 0
 
 prop_warning_levels_appropriate :: [Int] -> Property
 prop_warning_levels_appropriate levels =
-  let validLevels = all (\l -> l >= 1 && l <= 5) levels
+  let validLevels = L.all (\l -> l >= 1 && l <= 5) levels
   in classify validLevels "has valid warning levels" $
      property $ validLevels ==> not (null levels)
 
 prop_error_categories_exclusive :: String -> Property
 prop_error_categories_exclusive input =
   let syntaxErrors = '}' `elem` input
-      lexicalErrors = any (\c -> not (isPrint c) && not (isSpace c)) input
-      semanticErrors = "undefined" `L.isInfixOf` input
+      lexicalErrors = L.any (\c -> not (isPrint c) && not (isSpace c)) input
+      semanticErrors = "undefined" `L.L.isInfixOf` input
       categories = [syntaxErrors, lexicalErrors, semanticErrors]
-      trueCount = length (filter id categories)
+      trueCount = L.length (filter id categories)
   in property $ trueCount <= 3 -- Can have multiple categories but not more than available
 
 -- Helper functions
 
 findIndices :: (a -> Bool) -> [a] -> [Int]
-findIndices p = map fst . filter (p . snd) . zip [0..]
+findIndices p = map fst . L.filter (p . snd) . zip [0..]
 
 replace :: Eq a => a -> a -> [a] -> [a]
-replace old new = map (\x -> if x == old then new else x)
+replace old new = L.map (\x -> if x == old then new else x)

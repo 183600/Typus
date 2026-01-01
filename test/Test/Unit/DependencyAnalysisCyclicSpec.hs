@@ -23,7 +23,9 @@ import Utils
 
 import Data.Char (isSpace, isLetter, isDigit)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, isInfixOf, intercalate, nub, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (intercalate, nub, sort)
 import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -67,7 +69,7 @@ tests =
         , testCase "Cycle detection benchmark" test_cycle_detection_benchmark
         ]
     
-    , testGroup "Edge Cases and Error Handling"
+    , testGroup "Edge Cases L.and Error Handling"
         [ fastProperty "Cycle detection with malformed dependencies" prop_malformed_cycle_detection
         , fastProperty "Cycle detection with missing nodes" prop_missing_node_cycles
         , fastProperty "Cycle detection with duplicate dependencies" prop_duplicate_dependency_cycles
@@ -104,7 +106,7 @@ prop_self_dependency node =
 -- Property: Multiple cycles in same graph
 prop_multiple_cycles :: [String] -> Property
 prop_multiple_cycles nodes =
-  not (null nodes) && length nodes >= 4 && length nodes <= 10 ==>
+  not (null nodes) && L.length nodes >= 4 && L.length nodes <= 10 ==>
   let dependencies = createMultipleCycles nodes
       cycleCount = countCycles dependencies
   in property $ cycleCount >= 2
@@ -129,7 +131,7 @@ prop_conditional_cycles node1 node2 =
 -- Property: Cycle breaking strategies
 prop_cycle_breaking_strategies :: [String] -> Property
 prop_cycle_breaking_strategies nodes =
-  not (null nodes) && length nodes >= 3 && length nodes <= 8 ==>
+  not (null nodes) && L.length nodes >= 3 && L.length nodes <= 8 ==>
   let dependencies = createCycle nodes
       brokenDependencies = breakCycle dependencies
       hasNoCycle = not (detectCycles brokenDependencies)
@@ -138,17 +140,17 @@ prop_cycle_breaking_strategies nodes =
 -- Property: Cycle resolution with minimal changes
 prop_minimal_cycle_resolution :: [String] -> Property
 prop_minimal_cycle_resolution nodes =
-  not (null nodes) && length nodes >= 3 && length nodes <= 8 ==>
+  not (null nodes) && L.length nodes >= 3 && L.length nodes <= 8 ==>
   let dependencies = createCycle nodes
       resolvedDependencies = resolveCycleMinimally dependencies
-      originalCount = length dependencies
-      resolvedCount = length resolvedDependencies
+      originalCount = L.length dependencies
+      resolvedCount = L.length resolvedDependencies
   in property $ resolvedCount <= originalCount + 2
 
 -- Property: Cycle resolution preserves functionality
 prop_resolution_preserves_functionality :: [String] -> Property
 prop_resolution_preserves_functionality nodes =
-  not (null nodes) && length nodes >= 3 && length nodes <= 8 ==>
+  not (null nodes) && L.length nodes >= 3 && L.length nodes <= 8 ==>
   let dependencies = createCycle nodes
       resolvedDependencies = resolveCycle dependencies
       functionalityPreserved = checkFunctionalityPreserved dependencies resolvedDependencies
@@ -193,7 +195,7 @@ prop_malformed_cycle_detection malformedInput =
 prop_missing_node_cycles :: [String] -> String -> Property
 prop_missing_node_cycles existingNodes missingNode =
   not (null existingNodes) && not (missingNode `elem` existingNodes) ==>
-  let dependencies = [(head existingNodes, [missingNode]), (missingNode, [last existingNodes])]
+  let dependencies = [(L.head existingNodes, [missingNode]), (missingNode, [last existingNodes])]
       handlesMissing = detectCyclesWithMissingNodes dependencies
   in property $ handlesMissing
 
@@ -229,7 +231,7 @@ test_nested_circular_dependencies = do
         , ("inner2", ["inner1", "outer"])
         ]
       cycles = findCycles dependencies
-      hasMultipleCycles = length cycles >= 2
+      hasMultipleCycles = L.length cycles >= 2
   hasMultipleCycles @?= True
 
 test_cross_module_cycles :: IO ()
@@ -241,7 +243,7 @@ test_cross_module_cycles = do
         , ("pkg2::mod2", ["pkg1::mod1"])
         ]
       cycles = findCycles dependencies
-      hasCrossPackageCycle = any (hasCrossPackage dependencies) cycles
+      hasCrossPackageCycle = L.any (hasCrossPackage dependencies) cycles
   hasCrossPackageCycle @?= True
 
 test_lazy_dependency_introduction :: IO ()
@@ -277,7 +279,7 @@ test_cycle_detection_benchmark = do
         , createComplexCyclicGraph 50 -- Complex graph
         ]
       results = map benchmarkCycleDetection benchmarkCases
-      allPerformant = all (< 1000000) results
+      allPerformant = L.all (< 1000000) results
   allPerformant @?= True
 
 test_cycle_detection_recovery :: IO ()
@@ -291,8 +293,8 @@ test_cycle_reporting_accuracy :: IO ()
 test_cycle_reporting_accuracy = do
   let dependencies = [("A", ["B"]), ("B", ["C"]), ("C", ["A"]), ("D", ["E"])]
       cycleReport = generateCycleReport dependencies
-      reportsCycle = "A -> B -> C -> A" `isInfixOf` cycleReport
-      excludesAcyclic = not ("D -> E" `isInfixOf` cycleReport)
+      reportsCycle = "A -> B -> C -> A" `L.isInfixOf` cycleReport
+      excludesAcyclic = not ("D -> E" `L.isInfixOf` cycleReport)
   reportsCycle @?= True
   excludesAcyclic @?= True
 
@@ -300,7 +302,7 @@ test_cycle_reporting_accuracy = do
 
 -- Basic cycle detection functions
 detectCycles :: [(String, [String])] -> Bool
-detectCycles dependencies = not (null (findCycles dependencies)) -- Placeholder
+detectCycles dependencies = not (L.null (findCycles dependencies)) -- Placeholder
 
 findCycles :: [(String, [String])] -> [[String]]
 findCycles _ = [["A", "B"]] -- Placeholder
@@ -322,18 +324,18 @@ detectIncrementalCycles _ _ = True -- Placeholder
 
 -- Graph creation functions
 createMultipleCycles :: [String] -> [(String, [String])]
-createMultipleCycles nodes = zip nodes (tail nodes ++ [head nodes]) -- Placeholder
+createMultipleCycles nodes = zip nodes (L.tail nodes ++ [L.head nodes]) -- Placeholder
 
 createLargeGraphWithCycle :: [String] -> [(String, [String])]
 createLargeGraphWithCycle nodes = 
-  let n = length nodes
-  in zip nodes (take n (tail nodes ++ [head nodes])) -- Placeholder
+  let n = L.length nodes
+  in zip nodes (take n (L.tail nodes ++ [L.head nodes])) -- Placeholder
 
 createCycle :: [String] -> [(String, [String])]
-createCycle nodes = zip nodes (tail nodes ++ [head nodes]) -- Placeholder
+createCycle nodes = zip nodes (L.tail nodes ++ [L.head nodes]) -- Placeholder
 
 createAcyclicGraph :: [String] -> [(String, [String])]
-createAcyclicGraph nodes = zip (init nodes) (tail nodes) -- Placeholder
+createAcyclicGraph nodes = zip (init nodes) (L.tail nodes) -- Placeholder
 
 createCyclicGraph :: [String] -> [(String, [String])]
 createCyclicGraph nodes = createCycle nodes -- Placeholder
@@ -348,9 +350,9 @@ createComplexCyclicGraph nodeCount =
 
 createGraphWithPotentialCycle :: [String] -> [(String, [String])]
 createGraphWithPotentialCycle nodes = 
-  let n = length nodes
-  in if n >= 3 then zip (init nodes) (tail nodes) ++ [(last nodes, [head nodes])]
-     else zip (init nodes) (tail nodes) -- Placeholder
+  let n = L.length nodes
+  in if n >= 3 then zip (init nodes) (L.tail nodes) ++ [(last nodes, [L.head nodes])]
+     else zip (init nodes) (L.tail nodes) -- Placeholder
 
 -- Cycle resolution functions
 breakCycle :: [(String, [String])] -> [(String, [String])]
@@ -364,7 +366,7 @@ resolveCycle dependencies = breakCycle dependencies -- Placeholder
 
 introduceLazyDependencies :: [(String, [String])] -> [(String, [String])]
 introduceLazyDependencies dependencies = 
-  map (\(node, deps) -> (node, map Lazy deps)) dependencies -- Placeholder
+  L.map (\(node, deps) -> (node, map Lazy deps)) dependencies -- Placeholder
 
 extractInterfacesForCycle :: [(String, [String])] -> [String]
 extractInterfacesForCycle _ = ["InterfaceA", "InterfaceB"] -- Placeholder
@@ -372,15 +374,15 @@ extractInterfacesForCycle _ = ["InterfaceA", "InterfaceB"] -- Placeholder
 -- Utility functions
 addDependency :: [(String, [String])] -> String -> String -> [(String, [String])]
 addDependency dependencies from to = 
-  map (\(node, deps) -> if node == from then (node, deps ++ [to]) else (node, deps)) dependencies -- Placeholder
+  L.map (\(node, deps) -> if node == from then (node, deps ++ [to]) else (node, deps)) dependencies -- Placeholder
 
 countCycles :: [(String, [String])] -> Int
-countCycles dependencies = length (findCycles dependencies) -- Placeholder
+countCycles dependencies = L.length (findCycles dependencies) -- Placeholder
 
 hasCrossPackage :: [(String, [String])] -> [String] -> Bool
 hasCrossPackage dependencies cycle = 
   let nodesInCycle = Set.fromList cycle
-      hasPkgSeparator = any (\node -> "::" `isInfixOf` node) cycle
+      hasPkgSeparator = L.any (\node -> "::" `L.isInfixOf` node) cycle
   in hasPkgSeparator -- Placeholder
 
 checkFunctionalityPreserved :: [(String, [String])] -> [(String, [String])] -> Bool
@@ -391,12 +393,12 @@ measureCycleDetectionTime :: [(String, [String])] -> Int
 measureCycleDetectionTime _ = 500 -- Placeholder
 
 measureCycleMemoryUsage :: [(String, [String])] -> Int
-measureCycleMemoryUsage dependencies = length dependencies * 100 -- Placeholder
+measureCycleMemoryUsage dependencies = L.length dependencies * 100 -- Placeholder
 
 benchmarkCycleDetection :: [(String, [String])] -> Int
 benchmarkCycleDetection dependencies = measureCycleDetectionTime dependencies -- Placeholder
 
--- Error handling and reporting functions
+-- Error handling L.and reporting functions
 parseMalformedDependencies :: String -> [(String, [String])]
 parseMalformedDependencies _ = [("A", ["B"])] -- Placeholder
 

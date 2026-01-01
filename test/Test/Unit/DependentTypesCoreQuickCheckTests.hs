@@ -4,6 +4,7 @@
 module Test.Unit.DependentTypesCoreQuickCheckTests (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperties, (===), Property, forAll, Gen, Arbitrary(..), oneof, elements, listOf, listOf1, resize, suchThat)
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
 
@@ -28,7 +29,8 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.List (sort, length)
+import Data.List (length)
+import Data.List (sort)
 
 -- ============================================================================
 -- Arbitrary Instances
@@ -112,9 +114,9 @@ prop_typeRef_show_contains_name :: TypeRef -> Bool
 prop_typeRef_show_contains_name tr = 
     let showStr = show tr
         name = trName tr
-    in name `isInfixOf` showStr
+    in name `L.isInfixOf` showStr
   where
-    isInfixOf needle haystack = needle `Data.List.isInfixOf` haystack
+    isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
 
 -- | Field: equality should be reflexive
 prop_field_reflexive :: Field -> Bool
@@ -125,9 +127,9 @@ prop_field_show_contains_name :: Field -> Bool
 prop_field_show_contains_name f = 
     let showStr = show f
         name = fName f
-    in name `isInfixOf` showStr
+    in name `L.isInfixOf` showStr
   where
-    isInfixOf needle haystack = needle `Data.List.isInfixOf` haystack
+    isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
 
 -- | TypeParameter: equality should be reflexive
 prop_typeParameter_reflexive :: TypeParameter -> Bool
@@ -146,9 +148,9 @@ prop_dependentType_show_contains_name :: DependentType -> Bool
 prop_dependentType_show_contains_name dt = 
     let showStr = show dt
         name = dtName dt
-    in name `isInfixOf` showStr
+    in name `L.isInfixOf` showStr
   where
-    isInfixOf needle haystack = needle `Data.List.isInfixOf` haystack
+    isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
 
 -- | DependentTypeError: equality should be reflexive
 prop_dependentTypeError_reflexive :: DependentTypeError -> Bool
@@ -232,7 +234,7 @@ prop_runDependentTypesParser_empty =
 -- | parseDependentType: parsing simple type should not crash
 prop_parseDependentType_no_crash :: String -> Property
 prop_parseDependentType_no_crash input = 
-    let simpleInput = take 20 $ filter (\c -> isAlphaNum c || c `elem` "_[]{}()") input
+    let simpleInput = take 20 $ L.filter (\c -> isAlphaNum c || c `elem` "_[]{}()") input
     in not (null simpleInput) ==> 
        case parseDependentType simpleInput of
          Right _ -> True
@@ -252,9 +254,9 @@ prop_validateDependentTypeSyntax_no_crash input =
 prop_typeRef_param_count :: String -> [TypeRef] -> Bool
 prop_typeRef_param_count name params = 
     let typeRef = TypeRef name params
-    in length (trParams typeRef) == length params
+    in L.length (trParams typeRef) == L.length params
 
--- | Field: field should preserve name and type
+-- | Field: field should preserve name L.and type
 prop_field_preserves_components :: String -> TypeRef -> Bool
 prop_field_preserves_components name fieldType = 
     let field = Field name fieldType

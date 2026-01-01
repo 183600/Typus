@@ -10,6 +10,7 @@
 module Test.Unit.ErrorHandlerCorePropertiesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertBool, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Positive(Positive), getPositive)
@@ -37,30 +38,11 @@ import Compiler.Errors.Core
   , formatErrors
   , canRecoverFrom
   , shouldContinueAfter
-  , errorAt
-  , warningAt
-  , infoAt
-  , errorWithCategory
-  , warningWithCategory
-  , infoWithCategory
-  , fatalError
-  , fatalErrorWithCategory
-  , combineErrors
-  , combinedErrorSeverity
-  , filterBySeverity
-  , filterByCategory
-  , hasCategory
-  , severityPriority
-  , isAtLeast
-  , createRecoveryStrategy
-  , customRecovery
-  , fatalRecovery
-  , errorRecovery
-  , warningRecovery
   , infoRecovery
   )
 
-import Data.List (sort, length)
+import Data.List (length)
+import Data.List (sort)
 import Data.Text (Text)
 import qualified Data.Text as T
 
@@ -80,11 +62,11 @@ prop_isAtLeast_transitive :: ErrorSeverity -> ErrorSeverity -> ErrorSeverity -> 
 prop_isAtLeast_transitive s1 s2 s3 =
   isAtLeast s1 s2 .&&. isAtLeast s2 s3 ==> isAtLeast s1 s3
 
--- Property: Fatal is at least all other severities
+-- Property: Fatal is at least L.all other severities
 prop_fatal_is_at_least_all :: ErrorSeverity -> Property
 prop_fatal_is_at_least_all severity = isAtLeast Fatal severity === True
 
--- Property: Info is not at least any higher severity
+-- Property: Info is not at least L.any higher severity
 prop_info_is_not_at_least_higher :: ErrorSeverity -> Property
 prop_info_is_not_at_least_higher severity =
   severity /= Info ==> isAtLeast Info severity === False
@@ -113,7 +95,7 @@ prop_add_warning_makes_has_warnings_true msg =
   let collector = addWarning msg newErrorCollector
   in hasWarnings collector === True
 
--- Property: adding info doesn't make hasErrors or hasWarnings true
+-- Property: adding info doesn't make hasErrors L.or hasWarnings true
 prop_add_info_no_errors_warnings :: String -> Property
 prop_add_info_no_errors_warnings msg =
   not (null msg) ==> 
@@ -126,7 +108,7 @@ prop_get_errors_returns_only_errors errorMsg warningMsg infoMsg =
   not (null errorMsg && null warningMsg && null infoMsg) ==>
   let collector = addError errorMsg $ addWarning warningMsg $ addInfo infoMsg newErrorCollector
       errors = getErrors collector
-  in all ("Error" `T.isPrefixOf`) errors === True
+  in L.all ("Error" `T.L.isPrefixOf`) errors === True
 
 -- Property: getWarnings returns only warnings
 prop_get_warnings_returns_only_warnings :: String -> String -> String -> Property
@@ -134,7 +116,7 @@ prop_get_warnings_returns_only_warnings errorMsg warningMsg infoMsg =
   not (null errorMsg && null warningMsg && null infoMsg) ==>
   let collector = addError errorMsg $ addWarning warningMsg $ addInfo infoMsg newErrorCollector
       warnings = getWarnings collector
-  in all ("Warning" `T.isPrefixOf`) warnings === True
+  in L.all ("Warning" `T.L.isPrefixOf`) warnings === True
 
 -- Property: getInfo returns only info
 prop_get_info_returns_only_info :: String -> String -> String -> Property
@@ -142,9 +124,9 @@ prop_get_info_returns_only_info errorMsg warningMsg infoMsg =
   not (null errorMsg && null warningMsg && null infoMsg) ==>
   let collector = addError errorMsg $ addWarning warningMsg $ addInfo infoMsg newErrorCollector
       infos = getInfo collector
-  in all ("Info" `T.isPrefixOf`) infos === True
+  in L.all ("Info" `T.L.isPrefixOf`) infos === True
 
--- Property: getAllMessages returns all messages
+-- Property: getAllMessages returns L.all messages
 prop_get_all_messages_count :: String -> String -> String -> Property
 prop_get_all_messages_count errorMsg warningMsg infoMsg =
   not (null errorMsg && null warningMsg && null infoMsg) ==>
@@ -153,13 +135,13 @@ prop_get_all_messages_count errorMsg warningMsg infoMsg =
       errorCount = if null errorMsg then 0 else 1
       warningCount = if null warningMsg then 0 else 1
       infoCount = if null infoMsg then 0 else 1
-  in length allMessages === errorCount + warningCount + infoCount
+  in L.length allMessages === errorCount + warningCount + infoCount
 
 -- Property: filterBySeverity preserves ordering
 prop_filter_by_severity_preserves_ordering :: [ErrorSeverity] -> ErrorSeverity -> Property
 prop_filter_by_severity_preserves_ordering severities minSeverity =
   not (null severities) ==>
-  let filtered = filter (isAtLeast minSeverity) severities
+  let filtered = L.filter (isAtLeast minSeverity) severities
       sorted = sort filtered
   in filtered === sorted
 
@@ -167,13 +149,13 @@ prop_filter_by_severity_preserves_ordering severities minSeverity =
 prop_filter_by_category_works :: [(ErrorCategory, String)] -> ErrorCategory -> Property
 prop_filter_by_category_works errorPairs targetCategory =
   not (null errorPairs) ==>
-  let filtered = filter (\(cat, _) -> cat == targetCategory) errorPairs
-  in all (\(cat, _) -> cat == targetCategory) filtered === True
+  let filtered = L.filter (\(cat, _) -> cat == targetCategory) errorPairs
+  in L.all (\(cat, _) -> cat == targetCategory) filtered === True
 
 -- Property: hasCategory finds matching categories
 prop_has_category_finds_matches :: [(ErrorCategory, String)] -> ErrorCategory -> Property
 prop_has_category_finds_matches errorPairs targetCategory =
-  let hasMatch = any (\(cat, _) -> cat == targetCategory) errorPairs
+  let hasMatch = L.any (\(cat, _) -> cat == targetCategory) errorPairs
   in hasCategory errorPairs targetCategory === hasMatch
 
 -- Property: combineErrors preserves highest severity
@@ -221,13 +203,13 @@ tests =
     [ fastProperty "severity priority ordering" prop_severity_priority_ordering
     , fastProperty "isAtLeast is reflexive" prop_isAtLeast_reflexive
     , fastProperty "isAtLeast is transitive" prop_isAtLeast_transitive
-    , fastProperty "Fatal is at least all other severities" prop_fatal_is_at_least_all
-    , fastProperty "Info is not at least any higher severity" prop_info_is_not_at_least_higher
+    , fastProperty "Fatal is at least L.all other severities" prop_fatal_is_at_least_all
+    , fastProperty "Info is not at least L.any higher severity" prop_info_is_not_at_least_higher
     , fastProperty "empty context has no messages" prop_empty_context_has_no_messages
     , fastProperty "new collector has no errors" prop_new_collector_has_no_errors
     , fastProperty "adding error makes hasErrors true" prop_add_error_makes_has_errors_true
     , fastProperty "adding warning makes hasWarnings true" prop_add_warning_makes_has_warnings_true
-    , fastProperty "adding info doesn't make hasErrors or hasWarnings true" prop_add_info_no_errors_warnings
+    , fastProperty "adding info doesn't make hasErrors L.or hasWarnings true" prop_add_info_no_errors_warnings
     , fastProperty "getErrors returns only errors" prop_get_errors_returns_only_errors
     , fastProperty "getWarnings returns only warnings" prop_get_warnings_returns_only_warnings
     , fastProperty "getInfo returns only info" prop_get_info_returns_only_info

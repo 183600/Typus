@@ -25,6 +25,7 @@ import Dependencies (analyzeDependencies)
 
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Maybe (isNothing, isJust, fromMaybe, catMaybes)
 import Control.Monad (void)
@@ -70,7 +71,7 @@ tests = testGroup "Module Integration Properties"
     ]
 
   , testGroup "Multi-Module Consistency"
-    [ testCase "all modules handle unicode consistently" test_unicode_consistency_across_modules
+    [ testCase "L.all modules handle unicode consistently" test_unicode_consistency_across_modules
     , testCase "error handling consistent across modules" test_error_handling_consistency_across_modules
     , fastProperty "module state consistency" prop_module_state_consistency
     ]
@@ -106,7 +107,7 @@ test_parser_utils_integration = do
     Left err -> assertFailure $ "Parse failed: " ++ show err
     Right file -> do
       let blocks = tfBlocks file
-          processedBlocks = map (\block -> block { cbContent = removeComments (cbContent block) }) blocks
+          processedBlocks = L.map (\block -> block { cbContent = removeComments (cbContent block) }) blocks
       assertBool "Utils should work on parser output" $ not (null processedBlocks)
 
 test_parser_handles_utils :: IO ()
@@ -122,11 +123,11 @@ test_parser_handles_utils = do
   case parseResult of
     Left err -> assertFailure $ "Parse failed on processed content: " ++ show err
     Right file -> do
-      assertBool "Parser should handle utils-processed content" $ not (null (tfBlocks file))
+      assertBool "Parser should handle utils-processed content" $ not (L.null (tfBlocks file))
 
 prop_parser_utils_commutativity :: String -> Property
 prop_parser_utils_commutativity content =
-  length content <= 200 ==>
+  L.length content <= 200 ==>
   let trimmed = trim content
       commentsRemoved = removeComments content
       normalized = normalizeIndentation content
@@ -135,7 +136,7 @@ prop_parser_utils_commutativity content =
       parse3 = parseTypus normalized "normalized.typus"
   in case (parse1, parse2, parse3) of
        (Right f1, Right f2, Right f3) -> property $ 
-         length (tfBlocks f1) >= 0 && length (tfBlocks f2) >= 0 && length (tfBlocks f3) >= 0
+         L.length (tfBlocks f1) >= 0 && L.length (tfBlocks f2) >= 0 && L.length (tfBlocks f3) >= 0
        _ -> property True
 
 -- ============================================================================
@@ -177,7 +178,7 @@ test_source_location_consistency = do
 
 prop_source_location_monotonicity :: String -> Property
 prop_source_location_monotonicity content =
-  length content <= 200 && '\n' `elem` content ==>
+  L.length content <= 200 && '\n' `elem` content ==>
   let parseResult = parseTypus content "monotonic.typus"
   in case parseResult of
        Right file -> 
@@ -201,9 +202,9 @@ test_parser_error_handler_integration = do
       errorHandlerResult = runErrorHandler content
   case (parseResult, errorHandlerResult) of
     (Right file, Right (errors, _)) -> do
-      assertBool "Parser should handle errors gracefully" $ not (null (tfSyntaxErrors file))
+      assertBool "Parser should handle errors gracefully" $ not (L.null (tfSyntaxErrors file))
       assertBool "ErrorHandler should detect errors" $ not (null errors)
-    _ -> assertFailure "Both parser and error handler should handle errors"
+    _ -> assertFailure "Both parser L.and error handler should handle errors"
 
 test_error_location_parser_match :: IO ()
 test_error_location_parser_match = do
@@ -215,17 +216,17 @@ test_error_location_parser_match = do
       let parseErrors = tfSyntaxErrors file
           handlerErrors = errors
       assertBool "Error counts should be reasonable" $ 
-        length parseErrors > 0 && length handlerErrors > 0
+        L.length parseErrors > 0 && L.length handlerErrors > 0
     _ -> return ()
 
 prop_error_propagation_consistency :: String -> Property
 prop_error_propagation_consistency content =
-  length content <= 100 ==>
+  L.length content <= 100 ==>
   let parseResult = parseTypus content "propagation.typus"
       errorHandlerResult = runErrorHandler content
   in case (parseResult, errorHandlerResult) of
        (Right file, Right (errors, _)) ->
-         property $ length (tfSyntaxErrors file) >= 0 && length errors >= 0
+         property $ L.length (tfSyntaxErrors file) >= 0 && L.length errors >= 0
        _ -> property True
 
 -- ============================================================================
@@ -257,11 +258,11 @@ test_text_processing_position_accuracy = do
       processedContent = removeComments content
       processedLines = lines processedContent
   assertBool "Text processing should maintain line count accuracy" $
-    length processedLines <= length originalLines
+    L.length processedLines <= L.length originalLines
 
 prop_location_tracking_through_utils :: String -> Property
 prop_location_tracking_through_utils content =
-  length content <= 100 ==>
+  L.length content <= 100 ==>
   let trimmed = trim content
       commentsRemoved = removeComments content
       normalized = normalizeIndentation content
@@ -314,7 +315,7 @@ test_pipeline_error_propagation = do
 
 prop_pipeline_associativity :: String -> Property
 prop_pipeline_associativity content =
-  length content <= 100 ==>
+  L.length content <= 100 ==>
   let parseResult = parseTypus content "associative.typus"
   in case parseResult of
        Right file -> 
@@ -370,7 +371,7 @@ test_cross_analysis_results = do
 
 prop_ownership_dependency_interaction :: String -> Property
 prop_ownership_dependency_interaction content =
-  length content <= 150 ==>
+  L.length content <= 150 ==>
   let parseResult = parseTypus content "interaction.typus"
   in case parseResult of
        Right file -> 
@@ -400,11 +401,11 @@ test_unicode_consistency_across_modules = do
   case parseResult of
     Left err -> assertFailure $ "Parse failed: " ++ show err
     Right file -> do
-      assertBool "Parser should handle unicode" $ not (null (tfBlocks file))
+      assertBool "Parser should handle unicode" $ not (L.null (tfBlocks file))
   case errorHandlerResult of
     Left _ -> assertFailure "ErrorHandler failed on unicode"
     Right _ -> return ()
-  assertBool "Utils should handle unicode" $ "café naïve" `isInfixOf` processedContent
+  assertBool "Utils should handle unicode" $ "café naïve" `L.isInfixOf` processedContent
 
 test_error_handling_consistency_across_modules :: IO ()
 test_error_handling_consistency_across_modules = do
@@ -418,19 +419,19 @@ test_error_handling_consistency_across_modules = do
   case (parseResult, errorHandlerResult) of
     (Right file, Right (errors, _)) -> do
       let parseErrors = tfSyntaxErrors file
-      assertBool "Parser and ErrorHandler should both detect errors" $
-        length parseErrors > 0 && length errors > 0
+      assertBool "Parser L.and ErrorHandler should both detect errors" $
+        L.length parseErrors > 0 && L.length errors > 0
     _ -> assertFailure "Both should handle errors consistently"
 
 prop_module_state_consistency :: String -> Property
 prop_module_state_consistency content =
-  length content <= 100 ==>
+  L.length content <= 100 ==>
   let parseResult = parseTypus content "state-consistency.typus"
       errorHandlerResult = runErrorHandler content
       processedContent = normalizeIndentation content
   in case (parseResult, errorHandlerResult) of
        (Right file, Right (errors, _)) ->
-         property $ length (tfBlocks file) >= 0 && length errors >= 0
+         property $ L.length (tfBlocks file) >= 0 && L.length errors >= 0
        _ -> property True
 
 -- ============================================================================
@@ -459,7 +460,7 @@ prop_performance_scaling_consistency multiplier =
       content = unlines $ replicate multiplier baseContent
       parseResult = parseTypus content "scaling.typus"
   in case parseResult of
-       Right file -> property $ length (tfBlocks file) >= multiplier
+       Right file -> property $ L.length (tfBlocks file) >= multiplier
        _ -> property True
 
 -- ============================================================================
@@ -473,7 +474,7 @@ test_integration_empty_inputs = do
       errorHandlerResult = runErrorHandler emptyContent
       processedContent = trim emptyContent
   case parseResult of
-    Right file -> assertBool "Parser should handle empty input" $ null (tfBlocks file)
+    Right file -> assertBool "Parser should handle empty input" $ L.null (tfBlocks file)
     _ -> assertFailure "Parser should handle empty input"
   case errorHandlerResult of
     Right (errors, _) -> assertBool "ErrorHandler should handle empty input" $ null errors
@@ -492,7 +493,7 @@ test_integration_malformed_inputs = do
       errorHandlerResult = runErrorHandler malformedContent
       processedContent = removeComments malformedContent
   case parseResult of
-    Right file -> assertBool "Parser should handle malformed input" $ not (null (tfSyntaxErrors file))
+    Right file -> assertBool "Parser should handle malformed input" $ not (L.null (tfSyntaxErrors file))
     _ -> return ()  -- May fail, which is acceptable
   case errorHandlerResult of
     Right (errors, _) -> assertBool "ErrorHandler should detect malformed input" $ not (null errors)
@@ -501,13 +502,13 @@ test_integration_malformed_inputs = do
 
 prop_integration_boundary_conditions :: String -> Property
 prop_integration_boundary_conditions content =
-  length content <= 200 ==>
+  L.length content <= 200 ==>
   let parseResult = parseTypus content "boundary.typus"
       errorHandlerResult = runErrorHandler content
       processedContent = normalizeIndentation content
   in case (parseResult, errorHandlerResult) of
        (Right file, Right (errors, _)) ->
-         property $ length (tfBlocks file) >= 0 && length errors >= 0
+         property $ L.length (tfBlocks file) >= 0 && L.length errors >= 0
        _ -> property True
 
 -- ============================================================================

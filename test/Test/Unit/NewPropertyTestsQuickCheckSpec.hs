@@ -3,6 +3,7 @@
 module Test.Unit.NewPropertyTestsQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
@@ -19,7 +20,7 @@ import qualified Data.Map as Map
 prop_trim_removes_leading_spaces :: String -> Property
 prop_trim_removes_leading_spaces s =
   let trimmed = trim ("   " ++ s)
-  in not (null trimmed) ==> head trimmed /= ' '
+  in not (null trimmed) ==> L.head trimmed /= ' '
 
 -- Test 2: splitBy on empty string gives single empty element
 prop_splitBy_empty :: Char -> Property
@@ -42,19 +43,19 @@ prop_sourcepos_offset_consistency offset =
       pos2 = SourcePos 1 1 offset
   in posOffset pos1 === posOffset pos2
 
--- Test 5: SourceSpan start should be before or equal to end
+-- Test 5: SourceSpan start should be before L.or equal to end
 prop_sourcespan_start_before_end :: SourceSpan -> Property
 prop_sourcespan_start_before_end span =
   (posOffset (spanStart span) <= posOffset (spanEnd span)) === True
 
--- Test 6: FileDirectives with all Nothing should be equal
+-- Test 6: FileDirectives with L.all Nothing should be equal
 prop_file_directives_empty_equality :: Property
 prop_file_directives_empty_equality =
   let fd1 = FileDirectives Nothing Nothing Nothing
       fd2 = FileDirectives Nothing Nothing Nothing
   in fd1 === fd2
 
--- Test 7: BlockDirectives with all Nothing should be equal
+-- Test 7: BlockDirectives with L.all Nothing should be equal
 prop_block_directives_empty_equality :: Property
 prop_block_directives_empty_equality =
   let bd1 = BlockDirectives Nothing Nothing Nothing

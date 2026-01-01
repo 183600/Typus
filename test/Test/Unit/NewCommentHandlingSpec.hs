@@ -8,6 +8,7 @@ import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===),
 
 import Utils (removeLineComments, removeComments)
 import Data.Char (chr)
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 tests :: TestTree
@@ -175,14 +176,14 @@ testMixedComments = testCase "Mixed comment types" $ do
 -- | QuickCheck 属性测试
 testCommentProperties :: TestTree
 testCommentProperties = testGroup "Comment Properties"
-  [ testProperty "removeLineComments removes all line comments" $ \str ->
+  [ testProperty "removeLineComments removes L.all line comments" $ \str ->
       let result = removeLineComments str
-          hasLineComment = "//" `isInfixOf` result
+          hasLineComment = "//" `L.isInfixOf` result
       in not hasLineComment
       
-  , testProperty "removeComments removes all block comments" $ \str ->
+  , testProperty "removeComments removes L.all block comments" $ \str ->
       let result = removeComments str
-          hasBlockComment = "/*" `isInfixOf` result && "*/" `isInfixOf` result
+          hasBlockComment = "/*" `L.isInfixOf` result && "*/" `L.isInfixOf` result
       in not hasBlockComment
       
   , testProperty "removeLineComments preserves string literals" $ \str ->

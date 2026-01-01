@@ -3,6 +3,7 @@
 module Test.Unit.TypeSystemInvariantsQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
@@ -69,7 +70,7 @@ prop_type_equality_symmetric typ1 typ2 =
 
 prop_type_equality_transitive :: Type -> Type -> Type -> Property
 prop_type_equality_transitive typ1 typ2 typ3 =
-  property $ True -- If t1 = t2 and t2 = t3 then t1 = t3
+  property $ True -- If t1 = t2 L.and t2 = t3 then t1 = t3
 
 -- Type unification properties
 prop_unification_preserves_info :: Type -> Type -> Property
@@ -100,7 +101,7 @@ prop_substitution_preserves_free_vars typ =
 -- Type constraint properties
 prop_constraints_satisfiable :: [TypeConstraint] -> Property
 prop_constraints_satisfiable constraints =
-  property $ length constraints <= 5 ==> True -- Constraints should be satisfiable
+  property $ L.length constraints <= 5 ==> True -- Constraints should be satisfiable
 
 prop_constraint_solving_deterministic :: TypeConstraint -> Property
 prop_constraint_solving_deterministic constraint =
@@ -108,12 +109,12 @@ prop_constraint_solving_deterministic constraint =
 
 prop_constraint_propagation_valid :: [TypeConstraint] -> Property
 prop_constraint_propagation_valid constraints =
-  property $ length constraints <= 3 ==> True -- Constraint propagation should preserve validity
+  property $ L.length constraints <= 3 ==> True -- Constraint propagation should preserve validity
 
 -- Dependent type properties
 prop_dependent_types_preserve_values :: String -> Property
 prop_dependent_types_preserve_values value =
-  property $ length value <= 20 ==> True -- Dependent types should preserve value information
+  property $ L.length value <= 20 ==> True -- Dependent types should preserve value information
 
 prop_type_predicates_well_formed :: TypePredicate -> Property
 prop_type_predicates_well_formed predicate =

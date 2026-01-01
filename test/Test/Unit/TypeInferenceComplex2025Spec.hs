@@ -3,6 +3,7 @@
 module Test.Unit.TypeInferenceComplex2025Spec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, choose, listOf, elements)
 import Test.Tasty.HUnit (testCase, (@=?))
 
@@ -65,7 +66,7 @@ propDependentTypeConstraintsPropagation baseType constraints =
   let dependentType = MockDependentType "T" constraints
       result = mockPropagateConstraints dependentType baseType
   in case result of
-       Right finalType -> all (constraintSatisfied finalType) constraints
+       Right finalType -> L.all (constraintSatisfied finalType) constraints
        Left _ -> False
 
 -- Property 4: Type generalization preserves semantics
@@ -106,7 +107,7 @@ testComplexDependentTypeInference = do
     Right inferredType -> do
       case inferredType of
         MockDependentType _ constraints -> do
-          length constraints @=? 1
+          L.length constraints @=? 1
           True @=? True  -- Successfully inferred dependent type
         _ -> pure ()
     Left _ -> pure ()
@@ -143,7 +144,7 @@ propTypeInferenceWithConstraints expr constraints =
   let env = MockTypeEnvironment []
       constrainedEnv = mockAddConstraints env constraints
   in case mockInferType constrainedEnv expr of
-       Right inferredType -> all (constraintSatisfied inferredType) constraints
+       Right inferredType -> L.all (constraintSatisfied inferredType) constraints
        Left _ -> True  -- Type errors are acceptable
 
 -- Helper functions
@@ -170,7 +171,7 @@ mockUnifyTypes t1 t2
 
 mockPropagateConstraints :: MockType -> MockType -> Either String MockType
 mockPropagateConstraints (MockDependentType _ constraints) baseType =
-  if all (constraintSatisfied baseType) constraints
+  if L.all (constraintSatisfied baseType) constraints
   then Right baseType
   else Left "Constraints not satisfied"
 
@@ -179,10 +180,10 @@ mockGeneralize t env = MockTypeScheme (freeVarsInType t `minus` freeVarsInEnv en
 
 mockInstantiate :: MockTypeScheme -> MockType
 mockInstantiate (MockTypeScheme vars t) = substituteTypeVars t (zip vars (map MockTypeVar freshVars))
-  where freshVars = map (\i -> "a" ++ show i) [0..]
+  where freshVars = L.map (\i -> "a" ++ show i) [0..]
 
 mockDetectRecursive :: MockType -> Either String Bool
-mockDetectRecursive (MockTypeConstructor name args) = Right (any (appearsIn name) args)
+mockDetectRecursive (MockTypeConstructor name args) = Right (L.any (appearsIn name) args)
 mockDetectRecursive _ = Right False
 
 mockLookupType :: MockTypeEnvironment -> String -> Maybe MockTypeScheme
@@ -196,7 +197,7 @@ typeSchemeType (MockTypeScheme _ t) = t
 
 isValidType :: MockType -> Bool
 isValidType (MockTypeVar _) = True
-isValidType (MockTypeConstructor name args) = all isValidType args
+isValidType (MockTypeConstructor name args) = L.all isValidType args
 isValidType (MockFunctionType arg ret) = isValidType arg && isValidType ret
 isValidType (MockDependentType _ _) = True
 
@@ -208,7 +209,7 @@ typeSemanticsEqual t1 t2 = t1 == t2  -- Simplified semantic equality
 
 appearsIn :: String -> MockType -> Bool
 appearsIn name (MockTypeVar n) = n == name
-appearsIn name (MockTypeConstructor n args) = n == name || any (appearsIn name) args
+appearsIn name (MockTypeConstructor n args) = n == name || L.any (appearsIn name) args
 appearsIn name (MockFunctionType arg ret) = appearsIn name arg || appearsIn name ret
 appearsIn name (MockDependentType _ _) = False
 
@@ -224,7 +225,7 @@ freeVarsInEnv (MockTypeEnvironment env) = concatMap (freeVarsInScheme . snd) env
     freeVarsInScheme (MockTypeScheme vars t) = vars
 
 minus :: [String] -> [String] -> [String]
-minus xs ys = filter (`notElem` ys) xs
+minus xs ys = L.filter (`notElem` ys) xs
 
 substituteTypeVars :: MockType -> [(String, MockType)] -> MockType
 substituteTypeVars (MockTypeVar name) subs = 
@@ -232,7 +233,7 @@ substituteTypeVars (MockTypeVar name) subs =
     Just t -> t
     Nothing -> MockTypeVar name
 substituteTypeVars (MockTypeConstructor name args) subs = 
-  MockTypeConstructor name (map (`substituteTypeVars` subs) args)
+  MockTypeConstructor name (L.map (`substituteTypeVars` subs) args)
 substituteTypeVars (MockFunctionType arg ret) subs = 
   MockFunctionType (substituteTypeVars arg subs) (substituteTypeVars ret subs)
 substituteTypeVars (MockDependentType name constraints) subs = 

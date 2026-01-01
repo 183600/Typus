@@ -3,6 +3,7 @@
 module Test.Unit.IntegrationComplexWorkflowsSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty)
 import Test.QuickCheck (Arbitrary(..), Gen, oneof, listOf, choose, Property, (==>))
@@ -147,7 +148,7 @@ tests =
                       ])
                   ]
                 result <- generateBuildArtifacts files
-            assertBool "Should generate all required artifacts"
+            assertBool "Should generate L.all required artifacts"
                 (hasRequiredArtifacts result ["main.go", "main.o", "main"])
         ]
 
@@ -182,7 +183,7 @@ tests =
             assertBool "Should provide comprehensive error reports"
                 (errorCount result >= 2)
             assertBool "Should include source locations in errors"
-                (all hasSourceLocation (errors result))
+                (L.all hasSourceLocation (errors result))
         ]
 
     , testGroup "Property-based Integration Tests"
@@ -228,27 +229,27 @@ projectSuccess = prSuccess
 
 hasCircularDependencyError :: ProjectResult -> Bool
 hasCircularDependencyError result = 
-    any (\e -> "circular" `isInfixOf` peMessage e) (prErrors result)
+    L.any (\e -> "circular" `L.isInfixOf` peMessage e) (prErrors result)
 
 recompiledCount :: ProjectResult -> Int
-recompiledCount result = length (prCompiledFiles result)
+recompiledCount result = L.length (prCompiledFiles result)
 
 buildSuccess :: BuildResult -> Bool
 buildSuccess = brSuccess
 
 hasRequiredArtifacts :: BuildResult -> [String] -> Bool
 hasRequiredArtifacts result required = 
-    all (`elem` brArtifacts result) required
+    L.all (`elem` brArtifacts result) required
 
 hasPartialSuccess :: ProjectResult -> Bool
 hasPartialSuccess result = 
-    not (prSuccess result) && length (prCompiledFiles result) > 0
+    not (prSuccess result) && L.length (prCompiledFiles result) > 0
 
 validFilesCompiled :: ProjectResult -> Int
-validFilesCompiled = length . prCompiledFiles
+validFilesCompiled = L.length . prCompiledFiles
 
 errorCount :: ProjectResult -> Int
-errorCount = length . prErrors
+errorCount = L.length . prErrors
 
 errors :: ProjectResult -> [ProjectError]
 errors = prErrors
@@ -257,7 +258,7 @@ hasSourceLocation :: ProjectError -> Bool
 hasSourceLocation = isJust . peLocation
 
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` words haystack
+L.isInfixOf needle haystack = needle `elem` words haystack
 
 isJust :: Maybe a -> Bool
 isJust Nothing = False
@@ -267,27 +268,27 @@ isJust (Just _) = True
 
 compileProject :: [(String, String)] -> IO ProjectResult
 compileProject files = do
-    let hasCircular = any (\(f, c) -> "import" `isInfixOf` c && length files > 1) files
+    let hasCircular = L.any (\(f, c) -> "import" `L.isInfixOf` c && L.length files > 1) files
         success = not hasCircular
         compiledFiles = if success then map fst files else []
     return $ ProjectResult success compiledFiles [] []
 
 compileProjectWithRecovery :: [(String, String)] -> IO ProjectResult
 compileProjectWithRecovery files = do
-    let validFiles = filter (\(_, c) -> not ("undefinedVar" `isInfixOf` c)) files
+    let validFiles = L.filter (\(_, c) -> not ("undefinedVar" `L.isInfixOf` c)) files
         compiledFiles = map fst validFiles
-        errors = [ProjectError f "Undefined variable" Nothing | (f, c) <- files, "undefinedVar" `isInfixOf` c]
+        errors = [ProjectError f "Undefined variable" Nothing | (f, c) <- files, "undefinedVar" `L.isInfixOf` c]
     return $ ProjectResult False compiledFiles errors []
 
 incrementalCompile :: [(String, String)] -> [(String, String)] -> IO ProjectResult
 incrementalCompile oldFiles newFiles = do
-    let changedFiles = filter (\(f, _) -> f `elem` map fst newFiles) oldFiles
+    let changedFiles = L.filter (\(f, _) -> f `elem` map fst newFiles) oldFiles
         recompiled = map fst changedFiles
     return $ ProjectResult True recompiled [] []
 
 buildWithExternalTool :: BuildConfig -> [(String, String)] -> IO BuildResult
 buildWithExternalTool config files = do
-    let artifacts = map (\f -> bcOutputDir config ++ "/" ++ replaceExtension f "go") (map fst files)
+    let artifacts = L.map (\f -> bcOutputDir config ++ "/" ++ replaceExtension f "go") (map fst files)
     return $ BuildResult True artifacts ["Build completed"]
 
 generateBuildArtifacts :: [(String, String)] -> IO BuildResult
@@ -297,8 +298,8 @@ generateBuildArtifacts files = do
 
 replaceExtension :: String -> String -> String
 replaceExtension file newExt = 
-    case reverse file of
-        ('s':'y':'p':'u':'t':'.':rest) -> reverse rest ++ "." ++ newExt
+    case L.reverse file of
+        ('s':'y':'p':'u':'t':'.':rest) -> L.reverse rest ++ "." ++ newExt
         _ -> file ++ "." ++ newExt
 
 -- Property-based tests
@@ -324,7 +325,7 @@ prop_buildPipelineRobustness :: BuildConfig -> [(String, String)] -> Property
 prop_buildPipelineRobustness config files =
     not (null files) ==>
     let result = buildResultFromConfig config files
-    in brSuccess result || not (null (brBuildLog result))
+    in brSuccess result || not (L.null (brBuildLog result))
 
 prop_errorRecoveryConsistency :: [(String, String)] -> Property
 prop_errorRecoveryConsistency files =

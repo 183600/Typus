@@ -1,5 +1,6 @@
 module Test.Unit.SyntaxValidatorSpec (tests) where
 
+import qualified Data.List as L
 import Data.List (isInfixOf)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, assertFailure, testCase, (@?=))
@@ -60,7 +61,7 @@ tests =
           [SyntaxError { lineNumber = line', columnNumber = column', errorMessage = msg }] -> do
             line' @?= 2
             column' @?= 1
-            assertBool "error message should reference the directive" ("directive" `isInfixOf` msg)
+            assertBool "error message should reference the directive" ("directive" `L.isInfixOf` msg)
           _ -> assertFailure "expected exactly one directive validation error"
 
     , testCase "detects duplicate variable declarations in the same scope" $ do
@@ -76,7 +77,7 @@ tests =
           [SyntaxError { lineNumber = line', columnNumber = column', errorMessage = msg }] -> do
             line' @?= 3
             column' @?= 1
-            assertBool "duplicate error should mention the identifier" ("answer" `isInfixOf` msg)
+            assertBool "duplicate error should mention the identifier" ("answer" `L.isInfixOf` msg)
           _ -> assertFailure "expected a single duplicate declaration error"
 
     , testCase "requires braces after control-flow keywords" $ do
@@ -118,7 +119,7 @@ tests =
               ]
         validateSyntax source @?= []
 
-    , testCase "formatSyntaxError includes the location prefix and context line" $ do
+    , testCase "formatSyntaxError includes the location prefix L.and context line" $ do
         let err = SyntaxError MissingBrace "unclosed block" 4 2 "    body"
             rendered = formatSyntaxError err
         rendered @?= "Line 4:2 [MissingBrace] unclosed block\n        body"

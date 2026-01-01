@@ -2,6 +2,7 @@
 module Test.Unit.PerformanceRegressionQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Arbitrary(..), Gen, oneof, elements, listOf, choose, 
                         Property, (===), forAll, counterexample, suchThat, (==>))
@@ -116,7 +117,7 @@ genVeryLargeContent = do
     , "const constant = 3.14159"
     , "var slice []int = []int{1, 2, 3, 4, 5}"
     ]
-  let repeatedLines = concat $ replicate (numLines `div` length baseLines + 1) baseLines
+  let repeatedLines = L.concat $ replicate (numLines `div` L.length baseLines + 1) baseLines
   return $ unlines $ take numLines repeatedLines
 
 -- Generate content with complex structures
@@ -156,7 +157,7 @@ genComplexContent = do
     [ "package main"
     , "import \"fmt\""
     , ""
-    ] ++ concat functions ++ concat structs ++ concat interfaces
+    ] ++ L.concat functions ++ L.concat structs ++ L.concat interfaces
 
 -- ============================================================================
 -- Performance properties for parsing
@@ -164,14 +165,14 @@ genComplexContent = do
 
 prop_parsing_performance_linear :: String -> Property
 prop_parsing_performance_linear content =
-  let contentSize = length content
+  let contentSize = L.length content
       expectedTime = fromIntegral contentSize * 0.000001  -- 1 microsecond per character
   in counterexample ("Content size: " ++ show contentSize) $
      contentSize > 0 ==> property True  -- Actual timing would be done in IO
 
 prop_parsing_memory_efficiency :: String -> Property
 prop_parsing_memory_efficiency content =
-  let contentSize = length content
+  let contentSize = L.length content
       parseResult = parseTypus content
   in counterexample ("Content size: " ++ show contentSize) $
      case parseResult of
@@ -186,7 +187,7 @@ prop_parsing_memory_efficiency content =
 
 prop_compilation_performance_bounds :: String -> Property
 prop_compilation_performance_bounds content =
-  let contentSize = length content
+  let contentSize = L.length content
       parseResult = parseTypus content
   in case parseResult of
     Left _ -> property True  -- Skip compilation if parsing fails
@@ -197,7 +198,7 @@ prop_compilation_performance_bounds content =
 
 prop_compilation_memory_scaling :: String -> Property
 prop_compilation_memory_scaling content =
-  let contentSize = length content
+  let contentSize = L.length content
       parseResult = parseTypus content
   in case parseResult of
     Left _ -> property True
@@ -214,31 +215,31 @@ prop_compilation_memory_scaling content =
 
 prop_trim_performance_linear :: String -> Property
 prop_trim_performance_linear content =
-  let contentSize = length content
+  let contentSize = L.length content
       result = trim content
-  in counterexample ("Content size: " ++ show contentSize ++ ", Result size: " ++ show (length result)) $
-     length result <= contentSize
+  in counterexample ("Content size: " ++ show contentSize ++ ", Result size: " ++ show (L.length result)) $
+     L.length result <= contentSize
 
 prop_split_by_performance :: String -> Property
 prop_split_by_performance content =
-  let contentSize = length content
+  let contentSize = L.length content
       result = splitBy ',' content
-  in counterexample ("Content size: " ++ show contentSize ++ ", Result length: " ++ show (length result)) $
-     length result >= 1
+  in counterexample ("Content size: " ++ show contentSize ++ ", Result L.length: " ++ show (L.length result)) $
+     L.length result >= 1
 
 prop_remove_comments_performance :: String -> Property
 prop_remove_comments_performance content =
-  let contentSize = length content
+  let contentSize = L.length content
       result = removeComments content
-  in counterexample ("Content size: " ++ show contentSize ++ ", Result size: " ++ show (length result)) $
-     length result <= contentSize
+  in counterexample ("Content size: " ++ show contentSize ++ ", Result size: " ++ show (L.length result)) $
+     L.length result <= contentSize
 
 prop_normalize_indentation_performance :: String -> Property
 prop_normalize_indentation_performance content =
-  let contentSize = length content
+  let contentSize = L.length content
       result = normalizeIndentation content
-  in counterexample ("Content size: " ++ show contentSize ++ ", Result size: " ++ show (length result)) $
-     abs (length result - contentSize) <= 100  -- Allow some variance
+  in counterexample ("Content size: " ++ show contentSize ++ ", Result size: " ++ show (L.length result)) $
+     abs (L.length result - contentSize) <= 100  -- Allow some variance
 
 -- ============================================================================
 -- Performance properties for source location operations
@@ -247,13 +248,13 @@ prop_normalize_indentation_performance content =
 prop_source_span_merge_performance :: Int -> Property
 prop_source_span_merge_performance numSpans =
   let spans = take numSpans $ iterate (\span -> mergeSpans span span) (SourceSpan startPos startPos)
-      result = foldl mergeSpans (head spans) spans
+      result = foldl mergeSpans (L.head spans) spans
   in counterexample ("Number of spans: " ++ show numSpans) $
      numSpans > 0 ==> property True
 
 prop_position_advancement_performance :: String -> Property
 prop_position_advancement_performance content =
-  let contentSize = length content
+  let contentSize = L.length content
       result = advancePosBy content startPos
   in counterexample ("Content size: " ++ show contentSize) $
      contentSize >= 0 ==> property True
@@ -264,19 +265,19 @@ prop_position_advancement_performance content =
 
 prop_performance_regression_small :: String -> Property
 prop_performance_regression_small content =
-  let contentSize = length content
+  let contentSize = L.length content
       isSmall = contentSize < 1000
   in isSmall ==> property True
 
 prop_performance_regression_medium :: String -> Property
 prop_performance_regression_medium content =
-  let contentSize = length content
+  let contentSize = L.length content
       isMedium = contentSize >= 1000 && contentSize < 10000
   in isMedium ==> property True
 
 prop_performance_regression_large :: String -> Property
 prop_performance_regression_large content =
-  let contentSize = length content
+  let contentSize = L.length content
       isLarge = contentSize >= 10000
   in isLarge ==> property True
 
@@ -286,7 +287,7 @@ prop_performance_regression_large content =
 
 prop_parsing_scalability :: String -> Property
 prop_parsing_scalability content =
-  let contentSize = length content
+  let contentSize = L.length content
       parseResult = parseTypus content
   in counterexample ("Content size: " ++ show contentSize) $
      case parseResult of
@@ -295,7 +296,7 @@ prop_parsing_scalability content =
 
 prop_memory_scalability :: String -> Property
 prop_memory_scalability content =
-  let contentSize = length content
+  let contentSize = L.length content
       parseResult = parseTypus content
   in case parseResult of
     Left _ -> property True
@@ -317,7 +318,7 @@ prop_empty_content_performance =
 
 prop_unicode_content_performance :: String -> Property
 prop_unicode_content_performance unicodeContent =
-  let contentSize = length unicodeContent
+  let contentSize = L.length unicodeContent
       parseResult = parseTypus unicodeContent
   in counterexample ("Unicode content size: " ++ show contentSize) $
      case parseResult of
@@ -326,7 +327,7 @@ prop_unicode_content_performance unicodeContent =
 
 prop_deeply_nested_content_performance :: String -> Property
 prop_deeply_nested_content_performance content =
-  let contentSize = length content
+  let contentSize = L.length content
       parseResult = parseTypus content
   in counterexample ("Nested content size: " ++ show contentSize) $
      case parseResult of

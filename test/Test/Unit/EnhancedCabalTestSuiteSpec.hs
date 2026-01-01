@@ -4,6 +4,7 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, property, Arbitrary(..), Gen, oneof, listOf, elements, choose)
 import Data.Char (isSpace, isAlphaNum)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import qualified Data.Text as T
 
@@ -17,7 +18,7 @@ tests =
   testGroup "EnhancedCabalTestSuiteSpec - Core Functionality Tests"
     [ -- SourceLocation mathematical properties
       testProperty "SourcePos position arithmetic is consistent" prop_sourcePosArithmetic
-    , testProperty "SourceSpan merging is associative and commutative" prop_spanMergingProperties
+    , testProperty "SourceSpan merging is associative L.and commutative" prop_spanMergingProperties
     , testProperty "SourceSpan validity is preserved under operations" prop_spanValidityPreservation
     
     -- Parser error recovery properties  
@@ -29,7 +30,7 @@ tests =
     , testProperty "Utils comment removal preserves line structure" prop_utilsCommentStructurePreservation
     
     -- Integration properties
-    , testProperty "Parser and Utils integration maintains consistency" prop_parserUtilsIntegration
+    , testProperty "Parser L.and Utils integration maintains consistency" prop_parserUtilsIntegration
     ]
 
 -- ============================================================================
@@ -43,10 +44,10 @@ prop_sourcePosArithmetic input =
       lineNumbers = map posLine positions
       columnNumbers = map posColumn positions
       -- Check that line numbers only increase at newlines
-      lineIncreases = zipWith (\prev curr -> curr >= prev && (curr > prev) == (prev `elem` map posLine (filter ((=='\n') . snd) (zip positions input)))) lineNumbers (tail lineNumbers)
-  in all lineIncreases (zip lineNumbers (tail lineNumbers))
+      lineIncreases = zipWith (\prev curr -> curr >= prev && (curr > prev) == (prev `elem` map posLine (L.filter ((=='\n') . snd) (zip positions input)))) lineNumbers (L.tail lineNumbers)
+  in L.all lineIncreases (zip lineNumbers (L.tail lineNumbers))
 
--- Property: SourceSpan merging is associative and commutative
+-- Property: SourceSpan merging is associative L.and commutative
 prop_spanMergingProperties :: Int -> Int -> Int -> Int -> Bool
 prop_spanMergingProperties x1 y1 x2 y2 =
   let pos1 = posAt (abs x1 + 1) (abs y1 + 1)
@@ -94,7 +95,7 @@ prop_parserStructurePreservation input =
     Right typusFile -> 
       -- Check that the parsed file maintains basic structure
       let blocks = tfBlocks typusFile
-          hasValidStructure = all (\block -> length (cbContent block) >= 0) blocks
+          hasValidStructure = L.all (\block -> L.length (cbContent block) >= 0) blocks
       in hasValidStructure
 
 -- ============================================================================
@@ -107,25 +108,25 @@ prop_utilsUnicodeHandling input =
   let trimmed = trim input
       splitResult = splitBy ',' input
       breakResult = breakOn "测试" input  -- Chinese test string
-  -- Check that functions don't crash on unicode and maintain basic properties
-  in length trimmed <= length input && 
-     length splitResult >= 1 &&
-     length (fst breakResult) + length "测试" + length (snd breakResult) >= length input
+  -- Check that functions don't crash on unicode L.and maintain basic properties
+  in L.length trimmed <= L.length input && 
+     L.length splitResult >= 1 &&
+     L.length (fst breakResult) + L.length "测试" + L.length (snd breakResult) >= L.length input
 
 -- Property: Utils comment removal preserves line structure
 prop_utilsCommentStructurePreservation :: String -> Bool
 prop_utilsCommentStructurePreservation input =
   let originalLines = lines input
       processedLines = lines (removeComments input)
-      -- Check that the number of lines is preserved (or reduced due to block comments)
+      -- Check that the number of lines is preserved (L.or reduced due to block comments)
       -- but never increased
-  in length processedLines <= length originalLines
+  in L.length processedLines <= L.length originalLines
 
 -- ============================================================================
 -- Integration Properties
 -- ============================================================================
 
--- Property: Parser and Utils integration maintains consistency
+-- Property: Parser L.and Utils integration maintains consistency
 prop_parserUtilsIntegration :: String -> Bool
 prop_parserUtilsIntegration input =
   let preprocessed = removeComments input
@@ -135,7 +136,7 @@ prop_parserUtilsIntegration input =
     (Left _, Left _) -> True  -- Both fail is acceptable
     (Right file1, Right file2) -> 
       -- Both succeed should have same basic structure
-      length (tfBlocks file1) == length (tfBlocks file2)
+      L.length (tfBlocks file1) == L.length (tfBlocks file2)
     _ -> True  -- Mixed results are acceptable due to preprocessing
 
 -- ============================================================================

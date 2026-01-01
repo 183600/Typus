@@ -17,6 +17,7 @@ import Compiler
   )
 import qualified Compiler.IR as IR
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 -- ============================================================================
@@ -119,7 +120,7 @@ prop_ir_preserves_semantics code =
 -- | Multiple declarations should be handled
 prop_multiple_declarations :: [String] -> Property
 prop_multiple_declarations varNames =
-  let declarations = map (\var -> var ++ " = 1") varNames
+  let declarations = L.map (\var -> var ++ " = 1") varNames
       code = unlines declarations
       result = compile code
   in case result of

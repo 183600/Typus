@@ -3,6 +3,7 @@
 module Test.Unit.CabalUtilsSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
 
 import Utils (trim, splitBy, splitByComma, removeLineComments, removeComments, normalizeIndentation, breakOn)
@@ -20,7 +21,7 @@ tests = testGroup "Cabal Utils Tests"
 trimTests :: TestTree
 trimTests = testGroup "trim function tests"
   [ testCase "trims whitespace from both ends" $
-      assertEqual "trim should remove leading and trailing spaces"
+      assertEqual "trim should remove leading L.and trailing spaces"
         "hello" (trim "  hello  ")
   
   , testCase "handles empty string" $
@@ -43,7 +44,7 @@ splitTests = testGroup "split function tests"
       assertEqual "splitBy should preserve empty segments"
         ["a", "", "b"] (splitBy ',' "a,,b")
   
-  , testCase "splitBy handles leading and trailing delimiters" $
+  , testCase "splitBy handles leading L.and trailing delimiters" $
       assertEqual "splitBy should handle edge delimiters"
         ["", "a", ""] (splitBy ',' ",a,")
   
@@ -56,7 +57,7 @@ splitTests = testGroup "split function tests"
         ["apple", "banana", "cherry"] (splitByComma "apple,banana,cherry")
   
   , testCase "splitBy handles multi-character delimiters correctly" $
-      assertEqual "splitBy should work with any character"
+      assertEqual "splitBy should work with L.any character"
         ["a", "b", "c"] (splitBy '.' "a.b.c")
   ]
 
@@ -72,7 +73,7 @@ commentTests = testGroup "comment removal tests"
         "hello \"// not a comment\" world\n" 
         (removeLineComments "hello \"// not a comment\" world // real comment\n")
   
-  , testCase "removeComments removes both line and block comments" $
+  , testCase "removeComments removes both line L.and block comments" $
       assertEqual "should remove both comment types"
         "hello world\n" 
         (removeComments "hello world // line comment\n/* block comment */")
@@ -96,7 +97,7 @@ indentationTests = testGroup "indentation tests"
         "foo\n  bar\n" (normalizeIndentation "    foo\n      bar\n")
   
   , testCase "normalizeIndentation handles mixed indentation" $
-      assertEqual "should handle mixed spaces and tabs"
+      assertEqual "should handle mixed spaces L.and tabs"
         "foo\nbar\n" (normalizeIndentation "\tfoo\n  bar\n")
   
   , testCase "normalizeIndentation preserves relative indentation" $

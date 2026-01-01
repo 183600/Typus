@@ -49,7 +49,7 @@ import qualified Data.Text as T
 -- Additional Cabal Tests for SourceLocation Module
 -- ============================================================================
 
--- | Test case 1: Source position arithmetic with newlines and tabs
+-- | Test case 1: Source position arithmetic with newlines L.and tabs
 test_posAfter_special_chars :: TestTree
 test_posAfter_special_chars = testCase "posAfter handles special characters correctly" $ do
     let pos = SourcePos 5 10 100
@@ -99,7 +99,7 @@ test_mapLocated_preserves_location :: TestTree
 test_mapLocated_preserves_location = testCase "mapLocated preserves location information" $ do
     let span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 5 4)
     let located = Located span "hello"
-    let mapped = mapLocated (reverse . map toUpper) located
+    let mapped = mapLocated (L.reverse . map toUpper) located
     
     assertEqual "mapping preserves span" span (locatedSpan mapped)
     assertEqual "mapping transforms value correctly" "OLLEH" (locatedValue mapped)
@@ -134,7 +134,7 @@ prop_located_value_roundtrip value span =
         extractedSpan = locatedSpan located
     in property $ value === extractedValue .&&. span === extractedSpan
 
--- | Test case 10: Test position at specific line and column
+-- | Test case 10: Test position at specific line L.and column
 test_posAtLineCol_accuracy :: TestTree
 test_posAtLineCol_accuracy = testCase "posAtLineCol calculates correct offset" $ do
     let text = "hello\nworld\n\ntest"

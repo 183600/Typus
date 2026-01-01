@@ -23,7 +23,9 @@ import Utils (trim, removeComments, normalizeIndentation)
 
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, length, replicate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, length)
+import Data.List (replicate)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import Data.Char (isSpace)
 import Control.DeepSeq (NFData, force)
@@ -100,8 +102,8 @@ test_small_file_parsing = do
 test_medium_file_parsing :: IO ()
 test_medium_file_parsing = do
   let mediumFunction = "func test" ++ show [1..100] ++ "() {\n"
-      functionBody = concat $ replicate 50 "    x := x + 1\n    y := y * 2\n    z := z / 3\n"
-      mediumContent = concat $ replicate 20 (mediumFunction ++ functionBody ++ "}\n")
+      functionBody = L.concat $ replicate 50 "    x := x + 1\n    y := y * 2\n    z := z / 3\n"
+      mediumContent = L.concat $ replicate 20 (mediumFunction ++ functionBody ++ "}\n")
       startTime <- getCPUTime
       let parseResult = parseTypus mediumContent
       endTime <- getCPUTime
@@ -114,8 +116,8 @@ test_medium_file_parsing = do
 test_large_file_parsing :: IO ()
 test_large_file_parsing = do
   let largeFunction = "func large" ++ show [1..1000] ++ "() {\n"
-      functionBody = concat $ replicate 100 "    x := x + 1\n    y := make([]int, 1000)\n    for i := range y {\n        x += y[i]\n    }\n"
-      largeContent = concat $ replicate 100 (largeFunction ++ functionBody ++ "}\n")
+      functionBody = L.concat $ replicate 100 "    x := x + 1\n    y := make([]int, 1000)\n    for i := range y {\n        x += y[i]\n    }\n"
+      largeContent = L.concat $ replicate 100 (largeFunction ++ functionBody ++ "}\n")
       startTime <- getCPUTime
       let parseResult = parseTypus largeContent
       endTime <- getCPUTime
@@ -132,19 +134,19 @@ test_parsing_scalability = do
   let baseContent = "func test() { return 42 }\n"
       sizes = [1, 10, 100, 1000]
       parseTimes <- mapM (\size -> do
-        let content = concat $ replicate size baseContent
+        let content = L.concat $ replicate size baseContent
         startTime <- getCPUTime
         let parseResult = parseTypus content
         endTime <- getCPUTime
         let timeDiff = fromIntegral (endTime - startTime) / (10^12)
         return (size, timeDiff, parseResult)
         ) sizes
-  let successfulParses = filter (\(_, _, result) -> case result of Left _ -> False; Right _ -> True) parseTimes
-      timeRatios = if length successfulParses >= 2
+  let successfulParses = L.filter (\(_, _, result) -> case result of Left _ -> False; Right _ -> True) parseTimes
+      timeRatios = if L.length successfulParses >= 2
                    then let (_, t1, _) = successfulParses !! 0
-                            (_, t2, _) = successfulParses !! (length successfulParses - 1)
+                            (_, t2, _) = successfulParses !! (L.length successfulParses - 1)
                             size1 = fst $ successfulParses !! 0
-                            size2 = fst $ successfulParses !! (length successfulParses - 1)
+                            size2 = fst $ successfulParses !! (L.length successfulParses - 1)
                         in (t2 / t1) / (fromIntegral size2 / fromIntegral size1)
                    else 1.0
   assertBool "Parsing should scale roughly linearly" (timeRatios < 10.0)  -- Allow some overhead
@@ -152,7 +154,7 @@ test_parsing_scalability = do
 test_complex_syntax_parsing :: IO ()
 test_complex_syntax_parsing = do
   let complexFunction = "func complex() {\n"
-      complexBody = concat $ replicate 50
+      complexBody = L.concat $ replicate 50
         [ "    if condition1 {\n"
         , "        for i := 0; i < 100; i++ {\n"
         , "            switch i {\n"
@@ -231,7 +233,7 @@ test_compilation_scalability = do
   let baseFunction = "func test() { return 42 }\n"
       functionCounts = [1, 10, 100]
       compileTimes <- mapM (\count -> do
-        let content = concat $ replicate count baseFunction
+        let content = L.concat $ replicate count baseFunction
         let parseResult = parseTypus content
         case parseResult of
           Left _ -> return (count, 0.0, False)
@@ -244,19 +246,19 @@ test_compilation_scalability = do
               Left _ -> return (count, timeDiff, False)
               Right _ -> return (count, timeDiff, True)
         ) functionCounts
-  let successfulCompiles = filter (\(_, _, success) -> success) compileTimes
-  if length successfulCompiles >= 2
+  let successfulCompiles = L.filter (\(_, _, success) -> success) compileTimes
+  if L.length successfulCompiles >= 2
     then let (_, t1, _) = successfulCompiles !! 0
-             (_, t2, _) = successfulCompiles !! (length successfulCompiles - 1)
+             (_, t2, _) = successfulCompiles !! (L.length successfulCompiles - 1)
              count1 = fst $ successfulCompiles !! 0
-             count2 = fst $ successfulCompiles !! (length successfulCompiles - 1)
+             count2 = fst $ successfulCompiles !! (L.length successfulCompiles - 1)
              timeRatio = (t2 / t1) / (fromIntegral count2 / fromIntegral count1)
          in assertBool "Compilation should scale reasonably" (timeRatio < 5.0)
     else assertBool "Should have at least some successful compilations" (not (null successfulCompiles))
 
 test_many_functions_compilation :: IO ()
 test_many_functions_compilation = do
-  let manyFunctionsContent = concat $ map (\i -> "func func" ++ show i ++ "() { return " ++ show i ++ " }\n") [1..1000]
+  let manyFunctionsContent = L.concat $ L.map (\i -> "func func" ++ show i ++ "() { return " ++ show i ++ " }\n") [1..1000]
       parseResult = parseTypus manyFunctionsContent
   case parseResult of
     Left err -> assertFailure $ "Parse failed: " ++ show err
@@ -277,7 +279,7 @@ test_many_functions_compilation = do
 
 test_memory_usage_bounded :: IO ()
 test_memory_usage_bounded = do
-  let largeContent = concat $ replicate 10000 "func test() { x := x + 1; return x }\n"
+  let largeContent = L.concat $ replicate 10000 "func test() { x := x + 1; return x }\n"
       parseResult = parseTypus largeContent
   case parseResult of
     Left err -> do
@@ -305,7 +307,7 @@ test_garbage_collection = do
 test_memory_leaks_prevented :: IO ()
 test_memory_leaks_prevented = do
   let processLargeFile = do
-        let largeContent = concat $ replicate 1000 "func test() { data := make([]byte, 1000); return data }\n"
+        let largeContent = L.concat $ replicate 1000 "func test() { data := make([]byte, 1000); return data }\n"
         let parseResult = parseTypus largeContent
         case parseResult of
           Left _ -> return ()
@@ -319,8 +321,8 @@ test_memory_leaks_prevented = do
 test_deep_structures_memory :: IO ()
 test_deep_structures_memory = do
   let nestDepth = 100
-      nestedContent = concat $ replicate nestDepth "func outer() { "
-      content = nestedContent ++ "return 42" ++ concat (replicate nestDepth " }") ++ "\n"
+      nestedContent = L.concat $ replicate nestDepth "func outer() { "
+      content = nestedContent ++ "return 42" ++ L.concat (replicate nestDepth " }") ++ "\n"
       parseResult = parseTypus content
   case parseResult of
     Left err -> do
@@ -335,7 +337,7 @@ test_deep_structures_memory = do
 
 test_trim_performance :: IO ()
 test_trim_performance = do
-  let largeString = concat $ replicate 10000 "    \t   hello world   \t    \n"
+  let largeString = L.concat $ replicate 10000 "    \t   hello world   \t    \n"
       startTime <- getCPUTime
       let result = trim largeString
       endTime <- getCPUTime
@@ -344,7 +346,7 @@ test_trim_performance = do
 
 test_remove_comments_performance :: IO ()
 test_remove_comments_performance = do
-  let largeContent = concat $ replicate 1000 "func test() { // This is a comment\n    x := 42 /* block comment */; return x }\n"
+  let largeContent = L.concat $ replicate 1000 "func test() { // This is a comment\n    x := 42 /* block comment */; return x }\n"
       startTime <- getCPUTime
       let result = removeComments largeContent
       endTime <- getCPUTime
@@ -353,7 +355,7 @@ test_remove_comments_performance = do
 
 test_normalize_indentation_performance :: IO ()
 test_normalize_indentation_performance = do
-  let indentedContent = concat $ map (\i -> replicate i ' ' ++ "line " ++ show i ++ "\n") [1..1000]
+  let indentedContent = L.concat $ L.map (\i -> replicate i ' ' ++ "line " ++ show i ++ "\n") [1..1000]
       startTime <- getCPUTime
       let result = normalizeIndentation indentedContent
       endTime <- getCPUTime
@@ -362,13 +364,13 @@ test_normalize_indentation_performance = do
 
 test_string_operations_memory :: IO ()
 test_string_operations_memory = do
-  let largeString = concat $ replicate 10000 "This is a test string with various content\n"
+  let largeString = L.concat $ replicate 10000 "This is a test string with various content\n"
       operations = [trim, removeComments, normalizeIndentation]
       results <- mapM (\op -> do
         let result = op largeString
-        return (length result)
+        return (L.length result)
         ) operations
-  assertBool "String operations should be memory efficient" (all (> 0) results)
+  assertBool "String operations should be memory efficient" (L.all (> 0) results)
 
 -- ============================================================================
 -- Error Handling Performance Tests
@@ -378,7 +380,7 @@ test_error_creation_performance :: IO ()
 test_error_creation_performance = do
   let location = ErrorLocation Nothing 1 1 Nothing Nothing
       startTime <- getCPUTime
-      let errors = map (\i -> errorAt location ("Error " ++ show i)) [1..10000]
+      let errors = L.map (\i -> errorAt "test-id" show i)) [1..10000]
       endTime <- getCPUTime
       let timeDiff = fromIntegral (endTime - startTime) / (10^12)
   assertBool "Error creation should be fast (< 0.01s)" (timeDiff < 0.01)
@@ -386,9 +388,9 @@ test_error_creation_performance = do
 test_error_collection_performance :: IO ()
 test_error_collection_performance = do
   let location = ErrorLocation Nothing 1 1 Nothing Nothing
-      errors = map (\i -> errorAt location ("Error " ++ show i)) [1..10000]
+      errors = L.map (\i -> errorAt "test-id" show i)) [1..10000]
       startTime <- getCPUTime
-      let errorCount = length errors
+      let errorCount = L.length errors
       endTime <- getCPUTime
       let timeDiff = fromIntegral (endTime - startTime) / (10^12)
   assertBool "Error collection should scale well (< 0.01s)" (timeDiff < 0.01)
@@ -396,7 +398,7 @@ test_error_collection_performance = do
 test_error_formatting_performance :: IO ()
 test_error_formatting_performance = do
   let location = ErrorLocation Nothing 1 1 Nothing Nothing
-      errors = map (\i -> errorAt location ("Error " ++ show i)) [1..1000]
+      errors = L.map (\i -> errorAt "test-id" show i)) [1..1000]
       startTime <- getCPUTime
       let formatted = map show errors
       endTime <- getCPUTime
@@ -405,7 +407,7 @@ test_error_formatting_performance = do
 
 test_many_errors_performance :: IO ()
 test_many_errors_performance = do
-  let errorContent = concat $ map (\i -> "func test" ++ show i ++ "() { invalid_syntax_" ++ show i ++ " }\n") [1..1000]
+  let errorContent = L.concat $ L.map (\i -> "func test" ++ show i ++ "() { invalid_syntax_" ++ show i ++ " }\n") [1..1000]
       parseResult = parseTypus errorContent
   case parseResult of
     Left err -> do
@@ -414,7 +416,7 @@ test_many_errors_performance = do
       let compileResult = compileTypus typusFile
       case compileResult of
         Left errors -> do
-          assertBool "Should handle many compilation errors efficiently" (length errors >= 1)
+          assertBool "Should handle many compilation errors efficiently" (L.length errors >= 1)
         Right _ -> do
           assertBool "Should handle case with no errors" (True)
 
@@ -425,7 +427,7 @@ test_many_errors_performance = do
 prop_parsing_linear_time :: Property
 prop_parsing_linear_time =
   forAll arbitrary $ \content ->
-    let contentLength = length content
+    let contentLength = L.length content
         -- This is a simplified check - in real benchmarks we'd measure actual time
         reasonableSize = contentLength < 1000000  -- 1MB limit for property tests
     in property $ reasonableSize ==> True
@@ -433,7 +435,7 @@ prop_parsing_linear_time =
 prop_memory_reasonable :: Property
 prop_memory_reasonable =
   forAll arbitrary $ \content ->
-    let contentLength = length content
+    let contentLength = L.length content
         -- Memory usage should be proportional to input size
         reasonableRatio = contentLength < 10000000  -- 10MB limit
     in property $ reasonableRatio ==> True

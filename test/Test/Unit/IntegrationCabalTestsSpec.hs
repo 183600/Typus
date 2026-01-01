@@ -23,16 +23,18 @@ import Compiler (compile) -- Assuming this exists
 import IntegratedCompiler (processTypusFile) -- Assuming this exists
 
 import Data.Maybe (isJust, isNothing, fromMaybe)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, intercalate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (intercalate)
 import qualified Data.Text as T
 
 -- ============================================================================
--- Additional Cabal Tests for Integration and Module Interaction
+-- Additional Cabal Tests for Integration L.and Module Interaction
 -- ============================================================================
 
--- | Test case 1: End-to-end parsing and processing pipeline
+-- | Test case 1: End-to-end parsing L.and processing pipeline
 test_end_to_end_pipeline :: TestTree
-test_end_to_end_pipeline = testCase "complete parsing and processing pipeline works" $ do
+test_end_to_end_pipeline = testCase "complete parsing L.and processing pipeline works" $ do
     let input = unlines
             [ "// @ownership: true"
             , "// @dependent-types: false"
@@ -53,17 +55,17 @@ test_end_to_end_pipeline = testCase "complete parsing and processing pipeline wo
         Left err -> assertFailure $ "Parse failed: " ++ show err
         Right typusFile -> do
             -- Verify parsing results
-            assertEqual "has one build tag" 1 (length $ tfBuildTags typusFile)
-            assertEqual "has one code block" 1 (length $ tfBlocks typusFile)
+            assertEqual "has one build tag" 1 (L.length $ tfBuildTags typusFile)
+            assertEqual "has one code block" 1 (L.length $ tfBlocks typusFile)
             
             -- Test utility functions on the content
-            let blockContent = cbContent (head $ tfBlocks typusFile)
+            let blockContent = cbContent (L.head $ tfBlocks typusFile)
             let trimmedContent = trim blockContent
             let withoutComments = removeComments blockContent
             
-            assertBool "content contains function definition" $ "func calculate" `isInfixOf` blockContent
-            assertBool "trimmed content preserves function" $ "func calculate" `isInfixOf` trimmedContent
-            assertBool "comment removal preserves function" $ "func calculate" `isInfixOf` withoutComments
+            assertBool "content contains function definition" $ "func calculate" `L.isInfixOf` blockContent
+            assertBool "trimmed content preserves function" $ "func calculate" `L.isInfixOf` trimmedContent
+            assertBool "comment removal preserves function" $ "func calculate" `L.isInfixOf` withoutComments
 
 -- | Test case 2: Source location tracking through parsing
 test_source_location_tracking :: TestTree
@@ -119,11 +121,11 @@ test_multi_file_processing = testCase "multi-file processing integration works" 
         (Right typus1, Right typus2) -> do
             assertEqual "file1 has ownership directive" (Just True) (fmap locatedValue $ fdOwnership $ tfDirectives typus1)
             assertEqual "file2 has dependent-types directive" (Just True) (fmap locatedValue $ fdDependentTypes $ tfDirectives typus2)
-        _ -> assertFailure "One or both files failed to parse"
+        _ -> assertFailure "One L.or both files failed to parse"
 
--- | Test case 5: Directive inheritance and overriding
+-- | Test case 5: Directive inheritance L.and overriding
 test_directive_inheritance :: TestTree
-test_directive_inheritance = testCase "directive inheritance and overriding works" $ do
+test_directive_inheritance = testCase "directive inheritance L.and overriding works" $ do
     let input = unlines
             [ "// @ownership: true"
             , "// @dependent-types: false"
@@ -140,7 +142,7 @@ test_directive_inheritance = testCase "directive inheritance and overriding work
         Right typusFile -> do
             let fileDirectives = tfDirectives typusFile
             let blocks = tfBlocks typusFile
-            let blockDirectives = cbDirectives (head blocks)
+            let blockDirectives = cbDirectives (L.head blocks)
             
             assertEqual "file ownership directive" (Just True) (fmap locatedValue $ fdOwnership fileDirectives)
             assertEqual "block ownership override" (Just False) (fmap locatedValue $ bdOwnership blockDirectives)
@@ -152,9 +154,9 @@ prop_round_trip_parsing :: String -> Property
 prop_round_trip_parsing original =
     let trimmed = trim original
         processed = removeComments trimmed
-        -- In a real test, we would parse and re-serialize
+        -- In a real test, we would parse L.and re-serialize
         -- For now, we test that processing preserves certain properties
-    in property $ length processed <= length original
+    in property $ L.length processed <= L.length original
 
 -- | Test case 7: Property test for module interaction consistency
 prop_module_interaction_consistency :: String -> String -> Property
@@ -163,7 +165,7 @@ prop_module_interaction_consistency input1 input2 =
         parsed1 = lines input1
         parsed2 = lines input2
         combinedParsed = lines combined
-    in property $ length combinedParsed == length parsed1 + length parsed2
+    in property $ L.length combinedParsed == L.length parsed1 + L.length parsed2
 
 -- | Test case 8: Build system integration
 test_build_system_integration :: TestTree
@@ -192,8 +194,8 @@ test_configuration_propagation = testCase "configuration propagates through modu
     let localConfig = [(\"ownership\", \"false\")] -- Override
     
     -- Test that local config can override global
-    assertBool "global config has ownership" $ any ((== \"ownership\") . fst) globalConfig
-    assertBool "local config overrides ownership" $ any ((== \"ownership\") . fst) localConfig
+    assertBool "global config has ownership" $ L.any ((== \"ownership\") . fst) globalConfig
+    assertBool "local config overrides ownership" $ L.any ((== \"ownership\") . fst) localConfig
 
 -- | Test case 10: Performance integration test
 test_performance_integration :: TestTree

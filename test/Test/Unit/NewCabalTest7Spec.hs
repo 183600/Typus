@@ -14,6 +14,7 @@ import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), oneof)
 import Data.Char (isSpace, isAlpha)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 
 import Compiler
@@ -57,7 +58,7 @@ tests =
                 result = compileTypus code
             case result of
                 Left errors -> assertBool "Should detect type error" $ 
-                    any (\e -> "type" `isInfixOf` (map toLower (show e))) errors
+                    L.any (\e -> "type" `L.isInfixOf` (map toLower (show e))) errors
                 Right _ -> assertBool "Should detect type error" False
 
         , testCase "类型推理" $ do
@@ -97,7 +98,7 @@ prop_type_checking_deterministic code =
        (Right res1, Right res2) -> 
          property $ True  -- 两个都成功
        (Left err1, Left err2) -> 
-         property $ length err1 === length err2  -- 两个都失败，错误数量相同
+         property $ L.length err1 === L.length err2  -- 两个都失败，错误数量相同
        _ -> property $ False  -- 结果不一致
 
 -- 类型推理的一致性：推理出的类型应该与使用情况一致
@@ -108,7 +109,7 @@ prop_type_inference_consistency code =
        Right compilationResult -> 
          property $ True  -- 编译成功意味着类型推理一致
        Left errors -> 
-         let hasTypeErrors = any (\e -> "type" `isInfixOf` (map toLower (show e))) errors
+         let hasTypeErrors = L.any (\e -> "type" `L.isInfixOf` (map toLower (show e))) errors
          in property $ hasTypeErrors ==> True  -- 类型错误是预期的
 
 -- 类型等价的传递性：如果A等价于B，B等价于C，那么A等价于C
@@ -148,7 +149,7 @@ prop_type_environment_monotonic baseCode newTypeDef =
 
 -- 辅助函数
 toLower :: String -> String
-toLower = map (\c -> if c >= 'A' && c <= 'Z' then toEnum (fromEnum c + 32) else c)
+toLower = L.map (\c -> if c >= 'A' && c <= 'Z' then toEnum (fromEnum c + 32) else c)
 
 -- 简化的类型定义（实际会从Compiler模块导入）
 data Type = IntType | StringType | BoolType | FunctionType Type Type | CustomType String
@@ -160,5 +161,5 @@ instance Arbitrary Type where
     , pure StringType
     , pure BoolType
     , FunctionType <$> arbitrary <*> arbitrary
-    , CustomType <$> fmap (:[]) arbitrary
+    , CustomType <$> fL.map (:[]) arbitrary
     ]

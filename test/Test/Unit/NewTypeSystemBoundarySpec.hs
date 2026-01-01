@@ -10,6 +10,7 @@
 module Test.Unit.NewTypeSystemBoundarySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -79,7 +80,8 @@ import Parser
   )
 
 import qualified Data.Map.Strict as Map
-import Data.List (intercalate, isInfixOf, isPrefixOf, sort, nub)
+import Data.List (isInfixOf, isPrefixOf)
+import Data.List (intercalate, sort, nub)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
@@ -180,7 +182,7 @@ tests =
               Right valid -> valid @?= True
         ]
         
-    , testGroup "Subtyping and coercion boundaries"
+    , testGroup "Subtyping L.and coercion boundaries"
         [ testCase "isSubtype handles interface subtyping" $ do
             let baseType = TypeName "Interface"
                 derivedType = TypeName "Concrete"
@@ -359,12 +361,12 @@ tests =
         [ testCase "handles large type environments efficiently" $ do
             let manyTypes = [("Type" ++ show i, TypeName "int") | i <- [1..1000]]
                 typeEnv = buildTypeEnvFromPairs manyTypes []
-                lookupResults = map (\(name, _) -> lookupType typeEnv name) manyTypes
-                successfulLookups = length $ filter isJust lookupResults
+                lookupResults = L.map (\(name, _) -> lookupType typeEnv name) manyTypes
+                successfulLookups = L.length $ filter isJust lookupResults
             successfulLookups @?= 1000
             
         , testCase "handles deeply nested type structures" $ do
-            let deeplyNested = foldr (\t acc -> TypeFunction [t] acc) (TypeName "base") 
+            let deeplyNested = L.foldr (\t acc -> TypeFunction [t] acc) (TypeName "base") 
                                    [TypeName "Level" ++ show i | i <- [1..100]]
                 level = computeTypeLevel deeplyNested
             level @?= 101

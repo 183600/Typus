@@ -1,6 +1,7 @@
 module Test.Unit.NewSyntaxValidatorBoundarySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, Property, (===), Arbitrary(..), Gen, choose, listOf, elements, forAll, oneof, suchThat)
 
@@ -43,7 +44,7 @@ genErrorMessage = do
 -- Generate line content
 genLineContent :: Gen String
 genLineContent = do
-  length' <- choose (0, 100)
+  L.length' <- choose (0, 100)
   listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t{}();,."
 
 -- Generate syntax errors
@@ -58,7 +59,7 @@ genSyntaxError = SyntaxError
 -- Generate token content
 genTokenContent :: Gen String
 genTokenContent = do
-  length' <- choose (1, 20)
+  L.length' <- choose (1, 20)
   listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"
 
 -- Generate tokens
@@ -180,7 +181,7 @@ prop_syntax_error_sorting =
               EQ -> colOrder <= EQ
               GT -> False
             GT -> False
-    in all (\(e1, e2) -> compare e1 e2 <= EQ) (zip sortedErrors (tail sortedErrors))
+    in L.all (\(e1, e2) -> compare e1 e2 <= EQ) (zip sortedErrors (L.tail sortedErrors))
 
 -- ============================================================================
 -- Property Tests for Token
@@ -199,7 +200,7 @@ prop_token_equality_symmetric =
     forAll genToken $ \token2 ->
       (token1 == token2) === (token2 == token1)
 
--- Property: Tokens with same type and content should be equal
+-- Property: Tokens with same type L.and content should be equal
 prop_token_structural_equality :: Property
 prop_token_structural_equality = 
   forAll genTokenContent $ \content ->
@@ -234,8 +235,8 @@ prop_scope_set_order_independence =
       forAll (listOf genFunctionName) $ \funcs1 ->
         let varsSet1 = Set.fromList vars1
             funcsSet1 = Set.fromList funcs1
-            varsSet2 = Set.fromList (reverse vars1)
-            funcsSet2 = Set.fromList (reverse funcs1)
+            varsSet2 = Set.fromList (L.reverse vars1)
+            funcsSet2 = Set.fromList (L.reverse funcs1)
             scope1 = Scope name varsSet1 funcsSet1 Nothing
             scope2 = Scope name varsSet2 funcsSet2 Nothing
         in scope1 === scope2
@@ -365,12 +366,12 @@ test_complex_validation_scenarios = do
   let invalidCode = "package main\n\nfunc main() {\n    return 42\n  // Missing closing brace\n"
       invalidErrors = validateFile invalidCode
   
-  -- Valid code should have no errors (or only warnings)
-  length validErrors @?= 0
+  -- Valid code should have no errors (L.or only warnings)
+  L.length validErrors @?= 0
   
   -- Invalid code should have errors
-  length invalidErrors @?= 1
-  errorType (head invalidErrors) @?= MissingBrace
+  L.length invalidErrors @?= 1
+  errorType (L.head invalidErrors) @?= MissingBrace
 
 test_error_formatting :: IO ()
 test_error_formatting = do
@@ -388,7 +389,7 @@ test_error_formatting = do
   formatted `contains` "line 10"
   formatted `contains` "column 5"
   where
-    contains x y = y `isInfixOf` x
+    contains x y = y `L.isInfixOf` x
 
 -- ============================================================================
 -- Test Suite

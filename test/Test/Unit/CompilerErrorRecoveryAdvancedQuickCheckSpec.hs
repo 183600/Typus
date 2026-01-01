@@ -10,6 +10,7 @@
 module Test.Unit.CompilerErrorRecoveryAdvancedQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertBool, assertEqual, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -144,13 +145,13 @@ prop_error_formatting_preserves_info err =
       ctx = errorContext err
   in counterexample ("Formatted: " ++ formatted) $
      property $ 
-       show (sourceLine pos) `isInfixOf` formatted .&&.
-       show (sourceColumn pos) `isInfixOf` formatted .&&.
-       msg `isInfixOf` formatted .&&.
-       show sev `isInfixOf` formatted .&&.
-       show ctx `isInfixOf` formatted
+       show (sourceLine pos) `L.isInfixOf` formatted .&&.
+       show (sourceColumn pos) `L.isInfixOf` formatted .&&.
+       msg `L.isInfixOf` formatted .&&.
+       show sev `L.isInfixOf` formatted .&&.
+       show ctx `L.isInfixOf` formatted
   where
-    isInfixOf needle haystack = needle `elem` words haystack
+    L.isInfixOf needle haystack = needle `elem` words haystack
 
 -- Property: error filtering preserves ordering
 prop_error_filtering_preserves_order :: ErrorList -> ErrorSeverity -> Property
@@ -159,7 +160,7 @@ prop_error_filtering_preserves_order errors severity =
       filtered = filterErrorsBySeverity severity original
       originalSeverities = map errorSeverity original
       filteredSeverities = map errorSeverity filtered
-  in property $ all (>= severity) filteredSeverities
+  in property $ L.all (>= severity) filteredSeverities
 
 -- Property: most severe error is correctly identified
 prop_most_severe_error_correct :: ErrorList -> Property
@@ -171,7 +172,7 @@ prop_most_severe_error_correct errors =
            Warning -> 1
            Error -> 2
            Fatal -> 3
-         maxSeverity = maximum $ map (severityOrder . errorSeverity) errorList
+         maxSeverity = L.maximum $ L.map (severityOrder . errorSeverity) errorList
          mostSevereOrder = severityOrder $ errorSeverity mostSevere
      in property $ mostSevereOrder === maxSeverity
 
@@ -181,11 +182,11 @@ prop_error_grouping_consistency errors =
   let errorList = getErrorList errors
       grouped = groupErrors errorList
       -- Each group should have errors of the same context
-      groupsHaveConsistentContext = all (\group -> 
+      groupsHaveConsistentContext = L.all (\group -> 
             let contexts = map errorContext group
-            in length (nub contexts) <= 1) grouped
-  in classify (length errorList > 5) "multiple errors" $
-     classify (length errorList <= 5) "few errors" $
+            in L.length (nub contexts) <= 1) grouped
+  in classify (L.length errorList > 5) "multiple errors" $
+     classify (L.length errorList <= 5) "few errors" $
      property $ groupsHaveConsistentContext
 
 -- Property: error recovery strategy selection is logical
@@ -208,13 +209,13 @@ prop_recovery_strategy_selection err =
 prop_error_position_ordering_in_groups :: ErrorList -> ErrorContext -> Property
 prop_error_position_ordering_in_groups errors context =
   let errorList = getErrorList errors
-      contextErrors = filter (\e -> errorContext e == context) errorList
+      contextErrors = L.filter (\e -> errorContext e == context) errorList
       orderedByPos = sortBy (\e1 e2 -> 
         compare (errorPosition e1) (errorPosition e2)) contextErrors
   in not (null contextErrors) ==>
      let grouped = groupErrors errorList
-         contextGroup = filter (\group -> not (null group) && 
-                                     errorContext (head group) == context) grouped
+         contextGroup = L.filter (\group -> not (null group) && 
+                                     errorContext (L.head group) == context) grouped
      in case contextGroup of
           [] -> property $ True  -- No group for this context
           (group:_) -> 
@@ -228,9 +229,9 @@ prop_error_message_uniqueness errors =
   let errorList = getErrorList errors
       messages = map errorMessage errorList
       uniqueMessages = nub messages
-      duplicateCount = length messages - length uniqueMessages
+      duplicateCount = L.length messages - L.length uniqueMessages
   in classify (duplicateCount > 0) "has duplicate messages" $
-     classify (duplicateCount == 0) "all unique messages" $
+     classify (duplicateCount == 0) "L.all unique messages" $
      property $ duplicateCount >= 0
 
 -- Property: error suggestion handling
@@ -241,19 +242,19 @@ prop_error_suggestion_handling err =
   in classify hasSuggestion "has suggestion" $
      classify (not hasSuggestion) "no suggestion" $
      case errorSuggestion err of
-       Just suggestion -> property $ suggestion `isInfixOf` formatted
+       Just suggestion -> property $ suggestion `L.isInfixOf` formatted
        Nothing -> property $ True
   where
-    isInfixOf needle haystack = needle `elem` words haystack
+    L.isInfixOf needle haystack = needle `elem` words haystack
 
 -- Property: error context distribution
 prop_error_context_distribution :: ErrorList -> Property
 prop_error_context_distribution errors =
   let errorList = getErrorList errors
       contexts = map errorContext errorList
-      contextCounts = map (\ctx -> (ctx, length $ filter (== ctx) contexts)) (nub contexts)
-      totalCount = length errorList
-      sumOfCounts = sum $ map snd contextCounts
+      contextCounts = L.map (\ctx -> (ctx, L.length $ L.filter (== ctx) contexts)) (nub contexts)
+      totalCount = L.length errorList
+      sumOfCounts = L.sum $ map snd contextCounts
   in property $ sumOfCounts === totalCount
 
 tests :: TestTree
@@ -297,7 +298,7 @@ tests = testGroup "Compiler Error Recovery Advanced QuickCheck Tests"
               err3 = CompilerError Error TypeChecking (posAtLineCol 3 1) "Type error" Nothing
               errors = [err1, err2, err3]
               grouped = groupErrors errors
-          assertEqual "should have 2 groups" 2 (length grouped)
+          assertEqual "should have 2 groups" 2 (L.length grouped)
           
       , testCase "most severe error identification" $ do
           let warning = CompilerError Warning Parsing startPos "Warning" Nothing

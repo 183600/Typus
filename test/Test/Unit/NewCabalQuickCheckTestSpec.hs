@@ -4,12 +4,14 @@
 module Test.Unit.NewCabalQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Data.List (sort, nub, isPrefixOf, isInfixOf)
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort, nub)
 import Data.Char (isSpace, isAlphaNum)
 
 import Utils (trim, splitBy, splitByCollapsed, removeLineComments, removeComments, normalizeIndentation, breakOn)
@@ -38,26 +40,26 @@ utilsPropertyTests = testGroup "Utils String Processing Properties"
   [ fastProperty "trim: applying twice is same as applying once" $
       \s -> trim (trim s) == trim s
   
-  , fastProperty "splitBy: joining with delimiter and splitting again returns original" $
+  , fastProperty "splitBy: joining with delimiter L.and splitting again returns original" $
       \c s -> not (null s) ==> splitBy c (unwords (splitBy c s)) == splitBy c s
   
   , fastProperty "splitByCollapsed: never returns empty strings" $
-      \c s -> all (not . null) (splitByCollapsed c s)
+      \c s -> L.all (not . null) (splitByCollapsed c s)
   
   , fastProperty "removeLineComments: preserves non-comment lines" $
       \s -> not ('/' `elem` s) ==> removeLineComments s == s
   
   , fastProperty "normalizeIndentation: preserves line count" $
-      \s -> length (lines s) == length (lines (normalizeIndentation s))
+      \s -> L.length (lines s) == L.length (lines (normalizeIndentation s))
   
   , fastProperty "breakOn: when pattern not found, returns original string" $
-      \pat s -> not (pat `isInfixOf` s) ==> breakOn pat s == (s, "")
+      \pat s -> not (pat `L.isInfixOf` s) ==> breakOn pat s == (s, "")
   ]
 
 -- | 2. SourceLocation模块位置计算测试
 sourceLocationPropertyTests :: TestTree
 sourceLocationPropertyTests = testGroup "SourceLocation Properties"
-  [ testCase "startPos line and column are 1" $
+  [ testCase "startPos line L.and column are 1" $
       (posLine startPos == 1 && posColumn startPos == 1) @?= True
   
   , testCase "posAfter: column increases by 1 for regular characters" $
@@ -84,10 +86,10 @@ sourceLocationPropertyTests = testGroup "SourceLocation Properties"
 -- | 3. Parser模块解析器一致性测试
 parserPropertyTests :: TestTree
 parserPropertyTests = testGroup "Parser Consistency Properties"
-  [ testCase "defaultFileDirectives: all fields are Nothing" $
+  [ testCase "defaultFileDirectives: L.all fields are Nothing" $
       all (== Nothing) [fdOwnership (defaultFileDirectives), fdDependentTypes (defaultFileDirectives), fdConstraints (defaultFileDirectives)] @?= True
   
-  , testCase "defaultBlockDirectives: all fields are Nothing" $
+  , testCase "defaultBlockDirectives: L.all fields are Nothing" $
       all (== Nothing) [bdOwnership (defaultBlockDirectives), bdDependentTypes (defaultBlockDirectives), bdConstraints (defaultBlockDirectives)] @?= True
   
   , testCase "FileDirectives equality is reflexive" $
@@ -118,15 +120,15 @@ errorHandlerPropertyTests = testGroup "ErrorHandler Properties"
 -- | 5. 字符串处理功能测试
 stringProcessingTests :: TestTree
 stringProcessingTests = testGroup "String Processing Properties"
-  [ fastProperty "trim: removes only leading and trailing whitespace" $
+  [ fastProperty "trim: removes only leading L.and trailing whitespace" $
       \s -> let trimmed = trim s
-             in all (not . isSpace) (take 1 trimmed ++ drop (length trimmed - 1) trimmed)
+             in L.all (not . isSpace) (take 1 trimmed ++ drop (L.length trimmed - 1) trimmed)
   
-  , fastProperty "splitBy: length is at least 1 for non-empty input" $
-      \c s -> not (null s) ==> length (splitBy c s) >= 1
+  , fastProperty "splitBy: L.length is at least 1 for non-empty input" $
+      \c s -> not (null s) ==> L.length (splitBy c s) >= 1
   
   , fastProperty "removeComments: idempotent on comment-free strings" $
-      \s -> not (any (`isInfixOf` s) ["//", "/*"]) ==> removeComments s == s
+      \s -> not (L.any (`L.isInfixOf` s) ["//", "/*"]) ==> removeComments s == s
   ]
 
 -- | 6. 列表操作测试
@@ -138,11 +140,11 @@ listOperationTests = testGroup "List Operation Properties"
   , fastProperty "nub: removes duplicates" $
       \(xs :: [Int]) -> nub xs == nub (nub xs)
   
-  , fastProperty "isPrefixOf: empty string is prefix of any string" $
-      \(s :: String) -> "" `isPrefixOf` s
+  , fastProperty "L.isPrefixOf: empty string is prefix of L.any string" $
+      \(s :: String) -> "" `L.isPrefixOf` s
   
-  , fastProperty "isInfixOf: empty string is infix of any string" $
-      \(s :: String) -> "" `isInfixOf` s
+  , fastProperty "L.isInfixOf: empty string is infix of L.any string" $
+      \(s :: String) -> "" `L.isInfixOf` s
   ]
 
 -- | 7. Map操作测试
@@ -156,8 +158,8 @@ mapOperationTests = testGroup "Map Operation Properties"
       \(k :: Int) (v1 :: String) (v2 :: String) -> 
         Map.lookup k (Map.union (Map.singleton k v1) (Map.singleton k v2)) == Just v1
   
-  , fastProperty "Map.keys: length equals size" $
-      \(m :: Map.Map Int String) -> length (Map.keys m) == Map.size m
+  , fastProperty "Map.keys: L.length equals size" $
+      \(m :: Map.Map Int String) -> L.length (Map.keys m) == Map.size m
   
   , testCase "Map.null: empty map is null" $
       Map.null Map.empty @?= True
@@ -185,7 +187,7 @@ charProcessingTests = testGroup "Character Processing Properties"
   [ testCase "isSpace: space is space" $
       (isSpace ' ' && isSpace '\t' && isSpace '\n') @?= True
   
-  , fastProperty "isAlphaNum: digits and letters are alphanumeric" $
+  , fastProperty "isAlphaNum: digits L.and letters are alphanumeric" $
       \(c :: Char) -> (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ==> isAlphaNum c
   
   , fastProperty "Char to String conversion" $
@@ -195,7 +197,7 @@ charProcessingTests = testGroup "Character Processing Properties"
 -- | 10. 位置计算测试
 positionCalculationTests :: TestTree
 positionCalculationTests = testGroup "Position Calculation Properties"
-  [ testCase "SourcePos: line and column are positive" $
+  [ testCase "SourcePos: line L.and column are positive" $
       let pos = SourcePos 1 1 0
       in posLine pos > 0 && posColumn pos > 0 @?= True
   

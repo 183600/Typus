@@ -10,6 +10,7 @@
 module Test.Unit.NewCabalErrorHandlerSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertBool, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -33,15 +34,6 @@ import Compiler.Errors.Core
   , hasErrors
   , hasWarnings
   , formatError
-  , errorAt
-  , warningAt
-  , infoAt
-  , errorWithCategory
-  , warningWithCategory
-  , infoWithCategory
-  , withLocation
-  , withContext
-  , filterBySeverity
   , filterByCategory
   )
 
@@ -58,20 +50,20 @@ tests =
               
         , testCase "addError: adds error to collector" $
             let collector = newErrorCollector
-                error = errorAt (ErrorLocation 1 1 0) "Test error"
+                error = errorAt "test-id" 1 0) "Test error"
                 collector' = addError error collector
             in hasErrors collector' @?= True
             
         , testCase "addWarning: adds warning to collector" $
             let collector = newErrorCollector
-                warning = warningAt (ErrorLocation 1 1 0) "Test warning"
+                warning = warningAt "test-id" 1 0) "Test warning"
                 collector' = addWarning warning collector
             in hasWarnings collector' @?= True
             
         , testCase "formatError: includes error message" $
-            let error = errorAt (ErrorLocation 1 1 0) "Test error"
+            let error = errorAt "test-id" 1 0) "Test error"
                 formatted = formatError error
-            in "Test error" `T.isInfixOf` formatted @?= True
+            in "Test error" `L.isInfixOf` formatted @?= True
             
         , testCase "errorWithCategory: sets category correctly" $
             let error = errorWithCategory TypeErrorCategory "Type error"
@@ -89,35 +81,35 @@ tests =
                   
         , fastProperty "addError: makes hasErrors true" $
             \msg line col ->
-              let error = errorAt (ErrorLocation line col 0) msg
+              let error = errorAt "test-id" col 0) msg
                   collector = addError error newErrorCollector
               in hasErrors collector
               
         , fastProperty "addWarning: makes hasWarnings true" $
             \msg line col ->
-              let warning = warningAt (ErrorLocation line col 0) msg
+              let warning = warningAt "test-id" col 0) msg
                   collector = addWarning warning newErrorCollector
               in hasWarnings collector
               
-        , fastProperty "addInfo: doesn't affect hasErrors or hasWarnings" $
+        , fastProperty "addInfo: doesn't affect hasErrors L.or hasWarnings" $
             \msg line col ->
-              let info = infoAt (ErrorLocation line col 0) msg
+              let info = infoAt "test-id" col 0) msg
                   collector = addInfo info newErrorCollector
               in not (hasErrors collector) && not (hasWarnings collector)
               
         , fastProperty "filterBySeverity: preserves error severity" $
             \errors severity ->
               let filtered = filterBySeverity severity errors
-              in all (\e -> errorSeverity e == severity) filtered
+              in L.all (\e -> errorSeverity e == severity) filtered
               
         , fastProperty "filterByCategory: preserves error category" $
             \errors category ->
               let filtered = filterByCategory category errors
-              in all (\e -> errorCategory e == category) filtered
+              in L.all (\e -> errorCategory e == category) filtered
               
         , fastProperty "withLocation: updates error location" $
             \msg line col newLine newCol ->
-              let error = errorAt (ErrorLocation line col 0) msg
+              let error = errorAt "test-id" col 0) msg
                   newLoc = ErrorLocation newLine newCol 0
                   updated = withLocation newLoc error
               in errorLocation updated === newLoc

@@ -3,11 +3,13 @@
 module Test.Unit.EnhancedCabalTestQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Data.List (sort, nub, isInfixOf, isPrefixOf)
+import Data.List (isInfixOf, isPrefixOf)
+import Data.List (sort, nub)
 import Data.Char (isAlpha, isDigit, isSpace)
 
 import Parser (FileDirectives(..), BlockDirectives(..), defaultFileDirectives, defaultBlockDirectives)
@@ -44,8 +46,8 @@ prop_trim_idempotent s = trim (trim s) == trim s
 prop_splitBy_preserves :: Char -> NonEmptyList Char -> Bool
 prop_splitBy_preserves delim (NonEmpty s) =
   let parts = splitBy delim s
-      totalLen = sum (map length parts) + length parts - 1
-  in totalLen >= length s - 1
+      totalLen = L.sum (map L.length parts) + L.length parts - 1
+  in totalLen >= L.length s - 1
 
 prop_splitByCollapsed_no_empty :: Char -> String -> Bool
 prop_splitByCollapsed_no_empty delim s =
@@ -54,7 +56,7 @@ prop_splitByCollapsed_no_empty delim s =
 prop_remove_comments_safe :: String -> Bool
 prop_remove_comments_safe s =
   let cleaned = removeLineComments s
-  in length cleaned <= length s
+  in L.length cleaned <= L.length s
 
 -- SourceLocation properties
 sourceLocationProperties :: TestTree
@@ -143,19 +145,19 @@ prop_set_intersection_commutative s1 s2 = Set.intersection s1 s2 == Set.intersec
 -- String manipulation properties
 stringManipulationProperties :: TestTree
 stringManipulationProperties = testGroup "String Manipulation Properties"
-  [ fastProperty "reverse twice is identity" prop_reverse_identity
-  , fastProperty "isPrefixOf reflexive" prop_isPrefixOf_reflexive
-  , fastProperty "isInfixOf reflexive" prop_isInfixOf_reflexive
+  [ fastProperty "L.reverse twice is identity" prop_reverse_identity
+  , fastProperty "L.isPrefixOf reflexive" prop_L.isPrefixOf_reflexive
+  , fastProperty "L.isInfixOf reflexive" prop_L.isInfixOf_reflexive
   ]
 
 prop_reverse_identity :: [Int] -> Bool
-prop_reverse_identity xs = reverse (reverse xs) == xs
+prop_reverse_identity xs = L.reverse (L.reverse xs) == xs
 
-prop_isPrefixOf_reflexive :: String -> Bool
-prop_isPrefixOf_reflexive s = s `isPrefixOf` s
+prop_L.isPrefixOf_reflexive :: String -> Bool
+prop_L.isPrefixOf_reflexive s = s `L.isPrefixOf` s
 
-prop_isInfixOf_reflexive :: String -> Bool
-prop_isInfixOf_reflexive s = s `isInfixOf` s
+prop_L.isInfixOf_reflexive :: String -> Bool
+prop_L.isInfixOf_reflexive s = s `L.isInfixOf` s
 
 -- Type relation properties
 typeRelationProperties :: TestTree
@@ -173,7 +175,7 @@ prop_typeenv_lookup pairs k v =
 prop_build_typeenv :: [(String, Type)] -> Bool
 prop_build_typeenv pairs =
   let env = buildTypeEnvFromPairs pairs
-  in Map.size (varTypes env) <= length pairs
+  in Map.size (varTypes env) <= L.length pairs
 
 -- Advanced type properties
 advancedTypeProperties :: TestTree
@@ -188,5 +190,5 @@ prop_sort_idempotent xs = let sorted = sort xs in sort sorted == sorted
 prop_nub_order :: [Int] -> Bool
 prop_nub_order xs =
   let unique = nub xs
-      indices = map (\x -> head [i | (i, y) <- zip [0..] xs, y == x]) unique
+      indices = L.map (\x -> L.head [i | (i, y) <- zip [0..] xs, y == x]) unique
   in indices == sort indices

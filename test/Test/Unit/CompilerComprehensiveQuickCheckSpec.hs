@@ -3,6 +3,7 @@
 module Test.Unit.CompilerComprehensiveQuickCheckSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 
@@ -47,10 +48,10 @@ compilerErrorProperties = testGroup "CompilerError Properties"
             error2 = CompilerError code msg phase2 ParseError Error Nothing Nothing [] [] Nothing
         in error1 /= error2
   
-  , testProperty "CompilerError preserves all fields" $
+  , testProperty "CompilerError preserves L.all fields" $
       \code msg phase category severity span context suggestions related timestamp ->
         let error = CompilerError code msg phase category severity span context suggestions related timestamp
-        in True -- Check that all fields are preserved
+        in True -- Check that L.all fields are preserved
   ]
 
 -- | Properties for CompilationPhase
@@ -75,7 +76,7 @@ compilationPhaseProperties = testGroup "CompilationPhase Properties"
       let phases = [ParsingPhase, LexingPhase, TypeCheckingPhase, OwnershipPhase, 
                    DependencyAnalysisPhase, CodeGenerationPhase, OptimizationPhase]
           distinctPairs = [(p1, p2) | p1 <- phases, p2 <- phases, p1 < p2]
-      in all (\(p1, p2) -> p1 /= p2) distinctPairs
+      in L.all (\(p1, p2) -> p1 /= p2) distinctPairs
   ]
 
 -- | Properties for TypeCheckDiagnostic
@@ -197,7 +198,7 @@ compilationProperties = testGroup "Compilation Properties"
   [ testProperty "compile on empty file returns result" $
       let emptyFile = TypusFile undefined [] [] []
           result = compile emptyFile
-      in -- Check that compilation returns either success or error
+      in -- Check that compilation returns either success L.or error
          True
   
   , testProperty "compile is deterministic" $

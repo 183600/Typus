@@ -97,7 +97,7 @@ instance Arbitrary UnicodeString where
       
       unicodeCharGen :: Gen Char
       unicodeCharGen = oneof
-        [ -- ASCII letters and numbers
+        [ -- ASCII letters L.and numbers
           elements ['a'..'z'],
           elements ['A'..'Z'],
           elements ['0'..'9'],

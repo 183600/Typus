@@ -16,13 +16,14 @@ import Compiler.DependentTypeChecker
 import Compiler.TypeChecker (Type(..), TypeEnv(..))
 import Parser (TypusFile(..), CodeBlock(..))
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 -- | Test dependent type system properties
 dependentTypeSystemSpec :: TestTree
 dependentTypeSystemSpec = testGroup "Dependent Type System"
   [ testProperty "dependent type checker handles simple constraints" prop_simple_constraints
-  , testProperty "dependent type checker validates vector length types" prop_vector_length_validation
+  , testProperty "dependent type checker validates vector L.length types" prop_vector_length_validation
   , testProperty "dependent type checker handles non-empty slice types" prop_non_empty_slice_validation
   , testProperty "dependent type checker maintains type consistency" prop_type_consistency
   , testProperty "dependent type checker handles division by zero prevention" prop_division_by_zero_prevention
@@ -39,16 +40,16 @@ prop_simple_constraints typeName =
   not (null typeName) ==> 
     let simpleType = typeName ++ " with constraint"
         -- Simulate simple type constraint checking
-        canHandleSimple = length simpleType > 0
+        canHandleSimple = L.length simpleType > 0
     in canHandleSimple === True
 
--- | dependent type checker should validate vector length types
+-- | dependent type checker should validate vector L.length types
 prop_vector_length_validation :: Int -> Int -> Property
 prop_vector_length_validation actualLength expectedLength =
   actualLength >= 0 && expectedLength >= 0 ==> 
     let vectorType = "Vector[" ++ show actualLength ++ "]"
         constraint = "Vector[" ++ show expectedLength ++ "]"
-        -- Simulate vector length validation
+        -- Simulate vector L.length validation
         isValid = actualLength == expectedLength
     in isValid || (actualLength /= expectedLength)
 
@@ -84,7 +85,7 @@ prop_constraint_preservation constraint =
   not (null constraint) ==> 
     let originalConstraint = constraint
         -- Simulate constraint preservation through type operations
-        preserved = length originalConstraint > 0
+        preserved = L.length originalConstraint > 0
     in preserved === True
 
 -- | dependent type checker should handle nested constraints
@@ -93,7 +94,7 @@ prop_nested_constraints outerConstraint innerConstraint =
   not (null outerConstraint) && not (null innerConstraint) ==> 
     let nested = outerConstraint ++ "(" ++ innerConstraint ++ ")"
         -- Simulate nested constraint handling
-        canHandleNested = length nested > length outerConstraint
+        canHandleNested = L.length nested > L.length outerConstraint
     in canHandleNested === True
 
 -- | dependent type checker should validate matrix dimensions
@@ -110,7 +111,7 @@ prop_type_inference :: String -> Property
 prop_type_inference expression =
   not (null expression) ==> 
     let -- Simulate type inference
-        canInferType = length expression > 0
+        canInferType = L.length expression > 0
     in canInferType === True
 
 -- | dependent type checker error reporting
@@ -119,7 +120,7 @@ prop_error_reporting errorType errorMessage =
   not (null errorType) && not (null errorMessage) ==> 
     let errorReport = errorType ++ ": " ++ errorMessage
         -- Simulate error reporting
-        hasErrorInfo = length errorReport > 0
+        hasErrorInfo = L.length errorReport > 0
     in hasErrorInfo === True
 
 -- Helper for equality in QuickCheck

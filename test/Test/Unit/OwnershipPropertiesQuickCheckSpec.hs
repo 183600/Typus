@@ -2,6 +2,7 @@
 module Test.Unit.OwnershipPropertiesQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), Gen, oneof, elements, listOf, sized, choose, forAll)
 import Data.Char (isAlphaNum, isLetter, isDigit)
@@ -120,7 +121,7 @@ propOwnershipErrorShowRead :: OwnershipError -> Bool
 propOwnershipErrorShowRead oe =
   let shown = show oe
       -- 简化的检查：确保show产生非空字符串
-  in not (null shown) && shown `isPrefixOf` show oe
+  in not (null shown) && shown `L.isPrefixOf` show oe
 
 -- | OwnershipError的错误分类
 propOwnershipErrorCategorization :: OwnershipError -> Bool
@@ -209,7 +210,7 @@ propNoDoubleOwnership vars =
   let uniqueVars = nub vars
       ownershipTypes = map Owned uniqueVars
       ownershipMap = zip uniqueVars ownershipTypes
-  in length ownershipMap == length uniqueVars
+  in L.length ownershipMap == L.length uniqueVars
 
 -- | 借用跟踪属性
 propBorrowTracking :: String -> [String] -> Bool
@@ -217,7 +218,7 @@ propBorrowTracking owner borrowers =
   let owned = Owned owner
       borrowTypes = map Borrowed borrowers
       -- 检查所有借用都引用了有效的所有者
-      allReferenceOwner = all (\(Borrowed ref) -> ref == owner) borrowTypes
+      allReferenceOwner = L.all (\(Borrowed ref) -> ref == owner) borrowTypes
   in null borrowers || allReferenceOwner
 
 -- | 移动语义属性
@@ -235,7 +236,7 @@ propScopeManagement vars =
   let inScope = Set.fromList vars
       outOfScope = Set.empty
       -- 检查作用域内的变量都是有效的
-      scopeValid = all (`member` inScope) vars
+      scopeValid = L.all (`member` inScope) vars
   in scopeValid && Set.null outOfScope
 
 -- ============================================================================
@@ -265,10 +266,10 @@ propSpecialCharacterNames base =
 -- | 非常长的名称
 propVeryLongNames :: Int -> String -> Bool
 propVeryLongNames n base =
-  let length = abs n `mod` 1000 + 1
-      longName = concat (replicate length base)
+  let L.length = abs n `mod` 1000 + 1
+      longName = L.concat (replicate L.length base)
       owned = Owned longName
-  in length (show owned) > length base
+  in L.length (show owned) > L.length base
 
 -- | Unicode名称
 propUnicodeNames :: String -> Bool
@@ -287,21 +288,21 @@ propUnicodeNames base =
 propManyVariables :: Int -> Bool
 propManyVariables count =
   let varCount = abs count `mod` 100 + 1
-      vars = map (\i -> "var" ++ show i) [1..varCount]
+      vars = L.map (\i -> "var" ++ show i) [1..varCount]
       ownershipTypes = map Owned vars
-      transferChains = zipWith OwnershipTransfer vars (tail vars ++ [head vars])
-  in length ownershipTypes == varCount && length transferChains == varCount
+      transferChains = zipWith OwnershipTransfer vars (L.tail vars ++ [L.head vars])
+  in L.length ownershipTypes == varCount && L.length transferChains == varCount
 
 -- | 深度转移链
 propDeepTransferChains :: Int -> Bool
 propDeepTransferChains depth =
   let chainDepth = abs depth `mod` 50 + 1
-      vars = map (\i -> "chain_var_" ++ show i) [1..chainDepth]
-      transfers = zipWith OwnershipTransfer vars (tail vars)
+      vars = L.map (\i -> "chain_var_" ++ show i) [1..chainDepth]
+      transfers = zipWith OwnershipTransfer vars (L.tail vars)
       finalVar = last vars
-      firstVar = head vars
-  in length transfers == chainDepth - 1 &&
-     (if null transfers then True else transferFrom (head transfers) == firstVar)
+      firstVar = L.head vars
+  in L.length transfers == chainDepth - 1 &&
+     (if null transfers then True else transferFrom (L.head transfers) == firstVar)
 
 -- | 复杂错误场景
 propComplexErrorScenarios :: [String] -> Bool
@@ -316,10 +317,10 @@ propComplexErrorScenarios vars =
         ]) uniqueVars
       -- 检查错误分类
       categorizedErrors = map propOwnershipErrorCategorization errors
-  in all id categorizedErrors
+  in L.all id categorizedErrors
 
 -- ============================================================================
--- Helper Functions and Generators
+-- Helper Functions L.and Generators
 -- ============================================================================
 
 -- 生成变量名
@@ -334,7 +335,7 @@ genLongVariableName :: Gen String
 genLongVariableName = do
   base <- genVariableName
   n <- choose (1, 100)
-  return $ concat (replicate n base)
+  return $ L.concat (replicate n base)
 
 -- 生成Unicode变量名
 genUnicodeVariableName :: Gen String

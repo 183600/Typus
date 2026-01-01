@@ -10,6 +10,7 @@
 module Test.Unit.SourceLocationMathPrecisionSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertFailure, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -59,7 +60,7 @@ genTextContent = oneof
   , listOf $ elements $ ['\128'..'\255'] ++ "测试🚀"
   , do
       n <- choose (0, 10)
-      return $ concat (replicate n "word ")
+      return $ L.concat (replicate n "word ")
   ]
 
 -- | Generate multiline text content
@@ -77,7 +78,7 @@ genPatternedText = oneof
   , return $ "a\tb\tc\n1\t2\t3\n"
   , do
       n <- choose (1, 5)
-      return $ concat (replicate n "text\n")
+      return $ L.concat (replicate n "text\n")
   ]
 
 -- Property: Position advancement should be mathematically consistent
@@ -103,7 +104,7 @@ prop_position_after_tab_alignment pos =
       expectedCol = ((beforeTab - 1) `div` 8 + 1) * 8 + 1
   in property $ column afterTab === expectedCol
 
--- Property: Position after newline should reset column and increment line
+-- Property: Position after newline should reset column L.and increment line
 prop_position_after_newline :: SourcePos -> Property
 prop_position_after_newline pos =
   let afterNewline = posAfter '\n' pos
@@ -115,7 +116,7 @@ prop_position_advancement_offset :: SourcePos -> String -> Property
 prop_position_advancement_offset pos text =
   let startOffset = sourceOffset pos
       advanced = advancePosByText (T.pack text) pos
-      expectedOffset = startOffset + length text
+      expectedOffset = startOffset + L.length text
   in property $ sourceOffset advanced === expectedOffset
 
 -- Property: Span between positions should be mathematically sound
@@ -155,9 +156,9 @@ prop_span_validity_transitive pos1 pos2 pos3 =
 -- Property: Position advancement should handle Unicode correctly
 prop_position_advancement_unicode :: SourcePos -> String -> Property
 prop_position_advancement_unicode pos text =
-  let hasUnicode = any (> '\127') text
+  let hasUnicode = L.any (> '\127') text
       advanced = advancePosByText (T.pack text) pos
-      expectedOffset = sourceOffset pos + length text
+      expectedOffset = sourceOffset pos + L.length text
   in property $ sourceOffset advanced === expectedOffset
 
 -- Property: Multiline text advancement should be accurate
@@ -167,7 +168,7 @@ prop_multiline_advancement_accuracy content =
   let lines' = lines content
       finalPos = foldl' (\pos line -> 
         advancePosByText (T.pack line) (posAfter '\n' pos)) startPos content
-      expectedLine = length lines'
+      expectedLine = L.length lines'
   in property $ line finalPos === expectedLine
 
 -- Property: Tab expansion should be consistent
@@ -191,11 +192,11 @@ prop_span_merging_associative span1 span2 span3 =
 -- Property: Position arithmetic should be invertible for simple cases
 prop_position_arithmetic_invertible :: SourcePos -> String -> Property
 prop_position_arithmetic_invertible pos text =
-  not (null text) && all (`elem` "abcde \t") text ==> 
+  not (null text) && L.all (`elem` "abcde \t") text ==> 
   let advanced = advancePosByText (T.pack text) pos
       -- Note: Full inversion is complex, this tests simple cases
       offsetDiff = sourceOffset advanced - sourceOffset pos
-  in property $ offsetDiff === length text
+  in property $ offsetDiff === L.length text
 
 -- Property: Error location conversion should preserve information
 prop_error_location_preservation :: SourceSpan -> Property
@@ -223,9 +224,9 @@ prop_position_ordering_consistent pos1 pos2 =
 -- Property: Complex text patterns should be tracked accurately
 prop_complex_text_tracking :: String -> Property
 prop_complex_text_tracking text =
-  length text > 10 ==> 
+  L.length text > 10 ==> 
   let finalPos = advancePosByText (T.pack text) startPos
-      lineCount = length $ filter (== '\n') text
+      lineCount = L.length $ L.filter (== '\n') text
       expectedLine = lineCount + 1
   in property $ line finalPos === expectedLine
 

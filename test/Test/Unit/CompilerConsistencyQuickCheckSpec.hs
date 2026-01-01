@@ -28,6 +28,7 @@ import SourceLocation
   )
 
 import Data.Char (isSpace, isAlphaNum)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 
 -- Property: compilation of empty input produces consistent result
@@ -86,7 +87,7 @@ prop_compile_error_messages_useful :: String -> Property
 prop_compile_error_messages_useful malformed =
   let result = compileTypus "" malformed
   in case result of
-       Left err -> property $ length (show err) > 0
+       Left err -> property $ L.length (show err) > 0
        Right _ -> property True
 
 -- Property: compilation respects file directives
@@ -101,8 +102,8 @@ prop_compile_respects_directives ownership =
 -- Property: compilation handles nested structures
 prop_compile_nested_structures :: Positive Int -> Property
 prop_compile_nested_structures (Positive depth) =
-  let nested = concat $ replicate depth "{"
-      input = "func test() " ++ nested ++ " return 0 " ++ concat (replicate depth "}")
+  let nested = L.concat $ replicate depth "{"
+      input = "func test() " ++ nested ++ " return 0 " ++ L.concat (replicate depth "}")
       result = compileTypus "" input
   in property $ case result of
                   Left _ -> property True
@@ -119,8 +120,8 @@ prop_compile_type_consistent input =
 -- Property: compilation handles multiple functions
 prop_compile_multiple_functions :: [String] -> Property
 prop_compile_multiple_functions funcNames =
-  let validNames = map (\n -> take 6 $ filter isAlphaNum $ n ++ "test") funcNames
-      funcDefs = map (\name -> "func " ++ name ++ "() { return 0 }") validNames
+  let validNames = L.map (\n -> take 6 $ filter isAlphaNum $ n ++ "test") funcNames
+      funcDefs = L.map (\name -> "func " ++ name ++ "() { return 0 }") validNames
       input = unlines funcDefs
       result = compileTypus "" input
   in property $ case result of

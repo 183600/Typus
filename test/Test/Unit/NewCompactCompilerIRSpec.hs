@@ -3,6 +3,7 @@
 module Test.Unit.NewCompactCompilerIRSpec where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), forAll, choose, elements)
 import Compiler.IR
@@ -138,7 +139,7 @@ testIRTransformation = testGroup "IR转换测试"
             ]
           cfg = buildControlFlowGraph statements
       in case cfg of
-        CFG nodes -> length nodes @?= 3  -- entry, then, else
+        CFG nodes -> L.length nodes @?= 3  -- entry, then, else
         _ -> assertBool "CFG构建失败" False
   ]
 
@@ -155,13 +156,13 @@ testIRValidation = testGroup "IR验证测试"
       let expr = BinaryOp Add (Variable "undefined") (Constant (IntValue 1))
           symbolTable = Map.fromList [("x", IntType)]
           errors = validateExpression expr symbolTable
-      in length errors @?= 1
+      in L.length errors @?= 1
     
   , testCase "类型错误检测" $
       let expr = BinaryOp Add (Variable "x") (Constant (StringValue "test"))
           symbolTable = Map.fromList [("x", IntType)]
           errors = validateExpression expr symbolTable
-      in length errors @?= 1
+      in L.length errors @?= 1
   ]
 
 -- | QuickCheck属性测试
@@ -188,7 +189,7 @@ testIRProperties = testGroup "IR属性测试"
         let ssa = convertToSSA expr
             originalVars = collectVariables expr
             ssaVars = nub $ concatMap collectAssignmentVariables ssa
-        in length ssaVars >= length originalVars
+        in L.length ssaVars >= L.length originalVars
   ]
 
 -- | 测试IR生成
@@ -199,7 +200,7 @@ testIRGeneration = testGroup "IR生成测试"
                    [ Return (Constant (IntValue 0)) ]
           ir = generateFunctionIR func
       in case ir of
-        FunctionIR _ _ statements -> length statements @?= 1
+        FunctionIR _ _ statements -> L.length statements @?= 1
         _ -> assertBool "IR生成失败" False
     
   , testCase "带参数函数IR生成" $
@@ -207,7 +208,7 @@ testIRGeneration = testGroup "IR生成测试"
                    [ Return (BinaryOp Add (Variable "a") (Variable "b")) ]
           ir = generateFunctionIR func
       in case ir of
-        FunctionIR _ _ statements -> length statements @?= 1
+        FunctionIR _ _ statements -> L.length statements @?= 1
         _ -> assertBool "IR生成失败" False
   ]
 
@@ -245,7 +246,7 @@ testPerformanceProperties = testGroup "性能属性测试"
             exprs = replicate size (BinaryOp Add (Variable "x") (Constant (IntValue 1)))
             optimized = map optimizeExpression exprs
             types = map inferType optimized
-        in length optimized === size && all (/= Nothing) types
+        in L.length optimized === size && L.all (/= Nothing) types
   ]
 
 -- | 组合所有测试

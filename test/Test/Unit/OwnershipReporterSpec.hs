@@ -1,6 +1,7 @@
 module Test.Unit.OwnershipReporterSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertBool, assertEqual)
 import Test.Tasty.QuickCheck (testProperty, Property, forAll, Gen, arbitrary, elements, listOf1)
 
@@ -116,8 +117,8 @@ testErrorFormattingConsistency = testCase "Error formatting consistency" $ do
       formatted = formatOwnershipErrors errors
   
   assertBool "Should contain both errors" 
-    ("Use after move: var1" `isInfixOf` formatted && 
-     "Double move: src to dst" `isInfixOf` formatted)
+    ("Use after move: var1" `L.isInfixOf` formatted && 
+     "Double move: src to dst" `L.isInfixOf` formatted)
   assertBool "Should separate errors with semicolon" (';' `elem` formatted)
 
 testMultipleErrorsFormatting :: TestTree
@@ -137,7 +138,7 @@ testMultipleErrorsFormatting = testCase "Multiple errors formatting" $ do
         ]
   
   mapM_ (\part -> 
-    assertBool ("Should contain: " ++ part) (part `isInfixOf` formatted)
+    assertBool ("Should contain: " ++ part) (part `L.isInfixOf` formatted)
   ) expectedParts
 
 testErrorTypeCoverage :: TestTree
@@ -170,7 +171,7 @@ testFormattingProperties :: TestTree
 testFormattingProperties = testProperty "Formatting preserves error information" $
   forAll arbitraryErrorList $ \errors -> do
     let formatted = formatOwnershipErrors errors
-    return $ not (null formatted) ==> length (words formatted) > 0
+    return $ not (null formatted) ==> L.length (words formatted) > 0
 
 -- Helper generator for arbitrary errors
 arbitraryError :: Gen OwnershipError
@@ -197,4 +198,4 @@ arbitraryErrorList = listOf1 arbitraryError
 
 -- Helper function to check if a string is contained in another
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` words haystack
+L.isInfixOf needle haystack = needle `elem` words haystack

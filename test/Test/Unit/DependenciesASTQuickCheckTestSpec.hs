@@ -4,6 +4,7 @@
 module Test.Unit.DependenciesASTQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
@@ -67,7 +68,7 @@ dependencyEdgeTests = testGroup "Dependency Edge Tests"
           edge = DependencyEdge source target IndirectDependency (SourceSpan startPos startPos)
       in dependencyEdgeType edge @?= IndirectDependency
   
-  , fastProperty "Edge source and target are different" $
+  , fastProperty "Edge source L.and target are different" $
       \sourceName targetName -> let source = ModuleNode sourceName (SourceSpan startPos startPos)
                                     target = ModuleNode targetName (SourceSpan startPos startPos)
                                     edge = DependencyEdge source target DirectDependency (SourceSpan startPos startPos)
@@ -96,9 +97,9 @@ dependencyGraphTests = testGroup "Dependency Graph Tests"
       in dependencyGraphEdgeCount graph' @?= 1
   
   , fastProperty "Graph node count consistency" $
-      \nodeNames -> let nodes = map (\n -> ModuleNode n (SourceSpan startPos startPos)) nodeNames
+      \nodeNames -> let nodes = L.map (\n -> ModuleNode n (SourceSpan startPos startPos)) nodeNames
                         graph = foldl addDependencyNode emptyDependencyGraph nodes
-                    in dependencyGraphSize graph == length (nub nodeNames)
+                    in dependencyGraphSize graph == L.length (nub nodeNames)
   ]
 
 -- | 4. 模块依赖测试
@@ -210,9 +211,9 @@ circularDependencyTests = testGroup "Circular Dependency Tests"
       in hasCircularDependency graph' @?= False
   
   , fastProperty "Circular dependency detection" $
-      \nodeNames -> let nodes = take 3 (map (\n -> ModuleNode ("module" ++ show n) (SourceSpan startPos startPos)) [1..])
+      \nodeNames -> let nodes = take 3 (L.map (\n -> ModuleNode ("module" ++ show n) (SourceSpan startPos startPos)) [1..])
                         edges = [(nodes !! 0, nodes !! 1), (nodes !! 1, nodes !! 2)]
-                        graph = foldl (\g (s, t) -> addDependencyEdge g (DependencyEdge s t DirectDependency (SourceSpan startPos startPos))) 
+                        graph = L.foldl (\g (s, t) -> addDependencyEdge g (DependencyEdge s t DirectDependency (SourceSpan startPos startPos))) 
                                       (foldl addDependencyNode emptyDependencyGraph nodes) edges
                     in hasCircularDependency graph == False
   ]
@@ -227,7 +228,7 @@ dependencyAnalysisTests = testGroup "Dependency Analysis Tests"
           edge = DependencyEdge node1 node2 DirectDependency (SourceSpan startPos startPos)
           graph' = addDependencyEdge (addDependencyNode (addDependencyNode graph node1) node2) edge
           deps = getDirectDependencies graph' node1
-      in length deps @?= 1
+      in L.length deps @?= 1
   
   , testCase "Get transitive dependencies" $
       let graph = emptyDependencyGraph
@@ -238,15 +239,15 @@ dependencyAnalysisTests = testGroup "Dependency Analysis Tests"
           edge2 = DependencyEdge node2 node3 DirectDependency (SourceSpan startPos startPos)
           graph' = foldl addDependencyEdge (foldl addDependencyNode graph [node1, node2, node3]) [edge1, edge2]
           deps = getTransitiveDependencies graph' node1
-      in length deps @?= 2
+      in L.length deps @?= 2
   
   , fastProperty "Dependency closure" $
-      \nodeCount -> let nodes = take nodeCount (map (\n -> ModuleNode ("module" ++ show n) (SourceSpan startPos startPos)) [1..])
-                        edges = zip nodes (tail nodes)
-                        graph = foldl (\g (s, t) -> addDependencyEdge g (DependencyEdge s t DirectDependency (SourceSpan startPos startPos))) 
+      \nodeCount -> let nodes = take nodeCount (L.map (\n -> ModuleNode ("module" ++ show n) (SourceSpan startPos startPos)) [1..])
+                        edges = zip nodes (L.tail nodes)
+                        graph = L.foldl (\g (s, t) -> addDependencyEdge g (DependencyEdge s t DirectDependency (SourceSpan startPos startPos))) 
                                       (foldl addDependencyNode emptyDependencyGraph nodes) edges
                     in if nodeCount > 0
-                       then length (getTransitiveDependencies graph (head nodes)) == nodeCount - 1
+                       then L.length (getTransitiveDependencies graph (L.head nodes)) == nodeCount - 1
                        else True
   ]
 
@@ -269,6 +270,6 @@ dependencyValidationTests = testGroup "Dependency Validation Tests"
   
   , fastProperty "Graph validation consistency" $
       \nodes edges -> let graph = foldl addDependencyNode emptyDependencyGraph nodes
-                          graph' = foldl (\g (s, t) -> addDependencyEdge g (DependencyEdge s t DirectDependency (SourceSpan startPos startPos))) graph edges
+                          graph' = L.foldl (\g (s, t) -> addDependencyEdge g (DependencyEdge s t DirectDependency (SourceSpan startPos startPos))) graph edges
                       in validateDependencyGraph graph' == True || validateDependencyGraph graph' == False
   ]

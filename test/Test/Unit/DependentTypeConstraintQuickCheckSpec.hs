@@ -18,28 +18,30 @@ import DependentTypesParser (parseDependentType, DependentType(..))
 import Compiler.DependentTypeChecker (checkDependentTypes, validateConstraints, TypeConstraint(..))
 import Dependencies.TypeSystem (solveConstraints, TypeConstraint(..))
 import Parser (parseTypus)
-import Data.List (isInfixOf, isPrefixOf, nub, sort)
+import qualified Data.List as L
+import Data.List (isInfixOf, isPrefixOf)
+import Data.List (nub, sort)
 
 -- Property: Dependent type constraints are parsed correctly
 prop_dependent_type_constraints_parsed :: String -> String -> Property
 prop_dependent_type_constraints_parsed typeName constraintExpr =
-  let validType = length typeName > 0 && all (`elem` ['a'..'z'] ++ ['A'..'Z']) typeName
-      validConstraint = length constraintExpr > 0
+  let validType = L.length typeName > 0 && L.all (`elem` ['a'..'z'] ++ ['A'..'Z']) typeName
+      validConstraint = L.length constraintExpr > 0
       typeDef = "type " ++ typeName ++ " = " ++ constraintExpr
   in validType && validConstraint ==>
   case parseDependentType typeDef of
     Right parsedType ->
       let typeStr = show parsedType
           hasTypeName = typeName `isInfix` typeStr
-          hasConstraint = constraintExpr `isInfix` typeStr || length constraintExpr > 10
+          hasConstraint = constraintExpr `isInfix` typeStr || L.length constraintExpr > 10
       in property $ hasTypeName .&&. hasConstraint
     Left _ -> property $ True -- Some constraints are expected to fail
 
 -- Property: Type constraint validation is consistent
 prop_type_constraint_validation_consistent :: String -> Property
 prop_type_constraint_validation_consistent constraint =
-  let hasConstraint = length constraint > 5
-      simpleConstraint = all (`elem` constraint) "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789=<>+"
+  let hasConstraint = L.length constraint > 5
+      simpleConstraint = L.all (`elem` constraint) "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789=<>+"
   in hasConstraint && simpleConstraint ==>
   let validation1 = validateConstraints constraint
       validation2 = validateConstraints constraint
@@ -52,8 +54,8 @@ prop_type_constraint_validation_consistent constraint =
 -- Property: Dependent type checking preserves type information
 prop_dependent_type_checking_preserves_info :: String -> String -> Property
 prop_dependent_type_checking_preserves_info typeName typeBody =
-  let validType = length typeName > 0 && all (`elem` ['a'..'z'] ++ ['A'..'Z']) typeName
-      validBody = length typeBody > 0
+  let validType = L.length typeName > 0 && L.all (`elem` ['a'..'z'] ++ ['A'..'Z']) typeName
+      validBody = L.length typeBody > 0
       typeDef = "type " ++ typeName ++ " = " ++ typeBody
   in validType && validBody ==>
   case parseDependentType typeDef of
@@ -63,7 +65,7 @@ prop_dependent_type_checking_preserves_info typeName typeBody =
           let checkedStr = show checkedType
               originalStr = show parsedType
               hasTypeName = typeName `isInfix` checkedStr
-              preservesInfo = length checkedStr >= length originalStr - 5
+              preservesInfo = L.length checkedStr >= L.length originalStr - 5
           in property $ hasTypeName .&&. preservesInfo
         Left _ -> property $ True
     Left _ -> property $ True
@@ -71,11 +73,11 @@ prop_dependent_type_checking_preserves_info typeName typeBody =
 -- Property: Constraint solving is deterministic
 prop_constraint_solving_deterministic :: [String] -> Property
 prop_constraint_solving_deterministic constraints =
-  let hasConstraints = length constraints > 0
-      validConstraints = all (not . null) constraints
-      uniqueConstraints = length (nub constraints) == length constraints
+  let hasConstraints = L.length constraints > 0
+      validConstraints = L.all (not . null) constraints
+      uniqueConstraints = L.length (nub constraints) == L.length constraints
   in hasConstraints && validConstraints && uniqueConstraints ==>
-  let typeConstraints = map (\c -> TypeConstraint c "bool") constraints
+  let typeConstraints = L.map (\c -> TypeConstraint c "bool") constraints
       solution1 = solveConstraints typeConstraints
       solution2 = solveConstraints typeConstraints
       solutionsMatch = case (solution1, solution2) of
@@ -87,39 +89,39 @@ prop_constraint_solving_deterministic constraints =
 -- Property: Complex dependent types are handled correctly
 prop_complex_dependent_types :: String -> [String] -> Property
 prop_complex_dependent_types baseType params =
-  let validBase = length baseType > 0
-      validParams = all (not . null) params
-      hasParams = length params > 0
+  let validBase = L.length baseType > 0
+      validParams = L.all (not . null) params
+      hasParams = L.length params > 0
       complexType = baseType ++ "<" ++ unwords params ++ ">"
   in validBase && validParams && hasParams ==>
   case parseDependentType complexType of
     Right parsedType ->
       let parsedStr = show parsedType
           hasBaseType = baseType `isInfix` parsedStr
-          hasParams = any (`isInfix` parsedStr) params
+          hasParams = L.any (`isInfix` parsedStr) params
       in property $ hasBaseType .&&. hasParams
     Left _ -> property $ True
 
 -- Property: Type constraint errors are informative
 prop_type_constraint_errors_informative :: String -> Property
 prop_type_constraint_errors_informative malformedConstraint =
-  let hasMalformed = length malformedConstraint > 3
-      hasInvalidChars = any (`notElem` "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789=<>+-*/") malformedConstraint
+  let hasMalformed = L.length malformedConstraint > 3
+      hasInvalidChars = L.any (`notElem` "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789=<>+-*/") malformedConstraint
   in hasMalformed && hasInvalidChars ==>
   case validateConstraints malformedConstraint of
     Right _ -> property $ True
     Left error ->
       let errorStr = show error
-          hasInfo = any (`isInfix` errorStr) ["constraint", "type", "invalid", "parse", "error"]
-          notEmpty = length errorStr > 0
+          hasInfo = L.any (`isInfix` errorStr) ["constraint", "type", "invalid", "parse", "error"]
+          notEmpty = L.length errorStr > 0
       in property $ hasInfo .&&. notEmpty
 
 -- Property: Dependent type inference is sound
 prop_dependent_type_inference_sound :: String -> String -> Property
 prop_dependent_type_inference_sound expr expectedType =
-  let hasExpr = length expr > 0
-      hasType = length expectedType > 0
-      simpleExpr = all (`elem` expr) "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+"
+  let hasExpr = L.length expr > 0
+      hasType = L.length expectedType > 0
+      simpleExpr = L.all (`elem` expr) "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+"
   in hasExpr && hasType && simpleExpr ==>
   case parseDependentType expr of
     Right parsedType ->

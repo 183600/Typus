@@ -22,7 +22,9 @@ import SourceLocation
 import Parser (parseTypus, TypusFile(..))
 import Compiler (CompilerError(..), formatCompilerErrors)
 
-import Data.List (isInfixOf, isPrefixOf, length, lines)
+import qualified Data.List as L
+import Data.List (isInfixOf, isPrefixOf, length)
+import Data.List (lines)
 import qualified Data.Text as T
 
 -- Test 1: Source location tracking for syntax errors
@@ -43,7 +45,7 @@ test_source_location_syntax_errors =
       Left err -> do
         -- Error should mention line number around the missing brace
         assertBool "Error should mention correct line number" $
-          any (`isInfixOf` err) ["4", "5", "6", "line"]
+          L.any (`L.isInfixOf` err) ["4", "5", "6", "line"]
       Right _ -> do
         assertFailure "Expected parsing error for missing brace"
 
@@ -67,7 +69,7 @@ test_source_location_type_errors =
         -- For this test, we'll check that source parsing preserves line info
         let codeBlocks = tfCodeBlocks typusFile
         assertBool "Should preserve code block structure" $
-          length codeBlocks > 0
+          L.length codeBlocks > 0
 
 -- Test 3: Source location tracking across multiple files
 test_source_location_multiple_files :: TestTree
@@ -82,9 +84,9 @@ test_source_location_multiple_files =
           ]
     case parseTypus source of
       Left err -> do
-        -- Should handle import directives and track locations
+        -- Should handle import directives L.and track locations
         assertBool "Should handle import directives" $
-          any (`isInfixOf` err) ["import", "helper", "file"]
+          L.any (`L.isInfixOf` err) ["import", "helper", "file"]
       Right typusFile -> do
         -- Should parse successfully with import tracking
         assertBool "Should parse with import directives" True
@@ -104,7 +106,7 @@ test_source_location_macro_expansion =
       Left err -> do
         -- Should track macro expansion locations
         assertBool "Should handle macro expansion" $
-          any (`isInfixOf` err) ["macro", "define", "LOG"]
+          L.any (`L.isInfixOf` err) ["macro", "define", "LOG"]
       Right typusFile -> do
         -- Should parse macros correctly
         assertBool "Should parse macro definitions" True
@@ -112,7 +114,7 @@ test_source_location_macro_expansion =
 -- QuickCheck property: Source positions are consistent
 prop_source_positions_consistent :: String -> Property
 prop_source_positions_consistent code =
-  length code < 100 ==>  -- Keep code reasonable
+  L.length code < 100 ==>  -- Keep code reasonable
   let source = unlines
         [ "package main"
         , "func main() {"
@@ -123,7 +125,7 @@ prop_source_positions_consistent code =
        Left _ -> property True  -- Invalid code is skipped
        Right typusFile ->
          let codeBlocks = tfCodeBlocks typusFile
-         in property $ all (not . null . cbLines) codeBlocks
+         in property $ L.all (not . null . cbLines) codeBlocks
 
 -- Test 5: Source location tracking with Unicode
 test_source_location_unicode :: TestTree
@@ -140,12 +142,12 @@ test_source_location_unicode =
       Left err -> do
         -- Should handle Unicode characters in location tracking
         assertBool "Should handle Unicode in source locations" $
-          length err > 0
+          L.length err > 0
       Right typusFile -> do
         -- Should parse Unicode correctly
         let codeBlocks = tfCodeBlocks typusFile
         assertBool "Should parse Unicode content" $
-          any (isInfixOf "测试函数" . unlines . cbLines) codeBlocks
+          L.any (L.isInfixOf "测试函数" . unlines . cbLines) codeBlocks
 
 -- Test 6: Source location precision in error messages
 test_source_location_error_precision :: TestTree
@@ -166,7 +168,7 @@ test_source_location_error_precision =
       Left err -> do
         -- Error should point to the function, not just anywhere
         assertBool "Error should point to function location" $
-          any (`isInfixOf` err) ["calculate", "function", "return"]
+          L.any (`L.isInfixOf` err) ["calculate", "function", "return"]
       Right _ -> do
         -- May pass if return statement analysis is not implemented
         assertBool "Should analyze function completeness" True
@@ -182,7 +184,7 @@ prop_line_numbers_accurate offset contentLines =
        Left _ -> property True
        Right typusFile ->
          let codeBlocks = tfCodeBlocks typusFile
-         in property $ length codeBlocks > 0
+         in property $ L.length codeBlocks > 0
 
 -- Test 7: Source location tracking with nested structures
 test_source_location_nested_structures :: TestTree
@@ -211,12 +213,12 @@ test_source_location_nested_structures =
       Left err -> do
         -- Should handle deeply nested structures
         assertBool "Should handle nested structure errors" $
-          any (`isInfixOf` err) ["nested", "struct", "field"]
+          L.any (`L.isInfixOf` err) ["nested", "struct", "field"]
       Right typusFile -> do
         -- Should parse nested structures correctly
         let codeBlocks = tfCodeBlocks typusFile
         assertBool "Should parse nested structures" $
-          any (isInfixOf "Outer" . unlines . cbLines) codeBlocks
+          L.any (L.isInfixOf "Outer" . unlines . cbLines) codeBlocks
 
 tests :: TestTree
 tests =

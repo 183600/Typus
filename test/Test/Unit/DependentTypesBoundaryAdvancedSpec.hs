@@ -6,6 +6,7 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 
 import DependentTypesParser
@@ -51,7 +52,7 @@ typeParsingTests = testGroup "Type Parsing Tests"
         Right _ -> "Empty type should fail" @?= "Got success"
         
   , testCase "parses generic type parameters" $ do
-      let input = "type List[T] = struct { head: T, tail: List[T] }"
+      let input = "type List[T] = struct { L.head: T, L.tail: List[T] }"
           result = parseTypeDeclaration input
       case result of
         Right _ -> "Generic type should parse" @?= "Got success"
@@ -112,7 +113,7 @@ nestedTypeTests = testGroup "Nested Type Tests"
         Left err -> "Nested structs should be supported" @?= show err
         
   , testCase "handles recursive type definitions" $ do
-      let input = "type List[T] = struct { head: T, tail: List[T] }"
+      let input = "type List[T] = struct { L.head: T, L.tail: List[T] }"
           result = parseTypeDeclaration input
       case result of
         Right _ -> "Recursive types should parse" @?= "Got success"
@@ -139,7 +140,7 @@ errorHandlingTests = testGroup "Error Handling Tests"
             ]
           result = validateDependentTypeSyntax input
       case result of
-        Left errors -> length errors @?= 2  -- Should find Bad1 and Bad2
+        Left errors -> L.length errors @?= 2  -- Should find Bad1 L.and Bad2
         Right _ -> "Should detect multiple errors" @?= "Got success"
         
   , testCase "recovers from syntax errors" $ do
@@ -152,8 +153,8 @@ errorHandlingTests = testGroup "Error Handling Tests"
             ]
           result = runDependentTypesParser input
       case result of
-        Right (_, types) -> length types @?= 2  -- Should parse First and Second
-        Left err -> "Should recover and parse valid types" @?= show err
+        Right (_, types) -> L.length types @?= 2  -- Should parse First L.and Second
+        Left err -> "Should recover L.and parse valid types" @?= show err
         
   , testCase "handles malformed type references" $ do
       let input = "type BadRef = struct { field: InvalidType[UnclosedBracket }"
@@ -180,7 +181,7 @@ edgeCaseTests = testGroup "Edge Case Tests"
         Left _ -> "Whitespace-only should not error" @?= "Got error"
         
   , testCase "handles very long type names" $ do
-      let longName = concat $ replicate 100 "VeryLongTypeName"
+      let longName = L.concat $ replicate 100 "VeryLongTypeName"
           input = "type " ++ longName ++ " = int"
           result = parseTypeDeclaration input
       case result of
@@ -188,7 +189,7 @@ edgeCaseTests = testGroup "Edge Case Tests"
         Left err -> "Long names should not crash" @?= show err
         
   , testCase "handles deeply nested structures" $ do
-      let nested = concat $ replicate 50 "struct { value: "
+      let nested = L.concat $ replicate 50 "struct { value: "
           input = "type Deep = " ++ nested ++ "int" ++ replicate 50 " }"
           result = parseTypeDeclaration input
       case result of
@@ -232,6 +233,6 @@ prop_error_collection_deterministic input =
   let result1 = validateDependentTypeSyntax input
       result2 = validateDependentTypeSyntax input
   in case (result1, result2) of
-    (Left errors1, Left errors2) -> length errors1 === length errors2
-    (Right types1, Right types2) -> length types1 === length types2
+    (Left errors1, Left errors2) -> L.length errors1 === L.length errors2
+    (Right types1, Right types2) -> L.length types1 === L.length types2
     _ -> property True

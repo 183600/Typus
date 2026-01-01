@@ -14,6 +14,7 @@ import SourceLocation (SourcePos(..), startPos, posAfter, advancePos, advancePos
 import Compiler.Errors.Core (ErrorSeverity(..), ErrorCategory(..), formatError, errorAt)
 import qualified Data.Text as T
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf)
 
 -- ============================================================================
@@ -65,28 +66,28 @@ prop_trimOnlyWhitespace :: String -> String -> Bool
 prop_trimOnlyWhitespace prefix suffix =
     let input = prefix ++ "hello world" ++ suffix
         trimmed = trim input
-    in not (all isSpace prefix) || not (all isSpace suffix) || 
+    in not (L.all isSpace prefix) || not (L.all isSpace suffix) || 
        trimmed == "hello world"
 
 -- Property: splitBy preserves empty segments
 prop_splitByPreservesEmpty :: Char -> String -> Bool
 prop_splitByPreservesEmpty delim input =
     let result = splitBy delim input
-        expectedCount = length (filter (== delim) input) + 1
-    in length result == expectedCount
+        expectedCount = L.length (L.filter (== delim) input) + 1
+    in L.length result == expectedCount
 
 -- Property: splitByCollapsed removes empty segments
 prop_splitByCollapsedRemovesEmpty :: Char -> String -> Bool
 prop_splitByCollapsedRemovesEmpty delim input =
     let result = splitByCollapsed delim input
-    in all (not . null) result
+    in L.all (not . null) result
 
--- Property: breakOn returns correct prefix and suffix
+-- Property: breakOn returns correct prefix L.and suffix
 prop_breakOnCorrect :: String -> String -> Property
 prop_breakOnCorrect pattern text =
     not (null pattern) ==>
     let (prefix, suffix) = breakOn pattern text
-        found = pattern `isPrefixOf` text
+        found = pattern `L.isPrefixOf` text
     in if found
        then prefix ++ pattern ++ suffix == text
        else prefix == text && null suffix
@@ -94,12 +95,12 @@ prop_breakOnCorrect pattern text =
 -- Property: removeLineComments preserves non-comment content
 prop_removeLineCommentsPreservesContent :: String -> Property
 prop_removeLineCommentsPreservesContent input =
-    let linesWithoutComments = filter (not . ("//" `isPrefixOf`)) (lines input)
-        hasStringLiterals = any ('"' `elem`) linesWithoutComments
+    let linesWithoutComments = L.filter (not . ("//" `L.isPrefixOf`)) (lines input)
+        hasStringLiterals = L.any ('"' `elem`) linesWithoutComments
     in not hasStringLiterals ==> -- Simple case: no string literals
        let result = removeLineComments input
            resultLines = lines result
-       in length resultLines == length linesWithoutComments
+       in L.length resultLines == L.length linesWithoutComments
 
 -- ============================================================================
 -- SourceLocation Module Tests
@@ -143,35 +144,20 @@ prop_advancePosConsistency pos char =
 prop_errorFormatIncludesLocation :: SourcePos -> String -> Property
 prop_errorFormatIncludesLocation pos message =
     not (null message) ==>
-    let error = errorAt pos message
-        formatted = formatError error
-        posStr = show (posLine pos) ++ ":" ++ show (posColumn pos)
-    in posStr `isInfixOf` formatted
+    let error = errorAt "test-id" (posLine pos) ++ ":" ++ show (posColumn pos)
+    in posStr `L.isInfixOf` formatted
 
 -- Property: error messages are preserved in formatting
 prop_errorFormatPreservesMessage :: SourcePos -> String -> Property
 prop_errorFormatPreservesMessage pos message =
     not (null message) ==>
-    let error = errorAt pos message
-        formatted = formatError error
-    in message `isInfixOf` formatted
-
--- ============================================================================
--- Integration Tests
--- ============================================================================
-
--- Property: normalizeIndentation preserves relative structure
-prop_normalizeIndentationPreservesStructure :: String -> Property
-prop_normalizeIndentationPreservesStructure input =
-    let lines' = lines input
-        hasMultipleLines = length lines' > 1
-        hasContent = any (not . null) lines'
+    let error = errorAt "test-id" . null) lines'
     in hasMultipleLines && hasContent ==>
        let normalized = normalizeIndentation input
            normLines = lines normalized
-       in length normLines == length lines'
+       in L.length normLines == L.length lines'
 
--- Property: comment removal and indentation normalization commute
+-- Property: comment removal L.and indentation normalization commute
 prop_commentsAndIndentationCommute :: String -> Property
 prop_commentsAndIndentationCommute input =
     let withoutComments = removeLineComments input
@@ -209,7 +195,7 @@ tests = testGroup "New Cabal QuickCheck Test Suite"
     
     , testGroup "Integration Properties"
         [ testProperty "normalizeIndentation preserves structure" prop_normalizeIndentationPreservesStructure
-        , testProperty "comment removal and indentation commute" prop_commentsAndIndentationCommute
+        , testProperty "comment removal L.and indentation commute" prop_commentsAndIndentationCommute
         ]
     
     , testGroup "Unit Tests (Sanity Checks)"

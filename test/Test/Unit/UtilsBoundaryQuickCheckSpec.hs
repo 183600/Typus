@@ -10,6 +10,7 @@ import Utils (trim, splitBy, splitByCollapsed, splitByComma, removeLineComments,
 import Test.QuickCheck.Arbitrary (Arbitrary(..))
 import Test.QuickCheck.Gen (oneof, listOf, elements)
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf)
 
 -- | Generate arbitrary strings with various whitespace patterns
@@ -33,7 +34,7 @@ instance Arbitrary CommaString where
     parts <- listOf (listOf $ arbitrary `suchThat` (/= ','))
     let sep = oneof [return ",", return ",,", return ",,,", return ""]
     separator <- sep
-    return $ CommaString $ concat $ intersperse separator parts
+    return $ CommaString $ L.concat $ intersperse separator parts
     where
       intersperse _ [] = []
       intersperse _ [x] = [x]
@@ -59,18 +60,18 @@ tests = testGroup "Utils Boundary Tests"
   
   , testProperty "trim removes only leading/trailing whitespace" $ \(WhitespaceString s) ->
       let trimmed = trim s
-          hasLeadingSpace = not (null trimmed) && isSpace (head trimmed)
+          hasLeadingSpace = not (null trimmed) && isSpace (L.head trimmed)
           hasTrailingSpace = not (null trimmed) && isSpace (last trimmed)
       in not hasLeadingSpace && not hasTrailingSpace
   
   , testProperty "splitBy preserves empty segments" $ \(CommaString s) ->
       let segments = splitBy ',' s
-          reconstructed = concat $ intersperse "," segments
+          reconstructed = L.concat $ intersperse "," segments
       in reconstructed == s
   
   , testProperty "splitByCollapsed removes empty segments" $ \(CommaString s) ->
       let segments = splitByCollapsed ',' s
-          hasEmpty = any null segments
+          hasEmpty = L.any null segments
       in not hasEmpty
   
   , testProperty "splitByComma equals splitBy with comma" $ \s ->
@@ -79,7 +80,7 @@ tests = testGroup "Utils Boundary Tests"
   , testProperty "removeLineComments preserves content before comment" $ \(CommentString s) ->
       let beforeComment = takeWhile (/= '/') s
           result = removeLineComments s
-      in beforeComment `isPrefixOf` result
+      in beforeComment `L.isPrefixOf` result
   
   , testCase "trim handles empty string" $
       trim "" @?= ""
@@ -101,8 +102,8 @@ tests = testGroup "Utils Boundary Tests"
   
   , testProperty "normalizeIndentation preserves relative indentation" $ \s ->
       let lines' = lines s
-          indented = map ("  " ++) lines'
+          indented = L.map ("  " ++) lines'
           normalized = normalizeIndentation (unlines indented)
-          originalLines = map (drop 2) (lines normalized)
-      in length originalLines == length lines'
+          originalLines = L.map (drop 2) (lines normalized)
+      in L.length originalLines == L.length lines'
   ]

@@ -11,7 +11,8 @@ import Test.QuickCheck (Property)
 import SyntaxValidator (SyntaxValidator, validateSyntax, SyntaxError(..), SyntaxWarning(..))
 import SimpleSyntaxValidator (SimpleValidator, validateSimpleSyntax, SimpleError(..))
 import SourceLocation (SourcePos(..), startPos, spanFrom)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
+import qualified Data.List as L
 import Data.List (isInfixOf)
 import Data.Maybe (isNothing, isJust)
 
@@ -39,8 +40,8 @@ test_validate_invalid_syntax = do
     case result of
         Right (_, errors) -> do
             assertBool "Invalid code should have errors" (not (null errors))
-            let firstError = head errors
-            assertBool "Error should mention syntax" ("syntax" `isInfixOf` T.unpack (errorMessage firstError))
+            let firstError = L.head errors
+            assertBool "Error should mention syntax" ("syntax" `L.isInfixOf` T.unpack (errorMessage firstError))
         Left _ -> assertBool "Validation should handle invalid code" True
 
 -- Test syntax validation with warnings
@@ -51,7 +52,7 @@ test_validate_with_warnings = do
     case result of
         Right (warnings, errors) -> do
             assertBool "Should have no errors" (null errors)
-            -- May or may not have warnings depending on implementation
+            -- May L.or may not have warnings depending on implementation
             assertBool "Should handle warnings gracefully" (True)
         Left _ -> assertBool "Validation should not fail" False
 
@@ -94,8 +95,8 @@ test_validate_simple_invalid = do
     case result of
         Right errors -> do
             assertBool "Invalid simple code should have errors" (not (null errors))
-            let firstError = head errors
-            assertBool "Simple error should be descriptive" (length (simpleErrorMessage firstError) > 0)
+            let firstError = L.head errors
+            assertBool "Simple error should be descriptive" (L.length (simpleErrorMessage firstError) > 0)
         Left _ -> assertBool "Simple validation should handle invalid code" True
 
 -- Test simple error properties
@@ -105,7 +106,7 @@ prop_simple_error_has_description error =
     in not (null desc)
 
 -- ============================================================================
--- Edge Cases and Boundary Tests
+-- Edge Cases L.and Boundary Tests
 -- ============================================================================
 
 -- Test empty input validation
@@ -115,7 +116,7 @@ test_validate_empty_input = do
         result = validateSyntax emptyCode
     case result of
         Right (warnings, errors) -> do
-            -- Empty input might be valid or produce warnings, but shouldn't crash
+            -- Empty input might be valid L.or produce warnings, but shouldn't crash
             assertBool "Empty input should be handled gracefully" True
         Left _ -> assertBool "Empty input validation should not fail" True
 
@@ -155,7 +156,7 @@ test_validate_language_features = do
         result = validateSyntax featuresCode
     case result of
         Right (warnings, errors) -> do
-            -- Should parse advanced features or provide meaningful errors
+            -- Should parse advanced features L.or provide meaningful errors
             assertBool "Should handle language features" True
         Left _ -> assertBool "Advanced features should not crash validator" True
 
@@ -193,13 +194,13 @@ instance Arbitrary SimpleError where
 
 validateSyntax :: String -> Either String ([SyntaxWarning], [SyntaxError])
 validateSyntax code = 
-    if "func main( { return" `isInfixOf` code
+    if "func main( { return" `L.isInfixOf` code
     then Right ([], [SyntaxError (T.pack "Syntax error: missing closing parenthesis") (spanFrom startPos)])
     else Right ([], [])
 
 validateSimpleSyntax :: String -> Either String [SimpleError]
 validateSimpleSyntax code = 
-    if "x = 42 +\n" `isInfixOf` code
+    if "x = 42 +\n" `L.isInfixOf` code
     then Right [SimpleError "Incomplete expression"]
     else Right []
 
@@ -235,7 +236,7 @@ tests = testGroup "Syntax Validator Test Suite"
       , testCase "Validate simple invalid code" test_validate_simple_invalid
       , fastProperty "Simple error has description" prop_simple_error_has_description
       ]
-  , testGroup "Edge Cases and Boundary Tests"
+  , testGroup "Edge Cases L.and Boundary Tests"
       [ testCase "Validate empty input" test_validate_empty_input
       , testCase "Validate long input" test_validate_long_input
       , testCase "Validate unicode characters" test_validate_unicode

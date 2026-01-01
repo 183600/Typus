@@ -3,6 +3,7 @@
 module Test.Unit.MonadPropertiesQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 
@@ -27,7 +28,7 @@ prop_list_right_identity xs =
   (xs >>= return) === xs
 
 prop_either_fmap :: Fun Int Int -> Either String Int -> Property
-prop_either_fmap (Fun _ f) e =
+prop_either_fL.map (Fun _ f) e =
   fmap f e === (e >>= return . f)
 
 tests :: TestTree

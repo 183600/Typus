@@ -1,6 +1,7 @@
 module Test.Unit.NewCabalQuickCheckSpec5 (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, property, Arbitrary(..), Gen, choose, listOf, elements)
 import Data.Text (Text)
@@ -76,7 +77,7 @@ prop_ownershipMoveInvalidatesSource state source target =
 -- Property: shared ownership allows multiple borrows
 prop_sharedOwnershipAllowsBorrows :: OwnershipState -> Text -> [Text] -> Bool
 prop_sharedOwnershipAllowsBorrows state owner borrowers =
-  all (canBorrow state owner) borrowers
+  L.all (canBorrow state owner) borrowers
 
 -- Property: ownership tracking is consistent across operations
 prop_ownershipTrackingConsistent :: OwnershipState -> [TransferOperation] -> Bool
@@ -87,7 +88,7 @@ prop_ownershipTrackingConsistent state transfers =
         , validLifetimeChains finalState
         , consistentBorrowing finalState
         ]
-  in all id consistencyChecks
+  in L.all id consistencyChecks
 
 -- Property: ownership transfer follows transitivity
 prop_ownershipTransitivity :: OwnershipState -> Text -> Text -> Text -> Bool

@@ -6,7 +6,9 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
-import Data.List (isInfixOf, nub)
+import qualified Data.List as L
+import Data.List (isInfixOf)
+import Data.List (nub)
 import qualified Data.Set as Set
 
 import Dependencies
@@ -55,7 +57,7 @@ simpleCycleTests = testGroup "Simple Cycle Tests"
       case result of
         Left errors -> do
           let errorStr = show errors
-          "cycle" `isInfixOf` errorStr @?= True
+          "cycle" `L.isInfixOf` errorStr @?= True
         Right _ -> "Expected cycle detection error" @?= "Got success"
         
   , testCase "detects three-way cycle" $ do
@@ -73,7 +75,7 @@ simpleCycleTests = testGroup "Simple Cycle Tests"
       case result of
         Left errors -> do
           let errorStr = show errors
-          "cycle" `isInfixOf` errorStr @?= True
+          "cycle" `L.isInfixOf` errorStr @?= True
         Right _ -> "Expected cycle detection error" @?= "Got success"
         
   , testCase "allows non-cyclic dependencies" $ do
@@ -110,7 +112,7 @@ complexCycleTests = testGroup "Complex Cycle Tests"
       case result of
         Left errors -> do
           let errorStr = show errors
-          "cycle" `isInfixOf` errorStr @?= True
+          "cycle" `L.isInfixOf` errorStr @?= True
         Right _ -> "Expected cycle detection error" @?= "Got success"
         
   , testCase "detects multiple independent cycles" $ do
@@ -128,7 +130,7 @@ complexCycleTests = testGroup "Complex Cycle Tests"
       case result of
         Left errors -> do
           let errorStr = show errors
-          "cycle" `isInfixOf` errorStr @?= True
+          "cycle" `L.isInfixOf` errorStr @?= True
         Right _ -> "Expected cycle detection error" @?= "Got success"
   ]
 
@@ -146,7 +148,7 @@ constraintCycleTests = testGroup "Constraint Cycle Tests"
       case result of
         Left errors -> do
           let errorStr = show errors
-          "recursive" `isInfixOf` errorStr @?= True
+          "recursive" `L.isInfixOf` errorStr @?= True
         Right _ -> "Expected recursive type detection" @?= "Got success"
         
   , testCase "allows well-founded recursive types" $ do
@@ -177,7 +179,7 @@ typeVariableCycleTests = testGroup "Type Variable Cycle Tests"
       case result of
         Left errors -> do
           let errorStr = show errors
-          "self" `isInfixOf` errorStr @?= True
+          "self" `L.isInfixOf` errorStr @?= True
         Right _ -> "Expected self-reference detection" @?= "Got success"
         
   , testCase "detects indirect type variable cycles" $ do
@@ -194,7 +196,7 @@ typeVariableCycleTests = testGroup "Type Variable Cycle Tests"
       case result of
         Left errors -> do
           let errorStr = show errors
-          "cycle" `isInfixOf` errorStr @?= True
+          "cycle" `L.isInfixOf` errorStr @?= True
         Right _ -> "Expected indirect cycle detection" @?= "Got success"
   ]
 
@@ -204,7 +206,7 @@ crossModuleCycleTests = testGroup "Cross Module Cycle Tests"
       let checker = newDependentTypeChecker
           moduleAType = TypeVar "ModuleA.Type"
           moduleBType = TypeVar "ModuleB.Type"
-          -- ModuleA.Type depends on ModuleB.Type and vice versa
+          -- ModuleA.Type depends on ModuleB.Type L.and vice versa
           constraint1 = TypeConstraint moduleAType (TypeVarType moduleBType)
           constraint2 = TypeConstraint moduleBType (TypeVarType moduleAType)
           checkerWithTypes = addType moduleBType $ addType moduleAType checker
@@ -213,7 +215,7 @@ crossModuleCycleTests = testGroup "Cross Module Cycle Tests"
       case result of
         Left errors -> do
           let errorStr = show errors
-          "cycle" `isInfixOf` errorStr @?= True
+          "cycle" `L.isInfixOf` errorStr @?= True
         Right _ -> "Expected cross-module cycle detection" @?= "Got success"
   ]
 
@@ -227,12 +229,12 @@ quickCheckProperties = testGroup "QuickCheck Cycle Detection Properties"
 prop_acyclic_solvable :: [(String, String)] -> Property
 prop_acyclic_solvable dependencies =
   let uniqueDeps = nub dependencies
-      hasCycle deps = any (\(a, b) -> (b, a) `elem` deps) deps
+      hasCycle deps = L.any (\(a, b) -> (b, a) `elem` deps) deps
   in not (hasCycle uniqueDeps) ==> property True
 
 prop_cycle_detection_deterministic :: [(String, String)] -> Property
 prop_cycle_detection_deterministic dependencies =
-  let hasCycle deps = any (\(a, b) -> (b, a) `elem` deps) deps
+  let hasCycle deps = L.any (\(a, b) -> (b, a) `elem` deps) deps
       result1 = hasCycle dependencies
       result2 = hasCycle dependencies
   in result1 === result2

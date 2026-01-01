@@ -12,6 +12,7 @@ import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify
 import Parser (parseTypus, TypusFile(..), CodeBlock(..))
 import SourceLocation (SourcePos(..), SourceSpan(..))
 import Text.Megaparsec (errorBundlePretty)
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 
 tests :: TestTree
@@ -32,11 +33,11 @@ tests = testGroup "New Parser Recovery Tests"
         case parseTypus source of
           Left err -> do
             let errMsg = errorBundlePretty err
-            assertBool "Should report syntax error" $ "syntax error" `isInfixOf` errMsg
-            assertBool "Should report location of error" $ "line 5" `isInfixOf` errMsg
-            -- Parser should attempt to continue and find other valid constructs
+            assertBool "Should report syntax error" $ "syntax error" `L.isInfixOf` errMsg
+            assertBool "Should report location of error" $ "line 5" `L.isInfixOf` errMsg
+            -- Parser should attempt to continue L.and find other valid constructs
             assertBool "Should mention recovery attempt" $ 
-              "recovery" `isInfixOf` errMsg || "continuing" `isInfixOf` errMsg
+              "recovery" `L.isInfixOf` errMsg || "continuing" `L.isInfixOf` errMsg
           Right _ -> assertFailure "Expected parsing error"
               
     , testCase "recovers from missing braces" $ do
@@ -56,9 +57,9 @@ tests = testGroup "New Parser Recovery Tests"
           Left err -> do
             let errMsg = errorBundlePretty err
             assertBool "Should report missing brace" $ 
-              "brace" `isInfixOf` errMsg || "}" `isInfixOf` errMsg
+              "brace" `L.isInfixOf` errMsg || "}" `L.isInfixOf` errMsg
             assertBool "Should attempt to continue parsing" $ 
-              "recovery" `isInfixOf` errMsg || "continuing" `isInfixOf` errMsg
+              "recovery" `L.isInfixOf` errMsg || "continuing" `L.isInfixOf` errMsg
           Right _ -> assertFailure "Expected parsing error"
               
     , testCase "recovers from invalid type annotations" $ do
@@ -78,15 +79,15 @@ tests = testGroup "New Parser Recovery Tests"
           Left err -> do
             let errMsg = errorBundlePretty err
             assertBool "Should report invalid type" $ 
-              "type" `isInfixOf` errMsg || "InvalidType" `isInfixOf` errMsg
+              "type" `L.isInfixOf` errMsg || "InvalidType" `L.isInfixOf` errMsg
             assertBool "Should continue to parse next function" $ 
-              "another_valid_func" `isInfixOf` errMsg || "recovery" `isInfixOf` errMsg
+              "another_valid_func" `L.isInfixOf` errMsg || "recovery" `L.isInfixOf` errMsg
           Right _ -> assertFailure "Expected parsing error"
     ]
 
 -- QuickCheck properties for parser error recovery
 
--- Property: Parser should not crash on any input string
+-- Property: Parser should not crash on L.any input string
 prop_parser_never_crashes :: String -> Property
 prop_parser_never_crashes source =
   let result = parseTypus source
@@ -101,7 +102,7 @@ prop_error_messages_include_line_numbers source =
   in case result of
        Left err -> 
          let errMsg = errorBundlePretty err
-         in property $ "line" `isInfixOf` errMsg || "Line" `isInfixOf` errMsg
+         in property $ "line" `L.isInfixOf` errMsg || "Line" `L.isInfixOf` errMsg
        Right _ -> property $ True  -- No error, no line number needed
 
 -- Helper functions for QuickCheck

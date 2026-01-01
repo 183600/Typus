@@ -4,6 +4,7 @@
 module Test.Unit.ComprehensiveOwnershipQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import TestSupport.ExtendedArbitrary ()
@@ -35,7 +36,7 @@ prop_ownership_respects_mode mode variableNames =
 -- Property: Ownership constraints are transitive
 prop_ownership_constraints_transitive :: [String] -> Property
 prop_ownership_constraints_transitive variableNames =
-  length variableNames >= 3 ==> 
+  L.length variableNames >= 3 ==> 
   let [a, b, c] = take 3 variableNames
       constraints = [OwnershipConstraint a b "moves", OwnershipConstraint b c "moves"]
       analysis = analyzeOwnershipWithConstraints constraints
@@ -45,7 +46,7 @@ prop_ownership_constraints_transitive variableNames =
 -- Property: Ownership transfer preserves validity
 prop_ownership_transfer_preserves_validity :: [String] -> Property
 prop_ownership_transfer_preserves_validity variableNames =
-  length variableNames >= 2 ==> 
+  L.length variableNames >= 2 ==> 
   let [owner, receiver] = take 2 variableNames
       initialOwnership = Map.fromList [(owner, True)]
       transfer = LocalOwnershipTransfer owner receiver
@@ -55,7 +56,7 @@ prop_ownership_transfer_preserves_validity variableNames =
 -- Property: Borrow checking prevents invalid accesses
 prop_borrow_checking_prevents_invalid_accesses :: [String] -> Property
 prop_borrow_checking_prevents_invalid_accesses variableNames =
-  length variableNames >= 2 ==> 
+  L.length variableNames >= 2 ==> 
   let [owner, borrower] = take 2 variableNames
       borrow = BorrowOwnership owner borrower
       invalidAccess = AccessOwnership owner "write"
@@ -68,7 +69,7 @@ prop_lifetime_analysis_respects_scope variableNames =
   not (null variableNames) ==> 
   let scopes = generateScopes variableNames
       lifetimes = analyzeLifetimes scopes
-  in property $ all isValidLifetime lifetimes
+  in property $ L.all isValidLifetime lifetimes
 
 -- Property: Ownership inference is conservative
 prop_ownership_inference_conservative :: [String] -> Property
@@ -82,7 +83,7 @@ prop_ownership_inference_conservative variableNames =
 -- Property: Move semantics invalidate source
 prop_move_semantics_invalidate_source :: [String] -> Property
 prop_move_semantics_invalidate_source variableNames =
-  length variableNames >= 2 ==> 
+  L.length variableNames >= 2 ==> 
   let [source, target] = take 2 variableNames
       initialState = Map.fromList [(source, True), (target, False)]
       move = MoveOwnership source target
@@ -93,7 +94,7 @@ prop_move_semantics_invalidate_source variableNames =
 -- Property: Copy semantics preserve source
 prop_copy_semantics_preserve_source :: [String] -> Property
 prop_copy_semantics_preserve_source variableNames =
-  length variableNames >= 2 ==> 
+  L.length variableNames >= 2 ==> 
   let [source, target] = take 2 variableNames
       initialState = Map.fromList [(source, True), (target, False)]
       copy = CopyOwnership source target
@@ -108,7 +109,7 @@ prop_reference_counting_accurate variableNames =
   let refCounts = initialReferenceCounts variableNames
       operations = generateReferenceOperations variableNames
       finalCounts = applyReferenceOperations refCounts operations
-  in property $ all (>= 0) (Map.elems finalCounts)
+  in property $ L.all (>= 0) (Map.elems finalCounts)
 
 -- Property: Ownership graph maintains consistency
 prop_ownership_graph_consistent :: [String] -> Property
@@ -120,7 +121,7 @@ prop_ownership_graph_consistent variableNames =
 -- Property: Circular ownership is detected
 prop_circular_ownership_detected :: [String] -> Property
 prop_circular_ownership_detected variableNames =
-  length variableNames >= 3 ==> 
+  L.length variableNames >= 3 ==> 
   let circularRefs = generateCircularReferences variableNames
       detected = detectCircularOwnership circularRefs
   in property $ detected
@@ -131,7 +132,7 @@ prop_ownership_constraints_satisfiable constraints =
   not (null constraints) ==> 
   let solution = solveOwnershipConstraints constraints
   in property $ case solution of
-    Just sol -> all (satisfiesConstraint sol) constraints
+    Just sol -> L.all (satisfiesConstraint sol) constraints
     Nothing -> True  -- May be unsatisfiable
 
 -- Property: Ownership optimization preserves semantics
@@ -193,12 +194,12 @@ prop_resource_cleanup_guaranteed resourceNames =
   not (null resourceNames) ==> 
   let resources = generateResources resourceNames
       cleanup = analyzeResourceCleanup resources
-  in property $ all isResourceCleaned cleanup
+  in property $ L.all isResourceCleaned cleanup
 
 -- Property: Ownership transfer across function boundaries
 prop_ownership_transfer_function_boundaries :: [String] -> Property
 prop_ownership_transfer_function_boundaries variableNames =
-  length variableNames >= 2 ==> 
+  L.length variableNames >= 2 ==> 
   let [caller, callee] = take 2 variableNames
       functions = generateOwnershipFunctions [caller, callee]
       transfer = analyzeFunctionOwnershipTransfer functions
@@ -221,7 +222,7 @@ prop_ownership_polymorphism_sound variableNames =
   in property $ validation
 
 -- ============================================================================
--- Edge Case and Stress Tests
+-- Edge Case L.and Stress Tests
 -- ============================================================================
 
 -- Property: Extremely large ownership graphs
@@ -284,7 +285,7 @@ oaMode (OwnershipAnalysis mode _ _) = mode
 generateOwnershipCode :: [String] -> String
 generateOwnershipCode names = unlines $
   ["package main", "func main() {"] ++
-  map (\name -> "  var " ++ name ++ " = new(int)") names ++
+  L.map (\name -> "  var " ++ name ++ " = new(int)") names ++
   ["}"]
 
 analyzeOwnershipWithMode :: OwnershipMode -> String -> OwnershipAnalysis
@@ -361,7 +362,7 @@ isValidOwnershipGraph _ = True  -- Simplified
 
 generateCircularReferences :: [String] -> [OwnershipConstraint]
 generateCircularReferences names = 
-  zipWith (\a b -> OwnershipConstraint a b "circular") names (tail names ++ [head names])
+  zipWith (\a b -> OwnershipConstraint a b "circular") names (L.tail names ++ [L.head names])
 
 detectCircularOwnership :: [OwnershipConstraint] -> Bool
 detectCircularOwnership _ = True  -- Simplified
@@ -390,7 +391,7 @@ isValidConcurrentResult = not . null
 generateInvalidOwnershipCode :: [String] -> String
 generateInvalidOwnershipCode names = unlines $
   ["package main", "func main() {"] ++
-  map (\name -> "  " ++ name ++ " = " ++ name ++ " // invalid use") names ++
+  L.map (\name -> "  " ++ name ++ " = " ++ name ++ " // invalid use") names ++
   ["}"]
 
 checkOwnershipErrors :: [LocalOwnershipError]
@@ -415,13 +416,13 @@ isValidRegionOwnership :: RegionOwnershipAnalysis -> Bool
 isValidRegionOwnership _ = True  -- Simplified
 
 generateLinearCode :: [String] -> String
-generateLinearCode names = unlines $ map (\name -> name ++ " := " ++ name) names
+generateLinearCode names = unlines $ L.map (\name -> name ++ " := " ++ name) names
 
 validateLinearTypes :: String -> Bool
 validateLinearTypes _ = True  -- Simplified
 
 generateAffineCode :: [String] -> String
-generateAffineCode names = unlines $ map (\name -> "if " ++ name ++ " != nil { " ++ name ++ " = nil }") names
+generateAffineCode names = unlines $ L.map (\name -> "if " ++ name ++ " != nil { " ++ name ++ " = nil }") names
 
 validateAffineTypes :: String -> Bool
 validateAffineTypes _ = True  -- Simplified
@@ -461,19 +462,19 @@ validateGenericOwnership :: GenericOwnership -> Bool
 validateGenericOwnership _ = True  -- Simplified
 
 generatePolymorphicOwnershipCode :: [String] -> String
-generatePolymorphicOwnershipCode names = unlines $ map (\name -> "func polymorphic[" ++ name ++ "](x " ++ name ++ ") " ++ name ++ " { return x }") names
+generatePolymorphicOwnershipCode names = unlines $ L.map (\name -> "func polymorphic[" ++ name ++ "](x " ++ name ++ ") " ++ name ++ " { return x }") names
 
 validateOwnershipPolymorphism :: String -> Bool
 validateOwnershipPolymorphism _ = True  -- Simplified
 
 generateLargeOwnershipGraph :: Int -> OwnershipGraph
-generateLargeOwnershipGraph nodeCount = OwnershipGraph (map (\i -> "node" ++ show i) [1..nodeCount]) []
+generateLargeOwnershipGraph nodeCount = OwnershipGraph (L.map (\i -> "node" ++ show i) [1..nodeCount]) []
 
 validateLargeGraph :: OwnershipGraph -> Bool
 validateLargeGraph _ = True  -- Simplified
 
 generateNestedOwnershipScopes :: Int -> [NestedScope]
-generateNestedOwnershipScopes depth = map (\i -> NestedScope ("scope" ++ show i)) [1..depth]
+generateNestedOwnershipScopes depth = L.map (\i -> NestedScope ("scope" ++ show i)) [1..depth]
 
 data NestedScope = NestedScope String deriving (Eq, Show)
 
@@ -537,8 +538,8 @@ tests = testGroup "Comprehensive Ownership QuickCheck Tests"
     , fastProperty "Ownership polymorphism is sound" prop_ownership_polymorphism_sound
     ]
   
-  -- Edge Case and Stress tests
-  , testGroup "Edge Cases and Stress"
+  -- Edge Case L.and Stress tests
+  , testGroup "Edge Cases L.and Stress"
     [ fastProperty "Extremely large ownership graphs" prop_extremely_large_ownership_graphs
     , fastProperty "Deeply nested ownership scopes" prop_deeply_nested_ownership_scopes
     , fastProperty "Complex ownership constraint systems" prop_complex_ownership_constraints

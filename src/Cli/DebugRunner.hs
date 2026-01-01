@@ -6,7 +6,7 @@ module Cli.DebugRunner
     , DebugCommand(..)
     ) where
 
-import CommandLineDebug (CommandLineDebugConfig, defaultCLIDebugConfig, setBreakpoint, listBreakpoints, clearBreakpoints)
+import CommandLineDebug (CommandLineDebugConfig, defaultCLIDebugConfig, setBreakpoint, listBreakpoints, printBreakpoints, clearBreakpoints)
 import EnhancedDebug (EnhancedDebugConfig, defaultEnhancedDebugConfig, createBreakpoint, LogLevel(Debug, Info, Warning, Error), setLogLevel, getDebugStats)
 import System.Directory (doesFileExist)
 import System.IO (hFlush, stdout)
@@ -234,7 +234,7 @@ processDebugArgs args = do
             putStrLn $ "Breakpoint set at: " ++ location
         ["breakpoint", "list"] -> do
             config <- defaultCLIDebugConfig
-            listBreakpoints config
+            printBreakpoints config
         ["log", "level", levelStr] -> do
             config <- defaultEnhancedDebugConfig
             case parseLogLevel levelStr of

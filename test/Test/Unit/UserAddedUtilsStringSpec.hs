@@ -1,6 +1,7 @@
 module Test.Unit.UserAddedUtilsStringSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), Gen, choose, oneof, listOf, elements)
 import TestSupport.QuickCheck (fastProperty)
@@ -27,7 +28,7 @@ tests :: TestTree
 tests =
   testGroup "UserAdded Utils String Processing"
     [ testGroup "Whitespace handling"
-        [ testCase "trim removes all types of whitespace" $ do
+        [ testCase "trim removes L.all types of whitespace" $ do
             trim "\t\n  hello  world  \n\t" @?= "hello  world"
 
         , testCase "trim handles empty string" $ do
@@ -66,7 +67,7 @@ tests =
                 expected = "url := \"http://example.com//path\" "
             removeLineComments input @?= expected
 
-        , testCase "removeComments removes both line and block comments" $ do
+        , testCase "removeComments removes both line L.and block comments" $ do
             let input = "/* block comment */ hello // line comment\nworld"
                 expected = "  hello \nworld"
             removeComments input @?= expected
@@ -88,7 +89,7 @@ tests =
             fixIndentation input @?= normalizeIndentation input
         ]
 
-    , testGroup "Search and split operations"
+    , testGroup "Search L.and split operations"
         [ testCase "breakOn finds pattern" $ do
             breakOn "world" "hello world" @?= ("hello ", "world")
 
@@ -99,7 +100,7 @@ tests =
             breakOn "" "hello" @?= ("", "hello")
         ]
 
-    , testGroup "Unicode and special character handling"
+    , testGroup "Unicode L.and special character handling"
         [ testCase "trim handles Unicode whitespace" $ do
             trim "\u00A0\u2000hello\u2003world\u2002" @?= "hello\u2003world"
 
@@ -113,9 +114,9 @@ tests =
         ]
 
     , testGroup "Property-based tests"
-        [ fastProperty "splitBy and splitByCollapsed relationship" prop_splitByRelationship
+        [ fastProperty "splitBy L.and splitByCollapsed relationship" prop_splitByRelationship
         , fastProperty "trim is idempotent" prop_trimIdempotent
-        , fastProperty "splitBy preserves total length" prop_splitByPreservesLength
+        , fastProperty "splitBy preserves total L.length" prop_splitByPreservesLength
         , fastProperty "breakOn is deterministic" prop_breakOnDeterministic
         ]
 
@@ -123,21 +124,21 @@ tests =
         [ testCase "splitBy is linear time" $ do
             let input = replicate 10000 'a' ++ "," ++ replicate 10000 'b'
                 result = splitBy ',' input
-            length result @?= 2
+            L.length result @?= 2
 
         , testCase "removeComments is efficient for large files" $ do
             let largeContent = unlines $ replicate 1000 ("code // comment " ++ replicate 100 'x')
                 result = removeLineComments largeContent
-            length (lines result) @?= 1000
+            L.length (lines result) @?= 1000
         ]
     ]
 
--- | Property: splitBy and splitByCollapsed relationship
+-- | Property: splitBy L.and splitByCollapsed relationship
 prop_splitByRelationship :: String -> Char -> Bool
 prop_splitByRelationship input delim =
   let normal = splitBy delim input
       collapsed = splitByCollapsed delim input
-  in all (not . null) collapsed == (null $ filter null normal)
+  in L.all (not . null) collapsed == (L.null $ filter null normal)
 
 -- | Property: trim is idempotent
 prop_trimIdempotent :: String -> Bool
@@ -146,12 +147,12 @@ prop_trimIdempotent input =
       twice = trim once
   in once == twice
 
--- | Property: splitBy preserves total length
+-- | Property: splitBy preserves total L.length
 prop_splitByPreservesLength :: String -> Char -> Bool
 prop_splitByPreservesLength input delim =
   let parts = splitBy delim input
-      totalLength = sum (map length parts) + length (filter (== delim) input) - length parts + 1
-  in totalLength == length input
+      totalLength = L.sum (map L.length parts) + L.length (L.filter (== delim) input) - L.length parts + 1
+  in totalLength == L.length input
 
 -- | Property: breakOn is deterministic
 prop_breakOnDeterministic :: String -> String -> Bool

@@ -18,6 +18,7 @@ import TestSupport.Arbitrary
 import Parser (parseTypus)
 import SourceLocation (SourceSpan(..), SourcePos(..))
 import Data.Char (isSpace, isLetter, isDigit)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import qualified Data.List as List
 
@@ -31,7 +32,7 @@ prop_parse_empty_string =
 -- Property: Parsing valid package declaration should succeed
 prop_parse_valid_package :: String -> Property
 prop_parse_valid_package name =
-  not (null name) && all (\c -> isLetter c || isDigit c || c == '_') name ==>
+  not (null name) && L.all (\c -> isLetter c || isDigit c || c == '_') name ==>
   let source = "package " ++ name ++ "\n"
   in case parseTypus source of
        Left err -> counterexample ("parseTypus failed: " ++ err) $ property False
@@ -40,7 +41,7 @@ prop_parse_valid_package name =
 -- Property: Parsing simple function should preserve function name
 prop_parse_simple_function :: String -> Property
 prop_parse_simple_function funcName =
-  not (null funcName) && all isLetter funcName ==>
+  not (null funcName) && L.all isLetter funcName ==>
   let source = unlines ["package main", "func " ++ funcName ++ "() {}", ""]
   in case parseTypus source of
        Left err -> counterexample ("parseTypus failed: " ++ err) $ property False
@@ -67,7 +68,7 @@ prop_parse_whitespace_variations before after =
 -- Property: Parsing comments should not break structure
 prop_parse_with_comments :: String -> Property
 prop_parse_with_comments comment =
-  not ("//" `isInfixOf` comment) && not ("/*" `isInfixOf` comment) ==>
+  not ("//" `L.isInfixOf` comment) && not ("/*" `L.isInfixOf` comment) ==>
   let source = unlines 
         [ "package main"
         , "// " ++ comment
@@ -82,7 +83,7 @@ prop_parse_with_comments comment =
 -- Property: Parsing should handle basic type declarations
 prop_parse_basic_types :: String -> Property
 prop_parse_basic_types typeName =
-  not (null typeName) && all isLetter typeName ==>
+  not (null typeName) && L.all isLetter typeName ==>
   let source = unlines 
         [ "package main"
         , "type " ++ typeName ++ " int"
@@ -96,7 +97,7 @@ prop_parse_basic_types typeName =
 prop_parse_variable_declarations :: String -> String -> Property
 prop_parse_variable_declarations varName varType =
   not (null varName) && not (null varType) && 
-  all isLetter varName && all isLetter varType ==>
+  L.all isLetter varName && L.all isLetter varType ==>
   let source = unlines 
         [ "package main"
         , "var " ++ varName ++ " " ++ varType
@@ -122,9 +123,9 @@ prop_parse_imports importPath =
 -- Property: Parsing should handle multiple imports
 prop_parse_multiple_imports :: [String] -> Property
 prop_parse_multiple_imports importPaths =
-  not (null importPaths) && all (\p -> not (null p) && not (' ' `elem` p)) (take 5 importPaths) ==>
+  not (null importPaths) && L.all (\p -> not (null p) && not (' ' `elem` p)) (take 5 importPaths) ==>
   let limitedPaths = take 5 importPaths
-      importLines = map (\p -> "import \"" ++ p ++ "\"") limitedPaths
+      importLines = L.map (\p -> "import \"" ++ p ++ "\"") limitedPaths
       source = unlines $ ["package main"] ++ importLines ++ ["func main() {}"]
   in case parseTypus source of
        Left err -> counterexample ("parseTypus failed: " ++ err) $ property False
@@ -133,7 +134,7 @@ prop_parse_multiple_imports importPaths =
 -- Property: Parsing should handle basic expressions
 prop_parse_basic_expressions :: String -> Property
 prop_parse_basic_expressions expr =
-  not (null expr) && length expr <= 50 ==>
+  not (null expr) && L.length expr <= 50 ==>
   let source = unlines 
         [ "package main"
         , "func main() {"
@@ -148,7 +149,7 @@ prop_parse_basic_expressions expr =
 prop_parse_function_params :: String -> String -> Property
 prop_parse_function_params paramName paramType =
   not (null paramName) && not (null paramType) &&
-  all isLetter paramName && all isLetter paramType ==>
+  L.all isLetter paramName && L.all isLetter paramType ==>
   let source = unlines 
         [ "package main"
         , "func test(" ++ paramName ++ " " ++ paramType ++ ") {}"
@@ -162,7 +163,7 @@ prop_parse_function_params paramName paramType =
 prop_parse_return_values :: String -> String -> Property
 prop_parse_return_values funcName returnType =
   not (null funcName) && not (null returnType) &&
-  all isLetter funcName && all isLetter returnType ==>
+  L.all isLetter funcName && L.all isLetter returnType ==>
   let source = unlines 
         [ "package main"
         , "func " ++ funcName ++ "() " ++ returnType ++ " {"
@@ -177,7 +178,7 @@ prop_parse_return_values funcName returnType =
 -- Property: Parsing should handle basic control structures
 prop_parse_control_structures :: String -> Property
 prop_parse_control_structures condition =
-  not (null condition) && length condition <= 30 ==>
+  not (null condition) && L.length condition <= 30 ==>
   let source = unlines 
         [ "package main"
         , "func main() {"
@@ -194,9 +195,9 @@ prop_parse_control_structures condition =
 prop_parse_struct_definitions :: String -> [String] -> Property
 prop_parse_struct_definitions structName fieldNames =
   not (null structName) && not (null fieldNames) &&
-  all isLetter structName && all (\f -> not (null f) && all isLetter f) (take 3 fieldNames) ==>
+  L.all isLetter structName && L.all (\f -> not (null f) && L.all isLetter f) (take 3 fieldNames) ==>
   let limitedFields = take 3 fieldNames
-      fieldLines = map (\f -> "   " ++ f ++ " int") limitedFields
+      fieldLines = L.map (\f -> "   " ++ f ++ " int") limitedFields
       source = unlines $ ["package main", "type " ++ structName ++ " struct {"] ++ fieldLines ++ ["}", "func main() {}"]
   in case parseTypus source of
        Left err -> counterexample ("parseTypus failed: " ++ err) $ property False
@@ -206,9 +207,9 @@ prop_parse_struct_definitions structName fieldNames =
 prop_parse_interface_definitions :: String -> [String] -> Property
 prop_parse_interface_definitions interfaceName methodNames =
   not (null interfaceName) && not (null methodNames) &&
-  all isLetter interfaceName && all (\m -> not (null m) && all isLetter m) (take 3 methodNames) ==>
+  L.all isLetter interfaceName && L.all (\m -> not (null m) && L.all isLetter m) (take 3 methodNames) ==>
   let limitedMethods = take 3 methodNames
-      methodLines = map (\m -> "   " ++ m ++ "()") limitedMethods
+      methodLines = L.map (\m -> "   " ++ m ++ "()") limitedMethods
       source = unlines $ ["package main", "type " ++ interfaceName ++ " interface {"] ++ methodLines ++ ["}", "func main() {}"]
   in case parseTypus source of
        Left err -> counterexample ("parseTypus failed: " ++ err) $ property False
@@ -217,7 +218,7 @@ prop_parse_interface_definitions interfaceName methodNames =
 -- Property: Parsing idempotency with valid code
 prop_parse_idempotent :: String -> Property
 prop_parse_idempotent source =
-  length source <= 100 ==> -- Limit size for performance
+  L.length source <= 100 ==> -- Limit size for performance
   case parseTypus source of
     Left _ -> property $ True  -- Invalid code, skip
     Right result1 -> 
@@ -228,7 +229,7 @@ prop_parse_idempotent source =
 -- Property: Parsing should be line-count preserving
 prop_parse_line_count_preserving :: String -> Property
 prop_parse_line_count_preserving content =
-  let lineCount = length $ lines content
+  let lineCount = L.length $ lines content
       source = "package main\nfunc main() {\n" ++ content ++ "\n}\n"
   in case parseTypus source of
        Left err -> counterexample ("parseTypus failed: " ++ err) $ property False
@@ -237,7 +238,7 @@ prop_parse_line_count_preserving content =
 -- Property: Parsing should handle unicode characters
 prop_parse_unicode :: String -> Property
 prop_parse_unicode unicodeContent =
-  length unicodeContent <= 50 ==> -- Limit size
+  L.length unicodeContent <= 50 ==> -- Limit size
   let source = unlines 
         [ "package main"
         , "// " ++ unicodeContent ++ " unicode test"

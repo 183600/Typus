@@ -4,6 +4,7 @@
 module Test.Unit.ErrorHandlingRobustnessSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (==>), property, classify, counterexample)
 import qualified Data.List as Data.List
@@ -71,7 +72,7 @@ prop_error_context_preserves_position line col content =
 -- Property: Error messages are informative
 prop_error_messages_informative :: String -> Property
 prop_error_messages_informative input =
-  length input > 0 ==>
+  L.length input > 0 ==>
   let context = ErrorContext input (SourcePos 1 1)
       result = handleError context
   in property $ hasInformativeMessage result
@@ -79,10 +80,10 @@ prop_error_messages_informative input =
 -- Property: Error handler handles nested contexts
 prop_error_handler_nested_contexts :: [String] -> Property
 prop_error_handler_nested_contexts contexts =
-  not (null contexts) && length contexts <= 5 ==>
-  let nestedContexts = foldr (\ctx acc -> ErrorContext ctx (SourcePos 1 1) : acc) [] contexts
+  not (null contexts) && L.length contexts <= 5 ==>
+  let nestedContexts = L.foldr (\ctx acc -> ErrorContext ctx (SourcePos 1 1) : acc) [] contexts
       results = map handleError nestedContexts
-  in property $ all isWellFormedError results
+  in property $ L.all isWellFormedError results
 
 -- Property: Error handler consistency across multiple calls
 prop_error_handler_consistency :: String -> Property
@@ -124,21 +125,21 @@ handleError (ErrorContext input pos) =
   ErrorResult
     { errorMessage = generateErrorMessage input
     , errorPosition = pos
-    , errorContext = take 50 input ++ if length input > 50 then "..." else ""
+    , errorContext = take 50 input ++ if L.length input > 50 then "..." else ""
     }
 
 generateErrorMessage :: String -> String
 generateErrorMessage input
   | null input = "Empty input provided"
-  | length input > 100 = "Input too long"
-  | any isControl input = "Invalid control characters"
+  | L.length input > 100 = "Input too long"
+  | L.any isControl input = "Invalid control characters"
   | otherwise = "General error in input: " ++ take 20 input
 
 isWellFormedError :: ErrorResult -> Bool
 isWellFormedError (ErrorResult msg pos ctx) =
   not (null msg) && 
   posLine pos >= 1 && posColumn pos >= 1 &&
-  length ctx <= 53 -- 50 chars + "..." if truncated
+  L.length ctx <= 53 -- 50 chars + "..." if truncated
 
 errorContainsPosition :: ErrorResult -> Int -> Int -> Bool
 errorContainsPosition result line col =
@@ -148,7 +149,7 @@ errorContainsPosition result line col =
 hasInformativeMessage :: ErrorResult -> Bool
 hasInformativeMessage result =
   let msg = errorMessage result
-  in length msg >= 10 && any (`Data.List.isInfixOf` msg) ["error", "invalid", "empty", "input"]
+  in L.length msg >= 10 && L.any (`Data.List.L.isInfixOf` msg) ["error", "invalid", "empty", "input"]
 
 -- ============================================================================
 -- Test Suite

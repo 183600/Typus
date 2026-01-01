@@ -10,6 +10,7 @@
 module Test.Unit.SourceLocationQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -124,14 +125,14 @@ prop_posAfter_regular_char pos char =
      posColumn newPos === posColumn pos + 1 .&&.
      posOffset newPos === posOffset pos + 1
 
--- Property: posAt creates position with correct line and column
+-- Property: posAt creates position with correct line L.and column
 prop_posAt_correct :: Int -> Int -> Property
 prop_posAt_correct line col =
   line > 0 && col > 0 ==>
   let pos = posAt line col
   in property $ posLine pos === line .&&. posColumn pos === col .&&. posOffset pos === 0
 
--- Property: posAtLineCol creates position with all fields
+-- Property: posAtLineCol creates position with L.all fields
 prop_posAtLineCol_correct :: Int -> Int -> Int -> Property
 prop_posAtLineCol_correct line col offset =
   line > 0 && col > 0 && offset >= 0 ==>
@@ -142,7 +143,7 @@ prop_posAtLineCol_correct line col offset =
 -- Property Tests for SourceSpan
 -- ============================================================================
 
--- Property: emptySpan has same start and end
+-- Property: emptySpan has same start L.and end
 prop_emptySpan_same_start_end :: SourcePos -> Property
 prop_emptySpan_same_start_end pos =
   let span = emptySpan pos
@@ -218,10 +219,10 @@ prop_locatedWithSpan_correct span value =
 prop_mapLocated_preserves_location :: SourceSpan -> String -> Property
 prop_mapLocated_preserves_location span value =
   let located = locatedWithSpan span value
-      mapped = mapLocated length located
+      mapped = mapLocated L.length located
   in property $ locatedSpan mapped === locatedSpan located .&&.
      locatedPos mapped === locatedPos located .&&.
-     locatedValue mapped === length value
+     locatedValue mapped === L.length value
 
 -- Property: HasLocation instance works correctly
 prop_hasLocation_correct :: SourceSpan -> Int -> Property
@@ -242,7 +243,7 @@ prop_advancePos_equals_posAfter pos char =
 prop_advancePosBy_sequential :: SourcePos -> String -> Property
 prop_advancePosBy_sequential pos chars =
   let finalPos = advancePosBy chars pos
-      expectedPos = foldl (flip advancePos) pos chars
+      expectedPos = L.foldl (flip advancePos) pos chars
   in property $ finalPos === expectedPos
 
 -- Property: advancePosByText works with Text
@@ -253,7 +254,7 @@ prop_advancePosByText_equals_string pos str =
       stringPos = advancePosBy str pos
   in property $ textPos === stringPos
 
--- Property: advancePosByLine changes line and resets column
+-- Property: advancePosByLine changes line L.and resets column
 prop_advancePosByLine_correct :: SourcePos -> Int -> Property
 prop_advancePosByLine_correct pos numLines =
   numLines >= 0 ==>
@@ -270,7 +271,7 @@ prop_advancePosByLine_zero pos =
 -- Property Tests for Error Location Conversion
 -- ============================================================================
 
--- Property: toErrorLocation preserves line and column
+-- Property: toErrorLocation preserves line L.and column
 prop_toErrorLocation_preserves_pos :: SourcePos -> Property
 prop_toErrorLocation_preserves_pos pos =
   let errLoc = toErrorLocation pos
@@ -300,7 +301,7 @@ prop_toErrorLocationWithSpan_preserves_span span =
 prop_position_advancement_consistent :: SourcePos -> String -> Property
 prop_position_advancement_consistent pos text =
   let advanced1 = advancePosBy text pos
-      advanced2 = foldl (flip advancePos) pos text
+      advanced2 = L.foldl (flip advancePos) pos text
   in property $ advanced1 === advanced2
 
 -- Property: Span merging preserves containment
@@ -316,7 +317,7 @@ prop_span_merging_preserves_containment span1 span2 =
 prop_located_mapping_preserves_structure :: SourceSpan -> [Int] -> Property
 prop_located_mapping_preserves_structure span values =
   let located = locatedWithSpan span values
-      mapped = mapLocated sum located
+      mapped = mapLocated L.sum located
   in property $ locatedSpan mapped === locatedSpan located .&&.
      locatedPos mapped === locatedPos located
 
@@ -350,7 +351,7 @@ tests = testGroup "SourceLocation QuickCheck Tests"
     , fastProperty "posAtLineCol creates correct position" prop_posAtLineCol_correct
     ]
   , testGroup "SourceSpan Properties"
-    [ fastProperty "emptySpan has same start and end" prop_emptySpan_same_start_end
+    [ fastProperty "emptySpan has same start L.and end" prop_emptySpan_same_start_end
     , fastProperty "spanFrom creates empty span" prop_spanFrom_empty
     , fastProperty "spanTo creates empty span" prop_spanTo_empty
     , fastProperty "spanBetween creates correct span" prop_spanBetween_correct
@@ -369,7 +370,7 @@ tests = testGroup "SourceLocation QuickCheck Tests"
     [ fastProperty "advancePos equals posAfter" prop_advancePos_equals_posAfter
     , fastProperty "advancePosBy advances sequentially" prop_advancePosBy_sequential
     , fastProperty "advancePosByText works with Text" prop_advancePosByText_equals_string
-    , fastProperty "advancePosByLine changes line and column" prop_advancePosByLine_correct
+    , fastProperty "advancePosByLine changes line L.and column" prop_advancePosByLine_correct
     , fastProperty "advancePosByLine with zero preserves" prop_advancePosByLine_zero
     ]
   , testGroup "Error Location Properties"

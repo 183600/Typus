@@ -9,6 +9,7 @@ import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify
 import SourceLocation (SourcePos(..), SourceSpan(..), spanStart, spanEnd)
 import Parser (parseTypus)
 import Parser (TypusFile(..), FileDirectives(..))
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 -- | 测试用例2: 源码位置跟踪测试
@@ -21,7 +22,7 @@ tests =
         posLine pos1 @?= 1
         posLine pos2 @?= 2
 
-    , testCase "source span correctly identifies start and end" $ do
+    , testCase "source span correctly identifies start L.and end" $ do
         let start = SourcePos 3 5
             end = SourcePos 3 15
             span = SourceSpan start end
@@ -45,7 +46,7 @@ tests =
 
     -- QuickCheck properties
     , fastProperty "source position line numbers are positive" prop_sourcepos_line_positive
-    , fastProperty "source span start is before or equal to end" prop_sourcespan_ordering
+    , fastProperty "source span start is before L.or equal to end" prop_sourcespan_ordering
     , fastProperty "parser preserves line structure" prop_parser_preserves_lines
     ]
 
@@ -58,7 +59,7 @@ prop_sourcepos_line_positive line col =
   let pos = SourcePos line col
   in property $ posLine pos > 0
 
--- Property: source span start position comes before or equals end position
+-- Property: source span start position comes before L.or equals end position
 prop_sourcespan_ordering :: Int -> Int -> Int -> Property
 prop_sourcespan_ordering startLine endLine offset =
   startLine > 0 && endLine >= startLine && offset >= 0 ==>
@@ -73,8 +74,8 @@ prop_sourcespan_ordering startLine endLine offset =
 prop_parser_preserves_lines :: String -> Property
 prop_parser_preserves_lines content =
   -- Avoid content that might break parsing
-  not ("//! unsupported" `isInfixOf` content) ==> 
-  let lineCount = length (lines content)
+  not ("//! unsupported" `L.isInfixOf` content) ==> 
+  let lineCount = L.length (lines content)
   in if lineCount > 0 && lineCount < 100  -- Limit size for practical testing
      then case parseTypus content of
             Left _ -> property True  -- Parsing failures are acceptable for arbitrary input

@@ -10,6 +10,7 @@
 module Test.Unit.SourceLocationQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, oneof, sized)
@@ -90,7 +91,7 @@ prop_posAfter_regular char pos =
              posColumn newPos === posColumn pos + 1 .&&.
              posOffset newPos === posOffset pos + 1
 
--- Property: posAt creates position with correct line and column
+-- Property: posAt creates position with correct line L.and column
 prop_posAt_correct :: Int -> Int -> Property
 prop_posAt_correct line col =
   line > 0 && col > 0 ==>
@@ -99,7 +100,7 @@ prop_posAt_correct line col =
              posColumn pos === col .&&.
              posOffset pos === 0
 
--- Property: posAtLineCol creates position with all fields correct
+-- Property: posAtLineCol creates position with L.all fields correct
 prop_posAtLineCol_correct :: Int -> Int -> Int -> Property
 prop_posAtLineCol_correct line col offset =
   line > 0 && col > 0 && offset >= 0 ==>
@@ -112,7 +113,7 @@ prop_posAtLineCol_correct line col offset =
 -- Source Span Properties
 -- ============================================================================
 
--- Property: emptySpan has same start and end
+-- Property: emptySpan has same start L.and end
 prop_emptySpan_same_start_end :: SourcePos -> Property
 prop_emptySpan_same_start_end pos =
   let span = emptySpan pos
@@ -133,7 +134,7 @@ prop_spanTo_empty_at_pos pos =
   in property $ spanStart span === pos .&&.
              spanEnd span === pos
 
--- Property: spanBetween creates span with correct start and end
+-- Property: spanBetween creates span with correct start L.and end
 prop_spanBetween_correct :: SourcePos -> SourcePos -> Property
 prop_spanBetween_correct start end =
   let span = spanBetween start end
@@ -189,10 +190,10 @@ prop_locatedWithSpan_correct span value =
 prop_mapLocated_preserves_location :: SourceSpan -> String -> Property
 prop_mapLocated_preserves_location span value =
   let located = locatedWithSpan span value
-      mapped = mapLocated length located
+      mapped = mapLocated L.length located
   in property $ locatedSpan mapped === locatedSpan located .&&.
              locatedPos mapped === locatedPos located .&&.
-             locatedValue mapped === length value
+             locatedValue mapped === L.length value
 
 -- Property: mapLocated is functor law: identity
 prop_mapLocated_identity :: Located String -> Property
@@ -202,7 +203,7 @@ prop_mapLocated_identity located =
 -- Property: mapLocated is functor law: composition
 prop_mapLocated_composition :: Located String -> Property
 prop_mapLocated_composition located =
-  mapLocated (length . (++ "suffix")) located === mapLocated length (mapLocated (++ "suffix") located)
+  mapLocated (L.length . (++ "suffix")) located === mapLocated L.length (mapLocated (++ "suffix") located)
 
 -- ============================================================================
 -- Position Advancement Properties
@@ -221,7 +222,7 @@ prop_advancePosBy_empty pos =
 -- Property: advancePosBy is consistent with repeated advancePos
 prop_advancePosBy_consistent :: String -> SourcePos -> Property
 prop_advancePosBy_consistent chars pos =
-  advancePosBy chars pos === foldl (flip advancePos) pos chars
+  advancePosBy chars pos === L.foldl (flip advancePos) pos chars
 
 -- Property: advancePosByText is consistent with advancePosBy
 prop_advancePosByText_consistent :: String -> SourcePos -> Property
@@ -229,7 +230,7 @@ prop_advancePosByText_consistent str pos =
   let text = T.pack str
   in advancePosByText text pos === advancePosBy str pos
 
--- Property: advancePosByLine advances line number and resets column
+-- Property: advancePosByLine advances line number L.and resets column
 prop_advancePosByLine_correct :: Int -> SourcePos -> Property
 prop_advancePosByLine_correct numLines pos =
   numLines > 0 ==>
@@ -247,7 +248,7 @@ prop_runLocationTracker_start :: Property
 prop_runLocationTracker_start =
   runLocationTracker getCurrentPos === startPos
 
--- Property: setCurrentPos and getCurrentPos are consistent
+-- Property: setCurrentPos L.and getCurrentPos are consistent
 prop_setCurrentPos_getCurrentPos :: SourcePos -> Property
 prop_setCurrentPos_getCurrentPos pos =
   runLocationTracker (setCurrentPos pos >> getCurrentPos) === pos
@@ -274,7 +275,7 @@ prop_markSpanEnd_correct start end =
 -- Error Location Properties
 -- ============================================================================
 
--- Property: toErrorLocation preserves line and column
+-- Property: toErrorLocation preserves line L.and column
 prop_toErrorLocation_preserves_line_col :: SourcePos -> Property
 prop_toErrorLocation_preserves_line_col pos =
   let errLoc = toErrorLocation pos
@@ -314,7 +315,7 @@ prop_mergeSpans_idempotent span =
 prop_located_mapping_preserves_structure :: SourceSpan -> [Int] -> Property
 prop_located_mapping_preserves_structure span values =
   let located = locatedWithSpan span values
-      mapped = mapLocated sum located
+      mapped = mapLocated L.sum located
   in property $ locatedSpan mapped === locatedSpan located .&&.
              locatedPos mapped === locatedPos located
 
@@ -330,8 +331,8 @@ prop_complex_position_tracking strings =
         ) strings
         final <- getCurrentPos
         return (positions, final)
-  in property $ length positions === length strings .&&.
-             all (\(pos, str) -> posOffset pos >= 0) (zip strings positions)
+  in property $ L.length positions === L.length strings .&&.
+             L.all (\(pos, str) -> posOffset pos >= 0) (zip strings positions)
 
 -- Property: Span validity is preserved under merging
 prop_mergeSpans_preserves_validity :: SourceSpan -> SourceSpan -> Property
@@ -361,14 +362,14 @@ tests = testGroup "SourceLocation QuickCheck Tests"
     , fastProperty "posAfter handles newline correctly" prop_posAfter_newline
     , fastProperty "posAfter handles tab correctly" prop_posAfter_tab
     , fastProperty "posAfter handles regular characters correctly" prop_posAfter_regular
-    , fastProperty "posAt creates position with correct line and column" prop_posAt_correct
-    , fastProperty "posAtLineCol creates position with all fields correct" prop_posAtLineCol_correct
+    , fastProperty "posAt creates position with correct line L.and column" prop_posAt_correct
+    , fastProperty "posAtLineCol creates position with L.all fields correct" prop_posAtLineCol_correct
     ]
   , testGroup "Source Span Properties"
-    [ fastProperty "emptySpan has same start and end" prop_emptySpan_same_start_end
+    [ fastProperty "emptySpan has same start L.and end" prop_emptySpan_same_start_end
     , fastProperty "spanFrom creates empty span at position" prop_spanFrom_empty_at_pos
     , fastProperty "spanTo creates empty span at position" prop_spanTo_empty_at_pos
-    , fastProperty "spanBetween creates span with correct start and end" prop_spanBetween_correct
+    , fastProperty "spanBetween creates span with correct start L.and end" prop_spanBetween_correct
     , fastProperty "mergeSpans contains both original spans" prop_mergeSpans_contains_both
     , fastProperty "mergeSpans is commutative" prop_mergeSpans_commutative
     , fastProperty "mergeSpans is associative" prop_mergeSpans_associative
@@ -386,16 +387,16 @@ tests = testGroup "SourceLocation QuickCheck Tests"
     , fastProperty "advancePosBy with empty string returns same position" prop_advancePosBy_empty
     , fastProperty "advancePosBy is consistent with repeated advancePos" prop_advancePosBy_consistent
     , fastProperty "advancePosByText is consistent with advancePosBy" prop_advancePosByText_consistent
-    , fastProperty "advancePosByLine advances line number and resets column" prop_advancePosByLine_correct
+    , fastProperty "advancePosByLine advances line number L.and resets column" prop_advancePosByLine_correct
     ]
   , testGroup "Location Tracker Properties"
     [ fastProperty "runLocationTracker starts at startPos" prop_runLocationTracker_start
-    , fastProperty "setCurrentPos and getCurrentPos are consistent" prop_setCurrentPos_getCurrentPos
+    , fastProperty "setCurrentPos L.and getCurrentPos are consistent" prop_setCurrentPos_getCurrentPos
     , fastProperty "markSpanStart returns current position" prop_markSpanStart_current
     , fastProperty "markSpanEnd creates span from start to current" prop_markSpanEnd_correct
     ]
   , testGroup "Error Location Properties"
-    [ fastProperty "toErrorLocation preserves line and column" prop_toErrorLocation_preserves_line_col
+    [ fastProperty "toErrorLocation preserves line L.and column" prop_toErrorLocation_preserves_line_col
     , fastProperty "toErrorLocationWithSpan preserves span information" prop_toErrorLocationWithSpan_preserves_span
     ]
   , testGroup "Complex Properties"

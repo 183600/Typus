@@ -9,6 +9,7 @@ import Parser (parseTypus, FileDirectives(..), BlockDirectives(..), CodeBlock(..
              defaultFileDirectives, defaultBlockDirectives)
 import SourceLocation (SourcePos(..), SourceSpan(..), spanStart, spanEnd)
 import Utils (trim)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 
 tests :: TestTree
@@ -29,11 +30,11 @@ basicParsingProperties = testGroup "Basic Parsing Properties"
         in case result of
           Left _ -> property False
           Right file -> tfDirectives file === defaultFileDirectives .&&. 
-                       null (tfBlocks file)
+                       L.null (tfBlocks file)
   
   , testProperty "parseTypus on whitespace-only string returns valid file" $
       \whitespace -> 
-        all (`elem` [' ', '\t', '\n', '\r']) whitespace ==> 
+        L.all (`elem` [' ', '\t', '\n', '\r']) whitespace ==> 
         let result = parseTypus whitespace
         in case result of
           Left _ -> property False
@@ -41,12 +42,12 @@ basicParsingProperties = testGroup "Basic Parsing Properties"
   
   , testProperty "parseTypus preserves non-directive content" $
       \content -> 
-        not (any (`isPrefixOf` content) ["//!", "{//!", "//go:build", "// +build"]) ==> 
+        not (L.any (`L.isPrefixOf` content) ["//!", "{//!", "//go:build", "// +build"]) ==> 
         let result = parseTypus content
         in case result of
           Left _ -> property False
-          Right file -> not (null (tfBlocks file)) ==> 
-                       content `isInfixOf` (concatMap cbContent (tfBlocks file))
+          Right file -> not (L.null (tfBlocks file)) ==> 
+                       content `L.isInfixOf` (concatMap cbContent (tfBlocks file))
   
   , testProperty "parseTypus handles mixed content" $
       \prefix directives suffix -> 
@@ -117,8 +118,8 @@ directiveParsingProperties = testGroup "Directive Parsing Properties"
             result = parseTypus input
         in case result of
           Left _ -> property False
-          Right file -> not (null (tfBlocks file)) ==> 
-                       let firstBlock = head (tfBlocks file)
+          Right file -> not (L.null (tfBlocks file)) ==> 
+                       let firstBlock = L.head (tfBlocks file)
                            directives = cbDirectives firstBlock
                        in case bdOwnership directives of
                             Nothing -> property False
@@ -134,7 +135,7 @@ blockParsingProperties = testGroup "Block Parsing Properties"
             result = parseTypus input
         in case result of
           Left _ -> property False
-          Right file -> not (null content) ==> not (null (tfBlocks file))
+          Right file -> not (null content) ==> not (L.null (tfBlocks file))
   
   , testProperty "parse multiple blocks" $
       \content1 content2 -> 
@@ -142,7 +143,7 @@ blockParsingProperties = testGroup "Block Parsing Properties"
             result = parseTypus input
         in case result of
           Left _ -> property False
-          Right file -> length (tfBlocks file) >= 1
+          Right file -> L.length (tfBlocks file) >= 1
   
   , testProperty "block content preservation" $
       \content -> 
@@ -150,9 +151,9 @@ blockParsingProperties = testGroup "Block Parsing Properties"
             result = parseTypus input
         in case result of
           Left _ -> property False
-          Right file -> not (null (tfBlocks file)) ==> 
+          Right file -> not (L.null (tfBlocks file)) ==> 
                        let blockContent = concatMap cbContent (tfBlocks file)
-                       in content `isInfixOf` blockContent
+                       in content `L.isInfixOf` blockContent
   ]
 
 -- | Error handling properties
@@ -160,7 +161,7 @@ errorHandlingProperties :: TestTree
 errorHandlingProperties = testGroup "Error Handling Properties"
   [ testProperty "parseTypus handles malformed directives gracefully" $
       \directive -> 
-        not ("//!" `isPrefixOf` directive) ==> 
+        not ("//!" `L.isPrefixOf` directive) ==> 
         let input = "//! " ++ directive
             result = parseTypus input
         in case result of
@@ -172,7 +173,7 @@ errorHandlingProperties = testGroup "Error Handling Properties"
         let input = "{//! ownership: true\n" ++ content
             result = parseTypus input
         in case result of
-          Left _ -> property True  -- Expected to fail or recover
+          Left _ -> property True  -- Expected to fail L.or recover
           Right _ -> property True -- Might recover
   
   , testProperty "parseTypus handles invalid directive values" $
@@ -189,11 +190,11 @@ syntaxValidationProperties :: TestTree
 syntaxValidationProperties = testGroup "Syntax Validation Properties"
   [ testProperty "parseTypus detects syntax errors" $
       \content -> 
-        let hasIfWithoutBrace = "if " `isInfixOf` content && not ("{" `isInfixOf` content)
+        let hasIfWithoutBrace = "if " `L.isInfixOf` content && not ("{" `L.isInfixOf` content)
             result = parseTypus content
         in case result of
           Left _ -> property True
-          Right file -> hasIfWithoutBrace ==> not (null (tfSyntaxErrors file))
+          Right file -> hasIfWithoutBrace ==> not (L.null (tfSyntaxErrors file))
   
   , testProperty "parseTypus detects multiple package declarations" $
       \content -> 

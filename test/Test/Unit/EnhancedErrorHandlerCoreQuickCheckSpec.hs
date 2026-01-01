@@ -10,6 +10,7 @@
 module Test.Unit.EnhancedErrorHandlerCoreQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Positive(..), NonNegative(..))
@@ -50,8 +51,6 @@ import Compiler.Errors.Core
   , ErrorCategory(..)
   , ErrorLocation(..)
   , emptyContext
-  , errorAt
-  , errorWithCategory
   , _atLocation
   )
 
@@ -81,12 +80,12 @@ prop_compiler_error_construction :: String -> String -> CompilationPhase -> Prop
 prop_compiler_error_construction errId msg phase =
   not (null errId) ==>
   let loc = _atLocation 1 1
-      baseError = errorAt errId (T.pack msg) loc
+      baseError = errorAt "test-id" (T.pack msg) loc
       compilerErr = CompilerError baseError Nothing [] phase
   in property $ ceError compilerErr === baseError .&&.
              cePhase compilerErr === phase .&&.
-             null (ceSourceContext compilerErr) .&&.
-             null (ceStackTrace compilerErr)
+             L.null (ceSourceContext compilerErr) .&&.
+             L.null (ceStackTrace compilerErr)
 
 -- Property: mkCompilerError creates valid compiler error
 prop_mk_compiler_error :: String -> String -> CompilationPhase -> Property
@@ -144,7 +143,7 @@ prop_collect_errors_gather errIds =
   not (null errIds) ==>
   let errors = [syntaxError errId (T.pack "test") | errId <- nub errIds]
       collected = collectErrors errors
-  in property $ length collected === length (nub errIds)
+  in property $ L.length collected === L.length (nub errIds)
 
 -- Property: recoverFrom handles recovery correctly
 prop_recover_from_handling :: String -> Property
@@ -182,8 +181,8 @@ prop_format_compiler_error_includes errId msg =
   not (null errId) ==>
   let error = syntaxError errId (T.pack msg)
       formatted = formatCompilerError error
-  in property $ errId `isInfixOf` formatted .&&.
-             msg `isInfixOf` formatted
+  in property $ errId `L.isInfixOf` formatted .&&.
+             msg `L.isInfixOf` formatted
 
 -- Property: formatCompilerErrors handles multiple errors
 prop_format_compiler_errors_multiple :: [String] -> Property
@@ -192,7 +191,7 @@ prop_format_compiler_errors_multiple errIds =
   let errors = [syntaxError errId (T.pack "test") | errId <- nub errIds]
       formatted = formatCompilerErrors errors
       formattedLines = lines formatted
-  in property $ length formattedLines >= length (nub errIds)
+  in property $ L.length formattedLines >= L.length (nub errIds)
 
 -- Property: generateDetailedReport creates comprehensive report
 prop_generate_detailed_report :: [String] -> Property
@@ -201,7 +200,7 @@ prop_generate_detailed_report errIds =
   let errors = [syntaxError errId (T.pack "test") | errId <- nub errIds]
       report = generateDetailedReport errors
   in property $ not (null report) .&&.
-             "Error Report" `isInfixOf` report
+             "Error Report" `L.isInfixOf` report
 
 -- Property: withSourceLocation adds location context
 prop_with_source_location :: String -> Property
@@ -229,7 +228,7 @@ prop_analyze_errors_statistics phases =
   not (null phases) ==>
   let errors = [syntaxError ("err" ++ show i) (T.pack "test") { cePhase = phase } | (i, phase) <- zip [0..] phases]
       stats = analyzeErrors errors
-  in property $ totalErrors stats === length phases
+  in property $ totalErrors stats === L.length phases
 
 -- Property: ErrorStatistics phase distribution
 prop_error_statistics_distribution :: [CompilationPhase] -> Property
@@ -237,8 +236,8 @@ prop_error_statistics_distribution phases =
   not (null phases) ==>
   let errors = [syntaxError ("err" ++ show i) (T.pack "test") { cePhase = phase } | (i, phase) <- zip [0..] phases]
       stats = analyzeErrors errors
-      phaseCounts = [length [e | e <- errors, cePhase e == phase] | phase <- nub phases]
-  in property $ sum phaseCounts === totalErrors stats
+      phaseCounts = [L.length [e | e <- errors, cePhase e == phase] | phase <- nub phases]
+  in property $ L.sum phaseCounts === totalErrors stats
 
 -- Property: makeUserFriendly simplifies error messages
 prop_make_user_friendly :: String -> Property
@@ -247,7 +246,7 @@ prop_make_user_friendly technicalMsg =
   let error = syntaxError "test" (T.pack technicalMsg)
       friendly = makeUserFriendly error
       friendlyMsg = message (ceError friendly)
-  in property $ T.length friendlyMsg <= T.length (T.pack technicalMsg) + 50
+  in property $ T.L.length friendlyMsg <= T.L.length (T.pack technicalMsg) + 50
 
 -- Property: suggestFix provides suggestions
 prop_suggest_fix :: String -> Property
@@ -256,7 +255,7 @@ prop_suggest_fix errType =
   let error = syntaxError errType (T.pack "test")
       withSuggestion = suggestFix error
       suggestions = suggestions (ceError withSuggestion)
-  in property $ length suggestions >= 0
+  in property $ L.length suggestions >= 0
 
 -- Property: CompilerM monad operations
 prop_compiler_m_operations :: [String] -> Property
@@ -265,7 +264,7 @@ prop_compiler_m_operations errIds =
   let errors = [syntaxError errId (T.pack "test") | errId <- nub errIds]
       result = runCompilerM (return errors)
   in property $ case result of
-    Right res -> length res === length (nub errIds)
+    Right res -> L.length res === L.length (nub errIds)
     Left _ -> property True
 
 -- Property: CompilerResult error handling
@@ -275,8 +274,8 @@ prop_compiler_result_handling errIds =
   let errors = [syntaxError errId (T.pack "test") | errId <- nub errIds]
       result = Left errors :: CompilerResult [()]
       (leftErrs, rightResults) = partitionEithers [result]
-  in property $ length leftErrs === 1 .&&.
-             length rightResults === 0
+  in property $ L.length leftErrs === 1 .&&.
+             L.length rightResults === 0
 
 -- Property: error chain preservation
 prop_error_chain_preservation :: String -> String -> Property
@@ -286,7 +285,7 @@ prop_error_chain_preservation errId1 errId2 =
       outerError = syntaxError errId2 (T.pack "outer")
       -- Simulate error chaining
       chainedError = outerError { ceError = (ceError outerError) { errorChain = [ceError innerError] } }
-  in property $ length (errorChain (ceError chainedError)) === 1
+  in property $ L.length (errorChain (ceError chainedError)) === 1
 
 -- Property: error severity preservation through compiler errors
 prop_error_severity_preservation :: ErrorSeverity -> Property
@@ -337,4 +336,4 @@ tests =
 
 -- Helper function for infix pattern matching
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `Data.List.isInfixOf` haystack
+L.isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack

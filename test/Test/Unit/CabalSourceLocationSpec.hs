@@ -3,6 +3,7 @@
 module Test.Unit.CabalSourceLocationSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
 
 import SourceLocation 
@@ -41,7 +42,7 @@ sourcePosTests = testGroup "SourcePos tests"
         (SourcePos 1 1 0) startPos
   
   , testCase "posAfter handles newline" $
-      assertEqual "newline should advance line and reset column"
+      assertEqual "newline should advance line L.and reset column"
         (SourcePos 2 1 1) (posAfter '\n' startPos)
   
   , testCase "posAfter handles tab" $
@@ -52,7 +53,7 @@ sourcePosTests = testGroup "SourcePos tests"
       assertEqual "regular char should advance column"
         (SourcePos 1 2 1) (posAfter 'a' startPos)
   
-  , testCase "posAt creates position at line and column" $
+  , testCase "posAt creates position at line L.and column" $
       assertEqual "posAt should create correct position"
         (SourcePos 5 10 0) (posAt 5 10)
   
@@ -72,7 +73,7 @@ sourceSpanTests = testGroup "SourceSpan tests"
   [ testCase "emptySpan creates span at position" $
       let pos = posAt 3 5
           span = emptySpan pos
-      in assertEqual "empty span should have same start and end"
+      in assertEqual "empty span should have same start L.and end"
          (SourceSpan pos pos) span
   
   , testCase "spanFrom creates span starting at position" $
@@ -135,7 +136,7 @@ positionAdvancementTests = testGroup "Position advancement tests"
   
   , testCase "advancePosBy handles multiple characters" $
       let pos = advancePosBy "abc" startPos
-      in assertEqual "should advance by string length"
+      in assertEqual "should advance by string L.length"
          (SourcePos 1 4 3) pos
   
   , testCase "advancePosBy handles newlines" $
@@ -178,7 +179,7 @@ spanUtilityTests = testGroup "Span utility tests"
       in assertEqual "should handle non-overlapping spans"
          expected merged
   
-  , testCase "mergeSpans handles reverse order" $
+  , testCase "mergeSpans handles L.reverse order" $
       let span1 = spanBetween (posAt 1 5) (posAt 1 8)
           span2 = spanBetween (posAt 1 1) (posAt 1 5)
           merged = mergeSpans span1 span2

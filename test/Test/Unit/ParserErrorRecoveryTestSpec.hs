@@ -25,6 +25,7 @@ import Utils (trim)
 
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 import Data.Maybe (isJust, isNothing)
 
@@ -124,8 +125,8 @@ testBasicParsingSuccess = testGroup "Basic Parsing Success"
       case parseTypus input of
         Left err -> assertBool $ "Should parse simple code" ++ err
         Right typusFile -> do
-          length (tfBlocks typusFile) @?= 1
-          let block = head (tfBlocks typusFile)
+          L.length (tfBlocks typusFile) @?= 1
+          let block = L.head (tfBlocks typusFile)
           cbDirectives block @?= defaultBlockDirectives
           
   , testCase "code with file directives" $ do
@@ -146,8 +147,8 @@ testBlockDirectiveParsing = testGroup "Block Directive Parsing"
       case parseTypus input of
         Left err -> assertBool $ "Should parse block directive" ++ err
         Right typusFile -> do
-          length (tfBlocks typusFile) @?= 1
-          let block = head (tfBlocks typusFile)
+          L.length (tfBlocks typusFile) @?= 1
+          let block = L.head (tfBlocks typusFile)
           isJust (bdOwnership (cbDirectives block)) @?= True
           
   , testCase "multiple block directives" $ do
@@ -155,18 +156,18 @@ testBlockDirectiveParsing = testGroup "Block Directive Parsing"
       case parseTypus input of
         Left err -> assertBool $ "Should parse multiple block directives" ++ err
         Right typusFile -> do
-          length (tfBlocks typusFile) @?= 1
-          let block = head (tfBlocks typusFile)
+          L.length (tfBlocks typusFile) @?= 1
+          let block = L.head (tfBlocks typusFile)
           let directives = cbDirectives block
           isJust (bdOwnership directives) @?= True
           isJust (bdDependentTypes directives) @?= True
           
-  , testCase "mixed code and block directives" $ do
+  , testCase "mixed code L.and block directives" $ do
       let input = "func before() {}\n\n{//! ownership: on}\nfunc with() {}\n\nfunc after() {}"
       case parseTypus input of
         Left err -> assertBool $ "Should parse mixed content" ++ err
         Right typusFile -> do
-          length (tfBlocks typusFile) @?= 3
+          L.length (tfBlocks typusFile) @?= 3
   ]
 
 -- Test error recovery cases
@@ -203,15 +204,15 @@ testSyntaxErrorDetection = testGroup "Syntax Error Detection"
   [ testCase "if without brace detection" $ do
       let input = "if condition:\n    doSomething()"
       case parseTypus input of
-        Left err -> assertBool "Should detect if without brace" $ "missing opening brace" `isInfixOf` err
+        Left err -> assertBool "Should detect if without brace" $ "missing opening brace" `L.isInfixOf` err
         Right typusFile -> do
           -- Should still parse but with syntax errors
-          assertBool "Should have syntax errors" $ not (null (tfSyntaxErrors typusFile))
+          assertBool "Should have syntax errors" $ not (L.null (tfSyntaxErrors typusFile))
           
   , testCase "multiple package declarations" $ do
       let input = "package main\n\npackage other\n\nfunc main() {}"
       case parseTypus input of
-        Left err -> assertBool "Should detect multiple packages" $ "Multiple package declarations" `isInfixOf` err
+        Left err -> assertBool "Should detect multiple packages" $ "Multiple package declarations" `L.isInfixOf` err
         Right _ -> assertBool "Should handle multiple package declarations" True
   ]
 
@@ -223,14 +224,14 @@ testBuildTagParsing = testGroup "Build Tag Parsing"
       case parseTypus input of
         Left err -> assertBool $ "Should parse go build tags" ++ err
         Right typusFile -> do
-          length (tfBuildTags typusFile) @?= 2
+          L.length (tfBuildTags typusFile) @?= 2
           
   , testCase "plus build tags" $ do
       let input = "// +build linux,amd64\n\nfunc main() {}"
       case parseTypus input of
         Left err -> assertBool $ "Should parse plus build tags" ++ err
         Right typusFile -> do
-          length (tfBuildTags typusFile) @?= 1
+          L.length (tfBuildTags typusFile) @?= 1
   ]
 
 -- ============================================================================
@@ -283,7 +284,7 @@ prop_parser_position_aware codeContent =
          let blocks = tfBlocks typusFile
          in if null blocks
             then property True
-            else property $ all (\block -> 
+            else property $ L.all (\block -> 
               let span = cbSpan block
                   start = spanStart span
                   endPos = spanEnd span
@@ -314,7 +315,7 @@ prop_mixed_content_handling =
       let input = invalidDirective ++ "\n\n" ++ validCode
       in case parseTypus input of
            Left _ -> property True  -- May fail due to invalid directive
-           Right typusFile -> property True  -- Should recover and parse valid code
+           Right typusFile -> property True  -- Should recover L.and parse valid code
 
 -- Property: Multiple directives should be combined correctly
 prop_multiple_directives_combination :: Property
@@ -336,9 +337,9 @@ prop_block_content_preservation =
     in case parseTypus input of
          Left _ -> property True  -- May fail for other reasons
          Right typusFile ->
-           if null (tfBlocks typusFile)
+           if L.null (tfBlocks typusFile)
            then property True
-           else property $ codeContent `isInfixOf` (cbContent (head (tfBlocks typusFile)))
+           else property $ codeContent `L.isInfixOf` (cbContent (L.head (tfBlocks typusFile)))
 
 -- ============================================================================
 -- Test Collection

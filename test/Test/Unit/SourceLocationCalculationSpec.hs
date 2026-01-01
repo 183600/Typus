@@ -4,6 +4,7 @@
 module Test.Unit.SourceLocationCalculationSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import SourceLocation
@@ -34,7 +35,7 @@ positionCalculationProperties = testGroup "Position Calculation Properties"
   [ testProperty "startPos is always (1, 1)" $
       startPos === SourcePos 1 1
     
-  , testProperty "posAt creates position at specific line and column" $
+  , testProperty "posAt creates position at specific line L.and column" $
       \line col -> line > 0 && col > 0 ==> 
         let pos = posAt line col
         in sourceLine pos === line && sourceColumn pos === col
@@ -109,7 +110,7 @@ locationTrackingProperties = testGroup "Location Tracking Properties"
               getCurrentPos
         in tracked === last positions
     
-  , testProperty "markSpanStart and markSpanEnd create valid span" $
+  , testProperty "markSpanStart L.and markSpanEnd create valid span" $
       \startPos endPos ->
         let tracked = runLocationTracker $ do
               setCurrentPos startPos
@@ -229,19 +230,19 @@ textLineColumnProperties = testGroup "Text Line/Column Calculation Properties"
       \text ->
         let linesList = lines text
             positions = scanl (\pos line -> advancePosBy pos (line ++ "\n")) startPos linesList
-        in length positions === length linesList + 1
+        in L.length positions === L.length linesList + 1
     
   , testProperty "position calculation is consistent with character count" $
       \text ->
         let finalPos = advancePosBy startPos text
-            lineCount = length $ filter (== '\n') text
+            lineCount = L.length $ L.filter (== '\n') text
         in sourceLine finalPos === 1 + lineCount
     
   , testProperty "column calculation matches characters in current line" $
       \text ->
         let finalPos = advancePosBy startPos text
             currentLine = last $ "" : lines text
-            expectedCol = length currentLine + 1
+            expectedCol = L.length currentLine + 1
         in sourceColumn finalPos === expectedCol
   ]
 
@@ -326,7 +327,7 @@ edgeCaseProperties = testGroup "Edge Case Properties"
   , testCase "handle tab character not at boundary" $
       advancePos (SourcePos 1 5) '\t' @?= SourcePos 1 9
     
-  , testCase "span with same start and end position" $
+  , testCase "span with same start L.and end position" $
       let span = emptySpan (SourcePos 10 20)
       in spanStart span @?= spanEnd span
   ]

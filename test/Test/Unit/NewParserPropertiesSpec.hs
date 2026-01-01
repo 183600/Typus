@@ -25,7 +25,9 @@ import Parser
 
 import SourceLocation (SourcePos(..), SourceSpan(..), locatedWithSpan, spanStart, spanEnd)
 import Utils (trim)
-import Data.List (isPrefixOf, isInfixOf, intercalate, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (intercalate, sort)
 import Data.Char (isSpace)
 
 -- ============================================================================
@@ -146,12 +148,12 @@ prop_parseTypus_build_tags =
        Left _ -> property False
        Right typusFile ->
          let buildTags = tfBuildTags typusFile
-         in length buildTags === 2
+         in L.length buildTags === 2
 
 -- Property: parseTypus preserves code content in blocks
 prop_parseTypus_preserves_content :: String -> Property
 prop_parseTypus_preserves_content code =
-  not (null code) && not (any (`elem` ['{', '}']) code) ==>
+  not (null code) && not (L.any (`elem` ['{', '}']) code) ==>
   let input = unlines
         [ "package main"
         , code
@@ -161,7 +163,7 @@ prop_parseTypus_preserves_content code =
        Left _ -> property False
        Right typusFile ->
          let blocks = tfBlocks typusFile
-         in any (\block -> code `isInfixOf` cbContent block) blocks
+         in L.any (\block -> code `L.isInfixOf` cbContent block) blocks
 
 -- Property: parseTypus handles multiple code blocks
 prop_parseTypus_multiple_blocks :: Property
@@ -180,7 +182,7 @@ prop_parseTypus_multiple_blocks =
        Left _ -> property False
        Right typusFile ->
          let blocks = tfBlocks typusFile
-         in length blocks >= 2
+         in L.length blocks >= 2
 
 -- Property: parseTypus with syntax errors still returns TypusFile
 prop_parseTypus_syntax_errors :: Property
@@ -257,7 +259,7 @@ prop_parseTypus_nested_directives =
        Left _ -> property False
        Right typusFile ->
          let blocks = tfBlocks typusFile
-         in length blocks >= 2
+         in L.length blocks >= 2
 
 -- Property: parseTypus with comments handles correctly
 prop_parseTypus_comments :: Property
@@ -279,14 +281,14 @@ prop_parseTypus_comments =
 -- Directive Properties
 -- ============================================================================
 
--- Property: defaultFileDirectives has all Nothing values
+-- Property: defaultFileDirectives has L.all Nothing values
 prop_defaultFileDirectives_nothing :: Property
 prop_defaultFileDirectives_nothing =
   fdOwnership defaultFileDirectives === Nothing .&&.
   fdDependentTypes defaultFileDirectives === Nothing .&&.
   fdConstraints defaultFileDirectives === Nothing
 
--- Property: defaultBlockDirectives has all Nothing values
+-- Property: defaultBlockDirectives has L.all Nothing values
 prop_defaultBlockDirectives_nothing :: Property
 prop_defaultBlockDirectives_nothing =
   bdOwnership defaultBlockDirectives === Nothing .&&.
@@ -352,7 +354,7 @@ tests = testGroup "New Parser Properties"
         Left err -> assertFailure $ "Failed to parse simple input: " ++ err
         Right typusFile -> do
           tfDirectives typusFile @?= defaultFileDirectives
-          length (tfBlocks typusFile) @?= 1
+          L.length (tfBlocks typusFile) @?= 1
           
   , testCase "parseTypus with file directives" $ do
       let directiveInput = unlines
@@ -394,5 +396,5 @@ tests = testGroup "New Parser Properties"
         Left err -> assertFailure $ "Failed to parse build tags: " ++ err
         Right typusFile -> do
           let buildTags = tfBuildTags typusFile
-          length buildTags @?= 2
+          L.length buildTags @?= 2
   ]

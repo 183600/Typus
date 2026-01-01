@@ -5,6 +5,7 @@
 module Test.Unit.TypeEnvironmentBuildingSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertBool, assertEqual, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Gen, arbitrary, oneof, elements, choose, listOf, resize)
@@ -49,16 +50,16 @@ import Data.List (sort, nub)
 tests :: TestTree
 tests =
   testGroup "Type Environment Building Tests"
-    [ testGroup "Analyzer State Creation and Initialization"
+    [ testGroup "Analyzer State Creation L.and Initialization"
         [ testCase "newIntegratedAnalyzer creates proper initial state" $ do
             let state = newIntegratedAnalyzer True True
             
             -- Check basic structure
             currentScope state @?= 0
-            Map.null (symbolTable state) @?= True
-            null (combinedErrorsAcc state) @?= True
-            null (ownershipErrorsAcc state) @?= True
-            null (dependentTypeErrorsAcc state) @?= True
+            Map.L.null (symbolTable state) @?= True
+            L.null (combinedErrorsAcc state) @?= True
+            L.null (ownershipErrorsAcc state) @?= True
+            L.null (dependentTypeErrorsAcc state) @?= True
             
             -- Check analysis context
             let context = analysisContext state
@@ -84,12 +85,12 @@ tests =
         , testCase "emptyAnalysisResult creates proper result" $ do
             let result = emptyAnalysisResult
             
-            null (ownershipErrors result) @?= True
-            null (dependentTypeErrors result) @?= True
-            null (combinedErrors result) @?= True
-            null (analysisWarnings result) @?= True
-            null (analysisInfo result) @?= True
-            Map.null (typeEnvironment result) @?= True
+            L.null (ownershipErrors result) @?= True
+            L.null (dependentTypeErrors result) @?= True
+            L.null (combinedErrors result) @?= True
+            L.null (analysisWarnings result) @?= True
+            L.null (analysisInfo result) @?= True
+            Map.L.null (typeEnvironment result) @?= True
         ]
 
     , testGroup "Symbol Table Management"
@@ -139,8 +140,8 @@ tests =
                     { symbolTable = Map.fromList [("var1", symbol1), ("var2", symbol2), ("var3", symbol3)]
                     }
             
-            let scope1Symbols = Map.filter (\s -> symbolScope s == 1) (symbolTable state)
-            let scope2Symbols = Map.filter (\s -> symbolScope s == 2) (symbolTable state)
+            let scope1Symbols = Map.L.filter (\s -> symbolScope s == 1) (symbolTable state)
+            let scope2Symbols = Map.L.filter (\s -> symbolScope s == 2) (symbolTable state)
             
             Map.size scope1Symbols @?= 2
             Map.size scope2Symbols @?= 1
@@ -182,7 +183,7 @@ tests =
             analysisPhase context @?= DependentTypePhase
         ]
 
-    , testGroup "Error Collection and Management"
+    , testGroup "Error Collection L.and Management"
         [ testCase "ownership errors are collected properly" $ do
             let initialState = newIntegratedAnalyzer True True
             let ownershipError = Own.UseAfterMove "testVar"
@@ -195,10 +196,10 @@ tests =
             let ownershipErrors = ownershipErrorsAcc stateWithErrors
             let combinedErrors = combinedErrorsAcc stateWithErrors
             
-            length ownershipErrors @?= 1
-            length combinedErrors @?= 1
-            fst (head ownershipErrors) @?= Error
-            snd (head ownershipErrors) @?= ownershipError
+            L.length ownershipErrors @?= 1
+            L.length combinedErrors @?= 1
+            fst (L.head ownershipErrors) @?= Error
+            snd (L.head ownershipErrors) @?= ownershipError
 
         , testCase "dependent type errors are collected properly" $ do
             let initialState = newIntegratedAnalyzer True True
@@ -212,12 +213,12 @@ tests =
             let typeErrors = dependentTypeErrorsAcc stateWithErrors
             let combinedErrors = combinedErrorsAcc stateWithErrors
             
-            length typeErrors @?= 1
-            length combinedErrors @?= 1
-            fst (head typeErrors) @?= Warning
-            snd (head typeErrors) @?= typeError
+            L.length typeErrors @?= 1
+            L.length combinedErrors @?= 1
+            fst (L.head typeErrors) @?= Warning
+            snd (L.head typeErrors) @?= typeError
 
-        , testCase "combined errors include all error types" $ do
+        , testCase "combined errors include L.all error types" $ do
             let ownershipError = Own.UseAfterMove "var1"
             let typeError = Dep.ConstraintError "constraint"
             let integrationError = IntegrationError "integration failed" Error
@@ -232,18 +233,18 @@ tests =
                     }
             
             let combinedErrors = combinedErrorsAcc finalState
-            length combinedErrors @?= 3
+            L.length combinedErrors @?= 3
             
             let ownershipErrors = filter isOwnershipError combinedErrors
             let typeErrors = filter isDependentTypeError combinedErrors
             let integrationErrors = filter isIntegrationError combinedErrors
             
-            length ownershipErrors @?= 1
-            length typeErrors @?= 1
-            length integrationErrors @?= 1
+            L.length ownershipErrors @?= 1
+            L.length typeErrors @?= 1
+            L.length integrationErrors @?= 1
         ]
 
-    , testGroup "Message Filtering and Collection"
+    , testGroup "Message Filtering L.and Collection"
         [ testCase "filterWarnings extracts warning messages" $ do
             let errors = 
                   [ OwnershipErrorCombined Warning (Own.UseAfterMove "var1")
@@ -253,9 +254,9 @@ tests =
                   ]
             
             let warnings = filterWarnings errors
-            length warnings @?= 2
-            assertBool "contains ownership warning" (any (isInfixOf "UseAfterMove") warnings)
-            assertBool "contains integration warning" (any (isInfixOf "integration warning") warnings)
+            L.length warnings @?= 2
+            assertBool "contains ownership warning" (L.any (L.isInfixOf "UseAfterMove") warnings)
+            assertBool "contains integration warning" (L.any (L.isInfixOf "integration warning") warnings)
 
         , testCase "filterInfo extracts info messages" $ do
             let errors = 
@@ -266,9 +267,9 @@ tests =
                   ]
             
             let infoMessages = filterInfo errors
-            length infoMessages @?= 2
-            assertBool "contains ownership info" (any (isInfixOf "UseAfterMove") infoMessages)
-            assertBool "contains integration info" (any (isInfixOf "integration info") infoMessages)
+            L.length infoMessages @?= 2
+            assertBool "contains ownership info" (L.any (L.isInfixOf "UseAfterMove") infoMessages)
+            assertBool "contains integration info" (L.any (L.isInfixOf "integration info") infoMessages)
 
         , testCase "collectMessages works for different severities" $ do
             let errors = 
@@ -281,12 +282,12 @@ tests =
             let warningMessages = collectMessages Warning errors
             let infoMessages = collectMessages Info errors
             
-            length errorMessages @?= 1
-            length warningMessages @?= 1
-            length infoMessages @?= 1
+            L.length errorMessages @?= 1
+            L.length warningMessages @?= 1
+            L.length infoMessages @?= 1
         ]
 
-    , testGroup "Analysis Summary and Reporting"
+    , testGroup "Analysis Summary L.and Reporting"
         [ testCase "getAnalysisSummary provides correct statistics" $ do
             let state = newIntegratedAnalyzer True True
             let errors = 
@@ -304,20 +305,20 @@ tests =
             let summary = getAnalysisSummary finalState
             let lines' = lines summary
             
-            assertBool "contains analysis summary header" ("Analysis Summary:" `isInfixOf` summary)
-            assertBool "contains error count" ("Errors: 2" `isInfixOf` summary)  -- Error + Fatal
-            assertBool "contains warning count" ("Warnings: 1" `isInfixOf` summary)
-            assertBool "contains info count" ("Info: 1" `isInfixOf` summary)
-            assertBool "contains symbol count" ("Total symbols: 3" `isInfixOf` summary)
+            assertBool "contains analysis summary header" ("Analysis Summary:" `L.isInfixOf` summary)
+            assertBool "contains error count" ("Errors: 2" `L.isInfixOf` summary)  -- Error + Fatal
+            assertBool "contains warning count" ("Warnings: 1" `L.isInfixOf` summary)
+            assertBool "contains info count" ("Info: 1" `L.isInfixOf` summary)
+            assertBool "contains symbol count" ("Total symbols: 3" `L.isInfixOf` summary)
 
         , testCase "analysis summary handles empty state" $ do
             let state = newIntegratedAnalyzer True True
             let summary = getAnalysisSummary state
             
-            assertBool "contains zero errors" ("Errors: 0" `isInfixOf` summary)
-            assertBool "contains zero warnings" ("Warnings: 0" `isInfixOf` summary)
-            assertBool "contains zero info" ("Info: 0" `isInfixOf` summary)
-            assertBool "contains zero symbols" ("Total symbols: 0" `isInfixOf` summary)
+            assertBool "contains zero errors" ("Errors: 0" `L.isInfixOf` summary)
+            assertBool "contains zero warnings" ("Warnings: 0" `L.isInfixOf` summary)
+            assertBool "contains zero info" ("Info: 0" `L.isInfixOf` summary)
+            assertBool "contains zero symbols" ("Total symbols: 0" `L.isInfixOf` summary)
 
         , testCase "analysis summary handles different error distributions" $ do
             let state = newIntegratedAnalyzer True True
@@ -326,8 +327,8 @@ tests =
             let finalState = state { combinedErrorsAcc = errors }
             let summary = getAnalysisSummary finalState
             
-            assertBool "contains correct warning count" ("Warnings: 5" `isInfixOf` summary)
-            assertBool "contains zero errors" ("Errors: 0" `isInfixOf` summary)
+            assertBool "contains correct warning count" ("Warnings: 5" `L.isInfixOf` summary)
+            assertBool "contains zero errors" ("Errors: 0" `L.isInfixOf` summary)
         ]
 
     , testGroup "Feature Flag Management"
@@ -380,7 +381,7 @@ tests =
                                   , SymbolInfo ("symbol" ++ show i) Nothing Nothing 0 False False []
                                   ) | i <- [1..symbolCount]]
                     symbolTable = Map.fromList symbolList
-                in Map.size symbolTable === length symbolList
+                in Map.size symbolTable === L.length symbolList
 
         , fastProperty "error collection preserves error types" $
             \ownershipCount typeCount integrationCount ->
@@ -394,9 +395,9 @@ tests =
                     ownershipFiltered = filter isOwnershipError allErrors
                     typeFiltered = filter isDependentTypeError allErrors
                     integrationFiltered = filter isIntegrationError allErrors
-                in length ownershipFiltered === length ownershipErrors .&&.
-                   length typeFiltered === length typeErrors .&&.
-                   length integrationFiltered === length integrationErrors
+                in L.length ownershipFiltered === L.length ownershipErrors .&&.
+                   L.length typeFiltered === L.length typeErrors .&&.
+                   L.length integrationFiltered === L.length integrationErrors
 
         , fastProperty "analysis summary counts match error distribution" $
             \errorCount warningCount infoCount ->
@@ -410,12 +411,12 @@ tests =
                     state = newIntegratedAnalyzer True True
                     finalState = state { combinedErrorsAcc = allErrors }
                     summary = getAnalysisSummary finalState
-                in ("Errors: " ++ show (length errors + length (filter isFatal allErrors))) `isInfixOf` summary .&&.
-                   ("Warnings: " ++ show (length warnings)) `isInfixOf` summary .&&.
-                   ("Info: " ++ show (length infos)) `isInfixOf` summary
+                in ("Errors: " ++ show (L.length errors + L.length (filter isFatal allErrors))) `L.isInfixOf` summary .&&.
+                   ("Warnings: " ++ show (L.length warnings)) `L.isInfixOf` summary .&&.
+                   ("Info: " ++ show (L.length infos)) `L.isInfixOf` summary
         ]
 
-    , testGroup "Edge Cases and Stress Tests"
+    , testGroup "Edge Cases L.and Stress Tests"
         [ testCase "handles large symbol tables efficiently" $ do
             let symbolCount = 1000
                 symbols = [( "symbol" ++ show i
@@ -428,7 +429,7 @@ tests =
             let summary = getAnalysisSummary finalState
             
             Map.size (symbolTable finalState) @?= symbolCount
-            assertBool "summary contains correct symbol count" ("Total symbols: 1000" `isInfixOf` summary)
+            assertBool "summary contains correct symbol count" ("Total symbols: 1000" `L.isInfixOf` summary)
 
         , testCase "handles many errors efficiently" $ do
             let errorCount = 500
@@ -437,7 +438,7 @@ tests =
                 finalState = state { combinedErrorsAcc = errors }
                 let summary = getAnalysisSummary finalState
                 
-            assertBool "summary contains correct error count" ("Errors: 500" `isInfixOf` summary)
+            assertBool "summary contains correct error count" ("Errors: 500" `L.isInfixOf` summary)
 
         , testCase "handles mixed error severities correctly" $ do
             let errors = 
@@ -452,9 +453,9 @@ tests =
             let finalState = state { combinedErrorsAcc = errors }
             let summary = getAnalysisSummary finalState
             
-            assertBool "counts fatal and error errors together" ("Errors: 3" `isInfixOf` summary)
-            assertBool "counts warnings correctly" ("Warnings: 1" `isInfixOf` summary)
-            assertBool "counts info correctly" ("Info: 1" `isInfixOf` summary)
+            assertBool "counts fatal L.and error errors together" ("Errors: 3" `L.isInfixOf` summary)
+            assertBool "counts warnings correctly" ("Warnings: 1" `L.isInfixOf` summary)
+            assertBool "counts info correctly" ("Info: 1" `L.isInfixOf` summary)
 
         , testCase "handles empty symbol table with errors" $ do
             let errors = [OwnershipErrorCombined Error (Own.UseAfterMove "var1")]
@@ -462,8 +463,8 @@ tests =
             let finalState = state { combinedErrorsAcc = errors }
             let summary = getAnalysisSummary finalState
             
-            assertBool "shows zero symbols" ("Total symbols: 0" `isInfixOf` summary)
-            assertBool "shows one error" ("Errors: 1" `isInfixOf` summary)
+            assertBool "shows zero symbols" ("Total symbols: 0" `L.isInfixOf` summary)
+            assertBool "shows one error" ("Errors: 1" `L.isInfixOf` summary)
         ]
     ]
 
@@ -488,4 +489,4 @@ isFatal (CrossAnalyzerError _ Fatal _) = True
 isFatal _ = False
 
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `Data.List.isInfixOf` haystack
+L.isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack

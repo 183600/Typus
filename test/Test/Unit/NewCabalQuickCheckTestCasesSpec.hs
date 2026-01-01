@@ -45,7 +45,9 @@ import Utils
   , normalizeIndentation
   )
 
-import Data.List (isPrefixOf, isInfixOf, sort, nub, intercalate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort, nub, intercalate)
 import Data.Char (isSpace, toLower, toUpper)
 import qualified Data.Text as T
 
@@ -91,9 +93,9 @@ arbitrarySourcePos = do
 prop_blockDirectives_consistency :: Property
 prop_blockDirectives_consistency =
   forAll arbitraryBlockDirectives $ \bd ->
-    let ownershipCount = length [() | Just _ <- [bdOwnership bd]]
-        depTypesCount = length [() | Just _ <- [bdDependentTypes bd]]
-        constraintsCount = length [() | Just _ <- [bdConstraints bd]]
+    let ownershipCount = L.length [() | Just _ <- [bdOwnership bd]]
+        depTypesCount = L.length [() | Just _ <- [bdDependentTypes bd]]
+        constraintsCount = L.length [() | Just _ <- [bdConstraints bd]]
         totalDirectives = ownershipCount + depTypesCount + constraintsCount
     in totalDirectives >= 0 && totalDirectives <= 3
 
@@ -138,15 +140,15 @@ prop_lineSplitting_consistency =
         hasNewlines = '\n' `elem` s
     in classify hasNewlines "contains newlines" $
        classify (null lines) "empty result" $
-       property $ length lines >= 1
+       property $ L.length lines >= 1
 
 -- Test Case 6: Typus file extension detection
 prop_typusFileDetection_consistent :: Property
 prop_typusFileDetection_consistent =
   forAll arbitraryFileName $ \filename ->
     let isTypus = isTypusFile filename
-        hasTypusExtension = ".typus" `isSuffixOf` filename
-        hasTypusExtensionLower = ".typus" `isInfixOf` (map toLower filename)
+        hasTypusExtension = ".typus" `L.isSuffixOf` filename
+        hasTypusExtensionLower = ".typus" `L.isInfixOf` (map toLower filename)
     in classify isTypus "is typus file" $
        classify hasTypusExtension "has typus extension" $
        property $ isTypus == hasTypusExtensionLower
@@ -169,11 +171,11 @@ prop_indentationNormalization_preservesContent :: Property
 prop_indentationNormalization_preservesContent =
   forAll arbitraryIndentedString $ \s ->
     let normalized = normalizeIndentation s
-        -- Remove all leading spaces to compare content
+        -- Remove L.all leading spaces to compare content
         strippedOriginal = dropWhile isSpace s
         strippedNormalized = dropWhile isSpace normalized
     in classify (null s) "empty string" $
-       classify (all isSpace s) "only whitespace" $
+       classify (L.all isSpace s) "only whitespace" $
        property $ strippedOriginal == strippedNormalized
 
 arbitraryIndentedString :: Gen String
@@ -190,11 +192,11 @@ prop_directiveParsing_caseInsensitive =
   forAll arbitraryDirectiveString $ \directive ->
     let lower = map toLower directive
         upper = map toUpper directive
-        mixed = map (\c -> if even $ fromEnum c then toLower c else toUpper c) directive
-    in classify (directive `isInfixOf` "ownership") "ownership directive" $
-       classify (directive `isInfixOf` "dependent") "dependent types directive" $
-       classify (directive `isInfixOf` "constraint") "constraints directive" $
-       property $ length directive > 0
+        mixed = L.map (\c -> if even $ fromEnum c then toLower c else toUpper c) directive
+    in classify (directive `L.isInfixOf` "ownership") "ownership directive" $
+       classify (directive `L.isInfixOf` "dependent") "dependent types directive" $
+       classify (directive `L.isInfixOf` "constraint") "constraints directive" $
+       property $ L.length directive > 0
 
 arbitraryDirectiveString :: Gen String
 arbitraryDirectiveString = oneof
@@ -215,10 +217,10 @@ prop_listDeduplication_nubProperty :: Property
 prop_listDeduplication_nubProperty =
   forAll (listOf arbitrary) $ \xs ->
     let deduplicated = nub xs
-        hasDuplicates = length xs > length deduplicated
+        hasDuplicates = L.length xs > L.length deduplicated
     in classify hasDuplicates "had duplicates" $
        classify (null xs) "empty list" $
-       property $ all (`elem` deduplicated) xs && length deduplicated <= length xs
+       property $ L.all (`elem` deduplicated) xs && L.length deduplicated <= L.length xs
 
 -- Test Case 10: String case conversion properties
 prop_stringCaseConversion_roundTrip :: Property
@@ -228,8 +230,8 @@ prop_stringCaseConversion_roundTrip =
         upper = map toUpper s
         lowerThenUpper = map toUpper lower
         upperThenLower = map toLower upper
-    in classify (all isLower s) "already lowercase" $
-       classify (all isUpper s) "already uppercase" $
+    in classify (L.all isLower s) "already lowercase" $
+       classify (L.all isUpper s) "already uppercase" $
        property $ lowerThenUpper == upper && upperThenLower == lower
 
 -- ============================================================================

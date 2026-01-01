@@ -4,6 +4,7 @@
 module Test.Unit.ComprehensiveAnalyzerQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import TestSupport.ExtendedArbitrary ()
@@ -70,7 +71,7 @@ prop_analyzer_state_transitions state phase =
 prop_combined_errors_aggregate :: [CombinedError] -> [CombinedError] -> Property
 prop_combined_errors_aggregate errors1 errors2 =
   let combined = aggregateErrors errors1 errors2
-  in property $ combinedErrorCount combined == length errors1 + length errors2
+  in property $ combinedErrorCount combined == L.length errors1 + L.length errors2
 
 -- Property: Analysis result maintains invariants
 prop_analysis_result_invariants :: AnalysisResult -> Property
@@ -91,7 +92,7 @@ prop_symbol_kind_scope_rules symbolKind symbolName =
 -- Property: Type information flows correctly through analysis
 prop_type_information_flow :: [SymbolInfo] -> Property
 prop_type_information_flow symbols =
-  not (null symbols) && length symbols <= 5 ==>
+  not (null symbols) && L.length symbols <= 5 ==>
   let typeGraph = buildTypeDependencyGraph symbols
       typeFlow = analyzeTypeFlow typeGraph
   in property $ typeFlowConsistent typeFlow symbols
@@ -105,10 +106,10 @@ prop_cross_analysis_consistency ownershipResult dependentTypeResult =
 -- Property: Analyzer performance scales reasonably
 prop_analyzer_performance_scaling :: [TypusFile] -> Property
 prop_analyzer_performance_scaling files =
-  not (null files) && length files <= 10 ==>
+  not (null files) && L.length files <= 10 ==>
   let analysisTimes = map measureAnalysisTime files
-      maxTime = maximum analysisTimes
-      avgTime = sum analysisTimes `div` length analysisTimes
+      maxTime = L.maximum analysisTimes
+      avgTime = L.sum analysisTimes `div` L.length analysisTimes
   in property $ maxTime < avgTime * 5 -- Max time shouldn't be 5x average
 
 -- Property: Memory usage stays within bounds during analysis
@@ -130,7 +131,7 @@ prop_incremental_analysis original modified =
 -- Property: Concurrent analysis is thread-safe
 prop_concurrent_analysis :: [TypusFile] -> Property
 prop_concurrent_analysis files =
-  not (null files) && length files <= 5 ==>
+  not (null files) && L.length files <= 5 ==>
   let concurrentResults = analyzeConcurrently files
       sequentialResults = map analyzeFile files
   in property $ resultsEquivalent concurrentResults sequentialResults
@@ -146,7 +147,7 @@ prop_error_recovery_state file =
 -- Property: Symbol resolution handles shadowing correctly
 prop_symbol_resolution_shadowing :: [SymbolInfo] -> [SymbolInfo] -> Property
 prop_symbol_resolution_shadowing outerSymbols innerSymbols =
-  not (null outerSymbols) && not (null innerSymbols) && length outerSymbols <= 3 && length innerSymbols <= 3 ==>
+  not (null outerSymbols) && not (null innerSymbols) && L.length outerSymbols <= 3 && L.length innerSymbols <= 3 ==>
   let shadowedSymbols = findShadowedSymbols outerSymbols innerSymbols
       resolution = resolveSymbols outerSymbols innerSymbols
   in property $ shadowingResolvedCorrectly shadowedSymbols resolution
@@ -154,7 +155,7 @@ prop_symbol_resolution_shadowing outerSymbols innerSymbols =
 -- Property: Type inference respects constraints
 prop_type_inference_constraints :: [SymbolInfo] -> [String] -> Property
 prop_type_inference_constraints symbols constraints =
-  not (null symbols) && not (null constraints) && length symbols <= 5 ==>
+  not (null symbols) && not (null constraints) && L.length symbols <= 5 ==>
   let typeConstraints = parseTypeConstraints constraints
       inference = inferTypes symbols typeConstraints
   in property $ inferenceRespectsConstraints inference typeConstraints
@@ -162,7 +163,7 @@ prop_type_inference_constraints symbols constraints =
 -- Property: Ownership analysis integrates with type checking
 prop_ownership_type_integration :: [SymbolInfo] -> [String] -> Property
 prop_ownership_type_integration symbols operations =
-  not (null symbols) && not (null operations) && length symbols <= 5 ==>
+  not (null symbols) && not (null operations) && L.length symbols <= 5 ==>
   let ownershipResult = analyzeOwnership symbols operations
       typeResult = analyzeTypes symbols
       integrated = integrateOwnershipType ownershipResult typeResult
@@ -171,7 +172,7 @@ prop_ownership_type_integration symbols operations =
 -- Property: Dependent type analysis handles complex constraints
 prop_dependent_type_complex_constraints :: [String] -> [String] -> Property
 prop_dependent_type_complex_constraints typeVars constraints =
-  not (null typeVars) && not (null constraints) && length typeVars <= 3 ==>
+  not (null typeVars) && not (null constraints) && L.length typeVars <= 3 ==>
   let complexConstraints = buildComplexConstraints typeVars constraints
       analysis = analyzeDependentTypes typeVars complexConstraints
   in property $ complexAnalysisValid analysis complexConstraints
@@ -186,7 +187,7 @@ prop_symbol_table_scalability symbols =
 -- Property: Analysis caching improves performance
 prop_analysis_caching :: TypusFile -> [TypusFile] -> Property
 prop_analysis_caching baseFile dependencies =
-  not (null dependencies) && length dependencies <= 5 ==>
+  not (null dependencies) && L.length dependencies <= 5 ==>
   let cachedTime = analyzeWithCache baseFile dependencies
       uncachedTime = analyzeWithoutCache baseFile dependencies
   in property $ cachedTime < uncachedTime
@@ -201,15 +202,15 @@ prop_analysis_serialization result =
 -- Property: Analyzer handles circular dependencies gracefully
 prop_circular_dependencies :: [String] -> Property
 prop_circular_dependencies symbols =
-  not (null symbols) && length symbols <= 5 ==>
+  not (null symbols) && L.length symbols <= 5 ==>
   let circularGraph = buildCircularDependencyGraph symbols
-      analysis = analyzeCircularDependencies (Map.map (\x -> [x]) circularGraph)
+      analysis = analyzeCircularDependencies (Map.L.map (\x -> [x]) circularGraph)
   in property $ handlesCircularDependencies analysis
 
 -- Property: Type system extensions maintain compatibility
 prop_type_system_extensions :: [SymbolInfo] -> [String] -> Property
 prop_type_system_extensions symbols extensions =
-  not (null symbols) && not (null extensions) && length symbols <= 5 ==>
+  not (null symbols) && not (null extensions) && L.length symbols <= 5 ==>
   let extendedTypes = applyTypeExtensions symbols extensions
       compatibility = checkTypeCompatibility symbols extendedTypes
   in property $ compatibility
@@ -225,7 +226,7 @@ prop_analyzer_configuration context file =
 -- Property: Symbol lifecycle management is correct
 prop_symbol_lifecycle :: [SymbolInfo] -> Property
 prop_symbol_lifecycle symbols =
-  not (null symbols) && length symbols <= 5 ==>
+  not (null symbols) && L.length symbols <= 5 ==>
   let lifecycle = trackSymbolLifecycle symbols
       lifecycleValid = validateSymbolLifecycle lifecycle
   in property $ lifecycleValid
@@ -241,9 +242,9 @@ prop_analysis_metrics file =
 -- Property: Analyzer error messages are helpful
 prop_error_messages_helpful :: [CombinedError] -> Property
 prop_error_messages_helpful errors =
-  not (null errors) && length errors <= 5 ==>
+  not (null errors) && L.length errors <= 5 ==>
   let helpfulness = map errorHelpfulness errors
-  in property $ all (>= 0.5) helpfulness -- At least 50% helpful
+  in property $ L.all (>= 0.5) helpfulness -- At least 50% helpful
 
 -- Helper functions for property testing
 symbolConsistent :: SymbolInfo -> Bool
@@ -253,7 +254,7 @@ lookupSymbol :: [(String, SymbolInfo)] -> String -> Maybe SymbolInfo
 lookupSymbol table name = lookup name table
 
 symbolTableSize :: [(String, SymbolInfo)] -> Int
-symbolTableSize = length
+symbolTableSize = L.length
 
 insertSymbol :: [(String, SymbolInfo)] -> SymbolInfo -> [(String, SymbolInfo)]
 insertSymbol table symbol = (symbolName symbol, symbol) : table
@@ -277,7 +278,7 @@ aggregateErrors :: [CombinedError] -> [CombinedError] -> [CombinedError]
 aggregateErrors errors1 errors2 = errors1 ++ errors2
 
 combinedErrorCount :: [CombinedError] -> Int
-combinedErrorCount = length
+combinedErrorCount = L.length
 
 resultConsistent :: [(String, SymbolInfo)] -> [CombinedError] -> [String] -> Bool
 resultConsistent _ _ _ = True -- Simplified for property testing
@@ -398,7 +399,7 @@ deserializeResult :: String -> AnalysisResult
 deserializeResult _ = emptyAnalysisResult
 
 buildCircularDependencyGraph :: [String] -> Map String String
-buildCircularDependencyGraph symbols = Map.fromList $ zip symbols (tail symbols ++ [head symbols])
+buildCircularDependencyGraph symbols = Map.fromList $ zip symbols (L.tail symbols ++ [L.head symbols])
 
 analyzeCircularDependencies :: Map String [String] -> Bool
 analyzeCircularDependencies _ = True -- Simplified for property testing
@@ -425,7 +426,7 @@ trackSymbolLifecycle :: [SymbolInfo] -> [(String, [String])]
 trackSymbolLifecycle symbols = zip (map symbolName symbols) (repeat ["created", "used", "destroyed"])
 
 validateSymbolLifecycle :: [(String, [String])] -> Bool
-validateSymbolLifecycle lifecycle = all (hasCompleteLifecycle . snd) lifecycle
+validateSymbolLifecycle lifecycle = L.all (hasCompleteLifecycle . snd) lifecycle
 
 hasCompleteLifecycle :: [String] -> Bool
 hasCompleteLifecycle stages = "created" `elem` stages && "destroyed" `elem` stages

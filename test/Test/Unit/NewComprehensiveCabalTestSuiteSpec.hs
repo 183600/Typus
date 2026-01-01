@@ -23,10 +23,12 @@ import Utils (trim, splitBy, removeComments, normalizeIndentation)
 
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (nub)
 import Data.Char (isSpace, isAlphaNum)
 
--- Helper function to parse and compile code
+-- Helper function to parse L.and compile code
 compileString :: String -> CompilerResult String
 compileString code = case parseTypus code of
   Left _ -> Left [] -- Parse error
@@ -36,7 +38,7 @@ compileString code = case parseTypus code of
 -- Test 1: Parser Directive Processing
 -- ============================================================================
 
--- Property: File directives are correctly parsed and preserved
+-- Property: File directives are correctly parsed L.and preserved
 prop_parser_directives_preserved :: String -> String -> Property
 prop_parser_directives_preserved content directive =
   let input = "// @ownership: true\n// @dependent-types: false\n" ++ content
@@ -67,7 +69,7 @@ test_parser_block_directives_override = do
       if null blocks
         then assertFailure "Expected at least one block"
         else do
-          let firstBlock = head blocks
+          let firstBlock = L.head blocks
               blockDirs = blockDirectives firstBlock
           case bdOwnership blockDirs of
             Nothing -> return () -- No override is acceptable
@@ -85,7 +87,7 @@ let result = case parsed of
         Right typusFile -> compile typusFile
   in case result of
     Left errors -> 
-      property $ all hasLocation errors
+      property $ L.all hasLocation errors
     Right _ -> property True
   where
     hasLocation (CompilerError {ceError = err}) = True -- All errors have locations
@@ -104,7 +106,7 @@ test_compiler_phases_reported = do
         else do
           -- Verify phases are valid compilation phases
           let validPhases = [minBound..maxBound] :: [CompilationPhase]
-          if all (`elem` validPhases) phases
+          if L.all (`elem` validPhases) phases
             then return ()
             else assertFailure $ "Invalid compilation phases: " ++ show phases
     Right _ -> assertFailure "Expected compilation to fail"
@@ -119,7 +121,7 @@ prop_ownership_transfer_tracked varName transferType =
   let code = "let " ++ varName ++ " = new Resource()\n" ++
             "transfer(" ++ varName ++ ", " ++ transferType ++ ")\n"
       result = analyzeOwnership code
-  in property $ length result >= 0 -- Analysis always returns a list of errors
+  in property $ L.length result >= 0 -- Analysis always returns a list of errors
 
 -- Test: Ownership types are correctly classified
 test_ownership_types_classified :: IO ()
@@ -129,7 +131,7 @@ test_ownership_types_classified = do
                 "let shared = share(owned)\n"
       result = analyzeOwnership testCode
   -- Check that analysis completes without crashing
-  if length result >= 0
+  if L.length result >= 0
     then return ()
     else assertFailure "Ownership analysis failed"
 
@@ -169,7 +171,7 @@ prop_trim_unicode_handling txt =
       input = unicodeChars ++ txt ++ unicodeChars
       trimmed = trim input
   in property $ not (null txt) ==> 
-    (null trimmed || not (isSpace (head trimmed))) .&&.
+    (null trimmed || not (isSpace (L.head trimmed))) .&&.
     (null trimmed || not (isSpace (last trimmed)))
 
 -- Test: Comment removal preserves string literals
@@ -180,9 +182,9 @@ test_comment_preserves_strings = do
              "let z = /* not a comment */"
       result = removeComments input
   -- Check that URL in string is preserved
-  if "http://example.com" `isInfixOf` result
-    then if "'// not a comment'" `isInfixOf` result
-           then if "/* not a comment */" `isInfixOf` result
+  if "http://example.com" `L.isInfixOf` result
+    then if "'// not a comment'" `L.isInfixOf` result
+           then if "/* not a comment */" `L.isInfixOf` result
                   then return ()
                   else assertFailure "Block comment in string not preserved"
            else assertFailure "Line comment in string not preserved"
@@ -214,7 +216,7 @@ test_compilation_pipeline = do
     Left errors -> assertFailure $ "Compilation failed: " ++ show errors
     Right compiled -> 
       -- Check that compiled code contains expected elements
-      if "add" `isInfixOf` show compiled && "main" `isInfixOf` show compiled
+      if "add" `L.isInfixOf` show compiled && "main" `L.isInfixOf` show compiled
         then return ()
         else assertFailure "Compiled code missing expected functions"
 
@@ -230,7 +232,7 @@ prop_parser_error_recovery malformedCode =
   in case result of
     Left _ -> property True -- Complete failure is acceptable
     Right typusFile -> 
-      property $ length (tfBlocks typusFile) > 0
+      property $ L.length (tfBlocks typusFile) > 0
 
 -- Test: Compiler provides multiple error messages
 test_multiple_error_messages :: IO ()
@@ -242,7 +244,7 @@ test_multiple_error_messages = do
       result = compileString codeWithMultipleErrors
   case result of
     Left errors -> 
-      if length errors >= 2
+      if L.length errors >= 2
         then return ()
         else assertFailure $ "Expected multiple errors, got: " ++ show errors
     Right _ -> assertFailure "Expected compilation to fail"
@@ -264,7 +266,7 @@ test_deep_nesting_performance = do
   let nestedCode = unlines $ take 50 $ 
         iterate (\code -> "func outer() {\n" ++ code ++ "\n}") "func inner() { return 0 }"
       result = compileString nestedCode
-  -- Should either succeed or fail gracefully, not hang
+  -- Should either succeed L.or fail gracefully, not hang
   case result of
     Left _ -> return () -- Graceful failure is acceptable
     Right _ -> return () -- Success is also acceptable
@@ -316,7 +318,7 @@ test_complex_type_expressions = do
   case result of
     Left errors -> 
       -- Check that errors are type-related, not parsing errors
-      if any isTypeError errors
+      if L.any isTypeError errors
         then return ()
         else assertFailure $ "Expected type errors, got: " ++ show errors
     Right _ -> return () -- Successful compilation is also acceptable

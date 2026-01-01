@@ -14,6 +14,7 @@ import Ownership
   , formatOwnershipErrors
   )
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isPrefixOf)
 
 -- ============================================================================
@@ -72,7 +73,7 @@ prop_ownership_error_formatting err =
 prop_multiple_errors_formatting :: [OwnershipError] -> Property
 prop_multiple_errors_formatting errs =
   let formatted = formatOwnershipErrors errs
-      errorCount = length errs
+      errorCount = L.length errs
   in if errorCount > 0
      then not (T.null formatted) === True
      else property True

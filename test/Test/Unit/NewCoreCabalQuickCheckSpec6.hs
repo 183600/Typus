@@ -1,6 +1,7 @@
 module Test.Unit.NewCoreCabalQuickCheckSpec6 (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 
@@ -42,16 +43,16 @@ tests =
                 typeExpr = TypeVariable typeVar
                 statement = TypeDeclaration "x" typeExpr
                 ast = AST { astStatements = [statement], astImports = [] }
-            length (astStatements ast) @?= 1
-            length (astImports ast) @?= 0
+            L.length (astStatements ast) @?= 1
+            L.length (astImports ast) @?= 0
         ]
     , testGroup "Dependency analysis edge cases"
         [ fastProperty "circular dependency detection" prop_circularDependencyDetection
         , fastProperty "dependency order is topological" prop_dependencyOrderTopological
         , testCase "empty AST" $ do
             let ast = AST { astStatements = [], astImports = [] }
-            length (astStatements ast) @?= 0
-            length (astImports ast) @?= 0
+            L.length (astStatements ast) @?= 0
+            L.length (astImports ast) @?= 0
         ]
     ]
 
@@ -163,11 +164,11 @@ applyTypeSubstitution substitution (TypeVariable tv) =
 applyTypeSubstitution substitution (TypeFunction t1 t2) = 
   TypeFunction (applyTypeSubstitution substitution t1) (applyTypeSubstitution substitution t2)
 applyTypeSubstitution substitution (TypeConstructor name args) = 
-  TypeConstructor name (map (applyTypeSubstitution substitution) args)
+  TypeConstructor name (L.map (applyTypeSubstitution substitution) args)
 
 hasValidStructure :: TypeExpr -> Bool
 hasValidStructure (TypeVariable _) = True
-hasValidStructure (TypeConstructor _ args) = all hasValidStructure args
+hasValidStructure (TypeConstructor _ args) = L.all hasValidStructure args
 hasValidStructure (TypeFunction t1 t2) = hasValidStructure t1 && hasValidStructure t2
 
 solveConstraints :: [Constraint] -> Map.Map String TypeExpr
@@ -188,10 +189,10 @@ extractTypeDeclarations ast =
     extractTypeDeclaration _ = []
 
 sortTypes :: [(String, TypeExpr)] -> [(String, TypeExpr)]
-sortTypes = map (\(name, expr) -> (name, expr))  -- Simplified sorting
+sortTypes = L.map (\(name, expr) -> (name, expr))  -- Simplified sorting
 
 astSize :: AST -> Int
-astSize ast = length (astStatements ast) + length (astImports ast)
+astSize ast = L.length (astStatements ast) + L.length (astImports ast)
 
 hasCircularDependencies :: [(String, [String])] -> Bool
 hasCircularDependencies dependencies = hasCycle dependencies
@@ -199,13 +200,13 @@ hasCircularDependencies dependencies = hasCycle dependencies
 hasCycle :: [(String, [String])] -> Bool
 hasCycle dependencies = 
   let nodes = map fst dependencies
-      edges = concatMap (\(node, deps) -> map (\dep -> (node, dep)) deps) dependencies
+      edges = concatMap (\(node, deps) -> L.map (\dep -> (node, dep)) deps) dependencies
       visit node visited = 
         if node `elem` visited then True
         else case lookup node dependencies of
                Nothing -> False
-               Just deps -> any (\dep -> visit dep (node:visited)) deps
-  in any (`visit` []) nodes
+               Just deps -> L.any (\dep -> visit dep (node:visited)) deps
+  in L.any (`visit` []) nodes
 
 topologicalSort :: [(String, [String])] -> [String]
 topologicalSort dependencies = 
@@ -222,6 +223,6 @@ isValidTopologicalOrder dependencies order =
   let positionMap = Map.fromList $ zip order [0..]
       checkDependency (node, deps) = 
         let nodePos = Map.findWithDefault (-1) node positionMap
-            depPos = map (\dep -> Map.findWithDefault (-1) dep positionMap) deps
-        in all (\pos -> pos < nodePos || pos == -1) depPos
-  in all checkDependency dependencies
+            depPos = L.map (\dep -> Map.findWithDefault (-1) dep positionMap) deps
+        in L.all (\pos -> pos < nodePos || pos == -1) depPos
+  in L.all checkDependency dependencies

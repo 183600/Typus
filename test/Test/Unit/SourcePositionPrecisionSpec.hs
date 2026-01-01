@@ -28,7 +28,9 @@ import SourceLocation
 import Parser (parseTypus)
 import Compiler (compile, renderCompilationError)
 
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, nub, sort, lines)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (nub, sort, lines)
 import Data.Char (isLetter, isDigit, isSpace)
 import qualified Data.Text as T
 import qualified Data.Map as Map
@@ -41,7 +43,7 @@ test_multiline_position_tracking = testCase "Source position tracking for multi-
   case result of
     Left errs -> do
       let errorMessages = map show errs
-          hasLineInfo = any (\msg -> any (`isInfixOf` msg) ["line", "Line", "行"]) errorMessages
+          hasLineInfo = L.any (\msg -> L.any (`L.isInfixOf` msg) ["line", "Line", "行"]) errorMessages
       if hasLineInfo
         then return ()  -- Success - line information included
         else assertFailure $ "Expected line information in error messages: " ++ unlines errorMessages
@@ -50,13 +52,13 @@ test_multiline_position_tracking = testCase "Source position tracking for multi-
 -- Property: Source positions are correctly calculated for nested expressions
 prop_nested_expression_positions :: [String] -> Property
 prop_nested_expression_positions expressions =
-  length expressions >= 2 && length expressions <= 4 ==>
-  let validExprs = filter (not . null) expressions
+  L.length expressions >= 2 && L.length expressions <= 4 ==>
+  let validExprs = L.filter (not . null) expressions
       code = "package main\n\nfunc main() {\n  result := " ++ unwords validExprs ++ "\n}"
       result = compile code
   in case result of
     Right _ -> property True  -- Success - positions handled correctly
-    Left errs -> property $ any (\err -> any (\n -> show n `isInfixOf` show err) [1..length (lines code)]) errs
+    Left errs -> property $ L.any (\err -> L.any (\n -> show n `L.isInfixOf` show err) [1..L.length (lines code)]) errs
 
 -- Test: Column positions are accurate for inline errors
 test_column_position_accuracy :: TestTree
@@ -66,7 +68,7 @@ test_column_position_accuracy = testCase "Column position accuracy for inline er
   case result of
     Left errs -> do
       let errorMessages = map show errs
-          hasColumnInfo = any (\msg -> any (`isInfixOf` msg) ["column", "Column", "col", "Col"]) errorMessages
+          hasColumnInfo = L.any (\msg -> L.any (`L.isInfixOf` msg) ["column", "Column", "col", "Col"]) errorMessages
       if hasColumnInfo
         then return ()  -- Success - column information included
         else assertFailure $ "Expected column information in error messages: " ++ unlines errorMessages
@@ -75,12 +77,12 @@ test_column_position_accuracy = testCase "Column position accuracy for inline er
 -- Property: Source spans cover the complete error context
 prop_complete_error_span :: String -> Property
 prop_complete_error_span malformedExpression =
-  not (null malformedExpression) && length malformedExpression <= 20 ==>
+  not (null malformedExpression) && L.length malformedExpression <= 20 ==>
   let code = "package main\n\nfunc main() {\n  x := " ++ malformedExpression ++ "\n}"
       result = compile code
   in case result of
     Right _ -> property True  -- Success - no error, span not needed
-    Left errs -> property $ any (\err -> length (show err) >= 10) errs  -- Error message should have reasonable length
+    Left errs -> property $ L.any (\err -> L.length (show err) >= 10) errs  -- Error message should have reasonable L.length
 
 -- Test: Source position tracking works with Unicode characters
 test_unicode_position_tracking :: TestTree
@@ -90,7 +92,7 @@ test_unicode_position_tracking = testCase "Source position tracking with Unicode
   case result of
     Left errs -> do
       let errorMessages = map show errs
-          hasPositionInfo = any (\msg -> any (`isInfixOf` msg) ["line", "Line", "行"]) errorMessages
+          hasPositionInfo = L.any (\msg -> L.any (`L.isInfixOf` msg) ["line", "Line", "行"]) errorMessages
       if hasPositionInfo
         then return ()  -- Success - position tracking works with Unicode
         else assertFailure $ "Expected position information with Unicode: " ++ unlines errorMessages
@@ -99,18 +101,18 @@ test_unicode_position_tracking = testCase "Source position tracking with Unicode
 -- Property: Source positions are preserved through error recovery
 prop_error_recovery_position_preservation :: [String] -> Property
 prop_error_recovery_position_preservation errorLines =
-  length errorLines >= 2 && length errorLines <= 5 ==>
-  let validLines = filter (not . null) errorLines
-      code = "package main\n\nfunc main() {\n" ++ unlines (map (\line -> "  " ++ line) validLines) ++ "\n}"
+  L.length errorLines >= 2 && L.length errorLines <= 5 ==>
+  let validLines = L.filter (not . null) errorLines
+      code = "package main\n\nfunc main() {\n" ++ unlines (L.map (\line -> "  " ++ line) validLines) ++ "\n}"
       result = compile code
   in case result of
     Right _ -> property True  -- Success - no errors
     Left errs -> 
       let errorMessages = map show errs
-          hasMultiplePositions = length (filter (\msg -> any (`isInfixOf` msg) ["line", "Line", "行"]) errorMessages) >= 1
+          hasMultiplePositions = L.length (L.filter (\msg -> L.any (`L.isInfixOf` msg) ["line", "Line", "行"]) errorMessages) >= 1
       in property $ hasMultiplePositions
 
--- Test: Source position tracking handles tabs and spaces correctly
+-- Test: Source position tracking handles tabs L.and spaces correctly
 test_whitespace_position_tracking :: TestTree
 test_whitespace_position_tracking = testCase "Source position tracking with mixed whitespace" $ do
   let whitespaceCode = "package main\n\nfunc main() {\n\t  x := 5\n\t  y := 10\n\t  z := x + y\n}"
@@ -118,7 +120,7 @@ test_whitespace_position_tracking = testCase "Source position tracking with mixe
   case result of
     Left errs -> do
       let errorMessages = map show errs
-          hasPositionInfo = any (\msg -> any (`isInfixOf` msg) ["line", "Line", "行"]) errorMessages
+          hasPositionInfo = L.any (\msg -> L.any (`L.isInfixOf` msg) ["line", "Line", "行"]) errorMessages
       if hasPositionInfo
         then return ()  -- Success - position tracking works with mixed whitespace
         else assertFailure $ "Expected position information with mixed whitespace: " ++ unlines errorMessages
@@ -127,12 +129,12 @@ test_whitespace_position_tracking = testCase "Source position tracking with mixe
 -- Property: Source positions are accurate for errors in string literals
 prop_string_literal_position_accuracy :: String -> Property
 prop_string_literal_position_accuracy stringContent =
-  not (null stringContent) && length stringContent <= 15 && not ('"' `elem` stringContent) ==>
+  not (null stringContent) && L.length stringContent <= 15 && not ('"' `elem` stringContent) ==>
   let code = "package main\n\nfunc main() {\n  x := \"" ++ stringContent ++ "\n  y := 5\n}"
       result = compile code
   in case result of
     Right _ -> property False  -- Should fail due to unclosed string
-    Left errs -> property $ any (\err -> any (`isInfixOf` show err) ["line", "Line", "行"]) errs
+    Left errs -> property $ L.any (\err -> L.any (`L.isInfixOf` show err) ["line", "Line", "行"]) errs
 
 -- Test: Source position tracking works with import statements
 test_import_position_tracking :: TestTree
@@ -142,7 +144,7 @@ test_import_position_tracking = testCase "Source position tracking with imports"
   case result of
     Left errs -> do
       let errorMessages = map show errs
-          hasPositionInfo = any (\msg -> any (`isInfixOf` msg) ["line", "Line", "行"]) errorMessages
+          hasPositionInfo = L.any (\msg -> L.any (`L.isInfixOf` msg) ["line", "Line", "行"]) errorMessages
       if hasPositionInfo
         then return ()  -- Success - position tracking works with imports
         else assertFailure $ "Expected position information with import error: " ++ unlines errorMessages
@@ -151,12 +153,12 @@ test_import_position_tracking = testCase "Source position tracking with imports"
 -- Property: Source positions are maintained in macro expansions
 prop_macro_expansion_positions :: String -> Property
 prop_macro_expansion_positions macroName =
-  not (null macroName) && all isLetter macroName ==>
+  not (null macroName) && L.all isLetter macroName ==>
   let code = "package main\n\n//go:generate " ++ macroName + "\n\nfunc main() {\n  x := 5\n}"
       result = compile code
   in case result of
     Right _ -> property True  -- Success - macro handled correctly
-    Left errs -> property $ any (\err -> any (`isInfixOf` show err) ["line", "Line", "行"]) errs
+    Left errs -> property $ L.any (\err -> L.any (`L.isInfixOf` show err) ["line", "Line", "行"]) errs
 
 tests :: TestTree
 tests = testGroup "Source Position Precision Tests"

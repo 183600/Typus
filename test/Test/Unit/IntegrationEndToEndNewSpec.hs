@@ -225,7 +225,7 @@ generateSimpleModule = oneof
         ]
     ]
 
--- | Property: Simple programs should compile and run successfully
+-- | Property: Simple programs should compile L.and run successfully
 prop_simpleProgramsCompileAndRun :: String -> Bool
 prop_simpleProgramsCompileAndRun program = 
     let result = runFullPipeline program
@@ -260,13 +260,13 @@ prop_errorRecoveryHandlesBrokenPrograms :: String -> Bool
 prop_errorRecoveryHandlesBrokenPrograms program = 
     let result = runFullPipeline program
         expectations = TestExpectations False False False False False False False
-    in not (prSuccess result) && length (prErrors result) >= 0
+    in not (prSuccess result) && L.length (prErrors result) >= 0
 
 -- | Property: Performance programs should complete within reasonable time
 prop_performanceProgramsCompleteInTime :: String -> Bool
 prop_performanceProgramsCompleteInTime program = 
     let result = runFullPipeline program
-        totalTime = sum $ map (srDuration . snd) (Map.toList (prStageResults result))
+        totalTime = L.sum $ L.map (srDuration . snd) (Map.toList (prStageResults result))
     in totalTime < 5000  -- Should complete within 5 seconds
 
 -- | Property: Multi-module programs should handle dependencies correctly
@@ -283,28 +283,28 @@ prop_pipelineStagesCorrectOrder program =
     let result = runFullPipeline program
         stageOrder = Map.keys (prStageResults result)
         expectedOrder = [ParsingStage, AnalysisStage, TypeCheckingStage, OwnershipStage, CodeGenerationStage, OptimizationStage, ValidationStage]
-    in stageOrder == expectedOrder || all (`elem` stageOrder) expectedOrder
+    in stageOrder == expectedOrder || L.all (`elem` stageOrder) expectedOrder
 
 -- | Property: Pipeline should provide meaningful error messages
 prop_pipelineMeaningfulErrors :: String -> Bool
 prop_pipelineMeaningfulErrors program = 
     let result = runFullPipeline program
         errors = prErrors result
-    in null errors || all (not . null) errors  -- All errors should be non-empty
+    in null errors || L.all (not . null) errors  -- All errors should be non-empty
 
 -- | Property: Pipeline metrics should be collected correctly
 prop_pipelineMetricsCollected :: String -> Bool
 prop_pipelineMetricsCollected program = 
     let result = runFullPipeline program
         metrics = prMetrics result
-    in Map.size metrics >= 0 && all (>= 0) (Map.elems metrics)
+    in Map.size metrics >= 0 && L.all (>= 0) (Map.elems metrics)
 
 -- | Run the full compilation pipeline
 runFullPipeline :: String -> PipelineResult
 runFullPipeline program = 
     let stages = [ParsingStage, AnalysisStage, TypeCheckingStage, OwnershipStage, CodeGenerationStage, OptimizationStage, ValidationStage]
         (results, finalOutput, errors, warnings, metrics) = runStages stages program
-        success = all srSuccess (Map.elems results)
+        success = L.all srSuccess (Map.elems results)
     in PipelineResult success results finalOutput errors warnings metrics
 
 -- | Run pipeline stages
@@ -375,7 +375,7 @@ defaultFileDirectives = Parser.FileDirectives Nothing Nothing Nothing
 
 tests :: TestTree
 tests = testGroup "Integration End-to-End Tests"
-  [ testProperty "Simple programs compile and run successfully" $
+  [ testProperty "Simple programs compile L.and run successfully" $
       fastProperty "simple program" prop_simpleProgramsCompileAndRun
   
   , testProperty "Ownership programs handle transfers correctly" $
@@ -410,7 +410,7 @@ tests = testGroup "Integration End-to-End Tests"
       \baseProgram -> 
         let largeProgram = unlines $ replicate 100 baseProgram
             result = runFullPipeline largeProgram
-            totalTime = sum $ map (srDuration . snd) (Map.toList (prStageResults result))
+            totalTime = L.sum $ L.map (srDuration . snd) (Map.toList (prStageResults result))
         in totalTime < 10000  -- Should complete within 10 seconds
   
   , testProperty "Pipeline maintains consistency across runs" $
@@ -419,5 +419,5 @@ tests = testGroup "Integration End-to-End Tests"
         let result1 = runFullPipeline program
             result2 = runFullPipeline program
         in prSuccess result1 == prSuccess result2 &&
-           length (prErrors result1) == length (prErrors result2)
+           L.length (prErrors result1) == L.length (prErrors result2)
   ]

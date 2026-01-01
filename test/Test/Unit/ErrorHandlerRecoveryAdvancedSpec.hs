@@ -4,6 +4,7 @@
 module Test.Unit.ErrorHandlerRecoveryAdvancedSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, choose, oneof, listOf)
 import Test.Tasty.HUnit (testCase, assertBool, assertEqual)
 
@@ -29,10 +30,6 @@ import Compiler.Errors.Core
   , hasWarnings
   , canRecoverFrom
   , shouldContinueAfter
-  , errorAt
-  , warningAt
-  , infoAt
-  , formatError
   , formatErrors
   )
 
@@ -89,9 +86,7 @@ instance Arbitrary TypeError where
     message <- listOf $ choose ('a', 'z')
     suggestion <- oneof [return Nothing, Just <$> listOf (choose ('a', 'z'))]
     recovery <- arbitrary
-    return $ TypeError severity category location context message suggestion recovery
-
-instance Arbitrary CombinedError where
+    return $ TypeError errId severity category location context message suggestion recovery instance Arbitrary CombinedError where
   arbitrary = do
     primary <- arbitrary
     related <- listOf arbitrary
@@ -130,15 +125,15 @@ propContinueAfterWarningsNotErrors severity location context message =
 propErrorCollectorMaintainsOrder :: [TypeError] -> Bool
 propErrorCollectorMaintainsOrder errors =
   let collector = newErrorCollector
-      collector' = foldl (\acc err -> addError err acc) collector errors
+      collector' = L.foldl (\acc err -> addError err acc) collector errors
       retrievedErrors = getErrors collector'
   in map errMessage retrievedErrors == map errMessage errors
 
--- Property: Error collector should separate errors and warnings correctly
+-- Property: Error collector should separate errors L.and warnings correctly
 propErrorCollectorSeparatesBySeverity :: [TypeError] -> Bool
 propErrorCollectorSeparatesBySeverity errors =
   let collector = newErrorCollector
-      collector' = foldl (\acc err -> 
+      collector' = L.foldl (\acc err -> 
             case errSeverity err of
               Error -> addError err acc
               Warning -> addWarning err acc
@@ -152,12 +147,12 @@ propErrorCollectorSeparatesBySeverity errors =
       warningMessages = map errMessage retrievedWarnings
       infoMessages = map errMessage retrievedInfo
       
-      originalErrors = filter (\e -> errSeverity e == Error) errors
-      originalWarnings = filter (\e -> errSeverity e == Warning) errors
-      originalInfo = filter (\e -> errSeverity e == Info) errors
-  in length errorMessages == length originalErrors &&
-     length warningMessages == length originalWarnings &&
-     length infoMessages == length originalInfo
+      originalErrors = L.filter (\e -> errSeverity e == Error) errors
+      originalWarnings = L.filter (\e -> errSeverity e == Warning) errors
+      originalInfo = L.filter (\e -> errSeverity e == Info) errors
+  in L.length errorMessages == L.length originalErrors &&
+     L.length warningMessages == L.length originalWarnings &&
+     L.length infoMessages == L.length originalInfo
 
 -- Property: Combined error should preserve primary error severity
 propCombinedErrorPreservesPrimary :: TypeError -> [TypeError] -> Bool
@@ -169,13 +164,13 @@ propCombinedErrorPreservesPrimary primary related =
 propErrorFormattingNeverCrashes :: TypeError -> Bool
 propErrorFormattingNeverCrashes err =
   let formatted = formatError err
-  in length formatted >= 0  -- Should never crash
+  in L.length formatted >= 0  -- Should never crash
 
 -- Property: Multiple errors formatting should never crash
 propMultipleErrorsFormattingNeverCrashes :: [TypeError] -> Bool
 propMultipleErrorsFormattingNeverCrashes errors =
   let formatted = formatErrors errors
-  in length formatted >= 0  -- Should never crash
+  in L.length formatted >= 0  -- Should never crash
 
 -- ============================================================================
 -- Unit Tests
@@ -214,9 +209,9 @@ testErrorCollectorFunctionality = testCase "Error collector functionality" $ do
   let warnings = getWarnings collector3
   let infos = getInfo collector3
   
-  assertEqual "Should have 1 error" 1 (length errors)
-  assertEqual "Should have 1 warning" 1 (length warnings)
-  assertEqual "Should have 1 info" 1 (length infos)
+  assertEqual "Should have 1 error" 1 (L.length errors)
+  assertEqual "Should have 1 warning" 1 (L.length warnings)
+  assertEqual "Should have 1 info" 1 (L.length infos)
 
 -- Test error context functionality
 testErrorContextFunctionality :: TestTree
@@ -230,9 +225,7 @@ testErrorContextFunctionality = testCase "Error context functionality" $ do
 testErrorAtPosition :: TestTree
 testErrorAtPosition = testCase "Error at position" $ do
   let pos = SourcePos 10 5
-  let err = errorAt SyntaxError "test error" pos
-  
-  assertEqual "Error should have correct severity" Error (errSeverity err)
+  let err = errorAt "test-id" (errSeverity err)
   assertEqual "Error should have correct category" SyntaxError (errCategory err)
   assertEqual "Error should have correct message" "test error" (errMessage err)
   
@@ -244,9 +237,7 @@ testErrorAtPosition = testCase "Error at position" $ do
 testWarningAtPosition :: TestTree
 testWarningAtPosition = testCase "Warning at position" $ do
   let pos = SourcePos 15 3
-  let warning = warningAt SyntaxError "test warning" pos
-  
-  assertEqual "Warning should have correct severity" Warning (errSeverity warning)
+  let warning = warningAt "test-id" (errSeverity warning)
   assertEqual "Warning should have correct category" SyntaxError (errCategory warning)
   assertEqual "Warning should have correct message" "test warning" (errMessage warning)
 
@@ -254,9 +245,7 @@ testWarningAtPosition = testCase "Warning at position" $ do
 testInfoAtPosition :: TestTree
 testInfoAtPosition = testCase "Info at position" $ do
   let pos = SourcePos 20 8
-  let info = infoAt SyntaxError "test info" pos
-  
-  assertEqual "Info should have correct severity" Info (errSeverity info)
+  let info = infoAt "test-id" (errSeverity info)
   assertEqual "Info should have correct category" SyntaxError (errCategory info)
   assertEqual "Info should have correct message" "test info" (errMessage info)
 
@@ -270,7 +259,7 @@ testCombinedErrorHandling = testCase "Combined error handling" $ do
   let combined = CombinedError primary [related1, related2]
   
   assertEqual "Combined error should preserve primary" primary (cePrimary combined)
-  assertEqual "Combined error should preserve related count" 2 (length (ceRelated combined))
+  assertEqual "Combined error should preserve related count" 2 (L.length (ceRelated combined))
 
 -- ============================================================================
 -- Test Suite

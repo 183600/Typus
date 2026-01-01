@@ -6,7 +6,9 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
-import Data.List (isInfixOf, isPrefixOf, intercalate)
+import qualified Data.List as L
+import Data.List (isInfixOf, isPrefixOf)
+import Data.List (intercalate)
 import qualified Data.Set as Set
 
 import Compiler.IR
@@ -99,7 +101,7 @@ semanticIRConsistencyTests = testGroup "SemanticIR Consistency Tests"
         Right semanticIR -> do
           let goModule = semanticModule semanticIR
           gmPackageName goModule @?= "main"
-          length (gmDecls goModule) @?= 1
+          L.length (gmDecls goModule) @?= 1
         Left err -> "Expected successful semantic analysis" @?= show err
         
   , testCase "semanticIR includes value analysis" $ do
@@ -110,7 +112,7 @@ semanticIRConsistencyTests = testGroup "SemanticIR Consistency Tests"
       case result of
         Right semanticIR -> do
           let valueInfo = semanticValueInfo semanticIR
-          length valueInfo @?= 1  -- Should detect the variable
+          L.length valueInfo @?= 1  -- Should detect the variable
         Left err -> "Expected successful semantic analysis" @?= show err
   ]
 
@@ -125,8 +127,8 @@ goIRConsistencyTests = testGroup "GoIR Consistency Tests"
         Right semanticIR -> do
           let goIR = emitGo semanticIR
               goSource = goSource goIR
-          "package main" `isInfixOf` goSource @?= True
-          "func main()" `isInfixOf` goSource @?= True
+          "package main" `L.isInfixOf` goSource @?= True
+          "func main()" `L.isInfixOf` goSource @?= True
         Left err -> "Expected successful semantic analysis" @?= show err
         
   , testCase "emitGo preserves module structure" $ do
@@ -140,7 +142,7 @@ goIRConsistencyTests = testGroup "GoIR Consistency Tests"
               goModule = goModule goIR
               goSource = goSource goIR
           gmPackageName goModule @?= "main"
-          "import \"fmt\"" `isInfixOf` goSource @?= True
+          "import \"fmt\"" `L.isInfixOf` goSource @?= True
         Left err -> "Expected successful semantic analysis" @?= show err
   ]
 
@@ -149,7 +151,7 @@ irTransformationTests = testGroup "IR Transformation Tests"
   [ testCase "ensurePackageDecl adds package when missing" $ do
       let input = "func main() {}\n"
           result = ensurePackageDecl input
-      "package main" `isPrefixOf` result @?= True
+      "package main" `L.isPrefixOf` result @?= True
       
   , testCase "ensurePackageDecl preserves existing package" $ do
       let input = "package custom\nfunc main() {}\n"
@@ -159,7 +161,7 @@ irTransformationTests = testGroup "IR Transformation Tests"
   , testCase "ensureMainFunction adds main when missing" $ do
       let input = "package main\nfunc other() {}\n"
           result = ensureMainFunction input
-      "func main()" `isInfixOf` result @?= True
+      "func main()" `L.isInfixOf` result @?= True
       
   , testCase "ensureMainFunction preserves existing main" $ do
       let input = "package main\nfunc main() { fmt.Println(\"hello\") }\n"
@@ -169,7 +171,7 @@ irTransformationTests = testGroup "IR Transformation Tests"
   , testCase "attachInferredImports adds necessary imports" $ do
       let input = "package main\nfunc main() { fmt.Println(\"hello\") }\n"
           result = attachInferredImports input
-      "import \"fmt\"" `isInfixOf` result @?= True
+      "import \"fmt\"" `L.isInfixOf` result @?= True
   ]
 
 importInferenceTests :: TestTree
@@ -177,18 +179,18 @@ importInferenceTests = testGroup "Import Inference Tests"
   [ testCase "infers fmt import for Println" $ do
       let input = "package main\nfunc main() { fmt.Println(\"test\") }\n"
           result = attachInferredImports input
-      "import \"fmt\"" `isInfixOf` result @?= True
+      "import \"fmt\"" `L.isInfixOf` result @?= True
       
   , testCase "infers multiple imports" $ do
       let input = "package main\nfunc main() { fmt.Println(math.Abs(-1)) }\n"
           result = attachInferredImports input
-      "import \"fmt\"" `isInfixOf` result @?= True
-      "import \"math\"" `isInfixOf` result @?= True
+      "import \"fmt\"" `L.isInfixOf` result @?= True
+      "import \"math\"" `L.isInfixOf` result @?= True
       
   , testCase "avoids duplicate imports" $ do
       let input = "package main\nimport \"fmt\"\nfunc main() { fmt.Println(\"test\") }\n"
           result = attachInferredImports input
-      let importCount = length $ filter (== "import \"fmt\"") (lines result)
+      let importCount = L.length $ L.filter (== "import \"fmt\"") (lines result)
       importCount @?= 1
       
   , testCase "handles qualified imports" $ do

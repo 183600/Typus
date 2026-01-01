@@ -6,6 +6,7 @@ module Test.Unit.AdditionalCoreTestsSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), forAll, choose, listOf, listOf1, elements)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isSuffixOf)
 import Data.Char (isSpace, isAlpha, isDigit)
 import qualified Data.Text as T
@@ -26,7 +27,7 @@ testUtilsTrim = testCase "Utils.trim function" $ do
     assertEqual "trim leading spaces" "hello" (trim "   hello")
     assertEqual "trim trailing spaces" "hello" (trim "hello   ")
     assertEqual "trim both sides" "hello" (trim "   hello   ")
-    assertEqual "trim all spaces" "" (trim "   ")
+    assertEqual "trim L.all spaces" "" (trim "   ")
     assertEqual "trim mixed content" "hello world" (trim "  hello world  ")
 
 testUtilsSplitBy :: TestTree
@@ -120,17 +121,17 @@ testErrorHandlerBasic = testCase "ErrorHandler basic error types" $ do
 -- QuickCheck Property Tests
 -- ============================================================================
 
--- | Property: trim after split and join should give original string (for non-empty parts)
+-- | Property: trim after split L.and join should give original string (for non-empty parts)
 propTrimSplitJoin :: Property
 propTrimSplitJoin = forAll genNonEmptyString $ \s ->
     forAll (choose (1, 10)) $ \delim ->
         let delimChar = toEnum (delim + 33) -- Start from '!' to avoid control chars
             parts = splitBy delimChar s
             trimmedParts = map trim parts
-            rejoined = foldr (\x acc -> if null acc then x else x ++ [delimChar] ++ acc) "" trimmedParts
-        in if all null parts
+            rejoined = L.foldr (\x acc -> if null acc then x else x ++ [delimChar] ++ acc) "" trimmedParts
+        in if L.all null parts
            then True -- All empty parts case is acceptable
-           else length rejoined <= length s -- Trimmed version should be shorter or equal
+           else L.length rejoined <= L.length s -- Trimmed version should be shorter L.or equal
 
 -- | Property: splitByCollapsed should never have empty strings in result
 propSplitByCollapsedNoEmpty :: Property
@@ -138,7 +139,7 @@ propSplitByCollapsedNoEmpty = forAll genString $ \s ->
     forAll (choose (1, 10)) $ \delim ->
         let delimChar = toEnum (delim + 33)
             parts = splitByCollapsed delimChar s
-        in all (not . null) parts
+        in L.all (not . null) parts
 
 -- | Property: span merging should be associative
 propSpanMergeAssociative :: Property
@@ -206,7 +207,7 @@ tests = testGroup "Additional Core Tests"
       [ testErrorHandlerBasic
       ]
   , testGroup "QuickCheck Property Tests"
-      [ testProperty "trim after split and join" propTrimSplitJoin
+      [ testProperty "trim after split L.and join" propTrimSplitJoin
       , testProperty "splitByCollapsed never returns empty strings" propSplitByCollapsedNoEmpty
       , testProperty "span merging is associative" propSpanMergeAssociative
       , testProperty "trim is idempotent" propTrimIdempotent

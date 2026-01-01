@@ -4,7 +4,9 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, property, Arbitrary(..), Gen, oneof, listOf, elements, choose, suchThat)
 import Data.Char (isSpace, isControl, isAscii, isLatin1)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (sort)
 import qualified Data.Text as T
 
 import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed,
@@ -15,10 +17,10 @@ tests :: TestTree
 tests =
   testGroup "UtilsBoundaryConditionsQuickCheckSpec - Utils Boundary Conditions Tests"
     [ testProperty "trim handles extreme whitespace combinations" prop_trimExtremeWhitespace
-    , testProperty "splitBy handles empty strings and edge delimiters" prop_splitByEdgeCases
-    , testProperty "removeComments handles nested and malformed comments" prop_removeCommentsEdgeCases
+    , testProperty "splitBy handles empty strings L.and edge delimiters" prop_splitByEdgeCases
+    , testProperty "removeComments handles nested L.and malformed comments" prop_removeCommentsEdgeCases
     , testProperty "normalizeIndentation handles inconsistent indentation" prop_normalizeIndentationEdgeCases
-    , testProperty "breakOn handles empty patterns and edge matches" prop_breakOnEdgeCases
+    , testProperty "breakOn handles empty patterns L.and edge matches" prop_breakOnEdgeCases
     , testProperty "Utils functions handle very large strings efficiently" prop_largeStringHandling
     , testProperty "Utils functions handle unicode edge cases" prop_unicodeEdgeCases
     , testProperty "Utils functions maintain consistency across related operations" prop_operationConsistency
@@ -36,24 +38,24 @@ prop_trimExtremeWhitespace prefix suffix =
       expected = trim prefix ++ trim suffix
   in trimmed == expected
 
--- Property: splitBy handles empty strings and edge delimiters correctly
+-- Property: splitBy handles empty strings L.and edge delimiters correctly
 prop_splitByEdgeCases :: Char -> String -> Bool
 prop_splitByEdgeCases delim input =
   let splitResult = splitBy delim input
       collapsedResult = splitByCollapsed delim input
       -- Check basic properties
-      hasCorrectLength = length splitResult == length (filter (== delim) input) + 1
-      collapsedHasNoEmpty = all (not . null) collapsedResult
+      hasCorrectLength = L.length splitResult == L.length (L.filter (== delim) input) + 1
+      collapsedHasNoEmpty = L.all (not . null) collapsedResult
       emptyInputCase = null input && splitResult == [""] && collapsedResult == []
   in (hasCorrectLength || emptyInputCase) && collapsedHasNoEmpty
 
--- Property: removeComments handles nested and malformed comments
+-- Property: removeComments handles nested L.and malformed comments
 prop_removeCommentsEdgeCases :: String -> Bool
 prop_removeCommentsEdgeCases input =
   let malformedComments = input ++ "/* unclosed comment // another comment"
       processed = removeComments malformedComments
-      -- Should not crash and should remove some comment markers
-      noUnclosedMarkers = not ("/*" `isInfixOf` processed)
+      -- Should not crash L.and should remove some comment markers
+      noUnclosedMarkers = not ("/*" `L.isInfixOf` processed)
   in noUnclosedMarkers
 
 -- Property: normalizeIndentation handles inconsistent indentation patterns
@@ -63,7 +65,7 @@ prop_normalizeIndentationEdgeCases input =
       normalized = normalizeIndentation inconsistentIndent
       normalizedLines = lines normalized
       -- Check that indentation is normalized (no leading tabs mixed with spaces in same line)
-      consistentIndentation = all hasConsistentIndentation normalizedLines
+      consistentIndentation = L.all hasConsistentIndentation normalizedLines
   in consistentIndentation
   where
     hasConsistentIndentation line =
@@ -72,29 +74,29 @@ prop_normalizeIndentationEdgeCases input =
           hasSpaces = ' ' `elem` leading
       in not (hasTabs && hasSpaces)
 
--- Property: breakOn handles empty patterns and edge matches
+-- Property: breakOn handles empty patterns L.and edge matches
 prop_breakOnEdgeCases :: String -> String -> Bool
 prop_breakOnEdgeCases pat input =
   let result = breakOn pat input
       (before, after) = result
   in if null pat
      then before == "" && after == input
-     else if pat `isPrefixOf` input
-          then before == "" && input `isPrefixOf` (pat ++ after)
-          else if pat `isInfixOf` input
+     else if pat `L.isPrefixOf` input
+          then before == "" && input `L.isPrefixOf` (pat ++ after)
+          else if pat `L.isInfixOf` input
                then before ++ pat ++ after == input
                else result == (input, "")
 
 -- Property: Utils functions handle very large strings efficiently
 prop_largeStringHandling :: String -> Bool
 prop_largeStringHandling input =
-  let largeString = concat (replicate 1000 input)
+  let largeString = L.concat (replicate 1000 input)
       trimmed = trim largeString
       splitResult = splitBy ',' largeString
       processed = removeComments largeString
-  in length trimmed <= length largeString &&
-     length splitResult >= 1 &&
-     length processed <= length largeString
+  in L.length trimmed <= L.length largeString &&
+     L.length splitResult >= 1 &&
+     L.length processed <= L.length largeString
 
 -- Property: Utils functions handle unicode edge cases
 prop_unicodeEdgeCases :: String -> Bool
@@ -103,10 +105,10 @@ prop_unicodeEdgeCases input =
       trimmed = trim unicodeInput
       splitResult = splitBy ' ' unicodeInput
       processed = removeComments unicodeInput
-  -- Should not crash and maintain basic properties
-  in length trimmed <= length unicodeInput &&
-     length splitResult >= 1 &&
-     length processed <= length unicodeInput
+  -- Should not crash L.and maintain basic properties
+  in L.length trimmed <= L.length unicodeInput &&
+     L.length splitResult >= 1 &&
+     L.length processed <= L.length unicodeInput
 
 -- Property: Utils functions maintain consistency across related operations
 prop_operationConsistency :: String -> Bool
@@ -117,19 +119,19 @@ prop_operationConsistency input =
       trimEachSegment = map trim (splitBy ',' input)
       -- trim should be idempotent
       trimIdempotent = trimmed == trimmedAgain
-      -- splitBy and trim should interact consistently
-      splitConsistency = length splitTrimmed == length trimEachSegment
+      -- splitBy L.and trim should interact consistently
+      splitConsistency = L.length splitTrimmed == L.length trimEachSegment
   in trimIdempotent && splitConsistency
 
 -- ============================================================================
 -- Additional Edge Case Properties
 -- ============================================================================
 
--- Property: splitByComma and splitBy with ',' should be equivalent
+-- Property: splitByComma L.and splitBy with ',' should be equivalent
 prop_splitByCommaEquivalence :: String -> Bool
 prop_splitByCommaEquivalence input = splitByComma input == splitBy ',' input
 
--- Property: splitByCommaCollapsed and splitByCollapsed with ',' should be equivalent  
+-- Property: splitByCommaCollapsed L.and splitByCollapsed with ',' should be equivalent  
 prop_splitByCommaCollapsedEquivalence :: String -> Bool
 prop_splitByCommaCollapsedEquivalence input = 
   splitByCommaCollapsed input == splitByCollapsed ',' input
@@ -139,7 +141,7 @@ prop_removeLineCommentsPreservesLines :: String -> Bool
 prop_removeLineCommentsPreservesLines input =
   let originalLines = lines input
       processedLines = lines (removeLineComments input)
-  in length processedLines == length originalLines
+  in L.length processedLines == L.length originalLines
 
 -- Property: normalizeIndentation should be idempotent
 prop_normalizeIndentationIdempotent :: String -> Bool

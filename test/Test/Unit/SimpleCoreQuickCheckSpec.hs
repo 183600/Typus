@@ -26,14 +26,14 @@ stringUtilsTests = testGroup "String Utils Properties"
   [ fastProperty "trim is idempotent" $ \s ->
       trim (trim s) == trim s
   
-  , fastProperty "trim removes leading and trailing spaces" $ \s ->
+  , fastProperty "trim removes leading L.and trailing spaces" $ \s ->
       let trimmed = trim s
       in not (null trimmed) ==> case trimmed of
                                     (c:_) -> c /= ' ' && last trimmed /= ' '
                                     [] -> True
   
   , fastProperty "splitBy preserves content" $ \(c :: Char) (s :: String) ->
-      concat (splitBy c s) == filter (/= c) s
+      L.concat (splitBy c s) == L.filter (/= c) s
   ]
 
 sourceLocationTests :: TestTree

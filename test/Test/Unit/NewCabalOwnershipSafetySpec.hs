@@ -79,7 +79,7 @@ tests =
             assertBool "double-free should be prevented" $ True
         }
 
-    , testGroup "Ownership and Types"
+    , testGroup "Ownership L.and Types"
         [ testCase "Copy types can be used after move" $ do
             -- Test that copy types behave differently from move types
             assertBool "copy types should work after move" $ True

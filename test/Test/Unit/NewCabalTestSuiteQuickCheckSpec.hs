@@ -4,12 +4,14 @@
 module Test.Unit.NewCabalTestSuiteQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck hiding ((.&&.))
 import Test.QuickCheck ((.&&.))
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Data.List (sort, nub, isPrefixOf, isSuffixOf)
+import Data.List (isPrefixOf, isSuffixOf)
+import Data.List (sort, nub)
 
 import Parser (FileDirectives(..), BlockDirectives(..), defaultFileDirectives, defaultBlockDirectives)
 import Compiler (CompilerError(..), CompilationPhase(..))
@@ -47,7 +49,7 @@ parserDirectivesTests = testGroup "Parser Directives Properties"
 compilerPhaseTests :: TestTree
 compilerPhaseTests = testGroup "Compiler Phase Properties"
   [ fastProperty "CompilationPhase show is non-empty" $ \phase ->
-      not (null (show (phase :: CompilationPhase)))
+      not (L.null (show (phase :: CompilationPhase)))
   ]
 
 utilsFunctionTests :: TestTree
@@ -57,18 +59,18 @@ utilsFunctionTests = testGroup "Utils Function Properties"
   
   , fastProperty "trim result has no leading/trailing whitespace" $ \s ->
       let t = trim s
-      in property (null t || (not (head t `elem` " \t\n\r") && not (last t `elem` " \t\n\r")))
+      in property (null t || (not (L.head t `elem` " \t\n\r") && not (last t `elem` " \t\n\r")))
   
   , fastProperty "splitBy preserves total character count (minus separators)" $ \c s ->
       c /= '\0' ==>
       let parts = splitBy c s
-          totalChars = sum (map length parts)
-      in totalChars <= length s
+          totalChars = L.sum (map L.length parts)
+      in totalChars <= L.length s
   
   , fastProperty "normalizeIndentation preserves non-empty lines" $ \s ->
-      let original = filter (not . null) (lines s)
-          normalized = filter (not . null) (lines (normalizeIndentation s))
-      in length original === length normalized
+      let original = L.filter (not . null) (lines s)
+          normalized = L.filter (not . null) (lines (normalizeIndentation s))
+      in L.length original === L.length normalized
   ]
 
 sourceSpanTests :: TestTree
@@ -90,8 +92,8 @@ listOperationTests = testGroup "List Operation Properties"
   
   , fastProperty "nub preserves order of first occurrence" $ \(xs :: [Int]) ->
       let unique = nub xs
-      in all (\x -> let idx = head [i | (i, y) <- zip [0..] xs, y == x]
-                        idx' = head [i | (i, y) <- zip [0..] unique, y == x]
+      in L.all (\x -> let idx = L.head [i | (i, y) <- zip [0..] xs, y == x]
+                        idx' = L.head [i | (i, y) <- zip [0..] unique, y == x]
                     in idx' <= idx) unique
   ]
 
@@ -115,9 +117,9 @@ setOperationTests = testGroup "Set Operation Properties"
 
 stringOperationTests :: TestTree
 stringOperationTests = testGroup "String Operation Properties"
-  [ fastProperty "isPrefixOf is reflexive" $ \(s :: String) ->
-      property (isPrefixOf s s)
+  [ fastProperty "L.isPrefixOf is reflexive" $ \(s :: String) ->
+      property (L.isPrefixOf s s)
   
-  , fastProperty "isSuffixOf is reflexive" $ \(s :: String) ->
-      property (isSuffixOf s s)
+  , fastProperty "L.isSuffixOf is reflexive" $ \(s :: String) ->
+      property (L.isSuffixOf s s)
   ]

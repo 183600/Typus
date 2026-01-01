@@ -20,7 +20,9 @@ import Compiler.Errors.Core
   )
 import Parser (parseTypus, FileDirectives(..), defaultFileDirectives)
 import Data.Char (isSpace)
-import Data.List (isInfixOf, isPrefixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isInfixOf, isPrefixOf)
+import Data.List (sort, nub)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import Data.Set (Set, empty, singleton, union, member, toList)
 import qualified Data.Set as Set
@@ -49,7 +51,7 @@ comprehensivePropertyTests = testGroup "Comprehensive Property Tests"
       \input ->
         let processed = normalizeIndentation $ removeComments $ trim input
             -- Should preserve non-whitespace, non-comment content
-        in length input < 200 ==> length processed <= length input + 50
+        in L.length input < 200 ==> L.length processed <= L.length input + 50
         
   , testProperty "composition property: multiple operations are associative" $
       \input ->
@@ -60,9 +62,9 @@ comprehensivePropertyTests = testGroup "Comprehensive Property Tests"
             alt1 = normalizeIndentation input
             alt2 = removeComments alt1
             alt3 = trim alt2
-        in length input < 100 ==> 
+        in L.length input < 100 ==> 
            -- Results should be equivalent up to whitespace differences
-           length (words op3) === length (words alt3)
+           L.length (words op3) === L.length (words alt3)
            
   , testProperty "idempotence property: repeated operations stabilize" $
       \input ->
@@ -81,10 +83,10 @@ comprehensivePropertyTests = testGroup "Comprehensive Property Tests"
         let trimmed = trim input
             commentsRemoved = removeComments input
             normalized = normalizeIndentation input
-            baseComplexity = length $ filter (not . isSpace) input
-            trimmedComplexity = length $ filter (not . isSpace) trimmed
-            commentsComplexity = length $ filter (not . isSpace) commentsRemoved
-            normalizedComplexity = length $ filter (not . isSpace) normalized
+            baseComplexity = L.length $ L.filter (not . isSpace) input
+            trimmedComplexity = L.length $ L.filter (not . isSpace) trimmed
+            commentsComplexity = L.length $ L.filter (not . isSpace) commentsRemoved
+            normalizedComplexity = L.length $ L.filter (not . isSpace) normalized
         in trimmedComplexity <= baseComplexity + 10 &&
            commentsComplexity <= baseComplexity + 10 &&
            normalizedComplexity <= baseComplexity + 10
@@ -116,21 +118,21 @@ crossModuleProperties = testGroup "Cross-Module Properties"
         
   , testProperty "error collector + multiple modules: consistent error accumulation" $
       \errorCounts ->
-        let collectors = map (\n -> foldl (\c i -> addError (SourcePos i 1) ("Error " ++ show i)) 
+        let collectors = L.map (\n -> L.foldl (\c i -> addError (SourcePos i 1) ("Error " ++ show i)) 
                                          newErrorCollector [1..n]) errorCounts
-            totalErrors = sum $ map (length . getErrors) collectors
-            combinedCollector = foldl (\c1 c2 -> 
-              foldl (\c err -> addError (SourcePos 1 1) (formatError err) c) c1 (getErrors c2)
+            totalErrors = L.sum $ L.map (L.length . getErrors) collectors
+            combinedCollector = L.foldl (\c1 c2 -> 
+              L.foldl (\c err -> addError (SourcePos 1 1) (formatError err) c) c1 (getErrors c2)
             ) newErrorCollector collectors
-            combinedErrors = length $ getErrors combinedCollector
-        in all (>= 0) errorCounts && all (<= 100) errorCounts ==>
+            combinedErrors = L.length $ getErrors combinedCollector
+        in L.all (>= 0) errorCounts && L.all (<= 100) errorCounts ==>
            totalErrors === combinedErrors
            
   , testProperty "parser + source location: directive positions are tracked correctly" $
       \directives ->
-        let input = unlines $ map (\d -> "// @ownership: " ++ show d) directives
+        let input = unlines $ L.map (\d -> "// @ownership: " ++ show d) directives
             result = parseTypus input
-        in length directives <= 10 ==> 
+        in L.length directives <= 10 ==> 
            case result of
              Left _ -> True
              Right file -> isJust (fdOwnership (fileDirectives file))
@@ -142,7 +144,7 @@ crossModuleProperties = testGroup "Cross-Module Properties"
 
 edgeCaseProperties :: TestTree
 edgeCaseProperties = testGroup "Edge Case Properties"
-  [ testProperty "empty and minimal inputs" $
+  [ testProperty "empty L.and minimal inputs" $
       \input ->
         let minimalInput = take 5 input
             result = parseTypus minimalInput
@@ -150,27 +152,27 @@ edgeCaseProperties = testGroup "Edge Case Properties"
              Left _ -> True  -- Expected for malformed input
              Right _ -> True  -- Or successful parsing
              
-  , testProperty "unicode and special characters" $
+  , testProperty "unicode L.and special characters" $
       \input ->
         let specialInput = input ++ "\n\t\r\x00\x1F"
             processed = trim specialInput
             split = splitBy ',' specialInput
-        in length input < 50 ==> 
-           not (null processed) && length split >= 1
+        in L.length input < 50 ==> 
+           not (null processed) && L.length split >= 1
            
-  , testProperty "extreme values and boundaries" $
+  , testProperty "extreme values L.and boundaries" $
       \size ->
         let largeInput = replicate size 'x'
             result = trim largeInput
         in size >= 0 && size <= 10000 ==> 
-           length result <= size + 10
+           L.length result <= size + 10
            
-  , testProperty "nested and recursive structures" $
+  , testProperty "nested L.and recursive structures" $
       \depth ->
         let nestedComment = "/* " ++ replicate depth '*' ++ " */"
             result = removeComments nestedComment
         in depth >= 0 && depth <= 100 ==> 
-           length result < length nestedComment
+           L.length result < L.length nestedComment
   ]
 
 -- ============================================================================
@@ -184,7 +186,7 @@ robustnessProperties = testGroup "Robustness Properties"
         let malformed = input ++ "\x00\x1F\uFFFE\uFFFF"
             processed = trim malformed
             parsed = parseTypus (take 100 malformed)
-        in length input < 100 ==> 
+        in L.length input < 100 ==> 
            not (null processed) && 
            case parsed of
              Left _ -> True
@@ -192,7 +194,7 @@ robustnessProperties = testGroup "Robustness Properties"
              
   , testProperty "resource exhaustion prevention" $
       \size ->
-        let largeInput = concat $ replicate size "// @ownership: true\n"
+        let largeInput = L.concat $ replicate size "// @ownership: true\n"
             result = parseTypus (take 10000 largeInput)
         in size >= 0 && size <= 1000 ==> 
            case result of
@@ -201,17 +203,17 @@ robustnessProperties = testGroup "Robustness Properties"
              
   , testProperty "error handling under stress" $
       \errorCount ->
-        let collector = foldl (\c i -> addError (SourcePos i 1) (replicate i 'x')) 
+        let collector = L.foldl (\c i -> addError (SourcePos i 1) (replicate i 'x')) 
                              newErrorCollector [1..errorCount]
             errors = getErrors collector
             formatted = map formatError errors
         in errorCount >= 0 && errorCount <= 1000 ==> 
-           length formatted === errorCount
+           L.length formatted === errorCount
            
   , testProperty "concurrent operations consistency" $
       \operations ->
-        let results = map (\op -> trim (take 50 op)) (take 10 operations)
-        in all (not . null) results ==> True
+        let results = L.map (\op -> trim (take 50 op)) (take 10 operations)
+        in L.all (not . null) results ==> True
   ]
 
 -- ============================================================================
@@ -248,7 +250,7 @@ consistencyProperties = testGroup "Consistency Properties"
         
   , testProperty "formatting consistency" $
       \errorCount ->
-        let errors = map (\i -> errorAt (SourcePos i 1) ("Error " ++ show i)) [1..errorCount]
+        let errors = L.map (\i -> errorAt "test-id" i 1) ("Error " ++ show i)) [1..errorCount]
             formatted1 = map formatError errors
             formatted2 = map formatError errors
         in errorCount >= 0 && errorCount <= 100 ==> 
@@ -261,7 +263,7 @@ consistencyProperties = testGroup "Consistency Properties"
 
 integrationTestCases :: TestTree
 integrationTestCases = testGroup "Integration Test Cases"
-  [ testCase "complete parsing and analysis workflow" $
+  [ testCase "complete parsing L.and analysis workflow" $
     do
       let input = "// @ownership: true\n// @dependentTypes: false\nfn test() {\n  let x = 42;\n  return x;\n}"
           parseResult = parseTypus input
@@ -280,12 +282,12 @@ integrationTestCases = testGroup "Integration Test Cases"
           collector3 = addInfo (SourcePos 3 1) "Info message" collector2
           errors = getErrors collector3
           warnings = getWarnings collector3
-      assertEqual "error count" 1 (length errors)
-      assertEqual "warning count" 1 (length warnings)
+      assertEqual "error count" 1 (L.length errors)
+      assertEqual "warning count" 1 (L.length warnings)
       
   , testCase "performance under load" $
     do
-      let largeInput = concat $ replicate 100 "// @ownership: true\nfn test() { return 42; }\n"
+      let largeInput = L.concat $ replicate 100 "// @ownership: true\nfn test() { return 42; }\n"
           result = parseTypus largeInput
       case result of
         Left _ -> return ()  -- May fail due to size

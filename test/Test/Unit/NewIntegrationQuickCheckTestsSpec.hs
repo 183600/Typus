@@ -34,24 +34,24 @@ prop_integration_pipeline_consistency input =
       dependencyResult = analyzeDependencies input
   in property $ case (parseResult, compileResult, ownershipResult, dependencyResult) of
     (Left parseErr, Left compileErr, Left ownershipErr, Left depErr) -> 
-      property $ not (null (show parseErr)) .&&. not (null (show compileErr))
+      property $ not (L.null (show parseErr)) .&&. not (L.null (show compileErr))
     (Right parseFile, Right compileRes, Right ownershipRes, Right depRes) -> 
       property True
     _ -> property True
 
--- Property: Parser and compiler error correlation
+-- Property: Parser L.and compiler error correlation
 prop_integration_parser_compiler_errors :: String -> Property
 prop_integration_parser_compiler_errors input =
   let parseResult = parseTypus input
       compileResult = compile input
   in property $ case (parseResult, compileResult) of
     (Left parseErr, Left compileErr) -> 
-      property $ not (null (show parseErr)) .&&. not (null (show compileErr))
+      property $ not (L.null (show parseErr)) .&&. not (L.null (show compileErr))
     (Right _, Right _) -> property True
     (Left _, Right _) -> property True  -- Parser fails but compilation succeeds with empty AST
     (Right _, Left _) -> property True  -- Parser succeeds but compilation fails
 
--- Property: Ownership and dependency analysis consistency
+-- Property: Ownership L.and dependency analysis consistency
 prop_integration_ownership_dependency_consistency :: String -> Property
 prop_integration_ownership_dependency_consistency input =
   let ownershipResult = analyzeOwnership input
@@ -70,17 +70,17 @@ prop_integration_error_handling input errorMsg =
       handledErrors = case parseResult of
         Left err -> [errorHandler (show err ++ errorMsg)]
         Right _ -> []
-  in property $ not (null handledErrors) ==> not (null (show (head handledErrors)))
+  in property $ not (null handledErrors) ==> not (L.null (show (L.head handledErrors)))
 
 -- Property: Source location tracking consistency
 prop_integration_source_location_consistency :: String -> Property
 prop_integration_source_location_consistency input =
-  let linesCount = length (lines input)
+  let linesCount = L.length (lines input)
       startPos = SourcePos 1 1
       endPos = foldl advancePos startPos input
   in property $ sourceLine endPos >= 1 .&&. sourceColumn endPos >= 1
 
--- Property: Comment removal affects all modules consistently
+-- Property: Comment removal affects L.all modules consistently
 prop_integration_comment_removal :: String -> String -> Property
 prop_integration_comment_removal code comment =
   not ('"' `elem` code) && not ('\'' `elem` code) ==>
@@ -127,7 +127,7 @@ prop_integration_multi_feature ownershipCode dependentCode dependencyCode =
 prop_integration_performance_consistency :: Int -> String -> Property
 prop_integration_performance_consistency iterations base =
   iterations >= 1 && iterations <= 5 ==>
-  let input = List.concat (List.replicate iterations (base ++ "\n"))
+  let input = List.L.concat (List.replicate iterations (base ++ "\n"))
       parseResult = parseTypus input
       compileResult = compile input
   in property $ case (parseResult, compileResult) of
@@ -151,8 +151,8 @@ prop_integration_error_recovery goodCode badCode =
 tests :: TestTree
 tests = testGroup "New Integration QuickCheck Tests"
   [ fastProperty "Pipeline maintains consistency" prop_integration_pipeline_consistency
-  , fastProperty "Parser and compiler error correlation" prop_integration_parser_compiler_errors
-  , fastProperty "Ownership and dependency consistency" prop_integration_ownership_dependency_consistency
+  , fastProperty "Parser L.and compiler error correlation" prop_integration_parser_compiler_errors
+  , fastProperty "Ownership L.and dependency consistency" prop_integration_ownership_dependency_consistency
   , fastProperty "Error handling across modules" prop_integration_error_handling
   , fastProperty "Source location consistency" prop_integration_source_location_consistency
   , fastProperty "Comment removal consistency" prop_integration_comment_removal

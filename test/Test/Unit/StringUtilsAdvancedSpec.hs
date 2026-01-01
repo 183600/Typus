@@ -31,7 +31,9 @@ import Utils
 
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, sort, nub, intersperse)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort, nub, intersperse)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import Data.Char (isSpace, isControl, isAscii)
 import qualified Data.String
@@ -48,7 +50,7 @@ tests =
         , testCase "preserves internal whitespace structure" test_internal_whitespace_preservation
         , testCase "handles mixed whitespace types" test_mixed_whitespace_types
         , testCase "handles zero-width whitespace" test_zero_width_whitespace
-        , testCase "trim is idempotent on all inputs" test_trim_idempotent_all
+        , testCase "trim is idempotent on L.all inputs" test_trim_idempotent_all
         ]
 
     , testGroup "Advanced splitting tests"
@@ -68,7 +70,7 @@ tests =
         ]
 
     , testGroup "Advanced indentation tests"
-        [ testCase "handles mixed tabs and spaces" test_mixed_tabs_spaces
+        [ testCase "handles mixed tabs L.and spaces" test_mixed_tabs_spaces
         , testCase "preserves relative indentation structure" test_relative_indentation_preservation
         , testCase "handles very deep indentation" test_deep_indentation
         , testCase "normalizes indentation with Unicode" test_unicode_indentation
@@ -83,11 +85,11 @@ tests =
         ]
 
     , testGroup "Property-based advanced tests"
-        [ fastProperty "trim never increases string length" prop_trim_never_increases
+        [ fastProperty "trim never increases string L.length" prop_trim_never_increases
         , fastProperty "splitBy preserves total character count" prop_splitby_preserves_chars
         , fastProperty "removeComments preserves non-comment content" prop_remove_comments_preserves_content
         , fastProperty "normalizeIndentation preserves line count" prop_normalize_preserves_lines
-        , fastProperty "all operations are safe on Unicode input" prop_unicode_safety
+        , fastProperty "L.all operations are safe on Unicode input" prop_unicode_safety
         ]
     ]
 
@@ -211,7 +213,7 @@ test_comment_preservation_in_strings = do
   let testCases = 
         [ ("var s = \"// not a comment\" // real comment", "var s = \"// not a comment\" ")
         , ("text = \"/* not a block */\" /* real block */", "text = \"/* not a block */\" ")
-        , ("mixed = \"// and /*\" /* real */ // comment", "mixed = \"// and /*\"  ")
+        , ("mixed = \"// L.and /*\" /* real */ // comment", "mixed = \"// L.and /*\"  ")
         ]
   mapM_ (\(input, expected) -> do
     let result = removeComments input
@@ -240,10 +242,10 @@ test_unicode_comments = do
 test_large_file_comment_removal :: IO ()
 test_large_file_comment_removal = do
   let largeLine = "code // comment\n" ++ "    x := x + 1\n"
-      largeContent = concat $ replicate 1000 largeLine
+      largeContent = L.concat $ replicate 1000 largeLine
       result = removeComments largeContent
-  assertBool "Should handle large file comment removal" (length result > 0)
-  assertBool "Should remove comments" (not ("// comment" `isInfixOf` result))
+  assertBool "Should handle large file comment removal" (L.length result > 0)
+  assertBool "Should remove comments" (not ("// comment" `L.isInfixOf` result))
 
 -- ============================================================================
 -- Advanced Indentation Tests
@@ -260,7 +262,7 @@ test_mixed_tabs_spaces = do
       result = normalizeIndentation input
       resultLines = lines result
   -- Should normalize to remove common leading whitespace
-  assertBool "Should normalize mixed indentation" (all (not . isPrefixOf "    ") resultLines)
+  assertBool "Should normalize mixed indentation" (L.all (not . L.isPrefixOf "    ") resultLines)
 
 test_relative_indentation_preservation :: IO ()
 test_relative_indentation_preservation = do
@@ -273,13 +275,13 @@ test_relative_indentation_preservation = do
         ]
       result = normalizeIndentation input
       resultLines = lines result
-      indentLevels = map (length . takeWhile isSpace) resultLines
+      indentLevels = L.map (L.length . takeWhile isSpace) resultLines
   -- Should preserve relative indentation structure
   indentLevels @?= [0, 4, 8, 4, 0]
 
 test_deep_indentation :: IO ()
 test_deep_indentation = do
-  let deepIndent = concat $ replicate 100 "    "
+  let deepIndent = L.concat $ replicate 100 "    "
       input = deepIndent ++ "deeply indented line\n"
       result = normalizeIndentation input
   result @?= "deeply indented line\n"
@@ -294,7 +296,7 @@ test_unicode_indentation = do
       result = normalizeIndentation input
   resultLines = lines result
   -- Should handle Unicode spaces in indentation
-  assertBool "Should handle Unicode indentation" (length resultLines == 3)
+  assertBool "Should handle Unicode indentation" (L.length resultLines == 3)
 
 test_force_single_tab_edge_cases :: IO ()
 test_force_single_tab_edge_cases = do
@@ -338,11 +340,11 @@ test_breakon_empty_pattern = do
 
 test_breakon_performance :: IO ()
 test_breakon_performance = do
-  let largeInput = concat $ replicate 10000 "test content "
+  let largeInput = L.concat $ replicate 10000 "test content "
       pattern = "middle"
-      inputWithPattern = take (length largeInput `div` 2) largeInput ++ pattern ++ drop (length largeInput `div` 2) largeInput
+      inputWithPattern = take (L.length largeInput `div` 2) largeInput ++ pattern ++ drop (L.length largeInput `div` 2) largeInput
       (before, after) = breakOn pattern inputWithPattern
-  assertBool "Should find pattern in large text" (pattern `isInfixOf` (before ++ pattern ++ after))
+  assertBool "Should find pattern in large text" (pattern `L.isInfixOf` (before ++ pattern ++ after))
 
 -- ============================================================================
 -- Property-Based Advanced Tests
@@ -352,7 +354,7 @@ prop_trim_never_increases :: Property
 prop_trim_never_increases =
   forAll arbitrary $ \input ->
     let trimmed = trim input
-    in property $ length trimmed <= length input
+    in property $ L.length trimmed <= L.length input
 
 prop_splitby_preserves_chars :: Property
 prop_splitby_preserves_chars =
@@ -366,8 +368,8 @@ prop_remove_comments_preserves_content :: Property
 prop_remove_comments_preserves_content =
   forAll arbitrary $ \input ->
     let withoutComments = removeComments input
-        hasNoComments = not ("//" `isInfixOf` withoutComments) && 
-                        not ("/*" `isInfixOf` withoutComments)
+        hasNoComments = not ("//" `L.isInfixOf` withoutComments) && 
+                        not ("/*" `L.isInfixOf` withoutComments)
     in property $ hasNoComments ==> True
 
 prop_normalize_preserves_lines :: Property
@@ -376,7 +378,7 @@ prop_normalize_preserves_lines =
     let normalized = normalizeIndentation input
         originalLines = lines input
         normalizedLines = lines normalized
-    in property $ length normalizedLines == length originalLines
+    in property $ L.length normalizedLines == L.length originalLines
 
 prop_unicode_safety :: Property
 prop_unicode_safety =

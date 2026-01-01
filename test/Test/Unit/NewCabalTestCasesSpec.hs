@@ -6,6 +6,7 @@ import Test.Tasty.HUnit (testCase, (@?=), assertFailure, assertString)
 import Test.Tasty.QuickCheck (testProperty, Property, (==>), forAll, Gen, choose, listOf1, elements, listOf)
 import qualified Data.Text as T
 import qualified Data.List as L
+import qualified Data.List as L
 import Data.List (isInfixOf)
 import Data.Char (isSpace, isAlphaNum)
 import Data.Maybe (isJust, isNothing, fromMaybe)
@@ -48,7 +49,7 @@ tests =
             let result = parseTypus input
             case result of
               Left _ -> assertFailure "Should parse simple code block"
-              Right typusFile -> length (tfBlocks typusFile) @?= 1
+              Right typusFile -> L.length (tfBlocks typusFile) @?= 1
 
         , testCase "parseTypus respects file directives" $ do
             let input = "// @ownership: true\n// @dependent-types: true\n\nfunc test() {}"
@@ -64,7 +65,7 @@ tests =
     , testGroup "Utils Tests with QuickCheck"
         [ testProperty "trim is idempotent" propTrimIdempotent
         , testProperty "trim removes leading/trailing spaces" propTrimRemovesSpaces
-        , testProperty "splitBy and splitByCollapsed relationship" propSplitByRelationship
+        , testProperty "splitBy L.and splitByCollapsed relationship" propSplitByRelationship
         , testProperty "breakOn correctness" propBreakOnCorrectness
         , testProperty "removeLineComments preserves non-comment lines" propRemoveLineCommentsPreserves
         ]
@@ -117,23 +118,23 @@ tests =
 
     , testGroup "Dependent Types Tests"
         [ testCase "DependentType basic construction" $ do
-            let constraint = SizeConstraint "length" 0
+            let constraint = SizeConstraint "L.length" 0
             let depType = TypeDecl "NonEmptyList" [] (StructBody []) [constraint]
             case depType of
               TypeDecl name params body constraints -> do
                 name @?= "NonEmptyList"
-                length constraints @?= 1
+                L.length constraints @?= 1
               _ -> assertFailure "Expected TypeDecl"
 
         , testProperty "Type constraints are valid" propTypeConstraintsValid
         ]
 
     , testGroup "Integration Tests"
-        [ testCase "Parser and Utils integration" $ do
+        [ testCase "Parser L.and Utils integration" $ do
             let input = "  // comment\n  func test() { return 42; }  "
             let cleaned = trim input
             let withoutComments = removeLineComments cleaned
-            length (filter (not . null) (lines withoutComments)) @?= 2
+            L.length (L.filter (not . null) (lines withoutComments)) @?= 2
 
         , testCase "Error handling in parsing workflow" $ do
             let malformed = "func incomplete {"
@@ -151,18 +152,18 @@ propTrimIdempotent str = trim (trim str) == trim str
 propTrimRemovesSpaces :: String -> Bool
 propTrimRemovesSpaces str = 
   let trimmed = trim str
-  in null trimmed || (not (isSpace (head trimmed)) && not (isSpace (last trimmed)))
+  in null trimmed || (not (isSpace (L.head trimmed)) && not (isSpace (last trimmed)))
 
 propSplitByRelationship :: Char -> String -> Bool
 propSplitByRelationship delim str = 
   let withEmpty = splitBy delim str
       collapsed = splitByCollapsed delim str
-  in all (not . null) collapsed
+  in L.all (not . null) collapsed
 
 propBreakOnCorrectness :: String -> String -> Bool
 propBreakOnCorrectness pat str =
   let (prefix, suffix) = breakOn pat str
-  in if pat `isInfixOf` str
+  in if pat `L.isInfixOf` str
      then prefix ++ pat ++ suffix == str
      else prefix == str && null suffix
 
@@ -171,7 +172,7 @@ propRemoveLineCommentsPreserves str =
   let withoutComments = removeLineComments str
       linesWithComments = lines str
       linesWithout = lines withoutComments
-  in length linesWithout <= length linesWithComments
+  in L.length linesWithout <= L.length linesWithComments
 
 propSourcePosValid :: SourcePos -> Bool
 propSourcePosValid pos = posLine pos > 0 && posColumn pos > 0

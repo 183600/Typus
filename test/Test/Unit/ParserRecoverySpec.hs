@@ -10,6 +10,7 @@ import Utils
 import SourceLocation
 import Parser
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 
 -- | Test parser error recovery mechanisms
@@ -23,9 +24,9 @@ tests =
                   , "let y = 13"  -- Missing semicolon on previous line
                   , "let z = x + y"
                   ]
-                -- Should recover and continue parsing
+                -- Should recover L.and continue parsing
                 recoveredLines = ["let x = 42;", "let y = 13;", "let z = x + y;"]
-                recoveredCount = length recoveredLines
+                recoveredCount = L.length recoveredLines
             recoveredCount @?= 3
 
         , testCase "unmatched brace recovery" $ do
@@ -37,7 +38,7 @@ tests =
                   , "  return true"
                   , "}"  -- Only one closing brace
                   ]
-                -- Should insert missing braces and continue
+                -- Should insert missing braces L.and continue
                 errorCount = 1  -- One missing brace
                 recoveredStructure = True  -- Can still parse function structure
             errorCount @?= 1
@@ -53,15 +54,15 @@ tests =
                 hasError = True
                 suggestion = "Did you mean 'func'?"
             hasError @?= True
-            "func" `isInfixOf` suggestion @?= True
+            "func" `L.isInfixOf` suggestion @?= True
 
         , testCase "operator precedence recovery" $ do
             let precedenceError = "result = 2 + 3 * 4 ^ 2"
                 -- Should parse with correct precedence even with ambiguity
                 parsedAs = "result = (2 + (3 * (4 ^ 2)))"
-                hasExponent = "^" `isInfixOf` parsedAs
-                hasMultiplication = "*" `isInfixOf` parsedAs
-                hasAddition = "+" `isInfixOf` parsedAs
+                hasExponent = "^" `L.isInfixOf` parsedAs
+                hasMultiplication = "*" `L.isInfixOf` parsedAs
+                hasAddition = "+" `L.isInfixOf` parsedAs
             hasExponent @?= True
             hasMultiplication @?= True
             hasAddition @?= True
@@ -70,9 +71,9 @@ tests =
     , testGroup "Token Error Recovery"
         [ testCase "invalid character handling" $ do
             let invalidChars = "let x = 42 @#$ y = 13"
-                -- Should skip invalid characters and continue
+                -- Should skip invalid characters L.and continue
                 validTokens = ["let", "x", "=", "42", "y", "=", "13"]
-                tokenCount = length validTokens
+                tokenCount = L.length validTokens
             tokenCount @?= 7
 
         , testCase "unterminated string recovery" $ do
@@ -80,9 +81,9 @@ tests =
                   [ "message := \"hello world"
                   , "next_line := \"properly closed\""
                   ]
-                -- Should close string at end of line and continue
+                -- Should close string at end of line L.and continue
                 recoveredStrings = ["\"hello world\"", "\"properly closed\""]
-                stringCount = length recoveredStrings
+                stringCount = L.length recoveredStrings
             stringCount @?= 2
 
         , testCase "numeric literal errors" $ do
@@ -94,7 +95,7 @@ tests =
                 -- Should recover from numeric errors
                 validNumbers = ["1_2_3_4_5"]
                 errorCount = 2  -- Two invalid numbers
-            length validNumbers @?= 1
+            L.length validNumbers @?= 1
             errorCount @?= 2
 
         , testCase "comment error recovery" $ do
@@ -106,7 +107,7 @@ tests =
                   ]
                 -- Should recover from comment errors
                 recoveredCode = ["code", "more code"]
-                lineCount = length recoveredCode
+                lineCount = L.length recoveredCode
             lineCount @?= 2
         ]
 
@@ -118,9 +119,9 @@ tests =
                   , "  // Missing parameter list closing"
                   , "  // Missing function body"
                   ]
-                -- Should infer structure and continue
-                hasParams = "param1: int" `isInfixOf` incompleteFunc
-                hasFunctionKeyword = "func" `isInfixOf` incompleteFunc
+                -- Should infer structure L.and continue
+                hasParams = "param1: int" `L.isInfixOf` incompleteFunc
+                hasFunctionKeyword = "func" `L.isInfixOf` incompleteFunc
             hasParams @?= True
             hasFunctionKeyword @?= True
 
@@ -135,8 +136,8 @@ tests =
                   , "}"
                   ]
                 -- Should recover struct definition
-                hasStructFields = "name: string" `isInfixOf` malformedStruct
-                hasStructUsage = "Person{}" `isInfixOf` malformedStruct
+                hasStructFields = "name: string" `L.isInfixOf` malformedStruct
+                hasStructUsage = "Person{}" `L.isInfixOf` malformedStruct
             hasStructFields @?= True
             hasStructUsage @?= True
 
@@ -165,8 +166,8 @@ tests =
                   , "}"
                   ]
                 -- Should continue despite incomplete type
-                hasUsage = "MyType =" `isInfixOf` crossStructure
-                hasFunction = "func useType" `isInfixOf` crossStructure
+                hasUsage = "MyType =" `L.isInfixOf` crossStructure
+                hasFunction = "func useType" `L.isInfixOf` crossStructure
             hasUsage @?= True
             hasFunction @?= True
         ]
@@ -174,10 +175,10 @@ tests =
     , testGroup "Contextual Error Recovery"
         [ testCase "type error in expression" $ do
             let typeError = "result := \"hello\" + 42"  -- String + int
-                -- Should recover and continue parsing
-                hasString = "\"hello\"" `isInfixOf` typeError
-                hasInt = "42" `isInfixOf` typeError
-                hasOperator = "+" `isInfixOf` typeError
+                -- Should recover L.and continue parsing
+                hasString = "\"hello\"" `L.isInfixOf` typeError
+                hasInt = "42" `L.isInfixOf` typeError
+                hasOperator = "+" `L.isInfixOf` typeError
             hasString @?= True
             hasInt @?= True
             hasOperator @?= True
@@ -190,8 +191,8 @@ tests =
                   , "let y = x + 1"  -- x out of scope
                   ]
                 -- Should detect scope error but continue
-                hasScopeBlock = "{" `isInfixOf` scopeError
-                hasScopeError = "x + 1" `isInfixOf` scopeError
+                hasScopeBlock = "{" `L.isInfixOf` scopeError
+                hasScopeError = "x + 1" `L.isInfixOf` scopeError
             hasScopeBlock @?= True
             hasScopeError @?= True
 
@@ -202,8 +203,8 @@ tests =
                   , "}"
                   ]
                 -- Should detect undefined variable
-                hasSignature = "func add(a: int, b: int)" `isInfixOf` signatureError
-                hasUndefined = "c" `isInfixOf` signatureError
+                hasSignature = "func add(a: int, b: int)" `L.isInfixOf` signatureError
+                hasUndefined = "c" `L.isInfixOf` signatureError
             hasSignature @?= True
             hasUndefined @?= True
 
@@ -215,8 +216,8 @@ tests =
                   , "}"
                   ]
                 -- Should handle import errors gracefully
-                hasImport = "import" `isInfixOf` importError
-                hasUsage = "useImportedFunction()" `isInfixOf` importError
+                hasImport = "import" `L.isInfixOf` importError
+                hasUsage = "useImportedFunction()" `L.isInfixOf` importError
             hasImport @?= True
             hasUsage @?= True
         ]
@@ -228,7 +229,7 @@ tests =
                 errorCount = 3  -- Invalid chars, bad number, unclosed string
                 recoveredTokens = ["let", "x", "=", "123.456.789", "\"unclosed\""]
             errorCount @?= 3
-            length recoveredTokens @?= 5
+            L.length recoveredTokens @?= 5
 
         , testCase "error cascading prevention" $ do
             let cascadingErrors = unlines
@@ -264,21 +265,21 @@ tests =
                   , "  doDefault()"
                   ]
                 -- Should use lookahead to determine structure
-                hasIfChain = "else if" `isInfixOf` lookaheadCode
-                hasElseBlock = "else {" `isInfixOf` lookaheadCode
+                hasIfChain = "else if" `L.isInfixOf` lookaheadCode
+                hasElseBlock = "else {" `L.isInfixOf` lookaheadCode
             hasIfChain @?= True
             hasElseBlock @?= True
         ]
 
-    , testGroup "Error Reporting and Suggestions"
+    , testGroup "Error Reporting L.and Suggestions"
         [ testCase "precise error location" $ do
             let errorSource = "func test() { return \"unclosed string }"
                 errorPosition = (1, 28)  -- Line 1, column 28
                 errorMessage = "Unterminated string literal at line 1, column 28"
-            "Unterminated string" `isInfixOf` errorMessage @?= True
-            "line 1, column 28" `isInfixOf` errorMessage @?= True
+            "Unterminated string" `L.isInfixOf` errorMessage @?= True
+            "line 1, column 28" `L.isInfixOf` errorMessage @?= True
 
-        , testCase "error context and hints" $ do
+        , testCase "error context L.and hints" $ do
             let contextError = unlines
                   [ "Error: Unexpected token '}'"
                   , "  --> input:3:15"
@@ -288,10 +289,10 @@ tests =
                   , "   |"
                   , "   = Note: Expected ';'"
                   ]
-                -- Should provide context and suggestions
-                hasErrorLine = "3 |" `isInfixOf` contextError
-                hasPointer = "^" `isInfixOf` contextError
-                hasSuggestion = "Expected ';'" `isInfixOf` contextError
+                -- Should provide context L.and suggestions
+                hasErrorLine = "3 |" `L.isInfixOf` contextError
+                hasPointer = "^" `L.isInfixOf` contextError
+                hasSuggestion = "Expected ';'" `L.isInfixOf` contextError
             hasErrorLine @?= True
             hasPointer @?= True
             hasSuggestion @?= True
@@ -305,7 +306,7 @@ tests =
                   ]
                 -- Should aggregate multiple errors
                 errorCount = 3
-                hasLineNumbers = all (`isInfixOf` multipleErrors) ["line 2", "line 4", "line 6"]
+                hasLineNumbers = L.all (`L.isInfixOf` multipleErrors) ["line 2", "line 4", "line 6"]
             errorCount @?= 3
             hasLineNumbers @?= True
 
@@ -318,7 +319,7 @@ tests =
                   , "  3. Verify return type annotation"
                   ]
                 -- Should provide helpful suggestions
-                hasSuggestions = "Suggestions:" `isInfixOf` suggestions
+                hasSuggestions = "Suggestions:" `L.isInfixOf` suggestions
                 suggestionCount = 3
             hasSuggestions @?= True
             suggestionCount @?= 3
@@ -332,37 +333,37 @@ tests =
         ]
     ]
 
--- Property: parser recovery should never crash on any input
+-- Property: parser recovery should never crash on L.any input
 prop_parserRecoverySafe :: String -> Bool
 prop_parserRecoverySafe input =
   let -- Simulate parsing with recovery
       tokens = words input
-      recovered = filter (not . null) tokens
+      recovered = L.filter (not . null) tokens
   -- Should always return some result, never crash
-  length recovered >= 0
+  L.length recovered >= 0
 
 -- Property: error recovery should preserve valid tokens
 prop_preservesValidTokens :: String -> Bool
 prop_preservesValidTokens input =
   let -- Simulate token extraction with error recovery
-      validTokens = filter (\t -> all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_") t) (words input)
+      validTokens = L.filter (\t -> L.all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_") t) (words input)
       recoveredTokens = validTokens  -- In real implementation, this would be the result of recovery
-  length recoveredTokens <= length (words input)
+  L.length recoveredTokens <= L.length (words input)
 
 -- Property: recovery should maintain line structure
 prop_maintainsLineStructure :: String -> Bool
 prop_maintainsLineStructure input =
   let originalLines = lines input
       -- Simulate recovery that preserves line structure
-      recoveredLines = map (const "recovered") originalLines
-  length recoveredLines == length originalLines
+      recoveredLines = L.map (const "recovered") originalLines
+  L.length recoveredLines == L.length originalLines
 
 -- Property: error positions should remain accurate through recovery
 prop_acurateErrorPositions :: String -> Bool
 prop_acurateErrorPositions input =
   let -- Simulate error position tracking
       linesList = lines input
-      errorLine = length linesList `div` 2 + 1
+      errorLine = L.length linesList `div` 2 + 1
       errorCol = 5
       -- Should track positions accurately
       validPosition = errorLine > 0 && errorCol > 0

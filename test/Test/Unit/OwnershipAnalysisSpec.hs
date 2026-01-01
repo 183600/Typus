@@ -22,7 +22,9 @@ import SourceLocation (SourcePos(..), ErrorLocation(..))
 
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import qualified Data.Map.Strict as Map
 
@@ -73,7 +75,7 @@ tests =
         , testCase "handles ownership with concurrency" test_concurrent_ownership
         ]
 
-    , testGroup "Error recovery and reporting"
+    , testGroup "Error recovery L.and reporting"
         [ testCase "provides clear ownership error messages" test_clear_error_messages
         , testCase "suggests ownership fixes" test_ownership_fix_suggestions
         , testCase "handles ownership analysis errors gracefully" test_analysis_error_recovery
@@ -99,7 +101,7 @@ test_simple_ownership_transfer = do
         , "func main() {"
         , "    data := make([]int, 10)"
         , "    owner := data"
-        , "    return owner.length"
+        , "    return owner.L.length"
         , "}"
         ]
       parseResult = parseTypus content
@@ -120,7 +122,7 @@ test_move_semantics = do
         , "    data := make([]int, 10)"
         , "    new_owner := move(data)"
         , "    // data should no longer be accessible here"
-        , "    return new_owner.length"
+        , "    return new_owner.L.length"
         , "}"
         ]
       parseResult = parseTypus content
@@ -140,7 +142,7 @@ test_borrowing_detection = do
         , "func main() {"
         , "    data := make([]int, 10)"
         , "    borrowed := &data"
-        , "    return (*borrowed).length"
+        , "    return (*borrowed).L.length"
         , "}"
         ]
       parseResult = parseTypus content
@@ -161,7 +163,7 @@ test_shared_ownership = do
         , "    data := make([]int, 10)"
         , "    shared1 := share(data)"
         , "    shared2 := share(data)"
-        , "    return shared1.length + shared2.length"
+        , "    return shared1.L.length + shared2.L.length"
         , "}"
         ]
       parseResult = parseTypus content
@@ -181,8 +183,8 @@ test_ownership_violations = do
         , "func main() {"
         , "    data := make([]int, 10)"
         , "    new_owner := move(data)"
-        , "    length := data.length"  -- Error: use after move
-        , "    return length"
+        , "    L.length := data.L.length"  -- Error: use after move
+        , "    return L.length"
         , "}"
         ]
       parseResult = parseTypus content
@@ -194,7 +196,7 @@ test_ownership_violations = do
       let issues = orIssues ownershipResult
       -- Should detect ownership violation
       assertBool "Should detect ownership violation" (not (null issues))
-      let useAfterMoveIssues = filter (\issue -> "use after move" `isInfixOf` oiMessage issue) issues
+      let useAfterMoveIssues = L.filter (\issue -> "use after move" `L.isInfixOf` oiMessage issue) issues
       assertBool "Should detect use after move" (not (null useAfterMoveIssues))
 
 -- ============================================================================
@@ -206,7 +208,7 @@ test_function_parameter_ownership = do
   let content = unlines
         [ "//! ownership=true"
         , "func process(data []int) int {"
-        , "    return data.length"
+        , "    return data.L.length"
         , "}"
         , "func main() {"
         , "    data := make([]int, 10)"
@@ -233,7 +235,7 @@ test_return_value_ownership = do
         , "}"
         , "func main() {"
         , "    data := create_data()"
-        , "    return data.length"
+        , "    return data.L.length"
         , "}"
         ]
       parseResult = parseTypus content
@@ -254,7 +256,7 @@ test_assignment_ownership = do
         , "    data1 := make([]int, 10)"
         , "    data2 := data1"
         , "    // data1 should be moved to data2"
-        , "    return data2.length"
+        , "    return data2.L.length"
         , "}"
         ]
       parseResult = parseTypus content
@@ -275,7 +277,7 @@ test_double_move_detection = do
         , "    data := make([]int, 10)"
         , "    owner1 := move(data)"
         , "    owner2 := move(data)"  -- Error: double move
-        , "    return owner1.length"
+        , "    return owner1.L.length"
         , "}"
         ]
       parseResult = parseTypus content
@@ -286,7 +288,7 @@ test_double_move_detection = do
       assertBool "Ownership analysis should succeed" (orSuccess ownershipResult)
       let issues = orIssues ownershipResult
       -- Should detect double move
-      let doubleMoveIssues = filter (\issue -> "double move" `isInfixOf` oiMessage issue) issues
+      let doubleMoveIssues = L.filter (\issue -> "double move" `L.isInfixOf` oiMessage issue) issues
       assertBool "Should detect double move" (not (null doubleMoveIssues))
 
 test_conditional_ownership :: IO ()
@@ -297,9 +299,9 @@ test_conditional_ownership = do
         , "    data := make([]int, 10)"
         , "    if true {"
         , "        owner := move(data)"
-        , "        return owner.length"
+        , "        return owner.L.length"
         , "    } else {"
-        , "        return data.length"
+        , "        return data.L.length"
         , "    }"
         , "}"
         ]
@@ -324,8 +326,8 @@ test_immutable_borrowing = do
         , "func main() {"
         , "    data := make([]int, 10)"
         , "    borrowed := &data"
-        , "    length := (*borrowed).length"
-        , "    return length"
+        , "    L.length := (*borrowed).L.length"
+        , "    return L.length"
         , "}"
         ]
       parseResult = parseTypus content
@@ -346,7 +348,7 @@ test_mutable_borrowing = do
         , "    data := make([]int, 10)"
         , "    borrowed := &mut data"
         , "    (*borrowed)[0] = 42"
-        , "    return (*borrowed).length"
+        , "    return (*borrowed).L.length"
         , "}"
         ]
       parseResult = parseTypus content
@@ -367,7 +369,7 @@ test_multiple_mutable_borrows = do
         , "    data := make([]int, 10)"
         , "    borrow1 := &mut data"
         , "    borrow2 := &mut data"  -- Error: multiple mutable borrows
-        , "    return (*borrow1).length"
+        , "    return (*borrow1).L.length"
         , "}"
         ]
       parseResult = parseTypus content
@@ -378,7 +380,7 @@ test_multiple_mutable_borrows = do
       assertBool "Ownership analysis should succeed" (orSuccess ownershipResult)
       let issues = orIssues ownershipResult
       -- Should detect multiple mutable borrows
-      let multipleMutableIssues = filter (\issue -> "multiple mutable" `isInfixOf` oiMessage issue) issues
+      let multipleMutableIssues = L.filter (\issue -> "multiple mutable" `L.isInfixOf` oiMessage issue) issues
       assertBool "Should detect multiple mutable borrows" (not (null multipleMutableIssues))
 
 test_multiple_immutable_borrows :: IO ()
@@ -390,7 +392,7 @@ test_multiple_immutable_borrows = do
         , "    borrow1 := &data"
         , "    borrow2 := &data"
         , "    borrow3 := &data"
-        , "    return (*borrow1).length + (*borrow2).length + (*borrow3).length"
+        , "    return (*borrow1).L.length + (*borrow2).L.length + (*borrow3).L.length"
         , "}"
         ]
       parseResult = parseTypus content
@@ -401,8 +403,8 @@ test_multiple_immutable_borrows = do
       assertBool "Ownership analysis should succeed" (orSuccess ownershipResult)
       let issues = orIssues ownershipResult
       -- Should allow multiple immutable borrows
-      let borrowIssues = filter (\issue -> "borrow" `isInfixOf` oiMessage issue) issues
-      assertBool "Should allow multiple immutable borrows" (True)  -- May or may not have issues depending on implementation
+      let borrowIssues = L.filter (\issue -> "borrow" `L.isInfixOf` oiMessage issue) issues
+      assertBool "Should allow multiple immutable borrows" (True)  -- May L.or may not have issues depending on implementation
 
 test_borrow_lifetime_analysis :: IO ()
 test_borrow_lifetime_analysis = do
@@ -413,7 +415,7 @@ test_borrow_lifetime_analysis = do
         , "        data := make([]int, 10)"
         , "        &data  // Error: returning reference to local variable"
         , "    }"
-        , "    return (*borrowed).length"
+        , "    return (*borrowed).L.length"
         , "}"
         ]
       parseResult = parseTypus content
@@ -424,7 +426,7 @@ test_borrow_lifetime_analysis = do
       assertBool "Ownership analysis should succeed" (orSuccess ownershipResult)
       let issues = orIssues ownershipResult
       -- Should detect lifetime issues
-      let lifetimeIssues = filter (\issue -> "lifetime" `isInfixOf` oiMessage issue) issues
+      let lifetimeIssues = L.filter (\issue -> "lifetime" `L.isInfixOf` oiMessage issue) issues
       assertBool "Should detect lifetime issues" (not (null lifetimeIssues))
 
 -- ============================================================================
@@ -441,7 +443,7 @@ test_variable_lifetime_tracking = do
         , "        inner := make([]int, 5)"
         , "        // inner should not be accessible outside this block"
         , "    }"
-        , "    return outer.length"
+        , "    return outer.L.length"
         , "}"
         ]
       parseResult = parseTypus content
@@ -475,7 +477,7 @@ test_dangling_reference_detection = do
       assertBool "Ownership analysis should succeed" (orSuccess ownershipResult)
       let issues = orIssues ownershipResult
       -- Should detect dangling references
-      let danglingIssues = filter (\issue -> "dangling" `isInfixOf` oiMessage issue) issues
+      let danglingIssues = L.filter (\issue -> "dangling" `L.isInfixOf` oiMessage issue) issues
       assertBool "Should detect dangling references" (not (null danglingIssues))
 
 test_lifetime_elision :: IO ()
@@ -520,7 +522,7 @@ test_lifetime_conflicts = do
       assertBool "Ownership analysis should succeed" (orSuccess ownershipResult)
       let issues = orIssues ownershipResult
       -- Should detect lifetime conflicts
-      let conflictIssues = filter (\issue -> "conflict" `isInfixOf` oiMessage issue) issues
+      let conflictIssues = L.filter (\issue -> "conflict" `L.isInfixOf` oiMessage issue) issues
       assertBool "Should detect lifetime conflicts" (not (null conflictIssues))
 
 test_struct_field_lifetimes :: IO ()
@@ -561,7 +563,7 @@ test_loop_ownership = do
         , "        item := data[i]"
         , "        // item should be moved from data"
         , "    }"
-        , "    return data.length"
+        , "    return data.L.length"
         , "}"
         ]
       parseResult = parseTypus content
@@ -581,7 +583,7 @@ test_closure_ownership = do
         , "func main() {"
         , "    data := make([]int, 10)"
         , "    closure := func() int {"
-        , "        return data.length"
+        , "        return data.L.length"
         , "    }"
         , "    return closure()"
         , "}"
@@ -606,7 +608,7 @@ test_generic_ownership = do
         , "func main() {"
         , "    data := make([]int, 10)"
         , "    result := process(data)"
-        , "    return result.length"
+        , "    return result.L.length"
         , "}"
         ]
       parseResult = parseTypus content
@@ -652,7 +654,7 @@ test_concurrent_ownership = do
         , "    go func() {"
         , "        process(data)"
         , "    }()"
-        , "    return data.length"
+        , "    return data.L.length"
         , "}"
         ]
       parseResult = parseTypus content
@@ -666,7 +668,7 @@ test_concurrent_ownership = do
       assertBool "Should handle ownership with concurrency" (not (null issues))
 
 -- ============================================================================
--- Error Recovery and Reporting Tests
+-- Error Recovery L.and Reporting Tests
 -- ============================================================================
 
 test_clear_error_messages :: IO ()
@@ -676,8 +678,8 @@ test_clear_error_messages = do
         , "func main() {"
         , "    data := make([]int, 10)"
         , "    new_owner := move(data)"
-        , "    length := data.length"  -- Use after move
-        , "    return length"
+        , "    L.length := data.L.length"  -- Use after move
+        , "    return L.length"
         , "}"
         ]
       parseResult = parseTypus content
@@ -688,9 +690,9 @@ test_clear_error_messages = do
       assertBool "Ownership analysis should succeed" (orSuccess ownershipResult)
       let issues = orIssues ownershipResult
       assertBool "Should have ownership issues" (not (null issues))
-      let firstIssue = head issues
+      let firstIssue = L.head issues
           message = oiMessage firstIssue
-      assertBool "Error message should be clear" (length message > 10)
+      assertBool "Error message should be clear" (L.length message > 10)
       assertBool "Error should have location information" (oiLine firstIssue > 0)
 
 test_ownership_fix_suggestions :: IO ()
@@ -700,8 +702,8 @@ test_ownership_fix_suggestions = do
         , "func main() {"
         , "    data := make([]int, 10)"
         , "    new_owner := move(data)"
-        , "    length := data.length"  -- Use after move
-        , "    return length"
+        , "    L.length := data.L.length"  -- Use after move
+        , "    return L.length"
         , "}"
         ]
       parseResult = parseTypus content
@@ -712,7 +714,7 @@ test_ownership_fix_suggestions = do
       assertBool "Ownership analysis should succeed" (orSuccess ownershipResult)
       let issues = orIssues ownershipResult
       assertBool "Should have ownership issues" (not (null issues))
-      let firstIssue = head issues
+      let firstIssue = L.head issues
           suggestions = oiSuggestions firstIssue
       -- Should provide suggestions for fixing ownership issues
       assertBool "Should provide suggestions" (not (null suggestions))
@@ -725,7 +727,7 @@ test_analysis_error_recovery = do
         , "    data := make([]int, 10)"
         , "    invalid := move(data)"
         , "    another_invalid := move(data)"  -- Double move
-        , "    return invalid.length"
+        , "    return invalid.L.length"
         , "}"
         ]
       parseResult = parseTypus content
@@ -735,8 +737,8 @@ test_analysis_error_recovery = do
       let ownershipResult = analyzeOwnership typusFile
       assertBool "Ownership analysis should succeed" (orSuccess ownershipResult)
       let issues = orIssues ownershipResult
-      -- Should recover from analysis errors and continue
-      assertBool "Should find multiple issues" (length issues >= 2)
+      -- Should recover from analysis errors L.and continue
+      assertBool "Should find multiple issues" (L.length issues >= 2)
 
 test_state_maintenance :: IO ()
 test_state_maintenance = do
@@ -746,7 +748,7 @@ test_state_maintenance = do
         , "    data := make([]int, 10)"
         , "    if true {"
         , "        owner := move(data)"
-        , "        return owner.length"
+        , "        return owner.L.length"
         , "    }"
         , "    return 42"
         , "}"
@@ -801,8 +803,8 @@ prop_ownership_violations_detected =
           , "func main() {"
           , "    data := make([]int, 10)"
           , "    new_owner := move(data)"
-          , "    length := data.length"  -- Use after move"
-          , "    return length"
+          , "    L.length := data.L.length"  -- Use after move"
+          , "    return L.length"
           , "}"
           ]
         parseResult = parseTypus violationContent
@@ -812,7 +814,7 @@ prop_ownership_violations_detected =
            let ownershipResult = analyzeOwnership typusFile
            in case ownershipResult of
                 OwnershipResult True _ -> property False
-                OwnershipResult False issues -> length issues > 0
+                OwnershipResult False issues -> L.length issues > 0
 
 prop_ownership_transfer_sound :: Property
 prop_ownership_transfer_sound =
@@ -826,4 +828,4 @@ prop_ownership_transfer_sound =
                 OwnershipResult True _ -> property True
                 OwnershipResult False issues -> 
                   -- If there are ownership issues, they should be well-formed
-                  all (\issue -> length (oiMessage issue) > 0 && oiLine issue > 0) issues
+                  L.all (\issue -> L.length (oiMessage issue) > 0 && oiLine issue > 0) issues

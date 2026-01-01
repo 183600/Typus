@@ -10,6 +10,7 @@ import TestSupport.QuickCheck (fastProperty)
 import Utils (splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed, breakOn)
 
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isSuffixOf)
 
 -- | 测试字符串分割功能的属性和边界情况
@@ -92,38 +93,38 @@ tests =
         ]
         
     , testGroup "Property Tests"
-        [ testProperty "splitBy preserves total length including delimiters" $ fastProperty $ \c input ->
-            let delim = head $ c ++ ","  -- 确保有一个分隔符
+        [ testProperty "splitBy preserves total L.length including delimiters" $ fastProperty $ \c input ->
+            let delim = L.head $ c ++ ","  -- 确保有一个分隔符
                 parts = splitBy delim input
                 reconstructed = intercalate [delim] parts
             in reconstructed == input
             
         , testProperty "splitByCollapsed removes delimiters in empty segments" $ fastProperty $ \c input ->
-            let delim = head $ c ++ ","
+            let delim = L.head $ c ++ ","
                 collapsed = splitByCollapsed delim input
-                hasNoEmpty = all (not . null) collapsed
+                hasNoEmpty = L.all (not . null) collapsed
             in hasNoEmpty
             
-        , testProperty "splitByCollapsed length <= splitBy length" $ fastProperty $ \c input ->
-            let delim = head $ c ++ ","
+        , testProperty "splitByCollapsed L.length <= splitBy L.length" $ fastProperty $ \c input ->
+            let delim = L.head $ c ++ ","
                 normal = splitBy delim input
                 collapsed = splitByCollapsed delim input
-            in length collapsed <= length normal
+            in L.length collapsed <= L.length normal
             
-        , testProperty "breakOn preserves total length" $ fastProperty $ \c input ->
-            let delim = head $ c ++ ","
+        , testProperty "breakOn preserves total L.length" $ fastProperty $ \c input ->
+            let delim = L.head $ c ++ ","
                 (prefix, suffix) = breakOn delim input
-            in length prefix + length suffix == length input
+            in L.length prefix + L.length suffix == L.length input
             
-        , testProperty "breakOn suffix starts with delimiter or is empty" $ fastProperty $ \c input ->
-            let delim = head $ c ++ ","
+        , testProperty "breakOn suffix starts with delimiter L.or is empty" $ fastProperty $ \c input ->
+            let delim = L.head $ c ++ ","
                 (prefix, suffix) = breakOn delim input
-            in null suffix || head suffix == delim
+            in null suffix || L.head suffix == delim
             
-        , testProperty "splitBy on single character returns original or two parts" $ fastProperty $ \c input ->
-            let delim = head $ c ++ ","
+        , testProperty "splitBy on single character returns original L.or two parts" $ fastProperty $ \c input ->
+            let delim = L.head $ c ++ ","
                 parts = splitBy delim input
-            in length parts == 1 || length parts >= 2
+            in L.length parts == 1 || L.length parts >= 2
         ]
         
     , testGroup "Edge Cases"
@@ -149,33 +150,33 @@ tests =
             splitByCollapsed '\t' "col1\t\tcol2" @?= ["col1", "col2"]
         ]
         
-    , testGroup "Performance and Robustness"
+    , testGroup "Performance L.and Robustness"
         [ testCase "handles very long strings" $ do
-            let longString = concat $ replicate 1000 "test,"
+            let longString = L.concat $ replicate 1000 "test,"
                 parts = splitBy ',' longString
-            length parts >= 0 @?= True
+            L.length parts >= 0 @?= True
             
         , testCase "handles many consecutive delimiters" $ do
             let manyDelimiters = replicate 1000 ','
                 parts = splitBy ',' manyDelimiters
                 collapsed = splitByCollapsed ',' manyDelimiters
-            length parts @?= 1001
-            length collapsed @?= 0
+            L.length parts @?= 1001
+            L.length collapsed @?= 0
             
-        , testProperty "functions don't crash on any input" $ fastProperty $ \c input ->
-            let delim = head $ c ++ ","
+        , testProperty "functions don't crash on L.any input" $ fastProperty $ \c input ->
+            let delim = L.head $ c ++ ","
                 split1 = splitBy delim input
                 split2 = splitByCollapsed delim input
                 break1 = breakOn delim input
-            in length split1 >= 0 && length split2 >= 0 && length break1 >= 0
+            in L.length split1 >= 0 && L.length split2 >= 0 && L.length break1 >= 0
             
         , testProperty "functions handle large delimiters correctly" $ fastProperty $ \input ->
             let parts = splitBy ',' input
                 collapsed = splitByCollapsed ',' input
                 commaParts = splitByComma input
                 commaCollapsed = splitByCommaCollapsed input
-            in length parts >= 0 && length collapsed >= 0 && 
-               length commaParts >= 0 && length commaCollapsed >= 0
+            in L.length parts >= 0 && L.length collapsed >= 0 && 
+               L.length commaParts >= 0 && L.length commaCollapsed >= 0
         ]
         
     , testGroup "Consistency Tests"
@@ -191,11 +192,11 @@ tests =
             where checkConsistency input = do
                     splitByCommaCollapsed input @?= splitByCollapsed ',' input
                     
-        , testProperty "splitBy and splitByCollapsed relationship" $ fastProperty $ \c input ->
-            let delim = head $ c ++ ","
+        , testProperty "splitBy L.and splitByCollapsed relationship" $ fastProperty $ \c input ->
+            let delim = L.head $ c ++ ","
                 normal = splitBy delim input
                 collapsed = splitByCollapsed delim input
-                filtered = filter (not . null) normal
+                filtered = L.filter (not . null) normal
             in collapsed == filtered
         ]
         
@@ -210,9 +211,9 @@ tests =
             
         , testProperty "splitBy handles repeated patterns" $ fastProperty $ \pattern count ->
             let count' = abs count `mod` 10 + 1
-                repeated = concat $ replicate count' [pattern]
+                repeated = L.concat $ replicate count' [pattern]
                 parts = splitBy ',' repeated
-            in length parts >= 0
+            in L.length parts >= 0
         ]
     ]
     

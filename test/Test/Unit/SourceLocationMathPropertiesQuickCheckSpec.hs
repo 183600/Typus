@@ -6,6 +6,7 @@
 module Test.Unit.SourceLocationMathPropertiesQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -56,7 +57,7 @@ tests =
         ]
 
     , testGroup "SourceSpan Properties"
-        [ fastProperty "empty span has zero length" $
+        [ fastProperty "empty span has zero L.length" $
             \pos ->
               let span = emptySpan pos
               in spanStart span === spanEnd span
@@ -75,7 +76,7 @@ tests =
               in spanStart merged1 === spanStart merged2 .&&.
                  spanEnd merged1 === spanEnd merged2
               
-        , fastProperty "span merge contains all original spans" $
+        , fastProperty "span merge contains L.all original spans" $
             \span1 span2 ->
               let merged = mergeSpans span1 span2
                   start1 = spanStart span1

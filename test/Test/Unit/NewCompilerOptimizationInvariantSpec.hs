@@ -10,6 +10,7 @@
 module Test.Unit.NewCompilerOptimizationInvariantSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -24,7 +25,8 @@ import SourceLocation (SourceSpan(..), SourcePos(..), startPos, spanBetween)
 
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (sort, nub, isInfixOf, isPrefixOf)
+import Data.List (isInfixOf, isPrefixOf)
+import Data.List (sort, nub)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import Data.Either (isLeft, isRight)
 
@@ -54,7 +56,7 @@ createTypusFile codeContents =
 -- Property: Compilation preserves semantic meaning
 prop_compilation_preserves_semantics :: String -> Property
 prop_compilation_preserves_semantics code =
-  not (null code) && length code <= 1000 ==>  -- Limit for performance
+  not (null code) && L.length code <= 1000 ==>  -- Limit for performance
   let typusFile = createTypusFile [code]
       result = compile typusFile
   in case result of
@@ -64,7 +66,7 @@ prop_compilation_preserves_semantics code =
 -- Property: Source IR preserves original source text
 prop_source_ir_preserves_source :: [String] -> Property
 prop_source_ir_preserves_source codeBlocks =
-  not (null codeBlocks) && length codeBlocks <= 10 ==>  -- Limit for performance
+  not (null codeBlocks) && L.length codeBlocks <= 10 ==>  -- Limit for performance
   let typusFile = createTypusFile codeBlocks
       sourceIR = buildSourceIR typusFile
       originalText = unlines codeBlocks
@@ -74,43 +76,43 @@ prop_source_ir_preserves_source codeBlocks =
 -- Property: Semantic IR contains valid Go module structure
 prop_semantic_ir_valid_structure :: String -> Property
 prop_semantic_ir_valid_structure code =
-  not (null code) && length code <= 500 ==>  -- Limit for performance
+  not (null code) && L.length code <= 500 ==>  -- Limit for performance
   let typusFile = createTypusFile [code]
       sourceIR = buildSourceIR typusFile
       result = buildSemanticIR sourceIR
   in case result of
-       Right semanticIR -> property $ not (null (show semanticIR))  -- Should have some structure
+       Right semanticIR -> property $ not (L.null (show semanticIR))  -- Should have some structure
        Left _ -> property $ True  -- May fail, but shouldn't crash
 
 -- Property: Go IR contains valid Go source code
 prop_go_ir_valid_source :: String -> Property
 prop_go_ir_valid_source code =
-  not (null code) && length code <= 500 ==>  -- Limit for performance
+  not (null code) && L.length code <= 500 ==>  -- Limit for performance
   let typusFile = createTypusFile [code]
       result = compile typusFile
   in case result of
-       Right goCode -> property $ "package main" `isInfixOf` goCode .||. 
-                                   "func main()" `isInfixOf` goCode .||.
+       Right goCode -> property $ "package main" `L.isInfixOf` goCode .||. 
+                                   "func main()" `L.isInfixOf` goCode .||.
                                    not (null goCode)
        Left _ -> property $ True  -- May fail, but shouldn't crash
 
 -- Property: Compilation is deterministic
 prop_compilation_deterministic :: String -> Property
 prop_compilation_deterministic code =
-  not (null code) && length code <= 500 ==>  -- Limit for performance
+  not (null code) && L.length code <= 500 ==>  -- Limit for performance
   let typusFile = createTypusFile [code]
       result1 = compile typusFile
       result2 = compile typusFile
   in case (result1, result2) of
        (Right code1, Right code2) -> property $ code1 === code2
-       (Left err1, Left err2) -> property $ length err1 === length err2  -- Same number of errors
+       (Left err1, Left err2) -> property $ L.length err1 === L.length err2  -- Same number of errors
        (Right _, Left _) -> property $ False  -- Shouldn't happen
        (Left _, Right _) -> property $ False  -- Shouldn't happen
 
 -- Property: Multiple code blocks are processed correctly
 prop_multiple_code_blocks :: [String] -> Property
 prop_multiple_code_blocks codeBlocks =
-  not (null codeBlocks) && length codeBlocks <= 5 ==>  -- Limit for performance
+  not (null codeBlocks) && L.length codeBlocks <= 5 ==>  -- Limit for performance
   let typusFile = createTypusFile codeBlocks
       result = compile typusFile
   in case result of
@@ -131,47 +133,47 @@ prop_empty_code_blocks numBlocks =
 -- Property: Compilation preserves import statements
 prop_compilation_preserves_imports :: String -> Property
 prop_compilation_preserves_imports code =
-  "import" `isInfixOf` code && length code <= 500 ==>  -- Only test code with imports
+  "import" `L.isInfixOf` code && L.length code <= 500 ==>  -- Only test code with imports
   let typusFile = createTypusFile [code]
       result = compile typusFile
   in case result of
-       Right goCode -> property $ "import" `isInfixOf` goCode
+       Right goCode -> property $ "import" `L.isInfixOf` goCode
        Left _ -> property $ True  -- May fail, but shouldn't crash
 
 -- Property: Compilation preserves function declarations
 prop_compilation_preserves_functions :: String -> Property
 prop_compilation_preserves_functions code =
-  "func" `isInfixOf` code && length code <= 500 ==>  -- Only test code with functions
+  "func" `L.isInfixOf` code && L.length code <= 500 ==>  -- Only test code with functions
   let typusFile = createTypusFile [code]
       result = compile typusFile
   in case result of
-       Right goCode -> property $ "func" `isInfixOf` goCode
+       Right goCode -> property $ "func" `L.isInfixOf` goCode
        Left _ -> property $ True  -- May fail, but shouldn't crash
 
 -- Property: Compilation handles variable declarations
 prop_compilation_handles_variables :: String -> Property
 prop_compilation_handles_variables code =
-  "var" `isInfixOf` code && length code <= 500 ==>  -- Only test code with variables
+  "var" `L.isInfixOf` code && L.length code <= 500 ==>  -- Only test code with variables
   let typusFile = createTypusFile [code]
       result = compile typusFile
   in case result of
-       Right goCode -> property $ "var" `isInfixOf` goCode
+       Right goCode -> property $ "var" `L.isInfixOf` goCode
        Left _ -> property $ True  -- May fail, but shouldn't crash
 
 -- Property: Compilation handles type annotations
 prop_compilation_handles_types :: String -> Property
 prop_compilation_handles_types code =
-  any (`isInfixOf` code) ["int", "string", "bool", "float"] && length code <= 500 ==>  -- Only test code with types
+  any (`L.isInfixOf` code) ["int", "string", "bool", "float"] && L.length code <= 500 ==>  -- Only test code with types
   let typusFile = createTypusFile [code]
       result = compile typusFile
   in case result of
-       Right goCode -> property $ any (`isInfixOf` goCode) ["int", "string", "bool", "float"]
+       Right goCode -> property $ L.any (`L.isInfixOf` goCode) ["int", "string", "bool", "float"]
        Left _ -> property $ True  -- May fail, but shouldn't crash
 
 -- Property: Source IR building is deterministic
 prop_source_ir_deterministic :: [String] -> Property
 prop_source_ir_deterministic codeBlocks =
-  not (null codeBlocks) && length codeBlocks <= 5 ==>  -- Limit for performance
+  not (null codeBlocks) && L.length codeBlocks <= 5 ==>  -- Limit for performance
   let typusFile = createTypusFile codeBlocks
       sourceIR1 = buildSourceIR typusFile
       sourceIR2 = buildSourceIR typusFile
@@ -181,21 +183,21 @@ prop_source_ir_deterministic codeBlocks =
 -- Property: Semantic IR building is deterministic
 prop_semantic_ir_deterministic :: String -> Property
 prop_semantic_ir_deterministic code =
-  not (null code) && length code <= 500 ==>  -- Limit for performance
+  not (null code) && L.length code <= 500 ==>  -- Limit for performance
   let typusFile = createTypusFile [code]
       sourceIR = buildSourceIR typusFile
       result1 = buildSemanticIR sourceIR
       result2 = buildSemanticIR sourceIR
   in case (result1, result2) of
        (Right ir1, Right ir2) -> property $ show ir1 === show ir2
-       (Left err1, Left err2) -> property $ length err1 === length err2  -- Same number of errors
+       (Left err1, Left err2) -> property $ L.length err1 === L.length err2  -- Same number of errors
        (Right _, Left _) -> property $ False  -- Shouldn't happen
        (Left _, Right _) -> property $ False  -- Shouldn't happen
 
 -- Property: Go emission preserves module structure
 prop_go_emission_preserves_structure :: String -> Property
 prop_go_emission_preserves_structure code =
-  not (null code) && length code <= 500 ==>  -- Limit for performance
+  not (null code) && L.length code <= 500 ==>  -- Limit for performance
   let typusFile = createTypusFile [code]
       sourceIR = buildSourceIR typusFile
       result = buildSemanticIR sourceIR
@@ -203,13 +205,13 @@ prop_go_emission_preserves_structure code =
        Right semanticIR ->
          let goIR = emitGo semanticIR
              goSource = goModule (goIR)
-         in property $ not (null (show goSource))
+         in property $ not (L.null (show goSource))
        Left _ -> property $ True  -- May fail, but shouldn't crash
 
 -- Property: Compilation pipeline maintains consistency
 prop_compilation_pipeline_consistency :: String -> Property
 prop_compilation_pipeline_consistency code =
-  not (null code) && length code <= 500 ==>  -- Limit for performance
+  not (null code) && L.length code <= 500 ==>  -- Limit for performance
   let typusFile = createTypusFile [code]
       directResult = compile typusFile
       pipelineResult = do
@@ -226,19 +228,19 @@ prop_compilation_pipeline_consistency code =
 -- Property: Error messages contain useful information
 prop_error_messages_useful :: String -> Property
 prop_error_messages_useful code =
-  "var x int = \"string\"" `isInfixOf` code ==>  -- Force a specific error
+  "var x int = \"string\"" `L.isInfixOf` code ==>  -- Force a specific error
   let typusFile = createTypusFile [code]
       result = compile typusFile
   in case result of
-       Left errors -> property $ any (\err -> "type error" `isInfixOf` show err || 
-                                           "CP0003" `isInfixOf` show err) errors
+       Left errors -> property $ L.any (\err -> "type error" `L.isInfixOf` show err || 
+                                           "CP0003" `L.isInfixOf` show err) errors
        Right _ -> property $ True  -- May succeed unexpectedly
 
 -- Property: Large source files are handled without crashing
 prop_large_source_files :: Int -> String -> Property
 prop_large_source_files multiplier base =
   multiplier >= 0 && multiplier <= 100 ==>  -- Limit for performance
-  let largeCode = concat (replicate multiplier (base ++ "\n"))
+  let largeCode = L.concat (replicate multiplier (base ++ "\n"))
       typusFile = createTypusFile [largeCode]
       result = compile typusFile
   in case result of
@@ -248,7 +250,7 @@ prop_large_source_files multiplier base =
 -- Property: Compilation with syntax errors provides diagnostics
 prop_syntax_error_diagnostics :: String -> Property
 prop_syntax_error_diagnostics code =
-  "func {" `isInfixOf` code ==>  -- Force a syntax error
+  "func {" `L.isInfixOf` code ==>  -- Force a syntax error
   let typusFile = createTypusFile [code]
       result = compile typusFile
   in case result of
@@ -258,17 +260,17 @@ prop_syntax_error_diagnostics code =
 -- Property: Compilation preserves comments (when possible)
 prop_compilation_preserves_comments :: String -> Property
 prop_compilation_preserves_comments code =
-  "//" `isInfixOf` code && length code <= 500 ==>  -- Only test code with comments
+  "//" `L.isInfixOf` code && L.length code <= 500 ==>  -- Only test code with comments
   let typusFile = createTypusFile [code]
       result = compile typusFile
   in case result of
-       Right goCode -> property $ "//" `isInfixOf` goCode .||. "/*" `isInfixOf` goCode
+       Right goCode -> property $ "//" `L.isInfixOf` goCode .||. "/*" `L.isInfixOf` goCode
        Left _ -> property $ True  -- May fail, but shouldn't crash
 
 -- Property: Multiple compilation passes are idempotent
 prop_multiple_compilation_idempotent :: String -> Property
 prop_multiple_compilation_idempotent code =
-  not (null code) && length code <= 500 ==>  -- Limit for performance
+  not (null code) && L.length code <= 500 ==>  -- Limit for performance
   let typusFile = createTypusFile [code]
       result1 = compile typusFile
   in case result1 of
@@ -276,7 +278,7 @@ prop_multiple_compilation_idempotent code =
          let typusFile2 = createTypusFile [goCode1]  -- Compile the result again
              result2 = compile typusFile2
          in case result2 of
-              Right goCode2 -> property $ length goCode2 > 0  -- Should still produce output
+              Right goCode2 -> property $ L.length goCode2 > 0  -- Should still produce output
               Left _ -> property $ True  -- May fail, but shouldn't crash
        Left _ -> property $ True  -- First compilation failed, skip second
 

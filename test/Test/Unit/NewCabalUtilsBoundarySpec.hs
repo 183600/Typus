@@ -31,6 +31,7 @@ import Utils
 
 import Data.Char (isSpace, isControl, isAscii)
 import qualified Data.List as List
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 
 -- | Test suite for Utils boundary conditions
@@ -65,14 +66,14 @@ tests =
         , fastProperty "indentation functions handle Unicode content" prop_indentation_unicode_content
         ]
 
-    , testGroup "Search and processing boundary conditions"
+    , testGroup "Search L.and processing boundary conditions"
         [ fastProperty "breakOn with empty pattern" prop_breakOn_empty_pattern
         , fastProperty "breakOn with pattern longer than string" prop_breakOn_pattern_too_long
         , fastProperty "breakOn with overlapping patterns" prop_breakOn_overlapping
         , fastProperty "breakOn with special characters" prop_breakOn_special_chars
         ]
 
-    , testGroup "Performance and memory boundary conditions"
+    , testGroup "Performance L.and memory boundary conditions"
         [ fastProperty "utils functions handle very large strings" prop_utils_large_strings
         , fastProperty "utils functions handle deep recursion" prop_utils_deep_recursion
         , fastProperty "utils functions handle memory pressure" prop_utils_memory_pressure
@@ -88,7 +89,7 @@ prop_trim_empty =
 
 prop_trim_whitespace_only :: String -> Property
 prop_trim_whitespace_only chars =
-  all isSpace chars && length chars <= 20 ==>
+  L.all isSpace chars && L.length chars <= 20 ==>
   let result = trim chars
   in property $ result === ""
 
@@ -97,15 +98,15 @@ prop_trim_unicode_whitespace content =
   let unicodeWhitespace = " \t\n\r\u00A0\u2000\u3000"  -- Various Unicode spaces
       input = unicodeWhitespace ++ content ++ unicodeWhitespace
       result = trim input
-  in property $ not (any isSpace (take 1 result)) .&&.
-             not (any isSpace (reverse (take 1 (reverse result))))
+  in property $ not (L.any isSpace (take 1 result)) .&&.
+             not (L.any isSpace (L.reverse (take 1 (L.reverse result))))
 
 prop_trim_control_chars :: String -> Property
 prop_trim_control_chars content =
   let controlChars = ['\0'..'\31'] ++ ['\127']
       input = controlChars ++ content ++ controlChars
       result = trim input
-  in property $ length result >= length content
+  in property $ L.length result >= L.length content
 
 -- String splitting boundary conditions
 
@@ -126,15 +127,15 @@ prop_splitBy_only_delimiters delim count =
   count > 0 && count <= 10 ==>
   let input = replicate count delim
       result = splitBy delim input
-  in property $ length result === count + 1 .&&. all (== "") result
+  in property $ L.length result === count + 1 .&&. L.all (== "") result
 
 prop_splitBy_large_strings :: Char -> Int -> Property
 prop_splitBy_large_strings delim size =
   size >= 0 && size <= 100 ==>
   let input = replicate size 'a' ++ [delim] ++ replicate size 'b'
       result = splitBy delim input
-  in property $ length result === 2 .&&. 
-             head result === replicate size 'a' .&&.
+  in property $ L.length result === 2 .&&. 
+             L.head result === replicate size 'a' .&&.
              last result === replicate size 'b'
 
 -- Comment removal boundary conditions
@@ -146,24 +147,24 @@ prop_removeComments_empty =
 
 prop_removeComments_unterminated :: String -> Property
 prop_removeComments_unterminated content =
-  not ("*/" `isInfixOf` content) && not ("/*" `isInfixOf` content) ==>
+  not ("*/" `L.isInfixOf` content) && not ("/*" `L.isInfixOf` content) ==>
   let input = content ++ "/* unterminated comment"
       result = removeComments input
-  in property $ length result <= length input
+  in property $ L.length result <= L.length input
 
 prop_removeComments_nested_markers :: String -> Property
 prop_removeComments_nested_markers content =
-  not ("/*" `isInfixOf` content) && not ("*/" `isInfixOf` content) ==>
+  not ("/*" `L.isInfixOf` content) && not ("*/" `L.isInfixOf` content) ==>
   let input = "/* outer /* inner */" ++ content
       result = removeComments input
-  in property $ not ("/* outer" `isInfixOf` result)
+  in property $ not ("/* outer" `L.isInfixOf` result)
 
 prop_removeComments_malformed_strings :: String -> Property
 prop_removeComments_malformed_strings content =
   not ('"' `elem` content) && not ('\'' `elem` content) ==>
   let input = "unterminated string \" // not a comment\n" ++ content
       result = removeComments input
-  in property $ length result >= length content
+  in property $ L.length result >= L.length content
 
 -- Indentation processing boundary conditions
 
@@ -171,7 +172,7 @@ prop_normalizeIndentation_empty_lines :: String -> Property
 prop_normalizeIndentation_empty_lines content =
   let input = "\n\n" ++ content ++ "\n\n"
       result = normalizeIndentation input
-  in property $ "\n\n" `isInfixOf` result
+  in property $ "\n\n" `L.isInfixOf` result
 
 prop_normalizeIndentation_mixed_whitespace :: Int -> Int -> Property
 prop_normalizeIndentation_mixed_whitespace spaces tabs =
@@ -179,7 +180,7 @@ prop_normalizeIndentation_mixed_whitespace spaces tabs =
   let mixedPrefix = replicate spaces ' ' ++ replicate tabs '\t'
       input = mixedPrefix ++ "content\n" ++ mixedPrefix ++ "more"
       result = normalizeIndentation input
-  in property $ not (mixedPrefix `isPrefixOf` result)
+  in property $ not (mixedPrefix `L.isPrefixOf` result)
 
 prop_forceSingleTabIndentation_excessive :: Int -> Property
 prop_forceSingleTabIndentation_excessive indentLevel =
@@ -187,7 +188,7 @@ prop_forceSingleTabIndentation_excessive indentLevel =
   let excessiveIndent = replicate indentLevel ' '
       input = excessiveIndent ++ "content"
       result = forceSingleTabIndentation input
-  in property $ "\t" `isPrefixOf` result
+  in property $ "\t" `L.isPrefixOf` result
 
 prop_indentation_unicode_content :: String -> Property
 prop_indentation_unicode_content content =
@@ -195,10 +196,10 @@ prop_indentation_unicode_content content =
       input = "    " ++ unicodeContent
       result1 = normalizeIndentation input
       result2 = forceSingleTabIndentation input
-  in property $ unicodeContent `isInfixOf` result1 .&&.
-             unicodeContent `isInfixOf` result2
+  in property $ unicodeContent `L.isInfixOf` result1 .&&.
+             unicodeContent `L.isInfixOf` result2
 
--- Search and processing boundary conditions
+-- Search L.and processing boundary conditions
 
 prop_breakOn_empty_pattern :: String -> Property
 prop_breakOn_empty_pattern haystack =
@@ -207,14 +208,14 @@ prop_breakOn_empty_pattern haystack =
 
 prop_breakOn_pattern_too_long :: String -> String -> Property
 prop_breakOn_pattern_too_long pat haystack =
-  not (null pat) && length pat > length haystack ==>
+  not (null pat) && L.length pat > L.length haystack ==>
   let (before, after) = breakOn pat haystack
   in property $ before === haystack .&&. after === ""
 
 prop_breakOn_overlapping :: String -> Property
 prop_breakOn_overlapping base =
-  not (null base) && length base <= 10 ==>
-  let pat = base ++ take (length base - 1) base
+  not (null base) && L.length base <= 10 ==>
+  let pat = base ++ take (L.length base - 1) base
       haystack = base ++ "extra"
       (before, after) = breakOn pat haystack
   in property $ before ++ pat ++ after === haystack .||. (before === haystack .&&. after === "")
@@ -226,30 +227,30 @@ prop_breakOn_special_chars content =
       (before, after) = breakOn specialChars haystack
   in property $ before === content .&&. after === content
 
--- Performance and memory boundary conditions
+-- Performance L.and memory boundary conditions
 
 prop_utils_large_strings :: Int -> Property
 prop_utils_large_strings multiplier =
   multiplier >= 0 && multiplier <= 20 ==>
-  let largeContent = concat (replicate multiplier "test content ")
+  let largeContent = L.concat (replicate multiplier "test content ")
       trimmed = trim largeContent
       split = splitBy ' ' largeContent
       commentsRemoved = removeLineComments largeContent
-  in property $ length trimmed <= length largeContent .&&.
-             length split >= 1 .&&.
-             length commentsRemoved <= length largeContent
+  in property $ L.length trimmed <= L.length largeContent .&&.
+             L.length split >= 1 .&&.
+             L.length commentsRemoved <= L.length largeContent
 
 prop_utils_deep_recursion :: Int -> Property
 prop_utils_deep_recursion depth =
   depth >= 0 && depth <= 10 ==>
-  let nestedContent = concat (replicate depth "/* comment ") ++ "content" ++ concat (replicate depth " */ ")
+  let nestedContent = L.concat (replicate depth "/* comment ") ++ "content" ++ L.concat (replicate depth " */ ")
       result = removeComments nestedContent
-  in property $ length result <= length nestedContent + depth
+  in property $ L.length result <= L.length nestedContent + depth
 
 prop_utils_memory_pressure :: Int -> Property
 prop_utils_memory_pressure operations =
   operations >= 0 && operations <= 50 ==>
-  let baseContent = "test content with // comments and /* block comments */"
+  let baseContent = "test content with // comments L.and /* block comments */"
       processOperations = iterate removeComments baseContent
-      finalResult = processOperations !! (min operations (length processOperations - 1))
-  in property $ length finalResult <= length baseContent * 2
+      finalResult = processOperations !! (min operations (L.length processOperations - 1))
+  in property $ L.length finalResult <= L.length baseContent * 2

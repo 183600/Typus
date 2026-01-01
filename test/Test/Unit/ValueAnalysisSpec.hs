@@ -11,7 +11,7 @@ import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 tests :: TestTree
 tests =
     testGroup "ValueAnalysis"
-        [ testCase "handles comments, strings, and multi-line references" $ do
+        [ testCase "handles comments, strings, L.and multi-line references" $ do
             goModule <- parseModule sampleSource
             let infos = analyzeValueSemantics goModule
                 kindOf = kindsFor infos
@@ -44,7 +44,7 @@ tests =
             kindOf "alias" @?= [Reference]
             kindOf "ref" @?= [Reference]
 
-        , testCase "handles composite literals and builder patterns" $ do
+        , testCase "handles composite literals L.and builder patterns" $ do
             goModule <- parseModule compositeLiteralSource
             let infos = analyzeValueSemantics goModule
                 kindOf = kindsFor infos

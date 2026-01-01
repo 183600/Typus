@@ -15,6 +15,7 @@ import qualified Data.Text as T
 import Data.Either (isLeft, isRight)
 import Data.Maybe (isJust, isNothing)
 import qualified Data.Map.Strict as Map
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 
 -- ============================================================================
@@ -149,7 +150,7 @@ prop_type_ref_has_name name args =
 prop_simple_type_ref_no_args :: Property
 prop_simple_type_ref_no_args =
   let ref = TypeRef "int" []
-  in refName ref === "int" .&&. null (refArgs ref)
+  in refName ref === "int" .&&. L.null (refArgs ref)
 
 -- ============================================================================
 -- Field QuickCheck Tests
@@ -224,7 +225,7 @@ prop_type_decl_has_components name params body constraints =
 -- Test DependentFunction creation
 prop_dependent_function_has_components :: String -> [(String, TypeRef)] -> TypeRef -> [TypeConstraint] -> Property
 prop_dependent_function_has_components name params ret constraints =
-  not (null name) && all (not . null . fst) params ==>
+  not (null name) && L.all (not . null . fst) params ==>
   let func = DependentFunction name params ret constraints
   in case func of
     DependentFunction n p r c -> n === name && p === params && r === ret && c === constraints
@@ -256,7 +257,7 @@ prop_run_parser_handles_valid_input =
     let result = runDependentTypesParser code
     in case result of
       Left _ -> property False  -- Valid input should not fail
-      Right (types, parser) -> length types >= 0  -- Should return some types
+      Right (types, parser) -> L.length types >= 0  -- Should return some types
 
 prop_run_parser_handles_invalid_input :: Property
 prop_run_parser_handles_invalid_input =
@@ -264,7 +265,7 @@ prop_run_parser_handles_invalid_input =
     let result = runDependentTypesParser code
     in case result of
       Left _ -> property True  -- Invalid input should fail
-      Right (types, parser) -> not (null (parserErrors parser))  -- Should have errors
+      Right (types, parser) -> not (L.null (parserErrors parser))  -- Should have errors
 
 -- Test parseDependentType function
 prop_parse_dependent_type_returns_result :: Property
@@ -370,7 +371,7 @@ prop_parse_multiple_definitions =
         result = runDependentTypesParser input
     in case result of
       Left _ -> property False  -- Valid definitions should not fail
-      Right (types, parser) -> length types >= 0  -- Should return some types
+      Right (types, parser) -> L.length types >= 0  -- Should return some types
 
 -- Test parser preserves order
 prop_parser_preserves_order :: Property
@@ -379,7 +380,7 @@ prop_parser_preserves_order =
     let input = unlines decls
         result = runDependentTypesParser input
     in case result of
-      Right (types, parser) -> length types >= 0  -- Basic order check
+      Right (types, parser) -> L.length types >= 0  -- Basic order check
       Left _ -> property False
 
 tests :: TestTree
@@ -389,7 +390,7 @@ tests = testGroup "New Cabal DependentTypesParser QuickCheck Tests"
       , testProperty "simple type ref no args" prop_simple_type_ref_no_args
       ]
   , testGroup "Field tests"
-      [ testProperty "field has name and type" prop_field_has_name_and_type
+      [ testProperty "field has name L.and type" prop_field_has_name_and_type
       ]
   , testGroup "TypeBody tests"
       [ testProperty "struct body contains fields" prop_struct_body_contains_fields

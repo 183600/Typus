@@ -20,14 +20,16 @@ import Compiler.IR (IRProgram(..), IRStatement(..), IRExpression(..))
 import Utils (trim)
 
 import Data.Char (isLetter, isDigit)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (sort)
 import qualified Data.List as List
 import qualified Data.Map as Map
 
 -- Property: Dead code elimination should remove unreachable code
 prop_dead_code_elimination :: String -> Property
 prop_dead_code_elimination unreachableCode =
-  length unreachableCode <= 100 ==> -- Limit size
+  L.length unreachableCode <= 100 ==> -- Limit size
   let source = unlines 
         [ "package main"
         , "func main() {"
@@ -55,7 +57,7 @@ prop_constant_folding x y =
 -- Property: Function inlining should work for simple functions
 prop_function_inlining :: String -> Property
 prop_function_inlining funcBody =
-  length funcBody <= 50 ==> -- Limit size
+  L.length funcBody <= 50 ==> -- Limit size
   let source = unlines 
         [ "package main"
         , "func simple() {"
@@ -108,7 +110,7 @@ prop_tail_recursion_optimization depth =
 -- Property: Common subexpression elimination should work
 prop_common_subexpression_elimination :: String -> String -> Property
 prop_common_subexpression_elimination expr1 expr2 =
-  length expr1 <= 30 && length expr2 <= 30 ==> -- Limit size
+  L.length expr1 <= 30 && L.length expr2 <= 30 ==> -- Limit size
   let source = unlines 
         [ "package main"
         , "func main() {"
@@ -138,9 +140,9 @@ prop_strength_reduction power =
 -- Property: Register allocation should minimize memory accesses
 prop_register_allocation :: [String] -> Property
 prop_register_allocation variables =
-  not (null variables) && length (take 10 variables) <= 10 ==> -- Limit variables
+  not (null variables) && L.length (take 10 variables) <= 10 ==> -- Limit variables
   let limitedVars = take 10 variables
-      varDecls = map (\v -> "   " ++ v ++ " := 0") limitedVars
+      varDecls = L.map (\v -> "   " ++ v ++ " := 0") limitedVars
       source = unlines $ ["package main", "func main() {"] ++ varDecls ++ ["}"]
   in case compileTypus source of
        Left _ -> property $ True
@@ -167,7 +169,7 @@ prop_instruction_scheduling operations =
 -- Property: Peephole optimization should improve instruction sequences
 prop_peephole_optimization :: String -> Property
 prop_peephole_optimization instruction =
-  length instruction <= 40 ==> -- Limit size
+  L.length instruction <= 40 ==> -- Limit size
   let source = unlines 
         [ "package main"
         , "func main() {"
@@ -183,7 +185,7 @@ prop_peephole_optimization instruction =
 -- Property: Function call optimization should handle direct calls
 prop_function_call_optimization :: String -> Property
 prop_function_call_optimization funcName =
-  not (null funcName) && all isLetter funcName ==>
+  not (null funcName) && L.all isLetter funcName ==>
   let source = unlines 
         [ "package main"
         , "func " ++ funcName "() int {"
@@ -200,9 +202,9 @@ prop_function_call_optimization funcName =
 -- Property: Memory access optimization should reduce loads/stores
 prop_memory_access_optimization :: [String] -> Property
 prop_memory_access_optimization accesses =
-  not (null accesses) && length (take 5 accesses) <= 5 ==> -- Limit accesses
+  not (null accesses) && L.length (take 5 accesses) <= 5 ==> -- Limit accesses
   let limitedAccesses = take 5 accesses
-      accessLines = map (\a -> "   _ = " ++ a) limitedAccesses
+      accessLines = L.map (\a -> "   _ = " ++ a) limitedAccesses
       source = unlines $ ["package main", "var global int", "func main() {"] ++ accessLines ++ ["}"]
   in case compileTypus source of
        Left _ -> property $ True
@@ -211,7 +213,7 @@ prop_memory_access_optimization accesses =
 -- Property: Branch prediction optimization should handle conditionals
 prop_branch_prediction_optimization :: String -> Property
 prop_branch_prediction_optimization condition =
-  length condition <= 30 ==> -- Limit size
+  L.length condition <= 30 ==> -- Limit size
   let source = unlines 
         [ "package main"
         , "func main() {"
@@ -229,7 +231,7 @@ prop_branch_prediction_optimization condition =
 -- Property: Inline cache optimization should improve method calls
 prop_inline_cache_optimization :: String -> Property
 prop_inline_cache_optimization methodName =
-  not (null methodName) && all isLetter methodName ==>
+  not (null methodName) && L.all isLetter methodName ==>
   let source = unlines 
         [ "package main"
         , "type MyStruct struct { value int }"
@@ -248,9 +250,9 @@ prop_inline_cache_optimization methodName =
 -- Property: Stack frame optimization should reduce memory usage
 prop_stack_frame_optimization :: [String] -> Property
 prop_stack_frame_optimization localVars =
-  not (null localVars) && length (take 8 localVars) <= 8 ==> -- Limit locals
+  not (null localVars) && L.length (take 8 localVars) <= 8 ==> -- Limit locals
   let limitedVars = take 8 localVars
-      varLines = map (\v -> "   " ++ v ++ " := 0") limitedVars
+      varLines = L.map (\v -> "   " ++ v ++ " := 0") limitedVars
       source = unlines $ ["package main", "func main() {"] ++ varLines ++ ["}"]
   in case compileTypus source of
        Left _ -> property $ True
@@ -259,7 +261,7 @@ prop_stack_frame_optimization localVars =
 -- Property: Global value numbering should identify equivalent expressions
 prop_global_value_numbering :: String -> Property
 prop_global_value_numbering expression =
-  length expression <= 50 ==> -- Limit size
+  L.length expression <= 50 ==> -- Limit size
   let source = unlines 
         [ "package main"
         , "func main() {"
@@ -275,7 +277,7 @@ prop_global_value_numbering expression =
 -- Property: Loop invariant code motion should move calculations out
 prop_loop_invariant_code_motion :: String -> Property
 prop_loop_invariant_code_motion invariant =
-  length invariant <= 30 ==> -- Limit size
+  L.length invariant <= 30 ==> -- Limit size
   let source = unlines 
         [ "package main"
         , "func main() {"
@@ -292,7 +294,7 @@ prop_loop_invariant_code_motion invariant =
 -- Property: Copy propagation should eliminate redundant assignments
 prop_copy_propagation :: String -> Property
 prop_copy_propagation varName =
-  not (null varName) && all isLetter varName ==>
+  not (null varName) && L.all isLetter varName ==>
   let source = unlines 
         [ "package main"
         , "func main() {"

@@ -10,6 +10,7 @@
 module Test.Unit.NewSourceLocationCalculationPrecisionSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -87,7 +88,7 @@ tests =
             spanStart merged @?= spanStart outer
             spanEnd merged @?= spanEnd outer
             
-        , testCase "mergeSpans handles reverse order spans" $ do
+        , testCase "mergeSpans handles L.reverse order spans" $ do
             let span1 = spanBetween (posAt 5 10) (posAt 8 15)
                 span2 = spanBetween (posAt 2 3) (posAt 12 25)
                 merged = mergeSpans span1 span2
@@ -115,7 +116,7 @@ tests =
             isValidSpan largeSpan @?= True
         ]
         
-    , testGroup "Unicode and multi-byte character handling"
+    , testGroup "Unicode L.and multi-byte character handling"
         [ testCase "position tracking with Unicode characters" $ do
             let start = startPos
                 pos1 = advancePosByText "你好" start
@@ -129,7 +130,7 @@ tests =
                 text = "hello\n\t世界"
                 result = advancePosByText text start
             posLine result @?= 2
-            posColumn result @?= 9  -- After tab and Unicode chars
+            posColumn result @?= 9  -- After tab L.and Unicode chars
         ]
         
     , testGroup "Edge case position calculations"
@@ -172,7 +173,7 @@ tests =
         ]
         
     , testGroup "Position advancement precision"
-        [ testCase "advancePosBy handles zero length" $ do
+        [ testCase "advancePosBy handles zero L.length" $ do
             let start = posAt 5 10
                 result = advancePosBy 0 start
             result @?= start
@@ -185,7 +186,7 @@ tests =
         ]
         
     , testGroup "Complex text position scenarios"
-        [ testCase "position tracking with tabs and Unicode mix" $ do
+        [ testCase "position tracking with tabs L.and Unicode mix" $ do
             let start = startPos
                 text = "\t你好\tworld"
                 finalPos = advancePosByText text start

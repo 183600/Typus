@@ -11,6 +11,7 @@ import Compiler.IR (SourceIR(..), SemanticIR(..), GoIR(..))
 import Compiler.GoAst (GoModule(..), GoDecl(..), FuncDecl(..))
 import Parser (TypusFile(..), CodeBlock(..))
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 -- | Test compiler IR generation properties
@@ -34,7 +35,7 @@ prop_source_ir_preserves_structure code =
   not (null code) ==> 
     let sourceIR = SourceIR code
         -- Simulate source IR structure preservation
-        preservesContent = length sourceIR > 0
+        preservesContent = L.length sourceIR > 0
     in preservesContent === True
 
 -- | semantic IR should capture type information
@@ -44,18 +45,18 @@ prop_semantic_ir_captures_types variable typeName =
     let typeInfo = variable ++ ":" ++ typeName
         semanticIR = SemanticIR typeInfo
         -- Simulate semantic IR type capture
-        capturesType = typeName `isInfixOf` typeInfo
+        capturesType = typeName `L.isInfixOf` typeInfo
     in capturesType === True
   where
     infix 4 `isInfixOf`
     [] `isInfixOf` _ = False
     (_:_) `isInfixOf` [] = False
-    needle `isInfixOf` haystack = any (isPrefixOf needle) (tails haystack)
+    needle `isInfixOf` haystack = L.any (L.isPrefixOf needle) (tails haystack)
     tails [] = [[]]
     tails xs@(_:xs') = xs : tails xs'
-    [] `isPrefixOf` _ = False
-    (_:_) `isPrefixOf` [] = False
-    needle `isPrefixOf` haystack = take (length needle) haystack === needle
+    [] `L.isPrefixOf` _ = False
+    (_:_) `L.isPrefixOf` [] = False
+    needle `L.isPrefixOf` haystack = take (L.length needle) haystack === needle
 
 -- | Go IR should generate valid Go code structure
 prop_go_ir_valid_structure :: String -> Property
@@ -64,18 +65,18 @@ prop_go_ir_valid_structure functionName =
     let goFunction = "func " ++ functionName ++ "() {}"
         goIR = GoIR goFunction
         -- Simulate Go IR structure validation
-        hasGoSyntax = "func" `isInfixOf` goFunction && "()" `isInfixOf` goFunction
+        hasGoSyntax = "func" `L.isInfixOf` goFunction && "()" `L.isInfixOf` goFunction
     in hasGoSyntax === True
   where
-    infix 4 `isInfixOf`
-    [] `isInfixOf` _ = False
-    (_:_) `isInfixOf` [] = False
-    needle `isInfixOf` haystack = any (isPrefixOf needle) (tails haystack)
+    infix isInfixOf
+    [] `L.isInfixOf` _ = False
+    (_:_) `L.isInfixOf` [] = False
+    needle `L.isInfixOf` haystack = L.any (L.isPrefixOf needle) (tails haystack)
     tails [] = [[]]
     tails xs@(_:xs') = xs : tails xs'
-    [] `isPrefixOf` _ = False
-    (_:_) `isPrefixOf` [] = False
-    needle `isPrefixOf` haystack = take (length needle) haystack === needle
+    [] `L.isPrefixOf` _ = False
+    (_:_) `L.isPrefixOf` [] = False
+    needle `L.isPrefixOf` haystack = take (L.length needle) haystack === needle
 
 -- | IR transformation should maintain information
 prop_ir_transformation_maintains_info :: String -> Property
@@ -85,7 +86,7 @@ prop_ir_transformation_maintains_info originalCode =
         semanticIR = SemanticIR originalCode
         goIR = GoIR originalCode
         -- Simulate IR transformation information maintenance
-        infoMaintained = length originalCode > 0
+        infoMaintained = L.length originalCode > 0
     in infoMaintained === True
 
 -- | IR generation should handle expressions correctly
@@ -94,17 +95,17 @@ prop_ir_expressions expression =
   not (null expression) ==> 
     let exprIR = SemanticIR expression
         -- Simulate expression IR generation
-        handlesExpression = length expression > 0
+        handlesExpression = L.length expression > 0
     in handlesExpression === True
 
 -- | IR generation should handle function declarations
 prop_ir_functions :: String -> [String] -> Property
 prop_ir_functions functionName parameters =
-  not (null functionName) && all (not . null) parameters ==> 
+  not (null functionName) && L.all (not . null) parameters ==> 
     let funcDecl = "func " ++ functionName ++ "(" ++ unwords parameters ++ ") {}"
         funcIR = GoIR funcDecl
         -- Simulate function IR generation
-        handlesFunction = length funcDecl > length functionName
+        handlesFunction = L.length funcDecl > L.length functionName
     in handlesFunction === True
 
 -- | IR generation should handle variable declarations
@@ -114,18 +115,18 @@ prop_ir_variables varName varType =
     let varDecl = "var " ++ varName ++ " " ++ varType
         varIR = GoIR varDecl
         -- Simulate variable IR generation
-        handlesVariable = varName `isInfixOf` varDecl && varType `isInfixOf` varDecl
+        handlesVariable = varName `L.isInfixOf` varDecl && varType `L.isInfixOf` varDecl
     in handlesVariable === True
   where
-    infix 4 `isInfixOf`
-    [] `isInfixOf` _ = False
-    (_:_) `isInfixOf` [] = False
-    needle `isInInfixOf` haystack = any (isPrefixOf needle) (tails haystack)
+    infix isInfixOf
+    [] `L.isInfixOf` _ = False
+    (_:_) `L.isInfixOf` [] = False
+    needle `isInInfixOf` haystack = L.any (L.isPrefixOf needle) (tails haystack)
     tails [] = [[]]
     tails xs@(_:xs') = xs : tails xs'
-    [] `isPrefixOf` _ = False
-    (_:_) `isPrefixOf` [] = False
-    needle `isPrefixOf` haystack = take (length needle) haystack === needle
+    [] `L.isPrefixOf` _ = False
+    (_:_) `L.isPrefixOf` [] = False
+    needle `L.isPrefixOf` haystack = take (L.length needle) haystack === needle
 
 -- | IR generation should handle type declarations
 prop_ir_types :: String -> Property
@@ -134,47 +135,47 @@ prop_ir_types typeName =
     let typeDecl = "type " ++ typeName ++ " struct{}"
         typeIR = GoIR typeDecl
         -- Simulate type IR generation
-        handlesType = typeName `isInfixOf` typeDecl && "type" `isInfixOf` typeDecl
+        handlesType = typeName `L.isInfixOf` typeDecl && "type" `L.isInfixOf` typeDecl
     in handlesType === True
   where
-    infix 4 `isInfixOf`
-    [] `isInfixOf` _ = False
-    (_:_) `isInfixOf` [] = False
-    needle `isInfixOf` haystack = any (isPrefixOf needle) (tails haystack)
+    infix isInfixOf
+    [] `L.isInfixOf` _ = False
+    (_:_) `L.isInfixOf` [] = False
+    needle `L.isInfixOf` haystack = L.any (L.isPrefixOf needle) (tails haystack)
     tails [] = [[]]
     tails xs@(_:xs') = xs : tails xs'
-    [] `isPrefixOf` _ = False
-    (_:_) `isPrefixOf` [] = False
-    needle `isPrefixOf` haystack = take (length needle) haystack === needle
+    [] `L.isPrefixOf` _ = False
+    (_:_) `L.isPrefixOf` [] = False
+    needle `L.isPrefixOf` haystack = take (L.length needle) haystack === needle
 
 -- | IR generation should maintain symbol table consistency
 prop_ir_symbol_table :: [String] -> Property
 prop_ir_symbol_table symbols =
-  not (null symbols) && all (not . null) symbols ==> 
+  not (null symbols) && L.all (not . null) symbols ==> 
     let symbolTable = unlines symbols
         -- Simulate symbol table consistency in IR
-        maintainsConsistency = length symbolTable >= length symbols
+        maintainsConsistency = L.length symbolTable >= L.length symbols
     in maintainsConsistency === True
 
 -- | IR generation should handle imports correctly
 prop_ir_imports :: [String] -> Property
 prop_ir_imports imports =
-  not (null imports) && all (not . null) imports ==> 
-    let importDecls = map (\imp -> "import \"" ++ imp ++ "\"") imports
+  not (null imports) && L.all (not . null) imports ==> 
+    let importDecls = L.map (\imp -> "import \"" ++ imp ++ "\"") imports
         importIR = GoIR (unlines importDecls)
         -- Simulate import IR generation
-        handlesImports = all (`isInfixOf` importIR) imports
+        handlesImports = L.all (`L.isInfixOf` importIR) imports
     in handlesImports === True
   where
-    infix 4 `isInfixOf`
-    [] `isInfixOf` _ = False
-    (_:_) `isInfixOf` [] = False
-    needle `isInfixOf` haystack = any (isPrefixOf needle) (tails haystack)
+    infix isInfixOf
+    [] `L.isInfixOf` _ = False
+    (_:_) `L.isInfixOf` [] = False
+    needle `L.isInfixOf` haystack = L.any (L.isPrefixOf needle) (tails haystack)
     tails [] = [[]]
     tails xs@(_:xs') = xs : tails xs'
-    [] `isPrefixOf` _ = False
-    (_:_) `isPrefixOf` [] = False
-    needle `isPrefixOf` haystack = take (length needle) haystack === needle
+    [] `L.isPrefixOf` _ = False
+    (_:_) `L.isPrefixOf` [] = False
+    needle `L.isPrefixOf` haystack = take (L.length needle) haystack === needle
 
 -- Helper for equality in QuickCheck
 (===) :: Eq a => a -> a -> Bool

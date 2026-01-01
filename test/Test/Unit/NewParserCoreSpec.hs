@@ -3,6 +3,7 @@
 module Test.Unit.NewParserCoreSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Text as T
@@ -23,7 +24,7 @@ prop_parse_empty_input =
 -- Test 2: Parse simple package declaration
 prop_parse_simple_package :: String -> Property
 prop_parse_simple_package pkgName =
-  length pkgName > 0 && length pkgName < 20 && all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ "_") pkgName ==>
+  L.length pkgName > 0 && L.length pkgName < 20 && L.all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ "_") pkgName ==>
   let input = "package " ++ pkgName
   in case parseTypus input of
     Left _ -> property False -- Simple package should parse
@@ -53,9 +54,9 @@ prop_parse_with_block_directives ownership dependentTypes =
 -- Test 5: Parse preserves whitespace structure
 prop_parse_preserves_structure :: String -> Property
 prop_parse_preserves_structure str =
-  length str > 0 && length str < 100 ==> -- Limit size
+  L.length str > 0 && L.length str < 100 ==> -- Limit size
   let lines = splitBy '\n' str
-      lineCount = length lines
+      lineCount = L.length lines
   in case parseTypus str of
     Left _ -> property True -- May fail, that's acceptable
     Right result -> property True -- If it parses, that's enough
@@ -63,7 +64,7 @@ prop_parse_preserves_structure str =
 -- Test 6: Parse with comments
 prop_parse_with_comments :: String -> Property
 prop_parse_with_comments comment =
-  length comment > 0 && length comment < 50 ==> -- Limit size
+  L.length comment > 0 && L.length comment < 50 ==> -- Limit size
   let input = "// " ++ comment ++ "\npackage main\n// Another comment\n"
   in case parseTypus input of
     Left _ -> property True -- May fail, that's acceptable
@@ -73,7 +74,7 @@ prop_parse_with_comments comment =
 prop_parse_multiple_functions :: Int -> Property
 prop_parse_multiple_functions n =
   n > 0 && n < 5 ==> -- Limit to reasonable size
-  let functions = unlines $ map (\i -> "func func" ++ show i ++ "() {}") [1..n]
+  let functions = unlines $ L.map (\i -> "func func" ++ show i ++ "() {}") [1..n]
       input = "package main\n\n" ++ functions
   in case parseTypus input of
     Left _ -> property False -- Multiple simple functions should parse
@@ -82,12 +83,12 @@ prop_parse_multiple_functions n =
 -- Test 8: Parse with variables
 prop_parse_with_variables :: [(String, String)] -> Property
 prop_parse_with_variables varDecls =
-  length varDecls < 5 ==> -- Limit complexity
-  let validVar (name, typ) = length name > 0 && length typ > 0 && 
-                             all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ "_") name &&
-                             all (`elem` ['a'..'z'] ++ ['A'..'Z']) typ
+  L.length varDecls < 5 ==> -- Limit complexity
+  let validVar (name, typ) = L.length name > 0 && L.length typ > 0 && 
+                             L.all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ "_") name &&
+                             L.all (`elem` ['a'..'z'] ++ ['A'..'Z']) typ
       filtered = filter validVar varDecls
-      varLines = map (\(name, typ) -> "var " ++ name ++ " " ++ typ) filtered
+      varLines = L.map (\(name, typ) -> "var " ++ name ++ " " ++ typ) filtered
       input = "package main\n\n" ++ unlines varLines
   in case parseTypus input of
     Left _ -> property True -- May fail, that's acceptable
@@ -107,7 +108,7 @@ prop_parse_nested_blocks depth =
 -- Test 10: Parse error recovery
 prop_parse_error_recovery :: String -> String -> Property
 prop_parse_error_recovery validPart invalidPart =
-  length validPart > 0 && length invalidPart > 0 && length validPart < 50 ==>
+  L.length validPart > 0 && L.length invalidPart > 0 && L.length validPart < 50 ==>
   let input = validPart ++ invalidPart
   in case parseTypus input of
     Left _ -> property True -- May fail due to invalid part

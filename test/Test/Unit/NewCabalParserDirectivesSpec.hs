@@ -13,6 +13,7 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, oneof, elements, vectorOf)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 import Data.Maybe (isJust, isNothing)
 
@@ -71,7 +72,7 @@ prop_parse_empty_content =
     Left _ -> property False
     Right file -> property $ 
       tfDirectives file === defaultFileDirectives &&.
-      length (tfBlocks file) === 0
+      L.length (tfBlocks file) === 0
 
 -- Property: parsing simple package declaration succeeds
 prop_parse_simple_package :: Property
@@ -80,7 +81,7 @@ prop_parse_simple_package =
       result = parseTypus content
   in case result of
     Left _ -> property False
-    Right file -> property $ length (tfBlocks file) >= 0
+    Right file -> property $ L.length (tfBlocks file) >= 0
 
 -- Property: parsing valid file directives preserves them
 prop_parse_file_directives :: Property
@@ -102,7 +103,7 @@ prop_parse_multiple_blocks =
       result = parseTypus content
   in case result of
     Left _ -> property False
-    Right file -> property $ length (tfBlocks file) >= 2
+    Right file -> property $ L.length (tfBlocks file) >= 2
 
 -- Property: block directives are parsed correctly
 prop_parse_block_directives :: Property
@@ -113,7 +114,7 @@ prop_parse_block_directives =
     Left _ -> property False
     Right file -> 
       let blocks = tfBlocks file
-          hasBlockWithOwnership = any (isJust . bdOwnership . cbDirectives) blocks
+          hasBlockWithOwnership = L.any (isJust . bdOwnership . cbDirectives) blocks
       in property $ hasBlockWithOwnership
 
 -- Property: malformed directives are handled gracefully
@@ -134,7 +135,7 @@ prop_parse_preserves_content =
     Left _ -> property False
     Right file ->
       let blocks = tfBlocks file
-          hasContent = any (isInfixOf "x := 1" . cbContent) blocks
+          hasContent = L.any (L.isInfixOf "x := 1" . cbContent) blocks
       in property $ hasContent
 
 -- Property: parsing handles mixed line endings
@@ -144,7 +145,7 @@ prop_parse_mixed_line_endings =
       result = parseTypus content
   in case result of
     Left _ -> property False
-    Right file -> property $ length (tfBlocks file) >= 1
+    Right file -> property $ L.length (tfBlocks file) >= 1
 
 -- Property: parsing large content doesn't crash
 prop_parse_large_content :: Property
@@ -153,7 +154,7 @@ prop_parse_large_content =
       result = parseTypus largeContent
   in case result of
     Left _ -> property False
-    Right file -> property $ length (tfBlocks file) > 0
+    Right file -> property $ L.length (tfBlocks file) > 0
 
 -- Property: parsing with syntax errors still returns structure
 prop_parse_syntax_errors_structure :: Property
@@ -164,8 +165,8 @@ prop_parse_syntax_errors_structure =
     Left _ -> property False
     Right file -> 
       let syntaxErrors = tfSyntaxErrors file
-      hasStructure = length (tfBlocks file) >= 0
-      hasErrors = length syntaxErrors >= 0
+      hasStructure = L.length (tfBlocks file) >= 0
+      hasErrors = L.length syntaxErrors >= 0
       in property $ hasStructure &&. hasErrors
 
 -- Property: round-trip parsing preserves essential structure
@@ -176,8 +177,8 @@ prop_parse_roundtrip_structure =
       Left _ -> property False
       Right file -> 
         let blocks = tfBlocks file
-            blockCount = length blocks
-            hasPackage = "package" `isInfixOf` originalContent
+            blockCount = L.length blocks
+            hasPackage = "package" `L.isInfixOf` originalContent
         in property $ (hasPackage ==> blockCount >= 0) &&. (not hasPackage ==> blockCount >= 0)
 
 tests :: TestTree

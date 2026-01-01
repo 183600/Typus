@@ -28,18 +28,20 @@ import Utils
 
 import Data.Char (isSpace, toLower, isAlphaNum)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, tails, isInfixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (tails, sort, nub)
 import Data.String (IsString)
 
 -- Property: trim is idempotent
 prop_trim_idempotent :: String -> Property
 prop_trim_idempotent s = trim (trim s) === trim s
 
--- Property: trim never adds leading or trailing whitespace
+-- Property: trim never adds leading L.or trailing whitespace
 prop_trim_no_added_whitespace :: String -> Property
 prop_trim_no_added_whitespace s =
   let trimmed = trim s
-      hasLeading = not (null trimmed) && isSpace (head trimmed)
+      hasLeading = not (null trimmed) && isSpace (L.head trimmed)
       hasTrailing = not (null trimmed) && isSpace (last trimmed)
   in property $ not hasLeading .&&. not hasTrailing
 
@@ -55,7 +57,7 @@ prop_splitByCollapsed_subset :: Char -> String -> Property
 prop_splitByCollapsed_subset delim s =
   let fullParts = splitBy delim s
       collapsedParts = splitByCollapsed delim s
-  in property $ all (`elem` fullParts) collapsedParts
+  in property $ L.all (`elem` fullParts) collapsedParts
 
 -- Property: splitByCollapsed removes empty strings
 prop_splitByCollapsed_no_empty :: Char -> String -> Property
@@ -75,23 +77,23 @@ prop_splitByCommaCollapsed_equals_splitByCollapsed s =
 -- Property: removeLineComments preserves non-commented lines
 prop_removeLineComments_preserves_non_commented :: String -> Property
 prop_removeLineComments_preserves_non_commented s =
-  let linesWithoutComments = filter (not . isPrefixOf "//") (lines s)
-      resultLines = filter (not . all isSpace) (lines (removeLineComments s))
-  in property $ length resultLines >= length linesWithoutComments
+  let linesWithoutComments = L.filter (not . L.isPrefixOf "//") (lines s)
+      resultLines = L.filter (not . L.all isSpace) (lines (removeLineComments s))
+  in property $ L.length resultLines >= L.length linesWithoutComments
 
--- Property: removeComments never increases string length
+-- Property: removeComments never increases string L.length
 prop_removeComments_never_increases_length :: String -> Property
 prop_removeComments_never_increases_length s =
-  let original = length s
-      withoutComments = length (removeComments s)
+  let original = L.length s
+      withoutComments = L.length (removeComments s)
   in property $ withoutComments <= original
 
 -- Property: normalizeIndentation preserves relative indentation
 prop_normalizeIndentation_preserves_relative :: String -> Property
 prop_normalizeIndentation_preserves_relative s =
-  let originalLines = filter (not . all isSpace) (lines s)
-      normalizedLines = filter (not . all isSpace) (lines (normalizeIndentation s))
-      hasSameStructure = length originalLines == length normalizedLines
+  let originalLines = L.filter (not . L.all isSpace) (lines s)
+      normalizedLines = L.filter (not . L.all isSpace) (lines (normalizeIndentation s))
+      hasSameStructure = L.length originalLines == L.length normalizedLines
   in classify hasSameStructure "same number of non-empty lines" $
      property hasSameStructure
 
@@ -100,14 +102,14 @@ prop_breakOn_correct_prefix :: String -> String -> Property
 prop_breakOn_correct_prefix pat s =
   not (null pat) ==> 
   case breakOn pat s of
-    (prefix, _) -> pat `isInfixOf` s ==> prefix ++ pat `isPrefixOf` s
+    (prefix, _) -> pat `L.isInfixOf` s ==> prefix ++ pat `L.isPrefixOf` s
 
 -- Property: breakOn returns empty suffix when pattern not found
 prop_breakOn_empty_suffix_when_not_found :: String -> String -> Property
 prop_breakOn_empty_suffix_when_not_found pat s =
   not (null pat) ==> 
   case breakOn pat s of
-    (_, suffix) -> not (pat `isInfixOf` s) ==> suffix === ""
+    (_, suffix) -> not (pat `L.isInfixOf` s) ==> suffix === ""
 
 -- Property: breakOn with empty pattern returns empty prefix
 prop_breakOn_empty_pattern :: String -> Property
@@ -118,7 +120,7 @@ prop_trim_splitBy_interaction :: Char -> String -> Property
 prop_trim_splitBy_interaction delim s =
   let trimmed = trim s
       parts = splitBy delim trimmed
-  in property $ all (\p -> trim p === p) parts
+  in property $ L.all (\p -> trim p === p) parts
 
 -- Property: removeComments is idempotent
 prop_removeComments_idempotent :: String -> Property
@@ -130,14 +132,14 @@ prop_normalizeIndentation_preserves_line_count :: String -> Property
 prop_normalizeIndentation_preserves_line_count s =
   let originalLines = lines s
       normalizedLines = lines (normalizeIndentation s)
-  in length originalLines === length normalizedLines
+  in L.length originalLines === L.length normalizedLines
 
 -- Property: splitBy with delimiter not in string returns singleton
 prop_splitBy_no_delimiter :: Char -> String -> Property
 prop_splitBy_no_delimiter delim s =
   not (delim `elem` s) ==> splitBy delim s === [s]
 
--- Property: trim and splitBy interaction with whitespace delimiters
+-- Property: trim L.and splitBy interaction with whitespace delimiters
 prop_trim_splitBy_whitespace :: String -> Property
 prop_trim_splitBy_whitespace s =
   let trimmed = trim s
@@ -155,7 +157,7 @@ tests =
     , fastProperty "splitByComma equals splitBy with comma" prop_splitByComma_equals_splitBy
     , fastProperty "splitByCommaCollapsed equals splitByCollapsed with comma" prop_splitByCommaCollapsed_equals_splitByCollapsed
     , fastProperty "removeLineComments preserves non-commented lines" prop_removeLineComments_preserves_non_commented
-    , fastProperty "removeComments never increases length" prop_removeComments_never_increases_length
+    , fastProperty "removeComments never increases L.length" prop_removeComments_never_increases_length
     , fastProperty "normalizeIndentation preserves relative indentation" prop_normalizeIndentation_preserves_relative
     , fastProperty "breakOn correct prefix when pattern exists" prop_breakOn_correct_prefix
     , fastProperty "breakOn empty suffix when not found" prop_breakOn_empty_suffix_when_not_found

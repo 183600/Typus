@@ -43,6 +43,7 @@ import SourceLocation
   )
 
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 import qualified Data.Text as T
 
@@ -78,7 +79,7 @@ prop_pos_after_regular pos char =
   let newPos = posAfter char pos
   in property $ posColumn newPos === posColumn pos + 1 .&&. posOffset newPos === posOffset pos + 1
 
--- Property: posAt creates position with correct line and column
+-- Property: posAt creates position with correct line L.and column
 prop_pos_at_correct :: Int -> Int -> Property
 prop_pos_at_correct line col =
   line > 0 && col > 0 ==>
@@ -152,8 +153,8 @@ prop_located_with_span_creates span value =
 prop_map_located_transforms :: SourcePos -> String -> Property
 prop_map_located_transforms pos value =
   let located = locatedAt pos value
-      transformed = mapLocated (length) located
-  in property $ locatedValue transformed === length value
+      transformed = mapLocated (L.length) located
+  in property $ locatedValue transformed === L.length value
 
 -- Property: advancePos advances position by character
 prop_advance_pos_correct :: SourcePos -> Char -> Property

@@ -2,6 +2,7 @@
 module Test.Unit.NewOwnershipAnalysisQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -26,7 +27,7 @@ tests =
                   ownership2 = Ownership.Analyzer.detectOwnership code
               in True -- Should detect same ownership patterns
               
-        , fastProperty "ownership detection handles all code" $
+        , fastProperty "ownership detection handles L.all code" $
             \code ->
               let ownership = Ownership.Analyzer.detectOwnership code
               in True -- Should never crash
@@ -34,7 +35,7 @@ tests =
         , fastProperty "ownership boundaries are correctly identified" $
             \code ->
               let boundaries = Ownership.Analyzer.findBoundaries code
-              in length boundaries >= 0
+              in L.length boundaries >= 0
         ]
 
     , testGroup "Ownership Transfer Properties"
@@ -54,19 +55,19 @@ tests =
             \resource owner1 owner2 owner3 ->
               let first = Ownership.Analyzer.transferOwnership resource owner1 owner2
                   second = Ownership.Analyzer.transferOwnership first owner2 owner3
-              in True -- Should detect and prevent double transfer
+              in True -- Should detect L.and prevent double transfer
         ]
 
     , testGroup "Borrowing Analysis Properties"
-        [ fastProperty "borrowing analysis tracks all borrows" $
+        [ fastProperty "borrowing analysis tracks L.all borrows" $
             \code ->
               let borrows = Ownership.Analyzer.analyzeBorrows code
-              in True -- Should find all borrow operations
+              in True -- Should find L.all borrow operations
               
         , fastProperty "immutable borrows allow multiple readers" $
             \resource readers ->
-              let borrows = map (Ownership.Analyzer.borrowImmutable resource) readers
-              in all Ownership.Analyzer.isValidBorrow borrows
+              let borrows = L.map (Ownership.Analyzer.borrowImmutable resource) readers
+              in L.all Ownership.Analyzer.isValidBorrow borrows
               
         , fastProperty "mutable borrows exclude other borrows" $
             \resource borrower1 borrower2 ->
@@ -98,7 +99,7 @@ tests =
         [ fastProperty "ownership inference is complete" $
             \code ->
               let inferred = Ownership.Analyzer.inferOwnership code
-              in True -- Should infer all possible ownership
+              in True -- Should infer L.all possible ownership
               
         , fastProperty "ownership inference is sound" $
             \code ->
@@ -114,10 +115,10 @@ tests =
         ]
 
     , testGroup "Move Semantics Properties"
-        [ fastProperty "move analysis detects all moves" $
+        [ fastProperty "move analysis detects L.all moves" $
             \code ->
               let moves = Ownership.Analyzer.analyzeMoves code
-              in True -- Should find all move operations
+              in True -- Should find L.all move operations
               
         , fastProperty "move prevents use after move" $
             \variable usageAfterMove ->
@@ -147,7 +148,7 @@ tests =
             \code ->
               let report = Ownership.Reporter.generateReport code
                   suggestions = Ownership.Reporter.getSuggestions report
-              in length suggestions > 0
+              in L.length suggestions > 0
         ]
 
     , testGroup "Complex Ownership Scenarios"

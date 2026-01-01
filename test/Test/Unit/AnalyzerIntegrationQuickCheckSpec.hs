@@ -5,7 +5,9 @@ module Test.Unit.AnalyzerIntegrationQuickCheckSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), property, forAll, counterexample, classify, Arbitrary(..), Gen, oneof, choose, listOf, elements, vectorOf, (.&&.))
-import Data.List (isPrefixOf, isInfixOf, nub, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (nub, sort)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import Data.Either (isLeft, isRight)
 import qualified Data.Text as T
@@ -49,7 +51,7 @@ prop_analysis_context_creation ownershipEnabled dependentTypesEnabled name phase
 prop_symbol_table_operations :: [(String, SymbolInfo)] -> Property
 prop_symbol_table_operations symbols =
   let baseAnalyzer = newIntegratedAnalyzer False False
-      symbolMap = foldl (\acc (name, info) -> Map.insert name info acc) (symbolTable baseAnalyzer) symbols
+      symbolMap = L.foldl (\acc (name, info) -> Map.insert name info acc) (symbolTable baseAnalyzer) symbols
       analyzerState = baseAnalyzer { symbolTable = symbolMap }
       retrievedSymbols = map fst $ getAllSymbols analyzerState
       expectedSymbols = map fst symbols
@@ -69,8 +71,8 @@ prop_symbol_info_preservation name =
 prop_analysis_result_combination :: AnalysisResult -> AnalysisResult -> Property
 prop_analysis_result_combination result1 result2 =
   let combined = combineAnalysisResults result1 result2
-      combinedErrorsCount = length $ combinedErrors combined
-      expectedErrors = length (combinedErrors result1) + length (combinedErrors result2)
+      combinedErrorsCount = L.length $ combinedErrors combined
+      expectedErrors = L.length (combinedErrors result1) + L.length (combinedErrors result2)
   in property $ combinedErrorsCount === expectedErrors
 
 -- Property: Phase transition validation
@@ -97,9 +99,9 @@ prop_cross_analysis_consistency ownershipSymbols dependentTypeSymbols =
 -- Property: Analyzer state mutation
 prop_analyzer_state_mutation :: AnalyzerState -> [(String, SymbolInfo)] -> Property
 prop_analyzer_state_mutation initialState symbols =
-  let mutatedState = foldl (\state (name, info) -> updateSymbolTable name info state) initialState symbols
+  let mutatedState = L.foldl (\state (name, info) -> updateSymbolTable name info state) initialState symbols
       finalSymbols = getSymbolTableSymbols mutatedState
-  in property $ length finalSymbols >= length symbols
+  in property $ L.length finalSymbols >= L.length symbols
 
 -- Property: Error accumulation across phases
 prop_error_accumulation :: [CombinedError] -> [CombinedError] -> Property
@@ -107,8 +109,8 @@ prop_error_accumulation errors1 errors2 =
   let result1 = AnalysisResult [] [] errors1 [] [] mempty
       result2 = AnalysisResult [] [] errors2 [] [] mempty
       combined = combineAnalysisResults result1 result2
-      totalErrors = length $ combinedErrors combined
-      expectedErrors = length errors1 + length errors2
+      totalErrors = L.length $ combinedErrors combined
+      expectedErrors = L.length errors1 + L.length errors2
   in property $ totalErrors === expectedErrors
 
 -- Property: Symbol scope validation
@@ -147,7 +149,7 @@ prop_dependent_type_integration symbols =
 -- Property: Integration phase validation
 prop_integration_phase_validation :: AnalysisResult -> AnalysisResult -> Property
 prop_integration_phase_validation ownershipResult dependentTypeResult =
-  let hasErrors = not (null $ combinedErrors ownershipResult) || not (null $ combinedErrors dependentTypeResult)
+  let hasErrors = not (L.null $ combinedErrors ownershipResult) || not (L.null $ combinedErrors dependentTypeResult)
   in property $ hasErrors
 
 -- Property: Analyzer state reset
@@ -161,7 +163,7 @@ prop_analyzer_state_reset state =
 prop_symbol_table_lookup :: [(String, SymbolInfo)] -> String -> Property
 prop_symbol_table_lookup symbols query =
   let baseAnalyzer = newIntegratedAnalyzer False False
-      symbolMap = foldl (\acc (name, info) -> Map.insert name info acc) (symbolTable baseAnalyzer) symbols
+      symbolMap = L.foldl (\acc (name, info) -> Map.insert name info acc) (symbolTable baseAnalyzer) symbols
       analyzerState = baseAnalyzer { symbolTable = symbolMap }
       found = isJust $ lookupSymbol query analyzerState
   in classify found "symbol found" $
@@ -193,9 +195,9 @@ prop_symbol_dependency_tracking :: String -> [String] -> Property
 prop_symbol_dependency_tracking symbol dependencies =
   let baseAnalyzer = newIntegratedAnalyzer False False
       analyzerState = baseAnalyzer { symbolTable = Map.empty }
-      updatedState = foldl (\acc dep -> addDependency symbol dep acc) analyzerState dependencies
+      updatedState = L.foldl (\acc dep -> addDependency symbol dep acc) analyzerState dependencies
       trackedDeps = getDependencies symbol updatedState
-  in property $ length trackedDeps === length dependencies
+  in property $ L.length trackedDeps === L.length dependencies
 
 -- Property: Phase-specific analysis rules
 prop_phase_specific_rules :: AnalysisPhase -> [(String, SymbolInfo)] -> Property
@@ -211,7 +213,7 @@ prop_analyzer_performance numSymbols =
   numSymbols >= 0 && numSymbols <= 1000 ==>
   let symbols = [("symbol" ++ show i, SymbolInfo ("symbol" ++ show i) Nothing Nothing i False False []) | i <- [1..numSymbols]]
       result = analyzeSymbols symbols
-      analyzedCount = length $ combinedErrors result
+      analyzedCount = L.length $ combinedErrors result
   in property $ analyzedCount >= 0
 
 -- Property: Error recovery mechanisms
@@ -219,22 +221,22 @@ prop_error_recovery :: [CombinedError] -> [(String, SymbolInfo)] -> Property
 prop_error_recovery errors symbols =
   let result = AnalysisResult [] [] errors [] [] mempty
       recovered = recoverFromErrors result
-      hasFewerErrors = length (combinedErrors recovered) <= length errors
+      hasFewerErrors = L.length (combinedErrors recovered) <= L.length errors
   in property $ hasFewerErrors
 
 -- Property: Incremental analysis support
 prop_incremental_analysis :: AnalysisResult -> [(String, SymbolInfo)] -> Property
 prop_incremental_analysis baseResult newSymbols =
   let incremental = updateAnalysisIncrementally baseResult newSymbols
-      baseErrorCount = length $ combinedErrors baseResult
-      totalErrorCount = length $ combinedErrors incremental
+      baseErrorCount = L.length $ combinedErrors baseResult
+      totalErrorCount = L.length $ combinedErrors incremental
   in property $ totalErrorCount >= baseErrorCount
 
 -- Property: Analyzer configuration validation
 prop_analyzer_configuration :: Bool -> Bool -> [String] -> Property
 prop_analyzer_configuration ownershipEnabled dependentTypesEnabled phases =
   let validConfig = isValidAnalyzerConfiguration ownershipEnabled dependentTypesEnabled phases
-  in property $ True -- Assuming all configurations are valid for this test
+  in property $ True -- Assuming L.all configurations are valid for this test
 
 tests :: TestTree
 tests = testGroup "AnalyzerIntegration QuickCheck Tests"
@@ -337,7 +339,7 @@ analyzeSymbols :: [(String, SymbolInfo)] -> AnalysisResult
 analyzeSymbols _ = AnalysisResult [] [] [] [] [] mempty
 
 recoverFromErrors :: AnalysisResult -> AnalysisResult
-recoverFromErrors result = result { combinedErrors = take (length (combinedErrors result) `div` 2) (combinedErrors result) }
+recoverFromErrors result = result { combinedErrors = take (L.length (combinedErrors result) `div` 2) (combinedErrors result) }
 
 updateAnalysisIncrementally :: AnalysisResult -> [(String, SymbolInfo)] -> AnalysisResult
 updateAnalysisIncrementally result _ = result { combinedErrors = combinedErrors result ++ [] }
@@ -350,7 +352,7 @@ symbolInScope _ _ = True
 
 nubBy :: (a -> a -> Bool) -> [a] -> [a]
 nubBy _ [] = []
-nubBy eq (x:xs) = x : nubBy eq (filter (\y -> not (eq x y)) xs)
+nubBy eq (x:xs) = x : nubBy eq (L.filter (\y -> not (eq x y)) xs)
 
 sortBy :: (a -> a -> Ordering) -> [a] -> [a]
 sortBy _ = id

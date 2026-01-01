@@ -10,6 +10,7 @@
 module Test.Unit.AdditionalOwnershipQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose)
@@ -120,12 +121,12 @@ prop_ownership_type_show_readable name =
       ownedStr = show owned
       borrowedStr = show borrowed
       mutBorrowedStr = show mutBorrowed
-  in property $ "Owned" `isInfixOf` ownedStr .&&.
-     "Borrowed" `isInfixOf` borrowedStr .&&.
-     "MutBorrowed" `isInfixOf` mutBorrowedStr .&&.
-     name `isInfixOf` ownedStr .&&.
-     name `isInfixOf` borrowedStr .&&.
-     name `isInfixOf` mutBorrowedStr
+  in property $ "Owned" `L.isInfixOf` ownedStr .&&.
+     "Borrowed" `L.isInfixOf` borrowedStr .&&.
+     "MutBorrowed" `L.isInfixOf` mutBorrowedStr .&&.
+     name `L.isInfixOf` ownedStr .&&.
+     name `L.isInfixOf` borrowedStr .&&.
+     name `L.isInfixOf` mutBorrowedStr
 
 -- Property: OwnershipError show is readable
 prop_ownership_error_show_readable :: String -> String -> Property
@@ -136,20 +137,20 @@ prop_ownership_error_show_readable var1 var2 =
       useAfterMoveStr = show useAfterMove
       doubleMoveStr = show doubleMove
       borrowWhileMovedStr = show borrowWhileMoved
-  in property $ "UseAfterMove" `isInfixOf` useAfterMoveStr .&&.
-     "DoubleMove" `isInfixOf` doubleMoveStr .&&.
-     "BorrowWhileMoved" `isInfixOf` borrowWhileMovedStr .&&.
-     var1 `isInfixOf` useAfterMoveStr .&&.
-     var1 `isInfixOf` doubleMoveStr .&&.
-     var2 `isInfixOf` doubleMoveStr .&&.
-     var1 `isInfixOf` borrowWhileMovedStr
+  in property $ "UseAfterMove" `L.isInfixOf` useAfterMoveStr .&&.
+     "DoubleMove" `L.isInfixOf` doubleMoveStr .&&.
+     "BorrowWhileMoved" `L.isInfixOf` borrowWhileMovedStr .&&.
+     var1 `L.isInfixOf` useAfterMoveStr .&&.
+     var1 `L.isInfixOf` doubleMoveStr .&&.
+     var2 `L.isInfixOf` doubleMoveStr .&&.
+     var1 `L.isInfixOf` borrowWhileMovedStr
 
 -- Property: OwnershipTransfer show is readable
 prop_ownership_transfer_show_readable :: String -> String -> Property
 prop_ownership_transfer_show_readable from to =
   let transfer = OwnershipTransfer from to
       transferStr = show transfer
-  in property $ "OwnershipTransfer" `isInfixOf` transferStr
+  in property $ "OwnershipTransfer" `L.isInfixOf` transferStr
 
 -- Property: OwnershipType sorting preserves order
 prop_ownership_type_sorting_preserves_order :: [OwnershipType] -> Property
@@ -179,9 +180,9 @@ prop_ownership_type_ordering_hierarchy name =
 prop_complex_ownership_transfer_scenarios :: [String] -> Property
 prop_complex_ownership_transfer_scenarios names =
   not (null names) ==> 
-  let transfers = zipWith OwnershipTransfer names (tail names ++ [head names])
+  let transfers = zipWith OwnershipTransfer names (L.tail names ++ [L.head names])
       uniqueTransfers = nub transfers
-  in property $ length uniqueTransfers <= length transfers
+  in property $ L.length uniqueTransfers <= L.length transfers
 
 -- Property: OwnershipError creation with different parameters
 prop_ownership_error_creation :: String -> String -> String -> Property
@@ -236,9 +237,9 @@ prop_ownership_type_special_characters name =
       owned = Owned specialName
       borrowed = Borrowed specialName
       mutBorrowed = MutBorrowed specialName
-  in property $ specialName `isInfixOf` show owned .&&.
-     specialName `isInfixOf` show borrowed .&&.
-     specialName `isInfixOf` show mutBorrowed
+  in property $ specialName `L.isInfixOf` show owned .&&.
+     specialName `L.isInfixOf` show borrowed .&&.
+     specialName `L.isInfixOf` show mutBorrowed
 
 -- Property: OwnershipError with special characters
 prop_ownership_error_special_characters :: String -> String -> Property
@@ -247,8 +248,8 @@ prop_ownership_error_special_characters var msg =
       specialMsg = msg ++ "!@#$%^&*()"
       useAfterMove = UseAfterMove specialVar
       borrowError = BorrowError specialMsg
-  in property $ specialVar `isInfixOf` show useAfterMove .&&.
-     specialMsg `isInfixOf` show borrowError
+  in property $ specialVar `L.isInfixOf` show useAfterMove .&&.
+     specialMsg `L.isInfixOf` show borrowError
 
 -- Helper function for string concatenation
 (+=+) :: String -> String -> String
@@ -260,8 +261,8 @@ prop_ownership_transfer_special_characters from to =
   let specialFrom = from ++ "!@#$%^&*()"
       specialTo = to ++ "!@#$%^&*()"
       transfer = OwnershipTransfer specialFrom specialTo
-  in property $ specialFrom `isInfixOf` show transfer .&&.
-     specialTo `isInfixOf` show transfer
+  in property $ specialFrom `L.isInfixOf` show transfer .&&.
+     specialTo `L.isInfixOf` show transfer
 
 -- Property: OwnershipType roundtrip through show/read (conceptual)
 prop_ownership_type_conceptual_roundtrip :: OwnershipType -> Property

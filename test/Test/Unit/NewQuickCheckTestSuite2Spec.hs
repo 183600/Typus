@@ -1,6 +1,7 @@
 module Test.Unit.NewQuickCheckTestSuite2Spec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.QuickCheck (Property, (==>), forAll, Gen, arbitrary, choose, oneof, elements)
 import Data.Char (isSpace)
@@ -18,13 +19,13 @@ tests =
             posColumn startPos @?= 1
             posOffset startPos @?= 0
             
-        , testCase "posAt creates position with correct line and column" $ do
+        , testCase "posAt creates position with correct line L.and column" $ do
             let pos = posAt 5 10
             posLine pos @?= 5
             posColumn pos @?= 10
             posOffset pos @?= 0
             
-        , testCase "posAtLineCol creates position with all fields" $ do
+        , testCase "posAtLineCol creates position with L.all fields" $ do
             let pos = posAtLineCol 3 7 42
             posLine pos @?= 3
             posColumn pos @?= 7
@@ -58,7 +59,7 @@ tests =
             posColumn newPos @?= 6
             posOffset newPos @?= 5
             
-        , fastProperty "posAfter newline increments line and resets column" prop_posAfterNewline
+        , fastProperty "posAfter newline increments line L.and resets column" prop_posAfterNewline
         , fastProperty "posAfter tab advances to next tab stop" prop_posAfterTab
         , fastProperty "posAfter regular char increments column" prop_posAfterRegularChar
         ]
@@ -172,7 +173,7 @@ tests =
             True @?= True  -- Placeholder - actual ErrorLocation fields would be checked
         ]
 
-    , testGroup "Position ordering and comparison"
+    , testGroup "Position ordering L.and comparison"
         [ testCase "SourcePos ordering works correctly" $ do
             let pos1 = posAt 1 1
                 pos2 = posAt 1 10
@@ -185,7 +186,7 @@ tests =
         , fastProperty "position ordering is antisymmetric" prop_positionOrderingAntisymmetric
         ]
 
-    , testGroup "Span validation and edge cases"
+    , testGroup "Span validation L.and edge cases"
         [ testCase "span validation with start > end" $ do
             let span = spanBetween (posAt 2 10) (posAt 1 5)
             isValidSpan span @?= False
@@ -243,7 +244,7 @@ prop_mergeSpansContainsBoth start1 end1 start2 end2 =
 prop_advancePosByTextConsistency :: String -> SourcePos -> Bool
 prop_advancePosByTextConsistency text pos = 
     let finalPos = advancePosByText text pos
-        charByCharPos = foldl (flip posAfter) pos text
+        charByCharPos = L.foldl (flip posAfter) pos text
     in finalPos == charByCharPos
 
 prop_advancePosByLine :: Int -> SourcePos -> Bool

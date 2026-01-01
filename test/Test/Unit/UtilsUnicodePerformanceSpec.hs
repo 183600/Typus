@@ -31,6 +31,7 @@ import Utils
 
 import Data.Char (isSpace, isAscii, ord)
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Maybe (isNothing, isJust, fromMaybe)
 import Control.DeepSeq (NFData, force)
@@ -38,9 +39,9 @@ import Control.Exception (evaluate)
 import System.CPUTime (getCPUTime)
 import Text.Printf (printf)
 
--- | Unicode and performance tests for Utils module
+-- | Unicode L.and performance tests for Utils module
 tests :: TestTree
-tests = testGroup "Utils Unicode and Performance"
+tests = testGroup "Utils Unicode L.and Performance"
   [ testGroup "Unicode Processing Tests"
     [ testCase "trim handles unicode whitespace" test_trim_unicode_whitespace
     , testCase "splitBy handles unicode delimiters" test_splitBy_unicode_delimiters
@@ -119,8 +120,8 @@ test_removeComments_unicode = do
         , "}"
         ]
       result = removeComments content
-  assertBool "Should preserve unicode content" $ "café naïve résumé 🚀" `isInfixOf` result
-  assertBool "Should remove comments" $ not ("中文注释" `isInfixOf` result)
+  assertBool "Should preserve unicode content" $ "café naïve résumé 🚀" `L.isInfixOf` result
+  assertBool "Should remove comments" $ not ("中文注释" `L.isInfixOf` result)
 
 test_normalizeIndentation_unicode :: IO ()
 test_normalizeIndentation_unicode = do
@@ -132,15 +133,15 @@ test_normalizeIndentation_unicode = do
         ]
       result = normalizeIndentation content
       resultLines = lines result
-  assertBool "Should normalize unicode content" $ length resultLines == 4
-  assertBool "Should preserve unicode in content" $ any ("中文函数" `isInfixOf`) resultLines
+  assertBool "Should normalize unicode content" $ L.length resultLines == 4
+  assertBool "Should preserve unicode in content" $ L.any ("中文函数" `L.isInfixOf`) resultLines
 
 prop_trim_unicode_preservation :: String -> Property
 prop_trim_unicode_preservation input =
-  let hasUnicode = any (not . isAscii) input
+  let hasUnicode = L.any (not . isAscii) input
       trimmed = trim input
   in classify hasUnicode "has unicode characters" $
-     property $ trimmed == input || not (any isSpace (take 1 trimmed))
+     property $ trimmed == input || not (L.any isSpace (take 1 trimmed))
 
 -- ============================================================================
 -- Performance Tests
@@ -148,7 +149,7 @@ prop_trim_unicode_preservation input =
 
 test_trim_performance :: IO ()
 test_trim_performance = do
-  let largeString = concat $ replicate 10000 "    café naïve résumé 🚀 测试    \n"
+  let largeString = L.concat $ replicate 10000 "    café naïve résumé 🚀 测试    \n"
       start <- getCPUTime
       let result = trim largeString
       end <- getCPUTime
@@ -158,13 +159,13 @@ test_trim_performance = do
 
 test_splitBy_performance :: IO ()
 test_splitBy_performance = do
-  let largeString = concat $ replicate 10000 "café,naïve,résumé,测试,"
+  let largeString = L.concat $ replicate 10000 "café,naïve,résumé,测试,"
       start <- getCPUTime
       let result = splitBy ',' largeString
       end <- getCPUTime
       let diff = fromIntegral (end - start) / (10^12 :: Double)
   assertBool "SplitBy should complete in reasonable time" $ diff < 1.0  -- 1 second
-  assertBool "SplitBy should work correctly" $ length result > 1000
+  assertBool "SplitBy should work correctly" $ L.length result > 1000
 
 test_removeComments_performance :: IO ()
 test_removeComments_performance = do
@@ -181,8 +182,8 @@ test_removeComments_performance = do
 
 prop_trim_scalability :: Int -> String -> Property
 prop_trim_scalability multiplier baseContent =
-  multiplier > 0 && multiplier <= 1000 && length baseContent <= 100 ==>
-  let largeContent = concat $ replicate multiplier (baseContent ++ "  ")
+  multiplier > 0 && multiplier <= 1000 && L.length baseContent <= 100 ==>
+  let largeContent = L.concat $ replicate multiplier (baseContent ++ "  ")
       result = trim largeContent
   in property $ not (null result) || null baseContent
 
@@ -190,9 +191,9 @@ prop_splitBy_scalability :: Int -> Property
 prop_splitBy_scalability multiplier =
   multiplier > 0 && multiplier <= 1000 ==>
   let baseContent = "café,naïve,résumé,测试"
-      largeContent = concat $ replicate multiplier (baseContent ++ ",")
+      largeContent = L.concat $ replicate multiplier (baseContent ++ ",")
       result = splitBy ',' largeContent
-  in property $ length result >= multiplier * 4
+  in property $ L.length result >= multiplier * 4
 
 -- ============================================================================
 -- Memory Efficiency Tests
@@ -200,22 +201,22 @@ prop_splitBy_scalability multiplier =
 
 test_trim_memory_efficiency :: IO ()
 test_trim_memory_efficiency = do
-  let largeString = concat $ replicate 100000 "    café naïve résumé 🚀 测试    \n"
+  let largeString = L.concat $ replicate 100000 "    café naïve résumé 🚀 测试    \n"
   -- Force evaluation to ensure memory usage
   result <- evaluate $ force $ trim largeString
   assertBool "Trim should handle large strings efficiently" $ not (null result)
 
 test_splitBy_memory_efficiency :: IO ()
 test_splitBy_memory_efficiency = do
-  let largeString = concat $ replicate 100000 "café,naïve,résumé,测试,"
+  let largeString = L.concat $ replicate 100000 "café,naïve,résumé,测试,"
   -- Force evaluation to ensure memory usage
   result <- evaluate $ force $ splitBy ',' largeString
-  assertBool "SplitBy should handle large strings efficiently" $ length result > 1000
+  assertBool "SplitBy should handle large strings efficiently" $ L.length result > 1000
 
 prop_memory_usage_consistency :: Int -> String -> Property
 prop_memory_usage_consistency size baseContent =
-  size > 0 && size <= 1000 && length baseContent <= 100 ==>
-  let content = concat $ replicate size baseContent
+  size > 0 && size <= 1000 && L.length baseContent <= 100 ==>
+  let content = L.concat $ replicate size baseContent
       trimmed1 = trim content
       trimmed2 = trim content
   in property $ trimmed1 == trimmed2
@@ -227,7 +228,7 @@ prop_memory_usage_consistency size baseContent =
 test_performance_special_chars :: IO ()
 test_performance_special_chars = do
   let specialChars = "\0\1\2\3\4\5\6\7\8\10\11\12\13\14\15\16\17\18\19\20\21\22\23\24\25\26\27\28\29\30\31\127"
-      content = concat $ replicate 1000 (specialChars ++ "café naïve")
+      content = L.concat $ replicate 1000 (specialChars ++ "café naïve")
       start <- getCPUTime
       let result = trim content
       end <- getCPUTime
@@ -252,7 +253,7 @@ test_performance_mixed_unicode = do
 prop_performance_boundary_conditions :: Int -> Property
 prop_performance_boundary_conditions size =
   size > 0 && size <= 10000 ==>
-  let content = concat $ replicate size "café naïve résumé 🚀 测试\n"
+  let content = L.concat $ replicate size "café naïve résumé 🚀 测试\n"
       result = trim content
   in property $ not (null result) || size == 0
 
@@ -262,7 +263,7 @@ prop_performance_boundary_conditions size =
 
 prop_thread_safety :: String -> Property
 prop_thread_safety input =
-  length input <= 1000 ==>
+  L.length input <= 1000 ==>
   let result1 = trim input
       result2 = trim input
       result3 = trim input
@@ -270,9 +271,9 @@ prop_thread_safety input =
 
 prop_parallel_processing_consistency :: String -> Property
 prop_parallel_processing_consistency input =
-  length input <= 1000 ==>
+  L.length input <= 1000 ==>
   let results = map trim [input, input, input, input, input]
-  in property $ all (== head results) results
+  in property $ L.all (== L.head results) results
 
 -- ============================================================================
 -- Regression Performance Tests
@@ -298,12 +299,12 @@ test_performance_regression_prevention = do
 
 prop_performance_monotonicity :: Int -> String -> Property
 prop_performance_monotonicity size baseContent =
-  size > 0 && size <= 100 && length baseContent <= 50 ==>
-  let content1 = concat $ replicate size baseContent
-      content2 = concat $ replicate (size + 1) baseContent
+  size > 0 && size <= 100 && L.length baseContent <= 50 ==>
+  let content1 = L.concat $ replicate size baseContent
+      content2 = L.concat $ replicate (size + 1) baseContent
       result1 = trim content1
       result2 = trim content2
-  in property $ length result2 >= length result1
+  in property $ L.length result2 >= L.length result1
 
 -- ============================================================================
 -- Real-world Performance Scenarios
@@ -311,7 +312,7 @@ prop_performance_monotonicity size baseContent =
 
 test_large_file_processing :: IO ()
 test_large_file_processing = do
-  let largeFile = unlines $ concat
+  let largeFile = unlines $ L.concat
         [ replicate 1000 "//! ownership=true"
         , replicate 1000 "func test() { return \"café naïve résumé 🚀 测试\"; }"
         , replicate 1000 "// 中文注释 line"
@@ -362,12 +363,12 @@ test_unicode_normalization_consistency = do
 
 prop_unicode_boundary_handling :: String -> Property
 prop_unicode_boundary_handling input =
-  length input <= 100 ==>
-  let hasUnicode = any (not . isAscii) input
+  L.length input <= 100 ==>
+  let hasUnicode = L.any (not . isAscii) input
       trimmed = trim input
       processed = removeComments input
   in classify hasUnicode "has unicode" $
-     property $ length trimmed <= length input && length processed <= length input * 2
+     property $ L.length trimmed <= L.length input && L.length processed <= L.length input * 2
 
 -- ============================================================================
 -- Additional Helper Functions

@@ -1,6 +1,7 @@
 module Test.Unit.NewQuickCheckTestSuite8Spec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.QuickCheck (Property, (==>), forAll, Gen, arbitrary, choose, oneof, elements)
 import Data.Set (Set)
@@ -101,8 +102,8 @@ tests =
         [ testCase "createGlobalScope creates empty global scope" $ do
             let global = createGlobalScope
             scopeName global @?= "global"
-            Set.null (scopeVariables global) @?= True
-            Set.null (scopeFunctions global) @?= True
+            Set.L.null (scopeVariables global) @?= True
+            Set.L.null (scopeFunctions global) @?= True
             parentScope global @?= Nothing
             
         , testCase "Scope construction" $ do
@@ -135,12 +136,12 @@ tests =
     , testGroup "SyntaxValidator initialization"
         [ testCase "newSyntaxValidator creates validator" $ do
             let validator = newSyntaxValidator
-            null (validatorErrors validator) @?= True
+            L.null (validatorErrors validator) @?= True
             scopeName (currentScope validator) @?= "global"
-            null (scopeStack validator) @?= True
-            null (braceStack validator) @?= True
+            L.null (scopeStack validator) @?= True
+            L.null (braceStack validator) @?= True
             language validator @?= Unknown
-            null (tokens validator) @?= True
+            L.null (tokens validator) @?= True
             hasPackageDecl validator @?= False
             hasMainFunc validator @?= False
         ]
@@ -148,25 +149,25 @@ tests =
     , testGroup "Syntax validation"
         [ testCase "validateSyntax handles empty input" $ do
             let errors = validateSyntax ""
-            length errors @?= 0
+            L.length errors @?= 0
             
         , testCase "validateSyntax detects missing brace" $ do
             let code = "func test() {\n  // missing closing brace\n"
                 errors = validateSyntax code
-            let hasMissingBrace = any (\err -> errorType err == MissingBrace) errors
+            let hasMissingBrace = L.any (\err -> errorType err == MissingBrace) errors
             hasMissingBrace @?= True
             
         , testCase "validateSyntax detects unclosed string" $ do
             let code = "var s = \"unclosed string\n"
                 errors = validateSyntax code
-            let hasUnclosedString = any (\err -> errorType err == UnclosedString) errors
+            let hasUnclosedString = L.any (\err -> errorType err == UnclosedString) errors
             hasUnclosedString @?= True
             
         , testCase "validateSyntax handles valid Go code" $ do
             let goCode = "package main\n\nfunc main() {\n    println(\"Hello\")\n}\n"
                 errors = validateSyntax goCode
             -- Should have minimal errors for valid Go code
-            length errors <= 2 @?= True  -- Allow for some false positives
+            L.length errors <= 2 @?= True  -- Allow for some false positives
         ]
 
     , testGroup "File validation"
@@ -174,7 +175,7 @@ tests =
             let code = "func test() {}"
                 errors1 = validateSyntax code
                 errors2 = validateFile code
-            length errors1 @?= length errors2
+            L.length errors1 @?= L.length errors2
         ]
 
     , testGroup "Error formatting"
@@ -191,7 +192,7 @@ tests =
         [ testCase "getSyntaxErrors returns errors" $ do
             let validator = newSyntaxValidator { validatorErrors = [SyntaxError MissingBrace "test" 1 1 ""] }
                 errors = getSyntaxErrors validator
-            length errors @?= 1
+            L.length errors @?= 1
         ]
 
     , testGroup "QuickCheck properties"
@@ -205,7 +206,7 @@ tests =
 
 -- Helper function to check if string contains substring
 contains :: String -> String -> Bool
-contains needle haystack = needle `isInfixOf` haystack
+contains needle haystack = needle `L.isInfixOf` haystack
 
 -- ============================================================================
 -- QuickCheck Properties
@@ -314,5 +315,5 @@ genLanguage = elements [Go, Typus, GoAndTypus, Unknown]
 genValidIdentifier :: Gen String
 genValidIdentifier = do
     first <- elements ['a'..'z']
-    rest <- arbitrary `suchThat` all (`elem` ['a'..'z'] ++ ['0'..'9'] ++ "_")
+    rest <- arbitrary `suchThat` L.all (`elem` ['a'..'z'] ++ ['0'..'9'] ++ "_")
     return (first : rest)

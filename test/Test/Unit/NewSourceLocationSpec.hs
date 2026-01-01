@@ -2,6 +2,7 @@
 module Test.Unit.NewSourceLocationSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit ((@?=), assertBool, assertFailure, testCase)
 
 import SourceLocation
@@ -210,7 +211,7 @@ tests =
             newPos = advancePosByText text pos
         posLine newPos @?= 3
         posColumn newPos @?= 6
-        posOffset newPos @?= length text
+        posOffset newPos @?= L.length text
 
     , testCase "creates nested located values" $ do
         let inner = locatedAt (posAt 2 3) "inner"
@@ -241,12 +242,12 @@ tests =
         posColumn afterTab @?= 9  -- Should jump to next tab stop
         posOffset afterTab @?= 1
 
-    , testCase "creates spans with same start and end" $ do
+    , testCase "creates spans with same start L.and end" $ do
         let pos = posAt 5 10
             span = spanBetween pos pos
         spanStart span @?= pos
         spanEnd span @?= pos
-        assertBool "zero-length span is valid" (isValidSpan span)
+        assertBool "zero-L.length span is valid" (isValidSpan span)
 
     , testCase "converts located value to error location" $ do
         let located = locatedAt (posAt 7 15) "test"
@@ -260,5 +261,5 @@ tests =
             newPos = advancePosByText text pos
         posLine newPos @?= 1
         posColumn newPos @?= 6  -- Should count characters, not bytes
-        posOffset newPos @?= length text
+        posOffset newPos @?= L.length text
     ]

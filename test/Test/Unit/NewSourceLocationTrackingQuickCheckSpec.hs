@@ -3,6 +3,7 @@
 module Test.Unit.NewSourceLocationTrackingQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import Data.Char (isSpace)
@@ -27,13 +28,13 @@ sourcePosProperties = testGroup "SourcePos Properties"
   [ fastProperty "SourcePos with positive values is valid" prop_sourcepos_valid_positive
   , fastProperty "posAfter advances column by 1" prop_posafter_advances_column
   , fastProperty "posAtLineCol creates consistent position" prop_posatlinecol_consistent
-  , fastProperty "startPos has minimum values" prop_startpos_minimum
+  , fastProperty "startPos has L.minimum values" prop_startpos_minimum
   , fastProperty "advancePos by newline moves to next line" prop_advancepos_newline
   ]
 
 sourceSpanProperties :: TestTree
 sourceSpanProperties = testGroup "SourceSpan Properties"
-  [ fastProperty "emptySpan has zero length" prop_emptyspan_zero_length
+  [ fastProperty "emptySpan has zero L.length" prop_emptyspan_zero_length
   , fastProperty "spanFrom creates span starting at position" prop_spanfrom_starts_at_pos
   , fastProperty "spanTo creates span ending at position" prop_spanto_ends_at_pos
   , fastProperty "spanBetween creates span between positions" prop_spanbetween_between_positions

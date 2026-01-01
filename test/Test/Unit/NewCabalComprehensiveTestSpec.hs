@@ -18,6 +18,7 @@ import TestSupport.Arbitrary
 import Parser (parseTypus, TypusFile(..), FileDirectives(..), BlockDirectives(..))
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..))
 import Utils (trim, splitBy, removeComments)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 import Data.Char (isSpace)
 
@@ -42,16 +43,16 @@ prop_trim_idempotent s =
 prop_split_by_consistency :: Char -> String -> Property
 prop_split_by_consistency delim s =
   let parts = splitBy delim s
-      rejoined = concat $ map (++ [delim]) $ init parts ++ [last parts]
-  in length parts > 0 ==> rejoined === (if null s then "" else s ++ [delim])
+      rejoined = L.concat $ L.map (++ [delim]) $ init parts ++ [last parts]
+  in L.length parts > 0 ==> rejoined === (if null s then "" else s ++ [delim])
 
 -- Test 4: Comment removal preserves code structure
 prop_comment_preserves_structure :: String -> Property
 prop_comment_preserves_structure code =
   let withoutComments = removeComments code
-      hasComments = "//" `isInfixOf` code || "/*" `isInfixOf` code
+      hasComments = "//" `L.isInfixOf` code || "/*" `L.isInfixOf` code
   in classify hasComments "has comments" $
-     property $ length (lines withoutComments) <= length (lines code)
+     property $ L.length (lines withoutComments) <= L.length (lines code)
 
 -- Test 5: Source position ordering
 prop_source_position_ordering :: Int -> Int -> Int -> Int -> Property
@@ -78,7 +79,7 @@ prop_string_processing_invariants :: String -> String -> Property
 prop_string_processing_invariants s1 s2 =
   let combined = s1 ++ s2
       trimmedCombined = trim combined
-  in property $ not (null trimmedCombined) ==> length trimmedCombined <= length combined
+  in property $ not (null trimmedCombined) ==> L.length trimmedCombined <= L.length combined
 
 -- Test 8: Parser error recovery
 prop_parser_error_recovery :: String -> String -> Property
@@ -89,17 +90,17 @@ prop_parser_error_recovery valid invalid =
       invalidParsed = parseTypus invalidInput
   in case (validParsed, invalidParsed) of
        (Right _, Left _) -> property True
-       _ -> property True -- Both may succeed or fail depending on input
+       _ -> property True -- Both may succeed L.or fail depending on input
 
 -- Test 9: Whitespace normalization
 prop_whitespace_normalization :: String -> Property
 prop_whitespace_normalization s =
   let trimmed = trim s
-      hasLeading = not (null s) && isSpace (head s)
+      hasLeading = not (null s) && isSpace (L.head s)
       hasTrailing = not (null s) && isSpace (last s)
   in classify hasLeading "has leading whitespace" $
      classify hasTrailing "has trailing whitespace" $
-     property $ null trimmed || not (isSpace (head trimmed) && isSpace (last trimmed))
+     property $ null trimmed || not (isSpace (L.head trimmed) && isSpace (last trimmed))
 
 -- Test 10: Multi-line parsing consistency
 prop_multiline_parsing_consistency :: [String] -> Property

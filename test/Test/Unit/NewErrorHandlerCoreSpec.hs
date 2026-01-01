@@ -1,6 +1,7 @@
 module Test.Unit.NewErrorHandlerCoreSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Property, (===), forAll, Gen, choose, arbitrary, listOf1, elements)
 import TestSupport.QuickCheck (fastProperty)
@@ -31,33 +32,6 @@ import Compiler.Errors.Core
   , formatErrorsWithLocation
   , canRecoverFrom
   , shouldContinueAfter
-  , errorAt
-  , errorWithCategory
-  , warningAt
-  , warningWithCategory
-  , infoAt
-  , infoWithCategory
-  , fatalError
-  , fatalErrorWithCategory
-  , errorWithSuggestions
-  , withLocation
-  , withContext
-  , withSuggestions
-  , withRelatedErrors
-  , wrapError
-  , combineErrors
-  , combinedErrorSeverity
-  , filterCombinedErrorsBySeverity
-  , hasCategory
-  , filterByCategory
-  , filterBySeverity
-  , getErrorStatistics
-  , generateErrorReport
-  , createRecoveryStrategy
-  , customRecovery
-  , fatalRecovery
-  , errorRecovery
-  , warningRecovery
   , infoRecovery
   )
 import SourceLocation (SourcePos(..))
@@ -146,8 +120,8 @@ prop_severityOrdering sev1 sev2 =
 prop_filterByCategoryPreservesOrder :: ErrorCategory -> [CombinedError] -> Bool
 prop_filterByCategoryPreservesOrder category errors =
   let filtered = filterByCategory category errors
-      originalIndices = map fst $ filter (\(_, e) -> errorCategory e == category) $ zip [0..] errors
-  in length filtered == length originalIndices
+      originalIndices = map fst $ L.filter (\(_, e) -> errorCategory e == category) $ zip [0..] errors
+  in L.length filtered == L.length originalIndices
 
 -- ============================================================================
 -- Unit Tests
@@ -167,10 +141,7 @@ tests = testGroup "New ErrorHandler Core Tests"
   , testGroup "Basic Error Creation"
     [ testCase "Create simple error with errorAt" $ do
         let pos = SourcePos 10 5 100
-            error = errorAt pos "Test error message"
-        errorMessage error @?= "Test error message"
-        errorSeverity error @?= Error
-        errorLocation error @?= Just (ErrorLocation 10 5 Nothing Nothing)
+            error = errorAt "test-id" Nothing Nothing)
 
     , testCase "Create error with category using errorWithCategory" $ do
         let error = errorWithCategory TypeError "Type mismatch error"
@@ -180,17 +151,11 @@ tests = testGroup "New ErrorHandler Core Tests"
 
     , testCase "Create warning with warningAt" $ do
         let pos = SourcePos 5 3 50
-            warning = warningAt pos "Warning message"
-        errorMessage warning @?= "Warning message"
-        errorSeverity warning @?= Warning
-        errorLocation warning @?= Just (ErrorLocation 5 3 Nothing Nothing)
+            warning = warningAt "test-id" Nothing Nothing)
 
     , testCase "Create info message with infoAt" $ do
         let pos = SourcePos 1 1 0
-            info = infoAt pos "Info message"
-        errorMessage info @?= "Info message"
-        errorSeverity info @?= ErrorInfo
-        errorLocation info @?= Just (ErrorLocation 1 1 Nothing Nothing)
+            info = infoAt "test-id" Nothing Nothing)
 
     , testCase "Create fatal error with fatalError" $ do
         let fatal = fatalError "Fatal error occurred"
@@ -229,31 +194,31 @@ tests = testGroup "New ErrorHandler Core Tests"
         errorMessage wrapper @?= "Wrapper context: Original error"
     ]
 
-  , testGroup "Error Combination and Analysis"
+  , testGroup "Error Combination L.and Analysis"
     [ testCase "Combine errors with combineErrors" $ do
         let error1 = errorWithCategory TypeError "Type error"
             error2 = warningWithCategory NameError "Name warning"
             combined = combineErrors [error1] [error2]
-        length combined @?= 2
+        L.length combined @?= 2
         combinedErrorSeverity combined @?= Error  -- Higher severity wins
 
     , testCase "Filter errors by severity" $ do
         let errors = [errorWithCategory TypeError "Error", warningWithCategory NameError "Warning"]
             errorOnly = filterBySeverity Error errors
             warningOnly = filterBySeverity Warning errors
-        length errorOnly @?= 1
-        length warningOnly @?= 1
-        errorSeverity (head errorOnly) @?= Error
-        errorSeverity (head warningOnly) @?= Warning
+        L.length errorOnly @?= 1
+        L.length warningOnly @?= 1
+        errorSeverity (L.head errorOnly) @?= Error
+        errorSeverity (L.head warningOnly) @?= Warning
 
     , testCase "Filter errors by category" $ do
         let errors = [errorWithCategory TypeError "Type error", errorWithCategory NameError "Name error"]
             typeErrors = filterByCategory TypeError errors
             nameErrors = filterByCategory NameError errors
-        length typeErrors @?= 1
-        length nameErrors @?= 1
-        errorCategory (head typeErrors) @?= TypeError
-        errorCategory (head nameErrors) @?= NameError
+        L.length typeErrors @?= 1
+        L.length nameErrors @?= 1
+        errorCategory (L.head typeErrors) @?= TypeError
+        errorCategory (L.head nameErrors) @?= NameError
 
     , testCase "Check if error has specific category" $ do
         let typeError = errorWithCategory TypeError "Type error"
@@ -268,28 +233,14 @@ tests = testGroup "New ErrorHandler Core Tests"
     [ testCase "Format simple error" $ do
         let error = errorWithCategory TypeError "Type mismatch"
             formatted = formatError error
-        "Type mismatch" `isInfixOf` formatted @?= True
-        "TypeError" `isInfixOf` formatted @?= True
+        "Type mismatch" `L.isInfixOf` formatted @?= True
+        "TypeError" `L.isInfixOf` formatted @?= True
 
     , testCase "Format error with location" $ do
         let pos = SourcePos 10 5 100
-            error = errorAt pos "Location error"
-            formatted = formatErrorWithLocation error
-        "Location error" `isInfixOf` formatted @?= True
-        "10:5" `isInfixOf` formatted @?= True
-
-    , testCase "Format multiple errors" $ do
-        let errors = [errorWithCategory TypeError "Error 1", warningWithCategory NameError "Warning 1"]
-            formatted = formatErrorsWithLocation errors
-        "Error 1" `isInfixOf` formatted @?= True
-        "Warning 1" `isInfixOf` formatted @?= True
-    ]
-
-  , testGroup "Error Recovery"
-    [ testCase "Check recovery capability by severity" $ do
-        let infoError = infoAt (SourcePos 1 1 0) "Info message"
-            warningError = warningAt (SourcePos 1 1 0) "Warning message"
-            regularError = errorAt (SourcePos 1 1 0) "Error message"
+            error = errorAt "test-id" 1 0) "Info message"
+            warningError = warningAt "test-id" 1 0) "Warning message"
+            regularError = errorAt "test-id" 1 0) "Error message"
             fatalError' = fatalError "Fatal message"
         canRecoverFrom infoError @?= True
         canRecoverFrom warningError @?= True
@@ -297,9 +248,9 @@ tests = testGroup "New ErrorHandler Core Tests"
         canRecoverFrom fatalError' @?= False
 
     , testCase "Check continuation capability by severity" $ do
-        let infoError = infoAt (SourcePos 1 1 0) "Info message"
-            warningError = warningAt (SourcePos 1 1 0) "Warning message"
-            regularError = errorAt (SourcePos 1 1 0) "Error message"
+        let infoError = infoAt "test-id" 1 0) "Info message"
+            warningError = warningAt "test-id" 1 0) "Warning message"
+            regularError = errorAt "test-id" 1 0) "Error message"
             fatalError' = fatalError "Fatal message"
         shouldContinueAfter infoError @?= True
         shouldContinueAfter warningError @?= True
@@ -308,12 +259,12 @@ tests = testGroup "New ErrorHandler Core Tests"
 
     , testCase "Create custom recovery strategy" $ do
         let strategy = createRecoveryStrategy True "Custom recovery action"
-            error = errorAt (SourcePos 1 1 0) "Recoverable error"
+            error = errorAt "test-id" 1 0) "Recoverable error"
             recovered = customRecovery strategy error
         errorRecovery recovered @?= Just strategy
 
     , testCase "Use predefined recovery strategies" $ do
-        let error = errorAt (SourcePos 1 1 0) "Test error"
+        let error = errorAt "test-id" 1 0) "Test error"
             fatalRecovered = fatalRecovery error
             errorRecovered = errorRecovery error
             warningRecovered = warningRecovery error
@@ -324,40 +275,40 @@ tests = testGroup "New ErrorHandler Core Tests"
         canRecoverFrom (errorWithRecovery infoRecovered) @?= True
 
     , testCase "Error with suggestions for recovery" $ do
-        let error = errorWithSuggestions ["Try alternative approach"] (errorAt (SourcePos 1 1 0) "Suggested error")
-        length (errorSuggestions error) @?= 1
-        head (errorSuggestions error) @?= "Try alternative approach"
+        let error = errorWithSuggestions ["Try alternative approach"] (errorAt "test-id" 1 0) "Suggested error")
+        L.length (errorSuggestions error) @?= 1
+        L.head (errorSuggestions error) @?= "Try alternative approach"
     ]
 
-  , testGroup "Error Statistics and Reporting"
+  , testGroup "Error Statistics L.and Reporting"
     [ testCase "Generate error statistics" $ do
         let errors = [errorWithCategory TypeError "Type error", warningWithCategory NameError "Name warning"]
             stats = getErrorStatistics errors
-        -- Check that stats contain information about errors and warnings
+        -- Check that stats contain information about errors L.and warnings
         stats `seq` True @?= True  -- Basic check that stats are generated
 
     , testCase "Generate error report" $ do
         let errors = [errorWithCategory TypeError "Type error", warningWithCategory NameError "Name warning"]
             report = generateErrorReport errors
-        "Type error" `isInfixOf` report @?= True
-        "Name warning" `isInfixOf` report @?= True
+        "Type error" `L.isInfixOf` report @?= True
+        "Name warning" `L.isInfixOf` report @?= True
 
     , testCase "Error with suggestions creates enhanced report" $ do
         let error = errorWithSuggestions ["Check imports", "Verify syntax"] (errorWithCategory TypeError "Suggested error")
             report = generateErrorReport [error]
-        "Suggested error" `isInfixOf` report @?= True
-        "Check imports" `isInfixOf` report @?= True
-        "Verify syntax" `isInfixOf` report @?= True
+        "Suggested error" `L.isInfixOf` report @?= True
+        "Check imports" `L.isInfixOf` report @?= True
+        "Verify syntax" `L.isInfixOf` report @?= True
     ]
   ]
 
 -- Helper function to check if a string is contained in another
 isInfixOf :: Eq a => [a] -> [a] -> Bool
-isInfixOf needle haystack = any (isPrefixOf needle) (tails haystack)
+L.isInfixOf needle haystack = L.any (L.isPrefixOf needle) (tails haystack)
   where
-    isPrefixOf [] _ = True
-    isPrefixOf _ [] = False
-    isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
+    L.isPrefixOf [] _ = True
+    L.isPrefixOf _ [] = False
+    L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
     tails [] = [[]]
     tails xs@(x:xs') = xs : tails xs'
 

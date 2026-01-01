@@ -16,7 +16,9 @@ import Compiler
 import Parser (TypusFile(..), CodeBlock(..), parseTypus)
 import Compiler.IR (IRModule(..), IRFunction(..), IRStatement(..), IRExpression(..))
 import SourceLocation (SourcePos(..), SourceSpan(..), posAtLineCol, spanBetween)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (nub)
 import Data.Text (Text, pack, unpack)
 import qualified Data.Map as Map
 
@@ -32,7 +34,7 @@ tests =
         ]
 
     , testGroup "Error analysis properties"
-        [ testProperty "error analysis preserves all errors" prop_errorAnalysisPreservesErrors
+        [ testProperty "error analysis preserves L.all errors" prop_errorAnalysisPreservesErrors
         , testProperty "error analysis categorizes by severity" prop_errorAnalysisCategorizesSeverity
         , testProperty "error analysis provides locations" prop_errorAnalysisProvidesLocations
         , testProperty "error analysis handles empty error list" prop_errorAnalysisHandlesEmpty
@@ -76,14 +78,14 @@ tests =
             let input = "func test() { return 1 + 2 * 3 }"
                 result = compile input
             case result of
-                Right (goCode, _) -> "6" `isInfixOf` goCode @?= True
+                Right (goCode, _) -> "6" `L.isInfixOf` goCode @?= True
                 Left _ -> @?= False True
 
         , testCase "dead code elimination" $ do
             let input = "func test() { if false { return 1 } else { return 2 } }"
                 result = compile input
             case result of
-                Right (goCode, _) -> "return 2" `isInfixOf` goCode @?= True
+                Right (goCode, _) -> "return 2" `L.isInfixOf` goCode @?= True
                 Left _ -> @?= False True
 
         , testCase "function inlining" $ do
@@ -93,21 +95,21 @@ tests =
                   ]
                 result = compile input
             case result of
-                Right (goCode, _) -> length (lines goCode) >= 2 @?= True
+                Right (goCode, _) -> L.length (lines goCode) >= 2 @?= True
                 Left _ -> @?= False True
 
         , testCase "loop optimization" $ do
-            let input = "func test() { for i := 0; i < 10; i++ { sum += i } }"
+            let input = "func test() { for i := 0; i < 10; i++ { L.sum += i } }"
                 result = compile input
             case result of
-                Right (goCode, _) -> "for" `isInfixOf` goCode @?= True
+                Right (goCode, _) -> "for" `L.isInfixOf` goCode @?= True
                 Left _ -> @?= False True
 
         , testCase "type inference optimization" $ do
             let input = "func test() { x := 42; return x }"
                 result = compile input
             case result of
-                Right (goCode, _) -> "int" `isInfixOf` goCode @?= True
+                Right (goCode, _) -> "int" `L.isInfixOf` goCode @?= True
                 Left _ -> @?= False True
 
         , testCase "ownership optimization" $ do
@@ -129,15 +131,15 @@ prop_compilationPhasesProgress :: String -> Property
 prop_compilationPhasesProgress input =
   let result = compile input
   in case result of
-       Right _ -> True -- Successful compilation went through all phases
-       Left errors -> all (\error -> compilationPhase error `elem` [ParsingPhase, TypeCheckPhase, OwnershipPhase, CodeGenPhase]) errors
+       Right _ -> True -- Successful compilation went through L.all phases
+       Left errors -> L.all (\error -> compilationPhase error `elem` [ParsingPhase, TypeCheckPhase, OwnershipPhase, CodeGenPhase]) errors
 
 -- | 错误分析识别正确阶段
 prop_errorAnalysisIdentifiesPhase :: [CompilationPhase] -> Property
 prop_errorAnalysisIdentifiesPhase phases =
-  let errors = map (\phase -> CompilerError { compilationPhase = phase, errorMessage = "test", errorLocation = Nothing, errorSeverity = Error }) phases
+  let errors = L.map (\phase -> CompilerError { compilationPhase = phase, errorMessage = "test", errorLocation = Nothing, errorSeverity = Error }) phases
       analyzed = analyzeErrors errors
-  in all (\error -> compilationPhase error `elem` phases) analyzed
+  in L.all (\error -> compilationPhase error `elem` phases) analyzed
 
 -- | 编译是确定性的
 prop_compilationDeterministic :: String -> Property
@@ -146,7 +148,7 @@ prop_compilationDeterministic input =
       result2 = compile input
   in case (result1, result2) of
        (Right (code1, _), Right (code2, _)) -> code1 == code2
-       (Left errors1, Left errors2) -> length errors1 == length errors2
+       (Left errors1, Left errors2) -> L.length errors1 == L.length errors2
        _ -> False -- Should be consistent success/failure
 
 -- | 编译处理重复调用
@@ -154,32 +156,32 @@ prop_compilationHandlesRepeats :: String -> Int -> Property
 prop_compilationHandlesRepeats input count =
   count >= 0 && count <= 10 ==>
   let results = replicate count (compile input)
-      successes = length [() | Right _ <- results]
-      failures = length [() | Left _ <- results]
-  in successes == count || failures == count -- All should be success or all should be failure
+      successes = L.length [() | Right _ <- results]
+      failures = L.length [() | Left _ <- results]
+  in successes == count || failures == count -- All should be success L.or L.all should be failure
 
 -- | 错误分析保留所有错误
 prop_errorAnalysisPreservesErrors :: [String] -> Property
 prop_errorAnalysisPreservesError messages =
-  let errors = map (\msg -> CompilerError { compilationPhase = ParsingPhase, errorMessage = msg, errorLocation = Nothing, errorSeverity = Error }) messages
+  let errors = L.map (\msg -> CompilerError { compilationPhase = ParsingPhase, errorMessage = msg, errorLocation = Nothing, errorSeverity = Error }) messages
       analyzed = analyzeErrors errors
-  in length analyzed == length errors
+  in L.length analyzed == L.length errors
 
 -- | 错误分析按严重程度分类
 prop_errorAnalysisCategorizesSeverity :: [ErrorSeverity] -> Property
 prop_errorAnalysisCategorizesSeverity severities =
   let errors = zipWith (\sev idx -> CompilerError { compilationPhase = ParsingPhase, errorMessage = "error" ++ show idx, errorLocation = Nothing, errorSeverity = sev }) severities [1..]
       analyzed = analyzeErrors errors
-  in all (\error -> errorSeverity error `elem` severities) analyzed
+  in L.all (\error -> errorSeverity error `elem` severities) analyzed
 
 -- | 错误分析提供位置
 prop_errorAnalysisProvidesLocations :: [Int] -> [Int] -> Property
 prop_errorAnalysisProvidesLocations lines cols =
-  length lines == length cols && not (null lines) ==>
+  L.length lines == L.length cols && not (null lines) ==>
   let positions = zipWith (\line col -> Just (posAtLineCol line col)) lines cols
       errors = zipWith (\pos idx -> CompilerError { compilationPhase = ParsingPhase, errorMessage = "error" ++ show idx, errorLocation = pos, errorSeverity = Error }) positions [1..]
       analyzed = analyzeErrors errors
-  in all (\error -> errorLocation error `elem` positions) analyzed
+  in L.all (\error -> errorLocation error `elem` positions) analyzed
 
 -- | 错误分析处理空错误列表
 prop_errorAnalysisHandlesEmpty :: Property
@@ -205,17 +207,17 @@ prop_typeCheckingDetectsInvalid input =
   in case parsed of
        Right typusFile -> 
          let typeErrors = diagnoseTypeErrors typusFile
-         in not (null typeErrors) || True -- May or may not have type errors
+         in not (null typeErrors) || True -- May L.or may not have type errors
        Left _ -> True -- Syntax errors are detected
 
 -- | 类型环境是一致的
 prop_typeEnvironmentConsistent :: [(String, String)] -> Property
 prop_typeEnvironmentConsistent pairs =
   let typeEnv = buildTypeEnvFromPairs pairs
-      -- Check that all declared types are present
+      -- Check that L.all declared types are present
       declaredTypes = map fst pairs
       envTypes = Map.keys typeEnv
-  in all (`elem` envTypes) declaredTypes
+  in L.all (`elem` envTypes) declaredTypes
 
 -- | 类型检查处理复杂表达式
 prop_typeCheckingComplexExpressions :: String -> Property
@@ -233,7 +235,7 @@ prop_dependentTypePreservesInvariants input =
   in case parsed of
        Right typusFile -> 
          let dependentErrors = checkDependentTypes typusFile
-         in True -- Should not crash on any input
+         in True -- Should not crash on L.any input
        Left _ -> True
 
 -- | 依赖类型约束被尊重
@@ -243,7 +245,7 @@ prop_dependentTypeConstraintsRespected input =
   in case parsed of
        Right typusFile -> 
          let dependentErrors = checkDependentTypes typusFile
-         in length dependentErrors >= 0 -- Should detect constraint violations
+         in L.length dependentErrors >= 0 -- Should detect constraint violations
        Left _ -> True
 
 -- | 依赖类型检查处理边界情况
@@ -312,7 +314,7 @@ prop_codeGenerationValidGo input =
   let result = compile input
   in case result of
        Right (goCode, _) -> 
-         let hasValidStructure = "func" `isInfixOf` goCode || "var" `isInfixOf` goCode || "const" `isInfixOf` goCode
+         let hasValidStructure = "func" `L.isInfixOf` goCode || "var" `L.isInfixOf` goCode || "const" `L.isInfixOf` goCode
          in hasValidStructure
        Left _ -> True
 
@@ -321,7 +323,7 @@ prop_codeGenerationHandlesOptimizations :: String -> Property
 prop_codeGenerationHandlesOptimizations input =
   let result = compile input
   in case result of
-       Right (goCode, _) -> length goCode >= 0 -- Should generate code of some length
+       Right (goCode, _) -> L.length goCode >= 0 -- Should generate code of some L.length
        Left _ -> True
 
 -- | 代码生成是确定性的

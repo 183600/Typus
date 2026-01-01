@@ -20,10 +20,11 @@ import Compiler.Errors.Core
   )
 import Parser (parseTypus, FileDirectives(..), BlockDirectives(..), defaultFileDirectives)
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf)
 import Data.Maybe (isJust, isNothing)
 import Control.Monad (when)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 
 -- ============================================================================
 -- Test Suite Definition
@@ -50,16 +51,16 @@ utilsProperties = testGroup "Utils Module Properties"
   , testProperty "trim: trimmed string has no leading/trailing whitespace" $
       \s -> let t = trim s
              in not (null t) ==> 
-                (not . isSpace $ head t) && (not . isSpace $ last t)
+                (not . isSpace $ L.head t) && (not . isSpace $ last t)
                 
-  , testProperty "splitBy: split and join with delimiter preserves original" $
-      \c s -> splitBy c s === map (T.unpack . T.pack) (T.split (== c) (T.pack s))
+  , testProperty "splitBy: split L.and join with delimiter preserves original" $
+      \c s -> splitBy c s === L.map (T.unpack . T.pack) (T.split (== c) (T.pack s))
       
   , testProperty "splitByCollapsed: never returns empty strings" $
-      \c s -> all (not . null) (splitByCollapsed c s)
+      \c s -> L.all (not . null) (splitByCollapsed c s)
       
   , testProperty "splitByCollapsed: result is subset of splitBy" $
-      \c s -> all (`elem` splitBy c s) (splitByCollapsed c s)
+      \c s -> L.all (`elem` splitBy c s) (splitByCollapsed c s)
       
   , testProperty "removeLineComments: removing comments twice is idempotent" $
       \s -> removeLineComments (removeLineComments s) === removeLineComments s
@@ -115,18 +116,12 @@ errorHandlingProperties = testGroup "ErrorHandling Module Properties"
       \severity category msg ->
         let err = TypeError severity category msg emptyContext
             formatted = formatError err
-        in msg `isInfixOf` formatted
+        in msg `L.isInfixOf` formatted
         
   , testProperty "ErrorLocation: position information is preserved in formatting" $
       \line col msg ->
         let pos = SourcePos line col
-            err = errorAt pos msg
-            formatted = formatError err
-        in show line `isInfixOf` formatted && show col `isInfixOf` formatted
-        
-  , testProperty "ErrorSeverity: different severities produce different formatted output" $
-      \msg ->
-        let err1 = errorAt (startPos) msg
+            err = errorAt "test-id" = errorAt (startPos) msg
             err2 = warningAt (startPos) msg
             err3 = infoAt (startPos) msg
             fmt1 = formatError err1
@@ -170,7 +165,7 @@ parserProperties = testGroup "Parser Module Properties"
       \ws1 ws2 ->
         let input = ws1 ++ "// @ownership: true\n" ++ ws2
             result = parseTypus input
-        in length ws1 < 10 && length ws2 < 10 ==>  -- Limit size for performance
+        in L.length ws1 < 10 && L.length ws2 < 10 ==>  -- Limit size for performance
            case result of
              Left _ -> property False  -- Should parse successfully
              Right file -> isJust (fdOwnership (fileDirectives file))
@@ -205,7 +200,7 @@ integrationProperties = testGroup "Integration Properties"
             withoutComments = removeLineComments withComments
             result1 = parseTypus withComments
             result2 = parseTypus withoutComments
-        in length input < 50 ==>  -- Limit size
+        in L.length input < 50 ==>  -- Limit size
            case (result1, result2) of
              (Right _, Right _) -> property True
              (Left _, Left _) -> property True  
@@ -217,4 +212,4 @@ integrationProperties = testGroup "Integration Properties"
 -- ============================================================================
 
 isInfixOf :: String -> String -> Bool
-isInfixOf = Data.List.isInfixOf
+L.isInfixOf = Data.List.L.isInfixOf

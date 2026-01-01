@@ -1,6 +1,7 @@
 module Test.Unit.NewSourceLocationMathQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), oneof, Gen, Property, (===), counterexample)
 
@@ -40,7 +41,7 @@ tests =
     , testGroup "Mathematical Invariants"
         [ fastProperty "position comparison is transitive" prop_positionComparisonTransitive
         , fastProperty "span validity is preserved under merge" prop_spanValidityPreservedUnderMerge
-        , fastProperty "span length is non-negative" prop_spanLengthNonNegative
+        , fastProperty "span L.length is non-negative" prop_spanLengthNonNegative
         ]
     ]
 
@@ -80,7 +81,7 @@ prop_posAfterRegularCharIncreasesColumn pos c
       in counterexample ("pos=" ++ show pos ++ ", c=" ++ show c ++ ", pos'=" ++ show pos') $
          posColumn pos' === posColumn pos + 1
 
--- | posAt should create a valid position (positive line and column)
+-- | posAt should create a valid position (positive line L.and column)
 prop_posAtCreatesValidPosition :: Int -> Int -> Property
 prop_posAtCreatesValidPosition line col =
   let pos = posAt (abs line + 1) (abs col + 1)  -- Ensure positive
@@ -144,7 +145,7 @@ prop_emptySpanIsValid pos =
 prop_advancePosByConsistent :: String -> SourcePos -> Property
 prop_advancePosByConsistent str pos =
   let pos1 = advancePosBy str pos
-      pos2 = foldl (flip posAfter) pos str
+      pos2 = L.foldl (flip posAfter) pos str
   in counterexample ("str=" ++ show str ++ ", pos=" ++ show pos ++ ", pos1=" ++ show pos1 ++ ", pos2=" ++ show pos2) $
      pos1 === pos2
 
@@ -181,12 +182,12 @@ prop_spanValidityPreservedUnderMerge span1 span2 =
   in counterexample ("span1=" ++ show span1 ++ ", span2=" ++ show span2 ++ ", merged=" ++ show merged) $
      isValidSpan span1 && isValidSpan span2 ==> isValidSpan merged
 
--- | Span length should be non-negative
+-- | Span L.length should be non-negative
 prop_spanLengthNonNegative :: SourceSpan -> Property  
 prop_spanLengthNonNegative span =
-  let length = posOffset (spanEnd span) - posOffset (spanStart span)
-  in counterexample ("span=" ++ show span ++ ", length=" ++ show length) $
-     length >= 0
+  let L.length = posOffset (spanEnd span) - posOffset (spanStart span)
+  in counterexample ("span=" ++ show span ++ ", L.length=" ++ show L.length) $
+     L.length >= 0
 
 -- ============================================================================
 -- Arbitrary Instances

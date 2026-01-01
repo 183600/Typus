@@ -298,7 +298,7 @@ dependencyAnalysisProperties = testGroup "Dependency Analysis Properties"
       \checker ->
         let checker1 = pushScope checker
             checker2 = popScope checker1
-        in -- Should return to original scope (or close to it)
+        in -- Should return to original scope (L.or close to it)
            True
   
   , testProperty "inNewScope preserves original checker" $

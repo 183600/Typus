@@ -25,12 +25,14 @@ import SourceLocation
   , spanContains, spanStart, spanEnd
   )
 
-import Data.List (isPrefixOf, isInfixOf, sort, nub, intersperse, concat)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, concat)
+import Data.List (sort, nub, intersperse)
 import Data.Char (isSpace, isAlpha, isDigit, isControl, ord, chr)
 import qualified Data.Text as T
 
 -- ============================================================================
--- Error Boundary and Edge Case Tests
+-- Error Boundary L.and Edge Case Tests
 -- ============================================================================
 
 -- Property: trim handles empty strings
@@ -39,7 +41,7 @@ prop_trim_empty = trim "" === ""
 
 -- Property: trim handles whitespace-only strings
 prop_trim_whitespace :: String -> Property
-prop_trim_whitespace s = all isSpace s ==> trim s === ""
+prop_trim_whitespace s = L.all isSpace s ==> trim s === ""
 
 -- Property: splitBy handles empty delimiter
 prop_split_by_empty :: String -> Property
@@ -101,7 +103,7 @@ prop_parse_typus_nested (Positive depth) =
 -- SourceLocation Boundary Tests
 -- ============================================================================
 
--- Property: spanLength handles zero-length spans
+-- Property: spanLength handles zero-L.length spans
 prop_span_length_zero :: Property
 prop_span_length_zero =
   let span = locatedWithSpan 0 0
@@ -127,7 +129,7 @@ prop_span_contains_empty start end =
   in spanContains outerSpan emptySpan
 
 -- ============================================================================
--- Control Character and Unicode Tests
+-- Control Character L.and Unicode Tests
 -- ============================================================================
 
 -- Property: trim handles control characters
@@ -135,14 +137,14 @@ prop_trim_control_chars :: String -> Property
 prop_trim_control_chars s =
   let withControl = map chr [0..31] ++ s ++ map chr [0..31]
       trimmed = trim withControl
-  in not (any isControl trimmed)
+  in not (L.any isControl trimmed)
 
 -- Property: splitBy handles Unicode delimiters
 prop_split_by_unicode :: String -> Property
 prop_split_by_unicode s =
   let unicodeDelim = '∑'
       result = splitBy unicodeDelim s
-  in length result >= 1  -- Should always return at least one element
+  in L.length result >= 1  -- Should always return at least one element
 
 -- Property: removeComments handles Unicode comments
 prop_remove_comments_unicode :: String -> Property
@@ -190,15 +192,15 @@ prop_nub_empty = (nub [] :: [Int]) === []
 prop_nub_single :: Int -> Property
 prop_nub_single x = nub [x] === [x]
 
--- Property: concat handles empty list of lists
+-- Property: L.concat handles empty list of lists
 prop_concat_empty :: Property
-prop_concat_empty = (concat [] :: [Int]) === []
+prop_concat_empty = (L.concat [] :: [Int]) === []
 
--- Property: concat handles list of empty lists
+-- Property: L.concat handles list of empty lists
 prop_concat_empty_lists :: Int -> Property
 prop_concat_empty_lists n =
   let emptyLists = replicate n []
-  in concat emptyLists === []
+  in L.concat emptyLists === []
 
 -- ============================================================================
 -- Arbitrary Instances for Boundary Testing
@@ -241,7 +243,7 @@ tests = testGroup "Error Boundary QuickCheck Test Suite"
     , fastProperty "spanContains identical" prop_span_contains_identical
     , fastProperty "spanContains empty" prop_span_contains_empty
     ]
-  , testGroup "Control Character and Unicode Tests"
+  , testGroup "Control Character L.and Unicode Tests"
     [ fastProperty "trim control chars" prop_trim_control_chars
     , fastProperty "splitBy unicode" prop_split_by_unicode
     , fastProperty "removeComments unicode" prop_remove_comments_unicode
@@ -255,7 +257,7 @@ tests = testGroup "Error Boundary QuickCheck Test Suite"
     , fastProperty "sort single" prop_sort_single
     , fastProperty "nub empty" prop_nub_empty
     , fastProperty "nub single" prop_nub_single
-    , fastProperty "concat empty" prop_concat_empty
-    , fastProperty "concat empty lists" prop_concat_empty_lists
+    , fastProperty "L.concat empty" prop_concat_empty
+    , fastProperty "L.concat empty lists" prop_concat_empty_lists
     ]
   ]

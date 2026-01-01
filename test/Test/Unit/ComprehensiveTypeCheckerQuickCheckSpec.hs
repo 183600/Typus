@@ -4,6 +4,7 @@
 module Test.Unit.ComprehensiveTypeCheckerQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import TestSupport.ExtendedArbitrary ()
@@ -27,8 +28,8 @@ import Analyzer.Types (SymbolInfo(..))
 -- Property: Type environment maintains consistency after additions
 prop_typeenv_consistent_after_additions :: TC.TypeEnv -> [String] -> [TC.Type] -> Property
 prop_typeenv_consistent_after_additions initialEnv names typesToAdd =
-  length typesToAdd == length names ==> 
-  let envWithAdditions = foldl (\env (name, typ) -> 
+  L.length typesToAdd == L.length names ==> 
+  let envWithAdditions = L.foldl (\env (name, typ) -> 
         TC.addType env name typ) initialEnv (zip names typesToAdd)
   in property $ isConsistentTypeEnv envWithAdditions
 
@@ -43,19 +44,19 @@ prop_type_lookup_consistent env name typ =
 prop_function_typechecking_preserves_signatures :: TC.TypeEnv -> [TC.FunctionSignature] -> Property
 prop_function_typechecking_preserves_signatures env signatures =
   not (null signatures) ==> 
-  let envWithFunctions = foldl (\e sig -> 
+  let envWithFunctions = L.foldl (\e sig -> 
         TC.addFunction e (generateFunctionName sig) sig) env signatures
-      checkedSignatures = map (TC.checkFunctionSignature envWithFunctions) signatures
-  in property $ all isRight checkedSignatures
+      checkedSignatures = L.map (TC.checkFunctionSignature envWithFunctions) signatures
+  in property $ L.all isRight checkedSignatures
 
 -- Property: Variable type checking respects scope
 prop_variable_typechecking_respects_scope :: TC.TypeEnv -> [String] -> [TC.Type] -> Property
 prop_variable_typechecking_respects_scope env varNames varTypes =
-  length varNames == length varTypes ==> 
-  let scopedEnv = foldl (\e (name, typ) -> 
+  L.length varNames == L.length varTypes ==> 
+  let scopedEnv = L.foldl (\e (name, typ) -> 
         TC.addVariable e name typ) env (zip varNames varTypes)
-      lookupResults = map (TC.lookupVariable scopedEnv) varNames
-  in property $ all isJust lookupResults
+      lookupResults = L.map (TC.lookupVariable scopedEnv) varNames
+  in property $ L.all isJust lookupResults
 
 -- Property: Expression type checking is deterministic
 prop_expression_typechecking_deterministic :: TC.TypeEnv -> String -> Property
@@ -88,13 +89,13 @@ prop_generic_instantiation_correct genericName typeArgs =
 -- Property: Type inference respects constraints
 prop_type_inference_respects_constraints :: TC.TypeEnv -> [String] -> [TC.Type] -> Property
 prop_type_inference_respects_constraints env expressions expectedTypes =
-  length expressions == length expectedTypes ==> 
-  let inferredTypes = map (TC.inferExpressionType env) expressions
+  L.length expressions == L.length expectedTypes ==> 
+  let inferredTypes = L.map (TC.inferExpressionType env) expressions
       validInferences = zipWith (\inferred expected -> 
         case inferred of
           Right typ -> isCompatible typ expected
           Left _ -> False) inferredTypes expectedTypes
-  in property $ all id validInferences
+  in property $ L.all id validInferences
 
 -- Property: Type checking catches type mismatches
 prop_typechecking_catches_mismatches :: TC.TypeEnv -> TC.Type -> TC.Type -> Property
@@ -107,8 +108,8 @@ prop_typechecking_catches_mismatches env expectedType actualType =
 -- Property: Function parameter checking is strict
 prop_function_parameter_checking_strict :: TC.FunctionSignature -> [TC.Type] -> Property
 prop_function_parameter_checking_strict signature argTypes =
-  let paramCount = length (TC.fsParams signature)
-      argCount = length argTypes
+  let paramCount = L.length (TC.fsParams signature)
+      argCount = L.length argTypes
       isValid = TC.checkFunctionParameters signature argTypes
   in property $ if paramCount == argCount 
                 then isValid == areParameterTypesCompatible signature argTypes
@@ -135,7 +136,7 @@ prop_recursive_type_definitions_handled typeNames =
   not (null typeNames) ==> 
   let recursiveTypes = generateRecursiveTypes typeNames
       validationResults = map TC.validateRecursiveType recursiveTypes
-  in property $ all (\result -> case result of { Right t -> isValidRecursiveTypeValidation t; Left _ -> False }) validationResults
+  in property $ L.all (\result -> case result of { Right t -> isValidRecursiveTypeValidation t; Left _ -> False }) validationResults
 
 -- Property: Interface implementation checking is thorough
 prop_interface_implementation_thorough :: [String] -> [String] -> Property
@@ -143,9 +144,9 @@ prop_interface_implementation_thorough interfaceNames structNames =
   not (null interfaceNames) && not (null structNames) ==> 
   let interfaces = generateInterfaces interfaceNames
       structs = generateStructs structNames
-      implementations = map (\(iface, struct) -> 
+      implementations = L.map (\(iface, struct) -> 
         TC.checkInterfaceImplementation iface struct) (zip interfaces structs)
-  in property $ all isValidImplementationCheck implementations
+  in property $ L.all isValidImplementationCheck implementations
 
 -- Property: Type coercion follows rules
 prop_type_coercion_follows_rules :: TC.Type -> TC.Type -> Property
@@ -162,7 +163,7 @@ prop_subtype_relationships_transitive type1 type2 type3 =
       isSub13 = TC.isSubtype type1 type3
   in property $ (isSub12 && isSub23) ==> isSub13
 
--- Property: Type equality is reflexive and symmetric
+-- Property: Type equality is reflexive L.and symmetric
 prop_type_equality_properties :: TC.Type -> TC.Type -> Property
 prop_type_equality_properties type1 type2 =
   let isEqual12 = TC.typesEqual type1 type2
@@ -192,10 +193,10 @@ prop_type_level_computation inputType expectedOutputType =
 -- Property: Dependent type checking
 prop_dependent_typechecking :: [String] -> [TC.Type] -> Property
 prop_dependent_typechecking valueNames types =
-  length valueNames == length types ==> 
+  L.length valueNames == L.length types ==> 
   let dependentTypes = generateDependentTypes valueNames types
       validationResults = map TC.validateDependentType dependentTypes
-  in property $ all (\result -> case result of { Right t -> isValidDependentTypeValidation t; Left _ -> False }) validationResults
+  in property $ L.all (\result -> case result of { Right t -> isValidDependentTypeValidation t; Left _ -> False }) validationResults
 
 -- Property: Type inference in presence of constraints
 prop_type_inference_with_constraints :: TC.TypeEnv -> [TC.TypeConstraint] -> String -> Property
@@ -216,10 +217,10 @@ prop_type_variable_generalization env varName varType =
 prop_type_variable_instantiation :: TC.Type -> Map.Map String TC.Type -> Property
 prop_type_variable_instantiation polyType substitutions =
   -- TC.instantiateType is not exported, simplified property check
-  property $ isValidType polyType && all isValidType (Map.elems substitutions)
+  property $ isValidType polyType && L.all isValidType (Map.elems substitutions)
 
 -- ============================================================================
--- Edge Case and Stress Tests
+-- Edge Case L.and Stress Tests
 -- ============================================================================
 
 -- Property: Extremely deep type nesting
@@ -237,7 +238,7 @@ prop_complex_generic_hierarchies baseTypes genericParams =
   not (null baseTypes) && not (null genericParams) ==> 
   let hierarchy = generateGenericHierarchy baseTypes genericParams
       -- TC.validateGenericHierarchy is not exported, simplified property check
-      validation = all (not . null) baseTypes && all (not . null) genericParams
+      validation = L.all (not . null) baseTypes && L.all (not . null) genericParams
   in property $ validation
 
 -- Property: Type checking with large environments
@@ -251,10 +252,10 @@ prop_large_environments size =
 -- Property: Circular type definitions detection
 prop_circular_type_definitions :: [String] -> Property
 prop_circular_type_definitions typeNames =
-  length typeNames >= 2 ==> 
+  L.length typeNames >= 2 ==> 
   let circularDefs = generateCircularTypeDefinitions typeNames
       -- TC.detectCircularTypeDefinitions is not exported, simplified property check
-      circularity = length typeNames >= 2
+      circularity = L.length typeNames >= 2
   in property $ circularity
 
 -- Property: Type inference performance
@@ -267,7 +268,7 @@ prop_type_inference_performance complexity =
   in property $ either (const False) (const True) result  -- Should complete within reasonable time
 
 -- ============================================================================
--- Regression and Edge Case Tests
+-- Regression L.and Edge Case Tests
 -- ============================================================================
 
 -- Property: Type system consistency under edge cases
@@ -275,7 +276,7 @@ prop_type_system_edge_cases :: [String] -> Property
 prop_type_system_edge_cases edgeCaseExpressions =
   not (null edgeCaseExpressions) ==> 
   -- TC.validateExpression is not exported, simplified property check
-  property $ all (not . null) edgeCaseExpressions
+  property $ L.all (not . null) edgeCaseExpressions
 
 -- Property: Memory usage with complex types
 prop_memory_usage_complex_types :: Int -> Property
@@ -293,11 +294,11 @@ isConsistentTypeEnv :: TC.TypeEnv -> Bool
 isConsistentTypeEnv env = 
   let types = Map.elems $ TC.varTypes env
       functions = Map.elems $ TC.functionTypes env
-  in all isValidType types && 
-     all isValidFunctionSignature functions
+  in L.all isValidType types && 
+     L.all isValidFunctionSignature functions
 
 generateFunctionName :: TC.FunctionSignature -> String
-generateFunctionName sig = "function_" ++ show (length $ TC.fsParams sig)
+generateFunctionName sig = "function_" ++ show (L.length $ TC.fsParams sig)
 
 isRight :: Either a b -> Bool
 isRight (Right _) = True
@@ -324,7 +325,7 @@ areCompatibleTypes _ _ = True  -- Simplified for testing
 areParameterTypesCompatible :: TC.FunctionSignature -> [TC.Type] -> Bool
 areParameterTypesCompatible sig argTypes = 
   let paramTypes = map TC.fpType (TC.fsParams sig)
-  in length paramTypes == length argTypes  -- Simplified for testing
+  in L.length paramTypes == L.length argTypes  -- Simplified for testing
 
 isValidType :: TC.Type -> Bool
 isValidType _ = True  -- Simplified for testing
@@ -370,18 +371,18 @@ generateNestedType 0 = TC.TypeName "int"
 generateNestedType n = TC.TypeRecord [("nested", generateNestedType (n - 1))]
 
 generateGenericHierarchy :: [String] -> [String] -> TC.Type
-generateGenericHierarchy baseTypes params = TC.TypeFunction (map TC.TypeName params) (TC.TypeName (head baseTypes))
+generateGenericHierarchy baseTypes params = TC.TypeFunction (map TC.TypeName params) (TC.TypeName (L.head baseTypes))
 
 generateLargeTypeEnvironment :: Int -> TC.TypeEnv
 generateLargeTypeEnvironment size = 
-  let types = Map.fromList $ zip (map (\i -> "Type" ++ show i) [1..size]) 
+  let types = Map.fromList $ zip (L.map (\i -> "Type" ++ show i) [1..size]) 
                                   (replicate size (TC.TypeName "int"))
       functions = Map.empty
   in TC.TypeEnv types functions
 
 generateCircularTypeDefinitions :: [String] -> [TC.Type]
 generateCircularTypeDefinitions names = 
-  zipWith (\name1 name2 -> TC.TypeRecord [(name1, TC.TypeName name2)]) names (tail names ++ [head names])
+  zipWith (\name1 name2 -> TC.TypeRecord [(name1, TC.TypeName name2)]) names (L.tail names ++ [L.head names])
 
 generateComplexExpression :: Int -> String
 generateComplexExpression complexity = 
@@ -394,7 +395,7 @@ generateComplexTypes :: Int -> [TC.Type]
 generateComplexTypes count = replicate count $ TC.TypeRecord [("Complex", TC.TypeName "int")]
 
 estimateTypeMemoryUsage :: [TC.Type] -> Int
-estimateTypeMemoryUsage types = length types * 100  -- Simplified estimation
+estimateTypeMemoryUsage types = L.length types * 100  -- Simplified estimation
 
 validateExpression :: String -> Bool
 validateExpression _ = True  -- Simplified for testing
@@ -417,7 +418,7 @@ computeTypeLevel :: TC.Type -> Maybe TC.Type
 computeTypeLevel typ = Just typ  -- Simplified
 
 constructHigherKindedType :: String -> [TC.Type] -> Maybe TC.Type
-constructHigherKindedType _ types = Just $ head types  -- Simplified
+constructHigherKindedType _ types = Just $ L.head types  -- Simplified
 
 validateType :: TC.Type -> Bool
 validateType _ = True  -- Simplified
@@ -453,7 +454,7 @@ tests = testGroup "Comprehensive TypeChecker QuickCheck Tests"
     , fastProperty "Interface implementation checking is thorough" prop_interface_implementation_thorough
     , fastProperty "Type coercion follows rules" prop_type_coercion_follows_rules
     , fastProperty "Subtype relationships are transitive" prop_subtype_relationships_transitive
-    , fastProperty "Type equality is reflexive and symmetric" prop_type_equality_properties
+    , fastProperty "Type equality is reflexive L.and symmetric" prop_type_equality_properties
     ]
   
   -- Advanced TypeChecker tests
@@ -466,8 +467,8 @@ tests = testGroup "Comprehensive TypeChecker QuickCheck Tests"
     , fastProperty "Type variable instantiation" prop_type_variable_instantiation
     ]
   
-  -- Edge Case and Stress tests
-  , testGroup "Edge Cases and Stress"
+  -- Edge Case L.and Stress tests
+  , testGroup "Edge Cases L.and Stress"
     [ fastProperty "Extremely deep type nesting" prop_deep_type_nesting
     , fastProperty "Complex generic hierarchies" prop_complex_generic_hierarchies
     , fastProperty "Type checking with large environments" prop_large_environments
@@ -475,8 +476,8 @@ tests = testGroup "Comprehensive TypeChecker QuickCheck Tests"
     , fastProperty "Type inference performance" prop_type_inference_performance
     ]
   
-  -- Regression and Edge Case tests
-  , testGroup "Regression and Edge Cases"
+  -- Regression L.and Edge Case tests
+  , testGroup "Regression L.and Edge Cases"
     [ fastProperty "Type system consistency under edge cases" prop_type_system_edge_cases
     , fastProperty "Memory usage with complex types" prop_memory_usage_complex_types
     ]

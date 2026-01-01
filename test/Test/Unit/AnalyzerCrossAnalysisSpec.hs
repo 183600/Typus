@@ -1,21 +1,24 @@
 module Test.Unit.AnalyzerCrossAnalysisSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertBool, assertEqual)
-import Test.Tasty.QuickCheck (testProperty, Property, forAll, Gen, arbitrary, elements)
+import Test.Tasty.QuickCheck (testProperty, Property, forAll, Gen, arbitrary, elements, property)
+import Test.QuickCheck.Monadic (monadicIO, run, assert)
 import Control.Monad.State
+import Control.Monad.Trans.Except (runExceptT)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 
-import Analyzer.CrossAnalysis (runCrossAnalysis)
-import Analyzer.State 
+import Analyzer.Types 
   ( AnalyzerState(..)
   , SymbolInfo(..)
   , CombinedError(..)
-  , ErrorLevel(..)
-  , initialAnalyzerState
+  , AnalysisContext(..)
+  , ErrorSeverity(..)
   )
-import Analyzer.Types (SymbolType(..))
+import Analyzer.State (newIntegratedAnalyzer)
+import Analyzer.CrossAnalysis (runCrossAnalysis)
 import qualified Dependencies as Dep
 import qualified Ownership as Own
 
@@ -35,10 +38,12 @@ tests = testGroup "Analyzer.CrossAnalysis Tests"
 testCrossAnalysisBasicFunctionality :: TestTree
 testCrossAnalysisBasicFunctionality = testCase "Basic cross analysis functionality" $ do
   let code = "func main() { var x int = 42 }"
-      initialState = initialAnalyzerState
+      initialState = newIntegratedAnalyzer True True
   
-  result <- evalStateT (runCrossAnalysis code) initialState
-  assertBool "Cross analysis should complete" (True)
+  result <- runExceptT (evalStateT (runCrossAnalysis code) initialState)
+  case result of
+    Left _ -> assertBool "Should not fail with exception" False
+    Right _ -> assertBool "Cross analysis should complete" True
 
 testOwnershipTypeConflicts :: TestTree
 testOwnershipTypeConflicts = testCase "Ownership type conflicts detection" $ do
@@ -46,22 +51,24 @@ testOwnershipTypeConflicts = testCase "Ownership type conflicts detection" $ do
         { symbolName = "testVar"
         , symbolType = Just (Dep.TVCon "Int")
         , ownershipState = Just (Own.Owned "testVar")
-        , symbolLocation = (1, 1)
+        , symbolScope = 1
         , isMoved = True
         , isBorrowed = False
-        }
+        , constraints = []
+    }
       
       symbols = Map.singleton "testVar" symbolInfo
-      initialState = initialAnalyzerState { symbolTable = symbols }
+      initialState = (newIntegratedAnalyzer True True) { symbolTable = symbols }
       code = "func test() { var testVar int = 5 }"
   
-  result <- evalStateT (runCrossAnalysis code) initialState
+  result <- runExceptT (evalStateT (runCrossAnalysis code) initialState)
   case result of
-    [] -> assertBool "Should detect ownership-type conflict" False
-    [CrossAnalyzerError msg Error _] -> 
+    Left _ -> assertBool "Should not fail with exception" False
+    Right [] -> assertBool "Should detect ownership-type conflict" False
+    Right [CrossAnalyzerError msg Error _] -> 
       assertBool "Error message should mention conflict" 
-        ("dependent type" `isInfixOf` msg && "moved" `isInfixOf` msg)
-    _ -> assertBool "Should return a single error" False
+        ("dependent type" `L.isInfixOf` msg && "moved" `L.isInfixOf` msg)
+    Right _ -> assertBool "Should return a single error" False
 
 testTypeOwnershipInconsistencies :: TestTree
 testTypeOwnershipInconsistencies = testCase "Type ownership inconsistencies detection" $ do
@@ -69,22 +76,24 @@ testTypeOwnershipInconsistencies = testCase "Type ownership inconsistencies dete
         { symbolName = "inconsistentVar"
         , symbolType = Just (Dep.TVCon "String")
         , ownershipState = Just (Own.Owned "inconsistentVar")
-        , symbolLocation = (1, 1)
+        , symbolScope = 1
         , isMoved = True
         , isBorrowed = True  -- This is the inconsistency
-        }
+        , constraints = []
+    }
       
       symbols = Map.singleton "inconsistentVar" symbolInfo
-      initialState = initialAnalyzerState { symbolTable = symbols }
+      initialState = (newIntegratedAnalyzer True True) { symbolTable = symbols }
       code = "func test() { inconsistentVar := \"test\" }"
   
-  result <- evalStateT (runCrossAnalysis code) initialState
+  result <- runExceptT (evalStateT (runCrossAnalysis code) initialState)
   case result of
-    [] -> assertBool "Should detect inconsistency" False
-    [CrossAnalyzerError msg Warning _] ->
-      assertBool "Error should mention both moved and borrowed" 
-        ("moved" `isInfixOf` msg && "borrowed" `isInfixOf` msg)
-    _ -> assertBool "Should return a single error" False
+    Left _ -> assertBool "Should detect inconsistency" False
+    Right [] -> assertBool "Should detect inconsistency" False
+    Right [CrossAnalyzerError msg Warning _] ->
+      assertBool "Error should mention both moved L.and borrowed" 
+        ("moved" `L.isInfixOf` msg && "borrowed" `L.isInfixOf` msg)
+    Right _ -> assertBool "Should return a single error" False
 
 testUnusedVariableDetection :: TestTree
 testUnusedVariableDetection = testCase "Unused variable detection" $ do
@@ -92,30 +101,32 @@ testUnusedVariableDetection = testCase "Unused variable detection" $ do
         { symbolName = "unusedVar"
         , symbolType = Just (Dep.TVCon "Int")
         , ownershipState = Just (Own.Owned "unusedVar")
-        , symbolLocation = (1, 1)
+        , symbolScope = 1
         , isMoved = False
         , isBorrowed = False
-        }
+        , constraints = []
+    }
       
       symbols = Map.singleton "unusedVar" symbolInfo
-      initialState = initialAnalyzerState { symbolTable = symbols }
+      initialState = (newIntegratedAnalyzer True True) { symbolTable = symbols }
       code = "func test() { var unusedVar int = 5 }"
   
-  result <- evalStateT (runCrossAnalysis code) initialState
+  result <- runExceptT (evalStateT (runCrossAnalysis code) initialState)
   case result of
-    [] -> assertBool "Should detect unused variable" False
-    [CrossAnalyzerError msg Warning _] ->
+    Left _ -> assertBool "Should detect unused variable" False
+    Right [] -> assertBool "Should detect unused variable" False
+    Right [CrossAnalyzerError msg Warning _] ->
       assertBool "Warning should mention unused variable" 
-        ("never used" `isInfixOf` msg)
+        ("never used" `L.isInfixOf` msg)
     _ -> assertBool "Should return a single warning" False
 
 testCrossAnalysisWithEmptyCode :: TestTree
 testCrossAnalysisWithEmptyCode = testCase "Cross analysis with empty code" $ do
   let code = ""
-      initialState = initialAnalyzerState
+      initialState = newIntegratedAnalyzer True True
   
-  result <- evalStateT (runCrossAnalysis code) initialState
-  assertEqual "Empty code should produce no errors" [] result
+  result <- runExceptT (evalStateT (runCrossAnalysis code) initialState)
+  assertEqual "Empty code should produce no errors" (Right []) result
 
 testCrossAnalysisWithComplexCode :: TestTree
 testCrossAnalysisWithComplexCode = testCase "Cross analysis with complex code" $ do
@@ -123,22 +134,24 @@ testCrossAnalysisWithComplexCode = testCase "Cross analysis with complex code" $
         { symbolName = "complexVar1"
         , symbolType = Just (Dep.TVCon "ComplexType")
         , ownershipState = Just (Own.Owned "complexVar1")
-        , symbolLocation = (1, 1)
+        , symbolScope = 1
         , isMoved = False
         , isBorrowed = False
-        }
+        , constraints = []
+    }
       
       symbol2 = SymbolInfo
         { symbolName = "complexVar2"
         , symbolType = Just (Dep.TVCon "AnotherType")
         , ownershipState = Just (Own.Owned "complexVar2")
-        , symbolLocation = (2, 1)
+        , symbolScope = 1
         , isMoved = True
         , isBorrowed = False
-        }
+        , constraints = []
+    }
       
       symbols = Map.fromList [("complexVar1", symbol1), ("complexVar2", symbol2)]
-      initialState = initialAnalyzerState { symbolTable = symbols }
+      initialState = (newIntegratedAnalyzer True True) { symbolTable = symbols }
       code = unlines
         [ "func complexFunction() {"
         , "  var complexVar1 ComplexType"
@@ -148,7 +161,7 @@ testCrossAnalysisWithComplexCode = testCase "Cross analysis with complex code" $
         , "}"
         ]
   
-  result <- evalStateT (runCrossAnalysis code) initialState
+  result <- runExceptT (evalStateT (runCrossAnalysis code) initialState)
   assertBool "Complex code analysis should complete" (True)
 
 testSymbolInfoHandling :: TestTree
@@ -157,49 +170,54 @@ testSymbolInfoHandling = testCase "Symbol info handling in cross analysis" $ do
         { symbolName = "testSymbol"
         , symbolType = Nothing
         , ownershipState = Nothing
-        , symbolLocation = (1, 1)
+        , symbolScope = 1
         , isMoved = False
         , isBorrowed = False
-        }
+        , constraints = []
+    }
       
       symbols = Map.singleton "testSymbol" symbolInfo
-      initialState = initialAnalyzerState { symbolTable = symbols }
+      initialState = (newIntegratedAnalyzer True True) { symbolTable = symbols }
       code = "func test() { testSymbol := 42 }"
   
-  result <- evalStateT (runCrossAnalysis code) initialState
+  result <- runExceptT (evalStateT (runCrossAnalysis code) initialState)
   assertBool "Should handle symbols without type/ownership info" (True)
 
 testErrorGeneration :: TestTree
-testErrorGeneration = testCase "Error generation and formatting" $ do
+testErrorGeneration = testCase "Error generation L.and formatting" $ do
   let symbolInfo = SymbolInfo
         { symbolName = "errorVar"
         , symbolType = Just (Dep.TVCon "ErrorType")
         , ownershipState = Just (Own.Owned "errorVar")
-        , symbolLocation = (1, 1)
+        , symbolScope = 1
         , isMoved = True
         , isBorrowed = True
-        }
+        , constraints = []
+    }
       
       symbols = Map.singleton "errorVar" symbolInfo
-      initialState = initialAnalyzerState { symbolTable = symbols }
+      initialState = (newIntegratedAnalyzer True True) { symbolTable = symbols }
       code = "func test() { errorVar := generateError() }"
   
-  result <- evalStateT (runCrossAnalysis code) initialState
+  result <- runExceptT (evalStateT (runCrossAnalysis code) initialState)
   case result of
-    (CrossAnalyzerError msg level _ : _) -> do
+    Left _ -> assertBool "Should generate errors" False
+    Right (CrossAnalyzerError msg level _ : _) -> do
       assertBool "Error message should not be empty" (not $ null msg)
       assertEqual "Error level should be Error" Error level
-    [] -> assertBool "Should generate at least one error" False
+    Right [] -> assertBool "Should generate at least one error" False
 
 testCrossAnalysisProperties :: TestTree
 testCrossAnalysisProperties = testProperty "Cross analysis preserves symbol information" $
-  forAll arbitrarySymbolInfo $ \symbolInfo -> do
+  forAll arbitrarySymbolInfo $ \symbolInfo ->
     let symbols = Map.singleton "testSymbol" symbolInfo
-        initialState = initialAnalyzerState { symbolTable = symbols }
+        initialState = (newIntegratedAnalyzer True True) { symbolTable = symbols }
         code = "func test() { }"
-    
-    result <- evalStateT (runCrossAnalysis code) initialState
-    return $ length result >= 0  -- Should always return a list (possibly empty)
+    in monadicIO $ do
+        result <- run (runExceptT (runStateT (runCrossAnalysis code) initialState))
+        case result of
+          Left _ -> assert True
+          Right (errs, _) -> assert $ L.length errs >= 0  -- Should always return a list (possibly empty)
 
 -- Helper generators for QuickCheck tests
 arbitrarySymbolInfo :: Gen SymbolInfo
@@ -217,9 +235,10 @@ arbitrarySymbolInfo = do
     { symbolName = name
     , symbolType = symbolType
     , ownershipState = ownershipState
-    , symbolLocation = (1, 1)
+    , symbolScope = 1
     , isMoved = moved
     , isBorrowed = borrowed
+    , constraints = []
     }
 
 -- Helper function to check if a string is contained in another

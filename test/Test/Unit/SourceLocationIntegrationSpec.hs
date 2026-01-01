@@ -1,6 +1,7 @@
 module Test.Unit.SourceLocationIntegrationSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, forAll, Gen, arbitrary, choose)
@@ -46,7 +47,7 @@ tests =
                   ]
                 positions = scanPositions source
             assertBool "Should track positions correctly" $
-                length positions == length source + 1  -- +1 for final position
+                L.length positions == L.length source + 1  -- +1 for final position
         
         , testCase "handle mixed tab/space indentation" $ do
             let source = "line1\n\tline2\n  \tline3\n\t\tline4"
@@ -58,13 +59,13 @@ tests =
                 finalPos = advancePosBy source startPos
             finalPos @?= SourcePos 3 8 18
         
-        , testCase "handle empty lines and whitespace" $ do
+        , testCase "handle empty lines L.and whitespace" $ do
             let source = "\n  \n\t\nline\n"
                 finalPos = advancePosBy source startPos
             finalPos @?= SourcePos 5 1 8
         ]
     
-    , testGroup "Span operations and merging"
+    , testGroup "Span operations L.and merging"
         [ testCase "merge overlapping spans correctly" $ do
             let span1 = spanBetween (posAt 1 5) (posAt 1 15)
                 span2 = spanBetween (posAt 1 10) (posAt 1 20)
@@ -82,7 +83,7 @@ tests =
                         , spanBetween (posAt 1 10) (posAt 1 15)
                         , spanBetween (posAt 1 12) (posAt 1 20)
                         ]
-                merged = foldl mergeSpans (head spans) (tail spans)
+                merged = foldl mergeSpans (L.head spans) (L.tail spans)
             merged @?= spanBetween (posAt 1 5) (posAt 1 20)
         
         , testCase "validate span correctness" $ do
@@ -93,7 +94,7 @@ tests =
         ]
     
     , testGroup "Located values operations"
-        [ testCase "create and manipulate located values" $ do
+        [ testCase "create L.and manipulate located values" $ do
             let pos = posAt 3 7
                 value = "variable"
                 located = locatedAt pos value
@@ -142,7 +143,7 @@ tests =
                     _ <- advancePosByText "}"
                     end2 <- markSpanEnd
                     return [spanBetween start1 end1, spanBetween start2 end2]
-            length spans @?= 2
+            L.length spans @?= 2
             finalPos @?= posAt 3 2
         ]
     
@@ -193,7 +194,7 @@ tests =
         [ testCase "track locations in function definition" $ do
             let funcDef = "func calculate(x int, y int) int {\n\treturn x + y\n}"
                 spans = locateFunctionParts funcDef
-            length spans @?= 3  -- name, params, body
+            L.length spans @?= 3  -- name, params, body
         
         , testCase "handle multiline string literals" $ do
             let multiline = "let s = \"line1\\nline2\\tline3\"\nlet x = 42"
@@ -229,11 +230,11 @@ locateFunctionParts funcDef =
     in [name, params, returnType]
   where
     locateKeyword keyword text = 
-        case span keyword `isInfixOf` text of
+        case span keyword `L.isInfixOf` text of
             True -> (emptySpan startPos, text)
             False -> (emptySpan startPos, text)
     
     locateParenthesized text = 
-        case spanBetween startPos startPos `isInfixOf` text of
+        case spanBetween startPos startPos `L.isInfixOf` text of
             True -> (emptySpan startPos, text)
             False -> (emptySpan startPos, text)

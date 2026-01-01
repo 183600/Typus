@@ -3,6 +3,7 @@
 module Test.Unit.GoToolchainQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (==>), property, classify)
 import Data.Maybe (isJust)
@@ -22,7 +23,7 @@ prop_go_module_creation moduleName imports =
 prop_go_package_validation :: String -> Property
 prop_go_package_validation packageName =
   let valid = validateGoPackage packageName
-      hasValidName = not (null packageName) && all (`elem` "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_") packageName
+      hasValidName = not (null packageName) && L.all (`elem` "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_") packageName
   in classify hasValidName "valid package name" $
      property $ valid
 

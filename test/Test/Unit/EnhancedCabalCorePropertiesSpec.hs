@@ -12,6 +12,7 @@ import SourceLocation
     , mergeSpans, isValidSpan, advancePos, advancePosBy, locatedAt
     )
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import Data.Char (isSpace)
 
@@ -24,7 +25,7 @@ tests =
       testGroup "Utils String Properties"
       [ fastProperty "trim is idempotent" prop_trimIdempotent
       , fastProperty "trim removes only leading/trailing whitespace" prop_trimOnlyRemovesWhitespace
-      , fastProperty "splitBy length equals delimiter count + 1" prop_splitByLength
+      , fastProperty "splitBy L.length equals delimiter count + 1" prop_splitByLength
       , fastProperty "splitByCollapsed never produces empty strings" prop_splitByCollapsedNoEmpty
       , fastProperty "splitBy followed by join with delimiter preserves original" prop_splitByJoinPreserves
       ]
@@ -39,7 +40,7 @@ tests =
     , -- Comment processing properties
       testGroup "Comment Processing Properties"
       [ fastProperty "removeLineComments preserves line count" prop_removeLineCommentsPreservesLines
-      , fastProperty "removeComments never increases string length" prop_removeCommentsNeverIncreases
+      , fastProperty "removeComments never increases string L.length" prop_removeCommentsNeverIncreases
       , fastProperty "removeLineComments preserves non-comment content" prop_removeLineCommentsPreservesContent
       ]
     , -- Indentation properties
@@ -62,27 +63,27 @@ prop_trimIdempotent input =
 prop_trimOnlyRemovesWhitespace :: String -> Bool
 prop_trimOnlyRemovesWhitespace input =
   let trimmed = trim input
-      originalLength = length input
-      trimmedLength = length trimmed
+      originalLength = L.length input
+      trimmedLength = L.length trimmed
   -- All removed characters must be whitespace
-  in all isSpace (take (originalLength - trimmedLength) (dropWhile isSpace input))
+  in L.all isSpace (take (originalLength - trimmedLength) (dropWhile isSpace input))
 
 prop_splitByLength :: Char -> String -> Bool
 prop_splitByLength delim input =
   let result = splitBy delim input
-      expectedLength = length (filter (== delim) input) + 1
-  in length result == expectedLength
+      expectedLength = L.length (L.filter (== delim) input) + 1
+  in L.length result == expectedLength
 
 prop_splitByCollapsedNoEmpty :: Char -> String -> Bool
 prop_splitByCollapsedNoEmpty delim input =
-  all (not . null) (splitByCollapsed delim input)
+  L.all (not . null) (splitByCollapsed delim input)
 
 prop_splitByJoinPreserves :: Char -> String -> Bool
 prop_splitByJoinPreserves delim input =
   let parts = splitBy delim input
-      rejoined = concat (intersperse [delim] parts)
+      rejoined = L.concat (intersperse [delim] parts)
   -- Note: This is approximate since splitBy preserves empty segments
-  in length rejoined == length input + length (filter (== delim) input) - length (filter (== delim) rejoined)
+  in L.length rejoined == L.length input + L.length (L.filter (== delim) input) - L.length (L.filter (== delim) rejoined)
   where
     intersperse _ [] = []
     intersperse _ [x] = [x]
@@ -124,7 +125,7 @@ prop_spanBetweenValid line1 col1 line2 col2 =
 
 prop_mergeSpansCommutative :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Bool
 prop_mergeSpansCommutative l1 c1 l2 c2 l3 c3 l4 c4 =
-  all (>0) [l1, c1, l2, c2, l3, c3, l4, c4] ==>
+  L.all (>0) [l1, c1, l2, c2, l3, c3, l4, c4] ==>
   let pos1 = posAt l1 c1
       pos2 = posAt l2 c2
       pos3 = posAt l3 c3
@@ -141,13 +142,13 @@ prop_mergeSpansCommutative l1 c1 l2 c2 l3 c3 l4 c4 =
 
 prop_removeLineCommentsPreservesLines :: String -> Bool
 prop_removeLineCommentsPreservesLines input =
-  let originalLines = length (lines input)
-      processedLines = length (lines (removeLineComments input))
+  let originalLines = L.length (lines input)
+      processedLines = L.length (lines (removeLineComments input))
   in originalLines == processedLines
 
 prop_removeCommentsNeverIncreases :: String -> Bool
 prop_removeCommentsNeverIncreases input =
-  length (removeComments input) <= length input
+  L.length (removeComments input) <= L.length input
 
 prop_removeLineCommentsPreservesContent :: String -> Bool
 prop_removeLineCommentsPreservesContent input =
@@ -155,8 +156,8 @@ prop_removeLineCommentsPreservesContent input =
       originalLines = lines input
       processedLines = lines processed
   -- Non-comment content should be preserved (simplified check)
-  in all (\line -> not ("//" `isPrefixOf` trim line) || trim line == "") processedLines ||
-     length processedLines <= length originalLines
+  in L.all (\line -> not ("//" `L.isPrefixOf` trim line) || trim line == "") processedLines ||
+     L.length processedLines <= L.length originalLines
 
 -- ============================================================================
 -- Indentation Properties
@@ -167,18 +168,18 @@ prop_normalizeIndentationPreservesRelative input =
   let originalLines = lines input
       processedLines = lines (normalizeIndentation input)
       -- Check that relative indentation differences are preserved
-      originalIndents = map (length . takeWhile isSpace) originalLines
-      processedIndents = map (length . takeWhile isSpace) processedLines
+      originalIndents = L.map (L.length . takeWhile isSpace) originalLines
+      processedIndents = L.map (L.length . takeWhile isSpace) processedLines
   -- This is a simplified check - in practice, we'd need more sophisticated logic
-  in length processedIndents == length originalIndents
+  in L.length processedIndents == L.length originalIndents
 
 prop_normalizeIndentationEmptyLines :: String -> Bool
 prop_normalizeIndentationEmptyLines input =
   let originalLines = lines input
       processedLines = lines (normalizeIndentation input)
-      emptyLinesOriginal = map (all isSpace) originalLines
-      emptyLinesProcessed = map (all isSpace) processedLines
-  in and (zipWith (==) emptyLinesOriginal emptyLinesProcessed)
+      emptyLinesOriginal = L.map (L.all isSpace) originalLines
+      emptyLinesProcessed = L.map (L.all isSpace) processedLines
+  in L.and (zipWith (==) emptyLinesOriginal emptyLinesProcessed)
 
 -- ============================================================================
 -- Helper Functions

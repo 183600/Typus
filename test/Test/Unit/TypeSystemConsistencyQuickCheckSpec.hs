@@ -10,6 +10,7 @@
 module Test.Unit.TypeSystemConsistencyQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Positive(..), NonEmptyList(..))
 
@@ -77,9 +78,9 @@ prop_function_signature_consistent sig env =
 -- Property: parameter type checking preserves order
 prop_parameter_type_checking_preserves_order :: [FunctionParam] -> TypeEnv -> Property
 prop_parameter_type_checking_preserves_order params env =
-  let checked = map (\param -> checkType (fpType param) env) params
-      paramCount = length params
-      checkedCount = length checked
+  let checked = L.map (\param -> checkType (fpType param) env) params
+      paramCount = L.length params
+      checkedCount = L.length checked
   in property $ paramCount === checkedCount
 
 -- Property: type environment extension preserves existing types
@@ -117,7 +118,7 @@ prop_complex_unification_respects_structure type1 type2 =
 prop_inference_respects_parameters :: [FunctionParam] -> Type -> Property
 prop_inference_respects_parameters params returnType =
   let sig = FunctionSignature params returnType
-  in property $ length params >= 0
+  in property $ L.length params >= 0
 
 -- Property: type environment lookup is consistent
 prop_env_lookup_consistent :: TypeEnv -> String -> Property

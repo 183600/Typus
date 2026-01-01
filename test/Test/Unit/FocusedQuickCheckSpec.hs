@@ -3,6 +3,7 @@
 module Test.Unit.FocusedQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
@@ -30,12 +31,12 @@ prop_sourcespan_start_before_end span =
 prop_trim_removes_whitespace :: String -> Property
 prop_trim_removes_whitespace s =
   let trimmed = trim s
-  in property $ null trimmed || (head trimmed /= ' ' && last trimmed /= ' ')
+  in property $ null trimmed || (L.head trimmed /= ' ' && last trimmed /= ' ')
 
 prop_splitBy_concat :: Char -> String -> Property
 prop_splitBy_concat delim s =
   not (delim `elem` s) ==>
-  property $ concat (splitBy delim s) == s
+  property $ L.concat (splitBy delim s) == s
 
 prop_typename_equality :: String -> Property
 prop_typename_equality name =
@@ -72,11 +73,11 @@ tests = testGroup "Focused QuickCheck Tests"
   [ fastProperty "SourcePos line is always positive" prop_sourcepos_line_positive
   , fastProperty "SourceSpan start offset <= end offset" prop_sourcespan_start_before_end
   , fastProperty "trim removes leading/trailing whitespace" prop_trim_removes_whitespace
-  , fastProperty "splitBy then concat preserves string without delimiter" prop_splitBy_concat
+  , fastProperty "splitBy then L.concat preserves string without delimiter" prop_splitBy_concat
   , fastProperty "TypeName equality is reflexive" prop_typename_equality
   , fastProperty "UnknownType equals itself" prop_unknown_type_equality
   , fastProperty "Map insert preserves size" prop_map_insert_preserves_size
-  , fastProperty "Default FileDirectives has all Nothing fields" prop_file_directives_default_all_nothing
-  , fastProperty "Default BlockDirectives has all Nothing fields" prop_block_directives_default_all_nothing
+  , fastProperty "Default FileDirectives has L.all Nothing fields" prop_file_directives_default_all_nothing
+  , fastProperty "Default BlockDirectives has L.all Nothing fields" prop_block_directives_default_all_nothing
   , fastProperty "TypeEnv lookup after insert returns value" prop_typeenv_lookup_after_insert
   ]

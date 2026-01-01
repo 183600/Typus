@@ -3,6 +3,7 @@
 module Test.Unit.NewErrorHandlerConsistencySpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck as QC
 import ErrorHandler
@@ -26,7 +27,7 @@ import SourceLocation (SourcePos(..), startPos)
 -- Error Handler Consistency QuickCheck Tests
 -- ============================================================================
 
--- | Test that initial error handler has no errors or warnings
+-- | Test that initial error handler has no errors L.or warnings
 prop_init_error_handler_clean :: Bool
 prop_init_error_handler_clean = 
     let handler = initErrorHandler
@@ -55,51 +56,51 @@ prop_add_warning_increases_count message pos =
 prop_add_multiple_errors :: [String] -> SourcePos -> Bool
 prop_add_multiple_errors messages pos = 
     let handler0 = initErrorHandler
-        handler1 = foldl (\h msg -> addError msg pos h) handler0 messages
-        expectedCount = length messages
+        handler1 = L.foldl (\h msg -> addError msg pos h) handler0 messages
+        expectedCount = L.length messages
     in getErrorCount handler1 == expectedCount
 
 -- | Test that adding multiple warnings accumulates correctly
 prop_add_multiple_warnings :: [String] -> SourcePos -> Bool
 prop_add_multiple_warnings messages pos = 
     let handler0 = initErrorHandler
-        handler1 = foldl (\h msg -> addWarning msg pos h) handler0 messages
-        expectedCount = length messages
+        handler1 = L.foldl (\h msg -> addWarning msg pos h) handler0 messages
+        expectedCount = L.length messages
     in getWarningCount handler1 == expectedCount
 
--- | Test that adding both errors and warnings tracks both correctly
+-- | Test that adding both errors L.and warnings tracks both correctly
 prop_add_errors_and_warnings :: [String] -> [String] -> SourcePos -> Bool
 prop_add_errors_and_warnings errorMessages warningMessages pos = 
     let handler0 = initErrorHandler
-        handler1 = foldl (\h msg -> addError msg pos h) handler0 errorMessages
-        handler2 = foldl (\h msg -> addWarning msg pos h) handler1 warningMessages
-    in getErrorCount handler2 == length errorMessages &&
-       getWarningCount handler2 == length warningMessages &&
+        handler1 = L.foldl (\h msg -> addError msg pos h) handler0 errorMessages
+        handler2 = L.foldl (\h msg -> addWarning msg pos h) handler1 warningMessages
+    in getErrorCount handler2 == L.length errorMessages &&
+       getWarningCount handler2 == L.length warningMessages &&
        hasErrors handler2 == not (null errorMessages) &&
        hasWarnings handler2 == not (null warningMessages)
 
--- | Test that clearErrors removes all errors but preserves warnings
+-- | Test that clearErrors removes L.all errors but preserves warnings
 prop_clear_errors_preserves_warnings :: [String] -> [String] -> SourcePos -> Bool
 prop_clear_errors_preserves_warnings errorMessages warningMessages pos = 
     let handler0 = initErrorHandler
-        handler1 = foldl (\h msg -> addError msg pos h) handler0 errorMessages
-        handler2 = foldl (\h msg -> addWarning msg pos h) handler1 warningMessages
+        handler1 = L.foldl (\h msg -> addError msg pos h) handler0 errorMessages
+        handler2 = L.foldl (\h msg -> addWarning msg pos h) handler1 warningMessages
         handler3 = clearErrors handler2
     in getErrorCount handler3 == 0 &&
        not (hasErrors handler3) &&
-       getWarningCount handler3 == length warningMessages &&
+       getWarningCount handler3 == L.length warningMessages &&
        hasWarnings handler3 == not (null warningMessages)
 
--- | Test that clearWarnings removes all warnings but preserves errors
+-- | Test that clearWarnings removes L.all warnings but preserves errors
 prop_clear_warnings_preserves_errors :: [String] -> [String] -> SourcePos -> Bool
 prop_clear_warnings_preserves_errors errorMessages warningMessages pos = 
     let handler0 = initErrorHandler
-        handler1 = foldl (\h msg -> addError msg pos h) handler0 errorMessages
-        handler2 = foldl (\h msg -> addWarning msg pos h) handler1 warningMessages
+        handler1 = L.foldl (\h msg -> addError msg pos h) handler0 errorMessages
+        handler2 = L.foldl (\h msg -> addWarning msg pos h) handler1 warningMessages
         handler3 = clearWarnings handler2
     in getWarningCount handler3 == 0 &&
        not (hasWarnings handler3) &&
-       getErrorCount handler3 == length errorMessages &&
+       getErrorCount handler3 == L.length errorMessages &&
        hasErrors handler3 == not (null errorMessages)
 
 -- | Test that error count is never negative
@@ -148,8 +149,8 @@ prop_clear_empty_handler =
 prop_clear_twice_idempotent :: [String] -> [String] -> SourcePos -> Bool
 prop_clear_twice_idempotent errorMessages warningMessages pos = 
     let handler0 = initErrorHandler
-        handler1 = foldl (\h msg -> addError msg pos h) handler0 errorMessages
-        handler2 = foldl (\h msg -> addWarning msg pos h) handler1 warningMessages
+        handler1 = L.foldl (\h msg -> addError msg pos h) handler0 errorMessages
+        handler2 = L.foldl (\h msg -> addWarning msg pos h) handler1 warningMessages
         handler3 = clearErrors (clearWarnings handler2)
         handler4 = clearErrors (clearWarnings handler3)
     in handler3 == handler4
@@ -160,14 +161,14 @@ prop_clear_twice_idempotent errorMessages warningMessages pos =
 
 testSuite :: TestTree
 testSuite = testGroup "Error Handler Consistency QuickCheck Tests"
-  [ QC.testProperty "initial error handler has no errors or warnings" prop_init_error_handler_clean
+  [ QC.testProperty "initial error handler has no errors L.or warnings" prop_init_error_handler_clean
   , QC.testProperty "adding error increases error count" prop_add_error_increases_count
   , QC.testProperty "adding warning increases warning count" prop_add_warning_increases_count
   , QC.testProperty "adding multiple errors accumulates correctly" prop_add_multiple_errors
   , QC.testProperty "adding multiple warnings accumulates correctly" prop_add_multiple_warnings
-  , QC.testProperty "adding both errors and warnings tracks both correctly" prop_add_errors_and_warnings
-  , QC.testProperty "clearErrors removes all errors but preserves warnings" prop_clear_errors_preserves_warnings
-  , QC.testProperty "clearWarnings removes all warnings but preserves errors" prop_clear_warnings_preserves_errors
+  , QC.testProperty "adding both errors L.and warnings tracks both correctly" prop_add_errors_and_warnings
+  , QC.testProperty "clearErrors removes L.all errors but preserves warnings" prop_clear_errors_preserves_warnings
+  , QC.testProperty "clearWarnings removes L.all warnings but preserves errors" prop_clear_warnings_preserves_errors
   , QC.testProperty "error count is never negative" prop_error_count_never_negative
   , QC.testProperty "warning count is never negative" prop_warning_count_never_negative
   , QC.testProperty "hasErrors is consistent with error count" prop_has_errors_consistent

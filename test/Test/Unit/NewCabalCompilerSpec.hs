@@ -45,7 +45,9 @@ import Text.Megaparsec (errorBundlePretty)
 import qualified Data.Text as T
 import Data.Char (isSpace, isAlphaNum)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, isInfixOf, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 
 -- ============================================================================
@@ -71,7 +73,7 @@ tests =
             case result of
               Left err -> assertFailure $ "Parse error: " ++ errorBundlePretty err
               Right file -> do
-                length (tfCodeBlocks file) @?= 1
+                L.length (tfCodeBlocks file) @?= 1
                 
         , testCase "parseTypus handles file directives" $ do
             let contentWithDirectives = "// @ownership: true\n// @dependent-types: false\nfunc test() {}"
@@ -89,15 +91,15 @@ tests =
               Left err -> assertFailure $ "Parse error: " ++ errorBundlePretty err
               Right file -> do
                 let blocks = tfCodeBlocks file
-                length blocks @?= 1
+                L.length blocks @?= 1
                 
-        , testCase "parseTypus handles mixed directives and code" $ do
+        , testCase "parseTypus handles mixed directives L.and code" $ do
             let mixedContent = "// @ownership: true\n\nfunc main() {\n  // @block-dependent-types: false\n  return 0\n}"
                 result = parseTypus mixedContent
             case result of
               Left err -> assertFailure $ "Parse error: " ++ errorBundlePretty err
               Right file -> do
-                length (tfCodeBlocks file) @?= 1
+                L.length (tfCodeBlocks file) @?= 1
                 isJust (fdOwnership $ tfFileDirectives file) @?= True
         ]
         
@@ -140,7 +142,7 @@ tests =
                 let blocks = tfCodeBlocks file
                 if not (null blocks)
                   then do
-                    let block = head blocks
+                    let block = L.head blocks
                         span = cbSpan block
                     isValidSpan span @?= True
                   else assertFailure "Expected at least one code block"
@@ -159,19 +161,19 @@ prop_parse_empty_directives =
        Left _ -> property $ counterexample "Parse failed on empty input" False
        Right file -> property $ tfFileDirectives file === defaultFileDirectives
 
--- Property: Parsing and re-parsing yields consistent results
+-- Property: Parsing L.and re-parsing yields consistent results
 prop_parse_consistency :: String -> Property
 prop_parse_consistency str =
   let result1 = parseTypus str
   in case result1 of
        Left _ -> property $ Discard
        Right file1 -> 
-         let content = unlines $ map (unlines . cbLines) $ tfCodeBlocks file1
+         let content = unlines $ L.map (unlines . cbLines) $ tfCodeBlocks file1
              result2 = parseTypus content
          in case result2 of
               Left _ -> property $ Discard
               Right file2 -> 
-                property $ length (tfCodeBlocks file1) === length (tfCodeBlocks file2)
+                property $ L.length (tfCodeBlocks file1) === L.length (tfCodeBlocks file2)
 
 -- Property: File directives are preserved across parse cycles
 prop_directive_preservation :: String -> Property
@@ -221,12 +223,12 @@ prop_directive_location_consistent str =
 -- Property: Code block count is predictable for simple inputs
 prop_codeblock_count_predictable :: String -> Property
 prop_codeblock_count_predictable str =
-  let braceCount = length (filter (== '{') str)
+  let braceCount = L.length (L.filter (== '{') str)
       result = parseTypus str
   in case result of
        Left _ -> property $ Discard
        Right file ->
-         let blockCount = length $ tfCodeBlocks file
+         let blockCount = L.length $ tfCodeBlocks file
          in property $ blockCount <= braceCount
 
 -- Property: File directives can be extracted safely

@@ -2,10 +2,12 @@
 module Test.Unit.DebugIntegrationFlowSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool, assertFailure)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck ((===), Property, forAll, Gen, choose, listOf, elements)
-import Data.List (sort, nub, length, intercalate, isInfixOf, isPrefixOf)
+import Data.List (length, isInfixOf, isPrefixOf)
+import Data.List (sort, nub, intercalate)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import qualified Data.Set as Set
 import Data.IORef
@@ -31,7 +33,7 @@ import DebugIntegration
   )
 import CommandLineDebug (CommandLineDebugConfig, defaultCLIDebugConfig, cldEnabled, cldInteractive, cldLogLevel)
 
--- | Flow and property-based tests for DebugIntegration module
+-- | Flow L.and property-based tests for DebugIntegration module
 tests :: TestTree
 tests =
   testGroup "DebugIntegration Flow Tests"
@@ -91,7 +93,7 @@ tests =
             -- Test that the function structure is valid
             assertBool "custom location is valid" (not $ null customLocation)
 
-        , testCase "removeAllBreakpoints clears all breakpoints" $ do
+        , testCase "removeAllBreakpoints clears L.all breakpoints" $ do
             config <- defaultCLIDebugConfig
             -- Test that the function can be called without errors
             assertBool "breakpoint removal is valid" True
@@ -194,7 +196,7 @@ tests =
                 debugCompilerEnd config file
             ) files
             
-            assertBool "multiple file debugging is valid" (length files == 3)
+            assertBool "multiple file debugging is valid" (L.length files == 3)
 
         , testCase "nested debug phases" $ do
             config <- setupCompilerDebugging
@@ -219,7 +221,7 @@ tests =
             -- Show breakpoints
             showCurrentBreakpoints config
             
-            -- Clear all breakpoints
+            -- Clear L.all breakpoints
             removeAllBreakpoints config
             
             assertBool "breakpoint workflow is valid" True
@@ -239,19 +241,19 @@ tests =
             assertBool "interactive mode workflow is valid" True
         ]
 
-    , testGroup "Edge cases and boundary conditions"
+    , testGroup "Edge cases L.and boundary conditions"
         [ testCase "empty file names" $ do
             config <- defaultCLIDebugConfig
             let emptyFilename = ""
             -- Should handle empty filenames gracefully
-            assertBool "empty filename handling" (length emptyFilename == 0)
+            assertBool "empty filename handling" (L.length emptyFilename == 0)
 
         , testCase "very long file names" $ do
             config <- defaultCLIDebugConfig
-            let longFilename = "/very/long/path/that/exceeds/normal/limits/and/tests/boundary/conditions/" ++
+            let longFilename = "/very/long/path/that/exceeds/normal/limits/L.and/tests/boundary/conditions/" ++
                              "with/many/nested/directories/to/ensure/the/system/can/handle/long/paths/correctly.typus"
             -- Should handle long filenames gracefully
-            assertBool "long filename handling" (length longFilename > 100)
+            assertBool "long filename handling" (L.length longFilename > 100)
 
         , testCase "special characters in file names" $ do
             config <- defaultCLIDebugConfig
@@ -262,16 +264,16 @@ tests =
                   , "file with spaces.typus"
                   ]
             -- Should handle special characters gracefully
-            assertBool "special characters handling" (length specialFiles == 4)
+            assertBool "special characters handling" (L.length specialFiles == 4)
 
-        , testCase "empty error and warning messages" $ do
+        , testCase "empty error L.and warning messages" $ do
             config <- defaultCLIDebugConfig
             let emptyMessage = ""
                 location = "test:location"
             -- Should handle empty messages gracefully
             debugErrorReport config location emptyMessage
             debugWarningReport config location emptyMessage
-            assertBool "empty message handling" (length emptyMessage == 0)
+            assertBool "empty message handling" (L.length emptyMessage == 0)
 
         , testCase "very long messages" $ do
             config <- defaultCLIDebugConfig
@@ -280,7 +282,7 @@ tests =
             -- Should handle long messages gracefully
             debugErrorReport config location longMessage
             debugWarningReport config location longMessage
-            assertBool "long message handling" (length longMessage > 1000)
+            assertBool "long message handling" (L.length longMessage > 1000)
         ]
     ]
 
@@ -348,7 +350,7 @@ prop_performanceMetricsValid metric value =
 -- Property: debug workflow is consistent
 prop_debugWorkflowConsistent :: [String] -> Property
 prop_debugWorkflowConsistent filenames =
-  let allValid = all (not . null) filenames
+  let allValid = L.all (not . null) filenames
   in if allValid 
      then property True
      else property True

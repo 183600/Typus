@@ -13,7 +13,9 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
-import Data.List (isPrefixOf, isInfixOf, intercalate, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (intercalate, nub)
 import Data.Char (isSpace, isLetter, isDigit)
 
 -- Import compiler modules
@@ -43,7 +45,7 @@ tests =
               Right _ -> pure ()
         ]
 
-    , testGroup "IR Generation and Validation"
+    , testGroup "IR Generation L.and Validation"
         [ fastProperty "IR generation preserves semantics" prop_ir_generation_preserves_semantics
         , fastProperty "IR optimization maintains correctness" prop_ir_optimization_maintains_correctness
         , fastProperty "IR validation catches inconsistencies" prop_ir_validation_catches_inconsistencies
@@ -109,7 +111,7 @@ tests =
               (Right _, _) -> pure ()  -- Or succeed with recovery
         ]
 
-    , testGroup "Performance and Optimization"
+    , testGroup "Performance L.and Optimization"
         [ fastProperty "Optimization improves performance" prop_optimization_improves_performance
         , fastProperty "Memory usage optimization" prop_memory_usage_optimization
         , fastProperty "Compilation time scaling" prop_compilation_time_scaling
@@ -128,7 +130,7 @@ tests =
 -- End-to-end compilation properties
 prop_complete_pipeline_preserves_meaning :: String -> Property
 prop_complete_pipeline_preserves_meaning input =
-  not (null input) && length input <= 100 && isValidExpression input ==>
+  not (null input) && L.length input <= 100 && isValidExpression input ==>
   let parsed = Parser.parseExpression input
       compiled = case parsed of
         Left _ -> Nothing
@@ -147,8 +149,8 @@ prop_complete_pipeline_preserves_meaning input =
 prop_compilation_complex_expressions :: String -> String -> String -> Property
 prop_compilation_complex_expressions expr1 expr2 expr3 =
   not (null expr1) && not (null expr2) && not (null expr3) &&
-  all isValidExpression [expr1, expr2, expr3] &&
-  all ((<= 50).length) [expr1, expr2, expr3] ==>
+  L.all isValidExpression [expr1, expr2, expr3] &&
+  L.all ((<= 50).L.length) [expr1, expr2, expr3] ==>
   let complexExpr = "(" ++ expr1 ++ ") + (" ++ expr2 ++ ") * (" ++ expr3 ++ ")"
       result = Compiler.compileExpression complexExpr
   in property $ case result of
@@ -157,16 +159,16 @@ prop_compilation_complex_expressions expr1 expr2 expr3 =
 
 prop_multifile_compilation_consistency :: [String] -> Property
 prop_multifile_compilation_consistency files =
-  not (null files) && length files <= 5 && all isValidExpression files ==>
+  not (null files) && L.length files <= 5 && L.all isValidExpression files ==>
   let compilationResults = map Compiler.compileFile files
       successfulResults = [r | Right r <- compilationResults]
-  in property $ length successfulResults >= 0 .&&.
-     all Compiler.isValidCompilation successfulResults
+  in property $ L.length successfulResults >= 0 .&&.
+     L.all Compiler.isValidCompilation successfulResults
 
 -- IR generation properties
 prop_ir_generation_preserves_semantics :: String -> Property
 prop_ir_generation_preserves_semantics input =
-  not (null input) && length input <= 50 && isValidExpression input ==>
+  not (null input) && L.length input <= 50 && isValidExpression input ==>
   let parsed = Parser.parseExpression input
       ir = case parsed of
         Left _ -> Nothing
@@ -178,7 +180,7 @@ prop_ir_generation_preserves_semantics input =
 
 prop_ir_optimization_maintains_correctness :: String -> Property
 prop_ir_optimization_maintains_correctness input =
-  not (null input) && length input <= 50 && isValidExpression input ==>
+  not (null input) && L.length input <= 50 && isValidExpression input ==>
   let parsed = Parser.parseExpression input
       optimized = case parsed of
         Left _ -> Nothing
@@ -201,17 +203,17 @@ prop_ir_validation_catches_inconsistencies input =
 -- Type checking properties
 prop_typechecking_catches_type_errors :: String -> String -> Property
 prop_typechecking_catches_type_errors expr1 expr2 =
-  let typeSafeExpr1 = filter (\c -> isLetter c || isDigit c || c `elem` " +-*/()") expr1
-      typeSafeExpr2 = filter (\c -> isLetter c || isDigit c || c `elem` " +-*/()") expr2
+  let typeSafeExpr1 = L.filter (\c -> isLetter c || isDigit c || c `elem` " +-*/()") expr1
+      typeSafeExpr2 = L.filter (\c -> isLetter c || isDigit c || c `elem` " +-*/()") expr2
       invalidExpr = typeSafeExpr1 ++ " + " ++ "\"" ++ typeSafeExpr2 ++ "\""  -- String + expression
       result = Compiler.TypeChecker.checkTypes invalidExpr
   in property $ case result of
     Left _ -> True  -- Should catch type error
-    Right _ -> length invalidExpr < 5  -- Only succeed for very short inputs
+    Right _ -> L.length invalidExpr < 5  -- Only succeed for very short inputs
 
 prop_type_inference_consistency :: String -> Property
 prop_type_inference_consistency input =
-  not (null input) && length input <= 30 && isValidExpression input ==>
+  not (null input) && L.length input <= 30 && isValidExpression input ==>
   let parsed = Parser.parseExpression input
       inferred1 = case parsed of
         Left _ -> Nothing
@@ -228,13 +230,13 @@ prop_generic_type_handling input =
   let genericExpr = "func identity<" ++ input ++ ">(x: " ++ input ++ "): " ++ input ++ " { return x; }"
       result = Compiler.TypeChecker.checkGenericTypes genericExpr
   in property $ case result of
-    Left _ -> length input <= 20  -- May fail for complex types
+    Left _ -> L.length input <= 20  -- May fail for complex types
     Right _ -> True  -- Should handle simple generic types
 
 -- Value analysis properties
 prop_value_analysis_tracks_dependencies :: String -> String -> Property
 prop_value_analysis_tracks_dependencies var1 var2 =
-  not (null var1) && not (null var2) && all isValidVariableName [var1, var2] ==>
+  not (null var1) && not (null var2) && L.all isValidVariableName [var1, var2] ==>
   let expr = var1 ++ " := 42; " ++ var2 ++ " := " ++ var1 ++ " + 1"
       parsed = Parser.parseExpression expr
       analysis = case parsed of
@@ -248,7 +250,7 @@ prop_value_analysis_tracks_dependencies var1 var2 =
 
 prop_constant_propagation_correctness :: String -> Property
 prop_constant_propagation_correctness input =
-  not (null input) && length input <= 30 && isConstantExpression input ==>
+  not (null input) && L.length input <= 30 && isConstantExpression input ==>
   let parsed = Parser.parseExpression input
       propagated = case parsed of
         Left _ -> Nothing
@@ -261,7 +263,7 @@ prop_constant_propagation_correctness input =
 
 prop_value_range_analysis :: String -> Property
 prop_value_range_analysis input =
-  not (null input) && length input <= 30 && isValidExpression input ==>
+  not (null input) && L.length input <= 30 && isValidExpression input ==>
   let parsed = Parser.parseExpression input
       range = case parsed of
         Left _ -> Nothing
@@ -275,7 +277,7 @@ prop_value_range_analysis input =
 -- Go AST properties
 prop_go_ast_generation_preserves_structure :: String -> Property
 prop_go_ast_generation_preserves_structure input =
-  not (null input) && length input <= 50 && isValidExpression input ==>
+  not (null input) && L.length input <= 50 && isValidExpression input ==>
   let parsed = Parser.parseExpression input
       goAst = case parsed of
         Left _ -> Nothing
@@ -288,7 +290,7 @@ prop_go_ast_generation_preserves_structure input =
 
 prop_go_code_generation_validity :: String -> Property
 prop_go_code_generation_validity input =
-  not (null input) && length input <= 30 && isValidExpression input ==>
+  not (null input) && L.length input <= 30 && isValidExpression input ==>
   let parsed = Parser.parseExpression input
       goCode = case parsed of
         Left _ -> Nothing
@@ -301,7 +303,7 @@ prop_go_code_generation_validity input =
 
 prop_go_type_mapping_correctness :: String -> Property
 prop_go_type_mapping_correctness typeName =
-  not (null typeName) && length typeName <= 20 && isValidTypeName typeName ==>
+  not (null typeName) && L.length typeName <= 20 && isValidTypeName typeName ==>
   let mappedType = Compiler.GoAst.mapType typeName
       isCorrectMapping = mappedType `elem` ["int", "string", "bool", "float64", typeName]
   in property $ isCorrectMapping
@@ -321,21 +323,21 @@ prop_partial_compilation_with_errors input =
       hasPartialResult = case result of
         Left _ -> False
         Right partial -> Compiler.hasPartialCompilation partial
-  in property $ hasPartialResult || length withError < 5
+  in property $ hasPartialResult || L.length withError < 5
 
 prop_error_context_preservation_integration :: String -> String -> Property
 prop_error_context_preservation_integration input context =
   not (null input) && not (null context) ==>
   let result = Compiler.compileWithContext input context
       contextPreserved = case result of
-        Left err -> context `isInfixOf` show err
+        Left err -> context `L.isInfixOf` show err
         Right _ -> True  -- Success is also acceptable
   in property $ contextPreserved
 
 -- Performance properties
 prop_optimization_improves_performance :: String -> Property
 prop_optimization_improves_performance input =
-  not (null input) && length input <= 50 && isValidExpression input ==>
+  not (null input) && L.length input <= 50 && isValidExpression input ==>
   let parsed = Parser.parseExpression input
       unoptimized = case parsed of
         Left _ -> Nothing
@@ -350,7 +352,7 @@ prop_optimization_improves_performance input =
 
 prop_memory_usage_optimization :: String -> Property
 prop_memory_usage_optimization input =
-  not (null input) && length input <= 30 && isValidExpression input ==>
+  not (null input) && L.length input <= 30 && isValidExpression input ==>
   let parsed = Parser.parseExpression input
       memoryUsage = case parsed of
         Left _ -> Nothing
@@ -365,8 +367,8 @@ prop_memory_usage_optimization input =
 
 prop_compilation_time_scaling :: [String] -> Property
 prop_compilation_time_scaling inputs =
-  not (null inputs) && length inputs <= 10 && all isValidExpression inputs ==>
-  let singleTime = maximum $ map Compiler.estimateCompilationTime inputs
+  not (null inputs) && L.length inputs <= 10 && L.all isValidExpression inputs ==>
+  let singleTime = L.maximum $ map Compiler.estimateCompilationTime inputs
       combinedInput = intercalate "; " inputs
       combinedTime = Compiler.estimateCompilationTime combinedInput
       reasonableScaling = combinedTime <= singleTime * 2  -- Allow some overhead
@@ -374,13 +376,13 @@ prop_compilation_time_scaling inputs =
 
 -- Helper functions
 isValidExpression :: String -> Bool
-isValidExpression = all (`elem` "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 +-*/()=;{}")
+isValidExpression = L.all (`elem` "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 +-*/()=;{}")
 
 isValidVariableName :: String -> Bool
-isValidVariableName = all (`elem` "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
+isValidVariableName = L.all (`elem` "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
 
 isValidTypeName :: String -> Bool
-isValidTypeName = all (`elem` "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+isValidTypeName = L.all (`elem` "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 isConstantExpression :: String -> Bool
-isConstantExpression = all (`elem` "0123456789 +-*/()")
+isConstantExpression = L.all (`elem` "0123456789 +-*/()")

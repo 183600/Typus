@@ -11,7 +11,9 @@ import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify
 import Utils (trim, splitBy, splitByComma, removeLineComments, removeComments, 
              normalizeIndentation, breakOn)
 import qualified Data.Text as T
-import Data.List (isInfixOf, isPrefixOf, isSuffixOf, group, sort, nub)
+import qualified Data.List as L
+import Data.List (isInfixOf, isPrefixOf, isSuffixOf)
+import Data.List (group, sort, nub)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import Data.Char (toLower, toUpper, isSpace, isAlphaNum)
 
@@ -24,23 +26,23 @@ prop_utils_trim_idempotent str =
       trimmedTwice = trim trimmedOnce
   in property $ trimmedOnce == trimmedTwice
 
--- Property: Trim removes leading and trailing whitespace
+-- Property: Trim removes leading L.and trailing whitespace
 prop_utils_trim_removes_whitespace :: String -> String -> String -> Property
 prop_utils_trim_removes_whitespace leading middle trailing =
   let fullString = leading ++ middle ++ trailing
       trimmed = trim fullString
-      hasLeadingSpace = not (null leading) && isSpace (head leading)
+      hasLeadingSpace = not (null leading) && isSpace (L.head leading)
       hasTrailingSpace = not (null trailing) && isSpace (last trailing)
   in classify hasLeadingSpace "has leading space" $
      classify hasTrailingSpace "has trailing space" $
-     property $ not (null trimmed) ==> not (isSpace (head trimmed)) && not (isSpace (last trimmed))
+     property $ not (null trimmed) ==> not (isSpace (L.head trimmed)) && not (isSpace (last trimmed))
 
 -- Property: Split by character preserves count based on delimiter occurrences
 prop_utils_split_by_character :: String -> Char -> Property
 prop_utils_split_by_character str delim =
   let result = splitBy delim str
-      expectedParts = length (filter (== delim) str) + 1
-  in property $ length result == expectedParts
+      expectedParts = L.length (L.filter (== delim) str) + 1
+  in property $ L.length result == expectedParts
 
 -- Property: Split by comma works correctly
 prop_utils_split_by_comma :: String -> Property
@@ -68,14 +70,14 @@ prop_utils_remove_line_comments :: String -> String -> Property
 prop_utils_remove_line_comments code comment =
   let codeWithComment = code ++ "// " ++ comment
       result = removeLineComments codeWithComment
-  in property $ comment `isInfixOf` codeWithComment && not (comment `isInfixOf` result)
+  in property $ comment `L.isInfixOf` codeWithComment && not (comment `L.isInfixOf` result)
 
--- Property: Remove all comments works
+-- Property: Remove L.all comments works
 prop_utils_remove_all_comments :: String -> String -> Property
 prop_utils_remove_all_comments code comment =
   let codeWithComment = code ++ "/* " ++ comment ++ " */"
       result = removeComments codeWithComment
-  in property $ comment `isInfixOf` codeWithComment && not (comment `isInfixOf` result)
+  in property $ comment `L.isInfixOf` codeWithComment && not (comment `L.isInfixOf` result)
 
 -- Property: Normalize indentation preserves relative indentation
 prop_utils_normalize_indentation :: [String] -> Property
@@ -83,15 +85,15 @@ prop_utils_normalize_indentation inputLines =
   let code = unlines inputLines
       normalized = normalizeIndentation code
       resultLines = lines normalized
-  in property $ not (null resultLines) ==> length resultLines == length inputLines
+  in property $ not (null resultLines) ==> L.length resultLines == L.length inputLines
 
 -- Property: Break on works correctly
 prop_utils_break_on :: String -> String -> Property
 prop_utils_break_on text pattern =
   let result = breakOn pattern text
-      hasPattern = pattern `isInfixOf` text
+      hasPattern = pattern `L.isInfixOf` text
   in classify hasPattern "has pattern" $
-     property $ hasPattern ==> length result == 2
+     property $ hasPattern ==> L.length result == 2
 
 -- Property: Break on with empty pattern returns original string
 prop_utils_break_on_empty_pattern :: String -> Property
@@ -102,7 +104,7 @@ prop_utils_break_on_empty_pattern text =
 -- Property: Break on with pattern not found returns original string
 prop_utils_break_on_pattern_not_found :: String -> String -> Property
 prop_utils_break_on_pattern_not_found text pattern =
-  let notFound = not (pattern `isInfixOf` text)
+  let notFound = not (pattern `L.isInfixOf` text)
       result = breakOn pattern text
   in classify notFound "pattern not found" $
      property $ notFound ==> result == (text, "")
@@ -112,16 +114,16 @@ prop_utils_trim_preserves_internal :: String -> String -> String -> Property
 prop_utils_trim_preserves_internal before middle after =
   let fullString = before ++ "  " ++ middle ++ "  " ++ after
       trimmed = trim fullString
-      hasInternalSpaces = "  " `isInfixOf` middle
+      hasInternalSpaces = "  " `L.isInfixOf` middle
   in classify hasInternalSpaces "has internal spaces" $
-     property $ hasInternalSpaces ==> "  " `isInfixOf` trimmed
+     property $ hasInternalSpaces ==> "  " `L.isInfixOf` trimmed
 
 -- Property: Split by handles different delimiters
 prop_utils_split_different_delimiters :: String -> Property
 prop_utils_split_different_delimiters str =
   let delimiters = [',', ';', ':', '|', ' ']
-      results = map (\d -> splitBy d str) delimiters
-  in property $ all (\r -> length r >= 1) results
+      results = L.map (\d -> splitBy d str) delimiters
+  in property $ L.all (\r -> L.length r >= 1) results
 
 -- Property: Split by with repeated delimiters
 prop_utils_split_repeated_delimiters :: String -> Char -> Property
@@ -129,21 +131,21 @@ prop_utils_split_repeated_delimiters str delim =
   let repeatedDelim = replicate 3 delim
       strWithRepeated = str ++ repeatedDelim ++ str
       result = splitBy delim strWithRepeated
-  in property $ length result >= 3
+  in property $ L.length result >= 3
 
 -- Property: Remove line comments with multiple comments
 prop_utils_remove_multiple_line_comments :: [String] -> Property
 prop_utils_remove_multiple_line_comments comments =
-  let codeWithComments = unlines $ map (\c -> "var x int = 42 // " ++ c) comments
+  let codeWithComments = unlines $ L.map (\c -> "var x int = 42 // " ++ c) comments
       result = removeLineComments codeWithComments
-  in property $ all (`notElem` lines result) comments
+  in property $ L.all (`notElem` lines result) comments
 
 -- Property: Remove comments with nested comments
 prop_utils_remove_nested_comments :: String -> String -> Property
 prop_utils_remove_nested_comments outer inner =
   let nestedComment = "/* " ++ outer ++ " /* " ++ inner ++ " */ */"
       result = removeComments nestedComment
-  in property $ not (outer `isInfixOf` result) && not (inner `isInfixOf` result)
+  in property $ not (outer `L.isInfixOf` result) && not (inner `L.isInfixOf` result)
 
 -- Property: Normalize indentation with mixed indentation
 prop_utils_normalize_mixed_indentation :: [String] -> Property
@@ -160,9 +162,9 @@ prop_utils_break_on_multiple_occurrences :: String -> String -> Property
 prop_utils_break_on_multiple_occurrences text pattern =
   let textWithMultiple = text ++ pattern ++ text ++ pattern ++ text
       result = breakOn pattern textWithMultiple
-      hasPattern = pattern `isInfixOf` textWithMultiple
+      hasPattern = pattern `L.isInfixOf` textWithMultiple
   in classify hasPattern "has pattern" $
-     property $ hasPattern ==> length result >= 2
+     property $ hasPattern ==> L.length result >= 2
 
 -- Property: Break on with pattern at start
 prop_utils_break_on_pattern_at_start :: String -> String -> Property
@@ -181,7 +183,7 @@ prop_utils_break_on_pattern_at_end text pattern =
 -- Property: Trim with only whitespace
 prop_utils_trim_whitespace_only :: String -> Property
 prop_utils_trim_whitespace_only whitespace =
-  let isOnlyWhitespace = all isSpace whitespace
+  let isOnlyWhitespace = L.all isSpace whitespace
       trimmed = trim whitespace
   in classify isOnlyWhitespace "whitespace only" $
      property $ isOnlyWhitespace ==> null trimmed
@@ -198,23 +200,23 @@ prop_utils_remove_comments_preserves_code :: String -> String -> Property
 prop_utils_remove_comments_preserves_code code comment =
   let codeWithComment = code ++ "// " ++ comment
       result = removeLineComments codeWithComment
-  in property $ code `isPrefixOf` result
+  in property $ code `L.isPrefixOf` result
 
 -- Property: Remove comments handles string literals
 prop_utils_remove_comments_handles_strings :: String -> String -> Property
 prop_utils_remove_comments_handles_strings code comment =
   let stringWithComment = "var s string = \"// not a comment\" // " ++ comment ++ "\n" ++ code
       result = removeLineComments stringWithComment
-  in property $ "// not a comment" `isInfixOf` result && not (comment `isInfixOf` result)
+  in property $ "// not a comment" `L.isInfixOf` result && not (comment `L.isInfixOf` result)
 
 -- Property: Normalize indentation removes common prefix
 prop_utils_normalize_removes_common_prefix :: [String] -> Property
 prop_utils_normalize_removes_common_prefix inputLines =
-  let indentedLines = map ("  " ++) inputLines
+  let indentedLines = L.map ("  " ++) inputLines
       code = unlines indentedLines
       normalized = normalizeIndentation code
       resultLines = lines normalized
-  in property $ not (null resultLines) ==> all (not . ("  " `isPrefixOf`)) resultLines
+  in property $ not (null resultLines) ==> L.all (not . ("  " `L.isPrefixOf`)) resultLines
 
 -- Property: Break on is case sensitive
 prop_utils_break_on_case_sensitive :: String -> Property
@@ -224,33 +226,33 @@ prop_utils_break_on_case_sensitive pattern =
       text = "Some " ++ lowerPattern ++ " text"
       resultUpper = breakOn upperPattern text
       resultLower = breakOn lowerPattern text
-  in property $ length resultUpper /= length resultLower
+  in property $ L.length resultUpper /= L.length resultLower
 
 -- Property: Split by handles Unicode characters
 prop_utils_split_unicode :: String -> Property
 prop_utils_split_unicode str =
   let unicodeDelim = '∑'
       result = splitBy unicodeDelim str
-  in property $ length result >= 1
+  in property $ L.length result >= 1
 
 -- Property: Trim with Unicode whitespace
 prop_utils_trim_unicode_whitespace :: String -> Property
 prop_utils_trim_unicode_whitespace str =
   let unicodeWhitespace = str ++ "\8192\8193\8194"
       trimmed = trim unicodeWhitespace
-  in property $ not (any (`elem` ['\8192', '\8193', '\8194']) trimmed)
+  in property $ not (L.any (`elem` ['\8192', '\8193', '\8194']) trimmed)
 
 -- Property: Remove line comments with Unicode content
 prop_utils_remove_comments_unicode :: String -> String -> Property
 prop_utils_remove_comments_unicode code comment =
   let unicodeComment = code ++ "// " ++ comment ++ " 测试 🚀"
       result = removeLineComments unicodeComment
-  in property $ comment `isInfixOf` unicodeComment && not (comment `isInfixOf` result)
+  in property $ comment `L.isInfixOf` unicodeComment && not (comment `L.isInfixOf` result)
 
 -- Property: Normalize indentation with tabs
 prop_utils_normalize_tab_indentation :: [String] -> Property
 prop_utils_normalize_tab_indentation lines =
-  let tabIndented = map ("\t\t" ++) lines
+  let tabIndented = L.map ("\t\t" ++) lines
       code = unlines tabIndented
       normalized = normalizeIndentation code
   in property $ not (null normalized)
@@ -259,8 +261,8 @@ prop_utils_normalize_tab_indentation lines =
 prop_utils_break_on_special_chars :: String -> Property
 prop_utils_break_on_special_chars text =
   let specialPatterns = [".", "*", "+", "?", "^", "$", "[", "]", "(", ")", "{", "}", "\\", "|"]
-      results = map (`breakOn` text) specialPatterns
-  in property $ all (\r -> length r >= 1) results
+      results = L.map (`breakOn` text) specialPatterns
+  in property $ L.all (\r -> L.length r >= 1) results
 
 -- Helper functions
 -- lines function removed to avoid conflict with Prelude.lines
@@ -274,7 +276,7 @@ tests = testGroup "Extended Utils QuickCheck Tests"
   , fastProperty "Split empty string" prop_utils_split_empty_string
   , fastProperty "Split no delimiter" prop_utils_split_no_delimiter
   , fastProperty "Remove line comments" prop_utils_remove_line_comments
-  , fastProperty "Remove all comments" prop_utils_remove_all_comments
+  , fastProperty "Remove L.all comments" prop_utils_remove_all_comments
   , fastProperty "Normalize indentation" prop_utils_normalize_indentation
   , fastProperty "Break on" prop_utils_break_on
   , fastProperty "Break on empty pattern" prop_utils_break_on_empty_pattern

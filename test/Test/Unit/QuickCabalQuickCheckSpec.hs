@@ -4,6 +4,7 @@
 module Test.Unit.QuickCabalQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import Data.List (nub, sort, group)
@@ -17,13 +18,13 @@ tests = testGroup "Quick Cabal QuickCheck Tests"
 listFunctionProperties :: TestTree
 listFunctionProperties = testGroup "List Function Properties"
   [ fastProperty "nub removes duplicates" $ \(xs :: [Int]) ->
-      all (\g -> length g == 1) (group (sort (nub xs)))
+      L.all (\g -> L.length g == 1) (group (sort (nub xs)))
   
   , fastProperty "filter preserves order" $ \(xs :: [Int]) ->
       let indices = [i :: Int | (i, x) <- zip [0..] xs, even x]
       in indices === sort indices
   
-  , fastProperty "take and drop split list" $ \n (xs :: [Int]) ->
+  , fastProperty "take L.and drop split list" $ \n (xs :: [Int]) ->
       n >= 0 ==> take n xs ++ drop n xs === xs
   ]
 

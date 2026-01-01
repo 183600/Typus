@@ -46,12 +46,12 @@ textProcessingProperties = testGroup "Text Processing Properties"
       \c s -> splitBy c s `L.intercalate` [c] == s
 
   , testProperty "splitByCollapsed removes empty segments" $
-      \c s -> all (not . null) (splitByCollapsed c s)
+      \c s -> L.all (not . null) (splitByCollapsed c s)
 
   , testProperty "normalizeIndentation preserves relative structure" $
       \lineList -> let normalized = normalizeIndentation lineList
-                       indentLevels = map (length . takeWhile isSpace) normalized
-                   in all (>= 0) indentLevels
+                       indentLevels = L.map (L.length . takeWhile isSpace) normalized
+                   in L.all (>= 0) indentLevels
 
   , testCase "trim handles empty strings" $
       assertEqual "trim empty" "" (trim "")
@@ -77,7 +77,7 @@ sourceLocationMathProperties = testGroup "Source Location Math Properties"
                           merged2 = mergeSpans span2 span1
                       in spanStart merged1 == spanStart merged2 && spanEnd merged1 == spanEnd merged2
 
-  , testProperty "emptySpan has zero length" $
+  , testProperty "emptySpan has zero L.length" $
       \pos -> let span = emptySpan pos
               in spanStart span == spanEnd span
 
@@ -141,7 +141,7 @@ errorHandlingProperties = testGroup "Error Handling Properties"
 
   , testCase "format error includes location" $
       let error = formatError "Test error" ErrorError (ErrorLocation (SourcePos 1 1) (SourcePos 1 5)) emptyContext
-      in assertBool "error contains position" ("1:1" `isInfixOf` error)
+      in assertBool "error contains position" ("1:1" `L.isInfixOf` error)
   ]
 
 -- ============================================================================
@@ -154,13 +154,13 @@ utilsBoundaryProperties = testGroup "Utils Boundary Properties"
       \c -> splitBy c [c] == ["", ""]
 
   , testProperty "splitByCollapsed handles empty input" $
-      \c -> null (splitByCollapsed c "")
+      \c -> L.null (splitByCollapsed c "")
 
   , testProperty "trim preserves non-whitespace content" $
-      \s -> not (all isSpace s) ==> not (null (trim s))
+      \s -> not (L.all isSpace s) ==> not (L.null (trim s))
 
   , testProperty "splitByComma handles consecutive commas" $
-      \s -> splitByComma (",," ++ s ++ ",,") `L.isPrefixOf` ["", "", ""]
+      \s -> splitByComma (",," ++ s ++ ",,") `L.L.isPrefixOf` ["", "", ""]
 
   , testCase "removeComments handles empty input" $
       assertEqual "removeComments empty" "" (removeComments "")
@@ -248,4 +248,4 @@ commentHandlingProperties = testGroup "Comment Handling Properties"
 -- ============================================================================
 
 isInfixOf :: String -> String -> Bool
-isInfixOf = L.isInfixOf
+L.isInfixOf = L.L.isInfixOf

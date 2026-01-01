@@ -11,7 +11,9 @@ import Parser (TypusFile(..), CodeBlock(..), BlockDirectives(..), FileDirectives
 import Compiler.GoAst (GoModule(..), GoDecl(..), ImportDecl(..), PackageDecl(..))
 import Compiler.Errors (CompilerResult(..))
 import SourceLocation (SourceSpan(..), locatedAt, startPos)
-import Data.List (isInfixOf, isPrefixOf, nub)
+import qualified Data.List as L
+import Data.List (isInfixOf, isPrefixOf)
+import Data.List (nub)
 import qualified Data.Set as Set
 import Data.Char (isSpace)
 
@@ -31,7 +33,7 @@ tests = testGroup "Compiler IR Properties QuickCheck Tests"
   , testProperty "IR transformation is deterministic" prop_ir_transformation_deterministic
   , testProperty "buildSemanticIR handles empty modules" prop_build_semantic_ir_empty_modules
   , testProperty "buildSemanticIR preserves value information" prop_build_semantic_ir_preserves_values
-  , testProperty "GoIR contains consistent module and source" prop_go_ir_consistent_module_source
+  , testProperty "GoIR contains consistent module L.and source" prop_go_ir_consistent_module_source
   , testCase "IR handles edge cases" test_ir_edge_cases
   , testCase "IR generation handles malformed input" test_ir_malformed_input
   ]
@@ -45,8 +47,8 @@ prop_build_source_ir_preserves_content typusFile =
   let sourceIR = buildSourceIR typusFile
       originalContent = rawSourceFromTypus typusFile
       irContent = sourceText sourceIR
-  in counterexample ("Original content length: " ++ show (length originalContent) ++ 
-                    ", IR content length: " ++ show (length irContent)) $
+  in counterexample ("Original content L.length: " ++ show (L.length originalContent) ++ 
+                    ", IR content L.length: " ++ show (L.length irContent)) $
      originalContent === irContent
 
 prop_build_source_ir_maintains_structure :: TypusFile -> Property
@@ -55,8 +57,8 @@ prop_build_source_ir_maintains_structure typusFile =
       originalFile = sourceTypusFile sourceIR
       originalBlocks = tfBlocks typusFile
       irBlocks = tfBlocks originalFile
-  in length originalBlocks === length irBlocks .&&.
-     all (\(orig, ir) -> cbContent orig === cbContent ir) (zip originalBlocks irBlocks)
+  in L.length originalBlocks === L.length irBlocks .&&.
+     L.all (\(orig, ir) -> cbContent orig === cbContent ir) (zip originalBlocks irBlocks)
 
 prop_raw_source_concatenates_blocks :: TypusFile -> Property
 prop_raw_source_concatenates_blocks typusFile =
@@ -64,9 +66,9 @@ prop_raw_source_concatenates_blocks typusFile =
       blocks = tfBlocks typusFile
       blockContents = map cbContent blocks
       expectedContent = unlines blockContents
-  in counterexample ("Expected lines: " ++ show (length blockContents) ++ 
-                    ", Raw source lines: " ++ show (length (lines rawSource))) $
-     length (lines rawSource) >= length blockContents
+  in counterexample ("Expected lines: " ++ show (L.length blockContents) ++ 
+                    ", Raw source lines: " ++ show (L.length (lines rawSource))) $
+     L.length (lines rawSource) >= L.length blockContents
 
 -- ============================================================================
 -- SemanticIR Properties
@@ -127,8 +129,8 @@ prop_emit_go_preserves_package typusFile =
              goModule = goModule goIR
              goSource = goSource goIR
          in case gmPackage goModule of
-              Just pkg -> "package " ++ pdName pkg `isInfixOf` goSource
-              Nothing -> "package main" `isInfixOf` goSource
+              Just pkg -> "package " ++ pdName pkg `L.isInfixOf` goSource
+              Nothing -> "package main" `L.isInfixOf` goSource
 
 prop_emit_go_preserves_imports :: TypusFile -> Property
 prop_emit_go_preserves_imports typusFile =
@@ -142,7 +144,7 @@ prop_emit_go_preserves_imports typusFile =
              imports = gmImports goModule
          in if null imports
             then True
-            else all (\imp -> importPath imp `isInfixOf` goSource) imports
+            else L.all (\imp -> importPath imp `L.isInfixOf` goSource) imports
 
 -- ============================================================================
 -- IR Transformation Properties
@@ -195,11 +197,11 @@ test_ir_edge_cases = do
   
   -- Test with very long content
   let longContent = replicate 1000 "very long line with content\n"
-      longBlock = CodeBlock defaultBlockDirectives (concat longContent) (emptySpan startPos)
+      longBlock = CodeBlock defaultBlockDirectives (L.concat longContent) (emptySpan startPos)
       longFile = TypusFile defaultFileDirectives [] [longBlock] []
       sourceIR'' = buildSourceIR longFile
       rawSource'' = sourceText sourceIR''
-  assertBool "Long content should be preserved" $ length rawSource'' > 10000
+  assertBool "Long content should be preserved" $ L.length rawSource'' > 10000
 
 test_ir_malformed_input :: IO ()
 test_ir_malformed_input = do
@@ -210,7 +212,7 @@ test_ir_malformed_input = do
       result = buildSemanticIR sourceIR >>= return . emitGo
   case result of
     Left _ -> assertBool "Malformed Go should fail gracefully" True
-    Right goIR -> assertBool "Malformed Go should produce some output" $ not (null (goSource goIR))
+    Right goIR -> assertBool "Malformed Go should produce some output" $ not (L.null (goSource goIR))
 
 -- ============================================================================
 -- Helper Functions
@@ -220,8 +222,8 @@ test_ir_malformed_input = do
 isValidGoModule :: GoModule -> Bool
 isValidGoModule GoModule{..} = 
   not (null gmName) && 
-  all isValidImport gmImports &&
-  all isValidDecl gmDecls
+  L.all isValidImport gmImports &&
+  L.all isValidDecl gmDecls
 
 isValidImport :: ImportDecl -> Bool
 isValidImport ImportDecl{..} = not (null importPath)
@@ -238,7 +240,7 @@ isValidDecl decl = case decl of
 hasValidGoStructure :: String -> Bool
 hasValidGoStructure source = 
   let lines' = lines source
-      hasPackage = any ("package" `isPrefixOf`) lines'
+      hasPackage = L.any ("package" `L.isPrefixOf`) lines'
       hasValidBraces = countBraces source >= 0
   in hasPackage && hasValidBraces
 
@@ -317,7 +319,7 @@ instance Arbitrary CodeBlock where
     directives <- arbitrary
     content <- listOf1 $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \n\t{}();"
     span <- arbitrary
-    return $ CodeBlock directives (concat content) span
+    return $ CodeBlock directives (L.concat content) span
 
 instance Arbitrary SourceSpan where
   arbitrary = do

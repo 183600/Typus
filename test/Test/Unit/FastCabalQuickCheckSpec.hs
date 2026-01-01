@@ -22,13 +22,13 @@ maybeProperties = testGroup "Maybe Properties"
   , fastProperty "fromMaybe with Nothing" $ \(def :: Int) ->
       fromMaybe def Nothing === def
   
-  , fastProperty "isJust and isNothing are opposites" $ \(m :: Maybe Int) ->
+  , fastProperty "isJust L.and isNothing are opposites" $ \(m :: Maybe Int) ->
       isJust m === not (isNothing m)
   ]
 
 tupleProperties :: TestTree
 tupleProperties = testGroup "Tuple Properties"
-  [ fastProperty "fst and snd" $ \(x :: Int) (y :: String) ->
+  [ fastProperty "fst L.and snd" $ \(x :: Int) (y :: String) ->
       (fst (x, y), snd (x, y)) === (x, y)
   
   , fastProperty "swap twice is identity" $ \(x :: Int) (y :: String) ->

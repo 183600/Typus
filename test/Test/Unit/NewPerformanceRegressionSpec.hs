@@ -20,7 +20,9 @@ import Test.QuickCheck
 
 import Utils (trim, splitBy, removeComments, normalizeIndentation)
 import SourceLocation (SourcePos(..), advancePos, advancePosByText)
-import Data.List (length, foldl')
+import qualified Data.List as L
+import Data.List (length)
+import Data.List (foldl')
 import Data.Char (isSpace)
 import Control.DeepSeq (NFData, rnf)
 import qualified Data.Text as T
@@ -45,7 +47,7 @@ prop_trim_performance_linear :: PerformanceTestData -> Property
 prop_trim_performance_linear testData =
   inputSize testData > 0 ==>
   let result = trim $ testString testData
-      resultLength = length result
+      resultLength = L.length result
   in classify (inputSize testData < 100) "small input" $
      classify (inputSize testData >= 100 && inputSize testData < 1000) "medium input" $
      classify (inputSize testData >= 1000) "large input" $
@@ -56,7 +58,7 @@ prop_split_performance_reasonable :: PerformanceTestData -> Char -> Property
 prop_split_performance_reasonable testData delim =
   inputSize testData > 0 ==>
   let segments = splitBy delim $ testString testData
-      segmentCount = length segments
+      segmentCount = L.length segments
   in property $ segmentCount <= inputSize testData + 1
 
 -- Property: Comment removal doesn't blow up exponentially
@@ -64,7 +66,7 @@ prop_remove_comments_performance :: PerformanceTestData -> Property
 prop_remove_comments_performance testData =
   inputSize testData > 0 ==>
   let result = removeComments $ testString testData
-      resultLength = length result
+      resultLength = L.length result
   in property $ resultLength <= inputSize testData
 
 -- Property: Normalization performance is linear
@@ -72,7 +74,7 @@ prop_normalize_indentation_performance :: PerformanceTestData -> Property
 prop_normalize_indentation_performance testData =
   inputSize testData > 0 ==>
   let result = normalizeIndentation $ testString testData
-      resultLength = length result
+      resultLength = L.length result
   in property $ resultLength <= inputSize testData + 100  -- Allow some overhead
 
 -- Property: Source position tracking is efficient
@@ -81,7 +83,7 @@ prop_source_position_tracking_efficient testData =
   inputSize testData > 0 ==>
   let text = testText testData
       finalPos = advancePosByText startPos text
-      expectedLines = length $ T.filter (== '\n') text + 1
+      expectedLines = L.length $ T.L.filter (== '\n') text + 1
   in property $ posLine finalPos <= expectedLines + 10  -- Allow some margin
 
 -- Property: Repeated operations don't accumulate memory
@@ -91,7 +93,7 @@ prop_repeated_operations_memory testData iterations =
   let content = testString testData
       performOperation n = if n <= 0 then content else performOperation (n - 1)
       result = performOperation iterations
-  in property $ length result <= inputSize testData
+  in property $ L.length result <= inputSize testData
 
 -- Property: Large input handling doesn't crash
 prop_large_input_handling :: Property
@@ -99,15 +101,15 @@ prop_large_input_handling =
   let largeInput = replicate 10000 'a' ++ "\n" ++ replicate 10000 'b'
       trimmed = trim largeInput
       split = splitBy '\n' largeInput
-  in property $ not (null trimmed) && length split == 2
+  in property $ not (null trimmed) && L.length split == 2
 
 -- Property: Text vs String performance consistency
 prop_text_string_consistency :: PerformanceTestData -> Property
 prop_text_string_consistency testData =
   let str = testString testData
       txt = testText testData
-      strLength = length str
-      txtLength = T.length txt
+      strLength = L.length str
+      txtLength = T.L.length txt
   in property $ strLength === txtLength
 
 -- Property: Nested operations performance
@@ -118,15 +120,15 @@ prop_nested_operations_performance testData =
       step1 = trim content
       step2 = splitBy '\n' step1
       step3 = map trim step2
-      step4 = filter (not . null) step3
-  in property $ length step4 <= length step2
+      step4 = L.filter (not . null) step3
+  in property $ L.length step4 <= L.length step2
 
 -- Property: Memory usage doesn't grow excessively
 prop_memory_usage_reasonable :: PerformanceTestData -> Property
 prop_memory_usage_reasonable testData =
   let content = testString testData
       processed = rnf $ map trim $ splitBy ' ' content
-  in property $ length content >= 0  -- Basic check that we can evaluate it
+  in property $ L.length content >= 0  -- Basic check that we can evaluate it
 
 tests :: TestTree
 tests = testGroup "New Performance Regression Tests"
@@ -145,6 +147,6 @@ tests = testGroup "New Performance Regression Tests"
           trimmed = trim mediumInput
           splitResult = splitBy ' ' trimmed
       assertBool "Trim should work on medium input" $ not (null trimmed)
-      assertBool "Split should produce reasonable number of segments" $ length splitResult > 0
-      assertBool "Performance should be reasonable" $ length trimmed <= length mediumInput
+      assertBool "Split should produce reasonable number of segments" $ L.length splitResult > 0
+      assertBool "Performance should be reasonable" $ L.length trimmed <= L.length mediumInput
   ]

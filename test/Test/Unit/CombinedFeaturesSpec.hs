@@ -1,6 +1,7 @@
 module Test.Unit.CombinedFeaturesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty)
 
@@ -61,13 +62,13 @@ tests =
                   , "    }"
                   ]
                 normalized = normalizeIndentation inconsistentInput
-                linesCount = length (lines normalized)
-            linesCount @?= 5  -- Should preserve all lines
+                linesCount = L.length (lines normalized)
+            linesCount @?= 5  -- Should preserve L.all lines
         ]
 
     , testGroup "Ownership + Type System Integration"
         [ testCase "ownership transfer respects type constraints" $ do
-            -- This test simulates the interaction between ownership and type checking
+            -- This test simulates the interaction between ownership L.and type checking
             let ownershipTransfer = True  -- Simulate successful transfer
                 typeCheckResult = True   -- Simulate type compatibility
             -- Both should succeed for valid transfer
@@ -107,7 +108,7 @@ tests =
                 startLoc = startPos
                 endLoc = advancePosByText (T.pack originalText) startLoc
                 textLines = lines originalText
-                lineCount = length textLines
+                lineCount = L.length textLines
             posLine endLoc @?= lineCount
             posColumn endLoc @?= 1  -- Should be at start of new line
 
@@ -115,8 +116,8 @@ tests =
             let input = "a,b,c"
                 splitResult = splitByComma input
                 expectedPositions = [1, 3, 5]  -- Expected start positions
-                actualLengths = map length splitResult
-            sum actualLengths @?= length input  -- Total chars should match
+                actualLengths = map L.length splitResult
+            L.sum actualLengths @?= L.length input  -- Total chars should match
         ]
 
     , testGroup "Property-based Integration Tests"
@@ -142,22 +143,22 @@ prop_locationReversibility txt
   | otherwise =
       let start = startPos
           end = advancePosBy txt start
-          -- For single line, column should be 1 + length of text
-          expectedColumn = 1 + length txt
+          -- For single line, column should be 1 + L.length of text
+          expectedColumn = 1 + L.length txt
       in posColumn end == expectedColumn
 
 -- Property: text splitting should preserve total character count
 prop_splitPreservesLength :: String -> Bool
 prop_splitPreservesLength input =
   let parts = splitBy ',' input
-      totalLength = sum (map length parts) + length (filter (== ',') input)
-  in totalLength == length input
+      totalLength = L.sum (map L.length parts) + L.length (L.filter (== ',') input)
+  in totalLength == L.length input
 
 -- Property: location tracking should be consistent across text operations
 prop_locationConsistency :: String -> Bool
 prop_locationConsistency input =
   let start = startPos
       afterText = advancePosBy input start
-      linesCount = length (lines input)
+      linesCount = L.length (lines input)
       expectedLine = posLine start + linesCount - 1
   in posLine afterText == expectedLine

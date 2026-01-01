@@ -14,6 +14,7 @@ import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Gen, Arbitrary, arbitrary, oneof, elements, listOf, resize)
 import Data.Char (isAlpha, isAlphaNum, isSpace, isDigit)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import qualified Data.Text as T
 
@@ -82,7 +83,7 @@ codeWithDirectives = do
   hasConstraints <- arbitrary
   code <- validTypusCode
   
-  let directives = concat $
+  let directives = L.concat $
         [ if hasOwnership then "// @ownership\n" else ""
         , if hasDepTypes then "// @dependent-types\n" else ""
         , if hasConstraints then "// @constraints\n" else ""
@@ -136,7 +137,7 @@ prop_parseTypus_line_numbers =
     let malformedCode = code ++ "\ninvalid syntax here !!!"
         result = parseTypus "linetest" malformedCode
     in case result of
-         Left err -> property $ "line" `isInfixOf` show err
+         Left err -> property $ "line" `L.isInfixOf` show err
          Right _ -> property $ counterexample "Expected parse error for malformed code" False
 
 -- Property: parseTypus handles Unicode characters
@@ -167,7 +168,7 @@ prop_parseTypus_large_files =
         result = parseTypus "large" largeCode
     in case result of
          Left _ -> property $ counterexample "Failed to parse large file" False
-         Right typusFile -> property $ length (tfCodeBlocks typusFile) >= 0
+         Right typusFile -> property $ L.length (tfCodeBlocks typusFile) >= 0
 
 -- Property: parseTypus handles nested structures
 prop_parseTypus_nested_structures :: Property

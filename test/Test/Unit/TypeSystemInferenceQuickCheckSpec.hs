@@ -10,6 +10,7 @@
 module Test.Unit.TypeSystemInferenceQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import TestSupport.Arbitrary
@@ -133,9 +134,9 @@ prop_type_inference_substitution_consistent env oldVar newVar newType =
 inferType :: MockTypeEnvironment -> String -> Maybe MockType
 inferType env expr
   | Map.member expr (typeBindings env) = Map.lookup expr (typeBindings env)
-  | " " `isInfixOf` expr = 
+  | " " `L.isInfixOf` expr = 
       let parts = words expr
-          funcName = head parts
+          funcName = L.head parts
           arg = last parts
       in case Map.lookup funcName (typeBindings env) of
         Just (MockFunction argType returnType) -> 
@@ -176,7 +177,7 @@ typeWellFormed env (MockFunction arg ret) = typeWellFormed env arg && typeWellFo
 typeWellFormed env (MockVar name) = Map.member name (typeBindings env)
 
 hasContradictoryConstraints :: MockTypeEnvironment -> Bool
-hasContradictoryConstraints env = any isContradiction (constraints env)
+hasContradictoryConstraints env = L.any isContradiction (constraints env)
   where
     isContradiction (MockEquality t1 t2) = t1 /= t2
     isContradiction (MockSubtype t1 t2) = t1 == t2 && t1 /= t2
@@ -186,8 +187,8 @@ isSubtype t1 t2 = t1 == t2
 
 substituteTypeVar :: String -> MockType -> MockTypeEnvironment -> MockTypeEnvironment
 substituteTypeVar oldVar newType env =
-  let newBindings = Map.map (substituteInType oldVar newType) (typeBindings env)
-      newConstraints = map (substituteInConstraint oldVar newType) (constraints env)
+  let newBindings = Map.L.map (substituteInType oldVar newType) (typeBindings env)
+      newConstraints = L.map (substituteInConstraint oldVar newType) (constraints env)
   in MockTypeEnvironment newBindings newConstraints
 
 substituteInType :: String -> MockType -> MockType -> MockType
@@ -205,10 +206,10 @@ substituteInConstraint oldVar newType (MockSubtype t1 t2) =
   MockSubtype (substituteInType oldVar newType t1) (substituteInType oldVar newType t2)
 
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` (substrings haystack)
+L.isInfixOf needle haystack = needle `elem` (substrings haystack)
   where
     substrings [] = []
-    substrings s@(x:xs) = take (length needle) s : substrings xs
+    substrings s@(x:xs) = take (L.length needle) s : substrings xs
 
 tests :: TestTree
 tests = testGroup "Type System Inference QuickCheck Tests"

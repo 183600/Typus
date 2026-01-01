@@ -10,6 +10,7 @@
 module Test.Unit.NewEnhancedErrorHandlerConsistencyQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose, suchThat)
@@ -18,7 +19,8 @@ import TestSupport.Arbitrary
 import ErrorHandler
 import EnhancedErrorHandler
 import SourceLocation
-import Data.List (sort, nub, group, intercalate, find, delete, isInfixOf)
+import Data.List (isInfixOf)
+import Data.List (sort, nub, group, intercalate, find, delete)
 import Data.Maybe (isJust, isNothing, catMaybes, fromMaybe, mapMaybe)
 import Data.Set (Set, empty, singleton, union, unions, member, size, difference, intersection)
 import qualified Data.Set as Set
@@ -38,10 +40,10 @@ prop_error_message_consistency errorType context line =
       enhancedError = createEnhancedError errorType context location
       basicMsg = getErrorMessage basicError
       enhancedMsg = getEnhancedErrorMessage enhancedError
-  in property $ errorType `isInfixOf` basicMsg .&&. 
-     errorType `isInfixOf` enhancedMsg .&&.
-     context `isInfixOf` basicMsg .&&.
-     context `isInfixOf` enhancedMsg
+  in property $ errorType `L.isInfixOf` basicMsg .&&. 
+     errorType `L.isInfixOf` enhancedMsg .&&.
+     context `L.isInfixOf` basicMsg .&&.
+     context `L.isInfixOf` enhancedMsg
 
 -- Property: Error severity classification consistency
 prop_error_severity_consistency :: String -> Property
@@ -65,8 +67,8 @@ prop_error_chaining_maintains_order :: [String] -> Property
 prop_error_chaining_maintains_order errorTypes =
   length errorTypes >= 2 ==> 
   let location = SourceLocation 0 0 "test.typus"
-      baseError = createBasicError (head errorTypes) "base" location
-      chainedErrors = foldl (\err errType -> chainError err (createBasicError errType "chained" location)) baseError (tail errorTypes)
+      baseError = createBasicError (L.head errorTypes) "base" location
+      chainedErrors = L.foldl (\err errType -> chainError err (createBasicError errType "chained" location)) baseError (L.tail errorTypes)
       extractedTypes = extractChainedErrorTypes chainedErrors
   in property $ errorTypes === extractedTypes
 
@@ -74,7 +76,7 @@ prop_error_chaining_maintains_order errorTypes =
 prop_error_recovery_suggestions_relevance :: String -> Property
 prop_error_recovery_suggestions_relevance errorType =
   let suggestions = generateRecoverySuggestions errorType
-      relevantSuggestion = not (null suggestions) && any (isRelevantToError errorType) suggestions
+      relevantSuggestion = not (null suggestions) && L.any (isRelevantToError errorType) suggestions
   in property $ relevantSuggestion
 
 -- Property: Error location accuracy preservation
@@ -99,7 +101,7 @@ prop_multiple_error_aggregation :: [String] -> Property
 prop_multiple_error_aggregation errorTypes =
   not (null errorTypes) ==> 
   let location = SourceLocation 0 0 "test.typus"
-      errors = map (\errType -> createBasicError errType "test" location) errorTypes
+      errors = L.map (\errType -> createBasicError errType "test" location) errorTypes
       aggregated = aggregateErrors errors
       aggregatedTypes = extractAggregatedErrorTypes aggregated
   in property $ sort errorTypes === sort aggregatedTypes
@@ -112,9 +114,9 @@ prop_error_formatting_consistency errorType context line column =
       error = createBasicError errorType context location
       basicFormat = formatError error
       enhancedFormat = formatEnhancedError error
-      hasType = errorType `isInfixOf` basicFormat && errorType `isInfixOf` enhancedFormat
-      hasContext = context `isInfixOf` basicFormat && context `isInfixOf` enhancedFormat
-      hasLocation = show line `isInfixOf` basicFormat && show line `isInfixOf` enhancedFormat
+      hasType = errorType `L.isInfixOf` basicFormat && errorType `L.isInfixOf` enhancedFormat
+      hasContext = context `L.isInfixOf` basicFormat && context `L.isInfixOf` enhancedFormat
+      hasLocation = show line `L.isInfixOf` basicFormat && show line `L.isInfixOf` enhancedFormat
   in property $ hasType .&&. hasContext .&&. hasLocation
 
 -- Property: Error filtering by severity
@@ -122,10 +124,10 @@ prop_error_filtering_by_severity :: [String] -> Property
 prop_error_filtering_by_severity errorTypes =
   not (null errorTypes) ==> 
   let location = SourceLocation 0 0 "test.typus"
-      errors = map (\errType -> createBasicError errType "test" location) errorTypes
+      errors = L.map (\errType -> createBasicError errType "test" location) errorTypes
       highSeverityErrors = filterErrorsBySeverity errors "high"
-      expectedHigh = filter (\err -> classifyErrorSeverity errType == "high") errorTypes
-  in property $ length highSeverityErrors === length expectedHigh
+      expectedHigh = L.filter (\err -> classifyErrorSeverity errType == "high") errorTypes
+  in property $ L.length highSeverityErrors === L.length expectedHigh
 
 -- Property: Error context propagation
 prop_error_context_propagation :: [String] -> String -> Property
@@ -158,7 +160,7 @@ prop_error_localization_accuracy errorType startLine endLine column =
      localizationColumn localization === column
 
 -- ============================================================================
--- Helper Functions and Types
+-- Helper Functions L.and Types
 -- ============================================================================
 
 -- Error handling types
@@ -258,9 +260,9 @@ getEnhancedErrorMessage = enhancedMessage
 
 classifyErrorSeverity :: String -> String
 classifyErrorSeverity errType
-  | "syntax" `isInfixOf` errType = "high"
-  | "type" `isInfixOf` errType = "medium"
-  | "warning" `isInfixOf` errType = "low"
+  | "syntax" `L.isInfixOf` errType = "high"
+  | "type" `L.isInfixOf` errType = "medium"
+  | "warning" `L.isInfixOf` errType = "low"
   | otherwise = "medium"
 
 classifyEnhancedErrorSeverity :: String -> String
@@ -274,20 +276,20 @@ extractChainedErrorTypes error = [errorType error]
 
 generateRecoverySuggestions :: String -> [String]
 generateRecoverySuggestions errType
-  | "syntax" `isInfixOf` errType = ["Check syntax", "Verify parentheses"]
-  | "type" `isInfixOf` errType = ["Check types", "Add type annotations"]
+  | "syntax" `L.isInfixOf` errType = ["Check syntax", "Verify parentheses"]
+  | "type" `L.isInfixOf` errType = ["Check types", "Add type annotations"]
   | otherwise = ["Review code"]
 
 isRelevantToError :: String -> String -> Bool
-isRelevantToError suggestion errType = length suggestion > 0
+isRelevantToError suggestion errType = L.length suggestion > 0
 
 extractErrorLocation :: BasicError -> SourceLocation
 extractErrorLocation = errorLocation
 
 getErrorCategory :: String -> String
 getErrorCategory errType
-  | "syntax" `isInfixOf` errType = "parsing"
-  | "type" `isInfixOf` errType = "type-checking"
+  | "syntax" `L.isInfixOf` errType = "parsing"
+  | "type" `L.isInfixOf` errType = "type-checking"
   | otherwise = "general"
 
 getEnhancedErrorCategory :: String -> String

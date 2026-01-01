@@ -9,6 +9,7 @@
 module Test.Unit.NewCoreQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements)
@@ -51,14 +52,14 @@ prop_located_preserves_content value pos =
 -- Utils QuickCheck Properties
 -- ============================================================================
 
--- Property: trim removes leading and trailing whitespace
+-- Property: trim removes leading L.and trailing whitespace
 prop_trim_removes_whitespace :: String -> String -> Property
 prop_trim_removes_whitespace prefix suffix =
   let content = prefix ++ "content" ++ suffix
-      hasLeading = any isSpace prefix
-      hasTrailing = any isSpace suffix
+      hasLeading = L.any isSpace prefix
+      hasTrailing = L.any isSpace suffix
       trimmed = trim content
-      noLeadingSpace = null trimmed || not (isSpace (head trimmed))
+      noLeadingSpace = null trimmed || not (isSpace (L.head trimmed))
       noTrailingSpace = null trimmed || not (isSpace (last trimmed))
   in classify hasLeading "has leading whitespace" $
      classify hasTrailing "has trailing whitespace" $
@@ -68,21 +69,21 @@ prop_trim_removes_whitespace prefix suffix =
 prop_splitBy_preserves_count :: Char -> String -> Property
 prop_splitBy_preserves_count delim str =
   let result = splitBy delim str
-      expectedCount = length (filter (== delim) str) + 1
-  in property $ length result === expectedCount
+      expectedCount = L.length (L.filter (== delim) str) + 1
+  in property $ L.length result === expectedCount
 
 -- Property: splitByCollapsed removes empty segments
 prop_splitByCollapsed_removes_empty :: Char -> String -> Property
 prop_splitByCollapsed_removes_empty delim str =
   let result = splitByCollapsed delim str
-  in property $ all (not . null) result
+  in property $ L.all (not . null) result
 
--- Property: splitByCollapsed result length <= splitBy result length
+-- Property: splitByCollapsed result L.length <= splitBy result L.length
 prop_splitByCollapsed_shorter_or_equal :: Char -> String -> Property
 prop_splitByCollapsed_shorter_or_equal delim str =
   let splitResult = splitBy delim str
       collapsedResult = splitByCollapsed delim str
-  in property $ length collapsedResult <= length splitResult
+  in property $ L.length collapsedResult <= L.length splitResult
 
 -- ============================================================================
 -- Arbitrary Instances
@@ -114,9 +115,9 @@ tests =
         , fastProperty "Located values preserve their content" prop_located_preserves_content
         ]
     , testGroup "Utils Properties"
-        [ fastProperty "trim removes leading and trailing whitespace" prop_trim_removes_whitespace
+        [ fastProperty "trim removes leading L.and trailing whitespace" prop_trim_removes_whitespace
         , fastProperty "splitBy preserves delimiter count + 1" prop_splitBy_preserves_count
         , fastProperty "splitByCollapsed removes empty segments" prop_splitByCollapsed_removes_empty
-        , fastProperty "splitByCollapsed result is shorter or equal to splitBy" prop_splitByCollapsed_shorter_or_equal
+        , fastProperty "splitByCollapsed result is shorter L.or equal to splitBy" prop_splitByCollapsed_shorter_or_equal
         ]
     ]

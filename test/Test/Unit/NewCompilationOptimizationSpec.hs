@@ -8,7 +8,9 @@ import Test.Tasty.HUnit (testCase, assertEqual, assertBool, assertFailure)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), forAll, elements, suchThat)
 import qualified Data.Text as T
 import Data.Maybe (isJust, isNothing, catMaybes)
-import Data.List (isInfixOf, nub, sort, length)
+import qualified Data.List as L
+import Data.List (isInfixOf, length)
+import Data.List (nub, sort)
 
 import Compiler (compile, CompilerError(..), CompilationPhase(..), generateGoCode)
 import Compiler.IR (IRModule, optimizeIR)
@@ -40,10 +42,10 @@ basicOptimizationTests =
               , ("let z = 15 - 5", "let z = 10")
               , ("let w = 20 / 4", "let w = 5")
               ]
-            results = map (\(input, expected) -> (optimizeCode "test.typus" input, expected)) inputs
+            results = L.map (\(input, expected) -> (optimizeCode "test.typus" input, expected)) inputs
         in do
            assertBool "All constant folding should work correctly" 
-                     (all (\(optimized, expected) -> optimized == Just expected) results)
+                     (L.all (\(optimized, expected) -> optimized == Just expected) results)
 
     , testCase "Boolean expression optimization" $
         let inputs = 
@@ -52,10 +54,10 @@ basicOptimizationTests =
               , ("let z = true || anything", "let z = true")
               , ("let w = false || false", "let w = false")
               ]
-            results = map (\(input, expected) -> (optimizeCode "test.typus" input, expected)) inputs
+            results = L.map (\(input, expected) -> (optimizeCode "test.typus" input, expected)) inputs
         in do
            assertBool "Boolean expressions should be optimized" 
-                     (all (\(optimized, expected) -> optimized == Just expected) results)
+                     (L.all (\(optimized, expected) -> optimized == Just expected) results)
 
     , testCase "Algebraic simplification" $
         let inputs = 
@@ -64,10 +66,10 @@ basicOptimizationTests =
               , ("let z = a + 0", "let z = a")
               , ("let w = b - b", "let w = 0")
               ]
-            results = map (\(input, expected) -> (optimizeCode "test.typus" input, expected)) inputs
+            results = L.map (\(input, expected) -> (optimizeCode "test.typus" input, expected)) inputs
         in do
            assertBool "Algebraic expressions should be simplified" 
-                     (all (\(optimized, expected) -> optimized == Just expected) results)
+                     (L.all (\(optimized, expected) -> optimized == Just expected) results)
 
     , testCase "Strength reduction" $
         let inputs = 
@@ -76,18 +78,18 @@ basicOptimizationTests =
               , ("let z = a / 2", "let z = a >> 1")
               , ("let w = b % 8", "let w = b & 7")
               ]
-            results = map (\(input, expected) -> (optimizeCode "test.typus" input, expected)) inputs
+            results = L.map (\(input, expected) -> (optimizeCode "test.typus" input, expected)) inputs
         in do
            assertBool "Strength reduction should be applied" 
-                     (all (\(optimized, expected) -> optimized == Just expected) results)
+                     (L.all (\(optimized, expected) -> optimized == Just expected) results)
 
     , testCase "Copy propagation" $
         let input = "let x = 5\nlet y = x\nlet z = y + 3"
             result = optimizeCode "test.typus" input
         in case result of
              Just optimized -> do
-               assertBool "Should propagate copies" ("5" `isInfixOf` optimized)
-               assertBool "Should eliminate unnecessary copies" (not $ "y = x" `isInfixOf` optimized)
+               assertBool "Should propagate copies" ("5" `L.isInfixOf` optimized)
+               assertBool "Should eliminate unnecessary copies" (not $ "y = x" `L.isInfixOf` optimized)
              Nothing -> assertFailure "Should optimize copy propagation"
     ]
 
@@ -100,8 +102,8 @@ constantFoldingTests =
             result = optimizeCode "test.typus" input
         in case result of
              Just optimized -> do
-               assertBool "Should fold nested constants" ("64" `isInfixOf` optimized)
-               assertBool "Should eliminate intermediate results" (not $ "+" `isInfixOf` optimized)
+               assertBool "Should fold nested constants" ("64" `L.isInfixOf` optimized)
+               assertBool "Should eliminate intermediate results" (not $ "+" `L.isInfixOf` optimized)
              Nothing -> assertFailure "Should fold nested constants"
 
     , testCase "Floating point constant folding" $
@@ -110,28 +112,28 @@ constantFoldingTests =
               , ("let y = 1.5 + 2.5", "let y = 4.0")
               , ("let z = 10.0 / 2.0", "let z = 5.0")
               ]
-            results = map (\(input, expected) -> (optimizeCode "test.typus" input, expected)) inputs
+            results = L.map (\(input, expected) -> (optimizeCode "test.typus" input, expected)) inputs
         in do
            assertBool "Floating point constants should be folded" 
-                     (all (\(optimized, expected) -> optimized == Just expected) results)
+                     (L.all (\(optimized, expected) -> optimized == Just expected) results)
 
     , testCase "String constant folding" $
         let inputs = 
               [ ("let x = \"hello\" + \" \" + \"world\"", "let x = \"hello world\"")
-              , ("let y = \"test\".length", "let y = 4")
+              , ("let y = \"test\".L.length", "let y = 4")
               ]
-            results = map (\(input, expected) -> (optimizeCode "test.typus" input, expected)) inputs
+            results = L.map (\(input, expected) -> (optimizeCode "test.typus" input, expected)) inputs
         in do
            assertBool "String constants should be folded" 
-                     (all (\(optimized, expected) -> optimized == Just expected) results)
+                     (L.all (\(optimized, expected) -> optimized == Just expected) results)
 
     , testCase "Boolean constant folding with complex expressions" $
         let input = "let x = (true && false) || (true || false)"
             result = optimizeCode "test.typus" input
         in case result of
              Just optimized -> do
-               assertBool "Should fold complex boolean expression" ("true" `isInfixOf` optimized)
-               assertBool "Should eliminate sub-expressions" (not $ "&&" `isInfixOf` optimized)
+               assertBool "Should fold complex boolean expression" ("true" `L.isInfixOf` optimized)
+               assertBool "Should eliminate sub-expressions" (not $ "&&" `L.isInfixOf` optimized)
              Nothing -> assertFailure "Should fold complex boolean expression"
 
     , testCase "Array literal folding" $
@@ -139,8 +141,8 @@ constantFoldingTests =
             result = optimizeCode "test.typus" input
         in case result of
              Just optimized -> do
-               assertBool "Should fold array literals" ("[1, 2, 3, 4, 5, 6]" `isInfixOf` optimized)
-               assertBool "Should eliminate concatenation" (not $ "+" `isInfixOf` optimized)
+               assertBool "Should fold array literals" ("[1, 2, 3, 4, 5, 6]" `L.isInfixOf` optimized)
+               assertBool "Should eliminate concatenation" (not $ "+" `L.isInfixOf` optimized)
              Nothing -> assertFailure "Should fold array literals"
     ]
 
@@ -153,8 +155,8 @@ deadCodeEliminationTests =
             result = optimizeCode "test.typus" input
         in case result of
              Just optimized -> do
-               assertBool "Should eliminate unreachable code" (not $ "let x = 5" `isInfixOf` optimized)
-               assertBool "Should keep reachable code" ("return 42" `isInfixOf` optimized)
+               assertBool "Should eliminate unreachable code" (not $ "let x = 5" `L.isInfixOf` optimized)
+               assertBool "Should keep reachable code" ("return 42" `L.isInfixOf` optimized)
              Nothing -> assertFailure "Should eliminate unreachable code"
 
     , testCase "Unused variable elimination" $
@@ -162,8 +164,8 @@ deadCodeEliminationTests =
             result = optimizeCode "test.typus" input
         in case result of
              Just optimized -> do
-               assertBool "Should eliminate unused variables" (not $ "unused" `isInfixOf` optimized)
-               assertBool "Should keep used variables" ("z = x + y" `isInfixOf` optimized)
+               assertBool "Should eliminate unused variables" (not $ "unused" `L.isInfixOf` optimized)
+               assertBool "Should keep used variables" ("z = x + y" `L.isInfixOf` optimized)
              Nothing -> assertFailure "Should eliminate unused variables"
 
     , testCase "Dead function elimination" $
@@ -171,8 +173,8 @@ deadCodeEliminationTests =
             result = optimizeCode "test.typus" input
         in case result of
              Just optimized -> do
-               assertBool "Should eliminate unused functions" (not $ "func unused" `isInfixOf` optimized)
-               assertBool "Should keep used functions" ("func used" `isInfixOf` optimized)
+               assertBool "Should eliminate unused functions" (not $ "func unused" `L.isInfixOf` optimized)
+               assertBool "Should keep used functions" ("func used" `L.isInfixOf` optimized)
              Nothing -> assertFailure "Should eliminate unused functions"
 
     , testCase "Conditional dead code elimination" $
@@ -180,8 +182,8 @@ deadCodeEliminationTests =
             result = optimizeCode "test.typus" input
         in case result of
              Just optimized -> do
-               assertBool "Should eliminate dead branch" (not $ "let x = 5" `isInfixOf` optimized)
-               assertBool "Should keep live branch" ("let y = 10" `isInfixOf` optimized)
+               assertBool "Should eliminate dead branch" (not $ "let x = 5" `L.isInfixOf` optimized)
+               assertBool "Should keep live branch" ("let y = 10" `L.isInfixOf` optimized)
              Nothing -> assertFailure "Should eliminate dead branch"
 
     , testCase "Loop invariant code motion" $
@@ -190,8 +192,8 @@ deadCodeEliminationTests =
         in case result of
              Just optimized -> do
                assertBool "Should move invariant code out of loop" 
-                         (not $ "let y = x * 2" `isInfixOf` optimized)
-               assertBool "Should preserve loop structure" ("while" `isInfixOf` optimized)
+                         (not $ "let y = x * 2" `L.isInfixOf` optimized)
+               assertBool "Should preserve loop structure" ("while" `L.isInfixOf` optimized)
              Nothing -> assertFailure "Should move loop invariant code"
     ]
 
@@ -204,8 +206,8 @@ loopOptimizationTests =
             result = optimizeCode "test.typus" input
         in case result of
              Just optimized -> do
-               assertBool "Should unroll small loops" (not $ "for i in 0..3" `isInfixOf` optimized)
-               assertBool "Should preserve loop semantics" ("result += 0" `isInfixOf` optimized)
+               assertBool "Should unroll small loops" (not $ "for i in 0..3" `L.isInfixOf` optimized)
+               assertBool "Should preserve loop semantics" ("result += 0" `L.isInfixOf` optimized)
              Nothing -> assertFailure "Should unroll small loops"
 
     , testCase "Loop fusion" $
@@ -213,8 +215,8 @@ loopOptimizationTests =
             result = optimizeCode "test.typus" input
         in case result of
              Just optimized -> do
-               assertBool "Should fuse compatible loops" (length (filter (== "for") (words optimized)) <= 1)
-               assertBool "Should preserve all operations" ("arr1" `isInfixOf` optimized && "arr2" `isInfixOf` optimized)
+               assertBool "Should fuse compatible loops" (L.length (L.filter (== "for") (words optimized)) <= 1)
+               assertBool "Should preserve L.all operations" ("arr1" `L.isInfixOf` optimized && "arr2" `L.isInfixOf` optimized)
              Nothing -> assertFailure "Should fuse compatible loops"
 
     , testCase "Induction variable elimination" $
@@ -222,8 +224,8 @@ loopOptimizationTests =
             result = optimizeCode "test.typus" input
         in case result of
              Just optimized -> do
-               assertBool "Should eliminate induction variables" (not $ "let j = i * 4" `isInfixOf` optimized)
-               assertBool "Should substitute directly" ("arr[i] = i * 4" `isInfixOf` optimized)
+               assertBool "Should eliminate induction variables" (not $ "let j = i * 4" `L.isInfixOf` optimized)
+               assertBool "Should substitute directly" ("arr[i] = i * 4" `L.isInfixOf` optimized)
              Nothing -> assertFailure "Should eliminate induction variables"
 
     , testCase "Loop invariant code motion" $
@@ -232,8 +234,8 @@ loopOptimizationTests =
         in case result of
              Just optimized -> do
                assertBool "Should move invariant computation" 
-                         (not $ "let y = x + i" `isInfixOf` optimized)
-               assertBool "Should preserve loop semantics" ("for i in 0..100" `isInfixOf` optimized)
+                         (not $ "let y = x + i" `L.isInfixOf` optimized)
+               assertBool "Should preserve loop semantics" ("for i in 0..100" `L.isInfixOf` optimized)
              Nothing -> assertFailure "Should move loop invariant code"
 
     , testCase "Strength reduction in loops" $
@@ -242,8 +244,8 @@ loopOptimizationTests =
         in case result of
              Just optimized -> do
                assertBool "Should apply strength reduction in loops" 
-                         ("<<" `isInfixOf` optimized || "+= 4" `isInfixOf` optimized)
-               assertBool "Should preserve array indexing" ("arr[i]" `isInfixOf` optimized)
+                         ("<<" `L.isInfixOf` optimized || "+= 4" `L.isInfixOf` optimized)
+               assertBool "Should preserve array indexing" ("arr[i]" `L.isInfixOf` optimized)
              Nothing -> assertFailure "Should apply strength reduction in loops"
     ]
 
@@ -256,8 +258,8 @@ functionInliningTests =
             result = optimizeCode "test.typus" input
         in case result of
              Just optimized -> do
-               assertBool "Should inline small functions" (not $ "func add" `isInfixOf` optimized)
-               assertBool "Should substitute function body" ("5 + 3" `isInfixOf` optimized)
+               assertBool "Should inline small functions" (not $ "func add" `L.isInfixOf` optimized)
+               assertBool "Should substitute function body" ("5 + 3" `L.isInfixOf` optimized)
              Nothing -> assertFailure "Should inline small functions"
 
     , testCase "Recursive function inlining prevention" $
@@ -265,8 +267,8 @@ functionInliningTests =
             result = optimizeCode "test.typus" input
         in case result of
              Just optimized -> do
-               assertBool "Should not inline recursive functions" ("func factorial" `isInfixOf` optimized)
-               assertBool "Should preserve recursive calls" ("factorial(" `isInfixOf` optimized)
+               assertBool "Should not inline recursive functions" ("func factorial" `L.isInfixOf` optimized)
+               assertBool "Should preserve recursive calls" ("factorial(" `L.isInfixOf` optimized)
              Nothing -> assertFailure "Should not inline recursive functions"
 
     , testCase "Conditional inlining based on size" $
@@ -274,21 +276,21 @@ functionInliningTests =
               [ ("func small() { return 42 }", True)      -- Should inline
               , ("func large() { let x = 1; x += 2; x += 3; x += 4; x += 5; return x }", False)  -- Should not inline
               ]
-            results = map (\(code, shouldInline) -> (optimizeCode "test.typus" code, shouldInline)) inputs
+            results = L.map (\(code, shouldInline) -> (optimizeCode "test.typus" code, shouldInline)) inputs
         in do
            assertBool "Should inline based on function size" 
-                     (all (\(optimized, shouldInline) -> 
+                     (L.all (\(optimized, shouldInline) -> 
                         if shouldInline 
-                        then not $ "func" `isInfixOf` optimized
-                        else "func" `isInfixOf` optimized) results)
+                        then not $ "func" `L.isInfixOf` optimized
+                        else "func" `L.isInfixOf` optimized) results)
 
     , testCase "Inlining with parameter substitution" $
         let input = "func multiply_by_two(x) { return x * 2 }\nlet result = multiply_by_two(5)"
             result = optimizeCode "test.typus" input
         in case result of
              Just optimized -> do
-               assertBool "Should substitute parameters" ("5 * 2" `isInfixOf` optimized)
-               assertBool "Should eliminate function call" (not $ "multiply_by_two" `isInfixOf` optimized)
+               assertBool "Should substitute parameters" ("5 * 2" `L.isInfixOf` optimized)
+               assertBool "Should eliminate function call" (not $ "multiply_by_two" `L.isInfixOf` optimized)
              Nothing -> assertFailure "Should substitute parameters"
 
     , testCase "Inlining with side effects preservation" $
@@ -297,8 +299,8 @@ functionInliningTests =
         in case result of
              Just optimized -> do
                assertBool "Should preserve side effects when inlining" 
-                         ("global_count += 1" `isInfixOf` optimized)
-               assertBool "Should maintain correct semantics" ("return global_count" `isInfixOf` optimized)
+                         ("global_count += 1" `L.isInfixOf` optimized)
+               assertBool "Should maintain correct semantics" ("return global_count" `L.isInfixOf` optimized)
              Nothing -> assertFailure "Should preserve side effects"
     ]
 
@@ -307,12 +309,12 @@ memoryOptimizationTests :: TestTree
 memoryOptimizationTests =
   testGroup "Memory Optimization Tests"
     [ testCase "Stack allocation optimization" $
-        let input = "let arr = [1, 2, 3, 4, 5]\nlet sum = 0\nfor i in 0..5 {\nsum += arr[i]\n}"
+        let input = "let arr = [1, 2, 3, 4, 5]\nlet L.sum = 0\nfor i in 0..5 {\nsum += arr[i]\n}"
             result = optimizeCode "test.typus" input
         in case result of
              Just optimized -> do
-               assertBool "Should optimize stack allocation" (length optimized <= length input)
-               assertBool "Should preserve array access" ("arr[i]" `isInfixOf` optimized)
+               assertBool "Should optimize stack allocation" (L.length optimized <= L.length input)
+               assertBool "Should preserve array access" ("arr[i]" `L.isInfixOf` optimized)
              Nothing -> assertFailure "Should optimize stack allocation"
 
     , testCase "Escape analysis for heap allocation" $
@@ -320,8 +322,8 @@ memoryOptimizationTests =
             result = optimizeCode "test.typus" input
         in case result of
              Just optimized -> do
-               assertBool "Should perform escape analysis" ("Point" `isInfixOf` optimized)
-               assertBool "Should optimize allocation based on escape" (length optimized <= length input)
+               assertBool "Should perform escape analysis" ("Point" `L.isInfixOf` optimized)
+               assertBool "Should optimize allocation based on escape" (L.length optimized <= L.length input)
              Nothing -> assertFailure "Should perform escape analysis"
 
     , testCase "Memory pool allocation" $
@@ -330,8 +332,8 @@ memoryOptimizationTests =
         in case result of
              Just optimized -> do
                assertBool "Should optimize repeated allocations" 
-                         ("pool" `isInfixOf` optimized || "reuse" `isInfixOf` optimized)
-               assertBool "Should preserve loop semantics" ("for i in 0..1000" `isInfixOf` optimized)
+                         ("pool" `L.isInfixOf` optimized || "reuse" `L.isInfixOf` optimized)
+               assertBool "Should preserve loop semantics" ("for i in 0..1000" `L.isInfixOf` optimized)
              Nothing -> assertFailure "Should optimize repeated allocations"
 
     , testCase "Garbage collection optimization" $
@@ -340,8 +342,8 @@ memoryOptimizationTests =
         in case result of
              Just optimized -> do
                assertBool "Should optimize garbage collection" 
-                         ("gc" `isInfixOf` optimized || "collect" `isInfixOf` optimized)
-               assertBool "Should reduce allocation pressure" (length optimized <= length input)
+                         ("gc" `L.isInfixOf` optimized || "collect" `L.isInfixOf` optimized)
+               assertBool "Should reduce allocation pressure" (L.length optimized <= L.length input)
              Nothing -> assertFailure "Should optimize garbage collection"
 
     , testCase "Memory layout optimization" $
@@ -350,8 +352,8 @@ memoryOptimizationTests =
         in case result of
              Just optimized -> do
                assertBool "Should optimize memory layout" 
-                         ("align" `isInfixOf` optimized || "packed" `isInfixOf` optimized)
-               assertBool "Should preserve type semantics" ("Data" `isInfixOf` optimized)
+                         ("align" `L.isInfixOf` optimized || "packed" `L.isInfixOf` optimized)
+               assertBool "Should preserve type semantics" ("Data" `L.isInfixOf` optimized)
              Nothing -> assertFailure "Should optimize memory layout"
     ]
 
@@ -365,9 +367,9 @@ optimizationValidationTests =
               , "func test(a) { return a * 2 }"
               , "for i in 0..10 { result += i }"
               ]
-            results = map (\input -> validateOptimization "test.typus" input) inputs
+            results = L.map (\input -> validateOptimization "test.typus" input) inputs
         in do
-           assertBool "All optimizations should preserve semantics" (all id results)
+           assertBool "All optimizations should preserve semantics" (L.all id results)
 
     , testCase "Optimization doesn't introduce errors" $
         let input = "let x = 5\nlet y = x + 3\nlet z = y * 2"
@@ -397,8 +399,8 @@ optimizationValidationTests =
             result = optimizeCode "test.typus" input
         in case result of
              Just optimized -> do
-               assertBool "Should preserve safety checks" ("bounds" `isInfixOf` optimized || "check" `isInfixOf` optimized)
-               assertBool "Should not optimize away safety" (length optimized > 0)
+               assertBool "Should preserve safety checks" ("bounds" `L.isInfixOf` optimized || "check" `L.isInfixOf` optimized)
+               assertBool "Should not optimize away safety" (L.length optimized > 0)
              Nothing -> assertFailure "Should preserve safety constraints"
 
     , testCase "Optimization handles edge cases" $
@@ -407,10 +409,10 @@ optimizationValidationTests =
               , "let y = 1 / 0"           -- Actual division by zero
               , "func infinite_recursion() { infinite_recursion() }"  -- Infinite recursion
               ]
-            results = map (\input -> optimizeCode "test.typus" input) inputs
+            results = L.map (\input -> optimizeCode "test.typus" input) inputs
         in do
            assertBool "Should handle optimization edge cases gracefully" 
-                     (all isJust results)
+                     (L.all isJust results)
     ]
 
 -- | QuickCheck properties for compilation optimization
@@ -452,7 +454,7 @@ validateOptimization filename code =
 measurePerformance :: String -> String -> Int
 measurePerformance filename code = 
     case compile filename code of
-      Right _ -> length code  -- Simplified performance metric
+      Right _ -> L.length code  -- Simplified performance metric
       Left _ -> maxBound
 
 executeProgram :: String -> String -> String
@@ -476,7 +478,7 @@ genValidProgram = elements
   [ "let x = 5 + 3"
   , "func add(a, b) { return a + b }"
   , "for i in 0..10 { result += i }"
-  , "let arr = [1, 2, 3]\nlet sum = 0\nfor v in arr { sum += v }"
+  , "let arr = [1, 2, 3]\nlet L.sum = 0\nfor v in arr { L.sum += v }"
   ]
 
 genConstantExpression :: Gen String

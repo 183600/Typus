@@ -13,7 +13,9 @@ import DependentTypesParser
       runDependentTypesParser, DependentTypeError(..) )
 import SourceLocation (Located(..), SourcePos(..), SourceSpan(..))
 import Data.Maybe (isJust, isNothing, fromMaybe)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (nub)
 import qualified Data.Map.Strict as Map
 
 -- | Generate simple type references
@@ -80,17 +82,17 @@ tests =
                 Right dependentType -> do
                     assertBool "Should parse struct type" $ 
                         case dtType dependentType of
-                            StructType fields -> length fields == 2
+                            StructType fields -> L.length fields == 2
                             _ -> False
                 Left _ -> assertBool "Should parse struct type" False
 
         , testCase "parses generic type" $ do
-            let code = "type List[T] = struct { items: [T], length: Int }"
+            let code = "type List[T] = struct { items: [T], L.length: Int }"
             result <- parseTypeDeclaration code
             case result of
                 Right dependentType -> do
                     assertBool "Should parse generic type" $ 
-                        length (dtParameters dependentType) == 1
+                        L.length (dtParameters dependentType) == 1
                 Left _ -> assertBool "Should parse generic type" False
 
         , testCase "parses type with constraints" $ do
@@ -99,7 +101,7 @@ tests =
             case result of
                 Right dependentType -> do
                     assertBool "Should parse type with constraints" $ 
-                        not (null (dtConstraints dependentType))
+                        not (L.null (dtConstraints dependentType))
                 Left _ -> assertBool "Should parse type with constraints" False
         ]
 
@@ -107,12 +109,12 @@ tests =
         [ testCase "validates simple type references" $ do
             let typeRef = TypeRef "Int" []
             assertBool "Simple type reference should be valid" $ 
-                not (null $ show typeRef)
+                not (L.null $ show typeRef)
 
         , testCase "validates generic type references" $ do
             let typeRef = TypeRef "List" [TypeRef "Int" [], TypeRef "String" []]
             assertBool "Generic type reference should be valid" $ 
-                length (trParams typeRef) == 2
+                L.length (trParams typeRef) == 2
 
         , testCase "validates nested type references" $ do
             let nestedType = TypeRef "Map" 
@@ -120,7 +122,7 @@ tests =
                     , TypeRef "List" [TypeRef "Int" []]
                     ]
             assertBool "Nested type reference should be valid" $ 
-                length (trParams nestedType) == 2
+                L.length (trParams nestedType) == 2
 
         , fastProperty "type reference construction is consistent" $ 
             prop_typeReferenceConsistent
@@ -130,27 +132,27 @@ tests =
         [ testCase "validates equality constraints" $ do
             let constraint = EqualityConstraint "x" "y"
             assertBool "Equality constraint should be valid" $ 
-                show constraint `isInfixOf` "x" && show constraint `isInfixOf` "y"
+                show constraint `L.isInfixOf` "x" && show constraint `L.isInfixOf` "y"
 
         , testCase "validates numeric constraints" $ do
             let constraints = 
                     [ GreaterThanConstraint "size" 0
-                    , GreaterEqualConstraint "length" 1
+                    , GreaterEqualConstraint "L.length" 1
                     , LessThanConstraint "count" 100
                     , LessEqualConstraint "capacity" 1000
                     ]
             assertBool "All numeric constraints should be valid" $ 
-                all (not . null . show) constraints
+                L.all (not . null . show) constraints
 
         , testCase "validates predicate constraints" $ do
             let constraint = PredicateConstraint "valid" ["x", "y", "z"]
             assertBool "Predicate constraint should be valid" $ 
-                show constraint `isInfixOf` "valid"
+                show constraint `L.isInfixOf` "valid"
 
         , testCase "validates non-empty constraints" $ do
             let constraint = NonEmptyConstraint "items"
             assertBool "Non-empty constraint should be valid" $ 
-                show constraint `isInfixOf` "items"
+                show constraint `L.isInfixOf` "items"
 
         , fastProperty "constraint construction preserves properties" $ 
             prop_constraintConstructionPreserves
@@ -160,25 +162,25 @@ tests =
         [ testCase "validates primitive types" $ do
             let typeBody = PrimitiveType
             assertBool "Primitive type should be valid" $ 
-                show typeBody `isInfixOf` "primitive"
+                show typeBody `L.isInfixOf` "primitive"
 
         , testCase "validates struct types with valid fields" $ do
             let fields = [Field "name" (TypeRef "String" []), Field "age" (TypeRef "Int" [])]
             let typeBody = StructType fields
             assertBool "Struct type with valid fields should be valid" $ 
-                length fields == 2
+                L.length fields == 2
 
         , testCase "validates alias types" $ do
             let typeBody = AliasType (TypeRef "Int" [])
             assertBool "Alias type should be valid" $ 
-                show typeBody `isInfixOf` "Int"
+                show typeBody `L.isInfixOf` "Int"
 
         , testCase "validates function types" $ do
             let params = [TypeRef "String" [], TypeRef "Int" []]
             let returnType = TypeRef "Bool" []
             let typeBody = FunctionType params returnType
             assertBool "Function type should be valid" $ 
-                length params == 2 && show typeBody `isInfixOf` "Bool"
+                L.length params == 2 && show typeBody `L.isInfixOf` "Bool"
 
         , fastProperty "type body validation is consistent" $ 
             prop_typeBodyValidationConsistent
@@ -188,16 +190,16 @@ tests =
         [ testCase "validates type parameter dependencies" $ do
             let param = TypeParameter "T" [GreaterThanConstraint "size" 0]
             assertBool "Type parameter with constraints should be valid" $ 
-                not (null (tpConstraints param))
+                not (L.null (tpConstraints param))
 
         , testCase "validates recursive type definitions" $ do
-            let code = "type List[T] = struct { head: T, tail: List[T] }"
+            let code = "type List[T] = struct { L.head: T, L.tail: List[T] }"
             result <- parseTypeDeclaration code
             case result of
                 Right dependentType -> do
                     assertBool "Should handle recursive types" $ 
                         case dtType dependentType of
-                            StructType fields -> any (hasRecursiveRef "List") fields
+                            StructType fields -> L.any (hasRecursiveRef "List") fields
                             _ -> False
                 Left _ -> assertBool "Should parse recursive types" False
 
@@ -210,11 +212,11 @@ tests =
             case result of
                 Right parseResult -> do
                     assertBool "Should handle mutually recursive types" $ 
-                        length (dprTypes parseResult) >= 2
+                        L.length (dprTypes parseResult) >= 2
                 Left _ -> assertBool "Should parse mutually recursive types" False
         ]
 
-    , testGroup "Error Handling and Validation"
+    , testGroup "Error Handling L.and Validation"
         [ testCase "detects invalid type names" $ do
             let invalidCode = "type 123Invalid = primitive"
             result <- validateDependentTypeSyntax invalidCode
@@ -248,7 +250,7 @@ tests =
             result <- validateDependentTypeSyntax invalidCode
             case result of
                 (err:_) -> assertBool "Error message should be descriptive" $ 
-                    length (show err) > 10
+                    L.length (show err) > 10
                 [] -> assertBool "Should produce error messages" False
         ]
 
@@ -270,16 +272,16 @@ tests =
             case result of
                 Right dependentType -> do
                     assertBool "Should handle higher-kinded types" $ 
-                        length (dtParameters dependentType) >= 2
+                        L.length (dtParameters dependentType) >= 2
                 Left _ -> assertBool "Should parse higher-kinded types" False
 
         , testCase "handles dependent function types" $ do
-            let code = "type Vec(n) where n >= 0 = struct { data: [Int], length: n }"
+            let code = "type Vec(n) where n >= 0 = struct { data: [Int], L.length: n }"
             result <- parseTypeDeclaration code
             case result of
                 Right dependentType -> do
                     assertBool "Should handle dependent function types" $ 
-                        not (null (dtConstraints dependentType))
+                        not (L.null (dtConstraints dependentType))
                 Left _ -> assertBool "Should parse dependent function types" False
 
         , testCase "handles type-level computations" $ do
@@ -288,7 +290,7 @@ tests =
             case result of
                 Right dependentType -> do
                     assertBool "Should handle type-level computations" $ 
-                        length (dtConstraints dependentType) >= 2
+                        L.length (dtConstraints dependentType) >= 2
                 Left _ -> assertBool "Should parse type-level computations" False
 
         , testCase "handles complex nested types" $ do
@@ -298,12 +300,12 @@ tests =
                 Right dependentType -> do
                     assertBool "Should handle complex nested types" $ 
                         case dtType dependentType of
-                            StructType fields -> any hasComplexNestedType fields
+                            StructType fields -> L.any hasComplexNestedType fields
                             _ -> False
                 Left _ -> assertBool "Should parse complex nested types" False
         ]
 
-    , testGroup "Performance and Scalability"
+    , testGroup "Performance L.and Scalability"
         [ testCase "handles large type definitions efficiently" $ do
             let largeStruct = unlines $ 
                     [ "type LargeStruct = struct {"
@@ -318,18 +320,18 @@ tests =
                 Right dependentType -> do
                     assertBool "Should handle large type definitions" $ 
                         case dtType dependentType of
-                            StructType fields -> length fields >= 100
+                            StructType fields -> L.length fields >= 100
                             _ -> False
                 Left _ -> assertBool "Should parse large type definitions" False
 
         , testCase "handles deeply nested type parameters" $ do
             let deeplyNested = "type Deep = " ++ 
-                    concat (replicate 10 "List[") ++ "Int" ++ concat (replicate 10 "]")
+                    L.concat (replicate 10 "List[") ++ "Int" ++ L.concat (replicate 10 "]")
             result <- parseTypeDeclaration deeplyNested
             case result of
                 Right dependentType -> do
                     assertBool "Should handle deeply nested types" $ 
-                        show dependentType `isInfixOf` "Int"
+                        show dependentType `L.isInfixOf` "Int"
                 Left _ -> assertBool "Should parse deeply nested types" False
         ]
     ]
@@ -340,14 +342,14 @@ hasRecursiveRef name (Field _ fieldType) = hasTypeRef name fieldType
   where
     hasTypeRef target (TypeRef base params) 
         | base == target = True
-        | otherwise = any (hasTypeRef target) params
+        | otherwise = L.any (hasTypeRef target) params
 
 -- Helper function to check if field has complex nested type
 hasComplexNestedType :: Field -> Bool
 hasComplexNestedType (Field _ fieldType) = hasComplexType fieldType
   where
     hasComplexType (TypeRef base params) = 
-        length params > 1 || any hasComplexType params
+        L.length params > 1 || L.any hasComplexType params
 
 -- Property: type reference construction is consistent
 prop_typeReferenceConsistent :: TypeRef -> Bool
@@ -358,12 +360,12 @@ prop_typeReferenceConsistent typeRef =
 -- Property: constraint construction preserves properties
 prop_constraintConstructionPreserves :: TypeConstraint -> Bool
 prop_constraintConstructionPreserves constraint = 
-    not (null (show constraint)) && length (show constraint) > 0
+    not (L.null (show constraint)) && L.length (show constraint) > 0
 
 -- Property: type body validation is consistent
 prop_typeBodyValidationConsistent :: TypeBody -> Bool
 prop_typeBodyValidationConsistent typeBody = 
-    not (null (show typeBody))
+    not (L.null (show typeBody))
 
 -- Property: type parsing is deterministic
 prop_typeParsingDeterministic :: String -> Bool
@@ -390,11 +392,11 @@ prop_typeValidationPreservesInvariants code =
 prop_constraintSatisfactionConsistent :: TypeConstraint -> Bool
 prop_constraintSatisfactionConsistent constraint = 
     -- All well-formed constraints should be representable
-    not (null (show constraint))
+    not (L.null (show constraint))
 
 -- Property: type parameter substitution works
 prop_typeParameterSubstitution :: TypeParameter -> Bool
 prop_typeParameterSubstitution param = 
     let name = tpName param
         constraints = tpConstraints param
-    in not (null name) && length constraints >= 0
+    in not (null name) && L.length constraints >= 0

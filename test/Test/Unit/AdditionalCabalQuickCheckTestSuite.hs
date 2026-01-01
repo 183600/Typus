@@ -5,6 +5,7 @@
 module Test.Unit.AdditionalCabalQuickCheckTestSuite where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty)
 import TestSupport.QuickCheck (fastProperty)
 
@@ -22,12 +23,12 @@ prop_trimIdempotent s =
       trimmedAgain = trim trimmed
   in trimmed == trimmedAgain
 
--- | Test that splitBy preserves all characters
+-- | Test that splitBy preserves L.all characters
 prop_splitByPreserves :: Char -> String -> Bool
 prop_splitByPreserves delim s =
   let parts = splitBy delim s
       rejoined = concatMap (++ [delim]) parts
-  in length rejoined >= length s
+  in L.length rejoined >= L.length s
 
 -- ============================================================================
 -- Test 2: Parser Properties
@@ -51,15 +52,15 @@ prop_parserDeterministic s =
 -- Test 3: Basic Properties
 -- ============================================================================
 
--- | Test that string length is non-negative
+-- | Test that string L.length is non-negative
 prop_stringLengthNonNegative :: String -> Bool
 prop_stringLengthNonNegative s =
-  length s >= 0
+  L.length s >= 0
 
--- | Test that reverse is involutive
+-- | Test that L.reverse is involutive
 prop_reverseInvolutive :: String -> Bool
 prop_reverseInvolutive s =
-  reverse (reverse s) == s
+  L.reverse (L.reverse s) == s
 
 -- | Test that concatenation is associative
 prop_concatAssociative :: String -> String -> String -> Bool
@@ -76,7 +77,7 @@ tests = testGroup "Additional Cabal QuickCheck Test Suite"
   , testProperty "Split by preserves characters" prop_splitByPreserves
   , testProperty "Parser handles empty input" prop_parserHandlesEmpty
   , testProperty "Parser is deterministic" prop_parserDeterministic
-  , testProperty "String length is non-negative" prop_stringLengthNonNegative
+  , testProperty "String L.length is non-negative" prop_stringLengthNonNegative
   , testProperty "Reverse is involutive" prop_reverseInvolutive
   , testProperty "Concatenation is associative" prop_concatAssociative
   ]

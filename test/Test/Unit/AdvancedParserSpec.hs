@@ -1,5 +1,6 @@
 module Test.Unit.AdvancedParserSpec (tests) where
 
+import qualified Data.List as L
 import Data.List (isInfixOf)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ((@?=), assertBool, assertFailure, testCase)
@@ -47,7 +48,7 @@ tests =
               , "func main() {}"
               ]
         case parseTypus source of
-          Left err -> assertBool "should report directive parsing error" ("directive" `isInfixOf` err)
+          Left err -> assertBool "should report directive parsing error" ("directive" `L.isInfixOf` err)
           Right _ -> assertFailure "expected parsing to fail"
 
     , testCase "parses complex type definitions" $ do
@@ -63,7 +64,7 @@ tests =
         case parseTypus source of
           Left err -> assertFailure $ "parseTypus failed: " <> err
           Right typusFile -> do
-            assertBool "should parse complex types" (not $ null $ tfBlocks typusFile)
+            assertBool "should parse complex types" (not $ L.null $ tfBlocks typusFile)
 
     , testCase "handles multiple build tags" $ do
         let source = unlines
@@ -76,9 +77,9 @@ tests =
         case parseTypus source of
           Left err -> assertFailure $ "parseTypus failed: " <> err
           Right TypusFile { tfBuildTags = buildTags } -> do
-            length buildTags @?= 3
-            -- Check that all build tags are either go:build or +build format
-            all (\tag -> isInfixOf "go:build" (locatedValue tag) || isInfixOf "+build" (locatedValue tag)) buildTags @?= True
+            L.length buildTags @?= 3
+            -- Check that L.all build tags are either go:build L.or +build format
+            L.all (\tag -> L.isInfixOf "go:build" (locatedValue tag) || L.isInfixOf "+build" (locatedValue tag)) buildTags @?= True
 
     , testCase "parses deeply nested code blocks" $ do
         let source = unlines
@@ -100,9 +101,9 @@ tests =
         case parseTypus source of
           Left err -> assertFailure $ "parseTypus failed: " <> err
           Right typusFile -> do
-            assertBool "should handle deeply nested blocks" (not $ null $ tfBlocks typusFile)
+            assertBool "should handle deeply nested blocks" (not $ L.null $ tfBlocks typusFile)
 
-    , testCase "handles unicode and special characters" $ do
+    , testCase "handles unicode L.and special characters" $ do
         let source = unlines
               [ "package main"
               , "func main() {"
@@ -165,7 +166,7 @@ tests =
           Right typusFile -> do
             assertBool "should parse channels" (hasContent "make(chan" typusFile)
 
-    , testCase "handles go statements and goroutines" $ do
+    , testCase "handles go statements L.and goroutines" $ do
         let source = unlines
               [ "package main"
               , "func worker() {"
@@ -235,7 +236,7 @@ tests =
           Right typusFile -> do
             assertBool "should parse methods" (hasContent "func (c *Counter)" typusFile)
 
-    , testCase "handles error types and error handling" $ do
+    , testCase "handles error types L.and error handling" $ do
         let source = unlines
               [ "package main"
               , "import \"errors\""
@@ -253,13 +254,13 @@ tests =
           Right typusFile -> do
             assertBool "should parse error handling" (hasContent "mightFail() error" typusFile)
 
-    , testCase "parses generic types and functions" $ do
+    , testCase "parses generic types L.and functions" $ do
         let source = unlines
               [ "package main"
-              , "type Container[T any] struct {"
+              , "type Container[T L.any] struct {"
               , "    value T"
               , "}"
-              , "func New[T any](v T) Container[T] {"
+              , "func New[T L.any](v T) Container[T] {"
               , "    return Container[T]{value: v}"
               , "}"
               , "func (c Container[T]) Get() T {"
@@ -270,7 +271,7 @@ tests =
         case parseTypus source of
           Left err -> assertFailure $ "parseTypus failed: " <> err
           Right typusFile -> do
-            assertBool "should parse generics" (hasContent "Container[T any]" typusFile)
+            assertBool "should parse generics" (hasContent "Container[T L.any]" typusFile)
 
     , testCase "handles embedded structs" $ do
         let source = unlines
@@ -291,4 +292,4 @@ tests =
     ]
 
 hasContent :: String -> TypusFile -> Bool
-hasContent target typusFile = any (isInfixOf target . cbContent) (tfBlocks typusFile)
+hasContent target typusFile = L.any (L.isInfixOf target . cbContent) (tfBlocks typusFile)

@@ -9,6 +9,7 @@ module CommandLineDebug
     , setBreakpoint
     , setConditionalBreakpoint
     , listBreakpoints
+    , printBreakpoints
     , clearBreakpoints
     , toggleDebugOutput
     , DebugCommandResult(..)
@@ -16,6 +17,7 @@ module CommandLineDebug
     , processDebugCommandWithOutput
     , setDebugLevel
     , showDebugStatus
+    , printDebugStatus
     , addWatchVariable
     , removeWatchVariable
     , listWatchVariables
@@ -116,7 +118,7 @@ handleDebugCommands config location = do
     putStr "debug> "
     hFlush stdout
     line <- getLine
-    result <- processDebugCommand config location (words line)
+    result <- processDebugCommand config line
     case result of
         ResumeExecution -> return ()
         AwaitMoreInput -> handleDebugCommands config location
@@ -127,8 +129,11 @@ data DebugCommandResult
     | AwaitMoreInput
     deriving stock (Eq, Show)
 
-processDebugCommand :: CommandLineDebugConfig -> String -> [String] -> IO DebugCommandResult
-processDebugCommand = processDebugCommandWithOutput True
+processDebugCommand :: CommandLineDebugConfig -> String -> IO DebugCommandResult
+processDebugCommand config commandStr = processDebugCommandWithOutput True config "" (words commandStr)
+
+processDebugCommandWithArgs :: CommandLineDebugConfig -> String -> [String] -> IO DebugCommandResult
+processDebugCommandWithArgs = processDebugCommandWithOutput True
 
 -- Internal version with output control
 processDebugCommandWithOutput :: Bool -> CommandLineDebugConfig -> String -> [String] -> IO DebugCommandResult
@@ -139,10 +144,10 @@ processDebugCommandWithOutput enableOutput config _ tokens =
         ["s"] -> return ResumeExecution
         ["step"] -> return ResumeExecution
         ["l"] -> do
-            when enableOutput $ listBreakpoints config
+            when enableOutput $ printBreakpoints config
             return AwaitMoreInput
         ["list"] -> do
-            when enableOutput $ listBreakpoints config
+            when enableOutput $ printBreakpoints config
             return AwaitMoreInput
         ["d"] -> disableDebugging >> return AwaitMoreInput
         ["disable"] -> disableDebugging >> return AwaitMoreInput
@@ -188,14 +193,20 @@ setBreakpoint config location = do
     putStrLn $ "Breakpoint set at: " ++ location
 
 -- List all breakpoints
-listBreakpoints :: CommandLineDebugConfig -> IO ()
+listBreakpoints :: CommandLineDebugConfig -> IO [String]
 listBreakpoints config = do
     breakpoints <- readIORef (cldBreakpoints config)
-    if Set.null breakpoints
+    return (Set.toList breakpoints)
+
+-- Print all breakpoints
+printBreakpoints :: CommandLineDebugConfig -> IO ()
+printBreakpoints config = do
+    breakpoints <- listBreakpoints config
+    if null breakpoints
         then putStrLn "No breakpoints set"
         else do
             putStrLn "Current breakpoints:"
-            mapM_ (\bp -> putStrLn $ "  " ++ bp) (Set.toList breakpoints)
+            mapM_ (\bp -> putStrLn $ "  " ++ bp) breakpoints
 
 -- Clear all breakpoints
 clearBreakpoints :: CommandLineDebugConfig -> IO ()
@@ -217,23 +228,30 @@ setDebugLevel config level = do
     putStrLn $ "Debug level set to: " ++ show level
 
 -- Show debug status
-showDebugStatus :: CommandLineDebugConfig -> IO ()
+showDebugStatus :: CommandLineDebugConfig -> IO String
 showDebugStatus config = do
     enabled <- readIORef (cldEnabled config)
     logLevel <- readIORef (cldLogLevel config)
     breakpoints <- readIORef (cldBreakpoints config)
     interactive <- readIORef (cldInteractive config)
 
-    putStrLn "=== Debug Status ==="
-    putStrLn $ "Debug enabled: " ++ show enabled
-    putStrLn $ "Log level: " ++ show logLevel
-    putStrLn $ "Interactive mode: " ++ show interactive
-    putStrLn $ "Active breakpoints: " ++ show (Set.size breakpoints)
-    if not (Set.null breakpoints)
-        then do
-            putStrLn "Breakpoints:"
-            mapM_ (\bp -> putStrLn $ "  " ++ bp) (Set.toList breakpoints)
-        else putStrLn "No breakpoints set"
+    let statusLines = 
+            [ "=== Debug Status ==="
+            , "Debug enabled: " ++ show enabled
+            , "Log level: " ++ show logLevel
+            , "Interactive mode: " ++ show interactive
+            , "Active breakpoints: " ++ show (Set.size breakpoints)
+            ] ++ 
+            (if not (Set.null breakpoints)
+                then "Breakpoints:" : map ("  " ++) (Set.toList breakpoints)
+                else ["No breakpoints set"])
+    return (unlines statusLines)
+
+-- Print debug status
+printDebugStatus :: CommandLineDebugConfig -> IO ()
+printDebugStatus config = do
+    status <- showDebugStatus config
+    putStrLn status
 
 -- Check conditional breakpoint
 checkConditionalBreakpoint :: CommandLineDebugConfig -> String -> (String -> Bool) -> IO ()
@@ -321,14 +339,20 @@ removeWatchVariable config varName = do
     putStrLn $ "Stopped watching variable: " ++ varName
 
 -- List watch variables
-listWatchVariables :: CommandLineDebugConfig -> IO ()
+listWatchVariables :: CommandLineDebugConfig -> IO [(String, String)]
 listWatchVariables config = do
     watchVars <- readIORef (cldWatchVariables config)
-    if Map.null watchVars
+    return (Map.toList watchVars)
+
+-- Print watch variables
+printWatchVariables :: CommandLineDebugConfig -> IO ()
+printWatchVariables config = do
+    watchVars <- listWatchVariables config
+    if null watchVars
         then putStrLn "No watch variables set"
         else do
             putStrLn "Watch variables:"
-            mapM_ (\(name, value) -> putStrLn $ "  " ++ name ++ " = " ++ value) (Map.toList watchVars)
+            mapM_ (\(name, value) -> putStrLn $ "  " ++ name ++ " = " ++ value) watchVars
 
 -- Get call stack
 getCallStack :: CommandLineDebugConfig -> IO [String]

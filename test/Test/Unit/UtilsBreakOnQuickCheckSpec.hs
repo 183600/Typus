@@ -1,6 +1,7 @@
 module Test.Unit.UtilsBreakOnQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (==>), forAll, Gen, arbitrary, elements)
@@ -18,22 +19,22 @@ tests =
             \s -> forAll (genNonSubstring s) $ \pat ->
                 breakOn pat s == (s, "")
         
-        , fastProperty "breakOn pattern equals string returns empty prefix and suffix" $
+        , fastProperty "breakOn pattern equals string returns empty prefix L.and suffix" $
             \s -> breakOn s s == ("", "")
         
         , fastProperty "breakOn pattern at start returns empty prefix" $
             \pat -> forAll (genStringWithPrefix pat) $ \s ->
-                breakOn pat s == ("", drop (length pat) s)
+                breakOn pat s == ("", drop (L.length pat) s)
         
-        , fastProperty "breakOn pattern at end returns correct prefix and empty suffix" $
+        , fastProperty "breakOn pattern at end returns correct prefix L.and empty suffix" $
             \pat -> forAll (genStringWithSuffix pat) $ \s ->
-                let prefix = take (length s - length pat) s
+                let prefix = take (L.length s - L.length pat) s
                 in breakOn pat s == (prefix, "")
         
-        , fastProperty "breakOn result concatenated with pattern and suffix equals original" $
+        , fastProperty "breakOn result concatenated with pattern L.and suffix equals original" $
             \s pat -> 
                 let (prefix, suffix) = breakOn pat s
-                    found = pat `isInfixOf` s
+                    found = pat `L.isInfixOf` s
                 in found ==> prefix ++ pat ++ suffix == s
         ]
     
@@ -78,7 +79,7 @@ genStringWithSuffix suffix = do
 -- Generate a string that avoids certain characters
 genStringAvoiding :: String -> Gen String
 genStringAvoiding avoid = do
-    let allowed = filter (`notElem` avoid) ['\0'..'\127']
+    let allowed = L.filter (`notElem` avoid) ['\0'..'\127']
     if null allowed
         then return ""
         else do
@@ -87,4 +88,4 @@ genStringAvoiding avoid = do
 
 -- Check if a string is a substring of another
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` [take (length needle) $ drop i haystack | i <- [0..length haystack - length needle]]
+L.isInfixOf needle haystack = needle `elem` [take (L.length needle) $ drop i haystack | i <- [0..L.length haystack - L.length needle]]

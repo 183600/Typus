@@ -4,6 +4,7 @@
 module Test.Unit.IntegrationPropertiesSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import Parser
@@ -71,7 +72,7 @@ endToEndCompilationProperties = testGroup "End-to-End Compilation Properties"
   , testProperty "compilation preserves module boundaries" $
       \typusFiles ->
         let results = map compileTypusFile typusFiles
-        in all compilationPreservesModuleBoundaries results
+        in L.all compilationPreservesModuleBoundaries results
     
   , testCase "end-to-end compilation examples" $ do
       let simpleFile = TypusFile defaultFileDirectives 
@@ -97,7 +98,7 @@ endToEndCompilationProperties = testGroup "End-to-End Compilation Properties"
 
 componentIntegrationProperties :: TestTree
 componentIntegrationProperties = testGroup "Component Integration Properties"
-  [ testProperty "parser and IR integration is consistent" $
+  [ testProperty "parser L.and IR integration is consistent" $
       \typusFile ->
         let parseResult = parseTypusFile typusFile
             irResult = case parseResult of
@@ -105,13 +106,13 @@ componentIntegrationProperties = testGroup "Component Integration Properties"
               Left err -> Left err
         in parserIRIntegrationConsistent parseResult irResult
     
-  , testProperty "IR and type checker integration preserves types" $
+  , testProperty "IR L.and type checker integration preserves types" $
       \sourceIR ->
         let semanticIR = buildSemanticIR sourceIR
             typeCheckResult = typeCheckSemanticIR semanticIR
         in irTypeCheckerIntegrationPreservesTypes sourceIR semanticIR typeCheckResult
     
-  , testProperty "type checker and ownership analysis integration" $
+  , testProperty "type checker L.and ownership analysis integration" $
       \semanticIR ->
         let typeCheckResult = typeCheckSemanticIR semanticIR
             ownershipResult = case typeCheckResult of
@@ -119,7 +120,7 @@ componentIntegrationProperties = testGroup "Component Integration Properties"
               Left err -> Left err
         in typeCheckerOwnershipIntegrationConsistent typeCheckResult ownershipResult
     
-  , testProperty "ownership analysis and error handling integration" $
+  , testProperty "ownership analysis L.and error handling integration" $
       \typedIR ->
         let ownershipResult = analyzeOwnershipIR typedIR
             errorResult = case ownershipResult of
@@ -127,7 +128,7 @@ componentIntegrationProperties = testGroup "Component Integration Properties"
               Left err -> Left err
         in ownershipErrorHandlingIntegrationConsistent ownershipResult errorResult
     
-  , testProperty "all components work together" $
+  , testProperty "L.all components work together" $
       \typusFile ->
         let result = fullCompilationPipeline typusFile
         in fullPipelineConsistent result
@@ -533,7 +534,7 @@ extractTypeAnnotations typusFile = ["int", "string"]  -- Placeholder
 typeAnnotationsFlow :: [String] -> String -> Bool
 typeAnnotationsFlow annotations output = True  -- Placeholder
 
--- Collect all errors
+-- Collect L.all errors
 collectAllErrors :: TypusFile -> [String]
 collectAllErrors typusFile = ["error"]  -- Placeholder
 
@@ -636,7 +637,7 @@ measureIncrementalCompilationTime typusFile changes = 0.05
 
 -- Check if compilation results are consistent
 compilationResultsConsistent :: [Either String String] -> Bool
-compilationResultsConsistent results = all (== head results) (tail results)
+compilationResultsConsistent results = L.all (== L.head results) (L.tail results)
 
 -- Check if type checking results are consistent
 typeCheckingResultsConsistent :: Either String TypedSemanticIR -> Either String TypedSemanticIR -> Bool
@@ -734,13 +735,13 @@ performanceIntegrationPropertiesExtended = testGroup "Extended Performance Prope
   , testProperty "compilation time is predictable" $
       \typusFile ->
         let times = replicate 5 $ measureFullCompilationTime typusFile
-            avgTime = sum times / fromIntegral (length times)
-            maxDeviation = maximum $ map (\t -> abs (t - avgTime)) times
+            avgTime = L.sum times / fromIntegral (L.length times)
+            maxDeviation = L.maximum $ L.map (\t -> abs (t - avgTime)) times
         in maxDeviation <= avgTime * 0.2  -- Within 20% of average
     
   , testProperty "parallel compilation provides speedup" $
-      \typusFiles -> length typusFiles > 1 ==>
-        let sequentialTime = sum $ map measureFullCompilationTime typusFiles
+      \typusFiles -> L.length typusFiles > 1 ==>
+        let sequentialTime = L.sum $ map measureFullCompilationTime typusFiles
             parallelTime = measureParallelCompilationTime typusFiles
         in parallelTime <= sequentialTime
     
@@ -753,4 +754,4 @@ performanceIntegrationPropertiesExtended = testGroup "Extended Performance Prope
 
 -- Measure parallel compilation time
 measureParallelCompilationTime :: [TypusFile] -> Double
-measureParallelCompilationTime typusFiles = maximum $ map measureFullCompilationTime typusFiles
+measureParallelCompilationTime typusFiles = L.maximum $ map measureFullCompilationTime typusFiles

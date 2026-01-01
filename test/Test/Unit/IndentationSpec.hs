@@ -5,6 +5,7 @@
 module Test.Unit.IndentationSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, choose, listOf, oneof, elements, forAll)
 import Utils (normalizeIndentation, forceSingleTabIndentation, fixIndentation)
@@ -25,7 +26,7 @@ tests = testGroup "Indentation Tests"
         normalizeIndentation "\n\n\n" @?= "\n\n\n"
     ]
   , testGroup "normalizeIndentation mixed indentation"
-    [ testCase "handles mixed spaces and tabs" $
+    [ testCase "handles mixed spaces L.and tabs" $
         normalizeIndentation "\t  foo\n\t  \tbar" @?= "foo\n\tbar"
     , testCase "handles tabs only" $
         normalizeIndentation "\tfoo\n\t\tbar" @?= "foo\n\tbar"
@@ -55,7 +56,7 @@ tests = testGroup "Indentation Tests"
         forceSingleTabIndentation "hello world" @?= "\thello world"
     , testCase "handles multi-line strings" $
         forceSingleTabIndentation "hello\nworld" @?= "\thello\n\tworld"
-    , testCase "trims and tabs each non-empty line" $
+    , testCase "trims L.and tabs each non-empty line" $
         forceSingleTabIndentation "  foo\n    bar\n  baz" @?= "\tfoo\n\tbar\n\tbaz"
     , testCase "preserves empty lines" $
         forceSingleTabIndentation "foo\n\nbar" @?= "\tfoo\n\n\tbar"
@@ -69,25 +70,25 @@ tests = testGroup "Indentation Tests"
     ]
   , testGroup "Properties"
     [ testProperty "normalizeIndentation preserves line count" $
-        \s -> not (null s) ==> length (lines (normalizeIndentation s)) == length (lines s)
+        \s -> not (null s) ==> L.length (lines (normalizeIndentation s)) == L.length (lines s)
     , testProperty "normalizeIndentation never adds leading spaces to first non-empty line" $
         \s -> let normalized = normalizeIndentation s
-                  nonEmptyLines = filter (not . all isSpace) $ lines normalized
+                  nonEmptyLines = L.filter (not . L.all isSpace) $ lines normalized
               in not (null nonEmptyLines) ==> 
-                 let firstLine = head nonEmptyLines
-                 in null firstLine || not (isSpace (head firstLine))
+                 let firstLine = L.head nonEmptyLines
+                 in null firstLine || not (isSpace (L.head firstLine))
     , testProperty "normalizeIndentation preserves relative indentation" $
         \s -> let original = lines s
                   normalized = lines (normalizeIndentation s)
-                  getIndent l = length $ takeWhile isSpace l
-                  originalIndents = map getIndent $ filter (not . null) original
-                  normalizedIndents = map getIndent $ filter (not . null) normalized
-              in length originalIndents == length normalizedIndents
+                  getIndent l = L.length $ takeWhile isSpace l
+                  originalIndents = map getIndent $ L.filter (not . null) original
+                  normalizedIndents = map getIndent $ L.filter (not . null) normalized
+              in L.length originalIndents == L.length normalizedIndents
     , testProperty "forceSingleTabIndentation adds tab to non-empty lines" $
         \s -> let result = forceSingleTabIndentation s
                   lines' = lines result
-                  nonEmptyLines = filter (not . all isSpace) lines'
-              in all ((== '\t') . head) nonEmptyLines
+                  nonEmptyLines = L.filter (not . L.all isSpace) lines'
+              in L.all ((== '\t') . L.head) nonEmptyLines
     , testProperty "normalizeIndentation is idempotent" $
         \s -> normalizeIndentation (normalizeIndentation s) == normalizeIndentation s
     ]
@@ -116,11 +117,11 @@ tests = testGroup "Indentation Tests"
 -- Helper functions
 hasConsistentRelativeIndentation :: [String] -> [String] -> Bool
 hasConsistentRelativeIndentation original normalized = 
-  let getIndent l = length $ takeWhile isSpace l
-      originalIndents = map getIndent $ filter (not . null) original
-      normalizedIndents = map getIndent $ filter (not . null) normalized
-      differences = zipWith (-) (tail normalizedIndents) (tail originalIndents)
-  in all (== head differences) (tail differences)
+  let getIndent l = L.length $ takeWhile isSpace l
+      originalIndents = map getIndent $ L.filter (not . null) original
+      normalizedIndents = map getIndent $ L.filter (not . null) normalized
+      differences = zipWith (-) (L.tail normalizedIndents) (L.tail originalIndents)
+  in L.all (== L.head differences) (L.tail differences)
 
 -- Generators for specific test cases
 genIndentedLine :: Gen String

@@ -13,7 +13,9 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
-import Data.List (isInfixOf, null, length)
+import qualified Data.List as L
+import Data.List (isInfixOf, length)
+import Data.List (null)
 import qualified Data.Text as T
 
 import Compiler
@@ -68,7 +70,7 @@ import qualified Compiler.IR as IR
 import Compiler.GoAst (renderGoModule)
 
 -- | Comprehensive QuickCheck tests for Compiler integration
--- This module tests the complete compilation pipeline and error handling
+-- This module tests the complete compilation pipeline L.and error handling
 
 -- Property: compile handles empty input
 prop_compile_empty_input :: Property
@@ -90,7 +92,7 @@ prop_compile_simple_valid functionName =
     Right typusFile -> 
       case compile typusFile of
         Left _ -> property False
-        Right goCode -> functionName `isInfixOf` goCode
+        Right goCode -> functionName `L.isInfixOf` goCode
 
 -- Property: compile detects type errors
 prop_compile_detects_type_errors :: String -> Property
@@ -102,7 +104,7 @@ prop_compile_detects_type_errors variableName =
     Left _ -> property False
     Right typusFile -> 
       case compile typusFile of
-        Left errs -> length errs >= 1
+        Left errs -> L.length errs >= 1
         Right _ -> property False
 
 -- Property: compile handles multiple functions
@@ -117,7 +119,7 @@ prop_compile_multiple_functions func1 func2 =
     Right typusFile -> 
       case compile typusFile of
         Left _ -> property False
-        Right goCode -> func1 `isInfixOf` goCode && func2 `isInfixOf` goCode
+        Right goCode -> func1 `L.isInfixOf` goCode && func2 `L.isInfixOf` goCode
 
 -- Property: renderCompilationError handles empty error list
 prop_renderCompilationError_empty :: Property
@@ -134,7 +136,7 @@ prop_renderCompilationError_includes_codes errorCode =
                TypeCheckingPhase TypeChecking Error (Just defaultSpan) Nothing [] [] Nothing
       errors = [error]
       rendered = renderCompilationError errors
-  in errorCode `isInfixOf` rendered
+  in errorCode `L.isInfixOf` rendered
 
 -- Property: formatCompilerErrors is consistent with renderCompilationError
 prop_formatCompilerError_consistent :: [CompilerError] -> Property
@@ -148,26 +150,26 @@ prop_generateDetailedReport_phases :: [CompilerError] -> Property
 prop_generateDetailedReport_phases errors =
   not (null errors) ==>
   let report = generateDetailedReport errors
-      hasPhaseInfo = any (`isInfixOf` report) ["Parsing", "TypeChecking", "CodeGeneration"]
+      hasPhaseInfo = L.any (`L.isInfixOf` report) ["Parsing", "TypeChecking", "CodeGeneration"]
   in hasPhaseInfo
 
 -- Property: analyzeErrors categorizes errors correctly
 prop_analyzeErrors_categorization :: [CompilerError] -> Property
 prop_analyzeErrors_categorization errors =
   let analysis = analyzeErrors errors
-  in length analysis >= 0
+  in L.length analysis >= 0
 
 -- Property: hasTypeErrors detects type checking errors
 prop_hasTypeErrors_detection :: [CompilerError] -> Property
 prop_hasTypeErrors_detection errors =
-  let typeErrors = filter (\e -> cePhase e == TypeCheckingPhase) errors
+  let typeErrors = L.filter (\e -> cePhase e == TypeCheckingPhase) errors
       hasType = hasTypeErrors errors
   in hasType === not (null typeErrors)
 
 -- Property: diagnoseTypeErrors handles valid files
 prop_diagnoseTypeErrors_valid :: String -> Property
 prop_diagnoseTypeErrors_valid content =
-  not (null content) && not ("var" `isInfixOf` content) ==>
+  not (null content) && not ("var" `L.isInfixOf` content) ==>
   let caseResult = parseTypus content
   in case caseResult of
     Left _ -> property False
@@ -186,7 +188,7 @@ prop_extractDeclarations_functions functionName =
     Left _ -> property False
     Right typusFile -> 
       let declarations = extractDeclarations typusFile
-      in any (functionName `isInfixOf`) declarations
+      in L.any (functionName `L.isInfixOf`) declarations
 
 -- Property: extractFunctionCalls identifies function calls
 prop_extractFunctionCalls_calls :: String -> String -> Property
@@ -199,15 +201,15 @@ prop_extractFunctionCalls_calls caller callee =
     Left _ -> property False
     Right typusFile -> 
       let calls = extractFunctionCalls typusFile
-      in any (callee `isInfixOf`) calls
+      in L.any (callee `L.isInfixOf`) calls
 
 -- Property: buildTypeEnv creates consistent environment
 prop_buildTypeEnv_consistency :: [(String, String)] -> Property
 prop_buildTypeEnv_consistency pairs =
-  length pairs <= 5 ==>
+  L.length pairs <= 5 ==>
   let env = buildTypeEnvFromPairs pairs
-      pairCount = length pairs
-  in length env >= pairCount
+      pairCount = L.length pairs
+  in L.length env >= pairCount
 
 -- Property: isMethodDeclaration identifies methods correctly
 prop_isMethodDeclaration_identification :: String -> String -> Property
@@ -223,7 +225,7 @@ prop_checkTypeError_validation :: String -> Property
 prop_checkTypeError_validation errorMsg =
   not (null errorMsg) ==>
   let isError = checkTypeError errorMsg
-  in isError === ("type error" `isInfixOf` errorMsg || "error" `isInfixOf` errorMsg)
+  in isError === ("type error" `L.isInfixOf` errorMsg || "error" `L.isInfixOf` errorMsg)
 
 -- Property: hasMalformedSyntax detects syntax issues
 prop_hasMalformedSyntax_detection :: String -> Property
@@ -239,7 +241,7 @@ prop_hasMalformedSyntax_detection content =
 -- Property: ensureSourceIR handles valid files
 prop_ensureSourceIR_valid :: String -> Property
 prop_ensureSourceIR_valid content =
-  not (null content) && "package" `isInfixOf` content ==>
+  not (null content) && "package" `L.isInfixOf` content ==>
   let caseResult = parseTypus content
   in case caseResult of
     Left _ -> property False
@@ -254,19 +256,19 @@ prop_typeDiagnosticToCompilerError_preservation diagnostic =
   let compilerError = typeDiagnosticToCompilerError diagnostic
       diagnosticMsg = T.pack (show diagnostic)
       errorMsg = ceMessage compilerError
-  in T.length errorMsg > 0
+  in T.L.length errorMsg > 0
 
 -- Property: generateGoCode produces syntactically valid Go
 prop_generateGoCode_valid_syntax :: String -> Property
 prop_generateGoCode_valid_syntax content =
-  "package" `isInfixOf` content && "func" `isInfixOf` content ==>
+  "package" `L.isInfixOf` content && "func" `L.isInfixOf` content ==>
   let caseResult = parseTypus content
   in case caseResult of
     Left _ -> property False
     Right typusFile -> 
       case compile typusFile of
         Left _ -> property False
-        Right goCode -> "package" `isInfixOf` goCode
+        Right goCode -> "package" `L.isInfixOf` goCode
 
 -- Property: compilation pipeline preserves function names
 prop_compilation_preserves_functions :: String -> String -> Property
@@ -280,18 +282,18 @@ prop_compilation_preserves_functions pkgName funcName =
     Right typusFile -> 
       case compile typusFile of
         Left _ -> property False
-        Right goCode -> funcName `isInfixOf` goCode
+        Right goCode -> funcName `L.isInfixOf` goCode
 
 -- Property: error handling preserves source location information
 prop_error_preserves_location :: String -> Property
 prop_error_preserves_location content =
-  "var" `isInfixOf` content && "string" `isInfixOf` content ==>
+  "var" `L.isInfixOf` content && "string" `L.isInfixOf` content ==>
   let caseResult = parseTypus content
   in case caseResult of
     Left _ -> property False
     Right typusFile -> 
       case compile typusFile of
-        Left errors -> any (hasLocation . ceSpan) errors
+        Left errors -> L.any (hasLocation . ceSpan) errors
         Right _ -> property False
   where
     hasLocation Nothing = False

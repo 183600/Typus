@@ -119,7 +119,7 @@ instance Arbitrary InferenceScenario where
         genTypeVar = elements ["T", "U", "V"]
         genGenericExpr = elements ["id<T>(x)", "map<T,U>(f, xs)", "fold<T>(acc, x)"]
         genDependentName = elements ["Vector", "Matrix", "Array"]
-        genRecursiveExpr = elements ["fact(n)", "fib(n)", "length(xs)"]
+        genRecursiveExpr = elements ["fact(n)", "fib(n)", "L.length(xs)"]
         genComplexExpr = elements ["map(f, filter(p, xs))", "fold(op, init, xs)", "compose(f, g, h)"]
 
 -- | Property: Type variables should be unified correctly
@@ -178,7 +178,7 @@ prop_recursiveTypesHandled typeName baseType =
 prop_complexExpressionsConsistent :: [String] -> Bool
 prop_complexExpressionsConsistent exprs = 
     let types = map inferSimpleType exprs
-        constraints = zipWith Equality types (tail types)
+        constraints = zipWith Equality types (L.tail types)
         initialContext = TypeContext Map.empty [] Map.empty Map.empty
         result = unifyConstraints initialContext constraints
     in case result of
@@ -194,7 +194,7 @@ prop_inferenceHandlesPolymorphism inputType outputType =
         initialContext = TypeContext Map.empty [] Map.empty Map.empty
         result = unifyConstraints initialContext [constraint]
     in case result of
-        Unified ctx -> Map.size (tcSubstitutions ctx) >= 2  -- Should substitute T and U
+        Unified ctx -> Map.size (tcSubstitutions ctx) >= 2  -- Should substitute T L.and U
         Failed _ -> True
         Ambiguous _ -> True
 
@@ -247,10 +247,10 @@ unifyConstraints ctx (constraint:rest) =
 unifyConstraint :: TypeContext -> TypeConstraint -> Either [TypeConstraint] TypeContext
 unifyConstraint ctx constraint = case constraint of
     Equality t1 t2 -> unifyTypes ctx t1 t2
-    Subtype t1 t2 -> Right ctx  -- Simplified: accept all subtypes
-    InstanceOf t1 className -> Right ctx  -- Simplified: accept all instances
-    DependentConstraint name t -> Right ctx  -- Simplified: accept all dependent constraints
-    OwnershipConstraint var t -> Right ctx  -- Simplified: accept all ownership constraints
+    Subtype t1 t2 -> Right ctx  -- Simplified: accept L.all subtypes
+    InstanceOf t1 className -> Right ctx  -- Simplified: accept L.all instances
+    DependentConstraint name t -> Right ctx  -- Simplified: accept L.all dependent constraints
+    OwnershipConstraint var t -> Right ctx  -- Simplified: accept L.all ownership constraints
 
 -- | Unify two types
 unifyTypes :: TypeContext -> TypeExpr -> TypeExpr -> Either [TypeConstraint] TypeContext
@@ -262,7 +262,7 @@ unifyTypes ctx t1 t2
         (TypeFunc a1 b1, TypeFunc a2 b2) -> do
             ctx' <- unifyTypes ctx a1 a2
             unifyTypes ctx' b1 b2
-        (TypeTuple ts1, TypeTuple ts2) | length ts1 == length ts2 -> 
+        (TypeTuple ts1, TypeTuple ts2) | L.length ts1 == L.length ts2 -> 
             foldM (\ctx' (t1', t2') -> unifyTypes ctx' t1' t2') ctx (zip ts1 ts2)
         _ -> Left [Equality t1 t2]
 
@@ -296,7 +296,7 @@ containsRecursiveType :: TypeExpr -> String -> Bool
 containsRecursiveType t name = case t of
     TypeVar n -> n == name
     TypeFunc a b -> containsRecursiveType a name || containsRecursiveType b name
-    TypeTuple ts -> any (flip containsRecursiveType name) ts
+    TypeTuple ts -> L.any (flip containsRecursiveType name) ts
     TypeList t' -> containsRecursiveType t' name
     TypeOption t' -> containsRecursiveType t' name
     TypeMap k v -> containsRecursiveType k name || containsRecursiveType v name
@@ -315,7 +315,7 @@ isWellFounded t name =
     checkWellFounded (TypeFunc a b) visited = 
         checkWellFounded a visited && checkWellFounded b visited
     checkWellFounded (TypeTuple ts) visited = 
-        all (flip checkWellFounded visited) ts
+        L.all (flip checkWellFounded visited) ts
     checkWellFounded (TypeList t') visited = checkWellFounded t' visited
     checkWellFounded (TypeOption t') visited = checkWellFounded t' visited
     checkWellFounded (TypeMap k v) visited = 
@@ -330,10 +330,10 @@ isWellFounded t name =
 -- | Infer simple type from expression
 inferSimpleType :: String -> TypeExpr
 inferSimpleType expr
-    | all (`elem` "0123456789") expr = TypeConst "Int"
-    | head expr == '"' && last expr == '"' = TypeConst "String"
+    | L.all (`elem` "0123456789") expr = TypeConst "Int"
+    | L.head expr == '"' && last expr == '"' = TypeConst "String"
     | expr == "true" || expr == "false" = TypeConst "Bool"
-    | any (`elem` expr) ".eE" && all (`elem` "0123456789.eE-+") expr = TypeConst "Float"
+    | L.any (`elem` expr) ".eE" && L.all (`elem` "0123456789.eE-+") expr = TypeConst "Float"
     | otherwise = TypeVar "T"
 
 -- | Generate Typus code for type inference testing

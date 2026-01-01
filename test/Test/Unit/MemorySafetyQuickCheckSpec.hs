@@ -10,6 +10,7 @@
 module Test.Unit.MemorySafetyQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertBool, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -20,10 +21,11 @@ import Test.QuickCheck
 
 import Utils (trim, splitBy, removeComments)
 import SourceLocation (SourcePos(..), advancePosByText)
-import Data.List (foldl', length, take, drop)
+import Data.List (length)
+import Data.List (foldl', take, drop)
 import Data.Char (isSpace, isPrint)
 import Control.DeepSeq (NFData, rnf, force)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 import Data.Text (Text)
 
 -- Test data for memory safety
@@ -56,17 +58,17 @@ prop_string_operations_no_leaks testData =
 prop_text_operations_safe :: MemorySafetyTestData -> Property
 prop_text_operations_safe testData =
   let txt = testText testData
-      length' = T.length txt
+      L.length' = T.L.length txt
       lines' = T.lines txt
       words' = T.words txt
-      result = rnf (length', lines', words')
+      result = rnf (L.length', lines', words')
   in property $ result === ()
 
 -- Property: List operations handle large inputs safely
 prop_large_list_operations_safe :: [Int] -> Property
 prop_large_list_operations_safe lst =
-  let filtered = filter (> 50) lst
-      mapped = map (*2) lst
+  let filtered = L.filter (> 50) lst
+      mapped = L.map (*2) lst
       folded = foldl' (+) 0 lst
       result = rnf (filtered, mapped, folded)
   in property $ result === ()
@@ -74,9 +76,9 @@ prop_large_list_operations_safe lst =
 -- Property: Nested list operations are memory safe
 prop_nested_list_operations_safe :: [[Int]] -> Property
 prop_nested_list_operations_safe nested =
-  let flattened = concat nested
-      sumOfLengths = sum $ map length nested
-      maxElement = maximum $ map maximum nested
+  let flattened = L.concat nested
+      sumOfLengths = L.sum $ map L.length nested
+      maxElement = L.maximum $ map L.maximum nested
       result = rnf (flattened, sumOfLengths, maxElement)
   in property $ result === ()
 
@@ -95,15 +97,15 @@ prop_repeated_operations_memory testData iterations =
   let str = testString testData
       performOp n = if n <= 0 then str else trim (performOp (n - 1))
       result = performOp iterations
-      resultLength = length result
-  in property $ resultLength <= length str + 1000  -- Allow some reasonable growth
+      resultLength = L.length result
+  in property $ resultLength <= L.length str + 1000  -- Allow some reasonable growth
 
 -- Property: Deep nesting doesn't cause stack overflow
 prop_deep_nesting_safe :: Int -> Property
 prop_deep_nesting_safe depth =
   depth > 0 && depth < 1000 ==>
   let nested = replicate depth [1,2,3]
-      flattened = concat nested
+      flattened = L.concat nested
       result = rnf flattened
   in property $ result === ()
 
@@ -128,7 +130,7 @@ prop_text_conversion_safe str =
 prop_recursive_operations_bounded :: [Int] -> Property
 prop_recursive_operations_bounded lst =
   let quicksort [] = []
-      quicksort (x:xs) = quicksort (filter (< x) xs) ++ [x] ++ quicksort (filter (>= x) xs)
+      quicksort (x:xs) = quicksort (L.filter (< x) xs) ++ [x] ++ quicksort (L.filter (>= x) xs)
       sorted = quicksort lst
       result = rnf sorted
   in property $ result === ()
@@ -138,7 +140,7 @@ prop_memory_usage_linear :: Int -> Property
 prop_memory_usage_linear size =
   size > 0 && size < 5000 ==>
   let input = [1..size]
-      processed = map (*2) $ filter even input
+      processed = L.map (*2) $ filter even input
       result = rnf processed
   in property $ result === ()
 
@@ -148,8 +150,8 @@ prop_garbage_collection_works testData =
   let str = testString testData
       temp1 = map toUpper str
       temp2 = map toLower temp1
-      temp3 = reverse temp2
-      final = length temp3
+      temp3 = L.reverse temp2
+      final = L.length temp3
       result = rnf final
   in property $ result === ()
   where
@@ -159,7 +161,7 @@ prop_garbage_collection_works testData =
 -- Property: Resource cleanup happens properly
 prop_resource_cleanup_proper :: MemorySafetyTestData -> Property
 prop_resource_cleanup_proper testData =
-  let processChunk chunk = rnf $ length chunk
+  let processChunk chunk = rnf $ L.length chunk
       chunks = chunksOf 100 (testString testData)
       results = map processChunk chunks
       finalResult = rnf results
@@ -199,17 +201,17 @@ tests = testGroup "Memory Safety QuickCheck Tests"
           split = splitBy ' ' trimmed
           
       assertBool "Large string processing works" $ not (null trimmed)
-      assertBool "Large split works" $ length split > 0
+      assertBool "Large split works" $ L.length split > 0
       
       let nestedList = replicate 100 [1..100]
-          flattened = concat nestedList
+          flattened = L.concat nestedList
           
-      assertBool "Nested list flattening works" $ length flattened == 100 * 100
+      assertBool "Nested list flattening works" $ L.length flattened == 100 * 100
       
       let text = T.pack "Hello World\nThis is a test\nMultiple lines"
           lines' = T.lines text
           
-      assertBool "Text processing works" $ length lines' == 3
+      assertBool "Text processing works" $ L.length lines' == 3
       
       -- Force evaluation to ensure no thunks
       rnf trimmed @?= ()

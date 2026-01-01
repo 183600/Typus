@@ -2,6 +2,7 @@
 module Test.Unit.ErrorHandlerRecoveryQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), Gen, oneof, elements, listOf, sized, choose, forAll)
 import Data.Char (isAlphaNum, isLetter, isDigit)
@@ -17,12 +18,7 @@ import Compiler.Errors.Core
   , emptyContext, newErrorCollector, addError, addWarning, addInfo
   , getErrors, getWarnings, getInfo, getAllMessages, hasErrors, hasWarnings
   , formatError, formatErrors, canRecoverFrom, shouldContinueAfter
-  , errorAt, errorWithCategory, warningAt, warningWithCategory, infoAt
-  , fatalError, fatalErrorWithCategory, errorWithSuggestions
-  , withLocation, withContext, withSuggestions, withRelatedErrors
-  , wrapError, combineErrors, filterBySeverity, filterByCategory
-  , hasCategory, getErrorStatistics, createRecoveryStrategy
-  , customRecovery, fatalRecovery, errorRecovery, warningRecovery, infoRecovery
+  , errorAt, errorWithCategory, warningAt, warningWithCategory, infoAt, warningRecovery, infoRecovery
   )
 
 -- | ErrorHandler错误恢复QuickCheck测试
@@ -36,26 +32,26 @@ tests =
         , testProperty "Recovery strategy composition" propRecoveryStrategyComposition
         ]
 
-    , testGroup "Error Collection and Recovery"
+    , testGroup "Error Collection L.and Recovery"
         [ testProperty "Error collection preserves recovery info" propErrorCollectionPreservesRecovery
         , testProperty "Multiple errors recovery aggregation" propMultipleErrorsRecoveryAggregation
         , testProperty "Error filtering maintains recovery" propErrorFilteringMaintainsRecovery
         ]
 
-    , testGroup "Error Severity and Recovery"
+    , testGroup "Error Severity L.and Recovery"
         [ testProperty "Fatal errors non-recoverable" propFatalErrorsNonRecoverable
         , testProperty "Warning errors always recoverable" propWarningErrorsAlwaysRecoverable
         , testProperty "Info errors always recoverable" propInfoErrorsAlwaysRecoverable
         , testProperty "Error severity affects recovery" propErrorSeverityAffectsRecovery
         ]
 
-    , testGroup "Error Context and Recovery"
+    , testGroup "Error Context L.and Recovery"
         [ testProperty "Context preservation in recovery" propContextPreservationInRecovery
         , testProperty "Context enhancement improves recovery" propContextEnhancementImprovesRecovery
         , testProperty "Empty context recovery behavior" propEmptyContextRecoveryBehavior
         ]
 
-    , testGroup "Error Location and Recovery"
+    , testGroup "Error Location L.and Recovery"
         [ testProperty "Location information preservation" propLocationInformationPreservation
         , testProperty "Multiple locations recovery" propMultipleLocationsRecovery
         , testProperty "Unknown location recovery" propUnknownLocationRecovery
@@ -121,25 +117,25 @@ propRecoveryStrategyComposition err1 err2 =
      else True  -- 至少一个不可恢复时，组合可能不可恢复
 
 -- ============================================================================
--- Error Collection and Recovery
+-- Error Collection L.and Recovery
 -- ============================================================================
 
 -- | 错误收集保持恢复信息
 propErrorCollectionPreservesRecovery :: [TypeError] -> Bool
 propErrorCollectionPreservesRecovery errors =
   let collector = newErrorCollector
-      withErrors = foldl (\acc err -> addError err acc) collector errors
+      withErrors = L.foldl (\acc err -> addError err acc) collector errors
       collectedErrors = getErrors withErrors
       originalRecoverable = map canRecoverFrom errors
       collectedRecoverable = map canRecoverFrom collectedErrors
-  in length originalRecoverable == length collectedRecoverable &&
-     all id (zipWith (==) originalRecoverable collectedRecoverable)
+  in L.length originalRecoverable == L.length collectedRecoverable &&
+     L.all id (zipWith (==) originalRecoverable collectedRecoverable)
 
 -- | 多错误恢复聚合
 propMultipleErrorsRecoveryAggregation :: [TypeError] -> Bool
 propMultipleErrorsRecoveryAggregation errors =
-  let recoverableCount = length $ filter canRecoverFrom errors
-      totalCount = length errors
+  let recoverableCount = L.length $ filter canRecoverFrom errors
+      totalCount = L.length errors
       hasAnyRecoverable = recoverableCount > 0
       hasAnyNonRecoverable = recoverableCount < totalCount
   in hasAnyRecoverable || not hasAnyNonRecoverable
@@ -151,10 +147,10 @@ propErrorFilteringMaintainsRecovery errors severity =
       originalRecoverable = map canRecoverFrom errors
       filteredRecoverable = map canRecoverFrom filtered
       -- 过滤后的错误应该保持其恢复能力
-  in all (\(orig, filt) -> filt ==> orig) (zip originalRecoverable filteredRecoverable)
+  in L.all (\(orig, filt) -> filt ==> orig) (zip originalRecoverable filteredRecoverable)
 
 -- ============================================================================
--- Error Severity and Recovery
+-- Error Severity L.and Recovery
 -- ============================================================================
 
 -- | 致命错误不可恢复
@@ -166,13 +162,13 @@ propFatalErrorsNonRecoverable msg =
 -- | 警告错误总是可恢复
 propWarningErrorsAlwaysRecoverable :: String -> Bool
 propWarningErrorsAlwaysRecoverable msg =
-  let warning = warningAt (ErrorLocation 0 0 "") msg
+  let warning = warningAt "test-id" 0 0 "") msg
   in canRecoverFrom warning
 
 -- | 信息错误总是可恢复
 propInfoErrorsAlwaysRecoverable :: String -> Bool
 propInfoErrorsAlwaysRecoverable msg =
-  let info = infoAt (ErrorLocation 0 0 "") msg
+  let info = infoAt "test-id" 0 0 "") msg
   in canRecoverFrom info
 
 -- | 错误严重程度影响恢复
@@ -185,7 +181,7 @@ propErrorSeverityAffectsRecovery sev1 sev2 =
      else canRecoverFrom err1 <= canRecoverFrom err2
 
 -- ============================================================================
--- Error Context and Recovery
+-- Error Context L.and Recovery
 -- ============================================================================
 
 -- | 上下文在恢复中保持
@@ -214,7 +210,7 @@ propEmptyContextRecoveryBehavior err =
   in originalRecoverable == withEmptyRecoverable
 
 -- ============================================================================
--- Error Location and Recovery
+-- Error Location L.and Recovery
 -- ============================================================================
 
 -- | 位置信息保持
@@ -295,9 +291,9 @@ propEmptyErrorCollectionRecovery =
 -- | 循环错误依赖
 propCircularErrorDependencies :: String -> Bool
 propCircularErrorDependencies base =
-  let err1 = errorAt (ErrorLocation 0 0 "") (base ++ "1")
-      err2 = errorAt (ErrorLocation 1 0 "") (base ++ "2")
-      err3 = errorAt (ErrorLocation 2 0 "") (base ++ "3")
+  let err1 = errorAt "test-id" 0 0 "") (base ++ "1")
+      err2 = errorAt "test-id" 1 0 "") (base ++ "2")
+      err3 = errorAt "test-id" 2 0 "") (base ++ "3")
       -- 创建循环依赖
       withRelated1 = withRelatedErrors err1 [err2, err3]
       withRelated2 = withRelatedErrors err2 [err3, err1]
@@ -308,10 +304,10 @@ propCircularErrorDependencies base =
 propMaximumErrorDepthRecovery :: Int -> String -> Bool
 propMaximumErrorDepthRecovery depth base =
   let maxDepth = abs depth `mod` 10 + 1
-      createNestedError 0 = errorAt (ErrorLocation 0 0 "") base
+      createNestedError 0 = errorAt "test-id" 0 0 "") base
       createNestedError n = 
         let inner = createNestedError (n-1)
-            wrapper = errorAt (ErrorLocation n 0 "") (base ++ "_depth_" ++ show n)
+            wrapper = errorAt "test-id" n 0 "") (base ++ "_depth_" ++ show n)
         in withRelatedErrors wrapper [inner]
       deepest = createNestedError maxDepth
   in canRecoverFrom deepest
@@ -324,8 +320,8 @@ propMaximumErrorDepthRecovery depth base =
 propLargeErrorCollectionRecovery :: Int -> Bool
 propLargeErrorCollectionRecovery count =
   let errorCount = abs count `mod` 100 + 1
-      errors = map (\i -> errorAt (ErrorLocation i 0 "") ("error_" ++ show i)) [1..errorCount]
-      recoverableCount = length $ filter canRecoverFrom errors
+      errors = L.map (\i -> errorAt "test-id" i 0 "") ("error_" ++ show i)) [1..errorCount]
+      recoverableCount = L.length $ filter canRecoverFrom errors
   in recoverableCount >= 0 && recoverableCount <= errorCount
 
 -- | 混合严重程度恢复性能
@@ -333,15 +329,15 @@ propMixedSeverityRecoveryPerformance :: [ErrorSeverity] -> Bool
 propMixedSeverityRecoveryPerformance severities =
   let errors = zipWith (\sev i -> 
         errorWithCategory (ErrorLocation i 0 "") TypeMismatch "" sev) severities [1..]
-      recoverableCount = length $ filter canRecoverFrom errors
-      totalCount = length errors
+      recoverableCount = L.length $ filter canRecoverFrom errors
+      totalCount = L.length errors
   in recoverableCount >= 0 && recoverableCount <= totalCount
 
 -- | 复杂错误图恢复
 propComplexErrorGraphRecovery :: Int -> Bool
 propComplexErrorGraphRecovery nodeCount =
   let nodes = abs nodeCount `mod` 20 + 1
-      createNode i = errorAt (ErrorLocation i 0 "") ("node_" ++ show i)
+      createNode i = errorAt "test-id" i 0 "") ("node_" ++ show i)
       nodeErrors = map createNode [1..nodes]
       -- 创建随机连接
       connectNodes errors = zipWith (\err i -> 
@@ -349,11 +345,11 @@ propComplexErrorGraphRecovery nodeCount =
             related = take relatedCount (drop (i+1) errors)
         in withRelatedErrors err related) errors [0..]
       connectedErrors = connectNodes nodeErrors
-      allRecoverable = all canRecoverFrom connectedErrors
+      allRecoverable = L.all canRecoverFrom connectedErrors
   in allRecoverable || not allRecoverable  -- 至少有确定的结果
 
 -- ============================================================================
--- Helper Functions and Generators
+-- Helper Functions L.and Generators
 -- ============================================================================
 
 -- 获取错误的严重程度

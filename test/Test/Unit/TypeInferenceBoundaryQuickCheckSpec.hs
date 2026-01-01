@@ -4,6 +4,7 @@
 module Test.Unit.TypeInferenceBoundaryQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, QuickCheckTests(..))
 import Test.Tasty.HUnit (testCase, assert, assertBool)
 import Compiler.TypeChecker (TypeScheme, Type, TypeEnvironment(..), inferType, generalize, instantiate)
@@ -86,7 +87,7 @@ tests = testGroup "Type Inference Boundary Tests"
 
   , testProperty "type inference is principal" $ \env ->
       \expr -> case inferType' env expr of
-        Just typ -> all (`isSubtypeOf` typ) (possibleTypes env expr)
+        Just typ -> L.all (`isSubtypeOf` typ) (possibleTypes env expr)
         Nothing -> True
 
   , testProperty "type environment extension preserves inference" $ \env ->
@@ -187,7 +188,7 @@ isWellTyped :: Type -> Bool
 isWellTyped (TVar _) = True
 isWellTyped (TCon _) = True
 isWellTyped (TArr t1 t2) = isWellTyped t1 && isWellTyped t2
-isWellTyped (TApp t args) = isWellTyped t && all isWellTyped args
+isWellTyped (TApp t args) = isWellTyped t && L.all isWellTyped args
 
 isMorePolymorphic :: TypeScheme -> Type -> Bool
 isMorePolymorphic (Forall vars _) _ = not (null vars)
@@ -216,7 +217,7 @@ isMonomorphic :: Type -> Bool
 isMonomorphic (TVar _) = False
 isMonomorphic (TCon _) = True
 isMonomorphic (TArr t1 t2) = isMonomorphic t1 && isMonomorphic t2
-isMonomorphic (TApp t args) = isMonomorphic t && all isMonomorphic args
+isMonomorphic (TApp t args) = isMonomorphic t && L.all isMonomorphic args
 
 isPrincipalType :: TestTypeEnvironment -> String -> Type -> Bool
 isPrincipalType _ expr typ = case expr of

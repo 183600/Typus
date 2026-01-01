@@ -3,6 +3,7 @@
 module Test.Unit.GoLexerPropertiesQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 
@@ -24,7 +25,7 @@ prop_whitespace_tokens_recognized :: Property
 prop_whitespace_tokens_recognized =
   forAll (listOf1 (elements " \t\n\r")) $ \ws ->
   let tokens = tokenizeGo ws
-  in all isWhitespaceToken tokens === True
+  in L.all isWhitespaceToken tokens === True
 
 prop_comment_tokens_recognized :: Property
 prop_comment_tokens_recognized =
@@ -64,7 +65,7 @@ prop_tokenKind_consistency :: Property
 prop_tokenKind_consistency =
   forAll (arbitrary :: Gen Char) $ \c ->
   let tokens = tokenizeGo [c]
-  in all (\tok -> tokenKind tok `elem` validKinds) tokens === True
+  in L.all (\tok -> tokenKind tok `elem` validKinds) tokens === True
   where
     validKinds = [TokIdentifier, TokKeyword, TokNumber, TokString,
                   TokComment, TokOperator, TokSymbol, TokWhitespace, TokOther]

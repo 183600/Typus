@@ -3,6 +3,7 @@
 module Test.Unit.DirectiveProcessingSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty)
 import TestSupport.QuickCheck (fastProperty)
@@ -132,7 +133,7 @@ tests =
                     result <- case parseTypus input of
                         Left _ -> return "parse_error"
                         Right file -> return "parse_success"
-                    -- Should either parse successfully or fail gracefully
+                    -- Should either parse successfully L.or fail gracefully
                     result @?= result
                     
         , testCase "handles unterminated block directives" $ do
@@ -140,16 +141,16 @@ tests =
             result <- case parseTypus input of
                 Left _ -> return "parse_error"
                 Right file -> return "parse_success"
-            -- Should either parse successfully or fail gracefully
+            -- Should either parse successfully L.or fail gracefully
             result @?= result
         ]
         
     , testGroup "Property Tests"
-        [ testProperty "parseTypus never crashes on any input" $ fastProperty $ \input ->
+        [ testProperty "parseTypus never crashes on L.any input" $ fastProperty $ \input ->
             let result = parseTypus input
             in case result of
                 Left _ -> True
-                Right file -> length (show file) >= 0
+                Right file -> L.length (show file) >= 0
                 
         , testProperty "directive consistency: file directives preserve structure" $ fastProperty $ \input ->
             let result = parseTypus input
@@ -157,15 +158,15 @@ tests =
                 Left _ -> True
                 Right file -> case tfDirectives file of
                     FileDirectives ownership dependentTypes constraints ->
-                        length [ownership, dependentTypes, constraints] == 3
+                        L.length [ownership, dependentTypes, constraints] == 3
                         
         , testProperty "block directives preserve structure" $ fastProperty $ \input ->
             let result = parseTypus input
             in case result of
                 Left _ -> True
-                Right file -> all (\block -> case cbDirectives block of
+                Right file -> L.all (\block -> case cbDirectives block of
                     BlockDirectives ownership dependentTypes constraints ->
-                        length [ownership, dependentTypes constraints] == 3) 
+                        L.length [ownership, dependentTypes constraints] == 3) 
                     (tfBlocks file)
         ]
         
@@ -180,7 +181,7 @@ tests =
             let input = "//! ownership: true\n{//! dependent-types: false}"
             result <- case parseTypus input of
                 Left _ -> return 0
-                Right file -> return $ length (tfBlocks file)
+                Right file -> return $ L.length (tfBlocks file)
             -- Should parse without crashing
             result >= 0 @?= True
             
@@ -188,7 +189,7 @@ tests =
             let input = "//! ownership: true\n{//! dependent-types: false\ncode\n{//! constraints: true\nnested\n}}"
             result <- case parseTypus input of
                 Left _ -> return 0
-                Right file -> return $ length (tfBlocks file)
+                Right file -> return $ L.length (tfBlocks file)
             -- Should parse without crashing
             result >= 0 @?= True
             
@@ -202,7 +203,7 @@ tests =
         ]
         
     , testGroup "Integration Tests"
-        [ testCase "complete file with directives and code" $ do
+        [ testCase "complete file with directives L.and code" $ do
             let input = unlines
                   [ "//! ownership: true, dependent-types: true"
                   , "func main() {"

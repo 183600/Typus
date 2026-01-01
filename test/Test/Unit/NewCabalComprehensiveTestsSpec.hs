@@ -35,7 +35,7 @@ prop_parser_empty_input =
 -- Property: Parser handles whitespace-only input
 prop_parser_whitespace_input :: String -> Property
 prop_parser_whitespace_input input =
-  all isSpace input ==>
+  L.all isSpace input ==>
   let result = parseTypus input
   in property $ case result of
     Left _ -> property True
@@ -87,7 +87,7 @@ prop_string_processing_composable input =
       cleaned = removeComments input
       pipeline = input |> trim |> removeComments |> splitBy ','
       alternative = input |> removeComments |> trim |> splitBy ','
-  in property $ length pipeline >= 0 .&&. length alternative >= 0
+  in property $ L.length pipeline >= 0 .&&. L.length alternative >= 0
 
 -- Property: Error handling preserves error information
 prop_error_handling_preserves_info :: String -> Property
@@ -96,11 +96,11 @@ prop_error_handling_preserves_info input =
       compileResult = compile input
   in property $ case (parseResult, compileResult) of
     (Left parseErr, Left compileErr) -> 
-      property $ not (null (show parseErr)) .&&. not (null (show compileErr))
+      property $ not (L.null (show parseErr)) .&&. not (L.null (show compileErr))
     (Right _, Left compileErr) -> 
-      property $ not (null (show compileErr))
+      property $ not (L.null (show compileErr))
     (Left parseErr, Right _) -> 
-      property $ not (null (show parseErr))
+      property $ not (L.null (show parseErr))
     (Right _, Right _) -> 
       property True
 

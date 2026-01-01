@@ -26,7 +26,7 @@ prop_source_span_merge_preserves_ordering span1 span2 =
       mergedStart = getSpanStart merged
   in property $ (mergedStart <= start1) .&&. (mergedStart <= start2)
 
--- Property: Source span contains its own start and end
+-- Property: Source span contains its own start L.and end
 prop_source_span_contains_bounds :: SourceSpan -> Property
 prop_source_span_contains_bounds span =
   let start = getSpanStart span

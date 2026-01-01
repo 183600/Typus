@@ -9,6 +9,7 @@ import Ownership.Common.Types (OwnershipAnalyzer, OwnershipError(..), OwnershipT
 import SourceLocation (SourcePos(..), startPos)
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 -- ============================================================================
@@ -101,7 +102,7 @@ prop_lexerHandlesBasicTokens input =
   let result = lexAll input
   in case result of
     Left _ -> True  -- May fail, but shouldn't crash
-    Right tokens -> length tokens >= 0
+    Right tokens -> L.length tokens >= 0
 
 -- Property: lexer preserves token order
 prop_lexerPreservesTokenOrder :: String -> Bool
@@ -120,7 +121,7 @@ prop_lexerHandlesWhitespace input =
       result = lexAll withWhitespace
   in case result of
     Left _ -> True
-    Right tokens -> length tokens >= 0
+    Right tokens -> L.length tokens >= 0
 
 -- Property: lexer handles special characters
 prop_lexerHandlesSpecialChars :: String -> Bool
@@ -130,7 +131,7 @@ prop_lexerHandlesSpecialChars input =
       result = lexAll testInput
   in case result of
     Left _ -> True
-    Right tokens -> length tokens >= 0
+    Right tokens -> L.length tokens >= 0
 
 -- ============================================================================
 -- Parsing Properties
@@ -205,7 +206,7 @@ prop_errorDetectionComprehensive input =
   let analyzer = newOwnershipAnalyzer
       result = analyzeOwnership analyzer input
   in case result of
-    Left errors -> length errors >= 0  -- Should detect errors
+    Left errors -> L.length errors >= 0  -- Should detect errors
     Right _ -> True
 
 -- Property: error recovery is graceful
@@ -251,7 +252,7 @@ prop_completePipelineConsistent input =
     _ -> False  -- Should be deterministic
 
 -- ============================================================================
--- Helper Functions and Generators
+-- Helper Functions L.and Generators
 -- ============================================================================
 
 -- Generate ownership types

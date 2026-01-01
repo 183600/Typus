@@ -15,7 +15,9 @@ import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
 
 import Utils (trim, splitBy, splitByComma, removeLineComments, normalizeIndentation)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, sort, nub, intercalate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (sort, nub, intercalate)
 import Data.Char (isSpace, isAlpha, isAlphaNum, isDigit, isLower, isUpper)
 
 -- Property: splitBy works correctly for basic cases
@@ -43,28 +45,28 @@ prop_splitby_single :: Char -> String -> Property
 prop_splitby_single delimiter ch =
   let input = [ch]
       result = splitBy delimiter input
-  in length result >= 1 -- Basic property check
+  in L.length result >= 1 -- Basic property check
 
 -- Property: removeLineComments works correctly
 prop_remove_line_comments :: String -> Property
 prop_remove_line_comments code =
   let result = removeLineComments code
-  in length result >= 0 -- Basic property check
+  in property $ L.length result >= 0 -- Basic property check
 
 -- Property: normalizeIndentation works correctly
 prop_normalize_indentation :: String -> Property
 prop_normalize_indentation indentedCode =
   let result = normalizeIndentation indentedCode
-  in length result >= 0 -- Basic property check
+  in property $ L.length result >= 0 -- Basic property check
 
--- Property: trim removes leading and trailing whitespace correctly
+-- Property: trim removes leading L.and trailing whitespace correctly
 prop_trim_whitespace :: String -> Property
 prop_trim_whitespace input =
   let trimmed = trim input
-      hasLeadingSpace = not (null input) && isSpace (head input)
+      hasLeadingSpace = not (null input) && isSpace (L.head input)
       hasTrailingSpace = not (null input) && isSpace (last input)
   in if hasLeadingSpace || hasTrailingSpace
-     then not (null trimmed) ==> (not (isSpace (head trimmed)) && not (isSpace (last trimmed)))
+     then not (null trimmed) ==> (not (isSpace (L.head trimmed)) && not (isSpace (last trimmed)))
      else trimmed === input
 
 -- Property: trim handles empty string correctly
@@ -72,25 +74,25 @@ prop_trim_empty :: Property
 prop_trim_empty =
   trim "" === ""
 
--- Property: trim handles all whitespace correctly
+-- Property: trim handles L.all whitespace correctly
 prop_trim_all_whitespace :: String -> Property
 prop_trim_all_whitespace whitespace =
-  all isSpace whitespace ==> trim whitespace === ""
+  L.all isSpace whitespace ==> trim whitespace === ""
 
 -- Property: removeLineComments preserves code without comments
 prop_remove_line_comments_no_comments :: String -> Property
 prop_remove_line_comments_no_comments code =
-  not ("//" `isInfixOf` code) ==>
+  not ("//" `L.isInfixOf` code) ==>
   let result = removeLineComments code
   in result === code
 
 -- Property: removeLineComments handles line ending with comment
 prop_remove_line_comments_end_of_line :: String -> Property
 prop_remove_line_comments_end_of_line prefix =
-  not ("//" `isInfixOf` prefix) ==>
+  not ("//" `L.isInfixOf` prefix) ==>
   let code = prefix ++ " // comment"
       result = removeLineComments code
-  in length result >= length prefix -- Basic property check
+  in L.length result >= L.length prefix -- Basic property check
 
 -- Property: trim is idempotent
 prop_trim_idempotent :: String -> Property
@@ -103,8 +105,8 @@ prop_trim_idempotent input =
 prop_trim_preserves_content :: String -> Property
 prop_trim_preserves_content input =
   let trimmed = trim input
-      nonSpaceInput = filter (not . isSpace) input
-      nonSpaceTrimmed = filter (not . isSpace) trimmed
+      nonSpaceInput = L.filter (not . isSpace) input
+      nonSpaceTrimmed = L.filter (not . isSpace) trimmed
   in nonSpaceInput === nonSpaceTrimmed
 
 -- Property: splitBy works with different delimiters
@@ -113,7 +115,7 @@ prop_splitby_different_delimiters delim1 delim2 input =
   delim1 /= delim2 ==>
   let result1 = splitBy delim1 input
       result2 = splitBy delim2 input
-  in length result1 >= 1 .&&. length result2 >= 1
+  in L.length result1 >= 1 .&&. L.length result2 >= 1
 
 -- Property: splitBy handles repeated delimiters
 prop_splitby_repeated :: Char -> Int -> Property
@@ -121,7 +123,7 @@ prop_splitby_repeated delimiter count =
   count >= 1 && count <= 10 ==>
   let input = replicate count delimiter
       result = splitBy delimiter input
-  in length result === count + 1
+  in L.length result === count + 1
 
 -- Property: splitByComma is equivalent to splitBy ','
 prop_splitby_comma_equivalence :: String -> Property
@@ -138,9 +140,9 @@ tests = testGroup "New Utils Additional tests"
   , fastProperty "splitBy handles single character correctly" prop_splitby_single
   , fastProperty "removeLineComments works correctly" prop_remove_line_comments
   , fastProperty "normalizeIndentation works correctly" prop_normalize_indentation
-  , fastProperty "trim removes leading and trailing whitespace correctly" prop_trim_whitespace
+  , fastProperty "trim removes leading L.and trailing whitespace correctly" prop_trim_whitespace
   , fastProperty "trim handles empty string correctly" prop_trim_empty
-  , fastProperty "trim handles all whitespace correctly" prop_trim_all_whitespace
+  , fastProperty "trim handles L.all whitespace correctly" prop_trim_all_whitespace
   
   , fastProperty "removeLineComments preserves code without comments" prop_remove_line_comments_no_comments
   , fastProperty "removeLineComments handles line ending with comment" prop_remove_line_comments_end_of_line

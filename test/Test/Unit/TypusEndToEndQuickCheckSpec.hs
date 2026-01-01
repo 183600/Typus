@@ -25,6 +25,7 @@ import GoToolchain
 import SourceLocation (SourcePos, SourceSpan, Located(..))
 import Utils (trim)
 
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import qualified Data.Text as T
 import System.FilePath (takeExtension)
@@ -133,7 +134,7 @@ prop_optimization_preserves_behavior typusCode =
   in property $ behaviorPreserved
   where
     optimizeCode = trim -- Simplified
-    checkBehaviorPreserved original optimized = length optimized >= 0
+    checkBehaviorPreserved original optimized = L.length optimized >= 0
 
 -- Property: Code generation produces valid Go code
 prop_codegeneration_valid_go :: String -> Property
@@ -211,7 +212,7 @@ prop_error_recovery_maintains_state typusCode =
 -- Property: Performance scales with project size
 prop_performance_scales_project_size :: [String] -> Property
 prop_performance_scales_project_size files =
-  length files >= 5 ==> 
+  L.length files >= 5 ==> 
   let performance = measureCompilationPerformance files
       scales = isPerformanceScalable performance
   in property $ scales
@@ -222,15 +223,15 @@ prop_performance_scales_project_size files =
 -- Property: Concurrent compilation produces correct results
 prop_concurrent_compilation_correct :: [String] -> Property
 prop_concurrent_compilation_correct files =
-  length files >= 3 ==> 
+  L.length files >= 3 ==> 
   let sequential = compileSequentially files
       concurrent = compileConcurrently files
       correct = areResultsEqual sequential concurrent
   in property $ correct
   where
-    compileSequentially = map (Right . ("compiled " ++)) -- Simplified
-    compileConcurrently = map (Right . ("compiled " ++)) -- Simplified
-    areResultsEqual seq conc = length seq == length conc
+    compileSequentially = L.map (Right . ("compiled " ++)) -- Simplified
+    compileConcurrently = L.map (Right . ("compiled " ++)) -- Simplified
+    areResultsEqual seq conc = L.length seq == L.length conc
 
 -- Additional end-to-end properties
 
@@ -261,7 +262,7 @@ prop_external_tools_integration typusCode =
 -- Property: Memory usage is bounded for large projects
 prop_memory_usage_bounded :: [String] -> Property
 prop_memory_usage_bounded files =
-  length files >= 10 ==> 
+  L.length files >= 10 ==> 
   let memoryUsage = measureMemoryUsage files
       bounded = isMemoryUsageBounded memoryUsage
   in property $ bounded
@@ -349,10 +350,10 @@ measureCompilationPerformance :: [String] -> Int
 measureCompilationPerformance _ = 1000
 
 compileSequentially :: [String] -> [Either String String]
-compileSequentially = map (Right . ("compiled " ++))
+compileSequentially = L.map (Right . ("compiled " ++))
 
 compileConcurrently :: [String] -> [Either String String]
-compileConcurrently = map (Right . ("compiled " ++))
+compileConcurrently = L.map (Right . ("compiled " ++))
 
 runFullPipeline :: String -> Either String String
 runFullPipeline _ = Right "edge case handled"

@@ -10,13 +10,15 @@
 module Test.Unit.NewCabalCoreTestsSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
 import qualified Data.Text as T
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Data.List (sort, nub, length, sum, reverse, concat, isInfixOf, isPrefixOf)
+import Data.List (length, sum, reverse, concat, isInfixOf, isPrefixOf)
+import Data.List (sort, nub)
 import Data.Char (isSpace, isAlphaNum, isLetter, isDigit)
 import Control.Monad (foldM, when)
 
@@ -45,8 +47,8 @@ prop_trim_idempotent s = trim (trim s) === trim s
 prop_splitBy_consistency :: Char -> String -> Property
 prop_splitBy_consistency delim s = 
   let parts = splitBy delim s
-      reconstructed = concat (map (\p -> p ++ [delim]) (init parts)) ++ (if null parts then "" else last parts)
-  in length parts > 0 ==> reconstructed === s
+      reconstructed = L.concat (L.map (\p -> p ++ [delim]) (init parts)) ++ (if null parts then "" else last parts)
+  in L.length parts > 0 ==> reconstructed === s
 
 prop_splitByComma_handles_empty :: Property
 prop_splitByComma_handles_empty = splitByComma "" === [""]
@@ -56,24 +58,24 @@ prop_removeLineComments_preserves_strings prefix code =
   not ('"' `elem` prefix) && not ('"' `elem` code) ==>
   let input = prefix ++ "// comment\n\"" ++ code ++ "\"\n"
       result = removeLineComments input
-  in "\"" `isInfixOf` result && code `isInfixOf` result
+  in "\"" `L.isInfixOf` result && code `L.isInfixOf` result
 
 prop_removeComments_handles_nested :: String -> String -> Property
 prop_removeComments_handles_nested outer inner =
-  not ("/*" `isInfixOf` outer) && not ("*/" `isInfixOf` outer) &&
-  not ("/*" `isInfixOf` inner) && not ("*/" `isInfixOf` inner) ==>
+  not ("/*" `L.isInfixOf` outer) && not ("*/" `L.isInfixOf` outer) &&
+  not ("/*" `L.isInfixOf` inner) && not ("*/" `L.isInfixOf` inner) ==>
   let input = outer ++ "/* " ++ inner ++ " */" ++ outer
       result = removeComments input
-  in outer `isInfixOf` result && not (inner `isInfixOf` result)
+  in outer `L.isInfixOf` result && not (inner `L.isInfixOf` result)
 
 prop_normalizeIndentation_preserves_relative :: String -> Property
 prop_normalizeIndentation_preserves_relative s =
   let lines' = lines s
-      hasIndent = any (isPrefixOf " " . dropWhile isSpace) lines'
+      hasIndent = L.any (L.isPrefixOf " " . dropWhile isSpace) lines'
   in hasIndent ==>
      let normalized = normalizeIndentation s
          normLines = lines normalized
-     in length normLines === length lines'
+     in L.length normLines === L.length lines'
 
 -- ============================================================================
 -- Test 2: SourceLocation Module Position Calculation Tests
@@ -111,7 +113,7 @@ prop_posAfter_monotonic c pos =
 
 prop_spanFrom_creates_valid_span :: SourcePos -> String -> Property
 prop_spanFrom_creates_valid_span pos text =
-  let endPos = foldl (flip posAfter) pos text
+  let endPos = L.foldl (flip posAfter) pos text
       span = spanFrom pos text
   in spanStart span === pos && spanEnd span === endPos
 
@@ -139,16 +141,16 @@ prop_parseTypus_empty =
 
 prop_parseTypus_simple_package :: String -> Property
 prop_parseTypus_simple_package pkgName =
-  not (null pkgName) && not ("package " `isInfixOf` pkgName) && all isAlphaNum pkgName ==>
+  not (null pkgName) && not ("package " `L.isInfixOf` pkgName) && L.all isAlphaNum pkgName ==>
   let content = "package " ++ pkgName ++ "\nfunc main() {}"
       result = parseTypus content
   in case result of
     Left _ -> property False
-    Right typusFile -> length (tfBlocks typusFile) >= 1
+    Right typusFile -> L.length (tfBlocks typusFile) >= 1
 
 prop_parseTypus_with_directives :: String -> Bool -> Bool -> Property
 prop_parseTypus_with_directives content ownership dependentTypes =
-  not (null content) && not ("//!" `isInfixOf` content) ==>
+  not (null content) && not ("//!" `L.isInfixOf` content) ==>
   let directives = "//!" ++ 
                    (if ownership then " ownership:on" else "") ++
                    (if dependentTypes then " dependent_types:off" else "")
@@ -156,7 +158,7 @@ prop_parseTypus_with_directives content ownership dependentTypes =
       result = parseTypus fullContent
   in case result of
     Left _ -> property False
-    Right typusFile -> length (tfBlocks typusFile) >= 1
+    Right typusFile -> L.length (tfBlocks typusFile) >= 1
 
 -- ============================================================================
 -- Test 4: Error Handling Edge Case Tests
@@ -198,8 +200,8 @@ prop_error_location_valid err =
 prop_parse_nested_functions :: Int -> String -> Property
 prop_parse_nested_functions depth funcBody =
   depth > 0 && depth <= 5 && not ('{' `elem` funcBody) && not ('}' `elem` funcBody) ==>
-  let indent func n = concat (replicate n "  ") ++ func
-      nestedFuncs = concat $ zipWith (\i _ -> 
+  let indent func n = L.concat (replicate n "  ") ++ func
+      nestedFuncs = L.concat $ zipWith (\i _ -> 
         indent ("func level" ++ show i ++ "() {\n") i ++ 
         indent funcBody (i+1) ++ "\n" ++
         indent "}\n" i) [0..depth-1] [undefined..undefined]
@@ -207,7 +209,7 @@ prop_parse_nested_functions depth funcBody =
       result = parseTypus content
   in case result of
     Left _ -> depth <= 2  -- Allow failure for deeper nesting
-    Right typusFile -> length (tfBlocks typusFile) >= 1
+    Right typusFile -> L.length (tfBlocks typusFile) >= 1
 
 prop_parse_nested_structs :: Int -> Property
 prop_parse_nested_structs depth =
@@ -221,58 +223,58 @@ prop_parse_nested_structs depth =
       result = parseTypus content
   in case result of
     Left _ -> property False
-    Right typusFile -> length (tfBlocks typusFile) >= 1
+    Right typusFile -> L.length (tfBlocks typusFile) >= 1
 
 -- ============================================================================
--- Test 6: Unicode and Special Character Tests
+-- Test 6: Unicode L.and Special Character Tests
 -- ============================================================================
 
 unicode_tests :: TestTree
-unicode_tests = testGroup "Unicode and Special Character Tests"
+unicode_tests = testGroup "Unicode L.and Special Character Tests"
   [ testCase "handles Unicode in comments" $ do
       let content = "package main\n// Unicode test: 你好世界 🌍\nfunc main() {}"
           result = parseTypus content
       case result of
         Left _ -> assertFailure "Failed to parse Unicode comments"
-        Right typusFile -> length (tfBlocks typusFile) @?= 1
+        Right typusFile -> L.length (tfBlocks typusFile) @?= 1
         
   , testCase "handles Unicode in string literals" $ do
       let content = "package main\nfunc main() {\n  s := \"Hello 世界 🌏\"\n}"
           result = parseTypus content
       case result of
         Left _ -> assertFailure "Failed to parse Unicode strings"
-        Right typusFile -> length (tfBlocks typusFile) @?= 1
+        Right typusFile -> L.length (tfBlocks typusFile) @?= 1
         
   , testCase "handles special characters in identifiers" $ do
       let content = "package main\nfunc test_αβγ() {\n  var_123 := 42\n}"
           result = parseTypus content
       case result of
         Left _ -> assertFailure "Failed to parse special characters"
-        Right typusFile -> length (tfBlocks typusFile) @?= 1
+        Right typusFile -> L.length (tfBlocks typusFile) @?= 1
   ]
 
 prop_unicode_content_preserved :: String -> Property
 prop_unicode_content_preserved unicodeText =
-  not (null unicodeText) && not ("//!" `isInfixOf` unicodeText) ==>
+  not (null unicodeText) && not ("//!" `L.isInfixOf` unicodeText) ==>
   let content = "package main\n// Unicode: " ++ unicodeText ++ "\nfunc main() {}"
       result = parseTypus content
   in case result of
     Left _ -> property False
-    Right typusFile -> length (tfBlocks typusFile) >= 1
+    Right typusFile -> L.length (tfBlocks typusFile) >= 1
 
 -- ============================================================================
--- Test 7: Performance and Memory Efficiency Tests
+-- Test 7: Performance L.and Memory Efficiency Tests
 -- ============================================================================
 
 performance_tests :: TestTree
-performance_tests = testGroup "Performance and Memory Efficiency Tests"
+performance_tests = testGroup "Performance L.and Memory Efficiency Tests"
   [ testCase "handles large files efficiently" $ do
       let largeContent = unlines $ replicate 1000 "  // This is a comment line\n  x := x + 1"
           content = "package main\nfunc largeFunc() {\n" ++ largeContent ++ "}\n"
           result = parseTypus content
       case result of
         Left _ -> assertFailure "Failed to parse large file"
-        Right typusFile -> length (tfBlocks typusFile) @?= 1
+        Right typusFile -> L.length (tfBlocks typusFile) @?= 1
         
   , testCase "handles deep indentation efficiently" $ do
       let deepIndent = concatMap (\i -> replicate i ' ' ++ "x := " ++ show i ++ "\n") [0..100]
@@ -280,38 +282,38 @@ performance_tests = testGroup "Performance and Memory Efficiency Tests"
           result = parseTypus content
       case result of
         Left _ -> assertFailure "Failed to parse deeply indented code"
-        Right typusFile -> length (tfBlocks typusFile) @?= 1
+        Right typusFile -> L.length (tfBlocks typusFile) @?= 1
   ]
 
 prop_large_input_handling :: Int -> String -> Property
 prop_large_input_handling multiplier baseContent =
-  multiplier > 0 && multiplier <= 50 && length baseContent <= 100 ==>
-  let largeContent = concat $ replicate multiplier (baseContent ++ "\n")
+  multiplier > 0 && multiplier <= 50 && L.length baseContent <= 100 ==>
+  let largeContent = L.concat $ replicate multiplier (baseContent ++ "\n")
       content = "package main\nfunc main() {\n" ++ largeContent ++ "}\n"
       result = parseTypus content
   in case result of
     Left _ -> multiplier > 20  -- Allow failure for very large inputs
-    Right typusFile -> length (tfBlocks typusFile) >= 1
+    Right typusFile -> L.length (tfBlocks typusFile) >= 1
 
 -- ============================================================================
--- Test 8: Boundary Condition and Exception Input Tests
+-- Test 8: Boundary Condition L.and Exception Input Tests
 -- ============================================================================
 
 boundary_tests :: TestTree
-boundary_tests = testGroup "Boundary Condition and Exception Input Tests"
+boundary_tests = testGroup "Boundary Condition L.and Exception Input Tests"
   [ testCase "handles empty lines" $ do
       let content = "package main\n\n\nfunc main() {\n\n}\n"
           result = parseTypus content
       case result of
         Left _ -> assertFailure "Failed to handle empty lines"
-        Right typusFile -> length (tfBlocks typusFile) @?= 1
+        Right typusFile -> L.length (tfBlocks typusFile) @?= 1
         
   , testCase "handles only whitespace" $ do
       let content = "   \n  \t  \n   \n"
           result = parseTypus content
       case result of
         Left _ -> pure ()  -- Expected to fail
-        Right typusFile -> null (tfBlocks typusFile) @?= True
+        Right typusFile -> L.null (tfBlocks typusFile) @?= True
         
   , testCase "handles extremely long lines" $ do
       let longLine = "x := \"" ++ replicate 1000 'a' ++ "\"\n"
@@ -319,7 +321,7 @@ boundary_tests = testGroup "Boundary Condition and Exception Input Tests"
           result = parseTypus content
       case result of
         Left _ -> assertFailure "Failed to handle extremely long lines"
-        Right typusFile -> length (tfBlocks typusFile) @?= 1
+        Right typusFile -> L.length (tfBlocks typusFile) @?= 1
   ]
 
 prop_boundary_conditions :: String -> Property
@@ -327,7 +329,7 @@ prop_boundary_conditions input =
   let result = parseTypus input
   in case result of
     Left _ -> property True  -- Parsing may fail for boundary conditions
-    Right typusFile -> property $ length (tfBlocks typusFile) >= 0
+    Right typusFile -> property $ L.length (tfBlocks typusFile) >= 0
 
 -- ============================================================================
 -- Test 9: Module Integration Tests
@@ -335,7 +337,7 @@ prop_boundary_conditions input =
 
 integration_tests :: TestTree
 integration_tests = testGroup "Module Integration Tests"
-  [ testCase "Utils and Parser integration" $ do
+  [ testCase "Utils L.and Parser integration" $ do
       let content = "package main\nfunc main() {\n  // Comment with   extra   spaces\n  x := 1 + 2\n}"
           result = parseTypus content
       case result of
@@ -343,10 +345,10 @@ integration_tests = testGroup "Module Integration Tests"
         Right typusFile -> do
           let blocks = tfBlocks typusFile
           length blocks @?= 1
-          let blockContent = cbContent (head blocks)
+          let blockContent = cbContent (L.head blocks)
           trim blockContent @?= "x := 1 + 2"
           
-  , testCase "SourceLocation and Parser integration" $ do
+  , testCase "SourceLocation L.and Parser integration" $ do
       let content = "package main\nfunc test() {}"
           result = parseTypus content
       case result of
@@ -354,7 +356,7 @@ integration_tests = testGroup "Module Integration Tests"
         Right typusFile -> do
           let blocks = tfBlocks typusFile
           length blocks @?= 1
-          let span = cbSpan (head blocks)
+          let span = cbSpan (L.head blocks)
           posLine (spanStart span) @?= 2
   ]
 
@@ -365,7 +367,7 @@ prop_integration_consistency prefix suffix =
       result = parseTypus content
   in case result of
     Left _ -> property False
-    Right typusFile -> length (tfBlocks typusFile) >= 1
+    Right typusFile -> L.length (tfBlocks typusFile) >= 1
 
 -- ============================================================================
 -- Test 10: QuickCheck Property Tests

@@ -5,7 +5,9 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), Gen, oneof, elements, listOf, sized, resize)
 import Data.Char (isSpace, isAlphaNum)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (nub)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import qualified Data.Text as T
 
@@ -20,7 +22,7 @@ tests =
   testGroup "New Comprehensive Cabal Tests"
     [ testGroup "Utils Module Properties"
         [ testProperty "trim removes only leading/trailing whitespace" propTrimBoundary
-        , testProperty "splitBy length relationship" propSplitByLength
+        , testProperty "splitBy L.length relationship" propSplitByLength
         , testProperty "splitByCollapsed removes empty segments" propSplitByCollapsedNoEmpty
         , testProperty "breakOn concatenation property" propBreakOnConcat
         , testProperty "removeLineComments preserves structure" propRemoveLineCommentsStructure
@@ -57,23 +59,23 @@ tests =
 propTrimBoundary :: String -> Bool
 propTrimBoundary input =
   let trimmed = trim input
-      hasLeadingSpace = not (null input) && isSpace (head input)
+      hasLeadingSpace = not (null input) && isSpace (L.head input)
       hasTrailingSpace = not (null input) && isSpace (last input)
   in if null trimmed
-     then all isSpace input
-     else not (isSpace (head trimmed) || isSpace (last trimmed))
+     then L.all isSpace input
+     else not (isSpace (L.head trimmed) || isSpace (last trimmed))
 
 -- | splitBy的长度关系：结果长度 <= 原始长度 + 1
 propSplitByLength :: Char -> String -> Bool
 propSplitByLength delim input =
   let parts = splitBy delim input
-      totalLength = sum (map length parts)
-  in totalLength + length parts - 1 >= length input
+      totalLength = L.sum (map L.length parts)
+  in totalLength + L.length parts - 1 >= L.length input
 
 -- | splitByCollapsed不产生空段
 propSplitByCollapsedNoEmpty :: Char -> String -> Bool
 propSplitByCollapsedNoEmpty delim input =
-  all (not . null) (splitByCollapsed delim input)
+  L.all (not . null) (splitByCollapsed delim input)
 
 -- | breakOn的连接性质：prefix + pattern + suffix = original
 propBreakOnConcat :: String -> String -> Bool
@@ -89,7 +91,7 @@ propRemoveLineCommentsStructure input =
   let withoutComments = removeLineComments input
       linesBefore = lines input
       linesAfter = lines withoutComments
-  in length linesAfter <= length linesBefore
+  in L.length linesAfter <= L.length linesBefore
 
 -- ============================================================================
 -- Parser Module Properties
@@ -165,12 +167,12 @@ propSourcePosArithmetic line1 col1 line2 col2 =
 -- | 错误消息一致性
 propErrorMessageConsistency :: String -> Bool
 propErrorMessageConsistency errorMsg =
-  not (null errorMsg) && all (not . isSpace) (filter (not . isSpace) errorMsg)
+  not (null errorMsg) && L.all (not . isSpace) (L.filter (not . isSpace) errorMsg)
 
 -- | 错误恢复保持部分结果
 propErrorRecoveryPartial :: [Int] -> Bool
 propErrorRecoveryPartial input =
-  let validInput = filter (> 0) input
+  let validInput = L.filter (> 0) input
       hasValidResult = not (null validInput)
   in hasValidResult || null input
 
@@ -184,7 +186,7 @@ propNormalizeIndentationRelative input =
   let normalized = normalizeIndentation input
       originalLines = lines input
       normalizedLines = lines normalized
-  in length normalizedLines == length originalLines
+  in L.length normalizedLines == L.length originalLines
 
 -- | 注释移除的幂等性
 propCommentRemovalIdempotent :: String -> Bool

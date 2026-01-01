@@ -3,6 +3,7 @@
 module Test.Unit.NewErrorHandlingQuickCheckTestSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Utils (trim, splitBy, removeLineComments)
 import SourceLocation (SourcePos(..), startPos, posAfter, emptySpan, isValidSpan)
@@ -14,12 +15,12 @@ import Control.Exception (evaluate)
 prop_trim_error_handling :: String -> Bool
 prop_trim_error_handling s = 
   let result = trim s
-  in length result >= 0  -- trim不应该产生负长度字符串
+  in L.length result >= 0  -- trim不应该产生负长度字符串
 
 prop_split_error_handling :: Char -> String -> Bool
 prop_split_error_handling delim s = 
   let parts = splitBy delim s
-  in length parts >= 1  -- splitBy应该总是返回至少一个部分
+  in L.length parts >= 1  -- splitBy应该总是返回至少一个部分
 
 prop_position_error_handling :: Int -> Int -> Bool
 prop_position_error_handling line col = 
@@ -55,7 +56,7 @@ prop_null_character_handling s =
   let stringWithNull = s ++ "\0"
       trimmed = trim stringWithNull
       parts = splitBy '\0' stringWithNull
-  in length trimmed >= 0 && length parts >= 1
+  in L.length trimmed >= 0 && L.length parts >= 1
 
 -- 测试类型错误处理
 prop_position_validation :: Int -> Int -> Bool
@@ -87,22 +88,22 @@ prop_error_recovery s1 s2 =
       trimmed2 = trim s2
       trimmedCombined = trim combined
   -- 操作应该是可组合的
-  in length trimmedCombined >= 0
+  in L.length trimmedCombined >= 0
 
 prop_partial_failure_handling :: String -> Bool
 prop_partial_failure_handling s = 
   let parts = splitBy ',' s
       processed = map trim parts
   -- 即使某些部分是空的，处理也应该继续
-  in length processed == length parts
+  in L.length processed == L.length parts
 
 -- 测试资源清理
 prop_memory_cleanup :: Small Int -> String -> Bool
 prop_memory_cleanup (Small n) s = n >= 0 && n <= 100 ==>  -- 限制大小
-  let largeString = concat (replicate n s)
+  let largeString = L.concat (replicate n s)
       result = trim largeString
   -- 操作应该完成而不耗尽内存
-  in length result >= 0
+  in L.length result >= 0
 
 -- 生成测试套件
 tests :: TestTree

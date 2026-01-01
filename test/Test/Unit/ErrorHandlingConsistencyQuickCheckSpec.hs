@@ -2,6 +2,7 @@
 module Test.Unit.ErrorHandlingConsistencyQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Arbitrary(..), Gen, oneof, elements, listOf, choose, 
                         Property, (===), forAll, counterexample, suchThat, (==>))
@@ -94,7 +95,7 @@ prop_error_severity_total_ordering sev1 sev2 sev3 =
         Warning -> 3
         Info -> 2
         Hint -> 1
-  in -- Test transitivity: if a > b and b > c then a > c
+  in -- Test transitivity: if a > b L.and b > c then a > c
      (severityOrder sev1 > severityOrder sev2 && severityOrder sev2 > severityOrder sev3) ==> 
      severityOrder sev1 > severityOrder sev3
 
@@ -131,7 +132,7 @@ prop_error_location_column_consistency errLoc =
 prop_error_context_non_empty_type :: ErrorContext -> Property
 prop_error_context_non_empty_type context =
   let contextType = contextType context
-  in T.length contextType > 0
+  in T.L.length contextType > 0
 
 prop_error_context_preserves_content :: String -> String -> Property
 prop_error_context_preserves_content contextType contextInfo =
@@ -155,7 +156,7 @@ prop_error_recovery_strategies_exhaustive recovery =
 
 prop_type_error_preserves_id :: TypeError -> Property
 prop_type_error_preserves_id typeErr =
-  T.length (errorId typeErr) >= 0
+  T.L.length (errorId typeErr) >= 0
 
 prop_type_error_has_valid_severity :: TypeError -> Property
 prop_type_error_has_valid_severity typeErr =
@@ -170,7 +171,7 @@ prop_type_error_location_consistency typeErr =
 prop_type_error_context_preservation :: TypeError -> Property
 prop_type_error_context_preservation typeErr =
   let ctx = context typeErr
-  in T.length (contextType ctx) > 0
+  in T.L.length (contextType ctx) > 0
 
 -- ============================================================================
 -- Properties for error transformation
@@ -197,14 +198,14 @@ prop_error_location_update typeErr newLocation =
 prop_error_suggestion_aggregation :: TypeError -> [String] -> Property
 prop_error_suggestion_aggregation typeErr newSuggestions =
   let updated = typeErr { suggestions = map T.pack newSuggestions }
-  in length (suggestions updated) === length newSuggestions
+  in L.length (suggestions updated) === L.length newSuggestions
 
 prop_error_chain_associativity :: TypeError -> TypeError -> TypeError -> Property
 prop_error_chain_associativity err1 err2 err3 =
   let chain1 = err1 { errorChain = [err2, err3] }
       chain2 = err1 { errorChain = [err2] }
       chain3 = chain2 { errorChain = errorChain chain2 ++ [err3] }
-  in length (errorChain chain1) === length (errorChain chain3)
+  in L.length (errorChain chain1) === L.length (errorChain chain3)
 
 -- ============================================================================
 -- Edge case properties
@@ -213,8 +214,8 @@ prop_error_chain_associativity err1 err2 err3 =
 prop_empty_error_context :: Property
 prop_empty_error_context =
   let empty = emptyContext
-  in T.length (contextType empty) >= 0 &&
-     T.length (contextInfo empty) >= 0
+  in T.L.length (contextType empty) >= 0 &&
+     T.L.length (contextInfo empty) >= 0
 
 prop_minimal_error_type :: Property
 prop_minimal_error_type =
@@ -231,7 +232,7 @@ prop_minimal_error_type =
         , errorChain = []
         , timestamp = Nothing
         }
-  in T.length (errorId minimal) === 0 &&
+  in T.L.length (errorId minimal) === 0 &&
      severity minimal === Error &&
      suggestions minimal === [] &&
      relatedErrors minimal === [] &&

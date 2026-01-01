@@ -9,10 +9,11 @@ import Utils (trim, splitBy, splitByCollapsed, removeComments, normalizeIndentat
 import SourceLocation (SourcePos(..), startPos, posAt, advancePos, advancePosBy)
 import Parser (parseTypus, defaultFileDirectives, defaultBlockDirectives)
 import Data.Char (isSpace, isControl)
+import qualified Data.List as L
 import Data.List (isPrefixOf)
 
 -- ============================================================================
--- Boundary Conditions and Edge Case Tests
+-- Boundary Conditions L.and Edge Case Tests
 -- ============================================================================
 
 -- | Utils: trim should handle empty strings
@@ -41,7 +42,7 @@ prop_remove_comments_empty = removeComments "" == ""
 prop_normalize_indentation_empty :: Bool
 prop_normalize_indentation_empty = normalizeIndentation "" == ""
 
--- | SourceLocation: posAt should handle minimum values
+-- | SourceLocation: posAt should handle L.minimum values
 prop_pos_at_minimum :: Bool
 prop_pos_at_minimum = posAt 1 1 == SourcePos 1 1
 
@@ -75,7 +76,7 @@ prop_parser_long_lines s =
 prop_parser_deep_nesting :: String -> Int -> Bool
 prop_parser_deep_nesting s depth = 
   let depth > 0 ==> 
-      let nested = concat $ replicate depth "// @ownership {\n" ++ [s] ++ concat (replicate depth "\n}\n")
+      let nested = L.concat $ replicate depth "// @ownership {\n" ++ [s] ++ L.concat (replicate depth "\n}\n")
       in case parseTypus nested of
         Left _ -> True
         Right _ -> True
@@ -102,13 +103,13 @@ prop_null_byte_handling s =
   let withNull = take 50 s ++ "\0" ++ drop 50 s
       trimmed = trim withNull
       split = splitBy ',' withNull
-  in length split >= 1  -- Should not crash
+  in L.length split >= 1  -- Should not crash
 
 -- | Property: Large input handling
 prop_large_input_handling :: Int -> String -> Bool
 prop_large_input_handling n s = 
   let n > 0 && n < 1000 ==>
-      let largeInput = concat $ replicate n s
+      let largeInput = L.concat $ replicate n s
       in case parseTypus largeInput of
         Left _ -> True
         Right _ -> True
@@ -118,7 +119,7 @@ prop_extreme_whitespace :: String -> Bool
 prop_extreme_whitespace s = 
   let extremeWs = concatMap (\c -> if isSpace c then replicate 10 c else [c]) s
       processed = normalizeIndentation extremeWs
-  in length processed <= length extremeWs
+  in L.length processed <= L.length extremeWs
 
 -- ============================================================================
 -- Test Suite
@@ -135,7 +136,7 @@ testSuite = testGroup "Core Module Boundary Conditions QuickCheck Tests"
     , testProperty "normalizeIndentation empty input" prop_normalize_indentation_empty
     ]
   , testGroup "SourceLocation Boundary Tests"
-    [ testProperty "posAt minimum values" prop_pos_at_minimum
+    [ testProperty "posAt L.minimum values" prop_pos_at_minimum
     , testProperty "posAt large values" prop_pos_at_large
     , testProperty "advancePos control characters" prop_advance_pos_control
     , testProperty "advancePosBy empty string" prop_advance_pos_by_empty

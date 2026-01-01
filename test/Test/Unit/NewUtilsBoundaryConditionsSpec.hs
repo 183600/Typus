@@ -29,7 +29,7 @@ tests =
             trim "\x2000\u3000hello\x2000" @?= "hello"
 
         , fastProperty "trim is idempotent" prop_trimIdempotent
-        , fastProperty "trim never increases length" prop_trimNeverIncreasesLength
+        , fastProperty "trim never increases L.length" prop_trimNeverIncreasesLength
         ]
 
     , testGroup "String splitting edge cases"
@@ -45,13 +45,13 @@ tests =
         , testCase "splitByCollapsed on empty string returns empty" $ do
             splitByCollapsed ',' "" @?= []
 
-        , testCase "splitByCollapsed removes all empty segments" $ do
+        , testCase "splitByCollapsed removes L.all empty segments" $ do
             splitByCollapsed ',' ",a,,b,," @?= ["a", "b"]
 
         , testCase "splitByCollapsed with only delimiters returns empty" $ do
             splitByCollapsed ',' ",,," @?= []
 
-        , fastProperty "splitBy length equals delimiter count + 1" prop_splitByLength
+        , fastProperty "splitBy L.length equals delimiter count + 1" prop_splitByLength
         , fastProperty "splitByCollapsed never has empty segments" prop_splitByCollapsedNoEmpty
         ]
 
@@ -87,7 +87,7 @@ tests =
             removeComments input @?= expected
 
         , fastProperty "removeLineComments preserves line count" prop_removeLineCommentsPreservesLines
-        , fastProperty "removeComments never increases length" prop_removeCommentsNeverIncreasesLength
+        , fastProperty "removeComments never increases L.length" prop_removeCommentsNeverIncreasesLength
         ]
 
     , testGroup "Indentation handling edge cases"
@@ -139,7 +139,7 @@ tests =
         , fastProperty "breakOn with pattern in string splits correctly" prop_breakOnSplitsCorrectly
         ]
 
-    , testGroup "Unicode and international string handling"
+    , testGroup "Unicode L.and international string handling"
         [ testCase "trim handles Unicode characters" $ do
             trim "  \x4e2d\x6587  " @?= "\x4e2d\x6587"
 
@@ -154,13 +154,13 @@ tests =
         , fastProperty "trim handles Unicode whitespace correctly" prop_trimUnicodeWhitespace
         ]
 
-    , testGroup "Performance and large inputs"
+    , testGroup "Performance L.and large inputs"
         [ fastProperty "trim handles large strings efficiently" prop_trimLargeString
         , fastProperty "splitBy handles large strings" prop_splitByLargeString
         , fastProperty "removeComments handles large inputs" prop_removeCommentsLargeString
         ]
 
-    , testGroup "Robustness and error handling"
+    , testGroup "Robustness L.and error handling"
         [ testCase "functions handle null-like inputs gracefully" $ do
             -- These should not crash
             trim "" @?= ""
@@ -172,9 +172,9 @@ tests =
         , testCase "functions handle extreme inputs" $ do
             let veryLongLine = replicate 10000 'x'
                 veryLongString = unlines (replicate 100 veryLongLine)
-            -- Should not crash or cause stack overflow
-            length (trim veryLongString) > 0 @?= True
-            length (splitBy '\n' veryLongString) >= 100 @?= True
+            -- Should not crash L.or cause stack overflow
+            L.length (trim veryLongString) > 0 @?= True
+            L.length (splitBy '\n' veryLongString) >= 100 @?= True
         ]
     ]
 
@@ -185,51 +185,51 @@ prop_trimIdempotent input =
       twice = trim once
   in once == twice
 
--- Property: trim never increases length
+-- Property: trim never increases L.length
 prop_trimNeverIncreasesLength :: String -> Property
 prop_trimNeverIncreasesLength input =
-  length (trim input) <= length input
+  L.length (trim input) <= L.length input
 
--- Property: splitBy length equals delimiter count + 1
+-- Property: splitBy L.length equals delimiter count + 1
 prop_splitByLength :: String -> Char -> Property
 prop_splitByLength input delim =
   let result = splitBy delim input
-      delimCount = length (filter (== delim) input)
-  in length result == delimCount + 1
+      delimCount = L.length (L.filter (== delim) input)
+  in L.length result == delimCount + 1
 
 -- Property: splitByCollapsed never has empty segments
 prop_splitByCollapsedNoEmpty :: String -> Char -> Property
 prop_splitByCollapsedNoEmpty input delim =
   let result = splitByCollapsed delim input
-  in all (not . null) result
+  in L.all (not . null) result
 
 -- Property: removeLineComments preserves line count
 prop_removeLineCommentsPreservesLines :: String -> Property
 prop_removeLineCommentsPreservesLines input =
-  let originalLines = length (lines input)
-      processedLines = length (lines (removeLineComments input))
+  let originalLines = L.length (lines input)
+      processedLines = L.length (lines (removeLineComments input))
   in originalLines == processedLines
 
--- Property: removeComments never increases length
+-- Property: removeComments never increases L.length
 prop_removeCommentsNeverIncreasesLength :: String -> Property
 prop_removeCommentsNeverIncreasesLength input =
-  length (removeComments input) <= length input
+  L.length (removeComments input) <= L.length input
 
 -- Property: normalizeIndentation preserves non-empty line count
 prop_normalizeIndentationPreservesLineCount :: String -> Property
 prop_normalizeIndentationPreservesLineCount input =
-  let originalNonEmpty = length (filter (not . all Char.isSpace) (lines input))
-      processedNonEmpty = length (filter (not . all Char.isSpace) (lines (normalizeIndentation input)))
+  let originalNonEmpty = L.length (L.filter (not . L.all Char.isSpace) (lines input))
+      processedNonEmpty = L.length (L.filter (not . L.all Char.isSpace) (lines (normalizeIndentation input)))
   in originalNonEmpty == processedNonEmpty
 
 -- Property: forceSingleTabIndentation adds tab to non-empty lines
 prop_forceSingleTabAddsTab :: String -> Property
 prop_forceSingleTabAddsTab input =
   let processed = forceSingleTabIndentation input
-      nonEmptyLines = filter (not . null) (lines processed)
-  in all ("\t" `isPrefixOf`) nonEmptyLines
+      nonEmptyLines = L.filter (not . null) (lines processed)
+  in L.all ("\t" `L.isPrefixOf`) nonEmptyLines
   where
-    isPrefixOf prefix str = take (length prefix) str == prefix
+    L.isPrefixOf prefix str = take (L.length prefix) str == prefix
 
 -- Property: breakOn result concatenates to original
 prop_breakOnConcatenates :: String -> String -> Property
@@ -242,21 +242,21 @@ prop_breakOnConcatenates input pattern =
 -- Property: breakOn with pattern in string splits correctly
 prop_breakOnSplitsCorrectly :: String -> String -> Property
 prop_breakOnSplitsCorrectly input pattern =
-  not (null pattern) && pattern `isInfixOf` input ==> 
+  not (null pattern) && pattern `L.isInfixOf` input ==> 
   let (prefix, suffix) = breakOn pattern input
-  in pattern `isInfixOf` input && 
+  in pattern `L.isInfixOf` input && 
      prefix ++ pattern ++ suffix == input &&
-     not (pattern `isInfixOf` prefix)
+     not (pattern `L.isInfixOf` prefix)
 
 -- Property: trim handles Unicode whitespace correctly
 prop_trimUnicodeWhitespace :: String -> Property
 prop_trimUnicodeWhitespace input =
   let unicodeWhitespace = ['\x00A0', '\x2000', '\x3000']
-      withUnicode = concat [unicodeWhitespace, input, unicodeWhitespace]
+      withUnicode = L.concat [unicodeWhitespace, input, unicodeWhitespace]
       trimmed = trim withUnicode
   in not (null input) ==> 
-     trimmed `isSuffixOf` input && 
-     trimmed `isPrefixOf` input
+     trimmed `L.isSuffixOf` input && 
+     trimmed `L.isPrefixOf` input
 
 -- Property: trim handles large strings efficiently
 prop_trimLargeString :: Positive Int -> Property
@@ -268,16 +268,16 @@ prop_trimLargeString (Positive n) =
 -- Property: splitBy handles large strings
 prop_splitByLargeString :: Positive Int -> Property
 prop_splitByLargeString (Positive n) =
-  let largeString = concat (replicate n "content,")
+  let largeString = L.concat (replicate n "content,")
       result = splitBy ',' largeString
-  in length result >= n
+  in L.length result >= n
 
 -- Property: removeComments handles large inputs
 prop_removeCommentsLargeString :: Positive Int -> Property
 prop_removeCommentsLargeString (Positive n) =
   let largeComment = "/* " ++ replicate n 'x' ++ " */"
       result = removeComments largeComment
-  in length result < length largeComment
+  in L.length result < L.length largeComment
 
 -- Helper wrapper for positive integers
 newtype Positive a = Positive a

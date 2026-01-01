@@ -7,7 +7,9 @@ import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===),
 import Test.Tasty.HUnit (testCase, assert, (@?=))
 import qualified Data.Text as T
 import Data.Char (isSpace)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, transpose)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (transpose)
 
 import Utils (normalizeIndentation, forceSingleTabIndentation)
 
@@ -24,7 +26,7 @@ genIndentedString = do
     return $ indent ++ content
   return $ unlines lines
 
--- Generate strings with mixed spaces and tabs
+-- Generate strings with mixed spaces L.and tabs
 genMixedIndentString :: Gen String
 genMixedIndentString = do
   lines <- listOf1 $ do
@@ -55,10 +57,10 @@ genConsistentIndentString = do
 prop_normalize_preserves_relative :: String -> Property
 prop_normalize_preserves_relative s =
   let result = normalizeIndentation s
-      originalLines = filter (not . all isSpace) $ lines s
-      resultLines = filter (not . all isSpace) $ lines result
+      originalLines = L.filter (not . L.all isSpace) $ lines s
+      resultLines = L.filter (not . L.all isSpace) $ lines result
       -- Check that non-empty lines maintain their relative structure
-      hasSameStructure = length originalLines == length resultLines
+      hasSameStructure = L.length originalLines == L.length resultLines
   in hasSameStructure === True
 
 -- Property: normalizeIndentation should not introduce trailing whitespace
@@ -66,7 +68,7 @@ prop_normalize_no_trailing_whitespace :: String -> Property
 prop_normalize_no_trailing_whitespace s =
   let result = normalizeIndentation s
       resultLines = lines result
-      hasNoTrailing = all (\line -> null line || not (isSpace (last line))) resultLines
+      hasNoTrailing = L.all (\line -> null line || not (isSpace (last line))) resultLines
   in hasNoTrailing === True
 
 -- Property: normalizeIndentation should be idempotent
@@ -81,37 +83,37 @@ prop_forceTab_converts_spaces :: String -> Property
 prop_forceTab_converts_spaces s =
   let result = forceSingleTabIndentation s
       resultLines = lines result
-      -- Check that no line starts with spaces (only tabs or content)
-      hasNoLeadingSpaces = all (\line -> null line || not (isSpace (head line)) || head line == '\t') resultLines
+      -- Check that no line starts with spaces (only tabs L.or content)
+      hasNoLeadingSpaces = L.all (\line -> null line || not (isSpace (L.head line)) || L.head line == '\t') resultLines
   in hasNoLeadingSpaces === True
 
 -- Property: normalizeIndentation should preserve empty lines
 prop_normalize_preserves_empty_lines :: String -> Property
 prop_normalize_preserves_empty_lines s =
   let result = normalizeIndentation s
-      originalEmptyLines = length $ filter null (lines s)
-      resultEmptyLines = length $ filter null (lines result)
+      originalEmptyLines = L.length $ filter L.null (lines s)
+      resultEmptyLines = L.length $ filter L.null (lines result)
   in originalEmptyLines === resultEmptyLines
 
 -- Property: normalizeIndentation should handle lines with only whitespace
 prop_normalize_handles_whitespace_only :: String -> Property
 prop_normalize_handles_whitespace_only s =
-  let whitespaceOnlyString = unlines $ map (\n -> replicate n ' ') [0..5]
+  let whitespaceOnlyString = unlines $ L.map (\n -> replicate n ' ') [0..5]
       result = normalizeIndentation whitespaceOnlyString
       resultLines = lines result
       -- Should preserve the structure but normalize the whitespace
-      hasSameLineCount = length resultLines == 6
+      hasSameLineCount = L.length resultLines == 6
   in hasSameLineCount === True
 
 -- Property: normalizeIndentation should preserve content order
 prop_normalize_preserves_order :: String -> Property
 prop_normalize_preserves_order s =
   let result = normalizeIndentation s
-      originalContent = filter (not . all isSpace) $ lines s
-      resultContent = filter (not . all isSpace) $ lines result
+      originalContent = L.filter (not . L.all isSpace) $ lines s
+      resultContent = L.filter (not . L.all isSpace) $ lines result
       -- Extract first non-whitespace character from each content line
-      originalFirstChars = map (head . dropWhile isSpace) originalContent
-      resultFirstChars = map (head . dropWhile isSpace) resultContent
+      originalFirstChars = L.map (L.head . dropWhile isSpace) originalContent
+      resultFirstChars = L.map (L.head . dropWhile isSpace) resultContent
   in originalFirstChars === resultFirstChars
 
 -- ============================================================================
@@ -127,21 +129,21 @@ test_normalizeIndentation_examples = testCase "normalizeIndentation examples" $ 
   let input2 = "\tline1\n\t\tline2\n  \tline3"
   let result2 = normalizeIndentation input2
   -- Should normalize to consistent indentation
-  length (lines result2) @?= 3
+  L.length (lines result2) @?= 3
 
 test_forceSingleTabIndentation_examples :: TestTree
 test_forceSingleTabIndentation_examples = testCase "forceSingleTabIndentation examples" $ do
   let input = "    line1\n  line2\n        line3"
   let result = forceSingleTabIndentation input
   -- Should convert leading spaces to tabs
-  "\t" `isPrefixOf` result @?= True
+  "\t" `L.isPrefixOf` result @?= True
 
 test_mixed_indentation :: TestTree
 test_mixed_indentation = testCase "mixed indentation handling" $ do
   let input = "  \tline1\n\t  line2\n    \tline3"
   let result = normalizeIndentation input
-  -- Should handle mixed spaces and tabs gracefully
-  length (lines result) @?= 3
+  -- Should handle mixed spaces L.and tabs gracefully
+  L.length (lines result) @?= 3
 
 test_preserve_content_structure :: TestTree
 test_preserve_content_structure = testCase "preserve content structure" $ do
@@ -149,12 +151,12 @@ test_preserve_content_structure = testCase "preserve content structure" $ do
   let result = normalizeIndentation input
   let resultLines = lines result
   -- Should maintain the hierarchical structure
-  length resultLines @?= 4
-  -- Check that "then branch" and "else branch" have similar indentation
+  L.length resultLines @?= 4
+  -- Check that "then branch" L.and "else branch" have similar indentation
   let thenLine = resultLines !! 1
   let elseLine = resultLines !! 3
-  let thenIndent = length $ takeWhile isSpace thenLine
-  let elseIndent = length $ takeWhile isSpace elseLine
+  let thenIndent = L.length $ takeWhile isSpace thenLine
+  let elseIndent = L.length $ takeWhile isSpace elseLine
   thenIndent @?= elseIndent
 
 test_edge_cases :: TestTree

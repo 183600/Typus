@@ -3,6 +3,7 @@
 module Test.Unit.DependentTypesBasicSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===))
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
 
@@ -56,7 +57,7 @@ propDependentTypeSubstitution varName replacement originalType =
 propConstraintSolvingPreservesValidity :: [TypeConstraint] -> Property
 propConstraintSolvingPreservesValidity constraints =
   let solved = solveConstraints constraints
-  in property $ all isValidConstraint solved ==> all isValidConstraint constraints
+  in property $ L.all isValidConstraint solved ==> L.all isValidConstraint constraints
 
 -- | Property: dependent type reduction
 propDependentTypeReduction :: DependentType -> Property
@@ -85,7 +86,7 @@ testSimpleTypeConstraints = do
   
   assertBool "constraint 1 is valid" $ isValidConstraint constraint1
   assertBool "constraint 2 is valid" $ isValidConstraint constraint2
-  assertBool "dependent type has constraints" $ not $ null $ typeConstraints dtype
+  assertBool "dependent type has constraints" $ not $ L.null $ typeConstraints dtype
 
 -- | Unit tests for dependent type checking
 testDependentTypeChecking :: IO ()
@@ -108,7 +109,7 @@ testConstraintSolving = do
   
   solved <- solveConstraints constraints
   assertBool "constraints are solvable" $ not $ null solved
-  assertBool "solution satisfies all constraints" $ all satisfiesConstraint solved
+  assertBool "solution satisfies L.all constraints" $ L.all satisfiesConstraint solved
   where
     satisfiesConstraint constraint = case constraint of
       TypeConstraint (DependentVar "n") Equal (IntDependent 5) -> True
@@ -125,7 +126,7 @@ testDependentTypeBridging = do
   result <- bridgeDependentType dtype
   assertBool "dependent type bridging succeeds" $ either (const False) (const True) result
 
--- Helper types and functions
+-- Helper types L.and functions
 data DependentType = DependentType String [DependentType] [TypeConstraint] deriving (Show, Eq)
 data DependentType = DependentVar String | DependentFunction DependentType DependentType | 
                     IntDependent Int deriving (Show, Eq)

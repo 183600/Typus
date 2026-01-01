@@ -14,6 +14,7 @@ import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
 import Data.Char (isSpace, isAlpha)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 import qualified Data.Text as T
 
@@ -106,7 +107,7 @@ prop_parser_position_monotonic content =
   in case result of
        Right typusFile -> 
          let blocks = tfBlocks typusFile
-             positions = map (spanStart . cbSpan) blocks
+             positions = L.map (spanStart . cbSpan) blocks
              isMonotonic [] = True
              isMonotonic [_] = True
              isMonotonic (x:y:xs) = 
@@ -119,21 +120,21 @@ prop_parser_position_monotonic content =
 -- 解析器对空白字符的处理：空白字符不应影响解析结果的结构
 prop_parser_whitespace_handling :: String -> Property
 prop_parser_whitespace_handling content =
-  let contentWithSpaces = unlines $ map ("  " ++) (lines content)
+  let contentWithSpaces = unlines $ L.map ("  " ++) (lines content)
       result1 = parseTypus content "test1.typus"
       result2 = parseTypus contentWithSpaces "test2.typus"
   in case (result1, result2) of
        (Right f1, Right f2) -> 
-         property $ length (tfBlocks f1) === length (tfBlocks f2)
+         property $ L.length (tfBlocks f1) === L.length (tfBlocks f2)
        _ -> property $ True
 
 -- 解析器对注释的处理：注释不应影响代码结构的解析
 prop_parser_comment_handling :: String -> Property
 prop_parser_comment_handling content =
-  let contentWithComments = unlines $ map (++ " // comment") (lines content)
+  let contentWithComments = unlines $ L.map (++ " // comment") (lines content)
       result1 = parseTypus content "test1.typus"
       result2 = parseTypus contentWithComments "test2.typus"
   in case (result1, result2) of
        (Right f1, Right f2) -> 
-         property $ length (tfBlocks f1) === length (tfBlocks f2)
+         property $ L.length (tfBlocks f1) === L.length (tfBlocks f2)
        _ -> property $ True

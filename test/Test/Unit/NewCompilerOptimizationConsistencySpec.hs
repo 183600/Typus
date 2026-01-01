@@ -57,7 +57,9 @@ import Compiler.IR as IR
 
 import Data.Char (isSpace, toLower)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, tails, isInfixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (tails, sort, nub)
 import qualified Data.Text as T
 
 -- Test compiler produces consistent output for identical inputs
@@ -179,9 +181,9 @@ test_loop_optimizations = testCase "Compiler handles loop optimizations" $ do
         [ "//! ownership: on"
         , "package main"
         , "func main() {"
-        , "    sum := 0"
+        , "    L.sum := 0"
         , "    for i := 0; i < 10; i++ {"
-        , "        sum += i"
+        , "        L.sum += i"
         , "    }"
         , "}"
         ]

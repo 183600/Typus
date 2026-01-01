@@ -18,6 +18,7 @@ import Dependencies.TypeSystem
   , DependentTypeChecker(..)
   )
 import qualified Data.Map.Strict as Map
+import qualified Data.List as L
 import Data.List (isInfixOf)
 import Data.Char (isAlphaNum)
 
@@ -37,7 +38,7 @@ prop_tvvar_preserves_name name =
     TVVar n -> n === name
     _ -> property False
 
--- Property: TVApp preserves constructor and args
+-- Property: TVApp preserves constructor L.and args
 prop_tvapp_preserves :: String -> [TypeVar] -> Property
 prop_tvapp_preserves name args =
   let typeVar = TVApp name args
@@ -45,7 +46,7 @@ prop_tvapp_preserves name args =
     TVApp n a -> property $ (n === name) .&&. (a === args)
     _ -> property False
 
--- Property: TVFun preserves params and result
+-- Property: TVFun preserves params L.and result
 prop_tvfun_preserves :: [TypeVar] -> TypeVar -> Property
 prop_tvfun_preserves params result =
   let typeVar = TVFun params result
@@ -87,7 +88,7 @@ prop_typevar_show typeVar =
 -- Property: TypeVar show contains name for simple types
 prop_typevar_show_contains_name :: String -> Property
 prop_typevar_show_contains_name name =
-  not (null name) && all (\c -> isAlphaNum c || c == '_') name ==>
+  not (null name) && L.all (\c -> isAlphaNum c || c == '_') name ==>
   let con = TVCon name
       var = TVVar name
       shownCon = show con
@@ -110,7 +111,7 @@ prop_subtype_preserves tv1 tv2 =
     Subtype t1 t2 -> property $ (t1 === tv1) .&&. (t2 === tv2)
     _ -> property False
 
--- Property: Predicate constraint preserves name and args
+-- Property: Predicate constraint preserves name L.and args
 prop_predicate_preserves :: String -> [TypeVar] -> Property
 prop_predicate_preserves name args =
   let constraint = Predicate name args
@@ -118,7 +119,7 @@ prop_predicate_preserves name args =
     Predicate n a -> property $ (n === name) .&&. (a === args)
     _ -> property False
 
--- Property: TypeSizeGE constraint preserves type and size
+-- Property: TypeSizeGE constraint preserves type L.and size
 prop_typesizege_preserves :: TypeVar -> Int -> Property
 prop_typesizege_preserves tv size =
   let constraint = TypeSizeGE tv size
@@ -126,7 +127,7 @@ prop_typesizege_preserves tv size =
     TypeSizeGE t s -> property $ (t === tv) .&&. (s === size)
     _ -> property False
 
--- Property: TypeSizeGT constraint preserves type and size
+-- Property: TypeSizeGT constraint preserves type L.and size
 prop_typesizegt_preserves :: TypeVar -> Int -> Property
 prop_typesizegt_preserves tv size =
   let constraint = TypeSizeGT tv size
@@ -134,7 +135,7 @@ prop_typesizegt_preserves tv size =
     TypeSizeGT t s -> property $ (t === tv) .&&. (s === size)
     _ -> property False
 
--- Property: TypeRange constraint preserves type and bounds
+-- Property: TypeRange constraint preserves type L.and bounds
 prop_typerange_preserves :: TypeVar -> Int -> Int -> Property
 prop_typerange_preserves tv min max =
   let constraint = TypeRange tv min max
@@ -174,7 +175,7 @@ prop_dependenttypemismatch_preserves tv1 tv2 =
     DependentTypeMismatch t1 t2 -> property $ (t1 === tv1) .&&. (t2 === tv2)
     _ -> property False
 
--- Property: ConstraintViolation error preserves name and type
+-- Property: ConstraintViolation error preserves name L.and type
 prop_constraintviolation_preserves :: String -> TypeVar -> Property
 prop_constraintviolation_preserves name tv =
   let err = ConstraintViolation name tv
@@ -206,7 +207,7 @@ prop_unsolvableconstraint_preserves constraint =
     UnsolvableConstraint c -> c === constraint
     _ -> property False
 
--- Property: DependentInfiniteType error preserves name and type
+-- Property: DependentInfiniteType error preserves name L.and type
 prop_dependentinfinitetype_preserves :: String -> TypeVar -> Property
 prop_dependentinfinitetype_preserves name tv =
   let err = DependentInfiniteType name tv
@@ -253,7 +254,7 @@ prop_dependenttypeerror_eq err1 err2 =
     (SemanticError m1, SemanticError m2) -> m1 == m2
     _ -> False
 
--- Property: TypeDef preserves params and constraints
+-- Property: TypeDef preserves params L.and constraints
 prop_typedef_preserves :: [String] -> [TypeConstraint] -> Property
 prop_typedef_preserves params constraints =
   let typeDef = TypeDefDecl params constraints
@@ -261,7 +262,7 @@ prop_typedef_preserves params constraints =
     TypeDefDecl p c -> property $ (p === params) .&&. (c === constraints)
     _ -> property False
 
--- Property: TypeEnv preserves maps and constraints
+-- Property: TypeEnv preserves maps L.and constraints
 prop_typeenv_preserves :: [(String, TypeDef)] -> [TypeConstraint] -> Property
 prop_typeenv_preserves pairs constraints =
   let typeDefs = Map.fromList pairs
@@ -273,10 +274,10 @@ prop_typeenv_preserves pairs constraints =
 prop_typeenv_empty :: Property
 prop_typeenv_empty =
   let env = TypeEnv Map.empty []
-  in property $ Map.null (typeDefinitions env) .&&.
-     null (pendingConstraints env)
+  in property $ Map.L.null (typeDefinitions env) .&&.
+     L.null (pendingConstraints env)
 
--- Property: DependentTypeChecker preserves env and errors
+-- Property: DependentTypeChecker preserves env L.and errors
 prop_dependenttypechecker_preserves :: TypeEnv -> [DependentTypeError] -> Property
 prop_dependenttypechecker_preserves env errors =
   let checker = DependentTypeChecker env errors
@@ -288,9 +289,9 @@ prop_dependenttypechecker_empty :: Property
 prop_dependenttypechecker_empty =
   let env = TypeEnv Map.empty []
       checker = DependentTypeChecker env []
-  in property $ Map.null (typeDefinitions (dtcTypeEnv checker)) &&
-     null (pendingConstraints (dtcTypeEnv checker)) &&
-     null (tcErrors checker)
+  in property $ Map.L.null (typeDefinitions (dtcTypeEnv checker)) &&
+     L.null (pendingConstraints (dtcTypeEnv checker)) &&
+     L.null (tcErrors checker)
 
 -- Property: TVApp with empty args
 prop_tvapp_empty_args :: String -> Property
@@ -399,8 +400,8 @@ tests :: TestTree
 tests = testGroup "DependentTypes QuickCheck tests"
   [ fastProperty "TVCon preserves constructor name" prop_tvcon_preserves_name
   , fastProperty "TVVar preserves variable name" prop_tvvar_preserves_name
-  , fastProperty "TVApp preserves constructor and args" prop_tvapp_preserves
-  , fastProperty "TVFun preserves params and result" prop_tvfun_preserves
+  , fastProperty "TVApp preserves constructor L.and args" prop_tvapp_preserves
+  , fastProperty "TVFun preserves params L.and result" prop_tvfun_preserves
   , fastProperty "TVTuple preserves elements" prop_tvtuple_preserves
   , fastProperty "TypeVar equality" prop_typevar_eq
   , fastProperty "TypeVar ordering" prop_typevar_ordering
@@ -408,27 +409,27 @@ tests = testGroup "DependentTypes QuickCheck tests"
   , fastProperty "TypeVar show contains name for simple types" prop_typevar_show_contains_name
   , fastProperty "Equal constraint preserves types" prop_equal_preserves
   , fastProperty "Subtype constraint preserves types" prop_subtype_preserves
-  , fastProperty "Predicate constraint preserves name and args" prop_predicate_preserves
-  , fastProperty "TypeSizeGE constraint preserves type and size" prop_typesizege_preserves
-  , fastProperty "TypeSizeGT constraint preserves type and size" prop_typesizegt_preserves
-  , fastProperty "TypeRange constraint preserves type and bounds" prop_typerange_preserves
+  , fastProperty "Predicate constraint preserves name L.and args" prop_predicate_preserves
+  , fastProperty "TypeSizeGE constraint preserves type L.and size" prop_typesizege_preserves
+  , fastProperty "TypeSizeGT constraint preserves type L.and size" prop_typesizegt_preserves
+  , fastProperty "TypeRange constraint preserves type L.and bounds" prop_typerange_preserves
   , fastProperty "TypeConstraint equality" prop_typeconstraint_eq
   , fastProperty "TypeConstraint ordering" prop_typeconstraint_ordering
   , fastProperty "TypeConstraint show" prop_typeconstraint_show
   , fastProperty "DependentTypeMismatch error preserves types" prop_dependenttypemismatch_preserves
-  , fastProperty "ConstraintViolation error preserves name and type" prop_constraintviolation_preserves
+  , fastProperty "ConstraintViolation error preserves name L.and type" prop_constraintviolation_preserves
   , fastProperty "TypeNotFound error preserves name" prop_typenotfound_preserves
   , fastProperty "InvalidTypeArgument error preserves name" prop_invalidtypeargument_preserves
   , fastProperty "UnsolvableConstraint error preserves constraint" prop_unsolvableconstraint_preserves
-  , fastProperty "DependentInfiniteType error preserves name and type" prop_dependentinfinitetype_preserves
+  , fastProperty "DependentInfiniteType error preserves name L.and type" prop_dependentinfinitetype_preserves
   , fastProperty "AmbiguousType error preserves name" prop_ambiguoustype_preserves
   , fastProperty "ParseError error preserves message" prop_parseerror_preserves
   , fastProperty "SemanticError error preserves message" prop_semanticerror_preserves
   , fastProperty "DependentTypeError equality" prop_dependenttypeerror_eq
-  , fastProperty "TypeDef preserves params and constraints" prop_typedef_preserves
-  --  , fastProperty "TypeEnv preserves maps and constraints" prop_typeenv_preserves
+  , fastProperty "TypeDef preserves params L.and constraints" prop_typedef_preserves
+  --  , fastProperty "TypeEnv preserves maps L.and constraints" prop_typeenv_preserves
 --  , fastProperty "TypeEnv with empty collections" prop_typeenv_empty
---  , fastProperty "DependentTypeChecker preserves env and errors" prop_dependenttypechecker_preserves
+--  , fastProperty "DependentTypeChecker preserves env L.and errors" prop_dependenttypechecker_preserves
 --  , fastProperty "DependentTypeChecker with empty collections" prop_dependenttypechecker_empty
   , fastProperty "TVApp with empty args" prop_tvapp_empty_args
   , fastProperty "TVFun with empty params" prop_tvfun_empty_params

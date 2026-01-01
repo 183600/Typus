@@ -10,7 +10,9 @@ import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
   ( Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), choose, vectorOf, elements )
 import Control.Monad (replicateM, when)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (sort)
 import Data.Char (isSpace, isDigit, isAlpha)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -68,12 +70,12 @@ prop_log_level_comparison_properties :: LogLevel -> LogLevel -> LogLevel -> Prop
 prop_log_level_comparison_properties level1 level2 level3 =
   property $ (level1 <= level2 && level2 <= level3) ==> (level1 <= level3)
 
--- Property: LogLevel maximum and minimum
+-- Property: LogLevel L.maximum L.and L.minimum
 prop_log_level_extremes :: Property
 prop_log_level_extremes =
   let allLevels = [Debug, Info, Warning, Error]
-      minLevel = minimum allLevels
-      maxLevel = maximum allLevels
+      minLevel = L.minimum allLevels
+      maxLevel = L.maximum allLevels
   in property $ minLevel === Debug .&&. maxLevel === Error
 
 -- Property: LogLevel successor relationships
@@ -98,7 +100,7 @@ prop_log_level_predecessor level =
 prop_log_level_sorting :: [LogLevel] -> Property
 prop_log_level_sorting levels =
   let sortedLevels = sort levels
-      isSorted = all (\(a,b) -> a <= b) (zip sortedLevels (drop 1 sortedLevels))
+      isSorted = L.all (\(a,b) -> a <= b) (zip sortedLevels (drop 1 sortedLevels))
   in property $ isSorted === True
 
 -- Property: LogLevel set operations

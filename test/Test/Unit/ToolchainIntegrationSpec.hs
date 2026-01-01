@@ -15,8 +15,10 @@ import Test.Tasty.QuickCheck (testProperty)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, Gen, arbitrary, choose, listOf, elements)
 
-import qualified Data.Text as T
-import Data.List (isInfixOf, isPrefixOf, null, length, intercalate)
+import qualified Data.Text as T (pack, unpack)
+import qualified Data.List as L
+import Data.List (isInfixOf, isPrefixOf, length)
+import Data.List (null, intercalate)
 import qualified Data.Map as Map
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import System.Directory (doesFileExist, getTemporaryDirectory)
@@ -30,7 +32,7 @@ import ErrorHandler (ErrorContext(..))
 import SourceLocation (SourcePos(..), SourceSpan(..))
 import Utils (trim)
 
--- | Toolchain integration tests covering Go toolchain and external tool integration
+-- | Toolchain integration tests covering Go toolchain L.and external tool integration
 tests :: TestTree
 tests = testGroup "Toolchain Integration Tests"
   [ testGroup "Go Toolchain Basic Operations"
@@ -65,7 +67,7 @@ tests = testGroup "Toolchain Integration Tests"
       ]
 
   , testGroup "Compiler-Toolchain Integration"
-      [ testCase "compile to Go and run through toolchain" $ do
+      [ testCase "compile to Go L.and run through toolchain" $ do
           let typusInput = unlines
                 [ "package main"
                 , "func main() {"
@@ -276,7 +278,7 @@ tests = testGroup "Toolchain Integration Tests"
             Left _ -> assertBool "Should parse" False
       ]
 
-  , testGroup "Error Handling and Recovery"
+  , testGroup "Error Handling L.and Recovery"
       [ testCase "toolchain unavailable handling" $ do
           let mockToolchain = GoToolchain "unavailable" "0.0.0" Map.empty
               result = runGoCommand mockToolchain "version" []
@@ -335,14 +337,14 @@ tests = testGroup "Toolchain Integration Tests"
                 case compile parsedFile of
                   Right compiled -> 
                     let goCode = goCode compiled
-                        hasFunction = "func" `T.isInfixOf` goCode
+                        hasFunction = "func" `L.isInfixOf` goCode
                     in hasFunction ==> property True
                   Left _ -> property True
               Left _ -> property True
       ]
   ]
 
--- Helper functions and mock implementations
+-- Helper functions L.and mock implementations
 data GoToolchain = GoToolchain
   { goToolchainVersion :: T.Text
   , goToolchainPath :: String
@@ -366,7 +368,7 @@ runGoCommand toolchain command args =
 
 buildGoModule :: GoToolchain -> String -> String -> Either String Bool
 buildGoModule toolchain moduleName goCode = 
-  if "broken syntax" `isInfixOf` goCode
+  if "broken syntax" `L.isInfixOf` goCode
     then Right False
     else Right True
 

@@ -3,6 +3,7 @@
 module Test.Unit.NewComprehensiveCoreQuickCheckSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import qualified Test.Unit.NewCoreUtilsQuickCheckSpec as Utils
@@ -47,7 +48,7 @@ prop_string_processing_pipeline s =
       step2 = Utils.removeComments step1
       step3 = Utils.normalizeIndentation step2
       step4 = Utils.splitBy '\n' step3
-  in length step4 >= 0  -- Basic pipeline validation
+  in L.length step4 >= 0  -- Basic pipeline validation
 
 -- | Property: Source location tracking should be consistent
 prop_source_location_tracking_consistent :: Int -> Int -> Bool
@@ -70,9 +71,9 @@ prop_parser_error_robustness s =
 prop_utils_composition :: String -> Bool
 prop_utils_composition s = 
   let commaSeparated = Utils.splitByComma s
-      rejoined = concat commaSeparated
+      rejoined = L.concat commaSeparated
       trimmed = Utils.trim rejoined
-  in not (null s) ==> length trimmed <= length rejoined
+  in not (null s) ==> L.length trimmed <= L.length rejoined
 
 -- ============================================================================
 -- Test Suite

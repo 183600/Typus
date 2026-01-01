@@ -10,10 +10,11 @@ import qualified Parser (parseTypus)
 import qualified Utils (trim, splitBy, removeComments, normalizeIndentation)
 import qualified SourceLocation
 import Control.DeepSeq (NFData, rnf, force)
+import qualified Data.List as L
 import Data.List (isPrefixOf)
 import System.Mem (performGC)
 
--- | Memory safety and leak prevention tests
+-- | Memory safety L.and leak prevention tests
 tests :: TestTree
 tests =
   testGroup "Cabal Memory Safety Tests"
@@ -24,7 +25,7 @@ tests =
             case result of
               Left err -> do
                 performGC  -- Force garbage collection
-                length (show err) > 0 @?= True
+                L.length (show err) > 0 @?= True
               Right parsed -> do
                 performGC
                 parsed `seq` True @?= True
@@ -35,7 +36,7 @@ tests =
             case result of
               Left err -> do
                 performGC
-                length (show err) > 0 @?= True
+                L.length (show err) > 0 @?= True
               Right parsed -> do
                 performGC
                 parsed `seq` True @?= True
@@ -54,7 +55,7 @@ tests =
                 parseMultiple = sequence $ replicate 100 $ Parser.parseTypus "repeat" input
             results <- parseMultiple
             performGC
-            all isSuccess results @?= True
+            L.all isSuccess results @?= True
         ]
 
     , testGroup "Utils Memory Safety"
@@ -63,28 +64,28 @@ tests =
                 result = Utils.trim largeString
             performGC
             rnf result `seq` True @?= True
-            length result @?= 10000
+            L.length result @?= 10000
 
         , testCase "splitBy doesn't leak memory on large inputs" $ do
             let largeInput = unlines $ replicate 5000 "test line content"
                 result = Utils.splitBy '\n' largeInput
             performGC
             rnf result `seq` True @?= True
-            length result @?= 5000
+            L.length result @?= 5000
 
         , testCase "removeComments handles large comment blocks" $ do
             let largeComments = "/* " ++ replicate 10000 'x' ++ " */\nfunc test() { return 1; }"
                 result = Utils.removeComments largeComments
             performGC
             rnf result `seq` True @?= True
-            "func test() { return 1; }" `isInfixOf` result @?= True
+            "func test() { return 1; }" `L.isInfixOf` result @?= True
 
         , testCase "normalizeIndentation processes large files efficiently" $ do
             let largeIndented = unlines $ replicate 1000 ("    " ++ "indented line")
                 result = Utils.normalizeIndentation largeIndented
             performGC
             rnf result `seq` True @?= True
-            length (lines result) @?= 1000
+            L.length (lines result) @?= 1000
         ]
 
     , testGroup "Source Location Memory Safety"
@@ -92,11 +93,11 @@ tests =
             let positions = [SourceLocation.SourcePos line col | line <- [1..1000], col <- [1..100]]
             performGC
             rnf positions `seq` True @?= True
-            length positions @?= 100000
+            L.length positions @?= 100000
 
         , testCase "Span operations are memory efficient" $ do
             let spans = [SourceLocation.SourceSpan (SourceLocation.SourcePos 1 1) (SourceLocation.SourcePos 100 100)]
-                merged = foldl SourceLocation.mergeSpans (head spans) (tail spans)
+                merged = foldl SourceLocation.mergeSpans (L.head spans) (L.tail spans)
             performGC
             rnf merged `seq` True @?= True
             SourceLocation.isValidSpan merged @?= True
@@ -107,7 +108,7 @@ tests =
                 positions = scanl (SourceLocation.advancePos) basePos (take 1000 chars)
             performGC
             rnf positions `seq` True @?= True
-            length positions @?= 1001
+            L.length positions @?= 1001
         ]
 
     , testGroup "Deep Evaluation Safety"
@@ -175,52 +176,52 @@ tests =
                       Right parsed -> rnf parsed `seq` return True
             results <- operations
             performGC
-            all id results @?= True
+            L.all id results @?= True
         ]
 
     , testGroup "Resource Management"
         [ testCase "Parser releases resources on failure" $ do
             let invalidInputs = ["{", "}", "func", "return", "if", "else", "for", "while"]
-                results <- sequence $ map (\input -> do
+                results <- sequence $ L.map (\input -> do
                     let result = Parser.parseTypus "resource" input
                     performGC
                     case result of
                       Left err -> rnf (show err) `seq` return True
                       Right parsed -> rnf parsed `seq` return True
                     ) invalidInputs
-            all id results @?= True
+            L.all id results @?= True
 
         , testCase "Utils functions release intermediate results" $ do
             let largeInput = unlines $ replicate 1000 "// comment\nfunc test() { return 1; }"
                 processed = Utils.removeComments largeInput
             performGC
             rnf processed `seq` True @?= True
-            length (lines processed) >= 1000 @?= True
+            L.length (lines processed) >= 1000 @?= True
 
         , testCase "Memory usage stays bounded" $ do
             let testSizes = [100, 500, 1000, 2000]
-                testInputs = map (\n -> unlines $ replicate n "func test() { return 1; }") testSizes
-                results <- sequence $ map (\input -> do
+                testInputs = L.map (\n -> unlines $ replicate n "func test() { return 1; }") testSizes
+                results <- sequence $ L.map (\input -> do
                     let result = Parser.parseTypus "bounded" input
                     performGC
                     case result of
-                      Left err -> rnf (show err) `seq` return (length $ show err)
+                      Left err -> rnf (show err) `seq` return (L.length $ show err)
                       Right parsed -> rnf parsed `seq` return 1000  -- Arbitrary success value
                     ) testInputs
-            all (> 0) results @?= True
+            L.all (> 0) results @?= True
         ]
 
     , testGroup "Edge Case Memory Safety"
         [ testCase "Empty inputs don't cause issues" $ do
             let emptyInputs = ["", "   ", "\n\t", "// comment", "/* */"]
-                results <- sequence $ map (\input -> do
+                results <- sequence $ L.map (\input -> do
                     let result = Parser.parseTypus "empty" input
                     performGC
                     case result of
                       Left err -> rnf (show err) `seq` return True
                       Right parsed -> rnf parsed `seq` return True
                     ) emptyInputs
-            all id results @?= True
+            L.all id results @?= True
 
         , testCase "Extremely long lines handled safely" $ do
             let longLine = replicate 10000 'a' ++ " func test() { return 1; }"
@@ -247,5 +248,5 @@ isSuccess (Right _) = True
 isSuccess (Left _) = False
 
 isInfixOf :: Eq a => [a] -> [a] -> Bool
-isInfixOf needle haystack = needle `isPrefixOf` haystack || 
-                            (not (null haystack) && isInfixOf needle (tail haystack))
+L.isInfixOf needle haystack = needle `L.isPrefixOf` haystack || 
+                            (not (null haystack) && L.isInfixOf needle (L.tail haystack))

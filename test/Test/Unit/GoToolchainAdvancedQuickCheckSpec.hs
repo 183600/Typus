@@ -1,6 +1,7 @@
 module Test.Unit.GoToolchainAdvancedQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Property, (===), forAll, Gen, choose, arbitrary, listOf, elements, oneof, suchThat)
 import TestSupport.QuickCheck (fastProperty)
@@ -29,19 +30,19 @@ genGoArgs = listOf $ oneof
   , return "help"
   , return "fmt"
   , return "vet"
-  , arbitrary `suchThat` (\s -> length s <= 20 && not (null s))
+  , arbitrary `suchThat` (\s -> L.length s <= 20 && not (null s))
   ]
 
 -- Generate file paths
 genFilePath :: Gen String
 genFilePath = do
-  parts <- listOf $ arbitrary `suchThat` (\s -> length s <= 10 && not (null s))
+  parts <- listOf $ arbitrary `suchThat` (\s -> L.length s <= 10 && not (null s))
   return $ unwords parts ++ ".go"
 
 -- Generate directory paths
 genDirPath :: Gen String
 genDirPath = do
-  parts <- listOf $ arbitrary `suchThat` (\s -> length s <= 10 && not (null s))
+  parts <- listOf $ arbitrary `suchThat` (\s -> L.length s <= 10 && not (null s))
   return $ "/" ++ unwords parts
 
 -- Generate environment variable names
@@ -63,7 +64,7 @@ genEnvVarValue = oneof
   , return "no"
   , return "off"
   , return ""
-  , arbitrary `suchThat` (\s -> length s <= 50)
+  , arbitrary `suchThat` (\s -> L.length s <= 50)
   ]
 
 -- ============================================================================
@@ -76,11 +77,11 @@ prop_goModContentsNonEmpty = not (null goModContents)
 
 -- Property: goModContents contains module declaration
 prop_goModContentsContainsModule :: Bool
-prop_goModContentsContainsModule = "module temp" `isInfixOf` goModContents
+prop_goModContentsContainsModule = "module temp" `L.isInfixOf` goModContents
 
 -- Property: goModContents contains go version
 prop_goModContentsContainsGoVersion :: Bool
-prop_goModContentsContainsGoVersion = "go 1.21" `isInfixOf` goModContents
+prop_goModContentsContainsGoVersion = "go 1.21" `L.isInfixOf` goModContents
 
 -- Property: nullDevice is platform-appropriate
 prop_nullDevicePlatformAppropriate :: Bool
@@ -96,28 +97,28 @@ prop_nullDeviceNonEmpty = not (null nullDevice)
 -- Property: withTemporaryGoProject creates temporary directory
 prop_withTemporaryGoProjectCreatesDir :: String -> Property
 prop_withTemporaryGoProjectCreatesDir prefix =
-  length prefix <= 10 ==>
+  L.length prefix <= 10 ==>
   -- This is a simplified property test since we can't easily test IO in QuickCheck
-  length prefix >= 0
+  L.length prefix >= 0
 
 -- Property: createTempGoFile generates .go extension
 prop_createTempGoFileHasGoExtension :: String -> String -> Property
 prop_createTempGoFileHasGoExtension sourcePath tempDir =
-  length sourcePath <= 50 && length tempDir <= 50 ==>
+  L.length sourcePath <= 50 && L.length tempDir <= 50 ==>
   -- Simplified property - actual implementation would need IO testing
   True
 
 -- Property: Go executor has consistent structure
 prop_goExecutorConsistent :: GoExecutor -> Bool
 prop_goExecutorConsistent executor = 
-  -- Check that all required fields are present
+  -- Check that L.all required fields are present
   case executor of
     GoExecutor skip run -> True
 
 -- Property: Environment variable detection is case-sensitive
 prop_envVarDetectionCaseSensitive :: String -> String -> Property
 prop_envVarDetectionCaseSensitive name value =
-  length name <= 20 && length value <= 10 ==>
+  L.length name <= 20 && L.length value <= 10 ==>
   -- This is a simplified property since we can't easily test environment variables
   True
 
@@ -153,9 +154,9 @@ tests = testGroup "GoToolchain Advanced QuickCheck Tests"
 
   , testGroup "Unit Tests"
     [ testCase "goModContents has correct format" $ do
-        assertBool "Should contain module declaration" $ "module temp" `isInfixOf` goModContents
-        assertBool "Should contain go version" $ "go 1.21" `isInfixOf` goModContents
-        assertBool "Should have multiple lines" $ length (lines goModContents) >= 2
+        assertBool "Should contain module declaration" $ "module temp" `L.isInfixOf` goModContents
+        assertBool "Should contain go version" $ "go 1.21" `L.isInfixOf` goModContents
+        assertBool "Should have multiple lines" $ L.length (lines goModContents) >= 2
 
     , testCase "nullDevice is correct for platform" $ do
         let expected = if os == "mingw32" then "NUL" else "/dev/null"
@@ -175,7 +176,7 @@ tests = testGroup "GoToolchain Advanced QuickCheck Tests"
 
     , testCase "isEnvVarEnabled with various values" $ do
         -- These tests would require setting environment variables
-        -- For now, we just test the function exists and returns a boolean
+        -- For now, we just test the function exists L.and returns a boolean
         enabled <- isEnvVarEnabled "TYPUS_SKIP_GO_BUILD"
         let result = if enabled then True else False
         result @?= enabled
@@ -195,8 +196,8 @@ tests = testGroup "GoToolchain Advanced QuickCheck Tests"
 
     , testCase "Go module content structure" $ do
         let lines' = lines goModContents
-        length lines' @?= 2
-        head lines' @?= "module temp"
+        L.length lines' @?= 2
+        L.head lines' @?= "module temp"
         last lines' @?= "go 1.21"
 
     , testCase "Platform-specific null device" $ do
@@ -208,24 +209,24 @@ tests = testGroup "GoToolchain Advanced QuickCheck Tests"
         -- Test that environment variable names follow expected patterns
         let validNames = ["TYPUS_SKIP_GO_BUILD", "GO_VERSION", "PATH"]
         let invalidNames = ["invalid-name", "123invalid", ""]
-        all (\n -> length n > 0 && head n `elem` ['A'..'Z'] ++ '_') validNames @?= True
+        L.all (\n -> L.length n > 0 && L.head n `elem` ['A'..'Z'] ++ '_') validNames @?= True
 
     , testCase "Environment variable value validation" $ do
         -- Test that environment variable values are interpreted correctly
         let trueValues = ["1", "true", "TRUE", "yes", "YES", "on", "ON"]
         let falseValues = ["0", "false", "FALSE", "no", "NO", "off", "OFF", ""]
-        all (`elem` trueValues) ["1", "true", "yes", "on"] @?= True
-        all (`elem` falseValues) ["0", "false", "no", "off", ""] @?= True
+        L.all (`elem` trueValues) ["1", "true", "yes", "on"] @?= True
+        L.all (`elem` falseValues) ["0", "false", "no", "off", ""] @?= True
 
     , testCase "File path generation" $ do
         let testPath = "test.go"
-        length testPath @?= 8
-        ".go" `isSuffixOf` testPath @?= True
+        L.length testPath @?= 8
+        ".go" `L.isSuffixOf` testPath @?= True
 
     , testCase "Directory path generation" $ do
         let testDir = "/tmp/test"
-        "/" `isPrefixOf` testDir @?= True
-        length testDir >= 1 @?= True
+        "/" `L.isPrefixOf` testDir @?= True
+        L.length testDir >= 1 @?= True
 
     , testCase "Go command argument validation" $ do
         let validArgs = ["build", "run", "test", "mod", "version", "help"]
@@ -244,12 +245,12 @@ tests = testGroup "GoToolchain Advanced QuickCheck Tests"
 
 -- Helper function to check if a string is contained in another
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `Data.List.isInfixOf` haystack
+L.isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
 
 -- Helper function to check if a string is a suffix of another
 isSuffixOf :: String -> String -> Bool
-isSuffixOf suffix haystack = suffix `Data.List.isSuffixOf` haystack
+L.isSuffixOf suffix haystack = suffix `Data.List.L.isSuffixOf` haystack
 
 -- Helper function to check if a string is a prefix of another
 isPrefixOf :: String -> String -> Bool
-isPrefixOf prefix haystack = prefix `Data.List.isPrefixOf` haystack
+L.isPrefixOf prefix haystack = prefix `Data.List.L.isPrefixOf` haystack

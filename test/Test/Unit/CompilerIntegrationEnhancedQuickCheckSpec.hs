@@ -13,6 +13,7 @@ import Parser (parseTypus, TypusFile(..), CodeBlock(..))
 import Compiler.Errors (ErrorSeverity(..), ErrorCategory(..))
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import Data.Either (isLeft, isRight)
 
@@ -38,10 +39,10 @@ basicCompilationProperties = testGroup "Basic Compilation Properties"
   
   , testProperty "compile simple valid code" $
       \code -> 
-        not ("var x int = \"string\"" `isInfixOf` code) ==> 
+        not ("var x int = \"string\"" `L.isInfixOf` code) ==> 
         let result = parseTypus code >>= compile
         in case result of
-          Left errs -> all (\e -> errorPhase e /= ParsingPhase) errs
+          Left errs -> L.all (\e -> errorPhase e /= ParsingPhase) errs
           Right _ -> property True
   
   , testProperty "compile preserves valid structure" $
@@ -49,7 +50,7 @@ basicCompilationProperties = testGroup "Basic Compilation Properties"
         let result = parseTypus code >>= compile
         in case result of
           Left _ -> property True
-          Right goCode -> not (null goCode) ==> length goCode > 0
+          Right goCode -> not (null goCode) ==> L.length goCode > 0
   
   , testProperty "compile handles whitespace" $
       \whitespace -> 
@@ -68,7 +69,7 @@ errorHandlingProperties = testGroup "Error Handling Properties"
         let code = "var x int = \"string\""
             result = parseTypus code >>= compile
         in case result of
-          Left errs -> any (\e -> errorCategory e == TypeChecking) errs
+          Left errs -> L.any (\e -> errorCategory e == TypeChecking) errs
           Right _ -> property False
   
   , testProperty "compile provides meaningful error messages" $
@@ -76,27 +77,27 @@ errorHandlingProperties = testGroup "Error Handling Properties"
         let code = "var x int = \"string\""
             result = parseTypus code >>= compile
         in case result of
-          Left errs -> any (\e -> "type error" `T.isInfixOf` T.pack (errorMessage e)) errs
+          Left errs -> L.any (\e -> "type error" `L.isInfixOf` T.pack (errorMessage e)) errs
           Right _ -> property False
   
   , testProperty "renderCompilationError formats errors" $
       \errorMsg -> 
         let errors = [CompilerError "TEST001" (T.pack errorMsg) ParsingPhase Parsing Error Nothing Nothing [] Nothing Nothing]
             formatted = renderCompilationError errors
-        in errorMsg `isInfixOf` formatted
+        in errorMsg `L.isInfixOf` formatted
   
   , testProperty "formatCompilerErrors handles multiple errors" $
       \errors -> 
         let formatted = formatCompilerErrors errors
-            errorCount = length errors
-        in errorCount > 0 ==> length (lines formatted) >= errorCount
+            errorCount = L.length errors
+        in errorCount > 0 ==> L.length (lines formatted) >= errorCount
   
   , testProperty "compile provides recovery suggestions" $
       \() -> 
         let code = "var x int = \"string\""
             result = parseTypus code >>= compile
         in case result of
-          Left errs -> any (not . null . errorSuggestions) errs
+          Left errs -> L.any (not . null . errorSuggestions) errs
           Right _ -> property False
   ]
 
@@ -111,14 +112,14 @@ typeCheckingProperties = testGroup "Type Checking Properties"
           Right file -> 
             case diagnoseTypeErrors file of
               Left _ -> property True
-              Right diagnostics -> length diagnostics >= 0
+              Right diagnostics -> L.length diagnostics >= 0
   
   , testProperty "hasTypeErrors detects type problems" $
       \code -> 
         let parsed = parseTypus code
         in case parsed of
           Left _ -> property True
-          Right file -> hasTypeErrors file === ("var x int = \"string\"" `isInfixOf` code)
+          Right file -> hasTypeErrors file === ("var x int = \"string\"" `L.isInfixOf` code)
   
   , testProperty "type checking preserves file structure" $
       \code -> 
@@ -128,11 +129,11 @@ typeCheckingProperties = testGroup "Type Checking Properties"
           Right file -> 
             case diagnoseTypeErrors file of
               Left _ -> property True
-              Right diagnostics -> length diagnostics >= 0
+              Right diagnostics -> L.length diagnostics >= 0
   
   , testProperty "type checking handles valid code" $
       \code -> 
-        not ("var x int = \"string\"" `isInfixOf` code) ==> 
+        not ("var x int = \"string\"" `L.isInfixOf` code) ==> 
         let parsed = parseTypus code
         in case parsed of
           Left _ -> property True
@@ -217,11 +218,11 @@ codeGenerationProperties = testGroup "Code Generation Properties"
           Right file -> 
             case compile file of
               Left _ -> property True
-              Right goCode -> not (null goCode) ==> length goCode > 0
+              Right goCode -> not (null goCode) ==> L.length goCode > 0
   
   , testProperty "generateGoCode handles valid code" $
       \code -> 
-        not ("var x int = \"string\"" `isInfixOf` code) ==> 
+        not ("var x int = \"string\"" `L.isInfixOf` code) ==> 
         let parsed = parseTypus code
         in case parsed of
           Left _ -> property True
@@ -240,7 +241,7 @@ codeGenerationProperties = testGroup "Code Generation Properties"
               Left _ -> property True
               Right goCode -> 
                 -- Basic sanity check that generated code is not empty
-                not (null goCode) ==> any (`isInfixOf` goCode) ["func", "var", "package"]
+                not (null goCode) ==> L.any (`L.isInfixOf` goCode) ["func", "var", "package"]
   
   , testProperty "generateGoCode handles errors gracefully" $
       \code -> 

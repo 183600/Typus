@@ -28,7 +28,9 @@ import Parser
   , parseTypus
   )
 
-import Data.List (isPrefixOf, isInfixOf, null, length)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, length)
+import Data.List (null)
 import Data.Char (isSpace, isControl)
 
 -- | 生成空字符串
@@ -91,15 +93,15 @@ genMixedNewlineString :: Gen String
 genMixedNewlineString = do
   lines <- listOf $ listOf $ elements $ ['a'..'z'] ++ [' ']
   let newlines = cycle ["\n", "\r\n", "\r"]
-      mixedLines = zipWith (++) lines (take (length lines) newlines)
-  return $ concat mixedLines
+      mixedLines = zipWith (++) lines (take (L.length lines) newlines)
+  return $ L.concat mixedLines
 
 -- | 生成包含转义字符的字符串
 genEscapedString :: Gen String
 genEscapedString = do
   parts <- listOf $ elements 
     [ "\\n", "\\t", "\\r", "\\\\", "\\\"", "\\'", "\\0", "\\x41", "\\u1234" ]
-  return $ concat parts
+  return $ L.concat parts
 
 -- 属性：解析空字符串应该成功
 prop_parse_empty_string :: Property
@@ -200,14 +202,14 @@ prop_parse_reparse_consistency =
         case parseTypus originalString of
           Left _ -> property False  -- 第二次解析不应该失败
           Right reparsedFile ->
-            length (tfBlocks parsedFile) === length (tfBlocks reparsedFile)
+            L.length (tfBlocks parsedFile) === L.length (tfBlocks reparsedFile)
 
 -- 属性：解析包含大量注释的字符串应该合理处理
 prop_parse_many_comments :: Property
 prop_parse_many_comments =
   let commentCount = 1000
       comments = replicate commentCount "// This is a comment\n"
-      codeWithComments = concat comments ++ "func main() {}"
+      codeWithComments = L.concat comments ++ "func main() {}"
   in case parseTypus codeWithComments of
        Left _ -> property True  -- 可能失败，但不应该崩溃
        Right _ -> property True
@@ -216,8 +218,8 @@ prop_parse_many_comments =
 prop_parse_nested_comments :: Property
 prop_parse_nested_comments =
   let depth = 100
-      nestedComments = concat $ replicate depth "/* "
-      codeWithNestedComments = nestedComments ++ "func main() {}" ++ concat (replicate depth " */")
+      nestedComments = L.concat $ replicate depth "/* "
+      codeWithNestedComments = nestedComments ++ "func main() {}" ++ L.concat (replicate depth " */")
   in case parseTypus codeWithNestedComments of
        Left _ -> property True  -- 可能失败，但不应该崩溃
        Right _ -> property True

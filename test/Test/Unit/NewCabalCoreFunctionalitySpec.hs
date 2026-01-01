@@ -59,7 +59,9 @@ import SourceLocation
 
 import Data.Char (isSpace, toLower, isAlphaNum, isLetter)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, tails, isInfixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (tails, sort, nub)
 import qualified Data.Text as T
 import Data.Text (Text)
 import Control.Monad (foldM, when)
@@ -92,9 +94,9 @@ prop_located_mapping_preserves_location s n =
   let pos = posAt 1 1
       span = emptySpan pos
       located = locatedWithSpan span s
-      mapped = mapLocated length located
+      mapped = mapLocated L.length located
   in property $ locatedSpan mapped === locatedSpan located .&&.
-               locatedValue mapped === length s
+               locatedValue mapped === L.length s
 
 -- ============================================================================
 -- Test 2: Utils String Processing Edge Cases
@@ -106,11 +108,11 @@ prop_trim_unicode_whitespace s =
   let unicodeWhitespace = "\x2000\x2001\x2002\x2003\x2004\x2005\x2006\x2007\x2008\x2009\x200A\x2028\x2029\x3000"
       input = unicodeWhitespace ++ s ++ unicodeWhitespace
       trimmed = trim input
-      hasLeading = not (null s) && isSpace (head input)
+      hasLeading = not (null s) && isSpace (L.head input)
       hasTrailing = not (null s) && isSpace (last input)
   in classify hasLeading "has leading Unicode whitespace" $
      classify hasTrailing "has trailing Unicode whitespace" $
-     property $ (null trimmed || not (isSpace (head trimmed))) .&&.
+     property $ (null trimmed || not (isSpace (L.head trimmed))) .&&.
                 (null trimmed || not (isSpace (last trimmed)))
 
 -- Test splitBy with empty delimiter edge cases
@@ -118,18 +120,18 @@ prop_splitBy_empty_delimiter_consistency :: String -> Property
 prop_splitBy_empty_delimiter_consistency s =
   let regular = splitBy ',' s
       collapsed = splitByCollapsed ',' s
-      hasConsecutiveCommas = ",," `isInfixOf` s
+      hasConsecutiveCommas = ",," `L.isInfixOf` s
   in classify hasConsecutiveCommas "has consecutive delimiters" $
-     property $ (if hasConsecutiveCommas then length regular > length collapsed else regular == collapsed)
+     property $ (if hasConsecutiveCommas then L.length regular > L.length collapsed else regular == collapsed)
 
 -- Test comment removal with nested quotes
 prop_comment_removal_nested_quotes :: String -> String -> Property
 prop_comment_removal_nested_quotes before after =
   let content = before ++ "var s = \"// not comment \\\" // still not comment\" // real comment\n" ++ after
       processed = removeLineComments content
-  in not (any (`elem` "\"'\\") before) && not (any (`elem` "\"'\\") after) ==>
-     property $ "// not comment" `isInfixOf` processed .&&.
-                not ("// real comment" `isInfixOf` processed)
+  in not (L.any (`elem` "\"'\\") before) && not (L.any (`elem` "\"'\\") after) ==>
+     property $ "// not comment" `L.isInfixOf` processed .&&.
+                not ("// real comment" `L.isInfixOf` processed)
 
 -- ============================================================================
 -- Test 3: Parser Error Recovery Simulation
@@ -141,10 +143,10 @@ prop_parser_error_recovery_directives content =
   let malformedDirective = "//! malformed-directive without-equals\n" ++ content
       -- Simulate basic directive parsing
       lines' = lines malformedDirective
-      directiveLines = filter ("//! " `isPrefixOf`) lines'
-      contentLines = filter (not . ("//! " `isPrefixOf`)) lines'
-  in property $ length directiveLines >= 1 .&&.
-                length contentLines >= length (lines content)
+      directiveLines = L.filter ("//! " `L.isPrefixOf`) lines'
+      contentLines = L.filter (not . ("//! " `L.isPrefixOf`)) lines'
+  in property $ L.length directiveLines >= 1 .&&.
+                L.length contentLines >= L.length (lines content)
 
 -- Test block parsing with mixed content
 prop_parser_block_mixed_content :: [String] -> Property
@@ -153,9 +155,9 @@ prop_parser_block_mixed_content blocks =
   let blockContent = Data.List.intercalate "\n\n" blocks
       blockLines = lines blockContent
       -- Simulate block detection
-      hasDirectives = any ("//! " `isPrefixOf`) blockLines
-      hasCode = any (not . null . trim) blockLines
-  in property $ length blockLines >= length blocks .&&.
+      hasDirectives = L.any ("//! " `L.isPrefixOf`) blockLines
+      hasCode = L.any (not . null . trim) blockLines
+  in property $ L.length blockLines >= L.length blocks .&&.
                 (hasDirectives || hasCode)
 
 -- ============================================================================
@@ -178,10 +180,10 @@ prop_compilation_pipeline_consistency source =
 prop_compiler_optimization_invariants :: String -> Property
 prop_compiler_optimization_invariants code =
   let optimized = removeComments code
-      originalLines = length (lines code)
-      optimizedLines = length (lines optimized)
+      originalLines = L.length (lines code)
+      optimizedLines = L.length (lines optimized)
   in property $ optimizedLines <= originalLines .&&.
-                length optimized <= length code
+                L.length optimized <= L.length code
 
 -- ============================================================================
 -- Test 5: Ownership Transfer Tests
@@ -195,8 +197,8 @@ prop_ownership_transfer_transitive owner1 owner2 resource =
       transfer2 = owner2 ++ " -> " ++ owner1
       -- Simulate ownership chain validation
       chain = [transfer1, transfer2]
-      chainValid = all (\t -> length (words t) >= 3) chain
-  in property $ chainValid ==> length chain >= 2
+      chainValid = L.all (\t -> L.length (words t) >= 3) chain
+  in property $ chainValid ==> L.length chain >= 2
 
 -- Test ownership borrowing constraints
 prop_ownership_borrowing_constraints :: String -> Property
@@ -205,9 +207,9 @@ prop_ownership_borrowing_constraints resource =
   let borrow = "&" ++ resource
       use = resource ++ ".method()"
       -- Simulate borrow checker validation
-      hasBorrow = "&" `isPrefixOf` borrow
+      hasBorrow = "&" `L.isPrefixOf` borrow
       hasUse = not (null use)
-  in property $ hasBorrow && hasUse ==> length borrow >= 1 .&&. length use >= 1
+  in property $ hasBorrow && hasUse ==> L.length borrow >= 1 .&&. L.length use >= 1
 
 -- ============================================================================
 -- Test 6: Dependency Analysis Cycle Detection
@@ -218,10 +220,10 @@ prop_dependency_cycle_detection :: [(String, String)] -> Property
 prop_dependency_cycle_detection dependencies =
   not (null dependencies) ==>
   let nodes = nub $ concatMap (\(a, b) -> [a, b]) dependencies
-      hasCycle = any (\(a, b) -> (b, a) `elem` dependencies) dependencies
+      hasCycle = L.any (\(a, b) -> (b, a) `elem` dependencies) dependencies
   in classify hasCycle "has cycle" $
-     property $ length nodes >= 2 .&&.
-                (if hasCycle then length dependencies >= 2 else True)
+     property $ L.length nodes >= 2 .&&.
+                (if hasCycle then L.length dependencies >= 2 else True)
 
 -- Test dependency ordering consistency
 prop_dependency_ordering_consistency :: [String] -> Property
@@ -229,8 +231,8 @@ prop_dependency_ordering_consistency modules =
   not (null modules) ==>
   let ordered = sort modules
       -- Simulate topological sort validation
-      isSorted = all (uncurry (<=)) (zip ordered (tail ordered))
-  in property $ length ordered == length modules .&&.
+      isSorted = L.all (uncurry (<=)) (zip ordered (L.tail ordered))
+  in property $ L.length ordered == L.length modules .&&.
                 isSorted
 
 -- ============================================================================
@@ -269,20 +271,20 @@ prop_error_span_coverage startLine startCol endLine endCol =
 -- Test syntax validation with malformed input
 prop_syntax_validation_malformed_input :: String -> Property
 prop_syntax_validation_malformed_input input =
-  let hasUnmatchedBrackets = (length (filter (== '{') input) /= length (filter (== '}') input)) ||
-                            (length (filter (== '(') input) /= length (filter (== ')') input))
-      hasUnmatchedQuotes = (length (filter (== '"') input) `mod` 2) /= 0
+  let hasUnmatchedBrackets = (L.length (L.filter (== '{') input) /= L.length (L.filter (== '}') input)) ||
+                            (L.length (L.filter (== '(') input) /= L.length (L.filter (== ')') input))
+      hasUnmatchedQuotes = (L.length (L.filter (== '"') input) `mod` 2) /= 0
   in classify hasUnmatchedBrackets "has unmatched brackets" $
      classify hasUnmatchedQuotes "has unmatched quotes" $
-     property $ length input >= 0 .&&. True -- Always should not crash
+     property $ L.length input >= 0 .&&. True -- Always should not crash
 
 -- Test syntax validation edge cases
 prop_syntax_validation_edge_cases :: String -> Property
 prop_syntax_validation_edge_cases input =
   let specialChars = "!@#$%^&*()_+-=[]{}|;':\",./<>?"
-      hasSpecialChars = any (`elem` specialChars) input
+      hasSpecialChars = L.any (`elem` specialChars) input
   in classify hasSpecialChars "has special characters" $
-     property $ length input >= 0 -- Should handle special characters gracefully
+     property $ L.length input >= 0 -- Should handle special characters gracefully
 
 -- ============================================================================
 -- Test 9: Comment Processing Complex Scenarios
@@ -293,26 +295,26 @@ prop_comment_complex_string_literals :: String -> Property
 prop_comment_complex_string_literals content =
   let stringWithComments = content ++ " var s = \"// not comment /* also not */\" /* real comment */ // line comment"
       processed = removeComments stringWithComments
-  in not (any (`elem` "\"'\\") content) ==>
-     property $ "// not comment /* also not */" `isInfixOf` processed .&&.
-                not ("/* real comment */" `isInfixOf` processed) .&&.
-                not ("// line comment" `isInfixOf` processed)
+  in not (L.any (`elem` "\"'\\") content) ==>
+     property $ "// not comment /* also not */" `L.isInfixOf` processed .&&.
+                not ("/* real comment */" `L.isInfixOf` processed) .&&.
+                not ("// line comment" `L.isInfixOf` processed)
 
 -- Test comment nesting edge cases
 prop_comment_nesting_edge_cases :: String -> Property
 prop_comment_nesting_edge_cases content =
   let nestedComments = "/* outer /* inner */ still outer */" ++ content
       processed = removeComments nestedComments
-  in not ("/*" `isInfixOf` content) && not ("*/" `isInfixOf` content) ==>
-     property $ not ("/* outer" `isInfixOf` processed) .&&.
-                not ("/* inner" `isInfixOf` processed) .&&.
-                content `isInfixOf` processed
+  in not ("/*" `L.isInfixOf` content) && not ("*/" `L.isInfixOf` content) ==>
+     property $ not ("/* outer" `L.isInfixOf` processed) .&&.
+                not ("/* inner" `L.isInfixOf` processed) .&&.
+                content `L.isInfixOf` processed
 
 -- ============================================================================
 -- Test 10: Indentation Normalization Boundaries
 -- ============================================================================
 
--- Test indentation with mixed tabs and spaces
+-- Test indentation with mixed tabs L.and spaces
 prop_indentation_mixed_whitespace :: [Int] -> Property
 prop_indentation_mixed_whitespace indentLevels =
   not (null indentLevels) ==>
@@ -322,25 +324,25 @@ prop_indentation_mixed_whitespace indentLevels =
         in spaces ++ tabs ++ "content " ++ show level) indentLevels [1..]
       content = unlines inputLines
       normalized = normalizeIndentation content
-      normalizedLines = filter (not . null . trim) (lines normalized)
+      normalizedLines = L.filter (not . null . trim) (lines normalized)
       minIndent = if null normalizedLines then 0 else 
-                  minimum [length (takeWhile isSpace line) | line <- normalizedLines]
-  in property $ length normalizedLines >= length indentLevels .&&.
+                  L.minimum [L.length (takeWhile isSpace line) | line <- normalizedLines]
+  in property $ L.length normalizedLines >= L.length indentLevels .&&.
                 minIndent === 0
 
 -- Test indentation preservation of relative structure
 prop_indentation_relative_structure :: [Int] -> Property
 prop_indentation_relative_structure levels =
-  not (null levels) && all (>= 0) levels ==>
+  not (null levels) && L.all (>= 0) levels ==>
   let inputLines = zipWith (\level content -> 
         replicate level ' ' ++ "line" ++ show level) levels [1..]
       content = unlines inputLines
       normalized = normalizeIndentation content
       normalizedLines = lines normalized
       indentDifferences = zipWith (-) 
-        [length (takeWhile isSpace line) | line <- normalizedLines]
-        (0 : [length (takeWhile isSpace line) | line <- normalizedLines])
-  in property $ all (>= 0) indentDifferences
+        [L.length (takeWhile isSpace line) | line <- normalizedLines]
+        (0 : [L.length (takeWhile isSpace line) | line <- normalizedLines])
+  in property $ L.all (>= 0) indentDifferences
 
 -- Helper function for pipeline testing
 (|>) :: a -> (a -> b) -> b

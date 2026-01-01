@@ -4,17 +4,18 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.QuickCheck (Property, (==>), forAll, Gen, arbitrary, choose)
 import Data.Char (isSpace, isControl)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isSuffixOf)
 
 import TestSupport.QuickCheck (fastProperty)
 import Utils
 
--- | Test suite for Utils module string processing and boundary conditions
+-- | Test suite for Utils module string processing L.and boundary conditions
 tests :: TestTree
 tests =
   testGroup "NewQuickCheckTestSuite1 - Utils String Processing"
     [ testGroup "Trim function properties"
-        [ testCase "trim handles all whitespace" $ do
+        [ testCase "trim handles L.all whitespace" $ do
             trim " \t\n\r\v\f " @?= ""
             
         , testCase "trim preserves internal whitespace" $ do
@@ -47,7 +48,7 @@ tests =
         , testCase "splitByCollapsed with only delimiters" $ do
             splitByCollapsed ',' ",,," @?= []
             
-        , fastProperty "splitBy length property" prop_splitByLength
+        , fastProperty "splitBy L.length property" prop_splitByLength
         , fastProperty "splitByCollapsed never returns empty strings" prop_splitByCollapsedNoEmpty
         , fastProperty "splitBy recombination" prop_splitByRecombination
         ]
@@ -72,11 +73,11 @@ tests =
                 @?= "start \n"
             
         , fastProperty "removeLineComments preserves non-comment content" prop_removeLineCommentsPreservesContent
-        , fastProperty "removeComments never increases string length" prop_removeCommentsNeverIncreases
+        , fastProperty "removeComments never increases string L.length" prop_removeCommentsNeverIncreases
         ]
 
     , testGroup "Indentation normalization edge cases"
-        [ testCase "normalizeIndentation handles mixed tabs and spaces" $ do
+        [ testCase "normalizeIndentation handles mixed tabs L.and spaces" $ do
             let input = "    \tline1\n\t    line2\n"
                 expected = "line1\n\tline2\n"
             normalizeIndentation input @?= expected
@@ -112,7 +113,7 @@ tests =
         , fastProperty "breakOn with pattern longer than string" prop_breakOnPatternLonger
         ]
     
-    , testGroup "Unicode and special character handling"
+    , testGroup "Unicode L.and special character handling"
         [ testCase "trim with Unicode characters" $ do
             trim "  \x03B8\x03B5\x03C1\x03BC\x03B1  " @?= "\x03B8\x03B5\x03C1\x03BC\x03B1"
             
@@ -136,31 +137,31 @@ prop_trimIdempotent :: String -> Bool
 prop_trimIdempotent input = trim (trim input) == trim input
 
 prop_trimNeverAdds :: String -> Bool
-prop_trimNeverAdds input = length (trim input) <= length input
+prop_trimNeverAdds input = L.length (trim input) <= L.length input
 
 prop_trimOnlyRemovesWhitespace :: String -> Bool
 prop_trimOnlyRemovesWhitespace input = 
     let trimmed = trim input
-        originalLength = length input
-        trimmedLength = length trimmed
+        originalLength = L.length input
+        trimmedLength = L.length trimmed
         removed = take (originalLength - trimmedLength) input
-    in all isSpace removed
+    in L.all isSpace removed
 
 -- Split properties
 prop_splitByLength :: Char -> String -> Bool
 prop_splitByLength delim input = 
     let parts = splitBy delim input
         joined = intercalate [delim] parts
-    in length joined >= length input  -- May be longer due to delimiter reinsertion
+    in L.length joined >= L.length input  -- May be longer due to delimiter reinsertion
 
 prop_splitByCollapsedNoEmpty :: Char -> String -> Bool
 prop_splitByCollapsedNoEmpty delim input = 
-    all (not . null) (splitByCollapsed delim input)
+    L.all (not . null) (splitByCollapsed delim input)
 
 prop_splitByRecombination :: Char -> String -> Bool
 prop_splitByRecombination delim input = 
     let parts = splitBy delim input
-        recombined = concat parts ++ replicate (length parts - 1) [delim]
+        recombined = L.concat parts ++ replicate (L.length parts - 1) [delim]
     in recombined == input
 
 -- Comment removal properties
@@ -169,23 +170,23 @@ prop_removeLineCommentsPreservesContent input =
     let withoutComments = removeLineComments input
         linesInput = lines input
         linesOutput = lines withoutComments
-    in length linesOutput == length linesInput
+    in L.length linesOutput == L.length linesInput
 
 prop_removeCommentsNeverIncreases :: String -> Bool
-prop_removeComments input = length (removeComments input) <= length input
+prop_removeComments input = L.length (removeComments input) <= L.length input
 
 -- Indentation properties
 prop_normalizeIndentationPreservesRelative :: String -> Bool
 prop_normalizeIndentationPreservesRelative input = 
     let linesInput = lines input
         linesOutput = lines (normalizeIndentation input)
-    in length linesInput == length linesOutput
+    in L.length linesInput == L.length linesOutput
 
 prop_forceSingleTabProperty :: String -> Bool
 prop_forceSingleTabProperty input = 
     let linesOutput = lines (forceSingleTabIndentation input)
-        nonEmptyLines = filter (not . null) linesOutput
-    in all ("\t" `isPrefixOf`) nonEmptyLines
+        nonEmptyLines = L.filter (not . null) linesOutput
+    in L.all ("\t" `L.isPrefixOf`) nonEmptyLines
 
 -- Search properties
 prop_breakOnConcatenation :: String -> String -> Bool
@@ -195,20 +196,20 @@ prop_breakOnConcatenation pattern input =
 
 prop_breakOnPatternLonger :: String -> String -> Bool
 prop_breakOnPatternLonger pattern input = 
-    length pattern > length input ==> breakOn pattern input == (input, "")
+    L.length pattern > L.length input ==> breakOn pattern input == (input, "")
 
 -- Unicode properties
 prop_trimUnicode :: String -> Bool
 prop_trimUnicode input = 
     let trimmed = trim input
-        hasNonWhitespace = any (not . isSpace) input
-    in hasNonWhitespace ==> any (not . isSpace) trimmed
+        hasNonWhitespace = L.any (not . isSpace) input
+    in hasNonWhitespace ==> L.any (not . isSpace) trimmed
 
 prop_splitByUnicode :: Char -> String -> Bool
 prop_splitByUnicode delim input = 
     let parts = splitBy delim input
-        totalLength = sum (map length parts) + length parts - 1
-    in totalLength == length input
+        totalLength = L.sum (map L.length parts) + L.length parts - 1
+    in totalLength == L.length input
 
 -- Helper function
 intercalate :: String -> [String] -> String

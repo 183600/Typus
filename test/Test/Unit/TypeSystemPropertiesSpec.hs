@@ -13,7 +13,9 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase, (@=?))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, oneof, sized, suchThat)
-import Data.List (isInfixOf, isPrefixOf, sort, nub, intercalate)
+import qualified Data.List as L
+import Data.List (isInfixOf, isPrefixOf)
+import Data.List (sort, nub, intercalate)
 import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -118,7 +120,7 @@ prop_typevar_ordering tv1 tv2 =
 -- Property: TypeVar constructors create distinct representations
 prop_typevar_constructors_distinct :: String -> String -> [TypeVar] -> Property
 prop_typevar_constructors_distinct name1 name2 args =
-  length args <= 3 ==>
+  L.length args <= 3 ==>
   let con = TVCon name1
       var = TVVar name1
       app = TVApp name1 args
@@ -126,7 +128,7 @@ prop_typevar_constructors_distinct name1 name2 args =
       tuple = TVTuple args
       typeVars = [con, var, app, fun, tuple]
       shownVars = map show typeVars
-  in property $ length (nub shownVars) >= 3 -- At least some should be distinct
+  in property $ L.length (nub shownVars) >= 3 -- At least some should be distinct
 
 -- ============================================================================
 -- TypeConstraint Properties
@@ -152,12 +154,12 @@ prop_typeconstraint_contains_info :: TypeConstraint -> Property
 prop_typeconstraint_contains_info constraint =
   let shown = show constraint
   in case constraint of
-    Equal tv1 tv2 -> property $ show tv1 `isInfixOf` shown .&&. show tv2 `isInfixOf` shown
-    Subtype tv1 tv2 -> property $ show tv1 `isInfixOf` shown .&&. show tv2 `isInfixOf` shown
-    Predicate name args -> property $ name `isInfixOf` shown .&&. all (`isInfixOf` shown) (map show args)
-    TypeSizeGE tv size -> property $ show tv `isInfixOf` shown .&&. show size `isInfixOf` shown
-    TypeSizeGT tv size -> property $ show tv `isInfixOf` shown .&&. show size `isInfixOf` shown
-    TypeRange tv min max -> property $ show tv `isInfixOf` shown .&&. show min `isInfixOf` shown .&&. show max `isInfixOf` shown
+    Equal tv1 tv2 -> property $ show tv1 `L.isInfixOf` shown .&&. show tv2 `L.isInfixOf` shown
+    Subtype tv1 tv2 -> property $ show tv1 `L.isInfixOf` shown .&&. show tv2 `L.isInfixOf` shown
+    Predicate name args -> property $ name `L.isInfixOf` shown .&&. L.all (`L.isInfixOf` shown) (map show args)
+    TypeSizeGE tv size -> property $ show tv `L.isInfixOf` shown .&&. show size `L.isInfixOf` shown
+    TypeSizeGT tv size -> property $ show tv `L.isInfixOf` shown .&&. show size `L.isInfixOf` shown
+    TypeRange tv min max -> property $ show tv `L.isInfixOf` shown .&&. show min `L.isInfixOf` shown .&&. show max `L.isInfixOf` shown
 
 -- ============================================================================
 -- DependentTypeError Properties
@@ -174,15 +176,15 @@ prop_dependent_type_error_contains_info :: DependentTypeError -> Property
 prop_dependent_type_error_contains_info err =
   let shown = show err
   in case err of
-    DependentTypeMismatch tv1 tv2 -> property $ show tv1 `isInfixOf` shown .&&. show tv2 `isInfixOf` shown
-    ConstraintViolation msg tv -> property $ msg `isInfixOf` shown .&&. show tv `isInfixOf` shown
-    TypeNotFound name -> property $ name `isInfixOf` shown
-    InvalidTypeArgument msg -> property $ msg `isInfixOf` shown
-    UnsolvableConstraint constraint -> property $ show constraint `isInfixOf` shown
-    DependentInfiniteType msg tv -> property $ msg `isInfixOf` shown .&&. show tv `isInfixOf` shown
-    AmbiguousType msg -> property $ msg `isInfixOf` shown
-    ParseError msg -> property $ msg `isInfixOf` shown
-    SemanticError msg -> property $ msg `isInfixOf` shown
+    DependentTypeMismatch tv1 tv2 -> property $ show tv1 `L.isInfixOf` shown .&&. show tv2 `L.isInfixOf` shown
+    ConstraintViolation msg tv -> property $ msg `L.isInfixOf` shown .&&. show tv `L.isInfixOf` shown
+    TypeNotFound name -> property $ name `L.isInfixOf` shown
+    InvalidTypeArgument msg -> property $ msg `L.isInfixOf` shown
+    UnsolvableConstraint constraint -> property $ show constraint `L.isInfixOf` shown
+    DependentInfiniteType msg tv -> property $ msg `L.isInfixOf` shown .&&. show tv `L.isInfixOf` shown
+    AmbiguousType msg -> property $ msg `L.isInfixOf` shown
+    ParseError msg -> property $ msg `L.isInfixOf` shown
+    SemanticError msg -> property $ msg `L.isInfixOf` shown
 
 -- ============================================================================
 -- TypeDef Properties
@@ -194,7 +196,7 @@ prop_typedef_show_nonempty typeDef =
   let shown = show typeDef
   in property $ not (null shown)
 
--- Property: TypeDef with empty params and constraints is valid
+-- Property: TypeDef with empty params L.and constraints is valid
 prop_typedef_empty_valid :: Property
 prop_typedef_empty_valid =
   let emptyDef = TypeDefDecl [] []
@@ -238,7 +240,7 @@ prop_new_dependent_type_checker_with_types types =
 -- Property: getDependentTypeErrors returns errors from checker
 prop_get_dependent_type_errors :: [DependentTypeError] -> Property
 prop_get_dependent_type_errors errors =
-  length errors <= 5 ==> -- Limit for performance
+  L.length errors <= 5 ==> -- Limit for performance
   let checker = DependentTypeChecker (TypeEnv Map.empty []) errors
       retrievedErrors = getDependentTypeErrors checker
   in property $ retrievedErrors === errors
@@ -275,7 +277,7 @@ prop_add_constraint constraint typeEnv =
       oldConstraints = pendingConstraints typeEnv
       newConstraints = pendingConstraints newEnv
   in property $ constraint `elem` newConstraints .&&.
-             length newConstraints === length oldConstraints + 1
+             L.length newConstraints === L.length oldConstraints + 1
 
 -- Property: addTypeError adds error to checker
 prop_add_type_error :: DependentTypeError -> DependentTypeChecker -> Property
@@ -284,7 +286,7 @@ prop_add_type_error error checker =
       oldErrors = tcErrors checker
       newErrors = tcErrors newChecker
   in property $ error `elem` newErrors .&&.
-             length newErrors === length oldErrors + 1
+             L.length newErrors === L.length oldErrors + 1
 
 -- ============================================================================
 -- Type Checking Properties
@@ -339,7 +341,7 @@ prop_solve_constraints_simple constraint =
 -- Property: solveConstraints handles multiple constraints
 prop_solve_constraints_multiple :: [TypeConstraint] -> Property
 prop_solve_constraints_multiple constraints =
-  length constraints <= 3 ==> -- Limit for performance
+  L.length constraints <= 3 ==> -- Limit for performance
   let checker = newDependentTypeChecker
       result = solveConstraints checker constraints
   in property $ True -- Should not crash
@@ -387,7 +389,7 @@ prop_convert_constraint_simple constraint =
 prop_prelude_contains_basic_types :: Property
 prop_prelude_contains_basic_types =
   let basicTypes = ["int", "string", "bool"]
-  in property $ all (`Map.member` preludeTypeDefs) basicTypes
+  in property $ L.all (`Map.member` preludeTypeDefs) basicTypes
 
 -- Property: preludeTypeDefs is non-empty
 prop_prelude_nonempty :: Property
@@ -409,7 +411,7 @@ prop_type_checking_deterministic typeVar =
 -- Property: Constraint solving is deterministic
 prop_constraint_solving_deterministic :: [TypeConstraint] -> Property
 prop_constraint_solving_deterministic constraints =
-  length constraints <= 3 ==> -- Limit for performance
+  L.length constraints <= 3 ==> -- Limit for performance
   let checker = newDependentTypeChecker
       result1 = solveConstraints checker constraints
       result2 = solveConstraints checker constraints
@@ -436,12 +438,12 @@ prop_environment_operations_consistent name typeDef constraint typeEnv =
 -- Property: Error accumulation works correctly
 prop_error_accumulation :: [DependentTypeError] -> Property
 prop_error_accumulation errors =
-  length errors <= 5 ==> -- Limit for performance
+  L.length errors <= 5 ==> -- Limit for performance
   let checker = newDependentTypeChecker
-      checkerWithErrors = foldl (flip addTypeError) checker errors
+      checkerWithErrors = L.foldl (flip addTypeError) checker errors
       finalErrors = getDependentTypeErrors checkerWithErrors
-  in property $ length finalErrors >= length errors .&&.
-             all (`elem` finalErrors) errors
+  in property $ L.length finalErrors >= L.length errors .&&.
+             L.all (`elem` finalErrors) errors
 
 -- ============================================================================
 -- Test Collection
@@ -465,7 +467,7 @@ tests = testGroup "TypeSystem Properties Tests"
     ]
   , testGroup "TypeDef Properties"
     [ fastProperty "TypeDef Show produces non-empty string" prop_typedef_show_nonempty
-    , fastProperty "TypeDef with empty params and constraints is valid" prop_typedef_empty_valid
+    , fastProperty "TypeDef with empty params L.and constraints is valid" prop_typedef_empty_valid
     ]
   , testGroup "TypeEnv Properties"
     [ fastProperty "TypeEnv Show produces non-empty string" prop_typeenv_show_nonempty

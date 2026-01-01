@@ -11,12 +11,14 @@
 module Test.Unit.NewErrorRecoveryMechanismsQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, oneof, suchThat)
 import Data.Text (Text)
-import qualified Data.Text as T
-import Data.List (sort, nub, isInfixOf, isPrefixOf, isSuffixOf)
+import qualified Data.Text as T (pack, unpack)
+import Data.List (isInfixOf, isPrefixOf, isSuffixOf)
+import Data.List (sort, nub)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import Data.Either (isLeft, isRight)
 
@@ -47,7 +49,7 @@ import Compiler
   )
 
 -- ============================================================================
--- Helper Functions and Generators
+-- Helper Functions L.and Generators
 -- ============================================================================
 
 -- Generate error contexts
@@ -116,7 +118,7 @@ prop_recovery_preserves_original_error errorMsg strategy =
       originalErrors = collectErrors handlerWithError
       recoveredErrors = collectErrors recoveredHandler
   in property $ not (null originalErrors) ==> 
-             length recoveredErrors >= length originalErrors
+             length recoveredErrors >= L.length originalErrors
 
 -- Property: Recovery suggestions should be relevant to error type
 prop_recovery_suggestions_relevance :: ErrorMessage -> Property
@@ -128,9 +130,9 @@ prop_recovery_suggestions_relevance errorMsg =
              all (\suggestion -> 
                let suggestionText = T.unpack $ formatError suggestion
                in case errSeverity errorMsg of
-                    ErrorWarning -> "warning" `isInfixOf` suggestionText || "continue" `isInfixOf` suggestionText
-                    ErrorError -> "error" `isInfixOf` suggestionText || "fix" `isInfixOf` suggestionText  
-                    ErrorFatal -> "fatal" `isInfixOf` suggestionText || "abort" `isInfixOf` suggestionText
+                    ErrorWarning -> "warning" `L.isInfixOf` suggestionText || "continue" `L.isInfixOf` suggestionText
+                    ErrorError -> "error" `L.isInfixOf` suggestionText || "fix" `L.isInfixOf` suggestionText  
+                    ErrorFatal -> "fatal" `L.isInfixOf` suggestionText || "abort" `L.isInfixOf` suggestionText
              ) suggestions
 
 -- Property: Multiple recovery attempts should accumulate suggestions
@@ -145,7 +147,7 @@ prop_multiple_recovery_accumulates errorMessages =
                         then attemptRecovery handlerWithErrors SkipToken
                         else handlerWithErrors
       suggestions2 = getRecoverySuggestions recoveredHandler
-  in property $ length suggestions2 >= length suggestions1
+  in property $ L.length suggestions2 >= L.length suggestions1
 
 -- Property: Parse recovery should produce valid partial results
 prop_parse_recovery_partial_results :: String -> ParseError -> Property
@@ -171,8 +173,8 @@ prop_recovery_circular_dependencies moduleNames =
   length moduleNames >= 3 ==> 
   let uniqueModules = nub moduleNames
       -- Create circular dependency
-      circularDeps = zip uniqueModules (tail uniqueModules ++ [head uniqueModules])
-      errors = map (\(from, to) -> 
+      circularDeps = zip uniqueModules (L.tail uniqueModules ++ [L.head uniqueModules])
+      errors = L.map (\(from, to) -> 
         CompilationError ("Circular dependency: " ++ from ++ " -> " ++ to) 
                          "dependency-analysis" 
                          (ErrorContext from 1 1)
@@ -191,7 +193,7 @@ prop_recovery_strategy_idempotent errorMsg strategy =
       recovered2 = attemptRecovery recovered1 strategy
       errors1 = collectErrors recovered1
       errors2 = collectErrors recovered2
-  in property $ length errors1 === length errors2
+  in property $ L.length errors1 === L.length errors2
 
 -- Property: Error recovery should maintain error severity ordering
 prop_recovery_maintains_severity_ordering :: [ErrorMessage] -> Property
@@ -207,7 +209,7 @@ prop_recovery_maintains_severity_ordering errorMessages =
 -- Property: Recovery should handle malformed input gracefully
 prop_recovery_malformed_input :: String -> Property
 prop_recovery_malformed_input input =
-  let malformedChars = filter (\c -> ord c < 32 && c `notElem` "\t\n\r") input
+  let malformedChars = L.filter (\c -> ord c < 32 && c `notElem` "\t\n\r") input
   in not (null malformedChars) ==> 
      let handler = newErrorHandler
          errorMsg = ErrorMessage ("Malformed input: " ++ show malformedChars) ErrorError (ErrorContext "" 1 1)
@@ -223,10 +225,10 @@ prop_recovery_suggestions_actionable errorMsg =
       handlerWithError = handleError handler errorMsg
       suggestions = getRecoverySuggestions handlerWithError
   in not (null suggestions) ==> 
-     property $ all (\suggestion -> 
+     property $ L.all (\suggestion -> 
        let suggestionText = T.unpack $ formatError suggestion
            actionableKeywords = ["fix", "change", "add", "remove", "replace", "skip", "continue"]
-       in any (`isInfixOf` suggestionText) actionableKeywords
+       in L.any (`L.isInfixOf` suggestionText) actionableKeywords
      ) suggestions
 
 -- Property: Error recovery should preserve context information
@@ -238,7 +240,7 @@ prop_recovery_preserves_context context errorMsg =
       recoveredHandler = attemptRecovery handlerWithError SkipToken
       recoveredErrors = collectErrors recoveredHandler
   in not (null recoveredErrors) ==> 
-     property $ all (\err -> errContext err === context) recoveredErrors
+     property $ L.all (\err -> errContext err === context) recoveredErrors
 
 -- ============================================================================
 -- Performance Properties
@@ -263,10 +265,10 @@ prop_recovery_memory_efficiency errorMessages iterations =
       -- Simulate multiple recovery attempts
       finalHandler = iterate (\h -> attemptRecovery h SkipToken) handlerWithErrors !! iterations
       finalErrors = collectErrors finalHandler
-  in property $ length finalErrors <= length errorMessages + iterations
+  in property $ L.length finalErrors <= L.length errorMessages + iterations
 
 -- ============================================================================
--- Edge Cases and Boundary Conditions
+-- Edge Cases L.and Boundary Conditions
 -- ============================================================================
 
 -- Property: Recovery should handle empty error lists
@@ -285,7 +287,7 @@ prop_recovery_fatal_errors errorMsg =
       handlerWithError = handleError handler fatalError
       recoveredHandler = attemptRecovery handlerWithError ContinueWithWarnings
       suggestions = getRecoverySuggestions recoveredHandler
-  in property $ any (\s -> errSeverity s == ErrorFatal) suggestions
+  in property $ L.any (\s -> errSeverity s == ErrorFatal) suggestions
 
 -- Property: Recovery should handle errors with missing context
 prop_recovery_missing_context :: String -> Property
@@ -308,7 +310,7 @@ tests = testGroup "New Error Recovery Mechanisms QuickCheck Tests"
     , fastProperty "multiple recovery accumulates" prop_multiple_recovery_accumulates
     ]
 
-  , testGroup "Parse and Compilation Recovery"
+  , testGroup "Parse L.and Compilation Recovery"
     [ fastProperty "parse recovery partial results" prop_parse_recovery_partial_results
     , fastProperty "compilation recovery preserves success" prop_compilation_recovery_preserves_success
     , fastProperty "recovery circular dependencies" prop_recovery_circular_dependencies
@@ -330,7 +332,7 @@ tests = testGroup "New Error Recovery Mechanisms QuickCheck Tests"
     , fastProperty "recovery memory efficiency" prop_recovery_memory_efficiency
     ]
 
-  , testGroup "Edge Cases and Boundary Conditions"
+  , testGroup "Edge Cases L.and Boundary Conditions"
     [ fastProperty "recovery empty error list" prop_recovery_empty_error_list
     , fastProperty "recovery fatal errors" prop_recovery_fatal_errors
     , fastProperty "recovery missing context" prop_recovery_missing_context

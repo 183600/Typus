@@ -24,7 +24,7 @@ module DebugIntegration
 import Data.IORef (writeIORef)
 
 import Debug (debugLog, debugError, debugInfo, debugWarn, debugTrace)
-import CommandLineDebug (CommandLineDebugConfig, pushCallStack, popCallStack, listBreakpoints, setBreakpoint, clearBreakpoints, addWatchVariable, runWithCLIDebug, defaultCLIDebugConfig, getCallStack, listWatchVariables, cldEnabled, cldLogLevel, cldInteractive)
+import CommandLineDebug (CommandLineDebugConfig, pushCallStack, popCallStack, listBreakpoints, printBreakpoints, setBreakpoint, clearBreakpoints, addWatchVariable, runWithCLIDebug, defaultCLIDebugConfig, getCallStack, listWatchVariables, cldEnabled, cldLogLevel, cldInteractive)
 
 -- Debug integration for compiler phases
 withDebugging :: CommandLineDebugConfig -> String -> IO a -> IO a
@@ -166,7 +166,7 @@ exampleDebugIntegration = do
 
 -- Command line debugger utility functions
 showCurrentBreakpoints :: CommandLineDebugConfig -> IO ()
-showCurrentBreakpoints = listBreakpoints
+showCurrentBreakpoints = printBreakpoints
 
 addCustomBreakpoint :: CommandLineDebugConfig -> String -> IO ()
 addCustomBreakpoint = setBreakpoint

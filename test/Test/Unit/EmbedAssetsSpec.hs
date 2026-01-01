@@ -1,6 +1,7 @@
 module Test.Unit.EmbedAssetsSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertBool, assertEqual)
 import Test.Tasty.QuickCheck (testProperty, Property, forAll, Gen, arbitrary, listOf1, elements)
 import Control.Monad (unless)
@@ -61,11 +62,11 @@ testFormatMissingMessage = testCase "Format missing message" $ do
         ]
   
   let message = formatMissingMessage missing
-  assertBool "Message should contain header" ("Missing embedded assets" `isInfixOf` message)
-  assertBool "Message should contain pattern" ("*.txt" `isInfixOf` message)
-  assertBool "Message should contain root" ("/assets" `isInfixOf` message)
-  assertBool "Message should contain reference" ("main.go" `isInfixOf` message)
-  assertBool "Message should contain second pattern" ("config/*.json" `isInfixOf` message)
+  assertBool "Message should contain header" ("Missing embedded assets" `L.isInfixOf` message)
+  assertBool "Message should contain pattern" ("*.txt" `L.isInfixOf` message)
+  assertBool "Message should contain root" ("/assets" `L.isInfixOf` message)
+  assertBool "Message should contain reference" ("main.go" `L.isInfixOf` message)
+  assertBool "Message should contain second pattern" ("config/*.json" `L.isInfixOf` message)
 
 testExtractEmbeddedPatterns :: TestTree
 testExtractEmbeddedPatterns = testCase "Extract embedded patterns" $ do
@@ -122,7 +123,7 @@ testListGoFiles = testCase "List Go files" $ do
     writeFile (tempDir </> "readme.txt") "readme"
     
     goFiles <- listGoFiles tempDir
-    assertEqual "Should find 3 Go files" 3 (length goFiles)
+    assertEqual "Should find 3 Go files" 3 (L.length goFiles)
     assertBool "Should contain main.go" ("main.go" `elem` map takeFileName goFiles)
     assertBool "Should contain helper.go" ("helper.go" `elem` map takeFileName goFiles)
     assertBool "Should contain sub.go" ("sub.go" `elem` map takeFileName goFiles)
@@ -177,22 +178,22 @@ testCopyEmbeddedForBuild = testCase "Copy embedded for build" $ do
     assertBool "Should copy embedded file for build" destFileExists
 
 testEmbedPatternExtractionProperties :: TestTree
-testEmbedPatternExtractionProperties = testProperty "Extract patterns preserves order and content" $
+testEmbedPatternExtractionProperties = testProperty "Extract patterns preserves order L.and content" $
   forAll arbitraryEmbedContent $ \content -> do
     let patterns = extractEmbeddedPatterns content
-    return $ all (not . null) patterns
+    return $ L.all (not . null) patterns
 
 -- Helper generator for embed content
 arbitraryEmbedContent :: Gen String
 arbitraryEmbedContent = do
   patterns <- listOf1 $ elements ["*.txt", "config/*.json", "assets/*", "data/*.yaml", "static/**"]
-  let directives = map (\p -> "//go:embed " ++ p) patterns
+  let directives = L.map (\p -> "//go:embed " ++ p) patterns
   return $ unlines (directives ++ ["package main"])
 
 -- Helper function to check if a string is contained in another
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` (words haystack)
+L.isInfixOf needle haystack = needle `elem` (words haystack)
 
 -- Helper to get filename from path
 takeFileName :: FilePath -> String
-takeFileName = reverse . takeWhile (/= '/') . reverse
+takeFileName = L.reverse . takeWhile (/= '/') . L.reverse

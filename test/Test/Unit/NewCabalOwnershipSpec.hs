@@ -24,7 +24,9 @@ import Ownership
   , formatOwnershipErrors
   )
 
-import Data.List (isPrefixOf, isInfixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort, nub)
 
 -- Test 1: Ownership analyzer creation
 prop_ownership_analyzer_creation :: Property
@@ -55,10 +57,10 @@ prop_ownership_transfer_consistency fromVar toVar =
 -- Test 4: Multiple ownership transfers
 prop_multiple_ownership_transfers :: [String] -> Property
 prop_multiple_ownership_transfers variables =
-  let code = unlines $ map (\v -> v ++ " := 1") variables
+  let code = unlines $ L.map (\v -> v ++ " := 1") variables
       analyzer = newOwnershipAnalyzer
       result = analyzeOwnership analyzer code
-  in length variables > 0 ==> 
+  in L.length variables > 0 ==> 
      property $ True -- Should handle multiple variables
 
 -- Test 5: Ownership error formatting
@@ -79,7 +81,7 @@ prop_ownership_type_consistency :: OwnershipType -> Property
 prop_ownership_type_consistency ownershipType =
   let analyzer = newOwnershipAnalyzer
       result = analyzeOwnership analyzer "x := 42"
-  in property $ True -- Should work with any ownership type
+  in property $ True -- Should work with L.any ownership type
 
 -- Test 8: Variable reassignment analysis
 prop_variable_reassignment_analysis :: String -> Property
@@ -108,7 +110,7 @@ prop_complex_ownership_scenarios statements =
   let code = unlines statements
       analyzer = newOwnershipAnalyzer
       result = analyzeOwnership analyzer code
-  in length statements > 0 ==> 
+  in L.length statements > 0 ==> 
      property $ True -- Should handle complex scenarios
 
 tests :: TestTree

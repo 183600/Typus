@@ -33,6 +33,7 @@ import Compiler
 import Parser (TypusFile(..), CodeBlock(..), defaultFileDirectives, defaultBlockDirectives)
 import SourceLocation (SourceSpan(..), SourcePos(..), startPos)
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 -- | Generate simple code blocks

@@ -14,10 +14,10 @@ import ErrorHandler (Error(..), ErrorSeverity(..), ErrorContext(..), ErrorRecove
 import Compiler.Errors.Core (ErrorSeverity(..), ErrorLocation(..), ErrorContext(..), ErrorRecovery(..), emptyContext)
 import SourceLocation (SourceSpan(..), SourcePos(..))
 
--- | Advanced error handling and recovery tests
+-- | Advanced error handling L.and recovery tests
 tests :: TestTree
 tests =
-  testGroup "Advanced Error Handling and Recovery Tests"
+  testGroup "Advanced Error Handling L.and Recovery Tests"
     [ testGroup "Syntax error recovery"
         [ testCase "recovers from missing semicolon" $ do
             let input = unlines
@@ -29,7 +29,7 @@ tests =
                   ]
                 result = recoverFromSyntaxError input
             case result of
-                Right (Recovered warnings) -> length warnings @?= 1
+                Right (Recovered warnings) -> L.length warnings @?= 1
                 Left _ -> assertBool "Expected recovery" False
 
         , testCase "handles unmatched brackets gracefully" $ do
@@ -38,7 +38,7 @@ tests =
             case result of
                 Right (Recovered warnings) -> 
                     assertBool "Should suggest bracket completion" $ 
-                        any (List.isInfixOf "missing closing") warnings
+                        L.any (List.L.isInfixOf "missing closing") warnings
                 _ -> assertBool "Expected recovery" False
 
         , testCase "recovers from malformed function signatures" $ do
@@ -47,7 +47,7 @@ tests =
             case result of
                 Right (Recovered warnings) -> 
                     assertBool "Should suggest parameter name" $ 
-                        any (List.isInfixOf "parameter name") warnings
+                        L.any (List.L.isInfixOf "parameter name") warnings
                 _ -> assertBool "Expected recovery" False
         ]
 
@@ -58,7 +58,7 @@ tests =
             case result of
                 Right (Suggestion suggestion) -> 
                     assertBool "Should suggest conversion" $ 
-                        "strconv.Atoi" `List.isInfixOf` suggestion
+                        "strconv.Atoi" `List.L.isInfixOf` suggestion
                 _ -> assertBool "Expected suggestion" False
 
         , testCase "handles undefined variables with suggestions" $ do
@@ -67,7 +67,7 @@ tests =
             case result of
                 Right (Suggestions suggestions) -> 
                     assertBool "Should suggest similar names" $ 
-                        length suggestions > 0
+                        L.length suggestions > 0
                 _ -> assertBool "Expected suggestions" False
 
         , testCase "recovers from missing imports" $ do
@@ -76,7 +76,7 @@ tests =
             case result of
                 Right (ImportSuggestion importSuggestion) -> 
                     assertBool "Should suggest import" $ 
-                        "import \"fmt\"" `List.isInfixOf` importSuggestion
+                        "import \"fmt\"" `List.L.isInfixOf` importSuggestion
                 _ -> assertBool "Expected import suggestion" False
         ]
 
@@ -93,7 +93,7 @@ tests =
             case result of
                 Right (Warning warning) -> 
                     assertBool "Should warn about unreachable code" $ 
-                        "unreachable" `List.isInfixOf` warning
+                        "unreachable" `List.L.isInfixOf` warning
                 _ -> assertBool "Expected unreachable warning" False
 
         , testCase "detects unused variables with fix suggestions" $ do
@@ -106,8 +106,8 @@ tests =
                 result = analyzeSemanticError input
             case result of
                 Right (FixSuggestions fixes) -> 
-                    assertBool "Should suggest removal or prefix" $ 
-                        any (List.isInfixOf "_unused") fixes
+                    assertBool "Should suggest removal L.or prefix" $ 
+                        L.any (List.L.isInfixOf "_unused") fixes
                 _ -> assertBool "Expected fix suggestions" False
 
         , testCase "handles function redefinition" $ do
@@ -119,7 +119,7 @@ tests =
             case result of
                 Right (RedefinitionError suggestion) -> 
                     assertBool "Should suggest rename" $ 
-                        "rename" `List.isInfixOf` suggestion
+                        "rename" `List.L.isInfixOf` suggestion
                 _ -> assertBool "Expected redefinition error" False
         ]
 
@@ -135,7 +135,7 @@ tests =
             case result of
                 Right (PotentialError warning) -> 
                     assertBool "Should warn about nil pointer" $ 
-                        "nil pointer" `List.isInfixOf` warning
+                        "nil pointer" `List.L.isInfixOf` warning
                 _ -> assertBool "Expected nil pointer warning" False
 
         , testCase "detects potential slice bounds errors" $ do
@@ -149,7 +149,7 @@ tests =
             case result of
                 Right (BoundsCheck suggestion) -> 
                     assertBool "Should suggest bounds check" $ 
-                        "bounds check" `List.isInfixOf` suggestion
+                        "bounds check" `List.L.isInfixOf` suggestion
                 _ -> assertBool "Expected bounds check suggestion" False
 
         , testCase "predicts race conditions" $ do
@@ -165,7 +165,7 @@ tests =
             case result of
                 Right (RaceCondition warning) -> 
                     assertBool "Should warn about race condition" $ 
-                        "race condition" `List.isInfixOf` warning
+                        "race condition" `List.L.isInfixOf` warning
                 _ -> assertBool "Expected race condition warning" False
         ]
 
@@ -186,7 +186,7 @@ tests =
                     , callStack = ["complex", "transform"]
                     }
                 enhanced = enhanceErrorContext input errorLocation
-            length (variables enhanced) @?= 2
+            L.length (variables enhanced) @?= 2
 
         , testCase "suggests relevant documentation" $ do
             let errorType = "TypeMismatch"
@@ -198,13 +198,13 @@ tests =
                     }
                 docs = suggestDocumentation errorType context
             assertBool "Should provide relevant docs" $ 
-                any (List.isInfixOf "type conversion") docs
+                L.any (List.L.isInfixOf "type conversion") docs
 
         , testCase "provides code examples for fixes" $ do
             let errorType = "MissingImport"
                 examples = getCodeExamples errorType
             assertBool "Should provide code examples" $ 
-                any (List.isInfixOf "import") examples
+                L.any (List.L.isInfixOf "import") examples
         ]
 
     , testGroup "Incremental error recovery"
@@ -219,7 +219,7 @@ tests =
                 result = recoverFromMultipleErrors input
             case result of
                 Right (MultipleRecovery recoveries) -> 
-                    length recoveries @?= 3
+                    L.length recoveries @?= 3
                 _ -> assertBool "Expected multiple recoveries" False
 
         , testCase "maintains error recovery state" $ do
@@ -253,9 +253,9 @@ tests =
 
         , testCase "scales linearly with error count" $ do
             let errorCounts = [1, 5, 10, 20]
-                recoveryTimes = map (`recoverWithErrors` 100) errorCounts
+                recoveryTimes = L.map (`recoverWithErrors` 100) errorCounts
             -- Simple linear scaling check
-            assertBool "Linear scaling" $ all (>= 0) recoveryTimes
+            assertBool "Linear scaling" $ L.all (>= 0) recoveryTimes
         ]
 
     , testGroup "Property-based tests"
@@ -265,7 +265,7 @@ tests =
         , fastProperty "incremental recovery preserves state" prop_incrementalRecoveryPreservesState
         ]
 
-    , testGroup "Edge cases and regression tests"
+    , testGroup "Edge cases L.and regression tests"
         [ testCase "handles empty input gracefully" $ do
             recoverFromSyntaxError "" @?= Right (Recovered [])
 
@@ -288,7 +288,7 @@ tests =
             case result of
                 Right (Recovered _) -> 
                     assertBool "Should preserve structure" $ 
-                        "package main" `List.isInfixOf` input
+                        "package main" `List.L.isInfixOf` input
                 _ -> assertBool "Expected structure preservation" False
         ]
     ]
@@ -314,31 +314,31 @@ data IncrementalState = IncrementalState { errorCount :: Int }
 
 recoverFromSyntaxError :: String -> Either Error RecoveryResult
 recoverFromSyntaxError input
-    | "y := 2" `List.isInfixOf` input = Right (Recovered ["Missing semicolon at line 3"])
-    | "return (1 + 2" `List.isInfixOf` input = Right (Recovered ["Missing closing parenthesis"])
-    | "func invalid( int," `List.isInfixOf` input = Right (Recovered ["Missing parameter name at position 1"])
-    | "!@#$%" `List.isInfixOf` input = Right (Recovered ["Unrecognized characters, treating as comments"])
+    | "y := 2" `List.L.isInfixOf` input = Right (Recovered ["Missing semicolon at line 3"])
+    | "return (1 + 2" `List.L.isInfixOf` input = Right (Recovered ["Missing closing parenthesis"])
+    | "func invalid( int," `List.L.isInfixOf` input = Right (Recovered ["Missing parameter name at position 1"])
+    | "!@#$%" `List.L.isInfixOf` input = Right (Recovered ["Unrecognized characters, treating as comments"])
     | otherwise = Right (Recovered [])
 
 recoverFromTypeError :: String -> Either Error RecoveryResult
 recoverFromTypeError input
-    | "int = \"hello\"" `List.isInfixOf` input = Right (Suggestion "Consider using strconv.Atoi to convert string to int")
-    | "undefinedVar" `List.isInfixOf` input = Right (Suggestions ["definedVar", "undefinedValue", "var"])
-    | "fmt.Println" `List.isInfixOf` input = Right (ImportSuggestion "import \"fmt\"")
+    | "int = \"hello\"" `List.L.isInfixOf` input = Right (Suggestion "Consider using strconv.Atoi to convert string to int")
+    | "undefinedVar" `List.L.isInfixOf` input = Right (Suggestions ["definedVar", "undefinedValue", "var"])
+    | "fmt.Println" `List.L.isInfixOf` input = Right (ImportSuggestion "import \"fmt\"")
     | otherwise = Right (Recovered [])
 
 analyzeSemanticError :: String -> Either Error RecoveryResult
 analyzeSemanticError input
-    | "return 42" `List.isInfixOf` input && "unreachable := 100" `List.isInfixOf` input = 
+    | "return 42" `List.L.isInfixOf` input && "unreachable := 100" `List.L.isInfixOf` input = 
         Right (Warning "Code after return statement is unreachable")
-    | "unused := 42" `List.isInfixOf` input = Right (FixSuggestions ["Remove unused variable", "Prefix with underscore: _unused"])
+    | "unused := 42" `List.L.isInfixOf` input = Right (FixSuggestions ["Remove unused variable", "Prefix with underscore: _unused"])
     | otherwise = Right (Recovered [])
 
 predictRuntimeError :: String -> Either Error RecoveryResult
 predictRuntimeError input
-    | "*ptr" `List.isInfixOf` input = Right (PotentialError "Potential nil pointer dereference - check if ptr is nil")
-    | "slice[index]" `List.isInfixOf` input = Right (BoundsCheck "Add bounds check: if index < len(slice)")
-    | "counter++" `List.isInfixOf` input && "go func" `List.isInfixOf` input = Right (RaceCondition "Potential race condition - use mutex or atomic operations")
+    | "*ptr" `List.L.isInfixOf` input = Right (PotentialError "Potential nil pointer dereference - check if ptr is nil")
+    | "slice[index]" `List.L.isInfixOf` input = Right (BoundsCheck "Add bounds check: if index < len(slice)")
+    | "counter++" `List.L.isInfixOf` input && "go func" `List.L.isInfixOf` input = Right (RaceCondition "Potential race condition - use mutex L.or atomic operations")
     | otherwise = Right (Recovered [])
 
 enhanceErrorContext :: String -> ErrorContext -> ErrorContext
@@ -354,7 +354,7 @@ getCodeExamples _ = ["Example code"]
 
 recoverFromMultipleErrors :: String -> Either Error RecoveryResult
 recoverFromMultipleErrors input
-    | "undefinedVar" `List.isInfixOf` input = Right (MultipleRecovery [Recovered [], Recovered [], Recovered []])
+    | "undefinedVar" `List.L.isInfixOf` input = Right (MultipleRecovery [Recovered [], Recovered [], Recovered []])
     | otherwise = Right (Recovered [])
 
 recoverIncrementally :: [String] -> Either Error RecoveryResult
@@ -369,28 +369,28 @@ recoverWithErrors errorCount complexity = errorCount * complexity
 -- Property-based tests
 prop_errorRecoveryDeterministic :: String -> Property
 prop_errorRecoveryDeterministic input =
-    length input < 100 ==> 
+    L.length input < 100 ==> 
     let result1 = recoverFromSyntaxError input
         result2 = recoverFromSyntaxError input
     in result1 == result2
 
 prop_recoverySuggestionsValid :: String -> Property
 prop_recoverySuggestionsValid input =
-    length input < 50 ==> 
+    L.length input < 50 ==> 
     case recoverFromTypeError input of
-        Right (Suggestions suggestions) -> all (not . null) suggestions
+        Right (Suggestions suggestions) -> L.all (not . null) suggestions
         _ -> True
 
 prop_errorContextConsistent :: String -> Property
 prop_errorContextConsistent input =
-    length input < 100 ==> 
+    L.length input < 100 ==> 
     let ctx = ErrorContext "test" 1 [] []
         enhanced = enhanceErrorContext input ctx
     in function enhanced == "test"
 
 prop_incrementalRecoveryPreservesState :: [String] -> Property
 prop_incrementalRecoveryPreservesState inputs =
-    length inputs < 10 ==> 
+    L.length inputs < 10 ==> 
     case recoverIncrementally inputs of
         Right (IncrementalState _) -> True
         _ -> False

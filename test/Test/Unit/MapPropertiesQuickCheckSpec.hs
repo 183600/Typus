@@ -3,6 +3,7 @@
 module Test.Unit.MapPropertiesQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
@@ -38,7 +39,7 @@ prop_union_size m1 m2 =
 
 prop_keys_values_match :: Map.Map Int String -> Property
 prop_keys_values_match m =
-  length (Map.keys m) === length (Map.elems m)
+  L.length (Map.keys m) === L.length (Map.elems m)
 
 tests :: TestTree
 tests = testGroup "Map Properties QuickCheck"
@@ -47,5 +48,5 @@ tests = testGroup "Map Properties QuickCheck"
   , fastProperty "size after insert" prop_size_insert
   , fastProperty "size after delete" prop_size_delete
   , fastProperty "union size bound" prop_union_size
-  , fastProperty "keys and values match" prop_keys_values_match
+  , fastProperty "keys L.and values match" prop_keys_values_match
   ]

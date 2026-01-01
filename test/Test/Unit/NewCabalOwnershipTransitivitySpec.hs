@@ -10,6 +10,7 @@
 module Test.Unit.NewCabalOwnershipTransitivitySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -110,7 +111,7 @@ borrowResource resourceId borrowerId state =
 
 prop_ownership_reflexive :: String -> Property
 prop_ownership_reflexive ownerId =
-  not (null ownerId) && length ownerId <= 10 ==>
+  not (null ownerId) && L.length ownerId <= 10 ==>
   let resourceId = "resource_" ++ ownerId
       state = initialOwnership resourceId ownerId
   in case Map.lookup resourceId (owners state) of
@@ -120,7 +121,7 @@ prop_ownership_reflexive ownerId =
 prop_ownership_transfer_deterministic :: String -> String -> String -> Property
 prop_ownership_transfer_deterministic resourceId fromOwner toOwner =
   not (null resourceId) && not (null fromOwner) && not (null toOwner) &&
-  length resourceId <= 10 && length fromOwner <= 10 && length toOwner <= 10 &&
+  L.length resourceId <= 10 && L.length fromOwner <= 10 && L.length toOwner <= 10 &&
   fromOwner /= toOwner ==>
   let state1 = initialOwnership resourceId fromOwner
       state2 = initialOwnership resourceId fromOwner
@@ -148,7 +149,7 @@ prop_ownership_no_duplication resourceId originalOwner newOwner =
 prop_ownership_provenance :: String -> String -> String -> Property
 prop_ownership_provenance resourceId originalOwner intermediateOwner finalOwner =
   not (null resourceId) && not (null originalOwner) && not (null intermediateOwner) && not (null finalOwner) &&
-  all distinct [originalOwner, intermediateOwner, finalOwner] ==>
+  L.all distinct [originalOwner, intermediateOwner, finalOwner] ==>
   let state = initialOwnership resourceId originalOwner
       pos1 = posAt 1 1
       pos2 = posAt 2 1
@@ -167,8 +168,8 @@ prop_ownership_provenance resourceId originalOwner intermediateOwner finalOwner 
 
 prop_ownership_transitive :: String -> String -> String -> String -> Property
 prop_ownership_transitive resourceId owner1 owner2 owner3 =
-  not (null resourceId) && all (not . null) [owner1, owner2, owner3] &&
-  all distinct [owner1, owner2, owner3] ==>
+  not (null resourceId) && L.all (not . null) [owner1, owner2, owner3] &&
+  L.all distinct [owner1, owner2, owner3] ==>
   let state = initialOwnership resourceId owner1
       pos1 = posAt 1 1
       pos2 = posAt 2 1
@@ -187,13 +188,13 @@ prop_ownership_transitive resourceId owner1 owner2 owner3 =
 
 prop_ownership_chain_preserves_original :: String -> [String] -> Property
 prop_ownership_chain_preserves_original resourceId owners =
-  not (null resourceId) && not (null owners) && length owners <= 5 &&
-  all (not . null) owners && all distinct owners ==>
-  let initialOwner = head owners
+  not (null resourceId) && not (null owners) && L.length owners <= 5 &&
+  L.all (not . null) owners && L.all distinct owners ==>
+  let initialOwner = L.head owners
       state = initialOwnership resourceId initialOwner
-      positions = [posAt i 1 | i <- [1..length owners]]
-      transferChain = zip3 (init owners) (tail owners) (init positions)
-      finalState = foldl (\state (from, to, pos) -> 
+      positions = [posAt i 1 | i <- [1..L.length owners]]
+      transferChain = zip3 (init owners) (L.tail owners) (init positions)
+      finalState = L.foldl (\state (from, to, pos) -> 
                           case state of
                             Left err -> Left err
                             Right s -> transferOwnership resourceId from to pos s
@@ -207,19 +208,19 @@ prop_ownership_chain_preserves_original resourceId owners =
 
 prop_ownership_linear_history :: String -> [String] -> Property
 prop_ownership_linear_history resourceId owners =
-  not (null resourceId) && not (null owners) && length owners <= 4 &&
-  all (not . null) owners && all distinct owners ==>
-  let initialOwner = head owners
+  not (null resourceId) && not (null owners) && L.length owners <= 4 &&
+  L.all (not . null) owners && L.all distinct owners ==>
+  let initialOwner = L.head owners
       state = initialOwnership resourceId initialOwner
-      positions = [posAt i 1 | i <- [1..length owners]]
-      transferChain = zip3 (init owners) (tail owners) (init positions)
-      finalState = foldl (\state (from, to, pos) -> 
+      positions = [posAt i 1 | i <- [1..L.length owners]]
+      transferChain = zip3 (init owners) (L.tail owners) (init positions)
+      finalState = L.foldl (\state (from, to, pos) -> 
                           case state of
                             Left err -> Left err
                             Right s -> transferOwnership resourceId from to pos s
                          ) (Right state) transferChain
   in case finalState of
-    Right goodState -> property $ length (transferHistory goodState) === length owners - 1
+    Right goodState -> property $ L.length (transferHistory goodState) === L.length owners - 1
     Left _ -> property $ False
   where
     distinct [] = True
@@ -227,15 +228,15 @@ prop_ownership_linear_history resourceId owners =
 
 prop_ownership_no_cycles :: String -> [String] -> Property
 prop_ownership_no_cycles resourceId owners =
-  not (null resourceId) && not (null owners) && length owners <= 4 &&
-  all (not . null) owners ==>
-  let initialOwner = head owners
+  not (null resourceId) && not (null owners) && L.length owners <= 4 &&
+  L.all (not . null) owners ==>
+  let initialOwner = L.head owners
       state = initialOwnership resourceId initialOwner
       -- Create a potential cycle by transferring back to original owner
       cycleOwners = owners ++ [initialOwner]
-      positions = [posAt i 1 | i <- [1..length cycleOwners]]
-      transferChain = zip3 (init cycleOwners) (tail cycleOwners) (init positions)
-      finalState = foldl (\state (from, to, pos) -> 
+      positions = [posAt i 1 | i <- [1..L.length cycleOwners]]
+      transferChain = zip3 (init cycleOwners) (L.tail cycleOwners) (init positions)
+      finalState = L.foldl (\state (from, to, pos) -> 
                           case state of
                             Left err -> Left err
                             Right s -> transferOwnership resourceId from to pos s
@@ -274,9 +275,9 @@ prop_borrowing_limited_lifetime resourceId owner borrower =
 prop_multiple_immutable_borrows :: String -> String -> [String] -> Property
 prop_multiple_immutable_borrows resourceId owner borrowers =
   not (null resourceId) && not (null owner) && not (null borrowers) &&
-  length borrowers <= 3 && all (/= owner) borrowers && all distinct borrowers ==>
+  L.length borrowers <= 3 && L.all (/= owner) borrowers && L.all distinct borrowers ==>
   let state = initialOwnership resourceId owner
-      borrowAll = foldl (\state borrower -> 
+      borrowAll = L.foldl (\state borrower -> 
                           case state of
                             Left err -> Left err
                             Right s -> borrowResource resourceId borrower s
@@ -336,26 +337,26 @@ prop_single_deallocation resourceId owner =
   not (null resourceId) && not (null owner) ==>
   let state = initialOwnership resourceId owner
   in case Map.lookup resourceId (owners state) of
-    Just resource -> property $ length (filter ((== resourceId) . resourceId) [resource]) === 1
+    Just resource -> property $ L.length (L.filter ((== resourceId) . resourceId) [resource]) === 1
     Nothing -> property $ False
 
 -- Ownership inference properties
 
 prop_ownership_inference_conservative :: String -> [String] -> Property
 prop_ownership_inference_conservative resourceId potentialOwners =
-  not (null resourceId) && not (null potentialOwners) && length potentialOwners <= 3 ==>
-  let state = initialOwnership resourceId (head potentialOwners)
+  not (null resourceId) && not (null potentialOwners) && L.length potentialOwners <= 3 ==>
+  let state = initialOwnership resourceId (L.head potentialOwners)
   in case Map.lookup resourceId (owners state) of
     Just resource -> property $ resourceOwner resource `elem` potentialOwners
     Nothing -> property $ False
 
 prop_ownership_analysis_terminates :: String -> [String] -> Property
 prop_ownership_analysis_terminates resourceId transferChain =
-  not (null resourceId) && not (null transferChain) && length transferChain <= 4 ==>
-  let state = initialOwnership resourceId (head transferChain)
-      positions = [posAt i 1 | i <- [1..length transferChain]]
-      transfers = zip3 (init transferChain) (tail transferChain) (init positions)
-      finalState = foldl (\state (from, to, pos) -> 
+  not (null resourceId) && not (null transferChain) && L.length transferChain <= 4 ==>
+  let state = initialOwnership resourceId (L.head transferChain)
+      positions = [posAt i 1 | i <- [1..L.length transferChain]]
+      transfers = zip3 (init transferChain) (L.tail transferChain) (init positions)
+      finalState = L.foldl (\state (from, to, pos) -> 
                           case state of
                             Left err -> Left err
                             Right s -> transferOwnership resourceId from to pos s
@@ -366,8 +367,8 @@ prop_ownership_analysis_terminates resourceId transferChain =
 
 prop_ownership_constraints_consistent :: String -> [String] -> Property
 prop_ownership_constraints_consistent resourceId owners =
-  not (null resourceId) && not (null owners) && length owners <= 3 ==>
-  let initialOwner = head owners
+  not (null resourceId) && not (null owners) && L.length owners <= 3 ==>
+  let initialOwner = L.head owners
       state = initialOwnership resourceId initialOwner
   in case Map.lookup resourceId (owners state) of
     Just resource -> property $ resourceOwner resource === initialOwner

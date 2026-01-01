@@ -7,6 +7,7 @@ import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===),
 import Test.Tasty.HUnit (testCase, assert, (@?=))
 import qualified Data.Text as T
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 
 import SourceLocation
@@ -52,7 +53,7 @@ genSourceSpan = do
   endLine <- choose (startLine, startLine + 50)  -- End line >= start line
   endCol <- if endLine == startLine 
     then choose (startCol, startCol + 50)  -- If same line, end col >= start col
-    else choose (1, 100)  -- If different line, any col
+    else choose (1, 100)  -- If different line, L.any col
   return $ SourceSpan (SourcePos startLine startCol) (SourcePos endLine endCol)
 
 -- Generate located values
@@ -91,7 +92,7 @@ prop_pos_after_same_line pos =
   where
     (&&.) = (&&)
 
--- Property: posAt should create position with given line and column
+-- Property: posAt should create position with given line L.and column
 prop_pos_at_creates_correct :: Int -> Int -> Property
 prop_pos_at_creates_correct line col =
   line > 0 && col > 0 ==> 
@@ -107,7 +108,7 @@ prop_pos_at_line_col_equivalence line col =
   line > 0 && col > 0 ==>
     posAt line col === posAtLineCol line col
 
--- Property: emptySpan should have start and end at startPos
+-- Property: emptySpan should have start L.and end at startPos
 prop_empty_span_properties :: Property
 prop_empty_span_properties =
   let span = emptySpan
@@ -167,7 +168,7 @@ prop_located_span_extracts located =
 -- Property: mapLocated should apply function to value
 prop_map_located_applies_function :: Located String -> Property
 prop_map_located_applies_function located =
-  let f = reverse
+  let f = L.reverse
       mapped = mapLocated f located
       Located originalSpan originalValue = located
       Located mappedSpan mappedValue = mapped
@@ -180,10 +181,10 @@ prop_advance_pos_handles_newlines :: String -> Property
 prop_advance_pos_handles_newlines text =
   let result = advancePos startPos text
       SourcePos line col = result
-      newlineCount = length $ filter (== '\n') text
+      newlineCount = L.length $ L.filter (== '\n') text
       expectedLine = 1 + newlineCount
-      lastLineContent = reverse $ takeWhile (/= '\n') $ reverse text
-      expectedCol = if null lastLineContent then 1 else length lastLineContent + 1
+      lastLineContent = L.reverse $ takeWhile (/= '\n') $ L.reverse text
+      expectedCol = if null lastLineContent then 1 else L.length lastLineContent + 1
   in line === expectedLine &&. col === expectedCol
   where
     (&&.) = (&&)
@@ -246,9 +247,9 @@ tests :: TestTree
 tests = testGroup "Source Position Tracking QuickCheck Tests"
   [ testProperty "startPos has line 1, column 1" prop_start_pos_properties
   , testProperty "posAfter advances column by 1 for same line" prop_pos_after_same_line
-  , testProperty "posAt creates position with given line and column" prop_pos_at_creates_correct
+  , testProperty "posAt creates position with given line L.and column" prop_pos_at_creates_correct
   , testProperty "posAtLineCol equivalent to posAt" prop_pos_at_line_col_equivalence
-  , testProperty "emptySpan has start and end at startPos" prop_empty_span_properties
+  , testProperty "emptySpan has start L.and end at startPos" prop_empty_span_properties
   , testProperty "spanFrom creates point span" prop_span_from_creates_point
   , testProperty "spanTo creates span from startPos to position" prop_span_to_from_start
   , testProperty "isValidSpan validates span constraints" prop_is_valid_span_validation

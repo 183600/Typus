@@ -88,12 +88,12 @@ prop_chainTransferMaintainsConsistency vars resource =
                     , osTransfers = []
                     , osErrors = []
                     }
-                transfers = zipWith OwnershipTransfer vars (tail vars) 
-                    (map (\i -> Just $ "Chain transfer " ++ show i) [0..])
+                transfers = zipWith OwnershipTransfer vars (L.tail vars) 
+                    (L.map (\i -> Just $ "Chain transfer " ++ show i) [0..])
                 finalState = foldl applyTransfer initialState transfers
                 lastOwner = last vars
             in Map.member lastOwner (osOwners finalState) &&
-               length (filter (Map.member `flip` osOwners finalState) (init vars)) == 0
+               L.length (L.filter (Map.member `flip` osOwners finalState) (init vars)) == 0
 
 -- | Property: Invalid transfers should produce appropriate errors
 prop_invalidTransferProducesErrors :: String -> String -> Bool
@@ -105,9 +105,9 @@ prop_invalidTransferProducesErrors from to =
             }
         transfer = OwnershipTransfer from to (Just "Invalid transfer")
         finalState = applyTransfer initialState transfer
-    in not (null (osErrors finalState))
+    in not (L.null (osErrors finalState))
 
--- | Property: Concurrent access should be detected and prevented
+-- | Property: Concurrent access should be detected L.and prevented
 prop_concurrentAccessPrevented :: String -> String -> ResourceType -> Bool
 prop_concurrentAccessPrevented resource1 resource2 resource = 
     let initialState = OwnershipState 
@@ -119,7 +119,7 @@ prop_concurrentAccessPrevented resource1 resource2 resource =
         transfer1 = OwnershipTransfer resource1 "newOwner1" (Just "Concurrent transfer 1")
         transfer2 = OwnershipTransfer resource2 "newOwner2" (Just "Concurrent transfer 2")
         finalState = applyTransfer (applyTransfer initialState transfer1) transfer2
-    in length (osErrors finalState) >= 1 || 
+    in L.length (osErrors finalState) >= 1 || 
        (Map.size (osOwners finalState) <= 1) -- At most one should succeed
 
 -- | Property: Conditional transfers work correctly
@@ -169,7 +169,7 @@ prop_ownershipAnalysisHandlesComplexScenarios scenario = case scenario of
         let code = generateOwnershipCode [ChainTransfer vars]
         in case parseAndAnalyzeOwnership code of
             Left _ -> True
-            Right (state, _) -> length (osTransfers state) >= length vars - 1
+            Right (state, _) -> L.length (osTransfers state) >= L.length vars - 1
     
     ConditionalTransfer from to condition ->
         let code = generateOwnershipCode [ConditionalTransfer from to condition]
@@ -181,13 +181,13 @@ prop_ownershipAnalysisHandlesComplexScenarios scenario = case scenario of
         let code = generateOwnershipCode [ConcurrentTransfer from to]
         in case parseAndAnalyzeOwnership code of
             Left _ -> True
-            Right (state, _) -> length (osErrors state) >= 0 -- Should detect issues
+            Right (state, _) -> L.length (osErrors state) >= 0 -- Should detect issues
     
     InvalidTransfer from to ->
         let code = generateOwnershipCode [InvalidTransfer from to]
         in case parseAndAnalyzeOwnership code of
             Left _ -> True
-            Right (state, _) -> length (osErrors state) >= 1 -- Should produce errors
+            Right (state, _) -> L.length (osErrors state) >= 1 -- Should produce errors
 
 -- | Generate Typus code for ownership scenarios
 generateOwnershipCode :: [OwnershipScenario] -> String
@@ -209,7 +209,7 @@ generateOwnershipCode scenarios =
             "    var " ++ first ++ " Resource = createResource()\n" ++
             concatMap (\(from, to) -> 
                 "    " ++ to ++ " = " ++ from ++ "  // chain transfer\n"
-            ) (zip vars (tail vars))
+            ) (zip vars (L.tail vars))
     
     generateScenarioCode (ConditionalTransfer from to condition) =
         "    var " ++ from ++ " Resource = createResource()\n" ++
@@ -226,7 +226,7 @@ generateOwnershipCode scenarios =
     generateScenarioCode (InvalidTransfer from to) =
         "    // " ++ to ++ " = " ++ from ++ "  // invalid transfer (no resource)\n"
 
--- | Parse and analyze ownership from code
+-- | Parse L.and analyze ownership from code
 parseAndAnalyzeOwnership :: String -> Either String (OwnershipState, [OwnershipError])
 parseAndAnalyzeOwnership code = 
     case parseTypus code of
@@ -265,7 +265,7 @@ tests = testGroup "Ownership Transfer Boundary Tests"
       \transfers -> 
         let initialState = OwnershipState Map.empty [] []
             finalState = foldl applyTransfer initialState transfers
-        in length (osTransfers finalState) == length transfers
+        in L.length (osTransfers finalState) == L.length transfers
   
   , testProperty "Resource cleanup after transfer" $
       fastProperty "transfer scenarios" $

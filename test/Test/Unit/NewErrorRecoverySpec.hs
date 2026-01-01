@@ -3,6 +3,7 @@
 module Test.Unit.NewErrorRecoverySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
 
 import Parser (parseTypus, FileDirectives(..), BlockDirectives(..), TypusFile(..))
@@ -118,7 +119,7 @@ testUnicodeErrorRecovery = testCase "Unicode error recovery" $ do
 testPartialParsingRecovery :: TestTree
 testPartialParsingRecovery = testCase "Partial parsing recovery" $ do
   -- 文件末尾不完整
-  let incompleteEOF = "package main\n\nfunc main() {\n    println(\"test\"\n    // missing closing quote and brace"
+  let incompleteEOF = "package main\n\nfunc main() {\n    println(\"test\"\n    // missing closing quote L.and brace"
   result <- parseTypus "test.typus" incompleteEOF
   case result of
     Left err -> assertBool "Should report EOF error" True
@@ -147,7 +148,7 @@ testErrorPositionAccuracy = testCase "Error position accuracy" $ do
   case result of
     Left err -> 
       let errorMsg = show err
-          hasCorrectLine = "line 5" `isInfixOf` errorMsg || "5:" `isInfixOf` errorMsg
+          hasCorrectLine = "line 5" `L.isInfixOf` errorMsg || "5:" `L.isInfixOf` errorMsg
       in assertBool ("Error should point to correct line: " ++ errorMsg) hasCorrectLine
     Right file -> assertBool "Should report error" False
   
@@ -157,7 +158,7 @@ testErrorPositionAccuracy = testCase "Error position accuracy" $ do
   case result2 of
     Left err -> 
       let errorMsg = show err
-          hasColInfo = "column" `isInfixOf` errorMsg || ":" `isInfixOf` errorMsg
+          hasColInfo = "column" `L.isInfixOf` errorMsg || ":" `L.isInfixOf` errorMsg
       in assertBool ("Error should include column info: " ++ errorMsg) hasColInfo
     Right file -> assertBool "Should report error" False
   
@@ -167,6 +168,6 @@ testErrorPositionAccuracy = testCase "Error position accuracy" $ do
   case result3 of
     Left err -> 
       let errorMsg = show err
-          hasFileName = "test.typus" `isInfixOf` errorMsg
+          hasFileName = "test.typus" `L.isInfixOf` errorMsg
       in assertBool ("Error should include filename: " ++ errorMsg) hasFileName
     Right file -> assertBool "Should report error" False

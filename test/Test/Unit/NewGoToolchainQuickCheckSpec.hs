@@ -10,6 +10,7 @@
 module Test.Unit.NewGoToolchainQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -44,7 +45,7 @@ import System.Directory (doesFileExist, doesDirectoryExist)
 -- Arbitrary Instances for QuickCheck Testing
 -- ============================================================================
 
--- Generate arbitrary string for file paths and commands
+-- Generate arbitrary string for file paths L.and commands
 instance Arbitrary String where
   arbitrary = QC.oneof
     [ QC.listOf (QC.elements ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_-")
@@ -63,12 +64,12 @@ prop_go_mod_contents_not_empty =
 -- Property: Go mod contents contains module declaration
 prop_go_mod_contents_contains_module :: Property
 prop_go_mod_contents_contains_module =
-  property $ "module temp" `isInfixOf` goModContents
+  property $ "module temp" `L.isInfixOf` goModContents
 
 -- Property: Go mod contents contains go version
 prop_go_mod_contents_contains_go_version :: Property
 prop_go_mod_contents_contains_go_version =
-  property $ "go 1.21" `isInfixOf` goModContents
+  property $ "go 1.21" `L.isInfixOf` goModContents
 
 -- Property: Null device is valid path
 prop_null_device_valid_path :: Property
@@ -83,7 +84,7 @@ prop_env_var_enabled_known_values =
                    , ("0", False), ("false", False), ("FALSE", False), ("False", False)
                    , ("no", False), ("NO", False), ("off", False), ("OFF", False)
                    , ("", False), ("maybe", False), ("123", False)]
-  in property $ all (\(value, expected) -> 
+  in property $ L.all (\(value, expected) -> 
     -- Note: We can't actually test environment variable setting in QuickCheck
     -- but we can verify the logic would work correctly
     value `elem` ["1", "true", "TRUE", "True", "yes", "YES", "on", "ON"] === expected) testValues
@@ -92,7 +93,7 @@ prop_env_var_enabled_known_values =
 prop_env_var_enabled_case_insensitive :: Property
 prop_env_var_enabled_case_insensitive =
   let trueValues = ["true", "TRUE", "True", "tRuE"]
-  in property $ all (`elem` ["1", "true", "TRUE", "True", "yes", "YES", "on", "ON"]) trueValues
+  in property $ L.all (`elem` ["1", "true", "TRUE", "True", "yes", "YES", "on", "ON"]) trueValues
 
 -- Property: Default Go executor can be created (basic test)
 prop_default_go_executor_creation :: Property
@@ -110,15 +111,15 @@ prop_go_executor_has_correct_fields skipFn runFn =
 prop_go_mod_contents_structure :: Property
 prop_go_mod_contents_structure =
   let lines' = lines goModContents
-      hasModuleLine = any ("module" `isPrefixOf`) lines'
-      hasGoVersionLine = any ("go 1.21" `isPrefixOf`) lines'
+      hasModuleLine = L.any ("module" `L.isPrefixOf`) lines'
+      hasGoVersionLine = L.any ("go 1.21" `L.isPrefixOf`) lines'
   in property $ hasModuleLine .&&. hasGoVersionLine
 
 -- Property: Go mod contents has exactly two lines
 prop_go_mod_contents_line_count :: Property
 prop_go_mod_contents_line_count =
   let lines' = lines goModContents
-  in property $ length lines' === 2
+  in property $ L.length lines' === 2
 
 -- Property: Temporary project prefix is preserved
 prop_temp_project_prefix_preserved :: String -> Property
@@ -193,13 +194,13 @@ prop_go_mod_contents_valid_syntax =
       goVersionLine = findLine lines' "go"
   in property $ isJust moduleLine .&&. isJust goVersionLine
   where
-    findLine lines' prefix = find (\line -> prefix `isPrefixOf` line) lines'
+    findLine lines' prefix = find (\line -> prefix `L.isPrefixOf` line) lines'
 
 -- Property: Go mod contents module name is "temp"
 prop_go_mod_contents_module_name :: Property
 prop_go_mod_contents_module_name =
   let lines' = lines goModContents
-      moduleLine = find (\line -> "module" `isPrefixOf` line) lines'
+      moduleLine = find (\line -> "module" `L.isPrefixOf` line) lines'
       moduleName = case moduleLine of
         Just line -> unwords $ drop 1 (words line)
         Nothing -> ""
@@ -209,7 +210,7 @@ prop_go_mod_contents_module_name =
 prop_go_mod_contents_go_version :: Property
 prop_go_mod_contents_go_version =
   let lines' = lines goModContents
-      goVersionLine = find (\line -> "go" `isPrefixOf` line) lines'
+      goVersionLine = find (\line -> "go" `L.isPrefixOf` line) lines'
       goVersion = case goVersionLine of
         Just line -> unwords $ drop 1 (words line)
         Nothing -> ""

@@ -10,7 +10,9 @@ import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollaps
               forceSingleTabIndentation, fixIndentation, breakOn)
 import Data.Char (isSpace)
 import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, intercalate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (intercalate)
 
 -- ============================================================================
 -- Generators
@@ -75,14 +77,14 @@ genCommentString = oneof
 -- QuickCheck Properties
 -- ============================================================================
 
--- Property: trim removes leading and trailing whitespace
+-- Property: trim removes leading L.and trailing whitespace
 prop_trimRemovesWhitespace :: String -> Bool
 prop_trimRemovesWhitespace input =
   let trimmed = trim input
-      hasLeadingWhitespace = not (null input) && isSpace (head input)
+      hasLeadingWhitespace = not (null input) && isSpace (L.head input)
       hasTrailingWhitespace = not (null input) && isSpace (last input)
   in if hasLeadingWhitespace || hasTrailingWhitespace
-     then length trimmed <= length input
+     then L.length trimmed <= L.length input
      else trimmed == input
 
 -- Property: trim is idempotent
@@ -93,16 +95,16 @@ prop_trimIdempotent input = trim (trim input) == trim input
 prop_trimPreservesContent :: String -> Bool
 prop_trimPreservesContent input =
   let trimmed = trim input
-      nonWhitespaceContent = filter (not . isSpace) input
-      trimmedNonWhitespace = filter (not . isSpace) trimmed
+      nonWhitespaceContent = L.filter (not . isSpace) input
+      trimmedNonWhitespace = L.filter (not . isSpace) trimmed
   in trimmedNonWhitespace == nonWhitespaceContent
 
--- Property: splitBy preserves total length (including delimiters)
+-- Property: splitBy preserves total L.length (including delimiters)
 prop_splitByPreservesLength :: Char -> String -> Bool
 prop_splitByPreservesLength delim input =
   let parts = splitBy delim input
       rejoined = intercalate [delim] parts
-  in length rejoined == length input
+  in L.length rejoined == L.length input
 
 -- Property: splitBy preserves order
 prop_splitByPreservesOrder :: Char -> String -> Bool
@@ -115,7 +117,7 @@ prop_splitByPreservesOrder delim input =
 prop_splitByCollapsedRemovesEmpty :: Char -> String -> Bool
 prop_splitByCollapsedRemovesEmpty delim input =
   let parts = splitByCollapsed delim input
-  in all (not . null) parts
+  in L.all (not . null) parts
 
 -- Property: splitByComma is equivalent to splitBy ','
 prop_splitByCommaEquivalent :: String -> Bool
@@ -128,66 +130,66 @@ prop_splitByCommaCollapsedEquivalent input = splitByCommaCollapsed input == spli
 -- Property: removeLineComments removes // comments
 prop_removeLineCommentsRemovesComments :: String -> Property
 prop_removeLineCommentsRemovesComments input =
-  "//" `isInfixOf` input ==>
+  "//" `L.isInfixOf` input ==>
   let cleaned = removeLineComments input
       lines' = lines cleaned
-  in not (any ("//" `isPrefixOf`) lines')
+  in not (L.any ("//" `L.isPrefixOf`) lines')
 
 -- Property: removeLineComments preserves strings with // inside
 prop_removeLineCommentsPreservesStringsWithComments :: String -> Property
 prop_removeLineCommentsPreservesStringsWithComments input =
-  "\"" `isInfixOf` input && "//" `isInfixOf` input ==>
+  "\"" `L.isInfixOf` input && "//" `L.isInfixOf` input ==>
   let cleaned = removeLineComments input
-      hasStringWithComment = any (\line -> 
+      hasStringWithComment = L.any (\line -> 
         let beforeComment = takeWhile (/= '/') line
-            hasQuoteBeforeComment = "\"" `isInfixOf` beforeComment
+            hasQuoteBeforeComment = "\"" `L.isInfixOf` beforeComment
         in hasQuoteBeforeComment) (lines input)
   in if hasStringWithComment 
-     then "//" `isInfixOf` cleaned  -- Should preserve // inside strings
+     then "//" `L.isInfixOf` cleaned  -- Should preserve // inside strings
      else property True
 
--- Property: removeComments removes both // and /* */ comments
+-- Property: removeComments removes both // L.and /* */ comments
 prop_removeCommentsRemovesBothTypes :: String -> Property
 prop_removeCommentsRemovesBothTypes input =
-  ("//" `isInfixOf` input || "/*" `isInfixOf` input) ==>
+  ("//" `L.isInfixOf` input || "/*" `L.isInfixOf` input) ==>
   let cleaned = removeComments input
       lines' = lines cleaned
-  in not (any ("//" `isPrefixOf`) lines') && 
-     not (any ("/*" `isInfixOf`) cleaned)
+  in not (L.any ("//" `L.isPrefixOf`) lines') && 
+     not (L.any ("/*" `L.isInfixOf`) cleaned)
 
 -- Property: normalizeIndentation preserves relative indentation
 prop_normalizeIndentationPreservesRelative :: String -> Property
 prop_normalizeIndentationPreservesRelative input =
   let lines' = lines input
-      nonEmptyLines = filter (not . all isSpace) lines'
-  in length nonEmptyLines >= 2 ==>
+      nonEmptyLines = L.filter (not . L.all isSpace) lines'
+  in L.length nonEmptyLines >= 2 ==>
      let normalized = normalizeIndentation input
          normalizedLines = lines normalized
-         originalIndents = map (takeWhile isSpace) nonEmptyLines
-         normalizedIndents = map (takeWhile isSpace) $ filter (not . all isSpace) normalizedLines
-     in length originalIndents == length normalizedIndents
+         originalIndents = L.map (takeWhile isSpace) nonEmptyLines
+         normalizedIndents = L.map (takeWhile isSpace) $ L.filter (not . L.all isSpace) normalizedLines
+     in L.length originalIndents == L.length normalizedIndents
 
 -- Property: normalizeIndentation removes common prefix
 prop_normalizeIndentationRemovesCommonPrefix :: String -> Property
 prop_normalizeIndentationRemovesCommonPrefix input =
   let lines' = lines input
-      nonEmptyLines = filter (not . all isSpace) lines'
+      nonEmptyLines = L.filter (not . L.all isSpace) lines'
   in not (null nonEmptyLines) ==>
      let normalized = normalizeIndentation input
          normalizedLines = lines normalized
-         firstNormalizedNonEmpty = head $ filter (not . all isSpace) normalizedLines
-     in not (isSpace (head firstNormalizedNonEmpty))
+         firstNormalizedNonEmpty = L.head $ L.filter (not . L.all isSpace) normalizedLines
+     in not (isSpace (L.head firstNormalizedNonEmpty))
 
 -- Property: forceSingleTabIndentation adds tab to non-empty lines
 prop_forceSingleTabIndentationAddsTab :: String -> Property
 prop_forceSingleTabIndentationAddsTab input =
   let lines' = lines input
-      nonEmptyLines = filter (not . null) lines'
+      nonEmptyLines = L.filter (not . null) lines'
   in not (null nonEmptyLines) ==>
      let forced = forceSingleTabIndentation input
          forcedLines = lines forced
-         nonEmptyForced = filter (not . null) forcedLines
-     in all ("\t" `isPrefixOf`) nonEmptyForced
+         nonEmptyForced = L.filter (not . null) forcedLines
+     in L.all ("\t" `L.isPrefixOf`) nonEmptyForced
 
 -- Property: fixIndentation is equivalent to normalizeIndentation
 prop_fixIndentationEquivalent :: String -> Bool
@@ -200,16 +202,16 @@ prop_breakOnEmptyPattern input = breakOn "" input == ("", input)
 -- Property: breakOn returns correct split when pattern exists
 prop_breakOnCorrectSplit :: String -> String -> Property
 prop_breakOnCorrectSplit pat input =
-  not (null pat) && pat `isInfixOf` input ==>
+  not (null pat) && pat `L.isInfixOf` input ==>
   let (before, after) = breakOn pat input
-      expectedBefore = takeWhile (not . (`isPrefixOf` (tails input))) input
-      expectedAfter = drop (length before + length pat) input
+      expectedBefore = takeWhile (not . (`L.isPrefixOf` (tails input))) input
+      expectedAfter = drop (L.length before + L.length pat) input
   in before == expectedBefore && after == expectedAfter
 
 -- Property: breakOn returns (input, "") when pattern doesn't exist
 prop_breakOnPatternNotFound :: String -> String -> Property
 prop_breakOnPatternNotFound pat input =
-  not (null pat) && not (pat `isInfixOf` input) ==>
+  not (null pat) && not (pat `L.isInfixOf` input) ==>
   breakOn pat input == (input, "")
 
 -- ============================================================================
@@ -219,13 +221,13 @@ prop_breakOnPatternNotFound pat input =
 tests :: TestTree
 tests = testGroup "Utils Advanced QuickCheck Tests"
   [ testGroup "Trim Properties"
-    [ testProperty "trim removes leading and trailing whitespace" prop_trimRemovesWhitespace
+    [ testProperty "trim removes leading L.and trailing whitespace" prop_trimRemovesWhitespace
     , testProperty "trim is idempotent" prop_trimIdempotent
     , testProperty "trim preserves non-whitespace content" prop_trimPreservesContent
     ]
 
   , testGroup "Split Properties"
-    [ testProperty "splitBy preserves total length (including delimiters)" prop_splitByPreservesLength
+    [ testProperty "splitBy preserves total L.length (including delimiters)" prop_splitByPreservesLength
     , testProperty "splitBy preserves order" prop_splitByPreservesOrder
     , testProperty "splitByCollapsed removes empty parts" prop_splitByCollapsedRemovesEmpty
     , testProperty "splitByComma is equivalent to splitBy ','" prop_splitByCommaEquivalent
@@ -235,7 +237,7 @@ tests = testGroup "Utils Advanced QuickCheck Tests"
   , testGroup "Comment Removal Properties"
     [ testProperty "removeLineComments removes // comments" prop_removeLineCommentsRemovesComments
     , testProperty "removeLineComments preserves strings with // inside" prop_removeLineCommentsPreservesStringsWithComments
-    , testProperty "removeComments removes both // and /* */ comments" prop_removeCommentsRemovesBothTypes
+    , testProperty "removeComments removes both // L.and /* */ comments" prop_removeCommentsRemovesBothTypes
     ]
 
   , testGroup "Indentation Properties"
@@ -252,7 +254,7 @@ tests = testGroup "Utils Advanced QuickCheck Tests"
     ]
 
   , testGroup "Unit Tests"
-    [ testCase "trim removes leading and trailing whitespace" $ do
+    [ testCase "trim removes leading L.and trailing whitespace" $ do
         trim "\t  hello  world \n" @?= "hello  world"
 
     , testCase "trim on empty string" $ do

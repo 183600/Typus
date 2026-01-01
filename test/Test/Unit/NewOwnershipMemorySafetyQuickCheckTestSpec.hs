@@ -13,7 +13,9 @@ import Ownership
 import Ownership.Common.Types (OwnershipError(..), OwnershipType(..), OwnershipTransfer(..))
 import Parser (TypusFile(..), parseTypus)
 import SourceLocation (SourcePos(..), SourceSpan(..), posAtLineCol, spanBetween)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (nub)
 import qualified Data.Map as Map
 import Data.Text (Text, pack, unpack)
 
@@ -49,7 +51,7 @@ tests =
         , testProperty "reference count reaches zero on destruction" prop_referenceCountReachesZero
         ]
 
-    , testGroup "Scope and lifetime properties"
+    , testGroup "Scope L.and lifetime properties"
         [ testProperty "variables destroyed at scope exit" prop_variablesDestroyedAtScopeExit
         , testProperty "references outlive referenced values" prop_referencesOutliveValues
         , testProperty "temporary values have correct lifetime" prop_temporaryValuesLifetime
@@ -80,7 +82,7 @@ tests =
                   ]
                 result = analyzeOwnership input
             case result of
-                Left errors -> any (isInfixOf "use after move" . unpack) errors @?= True
+                Left errors -> L.any (L.isInfixOf "use after move" . unpack) errors @?= True
                 Right _ -> @?= False True
 
         , testCase "double move is detected" $ do
@@ -93,7 +95,7 @@ tests =
                   ]
                 result = analyzeOwnership input
             case result of
-                Left errors -> any (isInfixOf "double move" . unpack) errors @?= True
+                Left errors -> L.any (L.isInfixOf "double move" . unpack) errors @?= True
                 Right _ -> @?= False True
 
         , testCase "borrowing prevents mutation" $ do
@@ -106,7 +108,7 @@ tests =
                   ]
                 result = analyzeOwnership input
             case result of
-                Left errors -> any (isInfixOf "borrowed" . unpack) errors @?= True
+                Left errors -> L.any (L.isInfixOf "borrowed" . unpack) errors @?= True
                 Right _ -> @?= False True
 
         , testCase "scope-based destruction" $ do
@@ -152,7 +154,7 @@ tests =
                 result = analyzeOwnership input
             case result of
                 Right _ -> @?= True True
-                Left errors -> length errors >= 0 @?= True
+                Left errors -> L.length errors >= 0 @?= True
         ]
     ]
 
@@ -168,7 +170,7 @@ prop_transferPreventsUseAfterMove variableName =
         ]
       result = analyzeOwnership input
   in case result of
-       Left errors -> any (isInfixOf "use after move" . unpack) errors
+       Left errors -> L.any (L.isInfixOf "use after move" . unpack) errors
        Right _ -> variableName == "" -- May pass if variable name is empty
 
 -- | 所有权转移跟踪已移动的值
@@ -198,7 +200,7 @@ prop_transferAllowsValidMoves variableName =
         ]
       result = analyzeOwnership input
   in case result of
-       Left errors -> not (any (isInfixOf "use after move" . unpack) errors)
+       Left errors -> not (L.any (L.isInfixOf "use after move" . unpack) errors)
        Right _ -> True
 
 -- | 所有权转移处理复杂场景
@@ -228,7 +230,7 @@ prop_noDoubleFree variableName =
         ]
       result = analyzeOwnership input
   in case result of
-       Left errors -> not (any (isInfixOf "double free" . unpack) errors)
+       Left errors -> not (L.any (L.isInfixOf "double free" . unpack) errors)
        Right _ -> True
 
 -- | 没有悬空指针
@@ -242,7 +244,7 @@ prop_noDanglingPointers input =
         ]
       result = analyzeOwnership testInput
   in case result of
-       Left errors -> not (any (isInfixOf "dangling" . unpack) errors)
+       Left errors -> not (L.any (L.isInfixOf "dangling" . unpack) errors)
        Right _ -> True
 
 -- | 没有内存泄漏
@@ -256,7 +258,7 @@ prop_noMemoryLeaks input =
         ]
       result = analyzeOwnership testInput
   in case result of
-       Left errors -> not (any (isInfixOf "leak" . unpack) errors)
+       Left errors -> not (L.any (L.isInfixOf "leak" . unpack) errors)
        Right _ -> True
 
 -- | 正确的生命周期管理
@@ -285,7 +287,7 @@ prop_borrowingPreventsMutation variableName =
         ]
       result = analyzeOwnership input
   in case result of
-       Left errors -> any (isInfixOf "borrowed" . unpack) errors || variableName == ""
+       Left errors -> L.any (L.isInfixOf "borrowed" . unpack) errors || variableName == ""
        Right _ -> variableName == ""
 
 -- | 允许多个不可变借用
@@ -302,7 +304,7 @@ prop_multipleImmutableBorrows variableName =
         ]
       result = analyzeOwnership input
   in case result of
-       Left errors -> not (any (isInfixOf "borrow" . unpack) errors) || variableName == ""
+       Left errors -> not (L.any (L.isInfixOf "borrow" . unpack) errors) || variableName == ""
        Right _ -> True
 
 -- | 强制执行单个可变借用
@@ -317,7 +319,7 @@ prop_singleMutableBorrow variableName =
         ]
       result = analyzeOwnership input
   in case result of
-       Left errors -> any (isInfixOf "borrow" . unpack) errors || variableName == ""
+       Left errors -> L.any (L.isInfixOf "borrow" . unpack) errors || variableName == ""
        Right _ -> variableName == ""
 
 -- | 借用生命周期被跟踪
@@ -357,7 +359,7 @@ prop_referenceCountDecrements baseCount =
 prop_referenceCountReachesZero :: Int -> Property
 prop_referenceCountReachesZero initialCount =
   initialCount >= 0 ==>
-  let finalCount = 0 -- After all references are destroyed
+  let finalCount = 0 -- After L.all references are destroyed
   in finalCount == 0
 
 -- | 变量在作用域退出时销毁
@@ -387,7 +389,7 @@ prop_referencesOutliveValues input =
         ]
       result = analyzeOwnership testInput
   in case result of
-       Left errors -> not (any (isInfixOf "outlive" . unpack) errors)
+       Left errors -> not (L.any (L.isInfixOf "outlive" . unpack) errors)
        Right _ -> True
 
 -- | 临时值有正确的生命周期
@@ -431,7 +433,7 @@ prop_ownershipErrorsDetected input =
         ]
       result = analyzeOwnership testInput
   in case result of
-       Left errors -> length errors >= 0
+       Left errors -> L.length errors >= 0
        Right _ -> True
 
 -- | 错误消息提供信息
@@ -444,7 +446,7 @@ prop_errorMessagesInformative input =
         ]
       result = analyzeOwnership testInput
   in case result of
-       Left errors -> all (not . null . unpack) errors
+       Left errors -> L.all (not . null . unpack) errors
        Right _ -> True
 
 -- | 错误位置准确

@@ -1,6 +1,7 @@
 module Test.Unit.CabalRegressionSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty)
 
@@ -23,7 +24,7 @@ tests =
             case result of
               Left err -> 
                 -- Should provide helpful error message, not crash
-                "semicolon" `isInfixOf` show err || "expected" `isInfixOf` show err @?= True
+                "semicolon" `L.isInfixOf` show err || "expected" `L.isInfixOf` show err @?= True
               Right _ -> @?= "Should handle gracefully" "Graceful handling"
 
         , testCase "Regression: Parser recovers from unclosed blocks" $ do
@@ -33,7 +34,7 @@ tests =
             case result of
               Left err -> 
                 -- Should detect unclosed block
-                length (show err) > 0 @?= True
+                L.length (show err) > 0 @?= True
               Right _ -> @?= "Should detect error" "Error detection"
 
         , testCase "Regression: Parser handles empty directives" $ do
@@ -49,13 +50,13 @@ tests =
         , testCase "Regression: Parser handles deeply nested structures" $ do
             -- Previously deep nesting would cause stack overflow
             let nestedInput = unlines ["func deep() {"] ++ 
-                               concat (replicate 50 ["  if (true) {\n"]) ++
+                               L.concat (replicate 50 ["  if (true) {\n"]) ++
                                "    return 1;\n" ++
-                               concat (replicate 50 ["  }\n"]) ++
+                               L.concat (replicate 50 ["  }\n"]) ++
                                ["}"]
                 result = Parser.parseTypus "regression4" nestedInput
             case result of
-              Left err -> length (show err) > 0 @?= True
+              Left err -> L.length (show err) > 0 @?= True
               Right _ -> @?= "Handle deep nesting" "Deep nesting handled"
         ]
 
@@ -77,14 +78,14 @@ tests =
             -- Previously escaped quotes in strings were mishandled
             let input = "func test() { s := \"She said \\\"// hi\\\"\"; // comment }"
                 result = Utils.removeComments input
-            "\"She said \\\"// hi\\\"\"" `isInfixOf` result @?= True
+            "\"She said \\\"// hi\\\"\"" `L.isInfixOf` result @?= True
 
         , testCase "Regression: normalizeIndentation handles mixed tabs/spaces" $ do
             -- Previously mixed indentation caused issues
             let mixedIndent = "\tfunc test() {\n    \treturn 1;\n\t}\n"
                 normalized = Utils.normalizeIndentation mixedIndent
-            "func test() {" `isInfixOf` normalized @?= True
-            "return 1;" `isInfixOf` normalized @?= True
+            "func test() {" `L.isInfixOf` normalized @?= True
+            "return 1;" `L.isInfixOf` normalized @?= True
         ]
 
     , testGroup "SourceLocation Regression Tests"
@@ -120,7 +121,7 @@ tests =
             case result of
               Left err -> 
                 let errStr = show err
-                in "line" `isInfixOf` errStr || any (`isInfixOf` errStr) ["1:", "2:", "3:", "4:"] @?= True
+                in "line" `L.isInfixOf` errStr || L.any (`L.isInfixOf` errStr) ["1:", "2:", "3:", "4:"] @?= True
               Right _ -> @?= "Should fail with location" "Location info"
 
         , testCase "Regression: Multiple errors are reported when possible" $ do
@@ -130,7 +131,7 @@ tests =
             case result of
               Left err -> 
                 -- Should provide meaningful error information
-                length (show err) > 10 @?= True
+                L.length (show err) > 10 @?= True
               Right _ -> @?= "Should detect errors" "Error detection"
         ]
 
@@ -140,21 +141,21 @@ tests =
             let largeInput = unlines $ replicate 1000 "func test() { return 1; }"
                 result = Parser.parseTypus "regression-perf" largeInput
             case result of
-              Left err -> length (show err) > 0 @?= True
+              Left err -> L.length (show err) > 0 @?= True
               Right _ -> @?= "Handle large input" "Large input handled"
 
         , testCase "Regression: Utils operations maintain performance" $ do
             -- Ensure utils don't have performance regressions
             let largeString = "   " ++ replicate 10000 'a' ++ "   "
                 trimmed = Utils.trim largeString
-            length trimmed @?= 10000  -- Should be immediate
+            L.length trimmed @?= 10000  -- Should be immediate
 
         , testProperty "Regression: Property tests still hold" $ do
             \input -> Utils.trim (Utils.trim input) == Utils.trim input
         ]
 
     , testGroup "Integration Regression Tests"
-        [ testCase "Regression: Parser and SyntaxValidator integration" $ do
+        [ testCase "Regression: Parser L.and SyntaxValidator integration" $ do
             -- Previously integration would miss certain edge cases
             let input = "func validated() { return true; }"
                 parseResult = Parser.parseTypus "regression-integration" input
@@ -189,17 +190,17 @@ tests =
               Left err -> do
                 let errStr = show err
                 -- Should indicate line number around where error occurs
-                any (`isInfixOf` errStr) ["3:", "4:", "5:"] @?= True
+                L.any (`L.isInfixOf` errStr) ["3:", "4:", "5:"] @?= True
               Right _ -> @?= "Should detect error" "Error detection"
         ]
 
     , testGroup "Edge Case Regression Tests"
-        [ testCase "Regression: Parser handles all whitespace input" $ do
-            -- Previously all-whitespace input could cause issues
+        [ testCase "Regression: Parser handles L.all whitespace input" $ do
+            -- Previously L.all-whitespace input could cause issues
             let whitespaceOnly = "   \n\t  \n   \t\n"
                 result = Parser.parseTypus "regression-whitespace" whitespaceOnly
             case result of
-              Left err -> length (show err) > 0 @?= True
+              Left err -> L.length (show err) > 0 @?= True
               Right _ -> @?= "Handle whitespace" "Whitespace handled"
 
         , testCase "Regression: Comment removal handles edge cases" $ do
@@ -209,8 +210,8 @@ tests =
                   , "// comment with /* block */ inside"
                   , "func test() { \"/* not comment */\"; /* real comment */ }"
                   ]
-                results = map (Utils.removeComments) edgeCases
-            all (> 0) (map length results) @?= True
+                results = L.map (Utils.removeComments) edgeCases
+            L.all (> 0) (map L.length results) @?= True
 
         , testCase "Regression: Indentation normalization preserves meaning" $ do
             -- Previously normalization could change code meaning
@@ -224,14 +225,14 @@ tests =
                   , "}"
                   ]
                 normalized = Utils.normalizeIndentation input
-            "if (true)" `isInfixOf` normalized @?= True
-            "return 1;" `isInfixOf` normalized @?= True
-            "return 2;" `isInfixOf` normalized @?= True
+            "if (true)" `L.isInfixOf` normalized @?= True
+            "return 1;" `L.isInfixOf` normalized @?= True
+            "return 2;" `L.isInfixOf` normalized @?= True
         ]
     ]
   where
-    isInfixOf needle haystack = needle `isPrefixOf` haystack || 
-                              (not (null haystack) && isInfixOf needle (tail haystack))
-    isPrefixOf [] _ = True
-    isPrefixOf _ [] = False
-    isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
+    L.isInfixOf needle haystack = needle `L.isPrefixOf` haystack || 
+                              (not (null haystack) && L.isInfixOf needle (L.tail haystack))
+    L.isPrefixOf [] _ = True
+    L.isPrefixOf _ [] = False
+    L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys

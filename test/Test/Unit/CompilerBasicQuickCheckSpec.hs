@@ -4,6 +4,7 @@
 module Test.Unit.CompilerBasicQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
@@ -25,7 +26,7 @@ compilationPhaseProperties = testGroup "Compilation Phase Properties"
       phase === (phase :: CompilationPhase)
   
   , fastProperty "CompilationPhase show is non-empty" $ \phase ->
-      not (null (show (phase :: CompilationPhase)))
+      not (L.null (show (phase :: CompilationPhase)))
   ]
 
 typeEnvProperties :: TestTree
@@ -45,9 +46,9 @@ typeEnvProperties = testGroup "Type Environment Properties"
 errorMessageProperties :: TestTree
 errorMessageProperties = testGroup "Error Message Properties"
   [ fastProperty "error messages are non-empty" $ \(msg :: String) ->
-      not (null msg) ==> length msg > 0
+      not (null msg) ==> L.length msg > 0
   
   , fastProperty "concatenating errors preserves both" $ \(e1 :: String) (e2 :: String) ->
       let combined = e1 ++ "\n" ++ e2
-      in length combined >= length e1 && length combined >= length e2
+      in L.length combined >= L.length e1 && L.length combined >= L.length e2
   ]

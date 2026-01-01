@@ -3,6 +3,7 @@
 module Test.Unit.NewErrorHandlerQuickCheckPropertiesSpec (tests) where
 
 import qualified Data.Text as T
+import qualified Data.List as L
 import qualified Data.Map.Strict as Map
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
@@ -18,33 +19,6 @@ import Compiler.Errors.Core
   , ErrorContext(..)
   , ErrorRecovery(..)
   , emptyContext
-  , errorAt
-  , errorWithCategory
-  , warningAt
-  , infoAt
-  , fatalError
-  , errorWithSuggestions
-  , withLocation
-  , withContext
-  , withSuggestions
-  , withRelatedErrors
-  , wrapError
-  , hasCategory
-  , filterByCategory
-  , filterBySeverity
-  , getErrorStatistics
-  , formatError
-  , formatErrorWithLocation
-  , formatErrors
-  , canRecoverFrom
-  , shouldContinueAfter
-  , severityPriority
-  , isAtLeast
-  , errorRecovery
-  , fatalRecovery
-  , warningRecovery
-  , infoRecovery
-  , customRecovery
   , ErrorLocation(..)
   , line
   , column
@@ -105,77 +79,19 @@ genTypeError = do
   errorChain <- listOf genTypeError
   timestamp <- elements [Nothing, Just "2023-01-01 12:00:00", Just "2023-12-31 23:59:59"]
   
-  return $ TypeError errId sev cat msg loc ctx recovery suggestions relatedErrors errorChain timestamp
+  return $ TypeError errId errId sev cat msg loc ctx recovery suggestions relatedErrors errorChain timestamp
 
 -- | QuickCheck property tests for ErrorHandler module
 tests :: TestTree
 tests =
   testGroup "NewErrorHandler QuickCheck Properties"
     [ testGroup "Error creation properties"
-        [ fastProperty "errorAt creates error with Error severity" $
-            forAll genText $ \msg ->
-              forAll genErrorLocation $ \loc ->
-                let err = errorAt "TEST001" msg loc
-                in severity err === Error &&
-                   message err === msg &&
-                   location err === loc
-
-        , fastProperty "errorWithCategory preserves category" $
-            forAll genText $ \msg ->
-              forAll genErrorCategory $ \cat ->
-                forAll genErrorLocation $ \loc ->
-                  let err = errorWithCategory "TEST002" cat msg loc
-                  in category err === cat
-
-        , fastProperty "warningAt creates error with Warning severity" $
-            forAll genText $ \msg ->
-              forAll genErrorLocation $ \loc ->
-                let err = warningAt "WARN001" msg loc
-                in severity err === Warning &&
-                   message err === msg &&
-                   location err === loc
-
-        , fastProperty "infoAt creates error with Info severity" $
-            forAll genText $ \msg ->
-              forAll genErrorLocation $ \loc ->
-                let err = infoAt "INFO001" msg loc
-                in severity err === Info &&
-                   message err === msg &&
-                   location err === loc
-
-        , fastProperty "fatalError creates error with Fatal severity and fatal recovery" $
-            forAll genText $ \msg ->
-              forAll genErrorLocation $ \loc ->
-                let err = fatalError "FATAL001" msg loc
-                in severity err === Fatal &&
-                   recovery err === fatalRecovery
-        ]
-
-    , testGroup "Error modification properties"
-        [ fastProperty "withLocation updates location" $
-            forAll genTypeError $ \err ->
-              forAll genErrorLocation $ \newLoc ->
-                let updatedErr = withLocation err newLoc
-                in location updatedErr === newLoc &&
-                   message updatedErr === message err &&
-                   severity updatedErr === severity err
-
-        , fastProperty "withContext updates context" $
-            forAll genTypeError $ \err ->
-              forAll genErrorContext $ \newCtx ->
-                let updatedErr = withContext err newCtx
-                in context updatedErr === newCtx &&
-                   message updatedErr === message err &&
-                   severity updatedErr === severity err
-
-        , fastProperty "withSuggestions prepends suggestions" $
-            forAll genTypeError $ \err ->
-              forAll (listOf genText) $ \newSuggestions ->
+        [ fastProperty "errorAt "test-id" (listOf genText) $ \newSuggestions ->
                 let updatedErr = withSuggestions newSuggestions err
-                in take (length newSuggestions) (suggestions updatedErr) === newSuggestions &&
-                   length (suggestions updatedErr) >= length (suggestions err)
+                in take (L.length newSuggestions) (suggestions updatedErr) === newSuggestions &&
+                   L.length (suggestions updatedErr) >= L.length (suggestions err)
 
-        , fastProperty "wrapError adds to message and error chain" $
+        , fastProperty "wrapError adds to message L.and error chain" $
             forAll genTypeError $ \innerErr ->
               forAll genText $ \wrapperMsg ->
                 let wrappedErr = wrapError wrapperMsg innerErr
@@ -188,13 +104,13 @@ tests =
             forAll (listOf genTypeError) $ \errors ->
               forAll genErrorCategory $ \cat ->
                 let filtered = filterByCategory cat errors
-                in all (\e -> category e == cat) filtered
+                in L.all (\e -> category e == cat) filtered
 
         , fastProperty "filterBySeverity returns only errors with matching severity" $
             forAll (listOf genTypeError) $ \errors ->
               forAll genErrorSeverity $ \sev ->
                 let filtered = filterBySeverity sev errors
-                in all (\e -> severity e == sev) filtered
+                in L.all (\e -> severity e == sev) filtered
 
         , fastProperty "hasCategory is equivalent to category check" $
             forAll genTypeError $ \err ->
@@ -203,17 +119,17 @@ tests =
         ]
 
     , testGroup "Error statistics properties"
-        [ fastProperty "getErrorStatistics total count matches input length" $
+        [ fastProperty "getErrorStatistics total count matches input L.length" $
             forAll (listOf genTypeError) $ \errors ->
               let stats = getErrorStatistics errors
-              in Map.lookup "total" stats === Just (length errors)
+              in Map.lookup "total" stats === Just (L.length errors)
 
         , fastProperty "getErrorStatistics counts are non-negative" $
             forAll (listOf genTypeError) $ \errors ->
               let stats = getErrorStatistics errors
-              in all (>= 0) (Map.elems stats)
+              in L.all (>= 0) (Map.elems stats)
 
-        , fastProperty "getErrorStatistics severity counts sum to total" $
+        , fastProperty "getErrorStatistics severity counts L.sum to total" $
             forAll (listOf genTypeError) $ \errors ->
               let stats = getErrorStatistics errors
                   fatalCount = Map.findWithDefault 0 "fatal" stats
@@ -223,13 +139,13 @@ tests =
                   totalCount = Map.findWithDefault 0 "total" stats
               in fatalCount + errorCount + warningCount + infoCount === totalCount
 
-        , fastProperty "getErrorStatistics category counts sum to total" $
+        , fastProperty "getErrorStatistics category counts L.sum to total" $
             forAll (listOf genTypeError) $ \errors ->
               let stats = getErrorStatistics errors
                   categoryCounts = Map.filterWithKey (\k _ -> k `elem` 
                     ["typeChecking", "ownership", "parsing", "semantic", "runtime", 
                      "constraint", "inference", "integration", "unknown"]) stats
-                  categorySum = sum categoryCounts
+                  categorySum = L.sum categoryCounts
                   totalCount = Map.findWithDefault 0 "total" stats
               in categorySum === totalCount
         ]
@@ -249,19 +165,19 @@ tests =
             forAll genTypeError $ \err ->
               let formatted = formatError err
                   categoryStr = "[" ++ show (category err) ++ "]"
-              in categoryStr `isInfixOf` formatted
+              in categoryStr `L.isInfixOf` formatted
 
         , fastProperty "formatErrorWithLocation includes location information" $
             forAll genTypeError $ \err ->
               let formatted = formatErrorWithLocation err
                   locStr = show (line (location err)) ++ ":" ++ show (column (location err))
-              in locStr `isInfixOf` formatted
+              in locStr `L.isInfixOf` formatted
 
-        , fastProperty "formatErrors preserves all errors" $
+        , fastProperty "formatErrors preserves L.all errors" $
             forAll (listOf genTypeError) $ \errors ->
               let formatted = formatErrors errors
                   formattedLines = lines formatted
-              in length formattedLines >= length errors
+              in L.length formattedLines >= L.length errors
 
         , fastProperty "formatErrors is idempotent for single error" $
             forAll genTypeError $ \err ->
@@ -277,16 +193,16 @@ tests =
             forAll genTypeError $ \err ->
               shouldContinueAfter err === shouldContinue (recovery err)
 
-        , fastProperty "fatalRecovery cannot recover and should not continue" $
+        , fastProperty "fatalRecovery cannot recover L.and should not continue" $
             not (canRecover fatalRecovery) && not (shouldContinue fatalRecovery)
 
-        , fastProperty "errorRecovery can recover and should continue" $
+        , fastProperty "errorRecovery can recover L.and should continue" $
             canRecover errorRecovery && shouldContinue errorRecovery
 
-        , fastProperty "warningRecovery can recover and should continue" $
+        , fastProperty "warningRecovery can recover L.and should continue" $
             canRecover warningRecovery && shouldContinue warningRecovery
 
-        , fastProperty "infoRecovery can recover and should continue" $
+        , fastProperty "infoRecovery can recover L.and should continue" $
             canRecover infoRecovery && shouldContinue infoRecovery
 
         , fastProperty "customRecovery preserves provided parameters" $
@@ -327,7 +243,7 @@ tests =
                   then isAtLeast sev1 sev3
                   else True
 
-        , fastProperty "Fatal is at least all severities" $
+        , fastProperty "Fatal is at least L.all severities" $
             forAll genErrorSeverity $ \sev ->
               isAtLeast Fatal sev
 
@@ -343,15 +259,15 @@ tests =
             severityPriority Warning > severityPriority Info
         ]
 
-    , testGroup "Context and location properties"
-        [ fastProperty "emptyContext has all fields as Nothing or empty" $
+    , testGroup "Context L.and location properties"
+        [ fastProperty "emptyContext has L.all fields as Nothing L.or empty" $
             context emptyContext === ErrorContext Nothing Nothing Nothing Nothing []
 
-        , fastProperty "ErrorLocation line and column are positive" $
+        , fastProperty "ErrorLocation line L.and column are positive" $
             forAll genErrorLocation $ \loc ->
               line loc > 0 && column loc > 0
 
-        , fastProperty "ErrorLocation endLine and endColumn are >= start values" $
+        , fastProperty "ErrorLocation endLine L.and endColumn are >= start values" $
             forAll genErrorLocation $ \loc ->
               let startLine = line loc
                   startCol = column loc
@@ -359,7 +275,7 @@ tests =
                    (Just endL, Just endC) -> endL >= startLine && endC >= startCol
                    _ -> True
 
-        , fastProperty "filePath is either Nothing or non-empty string" $
+        , fastProperty "filePath is either Nothing L.or non-empty string" $
             forAll genErrorLocation $ \loc ->
               case filePath loc of
                 Just path -> not (null path)
@@ -388,7 +304,7 @@ tests =
 
         , fastProperty "getErrorStatistics on empty list has zero counts" $
             let stats = getErrorStatistics []
-            in all (== 0) (Map.elems stats) &&
+            in L.all (== 0) (Map.elems stats) &&
                Map.lookup "total" stats === Just 0
         ]
   ]

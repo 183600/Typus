@@ -7,6 +7,7 @@ import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import Parser
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos, spanBetween)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import qualified Data.Text as T
@@ -25,7 +26,7 @@ test_ParserEnhancedQuickCheck = testGroup "Parser Enhanced QuickCheck Tests"
 -- | Directive parsing properties
 directiveParsingProperties :: TestTree
 directiveParsingProperties = testGroup "Directive Parsing Properties"
-  [ QC.testProperty "parseBool parses 'true' and 'false' correctly" $
+  [ QC.testProperty "parseBool parses 'true' L.and 'false' correctly" $
       \b -> let str = if b then "true" else "false"
              in parseBool str === Right b
 
@@ -35,12 +36,12 @@ directiveParsingProperties = testGroup "Directive Parsing Properties"
                Left _ -> True
                Right _ -> False
 
-  , QC.testProperty "defaultFileDirectives has all Nothing values" $
+  , QC.testProperty "defaultFileDirectives has L.all Nothing values" $
       \fd -> fdOwnership (defaultFileDirectives) === Nothing &&
              fdDependentTypes (defaultFileDirectives) === Nothing &&
              fdConstraints (defaultFileDirectives) === Nothing
 
-  , QC.testProperty "defaultBlockDirectives has all Nothing values" $
+  , QC.testProperty "defaultBlockDirectives has L.all Nothing values" $
       \bd -> bdOwnership (defaultBlockDirectives) === Nothing &&
              bdDependentTypes (defaultBlockDirectives) === Nothing &&
              bdConstraints (defaultBlockDirectives) === Nothing
@@ -99,23 +100,23 @@ fileDirectiveProperties = testGroup "File Directive Properties"
       \tag -> let input = "//go:build " ++ tag
                   result = parseTypus input
               in case result of
-                   Right tf -> not (null (tfBuildTags tf))
+                   Right tf -> not (L.null (tfBuildTags tf))
                    Left _ -> False
 
   , QC.testProperty "parseTypus handles multiple build tags" $
       \tag1 tag2 -> let input = "//go:build " ++ tag1 ++ "\n// +build " ++ tag2
                         result = parseTypus input
                     in case result of
-                         Right tf -> length (tfBuildTags tf) >= 2
+                         Right tf -> L.length (tfBuildTags tf) >= 2
                          Left _ -> False
 
-  , QC.testProperty "parseTypus handles mixed directives and build tags" $
+  , QC.testProperty "parseTypus handles mixed directives L.and build tags" $
       \b tag -> let input = "//! ownership: " ++ if b then "true" else "false" ++ "\n" ++
                            "//go:build " ++ tag
                     result = parseTypus input
                 in case result of
                      Right tf -> isJust (fdOwnership (tfDirectives tf)) &&
-                                 not (null (tfBuildTags tf))
+                                 not (L.null (tfBuildTags tf))
                      Left _ -> False
   ]
 
@@ -126,8 +127,8 @@ blockDirectiveProperties = testGroup "Block Directive Properties"
       \b -> let input = "{//! ownership: " ++ if b then "true" else "false" ++ "}\ncode here"
                  result = parseTypus input
              in case result of
-                  Right tf -> not (null (tfBlocks tf)) &&
-                               isJust (bdOwnership (cbDirectives (head (tfBlocks tf))))
+                  Right tf -> not (L.null (tfBlocks tf)) &&
+                               isJust (bdOwnership (cbDirectives (L.head (tfBlocks tf))))
                   Left _ -> False
 
   , QC.testProperty "parseTypus handles multiple block directives" $
@@ -135,24 +136,24 @@ blockDirectiveProperties = testGroup "Block Directive Properties"
                                ", dependent_types: " ++ if b2 then "true" else "false" ++ "}\ncode"
                     result = parseTypus input
                 in case result of
-                     Right tf -> not (null (tfBlocks tf)) &&
-                                 isJust (bdOwnership (cbDirectives (head (tfBlocks tf)))) &&
-                                 isJust (bdDependentTypes (cbDirectives (head (tfBlocks tf))))
+                     Right tf -> not (L.null (tfBlocks tf)) &&
+                                 isJust (bdOwnership (cbDirectives (L.head (tfBlocks tf)))) &&
+                                 isJust (bdDependentTypes (cbDirectives (L.head (tfBlocks tf))))
                      Left _ -> False
 
   , QC.testProperty "parseTypus handles blocks without directives" $
       \content -> let input = "some code\nmore code"
                       result = parseTypus input
                   in case result of
-                       Right tf -> not (null (tfBlocks tf)) &&
-                                   cbDirectives (head (tfBlocks tf)) === defaultBlockDirectives
+                       Right tf -> not (L.null (tfBlocks tf)) &&
+                                   cbDirectives (L.head (tfBlocks tf)) === defaultBlockDirectives
                        Left _ -> False
 
-  , QC.testProperty "parseTypus handles mixed blocks with and without directives" $
+  , QC.testProperty "parseTypus handles mixed blocks with L.and without directives" $
       \b content -> let input = "{//! ownership: " ++ if b then "true" else "false" ++ "}\ncode1\n\ncode2"
                         result = parseTypus input
                     in case result of
-                         Right tf -> length (tfBlocks tf) >= 2
+                         Right tf -> L.length (tfBlocks tf) >= 2
                          Left _ -> False
   ]
 
@@ -162,7 +163,7 @@ typusFileProperties = testGroup "TypusFile Properties"
   [ QC.testProperty "parseTypus preserves file structure" $
       \content -> let result = parseTypus content
                   in case result of
-                       Right tf -> length (tfBlocks tf) > 0 || not (null content)
+                       Right tf -> L.length (tfBlocks tf) > 0 || not (null content)
                        Left _ -> False
 
   , QC.testProperty "parseTypus handles whitespace correctly" $
@@ -170,7 +171,7 @@ typusFileProperties = testGroup "TypusFile Properties"
                       result1 = parseTypus content
                       result2 = parseTypus input
                   in case (result1, result2) of
-                       (Right tf1, Right tf2) -> length (tfBlocks tf1) === length (tfBlocks tf2)
+                       (Right tf1, Right tf2) -> L.length (tfBlocks tf1) === L.length (tfBlocks tf2)
                        _ -> False
 
   , QC.testProperty "parseTypus is idempotent on valid input" $
@@ -186,8 +187,8 @@ typusFileProperties = testGroup "TypusFile Properties"
                         result = parseTypus input
                     in case result of
                          Right tf -> isJust (fdOwnership (tfDirectives tf)) &&
-                                     not (null (tfBuildTags tf)) &&
-                                     not (null (tfBlocks tf))
+                                     not (L.null (tfBuildTags tf)) &&
+                                     not (L.null (tfBlocks tf))
                          Left _ -> False
   ]
 
@@ -198,7 +199,7 @@ syntaxValidationProperties = testGroup "Syntax Validation Properties"
       \condition -> let input = "if " ++ condition
                         result = parseTypus input
                     in case result of
-                         Left err -> "missing opening brace" `isInfixOf` err
+                         Left err -> "missing opening brace" `L.isInfixOf` err
                          Right _ -> False
 
   , QC.testProperty "parseTypus accepts if statements with braces" $
@@ -212,7 +213,7 @@ syntaxValidationProperties = testGroup "Syntax Validation Properties"
       \name1 name2 -> let input = "package " ++ name1 ++ "\npackage " ++ name2
                           result = parseTypus input
                       in case result of
-                           Left err -> "Multiple package" `isInfixOf` err
+                           Left err -> "Multiple package" `L.isInfixOf` err
                            Right _ -> False
 
   , QC.testProperty "parseTypus accepts single package declaration" $
@@ -230,21 +231,21 @@ buildTagProperties = testGroup "Build Tag Properties"
       \tag -> let input = "//go:build " ++ tag
                   result = parseTypus input
               in case result of
-                   Right tf -> any ("//go:build " `isPrefixOf`) (map (("\n" ++) . show) (tfBuildTags tf))
+                   Right tf -> L.any ("//go:build " `L.isPrefixOf`) (L.map (("\n" ++) . show) (tfBuildTags tf))
                    Left _ -> False
 
   , QC.testProperty "parseTypus recognizes // +build tags" $
       \tag -> let input = "// +build " ++ tag
                   result = parseTypus input
               in case result of
-                   Right tf -> any ("// +build " `isPrefixOf`) (map (("\n" ++) . show) (tfBuildTags tf))
+                   Right tf -> L.any ("// +build " `L.isPrefixOf`) (L.map (("\n" ++) . show) (tfBuildTags tf))
                    Left _ -> False
 
   , QC.testProperty "parseTypus preserves build tag order" $
       \tag1 tag2 -> let input = "//go:build " ++ tag1 ++ "\n// +build " ++ tag2
                         result = parseTypus input
                     in case result of
-                         Right tf -> length (tfBuildTags tf) >= 2
+                         Right tf -> L.length (tfBuildTags tf) >= 2
                          Left _ -> False
 
   , QC.testProperty "parseTypus handles build tags with directives" $
@@ -253,6 +254,6 @@ buildTagProperties = testGroup "Build Tag Properties"
                         result = parseTypus input
                     in case result of
                          Right tf -> isJust (fdOwnership (tfDirectives tf)) &&
-                                     not (null (tfBuildTags tf))
+                                     not (L.null (tfBuildTags tf))
                          Left _ -> False
   ]

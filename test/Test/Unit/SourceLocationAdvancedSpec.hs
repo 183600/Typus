@@ -10,6 +10,7 @@
 module Test.Unit.SourceLocationAdvancedSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -68,12 +69,12 @@ tests =
         , fastProperty "mergeSpans is commutative" prop_mergeSpans_commutative
         , fastProperty "mergeSpans is associative" prop_mergeSpans_associative
         , fastProperty "spanBetween creates valid span" prop_spanBetween_valid
-        , fastProperty "emptySpan has zero length" prop_emptySpan_zero_length
+        , fastProperty "emptySpan has zero L.length" prop_emptySpan_zero_length
         ]
 
     , testGroup "Located values"
         [ fastProperty "mapLocated preserves position" prop_mapLocated_preserves_position
-        , fastProperty "locatedAt creates span with same start and end" prop_locatedAt_zero_span
+        , fastProperty "locatedAt creates span with same start L.and end" prop_locatedAt_zero_span
         , fastProperty "locatedWithSpan preserves given span" prop_locatedWithSpan_preserves_span
         ]
 
@@ -84,11 +85,11 @@ tests =
         ]
 
     , testGroup "Error location conversion"
-        [ fastProperty "toErrorLocation preserves line and column" prop_toErrorLocation_preserves
+        [ fastProperty "toErrorLocation preserves line L.and column" prop_toErrorLocation_preserves
         , fastProperty "toErrorLocationWithSpan preserves range" prop_toErrorLocationWithSpan_preserves
         ]
 
-    , testGroup "Edge cases and robustness"
+    , testGroup "Edge cases L.and robustness"
         [ testCase "handles very large line numbers" test_large_line_numbers
         , testCase "handles very large column numbers" test_large_column_numbers
         , testCase "handles position at start of file" test_start_position
@@ -117,7 +118,7 @@ prop_posAfter_regular =
 prop_posAfter_tab :: Property
 prop_posAfter_tab =
   let testPositions = [(1,1), (1,2), (1,8), (1,9), (1,16), (1,17)]
-      results = map (\(line, col) -> posColumn (posAfter '\t' (posAt line col))) testPositions
+      results = L.map (\(line, col) -> posColumn (posAfter '\t' (posAt line col))) testPositions
       expected = [9, 9, 9, 17, 17, 25]
   in property $ results === expected
 
@@ -126,7 +127,7 @@ prop_advancePosBy_consistency =
   forAll arbitrary $ \str ->
     let pos = startPos
         advanced1 = advancePosBy str pos
-        advanced2 = foldl (flip posAfter) pos str
+        advanced2 = L.foldl (flip posAfter) pos str
     in property $ advanced1 === advanced2
 
 prop_position_monotonic :: Property
@@ -134,7 +135,7 @@ prop_position_monotonic =
   forAll arbitrary $ \str ->
     not (null str) ==>
     let positions = scanl (flip posAfter) startPos str
-        isMonotonic = all (\(p1, p2) -> posOffset p1 <= posOffset p2) (zip positions (tail positions))
+        isMonotonic = L.all (\(p1, p2) -> posOffset p1 <= posOffset p2) (zip positions (L.tail positions))
     in property $ isMonotonic
 
 -- ============================================================================
@@ -179,8 +180,8 @@ prop_emptySpan_zero_length :: Property
 prop_emptySpan_zero_length =
   forAll arbitrary $ \pos ->
     let span = emptySpan pos
-        length = posOffset (spanEnd span) - posOffset (spanStart span)
-    in property $ length === 0
+        L.length = posOffset (spanEnd span) - posOffset (spanStart span)
+    in property $ L.length === 0
 
 -- ============================================================================
 -- Located Values Properties
@@ -220,7 +221,7 @@ prop_advancePosByText_unicode =
   let unicodeText = "Hello 世界 🚀 Café"
       pos = startPos
       advanced = advancePosByText unicodeText pos
-  in property $ posLine advanced === 1 .&&. posColumn advanced === T.length unicodeText + 1
+  in property $ posLine advanced === 1 .&&. posColumn advanced === T.L.length unicodeText + 1
 
 prop_advancePosByText_multiline :: Property
 prop_advancePosByText_multiline =
@@ -229,7 +230,7 @@ prop_advancePosByText_multiline =
       advanced = advancePosByText multilineText pos
   in property $ posLine advanced === 3 .&&. 
                     posColumn advanced === 7 .&&.
-                    posOffset advanced === T.length multilineText
+                    posOffset advanced === T.L.length multilineText
 
 prop_advancePosByLine_preserves_column :: Property
 prop_advancePosByLine_preserves_column =
@@ -260,7 +261,7 @@ prop_toErrorLocationWithSpan_preserves =
                     endColumn errorLoc === Just (posColumn (spanEnd span))
 
 -- ============================================================================
--- Edge Cases and Robustness Tests
+-- Edge Cases L.and Robustness Tests
 -- ============================================================================
 
 test_large_line_numbers :: IO ()

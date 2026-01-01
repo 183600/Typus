@@ -49,7 +49,9 @@ import SourceLocation
 
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, nub, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (nub, sort)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -204,14 +206,14 @@ genInvalidTypusContent = oneof
 
 prop_syntax_error_contains_required_fields :: SyntaxError -> Property
 prop_syntax_error_contains_required_fields error =
-  in property $ T.length (errorMessage error) > 0 .&&.
-               T.length (errorSeverity error) > 0 .&&.
+  in property $ T.L.length (errorMessage error) > 0 .&&.
+               T.L.length (errorSeverity error) > 0 .&&.
                isValidSpan (errorLocation error)
 
 prop_syntax_error_suggestions_are_helpful :: SyntaxError -> Property
 prop_syntax_error_suggestions_are_helpful error =
   let suggestions = errorSuggestions error
-  in property $ all (T.length .>. 0) suggestions
+  in property $ L.all (T.L.length .>. 0) suggestions
 
 -- ============================================================================
 -- Properties for Syntax Validation
@@ -232,7 +234,7 @@ prop_validate_syntax_handles_valid_content content =
 
 prop_validate_syntax_detects_invalid_content :: String -> Property
 prop_validate_syntax_detects_invalid_content content =
-  "invalid" `isInfixOf` content ==> 
+  "invalid" `L.isInfixOf` content ==> 
   let validator = getDefaultValidator
       result = validateSyntax validator content
   in property $ True  -- Basic test that invalid content is processed
@@ -271,7 +273,7 @@ prop_get_syntax_errors_returns_errors content =
   let validator = getDefaultValidator
       _ = validateSyntax validator content
       errors = getSyntaxErrors validator
-  in property $ length errors >= 0
+  in property $ L.length errors >= 0
 
 prop_has_syntax_errors_detects_errors :: String -> Property
 prop_has_syntax_errors_detects_errors content =
@@ -305,7 +307,7 @@ prop_validation_handles_large_content :: Int -> Property
 prop_validation_handles_large_content multiplier =
   multiplier > 0 && multiplier <= 100 ==> 
   let baseContent = "func test() { return 42 }\n"
-      largeContent = concat (replicate multiplier baseContent)
+      largeContent = L.concat (replicate multiplier baseContent)
       validator = getDefaultValidator
       result = validateSyntax validator largeContent
   in property $ True  -- Basic test that large content doesn't crash
@@ -326,27 +328,27 @@ prop_validation_handles_nested_structures depth =
 
 prop_validation_detects_unclosed_braces :: String -> Property
 prop_validation_detects_unclosed_braces content =
-  "{" `isInfixOf` content && not ("}" `isInfixOf` content) ==> 
+  "{" `L.isInfixOf` content && not ("}" `L.isInfixOf` content) ==> 
   let validator = getDefaultValidator
       _ = validateSyntax validator content
       errors = getSyntaxErrors validator
-  in property $ length errors >= 0
+  in property $ L.length errors >= 0
 
 prop_validation_detects_malformed_directives :: String -> Property
 prop_validation_detects_malformed_directives content =
-  "//! malformed" `isInfixOf` content ==> 
+  "//! malformed" `L.isInfixOf` content ==> 
   let validator = getDefaultValidator
       _ = validateSyntax validator content
       errors = getSyntaxErrors validator
-  in property $ length errors >= 0
+  in property $ L.length errors >= 0
 
 prop_validation_detects_invalid_keywords :: String -> Property
 prop_validation_detects_invalid_keywords content =
-  "invalid_keyword" `isInfixOf` content ==> 
+  "invalid_keyword" `L.isInfixOf` content ==> 
   let validator = getDefaultValidator
       _ = validateSyntax validator content
       errors = getSyntaxErrors validator
-  in property $ length errors >= 0
+  in property $ L.length errors >= 0
 
 -- ============================================================================
 -- Properties for Validation Consistency
@@ -361,7 +363,7 @@ prop_validation_is_deterministic content =
       result2 = validateSyntax validator2 content
       errors1 = getSyntaxErrors validator1
       errors2 = getSyntaxErrors validator2
-  in property $ length errors1 === length errors2
+  in property $ L.length errors1 === L.length errors2
 
 prop_validation_preserves_error_order :: String -> Property
 prop_validation_preserves_error_order content =
@@ -370,7 +372,7 @@ prop_validation_preserves_error_order content =
       _ = validateSyntax validator content
       errors = getSyntaxErrors validator
       errorTypes = map errorType errors
-  in property $ length errorTypes >= 0
+  in property $ L.length errorTypes >= 0
 
 -- ============================================================================
 -- Helper Functions

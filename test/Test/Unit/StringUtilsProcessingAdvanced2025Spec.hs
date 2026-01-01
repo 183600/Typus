@@ -3,6 +3,7 @@
 module Test.Unit.StringUtilsProcessingAdvanced2025Spec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, choose, listOf, elements)
 import Test.Tasty.HUnit (testCase, (@=?))
 
@@ -15,7 +16,7 @@ import Data.Char (isSpace)
 
 tests :: TestTree
 tests = testGroup "String Utils Processing Advanced Tests"
-  [ testProperty "trim removes all surrounding whitespace" propTrimRemovesSurrounding
+  [ testProperty "trim removes L.all surrounding whitespace" propTrimRemovesSurrounding
   , testProperty "splitBy vs splitByCollapsed relationship" propSplitByRelationship
   , testProperty "removeComments preserves non-comment structure" propRemoveCommentsPreservesStructure
   , testProperty "normalizeIndentation idempotent" propNormalizeIndentationIdempotent
@@ -27,23 +28,23 @@ tests = testGroup "String Utils Processing Advanced Tests"
   , testCase "Multi-line string processing" testMultiLineStringProcessing
   ]
 
--- Property 1: trim removes all surrounding whitespace
+-- Property 1: trim removes L.all surrounding whitespace
 propTrimRemovesSurrounding :: String -> Bool
 propTrimRemovesSurrounding s =
   let trimmed = trim s
-      hasLeadingSpace = not (null s) && isSpace (head s)
+      hasLeadingSpace = not (null s) && isSpace (L.head s)
       hasTrailingSpace = not (null s) && isSpace (last s)
   in (not hasLeadingSpace && not hasTrailingSpace) || 
      (null trimmed) ||
-     (not (isSpace (head trimmed)) && not (isSpace (last trimmed)))
+     (not (isSpace (L.head trimmed)) && not (isSpace (last trimmed)))
 
 -- Property 2: splitBy vs splitByCollapsed relationship
 propSplitByRelationship :: Char -> String -> Bool
 propSplitByRelationship delim s =
   let normal = splitBy delim s
       collapsed = splitByCollapsed delim s
-  in length collapsed <= length normal && 
-     filter (not . null) normal == collapsed
+  in L.length collapsed <= L.length normal && 
+     L.filter (not . null) normal == collapsed
 
 -- Property 3: removeComments preserves non-comment structure
 propRemoveCommentsPreservesStructure :: String -> Bool
@@ -51,10 +52,10 @@ propRemoveCommentsPreservesStructure s =
   let withoutComments = removeComments s
       lines1 = lines s
       lines2 = lines withoutComments
-      codeLines1 = filter (not . isCommentLine) lines1
-  in length codeLines1 >= length lines2
+      codeLines1 = L.filter (not . isCommentLine) lines1
+  in L.length codeLines1 >= L.length lines2
   where
-    isCommentLine line = "//" `isPrefixOf` dropWhile isSpace line
+    isCommentLine line = "//" `L.isPrefixOf` dropWhile isSpace line
 
 -- Property 4: normalizeIndentation idempotent
 propNormalizeIndentationIdempotent :: String -> Bool
@@ -90,14 +91,14 @@ propIndentationPreservesLines s =
   let normalized = normalizeIndentation s
       lines1 = lines s
       lines2 = lines normalized
-  in length lines1 == length lines2
+  in L.length lines1 == L.length lines2
 
 -- Property 8: splitByComma edge cases
 propSplitByCommaEdgeCases :: String -> Bool
 propSplitByCommaEdgeCases s =
   let normal = splitByComma s
       collapsed = splitByCommaCollapsed s
-  in all (not . null) collapsed == (collapsed == filter (not . null) normal)
+  in L.all (not . null) collapsed == (collapsed == L.filter (not . null) normal)
 
 -- Property 9: fixIndentation equals normalizeIndentation
 propFixIndentationEqualsNormalize :: String -> Bool
@@ -114,14 +115,14 @@ testMultiLineStringProcessing = do
   -- Check that relative indentation is preserved
   lines normalized @=? ["  line1", "      line2", "  line3", "line4"]
   
-  -- Check that the minimum indentation was removed
-  length (filter (isSpace . head) (lines normalized)) @=? 3
+  -- Check that the L.minimum indentation was removed
+  L.length (L.filter (isSpace . L.head) (lines normalized)) @=? 3
 
 -- Helper function
 isPrefixOf :: Eq a => [a] -> [a] -> Bool
-isPrefixOf [] _ = True
-isPrefixOf _ [] = False
-isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
+L.isPrefixOf [] _ = True
+L.isPrefixOf _ [] = False
+L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
 
 -- Arbitrary instances for testing
 instance Arbitrary Char where

@@ -1,6 +1,7 @@
 module Test.Unit.NewCabalQuickCheckSpec9 (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, property, Arbitrary(..), Gen, choose, listOf, elements)
 import Data.Text (Text)
@@ -25,7 +26,7 @@ tests =
     [ testProperty "parser to compiler pipeline preserves semantics" prop_parserToCompilerPipeline
     , testProperty "compiler to ownership analysis consistency" prop_compilerToOwnershipConsistency
     , testProperty "dependencies analysis respects syntax structure" prop_dependenciesRespectsSyntax
-    , testProperty "error handling integrates with all modules" prop_errorHandlingIntegration
+    , testProperty "error handling integrates with L.all modules" prop_errorHandlingIntegration
     , testProperty "source location tracking across pipeline" prop_sourceLocationTracking
     , testProperty "type system consistency across modules" prop_typeSystemConsistency
     , testProperty "module interaction preserves invariants" prop_moduleInteractionPreservesInvariants
@@ -70,7 +71,7 @@ prop_dependenciesRespectsSyntax sourceCode =
         Left _ -> True  -- Analysis failures are acceptable
         Right depGraph -> syntaxDependenciesConsistent syntaxStructure depGraph
 
--- Property: error handling integrates with all modules
+-- Property: error handling integrates with L.all modules
 prop_errorHandlingIntegration :: SourceCode -> Bool
 prop_errorHandlingIntegration sourceCode =
   let parseResult = parseSourceCode sourceCode
@@ -91,7 +92,7 @@ prop_sourceLocationTracking sourceCode =
         Left compileError -> errorLocationValid compileError sourceCode
         Right ir ->
           let sourceLocations = extractAllSourceLocations ir
-          in all (locationInSource sourceCode) sourceLocations
+          in L.all (locationInSource sourceCode) sourceLocations
 
 -- Property: type system consistency across modules
 prop_typeSystemConsistency :: SourceCode -> Bool
@@ -113,7 +114,7 @@ prop_moduleInteractionPreservesInvariants :: SourceCode -> Bool
 prop_moduleInteractionPreservesInvariants sourceCode =
   let pipeline = executeFullPipeline sourceCode
       invariants = checkPipelineInvariants pipeline
-  in all invariantHolds invariants
+  in L.all invariantHolds invariants
 
 -- Property: circular dependency detection works across modules
 prop_circularDependencyDetection :: [Module] -> Bool
@@ -122,7 +123,7 @@ prop_circularDependencyDetection modules =
       circularDeps = detectCircularDependencies dependencyGraph
   case circularDeps of
     [] -> True  -- No circular dependencies is fine
-    cycles -> all isValidCycle cycles
+    cycles -> L.all isValidCycle cycles
 
 -- Property: optimization doesn't break ownership analysis
 prop_optimizationOwnershipSafety :: IR -> Bool

@@ -3,6 +3,7 @@
 module Test.Unit.NewCabalDependenciesQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), (.&&.), (.||.), (==>), forAll, oneof, elements, listOf, choose, suchThat)
 import Dependencies
   ( DependentTypeChecker, DependentTypeError(..), AST(..), Statement(..)
@@ -17,7 +18,7 @@ import Dependencies.AST (AST(..), Statement(..), TypeExpr(..), Constraint(..))
 import Dependencies.TypeSystem (TypeVar(..), TypeConstraint(..), DependentTypeError(..), TypeDef(..))
 import Dependencies.Inference (TypeScheme(..), TypeEnvironment(..), newTypeVariable, getFreshTypeVar)
 import Data.Text (Text)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 import Data.Either (isLeft, isRight)
 import Data.Maybe (isJust, isNothing)
 import qualified Data.Map.Strict as Map
@@ -213,10 +214,10 @@ prop_var_decl_statement var typ =
 
 prop_func_decl_statement :: String -> [(String, TypeExpr)] -> Maybe TypeExpr -> Property
 prop_func_decl_statement name params retType =
-  not (null name) && all (not . null . fst) params ==>
-  let stmt = SFuncDecl (T.pack name) (map (\(n, t) -> (T.pack n, t)) params) retType
+  not (null name) && L.all (not . null . fst) params ==>
+  let stmt = SFuncDecl (T.pack name) (L.map (\(n, t) -> (T.pack n, t)) params) retType
   in case stmt of
-    SFuncDecl n p r -> T.unpack n === name && length p === length params && r === retType
+    SFuncDecl n p r -> T.unpack n === name && L.length p === L.length params && r === retType
     _ -> property False
 
 -- ============================================================================
@@ -238,7 +239,7 @@ prop_program_ast_contains_statements stmts =
 -- Test TypeScheme creation
 prop_forall_scheme_has_vars_and_type :: [String] -> TypeVar -> Property
 prop_forall_scheme_has_vars_and_type vars typ =
-  all (not . null) vars ==>
+  L.all (not . null) vars ==>
   let scheme = Forall vars typ
   in case scheme of
     Forall v t -> v === vars && t === typ
@@ -403,7 +404,7 @@ tests = testGroup "New Cabal Dependencies QuickCheck Tests"
       ]
   , testGroup "TypeExpr tests"
       [ testProperty "Simple type has name" prop_simple_type_has_name
-      , testProperty "Generic type has name and args" prop_generic_type_has_name_and_args
+      , testProperty "Generic type has name L.and args" prop_generic_type_has_name_and_args
       ]
   , testGroup "Constraint tests"
       [ testProperty "SizeGT constraint" prop_size_gt_constraint
@@ -417,7 +418,7 @@ tests = testGroup "New Cabal Dependencies QuickCheck Tests"
       [ testProperty "Program AST contains statements" prop_program_ast_contains_statements
       ]
   , testGroup "TypeScheme tests"
-      [ testProperty "Forall scheme has vars and type" prop_forall_scheme_has_vars_and_type
+      [ testProperty "Forall scheme has vars L.and type" prop_forall_scheme_has_vars_and_type
       ]
   , testGroup "DependentTypeChecker tests"
       [ testProperty "new dependent type checker" prop_new_dependent_type_checker

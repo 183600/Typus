@@ -10,6 +10,7 @@ import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
 import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed, 
              removeLineComments, removeComments, normalizeIndentation, breakOn)
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isSuffixOf)
 import qualified Data.Text as T
 
@@ -42,7 +43,7 @@ genSplitString :: Gen (Char, String)
 genSplitString = do
   delim <- elements $ ",;|:\t "
   parts <- listOf1 $ listOf1 $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " "
-  let result = concat $ intersperse delim parts
+  let result = L.concat $ intersperse delim parts
   return (delim, result)
   where
     intersperse _ [] = []
@@ -86,21 +87,21 @@ prop_trim_no_leading_trailing_whitespace :: String -> Bool
 prop_trim_no_leading_trailing_whitespace s = 
   let trimmed = trim s
   in null trimmed || 
-     (not (isSpace (head trimmed)) && not (isSpace (last trimmed)))
+     (not (isSpace (L.head trimmed)) && not (isSpace (last trimmed)))
 
 prop_trim_preserves_internal_whitespace :: String -> Bool
 prop_trim_preserves_internal_whitespace s =
   let trimmed = trim s
-      originalInternal = dropWhile isSpace $ reverse $ dropWhile isSpace $ reverse s
-      trimmedInternal = dropWhile isSpace $ reverse $ dropWhile isSpace $ reverse trimmed
+      originalInternal = dropWhile isSpace $ L.reverse $ dropWhile isSpace $ L.reverse s
+      trimmedInternal = dropWhile isSpace $ L.reverse $ dropWhile isSpace $ L.reverse trimmed
   in trimmedInternal == originalInternal
 
 -- Test splitBy properties
 prop_split_by_length :: Char -> String -> Bool
-prop_split_by delim s = length (splitBy delim s) >= 1
+prop_split_by delim s = L.length (splitBy delim s) >= 1
 
 prop_split_by_join :: Char -> String -> Bool
-prop_split_by delim s = concat (intersperse delim (splitBy delim s)) == s
+prop_split_by delim s = L.concat (intersperse delim (splitBy delim s)) == s
   where
     intersperse _ [] = []
     intersperse _ [x] = [x]
@@ -111,7 +112,7 @@ prop_split_by delim s = splitByCollapsed delim s `isSubsetOf` splitBy delim s
   where
     [] `isSubsetOf` _ = True
     _ `isSubsetOf` [] = False
-    xs `isSubsetOf` ys = all (`elem` ys) xs
+    xs `isSubsetOf` ys = L.all (`elem` ys) xs
 
 -- Test splitByComma properties
 prop_split_by_comma_equals_split_by :: String -> Bool
@@ -123,7 +124,7 @@ prop_split_by_comma_collapsed s = splitByCommaCollapsed s == splitByCollapsed ',
 -- Test removeLineComments properties
 prop_remove_line_comments_no_double_slash :: String -> Bool
 prop_remove_line_comments s = 
-  let filtered = filter (not . isPrefixOf "//") (lines s)
+  let filtered = L.filter (not . L.isPrefixOf "//") (lines s)
       result = removeLineComments s
   in "//" `notElem` lines result
 
@@ -131,8 +132,8 @@ prop_remove_line_comments_preserves_non_comment_lines :: String -> Bool
 prop_remove_line_comments s =
   let originalLines = lines s
       resultLines = lines $ removeLineComments s
-      nonCommentLines = filter (not . isPrefixOf "//") originalLines
-  in length resultLines == length nonCommentLines
+      nonCommentLines = L.filter (not . L.isPrefixOf "//") originalLines
+  in L.length resultLines == L.length nonCommentLines
 
 -- Test removeComments properties
 prop_remove_comments_no_comment_markers :: String -> Bool
@@ -144,7 +145,7 @@ prop_remove_comments_preserves_non_comment_content :: String -> Bool
 prop_remove_comments s =
   let result = removeComments s
       -- Count non-comment, non-whitespace characters
-      countNonCommentChars str = length $ filter (not . isSpace) $ filter (\c -> c /= '/' && c /= '*') str
+      countNonCommentChars str = L.length $ L.filter (not . isSpace) $ L.filter (\c -> c /= '/' && c /= '*') str
   in countNonCommentChars result <= countNonCommentChars s
 
 -- Test normalizeIndentation properties
@@ -152,21 +153,21 @@ prop_normalize_indentation_preserves_line_count :: String -> Bool
 prop_normalize_indentation s = 
   let original = lines s
       normalized = lines $ normalizeIndentation s
-  in length original == length normalized
+  in L.length original == L.length normalized
 
 prop_normalize_indentation_removes_common_prefix :: String -> Bool
 prop_normalize_indentation s =
   let normalizedLines = lines $ normalizeIndentation s
-      nonEmptyLines = filter (not . all isSpace) normalizedLines
+      nonEmptyLines = L.filter (not . L.all isSpace) normalizedLines
   in if null nonEmptyLines 
      then True
-     else all (\line -> null line || not (isSpace (head line))) nonEmptyLines
+     else L.all (\line -> null line || not (isSpace (L.head line))) nonEmptyLines
 
 -- Test breakOn properties
 prop_break_on_returns_tuple :: String -> String -> Bool
 prop_break_on pat s = 
   let (before, after) = breakOn pat s
-  in length before + length pat + length after <= length s + length pat
+  in L.length before + L.length pat + L.length after <= L.length s + L.length pat
 
 prop_break_on_empty_pattern :: String -> Bool
 prop_break_on s = breakOn "" s == ("", s)
@@ -186,7 +187,7 @@ test_trim_empty = testCase "trim empty string" $
   assertEqual "" "" (trim "")
 
 test_trim_all_whitespace :: TestTree
-test_trim_all_whitespace = testCase "trim all whitespace" $
+test_trim_all_whitespace = testCase "trim L.all whitespace" $
   assertEqual "" "" (trim "   \t\n\r   ")
 
 test_trim_single_word :: TestTree
@@ -267,7 +268,7 @@ tests = testGroup "Utils Additional QuickCheck Tests"
     [ testProperty "trim idempotent" prop_trim_idempotent
     , testProperty "trim no leading/trailing whitespace" prop_trim_no_leading_trailing_whitespace
     , testProperty "trim preserves internal whitespace" prop_trim_preserves_internal_whitespace
-    , testProperty "splitBy length" prop_split_by_length
+    , testProperty "splitBy L.length" prop_split_by_length
     , testProperty "splitBy join" prop_split_by_join
     , testProperty "splitByCollapsed subset" prop_split_by_collapsed_subset
     , testProperty "splitByComma equals splitBy" prop_split_by_comma_equals_split_by

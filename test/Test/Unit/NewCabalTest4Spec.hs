@@ -14,6 +14,7 @@ import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 
 import Compiler.Errors.Core
@@ -42,11 +43,6 @@ import Compiler.Errors.Core
   , formatErrorsWithLocation
   , canRecoverFrom
   , shouldContinueAfter
-  , errorAt
-  , errorWithCategory
-  , warningAt
-  , warningWithCategory
-  , infoAt
   , infoWithCategory
   )
 import SourceLocation (SourcePos(..), startPos)
@@ -67,7 +63,7 @@ tests =
             let error = TypeError "Test message" ErrorSeverityError ErrorCategoryTypeCheck 
                                (ErrorLocation 1 1 Nothing Nothing) emptyContext
                 formatted = formatError error
-            assertBool "Should contain error message" $ "Test message" `isInfixOf` formatted
+            assertBool "Should contain error message" $ "Test message" `L.isInfixOf` formatted
 
         , testCase "错误恢复机制" $ do
             let recoverableError = TypeError "Recoverable" ErrorSeverityWarning ErrorCategorySyntax 
@@ -103,17 +99,17 @@ prop_error_collector_monotonic message severity category =
   not (null message) ==> 
   do
     collector <- newErrorCollector
-    let initialErrorCount = length $ getErrors collector
-        initialWarningCount = length $ getWarnings collector
+    let initialErrorCount = L.length $ getErrors collector
+        initialWarningCount = L.length $ getWarnings collector
     
     case severity of
         ErrorSeverityError -> do
             addError collector message severity startPos
-            finalErrorCount <- return $ length $ getErrors collector
+            finalErrorCount <- return $ L.length $ getErrors collector
             return $ finalErrorCount >= initialErrorCount
         ErrorSeverityWarning -> do
             addWarning collector message startPos
-            finalWarningCount <- return $ length $ getWarnings collector
+            finalWarningCount <- return $ L.length $ getWarnings collector
             return $ finalWarningCount >= initialWarningCount
         _ -> return $ True
 
@@ -123,7 +119,7 @@ prop_error_formatting_preservation message severity category =
   not (null message) ==>
   let error = TypeError message severity category (ErrorLocation 1 1 Nothing Nothing) emptyContext
       formatted = formatError error
-  in property $ message `isInfixOf` formatted
+  in property $ message `L.isInfixOf` formatted
 
 -- 错误恢复的一致性：相同严重性和类别的错误应该有一致的恢复行为
 prop_error_recovery_consistency :: String -> ErrorSeverity -> ErrorCategory -> Property

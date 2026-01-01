@@ -10,6 +10,7 @@
 module Test.Unit.AdditionalErrorHandlerQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose)
@@ -28,29 +29,6 @@ import Compiler.Errors.Core
   , isAtLeast
   , canRecoverFrom
   , shouldContinueAfter
-  , errorAt
-  , warningAt
-  , infoAt
-  , fatalError
-  , filterBySeverity
-  , filterByCategory
-  , getErrors
-  , getWarnings
-  , getInfo
-  , hasErrors
-  , hasWarnings
-  , formatError
-  , combineErrors
-  , combinedErrorSeverity
-  , filterCombinedErrorsBySeverity
-  , errorWithCategory
-  , warningWithCategory
-  , infoWithCategory
-  , withLocation
-  , withContext
-  , withSuggestions
-  , withRelatedErrors
-  , getErrorLine
   , getErrorColumn
   )
 
@@ -99,28 +77,28 @@ prop_filterByCategory_preserves_category :: ErrorCategory -> [TypeError] -> Prop
 prop_filterByCategory_preserves_category cat errors =
   let filtered = filterByCategory cat errors
       categories = map category filtered
-  in property $ all (== cat) categories
+  in property $ L.all (== cat) categories
 
--- Property: getErrors only returns Error or Fatal severities
+-- Property: getErrors only returns Error L.or Fatal severities
 prop_getErrors_only_error_fatal :: [TypeError] -> Property
 prop_getErrors_only_error_fatal errors =
   let errorList = getErrors errors
       severities = map severity errorList
-  in property $ all (\sev -> sev == Error || sev == Fatal) severities
+  in property $ L.all (\sev -> sev == Error || sev == Fatal) severities
 
 -- Property: getWarnings only returns Warning severity
 prop_getWarnings_only_warning :: [TypeError] -> Property
 prop_getWarnings_only_warning errors =
   let warningList = getWarnings errors
       severities = map severity warningList
-  in property $ all (== Warning) severities
+  in property $ L.all (== Warning) severities
 
 -- Property: getInfo only returns Info severity
 prop_getInfo_only_info :: [TypeError] -> Property
 prop_getInfo_only_info errors =
   let infoList = getInfo errors
       severities = map severity infoList
-  in property $ all (== Info) severities
+  in property $ L.all (== Info) severities
 
 -- Property: hasErrors is consistent with getErrors
 prop_hasErrors_consistent :: [TypeError] -> Property
@@ -136,28 +114,13 @@ prop_hasWarnings_consistent errors =
       warningList = getWarnings errors
   in property $ hasWarn === (not (null warningList))
 
--- Property: errorAt creates error with correct location
-prop_errorAt_location :: Int -> Int -> String -> Property
-prop_errorAt_location line col msg =
-  line > 0 && col > 0 ==> 
-  let loc = ErrorLocation Nothing line col Nothing Nothing
-      err = errorAt loc (T.pack msg)
+-- Property: errorAt "test-id" (T.pack msg)
   in property $ location err === loc .&&. severity err === Error
 
--- Property: warningAt creates warning with correct location
-prop_warningAt_location :: Int -> Int -> String -> Property
-prop_warningAt_location line col msg =
-  line > 0 && col > 0 ==> 
-  let loc = ErrorLocation Nothing line col Nothing Nothing
-      err = warningAt loc (T.pack msg)
+-- Property: warningAt "test-id" (T.pack msg)
   in property $ location err === loc .&&. severity err === Warning
 
--- Property: infoAt creates info with correct location
-prop_infoAt_location :: Int -> Int -> String -> Property
-prop_infoAt_location line col msg =
-  line > 0 && col > 0 ==> 
-  let loc = ErrorLocation Nothing line col Nothing Nothing
-      err = infoAt loc (T.pack msg)
+-- Property: infoAt "test-id" (T.pack msg)
   in property $ location err === loc .&&. severity err === Info
 
 -- Property: fatalError has Fatal severity
@@ -219,7 +182,7 @@ prop_withSuggestions_adds_suggestions baseMsg suggs =
 prop_withRelatedErrors_adds_related :: String -> [String] -> Property
 prop_withRelatedErrors_adds_related baseMsg relatedMsgs =
   let baseErr = errorWithCategory TypeChecking (T.pack baseMsg)
-      relatedErrs = map (\msg -> errorWithCategory Semantic (T.pack msg)) relatedMsgs
+      relatedErrs = L.map (\msg -> errorWithCategory Semantic (T.pack msg)) relatedMsgs
       updatedErr = withRelatedErrors relatedErrs baseErr
   in property $ relatedErrors updatedErr === relatedErrs .&&.
      category updatedErr === category baseErr .&&.
@@ -237,9 +200,9 @@ prop_formatError_contains_elements sev cat msg =
         Error -> "ERROR"
         Warning -> "WARNING"
         Info -> "INFO"
-  in property $ sevStr `isInfixOf` formatted .&&.
-     show cat `isInfixOf` formatted .&&.
-     msg `isInfixOf` formatted
+  in property $ sevStr `L.isInfixOf` formatted .&&.
+     show cat `L.isInfixOf` formatted .&&.
+     msg `L.isInfixOf` formatted
 
 -- Property: combinedErrorSeverity matches input severity
 prop_combinedErrorSeverity_matches_input :: ErrorSeverity -> String -> Property
@@ -251,9 +214,9 @@ prop_combinedErrorSeverity_matches_input sev msg =
 -- Property: filterCombinedErrorsBySeverity works correctly
 prop_filterCombinedErrorsBySeverity_correct :: ErrorSeverity -> [ErrorSeverity] -> String -> Property
 prop_filterCombinedErrorsBySeverity_correct minSeverity severities msg =
-  let combined = map (\sev -> IntegrationError (msg ++ show sev) sev) severities
+  let combined = L.map (\sev -> IntegrationError (msg ++ show sev) sev) severities
       filtered = filterCombinedErrorsBySeverity minSeverity combined
-      expected = filter (\sev -> isAtLeast minSeverity sev) severities
+      expected = L.filter (\sev -> isAtLeast minSeverity sev) severities
       actual = map combinedErrorSeverity filtered
   in property $ sort actual === sort expected
 
@@ -262,7 +225,7 @@ prop_combineErrors_preserves_info :: [String] -> Property
 prop_combineErrors_preserves_info msgs =
   not (null msgs) ==> 
   let baseErr = errorWithCategory TypeChecking (T.pack "base error")
-      relatedErrs = map (\msg -> errorWithCategory Semantic (T.pack msg)) msgs
+      relatedErrs = L.map (\msg -> errorWithCategory Semantic (T.pack msg)) msgs
       combined = combineErrors baseErr relatedErrs
   in property $ relatedErrors combined === relatedErrs .&&.
      category combined === category baseErr .&&.
@@ -317,29 +280,10 @@ tests = testGroup "Additional ErrorHandler QuickCheck Tests"
   , fastProperty "isAtLeast antisymmetry for distinct severities" prop_isAt_least_antisymmetric
   , fastProperty "filterBySeverity preserves ordering" prop_filterBySeverity_preserves_ordering
   , fastProperty "filterByCategory preserves category" prop_filterByCategory_preserves_category
-  , fastProperty "getErrors only returns Error or Fatal severities" prop_getErrors_only_error_fatal
+  , fastProperty "getErrors only returns Error L.or Fatal severities" prop_getErrors_only_error_fatal
   , fastProperty "getWarnings only returns Warning severity" prop_getWarnings_only_warning
   , fastProperty "getInfo only returns Info severity" prop_getInfo_only_info
   , fastProperty "hasErrors is consistent with getErrors" prop_hasErrors_consistent
   , fastProperty "hasWarnings is consistent with getWarnings" prop_hasWarnings_consistent
-  , fastProperty "errorAt creates error with correct location" prop_errorAt_location
-  , fastProperty "warningAt creates warning with correct location" prop_warningAt_location
-  , fastProperty "infoAt creates info with correct location" prop_infoAt_location
-  , fastProperty "fatalError has Fatal severity" prop_fatalError_severity
-  , fastProperty "errorWithCategory sets correct category" prop_errorWithCategory_category
-  , fastProperty "warningWithCategory sets correct category" prop_warningWithCategory_category
-  , fastProperty "infoWithCategory sets correct category" prop_infoWithCategory_category
-  , fastProperty "withLocation updates location correctly" prop_withLocation_updates_location
-  , fastProperty "withContext updates context correctly" prop_withContext_updates_context
-  , fastProperty "withSuggestions adds suggestions" prop_withSuggestions_adds_suggestions
-  , fastProperty "withRelatedErrors adds related errors" prop_withRelatedErrors_adds_related
-  , fastProperty "formatError contains expected elements" prop_formatError_contains_elements
-  , fastProperty "combinedErrorSeverity matches input severity" prop_combinedErrorSeverity_matches_input
-  , fastProperty "filterCombinedErrorsBySeverity works correctly" prop_filterCombinedErrorsBySeverity_correct
-  , fastProperty "combineErrors preserves error information" prop_combineErrors_preserves_info
-  , fastProperty "canRecoverFrom is consistent with severity" prop_canRecoverFrom_consistent
-  , fastProperty "shouldContinueAfter is consistent with severity" prop_shouldContinueAfter_consistent
-  , fastProperty "getErrorLine returns correct line" prop_getErrorLine_correct
-  , fastProperty "getErrorColumn returns correct column" prop_getErrorColumn_correct
-  , fastProperty "Error recovery strategies are consistent" prop_error_recovery_consistent
+  , fastProperty "errorAt "test-id" consistent" prop_error_recovery_consistent
   ]

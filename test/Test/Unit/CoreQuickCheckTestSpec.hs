@@ -3,13 +3,15 @@
 module Test.Unit.CoreQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import TestSupport.Arbitrary ()
 import TestSupport.ExtendedArbitrary ()
-import Data.List (sort, nub, length, sum, reverse, concat, (++))
+import Data.List (length, sum, reverse, concat)
+import Data.List (sort, nub, (++))
 
 import Utils (trim, splitBy, splitByComma, removeLineComments, normalizeIndentation)
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos, posAfter, emptySpan, mergeSpans)
@@ -71,7 +73,7 @@ prop_symboltable_uniqueness :: [(String, Int)] -> Property
 prop_symboltable_uniqueness pairs =
   let uniqueKeys = nub (map fst pairs)
       symbolTable = Map.fromList pairs
-  in Map.size symbolTable === length uniqueKeys
+  in Map.size symbolTable === L.length uniqueKeys
 
 prop_token_consistency :: GoTokenKind -> String -> Property
 prop_token_consistency kind tokenText' =
@@ -81,14 +83,14 @@ prop_token_consistency kind tokenText' =
 prop_string_processing :: String -> Property
 prop_string_processing s =
   let processed = trim (normalizeIndentation s)
-  in property $ not (null processed) || null (trim s)
+  in property $ not (null processed) || L.null (trim s)
 
 prop_list_cardinality :: [Int] -> [Int] -> Property
 prop_list_cardinality xs ys =
   let union = xs ++ ys
-      intersection = filter (`elem` ys) xs
-  in property $ length union <= length xs + length ys &&
-               length intersection <= min (length xs) (length ys)
+      intersection = L.filter (`elem` ys) xs
+  in property $ L.length union <= L.length xs + L.length ys &&
+               length intersection <= min (L.length xs) (L.length ys)
 
 prop_map_invariants :: Map.Map String Int -> String -> Int -> Property
 prop_map_invariants originalMap key value =

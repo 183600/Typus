@@ -34,6 +34,7 @@ import SourceLocation
   )
 
 import Data.Char (isSpace, isAlphaNum)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 import qualified Data.Text as T
 
@@ -54,7 +55,7 @@ prop_parse_preserves_lines (NonEmpty c) =
        Left _ -> property True
        Right file -> 
          let blocks = tfCodeBlocks file
-             blockCount = length blocks
+             blockCount = L.length blocks
          in property $ blockCount >= 0
 
 -- Property: parsing directives preserves boolean values
@@ -78,18 +79,18 @@ prop_parse_directives_preserves_bool ownership dependent constraints =
 prop_parse_block_count_relationship :: String -> Property
 prop_parse_block_count_relationship input =
   let result = parseTypus "" input
-      blockCount = length $ lines $ filter (\c -> c == '{') input
+      blockCount = L.length $ lines $ L.filter (\c -> c == '{') input
   in case result of
        Left _ -> property True
        Right file -> 
-         let parsedBlocks = length $ tfCodeBlocks file
+         let parsedBlocks = L.length $ tfCodeBlocks file
          in property $ parsedBlocks >= 0
 
 -- Property: parsing handles nested structures gracefully
 prop_parse_nested_structures :: Positive Int -> Property
 prop_parse_nested_structures (Positive depth) =
-  let nestedBraces = concat $ replicate depth "{"
-      input = "func test() " ++ nestedBraces ++ " return x " ++ concat (replicate depth "}")
+  let nestedBraces = L.concat $ replicate depth "{"
+      input = "func test() " ++ nestedBraces ++ " return x " ++ L.concat (replicate depth "}")
       result = parseTypus "" input
   in case result of
        Left _ -> property True
@@ -105,7 +106,7 @@ prop_parse_preserves_identifiers (NonEmpty c) =
        Left _ -> property True
        Right file -> 
          let blocks = tfCodeBlocks file
-         in property $ length blocks >= 0
+         in property $ L.length blocks >= 0
 
 -- Property: parsing handles comments without crashing
 prop_parse_handles_comments :: String -> Property
@@ -128,13 +129,13 @@ prop_parse_respects_directive_boundaries directive content =
 -- Property: parsing maintains code block ordering
 prop_parse_maintains_block_ordering :: [String] -> Property
 prop_parse_maintains_block_ordering blocks =
-  let input = unlines $ map (\b -> "func " ++ b ++ "() { return 0 }") blocks
+  let input = unlines $ L.map (\b -> "func " ++ b ++ "() { return 0 }") blocks
       result = parseTypus "" input
   in case result of
        Left _ -> property True
        Right file -> 
          let parsedBlocks = tfCodeBlocks file
-         in property $ length parsedBlocks >= 0
+         in property $ L.length parsedBlocks >= 0
 
 -- Property: parsing handles whitespace variations
 prop_parse_handles_whitespace :: String -> String -> Property

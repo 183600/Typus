@@ -22,7 +22,9 @@ import Utils
   , breakOn
   )
 
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (sort, nub)
 import Data.Char (isSpace, isAlphaNum, isLetter)
 
 -- Generate a string with potential whitespace
@@ -33,7 +35,7 @@ genStringWithWhitespace = do
     content <- listOf1 $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_-.,;:"
     return $ whitespace ++ content
   finalWhitespace <- listOf $ elements " \t\n"
-  return $ concat parts ++ finalWhitespace
+  return $ L.concat parts ++ finalWhitespace
 
 -- Generate a string with comments
 genStringWithComments :: Gen String
@@ -68,16 +70,16 @@ genStringWithIndentation = do
 
 
 
--- Property: trim removes leading and trailing whitespace
+-- Property: trim removes leading L.and trailing whitespace
 prop_trim_removes_whitespace :: String -> Property
 prop_trim_removes_whitespace s =
   let trimmed = trim s
-      hasLeadingSpace = not (null s) && isSpace (head s)
+      hasLeadingSpace = not (null s) && isSpace (L.head s)
       hasTrailingSpace = not (null s) && isSpace (last s)
   in classify hasLeadingSpace "has leading space" $
      classify hasTrailingSpace "has trailing space" $
      counterexample ("Original: " ++ show s ++ ", Trimmed: " ++ show trimmed) $
-     (null trimmed || not (isSpace (head trimmed))) .&&.
+     (null trimmed || not (isSpace (L.head trimmed))) .&&.
      (null trimmed || not (isSpace (last trimmed)))
 
 -- Property: trim is idempotent
@@ -91,14 +93,14 @@ prop_trim_idempotent s =
 prop_splitBy_preserves_empty :: Char -> String -> Property
 prop_splitBy_preserves_empty delim s =
   let parts = splitBy delim s
-      rejoined = concat $ map (\p -> p ++ [delim]) (init parts) ++ [last parts]
-  in length parts > 0 ==> rejoined === s
+      rejoined = L.concat $ L.map (\p -> p ++ [delim]) (init parts) ++ [last parts]
+  in L.length parts > 0 ==> rejoined === s
 
 -- Property: splitByCollapsed removes empty segments
 prop_splitByCollapsed_removes_empty :: Char -> String -> Property
 prop_splitByCollapsed_removes_empty delim s =
   let parts = splitByCollapsed delim
-  in all (not . null) parts === True
+  in L.all (not . null) parts === True
 
 -- Property: splitByComma is splitBy with comma delimiter
 prop_splitByComma_equals_splitBy :: String -> Property
@@ -114,18 +116,18 @@ prop_splitByCommaCollapsed s =
 prop_removeLineComments_removes_comments :: String -> Property
 prop_removeLineComments_removes_comments s =
   let cleaned = removeLineComments s
-      hasComment = "//" `isInfixOf` s
+      hasComment = "//" `L.isInfixOf` s
   in classify hasComment "has comment" $
-     not ("//" `isInfixOf` cleaned)
+     not ("//" `L.isInfixOf` cleaned)
 
--- Property: removeComments removes content between /* and */
+-- Property: removeComments removes content between /* L.and */
 prop_removeComments_removes_block_comments :: String -> Property
 prop_removeComments_removes_block_comments s =
   let withComment = "before" ++ "/* comment */" ++ "after"
       cleaned = removeComments withComment
-  in "before" `isInfixOf` cleaned .&&. 
-     "after" `isInfixOf` cleaned .&&.
-     not (" comment " `isInfixOf` cleaned)
+  in "before" `L.isInfixOf` cleaned .&&. 
+     "after" `L.isInfixOf` cleaned .&&.
+     not (" comment " `L.isInfixOf` cleaned)
 
 -- Property: normalizeIndentation preserves line count
 prop_normalizeIndentation_preserves_lines :: String -> Property
@@ -133,15 +135,15 @@ prop_normalizeIndentation_preserves_lines s =
   let normalized = normalizeIndentation s
       originalLines = lines s
       normalizedLines = lines normalized
-  in length originalLines === length normalizedLines
+  in L.length originalLines === L.length normalizedLines
 
--- Property: breakOn finds first occurrence or returns original
+-- Property: breakOn finds first occurrence L.or returns original
 prop_breakOn_behavior :: String -> String -> Property
 prop_breakOn_behavior needle haystack =
   let result = breakOn needle haystack
   in case result of
     (before, after) -> 
-      if needle `isInfixOf` haystack
+      if needle `L.isInfixOf` haystack
       then before ++ needle ++ after === haystack
       else before === haystack .&&. after === ""
 
@@ -149,17 +151,17 @@ prop_breakOn_behavior needle haystack =
 prop_isIdentifier_correct :: String -> Property
 prop_isIdentifier_correct s =
   let actualResult = isIdentifier s
-      expectedResult = not (null s) && isLetter (head s) && all (\c -> isAlphaNum c || c == '_') (tail s)
+      expectedResult = not (null s) && isLetter (L.head s) && L.all (\c -> isAlphaNum c || c == '_') (L.tail s)
   in actualResult === expectedResult
 
 -- Property: isValidTypusIdentifier correctly identifies valid Typus identifiers
 prop_isValidTypusIdentifier_correct :: String -> Property
 prop_isValidTypusIdentifier_correct s =
   let actualResult = isValidTypusIdentifier s
-      expectedResult = not (null s) && isLetter (head s) && all (\c -> isAlphaNum c || c == '_') s
+      expectedResult = not (null s) && isLetter (L.head s) && L.all (\c -> isAlphaNum c || c == '_') s
   in actualResult === expectedResult
 
--- Property: escapeString and unescapeString are inverses
+-- Property: escapeString L.and unescapeString are inverses
 prop_escape_unescape_inverse :: String -> Property
 prop_escape_unescape_inverse s =
   let escaped = escapeString s
@@ -177,7 +179,7 @@ prop_escapeString_safe s =
 tests :: TestTree
 tests =
   testGroup "Utils String Processing QuickCheck Tests"
-    [ fastProperty "trim removes leading and trailing whitespace" prop_trim_removes_whitespace
+    [ fastProperty "trim removes leading L.and trailing whitespace" prop_trim_removes_whitespace
     , fastProperty "trim is idempotent" prop_trim_idempotent
     , fastProperty "splitBy preserves empty segments" prop_splitBy_preserves_empty
     , fastProperty "splitByCollapsed removes empty segments" prop_splitByCollapsed_removes_empty
@@ -189,6 +191,6 @@ tests =
     , fastProperty "breakOn behavior" prop_breakOn_behavior
     , fastProperty "isIdentifier correct" prop_isIdentifier_correct
     , fastProperty "isValidTypusIdentifier correct" prop_isValidTypusIdentifier_correct
-    , fastProperty "escape and unescape are inverse" prop_escape_unescape_inverse
+    , fastProperty "escape L.and unescape are inverse" prop_escape_unescape_inverse
     , fastProperty "escapeString makes string safe" prop_escapeString_safe
     ]

@@ -1,6 +1,7 @@
 module Test.Unit.NewQuickCheckTestSuite7Spec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.QuickCheck (Property, (==>), forAll, Gen, arbitrary, choose, oneof, elements)
 import Data.Text (Text)
@@ -20,7 +21,7 @@ tests =
     [ testGroup "Compilation phases"
         [ testCase "CompilationPhase ordering works" $ do
             let phases = [ParsingPhase, TypeCheckingPhase, OwnershipAnalysisPhase, CodeGenPhase]
-            length phases @?= 4
+            L.length phases @?= 4
             
         , testCase "CompilationPhase Show works" $ do
             show ParsingPhase `contains` "ParsingPhase" @?= True
@@ -51,7 +52,7 @@ tests =
             case result of
               Left _ -> assertBool "Should build semantic IR" False
               Right semanticIR -> do
-                length (semanticValueInfo semanticIR) @?= 0  -- Basic check
+                L.length (semanticValueInfo semanticIR) @?= 0  -- Basic check
         ]
 
     , testGroup "GoIR operations"
@@ -92,7 +93,7 @@ tests =
                 result = diagnoseTypeErrors typusFile
             case result of
               Left _ -> True @?= True  -- May have errors
-              Right diagnostics -> length diagnostics >= 0 @?= True
+              Right diagnostics -> L.length diagnostics >= 0 @?= True
         ]
 
     , testGroup "Declaration extraction"
@@ -100,13 +101,13 @@ tests =
             let typusFile = TypusFile defaultFileDirectives [] [CodeBlock defaultBlockDirectives "func test() {}" emptySpan] []
                 declarations = extractDeclarations typusFile
             -- Basic check that extraction doesn't crash
-            length declarations >= 0 @?= True
+            L.length declarations >= 0 @?= True
             
         , testCase "extractFunctionCalls finds calls" $ do
             let typusFile = TypusFile defaultFileDirectives [] [CodeBlock defaultBlockDirectives "test()" emptySpan] []
                 calls = extractFunctionCalls typusFile
             -- Basic check that extraction doesn't crash
-            length calls >= 0 @?= True
+            L.length calls >= 0 @?= True
         ]
 
     , testGroup "Type environment building"
@@ -180,7 +181,7 @@ tests =
 
 -- Helper function to check if string contains substring
 contains :: String -> String -> Bool
-contains needle haystack = needle `isInfixOf` haystack
+contains needle haystack = needle `L.isInfixOf` haystack
 
 -- ============================================================================
 -- QuickCheck Properties
@@ -223,7 +224,7 @@ prop_typeCheckDiagnosticRoundtrip :: String -> String -> Int -> Int -> Bool
 prop_typeCheckDiagnosticRoundtrip message details line column =
     let diagnostic = TypeCheckDiagnostic message details line column
         diagnosticStr = show diagnostic
-    in length diagnosticStr > 0  -- Basic check that string representation is non-empty
+    in L.length diagnosticStr > 0  -- Basic check that string representation is non-empty
 
 -- Code generation properties
 prop_codeGenerationPreservesStructure :: String -> Property
@@ -234,7 +235,7 @@ prop_codeGenerationPreservesStructure content =
         result = generateGoCode typusFile
     in case result of
       Left _ -> True  -- Generation may fail for invalid content
-      Right goCode -> length goCode >= 0
+      Right goCode -> L.length goCode >= 0
 
 -- Helper functions for generating test data
 genCompilationPhase :: Gen CompilationPhase
@@ -277,6 +278,6 @@ genTypusFile = do
 sortBy :: (a -> a -> Ordering) -> [a] -> [a]
 sortBy _ [] = []
 sortBy _ [x] = [x]
-sortBy cmp (x:xs) = let smaller = filter (\y -> cmp y x == LT) xs
-                        larger = filter (\y -> cmp y x /= LT) xs
+sortBy cmp (x:xs) = let smaller = L.filter (\y -> cmp y x == LT) xs
+                        larger = L.filter (\y -> cmp y x /= LT) xs
                     in sortBy cmp smaller ++ [x] ++ sortBy cmp larger

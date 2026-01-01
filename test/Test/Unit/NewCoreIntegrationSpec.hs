@@ -43,7 +43,7 @@ tests =
                   ]
             in removeComments input @?= expected
 
-        , testCase "Indentation normalization with mixed tabs and spaces" $
+        , testCase "Indentation normalization with mixed tabs L.and spaces" $
             let input = unlines
                   [ "    func outer() {"
                   , "\t\tfunc inner() {"
@@ -76,7 +76,7 @@ tests =
                 expected = SourcePos { posLine = 2, posColumn = 9, posOffset = 12 }
             in afterText @?= expected
 
-        , testCase "Span merging and validation" $
+        , testCase "Span merging L.and validation" $
             let span1 = spanBetween (posAt 1 5) (posAt 1 10)
                 span2 = spanBetween (posAt 1 8) (posAt 1 15)
                 merged = mergeSpans span1 span2
@@ -140,8 +140,8 @@ tests =
                 parsed = parseTypus normalized
             in case parsed of
                  Right result -> do
-                    "ownership=true" `L.isInfixOf` normalized @?= True
-                    length (tfBlocks result) @?= 1
+                    "ownership=true" `L.L.isInfixOf` normalized @?= True
+                    L.length (tfBlocks result) @?= 1
                  Left _ -> return ()
 
         , testCase "Error location consistency" $
@@ -174,12 +174,12 @@ prop_commentRemovalRoundTrip input =
       secondRemoval = removeComments withoutComments
   in property $ withoutComments === secondRemoval
 
--- Property: Position advancement is consistent with text length
+-- Property: Position advancement is consistent with text L.length
 prop_positionAdvancementConsistency :: String -> Property
 prop_positionAdvancementConsistency text =
   let start = startPos
       end = advancePosByText (T.pack text) start
-      expectedOffset = length text
+      expectedOffset = L.length text
   in property $ posOffset end === expectedOffset
 
 -- Property: Span merging is associative

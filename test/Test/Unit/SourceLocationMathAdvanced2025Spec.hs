@@ -3,6 +3,7 @@
 module Test.Unit.SourceLocationMathAdvanced2025Spec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, choose, listOf)
 import Test.Tasty.HUnit (testCase, (@=?))
 
@@ -23,7 +24,7 @@ tests = testGroup "SourceLocation Math Advanced Tests"
   , testProperty "mergeSpans preserves containment" propMergeSpansPreservesContainment
   , testCase "SourcePos edge cases" testSourcePosEdgeCases
   , testProperty "posAtLineCol roundtrip" propPosAtLineColRoundtrip
-  , testProperty "locatedAt and locatedWithSpan consistency" propLocatedConsistency
+  , testProperty "locatedAt L.and locatedWithSpan consistency" propLocatedConsistency
   , testProperty "isValidSpan invariants" propIsValidSpanInvariants
   , testCase "SourceSpan arithmetic edge cases" testSourceSpanArithmeticEdgeCases
   ]
@@ -53,7 +54,7 @@ propAdvancePosByConsistent s n =
   let pos = startPos
       advanced1 = advancePos pos (take n s)
       advanced2 = advancePosBy pos n
-  in n <= length s ==> sourceLine advanced1 == sourceLine advanced2
+  in n <= L.length s ==> sourceLine advanced1 == sourceLine advanced2
 
 -- Property 4: spanBetween creates valid span
 propSpanBetweenValid :: SourcePos -> SourcePos -> Bool
@@ -94,7 +95,7 @@ propPosAtLineColRoundtrip line col =
   let pos = posAtLineCol line col
   in line > 0 && col > 0 ==> sourceLine pos == line && sourceColumn pos == col
 
--- Property 8: locatedAt and locatedWithSpan consistency
+-- Property 8: locatedAt L.and locatedWithSpan consistency
 propLocatedConsistency :: String -> String -> Bool
 propLocatedConsistency value1 value2 =
   let pos = startPos

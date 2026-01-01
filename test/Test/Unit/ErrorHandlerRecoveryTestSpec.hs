@@ -24,7 +24,9 @@ import Utils
 
 import Data.Char (isSpace, isLetter, isDigit, toLower)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, tails, isInfixOf, sort, intercalate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (tails, sort, intercalate)
 import Data.String (IsString)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -32,15 +34,15 @@ import qualified Data.Set as Set
 -- Property: Error recovery continues parsing after syntax error
 prop_error_recovery_continues_parsing :: String -> String -> Property
 prop_error_recovery_continues_parsing before after =
-  length before <= 30 && length after <= 30 ==> -- Limit for performance
+  L.length before <= 30 && L.length after <= 30 ==> -- Limit for performance
   let input = before ++ " SYNTAX_ERROR " ++ after
       result = parseWithErrorRecovery input
-  in property $ canContinueAfterError result || not ("SYNTAX_ERROR" `isInfixOf` input)
+  in property $ canContinueAfterError result || not ("SYNTAX_ERROR" `L.isInfixOf` input)
 
 -- Property: Error messages contain source location
 prop_error_messages_contain_location :: String -> Property
 prop_error_messages_contain_location code =
-  length code <= 50 ==> -- Limit for performance
+  L.length code <= 50 ==> -- Limit for performance
   let result = parseWithErrorRecovery code
   in case getFirstError result of
        Just err -> property $ hasLocationInfo err
@@ -49,25 +51,25 @@ prop_error_messages_contain_location code =
 -- Property: Multiple errors are collected
 prop_multiple_errors_collected :: String -> String -> String -> Property
 prop_multiple_errors_collected part1 part2 part3 =
-  length part1 <= 20 && length part2 <= 20 && length part3 <= 20 ==> -- Limit for performance
+  L.length part1 <= 20 && L.length part2 <= 20 && L.length part3 <= 20 ==> -- Limit for performance
   let input = part1 ++ " ERROR1 " ++ part2 ++ " ERROR2 " ++ part3
       result = parseWithErrorRecovery input
       errors = getAllErrors result
-  in property $ length errors >= 0 && length errors <= 2
+  in property $ L.length errors >= 0 && L.length errors <= 2
 
 -- Property: Error recovery preserves valid AST nodes
 prop_error_recovery_preserves_ast :: String -> String -> Property
 prop_error_recovery_preserves_ast validPrefix invalidSuffix =
-  length validPrefix <= 30 && length invalidSuffix <= 30 ==> -- Limit for performance
+  L.length validPrefix <= 30 && L.length invalidSuffix <= 30 ==> -- Limit for performance
   let input = validPrefix ++ " INVALID " ++ invalidSuffix
       result = parseWithErrorRecovery input
       ast = getRecoveredAST result
-  in property $ not (null validPrefix) ==> not (null ast) || length ast >= 0
+  in property $ not (null validPrefix) ==> not (null ast) || L.length ast >= 0
 
 -- Property: Cascading errors are prevented
 prop_cascading_errors_prevented :: String -> Property
 prop_cascading_errors_prevented code =
-  length code <= 40 ==> -- Limit for performance
+  L.length code <= 40 ==> -- Limit for performance
   let result = parseWithErrorRecovery code
       errors = getAllErrors result
   in property $ not (hasCascadingErrors errors)
@@ -75,7 +77,7 @@ prop_cascading_errors_prevented code =
 -- Property: Error context is maintained
 prop_error_context_maintained :: String -> String -> Property
 prop_error_context_maintained prefix error =
-  length prefix <= 30 && length error <= 20 ==> -- Limit for performance
+  L.length prefix <= 30 && L.length error <= 20 ==> -- Limit for performance
   let input = prefix ++ " " ++ error
       result = parseWithErrorRecovery input
   in case getFirstError result of
@@ -85,38 +87,38 @@ prop_error_context_maintained prefix error =
 -- Property: Recovery strategies are appropriate
 prop_recovery_strategies_appropriate :: String -> Property
 prop_recovery_strategies_appropriate malformed =
-  length malformed <= 50 ==> -- Limit for performance
+  L.length malformed <= 50 ==> -- Limit for performance
   let result = parseWithErrorRecovery malformed
   in property $ usesAppropriateRecovery result
 
 -- Property: Error severity is classified correctly
 prop_error_severity_classified :: String -> Property
 prop_error_severity_classified code =
-  length code <= 40 ==> -- Limit for performance
+  L.length code <= 40 ==> -- Limit for performance
   let result = parseWithErrorRecovery code
       errors = getAllErrors result
-  in property $ all hasValidSeverity errors
+  in property $ L.all hasValidSeverity errors
 
 -- Property: Error suggestions are helpful
 prop_error_suggestions_helpful :: String -> Property
 prop_error_suggestions_helpful code =
-  length code <= 40 ==> -- Limit for performance
+  L.length code <= 40 ==> -- Limit for performance
   let result = parseWithErrorRecovery code
       errors = getAllErrors result
-  in property $ all (hasHelpfulSuggestion code) errors
+  in property $ L.all (hasHelpfulSuggestion code) errors
 
 -- Property: Error recovery handles nested structures
 prop_error_recovery_nested :: Int -> Property
 prop_error_recovery_nested depth =
   depth >= 0 && depth <= 5 ==> -- Limit for performance
-  let nestedCode = concat (replicate depth "{") ++ " ERROR " ++ concat (replicate depth "}")
+  let nestedCode = L.concat (replicate depth "{") ++ " ERROR " ++ L.concat (replicate depth "}")
       result = parseWithErrorRecovery nestedCode
   in property $ canRecoverFromNested result
 
 -- Property: Error recovery maintains position tracking
 prop_error_recovery_position_tracking :: String -> String -> Property
 prop_error_recovery_position_tracking before after =
-  length before <= 30 && length after <= 30 ==> -- Limit for performance
+  L.length before <= 30 && L.length after <= 30 ==> -- Limit for performance
   let input = before ++ "\nERROR\n" ++ after
       result = parseWithErrorRecovery input
   in property $ positionsAreAccurate result
@@ -124,7 +126,7 @@ prop_error_recovery_position_tracking before after =
 -- Property: Error recovery handles Unicode
 prop_error_recovery_unicode :: String -> Property
 prop_error_recovery_unicode base =
-  length base <= 20 ==> -- Limit for performance
+  L.length base <= 20 ==> -- Limit for performance
   let unicodeInput = base ++ " 测试 café naïve"
       result = parseWithErrorRecovery unicodeInput
   in property $ canHandleUnicode result
@@ -132,23 +134,23 @@ prop_error_recovery_unicode base =
 -- Property: Error recovery is incremental
 prop_error_recovery_incremental :: String -> Property
 prop_error_recovery_incremental code =
-  length code <= 50 ==> -- Limit for performance
+  L.length code <= 50 ==> -- Limit for performance
   let incrementalResults = map parseWithErrorRecovery (scanl1 (\acc c -> acc ++ [c]) code)
-      consistent = all (\r -> length (getAllErrors r) >= 0) incrementalResults
+      consistent = L.all (\r -> L.length (getAllErrors r) >= 0) incrementalResults
   in property $ consistent
 
 -- Property: Error recovery handles large files
 prop_error_recovery_large_files :: String -> Int -> Property
 prop_error_recovery_large_files base multiplier =
-  length base <= 20 && multiplier >= 1 && multiplier <= 10 ==> -- Limit for performance
-  let largeInput = concat (replicate multiplier (base ++ " "))
+  L.length base <= 20 && multiplier >= 1 && multiplier <= 10 ==> -- Limit for performance
+  let largeInput = L.concat (replicate multiplier (base ++ " "))
       result = parseWithErrorRecovery largeInput
   in property $ canHandleLargeInput result
 
 -- Property: Error recovery preserves comments
 prop_error_recovery_preserves_comments :: String -> Property
 prop_error_recovery_preserves_comments comment =
-  length comment <= 30 && not (any (`elem` "\"'") comment) ==>
+  L.length comment <= 30 && not (L.any (`elem` "\"'") comment) ==>
   let input = "var x = 1; // " ++ comment ++ "\nvar y = 2;"
       result = parseWithErrorRecovery input
   in property $ commentPreserved result comment
@@ -156,7 +158,7 @@ prop_error_recovery_preserves_comments comment =
 -- Property: Error recovery handles malformed literals
 prop_error_recovery_malformed_literals :: String -> Property
 prop_error_recovery_malformed_literals literal =
-  length literal <= 20 ==> -- Limit for performance
+  L.length literal <= 20 ==> -- Limit for performance
   let malformedCode = "var x = " ++ literal ++ ";"
       result = parseWithErrorRecovery malformedCode
   in property $ canRecoverFromMalformedLiteral result
@@ -164,7 +166,7 @@ prop_error_recovery_malformed_literals literal =
 -- Property: Error recovery handles incomplete statements
 prop_error_recovery_incomplete_statements :: String -> Property
 prop_error_recovery_incomplete_statements stmt =
-  length stmt <= 30 ==> -- Limit for performance
+  L.length stmt <= 30 ==> -- Limit for performance
   let incomplete = stmt ++ " {"
       result = parseWithErrorRecovery incomplete
   in property $ canRecoverFromIncomplete result
@@ -173,14 +175,14 @@ prop_error_recovery_incomplete_statements stmt =
 prop_error_recovery_mismatched_brackets :: Int -> Int -> Property
 prop_error_recovery_mismatched_brackets open close =
   open >= 0 && open <= 5 && close >= 0 && close <= 5 && open /= close ==>
-  let mismatched = concat (replicate open "{") ++ " content " ++ concat (replicate close "}")
+  let mismatched = L.concat (replicate open "{") ++ " content " ++ L.concat (replicate close "}")
       result = parseWithErrorRecovery mismatched
   in property $ canRecoverFromMismatched result
 
 -- Property: Error recovery handles unexpected tokens
 prop_error_recovery_unexpected_tokens :: String -> Property
 prop_error_recovery_unexpected_tokens token =
-  length token <= 15 ==> -- Limit for performance
+  L.length token <= 15 ==> -- Limit for performance
   let unexpectedCode = "var x = " ++ token ++ " var y = 2;"
       result = parseWithErrorRecovery unexpectedCode
   in property $ canRecoverFromUnexpected result
@@ -188,7 +190,7 @@ prop_error_recovery_unexpected_tokens token =
 -- Property: Error recovery maintains symbol table
 prop_error_recovery_maintains_symbol_table :: String -> Property
 prop_error_recovery_maintains_symbol_table declarations =
-  length declarations <= 40 ==> -- Limit for performance
+  L.length declarations <= 40 ==> -- Limit for performance
   let result = parseWithErrorRecovery declarations
       symbols = getSymbolTable result
   in property $ symbolTableConsistent symbols
@@ -196,17 +198,17 @@ prop_error_recovery_maintains_symbol_table declarations =
 -- Property: Error recovery provides fix hints
 prop_error_recovery_fix_hints :: String -> Property
 prop_error_recovery_fix_hints code =
-  length code <= 40 ==> -- Limit for performance
+  L.length code <= 40 ==> -- Limit for performance
   let result = parseWithErrorRecovery code
       errors = getAllErrors result
-  in property $ all hasFixHint errors
+  in property $ L.all hasFixHint errors
 
 -- Property: Error recovery handles concurrent errors
 prop_error_recovery_concurrent :: String -> Property
 prop_error_recovery_concurrent code =
-  length code <= 40 ==> -- Limit for performance
+  L.length code <= 40 ==> -- Limit for performance
   let results = replicate 3 (parseWithErrorRecovery code) -- Simulate concurrent processing
-      consistent = all (\r -> length (getAllErrors r) >= 0) results
+      consistent = L.all (\r -> L.length (getAllErrors r) >= 0) results
   in property $ consistent
 
 -- Advanced error recovery tests
@@ -214,7 +216,7 @@ prop_error_recovery_concurrent code =
 -- Property: Complex error scenarios
 prop_complex_error_scenarios :: [String] -> Property
 prop_complex_error_scenarios parts =
-  not (null parts) && all (\p -> length p <= 20) parts && length parts <= 5 ==>
+  not (null parts) && L.all (\p -> L.length p <= 20) parts && L.length parts <= 5 ==>
   let complexCode = intercalate " ERROR " parts
       result = parseWithErrorRecovery complexCode
   in property $ True
@@ -222,14 +224,14 @@ prop_complex_error_scenarios parts =
 -- Property: Error recovery performance
 prop_error_recovery_performance :: String -> Property
 prop_error_recovery_performance code =
-  length code <= 100 ==> -- Limit for performance
+  L.length code <= 100 ==> -- Limit for performance
   let result = parseWithErrorRecovery code
   in property $ recoveryIsEfficient result
 
 -- Property: Error recovery edge cases
 prop_error_recovery_edge_cases :: String -> Property
 prop_error_recovery_edge_cases edgeCase =
-  length edgeCase <= 30 ==> -- Limit for performance
+  L.length edgeCase <= 30 ==> -- Limit for performance
   let result = parseWithErrorRecovery edgeCase
   in property $ handlesEdgeCase result
 
@@ -240,10 +242,10 @@ hasLocationInfo err = case errorLocation err of
   Nothing -> False
 
 hasContextInfo :: Error -> String -> Bool
-hasContextInfo err prefix = prefix `isInfixOf` show err
+hasContextInfo err prefix = prefix `L.isInfixOf` show err
 
 hasCascadingErrors :: [Error] -> Bool
-hasCascadingErrors errors = length errors > 5 -- Simplified check
+hasCascadingErrors errors = L.length errors > 5 -- Simplified check
 
 usesAppropriateRecovery :: ParseResult -> Bool
 usesAppropriateRecovery result = True -- Simplified check
@@ -256,7 +258,7 @@ hasValidSeverity err = case errorSeverity err of
   _ -> False
 
 hasHelpfulSuggestion :: String -> Error -> Bool
-hasHelpfulSuggestion _ err = length (show err) > 10 -- Simplified check
+hasHelpfulSuggestion _ err = L.length (show err) > 10 -- Simplified check
 
 canRecoverFromNested :: ParseResult -> Bool
 canRecoverFromNested result = True -- Simplified check
@@ -271,7 +273,7 @@ canHandleLargeInput :: ParseResult -> Bool
 canHandleLargeInput result = True -- Simplified check
 
 commentPreserved :: ParseResult -> String -> Bool
-commentPreserved result comment = comment `isInfixOf` show result
+commentPreserved result comment = comment `L.isInfixOf` show result
 
 canRecoverFromMalformedLiteral :: ParseResult -> Bool
 canRecoverFromMalformedLiteral result = True -- Simplified check
@@ -289,7 +291,7 @@ symbolTableConsistent :: SymbolTable -> Bool
 symbolTableConsistent _ = True -- Simplified check
 
 hasFixHint :: Error -> Bool
-hasFixHint err = "fix" `isInfixOf` map toLower (show err)
+hasFixHint err = "fix" `L.isInfixOf` map toLower (show err)
 
 recoveryIsEfficient :: ParseResult -> Bool
 recoveryIsEfficient result = True -- Simplified check

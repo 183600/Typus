@@ -21,7 +21,9 @@ import Compiler (compile)
 import Utils (trim)
 import Data.Char (isSpace, isLetter, isDigit)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, isInfixOf, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort)
 
 -- Property: Error handling preserves error messages
 prop_error_preserves_message :: String -> String -> Property
@@ -29,7 +31,7 @@ prop_error_preserves_message errorMsg input =
   not (null errorMsg) && not (null input) ==>
   let result = handleError input errorMsg
   in property $ case result of
-    Left err -> property $ errorMsg `isInfixOf` err
+    Left err -> property $ errorMsg `L.isInfixOf` err
     Right _ -> True
 
 -- Property: Error handling captures source location
@@ -39,7 +41,7 @@ prop_error_captures_location line col errorMsg =
   let input = "var x = 42"
       result = handleErrorWithLocation input line col errorMsg
   in property $ case result of
-    Left err -> property $ show line `isInfixOf` err .&&. show col `isInfixOf` err
+    Left err -> property $ show line `L.isInfixOf` err .&&. show col `L.isInfixOf` err
     Right _ -> True
 
 -- Property: Error handling handles syntax errors
@@ -64,7 +66,7 @@ prop_error_context code context =
         Right _ -> "no error"
   in property $ case enhancedError of
     "no error" -> True
-    err -> context `isInfixOf` err
+    err -> context `L.isInfixOf` err
 
 -- Property: Error recovery attempts are made
 prop_error_recovery_attempts :: String -> Property
@@ -94,9 +96,9 @@ prop_error_consistency input =
 -- Property: Error handling handles nested errors
 prop_error_nested :: [String] -> Property
 prop_error_nested errorMessages =
-  not (null errorMessages) && length errorMessages <= 3 ==>
+  not (null errorMessages) && L.length errorMessages <= 3 ==>
   let nestedError = createNestedError errorMessages
-  in property $ all (`isInfixOf` nestedError) errorMessages
+  in property $ L.all (`L.isInfixOf` nestedError) errorMessages
 
 -- Property: Error severity classification
 prop_error_severity :: String -> Property
@@ -110,14 +112,14 @@ prop_error_chaining :: String -> String -> Property
 prop_error_chaining error1 error2 =
   not (null error1) && not (null error2) ==>
   let chained = chainErrors error1 error2
-  in property $ error1 `isInfixOf` chained .&&. error2 `isInfixOf` chained
+  in property $ error1 `L.isInfixOf` chained .&&. error2 `L.isInfixOf` chained
 
 -- Property: Error formatting is readable
 prop_error_formatting :: String -> Int -> Int -> Property
 prop_error_formatting errorMsg line col =
   not (null errorMsg) && line >= 0 && col >= 0 ==>
   let formatted = formatError errorMsg line col
-  in property $ not (null formatted) && errorMsg `isInfixOf` formatted
+  in property $ not (null formatted) && errorMsg `L.isInfixOf` formatted
 
 -- Property: Error handling with compiler errors
 prop_error_compiler_errors :: String -> Property
@@ -140,15 +142,15 @@ prop_error_types errorInput errorType =
   not (null errorInput) && not (null errorType) ==>
   let result = handleErrorWithType errorInput errorType
   in property $ case result of
-    Left err -> property $ errorType `isInfixOf` err
+    Left err -> property $ errorType `L.isInfixOf` err
     Right _ -> True
 
 -- Property: Error handling with multiple errors
 prop_error_multiple :: [String] -> Property
 prop_error_multiple errors =
-  not (null errors) && length errors <= 5 ==>
+  not (null errors) && L.length errors <= 5 ==>
   let multiError = combineErrors errors
-  in property $ all (`isInfixOf` multiError) errors
+  in property $ L.all (`L.isInfixOf` multiError) errors
 
 -- Property: Error handling provides suggestions
 prop_error_suggestions :: String -> Property
@@ -176,36 +178,36 @@ prop_error_custom_handlers input =
   let customHandler = CustomErrorHandler (\err -> "Custom: " ++ err)
       result = handleWithCustom input customHandler
   in property $ case result of
-    Left err -> property $ "Custom:" `isPrefixOf` err
+    Left err -> property $ "Custom:" `L.isPrefixOf` err
     Right _ -> True
 
 -- Property: Error handling preserves stack traces
 prop_error_stack_traces :: [String] -> Property
 prop_error_stack_traces callStack =
-  not (null callStack) && length callStack <= 5 ==>
+  not (null callStack) && L.length callStack <= 5 ==>
   let stackTrace = createStackTrace callStack
-  in property $ all (`isInfixOf` stackTrace) callStack
+  in property $ L.all (`L.isInfixOf` stackTrace) callStack
 
 -- Property: Error handling with timeout errors
 prop_error_timeouts :: Int -> Property
 prop_error_timeouts timeoutMs =
   timeoutMs >= 0 && timeoutMs <= 1000 ==>
   let timeoutError = createTimeoutError timeoutMs
-  in property $ "timeout" `isInfixOf` timeoutError .&&. show timeoutMs `isInfixOf` timeoutError
+  in property $ "timeout" `L.isInfixOf` timeoutError .&&. show timeoutMs `L.isInfixOf` timeoutError
 
 -- Property: Error handling with memory errors
 prop_error_memory :: Int -> Property
 prop_error_memory memoryUsage =
   memoryUsage >= 0 && memoryUsage <= 10000 ==>
   let memoryError = createMemoryError memoryUsage
-  in property $ "memory" `isInfixOf` memoryError .&&. show memoryUsage `isInfixOf` memoryError
+  in property $ "memory" `L.isInfixOf` memoryError .&&. show memoryUsage `L.isInfixOf` memoryError
 
 -- Property: Error handling with IO errors
 prop_error_io :: String -> Property
 prop_error_io ioOperation =
   not (null ioOperation) ==>
   let ioError = createIOError ioOperation
-  in property $ ioOperation `isInfixOf` ioError .&&. "IO" `isInfixOf` ioError
+  in property $ ioOperation `L.isInfixOf` ioError .&&. "IO" `L.isInfixOf` ioError
 
 -- Property: Error handling is deterministic
 prop_error_deterministic :: String -> Property

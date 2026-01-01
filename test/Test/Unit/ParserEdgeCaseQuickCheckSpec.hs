@@ -22,6 +22,7 @@ import SyntaxValidator
 import SourceLocation (SourcePos, SourceSpan, Located(..))
 import Utils (trim, removeComments, normalizeIndentation)
 
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Char (isSpace, isControl)
 
@@ -57,7 +58,7 @@ prop_parser_empty_input =
 -- Property: Parser handles whitespace-only input
 prop_parser_whitespace_only :: String -> Property
 prop_parser_whitespace_only input =
-  all isSpace input ==>
+  L.all isSpace input ==>
   let result = parseTypus input
   in property $ either isError (const True) result
   where
@@ -67,7 +68,7 @@ prop_parser_whitespace_only input =
 prop_parser_long_identifiers :: String -> Int -> Property
 prop_parser_long_identifiers base multiplier =
   not (null base) && multiplier > 0 && multiplier <= 100 ==> -- Reasonable bounds
-  let longIdent = concat (replicate multiplier base)
+  let longIdent = L.concat (replicate multiplier base)
       input = "var " ++ longIdent ++ " int"
       result = parseTypus input
   in property $ either (const False) (const True) result || isError result
@@ -88,7 +89,7 @@ prop_parser_deeply_nested base depth =
 -- Property: Parser handles special characters in strings
 prop_parser_special_chars_strings :: String -> Property
 prop_parser_special_chars_strings content =
-  not (any (`elem` "\\\"") content) ==> -- Avoid unescaped quotes
+  not (L.any (`elem` "\\\"") content) ==> -- Avoid unescaped quotes
   let specialChars = "!@#$%^&*()_+-=[]{}|;':,./<>?"
       stringWithSpecial = "\"" ++ specialChars ++ content ++ "\""
       input = "var s string = " ++ stringWithSpecial
@@ -100,7 +101,7 @@ prop_parser_special_chars_strings content =
 -- Property: Parser handles malformed comments
 prop_parser_malformed_comments :: String -> String -> Property
 prop_parser_malformed_comments before after =
-  not ("*/" `isInfixOf` before) && not ("/*" `isInfixOf` after) ==>
+  not ("*/" `L.isInfixOf` before) && not ("/*" `L.isInfixOf` after) ==>
   let malformed = before ++ "/* unclosed comment " ++ after
       result = parseTypus malformed
   in property $ either isError (const True) result
@@ -120,7 +121,7 @@ prop_parser_unicode_chars base =
 -- Property: Parser handles escape sequences
 prop_parser_escape_sequences :: String -> Property
 prop_parser_escape_sequences content =
-  not (any (`elem` "\\\"") content) ==> -- Avoid conflicts
+  not (L.any (`elem` "\\\"") content) ==> -- Avoid conflicts
   let escapeSequences = ["\\n", "\\t", "\\r", "\\\\", "\\\""]
       escapedContent = concatMap (++ content) escapeSequences
       input = "var s string = \"" ++ escapedContent ++ "\""
@@ -145,7 +146,7 @@ prop_parser_token_position_accuracy :: String -> Property
 prop_parser_token_position_accuracy input =
   let tokens = tokenizeInput input
       positions = map getTokenPosition tokens
-  in property $ all isValidPosition positions
+  in property $ L.all isValidPosition positions
   where
     tokenizeInput _ = [] -- Simplified
     getTokenPosition _ = SourcePos 1 1 0 -- Simplified
@@ -167,7 +168,7 @@ prop_parser_mixed_indentation lines =
 prop_parser_incomplete_constructs :: String -> Property
 prop_parser_incomplete_constructs construct =
   not (null construct) ==> 
-  let incomplete = take (length construct `div` 2) construct
+  let incomplete = take (L.length construct `div` 2) construct
       result = parseTypus incomplete
   in property $ either isError (const True) result
   where
@@ -208,7 +209,7 @@ prop_parser_control_chars :: String -> Property
 prop_parser_control_chars base =
   let controlChars = map toEnum [0..31] ++ [127]
       withControls = base ++ take 5 controlChars ++ base
-      cleaned = filter (not . isControl) withControls
+      cleaned = L.filter (not . isControl) withControls
       result = parseTypus cleaned
   in property $ either (const False) (const True) result || isError result
   where
@@ -217,8 +218,8 @@ prop_parser_control_chars base =
 -- Property: Parser with nested comments
 prop_parser_nested_comments :: String -> String -> Property
 prop_parser_nested_comments outer inner =
-  not ("/*" `isInfixOf` outer) && not ("*/" `isInfixOf` outer) &&
-  not ("/*" `isInfixOf` inner) && not ("*/" `isInfixOf` inner) ==>
+  not ("/*" `L.isInfixOf` outer) && not ("*/" `L.isInfixOf` outer) &&
+  not ("/*" `L.isInfixOf` inner) && not ("*/" `L.isInfixOf` inner) ==>
   let nested = outer ++ "/* " ++ inner ++ " /* inner */ */ " ++ outer
       result = parseTypus nested
   in property $ either isError (const True) result
@@ -255,7 +256,7 @@ prop_parser_zero_width_constructs =
   where
     isError _ = True
 
--- Property: Parser with maximum depth nesting
+-- Property: Parser with L.maximum depth nesting
 prop_parser_max_depth_nesting :: String -> Property
 prop_parser_max_depth_nesting base =
   not (null base) ==>
@@ -276,7 +277,7 @@ prop_parser_mixed_line_endings content =
       result = parseTypus normalized
   in property $ either (const False) (const True) result || isError result
   where
-    normalizeLineEndings = map (\c -> if c == '\r' then '\n' else c)
+    normalizeLineEndings = L.map (\c -> if c == '\r' then '\n' else c)
     isError _ = True
 
 -- Property: Parser with concurrent constructs

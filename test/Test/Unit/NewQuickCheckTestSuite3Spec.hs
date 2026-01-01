@@ -4,6 +4,7 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.QuickCheck (Property, (==>), forAll, Gen, arbitrary, choose, oneof, elements)
 import Data.Char (isAlphaNum, isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 
 import TestSupport.QuickCheck (fastProperty)
@@ -14,12 +15,12 @@ tests :: TestTree
 tests =
   testGroup "NewQuickCheckTestSuite3 - Parser Basic Functionality"
     [ testGroup "Default directive values"
-        [ testCase "defaultFileDirectives has all Nothing values" $ do
+        [ testCase "defaultFileDirectives has L.all Nothing values" $ do
             fdOwnership defaultFileDirectives @?= Nothing
             fdDependentTypes defaultFileDirectives @?= Nothing
             fdConstraints defaultFileDirectives @?= Nothing
             
-        , testCase "defaultBlockDirectives has all Nothing values" $ do
+        , testCase "defaultBlockDirectives has L.all Nothing values" $ do
             bdOwnership defaultBlockDirectives @?= Nothing
             bdDependentTypes defaultBlockDirectives @?= Nothing
             bdConstraints defaultBlockDirectives @?= Nothing
@@ -31,7 +32,7 @@ tests =
             case result of
               Left err -> assertBool "Should parse empty input" False
               Right file -> do
-                length (tfBlocks file) @?= 0
+                L.length (tfBlocks file) @?= 0
                 tfDirectives file @?= defaultFileDirectives
                 
         , testCase "parseTypus handles simple content" $ do
@@ -40,8 +41,8 @@ tests =
             case result of
               Left err -> assertBool ("Should parse simple content: " ++ err) False
               Right file -> do
-                length (tfBlocks file) @?= 1
-                cbContent (head (tfBlocks file)) @?= input
+                L.length (tfBlocks file) @?= 1
+                cbContent (L.head (tfBlocks file)) @?= input
                 
         , testCase "parseTypus handles content with comments" $ do
             let input = "// This is a comment\nfunc main() {\n    return 0\n}\n"
@@ -49,7 +50,7 @@ tests =
             case result of
               Left err -> assertBool ("Should parse with comments: " ++ err) False
               Right file -> do
-                length (tfBlocks file) @?= 1
+                L.length (tfBlocks file) @?= 1
         ]
 
     , testGroup "File directive parsing"
@@ -78,8 +79,8 @@ tests =
             case result of
               Left err -> assertBool ("Should parse with block directives: " ++ err) False
               Right file -> do
-                length (tfBlocks file) @?= 1
-                let block = head (tfBlocks file)
+                L.length (tfBlocks file) @?= 1
+                let block = L.head (tfBlocks file)
                     dirs = cbDirectives block
                 -- Check that block directives were parsed
                 True @?= True
@@ -91,7 +92,7 @@ tests =
                 result = parseTypus input
             case result of
               Left err -> assertBool "Should detect missing brace" $ 
-                "missing opening brace" `isInfixOf` err
+                "missing opening brace" `L.isInfixOf` err
               Right file -> assertBool "Should not parse invalid syntax" False
         ]
 
@@ -114,7 +115,7 @@ tests =
             case result of
               Left err -> assertBool ("Should parse multiple blocks: " ++ err) False
               Right file -> do
-                length (tfBlocks file) @?= 3
+                L.length (tfBlocks file) @?= 3
         ]
 
     , testGroup "Syntax validation integration"
@@ -129,7 +130,7 @@ tests =
                 True @?= True
         ]
 
-    , testGroup "Edge cases and boundary conditions"
+    , testGroup "Edge cases L.and boundary conditions"
         [ testCase "parseTypus handles only whitespace" $ do
             let input = "   \n  \t\n   \n"
                 result = parseTypus input
@@ -143,7 +144,7 @@ tests =
             case result of
               Left err -> assertBool ("Should parse Unicode: " ++ err) False
               Right file -> do
-                length (tfBlocks file) @?= 1
+                L.length (tfBlocks file) @?= 1
                 
         , fastProperty "parseTypus roundtrip property" prop_parseRoundtrip
         , fastProperty "parseTypus preserves line structure" prop_preservesLineStructure
@@ -155,7 +156,7 @@ tests =
 -- QuickCheck Properties
 -- ============================================================================
 
--- Roundtrip property: parsing and recombining should preserve structure
+-- Roundtrip property: parsing L.and recombining should preserve structure
 prop_parseRoundtrip :: String -> Property
 prop_parseRoundtrip input = 
     not (null input) ==> 
@@ -163,18 +164,18 @@ prop_parseRoundtrip input =
       Left _ -> True  -- Parsing failures are acceptable for arbitrary input
       Right file -> 
         let recombined = unlines $ map cbContent (tfBlocks file)
-        in length recombined >= 0  -- Basic sanity check
+        in L.length recombined >= 0  -- Basic sanity check
 
 -- Line structure preservation
 prop_preservesLineStructure :: String -> Property
 prop_preservesLineStructure input = 
-    let linesIn = length $ lines input
+    let linesIn = L.length $ lines input
     in linesIn > 0 ==>
     case parseTypus input of
       Left _ -> True
       Right file -> 
         let blocks = tfBlocks file
-            totalLines = sum $ map (length . lines . cbContent) blocks
+            totalLines = L.sum $ L.map (L.length . lines . cbContent) blocks
         in totalLines >= 0  -- Basic sanity check
 
 -- Handle arbitrary content gracefully
@@ -184,14 +185,14 @@ prop_handlesArbitraryContent input =
       Left _ -> True  -- Should handle errors gracefully
       Right file -> 
         -- Should produce a valid TypusFile structure
-        length (tfBlocks file) >= 0 &&
-        length (tfBuildTags file) >= 0
+        L.length (tfBlocks file) >= 0 &&
+        L.length (tfBuildTags file) >= 0
 
 -- Helper functions for generating test data
 genValidIdentifier :: Gen String
 genValidIdentifier = do
     first <- elements ['a'..'z']
-    rest <- arbitrary `suchThat` all isAlphaNum
+    rest <- arbitrary `suchThat` L.all isAlphaNum
     return (first : rest)
 
 genDirective :: Gen String
@@ -213,8 +214,8 @@ genCodeBlock = do
     return $ unlines lines'
   where
     genCodeLine = do
-        length' <- choose (0, 20)
-        chars <- sequence $ replicate length' $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t{}();"
+        L.length' <- choose (0, 20)
+        chars <- sequence $ replicate L.length' $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t{}();"
         return chars
 
 genTypusInput :: Gen String

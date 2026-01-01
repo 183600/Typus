@@ -29,6 +29,7 @@ import SourceLocation (SourceSpan(..), SourcePos(..), spanStart, spanEnd, posAt)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf)
 
 -- | Parser error recovery tests
@@ -68,7 +69,7 @@ tests =
               Left err -> 
                 assertFailure $ "Should recover from unknown directive, but got: " ++ err
               Right typusFile -> do
-                -- Should parse valid directives and ignore unknown ones
+                -- Should parse valid directives L.and ignore unknown ones
                 case fdOwnership (tfDirectives typusFile) of
                   Nothing -> assertFailure "Expected ownership directive"
                   Just _ -> return ()
@@ -95,9 +96,9 @@ tests =
                 assertFailure $ "Should recover from malformed block directive, but got: " ++ err
               Right typusFile -> do
                 let blocks = tfBlocks typusFile
-                length blocks @?= 2
+                L.length blocks @?= 2
                 -- First block should have default directives due to error
-                cbDirectives (head blocks) @?= defaultBlockDirectives
+                cbDirectives (L.head blocks) @?= defaultBlockDirectives
                 -- Second block should have valid constraints
                 case bdConstraints (cbDirectives (last blocks)) of
                   Nothing -> assertFailure "Expected constraints directive in second block"
@@ -125,7 +126,7 @@ tests =
               Right typusFile -> do
                 let blocks = tfBlocks typusFile
                 -- Should still parse blocks despite syntax errors
-                length blocks @>= 1
+                L.length blocks @>= 1
         ]
         
     , testGroup "Malformed build tag handling"
@@ -145,10 +146,10 @@ tests =
               Right typusFile -> do
                 let buildTags = tfBuildTags typusFile
                 -- Should parse valid build tags
-                length buildTags @?= 2
+                L.length buildTags @?= 2
         ]
         
-    , testGroup "Encoding and character handling"
+    , testGroup "Encoding L.and character handling"
         [ testCase "parseTypus handles mixed line endings gracefully" $ do
             let input = "//! ownership on\r\n\r\n//typus: constraints on\n\ncode here\r\n"
                 result = parseTypus input
@@ -161,7 +162,7 @@ tests =
                   , fdDependentTypes = Just (posAt 1 1, True)  -- constraints enables dependent_types
                   , fdConstraints = Just (posAt 1 1, True)
                   }
-                length (tfBlocks typusFile) @?= 1
+                L.length (tfBlocks typusFile) @?= 1
         ]
         
     , testGroup "Partial recovery scenarios"
@@ -178,7 +179,7 @@ tests =
               Left err -> 
                 assertFailure $ "Should recover from directive syntax error, but got: " ++ err
               Right typusFile -> do
-                -- Should parse valid directives and skip malformed ones
+                -- Should parse valid directives L.and skip malformed ones
                 case fdOwnership (tfDirectives typusFile) of
                   Nothing -> assertFailure "Expected ownership directive"
                   Just _ -> return ()
@@ -202,11 +203,11 @@ tests =
                 result = parseTypus input
             case result of
               Left err -> 
-                assertFailure $ "Should accumulate errors and continue, but got: " ++ err
+                assertFailure $ "Should accumulate errors L.and continue, but got: " ++ err
               Right typusFile -> do
                 -- Should parse structure despite multiple directive errors
                 let blocks = tfBlocks typusFile
-                length blocks @>= 1
+                L.length blocks @>= 1
                 -- Directives should be defaulted due to errors
                 tfDirectives typusFile @?= defaultFileDirectives
         ]
@@ -227,7 +228,7 @@ tests =
               Right typusFile -> do
                 -- Should create default structure
                 tfDirectives typusFile @?= defaultFileDirectives
-                length (tfBlocks typusFile) @>= 1
+                L.length (tfBlocks typusFile) @>= 1
         ]
         
     , testGroup "Recovery with nested structures"
@@ -253,7 +254,7 @@ tests =
                 assertFailure $ "Should recover from nested block errors, but got: " ++ err
               Right typusFile -> do
                 let blocks = tfBlocks typusFile
-                length blocks @?= 2
+                L.length blocks @?= 2
                 -- Should have at least one valid block
                 case bdConstraints (cbDirectives (last blocks)) of
                   Nothing -> assertFailure "Expected constraints directive"

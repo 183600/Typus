@@ -24,7 +24,9 @@ import Utils (trim)
 
 import Data.Char (isSpace, isAlpha, isDigit)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, isInfixOf, sort, nub, union, (\\))
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort, nub, union, (\\))
 import qualified Data.Text as T
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -36,7 +38,7 @@ import qualified Data.Set as Set
 -- Property: compilation to IR is deterministic
 prop_ir_deterministic :: String -> Property
 prop_ir_deterministic source =
-  length source <= 500 ==>  -- Keep reasonable size
+  L.length source <= 500 ==>  -- Keep reasonable size
   case parseTypus source of
     Left _ -> property $ True  -- Parse failures are OK
     Right typusFile -> 
@@ -47,8 +49,8 @@ prop_ir_deterministic source =
 -- Property: IR module contains expected functions
 prop_ir_contains_functions :: String -> [String] -> Property
 prop_ir_contains_functions source funcNames =
-  length source <= 300 && length funcNames <= 3 ==>  -- Keep reasonable
-  let sourceWithFuncs = source ++ unlines (map (\f -> "func " ++ f ++ "() {}") funcNames)
+  L.length source <= 300 && L.length funcNames <= 3 ==>  -- Keep reasonable
+  let sourceWithFuncs = source ++ unlines (L.map (\f -> "func " ++ f ++ "() {}") funcNames)
   in case parseTypus sourceWithFuncs of
     Left _ -> property $ True
     Right typusFile ->
@@ -58,11 +60,11 @@ prop_ir_contains_functions source funcNames =
 -- Property: IR preserves variable declarations
 prop_ir_preserves_variables :: String -> [String] -> Property
 prop_ir_preserves_variables source varNames =
-  length source <= 200 && 
-  length varNames <= 5 && 
-  all (not . null) varNames && 
-  all (all isAlpha) varNames ==>  -- Valid identifiers
-  let varDecls = map (\v -> "  " ++ v ++ " := 42") varNames
+  L.length source <= 200 && 
+  L.length varNames <= 5 && 
+  L.all (not . null) varNames && 
+  L.all (L.all isAlpha) varNames ==>  -- Valid identifiers
+  let varDecls = L.map (\v -> "  " ++ v ++ " := 42") varNames
       sourceWithVars = unlines
         [ source
         , "func main() {"
@@ -76,7 +78,7 @@ prop_ir_preserves_variables source varNames =
 -- Property: IR types are consistent with source
 prop_ir_type_consistency :: String -> Property
 prop_ir_type_consistency source =
-  length source <= 300 && "int" `isInfixOf` source ==>  -- Contains int type
+  L.length source <= 300 && "int" `L.isInfixOf` source ==>  -- Contains int type
   case parseTypus source of
     Left _ -> property $ True
     Right typusFile ->
@@ -86,8 +88,8 @@ prop_ir_type_consistency source =
 -- Property: IR control flow matches source structure
 prop_ir_control_flow :: String -> Property
 prop_ir_control_flow source =
-  length source <= 400 && 
-  ("if" `isInfixOf` source || "for" `isInfixOf` source) ==>  -- Has control flow
+  L.length source <= 400 && 
+  ("if" `L.isInfixOf` source || "for" `L.isInfixOf` source) ==>  -- Has control flow
   case parseTypus source of
     Left _ -> property $ True
     Right typusFile ->
@@ -97,8 +99,8 @@ prop_ir_control_flow source =
 -- Property: IR function signatures match source
 prop_ir_function_signatures :: String -> String -> Property
 prop_ir_function_signatures funcName paramType =
-  length funcName <= 10 && 
-  all isAlpha funcName && 
+  L.length funcName <= 10 && 
+  L.all isAlpha funcName && 
   paramType `elem` ["int", "string", "bool"] ==>
   let source = unlines
         [ "package main"
@@ -131,9 +133,9 @@ prop_ir_operator_precedence (Positive x) (Positive y) (Positive z) =
 -- Property: IR handles nested function calls
 prop_ir_nested_calls :: String -> String -> Property
 prop_ir_nested_calls outerFunc innerFunc =
-  length outerFunc <= 8 && 
-  length innerFunc <= 8 && 
-  all isAlpha (outerFunc ++ innerFunc) ==>  -- Valid identifiers
+  L.length outerFunc <= 8 && 
+  L.length innerFunc <= 8 && 
+  L.all isAlpha (outerFunc ++ innerFunc) ==>  -- Valid identifiers
   let source = unlines
         [ "package main"
         , "func " ++ innerFunc ++ "() int { return 42 }"
@@ -150,7 +152,7 @@ prop_ir_nested_calls outerFunc innerFunc =
 -- Property: IR preserves string literals
 prop_ir_string_literals :: String -> Property
 prop_ir_string_literals str =
-  length str <= 20 && all (/= '"') str ==>  -- Valid string content
+  L.length str <= 20 && L.all (/= '"') str ==>  -- Valid string content
   let escapedStr = "\"" ++ str ++ "\""
       source = unlines
         [ "package main"
@@ -167,20 +169,20 @@ prop_ir_string_literals str =
 -- Property: IR compilation is consistent with full compilation
 prop_ir_consistent_with_full_compilation :: String -> Property
 prop_ir_consistent_with_full_compilation source =
-  length source <= 300 ==>  -- Keep reasonable
+  L.length source <= 300 ==>  -- Keep reasonable
   case parseTypus source of
     Left _ -> property $ True
     Right typusFile ->
       let irResult = compileToIR typusFile
           fullResult = compile typusFile
-      in property $ True  -- Both should succeed or fail consistently
+      in property $ True  -- Both should succeed L.or fail consistently
 
 -- Property: IR validates variable scoping
 prop_ir_variable_scoping :: String -> String -> Property
 prop_ir_variable_scoping outerVar innerVar =
   outerVar /= innerVar && 
-  all (not . null) [outerVar, innerVar] && 
-  all (all isAlpha) [outerVar, innerVar] ==>  -- Valid identifiers
+  L.all (not . null) [outerVar, innerVar] && 
+  L.all (L.all isAlpha) [outerVar, innerVar] ==>  -- Valid identifiers
   let source = unlines
         [ "package main"
         , "func test() {"

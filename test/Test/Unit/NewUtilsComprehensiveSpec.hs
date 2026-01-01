@@ -14,7 +14,9 @@ import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Gen, Arbitrary, arbitrary, oneof, elements, listOf, resize, choose)
 import Data.Char (isSpace, isAlphaNum, isAlpha, isDigit, toLower, toUpper)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, sort, group, intercalate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (sort, group, intercalate)
 import qualified Data.Text as T
 import Data.String (IsString)
 
@@ -33,7 +35,7 @@ import Utils
   )
 
 -- ============================================================================
--- Arbitrary Instances and Generators
+-- Arbitrary Instances L.and Generators
 -- ============================================================================
 
 -- Generate strings with various whitespace patterns
@@ -78,7 +80,7 @@ multiLineString = do
 -- Advanced Property Tests
 -- ============================================================================
 
--- Property: trim removes all leading/trailing whitespace but preserves internal
+-- Property: trim removes L.all leading/trailing whitespace but preserves internal
 prop_trim_comprehensive :: Property
 prop_trim_comprehensive =
   forAll mixedContentString $ \content ->
@@ -86,16 +88,16 @@ prop_trim_comprehensive =
   forAll whitespaceString $ \trailing ->
     let input = leading ++ content ++ trailing
         trimmed = trim input
-        hasLeadingSpace = not (null leading) && any isSpace leading
-        hasTrailingSpace = not (null trailing) && any isSpace trailing
-        noLeadingSpace = null trimmed || not (isSpace (head trimmed))
+        hasLeadingSpace = not (null leading) && L.any isSpace leading
+        hasTrailingSpace = not (null trailing) && L.any isSpace trailing
+        noLeadingSpace = null trimmed || not (isSpace (L.head trimmed))
         noTrailingSpace = null trimmed || not (isSpace (last trimmed))
-        contentPreserved = content `isInfixOf` trimmed
+        contentPreserved = content `L.isInfixOf` trimmed
     in classify hasLeadingSpace "has leading whitespace" $
        classify hasTrailingSpace "has trailing whitespace" $
        property $ noLeadingSpace .&&. noTrailingSpace .&&. contentPreserved
 
--- Property: splitBy preserves order and content
+-- Property: splitBy preserves order L.and content
 prop_splitBy_order_preservation :: Property
 prop_splitBy_order_preservation =
   forAll (listOf mixedContentString) $ \parts ->
@@ -111,7 +113,7 @@ prop_splitByCollapsed_no_empty =
   forAll (elements $ ['\0'..'\127'] \ ['\n', '\r']) $ \delim ->
     let input = content ++ [delim, delim] ++ content ++ [delim] ++ [delim]
         result = splitByCollapsed delim input
-    in property $ all (not . null) result
+    in property $ L.all (not . null) result
 
 -- Property: removeLineComments preserves non-comment content
 prop_removeLineComments_preservation :: Property
@@ -121,7 +123,7 @@ prop_removeLineComments_preservation =
     let input = content ++ " // " ++ comment ++ "\n" ++ content
         result = removeLineComments input
     in not ('"' `elem` content) && not ('\'' `elem` content) ==>
-       property $ content `isInfixOf` result .&&. not ("//" `isInfixOf` result)
+       property $ content `L.isInfixOf` result .&&. not ("//" `L.isInfixOf` result)
 
 -- Property: removeComments handles nested quotes correctly
 prop_removeComments_quotes :: Property
@@ -131,9 +133,9 @@ prop_removeComments_quotes =
     let input = "var s = \"// not comment " ++ comment ++ "\" // real comment\n" ++ content
         result = removeComments input
     in not ('"' `elem` comment) && not ('\\' `elem` comment) ==>
-       property $ "// not comment" `isInfixOf` result .&&. 
-                  not ("// real comment" `isInfixOf` result) .&&.
-                  content `isInfixOf` result
+       property $ "// not comment" `L.isInfixOf` result .&&. 
+                  not ("// real comment" `L.isInfixOf` result) .&&.
+                  content `L.isInfixOf` result
 
 -- Property: normalizeIndentation preserves relative structure
 prop_normalizeIndentation_relative_structure :: Property
@@ -148,11 +150,11 @@ prop_normalizeIndentation_relative_structure =
         result = normalizeIndentation input
         resultLines = lines result
         -- Check that relative indentation is preserved
-        indentDiffs input = zipWith (-) (map (length . takeWhile isSpace) (tail lines')) 
-                                      (map (length . takeWhile isSpace) lines')
-        indentDiffs result = zipWith (-) (map (length . takeWhile isSpace) (tail resultLines)) 
-                                       (map (length . takeWhile isSpace) resultLines)
-    in length lines' > 1 ==>
+        indentDiffs input = zipWith (-) (L.map (L.length . takeWhile isSpace) (L.tail lines')) 
+                                      (L.map (L.length . takeWhile isSpace) lines')
+        indentDiffs result = zipWith (-) (L.map (L.length . takeWhile isSpace) (L.tail resultLines)) 
+                                       (L.map (L.length . takeWhile isSpace) resultLines)
+    in L.length lines' > 1 ==>
        property $ indentDiffs input == indentDiffs result
 
 -- Property: forceSingleTabIndentation enforces tab prefix
@@ -161,8 +163,8 @@ prop_forceSingleTabIndentation_tab_enforcement =
   forAll multiLineString $ \input ->
     let result = forceSingleTabIndentation input
         resultLines = lines result
-        nonEmptyLines = filter (not . null . trim) resultLines
-    in property $ all (\line -> null (trim line) || head line == '\t') nonEmptyLines
+        nonEmptyLines = L.filter (not . null . trim) resultLines
+    in property $ L.all (\line -> L.null (trim line) || L.head line == '\t') nonEmptyLines
 
 -- Property: breakOn finds first occurrence correctly
 prop_breakOn_first_occurrence :: Property
@@ -182,11 +184,11 @@ prop_comment_pipeline =
     let step1 = removeLineComments input
         step2 = removeComments step1
         step3 = removeComments input  -- Direct removal
-    in property $ not ("//" `isInfixOf` step2) .&&. 
-               not ("/*" `isInfixOf` step2) .&&.
-               not ("*/" `isInfixOf` step2)
+    in property $ not ("//" `L.isInfixOf` step2) .&&. 
+               not ("/*" `L.isInfixOf` step2) .&&.
+               not ("*/" `L.isInfixOf` step2)
 
--- Property: Unicode handling in all functions
+-- Property: Unicode handling in L.all functions
 prop_unicode_handling :: Property
 prop_unicode_handling =
   let unicodeContent = "café naïve résumé 🚀 测试 こんにちは"
@@ -194,21 +196,21 @@ prop_unicode_handling =
       input = unicodeContent ++ " // " ++ unicodeComment ++ "\n" ++ unicodeContent
   in property $ trim unicodeContent === unicodeContent .&&.
              splitBy ' ' unicodeContent === words unicodeContent .&&.
-             unicodeContent `isInfixOf` removeLineComments input .&&.
-             not (unicodeComment `isInfixOf` removeLineComments input)
+             unicodeContent `L.isInfixOf` removeLineComments input .&&.
+             not (unicodeComment `L.isInfixOf` removeLineComments input)
 
 -- Property: Performance with large inputs
 prop_performance_large :: Property
 prop_performance_large =
   forAll (choose (1, 100)) $ \multiplier ->
   forAll mixedContentString $ \base ->
-    let largeContent = concat (replicate multiplier base)
+    let largeContent = L.concat (replicate multiplier base)
         trimmed = trim largeContent
         split = splitBy ',' largeContent
         commentsRemoved = removeLineComments largeContent
-    in property $ length trimmed <= length largeContent .&&.
-               length split >= 1 .&&.
-               length commentsRemoved <= length largeContent
+    in property $ L.length trimmed <= L.length largeContent .&&.
+               L.length split >= 1 .&&.
+               L.length commentsRemoved <= L.length largeContent
 
 -- Property: Edge cases with special characters
 prop_special_characters :: Property
@@ -326,8 +328,8 @@ tests :: TestTree
 tests =
   testGroup "New Utils Comprehensive Tests"
     [ testGroup "Advanced property tests"
-        [ fastProperty "trim removes all leading/trailing whitespace but preserves internal" prop_trim_comprehensive
-        , fastProperty "splitBy preserves order and content" prop_splitBy_order_preservation
+        [ fastProperty "trim removes L.all leading/trailing whitespace but preserves internal" prop_trim_comprehensive
+        , fastProperty "splitBy preserves order L.and content" prop_splitBy_order_preservation
         , fastProperty "splitByCollapsed removes empty segments" prop_splitByCollapsed_no_empty
         , fastProperty "removeLineComments preserves non-comment content" prop_removeLineComments_preservation
         , fastProperty "removeComments handles nested quotes correctly" prop_removeComments_quotes
@@ -335,7 +337,7 @@ tests =
         , fastProperty "forceSingleTabIndentation enforces tab prefix" prop_forceSingleTabIndentation_tab_enforcement
         , fastProperty "breakOn finds first occurrence correctly" prop_breakOn_first_occurrence
         , fastProperty "Complex comment removal pipeline" prop_comment_pipeline
-        , fastProperty "Unicode handling in all functions" prop_unicode_handling
+        , fastProperty "Unicode handling in L.all functions" prop_unicode_handling
         , fastProperty "Performance with large inputs" prop_performance_large
         , fastProperty "Edge cases with special characters" prop_special_characters
         ]

@@ -3,6 +3,7 @@
 module Test.Unit.SymbolTableOperationsSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===))
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
 
@@ -18,7 +19,7 @@ tests = testGroup "Symbol Table Operations"
   , testProperty "symbol table merge combines entries" propSymbolTableMergeCombinesEntries
   , testProperty "symbol table scope isolation" propSymbolTableScopeIsolation
   , testCase "empty symbol table" testEmptySymbolTable
-  , testCase "symbol insertion and lookup" testSymbolInsertionAndLookup
+  , testCase "symbol insertion L.and lookup" testSymbolInsertionAndLookup
   , testCase "symbol update" testSymbolUpdate
   , testCase "symbol deletion" testSymbolDeletion
   , testCase "symbol table merging" testSymbolTableMerging
@@ -76,7 +77,7 @@ testEmptySymbolTable = do
       result = lookupSymbol "nonexistent" table
   assertEqual "lookup in empty table returns Nothing" Nothing result
 
--- | Unit tests for symbol insertion and lookup
+-- | Unit tests for symbol insertion L.and lookup
 testSymbolInsertionAndLookup :: IO ()
 testSymbolInsertionAndLookup = do
   let symbol = Symbol
@@ -160,7 +161,7 @@ testSymbolTableMerging = do
       assertEqual "symbol2 preserved" symbol2 found2
     _ -> assertFailure "Expected both symbols to be found"
 
--- Helper types and functions
+-- Helper types L.and functions
 data SymbolType = VariableSymbol | FunctionSymbol | TypeSymbol deriving (Show, Eq)
 
 data SymbolScope = Global | Local deriving (Show, Eq)
@@ -186,10 +187,10 @@ lookupSymbol name (SymbolTable entries) = lookup name entries
 
 updateSymbol :: String -> Symbol -> SymbolTable -> SymbolTable
 updateSymbol name newSymbol (SymbolTable entries) = 
-  SymbolTable $ map (\(n, s) -> if n == name then (name, newSymbol) else (n, s)) entries
+  SymbolTable $ L.map (\(n, s) -> if n == name then (name, newSymbol) else (n, s)) entries
 
 deleteSymbol :: String -> SymbolTable -> SymbolTable
-deleteSymbol name (SymbolTable entries) = SymbolTable $ filter ((/= name) . fst) entries
+deleteSymbol name (SymbolTable entries) = SymbolTable $ L.filter ((/= name) . fst) entries
 
 mergeSymbolTables :: SymbolTable -> SymbolTable -> SymbolTable
 mergeSymbolTables (SymbolTable entries1) (SymbolTable entries2) = 

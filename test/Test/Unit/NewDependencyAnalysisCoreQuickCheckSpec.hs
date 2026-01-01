@@ -3,6 +3,7 @@
 module Test.Unit.NewDependencyAnalysisCoreQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), forAll, oneof, elements, listOf, sized)
 import TestSupport.QuickCheck (fastProperty)
@@ -183,8 +184,8 @@ prop_substitutionCompositionAssociative :: TypeExpr -> TypeVar -> TypeExpr -> Ty
 prop_substitutionCompositionAssociative t var1 rep1 var2 rep2 =
     let sub1 = Map.singleton var1 rep1
         sub2 = Map.singleton var2 rep2
-        comp1 = Map.union sub2 (Map.map (applyTypeSubstitution sub2) sub1)
-        comp2 = Map.union (Map.map (applyTypeSubstitution sub1) sub2) sub1
+        comp1 = Map.union sub2 (Map.L.map (applyTypeSubstitution sub2) sub1)
+        comp2 = Map.union (Map.L.map (applyTypeSubstitution sub1) sub2) sub1
         result1 = applyTypeSubstitution comp1 t
         result2 = applyTypeSubstitution comp2 t
     in result1 === result2
@@ -192,11 +193,11 @@ prop_substitutionCompositionAssociative t var1 rep1 var2 rep2 =
 -- | Type variables should remain fresh
 prop_typeVariableFreshness :: [TypeVar] -> Property
 prop_typeVariableFreshness vars =
-    let freshVars = map (const newTypeVariable) vars
-    in property $ length (nub freshVars) == length freshVars
+    let freshVars = L.map (const newTypeVariable) vars
+    in property $ L.length (nub freshVars) == L.length freshVars
   where
     nub [] = []
-    nub (x:xs) = x : nub (filter (/= x) xs)
+    nub (x:xs) = x : nub (L.filter (/= x) xs)
 
 -- ============================================================================
 -- AST Analysis Properties
@@ -214,7 +215,7 @@ prop_astValidationWellFormedness ast =
 prop_dependencyExtractionComplete :: AST -> Property
 prop_dependencyExtractionComplete ast =
     let dependencies = extractDependencies ast
-    in property $ length dependencies >= 0  -- Basic sanity check
+    in property $ L.length dependencies >= 0  -- Basic sanity check
 
 -- | Type inference should preserve typing rules
 prop_typeInferencePreservesRules :: AST -> Property
@@ -267,13 +268,13 @@ prop_environmentMergingCommutative env1 env2 =
 prop_errorDetectionSound :: AST -> Property
 prop_errorDetectionSound ast =
     let errors = getDependentTypeErrors ast
-    in property $ length errors >= 0  -- Basic sanity check
+    in property $ L.length errors >= 0  -- Basic sanity check
 
 -- | Error messages should contain location information
 prop_errorMessagesContainLocation :: AST -> Property
 prop_errorMessagesContainLocation ast =
     let errors = getDependentTypeErrors ast
-    in property $ all (not . null . show) errors  -- All errors should be displayable
+    in property $ L.all (not . null . show) errors  -- All errors should be displayable
 
 -- | Error recovery should preserve partial results
 prop_errorRecoveryPreservesPartial :: AST -> Property

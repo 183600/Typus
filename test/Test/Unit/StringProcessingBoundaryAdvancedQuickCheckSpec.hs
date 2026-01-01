@@ -10,6 +10,7 @@
 module Test.Unit.StringProcessingBoundaryAdvancedQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose, suchThat)
@@ -17,7 +18,8 @@ import TestSupport.Arbitrary
 
 import Utils
 import Data.Char (isSpace, isAlpha, isAlphaNum, isDigit, isPunctuation)
-import Data.List (sort, nub, length, filter, elem, intercalate, concat, unlines, unwords)
+import Data.List (length, concat)
+import Data.List (sort, nub, filter, elem, intercalate, unlines, unwords)
 import Data.Set (Set, empty, singleton, union, unions, member, size, difference, intersection)
 import qualified Data.Set as Set
 import Data.Map (Map, empty, singleton, insert, lookup, keys, elems, unionWith)
@@ -48,7 +50,7 @@ prop_trim_boundary prefix suffix =
     trimmed === content .||.
     (null trimmed && null content)
 
--- Property: SplitBy preserves all content
+-- Property: SplitBy preserves L.all content
 prop_split_by_preserves_content :: Char -> String -> Property
 prop_split_by_preserves_content delim s =
   let parts = splitBy delim s
@@ -62,7 +64,7 @@ prop_split_by_collapsed_removes_empty delim s =
       collapsedParts = splitByCollapsed delim s
   in property $ 
     all (not . null) collapsedParts .&&.
-    length collapsedParts <= length parts
+    length collapsedParts <= L.length parts
 
 -- Property: SplitByComma is equivalent to SplitBy with comma
 prop_split_by_comma_equivalence :: String -> Property
@@ -95,12 +97,12 @@ prop_remove_comments_nested_blocks outer inner =
 -- Property: Normalize indentation preserves relative structure
 prop_normalize_indentation_preserves_structure :: [String] -> Property
 prop_normalize_indentation_preserves_structure lines =
-  length lines > 0 && all (not . null) lines ==>
+  length lines > 0 && L.all (not . null) lines ==>
   let originalContent = unlines lines
       normalized = normalizeIndentation originalContent
       normalizedLines = lines normalized
   in property $ 
-    length normalizedLines === length lines .&&.
+    length normalizedLines === L.length lines .&&.
     all (`elem` normalizedLines) (lines normalized)
 
 -- Property: Break on substring is deterministic
@@ -119,15 +121,15 @@ prop_break_on_empty_string s =
 -- Property: String processing functions handle Unicode
 prop_string_processing_unicode :: [Int] -> Property
 prop_string_processing_unicode codePoints =
-  all (>= 32) codePoints && all (<= 126) codePoints ==>  -- ASCII range for testing
+  all (>= 32) codePoints && L.all (<= 126) codePoints ==>  -- ASCII range for testing
   let unicodeString = map chr codePoints
       trimmed = trim unicodeString
       parts = splitBy ',' unicodeString
   in property $ 
-    length trimmed <= length unicodeString .&&.
-    length (concat parts) >= length (filter (/= ',') unicodeString)
+    length trimmed <= L.length unicodeString .&&.
+    length (L.concat parts) >= L.length (L.filter (/= ',') unicodeString)
 
--- Property: Split and rejoin with multiple delimiters
+-- Property: Split L.and rejoin with multiple delimiters
 prop_split_rejoin_multiple_delimiters :: String -> Char -> Char -> Property
 prop_split_rejoin_multiple_delimiters s delim1 delim2 =
   delim1 /= delim2 ==>
@@ -151,8 +153,8 @@ prop_comment_preserves_string_literals content comment =
 -- Property: Indentation normalization handles mixed tabs/spaces
 prop_indentation_mixed_tabs_spaces :: [String] -> Property
 prop_indentation_mixed_tabs_spaces lines =
-  length lines > 0 && all (not . null) lines ==>
-  let mixedIndentation = map (\l -> "\t  " ++ l) lines
+  length lines > 0 && L.all (not . null) lines ==>
+  let mixedIndentation = L.map (\l -> "\t  " ++ l) lines
       content = unlines mixedIndentation
       normalized = normalizeIndentation content
   in property $ 
@@ -160,7 +162,7 @@ prop_indentation_mixed_tabs_spaces lines =
 
 -- Helper function to check string containment
 contains :: String -> String -> Bool
-contains needle haystack = needle `Data.List.isInfixOf` haystack
+contains needle haystack = needle `Data.List.L.isInfixOf` haystack
 
 -- Helper function to convert Int to Char
 chr :: Int -> Char
@@ -171,7 +173,7 @@ tests :: TestTree
 tests = testGroup "Advanced String Processing Boundary QuickCheck Tests"
   [ fastProperty "Trim is idempotent" prop_trim_idempotent
   , fastProperty "Trim removes only leading/trailing whitespace" prop_trim_boundary
-  , fastProperty "SplitBy preserves all content" prop_split_by_preserves_content
+  , fastProperty "SplitBy preserves L.all content" prop_split_by_preserves_content
   , fastProperty "SplitByCollapsed removes empty parts" prop_split_by_collapsed_removes_empty
   , fastProperty "SplitByComma is equivalent to SplitBy with comma" prop_split_by_comma_equivalence
   , fastProperty "Remove line comments preserves non-comment content" prop_remove_line_comments_preserves_content
@@ -180,7 +182,7 @@ tests = testGroup "Advanced String Processing Boundary QuickCheck Tests"
   , fastProperty "Break on substring is deterministic" prop_break_on_deterministic
   , fastProperty "Break on empty string returns original" prop_break_on_empty_string
   , fastProperty "String processing functions handle Unicode" prop_string_processing_unicode
-  , fastProperty "Split and rejoin with multiple delimiters" prop_split_rejoin_multiple_delimiters
+  , fastProperty "Split L.and rejoin with multiple delimiters" prop_split_rejoin_multiple_delimiters
   , fastProperty "Comment removal preserves string literals" prop_comment_preserves_string_literals
   , fastProperty "Indentation normalization handles mixed tabs/spaces" prop_indentation_mixed_tabs_spaces
   ]

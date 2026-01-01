@@ -39,12 +39,17 @@ import Parser
 
 import SourceLocation
   ( emptySpan
+  , SourcePos(..)
+  , SourceSpan(..)
+  , startPos
   )
 import SyntaxValidator (SyntaxError(..))
 import Compiler.Errors (CompilerResult)
 import Compiler.GoAst (GoModule(..))
 import Data.Char (isSpace)
-import Data.List (isPrefixOf, isInfixOf, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (nub)
 import qualified Data.Text as T
 
 -- Property: buildSourceIR creates IR with correct typus file
@@ -57,26 +62,25 @@ prop_build_source_ir_correct typusFile =
 prop_build_source_ir_extracts_text :: TypusFile -> Property
 prop_build_source_ir_extracts_text typusFile =
   let ir = buildSourceIR typusFile
-      sourceText = sourceText ir
-  in property $ not (null sourceText) || null (tfCodeBlocks typusFile)
-
+      source = sourceText ir
+  in property $ not (null source) || L.null (tfBlocks typusFile)
 -- Property: rawSourceFromTypus extracts code from blocks
 prop_raw_source_from_typus :: TypusFile -> Property
 prop_raw_source_from_typus typusFile =
   let raw = rawSourceFromTypus typusFile
-      blocks = tfCodeBlocks typusFile
-      blockCount = length blocks
+      blocks = tfBlocks typusFile
+      blockCount = L.length blocks
   in property $ (blockCount == 0) ==> (null raw)
 
 -- Property: rawSourceFromTypus preserves block order
 prop_raw_source_preserves_order :: [String] -> Property
 prop_raw_source_preserves_order blockContents =
-  not (null blockContents) && all (not . null) blockContents ==>
-  let blocks = map (\content -> CodeBlock content Nothing Nothing) blockContents
-      typusFile = TypusFile "" Nothing Nothing blocks
+  not (null blockContents) && L.all (not . null) blockContents ==>
+  let blocks = L.map (\content -> CodeBlock defaultBlockDirectives content (SourceSpan (SourcePos 1 1 0) (SourcePos 1 1 0))) blockContents
+      typusFile = TypusFile defaultFileDirectives [] blocks []
       raw = rawSourceFromTypus typusFile
       rawLines = lines raw
-  in property $ length rawLines >= length blockContents
+  in property $ L.length rawLines >= L.length blockContents
 
 -- Property: buildSemanticIR handles valid input
 prop_build_semantic_ir_valid :: TypusFile -> Property
@@ -125,7 +129,7 @@ prop_build_semantic_ir_combines_decls typusFile packageFiles =
     Right semanticIR -> 
       let module' = semanticModule semanticIR
           decls = gmDecls module'
-      in property $ length decls >= 0  -- Should combine declarations
+      in property $ L.length decls >= 0  -- Should combine declarations
 
 -- Property: emitGo creates Go IR
 prop_emit_go_creates :: TypusFile -> Property
@@ -148,8 +152,8 @@ prop_emit_go_preserves_module typusFile =
     Right semanticIR ->
       let goIR = emitGo semanticIR
           originalModule = semanticModule semanticIR
-          goModule = goModule goIR
-      in property $ goModule === originalModule
+          generatedGoModule = goModule goIR
+      in property $ generatedGoModule === originalModule
 
 -- Property: emitGo generates source code
 prop_emit_go_generates_source :: TypusFile -> Property
@@ -161,12 +165,12 @@ prop_emit_go_generates_source typusFile =
     Right semanticIR ->
       let goIR = emitGo semanticIR
           source = goSource goIR
-      in property $ not (null source) || null (tfCodeBlocks typusFile)
+      in property $ not (null source) || L.null (tfBlocks typusFile)
 
 -- Property: moduleFromTypus handles empty file
 prop_module_from_empty :: Property
 prop_module_from_empty =
-  let typusFile = TypusFile "" Nothing Nothing []
+  let typusFile = TypusFile defaultFileDirectives [] [] []
       result = moduleFromTypus typusFile
   in case result of
     Left _ -> property True
@@ -175,9 +179,9 @@ prop_module_from_empty =
 -- Property: moduleFromTypus handles file with blocks
 prop_module_from_blocks :: [String] -> Property
 prop_module_from_blocks blockContents =
-  not (null blockContents) && all (not . null) blockContents ==>
-  let blocks = map (\content -> CodeBlock content Nothing Nothing) blockContents
-      typusFile = TypusFile "" Nothing Nothing blocks
+  not (null blockContents) && L.all (not . null) blockContents ==>
+  let blocks = L.map (\content -> CodeBlock defaultBlockDirectives content (SourceSpan (SourcePos 1 1 0) (SourcePos 1 1 0))) blockContents
+      typusFile = TypusFile defaultFileDirectives [] blocks []
       result = moduleFromTypus typusFile
   in case result of
     Left _ -> property True
@@ -186,50 +190,38 @@ prop_module_from_blocks blockContents =
 -- Property: ensurePackageDecl adds package when missing
 prop_ensure_package_adds_missing :: GoModule -> Property
 prop_ensure_package_adds_missing goModule =
-  let result = ensurePackageDecl goModule
-  in case result of
-    Left _ -> property True
-    Right updatedModule -> property $ True  -- Should add package when missing
+  let updatedModule = ensurePackageDecl goModule
+  in property $ True  -- Should add package when missing
 
 -- Property: ensurePackageDecl preserves existing package
 prop_ensure_package_preserves_existing :: GoModule -> Property
 prop_ensure_package_preserves_existing goModule =
-  let result = ensurePackageDecl goModule
-  in case result of
-    Left _ -> property True
-    Right updatedModule -> property $ True  -- Should preserve existing package
+  let updatedModule = ensurePackageDecl goModule
+  in property $ True  -- Should preserve existing package
 
 -- Property: ensureMainFunction adds main when missing
 prop_ensure_main_adds_missing :: GoModule -> Property
 prop_ensure_main_adds_missing goModule =
-  let result = ensureMainFunction goModule
-  in case result of
-    Left _ -> property True
-    Right updatedModule -> property $ True  -- Should add main when missing
+  let updatedModule = ensureMainFunction goModule
+  in property $ True  -- Should add main when missing
 
 -- Property: ensureMainFunction preserves existing main
 prop_ensure_main_preserves_existing :: GoModule -> Property
 prop_ensure_main_preserves_existing goModule =
-  let result = ensureMainFunction goModule
-  in case result of
-    Left _ -> property True
-    Right updatedModule -> property $ True  -- Should preserve existing main
+  let updatedModule = ensureMainFunction goModule
+  in property $ True  -- Should preserve existing main
 
--- Property: attachInferredImports handles empty imports
+-- Property: attachInferredImports handles empty module
 prop_attach_inferred_empty :: GoModule -> Property
 prop_attach_inferred_empty goModule =
-  let result = attachInferredImports goModule
-  in case result of
-    Left _ -> property True
-    Right updatedModule -> property $ True  -- Should handle empty imports
+  let updatedModule = attachInferredImports goModule
+  in property $ True  -- Should handle empty imports
 
 -- Property: attachInferredImports preserves existing imports
 prop_attach_inferred_preserves :: GoModule -> Property
 prop_attach_inferred_preserves goModule =
-  let result = attachInferredImports goModule
-  in case result of
-    Left _ -> property True
-    Right updatedModule -> property $ True  -- Should preserve existing imports
+  let updatedModule = attachInferredImports goModule
+  in property $ True  -- Should preserve existing imports
 
 -- Property: IR building pipeline is deterministic
 prop_ir_pipeline_deterministic :: TypusFile -> Property
@@ -260,9 +252,10 @@ prop_go_generation_deterministic typusFile =
 prop_ir_large_input :: String -> Int -> Property
 prop_ir_large_input base multiplier =
   multiplier >= 0 && multiplier <= 50 ==>  -- Limit for performance
-  let largeContent = concat (replicate multiplier base)
-      block = CodeBlock largeContent Nothing Nothing
-      typusFile = TypusFile "" Nothing Nothing [block]
+  let largeContent = L.concat (replicate multiplier base)
+      pos = SourcePos 1 1 1
+      block = CodeBlock defaultBlockDirectives largeContent (SourceSpan pos pos)
+      typusFile = TypusFile defaultFileDirectives [] [block] []
       ir = buildSourceIR typusFile
   in property $ sourceText ir === largeContent
 
@@ -273,7 +266,7 @@ prop_ir_unicode content =
       block = CodeBlock 
                 { cbDirectives = defaultBlockDirectives
                 , cbContent = unicodeContent
-                , cbSpan = emptySpan
+                , cbSpan = emptySpan (SourcePos 1 1 1)
                 }
       typusFile = TypusFile 
                     { tfDirectives = defaultFileDirectives
@@ -282,7 +275,7 @@ prop_ir_unicode content =
                     , tfSyntaxErrors = []
                     }
       ir = buildSourceIR typusFile
-  in property $ "测试🚀" `isInfixOf` (sourceText ir)
+  in property $ "测试🚀" `L.isInfixOf` (sourceText ir)
 
 tests :: TestTree
 tests = testGroup "Advanced Compiler QuickCheck"

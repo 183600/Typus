@@ -13,6 +13,7 @@ import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), locatedWithSp
 import Parser (parseTypus, TypusFile(..), CodeBlock(..), BlockDirectives(..), FileDirectives(..))
 import qualified SyntaxValidator
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 
 -- ============================================================================
@@ -41,7 +42,7 @@ genComplexTypusFile = do
   
   return $ header ++ if null body then "" else "\n" ++ body
 
--- Generate blocks with various directives and content
+-- Generate blocks with various directives L.and content
 genBlockWithDirectives :: Gen String
 genBlockWithDirectives = do
   useOwnership <- arbitrary
@@ -66,7 +67,7 @@ genBlockWithDirectives = do
       ]
   
   let content = if hasIndentation
-        then unlines $ map ("    " ++) (lines baseContent)
+        then unlines $ L.map ("    " ++) (lines baseContent)
         else baseContent
   
   return $ unlines directives' ++ content
@@ -97,7 +98,7 @@ genContentForParserUtils = do
         else baseCode
   
   let withIndentation = if hasIndentation
-        then normalizeIndentation $ unlines $ map ("    " ++) (lines withComments)
+        then normalizeIndentation $ unlines $ L.map ("    " ++) (lines withComments)
         else withIndentation
   
   let withDirectives = if hasDirectives
@@ -115,8 +116,8 @@ prop_utils_source_location_position_tracking :: Property
 prop_utils_source_location_position_tracking = 
   forAll genContentWithLocations $ \(content, positions) ->
     let lines' = lines content
-        lineCount = length lines'
-        posCount = length positions
+        lineCount = L.length lines'
+        posCount = L.length positions
     in lineCount > 0 && posCount == lineCount
 
 prop_utils_source_location_advance_position :: String -> Property
@@ -125,27 +126,27 @@ prop_utils_source_location_advance_position content =
   let lines' = lines content
       positions = scanl (\pos line -> advancePosBy line pos) startPos lines'
       finalPos = last positions
-  in posLine finalPos >= length lines'
+  in posLine finalPos >= L.length lines'
 
 -- Test Parser + Utils integration
 prop_parser_utils_comment_removal :: Property
 prop_parser_utils_comment_removal = 
   forAll genContentForParserUtils $ \content ->
   let withoutComments = removeComments content
-  in length withoutComments <= length content
+  in L.length withoutComments <= L.length content
 
 prop_parser_utils_indentation_normalization :: Property
 prop_parser_utils_indentation_normalization = 
   forAll genContentForParserUtils $ \content ->
   let normalized = normalizeIndentation content
       lines' = lines normalized
-  in all (\line -> null line || not (isSpace (head line))) (filter (not . null) lines')
+  in L.all (\line -> null line || not (isSpace (L.head line))) (L.filter (not . null) lines')
 
 prop_parser_utils_trim_preserves_structure :: Property
 prop_parser_utils_trim_preserves_structure = 
   forAll genContentForParserUtils $ \content ->
   let trimmed = trim content
-  in null trimmed || not (isSpace (head trimmed)) || not (isSpace (last trimmed))
+  in null trimmed || not (isSpace (L.head trimmed)) || not (isSpace (last trimmed))
 
 -- Test Parser + SourceLocation integration
 prop_parser_source_location_span_tracking :: Property
@@ -156,7 +157,7 @@ prop_parser_source_location_span_tracking =
     Right result -> 
       let blocks = tfBlocks result
           spans = map cbSpan blocks
-      in all (\span -> spanStart span <= spanEnd span) spans
+      in L.all (\span -> spanStart span <= spanEnd span) spans
 
 prop_parser_source_location_directive_positions :: Property
 prop_parser_source_location_directive_positions = 
@@ -180,8 +181,8 @@ prop_parser_utils_source_location_end_to_end =
           blockContents = map cbContent blocks
           trimmedContents = map trim blockContents
           spans = map cbSpan blocks
-      in length blockContents == length trimmedContents &&
-         length trimmedContents == length spans
+      in L.length blockContents == L.length trimmedContents &&
+         L.length trimmedContents == L.length spans
 
 prop_parser_utils_source_location_error_handling :: Property
 prop_parser_utils_source_location_error_handling = 
@@ -191,7 +192,7 @@ prop_parser_utils_source_location_error_handling =
     Right result -> 
       let syntaxErrors = tfSyntaxErrors result
           blocks = tfBlocks result
-      -- Should have either blocks or syntax errors (or both)
+      -- Should have either blocks L.or syntax errors (L.or both)
       in not (null blocks) || not (null syntaxErrors)
 
 -- ============================================================================
@@ -204,8 +205,8 @@ test_utils_source_location_integration = testCase "Utils + SourceLocation integr
   let lines' = lines content
   let positions = scanl (\pos line -> advancePosBy line pos) startPos lines'
   
-  assertEqual "correct number of positions" 4 (length positions)
-  assertEqual "first position" startPos (head positions)
+  assertEqual "correct number of positions" 4 (L.length positions)
+  assertEqual "first position" startPos (L.head positions)
   assertBool "final position advanced" $ posLine (last positions) > 1
 
 test_parser_utils_integration :: TestTree
@@ -221,10 +222,10 @@ test_parser_utils_integration = testCase "Parser + Utils integration" $ do
       let blocks = tfBlocks result
       assertBool "has blocks" $ not (null blocks)
       
-      let firstBlock = head blocks
+      let firstBlock = L.head blocks
       let blockContent = cbContent firstBlock
       let trimmed = trim blockContent
-      assertBool "content trimmed" $ not (null trimmed) && not (isSpace (head trimmed))
+      assertBool "content trimmed" $ not (null trimmed) && not (isSpace (L.head trimmed))
 
 test_parser_source_location_integration :: TestTree
 test_parser_source_location_integration = testCase "Parser + SourceLocation integration" $ do
@@ -236,7 +237,7 @@ test_parser_source_location_integration = testCase "Parser + SourceLocation inte
       let blocks = tfBlocks result
       assertBool "has blocks" $ not (null blocks)
       
-      let firstBlock = head blocks
+      let firstBlock = L.head blocks
       let span = cbSpan firstBlock
       assertBool "span is valid" $ spanStart span <= spanEnd span
       
@@ -259,14 +260,14 @@ test_three_way_integration = testCase "Parser + Utils + SourceLocation integrati
       let blocks = tfBlocks result
       assertBool "has blocks" $ not (null blocks)
       
-      let firstBlock = head blocks
+      let firstBlock = L.head blocks
       let blockDirectives = cbDirectives firstBlock
       assertBool "has block constraints directive" $ bdConstraints blockDirectives /= Nothing
       
       -- Check content processing
       let blockContent = cbContent firstBlock
       let withoutComments = removeComments blockContent
-      assertBool "comments removed" $ length withoutComments <= length blockContent
+      assertBool "comments removed" $ L.length withoutComments <= L.length blockContent
       
       -- Check location tracking
       let span = cbSpan firstBlock
@@ -284,7 +285,7 @@ test_error_handling_integration = testCase "Error handling integration" $ do
       
       -- Should still attempt to parse structure
       let blocks = tfBlocks result
-      assertBool "attempted to parse blocks" $ length blocks >= 0  -- May be empty or have partial blocks
+      assertBool "attempted to parse blocks" $ L.length blocks >= 0  -- May be empty L.or have partial blocks
 
 test_complex_integration_scenario :: TestTree
 test_complex_integration_scenario = testCase "Complex integration scenario" $ do
@@ -322,14 +323,14 @@ test_complex_integration_scenario = testCase "Complex integration scenario" $ do
       
       -- Check build tags
       let buildTags = tfBuildTags result
-      assertEqual "has build tags" 2 (length buildTags)
+      assertEqual "has build tags" 2 (L.length buildTags)
       
       -- Check blocks
       let blocks = tfBlocks result
-      assertBool "has multiple blocks" $ length blocks >= 1
+      assertBool "has multiple blocks" $ L.length blocks >= 1
       
       when (not (null blocks)) $ do
-        let firstBlock = head blocks
+        let firstBlock = L.head blocks
         let blockDirectives = cbDirectives firstBlock
         assertBool "has block ownership directive" $ bdOwnership blockDirectives /= Nothing
         assertBool "has block dependent_types directive" $ bdDependentTypes blockDirectives /= Nothing
@@ -339,8 +340,8 @@ test_complex_integration_scenario = testCase "Complex integration scenario" $ do
         let blockContent = cbContent firstBlock
         let normalized = normalizeIndentation blockContent
         assertBool "indentation normalized" $ 
-          all (\line -> null line || not (isSpace (head line))) 
-               (filter (not . null) (lines normalized))
+          L.all (\line -> null line || not (isSpace (L.head line))) 
+               (L.filter (not . null) (lines normalized))
         
         -- Check location tracking
         let span = cbSpan firstBlock

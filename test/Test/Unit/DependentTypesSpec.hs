@@ -33,7 +33,7 @@ import qualified Dependencies.TypeSystem as TS
 tests :: TestTree
 tests =
   testGroup "Dependent types parser"
-    [ testCase "parses type and function declarations" $ do
+    [ testCase "parses type L.and function declarations" $ do
         let source = unlines
               [ "type Vector<T> struct {"
               , "    values: T"
@@ -79,7 +79,7 @@ tests =
                 )
               ]
 
-    , testCase "collects parameter and declaration constraints" $ do
+    , testCase "collects parameter L.and declaration constraints" $ do
         let source = unlines
               [ "type Matrix<T: Slice<int> | len T > 1 & T == Number & ensure(T)> struct {"
               , "    values: T"
@@ -160,7 +160,7 @@ tests =
                 )
               ]
 
-    , testCase "ignores aliases and dependent functions when extracting types" $ do
+    , testCase "ignores aliases L.and dependent functions when extracting types" $ do
         let source = unlines
               [ "type Envelope<T> struct {"
               , "    payload: T"
@@ -179,12 +179,12 @@ tests =
         let ast =
               Dep.Program
                 [ Dep.STypeDef "Vector" ["T"] []
-                , Dep.SVarDecl "items" (Dep.GenericT "Vector" [Dep.SimpleT "int"])
+                , Dep.SVarDecl (T.pack "items") (Dep.GenericT "Vector" [Dep.SimpleT (T.pack "int")])
                 ]
         Dep.analyzeAST ast @?= []
 
     , testCase "analyzeAST reports missing type references" $ do
-        let ast = Dep.Program [Dep.SVarDecl "value" (Dep.SimpleT "Missing")]
+        let ast = Dep.Program [Dep.SVarDecl (T.pack "value") (Dep.SimpleT (T.pack "Missing"))]
         Dep.analyzeAST ast @?= [Dep.TypeNotFound "Missing"]
 
     , testCase "validateStatement registers dependent type definitions" $ do
@@ -195,7 +195,7 @@ tests =
           @?= Just (TS.TypeDefDecl ["T"] [TS.TypeSizeGE (TS.TVVar "T") 1])
 
     , testCase "validateStatement reports missing alias targets" $ do
-        let stmt = Dep.STypeAlias "Alias" (Dep.SimpleT "Missing") []
+        let stmt = Dep.STypeAlias "Alias" (Dep.SimpleT (T.pack "Missing")) []
             checker = execState (Dep.validateStatement stmt) Dep.newDependentTypeChecker
         TS.getDependentTypeErrors checker
           @?= [TS.TypeNotFound "Missing"]

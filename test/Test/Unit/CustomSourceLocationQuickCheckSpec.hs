@@ -220,7 +220,7 @@ prop_advancePosByTextEmpty = forAll genSourcePos $ \pos ->
 prop_advancePosByTextNewlines :: Property
 prop_advancePosByTextNewlines = forAll genSourcePos $ \pos ->
   forAll (choose (1, 10)) $ \numLines ->
-    let newText = concat $ replicate numLines "\n"
+    let newText = L.concat $ replicate numLines "\n"
         newPos = advancePosByText newText pos
     in posLine newPos == posLine pos + numLines &&
        posColumn newPos == 1 &&

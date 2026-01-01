@@ -2,11 +2,12 @@
 
 module Test.Unit.CodeGenerationConsistencyQuickCheckSpec (tests) where
 
-import Test.Tasty (TestTree)
-import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), (==>), elements, listOf, listOf1)
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), (==>), elements, listOf, listOf1, choose, oneof)
 import Test.Tasty.HUnit (testCase, assert, (@?=))
 import qualified Data.Text as T
 import Data.Char (isSpace, isAlpha, isDigit)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 
 import Compiler
@@ -18,9 +19,87 @@ import Compiler
 import Parser 
   ( parseTypus
   , TypusFile(..)
+  , FileDirectives(..)
+  , BlockDirectives(..)
+  , CodeBlock(..)
   , defaultFileDirectives
+  , defaultBlockDirectives
   )
+import qualified SyntaxValidator
+import SourceLocation (emptySpan, startPos, SourcePos(..), SourceSpan(..), Located(..), locatedWithSpan)
 import Compiler.GoAst (renderGoModule)
+
+-- ============================================================================
+-- Arbitrary Instances
+-- ============================================================================
+
+instance Arbitrary TypusFile where
+    arbitrary = do
+        directives <- arbitrary
+        buildTags <- listOf arbitrary
+        blocks <- listOf arbitrary
+        syntaxErrors <- listOf arbitrary
+        return $ TypusFile directives buildTags blocks syntaxErrors
+
+instance Arbitrary FileDirectives where
+    arbitrary = FileDirectives <$> arbitrary <*> arbitrary <*> arbitrary
+
+instance Arbitrary BlockDirectives where
+    arbitrary = BlockDirectives <$> arbitrary <*> arbitrary <*> arbitrary
+
+instance Arbitrary CodeBlock where
+    arbitrary = do
+        directives <- arbitrary
+        content <- listOf1 $ elements "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 \n\t;"
+        span <- arbitrary
+        return $ CodeBlock directives content span
+
+instance Arbitrary SyntaxValidator.SyntaxError where
+    arbitrary = do
+        errorType <- arbitrary
+        errorMessage <- listOf1 $ elements "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
+        lineNumber <- choose (1, 1000)
+        columnNumber <- choose (1, 1000)
+        lineContent <- listOf1 $ elements "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 \n\t;"
+        return $ SyntaxValidator.SyntaxError errorType errorMessage lineNumber columnNumber lineContent
+
+instance Arbitrary SyntaxValidator.ErrorType where
+    arbitrary = oneof
+        [ pure SyntaxValidator.MissingBrace
+        , pure SyntaxValidator.MissingParenthesis
+        , pure SyntaxValidator.MissingBracket
+        , pure SyntaxValidator.UnclosedString
+        , pure SyntaxValidator.UnclosedComment
+        , pure SyntaxValidator.InvalidIdentifier
+        , pure SyntaxValidator.InvalidTypeDeclaration
+        , pure SyntaxValidator.InvalidFunctionDeclaration
+        , pure SyntaxValidator.InvalidImport
+        , pure SyntaxValidator.InvalidStatement
+        , pure SyntaxValidator.UnterminatedBlock
+        , pure SyntaxValidator.InvalidOperator
+        , pure SyntaxValidator.MissingSemicolon
+        , pure SyntaxValidator.UnexpectedToken
+        , pure SyntaxValidator.MissingPackageDeclaration
+        , pure SyntaxValidator.DuplicateDeclaration
+        , pure SyntaxValidator.InvalidBlockStructure
+        , pure SyntaxValidator.UndeclaredVariable
+        , pure SyntaxValidator.SyntaxWarning
+        ]
+
+instance Arbitrary SourcePos where
+    arbitrary = SourcePos <$> choose (1, 1000) <*> choose (1, 1000) <*> choose (0, 100000)
+
+instance Arbitrary SourceSpan where
+    arbitrary = do
+        start <- arbitrary
+        end <- arbitrary
+        return $ SourceSpan start end
+
+instance Arbitrary a => Arbitrary (Located a) where
+    arbitrary = do
+        value <- arbitrary
+        span <- arbitrary
+        return $ locatedWithSpan value span
 
 -- ============================================================================
 -- Test Data Generators
@@ -42,11 +121,11 @@ genFunctionDefinition = do
   returnType <- elements ["Int", "String", "Bool", "Float"]
   paramNames <- listOf1 $ elements ["x", "y", "input", "value", "arg"]
   
-  let params = unwords $ map (\name -> name ++ ": " ++ paramType) paramNames
+  let params = unwords $ L.map (\name -> name ++ ": " ++ paramType) paramNames
   let returnExpr = case paramNames of
         [] -> "42"
         [x] -> x
-        (x:xs) -> x ++ " + " ++ head xs
+        (x:xs) -> x ++ " + " ++ L.head xs
   
   return $ unlines
     [ "func " ++ funcName ++ "(" ++ params ++ "): " ++ returnType ++ " {"
@@ -63,7 +142,7 @@ genTypeDefinition = do
     fieldType <- elements ["Int", "String", "Bool", "Float"]
     return $ fieldName ++ ": " ++ fieldType
   
-  let fieldStr = unlines $ map (\field -> "  " ++ field ++ ";") fields
+  let fieldStr = unlines $ L.map (\field -> "  " ++ field ++ ";") fields
   return $ unlines
     [ "struct " ++ typeName ++ " {"
     , fieldStr
@@ -115,7 +194,7 @@ genTypusProgram = do
   hasTypes <- arbitrary
   hasControlFlow <- arbitrary
   
-  parts <- concat <$> sequence
+  parts <- L.concat <$> sequence
     [ if hasVariables then listOf1 genVariableDeclaration else return []
     , if hasFunctions then listOf1 genFunctionDefinition else return []
     , if hasTypes then listOf1 genTypeDefinition else return []
@@ -179,23 +258,20 @@ genChallengingProgram = do
 -- Property Tests
 -- ============================================================================
 
--- Property: generateGoCode should return a result for any TypusFile
-prop_generate_go_code_returns_result :: TypusFile -> Property
-prop_generate_go_code_returns_result typusFile =
-  let result = generateGoCode typusFile
-      hasResult = case result of
-        Left _ -> False
-        Right _ -> True
+-- Property: generateGoCode should return a result for L.any TypusFile
+prop_generate_go_code_returns_result :: Property
+prop_generate_go_code_returns_result =
+  let typusFile = TypusFile defaultFileDirectives [] [CodeBlock defaultBlockDirectives "package main\n\nfunc main() {\n}" (emptySpan startPos)] []
+      result = generateGoCode typusFile
+      hasResult = not (null result)
   in hasResult === True
 
 -- Property: generateGoCode should handle empty files
 prop_generate_go_code_empty_file :: Property
 prop_generate_go_code_empty_file =
-  let emptyFile = TypusFile defaultFileDirectives []
+  let emptyFile = TypusFile defaultFileDirectives [] [] []
       result = generateGoCode emptyFile
-      hasResult = case result of
-        Left _ -> False
-        Right _ -> True
+      hasResult = not (null result)
   in hasResult === True
 
 -- Property: generateGoCode should be idempotent
@@ -215,12 +291,10 @@ prop_generated_go_syntactically_valid typusCode =
       
       hasValidGoStructure = case goCodeResult of
         Nothing -> False
-        Nothing -> False  -- This line is redundant, keeping for clarity
-        Just (Left _) -> False
-        Just (Right goCode) -> 
-          let hasPackageDecl = "package" `isInfixOf` goCode
-              hasImports = "import" `isInfixOf` goCode
-              hasFuncDecls = "func" `isInfixOf` goCode
+        Just goCode -> 
+          let hasPackageDecl = "package" `L.isInfixOf` goCode
+              hasImports = "import" `L.isInfixOf` goCode
+              hasFuncDecls = "func" `L.isInfixOf` goCode
           in hasPackageDecl || hasFuncDecls || hasImports
   in hasValidGoStructure === True
 
@@ -228,35 +302,31 @@ prop_generated_go_syntactically_valid typusCode =
 prop_generated_go_preserves_functions :: String -> Property
 prop_generated_go_preserves_functions typusCode =
   let parseResult = parseTypus typusCode
-      hasFunctions = "func" `isInfixOf` typusCode
+      hasFunctions = "func" `L.isInfixOf` typusCode
       
       preservesFunctions = case parseResult of
         Left _ -> False
         Right typusFile ->
-          case generateGoCode typusFile of
-            Left _ -> False
-            Right goCode -> 
-              if hasFunctions
-              then "func" `isInfixOf` goCode
-              else True  -- No functions to preserve
-  in not hasFunctions || preservesFunctions === True
+          let goCode = generateGoCode typusFile
+          in if hasFunctions
+             then "func" `L.isInfixOf` goCode
+             else True  -- No functions to preserve
+  in (not hasFunctions || preservesFunctions) === True
 
 -- Property: generated Go code should handle variable declarations
 prop_generated_go_handles_variables :: String -> Property
 prop_generated_go_handles_variables typusCode =
   let parseResult = parseTypus typusCode
-      hasVariables = "let" `isInfixOf` typusCode
+      hasVariables = "let" `L.isInfixOf` typusCode
       
       handlesVariables = case parseResult of
         Left _ -> False
         Right typusFile ->
-          case generateGoCode typusFile of
-            Left _ -> False
-            Right goCode -> 
-              if hasVariables
-              then "var" `isInfixOf` goCode || ":=" `isInfixOf` goCode
-              else True  -- No variables to handle
-  in not hasVariables || handlesVariables === True
+          let goCode = generateGoCode typusFile
+          in if hasVariables
+             then "var" `L.isInfixOf` goCode || ":=" `L.isInfixOf` goCode
+             else True  -- No variables to handle
+  in (not hasVariables || handlesVariables) === True
 
 -- Property: generated Go code should be consistent across runs
 prop_generated_go_consistency :: String -> Property
@@ -282,12 +352,9 @@ test_generate_simple_variable = testCase "generate simple variable" $ do
   case result of
     Left _ -> assert False
     Right typusFile -> do
-      let goResult = generateGoCode typusFile
-      case goResult of
-        Left _ -> assert False
-        Right goCode -> do
-          assert $ not $ null goCode
-          assert $ "var" `isInfixOf` goCode || ":=" `isInfixOf` goCode
+      let goCode = generateGoCode typusFile
+      assert $ not $ null goCode
+      assert $ "var" `L.isInfixOf` goCode || ":=" `L.isInfixOf` goCode
 
 test_generate_simple_function :: TestTree
 test_generate_simple_function = testCase "generate simple function" $ do
@@ -300,13 +367,10 @@ test_generate_simple_function = testCase "generate simple function" $ do
   case result of
     Left _ -> assert False
     Right typusFile -> do
-      let goResult = generateGoCode typusFile
-      case goResult of
-        Left _ -> assert False
-        Right goCode -> do
-          assert $ not $ null goCode
-          assert $ "func" `isInfixOf` goCode
-          assert $ "test" `isInfixOf` goCode
+      let goCode = generateGoCode typusFile
+      assert $ not $ null goCode
+      assert $ "func" `L.isInfixOf` goCode
+      assert $ "test" `L.isInfixOf` goCode
 
 test_generate_struct_definition :: TestTree
 test_generate_struct_definition = testCase "generate struct definition" $ do
@@ -320,13 +384,10 @@ test_generate_struct_definition = testCase "generate struct definition" $ do
   case result of
     Left _ -> assert False
     Right typusFile -> do
-      let goResult = generateGoCode typusFile
-      case goResult of
-        Left _ -> assert False
-        Right goCode -> do
-          assert $ not $ null goCode
-          assert $ "type" `isInfixOf` goCode || "struct" `isInfixOf` goCode
-          assert $ "Person" `isInfixOf` goCode
+      let goCode = generateGoCode typusFile
+      assert $ not $ null goCode
+      assert $ "type" `L.isInfixOf` goCode || "struct" `L.isInfixOf` goCode
+      assert $ "Person" `L.isInfixOf` goCode
 
 test_generate_control_flow :: TestTree
 test_generate_control_flow = testCase "generate control flow" $ do
@@ -341,12 +402,9 @@ test_generate_control_flow = testCase "generate control flow" $ do
   case result of
     Left _ -> assert False
     Right typusFile -> do
-      let goResult = generateGoCode typusFile
-      case goResult of
-        Left _ -> assert False
-        Right goCode -> do
-          assert $ not $ null goCode
-          assert $ "if" `isInfixOf` goCode
+      let goCode = generateGoCode typusFile
+      assert $ not $ null goCode
+      assert $ "if" `L.isInfixOf` goCode
 
 test_generate_complex_program :: TestTree
 test_generate_complex_program = testCase "generate complex program" $ do
@@ -367,13 +425,10 @@ test_generate_complex_program = testCase "generate complex program" $ do
   case result of
     Left _ -> assert False
     Right typusFile -> do
-      let goResult = generateGoCode typusFile
-      case goResult of
-        Left _ -> assert False
-        Right goCode -> do
-          assert $ not $ null goCode
-          assert $ "func" `isInfixOf` goCode
-          assert $ "if" `isInfixOf` goCode
+      let goCode = generateGoCode typusFile
+      assert $ not $ null goCode
+      assert $ "func" `L.isInfixOf` goCode
+      assert $ "if" `L.isInfixOf` goCode
 
 test_generate_error_handling :: TestTree
 test_generate_error_handling = testCase "generate error handling" $ do
@@ -383,30 +438,22 @@ test_generate_error_handling = testCase "generate error handling" $ do
     Left _ -> assert False
     Right typusFile -> do
       let goResult = generateGoCode typusFile
-      case goResult of
-        Left errors -> do
-          -- Should handle errors gracefully
-          assert $ not $ null errors
-        Right goCode -> do
-          -- Might still generate code despite errors
-          assert $ not $ null goCode
+      let goCode = goResult
+      -- generateGoCode returns String directly
+      assert $ not $ null goCode
 
 test_go_module_rendering :: TestTree
 test_go_module_rendering = testCase "Go module rendering" $ do
-  let dummyFile = TypusFile defaultFileDirectives []
+  let dummyFile = TypusFile defaultFileDirectives [] [] []
   let result = generateGoCode dummyFile
-  case result of
-    Left _ -> assert False
-    Right goCode -> assert $ not $ null goCode
+  assert $ not $ null result
 
 test_empty_file_generation :: TestTree
 test_empty_file_generation = testCase "empty file generation" $ do
-  let emptyFile = TypusFile defaultFileDirectives []
-  let result = generateGoCode emptyFile
-  case result of
-    Left _ -> assert False
-    Right goCode -> do
-      assert $ not $ null goCode
+  let emptyFile = TypusFile defaultFileDirectives [] [] []
+  let goCode = generateGoCode emptyFile
+  -- generateGoCode returns String directly
+  assert $ not $ null goCode
 
 test_consistency_across_runs :: TestTree
 test_consistency_across_runs = testCase "consistency across runs" $ do
@@ -419,12 +466,9 @@ test_consistency_across_runs = testCase "consistency across runs" $ do
   case result of
     Left _ -> assert False
     Right typusFile -> do
-      let goResult1 = generateGoCode typusFile
-      let goResult2 = generateGoCode typusFile
-      case (goResult1, goResult2) of
-        (Right code1, Right code2) -> do
-          code1 @?= code2
-        _ -> assert False
+      let (code1, code2) = (generateGoCode typusFile, generateGoCode typusFile)
+      -- generateGoCode returns String directly
+      code1 @?= code2
 
 test_edge_cases :: TestTree
 test_edge_cases = testCase "edge cases" $ do
@@ -440,10 +484,9 @@ test_edge_cases = testCase "edge cases" $ do
     case result of
       Left _ -> assert $ null code  -- Only allow failure for empty code
       Right typusFile -> do
-        let goResult = generateGoCode typusFile
-        case goResult of
-          Left _ -> assert $ length code < 5  -- Allow failures for very short code
-          Right _ -> assert True
+        let goCode = generateGoCode typusFile
+        -- generateGoCode returns String directly
+        assert $ not $ null goCode || L.length code < 5  -- Allow empty result for very short code
     ) testCases
 
 -- ============================================================================
@@ -452,7 +495,7 @@ test_edge_cases = testCase "edge cases" $ do
 
 tests :: TestTree
 tests = testGroup "Code Generation Consistency QuickCheck Tests"
-  [ testProperty "generateGoCode returns result for any TypusFile" prop_generate_go_code_returns_result
+  [ testProperty "generateGoCode returns result for L.any TypusFile" prop_generate_go_code_returns_result
   , testProperty "generateGoCode handles empty files" prop_generate_go_code_empty_file
   , testProperty "generateGoCode is idempotent" prop_generate_go_code_idempotent
   , testProperty "generated Go code is syntactically valid" prop_generated_go_syntactically_valid

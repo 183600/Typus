@@ -10,7 +10,9 @@ import DependentTypesParser
 import Compiler.DependentTypeChecker
 
 import qualified Data.Map.Strict as Map
-import Data.List (isInfixOf, nub)
+import qualified Data.List as L
+import Data.List (isInfixOf)
+import Data.List (nub)
 
 -- Arbitrary instances for dependent types
 instance Arbitrary TypeRef where
@@ -103,7 +105,7 @@ tests = testGroup "Dependent Types System QuickCheck Tests"
   , testProperty "Field names are valid identifiers" testFieldNames
   , testProperty "Type parameters are properly formed" testTypeParameters
   , testProperty "Constraints are syntactically valid" testConstraints
-  , testProperty "Dependent types can be parsed and reconstructed" testDependentTypeParsing
+  , testProperty "Dependent types can be parsed L.and reconstructed" testDependentTypeParsing
   , testProperty "Type validation catches invalid constructs" testTypeValidation
   , testProperty "Generic type arguments are preserved" testGenericTypeArguments
   , testProperty "Constraint expressions are well-formed" testConstraintExpressions
@@ -125,14 +127,14 @@ testTypeRefNesting ref =
 testFieldNames :: Field -> Property
 testFieldNames field =
   let name = fieldName field
-      isValidIdentifier = all (\c -> c == '_' || isAlphaNum c) name && not (null name)
+      isValidIdentifier = L.all (\c -> c == '_' || isAlphaNum c) name && not (null name)
   in isValidIdentifier === True
 
 testTypeParameters :: TypeParameter -> Property
 testTypeParameters param =
   let name = parameterName param
       constraint = parameterConstraint param
-      isValidName = all (\c -> isAlphaNum c) name && not (null name)
+      isValidName = L.all (\c -> isAlphaNum c) name && not (null name)
   in isValidName === True
 
 testConstraints :: TypeConstraint -> Property
@@ -150,40 +152,40 @@ testConstraints constraint =
 testDependentTypeParsing :: DependentType -> Property
 testDependentTypeParsing depType =
   let typeString = show depType
-      hasValidStructure = not (null typeString) && length typeString > 5
+      hasValidStructure = not (null typeString) && L.length typeString > 5
   in hasValidStructure === True
 
 testTypeValidation :: DependentType -> Property
 testTypeValidation depType =
-  let hasValidName = not (null (getTypeName depType))
+  let hasValidName = not (L.null (getTypeName depType))
       hasValidStructure = isWellFormed depType
   in hasValidName .&&. hasValidStructure
 
 testGenericTypeArguments :: TypeRef -> Property
 testGenericTypeArguments ref =
   let args = refArgs ref
-      allArgsValid = all isValidTypeRef args
+      allArgsValid = L.all isValidTypeRef args
   in allArgsValid === True
 
 testConstraintExpressions :: TypeConstraint -> Property
 testConstraintExpressions constraint =
   let expressionString = show constraint
-      isWellFormed = not (null expressionString) && not (isInfixOf "!!" expressionString)
+      isWellFormed = not (null expressionString) && not (L.isInfixOf "!!" expressionString)
   in isWellFormed === True
 
 -- Helper functions
 calculateDepth :: TypeRef -> Int
 calculateDepth (TypeRef _ []) = 0
-calculateDepth (TypeRef _ args) = 1 + maximum (map calculateDepth args)
+calculateDepth (TypeRef _ args) = 1 + L.maximum (map calculateDepth args)
 
 countTypeRefs :: TypeRef -> Int
-countTypeRefs (TypeRef _ args) = 1 + sum (map countTypeRefs args)
+countTypeRefs (TypeRef _ args) = 1 + L.sum (map countTypeRefs args)
 
 validVariable :: String -> Bool
-validVariable var = all (\c -> isAlphaNum c) var && not (null var)
+validVariable var = L.all (\c -> isAlphaNum c) var && not (null var)
 
 validExpression :: String -> Bool
-validExpression expr = not (null expr) && length expr > 0
+validExpression expr = not (null expr) && L.length expr > 0
 
 validValue :: String -> Bool
 validValue value = not (null value)
@@ -192,13 +194,13 @@ validLength :: Int -> Bool
 validLength len = len >= 0
 
 validPredicate :: String -> Bool
-validPredicate pred = not (null pred) && all (\c -> isAlphaNum c) pred
+validPredicate pred = not (null pred) && L.all (\c -> isAlphaNum c) pred
 
 validArgs :: [String] -> Bool
-validArgs args = all (not . null) args
+validArgs args = L.all (not . null) args
 
 isValidTypeRef :: TypeRef -> Bool
-isValidTypeRef (TypeRef name args) = not (null name) && all isValidTypeRef args
+isValidTypeRef (TypeRef name args) = not (null name) && L.all isValidTypeRef args
 
 isAlphaNum :: Char -> Bool
 isAlphaNum c = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
@@ -210,9 +212,9 @@ getTypeName (TypeAlias name _ _) = name
 
 isWellFormed :: DependentType -> Bool
 isWellFormed (TypeDecl name params body constraints) = 
-  not (null name) && all isValidParameter params && isValidBody body
+  not (null name) && L.all isValidParameter params && isValidBody body
 isWellFormed (DependentFunction name params returnType constraints) = 
-  not (null name) && all isValidParam params
+  not (null name) && L.all isValidParam params
 isWellFormed (TypeAlias name target constraints) = 
   not (null name) && isValidTypeRef target
 
@@ -223,13 +225,13 @@ isValidParam :: (String, TypeRef) -> Bool
 isValidParam (name, typeRef) = not (null name) && isValidTypeRef typeRef
 
 isValidBody :: TypeBody -> Bool
-isValidBody (StructBody fields) = all isValidField fields
+isValidBody (StructBody fields) = L.all isValidField fields
 
 isValidField :: Field -> Bool
 isValidField (Field name fieldType) = not (null name) && isValidTypeRef fieldType
 
 validClassName :: String -> Bool
-validClassName name = not (null name) && all isAlphaNum name
+validClassName name = not (null name) && L.all isAlphaNum name
 
 validConstraintName :: String -> Bool
-validConstraintName name = not (null name) && all (\c -> isAlphaNum c || c == '_') name
+validConstraintName name = not (null name) && L.all (\c -> isAlphaNum c || c == '_') name

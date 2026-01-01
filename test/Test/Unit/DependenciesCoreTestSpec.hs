@@ -1,6 +1,7 @@
 module Test.Unit.DependenciesCoreTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, (==>), oneof, elements, listOf, choose)
 import qualified Test.Tasty.QuickCheck as QC
@@ -100,7 +101,7 @@ tests =
             assertBool "Same constructors should be equal" $ tv1 == tv2
             assertBool "Different constructors should not be equal" $ tv1 /= tv3
             assertBool "Same variables should be equal" $ tv4 == tv5
-            assertBool "Constructor and variable should not be equal" $ tv1 /= tv4
+            assertBool "Constructor L.and variable should not be equal" $ tv1 /= tv4
 
         , testCase "TypeVar ordering works consistently" $ do
             let tv1 = TVCon "a"
@@ -113,8 +114,8 @@ tests =
             let funcType = TVFun [TVCon "int", TVCon "string"] (TVCon "bool")
             case funcType of
               TVFun args ret -> do
-                assertBool "Should have 2 arguments" $ length args == 2
-                head args @?= TVCon "int"
+                assertBool "Should have 2 arguments" $ L.length args == 2
+                L.head args @?= TVCon "int"
                 args !! 1 @?= TVCon "string"
                 ret @?= TVCon "bool"
               _ -> assertBool "Should be TVFun" False
@@ -123,8 +124,8 @@ tests =
             let tupleType = TVTuple [TVCon "int", TVCon "string", TVCon "bool"]
             case tupleType of
               TVTuple elems -> do
-                assertBool "Should have 3 elements" $ length elems == 3
-                head elems @?= TVCon "int"
+                assertBool "Should have 3 elements" $ L.length elems == 3
+                L.head elems @?= TVCon "int"
                 elems !! 1 @?= TVCon "string"
                 elems !! 2 @?= TVCon "bool"
               _ -> assertBool "Should be TVTuple" False
@@ -195,8 +196,8 @@ tests =
             assertBool "Should have string type" $ Map.member "string" defs
             assertBool "Should have bool type" $ Map.member "bool" defs
             assertBool "Should have float64 type" $ Map.member "float64" defs
-            assertBool "Should start with no errors" $ null $ tcErrors checker
-            assertBool "Should start with no pending constraints" $ null $ pendingConstraints env
+            assertBool "Should start with no errors" $ L.null $ tcErrors checker
+            assertBool "Should start with no pending constraints" $ L.null $ pendingConstraints env
 
         , testCase "newDependentTypeCheckerWithTypes adds custom types" $ do
             let customTypes = [("custom", ["T"], [TypeSizeGE (TVVar "T") 0])]
@@ -207,7 +208,7 @@ tests =
             case Map.lookup "custom" defs of
               Just (TypeDefDecl params constraints) -> do
                 params @?= ["T"]
-                assertBool "Should have one constraint" $ length constraints == 1
+                assertBool "Should have one constraint" $ L.length constraints == 1
               _ -> assertBool "Should find custom type definition" False
 
         , testCase "addType adds type to environment" $ do
@@ -219,7 +220,7 @@ tests =
             case Map.lookup "newtype" defs of
               Just (TypeDefDecl params constraints) -> do
                 params @?= ["A", "B"]
-                assertBool "Should have one constraint" $ length constraints == 1
+                assertBool "Should have one constraint" $ L.length constraints == 1
               _ -> assertBool "Should find newtype definition" False
 
         , testCase "addConstraint adds pending constraint" $ do
@@ -228,16 +229,16 @@ tests =
                 ((), checker) = runState (addConstraint constraint) initialChecker
             let env = dtcTypeEnv checker
             let constraints = pendingConstraints env
-            assertBool "Should have one pending constraint" $ length constraints == 1
-            head constraints @?= constraint
+            assertBool "Should have one pending constraint" $ L.length constraints == 1
+            L.head constraints @?= constraint
 
         , testCase "addTypeError adds error to checker" $ do
             let initialChecker = newDependentTypeChecker
                 error = TypeNotFound "unknownType"
                 ((), checker) = runState (addTypeError error) initialChecker
             let errors = tcErrors checker
-            assertBool "Should have one error" $ length errors == 1
-            head errors @?= error
+            assertBool "Should have one error" $ L.length errors == 1
+            L.head errors @?= error
 
         , testCase "lookupTypeDef finds existing types" $ do
             let checker = newDependentTypeChecker
@@ -257,38 +258,38 @@ tests =
     , testGroup "Type Conversion"
         [ testCase "convertTypeExpr handles simple types" $ do
             let params = Set.empty
-                typeExpr = SimpleT "int"
+                typeExpr = SimpleT (T.pack "int")
                 typeVar = convertTypeExpr params typeExpr
             typeVar @?= TVCon "int"
 
         , testCase "convertTypeExpr handles generic types" $ do
             let params = Set.empty
-                typeExpr = GenericT "list" [SimpleT "int"]
+                typeExpr = GenericT "list" [SimpleT (T.pack "int")]
                 typeVar = convertTypeExpr params typeExpr
             case typeVar of
               TVApp "list" args -> do
-                assertBool "Should have one argument" $ length args == 1
-                head args @?= TVCon "int"
+                assertBool "Should have one argument" $ L.length args == 1
+                L.head args @?= TVCon "int"
               _ -> assertBool "Should be TVApp" False
 
         , testCase "convertTypeExpr handles function types" $ do
             let params = Set.empty
-                typeExpr = FuncT [("x", SimpleT "int")] (SimpleT "bool")
+                typeExpr = FuncT [("x", SimpleT (T.pack "int"))] (SimpleT (T.pack "bool"))
                 typeVar = convertTypeExpr params typeExpr
             case typeVar of
               TVFun args ret -> do
-                assertBool "Should have one argument" $ length args == 1
-                head args @?= TVCon "int"
+                assertBool "Should have one argument" $ L.length args == 1
+                L.head args @?= TVCon "int"
                 ret @?= TVCon "bool"
               _ -> assertBool "Should be TVFun" False
 
         , testCase "convertTypeExprAndRefinements extracts constraints" $ do
             let params = Set.fromList ["n"]
-                typeExpr = RefineT (SimpleT "n") [SizeGE "n" 0]
+                typeExpr = RefineT (SimpleT (T.pack "n")) [SizeGE "n" 0]
                 (typeVar, constraints) = convertTypeExprAndRefinements params typeExpr
             typeVar @?= TVVar "n"
-            assertBool "Should have one constraint" $ length constraints == 1
-            case head constraints of
+            assertBool "Should have one constraint" $ L.length constraints == 1
+            case L.head constraints of
               TypeSizeGE (TVVar "n") k -> k @?= 0
               _ -> assertBool "Should be TypeSizeGE" False
 
@@ -302,12 +303,12 @@ tests =
 
         , testCase "convertConstraint handles predicate constraints" $ do
             let params = Set.empty
-                constraint = PredC "positive" [SimpleT "int"]
+                constraint = PredC "positive" [SimpleT (T.pack "int")]
                 typeConstraint = convertConstraint params constraint
             case typeConstraint of
               Predicate "positive" args -> do
-                assertBool "Should have one argument" $ length args == 1
-                head args @?= TVCon "int"
+                assertBool "Should have one argument" $ L.length args == 1
+                L.head args @?= TVCon "int"
               _ -> assertBool "Should be Predicate" False
         ]
 
@@ -315,23 +316,23 @@ tests =
         [ testCase "checkType validates constructor types" $ do
             let initialChecker = newDependentTypeChecker
                 ((), checker) = runState (checkType (TVCon "int")) initialChecker
-            assertBool "Should not add errors for valid type" $ null $ tcErrors checker
+            assertBool "Should not add errors for valid type" $ L.null $ tcErrors checker
 
         , testCase "checkType adds error for unknown constructor" $ do
             let initialChecker = newDependentTypeChecker
                 ((), checker) = runState (checkType (TVCon "unknown")) initialChecker
             let errors = tcErrors checker
             assertBool "Should add error for unknown type" $ not $ null errors
-            case head errors of
+            case L.head errors of
               TypeNotFound name -> name @?= "unknown"
               _ -> assertBool "Should be TypeNotFound error" False
 
-        , testCase "getDependentTypeErrors returns all errors" $ do
+        , testCase "getDependentTypeErrors returns L.all errors" $ do
             let initialChecker = newDependentTypeChecker
                 ((), checker1) = runState (addTypeError (TypeNotFound "error1")) initialChecker
                 ((), checker2) = runState (addTypeError (SemanticError "error2")) checker1
             let errors = getDependentTypeErrors checker2
-            assertBool "Should have 2 errors" $ length errors == 2
+            assertBool "Should have 2 errors" $ L.length errors == 2
         ]
 
     , testGroup "QuickCheck Properties"
@@ -354,7 +355,7 @@ tests =
             \checker -> checker == checker
 
         , testProperty "newDependentTypeChecker has no errors" $
-            \_ -> null $ tcErrors newDependentTypeChecker
+            \_ -> L.null $ tcErrors newDependentTypeChecker
 
         , testProperty "newDependentTypeCheckerWithTypes preserves custom types" $
             \typeDefs ->
@@ -362,7 +363,7 @@ tests =
                   env = dtcTypeEnv checker
                   defs = typeDefinitions env
                   customNames = [name | (name, _, _) <- typeDefs]
-              in all (`Map.member` defs) customNames
+              in L.all (`Map.member` defs) customNames
 
         , testProperty "addType preserves existing types" $
             \name params constraints ->

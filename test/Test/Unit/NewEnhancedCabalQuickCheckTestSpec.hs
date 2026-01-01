@@ -13,7 +13,9 @@ import Utils (trim, splitBy, splitByCollapsed, splitByComma, removeLineComments,
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos, posAfter, emptySpan, spanFrom, mergeSpans, isValidSpan)
 import qualified Data.Text as T
 import Data.Char (isSpace, isAlphaNum)
-import Data.List (isPrefixOf, isInfixOf, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (nub)
 
 -- | 10个新的QuickCheck测试用例，覆盖Typus项目的核心功能
 tests :: TestTree
@@ -70,7 +72,7 @@ propSplitByRoundtrip delim input =
 propSplitByCollapsedNoEmpty :: Char -> String -> Bool
 propSplitByCollapsedNoEmpty delim input =
   let parts = splitByCollapsed delim input
-  in all (not . null) parts
+  in L.all (not . null) parts
 
 -- | breakOn的结果连接起来等于原始字符串
 propBreakOnRoundtrip :: String -> String -> Bool
@@ -136,12 +138,12 @@ propIndentationPreservesStructure input =
       originalLines = lines input
       normalizedLines = lines normalized
       -- 检查非空行的相对关系是否保持
-      originalIndents = map (length . takeWhile isSpace) $ filter (not . all isSpace) originalLines
-      normalizedIndents = map (length . takeWhile isSpace) $ filter (not . all isSpace) normalizedLines
-  in length originalIndents == length normalizedIndents &&
+      originalIndents = L.map (L.length . takeWhile isSpace) $ L.filter (not . L.all isSpace) originalLines
+      normalizedIndents = L.map (L.length . takeWhile isSpace) $ L.filter (not . L.all isSpace) normalizedLines
+  in L.length originalIndents == L.length normalizedIndents &&
      if not (null originalIndents) && not (null normalizedIndents)
-     then all (>=0) (zipWith (-) (tail normalizedIndents) (init normalizedIndents)) ==
-        all (>=0) (zipWith (-) (tail originalIndents) (init originalIndents))
+     then L.all (>=0) (zipWith (-) (L.tail normalizedIndents) (init normalizedIndents)) ==
+        L.all (>=0) (zipWith (-) (L.tail originalIndents) (init originalIndents))
      else True
 
 -- ============================================================================

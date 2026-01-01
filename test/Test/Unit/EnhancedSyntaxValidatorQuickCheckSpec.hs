@@ -27,7 +27,9 @@ import SyntaxValidator
   )
 
 import Data.Char (isAlphaNum, isAlpha, isDigit, isSpace)
-import Data.List (isPrefixOf, isInfixOf, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (nub)
 import qualified Data.Set as Set
 
 -- Property: ErrorType equality is reflexive
@@ -60,7 +62,7 @@ prop_validate_syntax_empty =
 -- Property: validateSyntax handles whitespace only
 prop_validate_syntax_whitespace :: String -> Property
 prop_validate_syntax_whitespace input =
-  all isSpace input ==>
+  L.all isSpace input ==>
   let validator = newSyntaxValidator
       result = validateSyntax validator input
   in case result of
@@ -70,8 +72,8 @@ prop_validate_syntax_whitespace input =
 -- Property: validateSyntax handles simple identifiers
 prop_validate_syntax_identifiers :: [String] -> Property
 prop_validate_syntax_identifiers identifiers =
-  not (null identifiers) && all (not . null) identifiers &&
-  all (all isAlphaNum) identifiers ==>
+  not (null identifiers) && L.all (not . null) identifiers &&
+  L.all (L.all isAlphaNum) identifiers ==>
   let input = unwords identifiers
       validator = newSyntaxValidator
       result = validateSyntax validator input
@@ -82,8 +84,8 @@ prop_validate_syntax_identifiers identifiers =
 -- Property: validateSyntax handles balanced braces
 prop_validate_syntax_balanced_braces :: String -> Property
 prop_validate_syntax_balanced_braces content =
-  let openCount = length (filter (== '{') content)
-      closeCount = length (filter (== '}') content)
+  let openCount = L.length (L.filter (== '{') content)
+      closeCount = L.length (L.filter (== '}') content)
       balanced = openCount == closeCount
   in balanced ==>
   let validator = newSyntaxValidator
@@ -95,8 +97,8 @@ prop_validate_syntax_balanced_braces content =
 -- Property: validateSyntax detects unbalanced braces
 prop_validate_syntax_unbalanced_braces :: String -> Property
 prop_validate_syntax_unbalanced_braces content =
-  let openCount = length (filter (== '{') content)
-      closeCount = length (filter (== '}') content)
+  let openCount = L.length (L.filter (== '{') content)
+      closeCount = L.length (L.filter (== '}') content)
       unbalanced = openCount /= closeCount
   in unbalanced ==>
   let validator = newSyntaxValidator
@@ -105,14 +107,14 @@ prop_validate_syntax_unbalanced_braces content =
     Left _ -> property True
     Right newValidator -> 
       let errors = getSyntaxErrors newValidator
-          hasBraceError = any (\err -> errorType err `elem` [MissingBrace, UnterminatedBlock]) errors
+          hasBraceError = L.any (\err -> errorType err `elem` [MissingBrace, UnterminatedBlock]) errors
       in property $ hasBraceError || not (null errors)
 
 -- Property: validateSyntax handles balanced parentheses
 prop_validate_syntax_balanced_parens :: String -> Property
 prop_validate_syntax_balanced_parens content =
-  let openCount = length (filter (== '(') content)
-      closeCount = length (filter (== ')') content)
+  let openCount = L.length (L.filter (== '(') content)
+      closeCount = L.length (L.filter (== ')') content)
       balanced = openCount == closeCount
   in balanced ==>
   let validator = newSyntaxValidator
@@ -124,8 +126,8 @@ prop_validate_syntax_balanced_parens content =
 -- Property: validateSyntax detects unbalanced parentheses
 prop_validate_syntax_unbalanced_parens :: String -> Property
 prop_validate_syntax_unbalanced_parens content =
-  let openCount = length (filter (== '(') content)
-      closeCount = length (filter (== ')') content)
+  let openCount = L.length (L.filter (== '(') content)
+      closeCount = L.length (L.filter (== ')') content)
       unbalanced = openCount /= closeCount
   in unbalanced ==>
   let validator = newSyntaxValidator
@@ -134,14 +136,14 @@ prop_validate_syntax_unbalanced_parens content =
     Left _ -> property True
     Right newValidator -> 
       let errors = getSyntaxErrors newValidator
-          hasParenError = any (\err -> errorType err == MissingParenthesis) errors
+          hasParenError = L.any (\err -> errorType err == MissingParenthesis) errors
       in property $ hasParenError || not (null errors)
 
 -- Property: validateSyntax handles balanced brackets
 prop_validate_syntax_balanced_brackets :: String -> Property
 prop_validate_syntax_balanced_brackets content =
-  let openCount = length (filter (== '[') content)
-      closeCount = length (filter (== ']') content)
+  let openCount = L.length (L.filter (== '[') content)
+      closeCount = L.length (L.filter (== ']') content)
       balanced = openCount == closeCount
   in balanced ==>
   let validator = newSyntaxValidator
@@ -153,8 +155,8 @@ prop_validate_syntax_balanced_brackets content =
 -- Property: validateSyntax detects unbalanced brackets
 prop_validate_syntax_unbalanced_brackets :: String -> Property
 prop_validate_syntax_unbalanced_brackets content =
-  let openCount = length (filter (== '[') content)
-      closeCount = length (filter (== ']') content)
+  let openCount = L.length (L.filter (== '[') content)
+      closeCount = L.length (L.filter (== ']') content)
       unbalanced = openCount /= closeCount
   in unbalanced ==>
   let validator = newSyntaxValidator
@@ -163,14 +165,14 @@ prop_validate_syntax_unbalanced_brackets content =
     Left _ -> property True
     Right newValidator -> 
       let errors = getSyntaxErrors newValidator
-          hasBracketError = any (\err -> errorType err == MissingBracket) errors
+          hasBracketError = L.any (\err -> errorType err == MissingBracket) errors
       in property $ hasBracketError || not (null errors)
 
 -- Property: validateSyntax handles string literals
 prop_validate_syntax_strings :: [String] -> Property
 prop_validate_syntax_strings stringContents =
-  not (null stringContents) && all (not . any (`elem` "\\\"")) stringContents ==>
-  let quotedStrings = map (\s -> "\"" ++ s ++ "\"") stringContents
+  not (null stringContents) && L.all (not . L.any (`elem` "\\\"")) stringContents ==>
+  let quotedStrings = L.map (\s -> "\"" ++ s ++ "\"") stringContents
       input = unwords quotedStrings
       validator = newSyntaxValidator
       result = validateSyntax validator input
@@ -189,14 +191,14 @@ prop_validate_syntax_unclosed_strings content =
     Left _ -> property True
     Right newValidator -> 
       let errors = getSyntaxErrors newValidator
-          hasStringError = any (\err -> errorType err == UnclosedString) errors
+          hasStringError = L.any (\err -> errorType err == UnclosedString) errors
       in property $ hasStringError || not (null errors)
 
 -- Property: validateSyntax handles comments
 prop_validate_syntax_comments :: [String] -> Property
 prop_validate_syntax_comments commentContents =
-  not (null commentContents) && all (not . any (`elem` "\\\"")) commentContents ==>
-  let comments = map (\s -> "// " ++ s) commentContents
+  not (null commentContents) && L.all (not . L.any (`elem` "\\\"")) commentContents ==>
+  let comments = L.map (\s -> "// " ++ s) commentContents
       input = unlines comments
       validator = newSyntaxValidator
       result = validateSyntax validator input
@@ -207,7 +209,7 @@ prop_validate_syntax_comments commentContents =
 -- Property: validateSyntax handles multiline comments
 prop_validate_syntax_multiline_comments :: String -> Property
 prop_validate_syntax_multiline_comments content =
-  not (null content) && not ("*/" `isInfixOf` content) ==>
+  not (null content) && not ("*/" `L.isInfixOf` content) ==>
   let input = "/* " ++ content ++ " */"
       validator = newSyntaxValidator
       result = validateSyntax validator input
@@ -218,7 +220,7 @@ prop_validate_syntax_multiline_comments content =
 -- Property: validateSyntax detects unclosed multiline comments
 prop_validate_syntax_unclosed_multiline_comments :: String -> Property
 prop_validate_syntax_unclosed_multiline_comments content =
-  not (null content) && not ("*/" `isInfixOf` content) ==>
+  not (null content) && not ("*/" `L.isInfixOf` content) ==>
   let input = "/* " ++ content  -- Unclosed comment
       validator = newSyntaxValidator
       result = validateSyntax validator input
@@ -226,15 +228,15 @@ prop_validate_syntax_unclosed_multiline_comments content =
     Left _ -> property True
     Right newValidator -> 
       let errors = getSyntaxErrors newValidator
-          hasCommentError = any (\err -> errorType err == UnclosedComment) errors
+          hasCommentError = L.any (\err -> errorType err == UnclosedComment) errors
       in property $ hasCommentError || not (null errors)
 
 -- Property: validateSyntax handles function declarations
 prop_validate_syntax_functions :: [String] -> Property
 prop_validate_syntax_functions functionNames =
-  not (null functionNames) && all (not . null) functionNames &&
-  all (all isAlphaNum) functionNames ==>
-  let functionDecls = map (\name -> "func " ++ name ++ "() {}") functionNames
+  not (null functionNames) && L.all (not . null) functionNames &&
+  L.all (L.all isAlphaNum) functionNames ==>
+  let functionDecls = L.map (\name -> "func " ++ name ++ "() {}") functionNames
       input = unlines functionDecls
       validator = newSyntaxValidator
       result = validateSyntax validator input
@@ -245,9 +247,9 @@ prop_validate_syntax_functions functionNames =
 -- Property: validateSyntax handles variable declarations
 prop_validate_syntax_variables :: [String] -> Property
 prop_validate_syntax_variables variableNames =
-  not (null variableNames) && all (not . null) variableNames &&
-  all (all isAlphaNum) variableNames ==>
-  let varDecls = map (\name -> "var " ++ name ++ " int") variableNames
+  not (null variableNames) && L.all (not . null) variableNames &&
+  L.all (L.all isAlphaNum) variableNames ==>
+  let varDecls = L.map (\name -> "var " ++ name ++ " int") variableNames
       input = unlines varDecls
       validator = newSyntaxValidator
       result = validateSyntax validator input
@@ -258,9 +260,9 @@ prop_validate_syntax_variables variableNames =
 -- Property: validateSyntax handles type declarations
 prop_validate_syntax_types :: [String] -> Property
 prop_validate_syntax_types typeNames =
-  not (null typeNames) && all (not . null) typeNames &&
-  all (all isAlphaNum) typeNames ==>
-  let typeDecls = map (\name -> "type " ++ name ++ " int") typeNames
+  not (null typeNames) && L.all (not . null) typeNames &&
+  L.all (L.all isAlphaNum) typeNames ==>
+  let typeDecls = L.map (\name -> "type " ++ name ++ " int") typeNames
       input = unlines typeDecls
       validator = newSyntaxValidator
       result = validateSyntax validator input
@@ -271,9 +273,9 @@ prop_validate_syntax_types typeNames =
 -- Property: validateSyntax handles import statements
 prop_validate_syntax_imports :: [String] -> Property
 prop_validate_syntax_imports importPaths =
-  not (null importPaths) && all (not . null) importPaths &&
-  all (all (`elem` "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/.")) importPaths ==>
-  let importDecls = map (\path -> "import \"" ++ path ++ "\"") importPaths
+  not (null importPaths) && L.all (not . null) importPaths &&
+  L.all (L.all (`elem` "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/.")) importPaths ==>
+  let importDecls = L.map (\path -> "import \"" ++ path ++ "\"") importPaths
       input = unlines importDecls
       validator = newSyntaxValidator
       result = validateSyntax validator input
@@ -284,7 +286,7 @@ prop_validate_syntax_imports importPaths =
 -- Property: validateSyntax handles package declarations
 prop_validate_syntax_package :: String -> Property
 prop_validate_syntax_package packageName =
-  not (null packageName) && all isAlphaNum packageName ==>
+  not (null packageName) && L.all isAlphaNum packageName ==>
   let input = "package " ++ packageName
       validator = newSyntaxValidator
       result = validateSyntax validator input
@@ -325,21 +327,21 @@ prop_format_syntax_error_includes_message :: SyntaxError -> Property
 prop_format_syntax_error_includes_message error =
   let formatted = formatSyntaxError error
       msg = errorMessage error
-  in property $ msg `isInfixOf` formatted
+  in property $ msg `L.isInfixOf` formatted
 
 -- Property: formatSyntaxError includes line number
 prop_format_syntax_error_includes_line :: SyntaxError -> Property
 prop_format_syntax_error_includes_line error =
   let formatted = formatSyntaxError error
       line = lineNumber error
-  in property $ show line `isInfixOf` formatted
+  in property $ show line `L.isInfixOf` formatted
 
 -- Property: formatSyntaxError includes column number
 prop_format_syntax_error_includes_column :: SyntaxError -> Property
 prop_format_syntax_error_includes_column error =
   let formatted = formatSyntaxError error
       column = columnNumber error
-  in property $ show column `isInfixOf` formatted
+  in property $ show column `L.isInfixOf` formatted
 
 -- Property: Syntax validation is deterministic
 prop_syntax_validation_deterministic :: String -> Property
@@ -352,7 +354,7 @@ prop_syntax_validation_deterministic content =
     (Right v1, Right v2) ->
       let errors1 = getSyntaxErrors v1
           errors2 = getSyntaxErrors v2
-      in property $ length errors1 == length errors2
+      in property $ L.length errors1 == L.length errors2
     _ -> property True  -- Handle error cases consistently
 
 tests :: TestTree

@@ -37,7 +37,9 @@ import SourceLocation
 
 import Data.Char (isSpace, toLower)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, tails, isInfixOf, sort, intercalate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (tails, sort, intercalate)
 
 -- Property: Position creation is consistent
 prop_position_creation_consistent :: Int -> Int -> Property
@@ -54,7 +56,7 @@ prop_sourcelocation_creation_preserves_file file line col =
       pos = mkPosition line col
   in sourceFile loc === file .&&. sourceLine loc === line .&&. sourceColumn loc === col
 
--- Property: Span length calculation is accurate
+-- Property: Span L.length calculation is accurate
 prop_span_length_accurate :: Int -> Int -> Int -> Property
 prop_span_length_accurate startLine startCol endLine endCol =
   startLine >= 1 && startCol >= 1 && endLine >= 1 && endCol >= 1 &&
@@ -163,7 +165,7 @@ prop_position_ordering_transitive line1 col1 line2 col2 line3 col3 =
       cmp13 = positionCompare pos1 pos3
   in (cmp12 == LT && cmp23 == LT) ==> cmp13 == LT
 
--- Property: Span length is non-negative
+-- Property: Span L.length is non-negative
 prop_span_length_non_negative :: Int -> Int -> Int -> Int -> Property
 prop_span_length_non_negative startLine startCol endLine endCol =
   startLine >= 1 && startCol >= 1 && endLine >= 1 && endCol >= 1 &&
@@ -179,7 +181,7 @@ prop_sourcelocation_same_position_equal file line col =
       loc2 = mkSourceLocation file line col
   in loc1 === loc2
 
--- Property: Merged span start is minimum of starts
+-- Property: Merged span start is L.minimum of starts
 prop_merged_span_start_is_min :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Property
 prop_merged_span_start_is_min start1Line start1Col end1Line end1Col 
                               start2Line start2Col end2Line end2Col =
@@ -197,7 +199,7 @@ prop_merged_span_start_is_min start1Line start1Col end1Line end1Col
       start2 = spanStart span2
   in positionCompare mergedStart start1 /= GT .&&. positionCompare mergedStart start2 /= GT
 
--- Property: Merged span end is maximum of ends
+-- Property: Merged span end is L.maximum of ends
 prop_merged_span_end_is_max :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Property
 prop_merged_span_end_is_max start1Line start1Col end1Line end1Col 
                             start2Line start2Col end2Line end2Col =
@@ -233,7 +235,7 @@ prop_span_contains_end startLine startCol endLine endCol =
       endPos = spanEnd span
   in positionWithin endPos span
 
--- Property: Zero-length span contains only its position
+-- Property: Zero-L.length span contains only its position
 prop_zero_length_span_contains_only_position :: Int -> Int -> Property
 prop_zero_length_span_contains_only_position line col =
   line >= 1 && col >= 1 && line <= 1000 && col <= 1000 ==>
@@ -241,7 +243,7 @@ prop_zero_length_span_contains_only_position line col =
       span = Span pos pos
   in positionWithin pos span .&&. spanLength span === 1
 
--- Property: Span length calculation with multi-line spans
+-- Property: Span L.length calculation with multi-line spans
 prop_span_length_multi_line :: Int -> Int -> Int -> Property
 prop_span_length_multi_line startLine startCol numLines =
   startLine >= 1 && startCol >= 1 && numLines >= 1 && numLines <= 10 &&
@@ -257,12 +259,12 @@ prop_span_length_multi_line startLine startCol numLines =
 -- Property: Complex span merging maintains order
 prop_complex_span_merging_order :: [Int] -> Property
 prop_complex_span_merging_order lineNumbers =
-  not (null lineNumbers) && all (>=1) lineNumbers && all (<=1000) lineNumbers ==>
+  not (null lineNumbers) && L.all (>=1) lineNumbers && L.all (<=1000) lineNumbers ==>
   let sortedLines = sort lineNumbers
-      positions = map (`mkPosition` 1) sortedLines
-      spans = zipWith Span positions (tail positions ++ [last positions])
-      merged = foldl mergeSpans (head spans) (tail spans)
-  in spanLength merged >= length lineNumbers - 1
+      positions = L.map (`mkPosition` 1) sortedLines
+      spans = zipWith Span positions (L.tail positions ++ [last positions])
+      merged = foldl mergeSpans (L.head spans) (L.tail spans)
+  in spanLength merged >= L.length lineNumbers - 1
 
 -- Property: Span overlap detection is accurate
 prop_span_overlap_detection_accurate :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Property
@@ -299,7 +301,7 @@ tests :: TestTree
 tests = testGroup "SourceLocation Advanced Tests"
   [ fastProperty "Position creation is consistent" prop_position_creation_consistent
   , fastProperty "SourceLocation creation preserves file information" prop_sourcelocation_creation_preserves_file
-  , fastProperty "Span length calculation is accurate" prop_span_length_accurate
+  , fastProperty "Span L.length calculation is accurate" prop_span_length_accurate
   , fastProperty "Position comparison is antisymmetric" prop_position_comparison_antisymmetric
   , fastProperty "Position within span is consistent" prop_position_within_span_consistent
   , fastProperty "Span merging preserves containment" prop_span_merging_preserves_containment
@@ -307,14 +309,14 @@ tests = testGroup "SourceLocation Advanced Tests"
   , fastProperty "Span overlaps is symmetric" prop_span_overlaps_symmetric
   , fastProperty "Merged span contains both original spans" prop_merged_span_contains_originals
   , fastProperty "Position ordering is transitive" prop_position_ordering_transitive
-  , fastProperty "Span length is non-negative" prop_span_length_non_negative
+  , fastProperty "Span L.length is non-negative" prop_span_length_non_negative
   , fastProperty "Source location with same position are equal" prop_sourcelocation_same_position_equal
-  , fastProperty "Merged span start is minimum of starts" prop_merged_span_start_is_min
-  , fastProperty "Merged span end is maximum of ends" prop_merged_span_end_is_max
+  , fastProperty "Merged span start is L.minimum of starts" prop_merged_span_start_is_min
+  , fastProperty "Merged span end is L.maximum of ends" prop_merged_span_end_is_max
   , fastProperty "Span contains its start position" prop_span_contains_start
   , fastProperty "Span contains its end position" prop_span_contains_end
-  , fastProperty "Zero-length span contains only its position" prop_zero_length_span_contains_only_position
-  , fastProperty "Span length calculation with multi-line spans" prop_span_length_multi_line
+  , fastProperty "Zero-L.length span contains only its position" prop_zero_length_span_contains_only_position
+  , fastProperty "Span L.length calculation with multi-line spans" prop_span_length_multi_line
   , fastProperty "Complex span merging maintains order" prop_complex_span_merging_order
   , fastProperty "Span overlap detection is accurate" prop_span_overlap_detection_accurate
   , fastProperty "Position distance calculation consistency" prop_position_distance_consistency

@@ -21,7 +21,9 @@ import Parser
     )
 
 import Utils (trim, splitBy, removeComments)
-import Data.List (isPrefixOf, isInfixOf, intercalate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (intercalate)
 import Data.Char (isSpace, isAlphaNum)
 
 -- | QuickCheck property tests for Parser combinator properties
@@ -65,14 +67,14 @@ tests =
         , fastProperty "block directives maintain order" $
             \blocks ->
               let ordered = blocks
-              in property $ length ordered >= 0 -- Should maintain order
+              in property $ L.length ordered >= 0 -- Should maintain order
               
         , fastProperty "block directive parsing is deterministic" $
             \content ->
               let parsed1 = parseTypus content
                   parsed2 = parseTypus content
               in case (parsed1, parsed2) of
-                (Right file1, Right file2) -> length (tfBlocks file1) === length (tfBlocks file2)
+                (Right file1, Right file2) -> L.length (tfBlocks file1) === L.length (tfBlocks file2)
                 (Left _, Left _) -> property True
                 _ -> property False
         ]
@@ -94,7 +96,7 @@ tests =
               let block = CodeBlock defaultBlockDirectives content
                   trimmed = trim (cbContent block)
               in not (null content) ==> 
-                 (null trimmed || not (isSpace (head trimmed))) .&&.
+                 (null trimmed || not (isSpace (L.head trimmed))) .&&.
                  (null trimmed || not (isSpace (last trimmed)))
         ]
 
@@ -116,7 +118,7 @@ tests =
             \content ->
               let parsed = parseTypus content
               in case parsed of
-                Right file -> length (tfBlocks file) >= 0
+                Right file -> L.length (tfBlocks file) >= 0
                 Left _ -> property True
         ]
 
@@ -128,7 +130,7 @@ tests =
                   parsed2 = parseTypus spaced
               in case (parsed1, parsed2) of
                 (Right file1, Right file2) -> 
-                  length (tfBlocks file1) === length (tfBlocks file2)
+                  L.length (tfBlocks file1) === L.length (tfBlocks file2)
                 (Left _, Left _) -> property True
                 _ -> property True
               
@@ -140,7 +142,7 @@ tests =
                   parsed2 = parseTypus withoutComments
               in case (parsed1, parsed2) of
                 (Right file1, Right file2) -> 
-                  length (tfBlocks file1) >= length (tfBlocks file2)
+                  L.length (tfBlocks file1) >= L.length (tfBlocks file2)
                 (Left _, Left _) -> property True
                 _ -> property True
               
@@ -148,7 +150,7 @@ tests =
             \_ ->
               let parsed = parseTypus ""
               in case parsed of
-                Right file -> length (tfBlocks file) === 0
+                Right file -> L.length (tfBlocks file) === 0
                 Left _ -> property True -- Parse errors are acceptable
         ]
 
@@ -163,14 +165,14 @@ tests =
         , fastProperty "directive ordering preservation" $
             \directives ->
               let ordered = directives
-              in property $ length ordered >= 0 -- Should maintain order
+              in property $ L.length ordered >= 0 -- Should maintain order
               
         , fastProperty "directive nesting properties" $
             \content ->
               let nested = content ++ "\n" ++ content
                   parsed = parseTypus nested
               in case parsed of
-                Right file -> length (tfBlocks file) >= 0
+                Right file -> L.length (tfBlocks file) >= 0
                 Left _ -> property True
         ]
 
@@ -189,7 +191,7 @@ tests =
               let partial = prefix ++ "\n" ++ content
                   parsed = parseTypus partial
               in case parsed of
-                Right file -> length (tfBlocks file) >= 0
+                Right file -> L.length (tfBlocks file) >= 0
                 Left _ -> property True
               
         , fastProperty "malformed content handling" $
@@ -205,10 +207,10 @@ tests =
         [ fastProperty "linear parsing performance" $
             \content (Positive multiplier) ->
               multiplier <= 10 ==> -- Limit for performance testing
-              let repeated = concat (replicate multiplier content)
+              let repeated = L.concat (replicate multiplier content)
                   parsed = parseTypus repeated
               in case parsed of
-                Right file -> length (tfBlocks file) >= 0
+                Right file -> L.length (tfBlocks file) >= 0
                 Left _ -> property $ True
               
         , fastProperty "memory efficiency with large inputs" $
@@ -217,11 +219,11 @@ tests =
               let largeContent = take size (cycle content)
                   parsed = parseTypus largeContent
               in case parsed of
-                Right file -> length (tfBlocks file) >= 0
+                Right file -> L.length (tfBlocks file) >= 0
                 Left _ -> property $ True
         ]
     ]
 
 -- Helper function to convert to uppercase
 toUpper :: String -> String
-toUpper = map (\c -> if c >= 'a' && c <= 'z' then toEnum (fromEnum c - 32) else c)
+toUpper = L.map (\c -> if c >= 'a' && c <= 'z' then toEnum (fromEnum c - 32) else c)

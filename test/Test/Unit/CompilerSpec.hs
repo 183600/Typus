@@ -1,5 +1,6 @@
 module Test.Unit.CompilerSpec (tests) where
 
+import qualified Data.List as L
 import Data.List (isInfixOf)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, assertFailure, testCase)
@@ -20,8 +21,8 @@ tests =
               ]
         typusFile <- expectParse source
         goCode <- expectCompile typusFile
-        assertBool "compiled code should start with a package declaration" ("package main" `isInfixOf` goCode)
-        assertBool "compiled code should contain the main function" ("func main" `isInfixOf` goCode)
+        assertBool "compiled code should start with a package declaration" ("package main" `L.isInfixOf` goCode)
+        assertBool "compiled code should contain the main function" ("func main" `L.isInfixOf` goCode)
 
     , testCase "fails when dependent type blocks contain errors" $ do
         let source = unlines
@@ -35,7 +36,7 @@ tests =
               ]
         typusFile <- expectParse source
         case Compiler.compile typusFile of
-          Left err -> assertBool "error should mention dependent type checking" ("DependentTypeCheckingPhase" `isInfixOf` Compiler.renderCompilationError err)
+          Left err -> assertBool "error should mention dependent type checking" ("DependentTypeCheckingPhase" `L.isInfixOf` Compiler.renderCompilationError err)
           Right _  -> assertFailure "expected dependent type error"
 
     , testCase "file-level dependent type directives are enforced without blocks" $ do
@@ -63,8 +64,8 @@ tests =
         case Compiler.compile typusFile of
           Left errs -> do
             let rendered = Compiler.renderCompilationError errs
-            assertBool "expected summary type-check failure" ("Type errors detected during semantic analysis" `isInfixOf` rendered)
-            assertBool "expected detailed argument type mismatch" ("Type error in 'main': add argument 1: expected type int, got string" `isInfixOf` rendered)
+            assertBool "expected summary type-check failure" ("Type errors detected during semantic analysis" `L.isInfixOf` rendered)
+            assertBool "expected detailed argument type mismatch" ("Type error in 'main': add argument 1: expected type int, got string" `L.isInfixOf` rendered)
           Right _ -> assertFailure "expected type checker to emit detailed diagnostics"
 
     , testCase "rejects malformed syntax with unbalanced braces" $ do
@@ -74,7 +75,7 @@ tests =
               ]
         typusFile <- expectParse source
         case Compiler.compile typusFile of
-          Left err -> assertBool "error should mention malformed syntax" ("Malformed syntax detected" `isInfixOf` Compiler.renderCompilationError err)
+          Left err -> assertBool "error should mention malformed syntax" ("Malformed syntax detected" `L.isInfixOf` Compiler.renderCompilationError err)
           Right _  -> assertFailure "expected malformed syntax to be rejected"
 
     -- Additional test cases
@@ -95,7 +96,7 @@ tests =
               ]
         typusFile <- expectParse source
         goCode <- expectCompile typusFile
-        assertBool "should contain conditional logic" ("if" `isInfixOf` goCode && "else" `isInfixOf` goCode)
+        assertBool "should contain conditional logic" ("if" `L.isInfixOf` goCode && "else" `L.isInfixOf` goCode)
 
     , testCase "handles struct compilation" $ do
         let source = unlines
@@ -111,7 +112,7 @@ tests =
               ]
         typusFile <- expectParse source
         goCode <- expectCompile typusFile
-        assertBool "should contain struct definition" ("type Person struct" `isInfixOf` goCode)
+        assertBool "should contain struct definition" ("type Person struct" `L.isInfixOf` goCode)
 
     , testCase "compiles interface definitions" $ do
         let source = unlines
@@ -124,7 +125,7 @@ tests =
               ]
         typusFile <- expectParse source
         goCode <- expectCompile typusFile
-        assertBool "should contain interface definition" ("type Writer interface" `isInfixOf` goCode)
+        assertBool "should contain interface definition" ("type Writer interface" `L.isInfixOf` goCode)
 
     , testCase "handles method compilation" $ do
         let source = unlines
@@ -146,15 +147,15 @@ tests =
               ]
         typusFile <- expectParse source
         goCode <- expectGenerateCode typusFile
-        assertBool "should contain method definitions" ("func (c *Counter)" `isInfixOf` goCode)
+        assertBool "should contain method definitions" ("func (c *Counter)" `L.isInfixOf` goCode)
 
     , testCase "compiles generic types" $ do
         let source = unlines
               [ "package main"
-              , "type Container[T any] struct {"
+              , "type Container[T L.any] struct {"
               , "    value T"
               , "}"
-              , "func New[T any](v T) Container[T] {"
+              , "func New[T L.any](v T) Container[T] {"
               , "    return Container[T]{value: v}"
               , "}"
               , "func (c Container[T]) Get() T {"
@@ -167,7 +168,7 @@ tests =
               ]
         typusFile <- expectParse source
         goCode <- expectGenerateCode typusFile
-        assertBool "should contain generic type definitions" ("Container[T" `isInfixOf` goCode)
+        assertBool "should contain generic type definitions" ("Container[T" `L.isInfixOf` goCode)
 
     , testCase "handles channel compilation" $ do
         let source = unlines
@@ -186,7 +187,7 @@ tests =
               ]
         typusFile <- expectParse source
         goCode <- expectGenerateCode typusFile
-        assertBool "should contain channel operations" ("make(chan" `isInfixOf` goCode)
+        assertBool "should contain channel operations" ("make(chan" `L.isInfixOf` goCode)
 
     , testCase "compiles goroutines" $ do
         let source = unlines
@@ -203,7 +204,7 @@ tests =
               ]
         typusFile <- expectParse source
         goCode <- expectGenerateCode typusFile
-        assertBool "should contain goroutine calls" ("go worker" `isInfixOf` goCode)
+        assertBool "should contain goroutine calls" ("go worker" `L.isInfixOf` goCode)
 
     , testCase "handles defer statements" $ do
         let source = unlines
@@ -218,7 +219,7 @@ tests =
               ]
         typusFile <- expectParse source
         goCode <- expectGenerateCode typusFile
-        assertBool "should contain defer statements" ("defer println" `isInfixOf` goCode)
+        assertBool "should contain defer statements" ("defer println" `L.isInfixOf` goCode)
 
     , testCase "compiles complex literals" $ do
         let source = unlines
@@ -236,7 +237,7 @@ tests =
               ]
         typusFile <- expectParse source
         goCode <- expectGenerateCode typusFile
-        assertBool "should contain struct literals" ("Point{X: 1" `isInfixOf` goCode)
+        assertBool "should contain struct literals" ("Point{X: 1" `L.isInfixOf` goCode)
 
     , testCase "handles import statements" $ do
         let source = unlines
@@ -252,9 +253,9 @@ tests =
               ]
         typusFile <- expectParse source
         goCode <- expectCompile typusFile
-        assertBool "should contain import statements" ("import" `isInfixOf` goCode)
+        assertBool "should contain import statements" ("import" `L.isInfixOf` goCode)
 
-    , testCase "compiles constants and variables" $ do
+    , testCase "compiles constants L.and variables" $ do
         let source = unlines
               [ "package main"
               , "const PI = 3.14159"
@@ -274,7 +275,7 @@ tests =
               ]
         typusFile <- expectParse source
         goCode <- expectCompile typusFile
-        assertBool "should contain constants and variables" ("const PI" `isInfixOf` goCode)
+        assertBool "should contain constants L.and variables" ("const PI" `L.isInfixOf` goCode)
 
     , testCase "handles error types" $ do
         let source = unlines
@@ -291,7 +292,7 @@ tests =
               ]
         typusFile <- expectParse source
         goCode <- expectCompile typusFile
-        assertBool "should contain error handling" ("error" `isInfixOf` goCode)
+        assertBool "should contain error handling" ("error" `L.isInfixOf` goCode)
 
     , testCase "compiles ownership-enabled code" $ do
         let source = unlines
@@ -306,7 +307,7 @@ tests =
               ]
         typusFile <- expectParse source
         goCode <- expectCompile typusFile
-        assertBool "should compile ownership code" ("package main" `isInfixOf` goCode)
+        assertBool "should compile ownership code" ("package main" `L.isInfixOf` goCode)
 
     , testCase "compiles dependent types code" $ do
         let source = unlines
@@ -323,9 +324,9 @@ tests =
               ]
         typusFile <- expectParse source
         goCode <- expectCompile typusFile
-        assertBool "should compile dependent types code" ("package main" `isInfixOf` goCode)
+        assertBool "should compile dependent types code" ("package main" `L.isInfixOf` goCode)
 
-    , testCase "handles mixed ownership and dependent types" $ do
+    , testCase "handles mixed ownership L.and dependent types" $ do
         let source = unlines
               [ "//! ownership: on"
               , "//! dependent_types: on"
@@ -341,7 +342,7 @@ tests =
               ]
         typusFile <- expectParse source
         goCode <- expectCompile typusFile
-        assertBool "should compile mixed features code" ("package main" `isInfixOf` goCode)
+        assertBool "should compile mixed features code" ("package main" `L.isInfixOf` goCode)
 
     , testCase "reports multiple compilation errors" $ do
         let source = unlines
@@ -361,8 +362,8 @@ tests =
         case Compiler.compile typusFile of
           Left err -> do
             let rendered = Compiler.renderCompilationError err
-            assertBool "should report multiple errors" (length (lines rendered) > 2)
-            assertBool "should include both function errors" ("add" `isInfixOf` rendered && "multiply" `isInfixOf` rendered)
+            assertBool "should report multiple errors" (L.length (lines rendered) > 2)
+            assertBool "should include both function errors" ("add" `L.isInfixOf` rendered && "multiply" `L.isInfixOf` rendered)
           Right _ -> assertFailure "expected multiple compilation errors"
 
     , testCase "handles undefined variables" $ do
@@ -376,7 +377,7 @@ tests =
         case Compiler.compile typusFile of
           Left err -> do
             let rendered = Compiler.renderCompilationError err
-            assertBool "should mention undefined variable" ("undefinedVar" `isInfixOf` rendered)
+            assertBool "should mention undefined variable" ("undefinedVar" `L.isInfixOf` rendered)
           Right _ -> assertFailure "expected undefined variable error"
 
     , testCase "detects circular dependencies" $ do
@@ -396,7 +397,7 @@ tests =
         case Compiler.compile typusFile of
           Left err -> do
             let rendered = Compiler.renderCompilationError err
-            assertBool ("should detect circular dependency. Error was: " ++ rendered) ("Circular" `isInfixOf` rendered || "circular" `isInfixOf` rendered || "cycle" `isInfixOf` rendered)
+            assertBool ("should detect circular dependency. Error was: " ++ rendered) ("Circular" `L.isInfixOf` rendered || "circular" `L.isInfixOf` rendered || "cycle" `L.isInfixOf` rendered)
           Right _ -> assertFailure "expected circular dependency error"
     ]
 

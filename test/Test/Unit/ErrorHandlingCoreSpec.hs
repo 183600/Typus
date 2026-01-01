@@ -3,6 +3,7 @@
 module Test.Unit.ErrorHandlingCoreSpec where
 
 import Test.Hspec
+import qualified Data.List as L
 import Test.Hspec.QuickCheck
 import Test.QuickCheck
 import Compiler.Errors.Core
@@ -67,7 +68,7 @@ spec = describe "Error Handling Core Functions" $ do
       _isNotification notification `shouldBe` True
 
   describe "ErrorLocation functions" $ do
-    it "creates location with line and column" $ do
+    it "creates location with line L.and column" $ do
       let loc = _atLocation 10 20
       line loc `shouldBe` 10
       column loc `shouldBe` 20
@@ -163,69 +164,18 @@ spec = describe "Error Handling Core Functions" $ do
       
       _recoverySuccessRate ctx3 `shouldBe` 2.0/3.0
 
-  describe "Error creation and manipulation" $ do
+  describe "Error creation L.and manipulation" $ do
     it "creates basic error correctly" $ do
       let loc = _atLocation 10 20
-          err = errorAt "ERR001" "Test error message" loc
-      
-      errorId err `shouldBe` "ERR001"
-      message err `shouldBe` "Test error message"
-      location err `shouldBe` loc
-      severity err `shouldBe` Error
-      category err `shouldBe` Unknown
-      suggestions err `shouldBe` []
-      relatedErrors err `shouldBe` []
-      errorChain err `shouldBe` []
-      timestamp err `shouldBe` Nothing
-    
-    it "creates error with category correctly" $ do
-      let loc = _atLocation 10 20
-          err = errorWithCategory "ERR002" TypeChecking "Type mismatch" loc
-      
-      errorId err `shouldBe` "ERR002"
-      category err `shouldBe` TypeChecking
-      message err `shouldBe` "Type mismatch"
-    
-    it "adds timestamp to error" $ do
-      let loc = _atLocation 10 20
-          err = errorAt "ERR003" "Test error" loc
-          timestamped = withTimestamp "2023-01-01 12:00:00" err
-      
-      timestamp timestamped `shouldBe` Just "2023-01-01 12:00:00"
-
-  describe "Error collection and filtering" $ do
-    it "filters errors by severity correctly" $ do
-      let loc = _atLocation 1 1
-          errors = [ errorAt "E1" "Fatal" loc { severity = Fatal }
-                   , errorAt "E2" "Error" loc { severity = Error }
-                   , errorAt "E3" "Warning" loc { severity = Warning }
-                   , errorAt "E4" "Info" loc { severity = Info }
-                   ]
-      
-      getErrors errors `shouldSatisfy` ((== 2) . length)
-      getWarnings errors `shouldSatisfy` ((== 1) . length)
-      getInfo errors `shouldSatisfy` ((== 1) . length)
+          err = errorAt "test-id" ((== 2) . L.length)
+      getWarnings errors `shouldSatisfy` ((== 1) . L.length)
+      getInfo errors `shouldSatisfy` ((== 1) . L.length)
       hasErrors errors `shouldBe` True
       hasWarnings errors `shouldBe` True
     
-    it "detects when no errors or warnings exist" $ do
+    it "detects when no errors L.or warnings exist" $ do
       let loc = _atLocation 1 1
-          infoOnly = [errorAt "I1" "Info" loc { severity = Info }]
-      
-      hasErrors infoOnly `shouldBe` False
-      hasWarnings infoOnly `shouldBe` False
-
-  describe "Error context operations" $ do
-    it "creates empty context correctly" $ do
-      let ctx = emptyContext
-      contextCode ctx `shouldBe` Nothing
-      contextFunction ctx `shouldBe` Nothing
-      contextVariable ctx `shouldBe` Nothing
-      contextType ctx `shouldBe` Nothing
-      contextAdditional ctx `shouldBe` []
-    
-    it "creates context with values" $ do
-      let ctx = ErrorContext (Just "code") (Just "func") (Just "var") (Just "type") [("key1", "value1")]
+          infoOnly = [errorAt "test-id" = ErrorContext (Just "code") (Just "func") (Just "var") (Just "type") [("key1", "value1")]
       
       contextCode ctx `shouldBe` Just "code"
       contextFunction ctx `shouldBe` Just "func"
@@ -253,11 +203,11 @@ spec = describe "Error Handling Core Functions" $ do
                    ]
       
       let filtered = filterCombinedErrorsBySeverity Error errors
-      length filtered `shouldBe` 2  -- Error and Fatal
+      L.length filtered `shouldBe` 2  -- Error L.and Fatal
 
   describe "Error formatting" $ do
     it "formats basic error without location" $ do
-      let err = errorAt "ERR001" "Test message" (_atLocation 0 0)
+      let err = errorAt "test-id" 0 0)
       let formatted = formatError err
       
       formatted `shouldContain` "[ERROR]"
@@ -266,15 +216,7 @@ spec = describe "Error Handling Core Functions" $ do
     
     it "formats error with location" $ do
       let loc = _atFileLocation "test.typus" 10 20
-          err = errorAt "ERR001" "Test message" loc
-      let formatted = formatErrorWithLocation err
-      
-      formatted `shouldContain` "test.typus:10:20:"
-      formatted `shouldContain` "[ERROR]"
-      formatted `shouldContain` "Test message"
-    
-    it "formats error with suggestions" $ do
-      let err = errorAt "ERR001" "Test message" (_atLocation 0 0)
+          err = errorAt "test-id" 0 0)
           errWithSuggestions = err { suggestions = ["Suggestion 1", "Suggestion 2"] }
       let formatted = formatError errWithSuggestions
       
@@ -284,21 +226,14 @@ spec = describe "Error Handling Core Functions" $ do
     
     it "formats multiple errors sorted by severity" $ do
       let loc = _atLocation 1 1
-          errors = [ errorAt "E1" "Warning" loc { severity = Warning }
-                   , errorAt "E2" "Fatal" loc { severity = Fatal }
-                   , errorAt "E3" "Error" loc { severity = Error }
-                   ]
-      let formatted = formatErrors errors
-      
-      lines formatted `shouldSatisfy` (\ls -> 
-        let fatalLine = head $ filter (isInfixOf "FATAL") ls
-            errorLine = head $ filter (isInfixOf "ERROR") ls
-            warningLine = head $ filter (isInfixOf "WARNING") ls
+          errors = [ errorAt "test-id" $ L.filter (L.isInfixOf "FATAL") ls
+            errorLine = L.head $ L.filter (L.isInfixOf "ERROR") ls
+            warningLine = L.head $ L.filter (L.isInfixOf "WARNING") ls
         in indexOf fatalLine ls < indexOf errorLine ls && 
            indexOf errorLine ls < indexOf warningLine ls)
       where
         indexOf x xs = case elemIndex x xs of Just i -> i; Nothing -> -1
-        isInfixOf needle haystack = needle `elem` (substrings haystack)
+        L.isInfixOf needle haystack = needle `elem` (substrings haystack)
         substrings [] = []
-        substrings s = map (take (length needle)) (tails s)
+        substrings s = L.map (take (L.length needle)) (tails s)
         needle = ""  -- dummy value

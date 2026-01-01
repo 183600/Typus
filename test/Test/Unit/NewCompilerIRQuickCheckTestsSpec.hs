@@ -94,13 +94,13 @@ prop_irNodeTypeConsistency node =
   case node of
     IRVariable _ -> True
     IRConstant _ -> True
-    IRFunctionCall _ args -> all prop_irNodeTypeConsistency args
+    IRFunctionCall _ args -> L.all prop_irNodeTypeConsistency args
     IRBinaryOp _ left right -> prop_irNodeTypeConsistency left && prop_irNodeTypeConsistency right
     IRUnaryOp _ operand -> prop_irNodeTypeConsistency operand
     IRConditional cond trueBranch falseBranch -> 
       prop_irNodeTypeConsistency cond && prop_irNodeTypeConsistency trueBranch && prop_irNodeTypeConsistency falseBranch
     IRLetBinding _ value -> prop_irNodeTypeConsistency value
-    IRSequence nodes -> all prop_irNodeTypeConsistency nodes
+    IRSequence nodes -> L.all prop_irNodeTypeConsistency nodes
 
 -- Property: IR statement well-formedness
 prop_irStatementWellFormed :: IRStatement -> Bool
@@ -110,26 +110,26 @@ prop_irStatementWellFormed stmt =
     IRReturn expr -> prop_irNodeTypeConsistency expr
     IRVarDecl _ typ expr -> prop_irNodeTypeConsistency expr
     IRIf cond trueStmts falseStmts -> 
-      prop_irNodeTypeConsistency cond && all prop_irStatementWellFormed trueStmts && all prop_irStatementWellFormed falseStmts
+      prop_irNodeTypeConsistency cond && L.all prop_irStatementWellFormed trueStmts && L.all prop_irStatementWellFormed falseStmts
     IRWhile cond body -> 
-      prop_irNodeTypeConsistency cond && all prop_irStatementWellFormed body
+      prop_irNodeTypeConsistency cond && L.all prop_irStatementWellFormed body
     IRFor _ initExpr body -> 
-      prop_irNodeTypeConsistency initExpr && all prop_irStatementWellFormed body
+      prop_irNodeTypeConsistency initExpr && L.all prop_irStatementWellFormed body
     IRFunctionDecl _ params retType body -> 
-      all prop_irStatementWellFormed body
+      L.all prop_irStatementWellFormed body
 
 -- Property: Function parameter types are consistent
 prop_functionParameterTypes :: IRFunction -> Bool
 prop_functionParameterTypes (IRFunction _ params retType body) = 
   let paramTypes = map snd params
-  in all isValidType paramTypes && isValidType retType
+  in L.all isValidType paramTypes && isValidType retType
 
 -- Property: Module contains unique function names
 prop_moduleUniqueFunctionNames :: IRModule -> Bool
 prop_moduleUniqueFunctionNames (IRModule _ functions _) = 
   let functionNames = map functionName functions
       uniqueNames = functionNames ++ functionNames
-  in length functionNames == length uniqueNames
+  in L.length functionNames == L.length uniqueNames
   where
     functionName (IRFunction name _ _ _) = name
 
@@ -149,7 +149,7 @@ prop_literalValueRanges literal =
   case literal of
     IntLiteral i -> i >= -10000 && i <= 10000
     FloatLiteral f -> f >= -10000.0 && f <= 10000.0
-    StringLiteral s -> length s <= 1000
+    StringLiteral s -> L.length s <= 1000
     BoolLiteral _ -> True
 
 -- Property: Type system consistency
@@ -157,8 +157,8 @@ prop_typeSystemConsistency :: IRType -> Bool
 prop_typeSystemConsistency typ = 
   case typ of
     IRFunction paramTypes retType -> 
-      all prop_typeSystemConsistency paramTypes && prop_typeSystemConsistency retType
-    IRTuple elementTypes -> all prop_typeSystemConsistency elementTypes
+      L.all prop_typeSystemConsistency paramTypes && prop_typeSystemConsistency retType
+    IRTuple elementTypes -> L.all prop_typeSystemConsistency elementTypes
     IRList elementType -> prop_typeSystemConsistency elementType
     IRCustom name -> not (null name)
     _ -> True
@@ -169,9 +169,9 @@ prop_irNodeCountFinite (IRModule _ functions statements) =
   let countNodes = countIRNodes functions + countStatements statements
   in countNodes >= 0 && countNodes < 10000  -- Reasonable upper bound
   where
-    countIRNodes = length . map countFunctionNodes
+    countIRNodes = L.length . map countFunctionNodes
     countFunctionNodes (IRFunction _ _ _ body) = countStatements body
-    countStatements = sum . map countStatementNodes
+    countStatements = L.sum . map countStatementNodes
     countStatementNodes stmt = 
       case stmt of
         IRExprStmt expr -> countExpressionNodes expr
@@ -186,13 +186,13 @@ prop_irNodeCountFinite (IRModule _ functions statements) =
       case expr of
         IRVariable _ -> 1
         IRConstant _ -> 1
-        IRFunctionCall _ args -> 1 + sum (map countExpressionNodes args)
+        IRFunctionCall _ args -> 1 + L.sum (map countExpressionNodes args)
         IRBinaryOp _ left right -> 1 + countExpressionNodes left + countExpressionNodes right
         IRUnaryOp _ operand -> 1 + countExpressionNodes operand
         IRConditional cond trueBranch falseBranch -> 
           1 + countExpressionNodes cond + countExpressionNodes trueBranch + countExpressionNodes falseBranch
         IRLetBinding _ value -> 1 + countExpressionNodes value
-        IRSequence nodes -> length nodes + sum (map countExpressionNodes nodes)
+        IRSequence nodes -> L.length nodes + L.sum (map countExpressionNodes nodes)
 
 -- Property: IR serialization round-trip preserves structure
 prop_irSerializationRoundTrip :: IRModule -> Bool

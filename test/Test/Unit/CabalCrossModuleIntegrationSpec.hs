@@ -1,6 +1,7 @@
 module Test.Unit.CabalCrossModuleIntegrationSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty)
 
@@ -15,7 +16,7 @@ import qualified SyntaxValidator
 tests :: TestTree
 tests =
   testGroup "Cabal Cross-Module Integration Tests"
-    [ testGroup "Parser and Utils Integration"
+    [ testGroup "Parser L.and Utils Integration"
         [ testCase "Parser handles comments removed by Utils" $ do
             let input = "// This is a comment\nfunc main() { /* block comment */ return 42; }"
                 cleaned = Utils.removeComments input
@@ -34,11 +35,11 @@ tests =
 
         , testProperty "splitBy integration with parser line handling" $ do
             \input -> let lines = Utils.splitBy '\n' input
-                          lineCount = length lines
+                          lineCount = L.length lines
                       in lineCount >= 0
         ]
 
-    , testGroup "SourceLocation and Parser Integration"
+    , testGroup "SourceLocation L.and Parser Integration"
         [ testCase "Source locations are preserved in parse results" $ do
             let input = "func test() { return 1; }"
                 result = Parser.parseTypus "test" input
@@ -57,7 +58,7 @@ tests =
             SourceLocation.spanEnd span @?= pos2
         ]
 
-    , testGroup "SyntaxValidator and Parser Integration"
+    , testGroup "SyntaxValidator L.and Parser Integration"
         [ testCase "Validated parsed code passes syntax validation" $ do
             let input = "func validated() { return true; }"
                 result = Parser.parseTypus "test" input

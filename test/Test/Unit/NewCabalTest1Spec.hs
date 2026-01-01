@@ -14,6 +14,7 @@ import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
 import Data.Char (isSpace, isLetter, isDigit)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import qualified Data.Text as T
 
@@ -52,7 +53,7 @@ tests =
             let input = "  line1\n\tline2\n    line3"
                 result = normalizeIndentation input
                 lines' = lines result
-            length lines' @?= 3
+            L.length lines' @?= 3
         ]
 
     , testGroup "QuickCheck属性测试"
@@ -80,7 +81,7 @@ prop_splitBy_length_invariant prefix suffix delim =
       partsFull = splitBy delim fullString
       partsPrefix = splitBy delim prefix
       partsSuffix = splitBy delim suffix
-  in property $ length partsFull === length partsPrefix + length partsSuffix
+  in property $ L.length partsFull === L.length partsPrefix + L.length partsSuffix
 
 -- removeComments保持代码内容：移除注释后，原始代码内容仍然存在
 prop_removeComments_preserves_code :: String -> String -> Property
@@ -88,19 +89,19 @@ prop_removeComments_preserves_code code comment =
   -- 避免字符串字面量中的注释标记
   not ('"' `elem` code) && not ('\'' `elem` code) &&
   not ('"' `elem` comment) && not ('\'' `elem` comment) &&
-  not ("/*" `isInfixOf` code) && not ("*/" `isInfixOf` code) &&
-  not ("//" `isInfixOf` code) ==>
+  not ("/*" `L.isInfixOf` code) && not ("*/" `L.isInfixOf` code) &&
+  not ("//" `L.isInfixOf` code) ==>
   let withComments = code ++ " /* " ++ comment ++ " */ " ++ code ++ " // " ++ comment
       withoutComments = removeComments withComments
-  in property $ code `isInfixOf` withoutComments .&&. 
-     length (filter (== 'c') withoutComments) >= length (filter (== 'c') code)
+  in property $ code `L.isInfixOf` withoutComments .&&. 
+     L.length (L.filter (== 'c') withoutComments) >= L.length (L.filter (== 'c') code)
 
 -- normalizeIndentation保持行数：缩进规范化不改变行数
 prop_normalizeIndentation_preserves_lines :: String -> Property
 prop_normalizeIndentation_preserves_lines content =
   let normalized = normalizeIndentation content
-      originalLines = length (lines content)
-      normalizedLines = length (lines normalized)
+      originalLines = L.length (lines content)
+      normalizedLines = L.length (lines normalized)
   in property $ originalLines === normalizedLines
 
 -- breakOn的分解正确性：breakOn p (xs ++ p ++ ys) == (xs ++ p, ys)

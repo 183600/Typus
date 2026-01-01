@@ -34,17 +34,18 @@ import System.Directory (doesFileExist, removeFile)
 import System.FilePath ((</>))
 import qualified Data.Text as T
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 
 -- Property: goModContents contains module declaration
 prop_go_mod_contents_module :: Property
 prop_go_mod_contents_module =
-  property $ "module temp" `isInfixOf` goModContents
+  property $ "module temp" `L.isInfixOf` goModContents
 
 -- Property: goModContents contains go version
 prop_go_mod_contents_version :: Property
 prop_go_mod_contents_version =
-  property $ "go 1.21" `isInfixOf` goModContents
+  property $ "go 1.21" `L.isInfixOf` goModContents
 
 -- Property: nullDevice is non-empty
 prop_null_device_non_empty :: Property
@@ -96,7 +97,7 @@ prop_run_go_command_version executor =
 -- Property: withTemporaryGoProject creates temporary directory
 prop_with_temp_go_project_creates :: String -> Property
 prop_with_temp_go_project_creates prefix =
-  not (null prefix) && all (`elem` "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_") prefix ==>
+  not (null prefix) && L.all (`elem` "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_") prefix ==>
   let action tempDir = pure tempDir
       result = withTemporaryGoProject prefix action
   in case result of
@@ -151,7 +152,7 @@ prop_go_command_in_dir executor dir args =
 -- Property: Go toolchain handles different command types
 prop_go_toolchain_command_types :: GoExecutor -> String -> Property
 prop_go_toolchain_command_types executor command =
-  not (null command) && all (`elem` "version mod build run test") (words command) ==>
+  not (null command) && L.all (`elem` "version mod build run test") (words command) ==>
   let args = words command
       result = runGoCommand executor args
   in case result of
@@ -161,7 +162,7 @@ prop_go_toolchain_command_types executor command =
 -- Property: Temporary project cleanup works
 prop_temp_project_cleanup :: String -> Property
 prop_temp_project_cleanup prefix =
-  not (null prefix) && length prefix <= 10 ==>
+  not (null prefix) && L.length prefix <= 10 ==>
   let action tempDir = do
         let testFile = tempDir </> "test.txt"
         writeFile testFile "test"
@@ -175,14 +176,14 @@ prop_temp_project_cleanup prefix =
 prop_go_module_content_valid :: Property
 prop_go_module_content_valid =
   let lines' = lines goModContents
-      hasModule = any ("module" `isPrefixOf`) lines'
-      hasGoVersion = any ("go 1.21" `isPrefixOf`) lines'
+      hasModule = L.any ("module" `L.isPrefixOf`) lines'
+      hasGoVersion = L.any ("go 1.21" `L.isPrefixOf`) lines'
   in property $ hasModule .&&. hasGoVersion
 
 -- Property: Go toolchain handles long arguments
 prop_go_toolchain_long_args :: GoExecutor -> String -> Property
 prop_go_toolchain_long_args executor longArg =
-  not (null longArg) && length longArg <= 1000 ==>
+  not (null longArg) && L.length longArg <= 1000 ==>
   let args = ["build", longArg]
       result = runGoCommand executor args
   in case result of
@@ -192,7 +193,7 @@ prop_go_toolchain_long_args executor longArg =
 -- Property: Go toolchain handles special characters in args
 prop_go_toolchain_special_chars :: GoExecutor -> String -> Property
 prop_go_toolchain_special_chars executor specialArg =
-  not (null specialArg) && length specialArg <= 100 ==>
+  not (null specialArg) && L.length specialArg <= 100 ==>
   let args = ["build", specialArg]
       result = runGoCommand executor args
   in case result of
@@ -202,7 +203,7 @@ prop_go_toolchain_special_chars executor specialArg =
 -- Property: Go toolchain handles unicode in args
 prop_go_toolchain_unicode :: GoExecutor -> String -> Property
 prop_go_toolchain_unicode executor unicodeArg =
-  not (null unicodeArg) && length unicodeArg <= 50 ==>
+  not (null unicodeArg) && L.length unicodeArg <= 50 ==>
   let args = ["build", unicodeArg]
       result = runGoCommand executor args
   in case result of
@@ -222,9 +223,7 @@ prop_go_toolchain_concurrent executor =
 prop_go_toolchain_error_handling :: GoExecutor -> Property
 prop_go_toolchain_error_handling executor =
   let result = runGoCommand executor ["nonexistent-command"]
-  in case result of
-    Left _ -> property True  -- Should handle invalid commands gracefully
-    Right _ -> property True  -- Or succeed in some environments
+  in property $ True  -- Should handle invalid commands gracefully L.or succeed in some environments
 
 tests :: TestTree
 tests = testGroup "Advanced GoToolchain QuickCheck"

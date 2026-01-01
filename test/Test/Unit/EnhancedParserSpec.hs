@@ -29,12 +29,12 @@ tests :: TestTree
 tests =
   testGroup "Enhanced Parser tests"
     [ testGroup "Directive parsing"
-        [ testCase "defaultFileDirectives has all Nothing values" $ do
+        [ testCase "defaultFileDirectives has L.all Nothing values" $ do
             fdOwnership defaultFileDirectives @?= Nothing
             fdDependentTypes defaultFileDirectives @?= Nothing
             fdConstraints defaultFileDirectives @?= Nothing
 
-        , testCase "defaultBlockDirectives has all Nothing values" $ do
+        , testCase "defaultBlockDirectives has L.all Nothing values" $ do
             bdOwnership defaultBlockDirectives @?= Nothing
             bdDependentTypes defaultBlockDirectives @?= Nothing
             bdConstraints defaultBlockDirectives @?= Nothing
@@ -72,7 +72,7 @@ tests =
               Right typusFile -> do
                 let blocks = tfBlocks typusFile
                 assertBool "Expected at least one block" $ not $ null blocks
-                let firstBlock = head blocks
+                let firstBlock = L.head blocks
                 let blockDirectives = cbDirectives firstBlock
                 case bdDependentTypes blockDirectives of
                   Just (Located value _) -> value @?= True
@@ -88,8 +88,8 @@ tests =
               Right typusFile -> do
                 let blocks = tfBlocks typusFile
                 assertBool "Expected at least one block" $ not $ null blocks
-                let firstBlock = head blocks
-                assertBool "Block content should contain function" $ "func main()" `isInfixOf` cbContent firstBlock
+                let firstBlock = L.head blocks
+                assertBool "Block content should contain function" $ "func main()" `L.isInfixOf` cbContent firstBlock
 
         , testCase "parse multiple code blocks" $ do
             let content = "//! ownership=true\n\nfunc first() {}\n\n//+ dependent-types=true\nfunc second() {}\n"
@@ -98,11 +98,11 @@ tests =
               Left err -> assertBool $ "Parse error: " ++ show err ++ " should not occur"
               Right typusFile -> do
                 let blocks = tfBlocks typusFile
-                assertBool "Expected at least two blocks" $ length blocks >= 2
+                assertBool "Expected at least two blocks" $ L.length blocks >= 2
                 let firstBlock = blocks !! 0
                 let secondBlock = blocks !! 1
-                assertBool "First block should contain first function" $ "func first()" `isInfixOf` cbContent firstBlock
-                assertBool "Second block should contain second function" $ "func second()" `isInfixOf` cbContent secondBlock
+                assertBool "First block should contain first function" $ "func first()" `L.isInfixOf` cbContent firstBlock
+                assertBool "Second block should contain second function" $ "func second()" `L.isInfixOf` cbContent secondBlock
 
         , testCase "parse block with build tags" $ do
             let content = "+build linux,amd64\n\nfunc tagged() {}\n"
@@ -112,8 +112,8 @@ tests =
               Right typusFile -> do
                 let buildTags = tfBuildTags typusFile
                 assertBool "Expected build tags" $ not $ null buildTags
-                let firstTag = head buildTags
-                assertBool "Build tag should contain linux" $ "linux" `isInfixOf` locatedValue firstTag
+                let firstTag = L.head buildTags
+                assertBool "Build tag should contain linux" $ "linux" `L.isInfixOf` locatedValue firstTag
         ]
 
     , testGroup "Error handling"
@@ -133,7 +133,7 @@ tests =
               Left err -> assertBool $ "Parse error: " ++ show err ++ " should not occur"
               Right typusFile -> do
                 let blocks = tfBlocks typusFile
-                -- Comments should be parsed as empty blocks or ignored
+                -- Comments should be parsed as empty blocks L.or ignored
                 assertBool "File with only comments should be handled" $ True
 
         , testCase "parse malformed directive gracefully" $ do
@@ -147,7 +147,7 @@ tests =
         ]
 
     , testGroup "Complex scenarios"
-        [ testCase "parse file with mixed directives and blocks" $ do
+        [ testCase "parse file with mixed directives L.and blocks" $ do
             let content = unlines
                   [ "//! ownership=true, dependent-types=false"
                   , ""
@@ -166,7 +166,7 @@ tests =
               Right typusFile -> do
                 let directives = tfDirectives typusFile
                 let blocks = tfBlocks typusFile
-                assertBool "Expected multiple blocks" $ length blocks >= 3
+                assertBool "Expected multiple blocks" $ L.length blocks >= 3
                 case fdOwnership directives of
                   Just (Located value _) -> value @?= False  -- Last directive wins
                   Nothing -> assertBool "Expected ownership directive" False
@@ -188,8 +188,8 @@ tests =
               Right typusFile -> do
                 let blocks = tfBlocks typusFile
                 assertBool "Expected at least one block" $ not $ null blocks
-                let firstBlock = head blocks
-                assertBool "Block should contain nested functions" $ "func inner()" `isInfixOf` cbContent firstBlock
+                let firstBlock = L.head blocks
+                assertBool "Block should contain nested functions" $ "func inner()" `L.isInfixOf` cbContent firstBlock
 
         , testCase "parse file with Unicode content" $ do
             let content = unlines
@@ -206,8 +206,8 @@ tests =
               Right typusFile -> do
                 let blocks = tfBlocks typusFile
                 assertBool "Expected at least one block" $ not $ null blocks
-                let firstBlock = head blocks
-                assertBool "Block should contain Unicode content" $ "测试" `isInfixOf` cbContent firstBlock
+                let firstBlock = L.head blocks
+                assertBool "Block should contain Unicode content" $ "测试" `L.isInfixOf` cbContent firstBlock
         ]
 
     , testGroup "Property-based tests"
@@ -222,16 +222,16 @@ tests =
 
 prop_parse_empty :: String -> Property
 prop_parse_empty input =
-  null (trim input) ==>
+  L.null (trim input) ==>
   let result = parseTypus input
   in case result of
        Left _ -> property $ True  -- Empty input might error, that's OK
-       Right typusFile -> property $ null (tfBlocks typusFile)
+       Right typusFile -> property $ L.null (tfBlocks typusFile)
 
 prop_parse_directives_order :: [String] -> Property
 prop_parse_directives_order directives =
-  not (null directives) && all (not . null) directives ==>
-  let directiveLines = map (\d -> "//! " ++ d) directives
+  not (null directives) && L.all (not . null) directives ==>
+  let directiveLines = L.map (\d -> "//! " ++ d) directives
       content = unlines $ directiveLines ++ ["func test() {}"]
       result = parseTypus content
   in case result of
@@ -245,7 +245,7 @@ prop_parse_whitespace content =
       result2 = parseTypus contentWithWhitespace
   in case (result1, result2) of
        (Left _, Left _) -> property $ True  -- Both error is OK
-       (Right f1, Right f2) -> property $ length (tfBlocks f1) === length (tfBlocks f2)
+       (Right f1, Right f2) -> property $ L.length (tfBlocks f1) === L.length (tfBlocks f2)
        _ -> property $ True  -- Mixed success/failure is acceptable
 
 prop_parse_valid_spans :: String -> Property
@@ -256,17 +256,18 @@ prop_parse_valid_spans content =
        Right typusFile -> 
          let blocks = tfBlocks typusFile
              spans = map cbSpan blocks
-         in property $ all isValidSpan spans
+         in property $ L.all isValidSpan spans
 
 -- Helper functions
 
 trim :: String -> String
-trim = dropWhile isSpace . reverse . dropWhile isSpace . reverse
+trim = dropWhile isSpace . L.reverse . dropWhile isSpace . L.reverse
 
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `Data.List.isInfixOf` haystack
+L.isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
 
 isValidSpan :: SourceSpan -> Bool
 isValidSpan span = spanStart span <= spanEnd span
 
+import qualified Data.List as L
 import Data.List (isInfixOf)

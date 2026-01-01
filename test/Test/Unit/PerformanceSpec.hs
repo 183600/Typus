@@ -1,6 +1,7 @@
 module Test.Unit.PerformanceSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertBool, assertFailure, testCase)
 import System.CPUTime (getCPUTime)
 
@@ -11,7 +12,7 @@ tests :: TestTree
 tests =
   testGroup "Performance tests"
     [ testCase "parses large files efficiently" $ do
-        let largeSource = unlines $ concat
+        let largeSource = unlines $ L.concat
               [ ["package main"]
               , ["func main() {"]
               , replicate 1000 "    println(\"test\")"
@@ -26,7 +27,7 @@ tests =
             assertBool ("parsing should take less than 1 second, took " ++ show diff) (diff < 1.0)
 
     , testCase "compiles complex types efficiently" $ do
-        let complexSource = unlines $ concat
+        let complexSource = unlines $ L.concat
               [ ["package main"]
               , ["type Complex struct {"]
               , replicate 100 "    field int"
@@ -50,10 +51,10 @@ tests =
                 assertBool ("compilation should take less than 2 seconds, took " ++ show diff) (diff < 2.0)
 
     , testCase "handles deeply nested structures efficiently" $ do
-        let nestedSource = unlines $ concat
+        let nestedSource = unlines $ L.concat
               [ ["package main"]
               , ["func main() {"]
-              , concat $ replicate 50 ["    println(\"nested\")"]
+              , L.concat $ replicate 50 ["    println(\"nested\")"]
               , ["}"]
               ]
         start <- getCPUTime
@@ -65,12 +66,12 @@ tests =
             assertBool ("parsing nested structures should take less than 1 second, took " ++ show diff) (diff < 1.0)
 
     , testCase "processes many small functions efficiently" $ do
-        let manyFunctionsSource = unlines $ concat
+        let manyFunctionsSource = unlines $ L.concat
               [ ["package main"]
-              , concat $ map (\i -> ["func test" ++ show i ++ "() int {", "    return " ++ show i, "}"]) ([1..200] :: [Integer])
+              , L.concat $ L.map (\i -> ["func test" ++ show i ++ "() int {", "    return " ++ show i, "}"]) ([1..200] :: [Integer])
               , ["func main() {"]
               , ["    total := 0"]
-              , concat $ map (\i -> ["    total += test" ++ show i ++ "()"]) ([1..200] :: [Integer])
+              , L.concat $ L.map (\i -> ["    total += test" ++ show i ++ "()"]) ([1..200] :: [Integer])
               , ["    println(total)"]
               , ["}"]
               ]
@@ -86,7 +87,7 @@ tests =
                 assertBool ("processing many functions should take less than 3 seconds, took " ++ show diff) (diff < 3.0)
 
     , testCase "memory usage remains reasonable for large files" $ do
-        let largeSource = unlines $ concat
+        let largeSource = unlines $ L.concat
               [ ["package main"]
               , ["// Large comment block"]
               , replicate 5000 "// This is a comment line to test memory usage"
@@ -103,19 +104,19 @@ tests =
             assertBool ("parsing large file should take less than 2 seconds, took " ++ show diff) (diff < 2.0)
 
     , testCase "compilation time scales linearly with file size" $ do
-        let smallSource = unlines $ concat
+        let smallSource = unlines $ L.concat
               [ ["package main"]
               , ["func main() {"]
               , replicate 50 "    println(\"small\")"
               , ["}"]
               ]
-        let mediumSource = unlines $ concat
+        let mediumSource = unlines $ L.concat
               [ ["package main"]
               , ["func main() {"]
               , replicate 500 "    println(\"medium\")"
               , ["}"]
               ]
-        let largeSource = unlines $ concat
+        let largeSource = unlines $ L.concat
               [ ["package main"]
               , ["func main() {"]
               , replicate 1000 "    println(\"large\")"
@@ -154,7 +155,7 @@ tests =
                     assertBool ("medium to large ratio should be reasonable: " ++ show mediumToLargeRatio) (mediumToLargeRatio < 50)
 
     , testCase "error handling doesn't significantly impact performance" $ do
-        let sourceWithErrors = unlines $ concat
+        let sourceWithErrors = unlines $ L.concat
               [ ["package main"]
               , ["func undefined() {}"]  
               , ["func main() {"]

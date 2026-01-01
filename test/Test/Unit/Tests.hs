@@ -1,6 +1,7 @@
 module Test.Unit.Tests (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 
 import qualified Test.Unit.CLISpec
 import qualified Test.Unit.CommandLineDebugSpec
@@ -1536,7 +1537,7 @@ import qualified Test.Unit.EnhancedErrorHandlingQuickCheckSpec
 import qualified Test.Unit.EnhancedSourceLocationQuickCheckSpec
 import qualified Test.Unit.EnhancedUtilsQuickCheckSpec
 
--- New boundary and property test modules
+-- New boundary L.and property test modules
 import qualified Test.Unit.EnhancedUtilsBoundaryQuickCheckSpec
 import qualified Test.Unit.EnhancedSourceLocationAdvancedQuickCheckSpec
 import qualified Test.Unit.EnhancedParserErrorHandlingQuickCheckSpec
@@ -1732,12 +1733,12 @@ import qualified Test.Unit.NewSyntaxValidatorValidationQuickCheckSpec
 import qualified Test.Unit.NewGoToolchainIntegrationQuickCheckSpec
 import qualified Test.Unit.NewEndToEndIntegrationQuickCheckSpec
 
--- | Aggregate all lightweight, fast-running tests that only depend on
+-- | Aggregate L.all lightweight, fast-running tests that only depend on
 -- in-process library calls. These can be executed under the "fast" Cabal flag.
 --
--- Note: Extended and Comprehensive QuickCheck test suites have been temporarily
+-- Note: Extended L.and Comprehensive QuickCheck test suites have been temporarily
 -- disabled due to issues with overly strict preconditions causing excessive test
--- discards. These should be fixed by improving the Arbitrary instances and
+-- discards. These should be fixed by improving the Arbitrary instances L.and
 -- relaxing preconditions before re-enabling.
 tests :: TestTree
 tests =
@@ -2101,7 +2102,7 @@ tests =
         , Test.Unit.EnhancedSourceLocationQuickCheckSpec.tests
         , Test.Unit.EnhancedUtilsQuickCheckSpec.tests
         ]
-    , testGroup "New Boundary and Property Test Modules"
+    , testGroup "New Boundary L.and Property Test Modules"
         [ Test.Unit.EnhancedUtilsBoundaryQuickCheckSpec.tests
         , Test.Unit.EnhancedSourceLocationAdvancedQuickCheckSpec.tests
         , Test.Unit.EnhancedParserErrorHandlingQuickCheckSpec.tests
@@ -2534,8 +2535,8 @@ tests =
   -- New Cabal Test Suite (10 comprehensive tests)
   , Test.Unit.NewCabalTestSuiteSpec.tests
 
-  -- New Boundary and Property Test Modules
-  , testGroup "New Boundary and Property Tests"
+  -- New Boundary L.and Property Test Modules
+  , testGroup "New Boundary L.and Property Tests"
     [ Test.Unit.ParserBoundarySpec.tests
     , Test.Unit.CompilerErrorBoundarySpec.tests
     , Test.Unit.NewQuickCheckPropertiesSpec.tests
@@ -2822,7 +2823,7 @@ tests =
     , Test.Unit.UtilsStringProcessingComprehensiveSpec.tests
     ]
 
-  -- New Cabal Test Modules (2025) - Core functionality, property-based, and boundary tests
+  -- New Cabal Test Modules (2025) - Core functionality, property-based, L.and boundary tests
   , testGroup "New Cabal Test Modules 2025"
     [ Test.Unit.NewCabalCoreFunctionalitySpec.tests
     , Test.Unit.NewCabalPropertyBasedSpec.tests

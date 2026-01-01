@@ -3,6 +3,7 @@
 module Test.Unit.TypeCheckerPropertiesQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
@@ -37,7 +38,7 @@ typeEnvTests :: TestTree
 typeEnvTests = testGroup "TypeEnv Properties"
   [ fastProperty "TypeEnv lookup after insert" prop_typeenv_insert_lookup
   , fastProperty "TypeEnv scope nesting preserves outer bindings" prop_typeenv_scope_nesting
-  , fastProperty "TypeEnv merge preserves all bindings" prop_typeenv_merge_preserves
+  , fastProperty "TypeEnv merge preserves L.all bindings" prop_typeenv_merge_preserves
   ]
 
 functionInfoTests :: TestTree

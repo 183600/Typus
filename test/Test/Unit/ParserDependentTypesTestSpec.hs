@@ -11,7 +11,8 @@ import Test.QuickCheck (Property, (==>))
 import Parser (parseTypus, TypusFile(..), FileDirectives(..), BlockDirectives(..), defaultFileDirectives, defaultBlockDirectives)
 import DependentTypesParser (parseDependentType, DependentTypeConstraint(..))
 import SourceLocation (SourcePos(..), startPos)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
+import qualified Data.List as L
 import Data.List (isInfixOf)
 import Data.Maybe (isNothing, isJust)
 
@@ -57,7 +58,7 @@ test_parse_file_directives = do
 -- Test parser properties
 prop_parser_roundtrip :: String -> Property
 prop_parser_roundtrip input = 
-    not (null input) && length input < 100 ==> -- Limit size for performance
+    not (null input) && L.length input < 100 ==> -- Limit size for performance
     case parseTypus input of
         Right parsed -> True -- If it parses, consider it successful
         Left _ -> True -- Failed parsing is also a valid outcome
@@ -74,7 +75,7 @@ test_parse_dependent_type_constraint = do
     case result of
         Right constraint -> do
             assertEqual "Should parse constraint name" "Vector" (constraintName constraint)
-            assertBool "Should have predicate" (not (T.null (constraintPredicate constraint)))
+            assertBool "Should have predicate" (not (T.L.null (constraintPredicate constraint)))
         Left _ -> assertBool "Should parse dependent type constraint" False
 
 -- Test dependent type with complex constraint
@@ -85,26 +86,26 @@ test_parse_complex_dependent_type = do
     case result of
         Right constraint -> do
             assertEqual "Should parse matrix type" "Matrix" (constraintName constraint)
-            assertBool "Should have complex predicate" ("> 0 &&" `isInfixOf` T.unpack (constraintPredicate constraint))
+            assertBool "Should have complex predicate" ("> 0 &&" `L.isInfixOf` T.unpack (constraintPredicate constraint))
         Left _ -> assertBool "Should parse complex dependent type" False
 
 -- Test dependent type properties
 prop_dependent_type_has_name :: DependentTypeConstraint -> Bool
-prop_dependent_type_has_name constraint = not (T.null (constraintName constraint))
+prop_dependent_type_has_name constraint = not (T.L.null (constraintName constraint))
 
 prop_dependent_type_has_predicate :: DependentTypeConstraint -> Bool
-prop_dependent_type_has_predicate constraint = not (T.null (constraintPredicate constraint))
+prop_dependent_type_has_predicate constraint = not (T.L.null (constraintPredicate constraint))
 
 -- ============================================================================
 -- Integration Tests
 -- ============================================================================
 
--- Test parsing with ownership and dependent types
+-- Test parsing with ownership L.and dependent types
 test_parse_ownership_dependent_types :: IO ()
 test_parse_ownership_dependent_types = do
     let input = "#![ownership = true]\n#![dependent_types = true]\n\nfunc process(data: Vector{n : Nat | n > 0}) { data.move() }"
         result = parseTypus input
-    assertBool "Should parse with ownership and dependent types" (isRight result)
+    assertBool "Should parse with ownership L.and dependent types" (isRight result)
 
 -- Test parsing nested blocks
 test_parse_nested_blocks :: IO ()
@@ -133,7 +134,7 @@ isRight _ = False
 -- ============================================================================
 
 tests :: TestTree
-tests = testGroup "Parser and Dependent Types Test Suite"
+tests = testGroup "Parser L.and Dependent Types Test Suite"
   [ testGroup "Parser Tests"
       [ testCase "Parse empty input" test_parse_empty_input
       , testCase "Parse simple valid input" test_parse_simple_valid

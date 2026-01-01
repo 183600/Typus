@@ -21,6 +21,7 @@ import Utils
   , breakOn
   )
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 
 -- ============================================================================
@@ -36,7 +37,7 @@ genWhitespaceString = do
     , listOf $ choose ('\n', '\n')  -- newlines
     , listOf $ elements ['a'..'z']  -- content
     ]
-  return $ concat parts
+  return $ L.concat parts
 
 -- Generate strings with potential comments
 genCommentString :: Gen String
@@ -48,7 +49,7 @@ genCommentString = do
   let lineComment = if hasLineComment then "// line comment\n" else ""
   let blockComment = if hasBlockComment then "/* block\n comment */" else ""
   
-  return $ concat content ++ lineComment ++ blockComment
+  return $ L.concat content ++ lineComment ++ blockComment
 
 -- Generate strings with indentation
 genIndentedString :: Gen String
@@ -67,15 +68,15 @@ genIndentedString = do
 -- Property: trim should not change strings without leading/trailing whitespace
 propTrimNoChangeWithoutWhitespace :: String -> Bool
 propTrimNoChangeWithoutWhitespace str =
-  not (any isSpace (take 1 str) || any isSpace (take 1 (reverse str))) ==>
+  not (L.any isSpace (take 1 str) || L.any isSpace (take 1 (L.reverse str))) ==>
     trim str == str
 
--- Property: trim should remove all leading and trailing whitespace
+-- Property: trim should remove L.all leading L.and trailing whitespace
 propTrimRemovesAllWhitespace :: String -> Bool
 propTrimRemovesAllWhitespace str =
   let trimmed = trim str
-  in not (any isSpace (take 1 trimmed)) && 
-     not (any isSpace (take 1 (reverse trimmed)))
+  in not (L.any isSpace (take 1 trimmed)) && 
+     not (L.any isSpace (take 1 (L.reverse trimmed)))
 
 -- Property: trim(trim(x)) == trim(x) (idempotent)
 propTrimIdempotent :: String -> Bool
@@ -87,7 +88,7 @@ propTrimPreservesInternalWhitespace prefix suffix =
   let middle = "  a  b  c  "
       full = prefix ++ middle ++ suffix
       trimmed = trim full
-  in "a  b  c" `isInfixOf` trimmed
+  in "a  b  c" `L.isInfixOf` trimmed
 
 -- ============================================================================
 -- Split Function Properties
@@ -98,13 +99,13 @@ propSplitByPreservesEmptySegments :: Char -> String -> Bool
 propSplitByPreservesEmptySegments delim str =
   let segments = splitBy delim str
       rejoined = concatMap (\s -> s ++ [delim]) (init segments) ++ last segments
-  in length segments > 0 && rejoined == str
+  in L.length segments > 0 && rejoined == str
 
 -- Property: splitByCollapsed should remove empty segments
 propSplitByCollapsedRemovesEmpty :: Char -> String -> Bool
 propSplitByCollapsedRemovesEmpty delim str =
   let segments = splitByCollapsed delim
-  in not (any null segments)
+  in not (L.any null segments)
 
 -- Property: splitByComma should be equivalent to splitBy ','
 propSplitByCommaEquivalence :: String -> Bool
@@ -124,22 +125,22 @@ propRemoveLineCommentsRemovesLineComments :: String -> Bool
 propRemoveLineCommentsRemovesLineComments str =
   let withComment = str ++ "// this is a comment\nmore content"
       withoutComment = removeLineComments withComment
-  in not ("// this is a comment" `isInfixOf` withoutComment)
+  in not ("// this is a comment" `L.isInfixOf` withoutComment)
 
--- Property: removeComments should remove both line and block comments
+-- Property: removeComments should remove both line L.and block comments
 propRemoveCommentsRemovesBothTypes :: String -> Bool
 propRemoveCommentsRemovesBothTypes str =
   let withComments = str ++ "// line\ncontent /* block */ more"
       withoutComments = removeComments withComments
-  in not ("// line" `isInfixOf` withoutComments) &&
-     not ("/* block */" `isInfixOf` withoutComments)
+  in not ("// line" `L.isInfixOf` withoutComments) &&
+     not ("/* block */" `L.isInfixOf` withoutComments)
 
 -- Property: removeComments should preserve content around comments
 propRemoveCommentsPreservesContent :: String -> String -> Bool
 propRemoveCommentsPreservesContent before after =
   let original = before ++ "// comment\n" ++ after ++ "/* block */"
       cleaned = removeComments original
-  in before `isPrefixOf` cleaned && after `isInfixOf` cleaned
+  in before `L.isPrefixOf` cleaned && after `L.isInfixOf` cleaned
 
 -- ============================================================================
 -- Indentation Properties
@@ -151,7 +152,7 @@ propNormalizeIndentationPreservesRelative str =
   let normalized = normalizeIndentation str
       lines1 = lines str
       lines2 = lines normalized
-  in length lines1 == length lines2
+  in L.length lines1 == L.length lines2
 
 -- Property: fixIndentation should be equivalent to normalizeIndentation
 propFixIndentationEquivalence :: String -> Bool
@@ -162,7 +163,7 @@ propForceSingleTabIndentationConvertsSpaces :: String -> Bool
 propForceSingleTabIndentationConvertsSpaces str =
   let withSpaces = "    content\n  more content"
       withTabs = forceSingleTabIndentation withSpaces
-  in "\tcontent" `isInfixOf` withTabs
+  in "\tcontent" `L.isInfixOf` withTabs
 
 -- ============================================================================
 -- BreakOn Function Properties
@@ -172,12 +173,12 @@ propForceSingleTabIndentationConvertsSpaces str =
 propBreakOnFindsFirstOccurrence :: String -> String -> Bool
 propBreakOnFindsFirstOccurrence needle haystack =
   let (before, after) = breakOn needle haystack
-  in needle `isPrefixOf` after
+  in needle `L.isPrefixOf` after
 
 -- Property: breakOn should return original string if needle not found
 propBreakOnReturnsOriginalIfNotFound :: String -> String -> Bool
 propBreakOnReturnsOriginalIfNotFound needle haystack =
-  not (needle `isInfixOf` haystack) ==>
+  not (needle `L.isInfixOf` haystack) ==>
     let (before, after) = breakOn needle haystack
     in before == haystack && after == ""
 
@@ -262,10 +263,10 @@ testComplexStringProcessing = testCase "Complex string processing scenarios" $ d
   let step3 = normalizeIndentation step2
   let step4 = splitByCommaCollapsed step3
   
-  assertBool "Trim removes leading/trailing whitespace" (not (any isSpace (take 1 step1)))
-  assertBool "Comments removed" (not ("//" `isInfixOf` step2 || "/*" `isInfixOf` step2))
-  assertBool "Indentation normalized" (length (lines step3) >= 1)
-  assertBool "Split produces content" (length step4 >= 1)
+  assertBool "Trim removes leading/trailing whitespace" (not (L.any isSpace (take 1 step1)))
+  assertBool "Comments removed" (not ("//" `L.isInfixOf` step2 || "/*" `L.isInfixOf` step2))
+  assertBool "Indentation normalized" (L.length (lines step3) >= 1)
+  assertBool "Split produces content" (L.length step4 >= 1)
 
 -- ============================================================================
 -- Test Suite
@@ -275,7 +276,7 @@ tests :: TestTree
 tests = testGroup "Utils String Processing Advanced Tests"
   [ -- QuickCheck properties for trim
     testProperty "Trim no change without whitespace" propTrimNoChangeWithoutWhitespace
-  , testProperty "Trim removes all whitespace" propTrimRemovesAllWhitespace
+  , testProperty "Trim removes L.all whitespace" propTrimRemovesAllWhitespace
   , testProperty "Trim is idempotent" propTrimIdempotent
   , testProperty "Trim preserves internal whitespace" propTrimPreservesInternalWhitespace
   

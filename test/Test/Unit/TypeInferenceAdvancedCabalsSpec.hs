@@ -19,7 +19,9 @@ import Compiler.TypeChecker (buildTypeEnv, TypeCheckDiagnostic(..))
 import Compiler (compile, CompilerError(..))
 import Parser (parseTypus, TypusFile(..))
 
-import Data.List (isInfixOf, isPrefixOf, length, sort)
+import qualified Data.List as L
+import Data.List (isInfixOf, isPrefixOf, length)
+import Data.List (sort)
 import qualified Data.Text as T
 
 -- Test 1: Type inference for generic functions
@@ -44,7 +46,7 @@ test_type_inference_generic_functions =
           Left compileErr -> do
             -- May fail on generic type inference
             assertBool "Should handle generic type inference" $
-              any (`isInfixOf` show compileErr) 
+              L.any (`L.isInfixOf` show compileErr) 
                 ["generic", "type", "inference", "T"]
           Right result -> do
             -- Generic type inference succeeded
@@ -74,7 +76,7 @@ test_type_inference_composition =
           Left compileErr -> do
             -- May fail on complex type inference
             assertBool "Should handle function composition types" $
-              any (`isInfixOf` show compileErr) 
+              L.any (`L.isInfixOf` show compileErr) 
                 ["compose", "function", "type"]
           Right result -> do
             -- Function composition type inference succeeded
@@ -106,7 +108,7 @@ test_type_inference_higher_order =
           Left compileErr -> do
             -- May fail on higher-order function inference
             assertBool "Should handle higher-order function types" $
-              any (`isInfixOf` show compileErr) 
+              L.any (`L.isInfixOf` show compileErr) 
                 ["map", "higher", "order", "function"]
           Right result -> do
             -- Higher-order function type inference succeeded
@@ -137,7 +139,7 @@ test_type_inference_constraints =
           Left compileErr -> do
             -- May fail on constrained type inference
             assertBool "Should handle constrained type inference" $
-              any (`isInfixOf` show compileErr) 
+              L.any (`L.isInfixOf` show compileErr) 
                 ["comparable", "constraint", "max"]
           Right result -> do
             -- Constrained type inference succeeded
@@ -146,7 +148,7 @@ test_type_inference_constraints =
 -- QuickCheck property: Type inference is deterministic
 prop_type_inference_deterministic :: String -> Property
 prop_type_inference_deterministic expr =
-  length expr < 50 ==>  -- Keep expressions reasonable
+  L.length expr < 50 ==>  -- Keep expressions reasonable
   let source = unlines
         [ "package main"
         , "func main() {"
@@ -223,7 +225,7 @@ test_type_inference_type_classes =
           Left compileErr -> do
             -- May fail on type class inference
             assertBool "Should handle type class inference" $
-              any (`isInfixOf` show compileErr) 
+              L.any (`L.isInfixOf` show compileErr) 
                 ["Show", "interface", "type", "class"]
           Right result -> do
             -- Type class inference succeeded
@@ -256,7 +258,7 @@ test_type_inference_closures =
           Left compileErr -> do
             -- May fail on closure type inference
             assertBool "Should handle closure type inference" $
-              any (`isInfixOf` show compileErr) 
+              L.any (`L.isInfixOf` show compileErr) 
                 ["closure", "function", "type"]
           Right result -> do
             -- Closure type inference succeeded
@@ -265,7 +267,7 @@ test_type_inference_closures =
 -- QuickCheck property: Type inference handles edge cases
 prop_type_inference_edge_cases :: String -> Property
 prop_type_inference_edge_cases code =
-  length code < 80 ==>  -- Keep code reasonable
+  L.length code < 80 ==>  -- Keep code reasonable
   let source = unlines
         [ "package main"
         , "func main() {"

@@ -12,7 +12,7 @@ import qualified SourceLocation
 tests :: TestTree
 tests =
   testGroup "New Cabal Parser Boundary Tests"
-    [ testGroup "Empty and Null Input Handling"
+    [ testGroup "Empty L.and Null Input Handling"
         [ testCase "parser handles empty string" $ do
             let result = Parser.parse ""
             assertBool "should handle empty input" $ True
@@ -38,7 +38,7 @@ tests =
             assertBool "should handle deep nesting" $ True
         ]
 
-    , testGroup "Unicode and Special Characters"
+    , testGroup "Unicode L.and Special Characters"
         [ testCase "parser handles unicode characters" $ do
             let unicode = "变量_αβγ_🚀"
             let result = Parser.parse unicode
@@ -68,7 +68,7 @@ tests =
             let result = Parser.parse multiline
             assertBool "should track multiline positions" $ True
             
-        , testCase "parser handles tabs and spaces correctly" $ do
+        , testCase "parser handles tabs L.and spaces correctly" $ do
             let mixed = "\t\tx\n    \t\ty"
             let result = Parser.parse mixed
             assertBool "should handle mixed indentation" $ True

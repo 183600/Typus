@@ -1,6 +1,7 @@
 module Test.Unit.NewQuickCheckTestSuite10Spec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.QuickCheck (Property, (==>), forAll, Gen, arbitrary, choose, oneof, elements)
 import Data.Text (Text)
@@ -39,7 +40,7 @@ tests =
             case parseResult of
               Left _ -> True @?= True  -- Parser may fail
               Right typusFile -> do
-                length syntaxErrors >= 0 @?= True  -- Should detect syntax issues
+                L.length syntaxErrors >= 0 @?= True  -- Should detect syntax issues
         ]
 
     , testGroup "Compiler IR pipeline"
@@ -62,7 +63,7 @@ tests =
                 typeResult = diagnoseTypeErrors typusFile
             case typeResult of
               Left _ -> True @?= True  -- Should detect type errors
-              Right diagnostics -> length diagnostics >= 0 @?= True
+              Right diagnostics -> L.length diagnostics >= 0 @?= True
         ]
 
     , testGroup "Utils integration with parsing"
@@ -117,10 +118,10 @@ tests =
                     typeResult = diagnoseTypeErrors typusFile
                 case (compileResult, typeResult) of
                   (Left compileErrors, Left typeErrors) -> 
-                    length compileErrors > 0 && length typeErrors > 0 @?= True
+                    L.length compileErrors > 0 && L.length typeErrors > 0 @?= True
                   _ -> True @?= True  -- Other error combinations are valid
               Left _ -> True @?= True  -- Parser errors
-            length syntaxErrors >= 0 @?= True  -- Syntax validation should work
+            L.length syntaxErrors >= 0 @?= True  -- Syntax validation should work
         ]
 
     , testGroup "End-to-end compilation"
@@ -148,7 +149,7 @@ tests =
                     goCode `contains` "func main()" @?= True
                   _ -> True @?= True  -- Error cases are also valid
               Left _ -> True @?= True  -- Parser errors
-            length syntaxErrors <= 2 @?= True  -- Should have minimal syntax errors
+            L.length syntaxErrors <= 2 @?= True  -- Should have minimal syntax errors
         ]
 
     , testGroup "QuickCheck properties"
@@ -162,7 +163,7 @@ tests =
 
 -- Helper function to check if string contains substring
 contains :: String -> String -> Bool
-contains needle haystack = needle `isInfixOf` haystack
+contains needle haystack = needle `L.isInfixOf` haystack
 
 -- ============================================================================
 -- QuickCheck Properties
@@ -177,7 +178,7 @@ prop_parseCompileRoundtrip input =
       Right typusFile ->
         let compileResult = compile typusFile
         in case compileResult of
-          Right goCode -> length goCode >= 0  -- Basic sanity check
+          Right goCode -> L.length goCode >= 0  -- Basic sanity check
           Left _ -> True  -- Compilation may fail
       Left _ -> True  -- Parsing may fail
 
@@ -186,7 +187,7 @@ prop_syntaxValidationConsistent :: String -> Bool
 prop_syntaxValidationConsistent input =
     let errors1 = validateSyntax input
         errors2 = validateSyntax input
-    in length errors1 == length errors2
+    in L.length errors1 == L.length errors2
 
 -- IR pipeline properties
 prop_irPipelinePreservesContent :: String -> Property
@@ -209,19 +210,19 @@ prop_errorPropagationPreservesInfo input =
             compileResult = compile typusFile
         in case (typeResult, compileResult) of
           (Left typeErrors, Left compileErrors) -> 
-            length typeErrors > 0 && length compileErrors > 0
+            L.length typeErrors > 0 && L.length compileErrors > 0
           _ -> True  -- Other combinations are valid
-      Left _ -> length syntaxErrors >= 0  -- Parser errors
+      Left _ -> L.length syntaxErrors >= 0  -- Parser errors
 
 -- Multi-block integration properties
 prop_multiBlockIntegrationMaintainsOrder :: [String] -> Property
 prop_multiBlockIntegrationMaintainsOrder contents =
-    not (null contents) && all (not . null) contents ==>
-    let blocks = map (\content -> CodeBlock defaultBlockDirectives content emptySpan) contents
+    not (null contents) && L.all (not . null) contents ==>
+    let blocks = L.map (\content -> CodeBlock defaultBlockDirectives content emptySpan) contents
         typusFile = TypusFile defaultFileDirectives [] blocks []
         sourceIR = buildSourceIR typusFile
         sourceText = rawSourceFromTypus typusFile
-    in length sourceText >= sum (map length contents)  -- Basic structure preservation
+    in L.length sourceText >= L.sum (map L.length contents)  -- Basic structure preservation
 
 -- Helper functions for generating test data
 genValidGoInput :: Gen String
@@ -257,19 +258,19 @@ genMixedInput = do
 -- Helper function to check if input is likely valid Go
 isValidGoInput :: String -> Bool
 isValidGoInput input = 
-    let hasPackage = "package" `isInfixOf` input
-        hasFunc = "func" `isInfixOf` input
+    let hasPackage = "package" `L.isInfixOf` input
+        hasFunc = "func" `L.isInfixOf` input
         hasBraces = count '{' input == count '}' input
     in hasPackage && hasFunc && hasBraces
 
 -- Helper function to count characters
 count :: Eq a => a -> [a] -> Int
-count x = length . filter (== x)
+count x = L.length . L.filter (== x)
 
 -- Helper function for sorting
 sortBy :: (a -> a -> Ordering) -> [a] -> [a]
 sortBy _ [] = []
 sortBy _ [x] = [x]
-sortBy cmp (x:xs) = let smaller = filter (\y -> cmp y x == LT) xs
-                        larger = filter (\y -> cmp y x /= LT) xs
+sortBy cmp (x:xs) = let smaller = L.filter (\y -> cmp y x == LT) xs
+                        larger = L.filter (\y -> cmp y x /= LT) xs
                     in sortBy cmp smaller ++ [x] ++ sortBy cmp larger

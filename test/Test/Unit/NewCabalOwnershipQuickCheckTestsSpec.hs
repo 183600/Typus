@@ -3,6 +3,7 @@
 module Test.Unit.NewCabalOwnershipQuickCheckTestsSpec where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), forAll, counterexample, suchThat, elements, listOf, listOf1, choose)
 import Ownership.Common.Types
   ( OwnershipType(..)
@@ -125,7 +126,7 @@ prop_ownership_type_name_consistency ownershipType =
 prop_ownership_error_show_roundtrip :: OwnershipError -> Property
 prop_ownership_error_show_roundtrip ownershipError =
   let shown = show ownershipError
-  in length shown > 0  -- Basic check that show produces non-empty string
+  in L.length shown > 0  -- Basic check that show produces non-empty string
 
 prop_ownership_error_ordering_consistent :: OwnershipError -> OwnershipError -> Property
 prop_ownership_error_ordering_consistent err1 err2 =
@@ -138,10 +139,10 @@ prop_ownership_error_use_after_move_structure =
   forAll genVariableName $ \var ->
     let err = UseAfterMove var
         shown = show err
-    in "UseAfterMove" `isPrefixOf` shown && var `isInfixOf` shown
+    in "UseAfterMove" `L.isPrefixOf` shown && var `L.isInfixOf` shown
   where
-    isPrefixOf prefix str = take (length prefix) str == prefix
-    isInfixOf substr str = substr `elem` [take (length substr) $ drop i str | i <- [0..length str - length substr]]
+    L.isPrefixOf prefix str = take (L.length prefix) str == prefix
+    L.isInfixOf substr str = substr `elem` [take (L.length substr) $ drop i str | i <- [0..L.length str - L.length substr]]
 
 prop_ownership_error_double_move_structure :: Property
 prop_ownership_error_double_move_structure =
@@ -149,12 +150,12 @@ prop_ownership_error_double_move_structure =
     forAll (genVariableName `suchThat` (/= var1)) $ \var2 ->
       let err = DoubleMove var1 var2
           shown = show err
-      in "DoubleMove" `isPrefixOf` shown && 
-         var1 `isInfixOf` shown && 
-         var2 `isInfixOf` shown
+      in "DoubleMove" `L.isPrefixOf` shown && 
+         var1 `L.isInfixOf` shown && 
+         var2 `L.isInfixOf` shown
   where
-    isPrefixOf prefix str = take (length prefix) str == prefix
-    isInfixOf substr str = substr `elem` [take (length substr) $ drop i str | i <- [0..length str - length substr]]
+    L.isPrefixOf prefix str = take (L.length prefix) str == prefix
+    L.isInfixOf substr str = substr `elem` [take (L.length substr) $ drop i str | i <- [0..L.length str - L.length substr]]
 
 -- ============================================================================
 -- Properties for OwnershipTransfer
@@ -167,7 +168,7 @@ prop_ownership_transfer_different_variables transfer =
 prop_ownership_transfer_show_roundtrip :: OwnershipTransfer -> Property
 prop_ownership_transfer_show_roundtrip transfer =
   let shown = show transfer
-  in length shown > 0  -- Basic check that show produces non-empty string
+  in L.length shown > 0  -- Basic check that show produces non-empty string
 
 prop_ownership_transfer_commutative_property :: Property
 prop_ownership_transfer_commutative_property =
@@ -189,9 +190,9 @@ prop_ownership_analyzer_show :: Property
 prop_ownership_analyzer_show =
   let analyzer = newOwnershipAnalyzer
       shown = show analyzer
-  in "OwnershipAnalyzer" `isPrefixOf` shown
+  in "OwnershipAnalyzer" `L.isPrefixOf` shown
   where
-    isPrefixOf prefix str = take (length prefix) str == prefix
+    L.isPrefixOf prefix str = take (L.length prefix) str == prefix
 
 -- ============================================================================
 -- Properties for OwnershipType Lists
@@ -202,15 +203,15 @@ prop_ownership_type_list_sort_preserves_elements =
   forAll genOwnershipTypeList $ \types ->
     let sorted = sort types
     in sort sorted === sorted &&  -- Already sorted
-       length sorted === length types &&
-       all (`elem` types) sorted
+       L.length sorted === L.length types &&
+       L.all (`elem` types) sorted
 
 prop_ownership_type_list_nub_removes_duplicates :: Property
 prop_ownership_type_list_nub_removes_duplicates =
   forAll genOwnershipTypeList $ \types ->
     let unique = nub types
-    in length unique <= length types &&
-       all (`elem` types) unique
+    in L.length unique <= L.length types &&
+       L.all (`elem` types) unique
 
 -- ============================================================================
 -- Properties for OwnershipError Lists
@@ -221,15 +222,15 @@ prop_ownership_error_list_sort_preserves_elements =
   forAll genOwnershipErrorList $ \errors ->
     let sorted = sort errors
     in sort sorted === sorted &&  -- Already sorted
-       length sorted === length errors &&
-       all (`elem` errors) sorted
+       L.length sorted === L.length errors &&
+       L.all (`elem` errors) sorted
 
 prop_ownership_error_list_nub_removes_duplicates :: Property
 prop_ownership_error_list_nub_removes_duplicates =
   forAll genOwnershipErrorList $ \errors ->
     let unique = nub errors
-    in length unique <= length errors &&
-       all (`elem` errors) unique
+    in L.length unique <= L.length errors &&
+       L.all (`elem` errors) unique
 
 -- ============================================================================
 -- Properties for Variable Name Generation
@@ -238,14 +239,14 @@ prop_ownership_error_list_nub_removes_duplicates =
 prop_variable_name_non_empty :: Property
 prop_variable_name_non_empty =
   forAll genVariableName $ \name ->
-    not (null name) && isAlphaNum (head name)
+    not (null name) && isAlphaNum (L.head name)
   where
     isAlphaNum c = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
 
 prop_variable_name_valid_characters :: Property
 prop_variable_name_valid_characters =
   forAll genVariableName $ \name ->
-    all isValidChar name
+    L.all isValidChar name
   where
     isValidChar c = (c >= 'a' && c <= 'z') || 
                     (c >= 'A' && c <= 'Z') || 
@@ -260,7 +261,7 @@ prop_error_classification_move_related :: Property
 prop_error_classification_move_related =
   let moveErrors = [UseAfterMove "x", DoubleMove "x" "y", BorrowWhileMoved "x", 
                     CrossFunctionMove "x" "y", ParameterMoveMismatch "x"]
-  in all isMoveRelatedError moveErrors
+  in L.all isMoveRelatedError moveErrors
   where
     isMoveRelatedError (UseAfterMove _) = True
     isMoveRelatedError (DoubleMove _ _) = True
@@ -273,7 +274,7 @@ prop_error_classification_borrow_related :: Property
 prop_error_classification_borrow_related =
   let borrowErrors = [MutBorrowWhileBorrowed "x", BorrowWhileMutBorrowed "x", 
                       MultipleMutBorrows "x", UseWhileMutBorrowed "x", BorrowError "msg"]
-  in all isBorrowRelatedError borrowErrors
+  in L.all isBorrowRelatedError borrowErrors
   where
     isBorrowRelatedError (MutBorrowWhileBorrowed _) = True
     isBorrowRelatedError (BorrowWhileMutBorrowed _) = True

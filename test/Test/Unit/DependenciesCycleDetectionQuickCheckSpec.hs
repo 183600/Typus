@@ -10,6 +10,7 @@
 module Test.Unit.DependenciesCycleDetectionQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -43,7 +44,7 @@ instance Arbitrary DependencyGraph where
         numNodes <- choose (1, maxNodes)
         nodeNames <- vectorOf numNodes (elements ["A", "B", "C", "D", "E", "F", "G", "H"])
         let uniqueNodes = nub nodeNames
-        numEdges <- choose (0, length uniqueNodes * 2)
+        numEdges <- choose (0, L.length uniqueNodes * 2)
         edges <- vectorOf numEdges $ do
           from <- elements uniqueNodes
           to <- elements uniqueNodes
@@ -53,11 +54,11 @@ instance Arbitrary DependencyGraph where
 -- Property: Acyclic graphs should have no cycles
 prop_acyclic_graph_no_cycles :: DependencyGraph -> Property
 prop_acyclic_graph_no_cycles graph =
-  let acyclicEdges = filter (uncurry (/=)) $ edges graph
+  let acyclicEdges = L.filter (uncurry (/=)) $ edges graph
       acyclicGraph = DependencyGraph (nodes graph) acyclicEdges
       hasCycle = detectDirectCycles acyclicGraph
-  in classify (length (nodes acyclicGraph) > 3) "medium graph" $
-     classify (length (edges acyclicGraph) > 5) "many edges" $
+  in classify (L.length (nodes acyclicGraph) > 3) "medium graph" $
+     classify (L.length (edges acyclicGraph) > 5) "many edges" $
      property $ not hasCycle
 
 -- Property: Self-loops are detected as cycles
@@ -87,8 +88,8 @@ prop_complex_cycle_detection =
 -- Property: Transitive dependencies are tracked correctly
 prop_transitive_dependencies :: DependencyGraph -> Property
 prop_transitive_dependencies graph =
-  length (nodes graph) >= 3 ==>
-  let startNode = head (nodes graph)
+  L.length (nodes graph) >= 3 ==>
+  let startNode = L.head (nodes graph)
       transitiveDeps = getTransitiveDependencies graph startNode
       directDeps = getDirectDependencies graph startNode
       allDeps = getAllDependencies graph startNode
@@ -98,7 +99,7 @@ prop_transitive_dependencies graph =
 -- Property: Cycle detection works with disconnected components
 prop_disconnected_components :: DependencyGraph -> DependencyGraph -> Property
 prop_disconnected_components graph1 graph2 =
-  let disjointNodes = null (nodes graph1 `intersect` nodes graph2)
+  let disjointNodes = L.null (nodes graph1 `intersect` nodes graph2)
       combinedGraph = DependencyGraph 
         (nodes graph1 `union` nodes graph2)
         (edges graph1 `union` edges graph2)
@@ -110,22 +111,22 @@ prop_disconnected_components graph1 graph2 =
 
 -- Helper functions for cycle detection
 detectDirectCycles :: DependencyGraph -> Bool
-detectDirectCycles graph = any (uncurry (==)) (edges graph) || hasPathCycle graph
+detectDirectCycles graph = L.any (uncurry (==)) (edges graph) || hasPathCycle graph
 
 hasPathCycle :: DependencyGraph -> Bool
-hasPathCycle graph = any (`hasPathTo` graph) (nodes graph)
+hasPathCycle graph = L.any (`hasPathTo` graph) (nodes graph)
   where
-    hasPathTo node g = any (pathExists node) (nodes g)
+    hasPathTo node g = L.any (pathExists node) (nodes g)
     
     pathExists from to = from /= to && reachable from to (edges g)
     
     reachable _ _ [] = False
     reachable target currentEdges ((from, to):rest)
       | from == target = to == target || reachable target rest currentEdges
-      | otherwise = reachable target (filter ((/=) from) currentEdges) rest
+      | otherwise = reachable target (L.filter ((/=) from) currentEdges) rest
 
 getDirectDependencies :: DependencyGraph -> String -> [String]
-getDirectDependencies graph node = map snd $ filter ((==) node . fst) (edges graph)
+getDirectDependencies graph node = map snd $ L.filter ((==) node . fst) (edges graph)
 
 getTransitiveDependencies :: DependencyGraph -> String -> [String]
 getTransitiveDependencies graph node = 
@@ -136,14 +137,14 @@ getTransitiveDependencies graph node =
 getAllDependencies :: DependencyGraph -> String -> [String]
 getAllDependencies graph node = 
   let visited = collectDeps graph node []
-  in filter (/= node) visited
+  in L.filter (/= node) visited
   where
     collectDeps g current visited'
       | current `elem` visited' = visited'
       | otherwise = 
           let direct = getDirectDependencies g current
               newVisited = current : visited'
-          in foldr (collectDeps g) newVisited direct
+          in L.foldr (collectDeps g) newVisited direct
 
 tests :: TestTree
 tests = testGroup "Dependencies Cycle Detection QuickCheck Tests"

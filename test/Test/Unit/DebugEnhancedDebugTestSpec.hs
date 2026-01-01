@@ -12,6 +12,7 @@ import Debug (DebugLevel(..), debugMessage, enableDebug, isDebugEnabled)
 import EnhancedDebug (EnhancedDebugConfig, enhancedDebug, debugWithLocation, debugPerformance)
 import SourceLocation (SourcePos(..), startPos, spanFrom)
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isInfixOf)
 import Data.Maybe (isNothing, isJust)
 
@@ -38,8 +39,8 @@ test_debug_message_creation = do
         message = "Test debug message"
         result = debugMessage level message
     assertBool "Debug message should be created" (not (null result))
-    assertBool "Debug message should contain level" (show level `isInfixOf` result)
-    assertBool "Debug message should contain message text" (message `isInfixOf` result)
+    assertBool "Debug message should contain level" (show level `L.isInfixOf` result)
+    assertBool "Debug message should contain message text" (message `L.isInfixOf` result)
 
 -- Test debug enable/disable
 test_debug_enable_disable :: IO ()
@@ -92,8 +93,8 @@ test_debug_with_location = do
         message = "Location test"
         result = debugWithLocation span message
     assertBool "Debug with location should work" (not (null result))
-    assertBool "Debug should contain line info" ("line 10" `isInfixOf` result)
-    assertBool "Debug should contain column info" ("column 5" `isInfixOf` result)
+    assertBool "Debug should contain line info" ("line 10" `L.isInfixOf` result)
+    assertBool "Debug should contain column info" ("column 5" `L.isInfixOf` result)
 
 -- Test performance debugging
 test_performance_debugging :: IO ()
@@ -106,7 +107,7 @@ test_performance_debugging = do
         Right (value, perfInfo) -> do
             assertEqual "Operation should return correct value" "result" value
             assertBool "Performance info should be generated" (not (null perfInfo))
-            assertBool "Performance info should contain operation name" (operation `isInfixOf` perfInfo)
+            assertBool "Performance info should contain operation name" (operation `L.isInfixOf` perfInfo)
         Left _ -> assertBool "Performance debugging should not fail" False
 
 -- Test enhanced debug properties
@@ -114,13 +115,13 @@ prop_enhanced_debug_contains_timestamp :: EnhancedDebugConfig -> String -> Prope
 prop_enhanced_debug_contains_timestamp config message = 
     includeTimestamp config ==>
     let result = enhancedDebug config message
-    in any (`isInfixOf` result) ["2023", "2024", "2025"]  -- Check for year in timestamp
+    in L.any (`L.isInfixOf` result) ["2023", "2024", "2025"]  -- Check for year in timestamp
 
 prop_enhanced_debug_contains_location :: EnhancedDebugConfig -> String -> Property
 prop_enhanced_debug_contains_location config message = 
     includeLocation config ==>
     let result = enhancedDebug config message
-    in "line" `isInfixOf` result || "col" `isInfixOf` result
+    in "line" `L.isInfixOf` result || "col" `L.isInfixOf` result
 
 -- ============================================================================
 -- Integration Tests
@@ -151,13 +152,13 @@ test_enhanced_debug_complex_scenarios = do
     
     -- Test multiple debug calls
     let messages = ["Message 1", "Message 2", "Message 3"]
-        results = map (enhancedDebug config) messages
+        results = L.map (enhancedDebug config) messages
     
-    assertBool "All messages should be processed" (length results == length messages)
-    assertBool "All results should be non-empty" (all (not . null) results)
+    assertBool "All messages should be processed" (L.length results == L.length messages)
+    assertBool "All results should be non-empty" (L.all (not . null) results)
 
 -- ============================================================================
--- Edge Cases and Boundary Tests
+-- Edge Cases L.and Boundary Tests
 -- ============================================================================
 
 -- Test debug with empty message
@@ -169,7 +170,7 @@ test_debug_empty_message = do
 -- Test debug with very long message
 test_debug_long_message :: IO ()
 test_debug_long_message = do
-    let longMessage = concat (replicate 1000 "This is a very long debug message. ")
+    let longMessage = L.concat (replicate 1000 "This is a very long debug message. ")
         result = debugMessage DebugInfo longMessage
     assertBool "Long message should be handled" (not (null result))
 
@@ -179,7 +180,7 @@ test_debug_special_characters = do
     let specialMessage = "Debug with special chars: \n\t\"'\\<>{}[]()&^%$#@!"
         result = debugMessage DebugInfo specialMessage
     assertBool "Special characters should be handled" (not (null result))
-    assertBool "Special characters should be preserved" (specialMessage `isInfixOf` result)
+    assertBool "Special characters should be preserved" (specialMessage `L.isInfixOf` result)
 
 -- ============================================================================
 -- Mock Implementations
@@ -252,7 +253,7 @@ instance Arbitrary EnhancedDebugConfig where
 elements :: [a] -> Gen a
 elements [] = error "elements: empty list"
 elements xs = do
-  idx <- arbitrary `suchThat` (\i -> i >= 0 && i < length xs)
+  idx <- arbitrary `suchThat` (\i -> i >= 0 && i < L.length xs)
   return (xs !! idx)
 
 arbitrary :: Gen a
@@ -268,7 +269,7 @@ gen `suchThat` p = do
 -- ============================================================================
 
 tests :: TestTree
-tests = testGroup "Debug and EnhancedDebug Test Suite"
+tests = testGroup "Debug L.and EnhancedDebug Test Suite"
   [ testGroup "Debug Tests"
       [ fastProperty "Debug level ordering" prop_debug_level_ordering
       , testCase "Debug message creation" test_debug_message_creation
@@ -286,7 +287,7 @@ tests = testGroup "Debug and EnhancedDebug Test Suite"
       [ testCase "Debug compilation integration" test_debug_compilation_integration
       , testCase "Enhanced debug complex scenarios" test_enhanced_debug_complex_scenarios
       ]
-  , testGroup "Edge Cases and Boundary Tests"
+  , testGroup "Edge Cases L.and Boundary Tests"
       [ testCase "Debug empty message" test_debug_empty_message
       , testCase "Debug long message" test_debug_long_message
       , testCase "Debug special characters" test_debug_special_characters

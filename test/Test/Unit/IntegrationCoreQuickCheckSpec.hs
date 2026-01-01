@@ -10,7 +10,9 @@ import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
   ( Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), choose, vectorOf, elements )
 import Control.Monad (replicateM, when)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, sort, intercalate, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (sort, intercalate, nub)
 import Data.Char (isSpace, isDigit, isAlpha, toLower, toUpper)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import qualified Data.Text as T
@@ -47,9 +49,9 @@ prop_source_location_consistency input =
 prop_error_phase_progression_pipeline :: String -> Property
 prop_error_phase_progression_pipeline input =
   let phases = [Parsing, TypeChecking, OwnershipAnalysis, CodeGeneration]
-      phaseOrder = map (\phase -> (phase, fromEnum phase)) 
+      phaseOrder = L.map (\phase -> (phase, fromEnum phase)) 
                     [(Parsing, 0), (TypeChecking, 1), (OwnershipAnalysis, 2), (CodeGeneration, 3)]
-  in property $ length phaseOrder === 4
+  in property $ L.length phaseOrder === 4
 
 -- Property: Multi-module consistency
 prop_multi_module_consistency :: [String] -> Property
@@ -57,9 +59,9 @@ prop_multi_module_consistency inputs =
   let parseResults = map parseTypus inputs
       compileResults = map compile parseResults
       ownershipResults = map analyzeOwnership inputs
-  in property $ length parseResults === length inputs .&&.
-     length compileResults === length inputs .&&.
-     length ownershipResults === length inputs
+  in property $ L.length parseResults === L.length inputs .&&.
+     L.length compileResults === L.length inputs .&&.
+     L.length ownershipResults === L.length inputs
 
 -- Property: Error accumulation across phases
 prop_error_accumulation :: String -> Property
@@ -73,10 +75,10 @@ prop_error_accumulation input =
 -- Property: Type preservation through pipeline
 prop_type_preservation_pipeline :: String -> Property
 prop_type_preservation_pipeline input =
-  let originalType = length input  -- Simple type proxy
+  let originalType = L.length input  -- Simple type proxy
       parseResult = parseTypus input
       compileResult = compile parseResult
-      finalType = length input  -- Should be preserved
+      finalType = L.length input  -- Should be preserved
   in property $ originalType === finalType
 
 -- Property: Resource cleanup in pipeline
@@ -97,9 +99,9 @@ prop_pipeline_idempotency input =
 -- Property: Cross-module data consistency
 prop_cross_module_consistency :: String -> Property
 prop_cross_module_consistency input =
-  let parseLength = length (show (parseTypus input))
-      compileLength = length (show (compile (parseTypus input)))
-      ownershipLength = length (show (analyzeOwnership input))
+  let parseLength = L.length (show (parseTypus input))
+      compileLength = L.length (show (compile (parseTypus input)))
+      ownershipLength = L.length (show (analyzeOwnership input))
   in property $ parseLength >= 0 .&&. compileLength >= 0 .&&. ownershipLength >= 0
 
 -- Property: Pipeline performance characteristics
@@ -107,7 +109,7 @@ prop_pipeline_performance :: String -> Int -> Property
 prop_pipeline_performance input iterations =
   iterations >= 0 && iterations <= 10 ==>
   let results = replicate iterations (compile (parseTypus input))
-  in property $ length results === iterations
+  in property $ L.length results === iterations
 
 -- Property: Error handling consistency
 prop_error_handling_consistency :: String -> Property
@@ -121,15 +123,15 @@ prop_error_handling_consistency input =
 prop_memory_efficiency_pipeline :: String -> Int -> Property
 prop_memory_efficiency_pipeline input multiplier =
   multiplier >= 0 && multiplier <= 5 ==>
-  let largeInput = concat (replicate multiplier input)
+  let largeInput = L.concat (replicate multiplier input)
       result = compile (parseTypus largeInput)
-  in property $ length largeInput >= length input
+  in property $ L.length largeInput >= L.length input
 
 -- Property: Concurrent pipeline execution
 prop_concurrent_pipeline :: [String] -> Property
 prop_concurrent_pipeline inputs =
-  let results = map (\inp -> compile (parseTypus inp)) inputs
-  in property $ length results === length inputs
+  let results = L.map (\inp -> compile (parseTypus inp)) inputs
+  in property $ L.length results === L.length inputs
 
 -- Property: Pipeline configuration consistency
 prop_pipeline_configuration :: String -> Property

@@ -3,6 +3,7 @@
 module Test.Unit.DependentTypesComprehensiveQuickCheckSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 
@@ -45,10 +46,10 @@ typeRefProperties = testGroup "TypeRef Properties"
             typeRef2 = TypeRef name2 params
         in typeRef1 /= typeRef2
   
-  , testProperty "TypeRef preserves name and parameters" $
+  , testProperty "TypeRef preserves name L.and parameters" $
       \name params ->
         let typeRef = TypeRef name params
-        in -- Check that name and parameters are preserved
+        in -- Check that name L.and parameters are preserved
            True
   ]
 
@@ -107,10 +108,10 @@ fieldProperties = testGroup "Field Properties"
             field2 = Field name2 type
         in field1 /= field2
   
-  , testProperty "Field preserves name and type" $
+  , testProperty "Field preserves name L.and type" $
       \name type ->
         let field = Field name type
-        in -- Check that name and type are preserved
+        in -- Check that name L.and type are preserved
            True
   ]
 
@@ -175,10 +176,10 @@ typeConstraintProperties = testGroup "TypeConstraint Properties"
         in -- Check that value is preserved
            True
   
-  , testProperty "PredicateConstraint preserves name and arguments" $
+  , testProperty "PredicateConstraint preserves name L.and arguments" $
       \name args ->
         let constraint = PredicateConstraint name args
-        in -- Check that name and arguments are preserved
+        in -- Check that name L.and arguments are preserved
            True
   ]
 
@@ -218,10 +219,10 @@ dependentTypeProperties = testGroup "DependentType Properties"
             type2 = DependentType name params constraints body2
         in type1 /= type2
   
-  , testProperty "DependentType preserves all fields" $
+  , testProperty "DependentType preserves L.all fields" $
       \name params constraints body ->
         let depType = DependentType name params constraints body
-        in -- Check that all fields are preserved
+        in -- Check that L.all fields are preserved
            True
   ]
 

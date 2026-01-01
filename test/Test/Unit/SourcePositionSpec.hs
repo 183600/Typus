@@ -3,6 +3,7 @@
 module Test.Unit.SourcePositionSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty)
 import TestSupport.QuickCheck (fastProperty)
@@ -38,7 +39,7 @@ tests =
                 newPos = posAfter 'a' pos
             newPos @?= SourcePos 1 6 5
             
-        , testCase "posAt creates position at specific line and column" $ do
+        , testCase "posAt creates position at specific line L.and column" $ do
             posAt 3 7 @?= SourcePos 3 7 0
             
         , testCase "posAtLineCol creates position with offset" $ do
@@ -46,11 +47,11 @@ tests =
         ]
         
     , testGroup "SourceSpan Operations"
-        [ testCase "emptySpan should be valid but have zero length" $ do
+        [ testCase "emptySpan should be valid but have zero L.length" $ do
             let span = emptySpan
             isValidSpan span @?= True
             
-        , testCase "spanFrom and spanTo create valid spans" $ do
+        , testCase "spanFrom L.and spanTo create valid spans" $ do
             let start = SourcePos 1 1 0
                 end = SourcePos 1 5 4
                 span = spanBetween start end
@@ -153,7 +154,7 @@ tests =
                then valid
                else True  -- span may be invalid, that's expected
                
-        , testProperty "mergeSpans preserves start of first and end of second" $ fastProperty $ \span1 span2 ->
+        , testProperty "mergeSpans preserves start of first L.and end of second" $ fastProperty $ \span1 span2 ->
             let merged = mergeSpans span1 span2
                 valid = isValidSpan span1 && isValidSpan span2
             in if valid
@@ -195,10 +196,10 @@ tests =
             let pos = SourcePos 1 1 0
                 unicodeText = "héllo 🌍"
                 newPos = advancePosByText unicodeText pos
-            posOffset newPos @?= length unicodeText
+            posOffset newPos @?= L.length unicodeText
         ]
         
-    , testGroup "Performance and Robustness"
+    , testGroup "Performance L.and Robustness"
         [ testProperty "position operations handle large values" $ fastProperty $ \line col ->
             let pos = SourcePos (abs line `mod` 10000 + 1) (abs col `mod` 1000 + 1) 0
                 newPos = posAfter 'a' pos
@@ -209,11 +210,11 @@ tests =
                 end = SourcePos (abs line2 `mod` 1000 + 1) (abs col2 `mod` 1000 + 1) 1000
                 span = spanBetween start end
                 merged = mergeSpans span span
-            in length (show merged) >= 0
+            in L.length (show merged) >= 0
             
         , testProperty "text advancement handles long texts" $ fastProperty $ \text ->
             let pos = SourcePos 1 1 0
-                longText = concat $ replicate 100 [text]
+                longText = L.concat $ replicate 100 [text]
                 newPos = advancePosByText (T.pack longText) pos
             in posOffset newPos >= 0
         ]

@@ -5,6 +5,7 @@
 module Test.Unit.NewFreshDependentTypesQuickCheckSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import DependentTypesParser (DependentType(..), TypeConstraint(..), TypeVariable(..))
@@ -94,7 +95,7 @@ typeConstraintProperties = testGroup "Type Constraint Properties"
       \constraints ->
         let constraintList = take 5 constraints
             -- Simplified: more constraints should not make satisfaction easier
-        in length constraintList >= 0 ==> True
+        in L.length constraintList >= 0 ==> True
   ]
 
 -- ============================================================================
@@ -106,15 +107,15 @@ dependentTypeProperties = testGroup "Dependent Type Properties"
   [ testProperty "dependent type with parameters preserves parameter count" $
       \baseType params ->
         let depType = DependentType baseType params
-        in not (null baseType) ==> length (dtParameters depType) === length params
+        in not (null baseType) ==> L.length (dtParameters depType) === L.length params
         
-  , testProperty "dependent type equality checks base type and parameters" $
+  , testProperty "dependent type equality checks base type L.and parameters" $
       \baseType1 baseType2 params1 params2 ->
         let type1 = DependentType baseType1 params1
             type2 = DependentType baseType2 params2
         in (baseType1 == baseType2 && params1 == params2) ==> type1 === type2
            
-  , testProperty "dependent type substitution affects all parameters" $
+  , testProperty "dependent type substitution affects L.all parameters" $
       \baseType params oldVar newVar ->
         let depType = DependentType baseType params
             substitution = [(oldVar, newVar)]
@@ -123,14 +124,14 @@ dependentTypeProperties = testGroup "Dependent Type Properties"
   , testProperty "dependent type complexity increases with parameters" $
       \baseType params ->
         let depType = DependentType baseType params
-            complexity = length baseType + sum (map length params)
-        in complexity >= length baseType
+            complexity = L.length baseType + L.sum (map L.length params)
+        in complexity >= L.length baseType
         
   , testProperty "nested dependent types preserve structure" $
       \outerType innerTypes ->
-        let nestedParams = map (\t -> DependentType t []) innerTypes
+        let nestedParams = L.map (\t -> DependentType t []) innerTypes
             depType = DependentType outerType nestedParams
-        in not (null outerType) ==> length (dtParameters depType) === length innerTypes
+        in not (null outerType) ==> L.length (dtParameters depType) === L.length innerTypes
   ]
 
 -- ============================================================================
@@ -148,17 +149,17 @@ typeInferenceProperties = testGroup "Type Inference Properties"
   , testProperty "type inference preserves most general types" $
       \expressions ->
         let inferredTypes = map inferType (take 3 expressions)
-        in length inferredTypes === 3  -- Simplified: each expression should have a type
+        in L.length inferredTypes === 3  -- Simplified: each expression should have a type
         
   , testProperty "type inference fails gracefully for invalid expressions" $
       \invalidExpr ->
         let result = inferType invalidExpr
-        in length invalidExpr > 50 ==> True  -- Large invalid expressions should not crash
+        in L.length invalidExpr > 50 ==> True  -- Large invalid expressions should not crash
         
   , testProperty "type inference respects constraints" $
       \constraints expression ->
         let constrainedType = inferTypeWithConstraints constraints expression
-        in length constraints <= 5 ==> True  -- Should handle multiple constraints
+        in L.length constraints <= 5 ==> True  -- Should handle multiple constraints
   ]
 
 -- ============================================================================
@@ -171,27 +172,27 @@ typeValidationProperties = testGroup "Type Validation Properties"
       \baseType params ->
         let depType = DependentType baseType params
             isValid = validateType depType
-        in not (null baseType) && all (not . null) params ==> isValid
+        in not (null baseType) && L.all (not . null) params ==> isValid
         
   , testProperty "invalid types fail validation" $
       \baseType params ->
         let depType = DependentType baseType params
-            hasInvalidParams = any null params
+            hasInvalidParams = L.any null params
             isValid = validateType depType
         in hasInvalidParams ==> not isValid
         
   , testProperty "type validation is transitive for nested types" $
       \outerType innerTypes ->
-        let innerDepTypes = map (\t -> DependentType t []) innerTypes
+        let innerDepTypes = L.map (\t -> DependentType t []) innerTypes
             depType = DependentType outerType innerDepTypes
-            allInnerValid = all validateType innerDepTypes
+            allInnerValid = L.all validateType innerDepTypes
             outerValid = validateType depType
         in allInnerValid ==> outerValid
         
   , testProperty "constraint validation is consistent" $
       \constraints ->
         let validConstraints = filter validateConstraint (take 5 constraints)
-        in length validConstraints >= 0  -- Should not crash
+        in L.length validConstraints >= 0  -- Should not crash
         
   , testCase "complex dependent type validation" $
     do
@@ -204,7 +205,7 @@ typeValidationProperties = testGroup "Type Validation Properties"
   ]
 
 -- ============================================================================
--- Helper Types and Functions
+-- Helper Types L.and Functions
 -- ============================================================================
 
 data TypeVariable = TypeVariable
@@ -255,8 +256,8 @@ inferTypeWithConstraints :: [TypeConstraint] -> String -> String
 inferTypeWithConstraints _ expr = inferType expr
 
 validateType :: DependentType -> Bool
-validateType depType = not (null (dtBaseType depType)) && 
-                      all (not . null) (dtParameters depType)
+validateType depType = not (L.null (dtBaseType depType)) && 
+                      L.all (not . null) (dtParameters depType)
 
 validateConstraint :: TypeConstraint -> Bool
 validateConstraint (EqualityConstraint left right) = not (null left) && not (null right)

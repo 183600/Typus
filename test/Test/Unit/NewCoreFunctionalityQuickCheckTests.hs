@@ -10,6 +10,7 @@
 module Test.Unit.NewCoreFunctionalityQuickCheckTests (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose)
@@ -64,14 +65,14 @@ prop_trim_idempotent str =
       trimmedTwice = trim trimmedOnce
   in property $ trimmedOnce === trimmedTwice
 
--- Property: trim removes leading and trailing whitespace
+-- Property: trim removes leading L.and trailing whitespace
 prop_trim_removes_whitespace :: String -> String -> Property
 prop_trim_removes_whitespace prefix suffix =
   let content = "content"
       input = prefix ++ content ++ suffix
       trimmed = trim input
       hasLeadingSpace = not (null prefix) && isSpace (last prefix)
-      hasTrailingSpace = not (null suffix) && isSpace (head suffix)
+      hasTrailingSpace = not (null suffix) && isSpace (L.head suffix)
   in classify hasLeadingSpace "has leading whitespace" $
      classify hasTrailingSpace "has trailing whitespace" $
      property $ trimmed === content
@@ -91,7 +92,7 @@ prop_splitBy_roundtrip delim str =
 prop_splitByCollapsed_no_empty :: Char -> String -> Property
 prop_splitByCollapsed_no_empty delim str =
   let parts = splitByCollapsed delim str
-  in property $ all (not . null) parts
+  in property $ L.all (not . null) parts
 
 -- ============================================================================
 -- Test 3: SourceLocation position arithmetic properties
@@ -101,7 +102,7 @@ prop_splitByCollapsed_no_empty delim str =
 prop_advance_pos_by_text_line_count :: String -> Property
 prop_advance_pos_by_text_line_count txt =
   let finalPos = advancePosByText startPos txt
-      expectedLine = length (filter (== '\n') txt) + 1
+      expectedLine = L.length (L.filter (== '\n') txt) + 1
   in property $ posLine finalPos === expectedLine
 
 -- Property: spanBetween creates valid span
@@ -118,10 +119,10 @@ prop_span_between_valid pos1 pos2 =
 prop_remove_line_comments_preserves_content :: String -> String -> Property
 prop_remove_line_comments_preserves_content code comment =
   -- Avoid strings with quotes that would complicate comment parsing
-  not (any (`elem` "\"'") code) && not (any (`elem` "\"'") comment) ==>
+  not (L.any (`elem` "\"'") code) && not (L.any (`elem` "\"'") comment) ==>
   let input = code ++ " // " ++ comment ++ "\nmore code"
       result = removeLineComments input
-  in property $ code `isInfixOf` result .&&. "more code" `isInfixOf` result
+  in property $ code `L.isInfixOf` result .&&. "more code" `L.isInfixOf` result
 
 -- Property: removeComments is idempotent
 prop_remove_comments_idempotent :: String -> Property
@@ -140,7 +141,7 @@ prop_parse_empty_content =
   let result = parseTypus "" 
   in case result of
     Left _ -> property False
-    Right typusFile -> property $ null (tfBlocks typusFile)
+    Right typusFile -> property $ L.null (tfBlocks typusFile)
 
 -- Property: parsing preserves directive structure
 prop_parse_preserves_directives :: Property
@@ -192,7 +193,7 @@ prop_normalize_indentation_preserves_structure lines =
       normalized = normalizeIndentation input
       inputLines = lines input
       outputLines = lines normalized
-  in property $ length inputLines === length outputLines
+  in property $ L.length inputLines === L.length outputLines
 
 -- ============================================================================
 -- Test 9: Source location advanced properties
@@ -219,7 +220,7 @@ prop_processing_malformed_input_safe input =
       split = splitBy ',' input
       commentsRemoved = removeComments input
       normalized = normalizeIndentation input
-  in property $ length trimmed >= 0 .&&. length split >= 1 .&&. length commentsRemoved >= 0 .&&. length normalized >= 0
+  in property $ L.length trimmed >= 0 .&&. L.length split >= 1 .&&. L.length commentsRemoved >= 0 .&&. L.length normalized >= 0
 
 -- ============================================================================
 -- Test collection
@@ -229,7 +230,7 @@ tests :: TestTree
 tests = testGroup "New Core Functionality QuickCheck Tests"
   [ testGroup "Utils Module Tests"
     [ fastProperty "trim is idempotent" prop_trim_idempotent
-    , fastProperty "trim removes leading and trailing whitespace" prop_trim_removes_whitespace
+    , fastProperty "trim removes leading L.and trailing whitespace" prop_trim_removes_whitespace
     , fastProperty "splitBy roundtrip consistency" prop_splitBy_roundtrip
     , fastProperty "splitByCollapsed never produces empty segments" prop_splitByCollapsed_no_empty
     ]

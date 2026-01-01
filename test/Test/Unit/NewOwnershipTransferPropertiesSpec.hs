@@ -1,6 +1,7 @@
 module Test.Unit.NewOwnershipTransferPropertiesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Arbitrary(..), Gen, oneof, choose, listOf, elements, suchThat)
@@ -94,7 +95,7 @@ genVariableName = do
 genTransferChain :: Int -> Gen [OwnershipTransfer]
 genTransferChain n = do
     vars <- listOf n genVariableName
-    return $ zipWith OwnershipTransfer vars (tail vars ++ [head vars])
+    return $ zipWith OwnershipTransfer vars (L.tail vars ++ [L.head vars])
 
 -- Generate valid code snippets for ownership analysis
 genValidOwnershipCode :: Gen String
@@ -102,8 +103,8 @@ genValidOwnershipCode = do
     vars <- listOf 3 genVariableName
     return $ unlines
         [ "fn main() {"
-        , "    let " ++ head vars ++ " = String::new();"
-        , "    let " ++ vars !! 1 ++ " = " ++ head vars ++ ";"
+        , "    let " ++ L.head vars ++ " = String::new();"
+        , "    let " ++ vars !! 1 ++ " = " ++ L.head vars ++ ";"
         , "    let " ++ vars !! 2 ++ " = &" ++ vars !! 1 ++ ";"
         , "}"
         ]
@@ -114,9 +115,9 @@ genViolationCode = do
     vars <- listOf 2 genVariableName
     return $ unlines
         [ "fn main() {"
-        , "    let " ++ head vars ++ " = String::new();"
-        , "    let " ++ vars !! 1 ++ " = " ++ head vars ++ ";"
-        , "    println!(\"{}\", " ++ head vars ++ ");"  -- Use after move
+        , "    let " ++ L.head vars ++ " = String::new();"
+        , "    let " ++ vars !! 1 ++ " = " ++ L.head vars ++ ";"
+        , "    println!(\"{}\", " ++ L.head vars ++ ");"  -- Use after move
         , "}"
         ]
 
@@ -139,9 +140,9 @@ prop_ownershipTypeShowRoundtrip ot =
     let shown = show ot
         -- Simple check that show contains the ownership type name
     in case ot of
-        Owned name -> "Owned" `isInfixOf` shown && name `isInfixOf` shown
-        Borrowed name -> "Borrowed" `isInfixOf` shown && name `isInfixOf` shown
-        MutBorrowed name -> "MutBorrowed" `isInfixOf` shown && name `isInfixOf` shown
+        Owned name -> "Owned" `L.isInfixOf` shown && name `L.isInfixOf` shown
+        Borrowed name -> "Borrowed" `L.isInfixOf` shown && name `L.isInfixOf` shown
+        MutBorrowed name -> "MutBorrowed" `L.isInfixOf` shown && name `L.isInfixOf` shown
 
 prop_ownershipTypeEqualityReflexivity :: OwnershipType -> Bool
 prop_ownershipTypeEqualityReflexivity ot = ot == ot
@@ -164,21 +165,21 @@ prop_ownershipErrorShowContainsInfo :: OwnershipError -> Bool
 prop_ownershipErrorShowContainsInfo oe =
     let shown = show oe
     in case oe of
-        UseAfterMove var -> "UseAfterMove" `isInfixOf` shown && var `isInfixOf` shown
-        DoubleMove var1 var2 -> "DoubleMove" `isInfixOf` shown && var1 `isInfixOf` shown && var2 `isInfixOf` shown
-        BorrowWhileMoved var -> "BorrowWhileMoved" `isInfixOf` shown && var `isInfixOf` shown
-        MutBorrowWhileBorrowed var -> "MutBorrowWhileBorrowed" `isInfixOf` shown && var `isInfixOf` shown
-        BorrowWhileMutBorrowed var -> "BorrowWhileMutBorrowed" `isInfixOf` shown && var `isInfixOf` shown
-        MultipleMutBorrows var -> "MultipleMutBorrows" `isInfixOf` shown && var `isInfixOf` shown
-        UseWhileMutBorrowed var -> "UseWhileMutBorrowed" `isInfixOf` shown && var `isInfixOf` shown
-        OutOfScope var -> "OutOfScope" `isInfixOf` shown && var `isInfixOf` shown
-        BorrowError msg -> "BorrowError" `isInfixOf` shown
-        ParseError msg -> "ParseError" `isInfixOf` shown
-        CrossFunctionMove var1 var2 -> "CrossFunctionMove" `isInfixOf` shown && var1 `isInfixOf` shown && var2 `isInfixOf` shown
-        ParameterMoveMismatch var -> "ParameterMoveMismatch" `isInfixOf` shown && var `isInfixOf` shown
-        ControlFlowError msg -> "ControlFlowError" `isInfixOf` shown
-        PathSensitiveError msg -> "PathSensitiveError" `isInfixOf` shown
-        LoopOwnershipError msg -> "LoopOwnershipError" `isInfixOf` shown
+        UseAfterMove var -> "UseAfterMove" `L.isInfixOf` shown && var `L.isInfixOf` shown
+        DoubleMove var1 var2 -> "DoubleMove" `L.isInfixOf` shown && var1 `L.isInfixOf` shown && var2 `L.isInfixOf` shown
+        BorrowWhileMoved var -> "BorrowWhileMoved" `L.isInfixOf` shown && var `L.isInfixOf` shown
+        MutBorrowWhileBorrowed var -> "MutBorrowWhileBorrowed" `L.isInfixOf` shown && var `L.isInfixOf` shown
+        BorrowWhileMutBorrowed var -> "BorrowWhileMutBorrowed" `L.isInfixOf` shown && var `L.isInfixOf` shown
+        MultipleMutBorrows var -> "MultipleMutBorrows" `L.isInfixOf` shown && var `L.isInfixOf` shown
+        UseWhileMutBorrowed var -> "UseWhileMutBorrowed" `L.isInfixOf` shown && var `L.isInfixOf` shown
+        OutOfScope var -> "OutOfScope" `L.isInfixOf` shown && var `L.isInfixOf` shown
+        BorrowError msg -> "BorrowError" `L.isInfixOf` shown
+        ParseError msg -> "ParseError" `L.isInfixOf` shown
+        CrossFunctionMove var1 var2 -> "CrossFunctionMove" `L.isInfixOf` shown && var1 `L.isInfixOf` shown && var2 `L.isInfixOf` shown
+        ParameterMoveMismatch var -> "ParameterMoveMismatch" `L.isInfixOf` shown && var `L.isInfixOf` shown
+        ControlFlowError msg -> "ControlFlowError" `L.isInfixOf` shown
+        PathSensitiveError msg -> "PathSensitiveError" `L.isInfixOf` shown
+        LoopOwnershipError msg -> "LoopOwnershipError" `L.isInfixOf` shown
 
 prop_ownershipErrorUniqueness :: OwnershipError -> OwnershipError -> Bool
 prop_ownershipErrorUniqueness oe1 oe2 =
@@ -205,12 +206,12 @@ prop_ownershipTransferSymmetry from to =
 
 prop_ownershipTransferComposition :: [String] -> Property
 prop_ownershipTransferComposition vars =
-    length vars >= 2 ==>
-    let transfers = zipWith OwnershipTransfer vars (tail vars)
+    L.length vars >= 2 ==>
+    let transfers = zipWith OwnershipTransfer vars (L.tail vars)
         fromVars = map transferFrom transfers
         toVars = map transferTo transfers
-    in length fromVars == length toVars &&
-       head fromVars == head vars &&
+    in L.length fromVars == L.length toVars &&
+       L.head fromVars == L.head vars &&
        last toVars == last vars
 
 -- ============================================================================
@@ -225,14 +226,14 @@ prop_analyzerCreationConsistency _ =
 
 prop_lexAllPreservesStructure :: String -> Property
 prop_lexAllPreservesStructure code =
-    length code < 1000 ==>
+    L.length code < 1000 ==>
     let tokens = lexAll code
-        -- Simple check that lexing doesn't crash and returns some result
-    in length tokens >= 0
+        -- Simple check that lexing doesn't crash L.and returns some result
+    in L.length tokens >= 0
 
 prop_parseProgramHandlesValid :: String -> Property
 prop_parseProgramHandlesValid code =
-    length code < 500 ==>
+    L.length code < 500 ==>
     let result = parseProgram code
     in case result of
         Left _ -> True  -- Parsing may fail for invalid code
@@ -247,16 +248,16 @@ prop_ownershipValidationConsistency ot =
     let shown = show ot
         -- Check that show representation is consistent with type
     in case ot of
-        Owned _ -> "Owned" `isInfixOf` shown
-        Borrowed _ -> "Borrowed" `isInfixOf` shown
-        MutBorrowed _ -> "MutBorrowed" `isInfixOf` shown
+        Owned _ -> "Owned" `L.isInfixOf` shown
+        Borrowed _ -> "Borrowed" `L.isInfixOf` shown
+        MutBorrowed _ -> "MutBorrowed" `L.isInfixOf` shown
 
 prop_borrowingRulesEnforcement :: [OwnershipType] -> Property
 prop_borrowingRulesEnforcement ownershipTypes =
-    length ownershipTypes >= 2 ==>
-    let hasBorrowed = any isBorrow ownershipTypes
-        hasMutBorrowed = any isMutBorrow ownershipTypes
-        hasOwned = any isOwned ownershipTypes
+    L.length ownershipTypes >= 2 ==>
+    let hasBorrowed = L.any isBorrow ownershipTypes
+        hasMutBorrowed = L.any isMutBorrow ownershipTypes
+        hasOwned = L.any isOwned ownershipTypes
     in hasBorrowed || hasMutBorrowed || hasOwned  -- At least one type should be present
 
 prop_moveSemanticsCorrectness :: String -> String -> Bool
@@ -272,7 +273,7 @@ prop_moveSemanticsCorrectness originalVar newVar =
 
 -- Check if a substring is in a string
 isInfixOf :: Eq a => [a] -> [a] -> Bool
-isInfixOf needle haystack = needle `elem` [take (length needle) (drop i haystack) | i <- [0..length haystack - length needle]]
+L.isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
 
 -- Check if ownership type is a borrow
 isBorrow :: OwnershipType -> Bool

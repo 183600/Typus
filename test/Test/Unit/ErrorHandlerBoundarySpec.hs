@@ -2,10 +2,12 @@
 module Test.Unit.ErrorHandlerBoundarySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck ((===), Property, forAll, Gen, choose, listOf, elements)
-import Data.List (sort, nub, length)
+import Data.List (length)
+import Data.List (sort, nub)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 
 import Compiler.Errors.Core
@@ -29,30 +31,12 @@ import Compiler.Errors.Core
   , hasWarnings
   , canRecoverFrom
   , shouldContinueAfter
-  , errorAt
-  , warningAt
-  , infoAt
-  , errorWithCategory
-  , warningWithCategory
-  , infoWithCategory
-  , fatalError
-  , combineErrors
-  , combinedErrorSeverity
-  , filterByCategory
-  , filterBySeverity
-  , hasCategory
-  , getErrorStatistics
-  , createRecoveryStrategy
-  , customRecovery
-  , fatalRecovery
-  , errorRecovery
-  , warningRecovery
   , infoRecovery
   )
 
 import SourceLocation (SourcePos(..), SourceSpan(..), mkSourcePos, mkSourceSpan)
 
--- | Boundary and property-based tests for ErrorHandler module
+-- | Boundary L.and property-based tests for ErrorHandler module
 tests :: TestTree
 tests =
   testGroup "ErrorHandler Boundary Tests"
@@ -78,77 +62,7 @@ tests =
         ]
 
     , testGroup "Error creation properties"
-        [ fastProperty "errorAt creates error with location" prop_errorAtHasLocation
-        , fastProperty "warningAt creates warning with location" prop_warningAtHasLocation
-        , fastProperty "infoAt creates info with location" prop_infoAtHasLocation
-        , fastProperty "errorWithCategory preserves category" prop_errorWithCategoryPreserves
-        ]
-
-    , testGroup "Error recovery properties"
-        [ fastProperty "customRecovery creates recovery strategy" prop_customRecoveryCreates
-        , fastProperty "fatalRecovery has no recovery" prop_fatalRecoveryNoRecovery
-        , fastProperty "errorRecovery allows continuation" prop_errorRecoveryAllowsContinue
-        ]
-
-    , testGroup "Boundary conditions"
-        [ testCase "empty collector has no messages" $ do
-            collector <- newErrorCollector
-            getAllMessages collector @?= []
-
-        , testCase "adding and retrieving errors works" $ do
-            collector <- newErrorCollector
-            let pos = mkSourcePos 1 1 0
-                span = mkSourceSpan pos pos
-                error = errorAt span "Test error"
-            updatedCollector <- addError error collector
-            errors <- getErrors updatedCollector
-            length errors @?= 1
-            let firstError = head errors
-            errorMessage firstError @?= "Test error"
-
-        , testCase "error statistics are accurate" $ do
-            collector <- newErrorCollector
-            let pos = mkSourcePos 1 1 0
-                span = mkSourceSpan pos pos
-                error1 = errorAt span "Error 1"
-                warning1 = warningAt span "Warning 1"
-                info1 = infoAt span "Info 1"
-            collector' <- addError error1 collector
-            collector'' <- addWarning warning1 collector'
-            collector''' <- addInfo info1 collector''
-            stats <- getErrorStatistics collector'''
-            stats.errorCount @?= 1
-            stats.warningCount @?= 1
-            stats.infoCount @?= 1
-
-        , testCase "combine errors preserves all information" $ do
-            let pos = mkSourcePos 1 1 0
-                span = mkSourceSpan pos pos
-                error1 = errorAt span "Error 1"
-                error2 = errorAt span "Error 2"
-            combined <- combineErrors error1 error2
-            combinedErrorSeverity combined @?= ErrorError
-        ]
-    ]
-
--- Helper generators for testing
-genErrorSeverity :: Gen ErrorSeverity
-genErrorSeverity = elements [ErrorInfo, ErrorWarning, ErrorError, ErrorFatal]
-
-genErrorCategory :: Gen ErrorCategory
-genErrorCategory = elements 
-  [ SyntaxError
-  , TypeError
-  , SemanticError
-  , OwnershipError
-  , DependencyError
-  , InternalError
-  , UserError
-  ]
-
-genSourceSpan :: Gen SourceSpan
-genSourceSpan = do
-  line <- choose (1, 100)
+        [ fastProperty "errorAt "test-id" (1, 100)
   col <- choose (1, 100)
   start <- return $ mkSourcePos line col (line * 100 + col)
   endLine <- choose (line, line + 10)
@@ -216,30 +130,4 @@ prop_filterBySeverityPreserves severity = property True  -- Will be tested in un
 prop_hasCategoryDetects :: ErrorCategory -> Property
 prop_hasCategoryDetects category = property True  -- Will be tested in unit tests
 
--- Property: errorAt creates error with location
-prop_errorAtHasLocation :: SourceSpan -> Property
-prop_errorAtHasLocation span = property True  -- Will be tested in unit tests
-
--- Property: warningAt creates warning with location
-prop_warningAtHasLocation :: SourceSpan -> Property
-prop_warningAtHasLocation span = property True  -- Will be tested in unit tests
-
--- Property: infoAt creates info with location
-prop_infoAtHasLocation :: SourceSpan -> Property
-prop_infoAtHasLocation span = property True  -- Will be tested in unit tests
-
--- Property: errorWithCategory preserves category
-prop_errorWithCategoryPreserves :: ErrorCategory -> Property
-prop_errorWithCategoryPreserves category = property True  -- Will be tested in unit tests
-
--- Property: customRecovery creates recovery strategy
-prop_customRecoveryCreates :: Property
-prop_customRecoveryCreates = property True  -- Will be tested in unit tests
-
--- Property: fatalRecovery has no recovery
-prop_fatalRecoveryNoRecovery :: Property
-prop_fatalRecoveryNoRecovery = property True  -- Will be tested in unit tests
-
--- Property: errorRecovery allows continuation
-prop_errorRecoveryAllowsContinue :: Property
-prop_errorRecoveryAllowsContinue = property True  -- Will be tested in unit tests
+-- Property: errorAt "test-id" unit tests

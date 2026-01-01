@@ -2,6 +2,7 @@
 module Test.Unit.NewCabalQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -28,13 +29,13 @@ tests =
             
         , fastProperty "splitBy delim . join delim = original (with empty segments)" $
             \delim xs -> 
-              let s = concat (Utils.intersperse delim xs)
+              let s = L.concat (Utils.intersperse delim xs)
               in Utils.splitBy delim s === xs
               
         , fastProperty "splitByCollapsed removes empty segments" $
             \delim s -> 
               let collapsed = Utils.splitByCollapsed delim s
-              in all (not . null) collapsed
+              in L.all (not . null) collapsed
         ]
 
     , testGroup "SourceLocation Properties"
@@ -52,7 +53,7 @@ tests =
         ]
 
     , testGroup "Parser Properties"
-        [ fastProperty "parsing preserves string length (roughly)" $
+        [ fastProperty "parsing preserves string L.length (roughly)" $
             \s ->
               let parsed = Parser.parse s
               in True -- Property depends on parser output structure
@@ -130,7 +131,7 @@ tests =
         ]
     ]
 
--- Helper function (assuming it exists or creating a simple version)
+-- Helper function (assuming it exists L.or creating a simple version)
 intersperse :: a -> [a] -> [a]
 intersperse _ [] = []
 intersperse _ [x] = [x]

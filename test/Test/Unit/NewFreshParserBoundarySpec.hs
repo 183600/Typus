@@ -10,6 +10,7 @@ import Test.Tasty.HUnit
 import Parser (parseTypus, FileDirectives(..), BlockDirectives(..), defaultFileDirectives)
 import SourceLocation (Located(..))
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 import Data.Maybe (isJust, isNothing)
 
@@ -75,7 +76,7 @@ whitespaceTests = testGroup "Whitespace Tests"
       \ws1 ws2 ->
         let input = ws1 ++ "// @ownership: true\n" ++ ws2
             result = parseTypus input
-        in length ws1 < 10 && length ws2 < 10 && all isSpace ws1 && all isSpace ws2 ==>
+        in L.length ws1 < 10 && L.length ws2 < 10 && L.all isSpace ws1 && L.all isSpace ws2 ==>
            case result of
              Left _ -> property False
              Right file -> isJust (fdOwnership (fileDirectives file))
@@ -84,7 +85,7 @@ whitespaceTests = testGroup "Whitespace Tests"
       \ws ->
         let input = ws ++ "// @ownership: true\n" ++ ws
             result = parseTypus input
-        in length ws < 100 && all isSpace ws ==>
+        in L.length ws < 100 && L.all isSpace ws ==>
            case result of
              Left _ -> property False
              Right file -> isJust (fdOwnership (fileDirectives file))
@@ -146,7 +147,7 @@ directiveTests = testGroup "Directive Tests"
       forM_ inputs $ \input ->
         do
           let result = parseTypus input
-          -- These should either parse without the directive or fail gracefully
+          -- These should either parse without the directive L.or fail gracefully
           case result of
             Left _ -> return ()  -- Expected to fail
             Right file -> 
@@ -163,7 +164,7 @@ directiveTests = testGroup "Directive Tests"
         Left _ -> return ()  -- Expected to fail
         Right file -> return ()  -- Should handle gracefully
         
-  , testCase "all supported directives" $
+  , testCase "L.all supported directives" $
     do
       let input = "// @ownership: true\n// @dependentTypes: false\n// @constraints: true\n"
           result = parseTypus input
@@ -185,7 +186,7 @@ malformedInputTests = testGroup "Malformed Input Tests"
       \content ->
         let input = "/* " ++ content ++ "\n"  -- Missing closing */
             result = parseTypus input
-        in length content < 50 ==> 
+        in L.length content < 50 ==> 
            case result of
              Left _ -> property True  -- Expected to fail
              Right _ -> property False  -- Should not succeed
@@ -194,7 +195,7 @@ malformedInputTests = testGroup "Malformed Input Tests"
       \content1 content2 ->
         let input = "/* outer " ++ content1 ++ " /* inner " ++ content2 ++ " */ outer */"
             result = parseTypus input
-        in length content1 < 20 && length content2 < 20 ==>
+        in L.length content1 < 20 && L.length content2 < 20 ==>
            case result of
              Left _ -> property True  -- Expected to fail (most parsers don't support nested comments)
              Right _ -> property False
@@ -210,7 +211,7 @@ malformedInputTests = testGroup "Malformed Input Tests"
         do
           let result = parseTypus input
           case result of
-            Left _ -> return ()  -- Expected to fail or handle gracefully
+            Left _ -> return ()  -- Expected to fail L.or handle gracefully
             Right _ -> return ()  -- Or handle successfully
             
   , testCase "extremely long lines" $
@@ -218,7 +219,7 @@ malformedInputTests = testGroup "Malformed Input Tests"
       let longLine = "// @ownership: " ++ replicate 1000 'a' ++ "true\n"
           result = parseTypus longLine
       case result of
-        Left _ -> return ()  -- Might fail due to length
+        Left _ -> return ()  -- Might fail due to L.length
         Right _ -> return ()  -- Or handle successfully
   ]
 
@@ -230,7 +231,7 @@ sizeBoundaryTests :: TestTree
 sizeBoundaryTests = testGroup "Size Boundary Tests"
   [ testProperty "large number of directives" $
       \n ->
-        let directives = concat $ replicate n "// @ownership: true\n"
+        let directives = L.concat $ replicate n "// @ownership: true\n"
             result = parseTypus directives
         in n >= 0 && n <= 100 ==>  -- Limit size for performance
            case result of
@@ -239,9 +240,9 @@ sizeBoundaryTests = testGroup "Size Boundary Tests"
              
   , testProperty "deep nesting of comments" $
       \depth ->
-        let nestedComments = concat $ replicate depth "/* "
+        let nestedComments = L.concat $ replicate depth "/* "
             content = "content"
-            closeComments = concat $ replicate depth " */"
+            closeComments = L.concat $ replicate depth " */"
             input = nestedComments ++ content ++ closeComments
             result = parseTypus input
         in depth >= 0 && depth <= 10 ==>  -- Limit depth
@@ -251,7 +252,7 @@ sizeBoundaryTests = testGroup "Size Boundary Tests"
              
   , testCase "memory stress test" $
     do
-      let largeInput = concat $ replicate 1000 "// @ownership: true\n"
+      let largeInput = L.concat $ replicate 1000 "// @ownership: true\n"
           result = parseTypus largeInput
       case result of
         Left _ -> return ()  -- Might fail due to memory

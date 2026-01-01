@@ -10,6 +10,7 @@
 module Test.Unit.CoreModulesIntegrationSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertBool, assertEqual, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property)
@@ -40,7 +41,7 @@ tests =
               Left err -> assertFailure $ "Parse failed: " ++ show err
               Right (TypusFile directives blocks) -> do
                 assertBool "Should have at least one code block" (not (null blocks))
-                let firstBlock = head blocks
+                let firstBlock = L.head blocks
                 assertBool "Code block should have valid location" 
                     (isValidLocation (cbLocation firstBlock))
 
@@ -195,22 +196,22 @@ isValidLocation located = case located of
 
 containsLocationInfo :: String -> Bool
 containsLocationInfo err = 
-    "line" `isInfixOf` err && "column" `isInfixOf` err
+    "line" `L.isInfixOf` err && "column" `L.isInfixOf` err
 
 isInformativeError :: String -> Bool
-isInformativeError err = length err > 10 && not (null (words err))
+isInformativeError err = L.length err > 10 && not (L.null (words err))
 
 isOwnershipRelatedError :: String -> Bool
 isOwnershipRelatedError err = 
-    "ownership" `isInfixOf` err || "move" `isInfixOf` err || "borrow" `isInfixOf` err
+    "ownership" `L.isInfixOf` err || "move" `L.isInfixOf` err || "borrow" `L.isInfixOf` err
 
 isDependentTypeError :: String -> Bool
 isDependentTypeError err = 
-    "dependent" `isInfixOf` err || "type" `isInfixOf` err || "constraint" `isInfixOf` err
+    "dependent" `L.isInfixOf` err || "type" `L.isInfixOf` err || "constraint" `L.isInfixOf` err
 
 isMeaningfulCompilationError :: String -> Bool
 isMeaningfulCompilationError err = 
-    length err > 15 && any (`isInfixOf` err) ["type", "function", "variable", "syntax"]
+    L.length err > 15 && L.any (`L.isInfixOf` err) ["type", "function", "variable", "syntax"]
 
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `Data.List.isInfixOf` haystack
+L.isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack

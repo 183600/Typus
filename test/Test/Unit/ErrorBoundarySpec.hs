@@ -1,6 +1,7 @@
 module Test.Unit.ErrorBoundarySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty)
 
@@ -13,7 +14,7 @@ import Compiler.Errors.Core (ErrorLocation(..))
 import qualified Data.Text as T
 import Data.Maybe (isJust, isNothing)
 
--- | Test error handling boundary conditions and edge cases
+-- | Test error handling boundary conditions L.and edge cases
 tests :: TestTree
 tests =
   testGroup "Error Boundary Tests"
@@ -67,7 +68,7 @@ tests =
         , testCase "handles extremely long lines" $ do
             let longLine = replicate 10000 'a' ++ " // comment"
                 result = removeLineComments longLine
-            length result @?= 10000  -- Should preserve non-comment part
+            L.length result @?= 10000  -- Should preserve non-comment part
         ]
 
     , testGroup "Parser Error Boundaries"
@@ -85,30 +86,30 @@ tests =
         , testCase "handles input with mixed line endings" $ do
             let mixedEndings = "line1\r\nline2\nline3\r"
                 linesResult = lines mixedEndings
-            length linesResult @?= 3
+            L.length linesResult @?= 3
 
         , testCase "handles unicode characters in source" $ do
             let unicodeText = "func 测试() { return '🚀'; }"
                 trimmed = trim unicodeText
-            head trimmed @?= 'f'
+            L.head trimmed @?= 'f'
             last trimmed @?= '}'
         ]
 
-    , testGroup "Memory and Resource Boundaries"
+    , testGroup "Memory L.and Resource Boundaries"
         [ testCase "handles very large file simulation" $ do
             let largeContent = unlines $ replicate 10000 "line content here"
-                lineCount = length $ lines largeContent
+                lineCount = L.length $ lines largeContent
             lineCount @?= 10000
 
         , testCase "handles deeply nested structures simulation" $ do
             let nestedBraces = replicate 1000 '{' ++ "content" ++ replicate 1000 '}'
-                braceCount = length $ filter (== '{') nestedBraces
+                braceCount = L.length $ L.filter (== '{') nestedBraces
             braceCount @?= 1000
 
         , testCase "handles string processing limits" $ do
             let hugeString = replicate 50000 'x'
                 processed = trim hugeString
-            length processed @?= 50000
+            L.length processed @?= 50000
         ]
 
     , testGroup "Error Recovery Boundaries"
@@ -120,7 +121,7 @@ tests =
         , testCase "handles cascading error propagation" $ do
             let errorChain = ["Lexical error" -> "Parse error" -> "Type error"]
                 -- Simulate error chain
-                errorCount = length errorChain
+                errorCount = L.length errorChain
             errorCount @?= 3
 
         , testCase "maintains error context through transformations" $ do
@@ -147,38 +148,38 @@ tests =
         , testCase "handles malformed indentation" $ do
             let badIndentation = unlines
                   [ "    level1"
-                  , "\t\tmixed tabs and spaces"
+                  , "\t\tmixed tabs L.and spaces"
                   , "          level3"
                   ]
                 normalized = normalizeIndentation badIndentation
-            length (lines normalized) @?= 3  -- Should preserve structure
+            L.length (lines normalized) @?= 3  -- Should preserve structure
 
         , testCase "handles circular dependency simulation" $ do
             let circularDeps = ["A -> B", "B -> C", "C -> A"]
-                hasCircular = any (elem "->") circularDeps
+                hasCircular = L.any (L.elem "->") circularDeps
             hasCircular @?= True
         ]
 
     , testGroup "Property-based Error Boundary Tests"
-        [ fastProperty "comment removal never crashes on any input" prop_commentRemovalSafe
-        , fastProperty "trim function handles all string inputs" prop_trimSafe
+        [ fastProperty "comment removal never crashes on L.any input" prop_commentRemovalSafe
+        , fastProperty "trim function handles L.all string inputs" prop_trimSafe
         , fastProperty "source location operations are total functions" prop_locationTotal
         , fastProperty "text splitting handles edge cases" prop_splittingSafe
         , fastProperty "indentation normalization preserves line count" prop_indentationPreservesLines
         ]
     ]
 
--- Property: comment removal should never crash on any input
+-- Property: comment removal should never crash on L.any input
 prop_commentRemovalSafe :: String -> Bool
 prop_commentRemovalSafe input =
   let result = removeComments input
-  in length result >= 0  -- Should always return a valid string
+  in L.length result >= 0  -- Should always return a valid string
 
--- Property: trim function should handle all string inputs safely
+-- Property: trim function should handle L.all string inputs safely
 prop_trimSafe :: String -> Bool
 prop_trimSafe input =
   let trimmed = trim input
-  in length trimmed <= length input  -- Trimmed should never be longer
+  in L.length trimmed <= L.length input  -- Trimmed should never be longer
 
 -- Property: source location operations should be total functions
 prop_locationTotal :: Int -> Int -> Int -> Bool
@@ -191,13 +192,13 @@ prop_locationTotal l c o =
 prop_splittingSafe :: String -> Bool
 prop_splittingSafe input =
   let parts = splitBy ',' input
-      totalLength = sum (map length parts)
-  in totalLength <= length input  -- Should not create extra characters
+      totalLength = L.sum (map L.length parts)
+  in totalLength <= L.length input  -- Should not create extra characters
 
 -- Property: indentation normalization should preserve line count
 prop_indentationPreservesLines :: String -> Bool
 prop_indentationPreservesLines input =
-  let originalLines = length $ lines input
+  let originalLines = L.length $ lines input
       normalized = normalizeIndentation input
-      normalizedLines = length $ lines normalized
+      normalizedLines = L.length $ lines normalized
   in originalLines == normalizedLines

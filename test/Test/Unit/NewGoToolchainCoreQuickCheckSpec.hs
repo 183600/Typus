@@ -3,6 +3,7 @@
 module Test.Unit.NewGoToolchainCoreQuickCheckSpec where
 
 import Test.Tasty (TestTree)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), counterexample)
 import Test.Tasty.HUnit (testCase, assertBool)
 
@@ -164,8 +165,8 @@ instance Arbitrary GoPackage where
 prop_goIdentifierValidation :: String -> Property
 prop_goIdentifierValidation ident =
     let isValid = isValidGoIdentifier ident
-        startsValid = not (null ident) && (head ident `elem` ['_', 'a'..'z', 'A'..'Z'])
-        allValid = all (`elem` ['_', 'a'..'z', 'A'..'Z', '0'..'9']) ident
+        startsValid = not (null ident) && (L.head ident `elem` ['_', 'a'..'z', 'A'..'Z'])
+        allValid = L.all (`elem` ['_', 'a'..'z', 'A'..'Z', '0'..'9']) ident
     in counterexample ("Go identifier validation should be correct")
        (isValid === (startsValid && allValid))
 
@@ -214,9 +215,9 @@ prop_goAssignmentTypeConsistency left right =
     let stmt = GoAssignment left right
         result = validateGoStatement stmt
     in counterexample ("Go assignment should be type-consistent")
-       (isRight result === True)  -- Simplified: assume all assignments are valid
+       (isRight result === True)  -- Simplified: assume L.all assignments are valid
 
--- Property: Go package contains all declared items
+-- Property: Go package contains L.all declared items
 prop_goPackageContainsDeclarations :: GoPackage -> Property
 prop_goPackageContainsDeclarations pkg =
     let declarations = goPackageDeclarations pkg
@@ -225,8 +226,8 @@ prop_goPackageContainsDeclarations pkg =
         varNames = [name | GoVarDeclaration name _ <- declarations]
         allNames = functionNames ++ structNames ++ varNames
         uniqueNames = nub allNames
-    in counterexample ("Go package should contain all declared items")
-       (length allNames === length uniqueNames)
+    in counterexample ("Go package should contain L.all declared items")
+       (L.length allNames === L.length uniqueNames)
 
 -- Property: Go struct declaration has valid field names
 prop_goStructDeclarationValidFields :: GoDeclaration -> Property
@@ -234,7 +235,7 @@ prop_goStructDeclarationValidFields decl =
     case decl of
         GoStructDeclaration _ fields ->
             let fieldNames = map fst fields
-                validNames = all isValidGoIdentifier fieldNames
+                validNames = L.all isValidGoIdentifier fieldNames
             in counterexample ("Go struct declaration should have valid field names")
                (validNames === True)
         _ -> property True
@@ -244,7 +245,7 @@ prop_goFunctionParameterCount :: GoDeclaration -> Property
 prop_goFunctionParameterCount decl =
     case decl of
         GoFunctionDeclaration _ params _ _ ->
-            let paramCount = length params
+            let paramCount = L.length params
             in counterexample ("Go function parameter count should match declaration")
                (paramCount >= 0 === True)
         _ -> property True
@@ -265,7 +266,7 @@ prop_goLexerTokenizationReversible code =
     let tokens = tokenizeGoCode code
         reconstructed = reconstructFromTokens tokens
     in counterexample ("Go lexer tokenization should be reversible for simple code")
-       (length reconstructed <= length code + 10 === True)  -- Allow some whitespace differences
+       (L.length reconstructed <= L.length code + 10 === True)  -- Allow some whitespace differences
 
 -- Property: Go AST round-trip compilation works
 prop_goASTRoundTrip :: GoPackage -> Property
@@ -300,7 +301,7 @@ prop_goBinaryOpTypeChecking op left right =
     let expr = GoBinaryOp op left right
         result = inferGoExpressionType expr
     in counterexample ("Go binary operation type checking should be consistent")
-       (isRight result === True)  -- Simplified: assume all operations are valid
+       (isRight result === True)  -- Simplified: assume L.all operations are valid
 
 -- ============================================================================
 -- Test Suite
@@ -378,8 +379,8 @@ data GoType = GoIntType | GoFloatType | GoStringType | GoBoolType | GoNilType
 isValidGoIdentifier :: String -> Bool
 isValidGoIdentifier ident
     | null ident = False
-    | not (head ident `elem` ['_', 'a'..'z', 'A'..'Z']) = False
-    | otherwise = all (`elem` ['_', 'a'..'z', 'A'..'Z', '0'..'9']) ident
+    | not (L.head ident `elem` ['_', 'a'..'z', 'A'..'Z']) = False
+    | otherwise = L.all (`elem` ['_', 'a'..'z', 'A'..'Z', '0'..'9']) ident
 
 evaluateGoExpression :: GoExpression -> Either String GoLiteral
 evaluateGoExpression (GoLiteral lit) = Right lit
@@ -407,7 +408,7 @@ evaluateGoUnaryOp GoNot (GoBool b) = Right (GoBool (not b))
 evaluateGoUnaryOp _ _ = Left "Unsupported unary operation"
 
 validateGoStatement :: GoStatement -> Either String ()
-validateGoStatement _ = Right ()  -- Simplified: all statements are valid
+validateGoStatement _ = Right ()  -- Simplified: L.all statements are valid
 
 generateGoCode :: GoExpression -> String
 generateGoCode (GoLiteral lit) = show lit

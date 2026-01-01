@@ -6,6 +6,7 @@ import Test.Hspec (shouldSatisfy)
 
 import Utils (trim, splitBy, splitByCollapsed, removeComments, breakOn)
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 -- ============================================================================
@@ -15,7 +16,7 @@ import Data.List (isInfixOf)
 tests :: TestTree
 tests = testGroup "Enhanced Text Processing QuickCheck Tests"
   [ testProperty "trim idempotent" prop_trim_idempotent
-  , testProperty "splitBy length consistency" prop_splitBy_length_consistency  
+  , testProperty "splitBy L.length consistency" prop_splitBy_length_consistency  
   , testProperty "splitByCollapsed removes empty segments" prop_splitByCollapsed_removes_empty
   , testProperty "removeComments preserves line structure" prop_removeComments_preserves_lines
   , testProperty "breakOn returns correct split" prop_breakOn_correct_split
@@ -33,28 +34,28 @@ prop_splitBy_length_consistency :: Char -> String -> Property
 prop_splitBy_length_consistency delim s = 
   let segments = splitBy delim s
       reconstructed = concatMap (++ [delim]) (init segments) ++ last segments
-  in length segments >= 1 && 
-     (if null s then segments == [""] else length (filter (== delim) s) + 1 == length segments)
+  in L.length segments >= 1 && 
+     (if null s then segments == [""] else L.length (L.filter (== delim) s) + 1 == L.length segments)
 
 -- | splitByCollapsed should never return empty strings in result
 prop_splitByCollapsed_removes_empty :: Char -> String -> Property
 prop_splitByCollapsed_removes_empty delim s = 
-  all (not . null) (splitByCollapsed delim s)
+  L.all (not . null) (splitByCollapsed delim s)
 
 -- | removeComments should preserve the number of lines (except when comments contain newlines)
 prop_removeComments_preserves_lines :: String -> Property
 prop_removeComments_preserves_lines s = 
-  let originalLines = length (lines s)
-      processedLines = length (lines (removeComments s))
+  let originalLines = L.length (lines s)
+      processedLines = L.length (lines (removeComments s))
   in processedLines <= originalLines  -- Can be less due to block comments
 
--- | breakOn should return prefix and suffix that combine to original (minus pattern)
+-- | breakOn should return prefix L.and suffix that combine to original (minus pattern)
 prop_breakOn_correct_split :: String -> String -> Property
 prop_breakOn_correct_split pattern s = 
   let (prefix, suffix) = breakOn pattern s
   in if null pattern 
      then prefix == "" && suffix == s
-     else if pattern `isInfixOf` s
+     else if pattern `L.isInfixOf` s
           then prefix ++ pattern ++ suffix === s
           else prefix === s && suffix === ""
 
@@ -62,27 +63,27 @@ prop_breakOn_correct_split pattern s =
 prop_trim_removes_only_whitespace :: String -> Property
 prop_trim_removes_only_whitespace s = 
   let trimmed = trim s
-      hasLeadingNonSpace = not (null s) && not (isSpace (head s)) || null trimmed
+      hasLeadingNonSpace = not (null s) && not (isSpace (L.head s)) || null trimmed
       hasTrailingNonSpace = not (null s) && not (isSpace (last s)) || null trimmed
   in if null trimmed
-     then all isSpace s
+     then L.all isSpace s
      else hasLeadingNonSpace && hasTrailingNonSpace
 
 -- | splitBy should handle edge cases correctly
 prop_splitBy_delimiter_behavior :: Char -> String -> Property
 prop_splitBy_delimiter_behavior delim s = 
   let segments = splitBy delim s
-      delimiterCount = length (filter (== delim) s)
+      delimiterCount = L.length (L.filter (== delim) s)
   in if null s
      then segments == [""]
-     else length segments === delimiterCount + 1
+     else L.length segments === delimiterCount + 1
 
 -- | removeComments should handle nested comment patterns gracefully
 prop_removeComments_nested_patterns :: String -> Property
 prop_removeComments_nested_patterns s = 
   let processed = removeComments s
-      hasUnmatchedBlockStart = "/*" `isInfixOf` processed
-      hasUnmatchedBlockEnd = "*/" `isInfixOf` processed
+      hasUnmatchedBlockStart = "/*" `L.isInfixOf` processed
+      hasUnmatchedBlockEnd = "*/" `L.isInfixOf` processed
   in not (hasUnmatchedBlockStart && hasUnmatchedBlockEnd)  -- Should not have both unmatched
 
 -- Helper operator for property testing

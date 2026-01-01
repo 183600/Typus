@@ -3,6 +3,7 @@
 module Test.Unit.NewOwnershipTransferQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import Data.Char (isAlphaNum)
@@ -172,11 +173,11 @@ prop_nonconflicting_allowed owner1 owner2 =
 
 prop_multiple_conflicts :: [String] -> String -> Property
 prop_multiple_conflicts owners resource =
-  let distinctOwners = nub (filter (not . null) owners)
-      ownerships = map (\o -> OwnershipInfo o resource "type1" 1) distinctOwners
+  let distinctOwners = nub (L.filter (not . null) owners)
+      ownerships = L.map (\o -> OwnershipInfo o resource "type1" 1) distinctOwners
       conflicts = [checkOwnershipConflict o1 o2 | o1 <- ownerships, o2 <- ownerships, o1 /= o2]
-  in length distinctOwners > 1 && not (null resource) ==>
-  property $ any (== True) conflicts
+  in L.length distinctOwners > 1 && not (null resource) ==>
+  property $ L.any (== True) conflicts
 
 prop_conflict_resolution_preserves :: String -> String -> String -> Property
 prop_conflict_resolution_preserves owner1 owner2 resource =
@@ -190,12 +191,12 @@ prop_conflict_resolution_preserves owner1 owner2 resource =
 -- Transfer chaining properties
 prop_chained_maintains_ownership :: [String] -> Property
 prop_chained_maintains_ownership owners =
-  let distinctOwners = filter (not . null) (nub owners)
-  in length distinctOwners > 2 ==>
+  let distinctOwners = L.filter (not . null) (nub owners)
+  in L.length distinctOwners > 2 ==>
   case distinctOwners of
     (o1:o2:rest) -> 
       let initialOwner = OwnershipInfo o1 "resource" "type1" 1
-          chainResult = foldl (\acc owner -> 
+          chainResult = L.foldl (\acc owner -> 
             case acc of
               TransferSuccess ownerInfo -> transferOwnership ownerInfo owner
               _ -> acc
@@ -207,19 +208,19 @@ prop_chained_maintains_ownership owners =
 
 prop_chain_preserves_history :: [String] -> Property
 prop_chain_preserves_history owners =
-  let distinctOwners = filter (not . null) (nub owners)
-  in length distinctOwners > 2 ==>
-  property $ length distinctOwners <= length (nub distinctOwners)  -- History preserved
+  let distinctOwners = L.filter (not . null) (nub owners)
+  in L.length distinctOwners > 2 ==>
+  property $ L.length distinctOwners <= L.length (nub distinctOwners)  -- History preserved
 
 prop_circular_detected :: [String] -> Property
 prop_circular_detected owners =
-  let distinctOwners = filter (not . null) (nub owners)
-  in length distinctOwners > 1 ==>
+  let distinctOwners = L.filter (not . null) (nub owners)
+  in L.length distinctOwners > 1 ==>
   case distinctOwners of
     (o1:os) -> 
       let initialOwner = OwnershipInfo o1 "resource" "type1" 1
           -- Create a circular transfer
-          chainResult = foldl (\acc owner -> 
+          chainResult = L.foldl (\acc owner -> 
             case acc of
               TransferSuccess ownerInfo -> transferOwnership ownerInfo owner
               _ -> acc
@@ -232,9 +233,9 @@ prop_circular_detected owners =
 prop_long_chain_efficient :: Int -> Property
 prop_long_chain_efficient n =
   let chainLength = min (max n 0) 1000  -- Cap at 1000
-      owners = map (\i -> "owner" ++ show i) [1..chainLength]
+      owners = L.map (\i -> "owner" ++ show i) [1..chainLength]
   in chainLength > 10 ==>
-  property $ length owners == chainLength
+  property $ L.length owners == chainLength
 
 -- Ownership invariant properties
 prop_single_owner_invariant :: String -> String -> Property
@@ -242,14 +243,14 @@ prop_single_owner_invariant from to =
   let owner1 = OwnershipInfo from "resource" "type1" 1
   in not (null from) && not (null to) && from /= to ==>
   case transferOwnership owner1 to of
-    TransferSuccess newOwner -> property $ length (words (getOwner newOwner)) >= 1
+    TransferSuccess newOwner -> property $ L.length (words (getOwner newOwner)) >= 1
     _ -> property False
 
 prop_ownership_acyclic :: [String] -> Property
 prop_ownership_acyclic owners =
-  let distinctOwners = filter (not . null) (nub owners)
-  in length distinctOwners > 2 ==>
-  property $ length distinctOwners == length (nub distinctOwners)
+  let distinctOwners = L.filter (not . null) (nub owners)
+  in L.length distinctOwners > 2 ==>
+  property $ L.length distinctOwners == L.length (nub distinctOwners)
 
 prop_preserves_resource_count :: String -> String -> String -> Property
 prop_preserves_resource_count from to resource =
@@ -265,7 +266,7 @@ prop_ownership_consistency from to =
   in not (null from) && not (null to) && from /= to ==>
   case transferOwnership owner1 to of
     TransferSuccess newOwner -> 
-      property $ not (null (getOwner newOwner)) && 
-                 not (null (ownershipResource newOwner)) &&
-                 not (null (ownershipType newOwner))
+      property $ not (L.null (getOwner newOwner)) && 
+                 not (L.null (ownershipResource newOwner)) &&
+                 not (L.null (ownershipType newOwner))
     _ -> property False

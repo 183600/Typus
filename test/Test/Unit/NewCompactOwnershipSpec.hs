@@ -3,6 +3,7 @@
 module Test.Unit.NewCompactOwnershipSpec where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), forAll, choose, elements)
 import Ownership
@@ -206,7 +207,7 @@ testOwnershipValidation = testGroup "所有权验证测试"
           state' = acquireOwnership state "x"
           state'' = releaseOwnership state' "x"
           violations = validateOwnershipState state''
-      in length violations @?= 1
+      in L.length violations @?= 1
     
   , testCase "检测重复释放" $
       let state = emptyOwnershipState
@@ -214,7 +215,7 @@ testOwnershipValidation = testGroup "所有权验证测试"
           state'' = releaseOwnership state' "x"
           state''' = releaseOwnership state'' "x"
           violations = validateOwnershipState state'''
-      in length violations >= 1 @?= True
+      in L.length violations >= 1 @?= True
   ]
 
 -- | 边界条件测试
@@ -236,7 +237,7 @@ testBoundaryConditions = testGroup "边界条件测试"
         Right _ -> assertBool "不应该成功" False
     
   , testCase "大量变量操作" $
-      let vars = map (\i -> "var" ++ show i) [1..100]
+      let vars = L.map (\i -> "var" ++ show i) [1..100]
           state = foldl acquireOwnership emptyOwnershipState vars
           owned = getOwnedVariables state
       in Set.size owned @?= 100
@@ -248,10 +249,10 @@ testPerformanceProperties = testGroup "性能属性测试"
   [ testProperty "大量所有权操作性能" $
       \n ->
         let numOps = min 1000 (max 1 n)
-            vars = map (\i -> "var" ++ show i) [1..numOps]
+            vars = L.map (\i -> "var" ++ show i) [1..numOps]
             state = foldl acquireOwnership emptyOwnershipState vars
-            transfers = zip vars (tail vars ++ ["final"])
-            finalState = foldl (\s (from, to) -> 
+            transfers = zip vars (L.tail vars ++ ["final"])
+            finalState = L.foldl (\s (from, to) -> 
               case transferOwnership s from to of
                 Left _ -> s
                 Right s' -> s') state transfers

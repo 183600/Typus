@@ -113,12 +113,12 @@ prop_trim_idempotent input =
 prop_splitBy_segment_count :: Char -> String -> Property
 prop_splitBy_segment_count delim input =
   let segments = splitBy delim input
-      expectedCount = length (filter (== delim) input) + 1
-  in property $ length segments === expectedCount
+      expectedCount = L.length (L.filter (== delim) input) + 1
+  in property $ L.length segments === expectedCount
 
 prop_removeComments_preserve_content :: String -> Property
 prop_removeComments_preserve_content input =
-  not ("//" `isInfixOf` input) && not ("/*" `isInfixOf` input) ==>
+  not ("//" `L.isInfixOf` input) && not ("/*" `L.isInfixOf` input) ==>
   let processed = removeComments input
   in property $ input === processed
 
@@ -127,7 +127,7 @@ prop_normalizeIndentation_line_count input =
   let originalLines = lines input
       normalized = normalizeIndentation input
       normalizedLines = lines normalized
-  in property $ length originalLines === length normalizedLines
+  in property $ L.length originalLines === L.length normalizedLines
 
 -- Source location mathematics
 
@@ -172,7 +172,7 @@ prop_parsing_whitespace_graceful :: String -> String -> Property
 prop_parsing_whitespace_graceful content whitespace =
   let withWhitespace = content ++ whitespace ++ content
       normalized = normalizeIndentation withWhitespace
-  in property $ content `isInfixOf` normalized
+  in property $ content `L.isInfixOf` normalized
 
 prop_error_locations_within_bounds :: String -> Property
 prop_error_locations_within_bounds input =
@@ -185,11 +185,11 @@ prop_error_locations_within_bounds input =
 
 prop_parse_tree_size_correlation :: String -> Property
 prop_parse_tree_size_correlation input =
-  let inputLength = length input
+  let inputLength = L.length input
       -- Simulate parse tree complexity with related operations
       processed = removeComments input
       normalized = normalizeIndentation processed
-  in property $ length normalized <= inputLength + 1000 -- Reasonable upper bound
+  in property $ L.length normalized <= inputLength + 1000 -- Reasonable upper bound
 
 -- Type system properties
 
@@ -209,16 +209,16 @@ prop_type_unification_symmetric type1 type2 =
 
 prop_type_inference_preserves_safety :: String -> Property
 prop_type_inference_preserves_safety program =
-  length program < 100 ==> -- Reasonable size limit
+  L.length program < 100 ==> -- Reasonable size limit
   let inferred = program -- Placeholder for type inference
-  in property $ not (null inferred) ==> length inferred >= 0
+  in property $ not (null inferred) ==> L.length inferred >= 0
 
 prop_type_environments_consistent :: [(String, String)] -> Property
 prop_type_environments_consistent typeBindings =
   let uniqueVars = L.nub (map fst typeBindings)
-      hasDuplicates = length typeBindings /= length uniqueVars
+      hasDuplicates = L.length typeBindings /= L.length uniqueVars
   in classify hasDuplicates "has duplicate bindings" $
-     property $ length uniqueVars <= length typeBindings
+     property $ L.length uniqueVars <= L.length typeBindings
 
 -- Ownership analysis
 
@@ -226,9 +226,9 @@ prop_ownership_transfer_transitive :: [(String, String)] -> Property
 prop_ownership_transfer_transitive transfers =
   not (null transfers) ==>
   let -- Simulate ownership transfer graph
-      hasCycle = any (\(a, b) -> (b, a) `elem` transfers) transfers
+      hasCycle = L.any (\(a, b) -> (b, a) `elem` transfers) transfers
   in classify hasCycle "has potential cycles" $
-     property $ length transfers >= 0
+     property $ L.length transfers >= 0
 
 prop_borrowing_prevents_double_moves :: String -> Property
 prop_borrowing_prevents_double_moves variable =
@@ -240,15 +240,15 @@ prop_borrowing_prevents_double_moves variable =
 
 prop_ownership_analysis_terminates :: String -> Property
 prop_ownership_analysis_terminates program =
-  length program < 1000 ==> -- Reasonable size limit
-  let analysisSteps = length program -- Placeholder for analysis steps
-  in property $ analysisSteps <= length program * 10
+  L.length program < 1000 ==> -- Reasonable size limit
+  let analysisSteps = L.length program -- Placeholder for analysis steps
+  in property $ analysisSteps <= L.length program * 10
 
 prop_lifetime_constraints_respected :: [(String, Int)] -> Property
 prop_lifetime_constraints_respected lifetimes =
   not (null lifetimes) ==>
-  let maxLifetime = maximum (map snd lifetimes)
-      minLifetime = minimum (map snd lifetimes)
+  let maxLifetime = L.maximum (map snd lifetimes)
+      minLifetime = L.minimum (map snd lifetimes)
   in property $ maxLifetime >= minLifetime
 
 -- Dependency analysis
@@ -256,25 +256,25 @@ prop_lifetime_constraints_respected lifetimes =
 prop_dependency_graphs_acyclic :: [(String, [String])] -> Property
 prop_dependency_graphs_acyclic dependencies =
   not (null dependencies) ==>
-  let hasSelfDeps = any (\(name, deps) -> name `elem` deps) dependencies
+  let hasSelfDeps = L.any (\(name, deps) -> name `elem` deps) dependencies
   in classify hasSelfDeps "has self dependencies" $
-     property $ length dependencies >= 0
+     property $ L.length dependencies >= 0
 
 prop_dependency_closure_transitive :: String -> [String] -> [String] -> Property
 prop_dependency_closure_transitive item deps1 deps2 =
   not (null deps1 && null deps2) ==>
   let allDeps = L.nub (deps1 ++ deps2)
-  in property $ length allDeps >= length deps1 .&&. length allDeps >= length deps2
+  in property $ L.length allDeps >= L.length deps1 .&&. L.length allDeps >= L.length deps2
 
 prop_module_dependencies_finite :: String -> Property
 prop_module_dependencies_finite moduleName =
   not (null moduleName) ==>
-  let depCount = length moduleName -- Placeholder for dependency count
+  let depCount = L.length moduleName -- Placeholder for dependency count
   in property $ depCount >= 0 .&&. depCount <= 1000
 
 prop_circular_dependencies_detected :: [(String, [String])] -> Property
 prop_circular_dependencies_detected dependencies =
-  let hasCircular = any (\(name, deps) -> name `elem` deps) dependencies
+  let hasCircular = L.any (\(name, deps) -> name `elem` deps) dependencies
   in classify hasCircular "has circular dependencies" $
      property $ hasCircular .||. not hasCircular
 
@@ -282,9 +282,9 @@ prop_circular_dependencies_detected dependencies =
 
 prop_error_recovery_progress :: String -> Property
 prop_error_recovery_progress input =
-  length input < 500 ==> -- Reasonable size limit
+  L.length input < 500 ==> -- Reasonable size limit
   let recovered = removeComments input -- Simulate error recovery
-  in property $ length recovered >= 0
+  in property $ L.length recovered >= 0
 
 prop_error_messages_location :: String -> Property
 prop_error_messages_location input =
@@ -294,64 +294,64 @@ prop_error_messages_location input =
 
 prop_error_cascading_limited :: String -> Property
 prop_error_cascading_limited input =
-  let errors = length (filter (== '\n') input) -- Simulate error count
-  in property $ errors <= length input + 10
+  let errors = L.length (L.filter (== '\n') input) -- Simulate error count
+  in property $ errors <= L.length input + 10
 
 prop_error_contexts_preserved :: String -> Property
 prop_error_contexts_preserved input =
   let processed = removeComments input
-      contextLength = min 100 (length processed)
+      contextLength = min 100 (L.length processed)
   in property $ contextLength >= 0
 
 -- Compiler optimizations
 
 prop_optimizations_preserve_semantics :: String -> Property
 prop_optimizations_preserve_semantics code =
-  length code < 200 ==> -- Reasonable size limit
+  L.length code < 200 ==> -- Reasonable size limit
   let optimized = trim code -- Simulate optimization
-  in property $ not (null optimized) ==> length optimized >= 0
+  in property $ not (null optimized) ==> L.length optimized >= 0
 
 prop_dead_code_elimination_safe :: String -> Property
 prop_dead_code_elimination_safe code =
   let optimized = normalizeIndentation code -- Simulate dead code elimination
-  in property $ length optimized <= length code + 100
+  in property $ L.length optimized <= L.length code + 100
 
 prop_constant_folding_correct :: String -> Property
 prop_constant_folding_correct expression =
   not (null expression) ==>
   let folded = expression -- Placeholder for constant folding
-  in property $ length folded >= 0
+  in property $ L.length folded >= 0
 
 prop_inlining_preserves_behavior :: String -> Property
 prop_inlining_preserves_behavior code =
-  length code < 300 ==> -- Reasonable size limit
+  L.length code < 300 ==> -- Reasonable size limit
   let inlined = removeComments code -- Simulate inlining
-  in property $ length inlined >= 0
+  in property $ L.length inlined >= 0
 
 -- Performance properties
 
 prop_compilation_time_reasonable :: String -> Property
 prop_compilation_time_reasonable source =
-  length source < 1000 ==> -- Reasonable size limit
-  let processingTime = length source -- Simulate processing time
+  L.length source < 1000 ==> -- Reasonable size limit
+  let processingTime = L.length source -- Simulate processing time
   in property $ processingTime <= 10000 -- Upper bound in arbitrary units
 
 prop_memory_usage_bounded :: String -> Property
 prop_memory_usage_bounded input =
-  length input < 10000 ==> -- Reasonable size limit
-  let memoryUsage = length input * 2 -- Simulate memory usage
-  in property $ memoryUsage <= length input * 10
+  L.length input < 10000 ==> -- Reasonable size limit
+  let memoryUsage = L.length input * 2 -- Simulate memory usage
+  in property $ memoryUsage <= L.length input * 10
 
 prop_incremental_compilation_faster :: String -> String -> Property
 prop_incremental_compilation_faster original change =
-  length original < 500 && length change < 100 ==>
-  let fullCompile = length (original ++ change)
-      incrementalCompile = length change + 100 -- Simulate incremental compilation
+  L.length original < 500 && L.length change < 100 ==>
+  let fullCompile = L.length (original ++ change)
+      incrementalCompile = L.length change + 100 -- Simulate incremental compilation
   in property $ incrementalCompile <= fullCompile
 
 prop_parallel_compilation_correct :: [String] -> Property
 prop_parallel_compilation_correct modules =
-  length modules < 10 ==> -- Reasonable limit
+  L.length modules < 10 ==> -- Reasonable limit
   let sequentialResult = L.sort modules
       parallelResult = L.sort modules -- Simulate parallel compilation
   in property $ sequentialResult === parallelResult
@@ -360,26 +360,26 @@ prop_parallel_compilation_correct modules =
 
 prop_end_to_end_preserves_meaning :: String -> Property
 prop_end_to_end_preserves_meaning source =
-  length source < 200 ==> -- Reasonable size limit
+  L.length source < 200 ==> -- Reasonable size limit
   let compiled = removeComments source -- Simulate compilation
       executed = normalizeIndentation compiled -- Simulate execution
-  in property $ length executed >= 0
+  in property $ L.length executed >= 0
 
 prop_generated_code_compiles :: String -> Property
 prop_generated_code_compiles source =
   not (null source) ==>
   let generated = source -- Simulate code generation
-  in property $ length generated >= 0
+  in property $ L.length generated >= 0
 
 prop_linking_succeeds :: [String] -> Property
 prop_linking_succeeds objects =
-  length objects < 20 ==> -- Reasonable limit
-  let linked = L.concat objects -- Simulate linking
-  in property $ length linked >= 0
+  L.length objects < 20 ==> -- Reasonable limit
+  let linked = L.L.concat objects -- Simulate linking
+  in property $ L.length linked >= 0
 
 prop_runtime_behavior_matches :: String -> Property
 prop_runtime_behavior_matches program =
-  length program < 300 ==> -- Reasonable size limit
+  L.length program < 300 ==> -- Reasonable size limit
   let expected = program -- Simulate expected behavior
       actual = removeComments program -- Simulate actual behavior
-  in property $ length actual >= 0
+  in property $ L.length actual >= 0

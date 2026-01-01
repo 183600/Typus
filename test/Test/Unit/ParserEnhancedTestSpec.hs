@@ -1,6 +1,7 @@
 module Test.Unit.ParserEnhancedTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify)
@@ -68,8 +69,8 @@ tests =
               Left err -> assertBool ("Should parse successfully: " ++ show err) False
               Right typusFile -> do
                 let blocks = tfBlocks typusFile
-                assertBool "Should have one block" (length blocks == 1)
-                let block = head blocks
+                assertBool "Should have one block" (L.length blocks == 1)
+                let block = L.head blocks
                 let directives = cbDirectives block
                 case bdOwnership directives of
                   Just (Located _ True) -> return ()
@@ -81,7 +82,7 @@ tests =
               Left err -> assertBool ("Should parse successfully: " ++ show err) False
               Right typusFile -> do
                 let blocks = tfBlocks typusFile
-                let block = head blocks
+                let block = L.head blocks
                 let directives = cbDirectives block
                 case (bdOwnership directives, bdDependentTypes directives) of
                   (Just (Located _ True), Just (Located _ False)) -> return ()
@@ -93,7 +94,7 @@ tests =
               Left err -> assertBool ("Should parse successfully: " ++ show err) False
               Right typusFile -> do
                 let blocks = tfBlocks typusFile
-                let block = head blocks
+                let block = L.head blocks
                 let directives = cbDirectives block
                 directives @?= defaultBlockDirectives
         ]
@@ -105,8 +106,8 @@ tests =
               Left err -> assertBool ("Should parse successfully: " ++ show err) False
               Right typusFile -> do
                 let buildTags = tfBuildTags typusFile
-                assertBool "Should have one build tag" (length buildTags == 1)
-                let tag = head buildTags
+                assertBool "Should have one build tag" (L.length buildTags == 1)
+                let tag = L.head buildTags
                 locatedValue tag @?= "linux"
 
         , testCase "parse multiple build tags" $ do
@@ -115,7 +116,7 @@ tests =
               Left err -> assertBool ("Should parse successfully: " ++ show err) False
               Right typusFile -> do
                 let buildTags = tfBuildTags typusFile
-                assertBool "Should have two build tags" (length buildTags == 2)
+                assertBool "Should have two build tags" (L.length buildTags == 2)
                 let tag1 = buildTags !! 0
                 let tag2 = buildTags !! 1
                 locatedValue tag1 @?= "linux,amd64"
@@ -137,8 +138,8 @@ tests =
               Left err -> assertBool ("Should parse successfully: " ++ show err) False
               Right typusFile -> do
                 let blocks = tfBlocks typusFile
-                assertBool "Should have one block" (length blocks == 1)
-                let block = head blocks
+                assertBool "Should have one block" (L.length blocks == 1)
+                let block = L.head blocks
                 cbContent block @?= content
                 isValidSpan (cbSpan block) @?= True
 
@@ -148,7 +149,7 @@ tests =
               Left err -> assertBool ("Should parse successfully: " ++ show err) False
               Right typusFile -> do
                 let blocks = tfBlocks typusFile
-                assertBool "Should have two blocks" (length blocks == 2)
+                assertBool "Should have two blocks" (L.length blocks == 2)
                 let block1 = blocks !! 0
                 let block2 = blocks !! 1
                 cbContent block1 @?= "first block"
@@ -160,11 +161,11 @@ tests =
               Left err -> assertBool ("Should parse successfully: " ++ show err) False
               Right typusFile -> do
                 let blocks = tfBlocks typusFile
-                let block = head blocks
+                let block = L.head blocks
                 cbContent block @?= content
         ]
 
-    , testGroup "Error handling and edge cases"
+    , testGroup "Error handling L.and edge cases"
         [ testCase "handle empty input" $ do
             let content = ""
             case parseTypus content of
@@ -187,7 +188,7 @@ tests =
               Left err -> assertBool ("Should handle malformed directive: " ++ show err) False
               Right typusFile -> do
                 let blocks = tfBlocks typusFile
-                assertBool "Should still parse code block" (length blocks >= 1)
+                assertBool "Should still parse code block" (L.length blocks >= 1)
 
         , testCase "handle unclosed block comments" $ do
             let content = "/* ownership=true\nsome code"
@@ -195,6 +196,6 @@ tests =
               Left err -> assertBool ("Should handle unclosed comment: " ++ show err) False
               Right typusFile -> do
                 let blocks = tfBlocks typusFile
-                assertBool "Should parse despite unclosed comment" (length blocks >= 1)
+                assertBool "Should parse despite unclosed comment" (L.length blocks >= 1)
         ]
     ]

@@ -3,6 +3,7 @@
 module Test.Unit.EnhancedQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
@@ -25,9 +26,9 @@ tests = testGroup "Enhanced QuickCheck Properties"
 
 utilsTests :: TestTree
 utilsTests = testGroup "Utils Properties"
-  [ fastProperty "trim removes leading and trailing whitespace" prop_trim_removes_whitespace
+  [ fastProperty "trim removes leading L.and trailing whitespace" prop_trim_removes_whitespace
   , fastProperty "trim is idempotent" prop_trim_idempotent
-  , fastProperty "splitBy preserves all elements" prop_splitBy_preserves_elements
+  , fastProperty "splitBy preserves L.all elements" prop_splitBy_preserves_elements
   , fastProperty "splitByCollapsed removes empty segments" prop_splitByCollapsed_no_empty
   , fastProperty "removeLineComments preserves non-comment lines" prop_removeLineComments_preserves
   , fastProperty "normalizeIndentation preserves relative indentation" prop_normalizeIndentation_relative
@@ -36,13 +37,13 @@ utilsTests = testGroup "Utils Properties"
 sourceLocationTests :: TestTree
 sourceLocationTests = testGroup "SourceLocation Properties"
   [ fastProperty "SourcePos offset increases with line/column" prop_sourcepos_offset_monotonic
-  , fastProperty "SourceSpan start is before or equal to end" prop_sourcespan_start_before_end
+  , fastProperty "SourceSpan start is before L.or equal to end" prop_sourcespan_start_before_end
   ]
 
 parserTests :: TestTree
 parserTests = testGroup "Parser Properties"
-  [ fastProperty "defaultFileDirectives has all Nothing fields" prop_defaultFileDirectives_empty
-  , fastProperty "defaultBlockDirectives has all Nothing fields" prop_defaultBlockDirectives_empty
+  [ fastProperty "defaultFileDirectives has L.all Nothing fields" prop_defaultFileDirectives_empty
+  , fastProperty "defaultBlockDirectives has L.all Nothing fields" prop_defaultBlockDirectives_empty
   ]
 
 irTests :: TestTree
@@ -55,7 +56,7 @@ prop_trim_removes_whitespace :: String -> Property
 prop_trim_removes_whitespace s =
   let trimmed = trim s
   in not (null trimmed) ==> 
-     property (not (head trimmed `elem` " \t\n\r") && not (last trimmed `elem` " \t\n\r"))
+     property (not (L.head trimmed `elem` " \t\n\r") && not (last trimmed `elem` " \t\n\r"))
 
 prop_trim_idempotent :: String -> Property
 prop_trim_idempotent s =
@@ -70,7 +71,7 @@ prop_splitBy_preserves_elements delim s =
 prop_splitByCollapsed_no_empty :: Char -> String -> Property
 prop_splitByCollapsed_no_empty delim s =
   let parts = splitByCollapsed delim s
-  in property $ all (not . null) parts
+  in property $ L.all (not . null) parts
 
 prop_removeLineComments_preserves :: String -> Property
 prop_removeLineComments_preserves s =
@@ -82,7 +83,7 @@ prop_normalizeIndentation_relative s =
   let normalized = normalizeIndentation s
       originalLines = lines s
       normalizedLines = lines normalized
-  in length originalLines === length normalizedLines
+  in L.length originalLines === L.length normalizedLines
 
 prop_sourcepos_offset_monotonic :: Positive Int -> Positive Int -> Positive Int -> Property
 prop_sourcepos_offset_monotonic (Positive l) (Positive c) (Positive o) =

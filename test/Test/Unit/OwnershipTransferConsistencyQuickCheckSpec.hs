@@ -2,6 +2,7 @@
 module Test.Unit.OwnershipTransferConsistencyQuickCheckSpec (tests) where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 
@@ -39,7 +40,7 @@ prop_ownershipTransferMaintainsUniqueness state transfer =
   in counterexample ("Ownership transfer should maintain uniqueness constraints. " ++
                      "Owners: " ++ show owners ++
                      " Unique: " ++ show uniqueOwners)
-     (length owners === length uniqueOwners)
+     (L.length owners === L.length uniqueOwners)
 
 -- | Test that ownership transfer is reversible
 prop_ownershipTransferIsReversible :: OwnershipState -> OwnershipTransfer -> Property
@@ -72,7 +73,7 @@ prop_ownershipTransferMaintainsLifetimeRelationships state transfer =
   in counterexample ("Ownership transfer should maintain lifetime relationships. " ++
                      "Before: " ++ show beforeLifetimes ++
                      " After: " ++ show afterLifetimes)
-     (all (`elem` afterLifetimes) beforeLifetimes)
+     (L.all (`elem` afterLifetimes) beforeLifetimes)
 
 -- | Test that ownership transfer preserves resource cleanup order
 prop_ownershipTransferPreservesCleanupOrder :: OwnershipState -> OwnershipTransfer -> Property
@@ -95,7 +96,7 @@ prop_ownershipTransferHandlesCyclicDependencies state =
   in counterexample ("Ownership transfer should handle cyclic dependencies correctly. " ++
                      "Before cycles: " ++ show cycles ++
                      " After cycles: " ++ show afterCycles)
-     (length cycles === length afterCycles)
+     (L.length cycles === L.length afterCycles)
 
 -- | Test that ownership transfer maintains move semantics
 prop_ownershipTransferMaintainsMoveSemantics :: OwnershipState -> OwnershipTransfer -> Property
@@ -106,7 +107,7 @@ prop_ownershipTransferMaintainsMoveSemantics state transfer =
   in counterexample ("Ownership transfer should maintain move semantics. " ++
                      "Before moves: " ++ show beforeMoves ++
                      " After moves: " ++ show afterMoves)
-     (all (`elem` afterMoves) beforeMoves)
+     (L.all (`elem` afterMoves) beforeMoves)
 
 -- | Test that ownership transfer preserves reference validity
 prop_ownershipTransferPreservesReferenceValidity :: OwnershipState -> OwnershipTransfer -> Property
@@ -117,7 +118,7 @@ prop_ownershipTransferPreservesReferenceValidity state transfer =
   in counterexample ("Ownership transfer should preserve reference validity. " ++
                      "Before refs: " ++ show beforeRefs ++
                      " After refs: " ++ show afterRefs)
-     (all (`elem` afterRefs) beforeRefs)
+     (L.all (`elem` afterRefs) beforeRefs)
 
 -- | Test that ownership transfer is associative
 prop_ownershipTransferIsAssociative :: OwnershipState -> OwnershipTransfer -> OwnershipTransfer -> Property
@@ -172,7 +173,7 @@ prop_ownershipTransferHandlesPartialTransfers state =
   in counterexample ("Ownership transfer should handle partial transfers correctly. " ++
                      "State: " ++ show state ++
                      " Transferred: " ++ show transferredResources)
-     (not (null transferredResources) ==> all isValidTransfer transferredResources)
+     (not (null transferredResources) ==> L.all isValidTransfer transferredResources)
 
 -- | Test that ownership transfer preserves exception safety
 prop_ownershipTransferPreservesExceptionSafety :: OwnershipState -> OwnershipTransfer -> Property
@@ -183,7 +184,7 @@ prop_ownershipTransferPreservesExceptionSafety state transfer =
   in counterexample ("Ownership transfer should preserve exception safety. " ++
                      "Before: " ++ show beforeGuarantees ++
                      " After: " ++ show afterGuarantees)
-     (all (`elem` afterGuarantees) beforeGuarantees)
+     (L.all (`elem` afterGuarantees) beforeGuarantees)
 
 -- | Test that ownership transfer maintains dependency ordering
 prop_ownershipTransferMaintainsDependencyOrdering :: OwnershipState -> OwnershipTransfer -> Property

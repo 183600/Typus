@@ -18,15 +18,17 @@ import Cli (CliOptions(..), parseCliOptions, runCli)
 import Cli.Runner (runCompilation, runAnalysis, runValidation)
 import CommandLineDebug (DebugOptions(..), parseDebugOptions)
 import SourceLocation (SourceSpan(..), startPos, SourcePos(..))
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, sort, nub, intercalate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (sort, nub, intercalate)
 import Data.Char (isSpace, isAlpha, isAlphaNum)
 import System.Exit (ExitCode(..))
 
 -- Property: CLI options parsing handles basic flags correctly
 prop_basic_cli_parsing :: [String] -> Property
 prop_basic_cli_parsing flags =
-  not (null flags) && length flags <= 5 &&
-  all (`elem` ["--help", "--version", "--verbose", "--quiet"]) flags ==>
+  not (null flags) && L.length flags <= 5 &&
+  L.all (`elem` ["--help", "--version", "--verbose", "--quiet"]) flags ==>
   let args = flags ++ ["test.typus"]
       result = parseCliOptions args
   in case result of
@@ -36,8 +38,8 @@ prop_basic_cli_parsing flags =
 -- Property: CLI options parsing handles file arguments correctly
 prop_file_argument_parsing :: String -> Property
 prop_file_argument_parsing filename =
-  not (null filename) && ".typus" `isSuffixOf` filename &&
-  all (\c -> isAlphaNum c || c `elem` ['.', '-', '_']) filename ==>
+  not (null filename) && ".typus" `L.isSuffixOf` filename &&
+  L.all (\c -> isAlphaNum c || c `elem` ['.', '-', '_']) filename ==>
   let args = [filename]
       result = parseCliOptions args
   in case result of
@@ -47,19 +49,19 @@ prop_file_argument_parsing filename =
 -- Property: CLI options parsing handles multiple files correctly
 prop_multiple_files_parsing :: [String] -> Property
 prop_multiple_files_parsing filenames =
-  not (null filenames) && length filenames <= 3 &&
-  all (\f -> not (null f) && ".typus" `isSuffixOf` f) filenames ==>
+  not (null filenames) && L.length filenames <= 3 &&
+  L.all (\f -> not (null f) && ".typus" `L.isSuffixOf` f) filenames ==>
   let args = filenames
       result = parseCliOptions args
   in case result of
     Left _ -> property False
-    Right options -> length (cliInputFiles options) === length filenames
+    Right options -> L.length (cliInputFiles options) === L.length filenames
 
 -- Property: CLI options parsing handles output directory correctly
 prop_output_directory_parsing :: String -> Property
 prop_output_directory_parsing outputDir =
-  not (null outputDir) && not ('/' `isSuffixOf` outputDir) &&
-  all (\c -> isAlphaNum c || c `elem` ['.', '-', '_', '/']) outputDir ==>
+  not (null outputDir) && not ('/' `L.isSuffixOf` outputDir) &&
+  L.all (\c -> isAlphaNum c || c `elem` ['.', '-', '_', '/']) outputDir ==>
   let args = ["--output", outputDir, "test.typus"]
       result = parseCliOptions args
   in case result of
@@ -79,8 +81,8 @@ prop_optimization_level_parsing optLevel =
 -- Property: CLI options parsing handles debug options correctly
 prop_debug_options_parsing :: [String] -> Property
 prop_debug_options_parsing debugFlags =
-  not (null debugFlags) && length debugFlags <= 3 &&
-  all (`elem` ["--debug-ast", "--debug-ir", "--debug-symbols"]) debugFlags ==>
+  not (null debugFlags) && L.length debugFlags <= 3 &&
+  L.all (`elem` ["--debug-ast", "--debug-ir", "--debug-symbols"]) debugFlags ==>
   let args = debugFlags ++ ["test.typus"]
       result = parseCliOptions args
   in case result of
@@ -110,7 +112,7 @@ prop_dependent_types_flags_parsing dtMode =
 -- Property: CLI handles compilation correctly
 prop_cli_compilation :: String -> Property
 prop_cli_compilation sourceCode =
-  not (null sourceCode) && "package main" `isPrefixOf` sourceCode ==>
+  not (null sourceCode) && "package main" `L.isPrefixOf` sourceCode ==>
   let options = defaultCliOptions { cliInputFiles = ["test.typus"] }
       result = runCompilation options sourceCode
   in case result of
@@ -120,7 +122,7 @@ prop_cli_compilation sourceCode =
 -- Property: CLI handles analysis correctly
 prop_cli_analysis :: String -> Property
 prop_cli_analysis sourceCode =
-  not (null sourceCode) && "package main" `isPrefixOf` sourceCode ==>
+  not (null sourceCode) && "package main" `L.isPrefixOf` sourceCode ==>
   let options = defaultCliOptions { cliInputFiles = ["test.typus"], cliMode = Just "analyze" }
       result = runAnalysis options sourceCode
   in case result of
@@ -130,7 +132,7 @@ prop_cli_analysis sourceCode =
 -- Property: CLI handles validation correctly
 prop_cli_validation :: String -> Property
 prop_cli_validation sourceCode =
-  not (null sourceCode) && "package main" `isPrefixOf` sourceCode ==>
+  not (null sourceCode) && "package main" `L.isPrefixOf` sourceCode ==>
   let options = defaultCliOptions { cliInputFiles = ["test.typus"], cliMode = Just "validate" }
       result = runValidation options sourceCode
   in case result of
@@ -140,7 +142,7 @@ prop_cli_validation sourceCode =
 -- Property: CLI handles verbose output correctly
 prop_verbose_output :: String -> Property
 prop_verbose_output sourceCode =
-  not (null sourceCode) && "package main" `isPrefixOf` sourceCode ==>
+  not (null sourceCode) && "package main" `L.isPrefixOf` sourceCode ==>
   let options = defaultCliOptions { cliInputFiles = ["test.typus"], cliVerbose = True }
       result = runCli options
   in case result of
@@ -150,7 +152,7 @@ prop_verbose_output sourceCode =
 -- Property: CLI handles quiet mode correctly
 prop_quiet_mode :: String -> Property
 prop_quiet_mode sourceCode =
-  not (null sourceCode) && "package main" `isPrefixOf` sourceCode ==>
+  not (null sourceCode) && "package main" `L.isPrefixOf` sourceCode ==>
   let options = defaultCliOptions { cliInputFiles = ["test.typus"], cliQuiet = True }
       result = runCli options
   in case result of
@@ -178,8 +180,8 @@ prop_version_flag =
 -- Property: CLI handles invalid arguments correctly
 prop_invalid_arguments :: [String] -> Property
 prop_invalid_arguments invalidArgs =
-  not (null invalidArgs) && length invalidArgs <= 3 &&
-  all (`elem` ["--invalid-flag", "--unknown-option", ""]) invalidArgs ==>
+  not (null invalidArgs) && L.length invalidArgs <= 3 &&
+  L.all (`elem` ["--invalid-flag", "--unknown-option", ""]) invalidArgs ==>
   let result = parseCliOptions invalidArgs
   in case result of
     Left _ -> property True -- Expected to fail
@@ -188,9 +190,9 @@ prop_invalid_arguments invalidArgs =
 -- Property: CLI handles missing input file correctly
 prop_missing_input_file :: [String] -> Property
 prop_missing_input_file flags =
-  not (null flags) && length flags <= 3 &&
-  all (`elem` ["--verbose", "--optimize", "2"]) flags &&
-  not (any (`elem` ["test.typus", "input.typus"]) flags) ==>
+  not (null flags) && L.length flags <= 3 &&
+  L.all (`elem` ["--verbose", "--optimize", "2"]) flags &&
+  not (L.any (`elem` ["test.typus", "input.typus"]) flags) ==>
   let result = parseCliOptions flags
   in case result of
     Left _ -> property True -- Expected to fail
@@ -208,9 +210,9 @@ prop_conflicting_options =
 -- Property: CLI handles complex option combinations correctly
 prop_complex_option_combinations :: [String] -> String -> Property
 prop_complex_option_combinations flags filename =
-  not (null flags) && length flags <= 5 &&
-  all (`elem` ["--verbose", "--optimize", "2", "--debug-ast", "--ownership", "on"]) flags &&
-  not (null filename) && ".typus" `isSuffixOf` filename ==>
+  not (null flags) && L.length flags <= 5 &&
+  L.all (`elem` ["--verbose", "--optimize", "2", "--debug-ast", "--ownership", "on"]) flags &&
+  not (null filename) && ".typus" `L.isSuffixOf` filename ==>
   let args = flags ++ [filename]
       result = parseCliOptions args
   in case result of
@@ -220,8 +222,8 @@ prop_complex_option_combinations flags filename =
 -- Property: CLI debug options parsing works correctly
 prop_debug_options_parsing_advanced :: [String] -> Property
 prop_debug_options_parsing_advanced debugOptions =
-  not (null debugOptions) && length debugOptions <= 4 &&
-  all (`elem` ["ast", "ir", "symbols", "types"]) debugOptions ==>
+  not (null debugOptions) && L.length debugOptions <= 4 &&
+  L.all (`elem` ["ast", "ir", "symbols", "types"]) debugOptions ==>
   let debugStr = intercalate "," debugOptions
       result = parseDebugOptions debugStr
   in case result of
@@ -245,10 +247,10 @@ defaultCliOptions = CliOptions
   }
 
 hasValidCliOptions :: CliOptions -> Bool
-hasValidCliOptions options = not (null (cliInputFiles options)) -- Basic validation
+hasValidCliOptions options = not (L.null (cliInputFiles options)) -- Basic validation
 
 hasDebugOptions :: CliOptions -> [String] -> Bool
-hasDebugOptions options flags = all (`elem` flags) ["--debug-ast", "--debug-ir", "--debug-symbols"]
+hasDebugOptions options flags = L.all (`elem` flags) ["--debug-ast", "--debug-ir", "--debug-symbols"]
 
 hasValidDebugOptions :: DebugOptions -> [String] -> Bool
 hasValidDebugOptions options expected = True -- Placeholder implementation

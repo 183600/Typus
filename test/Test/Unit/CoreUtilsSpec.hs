@@ -1,6 +1,7 @@
 module Test.Unit.CoreUtilsSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), oneof, elements)
 import qualified Data.Text as T
@@ -35,8 +36,8 @@ tests =
             splitByCollapsed ',' "a,,b" @?= ["a", "b"]
             splitByCollapsed ',' ",a,b," @?= ["a", "b"]
 
-        , testProperty "splitBy length is >= splitByCollapsed length" $ 
-            \str -> length (splitBy ',' str) >= length (splitByCollapsed ',' str)
+        , testProperty "splitBy L.length is >= splitByCollapsed L.length" $ 
+            \str -> L.length (splitBy ',' str) >= L.length (splitByCollapsed ',' str)
         ]
 
     , testGroup "Comment handling functions"
@@ -90,9 +91,9 @@ tests =
             breakOn "" "test" @?= ("", "test")
 
         , testProperty "breakOn pattern not found returns original string" $
-            \str pat -> not (pat `isInfixOf` str) ==> breakOn pat str == (str, "")
+            \str pat -> not (pat `L.isInfixOf` str) ==> breakOn pat str == (str, "")
           where
-            isInfixOf needle haystack = needle `T.isInfixOf` T.pack haystack
+            isInfixOf needle haystack = needle `L.isInfixOf` T.pack haystack
         ]
 
     , testGroup "Property-based tests for core functions"
@@ -105,7 +106,7 @@ tests =
         , testProperty "removeComments doesn't change strings without comments" $
             \str -> not (hasCommentMarkers str) ==> removeComments str == str
           where
-            hasCommentMarkers s = "//" `isInfixOf` s || "/*" `isInfixOf` s
-            isInfixOf needle haystack = needle `T.isInfixOf` T.pack haystack
+            hasCommentMarkers s = "//" `L.isInfixOf` s || "/*" `L.isInfixOf` s
+            isInfixOf needle haystack = needle `L.isInfixOf` T.pack haystack
         ]
     ]

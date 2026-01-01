@@ -10,6 +10,7 @@ import Parser
   )
 import SourceLocation (SourcePos(..), SourceSpan(..), locatedWithSpan, spanStart, spanEnd)
 import Data.Maybe (isJust, isNothing, fromMaybe)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 import Data.Char (isSpace)
 import qualified Data.Text as T
@@ -66,7 +67,7 @@ genFileDirectiveLine = do
   ownership <- oneof ["", "ownership: on", "ownership: off", "ownership: true", "ownership: false"]
   dependentTypes <- oneof ["", "dependent_types: on", "dependent_types: off"]
   constraints <- oneof ["", "constraints: on", "constraints: off"]
-  let directives = filter (not . null) [ownership, dependentTypes, constraints]
+  let directives = L.filter (not . null) [ownership, dependentTypes, constraints]
   case directives of
     [] -> return "//!"
     _ -> return $ "//! " ++ unwords directives
@@ -76,7 +77,7 @@ genBlockDirectiveLine = do
   ownership <- oneof ["", "ownership: on", "ownership: off"]
   dependentTypes <- oneof ["", "dependent_types: on", "dependent_types: off"]
   constraints <- oneof ["", "constraints: on", "constraints: off"]
-  let directives = filter (not . null) [ownership, dependentTypes, constraints]
+  let directives = L.filter (not . null) [ownership, dependentTypes, constraints]
   case directives of
     [] -> return "{//!}"
     _ -> return $ "{//! " ++ unwords directives ++ " }"
@@ -118,8 +119,8 @@ prop_parse_empty_input =
     Left _ -> property False
     Right typusFile -> 
       tfDirectives typusFile === defaultFileDirectives .&&.
-      null (tfBuildTags typusFile) .&&.
-      null (tfBlocks typusFile)
+      L.null (tfBuildTags typusFile) .&&.
+      L.null (tfBlocks typusFile)
 
 -- Test parsing simple file directives
 prop_parse_file_directives :: Property
@@ -136,7 +137,7 @@ prop_parse_build_tags = forAll genBuildTagLine $ \buildTag ->
   case parseTypus buildTag of
     Left _ -> property False
     Right typusFile -> 
-      not (null (tfBuildTags typusFile))
+      not (L.null (tfBuildTags typusFile))
 
 -- Test parsing simple code blocks
 prop_parse_simple_code :: Property
@@ -144,7 +145,7 @@ prop_parse_simple_code = forAll genSimpleCodeContent $ \code ->
   case parseTypus code of
     Left _ -> property False
     Right typusFile -> 
-      not (null (tfBlocks typusFile)) || all null (lines code)
+      not (L.null (tfBlocks typusFile)) || L.all L.null (lines code)
 
 -- Test parsing block directives
 prop_parse_block_directives :: Property
@@ -153,7 +154,7 @@ prop_parse_block_directives = forAll genBlockDirectiveLine $ \directiveLine ->
   in case parseTypus input of
        Left _ -> property False
        Right typusFile -> 
-         not (null (tfBlocks typusFile))
+         not (L.null (tfBlocks typusFile))
 
 -- Test parsing multiple directives
 prop_parse_multiple_file_directives :: Property
@@ -172,14 +173,14 @@ prop_parse_mixed_content = do
   buildTags <- listOf genBuildTagLine
   code <- genSimpleCodeContent
   blockDirectives <- listOf genBlockDirectiveLine
-  let blocks = map (\d -> d ++ "\n  block code\n") blockDirectives
+  let blocks = L.map (\d -> d ++ "\n  block code\n") blockDirectives
       input = unlines $ directives ++ buildTags ++ [code] ++ blocks
   case parseTypus input of
     Left _ -> property False
     Right typusFile -> 
       let hasDirectives = tfDirectives typusFile /= defaultFileDirectives
-          hasBuildTags = not (null (tfBuildTags typusFile))
-          hasBlocks = not (null (tfBlocks typusFile))
+          hasBuildTags = not (L.null (tfBuildTags typusFile))
+          hasBlocks = not (L.null (tfBlocks typusFile))
       in hasDirectives || hasBuildTags || hasBlocks || null input
 
 -- Test error handling for invalid directives
@@ -195,12 +196,12 @@ prop_parse_preserves_line_structure :: Property
 prop_parse_preserves_line_structure = 
   forAll (listOf $ listOf $ elements $ ['a'..'z'] ++ ' ') $ \lines' ->
   let input = unlines lines'
-      expectedLines = length $ filter (not . all isSpace) lines'
+      expectedLines = L.length $ L.filter (not . L.all isSpace) lines'
   in case parseTypus input of
        Left _ -> property False
        Right typusFile -> 
          let blocks = tfBlocks typusFile
-             totalLines = sum $ length . lines . cbContent <$> blocks
+             totalLines = L.sum $ L.length . lines . cbContent <$> blocks
          in totalLines >= expectedLines || null lines'
 
 -- Test parsing with whitespace variations
@@ -214,7 +215,7 @@ prop_parse_whitespace_variations =
         , "  " ++ baseDirective ++ "  "
         , baseDirective ++ "\n"
         ]
-  in all (\variant -> case parseTypus variant of
+  in L.all (\variant -> case parseTypus variant of
                        Left _ -> False
                        Right _ -> True) variations
 
@@ -225,9 +226,9 @@ prop_parse_nested_braces =
   in case parseTypus input of
        Left _ -> property False
        Right typusFile -> 
-         not (null (tfBlocks typusFile))
+         not (L.null (tfBlocks typusFile))
 
--- Test parsing comments and directives interaction
+-- Test parsing comments L.and directives interaction
 prop_parse_comments_with_directives :: Property
 prop_parse_comments_with_directives = 
   let input = "// This is a comment\n//! ownership: on\n// Another comment\nfunc main() {}\n"

@@ -6,6 +6,7 @@ import Control.Exception (bracket_)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.IO.Class (liftIO)
 import Data.IORef (modifyIORef', newIORef, readIORef)
+import qualified Data.List as L
 import Data.List (isPrefixOf)
 import GoToolchain
 import System.Directory (doesDirectoryExist, doesFileExist)
@@ -64,9 +65,9 @@ tests =
               exists <- doesFileExist path
               assertBool "temporary Go file should exist" exists
               takeExtension path @?= ".go"
-              assertBool "derived file name should keep the source prefix" ("server-" `isPrefixOf` takeBaseName path)
+              assertBool "derived file name should keep the source prefix" ("server-" `L.isPrefixOf` takeBaseName path)
 
-    , testCase "withTemporaryGoProject writes go.mod and reuses the provided prefix" $ do
+    , testCase "withTemporaryGoProject writes go.mod L.and reuses the provided prefix" $ do
         let prefix = "cli-run"
         result <- runExceptT $ withTemporaryGoProject prefix $ \tmp -> do
           let goModPath = tmp </> "go.mod"
@@ -78,7 +79,7 @@ tests =
           pure (takeBaseName tmp)
         case result of
           Left err -> assertFailure ("withTemporaryGoProject failed: " ++ show err)
-          Right dirBase -> assertBool "prefix should appear in directory name" (prefix `isPrefixOf` dirBase)
+          Right dirBase -> assertBool "prefix should appear in directory name" (prefix `L.isPrefixOf` dirBase)
 
     , testCase "runGoCommand logs when Go is skipped" $ do
         withEnvOverride "TYPUS_SKIP_GO_BUILD" (Just "1") $ do
@@ -89,5 +90,5 @@ tests =
             Left err -> assertFailure ("runGoCommand failed unexpectedly: " ++ show err)
             Right _ -> pure ()
           logs <- readIORef ref
-          assertBool "expected skip message" (any (isPrefixOf "Skipping Go command") logs)
+          assertBool "expected skip message" (L.any (L.isPrefixOf "Skipping Go command") logs)
     ]

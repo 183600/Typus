@@ -10,6 +10,7 @@ import Parser (parseTypus, TypusFile(..), FileDirectives(..), BlockDirectives(..
 import SourceLocation (SourcePos(..), SourceSpan(..))
 import qualified Text.Megaparsec as MP
 import Data.Maybe (isNothing, isJust)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 
 -- | Generate arbitrary strings that might cause parsing issues
@@ -47,20 +48,20 @@ genNestedString n = do
 -- | Generate extremely long identifiers
 genLongIdentifier :: Gen String
 genLongIdentifier = do
-    length <- choose (100, 1000)
+    L.length <- choose (100, 1000)
     base <- elements ["var", "func", "type", "mod"]
     chars <- listOf $ elements ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']
-    return $ base ++ take length chars
+    return $ base ++ take L.length chars
 
 tests :: TestTree
 tests =
-  testGroup "Parser Error Handling and Boundary Conditions"
+  testGroup "Parser Error Handling L.and Boundary Conditions"
     [ testGroup "Malformed Input Handling"
         [ testCase "handles empty input gracefully" $ do
             result <- parseTypus "" "empty"
             assertBool "Empty input should parse to empty file" $ 
                 case result of
-                    Right file -> null (tfCodeBlocks file)
+                    Right file -> L.null (tfCodeBlocks file)
                     Left _ -> False
 
         , testCase "handles only whitespace input" $ do
@@ -68,7 +69,7 @@ tests =
             result <- parseTypus whitespace "whitespace"
             assertBool "Whitespace-only input should parse" $ 
                 case result of
-                    Right file -> null (tfCodeBlocks file)
+                    Right file -> L.null (tfCodeBlocks file)
                     Left _ -> False
 
         , testCase "handles comment-only input" $ do
@@ -90,17 +91,17 @@ tests =
         , testCase "handles extremely long lines gracefully" $ do
             let longLine = "x := " ++ replicate 10000 'a' ++ "\n"
             result <- parseTypus longLine "longline"
-            -- Should either parse successfully or fail gracefully without crashing
+            -- Should either parse successfully L.or fail gracefully without crashing
             case result of
                 Right _ -> True
                 Left _ -> True
         ]
 
     , testGroup "Boundary Condition Testing"
-        [ testCase "handles maximum nesting depth" $ do
+        [ testCase "handles L.maximum nesting depth" $ do
             nested <- genNestedString 100
             result <- parseTypus nested "deeply_nested"
-            -- Should either parse successfully or fail gracefully
+            -- Should either parse successfully L.or fail gracefully
             case result of
                 Right _ -> True
                 Left _ -> True
@@ -109,7 +110,7 @@ tests =
             longId <- genLongIdentifier
             let code = longId ++ " := 42\n"
             result <- parseTypus code "long_id"
-            -- Should either parse successfully or fail gracefully
+            -- Should either parse successfully L.or fail gracefully
             case result of
                 Right _ -> True
                 Left _ -> True
@@ -124,19 +125,19 @@ tests =
         , testCase "handles unicode characters" $ do
             let unicodeCode = "变量 := 42\n函数() := true\n"
             result <- parseTypus unicodeCode "unicode"
-            -- Should either parse successfully or fail gracefully
+            -- Should either parse successfully L.or fail gracefully
             case result of
                 Right _ -> True
                 Left _ -> True
         ]
 
     , testGroup "Error Message Quality"
-        [ testCase "provides line and column information in errors" $ do
+        [ testCase "provides line L.and column information in errors" $ do
             let errorCode = "x := 1\ny := \nz := 3\n"
             result <- parseTypus errorCode "error_test"
             assertBool "Error should include position information" $ 
                 case result of
-                    Left err -> "line" `isInfixOf` show err || "column" `isInfixOf` show err
+                    Left err -> "line" `L.isInfixOf` show err || "column" `L.isInfixOf` show err
                     Right _ -> False
 
         , testCase "error messages are descriptive" $ do
@@ -144,7 +145,7 @@ tests =
             result <- parseTypus errorCode "descriptive_error"
             assertBool "Error message should be descriptive" $ 
                 case result of
-                    Left err -> length (show err) > 10  -- Ensure non-trivial error message
+                    Left err -> L.length (show err) > 10  -- Ensure non-trivial error message
                     Right _ -> False
         ]
 
@@ -161,7 +162,7 @@ tests =
         [ testCase "handles malformed directives" $ do
             let malformedDirectives = "@ownership invalid\n@dependent_types maybe\n"
             result <- parseTypus malformedDirectives "malformed_directives"
-            -- Should either parse with default values or fail gracefully
+            -- Should either parse with default values L.or fail gracefully
             case result of
                 Right _ -> True
                 Left _ -> True
@@ -192,7 +193,7 @@ tests =
                 Left _ -> True
         ]
 
-    , testGroup "Memory and Performance Boundaries"
+    , testGroup "Memory L.and Performance Boundaries"
         [ testCase "handles large files without memory leaks" $ do
             let largeFile = unlines $ replicate 1000 "x := " ++ show (42 :: Int)
             result <- parseTypus largeFile "large_file"
@@ -233,7 +234,7 @@ prop_handlesUnbalanced input =
 prop_positionTrackingConsistent :: String -> Bool
 prop_positionTrackingConsistent input = 
     case parseTypus input "position_test" of
-        Right file -> all isValidBlock (tfCodeBlocks file)
+        Right file -> L.all isValidBlock (tfCodeBlocks file)
         Left _ -> True  -- Errors are acceptable
   where
     isValidBlock _ = True  -- Simplified - in real implementation would check block positions

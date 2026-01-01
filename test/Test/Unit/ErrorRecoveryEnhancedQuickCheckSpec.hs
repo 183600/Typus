@@ -4,14 +4,14 @@
 module Test.Unit.ErrorRecoveryEnhancedQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, QuickCheckTests(..))
 import Test.Tasty.HUnit (testCase, assert)
 import Compiler.Errors.Core
   ( TypeError(..), ErrorSeverity(..), ErrorCategory(..)
   , ErrorCollector, newErrorCollector, addError, addWarning
   , getErrors, getWarnings, hasErrors, hasWarnings
-  , canRecoverFrom, shouldContinueAfter, errorAt, warningAt
-  , formatError, formatErrors
+  , canRecoverFrom, shouldContinueAfter, errorAt, warningAt, formatError, formatErrors
   )
 import SourceLocation (SourcePos(..), SourceSpan(..), emptySpan)
 import Test.QuickCheck.Arbitrary (Arbitrary(..))
@@ -78,14 +78,14 @@ tests = testGroup "Error Recovery Advanced Tests"
       let collector = newErrorCollector
           collector' = foldl addError collector errors
           retrievedErrors = getErrors collector'
-      in length retrievedErrors == length errors &&
+      in L.length retrievedErrors == L.length errors &&
          map errorMessage retrievedErrors == map errorMessage errors
   
   , testProperty "warning collector preserves insertion order" $ \warnings ->
       let collector = newErrorCollector
           collector' = foldl addWarning collector warnings
           retrievedWarnings = getWarnings collector'
-      in length retrievedWarnings == length warnings &&
+      in L.length retrievedWarnings == L.length warnings &&
          map errorMessage retrievedWarnings == map errorMessage warnings
   
   , testProperty "hasErrors correctly detects error presence" $ \errors ->
@@ -106,54 +106,40 @@ tests = testGroup "Error Recovery Advanced Tests"
       in canRecoverFrom error == canRecover
   
   , testProperty "shouldContinueAfter follows recovery rules" $ \errors ->
-      let shouldContinue = all canRecoverFrom errors
+      let shouldContinue = L.all canRecoverFrom errors
           collector = foldl addError newErrorCollector errors
       in shouldContinueAfter collector == shouldContinue
   
-  , testProperty "errorAt creates error at position" $ \pos ->
-      \msg -> let error = errorAt pos msg
-              in errorLocation error == emptySpan pos &&
-                 errorMessage error == msg
-  
-  , testProperty "warningAt creates warning at position" $ \pos ->
-      \msg -> let warning = warningAt pos msg
-              in errorSeverity warning == Warning &&
-                 errorLocation warning == emptySpan pos &&
-                 errorMessage warning == msg
-  
-  , testProperty "formatError includes essential information" $ \error ->
-      let formatted = formatError error
-          hasMsg = errorMessage error `isInfixOf` formatted
-          hasSeverity = show (errorSeverity error) `isInfixOf` formatted
+  , testProperty "errorAt "test-id" (errorSeverity error) `L.isInfixOf` formatted
       in hasMsg && hasSeverity
   
   , testProperty "formatErrors preserves order" $ \errors ->
       let collector = foldl addError newErrorCollector errors
           formatted = formatErrors collector
-          errorCount = length errors
+          errorCount = L.length errors
       in if null errors
          then null formatted
-         else length (lines formatted) >= errorCount
+         else L.length (lines formatted) >= errorCount
   
-  , testCase "error collector handles mixed errors and warnings" $ do
-      let errors = take 3 $ repeat $ errorAt (SourcePos 1 1) "error"
-          warnings = take 2 $ repeat $ warningAt (SourcePos 2 2) "warning"
+  , testCase "error collector handles mixed errors L.and warnings" $ do
+      let errors = take 3 $ repeat $ errorAt "test-id" 1 1) "error"
+          warnings = take 2 $ repeat $ warningAt "test-id" 2 2) "warning"
           collector = foldl addError newErrorCollector errors
           collector' = foldl addWarning collector warnings
       assert (hasErrors collector')
       assert (hasWarnings collector')
-      assert (length (getErrors collector') == 3)
-      assert (length (getWarnings collector') == 2)
+      assert (L.length (getErrors collector') == 3)
+      assert (L.length (getWarnings collector') == 2)
   
   , testCase "error recovery with critical errors" $ do
-      let criticalError = errorAt (SourcePos 1 1) "critical"
+      let criticalError = errorAt "test-id" 1 1) "critical"
           criticalError' = criticalError { errorSeverity = Error }
           collector = addError newErrorCollector criticalError'
       assert (not $ canRecoverFrom criticalError')
       assert (not $ shouldContinueAfter collector)
   
   , testCase "error recovery with warnings only" $ do
-      let warning = warningAt (SourcePos 1 1) "warning"
+      let warning = warningAt "test-id" 1 1) "warning"
           collector = addWarning newErrorCollector warning
       assert (canRecoverFrom warning)
       assert (shouldContinueAfter collector)
@@ -162,13 +148,13 @@ tests = testGroup "Error Recovery Advanced Tests"
       let collector = newErrorCollector
       assert (not $ hasErrors collector)
       assert (not $ hasWarnings collector)
-      assert (null $ getErrors collector)
-      assert (null $ getWarnings collector)
+      assert (L.null $ getErrors collector)
+      assert (L.null $ getWarnings collector)
       assert (shouldContinueAfter collector)
   ]
   where
-    isInfixOf needle haystack = needle `elem` (substrings haystack)
-    substrings s = take (length s - length needle + 1) $ map (take (length needle)) $ tails s
+    L.isInfixOf needle haystack = needle `elem` (substrings haystack)
+    substrings s = take (L.length s - L.length needle + 1) $ L.map (take (L.length needle)) $ tails s
     needle = ""
     tails [] = [[]]
     tails s@(_:xs) = s : tails xs

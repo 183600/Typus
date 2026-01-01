@@ -6,7 +6,9 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
-import Data.List (isInfixOf, sort)
+import qualified Data.List as L
+import Data.List (isInfixOf)
+import Data.List (sort)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 
@@ -56,7 +58,7 @@ breakpointTests = testGroup "Breakpoint Tests"
       result <- setBreakpoint config "main"
       breakpoints <- listBreakpoints config
       result `seq` True @?= True  -- Should not crash
-      length breakpoints @?= 1
+      L.length breakpoints @?= 1
       
   , testCase "setConditionalBreakpoint adds conditional breakpoint" $ do
       config <- defaultCLIDebugConfig
@@ -70,7 +72,7 @@ breakpointTests = testGroup "Breakpoint Tests"
       shouldBreak <- checkBreakpoint config "main"
       shouldBreak `seq` True @?= True  -- Should not crash
       
-  , testCase "clearBreakpoints removes all breakpoints" $ do
+  , testCase "clearBreakpoints removes L.all breakpoints" $ do
       config <- defaultCLIDebugConfig
       _ <- setBreakpoint config "main"
       _ <- setBreakpoint config "test"
@@ -86,7 +88,7 @@ watchVariableTests = testGroup "Watch Variable Tests"
       result <- addWatchVariable config "x" "42"
       result `seq` True @?= True  -- Should not crash
       watchVars <- listWatchVariables config
-      length watchVars @?= 1
+      L.length watchVars @?= 1
       
   , testCase "removeWatchVariable removes variable from watch list" $ do
       config <- defaultCLIDebugConfig
@@ -94,15 +96,15 @@ watchVariableTests = testGroup "Watch Variable Tests"
       _ <- addWatchVariable config "y" "hello"
       _ <- removeWatchVariable config "x"
       watchVars <- listWatchVariables config
-      length watchVars @?= 1
+      L.length watchVars @?= 1
       
-  , testCase "listWatchVariables returns all watched variables" $ do
+  , testCase "listWatchVariables returns L.all watched variables" $ do
       config <- defaultCLIDebugConfig
       _ <- addWatchVariable config "x" "42"
       _ <- addWatchVariable config "y" "\"hello\""
       _ <- addWatchVariable config "z" "true"
       watchVars <- listWatchVariables config
-      length watchVars @?= 3
+      L.length watchVars @?= 3
   ]
 
 callStackTests :: TestTree
@@ -112,7 +114,7 @@ callStackTests = testGroup "Call Stack Tests"
       _ <- pushCallStack config "main"
       _ <- pushCallStack config "helper"
       callStack <- getCallStack config
-      length callStack @?= 2
+      L.length callStack @?= 2
       
   , testCase "popCallStack removes function from call stack" $ do
       config <- defaultCLIDebugConfig
@@ -121,7 +123,7 @@ callStackTests = testGroup "Call Stack Tests"
       _ <- pushCallStack config "inner"
       _ <- popCallStack config
       callStack <- getCallStack config
-      length callStack @?= 2
+      L.length callStack @?= 2
       
   , testCase "getCallStack returns current call stack" $ do
       config <- defaultCLIDebugConfig
@@ -251,8 +253,8 @@ prop_breakpoint_idempotent breakpointName =
 prop_callstack_order :: [String] -> Property
 prop_callstack_order functions =
   let sorted = sort functions
-      reversed = reverse functions
-  in length sorted == length reversed ==> property True
+      reversed = L.reverse functions
+  in L.length sorted == L.length reversed ==> property True
 
 prop_watch_total :: String -> String -> Property
 prop_watch_total varName value =

@@ -35,7 +35,9 @@ import SourceLocation
   )
 
 import Data.Char (isSpace, isAlphaNum)
-import Data.List (isPrefixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf)
+import Data.List (sort, nub)
 import qualified Data.Text as T
 
 -- Property: trim is idempotent (trimming twice is same as trimming once)
@@ -45,23 +47,23 @@ prop_trim_idempotent s =
       trimmedTwice = trim trimmedOnce
   in property $ trimmedOnce === trimmedTwice
 
--- Property: splitBy and splitByCollapsed relationship
+-- Property: splitBy L.and splitByCollapsed relationship
 prop_splitBy_relationship :: Char -> String -> Property
 prop_splitBy_relationship delim s =
   let withEmpty = splitBy delim s
       withoutEmpty = splitByCollapsed delim s
       -- Collapsed version should never have empty strings
-      noEmpties = all (not . null) withoutEmpty
+      noEmpties = L.all (not . null) withoutEmpty
       -- Collapsed version should be a subset of non-empty parts from regular split
-      filtered = filter (not . null) withEmpty
+      filtered = L.filter (not . null) withEmpty
   in property $ noEmpties .&&. (sort withoutEmpty === sort filtered)
 
--- Property: breakOn finds first occurrence or returns whole string
+-- Property: breakOn finds first occurrence L.or returns whole string
 prop_breakOn_correctness :: String -> String -> Property
 prop_breakOn_correctness needle haystack =
   let (before, after) = breakOn needle haystack
-      needleFound = needle `isInfixOf` haystack
-      needleInAfter = needle `isPrefixOf` after
+      needleFound = needle `L.isInfixOf` haystack
+      needleInAfter = needle `L.isPrefixOf` after
   in classify needleFound "needle found" $
      classify (not needleFound) "needle not found" $
      property $ if needleFound 
@@ -105,8 +107,8 @@ prop_comment_preserves_structure :: String -> Property
 prop_comment_preserves_structure code =
   let withoutComments = removeComments code
       -- Count of non-comment, non-whitespace characters should be preserved
-      originalContent = length $ filter (\c -> not (isSpace c) && c /= '/' && c /= '*') code
-      contentAfter = length $ filter (\c -> not (isSpace c) && c /= '/' && c /= '*') withoutComments
+      originalContent = L.length $ L.filter (\c -> not (isSpace c) && c /= '/' && c /= '*') code
+      contentAfter = L.length $ L.filter (\c -> not (isSpace c) && c /= '/' && c /= '*') withoutComments
   in property $ contentAfter <= originalContent
 
 -- Property: normalizeIndentation preserves relative indentation
@@ -116,10 +118,10 @@ prop_normalize_preserves_relative code =
       originalLines = lines code
       normalizedLines = lines normalized
       -- Check that relative indentation differences are preserved
-      relativeDiffs = zipWith (\l1 l2 -> length (takeWhile isSpace l1) - length (takeWhile isSpace l2)) 
-                             (tail originalLines) originalLines
-      normalizedDiffs = zipWith (\l1 l2 -> length (takeWhile isSpace l1) - length (takeWhile isSpace l2)) 
-                               (tail normalizedLines) normalizedLines
+      relativeDiffs = zipWith (\l1 l2 -> L.length (takeWhile isSpace l1) - L.length (takeWhile isSpace l2)) 
+                             (L.tail originalLines) originalLines
+      normalizedDiffs = zipWith (\l1 l2 -> L.length (takeWhile isSpace l1) - L.length (takeWhile isSpace l2)) 
+                               (L.tail normalizedLines) normalizedLines
   in property $ relativeDiffs === normalizedDiffs
 
 -- Property: string operations round-trip consistency
@@ -127,7 +129,7 @@ prop_string_roundtrip :: NonEmptyList Char -> NonEmptyList Char -> Property
 prop_string_roundtrip (NonEmpty delim) (NonEmpty content) =
   let str = content ++ [delim] ++ content
       parts = splitBy delim str
-      rejoined = foldr (\x acc -> x ++ [delim] ++ acc) (last parts) (init parts)
+      rejoined = L.foldr (\x acc -> x ++ [delim] ++ acc) (last parts) (init parts)
   in property $ rejoined === str
 
 tests :: TestTree

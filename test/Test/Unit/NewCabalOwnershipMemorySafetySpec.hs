@@ -1,16 +1,18 @@
 module Test.Unit.NewCabalOwnershipMemorySafetySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.QuickCheck (property, forAll, Gen, arbitrary, choose, listOf1, elements, Positive(..))
-import Data.List (nub, sort, isInfixOf)
+import Data.List (isInfixOf)
+import Data.List (nub, sort)
 import Data.Char (isLetter, isDigit)
 
 import TestSupport.QuickCheck (fastProperty)
 import Ownership
 import Utils
 
--- | Ownership and memory safety tests for resource management
+-- | Ownership L.and memory safety tests for resource management
 tests :: TestTree
 tests =
   testGroup "New Cabal Ownership Memory Safety Tests"
@@ -95,7 +97,7 @@ tests =
             result @?= MemorySafe
         ]
 
-    , testGroup "Ownership and borrowing edge cases"
+    , testGroup "Ownership L.and borrowing edge cases"
         [ testCase "circular borrowing detection" $ do
             let code = unlines
                   [ "owner x := Resource()"
@@ -141,7 +143,7 @@ prop_transferIrreflexive varName =
         ]
       result = analyzeOwnership code
   in case result of
-       OwnershipError msg -> "self" `isInfixOf` map toLower msg || "same" `isInfixOf` map toLower msg
+       OwnershipError msg -> "self" `L.isInfixOf` map toLower msg || "same" `L.isInfixOf` map toLower msg
        _ -> False
 
 -- | Property: borrowing creates no new owners
@@ -158,10 +160,10 @@ prop_borrowingNoNewOwners varName =
 -- | Property: resource lifecycle is well-formed
 prop_resourceLifecycleWellFormed :: [String] -> Bool
 prop_resourceLifecycleWellFormed varNames =
-  let validNames = filter (all isLetter) (nub varNames)
-      createStatements = map (\name -> "owner " ++ name ++ " := Resource()") validNames
-      useStatements = map (\name -> "use " ++ name) validNames
-      freeStatements = map (\name -> "free " ++ name) validNames
+  let validNames = L.filter (L.all isLetter) (nub varNames)
+      createStatements = L.map (\name -> "owner " ++ name ++ " := Resource()") validNames
+      useStatements = L.map (\name -> "use " ++ name) validNames
+      freeStatements = L.map (\name -> "free " ++ name) validNames
       code = unlines (createStatements ++ useStatements ++ freeStatements)
       result = checkMemorySafety code
   in result == MemorySafe
@@ -176,7 +178,7 @@ prop_noUseAfterFree varName =
         ]
       result = checkMemorySafety code
   in case result of
-       MemoryError msg -> "use after free" `isInfixOf` map toLower msg
+       MemoryError msg -> "use after free" `L.isInfixOf` map toLower msg
        _ -> False
 
 -- Mock data types for testing
@@ -195,28 +197,28 @@ data MemoryResult =
 -- Mock functions for testing
 analyzeOwnership :: String -> OwnershipResult
 analyzeOwnership code
-  | "transfer x to x" `isInfixOf` code = OwnershipError "Cannot transfer resource to itself"
-  | "transfer x to y" `isInfixOf` code && "use x" `isInfixOf` code = 
+  | "transfer x to x" `L.isInfixOf` code = OwnershipError "Cannot transfer resource to itself"
+  | "transfer x to y" `L.isInfixOf` code && "use x" `L.isInfixOf` code = 
       OwnershipError "Cannot transfer used resource 'x'"
-  | "transfer x to y" `isInfixOf` code = OwnershipTransferred "x" "y"
-  | "borrow y as x" `isInfixOf` code && "borrow x as y" `isInfixOf` code = 
+  | "transfer x to y" `L.isInfixOf` code = OwnershipTransferred "x" "y"
+  | "borrow y as x" `L.isInfixOf` code && "borrow x as y" `L.isInfixOf` code = 
       OwnershipError "Circular borrowing detected"
-  | "transfer x to y" `isInfixOf` code && "borrow x as" `isInfixOf` code = 
+  | "transfer x to y" `L.isInfixOf` code && "borrow x as" `L.isInfixOf` code = 
       OwnershipError "Cannot borrow non-owner 'x'"
-  | "borrow mut x as y" `isInfixOf` code && "borrow mut x as z" `isInfixOf` code = 
+  | "borrow mut x as y" `L.isInfixOf` code && "borrow mut x as z" `L.isInfixOf` code = 
       OwnershipError "Multiple mutable borrows of 'x'"
-  | "borrow x as y" `isInfixOf` code = BorrowValid "x" "y"
+  | "borrow x as y" `L.isInfixOf` code = BorrowValid "x" "y"
   | otherwise = OwnershipError "Unknown ownership pattern"
 
 checkMemorySafety :: String -> MemoryResult
 checkMemorySafety code
-  | "free x" `isInfixOf` code && countOccurrences "free x" code > 1 = 
+  | "free x" `L.isInfixOf` code && countOccurrences "free x" code > 1 = 
       MemoryError "Double free of resource 'x'"
-  | "free x" `isInfixOf` code && "use x" `isInfixOf` code = 
+  | "free x" `L.isInfixOf` code && "use x" `L.isInfixOf` code = 
       MemoryError "Use after free of resource 'x'"
-  | "owner x := Resource()" `isInfixOf` code && not ("free x" `isInfixOf` code) = 
+  | "owner x := Resource()" `L.isInfixOf` code && not ("free x" `L.isInfixOf` code) = 
       MemoryWarning "Potential resource leak: 'x' not freed"
-  | "use x" `isInfixOf` code && "free x" `isInfixOf` code = MemorySafe
+  | "use x" `L.isInfixOf` code && "free x" `L.isInfixOf` code = MemorySafe
   | otherwise = MemorySafe
 
 -- Helper functions
@@ -226,7 +228,7 @@ extractOwners (BorrowValid owner borrow) = [owner]
 extractOwners (OwnershipError _) = []
 
 countOccurrences :: String -> String -> Int
-countOccurrences pattern text = length (filter (== pattern) (words text))
+countOccurrences pattern text = L.length (L.filter (== pattern) (words text))
 
 toLower :: String -> String
-toLower = map (\c -> if c >= 'A' && c <= 'Z' then toEnum (fromEnum c + 32) else c)
+toLower = L.map (\c -> if c >= 'A' && c <= 'Z' then toEnum (fromEnum c + 32) else c)

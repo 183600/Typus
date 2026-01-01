@@ -19,6 +19,7 @@ import Ownership (OwnershipType(..), OwnershipError(..), analyzeOwnership)
 import Compiler (compile, checkOwnership)
 import Parser (parseTypus, TypusFile(..))
 
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf, length)
 import qualified Data.Text as T
 
@@ -42,7 +43,7 @@ test_ownership_prevents_double_free =
           Left ownershipErr -> do
             -- Should catch double free error
             assertBool "Should detect double free" $
-              any (`isInfixOf` show ownershipErr) 
+              L.any (`L.isInfixOf` show ownershipErr) 
                 ["double", "free", "owned", "moved", "used"]
           Right _ -> do
             assertFailure "Expected ownership error for double free"
@@ -70,7 +71,7 @@ test_ownership_tracks_move_semantics =
           Left ownershipErr -> do
             -- Should catch use after move
             assertBool "Should detect use after move" $
-              any (`isInfixOf` show ownershipErr) 
+              L.any (`L.isInfixOf` show ownershipErr) 
                 ["moved", "used", "after", "consume"]
           Right _ -> do
             assertFailure "Expected ownership error for use after move"
@@ -97,7 +98,7 @@ test_ownership_validates_borrowing =
           Left ownershipErr -> do
             -- Should catch borrowing violation
             assertBool "Should detect borrowing violation" $
-              any (`isInfixOf` show ownershipErr) 
+              L.any (`L.isInfixOf` show ownershipErr) 
                 ["borrow", "mutable", "immutable", "conflict"]
           Right _ -> do
             -- May pass if borrowing rules are implemented permissively
@@ -131,7 +132,7 @@ test_ownership_prevents_data_races =
           Left ownershipErr -> do
             -- Should detect potential data race
             assertBool "Should detect potential data race" $
-              any (`isInfixOf` show ownershipErr) 
+              L.any (`L.isInfixOf` show ownershipErr) 
                 ["race", "concurrent", "shared", "access"]
           Right _ -> do
             -- May pass if data race detection is not implemented
@@ -140,7 +141,7 @@ test_ownership_prevents_data_races =
 -- QuickCheck property: Ownership analysis is deterministic
 prop_ownership_analysis_deterministic :: String -> Property
 prop_ownership_analysis_deterministic code =
-  length code < 100 ==>  -- Keep code reasonable
+  L.length code < 100 ==>  -- Keep code reasonable
   let source = unlines
         [ "//! ownership: on"
         , "package main"
@@ -179,7 +180,7 @@ test_ownership_lifetime_annotations =
           Left ownershipErr -> do
             -- Should handle lifetime annotations
             assertBool "Should handle lifetime annotations" $
-              any (`isInfixOf` show ownershipErr) 
+              L.any (`L.isInfixOf` show ownershipErr) 
                 ["lifetime", "ref", "borrow"]
           Right _ -> do
             -- Lifetime analysis passed
@@ -219,7 +220,7 @@ test_ownership_memory_layout_optimization =
 -- QuickCheck property: Ownership checking doesn't false positive
 prop_ownership_no_false_positives :: String -> Property
 prop_ownership_no_false_positives code =
-  length code < 50 && not (any (`isInfixOf` code) ["free", "move", "borrow"]) ==>  -- Simple code
+  L.length code < 50 && not (L.any (`L.isInfixOf` code) ["free", "move", "borrow"]) ==>  -- Simple code
   let source = unlines
         [ "//! ownership: on"
         , "package main"

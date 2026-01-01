@@ -10,6 +10,7 @@
 module Test.Unit.DependenciesTypeSystemPropertiesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertBool, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Positive(Positive), getPositive)
@@ -137,7 +138,7 @@ prop_new_dependent_type_checker_with_custom_types customTypes =
       env = dtcTypeEnv checker
       types = typeDefinitions env
       customTypeNames = map fst customTypes
-      hasAllCustomTypes = all (`Map.member` types) customTypeNames
+      hasAllCustomTypes = L.all (`Map.member` types) customTypeNames
   in hasAllCustomTypes === True
 
 -- Property: addType adds type to environment
@@ -187,7 +188,7 @@ prop_lookup_type_def_missing name =
       found = lookupTypeDef name checker
   in found === Nothing
 
--- Property: getDependentTypeErrors returns all errors
+-- Property: getDependentTypeErrors returns L.all errors
 prop_get_dependent_type_errors_returns_all :: [DependentTypeError] -> Property
 prop_get_dependent_type_errors_returns_all errors =
   let checker = newDependentTypeChecker
@@ -224,6 +225,6 @@ tests =
     , fastProperty "addTypeError adds to checker" prop_add_type_error_adds_to_checker
     , fastProperty "lookupTypeDef finds added types" prop_lookup_type_def_finds_added
     , fastProperty "lookupTypeDef returns Nothing for missing types" prop_lookup_type_def_missing
-    , fastProperty "getDependentTypeErrors returns all errors" prop_get_dependent_type_errors_returns_all
+    , fastProperty "getDependentTypeErrors returns L.all errors" prop_get_dependent_type_errors_returns_all
     , fastProperty "validateConstraint checks validity" prop_validate_constraint_checks_validity
     ]

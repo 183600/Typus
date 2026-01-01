@@ -39,7 +39,9 @@ import Ownership.Common.Types
   )
 
 import Data.Char (isAlphaNum, isAlpha, isDigit)
-import Data.List (isPrefixOf, isInfixOf, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (nub)
 import qualified Data.Set as Set
 
 -- Property: OwnershipType equality is reflexive
@@ -99,9 +101,9 @@ prop_analyze_ownership_empty =
 -- Property: analyzeOwnership handles simple variable declarations
 prop_analyze_ownership_simple_decls :: [String] -> Property
 prop_analyze_ownership_simple_decls varNames =
-  not (null varNames) && all (not . null) varNames &&
-  all (all isAlphaNum) varNames ==>
-  let decls = map (\name -> "var " ++ name ++ " int = 0") varNames
+  not (null varNames) && L.all (not . null) varNames &&
+  L.all (L.all isAlphaNum) varNames ==>
+  let decls = L.map (\name -> "var " ++ name ++ " int = 0") varNames
       input = unlines decls
       analyzer = newOwnershipAnalyzer
       result = analyzeOwnership analyzer input
@@ -112,9 +114,9 @@ prop_analyze_ownership_simple_decls varNames =
 -- Property: analyzeOwnership handles move operations
 prop_analyze_ownership_moves :: [String] -> Property
 prop_analyze_ownership_moves varNames =
-  not (null varNames) && all (not . null) varNames &&
-  all (all isAlphaNum) varNames ==>
-  let moves = zipWith (\from to -> from ++ " = " ++ to) varNames (tail varNames ++ ["0"])
+  not (null varNames) && L.all (not . null) varNames &&
+  L.all (L.all isAlphaNum) varNames ==>
+  let moves = zipWith (\from to -> from ++ " = " ++ to) varNames (L.tail varNames ++ ["0"])
       input = unlines moves
       analyzer = newOwnershipAnalyzer
       result = analyzeOwnership analyzer input
@@ -125,7 +127,7 @@ prop_analyze_ownership_moves varNames =
 -- Property: analyzeOwnership detects use after move
 prop_analyze_ownership_use_after_move :: String -> Property
 prop_analyze_ownership_use_after_move varName =
-  not (null varName) && all isAlphaNum varName ==>
+  not (null varName) && L.all isAlphaNum varName ==>
   let input = unlines 
         [ "var " ++ varName ++ " int = 42"
         , "other := " ++ varName
@@ -136,15 +138,15 @@ prop_analyze_ownership_use_after_move varName =
   in case result of
     Left _ -> property True
     Right errors -> 
-      let hasUseAfterMove = any (\err -> case err of UseAfterMove _ -> True; _ -> False) errors
+      let hasUseAfterMove = L.any (\err -> case err of UseAfterMove _ -> True; _ -> False) errors
       in property $ hasUseAfterMove || not (null errors)
 
 -- Property: analyzeOwnership handles borrow operations
 prop_analyze_ownership_borrows :: [String] -> Property
 prop_analyze_ownership_borrows varNames =
-  not (null varNames) && all (not . null) varNames &&
-  all (all isAlphaNum) varNames ==>
-  let borrows = map (\name -> "ref := &" ++ name) varNames
+  not (null varNames) && L.all (not . null) varNames &&
+  L.all (L.all isAlphaNum) varNames ==>
+  let borrows = L.map (\name -> "ref := &" ++ name) varNames
       input = unlines borrows
       analyzer = newOwnershipAnalyzer
       result = analyzeOwnership analyzer input
@@ -155,9 +157,9 @@ prop_analyze_ownership_borrows varNames =
 -- Property: analyzeOwnership handles function calls
 prop_analyze_ownership_functions :: [String] -> Property
 prop_analyze_ownership_functions functionNames =
-  not (null functionNames) && all (not . null) functionNames &&
-  all (all isAlphaNum) functionNames ==>
-  let calls = map (\name -> name ++ "()") functionNames
+  not (null functionNames) && L.all (not . null) functionNames &&
+  L.all (L.all isAlphaNum) functionNames ==>
+  let calls = L.map (\name -> name ++ "()") functionNames
       input = unlines calls
       analyzer = newOwnershipAnalyzer
       result = analyzeOwnership analyzer input
@@ -168,8 +170,8 @@ prop_analyze_ownership_functions functionNames =
 -- Property: analyzeOwnership handles scope changes
 prop_analyze_ownership_scopes :: [String] -> Property
 prop_analyze_ownership_scopes blockContents =
-  not (null blockContents) && all (not . null) blockContents ==>
-  let blocks = map (\content -> "{\n" ++ content ++ "\n}") blockContents
+  not (null blockContents) && L.all (not . null) blockContents ==>
+  let blocks = L.map (\content -> "{\n" ++ content ++ "\n}") blockContents
       input = unlines blocks
       analyzer = newOwnershipAnalyzer
       result = analyzeOwnership analyzer input
@@ -268,7 +270,7 @@ prop_ownership_analysis_deterministic input =
 prop_ownership_analysis_large :: String -> Int -> Property
 prop_ownership_analysis_large base multiplier =
   multiplier >= 0 && multiplier <= 50 ==>  -- Limit for performance
-  let largeInput = concat (replicate multiplier base)
+  let largeInput = L.concat (replicate multiplier base)
       analyzer = newOwnershipAnalyzer
       result = analyzeOwnership analyzer largeInput
   in case result of
@@ -305,8 +307,8 @@ tests = testGroup "Advanced Ownership QuickCheck"
   , fastProperty "analyze ownership debug" prop_analyze_ownership_debug
   , fastProperty "format ownership errors" prop_format_ownership_errors
   , fastProperty "format ownership errors empty" prop_format_ownership_errors_empty
-  , fastProperty "lex all empty" prop_lex_all_empty
-  , fastProperty "lex all simple" prop_lex_all_simple
+  , fastProperty "lex L.all empty" prop_lex_all_empty
+  , fastProperty "lex L.all simple" prop_lex_all_simple
   , fastProperty "parse program empty" prop_parse_program_empty
   , fastProperty "parse program simple" prop_parse_program_simple
   , fastProperty "built in functions non empty" prop_built_in_functions_non_empty

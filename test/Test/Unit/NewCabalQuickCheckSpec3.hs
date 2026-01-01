@@ -1,10 +1,11 @@
 module Test.Unit.NewCabalQuickCheckSpec3 (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, property, Arbitrary(..), Gen, oneof, elements, listOf)
 import Data.Text (Text)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 import Data.Char (isSpace, isAlpha, isDigit)
 
 -- We'll import parser modules - need to check what's available
@@ -41,8 +42,8 @@ prop_lexerWhitespaceConsistent input whitespace =
   let tokens1 = lexInput input
       tokensWithWhitespace = lexInput (input ++ whitespace)
       -- Filter out whitespace tokens to compare actual content
-      contentTokens1 = filter (not . isWhitespaceToken) tokens1
-      contentTokens2 = filter (not . isWhitespaceToken) tokensWithWhitespace
+      contentTokens1 = L.filter (not . isWhitespaceToken) tokens1
+      contentTokens2 = L.filter (not . isWhitespaceToken) tokensWithWhitespace
   in contentTokens1 == contentTokens2
 
 -- Property: parser round-trip for simple expressions
@@ -62,7 +63,7 @@ prop_parserPositionTracking input =
     Left _ -> True
     Right (expr, positions) ->
       -- All positions in the AST should be within the original input bounds
-      all (positionInBounds input) (extractPositions expr)
+      L.all (positionInBounds input) (extractPositions expr)
 
 -- Property: lexer token positions are sequential
 prop_lexerTokenPositions :: String -> Bool
@@ -82,7 +83,7 @@ prop_parserErrorLocationsValid input =
 prop_lexerEmptyInput :: Bool
 prop_lexerEmptyInput =
   let tokens = lexInput ""
-  in null tokens || all isEOFToken tokens
+  in null tokens || L.all isEOFToken tokens
 
 -- Property: parser handles nested structures correctly
 prop_parserNestedStructures :: Int -> Bool
@@ -96,17 +97,17 @@ prop_parserNestedStructures depth =
 prop_lexerTokenTypesMatch :: String -> Bool
 prop_lexerTokenTypesMatch input =
   let tokens = lexInput input
-  in all tokenMatchesInput tokens
+  in L.all tokenMatchesInput tokens
   where
     tokenMatchesInput token = 
       let tokenText = tokenText token
           tokenType = tokenType token
       in case tokenType of
-        IdentifierToken -> all (\c -> isAlpha c || c == '_') (T.unpack tokenText)
-        NumberToken -> all isDigit (T.unpack tokenText)
-        StringToken -> T.head tokenText == '"' && T.last tokenText == '"'
+        IdentifierToken -> L.all (\c -> isAlpha c || c == '_') (T.unpack tokenText)
+        NumberToken -> L.all isDigit (T.unpack tokenText)
+        StringToken -> T.L.head tokenText == '"' && T.last tokenText == '"'
         OperatorToken -> tokenText `elem` ["+", "-", "*", "/", "=", "==", "!=", "<", ">", "<=", ">="]
-        WhitespaceToken -> T.all isSpace tokenText
+        WhitespaceToken -> T.L.all isSpace tokenText
         _ -> True
 
 -- Property: parser preserves semantic structure
@@ -143,7 +144,7 @@ extractPositions = undefined
 positionInBounds :: String -> SourcePos -> Bool
 positionInBounds input pos = 
   let inputLines = lines input
-      lineCount = length inputLines
+      lineCount = L.length inputLines
   in posLine pos >= 1 && posLine pos <= lineCount &&
      posColumn pos >= 1
 
@@ -155,7 +156,7 @@ isSequential (p1:p2:ps) = p1 <= p2 && isSequential (p2:ps)
 errorLocationInBounds :: String -> ParseError -> Bool
 errorLocationInBounds input err = 
   let loc = errorLocation err
-  in line loc >= 1 && line loc <= length (lines input)
+  in line loc >= 1 && line loc <= L.length (lines input)
 
 generateNestedExpression :: Int -> String
 generateNestedExpression 0 = "x"

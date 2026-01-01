@@ -9,6 +9,7 @@ import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify
 import Parser (parseTypus, BlockDirectives(..), CodeBlock(..))
 import SourceLocation (SourcePos(..), SourceSpan(..))
 import Utils (trim, removeComments)
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 -- | 测试用例6: 解析器指令处理测试
@@ -68,7 +69,7 @@ tests =
         case parseTypus source of
           Left err -> 
             -- Check that error mentions invalid directive
-            "directive" `isInfixOf` err @?= True
+            "directive" `L.isInfixOf` err @?= True
           Right _ -> fail "expected parsing to fail with invalid directive"
 
     -- QuickCheck properties
@@ -99,7 +100,7 @@ prop_parser_preserves_structure_with_directives code =
          Left _ -> property True  -- Parse failures are acceptable for arbitrary input
          Right parsed -> 
            -- Check that blocks are preserved
-           property $ not (null (tfBlocks parsed))
+           property $ not (L.null (tfBlocks parsed))
 
 -- Property: directive values are correctly parsed
 prop_directive_values_parsed :: String -> Property

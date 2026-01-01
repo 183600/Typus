@@ -6,6 +6,7 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 
 import Parser
@@ -34,14 +35,14 @@ fileDirectiveErrorTests = testGroup "File Directive Error Tests"
       let input = "//! ownership invalid_value\npackage main\n"
       result <- return $ parseTypus input
       case result of
-        Left err -> "invalid_value" `isInfixOf` err @?= True
+        Left err -> "invalid_value" `L.isInfixOf` err @?= True
         Right _ -> "Expected error" @?= "Got success"
         
   , testCase "handles unknown file directive" $ do
       let input = "//! unknown_directive true\npackage main\n"
       result <- return $ parseTypus input
       case result of
-        Left err -> "unknown_directive" `isInfixOf` err @?= True
+        Left err -> "unknown_directive" `L.isInfixOf` err @?= True
         Right _ -> "Expected error" @?= "Got success"
         
   , testCase "handles file directive without colon" $ do
@@ -66,13 +67,13 @@ blockParsingErrorTests = testGroup "Block Parsing Error Tests"
       result <- return $ parseTypus input
       case result of
         Left _ -> "Expected parse error" @?= "Got error"
-        Right file -> length (tfBlocks file) @?= 1  -- Should recover and parse as regular code
+        Right file -> L.length (tfBlocks file) @?= 1  -- Should recover L.and parse as regular code
         
   , testCase "handles unterminated block" $ do
       let input = "//! ownership true\n\n//ownership: true\ncode without end\n"
       result <- return $ parseTypus input
       case result of
-        Right file -> length (tfBlocks file) @?= 1
+        Right file -> L.length (tfBlocks file) @?= 1
         Left err -> "Unterminated block should be recoverable" @?= err
         
   , testCase "handles nested block directives" $ do
@@ -80,8 +81,8 @@ blockParsingErrorTests = testGroup "Block Parsing Error Tests"
       result <- return $ parseTypus input
       case result of
         Right file -> do
-          length (tfBlocks file) @?= 1
-          let block = head (tfBlocks file)
+          L.length (tfBlocks file) @?= 1
+          let block = L.head (tfBlocks file)
               directives = cbDirectives block
           fdOwnership directives `seq` bdDependentTypes directives `seq` True @?= True
         Left err -> "Nested directives should be parseable" @?= err
@@ -93,14 +94,14 @@ syntaxErrorRecoveryTests = testGroup "Syntax Error Recovery Tests"
       let input = "//! ownership true\nfunc main() {\n}\n"
       result <- return $ parseTypus input
       case result of
-        Right file -> length (tfBlocks file) @?= 1
+        Right file -> L.length (tfBlocks file) @?= 1
         Left err -> "Should recover from missing package" @?= err
         
   , testCase "handles multiple package declarations" $ do
       let input = "package main\npackage other\nfunc main() {}\n"
       result <- return $ parseTypus input
       case result of
-        Left err -> "Multiple package" `isInfixOf` err @?= True
+        Left err -> "Multiple package" `L.isInfixOf` err @?= True
         Right _ -> "Expected error for multiple packages" @?= "Got success"
         
   , testCase "handles if without braces" $ do
@@ -109,7 +110,7 @@ syntaxErrorRecoveryTests = testGroup "Syntax Error Recovery Tests"
       case result of
         Right file -> do
           let errors = tfSyntaxErrors file
-          length errors @?= 1  -- Should detect the error but continue parsing
+          L.length errors @?= 1  -- Should detect the error but continue parsing
         Left err -> "Should detect syntax error but recover" @?= err
   ]
 
@@ -138,12 +139,12 @@ malformedInputTests = testGroup "Malformed Input Tests"
         Right file -> tfBlocks file @?= []
         Left err -> "Comments-only input should be valid" @?= err
         
-  , testCase "handles mixed valid and invalid content" $ do
+  , testCase "handles mixed valid L.and invalid content" $ do
       let input = "//! ownership true\npackage main\n\ninvalid syntax here\nfunc valid() {}\n"
       result <- return $ parseTypus input
       case result of
         Right file -> do
-          length (tfBlocks file) @?= 2  -- Should parse both parts
+          L.length (tfBlocks file) @?= 2  -- Should parse both parts
           tfDirectives file @?= FileDirectives (Just True) Nothing Nothing
         Left err -> "Should partially recover from syntax errors" @?= err
   ]
@@ -154,7 +155,7 @@ edgeCaseTests = testGroup "Edge Case Tests"
       let input = "//! ownership true\n//unicode: café\nfunc main() {}\n"
       result <- return $ parseTypus input
       case result of
-        Right file -> length (tfBlocks file) @?= 1
+        Right file -> L.length (tfBlocks file) @?= 1
         Left err -> "Unicode should be handled" @?= err
         
   , testCase "handles very long lines" $ do
@@ -162,29 +163,29 @@ edgeCaseTests = testGroup "Edge Case Tests"
           input = "//! ownership true\n" ++ longLine ++ "\nfunc main() {}\n"
       result <- return $ parseTypus input
       case result of
-        Right file -> length (tfBlocks file) @?= 1
+        Right file -> L.length (tfBlocks file) @?= 1
         Left err -> "Long lines should be handled" @?= err
         
   , testCase "handles deeply nested structures" $ do
-      let nested = concat $ replicate 50 "  if condition {\n"
+      let nested = L.concat $ replicate 50 "  if condition {\n"
           input = "package main\n\n" ++ nested ++ "doSomething()\n"
       result <- return $ parseTypus input
       case result of
-        Right file -> length (tfBlocks file) @?= 1
+        Right file -> L.length (tfBlocks file) @?= 1
         Left err -> "Deep nesting should be handled" @?= err
         
   , testCase "handles escaped characters in strings" $ do
       let input = "package main\n\nfunc main() {\n    s := \"hello \\\"world\\\"\"\n}\n"
       result <- return $ parseTypus input
       case result of
-        Right file -> length (tfBlocks file) @?= 1
+        Right file -> L.length (tfBlocks file) @?= 1
         Left err -> "Escaped characters should be handled" @?= err
   ]
 
 quickCheckProperties :: TestTree
 quickCheckProperties = testGroup "QuickCheck Error Recovery Properties"
-  [ fastProperty "parseTypus never crashes on any input" prop_parseTypus_safe
-  , fastProperty "parseTypus returns either error or valid file" prop_parseTypus_complete
+  [ fastProperty "parseTypus never crashes on L.any input" prop_parseTypus_safe
+  , fastProperty "parseTypus returns either error L.or valid file" prop_parseTypus_complete
   , fastProperty "successful parse has non-empty blocks when input has code" prop_parseTypus_blocks
   ]
 
@@ -204,12 +205,12 @@ prop_parseTypus_complete input =
     Right file -> do
       let blocks = tfBlocks file
           directives = tfDirectives file
-      property $ length blocks >= 0
+      property $ L.length blocks >= 0
 
 prop_parseTypus_blocks :: String -> Property
 prop_parseTypus_blocks input =
-  let hasCode = any (not . null) (lines input) && not (all (`isPrefixOf` "//") (lines input))
+  let hasCode = L.any (not . null) (lines input) && not (L.all (`L.isPrefixOf` "//") (lines input))
       result = parseTypus input
   in case result of
-    Right file -> hasCode ==> length (tfBlocks file) > 0
+    Right file -> hasCode ==> L.length (tfBlocks file) > 0
     Left _ -> property True  -- Error cases don't need to satisfy this property

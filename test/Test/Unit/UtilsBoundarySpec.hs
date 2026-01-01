@@ -17,7 +17,9 @@ import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollaps
 
 import Data.Char (isSpace, toLower, toUpper, isLetter, isDigit)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, tails, isInfixOf, sort, nub, group)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (tails, sort, nub, group)
 
 -- | Generate strings with various whitespace patterns
 genWhitespaceString :: Gen String
@@ -54,7 +56,7 @@ test_trim_edge_cases = testCase "trim handles edge cases" $ do
         , ("a", "a")  -- single character
         , (" a", "a")  -- leading space
         , ("a ", "a")  -- trailing space
-        , (" a ", "a")  -- both leading and trailing
+        , (" a ", "a")  -- both leading L.and trailing
         , ("  a  b  ", "a  b")  -- preserve internal whitespace
         , ("\t\n\r a b \t\n\r", "a b")  -- mixed whitespace around
         ]
@@ -72,7 +74,7 @@ test_splitby_edge_cases = testCase "splitBy handles edge cases" $ do
         , (':', "::", ["", "", ""])  -- double delimiter
         , (':', "a:b", ["a", "b"])  -- normal case
         , (':', "a::b", ["a", "", "b"])  -- empty segment
-        , (':', ":a:", ["", "a", ""])  -- leading and trailing
+        , (':', ":a:", ["", "a", ""])  -- leading L.and trailing
         , (':', "::a::", ["", "", "a", "", ""])  -- multiple delimiters
         ]
   mapM_ (\(delim, input, expected) -> do
@@ -89,7 +91,7 @@ test_splitbycollapsed_edge_cases = testCase "splitByCollapsed handles edge cases
         , (':', "::", [])  -- double delimiter
         , (':', "a:b", ["a", "b"])  -- normal case
         , (':', "a::b", ["a", "b"])  -- collapsed empty segment
-        , (':', ":a:", ["a"])  -- leading and trailing collapsed
+        , (':', ":a:", ["a"])  -- leading L.and trailing collapsed
         , (':', "::a::", ["a"])  -- multiple delimiters collapsed
         ]
   mapM_ (\(delim, input, expected) -> do
@@ -134,15 +136,15 @@ test_indentation_edge_cases = testCase "indentation normalization handles edge c
     assertEqual ("normalizeIndentation on '" ++ input ++ "'") expected result
   ) edgeCases
 
--- | Property: trim removes all leading and trailing whitespace
+-- | Property: trim removes L.all leading L.and trailing whitespace
 prop_trim_removes_whitespace :: String -> String -> Property
 prop_trim_removes_whitespace prefix suffix =
   let content = "content"
       input = prefix ++ content ++ suffix
       trimmed = trim input
-      hasLeading = not (null prefix) && all isSpace prefix
-      hasTrailing = not (null suffix) && all isSpace suffix
-      noLeadingSpace = null trimmed || not (isSpace (head trimmed))
+      hasLeading = not (null prefix) && L.all isSpace prefix
+      hasTrailing = not (null suffix) && L.all isSpace suffix
+      noLeadingSpace = null trimmed || not (isSpace (L.head trimmed))
       noTrailingSpace = null trimmed || not (isSpace (last trimmed))
   in classify hasLeading "has leading whitespace" $
      classify hasTrailing "has trailing whitespace" $
@@ -154,43 +156,43 @@ prop_trim_preserves_internal prefix internal suffix =
   let content = prefix ++ internal ++ suffix
       trimmed = trim content
       -- Remove leading/trailing whitespace manually to compare
-      manualTrim = dropWhile isSpace $ reverse $ dropWhile isSpace $ reverse content
+      manualTrim = dropWhile isSpace $ L.reverse $ dropWhile isSpace $ L.reverse content
   in property $ trimmed == manualTrim
 
 -- | Property: splitBy preserves empty segments
 prop_splitby_preserves_empty :: Char -> String -> Property
 prop_splitby_preserves_empty delim input =
   let result = splitBy delim input
-      expected = map (T.unpack . T.dropWhile (== delim)) $ 
+      expected = L.map (T.unpack . T.dropWhile (== delim)) $ 
                  T.splitOn (T.pack [delim]) (T.pack input)
-  in property $ length result == length (filter (not . null) expected) + 
-                   length (filter (== "") expected)
+  in property $ L.length result == L.length (L.filter (not . null) expected) + 
+                   L.length (L.filter (== "") expected)
 
 -- | Property: splitByCollapsed removes empty segments
 prop_splitbycollapsed_removes_empty :: Char -> String -> Property
 prop_splitbycollapsed_removes_empty delim input =
   let result = splitByCollapsed delim input
-  in property $ all (not . null) result
+  in property $ L.all (not . null) result
 
--- | Property: splitBy and splitByCollapsed are related
+-- | Property: splitBy L.and splitByCollapsed are related
 prop_splitby_relationship :: Char -> String -> Property
 prop_splitby_relationship delim input =
   let normal = splitBy delim input
       collapsed = splitByCollapsed delim input
-      filtered = filter (not . null) normal
+      filtered = L.filter (not . null) normal
   in property $ collapsed == filtered
 
 -- | Property: removeLineComments doesn't affect strings without comments
 prop_remove_line_comments_no_effect :: String -> Property
 prop_remove_line_comments_no_effect input =
-  let hasNoLineComment = not (isInfixOf "//" input)
+  let hasNoLineComment = not (L.isInfixOf "//" input)
       result = removeLineComments input
   in hasNoLineComment ==> property $ result == input
 
 -- | Property: removeComments doesn't affect strings without comments
 prop_remove_comments_no_effect :: String -> Property
 prop_remove_comments_no_effect input =
-  let hasNoComments = not (isInfixOf "//" input) && not (isInfixOf "/*" input)
+  let hasNoComments = not (L.isInfixOf "//" input) && not (L.isInfixOf "/*" input)
       result = removeComments input
   in hasNoComments ==> property $ result == input
 
@@ -213,7 +215,7 @@ prop_normalize_preserves_relative :: Property
 prop_normalize_preserves_relative = 
   forAll (choose (1, 10)) $ \numLines ->
   forAll (choose (0, 5)) $ \baseIndent ->
-    let lines = map (\i -> replicate (baseIndent + i) ' ' ++ "line " ++ show i) [0..numLines-1]
+    let lines = L.map (\i -> replicate (baseIndent + i) ' ' ++ "line " ++ show i) [0..numLines-1]
         input = unlines lines
         result = normalizeIndentation input
         resultLines = lines result
@@ -221,8 +223,8 @@ prop_normalize_preserves_relative =
         checkRelative [] = True
         checkRelative [_] = True
         checkRelative (x:y:xs) = 
-          let indentX = length $ takeWhile isSpace x
-              indentY = length $ takeWhile isSpace y
+          let indentX = L.length $ takeWhile isSpace x
+              indentY = L.length $ takeWhile isSpace y
           in indentY >= indentX && checkRelative (y:xs)
     in property $ checkRelative resultLines
 

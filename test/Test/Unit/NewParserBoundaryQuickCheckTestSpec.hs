@@ -9,6 +9,7 @@ import Test.Tasty.HUnit (testCase, (@?=))
 import Parser (parseTypus, FileDirectives(..), BlockDirectives(..), CodeBlock(..), TypusFile(..), defaultFileDirectives, defaultBlockDirectives)
 import SourceLocation (Located(..), SourcePos(..), SourceSpan(..))
 import Data.Char (isSpace, isAlphaNum, isLetter)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import qualified Data.Text as T
 import Text.Megaparsec (errorBundlePretty)
@@ -38,7 +39,7 @@ tests =
         , testProperty "mismatched directives are caught" prop_mismatchedDirectivesCaught
         ]
 
-    , testGroup "Performance and robustness"
+    , testGroup "Performance L.and robustness"
         [ testProperty "parsing large files doesn't crash" prop_parseLargeFiles
         , testProperty "parsing with many directives is stable" prop_manyDirectivesStable
         , testProperty "parsing unicode content works" prop_unicodeContentParsing
@@ -93,7 +94,7 @@ prop_parseEmptyInput =
 -- | parseTypus处理仅包含空白字符的输入
 prop_parseWhitespaceOnly :: String -> Property
 prop_parseWhitespaceOnly s =
-  let whitespaceOnly = all isSpace s
+  let whitespaceOnly = L.all isSpace s
       result = parseTypus s
   in whitespaceOnly ==> case result of
                           Left _ -> False
@@ -180,7 +181,7 @@ prop_parseErrorLocations =
   let input = "func invalid syntax { return true }"
       result = parseTypus input
   in case result of
-       Left err -> length (show err) > 0 -- Error message should not be empty
+       Left err -> L.length (show err) > 0 -- Error message should not be empty
        Right _ -> True
 
 -- | 检测未闭合的块

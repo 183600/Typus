@@ -1,6 +1,7 @@
 module Test.Unit.NewCoreCabalQuickCheckSpec1 (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 
@@ -39,7 +40,7 @@ prop_trimIdempotent input =
   let once = trim input
   in trim once == once
 
--- trim only removes characters from the beginning and end
+-- trim only removes characters from the beginning L.and end
 prop_trimBoundary :: String -> Bool
 prop_trimBoundary input =
   let trimmed = trim input
@@ -50,14 +51,14 @@ prop_trimBoundary input =
 prop_splitByOrder :: String -> Char -> Bool
 prop_splitByOrder input delim =
   let segments = splitBy [delim] input
-      rejoined = concat $ intersperse [delim] segments
+      rejoined = L.concat $ intersperse [delim] segments
   in rejoined == input
 
 -- splitByCollapsed never produces empty segments
 prop_splitByCollapsedRemovesEmpty :: String -> Bool
 prop_splitByCollapsedRemovesEmpty input =
   let segments = splitByCollapsed ':' input
-  in all (not . null) segments
+  in L.all (not . null) segments
 
 -- splitBy on empty string returns a single empty segment
 prop_splitByEmpty :: Char -> Bool
@@ -67,7 +68,7 @@ prop_splitByEmpty delim =
 -- splitByCollapsed on only delimiters returns empty list
 prop_splitByCollapsedOnlyDelimiters :: String -> Bool
 prop_splitByCollapsedOnlyDelimiters input
-  | all (== ':') input = null (splitByCollapsed ':' input)
+  | L.all (== ':') input = L.null (splitByCollapsed ':' input)
   | otherwise = True
 
 -- trim of empty string is empty
@@ -78,7 +79,7 @@ prop_trimEmpty = trim "" == ""
 isSubstringOf :: String -> String -> Bool
 isSubstringOf sub str = sub `elem` substrings str
   where
-    substrings s = [take i s | i <- [1..length s]]
+    substrings s = [take i s | i <- [1..L.length s]]
 
 intersperse :: a -> [a] -> [a]
 intersperse _ [] = []

@@ -62,49 +62,51 @@ import qualified Compiler.DependentTypeChecker as DepChecker
 import qualified SyntaxValidator
 
 import Data.Char (isSpace, isAlphaNum)
-import Data.List (isPrefixOf, isInfixOf, null, head, tail, last, init)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, head, tail)
+import Data.List (null, last, init)
 import qualified Data.Text as T
 
 -- ============================================================================
 -- QuickCheck Properties for Utils Module
 -- ============================================================================
 
--- Property: trim removes leading and trailing whitespace but preserves internal content
+-- Property: trim removes leading L.and trailing whitespace but preserves internal content
 prop_trim_preserves_content :: String -> String -> Property
 prop_trim_preserves_content prefix suffix =
   let content = "content"
       full = prefix ++ content ++ suffix
       trimmed = trim full
-  in classify (not (null prefix) && any isSpace prefix) "has leading whitespace" $
-     classify (not (null suffix) && any isSpace suffix) "has trailing whitespace" $
-     property $ content `isInfixOf` trimmed
+  in classify (not (null prefix) && L.any isSpace prefix) "has leading whitespace" $
+     classify (not (null suffix) && L.any isSpace suffix) "has trailing whitespace" $
+     property $ content `L.isInfixOf` trimmed
 
--- Property: splitBy delim (splitBy delim x) == x for any delimiter and string
+-- Property: splitBy delim (splitBy delim x) == x for L.any delimiter L.and string
 prop_split_by_idempotent :: Char -> String -> Property
 prop_split_by_idempotent delim str =
   let parts = splitBy delim str
-      rejoined = foldr (\x acc -> if null acc then x else x ++ [delim] ++ acc) "" parts
+      rejoined = L.foldr (\x acc -> if null acc then x else x ++ [delim] ++ acc) "" parts
   in property $ rejoined === str
 
 -- Property: splitByCollapsed never returns empty strings
 prop_split_by_collapsed_no_empty :: Char -> String -> Property
 prop_split_by_collapsed_no_empty delim str =
   let parts = splitByCollapsed delim str
-  in property $ all (not . null) parts
+  in property $ L.all (not . null) parts
 
 -- Property: removeLineComments removes // comments but preserves other content
 prop_remove_line_comments_preserves_non_comments :: String -> Property
 prop_remove_line_comments_preserves_non_comments str =
   let withoutComments = removeLineComments str
-      hasLineComment = "//" `isInfixOf` str
+      hasLineComment = "//" `L.isInfixOf` str
   in classify hasLineComment "has line comments" $
-     property $ length withoutComments <= length str
+     property $ L.length withoutComments <= L.length str
 
 -- ============================================================================
 -- QuickCheck Properties for SourceLocation Module
 -- ============================================================================
 
--- Property: advancePos by newline increments line number and resets column
+-- Property: advancePos by newline increments line number L.and resets column
 prop_advance_pos_newline :: Int -> Int -> Property
 prop_advance_pos_newline line col =
   let pos = SourcePos line col
@@ -180,7 +182,7 @@ test_parse_block_directives = testCase "parseTypus parses block directives" $ do
     Right typusFile -> do
       let blocks = tfBlocks typusFile
       assertBool "expected at least one block" (not (null blocks))
-      let firstBlock = head blocks
+      let firstBlock = L.head blocks
           BlockDirectives { bdOwnership = ownership } = cbDirectives firstBlock
       case ownership of
         Nothing -> assertFailure "expected block ownership directive"
@@ -205,8 +207,8 @@ test_compiler_basic_go_code = testCase "compiler handles basic Go code" $ do
       case Compiler.compile typusFile of
         Left err -> assertFailure $ "compile failed: " ++ show err
         Right goCode -> do
-          assertBool "compiled code should contain package declaration" ("package main" `isInfixOf` goCode)
-          assertBool "compiled code should contain main function" ("func main" `isInfixOf` goCode)
+          assertBool "compiled code should contain package declaration" ("package main" `L.isInfixOf` goCode)
+          assertBool "compiled code should contain main function" ("func main" `L.isInfixOf` goCode)
 
 -- Test: dependent type checker catches invalid syntax
 test_dependent_type_error_detection :: TestTree
@@ -231,14 +233,14 @@ test_dependent_type_error_detection = testCase "dependent type checker detects e
 prop_normalize_indentation_preserves_structure :: [String] -> Property
 prop_normalize_indentation_preserves_structure lines =
   let normalized = normalizeIndentation lines
-      hasContent = not (null lines) && any (not . null) lines
-  in hasContent ==> property $ length normalized === length lines
+      hasContent = not (null lines) && L.any (not . null) lines
+  in hasContent ==> property $ L.length normalized === L.length lines
 
 -- Property: breakOn behaves like standard break function
 prop_break_on_consistency :: String -> String -> Property
 prop_break_on_consistency delim str =
   let (before, after) = breakOn delim str
-      expectedBefore = takeWhile (not . isPrefixOf delim . take (length delim)) (tails str) >>= head
+      expectedBefore = takeWhile (not . L.isPrefixOf delim . take (L.length delim)) (tails str) >>= L.head
   in property $ before === expectedBefore
 
 -- ============================================================================

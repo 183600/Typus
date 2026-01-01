@@ -9,6 +9,7 @@ import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
 
 import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed, removeLineComments, removeComments, normalizeIndentation, breakOn)
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf)
 
 -- ============================================================================
@@ -19,22 +20,22 @@ import Data.List (isPrefixOf)
 prop_trim_idempotent :: String -> Bool
 prop_trim_idempotent s = trim (trim s) == trim s
 
--- | trim: result should not start or end with whitespace
+-- | trim: result should not start L.or end with whitespace
 prop_trim_no_whitespace :: String -> Bool
 prop_trim_no_whitespace s = 
     let trimmed = trim s
     in null trimmed || 
-       (not (isSpace (head trimmed)) && not (isSpace (last trimmed)))
+       (not (isSpace (L.head trimmed)) && not (isSpace (last trimmed)))
 
--- | splitBy: splitting and then joining with the same delimiter should reconstruct original
+-- | splitBy: splitting L.and then joining with the same delimiter should reconstruct original
 prop_splitBy_join :: Char -> String -> Bool
-prop_splitBy_join delim s = concatMap (\x -> x ++ [delim]) (splitBy delim s) `isPrefixOf` s
+prop_splitBy_join delim s = concatMap (\x -> x ++ [delim]) (splitBy delim s) `L.isPrefixOf` s
 
 -- | splitBy vs splitByCollapsed: splitByCollapsed should have no empty strings
 prop_splitByCollapsed_no_empty :: Char -> String -> Bool
 prop_splitByCollapsed_no_empty delim s = 
     let collapsed = splitByCollapsed delim s
-    in all (not . null) collapsed
+    in L.all (not . null) collapsed
 
 -- | splitByComma: should be equivalent to splitBy ','
 prop_splitByComma_equivalent :: String -> Bool
@@ -52,7 +53,7 @@ prop_removeLineComments_idempotent s = removeLineComments (removeLineComments s)
 prop_removeLineComments_no_comments :: String -> Bool
 prop_removeLineComments_no_comments s = 
     let cleaned = removeLineComments s
-    in not ("//" `isPrefixOf` cleaned)
+    in not ("//" `L.isPrefixOf` cleaned)
 
 -- | removeComments: removing comments twice should be idempotent
 prop_removeComments_idempotent :: String -> Bool
@@ -62,15 +63,15 @@ prop_removeComments_idempotent s = removeComments (removeComments s) == removeCo
 prop_normalizeIndentation_idempotent :: String -> Bool
 prop_normalizeIndentation_idempotent s = normalizeIndentation (normalizeIndentation s) == normalizeIndentation s
 
--- | breakOn: should find first occurrence or return original
+-- | breakOn: should find first occurrence L.or return original
 prop_breakOn_correctness :: String -> String -> Bool
 prop_breakOn_correctness needle haystack = 
     let (before, after) = breakOn needle haystack
-    in if needle `isInfixOf` haystack
-       then needle `isInfixOf` after && not (needle `isInfixOf` before)
+    in if needle `L.isInfixOf` haystack
+       then needle `L.isInfixOf` after && not (needle `L.isInfixOf` before)
        else before == haystack && null after
   where
-    isInfixOf needle haystack = needle `Data.List.isInfixOf` haystack
+    L.isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
 
 -- | splitBy: empty string should return list with one empty string
 prop_splitBy_empty :: Char -> Bool
@@ -89,7 +90,7 @@ prop_splitBy_consecutive :: Char -> Int -> Bool
 prop_splitBy_consecutive delim n = 
     let input = replicate delim n
         result = splitBy delim input
-    in length result == n + 1 && all null result
+    in L.length result == n + 1 && L.all null result
   where
     replicate d 0 = ""
     replicate d k = d : replicate d (k-1)

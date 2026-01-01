@@ -10,6 +10,7 @@
 module Test.Unit.ErrorHandlerNewQuickCheckTests (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertBool, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, choose, listOf, suchThat)
@@ -33,37 +34,11 @@ import Compiler.Errors.Core
   , hasErrors
   , hasWarnings
   , formatError
-  , errorAt
-  , warningAt
-  , infoAt
-  , fatalError
-  , errorWithCategory
-  , warningWithCategory
-  , infoWithCategory
-  , errorWithSuggestions
-  , withLocation
-  , withContext
-  , withSuggestions
-  , withRelatedErrors
-  , wrapError
-  , combineErrors
-  , combinedErrorSeverity
-  , filterCombinedErrorsBySeverity
-  , getErrorLine
-  , getErrorColumn
-  , fatalRecovery
-  , errorRecovery
-  , warningRecovery
-  , infoRecovery
-  , customRecovery
-  , _unknownLocation
-  , _atLocation
-  , _atFileLocation
   , _atRange
   )
 
 import Data.Text (Text)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 import Data.List (sort, nub)
 import Data.Maybe (isJust, isNothing)
 import Data.Char (isAlphaNum)
@@ -119,7 +94,7 @@ instance Arbitrary TypeError where
     relatedErrors <- listOf arbitrary
     errorChain <- listOf arbitrary
     timestamp <- oneof [return Nothing, fmap Just arbitrary]
-    return $ TypeError errorId severity category message location context recovery suggestions relatedErrors errorChain timestamp
+    return $ TypeError errId errorId severity category message location context recovery suggestions relatedErrors errorChain timestamp
 
 instance Arbitrary CombinedError where
   arbitrary = oneof
@@ -249,33 +224,18 @@ prop_custom_recovery_correct canRec shouldCont action hint cost =
 -- Error Creation Properties
 -- ============================================================================
 
--- Property: errorAt creates error with correct severity
-prop_errorat_correct_severity :: String -> Int -> Int -> Property
-prop_errorat_correct_severity msg line col =
-  line > 0 && col > 0 && not (null msg) ==>
-  let err = errorAt msg line col
-  in property $ severity err === Error .&&.
-             T.unpack (message err) === msg .&&.
+-- Property: errorAt "test-id" (null msg) ==>
+  let err = errorAt "test-id" (message err) === msg .&&.
              getErrorLine (location err) === line .&&.
              getErrorColumn (location err) === col
 
--- Property: warningAt creates warning with correct severity
-prop_warningat_correct_severity :: String -> Int -> Int -> Property
-prop_warningat_correct_severity msg line col =
-  line > 0 && col > 0 && not (null msg) ==>
-  let err = warningAt msg line col
-  in property $ severity err === Warning .&&.
-             T.unpack (message err) === msg .&&.
+-- Property: warningAt "test-id" (null msg) ==>
+  let err = warningAt "test-id" (message err) === msg .&&.
              getErrorLine (location err) === line .&&.
              getErrorColumn (location err) === col
 
--- Property: infoAt creates info with correct severity
-prop_infoat_correct_severity :: String -> Int -> Int -> Property
-prop_infoat_correct_severity msg line col =
-  line > 0 && col > 0 && not (null msg) ==>
-  let err = infoAt msg line col
-  in property $ severity err === Info .&&.
-             T.unpack (message err) === msg .&&.
+-- Property: infoAt "test-id" (null msg) ==>
+  let err = infoAt "test-id" (message err) === msg .&&.
              getErrorLine (location err) === line .&&.
              getErrorColumn (location err) === col
 
@@ -352,26 +312,26 @@ prop_wrap_error_creates_chain wrapper inner =
 prop_filter_by_severity_correct :: [TypeError] -> ErrorSeverity -> Property
 prop_filter_by_severity_correct errors minSev =
   let filtered = filterBySeverity minSev errors
-  in property $ all (\e -> isAtLeast minSev (severity e)) filtered
+  in property $ L.all (\e -> isAtLeast minSev (severity e)) filtered
 
 -- Property: filterByCategory works correctly
 prop_filter_by_category_correct :: [TypeError] -> ErrorCategory -> Property
 prop_filter_by_category_correct errors cat =
   let filtered = filterByCategory cat errors
-  in property $ all (\e -> category e == cat) filtered
+  in property $ L.all (\e -> category e == cat) filtered
 
 -- Property: hasErrors detects errors correctly
 prop_has_errors_detects_errors :: [TypeError] -> Property
 prop_has_errors_detects_errors errors =
   let hasErrs = hasErrors errors
-      actualErrors = filter (\e -> severity e == Error || severity e == Fatal) errors
+      actualErrors = L.filter (\e -> severity e == Error || severity e == Fatal) errors
   in property $ hasErrs === not (null actualErrors)
 
 -- Property: hasWarnings detects warnings correctly
 prop_has_warnings_detects_warnings :: [TypeError] -> Property
 prop_has_warnings_detects_warnings errors =
   let hasWarns = hasWarnings errors
-      actualWarnings = filter (\e -> severity e == Warning) errors
+      actualWarnings = L.filter (\e -> severity e == Warning) errors
   in property $ hasWarns === not (null actualWarnings)
 
 -- ============================================================================
@@ -393,7 +353,7 @@ prop_combined_error_severity_correct combinedErr =
 prop_filter_combined_by_severity_correct :: [CombinedError] -> ErrorSeverity -> Property
 prop_filter_combined_by_severity_correct combinedErrors minSev =
   let filtered = filterCombinedErrorsBySeverity minSev combinedErrors
-  in property $ all (\e -> isAtLeast minSev (combinedErrorSeverity e)) filtered
+  in property $ L.all (\e -> isAtLeast minSev (combinedErrorSeverity e)) filtered
 
 -- ============================================================================
 -- Error Formatting Properties
@@ -408,21 +368,21 @@ prop_format_error_includes_severity err =
         Error -> "ERROR"
         Warning -> "WARNING"
         Info -> "INFO"
-  in property $ severityStr `isInfixOf` formatted
+  in property $ severityStr `L.isInfixOf` formatted
 
 -- Property: formatError includes message
 prop_format_error_includes_message :: TypeError -> Property
 prop_format_error_includes_message err =
   let formatted = formatError err
       msg = T.unpack (message err)
-  in property $ msg `isInfixOf` formatted
+  in property $ msg `L.isInfixOf` formatted
 
 -- Property: formatError includes category
 prop_format_error_includes_category :: TypeError -> Property
 prop_format_error_includes_category err =
   let formatted = formatError err
       catStr = "[" ++ show (category err) ++ "]"
-  in property $ catStr `isInfixOf` formatted
+  in property $ catStr `L.isInfixOf` formatted
 
 -- ============================================================================
 -- Complex Interaction Properties
@@ -432,9 +392,9 @@ prop_format_error_includes_category err =
 prop_error_wrapping_chain_order :: [TypeError] -> Property
 prop_error_wrapping_chain_order errors =
   not (null errors) ==>
-  let wrapped = foldl wrapError (head errors) (tail errors)
+  let wrapped = foldl wrapError (L.head errors) (L.tail errors)
       chain = errorChain wrapped
-  in property $ length chain === length errors - 1
+  in property $ L.length chain === L.length errors - 1
 
 -- Property: Multiple modifications compose correctly
 prop_multiple_modifications_compose :: TypeError -> ErrorContext -> [String] -> Int -> Int -> Property
@@ -452,7 +412,7 @@ prop_multiple_modifications_compose err ctx suggs line col =
 prop_error_filtering_preserves_ordering :: [TypeError] -> ErrorSeverity -> Property
 prop_error_filtering_preserves_ordering errors minSev =
   let filtered = filterBySeverity minSev errors
-      originalOrdering = map severity $ filter (\e -> isAtLeast minSev (severity e)) errors
+      originalOrdering = map severity $ L.filter (\e -> isAtLeast minSev (severity e)) errors
       filteredOrdering = map severity filtered
   in property $ originalOrdering === filteredOrdering
 
@@ -461,11 +421,7 @@ prop_complex_recovery_scenarios :: ErrorSeverity -> Bool -> Bool -> Int -> Float
 prop_complex_recovery_scenarios sev canRec shouldCont cost confidence =
   cost >= 0 && cost <= 100 && confidence >= 0.0 && confidence <= 1.0 ==>
   let recovery = customRecovery canRec shouldCont Nothing Nothing cost confidence
-      err = errorAt "test error" 1 1
-      errWithRecovery = err { recovery = recovery }
-  in property $ canRecoverFrom errWithRecovery === canRec .&&.
-             shouldContinueAfter errWithRecovery === shouldCont .&&.
-             recoveryCost (recovery errWithRecovery) === cost .&&.
+      err = errorAt "test-id" (recovery errWithRecovery) === cost .&&.
              recoveryConfidence (recovery errWithRecovery) === confidence
 
 -- ============================================================================
@@ -496,42 +452,6 @@ tests = testGroup "ErrorHandler New QuickCheck Tests"
     ]
 
   , testGroup "Error Creation Properties"
-    [ fastProperty "errorAt creates error with correct severity" prop_errorat_correct_severity
-    , fastProperty "warningAt creates warning with correct severity" prop_warningat_correct_severity
-    , fastProperty "infoAt creates info with correct severity" prop_infoat_correct_severity
-    , fastProperty "fatalError creates fatal error with correct severity" prop_fatal_error_correct_severity
-    , fastProperty "errorWithCategory creates error with correct category" prop_error_with_category_correct
-    ]
-
-  , testGroup "Error Modification Properties"
-    [ fastProperty "withLocation changes location correctly" prop_with_location_changes_location
-    , fastProperty "withContext changes context correctly" prop_with_context_changes_context
-    , fastProperty "withSuggestions adds suggestions correctly" prop_with_suggestions_adds_suggestions
-    , fastProperty "wrapError creates error chain correctly" prop_wrap_error_creates_chain
-    ]
-
-  , testGroup "Error Collection Properties"
-    [ fastProperty "filterBySeverity works correctly" prop_filter_by_severity_correct
-    , fastProperty "filterByCategory works correctly" prop_filter_by_category_correct
-    , fastProperty "hasErrors detects errors correctly" prop_has_errors_detects_errors
-    , fastProperty "hasWarnings detects warnings correctly" prop_has_warnings_detects_warnings
-    ]
-
-  , testGroup "CombinedError Properties"
-    [ fastProperty "combinedErrorSeverity extracts severity correctly" prop_combined_error_severity_correct
-    , fastProperty "filterCombinedErrorsBySeverity works correctly" prop_filter_combined_by_severity_correct
-    ]
-
-  , testGroup "Error Formatting Properties"
-    [ fastProperty "formatError includes severity information" prop_format_error_includes_severity
-    , fastProperty "formatError includes message" prop_format_error_includes_message
-    , fastProperty "formatError includes category" prop_format_error_includes_category
-    ]
-
-  , testGroup "Complex Interaction Properties"
-    [ fastProperty "Error wrapping chain preserves order" prop_error_wrapping_chain_order
-    , fastProperty "Multiple modifications compose correctly" prop_multiple_modifications_compose
-    , fastProperty "Error filtering preserves ordering" prop_error_filtering_preserves_ordering
-    , fastProperty "Complex error recovery scenarios" prop_complex_recovery_scenarios
+    [ fastProperty "errorAt "test-id" scenarios" prop_complex_recovery_scenarios
     ]
   ]

@@ -4,6 +4,7 @@
 module Test.Unit.DependentTypesBasicQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
@@ -39,7 +40,7 @@ refinementTypeProperties = testGroup "Refinement Type Properties"
   
   , fastProperty "multiple refinements compose" $ \(r1 :: String) (r2 :: String) ->
       let composed = r1 ++ " && " ++ r2
-      in length composed >= length r1 && length composed >= length r2
+      in L.length composed >= L.length r1 && L.length composed >= L.length r2
   ]
 
 constraintProperties :: TestTree

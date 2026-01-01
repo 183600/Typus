@@ -7,6 +7,7 @@ import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Property(..), (==>), Positive(..))
 import Utils
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 -- | Test suite for Utils module validation functions
@@ -63,17 +64,17 @@ prop_trim_idempotent s = trim (trim s) == trim s
 prop_trim_no_leading_trailing_whitespace :: String -> Bool
 prop_trim_no_leading_trailing_whitespace s = 
   let t = trim s
-  in null t || (not (isSpace (head t)) && not (isSpace (last t)))
+  in null t || (not (isSpace (L.head t)) && not (isSpace (last t)))
 
 prop_splitBy_length :: String -> Char -> Bool
 prop_splitBy_length s c = 
   let parts = splitBy c s
-      commas = length (filter (== c) s)
-  in length parts == commas + 1
+      commas = L.length (L.filter (== c) s)
+  in L.length parts == commas + 1
 
 prop_splitByCollapsed_no_empty :: String -> Char -> Bool  
 prop_splitByCollapsed_no_empty s c = 
-  all (not . null) (splitByCollapsed c s)
+  L.all (not . null) (splitByCollapsed c s)
 
 prop_breakOn_consistency :: String -> String -> Bool
 prop_breakOn_consistency s needle = 

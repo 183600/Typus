@@ -20,7 +20,9 @@ import EnhancedErrorHandler (EnhancedErrorHandler(..), handleMultipleErrors)
 import Compiler (CompilerError(..), formatCompilerErrors, hasTypeErrors)
 import Parser (parseTypus, TypusFile(..))
 
-import Data.List (isInfixOf, isPrefixOf, length, sort)
+import qualified Data.List as L
+import Data.List (isInfixOf, isPrefixOf, length)
+import Data.List (sort)
 import qualified Data.Text as T
 
 -- Test 1: Error handler formats errors consistently
@@ -33,13 +35,13 @@ test_error_handler_consistency =
           , CompilerError "Missing semicolon" (SourcePos 3 20) (SourcePos 3 20)
           ]
         formatted = formatCompilerErrors errors
-    -- Should format all errors with consistent structure
-    assertBool "Should format all errors" $
-      length (lines formatted) >= 3
+    -- Should format L.all errors with consistent structure
+    assertBool "Should format L.all errors" $
+      L.length (lines formatted) >= 3
     assertBool "Should include line numbers" $
-      any (`isInfixOf` formatted) ["1:", "2:", "3:"]
+      L.any (`L.isInfixOf` formatted) ["1:", "2:", "3:"]
     assertBool "Should include error descriptions" $
-      any (`isInfixOf` formatted) ["Syntax", "Type", "Missing"]
+      L.any (`L.isInfixOf` formatted) ["Syntax", "Type", "Missing"]
 
 -- Test 2: Error handler handles multiple errors gracefully
 test_multiple_errors_handling :: TestTree
@@ -62,7 +64,7 @@ test_multiple_errors_handling =
       Left err -> do
         -- Should report multiple errors if possible
         assertBool "Should handle multiple compilation errors" $
-          length err > 10  -- Should have substantial error information
+          L.length err > 10  -- Should have substantial error information
       Right typusFile -> do
         -- May parse partially with error recovery
         assertBool "Should handle partial parsing" True
@@ -81,9 +83,9 @@ test_error_severity_categorization =
           ]
         allErrors = criticalErrors ++ warnings
         formatted = formatCompilerErrors allErrors
-    -- Should distinguish between errors and warnings
-    assertBool "Should format all errors and warnings" $
-      length (lines formatted) >= 4
+    -- Should distinguish between errors L.and warnings
+    assertBool "Should format L.all errors L.and warnings" $
+      L.length (lines formatted) >= 4
 
 -- Test 4: Error handler provides helpful suggestions
 test_error_suggestions :: TestTree
@@ -102,7 +104,7 @@ test_error_suggestions =
       Left err -> do
         -- Should provide suggestions for unused variables
         assertBool "Should suggest fixes for unused variables" $
-          any (`isInfixOf` err) ["unused", "remove", "use", "_"]
+          L.any (`L.isInfixOf` err) ["unused", "remove", "use", "_"]
       Right typusFile -> do
         -- May parse successfully with warnings
         assertBool "Should handle unused variable warnings" True
@@ -110,7 +112,7 @@ test_error_suggestions =
 -- QuickCheck property: Error formatting is deterministic
 prop_error_formatting_deterministic :: String -> Property
 prop_error_formatting_deterministic errorMsg =
-  length errorMsg < 100 ==>  -- Keep error messages reasonable
+  L.length errorMsg < 100 ==>  -- Keep error messages reasonable
   let error = CompilerError errorMsg (SourcePos 1 1) (SourcePos 1 10)
       formatted1 = formatCompilerErrors [error]
       formatted2 = formatCompilerErrors [error]
@@ -133,7 +135,7 @@ test_error_context_preservation =
       Left err -> do
         -- Should include function context in error
         assertBool "Should include function context" $
-          any (`isInfixOf` err) ["calculate", "function", "context"]
+          L.any (`L.isInfixOf` err) ["calculate", "function", "context"]
       Right typusFile -> do
         -- May parse successfully
         assertBool "Should parse function with potential error" True
@@ -154,7 +156,7 @@ test_cascading_errors =
       Left err -> do
         -- Should handle cascading errors without crashing
         assertBool "Should handle cascading errors" $
-          length err > 0
+          L.length err > 0
       Right typusFile -> do
         -- May parse partially
         assertBool "Should handle cascading errors gracefully" True
@@ -162,7 +164,7 @@ test_cascading_errors =
 -- QuickCheck property: Error messages are informative
 prop_error_messages_informative :: String -> Property
 prop_error_messages_informative errorType =
-  length errorType < 50 ==>  -- Keep error types reasonable
+  L.length errorType < 50 ==>  -- Keep error types reasonable
   let source = unlines
         [ "package main"
         , "func main() {"
@@ -170,7 +172,7 @@ prop_error_messages_informative errorType =
         , "}"
         ]
   in case parseTypus source of
-       Left err -> property $ length err > 5  -- Should have some content
+       Left err -> property $ L.length err > 5  -- Should have some content
        Right _ -> property True  -- May parse successfully
 
 -- Test 7: Error handler handles recovery scenarios
@@ -192,12 +194,12 @@ test_error_recovery_scenarios =
       Left err -> do
         -- Should attempt error recovery
         assertBool "Should attempt error recovery" $
-          any (`isInfixOf` err) ["recover", "continue", "parse"]
+          L.any (`L.isInfixOf` err) ["recover", "continue", "parse"]
       Right typusFile -> do
-        -- Should recover and parse the return statement
+        -- Should recover L.and parse the return statement
         let codeBlocks = tfCodeBlocks typusFile
-        assertBool "Should recover and parse return statement" $
-          any (isInfixOf "return 42" . unlines . cbLines) codeBlocks
+        assertBool "Should recover L.and parse return statement" $
+          L.any (L.isInfixOf "return 42" . unlines . cbLines) codeBlocks
 
 -- Test 8: Error handler localization consistency
 test_error_localization :: TestTree
@@ -210,7 +212,7 @@ test_error_localization =
         formatted = formatCompilerErrors errors
     -- Should handle different languages consistently
     assertBool "Should handle multilingual error messages" $
-      length (lines formatted) >= 2
+      L.length (lines formatted) >= 2
 
 tests :: TestTree
 tests =

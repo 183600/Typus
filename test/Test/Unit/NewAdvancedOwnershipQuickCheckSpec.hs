@@ -39,7 +39,9 @@ import Ownership.Common.Types
   )
 
 import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, intercalate, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (intercalate, nub)
 import Data.Char (isAlphaNum, isSpace)
 
 -- ============================================================================
@@ -55,37 +57,37 @@ prop_newOwnershipAnalyzer_valid =
 -- Property: lexAll handles simple Go code
 prop_lexAll_simple_code :: String -> Property
 prop_lexAll_simple_code code =
-  not (any (`elem` ["\"", "\\", "/", "*", "\n", "\r", "\t"]) code) && 
-  not (null code) && all isAlphaNum code ==>
+  not (L.any (`elem` ["\"", "\\", "/", "*", "\n", "\r", "\t"]) code) && 
+  not (null code) && L.all isAlphaNum code ==>
   let goCode = "package main\n\nfunc main() {\n    " ++ code ++ "\n}\n"
       result = lexAll goCode
-  in property $ length result >= 1
+  in property $ L.length result >= 1
 
 -- Property: lexAll handles empty input
 prop_lexAll_empty_input :: Property
 prop_lexAll_empty_input =
   let result = lexAll ""
-  in property $ length result >= 0
+  in property $ L.length result >= 0
 
 -- Property: lexAll handles whitespace-only input
 prop_lexAll_whitespace_only :: String -> Property
 prop_lexAll_whitespace_only input =
-  all isSpace input ==>
+  L.all isSpace input ==>
   let result = lexAll input
-  in property $ length result >= 0
+  in property $ L.length result >= 0
 
 -- Property: lexAll preserves basic structure
 prop_lexAll_preserves_structure :: String -> Property
 prop_lexAll_preserves_structure code =
-  not (null code) && length code <= 100 ==> -- Limit for performance
+  not (null code) && L.length code <= 100 ==> -- Limit for performance
   let result = lexAll code
-      tokenCount = length result
+      tokenCount = L.length result
   in property $ tokenCount >= 0
 
 -- Property: parseProgram handles simple function declarations
 prop_parseProgram_simple_function :: String -> Property
 prop_parseProgram_simple_function funcName =
-  not (null funcName) && all isAlphaNum funcName && length funcName <= 20 ==>
+  not (null funcName) && L.all isAlphaNum funcName && L.length funcName <= 20 ==>
   let goCode = "package main\n\nfunc " ++ funcName ++ "() {\n}\n"
       tokens = lexAll goCode
       result = parseProgram tokens
@@ -96,8 +98,8 @@ prop_parseProgram_simple_function funcName =
 -- Property: parseProgram handles variable declarations
 prop_parseProgram_variable_declaration :: String -> String -> Property
 prop_parseProgram_variable_declaration varName varType =
-  not (null varName) && all isAlphaNum varName && length varName <= 10 &&
-  not (null varType) && all isAlphaNum varType && length varType <= 10 ==>
+  not (null varName) && L.all isAlphaNum varName && L.length varName <= 10 &&
+  not (null varType) && L.all isAlphaNum varType && L.length varType <= 10 ==>
   let goCode = "package main\n\nvar " ++ varName ++ " " ++ varType ++ "\n"
       tokens = lexAll goCode
       result = parseProgram tokens
@@ -108,9 +110,9 @@ prop_parseProgram_variable_declaration varName varType =
 -- Property: parseProgram handles multiple declarations
 prop_parseProgram_multiple_declarations :: [String] -> Property
 prop_parseProgram_multiple_declarations varNames =
-  not (null varNames) && length varNames <= 5 && 
-  all (all isAlphaNum) varNames && all (\n -> length n <= 10) varNames ==>
-  let declarations = map (\name -> "var " ++ name ++ " int") varNames
+  not (null varNames) && L.length varNames <= 5 && 
+  L.all (L.all isAlphaNum) varNames && L.all (\n -> L.length n <= 10) varNames ==>
+  let declarations = L.map (\name -> "var " ++ name ++ " int") varNames
       goCode = "package main\n\n" ++ intercalate "\n" declarations ++ "\n"
       tokens = lexAll goCode
       result = parseProgram tokens
@@ -121,8 +123,8 @@ prop_parseProgram_multiple_declarations varNames =
 -- Property: analyzeOwnership handles simple code
 prop_analyzeOwnership_simple_code :: String -> Property
 prop_analyzeOwnership_simple_code code =
-  not (any (`elem` ["\"", "\\", "/", "*"]) code) && 
-  length code <= 50 ==>
+  not (L.any (`elem` ["\"", "\\", "/", "*"]) code) && 
+  L.length code <= 50 ==>
   let goCode = "package main\n\nfunc main() {\n    " ++ code ++ "\n}\n"
       result = analyzeOwnership goCode
   in case result of
@@ -140,7 +142,7 @@ prop_analyzeOwnership_empty_input =
 -- Property: analyzeOwnershipFile handles basic file structure
 prop_analyzeOwnershipFile_basic :: String -> Property
 prop_analyzeOwnershipFile_basic content =
-  length content <= 100 ==> -- Limit for performance
+  L.length content <= 100 ==> -- Limit for performance
   let result = analyzeOwnershipFile content
   in case result of
        Left _ -> property True
@@ -149,7 +151,7 @@ prop_analyzeOwnershipFile_basic content =
 -- Property: analyzeOwnershipDebug provides debug information
 prop_analyzeOwnershipDebug_provides_info :: String -> Property
 prop_analyzeOwnershipDebug_provides_info code =
-  length code <= 50 ==>
+  L.length code <= 50 ==>
   let result = analyzeOwnershipDebug code
   in case result of
        Left _ -> property True
@@ -158,22 +160,22 @@ prop_analyzeOwnershipDebug_provides_info code =
 -- Property: formatOwnershipErrors handles error list
 prop_formatOwnershipErrors_handles_list :: [String] -> Property
 prop_formatOwnershipErrors_handles_list errorMessages =
-  length errorMessages <= 10 ==> -- Limit for performance
-  let errors = map (\msg -> OwnershipError (T.pack msg) Unknown OwnershipTypeUnknown) errorMessages
+  L.length errorMessages <= 10 ==> -- Limit for performance
+  let errors = L.map (\msg -> OwnershipError (T.pack msg) Unknown OwnershipTypeUnknown) errorMessages
       formatted = formatOwnershipErrors errors
-  in property $ length formatted >= 0
+  in property $ L.length formatted >= 0
 
 -- Property: formatOwnershipErrors handles empty list
 prop_formatOwnershipErrors_empty_list :: Property
 prop_formatOwnershipErrors_empty_list =
   let formatted = formatOwnershipErrors []
-  in property $ length formatted >= 0
+  in property $ L.length formatted >= 0
 
 -- Property: builtInFunctions is not empty
 prop_builtInFunctions_not_empty :: Property
 prop_builtInFunctions_not_empty =
   let functions = builtInFunctions
-  in property $ length functions >= 1
+  in property $ L.length functions >= 1
 
 -- Property: OwnershipType values are consistent
 prop_OwnershipType_consistency :: OwnershipType -> Property
@@ -199,13 +201,13 @@ prop_OwnershipError_has_message :: String -> OwnershipType -> OwnershipTransfer 
 prop_OwnershipError_has_message errorMsg ownType transfer =
   not (null errorMsg) ==>
   let error = OwnershipError (T.pack errorMsg) ownType transfer
-  in property $ T.length (OwnershipError.ownershipMessage error) >= 0
+  in property $ T.L.length (OwnershipError.ownershipMessage error) >= 0
 
 -- Property: analyzeOwnership handles function calls
 prop_analyzeOwnership_function_calls :: String -> String -> Property
 prop_analyzeOwnership_function_calls funcName argName =
-  not (null funcName) && all isAlphaNum funcName && length funcName <= 10 &&
-  not (null argName) && all isAlphaNum argName && length argName <= 10 ==>
+  not (null funcName) && L.all isAlphaNum funcName && L.length funcName <= 10 &&
+  not (null argName) && L.all isAlphaNum argName && L.length argName <= 10 ==>
   let goCode = "package main\n\nfunc " ++ funcName ++ "(" ++ argName ++ " int) {\n}\n"
       result = analyzeOwnership goCode
   in case result of
@@ -215,8 +217,8 @@ prop_analyzeOwnership_function_calls funcName argName =
 -- Property: analyzeOwnership handles assignment operations
 prop_analyzeOwnership_assignments :: String -> String -> Property
 prop_analyzeOwnership_assignments varName value =
-  not (null varName) && all isAlphaNum varName && length varName <= 10 &&
-  length value <= 20 ==>
+  not (null varName) && L.all isAlphaNum varName && L.length varName <= 10 &&
+  L.length value <= 20 ==>
   let goCode = "package main\n\nfunc main() {\n    " ++ varName ++ " := " ++ value ++ "\n}\n"
       result = analyzeOwnership goCode
   in case result of
@@ -226,29 +228,29 @@ prop_analyzeOwnership_assignments varName value =
 -- Property: analyzeOwnership handles return statements
 prop_analyzeOwnership_returns :: String -> Property
 prop_analyzeOwnership_returns returnValue =
-  length returnValue <= 20 ==>
+  L.length returnValue <= 20 ==>
   let goCode = "package main\n\nfunc main() {\n    return " ++ returnValue ++ "\n}\n"
       result = analyzeOwnership goCode
   in case result of
        Left _ -> property True
        Right _ -> property True
 
--- Property: lexAll and parseProgram interaction
+-- Property: lexAll L.and parseProgram interaction
 prop_lexAll_parseProgram_interaction :: String -> Property
 prop_lexAll_parseProgram_interaction code =
-  length code <= 50 ==>
+  L.length code <= 50 ==>
   let tokens = lexAll code
       parseResult = parseProgram tokens
   in case parseResult of
        Left _ -> property True
-       Right _ -> property $ length tokens >= 0
+       Right _ -> property $ L.length tokens >= 0
 
 -- Property: analyzeOwnership with large inputs
 prop_analyzeOwnership_large_input :: Int -> String -> Property
 prop_analyzeOwnership_large_input multiplier baseCode =
   multiplier >= 0 && multiplier <= 10 && -- Limit for performance
-  length baseCode <= 20 ==>
-  let largeCode = concat (replicate multiplier (baseCode ++ "\n"))
+  L.length baseCode <= 20 ==>
+  let largeCode = L.concat (replicate multiplier (baseCode ++ "\n"))
       goCode = "package main\n\nfunc main() {\n" ++ largeCode ++ "\n}\n"
       result = analyzeOwnership goCode
   in case result of
@@ -273,7 +275,7 @@ prop_formatOwnershipErrors_preserves_info errorMsg =
   let error = OwnershipError (T.pack errorMsg) Owned TransferValid
       errors = [error]
       formatted = formatOwnershipErrors errors
-  in property $ errorMsg `isInfixOf` formatted
+  in property $ errorMsg `L.isInfixOf` formatted
 
 -- ============================================================================
 -- Test Suite Definition
@@ -297,7 +299,7 @@ tests = testGroup "New Advanced Ownership QuickCheck Tests"
     [ fastProperty "parseProgram handles simple function declarations" prop_parseProgram_simple_function
     , fastProperty "parseProgram handles variable declarations" prop_parseProgram_variable_declaration
     , fastProperty "parseProgram handles multiple declarations" prop_parseProgram_multiple_declarations
-    , fastProperty "lexAll and parseProgram interaction" prop_lexAll_parseProgram_interaction
+    , fastProperty "lexAll L.and parseProgram interaction" prop_lexAll_parseProgram_interaction
     ]
 
   , testGroup "Analysis properties"

@@ -2,6 +2,7 @@ module Test.Unit.ConciseSyntaxValidatorQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty, Property, (===), Arbitrary(..), Gen, oneof, choose, elements, listOf)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Char (isAlphaNum, isAlpha, isDigit, isSpace)
 import SyntaxValidator (SyntaxError(..), ErrorType(..), SyntaxValidator, validateSyntax)
@@ -22,18 +23,18 @@ tests =
         
     , testGroup "Basic syntax validation"
         [ testProperty "Empty input produces no syntax errors" $
-            \_ -> null (validateSyntax "")
+            \_ -> L.null (validateSyntax "")
             
         , testProperty "Whitespace-only input produces no syntax errors" $
-            \ws -> all isSpace ws ==> null (validateSyntax ws)
+            \ws -> L.all isSpace ws ==> L.null (validateSyntax ws)
             
         , testProperty "Valid identifiers pass validation" $
             \ident -> isValidIdentifier ident ==> 
-                null (validateSyntax ident)
+                L.null (validateSyntax ident)
                 
         , testProperty "Mismatched braces produce errors" $
             \open close -> not (isMatchingPair open close) ==> 
-                not (null (validateSyntax (open ++ "content" ++ close)))
+                not (L.null (validateSyntax (open ++ "content" ++ close)))
         ]
         
     , testGroup "String literal validation"
@@ -91,7 +92,7 @@ tests =
 -- Helper functions for testing
 isValidIdentifier :: String -> Bool
 isValidIdentifier [] = False
-isValidIdentifier (c:cs) = isAlpha c && all isAlphaNum cs
+isValidIdentifier (c:cs) = isAlpha c && L.all isAlphaNum cs
 
 isMatchingPair :: Char -> Char -> Bool
 isMatchingPair '(' ')' = True
@@ -137,7 +138,7 @@ isCompleteStatement s = not (null s) &&
                        (hasKeyword s "if" || hasKeyword s "for" || hasKeyword s "while" || endsProperly s)
 
 hasKeyword :: String -> String -> Bool
-hasKeyword s keyword = keyword `isInfixOf` s
+hasKeyword s keyword = keyword `L.isInfixOf` s
 
 -- Generate test data
 instance Arbitrary ErrorType where

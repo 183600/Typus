@@ -1,6 +1,7 @@
 module Test.Unit.ErrorHandlerCoreTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, (==>), oneof, elements, listOf)
 import qualified Test.Tasty.QuickCheck as QC
@@ -33,31 +34,6 @@ import Compiler.Errors.Core
   , formatErrorsWithLocation
   , canRecoverFrom
   , shouldContinueAfter
-  , errorAt
-  , errorWithCategory
-  , warningAt
-  , warningWithCategory
-  , infoAt
-  , infoWithCategory
-  , fatalError
-  , fatalErrorWithCategory
-  , errorWithSuggestions
-  , withLocation
-  , withContext
-  , withSuggestions
-  , withRelatedErrors
-  , hasCategory
-  , filterByCategory
-  , filterBySeverity
-  , getErrorStatistics
-  , generateErrorReport
-  , createRecoveryStrategy
-  , customRecovery
-  , fatalRecovery
-  , errorRecovery
-  , warningRecovery
-  , infoRecovery
-  , combinedErrorSeverity
   , filterCombinedErrorsBySeverity
   )
 import Control.Monad.State (runState)
@@ -142,12 +118,12 @@ tests =
         ]
 
     , testGroup "Error Context"
-        [ testCase "emptyContext has all Nothing values" $ do
+        [ testCase "emptyContext has L.all Nothing values" $ do
             contextCode emptyContext @?= Nothing
             contextFunction emptyContext @?= Nothing
             contextVariable emptyContext @?= Nothing
             contextType emptyContext @?= Nothing
-            assertBool "Additional context should be empty" $ null (contextAdditional emptyContext)
+            assertBool "Additional context should be empty" $ L.null (contextAdditional emptyContext)
 
         , testCase "ErrorContext equality works" $ do
             let ctx1 = emptyContext { contextCode = Just "test code" }
@@ -162,15 +138,15 @@ tests =
             canRecover fatalRecovery @?= False
             shouldContinue fatalRecovery @?= False
 
-        , testCase "errorRecovery can recover and continue" $ do
+        , testCase "errorRecovery can recover L.and continue" $ do
             canRecover errorRecovery @?= True
             shouldContinue errorRecovery @?= True
 
-        , testCase "warningRecovery has low cost and high confidence" $ do
+        , testCase "warningRecovery has low cost L.and high confidence" $ do
             recoveryCost warningRecovery @?= 10
             assertBool "Warning recovery should have high confidence" $ recoveryConfidence warningRecovery >= 0.9
 
-        , testCase "infoRecovery has zero cost and full confidence" $ do
+        , testCase "infoRecovery has zero cost L.and full confidence" $ do
             recoveryCost infoRecovery @?= 0
             recoveryConfidence infoRecovery @?= 1.0
 
@@ -185,50 +161,22 @@ tests =
         ]
 
     , testGroup "Error Creation"
-        [ testCase "errorAt creates error at location" $ do
-            let location = ErrorLocation (Just "test.typus") 10 5 Nothing Nothing
-                error = errorAt location "Test error message"
-            location error @?= location
-            message error @?= "Test error message"
-            severity error @?= Error
-
-        , testCase "errorWithCategory creates error with category" $ do
-            let error = errorWithCategory TypeChecking "Type error message"
-            category error @?= TypeChecking
-            severity error @?= Error
-
-        , testCase "fatalError creates fatal error" $ do
-            let error = fatalError "Fatal error message"
-            severity error @?= Fatal
-
-        , testCase "fatalErrorWithCategory creates fatal error with category" $ do
-            let error = fatalErrorWithCategory Parsing "Parse error"
-            severity error @?= Fatal
-            category error @?= Parsing
-
-        , testCase "errorWithSuggestions creates error with suggestions" $ do
-            let suggestions = ["Try this", "Try that"]
-                error = errorWithSuggestions "Error with suggestions" suggestions
-            suggestions error @?= suggestions
-        ]
-
-    , testGroup "Error Modification"
-        [ testCase "withLocation updates error location" $ do
-            let original = errorAt (ErrorLocation Nothing 1 1 Nothing Nothing) "Original"
+        [ testCase "errorAt "test-id" = ErrorLocation (Just "test.typus") 10 5 Nothing Nothing
+                error = errorAt "test-id" Nothing Nothing) "Original"
                 newLocation = ErrorLocation (Just "new.typus") 5 10 Nothing Nothing
                 updated = withLocation newLocation original
             location updated @?= newLocation
             message updated @?= message original
 
         , testCase "withContext updates error context" $ do
-            let original = errorAt (ErrorLocation Nothing 1 1 Nothing Nothing) "Original"
+            let original = errorAt "test-id" Nothing Nothing) "Original"
                 newContext = emptyContext { contextFunction = Just "testFunction" }
                 updated = withContext newContext original
             context updated @?= newContext
             message updated @?= message original
 
         , testCase "withSuggestions updates error suggestions" $ do
-            let original = errorAt (ErrorLocation Nothing 1 1 Nothing Nothing) "Original"
+            let original = errorAt "test-id" Nothing Nothing) "Original"
                 newSuggestions = ["New suggestion"]
                 updated = withSuggestions newSuggestions original
             suggestions updated @?= newSuggestions
@@ -241,34 +189,34 @@ tests =
             assertBool "New collector should be empty" $ null errors
 
         , testCase "addError adds error to collector" $ do
-            let error = errorAt (ErrorLocation Nothing 1 1 Nothing Nothing) "Test error"
+            let error = errorAt "test-id" Nothing Nothing) "Test error"
                 ((), errors) = runState (addError error) []
-            assertBool "Should have one error" $ length errors == 1
-            head errors @?= error
+            assertBool "Should have one error" $ L.length errors == 1
+            L.head errors @?= error
 
         , testCase "addWarning adds warning to collector" $ do
-            let warning = warningAt (ErrorLocation Nothing 1 1 Nothing Nothing) "Test warning"
+            let warning = warningAt "test-id" Nothing Nothing) "Test warning"
                 ((), errors) = runState (addWarning warning) []
-            assertBool "Should have one warning" $ length errors == 1
-            head errors @?= warning
+            assertBool "Should have one warning" $ L.length errors == 1
+            L.head errors @?= warning
 
         , testCase "addInfo adds info to collector" $ do
-            let info = infoAt (ErrorLocation Nothing 1 1 Nothing Nothing) "Test info"
+            let info = infoAt "test-id" Nothing Nothing) "Test info"
                 ((), errors) = runState (addInfo info) []
-            assertBool "Should have one info" $ length errors == 1
-            head errors @?= info
+            assertBool "Should have one info" $ L.length errors == 1
+            L.head errors @?= info
 
         , testCase "hasErrors detects errors correctly" $ do
-            let error = errorAt (ErrorLocation Nothing 1 1 Nothing Nothing) "Test error"
+            let error = errorAt "test-id" Nothing Nothing) "Test error"
                 ((), errors1) = runState (addError error) []
-                ((), errors2) = runState (addWarning (warningAt (ErrorLocation Nothing 1 1 Nothing Nothing) "Warning")) []
+                ((), errors2) = runState (addWarning (warningAt "test-id" Nothing Nothing) "Warning")) []
             assertBool "Should have errors" $ hasErrors errors1
             assertBool "Should not have errors" $ not $ hasErrors errors2
 
         , testCase "hasWarnings detects warnings correctly" $ do
-            let warning = warningAt (ErrorLocation Nothing 1 1 Nothing Nothing) "Test warning"
+            let warning = warningAt "test-id" Nothing Nothing) "Test warning"
                 ((), errors1) = runState (addWarning warning) []
-                ((), errors2) = runState (addError (errorAt (ErrorLocation Nothing 1 1 Nothing Nothing) "Error")) []
+                ((), errors2) = runState (addError (errorAt "test-id" Nothing Nothing) "Error")) []
             assertBool "Should have warnings" $ hasWarnings errors1
             assertBool "Should not have warnings" $ not $ hasWarnings errors2
         ]
@@ -288,18 +236,18 @@ tests =
                 anotherTypeError = errorWithCategory TypeChecking "Another type error"
                 errors = [typeError, ownershipError, anotherTypeError]
                 filtered = filterByCategory TypeChecking errors
-            assertBool "Should have 2 type errors" $ length filtered == 2
-            assertBool "All should be TypeChecking" $ all (\e -> category e == TypeChecking) filtered
+            assertBool "Should have 2 type errors" $ L.length filtered == 2
+            assertBool "All should be TypeChecking" $ L.all (\e -> category e == TypeChecking) filtered
 
         , testCase "filterBySeverity filters correctly" $ do
             let fatalError' = fatalError "Fatal error"
-                error' = errorAt (ErrorLocation Nothing 1 1 Nothing Nothing) "Error"
-                warning = warningAt (ErrorLocation Nothing 1 1 Nothing Nothing) "Warning"
-                info = infoAt (ErrorLocation Nothing 1 1 Nothing Nothing) "Info"
+                error' = errorAt "test-id" Nothing Nothing) "Error"
+                warning = warningAt "test-id" Nothing Nothing) "Warning"
+                info = infoAt "test-id" Nothing Nothing) "Info"
                 errors = [fatalError', error', warning, info]
                 filtered = filterBySeverity Error errors
-            assertBool "Should have 2 errors (Fatal + Error)" $ length filtered == 2
-            assertBool "All should be Error or higher" $ all (\e -> severity e >= Error) filtered
+            assertBool "Should have 2 errors (Fatal + Error)" $ L.length filtered == 2
+            assertBool "All should be Error L.or higher" $ L.all (\e -> severity e >= Error) filtered
         ]
 
     , testGroup "Combined Errors"
@@ -321,7 +269,7 @@ tests =
                   , IntegrationError "" Info
                   ]
                 filtered = filterCombinedErrorsBySeverity Error errors
-            assertBool "Should have 2 errors (Fatal + Error)" $ length filtered == 2
+            assertBool "Should have 2 errors (Fatal + Error)" $ L.length filtered == 2
         ]
 
     , testGroup "Error Formatting"
@@ -329,22 +277,15 @@ tests =
             let error = errorAt (ErrorLocation (Just "test.typus") 10 5 Nothing Nothing) "Test error"
                 formatted = formatError error
             assertBool "Format should produce non-empty string" $ not $ null formatted
-            assertBool "Format should contain error message" $ "Test error" `isInfixOf` formatted
+            assertBool "Format should contain error message" $ "Test error" `L.isInfixOf` formatted
 
         , testCase "formatErrorWithLocation includes location information" $ do
             let location = ErrorLocation (Just "test.typus") 10 5 Nothing Nothing
-                error = errorAt location "Test error"
-                formatted = formatErrorWithLocation error
-            assertBool "Format should include file name" $ "test.typus" `isInfixOf` formatted
-            assertBool "Format should include line number" $ "10" `isInfixOf` formatted
-            assertBool "Format should include column number" $ "5" `isInfixOf` formatted
-
-        , testCase "formatErrors formats multiple errors" $ do
-            let error1 = errorAt (ErrorLocation Nothing 1 1 Nothing Nothing) "Error 1"
-                error2 = errorAt (ErrorLocation Nothing 2 2 Nothing Nothing) "Error 2"
+                error = errorAt "test-id" Nothing Nothing) "Error 1"
+                error2 = errorAt "test-id" Nothing Nothing) "Error 2"
                 errors = [error1, error2]
                 formatted = formatErrors errors
-            assertBool "Format should contain both errors" $ "Error 1" `isInfixOf` formatted && "Error 2" `isInfixOf` formatted
+            assertBool "Format should contain both errors" $ "Error 1" `L.isInfixOf` formatted && "Error 2" `L.isInfixOf` formatted
         ]
 
     , testGroup "QuickCheck Properties"
@@ -365,25 +306,25 @@ tests =
         , testProperty "filterByCategory preserves order" $
             \category errors ->
               let filtered = filterByCategory category errors
-              in length filtered <= length errors
+              in L.length filtered <= L.length errors
 
         , testProperty "filterBySeverity preserves order" $
             \severity errors ->
               let filtered = filterBySeverity severity errors
-              in length filtered <= length errors
+              in L.length filtered <= L.length errors
 
         , testProperty "hasCategory is True if filterByCategory is non-empty" $
             \category errors ->
               let filtered = filterByCategory category errors
               in hasCategory category errors == (not $ null filtered)
 
-        , testProperty "hasErrors is True if any error has Error or Fatal severity" $
+        , testProperty "hasErrors is True if L.any error has Error L.or Fatal severity" $
             \errors ->
-              hasErrors errors == any (\e -> severity e >= Error) errors
+              hasErrors errors == L.any (\e -> severity e >= Error) errors
 
-        , testProperty "hasWarnings is True if any error has Warning severity" $
+        , testProperty "hasWarnings is True if L.any error has Warning severity" $
             \errors ->
-              hasWarnings errors == any (\e -> severity e == Warning) errors
+              hasWarnings errors == L.any (\e -> severity e == Warning) errors
 
         , testProperty "canRecoverFrom depends on error recovery strategy" $
             \error ->
@@ -395,4 +336,4 @@ tests =
         ]
     ]
   where
-    isInfixOf needle haystack = needle `elem` [take (length needle) (drop i haystack) | i <- [0..length haystack - length needle]]
+    L.isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]

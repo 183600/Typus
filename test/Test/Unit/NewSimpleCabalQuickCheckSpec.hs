@@ -4,6 +4,7 @@
 module Test.Unit.NewSimpleCabalQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
@@ -29,7 +30,7 @@ stringUtilsProperties = testGroup "String Utils Properties"
   [ fastProperty "trim is idempotent" $ \s ->
       let t = trim s in trim t === t
   
-  , fastProperty "trim removes all leading and trailing spaces" $ \s ->
+  , fastProperty "trim removes L.all leading L.and trailing spaces" $ \s ->
       let t = trim s
       in case t of
            [] -> property True
@@ -38,12 +39,12 @@ stringUtilsProperties = testGroup "String Utils Properties"
   , fastProperty "splitBy concatenation preserves original (without delimiter)" $ \c s ->
       c /= '\0' ==>
       let parts = splitBy c s
-      in concat parts === filter (/= c) s .||. any (== c) s
+      in L.concat parts === L.filter (/= c) s .||. L.any (== c) s
   
   , fastProperty "splitByCollapsed never returns empty strings" $ \c s ->
       c /= '\0' ==>
       let parts = splitByCollapsed c s
-      in all (not . null) parts
+      in L.all (not . null) parts
   ]
 
 sourceLocationProperties :: TestTree
@@ -65,12 +66,12 @@ sourceLocationProperties = testGroup "SourceLocation Properties"
 
 parserDirectivesProperties :: TestTree
 parserDirectivesProperties = testGroup "Parser Directives Properties"
-  [ fastProperty "defaultFileDirectives has all Nothing fields" $
+  [ fastProperty "defaultFileDirectives has L.all Nothing fields" $
       fdOwnership defaultFileDirectives === Nothing .&&.
       fdDependentTypes defaultFileDirectives === Nothing .&&.
       fdConstraints defaultFileDirectives === Nothing
   
-  , fastProperty "defaultBlockDirectives has all Nothing fields" $
+  , fastProperty "defaultBlockDirectives has L.all Nothing fields" $
       bdOwnership defaultBlockDirectives === Nothing .&&.
       bdDependentTypes defaultBlockDirectives === Nothing .&&.
       bdConstraints defaultBlockDirectives === Nothing
@@ -83,13 +84,13 @@ listOperationsProperties = testGroup "List Operations Properties"
   
   , fastProperty "nub preserves order of first occurrences" $ \(xs :: [Int]) ->
       let unique = nub xs
-      in all (`elem` xs) unique
+      in L.all (`elem` xs) unique
   
-  , fastProperty "reverse twice is identity" $ \(xs :: [Int]) ->
-      reverse (reverse xs) === xs
+  , fastProperty "L.reverse twice is identity" $ \(xs :: [Int]) ->
+      L.reverse (L.reverse xs) === xs
   
-  , fastProperty "length of append equals sum of lengths" $ \(xs :: [Int]) (ys :: [Int]) ->
-      length (xs ++ ys) === length xs + length ys
+  , fastProperty "L.length of append equals L.sum of lengths" $ \(xs :: [Int]) (ys :: [Int]) ->
+      L.length (xs ++ ys) === L.length xs + L.length ys
   ]
 
 mapOperationsProperties :: TestTree

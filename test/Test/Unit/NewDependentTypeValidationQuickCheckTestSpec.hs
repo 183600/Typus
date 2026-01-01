@@ -13,7 +13,9 @@ import DependentTypesParser
       parseTypeDeclaration, validateDependentTypeSyntax )
 import Parser (parseTypus)
 import SourceLocation (SourcePos(..), SourceSpan(..), posAtLineCol, spanBetween)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (nub)
 import qualified Data.Map as Map
 import Data.Text (Text, pack, unpack)
 
@@ -82,7 +84,7 @@ tests =
             let input = "type Matrix(m: Nat, n: Nat) where m > 0 && n > 0 && len(data) == m * n"
                 result = validateDependentTypeSyntax input
             case result of
-                Left errors -> length errors >= 0 @?= True
+                Left errors -> L.length errors >= 0 @?= True
                 Right parsed -> @?= True True
 
         , testCase "generic type validation" $ do
@@ -96,14 +98,14 @@ tests =
             let input = unlines
                   [ "type NonEmptyList(T: Type) where len(data) > 0"
                   , "struct {"
-                  , "  head: T"
-                  , "  tail: List(T)"
-                  , "  length: Nat where length == len(tail) + 1"
+                  , "  L.head: T"
+                  , "  L.tail: List(T)"
+                  , "  L.length: Nat where L.length == len(L.tail) + 1"
                   , "}"
                   ]
                 result = validateDependentTypeSyntax input
             case result of
-                Left errors -> length errors >= 0 @?= True
+                Left errors -> L.length errors >= 0 @?= True
                 Right parsed -> @?= True True
 
         , testCase "type alias validation" $ do
@@ -137,7 +139,7 @@ tests =
             let input = "type Invalid(n: Nat) where n > n"  -- Self-referential constraint
                 result = validateDependentTypeSyntax input
             case result of
-                Left errors -> length errors > 0 @?= True
+                Left errors -> L.length errors > 0 @?= True
                 Right parsed -> @?= False True
         ]
     ]
@@ -145,11 +147,11 @@ tests =
 -- | 类型定义具有有效名称
 prop_typeDefinitionValidNames :: String -> Property
 prop_typeDefinitionValidNames typeName =
-  not (null typeName) && all isAlphaNum typeName ==>
+  not (null typeName) && L.all isAlphaNum typeName ==>
   let input = "type " ++ typeName ++ " = Nat"
       result = validateDependentTypeSyntax input
   in case result of
-       Left errors -> not (any (isInfixOf "invalid name" . unpack) errors)
+       Left errors -> not (L.any (L.isInfixOf "invalid name" . unpack) errors)
        Right _ -> True
 
 -- | 类型定义保留结构
@@ -164,11 +166,11 @@ propTypeDefinitionPreserveStructure input =
 -- | 类型定义处理泛型
 propTypeDefinitionHandleGenerics :: String -> Property
 propTypeDefinitionHandleGenerics paramName =
-  not (null paramName) && all isAlphaNum paramName ==>
+  not (null paramName) && L.all isAlphaNum paramName ==>
   let input = "type Container(" ++ paramName ++ ": Type) where true"
       result = validateDependentTypeSyntax input
   in case result of
-       Left errors -> not (any (isInfixOf "parameter" . unpack) errors)
+       Left errors -> not (L.any (L.isInfixOf "parameter" . unpack) errors)
        Right _ -> True
 
 -- | 类型定义验证约束
@@ -177,7 +179,7 @@ propTypeDefinitionValidateConstraints constraint =
   let input = "type TestType where " ++ constraint
       result = validateDependentTypeSyntax input
   in case result of
-       Left errors -> length errors >= 0
+       Left errors -> L.length errors >= 0
        Right _ -> True
 
 -- | 约束在语法上有效
@@ -186,17 +188,17 @@ prop_constraintsSyntacticallyValid constraint =
   let input = "type TestType where " ++ constraint
       result = validateDependentTypeSyntax input
   in case result of
-       Left errors -> length errors >= 0
+       Left errors -> L.length errors >= 0
        Right _ -> True
 
 -- | 约束尊重类型参数
 prop_constraintsRespectTypeParameters :: String -> String -> Property
 prop_constraintsRespectTypeParameters paramName constraint =
-  not (null paramName) && all isAlphaNum paramName ==>
+  not (null paramName) && L.all isAlphaNum paramName ==>
   let input = "type TestType(" ++ paramName ++ ": Nat) where " ++ constraint
       result = validateDependentTypeSyntax input
   in case result of
-       Left errors -> length errors >= 0
+       Left errors -> L.length errors >= 0
        Right _ -> True
 
 -- | 约束正确限定作用域
@@ -205,7 +207,7 @@ prop_constraintsProperlyScoped input =
   let testInput = "type TestType where " ++ input
       result = validateDependentTypeSyntax testInput
   in case result of
-       Left errors -> length errors >= 0
+       Left errors -> L.length errors >= 0
        Right _ -> True
 
 -- | 约束可以组合
@@ -216,29 +218,29 @@ prop_constraintsCanBeCombined constraints =
       input = "type TestType where " ++ constraintStr
       result = validateDependentTypeSyntax input
   in case result of
-       Left errors -> length errors >= 0
+       Left errors -> L.length errors >= 0
        Right _ -> True
 
 -- | 泛型类型保留参数名称
 prop_genericTypesPreserveParameterNames :: [String] -> Property
 prop_genericTypesPreserveParameterNames paramNames =
-  all (not . null) paramNames && all (all isAlphaNum) paramNames ==>
-  let paramStr = concat $ intersperse ", " (map (\name -> name ++ ": Type") paramNames)
+  L.all (not . null) paramNames && L.all (L.all isAlphaNum) paramNames ==>
+  let paramStr = L.concat $ intersperse ", " (L.map (\name -> name ++ ": Type") paramNames)
       input = "type GenericType(" ++ paramStr ++ ") where true"
       result = validateDependentTypeSyntax input
   in case result of
-       Left errors -> not (any (isInfixOf "parameter" . unpack) errors)
+       Left errors -> not (L.any (L.isInfixOf "parameter" . unpack) errors)
        Right _ -> True
 
 -- | 泛型类型处理多个参数
 prop_genericTypesHandleMultipleParameters :: [String] -> Property
 prop_genericTypesHandleMultipleParameters paramNames =
-  length paramNames <= 5 && all (not . null) paramNames && all (all isAlphaNum) paramNames ==>
-  let paramStr = concat $ intersperse ", " (map (\name -> name ++ ": Type") paramNames)
+  L.length paramNames <= 5 && L.all (not . null) paramNames && L.all (L.all isAlphaNum) paramNames ==>
+  let paramStr = L.concat $ intersperse ", " (L.map (\name -> name ++ ": Type") paramNames)
       input = "type MultiGeneric(" ++ paramStr ++ ") where true"
       result = validateDependentTypeSyntax input
   in case result of
-       Left errors -> length errors >= 0
+       Left errors -> L.length errors >= 0
        Right _ -> True
 
 -- | 泛型类型支持嵌套
@@ -247,7 +249,7 @@ prop_genericTypesSupportNesting input =
   let nestedInput = "type Nested(T: Type) where len(" ++ input ++ ") > 0"
       result = validateDependentTypeSyntax nestedInput
   in case result of
-       Left errors -> length errors >= 0
+       Left errors -> L.length errors >= 0
        Right _ -> True
 
 -- | 泛型类型验证使用
@@ -256,35 +258,35 @@ prop_genericTypesValidateUsage input =
   let testInput = "type TestType(T: Type) where " ++ input
       result = validateDependentTypeSyntax testInput
   in case result of
-       Left errors -> length errors >= 0
+       Left errors -> L.length errors >= 0
        Right _ -> True
 
 -- | 结构体具有有效字段定义
 prop_structsValidFieldDefinitions :: [(String, String)] -> Property
 prop_structsValidFieldDefinitions fields =
-  all (not . null . fst) fields && all (all isAlphaNum . fst) fields ==>
-  let fieldStr = concat $ intersperse ", " (map (\(name, typ) -> name ++ ": " ++ typ) fields)
+  L.all (not . null . fst) fields && L.all (L.all isAlphaNum . fst) fields ==>
+  let fieldStr = L.concat $ intersperse ", " (L.map (\(name, typ) -> name ++ ": " ++ typ) fields)
       input = "type StructType struct { " ++ fieldStr ++ " }"
       result = validateDependentTypeSyntax input
   in case result of
-       Left errors -> length errors >= 0
+       Left errors -> L.length errors >= 0
        Right _ -> True
 
 -- | 结构体强制字段名称唯一性
 prop_structsEnforceFieldUniqueness :: [String] -> Property
 prop_structsEnforceFieldUniqueness fieldNames =
   let uniqueNames = nub fieldNames
-      hasDuplicates = length fieldNames /= length uniqueNames
+      hasDuplicates = L.length fieldNames /= L.length uniqueNames
       fields = zip fieldNames (repeat "Type")
-      fieldStr = concat $ intersperse ", " (map (\(name, typ) -> name ++ ": " ++ typ) fields)
+      fieldStr = L.concat $ intersperse ", " (L.map (\(name, typ) -> name ++ ": " ++ typ) fields)
       input = "type StructType struct { " ++ fieldStr ++ " }"
       result = validateDependentTypeSyntax input
   in if hasDuplicates
      then case result of
-            Left errors -> any (isInfixOf "duplicate" . unpack) errors
+            Left errors -> L.any (L.isInfixOf "duplicate" . unpack) errors
             Right _ -> False
      else case result of
-            Left errors -> not (any (isInfixOf "duplicate" . unpack) errors)
+            Left errors -> not (L.any (L.isInfixOf "duplicate" . unpack) errors)
             Right _ -> True
 
 -- | 结构体支持依赖字段类型
@@ -293,13 +295,13 @@ prop_structsSupportDependentFieldTypes constraint =
   let input = "type DependentStruct struct { field: Type where " ++ constraint ++ " }"
       result = validateDependentTypeSyntax input
   in case result of
-       Left errors -> length errors >= 0
+       Left errors -> L.length errors >= 0
        Right _ -> True
 
 -- | 结构体处理递归定义
 prop_structsHandleRecursiveDefinitions :: String -> Property
 prop_structsHandleRecursiveDefinitions typeName =
-  not (null typeName) && all isAlphaNum typeName ==>
+  not (null typeName) && L.all isAlphaNum typeName ==>
   let input = unlines
         [ "type " ++ typeName ++ " struct {"
         , "  value: Type"
@@ -308,7 +310,7 @@ prop_structsHandleRecursiveDefinitions typeName =
         ]
       result = validateDependentTypeSyntax input
   in case result of
-       Left errors -> length errors >= 0
+       Left errors -> L.length errors >= 0
        Right _ -> True
 
 -- | 别名保留目标类型
@@ -317,28 +319,28 @@ prop_aliasesPreserveTargetType targetType =
   let input = "type Alias = " ++ targetType
       result = validateDependentTypeSyntax input
   in case result of
-       Left errors -> length errors >= 0
+       Left errors -> L.length errors >= 0
        Right _ -> True
 
 -- | 别名支持泛型参数
 prop_aliasesSupportGenericParameters :: [String] -> Property
 prop_aliasesSupportGenericParameters paramNames =
-  all (not . null) paramNames && all (all isAlphaNum) paramNames ==>
-  let paramStr = concat $ intersperse ", " paramNames
+  L.all (not . null) paramNames && L.all (L.all isAlphaNum) paramNames ==>
+  let paramStr = L.concat $ intersperse ", " paramNames
       input = "type Alias(" ++ paramStr ++ ") = Type"
       result = validateDependentTypeSyntax input
   in case result of
-       Left errors -> length errors >= 0
+       Left errors -> L.length errors >= 0
        Right _ -> True
 
 -- | 别名防止循环定义
 prop_aliasesPreventCircularDefinitions :: String -> Property
 prop_aliasesPreventCircularDefinitions typeName =
-  not (null typeName) && all isAlphaNum typeName ==>
+  not (null typeName) && L.all isAlphaNum typeName ==>
   let input = "type " ++ typeName ++ " = " ++ typeName
       result = validateDependentTypeSyntax input
   in case result of
-       Left errors -> any (isInfixOf "circular" . unpack) errors
+       Left errors -> L.any (L.isInfixOf "circular" . unpack) errors
        Right _ -> False
 
 -- | 别名正确解析
@@ -347,7 +349,7 @@ prop_aliasesResolveCorrectly targetType =
   let input = "type Alias = " ++ targetType
       result = validateDependentTypeSyntax input
   in case result of
-       Left errors -> not (null targetType) || length errors > 0
+       Left errors -> not (null targetType) || L.length errors > 0
        Right _ -> True
 
 -- | 类型推断尊重约束
@@ -356,7 +358,7 @@ prop_typeInferenceRespectsConstraints constraint =
   let input = "type TestType where " ++ constraint
       result = validateDependentTypeSyntax input
   in case result of
-       Left errors -> length errors >= 0
+       Left errors -> L.length errors >= 0
        Right _ -> True
 
 -- | 类型推断处理复杂表达式
@@ -365,7 +367,7 @@ prop_typeInferenceHandlesComplexExpressions expression =
   let input = "type TestType where " ++ expression
       result = validateDependentTypeSyntax input
   in case result of
-       Left errors -> length errors >= 0
+       Left errors -> L.length errors >= 0
        Right _ -> True
 
 -- | 类型推断提供有用错误
@@ -374,7 +376,7 @@ prop_typeInferenceProvidesUsefulErrors input =
   let testInput = "type TestType where " ++ input
       result = validateDependentTypeSyntax testInput
   in case result of
-       Left errors -> all (not . null . unpack) errors
+       Left errors -> L.all (not . null . unpack) errors
        Right _ -> True
 
 -- | 类型推断是确定性的
@@ -383,7 +385,7 @@ prop_typeInferenceDeterministic input =
   let result1 = validateDependentTypeSyntax input
       result2 = validateDependentTypeSyntax input
   in case (result1, result2) of
-       (Left errors1, Left errors2) -> length errors1 == length errors2
+       (Left errors1, Left errors2) -> L.length errors1 == L.length errors2
        (Right _, Right _) -> True
        _ -> False -- Should be consistent success/failure
 
@@ -392,7 +394,7 @@ prop_errorMessagesInformative :: String -> Property
 prop_errorMessagesInformative input =
   let result = validateDependentTypeSyntax input
   in case result of
-       Left errors -> all (not . null . unpack) errors
+       Left errors -> L.all (not . null . unpack) errors
        Right _ -> True
 
 -- | 错误位置准确
@@ -416,7 +418,7 @@ prop_multipleErrorsCollected :: String -> Property
 prop_multipleErrorsCollected input =
   let result = validateDependentTypeSyntax input
   in case result of
-       Left errors -> length errors >= 0
+       Left errors -> L.length errors >= 0
        Right _ -> True
 
 -- Helper functions

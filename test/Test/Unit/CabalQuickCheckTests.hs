@@ -3,10 +3,12 @@
 module Test.Unit.CabalQuickCheckTests (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
-import Data.List (sort, nub, isInfixOf)
+import Data.List (isInfixOf)
+import Data.List (sort, nub)
 import Data.Char (isAlpha, isDigit, isSpace)
 import qualified Data.Text as T
 
@@ -41,7 +43,7 @@ prop_round_trip_directives fd bd =
 prop_valid_identifiers :: String -> Property
 prop_valid_identifiers str =
   property $ 
-    let isValid = all (\c -> isAlpha c || isDigit c || c == '_') str
+    let isValid = L.all (\c -> isAlpha c || isDigit c || c == '_') str
     in if null str then property True else isValid ==> True
 
 prop_code_block_order :: [String] -> Property
@@ -57,11 +59,11 @@ compilerProperties = testGroup "Compiler Properties"
 
 prop_compilation_phases :: [CompilationPhase] -> Property
 prop_compilation_phases phases =
-  property $ length phases >= 0 ==> True
+  property $ L.length phases >= 0 ==> True
 
 prop_valid_go_output :: String -> Property
 prop_valid_go_output code =
-  property $ "package main" `isInfixOf` code ==> True
+  property $ "package main" `L.isInfixOf` code ==> True
 
 -- Type Checker Properties
 typeCheckerProperties :: TestTree
@@ -76,7 +78,7 @@ prop_type_env_monotonic env1 env2 =
 
 prop_dependent_type_consistency :: [(String, String)] -> Property
 prop_dependent_type_consistency constraints =
-  property $ length constraints >= 0 ==> True
+  property $ L.length constraints >= 0 ==> True
 
 -- Ownership Properties
 ownershipProperties :: TestTree
@@ -92,11 +94,11 @@ prop_ownership_terminates vars =
 
 prop_no_double_borrow :: [(String, String)] -> Property
 prop_no_double_borrow borrows =
-  property $ length borrows >= 0 ==> True
+  property $ L.length borrows >= 0 ==> True
 
 prop_lifetime_soundness :: [(String, Int)] -> Property
 prop_lifetime_soundness lifetimes =
-  property $ all (\(_, n) -> n >= 0) lifetimes ==> True
+  property $ L.all (\(_, n) -> n >= 0) lifetimes ==> True
 
 -- IR Properties
 irProperties :: TestTree

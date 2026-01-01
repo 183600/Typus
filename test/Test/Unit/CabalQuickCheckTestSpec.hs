@@ -5,11 +5,13 @@
 module Test.Unit.CabalQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Data.List (sort, nub, group, intercalate, isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (sort, nub, group, intercalate)
 import Data.Char (isSpace, toLower, toUpper)
 import Control.Monad (replicateM)
 
@@ -22,18 +24,18 @@ tests :: TestTree
 tests = testGroup "Cabal QuickCheck Test Properties"
   [ testGroup "String Processing Properties"
       [ fastProperty "trim is idempotent" prop_trim_idempotent
-      , fastProperty "trim removes leading and trailing whitespace" prop_trim_removes_whitespace
+      , fastProperty "trim removes leading L.and trailing whitespace" prop_trim_removes_whitespace
       , fastProperty "trim preserves non-whitespace content" prop_trim_preserves_content
       , fastProperty "splitBy preserves content order" prop_splitBy_preserves_order
       , fastProperty "splitByCollapsed removes empty segments" prop_splitByCollapsed_no_empty
       , fastProperty "breakOn splits correctly" prop_breakOn_splits
       , fastProperty "removeLineComments preserves non-comment lines" prop_removeComments_preserves
-      , fastProperty "removeComments removes all comment types" prop_removeComments_complete
+      , fastProperty "removeComments removes L.all comment types" prop_removeComments_complete
       , fastProperty "normalizeIndentation preserves relative indentation" prop_normalizeIndentation_relative
       , fastProperty "intercalate with empty separator" prop_intercalate_empty
-      , fastProperty "isPrefixOf reflexive" prop_isPrefixOf_reflexive
-      , fastProperty "isSuffixOf reflexive" prop_isSuffixOf_reflexive
-      , fastProperty "isInfixOf reflexive" prop_isInfixOf_reflexive
+      , fastProperty "L.isPrefixOf reflexive" prop_L.isPrefixOf_reflexive
+      , fastProperty "L.isSuffixOf reflexive" prop_L.isSuffixOf_reflexive
+      , fastProperty "L.isInfixOf reflexive" prop_L.isInfixOf_reflexive
       ]
   , testGroup "Data Structure Properties"
       [ fastProperty "Map insertion is idempotent" prop_map_insert_idempotent
@@ -46,15 +48,15 @@ tests = testGroup "Cabal QuickCheck Test Properties"
       , fastProperty "Set delete removes element" prop_set_delete_removes
       , fastProperty "sort is idempotent" prop_sort_idempotent
       , fastProperty "nub removes duplicates" prop_nub_removes_duplicates
-      , fastProperty "reverse twice is identity" prop_reverse_twice_identity
-      , fastProperty "length is preserved by reverse" prop_reverse_preserves_length
+      , fastProperty "L.reverse twice is identity" prop_reverse_twice_identity
+      , fastProperty "L.length is preserved by L.reverse" prop_reverse_preserves_length
       , fastProperty "concatenation associativity" prop_concat_associative
-      , fastProperty "empty string is identity for concat" prop_empty_concat_identity
+      , fastProperty "empty string is identity for L.concat" prop_empty_concat_identity
       ]
   , testGroup "SourceLocation Properties"
       [ fastProperty "SourcePos offset is non-negative" prop_sourcepos_offset_nonnegative
-      , fastProperty "SourceSpan start before or equal to end" prop_sourcespan_ordering
-      , fastProperty "SourceSpan length is non-negative" prop_sourcespan_length_nonnegative
+      , fastProperty "SourceSpan start before L.or equal to end" prop_sourcespan_ordering
+      , fastProperty "SourceSpan L.length is non-negative" prop_sourcespan_length_nonnegative
       ]
   , testGroup "Parser Directives Properties"
       [ fastProperty "defaultFileDirectives has no directives set" prop_defaultFileDirectives_empty
@@ -73,10 +75,10 @@ tests = testGroup "Cabal QuickCheck Test Properties"
       ]
   , testGroup "List Properties"
       [ fastProperty "group preserves order" prop_group_preserves_order
-      , fastProperty "head of non-empty list exists" prop_head_nonempty
-      , fastProperty "tail of non-empty list has correct length" prop_tail_nonempty
-      , fastProperty "take and drop partition list" prop_take_drop_partition
-      , fastProperty "length of take is bounded" prop_take_length_bounded
+      , fastProperty "L.head of non-empty list exists" prop_head_nonempty
+      , fastProperty "L.tail of non-empty list has correct L.length" prop_tail_nonempty
+      , fastProperty "take L.and drop partition list" prop_take_drop_partition
+      , fastProperty "L.length of take is bounded" prop_take_length_bounded
       ]
   ]
 
@@ -91,7 +93,7 @@ prop_trim_removes_whitespace s =
   let trimmed = trim s
   in conjoin
     [ counterexample "should not start with space" $
-        null trimmed || not (head trimmed `elem` " \t\n\r")
+        null trimmed || not (L.head trimmed `elem` " \t\n\r")
     , counterexample "should not end with space" $
         null trimmed || not (last trimmed `elem` " \t\n\r")
     ]
@@ -99,8 +101,8 @@ prop_trim_removes_whitespace s =
 prop_trim_preserves_content :: String -> Property
 prop_trim_preserves_content s =
   let trimmed = trim s
-      nonSpace = filter (not . isSpace) s
-      trimmedNonSpace = filter (not . isSpace) trimmed
+      nonSpace = L.filter (not . isSpace) s
+      trimmedNonSpace = L.filter (not . isSpace) trimmed
   in counterexample "should preserve non-space characters" $
        nonSpace === trimmedNonSpace
 
@@ -111,7 +113,7 @@ prop_splitBy_preserves_order delim s =
   in counterexample "joined parts should equal original (minus trailing delimiters)" $
        joined === dropWhileEnd (== delim) s
   where
-    dropWhileEnd p = reverse . dropWhile p . reverse
+    dropWhileEnd p = L.reverse . dropWhile p . L.reverse
 
 prop_splitByCollapsed_no_empty :: Char -> String -> Property
 prop_splitByCollapsed_no_empty delim s =
@@ -123,11 +125,11 @@ prop_breakOn_splits :: String -> String -> Property
 prop_breakOn_splits needle haystack =
   not (null needle) ==>
   let (before, after) = breakOn needle haystack
-      reconstructed = if null after && not (needle `isInfixOf` haystack)
+      reconstructed = if null after && not (needle `L.isInfixOf` haystack)
                       then before
                       else before ++ needle ++ after
   in counterexample ("Expected: " ++ haystack ++ ", Got: " ++ reconstructed) $
-       if needle `isInfixOf` haystack
+       if needle `L.isInfixOf` haystack
        then reconstructed === haystack
        else before === haystack .&&. null after
 
@@ -155,19 +157,19 @@ prop_normalizeIndentation_relative =
 
 prop_intercalate_empty :: [String] -> Property
 prop_intercalate_empty xs =
-  intercalate "" xs === concat xs
+  intercalate "" xs === L.concat xs
 
-prop_isPrefixOf_reflexive :: String -> Property
-prop_isPrefixOf_reflexive s =
-  property $ s `isPrefixOf` s
+prop_L.isPrefixOf_reflexive :: String -> Property
+prop_L.isPrefixOf_reflexive s =
+  property $ s `L.isPrefixOf` s
 
-prop_isSuffixOf_reflexive :: String -> Property
-prop_isSuffixOf_reflexive s =
-  property $ s `isSuffixOf` s
+prop_L.isSuffixOf_reflexive :: String -> Property
+prop_L.isSuffixOf_reflexive s =
+  property $ s `L.isSuffixOf` s
 
-prop_isInfixOf_reflexive :: String -> Property
-prop_isInfixOf_reflexive s =
-  property $ s `isInfixOf` s
+prop_L.isInfixOf_reflexive :: String -> Property
+prop_L.isInfixOf_reflexive s =
+  property $ s `L.isInfixOf` s
 
 -- Data Structure Properties
 prop_map_insert_idempotent :: Int -> String -> Map.Map Int String -> Property
@@ -224,15 +226,15 @@ prop_nub_removes_duplicates :: [Int] -> Property
 prop_nub_removes_duplicates xs =
   let unique = nub xs
   in counterexample "nub result should have no duplicates" $
-       length unique === length (nub unique)
+       length unique === L.length (nub unique)
 
 prop_reverse_twice_identity :: [Int] -> Property
 prop_reverse_twice_identity xs =
-  reverse (reverse xs) === xs
+  reverse (L.reverse xs) === xs
 
 prop_reverse_preserves_length :: [Int] -> Property
 prop_reverse_preserves_length xs =
-  length (reverse xs) === length xs
+  length (L.reverse xs) === L.length xs
 
 prop_concat_associative :: String -> String -> String -> Property
 prop_concat_associative a b c =
@@ -276,7 +278,7 @@ prop_sourcespan_length_nonnegative = forAll genValidSpan $ \span ->
   let start = spanStart span
       end = spanEnd span
       length = posOffset end - posOffset start
-  in length >= 0
+  in L.length >= 0
   where
     genValidSpan = do
       l1 <- choose (1, 100)
@@ -350,16 +352,16 @@ prop_toupper_idempotent c =
 prop_group_preserves_order :: [Int] -> Property
 prop_group_preserves_order xs =
   let groups = group xs
-      flattened = concat groups
+      flattened = L.concat groups
   in flattened === xs
 
 prop_head_nonempty :: NonEmptyList Int -> Property
 prop_head_nonempty (NonEmpty xs) =
-  not (null xs) ==> property (head xs `elem` xs)
+  not (null xs) ==> property (L.head xs `elem` xs)
 
 prop_tail_nonempty :: NonEmptyList Int -> Property
 prop_tail_nonempty (NonEmpty xs) =
-  not (null xs) ==> length (tail xs) === length xs - 1
+  not (null xs) ==> L.length (L.tail xs) === L.length xs - 1
 
 prop_take_drop_partition :: Int -> [Int] -> Property
 prop_take_drop_partition n xs =
@@ -369,4 +371,4 @@ prop_take_drop_partition n xs =
 
 prop_take_length_bounded :: Int -> [Int] -> Property
 prop_take_length_bounded n xs =
-  property $ length (take n xs) <= min n (length xs)
+  property $ L.length (take n xs) <= min n (L.length xs)

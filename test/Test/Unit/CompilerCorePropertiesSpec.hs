@@ -10,6 +10,7 @@
 module Test.Unit.CompilerCorePropertiesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import TestSupport.Arbitrary ()
@@ -77,7 +78,7 @@ prop_default_block_directives =
 prop_located_preserves_span :: SourceSpan -> String -> Property
 prop_located_preserves_span span str =
   let located = locatedWithSpan span str
-      mapped = mapLocated reverse located
+      mapped = mapLocated L.reverse located
   in locatedSpan located === locatedSpan mapped .&&.
      locatedSpan mapped === span
 
@@ -105,8 +106,8 @@ prop_located_nesting outerPos innerPos str =
 prop_position_tracking_multiline :: [String] -> Property
 prop_position_tracking_multiline lines =
   let text = unlines lines
-      finalPos = foldl (flip posAfter) startPos text
-  in posLine finalPos === 6 .&&. posOffset finalPos === length text
+      finalPos = L.foldl (flip posAfter) startPos text
+  in posLine finalPos === 6 .&&. posOffset finalPos === L.length text
 
 -- Property: Tab expansion preserves character count consistency
 prop_tab_expansion_consistency :: Int -> Int -> Property
@@ -179,7 +180,7 @@ prop_span_validation_edge_cases =
 -- Property: Large text position tracking is linear time
 prop_large_text_position_tracking :: Property
 prop_large_text_position_tracking =
-  let largeText = concat (replicate 10000 "a\n")
+  let largeText = L.concat (replicate 10000 "a\n")
       finalPos = advancePosBy largeText startPos
   in posLine finalPos === 10001 .&&.
      posColumn finalPos === 1 .&&.

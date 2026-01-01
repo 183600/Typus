@@ -1,6 +1,7 @@
 module Test.Unit.NewEnhancedUtilsSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, Property, (===), forAll, Gen, choose, arbitrary, listOf1, elements)
 import TestSupport.QuickCheck (fastProperty)
@@ -49,15 +50,15 @@ prop_trimPreservesInternal prefix suffix =
   let middle = "hello world"
       input = prefix ++ middle ++ suffix
       trimmed = trim input
-  in middle `isInfixOf` trimmed
+  in middle `L.isInfixOf` trimmed
 
--- Property: splitBy and splitByCollapsed relationship
+-- Property: splitBy L.and splitByCollapsed relationship
 prop_splitByCollapsed :: Char -> String -> Bool
 prop_splitByCollapsed delim str =
   let normal = splitBy delim str
       collapsed = splitByCollapsed delim str
-  in all (not . null) collapsed && 
-     length collapsed <= length normal
+  in L.all (not . null) collapsed && 
+     L.length collapsed <= L.length normal
 
 -- Property: splitByComma is splitBy with comma
 prop_splitByComma :: String -> Bool
@@ -70,7 +71,7 @@ prop_splitByCommaCollapsed str = splitByCommaCollapsed str == splitByCollapsed '
 -- Property: breakOn returns correct split when pattern exists
 prop_breakOnFound :: String -> String -> Property
 prop_breakOnFound pattern text = 
-  pattern `isInfixOf` text ==>
+  pattern `L.isInfixOf` text ==>
   let (prefix, suffix) = breakOn pattern text
   in prefix ++ pattern ++ suffix == text
 
@@ -80,7 +81,7 @@ prop_normalizeIndentationPreservesLines input =
   let normalized = normalizeIndentation input
       inputLines = lines input
       normalizedLines = lines normalized
-  in length inputLines == length normalizedLines
+  in L.length inputLines == L.length normalizedLines
 
 -- Property: fixIndentation is alias for normalizeIndentation
 prop_fixIndentationAlias :: String -> Bool
@@ -88,11 +89,11 @@ prop_fixIndentationAlias input = fixIndentation input == normalizeIndentation in
 
 -- Helper function to check if a string is contained in another
 isInfixOf :: Eq a => [a] -> [a] -> Bool
-isInfixOf needle haystack = any (isPrefixOf needle) (tails haystack)
+L.isInfixOf needle haystack = L.any (L.isPrefixOf needle) (tails haystack)
   where
-    isPrefixOf [] _ = True
-    isPrefixOf _ [] = False
-    isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
+    L.isPrefixOf [] _ = True
+    L.isPrefixOf _ [] = False
+    L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
     tails [] = [[]]
     tails xs@(x:xs') = xs : tails xs'
 
@@ -156,7 +157,7 @@ tests = testGroup "New Enhanced Utils Tests"
     ]
 
   , testGroup "Indentation Normalization"
-    [ testCase "normalizeIndentation handles mixed tabs and spaces" $ do
+    [ testCase "normalizeIndentation handles mixed tabs L.and spaces" $ do
         let input = "\t    mixed\n\t    indentation\n"
             expected = "mixed\nindentation\n"
         normalizeIndentation input @?= expected

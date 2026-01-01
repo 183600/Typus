@@ -2,6 +2,7 @@
 module Test.Unit.OwnershipAnalysisBasicSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertBool, assertEqual, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck ((===), Property, forAll, Gen, elements, listOf, choose, suchThat)
@@ -46,7 +47,7 @@ testOwnershipTransfer = testGroup "Ownership Transfer"
   , testCase "copy semantics" testCopySemantics
   ]
 
--- | Test borrowing rules and lifetimes
+-- | Test borrowing rules L.and lifetimes
 testBorrowingRules :: TestTree
 testBorrowingRules = testGroup "Borrowing Rules"
   [ fastProperty "immutable borrow allows multiple borrows" prop_immutableBorrowAllowsMultiple
@@ -122,8 +123,8 @@ prop_copyWorksOnCopyableTypes value =
 prop_immutableBorrowAllowsMultiple :: String -> [String] -> Property
 prop_immutableBorrowAllowsMultiple owner borrowers =
   let ownerType = Own.Owned owner
-      borrowTypes = map (\b -> Own.Borrowed owner) borrowers
-      hasMultipleBorrows = length borrowTypes > 0
+      borrowTypes = L.map (\b -> Own.Borrowed owner) borrowers
+      hasMultipleBorrows = L.length borrowTypes > 0
   in hasMultipleBorrows === True
 
 prop_mutBorrowExcludesOthers :: String -> Property

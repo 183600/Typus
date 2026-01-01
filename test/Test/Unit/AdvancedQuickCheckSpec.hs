@@ -10,7 +10,9 @@ import TestSupport.ExtendedArbitrary ()
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import Data.List (isInfixOf, nub, sort)
+import qualified Data.List as L
+import Data.List (isInfixOf)
+import Data.List (nub, sort)
 
 import Compiler.TypeChecker (Type(..), TypeEnv(..))
 import Analyzer.Types (SymbolInfo(..), AnalysisResult(..))
@@ -30,7 +32,7 @@ prop_ast_structure_consistency statements =
   not (null statements) ==> 
   let ast = Program statements
   in property $ case ast of
-    Program stmts -> length stmts == length statements
+    Program stmts -> L.length stmts == L.length statements
     _ -> False
 
 -- Property: Type constraint solving
@@ -45,7 +47,7 @@ prop_symbol_table_consistency symbols =
   not (null symbols) ==> 
   let symbolMap = Map.fromList symbols
       uniqueNames = nub (map fst symbols)
-  in property $ Map.size symbolMap === length uniqueNames
+  in property $ Map.size symbolMap === L.length uniqueNames
 
 -- Property: Analysis result merging
 prop_analysis_result_merge :: AnalysisResult -> AnalysisResult -> Property
@@ -66,7 +68,7 @@ prop_topological_sort edges =
   not (null edges) ==> 
   let graph = buildGraph edges
       sorted = topologicalSort graph
-  in property $ length sorted >= 0 -- Stub implementation returns []
+  in property $ L.length sorted >= 0 -- Stub implementation returns []
 
 -- Property: Type unification commutativity
 prop_type_unification_commutative :: Type -> Type -> Property
@@ -88,21 +90,21 @@ prop_constraint_generation :: String -> Property
 prop_constraint_generation expression =
   not (null expression) ==> 
   let constraints = generateConstraints expression
-  in property $ length constraints >= 0
+  in property $ L.length constraints >= 0
 
 -- Property: Type inference completeness
 prop_type_inference_complete :: [String] -> Property
 prop_type_inference_complete expressions =
   not (null expressions) ==> 
   let results = map inferType expressions
-  in property $ length results === length expressions
+  in property $ L.length results === L.length expressions
 
 -- Property: Symbol scope nesting
 prop_symbol_scope_nesting :: [[String]] -> Property
 prop_symbol_scope_nesting scopes =
   not (null scopes) ==> 
   let nestedScopes = buildNestedScopes scopes
-  in property $ length nestedScopes === length scopes
+  in property $ L.length nestedScopes === L.length scopes
 
 -- Property: Ownership transfer validity
 prop_ownership_transfer_valid :: String -> String -> Property
@@ -174,7 +176,7 @@ prop_error_recovery_complete :: [String] -> Property
 prop_error_recovery_complete errors =
   not (null errors) ==> 
   let recovered = recoverFromErrors errors
-  in property $ length recovered >= 0
+  in property $ L.length recovered >= 0
 
 -- Property: Performance regression detection
 prop_performance_regression :: Int -> Property

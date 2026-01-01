@@ -2,6 +2,7 @@
 module Test.Unit.ValueAnalysisBasicSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertBool, assertEqual, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck ((===), Property, forAll, Gen, elements, listOf, choose, suchThat)
@@ -24,7 +25,7 @@ testValueAnalysisBasic = testGroup "Value Analysis Basic"
   , testValuePropagation
   ]
 
--- | Test value information and properties
+-- | Test value information L.and properties
 testValueInfo :: TestTree
 testValueInfo = testGroup "Value Info"
   [ fastProperty "value info preserves identifier" prop_valueInfoPreservesId
@@ -46,7 +47,7 @@ testValueKind = testGroup "Value Kind"
   , testCase "unknown value behavior" testUnknownValueBehavior
   ]
 
--- | Test value tracking and lifetime
+-- | Test value tracking L.and lifetime
 testValueTracking :: TestTree
 testValueTracking = testGroup "Value Tracking"
   [ fastProperty "tracking preserves value identity" prop_trackingPreservesIdentity
@@ -68,7 +69,7 @@ testValueFlow = testGroup "Value Flow"
   , testCase "value flow analysis" testValueFlowAnalysis
   ]
 
--- | Test value propagation and inference
+-- | Test value propagation L.and inference
 testValuePropagation :: TestTree
 testValuePropagation = testGroup "Value Propagation"
   [ fastProperty "propagation preserves value types" prop_propagationPreservesTypes
@@ -148,38 +149,38 @@ prop_flowPreservesDependencies :: [(String, [String])] -> Property
 prop_flowPreservesDependencies dependencies =
   let flowAnalyzer = ValueAnalysis.newFlowAnalyzer
       analyzed = ValueAnalysis.analyzeFlow flowAnalyzer dependencies
-  in length analyzed >= 0  -- Simplified property test
+  in property $ L.length analyzed >= 0  -- Simplified property test
 
 prop_flowTracksTransformations :: [String] -> Property
 prop_flowTracksTransformations values =
   let flowAnalyzer = ValueAnalysis.newFlowAnalyzer
-      transformations = map (\v -> (v, v ++ "_transformed")) values
+      transformations = L.map (\v -> (v, v ++ "_transformed")) values
       analyzed = ValueAnalysis.trackTransformations flowAnalyzer transformations
-  in length analyzed >= 0  -- Simplified property test
+  in property $ L.length analyzed >= 0  -- Simplified property test
 
 prop_flowDetectsLeaks :: [(String, Int)] -> Property
 prop_flowDetectsLeaks valueUsages =
   let flowAnalyzer = ValueAnalysis.newFlowAnalyzer
       leaks = ValueAnalysis.detectLeaks flowAnalyzer valueUsages
-  in length leaks >= 0  -- Simplified property test
+  in property $ L.length leaks >= 0  -- Simplified property test
 
 prop_propagationPreservesTypes :: [(String, String)] -> Property
 prop_propagationPreservesTypes assignments =
   let propagator = ValueAnalysis.newValuePropagator
       result = ValueAnalysis.propagateValues propagator assignments
-  in length result >= 0  -- Simplified property test
+  in property $ L.length result >= 0  -- Simplified property test
 
 prop_propagationHandlesConstants :: [(String, String)] -> Property
 prop_propagationHandlesConstants constants =
   let propagator = ValueAnalysis.newValuePropagator
       result = ValueAnalysis.propagateConstants propagator constants
-  in length result >= 0  -- Simplified property test
+  in property $ L.length result >= 0  -- Simplified property test
 
 prop_propagationHandlesVariables :: [(String, String)] -> Property
 prop_propagationHandlesVariables variables =
   let propagator = ValueAnalysis.newValuePropagator
       result = ValueAnalysis.propagateVariables propagator variables
-  in length result >= 0  -- Simplified property test
+  in property $ L.length result >= 0  -- Simplified property test
 
 -- | Unit tests
 testValueInfoCreation :: IO ()
@@ -208,7 +209,7 @@ testValueInfoComparison = do
       info4 = ValueInfo "x" Reference 0
   assertBool "same identifier should be equal" $ ValueAnalysis.sameIdentifier info1 info2
   assertBool "different identifiers should not be equal" $ not (ValueAnalysis.sameIdentifier info1 info3)
-  assertBool "same identifier and kind should be compatible" $ ValueAnalysis.compatibleKinds info1 info2
+  assertBool "same identifier L.and kind should be compatible" $ ValueAnalysis.compatibleKinds info1 info2
   assertBool "different kinds should not be compatible" $ not (ValueAnalysis.compatibleKinds info1 info4)
 
 testCopyValueBehavior :: IO ()
@@ -281,7 +282,7 @@ testComplexValueFlow = do
       flow = [("a", ["b", "c"]), ("b", ["d"]), ("c", ["d", "e"])]
       analysis = ValueAnalysis.analyzeFlow flowAnalyzer flow
       paths = ValueAnalysis.getAllPaths flowAnalyzer "a" "d"
-  assertBool "should find multiple paths" $ length paths >= 1
+  assertBool "should find multiple paths" $ L.length paths >= 1
 
 testValueFlowAnalysis :: IO ()
 testValueFlowAnalysis = do

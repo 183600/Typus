@@ -7,6 +7,7 @@ import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), forAll, choose, elements)
 import ErrorHandler
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), locatedAt, spanFrom)
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import Data.Maybe (isJust, isNothing)
 
@@ -14,8 +15,8 @@ import Data.Maybe (isJust, isNothing)
 instance Arbitrary String where
   arbitrary = do
     len <- choose (1, 50)
-    elements $ map (:[]) ['a'..'z'] >>= \c -> 
-      return $ concat (replicate len c)
+    elements $ L.map (:[]) ['a'..'z'] >>= \c -> 
+      return $ L.concat (replicate len c)
 
 -- | 生成任意的源位置用于错误测试
 genErrorPos :: Gen SourcePos
@@ -31,21 +32,21 @@ testErrorCreation = testGroup "错误创建和格式化测试"
       let msg = "Test error message"
           pos = SourcePos 1 1
           error = createBasicError msg pos
-      in assertBool "错误消息包含原始消息" (msg `isInfixOf` formatError error)
+      in assertBool "错误消息包含原始消息" (msg `L.isInfixOf` formatError error)
     
   , testCase "创建带位置的错误" $
       let msg = "Position error"
           pos = SourcePos 5 10
           error = createErrorWithLocation msg pos
           formatted = formatError error
-      in assertBool "错误格式包含位置信息" ("5:10" `isInfixOf` formatted)
+      in assertBool "错误格式包含位置信息" ("5:10" `L.isInfixOf` formatted)
     
   , testCase "创建带跨度的错误" $
       let msg = "Span error"
           span = SourceSpan (SourcePos 3 1) (SourcePos 3 10)
           error = createErrorWithSpan msg span
           formatted = formatError error
-      in assertBool "错误格式包含跨度信息" ("3:1-3:10" `isInfixOf` formatted)
+      in assertBool "错误格式包含跨度信息" ("3:1-3:10" `L.isInfixOf` formatted)
   ]
 
 -- | 测试错误分类
@@ -77,7 +78,7 @@ testErrorAggregation = testGroup "错误聚合测试"
                    , createBasicError "Error 3" (SourcePos 3 3)
                    ]
           aggregated = aggregateErrors errors
-      in assertBool "聚合包含所有错误" (length aggregated == length errors)
+      in assertBool "聚合包含所有错误" (L.length aggregated == L.length errors)
     
   , testCase "按位置排序错误" $
       let errors = [ createBasicError "Error 1" (SourcePos 3 3)
@@ -94,7 +95,7 @@ testErrorAggregation = testGroup "错误聚合测试"
                    , createWarning "Warning" (SourcePos 3 3)
                    ]
           syntaxErrors = filterByErrorType isSyntaxError errors
-      in length syntaxErrors @?= 1
+      in L.length syntaxErrors @?= 1
   ]
 
 -- | 测试错误恢复
@@ -130,12 +131,12 @@ testErrorHandlerProperties = testGroup "错误处理属性测试"
             error = createBasicError msg pos
             formatted = formatError error
             posStr = show (spLine pos) ++ ":" ++ show (spColumn pos)
-        in posStr `isInfixOf` formatted
+        in posStr `L.isInfixOf` formatted
   
   , testProperty "错误聚合保持数量" $
       \errors -> 
         let aggregated = aggregateErrors errors
-        in length aggregated === length errors
+        in L.length aggregated === L.length errors
   
   , testProperty "排序后位置单调递增" $
       \errors ->
@@ -153,18 +154,18 @@ testErrorContext = testGroup "错误上下文测试"
   [ testCase "错误上下文包含源码行" $
       let error = createBasicError "Error" (SourcePos 2 5)
           context = getErrorContext ["line 1", "line 2 with error", "line 3"] error
-      in assertBool "上下文包含错误行" ("line 2 with error" `isInfixOf` context)
+      in assertBool "上下文包含错误行" ("line 2 with error" `L.isInfixOf` context)
     
   , testCase "错误上下文显示位置标记" $
       let error = createBasicError "Error" (SourcePos 2 10)
           context = getErrorContext ["line 2 with error here"] error
-      in assertBool "上下文包含位置标记" ("^" `isInfixOf` context)
+      in assertBool "上下文包含位置标记" ("^" `L.isInfixOf` context)
     
   , testCase "多行错误上下文" $
       let error = createErrorWithSpan "Multi-line error" 
                    (SourceSpan (SourcePos 2 1) (SourcePos 4 10))
           context = getErrorContext ["line 1", "line 2", "line 3", "line 4", "line 5"] error
-      in assertBool "上下文包含多行" ("line 2" `isInfixOf` context && "line 4" `isInfixOf` context)
+      in assertBool "上下文包含多行" ("line 2" `L.isInfixOf` context && "line 4" `L.isInfixOf` context)
   ]
 
 -- | 边界条件测试
@@ -172,18 +173,18 @@ testBoundaryConditions :: TestTree
 testBoundaryConditions = testGroup "边界条件测试"
   [ testCase "空错误列表" $
       let aggregated = aggregateErrors []
-      in length aggregated @?= 0
+      in L.length aggregated @?= 0
     
   , testCase "空错误消息" $
       let error = createBasicError "" (SourcePos 1 1)
           formatted = formatError error
-      in assertBool "格式化仍然包含位置" ("1:1" `isInfixOf` formatted)
+      in assertBool "格式化仍然包含位置" ("1:1" `L.isInfixOf` formatted)
     
   , testCase "极大位置值" $
       let pos = SourcePos 999999 999999
           error = createBasicError "Large position" pos
           formatted = formatError error
-      in assertBool "处理大位置值" ("999999:999999" `isInfixOf` formatted)
+      in assertBool "处理大位置值" ("999999:999999" `L.isInfixOf` formatted)
   ]
 
 -- | 性能测试
@@ -194,7 +195,7 @@ testPerformanceProperties = testGroup "性能属性测试"
         let numErrors = min 1000 (max 1 n)
             errors = replicate numErrors (createBasicError "Test" (SourcePos 1 1))
             aggregated = aggregateErrors errors
-        in length aggregated === numErrors
+        in L.length aggregated === numErrors
   ]
 
 -- | 组合所有测试

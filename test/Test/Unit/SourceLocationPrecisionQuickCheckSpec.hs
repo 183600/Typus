@@ -8,7 +8,9 @@ import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 
 import qualified Data.Text as T
-import Data.List (isInfixOf, sort)
+import qualified Data.List as L
+import Data.List (isInfixOf)
+import Data.List (sort)
 import Data.Maybe (isJust, isNothing)
 
 import SourceLocation
@@ -97,9 +99,7 @@ testErrorLocationConversionPrecision :: Property
 testErrorLocationConversionPrecision =
   forAll arbitrary $ \pos ->
     forAll arbitrary $ \message ->
-      let error = errorAt pos message
-          errorLoc = toErrorLocation pos
-          errorWithSpanLoc = toErrorLocationWithSpan pos (spanFrom pos pos)
+      let error = errorAt "test-id" pos pos)
       in errorLocation error === errorLoc .&&.
          sourceLine (elPosition errorLoc) === sourceLine pos .&&.
          sourceColumn (elPosition errorLoc) === sourceColumn pos .&&.
@@ -134,24 +134,24 @@ testPositionComparisonPrecision =
               else earlier /= later
          else not earlier .&&. not later -- Different files can't be ordered
 
--- | Test span length calculation precision
+-- | Test span L.length calculation precision
 testSpanLengthCalculationPrecision :: Property
 testSpanLengthCalculationPrecision =
   forAll arbitrary $ \span ->
     if isValidSpan span
     then let start = spanStart span
              end = spanEnd span
-             length = spanLength span
+             L.length = spanLength span
          in if sourceLine start == sourceLine end
-            then length === max 0 (sourceColumn end - sourceColumn start)
-            else length >= 0
+            then L.length === max 0 (sourceColumn end - sourceColumn start)
+            else L.length >= 0
     else spanLength span === 0
 
 -- | Test location tracker state consistency
 testLocationTrackerStateConsistency :: Property
 testLocationTrackerStateConsistency =
   forAll arbitrary $ \positions ->
-    let tracker = foldl (\acc pos -> setCurrentPos pos acc) 
+    let tracker = L.foldl (\acc pos -> setCurrentPos pos acc) 
                         (runLocationTracker getCurrentPos) positions
         finalPos = runLocationTracker getCurrentPos tracker
     in if null positions
@@ -176,12 +176,12 @@ testTextPositionAdvancementPrecision :: Property
 testTextPositionAdvancementPrecision =
   forAll arbitrary $ \pos ->
     forAll arbitrary $ \text ->
-      let linesInText = length $ T.lines $ T.pack text
+      let linesInText = L.length $ T.lines $ T.pack text
           finalPos = foldl advancePos pos text
           expectedLine = sourceLine pos + linesInText
           expectedCol = if linesInText == 0 
-                       then sourceColumn pos + length text
-                       else length $ last $ lines text
+                       then sourceColumn pos + L.length text
+                       else L.length $ last $ lines text
       in sourceLine finalPos === expectedLine .&&.
          sourceColumn finalPos === max 1 expectedCol
 
@@ -213,7 +213,7 @@ testLocationSerializationRoundtrip =
     let serialized = show pos
         -- Note: This would require a readPos function to complete the roundtrip
         -- For now, we just test that serialization produces something
-    in length serialized > 0
+    in L.length serialized > 0
 
 tests :: TestTree
 tests = testGroup "Source Location Precision QuickCheck Tests"
@@ -224,7 +224,7 @@ tests = testGroup "Source Location Precision QuickCheck Tests"
   , testProperty "Error location conversion" testErrorLocationConversionPrecision
   , testProperty "Span validity invariants" testSpanValidityInvariants
   , testProperty "Position comparison" testPositionComparisonPrecision
-  , testProperty "Span length calculation" testSpanLengthCalculationPrecision
+  , testProperty "Span L.length calculation" testSpanLengthCalculationPrecision
   , testProperty "Tracker state consistency" testLocationTrackerStateConsistency
   , testProperty "Span intersection" testSpanIntersectionProperties
   , testProperty "Text position advancement" testTextPositionAdvancementPrecision

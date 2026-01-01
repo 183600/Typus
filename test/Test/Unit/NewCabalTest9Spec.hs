@@ -14,6 +14,7 @@ import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
 import Data.Char (isSpace, isAlpha)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 
 import IntegratedCompiler
@@ -126,7 +127,7 @@ prop_compilation_deterministic code =
        (PipelineSuccess output1, PipelineSuccess output2) -> 
          property $ output1 === output2
        (PipelineError errors1, PipelineError errors2) -> 
-         property $ length errors1 === length errors2
+         property $ L.length errors1 === L.length errors2
        _ -> property $ False
 
 -- 错误传播的完整性：早期阶段的错误应该传播到最终结果

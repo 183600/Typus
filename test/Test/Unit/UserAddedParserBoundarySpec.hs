@@ -1,6 +1,7 @@
 module Test.Unit.UserAddedParserBoundarySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), Gen, choose, oneof, listOf, elements)
 import TestSupport.QuickCheck (fastProperty)
@@ -12,7 +13,7 @@ import SourceLocation (SourceSpan(..), SourcePos(..), isValidSpan)
 tests :: TestTree
 tests =
   testGroup "UserAdded Parser Boundary Conditions"
-    [ testGroup "Empty and minimal input"
+    [ testGroup "Empty L.and minimal input"
         [ testCase "parse empty string returns valid file with no blocks" $ do
             let result = parseTypus "" "empty.typus"
                 expected = TypusFile defaultFileDirectives [] [] []
@@ -43,37 +44,37 @@ tests =
         , testCase "parse file with unknown directive keys" $ do
             let input = "//! unknown=true, other=value\nfunc main() {}\n"
                 result = parseTypus input "unknown.typus"
-            length (tfBlocks result) @?= 1
+            L.length (tfBlocks result) @?= 1
         ]
 
     , testGroup "Block boundary conditions"
         [ testCase "parse file with empty code block" $ do
             let input = "//! ownership=true\n\n//! ownership=false\n\n"
                 result = parseTypus input "emptyblocks.typus"
-            length (tfBlocks result) @?= 2
+            L.length (tfBlocks result) @?= 2
 
         , testCase "parse file with single-character code block" $ do
             let input = "//! ownership=true\nx"
                 result = parseTypus input "singlechar.typus"
                 blocks = tfBlocks result
-            length blocks @?= 1
-            cbContent (head blocks) @?= "x"
+            L.length blocks @?= 1
+            cbContent (L.head blocks) @?= "x"
         ]
 
-    , testGroup "Unicode and encoding edge cases"
+    , testGroup "Unicode L.and encoding edge cases"
         [ testCase "parse file with UTF-8 characters" $ do
             let input = "//! ownership=true\n// 你好世界\nfunc main() { fmt.Println(\"Hello, 世界\") }\n"
                 result = parseTypus input "unicode.typus"
                 blocks = tfBlocks result
-            length blocks @?= 1
-            assertBool "Should contain Unicode characters" $ "世界" `elem` cbContent (head blocks)
+            L.length blocks @?= 1
+            assertBool "Should contain Unicode characters" $ "世界" `elem` cbContent (L.head blocks)
 
         , testCase "parse file with emojis" $ do
             let input = "//! ownership=true\n// 😀 🎉 🚀\nfunc main() {}\n"
                 result = parseTypus input "emoji.typus"
                 blocks = tfBlocks result
-            length blocks @?= 1
-            assertBool "Should contain emoji characters" $ all (`elem` cbContent (head blocks)) ["😀", "🎉", "🚀"]
+            L.length blocks @?= 1
+            assertBool "Should contain emoji characters" $ L.all (`elem` cbContent (L.head blocks)) ["😀", "🎉", "🚀"]
         ]
 
     , testGroup "Property-based edge cases"
@@ -95,7 +96,7 @@ tests =
                   ]
                 result = parseTypus input "errorrecovery.typus"
                 blocks = tfBlocks result
-            length blocks @?= 2
+            L.length blocks @?= 2
         ]
     ]
 
@@ -105,7 +106,7 @@ prop_roundTripSimple directives content =
   let input = "//!" ++ directives ++ "\n" ++ content
       parsed = parseTypus input "roundtrip.typus"
       expectedBlocks = if null content then 0 else 1
-  in length (tfBlocks parsed) == expectedBlocks
+  in L.length (tfBlocks parsed) == expectedBlocks
 
 -- | Property: parse handles arbitrary unicode strings
 prop_unicodeHandling :: String -> Bool

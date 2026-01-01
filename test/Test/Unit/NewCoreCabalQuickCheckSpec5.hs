@@ -1,6 +1,7 @@
 module Test.Unit.NewCoreCabalQuickCheckSpec5 (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 
@@ -16,7 +17,7 @@ tests =
         , fastProperty "ownership type compatibility is symmetric" prop_ownershipTypeCompatibilitySymmetric
         , testCase "ownership type hierarchy" $ do
             let types = [Owned, Shared, Borrowed, Immutable]
-            length types @?= 4
+            L.length types @?= 4
         ]
     , testGroup "Ownership transfer properties"
         [ fastProperty "ownership transfer composition is associative" prop_ownershipTransferAssociative
@@ -47,8 +48,8 @@ tests =
         , fastProperty "ownership transfer chain validation" prop_ownershipTransferChainValidation
         , testCase "empty ownership analysis" $ do
             let analysis = emptyOwnershipAnalysis
-            length (oaTransfers analysis) @?= 0
-            length (oaErrors analysis) @?= 0
+            L.length (oaTransfers analysis) @?= 0
+            L.length (oaErrors analysis) @?= 0
         ]
     ]
 
@@ -133,15 +134,15 @@ prop_circularOwnershipTransferDetection :: [OwnershipType] -> Bool
 prop_circularOwnershipTransferDetection types =
   let transfers = createTransferChain types
       hasCircular = hasCircularTransfer transfers
-      expectedCircular = length types > 3 && hasCycle types
+      expectedCircular = L.length types > 3 && hasCycle types
   in hasCircular == expectedCircular
 
 -- Ownership transfer chain validation
 prop_ownershipTransferChainValidation :: [OwnershipType] -> Bool
 prop_ownershipTransferChainValidation types =
   let transfers = createTransferChain types
-      validChain = all isValidOwnershipTransfer transfers
-      compatibleTypes = all areAdjacentTypesCompatible types
+      validChain = L.all isValidOwnershipTransfer transfers
+      compatibleTypes = L.all areAdjacentTypesCompatible types
   in validChain == compatibleTypes
 
 -- Helper functions
@@ -182,26 +183,26 @@ createTransferChain :: [OwnershipType] -> [OwnershipTransfer]
 createTransferChain [] = []
 createTransferChain [_] = []
 createTransferChain types = 
-  let pairs = zip types (tail types)
-      positions = map (\i -> SourcePos i 1) [1..]
+  let pairs = zip types (L.tail types)
+      positions = L.map (\i -> SourcePos i 1) [1..]
   in zipWith (\(from, to) pos -> createOwnershipTransfer from to pos) pairs positions
 
 hasCircularTransfer :: [OwnershipTransfer] -> Bool
 hasCircularTransfer transfers = 
   let types = concatMap (\t -> [otFrom t, otTo t]) transfers
-      firstType = head types
+      firstType = L.head types
       lastType = last types
-  in length types > 2 && firstType == lastType
+  in L.length types > 2 && firstType == lastType
 
 hasCycle :: [OwnershipType] -> Bool
-hasCycle types = length types > 3 && head types == last types
+hasCycle types = L.length types > 3 && L.head types == last types
 
 areAdjacentTypesCompatible :: [OwnershipType] -> Bool
 areAdjacentTypesCompatible [] = True
 areAdjacentTypesCompatible [_] = True
 areAdjacentTypesCompatible types = 
-  let pairs = zip types (tail types)
-  in all (uncurry areOwnershipTypesCompatible) pairs
+  let pairs = zip types (L.tail types)
+  in L.all (uncurry areOwnershipTypesCompatible) pairs
 
 emptyOwnershipAnalysis :: OwnershipAnalysis
 emptyOwnershipAnalysis = OwnershipAnalysis { oaTransfers = [], oaErrors = [] }

@@ -4,6 +4,7 @@
 module Test.Unit.SimpleDataStructuresQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
 import qualified Data.List as Data.List
@@ -12,7 +13,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 
 -- ============================================================================
--- Collection and Container Properties
+-- Collection L.and Container Properties
 -- ============================================================================
 
 -- Property: Map operations maintain invariants
@@ -41,9 +42,9 @@ prop_list_operations_expected :: [Int] -> Int -> Property
 prop_list_operations_expected originalList value =
   let appended = originalList ++ [value]
       prefixed = value : originalList
-      lengthOriginal = length originalList
-      lengthAppended = length appended
-      lengthPrefixed = length prefixed
+      lengthOriginal = L.length originalList
+      lengthAppended = L.length appended
+      lengthPrefixed = L.length prefixed
       firstElement = case prefixed of
                       [] -> error "Impossible: prefixed list cannot be empty"
                       (x:_) -> x
@@ -59,34 +60,34 @@ prop_list_operations_expected originalList value =
 -- Property: Round-trip transformations preserve data
 prop_roundtrip_transformation_preserve :: [String] -> Property
 prop_roundtrip_transformation_preserve strings =
-  let textList = map (map toUpper) strings
-      backToStrings = map (map toLower) textList
-  in property $ length strings == length backToStrings
+  let textList = L.map (map toUpper) strings
+      backToStrings = L.map (map toLower) textList
+  in property $ L.length strings == L.length backToStrings
 
 -- Property: Sorting maintains order invariants
 prop_sorting_maintains_invariants :: [Int] -> Property
 prop_sorting_maintains_invariants unsorted =
   let sorted = Data.List.sort unsorted
-  in property $ length sorted == length unsorted &&
-                all (`elem` unsorted) sorted &&
+  in property $ L.length sorted == L.length unsorted &&
+                L.all (`elem` unsorted) sorted &&
                 isSorted sorted
 
--- Property: Grouping preserves all elements
+-- Property: Grouping preserves L.all elements
 prop_grouping_preserves_elements :: [(String, Int)] -> Property
 prop_grouping_preserves_elements pairs =
   let grouped = Map.fromListWith (++) [(k, [v]) | (k, v) <- pairs]
-      flattened = concat $ Map.elems grouped
-  in property $ length flattened == length pairs &&
-                all (`elem` (map snd pairs)) flattened
+      flattened = L.concat $ Map.elems grouped
+  in property $ L.length flattened == L.length pairs &&
+                L.all (`elem` (map snd pairs)) flattened
 
 -- Property: Filtering maintains subset relationship
 prop_filtering_maintains_subset :: [Int] -> Property
 prop_filtering_maintains_subset original =
   let filtered = filter even original
-  in property $ all (`elem` original) filtered
+  in property $ L.all (`elem` original) filtered
 
 -- ============================================================================
--- Edge Case and Stress Tests
+-- Edge Case L.and Stress Tests
 -- ============================================================================
 
 -- Property: Empty data structures behave correctly
@@ -104,15 +105,15 @@ prop_large_structures_performance size =
   let largeList = [1..size]
       largeMap = Map.fromList $ zip [1..size] [1..size]
       largeSet = Set.fromList [1..size]
-  in property $ length largeList == size &&
+  in property $ L.length largeList == size &&
                 Map.size largeMap == size &&
                 Set.size largeSet == size
 
 -- Property: Nested data structures maintain invariants
 prop_nested_structures_invariants :: Map.Map String [Set.Set Int] -> Property
 prop_nested_structures_invariants nestedMap =
-  let allSets = concat $ Map.elems nestedMap
-  in property $ all (not . Set.null) allSets || Map.null nestedMap
+  let allSets = L.concat $ Map.elems nestedMap
+  in property $ L.all (not . Set.null) allSets || Map.null nestedMap
 
 -- ============================================================================
 -- Helper Functions
@@ -129,7 +130,7 @@ isSorted (x:y:xs) = x <= y && isSorted (y:xs)
 
 tests :: TestTree
 tests = testGroup "Simple Data Structures QuickCheck Tests"
-  -- Collection and Container tests
+  -- Collection L.and Container tests
   [ testGroup "Collections"
     [ fastProperty "Map operations maintain invariants" prop_map_operations_invariants
     , fastProperty "Set operations maintain invariants" prop_set_operations_invariants
@@ -140,11 +141,11 @@ tests = testGroup "Simple Data Structures QuickCheck Tests"
   , testGroup "Transformations"
     [ fastProperty "Round-trip transformations preserve data" prop_roundtrip_transformation_preserve
     , fastProperty "Sorting maintains order invariants" prop_sorting_maintains_invariants
-    , fastProperty "Grouping preserves all elements" prop_grouping_preserves_elements
+    , fastProperty "Grouping preserves L.all elements" prop_grouping_preserves_elements
     , fastProperty "Filtering maintains subset relationship" prop_filtering_maintains_subset
     ]
   
-  -- Edge Case and Stress tests
+  -- Edge Case L.and Stress tests
   , testGroup "Edge Cases"
     [ fastProperty "Empty data structures behave correctly" prop_empty_structures_correct
     , fastProperty "Large data structures maintain performance" prop_large_structures_performance

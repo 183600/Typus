@@ -8,7 +8,9 @@ import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 
 import qualified Data.Text as T
-import Data.List (isInfixOf, isPrefixOf, intercalate)
+import qualified Data.List as L
+import Data.List (isInfixOf, isPrefixOf)
+import Data.List (intercalate)
 import Data.Char (isSpace)
 
 import Utils
@@ -19,12 +21,12 @@ testTrimProperties :: Property
 testTrimProperties =
   forAll arbitrary $ \text ->
     let trimmed = trim text
-        leadingSpaces = length $ takeWhile isSpace text
-        trailingSpaces = length $ reverse $ takeWhile isSpace $ reverse text
-        expectedLength = length text - leadingSpaces - trailingSpaces
-    in length trimmed === max 0 expectedLength .&&.
-       (if null trimmed then all isSpace text else not (isSpace $ head trimmed)) .&&.
-       (if null trimmed then all isSpace text else not (isSpace $ last trimmed))
+        leadingSpaces = L.length $ takeWhile isSpace text
+        trailingSpaces = L.length $ L.reverse $ takeWhile isSpace $ L.reverse text
+        expectedLength = L.length text - leadingSpaces - trailingSpaces
+    in L.length trimmed === max 0 expectedLength .&&.
+       (if null trimmed then L.all isSpace text else not (isSpace $ L.head trimmed)) .&&.
+       (if null trimmed then L.all isSpace text else not (isSpace $ last trimmed))
 
 -- | Test splitBy function properties
 testSplitByProperties :: Property
@@ -35,7 +37,7 @@ testSplitByProperties =
         joined = intercalate [delim] split
         -- For non-empty delimiters, joining should preserve original structure
       in if delim /= '\0' && not (null text)
-         then length joined >= length text - length split
+         then L.length joined >= L.length text - L.length split
          else property True
 
 -- | Test splitByCollapsed function properties
@@ -45,8 +47,8 @@ testSplitByCollapsedProperties =
     forAll arbitrary $ \delim ->
       let split = splitBy delim text
           collapsed = splitByCollapsed delim text
-      in length collapsed <= length split .&&.
-         all (not . null) collapsed
+      in L.length collapsed <= L.length split .&&.
+         L.all (not . null) collapsed
 
 -- | Test splitByComma function properties
 testSplitByCommaProperties :: Property
@@ -63,10 +65,10 @@ testRemoveLineCommentsProperties =
     let withoutComments = removeLineComments code
         linesOriginal = lines code
         linesWithoutComments = lines withoutComments
-        commentLines = filter ("//" `isPrefixOf`) linesOriginal
-        effectiveLines = filter (not . ("//" `isPrefixOf`)) linesOriginal
-    in length linesWithoutComments === length effectiveLines .&&.
-       length withoutComments <= length code
+        commentLines = L.filter ("//" `L.isPrefixOf`) linesOriginal
+        effectiveLines = L.filter (not . ("//" `L.isPrefixOf`)) linesOriginal
+    in L.length linesWithoutComments === L.length effectiveLines .&&.
+       L.length withoutComments <= L.length code
 
 -- | Test removeComments function properties
 testRemoveCommentsProperties :: Property
@@ -74,9 +76,9 @@ testRemoveCommentsProperties =
   forAll arbitrary $ \code ->
     let withoutComments = removeComments code
         withoutLineComments = removeLineComments code
-    -- removeComments should handle both line and block comments
-    in length withoutComments <= length withoutLineComments .&&.
-       length withoutComments <= length code
+    -- removeComments should handle both line L.and block comments
+    in L.length withoutComments <= L.length withoutLineComments .&&.
+       L.length withoutComments <= L.length code
 
 -- | Test normalizeIndentation function properties
 testNormalizeIndentationProperties :: Property
@@ -85,8 +87,8 @@ testNormalizeIndentationProperties =
     let normalized = normalizeIndentation code
         originalLines = lines code
         normalizedLines = lines normalized
-    in length normalizedLines === length originalLines .&&.
-       all (not . isPrefixOf "    ") normalizedLines
+    in L.length normalizedLines === L.length originalLines .&&.
+       L.all (not . L.isPrefixOf "    ") normalizedLines
 
 -- | Test forceSingleTabIndentation function properties
 testForceSingleTabIndentationProperties :: Property
@@ -95,7 +97,7 @@ testForceSingleTabIndentationProperties =
     let tabIndented = forceSingleTabIndentation code
         linesOriginal = lines code
         linesTabIndented = lines tabIndented
-    in length linesTabIndented === length linesOriginal
+    in L.length linesTabIndented === L.length linesOriginal
 
 -- | Test fixIndentation function properties
 testFixIndentationProperties :: Property
@@ -114,7 +116,7 @@ testBreakOnProperties =
       in if null pattern
          then broken === ("", text)
          else let (before, after) = broken
-              in length before + length pattern + length after >= length text
+              in L.length before + L.length pattern + L.length after >= L.length text
 
 -- | Test comment removal with string literals
 testCommentRemovalWithStrings :: Property
@@ -125,14 +127,14 @@ testCommentRemovalWithStrings =
         stringLiterals = extractStringLiterals withStrings
         remainingStrings = extractStringLiterals withoutComments
     -- String literals should be preserved
-    in length remainingStrings === length stringLiterals
+    in L.length remainingStrings === L.length stringLiterals
 
 -- | Test whitespace handling robustness
 testWhitespaceHandlingRobustness :: Property
 testWhitespaceHandlingRobustness =
   forAll arbitrary $ \text ->
     let trimmed = trim text
-        onlySpaces = all isSpace text
+        onlySpaces = L.all isSpace text
         onlySpacesTrimmed = null trimmed
     in onlySpaces === onlySpacesTrimmed
 
@@ -144,8 +146,8 @@ testSplitEdgeCases =
         splitEmptyText = splitBy ',' text
         splitWithEmptyDelim = splitBy '\0' text
     in splitEmpty === [""] .&&.
-       length splitEmptyText >= 0 .&&.
-       length splitWithEmptyDelim >= 0
+       L.length splitEmptyText >= 0 .&&.
+       L.length splitWithEmptyDelim >= 0
 
 -- | Test comment removal edge cases
 testCommentRemovalEdgeCases :: Property
@@ -155,18 +157,18 @@ testCommentRemovalEdgeCases =
         mixedComments = code ++ "// comment\nmore code"
         withoutComments = removeComments onlyComments
         withoutMixedComments = removeComments mixedComments
-    in length withoutComments >= 0 .&&.
-       length withoutMixedComments >= 0
+    in L.length withoutComments >= 0 .&&.
+       L.length withoutMixedComments >= 0
 
 -- | Test indentation edge cases
 testIndentationEdgeCases :: Property
 testIndentationEdgeCases =
   forAll arbitrary $ \code ->
-    let noIndentation = unlines $ map (dropWhile isSpace) $ lines code
+    let noIndentation = unlines $ L.map (dropWhile isSpace) $ lines code
         normalized = normalizeIndentation code
         normalizedNoIndent = normalizeIndentation noIndentation
-    in length (lines normalized) === length (lines code) .&&.
-       length (lines normalizedNoIndent) === length (lines code)
+    in L.length (lines normalized) === L.length (lines code) .&&.
+       L.length (lines normalizedNoIndent) === L.length (lines code)
 
 -- Helper functions
 

@@ -8,6 +8,7 @@ import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollaps
               removeLineComments, removeComments, normalizeIndentation, 
               forceSingleTabIndentation, fixIndentation, breakOn)
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 import Control.Monad (forM)
 
@@ -68,34 +69,34 @@ prop_trim_no_leading_trailing_whitespace :: String -> Property
 prop_trim_no_leading_trailing_whitespace s = 
   let trimmed = trim s
   in not (null trimmed) ==> 
-     (not (isSpace (head trimmed)) .&&. not (isSpace (last trimmed)))
+     (not (isSpace (L.head trimmed)) .&&. not (isSpace (last trimmed)))
 
 prop_trim_preserves_internal_content :: String -> Property
 prop_trim_preserves_internal_content s =
   let trimmed = trim s
-      original = filter (not . isSpace) s
-      filtered = filter (not . isSpace) trimmed
+      original = L.filter (not . isSpace) s
+      filtered = L.filter (not . isSpace) trimmed
   in original === filtered
 
 -- Test splitBy function properties
 prop_splitBy_length :: Char -> String -> Property
 prop_splitBy_length delim s = 
   let parts = splitBy delim s
-      delimiterCount = length (filter (== delim) s)
-  in length parts === delimiterCount + 1
+      delimiterCount = L.length (L.filter (== delim) s)
+  in L.length parts === delimiterCount + 1
 
 prop_splitBy_reconstruction :: Char -> String -> Property
 prop_splitBy_reconstruction delim s =
   let parts = splitBy delim s
-      reconstructed = concat (intersperse [delim] parts)
+      reconstructed = L.concat (intersperse [delim] parts)
   in reconstructed === s
 
 prop_splitByCollapsed_no_empty_parts :: Char -> String -> Property
 prop_splitByCollapsed_no_empty_parts delim s =
   let parts = splitByCollapsed delim s
-  in all (not . null) parts
+  in L.all (not . null) parts
 
--- Test splitByComma and splitByCommaCollapsed
+-- Test splitByComma L.and splitByCommaCollapsed
 prop_splitByComma_equals_splitBy :: String -> Property
 prop_splitByComma_equals_splitBy s = splitByComma s === splitBy ',' s
 
@@ -105,46 +106,46 @@ prop_splitByCommaCollapsed s = splitByCommaCollapsed s === splitByCollapsed ',' 
 -- Test removeLineComments function properties
 prop_removeLineComments_no_comment_markers :: String -> Property
 prop_removeLineComments_no_comment_markers s =
-  not ("//" `isInfixOf` s) ==> removeLineComments s === s
+  not ("//" `L.isInfixOf` s) ==> removeLineComments s === s
 
 prop_removeLineComments_preserves_line_structure :: String -> Property
 prop_removeLineComments_preserves_line_structure s =
   let original = lines s
       cleaned = lines (removeLineComments s)
-  in length original === length cleaned
+  in L.length original === L.length cleaned
 
 -- Test removeComments function properties
 prop_removeComments_no_comment_markers :: String -> Property
 prop_removeComments_no_comment_markers s =
-  not (("//" `isInfixOf` s) || ("/*" `isInfixOf` s)) ==> removeComments s === s
+  not (("//" `L.isInfixOf` s) || ("/*" `L.isInfixOf` s)) ==> removeComments s === s
 
 prop_removeLineComments_is_subset_of_removeComments :: String -> Property
 prop_removeLineComments_is_subset_of_removeComments s =
   let lineRemoved = removeLineComments s
       allRemoved = removeComments s
-  in length lineRemoved >= length allRemoved
+  in L.length lineRemoved >= L.length allRemoved
 
 -- Test normalizeIndentation function properties
 prop_normalizeIndentation_preserves_relative_indentation :: String -> Property
 prop_normalizeIndentation_preserves_relative_indentation s =
   let normalized = normalizeIndentation s
-      originalLines = filter (not . all isSpace) (lines s)
-      normalizedLines = filter (not . all isSpace) (lines normalized)
-  in length originalLines === length normalizedLines
+      originalLines = L.filter (not . L.all isSpace) (lines s)
+      normalizedLines = L.filter (not . L.all isSpace) (lines normalized)
+  in L.length originalLines === L.length normalizedLines
 
 prop_normalizeIndentation_removes_common_prefix :: String -> Property
 prop_normalizeIndentation_removes_common_prefix s =
   let normalized = normalizeIndentation s
       normalizedLines = lines normalized
-  in all (not . isPrefixOf "    ") normalizedLines
+  in L.all (not . L.isPrefixOf "    ") normalizedLines
 
 -- Test forceSingleTabIndentation function properties
 prop_forceSingleTabIndentation_adds_tab_to_nonempty :: String -> Property
 prop_forceSingleTabIndentation_adds_tab_to_nonempty s =
   let forced = forceSingleTabIndentation s
       lines' = lines forced
-      nonEmptyLines = filter (not . null) lines'
-  in all ("\t" `isPrefixOf`) nonEmptyLines
+      nonEmptyLines = L.filter (not . null) lines'
+  in L.all ("\t" `L.isPrefixOf`) nonEmptyLines
 
 -- Test fixIndentation equals normalizeIndentation
 prop_fixIndentation_equals_normalizeIndentation :: String -> Property
@@ -158,11 +159,11 @@ prop_breakOn_empty_pattern s = breakOn "" s === ("", s)
 prop_breakOn_reconstruction :: String -> String -> Property
 prop_breakOn_reconstruction pat s =
   let (before, after) = breakOn pat s
-  in before ++ pat ++ after === s || (null after && not (pat `isInfixOf` s))
+  in before ++ pat ++ after === s || (null after && not (pat `L.isInfixOf` s))
 
 prop_breakOn_not_found :: String -> String -> Property
 prop_breakOn_not_found pat s =
-  not (pat `isInfixOf` s) ==> breakOn pat s === (s, "")
+  not (pat `L.isInfixOf` s) ==> breakOn pat s === (s, "")
 
 -- Helper function
 intersperse :: a -> [a] -> [[a]]

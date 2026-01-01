@@ -24,23 +24,25 @@ import Utils
   , forceSingleTabIndentation, fixIndentation, breakOn
   )
 
-import Data.List (isPrefixOf, isInfixOf, intercalate, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (intercalate, sort)
 import Data.Char (isSpace, isAlphaNum)
 
 -- ============================================================================
 -- String Processing Properties
 -- ============================================================================
 
--- Property: trim removes leading and trailing whitespace
+-- Property: trim removes leading L.and trailing whitespace
 prop_trim_removes_whitespace :: String -> Property
 prop_trim_removes_whitespace s =
   let trimmed = trim s
-      hasLeading = not (null s) && isSpace (head s)
+      hasLeading = not (null s) && isSpace (L.head s)
       hasTrailing = not (null s) && isSpace (last s)
   in classify (hasLeading || hasTrailing) "with whitespace" $
      classify (not (hasLeading || hasTrailing)) "without whitespace" $
      if hasLeading || hasTrailing
-     then not (null trimmed) ==> not (isSpace (head trimmed) || isSpace (last trimmed))
+     then not (null trimmed) ==> not (isSpace (L.head trimmed) || isSpace (last trimmed))
      else trimmed === s
 
 -- Property: trim is idempotent (applying it twice gives same result)
@@ -51,14 +53,14 @@ prop_trim_idempotent s = trim (trim s) === trim s
 prop_splitBy_preserves_empty :: Char -> String -> Property
 prop_splitBy_preserves_empty c s =
   let result = splitBy c s
-      expectedLength = length s + 1
-  in length result === expectedLength
+      expectedLength = L.length s + 1
+  in L.length result === expectedLength
 
 -- Property: splitByCollapsed removes empty segments
 prop_splitByCollapsed_removes_empty :: Char -> String -> Property
 prop_splitByCollapsed_removes_empty c s =
   let result = splitByCollapsed c s
-      hasNoEmpty = all (not . null) result
+      hasNoEmpty = L.all (not . null) result
   in hasNoEmpty === True
 
 -- Property: splitByComma is equivalent to splitBy ','
@@ -79,30 +81,30 @@ prop_removeLineComments_removes_comments :: String -> Property
 prop_removeLineComments_removes_comments s =
   let withComment = s ++ "\n// this is a comment\nmore code"
       result = removeLineComments withComment
-  in "//" `isInfixOf` result === False
+  in "//" `L.isInfixOf` result === False
 
 -- Property: removeLineComments preserves // inside string literals
 prop_removeLineComments_preserves_string_comments :: String -> Property
 prop_removeLineComments_preserves_string_comments s =
   let codeWithCommentInString = "let x = \"string with // not a comment\"\nlet y = // real comment\nlet z = x"
       result = removeLineComments codeWithCommentInString
-  in "// not a comment" `isInfixOf` result === True
+  in "// not a comment" `L.isInfixOf` result === True
 
--- Property: removeComments removes both // and /* */ comments
+-- Property: removeComments removes both // L.and /* */ comments
 prop_removeComments_removes_both_types :: String -> Property
 prop_removeComments_removes_both_types s =
   let withComments = s ++ "\n// line comment\n/* block comment */\ncode"
       result = removeComments withComments
-  in "// line comment" `isInfixOf` result === False &&
-     "block comment" `isInfixOf` result === False
+  in "// line comment" `L.isInfixOf` result === False &&
+     "block comment" `L.isInfixOf` result === False
 
 -- Property: removeComments preserves comments inside string literals
 prop_removeComments_preserves_string_both :: String -> Property
 prop_removeComments_preserves_string_both s =
   let codeWithComments = "let s = \"// not comment /* also not */\"\n// real comment\ncode"
       result = removeComments codeWithComments
-  in "// not comment" `isInfixOf` result === True &&
-     "also not" `isInfixOf` result === True
+  in "// not comment" `L.isInfixOf` result === True &&
+     "also not" `L.isInfixOf` result === True
 
 -- ============================================================================
 -- Indentation Properties
@@ -115,15 +117,15 @@ prop_normalizeIndentation_preserves_relative s =
       normalized = normalizeIndentation indented
       linesOriginal = lines indented
       linesNormalized = lines normalized
-  in length linesNormalized === length linesOriginal
+  in L.length linesNormalized === L.length linesOriginal
 
 -- Property: forceSingleTabIndentation converts to single tab format
 prop_forceSingleTabIndentation_single_tab :: String -> Property
 prop_forceSingleTabIndentation_single_tab s =
   let result = forceSingleTabIndentation s
       linesResult = lines result
-      nonEmptyLines = filter (not . null) linesResult
-  in all ("\t" `isPrefixOf`) nonEmptyLines === True
+      nonEmptyLines = L.filter (not . null) linesResult
+  in L.all ("\t" `L.isPrefixOf`) nonEmptyLines === True
 
 -- Property: fixIndentation equals normalizeIndentation
 prop_fixIndentation_equals_normalize :: String -> Property
@@ -133,14 +135,14 @@ prop_fixIndentation_equals_normalize s = fixIndentation s === normalizeIndentati
 -- Search Properties
 -- ============================================================================
 
--- Property: breakOn finds pattern and splits correctly
+-- Property: breakOn finds pattern L.and splits correctly
 prop_breakOn_splits_correctly :: String -> String -> Property
 prop_breakOn_splits_correctly pat s
   | null pat = breakOn pat s === ("", s)
-  | pat `isInfixOf` s =
+  | pat `L.isInfixOf` s =
       let (before, after) = breakOn pat s
-          expected = takeWhile (not . (`isPrefixOf` pat)) (tails s)
-      in before `isPrefixOf` s && pat `isPrefixOf` (drop (length before) s)
+          expected = takeWhile (not . (`L.isPrefixOf` pat)) (tails s)
+      in before `L.isPrefixOf` s && pat `L.isPrefixOf` (drop (L.length before) s)
   | otherwise = breakOn pat s === (s, "")
 
 -- Property: breakOn with empty pattern returns ("", s)
@@ -151,7 +153,7 @@ prop_breakOn_empty_pattern s = breakOn "" s === ("", s)
 prop_breakOn_concatenates :: String -> String -> Property
 prop_breakOn_concatenates pat s =
   let (before, after) = breakOn pat s
-  in if pat `isInfixOf` s
+  in if pat `L.isInfixOf` s
      then before ++ pat ++ after === s
      else before === s && after === ""
 
@@ -214,6 +216,6 @@ tests = testGroup "New Utils Properties"
   , testCase "removeComments with complex example" $ do
       let complex = "code // comment\n\"string // not comment\"/* block */more"
       let result = removeComments complex
-      assertBool "should preserve string content" ("// not comment" `isInfixOf` result)
-      assertBool "should remove block comment" (not (" block " `isInfixOf` result))
+      assertBool "should preserve string content" ("// not comment" `L.isInfixOf` result)
+      assertBool "should remove block comment" (not (" block " `L.isInfixOf` result))
   ]

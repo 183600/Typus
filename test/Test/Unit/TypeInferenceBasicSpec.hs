@@ -4,6 +4,7 @@
 module Test.Unit.TypeInferenceBasicSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (==>), property, classify, counterexample)
 import qualified Data.List as Data.List
@@ -26,7 +27,7 @@ prop_infer_integer_literals value =
 -- Property: String literals infer to string type
 prop_infer_string_literals :: String -> Property
 prop_infer_string_literals str =
-  length str <= 50 ==> -- Reasonable limit
+  L.length str <= 50 ==> -- Reasonable limit
   let inferred = inferType $ IRStringLiteral str
   in property $ inferred == Just TypeInfo { tiType = IRString, tiConstraints = [] }
 
@@ -47,12 +48,12 @@ prop_infer_variable_type varName varType =
 -- Property: Function parameter types are preserved
 prop_infer_function_params :: [String] -> [IRType] -> Property
 prop_infer_function_params paramNames paramTypes =
-  all isValidIdentifier paramNames && 
-  length paramNames == length paramTypes &&
-  length paramNames <= 5 ==> -- Reasonable limit
+  L.all isValidIdentifier paramNames && 
+  L.length paramNames == L.length paramTypes &&
+  L.length paramNames <= 5 ==> -- Reasonable limit
   let paramInfos = zipWith (\name ty -> (name, TypeInfo ty [])) paramNames paramTypes
       inferred = map snd paramInfos
-      expected = map (\ty -> TypeInfo ty []) paramTypes
+      expected = L.map (\ty -> TypeInfo ty []) paramTypes
   in property $ inferred == expected
 
 -- Property: Type inference is consistent across multiple runs
@@ -81,7 +82,7 @@ prop_infer_invalid_expressions expr =
 -- Property: Type inference respects type constraints
 prop_infer_with_constraints :: String -> [IRType] -> Property
 prop_infer_with_constraints expr constraints =
-  isValidExpression expr && length constraints <= 3 ==>
+  isValidExpression expr && L.length constraints <= 3 ==>
   let constrainedEnv = addConstraints constraints
       inferred = inferExpressionTypeWithEnv expr constrainedEnv
   in property $ respectsConstraints inferred constraints
@@ -96,7 +97,7 @@ prop_infer_arithmetic_operations x y =
 -- Property: Type inference handles string concatenation
 prop_infer_string_concatenation :: String -> String -> Property
 prop_infer_string_concatenation str1 str2 =
-  length str1 <= 20 && length str2 <= 20 ==>
+  L.length str1 <= 20 && L.length str2 <= 20 ==>
   let expr = "\"" ++ str1 ++ "\" + \"" ++ str2 ++ "\""
       inferred = inferExpressionType expr
   in property $ inferred == Just (TypeInfo IRString [])
@@ -107,21 +108,21 @@ prop_infer_string_concatenation str1 str2 =
 
 isValidIdentifier :: String -> Bool
 isValidIdentifier [] = False
-isValidIdentifier (c:cs) = isAlpha c && all isValidChar cs
+isValidIdentifier (c:cs) = isAlpha c && L.all isValidChar cs
   where
     isValidChar ch = isAlpha ch || isDigit ch || ch == '_'
 
 isValidExpression :: String -> Bool
 isValidExpression expr = 
   not (null expr) && 
-  not (any (`elem` "@#$%^&*()[]{}|\\") expr) &&
-  length expr <= 100
+  not (L.any (`elem` "@#$%^&*()[]{}|\\") expr) &&
+  L.length expr <= 100
 
 hasInvalidSyntax :: String -> Bool
 hasInvalidSyntax expr = 
-  any (`elem` "@#$%^&*()[]{}|\\") expr ||
-  expr `Data.List.isInfixOf` "+++" ||
-  expr `Data.List.isInfixOf` "---"
+  L.any (`elem` "@#$%^&*()[]{}|\\") expr ||
+  expr `Data.List.L.isInfixOf` "+++" ||
+  expr `Data.List.L.isInfixOf` "---"
 
 generateNestedExpression :: Int -> String
 generateNestedExpression 0 = "42"
@@ -132,10 +133,10 @@ lookupVariableType name env = lookup name env
 
 inferExpressionType :: String -> Maybe TypeInfo
 inferExpressionType expr
-  | all isDigit expr = Just (TypeInfo IRInt [])
-  | expr `Data.List.isPrefixOf` "\"" && expr `Data.List.isSuffixOf` "\"" = Just (TypeInfo IRString [])
+  | L.all isDigit expr = Just (TypeInfo IRInt [])
+  | expr `Data.List.L.isPrefixOf` "\"" && expr `Data.List.L.isSuffixOf` "\"" = Just (TypeInfo IRString [])
   | expr == "true" || expr == "false" = Just (TypeInfo IRBool [])
-  | "+" `Data.List.isInfixOf` expr = Just (TypeInfo IRInt [])
+  | "+" `Data.List.L.isInfixOf` expr = Just (TypeInfo IRInt [])
   | otherwise = Nothing
 
 inferExpressionTypeWithEnv :: String -> [(String, TypeInfo)] -> Maybe TypeInfo

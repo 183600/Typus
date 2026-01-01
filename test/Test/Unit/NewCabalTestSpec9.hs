@@ -9,6 +9,7 @@ import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify
 import SyntaxValidator (validateSyntax, SyntaxError(..))
 import Parser (parseTypus)
 import Utils (trim)
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 -- | 测试用例9: 语法验证器测试
@@ -41,7 +42,7 @@ tests =
             case validateSyntax parsed of
               Left err -> 
                 -- Check that error mentions braces
-                "brace" `isInfixOf` err @?= True
+                "brace" `L.isInfixOf` err @?= True
               Right _ -> fail "expected syntax validation to detect missing brace"
 
     , testCase "syntax validator handles complex type annotations" $ do

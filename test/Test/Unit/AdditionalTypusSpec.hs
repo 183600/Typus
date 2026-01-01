@@ -18,7 +18,9 @@ import Parser (parseTypus, TypusFile(..), FileDirectives(..), BlockDirectives(..
 import Compiler (compile, CompilerError(..), CompilationPhase(..))
 import SourceLocation (SourceSpan(..), SourcePos(..), locatedValue)
 import Utils (trim, splitBy)
-import Data.List (isInfixOf, isPrefixOf, null, length)
+import qualified Data.List as L
+import Data.List (isInfixOf, isPrefixOf, length)
+import Data.List (null)
 import Data.Char (isSpace, isDigit)
 
 -- Test 1: Parser correctly handles file-level ownership directive
@@ -88,7 +90,7 @@ test_parser_block_ownership_directive =
       Right typusFile -> do
         let blocks = tfBlocks typusFile
         assertBool "expected at least one code block" (not (null blocks))
-        let firstBlock = head blocks
+        let firstBlock = L.head blocks
             blockDirectives = cbDirectives firstBlock
             BlockDirectives { bdOwnership = ownership } = blockDirectives
         case ownership of
@@ -113,7 +115,7 @@ test_parser_multiple_block_directives =
       Right typusFile -> do
         let blocks = tfBlocks typusFile
         assertBool "expected at least one code block" (not (null blocks))
-        let firstBlock = head blocks
+        let firstBlock = L.head blocks
             blockDirectives = cbDirectives firstBlock
             BlockDirectives { bdOwnership = ownership, bdDependentTypes = dependentTypes } = blockDirectives
         case ownership of
@@ -123,14 +125,14 @@ test_parser_multiple_block_directives =
           Nothing -> assertFailure "expected block-level dependent types directive"
           Just loc -> locatedValue loc @?= True
 
--- QuickCheck Property 6: Trim function removes leading and trailing whitespace
+-- QuickCheck Property 6: Trim function removes leading L.and trailing whitespace
 prop_trim_removes_whitespace :: String -> String -> Property
 prop_trim_removes_whitespace prefix suffix =
   let content = prefix ++ "content" ++ suffix
       trimmed = trim content
-      hasLeading = any isSpace prefix
-      hasTrailing = any isSpace suffix
-      noLeadingSpace = null trimmed || not (isSpace (head trimmed))
+      hasLeading = L.any isSpace prefix
+      hasTrailing = L.any isSpace suffix
+      noLeadingSpace = null trimmed || not (isSpace (L.head trimmed))
       noTrailingSpace = null trimmed || not (isSpace (last trimmed))
   in classify hasLeading "has leading whitespace" $
      classify hasTrailing "has trailing whitespace" $
@@ -140,7 +142,7 @@ prop_trim_removes_whitespace prefix suffix =
 prop_split_by_correctness :: Char -> String -> Property
 prop_split_by_correctness delimiter content =
   let parts = splitBy delimiter content
-      rejoined = concat $ intersperse [delimiter] parts
+      rejoined = L.concat $ intersperse [delimiter] parts
   in property $ rejoined === content
   where
     intersperse _ [] = []
@@ -191,18 +193,18 @@ test_compiler_invalid_syntax =
     case parseTypus source of
       Left err -> 
         -- Parsing failure is also a valid outcome for invalid syntax
-        assertBool "expected parsing or compilation error" True
+        assertBool "expected parsing L.or compilation error" True
       Right typusFile ->
         case compile typusFile of
           Left errs -> do
             assertBool "expected at least one compilation error" (not (null errs))
-            let firstError = head errs
+            let firstError = L.head errs
                 phase = cePhase firstError
-            assertBool "expected parsing or syntax error" 
+            assertBool "expected parsing L.or syntax error" 
               (phase == ParsingPhase || phase == LexingPhase)
           Right result -> assertFailure "expected compilation to fail with syntax errors"
 
--- Aggregate all tests
+-- Aggregate L.all tests
 tests :: TestTree
 tests = testGroup "Additional Typus Tests"
   [ test_parser_file_ownership_directive

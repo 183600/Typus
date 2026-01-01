@@ -10,13 +10,15 @@
 module Test.Unit.NewEnhancedSourceLocationMathPropertiesQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose, suchThat)
 import TestSupport.Arbitrary
 
 import SourceLocation
-import Data.List (sort, nub, group, intercalate, find, delete, isInfixOf, sortOn)
+import Data.List (isInfixOf)
+import Data.List (sort, nub, group, intercalate, find, delete, sortOn)
 import Data.Maybe (isJust, isNothing, catMaybes, fromMaybe, mapMaybe)
 import Data.Set (Set, empty, singleton, union, unions, member, size, difference, intersection)
 import qualified Data.Set as Set
@@ -63,11 +65,11 @@ prop_location_ordering_consistency line1 col1 line2 col2 =
 
 -- Property: Location range arithmetic
 prop_location_range_arithmetic :: Int -> Int -> Int -> Property
-prop_location_range_arithmetic startLine length =
-  startLine >= 0 && length >= 0 ==> 
+prop_location_range_arithmetic startLine L.length =
+  startLine >= 0 && L.length >= 0 ==> 
   let startLoc = SourceLocation startLine 0 "file.typus"
-      endLoc = calculateRangeEnd startLoc length
-      expectedEndLine = startLine + length
+      endLoc = calculateRangeEnd startLoc L.length
+      expectedEndLine = startLine + L.length
   in property $ sourceLine endLoc === expectedEndLine
 
 -- Property: Location containment
@@ -96,23 +98,23 @@ prop_location_interpolation line1 col1 line2 col2 factor =
 -- Property: Location clustering
 prop_location_clustering :: [Int] -> [Int] -> Property
 prop_location_clustering lines cols =
-  length lines == length cols && not (null lines) && all (>=0) lines && all (>=0) cols ==> 
+  length lines == L.length cols && not (null lines) && L.all (>=0) lines && L.all (>=0) cols ==> 
   let locations = zipWith (\l c -> SourceLocation l c "file.typus") lines cols
       clusters = clusterLocations locations 5
-      clusterSizes = map length clusters
-  in property $ sum clusterSizes === length locations .&&.
+      clusterSizes = map L.length clusters
+  in property $ L.sum clusterSizes === L.length locations .&&.
      all (>0) clusterSizes
 
 -- Property: Location bounding box
 prop_location_bounding_box :: [Int] -> [Int] -> Property
 prop_location_bounding_box lines cols =
-  length lines == length cols && not (null lines) && all (>=0) lines && all (>=0) cols ==> 
+  length lines == L.length cols && not (null lines) && L.all (>=0) lines && L.all (>=0) cols ==> 
   let locations = zipWith (\l c -> SourceLocation l c "file.typus") lines cols
       boundingBox = calculateBoundingBox locations
-      minLine = minimum (map sourceLine locations)
-      maxLine = maximum (map sourceLine locations)
-      minCol = minimum (map sourceColumn locations)
-      maxCol = maximum (map sourceColumn locations)
+      minLine = L.minimum (map sourceLine locations)
+      maxLine = L.maximum (map sourceLine locations)
+      minCol = L.minimum (map sourceColumn locations)
+      maxCol = L.maximum (map sourceColumn locations)
   in property $ boundingBoxMinLine boundingBox === minLine .&&.
      boundingBoxMaxLine boundingBox === maxLine .&&.
      boundingBoxMinCol boundingBox === minCol .&&.
@@ -121,11 +123,11 @@ prop_location_bounding_box lines cols =
 -- Property: Location path distance
 prop_location_path_distance :: [Int] -> [Int] -> Property
 prop_location_path_distance lines cols =
-  length lines >= 2 && all (>=0) lines && all (>=0) cols ==> 
+  length lines >= 2 && L.all (>=0) lines && L.all (>=0) cols ==> 
   let locations = zipWith (\l c -> SourceLocation l c "file.typus") lines cols
       pathDistance = calculatePathDistance locations
-      directDistances = zipWith calculateDistance locations (tail locations)
-      expectedDistance = sum directDistances
+      directDistances = zipWith calculateDistance locations (L.tail locations)
+      expectedDistance = L.sum directDistances
   in property $ pathDistance === expectedDistance
 
 -- Property: Location normalization
@@ -175,7 +177,7 @@ prop_location_hash_consistency line col filename =
   in property $ hash1 === hash2
 
 -- ============================================================================
--- Helper Functions and Types
+-- Helper Functions L.and Types
 -- ============================================================================
 
 -- Location calculation types
@@ -204,13 +206,13 @@ compareLocations loc1 loc2
   | otherwise = compare (sourceColumn loc1) (sourceColumn loc2)
 
 calculateRangeEnd :: SourceLocation -> Int -> SourceLocation
-calculateRangeEnd startLoc length = 
-  startLoc { sourceLine = sourceLine startLoc + length }
+calculateRangeEnd startLoc L.length = 
+  startLoc { sourceLine = sourceLine startLoc + L.length }
 
 createLocationRange :: SourceLocation -> Int -> LocationRange
-createLocationRange startLoc length = LocationRange
+createLocationRange startLoc L.length = LocationRange
   { rangeStart = startLoc
-  , rangeEnd = calculateRangeEnd startLoc length
+  , rangeEnd = calculateRangeEnd startLoc L.length
   }
 
 locationInRange :: SourceLocation -> LocationRange -> Bool
@@ -230,22 +232,22 @@ clusterLocations :: [SourceLocation] -> Int -> [[SourceLocation]]
 clusterLocations [] _ = []
 clusterLocations locations threshold = 
   let sorted = sortOn sourceLine locations
-      (cluster, rest) = span (\loc -> sourceLine loc - sourceLine (head sorted) <= threshold) sorted
+      (cluster, rest) = span (\loc -> sourceLine loc - sourceLine (L.head sorted) <= threshold) sorted
   in cluster : clusterLocations rest threshold
 
 calculateBoundingBox :: [SourceLocation] -> LocationBoundingBox
 calculateBoundingBox [] = LocationBoundingBox 0 0 0 0
 calculateBoundingBox locations = LocationBoundingBox
-  { boundingBoxMinLine = minimum (map sourceLine locations)
-  , boundingBoxMaxLine = maximum (map sourceLine locations)
-  , boundingBoxMinCol = minimum (map sourceColumn locations)
-  , boundingBoxMaxCol = maximum (map sourceColumn locations)
+  { boundingBoxMinLine = L.minimum (map sourceLine locations)
+  , boundingBoxMaxLine = L.maximum (map sourceLine locations)
+  , boundingBoxMinCol = L.minimum (map sourceColumn locations)
+  , boundingBoxMaxCol = L.maximum (map sourceColumn locations)
   }
 
 calculatePathDistance :: [SourceLocation] -> Int
 calculatePathDistance [] = 0
 calculatePathDistance [_] = 0
-calculatePathDistance locations = sum $ zipWith calculateDistance locations (tail locations)
+calculatePathDistance locations = L.sum $ zipWith calculateDistance locations (L.tail locations)
 
 normalizeLocation :: SourceLocation -> SourceLocation
 normalizeLocation loc = loc
@@ -268,7 +270,7 @@ mergeLocations loc1 loc2 = SourceLocation
 
 hashLocation :: SourceLocation -> Int
 hashLocation loc = 
-  sourceLine loc + 31 * sourceColumn loc + 961 * length (sourceFile loc)
+  sourceLine loc + 31 * sourceColumn loc + 961 * L.length (sourceFile loc)
 
 -- ============================================================================
 -- Test Collection

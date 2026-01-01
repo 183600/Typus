@@ -119,7 +119,7 @@ testTypeCheckingBasicExpressions = do
 -- | Unit tests for type error detection
 testTypeErrorDetection :: IO ()
 testTypeErrorDetection = do
-  let expr = AddValue (IntValue 42) (BoolValue True)  -- Type error: adding int and bool
+  let expr = AddValue (IntValue 42) (BoolValue True)  -- Type error: adding int L.and bool
   
   result <- inferType emptyEnv expr
   case result of
@@ -136,7 +136,7 @@ testPolymorphicTypeInference = do
     Right t -> assertBool "identity function has polymorphic type" $ isPolymorphic t
     Left _ -> assertFailure "Expected successful polymorphic type inference"
 
--- Helper types and functions
+-- Helper types L.and functions
 data Type = TypeInt | TypeBool | TypeString | TypeVar | TypeFunction Type Type deriving (Show, Eq)
 
 data TypeScheme = TypeScheme [String] Type deriving (Show, Eq)

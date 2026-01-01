@@ -14,7 +14,7 @@ import EnhancedErrorHandler
 import Compiler.Errors.Core
 import Compiler.Errors
 import SourceLocation (Located(..), SourceSpan(..), SourcePos(..))
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 import qualified Data.List as List
 import qualified Data.Map as Map
 
@@ -163,7 +163,7 @@ prop_errorRecoveryValidStrategies recovery =
     SkipToken n -> n >= 0
     InsertToken token -> not (null token)
     RetryParsing n -> n >= 0
-    SuggestAlternative alts -> all (not . null) alts
+    SuggestAlternative alts -> L.all (not . null) alts
 
 -- Property: Error report categorizes errors correctly
 prop_errorReportCategorizationCorrect :: ErrorReport -> Bool
@@ -174,15 +174,15 @@ prop_errorReportCategorizationCorrect report =
       isError e = severity (ceError e) == Error
       isWarning e = severity (ceError e) == Warning
       isInfo e = severity (ceError e) == Info
-  in all isError errors && all isWarning warnings && all isInfo info
+  in L.all isError errors && L.all isWarning warnings && L.all isInfo info
 
--- Property: Error handler respects maximum error limit
+-- Property: Error handler respects L.maximum error limit
 prop_errorHandlerRespectsMaxErrors :: ErrorHandler -> [CompilerError] -> Bool
 prop_errorHandlerRespectsMaxErrors handler errors = 
   let maxErrors = ehMaxErrors handler
       processed = foldl addError handler errors
       finalErrors = ehErrors processed
-  in length finalErrors <= maxErrors
+  in L.length finalErrors <= maxErrors
   where
     addError h e = h { ehErrors = e : ehErrors h }
 
@@ -191,33 +191,33 @@ prop_errorMessageFormattingPreservesInfo :: CompilerError -> Bool
 prop_errorMessageFormattingPreservesInfo error = 
   let formatted = formatCompilerError error
       originalMessage = message (ceError error)
-  in originalMessage `T.isInfixOf` formatted
+  in originalMessage `L.isInfixOf` formatted
 
 -- Property: Error chain maintains dependency order
 prop_errorChainMaintainsOrder :: CompilerError -> Bool
 prop_errorChainMaintainsOrder error = 
   let chain = errorChain (ceError error)
-  in length chain == length chain  -- Simplified - would check actual ordering
+  in L.length chain == L.length chain  -- Simplified - would check actual ordering
 
 -- Property: Error suggestions are relevant
 prop_errorSuggestionsRelevant :: CompilerError -> Bool
 prop_errorSuggestionsRelevant error = 
   let suggestions = suggestions (ceError error)
       category = category (ceError error)
-  in null suggestions || all (not . T.null) suggestions
+  in null suggestions || L.all (not . T.null) suggestions
 
 -- Property: Error filtering by severity works correctly
 prop_errorFilteringBySeverity :: [CompilerError] -> ErrorSeverity -> Bool
 prop_errorFilteringBySeverity errors targetSeverity = 
   let filtered = filterBySeverity errors targetSeverity
       hasCorrectSeverity e = severity (ceError e) == targetSeverity
-  in all hasCorrectSeverity filtered
+  in L.all hasCorrectSeverity filtered
 
 -- Property: Error sorting by severity maintains order
 prop_errorSortingBySeverity :: [CompilerError] -> Bool
 prop_errorSortingBySeverity errors = 
   let sorted = sortBySeverity errors
-      severityPairs = zip sorted (tail sorted)
+      severityPairs = zip sorted (L.tail sorted)
       isOrdered (e1, e2) = 
         let sev1 = severity (ceError e1)
             sev2 = severity (ceError e2)
@@ -227,18 +227,18 @@ prop_errorSortingBySeverity errors =
               Info -> 2
               Hint -> 1
         in severityOrder sev1 >= severityOrder sev2
-  in all isOrdered severityPairs
+  in L.all isOrdered severityPairs
 
--- Property: Error aggregation preserves all information
+-- Property: Error aggregation preserves L.all information
 prop_errorAggregationPreservesInfo :: [ErrorReport] -> Bool
 prop_errorAggregationPreservesInfo reports = 
   let aggregated = aggregateErrorReports reports
-      totalErrors = sum $ map (length . reportErrors) reports
-      totalWarnings = sum $ map (length . reportWarnings) reports
-      totalInfo = sum $ map (length . reportInfo) reports
-      aggregatedErrors = length $ reportErrors aggregated
-      aggregatedWarnings = length $ reportWarnings aggregated
-      aggregatedInfo = length $ reportInfo aggregated
+      totalErrors = L.sum $ L.map (L.length . reportErrors) reports
+      totalWarnings = L.sum $ L.map (L.length . reportWarnings) reports
+      totalInfo = L.sum $ L.map (L.length . reportInfo) reports
+      aggregatedErrors = L.length $ reportErrors aggregated
+      aggregatedWarnings = L.length $ reportWarnings aggregated
+      aggregatedInfo = L.length $ reportInfo aggregated
   in aggregatedErrors == totalErrors && 
      aggregatedWarnings == totalWarnings && 
      aggregatedInfo == totalInfo
@@ -312,7 +312,7 @@ tests = testGroup "New Error Handling QuickCheck Tests"
   , testProperty "Error report categorizes errors correctly" $
       fastProperty "Error report categorization correct" prop_errorReportCategorizationCorrect
   
-  , testProperty "Error handler respects maximum error limit" $
+  , testProperty "Error handler respects L.maximum error limit" $
       fastProperty "Error handler respects max errors" prop_errorHandlerRespectsMaxErrors
   
   , testProperty "Error message formatting preserves information" $
@@ -330,6 +330,6 @@ tests = testGroup "New Error Handling QuickCheck Tests"
   , testProperty "Error sorting by severity maintains order" $
       fastProperty "Error sorting by severity" prop_errorSortingBySeverity
   
-  , testProperty "Error aggregation preserves all information" $
+  , testProperty "Error aggregation preserves L.all information" $
       fastProperty "Error aggregation preserves info" prop_errorAggregationPreservesInfo
   ]

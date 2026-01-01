@@ -4,6 +4,7 @@
 module Test.Unit.NewDependentTypesQuickCheckTestsSpec where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty)
 import Test.QuickCheck (Arbitrary(..), Gen, oneof, elements, listOf, choose, property, (==>), forAll)
@@ -95,8 +96,8 @@ prop_typeExpressionWellFormed :: TypeExpression -> Bool
 prop_typeExpressionWellFormed expr = 
   case expr of
     TypeVar (TypeVar name) -> not (null name)
-    TypeConstructor name args -> not (null name) && all prop_typeExpressionWellFormed args
-    TypeFunction params ret -> all prop_typeExpressionWellFormed params && prop_typeExpressionWellFormed ret
+    TypeConstructor name args -> not (null name) && L.all prop_typeExpressionWellFormed args
+    TypeFunction params ret -> L.all prop_typeExpressionWellFormed params && prop_typeExpressionWellFormed ret
     TypeDependent var domain range -> not (null var) && prop_typeExpressionWellFormed domain && prop_typeExpressionWellFormed range
     TypeRefined base var constraint -> prop_typeExpressionWellFormed base && not (null var) && prop_typeExpressionWellFormed (TypeConstraintExpression constraint)
 
@@ -121,7 +122,7 @@ prop_typeEnvironmentVariableUniqueness :: TypeEnvironment -> Bool
 prop_typeEnvironmentVariableUniqueness env = 
   let vars = Map.keys (typeVariables env)
       uniqueVars = Set.fromList vars
-  in length vars == Set.size uniqueVars
+  in L.length vars == Set.size uniqueVars
 
 -- Property: Type substitution preserves structure
 prop_typeSubstitutionPreservesStructure :: TypeExpression -> Map.Map TypeVar TypeExpression -> Bool
@@ -139,7 +140,7 @@ prop_typeUnificationPreservesConstraints left right =
 -- Property: Dependent type parameter consistency
 prop_dependentTypeParameterConsistency :: DependentType -> Bool
 prop_dependentTypeParameterConsistency (DependentType name params constraints) = 
-  not (null name) && all prop_typeVariableConsistency params && all prop_typeConstraintValidity constraints
+  not (null name) && L.all prop_typeVariableConsistency params && L.all prop_typeConstraintValidity constraints
 
 -- Property: Type inference state consistency
 prop_typeInferenceStateConsistency :: TypeInferenceState -> Bool
@@ -148,7 +149,7 @@ prop_typeInferenceStateConsistency state =
       subs = inferenceSubstitutions state
       subVars = Map.keys subs
       envVars = Map.keys (typeVariables env)
-  in all (`Set.member` Set.fromList envVars) subVars
+  in L.all (`Set.member` Set.fromList envVars) subVars
 
 -- Property: Arithmetic expression simplification
 prop_arithmeticExpressionSimplification :: ArithmeticExpression -> Bool
@@ -160,7 +161,7 @@ prop_arithmeticExpressionSimplification expr =
 prop_typeConstraintSolvingPreservesValidity :: [TypeConstraint] -> Bool
 prop_typeConstraintSolvingPreservesValidity constraints = 
   case solveConstraints constraints of
-    Just solution -> all prop_typeConstraintValidity constraints
+    Just solution -> L.all prop_typeConstraintValidity constraints
     Nothing -> True  -- No solution found, which is valid
 
 -- Property: Dependent type refinement preserves base type
@@ -173,7 +174,7 @@ prop_dependentTypeRefinementPreservesBase base var constraint =
 prop_typeFunctionApplicationPreservesArity :: TypeExpression -> [TypeExpression] -> Bool
 prop_typeFunctionApplicationPreservesArity func args = 
   case func of
-    TypeFunction params ret -> length args == length params
+    TypeFunction params ret -> L.length args == L.length params
     _ -> True  -- Not a function type, property vacuously holds
 
 -- Property: Arithmetic expression evaluation is deterministic

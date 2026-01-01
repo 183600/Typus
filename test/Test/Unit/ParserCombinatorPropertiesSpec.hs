@@ -1,6 +1,7 @@
 module Test.Unit.ParserCombinatorPropertiesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Arbitrary(..), Gen, choose, listOf1, elements, suchThat, sized)
@@ -95,11 +96,11 @@ prop_stringMatching pat str =
 
 prop_manyReturnsList :: Char -> String -> Bool
 prop_manyReturnsList c str =
-    let input = replicate (length str) c
+    let input = replicate (L.length str) c
         result = parse (many (char c)) "" input
     in case result of
         Left _ -> False
-        Right parsed -> length parsed == length str && all (== c) parsed
+        Right parsed -> L.length parsed == L.length str && L.all (== c) parsed
 
 prop_many1RequiresOne :: Char -> Property
 prop_many1RequiresOne c =
@@ -107,7 +108,7 @@ prop_many1RequiresOne c =
         result = parse (many1 (char c)) "" input
     in case result of
         Left _ -> False
-        Right parsed -> length parsed == 1 && head parsed == c
+        Right parsed -> L.length parsed == 1 && L.head parsed == c
 
 -- ============================================================================
 -- Alternative parser properties
@@ -158,7 +159,7 @@ prop_sequentialConsumption c1 c2 str =
 
 prop_compositionAssociative :: String -> String -> String -> Property
 prop_compositionAssociative s1 s2 s3 =
-    all (not . null) [s1, s2, s3] ==> 
+    L.all (not . null) [s1, s2, s3] ==> 
     let input = s1 ++ s2 ++ s3
         parser1 = string s1 *> (string s2 *> string s3)
         parser2 = (string s1 *> string s2) *> string s3
@@ -235,7 +236,7 @@ prop_letterOnlyAlpha c =
 
 prop_decimalValidity :: String -> Property
 prop_decimalValidity str =
-    all (`elem` ['0'..'9']) str ==> 
+    L.all (`elem` ['0'..'9']) str ==> 
     let input = str
         result = parse decimal "" input
     in case result of

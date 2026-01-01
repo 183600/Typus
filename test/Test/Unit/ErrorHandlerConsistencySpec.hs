@@ -1,6 +1,7 @@
 module Test.Unit.ErrorHandlerConsistencySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Arbitrary(..), Gen, choose, listOf1, elements, suchThat)
@@ -33,7 +34,7 @@ tests =
 
     , testGroup "Error reporting properties"
         [ fastProperty "error reporting formats consistently" prop_errorReportingConsistency
-        , fastProperty "error reporting includes all essential information" prop_errorReportingComplete
+        , fastProperty "error reporting includes L.all essential information" prop_errorReportingComplete
         , fastProperty "error reporting handles edge cases gracefully" prop_errorReportingEdgeCases
         ]
 
@@ -90,7 +91,7 @@ prop_errorMessagesNonEmpty :: ErrorLocation -> ErrorSeverity -> String -> String
 prop_errorMessagesNonEmpty location severity message code =
     not (null message) ==> 
     let error = createError location severity message code
-    in not (null (errorMessage error))
+    in not (L.null (errorMessage error))
 
 prop_errorSeverityValid :: ErrorLocation -> String -> String -> ErrorSeverity -> Bool
 prop_errorSeverityValid location message code severity =
@@ -100,8 +101,8 @@ prop_errorSeverityValid location message code severity =
 prop_errorCodesConsistent :: ErrorLocation -> ErrorSeverity -> String -> String -> Property
 prop_errorCodesConsistent location severity message code =
     let error = createError location severity message code
-        expectedPattern = head code `elem` ['E', 'W', 'I']
-    in length code >= 4 && expectedPattern
+        expectedPattern = L.head code `elem` ['E', 'W', 'I']
+    in L.length code >= 4 && expectedPattern
 
 -- ============================================================================
 -- Error collection properties
@@ -110,19 +111,19 @@ prop_errorCodesConsistent location severity message code =
 prop_errorCollectionOrder :: [CompilerError] -> Bool
 prop_errorCollectionOrder errors =
     let collected = collectErrors errors
-    in length collected == length errors
+    in L.length collected == L.length errors
 
 prop_errorCollectionDuplicates :: [CompilerError] -> Bool
 prop_errorCollectionDuplicates errors =
     let withDuplicates = errors ++ errors
         collected = collectErrors withDuplicates
         uniqueErrors = removeDuplicates errors
-    in length collected >= length uniqueErrors
+    in L.length collected >= L.length uniqueErrors
 
 prop_errorFilteringInvariants :: [CompilerError] -> ErrorSeverity -> Bool
 prop_errorFilteringInvariants errors severity =
     let filtered = filterErrorsBySeverity errors severity
-    in all (\e -> errorSeverity e == severity) filtered
+    in L.all (\e -> errorSeverity e == severity) filtered
 
 -- ============================================================================
 -- Error recovery properties
@@ -135,7 +136,7 @@ prop_errorRecoveryValidState errors =
 
 prop_errorRecoveryPreservesSuccess :: [CompilerError] -> Bool
 prop_errorRecoveryPreservesSuccess errors =
-    let hasOnlyWarnings = all (\e -> errorSeverity e /= Error) errors
+    let hasOnlyWarnings = L.all (\e -> errorSeverity e /= Error) errors
         recovered = recoverFromErrors errors
     in hasOnlyWarnings ==> isRecoverySuccessful recovered
 
@@ -158,9 +159,9 @@ prop_errorReportingConsistency error =
 prop_errorReportingComplete :: CompilerError -> Bool
 prop_errorReportingComplete error =
     let report = formatError error
-        hasLocation = errorLocation error `isInfixOf` report
-        hasMessage = errorMessage error `isInfixOf` report
-        hasSeverity = show (errorSeverity error) `isInfixOf` report
+        hasLocation = errorLocation error `L.isInfixOf` report
+        hasMessage = errorMessage error `L.isInfixOf` report
+        hasSeverity = show (errorSeverity error) `L.isInfixOf` report
     in hasLocation && hasMessage && hasSeverity
 
 prop_errorReportingEdgeCases :: CompilerError -> Bool
@@ -182,8 +183,8 @@ prop_errorContextPropagation error context =
 
 prop_nestedErrorContexts :: [CompilerError] -> String -> Bool
 prop_nestedErrorContexts errors context =
-    let withContext = map (`addErrorContext` context) errors
-        allHaveContext = all (hasErrorContext context) withContext
+    let withContext = L.map (`addErrorContext` context) errors
+        allHaveContext = L.all (hasErrorContext context) withContext
     in allHaveContext
 
 prop_errorContextMerging :: CompilerError -> String -> String -> Bool
@@ -230,10 +231,10 @@ removeDuplicates :: [CompilerError] -> [CompilerError]
 removeDuplicates = nub
 
 filterErrorsBySeverity :: [CompilerError] -> ErrorSeverity -> [CompilerError]
-filterErrorsBySeverity errors sev = filter (\e -> errorSeverity e == sev) errors
+filterErrorsBySeverity errors sev = L.filter (\e -> errorSeverity e == sev) errors
 
 recoverFromErrors :: [CompilerError] -> RecoveryState
-recoverFromErrors errors = RecoveryState (all (\e -> errorSeverity e /= Error) errors) errors
+recoverFromErrors errors = RecoveryState (L.all (\e -> errorSeverity e /= Error) errors) errors
 
 isRecoveryStateValid :: RecoveryState -> Bool
 isRecoveryStateValid _ = True
@@ -248,17 +249,17 @@ addErrorContext :: CompilerError -> String -> CompilerError
 addErrorContext error ctx = error { errorMessage = errorMessage error ++ " (context: " ++ ctx ++ ")" }
 
 hasErrorContext :: CompilerError -> String -> Bool
-hasErrorContext error ctx = ctx `isInfixOf` errorMessage error
+hasErrorContext error ctx = ctx `L.isInfixOf` errorMessage error
 
 isInfixOf :: Eq a => [a] -> [a] -> Bool
-isInfixOf needle haystack = any (isPrefixOf needle) (tails haystack)
+L.isInfixOf needle haystack = L.any (L.isPrefixOf needle) (tails haystack)
   where
-    isPrefixOf [] _ = True
-    isPrefixOf _ [] = False
-    isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
+    L.isPrefixOf [] _ = True
+    L.isPrefixOf _ [] = False
+    L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
     tails [] = [[]]
     tails xs@(x:xs') = xs : tails xs'
 
 nub :: Eq a => [a] -> [a]
 nub [] = []
-nub (x:xs) = x : nub (filter (/= x) xs)
+nub (x:xs) = x : nub (L.filter (/= x) xs)

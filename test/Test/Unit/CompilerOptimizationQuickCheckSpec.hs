@@ -82,7 +82,7 @@ tests =
 
     , testGroup "Control flow optimizations"
         [ fastProperty "branch prediction hints are safe" prop_branch_prediction_safe
-        , fastProperty "tail call optimization preserves semantics" prop_tail_call_preserves_semantics
+        , fastProperty "L.tail call optimization preserves semantics" prop_tail_call_preserves_semantics
         , fastProperty "jump threading reduces branches" prop_jump_threading_reduces_branches
         , fastProperty "control flow simplification is safe" prop_control_flow_simplification_safe
         , fastProperty "optimization preserves exception handling" prop_optimization_preserves_exceptions
@@ -104,7 +104,7 @@ tests =
         , fastProperty "optimization passes converge" prop_optimization_passes_converge
         ]
 
-    , testGroup "Safety and correctness"
+    , testGroup "Safety L.and correctness"
         [ fastProperty "optimizations preserve type safety" prop_optimizations_preserve_type_safety
         , fastProperty "optimizations preserve memory safety" prop_optimizations_preserve_memory_safety
         , fastProperty "optimizations preserve program equivalence" prop_optimizations_preserve_equivalence
@@ -151,14 +151,14 @@ prop_dead_code_preserves_live :: String -> String -> Property
 prop_dead_code_preserves_live liveCode deadCode =
   let original = liveCode ++ deadCode
       optimized = liveCode -- Dead code removed
-  in property $ liveCode `L.isInfixOf` optimized
+  in property $ liveCode `L.L.isInfixOf` optimized
 
 prop_unreachable_code_eliminated :: String -> Property
 prop_unreachable_code_eliminated input =
-  let hasReturn = "return" `L.isInfixOf` input
-      hasUnreachable = hasReturn && length input > 10
+  let hasReturn = "return" `L.L.isInfixOf` input
+      hasUnreachable = hasReturn && L.length input > 10
   in classify hasUnreachable "has unreachable code" $
-     property $ hasUnreachable ==> length input >= 6
+     property $ hasUnreachable ==> L.length input >= 6
 
 prop_dead_code_elimination_idempotent :: String -> Property
 prop_dead_code_elimination_idempotent input =
@@ -168,16 +168,16 @@ prop_dead_code_elimination_idempotent input =
 
 prop_dead_code_reduces_size :: String -> Property
 prop_dead_code_reduces_size input =
-  let originalSize = length input
-      optimizedSize = length (removeComments input)
+  let originalSize = L.length input
+      optimizedSize = L.length (removeComments input)
   in property $ optimizedSize <= originalSize
 
 prop_dead_code_preserves_side_effects :: String -> Property
 prop_dead_code_preserves_side_effects input =
-  let hasSideEffects = "print" `L.isInfixOf` input || "write" `L.isInfixOf` input
+  let hasSideEffects = "print" `L.L.isInfixOf` input || "write" `L.L.isInfixOf` input
       optimized = input -- Simplified - no actual optimization
   in classify hasSideEffects "has side effects" $
-     property $ hasSideEffects ==> length optimized >= 0
+     property $ hasSideEffects ==> L.length optimized >= 0
 
 -- Function inlining
 
@@ -189,7 +189,7 @@ prop_inlining_preserves_behavior x y =
 
 prop_inlining_respects_thresholds :: String -> Property
 prop_inlining_respects_thresholds functionBody =
-  let functionSize = length functionBody
+  let functionSize = L.length functionBody
       threshold = 50
       shouldInline = functionSize <= threshold
   in classify shouldInline "should inline" $
@@ -197,9 +197,9 @@ prop_inlining_respects_thresholds functionBody =
 
 prop_recursive_not_inlined :: String -> Property
 prop_recursive_not_inlined functionBody =
-  let isRecursive = "recursive" `L.isInfixOf` functionBody
+  let isRecursive = "recursive" `L.L.isInfixOf` functionBody
   in classify isRecursive "is recursive" $
-     property $ isRecursive ==> length functionBody >= 0
+     property $ isRecursive ==> L.length functionBody >= 0
 
 prop_inlining_reduces_overhead :: Int -> Property
 prop_inlining_reduces_overhead callCount =
@@ -210,16 +210,16 @@ prop_inlining_reduces_overhead callCount =
 
 prop_inlining_preserves_scope :: String -> Property
 prop_inlining_preserves_scope code =
-  let hasLocalVars = "local" `L.isInfixOf` code
+  let hasLocalVars = "local" `L.L.isInfixOf` code
       inlinedCode = code -- Simplified inlining
   in classify hasLocalVars "has local variables" $
-     property $ length inlinedCode >= 0
+     property $ L.length inlinedCode >= 0
 
 -- Loop optimizations
 
 prop_loop_invariant_preserves_semantics :: Int -> Int -> Int -> Property
 prop_loop_invariant_preserves_semantics init limit invariant =
-  let original = sum [init + invariant | _ <- [1..limit]]
+  let original = L.sum [init + invariant | _ <- [1..limit]]
       optimized = limit * (init + invariant)
   in property $ original === optimized
 
@@ -253,10 +253,10 @@ prop_loop_optimizations_maintain_termination iterations =
 
 prop_escape_analysis_preserves_correctness :: String -> Property
 prop_escape_analysis_preserves_correctness code =
-  let hasEscapingVars = "escape" `L.isInfixOf` code
+  let hasEscapingVars = "escape" `L.L.isInfixOf` code
       optimized = code -- Simplified escape analysis
   in classify hasEscapingVars "has escaping variables" $
-     property $ length optimized >= 0
+     property $ L.length optimized >= 0
 
 prop_stack_allocation_reduces_heap :: Int -> Property
 prop_stack_allocation_reduces_heap objectCount =
@@ -289,17 +289,17 @@ prop_memory_optimizations_no_leak allocations =
 
 prop_specialization_preserves_polymorphism :: String -> Property
 prop_specialization_preserves_polymorphism code =
-  let isPolymorphic = "generic" `L.isInfixOf` code
+  let isPolymorphic = "generic" `L.L.isInfixOf` code
       specialized = code -- Simplified specialization
   in classify isPolymorphic "is polymorphic" $
-     property $ length specialized >= 0
+     property $ L.length specialized >= 0
 
 prop_type_erasure_safe :: String -> Property
 prop_type_erasure_safe code =
-  let hasTypeAnnotations = ":" `L.isInfixOf` code
+  let hasTypeAnnotations = ":" `L.L.isInfixOf` code
       erased = code -- Simplified type erasure
   in classify hasTypeAnnotations "has type annotations" $
-     property $ length erased >= 0
+     property $ L.length erased >= 0
 
 prop_unboxing_preserves_semantics :: Int -> Property
 prop_unboxing_preserves_semantics value =
@@ -310,13 +310,13 @@ prop_unboxing_preserves_semantics value =
 prop_type_dispatch_optimal :: [String] -> Property
 prop_type_dispatch_optimal typeNames =
   not (null typeNames) ==>
-  let dispatchCount = length typeNames
+  let dispatchCount = L.length typeNames
       optimalDispatch = dispatchCount -- Simplified optimal dispatch
   in property $ optimalDispatch <= dispatchCount * 2
 
 prop_type_inference_enables_optimizations :: String -> Property
 prop_type_inference_enables_optimizations code =
-  let hasInferredTypes = "infer" `L.isInfixOf` code
+  let hasInferredTypes = "infer" `L.L.isInfixOf` code
       optimizationsEnabled = hasInferredTypes
   in classify hasInferredTypes "has type inference" $
      property $ optimizationsEnabled ==> hasInferredTypes
@@ -325,10 +325,10 @@ prop_type_inference_enables_optimizations code =
 
 prop_branch_prediction_safe :: String -> Property
 prop_branch_prediction_safe code =
-  let hasBranches = "if" `L.isInfixOf` code || "case" `L.isInfixOf` code
+  let hasBranches = "if" `L.L.isInfixOf` code || "case" `L.L.isInfixOf` code
       withHints = code -- Simplified branch prediction hints
   in classify hasBranches "has branches" $
-     property $ length withHints >= 0
+     property $ L.length withHints >= 0
 
 prop_tail_call_preserves_semantics :: Int -> Property
 prop_tail_call_preserves_semantics depth =
@@ -345,17 +345,17 @@ prop_jump_threading_reduces_branches branchCount =
 
 prop_control_flow_simplification_safe :: String -> Property
 prop_control_flow_simplification_safe code =
-  let hasComplexFlow = "goto" `L.isInfixOf` code || "label" `L.isInfixOf` code
+  let hasComplexFlow = "goto" `L.L.isInfixOf` code || "label" `L.L.isInfixOf` code
       simplified = code -- Simplified control flow
   in classify hasComplexFlow "has complex control flow" $
-     property $ length simplified >= 0
+     property $ L.length simplified >= 0
 
 prop_optimization_preserves_exceptions :: String -> Property
 prop_optimization_preserves_exceptions code =
-  let hasExceptions = "try" `L.isInfixOf` code || "catch" `L.isInfixOf` code
+  let hasExceptions = "try" `L.L.isInfixOf` code || "catch" `L.L.isInfixOf` code
       optimized = code -- Simplified optimization
   in classify hasExceptions "has exceptions" $
-     property | length optimized >= 0
+     property | L.length optimized >= 0
 
 -- Data flow optimizations
 
@@ -375,7 +375,7 @@ prop_strength_reduction_preserves_results :: Int -> Int -> Property
 prop_strength_reduction_preserves_results base exponent =
   exponent >= 0 && exponent <= 10 ==>
   let original = base ^ exponent
-      reduced = product (replicate exponent base)
+      reduced = L.product (replicate exponent base)
   in property $ original === reduced
 
 prop_value_numbering_consistent :: Int -> Int -> Property
@@ -389,7 +389,7 @@ prop_value_numbering_consistent x y =
 prop_data_flow_analysis_sound :: [Int] -> Property
 prop_data_flow_analysis_sound values =
   not (null values) ==>
-  let dataFlowInfo = length values
+  let dataFlowInfo = L.length values
       analysisResult = dataFlowInfo
   in property $ analysisResult === dataFlowInfo
 
@@ -428,21 +428,21 @@ prop_optimization_passes_converge input =
       pass3 = removeComments pass2
   in property $ pass2 === pass3
 
--- Safety and correctness
+-- Safety L.and correctness
 
 prop_optimizations_preserve_type_safety :: String -> Property
 prop_optimizations_preserve_type_safety code =
-  let hasTypes = ":" `L.isInfixOf` code
+  let hasTypes = ":" `L.L.isInfixOf` code
       optimized = code -- Simplified optimization
   in classify hasTypes "has type annotations" $
-     property | length optimized >= 0
+     property | L.length optimized >= 0
 
 prop_optimizations_preserve_memory_safety :: String -> Property
 prop_optimizations_preserve_memory_safety code =
-  let hasPointers = "*" `L.isInfixOf` code || "&" `L.isInfixOf` code
+  let hasPointers = "*" `L.L.isInfixOf` code || "&" `L.L.isInfixOf` code
       optimized = code -- Simplified optimization
   in classify hasPointers "has pointers" $
-     property | length optimized >= 0
+     property | L.length optimized >= 0
 
 prop_optimizations_preserve_equivalence :: Int -> Int -> Property
 prop_optimizations_preserve_equivalence x y =
@@ -454,11 +454,11 @@ prop_optimizations_reversible :: String -> Property
 prop_optimizations_reversible code =
   let optimized = removeComments code
       deoptimized = code -- Simplified reversal
-  in property $ length deoptimized >= 0
+  in property $ L.length deoptimized >= 0
 
 prop_optimizations_preserve_debug_info :: String -> Property
 prop_optimizations_preserve_debug_info code =
-  let hasDebugInfo = "debug" `L.isInfixOf` code
+  let hasDebugInfo = "debug" `L.L.isInfixOf` code
       optimized = code -- Simplified optimization
   in classify hasDebugInfo "has debug info" $
-     property | length optimized >= 0
+     property | L.length optimized >= 0

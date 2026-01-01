@@ -14,6 +14,7 @@ import Compiler.ValueAnalysis
   , ValueKind(..)
   )
 import Data.Char (isControl, isAlphaNum)
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 -- Property: ValueInfo preserves name
@@ -34,7 +35,7 @@ prop_valueinfo_preserves_scope name kind scope =
   let valueInfo = ValueInfo name kind scope
   in property $ viLine valueInfo === scope
 
--- Property: ValueInfo with all fields
+-- Property: ValueInfo with L.all fields
 prop_valueinfo_all_fields :: String -> ValueKind -> Int -> Property
 prop_valueinfo_all_fields name kind scope =
   let valueInfo = ValueInfo name kind scope
@@ -65,10 +66,10 @@ prop_valueinfo_show valueInfo =
 -- Property: ValueInfo show contains name
 prop_valueinfo_show_contains_name :: String -> Property
 prop_valueinfo_show_contains_name name =
-  not (null name) && all (\c -> isAlphaNum c || c == '_') name ==>
+  not (null name) && L.all (\c -> isAlphaNum c || c == '_') name ==>
   let valueInfo = ValueInfo name Unknown 0
       shown = show valueInfo
-  in property $ not (null shown) && "ValueInfo" `isInfixOf` shown
+  in property $ not (null shown) && "ValueInfo" `L.isInfixOf` shown
 
 -- Property: ValueKind equality
 prop_valuekind_eq :: ValueKind -> ValueKind -> Bool
@@ -136,14 +137,14 @@ prop_valueinfo_different_kinds name scope =
 -- Property: ValueInfo with different scopes
 prop_valueinfo_different_scopes :: String -> ValueKind -> [Int] -> Property
 prop_valueinfo_different_scopes name kind scopes =
-  let valueInfos = map (\scope -> ValueInfo name kind scope) scopes
+  let valueInfos = L.map (\scope -> ValueInfo name kind scope) scopes
       scopes' = map viLine valueInfos
   in property $ scopes' === scopes
 
 -- Property: ValueInfo with different names
 prop_valueinfo_different_names :: [String] -> ValueKind -> Int -> Property
 prop_valueinfo_different_names names kind scope =
-  let valueInfos = map (\name -> ValueInfo name kind scope) names
+  let valueInfos = L.map (\name -> ValueInfo name kind scope) names
       names' = map viName valueInfos
   in property $ names' === names
 
@@ -203,20 +204,20 @@ prop_valueinfo_show_contains_kind name kind =
   let valueInfo = ValueInfo name kind 0
       shown = show valueInfo
       kindStr = show kind
-  in property $ kindStr `isInfixOf` shown
+  in property $ kindStr `L.isInfixOf` shown
 
 -- Property: ValueInfo show contains scope
 prop_valueinfo_show_contains_scope :: String -> ValueKind -> Int -> Property
 prop_valueinfo_show_contains_scope name kind scope =
   let valueInfo = ValueInfo name kind scope
       shown = show valueInfo
-  in property $ show scope `isInfixOf` shown
+  in property $ show scope `L.isInfixOf` shown
 
 -- Property: ValueKind with different values
 prop_valuekind_different :: Property
 prop_valuekind_different =
   let kinds = [ValueCopy, Reference, Unknown]
-      allDifferent = all (\(k1, k2) -> k1 /= k2) [(k1, k2) | k1 <- kinds, k2 <- kinds, k1 /= k2]
+      allDifferent = L.all (\(k1, k2) -> k1 /= k2) [(k1, k2) | k1 <- kinds, k2 <- kinds, k1 /= k2]
   in property $ allDifferent === True
 
 -- Property: ValueKind copy vs reference
@@ -255,7 +256,7 @@ prop_valueinfo_same_kind_different_name kind scope =
       vi2 = ValueInfo "name2" kind scope
   in property $ vi1 /= vi2
 
--- Property: ValueInfo with same name and kind different scope
+-- Property: ValueInfo with same name L.and kind different scope
 prop_valueinfo_same_name_kind_different_scope :: String -> ValueKind -> Int -> Int -> Property
 prop_valueinfo_same_name_kind_different_scope name kind scope1 scope2 =
   let vi1 = ValueInfo name kind scope1
@@ -283,7 +284,7 @@ tests = testGroup "ValueAnalysis QuickCheck tests"
   [ fastProperty "ValueInfo preserves name" prop_valueinfo_preserves_name
   , fastProperty "ValueInfo preserves kind" prop_valueinfo_preserves_kind
   , fastProperty "ValueInfo preserves scope" prop_valueinfo_preserves_scope
-  , fastProperty "ValueInfo with all fields" prop_valueinfo_all_fields
+  , fastProperty "ValueInfo with L.all fields" prop_valueinfo_all_fields
   , fastProperty "ValueInfo equality" prop_valueinfo_eq
   , fastProperty "ValueInfo ordering" prop_valueinfo_ordering
   , fastProperty "ValueInfo show" prop_valueinfo_show
@@ -311,7 +312,7 @@ tests = testGroup "ValueAnalysis QuickCheck tests"
   , fastProperty "ValueKind unknown vs others" prop_valuekind_unknown_vs_others
   , fastProperty "ValueInfo with same name different kind" prop_valueinfo_same_name_different_kind
   , fastProperty "ValueInfo with same kind different name" prop_valueinfo_same_kind_different_name
-  , fastProperty "ValueInfo with same name and kind different scope" prop_valueinfo_same_name_kind_different_scope
+  , fastProperty "ValueInfo with same name L.and kind different scope" prop_valueinfo_same_name_kind_different_scope
   , fastProperty "ValueInfo ordering by name" prop_valueinfo_ordering_by_name
   , fastProperty "ValueInfo ordering by scope when names equal" prop_valueinfo_ordering_by_scope
   ]

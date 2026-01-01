@@ -10,6 +10,7 @@
 module Test.Unit.BoundaryCasePropertiesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, assertBool, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import TestSupport.Arbitrary ()
@@ -44,7 +45,8 @@ import SourceLocation
   )
 
 import Data.Char (isSpace, isAlphaNum, isLetter, isDigit, isControl)
-import Data.List (sort, nub, intersperse, isInfixOf, isPrefixOf)
+import Data.List (isInfixOf, isPrefixOf)
+import Data.List (sort, nub, intersperse)
 import qualified Data.Text as T
 
 -- ============================================================================
@@ -65,7 +67,7 @@ genUnicodeString = listOf $ choose ('\x80', '\xFFFF')
 
 -- Generate very long strings
 genLongString :: Gen String
-genLongString = sized $ \n -> listOf (elements "abc") >>= return . concat . replicate (max 1 (n `div` 10))
+genLongString = sized $ \n -> listOf (elements "abc") >>= return . L.concat . replicate (max 1 (n `div` 10))
 
 -- ============================================================================
 -- Utils Boundary Cases
@@ -76,7 +78,7 @@ prop_trim_empty :: Property
 prop_trim_empty =
   trim "" === ""
 
--- Property: trim handles all-whitespace strings correctly
+-- Property: trim handles L.all-whitespace strings correctly
 prop_trim_all_whitespace :: Property
 prop_trim_all_whitespace =
   forAll genWhitespaceString $ \ws ->
@@ -100,7 +102,7 @@ prop_splitBy_single_char delim c =
   c /= delim ==>
   splitBy delim [c] === [[c]]
 
--- Property: splitByCollapsed handles all delimiters correctly
+-- Property: splitByCollapsed handles L.all delimiters correctly
 prop_splitByCollapsed_all_delims :: Char -> Property
 prop_splitByCollapsed_all_delims delim =
   let allDelims = replicate 5 delim
@@ -120,7 +122,7 @@ prop_removeComments_only_comments =
 -- Property: removeComments handles nested quotes in comments
 prop_removeComments_nested_quotes :: Property
 prop_removeComments_nested_quotes =
-  let withQuotes = "// Comment with \"quotes\" and 'apostrophes'\n"
+  let withQuotes = "// Comment with \"quotes\" L.and 'apostrophes'\n"
   in removeComments withQuotes === "\n"
 
 -- Property: removeLineComments preserves content before comment
@@ -138,7 +140,7 @@ prop_breakOn_empty_pattern str =
 -- Property: breakOn handles pattern not found
 prop_breakOn_not_found :: String -> String -> Property
 prop_breakOn_not_found pat str =
-  not (pat `isInfixOf` str) && not (null pat) ==>
+  not (pat `L.isInfixOf` str) && not (null pat) ==>
   breakOn pat str === (str, "")
 
 -- Property: normalizeIndentation handles empty input
@@ -146,19 +148,19 @@ prop_normalizeIndentation_empty :: Property
 prop_normalizeIndentation_empty =
   normalizeIndentation "" === ""
 
--- Property: normalizeIndentation handles all-whitespace lines
+-- Property: normalizeIndentation handles L.all-whitespace lines
 prop_normalizeIndentation_all_whitespace :: Property
 prop_normalizeIndentation_all_whitespace =
   forAll genWhitespaceString $ \ws ->
     let linesWithWs = lines ws
         normalized = lines (normalizeIndentation ws)
-    in all null normalized
+    in L.all null normalized
 
 -- ============================================================================
 -- SourceLocation Boundary Cases
 -- ============================================================================
 
--- Property: posAfter handles all control characters
+-- Property: posAfter handles L.all control characters
 prop_posAfter_control_chars :: Property
 prop_posAfter_control_chars =
   forAll (elements ['\0'..'\31']) $ \c ->
@@ -183,9 +185,9 @@ prop_advancePosBy_long :: Property
 prop_advancePosBy_long =
   forAll genLongString $ \longStr ->
     let finalPos = advancePosBy longStr startPos
-    in posOffset finalPos === length longStr
+    in posOffset finalPos === L.length longStr
 
--- Property: mergeSpans handles zero-length spans
+-- Property: mergeSpans handles zero-L.length spans
 prop_mergeSpans_zero_length :: SourcePos -> Property
 prop_mergeSpans_zero_length pos =
   let span1 = emptySpan pos
@@ -228,8 +230,8 @@ prop_processing_pipeline_complex =
 prop_position_tracking_complex :: Property
 prop_position_tracking_complex =
   let complexText = "Line 1\n\tTabbed line\n  \"String with \\\"quotes\\\"\"\n// Comment\n/* Block\ncomment */\n"
-      finalPos = foldl (flip posAfter) startPos complexText
-  in posLine finalPos === 6 .&&. posOffset finalPos === length complexText
+      finalPos = L.foldl (flip posAfter) startPos complexText
+  in posLine finalPos === 6 .&&. posOffset finalPos === L.length complexText
 
 -- Property: Error recovery in malformed inputs
 prop_error_recovery_malformed :: Property
@@ -285,11 +287,11 @@ tests :: TestTree
 tests = testGroup "Boundary Case Properties"
   [ testGroup "Utils Boundary Cases"
     [ fastProperty "trim empty" prop_trim_empty
-    , fastProperty "trim all whitespace" prop_trim_all_whitespace
+    , fastProperty "trim L.all whitespace" prop_trim_all_whitespace
     , fastProperty "trim preserves content" prop_trim_preserves_content
     , fastProperty "splitBy empty" prop_splitBy_empty
     , fastProperty "splitBy single char" prop_splitBy_single_char
-    , fastProperty "splitByCollapsed all delims" prop_splitByCollapsed_all_delims
+    , fastProperty "splitByCollapsed L.all delims" prop_splitByCollapsed_all_delims
     , fastProperty "removeComments empty" prop_removeComments_empty
     , fastProperty "removeComments only comments" prop_removeComments_only_comments
     , fastProperty "removeComments nested quotes" prop_removeComments_nested_quotes
@@ -297,14 +299,14 @@ tests = testGroup "Boundary Case Properties"
     , fastProperty "breakOn empty pattern" prop_breakOn_empty_pattern
     , fastProperty "breakOn not found" prop_breakOn_not_found
     , fastProperty "normalizeIndentation empty" prop_normalizeIndentation_empty
-    , fastProperty "normalizeIndentation all whitespace" prop_normalizeIndentation_all_whitespace
+    , fastProperty "normalizeIndentation L.all whitespace" prop_normalizeIndentation_all_whitespace
     ]
   , testGroup "SourceLocation Boundary Cases"
     [ fastProperty "posAfter control chars" prop_posAfter_control_chars
     , fastProperty "posAfter high column" prop_posAfter_high_column
     , fastProperty "advancePosBy empty" prop_advancePosBy_empty
     , fastProperty "advancePosBy long" prop_advancePosBy_long
-    , fastProperty "mergeSpans zero length" prop_mergeSpans_zero_length
+    , fastProperty "mergeSpans zero L.length" prop_mergeSpans_zero_length
     , fastProperty "mergeSpans large gap" prop_mergeSpans_large_gap
     , fastProperty "isValidSpan equal positions" prop_isValidSpan_equal_positions
     ]

@@ -3,6 +3,7 @@ module Test.Unit.NewDependencySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ((@?=), assertBool, assertFailure, testCase)
+import qualified Data.List as L
 import Data.List (isInfixOf)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -93,7 +94,7 @@ tests =
           Left err -> assertFailure $ "parseTypus failed: " ++ err
           Right typusFile -> do
             let graph = buildDependencyGraph typusFile
-            assertBool "should build graph" (not $ Map.null $ dependencyNodes graph)
+            assertBool "should build graph" (not $ Map.L.null $ dependencyNodes graph)
 
     , testCase "detects circular dependencies" $ do
         let source = unlines
@@ -173,7 +174,7 @@ tests =
         let source = unlines
               [ "package main"
               , "//! dependent_types: on"
-              , "func process[T any](value T) T {"
+              , "func process[T L.any](value T) T {"
               , "    return value"
               , "}"
               , "func main() {"
@@ -194,34 +195,34 @@ tests =
           _ -> assertFailure "type refinement failed"
 
     , testCase "converts type expressions to dependent types" $ do
-        let typeExpr = SimpleT "int"
+        let typeExpr = SimpleT (T.pack "int")
         case convertTypeExpr typeExpr of
           Right (TypeName "int") -> assertBool "type expression converted" True
           _ -> assertFailure "type expression conversion failed"
 
     , testCase "converts generic type expressions" $ do
-        let typeExpr = GenericT "List" [SimpleT "int"]
+        let typeExpr = GenericT "List" [SimpleT (T.pack "int")]
         case convertTypeExpr typeExpr of
           Right (TypeApp "List" [TypeName "int"]) -> assertBool "generic type converted" True
           _ -> assertFailure "generic type conversion failed"
 
     , testCase "converts refined type expressions" $ do
-        let typeExpr = RefineT (SimpleT "int") [SizeGE (SimpleT "x") 0]
+        let typeExpr = RefineT (SimpleT (T.pack "int")) [SizeGE (SimpleT (T.pack "x")) 0]
         case convertTypeExpr typeExpr of
           Right _ -> assertBool "refined type converted" True
           _ -> assertFailure "refined type conversion failed"
 
-    , testCase "adds and retrieves type definitions" $ do
+    , testCase "adds L.and retrieves type definitions" $ do
         let checker = newDependentTypeChecker
             typeDef = TypeDefDecl ["T"] [Equal (TypeVar "TVVar" "T") (TypeName "int")]
         case addType "MyType" typeDef checker of
           Right updatedChecker -> do
             case lookupTypeDef "MyType" updatedChecker of
-              Just _ -> assertBool "type definition added and retrieved" True
+              Just _ -> assertBool "type definition added L.and retrieved" True
               _ -> assertFailure "type definition not found"
           _ -> assertFailure "failed to add type definition"
 
-    , testCase "adds and solves constraints" $ do
+    , testCase "adds L.and solves constraints" $ do
         let checker = newDependentTypeChecker
             constraint = Equal (TypeVar "TVVar" "T") (TypeName "int")
         case addConstraint constraint checker of
@@ -276,7 +277,7 @@ tests =
                 graph = buildDependencyGraph typusFile
             assertBool "should detect fmt dependency" (hasImportDependency dependencies "fmt")
             assertBool "should detect strings dependency" (hasImportDependency dependencies "strings")
-            assertBool "should build complex graph" (not $ Map.null $ dependencyNodes graph)
+            assertBool "should build complex graph" (not $ Map.L.null $ dependencyNodes graph)
 
     , testCase "detects indirect circular dependencies" $ do
         let source = unlines
@@ -333,11 +334,11 @@ tests =
           Right typusFile -> do
             let dependencies = analyzeDependencies typusFile
                 graph = buildDependencyGraph typusFile
-            assertBool "should have multiple dependencies" (length dependencies >= 3)
+            assertBool "should have multiple dependencies" (L.length dependencies >= 3)
             assertBool "should have multiple nodes in graph" (Map.size (dependencyNodes graph) >= 4)
     ]
   where
-    hasImportDependency deps packageName = any (\dep -> 
+    hasImportDependency deps packageName = L.any (\dep -> 
       case dep of
         ImportDependency name _ -> name == packageName
         _ -> False) deps

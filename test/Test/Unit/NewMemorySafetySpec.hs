@@ -5,6 +5,7 @@
 module Test.Unit.NewMemorySafetySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit ((@?=), assertBool, assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, elements, listOf, oneof, sized, Positive(..))
@@ -13,7 +14,8 @@ import Parser (parseTypus, TypusFile(..), CodeBlock(..))
 import Ownership (OwnershipType(..), OwnershipError(..), newOwnershipAnalyzer, analyzeOwnership)
 import Compiler (compile, CompilationResult(..))
 import Compiler.IR (IRModule(..), IRFunction(..))
-import Data.List (nub, sort, length)
+import Data.List (length)
+import Data.List (nub, sort)
 import Control.DeepSeq (force)
 import System.Mem (performGC)
 
@@ -155,13 +157,13 @@ isMemoryLeakWarning (OwnershipError _ "Memory leak" _) = True
 isMemoryLeakWarning _ = False
 
 isStackOverflowWarning :: String -> Bool
-isStackOverflowWarning err = "stack overflow" `isInfixOf` err || "recursion" `isInfixOf` err
+isStackOverflowWarning err = "stack overflow" `L.isInfixOf` err || "recursion" `L.isInfixOf` err
 
 isInfixOf :: String -> String -> Bool
 isInfixOf needle haystack = needle `elem` (substrings haystack)
   where
     substrings [] = []
-    substrings s@(x:xs) = take (length needle) s : substrings xs
+    substrings s@(x:xs) = take (L.length needle) s : substrings xs
 
 -- Helper functions for QuickCheck
 generateMemoryIntensiveProgram :: Int -> String

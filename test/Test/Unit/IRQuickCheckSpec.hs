@@ -8,7 +8,9 @@ import GHC.Generics (Generic)
 import Test.Tasty (TestTree, testGroup)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), property, forAll, counterexample, classify, Arbitrary(..), Gen, oneof, choose, listOf, elements)
-import Data.List (isPrefixOf, isInfixOf, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (nub)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import Data.Either (isLeft, isRight)
 import qualified Data.Text as T
@@ -56,9 +58,9 @@ prop_semanticir_value_info directives source valueInfoStrings =
   let typusFile = TypusFile directives [] [] []
       sourceIR = SourceIR typusFile source
       goModule = createSimpleGoModule
-      valueInfo = replicate (length valueInfoStrings) undefined  -- Simplified for test
+      valueInfo = replicate (L.length valueInfoStrings) undefined  -- Simplified for test
       semanticIR = SemanticIR (sourceTypusFile sourceIR) goModule valueInfo
-  in property $ length (semanticValueInfo semanticIR) === length valueInfo
+  in property $ L.length (semanticValueInfo semanticIR) === L.length valueInfo
 
 -- Property: GoIR maintains generated code
 prop_goir_code_generation :: String -> Property
@@ -98,7 +100,7 @@ prop_ir_empty_source directives =
       semanticIR = SemanticIR typusFile goModule []
       goIR = GoIR goModule ""
       allEmpty = sourceText sourceIR == "" &&
-                null (semanticValueInfo semanticIR) &&
+                L.null (semanticValueInfo semanticIR) &&
                 goSource goIR == ""
   in property $ allEmpty
 
@@ -109,7 +111,7 @@ prop_ir_large_source directives size =
   let largeSource = replicate size 'x'
       typusFile = TypusFile directives [] [] []
       sourceIR = SourceIR typusFile largeSource
-  in property $ length (sourceText sourceIR) === size
+  in property $ L.length (sourceText sourceIR) === size
 
 -- Property: Unicode source handling
 prop_ir_unicode_source :: FileDirectives -> String -> Property
@@ -117,7 +119,7 @@ prop_ir_unicode_source directives unicodeText =
   let sourceWithUnicode = unicodeText ++ "测试内容🚀αβγ"
       typusFile = TypusFile directives [] [] []
       sourceIR = SourceIR typusFile sourceWithUnicode
-  in property $ "测试内容🚀αβγ" `isInfixOf` sourceText sourceIR
+  in property $ "测试内容🚀αβγ" `L.isInfixOf` sourceText sourceIR
 
 -- Property: IR error accumulation simulation
 prop_ir_error_accumulation :: FileDirectives -> String -> [String] -> [String] -> Property
@@ -128,7 +130,7 @@ prop_ir_error_accumulation directives source errors1 errors2 =
       semanticIR1 = SemanticIR (sourceTypusFile sourceIR) goModule []
       semanticIR2 = SemanticIR (sourceTypusFile sourceIR) goModule []
       combinedValueInfo = semanticValueInfo semanticIR1 ++ semanticValueInfo semanticIR2
-  in property $ length combinedValueInfo === length errors1 + length errors2
+  in property $ L.length combinedValueInfo === L.length errors1 + L.length errors2
 
 -- Property: Symbol table size limits simulation
 prop_ir_symbol_table_limits :: FileDirectives -> String -> Int -> Property
@@ -139,7 +141,7 @@ prop_ir_symbol_table_limits directives source numSymbols =
       valueInfo = replicate numSymbols undefined  -- Simplified for test
       goModule = GoModule [] Nothing [] []
       semanticIR = SemanticIR (sourceTypusFile sourceIR) goModule valueInfo
-  in property $ length (semanticValueInfo semanticIR) === numSymbols
+  in property $ L.length (semanticValueInfo semanticIR) === numSymbols
 
 -- Property: IR round-trip transformation
 prop_ir_roundtrip :: FileDirectives -> String -> String -> Property
@@ -168,9 +170,9 @@ prop_ir_validation directives source goCode =
       goModule = createSimpleGoModule
       semanticIR = SemanticIR (sourceTypusFile sourceIR) goModule []
       goIR = GoIR goModule goCode
-      validSource = not (null $ sourceText sourceIR)
-      validSemantic = not (null $ semanticValueInfo semanticIR) || null (semanticValueInfo semanticIR)
-      validGo = not (null $ goSource goIR)
+      validSource = not (L.null $ sourceText sourceIR)
+      validSemantic = not (L.null $ semanticValueInfo semanticIR) || L.null (semanticValueInfo semanticIR)
+      validGo = not (L.null $ goSource goIR)
   in property $ validSource && validSemantic && validGo
 
 -- Property: IR value info formatting
@@ -179,21 +181,21 @@ prop_ir_value_info_formatting directives source valueInfoStrings =
   let typusFile = TypusFile directives [] [] []
       sourceIR = SourceIR typusFile source
       goModule = createSimpleGoModule
-      valueInfo = replicate (length valueInfoStrings) undefined  -- Simplified for test
+      valueInfo = replicate (L.length valueInfoStrings) undefined  -- Simplified for test
       semanticIR = SemanticIR (sourceTypusFile sourceIR) goModule valueInfo
       allValueInfo = semanticValueInfo semanticIR
       hasValidValueInfo = not (null allValueInfo)
-  in property $ hasValidValueInfo ==> length allValueInfo === length valueInfoStrings
+  in property $ hasValidValueInfo ==> L.length allValueInfo === L.length valueInfoStrings
 
 -- Property: IR symbol consistency simulation
 prop_ir_symbol_consistency :: FileDirectives -> String -> [String] -> Property
 prop_ir_symbol_consistency directives source symbolNames =
   let typusFile = TypusFile directives [] [] []
       sourceIR = SourceIR typusFile source
-      valueInfo = replicate (length symbolNames) undefined  -- Simplified for test
+      valueInfo = replicate (L.length symbolNames) undefined  -- Simplified for test
       goModule = GoModule [] Nothing [] []
       semanticIR = SemanticIR (sourceTypusFile sourceIR) goModule valueInfo
-      uniqueNames = length symbolNames === length (nub symbolNames)
+      uniqueNames = L.length symbolNames === L.length (nub symbolNames)
   in property $ uniqueNames
 
 -- Property: IR code generation consistency
@@ -211,11 +213,11 @@ prop_ir_incremental_updates directives source valueInfoStrings =
       sourceIR = SourceIR typusFile source
       goModule = createSimpleGoModule
       baseSemanticIR = SemanticIR (sourceTypusFile sourceIR) goModule []
-      valueInfo = replicate (length valueInfoStrings) undefined  -- Simplified for test
+      valueInfo = replicate (L.length valueInfoStrings) undefined  -- Simplified for test
       updatedSemanticIR = SemanticIR (sourceTypusFile sourceIR) goModule valueInfo
       finalSemanticIR = SemanticIR (sourceTypusFile sourceIR) goModule (semanticValueInfo updatedSemanticIR)
   in property $ 
-       length (semanticValueInfo finalSemanticIR) === length valueInfo
+       L.length (semanticValueInfo finalSemanticIR) === L.length valueInfo
 
 -- Property: IR memory efficiency
 prop_ir_memory_efficiency :: FileDirectives -> String -> Int -> Property
@@ -226,7 +228,7 @@ prop_ir_memory_efficiency directives source multiplier =
       valueInfo = replicate multiplier undefined  -- Simplified for test
       goModule = GoModule [] Nothing [] []
       semanticIR = SemanticIR (sourceTypusFile sourceIR) goModule valueInfo
-      totalItems = length (semanticValueInfo semanticIR)
+      totalItems = L.length (semanticValueInfo semanticIR)
   in property $ totalItems === multiplier
 
 -- Property: IR serialization consistency

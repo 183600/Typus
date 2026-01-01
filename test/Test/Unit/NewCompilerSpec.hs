@@ -3,6 +3,7 @@ module Test.Unit.NewCompilerSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ((@?=), assertBool, assertFailure, testCase)
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 import Parser
@@ -37,8 +38,8 @@ tests =
             case compile typusFile of
               Left errs -> assertFailure $ "compile failed: " ++ show errs
               Right goCode -> do
-                assertBool "contains package declaration" ("package main" `isInfixOf` goCode)
-                assertBool "contains main function" ("func main()" `isInfixOf` goCode)
+                assertBool "contains package declaration" ("package main" `L.isInfixOf` goCode)
+                assertBool "contains main function" ("func main()" `L.isInfixOf` goCode)
 
     , testCase "compiles with ownership directive" $ do
         let source = unlines
@@ -52,7 +53,7 @@ tests =
             case compile typusFile of
               Left errs -> assertFailure $ "compile failed: " ++ show errs
               Right goCode -> do
-                assertBool "contains package declaration" ("package main" `isInfixOf` goCode)
+                assertBool "contains package declaration" ("package main" `L.isInfixOf` goCode)
 
     , testCase "compiles with dependent_types directive" $ do
         let source = unlines
@@ -66,7 +67,7 @@ tests =
             case compile typusFile of
               Left errs -> assertFailure $ "compile failed: " ++ show errs
               Right goCode -> do
-                assertBool "contains package declaration" ("package main" `isInfixOf` goCode)
+                assertBool "contains package declaration" ("package main" `L.isInfixOf` goCode)
 
     , testCase "compiles with block directives" $ do
         let source = unlines
@@ -83,8 +84,8 @@ tests =
             case compile typusFile of
               Left errs -> assertFailure $ "compile failed: " ++ show errs
               Right goCode -> do
-                assertBool "contains package declaration" ("package main" `isInfixOf` goCode)
-                assertBool "contains println" ("println" `isInfixOf` goCode)
+                assertBool "contains package declaration" ("package main" `L.isInfixOf` goCode)
+                assertBool "contains println" ("println" `L.isInfixOf` goCode)
 
     , testCase "handles type mismatch error" $ do
         let source = unlines
@@ -98,13 +99,13 @@ tests =
           Right typusFile -> do
             case compile typusFile of
               Left errs -> do
-                length errs @?= 1
-                let err = head errs
+                L.length errs @?= 1
+                let err = L.head errs
                 errorCode err @?= "CP0003"
                 errorPhase err @?= TypeCheckingPhase
                 errorCategory err @?= TypeChecking
                 errorSeverity err @?= Error
-                assertBool "error message mentions type error" ("type error" `isInfixOf` show (errorMessage err))
+                assertBool "error message mentions type error" ("type error" `L.isInfixOf` show (errorMessage err))
               Right _ -> assertFailure "expected compilation to fail"
 
     , testCase "ensures source IR for valid syntax" $ do
@@ -132,13 +133,13 @@ tests =
           Right typusFile -> do
             case ensureSourceIR typusFile of
               Left errs -> do
-                length errs @?= 1
-                let err = head errs
+                L.length errs @?= 1
+                let err = L.head errs
                 errorCode err @?= "CP0001"
                 errorPhase err @?= ParsingPhase
                 errorCategory err @?= Parsing
                 errorSeverity err @?= Error
-                assertBool "error mentions malformed syntax" ("Malformed syntax" `isInfixOf` show (errorMessage err))
+                assertBool "error mentions malformed syntax" ("Malformed syntax" `L.isInfixOf` show (errorMessage err))
               Right _ -> assertFailure "expected ensureSourceIR to fail"
 
     , testCase "generates Go code fallback for compilation failures" $ do
@@ -152,7 +153,7 @@ tests =
           Left err -> assertFailure $ "parseTypus failed: " ++ err
           Right typusFile -> do
             let goCode = generateGoCode typusFile
-            assertBool "contains original source" ("var x int = \"string\"" `isInfixOf` goCode)
+            assertBool "contains original source" ("var x int = \"string\"" `L.isInfixOf` goCode)
 
     , testCase "generates Go code for successful compilation" $ do
         let source = unlines
@@ -170,8 +171,8 @@ tests =
             case compile typusFile of
               Left errs -> assertFailure $ "compile failed: " ++ show errs
               Right goCode -> do
-                assertBool "contains greet function" ("func greet" `isInfixOf` goCode)
-                assertBool "contains main function" ("func main" `isInfixOf` goCode)
+                assertBool "contains greet function" ("func greet" `L.isInfixOf` goCode)
+                assertBool "contains main function" ("func main" `L.isInfixOf` goCode)
 
     , testCase "converts type diagnostic to compiler error" $ do
         let diagnostic = TypeCheckDiagnostic (Just "main") "cannot use string as int"
@@ -180,14 +181,14 @@ tests =
         errorPhase compilerError @?= TypeCheckingPhase
         errorCategory compilerError @?= TypeChecking
         errorSeverity compilerError @?= Error
-        assertBool "error mentions context" ("Type error in 'main'" `isInfixOf` show (errorMessage compilerError))
-        assertBool "error mentions detail" ("cannot use string as int" `isInfixOf` show (errorMessage compilerError))
+        assertBool "error mentions context" ("Type error in 'main'" `L.isInfixOf` show (errorMessage compilerError))
+        assertBool "error mentions detail" ("cannot use string as int" `L.isInfixOf` show (errorMessage compilerError))
 
     , testCase "converts type diagnostic without context" $ do
         let diagnostic = TypeCheckDiagnostic Nothing "undefined variable"
             compilerError = typeDiagnosticToCompilerError diagnostic
         errorCode compilerError @?= "CP0002"
-        assertBool "error mentions type error without context" ("Type error: undefined variable" `isInfixOf` show (errorMessage compilerError))
+        assertBool "error mentions type error without context" ("Type error: undefined variable" `L.isInfixOf` show (errorMessage compilerError))
 
     , testCase "renders compilation errors" $ do
         let errors = 
@@ -195,10 +196,10 @@ tests =
               , CompilerError "CP0002" "Type error" TypeCheckingPhase TypeChecking Error (Just defaultSpan) Nothing [] [] Nothing
               ]
             rendered = renderCompilationError errors
-        assertBool "contains CP0001" ("CP0001" `isInfixOf` rendered)
-        assertBool "contains CP0002" ("CP0002" `isInfixOf` rendered)
-        assertBool "contains syntax error" ("Syntax error" `isInfixOf` rendered)
-        assertBool "contains type error" ("Type error" `isInfixOf` rendered)
+        assertBool "contains CP0001" ("CP0001" `L.isInfixOf` rendered)
+        assertBool "contains CP0002" ("CP0002" `L.isInfixOf` rendered)
+        assertBool "contains syntax error" ("Syntax error" `L.isInfixOf` rendered)
+        assertBool "contains type error" ("Type error" `L.isInfixOf` rendered)
 
     , testCase "handles complex function compilation" $ do
         let source = unlines
@@ -217,8 +218,8 @@ tests =
             case compile typusFile of
               Left errs -> assertFailure $ "compile failed: " ++ show errs
               Right goCode -> do
-                assertBool "contains calculate function" ("func calculate" `isInfixOf` goCode)
-                assertBool "contains function call" ("calculate(10, 20)" `isInfixOf` goCode)
+                assertBool "contains calculate function" ("func calculate" `L.isInfixOf` goCode)
+                assertBool "contains function call" ("calculate(10, 20)" `L.isInfixOf` goCode)
 
     , testCase "compiles with build tags" $ do
         let source = unlines
@@ -232,7 +233,7 @@ tests =
             case compile typusFile of
               Left errs -> assertFailure $ "compile failed: " ++ show errs
               Right goCode -> do
-                assertBool "contains package declaration" ("package main" `isInfixOf` goCode)
+                assertBool "contains package declaration" ("package main" `L.isInfixOf` goCode)
 
     , testCase "handles multiple directives" $ do
         let source = unlines
@@ -250,7 +251,7 @@ tests =
             case compile typusFile of
               Left errs -> assertFailure $ "compile failed: " ++ show errs
               Right goCode -> do
-                assertBool "contains package declaration" ("package main" `isInfixOf` goCode)
+                assertBool "contains package declaration" ("package main" `L.isInfixOf` goCode)
 
     , testCase "preserves comments in generated code" $ do
         let source = unlines
@@ -267,8 +268,8 @@ tests =
             case compile typusFile of
               Left errs -> assertFailure $ "compile failed: " ++ show errs
               Right goCode -> do
-                assertBool "contains line comment" ("// This is a comment" `isInfixOf` goCode)
-                assertBool "contains inline comment" ("// Inline comment" `isInfixOf` goCode)
+                assertBool "contains line comment" ("// This is a comment" `L.isInfixOf` goCode)
+                assertBool "contains inline comment" ("// Inline comment" `L.isInfixOf` goCode)
 
     , testCase "handles empty file" $ do
         let source = ""

@@ -2,6 +2,7 @@
 module Test.Unit.NewDependencyAssociativityQuickCheckSpec (tests) where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Dependencies
   ( TypeVar(..), TypeConstraint(..), DependentTypeError(..), TypeDef(..)
@@ -40,9 +41,9 @@ prop_substitution_associativity a b c =
             Nothing -> TVVar x
             Just t -> t
           TVCon _ -> tv
-          TVApp f args -> TVApp f (map (applySubst s) args)
-          TVFun ps rt -> TVFun (map (applySubst s) ps) (applySubst s rt)
-          TVTuple xs -> TVTuple (map (applySubst s) xs)
+          TVApp f args -> TVApp f (L.map (applySubst s) args)
+          TVFun ps rt -> TVFun (L.map (applySubst s) ps) (applySubst s rt)
+          TVTuple xs -> TVTuple (L.map (applySubst s) xs)
         
         result1 = applySubst subst2 (applySubst subst1 a)
         result2 = applySubst (subst1 ++ subst2) a
@@ -51,7 +52,7 @@ prop_substitution_associativity a b c =
 -- | Test type checking associativity
 prop_typechecking_associativity :: String -> String -> String -> Property
 prop_typechecking_associativity typeName1 typeName2 typeName3 =
-    all (\n -> length n > 0 && head n `elem` ['A'..'Z']) [typeName1, typeName2, typeName3] ==>
+    L.all (\n -> L.length n > 0 && L.head n `elem` ['A'..'Z']) [typeName1, typeName2, typeName3] ==>
     let checker = newDependentTypeChecker
         -- Add types in different orders should yield consistent results
         addTypes1 = execState (do
@@ -80,7 +81,7 @@ prop_constraint_solving_associativity a b c =
         success2 = execState solveConstraints checker2
         errors1 = getDependentTypeErrors success1
         errors2 = getDependentTypeErrors success2
-    in length errors1 == length errors2
+    in L.length errors1 == L.length errors2
 
 -- | Test unification associativity with function types
 prop_unification_function_associativity :: TypeVar -> TypeVar -> TypeVar -> TypeVar -> Property
@@ -90,14 +91,14 @@ prop_unification_function_associativity a b c d =
         unify1 = unify [(funcType1, funcType2)]
         unify2 = unify [(a, c), (b, d)]
     in case (unify1, unify2) of
-         (Just s1, Just s2) -> length s1 == length s2
+         (Just s1, Just s2) -> L.length s1 == L.length s2
          (Nothing, Nothing) -> True
          _ -> False
 
 -- | Test type instantiation associativity
 prop_type_instantiation_associativity :: String -> TypeVar -> TypeVar -> Property
 prop_type_instantiation_associativity typeName arg1 arg2 =
-    length typeName > 0 && head typeName `elem` ['A'..'Z'] ==>
+    L.length typeName > 0 && L.head typeName `elem` ['A'..'Z'] ==>
     let checker = newDependentTypeChecker
         checker1 = execState (do
             addType typeName ["T"] []
@@ -107,7 +108,7 @@ prop_type_instantiation_associativity typeName arg1 arg2 =
             checkTypeInstantiation typeName [arg2]) checker
         errors1 = getDependentTypeErrors checker1
         errors2 = getDependentTypeErrors checker2
-    in length errors1 >= 0 && length errors2 >= 0  -- Should not crash
+    in L.length errors1 >= 0 && L.length errors2 >= 0  -- Should not crash
 
 -- | Test constraint composition associativity
 prop_constraint_composition_associativity :: TypeVar -> TypeVar -> TypeVar -> Property
@@ -136,7 +137,7 @@ prop_constraint_composition_associativity a b c =
 -- | Test type environment associativity
 prop_type_environment_associativity :: String -> String -> Property
 prop_type_environment_associativity typeName1 typeName2 =
-    all (\n -> length n > 0 && head n `elem` ['A'..'Z']) [typeName1, typeName2] ==>
+    L.all (\n -> L.length n > 0 && L.head n `elem` ['A'..'Z']) [typeName1, typeName2] ==>
     let checker = newDependentTypeChecker
         checker1 = execState (do
             addType typeName1 [] []
@@ -159,9 +160,9 @@ prop_substitution_composition a b c =
             Nothing -> TVVar x
             Just t -> t
           TVCon _ -> tv
-          TVApp f args -> TVApp f (map (applySubst s) args)
-          TVFun ps rt -> TVFun (map (applySubst s) ps) (applySubst s rt)
-          TVTuple xs -> TVTuple (map (applySubst s) xs)
+          TVApp f args -> TVApp f (L.map (applySubst s) args)
+          TVFun ps rt -> TVFun (L.map (applySubst s) ps) (applySubst s rt)
+          TVTuple xs -> TVTuple (L.map (applySubst s) xs)
         
         -- Apply subst1 then subst2
         result1 = applySubst subst2 (applySubst subst1 a)
@@ -178,20 +179,20 @@ prop_unification_tuple_associativity a b c d =
         unify1 = unify [(tuple1, tuple2)]
         unify2 = unify [(a, c), (b, d)]
     in case (unify1, unify2) of
-         (Just s1, Just s2) -> length s1 == length s2
+         (Just s1, Just s2) -> L.length s1 == L.length s2
          (Nothing, Nothing) -> True
          _ -> False
 
 -- | Test generic type associativity
 prop_generic_type_associativity :: String -> TypeVar -> TypeVar -> Property
 prop_generic_type_associativity typeName arg1 arg2 =
-    length typeName > 0 && head typeName `elem` ['A'..'Z'] ==>
+    L.length typeName > 0 && L.head typeName `elem` ['A'..'Z'] ==>
     let genericType1 = TVApp typeName [arg1]
         genericType2 = TVApp typeName [arg2]
         unify1 = unify [(genericType1, genericType2)]
         unify2 = unify [(arg1, arg2)]
     in case (unify1, unify2) of
-         (Just s1, Just s2) -> length s1 >= length s2
+         (Just s1, Just s2) -> L.length s1 >= L.length s2
          (Nothing, Nothing) -> True
          _ -> False
 
@@ -210,7 +211,7 @@ prop_constraint_solving_order_independence a b c d =
 -- | Test type checking with constraints associativity
 prop_typechecking_constraints_associativity :: String -> TypeVar -> TypeVar -> Property
 prop_typechecking_constraints_associativity typeName arg1 arg2 =
-    length typeName > 0 && head typeName `elem` ['A'..'Z'] ==>
+    L.length typeName > 0 && L.head typeName `elem` ['A'..'Z'] ==>
     let checker = newDependentTypeChecker
         constraint = TypeSizeGE arg1 5
         checker1 = execState (do
@@ -221,7 +222,7 @@ prop_typechecking_constraints_associativity typeName arg1 arg2 =
             addType typeName ["T"] [constraint]) checker
         errors1 = getDependentTypeErrors checker1
         errors2 = getDependentTypeErrors checker2
-    in length errors1 >= 0 && length errors2 >= 0
+    in L.length errors1 >= 0 && L.length errors2 >= 0
 
 -- | Test multiple unification associativity
 prop_multiple_unification_associativity :: TypeVar -> TypeVar -> TypeVar -> TypeVar -> TypeVar -> Property

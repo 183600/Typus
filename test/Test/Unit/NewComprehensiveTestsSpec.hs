@@ -20,7 +20,9 @@ import Compiler.Errors.Core (ErrorSeverity(..), ErrorCategory(..), ErrorLocation
 import qualified Data.Text as T
 import Data.Char (isSpace, isAlphaNum)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, isInfixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort, nub)
 
 -- ============================================================================
 -- SourceLocation Tests
@@ -89,7 +91,7 @@ prop_trim_idempotent str =
 -- Property: trim removes only outer whitespace
 prop_trim_preserves_internal_spaces :: String -> String -> String -> Property
 prop_trim_preserves_internal_spaces before middle after =
-  not (any isSpace before) && not (any isSpace after) ==>
+  not (L.any isSpace before) && not (L.any isSpace after) ==>
   let input = before ++ "   " ++ middle ++ "   " ++ after
       trimmed = trim input
       expected = before ++ "   " ++ middle ++ "   " ++ after
@@ -110,34 +112,34 @@ prop_splitByComma_consistency str =
 -- Property: removeLineComments preserves non-comment content
 prop_removeLineComments_preserves_content :: String -> String -> Property
 prop_removeLineComments_preserves_content before after =
-  not ("//" `isInfixOf` before) && not ("//" `isInfixOf` after) &&
-  not ("\"" `isInfixOf` before) && not ("\"" `isInfixOf` after) &&
-  not ("'" `isInfixOf` before) && not ("'" `isInfixOf` after) ==>
+  not ("//" `L.isInfixOf` before) && not ("//" `L.isInfixOf` after) &&
+  not ("\"" `L.isInfixOf` before) && not ("\"" `L.isInfixOf` after) &&
+  not ("'" `L.isInfixOf` before) && not ("'" `L.isInfixOf` after) ==>
   let input = before ++ "\n" ++ after ++ "\n// comment\n" ++ before
       result = removeLineComments input
-  in property $ before `isInfixOf` result .&&. after `isInfixOf` result
+  in property $ before `L.isInfixOf` result .&&. after `L.isInfixOf` result
 
 -- Property: removeComments preserves string literals
 prop_removeComments_preserves_strings :: String -> Property
 prop_removeComments_preserves_strings content =
-  not ("\"" `isInfixOf` content) && not ("'" `isInfixOf` content) ==>
+  not ("\"" `L.isInfixOf` content) && not ("'" `L.isInfixOf` content) ==>
   let input = "var s = \"" ++ content ++ "\" // comment\n/* block comment */"
       result = removeComments input
-  in property $ ("\"" ++ content ++ "\"") `isInfixOf` result
+  in property $ ("\"" ++ content ++ "\"") `L.isInfixOf` result
 
 -- Property: normalizeIndentation preserves relative structure
 prop_normalizeIndentation_preserves_structure :: [String] -> Property
 prop_normalizeIndentation_preserves_structure lines =
-  not (null lines) && length lines <= 10 ==>
+  not (null lines) && L.length lines <= 10 ==>
   let input = Data.List.unlines lines
       normalized = normalizeIndentation input
       normalizedLines = lines normalized
-  in property $ length normalizedLines === length lines
+  in property $ L.length normalizedLines === L.length lines
 
 -- Property: breakOn finds correct split point
 prop_breakOn_correct_split :: String -> String -> String -> Property
 prop_breakOn_correct_split pat prefix suffix =
-  not (null pat) && not (pat `isInfixOf` prefix) && not (pat `isInfixOf` suffix) ==>
+  not (null pat) && not (pat `L.isInfixOf` prefix) && not (pat `L.isInfixOf` suffix) ==>
   let input = prefix ++ pat ++ suffix
       (before, after) = breakOn pat input
   in property $ before === prefix .&&. after === suffix
@@ -146,7 +148,7 @@ prop_breakOn_correct_split pat prefix suffix =
 -- Error Handling Tests
 -- ============================================================================
 
--- Property: emptyContext has no errors or warnings
+-- Property: emptyContext has no errors L.or warnings
 prop_emptyContext_clean :: Property
 prop_emptyContext_clean =
   property $ not (hasErrors emptyContext) .&&. not (hasWarnings emptyContext)
@@ -156,7 +158,7 @@ prop_filterBySeverity_preserves_order :: [ErrorSeverity] -> ErrorSeverity -> Pro
 prop_filterBySeverity_preserves_order severities target =
   not (null severities) ==> 
   let filtered = filterBySeverity target severities
-      originalFiltered = filter (== target) severities
+      originalFiltered = L.filter (== target) severities
   in property $ filtered === originalFiltered
 
 -- Property: filterByCategory is consistent
@@ -164,17 +166,17 @@ prop_filterByCategory_consistent :: [ErrorCategory] -> ErrorCategory -> Property
 prop_filterByCategory_consistent categories target =
   not (null categories) ==>
   let filtered = filterByCategory target categories
-      expected = filter (== target) categories
+      expected = L.filter (== target) categories
   in property $ filtered === expected
 
 -- ============================================================================
 -- Parser Integration Tests
 -- ============================================================================
 
--- Property: Valid identifiers are alphanumeric with underscores and hyphens
+-- Property: Valid identifiers are alphanumeric with underscores L.and hyphens
 prop_valid_identifier_structure :: String -> Property
 prop_valid_identifier_structure str =
-  let isValid = all (\c -> isAlphaNum c || c == '_' || c == '-') str
+  let isValid = L.all (\c -> isAlphaNum c || c == '_' || c == '-') str
       hasContent = not (null str)
   in classify hasContent "non-empty" $
      classify isValid "valid identifier" $
@@ -183,9 +185,9 @@ prop_valid_identifier_structure str =
 -- Property: Directive parsing maintains consistency
 prop_directive_parsing_consistent :: [(String, String)] -> Property
 prop_directive_parsing_consistent pairs =
-  length pairs <= 5 ==> -- Limit complexity
+  L.length pairs <= 5 ==> -- Limit complexity
   let directiveStr = "//! " ++ unwords [key ++ "=" ++ value | (key, value) <- pairs]
-      hasDirective = "//!" `isPrefixOf` directiveStr
+      hasDirective = "//!" `L.isPrefixOf` directiveStr
   in classify hasDirective "has directive" $
      property $ hasDirective
 
@@ -197,16 +199,16 @@ prop_directive_parsing_consistent pairs =
 prop_linear_string_processing :: Int -> String -> Property
 prop_linear_string_processing multiplier baseStr =
   multiplier >= 1 && multiplier <= 100 ==> -- Reasonable limits
-  let largeStr = concat (replicate multiplier baseStr)
+  let largeStr = L.concat (replicate multiplier baseStr)
       processed = trim largeStr
       splitResult = splitBy ',' largeStr
-  in property $ length processed <= length largeStr .&&. length splitResult >= 1
+  in property $ L.length processed <= L.length largeStr .&&. L.length splitResult >= 1
 
 -- Property: Position tracking is efficient
 prop_efficient_position_tracking :: Int -> Property
 prop_efficient_position_tracking n =
   n >= 0 && n <= 10000 ==> -- Reasonable limits
-  let finalPos = foldl (\pos c -> posAfter c pos) startPos (replicate n 'x')
+  let finalPos = L.foldl (\pos c -> posAfter c pos) startPos (replicate n 'x')
   in property $ posOffset finalPos === n
 
 -- ============================================================================
@@ -228,16 +230,16 @@ prop_unicode_handling baseStr =
   let unicodeStr = baseStr ++ "测试café🚀"
       trimmed = trim unicodeStr
       processed = removeLineComments unicodeStr
-  in property $ "测试" `isInfixOf` processed .&&. "café" `isInfixOf` processed .&&. "🚀" `isInfixOf` processed
+  in property $ "测试" `L.isInfixOf` processed .&&. "café" `L.isInfixOf` processed .&&. "🚀" `L.isInfixOf` processed
 
 -- Property: Special character handling in comments
 prop_special_char_comments :: String -> Property
 prop_special_char_comments content =
-  not ("\"" `isInfixOf` content) && not ("'" `isInfixOf` content) &&
-  not ("/*" `isInfixOf` content) && not ("*/" `isInfixOf` content) ==>
+  not ("\"" `L.isInfixOf` content) && not ("'" `L.isInfixOf` content) &&
+  not ("/*" `L.isInfixOf` content) && not ("*/" `L.isInfixOf` content) ==>
   let input = content ++ " // " ++ content ++ "\n/* " ++ content ++ " */"
       result = removeComments input
-  in property $ not ("//" `isInfixOf` result) .&&. not ("/*" `isInfixOf` result) .&&. not ("*/" `isInfixOf` result)
+  in property $ not ("//" `L.isInfixOf` result) .&&. not ("/*" `L.isInfixOf` result) .&&. not ("*/" `L.isInfixOf` result)
 
 -- ============================================================================
 -- Integration Tests
@@ -246,24 +248,24 @@ prop_special_char_comments content =
 -- Property: Complete processing pipeline
 prop_complete_processing_pipeline :: String -> String -> String -> Property
 prop_complete_processing_pipeline prefix middle suffix =
-  not ("\"" `isInfixOf` prefix) && not ("'" `isInfixOf` prefix) &&
-  not ("\"" `isInfixOf` middle) && not ("'" `isInfixOf` middle) &&
-  not ("\"" `isInfixOf` suffix) && not ("'" `isInfixOf` suffix) &&
-  not ("/*" `isInfixOf` prefix ++ middle ++ suffix) ==>
+  not ("\"" `L.isInfixOf` prefix) && not ("'" `L.isInfixOf` prefix) &&
+  not ("\"" `L.isInfixOf` middle) && not ("'" `L.isInfixOf` middle) &&
+  not ("\"" `L.isInfixOf` suffix) && not ("'" `L.isInfixOf` suffix) &&
+  not ("/*" `L.isInfixOf` prefix ++ middle ++ suffix) ==>
   let input = prefix ++ "  /* comment */  " ++ middle ++ "  // line comment  " ++ suffix
       processed = input 
                   |> removeComments
                   |> trim
                   |> normalizeIndentation
-  in property $ not ("/* comment */" `isInfixOf` processed) .&&.
-     not ("// line comment" `isInfixOf` processed) .&&.
-     (middle `isInfixOf` processed)
+  in property $ not ("/* comment */" `L.isInfixOf` processed) .&&.
+     not ("// line comment" `L.isInfixOf` processed) .&&.
+     (middle `L.isInfixOf` processed)
 
 -- Helper function for pipeline composition
 (|>) :: a -> (a -> b) -> b
 x |> f = f x
 
--- Aggregate all tests
+-- Aggregate L.all tests
 tests :: TestTree
 tests = testGroup "New Comprehensive Tests"
   [ testGroup "SourceLocation Tests"

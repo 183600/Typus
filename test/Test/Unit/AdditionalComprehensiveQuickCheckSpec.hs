@@ -8,6 +8,7 @@
 module Test.Unit.AdditionalComprehensiveQuickCheckSpec where
 
 import Test.Tasty (TestTree)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty)
 import Test.QuickCheck (Property, (===), forAll, Gen, arbitrary, oneof, elements, listOf, choose, frequency)
 import qualified Test.QuickCheck as QC
@@ -58,25 +59,25 @@ import TestSupport.Arbitrary (genIdentifier, genNonEmptyString, genBool, genInt,
 prop_trim_idempotent :: String -> Property
 prop_trim_idempotent s = trim (trim s) === trim s
 
--- | Property: splitBy and splitByCollapsed relationship for non-empty results
+-- | Property: splitBy L.and splitByCollapsed relationship for non-empty results
 prop_splitBy_vs_collapsed :: Char -> String -> Property
 prop_splitBy_vs_collapsed delim s = 
   let normal = splitBy delim s
       collapsed = splitByCollapsed delim s
-  in null (filter (not . null) normal) === null collapsed
+  in L.null (L.filter (not . null) normal) === null collapsed
 
 -- | Property: removeLineComments preserves line structure
 prop_removeLine_comments_preserve_lines :: String -> Property
 prop_removeLine_comments_preserve_lines s = 
-  let originalLines = length (lines s)
-      commentRemovedLines = length (lines (removeLineComments s))
+  let originalLines = L.length (lines s)
+      commentRemovedLines = L.length (lines (removeLineComments s))
   in commentRemovedLines <= originalLines
 
 -- | Property: normalizeIndentation preserves relative indentation
 prop_normalize_indentation_relative :: String -> Property
 prop_normalize_indentation_relative s = 
-  let originalLines = filter (not . all (== ' ')) (lines s)
-      normalizedLines = filter (not . null) (lines (normalizeIndentation s))
+  let originalLines = L.filter (not . L.all (== ' ')) (lines s)
+      normalizedLines = L.filter (not . null) (lines (normalizeIndentation s))
   in if null originalLines 
      then QC.label "empty input" $ null normalizedLines
      else QC.label "non-empty input" $ not (null normalizedLines)
@@ -109,27 +110,27 @@ prop_mergeSpans_commutative span1 span2 =
 prop_advancePosBy_consistent :: String -> SourcePos -> Property
 prop_advancePosBy_consistent s pos =
   let advanced = advancePosBy s pos
-      manual = foldl (flip posAfter) pos s
+      manual = L.foldl (flip posAfter) pos s
   in advanced === manual
 
 -- ============================================================================
 -- Test 3: Parser Comment Handling Properties
 -- ============================================================================
 
--- | Property: removeComments removes all // comments
+-- | Property: removeComments removes L.all // comments
 prop_removeComments_removes_slash_comments :: String -> Property
 prop_removeComments_removes_slash_comments s =
-  let hasComment = isInfixOf "//" s
+  let hasComment = L.isInfixOf "//" s
       processed = removeComments s
-  in not (isInfixOf "//" processed) QC.|| QC.label "no original comment" (not hasComment)
+  in not (L.isInfixOf "//" processed) QC.|| QC.label "no original comment" (not hasComment)
   where
-    isInfixOf needle haystack = needle `elem` [take (length needle) (drop i haystack) | i <- [0..length haystack - length needle]]
+    L.isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
 
 -- | Property: removeComments preserves string literals
 prop_removeComments_preserves_strings :: String -> Property  
 prop_removeComments_preserves_strings s =
   let processed = removeComments s
-      countQuotes = length . filter (== '"')
+      countQuotes = L.length . L.filter (== '"')
   in countQuotes s === countQuotes processed
 
 -- ============================================================================
@@ -158,7 +159,7 @@ prop_ownership_valid_identifier ident =
   let ownType = Own.Owned ident
   in not (null ident) ==> not (null ident)
 
--- | Property: Borrowed and MutBorrowed types are distinguishable
+-- | Property: Borrowed L.and MutBorrowed types are distinguishable
 prop_ownership_borrowed_vs_mut :: String -> Property
 prop_ownership_borrowed_vs_mut ident =
   let borrowed = Own.Borrowed ident
@@ -208,13 +209,13 @@ prop_error_severity_ordering sev1 sev2 =
 -- | Property: Parsing is idempotent for well-formed code
 prop_parsing_idempotent :: String -> Property
 prop_parsing_idempotent code =
-  let simpleCheck = not (null code) && all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \n\t{}();")
+  let simpleCheck = not (null code) && L.all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \n\t{}();")
   in simpleCheck ==> simpleCheck
 
 -- | Property: Code generation preserves structure
 prop_code_generation_preserves_structure :: String -> Property
 prop_code_generation_preserves_structure code =
-  let lineCount = length (lines code)
+  let lineCount = L.length (lines code)
   in lineCount > 0 ==> lineCount > 0
 
 -- ============================================================================
@@ -233,15 +234,15 @@ prop_long_string_handling :: Property
 prop_long_string_handling =
   let longString = replicate 1000 'a'
       trimmed = trim longString
-  in length trimmed <= 1000
+  in L.length trimmed <= 1000
 
 -- | Property: Special characters are preserved correctly
 prop_special_characters :: String -> Property
 prop_special_characters s =
   let specialChars = "!@#$%^&*()_+-=[]{}|;':\",./<>?"
-      hasSpecial = any (`elem` specialChars) s
+      hasSpecial = L.any (`elem` specialChars) s
       processed = trim s
-  in hasSpecial ==> length processed >= 0
+  in hasSpecial ==> L.length processed >= 0
 
 -- ============================================================================
 -- Test 10: Integration End-to-End Properties
@@ -250,17 +251,17 @@ prop_special_characters s =
 -- | Property: Simple compilation pipeline preserves semantics
 prop_simple_pipeline_preserves_semantics :: String -> Property
 prop_simple_pipeline_preserves_semantics code =
-  let isSimple = all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \n\t") code
-      lineCount = length (lines code)
+  let isSimple = L.all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \n\t") code
+      lineCount = L.length (lines code)
   in isSimple && lineCount <= 10 ==> lineCount <= 10
 
 -- | Property: File directives are parsed consistently
 prop_file_directives_consistent :: String -> Property
 prop_file_directives_consistent directive =
-  let isDirective = "//!" `isPrefixOf` directive
-  in isDirective ==> length directive >= 3
+  let isDirective = "//!" `L.isPrefixOf` directive
+  in isDirective ==> L.length directive >= 3
   where
-    isPrefixOf prefix str = take (length prefix) str == prefix
+    L.isPrefixOf prefix str = take (L.length prefix) str == prefix
 
 -- | Property: Code blocks maintain structure
 prop_code_blocks_structure :: String -> Int -> Property

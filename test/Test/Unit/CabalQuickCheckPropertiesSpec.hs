@@ -1,6 +1,7 @@
 module Test.Unit.CabalQuickCheckPropertiesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty)
 
@@ -21,30 +22,30 @@ tests =
         , testProperty "trim removes only leading/trailing whitespace" $ do
             \input -> let trimmed = Utils.trim input
                           hasLeadingOrTrailing = not (null input) && 
-                                                (head input `elem` " \t\n\r" || last input `elem` " \t\n\r")
+                                                (L.head input `elem` " \t\n\r" || last input `elem` " \t\n\r")
                       in if hasLeadingOrTrailing
-                         then length trimmed < length input || trimmed == input
+                         then L.length trimmed < L.length input || trimmed == input
                          else trimmed == input
 
-        , testProperty "splitBy and splitByCollapsed relationship" $ do
+        , testProperty "splitBy L.and splitByCollapsed relationship" $ do
             \input delim -> let normal = Utils.splitBy delim input
                               collapsed = Utils.splitByCollapsed delim input
-                          in all (`elem` normal) collapsed
+                          in L.all (`elem` normal) collapsed
 
         , testProperty "splitBy preserves total content" $ do
             \input delim -> let parts = Utils.splitBy delim input
-                              rejoined = concat (intersperse [delim] parts)
-                          in length rejoined >= length input - length (filter (== delim) input)
+                              rejoined = L.concat (intersperse [delim] parts)
+                          in L.length rejoined >= L.length input - L.length (L.filter (== delim) input)
 
         , testProperty "removeComments doesn't change string literals" $ do
             \input -> let withComments = "func test() { s := \"" ++ input ++ "\"; // comment }\n"
                           withoutComments = Utils.removeComments withComments
-                      in "\"" ++ input ++ "\"" `isInfixOf` withoutComments
+                      in "\"" ++ input ++ "\"" `L.isInfixOf` withoutComments
 
         , testProperty "normalizeIndentation preserves line structure" $ do
             \input -> let normalized = Utils.normalizeIndentation input
-                          lineCount = length (lines input)
-                          normLineCount = length (lines normalized)
+                          lineCount = L.length (lines input)
+                          normLineCount = L.length (lines normalized)
                       in lineCount == normLineCount
         ]
 
@@ -81,7 +82,7 @@ tests =
         ]
 
     , testGroup "Parser Properties"
-        [ testProperty "Parser doesn't crash on any input" $ do
+        [ testProperty "Parser doesn't crash on L.any input" $ do
             \input -> let result = Parser.parseTypus "property" input
                       in case result of
                            Left _ -> True
@@ -89,11 +90,11 @@ tests =
 
         , testProperty "Parser preserves line count information" $ do
             \input -> let result = Parser.parseTypus "lines" input
-                          inputLines = length (lines input) + 1
+                          inputLines = L.length (lines input) + 1
                       in case result of
                            Left err -> 
                              -- Error should mention line number if there are multiple lines
-                             inputLines <= 1 || "line" `isInfixOf` show err
+                             inputLines <= 1 || "line" `L.isInfixOf` show err
                            Right _ -> True
 
         , testProperty "Parser handles empty input consistently" $ do
@@ -106,34 +107,34 @@ tests =
         ]
 
     , testGroup "String Processing Properties"
-        [ testProperty "trim never increases string length" $ do
-            \input -> length (Utils.trim input) <= length input
+        [ testProperty "trim never increases string L.length" $ do
+            \input -> L.length (Utils.trim input) <= L.length input
 
         , testProperty "splitByCollapsed never produces empty strings" $ do
-            \input delim -> all (not . null) (Utils.splitByCollapsed delim input)
+            \input delim -> L.all (not . null) (Utils.splitByCollapsed delim input)
 
         , testProperty "removeComments preserves non-comment content" $ do
             \input -> let code = "func test() { return " ++ show input ++ "; }"
                           withComments = code ++ " // comment"
                           withoutComments = Utils.removeComments withComments
-                      in show input `isInfixOf` withoutComments
+                      in show input `L.isInfixOf` withoutComments
 
         , testProperty "normalizeIndentation doesn't introduce trailing whitespace" $ do
             \input -> let normalized = Utils.normalizeIndentation input
-                          hasTrailing = any (`elem` " \t") . map last . filter (not . null) $ lines normalized
-                      in not hasTrailing || all null (lines normalized)
+                          hasTrailing = L.any (`elem` " \t") . map last . L.filter (not . null) $ lines normalized
+                      in not hasTrailing || L.all L.null (lines normalized)
         ]
 
     , testGroup "Combinatorial Properties"
         [ testProperty "trim after splitBy maintains consistency" $ do
             \input delim -> let parts = Utils.splitBy delim input
                               trimmedParts = map Utils.trim parts
-                          in length parts == length trimmedParts
+                          in L.length parts == L.length trimmedParts
 
-        , testProperty "removeComments and normalizeIndentation commute" $ do
+        , testProperty "removeComments L.and normalizeIndentation commute" $ do
             \input -> let order1 = Utils.normalizeIndentation (Utils.removeComments input)
                           order2 = Utils.removeComments (Utils.normalizeIndentation input)
-                      in length order1 == length order2  -- Basic consistency check
+                      in L.length order1 == L.length order2  -- Basic consistency check
 
         , testProperty "Multiple trim applications are idempotent" $ do
             \input -> let once = Utils.trim input
@@ -143,7 +144,7 @@ tests =
         ]
     ]
   where
-    isInfixOf needle haystack = needle `elem` (substrings haystack)
+    L.isInfixOf needle haystack = needle `elem` (substrings haystack)
     substrings [] = []
     substrings s@(x:xs) = takeWhile (const True) s : substrings xs
     intersperse _ [] = []

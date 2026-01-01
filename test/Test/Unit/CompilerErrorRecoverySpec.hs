@@ -33,11 +33,12 @@ import Compiler
 import Parser (TypusFile(..), parseTypus)
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos)
 
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Char (isSpace, isLetter)
 import qualified Data.Text as T
 
--- Test: Compiler can recover from syntax errors and continue parsing
+-- Test: Compiler can recover from syntax errors L.and continue parsing
 test_syntax_error_recovery :: TestTree
 test_syntax_error_recovery = testCase "Compiler recovers from syntax errors" $ do
   let malformedCode = "package main\n\nfunc main() {\n  x := 5\n  y := \n  z := x + y\n}"
@@ -46,27 +47,27 @@ test_syntax_error_recovery = testCase "Compiler recovers from syntax errors" $ d
     Left err -> assertFailure $ "Parse failed completely: " ++ show err
     Right typusFile -> do
       -- Should still parse some structure despite syntax error
-      length (tfBlocks typusFile) @?= 1
+      L.length (tfBlocks typusFile) @?= 1
 
 -- Property: Error messages contain source location information
 prop_error_messages_include_location :: String -> Property
 prop_error_messages_include_location code =
-  not (null code) && not ("package" `isInfixOf` code) ==>
+  not (null code) && not ("package" `L.isInfixOf` code) ==>
   let result = parseTypus ("package main\n\nfunc main() {\n" ++ code ++ "\n}")
   in case result of
     Right _ -> property True  -- No error, test passes
-    Left err -> property $ "line" `isInfixOf` show err || "column" `isInfixOf` show err
+    Left err -> property $ "line" `L.isInfixOf` show err || "column" `L.isInfixOf` show err
 
--- Property: Multiple errors are collected and reported together
+-- Property: Multiple errors are collected L.and reported together
 prop_multiple_errors_collected :: [String] -> Property
 prop_multiple_errors_collected errorLines =
-  length errorLines >= 2 && length errorLines <= 5 ==>
-  let malformedLines = map (\line -> "x := " ++ line) errorLines
+  L.length errorLines >= 2 && L.length errorLines <= 5 ==>
+  let malformedLines = L.map (\line -> "x := " ++ line) errorLines
       code = "package main\n\nfunc main() {\n" ++ unlines malformedLines ++ "\n}"
       result = parseTypus code
   in case result of
     Right _ -> property True  -- No errors, test passes
-    Left err -> property $ length (lines (show err)) >= 1
+    Left err -> property $ L.length (lines (show err)) >= 1
 
 -- Test: Compiler provides helpful error messages for common mistakes
 test_helpful_error_messages :: TestTree
@@ -82,15 +83,15 @@ test_helpful_error_messages = testCase "Compiler provides helpful error messages
 -- Property: Type checking errors include variable name information
 prop_type_errors_include_variable_info :: String -> String -> Property
 prop_type_errors_include_variable_info varName typeName =
-  not (null varName) && all isLetter varName && 
-  not (null typeName) && all isLetter typeName ==>
+  not (null varName) && L.all isLetter varName && 
+  not (null typeName) && L.all isLetter typeName ==>
   let code = "package main\n\nfunc main() {\n  " ++ varName ++ " := 5\n  " ++ varName ++ " := \"" ++ typeName ++ "\"\n}"
       result = compile code
   in case result of
     Right _ -> property True  -- No error, test passes
-    Left errs -> property $ any (varName `isInfixOf`) (map show errs)
+    Left errs -> property $ L.any (varName `L.isInfixOf`) (map show errs)
 
--- Test: Compiler can handle and report circular dependency errors
+-- Test: Compiler can handle L.and report circular dependency errors
 test_circular_dependency_detection :: TestTree
 test_circular_dependency_detection = testCase "Compiler detects circular dependencies" $ do
   let circularCode = "package main\n\nfunc a() { return b() }\nfunc b() { return a() }"
@@ -107,13 +108,13 @@ test_circular_dependency_detection = testCase "Compiler detects circular depende
 -- Property: Error recovery preserves line numbers for subsequent errors
 prop_error_recovery_preserves_line_numbers :: [String] -> Property
 prop_error_recovery_preserves_line_numbers errorLines =
-  length errorLines >= 3 && length errorLines <= 10 ==>
+  L.length errorLines >= 3 && L.length errorLines <= 10 ==>
   let numberedLines = zipWith (\i line -> show i ++ ": " ++ line) [1..] errorLines
       code = "package main\n\nfunc main() {\n" ++ unlines numberedLines ++ "\n}"
       result = parseTypus code
   in case result of
     Right _ -> property True  -- No errors, test passes
-    Left err -> property $ any (\n -> show n `isInfixOf` show err) [1..length errorLines]
+    Left err -> property $ L.any (\n -> show n `L.isInfixOf` show err) [1..L.length errorLines]
 
 -- Test: Compiler gracefully handles malformed type annotations
 test_malformed_type_annotations :: TestTree

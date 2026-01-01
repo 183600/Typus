@@ -29,6 +29,7 @@ import Utils
   , breakOn
   )
 
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Char (isSpace, toLower, isAlphaNum)
 import qualified Data.Text as T
@@ -59,27 +60,27 @@ tests =
 prop_trim_linear_time :: String -> Int -> Property
 prop_trim_linear_time input multiplier =
   multiplier > 0 && multiplier <= 100 ==> -- Reasonable bounds
-  let largeInput = concat (replicate multiplier input)
+  let largeInput = L.concat (replicate multiplier input)
       trimmed = trim largeInput
-      expectedRatio = fromIntegral (length trimmed) / fromIntegral (length largeInput)
+      expectedRatio = fromIntegral (L.length trimmed) / fromIntegral (L.length largeInput)
   in property $ expectedRatio <= 1.0 .&&. expectedRatio >= 0.0
 
 -- Property: SplitBy is efficient with large inputs
 prop_splitby_efficient_large :: String -> Char -> Int -> Property
 prop_splitby_efficient_large base delimiter multiplier =
   multiplier > 0 && multiplier <= 50 ==> -- Reasonable bounds
-  let largeInput = concat (replicate multiplier (base ++ [delimiter]))
+  let largeInput = L.concat (replicate multiplier (base ++ [delimiter]))
       result = splitBy delimiter largeInput
-      segmentsCount = length result
-  in property $ segmentsCount >= multiplier .&&. all (not . null) result
+      segmentsCount = L.length result
+  in property $ segmentsCount >= multiplier .&&. L.all (not . null) result
 
 -- Property: SplitByCollapsed reduces memory usage
 prop_splitbycollapsed_memory_efficient :: String -> Char -> Property
 prop_splitbycollapsed_memory_efficient input delimiter =
   let regular = splitBy delimiter input
       collapsed = splitByCollapsed delimiter input
-      memoryReduced = length collapsed <= length regular
-  in property $ memoryReduced .&&. all (not . null) collapsed
+      memoryReduced = L.length collapsed <= L.length regular
+  in property $ memoryReduced .&&. L.all (not . null) collapsed
 
 -- Property: RemoveComments handles large files efficiently
 prop_removecomments_efficient_large_files :: String -> Int -> Property
@@ -87,24 +88,24 @@ prop_removecomments_efficient_large_files baseContent multiplier =
   multiplier > 0 && multiplier <= 20 ==> -- Reasonable bounds
   let largeFile = unlines $ replicate multiplier (baseContent ++ " // comment")
       processed = removeComments largeFile
-      commentsRemoved = not ("// comment" `isInfixOf` processed)
-  in property $ commentsRemoved .&&. length processed <= length largeFile
+      commentsRemoved = not ("// comment" `L.isInfixOf` processed)
+  in property $ commentsRemoved .&&. L.length processed <= L.length largeFile
 
 -- Property: NormalizeIndentation scales linearly
 prop_normalizeindentation_linear_scaling :: [String] -> Int -> Property
 prop_normalizeindentation_linear_scaling lines multiplier =
   not (null lines) && multiplier > 0 && multiplier <= 10 ==> -- Reasonable bounds
-  let largeInput = unlines $ concat (replicate multiplier lines)
+  let largeInput = unlines $ L.concat (replicate multiplier lines)
       normalized = normalizeIndentation largeInput
-      scalingLinear = length normalized >= length lines
+      scalingLinear = L.length normalized >= L.length lines
   in property $ scalingLinear .&&. not (null normalized)
 
 -- Property: String operations are memory efficient
 prop_string_operations_memory_efficient :: String -> Int -> Property
 prop_string_operations_memory_efficient base operations =
   operations > 0 && operations <= 100 ==> -- Reasonable bounds
-  let processed = foldl (\acc _ -> trim acc) base [1..operations]
-      memoryEfficient = length processed <= length base + operations
+  let processed = L.foldl (\acc _ -> trim acc) base [1..operations]
+      memoryEfficient = L.length processed <= L.length base + operations
   in property $ memoryEfficient .&&. not (null processed)
 
 -- Property: Text processing is optimized for unicode
@@ -113,15 +114,15 @@ prop_text_processing_unicode_optimized base =
   let unicodeText = base ++ "测试🚀café"
       textProcessed = T.pack unicodeText
       processed = trim unicodeText
-      unicodePreserved = "测试" `isInfixOf` processed && "🚀" `isInfixOf` processed
-  in property $ unicodePreserved .&&. T.length textProcessed >= length base
+      unicodePreserved = "测试" `L.isInfixOf` processed && "🚀" `L.isInfixOf` processed
+  in property $ unicodePreserved .&&. T.L.length textProcessed >= L.length base
 
 -- Property: ByteString operations are efficient
 prop_bytestring_operations_efficient :: String -> Property
 prop_bytestring_operations_efficient input =
-  let byteString = BS.pack $ map (fromEnum . toEnum . fromEnum) input
-      processed = BS.take (BS.length byteString `div` 2) byteString
-      efficient = BS.length processed <= BS.length byteString
+  let byteString = BS.pack $ L.map (fromEnum . toEnum . fromEnum) input
+      processed = BS.take (BS.L.length byteString `div` 2) byteString
+      efficient = BS.L.length processed <= BS.L.length byteString
   in property $ efficient .&&. not (BS.null processed)
 
 -- Property: Recursive operations don't cause stack overflow
@@ -139,9 +140,9 @@ prop_recursive_operations_no_stack_overflow input depth =
 prop_large_string_processing_time_bounded :: String -> Int -> Property
 prop_large_string_processing_time_bounded base multiplier =
   multiplier > 0 && multiplier <= 10 ==> -- Reasonable bounds
-  let largeString = concat (replicate multiplier base)
+  let largeString = L.concat (replicate multiplier base)
       processed = complexStringProcessing largeString
-      timeBounded = length processed >= 0 -- Simplified time check
+      timeBounded = L.length processed >= 0 -- Simplified time check
   in property $ timeBounded
   where
     complexStringProcessing s = removeComments (normalizeIndentation s)
@@ -150,27 +151,27 @@ prop_large_string_processing_time_bounded base multiplier =
 prop_memory_usage_bounded_repeated :: String -> Int -> Property
 prop_memory_usage_bounded_repeated input iterations =
   iterations > 0 && iterations <= 50 ==> -- Reasonable bounds
-  let results = map (const $ trim input) [1..iterations]
-      bounded = all (== trim input) results
-  in property $ bounded .&&. length results == iterations
+  let results = L.map (const $ trim input) [1..iterations]
+      bounded = L.all (== trim input) results
+  in property $ bounded .&&. L.length results == iterations
 
 -- Property: String concatenation is efficient
 prop_string_concatenation_efficient :: [String] -> Property
 prop_string_concatenation_efficient strings =
   not (null strings) ==> 
   let concatenated = efficientConcat strings
-      efficient = length concatenated == sum (map length strings)
+      efficient = L.length concatenated == L.sum (map L.length strings)
   in property $ efficient .&&. not (null concatenated)
   where
-    efficientConcat = concat -- Simplified efficient concatenation
+    efficientConcat = L.concat -- Simplified efficient concatenation
 
 -- Property: List operations scale appropriately
 prop_list_operations_scale_appropriately :: [Int] -> Int -> Property
 prop_list_operations_scale_appropriately baseList multiplier =
   not (null baseList) && multiplier > 0 && multiplier <= 10 ==> -- Reasonable bounds
-  let largeList = concat (replicate multiplier baseList)
+  let largeList = L.concat (replicate multiplier baseList)
       processed = efficientListOperation largeList
-      scalingAppropriate = length processed >= length baseList
+      scalingAppropriate = L.length processed >= L.length baseList
   in property $ scalingAppropriate
   where
     efficientListOperation = nub -- Simplified efficient operation
@@ -179,20 +180,20 @@ prop_list_operations_scale_appropriately baseList multiplier =
 prop_cache_efficiency_repeated_operations :: String -> Int -> Property
 prop_cache_efficiency_repeated_operations input repetitions =
   repetitions > 0 && repetitions <= 20 ==> -- Reasonable bounds
-  let cachedResults = map (const $ cachedTrim input) [1..repetitions]
-      cacheEfficient = all (== trim input) cachedResults
-  in property $ cacheEfficient .&&. length cachedResults == repetitions
+  let cachedResults = L.map (const $ cachedTrim input) [1..repetitions]
+      cacheEfficient = L.all (== trim input) cachedResults
+  in property $ cacheEfficient .&&. L.length cachedResults == repetitions
   where
     cachedTrim = trim -- Simplified cached operation
 
 -- Property: Parallel processing improves performance
 prop_parallel_processing_performance :: [String] -> Property
 prop_parallel_processing_performance strings =
-  length strings >= 2 ==> 
+  L.length strings >= 2 ==> 
   let sequential = map trim strings
       parallel = map trim strings -- Simplified parallel processing
-      performanceImproved = length parallel == length sequential
-  in property $ performanceImproved .&&. all (`elem` sequential) parallel
+      performanceImproved = L.length parallel == L.length sequential
+  in property $ performanceImproved .&&. L.all (`elem` sequential) parallel
 
 -- Additional efficiency properties
 
@@ -200,14 +201,14 @@ prop_parallel_processing_performance strings =
 prop_memory_allocation_minimal_small :: String -> Property
 prop_memory_allocation_minimal_small input =
   let processed = trim input
-      minimalAllocation = length processed <= length input + 10
+      minimalAllocation = L.length processed <= L.length input + 10
   in property $ minimalAllocation
 
 -- Property: String searching is efficient
 prop_string_searching_efficient :: String -> String -> Property
 prop_string_searching_efficient haystack needle =
   not (null haystack) && not (null needle) ==> 
-  let found = needle `isInfixOf` haystack
+  let found = needle `L.isInfixOf` haystack
       efficient = True -- Simplified efficiency check
   in property $ efficient .||. not found
 
@@ -216,16 +217,16 @@ prop_regex_processing_bounded :: String -> String -> Property
 prop_regex_processing_bounded input pattern =
   not (null input) && not (null pattern) ==> 
   let processed = simpleRegexReplace pattern "X" input
-      bounded = length processed >= 0
+      bounded = L.length processed >= 0
   in property $ bounded
   where
-    simpleRegexReplace _ replacement = map (const replacement) -- Simplified
+    simpleRegexReplace _ replacement = L.map (const replacement) -- Simplified
 
 -- Property: File I/O operations are efficient
 prop_file_io_efficient :: String -> Property
 prop_file_io_efficient content =
   let processed = simulateFileProcessing content
-      efficient = length processed >= 0
+      efficient = L.length processed >= 0
   in property $ efficient
   where
     simulateFileProcessing = removeComments . normalizeIndentation
@@ -234,18 +235,18 @@ prop_file_io_efficient content =
 prop_string_transformation_performance :: String -> Int -> Property
 prop_string_transformation_performance base transformations =
   transformations > 0 && transformations <= 100 ==> -- Reasonable bounds
-  let result = foldl (\acc _ -> toLower <$> acc) base [1..transformations]
-      performancePreserved = length result == length base
+  let result = L.foldl (\acc _ -> toLower <$> acc) base [1..transformations]
+      performancePreserved = L.length result == L.length base
   in property $ performancePreserved
 
 -- Property: Bulk operations are more efficient than individual ones
 prop_bulk_operations_more_efficient :: [String] -> Property
 prop_bulk_operations_more_efficient strings =
-  length strings >= 10 ==> 
+  L.length strings >= 10 ==> 
   let individual = map trim strings
       bulk = map trim strings -- Simplified bulk operation
-      bulkEfficient = length bulk == length individual
-  in property $ bulkEfficient .&&. all (`elem` individual) bulk
+      bulkEfficient = L.length bulk == L.length individual
+  in property $ bulkEfficient .&&. L.all (`elem` individual) bulk
 
 -- Property: Lazy evaluation prevents unnecessary computation
 prop_lazy_evaluation_prevents_computation :: String -> Bool -> Property
@@ -258,9 +259,9 @@ prop_lazy_evaluation_prevents_computation input shouldProcess =
 prop_memory_cleanup_effective :: String -> Int -> Property
 prop_memory_cleanup_effective base size =
   size > 0 && size <= 100 ==> -- Reasonable bounds
-  let largeData = concat (replicate size base)
+  let largeData = L.concat (replicate size base)
       processed = processAndCleanup largeData
-      cleanupEffective = length processed >= 0
+      cleanupEffective = L.length processed >= 0
   in property $ cleanupEffective
   where
     processAndCleanup = trim -- Simplified process with cleanup
@@ -274,7 +275,7 @@ complexStringProcessing :: String -> String
 complexStringProcessing = removeComments . normalizeIndentation . trim
 
 efficientConcat :: [String] -> String
-efficientConcat = concat
+efficientConcat = L.concat
 
 efficientListOperation :: [Int] -> [Int]
 efficientListOperation = nub
@@ -283,4 +284,4 @@ cachedTrim :: String -> String
 cachedTrim = trim
 
 simpleRegexReplace :: String -> String -> String -> String
-simpleRegexReplace pattern replacement = map (const replacement)
+simpleRegexReplace pattern replacement = L.map (const replacement)

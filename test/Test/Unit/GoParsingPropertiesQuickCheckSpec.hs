@@ -3,6 +3,7 @@
 module Test.Unit.GoParsingPropertiesQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 
@@ -10,14 +11,14 @@ import Compiler.GoParsing
 
 prop_stripLineComment_preserves_non_comment :: String -> Property
 prop_stripLineComment_preserves_non_comment s =
-  not ("//" `elem` [take 2 $ drop i s | i <- [0..max 0 (length s - 2)]]) ==>
+  not ("//" `elem` [take 2 $ drop i s | i <- [0..max 0 (L.length s - 2)]]) ==>
   stripLineComment s === s
 
 prop_stripLineComment_removes_comment :: Property
 prop_stripLineComment_removes_comment =
   forAll genWithComment $ \s ->
   let result = stripLineComment s
-  in not ("//" `elem` [take 2 $ drop i result | i <- [0..max 0 (length result - 2)]]) === True
+  in not ("//" `elem` [take 2 $ drop i result | i <- [0..max 0 (L.length result - 2)]]) === True
   where
     genWithComment = do
       prefix <- listOf (elements ['a'..'z'])
@@ -27,7 +28,7 @@ prop_stripLineComment_removes_comment =
 prop_splitTopLevel_preserves_content :: Char -> String -> Property
 prop_splitTopLevel_preserves_content delim s =
   let parts = splitTopLevel delim s
-      reconstructed = concat parts
+      reconstructed = L.concat parts
   in property True
 
 prop_nestingDelta_balanced_parens :: Property

@@ -16,6 +16,7 @@ import Compiler.IR (SourceIR(..), SemanticIR(..), GoIR(..))
 import qualified Compiler.TypeChecker as TC
 import SourceLocation (Located(..), locatedValue, startPos, emptySpan)
 import qualified Data.Map as Map
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import Data.Maybe (isJust, isNothing)
 import qualified Data.Text as T
@@ -39,7 +40,7 @@ prop_compile_empty_file =
       result = compile emptyFile
   in case result of
     Left err -> counterexample ("Empty file compilation failed: " ++ show err) $ property False
-    Right goCode -> property $ "package main" `isInfixOf` goCode
+    Right goCode -> property $ "package main" `L.isInfixOf` goCode
 
 -- Property: Files with only directives compile without errors
 prop_compile_directives_only :: FileDirectives -> Property
@@ -48,7 +49,7 @@ prop_compile_directives_only directives =
       result = compile directivesFile
   in case result of
     Left err -> counterexample ("Directives-only compilation failed: " ++ show err) $ property False
-    Right goCode -> property $ "package main" `isInfixOf` goCode
+    Right goCode -> property $ "package main" `L.isInfixOf` goCode
 
 -- Property: Ownership directive affects compilation output
 prop_compile_ownership_directive_effect :: Bool -> Property
@@ -91,7 +92,7 @@ prop_compile_multiple_directives_interaction ownership dt constraints =
       result = compile file
   in case result of
     Left err -> counterexample ("Multiple directives compilation failed: " ++ show err) $ property False
-    Right goCode -> property $ "package main" `isInfixOf` goCode
+    Right goCode -> property $ "package main" `L.isInfixOf` goCode
 
 -- Property: Type checking preserves type information
 prop_compile_type_checking_preservation :: TypusFile -> Property
@@ -111,9 +112,9 @@ prop_compile_declaration_extraction_consistency typusFile =
   in case (declarations, result) of
     ([], Left _) -> property True
     ([], Right _) -> property True
-    (_, Left err) -> property $ "declaration" `isInfixOf` show err || "syntax" `isInfixOf` show err
+    (_, Left err) -> property $ "declaration" `L.isInfixOf` show err || "syntax" `L.isInfixOf` show err
     (decls, Right goCode) -> 
-      let hasDeclarationMarkers = any (`isInfixOf` goCode) ["func", "var", "type", "const"]
+      let hasDeclarationMarkers = L.any (`L.isInfixOf` goCode) ["func", "var", "type", "const"]
       in property $ hasDeclarationMarkers
 
 -- Property: Function call extraction matches compilation analysis
@@ -124,9 +125,9 @@ prop_compile_function_call_extraction_consistency typusFile =
   in case (functionCalls, result) of
     ([], Left _) -> property True
     ([], Right _) -> property True
-    (_, Left err) -> property $ "function" `isInfixOf` show err || "call" `isInfixOf` show err
+    (_, Left err) -> property $ "function" `L.isInfixOf` show err || "call" `L.isInfixOf` show err
     (calls, Right goCode) -> 
-      let hasFunctionCalls = any (`isInfixOf` goCode) (map (("(" ++) . (++ ")")) calls)
+      let hasFunctionCalls = L.any (`L.isInfixOf` goCode) (L.map (("(" ++) . (++ ")")) calls)
       in property $ hasFunctionCalls
 
 -- Property: Go code generation produces syntactically valid output
@@ -134,9 +135,9 @@ prop_compile_go_code_syntax_validity :: TypusFile -> Property
 prop_compile_go_code_syntax_validity typusFile =
   let result = compile typusFile
   in case result of
-    Left err -> property $ "error" `isInfixOf` show err  -- Errors are valid output
+    Left err -> property $ "error" `L.isInfixOf` show err  -- Errors are valid output
     Right goCode -> 
-      let hasPackageDecl = "package" `isInfixOf` goCode
+      let hasPackageDecl = "package" `L.isInfixOf` goCode
           hasValidBraces = countChar '{' goCode == countChar '}' goCode
           hasValidParens = countChar '(' goCode == countChar ')' goCode
       in property $ hasPackageDecl && hasValidBraces && hasValidParens
@@ -169,16 +170,16 @@ prop_compile_type_error_reporting typusFile =
   let hasTypeErrs = hasTypeErrors typusFile
       result = compile typusFile
   in case (hasTypeErrs, result) of
-    (True, Left err) -> property $ "type" `isInfixOf` show err
+    (True, Left err) -> property $ "type" `L.isInfixOf` show err
     (True, Right _) -> property $ False  -- Should have failed on type errors
-    (False, _) -> property $ True  -- No type errors, any result is acceptable
+    (False, _) -> property $ True  -- No type errors, L.any result is acceptable
 
 -- Property: Compilation phases are executed in correct order
 prop_compile_compilation_phases_order :: TypusFile -> Property
 prop_compile_compilation_phases_order typusFile =
   let result = compile typusFile
   in case result of
-    Left err -> property $ "phase" `isInfixOf` show err || "error" `isInfixOf` show err
+    Left err -> property $ "phase" `L.isInfixOf` show err || "error" `L.isInfixOf` show err
     Right _ -> property $ True  -- Successful compilation implies correct phase order
 
 -- Property: Large files compile without stack overflow
@@ -188,8 +189,8 @@ prop_compile_large_files numBlocks =
   let largeFile = createSimpleTypusFileWithBlocks numBlocks
       result = compile largeFile
   in case result of
-    Left err -> property $ "large" `isInfixOf` show err || "size" `isInfixOf` show err || True
-    Right goCode -> property $ "package main" `isInfixOf` goCode
+    Left err -> property $ "large" `L.isInfixOf` show err || "size" `L.isInfixOf` show err || True
+    Right goCode -> property $ "package main" `L.isInfixOf` goCode
 
 -- Property: Files with complex nested structures compile correctly
 prop_compile_nested_structures :: Int -> Property
@@ -198,8 +199,8 @@ prop_compile_nested_structures depth =
   let nestedFile = createNestedTypusFile depth
       result = compile nestedFile
   in case result of
-    Left err -> property $ "nested" `isInfixOf` show err || "structure" `isInfixOf` show err || True
-    Right goCode -> property $ "package main" `isInfixOf` goCode
+    Left err -> property $ "nested" `L.isInfixOf` show err || "structure" `L.isInfixOf` show err || True
+    Right goCode -> property $ "package main" `L.isInfixOf` goCode
 
 -- Property: Files with Unicode content compile correctly
 prop_compile_unicode_content :: String -> Property
@@ -207,8 +208,8 @@ prop_compile_unicode_content unicodeText =
   let unicodeFile = createSimpleTypusFile (unicodeText ++ " 测试内容 🚀")
       result = compile unicodeFile
   in case result of
-    Left err -> property $ "unicode" `isInfixOf` show err || "encoding" `isInfixOf` show err || True
-    Right goCode -> property $ "package main" `isInfixOf` goCode
+    Left err -> property $ "unicode" `L.isInfixOf` show err || "encoding" `L.isInfixOf` show err || True
+    Right goCode -> property $ "package main" `L.isInfixOf` goCode
 
 -- Property: Files with special characters compile correctly
 prop_compile_special_characters :: String -> Property
@@ -216,80 +217,80 @@ prop_compile_special_characters specialChars =
   let specialFile = createSimpleTypusFile specialChars
       result = compile specialFile
   in case result of
-    Left err -> property $ "character" `isInfixOf` show err || "encoding" `isInfixOf` show err || True
-    Right goCode -> property $ "package main" `isInfixOf` goCode
+    Left err -> property $ "character" `L.isInfixOf` show err || "encoding" `L.isInfixOf` show err || True
+    Right goCode -> property $ "package main" `L.isInfixOf` goCode
 
 -- Property: Files with multiple code blocks compile correctly
 prop_compile_multiple_blocks :: [String] -> Property
 prop_compile_multiple_blocks blockContents =
-  length blockContents <= 10 ==> -- Limit to avoid complexity
+  L.length blockContents <= 10 ==> -- Limit to avoid complexity
   let multiBlockFile = createSimpleTypusFileWithMultipleBlocks blockContents
       result = compile multiBlockFile
   in case result of
-    Left err -> property $ "block" `isInfixOf` show err || "multiple" `isInfixOf` show err || True
-    Right goCode -> property $ "package main" `isInfixOf` goCode
+    Left err -> property $ "block" `L.isInfixOf` show err || "multiple" `L.isInfixOf` show err || True
+    Right goCode -> property $ "package main" `L.isInfixOf` goCode
 
 -- Property: Files with import statements compile correctly
 prop_compile_import_statements :: [String] -> Property
 prop_compile_import_statements importPaths =
-  not (null importPaths) && length importPaths <= 10 ==> -- Limit to avoid complexity
+  not (null importPaths) && L.length importPaths <= 10 ==> -- Limit to avoid complexity
   let importFile = createSimpleTypusFileWithImports importPaths
       result = compile importFile
   in case result of
-    Left err -> property $ "import" `isInfixOf` show err || "package" `isInfixOf` show err || True
-    Right goCode -> property $ "package main" `isInfixOf` goCode
+    Left err -> property $ "import" `L.isInfixOf` show err || "package" `L.isInfixOf` show err || True
+    Right goCode -> property $ "package main" `L.isInfixOf` goCode
 
 -- Property: Files with function definitions compile correctly
 prop_compile_function_definitions :: [String] -> [String] -> [String] -> Property
 prop_compile_function_definitions funcNames paramTypes returnTypes =
   not (null funcNames) && not (null paramTypes) && not (null returnTypes) ==>
-  let minLen = minimum [length funcNames, length paramTypes, length returnTypes]
+  let minLen = L.minimum [L.length funcNames, L.length paramTypes, L.length returnTypes]
       limitedFuncs = take minLen funcNames
       limitedParams = take minLen paramTypes
       limitedReturns = take minLen returnTypes
       functionFile = createSimpleTypusFileWithFunctions limitedFuncs limitedParams limitedReturns
       result = compile functionFile
   in case result of
-    Left err -> property $ "function" `isInfixOf` show err || "definition" `isInfixOf` show err || True
-    Right goCode -> property $ "package main" `isInfixOf` goCode
+    Left err -> property $ "function" `L.isInfixOf` show err || "definition" `L.isInfixOf` show err || True
+    Right goCode -> property $ "package main" `L.isInfixOf` goCode
 
 -- Property: Files with struct definitions compile correctly
 prop_compile_struct_definitions :: [String] -> [String] -> Property
 prop_compile_struct_definitions structNames fieldTypes =
-  let minLen = min (length structNames) (length fieldTypes)
+  let minLen = min (L.length structNames) (L.length fieldTypes)
       limitedStructs = take minLen structNames
       limitedFields = take minLen fieldTypes
       structFile = createSimpleTypusFileWithStructs limitedStructs limitedFields
       result = compile structFile
   in case result of
-    Left err -> property $ "struct" `isInfixOf` show err || "definition" `isInfixOf` show err || True
-    Right goCode -> property $ "package main" `isInfixOf` goCode
+    Left err -> property $ "struct" `L.isInfixOf` show err || "definition" `L.isInfixOf` show err || True
+    Right goCode -> property $ "package main" `L.isInfixOf` goCode
 
 -- Property: Files with interface definitions compile correctly
 prop_compile_interface_definitions :: [String] -> [String] -> Property
 prop_compile_interface_definitions interfaceNames methodNames =
-  let minLen = min (length interfaceNames) (length methodNames)
+  let minLen = min (L.length interfaceNames) (L.length methodNames)
       limitedInterfaces = take minLen interfaceNames
       limitedMethods = take minLen methodNames
       interfaceFile = createSimpleTypusFileWithInterfaces limitedInterfaces limitedMethods
       result = compile interfaceFile
   in case result of
-    Left err -> property $ "interface" `isInfixOf` show err || "definition" `isInfixOf` show err || True
-    Right goCode -> property $ "package main" `isInfixOf` goCode
+    Left err -> property $ "interface" `L.isInfixOf` show err || "definition" `L.isInfixOf` show err || True
+    Right goCode -> property $ "package main" `L.isInfixOf` goCode
 
 -- Property: Files with generic type definitions compile correctly
 prop_compile_generic_definitions :: [String] -> [String] -> [String] -> Property
 prop_compile_generic_definitions typeNames typeParams constraints =
   not (null typeNames) && not (null typeParams) && not (null constraints) ==>
-  let minLen = minimum [length typeNames, length typeParams, length constraints]
+  let minLen = L.minimum [L.length typeNames, L.length typeParams, L.length constraints]
       limitedTypes = take minLen typeNames
       limitedParams = take minLen typeParams
       limitedConstraints = take minLen constraints
       genericFile = createSimpleTypusFileWithGenerics limitedTypes limitedParams limitedConstraints
       result = compile genericFile
   in case result of
-    Left err -> property $ "generic" `isInfixOf` show err || "definition" `isInfixOf` show err || True
-    Right goCode -> property $ "package main" `isInfixOf` goCode
+    Left err -> property $ "generic" `L.isInfixOf` show err || "definition" `L.isInfixOf` show err || True
+    Right goCode -> property $ "package main" `L.isInfixOf` goCode
 
 -- Property: Files with error handling constructs compile correctly
 prop_compile_error_handling :: [String] -> Property
@@ -297,8 +298,8 @@ prop_compile_error_handling functionNames =
   let errorFile = createSimpleTypusFileWithErrorHandling functionNames
       result = compile errorFile
   in case result of
-    Left err -> property $ "error" `isInfixOf` show err || "handling" `isInfixOf` show err || True
-    Right goCode -> property $ "package main" `isInfixOf` goCode
+    Left err -> property $ "error" `L.isInfixOf` show err || "handling" `L.isInfixOf` show err || True
+    Right goCode -> property $ "package main" `L.isInfixOf` goCode
 
 -- Property: Files with concurrent constructs compile correctly
 prop_compile_concurrent_constructs :: [String] -> Property
@@ -306,8 +307,8 @@ prop_compile_concurrent_constructs channelNames =
   let concurrentFile = createSimpleTypusFileWithConcurrency channelNames
       result = compile concurrentFile
   in case result of
-    Left err -> property $ "concurrent" `isInfixOf` show err || "goroutine" `isInfixOf` show err || True
-    Right goCode -> property $ "package main" `isInfixOf` goCode
+    Left err -> property $ "concurrent" `L.isInfixOf` show err || "goroutine" `L.isInfixOf` show err || True
+    Right goCode -> property $ "package main" `L.isInfixOf` goCode
 
 -- Helper functions
 createSimpleTypusFile :: String -> TypusFile
@@ -332,7 +333,7 @@ createNestedTypusFile :: Int -> TypusFile
 createNestedTypusFile depth = 
   TypusFile (FileDirectives Nothing Nothing Nothing) 
             []
-            [CodeBlock defaultBlockDirectives (concat (replicate depth "{")) (emptySpan startPos)]
+            [CodeBlock defaultBlockDirectives (L.concat (replicate depth "{")) (emptySpan startPos)]
             []
 
 createSimpleTypusFileWithMultipleBlocks :: [String] -> TypusFile
@@ -374,7 +375,7 @@ createSimpleTypusFileWithGenerics :: [String] -> [String] -> [String] -> TypusFi
 createSimpleTypusFileWithGenerics typeNames typeParams constraints = 
   TypusFile (FileDirectives Nothing Nothing Nothing) 
             []
-            [CodeBlock defaultBlockDirectives "type TestGeneric[T any] struct {}" (emptySpan startPos)]
+            [CodeBlock defaultBlockDirectives "type TestGeneric[T L.any] struct {}" (emptySpan startPos)]
             []
 
 createSimpleTypusFileWithErrorHandling :: [String] -> TypusFile
@@ -401,7 +402,7 @@ extractSimpleFunctionCalls :: TypusFile -> [String]
 extractSimpleFunctionCalls file = ["call1", "call2"]
 
 countChar :: Char -> String -> Int
-countChar c = length . filter (== c)
+countChar c = L.length . L.filter (== c)
 
 tests :: TestTree
 tests = testGroup "Extended Compiler QuickCheck Tests"

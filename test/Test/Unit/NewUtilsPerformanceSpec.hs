@@ -8,7 +8,9 @@ import Test.Tasty.HUnit (testCase, assertEqual, assertBool, assertFailure)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), forAll, elements, suchThat)
 import qualified Data.Text as T
 import Data.Maybe (isJust, isNothing, catMaybes)
-import Data.List (isInfixOf, nub, length, foldl')
+import qualified Data.List as L
+import Data.List (isInfixOf, length)
+import Data.List (nub, foldl')
 import Data.Char (isSpace)
 
 import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed, 
@@ -37,23 +39,23 @@ stringProcessingPerformanceTests =
             result = trim largeString
         in do
            assertEqual "Should trim correctly" "content" result
-           assertBool "Should handle large strings efficiently" (length result < length largeString)
+           assertBool "Should handle large strings efficiently" (L.length result < L.length largeString)
 
     , testCase "Unicode string processing performance" $
-        let unicodeString = concat $ replicate 1000 ["你好", "世界", "🌍", "test"]
+        let unicodeString = L.concat $ replicate 1000 ["你好", "世界", "🌍", "test"]
             result = trim unicodeString
         in do
-           assertBool "Should handle Unicode correctly" (length result > 0)
-           assertBool "Should preserve Unicode characters" (any (> 127) (map fromEnum result))
+           assertBool "Should handle Unicode correctly" (L.length result > 0)
+           assertBool "Should preserve Unicode characters" (L.any (> 127) (map fromEnum result))
 
     , testCase "Repeated trim operations" $
         let testString = "   \t  content with spaces   \t  "
             results = replicate 1000 (trim testString)
         in do
-           assertEqual "All results should be identical" (head results) (last results)
-           assertBool "Should be consistent" (all (== "content with spaces") results)
+           assertEqual "All results should be identical" (L.head results) (last results)
+           assertBool "Should be consistent" (L.all (== "content with spaces") results)
 
-    , testCase "Empty and whitespace-only strings" $
+    , testCase "Empty L.and whitespace-only strings" $
         let emptyResult = trim ""
             spaceResult = trim (replicate 1000 ' ')
             tabResult = trim (replicate 1000 '\t')
@@ -73,22 +75,22 @@ splittingPerformanceTests =
         let largeString = unwords $ replicate 10000 "word"
             result = splitBy ' ' largeString
         in do
-           assertEqual "Should split correctly" 10000 (length result)
-           assertBool "All parts should be non-empty" (all (not . null) result)
+           assertEqual "Should split correctly" 10000 (L.length result)
+           assertBool "All parts should be non-empty" (L.all (not . null) result)
 
     , testCase "Splitting with many delimiters" $
-        let delimitedString = concat $ replicate 5000 "a,"
+        let delimitedString = L.concat $ replicate 5000 "a,"
             result = splitBy ',' delimitedString
         in do
-           assertEqual "Should handle consecutive delimiters" 5000 (length result)
-           assertBool "Should preserve empty segments" (all (== "a") result)
+           assertEqual "Should handle consecutive delimiters" 5000 (L.length result)
+           assertBool "Should preserve empty segments" (L.all (== "a") result)
 
     , testCase "Collapsed splitting performance" $
-        let collapsedString = concat $ replicate 1000 "a,,"
+        let collapsedString = L.concat $ replicate 1000 "a,,"
             result = splitByCollapsed ',' collapsedString
         in do
-           assertEqual "Should collapse consecutive delimiters" 1000 (length result)
-           assertBool "Should remove empty segments" (all (== "a") result)
+           assertEqual "Should collapse consecutive delimiters" 1000 (L.length result)
+           assertBool "Should remove empty segments" (L.all (== "a") result)
 
     , testCase "Comma splitting variants" $
         let testString = "a,b,,c,d,,e"
@@ -102,8 +104,8 @@ splittingPerformanceTests =
         let unicodeString = intercalate "," $ replicate 1000 ["你好", "世界", "🌍"]
             result = splitBy ',' unicodeString
         in do
-           assertEqual "Should split Unicode correctly" 1000 (length result)
-           assertBool "Should preserve Unicode segments" (any (not . all (< 128) . map fromEnum) result)
+           assertEqual "Should split Unicode correctly" 1000 (L.length result)
+           assertBool "Should preserve Unicode segments" (L.any (not . L.all (< 128) . map fromEnum) result)
     ]
 
 -- | Comment removal performance tests
@@ -114,8 +116,8 @@ commentRemovalPerformanceTests =
         let largeFile = unlines $ replicate 5000 ["code line", "// comment line", "another code line"]
             result = removeLineComments largeFile
         in do
-           assertBool "Should remove line comments" (not $ "// comment line" `isInfixOf` result)
-           assertBool "Should preserve code lines" ("code line" `isInfixOf` result)
+           assertBool "Should remove line comments" (not $ "// comment line" `L.isInfixOf` result)
+           assertBool "Should preserve code lines" ("code line" `L.isInfixOf` result)
 
     , testCase "Block comment removal performance" $
         let fileWithBlocks = unlines 
@@ -129,8 +131,8 @@ commentRemovalPerformanceTests =
               ]
             result = removeComments fileWithBlocks
         in do
-           assertBool "Should remove block comments" (not $ "/*" `isInfixOf` result)
-           assertBool "Should preserve code" ("code before" `isInfixOf` result && "code after" `isInfixOf` result)
+           assertBool "Should remove block comments" (not $ "/*" `L.isInfixOf` result)
+           assertBool "Should preserve code" ("code before" `L.isInfixOf` result && "code after" `L.isInfixOf` result)
 
     , testCase "Nested comment handling" $
         let nestedComments = unlines
@@ -140,8 +142,8 @@ commentRemovalPerformanceTests =
               ]
             result = removeComments nestedComments
         in do
-           assertBool "Should handle nested comments" (not $ any (`isInfixOf` result) ["//", "/*"])
-           assertBool "Should preserve code" ("code after" `isInfixOf` result)
+           assertBool "Should handle nested comments" (not $ L.any (`L.isInfixOf` result) ["//", "/*"])
+           assertBool "Should preserve code" ("code after" `L.isInfixOf` result)
 
     , testCase "Comment removal in string literals" $
         let stringWithStrings = unlines
@@ -152,15 +154,15 @@ commentRemovalPerformanceTests =
               ]
             result = removeLineComments stringWithStrings
         in do
-           assertBool "Should preserve comments in strings" ("// not a comment" `isInfixOf` result)
-           assertBool "Should remove real comments" (not $ "this is a real comment" `isInfixOf` result)
+           assertBool "Should preserve comments in strings" ("// not a comment" `L.isInfixOf` result)
+           assertBool "Should remove real comments" (not $ "this is a real comment" `L.isInfixOf` result)
 
     , testCase "Performance with many small comments" $
-        let manyComments = unlines $ concat $ replicate 1000 [["code", "// comment"]]
+        let manyComments = unlines $ L.concat $ replicate 1000 [["code", "// comment"]]
             result = removeLineComments manyComments
         in do
-           assertBool "Should handle many comments efficiently" (not $ "// comment" `isInfixOf` result)
-           assertBool "Should preserve all code lines" ("code" `isInfixOf` result)
+           assertBool "Should handle many comments efficiently" (not $ "// comment" `L.isInfixOf` result)
+           assertBool "Should preserve L.all code lines" ("code" `L.isInfixOf` result)
     ]
 
 -- | Indentation performance tests
@@ -168,23 +170,23 @@ indentationPerformanceTests :: TestTree
 indentationPerformanceTests =
   testGroup "Indentation Performance Tests"
     [ testCase "Large file indentation normalization" $
-        let indentedFile = unlines $ map (\i -> replicate (i `mod` 20) ' ' ++ "line " ++ show i) [1..1000]
+        let indentedFile = unlines $ L.map (\i -> replicate (i `mod` 20) ' ' ++ "line " ++ show i) [1..1000]
             result = normalizeIndentation indentedFile
         in do
-           assertBool "Should normalize indentation" (not $ any (isPrefixOf "    ") (lines result))
-           assertBool "Should preserve content" ("line 1" `isInfixOf` result && "line 1000" `isInfixOf` result)
+           assertBool "Should normalize indentation" (not $ L.any (L.isPrefixOf "    ") (lines result))
+           assertBool "Should preserve content" ("line 1" `L.isInfixOf` result && "line 1000" `L.isInfixOf` result)
 
     , testCase "Mixed tab/space indentation" $
         let mixedIndentation = unlines
               [ "\tline with tab"
               , "    line with spaces"
-              , "\t  mixed tab and spaces"
+              , "\t  mixed tab L.and spaces"
               , "        deep indentation"
               ]
             result = normalizeIndentation mixedIndentation
         in do
-           assertBool "Should handle mixed indentation" (length (lines result) == 4)
-           assertBool "Should normalize consistently" (all (not . isPrefixOf "\t") (lines result))
+           assertBool "Should handle mixed indentation" (L.length (lines result) == 4)
+           assertBool "Should normalize consistently" (L.all (not . L.isPrefixOf "\t") (lines result))
 
     , testCase "Force single tab indentation" $
         let spaceIndented = unlines
@@ -194,8 +196,8 @@ indentationPerformanceTests =
               ]
             result = forceSingleTabIndentation spaceIndented
         in do
-           assertBool "Should convert to tabs" (any (isPrefixOf "\t") (lines result))
-           assertBool "Should preserve structure" (length (lines result) == 3)
+           assertBool "Should convert to tabs" (L.any (L.isPrefixOf "\t") (lines result))
+           assertBool "Should preserve structure" (L.length (lines result) == 3)
 
     , testCase "Indentation with empty lines" $
         let withEmptyLines = unlines
@@ -207,18 +209,18 @@ indentationPerformanceTests =
               ]
             result = normalizeIndentation withEmptyLines
         in do
-           assertBool "Should preserve empty lines" (null (lines result !! 1) && null (lines result !! 3))
-           assertBool "Should normalize non-empty lines" (all (not . isPrefixOf "    ") $ filter (not . null) (lines result))
+           assertBool "Should preserve empty lines" (L.null (lines result !! 1) && L.null (lines result !! 3))
+           assertBool "Should normalize non-empty lines" (L.all (not . L.isPrefixOf "    ") $ L.filter (not . null) (lines result))
 
     , testCase "Performance with deeply nested code" $
-        let deeplyNested = unlines $ concat $ replicate 100 
-              [ map (\i -> replicate (i*4) ' ' ++ "level " ++ show i) [1..10]
+        let deeplyNested = unlines $ L.concat $ replicate 100 
+              [ L.map (\i -> replicate (i*4) ' ' ++ "level " ++ show i) [1..10]
               , [""]
               ]
             result = normalizeIndentation deeplyNested
         in do
-           assertBool "Should handle deep nesting" (length (lines result) > 0)
-           assertBool "Should maintain structure" ("level 1" `isInfixOf` result && "level 10" `isInfixOf` result)
+           assertBool "Should handle deep nesting" (L.length (lines result) > 0)
+           assertBool "Should maintain structure" ("level 1" `L.isInfixOf` result && "level 10" `L.isInfixOf` result)
     ]
 
 -- | Memory efficiency tests
@@ -231,7 +233,7 @@ memoryEfficiencyTests =
             trimmed2 = trim original
         in do
            assertEqual "Results should be identical" trimmed1 trimmed2
-           assertBool "Should be memory efficient" (length trimmed1 < length original)
+           assertBool "Should be memory efficient" (L.length trimmed1 < L.length original)
 
     , testCase "Efficient splitting with reuse" $
         let original = "a,b,c,d,e"
@@ -239,7 +241,7 @@ memoryEfficiencyTests =
             result2 = splitBy ',' original
         in do
            assertEqual "Results should be identical" result1 result2
-           assertBool "Should split correctly" (length result1 == 5)
+           assertBool "Should split correctly" (L.length result1 == 5)
 
     , testCase "Memory usage with large files" $
         let largeContent = unlines $ replicate 10000 "line with some content"
@@ -247,9 +249,9 @@ memoryEfficiencyTests =
             split = splitBy '\n' largeContent
             commentsRemoved = removeLineComments largeContent
         in do
-           assertBool "Should handle large content" (length trimmed > 0)
-           assertBool "Should split large content" (length split == 10000)
-           assertBool "Should process large content" (length commentsRemoved > 0)
+           assertBool "Should handle large content" (L.length trimmed > 0)
+           assertBool "Should split large content" (L.length split == 10000)
+           assertBool "Should process large content" (L.length commentsRemoved > 0)
 
     , testCase "Lazy evaluation efficiency" $
         let infiniteStream = map show [1..]
@@ -257,8 +259,8 @@ memoryEfficiencyTests =
             joined = unwords limited
             result = splitBy ' ' joined
         in do
-           assertEqual "Should handle lazy evaluation" 1000 (length result)
-           assertBool "Should be memory efficient" (all (not . null) result)
+           assertEqual "Should handle lazy evaluation" 1000 (L.length result)
+           assertBool "Should be memory efficient" (L.all (not . null) result)
     ]
 
 -- | Edge case performance tests
@@ -298,17 +300,17 @@ edgeCasePerformanceTests =
             stringWithLong = "prefix," ++ longToken ++ ",suffix"
             result = splitBy ',' stringWithLong
         in do
-           assertEqual "Should handle long tokens" 3 (length result)
+           assertEqual "Should handle long tokens" 3 (L.length result)
            assertEqual "Should preserve long token" longToken (result !! 1)
 
-    , testCase "Special characters and Unicode" $
+    , testCase "Special characters L.and Unicode" $
         let specialString = "hello\tworld\ntest\r\nunicode: 你好世界🌍"
             trimResult = trim specialString
             splitResult = splitBy '\n' specialString
         in do
-           assertBool "Should handle special characters" (length trimResult > 0)
-           assertBool "Should split on newlines" (length splitResult >= 2)
-           assertBool "Should preserve Unicode" (any (> 127) (map fromEnum trimResult))
+           assertBool "Should handle special characters" (L.length trimResult > 0)
+           assertBool "Should split on newlines" (L.length splitResult >= 2)
+           assertBool "Should preserve Unicode" (L.any (> 127) (map fromEnum trimResult))
     ]
 
 -- | QuickCheck properties for Utils performance
@@ -319,15 +321,15 @@ quickCheckProperties =
         forAll genString $ \s ->
             trim (trim s) === trim s
 
-    , testProperty "Split and join are inverses" $
+    , testProperty "Split L.and join are inverses" $
         forAll genSplitString $ \s delim ->
-            concat (intersperse [delim] (splitBy delim s)) === s
+            L.concat (intersperse [delim] (splitBy delim s)) === s
 
     , testProperty "Collapsed split removes empty segments" $
         forAll genString $ \s ->
             let normal = splitBy ',' s
                 collapsed = splitByCollapsed ',' s
-            in all (not . null) collapsed ==> length collapsed <= length normal
+            in L.all (not . null) collapsed ==> L.length collapsed <= L.length normal
 
     , testProperty "Trim removes only leading/trailing whitespace" $
         forAll genString $ \s ->
@@ -338,18 +340,18 @@ quickCheckProperties =
     , testProperty "Comment removal preserves non-comment content" $
         forAll genCommentString $ \s ->
             let withoutComments = removeLineComments s
-                hasCode = any (not . isPrefixOf "//") (lines s)
-            in hasCode ==> length (filter (not . null) (lines withoutComments)) > 0
+                hasCode = L.any (not . L.isPrefixOf "//") (lines s)
+            in hasCode ==> L.length (L.filter (not . null) (lines withoutComments)) > 0
     ]
 
--- | Helper functions and generators
+-- | Helper functions L.and generators
 isPrefixOf :: String -> String -> Bool
-isPrefixOf [] _ = True
-isPrefixOf _ [] = False
-isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
+L.isPrefixOf [] _ = True
+L.isPrefixOf _ [] = False
+L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
 
 dropWhileEnd :: (a -> Bool) -> [a] -> [a]
-dropWhileEnd p = foldr (\x xs -> if p x && null xs then [] else x:xs) []
+dropWhileEnd p = L.foldr (\x xs -> if p x && null xs then [] else x:xs) []
 
 intersperse :: a -> [a] -> [a]
 intersperse _ [] = []
@@ -367,7 +369,7 @@ genString = elements
   , "\t\ttabs\t\t"
   , "mixed\t spaces\tand\ttabs"
   , replicate 1000 'a'
-  , concat $ replicate 100 "word "
+  , L.concat $ replicate 100 "word "
   ]
 
 genSplitString :: Gen (String, Char)

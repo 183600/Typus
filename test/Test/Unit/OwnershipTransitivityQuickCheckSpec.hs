@@ -4,7 +4,9 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, property, Arbitrary(..), Gen, oneof, listOf, elements, choose)
 import Data.Char (isAlphaNum)
-import Data.List (isPrefixOf, isInfixOf, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 
@@ -16,7 +18,7 @@ import Utils (trim)
 tests :: TestTree
 tests =
   testGroup "OwnershipTransitivityQuickCheckSpec - Ownership Transitivity Tests"
-    [ testProperty "Ownership transitivity: if A owns B and B owns C, then A should own C" prop_ownershipTransitivity
+    [ testProperty "Ownership transitivity: if A owns B L.and B owns C, then A should own C" prop_ownershipTransitivity
     , testProperty "Ownership transfer preserves uniqueness" prop_ownershipTransferUniqueness
     , testProperty "Ownership borrowing respects lifetimes" prop_ownershipBorrowingLifetimes
     , testProperty "Ownership sharing maintains reference counts" prop_ownershipSharingReferenceCounts
@@ -47,7 +49,7 @@ prop_ownershipTransferUniqueness state fromOwner toOwner =
   let transferred = transferOwnership state fromOwner toOwner
       owners = getAllOwners transferred
       ownerCounts = Map.fromListWith (+) [(owner, 1) | owner <- owners]
-  in all (\count -> count <= 1) (Map.elems ownerCounts)
+  in L.all (\count -> count <= 1) (Map.elems ownerCounts)
 
 -- Property: Ownership borrowing respects lifetimes
 prop_ownershipBorrowingLifetimes :: OwnershipState -> String -> String -> Int -> Bool
@@ -61,7 +63,7 @@ prop_ownershipSharingReferenceCounts :: OwnershipState -> String -> [String] -> 
 prop_ownershipSharingReferenceCounts state owner sharers =
   let shared = shareOwnership state owner sharers
       refCounts = getReferenceCounts shared owner
-      expectedCount = length sharers
+      expectedCount = L.length sharers
   in refCounts == expectedCount
 
 -- Property: Ownership move invalidates previous owner

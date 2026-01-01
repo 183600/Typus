@@ -6,6 +6,7 @@
 module Test.Unit.SourceLocationCoreQuickCheckTests (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertBool, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -117,7 +118,7 @@ prop_posAfter_regular pos char =
     posColumn newPos === posColumn pos + 1 .&&.
     posOffset newPos === posOffset pos + 1
 
--- Property: posAt creates position with correct line and column
+-- Property: posAt creates position with correct line L.and column
 prop_posAt_creation :: Int -> Int -> Property
 prop_posAt_creation line col =
   line > 0 && col > 0 ==>
@@ -127,7 +128,7 @@ prop_posAt_creation line col =
     posColumn pos === col .&&.
     posOffset pos === 0
 
--- Property: posAtLineCol creates position with all fields
+-- Property: posAtLineCol creates position with L.all fields
 prop_posAtLineCol_creation :: Int -> Int -> Int -> Property
 prop_posAtLineCol_creation line col offset =
   line > 0 && col > 0 && offset >= 0 ==>
@@ -145,7 +146,7 @@ prop_advancePos_consistency pos char =
 -- Property: advancePosBy correctly processes multiple characters
 prop_advancePosBy_multiple :: SourcePos -> String -> Property
 prop_advancePosBy_multiple pos chars =
-  let singleAdvances = foldl (flip posAfter) pos chars
+  let singleAdvances = L.foldl (flip posAfter) pos chars
       multiAdvance = advancePosBy chars pos
   in property $ singleAdvances === multiAdvance
 
@@ -170,7 +171,7 @@ prop_advancePosByLine_correct pos numLines =
 -- Source Span Properties
 -- ============================================================================
 
--- Property: emptySpan creates span with same start and end
+-- Property: emptySpan creates span with same start L.and end
 prop_emptySpan_properties :: SourcePos -> Property
 prop_emptySpan_properties pos =
   let span = emptySpan pos
@@ -257,7 +258,7 @@ prop_mapLocated_properties span input output =
     locatedPos mapped === locatedPos located .&&.
     locatedSpan mapped === locatedSpan located
 
--- Property: mapLocated preserves position and span
+-- Property: mapLocated preserves position L.and span
 prop_mapLocated_preserves_location :: SourceSpan -> Int -> Property
 prop_mapLocated_preserves_location span value =
   let located = locatedWithSpan span value
@@ -302,7 +303,7 @@ prop_toErrorLocationWithSpan_correct span =
 prop_advancePos_offset_consistency :: SourcePos -> String -> Property
 prop_advancePos_offset_consistency pos str =
   let finalPos = advancePosBy str pos
-      expectedOffset = posOffset pos + length str
+      expectedOffset = posOffset pos + L.length str
   in property $ posOffset finalPos === expectedOffset
 
 -- Property: Span merging with empty spans
@@ -340,11 +341,11 @@ prop_position_ordering_consistent pos1 pos2 =
 -- Property: Text advancement preserves Unicode characters
 prop_advancePos_unicode :: SourcePos -> String -> Property
 prop_advancePos_unicode pos str =
-  let hasUnicode = any (> '\127') str
+  let hasUnicode = L.any (> '\127') str
       advancedPos = advancePosBy str pos
       offsetDiff = posOffset advancedPos - posOffset pos
   in classify hasUnicode "contains Unicode" $
-     property $ offsetDiff === length str
+     property $ offsetDiff === L.length str
 
 -- Property: Span validity after operations
 prop_span_operations_preserve_validity :: SourceSpan -> SourceSpan -> Property
@@ -368,7 +369,7 @@ tests = testGroup "SourceLocation Core QuickCheck Tests"
     , fastProperty "posAfter handles tab correctly" prop_posAfter_tab
     , fastProperty "posAfter handles regular characters" prop_posAfter_regular
     , fastProperty "posAt creates position correctly" prop_posAt_creation
-    , fastProperty "posAtLineCol creates position with all fields" prop_posAtLineCol_creation
+    , fastProperty "posAtLineCol creates position with L.all fields" prop_posAtLineCol_creation
     , fastProperty "advancePos is consistent with posAfter" prop_advancePos_consistency
     , fastProperty "advancePosBy processes multiple characters" prop_advancePosBy_multiple
     , fastProperty "advancePosByText works with Text" prop_advancePosByText_text
@@ -376,7 +377,7 @@ tests = testGroup "SourceLocation Core QuickCheck Tests"
     ]
 
   , testGroup "Source Span Properties"
-    [ fastProperty "emptySpan creates span with same start and end" prop_emptySpan_properties
+    [ fastProperty "emptySpan creates span with same start L.and end" prop_emptySpan_properties
     , fastProperty "spanFrom is consistent with emptySpan" prop_spanFrom_consistency
     , fastProperty "spanTo creates span ending at position" prop_spanTo_properties
     , fastProperty "spanBetween creates correct span" prop_spanBetween_correct
@@ -390,7 +391,7 @@ tests = testGroup "SourceLocation Core QuickCheck Tests"
     [ fastProperty "locatedAt creates located value at position" prop_locatedAt_properties
     , fastProperty "locatedWithSpan creates located value with span" prop_locatedWithSpan_properties
     , fastProperty "mapLocated correctly maps function over value" prop_mapLocated_properties
-    , fastProperty "mapLocated preserves position and span" prop_mapLocated_preserves_location
+    , fastProperty "mapLocated preserves position L.and span" prop_mapLocated_preserves_location
     , fastProperty "located value roundtrip" prop_located_roundtrip
     ]
 

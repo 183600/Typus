@@ -8,6 +8,7 @@ import Test.Tasty.QuickCheck (testProperty, Property(..), (==>), Positive(..))
 import Parser
 import SourceLocation
 import Data.Maybe (isJust, isNothing)
+import qualified Data.List as L
 import Data.List (isInfixOf)
 import Data.Char (isSpace)
 
@@ -42,7 +43,7 @@ newParserValidationSpec = testGroup "New Parser Validation Tests"
         Right typusFile -> do
           let blocks = tfBlocks typusFile
           assertBool "Should have at least one block" $ not (null blocks)
-          let firstBlock = head blocks
+          let firstBlock = L.head blocks
           let directives = cbDirectives firstBlock
           assertBool "Dependent types directive should be present" $ isJust (bdDependentTypes directives)
   
@@ -53,8 +54,8 @@ newParserValidationSpec = testGroup "New Parser Validation Tests"
         Right typusFile -> do
           let blocks = tfBlocks typusFile
           assertBool "Should have at least one code block" $ not (null blocks)
-          let firstBlock = head blocks
-          assertBool "Code block should not be empty" $ not (null (cbContent firstBlock))
+          let firstBlock = L.head blocks
+          assertBool "Code block should not be empty" $ not (L.null (cbContent firstBlock))
   
   , testCase "Mixed directives handling" $ do
       let mixedDirectives = "//! ownership: on\n//! dependent_types: on\npackage main\n\nfunc test() {\n    //! constraints: on\n    // code here\n}"
@@ -66,10 +67,10 @@ newParserValidationSpec = testGroup "New Parser Validation Tests"
           assertBool "File should have dependent types directive" $ isJust (fdDependentTypes fileDirectives)
           
           let blocks = tfBlocks typusFile
-          assertBool "Should have at least one block" $ length blocks >= 1
+          assertBool "Should have at least one block" $ L.length blocks >= 1
           
-          when (length blocks >= 1) $ do
-            let firstBlock = head blocks
+          when (L.length blocks >= 1) $ do
+            let firstBlock = L.head blocks
             let blockDirectives = cbDirectives firstBlock
             assertBool "Block should have constraints directive" $ isJust (bdConstraints blockDirectives)
   
@@ -81,7 +82,7 @@ newParserValidationSpec = testGroup "New Parser Validation Tests"
       
       let unknownDirective = "//! unknown_feature: on\npackage main"
       case parseTypus unknownDirective of
-        Left _ -> return ()  -- Expected to fail or ignore unknown directive
+        Left _ -> return ()  -- Expected to fail L.or ignore unknown directive
         Right _ -> return ()  -- Or succeed by ignoring it
   ]
   where
@@ -93,15 +94,15 @@ prop_parse_empty_string :: Bool
 prop_parse_empty_string = 
   case parseTypus "" of
     Left _ -> True  -- Empty string should fail to parse meaningfully
-    Right typusFile -> null (tfBlocks typusFile)  -- Or parse to empty blocks
+    Right typusFile -> L.null (tfBlocks typusFile)  -- Or parse to empty blocks
 
 prop_parse_simple_package :: String -> Property
 prop_parse_simple_package name = 
-  not (null name) && all (not . isSpace) name ==>
+  not (null name) && L.all (not . isSpace) name ==>
     let code = "package " ++ name
     in case parseTypus code of
          Left _ -> False
-         Right typusFile -> not (null (tfBlocks typusFile))
+         Right typusFile -> not (L.null (tfBlocks typusFile))
 
 prop_directive_parsing_consistency :: String -> Bool
 prop_directive_parsing_consistency content = 
@@ -123,7 +124,7 @@ prop_block_directive_scope content =
          Right typusFile -> 
            let blocks = tfBlocks typusFile
            in not (null blocks) && 
-              let firstBlock = head blocks
+              let firstBlock = L.head blocks
                   directives = cbDirectives firstBlock
               in isJust (bdOwnership directives)
 

@@ -4,6 +4,7 @@
 module Test.Unit.TypeInferenceSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import Dependencies
@@ -16,7 +17,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
 import Data.Text (Text)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 
 -- ============================================================================
 -- Type Inference Test Suite
@@ -75,8 +76,8 @@ basicTypeInferenceProperties = testGroup "Basic Type Inference Properties"
     
   , testCase "basic type inference examples" $ do
       let env = initialTypeEnvironment
-          intExpr = SimpleT "int"
-          stringExpr = SimpleT "string"
+          intExpr = SimpleT (T.pack "int")
+          stringExpr = SimpleT (T.pack "string")
       case inferType env intExpr of
         Left err -> assertFailure $ "Type inference failed: " ++ show err
         Right inferredType -> assertBool "Int type inferred" $ inferredType == intExpr
@@ -116,7 +117,7 @@ functionTypeInferenceProperties = testGroup "Function Type Inference Properties"
     
   , testProperty "function type inference handles higher-order functions" $
       \funcType1 funcType2 env ->
-        let higherOrderFunc = FuncT [("f", funcType1), ("x", SimpleT "int")] funcType2
+        let higherOrderFunc = FuncT [("f", funcType1), ("x", SimpleT (T.pack "int"))] funcType2
             result = inferType env higherOrderFunc
         in case result of
           Right inferredType -> higherOrderTypeCorrect funcType1 funcType2 inferredType
@@ -132,8 +133,8 @@ functionTypeInferenceProperties = testGroup "Function Type Inference Properties"
     
   , testCase "function type inference examples" $ do
       let env = initialTypeEnvironment
-          addFunc = FuncT [("x", SimpleT "int"), ("y", SimpleT "int")] (SimpleT "int")
-          identityFunc = FuncT [("x", SimpleT "a")] (SimpleT "a")
+          addFunc = FuncT [("x", SimpleT (T.pack "int")), ("y", SimpleT (T.pack "int"))] (SimpleT (T.pack "int"))
+          identityFunc = FuncT [("x", SimpleT (T.pack "a"))] (SimpleT (T.pack "a"))
       case inferType env addFunc of
         Left err -> assertFailure $ "Type inference failed: " ++ show err
         Right inferredType -> assertBool "Add function type inferred" $ inferredType == addFunc
@@ -190,8 +191,8 @@ genericTypeInferenceProperties = testGroup "Generic Type Inference Properties"
     
   , testCase "generic type inference examples" $ do
       let env = initialTypeEnvironment
-          listType = GenericT (T.pack "List") [SimpleT "int"]
-          mapType = GenericT (T.pack "Map") [SimpleT "string", SimpleT "int"]
+          listType = GenericT (T.pack "List") [SimpleT (T.pack "int")]
+          mapType = GenericT (T.pack "Map") [SimpleT (T.pack "string"), SimpleT (T.pack "int")]
       case inferType env listType of
         Left err -> assertFailure $ "Type inference failed: " ++ show err
         Right inferredType -> assertBool "List type inferred" $ typeExprWellFormed inferredType
@@ -232,7 +233,7 @@ constraintTypeInferenceProperties = testGroup "Constraint Type Inference Propert
   , testProperty "constraint type inference supports size constraints" $
       \varName size env ->
         let sizeConstraint = SizeGT (T.pack varName) size
-            constrainedType = RefineT (SimpleT "Array") [sizeConstraint]
+            constrainedType = RefineT (SimpleT (T.pack "Array")) [sizeConstraint]
             result = inferType env constrainedType
         in case result of
           Right inferredType -> sizeConstraintCorrect varName size inferredType
@@ -241,7 +242,7 @@ constraintTypeInferenceProperties = testGroup "Constraint Type Inference Propert
   , testProperty "constraint type inference handles range constraints" $
       \varName minVal maxVal env ->
         let rangeConstraint = RangeC (T.pack varName) minVal maxVal
-            constrainedType = RefineT (SimpleT "Int") [rangeConstraint]
+            constrainedType = RefineT (SimpleT (T.pack "Int")) [rangeConstraint]
             result = inferType env constrainedType
         in case result of
           Right inferredType -> rangeConstraintCorrect varName minVal maxVal inferredType
@@ -249,8 +250,8 @@ constraintTypeInferenceProperties = testGroup "Constraint Type Inference Propert
     
   , testCase "constraint type inference examples" $ do
       let env = initialTypeEnvironment
-          sizedArray = RefineT (GenericT (T.pack "Array") [SimpleT "int"]) [SizeGT "length" 0]
-          rangedInt = RefineT (SimpleT "Int") [RangeC "value" 1 100]
+          sizedArray = RefineT (GenericT (T.pack "Array") [SimpleT (T.pack "int")]) [SizeGT "L.length" 0]
+          rangedInt = RefineT (SimpleT (T.pack "Int")) [RangeC "value" 1 100]
       case inferType env sizedArray of
         Left err -> assertFailure $ "Type inference failed: " ++ show err
         Right inferredType -> assertBool "Sized array type inferred" $ typeExprWellFormed inferredType
@@ -307,9 +308,9 @@ typeUnificationProperties = testGroup "Type Unification Properties"
           Left _ -> True
     
   , testCase "type unification examples" $ do
-      let varA = SimpleT "a"
-          varB = SimpleT "b"
-          intType = SimpleT "int"
+      let varA = SimpleT (T.pack "a")
+          varB = SimpleT (T.pack "b")
+          intType = SimpleT (T.pack "int")
           funcType = FuncT [("x", varA)] varA
       case unifyTypes varA intType of
         Left err -> assertFailure $ "Unification failed: " ++ show err
@@ -353,19 +354,19 @@ typeSubstitutionProperties = testGroup "Type Substitution Properties"
         let genericType = GenericT (T.pack "Container") typeExprs
             substituted = applySubstitutionType substitution genericType
         in case substituted of
-          GenericT name newTypes -> name == (T.pack "Container") && length newTypes == length typeExprs
+          GenericT name newTypes -> name == (T.pack "Container") && L.length newTypes == L.length typeExprs
           _ -> False
     
   , testProperty "type substitution handles recursive types" $
       \substitution ->
-        let recursiveType = GenericT (T.pack "List") [SimpleT "a"]
+        let recursiveType = GenericT (T.pack "List") [SimpleT (T.pack "a")]
             recursiveSub = Map.singleton (T.pack "a") recursiveType
             result = applySubstitutionType recursiveSub recursiveType
         in typeExprWellFormed result
     
   , testCase "type substitution examples" $ do
-      let sub = Map.fromList [(T.pack "a", SimpleT "int"), (T.pack "b", SimpleT "string")]
-          funcType = FuncT [("x", SimpleT "a")] (SimpleT "b")
+      let sub = Map.fromList [(T.pack "a", SimpleT (T.pack "int")), (T.pack "b", SimpleT (T.pack "string"))]
+          funcType = FuncT [("x", SimpleT (T.pack "a"))] (SimpleT (T.pack "b"))
           substituted = applySubstitutionType sub funcType
       assertBool "Substitution applied" $ substituted /= funcType
       assertBool "Substitution preserves structure" $ typeExprWellFormed substituted
@@ -382,10 +383,10 @@ genTypeVarName = elements ["a", "b", "c", "t", "u", "v", "x", "y", "z"]
 -- Generate basic types
 genBasicType :: Gen TypeExpr
 genBasicType = elements 
-  [ SimpleT "int"
-  , SimpleT "string"
-  , SimpleT "bool"
-  , SimpleT "float"
+  [ SimpleT (T.pack "int")
+  , SimpleT (T.pack "string")
+  , SimpleT (T.pack "bool")
+  , SimpleT (T.pack "float")
   , SimpleT . T.pack <$> genTypeVarName
   ]
 
@@ -481,9 +482,9 @@ type TypeSubstitution = Map.Map Text TypeExpr
 typeExprWellFormed :: TypeExpr -> Bool
 typeExprWellFormed typeExpr = case typeExpr of
   SimpleT name -> not $ T.null name
-  GenericT name args -> not $ T.null name && all typeExprWellFormed args
-  FuncT params returnType -> all (typeExprWellFormed . snd) params && typeExprWellFormed returnType
-  RefineT baseType constraints -> typeExprWellFormed baseType && all constraintValid constraints
+  GenericT name args -> not $ T.null name && L.all typeExprWellFormed args
+  FuncT params returnType -> L.all (typeExprWellFormed . snd) params && typeExprWellFormed returnType
+  RefineT baseType constraints -> typeExprWellFormed baseType && L.all constraintValid constraints
 
 -- Check if constraint is valid
 constraintValid :: Constraint -> Bool
@@ -491,15 +492,15 @@ constraintValid constraint = case constraint of
   SizeGT name value -> not $ T.null name && value >= 0
   SizeGE name value -> not $ T.null name && value >= 0
   RangeC name minVal maxVal -> not $ T.null name && minVal <= maxVal
-  PredC name args -> not $ T.null name && all typeExprWellFormed args
+  PredC name args -> not $ T.null name && L.all typeExprWellFormed args
 
 -- Get initial type environment
 initialTypeEnvironment :: TypeEnvironment
 initialTypeEnvironment = Map.fromList
-  [ (T.pack "int", SimpleT "int")
-  , (T.pack "string", SimpleT "string")
-  , (T.pack "bool", SimpleT "bool")
-  , (T.pack "float", SimpleT "float")
+  [ (T.pack "int", SimpleT (T.pack "int"))
+  , (T.pack "string", SimpleT (T.pack "string"))
+  , (T.pack "bool", SimpleT (T.pack "bool"))
+  , (T.pack "float", SimpleT (T.pack "float"))
   ]
 
 -- Infer type (placeholder implementation)
@@ -509,8 +510,8 @@ inferType env typeExpr = Right typeExpr
 -- Infer literal type
 inferLiteralType :: TypeEnvironment -> String -> Either String TypeExpr
 inferLiteralType env literal = case literal of
-  _ | all isDigit literal -> Right $ SimpleT "int"
-  _ | head literal == '"' && last literal == '"' -> Right $ SimpleT "string"
+  _ | L.all isDigit literal -> Right $ SimpleT (T.pack "int")
+  _ | L.head literal == '"' && last literal == '"' -> Right $ SimpleT (T.pack "string")
   _ -> Left "Unknown literal type"
 
 -- Infer variable type
@@ -527,8 +528,8 @@ typeExistsInEnvironment env typeExpr = typeExpr `elem` Map.elems env
 -- Check if literal type is correct
 literalTypeCorrect :: String -> TypeExpr -> Bool
 literalTypeCorrect literal inferredType = case literal of
-  _ | all isDigit literal -> inferredType == SimpleT "int"
-  _ | head literal == '"' && last literal == '"' -> inferredType == SimpleT "string"
+  _ | L.all isDigit literal -> inferredType == SimpleT (T.pack "int")
+  _ | L.head literal == '"' && last literal == '"' -> inferredType == SimpleT (T.pack "string")
   _ -> False
 
 -- Check if variable type is consistent
@@ -541,7 +542,7 @@ variableTypeConsistent env varName inferredType =
 -- Check if function parameter types are preserved
 functionParameterTypesPreserved :: [(String, TypeExpr)] -> TypeExpr -> Bool
 functionParameterTypesPreserved params inferredType = case inferredType of
-  FuncT inferredParams _ -> length inferredParams == length params
+  FuncT inferredParams _ -> L.length inferredParams == L.length params
   _ -> False
 
 -- Check if function return type is correct
@@ -591,7 +592,7 @@ typeConstraintsPreserved constraints inferredType = True
 
 -- Apply substitution to environment
 applySubstitution :: TypeEnvironment -> TypeSubstitution -> TypeEnvironment
-applySubstitution env substitution = Map.map (applySubstitutionType substitution) env
+applySubstitution env substitution = Map.L.map (applySubstitutionType substitution) env
 
 -- Check if types are equivalent under substitution
 typesEquivalentUnderSubstitution :: TypeExpr -> TypeExpr -> TypeSubstitution -> Bool
@@ -608,7 +609,7 @@ typeRefinementsPreserved constraints inferredType = True
 
 -- Check if constraints are valid
 constraintsAreValid :: [Constraint] -> TypeExpr -> Bool
-constraintsAreValid constraints inferredType = all constraintValid constraints
+constraintsAreValid constraints inferredType = L.all constraintValid constraints
 
 -- Infer dependent type
 inferDependentType :: TypeEnvironment -> TypeExpr -> Constraint -> Either String TypeExpr
@@ -642,21 +643,21 @@ isMostGeneralUnifier substitution type1 type2 = True
 applySubstitutionType :: TypeSubstitution -> TypeExpr -> TypeExpr
 applySubstitutionType substitution typeExpr = case typeExpr of
   SimpleT name -> Map.lookup name substitution `maybe` typeExpr id
-  GenericT name args -> GenericT name $ map (applySubstitutionType substitution) args
+  GenericT name args -> GenericT name $ L.map (applySubstitutionType substitution) args
   FuncT params returnType -> 
-    FuncT (map (\(name, t) -> (name, applySubstitutionType substitution t)) params) 
+    FuncT (L.map (\(name, t) -> (name, applySubstitutionType substitution t)) params) 
          (applySubstitutionType substitution returnType)
   RefineT baseType constraints -> 
     RefineT (applySubstitutionType substitution baseType) constraints
 
 -- Compose substitutions
 composeSubstitutions :: TypeSubstitution -> TypeSubstitution -> TypeSubstitution
-composeSubstitutions sub1 sub2 = Map.union sub1 (Map.map (applySubstitutionType sub1) sub2)
+composeSubstitutions sub1 sub2 = Map.union sub1 (Map.L.map (applySubstitutionType sub1) sub2)
 
 -- Check if substitutions are equivalent
 substitutionsEquivalent :: TypeSubstitution -> TypeSubstitution -> Bool
 substitutionsEquivalent sub1 sub2 = Map.size sub1 == Map.size sub2 && 
-  all (`Map.member` sub2) (Map.keys sub1)
+  L.all (`Map.member` sub2) (Map.keys sub1)
 
 -- Helper function for digit checking
 isDigit :: Char -> Bool
@@ -669,30 +670,30 @@ isDigit c = c >= '0' && c <= '9'
 edgeCaseProperties :: TestTree
 edgeCaseProperties = testGroup "Edge Case Tests"
   [ testCase "handle unbound type variables" $
-      let unboundType = SimpleT "unknown"
+      let unboundType = SimpleT (T.pack "unknown")
           env = initialTypeEnvironment
       in case inferType env unboundType of
         Left _ -> assertBool "Unbound variable handled" True
         Right inferredType -> assertBool "Type inferred" $ typeExprWellFormed inferredType
     
   , testCase "handle recursive type definitions" $
-      let recursiveType = GenericT (T.pack "List") [SimpleT "a"]
+      let recursiveType = GenericT (T.pack "List") [SimpleT (T.pack "a")]
           sub = Map.singleton (T.pack "a") recursiveType
           result = applySubstitutionType sub recursiveType
       in assertBool "Recursive type handled" $ typeExprWellFormed result
     
   , testCase "handle contradictory constraints" $
       let constraints = [SizeGT "x" 10, SizeLT "x" 5]
-          constrainedType = RefineT (SimpleT "Int") constraints
-      in assertBool "Contradictory constraints handled" $ not $ all constraintValid constraints
+          constrainedType = RefineT (SimpleT (T.pack "Int")) constraints
+      in assertBool "Contradictory constraints handled" $ not $ L.all constraintValid constraints
     
   , testProperty "handle very deep type nesting" $
       \n -> n < 100 ==>
-        let deepType = foldr (\name acc -> GenericT (T.pack name) [acc]) (SimpleT "int") (take n $ repeat "nested")
+        let deepType = L.foldr (\name acc -> GenericT (T.pack name) [acc]) (SimpleT (T.pack "int")) (take n $ repeat "nested")
         in typeExprWellFormed deepType
     
   , testCase "handle empty function parameters" $
-      let emptyFunc = FuncT [] (SimpleT "void")
+      let emptyFunc = FuncT [] (SimpleT (T.pack "void"))
           env = initialTypeEnvironment
       in case inferType env emptyFunc of
         Left err -> assertFailure $ "Type inference failed: " ++ show err
@@ -715,7 +716,7 @@ performanceProperties = testGroup "Performance Properties"
       \typeExpr env ->
         let result = inferType env typeExpr
         in case result of
-          Right inferredType -> length (show inferredType) `seq` True
+          Right inferredType -> L.length (show inferredType) `seq` True
           Left _ -> True
     
   , testProperty "type unification is efficient" $
@@ -728,10 +729,10 @@ performanceProperties = testGroup "Performance Properties"
   , testProperty "type substitution is linear" $
       \substitution typeExpr ->
         let result = applySubstitutionType substitution typeExpr
-        in length (show result) `seq` True
+        in L.length (show result) `seq` True
     
   , testProperty "constraint checking is efficient" $
       \constraints typeExpr ->
         let constrainedType = RefineT typeExpr constraints
-        in all constraintValid constraints `seq` True
+        in L.all constraintValid constraints `seq` True
   ]

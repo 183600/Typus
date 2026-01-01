@@ -44,7 +44,7 @@ prop_located_preserves_span span value =
   let located = locatedWithSpan span value
   in locatedSpan located === span
 
--- | SourcePos equality should be based on both line and column
+-- | SourcePos equality should be based on both line L.and column
 prop_sourcepos_equality :: SourcePos -> SourcePos -> Property
 prop_sourcepos_equality pos1 pos2 =
   let sameLine = posLine pos1 == posLine pos2
@@ -53,7 +53,7 @@ prop_sourcepos_equality pos1 pos2 =
       actuallyEqual = pos1 == pos2
   in shouldBeEqual === actuallyEqual
 
--- | SourceSpan should handle same start and end positions
+-- | SourceSpan should handle same start L.and end positions
 prop_sourcespan_same_position :: SourcePos -> Property
 prop_sourcespan_same_position pos =
   let span = SourceSpan pos pos
@@ -104,7 +104,7 @@ testSuite = testGroup "SourceLocation Math QuickCheck Tests"
   [ testProperty "SourcePos: ordering by line then column" prop_sourcepos_ordering
   , testProperty "SourceSpan: valid start/end order" prop_sourcespan_valid_order
   , testProperty "Located: preserves span" prop_located_preserves_span
-  , testProperty "SourcePos: equality based on line and column" prop_sourcepos_equality
+  , testProperty "SourcePos: equality based on line L.and column" prop_sourcepos_equality
   , testProperty "SourceSpan: same position handling" prop_sourcespan_same_position
   , testProperty "Located: value extraction" prop_located_extraction
   , testProperty "SourcePos: comparability" prop_sourcepos_comparable

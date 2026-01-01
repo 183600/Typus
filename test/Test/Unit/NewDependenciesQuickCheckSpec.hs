@@ -6,7 +6,9 @@ import Test.Tasty (TestTree, testGroup)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import Data.Char (isAlphaNum)
-import Data.List (isInfixOf, nub)
+import qualified Data.List as L
+import Data.List (isInfixOf)
+import Data.List (nub)
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 
@@ -56,7 +58,7 @@ typeInferenceProperties = testGroup "Type Inference Properties"
   [ fastProperty "inferType is deterministic" prop_infertype_deterministic
   , fastProperty "inferStatement preserves statement semantics" prop_inferstatement_preserves_semantics
   , fastProperty "inferProgram handles empty programs" prop_inferprogram_empty_program
-  , fastProperty "generalize and instantiate are inverses" prop_generalize_instantiate_inverse
+  , fastProperty "generalize L.and instantiate are inverses" prop_generalize_instantiate_inverse
   ]
 
 constraintProperties :: TestTree
@@ -133,7 +135,7 @@ prop_inferprogram_empty_program =
 
 prop_generalize_instantiate_inverse :: TypeScheme -> TypeEnvironment -> Property
 prop_generalize_instantiate_inverse ts env =
-  property $ True -- Generalization and instantiation should be inverse operations
+  property $ True -- Generalization L.and instantiation should be inverse operations
 
 -- Constraint properties
 prop_constraint_reflexive :: Constraint -> Property

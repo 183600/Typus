@@ -6,6 +6,7 @@ import Analyzer.Types (SymbolInfo(..))
 import Control.Monad.Except (runExceptT)
 import Control.Monad.State (evalStateT)
 import qualified Data.Map.Strict as Map
+import qualified Data.List as L
 import Data.List (isInfixOf)
 import qualified Dependencies as Dep
 import qualified Ownership as Own
@@ -120,6 +121,6 @@ tests =
               ]
         result <- runSymbolCollection broken
         case result of
-          Left err -> assertBool "expected Go AST parse failure" ("Go AST parsing failed" `isInfixOf` err)
+          Left err -> assertBool "expected Go AST parse failure" ("Go AST parsing failed" `L.isInfixOf` err)
           Right _ -> assertFailure "expected collectSymbolsAndTypes to fail on malformed input"
     ]

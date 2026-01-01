@@ -10,6 +10,7 @@
 module Test.Unit.NewCompilerIRConsistencySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -59,7 +60,8 @@ import Compiler.Errors
 import SourceLocation (SourceSpan(..), SourcePos(..), posAt)
 
 import qualified Data.Text as T
-import Data.List (intercalate, isInfixOf, isPrefixOf)
+import Data.List (isInfixOf, isPrefixOf)
+import Data.List (intercalate)
 import qualified Data.Set as Set
 
 -- | Compiler IR consistency tests
@@ -140,7 +142,7 @@ tests =
                   Left errors -> assertFailure $ "Failed to build semantic IR: " ++ show errors
                   Right semanticIR -> do
                     let valueInfo = semanticValueInfo semanticIR
-                    -- Should have analyzed variables and functions
+                    -- Should have analyzed variables L.and functions
                     length valueInfo @>= 1
         ]
         
@@ -165,9 +167,9 @@ tests =
                         goSource = goSource goIR
                         
                     -- Generated Go should contain key elements
-                    "package main" `isInfixOf` goSource @?= True
-                    "func main()" `isInfixOf` goSource @?= True
-                    "println(\"Hello\")" `isInfixOf` goSource @?= True
+                    "package main" `L.isInfixOf` goSource @?= True
+                    "func main()" `L.isInfixOf` goSource @?= True
+                    "println(\"Hello\")" `L.isInfixOf` goSource @?= True
                     
         , testCase "Go IR preserves module structure" $ do
             let typusContent = unlines
@@ -198,16 +200,16 @@ tests =
                         
                     gmPackageName goModule @?= "test"
                     length (gmImports goModule) @?= 2
-                    length (gmDecls goModule) @?= 2  -- const and func
+                    length (gmDecls goModule) @?= 2  -- const L.and func
                     
-                    "package test" `isInfixOf` goSource @?= True
-                    "import" `isInfixOf` goSource @?= True
-                    "const PI" `isInfixOf` goSource @?= True
-                    "func add" `isInfixOf` goSource @?= True
+                    "package test" `L.isInfixOf` goSource @?= True
+                    "import" `L.isInfixOf` goSource @?= True
+                    "const PI" `L.isInfixOf` goSource @?= True
+                    "func add" `L.isInfixOf` goSource @?= True
         ]
         
     , testGroup "IR transformation consistency"
-        [ testCase "moduleFromTypus applies all transformations" $ do
+        [ testCase "moduleFromTypus applies L.all transformations" $ do
             let typusContent = unlines
                   [ "//! ownership on"
                   , ""
@@ -299,11 +301,11 @@ tests =
                     let goIR = emitGo semanticIR
                         goSource = goSource goIR
                         
-                    -- Should preserve function signatures and calls
-                    "func greet(name string)" `isInfixOf` goSource @?= True
-                    "fmt.Printf" `isInfixOf` goSource @?= True
-                    "greet(\"World\")" `isInfixOf` goSource @?= True
-                    "func main()" `isInfixOf` goSource @?= True
+                    -- Should preserve function signatures L.and calls
+                    "func greet(name string)" `L.isInfixOf` goSource @?= True
+                    "fmt.Printf" `L.isInfixOf` goSource @?= True
+                    "greet(\"World\")" `L.isInfixOf` goSource @?= True
+                    "func main()" `L.isInfixOf` goSource @?= True
                     
         , testCase "IR handles complex constructs consistently" $ do
             let typusContent = unlines
@@ -333,11 +335,11 @@ tests =
                     let goIR = emitGo semanticIR
                         goSource = goSource goIR
                         
-                    -- Should preserve struct definition and methods
-                    "type Point struct" `isInfixOf` goSource @?= True
-                    "X, Y int" `isInfixOf` goSource @?= True
-                    "func (p Point) String()" `isInfixOf` goSource @?= True
-                    "Point{1, 2}" `isInfixOf` goSource @?= True
+                    -- Should preserve struct definition L.and methods
+                    "type Point struct" `L.isInfixOf` goSource @?= True
+                    "X, Y int" `L.isInfixOf` goSource @?= True
+                    "func (p Point) String()" `L.isInfixOf` goSource @?= True
+                    "Point{1, 2}" `L.isInfixOf` goSource @?= True
         ]
         
     , testGroup "IR error handling consistency"
@@ -386,7 +388,7 @@ tests =
                     -- If successful, should still maintain structure
                     let goIR = emitGo semanticIR
                         goSource = goSource goIR
-                    "func test()" `isInfixOf` goSource @?= True
+                    "func test()" `L.isInfixOf` goSource @?= True
         ]
         
     , testGroup "Package-level IR consistency"
@@ -422,8 +424,8 @@ tests =
                         goSource = renderGoModule goModule
                         
                     -- Should include declarations from both files
-                    "func main()" `isInfixOf` goSource @?= True
-                    "func HelperFunc()" `isInfixOf` goSource @?= True
+                    "func main()" `L.isInfixOf` goSource @?= True
+                    "func HelperFunc()" `L.isInfixOf` goSource @?= True
                     
                     -- Should have appropriate imports
                     length (gmImports goModule) @>= 1

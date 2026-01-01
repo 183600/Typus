@@ -10,6 +10,7 @@
 module Test.Unit.NewTypusSyntaxValidatorQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import TestSupport.Arbitrary
@@ -26,7 +27,7 @@ prop_validator_accepts_valid_constructs validCode =
       input = unlines $ validConstructs ++ [validCode]
       result = validateSyntax input
       isValid = result == Valid
-  in classify (length validCode > 0) "non-empty code" $
+  in classify (L.length validCode > 0) "non-empty code" $
      property $ isValid
 
 -- Property: Syntax validator rejects invalid constructs
@@ -36,7 +37,7 @@ prop_validator_rejects_invalid_constructs invalidCode =
       input = unlines $ invalidConstructs ++ [invalidCode]
       result = validateSyntax input
       isInvalid = result == Invalid
-  in classify (length invalidCode > 0) "non-empty code" $
+  in classify (L.length invalidCode > 0) "non-empty code" $
      property $ isInvalid
 
 -- Property: Syntax validator preserves structure
@@ -44,8 +45,8 @@ prop_validator_preserves_structure :: [String] -> Property
 prop_validator_preserves_structure lines =
   let input = unlines lines
       result = validateSyntax input
-      preservesLineCount = either (const False) (\_ -> length lines > 0) (Right result)
-  in classify (length lines > 1) "multiple lines" $
+      preservesLineCount = either (const False) (\_ -> L.length lines > 0) (Right result)
+  in classify (L.length lines > 1) "multiple lines" $
      property $ preservesLineCount
 
 -- Property: Syntax validator handles directives correctly
@@ -77,12 +78,12 @@ data ValidationResult = Valid | Warning | Invalid
 validateSyntax :: String -> ValidationResult
 validateSyntax input = 
   if null input then Invalid
-  else if "func" `isInfixOf` input then Valid
-  else if "var" `isInfixOf` input then Valid
+  else if "func" `L.isInfixOf` input then Valid
+  else if "var" `L.isInfixOf` input then Valid
   else Warning
 
 isInfixOf :: String -> String -> Bool
-isInfixOf = undefined  -- Simplified for test
+L.isInfixOf = undefined  -- Simplified for test
 
 tests :: TestTree
 tests = testGroup "New Typus Syntax Validator QuickCheck Tests"

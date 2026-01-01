@@ -35,6 +35,7 @@ import qualified Ownership.Lexer as OL
 import qualified Ownership.Parser as OP
 
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Char (isSpace, isAlphaNum)
 import Data.Set (Set)
@@ -126,7 +127,7 @@ arbitraryOwnershipCode = do
   numFuncs <- choose (0, 2)
   funcs <- vectorOf numFuncs arbitraryOwnershipFuncDecl
   
-  return $ directives ++ unlines vars ++ "\n" ++ concat transfers ++ "\n" ++ concat funcs
+  return $ directives ++ unlines vars ++ "\n" ++ L.concat transfers ++ "\n" ++ L.concat funcs
 
 -- ============================================================================
 -- Ownership Transfer Invariant Properties
@@ -276,7 +277,7 @@ prop_ownership_analysis_linear =
 prop_ownership_analysis_repeated_patterns :: Property
 prop_ownership_analysis_repeated_patterns =
   let pattern = "a := 1 // owned\nb := move(a) // moved\nc := 2 // owned\n"
-      largeCode = "func test() {\n" ++ concat (replicate 50 pattern) ++ "}\n"
+      largeCode = "func test() {\n" ++ L.concat (replicate 50 pattern) ++ "}\n"
   in case analyzeOwnership largeCode of
     Left _ -> property False
     Right (analyzer, _) ->

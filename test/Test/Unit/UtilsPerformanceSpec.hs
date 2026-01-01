@@ -32,7 +32,9 @@ import Utils
 
 import Data.Char (isSpace, toLower)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, tails, isInfixOf, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (tails, sort)
 import qualified Data.Text as T
 import Data.Text (Text)
 
@@ -51,7 +53,7 @@ arbitraryRepetitiveString :: Gen String
 arbitraryRepetitiveString = do
   pattern <- elements ["abc", "hello world", "test string", "pattern"]
   repetitions <- choose (10, 1000)
-  return $ concat (replicate repetitions pattern)
+  return $ L.concat (replicate repetitions pattern)
 
 -- Generate strings with many delimiters
 arbitraryDelimitedString :: Char -> Gen String
@@ -63,8 +65,8 @@ arbitraryDelimitedString delim = do
 -- Generate words
 arbitraryWord :: Gen String
 arbitraryWord = do
-  length <- choose (1, 20)
-  vectorOf length (elements "abcdefghijklmnopqrstuvwxyz")
+  L.length <- choose (1, 20)
+  vectorOf L.length (elements "abcdefghijklmnopqrstuvwxyz")
 
 -- Generate strings with many comments
 arbitraryCommentString :: Gen String
@@ -101,8 +103,8 @@ prop_trim_performance_linear :: Property
 prop_trim_performance_linear =
   forAll arbitraryLargeString $ \input ->
   let trimmed = trim input
-      resultLength = length trimmed
-      inputLength = length input
+      resultLength = L.length trimmed
+      inputLength = L.length input
   in property $ resultLength <= inputLength .&&. resultLength >= 0
 
 -- Property: splitBy performance is reasonable for large inputs
@@ -110,7 +112,7 @@ prop_splitBy_performance_large :: Property
 prop_splitBy_performance_large =
   forAll (arbitraryDelimitedString ',') $ \input ->
   let segments = splitBy ',' input
-      segmentCount = length segments
+      segmentCount = L.length segments
   in property $ segmentCount >= 1 .&&. segmentCount <= 101  -- At most numSegments + 1
 
 -- Property: splitByCollapsed removes empty segments efficiently
@@ -118,15 +120,15 @@ prop_splitByCollapsed_performance :: Property
 prop_splitByCollapsed_performance =
   forAll (arbitraryDelimitedString ',') $ \input ->
   let collapsed = splitByCollapsed ',' input
-      hasEmpty = any null collapsed
-  in property $ not hasEmpty .&&. length collapsed >= 0
+      hasEmpty = L.any null collapsed
+  in property $ not hasEmpty .&&. L.length collapsed >= 0
 
 -- Property: removeLineComments handles large files efficiently
 prop_removeLineComments_performance :: Property
 prop_removeLineComments_performance =
   forAll arbitraryCommentString $ \input ->
   let cleaned = removeLineComments input
-      lineCount = length (lines input)
+      lineCount = L.length (lines input)
   in property $ not (null cleaned) .&&. lineCount >= 10
 
 -- Property: removeComments handles mixed comments efficiently
@@ -134,8 +136,8 @@ prop_removeComments_performance :: Property
 prop_removeComments_performance =
   forAll arbitraryCommentString $ \input ->
   let cleaned = removeComments input
-      originalLength = length input
-      cleanedLength = length cleaned
+      originalLength = L.length input
+      cleanedLength = L.length cleaned
   in property $ cleanedLength <= originalLength .&&. cleanedLength >= 0
 
 -- Property: normalizeIndentation handles large indented blocks
@@ -143,7 +145,7 @@ prop_normalizeIndentation_performance :: Property
 prop_normalizeIndentation_performance =
   forAll arbitraryIndentedString $ \input ->
   let normalized = normalizeIndentation input
-      lineCount = length (lines input)
+      lineCount = L.length (lines input)
   in property $ not (null normalized) .&&. lineCount >= 10
 
 -- Property: forceSingleTabIndentation processes large files efficiently
@@ -151,7 +153,7 @@ prop_forceSingleTabIndentation_performance :: Property
 prop_forceSingleTabIndentation_performance =
   forAll arbitraryIndentedString $ \input ->
   let tabbed = forceSingleTabIndentation input
-      lineCount = length (lines input)
+      lineCount = L.length (lines input)
   in property $ not (null tabbed) .&&. lineCount >= 10
 
 -- Property: fixIndentation maintains performance with complex structures
@@ -159,7 +161,7 @@ prop_fixIndentation_performance :: Property
 prop_fixIndentation_performance =
   forAll arbitraryIndentedString $ \input ->
   let fixed = fixIndentation input
-      lineCount = length (lines input)
+      lineCount = L.length (lines input)
   in property $ not (null fixed) .&&. lineCount >= 10
 
 -- Property: breakOn finds patterns efficiently in large strings
@@ -168,8 +170,8 @@ prop_breakOn_performance =
   forAll arbitraryLargeString $ \input ->
   forAll arbitraryWord $ \pattern ->
   let (before, after) = breakOn pattern input
-      totalLength = length before + length after + length pattern
-  in property $ totalLength >= length input
+      totalLength = L.length before + L.length after + L.length pattern
+  in property $ totalLength >= L.length input
 
 -- ============================================================================
 -- Memory Efficiency Properties
@@ -180,8 +182,8 @@ prop_trim_memory_efficient :: Property
 prop_trim_memory_efficient =
   forAll arbitraryRepetitiveString $ \input ->
   let trimmed = trim input
-      inputLength = length input
-      trimmedLength = length trimmed
+      inputLength = L.length input
+      trimmedLength = L.length trimmed
   in property $ trimmedLength <= inputLength .&&. trimmedLength >= 0
 
 -- Property: splitBy doesn't create excessive intermediate lists
@@ -189,17 +191,17 @@ prop_splitBy_memory_efficient :: Property
 prop_splitBy_memory_efficient =
   forAll (arbitraryDelimitedString ',') $ \input ->
   let segments = splitBy ',' input
-      totalSegmentsLength = sum $ map length segments
-  in property $ totalSegmentsLength <= length input + length segments
+      totalSegmentsLength = L.sum $ map L.length segments
+  in property $ totalSegmentsLength <= L.length input + L.length segments
 
 -- Property: removeComments processes comments without memory bloat
 prop_removeComments_memory_efficient :: Property
 prop_removeComments_memory_efficient =
   forAll arbitraryCommentString $ \input ->
   let cleaned = removeComments input
-      commentCount = length $ filter ("//" `isInfixOf`) (lines input)
-      cleanedLength = length cleaned
-  in property $ cleanedLength <= length input .&&. commentCount >= 0
+      commentCount = L.length $ L.filter ("//" `L.isInfixOf`) (lines input)
+      cleanedLength = L.length cleaned
+  in property $ cleanedLength <= L.length input .&&. commentCount >= 0
 
 -- ============================================================================
 -- Edge Case Performance Properties
@@ -217,7 +219,7 @@ prop_splitBy_extreme_delimiters :: Property
 prop_splitBy_extreme_delimiters =
   let extremeDelimiters = replicate 5000 ','
   in let segments = splitBy ',' extremeDelimiters
-  in property $ length segments === 5001
+  in property $ L.length segments === 5001
 
 -- Property: removeComments handles comment-only files efficiently
 prop_removeComments_comment_only :: Property
@@ -229,7 +231,7 @@ prop_removeComments_comment_only =
 -- Property: normalizeIndentation handles deeply nested code efficiently
 prop_normalizeIndentation_deeply_nested :: Property
 prop_normalizeIndentation_deeply_nested =
-  let deeplyNested = unlines $ map (\i -> replicate i ' ' ++ "content") [0..1000]
+  let deeplyNested = unlines $ L.map (\i -> replicate i ' ' ++ "content") [0..1000]
   in let normalized = normalizeIndentation deeplyNested
   in property $ not (null normalized)
 
@@ -244,16 +246,16 @@ prop_functions_scale_linearly =
   let testString = replicate size 'a' ++ "content" ++ replicate size 'b'
       trimmed = trim testString
       segments = splitBy ' ' testString
-  in property $ length trimmed <= length testString .&&. length segments >= 1
+  in property $ L.length trimmed <= L.length testString .&&. L.length segments >= 1
 
 -- Property: Functions handle repeated operations efficiently
 prop_functions_repeated_operations :: Property
 prop_functions_repeated_operations =
   let repeatedPattern = "test pattern\n"
-      largeInput = concat $ replicate 1000 repeatedPattern
+      largeInput = L.concat $ replicate 1000 repeatedPattern
       lines' = lines largeInput
       trimmedLines = map trim lines'
-  in property $ length trimmedLines === 1000
+  in property $ L.length trimmedLines === 1000
 
 -- Property: Functions maintain performance with Unicode content
 prop_functions_unicode_performance :: Property
@@ -261,7 +263,7 @@ prop_functions_unicode_performance =
   let unicodeContent = unlines $ replicate 100 "测试内容 🚀 with ascii"
       trimmed = trim unicodeContent
       segments = splitBy ' ' unicodeContent
-  in property $ not (null trimmed) .&&. length segments >= 1
+  in property $ not (null trimmed) .&&. L.length segments >= 1
 
 -- ============================================================================
 -- Consistency Properties

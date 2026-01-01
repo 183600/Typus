@@ -15,7 +15,9 @@ import TestSupport.QuickCheck (fastProperty)
 import TestSupport.Arbitrary ()
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Gen, Arbitrary(..), elements, listOf, choose, oneof)
 import Data.Char (isSpace, isAlphaNum, isLetter, isDigit)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (sort, nub)
 import qualified Data.Text as T
 import Data.Maybe (isJust, isNothing, fromMaybe)
 
@@ -77,7 +79,7 @@ test_utils_edge_cases = testCase "Utils edge cases" $ do
   let nestedComments = "code /* outer /* inner */ still outer */ end"
   removeComments nestedComments @?= "code  end"
   
-  -- Test normalizeIndentation with mixed tabs and spaces
+  -- Test normalizeIndentation with mixed tabs L.and spaces
   let mixedIndent = "\t  line1\n    \tline2\n\t\tline3"
   normalizeIndentation mixedIndent @?= "line1\n  line2\n\tline3"
 
@@ -95,7 +97,7 @@ test_source_location_math = testCase "SourceLocation mathematical properties" $ 
   assertBool "pos1 < pos2" $ pos1 < pos2
   assertBool "pos2 < pos3" $ pos2 < pos3
   
-  -- Test span creation and validation
+  -- Test span creation L.and validation
   let span1 = spanBetween pos1 pos2
   let span2 = spanBetween pos2 pos3
   assertBool "span1 is valid" $ isValidSpan span1
@@ -167,15 +169,15 @@ test_located_values = testCase "Located values operations" $ do
 -- QuickCheck Properties
 -- ============================================================================
 
--- Property 6: splitBy and splitByCollapsed relationship
+-- Property 6: splitBy L.and splitByCollapsed relationship
 prop_split_by_relationship :: String -> Char -> Property
 prop_split_by_relationship str delim =
   let normal = splitBy delim str
       collapsed = splitByCollapsed delim str
   in property $ 
-     (null (filter null normal) === True) .&&.
+     (L.null (filter null normal) === True) .&&.
      (normal === collapsed) .||.
-     (length collapsed === length (filter (not . null) normal))
+     (L.length collapsed === L.length (L.filter (not . null) normal))
 
 -- Property 7: Source position advancement is consistent
 prop_position_advancement_consistent :: String -> Property
@@ -203,7 +205,7 @@ prop_span_merge_associative p1 p2 p3 =
 prop_comment_preservation :: String -> String -> Property
 prop_comment_preservation code comment =
   not ('"' `elem` code) && not ('\'' `elem` code) && 
-  not ("/" `isInfixOf` code) ==>
+  not ("/" `L.isInfixOf` code) ==>
   let withLineComment = code ++ " // " ++ comment
       withBlockComment = code ++ " /* " ++ comment ++ " */ " ++ code
       cleanedLine = removeLineComments withLineComment
@@ -219,7 +221,7 @@ prop_indentation_structure input =
       normalized = normalizeIndentation input
       linesNormalized = lines normalized
   in property $ 
-     length linesInput === length linesNormalized
+     L.length linesInput === L.length linesNormalized
 
 -- ============================================================================
 -- Test Collection

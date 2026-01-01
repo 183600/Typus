@@ -1,6 +1,7 @@
 module Test.Unit.UtilsCommentProcessingQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Arbitrary(..), Gen, choose, listOf, suchThat, oneof, elements, frequency)
@@ -49,7 +50,7 @@ genIndentedCode = frequency
           content <- listOf $ elements ['a'..'z', ' ']
           return $ replicate indent ' ' ++ content
         return $ unlines lines)
-    , (1, do -- Mixed tabs and spaces
+    , (1, do -- Mixed tabs L.and spaces
         lines <- listOf1 $ do
           spaces <- choose (0, 4)
           tabs <- choose (0, 2)
@@ -91,14 +92,14 @@ tests =
                 expected = "hello\nworld\n"
             removeLineComments input @?= expected
 
-        , fastProperty "removeLineComments never increases string length" $
+        , fastProperty "removeLineComments never increases string L.length" $
             \s ->
-              length (removeLineComments s) <= length s
+              L.length (removeLineComments s) <= L.length s
 
         , fastProperty "removeLineComments preserves line structure" $
             \s ->
-              let originalLines = length $ lines s
-                  processedLines = length $ lines (removeLineComments s)
+              let originalLines = L.length $ lines s
+                  processedLines = L.length $ lines (removeLineComments s)
               in processedLines == originalLines
 
         , fastProperty "removeLineComments is idempotent" $
@@ -109,7 +110,7 @@ tests =
         ]
 
     , testGroup "removeComments boundary conditions"
-        [ testCase "removes both line and block comments" $ do
+        [ testCase "removes both line L.and block comments" $ do
             let input = "code // line\n/* block */ more\n"
                 expected = "code \n more\n"
             removeComments input @?= expected
@@ -137,9 +138,9 @@ tests =
                 expected = "a  b  c\n"
             removeComments input @?= expected
 
-        , fastProperty "removeComments never increases string length" $
+        , fastProperty "removeComments never increases string L.length" $
             \s ->
-              length (removeComments s) <= length s
+              L.length (removeComments s) <= L.length s
 
         , fastProperty "removeComments is idempotent" $
             \s ->
@@ -149,8 +150,8 @@ tests =
 
         , fastProperty "removeComments preserves line count" $
             \s ->
-              let originalLines = length $ lines s
-                  processedLines = length $ lines (removeComments s)
+              let originalLines = L.length $ lines s
+                  processedLines = L.length $ lines (removeComments s)
               in processedLines == originalLines
         ]
 
@@ -181,7 +182,7 @@ tests =
             \s ->
               let originalLines = lines s
                   processedLines = lines (normalizeIndentation s)
-                  preservedLengths = length originalLines == length processedLines
+                  preservedLengths = L.length originalLines == L.length processedLines
               in preservedLengths
 
         , fastProperty "normalizeIndentation is idempotent" $
@@ -194,7 +195,7 @@ tests =
             \s ->
               let processed = normalizeIndentation s
                   lines' = lines processed
-              in null lines' || not (null (head lines')) || all null lines'
+              in null lines' || not (L.null (L.head lines')) || L.all null lines'
         ]
 
     , testGroup "forceSingleTabIndentation boundary conditions"
@@ -216,11 +217,11 @@ tests =
         , testCase "handles empty input" $ do
             forceSingleTabIndentation "" @?= ""
 
-        , fastProperty "forceSingleTabIndentation results start with tab or are empty" $
+        , fastProperty "forceSingleTabIndentation results start with tab L.or are empty" $
             \s ->
               let result = forceSingleTabIndentation s
                   lines' = lines result
-              in all (\line -> null line || head line == '\t') lines'
+              in L.all (\line -> null line || L.head line == '\t') lines'
 
         , fastProperty "forceSingleTabIndentation is idempotent" $
             \s ->
@@ -239,7 +240,7 @@ tests =
 
         , fastProperty "comment removal preserves string literals" $
             \s ->
-              let hasStringLiteral = "\"" `isInfixOf` s
+              let hasStringLiteral = "\"" `L.isInfixOf` s
                   processed = removeComments s
               in if hasStringLiteral 
                  then countOccurrences "\"" processed >= countOccurrences "\"" s - 2
@@ -249,14 +250,14 @@ tests =
 
 -- Helper function to count occurrences
 countOccurrences :: Eq a => a -> [a] -> Int
-countOccurrences x = length . filter (== x)
+countOccurrences x = L.length . L.filter (== x)
 
 -- Helper function for infix check
 isInfixOf :: Eq a => [a] -> [a] -> Bool
-isInfixOf needle haystack = any (isPrefixOf needle) (tails haystack)
+L.isInfixOf needle haystack = L.any (L.isPrefixOf needle) (tails haystack)
   where
-    isPrefixOf [] _ = True
-    isPrefixOf _ [] = False
-    isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
+    L.isPrefixOf [] _ = True
+    L.isPrefixOf _ [] = False
+    L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
     tails [] = [[]]
     tails xs@(_:ys) = xs : tails ys

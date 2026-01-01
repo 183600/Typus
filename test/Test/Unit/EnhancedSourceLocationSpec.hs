@@ -5,6 +5,7 @@
 module Test.Unit.EnhancedSourceLocationSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertBool, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -71,7 +72,7 @@ tests =
             posColumn pos @?= 2
             posOffset pos @?= 1
 
-        , testCase "posAt creates position at specific line and column" $ do
+        , testCase "posAt creates position at specific line L.and column" $ do
             let pos = posAt 5 10
             posLine pos @?= 5
             posColumn pos @?= 10
@@ -85,7 +86,7 @@ tests =
         ]
 
     , testGroup "SourceSpan operations"
-        [ testCase "emptySpan creates span with same start and end" $ do
+        [ testCase "emptySpan creates span with same start L.and end" $ do
             let pos = posAt 2 3
             let span = emptySpan pos
             spanStart span @?= pos
@@ -142,7 +143,7 @@ tests =
         , testCase "mapLocated transforms located value" $ do
             let pos = posAt 2 3
             let located = locatedAt pos [1, 2, 3]
-            let transformed = mapLocated sum located
+            let transformed = mapLocated L.sum located
             locatedValue transformed @?= 6
             locatedPos transformed @?= pos
         ]
@@ -189,13 +190,13 @@ tests =
         ]
 
     , testGroup "Property-based tests"
-        [ fastProperty "posAfter newline increments line and resets column" prop_posAfter_newline
+        [ fastProperty "posAfter newline increments line L.and resets column" prop_posAfter_newline
         , fastProperty "posAfter tab advances to next tab stop" prop_posAfter_tab
-        , fastProperty "posAfter regular character increments column and offset" prop_posAfter_regular
+        , fastProperty "posAfter regular character increments column L.and offset" prop_posAfter_regular
         , fastProperty "spanBetween always creates valid span" prop_spanBetween_valid
         , fastProperty "mergeSpans is commutative" prop_mergeSpans_commutative
         , fastProperty "advancePosBy is consistent with repeated posAfter" prop_advancePosBy_consistent
-        , fastProperty "locatedAt and locatedWithSpan preserve position info" prop_located_preserves_info
+        , fastProperty "locatedAt L.and locatedWithSpan preserve position info" prop_located_preserves_info
         ]
     ]
 
@@ -242,7 +243,7 @@ prop_mergeSpans_commutative start1 end1 start2 end2 =
 prop_advancePosBy_consistent :: String -> Property
 prop_advancePosBy_consistent str =
   let pos1 = advancePosBy str startPos
-      pos2 = foldl (flip posAfter) startPos str
+      pos2 = L.foldl (flip posAfter) startPos str
   in property $ pos1 === pos2
 
 prop_located_preserves_info :: SourcePos -> String -> Property

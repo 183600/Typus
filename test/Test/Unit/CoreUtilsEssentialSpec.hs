@@ -3,6 +3,7 @@
 module Test.Unit.CoreUtilsEssentialSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
 
 import Utils (trim, splitBy, splitByComma, splitByCollapsed, removeLineComments, removeComments, normalizeIndentation, breakOn)
@@ -10,11 +11,11 @@ import Utils (trim, splitBy, splitByComma, splitByCollapsed, removeLineComments,
 tests :: TestTree
 tests = testGroup "Core Utils Essential Tests"
   [ testGroup "String Trimming"
-    [ testCase "trim removes leading and trailing whitespace" $
+    [ testCase "trim removes leading L.and trailing whitespace" $
         assertEqual "trim should remove spaces" "hello" (trim "  hello  ")
     
-    , testCase "trim handles tabs and newlines" $
-        assertEqual "trim should remove all whitespace" "hello" (trim "\t\n hello \n\t")
+    , testCase "trim handles tabs L.and newlines" $
+        assertEqual "trim should remove L.all whitespace" "hello" (trim "\t\n hello \n\t")
     
     , testCase "trim handles empty string" $
         assertEqual "trim should handle empty input" "" (trim "")
@@ -27,7 +28,7 @@ tests = testGroup "Core Utils Essential Tests"
     [ testCase "splitBy preserves empty segments" $
         assertEqual "splitBy should preserve empty segments" ["a", "", "b"] (splitBy ',' "a,,b")
     
-    , testCase "splitBy handles leading and trailing delimiters" $
+    , testCase "splitBy handles leading L.and trailing delimiters" $
         assertEqual "splitBy should handle boundaries" ["", "a", ""] (splitBy ',' ",a,")
     
     , testCase "splitBy handles single element" $
@@ -39,8 +40,8 @@ tests = testGroup "Core Utils Essential Tests"
     , testCase "splitByCollapsed removes empty segments" $
         assertEqual "splitByCollapsed should remove empty segments" ["a", "b"] (splitByCollapsed ',' "a,,b")
     
-    , testCase "splitByCollapsed handles all empty" $
-        assertEqual "splitByCollapsed should handle all empty" [] (splitByCollapsed ',,,')
+    , testCase "splitByCollapsed handles L.all empty" $
+        assertEqual "splitByCollapsed should handle L.all empty" [] (splitByCollapsed ',,,')
     ]
   
   , testGroup "Comment Removal"

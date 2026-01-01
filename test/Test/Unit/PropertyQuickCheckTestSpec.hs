@@ -9,6 +9,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import TestSupport.Arbitrary ()
 import TestSupport.ExtendedArbitrary ()
+import qualified Data.List as L
 import Data.List (length)
 
 import SourceLocation (SourceSpan(..), posOffset)
@@ -80,7 +81,7 @@ prop_parser_preserves_structure _ = property True
 prop_lexer_preserves_count :: String -> Property
 prop_lexer_preserves_count s =
   let tokens = tokenizeGo s
-  in property $ length tokens >= 0
+  in property $ L.length tokens >= 0
 
 prop_ast_preserves_semantics :: Expr -> Property
 prop_ast_preserves_semantics _ = property True

@@ -34,6 +34,7 @@ import qualified Dependencies.TypeSystem as TS
 import Dependencies.AST (TypeExpr(..), Constraint(..))
 
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Char (isSpace, isAlphaNum)
 import Data.Map (Map)
@@ -108,7 +109,7 @@ arbitrarySubstitution = do
 prop_type_checking_simple_types :: Property
 prop_type_checking_simple_types =
   let checker = newDependentTypeChecker
-      simpleType = SimpleT "int"
+      simpleType = SimpleT (T.pack "int")
   in case checkType checker simpleType of
     Right _ -> property True
     Left _ -> property False
@@ -148,8 +149,8 @@ prop_type_checking_refined_types =
 -- Property: Type unification handles simple cases
 prop_unification_simple_cases :: Property
 prop_unification_simple_cases =
-  let type1 = SimpleT "int"
-      type2 = SimpleT "int"
+  let type1 = SimpleT (T.pack "int")
+      type2 = SimpleT (T.pack "int")
   in case unify type1 type2 of
     Right _ -> property True
     Left _ -> property False
@@ -157,8 +158,8 @@ prop_unification_simple_cases =
 -- Property: Type unification fails for different types
 prop_unification_different_types :: Property
 prop_unification_different_types =
-  let type1 = SimpleT "int"
-      type2 = SimpleT "string"
+  let type1 = SimpleT (T.pack "int")
+      type2 = SimpleT (T.pack "string")
   in case unify type1 type2 of
     Right _ -> property False
     Left _ -> property True
@@ -205,7 +206,7 @@ prop_type_environment_constraints =
 -- Property: Complex function types are handled
 prop_complex_function_types :: Property
 prop_complex_function_types =
-  let complexType = FuncT [SimpleT "int", SimpleT "string"] (SimpleT "bool")
+  let complexType = FuncT [SimpleT (T.pack "int"), SimpleT (T.pack "string")] (SimpleT (T.pack "bool"))
       checker = newDependentTypeChecker
   in case checkType checker complexType of
     Right _ -> property True
@@ -239,7 +240,7 @@ prop_refined_function_types =
   forAll arbitraryVarName $ \baseType ->
   forAll arbitrary $ \constraint ->
   let refinedBase = RefineT (SimpleT baseType) [constraint]
-      funcType = FuncT [refinedBase] (SimpleT "bool")
+      funcType = FuncT [refinedBase] (SimpleT (T.pack "bool"))
       checker = newDependentTypeChecker
   in case checkType checker funcType of
     Right _ -> property True

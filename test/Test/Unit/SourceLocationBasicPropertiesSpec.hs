@@ -2,6 +2,7 @@
 module Test.Unit.SourceLocationBasicPropertiesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertBool, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck ((===), Property, forAll, Gen, choose, suchThat)
@@ -22,7 +23,7 @@ testSourcePosProperties = testGroup "SourcePos Properties"
 testSourceSpanProperties :: TestTree
 testSourceSpanProperties = testGroup "SourceSpan Properties"
   [ fastProperty "start position comes before end position" prop_spanOrdering
-  , fastProperty "span length is non-negative" prop_spanLengthNonNegative
+  , fastProperty "span L.length is non-negative" prop_spanLengthNonNegative
   , fastProperty "span contains its start position" prop_spanContainsStart
   , testCase "span creation with same positions" testSinglePointSpan
   ]
@@ -106,7 +107,7 @@ testSinglePointSpan :: IO ()
 testSinglePointSpan = do
   let pos = SourcePos 5 10 50
       span = SourceSpan pos pos
-  assertBool "single point span should have zero length" $
+  assertBool "single point span should have zero L.length" $
     spanLength span == 0
   assertBool "single point span should contain its position" $
     spanContains span pos

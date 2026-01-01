@@ -10,6 +10,7 @@
 module Test.Unit.SymbolTableInvariantQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Positive(..), NonEmptyList(..))
 
@@ -85,7 +86,7 @@ prop_symbol_table_keys_unique pairs =
   let table = Map.fromList pairs
       keys = Map.keys table
       uniqueKeys = nub keys
-  in property $ length keys === length uniqueKeys
+  in property $ L.length keys === L.length uniqueKeys
 
 -- Property: filtering preserves symbol types
 prop_filter_preserves_types :: String -> SymbolKind -> Property
@@ -103,7 +104,7 @@ prop_union_combines_tables pairs1 pairs2 =
   let table1 = Map.fromList pairs1
       table2 = Map.fromList pairs2
       unioned = Map.union table1 table2
-      expectedSize = length $ nub $ map fst pairs1 ++ map fst pairs2
+      expectedSize = L.length $ nub $ map fst pairs1 ++ map fst pairs2
   in property $ Map.size unioned === expectedSize
 
 -- Property: intersection finds common symbols
@@ -112,8 +113,8 @@ prop_intersection_finds_common pairs1 pairs2 =
   let table1 = Map.fromList pairs1
       table2 = Map.fromList pairs2
       intersected = Map.intersection table1 table2
-      commonKeys = nub $ filter (`elem` map fst pairs2) (map fst pairs1)
-  in property $ Map.size intersected === length commonKeys
+      commonKeys = nub $ L.filter (`elem` map fst pairs2) (map fst pairs1)
+  in property $ Map.size intersected === L.length commonKeys
 
 -- Property: difference removes common symbols
 prop_difference_removes_common :: [(String, SymbolKind)] -> [(String, SymbolKind)] -> Property
@@ -121,8 +122,8 @@ prop_difference_removes_common pairs1 pairs2 =
   let table1 = Map.fromList pairs1
       table2 = Map.fromList pairs2
       differenced = Map.difference table1 table2
-      remainingKeys = filter (`notElem` map fst pairs2) (map fst pairs1)
-  in property $ Map.size differenced === length remainingKeys
+      remainingKeys = L.filter (`notElem` map fst pairs2) (map fst pairs1)
+  in property $ Map.size differenced === L.length remainingKeys
 
 -- Property: mapping preserves table size
 prop_mapping_preserves_size :: [(String, SymbolKind)] -> Property

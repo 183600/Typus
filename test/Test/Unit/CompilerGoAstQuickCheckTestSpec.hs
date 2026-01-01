@@ -4,6 +4,7 @@
 module Test.Unit.CompilerGoAstQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
@@ -155,12 +156,12 @@ goFunctionTests :: TestTree
 goFunctionTests = testGroup "Go Function Tests"
   [ testCase "Function without parameters" $
       let func = GoFunctionDecl "test" [] GoIntType []
-      in length (goFunctionParams func) @?= 0
+      in L.length (goFunctionParams func) @?= 0
   
   , testCase "Function with parameters" $
       let params = [GoParam "x" GoIntType, GoParam "y" GoIntType]
           func = GoFunctionDecl "add" params GoIntType []
-      in length (goFunctionParams func) @?= 2
+      in L.length (goFunctionParams func) @?= 2
   
   , testCase "Function return type" $
       let func = GoFunctionDecl "getString" [] GoStringType []
@@ -168,7 +169,7 @@ goFunctionTests = testGroup "Go Function Tests"
   
   , fastProperty "Function parameter count consistency" $
       \params -> let func = GoFunctionDecl "test" params GoIntType []
-                  in length (goFunctionParams func) == length params
+                  in L.length (goFunctionParams func) == L.length params
   ]
 
 -- | 8. Go类型测试
@@ -189,7 +190,7 @@ goTypeTests = testGroup "Go Type Tests"
   
   , fastProperty "Type string representation" $
       \ty -> let str = show ty
-              in length str > 0
+              in L.length str > 0
   ]
 
 -- | 9. Go包测试
@@ -202,11 +203,11 @@ goPackageTests = testGroup "Go Package Tests"
   , testCase "Package with declarations" $
       let decl = GoFunctionDecl "main" [] GoIntType []
           pkg = GoPackage "main" [decl]
-      in length (goPackageDecls pkg) @?= 1
+      in L.length (goPackageDecls pkg) @?= 1
   
   , fastProperty "Package declaration count" $
       \decls -> let pkg = GoPackage "test" decls
-                 in length (goPackageDecls pkg) == length decls
+                 in L.length (goPackageDecls pkg) == L.length decls
   ]
 
 -- | 10. Go AST验证测试

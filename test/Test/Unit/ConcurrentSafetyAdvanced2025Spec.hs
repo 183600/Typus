@@ -3,6 +3,7 @@
 module Test.Unit.ConcurrentSafetyAdvanced2025Spec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, choose, listOf, elements)
 import Test.Tasty.HUnit (testCase, (@=?))
 
@@ -46,7 +47,7 @@ propConcurrentParserAccess input numThreads =
   numThreads > 0 && numThreads <= 10 ==>
   let testResult = runConcurrentParserTest input numThreads
   in case testResult of
-       Right results -> all (== head results) results  -- All results should be identical
+       Right results -> L.all (== L.head results) results  -- All results should be identical
        Left _ -> False
 
 -- Property 2: Concurrent type inference maintains consistency
@@ -55,7 +56,7 @@ propConcurrentTypeInferenceConsistency expr numThreads =
   numThreads > 0 && numThreads <= 10 ==>
   let testResult = runConcurrentTypeInferenceTest expr numThreads
   in case testResult of
-       Right results -> length (nub results) <= 1  -- Should have at most one unique result
+       Right results -> L.length (nub results) <= 1  -- Should have at most one unique result
        Left _ -> False
 
 -- Property 3: Concurrent ownership tracking prevents conflicts
@@ -73,7 +74,7 @@ propConcurrentErrorHandling errors numThreads =
   numThreads > 0 && numThreads <= 10 ==>
   let testResult = runConcurrentErrorHandlingTest errors numThreads
   in case testResult of
-    Right collectedErrors -> length collectedErrors >= length errors
+    Right collectedErrors -> L.length collectedErrors >= L.length errors
     Left _ -> False
 
 -- Property 5: STM-based symbol table operations
@@ -81,7 +82,7 @@ propSTMSymbolTableOperations :: [(String, Int)] -> Bool
 propSTMSymbolTableOperations operations =
   let testResult = runSTMSymbolTableTest operations
   in case testResult of
-    Right finalTable -> length finalTable == length (nub (map fst operations))
+    Right finalTable -> L.length finalTable == L.length (nub (map fst operations))
     Left _ -> False
 
 -- Test Case 6: Concurrent compilation pipeline
@@ -90,8 +91,8 @@ testConcurrentCompilationPipeline = do
   state <- createMockCompilationState
   results <- runConcurrentCompilationPipeline state ["file1.typus", "file2.typus", "file3.typus"]
   
-  -- Should have processed all files
-  length results @=? 3
+  -- Should have processed L.all files
+  L.length results @=? 3
   
   -- Progress should be 100%
   progress <- readIORef (stateProgress state)
@@ -117,7 +118,7 @@ testThreadSafeSourceLocationTracking = do
     readMockLocation locationTracker
   
   -- All updates should be reflected consistently
-  let finalLocation = head results
+  let finalLocation = L.head results
   sourceLine finalLocation @=? 2
   sourceColumn finalLocation @=? 10
 
@@ -137,7 +138,7 @@ testConcurrentTestExecutionIsolation = do
   
   -- Each test should have its own isolated environment
   let uniqueResults = nub results
-  length uniqueResults @=? 5  -- All results should be unique
+  L.length uniqueResults @=? 5  -- All results should be unique
 
 -- Helper functions for concurrent testing
 runConcurrentParserTest :: String -> Int -> IO (Either String [String])
@@ -213,7 +214,7 @@ runSTMSymbolTableTest operations = do
         writeTVar table ((key, value) : current)
   
   mapM_ (forkIO . insert) operations
-  threadDelay 1000000  -- Wait for all operations
+  threadDelay 1000000  -- Wait for L.all operations
   
   finalTable <- atomically $ readTVar table
   return $ Right finalTable
@@ -231,7 +232,7 @@ runConcurrentCompilationPipeline state files = do
   
   let processFile file = do
         threadDelay 100000  -- Mock processing time
-        atomically $ modifyIORef (stateProgress state) (+ (100 `div` length files))
+        atomically $ modifyIORef (stateProgress state) (+ (100 `div` L.length files))
         return $ "processed: " ++ file
   
   results <- mapM processFile files
@@ -294,11 +295,11 @@ runIsolatedTest testName = do
 
 -- Utility functions
 isValidDependencyGraph :: [(String, [String])] -> Bool
-isValidDependencyGraph graph = all (\(file, deps) -> file `notElem` deps) graph
+isValidDependencyGraph graph = L.all (\(file, deps) -> file `notElem` deps) graph
 
 nub :: Eq a => [a] -> [a]
 nub [] = []
-nub (x:xs) = x : nub (filter (/= x) xs)
+nub (x:xs) = x : nub (L.filter (/= x) xs)
 
 -- STM helper
 newTVarIO :: a -> IO (TVar a)

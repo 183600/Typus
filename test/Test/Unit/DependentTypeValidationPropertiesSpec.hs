@@ -23,7 +23,9 @@ import Compiler (compile)
 
 import Data.Char (isSpace, isAlpha, isDigit)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, isInfixOf, sort, nub, union, (\\))
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort, nub, union, (\\))
 import qualified Data.Text as T
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -35,7 +37,7 @@ import qualified Data.Set as Set
 -- Property: dependent type checking is deterministic
 prop_dependent_type_deterministic :: String -> Property
 prop_dependent_type_deterministic source =
-  length source <= 500 ==>  -- Keep reasonable size
+  L.length source <= 500 ==>  -- Keep reasonable size
   case parseTypus source of
     Left _ -> property $ True  -- Parse failures are OK
     Right typusFile -> 
@@ -62,7 +64,7 @@ prop_numeric_constraints_validated (Positive x) (Positive y) =
           validConstraint = y > x
       in property $ True  -- If valid constraint, should pass; otherwise should fail
 
--- Property: array length constraints are enforced
+-- Property: array L.length constraints are enforced
 prop_array_length_constraints :: Positive Int -> Property
 prop_array_length_constraints (Positive n) =
   n <= 100 ==>  -- Keep reasonable
@@ -77,13 +79,13 @@ prop_array_length_constraints (Positive n) =
     Left _ -> property $ True
     Right typusFile ->
       let result = checkDependentTypes typusFile
-      in property $ True  -- Should validate length constraint
+      in property $ True  -- Should validate L.length constraint
 
--- Property: string length constraints are enforced
+-- Property: string L.length constraints are enforced
 prop_string_length_constraints :: String -> Property
 prop_string_length_constraints s =
-  length s <= 50 ==>  -- Keep reasonable
-  let len = length s
+  L.length s <= 50 ==>  -- Keep reasonable
+  let len = L.length s
       source = unlines
         [ "//! dependent_types: on"
         , "package main"
@@ -95,7 +97,7 @@ prop_string_length_constraints s =
     Left _ -> property $ True
     Right typusFile ->
       let result = checkDependentTypes typusFile
-      in property $ True  -- Should validate string length
+      in property $ True  -- Should validate string L.length
 
 -- Property: dependent type constraints are transitive
 prop_constraints_transitive :: Positive Int -> Positive Int -> Positive Int -> Property
@@ -137,7 +139,7 @@ prop_function_signature_constraints (Positive n) =
 -- Property: dependent types handle generic constraints
 prop_generic_constraints :: String -> Property
 prop_generic_constraints typeName =
-  length typeName <= 10 && all isAlpha typeName ==>  -- Valid type name
+  L.length typeName <= 10 && L.all isAlpha typeName ==>  -- Valid type name
   let source = unlines
         [ "//! dependent_types: on"
         , "package main"
@@ -195,7 +197,7 @@ prop_logical_combinations (Positive x) (Positive y) =
 -- Property: dependent types handle quantifiers
 prop_quantifier_constraints :: [Int] -> Property
 prop_quantifier_constraints values =
-  length values <= 5 && all (>0) values && all (<100) values ==>  -- Keep reasonable
+  L.length values <= 5 && L.all (>0) values && L.all (<100) values ==>  -- Keep reasonable
   let valuesStr = Data.List.intercalate ", " (map show values)
       source = unlines
         [ "//! dependent_types: on"
@@ -208,20 +210,20 @@ prop_quantifier_constraints values =
     Left _ -> property $ True
     Right typusFile ->
       let result = checkDependentTypes typusFile
-          allPositive = all (>0) values
+          allPositive = L.all (>0) values
       in property $ True  -- Should validate quantifier constraints
 
 -- Property: dependent type checking is consistent with compilation
 prop_dependent_types_consistent_with_compilation :: String -> Property
 prop_dependent_types_consistent_with_compilation source =
-  length source <= 300 ==>  -- Keep reasonable
-  "// dependent_types: on" `isInfixOf` source ==>
+  L.length source <= 300 ==>  -- Keep reasonable
+  "// dependent_types: on" `L.isInfixOf` source ==>
   case parseTypus source of
     Left _ -> property $ True
     Right typusFile ->
       let typeResult = checkDependentTypes typusFile
           compileResult = compile typusFile
-      in property $ True  -- Both should succeed or fail consistently
+      in property $ True  -- Both should succeed L.or fail consistently
 
 -- ============================================================================
 -- Test Collection
@@ -232,8 +234,8 @@ tests = testGroup "Dependent Type Validation Properties"
   [ testGroup "Basic Dependent Type Properties"
     [ fastProperty "dependent type checking is deterministic" prop_dependent_type_deterministic
     , fastProperty "numeric constraints are validated correctly" prop_numeric_constraints_validated
-    , fastProperty "array length constraints are enforced" prop_array_length_constraints
-    , fastProperty "string length constraints are enforced" prop_string_length_constraints
+    , fastProperty "array L.length constraints are enforced" prop_array_length_constraints
+    , fastProperty "string L.length constraints are enforced" prop_string_length_constraints
     ]
   
   , testGroup "Advanced Constraint Properties"

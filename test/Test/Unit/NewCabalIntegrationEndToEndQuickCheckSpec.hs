@@ -12,6 +12,7 @@ import SourceLocation (SourceSpan(..), SourcePos(..), posAt, spanBetween)
 import Utils (trim, removeComments, normalizeIndentation)
 import Dependencies.TypeSystem (newDependentTypeChecker, addType, checkType)
 import Ownership.Common.Types (newOwnershipAnalyzer, OwnershipTransfer(..))
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import Data.Either (isLeft, isRight)
 import qualified Data.Text as T
@@ -30,7 +31,7 @@ testIntegrationEndToEndProperties = testGroup "End-to-End Integration Properties
 -- | Parse-compile roundtrip should preserve basic structure
 propParseCompileRoundtrip :: String -> Property
 propParseCompileRoundtrip content =
-  not (null content) && not (any isControl content) ==> 
+  not (null content) && not (L.any isControl content) ==> 
   let parsed = parseTypus content
       compiled = compile parsed
   in case compiled of
@@ -45,7 +46,7 @@ propSourceLocationTracking content =
   let parsed = parseTypus content
       blocks = tfBlocks parsed
   in not (null blocks) ==> 
-     let firstBlock = head blocks
+     let firstBlock = L.head blocks
          span = cbSpan firstBlock
          start = spanStart span
          end = spanEnd span
@@ -55,7 +56,7 @@ propSourceLocationTracking content =
 -- | Error propagation should be consistent through compilation stages
 propErrorPropagation :: String -> Property
 propErrorPropagation content =
-  "syntax error" `isInfixOf` content ==> 
+  "syntax error" `L.isInfixOf` content ==> 
   let parsed = parseTypus content
       compiled = compile parsed
   in case compiled of
@@ -65,7 +66,7 @@ propErrorPropagation content =
 -- | Dependency analysis should integrate with compilation
 propDependencyAnalysisIntegration :: String -> Property
 propDependencyAnalysisIntegration content =
-  "func" `isInfixOf` content ==> 
+  "func" `L.isInfixOf` content ==> 
   let parsed = parseTypus content
       checker = newDependentTypeChecker
       checker1 = addType "int" (Dependencies.TypeSystem.TypeDefDecl [] []) checker
@@ -77,7 +78,7 @@ propDependencyAnalysisIntegration content =
 -- | Ownership analysis should integrate with compilation
 propOwnershipAnalysisIntegration :: String -> Property
 propOwnershipAnalysisIntegration content =
-  "move" `isInfixOf` content ==> 
+  "move" `L.isInfixOf` content ==> 
   let analyzer = newOwnershipAnalyzer
       transfer = OwnershipTransfer "source" "target"
   in transferFrom transfer == "source" && transferTo transfer == "target"
@@ -89,7 +90,7 @@ propUtilsParserIntegration content =
   let trimmed = trim content
       withoutComments = removeComments content
       normalized = normalizeIndentation content
-  in length trimmed <= length content &&  -- trim should not increase length
+  in L.length trimmed <= L.length content &&  -- trim should not increase L.length
      not (null normalized)  -- normalize should not produce empty result
 
 -- | Test parser-compiler integration
@@ -101,9 +102,9 @@ testParserCompilerIntegration = testGroup "Parser-Compiler Integration"
           compiled = compile parsed
       in case compiled of
            Right goCode -> 
-             "package main" `isInfixOf` goCode &&
-             "func main" `isInfixOf` goCode &&
-             "println" `isInfixOf` goCode
+             "package main" `L.isInfixOf` goCode &&
+             "func main" `L.isInfixOf` goCode &&
+             "println" `L.isInfixOf` goCode
            Left errors -> fail $ "Compilation failed: " ++ show errors
            
   , testCase "function with parameters" $
@@ -112,9 +113,9 @@ testParserCompilerIntegration = testGroup "Parser-Compiler Integration"
           compiled = compile parsed
       in case compiled of
            Right goCode -> 
-             "func add" `isInfixOf` goCode &&
-             "a int" `isInfixOf` goCode &&
-             "b int" `isInfixOf` goCode
+             "func add" `L.isInfixOf` goCode &&
+             "a int" `L.isInfixOf` goCode &&
+             "b int" `L.isInfixOf` goCode
            Left _ -> fail "Compilation failed"
            
   , testCase "multiple functions" $
@@ -123,8 +124,8 @@ testParserCompilerIntegration = testGroup "Parser-Compiler Integration"
           compiled = compile parsed
       in case compiled of
            Right goCode -> 
-             "func helper" `isInfixOf` goCode &&
-             "func main" `isInfixOf` goCode
+             "func helper" `L.isInfixOf` goCode &&
+             "func main" `L.isInfixOf` goCode
            Left _ -> fail "Compilation failed"
   ]
 
@@ -144,7 +145,7 @@ testErrorHandlingIntegration = testGroup "Error Handling Integration"
           parsed = parseTypus content
           compiled = compile parsed
       in case compiled of
-           Left errors -> any isErrorType errors
+           Left errors -> L.any isErrorType errors
            Right _ -> fail "Expected compilation to fail with type errors"
            where
              isErrorType (TypeError _ _ TypeChecking _ _) = True
@@ -181,7 +182,7 @@ testSourceLocationIntegration = testGroup "Source Location Integration"
            Right goCode -> not (null goCode)  -- Should generate code with location info
            Left errors -> 
              -- Errors should have location information
-             any hasLocation errors
+             L.any hasLocation errors
              where
                hasLocation (TypeError _ _ _ loc _) = 
                  case loc of
@@ -198,7 +199,7 @@ testTypeSystemIntegration = testGroup "Type System Integration"
           compiled = compile parsed
       in case compiled of
            Right goCode -> 
-             "int" `isInfixOf` goCode  -- Types should be preserved
+             "int" `L.isInfixOf` goCode  -- Types should be preserved
            Left _ -> fail "Type checking integration failed"
            
   , testCase "complex type checking" $
@@ -207,9 +208,9 @@ testTypeSystemIntegration = testGroup "Type System Integration"
           compiled = compile parsed
       in case compiled of
            Right goCode -> 
-             "type Pair" `isInfixOf` goCode &&
-             "first int" `isInfixOf` goCode &&
-             "second string" `isInfixOf` goCode
+             "type Pair" `L.isInfixOf` goCode &&
+             "first int" `L.isInfixOf` goCode &&
+             "second string" `L.isInfixOf` goCode
            Left _ -> fail "Complex type checking failed"
   ]
 
@@ -223,8 +224,8 @@ testUtilsIntegration = testGroup "Utils Integration"
           compiled = compile parsed
       in case compiled of
            Right goCode -> 
-             "package main" `isInfixOf` goCode &&
-             "func main" `isInfixOf` goCode
+             "package main" `L.isInfixOf` goCode &&
+             "func main" `L.isInfixOf` goCode
            Left _ -> fail "Utils integration failed"
            
   , testCase "indentation normalization" $
@@ -249,9 +250,9 @@ testCompletePipelineIntegration = testGroup "Complete Pipeline Integration"
           compiled = compile parsed
       in case compiled of
            Right goCode -> 
-             "package main" `isInfixOf` goCode &&
-             "func main" `isInfixOf` goCode &&
-             "println" `isInfixOf` goCode
+             "package main" `L.isInfixOf` goCode &&
+             "func main" `L.isInfixOf` goCode &&
+             "println" `L.isInfixOf` goCode
            Left errors -> fail $ "Pipeline failed: " ++ show errors
            
   , testCase "pipeline with type annotations" $
@@ -260,8 +261,8 @@ testCompletePipelineIntegration = testGroup "Complete Pipeline Integration"
           compiled = compile parsed
       in case compiled of
            Right goCode -> 
-             "int" `isInfixOf` goCode &&
-             "calculate" `isInfixOf` goCode
+             "int" `L.isInfixOf` goCode &&
+             "calculate" `L.isInfixOf` goCode
            Left _ -> fail "Type annotation pipeline failed"
   ]
 

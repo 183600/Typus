@@ -32,7 +32,9 @@ import Utils
 
 import Data.Char (isSpace, toLower)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, tails, isInfixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (tails, sort, nub)
 
 -- ============================================================================
 -- String Generation Helpers
@@ -61,8 +63,8 @@ genDelimiter = elements [',', ';', ':', '|', '#', '@']
 prop_trim_never_adds_whitespace :: String -> Property
 prop_trim_never_adds_whitespace input =
   let trimmed = trim input
-      originalSpaces = length (filter isSpace input)
-      trimmedSpaces = length (filter isSpace trimmed)
+      originalSpaces = L.length (filter isSpace input)
+      trimmedSpaces = L.length (filter isSpace trimmed)
   in property $ trimmedSpaces <= originalSpaces
 
 -- Property: trim applied twice should give same result as once
@@ -72,11 +74,11 @@ prop_trim_idempotent input =
       trimmedTwice = trim (trim input)
   in property $ trimmedOnce === trimmedTwice
 
--- Property: trim of all whitespace should be empty
+-- Property: trim of L.all whitespace should be empty
 prop_trim_all_whitespace_is_empty :: Property
 prop_trim_all_whitespace_is_empty =
   forAll genStringWithWhitespace $ \input ->
-    let allWhitespace = all isSpace input
+    let allWhitespace = L.all isSpace input
         trimmed = trim input
     in allWhitespace ==> property $ trimmed === ""
 
@@ -95,7 +97,7 @@ prop_splitBy_preserves_content delim input =
 prop_splitByCollapsed_no_empty_segments :: Char -> String -> Property
 prop_splitByCollapsed_no_empty_segments delim input =
   let parts = splitByCollapsed delim input
-  in property $ all (not . null) parts
+  in property $ L.all (not . null) parts
 
 -- Property: splitByComma should be equivalent to splitBy ','
 prop_splitByComma_equals_splitBy_comma :: String -> Property
@@ -111,11 +113,11 @@ prop_splitByCommaCollapsed_equals_splitByCollapsed_comma input =
 -- Comment Removal Properties
 -- ============================================================================
 
--- Property: removeLineComments should never increase string length
+-- Property: removeLineComments should never increase string L.length
 prop_removeLineComments_never_increases_length :: String -> Property
 prop_removeLineComments_never_increases_length input =
   let withoutComments = removeLineComments input
-  in property $ length withoutComments <= length input
+  in property $ L.length withoutComments <= L.length input
 
 -- Property: removeLineComments should preserve non-comment content
 prop_removeLineComments_preserves_non_comment_content :: String -> Property
@@ -124,9 +126,9 @@ prop_removeLineComments_preserves_non_comment_content input =
       linesWithoutComments = lines withoutComments
       originalLines = lines input
       -- Count non-empty, non-whitespace lines in both
-      nonCommentOriginal = length $ filter (not . all isSpace) $ 
-                           map (takeWhile (/= '/')) $ originalLines
-      nonCommentResult = length $ filter (not . all isSpace) linesWithoutComments
+      nonCommentOriginal = L.length $ L.filter (not . L.all isSpace) $ 
+                           L.map (takeWhile (/= '/')) $ originalLines
+      nonCommentResult = L.length $ L.filter (not . L.all isSpace) linesWithoutComments
   in property $ nonCommentResult <= nonCommentOriginal
 
 -- Property: removeComments applied twice should give same result as once
@@ -147,9 +149,9 @@ prop_normalizeIndentation_never_increases_leading =
     let normalized = normalizeIndentation input
         originalLines = lines input
         normalizedLines = lines normalized
-        leadingSpaces line = length $ takeWhile isSpace line
+        leadingSpaces line = L.length $ takeWhile isSpace line
     in not (null originalLines) ==> 
-       property $ all (\(orig, norm) -> leadingSpaces norm <= leadingSpaces orig) 
+       property $ L.all (\(orig, norm) -> leadingSpaces norm <= leadingSpaces orig) 
                      (zip originalLines normalizedLines)
 
 -- Property: fixIndentation should be equivalent to normalizeIndentation
@@ -163,9 +165,9 @@ prop_forceSingleTabIndentation_starts_with_tab =
   forAll genStringWithoutNewlines $ \input ->
     let forced = forceSingleTabIndentation input
         linesForced = lines forced
-        nonEmptyLines = filter (not . all isSpace) linesForced
+        nonEmptyLines = L.filter (not . L.all isSpace) linesForced
     in not (null nonEmptyLines) ==> 
-       property $ all (isPrefixOf "\t") nonEmptyLines
+       property $ L.all (L.isPrefixOf "\t") nonEmptyLines
 
 -- ============================================================================
 -- BreakOn Function Properties
@@ -189,7 +191,7 @@ prop_breakOn_empty_pattern input =
 prop_breakOn_pattern_not_found :: String -> String -> Property
 prop_breakOn_pattern_not_found pat input =
   not (null pat) ==> 
-  not (pat `isInfixOf` input) ==> 
+  not (pat `L.isInfixOf` input) ==> 
   let (before, after) = breakOn pat input
   in property $ before === input .&&. after === ""
 
@@ -198,10 +200,10 @@ prop_breakOn_consistent_with_break :: String -> String -> Property
 prop_breakOn_consistent_with_break pat input =
   not (null pat) ==> 
   let (before, after) = breakOn pat input
-      (before', after') = Data.List.break (isPrefixOf pat) (tails input)
+      (before', after') = Data.List.break (L.isPrefixOf pat) (tails input)
   in case after' of
        [] -> property $ before === input .&&. after === ""
-       (x:_) -> property $ before === Data.List.take (length input - length x) input
+       (x:_) -> property $ before === Data.List.take (L.length input - L.length x) input
 
 -- ============================================================================
 -- String Processing Properties
@@ -212,22 +214,22 @@ prop_trim_splitBy_no_empty_if_original_no_empty :: Char -> String -> Property
 prop_trim_splitBy_no_empty_if_original_no_empty delim input =
   let parts = splitBy delim input
       trimmedParts = map trim parts
-      originalHadEmpty = any null parts
-  in not originalHadEmpty ==> property $ not (any null trimmedParts)
+      originalHadEmpty = L.any null parts
+  in not originalHadEmpty ==> property $ not (L.any null trimmedParts)
 
 -- Property: normalizeIndentation should preserve relative indentation differences
 prop_normalizeIndentation_preserves_relative_differences :: Property
 prop_normalizeIndentation_preserves_relative_differences =
   forAll genStringWithoutNewlines $ \input ->
     let normalized = normalizeIndentation input
-        originalLines = filter (not . all isSpace) $ lines input
-        normalizedLines = filter (not . all isSpace) $ lines normalized
-        leadingSpaces line = length $ takeWhile isSpace line
+        originalLines = L.filter (not . L.all isSpace) $ lines input
+        normalizedLines = L.filter (not . L.all isSpace) $ lines normalized
+        leadingSpaces line = L.length $ takeWhile isSpace line
         differences origLines = 
           case origLines of
             [] -> []
-            (l:ls) -> map (\line -> leadingSpaces line - leadingSpaces l) ls
-    in length originalLines > 1 && length normalizedLines > 1 ==> 
+            (l:ls) -> L.map (\line -> leadingSpaces line - leadingSpaces l) ls
+    in L.length originalLines > 1 && L.length normalizedLines > 1 ==> 
        property $ differences originalLines === differences normalizedLines
 
 -- ============================================================================
@@ -239,7 +241,7 @@ tests = testGroup "New Utils QuickCheck Tests"
   [ testGroup "Trim Properties"
     [ fastProperty "trim never adds whitespace" prop_trim_never_adds_whitespace
     , fastProperty "trim is idempotent" prop_trim_idempotent
-    , fastProperty "trim of all whitespace is empty" prop_trim_all_whitespace_is_empty
+    , fastProperty "trim of L.all whitespace is empty" prop_trim_all_whitespace_is_empty
     ]
   , testGroup "Split Properties"
     [ fastProperty "splitBy preserves content" prop_splitBy_preserves_content
@@ -248,7 +250,7 @@ tests = testGroup "New Utils QuickCheck Tests"
     , fastProperty "splitByCommaCollapsed equals splitByCollapsed ','" prop_splitByCommaCollapsed_equals_splitByCollapsed_comma
     ]
   , testGroup "Comment Removal Properties"
-    [ fastProperty "removeLineComments never increases length" prop_removeLineComments_never_increases_length
+    [ fastProperty "removeLineComments never increases L.length" prop_removeLineComments_never_increases_length
     , fastProperty "removeLineComments preserves non-comment content" prop_removeLineComments_preserves_non_comment_content
     , fastProperty "removeComments is idempotent" prop_removeComments_idempotent
     ]

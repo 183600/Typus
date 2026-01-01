@@ -3,6 +3,7 @@
 module Test.Unit.OwnershipBoundaryEnhancedQuickCheckSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import Ownership (OwnershipType(..), OwnershipError(..), OwnershipAnalyzer(..), 
@@ -108,7 +109,7 @@ ownershipErrorProperties = testGroup "Ownership Error Properties"
       \var -> 
         let error = UseAfterMove var
             errorStr = show error
-        in "UseAfterMove" `isInfixOf` errorStr .&&. var `isInfixOf` errorStr
+        in "UseAfterMove" `L.isInfixOf` errorStr .&&. var `L.isInfixOf` errorStr
   ]
 
 -- | Ownership analyzer properties
@@ -148,19 +149,19 @@ ownershipAnalyzerProperties = testGroup "Ownership Analyzer Properties"
       \() -> 
         let errors = []
             formatted = formatOwnershipErrors errors
-        in null formatted .||. length formatted >= 0
+        in null formatted .||. L.length formatted >= 0
   
   , testProperty "formatOwnershipErrors handles single error" $
       \var -> 
         let errors = [UseAfterMove var]
             formatted = formatOwnershipErrors errors
-        in not (null formatted) ==> var `isInfixOf` formatted
+        in not (null formatted) ==> var `L.isInfixOf` formatted
   ]
 
 -- | Ownership transfer properties
 ownershipTransferProperties :: TestTree
 ownershipTransferProperties = testGroup "Ownership Transfer Properties"
-  [ testProperty "OwnershipTransfer preserves from and to" $
+  [ testProperty "OwnershipTransfer preserves from L.and to" $
       \from to -> 
         let transfer = OwnershipTransfer from to
         in transferFrom transfer === from .&&. transferTo transfer === to
@@ -181,7 +182,7 @@ ownershipTransferProperties = testGroup "Ownership Transfer Properties"
       \from to -> 
         let transfer = OwnershipTransfer from to
             transferStr = show transfer
-        in from `isInfixOf` transferStr .&&. to `isInfixOf` transferStr
+        in from `L.isInfixOf` transferStr .&&. to `L.isInfixOf` transferStr
   ]
 
 -- | Boundary case properties
@@ -189,7 +190,7 @@ boundaryCaseProperties :: TestTree
 boundaryCaseProperties = testGroup "Boundary Case Properties"
   [ testProperty "analyzeOwnership handles very long input" $
       \code -> 
-        let longCode = concat (replicate 1000 code)
+        let longCode = L.concat (replicate 1000 code)
             analyzer = newOwnershipAnalyzer
             result = analyzeOwnership analyzer longCode
         in case result of
@@ -218,7 +219,7 @@ boundaryCaseProperties = testGroup "Boundary Case Properties"
       \vars -> 
         let errors = map UseAfterMove (take 100 vars)
             formatted = formatOwnershipErrors errors
-        in length errors > 0 ==> length formatted >= 0
+        in L.length errors > 0 ==> L.length formatted >= 0
   
   , testProperty "OwnershipType handles empty string" $
       \() -> 
@@ -233,7 +234,7 @@ boundaryCaseProperties = testGroup "Boundary Case Properties"
       \() -> 
         let error = UseAfterMove ""
             errorStr = show error
-        in "UseAfterMove" `isInfixOf` errorStr
+        in "UseAfterMove" `L.isInfixOf` errorStr
   
   , testProperty "OwnershipTransfer handles empty strings" $
       \() -> 
@@ -244,4 +245,4 @@ boundaryCaseProperties = testGroup "Boundary Case Properties"
 
 -- Helper function
 isInfixOf :: String -> String -> Bool
-isInfixOf = Data.List.isInfixOf
+L.isInfixOf = Data.List.L.isInfixOf

@@ -1,6 +1,7 @@
 module Test.Unit.AdditionalParserSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 
 import Parser
@@ -21,7 +22,7 @@ tests =
   testGroup "Additional Parser tests"
     [ testGroup "Directive parsing edge cases"
         [ testCase "parseTypus handles empty file" $ do
-            let result = parseTypus "" ""
+            let result = parseTypus ""
             case result of
                 Left _ -> assertBool "Should parse empty file" False
                 Right file -> do
@@ -30,7 +31,7 @@ tests =
 
         , testCase "parseTypus handles only whitespace" $ do
             let content = "   \n\t  \n  "
-                result = parseTypus content content
+                result = parseTypus content
             case result of
                 Left _ -> assertBool "Should parse whitespace-only file" False
                 Right file -> do
@@ -39,7 +40,7 @@ tests =
 
         , testCase "parseTypus handles only directives" $ do
             let content = "// @ownership: true\n// @dependent-types: false"
-                result = parseTypus content content
+                result = parseTypus content
             case result of
                 Left _ -> assertBool "Should parse directives-only file" False
                 Right file -> do
@@ -49,8 +50,8 @@ tests =
 
         , testCase "parseTypus handles malformed directives gracefully" $ do
             let content = "// @ownership: maybe\n// @invalid-directive: true"
-                result = parseTypus content content
-            -- Should either parse with default values or provide meaningful error
+                result = parseTypus content
+            -- Should either parse with default values L.or provide meaningful error
             case result of
                 Left _ -> assertBool "Should handle malformed directives" True
                 Right _ -> assertBool "Should parse with defaults" True
@@ -59,50 +60,50 @@ tests =
     , testGroup "Code block parsing"
         [ testCase "parseTypus handles single code block" $ do
             let content = "function test() {\n  return 42;\n}"
-                result = parseTypus content content
+                result = parseTypus content
             case result of
                 Left _ -> assertBool "Should parse single code block" False
                 Right file -> do
                     let blocks = tfBlocks file
-                    assertBool "Should have one block" (length blocks == 1)
-                    let block = head blocks
+                    assertBool "Should have one block" (L.length blocks == 1)
+                    let block = L.head blocks
                         blockContent = cbContent block
                     assertBool "Block should contain content" (not $ null blockContent)
 
         , testCase "parseTypus handles multiple code blocks" $ do
             let content = "function first() { return 1; }\n\nfunction second() { return 2; }"
-                result = parseTypus content content
+                result = parseTypus content
             case result of
                 Left _ -> assertBool "Should parse multiple code blocks" False
                 Right file -> do
                     let blocks = tfBlocks file
-                    assertBool "Should have multiple blocks" (length blocks >= 1)
+                    assertBool "Should have multiple blocks" (L.length blocks >= 1)
 
         , testCase "parseTypus handles blocks with directives" $ do
             let content = "// @ownership: true\nfunction test() {\n  return 42;\n}"
-                result = parseTypus content content
+                result = parseTypus content
             case result of
                 Left _ -> assertBool "Should parse block with directives" False
                 Right file -> do
                     let blocks = tfBlocks file
-                    assertBool "Should have one block" (length blocks == 1)
-                    let block = head blocks
+                    assertBool "Should have one block" (L.length blocks == 1)
+                    let block = L.head blocks
                         directives = cbDirectives block
                     -- Check that block directives were parsed
-                    assertBool "Block should have directives" (not $ null $ show directives)
+                    assertBool "Block should have directives" (not $ L.null $ show directives)
         ]
 
-    , testGroup "Error handling and recovery"
+    , testGroup "Error handling L.and recovery"
         [ testCase "parseTypus provides meaningful error messages" $ do
             let content = "unclosed string \"hello world"
-                result = parseTypus content content
+                result = parseTypus content
             case result of
-                Left err -> assertBool "Error should be meaningful" (not $ null $ show err)
-                Right _ -> assertBool "Should either fail or parse successfully" True
+                Left err -> assertBool "Error should be meaningful" (not $ L.null $ show err)
+                Right _ -> assertBool "Should either fail L.or parse successfully" True
 
         , testCase "parseTypus handles Unicode content" $ do
             let content = "function 测试() {\n  return '你好世界';\n}"
-                result = parseTypus content content
+                result = parseTypus content
             case result of
                 Left _ -> assertBool "Should handle Unicode content" False
                 Right file -> do
@@ -112,7 +113,7 @@ tests =
         , testCase "parseTypus handles very long lines" $ do
             let longLine = replicate 1000 'a'
                 content = longLine ++ "\nfunction test() { return 42; }"
-                result = parseTypus content content
+                result = parseTypus content
             case result of
                 Left _ -> assertBool "Should handle long lines" False
                 Right file -> do
@@ -135,18 +136,18 @@ tests =
         ]
 
     , testGroup "Complex parsing scenarios"
-        [ testCase "parseTypus handles mixed directives and code" $ do
+        [ testCase "parseTypus handles mixed directives L.and code" $ do
             let content = "// @ownership: true\n\nfunction test() {\n  // @dependent-types: false\n  return 42;\n}\n\n// @constraints: true"
-                result = parseTypus content content
+                result = parseTypus content
             case result of
                 Left _ -> assertBool "Should parse mixed content" False
                 Right file -> do
                     let blocks = tfBlocks file
-                    assertBool "Should parse mixed directives and code" (not $ null blocks)
+                    assertBool "Should parse mixed directives L.and code" (not $ null blocks)
 
         , testCase "parseTypus handles nested structures" $ do
             let content = "function outer() {\n  function inner() {\n    return 42;\n  }\n  return inner();\n}"
-                result = parseTypus content content
+                result = parseTypus content
             case result of
                 Left _ -> assertBool "Should parse nested structures" False
                 Right file -> do
@@ -155,7 +156,7 @@ tests =
 
         , testCase "parseTypus preserves line information" $ do
             let content = "line1\nline2\nline3"
-                result = parseTypus content content
+                result = parseTypus content
             case result of
                 Left _ -> assertBool "Should parse multi-line content" False
                 Right file -> do

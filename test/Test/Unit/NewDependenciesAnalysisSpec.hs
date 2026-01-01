@@ -17,14 +17,16 @@ import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify
 import Dependencies.Analyzer (analyzeDependentTypes)
 import Dependencies.TypeSystem
 import SourceLocation (SourceSpan(..), startPos, SourcePos(..))
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, sort, nub, intercalate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (sort, nub, intercalate)
 import Data.Char (isSpace, isAlpha, isAlphaNum)
 import Data.Set (Set, empty, singleton, union, unions, member, toList)
 
 -- Property: Dependency analysis handles simple types correctly
 prop_simple_type_analysis :: String -> Property
 prop_simple_type_analysis typeName =
-  not (null typeName) && isAlpha (head typeName) && all isAlphaNum typeName ==>
+  not (null typeName) && isAlpha (L.head typeName) && L.all isAlphaNum typeName ==>
   let source = "type " ++ typeName ++ " struct {\n  field int\n}"
       result = analyzeDependentTypes source
   in case result of
@@ -35,8 +37,8 @@ prop_simple_type_analysis typeName =
 prop_type_alias_analysis :: String -> String -> Property
 prop_type_alias_analysis aliasName originalType =
   not (null aliasName) && not (null originalType) &&
-  isAlpha (head aliasName) && isAlpha (head originalType) &&
-  all isAlphaNum aliasName && all isAlphaNum originalType ==>
+  isAlpha (L.head aliasName) && isAlpha (L.head originalType) &&
+  L.all isAlphaNum aliasName && L.all isAlphaNum originalType ==>
   let source = "type " ++ aliasName ++ " = " ++ originalType
       result = analyzeDependentTypes source
   in case result of
@@ -47,7 +49,7 @@ prop_type_alias_analysis aliasName originalType =
 prop_constraint_analysis :: String -> String -> Property
 prop_constraint_analysis typeName constraint =
   not (null typeName) && not (null constraint) &&
-  isAlpha (head typeName) && all isAlphaNum typeName ==>
+  isAlpha (L.head typeName) && L.all isAlphaNum typeName ==>
   let source = "type " ++ typeName ++ " [a] where " ++ constraint ++ "\n"
       result = analyzeDependentTypes source
   in case result of
@@ -58,8 +60,8 @@ prop_constraint_analysis typeName constraint =
 prop_nested_type_analysis :: String -> String -> Property
 prop_nested_type_analysis outerType innerType =
   not (null outerType) && not (null innerType) &&
-  isAlpha (head outerType) && isAlpha (head innerType) &&
-  all isAlphaNum outerType && all isAlphaNum innerType &&
+  isAlpha (L.head outerType) && isAlpha (L.head innerType) &&
+  L.all isAlphaNum outerType && L.all isAlphaNum innerType &&
   outerType /= innerType ==>
   let source = "type " ++ innerType ++ " struct {\n  value int\n}\ntype " ++ outerType ++ " struct {\n  inner " ++ innerType ++ "\n}"
       result = analyzeDependentTypes source
@@ -70,7 +72,7 @@ prop_nested_type_analysis outerType innerType =
 -- Property: Dependency analysis handles recursive types correctly
 prop_recursive_type_analysis :: String -> Property
 prop_recursive_type_analysis typeName =
-  not (null typeName) && isAlpha (head typeName) && all isAlphaNum typeName ==>
+  not (null typeName) && isAlpha (L.head typeName) && L.all isAlphaNum typeName ==>
   let source = "type " ++ typeName ++ " struct {\n  next *" ++ typeName ++ "\n}"
       result = analyzeDependentTypes source
   in case result of
@@ -81,8 +83,8 @@ prop_recursive_type_analysis typeName =
 prop_parameterized_type_analysis :: String -> String -> Property
 prop_parameterized_type_analysis typeName paramName =
   not (null typeName) && not (null paramName) &&
-  isAlpha (head typeName) && isAlpha (head paramName) &&
-  all isAlphaNum typeName && all isAlphaNum paramName ==>
+  isAlpha (L.head typeName) && isAlpha (L.head paramName) &&
+  L.all isAlphaNum typeName && L.all isAlphaNum paramName ==>
   let source = "type " ++ typeName ++ " [" ++ paramName ++ "] struct {\n  value " ++ paramName ++ "\n}"
       result = analyzeDependentTypes source
   in case result of

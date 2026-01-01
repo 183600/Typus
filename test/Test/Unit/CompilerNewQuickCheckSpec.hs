@@ -10,6 +10,7 @@
 module Test.Unit.CompilerNewQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -52,7 +53,8 @@ import Compiler.Errors
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (sort, length, null, isPrefixOf, nub, isInfixOf, isSuffixOf)
+import Data.List (length, isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (sort, null, nub)
 import Data.Maybe (isJust, isNothing, fromMaybe, mapMaybe)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -73,7 +75,7 @@ prop_compilation_phases_ordered =
 prop_compilation_phases_unique :: Property
 prop_compilation_phases_unique =
   let phases = [Parsing, TypeChecking, OwnershipAnalysis, DependentTypeAnalysis, CodeGeneration]
-  in property $ length phases === length (nub phases)
+  in property $ L.length phases === L.length (nub phases)
 
 -- ============================================================================
 -- CompilerError Properties
@@ -131,19 +133,19 @@ prop_extract_declarations_empty =
 -- Property: Extracting declarations preserves function names
 prop_extract_declarations_preserves_functions :: String -> Property
 prop_extract_declarations_preserves_functions funcName =
-  not (null funcName) && all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"]) funcName ==>
+  not (null funcName) && L.all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"]) funcName ==>
   let code = "func " ++ funcName ++ "() {}\n"
       declarations = extractDeclarations code
-  in property $ any (funcName `isInfixOf`) declarations
+  in property $ L.any (funcName `L.isInfixOf`) declarations
 
 -- Property: Extracting declarations handles multiple functions
 prop_extract_declarations_multiple :: [String] -> Property
 prop_extract_declarations_multiple funcNames =
-  not (null funcNames) && all (not . null) funcNames && all (all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"])) funcNames ==>
-  let funcDecls = map (\name -> "func " ++ name ++ "() {}") funcNames
+  not (null funcNames) && L.all (not . null) funcNames && L.all (L.all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"])) funcNames ==>
+  let funcDecls = L.map (\name -> "func " ++ name ++ "() {}") funcNames
       code = unlines funcDecls
       declarations = extractDeclarations code
-  in property $ all (\name -> any (name `isInfixOf`) declarations) funcNames
+  in property $ L.all (\name -> L.any (name `L.isInfixOf`) declarations) funcNames
 
 -- ============================================================================
 -- Function Call Extraction Properties
@@ -158,19 +160,19 @@ prop_extract_calls_empty =
 -- Property: Extracting function calls preserves call names
 prop_extract_calls_preserves_calls :: String -> Property
 prop_extract_calls_preserves_calls callName =
-  not (null callName) && all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"]) callName ==>
+  not (null callName) && L.all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"]) callName ==>
   let code = callName ++ "();\n"
       calls = extractFunctionCalls code
-  in property $ any (callName `isInfixOf`) calls
+  in property $ L.any (callName `L.isInfixOf`) calls
 
 -- Property: Extracting function calls handles multiple calls
 prop_extract_calls_multiple :: [String] -> Property
 prop_extract_calls_multiple callNames =
-  not (null callNames) && all (not . null) callNames && all (all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_")) callNames ==>
-  let callStatements = map (\name -> name ++ "();") callNames
+  not (null callNames) && L.all (not . null) callNames && L.all (L.all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_")) callNames ==>
+  let callStatements = L.map (\name -> name ++ "();") callNames
       code = unlines callStatements
       calls = extractFunctionCalls code
-  in property $ all (\name -> any (name `isInfixOf`) calls) callNames
+  in property $ L.all (\name -> L.any (name `L.isInfixOf`) calls) callNames
 
 -- ============================================================================
 -- Type Environment Properties
@@ -185,9 +187,9 @@ prop_build_type_env_empty =
 -- Property: Building type environment preserves type mappings
 prop_build_type_env_preserves_mappings :: [(String, String)] -> Property
 prop_build_type_env_preserves_mappings pairs =
-  not (null pairs) && all (not . null . fst) pairs && all (not . null . snd) pairs ==>
+  not (null pairs) && L.all (not . null . fst) pairs && L.all (not . null . snd) pairs ==>
   let env = buildTypeEnvFromPairs pairs
-  in property $ all (\(name, typ) -> Map.member (T.pack name) env && 
+  in property $ L.all (\(name, typ) -> Map.member (T.pack name) env && 
                                      env Map.! (T.pack name) === T.pack typ) pairs
 
 -- Property: Type environment lookup works correctly
@@ -207,14 +209,14 @@ prop_type_env_lookup pairs lookupKey =
 -- Property: Method declarations are detected correctly
 prop_is_method_declaration_true :: String -> Property
 prop_is_method_declaration_true methodName =
-  not (null methodName) && all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"]) methodName ==>
+  not (null methodName) && L.all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"]) methodName ==>
   let methodDecl = "func (r *Receiver) " ++ methodName ++ "() {}"
   in property $ isMethodDeclaration methodDecl
 
 -- Property: Non-method declarations are not detected as methods
 prop_is_method_declaration_false :: String -> Property
 prop_is_method_declaration_false funcName =
-  not (null funcName) && all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_")) funcName ==>
+  not (null funcName) && L.all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_")) funcName ==>
   let funcDecl = "func " ++ funcName ++ "() {}"
   in property $ not (isMethodDeclaration funcDecl)
 
@@ -232,18 +234,18 @@ prop_analyze_empty_errors =
 -- Property: Analyzing type errors detects type errors
 prop_analyze_type_errors :: [String] -> Property
 prop_analyze_type_errors errorMessages =
-  not (null errorMessages) && all (not . null) errorMessages ==>
-  let errors = map (\msg -> CompilerError TypeChecking msg startPos) errorMessages
+  not (null errorMessages) && L.all (not . null) errorMessages ==>
+  let errors = L.map (\msg -> CompilerError TypeChecking msg startPos) errorMessages
       hasTypeErrs = hasTypeErrors errors
   in property $ hasTypeErrs
 
 -- Property: Diagnosing type errors preserves messages
 prop_diagnose_type_errors_preserves :: [String] -> Property
 prop_diagnose_type_errors_preserves errorMessages =
-  not (null errorMessages) && all (not . null) errorMessages ==>
-  let diagnostics = map (\msg -> TypeCheckDiagnostic msg startPos) errorMessages
+  not (null errorMessages) && L.all (not . null) errorMessages ==>
+  let diagnostics = L.map (\msg -> TypeCheckDiagnostic msg startPos) errorMessages
       compilerErrors = map typeDiagnosticToCompilerError diagnostics
-  in property $ all (\(orig, err) -> errorMessage err === orig) (zip errorMessages compilerErrors)
+  in property $ L.all (\(orig, err) -> errorMessage err === orig) (zip errorMessages compilerErrors)
 
 -- ============================================================================
 -- Compilation Properties
@@ -258,7 +260,7 @@ prop_compile_empty_code =
 -- Property: Compiling simple Go code produces result
 prop_compile_simple_go_code :: String -> Property
 prop_compile_simple_go_code funcName =
-  not (null funcName) && all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"]) funcName ==>
+  not (null funcName) && L.all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"]) funcName ==>
   let code = "package main\n\nfunc " ++ funcName ++ "() {}\n"
       result = compile code
   in property $ isJust result
@@ -266,12 +268,12 @@ prop_compile_simple_go_code funcName =
 -- Property: Compilation preserves function names
 prop_compilation_preserves_functions :: String -> Property
 prop_compilation_preserves_functions funcName =
-  not (null funcName) && all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"]) funcName ==>
+  not (null funcName) && L.all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"]) funcName ==>
   let code = "package main\n\nfunc " ++ funcName ++ "() {}\n"
       result = compile code
   in case result of
        Nothing -> property False
-       Just compiled -> property $ funcName `isInfixOf` compiled
+       Just compiled -> property $ funcName `L.isInfixOf` compiled
 
 -- ============================================================================
 -- Code Generation Properties
@@ -287,10 +289,10 @@ prop_generate_go_code_empty =
 -- Property: Generating Go code preserves structure
 prop_generate_go_code_preserves_structure :: String -> Property
 prop_generate_go_code_preserves_structure funcName =
-  not (null funcName) && all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"]) funcName ==>
+  not (null funcName) && L.all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"]) funcName ==>
   let ir = IR.fromFunction (T.pack funcName) IR.emptyIR
       goCode = generateGoCode ir
-  in property $ funcName `isInfixOf` goCode
+  in property $ funcName `L.isInfixOf` goCode
 
 -- ============================================================================
 -- Error Formatting Properties
@@ -303,23 +305,23 @@ prop_format_empty_compiler_errors =
       formatted = formatCompilerErrors errors
   in property $ null formatted
 
--- Property: Formatting single error includes phase and message
+-- Property: Formatting single error includes phase L.and message
 prop_format_single_compiler_error :: CompilationPhase -> String -> Property
 prop_format_single_compiler_error phase errorMsg =
   not (null errorMsg) ==>
   let error = CompilerError phase errorMsg startPos
       errors = [error]
       formatted = formatCompilerErrors errors
-  in property $ show phase `isInfixOf` formatted .&&.
-             errorMsg `isInfixOf` formatted
+  in property $ show phase `L.isInfixOf` formatted .&&.
+             errorMsg `L.isInfixOf` formatted
 
--- Property: Formatting multiple errors includes all messages
+-- Property: Formatting multiple errors includes L.all messages
 prop_format_multiple_compiler_errors :: [String] -> Property
 prop_format_multiple_compiler_errors errorMessages =
-  not (null errorMessages) && all (not . null) errorMessages ==>
-  let errors = map (\msg -> CompilerError TypeChecking msg startPos) errorMessages
+  not (null errorMessages) && L.all (not . null) errorMessages ==>
+  let errors = L.map (\msg -> CompilerError TypeChecking msg startPos) errorMessages
       formatted = formatCompilerErrors errors
-  in property $ all (`isInfixOf` formatted) errorMessages
+  in property $ L.all (`L.isInfixOf` formatted) errorMessages
 
 -- ============================================================================
 -- Report Generation Properties
@@ -328,16 +330,16 @@ prop_format_multiple_compiler_errors errorMessages =
 -- Property: Generating detailed report includes statistics
 prop_generate_detailed_report_includes_stats :: [String] -> Property
 prop_generate_detailed_report_includes_stats errorMessages =
-  not (null errorMessages) && all (not . null) errorMessages ==>
-  let errors = map (\msg -> CompilerError TypeChecking msg startPos) errorMessages
+  not (null errorMessages) && L.all (not . null) errorMessages ==>
+  let errors = L.map (\msg -> CompilerError TypeChecking msg startPos) errorMessages
       report = generateDetailedReport errors
-  in property $ "Compilation Report" `isInfixOf` report .&&.
-             "Total errors:" `isInfixOf` report
+  in property $ "Compilation Report" `L.isInfixOf` report .&&.
+             "Total errors:" `L.isInfixOf` report
 
 -- Property: Analyzing errors categorizes by phase
 prop_analyze_errors_categorizes :: [CompilationPhase] -> [String] -> Property
 prop_analyze_errors_categorizes phases errorMessages =
-  not (null phases) && not (null errorMessages) && length phases === length errorMessages ==>
+  not (null phases) && not (null errorMessages) && L.length phases === L.length errorMessages ==>
   let errors = zipWith (\phase msg -> CompilerError phase msg startPos) phases errorMessages
       analysis = analyzeErrors errors
   in property $ not (null analysis)
@@ -356,16 +358,16 @@ prop_compile_unicode unicodeText =
 
 -- Property: Compiling very long code works
 prop_compile_long_code :: Int -> Property
-prop_compile_long_code length =
-  length > 0 && length <= 1000 ==>
-  let longCode = "package main\n\nfunc main() {\n" ++ concat (replicate length "    x := 42;\n") ++ "}\n"
+prop_compile_long_code L.length =
+  length > 0 && L.length <= 1000 ==>
+  let longCode = "package main\n\nfunc main() {\n" ++ L.concat (replicate L.length "    x := 42;\n") ++ "}\n"
       result = compile longCode
   in property $ isJust result
 
 -- Property: Compiling code with comments works
 prop_compile_with_comments :: String -> String -> Property
 prop_compile_with_comments funcName comment =
-  not (null funcName) && not (null comment) && not ("//" `isInfixOf` comment) ==>
+  not (null funcName) && not (null comment) && not ("//" `L.isInfixOf` comment) ==>
   let code = "package main\n\n// " ++ comment ++ "\nfunc " ++ funcName ++ "() {} // " ++ comment
       result = compile code
   in property $ isJust result

@@ -31,6 +31,7 @@ import SourceLocation
   )
 
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf)
 
 -- Property: source position components are always positive
@@ -39,7 +40,7 @@ prop_source_pos_components_positive (Positive line) (Positive col) =
   let pos = SourcePos line col
   in property $ sourceLine pos > 0 .&&. sourceColumn pos > 0
 
--- Property: startPos has minimum values
+-- Property: startPos has L.minimum values
 prop_start_pos_minimum :: Property
 prop_start_pos_minimum =
   let start = startPos
@@ -96,7 +97,7 @@ prop_advance_pos_counts_newlines :: Positive Int -> Positive Int -> String -> Pr
 prop_advance_pos_counts_newlines (Positive line) (Positive col) text =
   let pos = posAt line col
       advanced = advancePos pos text
-      newlineCount = length $ filter (== '\n') text
+      newlineCount = L.length $ L.filter (== '\n') text
   in property $ sourceLine advanced >= line .&&. 
                    sourceLine advanced <= line + newlineCount + 1
 
@@ -161,7 +162,7 @@ prop_pos_advancement_preserves_positivity (Positive line) (Positive col) text =
 tests :: TestTree
 tests = testGroup "Source Position Invariant QuickCheck"
   [ fastProperty "source pos components positive" prop_source_pos_components_positive
-  , fastProperty "start pos minimum" prop_start_pos_minimum
+  , fastProperty "start pos L.minimum" prop_start_pos_minimum
   , fastProperty "pos at creates correct" prop_pos_at_creates_correct
   , fastProperty "pos at line col consistent" prop_pos_at_line_col_consistent
   , fastProperty "pos after newline" prop_pos_after_newline

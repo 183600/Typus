@@ -21,7 +21,9 @@ import DependentTypesParser (TypeRef(..), TypeConstraint(..), DependentType(..),
 import Compiler.Errors (CompilerError(..), ErrorCategory(..), ErrorSeverity(..), CompilationPhase(..))
 import ErrorHandler (CompilerError(..))
 
-import Data.List (isPrefixOf, isInfixOf, nub, sort, group, intercalate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (nub, sort, group, intercalate)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import Data.Either (isLeft, isRight)
 import qualified Data.Map.Strict as Map
@@ -49,7 +51,7 @@ prop_parser_error_recovery_idempotent input =
       secondResult = parseTypus input
   in classify (isLeft firstResult) "has parsing error" $
      property $ case (firstResult, secondResult) of
-       (Left err1, Left err2) -> property $ length (show err1) > 0 .&&. length (show err2) > 0
+       (Left err1, Left err2) -> property $ L.length (show err1) > 0 .&&. L.length (show err2) > 0
        (Right _, Right _) -> property $ True  -- Both successful
        _ -> property $ False  -- Inconsistent results
 
@@ -62,9 +64,9 @@ prop_parser_directive_block_nesting input =
        Left _ -> property $ True
        Right typusFile -> 
          let blocks = tfBlocks typusFile
-             blockCount = length blocks
-             directiveBlocks = filter (hasDirectives . cbDirectives) blocks
-         in property $ blockCount >= length directiveBlocks
+             blockCount = L.length blocks
+             directiveBlocks = L.filter (hasDirectives . cbDirectives) blocks
+         in property $ blockCount >= L.length directiveBlocks
   where
     hasDirectives directives = 
       isJust (bdOwnership directives) || 
@@ -89,7 +91,7 @@ prop_ir_transformation_consistency input =
              semanticIR2 = buildSemanticIR sourceIR2
          in property $ sourceIR1 === sourceIR2 .&&. semanticIR1 === semanticIR2
 
--- Property: IR generation completeness - generated IR contains all essential components
+-- Property: IR generation completeness - generated IR contains L.all essential components
 prop_ir_generation_completeness :: String -> Property
 prop_ir_generation_completeness input =
   let parseResult = parseTypus input
@@ -99,8 +101,8 @@ prop_ir_generation_completeness input =
        Right typusFile ->
          let sourceIR = buildSourceIR typusFile input
              semanticIR = buildSemanticIR sourceIR
-             hasSourceText = not (null $ sourceText sourceIR)
-             hasTypusFile = not (null $ show $ semanticTypusFile semanticIR)
+             hasSourceText = not (L.null $ sourceText sourceIR)
+             hasTypusFile = not (L.null $ show $ semanticTypusFile semanticIR)
          in property $ hasSourceText .&&. hasTypusFile
 
 -- ============================================================================
@@ -110,11 +112,11 @@ prop_ir_generation_completeness input =
 -- Property: Ownership transfer transitivity
 prop_ownership_transfer_transitivity :: [OwnershipType] -> Property
 prop_ownership_transfer_transitivity ownershipTypes =
-  not (null ownershipTypes) && length ownershipTypes <= 5 ==>
+  not (null ownershipTypes) && L.length ownershipTypes <= 5 ==>
   let analyzer = newOwnershipAnalyzer
-      transfers = zip ownershipTypes (tail ownershipTypes ++ [head ownershipTypes])
+      transfers = zip ownershipTypes (L.tail ownershipTypes ++ [L.head ownershipTypes])
       validTransfers = filter isTransferValid transfers
-  in property $ length validTransfers >= 0
+  in property $ L.length validTransfers >= 0
   where
     isTransferValid (from, to) = case (from, to) of
       (Owned, Borrowed) -> True
@@ -134,7 +136,7 @@ prop_ownership_checking_idempotent input =
              analyzer2 = newOwnershipAnalyzer
              result1 = analyzeOwnership analyzer1 (show typusFile)
              result2 = analyzeOwnership analyzer2 (show typusFile)
-         in property $ length result1 === length result2
+         in property $ L.length result1 === L.length result2
 
 -- ============================================================================
 -- Dependent Type System Property Tests (2 tests)
@@ -155,14 +157,14 @@ prop_type_constraint_equivalence constraint1 constraint2 =
 -- Property: Type reference parsing consistency
 prop_type_reference_parsing_consistency :: String -> Property
 prop_type_reference_parsing_consistency typeString =
-  not (null typeString) && length typeString <= 100 ==>
+  not (null typeString) && L.length typeString <= 100 ==>
   let parseResult1 = parseDependentType typeString
       parseResult2 = parseDependentType typeString
   in classify (isRight parseResult1) "valid type reference" $
      classify (isLeft parseResult1) "invalid type reference" $
      property $ case (parseResult1, parseResult2) of
        (Right type1, Right type2) -> property $ show type1 === show type2
-       (Left err1, Left err2) -> property $ length (show err1) > 0 .&&. length (show err2) > 0
+       (Left err1, Left err2) -> property $ L.length (show err1) > 0 .&&. L.length (show err2) > 0
        _ -> property $ False
 
 -- ============================================================================
@@ -174,8 +176,8 @@ prop_error_aggregation_idempotent :: [CompilerError] -> Property
 prop_error_aggregation_idempotent errors =
   let uniqueErrors1 = nubBy sameErrorType errors
       uniqueErrors2 = nubBy sameErrorType errors
-      errorCount1 = length uniqueErrors1
-      errorCount2 = length uniqueErrors2
+      errorCount1 = L.length uniqueErrors1
+      errorCount2 = L.length uniqueErrors2
   in property $ errorCount1 === errorCount2
   where
     sameErrorType err1 err2 = 

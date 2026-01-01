@@ -42,7 +42,9 @@ import SourceLocation
 
 import Data.Char (isSpace)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf)
+import Data.List (sort)
 
 -- ============================================================================
 -- SourcePos Properties
@@ -81,7 +83,7 @@ prop_posAfter_tab pos =
              posColumn newPos === expectedCol .&&.
              posOffset newPos === posOffset pos + 1
 
--- Property: posAt creates position with correct line and column
+-- Property: posAt creates position with correct line L.and column
 prop_posAt_correct :: Int -> Int -> Property
 prop_posAt_correct line col =
   line > 0 && col > 0 ==>
@@ -90,7 +92,7 @@ prop_posAt_correct line col =
              posColumn pos === col .&&.
              posOffset pos === 0
 
--- Property: posAtLineCol creates position with correct line, column, and offset
+-- Property: posAtLineCol creates position with correct line, column, L.and offset
 prop_posAtLineCol_correct :: Int -> Int -> Int -> Property
 prop_posAtLineCol_correct line col offset =
   line > 0 && col > 0 && offset >= 0 ==>
@@ -103,7 +105,7 @@ prop_posAtLineCol_correct line col offset =
 -- SourceSpan Properties
 -- ============================================================================
 
--- Property: emptySpan creates span with same start and end
+-- Property: emptySpan creates span with same start L.and end
 prop_emptySpan_same_start_end :: SourcePos -> Property
 prop_emptySpan_same_start_end pos =
   let span = emptySpan pos
@@ -124,14 +126,14 @@ prop_spanTo_creates_empty pos =
   in property $ spanStart span === pos .&&.
              spanEnd span === pos
 
--- Property: spanBetween creates span with correct start and end
+-- Property: spanBetween creates span with correct start L.and end
 prop_spanBetween_correct :: SourcePos -> SourcePos -> Property
 prop_spanBetween_correct start end =
   let span = spanBetween start end
   in property $ spanStart span === start .&&.
              spanEnd span === end
 
--- Property: mergeSpans creates span with minimum start and maximum end
+-- Property: mergeSpans creates span with L.minimum start L.and L.maximum end
 prop_mergeSpans_correct :: SourcePos -> SourcePos -> SourcePos -> SourcePos -> Property
 prop_mergeSpans_correct start1 end1 start2 end2 =
   let span1 = spanBetween start1 end1
@@ -202,16 +204,16 @@ prop_advancePos_associative :: String -> String -> SourcePos -> Property
 prop_advancePos_associative str1 str2 pos =
   advancePos (str1 ++ str2) pos === advancePos str2 (advancePos str1 pos)
 
--- Property: advancePosBy increments offset by string length
+-- Property: advancePosBy increments offset by string L.length
 prop_advancePosBy_offset :: String -> SourcePos -> Property
 prop_advancePosBy_offset str pos =
   let newPos = advancePosBy str pos
-  in property $ posOffset newPos === posOffset pos + length str
+  in property $ posOffset newPos === posOffset pos + L.length str
 
 -- Property: advancePosByLine increments line by newline count
 prop_advancePosByLine_newlines :: String -> SourcePos -> Property
 prop_advancePosByLine_newlines str pos =
-  let newlineCount = length (filter (== '\n') str)
+  let newlineCount = L.length (L.filter (== '\n') str)
       newPos = advancePosByLine str pos
   in property $ posLine newPos === posLine pos + newlineCount
 
@@ -271,7 +273,7 @@ tests = testGroup "SourceLocation New QuickCheck Tests"
     , fastProperty "posAtLineCol creates correct position" prop_posAtLineCol_correct
     ]
   , testGroup "SourceSpan Properties"
-    [ fastProperty "emptySpan has same start and end" prop_emptySpan_same_start_end
+    [ fastProperty "emptySpan has same start L.and end" prop_emptySpan_same_start_end
     , fastProperty "spanFrom creates empty span" prop_spanFrom_creates_empty
     , fastProperty "spanTo creates empty span" prop_spanTo_creates_empty
     , fastProperty "spanBetween creates correct span" prop_spanBetween_correct

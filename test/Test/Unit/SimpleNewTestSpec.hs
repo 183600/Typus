@@ -38,7 +38,7 @@ textProcessingProperties = testGroup "Text Processing Properties"
       \c s -> splitBy c s `L.intercalate` [c] == s
 
   , testProperty "splitByCollapsed removes empty segments" $
-      \c s -> all (not . null) (splitByCollapsed c s)
+      \c s -> L.all (not . null) (splitByCollapsed c s)
 
   , testCase "trim handles empty strings" $
       assertEqual "trim empty" "" (trim "")
@@ -59,7 +59,7 @@ sourceLocationProperties = testGroup "Source Location Properties"
   , testProperty "spanFrom creates valid spans" $
       \pos -> isValidSpan (spanFrom pos 5)
 
-  , testProperty "emptySpan has zero length" $
+  , testProperty "emptySpan has zero L.length" $
       \pos -> let span = emptySpan pos
               in spanStart span == spanEnd span
 
@@ -80,7 +80,7 @@ basicProperties = testGroup "Basic Properties"
       \pos val -> locatedPos (Located pos val) == pos
 
   , testProperty "splitByComma handles consecutive commas" $
-      \s -> splitByComma (",," ++ s ++ ",,") `L.isPrefixOf` ["", "", ""]
+      \s -> splitByComma (",," ++ s ++ ",,") `L.L.isPrefixOf` ["", "", ""]
 
   , testCase "splitBy handles single character strings" $
       assertEqual "single char" ["", ""] (splitBy ',' [','])

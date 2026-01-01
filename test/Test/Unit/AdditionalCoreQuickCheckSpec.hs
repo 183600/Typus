@@ -24,6 +24,7 @@ import Utils
   , normalizeIndentation, breakOn, splitByComma
   )
 
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 
 -- Import Arbitrary instances from TestSupport.Arbitrary to avoid orphan instances
@@ -54,9 +55,9 @@ prop_merge_spans_validity span1 span2 =
 prop_located_map_preservation :: String -> Int -> Property
 prop_located_map_preservation str _value =
   let located = locatedAt (startPos) str
-      mapped = mapLocated length located
+      mapped = mapLocated L.length located
   in property $
-     locatedValue mapped === length str .&&.
+     locatedValue mapped === L.length str .&&.
      locatedSpan mapped === locatedSpan located
 
 -- ============================================================================
@@ -69,25 +70,25 @@ prop_located_map_preservation str _value =
 prop_import_path_consistency :: ImportDecl -> Property
 prop_import_path_consistency imp =
   let path = importPath imp
-  in property $ not (null path) ==> length path > 0
+  in property $ not (null path) ==> L.length path > 0
 
 -- Property: Package declarations maintain name consistency
 prop_package_name_consistency :: PackageDecl -> Property
 prop_package_name_consistency pkg =
   let name = packageName pkg
-  in property $ length name >= 0
+  in property $ L.length name >= 0
 
 -- ============================================================================
 -- Parser/Utils Properties
 -- ============================================================================
 
--- Property: splitBy and splitByCollapsed relationship
+-- Property: splitBy L.and splitByCollapsed relationship
 prop_split_by_collapsed_relationship :: Char -> String -> Property
 prop_split_by_collapsed_relationship delim str =
   let normal = splitBy delim str
       collapsed = splitByCollapsed delim str
-  in property $ length collapsed <= length normal .&&.
-     (not (null collapsed) || all null (filter (not . null) normal))
+  in property $ L.length collapsed <= L.length normal .&&.
+     (not (null collapsed) || L.all L.null (L.filter (not . null) normal))
 
 -- Property: trim is idempotent
 prop_trim_idempotent :: String -> Property
@@ -96,11 +97,11 @@ prop_trim_idempotent str =
       trimmedTwice = trim trimmedOnce
   in property $ trimmedOnce === trimmedTwice
 
--- Property: breakOn always finds first occurrence or returns original
+-- Property: breakOn always finds first occurrence L.or returns original
 prop_break_on_finds_first :: String -> String -> Property
 prop_break_on_finds_first needle haystack =
   let (before, after) = breakOn needle haystack
-      hasNeedle = needle `isInfixOf` haystack
+      hasNeedle = needle `L.isInfixOf` haystack
       reconstructed = before ++ needle ++ after
   in property $ 
      (if hasNeedle then reconstructed === haystack else (before, after) === (haystack, ""))
@@ -111,7 +112,7 @@ prop_normalize_indentation_preserves_relative code =
   let normalized = normalizeIndentation code
       linesInOriginal = lines code
       linesInNormalized = lines normalized
-  in length linesInOriginal === length linesInNormalized
+  in L.length linesInOriginal === L.length linesInNormalized
 
 -- ============================================================================
 -- String Processing Properties
@@ -123,9 +124,9 @@ prop_remove_line_comments_preserves_non_comments code =
   let withoutComments = removeLineComments code
       linesOriginal = lines code
       linesWithoutComments = lines withoutComments
-      nonCommentLines = filter (not . ("//" `isPrefixOf`)) (filter (not . null) linesOriginal)
-      filteredWithoutComments = filter (not . null) linesWithoutComments
-  in property $ length filteredWithoutComments >= length nonCommentLines
+      nonCommentLines = L.filter (not . ("//" `L.isPrefixOf`)) (L.filter (not . null) linesOriginal)
+      filteredWithoutComments = L.filter (not . null) linesWithoutComments
+  in property $ L.length filteredWithoutComments >= L.length nonCommentLines
 
 -- Property: splitBy comma consistency with splitBy comma
 prop_split_by_comma_consistency :: String -> Property

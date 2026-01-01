@@ -32,7 +32,9 @@ import Ownership
 
 import Ownership.Common.Types (OwnershipType(..), OwnershipError(..), OwnershipTransfer(..), newOwnershipAnalyzer)
 import Data.Char (isSpace, isAlphaNum)
-import Data.List (isPrefixOf, isInfixOf, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (nub)
 import qualified Data.Set as Set
 
 -- Property: OwnershipType ordering is consistent
@@ -56,7 +58,7 @@ prop_new_analyzer_consistent =
       analyzer2 = newOwnershipAnalyzer
   in property $ analyzer1 === analyzer2
 
--- Property: OwnershipTransfer preserves from and to fields
+-- Property: OwnershipTransfer preserves from L.and to fields
 prop_ownership_transfer_preserves_fields :: String -> String -> Property
 prop_ownership_transfer_preserves_fields from to =
   not (null from) && not (null to) && from /= to ==>
@@ -75,7 +77,7 @@ prop_analyze_ownership_empty =
 -- Property: analyzeOwnership handles simple variable assignment
 prop_analyze_ownership_simple_assignment :: String -> Property
 prop_analyze_ownership_simple_assignment varName =
-  not (null varName) && all isAlphaNum varName ==>
+  not (null varName) && L.all isAlphaNum varName ==>
   let analyzer = newOwnershipAnalyzer
       code = varName ++ " := 42"
       result = analyzeOwnership analyzer code
@@ -87,7 +89,7 @@ prop_analyze_ownership_simple_assignment varName =
 prop_analyze_ownership_use_after_move :: String -> String -> Property
 prop_analyze_ownership_use_after_move var1 var2 =
   not (null var1) && not (null var2) &&
-  all isAlphaNum var1 && all isAlphaNum var2 &&
+  L.all isAlphaNum var1 && L.all isAlphaNum var2 &&
   var1 /= var2 ==>
   let analyzer = newOwnershipAnalyzer
       code = unlines
@@ -99,7 +101,7 @@ prop_analyze_ownership_use_after_move var1 var2 =
   in case result of
     Left _ -> property True
     Right errors -> 
-      let hasUseAfterMove = any (\err -> case err of
+      let hasUseAfterMove = L.any (\err -> case err of
             UseAfterMove v -> v == var1
             _ -> False) errors
       in property $ hasUseAfterMove || not (null errors)
@@ -107,7 +109,7 @@ prop_analyze_ownership_use_after_move var1 var2 =
 -- Property: analyzeOwnership handles multiple borrows
 prop_analyze_ownership_multiple_borrows :: String -> Property
 prop_analyze_ownership_multiple_borrows varName =
-  not (null varName) && all isAlphaNum varName ==>
+  not (null varName) && L.all isAlphaNum varName ==>
   let analyzer = newOwnershipAnalyzer
       code = unlines
         [ varName ++ " := 42"
@@ -123,7 +125,7 @@ prop_analyze_ownership_multiple_borrows varName =
 prop_analyze_ownership_function_calls :: String -> String -> Property
 prop_analyze_ownership_function_calls funcName varName =
   not (null funcName) && not (null varName) &&
-  all isAlphaNum funcName && all isAlphaNum varName ==>
+  L.all isAlphaNum funcName && L.all isAlphaNum varName ==>
   let analyzer = newOwnershipAnalyzer
       code = unlines
         [ varName ++ " := 42"
@@ -137,7 +139,7 @@ prop_analyze_ownership_function_calls funcName varName =
 -- Property: analyzeOwnership handles scope boundaries
 prop_analyze_ownership_scope_boundaries :: String -> Property
 prop_analyze_ownership_scope_boundaries varName =
-  not (null varName) && all isAlphaNum varName ==>
+  not (null varName) && L.all isAlphaNum varName ==>
   let analyzer = newOwnershipAnalyzer
       code = unlines
         [ "{"
@@ -149,7 +151,7 @@ prop_analyze_ownership_scope_boundaries varName =
   in case result of
     Left _ -> property True
     Right errors -> 
-      let hasOutOfScope = any (\err -> case err of
+      let hasOutOfScope = L.any (\err -> case err of
             OutOfScope v -> v == varName
             _ -> False) errors
       in property $ hasOutOfScope || not (null errors)
@@ -165,8 +167,8 @@ prop_lex_all_empty =
 -- Property: lexAll handles simple identifiers
 prop_lex_all_identifiers :: [String] -> Property
 prop_lex_all_identifiers identifiers =
-  not (null identifiers) && all (not . null) identifiers &&
-  all (all isAlphaNum) identifiers ==>
+  not (null identifiers) && L.all (not . null) identifiers &&
+  L.all (L.all isAlphaNum) identifiers ==>
   let input = unwords identifiers
       result = lexAll input
   in case result of
@@ -184,7 +186,7 @@ prop_parse_program_empty =
 -- Property: parseProgram handles simple expressions
 prop_parse_program_simple :: String -> Property
 prop_parse_program_simple expr =
-  not (null expr) && all (`elem` "0123456789+-*/ ") expr ==>
+  not (null expr) && L.all (`elem` "0123456789+-*/ ") expr ==>
   let result = parseProgram expr
   in case result of
     Left _ -> property True
@@ -201,7 +203,7 @@ prop_builtin_functions_contains_expected :: Property
 prop_builtin_functions_contains_expected =
   let builtins = builtInFunctions
       expected = ["print", "len", "append"]  -- Common built-in functions
-      hasExpected = all (`elem` builtins) expected
+      hasExpected = L.all (`elem` builtins) expected
   in property $ hasExpected || not (null builtins)
 
 -- Property: formatOwnershipErrors handles empty list
@@ -214,7 +216,7 @@ prop_format_errors_empty =
 prop_format_errors_consistent :: [OwnershipError] -> Property
 prop_format_errors_consistent errors =
   let formatted = formatOwnershipErrors errors
-      errorCount = length errors
+      errorCount = L.length errors
   in property $ (null errors && null formatted) .||. 
      (not (null errors) && not (null formatted))
 

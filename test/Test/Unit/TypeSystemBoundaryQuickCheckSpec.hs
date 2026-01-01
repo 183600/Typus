@@ -10,6 +10,7 @@
 module Test.Unit.TypeSystemBoundaryQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertBool, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -92,7 +93,7 @@ prop_type_substitution_preserves_structure typeExpr varName replacement =
     TypeConstructor name args -> 
       case substituted of
         TypeConstructor newName newArgs -> 
-          property $ newName === name && length newArgs === length args
+          property $ newName === name && L.length newArgs === L.length args
         _ -> property False
     FunctionType from to -> 
       case substituted of
@@ -142,8 +143,8 @@ prop_dependent_constraints_preserved base value name =
 prop_type_var_freshness :: [TypeVar] -> Property
 prop_type_var_freshness vars =
   let freshVars = map generateFreshVar vars
-      allUnique = length (nub freshVars) == length freshVars
-      allFresh = all (`notElem` vars) freshVars
+      allUnique = L.length (nub freshVars) == L.length freshVars
+      allFresh = L.all (`notElem` vars) freshVars
   in property $ allUnique && allFresh
 
 -- Property: Type inference preserves consistency
@@ -154,8 +155,8 @@ prop_type_inference_consistent statements =
   in case result of
     Left _ -> property True
     Right types -> 
-      let typeCount = length types
-          statementCount = length statements
+      let typeCount = L.length types
+          statementCount = L.length statements
       in property $ typeCount <= statementCount
 
 -- Property: Subtype relation is transitive
@@ -184,7 +185,7 @@ prop_type_constructor_arity :: String -> [TypeExpr] -> Property
 prop_type_constructor_arity name args =
   let constructor = TypeConstructor name args
       arity = getConstructorArity constructor
-  in property $ arity === length args
+  in property $ arity === L.length args
 
 -- Property: Dependent type reduction works correctly
 prop_dependent_type_reduction :: TypeExpr -> TypeExpr -> Property
@@ -206,7 +207,7 @@ prop_generalization_preserves_free typeExpr env =
 -- Property: Type instantiation preserves structure
 prop_instantiation_preserves_structure :: TypeExpr -> [TypeVar] -> [TypeExpr] -> Property
 prop_instantiation_preserves_structure typeExpr vars replacements =
-  length vars == length replacements ==>
+  L.length vars == L.length replacements ==>
   let scheme = TypeScheme vars typeExpr
       instantiated = instantiateScheme scheme replacements
   in property $ case instantiated of
@@ -219,7 +220,7 @@ data TypeScheme = TypeScheme [TypeVar] TypeExpr deriving (Show, Eq)
 substituteType :: String -> TypeExpr -> TypeExpr -> TypeExpr
 substituteType varName replacement typeExpr = case typeExpr of
   TypeVar name -> if name == varName then replacement else typeExpr
-  TypeConstructor name args -> TypeConstructor name (map (substituteType varName replacement) args)
+  TypeConstructor name args -> TypeConstructor name (L.map (substituteType varName replacement) args)
   FunctionType from to -> FunctionType (substituteType varName replacement from) (substituteType varName replacement to)
   dependentType base value -> dependentType (substituteType varName replacement base) (substituteType varName replacement value)
 
@@ -242,7 +243,7 @@ unifyTypes t1 t2 =
   else Left "Cannot unify"
 
 applySubstitution :: [(String, TypeExpr)] -> TypeExpr -> TypeExpr
-applySubstitution substitution typeExpr = foldl (\acc (var, replacement) -> substituteType var replacement acc) typeExpr substitution
+applySubstitution substitution typeExpr = L.foldl (\acc (var, replacement) -> substituteType var replacement acc) typeExpr substitution
 
 checkDependentConstraint :: Constraint -> TypeExpr -> Bool
 checkDependentConstraint (DependentConstraint _ base value) (dependentType base' value') = base == base' && value == value'
@@ -264,7 +265,7 @@ areTypesEqual :: TypeExpr -> TypeExpr -> Bool
 areTypesEqual = (==)
 
 getConstructorArity :: TypeExpr -> Int
-getConstructorArity (TypeConstructor _ args) = length args
+getConstructorArity (TypeConstructor _ args) = L.length args
 getConstructorArity _ = 0
 
 reduceDependentType :: TypeExpr -> Maybe TypeExpr
@@ -281,8 +282,8 @@ generalizeType typeExpr _ = typeExpr  -- Simplified
 
 instantiateScheme :: TypeScheme -> [TypeExpr] -> Maybe TypeExpr
 instantiateScheme (TypeScheme vars typeExpr) replacements = 
-  if length vars == length replacements
-  then Just $ foldl (\acc (TypeVar var, replacement) -> substituteType var replacement acc) typeExpr (zip vars replacements)
+  if L.length vars == L.length replacements
+  then Just $ L.foldl (\acc (TypeVar var, replacement) -> substituteType var replacement acc) typeExpr (zip vars replacements)
   else Nothing
 
 tests :: TestTree

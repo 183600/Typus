@@ -11,12 +11,14 @@
 module Test.Unit.NewConcurrentSafetyQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, oneof, suchThat)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (sort, nub, isInfixOf, isPrefixOf, isSuffixOf, intercalate)
+import Data.List (isInfixOf, isPrefixOf, isSuffixOf)
+import Data.List (sort, nub, intercalate)
 import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes)
 import Data.Either (isLeft, isRight)
 import Control.Concurrent (MVar, newMVar, takeMVar, putMVar, forkIO, threadDelay)
@@ -122,7 +124,7 @@ utilsStateLock :: MVar UtilsState
 utilsStateLock = unsafePerformIO $ newMVar (UtilsState 0)
 
 -- ============================================================================
--- Helper Functions and Generators
+-- Helper Functions L.and Generators
 -- ============================================================================
 
 -- Generate test inputs for concurrent operations
@@ -169,7 +171,7 @@ prop_concurrent_parsing_safe numThreads numOperations =
             putMVar parserStateLock newState
             return $ parse input
           ) inputs
-          return $ length results
+          return $ L.length results
     in property $ True  -- If we can execute this without race conditions, it's safe
 
 -- Property: Concurrent compilation should maintain consistency
@@ -184,7 +186,7 @@ prop_concurrent_compilation_consistent numThreads numOperations =
             putMVar compilerStateLock newState
             return $ compile input
           ) inputs
-          return $ length results
+          return $ L.length results
     in property $ True  -- If we can execute this without inconsistency, it's consistent
 
 -- Property: Concurrent ownership analysis should be thread-safe
@@ -197,7 +199,7 @@ prop_concurrent_ownership_thread_safe numThreads numOperations =
           let newState = state { ownershipAnalysisCount = ownershipAnalysisCount state + 1 }
           putMVar ownershipStateLock newState
           return $ analyzeOwnership ()
-        return $ length results
+        return $ L.length results
   in property $ True  -- If we can execute this without race conditions, it's thread-safe
 
 -- Property: Concurrent dependency analysis should not interfere
@@ -210,7 +212,7 @@ prop_concurrent_dependency_no_interference numThreads numOperations =
           let newState = state { dependencyAnalysisCount = dependencyAnalysisCount state + 1 }
           putMVar dependencyStateLock newState
           return $ analyzeDependencies ""
-        return $ length results
+        return $ L.length results
   in property $ True  -- If we can execute this without interference, it's safe
 
 -- Property: Concurrent error handling should maintain isolation
@@ -224,7 +226,7 @@ prop_concurrent_error_isolation numThreads numOperations =
           let newState = state { errorCount = errorCount state + 1 }
           putMVar errorHandlerStateLock newState
           return $ handleError handler "test error"
-        return $ length results
+        return $ L.length results
   in property $ True  -- If we can execute this with isolation, it's isolated
 
 -- Property: Concurrent source location tracking should be accurate
@@ -237,7 +239,7 @@ prop_concurrent_location_accuracy numThreads numOperations =
           let newState = state { locationCount = locationCount state + 1 }
           putMVar locationStateLock newState
           return $ getLocationState ()
-        return $ length results
+        return $ L.length results
   in property $ True  -- If we can execute this accurately, it's accurate
 
 -- Property: Concurrent utils operations should be deterministic
@@ -252,7 +254,7 @@ prop_concurrent_utils_deterministic numThreads numOperations =
             putMVar utilsStateLock newState
             return $ trim (removeComments (normalizeIndentation input))
           ) inputs
-          return $ length results
+          return $ L.length results
     in property $ True  -- If we can execute this deterministically, it's deterministic
 
 -- ============================================================================
@@ -319,7 +321,7 @@ prop_lock_ordering_prevents_circular_wait numThreads =
         state1 <- takeMVar parserStateLock
         state2 <- takeMVar compilerStateLock
         state3 <- takeMVar ownershipStateLock
-        -- Release in reverse order
+        -- Release in L.reverse order
         putMVar ownershipStateLock state3
         putMVar compilerStateLock state2
         putMVar parserStateLock state1
@@ -368,7 +370,7 @@ prop_error_handling_thread_safe numThreads numErrors =
           let newState = state { errorCount = errorCount state + 1 }
           putMVar errorHandlerStateLock newState
           return $ handleError handler ("Error " ++ show threadId)
-        return $ length errors
+        return $ L.length errors
   in property $ True  -- If we can execute this safely, error handling is thread-safe
 
 -- Property: Exception handling should not corrupt shared state

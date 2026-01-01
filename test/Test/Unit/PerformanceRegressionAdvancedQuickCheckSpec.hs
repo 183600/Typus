@@ -10,6 +10,7 @@
 module Test.Unit.PerformanceRegressionAdvancedQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose, suchThat)
@@ -20,7 +21,8 @@ import Compiler.IR (buildSourceIR, buildSemanticIR, emitGo)
 import Ownership (analyzeOwnership)
 import DependentTypesParser (validateDependentTypeSyntax)
 import Utils (trim, removeComments, normalizeIndentation)
-import Data.List (sort, nub, length, filter, elem, intercalate, concat)
+import Data.List (length, concat)
+import Data.List (sort, nub, filter, elem, intercalate)
 import Data.Set (Set, empty, singleton, union, unions, member, size, difference, intersection)
 import qualified Data.Set as Set
 import Data.Map (Map, empty, singleton, insert, lookup, keys, elems, unionWith)
@@ -40,7 +42,7 @@ prop_parsing_time_linear :: String -> Int -> Property
 prop_parsing_time_linear baseContent multiplier =
   length baseContent > 0 && multiplier > 0 && multiplier <= 50 ==>
   let smallSource = baseContent
-      largeSource = concat (replicate multiplier baseContent)
+      largeSource = L.concat (replicate multiplier baseContent)
       smallTime = measureTime $ parseTypus smallSource
       largeTime = measureTime $ parseTypus largeSource
       ratio = fromIntegral largeTime / fromIntegral (smallTime * max 1 multiplier)
@@ -67,9 +69,9 @@ prop_memory_usage_bounded baseContent repetitions =
   let sources = replicate repetitions baseContent
       parseResults = map parseTypus sources
       successfulParses = [typusFile | Right typusFile <- parseResults]
-      irs = map (\f -> buildSourceIR f baseContent) successfulParses
+      irs = L.map (\f -> buildSourceIR f baseContent) successfulParses
   in property $ 
-    length irs <= length successfulParses .&&.
+    length irs <= L.length successfulParses .&&.
     all (\ir -> sourceText ir `seq` True) irs  -- Force evaluation
 
 -- Property: Error handling performance is consistent
@@ -83,7 +85,7 @@ prop_error_handling_performance malformedInput =
 prop_ownership_analysis_performance :: String -> Int -> Property
 prop_ownership_analysis_performance baseContent numVariables =
   length baseContent > 0 && numVariables > 0 && numVariables <= 100 ==>
-  let sourceWithVars = unlines $ map (\i -> "let var" ++ show i ++ " = " ++ baseContent) [1..numVariables]
+  let sourceWithVars = unlines $ L.map (\i -> "let var" ++ show i ++ " = " ++ baseContent) [1..numVariables]
       parseResult = parseTypus sourceWithVars
   in case parseResult of
     Left _ -> property True
@@ -95,7 +97,7 @@ prop_ownership_analysis_performance baseContent numVariables =
 prop_type_validation_performance :: String -> Int -> Property
 prop_type_validation_performance typeBase numTypes =
   length typeBase > 0 && numTypes > 0 && numTypes <= 50 ==>
-  let typeDefinitions = unlines $ map (\i -> "type Type" ++ show i ++ " = " ++ typeBase) [1..numTypes]
+  let typeDefinitions = unlines $ L.map (\i -> "type Type" ++ show i ++ " = " ++ typeBase) [1..numTypes]
       validationTime = measureTime $ validateDependentTypeSyntax typeDefinitions
   in property $ fromIntegral validationTime < 5000000  -- Less than 5ms
 
@@ -104,7 +106,7 @@ prop_string_processing_performance :: String -> Int -> Property
 prop_string_processing_performance baseString multiplier =
   length baseString > 0 && multiplier > 0 && multiplier <= 100 ==>
   let smallString = baseString
-      largeString = concat (replicate multiplier baseString)
+      largeString = L.concat (replicate multiplier baseString)
       smallTime = measureTime $ trim (removeComments (normalizeIndentation smallString))
       largeTime = measureTime $ trim (removeComments (normalizeIndentation largeString))
       ratio = fromIntegral largeTime / fromIntegral (smallTime * max 1 multiplier)
@@ -114,7 +116,7 @@ prop_string_processing_performance baseString multiplier =
 prop_go_generation_performance :: String -> Int -> Property
 prop_go_generation_performance baseContent numFunctions =
   length baseContent > 0 && numFunctions > 0 && numFunctions <= 50 ==>
-  let sourceWithFuncs = unlines $ map (\i -> "func func" ++ show i ++ "() { " ++ baseContent ++ " }") [1..numFunctions]
+  let sourceWithFuncs = unlines $ L.map (\i -> "func func" ++ show i ++ "() { " ++ baseContent ++ " }") [1..numFunctions]
       parseResult = parseTypus sourceWithFuncs
   in case parseResult of
     Left _ -> property True
@@ -126,10 +128,10 @@ prop_go_generation_performance baseContent numFunctions =
 -- Property: Concurrent compilation performance
 prop_concurrent_compilation_performance :: [String] -> Property
 prop_concurrent_compilation_performance sources =
-  length sources > 0 && length sources <= 10 && all (not . null) sources ==>
-  let sequentialTime = sum $ map (\s -> measureTime $ parseTypus s) sources
+  length sources > 0 && L.length sources <= 10 && L.all (not . null) sources ==>
+  let sequentialTime = L.sum $ L.map (\s -> measureTime $ parseTypus s) sources
       -- In a real scenario, we'd run these in parallel
-      theoreticalParallelTime = sequentialTime `div` length sources
+      theoreticalParallelTime = sequentialTime `div` L.length sources
   in property $ 
     fromIntegral sequentialTime > 0 .&&.
     fromIntegral theoreticalParallelTime >= 0

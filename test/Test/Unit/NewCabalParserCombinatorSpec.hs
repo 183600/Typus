@@ -38,7 +38,7 @@ tests =
 
     , testGroup "Parser composition properties"
         [ fastProperty "sequential parsing consumes input in order" prop_sequential_consumes_order
-        , fastProperty "optional parser either succeeds with value or returns Nothing" prop_optional_behavior
+        , fastProperty "optional parser either succeeds with value L.or returns Nothing" prop_optional_behavior
         , fastProperty "try parser backtrack preserves input on failure" prop_try_backtrack
         , fastProperty "lookahead parser does not consume input" prop_lookahead_no_consume
         ]
@@ -49,7 +49,7 @@ tests =
         , fastProperty "nested errors provide context" prop_nested_errors_context
         ]
 
-    , testGroup "Performance and efficiency properties"
+    , testGroup "Performance L.and efficiency properties"
         [ fastProperty "parsing is linear in input size for simple grammars" prop_linear_parsing_simple
         , fastProperty "backtracking is bounded for deterministic parsers" prop_bounded_backtracking
         , fastProperty "memory usage does not grow exponentially" prop_memory_bounded
@@ -85,21 +85,21 @@ parseString input =
 
 prop_parse_identifier_preserves :: String -> Property
 prop_parse_identifier_preserves input =
-  not (null input) && all (`elem` ('_':['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'])) input ==>
+  not (null input) && L.all (`elem` ('_':['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'])) input ==>
   case parseIdentifier input of
     Right result -> property $ result === input
     Left _ -> property $ False -- Should not fail on valid identifiers
 
 prop_parse_number_preserves :: String -> Property
 prop_parse_number_preserves input =
-  not (null input) && all isDigit input && length input <= 10 ==>
+  not (null input) && L.all isDigit input && L.length input <= 10 ==>
   case parseNumber input of
     Right result -> property $ show result === input
     Left _ -> property $ False -- Should not fail on valid numbers
 
 prop_parse_string_preserves :: String -> Property
 prop_parse_string_preserves content =
-  not (any (`elem` "\\\"") content) && length content <= 20 ==>
+  not (L.any (`elem` "\\\"") content) && L.length content <= 20 ==>
   let quoted = "\"" ++ content ++ "\""
   in case parseString quoted of
     Right result -> property $ result === content
@@ -121,7 +121,7 @@ prop_many_returns_list item separator =
       input = List.intercalate separator items
       manyParser = many (string item <* optional (string separator))
   in case parse manyParser "" input of
-    Right results -> property $ length results >= 1 .&&. head results === item
+    Right results -> property $ L.length results >= 1 .&&. L.head results === item
     Left _ -> property $ False -- Should parse at least one item
 
 -- Parser composition properties
@@ -139,7 +139,7 @@ prop_optional_behavior :: String -> Property
 prop_optional_behavior input =
   let optionalParser = optional (string "test")
   in case parse optionalParser "" input of
-    Right (Just "test") -> property $ "test" `isPrefixOf` input
+    Right (Just "test") -> property $ "test" `L.isPrefixOf` input
     Right Nothing -> property $ True -- Optional can always fail gracefully
     Left _ -> property $ False -- Should never fail for optional
 
@@ -149,7 +149,7 @@ prop_try_backtrack prefix alternative =
   let input = prefix ++ "suffix"
       tryParser = try (string prefix <* string "wrong") <|> string alternative
   in case parse tryParser "" input of
-    Right _ -> property $ True -- Should backtrack and try alternative
+    Right _ -> property $ True -- Should backtrack L.and try alternative
     Left _ -> property $ True -- Backtracking failure is acceptable
 
 prop_lookahead_no_consume :: String -> String -> Property
@@ -177,7 +177,7 @@ prop_custom_error_preserved input =
   let customError = "Custom error message"
       parser = string "expected" <|> fail customError
   in case parse parser "" input of
-    Left err -> property $ customError `isInfixOf` errorBundlePretty err
+    Left err -> property $ customError `L.isInfixOf` errorBundlePretty err
     Right _ -> property $ False -- Should fail with custom error
 
 prop_nested_errors_context :: String -> String -> Property
@@ -189,21 +189,21 @@ prop_nested_errors_context outer inner =
     Left err -> property $ True -- Should provide context about both levels
     Right _ -> property $ False
 
--- Performance and efficiency properties
+-- Performance L.and efficiency properties
 
 prop_linear_parsing_simple :: Int -> String -> Property
 prop_linear_parsing_simple repetitions token =
-  repetitions >= 0 && repetitions <= 100 && not (null token) && length token <= 5 ==>
-  let input = concat $ replicate repetitions token
+  repetitions >= 0 && repetitions <= 100 && not (null token) && L.length token <= 5 ==>
+  let input = L.concat $ replicate repetitions token
       simpleParser = many (string token)
   in case parse simpleParser "" input of
-    Right results -> property $ length results === repetitions
+    Right results -> property $ L.length results === repetitions
     Left _ -> property $ repetitions == 0 -- Only fail on empty input
 
 prop_bounded_backtracking :: Int -> String -> Property
 prop_bounded_backtracking depth content =
   depth >= 0 && depth <= 10 && not (null content) ==>
-  let nestedParser = foldr (\_ p -> try (string content <* string "wrong") <|> p) 
+  let nestedParser = L.foldr (\_ p -> try (string content <* string "wrong") <|> p) 
                           (string content) 
                           [1..depth]
       input = content
@@ -213,8 +213,8 @@ prop_bounded_backtracking depth content =
 
 prop_memory_bounded :: Int -> String -> Property
 prop_memory_bounded size token =
-  size >= 0 && size <= 50 && not (null token) && length token <= 3 ==>
-  let input = concat $ replicate size token
+  size >= 0 && size <= 50 && not (null token) && L.length token <= 3 ==>
+  let input = L.concat $ replicate size token
       recursiveParser = many (string token <* optional (string token))
   in case parse recursiveParser "" input of
     Right _ -> property $ True -- Should not cause memory issues
@@ -224,7 +224,7 @@ prop_memory_bounded size token =
 
 prop_parsing_roundtrip :: String -> Property
 prop_parsing_roundtrip content =
-  length content <= 20 && not (any (`elem` "\\\"") content) ==>
+  L.length content <= 20 && not (L.any (`elem` "\\\"") content) ==>
   let quoted = "\"" ++ content ++ "\""
       roundtripParser = char '\"' *> many (noneOf "\"") <* char '\"'
   in case parse roundtripParser "" quoted of
@@ -245,7 +245,7 @@ prop_whitespace_idempotent input =
 prop_concatenated_order :: String -> String -> String -> Property
 prop_concatenated_order first second third =
   not (null first) && not (null second) && not (null third) &&
-  all (/=) [first, second, third] ==>
+  L.all (/=) [first, second, third] ==>
   let input = first ++ second ++ third
       concatenatedParser = string first *> string second *> string third
   in case parse concatenatedParser "" input of

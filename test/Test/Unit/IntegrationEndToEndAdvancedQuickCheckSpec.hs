@@ -10,6 +10,7 @@
 module Test.Unit.IntegrationEndToEndAdvancedQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose, suchThat)
@@ -22,7 +23,8 @@ import Ownership (analyzeOwnership, OwnershipError(..))
 import DependentTypesParser (validateDependentTypeSyntax)
 import Utils (trim, removeComments, normalizeIndentation)
 import Compiler.Errors (ErrorSeverity(..), ErrorCategory(..))
-import Data.List (sort, nub, length, filter, elem, intercalate, concat, isPrefixOf, isInfixOf)
+import Data.List (length, concat, isPrefixOf, isInfixOf)
+import Data.List (sort, nub, filter, elem, intercalate)
 import Data.Set (Set, empty, singleton, union, unions, member, size, difference, intersection)
 import qualified Data.Set as Set
 import Data.Map (Map, empty, singleton, insert, lookup, keys, elems, unionWith)
@@ -38,7 +40,7 @@ import qualified Data.Text as T
 -- Property: Complete compilation pipeline preserves function structure
 prop_complete_pipeline_preserves_functions :: String -> String -> Property
 prop_complete_pipeline_preserves_functions funcName funcBody =
-  length funcName > 0 && length funcBody > 0 && not (null funcBody) ==>
+  length funcName > 0 && L.length funcBody > 0 && not (null funcBody) ==>
   let typusSource = "func " ++ funcName ++ "() {\n" ++ funcBody ++ "\n}"
       parseResult = parseTypus typusSource
   in case parseResult of
@@ -59,13 +61,13 @@ prop_pipeline_error_consistency malformedSource =
   let parseResult = parseTypus malformedSource
   in case parseResult of
     Left parseError -> 
-      property $ length (show parseError) > 0
+      property $ L.length (show parseError) > 0
     Right typusFile -> 
       let sourceIR = buildSourceIR typusFile malformedSource
           semanticIR = buildSemanticIR typusFile
           goIR = emitGo semanticIR
           goCode = goIR goIR
-      in property $ length goCode >= 0
+      in property $ L.length goCode >= 0
 
 -- Property: Ownership analysis integrates with parsing
 prop_ownership_analysis_integration :: String -> Property
@@ -78,17 +80,17 @@ prop_ownership_analysis_integration sourceCode =
       let ownershipResult = analyzeOwnership typusFile
       in property $ 
         case ownershipResult of
-          Left errors -> length errors > 0
+          Left errors -> L.length errors > 0
           Right _ -> property True
 
 -- Property: Dependent type validation integrates with pipeline
 prop_dependent_type_validation_integration :: String -> Property
 prop_dependent_type_validation_integration typeSource =
-  length typeSource > 0 && "type " `isInfixOf` typeSource ==>
+  length typeSource > 0 && "type " `L.isInfixOf` typeSource ==>
   let validationResult = validateDependentTypeSyntax typeSource
   in property $ 
     case validationResult of
-      Left errors -> length errors > 0
+      Left errors -> L.length errors > 0
       Right _ -> property True
 
 -- Property: String processing integrates with compilation
@@ -108,21 +110,21 @@ prop_string_processing_integration rawSource =
 -- Property: Multi-file compilation consistency
 prop_multi_file_compilation_consistency :: [String] -> Property
 prop_multi_file_compilation_consistency sources =
-  length sources > 0 && all (not . null) sources ==>
+  length sources > 0 && L.all (not . null) sources ==>
   let parseResults = map parseTypus sources
       successfulParses = [typusFile | Right typusFile <- parseResults]
-      sourceIRs = map (\f -> buildSourceIR f "") successfulParses
+      sourceIRs = L.map (\f -> buildSourceIR f "") successfulParses
       semanticIRs = map buildSemanticIR successfulParses
       goIRs = map emitGo semanticIRs
-      goCodes = map (\ir -> ir ir) goIRs
+      goCodes = L.map (\ir -> ir ir) goIRs
   in property $ 
-    length goCodes === length successfulParses .&&.
-    all (length > 0) goCodes
+    length goCodes === L.length successfulParses .&&.
+    all (L.length > 0) goCodes
 
 -- Property: Directive processing consistency
 prop_directive_processing_consistency :: String -> String -> Property
 prop_directive_processing_consistency directive content =
-  length directive > 0 && length content > 0 ==>
+  length directive > 0 && L.length content > 0 ==>
   let sourceWithDirective = "//! " ++ directive ++ " = true\n" ++ content
       parseResult = parseTypus sourceWithDirective
   in case parseResult of
@@ -137,20 +139,20 @@ prop_directive_processing_consistency directive content =
 -- Property: Error recovery maintains partial results
 prop_error_recovery_maintains_partial :: String -> String -> Property
 prop_error_recovery_maintains_partial good bad =
-  length good > 0 && length bad > 0 ==>
+  length good > 0 && L.length bad > 0 ==>
   let mixedSource = good ++ "\n@@ SYNTAX ERROR @@\n" ++ bad ++ "\n" ++ good
       parseResult = parseTypus mixedSource
   in case parseResult of
     Left _ -> property True
     Right typusFile -> 
       let blocks = tfBlocks typusFile
-      in property $ length blocks >= 0
+      in property $ L.length blocks >= 0
 
 -- Property: Performance characteristics are bounded
 prop_performance_bounded :: String -> Int -> Property
 prop_performance_bounded baseContent iterations =
   length baseContent > 0 && iterations > 0 && iterations <= 100 ==>
-  let largeSource = concat (replicate iterations baseContent)
+  let largeSource = L.concat (replicate iterations baseContent)
       parseResult = parseTypus largeSource
   in case parseResult of
     Left _ -> property True
@@ -159,12 +161,12 @@ prop_performance_bounded baseContent iterations =
           semanticIR = buildSemanticIR typusFile
           goIR = emitGo semanticIR
           goCode = goIR goIR
-      in property $ length goCode > 0
+      in property $ L.length goCode > 0
 
 -- Property: Cross-module dependency handling
 prop_cross_module_dependencies :: [String] -> [String] -> Property
 prop_cross_module_dependencies moduleNames dependencies =
-  length moduleNames > 0 && all (not . null) moduleNames ==>
+  length moduleNames > 0 && L.all (not . null) moduleNames ==>
   let moduleSources = zipWith (\name deps -> 
         "module " ++ name ++ "\n" ++ 
         concatMap (\dep -> "import " ++ dep ++ "\n") deps) 
@@ -172,13 +174,13 @@ prop_cross_module_dependencies moduleNames dependencies =
       parseResults = map parseTypus moduleSources
       successfulModules = [typusFile | Right typusFile <- parseResults]
   in property $ 
-    length successfulModules <= length moduleNames .&&.
+    length successfulModules <= L.length moduleNames .&&.
     length successfulModules >= 0
 
 -- Property: Type inference consistency
 prop_type_inference_consistency :: String -> String -> Property
 prop_type_inference_consistency varName value =
-  length varName > 0 && length value > 0 ==>
+  length varName > 0 && L.length value > 0 ==>
   let sourceWithVar = "let " ++ varName ++ " = " ++ value
       parseResult = parseTypus sourceWithVar
   in case parseResult of
@@ -201,7 +203,7 @@ prop_optimization_preserves_semantics sourceCode =
           goCode = goIR goIR
       in property $ 
         length goCode > 0 .&&.
-        (goCode `contains` "func" || length (filter (`elem` goCode) "func") == 0)
+        (goCode `contains` "func" || L.length (L.filter (`elem` goCode) "func") == 0)
 
 -- Property: Resource cleanup is consistent
 prop_resource_cleanup_consistent :: String -> Property
@@ -222,7 +224,7 @@ prop_resource_cleanup_consistent sourceCode =
 
 -- Helper function to check string containment
 contains :: String -> String -> Bool
-contains needle haystack = needle `Data.List.isInfixOf` haystack
+contains needle haystack = needle `Data.List.L.isInfixOf` haystack
 
 -- Test collection
 tests :: TestTree

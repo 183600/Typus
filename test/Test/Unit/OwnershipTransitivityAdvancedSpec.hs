@@ -6,7 +6,9 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
-import Data.List (isInfixOf, nub)
+import qualified Data.List as L
+import Data.List (isInfixOf)
+import Data.List (nub)
 
 import Ownership
   ( OwnershipType(..)
@@ -36,7 +38,7 @@ basicTransitivityTests = testGroup "Basic Transitivity Tests"
           analyzer = newOwnershipAnalyzer
           result <- return $ analyzeOwnership analyzer code
       case result of
-        Right (_, transfers) -> length transfers @?= 2
+        Right (_, transfers) -> L.length transfers @?= 2
         Left err -> "Expected successful analysis" @?= show err
         
   , testCase "borrow preserves original ownership" $ do
@@ -56,7 +58,7 @@ basicTransitivityTests = testGroup "Basic Transitivity Tests"
       case result of
         Left errors -> do
           let errorStr = formatOwnershipErrors errors
-          "MutBorrow" `isInfixOf` errorStr @?= True
+          "MutBorrow" `L.isInfixOf` errorStr @?= True
         Right _ -> "Expected borrow conflict error" @?= "Got success"
   ]
 
@@ -68,7 +70,7 @@ borrowTransitivityTests = testGroup "Borrow Transitivity Tests"
           result <- return $ analyzeOwnership analyzer code
       case result of
         Right (ownership, transfers) -> do
-          length transfers @?= 2
+          L.length transfers @?= 2
           ownership `seq` True @?= True
         Left err -> "Expected successful borrow chain" @?= show err
         
@@ -79,7 +81,7 @@ borrowTransitivityTests = testGroup "Borrow Transitivity Tests"
       case result of
         Left errors -> do
           let errorStr = formatOwnershipErrors errors
-          "UseAfterMove" `isInfixOf` errorStr @?= True
+          "UseAfterMove" `L.isInfixOf` errorStr @?= True
         Right _ -> "Expected use after move error" @?= "Got success"
         
   , testCase "multiple immutable borrows allowed" $ do
@@ -88,7 +90,7 @@ borrowTransitivityTests = testGroup "Borrow Transitivity Tests"
           result <- return $ analyzeOwnership analyzer code
       case result of
         Right (ownership, transfers) -> do
-          length transfers @?= 2
+          L.length transfers @?= 2
           ownership `seq` True @?= True
         Left err -> "Multiple immutable borrows should be allowed" @?= show err
   ]
@@ -101,7 +103,7 @@ moveTransitivityTests = testGroup "Move Transitivity Tests"
           result <- return $ analyzeOwnership analyzer code
       case result of
         Right (_, transfers) -> do
-          length transfers @?= 2
+          L.length transfers @?= 2
           let transferList = map transferFrom transfers ++ map transferTo transfers
           nub transferList `seq` True @?= True
         Left err -> "Expected successful move chain" @?= show err
@@ -113,7 +115,7 @@ moveTransitivityTests = testGroup "Move Transitivity Tests"
       case result of
         Left errors -> do
           let errorStr = formatOwnershipErrors errors
-          "DoubleMove" `isInfixOf` errorStr @?= True
+          "DoubleMove" `L.isInfixOf` errorStr @?= True
         Right _ -> "Expected double move error" @?= "Got success"
         
   , testCase "move after borrow fails" $ do
@@ -123,7 +125,7 @@ moveTransitivityTests = testGroup "Move Transitivity Tests"
       case result of
         Left errors -> do
           let errorStr = formatOwnershipErrors errors
-          "BorrowWhileMoved" `isInfixOf` errorStr @?= True
+          "BorrowWhileMoved" `L.isInfixOf` errorStr @?= True
         Right _ -> "Expected borrow while moved error" @?= "Got success"
   ]
 
@@ -140,7 +142,7 @@ complexTransitivityTests = testGroup "Complex Transitivity Tests"
           result <- return $ analyzeOwnership analyzer code
       case result of
         Right (ownership, transfers) -> do
-          length transfers @?= 3
+          L.length transfers @?= 3
           ownership `seq` True @?= True
         Left err -> "Should handle complex nested patterns" @?= show err
         
@@ -156,7 +158,7 @@ complexTransitivityTests = testGroup "Complex Transitivity Tests"
           result <- return $ analyzeOwnership analyzer code
       case result of
         Right (ownership, transfers) -> do
-          length transfers @?= 2
+          L.length transfers @?= 2
           ownership `seq` True @?= True
         Left err -> "Should handle cross-function transfers" @?= show err
         
@@ -172,7 +174,7 @@ complexTransitivityTests = testGroup "Complex Transitivity Tests"
           result <- return $ analyzeOwnership analyzer code
       case result of
         Right (ownership, transfers) -> do
-          length transfers @?= 20  -- 10 iterations * 2 transfers each
+          L.length transfers @?= 20  -- 10 iterations * 2 transfers each
           ownership `seq` True @?= True
         Left err -> "Should handle loop ownership" @?= show err
   ]
@@ -186,8 +188,8 @@ errorPropagationTests = testGroup "Error Propagation Tests"
       case result of
         Left errors -> do
           let errorStr = formatOwnershipErrors errors
-          "DoubleMove" `isInfixOf` errorStr @?= True
-          length errors @?= 1  -- Should detect the root cause
+          "DoubleMove" `L.isInfixOf` errorStr @?= True
+          L.length errors @?= 1  -- Should detect the root cause
         Right _ -> "Expected error propagation" @?= "Got success"
         
   , testCase "borrow conflicts detected early" $ do
@@ -197,7 +199,7 @@ errorPropagationTests = testGroup "Error Propagation Tests"
       case result of
         Left errors -> do
           let errorStr = formatOwnershipErrors errors
-          "MultipleMutBorrows" `isInfixOf` errorStr @?= True
+          "MultipleMutBorrows" `L.isInfixOf` errorStr @?= True
         Right _ -> "Expected multiple mutable borrow error" @?= "Got success"
         
   , testCase "path-sensitive ownership errors" $ do
@@ -228,7 +230,7 @@ quickCheckProperties = testGroup "QuickCheck Transitivity Properties"
 prop_transfers_acyclic :: [OwnershipTransfer] -> Property
 prop_transfers_acyclic transfers =
   let hasCycle transfer = transferFrom transfer == transferTo transfer
-  in not (any hasCycle transfers) ==> property True
+  in not (L.any hasCycle transfers) ==> property True
 
 prop_borrow_chain_preserves :: String -> Property
 prop_borrow_chain_preserves ownerName =
@@ -242,6 +244,6 @@ prop_borrow_chain_preserves ownerName =
 prop_move_chain_unique :: [String] -> Property
 prop_move_chain_unique names =
   let uniqueNames = nub names
-      transfers = zipWith OwnershipTransfer uniqueNames (tail uniqueNames ++ [""])
-  in length uniqueNames > 1 ==> 
-     all (\t -> transferFrom t /= transferTo t) transfers ==> property True
+      transfers = zipWith OwnershipTransfer uniqueNames (L.tail uniqueNames ++ [""])
+  in L.length uniqueNames > 1 ==> 
+     L.all (\t -> transferFrom t /= transferTo t) transfers ==> property True

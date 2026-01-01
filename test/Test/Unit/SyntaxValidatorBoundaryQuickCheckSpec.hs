@@ -3,6 +3,7 @@
 module Test.Unit.SyntaxValidatorBoundaryQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), (==>), suchThat)
 import Test.Tasty.HUnit (testCase, assertBool)
 
@@ -58,7 +59,7 @@ genValidVariable = do
 genInvalidVariable :: Gen String
 genInvalidVariable = oneof
   [ elements ["", "1var", "var!", "var space", "var@"]  -- Invalid starts/characters
-  , listOf $ elements [' '..']  -- Control characters and spaces
+  , listOf $ elements [' '..']  -- Control characters L.and spaces
   ]
 
 -- Generate deeply nested structures
@@ -78,9 +79,9 @@ mockValidateVariable :: String -> MockValidationResult
 mockValidateVariable var = 
   if null var
   then MockInvalid [MockValidationError "Empty variable name" (MockVariable var)]
-  else if not (isValidVarStart (head var))
+  else if not (isValidVarStart (L.head var))
        then MockInvalid [MockValidationError "Invalid variable start" (MockVariable var)]
-       else if any (not . isValidVarChar) (tail var)
+       else if L.any (not . isValidVarChar) (L.tail var)
             then MockInvalid [MockValidationError "Invalid variable character" (MockVariable var)]
             else MockValid
   where
@@ -104,7 +105,7 @@ mockValidateElement :: MockSyntaxElement -> MockValidationResult
 mockValidateElement element = 
   case element of
     MockVariable var -> mockValidateVariable var
-    MockLiteral _ -> MockValid  -- Assume all literals are valid
+    MockLiteral _ -> MockValid  -- Assume L.all literals are valid
     MockFunction name args -> mockValidateFunction name args
 
 mockValidateWithContext :: MockSyntaxElement -> MockValidationContext -> MockValidationResult
@@ -130,7 +131,7 @@ mockCheckDepth element maxDepth =
     calculateDepth (MockVariable _) = 1
     calculateDepth (MockLiteral _) = 1
     calculateDepth (MockFunction _ args) = 
-      1 + (if null args then 0 else maximum $ map calculateDepth args)
+      1 + (if null args then 0 else L.maximum $ map calculateDepth args)
 
 mockValidateAll :: [MockSyntaxElement] -> MockValidationResult
 mockValidateAll elements = 
@@ -169,7 +170,7 @@ prop_emptyVariableFails =
     MockValid -> property False
     MockInvalid _ -> property True
 
--- Property: Function with valid name and args validates
+-- Property: Function with valid name L.and args validates
 prop_functionWithValidArgs :: Property
 prop_functionWithValidArgs = 
   forAll genValidVariable $ \name ->
@@ -216,7 +217,7 @@ prop_multipleElementsAggregateErrors elements =
       individualErrors = concatMap extractErrors individualResults
       combinedResult = mockValidateAll elements
       combinedErrors = extractErrors combinedResult
-  in length individualErrors === length combinedErrors
+  in L.length individualErrors === L.length combinedErrors
   where
     extractErrors MockValid = []
     extractErrors (MockInvalid errs) = errs
@@ -230,7 +231,7 @@ tests = testGroup "Syntax Validator Boundary QuickCheck Tests"
   [ testProperty "Valid variables always validate" prop_validVariablesValidate
   , testProperty "Invalid variables fail validation" prop_invalidVariablesFail
   , testProperty "Empty variable name fails validation" prop_emptyVariableFails
-  , testProperty "Function with valid name and args validates" prop_functionWithValidArgs
+  , testProperty "Function with valid name L.and args validates" prop_functionWithValidArgs
   , testProperty "Validation is deterministic" prop_validationDeterministic
   , testProperty "Context validation respects defined variables" prop_contextRespectsVariables
   , testProperty "Depth checking limits nesting" prop depthCheckingLimitsNesting

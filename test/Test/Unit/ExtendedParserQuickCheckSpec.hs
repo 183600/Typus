@@ -3,6 +3,7 @@
 module Test.Unit.ExtendedParserQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import TestSupport.Arbitrary ()
 import Test.QuickCheck (Property, (==>), counterexample, property)
@@ -17,7 +18,7 @@ import Data.Maybe (isJust)
 -- Property: Parsing is idempotent - parsing a parsed file's reconstruction yields same structure
 prop_parse_idempotent :: TypusFile -> Property
 prop_parse_idempotent typusFile = 
-  null (tfSyntaxErrors typusFile) && 
+  L.null (tfSyntaxErrors typusFile) && 
   (hasOwnershipDirective typusFile || hasDependentTypesDirective typusFile || hasCodeBlocks typusFile) ==>
   let reconstructed = reconstructTypusFile typusFile
   in case parseTypus reconstructed of
@@ -30,11 +31,11 @@ prop_parse_idempotent typusFile =
 -- Property: Directive order preservation
 prop_parse_directive_order_preservation :: [String] -> Property
 prop_parse_directive_order_preservation directives =
-  not (null directives) && length directives <= 10 ==>
+  not (null directives) && L.length directives <= 10 ==>
   let validDirectives = ["//! ownership: on", "//! ownership: off", 
                         "//! dependent_types: on", "//! dependent_types: off",
                         "//! constraints: on", "//! constraints: off"]
-      selectedDirectives = take (length directives `mod` 6 + 1) 
+      selectedDirectives = take (L.length directives `mod` 6 + 1) 
                               (cycle validDirectives)
       content = Data.List.unlines selectedDirectives
   in case parseTypus content of
@@ -44,7 +45,7 @@ prop_parse_directive_order_preservation directives =
 -- Property: Whitespace insensitivity for directives
 prop_parse_directive_whitespace_insensitive :: String -> String -> String -> Property
 prop_parse_directive_whitespace_insensitive before middle after =
-  all (\s -> not ("//!" `Data.List.isInfixOf` s) && not ("\n" `Data.List.isInfixOf` s)) [before, middle, after] ==>
+  L.all (\s -> not ("//!" `Data.List.L.isInfixOf` s) && not ("\n" `Data.List.L.isInfixOf` s)) [before, middle, after] ==>
   let safeBefore = if null before then " " else before
       safeMiddle = if null middle then " " else middle
       safeAfter = if null after then " " else after
@@ -66,13 +67,13 @@ prop_parse_directive_case_sensitivity =
 -- Property: Comment preservation in code blocks
 prop_parse_comment_preservation :: [String] -> Property
 prop_parse_comment_preservation comments =
-  let commentLines = map ("// " ++) comments
+  let commentLines = L.map ("// " ++) comments
       content = Data.List.unlines $ ["//! ownership: on", "package main"] ++ commentLines ++ ["func main() {}"]
   in case parseTypus content of
     Left err -> counterexample ("Parse error with comments: " ++ err) $ property False
     Right parsed -> property $ hasCodeBlocks parsed
 
--- Property: Tab and space mixing handling
+-- Property: Tab L.and space mixing handling
 prop_parse_tab_space_mixing :: [String] -> Property
 prop_parse_tab_space_mixing lines =
   not (null lines) ==>
@@ -92,23 +93,23 @@ prop_parse_empty_lines_preservation numBlocks numEmptyLines =
       content = Data.List.unlines $ ["//! ownership: on", "package main"] ++ blocks
   in case parseTypus content of
     Left err -> counterexample ("Parse error with empty lines: " ++ err) $ property False
-    Right parsed -> property $ length (tfBlocks parsed) >= numBlocks
+    Right parsed -> property $ L.length (tfBlocks parsed) >= numBlocks
 
 -- Property: Special Unicode characters in identifiers
 prop_parse_unicode_identifiers :: [String] -> Property
 prop_parse_unicode_identifiers identifiers =
-  let unicodeIdentifiers = map (++ "变量") identifiers
+  let unicodeIdentifiers = L.map (++ "变量") identifiers
       content = Data.List.unlines $ ["//! ownership: on", "package main"] ++
-                        map (\id -> "var " ++ id ++ " int = 42") unicodeIdentifiers
+                        L.map (\id -> "var " ++ id ++ " int = 42") unicodeIdentifiers
   in case parseTypus content of
     Left err -> counterexample ("Parse error with Unicode identifiers: " ++ err) $ property False
     Right parsed -> property $ hasCodeBlocks parsed
 
 -- Property: Extremely long identifiers
 prop_parse_long_identifiers :: Int -> Property
-prop_parse_long_identifiers length =
-  length > 0 && length <= 100 ==>
-  let longIdentifier = replicate length 'x'
+prop_parse_long_identifiers L.length =
+  L.length > 0 && L.length <= 100 ==>
+  let longIdentifier = replicate L.length 'x'
       content = "//! ownership: on\npackage main\nvar " ++ longIdentifier ++ " int = 42"
   in case parseTypus content of
     Left err -> counterexample ("Parse error with long identifier: " ++ err) $ property False
@@ -117,9 +118,9 @@ prop_parse_long_identifiers length =
 -- Property: Numeric literals with different bases
 prop_parse_numeric_base_literals :: [Int] -> [Int] -> [Int] -> Property
 prop_parse_numeric_base_literals decimals octals hexadecimals =
-  let decimalVars = map (\i -> "var dec" ++ show i ++ " int = " ++ show i) decimals
-      octalVars = map (\i -> "var oct" ++ show i ++ " int = 0o" ++ show (i `mod` 100)) octals
-      hexVars = map (\i -> "var hex" ++ show i ++ " int = 0x" ++ show (i `mod` 255)) hexadecimals
+  let decimalVars = L.map (\i -> "var dec" ++ show i ++ " int = " ++ show i) decimals
+      octalVars = L.map (\i -> "var oct" ++ show i ++ " int = 0o" ++ show (i `mod` 100)) octals
+      hexVars = L.map (\i -> "var hex" ++ show i ++ " int = 0x" ++ show (i `mod` 255)) hexadecimals
       content = Data.List.unlines $ ["//! ownership: on", "package main"] ++ 
                         decimalVars ++ octalVars ++ hexVars ++ ["func main() {}"]
   in case parseTypus content of
@@ -129,7 +130,7 @@ prop_parse_numeric_base_literals decimals octals hexadecimals =
 -- Property: Floating point literals with scientific notation
 prop_parse_float_scientificnotation :: [Double] -> Property
 prop_parse_float_scientificnotation floats =
-  let floatVars = map (\(i, f) -> "var float" ++ show i ++ " float64 = " ++ 
+  let floatVars = L.map (\(i, f) -> "var float" ++ show i ++ " float64 = " ++ 
                       show f ++ "e" ++ show (i `mod` 3 + 1)) (zip [0..] floats)
       content = Data.List.unlines $ ["//! ownership: on", "package main"] ++ floatVars ++ ["func main() {}"]
   in case parseTypus content of
@@ -140,9 +141,9 @@ prop_parse_float_scientificnotation floats =
 prop_parse_string_escape_sequences :: [String] -> Property
 prop_parse_string_escape_sequences strings =
   let escapeSequences = ["\n", "\t", "\r", "\\", "\"", "'", "\x41", "\4660"]
-      stringsWithEscapes = map (\s -> s ++ concat escapeSequences) strings
+      stringsWithEscapes = L.map (\s -> s ++ L.concat escapeSequences) strings
       content = Data.List.unlines $ ["//! ownership: on", "package main"] ++
-                        map (\s -> "var str string = \"" ++ s ++ "\"") stringsWithEscapes ++
+                        L.map (\s -> "var str string = \"" ++ s ++ "\"") stringsWithEscapes ++
                         ["func main() {}"]
   in case parseTypus content of
     Left err -> counterexample ("Parse error with escape sequences: " ++ err) $ property False
@@ -151,9 +152,9 @@ prop_parse_string_escape_sequences strings =
 -- Property: Raw string literals
 prop_parse_raw_string_literals :: [String] -> Property
 prop_parse_raw_string_literals strings =
-  let rawStrings = map (\s -> "`" ++ s ++ "`") strings
+  let rawStrings = L.map (\s -> "`" ++ s ++ "`") strings
       content = Data.List.unlines $ ["//! ownership: on", "package main"] ++
-                        map (\s -> "var raw string = " ++ s) rawStrings ++
+                        L.map (\s -> "var raw string = " ++ s) rawStrings ++
                         ["func main() {}"]
   in case parseTypus content of
     Left err -> counterexample ("Parse error with raw strings: " ++ err) $ property False
@@ -214,11 +215,11 @@ prop_parse_complex_function_signatures funcNames paramNames paramTypes returnTyp
     Left err -> counterexample ("Parse error with complex function signatures: " ++ err) $ property False
     Right parsed -> property $ hasCodeBlocks parsed
 
--- Property: Method declarations with value and pointer receivers
+-- Property: Method declarations with value L.and pointer receivers
 prop_parse_method_declarations :: [String] -> [String] -> [String] -> Bool -> Property
 prop_parse_method_declarations structNames methodNames paramTypes isPointerReceiver =
   not (null structNames) && not (null methodNames) && not (null paramTypes) ==>
-  let maxMethods = min 10 (minimum [length structNames, length methodNames, length paramTypes])
+  let maxMethods = min 10 (L.minimum [L.length structNames, L.length methodNames, L.length paramTypes])
       methods = take maxMethods $ zipWith3 (\sName mName pType -> 
         let receiverType = if isPointerReceiver then "*" ++ sName else sName
         in "func (" ++ receiverType ++ ") " ++ mName ++ "(" ++ pType ++ ") error {\n  return nil\n}") 
@@ -242,8 +243,8 @@ prop_parse_anonymous_functions paramTypes returnTypes =
 -- Property: Closure expressions with captured variables
 prop_parse_closure_expressions :: [String] -> Property
 prop_parse_closure_expressions variableNames =
-  let variables = map (\vName -> "var " ++ vName ++ " int = 42") variableNames
-      closures = map (\vName -> "closure := func() int { return " ++ vName ++ " }") variableNames
+  let variables = L.map (\vName -> "var " ++ vName ++ " int = 42") variableNames
+      closures = L.map (\vName -> "closure := func() int { return " ++ vName ++ " }") variableNames
       content = Data.List.unlines $ ["//! ownership: on", "package main", "func main() {"] ++
                         variables ++ closures ++ ["}"]
   in case parseTypus content of
@@ -267,7 +268,7 @@ prop_parse_complex_select_statements :: Int -> Int -> Property
 prop_parse_complex_select_statements numCases numChannels =
   numCases > 0 && numCases <= 10 && numChannels > 0 && numChannels <= 5 ==>
   let channels = ["ch" ++ show i | i <- [1..numChannels]]
-      channelDecls = map (\c -> "var " ++ c ++ " chan int") channels
+      channelDecls = L.map (\c -> "var " ++ c ++ " chan int") channels
       selectCases = take numCases $ cycle [
         "case <-ch1:\n  fmt.Println(\"received from ch1\")",
         "case ch2 <- 42:\n  fmt.Println(\"sent to ch2\")",
@@ -285,7 +286,7 @@ prop_parse_go_statements funcNames paramTypes =
   let funcDecls = zipWith (\fName pType -> 
         "func " ++ fName ++ "(" ++ pType ++ ") {\n  fmt.Println(\"Running " ++ fName ++ "\")\n}") 
         funcNames paramTypes
-      goCalls = map (\fName -> "go " ++ fName ++ "(42)") funcNames
+      goCalls = L.map (\fName -> "go " ++ fName ++ "(42)") funcNames
       content = Data.List.unlines $ ["//! ownership: on", "package main"] ++ funcDecls ++
                         ["func main() {"] ++ goCalls ++ ["}"]
   in case parseTypus content of
@@ -298,17 +299,17 @@ prop_parse_defer_statements funcNames paramTypes =
   let funcDecls = zipWith (\fName pType -> 
         "func " ++ fName ++ "(" ++ pType ++ ") {\n  fmt.Println(\"Cleaning up " ++ fName ++ "\")\n}") 
         funcNames paramTypes
-      deferCalls = map (\fName -> "defer " ++ fName ++ "(42)") funcNames
+      deferCalls = L.map (\fName -> "defer " ++ fName ++ "(42)") funcNames
       content = Data.List.unlines $ ["//! ownership: on", "package main"] ++ funcDecls ++
                         ["func main() {"] ++ deferCalls ++ ["}"]
   in case parseTypus content of
     Left err -> counterexample ("Parse error with defer statements: " ++ err) $ property False
     Right parsed -> property $ hasCodeBlocks parsed
 
--- Property: Panic and recover statements
+-- Property: Panic L.and recover statements
 prop_parse_panic_recover_statements :: [String] -> Property
 prop_parse_panic_recover_statements panicMessages =
-  let panics = map (\msg -> "panic(\"" ++ msg ++ "\")") panicMessages
+  let panics = L.map (\msg -> "panic(\"" ++ msg ++ "\")") panicMessages
       recoverFunc = "func recoverTest() {\n  defer func() {\n    if r := recover(); r != nil {\n      fmt.Println(\"Recovered:\", r)\n    }\n  }()\n  panic(\"test panic\")\n}"
       content = Data.List.unlines $ ["//! ownership: on", "package main"] ++ panics ++ [recoverFunc, "func main() {}"]
   in case parseTypus content of
@@ -353,7 +354,7 @@ hasDependentTypesDirective :: TypusFile -> Bool
 hasDependentTypesDirective file = isJust $ fdDependentTypes $ tfDirectives file
 
 hasCodeBlocks :: TypusFile -> Bool
-hasCodeBlocks file = not $ null $ tfBlocks file
+hasCodeBlocks file = not $ L.null $ tfBlocks file
 
 generateNestedExpression :: Int -> String
 generateNestedExpression 0 = "42"
@@ -374,7 +375,7 @@ tests = testGroup "Extended Parser QuickCheck Tests"
   , fastProperty "Directive whitespace insensitive" prop_parse_directive_whitespace_insensitive
   , fastProperty "Directive case sensitivity" prop_parse_directive_case_sensitivity
   , fastProperty "Comment preservation" prop_parse_comment_preservation
-  , fastProperty "Tab and space mixing" prop_parse_tab_space_mixing
+  , fastProperty "Tab L.and space mixing" prop_parse_tab_space_mixing
   , fastProperty "Empty lines preservation" prop_parse_empty_lines_preservation
   , fastProperty "Unicode identifiers" prop_parse_unicode_identifiers
   , fastProperty "Long identifiers" prop_parse_long_identifiers
@@ -394,5 +395,5 @@ tests = testGroup "Extended Parser QuickCheck Tests"
   , fastProperty "Complex select statements" prop_parse_complex_select_statements
   , fastProperty "Go statements" prop_parse_go_statements
   , fastProperty "Defer statements" prop_parse_defer_statements
-  , fastProperty "Panic and recover statements" prop_parse_panic_recover_statements
+  , fastProperty "Panic L.and recover statements" prop_parse_panic_recover_statements
   ]

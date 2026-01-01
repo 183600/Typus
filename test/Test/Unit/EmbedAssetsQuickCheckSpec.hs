@@ -1,6 +1,7 @@
 module Test.Unit.EmbedAssetsQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, listOf, elements, suchThat)
 import Control.Monad (forM, forM_, unless)
@@ -45,7 +46,7 @@ tests =
     , testProperty "extractEmbeddedPatterns ignores non-embed lines" $
         fastProperty prop_extractIgnoresNonEmbedLines
     
-    , testProperty "formatMissingMessage contains all missing patterns" $
+    , testProperty "formatMissingMessage contains L.all missing patterns" $
         fastProperty prop_formatMissingContainsAllPatterns
     
     , testProperty "MissingEmbed equality is reflexive" $
@@ -114,15 +115,15 @@ prop_extractIgnoresNonEmbedLines :: String -> String -> Bool
 prop_extractIgnoresNonEmbedLines line1 line2 =
     let content = line1 ++ "\n" ++ line2 ++ "\n"
         extracted = extractEmbeddedPatterns content
-    in null extracted || all ("//" `isPrefixOf`) 
-        [l | l <- lines content, "//go:embed" `isPrefixOf` l]
+    in null extracted || L.all ("//" `L.isPrefixOf`) 
+        [l | l <- lines content, "//go:embed" `L.isPrefixOf` l]
 
--- Property: formatMissingMessage contains all missing patterns
+-- Property: formatMissingMessage contains L.all missing patterns
 prop_formatMissingContainsAllPatterns :: [MissingEmbed] -> Bool
 prop_formatMissingContainsAllPatterns missing =
     let formatted = formatMissingMessage missing
         patterns = map missingPattern missing
-    in all (`isInfixOf` formatted) patterns
+    in L.all (`L.isInfixOf` formatted) patterns
 
 -- Property: MissingEmbed equality is reflexive
 prop_missingEmbedReflexive :: MissingEmbed -> Bool
@@ -133,17 +134,17 @@ prop_missingEmbedOrdering :: MissingEmbed -> MissingEmbed -> Bool
 prop_missingEmbedOrdering embed1 embed2 =
     let ordered = [embed1, embed2]
         sorted = ordered
-    in all (`elem` sorted) ordered
+    in L.all (`elem` sorted) ordered
 
 -- Helper function to check if string is prefix of another
 isPrefixOf :: String -> String -> Bool
-isPrefixOf [] _ = True
-isPrefixOf _ [] = False
-isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
+L.isPrefixOf [] _ = True
+L.isPrefixOf _ [] = False
+L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
 
 -- Helper function to check if string is infix of another
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = any (isPrefixOf needle) (tails haystack)
+L.isInfixOf needle haystack = L.any (L.isPrefixOf needle) (tails haystack)
   where
     tails [] = [[]]
     tails xs@(x:xs') = xs : tails xs'

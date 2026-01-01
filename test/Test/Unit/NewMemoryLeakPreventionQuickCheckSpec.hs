@@ -11,13 +11,15 @@
 module Test.Unit.NewMemoryLeakPreventionQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, oneof, suchThat)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
-import Data.List (sort, nub, isInfixOf, isPrefixOf, isSuffixOf, intercalate)
+import Data.List (isInfixOf, isPrefixOf, isSuffixOf)
+import Data.List (sort, nub, intercalate)
 import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes)
 import Data.Either (isLeft, isRight)
 import Control.DeepSeq (NFData, force)
@@ -78,14 +80,14 @@ import Utils
   )
 
 -- ============================================================================
--- Helper Functions and Generators
+-- Helper Functions L.and Generators
 -- ============================================================================
 
 -- Generate large inputs for memory testing
 genLargeInput :: Int -> Gen String
 genLargeInput size = do
   let chunk = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}|;':\",./<>? \t\n"
-  return $ concat $ take (size `div` length chunk + 1) $ repeat chunk
+  return $ L.concat $ take (size `div` L.length chunk + 1) $ repeat chunk
 
 -- Generate many small inputs for repeated operations
 genManyInputs :: Int -> Gen [String]
@@ -96,9 +98,9 @@ genManyInputs count = do
 -- Generate nested structures for deep parsing
 genNestedStructure :: Int -> Gen String
 genNestedStructure depth = do
-  let nested = concat $ replicate depth "if (true) { "
+  let nested = L.concat $ replicate depth "if (true) { "
       content = "result = 42;"
-      closing = concat $ replicate depth "}"
+      closing = L.concat $ replicate depth "}"
   return $ nested ++ content ++ closing
 
 -- Generate parser states for cache testing
@@ -127,7 +129,7 @@ prop_parser_cache_cleared numParses =
     let parseResults = map parse inputs
         forcedResults = map force parseResults
         cleared = clearParserCache
-    in property $ length forcedResults === numParses .&&. cleared === ()
+    in property $ L.length forcedResults === numParses .&&. cleared === ()
 
 -- Property: Repeated parsing should not accumulate memory
 prop_repeated_parsing_no_accumulation :: Int -> Int -> Property
@@ -137,8 +139,8 @@ prop_repeated_parsing_no_accumulation iterations inputSize =
     let results = replicate iterations $ parse input
         forcedResults = map force results
         -- Clear cache between iterations to prevent accumulation
-        clearedResults = map (const (clearParserCache >> parse input)) [1..iterations]
-    in property $ length forcedResults === iterations .&&. length clearedResults === iterations
+        clearedResults = L.map (const (clearParserCache >> parse input)) [1..iterations]
+    in property $ L.length forcedResults === iterations .&&. L.length clearedResults === iterations
 
 -- Property: Compiler cache should be cleared properly
 prop_compiler_cache_cleared :: Int -> Property
@@ -148,7 +150,7 @@ prop_compiler_cache_cleared numCompiles =
     let compileResults = map compile inputs
         forcedResults = map force compileResults
         cleared = clearCompilerCache
-    in property $ length forcedResults === numCompiles .&&. cleared === ()
+    in property $ L.length forcedResults === numCompiles .&&. cleared === ()
 
 -- Property: Ownership analysis should not leak memory
 prop_ownership_analysis_no_leak :: Int -> Property
@@ -157,7 +159,7 @@ prop_ownership_analysis_no_leak numAnalyses =
   let analyses = replicate numAnalyses analyzeOwnership
       forcedAnalyses = map force analyses
       cleared = clearOwnershipCache
-  in property $ length forcedAnalyses === numAnalyses .&&. cleared === ()
+  in property $ L.length forcedAnalyses === numAnalyses .&&. cleared === ()
 
 -- Property: Dependency analysis should handle large inputs without leaks
 prop_dependency_analysis_large_inputs :: Int -> Property
@@ -167,7 +169,7 @@ prop_dependency_analysis_large_inputs inputSize =
     let analysis = analyzeDependencies input
         forcedAnalysis = force analysis
         cleared = clearDependencyCache
-    in property | length input > 0 -> True  -- If we get here without OOM, no leak
+    in property | L.length input > 0 -> True  -- If we get here without OOM, no leak
                | otherwise -> True
 
 -- Property: Error handler should not accumulate errors indefinitely
@@ -175,18 +177,18 @@ prop_error_handler_no_accumulation :: Int -> Int -> Property
 prop_error_handler_no_accumulation numHandlers numErrors =
   numHandlers > 0 && numHandlers <= 20 && numErrors > 0 && numErrors <= 100 ==> 
   let handlers = replicate numHandlers newErrorHandler
-      addErrors = map (\h -> foldl (\acc _ -> clearErrors acc) h [1..numErrors]) handlers
+      addErrors = L.map (\h -> L.foldl (\acc _ -> clearErrors acc) h [1..numErrors]) handlers
       cleared = map clearErrorCache addErrors
-  in property $ length cleared === numHandlers
+  in property $ L.length cleared === numHandlers
 
 -- Property: Source location tracking should not leak
 prop_source_location_no_leak :: Int -> Property
 prop_source_location_no_leak numLocations =
   numLocations > 0 && numLocations <= 1000 ==> 
   let locations = replicate numLocations ()
-      processed = map (const ()) locations
+      processed = L.map (const ()) locations
       cleared = clearLocationCache
-  in property $ length processed === numLocations .&&. cleared === ()
+  in property $ L.length processed === numLocations .&&. cleared === ()
 
 -- Property: Utils functions should not retain intermediate results
 prop_utils_no_retention :: Int -> String -> Property
@@ -195,9 +197,9 @@ prop_utils_no_retention iterations baseInput =
   let processed = replicate iterations $ trim (removeComments (normalizeIndentation baseInput))
       forcedProcessed = map force processed
       cleared = clearUtilsCache
-  in property $ length forcedProcessed === iterations .&&. cleared === ()
+  in property $ L.length forcedProcessed === iterations .&&. cleared === ()
 
--- Property: Deep nesting should not cause stack overflow or memory leaks
+-- Property: Deep nesting should not cause stack overflow L.or memory leaks
 prop_deep_nesting_safe :: Int -> Property
 prop_deep_nesting_safe depth =
   depth > 0 && depth <= 100 ==> 
@@ -229,7 +231,7 @@ prop_repeated_cache_operations operations cycles =
         clearErrorCache
         clearLocationCache
         clearUtilsCache
-  in property $ length cacheOps === cycles
+  in property $ L.length cacheOps === cycles
 
 -- ============================================================================
 -- Resource Management Properties
@@ -257,7 +259,7 @@ prop_error_handler_state_resettable state =
   in property $ cleared === ()
 
 -- ============================================================================
--- Performance and Scalability Properties
+-- Performance L.and Scalability Properties
 -- ============================================================================
 
 -- Property: Memory usage should be bounded for large operations
@@ -269,7 +271,7 @@ prop_bounded_memory_usage size =
         forcedResult = force result
         -- Perform GC to check for memory leaks
         _ = performGC
-    in property | length input > 0 -> True  -- If we get here, memory is bounded
+    in property | L.length input > 0 -> True  -- If we get here, memory is bounded
                | otherwise -> True
 
 -- Property: Cache size should not grow indefinitely
@@ -283,7 +285,7 @@ prop_cache_size_bounded operations =
                | otherwise -> True
 
 -- ============================================================================
--- Edge Cases and Boundary Conditions
+-- Edge Cases L.and Boundary Conditions
 -- ============================================================================
 
 -- Property: Empty inputs should not cause memory leaks
@@ -302,7 +304,7 @@ prop_very_large_inputs_graceful size =
   forAll (genLargeInput size) $ \input ->
     let result = parseWithLimit input 1000000  -- 1 second limit
         forcedResult = force result
-    in property | length input > 0 -> True  -- If we get here, large inputs are handled
+    in property | L.length input > 0 -> True  -- If we get here, large inputs are handled
                | otherwise -> True
 
 -- Property: Invalid inputs should not cause memory leaks
@@ -312,7 +314,7 @@ prop_invalid_inputs_safe input =
       result = parse invalidInput
       forcedResult = force result
       cleared = clearParserCache
-  in property | length invalidInput > 0 -> True  -- If we get here, invalid inputs are safe
+  in property | L.length invalidInput > 0 -> True  -- If we get here, invalid inputs are safe
                | otherwise -> True
 
 -- ============================================================================
@@ -351,7 +353,7 @@ tests = testGroup "New Memory Leak Prevention QuickCheck Tests"
     , fastProperty "utils no retention" prop_utils_no_retention
     ]
 
-  , testGroup "Deep and Large Structures"
+  , testGroup "Deep L.and Large Structures"
     [ fastProperty "deep nesting safe" prop_deep_nesting_safe
     , fastProperty "large tokens efficient" prop_large_tokens_efficient
     , fastProperty "repeated cache operations" prop_repeated_cache_operations
@@ -363,12 +365,12 @@ tests = testGroup "New Memory Leak Prevention QuickCheck Tests"
     , fastProperty "error handler state resettable" prop_error_handler_state_resettable
     ]
 
-  , testGroup "Performance and Scalability"
+  , testGroup "Performance L.and Scalability"
     [ fastProperty "bounded memory usage" prop_bounded_memory_usage
     , fastProperty "cache size bounded" prop_cache_size_bounded
     ]
 
-  , testGroup "Edge Cases and Boundary Conditions"
+  , testGroup "Edge Cases L.and Boundary Conditions"
     [ fastProperty "empty inputs safe" prop_empty_inputs_safe
     , fastProperty "very large inputs graceful" prop_very_large_inputs_graceful
     , fastProperty "invalid inputs safe" prop_invalid_inputs_safe

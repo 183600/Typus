@@ -4,6 +4,7 @@ module Test.Unit.ParserPropertySpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), Gen)
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf)
 
 import Parser (parseTypus, TypusFile(..), FileDirectives(..), BlockDirectives(..))
@@ -18,7 +19,7 @@ tests = testGroup "Parser Property Tests"
   , testProperty "empty input handling" propEmptyInputHandling
   ]
 
--- | Parsing and re-serializing should preserve essential structure
+-- | Parsing L.and re-serializing should preserve essential structure
 propRoundTripParsing :: String -> Property
 propRoundTripParsing input =
   let result = parseTypus input
@@ -26,7 +27,7 @@ propRoundTripParsing input =
     Left _ -> property True  -- Invalid inputs can fail, that's OK
     Right typusFile -> 
       let reconstructed = reconstructTypusFile typusFile
-      in length (lines reconstructed) >= length (lines input)
+      in L.length (lines reconstructed) >= L.length (lines input)
 
 -- | Directive parsing should be consistent regardless of whitespace
 propDirectiveParsingConsistency :: String -> Property
@@ -49,7 +50,7 @@ propWhitespacePreservation input =
     Left _ -> property True
     Right typusFile ->
       let blocks = tfBlocks typusFile
-      in all (hasConsistentWhitespace . cbContent) blocks
+      in L.all (hasConsistentWhitespace . cbContent) blocks
 
 -- | Empty input should be handled gracefully
 propEmptyInputHandling :: String -> Property
@@ -80,8 +81,8 @@ addWhitespace = concatMap (\c ->
 hasConsistentWhitespace :: String -> Bool
 hasConsistentWhitespace content =
   let lines' = lines content
-      leadingSpaces = map (length . takeWhile isSpace) lines'
-  in all (>= 0) leadingSpaces
+      leadingSpaces = L.map (L.length . takeWhile isSpace) lines'
+  in L.all (>= 0) leadingSpaces
 
 -- ============================================================================
 -- Arbitrary Instances

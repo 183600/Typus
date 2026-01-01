@@ -14,6 +14,7 @@ import Text.Megaparsec
 import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 import Data.Char (isAlphaNum, isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 import qualified Data.Text as T
 import Control.Monad (void)
@@ -50,7 +51,7 @@ basicParsingProperties = testGroup "Basic Parsing Properties"
       \input ->
         case parseTypus input of
           Left _ -> True
-          Right result -> length (show result) >= 0
+          Right result -> L.length (show result) >= 0
     
   , testCase "parse simple file directives" $
       let input = "// @ownership: true\n// @dependent-types: false"
@@ -148,7 +149,7 @@ codeBlockProperties = testGroup "Code Block Properties"
             result2 = parseTypus input
         in case (result1, result2) of
           (Left _, Left _) -> True
-          (Right r1, Right r2) -> length (show r1) == length (show r2)
+          (Right r1, Right r2) -> L.length (show r1) == L.length (show r2)
           _ -> False
   ]
 
@@ -160,7 +161,7 @@ fileStructureProperties :: TestTree
 fileStructureProperties = testGroup "File Structure Properties"
   [ testProperty "multiple code blocks are parsed sequentially" $
       \contents ->
-        let blocks = map (\c -> "```typus\n" ++ c ++ "\n```") contents
+        let blocks = L.map (\c -> "```typus\n" ++ c ++ "\n```") contents
             input = unlines blocks
         in case parseTypus input of
           Left _ -> True
@@ -174,7 +175,7 @@ fileStructureProperties = testGroup "File Structure Properties"
           Left _ -> True
           Right result -> True
     
-  , testCase "parse mixed directives and code" $
+  , testCase "parse mixed directives L.and code" $
       let input = "// @ownership: true\n" ++
                  "// @dependent-types: false\n" ++
                  "```typus\n// @constraints: true\nfn test() {}\n```"
@@ -223,7 +224,7 @@ errorHandlingProperties = testGroup "Error Handling Properties"
   , testProperty "parsing errors provide useful information" $
       \input ->
         case parseTypus input of
-          Left err -> not $ null $ errorBundlePretty err
+          Left err -> not $ L.null $ errorBundlePretty err
           Right _ -> True
     
   , testCase "handle empty input gracefully" $
@@ -258,16 +259,16 @@ parserCombinatorProperties = testGroup "Parser Combinator Properties"
             parser3 = string "a"
             choiceParser = parser1 <|> parser2 <|> parser3
         in case parse choiceParser "" input of
-          Right result -> "abc" `isPrefixOf` input || 
-                         "ab" `isPrefixOf` input || 
-                         "a" `isPrefixOf` input
-          Left _ -> not ("a" `isPrefixOf` input)
+          Right result -> "abc" `L.isPrefixOf` input || 
+                         "ab" `L.isPrefixOf` input || 
+                         "a" `L.isPrefixOf` input
+          Left _ -> not ("a" `L.isPrefixOf` input)
     
   , testProperty "many parser is greedy" $
       \input ->
         let parser = many (single 'a')
         in case parse parser "" input of
-          Right result -> length result >= 0
+          Right result -> L.length result >= 0
           Left _ -> True
     
   , testProperty "optional parser provides default value" $
@@ -356,7 +357,7 @@ parseFailed = not . parseSucceeded
 performanceProperties :: TestTree
 performanceProperties = testGroup "Performance Properties"
   [ testProperty "parsing time is reasonable for small inputs" $
-      \input -> length input < 100 ==> 
+      \input -> L.length input < 100 ==> 
         case parseTypus input of
           Left _ -> True
           Right result -> True
@@ -369,10 +370,10 @@ performanceProperties = testGroup "Performance Properties"
           Right result -> True
     
   , testProperty "memory usage is bounded" $
-      \input -> length input < 10000 ==>
+      \input -> L.length input < 10000 ==>
         case parseTypus input of
           Left _ -> True
-          Right result -> length (show result) < length input * 10
+          Right result -> L.length (show result) < L.length input * 10
   ]
 
 -- ============================================================================

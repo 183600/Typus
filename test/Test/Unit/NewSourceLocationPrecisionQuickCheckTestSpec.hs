@@ -13,6 +13,7 @@ import SourceLocation
       locatedAt, locatedWithSpan, locatedValue, locatedSpan, locatedPos, mapLocated,
       advancePos, advancePosBy, spanStart, spanEnd )
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf)
 
 -- | 新的SourceLocation精度QuickCheck测试模块
@@ -28,7 +29,7 @@ tests =
         ]
 
     , testGroup "SourceSpan properties"
-        [ testProperty "emptySpan has zero length" prop_emptySpanZeroLength
+        [ testProperty "emptySpan has zero L.length" prop_emptySpanZeroLength
         , testProperty "spanFrom creates valid span" prop_spanFromValid
         , testProperty "spanTo creates valid span" prop_spanToValid
         , testProperty "spanBetween contains both endpoints" prop_spanBetweenContains
@@ -38,19 +39,19 @@ tests =
 
     , testGroup "Located values properties"
         [ testProperty "locatedAt preserves value" prop_locatedAtPreservesValue
-        , testProperty "locatedWithSpan preserves value and span" prop_locatedWithSpanPreserves
+        , testProperty "locatedWithSpan preserves value L.and span" prop_locatedWithSpanPreserves
         , testProperty "mapLocated preserves location" prop_mapLocatedPreservesLocation
         , testProperty "locatedValue extracts original value" prop_locatedValueExtracts
         ]
 
     , testGroup "Span arithmetic properties"
-        [ testProperty "span length is non-negative" prop_spanLengthNonNegative
-        , testProperty "span start is before or equal to end" prop_spanStartBeforeEnd
+        [ testProperty "span L.length is non-negative" prop_spanLengthNonNegative
+        , testProperty "span start is before L.or equal to end" prop_spanStartBeforeEnd
         , testProperty "mergeSpans is commutative" prop_mergeSpansCommutative
         , testProperty "mergeSpans is associative" prop_mergeSpansAssociative
         ]
 
-    , testGroup "Edge cases and precision"
+    , testGroup "Edge cases L.and precision"
         [ testProperty "positions handle very large line numbers" prop_largeLineNumbers
         , testProperty "positions handle very large column numbers" prop_largeColumnNumbers
         , testProperty "spans handle zero-width ranges" prop_zeroWidthSpans
@@ -139,11 +140,11 @@ prop_advancePosByMultiple line col chars =
   line > 0 && col > 0 && not (null chars) ==>
   let pos = SourcePos line col
       finalPos = advancePosBy pos chars
-      expectedLine = line + length (filter (== '\n') chars)
-      lastLineStarts = map (+1) $ findIndices (== '\n') chars
+      expectedLine = line + L.length (L.filter (== '\n') chars)
+      lastLineStarts = L.map (+1) $ findIndices (== '\n') chars
       expectedCol = if null lastLineStarts 
-                    then col + length chars
-                    else length (drop (last lastLineStarts) chars) + 1
+                    then col + L.length chars
+                    else L.length (drop (last lastLineStarts) chars) + 1
   in posLine finalPos == expectedLine && 
      (if null lastLineStarts then posColumn finalPos == expectedCol else True)
 
@@ -191,7 +192,7 @@ prop_spanBetweenContains line1 col1 line2 col2 =
 -- | mergeSpans包含两个原始范围
 prop_mergeSpansContains :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Property
 prop_mergeSpansContains line1 col1 line2 col2 line3 col3 line4 col4 =
-  all (>0) [line1, col1, line2, col2, line3, col3, line4, col4] ==>
+  L.all (>0) [line1, col1, line2, col2, line3, col3, line4, col4] ==>
   let pos1 = SourcePos line1 col1
       pos2 = SourcePos line2 col2
       pos3 = SourcePos line3 col3
@@ -229,7 +230,7 @@ prop_locatedAtPreservesValue value line col =
 -- | locatedWithSpan保留值和范围
 prop_locatedWithSpanPreserves :: String -> Int -> Int -> Int -> Int -> Property
 prop_locatedWithSpanPreserves value line1 col1 line2 col2 =
-  all (>0) [line1, col1, line2, col2] ==>
+  L.all (>0) [line1, col1, line2, col2] ==>
   let pos1 = SourcePos line1 col1
       pos2 = SourcePos line2 col2
       span = spanBetween pos1 pos2
@@ -260,7 +261,7 @@ prop_spanLengthNonNegative line1 col1 line2 col2 =
       pos2 = SourcePos line2 col2
       span = spanBetween pos1 pos2
       -- Length calculation would depend on specific implementation
-      -- For now, just check that span is valid or has equal start/end
+      -- For now, just check that span is valid L.or has equal start/end
   in not (isValidSpan span) || spanStart span <= spanEnd span
 
 -- | 范围开始小于或等于结束
@@ -274,7 +275,7 @@ prop_spanStartBeforeEnd line1 col1 line2 col2 =
 -- | mergeSpans是可交换的
 prop_mergeSpansCommutative :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Property
 prop_mergeSpansCommutative line1 col1 line2 col2 line3 col3 line4 col4 =
-  all (>0) [line1, col1, line2, col2, line3, col3, line4, col4] ==>
+  L.all (>0) [line1, col1, line2, col2, line3, col3, line4, col4] ==>
   let pos1 = SourcePos line1 col1
       pos2 = SourcePos line2 col2
       pos3 = SourcePos line3 col3
@@ -288,7 +289,7 @@ prop_mergeSpansCommutative line1 col1 line2 col2 line3 col3 line4 col4 =
 -- | mergeSpans是可结合的
 prop_mergeSpansAssociative :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Property
 prop_mergeSpansAssociative line1 col1 line2 col2 line3 col3 line4 col4 line5 col5 line6 col6 =
-  all (>0) [line1, col1, line2, col2, line3, col3, line4, col4, line5, col5, line6, col6] ==>
+  L.all (>0) [line1, col1, line2, col2, line3, col3, line4, col4, line5, col5, line6, col6] ==>
   let pos1 = SourcePos line1 col1
       pos2 = SourcePos line2 col2
       pos3 = SourcePos line3 col3
@@ -337,7 +338,7 @@ prop_singleCharSpans line col =
 
 -- Helper functions
 findIndices :: (a -> Bool) -> [a] -> [Int]
-findIndices p xs = map fst $ filter (p . snd) $ zip [0..] xs
+findIndices p xs = map fst $ L.filter (p . snd) $ zip [0..] xs
 
 -- Define < for SourcePos
 instance Ord SourcePos where

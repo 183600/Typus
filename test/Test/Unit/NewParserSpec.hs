@@ -3,6 +3,7 @@ module Test.Unit.NewParserSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ((@?=), assertBool, assertFailure, testCase)
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import Data.Maybe (isJust)
 
@@ -44,10 +45,10 @@ tests =
         case parseTypus source of
           Left err -> assertFailure $ "parseTypus failed: " ++ err
           Right typusFile -> do
-            assertBool "should have one block" (length (tfBlocks typusFile) == 1)
-            let firstBlock = head (tfBlocks typusFile)
+            assertBool "should have one block" (L.length (tfBlocks typusFile) == 1)
+            let firstBlock = L.head (tfBlocks typusFile)
             cbDirectives firstBlock @?= defaultBlockDirectives
-            assertBool "block contains package declaration" ("package main" `isInfixOf` cbContent firstBlock)
+            assertBool "block contains package declaration" ("package main" `L.isInfixOf` cbContent firstBlock)
 
     , testCase "parses file-level ownership directive" $ do
         let source = unlines
@@ -124,14 +125,14 @@ tests =
           Left err -> assertFailure $ "parseTypus failed: " ++ err
           Right typusFile -> do
             let blocks = tfBlocks typusFile
-                ownershipBlock = filter (\block -> maybe False locatedValue (bdOwnership (cbDirectives block))) blocks
+                ownershipBlock = L.filter (\block -> maybe False locatedValue (bdOwnership (cbDirectives block))) blocks
             case ownershipBlock of
               [] -> assertFailure "expected ownership block"
               (block:_) -> do
                 case bdOwnership (cbDirectives block) of
                   Nothing -> assertFailure "expected ownership directive"
                   Just loc -> locatedValue loc @?= True
-                assertBool "block contains println" ("println(\"hello\")" `isInfixOf` cbContent block)
+                assertBool "block contains println" ("println(\"hello\")" `L.isInfixOf` cbContent block)
 
     , testCase "parses block with multiple directives" $ do
         let source = unlines
@@ -146,7 +147,7 @@ tests =
           Left err -> assertFailure $ "parseTypus failed: " ++ err
           Right typusFile -> do
             let blocks = tfBlocks typusFile
-                directedBlocks = filter (\block -> isJust (bdOwnership (cbDirectives block))) blocks
+                directedBlocks = L.filter (\block -> isJust (bdOwnership (cbDirectives block))) blocks
             case directedBlocks of
               [] -> assertFailure "expected directed block"
               (block:_) -> do
@@ -171,7 +172,7 @@ tests =
           Left err -> assertFailure $ "parseTypus failed: " ++ err
           Right typusFile -> do
             let blocks = tfBlocks typusFile
-                ownershipBlock = filter (\block -> maybe False locatedValue (bdOwnership (cbDirectives block))) blocks
+                ownershipBlock = L.filter (\block -> maybe False locatedValue (bdOwnership (cbDirectives block))) blocks
             case ownershipBlock of
               [] -> assertFailure "expected ownership block"
               (block:_) -> do
@@ -189,7 +190,7 @@ tests =
           Left err -> assertFailure $ "parseTypus failed: " ++ err
           Right typusFile -> do
             let buildTags = tfBuildTags typusFile
-            length buildTags @?= 2
+            L.length buildTags @?= 2
             map locatedValue buildTags @?= ["//go:build ignore", "// +build ignore"]
 
     , testCase "rejects unknown file directive" $ do
@@ -198,7 +199,7 @@ tests =
               , "package main"
               ]
         case parseTypus source of
-          Left err -> assertBool ("error should mention unknown directive: " ++ err) ("Unknown file directive" `isInfixOf` err)
+          Left err -> assertBool ("error should mention unknown directive: " ++ err) ("Unknown file directive" `L.isInfixOf` err)
           Right _ -> assertFailure "expected parse failure for unknown directive"
 
     , testCase "rejects unknown block directive" $ do
@@ -210,7 +211,7 @@ tests =
               , "}"
               ]
         case parseTypus source of
-          Left err -> assertBool ("error should mention unknown directive: " ++ err) ("Unknown block directive" `isInfixOf` err)
+          Left err -> assertBool ("error should mention unknown directive: " ++ err) ("Unknown block directive" `L.isInfixOf` err)
           Right _ -> assertFailure "expected parse failure for unknown directive"
 
     , testCase "rejects invalid boolean values" $ do
@@ -219,7 +220,7 @@ tests =
               , "package main"
               ]
         case parseTypus source of
-          Left err -> assertBool ("error should mention invalid boolean: " ++ err) ("Invalid boolean value" `isInfixOf` err)
+          Left err -> assertBool ("error should mention invalid boolean: " ++ err) ("Invalid boolean value" `L.isInfixOf` err)
           Right _ -> assertFailure "expected parse failure for invalid boolean"
 
     , testCase "rejects multiple package declarations" $ do
@@ -228,7 +229,7 @@ tests =
               , "package secondary"
               ]
         case parseTypus source of
-          Left err -> assertBool ("error should mention multiple package: " ++ err) ("Multiple package declarations" `isInfixOf` err)
+          Left err -> assertBool ("error should mention multiple package: " ++ err) ("Multiple package declarations" `L.isInfixOf` err)
           Right _ -> assertFailure "expected parse failure for multiple packages"
 
     , testCase "rejects unclosed directive block" $ do
@@ -240,10 +241,10 @@ tests =
               , "}"
               ]
         case parseTypus source of
-          Left err -> assertBool ("error should mention unclosed block: " ++ err) ("Unclosed directive block" `isInfixOf` err)
+          Left err -> assertBool ("error should mention unclosed block: " ++ err) ("Unclosed directive block" `L.isInfixOf` err)
           Right _ -> assertFailure "expected parse failure for unclosed block"
 
-    , testCase "handles whitespace and empty lines" $ do
+    , testCase "handles whitespace L.and empty lines" $ do
         let source = unlines
               [ ""
               , "   "
@@ -261,7 +262,7 @@ tests =
             case ownership of
               Nothing -> assertFailure "expected ownership directive"
               Just loc -> locatedValue loc @?= True
-            assertBool "should have blocks" (not $ null $ tfBlocks typusFile)
+            assertBool "should have blocks" (not $ L.null $ tfBlocks typusFile)
 
     , testCase "parses complex nested structures" $ do
         let source = unlines
@@ -282,10 +283,10 @@ tests =
           Left err -> assertFailure $ "parseTypus failed: " ++ err
           Right typusFile -> do
             let blocks = tfBlocks typusFile
-                ownershipBlocks = filter (\block -> maybe False locatedValue (bdOwnership (cbDirectives block))) blocks
-                dependentTypeBlocks = filter (\block -> maybe False locatedValue (bdDependentTypes (cbDirectives block))) blocks
-            length ownershipBlocks @?= 1
-            length dependentTypeBlocks @?= 1
+                ownershipBlocks = L.filter (\block -> maybe False locatedValue (bdOwnership (cbDirectives block))) blocks
+                dependentTypeBlocks = L.filter (\block -> maybe False locatedValue (bdDependentTypes (cbDirectives block))) blocks
+            L.length ownershipBlocks @?= 1
+            L.length dependentTypeBlocks @?= 1
 
     , testCase "preserves source location information" $ do
         let source = unlines
@@ -305,7 +306,7 @@ tests =
                 posLine (spanStart (locSpan loc)) @?= 1
                 posColumn (spanStart (locSpan loc)) @?= 1
             let blocks = tfBlocks typusFile
-                dependentTypeBlocks = filter (\block -> maybe False (not . locatedValue) (bdDependentTypes (cbDirectives block))) blocks
+                dependentTypeBlocks = L.filter (\block -> maybe False (not . locatedValue) (bdDependentTypes (cbDirectives block))) blocks
             case dependentTypeBlocks of
               (block:_) -> case bdDependentTypes (cbDirectives block) of
                 Just loc -> do
@@ -326,11 +327,11 @@ tests =
         case parseTypus source of
           Left err -> assertFailure $ "parseTypus failed: " ++ err
           Right typusFile -> do
-            assertBool "should have blocks" (not $ null $ tfBlocks typusFile)
-            let mainBlock = head (tfBlocks typusFile)
-            assertBool "contains line comment" ("// This is a comment" `isInfixOf` cbContent mainBlock)
-            assertBool "contains inline comment" ("// inline comment" `isInfixOf` cbContent mainBlock)
-            assertBool "contains block comment" ("/* block comment */" `isInfixOf` cbContent mainBlock)
+            assertBool "should have blocks" (not $ L.null $ tfBlocks typusFile)
+            let mainBlock = L.head (tfBlocks typusFile)
+            assertBool "contains line comment" ("// This is a comment" `L.isInfixOf` cbContent mainBlock)
+            assertBool "contains inline comment" ("// inline comment" `L.isInfixOf` cbContent mainBlock)
+            assertBool "contains block comment" ("/* block comment */" `L.isInfixOf` cbContent mainBlock)
 
     , testCase "handles string literals with braces" $ do
         let source = unlines
@@ -344,8 +345,8 @@ tests =
           Left err -> assertFailure $ "parseTypus failed: " ++ err
           Right typusFile -> do
             let blocks = tfBlocks typusFile
-                directedBlocks = filter (\block -> isJust (bdOwnership (cbDirectives block))) blocks
-            length directedBlocks @?= 0  -- Should not parse string content as directive
-            let mainBlock = head blocks
-            assertBool "contains string literal" ("{not a directive}" `isInfixOf` cbContent mainBlock)
+                directedBlocks = L.filter (\block -> isJust (bdOwnership (cbDirectives block))) blocks
+            L.length directedBlocks @?= 0  -- Should not parse string content as directive
+            let mainBlock = L.head blocks
+            assertBool "contains string literal" ("{not a directive}" `L.isInfixOf` cbContent mainBlock)
   ]

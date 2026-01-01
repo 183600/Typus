@@ -2,6 +2,7 @@
 module Test.Unit.NewComprehensivePropertySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), Gen)
 import Data.List (sort, nub)
 import Data.Char (isSpace, isAlphaNum)
@@ -23,7 +24,7 @@ tests = testGroup "Comprehensive QuickCheck Tests"
 testStringProcessingProperties :: TestTree
 testStringProcessingProperties = testGroup "String Processing Properties"
   [ testProperty "trim preserves non-space characters" propTrimPreservesNonSpace
-  , testProperty "splitBy and join are inverses" propSplitJoinInverse
+  , testProperty "splitBy L.and join are inverses" propSplitJoinInverse
   , testProperty "splitByCollapsed removes duplicates" propSplitByCollapsedRemovesDuplicates
   , testProperty "normalizeIndentation preserves relative structure" propNormalizeIndentationPreservesStructure
   ]
@@ -33,7 +34,7 @@ testSourceLocationProperties :: TestTree
 testSourceLocationProperties = testGroup "Source Location Properties"
   [ testProperty "position advancement is deterministic" propPositionAdvancementDeterministic
   , testProperty "span creation preserves order" propSpanCreationPreservesOrder
-  , testProperty "valid spans have positive length" propValidSpansPositiveLength
+  , testProperty "valid spans have positive L.length" propValidSpansPositiveLength
   , testProperty "advancePosBy is associative" propAdvancePosByAssociative
   ]
 
@@ -61,23 +62,23 @@ testIntegrationProperties = testGroup "Integration Properties"
 propTrimPreservesNonSpace :: String -> Property
 propTrimPreservesNonSpace str =
   let trimmed = trim str
-      nonSpaceChars = filter (not . isSpace) str
-      trimmedNonSpaceChars = filter (not . isSpace) trimmed
+      nonSpaceChars = L.filter (not . isSpace) str
+      trimmedNonSpaceChars = L.filter (not . isSpace) trimmed
   in sort nonSpaceChars == sort trimmedNonSpaceChars
 
--- | splitBy and join should be inverses (for non-empty delimiters)
+-- | splitBy L.and join should be inverses (for non-empty delimiters)
 propSplitJoinInverse :: Char -> String -> Property
 propSplitJoinInverse delim str =
   delim /= '\0' ==>
   let parts = splitBy delim str
       rejoined = concatMap (++ [delim]) (init parts ++ [last parts])
-  in length rejoined >= length str
+  in L.length rejoined >= L.length str
 
 -- | splitByCollapsed should remove duplicate delimiters
 propSplitByCollapsedRemovesDuplicates :: Char -> String -> Property
 propSplitByCollapsedRemovesDuplicates delim str =
   let parts = splitByCollapsed delim str
-      hasNoDuplicates = all (not . elem delim) parts
+      hasNoDuplicates = L.all (not . L.elem delim) parts
   in hasNoDuplicates
 
 -- | normalizeIndentation should preserve relative structure
@@ -86,7 +87,7 @@ propNormalizeIndentationPreservesStructure str =
   let normalized = normalizeIndentation str
       originalLines = lines str
       normalizedLines = lines normalized
-  in length originalLines == length normalizedLines
+  in L.length originalLines == L.length normalizedLines
 
 -- ============================================================================
 -- Source Location Properties
@@ -107,7 +108,7 @@ propSpanCreationPreservesOrder start end =
      then True  -- Valid spans maintain proper order
      else True  -- Invalid spans are expected for reversed inputs
 
--- | Valid spans should have positive length
+-- | Valid spans should have positive L.length
 propValidSpansPositiveLength :: SourcePos -> SourcePos -> Property
 propValidSpansPositiveLength start end =
   let span = spanBetween start end
@@ -153,7 +154,7 @@ propParseErrorsInformative :: String -> Property
 propParseErrorsInformative input =
   let result = parseTypus input
   in case result of
-    Left err -> length (show err) > 0
+    Left err -> L.length (show err) > 0
     Right _ -> property True
 
 -- ============================================================================
@@ -166,14 +167,14 @@ propSourceLocationTracking input =
   let result = parseTypus input
   in case result of
     Left _ -> property True
-    Right file -> length (tfBlocks file) >= 0
+    Right file -> L.length (tfBlocks file) >= 0
 
 -- | Error handling should preserve context
 propErrorHandlingPreservesContext :: String -> Property
 propErrorHandlingPreservesContext input =
   let result = parseTypus input
   in case result of
-    Left err -> length (show err) > 0
+    Left err -> L.length (show err) > 0
     Right _ -> property True
 
 -- | String utilities should work with parser output

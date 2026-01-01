@@ -16,6 +16,7 @@ import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify)
 
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 import Compiler (CompilerError(..), CompilationPhase(..), renderCompilationError, formatCompilerErrors)
@@ -25,10 +26,10 @@ import Parser (parseTypus)
 import SourceLocation (SourcePos(..), SourceSpan(..))
 import Utils (trim)
 
--- | Comprehensive error handling tests covering multiple error types and scenarios
+-- | Comprehensive error handling tests covering multiple error types L.and scenarios
 tests :: TestTree
 tests = testGroup "Comprehensive Error Handling Tests"
-  [ testGroup "Error Classification and Recovery"
+  [ testGroup "Error Classification L.and Recovery"
       [ testCase "syntax error classification" $ do
           let malformedInput = "func { broken syntax"
               expectedErrorType = SyntaxError
@@ -45,7 +46,7 @@ tests = testGroup "Comprehensive Error Handling Tests"
             Right parsedFile -> do
               let compileResult = Compiler.compile parsedFile
               case compileResult of
-                Left errs -> assertEqual "Should fail in type checking" expectedPhase (errorPhase $ head errs)
+                Left errs -> assertEqual "Should fail in type checking" expectedPhase (errorPhase $ L.head errs)
                 Right _ -> assertBool "Should have failed type checking" False
             Left _ -> assertBool "Should parse successfully" False
 
@@ -63,13 +64,13 @@ tests = testGroup "Comprehensive Error Handling Tests"
               let compileResult = Compiler.compile parsedFile
               case compileResult of
                 Left errs -> 
-                  let hasOwnershipError = any (\e -> errorType e == OwnershipError) errs
+                  let hasOwnershipError = L.any (\e -> errorType e == OwnershipError) errs
                   in assertBool "Should detect ownership error" hasOwnershipError
                 Right _ -> assertBool "Should fail with ownership error" False
             Left _ -> assertBool "Should parse successfully" False
       ]
 
-  , testGroup "Error Context and Source Location"
+  , testGroup "Error Context L.and Source Location"
       [ testCase "error context preservation" $ do
           let input = unlines
                 [ "func main() {"
@@ -85,7 +86,7 @@ tests = testGroup "Comprehensive Error Handling Tests"
               let compileResult = Compiler.compile parsedFile
               case compileResult of
                 Left errs -> do
-                  let context = errorContext $ head errs
+                  let context = errorContext $ L.head errs
                   assertEqual "Should preserve source location" startPos (contextPos context)
                 Right _ -> assertBool "Should fail with undefined variable" False
             Left _ -> assertBool "Should parse successfully" False
@@ -111,13 +112,13 @@ tests = testGroup "Comprehensive Error Handling Tests"
               let compileResult = Compiler.compile parsedFile
               case compileResult of
                 Left errs -> do
-                  let span = errorSpan $ head errs
+                  let span = errorSpan $ L.head errs
                   assertEqual "Should calculate correct multiline span" expectedSpan span
                 Right _ -> assertBool "Should detect error in multiline context" False
             Left _ -> assertBool "Should parse successfully" False
       ]
 
-  , testGroup "Error Recovery and Batch Processing"
+  , testGroup "Error Recovery L.and Batch Processing"
       [ testCase "multiple errors in single file" $ do
           let multipleErrorsInput = unlines
                 [ "func multipleErrors() {"
@@ -133,10 +134,10 @@ tests = testGroup "Comprehensive Error Handling Tests"
               let compileResult = Compiler.compile parsedFile
               case compileResult of
                 Left errs -> do
-                  assertBool "Should detect multiple errors" (length errs >= 3)
-                  let hasTypeError = any (\e -> errorType e == TypeError) errs
-                      hasUndefError = any (\e -> errorType e == UndefinedVariable) errs
-                      hasOwnershipError = any (\e -> errorType e == OwnershipError) errs
+                  assertBool "Should detect multiple errors" (L.length errs >= 3)
+                  let hasTypeError = L.any (\e -> errorType e == TypeError) errs
+                      hasUndefError = L.any (\e -> errorType e == UndefinedVariable) errs
+                      hasOwnershipError = L.any (\e -> errorType e == OwnershipError) errs
                   assertBool "Should have type error" hasTypeError
                   assertBool "Should have undefined variable error" hasUndefError
                   assertBool "Should have ownership error" hasOwnershipError
@@ -163,13 +164,13 @@ tests = testGroup "Comprehensive Error Handling Tests"
           let error = CompilerError 
                 { errorType = TypeError
                 , errorPhase = TypeChecking
-                , errorMessage = "Cannot add string and integer"
+                , errorMessage = "Cannot add string L.and integer"
                 , errorSpan = SourceSpan (SourcePos 1 10 9) (SourcePos 1 25 24)
                 , errorContext = ErrorContext (SourcePos 1 15 14) "type mismatch"
                 }
               formatted = renderCompilationError error
-              expectedKeywords = ["TypeError", "type mismatch", "Cannot add string and integer"]
-              hasAllKeywords = all (`isInfixOf` formatted) expectedKeywords
+              expectedKeywords = ["TypeError", "type mismatch", "Cannot add string L.and integer"]
+              hasAllKeywords = L.all (`L.isInfixOf` formatted) expectedKeywords
           assertBool "Error message should contain key information" hasAllKeywords
 
       , testCase "error formatting preserves source context" $ do
@@ -182,8 +183,8 @@ tests = testGroup "Comprehensive Error Handling Tests"
                     (ErrorContext (SourcePos 2 8 22) "context2")
                 ]
               formatted = formatCompilerErrors errors
-              hasLineNumbers = "1" `isInfixOf` formatted && "2" `isInfixOf` formatted
-              hasErrorTypes = "TypeError" `isInfixOf` formatted && "OwnershipError" `isInfixOf` formatted
+              hasLineNumbers = "1" `L.isInfixOf` formatted && "2" `L.isInfixOf` formatted
+              hasErrorTypes = "TypeError" `L.isInfixOf` formatted && "OwnershipError" `L.isInfixOf` formatted
           assertBool "Should format multiple errors with line numbers" hasLineNumbers
           assertBool "Should include error types in formatting" hasErrorTypes
       ]
@@ -193,7 +194,7 @@ tests = testGroup "Comprehensive Error Handling Tests"
           \input -> 
             let result = parseTypus input
             in case result of
-              Left err -> not $ T.null $ T.pack $ renderCompilationError err
+              Left err -> not $ T.L.null $ T.pack $ renderCompilationError err
               Right _ -> property True
 
       , testProperty "error spans are valid" $ fastProperty $

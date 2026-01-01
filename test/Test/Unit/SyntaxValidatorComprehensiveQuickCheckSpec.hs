@@ -3,6 +3,7 @@
 module Test.Unit.SyntaxValidatorComprehensiveQuickCheckSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 
@@ -40,7 +41,7 @@ errorTypeProperties = testGroup "ErrorType Properties"
                        , InvalidBlockStructure, UndeclaredVariable, SyntaxWarning
                        ]
           distinctPairs = [(et1, et2) | et1 <- errorTypes, et2 <- errorTypes, et1 < et2]
-      in all (\(et1, et2) -> et1 /= et2) distinctPairs
+      in L.all (\(et1, et2) -> et1 /= et2) distinctPairs
   ]
 
 -- | Properties for SyntaxError
@@ -86,7 +87,7 @@ syntaxErrorProperties = testGroup "SyntaxError Properties"
             error2 = SyntaxError errorType msg line col2 content
         in error1 /= error2
   
-  , testProperty "SyntaxError preserves all fields" $
+  , testProperty "SyntaxError preserves L.all fields" $
       \errorType msg line col content ->
         let error = SyntaxError errorType msg line col content
         in errorType error == errorType &&
@@ -205,7 +206,7 @@ scopeProperties = testGroup "Scope Properties"
             scope2 = Scope name vars funcs parent2
         in scope1 /= scope2
   
-  , testProperty "Scope preserves all fields" $
+  , testProperty "Scope preserves L.all fields" $
       \name vars funcs parent ->
         let scope = Scope name vars funcs parent
         in scopeName scope == name &&

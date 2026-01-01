@@ -1,10 +1,11 @@
 module Test.Unit.ErrorHandlerBoundaryQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Arbitrary(..), Gen, choose, listOf, suchThat, oneof, elements, frequency)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import Data.List (sort, nub)
 import Compiler.Errors.Core
@@ -19,7 +20,7 @@ genBoundaryString = frequency
     , (1, return "\0") -- Null character
     , (1, listOf $ elements "\n\t\r\f\v") -- Only whitespace
     , (1, return $ replicate 1000 'a') -- Very long string
-    , (1, return $ concat (replicate 100 "test ")) -- Repeated pattern
+    , (1, return $ L.concat (replicate 100 "test ")) -- Repeated pattern
     ]
 
 -- | Generate extreme severity combinations
@@ -58,7 +59,7 @@ tests :: TestTree
 tests =
   testGroup "ErrorHandler boundary conditions QuickCheck tests"
     [ testGroup "Severity boundary conditions"
-        [ testCase "severity priority handles all values" $ do
+        [ testCase "severity priority handles L.all values" $ do
             severityPriority Fatal @?= 100
             severityPriority Error @?= 80
             severityPriority Warning @?= 30
@@ -144,8 +145,8 @@ tests =
         , fastProperty "context with many additional fields" $
             \additional ->
               let ctx = emptyContext { contextAdditional = additional }
-                  count = length additional
-              in length (contextAdditional ctx) == count
+                  count = L.length additional
+              in L.length (contextAdditional ctx) == count
 
         , testCase "context with duplicate additional keys" $ do
             let additional = [("key1", "value1"), ("key1", "value2"), ("key2", "value3")]
@@ -201,18 +202,18 @@ tests =
         [ fastProperty "type error with empty message" $ do
             \errorId severity category location context ->
               let error = TypeError errorId severity category T.empty location context
-              in T.null (message error)
+              in T.L.null (message error)
 
         , fastProperty "type error with very long message" $
             \errorId severity category location context ->
               let longMsg = T.pack $ replicate 10000 'a'
                   error = TypeError errorId severity category longMsg location context
-              in T.length (message error) == 10000
+              in T.L.length (message error) == 10000
 
         , fastProperty "type error with empty ID" $
             \severity category message location context ->
               let error = TypeError "" severity category message location context
-              in null (errorId error)
+              in L.null (errorId error)
 
         , fastProperty "type error with unknown location" $
             \errorId severity category message context ->
@@ -230,22 +231,22 @@ tests =
     , testGroup "Error collection boundary conditions"
         [ testCase "collector with many errors" $ do
             let errors = replicate 1000 $ TypeError "test" Error TypeMismatch "test" _unknownLocation emptyContext
-                collector = foldl (\c e -> addError e c) newErrorCollector errors
-            length (getErrors collector) @?= 1000
+                collector = L.foldl (\c e -> addError e c) newErrorCollector errors
+            L.length (getErrors collector) @?= 1000
 
         , fastProperty "collector with mixed severity levels" $
             \errors ->
-              let collector = foldl (\c e -> addError e c) newErrorCollector errors
-                  errorCount = length $ filter (\e -> severity e `elem` [Error, Fatal]) errors
-                  warningCount = length $ filter (\e -> severity e == Warning) errors
-                  infoCount = length $ filter (\e -> severity e == Info) errors
-              in length (getErrors collector) == errorCount &&
-                 length (getWarnings collector) == warningCount
+              let collector = L.foldl (\c e -> addError e c) newErrorCollector errors
+                  errorCount = L.length $ L.filter (\e -> severity e `elem` [Error, Fatal]) errors
+                  warningCount = L.length $ L.filter (\e -> severity e == Warning) errors
+                  infoCount = L.length $ L.filter (\e -> severity e == Info) errors
+              in L.length (getErrors collector) == errorCount &&
+                 L.length (getWarnings collector) == warningCount
 
         , fastProperty "collector handles duplicate errors" $
             \error ->
               let collector = addError error (addError error newErrorCollector)
-              in length (getErrors collector) == 2
+              in L.length (getErrors collector) == 2
 
         , testCase "collector with no messages" $ do
             let collector = newErrorCollector
@@ -269,7 +270,7 @@ tests =
         , fastProperty "formatting many errors doesn't crash" $
             \errors ->
               let formatted = formatErrors errors
-              in length formatted == length errors
+              in L.length formatted == L.length errors
 
         , fastProperty "formatting with location handles unknown location" $
             \errorId severity category message context ->
@@ -292,19 +293,19 @@ tests =
         , fastProperty "filtering by severity preserves order" $
             \errors sev ->
               let filtered = filterBySeverity sev errors
-                  originalIndices = map fst $ filter (\e -> severity (snd e) == sev) (zip [0..] errors)
-              in length filtered == length originalIndices
+                  originalIndices = map fst $ L.filter (\e -> severity (snd e) == sev) (zip [0..] errors)
+              in L.length filtered == L.length originalIndices
 
         , fastProperty "filtering by category preserves order" $
             \errors cat ->
               let filtered = filterByCategory cat errors
-                  originalIndices = map fst $ filter (\e -> category (snd e) == cat) (zip [0..] errors)
-              in length filtered == length originalIndices
+                  originalIndices = map fst $ L.filter (\e -> category (snd e) == cat) (zip [0..] errors)
+              in L.length filtered == L.length originalIndices
 
         , fastProperty "hasCategory works correctly" $
             \errors cat ->
               let hasCat = hasCategory cat errors
-                  hasCat' = any (\e -> category e == cat) errors
+                  hasCat' = L.any (\e -> category e == cat) errors
               in hasCat == hasCat'
 
         , testCase "error statistics with empty list" $ do
@@ -315,14 +316,14 @@ tests =
 
 -- Helper function for string contains check
 contains :: String -> String -> Bool
-contains needle haystack = needle `isInfixOf` haystack
+contains needle haystack = needle `L.isInfixOf` haystack
 
 -- Helper function for infix check
 isInfixOf :: Eq a => [a] -> [a] -> Bool
-isInfixOf needle haystack = any (isPrefixOf needle) (tails haystack)
+L.isInfixOf needle haystack = L.any (L.isPrefixOf needle) (tails haystack)
   where
-    isPrefixOf [] _ = True
-    isPrefixOf _ [] = False
-    isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
+    L.isPrefixOf [] _ = True
+    L.isPrefixOf _ [] = False
+    L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
     tails [] = [[]]
     tails xs@(_:ys) = xs : tails ys

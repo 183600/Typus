@@ -7,13 +7,25 @@ module Test.Unit.AdditionalQuickCheckTests2025 where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
+import Test.QuickCheck (Arbitrary, arbitrary, suchThat)
 import Utils (trim, splitBy, removeComments)
 import SourceLocation (SourcePos(..), startPos, advancePos)
-import Compiler.Errors.Core (TypeError(..), ErrorSeverity(..), formatError, errorAt)
+
+import Compiler.Errors.Core (TypeError(..), ErrorSeverity(..), formatError, errorAt, ErrorLocation(..))
+import qualified Data.Text as T (pack, isInfixOf)
 import Parser (parseTypus)
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isInfixOf)
 import Data.Maybe (isJust)
+
+-- Arbitrary instance for SourcePos
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- arbitrary `suchThat` (> 0)
+    column <- arbitrary `suchThat` (> 0)
+    offset <- arbitrary
+    return $ SourcePos line column offset
 
 -- ============================================================================
 -- Test Suite Definition
@@ -36,17 +48,17 @@ basicUtilsProperties = testGroup "Basic Utils Properties"
   [ testProperty "trim: idempotent" $
       \s -> trim (trim s) === trim s
       
-  , testProperty "trim: removes leading and trailing whitespace" $
+  , testProperty "trim: removes leading L.and trailing whitespace" $
       \s ->
         let t = trim s
         in not (null t) ==> 
-           (not . isSpace $ head t) && (not . isSpace $ last t)
+           (not . isSpace $ L.head t) && (not . isSpace $ last t)
            
   , testProperty "splitBy: preserves original content when joined" $
       \delim s ->
         let parts = splitBy delim s
-            rejoined = concat parts
-        in delim /= '\0' ==> length rejoined === length s
+            rejoined = L.concat parts
+        in delim /= '\0' ==> L.length rejoined === L.length s
   ]
 
 -- ============================================================================
@@ -57,18 +69,18 @@ basicSourceLocationProperties :: TestTree
 basicSourceLocationProperties = testGroup "Basic SourceLocation Properties"
   [ testProperty "advancePos: preserves line positivity" $
       \pos ->
-        let newPos = advancePos pos 'x'
-        in sourceLine newPos >= 1
+        let newPos = advancePos 'x' pos
+        in posLine newPos >= 1
         
   , testProperty "advancePos: preserves column positivity" $
       \pos ->
-        let newPos = advancePos pos 'x'
-        in sourceColumn newPos >= 1
+        let newPos = advancePos 'x' pos
+        in posColumn newPos >= 1
         
   , testCase "startPos has correct values" $
     do
-      sourceLine startPos @?= 1
-      sourceColumn startPos @?= 1
+      posLine startPos @?= 1
+      posColumn startPos @?= 1
   ]
 
 -- ============================================================================
@@ -79,15 +91,17 @@ basicErrorHandlingProperties :: TestTree
 basicErrorHandlingProperties = testGroup "Basic ErrorHandling Properties"
   [ testProperty "error formatting contains message" $
       \msg ->
-        let err = errorAt startPos msg
+        let location = ErrorLocation Nothing 1 1 Nothing Nothing
+            err = errorAt "test-id" (T.pack msg) location
             formatted = formatError err
-        in not (null msg) ==> msg `isInfixOf` formatted
+        in not (null msg) ==> T.pack msg `T.isInfixOf` T.pack formatted
         
   , testProperty "error formatting contains position" $
       \msg ->
-        let err = errorAt startPos msg
+        let location = ErrorLocation Nothing 1 1 Nothing Nothing
+            err = errorAt "test-id" (T.pack msg) location
             formatted = formatError err
-        in "1:1" `isInfixOf` formatted
+        in "1:1" `L.isInfixOf` formatted
   ]
 
 -- ============================================================================

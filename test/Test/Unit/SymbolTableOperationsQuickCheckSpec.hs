@@ -20,16 +20,18 @@ import Parser (parseTypus)
 import Compiler.TypeChecker (TypeEnv)
 
 import Data.Char (isLetter, isDigit)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (sort, nub)
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 
--- Property: Symbol table should insert and retrieve symbols correctly
+-- Property: Symbol table should insert L.and retrieve symbols correctly
 prop_symbol_table_insert_lookup :: String -> String -> Property
 prop_symbol_table_insert_lookup symbolName symbolType =
   not (null symbolName) && not (null symbolType) &&
-  all isLetter symbolName && all isLetter symbolType ==>
+  L.all isLetter symbolName && L.all isLetter symbolType ==>
   let symbol = Symbol 
         { symbolName = symbolName
         , symbolType = UserDefinedType symbolType
@@ -44,22 +46,22 @@ prop_symbol_table_insert_lookup symbolName symbolType =
 -- Property: Symbol table should handle multiple symbols
 prop_symbol_table_multiple_symbols :: [String] -> Property
 prop_symbol_table_multiple_symbols symbolNames =
-  not (null symbolNames) && all (\n -> not (null n) && all isLetter n) (take 5 symbolNames) ==>
+  not (null symbolNames) && L.all (\n -> not (null n) && L.all isLetter n) (take 5 symbolNames) ==>
   let limitedNames = take 5 symbolNames
-      symbols = map (\name -> Symbol 
+      symbols = L.map (\name -> Symbol 
         { symbolName = name
         , symbolType = UserDefinedType "int"
         , symbolScope = Global
         }) limitedNames
       emptyTable = Map.empty :: SymbolTable
       tableWithSymbols = foldr insertSymbol emptyTable symbols
-      lookupResults = map (`lookupSymbol` tableWithSymbols) limitedNames
-  in property $ all isJust lookupResults
+      lookupResults = L.map (`lookupSymbol` tableWithSymbols) limitedNames
+  in property $ L.all isJust lookupResults
 
 -- Property: Symbol table should handle scope correctly
 prop_symbol_table_scopes :: String -> Property
 prop_symbol_table_scopes symbolName =
-  not (null symbolName) && all isLetter symbolName ==>
+  not (null symbolName) && L.all isLetter symbolName ==>
   let globalSymbol = Symbol 
         { symbolName = symbolName
         , symbolType = UserDefinedType "int"
@@ -80,7 +82,7 @@ prop_symbol_table_scopes symbolName =
 -- Property: Symbol table should delete symbols correctly
 prop_symbol_table_delete :: String -> Property
 prop_symbol_table_delete symbolName =
-  not (null symbolName) && all isLetter symbolName ==>
+  not (null symbolName) && L.all isLetter symbolName ==>
   let symbol = Symbol 
         { symbolName = symbolName
         , symbolType = UserDefinedType "int"
@@ -95,7 +97,7 @@ prop_symbol_table_delete symbolName =
 prop_symbol_table_update :: String -> String -> Property
 prop_symbol_table_update symbolName newType =
   not (null symbolName) && not (null newType) &&
-  all isLetter symbolName && all isLetter newType ==>
+  L.all isLetter symbolName && L.all isLetter newType ==>
   let originalSymbol = Symbol 
         { symbolName = symbolName
         , symbolType = UserDefinedType "int"
@@ -117,7 +119,7 @@ prop_symbol_table_update symbolName newType =
 prop_symbol_table_duplicates :: String -> String -> Property
 prop_symbol_table_duplicates symbolName firstType secondType =
   not (null symbolName) && not (null firstType) && not (null secondType) &&
-  all isLetter symbolName && all isLetter firstType && all isLetter secondType ==>
+  L.all isLetter symbolName && L.all isLetter firstType && L.all isLetter secondType ==>
   let firstSymbol = Symbol 
         { symbolName = symbolName
         , symbolType = UserDefinedType firstType
@@ -139,7 +141,7 @@ prop_symbol_table_duplicates symbolName firstType secondType =
 prop_symbol_table_types :: String -> String -> Property
 prop_symbol_table_types symbolName typeName =
   not (null symbolName) && not (null typeName) &&
-  all isLetter symbolName && all isLetter typeName ==>
+  L.all isLetter symbolName && L.all isLetter typeName ==>
   let symbol = Symbol 
         { symbolName = symbolName
         , symbolType = UserDefinedType typeName
@@ -154,10 +156,10 @@ prop_symbol_table_types symbolName typeName =
 -- Property: Symbol table should handle nested scopes
 prop_symbol_table_nested_scopes :: [String] -> Property
 prop_symbol_table_nested_scopes symbolNames =
-  not (null symbolNames) && all (\n -> not (null n) && all isLetter n) (take 3 symbolNames) ==>
+  not (null symbolNames) && L.all (\n -> not (null n) && L.all isLetter n) (take 3 symbolNames) ==>
   let limitedNames = take 3 symbolNames
       globalSymbol = Symbol 
-        { symbolName = head limitedNames
+        { symbolName = L.head limitedNames
         , symbolType = UserDefinedType "int"
         , symbolScope = Global
         }
@@ -175,7 +177,7 @@ prop_symbol_table_nested_scopes symbolNames =
       tableWithGlobal = insertSymbol globalSymbol emptyTable
       tableWithLocal = insertSymbol localSymbol tableWithGlobal
       tableWithNested = insertSymbol nestedSymbol tableWithLocal
-  in case (lookupSymbol (head limitedNames) tableWithNested,
+  in case (lookupSymbol (L.head limitedNames) tableWithNested,
            lookupSymbol (limitedNames !! 1) tableWithNested,
            lookupSymbol (last limitedNames) tableWithNested) of
        (Just g, Just l, Just n) -> 
@@ -187,8 +189,8 @@ prop_symbol_table_nested_scopes symbolNames =
 -- Property: Symbol table should handle symbol attributes
 prop_symbol_table_attributes :: String -> [String] -> Property
 prop_symbol_table_attributes symbolName attributes =
-  not (null symbolName) && all isLetter symbolName &&
-  not (null attributes) && length (take 3 attributes) <= 3 ==>
+  not (null symbolName) && L.all isLetter symbolName &&
+  not (null attributes) && L.length (take 3 attributes) <= 3 ==>
   let limitedAttrs = take 3 attributes
       symbol = Symbol 
         { symbolName = symbolName
@@ -204,8 +206,8 @@ prop_symbol_table_attributes symbolName attributes =
 -- Property: Symbol table should handle function symbols
 prop_symbol_table_functions :: String -> [String] -> Property
 prop_symbol_table_functions funcName paramTypes =
-  not (null funcName) && all isLetter funcName &&
-  not (null paramTypes) && length (take 3 paramTypes) <= 3 ==>
+  not (null funcName) && L.all isLetter funcName &&
+  not (null paramTypes) && L.length (take 3 paramTypes) <= 3 ==>
   let limitedParams = take 3 paramTypes
       functionSymbol = Symbol 
         { symbolName = funcName
@@ -222,7 +224,7 @@ prop_symbol_table_functions funcName paramTypes =
 prop_symbol_table_variables :: String -> String -> Property
 prop_symbol_table_variables varName varType =
   not (null varName) && not (null varType) &&
-  all isLetter varName && all isLetter varType ==>
+  L.all isLetter varName && L.all isLetter varType ==>
   let variableSymbol = Symbol 
         { symbolName = varName
         , symbolType = UserDefinedType varType
@@ -237,8 +239,8 @@ prop_symbol_table_variables varName varType =
 -- Property: Symbol table should handle type symbols
 prop_symbol_table_type_symbols :: String -> [String] -> Property
 prop_symbol_table_type_symbols typeName fieldNames =
-  not (null typeName) && all isLetter typeName &&
-  not (null fieldNames) && length (take 3 fieldNames) <= 3 ==>
+  not (null typeName) && L.all isLetter typeName &&
+  not (null fieldNames) && L.length (take 3 fieldNames) <= 3 ==>
   let limitedFields = take 3 fieldNames
       typeSymbol = Symbol 
         { symbolName = typeName
@@ -255,7 +257,7 @@ prop_symbol_table_type_symbols typeName fieldNames =
 prop_symbol_table_constants :: String -> String -> Property
 prop_symbol_table_constants constName constType =
   not (null constName) && not (null constType) &&
-  all isLetter constName && all isLetter constType ==>
+  L.all isLetter constName && L.all isLetter constType ==>
   let constantSymbol = Symbol 
         { symbolName = constName
         , symbolType = UserDefinedType constType
@@ -270,8 +272,8 @@ prop_symbol_table_constants constName constType =
 -- Property: Symbol table should handle interface symbols
 prop_symbol_table_interfaces :: String -> [String] -> Property
 prop_symbol_table_interfaces interfaceName methodNames =
-  not (null interfaceName) && all isLetter interfaceName &&
-  not (null methodNames) && length (take 3 methodNames) <= 3 ==>
+  not (null interfaceName) && L.all isLetter interfaceName &&
+  not (null methodNames) && L.length (take 3 methodNames) <= 3 ==>
   let limitedMethods = take 3 methodNames
       interfaceSymbol = Symbol 
         { symbolName = interfaceName
@@ -287,8 +289,8 @@ prop_symbol_table_interfaces interfaceName methodNames =
 -- Property: Symbol table should handle generic symbols
 prop_symbol_table_generics :: String -> [String] -> Property
 prop_symbol_table_generics genericName typeParams =
-  not (null genericName) && all isLetter genericName &&
-  not (null typeParams) && length (take 2 typeParams) <= 2 ==>
+  not (null genericName) && L.all isLetter genericName &&
+  not (null typeParams) && L.length (take 2 typeParams) <= 2 ==>
   let limitedParams = take 2 typeParams
       genericSymbol = Symbol 
         { symbolName = genericName
@@ -304,8 +306,8 @@ prop_symbol_table_generics genericName typeParams =
 -- Property: Symbol table should handle symbol dependencies
 prop_symbol_table_dependencies :: String -> [String] -> Property
 prop_symbol_table_dependencies symbolName dependencies =
-  not (null symbolName) && all isLetter symbolName &&
-  not (null dependencies) && length (take 3 dependencies) <= 3 ==>
+  not (null symbolName) && L.all isLetter symbolName &&
+  not (null dependencies) && L.length (take 3 dependencies) <= 3 ==>
   let limitedDeps = take 3 dependencies
       symbol = Symbol 
         { symbolName = symbolName
@@ -321,7 +323,7 @@ prop_symbol_table_dependencies symbolName dependencies =
 -- Property: Symbol table should maintain consistency
 prop_symbol_table_consistency :: String -> Property
 prop_symbol_table_consistency symbolName =
-  not (null symbolName) && all isLetter symbolName ==>
+  not (null symbolName) && L.all isLetter symbolName ==>
   let symbol = Symbol 
         { symbolName = symbolName
         , symbolType = UserDefinedType "int"
@@ -339,21 +341,21 @@ prop_symbol_table_consistency symbolName =
 prop_symbol_table_large :: Int -> Property
 prop_symbol_table_large symbolCount =
   symbolCount >= 1 && symbolCount <= 100 ==> -- Reasonable limit
-  let symbolNames = map (\i -> "symbol" ++ show i) [1..symbolCount]
-      symbols = map (\name -> Symbol 
+  let symbolNames = L.map (\i -> "symbol" ++ show i) [1..symbolCount]
+      symbols = L.map (\name -> Symbol 
         { symbolName = name
         , symbolType = UserDefinedType "int"
         , symbolScope = Global
         }) symbolNames
       emptyTable = Map.empty :: SymbolTable
       tableWithSymbols = foldr insertSymbol emptyTable symbols
-      lookupResults = map (`lookupSymbol` tableWithSymbols) symbolNames
-  in property $ all isJust lookupResults
+      lookupResults = L.map (`lookupSymbol` tableWithSymbols) symbolNames
+  in property $ L.all isJust lookupResults
 
 -- Property: Symbol table should handle shadowing correctly
 prop_symbol_table_shadowing :: String -> Property
 prop_symbol_table_shadowing symbolName =
-  not (null symbolName) && all isLetter symbolName ==>
+  not (null symbolName) && L.all isLetter symbolName ==>
   let outerSymbol = Symbol 
         { symbolName = symbolName
         , symbolType = UserDefinedType "int"
@@ -374,7 +376,7 @@ prop_symbol_table_shadowing symbolName =
 -- Property: Symbol table operations should be idempotent
 prop_symbol_table_idempotent :: String -> Property
 prop_symbol_table_idempotent symbolName =
-  not (null symbolName) && all isLetter symbolName ==>
+  not (null symbolName) && L.all isLetter symbolName ==>
   let symbol = Symbol 
         { symbolName = symbolName
         , symbolType = UserDefinedType "int"

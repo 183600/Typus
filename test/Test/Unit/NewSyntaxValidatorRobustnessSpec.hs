@@ -6,6 +6,7 @@ import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Arbitrary(..), Gen, oneof, choose, listOf, elements, suchThat)
 import SyntaxValidator
 import qualified Data.Set as Set
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import Data.Char (isAlphaNum, isAlpha, isDigit)
 
@@ -158,25 +159,25 @@ prop_errorTypeShowRoundtrip :: ErrorType -> Bool
 prop_errorTypeShowRoundtrip errorType =
     let shown = show errorType
     in case errorType of
-        MissingBrace -> "MissingBrace" `isInfixOf` shown
-        MissingParenthesis -> "MissingParenthesis" `isInfixOf` shown
-        MissingBracket -> "MissingBracket" `isInfixOf` shown
-        UnclosedString -> "UnclosedString" `isInfixOf` shown
-        UnclosedComment -> "UnclosedComment" `isInfixOf` shown
-        InvalidIdentifier -> "InvalidIdentifier" `isInfixOf` shown
-        InvalidTypeDeclaration -> "InvalidTypeDeclaration" `isInfixOf` shown
-        InvalidFunctionDeclaration -> "InvalidFunctionDeclaration" `isInfixOf` shown
-        InvalidImport -> "InvalidImport" `isInfixOf` shown
-        InvalidStatement -> "InvalidStatement" `isInfixOf` shown
-        UnterminatedBlock -> "UnterminatedBlock" `isInfixOf` shown
-        InvalidOperator -> "InvalidOperator" `isInfixOf` shown
-        MissingSemicolon -> "MissingSemicolon" `isInfixOf` shown
-        UnexpectedToken -> "UnexpectedToken" `isInfixOf` shown
-        MissingPackageDeclaration -> "MissingPackageDeclaration" `isInfixOf` shown
-        DuplicateDeclaration -> "DuplicateDeclaration" `isInfixOf` shown
-        InvalidBlockStructure -> "InvalidBlockStructure" `isInfixOf` shown
-        UndeclaredVariable -> "UndeclaredVariable" `isInfixOf` shown
-        SyntaxWarning -> "SyntaxWarning" `isInfixOf` shown
+        MissingBrace -> "MissingBrace" `L.isInfixOf` shown
+        MissingParenthesis -> "MissingParenthesis" `L.isInfixOf` shown
+        MissingBracket -> "MissingBracket" `L.isInfixOf` shown
+        UnclosedString -> "UnclosedString" `L.isInfixOf` shown
+        UnclosedComment -> "UnclosedComment" `L.isInfixOf` shown
+        InvalidIdentifier -> "InvalidIdentifier" `L.isInfixOf` shown
+        InvalidTypeDeclaration -> "InvalidTypeDeclaration" `L.isInfixOf` shown
+        InvalidFunctionDeclaration -> "InvalidFunctionDeclaration" `L.isInfixOf` shown
+        InvalidImport -> "InvalidImport" `L.isInfixOf` shown
+        InvalidStatement -> "InvalidStatement" `L.isInfixOf` shown
+        UnterminatedBlock -> "UnterminatedBlock" `L.isInfixOf` shown
+        InvalidOperator -> "InvalidOperator" `L.isInfixOf` shown
+        MissingSemicolon -> "MissingSemicolon" `L.isInfixOf` shown
+        UnexpectedToken -> "UnexpectedToken" `L.isInfixOf` shown
+        MissingPackageDeclaration -> "MissingPackageDeclaration" `L.isInfixOf` shown
+        DuplicateDeclaration -> "DuplicateDeclaration" `L.isInfixOf` shown
+        InvalidBlockStructure -> "InvalidBlockStructure" `L.isInfixOf` shown
+        UndeclaredVariable -> "UndeclaredVariable" `L.isInfixOf` shown
+        SyntaxWarning -> "SyntaxWarning" `L.isInfixOf` shown
 
 prop_errorTypeUniqueness :: ErrorType -> ErrorType -> Bool
 prop_errorTypeUniqueness et1 et2 =
@@ -205,10 +206,10 @@ prop_syntaxErrorShowContainsInfo syntaxError =
         msg = errorMessage syntaxError
         line = lineNumber syntaxError
         col = columnNumber syntaxError
-    in show errType `isInfixOf` shown &&
-       msg `isInfixOf` shown &&
-       show line `isInfixOf` shown &&
-       show col `isInfixOf` shown
+    in show errType `L.isInfixOf` shown &&
+       msg `L.isInfixOf` shown &&
+       show line `L.isInfixOf` shown &&
+       show col `L.isInfixOf` shown
 
 prop_syntaxErrorLocationAccuracy :: Int -> Int -> String -> ErrorType -> Bool
 prop_syntaxErrorLocationAccuracy line column content errorType =
@@ -222,13 +223,13 @@ prop_syntaxErrorLocationAccuracy line column content errorType =
 
 prop_validationPreservesContent :: String -> Property
 prop_validationPreservesContent content =
-    length content < 1000 ==>
+    L.length content < 1000 ==>
     let errors = validateSyntax content
-    in length errors >= 0  -- Validation doesn't modify content
+    in L.length errors >= 0  -- Validation doesn't modify content
 
 prop_validationDetectsSyntaxErrors :: String -> Property
 prop_validationDetectsSyntaxErrors content =
-    length content < 500 ==>
+    L.length content < 500 ==>
     let errors = validateSyntax content
         hasSyntaxErrors = not (null errors)
     in case content of
@@ -238,9 +239,9 @@ prop_validationDetectsSyntaxErrors content =
 
 prop_validationHandlesEdgeCases :: String -> Property
 prop_validationHandlesEdgeCases content =
-    length content < 200 ==>
+    L.length content < 200 ==>
     let errors = validateSyntax content
-    in length errors >= 0  -- Should not crash on edge cases
+    in L.length errors >= 0  -- Should not crash on edge cases
 
 -- ============================================================================
 -- Properties for Token
@@ -251,12 +252,12 @@ prop_tokenCreationPreservesPosition tokenContent line column =
     line > 0 && column > 0 ==>
     let -- Mock token creation for testing
         token = tokenContent
-    in length token >= 0  -- Token preserves position info
+    in L.length token >= 0  -- Token preserves position info
 
 prop_tokenOrderingConsistency :: [String] -> Bool
 prop_tokenOrderingConsistency tokens =
     let ordered = sortTokens tokens
-    in length ordered == length tokens
+    in L.length ordered == L.length tokens
 
 prop_tokenValidationCorrectness :: String -> Bool
 prop_tokenValidationCorrectness token =
@@ -275,22 +276,22 @@ prop_tokenValidationCorrectness token =
 
 prop_malformedInputHandling :: String -> Property
 prop_malformedInputHandling input =
-    length input < 1000 ==>
+    L.length input < 1000 ==>
     let errors = validateSyntax input
-    in length errors >= 0  -- Should not crash on malformed input
+    in L.length errors >= 0  -- Should not crash on malformed input
 
 prop_largeInputHandling :: Int -> Property
 prop_largeInputHandling size =
     size > 0 && size < 10000 ==>
     let largeContent = replicate size '\n' ++ "func main() {}"
         errors = validateSyntax largeContent
-    in length errors >= 0  -- Should handle large input gracefully
+    in L.length errors >= 0  -- Should handle large input gracefully
 
 prop_unicodeHandling :: String -> Property
 prop_unicodeHandling unicodeContent =
-    length unicodeContent < 500 ==>
+    L.length unicodeContent < 500 ==>
     let errors = validateSyntax unicodeContent
-    in length errors >= 0  -- Should handle unicode without crashing
+    in L.length errors >= 0  -- Should handle unicode without crashing
 
 -- ============================================================================
 -- Helper functions

@@ -19,6 +19,7 @@ import DependentTypesParser (TypeRef(..), TypeConstraint(..), DependentType(..),
 import Compiler (checkDependentTypes)
 import Parser (parseTypus, TypusFile(..))
 
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf, length)
 import qualified Data.Text as T
 
@@ -44,15 +45,15 @@ test_dependent_type_invalid_constraints =
           Left typeErr -> do
             -- Should catch invalid constraint
             assertBool "Should detect invalid constraint" $
-              any (`isInfixOf` show typeErr) 
+              L.any (`L.isInfixOf` show typeErr) 
                 ["negative", "constraint", "invalid", "Vector"]
           Right _ -> do
             assertFailure "Expected type error for invalid constraint"
 
--- Test 2: Dependent type validation enforces length constraints
+-- Test 2: Dependent type validation enforces L.length constraints
 test_dependent_type_length_constraints :: TestTree
 test_dependent_type_length_constraints =
-  testCase "Dependent type validation enforces length constraints" $ do
+  testCase "Dependent type validation enforces L.length constraints" $ do
     let source = unlines
           [ "//! dependent_types: on"
           , "package main"
@@ -61,7 +62,7 @@ test_dependent_type_length_constraints =
           , "}"
           , "func main() {"
           , "  s1: String(10)  // Valid"
-          , "  s2: String(0)   // Invalid: zero length"
+          , "  s2: String(0)   // Invalid: zero L.length"
           , "}"
           ]
     case parseTypus source of
@@ -69,12 +70,12 @@ test_dependent_type_length_constraints =
       Right typusFile -> do
         case checkDependentTypes typusFile of
           Left typeErr -> do
-            -- Should catch zero length constraint
-            assertBool "Should detect zero length constraint" $
-              any (`isInfixOf` show typeErr) 
-                ["zero", "length", "constraint", "String"]
+            -- Should catch zero L.length constraint
+            assertBool "Should detect zero L.length constraint" $
+              L.any (`L.isInfixOf` show typeErr) 
+                ["zero", "L.length", "constraint", "String"]
           Right _ -> do
-            assertFailure "Expected type error for zero length"
+            assertFailure "Expected type error for zero L.length"
 
 -- Test 3: Dependent type validation handles complex expressions
 test_dependent_type_complex_expressions :: TestTree
@@ -103,7 +104,7 @@ test_dependent_type_complex_expressions =
           Left typeErr -> do
             -- May fail on complex expression evaluation
             assertBool "Should handle complex expressions" $
-              any (`isInfixOf` show typeErr) 
+              L.any (`L.isInfixOf` show typeErr) 
                 ["matrix", "dimension", "constraint"]
           Right _ -> do
             -- Complex expression validation passed
@@ -117,8 +118,8 @@ test_dependent_type_computation =
           [ "//! dependent_types: on"
           , "package main"
           , "type List(n: int) struct {"
-          , "  head: int"
-          , "  tail: List(n - 1) where n > 0"
+          , "  L.head: int"
+          , "  L.tail: List(n - 1) where n > 0"
           , "}"
           , "type Nil struct {}"
           , "func main() {"
@@ -132,7 +133,7 @@ test_dependent_type_computation =
           Left typeErr -> do
             -- Should handle recursive type computation
             assertBool "Should handle type-level computation" $
-              any (`isInfixOf` show typeErr) 
+              L.any (`L.isInfixOf` show typeErr) 
                 ["recursive", "computation", "List"]
           Right _ -> do
             -- Type computation passed
@@ -141,7 +142,7 @@ test_dependent_type_computation =
 -- QuickCheck property: Dependent type validation is sound
 prop_dependent_type_validation_sound :: String -> Property
 prop_dependent_type_validation_sound constraint =
-  length constraint < 50 ==>  -- Keep constraints reasonable
+  L.length constraint < 50 ==>  -- Keep constraints reasonable
   let source = unlines
         [ "//! dependent_types: on"
         , "package main"
@@ -188,7 +189,7 @@ test_dependent_type_predicates =
           Left typeErr -> do
             -- Should catch non-prime constraint
             assertBool "Should detect non-prime constraint" $
-              any (`isInfixOf` show typeErr) 
+              L.any (`L.isInfixOf` show typeErr) 
                 ["prime", "predicate", "constraint"]
           Right _ -> do
             assertFailure "Expected type error for non-prime constraint"
@@ -218,7 +219,7 @@ test_dependent_type_nested_constraints =
           Left typeErr -> do
             -- Should catch nested constraint violation
             assertBool "Should detect nested constraint violation" $
-              any (`isInfixOf` show typeErr) 
+              L.any (`L.isInfixOf` show typeErr) 
                 ["nested", "constraint", "SquareMatrix"]
           Right _ -> do
             assertFailure "Expected type error for negative size"
@@ -226,7 +227,7 @@ test_dependent_type_nested_constraints =
 -- QuickCheck property: Dependent type parsing is consistent
 prop_dependent_type_parsing_consistent :: String -> Property
 prop_dependent_type_parsing_consistent typeDef =
-  length typeDef < 100 ==>  -- Keep type definitions reasonable
+  L.length typeDef < 100 ==>  -- Keep type definitions reasonable
   case parseDependentType typeDef of
     Left _ -> property True  -- Invalid syntax is skipped
     Right result1 ->

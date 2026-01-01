@@ -18,7 +18,9 @@ import Compiler (checkDependentTypes)
 import Parser (TypusFile(..), parseTypus, defaultFileDirectives, CodeBlock(..))
 import SourceLocation (SourceSpan(..), startPos)
 import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (sort)
 import Data.Char (isSpace, isDigit)
 
 -- Property: Dependent type validation handles simple vector types
@@ -93,7 +95,7 @@ prop_dependent_positive_numbers value =
 
 -- Helper function to check if a string contains only alphanumeric characters
 isAlphaNum :: String -> Bool
-isAlphaNum = all (\c -> isDigit c || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'))
+isAlphaNum = L.all (\c -> isDigit c || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'))
 
 tests :: TestTree
 tests = testGroup "Dependent Types Validation QuickCheck tests"

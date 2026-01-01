@@ -1,6 +1,7 @@
 module Test.Unit.CoreSourceLocationSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, choose, oneof)
 import Control.Monad.State (runState)
@@ -37,7 +38,7 @@ tests =
         ]
 
     , testGroup "SourceSpan operations"
-        [ testCase "emptySpan creates zero-length span" $ do
+        [ testCase "emptySpan creates zero-L.length span" $ do
             let pos = posAt 2 3
                 span = emptySpan pos
             spanStart span @?= pos
@@ -91,7 +92,7 @@ tests =
         , testCase "mapLocated transforms value correctly" $ do
             let pos = posAt 1 1
                 original = locatedAt pos "hello"
-                transformed = mapLocated length original
+                transformed = mapLocated L.length original
             locValue transformed @?= 5
             locPos transformed @?= pos
         ]

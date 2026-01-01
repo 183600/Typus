@@ -18,7 +18,7 @@ import Test.QuickCheck
     , vectorOf, frequency, sized
     )
 
--- Dependencies and Ownership modules
+-- Dependencies L.and Ownership modules
 import Dependencies (DependencyGraph(..), DependencyAnalysis(..), analyzeDependencies)
 import Dependencies.Analyzer (DependencyAnalyzer(..))
 import Dependencies.TypeSystem (DependencyType(..))
@@ -29,7 +29,9 @@ import Parser (parseTypus, TypusFile(..), CodeBlock(..))
 import SourceLocation (SourcePos(..), startPos)
 
 import Data.Char (isSpace, isAlphaNum)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (nub)
 import qualified Data.Text as T
 import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes)
 import Data.Either (isLeft, isRight)
@@ -37,7 +39,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Control.Monad (when)
 
--- | Tests for interaction between dependency analysis and ownership system
+-- | Tests for interaction between dependency analysis L.and ownership system
 tests :: TestTree
 tests =
   testGroup "Dependencies Ownership Interaction"
@@ -124,12 +126,12 @@ tests =
               (Left depErr, Right _) -> do
                 -- May fail due to circular dependency detection
                 assertBool "Should report circular dependency" 
-                    ("circular" `isInfixOf` map toLower depErr)
+                    ("circular" `L.isInfixOf` map toLower depErr)
               (Right _, Left ownErr) -> do
                 assertFailure $ "Ownership analysis failed unexpectedly: " ++ ownErr
               (Left depErr, Left ownErr) -> do
                 assertBool "Should report circular dependency" 
-                    ("circular" `isInfixOf` map toLower depErr || "circular" `isInfixOf` map toLower ownErr)
+                    ("circular" `L.isInfixOf` map toLower depErr || "circular" `L.isInfixOf` map toLower ownErr)
         ]
 
     , testGroup "Advanced Interaction Scenarios"
@@ -222,7 +224,7 @@ tests =
                 assertFailure $ "Analyses failed: Dep: " ++ depErr ++ ", Own: " ++ ownErr
         ]
 
-    , testGroup "Error Handling and Edge Cases"
+    , testGroup "Error Handling L.and Edge Cases"
         [ testCase "Ownership errors affect dependency analysis" $ do
             let ownershipError = unlines
                     [ "// @ownership: true"
@@ -260,13 +262,13 @@ tests =
             case (depResult, ownResult) of
               (Left depErr, Right _) -> do
                 assertBool "Should detect missing dependency" 
-                    ("undefined" `isInfixOf` map toLower depErr)
+                    ("undefined" `L.isInfixOf` map toLower depErr)
               (Right deps, Left ownErr) -> do
                 assertBool "Should detect ownership issue" 
                     (isOwnershipError ownErr)
               (Left depErr, Left ownErr) -> do
                 assertBool "Should report both issues" 
-                    (length depErr > 5 && length ownErr > 5)
+                    (L.length depErr > 5 && L.length ownErr > 5)
               (Right _, Right _) -> do
                 assertFailure "Expected error for undefined resource"
 
@@ -301,9 +303,9 @@ tests =
                 assertFailure $ "Both analyses failed for complex case: Dep: " ++ depErr ++ ", Own: " ++ ownErr
         ]
 
-    , testGroup "Performance and Scalability"
+    , testGroup "Performance L.and Scalability"
         [ testCase "Large dependency graphs with ownership" $ do
-            let largeGraph = unlines $ concat
+            let largeGraph = unlines $ L.concat
                     [ ["// @ownership: true", "func main() {"]
                     , ["  let r" ++ show i ++ " = Resource();" | i <- [1..50]]
                     , ["  process r" ++ show i ++ ";" | i <- [1..50]]
@@ -323,10 +325,10 @@ tests =
                 assertFailure "Ownership analysis should handle large graphs"
               (Left depErr, Left ownErr) -> do
                 assertBool "Should handle large inputs gracefully" 
-                    (length depErr > 10 && length ownErr > 10)
+                    (L.length depErr > 10 && L.length ownErr > 10)
 
-        , testCase "Performance with mixed ownership and dependencies" $ do
-            let mixedCode = unlines $ concat
+        , testCase "Performance with mixed ownership L.and dependencies" $ do
+            let mixedCode = unlines $ L.concat
                     [ ["// @ownership: true"]
                     , ["func func" ++ show i ++ "() {" | i <- [1..20]]
                     , ["  let r" ++ show j ++ " = Resource();" | i <- [1..20], j <- [1..3]]
@@ -345,7 +347,7 @@ tests =
                 assertFailure "Ownership analysis should handle mixed code"
               (Left depErr, Left ownErr) -> do
                 assertBool "Should handle mixed analysis errors gracefully" 
-                    (length depErr > 0 && length ownErr > 0)
+                    (L.length depErr > 0 && L.length ownErr > 0)
         ]
 
     , testGroup "QuickCheck Properties"
@@ -419,7 +421,7 @@ hasValidCleanupAnalysis own = True  -- Mock implementation
 
 isOwnershipError :: String -> Bool
 isOwnershipError err = 
-    any (`isInfixOf` map toLower err) ["ownership", "move", "borrow", "lifetime"]
+    L.any (`L.isInfixOf` map toLower err) ["ownership", "move", "borrow", "lifetime"]
 
 handlesOwnershipErrors :: DependencyAnalysis -> Bool
 handlesOwnershipErrors deps = True  -- Mock implementation
@@ -445,7 +447,7 @@ preservesOwnershipConstraints deps own = True  -- Mock implementation
 respectsDependencyOrder :: DependencyAnalysis -> OwnershipAnalysis -> Bool
 respectsDependencyOrder deps own = True  -- Mock implementation
 
--- Mock types and functions for testing
+-- Mock types L.and functions for testing
 data DependencyAnalysis = DependencyAnalysis
     { dependencyGraph :: DependencyGraph
     , dependencyTypes :: [DependencyType]
@@ -483,9 +485,9 @@ data OwnershipMode =
 -- Mock functions
 analyzeDependencies :: String -> Either String DependencyAnalysis
 analyzeDependencies input
-    | "undefined_resource" `isInfixOf` input = 
+    | "undefined_resource" `L.isInfixOf` input = 
         Left "Error: undefined resource 'unknown_resource'"
-    | "circular" `isInfixOf` input = 
+    | "circular" `L.isInfixOf` input = 
         Left "Error: circular dependency detected"
     | otherwise = 
         Right $ DependencyAnalysis
@@ -495,9 +497,9 @@ analyzeDependencies input
 
 analyzeOwnership :: String -> Either String OwnershipAnalysis
 analyzeOwnership input
-    | "use data" `isInfixOf` input && "move data" `isInfixOf` input = 
+    | "use data" `L.isInfixOf` input && "move data" `L.isInfixOf` input = 
         Left "Error: use after move"
-    | "unknown_resource" `isInfixOf` input = 
+    | "unknown_resource" `L.isInfixOf` input = 
         Left "Error: unknown resource in ownership context"
     | otherwise = 
         Right $ OwnershipAnalysis
@@ -507,10 +509,10 @@ analyzeOwnership input
 
 -- Helper functions
 toLower :: String -> String
-toLower = map (\c -> if c >= 'A' && c <= 'Z' then toEnum (fromEnum c + 32) else c)
+toLower = L.map (\c -> if c >= 'A' && c <= 'Z' then toEnum (fromEnum c + 32) else c)
 
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `Data.List.isInfixOf` haystack
+L.isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
 
 -- QuickCheck generators
 arbitraryDependencyType :: Gen DependencyType

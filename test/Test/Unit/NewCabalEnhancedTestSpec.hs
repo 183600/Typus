@@ -21,7 +21,9 @@ import SourceLocation (Located(..), SourcePos(..), SourceSpan(..))
 import ErrorHandler
 import Utils (trim, splitBy)
 
-import Data.List (isInfixOf, isPrefixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isInfixOf, isPrefixOf)
+import Data.List (sort, nub)
 import Data.Char (isSpace, isAlpha)
 import qualified Data.Text as T
 
@@ -45,8 +47,8 @@ test_error_recovery_mechanism =
     case parseTypus source of
       Left err -> do
         -- 确保错误信息包含有用的位置信息
-        assertBool "Error should contain line information" (isInfixOf "line" err)
-        assertBool "Error should contain column information" (isInfixOf "column" err)
+        assertBool "Error should contain line information" (L.isInfixOf "line" err)
+        assertBool "Error should contain column information" (L.isInfixOf "column" err)
       Right _ -> assertFailure "Expected parsing to fail with syntax errors"
 
 -- ============================================================================
@@ -112,7 +114,7 @@ test_compiler_optimization_invariants =
         assertBool "Both programs should be semantically equivalent" True
       (Left err1, Left err2) -> 
         -- 如果都失败，确保失败原因一致
-        assertBool "Both should fail for similar reasons" (length err1 > 0 && length err2 > 0)
+        assertBool "Both should fail for similar reasons" (L.length err1 > 0 && L.length err2 > 0)
       (Left err, Right _) -> 
         assertFailure $ "First program failed but second succeeded: " ++ err
       (Right _, Left err) -> 
@@ -138,7 +140,7 @@ test_source_location_tracking_precision =
         -- 验证源位置信息
         let blocks = tfCodeBlocks typusFile
         assertBool "Should have at least one code block" (not (null blocks))
-        case head blocks of
+        case L.head blocks of
           CodeBlock { cbSpan = span } -> do
             posLine (spanStart span) @?= 2  -- func main starts at line 2
             posLine (spanEnd span) @?= 5     -- block ends at line 5
@@ -167,7 +169,7 @@ test_ownership_transfer_complex_scenarios =
           , "}"
           ]
     let errors = analyzeOwnership source
-        hasUseAfterMove = any (\e -> case e of UseAfterMove v -> v == "data"; _ -> False) errors
+        hasUseAfterMove = L.any (\e -> case e of UseAfterMove v -> v == "data"; _ -> False) errors
     assertBool "Should detect use after move in complex scenario" hasUseAfterMove
 
 -- ============================================================================
@@ -186,7 +188,7 @@ test_type_system_consistency =
           , "func main() {"
           , "    x := 42"
           , "    y := identity(x)"
-          , "    // x and y should have the same type"
+          , "    // x L.and y should have the same type"
           , "    _ = x + y  // This should be valid"
           , "}"
           ]
@@ -206,7 +208,7 @@ test_semantic_analysis_invariants =
     let source = unlines
           [ "package main"
           , "func main() {"
-          , "    // Variable declaration and usage"
+          , "    // Variable declaration L.and usage"
           , "    x := 10"
           , "    x = x + 1"
           , "    // x should be updated correctly"
@@ -238,8 +240,8 @@ test_parser_error_recovery =
     case parseTypus source of
       Left err -> do
         -- 确保错误信息包含有用的上下文
-        assertBool "Error should provide context" (length err > 10)
-        assertBool "Error should mention syntax" (isInfixOf "syntax" err || isInfixOf "parse" err)
+        assertBool "Error should provide context" (L.length err > 10)
+        assertBool "Error should mention syntax" (L.isInfixOf "syntax" err || L.isInfixOf "parse" err)
       Right _ -> assertFailure "Expected parsing to fail with syntax error"
 
 -- ============================================================================
@@ -266,10 +268,10 @@ test_compiler_ir_consistency =
         let blocks = tfCodeBlocks typusFile
         assertBool "Should have code blocks" (not (null blocks))
         -- 验证每个代码块都有有效的源位置信息
-        let validSpans = filter (\cb -> null (cbContent cb) || 
+        let validSpans = L.filter (\cb -> L.null (cbContent cb) || 
                                       (posLine (spanStart (cbSpan cb)) > 0)) blocks
         assertBool "All code blocks should have valid source spans" 
-                   (length validSpans == length blocks)
+                   (L.length validSpans == L.length blocks)
 
 -- ============================================================================
 -- Test 10: 工具链集成测试
@@ -297,7 +299,7 @@ test_toolchain_integration =
           (Just ownLoc, Just depLoc) -> do
             locatedValue ownLoc @?= True
             locatedValue depLoc @?= True
-          _ -> assertFailure "Expected both ownership and dependent types directives"
+          _ -> assertFailure "Expected both ownership L.and dependent types directives"
         
         -- 测试所有权分析
         let ownershipErrors = analyzeOwnership source
@@ -307,7 +309,7 @@ test_toolchain_integration =
         -- 测试代码生成
         case generateGoCode typusFile of
           Left _ -> assertFailure "Code generation should not fail"
-          Right goCode -> assertBool "Should generate valid Go code" (length goCode > 0)
+          Right goCode -> assertBool "Should generate valid Go code" (L.length goCode > 0)
 
 -- ============================================================================
 -- QuickCheck Properties
@@ -318,17 +320,17 @@ prop_trim_preserves_internal_content :: String -> String -> Property
 prop_trim_preserves_internal_content prefix suffix =
   let content = prefix ++ "  hello  world  " ++ suffix
       trimmed = trim content
-      hasInternalSpaces = "  " `isInfixOf` content
+      hasInternalSpaces = "  " `L.isInfixOf` content
   in classify hasInternalSpaces "has internal spaces" $
-     property $ "hello  world" `isInfixOf` trimmed
+     property $ "hello  world" `L.isInfixOf` trimmed
 
 -- Property: splitBy保持分割符数量一致性
 prop_splitby_preserves_delimiter_count :: Char -> String -> Property
 prop_splitby_preserves_delimiter_count delim str =
   let parts = splitBy delim str
-      delimiterCount = length (filter (== delim) str)
+      delimiterCount = L.length (L.filter (== delim) str)
       expectedCount = if null str then 0 else delimiterCount
-  in property $ length parts - 1 == expectedCount
+  in property $ L.length parts - 1 == expectedCount
 
 -- Property: 所有权分析对于简单代码不报错
 prop_ownership_analysis_simple_code :: Property

@@ -10,6 +10,7 @@
 module Test.Unit.ErrorHandlerQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose, suchThat)
@@ -70,7 +71,7 @@ instance Arbitrary TypeError where
         relatedErrors <- listOf arbitrary
         errorChain <- listOf arbitrary
         timestamp <- arbitrary
-        return $ TypeError errorId severity category message location context recovery suggestions relatedErrors errorChain timestamp
+        return $ TypeError errId errorId severity category message location context recovery suggestions relatedErrors errorChain timestamp
 
 instance Arbitrary CombinedError where
     arbitrary = oneof
@@ -148,7 +149,7 @@ prop_error_suggestions_nonempty :: TypeError -> Property
 prop_error_suggestions_nonempty error =
     let suggestions = errorSuggestions error
         hasSuggestions = not (null suggestions)
-        allNonEmpty = all (not . T.null) suggestions
+        allNonEmpty = L.all (not . T.null) suggestions
     in classify hasSuggestions "Has suggestions" $
        classify (not hasSuggestions) "No suggestions" $
        property $ hasSuggestions ==> allNonEmpty
@@ -164,7 +165,7 @@ prop_combined_error_severity_consistent combinedError =
 prop_error_filter_preserves_ordering :: ErrorSeverity -> [TypeError] -> Property
 prop_error_filter_preserves_ordering minSeverity errors =
     let filtered = filterBySeverity minSeverity errors
-        ordered = all (\e -> severity e >= minSeverity) filtered
+        ordered = L.all (\e -> severity e >= minSeverity) filtered
     in classify (not (null filtered)) "Has filtered errors" $
        classify (null filtered) "No filtered errors" $
        property $ ordered
@@ -173,14 +174,14 @@ prop_error_filter_preserves_ordering minSeverity errors =
 prop_error_statistics_accurate :: [TypeError] -> Property
 prop_error_statistics_accurate errors =
     let stats = getErrorStatistics errors
-        actualFatal = length $ filter (\e -> severity e == Fatal) errors
-        actualError = length $ filter (\e -> severity e == Error) errors
-        actualWarning = length $ filter (\e -> severity e == Warning) errors
-        actualInfo = length $ filter (\e -> severity e == Info) errors
-    in property $ actualFatal == length (filterBySeverity Fatal errors) &&
-                actualError == length (filterBySeverity Error errors) &&
-                actualWarning == length (filterBySeverity Warning errors) &&
-                actualInfo == length (filterBySeverity Info errors)
+        actualFatal = L.length $ L.filter (\e -> severity e == Fatal) errors
+        actualError = L.length $ L.filter (\e -> severity e == Error) errors
+        actualWarning = L.length $ L.filter (\e -> severity e == Warning) errors
+        actualInfo = L.length $ L.filter (\e -> severity e == Info) errors
+    in property $ actualFatal == L.length (filterBySeverity Fatal errors) &&
+                actualError == L.length (filterBySeverity Error errors) &&
+                actualWarning == L.length (filterBySeverity Warning errors) &&
+                actualInfo == L.length (filterBySeverity Info errors)
 
 -- Property: Error context can be empty
 prop_error_context_empty :: ErrorContext -> Property
@@ -189,7 +190,7 @@ prop_error_context_empty context =
                   isNothing (contextFunction context) &&
                   isNothing (contextVariable context) &&
                   isNothing (contextType context) &&
-                  null (contextAdditional context)
+                  L.null (contextAdditional context)
     in classify isEmpty "Empty context" $
        classify (not isEmpty) "Non-empty context" $
        property True
@@ -198,20 +199,20 @@ prop_error_context_empty context =
 prop_error_chaining_preserves_original :: TypeError -> [TypeError] -> Property
 prop_error_chaining_preserves_original baseError chainErrors =
     let chainedError = baseError { errorChain = chainErrors }
-        chainLength = length (errorChain chainedError)
+        chainLength = L.length (errorChain chainedError)
         originalUnchanged = errorId baseError == errorId chainedError &&
                            severity baseError == severity chainedError
     in classify (not (null chainErrors)) "Has chain" $
        classify (null chainErrors) "No chain" $
-       property $ chainLength == length chainErrors && originalUnchanged
+       property $ chainLength == L.length chainErrors && originalUnchanged
 
 -- Property: Error formatting preserves essential information
 prop_error_format_preserves_info :: TypeError -> Property
 prop_error_format_preserves_info error =
     let formatted = formatError error
-        hasMessage = T.unpack (message error) `isInfixOf` formatted
-        hasLocation = show (line (location error)) `isInfixOf` formatted
-        hasSeverity = show (severity error) `isInfixOf` formatted
+        hasMessage = T.unpack (message error) `L.isInfixOf` formatted
+        hasLocation = show (line (location error)) `L.isInfixOf` formatted
+        hasSeverity = show (severity error) `L.isInfixOf` formatted
     in classify hasMessage "Has message" $
        classify hasLocation "Has location" $
        classify hasSeverity "Has severity" $
@@ -233,8 +234,8 @@ prop_recovery_strategy_consistent recovery =
 prop_combine_errors_preserves_all :: [TypeError] -> Property
 prop_combine_errors_preserves_all errors =
     let combined = combineErrors errors
-        combinedCount = length combined
-        originalCount = length errors
+        combinedCount = L.length combined
+        originalCount = L.length errors
     in classify (not (null errors)) "Has errors" $
        classify (null errors) "No errors" $
        property $ combinedCount >= originalCount
@@ -243,7 +244,7 @@ prop_combine_errors_preserves_all errors =
 prop_filter_by_category :: ErrorCategory -> [TypeError] -> Property
 prop_filter_by_category targetCategory errors =
     let filtered = filterByCategory targetCategory errors
-        allCorrectCategory = all (\e -> category e == targetCategory) filtered
+        allCorrectCategory = L.all (\e -> category e == targetCategory) filtered
     in classify (not (null filtered)) "Has filtered errors" $
        classify (null filtered) "No filtered errors" $
        property $ allCorrectCategory
@@ -260,9 +261,9 @@ prop_severity_comparison_transitive sev1 sev2 sev3 =
 
 -- Helper function for string infix check
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` [take (length needle) (drop i haystack) | i <- [0..length haystack - length needle]]
+L.isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
 
--- Test group containing all QuickCheck properties
+-- Test group containing L.all QuickCheck properties
 tests :: TestTree
 tests = testGroup "ErrorHandler QuickCheck tests"
     [ fastProperty "Error severity ordering is consistent" prop_severity_ordering_consistent

@@ -3,6 +3,7 @@
 module Test.Unit.MemoryEfficiencySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty)
 import Test.QuickCheck (Arbitrary(..), Gen, oneof, listOf, choose, Property, (==>), sized)
@@ -27,14 +28,14 @@ tests =
                 results = map testMemoryScaling sizes
             -- Memory usage should not grow exponentially
             assertBool "Memory scaling should be near-linear" 
-                (all (\(size, mem) -> mem <= size * 10) results)
+                (L.all (\(size, mem) -> mem <= size * 10) results)
 
         , testCase "Symbol table memory efficiency" $ do
             let numSymbols = [100, 1000, 5000]
                 results = map testSymbolTableMemory numSymbols
             -- Symbol table should use memory efficiently
             assertBool "Symbol table memory usage should be reasonable"
-                (all (\(symbols, mem) -> mem <= symbols * 100) results)
+                (L.all (\(symbols, mem) -> mem <= symbols * 100) results)
 
         , testCase "AST node memory cleanup" $ do
             let initialMemory = getCurrentMemoryUsage
@@ -82,7 +83,7 @@ tests =
                 results = map testMemoryPool allocations
             -- Memory pool should be efficient
             assertBool "Memory pool allocation should be efficient"
-                (all (\(alloc, efficiency) -> efficiency >= 0.8) results)
+                (L.all (\(alloc, efficiency) -> efficiency >= 0.8) results)
 
         , testCase "Memory pool cleanup" $ do
             let poolSize = 10000
@@ -130,15 +131,15 @@ testMemoryScaling :: Int -> (Int, Int)
 testMemoryScaling size = 
     let input = replicate size 'x'
         memoryBefore = getCurrentMemoryUsage
-        _ = length input -- Process the input
+        _ = L.length input -- Process the input
         memoryAfter = getCurrentMemoryUsage
     in (size, memoryAfter - memoryBefore)
 
 testSymbolTableMemory :: Int -> (Int, Int)
 testSymbolTableMemory numSymbols = 
-    let symbols = map (\i -> "symbol" ++ show i) [1..numSymbols]
+    let symbols = L.map (\i -> "symbol" ++ show i) [1..numSymbols]
         memoryBefore = getCurrentMemoryUsage
-        _ = length symbols -- Simulate symbol table operations
+        _ = L.length symbols -- Simulate symbol table operations
         memoryAfter = getCurrentMemoryUsage
     in (numSymbols, memoryAfter - memoryBefore)
 
@@ -184,28 +185,28 @@ performMemoryIntensiveOperation = return () -- Mock implementation
 prop_memoryBoundedByInput :: [(String, String)] -> Property
 prop_memoryBoundedByInput inputs =
     not (null inputs) ==>
-    let totalInputSize = sum $ map (\(f, c) -> length f + length c) inputs
+    let totalInputSize = L.sum $ L.map (\(f, c) -> L.length f + L.length c) inputs
         maxMemory = totalInputSize * 100 -- 100x multiplier as upper bound
     in maxMemory >= totalInputSize
 
 prop_noMemoryLeaks :: [(String, String)] -> Int -> Property
 prop_noMemoryLeaks inputs iterations =
     not (null inputs) && iterations > 0 && iterations <= 1000 ==>
-    let baseMemory = sum $ map (\(f, c) -> length f + length c) inputs
+    let baseMemory = L.sum $ L.map (\(f, c) -> L.length f + L.length c) inputs
         maxLeak = baseMemory * 10 -- Allow 10x base memory as leak threshold
     in maxLeak >= baseMemory
 
 prop_memoryPoolEfficiency :: [Int] -> Property
 prop_memoryPoolEfficiency sizes =
     not (null sizes) ==>
-    let totalSize = sum sizes
-        minEfficiency = 0.7 -- 70% minimum efficiency
+    let totalSize = L.sum sizes
+        minEfficiency = 0.7 -- 70% L.minimum efficiency
     in totalSize > 0 ==> minEfficiency > 0
 
 prop_garbageCollectionEffectiveness :: [Int] -> Property
 prop_garbageCollectionEffectiveness operations =
     not (null operations) ==>
-    let totalOps = sum operations
+    let totalOps = L.sum operations
         maxGCPressure = totalOps `div` 50 -- Max 1 GC per 50 operations
     in totalOps > 0 ==> maxGCPressure >= 0
 

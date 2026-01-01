@@ -1,6 +1,7 @@
 module Test.Unit.NewCoreCabalQuickCheckSpec3 (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 
@@ -24,7 +25,7 @@ tests =
         ]
     , testGroup "Code block properties"
         [ fastProperty "code block text concatenation preserves order" prop_codeBlockConcatenationOrder
-        , fastProperty "code block span covers all content" prop_codeBlockSpanCoverage
+        , fastProperty "code block span covers L.all content" prop_codeBlockSpanCoverage
         , testCase "code block creation" $ do
             let text = T.pack "test code"
                 span = SourceSpan (SourcePos 1 1) (SourcePos 1 10)
@@ -38,7 +39,7 @@ tests =
         , testCase "empty typus file" $ do
             let file = TypusFile { tfDirectives = defaultFileDirectives, tfBlocks = [] }
             tfDirectives file @?= defaultFileDirectives
-            length (tfBlocks file) @?= 0
+            L.length (tfBlocks file) @?= 0
         ]
     ]
 
@@ -112,24 +113,24 @@ prop_codeBlockConcatenationOrder txt1 txt2 txt3 =
   let text1 = T.pack txt1
       text2 = T.pack txt2
       text3 = T.pack txt3
-      span1 = SourceSpan (SourcePos 1 1) (SourcePos 1 (length txt1))
-      span2 = SourceSpan (SourcePos 2 1) (SourcePos 2 (length txt2))
-      span3 = SourceSpan (SourcePos 3 1) (SourcePos 3 (length txt3))
+      span1 = SourceSpan (SourcePos 1 1) (SourcePos 1 (L.length txt1))
+      span2 = SourceSpan (SourcePos 2 1) (SourcePos 2 (L.length txt2))
+      span3 = SourceSpan (SourcePos 3 1) (SourcePos 3 (L.length txt3))
       directives = defaultBlockDirectives
       block1 = CodeBlock { cbText = text1, cbSpan = span1, cbDirectives = directives }
       block2 = CodeBlock { cbText = text2, cbSpan = span2, cbDirectives = directives }
       block3 = CodeBlock { cbText = text3, cbSpan = span3, cbDirectives = directives }
       blocks = [block1, block2, block3]
-      concatenated = T.concat $ map cbText blocks
+      concatenated = T.L.concat $ map cbText blocks
       expected = text1 <> text2 <> text3
   in concatenated == expected
 
--- Code block span covers all content
+-- Code block span covers L.all content
 prop_codeBlockSpanCoverage :: String -> Bool
 prop_codeBlockSpanCoverage txt =
   let text = T.pack txt
-      lineCount = length $ lines txt
-      lastLineLength = length $ last $ lines txt
+      lineCount = L.length $ lines txt
+      lastLineLength = L.length $ last $ lines txt
       span = SourceSpan (SourcePos 1 1) (SourcePos lineCount lastLineLength)
       block = CodeBlock { cbText = text, cbSpan = span, cbDirectives = defaultBlockDirectives }
       (SourceSpan start end) = cbSpan block

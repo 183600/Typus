@@ -10,6 +10,7 @@ import Ownership (analyzeOwnership)
 import Ownership.Common.Types (OwnershipResult(..))
 import Parser (parseTypus)
 import Utils (trim)
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 -- | 测试用例4: 所有权分析测试
@@ -58,7 +59,7 @@ tests =
         case parseTypus source >>= analyzeOwnership of
           Left err -> 
             -- Check that error mentions ownership
-            "ownership" `isInfixOf` err @?= True
+            "ownership" `L.isInfixOf` err @?= True
           Right _ -> fail "expected ownership analysis to detect violation"
 
     -- QuickCheck properties

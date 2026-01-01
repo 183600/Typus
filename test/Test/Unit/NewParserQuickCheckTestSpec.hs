@@ -3,6 +3,7 @@
 module Test.Unit.NewParserQuickCheckTestSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Parser (FileDirectives(..), BlockDirectives(..), defaultFileDirectives, defaultBlockDirectives)
 import SourceLocation (Located(..), SourcePos(..))
@@ -26,12 +27,12 @@ prop_default_block_directives_properties =
 -- 测试FileDirectives的性质
 prop_file_directives_equality :: Maybe Bool -> Maybe Bool -> Maybe Bool -> Bool
 prop_file_directives_equality own deps cons =
-  let directives1 = FileDirectives (fmap (locatedAt testPos) own) 
-                                   (fmap (locatedAt testPos) deps) 
-                                   (fmap (locatedAt testPos) cons)
-      directives2 = FileDirectives (fmap (locatedAt testPos) own) 
-                                   (fmap (locatedAt testPos) deps) 
-                                   (fmap (locatedAt testPos) cons)
+  let directives1 = FileDirectives (fL.map (locatedAt testPos) own) 
+                                   (fL.map (locatedAt testPos) deps) 
+                                   (fL.map (locatedAt testPos) cons)
+      directives2 = FileDirectives (fL.map (locatedAt testPos) own) 
+                                   (fL.map (locatedAt testPos) deps) 
+                                   (fL.map (locatedAt testPos) cons)
   in directives1 == directives2
   where
     testPos = SourcePos 1 1
@@ -40,12 +41,12 @@ prop_file_directives_equality own deps cons =
 -- 测试BlockDirectives的性质
 prop_block_directives_equality :: Maybe Bool -> Maybe Bool -> Maybe Bool -> Bool
 prop_block_directives_equality own deps cons =
-  let directives1 = BlockDirectives (fmap (locatedAt testPos) own) 
-                                    (fmap (locatedAt testPos) deps) 
-                                    (fmap (locatedAt testPos) cons)
-      directives2 = BlockDirectives (fmap (locatedAt testPos) own) 
-                                    (fmap (locatedAt testPos) deps) 
-                                    (fmap (locatedAt testPos) cons)
+  let directives1 = BlockDirectives (fL.map (locatedAt testPos) own) 
+                                    (fL.map (locatedAt testPos) deps) 
+                                    (fL.map (locatedAt testPos) cons)
+      directives2 = BlockDirectives (fL.map (locatedAt testPos) own) 
+                                    (fL.map (locatedAt testPos) deps) 
+                                    (fL.map (locatedAt testPos) cons)
   in directives1 == directives2
   where
     testPos = SourcePos 1 1
@@ -79,12 +80,12 @@ prop_block_directives_extraction own deps cons =
 -- 测试指令的一致性
 prop_directives_consistency :: Maybe Bool -> Maybe Bool -> Maybe Bool -> Bool
 prop_directives_consistency own deps cons =
-  let fileDirs = FileDirectives (fmap (locatedAt testPos) own) 
-                                (fmap (locatedAt testPos) deps) 
-                                (fmap (locatedAt testPos) cons)
-      blockDirs = BlockDirectives (fmap (locatedAt testPos) own) 
-                                 (fmap (locatedAt testPos) deps) 
-                                 (fmap (locatedAt testPos) cons)
+  let fileDirs = FileDirectives (fL.map (locatedAt testPos) own) 
+                                (fL.map (locatedAt testPos) deps) 
+                                (fL.map (locatedAt testPos) cons)
+      blockDirs = BlockDirectives (fL.map (locatedAt testPos) own) 
+                                 (fL.map (locatedAt testPos) deps) 
+                                 (fL.map (locatedAt testPos) cons)
       extractFile fd = fmap locatedValue fd
       extractBlock bd = fmap locatedValue bd
   in extractFile (fdOwnership fileDirs) == extractBlock (bdOwnership blockDirs) &&

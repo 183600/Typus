@@ -1,12 +1,13 @@
 module Test.Unit.NewDependentTypeBoundarySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), choose, listOf, elements)
 import DependentTypesParser
 import qualified Data.Text as T
 
--- | Test dependent type boundary conditions and constraints
+-- | Test dependent type boundary conditions L.and constraints
 tests :: TestTree
 tests =
   testGroup "Dependent Type Boundary Tests"
@@ -65,7 +66,7 @@ tests =
                 Right checked -> assertBool "Should handle dependent function types" True
 
         , testCase "Higher-order dependent types" $ do
-            let input = "// @dependent-types true\nfunc test(f: (n: int) -> [n]int) -> int {\n  let result: [5]int = f(5)\n  return length(result)\n}"
+            let input = "// @dependent-types true\nfunc test(f: (n: int) -> [n]int) -> int {\n  let result: [5]int = f(5)\n  return L.length(result)\n}"
                 result = parseAndCheck input
             case result of
                 Left err -> assertBool ("Higher-order types should work: " ++ show err) False

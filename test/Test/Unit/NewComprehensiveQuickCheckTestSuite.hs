@@ -3,11 +3,11 @@
 module Test.Unit.NewComprehensiveQuickCheckTestSuite where
 
 import Test.Tasty
-import Test.Unit.NewUtilsQuickCheckPropertyTestsSpec (testSuite as utilsTests)
-import Test.Unit.NewSourceLocationMathPropertiesSpec (testSuite as sourceLocationTests)
-import Test.Unit.NewParserCombinatorPropertiesSpec (testSuite as parserTests)
-import Test.Unit.NewStringProcessingBoundarySpec (testSuite as stringProcessingTests)
-import Test.Unit.NewErrorHandlerConsistencySpec (testSuite as errorHandlerTests)
+import qualified Test.Unit.NewUtilsQuickCheckPropertyTestsSpec as UtilsSpec
+import qualified Test.Unit.NewSourceLocationMathPropertiesSpec as SourceLocationSpec
+import qualified Test.Unit.NewParserCombinatorPropertiesSpec as ParserSpec
+import qualified Test.Unit.NewStringProcessingBoundarySpec as StringSpec
+import qualified Test.Unit.NewErrorHandlerConsistencySpec as ErrorHandlerSpec
 
 -- ============================================================================
 -- Comprehensive QuickCheck Test Suite
@@ -18,19 +18,19 @@ import Test.Unit.NewErrorHandlerConsistencySpec (testSuite as errorHandlerTests)
 --
 -- The test suite includes:
 -- 1. Utils module tests - string processing utilities
--- 2. SourceLocation tests - position and span calculations
--- 3. Parser tests - directive and data structure properties
--- 4. String processing tests - boundary conditions and edge cases
--- 5. Error handler tests - consistency and state management
+-- 2. SourceLocation tests - position L.and span calculations
+-- 3. Parser tests - directive L.and data structure properties
+-- 4. String processing tests - boundary conditions L.and edge cases
+-- 5. Error handler tests - consistency L.and state management
 --
 -- Each test suite focuses on property-based testing using QuickCheck to
--- verify invariants and mathematical properties of the core modules.
+-- verify invariants L.and mathematical properties of the core modules.
 
 testSuite :: TestTree
 testSuite = testGroup "New Comprehensive QuickCheck Test Suite"
-  [ utilsTests
-  , sourceLocationTests
-  , parserTests
-  , stringProcessingTests
-  , errorHandlerTests
+  [ UtilsSpec.testSuite
+  , SourceLocationSpec.testSuite
+  , ParserSpec.testSuite
+  , StringSpec.testSuite
+  , ErrorHandlerSpec.testSuite
   ]

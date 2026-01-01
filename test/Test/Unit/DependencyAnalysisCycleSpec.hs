@@ -31,6 +31,7 @@ import Dependencies
 import qualified Dependencies.TypeSystem as TS
 
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Char (isSpace, isAlphaNum)
 import Data.Map (Map)
@@ -85,7 +86,7 @@ arbitraryCyclicGraph :: Gen [(String, [String])
 arbitraryCyclicGraph = do
   numNodes <- choose (2, 6)
   nodeNames <- vectorOf numNodes arbitraryFuncName
-  let createCycle nodes = zip nodes (tail nodes ++ [head nodes])
+  let createCycle nodes = zip nodes (L.tail nodes ++ [L.head nodes])
   return $ createCycle nodeNames
 
 -- Generate complex dependency patterns
@@ -96,8 +97,8 @@ arbitraryComplexDependency = do
     "linear" -> do
       numNodes <- choose (2, 5)
       nodeNames <- vectorOf numNodes arbitraryFuncName
-      let linearDeps = zip nodeNames (tail nodeNames)
-          code = unlines $ map (\(name, deps) -> 
+      let linearDeps = zip nodeNames (L.tail nodeNames)
+          code = unlines $ L.map (\(name, deps) -> 
             "func " ++ name ++ "() {\n" ++ 
             concatMap (\dep -> "  " ++ dep ++ "()\n") deps ++ 
             "}") nodeNames
@@ -108,7 +109,7 @@ arbitraryComplexDependency = do
       let treeCode = "func " ++ root ++ "() {\n" ++
                      concatMap (\child -> "  " ++ child ++ "()\n") children ++
                      "}\n" ++
-                     unlines (map (\child -> "func " ++ child ++ "() {\n  // leaf\n}\n") children)
+                     unlines (L.map (\child -> "func " ++ child ++ "() {\n  // leaf\n}\n") children)
       return treeCode
     "diamond" -> do
       root <- arbitraryFuncName
@@ -123,15 +124,15 @@ arbitraryComplexDependency = do
     "cycle" -> do
       numNodes <- choose (2, 4)
       nodeNames <- vectorOf numNodes arbitraryFuncName
-      let cycleDeps = zip nodeNames (tail nodeNames ++ [head nodeNames])
-          cycleCode = unlines $ map (\(name, deps) -> 
+      let cycleDeps = zip nodeNames (L.tail nodeNames ++ [L.head nodeNames])
+          cycleCode = unlines $ L.map (\(name, deps) -> 
             "func " ++ name ++ "() {\n" ++ 
             concatMap (\dep -> "  " ++ dep ++ "()\n") deps ++ 
             "}") nodeNames
       return cycleCode
     _ -> do  -- complete
       nodeNames <- vectorOf 3 arbitraryFuncName
-      let completeCode = unlines $ map (\name -> 
+      let completeCode = unlines $ L.map (\name -> 
             "func " ++ name ++ "() {\n" ++ 
             concatMap (\other -> if other /= name then "  " ++ other ++ "()\n" else "") nodeNames ++
             "}") nodeNames
@@ -146,47 +147,47 @@ prop_acyclic_graph_topological_sort :: Property
 prop_acyclic_graph_topological_sort =
   forAll arbitraryAcyclicGraph $ \graph ->
   let nodeNames = map fst graph
-      edges = concatMap (\(node, deps) -> map (\dep -> (node, dep)) deps) graph
+      edges = concatMap (\(node, deps) -> L.map (\dep -> (node, dep)) deps) graph
       -- Create a graph representation
       vertexIndices = Map.fromList $ zip nodeNames [0..]
-      indexedEdges = map (\(from, to) -> 
+      indexedEdges = L.map (\(from, to) -> 
         (Map.findWithDefault 0 from vertexIndices, 
          Map.findWithDefault 0 to vertexIndices)) edges
-      maxIndex = length nodeNames - 1
+      maxIndex = L.length nodeNames - 1
       graph' = buildG (0, maxIndex) indexedEdges
       sorted = topSort graph'
-  in property $ length sorted == length nodeNames
+  in property $ L.length sorted == L.length nodeNames
 
 -- Property: Cyclic graphs cannot be topologically sorted
 prop_cyclic_graph_no_topological_sort :: Property
 prop_cyclic_graph_no_topological_sort =
   forAll arbitraryCyclicGraph $ \graph ->
   let nodeNames = map fst graph
-      edges = concatMap (\(node, deps) -> map (\dep -> (node, dep)) deps) graph
+      edges = concatMap (\(node, deps) -> L.map (\dep -> (node, dep)) deps) graph
       -- Create a graph representation
       vertexIndices = Map.fromList $ zip nodeNames [0..]
-      indexedEdges = map (\(from, to) -> 
+      indexedEdges = L.map (\(from, to) -> 
         (Map.findWithDefault 0 from vertexIndices, 
          Map.findWithDefault 0 to vertexIndices)) edges
-      maxIndex = length nodeNames - 1
+      maxIndex = L.length nodeNames - 1
       graph' = buildG (0, maxIndex) indexedEdges
       sorted = topSort graph'
-  in property $ length sorted < length nodeNames
+  in property $ L.length sorted < L.length nodeNames
 
 -- Property: Strongly connected components identify cycles
 prop_scc_identifies_cycles :: Property
 prop_scc_identifies_cycles =
   forAll arbitraryCyclicGraph $ \graph ->
   let nodeNames = map fst graph
-      edges = concatMap (\(node, deps) -> map (\dep -> (node, dep)) deps) graph
+      edges = concatMap (\(node, deps) -> L.map (\dep -> (node, dep)) deps) graph
       -- Create a graph representation for SCC analysis
       vertexMap = Map.fromList $ zip nodeNames [0..]
-      indexedEdges = map (\(from, to) -> 
+      indexedEdges = L.map (\(from, to) -> 
         (Map.findWithDefault 0 from vertexMap, 
          Map.findWithDefault 0 to vertexMap)) edges
       edgesWithVertices = zipWith (\i (from, to) -> (i, from, to)) [0..] indexedEdges
       sccs = stronglyConnComp edgesWithVertices
-      hasCycles = any (\scc -> case scc of
+      hasCycles = L.any (\scc -> case scc of
         CyclicSCC _ -> True
         AcyclicSCC _ -> False) sccs
   in property $ hasCycles
@@ -242,7 +243,7 @@ prop_dependency_analysis_consistent =
 -- Property: Dependency analysis handles large code bases
 prop_dependency_analysis_large_code :: Property
 prop_dependency_analysis_large_code =
-  let largeCode = unlines $ map (\i -> "func func" ++ show i ++ "() int {\n  return " ++ show i ++ "\n}") [1..20]
+  let largeCode = unlines $ L.map (\i -> "func func" ++ show i ++ "() int {\n  return " ++ show i ++ "\n}") [1..20]
   in case analyzeDependentTypes largeCode of
     Left _ -> property True
     Right _ -> property True
@@ -279,12 +280,12 @@ prop_dependency_analysis_interface_dependencies =
 buildDependencyGraph :: String -> [(String, [String])]
 buildDependencyGraph code = 
   let lines' = lines code
-      funcLines = filter ("func " `isPrefixOf`) lines'
+      funcLines = L.filter ("func " `L.isPrefixOf`) lines'
       extractFuncName line = takeWhile (\c -> c /= '(' && c /= ' ') $ drop 5 line
       extractDeps line = 
-        let depCalls = filter ("()" `isSuffixOf`) $ words line
-        in map (takeWhile (/= '(')) depCalls
-  in map (\line -> 
+        let depCalls = L.filter ("()" `L.isSuffixOf`) $ words line
+        in L.map (takeWhile (/= '(')) depCalls
+  in L.map (\line -> 
     let funcName = extractFuncName line
         deps = extractDeps line
     in (funcName, deps)) funcLines
@@ -293,14 +294,14 @@ buildDependencyGraph code =
 hasCycles :: [(String, [String])] -> Bool
 hasCycles graph =
   let nodeNames = map fst graph
-      edges = concatMap (\(node, deps) -> map (\dep -> (node, dep)) deps) graph
+      edges = concatMap (\(node, deps) -> L.map (\dep -> (node, dep)) deps) graph
       vertexMap = Map.fromList $ zip nodeNames [0..]
-      indexedEdges = map (\(from, to) -> 
+      indexedEdges = L.map (\(from, to) -> 
         (Map.findWithDefault 0 from vertexMap, 
          Map.findWithDefault 0 to vertexMap)) edges
       edgesWithVertices = zipWith (\i (from, to) -> (i, from, to)) [0..] indexedEdges
       sccs = stronglyConnComp edgesWithVertices
-  in any (\scc -> case scc of
+  in L.any (\scc -> case scc of
       CyclicSCC _ -> True
       AcyclicSCC _ -> False) sccs
 

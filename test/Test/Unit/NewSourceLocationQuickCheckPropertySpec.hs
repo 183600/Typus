@@ -5,13 +5,14 @@
 module Test.Unit.NewSourceLocationQuickCheckPropertySpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 
 import SourceLocation
 import Compiler.Errors.Core (ErrorLocation(..))
 import Data.Text (Text)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 import Data.List (sort)
 import Control.Monad.State (runState)
 
@@ -32,7 +33,7 @@ sourcePosProperties = testGroup "SourcePos properties"
   [ testProperty "startPos has line 1, column 1, offset 0" $
     \_ -> startPos === SourcePos 1 1 0
   
-  , testProperty "posAfter newline increments line and resets column" $
+  , testProperty "posAfter newline increments line L.and resets column" $
     \pos -> posAfter '\n' pos === SourcePos (posLine pos + 1) 1 (posOffset pos + 1)
   
   , testProperty "posAfter tab aligns to next 8-column boundary" $
@@ -40,15 +41,15 @@ sourcePosProperties = testGroup "SourcePos properties"
                 expectedCol = ((posColumn pos - 1) `div` 8 + 1) * 8 + 1
             in posColumn newPos === expectedCol
   
-  , testProperty "posAfter regular char increments column and offset" $
+  , testProperty "posAfter regular char increments column L.and offset" $
     \pos c -> c /= '\n' && c /= '\t' ==> 
       posAfter c pos === SourcePos (posLine pos) (posColumn pos + 1) (posOffset pos + 1)
   
-  , testProperty "posAt creates position with given line and column" $
+  , testProperty "posAt creates position with given line L.and column" $
     \line col -> line > 0 && col > 0 ==> 
       posAt line col === SourcePos line col 0
   
-  , testProperty "posAtLineCol creates position with given line, column, and offset" $
+  , testProperty "posAtLineCol creates position with given line, column, L.and offset" $
     \line col offset -> line > 0 && col > 0 && offset >= 0 ==> 
       posAtLineCol line col offset === SourcePos line col offset
   ]
@@ -56,18 +57,18 @@ sourcePosProperties = testGroup "SourcePos properties"
 -- | Properties for SourceSpan
 sourceSpanProperties :: TestTree
 sourceSpanProperties = testGroup "SourceSpan properties"
-  [ testProperty "emptySpan creates span with same start and end" $
+  [ testProperty "emptySpan creates span with same start L.and end" $
     \pos -> let span = emptySpan pos
             in spanStart span === pos && spanEnd span === pos
   
   , testProperty "spanFrom equals emptySpan" $
     \pos -> spanFrom pos === emptySpan pos
   
-  , testProperty "spanTo creates span with same start and end" $
+  , testProperty "spanTo creates span with same start L.and end" $
     \pos -> let span = spanTo pos
             in spanStart span === pos && spanEnd span === pos
   
-  , testProperty "spanBetween creates span with given start and end" $
+  , testProperty "spanBetween creates span with given start L.and end" $
     \start end -> spanBetween start end === SourceSpan start end
   
   , testProperty "mergeSpans creates span covering both spans" $
@@ -141,13 +142,13 @@ positionAdvancementProperties = testGroup "Position advancement properties"
   , testProperty "advancePosBy is consistent with repeated advancePos" $
     \chars pos -> 
       let result1 = advancePosBy chars pos
-          result2 = foldl (flip advancePos) pos chars
+          result2 = L.foldl (flip advancePos) pos chars
       in result1 === result2
   
   , testProperty "advancePosByText equals advancePosBy on unpacked text" $
     \text pos -> advancePosByText text pos === advancePosBy (T.unpack text) pos
   
-  , testProperty "advancePosByLine increments line and resets column" $
+  , testProperty "advancePosByLine increments line L.and resets column" $
     \pos numLines -> numLines > 0 ==> 
       let result = advancePosByLine numLines pos
       in posLine result === posLine pos + numLines &&

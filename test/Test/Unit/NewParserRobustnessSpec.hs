@@ -30,7 +30,9 @@ import SourceLocation (SourceSpan(..), SourcePos(..), posLine, posColumn)
 import Data.Char (isSpace, isAlphaNum, isControl, isAscii)
 import qualified Data.Text as T
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, isInfixOf, intercalate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (intercalate)
 
 -- ============================================================================
 -- New Parser Robustness Tests
@@ -43,25 +45,25 @@ prop_parser_empty_input =
   in case result of
        Left _ -> property $ True  -- Empty input might fail, but shouldn't crash
        Right file -> property $ tfDirectives file === defaultFileDirectives .&&.
-                           null (tfBuildTags file) .&&.
-                           null (tfBlocks file)
+                           L.null (tfBuildTags file) .&&.
+                           L.null (tfBlocks file)
 
 -- Property: Parser handles whitespace-only input gracefully
 prop_parser_whitespace_only :: String -> Property
 prop_parser_whitespace_only input =
-  all isSpace input ==>
+  L.all isSpace input ==>
   let result = parseTypus input
   in case result of
        Left _ -> property $ True  -- Whitespace-only might fail, but shouldn't crash
        Right file -> property $ tfDirectives file === defaultFileDirectives .&&.
-                           null (tfBuildTags file) .&&.
-                           null (tfBlocks file)
+                           L.null (tfBuildTags file) .&&.
+                           L.null (tfBlocks file)
 
 -- Property: Parser handles very long lines without crashing
 prop_parser_long_lines :: Int -> String -> Property
 prop_parser_long_lines multiplier base =
   multiplier >= 0 && multiplier <= 100 ==>  -- Limit for performance
-  let longLine = concat (replicate multiplier base) ++ "\n"
+  let longLine = L.concat (replicate multiplier base) ++ "\n"
       result = parseTypus longLine
   in case result of
        Left _ -> property $ True  -- Long lines might fail, but shouldn't crash
@@ -89,7 +91,7 @@ prop_parser_unicode_handling input =
 -- Property: Parser handles control characters gracefully
 prop_parser_control_characters :: String -> Property
 prop_parser_control_characters input =
-  not (any isControl input) ==>  -- Avoid too many control characters
+  not (L.any isControl input) ==>  -- Avoid too many control characters
   let controlInput = input ++ "\1\2\3\4\5\n"
       result = parseTypus controlInput
   in case result of
@@ -99,7 +101,7 @@ prop_parser_control_characters input =
 -- Property: Parser handles malformed directives gracefully
 prop_parser_malformed_directives :: String -> Property
 prop_parser_malformed_directives content =
-  not ("//" `isInfixOf` content) && not ("{!" `isInfixOf` content) ==>  -- Avoid existing directives
+  not ("//" `L.isInfixOf` content) && not ("{!" `L.isInfixOf` content) ==>  -- Avoid existing directives
   let malformed = content ++ "//! malformed_directive_without_colon\n" ++
                   content ++ "{//! malformed_block_directive\n" ++
                   content ++ "//! :colon_without_key\n"
@@ -123,7 +125,7 @@ prop_parser_nested_braces depth content =
 -- Property: Parser handles mismatched braces gracefully
 prop_parser_mismatched_braces :: String -> Property
 prop_parser_mismatched_braces content =
-  not ("{" `isInfixOf` content) && not ("}" `isInfixOf` content) ==>  -- Avoid existing braces
+  not ("{" `L.isInfixOf` content) && not ("}" `L.isInfixOf` content) ==>  -- Avoid existing braces
   let mismatched = content ++ "{{{\n" ++ content ++ "}}\n"  -- Unmatched braces
       result = parseTypus mismatched
   in case result of
@@ -132,9 +134,9 @@ prop_parser_mismatched_braces content =
 
 -- Property: Parser handles very long identifiers gracefully
 prop_parser_long_identifiers :: Int -> String -> Property
-prop_parser_long_identifiers length base =
-  length >= 0 && length <= 100 ==>  -- Limit identifier length
-  let longIdent = concat (replicate length base)
+prop_parser_long_identifiers L.length base =
+  L.length >= 0 && L.length <= 100 ==>  -- Limit identifier L.length
+  let longIdent = L.concat (replicate L.length base)
       withIdent = "//! " ++ longIdent ++ ": value\n" ++ longIdent ++ " := 42\n"
       result = parseTypus withIdent
   in case result of
@@ -154,7 +156,7 @@ prop_parser_mixed_line_endings content =
 -- Property: Parser handles comments in unusual contexts
 prop_parser_unusual_comments :: String -> Property
 prop_parser_unusual_comments content =
-  not ("//" `isInfixOf` content) ==>  -- Avoid existing comments
+  not ("//" `L.isInfixOf` content) ==>  -- Avoid existing comments
   let unusualComments = content ++ "// comment at end without newline" ++
                        "\n// comment with special chars !@#$%^&*()\n" ++
                        content ++ "//! directive with // inside\n"
@@ -186,7 +188,7 @@ prop_parser_repeated_directives count directive =
 -- Property: Parser handles empty blocks
 prop_parser_empty_blocks :: String -> Property
 prop_parser_empty_blocks content =
-  not ("{!" `isInfixOf` content) ==>  -- Avoid existing block directives
+  not ("{!" `L.isInfixOf` content) ==>  -- Avoid existing block directives
   let emptyBlocks = content ++ "{//! }\n" ++ content ++ "{//! :}\n" ++ content ++ "{//! key:}\n"
       result = parseTypus emptyBlocks
   in case result of
@@ -206,11 +208,11 @@ prop_parser_special_chars base =
 -- Property: Parser preserves line structure in successful parses
 prop_parser_preserves_line_structure :: [String] -> Property
 prop_parser_preserves_line_structure lines' =
-  not (null lines') && length lines' <= 50 ==>  -- Limit for performance
+  not (null lines') && L.length lines' <= 50 ==>  -- Limit for performance
   let input = unlines lines'
       result = parseTypus input
   in case result of
-       Right file -> property $ length (tfBlocks file) <= length lines'
+       Right file -> property $ L.length (tfBlocks file) <= L.length lines'
        Left _ -> property $ True  -- Parse failure is acceptable
 
 -- Property: Parser handles null bytes gracefully

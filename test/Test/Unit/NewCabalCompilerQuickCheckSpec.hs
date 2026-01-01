@@ -21,7 +21,9 @@ import Compiler.GoAst
 import Compiler.TypeChecker
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..))
 
-import Data.List (isInfixOf, isPrefixOf, nub)
+import qualified Data.List as L
+import Data.List (isInfixOf, isPrefixOf)
+import Data.List (nub)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)
@@ -98,7 +100,7 @@ instance Arbitrary MockSymbol where
 instance Arbitrary MockSymbolTable where
   arbitrary = do
     symbolList <- listOf arbitrary
-    let symbolMap = Map.fromList $ map (\s -> (symbolName s, s)) symbolList
+    let symbolMap = Map.fromList $ L.map (\s -> (symbolName s, s)) symbolList
     hasParent <- arbitrary
     parent <- if hasParent then Just arbitrary else Nothing
     return $ MockSymbolTable symbolMap parent
@@ -114,7 +116,7 @@ instance Arbitrary MockIRNode where
 instance Arbitrary MockIR where
   arbitrary = do
     nodes <- listOf1 arbitrary
-    irEntry' <- choose (0, length nodes - 1)
+    irEntry' <- choose (0, L.length nodes - 1)
     irExports' <- Set.fromList <$> listOf (elements ["main", "func1", "func2", "export1"])
     return $ MockIR nodes irEntry' irExports'
 
@@ -128,14 +130,14 @@ prop_ir_node_ids_unique ir =
   let nodes = irNodes ir
       ids = map nodeId nodes
       uniqueIds = nub ids
-  in property $ length ids === length uniqueIds
+  in property $ L.length ids === L.length uniqueIds
 
 -- Property: IR entry point is valid
 prop_ir_entry_valid :: MockIR -> Property
 prop_ir_entry_valid ir =
   let nodes = irNodes ir
       entry = irEntry ir
-      nodeCount = length nodes
+      nodeCount = L.length nodes
   in not (null nodes) ==> entry >= 0 && entry < nodeCount
 
 -- Property: IR exports are valid identifiers
@@ -143,8 +145,8 @@ prop_ir_exports_valid :: MockIR -> Property
 prop_ir_exports_valid ir =
   let exports = irExports ir
       exportNames = Set.toList exports
-      isValidExport name = not (null name) && all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_") name
-  in property $ all isValidExport exportNames
+      isValidExport name = not (null name) && L.all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_") name
+  in property $ L.all isValidExport exportNames
 
 -- Property: IR node locations are valid
 prop_ir_node_locations_valid :: MockIRNode -> Property
@@ -205,7 +207,7 @@ prop_symbol_location_preserved symbol =
 prop_ir_node_count_consistent :: MockIR -> Property
 prop_ir_node_count_consistent ir =
   let nodes = irNodes ir
-      nodeCount = length nodes
+      nodeCount = L.length nodes
       entry = irEntry ir
   in not (null nodes) ==> entry >= 0 && entry < nodeCount
 
@@ -213,8 +215,8 @@ prop_ir_node_count_consistent ir =
 prop_type_param_count_preserved :: MockType -> Property
 prop_type_param_count_preserved typ =
   let originalParams = typeParams typ
-      paramCount = length originalParams
-  in property $ paramCount === length originalParams
+      paramCount = L.length originalParams
+  in property $ paramCount === L.length originalParams
 
 -- Property: Symbol table parent chain is maintained
 prop_symboltable_parent_chain :: MockSymbolTable -> Property
@@ -230,7 +232,7 @@ prop_ir_exports_unique ir =
       exportCount = Set.size exports
       exportList = Set.toList exports
       uniqueExports = nub exportList
-  in property $ exportCount === length uniqueExports
+  in property $ exportCount === L.length uniqueExports
 
 -- Property: Node type classification is consistent
 prop_ir_node_type_classification :: MockIRNode -> Property
@@ -243,8 +245,8 @@ prop_ir_node_type_classification node =
 prop_symbol_name_validation :: String -> Property
 prop_symbol_name_validation name =
   let isValidName = not (null name) && 
-                   all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_") name &&
-                   head name `elem` ['a'..'z'] ++ ['A'..'Z'] ++ "_"
+                   L.all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_") name &&
+                   L.head name `elem` ['a'..'z'] ++ ['A'..'Z'] ++ "_"
   in classify isValidName "valid name" $
      classify (not isValidName) "invalid name" $
      property $ True
@@ -255,7 +257,7 @@ prop_type_field_names_unique typ =
   let fields = typeFields typ
       fieldNames = Map.keys fields
       uniqueFieldNames = nub fieldNames
-  in property $ length fieldNames === length uniqueFieldNames
+  in property $ L.length fieldNames === L.length uniqueFieldNames
 
 -- Property: IR node values are consistent with types
 prop_ir_node_values_consistent :: MockIRNode -> Property
@@ -264,12 +266,12 @@ prop_ir_node_values_consistent node =
       nodeValue' = nodeValue node
       isConsistent = case nodeType' of
         "Const" -> nodeValue' `elem` ["1", "2", "3", "true", "false", "\"string\""]
-        "Var" -> all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_") nodeValue'
+        "Var" -> L.all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_") nodeValue'
         "Func" -> not (null nodeValue')
         _ -> True
   in property $ isConsistent
 
--- Property: Symbol table merge preserves all symbols
+-- Property: Symbol table merge preserves L.all symbols
 prop_symboltable_merge_preserves :: MockSymbolTable -> MockSymbolTable -> Property
 prop_symboltable_merge_preserves table1 table2 =
   let symbols1 = symbols table1
@@ -283,7 +285,7 @@ prop_symboltable_merge_preserves table1 table2 =
 prop_type_param_substitution :: MockType -> [(String, MockType)] -> Property
 prop_type_param_substitution typ substitutions =
   let params = typeParams typ
-      hasSubstitution = any (`elem` map fst substitutions) params
+      hasSubstitution = L.any (`elem` map fst substitutions) params
   in classify hasSubstitution "has substitution" $
      classify (not hasSubstitution) "no substitution" $
      property $ True

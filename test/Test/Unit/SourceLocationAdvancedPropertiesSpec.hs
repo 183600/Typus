@@ -3,6 +3,7 @@
 module Test.Unit.SourceLocationAdvancedPropertiesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Text as T
@@ -60,18 +61,18 @@ tests = testGroup "SourceLocation Advanced Properties"
 
 positionProperties :: TestTree
 positionProperties = testGroup "Position Properties"
-  [ fastProperty "posAfter newline increases line by 1 and resets column to 1" prop_posAfter_newline
+  [ fastProperty "posAfter newline increases line by 1 L.and resets column to 1" prop_posAfter_newline
   , fastProperty "posAfter tab jumps to next tab stop (multiple of 8)" prop_posAfter_tab
   , fastProperty "posAfter regular character increments column by 1" prop_posAfter_regular
   , fastProperty "advancePosBy empty string returns original position" prop_advancePosBy_empty
   , fastProperty "advancePosBy is equivalent to repeated posAfter" prop_advancePosBy_consistent
-  , fastProperty "advancePosByLine preserves offset but changes line and column" prop_advancePosByLine_properties
+  , fastProperty "advancePosByLine preserves offset but changes line L.and column" prop_advancePosByLine_properties
   , fastProperty "posAtLineCol creates valid position" prop_posAtLineCol_valid
   ]
 
 spanProperties :: TestTree
 spanProperties = testGroup "Span Properties"
-  [ fastProperty "emptySpan has equal start and end" prop_emptySpan_equal
+  [ fastProperty "emptySpan has equal start L.and end" prop_emptySpan_equal
   , fastProperty "spanFrom creates valid span" prop_spanFrom_valid
   , fastProperty "spanTo creates valid span" prop_spanTo_valid
   , fastProperty "spanBetween creates span with correct bounds" prop_spanBetween_bounds
@@ -83,7 +84,7 @@ spanProperties = testGroup "Span Properties"
 
 locatedProperties :: TestTree
 locatedProperties = testGroup "Located Properties"
-  [ fastProperty "locatedAt creates span with equal start and end" prop_locatedAt_span
+  [ fastProperty "locatedAt creates span with equal start L.and end" prop_locatedAt_span
   , fastProperty "locatedWithSpan preserves span" prop_locatedWithSpan_preserves
   , fastProperty "mapLocated preserves position" prop_mapLocated_preserves_position
   , fastProperty "locatedPos returns span start" prop_locatedPos_span_start
@@ -92,7 +93,7 @@ locatedProperties = testGroup "Located Properties"
 
 errorLocationProperties :: TestTree
 errorLocationProperties = testGroup "Error Location Properties"
-  [ fastProperty "toErrorLocation preserves line and column" prop_toErrorLocation_preserves
+  [ fastProperty "toErrorLocation preserves line L.and column" prop_toErrorLocation_preserves
   , fastProperty "toErrorLocationWithSpan preserves full range" prop_toErrorLocationWithSpan_preserves
   , fastProperty "toErrorLocation has no end positions" prop_toErrorLocation_no_end
   ]
@@ -140,7 +141,7 @@ prop_advancePosBy_empty pos =
 
 prop_advancePosBy_consistent :: SourcePos -> NonEmptyString -> Property
 prop_advancePosBy_consistent pos (NonEmptyString s) =
-  let manual = foldl (flip posAfter) pos s
+  let manual = L.foldl (flip posAfter) pos s
       auto = advancePosBy s pos
   in manual === auto
 
@@ -228,7 +229,7 @@ prop_locatedWithSpan_preserves span value =
 prop_mapLocated_preserves_position :: SourceSpan -> [Int] -> Property
 prop_mapLocated_preserves_position span values =
   let loc = locatedWithSpan span values
-      mapped = mapLocated length loc
+      mapped = mapLocated L.length loc
   in conjoin
     [ locatedSpan mapped === locatedSpan loc
     , locatedPos mapped === locatedPos loc
@@ -284,7 +285,7 @@ prop_advancePosByText_consistent pos (NonEmptyString s) =
 
 prop_advancePosByText_multiline :: SourcePos -> NonEmptyString -> Property
 prop_advancePosByText_multiline pos (NonEmptyString s) =
-  let linesWithNewlines = length $ filter (== '\n') s
+  let linesWithNewlines = L.length $ L.filter (== '\n') s
       finalPos = advancePosByText (T.pack s) pos
       expectedLine = posLine pos + linesWithNewlines
   in posLine finalPos >= expectedLine .&&. posLine finalPos <= expectedLine + 1

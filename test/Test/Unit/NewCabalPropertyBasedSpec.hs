@@ -20,7 +20,8 @@ import Test.QuickCheck
 import qualified Data.Text as T
 import Data.Char (isSpace, isLetter, isDigit, isPunctuation)
 import qualified Data.List as L
-import Data.List (sort, nub, group, isInfixOf, isPrefixOf)
+import Data.List (isInfixOf, isPrefixOf)
+import Data.List (sort, nub, group)
 
 import SourceLocation
   ( SourcePos(..)
@@ -119,10 +120,10 @@ prop_trim_removes_whitespace prefix suffix =
   let content = prefix ++ "content" ++ suffix
       trimmed = trim content
       hasLeadingSpace = not (null prefix) && isSpace (last prefix)
-      hasTrailingSpace = not (null suffix) && isSpace (head suffix)
+      hasTrailingSpace = not (null suffix) && isSpace (L.head suffix)
   in classify hasLeadingSpace "has leading" $
      classify hasTrailingSpace "has trailing" $
-     property $ (null trimmed || not (isSpace (head trimmed))) .&&.
+     property $ (null trimmed || not (isSpace (L.head trimmed))) .&&.
                 (null trimmed || not (isSpace (last trimmed)))
 
 -- Property: splitBy preserves total character count (minus delimiters)
@@ -136,7 +137,7 @@ prop_splitBy_preserves_content delim str =
 prop_splitByCollapsed_removes_empty :: Char -> String -> Property
 prop_splitByCollapsed_removes_empty delim str =
   let parts = splitByCollapsed delim str
-  in property $ not (any null parts)
+  in property $ not (L.any null parts)
 
 -- Property: splitByComma equals splitBy with comma
 prop_splitByComma_consistency :: String -> Property
@@ -149,7 +150,7 @@ prop_removeLineComments_preserves_content content comment =
   not ('"' `elem` content) && not ('\'' `elem` content) ==>
   let input = content ++ " // " ++ comment ++ "\nmore content"
       result = removeLineComments input
-  in property $ content `isInfixOf` result .&&. "more content" `isInfixOf` result
+  in property $ content `L.isInfixOf` result .&&. "more content" `L.isInfixOf` result
 
 -- Property: removeComments preserves string literals
 prop_removeComments_preserves_strings :: String -> Property
@@ -157,12 +158,12 @@ prop_removeComments_preserves_strings content =
   not ('"' `elem` content) && not ('\'' `elem` content) ==>
   let input = "var s = \"" ++ content ++ "\"; // comment\n/* block comment */"
       result = removeComments input
-  in property $ ("\"" ++ content ++ "\"") `isInfixOf` result
+  in property $ ("\"" ++ content ++ "\"") `L.isInfixOf` result
 
 -- Property: normalizeIndentation preserves relative indentation
 prop_normalizeIndentation_preserves_relative :: [Int] -> [String] -> Property
 prop_normalizeIndentation_preserves_relative indentLevels contents =
-  length indentLevels == length contents && all (>= 0) indentLevels ==>
+  length indentLevels == L.length contents && L.all (>= 0) indentLevels ==>
   let lines' = zipWith (\lvl content -> replicate lvl ' ' ++ content) indentLevels contents
       input = unlines lines'
       normalized = normalizeIndentation input
@@ -170,10 +171,10 @@ prop_normalizeIndentation_preserves_relative indentLevels contents =
       -- Check that relative indentation is preserved
       originalPairs = zip (drop 1 indentLevels) (init indentLevels)
       normalizedPairs = zipWith (\l1 l2 -> 
-        let indent1 = length (takeWhile isSpace l1)
-            indent2 = length (takeWhile isSpace l2)
+        let indent1 = L.length (takeWhile isSpace l1)
+            indent2 = L.length (takeWhile isSpace l2)
         in indent1 - indent2) (drop 1 normalizedLines) (init normalizedLines)
-  in property $ all (>= 0) normalizedPairs
+  in property $ L.all (>= 0) normalizedPairs
 
 -- Property: breakOn finds correct split point
 prop_breakOn_correct_split :: String -> String -> String -> Property
@@ -186,7 +187,7 @@ prop_breakOn_correct_split pat prefix suffix =
 -- Property: breakOn handles missing pattern
 prop_breakOn_missing_pattern :: String -> String -> Property
 prop_breakOn_missing_pattern pat haystack =
-  not (null pat) && not (pat `isInfixOf` haystack) ==>
+  not (null pat) && not (pat `L.isInfixOf` haystack) ==>
   let (before, after) = breakOn pat haystack
   in property $ before === haystack .&&. after === ""
 
@@ -206,7 +207,7 @@ prop_complex_pipeline_consistency input =
 prop_position_advancement_unicode :: String -> Property
 prop_position_advancement_unicode unicodeText =
   let pos = advancePosBy unicodeText startPos
-  in property $ posOffset pos >= length unicodeText
+  in property $ posOffset pos >= L.length unicodeText
 
 -- Property: Span validity after merging
 prop_span_merging_validity :: SourcePos -> SourcePos -> SourcePos -> SourcePos -> Property
@@ -221,15 +222,15 @@ prop_split_special_characters :: Char -> String -> Property
 prop_split_special_characters delim content =
   let specialContent = content ++ "\n\t\r" ++ content
       parts = splitBy delim specialContent
-  in property $ length parts >= 1
+  in property $ L.length parts >= 1
 
 -- Property: Comment removal with edge cases
 prop_comment_removal_edge_cases :: String -> Property
 prop_comment_removal_edge_cases content =
-  not ('"' `elem` content) && not ('\'' `elem` content) && not ("*/" `isInfixOf` content) ==>
+  not ('"' `elem` content) && not ('\'' `elem` content) && not ("*/" `L.isInfixOf` content) ==>
   let edgeInput = content ++ "/* comment\n" ++ content ++ "*/" ++ content
       result = removeComments edgeInput
-  in property $ content `isInfixOf` result
+  in property $ content `L.isInfixOf` result
 
 -- Property: Indentation normalization with empty lines
 prop_indentation_with_empty_lines :: [String] -> Property
@@ -237,14 +238,14 @@ prop_indentation_with_empty_lines lines =
   let input = unlines $ intersperse "" lines
       normalized = normalizeIndentation input
       normalizedLines = lines normalized
-  in property $ length normalizedLines >= length lines
+  in property $ L.length normalizedLines >= L.length lines
 
 -- Property: String processing roundtrip
 prop_string_processing_roundtrip :: String -> Property
 prop_string_processing_roundtrip original =
   let processed = original |> trim |> normalizeIndentation |> removeComments
       restored = processed  -- In practice, this would be more complex
-  in property $ length processed <= length original
+  in property $ L.length processed <= L.length original
 
 -- Helper function for pipeline
 (|>) :: a -> (a -> b) -> b

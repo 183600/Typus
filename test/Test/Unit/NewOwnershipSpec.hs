@@ -3,6 +3,7 @@ module Test.Unit.NewOwnershipSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ((@?=), assertBool, assertFailure, testCase)
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 import Ownership
@@ -199,9 +200,9 @@ tests =
               , BorrowWhileMoved "z"
               ]
             formatted = formatOwnershipErrors errors
-        assertBool "contains use after move" ("UseAfterMove" `isInfixOf` formatted)
-        assertBool "contains double move" ("DoubleMove" `isInfixOf` formatted)
-        assertBool "contains borrow while moved" ("BorrowWhileMoved" `isInfixOf` formatted)
+        assertBool "contains use after move" ("UseAfterMove" `L.isInfixOf` formatted)
+        assertBool "contains double move" ("DoubleMove" `L.isInfixOf` formatted)
+        assertBool "contains borrow while moved" ("BorrowWhileMoved" `L.isInfixOf` formatted)
 
     , testCase "provides debug analysis" $ do
         let source = unlines

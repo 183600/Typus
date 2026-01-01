@@ -35,7 +35,9 @@ import SourceLocation
   )
 
 import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, intercalate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (intercalate)
 import Data.Char (isAlphaNum, isSpace)
 
 -- ============================================================================
@@ -50,37 +52,37 @@ prop_parseTypus_empty_input =
        Left _ -> property True -- Parse errors are acceptable for malformed input
        Right typusFile -> property $ 
          tfDirectives typusFile === defaultFileDirectives .&&.
-         null (tfBuildTags typusFile) .&&.
-         null (tfBlocks typusFile)
+         L.null (tfBuildTags typusFile) .&&.
+         L.null (tfBlocks typusFile)
 
 -- Property: parseTypus handles whitespace-only input
 prop_parseTypus_whitespace_only :: String -> Property
 prop_parseTypus_whitespace_only input =
-  all isSpace input ==>
+  L.all isSpace input ==>
   let result = parseTypus input
   in case result of
        Left _ -> property True
        Right typusFile -> property $ 
          tfDirectives typusFile === defaultFileDirectives .&&.
-         null (tfBuildTags typusFile) .&&.
-         null (tfBlocks typusFile)
+         L.null (tfBuildTags typusFile) .&&.
+         L.null (tfBlocks typusFile)
 
 -- Property: parseTypus preserves simple code blocks
 prop_parseTypus_simple_blocks :: String -> Property
 prop_parseTypus_simple_blocks content =
-  not (any (`elem` ["//!", "/*", "*/", "//"]) content) ==>
+  not (L.any (`elem` ["//!", "/*", "*/", "//"]) content) ==>
   let input = "```typus\n" ++ content ++ "\n```"
       result = parseTypus input
   in case result of
        Left _ -> property True
        Right typusFile -> property $ 
-         not (null (tfBlocks typusFile)) ==> 
-         content `isInfixOf` (cbContent (head (tfBlocks typusFile)))
+         not (L.null (tfBlocks typusFile)) ==> 
+         content `L.isInfixOf` (cbContent (L.head (tfBlocks typusFile)))
 
 -- Property: parseTypus handles file directives correctly
 prop_parseTypus_file_directives :: String -> String -> Property
 prop_parseTypus_file_directives key value =
-  not (any (`elem` [" ", "!", "/", "\n", "\r", "\t"]) (key ++ value)) ==>
+  not (L.any (`elem` [" ", "!", "/", "\n", "\r", "\t"]) (key ++ value)) ==>
   let input = "//! " ++ key ++ "=" ++ value ++ "\n"
       result = parseTypus input
   in case result of
@@ -91,8 +93,8 @@ prop_parseTypus_file_directives key value =
 -- Property: parseTypus handles multiple file directives
 prop_parseTypus_multiple_file_directives :: [(String, String)] -> Property
 prop_parseTypus_multiple_file_directives directives =
-  not (null directives) && all (\(k, v) -> not (any (`elem` [" ", "!", "/", "\n", "\r", "\t"]) (k ++ v))) directives ==>
-  let directiveStrs = map (\(k, v) -> k ++ "=" ++ v) directives
+  not (null directives) && L.all (\(k, v) -> not (L.any (`elem` [" ", "!", "/", "\n", "\r", "\t"]) (k ++ v))) directives ==>
+  let directiveStrs = L.map (\(k, v) -> k ++ "=" ++ v) directives
       input = "//! " ++ intercalate "," directiveStrs ++ "\n"
       result = parseTypus input
   in case result of
@@ -103,45 +105,45 @@ prop_parseTypus_multiple_file_directives directives =
 -- Property: parseTypus handles block directives correctly
 prop_parseTypus_block_directives :: String -> String -> String -> Property
 prop_parseTypus_block_directives content key value =
-  not (any (`elem` [" ", "!", "/", "\n", "\r", "\t", "`"]) (key ++ value)) ==>
+  not (L.any (`elem` [" ", "!", "/", "\n", "\r", "\t", "`"]) (key ++ value)) ==>
   let input = "//! " ++ key ++ "=" ++ value ++ "\n```typus\n" ++ content ++ "\n```"
       result = parseTypus input
   in case result of
        Left _ -> property True
        Right typusFile -> property $ 
-         not (null (tfBlocks typusFile)) ==> 
-         let firstBlock = head (tfBlocks typusFile)
+         not (L.null (tfBlocks typusFile)) ==> 
+         let firstBlock = L.head (tfBlocks typusFile)
          in bdDirectives firstBlock /= defaultBlockDirectives
 
 -- Property: parseTypus preserves build tags
 prop_parseTypus_build_tags :: [String] -> Property
 prop_parseTypus_build_tags tags =
-  not (null tags) && all (not . any (`elem` [" ", "!", "/", "\n", "\r", "\t", "+"])) tags ==>
+  not (null tags) && L.all (not . L.any (`elem` [" ", "!", "/", "\n", "\r", "\t", "+"])) tags ==>
   let tagStr = intercalate "+" tags
       input = "//+build " ++ tagStr ++ "\n"
       result = parseTypus input
   in case result of
        Left _ -> property True
        Right typusFile -> property $ 
-         not (null (tfBuildTags typusFile))
+         not (L.null (tfBuildTags typusFile))
 
 -- Property: parseTypus handles multiple code blocks
 prop_parseTypus_multiple_blocks :: [String] -> Property
 prop_parseTypus_multiple_blocks contents =
-  not (null contents) && all (not . any (`elem` ["```", "//!", "//+build"])) contents ==>
-  let blockStrs = map (\content -> "```typus\n" ++ content ++ "\n```\n") contents
+  not (null contents) && L.all (not . L.any (`elem` ["```", "//!", "//+build"])) contents ==>
+  let blockStrs = L.map (\content -> "```typus\n" ++ content ++ "\n```\n") contents
       input = intercalate "\n" blockStrs
       result = parseTypus input
   in case result of
        Left _ -> property True
        Right typusFile -> property $ 
-         length (tfBlocks typusFile) === length contents
+         L.length (tfBlocks typusFile) === L.length contents
 
--- Property: parseTypus handles mixed directives and blocks
+-- Property: parseTypus handles mixed directives L.and blocks
 prop_parseTypus_mixed_content :: String -> String -> String -> Property
 prop_parseTypus_mixed_content directiveKey directiveValue content =
-  not (any (`elem` [" ", "!", "/", "\n", "\r", "\t", "`", "+"]) (directiveKey ++ directiveValue)) &&
-  not (any (`elem` ["```", "//!", "//+build"]) content) ==>
+  not (L.any (`elem` [" ", "!", "/", "\n", "\r", "\t", "`", "+"]) (directiveKey ++ directiveValue)) &&
+  not (L.any (`elem` ["```", "//!", "//+build"]) content) ==>
   let input = "//! " ++ directiveKey ++ "=" ++ directiveValue ++ "\n" ++
               "//+build test\n" ++
               "```typus\n" ++ content ++ "\n```\n"
@@ -149,51 +151,51 @@ prop_parseTypus_mixed_content directiveKey directiveValue content =
   in case result of
        Left _ -> property True
        Right typusFile -> property $ 
-         not (null (tfBuildTags typusFile)) .&&.
-         not (null (tfBlocks typusFile)) .&&.
+         not (L.null (tfBuildTags typusFile)) .&&.
+         not (L.null (tfBlocks typusFile)) .&&.
          tfDirectives typusFile /= defaultFileDirectives
 
 -- Property: parseTypus handles nested content in blocks
 prop_parseTypus_nested_content :: String -> String -> Property
 prop_parseTypus_nested_content outerContent innerContent =
-  not (any (`elem` ["```", "//!", "//+build"]) (outerContent ++ innerContent)) ==>
+  not (L.any (`elem` ["```", "//!", "//+build"]) (outerContent ++ innerContent)) ==>
   let input = "```typus\n" ++ outerContent ++ "\n/* nested comment */\n" ++ innerContent ++ "\n```"
       result = parseTypus input
   in case result of
        Left _ -> property True
        Right typusFile -> property $ 
-         not (null (tfBlocks typusFile)) ==> 
-         let blockContent = cbContent (head (tfBlocks typusFile))
-         in outerContent `isInfixOf` blockContent .&&.
-            innerContent `isInfixOf` blockContent
+         not (L.null (tfBlocks typusFile)) ==> 
+         let blockContent = cbContent (L.head (tfBlocks typusFile))
+         in outerContent `L.isInfixOf` blockContent .&&.
+            innerContent `L.isInfixOf` blockContent
 
 -- Property: parseTypus handles Unicode content
 prop_parseTypus_unicode_content :: String -> Property
 prop_parseTypus_unicode_content baseContent =
-  not (any (`elem` ["```", "//!", "//+build"]) baseContent) ==>
+  not (L.any (`elem` ["```", "//!", "//+build"]) baseContent) ==>
   let unicodeContent = baseContent ++ " café naïve résumé 🚀 测试"
       input = "```typus\n" ++ unicodeContent ++ "\n```"
       result = parseTypus input
   in case result of
        Left _ -> property True
        Right typusFile -> property $ 
-         not (null (tfBlocks typusFile)) ==> 
-         unicodeContent `isInfixOf` (cbContent (head (tfBlocks typusFile)))
+         not (L.null (tfBlocks typusFile)) ==> 
+         unicodeContent `L.isInfixOf` (cbContent (L.head (tfBlocks typusFile)))
 
 -- Property: parseTypus preserves line structure
 prop_parseTypus_preserves_lines :: [String] -> Property
 prop_parseTypus_preserves_lines lineList =
-  not (null lineList) && all (not . any (`elem` ["```", "//!", "//+build"])) lineList ==>
+  not (null lineList) && L.all (not . L.any (`elem` ["```", "//!", "//+build"])) lineList ==>
   let content = intercalate "\n" lineList
       input = "```typus\n" ++ content ++ "\n```"
       result = parseTypus input
   in case result of
        Left _ -> property True
        Right typusFile -> property $ 
-         not (null (tfBlocks typusFile)) ==> 
-         let blockContent = cbContent (head (tfBlocks typusFile))
+         not (L.null (tfBlocks typusFile)) ==> 
+         let blockContent = cbContent (L.head (tfBlocks typusFile))
              blockLines = lines blockContent
-         in length blockLines >= length lineList
+         in L.length blockLines >= L.length lineList
 
 -- Property: parseTypus handles empty blocks
 prop_parseTypus_empty_blocks :: Property
@@ -203,7 +205,7 @@ prop_parseTypus_empty_blocks =
   in case result of
        Left _ -> property True
        Right typusFile -> property $ 
-         length (tfBlocks typusFile) >= 1
+         L.length (tfBlocks typusFile) >= 1
 
 -- Property: parseTypus handles malformed block markers gracefully
 prop_parseTypus_malformed_blocks :: String -> Property
@@ -217,7 +219,7 @@ prop_parseTypus_malformed_blocks content =
 -- Property: parseTypus handles directive parsing edge cases
 prop_parseTypus_directive_edge_cases :: String -> Property
 prop_parseTypus_directive_edge_cases directiveContent =
-  "//!" `isPrefixOf` directiveContent ==>
+  "//!" `L.isPrefixOf` directiveContent ==>
   let result = parseTypus directiveContent
   in case result of
        Left _ -> property True
@@ -227,21 +229,21 @@ prop_parseTypus_directive_edge_cases directiveContent =
 prop_parseTypus_large_input :: Int -> String -> Property
 prop_parseTypus_large_input multiplier baseContent =
   multiplier >= 0 && multiplier <= 50 && -- Limit for performance
-  not (any (`elem` ["```", "//!", "//+build"]) baseContent) ==>
-  let largeContent = concat (replicate multiplier (baseContent ++ "\n"))
+  not (L.any (`elem` ["```", "//!", "//+build"]) baseContent) ==>
+  let largeContent = L.concat (replicate multiplier (baseContent ++ "\n"))
       input = "```typus\n" ++ largeContent ++ "\n```"
       result = parseTypus input
   in case result of
        Left _ -> property True
        Right typusFile -> property $ 
-         not (null (tfBlocks typusFile)) ==> 
-         length (cbContent (head (tfBlocks typusFile))) >= length baseContent * multiplier
+         not (L.null (tfBlocks typusFile)) ==> 
+         L.length (cbContent (L.head (tfBlocks typusFile))) >= L.length baseContent * multiplier
 
 -- Property: parseTypus maintains directive-block separation
 prop_parseTypus_directive_block_separation :: String -> String -> String -> Property
 prop_parseTypus_directive_block_separation directiveKey directiveValue content =
-  not (any (`elem` [" ", "!", "/", "\n", "\r", "\t", "`", "+"]) (directiveKey ++ directiveValue)) &&
-  not (any (`elem` ["```", "//!", "//+build"]) content) ==>
+  not (L.any (`elem` [" ", "!", "/", "\n", "\r", "\t", "`", "+"]) (directiveKey ++ directiveValue)) &&
+  not (L.any (`elem` ["```", "//!", "//+build"]) content) ==>
   let input = "//! " ++ directiveKey ++ "=" ++ directiveValue ++ "\n\n" ++
               "```typus\n" ++ content ++ "\n```"
       result = parseTypus input
@@ -249,33 +251,33 @@ prop_parseTypus_directive_block_separation directiveKey directiveValue content =
        Left _ -> property True
        Right typusFile -> property $ 
          tfDirectives typusFile /= defaultFileDirectives .&&.
-         not (null (tfBlocks typusFile))
+         not (L.null (tfBlocks typusFile))
 
 -- Property: parseTypus handles comment-like strings in code blocks
 prop_parseTypus_code_like_strings :: String -> Property
 prop_parseTypus_code_like_strings content =
-  not ("```" `isInfixOf` content) ==>
+  not ("```" `L.isInfixOf` content) ==>
   let codeLikeContent = "var x = 1; // line comment\n/* block comment */\n" ++ content
       input = "```typus\n" ++ codeLikeContent ++ "\n```"
       result = parseTypus input
   in case result of
        Left _ -> property True
        Right typusFile -> property $ 
-         not (null (tfBlocks typusFile)) ==> 
-         "var x = 1;" `isInfixOf` (cbContent (head (tfBlocks typusFile)))
+         not (L.null (tfBlocks typusFile)) ==> 
+         "var x = 1;" `L.isInfixOf` (cbContent (L.head (tfBlocks typusFile)))
 
 -- Property: parseTypus error recovery preserves partial structure
 prop_parseTypus_error_recovery :: String -> String -> Property
 prop_parseTypus_error_recovery validContent invalidContent =
-  not (any (`elem` ["```", "//!", "//+build"]) validContent) ==>
+  not (L.any (`elem` ["```", "//!", "//+build"]) validContent) ==>
   let input = "```typus\n" ++ validContent ++ "\n```typus\n" ++ invalidContent ++ "\n```"
       result = parseTypus input
   in case result of
        Left _ -> property True
        Right typusFile -> property $ 
          -- Should still have at least the valid block
-         not (null (tfBlocks typusFile)) ==> 
-         validContent `isInfixOf` (cbContent (head (tfBlocks typusFile)))
+         not (L.null (tfBlocks typusFile)) ==> 
+         validContent `L.isInfixOf` (cbContent (L.head (tfBlocks typusFile)))
 
 -- ============================================================================
 -- Test Suite Definition
@@ -300,13 +302,13 @@ tests = testGroup "New Comprehensive Parser QuickCheck Tests"
 
   , testGroup "Block parsing properties"
     [ fastProperty "parseTypus handles multiple code blocks" prop_parseTypus_multiple_blocks
-    , fastProperty "parseTypus handles mixed directives and blocks" prop_parseTypus_mixed_content
+    , fastProperty "parseTypus handles mixed directives L.and blocks" prop_parseTypus_mixed_content
     , fastProperty "parseTypus handles nested content in blocks" prop_parseTypus_nested_content
     , fastProperty "parseTypus preserves line structure" prop_parseTypus_preserves_lines
     , fastProperty "parseTypus handles code-like strings in blocks" prop_parseTypus_code_like_strings
     ]
 
-  , testGroup "Error handling and recovery properties"
+  , testGroup "Error handling L.and recovery properties"
     [ fastProperty "parseTypus handles malformed block markers gracefully" prop_parseTypus_malformed_blocks
     , fastProperty "parseTypus error recovery preserves partial structure" prop_parseTypus_error_recovery
     ]

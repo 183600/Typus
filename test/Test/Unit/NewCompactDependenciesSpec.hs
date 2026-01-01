@@ -3,6 +3,7 @@
 module Test.Unit.NewCompactDependenciesSpec where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), forAll, choose, elements)
 import Dependencies
@@ -37,7 +38,7 @@ testBasicDependencyAnalysis = testGroup "基本依赖分析测试"
   [ testCase "空依赖图" $
       let graph = Map.empty
           analysis = analyzeDependencies graph
-      in null (getDirectDependencies analysis) @?= True
+      in L.null (getDirectDependencies analysis) @?= True
     
   , testCase "单模块无依赖" $
       let graph = Map.fromList [("Main", [])]
@@ -70,12 +71,12 @@ testCycleDetection = testGroup "循环检测测试"
             , ("B", ["A"])
             ]
           cycles = detectCycles graph
-      in length cycles @?= 1
+      in L.length cycles @?= 1
     
   , testCase "自循环" $
       let graph = Map.fromList [("A", ["A"])]
           cycles = detectCycles graph
-      in length cycles @?= 1
+      in L.length cycles @?= 1
     
   , testCase "复杂循环" $
       let graph = Map.fromList 
@@ -85,7 +86,7 @@ testCycleDetection = testGroup "循环检测测试"
             , ("D", ["A"])
             ]
           cycles = detectCycles graph
-      in length cycles @?= 1
+      in L.length cycles @?= 1
     
   , testCase "多个循环" $
       let graph = Map.fromList 
@@ -95,7 +96,7 @@ testCycleDetection = testGroup "循环检测测试"
             , ("D", ["C"])
             ]
           cycles = detectCycles graph
-      in length cycles @?= 2
+      in L.length cycles @?= 2
   ]
 
 -- | 测试传递依赖
@@ -211,12 +212,12 @@ testDependencyProperties = testGroup "依赖属性测试"
         let analysis = analyzeDependencies graph
             transitiveDeps = getTransitiveDependencies analysis module'
             allTransitive = concatMap (getTransitiveDependencies analysis) transitiveDeps
-        in all (`elem` allTransitive) transitiveDeps
+        in L.all (`elem` allTransitive) transitiveDeps
   
   , testProperty "循环检测的完备性" $
       \graph ->
         let cycles = detectCycles graph
-            hasDirectCycle = any (\(module', deps) -> module' `elem` deps) (Map.toList graph)
+            hasDirectCycle = L.any (\(module', deps) -> module' `elem` deps) (Map.toList graph)
         in hasDirectCycle ==> not (null cycles)
   
   , testProperty "拓扑排序保持依赖顺序" $
@@ -227,11 +228,11 @@ testDependencyProperties = testGroup "依赖属性测试"
             Left _ -> False
             Right sorted ->
               let positions = Map.fromList (zip sorted [0..])
-                  checkDep (from, tos) = all (\to -> 
+                  checkDep (from, tos) = L.all (\to -> 
                     case (Map.lookup from positions, Map.lookup to positions) of
                       (Just fromPos, Just toPos) -> fromPos < toPos
                       _ -> False) tos
-              in all checkDep (Map.toList graph)
+              in L.all checkDep (Map.toList graph)
   ]
 
 -- | 测试依赖优化
@@ -274,15 +275,15 @@ testBoundaryConditions = testGroup "边界条件测试"
   , testCase "自引用模块" $
       let graph = Map.fromList [("A", ["A"])]
           cycles = detectCycles graph
-      in length cycles @?= 1
+      in L.length cycles @?= 1
     
   , testCase "大量模块处理" $
-      let modules = map (\i -> "Mod" ++ show i) [1..100]
+      let modules = L.map (\i -> "Mod" ++ show i) [1..100]
           graph = Map.fromList [(mod, []) | mod <- modules]
           analysis = analyzeDependencies graph
           sorted = topologicalSort graph
       in case sorted of
-        Right sorted' -> length sorted' @?= 100
+        Right sorted' -> L.length sorted' @?= 100
         Left _ -> assertBool "大量模块排序失败" False
   ]
 
@@ -292,14 +293,14 @@ testPerformanceProperties = testGroup "性能属性测试"
   [ testProperty "大型依赖图分析性能" $
       \n ->
         let size = min 50 (max 1 n)
-            modules = map (\i -> "M" ++ show i) [1..size]
+            modules = L.map (\i -> "M" ++ show i) [1..size]
             -- 创建一个线性依赖链
-            pairs = zip modules (tail modules)
-            graph = Map.fromList $ map (\(from, to) -> (from, [to])) pairs ++ 
+            pairs = zip modules (L.tail modules)
+            graph = Map.fromList $ L.map (\(from, to) -> (from, [to])) pairs ++ 
                    [(last modules, [])]
             analysis = analyzeDependencies graph
             cycles = detectCycles graph
-        in null cycles && length (getTransitiveDependencies analysis (head modules)) >= 0
+        in null cycles && L.length (getTransitiveDependencies analysis (L.head modules)) >= 0
   ]
 
 -- | 组合所有测试
@@ -363,7 +364,7 @@ calculateDependencyLevels analysis =
   let modules = Map.keys (graph analysis)
       calculateLevel module' = 
         let deps = getTransitiveDependencies analysis module'
-        in if null deps then 0 else 1 + maximum (map calculateLevel deps)
+        in if null deps then 0 else 1 + L.maximum (map calculateLevel deps)
   in Map.fromList [(mod, calculateLevel mod) | mod <- modules]
 
 removeRedundantDependencies :: Map String [String] -> Map String [String]
@@ -371,7 +372,7 @@ removeRedundantDependencies graph =
   let analysis = analyzeDependencies graph
       removeRedundant module' deps =
         let transitive = Set.fromList $ concatMap (getTransitiveDependencies analysis) deps
-        in filter (\dep -> not (dep `Set.member` transitive)) deps
+        in L.filter (\dep -> not (dep `Set.member` transitive)) deps
   in Map.mapWithKey (\module' deps -> removeRedundant module' deps) graph
 
 findCommonDependencies :: Map String [String] -> String -> String -> [String]

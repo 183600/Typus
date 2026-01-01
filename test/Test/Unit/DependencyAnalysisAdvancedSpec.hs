@@ -10,6 +10,7 @@
 module Test.Unit.DependencyAnalysisAdvancedSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertFailure, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -63,7 +64,7 @@ genCyclicGraph :: Gen [(String, String)]
 genCyclicGraph = do
   cycleLength <- choose (2, 5)
   cycleNodes <- listOf1 $ genDepNode
-  let cycleEdges = zip cycleNodes (tail cycleNodes ++ [head cycleNodes])
+  let cycleEdges = zip cycleNodes (L.tail cycleNodes ++ [L.head cycleNodes])
   additionalEdges <- listOf $ genDepEdge
   return $ cycleEdges ++ additionalEdges
 
@@ -73,10 +74,10 @@ genAcyclicGraph = do
   numNodes <- choose (3, 8)
   nodes <- listOf1 $ genDepNode
   let orderedNodes = nub nodes
-  edges <- concat <$> forM orderedNodes $ \node -> do
+  edges <- L.concat <$> forM orderedNodes $ \node -> do
     numDeps <- choose (0, 2)
     deps <- take numDeps <$> elements (takeWhile (/= node) orderedNodes)
-    return $ map (\dep -> (node, dep)) deps
+    return $ L.map (\dep -> (node, dep)) deps
   return edges
 
 -- | Generate complex dependency scenarios
@@ -86,7 +87,7 @@ genComplexDepScenario = do
   entryPoints <- listOf1 $ elements $ map fst edges ++ map snd edges
   return (edges, entryPoints)
 
--- Property: Dependency analysis should detect all direct dependencies
+-- Property: Dependency analysis should detect L.all direct dependencies
 prop_dependency_analysis_direct :: [(String, String)] -> String -> Property
 prop_dependency_analysis_direct edges node =
   node `elem` map fst edges || node `elem` map snd edges ==> 
@@ -105,15 +106,15 @@ prop_dependency_analysis_transitive edges node =
       expectedDeps = computeTransitiveClosure edges node
   in property $ sort transitiveDeps === sort expectedDeps
 
--- Property: Cycle detection should find all cycles
+-- Property: Cycle detection should find L.all cycles
 prop_cycle_detection_complete :: [(String, String)] -> Property
 prop_cycle_detection_complete edges =
-  length edges >= 2 ==> 
+  L.length edges >= 2 ==> 
   let graph = buildDependencyGraph edges
       cycles = findCycles graph
       hasCycle = hasCyclePath edges
   in property $ (not (null cycles) === hasCycle) .&&.
-     (if hasCycle then all isValidCycle cycles else null cycles)
+     (if hasCycle then L.all isValidCycle cycles else null cycles)
 
 -- Property: Cycle detection should handle self-loops
 prop_cycle_detection_self_loop :: String -> Property
@@ -122,8 +123,8 @@ prop_cycle_detection_self_loop node =
   let edges = [(node, node)]
       graph = buildDependencyGraph edges
       cycles = findCycles graph
-  in property $ length cycles >= 1 && 
-     any (\cycle -> node `elem` cycle) cycles
+  in property $ L.length cycles >= 1 && 
+     L.any (\cycle -> node `elem` cycle) cycles
 
 -- Property: Topological sort should work for acyclic graphs
 prop_topological_sort_acyclic :: [(String, String)] -> Property
@@ -155,7 +156,7 @@ prop_dependency_analysis_isolated nodes =
   not (null nodes) ==> 
   let graph = buildDependencyGraph []
       allNodes = getAllNodes graph
-  in property $ null allNodes || all (`elem` nodes) allNodes
+  in property $ null allNodes || L.all (`elem` nodes) allNodes
 
 -- Property: Transitive dependencies should be idempotent
 prop_transitive_dependencies_idempotent :: [(String, String)] -> String -> Property
@@ -169,7 +170,7 @@ prop_transitive_dependencies_idempotent edges node =
 -- Property: Cycle detection should be order-independent
 prop_cycle_detection_order_independent :: [(String, String)] -> Property
 prop_cycle_detection_order_independent edges =
-  let reversedEdges = reverse edges
+  let reversedEdges = L.reverse edges
       graph1 = buildDependencyGraph edges
       graph2 = buildDependencyGraph reversedEdges
       cycles1 = findCycles graph1
@@ -191,7 +192,7 @@ prop_scc_correct :: [(String, String)] -> Property
 prop_scc_correct edges =
   let graph = buildDependencyGraph edges
       sccs = findStronglyConnectedComponents graph
-  in property $ all isValidSCC sccs && 
+  in property $ L.all isValidSCC sccs && 
      allNodesInGraphAreInSCCs edges sccs
 
 -- Property: Dependency analysis should handle large graphs efficiently
@@ -201,16 +202,16 @@ prop_dependency_analysis_large_graph size =
   let edges = generateLargeGraph size
       graph = buildDependencyGraph edges
       cycles = findCycles graph
-  in property $ length cycles <= size
+  in property $ L.length cycles <= size
 
 -- Property: Circular dependency detection should handle complex cycles
 prop_complex_cycle_detection :: [(String, String)] -> Property
 prop_complex_cycle_detection edges =
-  length edges >= 3 ==> 
+  L.length edges >= 3 ==> 
   let graph = buildDependencyGraph edges
       cycles = findCycles graph
       expectedCycles = findAllCycles edges
-  in property $ length cycles >= length expectedCycles
+  in property $ L.length cycles >= L.length expectedCycles
 
 -- Property: Dependency ordering should respect constraints
 prop_dependency_ordering_constraints :: [(String, String)] -> [String] -> Property
@@ -218,8 +219,8 @@ prop_dependency_ordering_constraints edges nodes =
   not (null nodes) && not (hasCyclePath edges) ==> 
   let graph = buildDependencyGraph edges
       ordered = topologicalSort graph
-      filteredOrdered = filter (`elem` nodes) ordered
-  in property $ all (\(from, to) -> 
+      filteredOrdered = L.filter (`elem` nodes) ordered
+  in property $ L.all (\(from, to) -> 
         from `elem` nodes && to `elem` nodes ==> 
         position from filteredOrdered < position to filteredOrdered) edges
 
@@ -246,7 +247,7 @@ findCycles graph =
 
 hasCyclePath :: [(String, String)] -> Bool
 hasCyclePath edges = 
-  let graph = Graph.buildG (1, length edges) 
+  let graph = Graph.buildG (1, L.length edges) 
           [(index from, index to) | (from, to) <- edges]
       index x = 1 -- Simplified
   in not $ Graph.acyclic graph
@@ -263,13 +264,13 @@ computeTransitiveClosure edges node =
   in nub $ directDeps ++ indirectDeps
 
 isValidCycle :: [String] -> Bool
-isValidCycle cycle = length cycle >= 2 && 
-                     head cycle == last cycle &&
-                     all (not . null) cycle
+isValidCycle cycle = L.length cycle >= 2 && 
+                     L.head cycle == last cycle &&
+                     L.all (not . null) cycle
 
 isValidTopologicalOrder :: [(String, String)] -> [String] -> Bool
 isValidTopologicalOrder edges order = 
-  all (\(from, to) -> 
+  L.all (\(from, to) -> 
     position from order <= position to order) edges
 
 position :: Eq a => a -> [a] -> Int
@@ -281,13 +282,13 @@ getAllNodes :: DependencyGraph -> [String]
 getAllNodes (DependencyGraph graph) = Map.keys graph
 
 isValidSCC :: [String] -> Bool
-isValidSCC scc = length scc >= 1
+isValidSCC scc = L.length scc >= 1
 
 allNodesInGraphAreInSCCs :: [(String, String)] -> [[String]] -> Bool
 allNodesInGraphAreInSCCs edges sccs = 
   let allNodes = nub $ map fst edges ++ map snd edges
-      sccNodes = concat sccs
-  in all (`elem` sccNodes) allNodes
+      sccNodes = L.concat sccs
+  in L.all (`elem` sccNodes) allNodes
 
 generateLargeGraph :: Int -> [(String, String)]
 generateLargeGraph size = 

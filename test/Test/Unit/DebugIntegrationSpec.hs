@@ -1,6 +1,7 @@
 module Test.Unit.DebugIntegrationSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 
 import DebugIntegration
@@ -48,7 +49,7 @@ tests =
                 Left (_ :: SomeException) -> assertBool "Should not throw exception" False
                 Right _ -> assertBool "Custom breakpoint added successfully" True
 
-        , testCase "removeAllBreakpoints clears all breakpoints" $ do
+        , testCase "removeAllBreakpoints clears L.all breakpoints" $ do
             let config = defaultCLIDebugConfig
             result <- try $ removeAllBreakpoints config
             case result of

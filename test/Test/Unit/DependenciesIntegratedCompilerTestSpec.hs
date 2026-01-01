@@ -12,7 +12,9 @@ import Dependencies (DependencyGraph, DependencyType(..), analyzeDependencies, f
 import IntegratedCompiler (CompilationResult, compileProject, CompilationSettings(..), defaultSettings)
 import SourceLocation (SourcePos(..), startPos, spanFrom)
 import qualified Data.Text as T
-import Data.List (isInfixOf, nub)
+import qualified Data.List as L
+import Data.List (isInfixOf)
+import Data.List (nub)
 import Data.Maybe (isNothing, isJust)
 import qualified Data.Map as Map
 
@@ -46,7 +48,7 @@ test_circular_dependency_detection = do
     case result of
         Right cycles -> do
             assertBool "Should detect circular dependencies" (not (null cycles))
-            assertBool "Should detect a->b->a cycle" (any (\cycle -> "a" `elem` cycle && "b" `elem` cycle) cycles)
+            assertBool "Should detect a->b->a cycle" (L.any (\cycle -> "a" `elem` cycle && "b" `elem` cycle) cycles)
         Left _ -> assertBool "Circular dependency detection should work" False
 
 -- Test dependency types
@@ -63,15 +65,15 @@ test_dependency_types = do
 prop_dependency_graph_consistency :: [(String, [String])] -> Property
 prop_dependency_graph_consistency deps =
     let graph = Map.fromList deps
-        allDeps = concat (Map.elems graph)
+        allDeps = L.concat (Map.elems graph)
         uniqueDeps = nub allDeps
-    in length allDeps >= length uniqueDeps  -- May have duplicates, which is fine
+    in L.length allDeps >= L.length uniqueDeps  -- May have duplicates, which is fine
 
 prop_circular_detection_properties :: String -> Property
 prop_circular_detection_properties code = 
-    not (null code) && length code < 200 ==> -- Limit size for performance
+    not (null code) && L.length code < 200 ==> -- Limit size for performance
     case findCircularDependencies code of
-        Right cycles -> all (\cycle -> length cycle >= 2) cycles  -- Cycles should have at least 2 nodes
+        Right cycles -> L.all (\cycle -> L.length cycle >= 2) cycles  -- Cycles should have at least 2 nodes
         Left _ -> True  -- Detection failure is acceptable
 
 -- ============================================================================
@@ -82,7 +84,7 @@ prop_circular_detection_properties code =
 test_default_compilation_settings :: IO ()
 test_default_compilation_settings = do
     let settings = defaultSettings
-    assertBool "Default settings should be valid" (not (null (show settings)))
+    assertBool "Default settings should be valid" (not (L.null (show settings)))
 
 -- Test project compilation
 test_project_compilation :: IO ()
@@ -93,8 +95,8 @@ test_project_compilation = do
     case result of
         Right compilationResult -> do
             assertBool "Compilation should succeed" (compilationSuccess compilationResult)
-            assertEqual "Should have no errors" 0 (length (compilationErrors compilationResult))
-        Left _ -> assertBool "Compilation should work or fail gracefully" True
+            assertEqual "Should have no errors" 0 (L.length (compilationErrors compilationResult))
+        Left _ -> assertBool "Compilation should work L.or fail gracefully" True
 
 -- Test compilation with errors
 test_compilation_with_errors :: IO ()
@@ -104,7 +106,7 @@ test_compilation_with_errors = do
         result <- compileProject settings files
     case result of
         Right compilationResult -> do
-            -- Either succeeds with warnings or fails with errors
+            -- Either succeeds with warnings L.or fails with errors
             assertBool "Should have result" (True)
         Left _ -> assertBool "Compilation should handle invalid input" True
 
@@ -117,7 +119,7 @@ test_compilation_phases = do
     case result of
         Right compilationResult -> do
             let phases = compilationPhases compilationResult
-            assertBool "Should have multiple phases" (length phases >= 1)
+            assertBool "Should have multiple phases" (L.length phases >= 1)
         Left _ -> assertBool "Compilation phases should work" True
 
 -- ============================================================================
@@ -141,7 +143,7 @@ test_dependencies_compilation_integration = do
         Left _ -> assertBool "Dependency analysis should work" True
 
 -- ============================================================================
--- Data Types and Utilities
+-- Data Types L.and Utilities
 -- ============================================================================
 
 data DependencyType = FunctionDependency String
@@ -217,7 +219,7 @@ instance Arbitrary DependencyType where
 oneof :: [Gen a] -> Gen a
 oneof [] = error "oneof: empty list"
 oneof gens = do
-  idx <- arbitrary `suchThat` (\i -> i >= 0 && i < length gens)
+  idx <- arbitrary `suchThat` (\i -> i >= 0 && i < L.length gens)
   (gens !! idx)
 
 suchThat :: Gen a -> (a -> Bool) -> Gen a
@@ -230,7 +232,7 @@ gen `suchThat` p = do
 -- ============================================================================
 
 tests :: TestTree
-tests = testGroup "Dependencies and Integrated Compiler Test Suite"
+tests = testGroup "Dependencies L.and Integrated Compiler Test Suite"
   [ testGroup "Dependencies Tests"
       [ testCase "Dependency graph creation" test_dependency_graph_creation
       , testCase "Simple dependency analysis" test_dependency_analysis_simple

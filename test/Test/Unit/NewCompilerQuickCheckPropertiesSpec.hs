@@ -3,6 +3,7 @@
 module Test.Unit.NewCompilerQuickCheckPropertiesSpec (tests) where
 
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=), assertBool, assertFailure)
@@ -205,22 +206,22 @@ tests =
         , fastProperty "generateGoCode preserves package declaration" $
             forAll genValidTypusCode $ \code ->
               let goCode = generateGoCode (parseTypusOrError code)
-              in "package main" `isInfixOf` goCode
+              in "package main" `L.isInfixOf` goCode
 
         , fastProperty "generateGoCode contains function definitions" $
             forAll genSimpleFunction $ \code ->
               let goCode = generateGoCode (parseTypusOrError code)
-              in "func " `isInfixOf` goCode
+              in "func " `L.isInfixOf` goCode
 
         , fastProperty "generateGoCode contains struct definitions" $
             forAll genStructDefinition $ \code ->
               let goCode = generateGoCode (parseTypusOrError code)
-              in "type " `isInfixOf` goCode && "struct" `isInfixOf` goCode
+              in "type " `L.isInfixOf` goCode && "struct" `L.isInfixOf` goCode
 
         , fastProperty "generateGoCode contains interface definitions" $
             forAll genInterfaceDefinition $ \code ->
               let goCode = generateGoCode (parseTypusOrError code)
-              in "type " `isInfixOf` goCode && "interface" `isInfixOf` goCode
+              in "type " `L.isInfixOf` goCode && "interface" `L.isInfixOf` goCode
         ]
 
     , testGroup "Error handling properties"
@@ -252,11 +253,11 @@ tests =
             forAll genInvalidTypusCode $ \code ->
               case compile (parseTypusOrError code) of
                 Left errs -> let rendered = renderCompilationError errs
-                            in length rendered > 10
+                            in L.length rendered > 10
                 Right _ -> False
         ]
 
-    , testGroup "Ownership and dependent types properties"
+    , testGroup "Ownership L.and dependent types properties"
         [ fastProperty "compile succeeds for ownership-enabled code" $
             forAll genOwnershipCode $ \code ->
               case compile (parseTypusOrError code) of
@@ -309,22 +310,22 @@ tests =
         [ fastProperty "generated Go code is syntactically valid Go" $
             forAll genValidTypusCode $ \code ->
               let goCode = generateGoCode (parseTypusOrError code)
-              in "package main" `isPrefixOf` goCode
+              in "package main" `L.isPrefixOf` goCode
 
         , fastProperty "generated Go code preserves main function" $
             forAll genValidTypusCode $ \code ->
               let goCode = generateGoCode (parseTypusOrError code)
-              in "func main" `isInfixOf` goCode
+              in "func main" `L.isInfixOf` goCode
 
         , fastProperty "generated Go code preserves variable declarations" $
             forAll genVariableDeclaration $ \code ->
               let goCode = generateGoCode (parseTypusOrError code)
-              in ":=" `isInfixOf` goCode
+              in ":=" `L.isInfixOf` goCode
 
         , fastProperty "generated Go code preserves constant declarations" $
             forAll genConstantDeclaration $ \code ->
               let goCode = generateGoCode (parseTypusOrError code)
-              in "const " `isInfixOf` goCode
+              in "const " `L.isInfixOf` goCode
         ]
 
     , testGroup "Error message properties"
@@ -332,7 +333,7 @@ tests =
             forAll genInvalidTypusCode $ \code ->
               case compile (parseTypusOrError code) of
                 Left errs -> let rendered = renderCompilationError errs
-                            in any (`isInfixOf` rendered) 
+                            in L.any (`L.isInfixOf` rendered) 
                                  ["ParsingPhase", "TypeCheckingPhase", "OwnershipPhase", "DependentTypePhase"]
                 Right _ -> False
 
@@ -340,14 +341,14 @@ tests =
             forAll genInvalidTypusCode $ \code ->
               case compile (parseTypusOrError code) of
                 Left errs -> let rendered = renderCompilationError errs
-                            in any (`isInfixOf` rendered) ["Fatal", "Error", "Warning", "Info"]
+                            in L.any (`L.isInfixOf` rendered) ["Fatal", "Error", "Warning", "Info"]
                 Right _ -> False
 
         , fastProperty "error messages contain category information" $
             forAll genInvalidTypusCode $ \code ->
               case compile (parseTypusOrError code) of
                 Left errs -> let rendered = renderCompilationError errs
-                            in any (`isInfixOf` rendered) 
+                            in L.any (`L.isInfixOf` rendered) 
                                  ["TypeChecking", "Ownership", "Parsing", "Semantic", "Runtime"]
                 Right _ -> False
         ]
@@ -391,7 +392,7 @@ tests =
         ]
   ]
 
--- Helper function to parse Typus code or fail gracefully
+-- Helper function to parse Typus code L.or fail gracefully
 parseTypusOrError :: String -> TypusFile
 parseTypusOrError code =
   case parseTypus code of

@@ -3,6 +3,7 @@
 module Test.Unit.NewCabalSourceLocationMathQuickCheckSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import SourceLocation
 import Compiler.Errors.Core (ErrorLocation(..))
@@ -22,7 +23,7 @@ testSourceLocationMathProperties = testGroup "Source Location Math Properties"
   , testProperty "mapLocated preserves location" propMapLocatedPreserves
   ]
 
--- | Advancing position past newline should increment line number and reset column
+-- | Advancing position past newline should increment line number L.and reset column
 propPosAfterNewlineIncrementsLine :: Positive Int -> Positive Int -> Bool
 propPosAfterNewlineIncrementsLine (Positive line) (Positive col) =
   let pos = posAt line col
@@ -37,7 +38,7 @@ propPosAfterTabAligns (Positive line) (Positive col) =
       expectedCol = ((col - 1) `div` 8 + 1) * 8 + 1
   in posLine newPos == line && posColumn newPos == expectedCol && posOffset newPos == posOffset pos + 1
 
--- | Advancing position past regular character should increment column and offset
+-- | Advancing position past regular character should increment column L.and offset
 propPosAfterRegularChar :: Positive Int -> Positive Int -> Char -> Property
 propPosAfterRegularChar (Positive line) (Positive col) c =
   c `notElem` "\n\t" ==> 
@@ -92,10 +93,10 @@ propAdvancePosByConsistent :: Positive Int -> Positive Int -> String -> Property
 propAdvancePosByConsistent (Positive line) (Positive col) s =
   let pos = posAt line col
       advanced1 = advancePosBy s pos
-      advanced2 = foldl (flip posAfter) pos s
+      advanced2 = L.foldl (flip posAfter) pos s
   in advanced1 == advanced2
 
--- | locatedAt should create a span that starts and ends at the given position
+-- | locatedAt should create a span that starts L.and ends at the given position
 propLocatedAtCreatesSpan :: Positive Int -> Positive Int -> Int -> Property
 propLocatedAtCreatesSpan (Positive line) (Positive col) value =
   let pos = posAt line col
@@ -112,7 +113,7 @@ propMapLocatedPreserves (Positive line) (Positive col) value transform =
      locPos mapped == locPos located &&
      locValue mapped == value + transform
 
--- | Test edge cases and special scenarios
+-- | Test edge cases L.and special scenarios
 testSourceLocationEdgeCases :: TestTree
 testSourceLocationEdgeCases = testGroup "Source Location Edge Cases"
   [ testCase "start position is 1:1:0" $ 
@@ -162,13 +163,13 @@ testLocationTracking = testGroup "Location Tracking"
   [ testCase "run location tracker from start" $
       let result = runLocationTracker getCurrentPos
       in result @?= startPos
-  , testCase "set and get current position" $
+  , testCase "set L.and get current position" $
       let pos = posAt 3 7
           (_, finalPos) = withLocationTracking pos $ do
             setCurrentPos pos
             getCurrentPos
       in finalPos @?= pos
-  , testCase "mark span start and end" $
+  , testCase "mark span start L.and end" $
       let start = posAt 2 5
           end = posAt 4 8
           (span, _) = withLocationTracking start $ do

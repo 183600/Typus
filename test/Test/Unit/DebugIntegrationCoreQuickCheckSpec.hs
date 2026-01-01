@@ -10,6 +10,7 @@
 module Test.Unit.DebugIntegrationCoreQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Positive(..), NonNegative(..))
@@ -39,7 +40,8 @@ import Debug (debugLog, debugError, debugInfo, debugWarn, debugTrace)
 
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (sort, nub, isInfixOf)
+import Data.List (isInfixOf)
+import Data.List (sort, nub)
 import Control.Monad (when)
 
 -- Property: withDebugging maintains phase information
@@ -204,7 +206,7 @@ prop_debug_message_handling messages =
   not (null messages) ==>
   let uniqueMessages = nub messages
       actions = [debugLog "test" msg | msg <- uniqueMessages] :: [IO ()]
-  in property $ length actions === length uniqueMessages
+  in property $ L.length actions === L.length uniqueMessages
 
 -- Property: debug breakpoint management
 prop_debug_breakpoint_management :: [String] -> Property
@@ -213,7 +215,7 @@ prop_debug_breakpoint_management breakpointNames =
   let uniqueBreakpoints = nub breakpointNames
       addActions = [addCustomBreakpoint undefined name | name <- uniqueBreakpoints]
       removeAction = removeAllBreakpoints undefined
-  in property $ length addActions === length uniqueBreakpoints
+  in property $ L.length addActions === L.length uniqueBreakpoints
 
 -- Property: debug performance tracking
 prop_debug_performance_tracking :: String -> Int -> Property

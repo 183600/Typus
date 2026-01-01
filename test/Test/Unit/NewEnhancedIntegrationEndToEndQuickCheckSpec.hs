@@ -10,6 +10,7 @@
 module Test.Unit.NewEnhancedIntegrationEndToEndQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose, suchThat)
@@ -21,7 +22,8 @@ import Ownership
 import ErrorHandler
 import Dependencies
 import SourceLocation
-import Data.List (sort, nub, group, intercalate, find, delete, isInfixOf, sortOn)
+import Data.List (isInfixOf)
+import Data.List (sort, nub, group, intercalate, find, delete, sortOn)
 import Data.Maybe (isJust, isNothing, catMaybes, fromMaybe, mapMaybe)
 import Data.Set (Set, empty, singleton, union, unions, member, size, difference, intersection)
 import qualified Data.Set as Set
@@ -65,7 +67,7 @@ prop_ownership_analysis_integration variableNames =
       violations = case ownership of
                      Nothing -> []
                      Just analysis -> findOwnershipViolations analysis
-  in property $ isJust parsed ==> isJust ownership .&&. length violations >= 0
+  in property $ isJust parsed ==> isJust ownership .&&. L.length violations >= 0
 
 -- Property: Dependency analysis integration
 prop_dependency_analysis_integration :: [String] -> Property
@@ -79,7 +81,7 @@ prop_dependency_analysis_integration moduleNames =
       cycles = case dependencies of
                  Nothing -> []
                  Just deps -> findDependencyCycles deps
-  in property $ isJust parsed ==> isJust dependencies .&&. length cycles >= 0
+  in property $ isJust parsed ==> isJust dependencies .&&. L.length cycles >= 0
 
 -- Property: Type checking integration
 prop_type_checking_integration :: [String] -> Property
@@ -93,7 +95,7 @@ prop_type_checking_integration typeDeclarations =
       typeErrors = case typeChecked of
                      Nothing -> []
                      Just result -> getTypeErrors result
-  in property $ isJust parsed ==> isJust typeChecked .&&. length typeErrors >= 0
+  in property $ isJust parsed ==> isJust typeChecked .&&. L.length typeErrors >= 0
 
 -- Property: Source location tracking through pipeline
 prop_source_location_tracking :: String -> Int -> Int -> Property
@@ -113,7 +115,7 @@ prop_multi_module_integration modules =
   not (null modules) ==> 
   let moduleSources = map generateModuleSource modules
       parsedModules = map parseSource moduleSources
-      allParsed = all isJust parsedModules
+      allParsed = L.all isJust parsedModules
       compiled = if allParsed then compileModules (catMaybes parsedModules) else Nothing
       linked = case compiled of
                  Nothing -> Nothing
@@ -162,14 +164,14 @@ prop_resource_management_integration resources =
       leaks = case analyzed of
                 Nothing -> []
                 Just analysis -> findResourceLeaks analysis
-  in property $ isJust parsed ==> isJust analyzed .&&. length leaks >= 0
+  in property $ isJust parsed ==> isJust analyzed .&&. L.length leaks >= 0
 
 -- Property: Concurrent compilation integration
 prop_concurrent_compilation_integration :: [String] -> Property
 prop_concurrent_compilation_integration sources =
   not (null sources) ==> 
   let parsedSources = map parseSource sources
-      allParsed = all isJust parsedSources
+      allParsed = L.all isJust parsedSources
       compiled = if allParsed then compileConcurrently (catMaybes parsedSources) else Nothing
       merged = case compiled of
                  Nothing -> Nothing
@@ -191,7 +193,7 @@ prop_incremental_compilation_integration originalSource modifiedSource =
   in property $ isJust originalCompiled && isJust modifiedParsed ==> isJust incremental
 
 -- ============================================================================
--- Helper Functions and Types
+-- Helper Functions L.and Types
 -- ============================================================================
 
 -- Simplified types for integration testing
@@ -267,7 +269,7 @@ collectErrors maybeAST maybeIR =
     _ -> []
 
 generateOwnershipSource :: [String] -> String
-generateOwnershipSource vars = unlines $ map (\v -> "var " ++ v ++ " = new Resource();") vars
+generateOwnershipSource vars = unlines $ L.map (\v -> "var " ++ v ++ " = new Resource();") vars
 
 analyzeOwnership :: AST -> Maybe OwnershipAnalysis
 analyzeOwnership ast = Just $ OwnershipAnalysis [] empty
@@ -276,7 +278,7 @@ findOwnershipViolations :: OwnershipAnalysis -> [String]
 findOwnershipViolations = ownershipViolations
 
 generateDependencySource :: [String] -> String
-generateDependencySource modules = unlines $ map (\m -> "import " ++ m ++ ";") modules
+generateDependencySource modules = unlines $ L.map (\m -> "import " ++ m ++ ";") modules
 
 analyzeDependencies :: AST -> Maybe DependencyAnalysis
 analyzeDependencies ast = Just $ DependencyAnalysis empty []
@@ -285,7 +287,7 @@ findDependencyCycles :: DependencyAnalysis -> [[String]]
 findDependencyCycles = dependencyCycles
 
 generateTypeSource :: [String] -> String
-generateTypeSource types = unlines $ map (\t -> "type " ++ t ++ " = int;") types
+generateTypeSource types = unlines $ L.map (\t -> "type " ++ t ++ " = int;") types
 
 typeCheckAST :: AST -> Maybe TypeCheckResult
 typeCheckAST ast = Just $ TypeCheckResult [] empty
@@ -298,7 +300,7 @@ checkLocationPreservation maybeAST maybeIR location = isJust maybeAST && isJust 
 
 generateModuleSource :: (String, [String]) -> String
 generateModuleSource (name, deps) = 
-  "module " ++ name ++ ";\n" ++ unlines (map (\d -> "import " ++ d ++ ";") deps)
+  "module " ++ name ++ ";\n" ++ unlines (L.map (\d -> "import " ++ d ++ ";") deps)
 
 compileModules :: [AST] -> Maybe IR
 compileModules asts = Just $ IR [LoadInstruction "module"] empty
@@ -313,13 +315,13 @@ measurePerformance :: IR -> Maybe Int
 measurePerformance ir = Just 42
 
 recoverFromErrors :: String -> Maybe AST
-recoverFromErrors source = if "error" `isInfixOf` source then Nothing else parseSource source
+recoverFromErrors source = if "error" `L.isInfixOf` source then Nothing else parseSource source
 
 compilePartial :: AST -> Maybe IR
 compilePartial ast = compileAST ast
 
 generateResourceSource :: [String] -> String
-generateResourceSource resources = unlines $ map (\r -> "resource " ++ r ++ " = create();") resources
+generateResourceSource resources = unlines $ L.map (\r -> "resource " ++ r ++ " = create();") resources
 
 analyzeResourceUsage :: AST -> Maybe ResourceAnalysis
 analyzeResourceUsage ast = Just $ ResourceAnalysis [] empty
@@ -328,7 +330,7 @@ findResourceLeaks :: ResourceAnalysis -> [String]
 findResourceLeaks = resourceLeaks
 
 compileConcurrently :: [AST] -> Maybe [IR]
-compileConcurrently asts = Just $ map (\_ -> IR [LoadInstruction "concurrent"] empty) asts
+compileConcurrently asts = Just $ L.map (\_ -> IR [LoadInstruction "concurrent"] empty) asts
 
 mergeCompilationResults :: [IR] -> Maybe IR
 mergeCompilationResults irs = Just $ IR (concatMap irInstructions irs) empty

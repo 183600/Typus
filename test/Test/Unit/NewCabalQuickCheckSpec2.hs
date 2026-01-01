@@ -1,6 +1,7 @@
 module Test.Unit.NewCabalQuickCheckSpec2 (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, property, Arbitrary(..), Gen, choose, listOf)
 import Data.Text (Text)
@@ -19,7 +20,7 @@ import SourceLocation
 tests :: TestTree
 tests =
   testGroup "NewCabalQuickCheckSpec2 - SourceLocation Position Calculation Properties"
-    [ testProperty "posAfter newline increments line and resets column" prop_posAfterNewline
+    [ testProperty "posAfter newline increments line L.and resets column" prop_posAfterNewline
     , testProperty "posAfter tab jumps to next tab stop" prop_posAfterTab
     , testProperty "posAfter regular char increments column" prop_posAfterRegularChar
     , testProperty "advancePosBy is consistent with repeated posAfter" prop_advancePosByConsistency
@@ -28,10 +29,10 @@ tests =
     , testProperty "spanBetween creates valid span" prop_spanBetweenValid
     , testProperty "mergeSpans contains both original spans" prop_mergeSpansContains
     , testProperty "isValidSpan correctly validates spans" prop_isValidSpanCorrect
-    , testProperty "locatedAt creates zero-length span" prop_locatedAtZeroLength
+    , testProperty "locatedAt creates zero-L.length span" prop_locatedAtZeroLength
     ]
 
--- Property: posAfter newline increments line and resets column to 1
+-- Property: posAfter newline increments line L.and resets column to 1
 prop_posAfterNewline :: Int -> Int -> Int -> Bool
 prop_posAfterNewline line col offset = 
   let pos = SourcePos line col offset
@@ -50,7 +51,7 @@ prop_posAfterTab line col offset =
      posColumn newPos == expectedCol && 
      posOffset newPos == offset + 1
 
--- Property: posAfter regular character increments column and offset
+-- Property: posAfter regular character increments column L.and offset
 prop_posAfterRegularChar :: Int -> Int -> Int -> Char -> Bool
 prop_posAfterRegularChar line col offset ch
   | ch == '\n' || ch == '\t' = True  -- Skip special chars
@@ -66,7 +67,7 @@ prop_advancePosByConsistency :: String -> Bool
 prop_advancePosByConsistency input =
   let start = startPos
       advanced = advancePosBy input start
-      manualAdvance = foldl (flip posAfter) start input
+      manualAdvance = L.foldl (flip posAfter) start input
   in advanced == manualAdvance
 
 -- Property: advancePosByText handles multiline text correctly
@@ -76,10 +77,10 @@ prop_advancePosByTextMultiline lineList =
       start = startPos
       result = advancePosByText text start
       -- Should end at line equal to number of lines
-      expectedLine = length lineList + (if null lineList then 0 else 0)
+      expectedLine = L.length lineList + (if null lineList then 0 else 0)
   in posLine result >= expectedLine
 
--- Property: advancePosByLine only changes line number and resets column
+-- Property: advancePosByLine only changes line number L.and resets column
 prop_advancePosByLine :: Int -> Int -> Int -> Int -> Bool
 prop_advancePosByLine line col offset numLines =
   let pos = SourcePos line col offset
@@ -108,7 +109,7 @@ prop_mergeSpansContains line1 col1 offset1 line2 col2 offset2 line3 col3 offset3
      spanStart merged <= spanStart span2 && 
      spanEnd merged >= spanEnd span2
 
--- Property: isValidSpan correctly identifies valid and invalid spans
+-- Property: isValidSpan correctly identifies valid L.and invalid spans
 prop_isValidSpanCorrect :: Int -> Int -> Int -> Int -> Int -> Int -> Bool
 prop_isValidSpanCorrect line1 col1 offset1 line2 col2 offset2 =
   let start = SourcePos line1 col1 offset1
@@ -117,7 +118,7 @@ prop_isValidSpanCorrect line1 col1 offset1 line2 col2 offset2 =
       shouldBeValid = start <= end
   in isValidSpan span == shouldBeValid
 
--- Property: locatedAt creates zero-length span at given position
+-- Property: locatedAt creates zero-L.length span at given position
 prop_locatedAtZeroLength :: Int -> Int -> Int -> String -> Bool
 prop_locatedAtZeroLength line col offset value =
   let pos = SourcePos line col offset
@@ -131,9 +132,9 @@ prop_mapLocatedPreservesSpan :: Int -> Int -> Int -> Int -> Int -> Int -> String
 prop_mapLocatedPreservesSpan line1 col1 offset1 line2 col2 offset2 value =
   let span = SourceSpan (SourcePos line1 col1 offset1) (SourcePos line2 col2 offset2)
       located = Located value (spanStart span) span
-      mapped = mapLocated length located
+      mapped = mapLocated L.length located
   in locatedSpan mapped == span && 
-     locatedValue mapped == length value
+     locatedValue mapped == L.length value
 
 -- Additional property: toErrorLocation preserves position information
 prop_toErrorLocationPreservesPosition :: Int -> Int -> Int -> Bool

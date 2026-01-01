@@ -10,6 +10,7 @@
 module Test.Unit.OwnershipBasicPropertiesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertBool, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Positive(Positive), getPositive)
@@ -66,11 +67,11 @@ prop_ownership_type_show_contains_name name =
       ownedStr = show owned
       borrowedStr = show borrowed
       mutBorrowedStr = show mutBorrowed
-  in name `isInfixOf` ownedStr .&&.
-     name `isInfixOf` borrowedStr .&&.
-     name `isInfixOf` mutBorrowedStr
+  in name `L.isInfixOf` ownedStr .&&.
+     name `L.isInfixOf` borrowedStr .&&.
+     name `L.isInfixOf` mutBorrowedStr
   where
-    x `isInfixOf` y = x `elem` words y
+    x `L.isInfixOf` y = x `elem` words y
 
 -- Property: OwnershipError ordering is based on string representation
 prop_ownership_error_ordering :: String -> String -> Property
@@ -98,9 +99,9 @@ prop_ownership_error_show_contains_message msg =
   not (null msg) ==>
   let error = ParseError msg
       errorStr = show error
-  in msg `isInfixOf` errorStr
+  in msg `L.isInfixOf` errorStr
   where
-    x `isInfixOf` y = x `elem` words y
+    x `L.isInfixOf` y = x `elem` words y
 
 -- Property: OwnershipAnalyzer constructor creates consistent analyzer
 prop_ownership_analyzer_consistency :: Property
@@ -116,7 +117,7 @@ prop_ownership_transfer_equality from1 to1 from2 to2 =
       transfer2 = OwnershipTransfer from2 to2
   in (transfer1 == transfer2) === (from1 == from2 && to1 == to2)
 
--- Property: OwnershipTransfer show contains both from and to
+-- Property: OwnershipTransfer show contains both from L.and to
 prop_ownership_transfer_show_contains_fields :: String -> String -> Property
 prop_ownership_transfer_show_contains_fields from to =
   not (null from && null to) ==>
@@ -184,7 +185,7 @@ tests =
     , fastProperty "OwnershipError show contains the message" prop_ownership_error_show_contains_message
     , fastProperty "OwnershipAnalyzer constructor creates consistent analyzer" prop_ownership_analyzer_consistency
     , fastProperty "OwnershipTransfer equality based on fields" prop_ownership_transfer_equality
-    , fastProperty "OwnershipTransfer show contains both from and to" prop_ownership_transfer_show_contains_fields
+    , fastProperty "OwnershipTransfer show contains both from L.and to" prop_ownership_transfer_show_contains_fields
     , fastProperty "OwnershipTransfer ordering based on fields" prop_ownership_transfer_ordering
     , fastProperty "OwnershipType categories are mutually exclusive" prop_ownership_type_mutually_exclusive
     , fastProperty "OwnershipError categories are mutually exclusive" prop_ownership_error_mutually_exclusive

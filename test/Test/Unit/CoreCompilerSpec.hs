@@ -1,6 +1,7 @@
 module Test.Unit.CoreCompilerSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, choose, oneof, elements, listOf)
 import qualified Data.Text as T
@@ -31,8 +32,8 @@ tests =
             case result of
                 Left errs -> assertBool ("should compile simple code: " ++ show errs) $ null errs
                 Right goCode -> do
-                    assertBool "should contain function" $ "func main()" `isInfixOf` goCode
-                    assertBool "should contain print statement" $ "fmt.Println" `isInfixOf` goCode
+                    assertBool "should contain function" $ "func main()" `L.isInfixOf` goCode
+                    assertBool "should contain print statement" $ "fmt.Println" `L.isInfixOf` goCode
 
         , testCase "compile detects type errors" $ do
             let blockWithError = CodeBlock defaultBlockDirectives "var x int = \"string\"" 
@@ -41,37 +42,37 @@ tests =
                 result = compile fileWithError
             case result of
                 Left errs -> do
-                    assertBool "should have type error" $ length errs >= 1
-                    let typeErr = head errs
+                    assertBool "should have type error" $ L.length errs >= 1
+                    let typeErr = L.head errs
                         innerErr = ceError typeErr
                     assertBool "should be type checking error" $ 
                         phase typeErr == TypeCheckingPhase
                     assertBool "should be type checking category" $ 
                         category innerErr == TypeChecking
                     assertBool "should mention string/int conflict" $ 
-                        "string" `T.isInfixOf` message innerErr && 
-                        "int" `T.isInfixOf` message innerErr
+                        "string" `L.isInfixOf` message innerErr && 
+                        "int" `L.isInfixOf` message innerErr
                 Right _ -> assertBool "should not succeed with type error" False
         ]
 
-    , testGroup "Error handling and reporting"
+    , testGroup "Error handling L.and reporting"
         [ testCase "renderCompilationError formats errors" $ do
             let errors = [typeCheckFailure]
                 formatted = renderCompilationError errors
-            assertBool "should contain error message" $ "Type errors detected" `isInfixOf` formatted
-            assertBool "should contain error code" $ "CP0002" `isInfixOf` formatted
+            assertBool "should contain error message" $ "Type errors detected" `L.isInfixOf` formatted
+            assertBool "should contain error code" $ "CP0002" `L.isInfixOf` formatted
 
         , testCase "formatCompilerErrors handles multiple errors" $ do
             let errors = [CE.malformedSyntaxError, typeCheckFailure]
                 formatted = formatCompilerErrors errors
-            assertBool "should contain malformed syntax error" $ "Malformed syntax" `isInfixOf` formatted
-            assertBool "should contain type checking error" $ "Type errors detected" `isInfixOf` formatted
+            assertBool "should contain malformed syntax error" $ "Malformed syntax" `L.isInfixOf` formatted
+            assertBool "should contain type checking error" $ "Type errors detected" `L.isInfixOf` formatted
 
 let errors = [CE.malformedSyntaxError, typeCheckFailure]
                 report = generateDetailedReport errors
-            assertBool "should contain error summary" $ "Error Summary" `isInfixOf` report
-            assertBool "should contain total count" $ "Total errors: 2" `isInfixOf` report
-            assertBool "should contain phase breakdown" $ "by Phase" `isInfixOf` report
+            assertBool "should contain error summary" $ "Error Summary" `L.isInfixOf` report
+            assertBool "should contain total count" $ "Total errors: 2" `L.isInfixOf` report
+            assertBool "should contain phase breakdown" $ "by Phase" `L.isInfixOf` report
         ]
 
     , testGroup "Source IR validation"
@@ -92,11 +93,11 @@ let errors = [CE.malformedSyntaxError, typeCheckFailure]
             case result of
                 Left errs -> do
                     assertBool "should have errors" $ not (null errs)
-                    let err = head errs
+                    let err = L.head errs
                         innerErr = ceError err
                     assertBool "should be parsing error" $ phase err == ParsingPhase
                     assertBool "should mention malformed syntax" $ 
-                        "Malformed syntax" `T.isInfixOf` message innerErr
+                        "Malformed syntax" `L.isInfixOf` message innerErr
                 Right _ -> assertBool "should not accept malformed syntax" False
         ]
 
@@ -106,7 +107,7 @@ let errors = [CE.malformedSyntaxError, typeCheckFailure]
                 file = TypusFile defaultFileDirectives [] [block] []
                 goCode = generateGoCode file
             assertBool "should generate Go code" $ not (null goCode)
-            assertBool "should contain function" $ "func main()" `isInfixOf` goCode
+            assertBool "should contain function" $ "func main()" `L.isInfixOf` goCode
 
         , testCase "generateGoCode falls back on errors" $ do
             let problematicBlock = CodeBlock defaultBlockDirectives "func incomplete {" 
@@ -114,15 +115,15 @@ let errors = [CE.malformedSyntaxError, typeCheckFailure]
                 problematicFile = TypusFile defaultFileDirectives [] [problematicBlock] []
                 goCode = generateGoCode problematicFile
             assertBool "should still generate output" $ not (null goCode)
-            assertBool "should contain original content" $ "func incomplete {" `isInfixOf` goCode
+            assertBool "should contain original content" $ "func incomplete {" `L.isInfixOf` goCode
 
     , testGroup "Type checking diagnostics"
         [ testCase "typeDiagnosticToCompilerError converts correctly" $ do
             let diagnostic = TypeCheckDiagnostic (Just "main") "undefined variable"
                 error = typeDiagnosticToCompilerError diagnostic
                 innerErr = ceError error
-            assertBool "should include context" $ "main" `T.isInfixOf` message innerErr
-            assertBool "should include detail" $ "undefined variable" `T.isInfixOf` message innerErr
+            assertBool "should include context" $ "main" `L.isInfixOf` message innerErr
+            assertBool "should include detail" $ "undefined variable" `L.isInfixOf` message innerErr
             assertBool "should be type checking error" $ phase error == TypeCheckingPhase
 
         , testCase "diagnoseTypeErrors handles valid code" $ do
@@ -170,13 +171,13 @@ let errors = [CE.malformedSyntaxError, typeCheckFailure]
                 Left _ -> True
 
         , testProperty "generateGoCode always returns output" $
-            \file -> not (null (generateGoCode file))
+            \file -> not (L.null (generateGoCode file))
 
         , testProperty "renderCompilationError is deterministic" $
             \errors -> renderCompilationError errors == renderCompilationError errors
 
         , testProperty "analyzeErrors counts match input" $
-            \errors -> totalErrorCount (analyzeErrors errors) == length errors
+            \errors -> totalErrorCount (analyzeErrors errors) == L.length errors
 
         , testProperty "typeDiagnosticToCompilerError preserves error type" $
             \diagnostic -> 

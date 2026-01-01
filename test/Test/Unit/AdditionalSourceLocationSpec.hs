@@ -1,6 +1,7 @@
 module Test.Unit.AdditionalSourceLocationSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 
 import SourceLocation
@@ -45,37 +46,37 @@ tests =
             posAfterCarriageReturn @?= SourcePos 1 2 1
 
         , testCase "posAt creates position with correct offset" $ do
-            let pos = posAt 5 10 42
-            pos @?= SourcePos 5 10 42
+            let pos = posAt 5 10
+            pos @?= SourcePos 5 10 0
 
         , testCase "posAtLineCol calculates offset correctly" $ do
-            let pos = posAtLineCol 3 5 "line1\nline2\nline3"
+            let pos = posAtLineCol 3 5 12
             pos @?= SourcePos 3 5 12
 
         , testCase "advancePos handles empty string" $ do
-            let result = advancePos "" startPos
-            result @?= startPos
+            let result = advancePos '\n' startPos
+            result @?= SourcePos 2 1 1
 
         , testCase "advancePosBy with zero offset" $ do
             let initial = SourcePos 5 10 42
-                result = advancePosBy 0 initial
+                result = advancePosBy "" initial
             result @?= initial
         ]
 
-    , testGroup "Span validation and edge cases"
+    , testGroup "Span validation L.and edge cases"
         [ testCase "isValidSpan identifies valid spans" $ do
             let validSpan = SourceSpan (SourcePos 1 1 0) (SourcePos 1 5 4)
                 invalidSpan = SourceSpan (SourcePos 2 1 10) (SourcePos 1 1 0)
             isValidSpan validSpan @?= True
             isValidSpan invalidSpan @?= False
 
-        , testCase "emptySpan creates zero-length span" $ do
+        , testCase "emptySpan creates zero-L.length span" $ do
             let pos = SourcePos 3 4 20
                 span = emptySpan pos
             spanStart span @?= pos
             spanEnd span @?= pos
 
-        , testCase "spanFrom and spanTo consistency" $ do
+        , testCase "spanFrom L.and spanTo consistency" $ do
             let start = SourcePos 1 1 0
                 end = SourcePos 1 3 2
                 spanFromStart = spanFrom start
@@ -103,7 +104,7 @@ tests =
                 merged = mergeSpans outer inner
             merged @?= outer
 
-        , testCase "mergeSpans chooses earliest start and latest end" $ do
+        , testCase "mergeSpans chooses earliest start L.and latest end" $ do
             let span1 = SourceSpan (SourcePos 2 3 10) (SourcePos 2 8 15)
                 span2 = SourceSpan (SourcePos 1 5 5) (SourcePos 3 1 20)
                 merged = mergeSpans span1 span2
@@ -129,7 +130,7 @@ tests =
         , testCase "mapLocated transforms value" $ do
             let pos = SourcePos 1 1 0
                 original = locatedAt pos "hello"
-                transformed = mapLocated length original
+                transformed = mapLocated L.length original
             locatedValue transformed @?= 5
             locatedPos transformed @?= pos
         ]
@@ -137,17 +138,17 @@ tests =
     , testGroup "Position arithmetic edge cases"
         [ testCase "advancePosBy with negative offset" $ do
             let initial = SourcePos 2 5 15
-                result = advancePosBy (-3) initial
-            result @?= SourcePos 2 2 12
+                result = advancePosBy "abc" initial
+            result @?= SourcePos 2 8 18
 
         , testCase "advancePosBy crosses line boundaries" $ do
             let initial = SourcePos 2 3 10
-                result = advancePosBy 5 initial
+                result = advancePosBy "abcde" initial
             result @?= SourcePos 2 8 15
 
         , testCase "posAfter with multiple newlines" $ do
             let initial = SourcePos 1 5 4
-                result = foldl posAfter initial "\n\n\n"
+                result = L.foldl (flip advancePos) initial "\n\n\n"
             result @?= SourcePos 4 1 7
         ]
     ]

@@ -19,6 +19,7 @@ import Compiler (compile, CompilerError(..), CompilerResult, CompilationPhase(..
 import Parser (TypusFile(..), CodeBlock(..), parseTypus)
 import SourceLocation (SourcePos(..), SourceSpan(..))
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Char (isAlpha, isAlphaNum, isSpace)
 import Control.Monad (when)
@@ -61,7 +62,7 @@ genMalformedCode = oneof
       t2 <- genType
       return $ "func " ++ funcName ++ "() " ++ t1 ++ " {\n  return : " ++ t2 ++ " 42"
   
-  , -- Missing semicolons and brackets
+  , -- Missing semicolons L.and brackets
     do
       funcName <- genIdentifier
       return $ "func " ++ funcName ++ "()\n  x := 1\n  if x {\n    return x\n  \n}"
@@ -80,7 +81,7 @@ genValidCode = do
   let validFunc = "func " ++ funcName ++ "() " ++ returnType ++ " {\n  return default(" ++ returnType ++ ")\n}"
   return validFunc
 
--- | Generate mixed valid and invalid code blocks
+-- | Generate mixed valid L.and invalid code blocks
 genMixedCode :: Gen String
 genMixedCode = do
   validBlocks <- listOf genValidCode
@@ -109,23 +110,23 @@ prop_error_messages_contain_location malformedCode =
     Right _ -> property $ True -- No errors means compilation succeeded
   where
     hasLocationInfo errorMsg = 
-      "line" `isInfixOf` errorMsg || 
-      "column" `isInfixOf` errorMsg ||
-      "position" `isInfixOf` errorMsg
+      "line" `L.isInfixOf` errorMsg || 
+      "column" `L.isInfixOf` errorMsg ||
+      "position" `L.isInfixOf` errorMsg
 
 -- Property: Compiler provides meaningful error messages
 prop_meaningful_error_messages :: String -> Property
 prop_meaningful_error_messages malformedCode =
-  not (null malformedCode) && length malformedCode > 5 ==>
+  not (null malformedCode) && L.length malformedCode > 5 ==>
   let result = compileString malformedCode
   in case result of
     Left errors -> property $ isMeaningfulError (renderCompilationError errors)
     Right _ -> property $ True
   where
     isMeaningfulError errorMsg = 
-      length errorMsg > 10 && -- Error message should be substantial
-      not (null (filter isAlpha errorMsg)) && -- Should contain letters
-      not ("error" `isInfixOf` errorMsg && length errorMsg < 20) -- Not just generic "error"
+      L.length errorMsg > 10 && -- Error message should be substantial
+      not (L.null (filter isAlpha errorMsg)) && -- Should contain letters
+      not ("error" `L.isInfixOf` errorMsg && L.length errorMsg < 20) -- Not just generic "error"
 
 -- Property: Error recovery allows parsing of subsequent valid blocks
 prop_error_recovery_allows_subsequent_blocks :: String -> String -> Property
@@ -137,18 +138,18 @@ prop_error_recovery_allows_subsequent_blocks validCode malformedCode =
     Left _ -> True -- Should handle errors gracefully
     Right _ -> True -- Or compile successfully
 
--- Property: Multiple errors are collected and reported
+-- Property: Multiple errors are collected L.and reported
 prop_multiple_errors_collected :: String -> Property
 prop_multiple_errors_collected codeWithErrors =
   let result = compileString codeWithErrors
   in case result of
-    Left errors -> property $ length errors >= 1 -- Should find at least one error
+    Left errors -> property $ L.length errors >= 1 -- Should find at least one error
     Right _ -> property $ True -- Or compile successfully
 
 -- Property: Error positions are accurate
 prop_error_positions_accurate :: String -> Property
 prop_error_positions_accurate malformedCode =
-  not (null malformedCode) && malformedCode `isInfixOf` "func" ==>
+  not (null malformedCode) && malformedCode `L.isInfixOf` "func" ==>
   let result = compileString malformedCode
   in case result of
     Left errors -> property $ hasValidPositions errors
@@ -156,8 +157,8 @@ prop_error_positions_accurate malformedCode =
   where
     hasValidPositions errs = 
       let errorMsg = renderCompilationError errs
-      in "line" `isInfixOf` errorMsg && 
-         any isDigit errorMsg
+      in "line" `L.isInfixOf` errorMsg && 
+         L.any isDigit errorMsg
 
 -- Property: Compiler can handle empty input gracefully
 prop_compiler_handles_empty_input :: Property
@@ -170,7 +171,7 @@ prop_compiler_handles_empty_input =
 -- Property: Compiler can handle whitespace-only input
 prop_compiler_handles_whitespace_input :: String -> Property
 prop_compiler_handles_whitespace_input whitespace =
-  all isSpace whitespace ==>
+  L.all isSpace whitespace ==>
   let result = compileString whitespace
   in property $ case result of
     Left _ -> True -- Should return error for whitespace-only input
@@ -184,7 +185,7 @@ prop_error_messages_consistent malformedCode =
       result2 = compileString malformedCode
   in case (result1, result2) of
     (Left errors1, Left errors2) -> 
-      property $ length errors1 === length errors2
+      property $ L.length errors1 === L.length errors2
     (Right _, Right _) -> 
       property $ True -- Consistent success
     _ -> 
@@ -194,7 +195,7 @@ prop_error_messages_consistent malformedCode =
 prop_compiler_handles_long_lines :: Int -> String -> Property
 prop_compiler_handles_long_lines multiplier baseContent =
   multiplier > 0 && multiplier <= 100 ==> -- Limit for performance
-  let longLine = concat (replicate multiplier (baseContent ++ " "))
+  let longLine = L.concat (replicate multiplier (baseContent ++ " "))
       codeWithLongLine = "func test() {\n  " ++ longLine ++ "\n}"
       result = compileString codeWithLongLine
   in property $ case result of
@@ -208,7 +209,7 @@ prop_nested_error_scenarios outerError innerError =
   let nestedCode = "func outer() {\n  " ++ outerError ++ "\n  func inner() {\n    " ++ innerError ++ "\n  }\n}"
       result = compileString nestedCode
   in property $ case result of
-    Left errors -> property $ length errors >= 1 -- Should detect errors
+    Left errors -> property $ L.length errors >= 1 -- Should detect errors
     Right _ -> property $ True
 
 -- Helper function to compile strings by first parsing them
@@ -221,7 +222,7 @@ compileString code = case parseTypus code of
 isDigit :: Char -> Bool
 isDigit c = c >= '0' && c <= '9'
 
--- Export all tests
+-- Export L.all tests
 tests :: TestTree
 tests =
   testGroup "Compiler Error Recovery QuickCheck Tests"
@@ -229,7 +230,7 @@ tests =
     , fastProperty "error messages contain source location information" prop_error_messages_contain_location
     , fastProperty "compiler provides meaningful error messages" prop_meaningful_error_messages
     , fastProperty "error recovery allows parsing of subsequent valid blocks" prop_error_recovery_allows_subsequent_blocks
-    , fastProperty "multiple errors are collected and reported" prop_multiple_errors_collected
+    , fastProperty "multiple errors are collected L.and reported" prop_multiple_errors_collected
     , fastProperty "error positions are accurate" prop_error_positions_accurate
     , fastProperty "compiler handles empty input gracefully" prop_compiler_handles_empty_input
     , fastProperty "compiler handles whitespace-only input" prop_compiler_handles_whitespace_input

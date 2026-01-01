@@ -2,6 +2,7 @@
 module Test.Unit.NewCabalTestSpec1 (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property)
@@ -33,12 +34,12 @@ tests =
         let input = "    line1\n\t\tline2\n    line3"
             result = normalizeIndentation input
             lines' = lines result
-        length lines' @?= 3
-        "\t\t" `isInfixOf` (lines' !! 1) @?= True
+        L.length lines' @?= 3
+        "\t\t" `L.isInfixOf` (lines' !! 1) @?= True
 
     -- QuickCheck properties
     , fastProperty "trim idempotency" prop_trim_idempotent
-    , fastProperty "splitBy length property" prop_splitBy_length
+    , fastProperty "splitBy L.length property" prop_splitBy_length
     , fastProperty "removeComments preserves non-comment content" prop_removeComments_preserves_content
     , fastProperty "normalizeIndentation preserves line count" prop_normalizeIndentation_preserves_lines
     ]
@@ -52,29 +53,29 @@ prop_trim_idempotent input =
       trimmedTwice = trim trimmedOnce
   in property $ trimmedOnce === trimmedTwice
 
--- Property: splitBy creates segments that sum to original length
+-- Property: splitBy creates segments that L.sum to original L.length
 prop_splitBy_length :: Char -> String -> Property
 prop_splitBy_length delim input =
   let segments = splitBy delim input
-      totalLength = sum (map length segments) + length (filter (== delim) input)
-  in property $ totalLength === length input
+      totalLength = L.sum (map L.length segments) + L.length (L.filter (== delim) input)
+  in property $ totalLength === L.length input
 
 -- Property: removeComments preserves non-comment content
 prop_removeComments_preserves_content :: String -> String -> Property
 prop_removeComments_preserves_content prefix suffix =
   -- Avoid strings with comment markers
-  not ("/*" `isInfixOf` prefix) && not ("*/" `isInfixOf` prefix) && 
-  not ("//" `isInfixOf` prefix) && not ("/*" `isInfixOf` suffix) && 
-  not ("*/" `isInfixOf` suffix) && not ("//" `isInfixOf` suffix) ==>
+  not ("/*" `L.isInfixOf` prefix) && not ("*/" `L.isInfixOf` prefix) && 
+  not ("//" `L.isInfixOf` prefix) && not ("/*" `L.isInfixOf` suffix) && 
+  not ("*/" `L.isInfixOf` suffix) && not ("//" `L.isInfixOf` suffix) ==>
   let content = prefix ++ "code" ++ suffix
       withComments = prefix ++ "/*comment*/" ++ "code" ++ "/*comment*/" ++ suffix
       processed = removeComments withComments
-  in property $ content `isInfixOf` processed
+  in property $ content `L.isInfixOf` processed
 
 -- Property: normalizeIndentation preserves line count
 prop_normalizeIndentation_preserves_lines :: String -> Property
 prop_normalizeIndentation_preserves_lines input =
   let normalized = normalizeIndentation input
-      originalLines = length (lines input)
-      normalizedLines = length (lines normalized)
+      originalLines = L.length (lines input)
+      normalizedLines = L.length (lines normalized)
   in property $ originalLines === normalizedLines

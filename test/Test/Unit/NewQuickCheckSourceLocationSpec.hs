@@ -5,6 +5,7 @@
 module Test.Unit.NewQuickCheckSourceLocationSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), counterexample, forAll, oneof, elements, choose, getSmall)
 
@@ -103,7 +104,7 @@ sourcePosProperties = testGroup "SourcePos Properties"
 -- | SourceSpan 属性测试
 sourceSpanProperties :: TestTree
 sourceSpanProperties = testGroup "SourceSpan Properties"
-  [ testProperty "spanFrom creates zero-length span" $ \pos ->
+  [ testProperty "spanFrom creates zero-L.length span" $ \pos ->
       let span = spanFrom pos
       in spanStart span === pos && spanEnd span === pos
       
@@ -112,7 +113,7 @@ sourceSpanProperties = testGroup "SourceSpan Properties"
           start = startPos (posFile pos)
       in spanStart span === start && spanEnd span === pos
       
-  , testProperty "emptySpan has start and end at startPos of empty file" $ \() ->
+  , testProperty "emptySpan has start L.and end at startPos of empty file" $ \() ->
       let empty = emptySpan
           start = spanStart empty
           end = spanEnd empty
@@ -188,11 +189,11 @@ positionMathProperties :: TestTree
 positionMathProperties = testGroup "Position Math Properties"
   [ testProperty "posAfter preserves monotonicity" $ \pos chars ->
       let positions = scanl posAfter pos chars
-          isMonotonic = all (\(p1, p2) -> 
+          isMonotonic = L.all (\(p1, p2) -> 
                                posLine p1 < posLine p2 ||
                                (posLine p1 == posLine p2 && posColumn p1 <= posColumn p2))
-                           (zip positions (tail positions))
-      in if null (tail positions)
+                           (zip positions (L.tail positions))
+      in if L.null (L.tail positions)
          then property True
          else property isMonotonic
          
@@ -203,15 +204,15 @@ positionMathProperties = testGroup "Position Math Properties"
       in posLine pos1 === posLine pos + 1 &&
          posLine pos2 === posLine pos + 2 &&
          posLine pos3 === posLine pos + 3 &&
-         all (\p -> posColumn p == 1) [pos1, pos2, pos3]
+         L.all (\p -> posColumn p == 1) [pos1, pos2, pos3]
          
   , testProperty "multiple characters advance column correctly" $ \pos ->
       let chars = "abcde"
           finalPos = foldl posAfter pos chars
       in posLine finalPos === posLine pos &&
-         posColumn finalPos === posColumn pos + length chars
+         posColumn finalPos === posColumn pos + L.length chars
          
-  , testProperty "mixed newlines and characters" $ \pos ->
+  , testProperty "mixed newlines L.and characters" $ \pos ->
       let chars = "ab\ncd\nef"
           finalPos = foldl posAfter pos chars
           expectedLine = posLine pos + 2  -- 2 newlines

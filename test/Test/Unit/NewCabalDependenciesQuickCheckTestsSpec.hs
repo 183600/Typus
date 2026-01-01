@@ -4,6 +4,7 @@
 module Test.Unit.NewCabalDependenciesQuickCheckTestsSpec where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), forAll, counterexample, suchThat, elements, listOf, listOf1, choose, oneof)
 import Dependencies.AST
   ( AST(..)
@@ -40,7 +41,7 @@ import Dependencies.TypeSystem
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Text (Text)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 import Data.Either (isLeft, isRight)
 
 -- ============================================================================
@@ -131,7 +132,7 @@ genDependencyNode = do
 genDependencyGraph :: Gen DependencyGraph
 genDependencyGraph = do
   nodes <- listOf genDependencyNode
-  let nodeMap = Map.fromList $ map (\n -> (nodeName n, n)) nodes
+  let nodeMap = Map.fromList $ L.map (\n -> (nodeName n, n)) nodes
   return $ DependencyGraph nodeMap
 
 -- Generate type variables
@@ -198,7 +199,7 @@ genDependentTypeError = oneof
 
 prop_ast_program_structure :: AST -> Property
 prop_ast_program_structure (Program statements) =
-  length statements >= 0  -- Always true, but ensures structure
+  L.length statements >= 0  -- Always true, but ensures structure
 
 prop_statement_type_def_structure :: Property
 prop_statement_type_def_structure =
@@ -263,11 +264,11 @@ prop_dependency_graph_node_lookup =
   forAll genDependencyGraph $ \graph ->
     let nodes = graphNodes graph
         nodeNames = Map.keys nodes
-    in all (`Map.member` nodes) nodeNames
+    in L.all (`Map.member` nodes) nodeNames
 
 prop_dependency_node_self_consistency :: DependencyNode -> Property
 prop_dependency_node_self_consistency node =
-  nodeName node `elem` nodeDependencies node || not (null $ nodeDependencies node)
+  nodeName node `elem` nodeDependencies node || not (L.null $ nodeDependencies node)
 
 -- ============================================================================
 -- Properties for TypeVar
@@ -276,7 +277,7 @@ prop_dependency_node_self_consistency node =
 prop_type_var_show_roundtrip :: TypeVar -> Property
 prop_type_var_show_roundtrip typeVar =
   let shown = show typeVar
-  in length shown > 0  -- Basic check that show produces non-empty string
+  in L.length shown > 0  -- Basic check that show produces non-empty string
 
 prop_type_var_ordering_consistent :: TypeVar -> TypeVar -> Property
 prop_type_var_ordering_consistent tv1 tv2 =

@@ -1,6 +1,7 @@
 module Test.Unit.ParserAdditionalSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 
 import Parser
@@ -19,13 +20,13 @@ tests :: TestTree
 tests =
   testGroup "Additional Parser tests"
     [ testGroup "Default directives"
-        [ testCase "defaultFileDirectives has all Nothing values" $ do
+        [ testCase "defaultFileDirectives has L.all Nothing values" $ do
             let defaults = defaultFileDirectives
             fdOwnership defaults @?= Nothing
             fdDependentTypes defaults @?= Nothing
             fdConstraints defaults @?= Nothing
 
-        , testCase "defaultBlockDirectives has all Nothing values" $ do
+        , testCase "defaultBlockDirectives has L.all Nothing values" $ do
             let defaults = defaultBlockDirectives
             bdOwnership defaults @?= Nothing
             bdDependentTypes defaults @?= Nothing
@@ -88,8 +89,8 @@ tests =
                   , tfFileDirectives = defaultFileDirectives
                   , tfBlocks = [block]
                   }
-            length (tfBlocks file) @?= 1
-            let firstBlock = head (tfBlocks file)
+            L.length (tfBlocks file) @?= 1
+            let firstBlock = L.head (tfBlocks file)
             cbContent firstBlock @?= "hello world"
         ]
 
@@ -131,7 +132,7 @@ tests =
             fdDependentTypes directives @?= Just False
             fdConstraints directives @?= Nothing
 
-        , testCase "BlockDirectives with all values set" $ do
+        , testCase "BlockDirectives with L.all values set" $ do
             let directives = BlockDirectives
                   { bdOwnership = Just False
                   , bdDependentTypes = Just True
@@ -148,10 +149,10 @@ tests =
                 block2 = CodeBlock defaultBlockDirectives "block2" Nothing
                 block3 = CodeBlock defaultBlockDirectives "block3" Nothing
                 file = TypusFile "multi.typus" defaultFileDirectives [block1, block2, block3]
-            length (tfBlocks file) @?= 3
+            L.length (tfBlocks file) @?= 3
             map cbContent (tfBlocks file) @?= ["block1", "block2", "block3"]
 
-        , testCase "TypusFile with file directives and blocks" $ do
+        , testCase "TypusFile with file directives L.and blocks" $ do
             let fileDirectives = FileDirectives
                   { fdOwnership = Just True
                   , fdDependentTypes = Nothing
@@ -165,6 +166,6 @@ tests =
                 block = CodeBlock blockDirectives "content" Nothing
                 file = TypusFile "complex.typus" fileDirectives [block]
             fdOwnership (tfFileDirectives file) @?= Just True
-            bdDependentTypes (cbDirectives (head (tfBlocks file))) @?= Just True
+            bdDependentTypes (cbDirectives (L.head (tfBlocks file))) @?= Just True
         ]
     ]

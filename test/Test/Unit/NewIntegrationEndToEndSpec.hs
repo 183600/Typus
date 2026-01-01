@@ -23,6 +23,7 @@ import Compiler (compileTypus)
 import ErrorHandler
 import Utils (trim, removeComments)
 import SourceLocation (SourcePos(..), startPos)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Either (isLeft, isRight)
 
@@ -73,10 +74,10 @@ prop_error_propagation_consistent testCase =
 -- Property: Comment removal preserves code structure
 prop_comment_preservation :: String -> String -> Property
 prop_comment_preservation code comment =
-  not (null code) && not ("//" `isInfixOf` code) && not ("/*" `isInfixOf` code) ==>
+  not (null code) && not ("//" `L.isInfixOf` code) && not ("/*" `L.isInfixOf` code) ==>
   let codeWithComment = code ++ " // " ++ comment
       cleaned = removeComments codeWithComment
-  in property $ code `isPrefixOf` cleaned
+  in property $ code `L.isPrefixOf` cleaned
 
 -- Property: Trimming doesn't break parsing
 prop_trimming_preserves_parsing :: String -> Property
@@ -125,11 +126,11 @@ prop_error_messages_informative testCase =
   let input = inputCode testCase
       parseResult = parseTypus input
   in case parseResult of
-    Left err -> property $ length (show err) > 10  -- Error message should have some content
+    Left err -> property $ L.length (show err) > 10  -- Error message should have some content
     Right typusFile -> 
       let compileResult = compileTypus typusFile
       in case compileResult of
-        Left err -> property $ length (show err) > 10
+        Left err -> property $ L.length (show err) > 10
         Right _ -> property False  -- Shouldn't succeed when we expect failure
 
 -- Property: Source location tracking works end-to-end

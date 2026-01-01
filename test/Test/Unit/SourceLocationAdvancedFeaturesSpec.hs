@@ -10,6 +10,7 @@
 module Test.Unit.SourceLocationAdvancedFeaturesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, elements, listOf, oneof, sized)
@@ -90,7 +91,7 @@ prop_posAfter_handles_chars char pos =
 prop_advancePosBy_processes_strings :: String -> SourcePos -> Property
 prop_advancePosBy_processes_strings str pos =
   let finalPos = advancePosBy str pos
-      expectedPos = foldl (flip posAfter) pos str
+      expectedPos = L.foldl (flip posAfter) pos str
   in property $ finalPos === expectedPos
 
 -- Property: advancePosByText works same as advancePosBy
@@ -150,7 +151,7 @@ prop_mapLocated_preserves_location :: SourceSpan -> String -> String -> Property
 prop_mapLocated_preserves_location span prefix suffix =
   let value = prefix ++ "content" ++ suffix
       located = locatedWithSpan span value
-      mapped = mapLocated reverse located
+      mapped = mapLocated L.reverse located
   in property $ locatedSpan located === locatedSpan mapped .&&.
                locatedPos located === locatedPos mapped
 
@@ -215,12 +216,12 @@ tests =
             posColumn startPos @?= 1
             posOffset startPos @?= 0
 
-        , testCase "posAt creates position at specified line and column" $ do
+        , testCase "posAt creates position at specified line L.and column" $ do
             let pos = posAt 5 10
             posLine pos @?= 5
             posColumn pos @?= 10
 
-        , testCase "emptySpan creates span with same start and end" $ do
+        , testCase "emptySpan creates span with same start L.and end" $ do
             let pos = posAt 3 7
                 span = emptySpan pos
             spanStart span @?= pos
@@ -253,7 +254,7 @@ tests =
                 span = emptySpan pos
                 value = "hello"
                 located = locatedWithSpan span value
-                mapped = mapLocated reverse located
+                mapped = mapLocated L.reverse located
             locatedValue mapped @?= "olleh"
             locatedSpan mapped @?= span
             locatedPos mapped @?= pos

@@ -10,6 +10,7 @@
 module Test.Unit.ToolchainRobustnessQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose, Positive(..), resize)
@@ -90,7 +91,7 @@ prop_toolchain_malformed_go goCode =
 -- Property: toolchain handles extremely large files
 prop_toolchain_large_files :: Property
 prop_toolchain_large_files =
-  let largeCode = concat $ replicate 1000 "package main\nfunc main() {}\n"
+  let largeCode = L.concat $ replicate 1000 "package main\nfunc main() {}\n"
       result = GoToolchain.compileGo largeCode
   in counterexample "toolchain should handle extremely large files" $
      case result of
@@ -187,7 +188,7 @@ genGoCode = oneof
       return $ "package main\ntype " ++ typeName ++ " struct { Name string }"
   , do
       imports <- listOf $ elements ["fmt", "os", "io", "strings"]
-      let importList = intercalate "\n" $ map (\imp -> "import \"" ++ imp ++ "\"") imports
+      let importList = intercalate "\n" $ L.map (\imp -> "import \"" ++ imp ++ "\"") imports
       return $ "package main\n" ++ importList ++ "\nfunc main() {}"
   ]
 

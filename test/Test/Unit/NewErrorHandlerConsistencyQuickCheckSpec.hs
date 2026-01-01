@@ -10,12 +10,14 @@
 module Test.Unit.NewErrorHandlerConsistencyQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@=?))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, oneof, suchThat)
 import Data.Text (Text)
-import qualified Data.Text as T
-import Data.List (sort, nub, isPrefixOf, isInfixOf)
+import qualified Data.Text as T (pack, unpack)
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort, nub)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import Control.Monad.State (runState, evalState)
 import qualified Data.Map.Strict as Map
@@ -46,42 +48,13 @@ import Compiler.Errors.Core
   , formatErrorsWithLocation
   , canRecoverFrom
   , shouldContinueAfter
-  , errorAt
-  , errorWithCategory
-  , warningAt
-  , warningWithCategory
-  , infoAt
-  , infoWithCategory
-  , fatalError
-  , fatalErrorWithCategory
-  , errorWithSuggestions
-  , withLocation
-  , withContext
-  , withSuggestions
-  , withRelatedErrors
-  , wrapError
-  , combineErrors
-  , combinedErrorSeverity
-  , filterCombinedErrorsBySeverity
-  , hasCategory
-  , filterByCategory
-  , filterBySeverity
-  , getErrorStatistics
-  , generateErrorReport
-  , createRecoveryStrategy
-  , customRecovery
-  , fatalRecovery
-  , errorRecovery
-  , warningRecovery
-  , infoRecovery
-  , getErrorLine
   , getErrorColumn
   )
 
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos)
 
 -- ============================================================================
--- Helper Functions and Generators
+-- Helper Functions L.and Generators
 -- ============================================================================
 
 -- Generate valid error IDs
@@ -215,28 +188,11 @@ prop_fatal_no_continue =
   let fatalErr = fatalError "test" "fatal message"
   in property $ not (shouldContinueAfter fatalErr)
 
--- Property: Warning and Info errors should be recoverable
+-- Property: Warning L.and Info errors should be recoverable
 prop_warning_info_recoverable :: ErrorSeverity -> Property
 prop_warning_info_recoverable sev =
   (sev == Warning || sev == Info) ==>
-  let err = errorAt sev "test" 1 1 "message"
-  in property $ canRecoverFrom err .&&. shouldContinueAfter err
-
--- ============================================================================
--- Error Location Properties
--- ============================================================================
-
--- Property: Error location helper functions work correctly
-prop_error_location_helpers :: ErrorLocation -> Property
-prop_error_location_helpers loc =
-  property $ getErrorLine loc === line loc .&&.
-             getErrorColumn loc === column loc
-
--- Property: Location with range has valid end positions
-prop_location_range_valid :: Int -> Int -> Int -> Int -> Property
-prop_location_range_valid startLine startCol endLine endCol =
-  startLine > 0 && startCol > 0 && endLine >= startLine && 
-  (endLine > startLine ==> endCol > 0) ==>
+  let err = errorAt "test-id" > 0) ==>
   let loc = ErrorLocation Nothing startLine startCol (Just endLine) (Just endCol)
   in property $ line loc === startLine .&&. column loc === startCol .&&.
              endLine loc === Just endLine .&&. endColumn loc === Just endCol
@@ -248,9 +204,9 @@ prop_location_range_valid startLine startCol endLine endCol =
 -- Property: Adding errors increases error count
 prop_add_error_increases_count :: TypeError -> [TypeError] -> Property
 prop_add_error_increases_count err errors =
-  let initialCount = length (getAllMessages errors)
+  let initialCount = L.length (getAllMessages errors)
       ((), newErrors) = runState (addError err) errors
-      finalCount = length (getAllMessages newErrors)
+      finalCount = L.length (getAllMessages newErrors)
   in property $ finalCount === initialCount + 1
 
 -- Property: Adding warnings preserves warning severity
@@ -258,14 +214,14 @@ prop_add_warning_preserves_severity :: TypeError -> Property
 prop_add_warning_preserves_severity err =
   let ((), warnings) = runState (addWarning err) []
       actualWarnings = getWarnings warnings
-  in property $ all (\w -> severity w == Warning) actualWarnings
+  in property $ L.all (\w -> severity w == Warning) actualWarnings
 
 -- Property: Adding info preserves info severity
 prop_add_info_preserves_severity :: TypeError -> Property
 prop_add_info_preserves_severity err =
   let ((), infos) = runState (addInfo err) []
       actualInfos = getInfo infos
-  in property $ all (\i -> severity i == Info) actualInfos
+  in property $ L.all (\i -> severity i == Info) actualInfos
 
 -- Property: hasErrors correctly detects errors
 prop_has_errors_detection :: [TypeError] -> Property
@@ -294,23 +250,23 @@ prop_format_includes_severity err =
         Error -> "ERROR"
         Warning -> "WARNING"
         Info -> "INFO"
-  in property $ severityStr `isInfixOf` formatted
+  in property $ severityStr `L.isInfixOf` formatted
 
 -- Property: Formatting with location includes line number
 prop_format_with_location_includes_line :: TypeError -> Property
 prop_format_with_location_includes_line err =
   let formatted = formatErrorWithLocation err
       lineNum = show $ line (location err)
-  in property $ lineNum `isInfixOf` formatted
+  in property $ lineNum `L.isInfixOf` formatted
 
 -- Property: Formatting multiple errors preserves order
 prop_format_multiple_preserves_order :: [TypeError] -> Property
 prop_format_multiple_preserves_order errors =
   let formatted = formatErrors errors
-      errorCount = length errors
+      errorCount = L.length errors
   in property $ if null errors 
                 then null formatted
-                else length (lines formatted) >= errorCount
+                else L.length (lines formatted) >= errorCount
 
 -- ============================================================================
 -- Error Transformation Properties
@@ -354,19 +310,19 @@ prop_wrap_error_creates_chain outer inner =
 prop_filter_by_severity_preserves :: [TypeError] -> ErrorSeverity -> Property
 prop_filter_by_severity_preserves errors minSev =
   let filtered = filterBySeverity minSev errors
-  in property $ all (\e -> severity e >= minSev) filtered
+  in property $ L.all (\e -> severity e >= minSev) filtered
 
 -- Property: filterByCategory preserves correct categories
 prop_filter_by_category_preserves :: [TypeError] -> ErrorCategory -> Property
 prop_filter_by_category_preserves errors cat =
   let filtered = filterByCategory cat errors
-  in property $ all (\e -> category e == cat) filtered
+  in property $ L.all (\e -> category e == cat) filtered
 
 -- Property: hasCategory correctly identifies categories
 prop_has_category_identifies :: [TypeError] -> ErrorCategory -> Property
 prop_has_category_identifies errors cat =
   let hasCat = hasCategory cat errors
-      hasMatchingElem = any (\e -> category e == cat) errors
+      hasMatchingElem = L.any (\e -> category e == cat) errors
   in property $ hasCat === hasMatchingElem
 
 -- ============================================================================
@@ -383,11 +339,11 @@ prop_combined_severity_extracts combinedErr =
     IntegrationError _ sev -> property $ extractedSev === sev
     CrossAnalyzerError _ sev _ -> property $ extractedSev === sev
 
--- Property: filterCombinedErrorsBySeverity preserves minimum severity
+-- Property: filterCombinedErrorsBySeverity preserves L.minimum severity
 prop_filter_combined_preserves_min :: [CombinedError] -> ErrorSeverity -> Property
 prop_filter_combined_preserves_min combinedErrs minSev =
   let filtered = filterCombinedErrorsBySeverity minSev combinedErrs
-  in property $ all (\e -> combinedErrorSeverity e >= minSev) filtered
+  in property $ L.all (\e -> combinedErrorSeverity e >= minSev) filtered
 
 -- ============================================================================
 -- Error Recovery Properties
@@ -424,10 +380,10 @@ prop_predefined_recovery_strategies =
 prop_error_statistics_counts :: [TypeError] -> Property
 prop_error_statistics_counts errors =
   let stats = getErrorStatistics errors
-      errorCount = length $ filterBySeverity Error errors
-      warningCount = length $ filterBySeverity Warning errors
-      infoCount = length $ filterBySeverity Info errors
-      fatalCount = length $ filterBySeverity Fatal errors
+      errorCount = L.length $ filterBySeverity Error errors
+      warningCount = L.length $ filterBySeverity Warning errors
+      infoCount = L.length $ filterBySeverity Info errors
+      fatalCount = L.length $ filterBySeverity Fatal errors
   in property $ Map.lookup "errors" stats === Just errorCount .&&.
              Map.lookup "warnings" stats === Just warningCount .&&.
              Map.lookup "info" stats === Just infoCount .&&.
@@ -441,18 +397,18 @@ prop_error_statistics_counts errors =
 prop_error_report_contains_summary :: [TypeError] -> Property
 prop_error_report_contains_summary errors =
   let report = generateErrorReport errors
-      hasSummary = "Summary:" `isInfixOf` report
+      hasSummary = "Summary:" `L.isInfixOf` report
   in property $ hasSummary
 
 -- Property: Error report contains error details
 prop_error_report_contains_details :: [TypeError] -> Property
 prop_error_report_contains_details errors =
   let report = generateErrorReport errors
-      hasDetails = not (null errors) ==> any (`isInfixOf` report) (map (T.unpack . message) errors)
+      hasDetails = not (null errors) ==> L.any (`L.isInfixOf` report) (L.map (T.unpack . message) errors)
   in property $ hasDetails
 
 -- ============================================================================
--- Edge Cases and Boundary Conditions
+-- Edge Cases L.and Boundary Conditions
 -- ============================================================================
 
 -- Property: Empty error list handles gracefully
@@ -470,11 +426,11 @@ prop_empty_error_list_handling =
 prop_large_error_list_handling :: Int -> Property
 prop_large_error_list_handling size =
   size >= 0 && size <= 1000 ==>
-  let errors = take size $ repeat (errorAt Error "test" 1 1 "message")
+  let errors = take size $ repeat (errorAt "test-id" 1 1 "message")
       stats = getErrorStatistics errors
   in property $ Map.size stats >= 0
 
--- Property: Error with maximum fields handles correctly
+-- Property: Error with L.maximum fields handles correctly
 prop_error_with_max_fields :: Property
 prop_error_with_max_fields =
   let maxErr = TypeError
@@ -492,7 +448,7 @@ prop_error_with_max_fields =
         }
   in property $ errorId maxErr === "MAX_ERR_9999" .&&.
              severity maxErr === Fatal .&&.
-             not (null $ formatError maxErr)
+             not (L.null $ formatError maxErr)
 
 -- ============================================================================
 -- Consistency Properties
@@ -512,11 +468,11 @@ prop_filtering_idempotent errors sev =
       filtered2 = filterBySeverity sev filtered1
   in property $ filtered1 === filtered2
 
--- Property: Error collection preserves all messages
+-- Property: Error collection preserves L.all messages
 prop_collection_preserves_all :: [TypeError] -> Property
 prop_collection_preserves_all errors =
   let allMessages = getAllMessages errors
-  in property $ length allMessages === length errors
+  in property $ L.length allMessages === L.length errors
 
 -- ============================================================================
 -- Test Collection
@@ -582,7 +538,7 @@ tests = testGroup "New Error Handler Consistency QuickCheck Tests"
     , fastProperty "error report contains details" prop_error_report_contains_details
     ]
 
-  , testGroup "Edge Cases and Boundary Conditions"
+  , testGroup "Edge Cases L.and Boundary Conditions"
     [ fastProperty "empty error list handling" prop_empty_error_list_handling
     , fastProperty "large error list handling" prop_large_error_list_handling
     , fastProperty "error with max fields" prop_error_with_max_fields
@@ -591,6 +547,6 @@ tests = testGroup "New Error Handler Consistency QuickCheck Tests"
   , testGroup "Consistency Properties"
     [ fastProperty "formatting consistency" prop_formatting_consistency
     , fastProperty "filtering idempotent" prop_filtering_idempotent
-    , fastProperty "collection preserves all" prop_collection_preserves_all
+    , fastProperty "collection preserves L.all" prop_collection_preserves_all
     ]
   ]

@@ -3,6 +3,7 @@
 module Test.Unit.NewDependenciesAdvancedQuickCheckSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.TH
 import Dependencies
@@ -25,8 +26,8 @@ prop_dependency_detection_finds_direct_dependencies :: DependencyGraph -> String
 prop_dependency_detection_finds_direct_dependencies graph module = 
   hasModule graph module ==> 
   let dependencies = getDirectDependencies graph module
-  in all (\dep -> hasDependency graph module dep) dependencies &&
-     all (\dep -> hasModule graph dep) dependencies
+  in L.all (\dep -> hasDependency graph module dep) dependencies &&
+     L.all (\dep -> hasModule graph dep) dependencies
 
 prop_dependency_detection_transitive_closure :: DependencyGraph -> String -> Property
 prop_dependency_detection_transitive_closure graph module = 
@@ -45,13 +46,13 @@ prop_dependency_detection_no_self_dependencies graph module =
 prop_cycle_detection_finds_actual_cycles :: DependencyGraph -> Property
 prop_cycle_detection_finds_actual_cycles graph = 
   let cycles = findDependencyCycles graph
-  in all (\cycle -> hasCycleProperty graph cycle) cycles
+  in L.all (\cycle -> hasCycleProperty graph cycle) cycles
 
 prop_cycle_detection_minimal_cycles :: DependencyGraph -> Property
 prop_cycle_detection_minimal_cycles graph = 
   let cycles = findDependencyCycles graph
-  in all (\cycle -> length cycle >= 2 && 
-                 not (any (\subcycle -> hasCycleProperty graph subcycle) 
+  in L.all (\cycle -> L.length cycle >= 2 && 
+                 not (L.any (\subcycle -> hasCycleProperty graph subcycle) 
                            (subsequences cycle))) cycles
 
 prop_cycle_detection_acyclic_graph_no_cycles :: DependencyGraph -> Property
@@ -65,8 +66,8 @@ prop_topological_sort_preserves_dependencies :: DependencyGraph -> Property
 prop_topological_sort_preserves_dependencies graph = 
   isAcyclic graph ==> 
   let sorted = topologicalSort graph
-  in all (\(i, module) -> 
-            all (\dep -> 
+  in L.all (\(i, module) -> 
+            L.all (\dep -> 
                   let depIndex = findIndex dep sorted
                   in isJust depIndex && fromJust depIndex < i) 
                 (getDirectDependencies graph module))
@@ -83,7 +84,7 @@ prop_topological_sort_unique :: DependencyGraph -> Property
 prop_topological_sort_unique graph = 
   isAcyclic graph ==> 
   let sorted = topologicalSort graph
-  in length sorted == length (nub sorted)
+  in L.length sorted == L.length (nub sorted)
 
 -- Test dependency analysis properties
 prop_dependency_analysis_computes_levels :: DependencyGraph -> String -> Property
@@ -91,21 +92,21 @@ prop_dependency_analysis_computes_levels graph module =
   hasModule graph module ==> 
   let level = computeDependencyLevel graph module
       dependencies = getTransitiveDependencies graph module
-  in all (\dep -> computeDependencyLevel graph dep < level) dependencies
+  in L.all (\dep -> computeDependencyLevel graph dep < level) dependencies
 
 prop_dependency_analysis_detects_orphan_modules :: DependencyGraph -> Bool
 prop_dependency_analysis_detects_orphan_modules graph = 
   let orphans = findOrphanModules graph
       allModules = getAllModules graph
       usedModules = Set.fromList $ concatMap (getDirectDependencies graph) allModules
-  in all (`Set.notMember` usedModules) orphans
+  in L.all (`Set.notMember` usedModules) orphans
 
 prop_dependency_analysis_computes_metrics :: DependencyGraph -> Bool
 prop_dependency_analysis_computes_metrics graph = 
   let metrics = computeDependencyMetrics graph
       modules = getAllModules graph
-  in dependencyCount metrics == length (concatMap (getDirectDependencies graph) modules) &&
-     moduleCount metrics == length modules
+  in dependencyCount metrics == L.length (concatMap (getDirectDependencies graph) modules) &&
+     moduleCount metrics == L.length modules
 
 -- Test dependency modification properties
 prop_dependency_addition_preserves_existing :: DependencyGraph -> String -> String -> Property
@@ -145,7 +146,7 @@ prop_type_system_acyclic_implies_no_infinite_types :: TypeSystem -> Property
 prop_type_system_acyclic_implies_no_infinite_types typeSystem = 
   let dependencies = buildTypeDependencyGraph typeSystem
   in isAcyclic dependencies ==> 
-     all (not . isInfiniteType typeSystem) (getAllTypes typeSystem)
+     L.all (not . isInfiniteType typeSystem) (getAllTypes typeSystem)
 
 -- Test NFData instances
 prop_dependency_graph_nfdata :: DependencyGraph -> Bool
@@ -264,7 +265,7 @@ getAllModules graph = Map.keys (moduleDependencies graph)
 
 getAllDependencies :: DependencyGraph -> [(String, String)]
 getAllDependencies graph = 
-  concatMap (\(from, deps) -> map (\to -> (from, to)) (Set.toList deps))
+  concatMap (\(from, deps) -> L.map (\to -> (from, to)) (Set.toList deps))
             (Map.toList (moduleDependencies graph))
 
 findIndex :: String -> [String] -> Maybe Int
@@ -275,7 +276,7 @@ findIndex target list = findIndexHelper target list 0
 
 subsequences :: [a] -> [[a]]
 subsequences [] = [[]]
-subsequences (x:xs) = subsequences xs ++ map (x:) (subsequences xs)
+subsequences (x:xs) = subsequences xs ++ L.map (x:) (subsequences xs)
 
 computeDependencyLevel :: DependencyGraph -> String -> Int
 computeDependencyLevel _ _ = 0  -- Simplified for testing
@@ -287,7 +288,7 @@ computeDependencyMetrics :: DependencyGraph -> DependencyMetrics
 computeDependencyMetrics graph = 
   let modules = getAllModules graph
       deps = getAllDependencies graph
-  in DependencyMetrics (length modules) (length deps) 0 0.0
+  in DependencyMetrics (L.length modules) (L.length deps) 0 0.0
 
 addDependency :: DependencyGraph -> String -> String -> DependencyGraph
 addDependency graph from to = 

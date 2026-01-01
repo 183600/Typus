@@ -5,6 +5,7 @@
 module Test.Unit.NewFreshOwnershipQuickCheckProperties where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import Ownership (OwnershipAnalysis(..), OwnershipTransfer(..), OwnershipPolicy(..))
@@ -36,7 +37,7 @@ ownershipAnalysisProperties = testGroup "Ownership Analysis Properties"
   [ testProperty "empty ownership analysis has no owners" $
       \() ->
         let analysis = OwnershipAnalysis empty empty empty
-        in null (oaOwners analysis) && null (oaBorrowers analysis) && null (oaMoved analysis)
+        in L.null (oaOwners analysis) && L.null (oaBorrowers analysis) && L.null (oaMoved analysis)
         
   , testProperty "adding owner increases owner count" $
       \ownerName ->
@@ -47,7 +48,7 @@ ownershipAnalysisProperties = testGroup "Ownership Analysis Properties"
       \ownerNames ->
         let uniqueOwners = Set.fromList ownerNames
             analysis = OwnershipAnalysis uniqueOwners empty empty
-        in length (toList (oaOwners analysis)) === length (nub ownerNames)
+        in L.length (toList (oaOwners analysis)) === L.length (nub ownerNames)
         
   , testProperty "borrowers cannot be owners simultaneously" $
       \owners borrowers ->
@@ -84,7 +85,7 @@ ownershipTransferProperties = testGroup "Ownership Transfer Properties"
             transfer2 = OwnershipTransfer source target resource
         in transfer1 === transfer2
         
-  , testProperty "reverse transfer has different source and target" $
+  , testProperty "L.reverse transfer has different source L.and target" $
       \source target resource ->
         let forward = OwnershipTransfer source target resource
             backward = OwnershipTransfer target source resource
@@ -94,9 +95,9 @@ ownershipTransferProperties = testGroup "Ownership Transfer Properties"
       \owners resources ->
         let owners' = take 3 owners
             resources' = take 2 resources
-            transfers = zipWith3 OwnershipTransfer owners' (tail owners' ++ [head owners']) resources'
-        in length owners' >= 2 && length resources' >= 1 ==>
-           all (\t -> otResource t `elem` resources') transfers
+            transfers = zipWith3 OwnershipTransfer owners' (L.tail owners' ++ [L.head owners']) resources'
+        in L.length owners' >= 2 && L.length resources' >= 1 ==>
+           L.all (\t -> otResource t `elem` resources') transfers
            
   , testProperty "circular transfer is detectable" $
       \owner resource ->
@@ -114,13 +115,13 @@ ownershipPolicyProperties = testGroup "Ownership Policy Properties"
   [ testProperty "strict policy disallows multiple borrowers" $
       \borrowers ->
         let policy = OwnershipPolicy Strict False
-            borrowerCount = length (nub borrowers)
+            borrowerCount = L.length (nub borrowers)
         in borrowerCount > 1 ==> not (opAllowMultipleBorrowers policy)
         
   , testProperty "lenient policy allows multiple borrowers" $
       \borrowers ->
         let policy = OwnershipPolicy Lenient True
-            borrowerCount = length (nub borrowers)
+            borrowerCount = L.length (nub borrowers)
         in borrowerCount > 1 ==> opAllowMultipleBorrowers policy
         
   , testProperty "move tracking affects transfer validation" $
@@ -164,12 +165,12 @@ ownershipSetProperties = testGroup "Ownership Set Properties"
         let single = singleton item
         in not (null item) ==> Set.size single === 1 && member item single
         
-  , testProperty "multiple unions preserve all elements" $
+  , testProperty "multiple unions preserve L.all elements" $
       \sets ->
         let allElements = concatMap toList sets
             unioned = unions sets
             resultElements = toList unioned
-        in length sets <= 5 ==> sort resultElements === sort (nub allElements)
+        in L.length sets <= 5 ==> sort resultElements === sort (nub allElements)
   ]
 
 -- ============================================================================
@@ -183,8 +184,8 @@ ownershipIntegrationProperties = testGroup "Ownership Integration Properties"
         let ownerSet = Set.fromList owners
             transferResources = map otResource transfers
             analysis = OwnershipAnalysis ownerSet empty (Set.fromList transferResources)
-        in length owners <= 5 && length transfers <= 5 ==>
-           all (`member` oaMoved analysis) transferResources
+        in L.length owners <= 5 && L.length transfers <= 5 ==>
+           L.all (`member` oaMoved analysis) transferResources
            
   , testProperty "policy violations are detectable" $
       \owners borrowers policyType trackMove ->
@@ -193,10 +194,10 @@ ownershipIntegrationProperties = testGroup "Ownership Integration Properties"
             policy = OwnershipPolicy policyType trackMove
             analysis = OwnershipAnalysis ownerSet borrowerSet empty
             hasViolation = case policyType of
-                           Strict -> not (null borrowers) && length (nub borrowers) > 1
+                           Strict -> not (null borrowers) && L.length (nub borrowers) > 1
                            Lenient -> False
-                           Moderate -> length (nub borrowers) > 3
-        in length owners <= 3 && length borrowers <= 5 ==> 
+                           Moderate -> L.length (nub borrowers) > 3
+        in L.length owners <= 3 && L.length borrowers <= 5 ==> 
            (if hasViolation then True else True)  -- Simplified for this example
            
   , testProperty "ownership transfer preserves invariants" $
@@ -230,7 +231,7 @@ ownershipIntegrationProperties = testGroup "Ownership Integration Properties"
   ]
 
 -- ============================================================================
--- Helper Types and Functions
+-- Helper Types L.and Functions
 -- ============================================================================
 
 data OwnershipPolicy = Strict | Lenient | Moderate

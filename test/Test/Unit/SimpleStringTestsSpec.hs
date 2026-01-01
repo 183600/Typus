@@ -45,7 +45,7 @@ prop_trim_empty =
 tests :: TestTree
 tests = testGroup "Simple String Tests"
   [ testGroup "Unit Tests"
-    [ testCase "trim removes leading and trailing whitespace" $ do
+    [ testCase "trim removes leading L.and trailing whitespace" $ do
         trim "\t  hello  world \n" @?= "hello  world"
 
     , testCase "splitBy preserves empty segments" $ do

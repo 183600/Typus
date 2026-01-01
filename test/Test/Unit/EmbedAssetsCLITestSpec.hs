@@ -12,6 +12,7 @@ import EmbedAssets (Asset, embedAsset, getAssetContent, getAssetType, AssetType(
 import Cli (CLIConfig, parseArgs, runCLI, Command(..))
 import SourceLocation (SourcePos(..), startPos)
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import Data.Maybe (isNothing, isJust)
 import System.Exit (ExitCode(..))
@@ -68,7 +69,7 @@ prop_asset_type_preservation content assetType =
 -- Test asset size limits
 test_embed_large_asset :: IO ()
 test_embed_large_asset = do
-    let largeContent = concat (replicate 10000 "This is a large asset. ")
+    let largeContent = L.concat (replicate 10000 "This is a large asset. ")
         result <- embedAsset largeContent TextAsset
     case result of
         Right asset -> do
@@ -187,7 +188,7 @@ test_cli_error_handling = do
         Right _ -> assertBool "Invalid arguments should not succeed" False
 
 -- ============================================================================
--- Edge Cases and Boundary Tests
+-- Edge Cases L.and Boundary Tests
 -- ============================================================================
 
 -- Test CLI with empty arguments
@@ -197,7 +198,7 @@ test_parse_empty_args = do
         result = parseArgs args
     case result of
         Right config -> do
-            -- Should default to help or show usage
+            -- Should default to help L.or show usage
             assertBool "Empty args should be handled" True
         Left _ -> assertBool "Empty args should be handled gracefully" True
 
@@ -215,13 +216,13 @@ test_embed_empty_asset = do
 -- Test CLI with long file paths
 test_parse_long_paths :: IO ()
 test_parse_long_paths = do
-    let longPath = concat (replicate 100 "very-long-path-component/")
+    let longPath = L.concat (replicate 100 "very-long-path-component/")
         args = ["compile", longPath ++ "input.typus", "--output", longPath ++ "output.go"]
         result = parseArgs args
     case result of
         Right config -> do
-            assertBool "Long input path should be preserved" (longPath `isPrefixOf` cliInputFile config)
-            assertBool "Long output path should be preserved" (longPath `isPrefixOf` cliOutputFile config)
+            assertBool "Long input path should be preserved" (longPath `L.isPrefixOf` cliInputFile config)
+            assertBool "Long output path should be preserved" (longPath `L.isPrefixOf` cliOutputFile config)
         Left _ -> assertBool "Long paths should be handled gracefully" True
 
 -- ============================================================================
@@ -302,7 +303,7 @@ instance Arbitrary CLIConfig where
 elements :: [a] -> Gen a
 elements [] = error "elements: empty list"
 elements xs = do
-  idx <- arbitrary `suchThat` (\i -> i >= 0 && i < length xs)
+  idx <- arbitrary `suchThat` (\i -> i >= 0 && i < L.length xs)
   return (xs !! idx)
 
 arbitrary :: Gen String
@@ -321,7 +322,7 @@ gen `suchThat` p = do
 -- ============================================================================
 
 tests :: TestTree
-tests = testGroup "EmbedAssets and CLI Test Suite"
+tests = testGroup "EmbedAssets L.and CLI Test Suite"
   [ testGroup "EmbedAssets Tests"
       [ testCase "Asset embedding" test_embed_asset
       , testCase "Embed different asset types" test_embed_different_asset_types
@@ -341,7 +342,7 @@ tests = testGroup "EmbedAssets and CLI Test Suite"
       [ testCase "CLI asset integration" test_cli_asset_integration
       , testCase "CLI error handling" test_cli_error_handling
       ]
-  , testGroup "Edge Cases and Boundary Tests"
+  , testGroup "Edge Cases L.and Boundary Tests"
       [ testCase "Parse empty args" test_parse_empty_args
       , testCase "Embed empty asset" test_embed_empty_asset
       , testCase "Parse long paths" test_parse_long_paths

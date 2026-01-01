@@ -4,6 +4,7 @@
 module Test.Unit.CompilerBasicPropertiesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (==>), property, classify, counterexample)
 import qualified Data.List as Data.List
@@ -36,8 +37,8 @@ prop_compile_valid_var_declaration varName =
 -- Property: Multiple declarations compile consistently
 prop_compile_multiple_declarations :: [String] -> Property
 prop_compile_multiple_declarations varNames =
-  all isValidIdentifier varNames && not (null varNames) && length varNames <= 5 ==>
-  let declarations = map (\name -> "var " ++ name ++ " int = 0") varNames
+  L.all isValidIdentifier varNames && not (null varNames) && L.length varNames <= 5 ==>
+  let declarations = L.map (\name -> "var " ++ name ++ " int = 0") varNames
       source = unlines declarations
   in case compileTypus source of
     CompilationSuccess _ -> property True
@@ -46,7 +47,7 @@ prop_compile_multiple_declarations varNames =
 -- Property: Compilation preserves semantic structure
 prop_compile_preserves_structure :: String -> Property
 prop_compile_preserves_structure content =
-  length content <= 100 ==> -- Limit size for reasonable test times
+  L.length content <= 100 ==> -- Limit size for reasonable test times
   case parseTypus content of
     Left _ -> property True -- Parsing failure is acceptable
     Right parsed -> 
@@ -57,8 +58,8 @@ prop_compile_preserves_structure content =
 -- Property: Function declarations with valid signatures
 prop_compile_function_declarations :: String -> [String] -> Property
 prop_compile_function_declarations funcName paramNames =
-  isValidIdentifier funcName && all isValidIdentifier paramNames && length paramNames <= 3 ==>
-  let params = unwords $ map (\p -> p ++ " int") paramNames
+  isValidIdentifier funcName && L.all isValidIdentifier paramNames && L.length paramNames <= 3 ==>
+  let params = unwords $ L.map (\p -> p ++ " int") paramNames
       funcDecl = "func " ++ funcName ++ "(" ++ params ++ ") int { return 42; }"
   in case compileTypus funcDecl of
     CompilationSuccess _ -> property True
@@ -67,7 +68,7 @@ prop_compile_function_declarations funcName paramNames =
 -- Property: Compilation error messages contain source location
 prop_compile_errors_have_location :: String -> Property
 prop_compile_errors_have_location malformed =
-  length malformed > 5 && hasInvalidSyntax malformed ==>
+  L.length malformed > 5 && hasInvalidSyntax malformed ==>
   case compileTypus malformed of
     CompilationSuccess _ -> property False -- Should not succeed on invalid syntax
     CompilationError errMsg -> property $ containsLocationInfo errMsg
@@ -108,7 +109,7 @@ prop_compile_type_consistency varName =
       stringDecl = "var " ++ varName ++ " string = \"hello\""
   in case (compileTypus intDecl, compileTypus stringDecl) of
     (CompilationSuccess _, CompilationSuccess _) -> property True
-    _ -> property False -- Both should succeed or fail consistently
+    _ -> property False -- Both should succeed L.or fail consistently
 
 -- Property: Nested block compilation
 prop_compile_nested_blocks :: Int -> Property
@@ -125,7 +126,7 @@ prop_compile_nested_blocks depth =
 
 isValidIdentifier :: String -> Bool
 isValidIdentifier [] = False
-isValidIdentifier (c:cs) = isAlpha c && all isValidChar cs
+isValidIdentifier (c:cs) = isAlpha c && L.all isValidChar cs
   where
     isValidChar ch = isAlpha ch || isDigit ch || ch == '_'
 
@@ -134,11 +135,11 @@ hasValidStructure (CompilationSuccess _) = True
 hasValidStructure (CompilationError _) = False
 
 hasInvalidSyntax :: String -> Bool
-hasInvalidSyntax s = any (`elem` "@#$%^&*()[]{}|\\") s
+hasInvalidSyntax s = L.any (`elem` "@#$%^&*()[]{}|\\") s
 
 containsLocationInfo :: String -> Bool
 containsLocationInfo errMsg = 
-  any (`Data.List.isInfixOf` errMsg) ["line", "column", "position", "at"]
+  L.any (`Data.List.L.isInfixOf` errMsg) ["line", "column", "position", "at"]
 
 isValidTypusSource :: String -> Bool
 isValidTypusSource source = 

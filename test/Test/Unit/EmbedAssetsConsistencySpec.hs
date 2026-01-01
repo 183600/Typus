@@ -2,10 +2,12 @@
 module Test.Unit.EmbedAssetsConsistencySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool, assertFailure)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck ((===), Property, forAll, Gen, choose, listOf, elements)
-import Data.List (sort, nub, length, intercalate, isInfixOf, isPrefixOf)
+import Data.List (length, isInfixOf, isPrefixOf)
+import Data.List (sort, nub, intercalate)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import qualified Data.Set as Set
 import System.FilePath ((</>), takeDirectory, takeExtension, makeRelative)
@@ -21,14 +23,14 @@ import EmbedAssets
 import CompilerUtils (Logger(..))
 import Tooling.Error (ToolingError(..), MissingEmbeddedAssets(..))
 
--- | Consistency and property-based tests for EmbedAssets module
+-- | Consistency L.and property-based tests for EmbedAssets module
 tests :: TestTree
 tests =
   testGroup "EmbedAssets Consistency Tests"
     [ testGroup "MissingEmbed properties"
         [ fastProperty "MissingEmbed equality is reflexive" prop_missingEmbedEquality
         , fastProperty "MissingEmbed ordering is consistent" prop_missingEmbedOrdering
-        , fastProperty "MissingEmbed preserves all fields" prop_missingEmbedPreservesFields
+        , fastProperty "MissingEmbed preserves L.all fields" prop_missingEmbedPreservesFields
         ]
 
     , testGroup "Pattern extraction"
@@ -102,14 +104,14 @@ tests =
                   , MissingEmbed "config.yaml" "/src" "utils.go"
                   ]
             let message = formatMissingMessage missing
-            "Missing embedded assets detected:" `isInfixOf` message @?= True
+            "Missing embedded assets detected:" `L.isInfixOf` message @?= True
 
         , testCase "formatMissingMessage includes pattern information" $ do
             let missing = [MissingEmbed "assets/*.txt" "/src" "main.go"]
             let message = formatMissingMessage missing
-            "assets/*.txt" `isInfixOf` message @?= True
-            "/src" `isInfixOf` message @?= True
-            "main.go" `isInfixOf` message @?= True
+            "assets/*.txt" `L.isInfixOf` message @?= True
+            "/src" `L.isInfixOf` message @?= True
+            "main.go" `L.isInfixOf` message @?= True
 
         , testCase "formatMissingMessage removes duplicates" $ do
             let missing = 
@@ -118,7 +120,7 @@ tests =
                   , MissingEmbed "config.yaml" "/src" "utils.go"
                   ]
             let message = formatMissingMessage missing
-            let lineCount = length $ lines message
+            let lineCount = L.length $ lines message
             lineCount @?= 3  -- Header + 2 unique entries
 
         , testCase "formatMissingMessage handles empty list" $ do
@@ -230,7 +232,7 @@ tests =
               ]
         ]
 
-    , testGroup "Edge cases and boundary conditions"
+    , testGroup "Edge cases L.and boundary conditions"
         [ testCase "empty Go source file" $ do
             let content = ""
             let patterns = extractEmbeddedPatterns content
@@ -303,7 +305,7 @@ prop_missingEmbedOrdering missing1 missing2 =
      then comp2 === EQ
      else comp1 /= comp2
 
--- Property: MissingEmbed preserves all fields
+-- Property: MissingEmbed preserves L.all fields
 prop_missingEmbedPreservesFields :: String -> String -> String -> Property
 prop_missingEmbedPreservesFields pattern root reference =
   let missing = MissingEmbed pattern root reference
@@ -322,23 +324,23 @@ prop_patternExtractionDeterministic content =
 prop_extractedPatternsValid :: String -> Property
 prop_extractedPatternsValid content =
   let patterns = extractEmbeddedPatterns content
-  in all isValidPattern patterns
+  in L.all isValidPattern patterns
   where
-    isValidPattern pattern = not (null pattern) && all (/= '\0') pattern
+    isValidPattern pattern = not (null pattern) && L.all (/= '\0') pattern
 
--- Property: missing embed message contains all patterns
+-- Property: missing embed message contains L.all patterns
 prop_missingMessageContainsPatterns :: [MissingEmbed] -> Property
 prop_missingMessageContainsPatterns missing =
   let message = formatMissingMessage missing
       patterns = map missingPattern missing
-  in all (`isInfixOf` message) patterns
+  in L.all (`L.isInfixOf` message) patterns
 
 -- Property: missing embed message removes duplicates
 prop_missingMessageRemovesDuplicates :: MissingEmbed -> MissingEmbed -> Property
 prop_missingMessageRemovesDuplicates missing1 missing2 =
   let missing = [missing1, missing2, missing1]  -- Include duplicate
       message = formatMissingMessage missing
-      lineCount = length $ lines message
+      lineCount = L.length $ lines message
   in if missing1 == missing2
      then lineCount === 2  -- Header + 1 unique entry
      else lineCount === 3  -- Header + 2 unique entries

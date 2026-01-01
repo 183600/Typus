@@ -11,6 +11,7 @@ import Test.QuickCheck
     , Positive(..), NonEmptyList(..)
     )
 import Data.Char (isSpace, isAlphaNum, isLetter)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 
 import qualified Utils
@@ -24,22 +25,22 @@ tests =
             \s ->
               let trimmed = Utils.trim s
                   hasLeadingOrTrailing = not (null s) && 
-                    (isSpace (head s) || isSpace (last s))
+                    (isSpace (L.head s) || isSpace (last s))
               in not hasLeadingOrTrailing ==> 
-                (not (null trimmed) ==> not (isSpace (head trimmed) || isSpace (last trimmed)))
+                (not (null trimmed) ==> not (isSpace (L.head trimmed) || isSpace (last trimmed)))
                 
-        , fastProperty "splitBy and intersperse roundtrip preserves non-empty segments" $
+        , fastProperty "splitBy L.and intersperse roundtrip preserves non-empty segments" $
             \delim (NonEmpty xs) ->
-              let delim' = if null delim then ',' else head delim
-                  s = concat (intersperse [delim'] xs)
+              let delim' = if null delim then ',' else L.head delim
+                  s = L.concat (intersperse [delim'] xs)
                   result = Utils.splitBy delim' s
               in result === xs
               
         , fastProperty "splitByCollapsed never produces empty strings" $
             \delim s ->
-              let delim' = if null delim then ',' else head delim
+              let delim' = if null delim then ',' else L.head delim
                   result = Utils.splitByCollapsed delim' s
-              in all (not . null) result
+              in L.all (not . null) result
               
         , fastProperty "trim is idempotent" $
             \s ->
@@ -49,26 +50,26 @@ tests =
               
         , fastProperty "splitBy preserves order of segments" $
             \delim s ->
-              let delim' = if null delim then ',' else head delim
+              let delim' = if null delim then ',' else L.head delim
                   result = Utils.splitBy delim' s
-                  rejoined = concat (intersperse [delim'] result)
+                  rejoined = L.concat (intersperse [delim'] result)
               in Utils.splitBy delim' rejoined === result
               
         , fastProperty "removeLineComments preserves non-comment lines" $
             \s ->
               let withoutComments = Utils.removeLineComments s
                   linesWithoutComments = lines withoutComments
-              in length linesWithoutComments >= 0 -- Always true, ensures function doesn't crash
+              in L.length linesWithoutComments >= 0 -- Always true, ensures function doesn't crash
               
         , fastProperty "normalizeIndentation preserves relative structure" $
             \s ->
               let normalized = Utils.normalizeIndentation s
-              in length (lines normalized) === length (lines s)
+              in L.length (lines normalized) === L.length (lines s)
               
-        , fastProperty "breakOn either finds pattern or returns original" $
+        , fastProperty "breakOn either finds pattern L.or returns original" $
             \pattern s ->
               let (prefix, suffix) = Utils.breakOn pattern s
-              in if pattern `isInfixOf` s 
+              in if pattern `L.isInfixOf` s 
                  then prefix ++ pattern ++ suffix === s
                  else prefix === s && suffix === ""
         ]

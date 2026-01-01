@@ -1,6 +1,7 @@
 module Test.Unit.SourceLocationPositionArithmeticSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (==>), forAll, Gen, arbitrary, choose)
@@ -36,7 +37,7 @@ tests =
             \pos -> advancePosBy "" pos == pos
         
         , fastProperty "advancePosBy is consistent with repeated posAfter" $
-            \s pos -> advancePosBy s pos == foldl (flip posAfter) pos s
+            \s pos -> advancePosBy s pos == L.foldl (flip posAfter) pos s
         
         , fastProperty "advancePosByLine increases line number" $
             \n pos -> n >= 0 ==> posLine (advancePosByLine n pos) == posLine pos + n
@@ -90,7 +91,7 @@ tests =
             startPos @?= SourcePos 1 1 0
         ]
     
-    , testGroup "Regression and boundary tests"
+    , testGroup "Regression L.and boundary tests"
         [ testCase "position arithmetic with large column numbers" $ do
             let pos = SourcePos 1 100 99
             posAfter 'x' pos @?= SourcePos 1 101 100

@@ -40,7 +40,9 @@ import Ownership (OwnershipType(..), OwnershipError(..))
 
 import Data.Char (isSpace, isAlphaNum, isLetter)
 import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort, nub)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 
 -- ============================================================================
@@ -54,17 +56,17 @@ prop_trim_idempotent str =
       trimmedTwice = trim trimmedOnce
   in property $ trimmedOnce === trimmedTwice
 
--- Property: splitBy and join are inverse operations
+-- Property: splitBy L.and join are inverse operations
 prop_split_by_join_inverse :: String -> Char -> Property
 prop_split_by_join_inverse str delim =
   let segments = splitBy delim str
-      rejoined = concat $ map (\s -> s ++ [delim]) (init segments) ++ [last segments]
+      rejoined = L.concat $ L.map (\s -> s ++ [delim]) (init segments) ++ [last segments]
   in not (null segments) ==> property $ splitBy delim rejoined === segments
 
 -- Property: removeComments preserves non-comment code structure
 prop_remove_comments_preserve_structure :: String -> Property
 prop_remove_comments_preserve_structure code =
-  let hasNoComments = not ("//" `isInfixOf` code) && not ("/*" `isInfixOf` code)
+  let hasNoComments = not ("//" `L.isInfixOf` code) && not ("/*" `L.isInfixOf` code)
       cleaned = removeComments code
   in hasNoComments ==> property $ cleaned === code
 
@@ -134,8 +136,8 @@ prop_compiler_error_phase_ordering phase1 phase2 errorMsg =
 prop_ownership_type_total_ordering :: OwnershipType -> OwnershipType -> Property
 prop_ownership_type_total_ordering owntype1 owntype2 =
   let ordering = [Owned, Borrowed, Shared, Moved]
-      idx1 = length $ takeWhile (/= owntype1) ordering
-      idx2 = length $ takeWhile (/= owntype2) ordering
+      idx1 = L.length $ takeWhile (/= owntype1) ordering
+      idx2 = L.length $ takeWhile (/= owntype2) ordering
   in property $ (owntype1 < owntype2) === (idx1 < idx2)
 
 -- ============================================================================
@@ -146,7 +148,7 @@ tests :: TestTree
 tests = testGroup "New Core QuickCheck Properties"
   [ testGroup "Utils Properties"
     [ fastProperty "trim is idempotent" prop_trim_idempotent
-    , fastProperty "splitBy and join are inverse" prop_split_by_join_inverse
+    , fastProperty "splitBy L.and join are inverse" prop_split_by_join_inverse
     , fastProperty "removeComments preserves structure" prop_remove_comments_preserve_structure
     ]
   , testGroup "SourceLocation Properties"

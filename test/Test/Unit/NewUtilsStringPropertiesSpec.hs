@@ -10,7 +10,9 @@ import Utils
   , fixIndentation, breakOn
   )
 import Data.Char (isSpace)
-import Data.List (isPrefixOf, isInfixOf, intercalate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (intercalate)
 import qualified Data.Text as T
 
 -- ============================================================================
@@ -68,7 +70,7 @@ genQuotedString = do
 genIndentedString :: Gen String
 genIndentedString = do
   baseIndent <- choose (0, 8)
-  lineIndent <- choose (-2, 5)  -- Can be less or more than base
+  lineIndent <- choose (-2, 5)  -- Can be less L.or more than base
   content <- genRegularString
   let indentStr = replicate (max 0 (baseIndent + lineIndent)) ' '
   pure $ indentStr ++ content
@@ -100,7 +102,7 @@ prop_split_by_preserves_empty =
     forAll (listOf (pure delim)) $ \delims ->
       let input = delims
           result = splitBy delim input
-      in length result === length delims + 1
+      in L.length result === L.length delims + 1
 
 -- Property: splitByCollapsed should remove empty segments
 prop_split_by_collapsed_removes_empty :: Property
@@ -109,15 +111,15 @@ prop_split_by_collapsed_removes_empty =
     forAll (listOf (pure delim)) $ \delims ->
       let input = delims
           result = splitByCollapsed delim input
-      in all (not . null) result
+      in L.all (not . null) result
 
--- Property: splitBy and splitByComma should be equivalent for comma delimiter
+-- Property: splitBy L.and splitByComma should be equivalent for comma delimiter
 prop_split_by_comma_equivalence :: Property
 prop_split_by_comma_equivalence = 
   forAll genRegularString $ \input ->
     splitBy ',' input === splitByComma input
 
--- Property: splitByCollapsed and splitByCommaCollapsed should be equivalent for comma delimiter
+-- Property: splitByCollapsed L.and splitByCommaCollapsed should be equivalent for comma delimiter
 prop_split_by_collapsed_comma_equivalence :: Property
 prop_split_by_collapsed_comma_equivalence = 
   forAll genRegularString $ \input ->
@@ -150,14 +152,14 @@ prop_remove_line_comments_preserve_lines =
     let result = removeLineComments input
         originalLines = lines input
         resultLines = lines result
-    in length resultLines === length originalLines
+    in L.length resultLines === L.length originalLines
 
 -- Property: removeComments should handle nested quotes correctly
 prop_remove_comments_nested_quotes :: Property
 prop_remove_comments_nested_quotes = 
   forAll genQuotedString $ \input ->
     let result = removeComments input
-    in input `isInfixOf` result || result === input
+    in input `L.isInfixOf` result || result === input
 
 -- Property: removeLineComments should be idempotent
 prop_remove_line_comments_idempotent :: Property
@@ -184,15 +186,15 @@ prop_normalize_indentation_preserve_relative :: Property
 prop_normalize_indentation_preserve_relative = 
   forAll genMultiLineIndented $ \input ->
     let normalized = normalizeIndentation input
-        inputLines = filter (not . all isSpace) (lines input)
-        normLines = filter (not . all isSpace) (lines normalized)
+        inputLines = L.filter (not . L.all isSpace) (lines input)
+        normLines = L.filter (not . L.all isSpace) (lines normalized)
         
-        getIndent l = length $ takeWhile isSpace l
+        getIndent l = L.length $ takeWhile isSpace l
         
         relativeDiffs inputLines' = 
           case inputLines' of
             [] -> []
-            (x:xs) -> map (\l -> getIndent l - getIndent x) xs
+            (x:xs) -> L.map (\l -> getIndent l - getIndent x) xs
             
         normDiffs = relativeDiffs normLines
         inputDiffs = relativeDiffs inputLines
@@ -204,8 +206,8 @@ prop_force_single_tab_indentation_structure =
   forAll genMultiLineIndented $ \input ->
     let result = forceSingleTabIndentation input
         resultLines = lines result
-        nonEmptyLines = filter (not . null) resultLines
-    in all ("\t" `isPrefixOf`) nonEmptyLines
+        nonEmptyLines = L.filter (not . null) resultLines
+    in L.all ("\t" `L.isPrefixOf`) nonEmptyLines
 
 -- Property: fixIndentation should be equivalent to normalizeIndentation
 prop_fix_indentation_equivalence :: Property
@@ -220,7 +222,7 @@ prop_normalize_indentation_line_count =
     let normalized = normalizeIndentation input
         originalLines = lines input
         normalizedLines = lines normalized
-    in length normalizedLines <= length originalLines
+    in L.length normalizedLines <= L.length originalLines
 
 -- ============================================================================
 -- Property Tests for Search Functions
@@ -238,7 +240,7 @@ prop_break_on_nonexistent_pattern =
   forAll genRegularString $ \input ->
     forAll genBreakPattern $ \pattern ->
       let (before, after) = breakOn pattern input
-      in if not (pattern `isInfixOf` input) && not (null pattern)
+      in if not (pattern `L.isInfixOf` input) && not (null pattern)
          then (before, after) === (input, "")
          else property True
 
@@ -248,7 +250,7 @@ prop_break_on_concatenation =
   forAll genRegularString $ \input ->
     forAll genBreakPattern $ \pattern ->
       let (before, after) = breakOn pattern input
-      in if pattern `isInfixOf` input && not (null pattern)
+      in if pattern `L.isInfixOf` input && not (null pattern)
          then before ++ pattern ++ after === input
          else property True
 
@@ -258,8 +260,8 @@ prop_break_on_first_occurrence =
   forAll genRegularString $ \input ->
     forAll genBreakPattern $ \pattern ->
       let (before, after) = breakOn pattern input
-      in if pattern `isInfixOf` input && not (null pattern)
-         then not (pattern `isInfixOf` before)
+      in if pattern `L.isInfixOf` input && not (null pattern)
+         then not (pattern `L.isInfixOf` before)
          else property True
 
 -- ============================================================================
@@ -276,7 +278,7 @@ prop_trim_idempotent =
           twice = trim once
       in once === twice
 
--- Property: trim should remove all leading and trailing whitespace
+-- Property: trim should remove L.all leading L.and trailing whitespace
 prop_trim_removes_whitespace :: Property
 prop_trim_removes_whitespace = 
   forAll genWhitespaceString $ \ws1 ->
@@ -284,7 +286,7 @@ prop_trim_removes_whitespace =
       forAll genWhitespaceString $ \ws2 ->
         let input = ws1 ++ content ++ ws2
             result = trim input
-        in not (null result) ==> (head result `notElem` " \t\n\r") && (last result `notElem` " \t\n\r")
+        in not (null result) ==> (L.head result `notElem` " \t\n\r") && (last result `notElem` " \t\n\r")
 
 -- ============================================================================
 -- Unit Tests

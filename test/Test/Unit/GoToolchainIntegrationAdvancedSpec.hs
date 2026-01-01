@@ -1,6 +1,7 @@
 module Test.Unit.GoToolchainIntegrationAdvancedSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), Gen, choose, oneof, listOf, elements)
 import TestSupport.QuickCheck (fastProperty)
@@ -62,9 +63,9 @@ tests =
                     assertBool "go.mod file should exist" exists
                     content <- readFile goModPath
                     assertBool "go.mod should contain module declaration" $ 
-                        "module temp" `isInfixOf` content
+                        "module temp" `L.isInfixOf` content
                     assertBool "go.mod should contain Go version" $ 
-                        "go 1.21" `isInfixOf` content
+                        "go 1.21" `L.isInfixOf` content
             case result of
                 Left _ -> assertBool "Should complete successfully" False
                 Right _ -> assertBool "Should succeed" True
@@ -91,7 +92,7 @@ tests =
                     -- After the withTemporaryGoProject block, the directory should be cleaned up
                     exists <- doesDirectoryExist tempDir
                     -- Note: withSystemTempDirectory handles cleanup automatically
-                    assertBool "Directory should be cleaned up" $ True  -- May or may not exist depending on timing
+                    assertBool "Directory should be cleaned up" $ True  -- May L.or may not exist depending on timing
                 Left _ -> assertBool "Should complete successfully" False
         ]
 
@@ -111,8 +112,8 @@ tests =
                 Left err -> 
                     -- May fail if Go is not installed, which is expected in some environments
                     assertBool "Should handle Go command gracefully" $ 
-                        "Go is not installed" `isInfixOf` show err || 
-                        "go command failed" `isInfixOf` show err
+                        "Go is not installed" `L.isInfixOf` show err || 
+                        "go command failed" `L.isInfixOf` show err
                 Right _ -> assertBool "Should succeed when Go is available" True
 
         , testCase "handles Go command failures gracefully" $ do
@@ -130,7 +131,7 @@ tests =
                 Left err -> 
                     -- Should fail gracefully with appropriate error message
                     assertBool "Should fail gracefully" $ 
-                        "go command failed" `isInfixOf` show err
+                        "go command failed" `L.isInfixOf` show err
                 Right _ -> assertBool "Should not succeed with invalid command" False
 
         , testCase "executes Go commands in specific directory" $ do
@@ -147,8 +148,8 @@ tests =
             case result of
                 Left err -> 
                     assertBool "Should handle directory-specific commands" $ 
-                        "Go is not installed" `isInfixOf` show err || 
-                        "go command failed" `isInfixOf` show err
+                        "Go is not installed" `L.isInfixOf` show err || 
+                        "go command failed" `L.isInfixOf` show err
                 Right _ -> assertBool "Should succeed when Go is available" True
         ]
 
@@ -169,7 +170,7 @@ tests =
                     assertBool "Go file should exist" exists
                     content <- readFile goFile
                     assertBool "Go file should contain correct code" $ 
-                        "package main" `isInfixOf` content
+                        "package main" `L.isInfixOf` content
                     return goFile
             case result of
                 Left _ -> assertBool "Should complete successfully" False
@@ -189,7 +190,7 @@ tests =
                 Right _ -> assertBool "Should succeed" True
         ]
 
-    , testGroup "Error handling and recovery"
+    , testGroup "Error handling L.and recovery"
         [ testCase "handles missing Go installation" $ do
             let mockLogger _ = return ()
             result <- runExceptT $ do
@@ -200,8 +201,8 @@ tests =
             case result of
                 Left err -> 
                     assertBool "Should handle missing Go gracefully" $ 
-                        "Go is not installed" `isInfixOf` show err || 
-                        "GoToolchainUnavailable" `isInfixOf` show err
+                        "Go is not installed" `L.isInfixOf` show err || 
+                        "GoToolchainUnavailable" `L.isInfixOf` show err
                 Right _ -> assertBool "Should succeed when skip is enabled" True
 
         , testCase "provides clear error messages" $ do
@@ -217,8 +218,8 @@ tests =
                         return ()
             case result of
                 Left err -> do
-                    assertBool "Error should be descriptive" $ length (show err) > 10
-                    assertBool "Error should mention Go" $ "go" `isInfixOf` show err
+                    assertBool "Error should be descriptive" $ L.length (show err) > 10
+                    assertBool "Error should mention Go" $ "go" `L.isInfixOf` show err
                 Right _ -> assertBool "Should not succeed with invalid command" False
 
         , testCase "handles permission errors gracefully" $ do
@@ -230,9 +231,9 @@ tests =
             case result of
                 Left err -> 
                     assertBool "Should handle permission errors" $ 
-                        "permission" `isInfixOf` show err || 
-                        "access" `isInfixOf` show err ||
-                        "GoToolchainUnavailable" `isInfixOf` show err
+                        "permission" `L.isInfixOf` show err || 
+                        "access" `L.isInfixOf` show err ||
+                        "GoToolchainUnavailable" `L.isInfixOf` show err
                 Right _ -> assertBool "Should succeed with valid permissions" True
         ]
 
@@ -242,7 +243,7 @@ tests =
         , fastProperty "temporary project names are unique" prop_tempProjectUnique
         ]
 
-    , testGroup "Performance and resource management"
+    , testGroup "Performance L.and resource management"
         [ testCase "handles concurrent operations" $ do
             let mockLogger _ = return ()
             result <- runExceptT $ do
@@ -254,7 +255,7 @@ tests =
             case result of
                 Left err -> assertBool ("Should handle concurrent operations: " ++ show err) False
                 Right projects -> do
-                    assertBool "Should create multiple projects" $ length projects == 3
+                    assertBool "Should create multiple projects" $ L.length projects == 3
 
         , testCase "cleans up resources properly" $ do
             let mockLogger _ = return ()
@@ -311,8 +312,8 @@ tests =
             case result of
                 Left err -> 
                     assertBool "Should handle complete workflow" $ 
-                        "Go is not installed" `isInfixOf` show err || 
-                        "go command failed" `isInfixOf` show err
+                        "Go is not installed" `L.isInfixOf` show err || 
+                        "go command failed" `L.isInfixOf` show err
                 Right _ -> assertBool "Should succeed when Go is available" True
 
         , testCase "handles Typus-generated Go code" $ do
@@ -341,15 +342,15 @@ tests =
             case result of
                 Left err -> 
                     assertBool "Should handle Typus-generated code" $ 
-                        "Go is not installed" `isInfixOf` show err || 
-                        "go command failed" `isInfixOf` show err
+                        "Go is not installed" `L.isInfixOf` show err || 
+                        "go command failed" `L.isInfixOf` show err
                 Right _ -> assertBool "Should succeed with Typus-generated code" True
         ]
     ]
 
 -- Helper functions
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` [take (length needle) $ drop i haystack | i <- [0..length haystack - length needle]]
+L.isInfixOf needle haystack = needle `elem` [take (L.length needle) $ drop i haystack | i <- [0..L.length haystack - L.length needle]]
 
 -- | Property: executor creation is deterministic
 prop_executorDeterministic :: String -> Bool
@@ -358,8 +359,8 @@ prop_executorDeterministic _ = True  -- Executor creation should always succeed
 -- | Property: go module content is consistent
 prop_goModuleConsistent :: String -> Bool
 prop_goModuleConsistent _ = 
-    "module temp" `isInfixOf` goModContents && 
-    "go 1.21" `isInfixOf` goModContents
+    "module temp" `L.isInfixOf` goModContents && 
+    "go 1.21" `L.isInfixOf` goModContents
 
 -- | Property: temporary project names are unique
 prop_tempProjectUnique :: String -> Bool

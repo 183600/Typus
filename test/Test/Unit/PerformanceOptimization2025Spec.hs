@@ -3,6 +3,7 @@
 module Test.Unit.PerformanceOptimization2025Spec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, choose, listOf, elements)
 import Test.Tasty.HUnit (testCase, (@=?))
 import System.CPUTime (getCPUTime)
@@ -38,9 +39,9 @@ data PerformanceResult = PerformanceResult
 -- Property 1: String processing scales linearly
 propStringProcessingLinear :: [String] -> Bool
 propStringProcessingLinear inputs =
-  length inputs > 1 ==>
+  L.length inputs > 1 ==>
   let sizes = [100, 1000, 10000]
-      results = map (\size -> measureStringProcessingPerformance (take size (concat inputs))) sizes
+      results = L.map (\size -> measureStringProcessingPerformance (take size (L.concat inputs))) sizes
       times = map executionTime results
   in isLinearGrowth times
 
@@ -48,7 +49,7 @@ propStringProcessingLinear inputs =
 propParserPerformanceGraceful :: String -> Bool
 propParserPerformanceGraceful baseInput =
   let sizes = [100, 500, 1000, 2000]
-      inputs = map (\size -> take size (baseInput ++ cycle "func test() {}")) sizes
+      inputs = L.map (\size -> take size (baseInput ++ cycle "func test() {}")) sizes
       results = map measureParserPerformance inputs
       times = map executionTime results
   in not (hasExponentialGrowth times)
@@ -57,7 +58,7 @@ propParserPerformanceGraceful baseInput =
 propSourceLocationEfficient :: String -> Bool
 propSourceLocationEfficient input =
   let sizes = [100, 1000, 10000]
-      results = map (\size -> measureSourceLocationPerformance (take size input)) sizes
+      results = L.map (\size -> measureSourceLocationPerformance (take size input)) sizes
       times = map executionTime results
   in isLinearGrowth times
 
@@ -65,7 +66,7 @@ propSourceLocationEfficient input =
 propCompilationTimeScales :: String -> Bool
 propCompilationTimeScales baseCode =
   let sizes = [50, 100, 200]
-      inputs = map (\size -> replicate size "func x() { return x; }") sizes
+      inputs = L.map (\size -> replicate size "func x() { return x; }") sizes
       flatInputs = map unlines inputs
       results = map measureCompilationPerformance flatInputs
       times = map executionTime results
@@ -75,7 +76,7 @@ propCompilationTimeScales baseCode =
 propMemoryUsageBounded :: String -> Bool
 propMemoryUsageBounded baseInput =
   let sizes = [100, 1000, 5000, 10000]
-      results = map (\size -> measureMemoryUsage (take size baseInput)) sizes
+      results = L.map (\size -> measureMemoryUsage (take size baseInput)) sizes
       memoryUsages = map memoryUsage results
   in isLinearGrowth memoryUsages
 
@@ -94,7 +95,7 @@ testLargeFileParsingPerformance = do
 -- Property 7: Concurrent processing provides speedup
 propConcurrentSpeedup :: [String] -> Bool
 propConcurrentSpeedup inputs =
-  length inputs > 1 ==>
+  L.length inputs > 1 ==>
   let sequentialTime = measureSequentialProcessing inputs
       concurrentTime = measureConcurrentProcessing inputs
   in sequentialTime / concurrentTime >= 1.5  -- At least 50% speedup
@@ -156,7 +157,7 @@ measureStringProcessingPerformance input = do
   let result = trim (normalizeIndentation input)
   end <- getCPUTime
   let time = fromIntegral (end - start) / (10^12)
-  let size = length input
+  let size = L.length input
   return $ PerformanceResult time (size `div` 1000) size
 
 measureParserPerformance :: String -> PerformanceResult
@@ -165,7 +166,7 @@ measureParserPerformance input = do
   let result = parseTypus input
   end <- getCPUTime
   let time = fromIntegral (end - start) / (10^12)
-  let size = length input
+  let size = L.length input
   return $ PerformanceResult time (size `div` 10) size
 
 measureSourceLocationPerformance :: String -> PerformanceResult
@@ -174,7 +175,7 @@ measureSourceLocationPerformance input = do
   let result = foldl advancePos (SourcePos 1 1) input
   end <- getCPUTime
   let time = fromIntegral (end - start) / (10^12)
-  let size = length input
+  let size = L.length input
   return $ PerformanceResult time (size `div` 100) size
 
 measureCompilationPerformance :: String -> PerformanceResult
@@ -183,13 +184,13 @@ measureCompilationPerformance input = do
   let result = compile input  -- Mock compilation
   end <- getCPUTime
   let time = fromIntegral (end - start) / (10^12)
-  let size = length input
+  let size = L.length input
   return $ PerformanceResult time (size `div` 50) size
 
 measureMemoryUsage :: String -> PerformanceResult
 measureMemoryUsage input = do
   memory <- getCurrentMemoryUsage
-  let size = length input
+  let size = L.length input
   return $ PerformanceResult 0.0 memory size
 
 measureSequentialProcessing :: [String] -> Double
@@ -227,7 +228,7 @@ hasExponentialGrowth (x:y:zs) =
 
 average :: [Double] -> Double
 average [] = 0.0
-average xs = sum xs / fromIntegral (length xs)
+average xs = L.sum xs / fromIntegral (L.length xs)
 
 -- Mock compilation function
 compile :: String -> String
@@ -238,6 +239,6 @@ instance Arbitrary String where
   arbitrary = do
     size <- choose (10, 1000)
     elements [replicate size 'a', 
-              concat $ replicate (size `div` 10) "func test() {} ",
-              concat $ replicate (size `div` 20) "let x = 1; let y = 2; ",
+              L.concat $ replicate (size `div` 10) "func test() {} ",
+              L.concat $ replicate (size `div` 20) "let x = 1; let y = 2; ",
               unlines $ replicate (size `div` 30) "func test" ++ map show [1..] ++ "() { return 0; }"]

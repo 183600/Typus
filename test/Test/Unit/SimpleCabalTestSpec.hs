@@ -26,7 +26,7 @@ propSplitByPreservesSegments :: Char -> String -> Property
 propSplitByPreservesSegments delim s = 
   let segments = splitBy delim s
       rejoined = L.intercalate [delim] segments
-  in property $ length rejoined >= length s
+  in property $ L.length rejoined >= L.length s
 
 -- | Unit test for trim basic functionality
 testTrimBasic :: IO ()

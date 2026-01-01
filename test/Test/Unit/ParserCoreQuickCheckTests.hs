@@ -16,6 +16,7 @@ import qualified Text.Megaparsec as MP
 import Utils (trim)
 
 import Data.Char (isSpace, isAlphaNum)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 
 -- ============================================================================
@@ -44,7 +45,7 @@ instance Arbitrary TypusFile where
 -- QuickCheck Properties for Parser Module
 -- ============================================================================
 
--- | defaultFileDirectives: should have all fields as Nothing
+-- | defaultFileDirectives: should have L.all fields as Nothing
 prop_defaultFileDirectives_nothing :: Bool
 prop_defaultFileDirectives_nothing = 
     let defs = defaultFileDirectives
@@ -52,7 +53,7 @@ prop_defaultFileDirectives_nothing =
        fdDependentTypes defs == Nothing &&
        fdConstraints defs == Nothing
 
--- | defaultBlockDirectives: should have all fields as Nothing
+-- | defaultBlockDirectives: should have L.all fields as Nothing
 prop_defaultBlockDirectives_nothing :: Bool
 prop_defaultBlockDirectives_nothing = 
     let defs = defaultBlockDirectives
@@ -65,12 +66,12 @@ prop_parseTypus_empty :: Bool
 prop_parseTypus_empty = 
     case parseTypus "" of
       Left _ -> False
-      Right file -> null (tfBlocks file)
+      Right file -> L.null (tfBlocks file)
 
 -- | parseTypus: parsing simple content should preserve some structure
 prop_parseTypus_simple :: String -> Property
 prop_parseTypus_simple content = 
-    let simpleContent = filter (\c -> isAlphaNum c || isSpace c || c `elem` "\n") content
+    let simpleContent = L.filter (\c -> isAlphaNum c || isSpace c || c `elem` "\n") content
     in not (null simpleContent) ==> 
        case parseTypus simpleContent of
          Left _ -> property False
@@ -79,8 +80,8 @@ prop_parseTypus_simple content =
 -- | parseTypus: parsing should be idempotent for well-formed content
 prop_parseTypus_roundtrip :: String -> Property
 prop_parseTypus_roundtrip content = 
-    let cleanContent = filter (\c -> isAlphaNum c || isSpace c || c `elem` "\n") content
-    in not (null cleanContent) && length cleanContent < 100 ==> -- Limit size for practicality
+    let cleanContent = L.filter (\c -> isAlphaNum c || isSpace c || c `elem` "\n") content
+    in not (null cleanContent) && L.length cleanContent < 100 ==> -- Limit size for practicality
        case parseTypus cleanContent of
          Left _ -> property True  -- Can't test roundtrip on parse failures
          Right file -> property True  -- We don't have a pretty printer, so just ensure it parses
@@ -122,7 +123,7 @@ prop_parseTypus_directives content =
 -- | parseTypus: trimming input should not affect parse success (for valid content)
 prop_parseTypus_trim :: String -> Property
 prop_parseTypus_trim content = 
-    let cleanContent = filter (\c -> isAlphaNum c || isSpace c) content
+    let cleanContent = L.filter (\c -> isAlphaNum c || isSpace c) content
         trimmed = trim cleanContent
     in not (null trimmed) ==> 
        case (parseTypus cleanContent, parseTypus trimmed) of
@@ -131,17 +132,17 @@ prop_parseTypus_trim content =
          (Left _, Right _) -> property True  -- Trimming helps
          (Right _, Left _) -> property True  -- Trimming hurts (rare but possible)
 
--- | CodeBlock: content length should be preserved
+-- | CodeBlock: content L.length should be preserved
 prop_codeBlock_content_length :: String -> String -> Bool
 prop_codeBlock_content_length directives content = 
     let block = CodeBlock (defaultBlockDirectives) content
-    in length (cbContent block) == length content
+    in L.length (cbContent block) == L.length content
 
 -- | TypusFile: number of blocks should be preserved
 prop_typusFile_block_count :: [CodeBlock] -> Bool
 prop_typusFile_block_count blocks = 
     let file = TypusFile defaultFileDirectives blocks
-    in length (tfBlocks file) == length blocks
+    in L.length (tfBlocks file) == L.length blocks
 
 -- | parseTypus: parsing very long content should not crash
 prop_parseTypus_long_content :: Int -> Property
@@ -188,7 +189,7 @@ tests = testGroup "Parser Core QuickCheck Tests"
     , ("BlockDirectives reflexive", prop_blockDirectives_reflexive)
     , ("CodeBlock reflexive", prop_codeBlock_reflexive)
     , ("TypusFile reflexive", prop_typusFile_reflexive)
-    , ("CodeBlock content length", prop_codeBlock_content_length)
+    , ("CodeBlock content L.length", prop_codeBlock_content_length)
     , ("TypusFile block count", prop_typusFile_block_count)
     ]
   ]

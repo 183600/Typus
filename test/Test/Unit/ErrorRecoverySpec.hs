@@ -13,7 +13,9 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
-import Data.List (isPrefixOf, isInfixOf, intercalate, nub, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (intercalate, nub, sort)
 import Data.Char (isSpace, isLetter, isDigit)
 
 -- Import error handling modules
@@ -25,7 +27,7 @@ import qualified Compiler
 import qualified SourceLocation
 import qualified Utils
 
--- | Error recovery tests covering error detection, recovery mechanisms, and graceful degradation
+-- | Error recovery tests covering error detection, recovery mechanisms, L.and graceful degradation
 tests :: TestTree
 tests =
   testGroup "Error Recovery"
@@ -36,7 +38,7 @@ tests =
         , testCase "Basic error scenarios" $ do
             let input = "x := 1 + )invalid("  -- Syntax error
             case Parser.parseExpression input of
-              Left err -> "syntax" `isInfixOf` show err @?= True
+              Left err -> "syntax" `L.isInfixOf` show err @?= True
               Right _ -> assertFailure "Expected parse error"
         ]
 
@@ -82,9 +84,9 @@ tests =
         , testCase "Error message quality" $ do
             let err = ErrorHandler.Core.mkParseError "unexpected token" (SourceLocation.Position 5 10)
             let msg = ErrorHandler.errorMessage err
-            "unexpected token" `isInfixOf` msg @?= True
-            "line 5" `isInfixOf` msg @?= True
-            "column 10" `isInfixOf` msg @?= True
+            "unexpected token" `L.isInfixOf` msg @?= True
+            "line 5" `L.isInfixOf` msg @?= True
+            "column 10" `L.isInfixOf` msg @?= True
         ]
 
     , testGroup "Recovery Strategy Testing"
@@ -170,14 +172,14 @@ prop_error_context_maintained input context =
   hasAnyError input && not (null context) ==>
   let error = ErrorHandler.mkErrorWithContext "error" context (SourceLocation.Position 1 1)
       preserved = ErrorHandler.getErrorContext error
-  in property $ context `isInfixOf` preserved
+  in property $ context `L.isInfixOf` preserved
 
 prop_error_stack_trace_accuracy :: [String] -> Property
 prop_error_stack_trace_accuracy callStack =
-  not (null callStack) && length callStack <= 5 ==>
+  not (null callStack) && L.length callStack <= 5 ==>
   let error = ErrorHandler.mkErrorWithStack "error" callStack
       stack = ErrorHandler.getErrorStack error
-      accurate = length stack >= length callStack - 1  -- Allow some frames to be missing
+      accurate = L.length stack >= L.length callStack - 1  -- Allow some frames to be missing
   in property $ accurate
 
 prop_error_propagation_consistency :: String -> Property
@@ -228,9 +230,9 @@ prop_error_messages_informative input =
   hasAnyError input ==>
   let error = extractFirstError input
       message = ErrorHandler.errorMessage error
-      informative = "error" `isInfixOf` message && 
+      informative = "error" `L.isInfixOf` message && 
                    not (null message) && 
-                   length message <= 200  -- Reasonable length
+                   L.length message <= 200  -- Reasonable L.length
   in property $ informative
 
 prop_error_suggestions_helpful :: String -> Property
@@ -239,9 +241,9 @@ prop_error_suggestions_helpful input =
   let error = extractFirstError input
       suggestions = ErrorHandler.getSuggestions error
       helpful = not (null suggestions) && 
-                all (not . null) suggestions &&
-                length suggestions <= 5  -- Reasonable number
-  in property $ helpful || length input < 5
+                L.all (not . null) suggestions &&
+                L.length suggestions <= 5  -- Reasonable number
+  in property $ helpful || L.length input < 5
 
 prop_error_formatting_consistency :: String -> Property
 prop_error_formatting_consistency input =
@@ -283,7 +285,7 @@ prop_enhanced_error_detection :: String -> Property
 prop_enhanced_error_detection input =
   let standardDetection = hasAnyError input
       enhancedDetection = EnhancedErrorHandler.detectErrors input
-      enhancedBetter = length enhancedDetection >= 
+      enhancedBetter = L.length enhancedDetection >= 
                        (if standardDetection then 1 else 0)
   in property $ enhancedBetter
 
@@ -340,10 +342,10 @@ extractFirstError input = case Parser.parseExpression input of
   Right _ -> ErrorHandler.mkError "no error" (SourceLocation.Position 1 1)
 
 hasLineInfo :: String -> Bool
-hasLineInfo msg = "line" `isInfixOf` msg
+hasLineInfo msg = "line" `L.isInfixOf` msg
 
 hasColumnInfo :: String -> Bool
-hasColumnInfo msg = "column" `isInfixOf` msg
+hasColumnInfo msg = "column" `L.isInfixOf` msg
 
 hasMessageInfo :: String -> Bool
-hasMessageInfo msg = not (null msg) && length msg > 5
+hasMessageInfo msg = not (null msg) && L.length msg > 5

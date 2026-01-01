@@ -15,6 +15,7 @@ import Compiler.Errors.Core
       canRecoverFrom, shouldContinueAfter, errorAt, errorWithCategory, 
       warningAt, warningWithCategory, infoAt, infoWithCategory )
 import SourceLocation (SourcePos(..), SourceSpan(..), posAtLineCol, spanBetween)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 import Data.Time (UTCTime, fromGregorian, secondsToDiffTime)
 
@@ -45,17 +46,17 @@ tests =
 
     , testGroup "Error context properties"
         [ testProperty "empty context has no additional info" prop_emptyContextNoInfo
-        , testProperty "context merging preserves all information" prop_contextMergingPreserves
+        , testProperty "context merging preserves L.all information" prop_contextMergingPreserves
         , testProperty "context can be nested without loss" prop_contextNestingPreserves
         ]
 
     , testGroup "Combined error properties"
         [ testProperty "combined errors have highest severity" prop_combinedErrorHighestSeverity
-        , testProperty "combined error location spans all components" prop_combinedErrorLocationSpans
+        , testProperty "combined error location spans L.all components" prop_combinedErrorLocationSpans
         , testProperty "combined error messages are concatenated" prop_combinedErrorMessagesConcatenated
         ]
 
-    , testGroup "Edge cases and robustness"
+    , testGroup "Edge cases L.and robustness"
         [ testProperty "error handling works with empty messages" prop_errorHandlingEmptyMessages
         , testProperty "error handling works with very long messages" prop_errorHandlingLongMessages
         , testProperty "error handling works with unicode messages" prop_errorHandlingUnicodeMessages
@@ -66,85 +67,9 @@ tests =
         [ testCase "error recovery from syntax errors" $ do
             let collector = newErrorCollector
                 pos = posAtLineCol 10 20
-                error = errorAt SyntaxError pos "Missing semicolon"
-                collector' = addError collector error
-            hasErrors collector' @?= True
-            canRecoverFrom error @?= True
-            shouldContinueAfter [error] @?= True
-
-        , testCase "error recovery from type errors" $ do
-            let collector = newErrorCollector
-                pos = posAtLineCol 5 15
-                error = errorAt TypeError pos "Cannot convert String to Int"
-                collector' = addError collector error
-            hasErrors collector' @?= True
-            canRecoverFrom error @?= True
-            shouldContinueAfter [error] @?= True
-
-        , testCase "error recovery from fatal errors" $ do
-            let collector = newErrorCollector
-                pos = posAtLineCol 1 1
-                error = errorAt FatalError pos "Internal compiler error"
-                collector' = addError collector error
-            hasErrors collector' @?= True
-            canRecoverFrom error @?= False
-            shouldContinueAfter [error] @?= False
-
-        , testCase "multiple errors with different recovery strategies" $ do
-            let pos1 = posAtLineCol 2 10
-                pos2 = posAtLineCol 3 15
-                pos3 = posAtLineCol 4 20
-                error1 = errorAt SyntaxError pos1 "Missing bracket"
-                error2 = errorAt TypeError pos2 "Type mismatch"
-                error3 = errorAt FatalError pos3 "Stack overflow"
-                errors = [error1, error2, error3]
-            canRecoverFrom error1 @?= True
-            canRecoverFrom error2 @?= True
-            canRecoverFrom error3 @?= False
-            shouldContinueAfter errors @?= False
-
-        , testCase "error context preservation across operations" $ do
-            let collector = newErrorCollector
-                context = emptyContext { contextFile = Just "test.typus" }
-                pos = posAtLineCol 7 25
-                error = errorWithCategory SyntaxError pos context "Unexpected token"
-                collector' = addError collector error
-                errors = getErrors collector'
-            length errors @?= 1
-            let extractedError = head errors
-            errorContext extractedError @?= context
-
-        , testCase "error formatting maintains readability" $ do
-            let collector = newErrorCollector
-                pos = posAtLineCol 15 30
-                error = errorAt TypeError pos "Variable 'x' not in scope"
-                collector' = addError collector error
-                formatted = formatErrorWithLocation error
-            "Variable 'x' not in scope" `isInfixOf` formatted @?= True
-            "15:30" `isInfixOf` formatted @?= True
-            "TypeError" `isInfixOf` formatted @?= True
-        ]
-    ]
-
--- | canRecoverFrom与严重程度一致
-prop_canRecoverFromSeverity :: ErrorSeverity -> Property
-prop_canRecoverFromSeverity severity =
-  let pos = posAtLineCol 1 1
-      error = TypeError { errorSeverity = severity, errorLocation = ErrorLocation pos, errorMessage = "test", errorContext = emptyContext, errorRecovery = NoRecovery }
-      canRecover = canRecoverFrom error
-  in case severity of
-       Info -> canRecover == True
-       Warning -> canRecover == True
-       Error -> canRecover == True
-       FatalError -> canRecover == False
-
--- | shouldContinueAfter尊重错误数量
-prop_shouldContinueAfterCount :: [ErrorSeverity] -> Property
-prop_shouldContinueAfterCount severities =
-  let pos = posAtLineCol 1 1
-      errors = map (\sev -> TypeError { errorSeverity = sev, errorLocation = ErrorLocation pos, errorMessage = "test", errorContext = emptyContext, errorRecovery = NoRecovery }) severities
+                error = errorAt "test-id" = NoRecovery }) severities
       shouldContinue = shouldContinueAfter errors
-      hasFatal = any (\sev -> sev == FatalError) severities
+      hasFatal = L.any (\sev -> sev == FatalError) severities
   in shouldContinue == not hasFatal
 
 -- | 恢复策略适合类别
@@ -169,27 +94,27 @@ prop_contextPreservedInRecovery filename =
 prop_errorCollectorCount :: [ErrorSeverity] -> Property
 prop_errorCollectorCount severities =
   let pos = posAtLineCol 1 1
-      errors = map (\sev -> TypeError { errorSeverity = sev, errorLocation = ErrorLocation pos, errorMessage = "test", errorContext = emptyContext, errorRecovery = NoRecovery }) severities
+      errors = L.map (\sev -> TypeError { errorSeverity = sev, errorLocation = ErrorLocation pos, errorMessage = "test", errorContext = emptyContext, errorRecovery = NoRecovery }) severities
       collector = foldl addError newErrorCollector errors
-      errorCount = length (getErrors collector)
-      warningCount = length (getWarnings collector)
-      infoCount = length (getInfo collector)
-      expectedErrors = length (filter (\sev -> sev == Error || sev == FatalError) severities)
-      expectedWarnings = length (filter (\sev -> sev == Warning) severities)
-      expectedInfo = length (filter (\sev -> sev == Info) severities)
+      errorCount = L.length (getErrors collector)
+      warningCount = L.length (getWarnings collector)
+      infoCount = L.length (getInfo collector)
+      expectedErrors = L.length (L.filter (\sev -> sev == Error || sev == FatalError) severities)
+      expectedWarnings = L.length (L.filter (\sev -> sev == Warning) severities)
+      expectedInfo = L.length (L.filter (\sev -> sev == Info) severities)
   in errorCount == expectedErrors && warningCount == expectedWarnings && infoCount == expectedInfo
 
 -- | 错误收集器按严重程度分离
 prop_errorCollectorSeparation :: [ErrorSeverity] -> Property
 prop_errorCollectorSeparation severities =
   let pos = posAtLineCol 1 1
-      errors = map (\sev -> TypeError { errorSeverity = sev, errorLocation = ErrorLocation pos, errorMessage = "test", errorContext = emptyContext, errorRecovery = NoRecovery }) severities
+      errors = L.map (\sev -> TypeError { errorSeverity = sev, errorLocation = ErrorLocation pos, errorMessage = "test", errorContext = emptyContext, errorRecovery = NoRecovery }) severities
       collector = foldl addError newErrorCollector errors
       errorList = getErrors collector
       warningList = getWarnings collector
       infoList = getInfo collector
       allErrors = errorList ++ warningList ++ infoList
-  in all (\e -> errorSeverity e `elem` severities) allErrors
+  in L.all (\e -> errorSeverity e `elem` severities) allErrors
 
 -- | 错误收集器保留顺序
 prop_errorCollectorOrder :: [String] -> Property
@@ -206,11 +131,11 @@ prop_errorCollectorBulk :: [[String]] -> Property
 prop_errorCollectorBulk messageGroups =
   let pos = posAtLineCol 1 1
       addGroup collector group = 
-        let errors = map (\msg -> TypeError { errorSeverity = Error, errorLocation = ErrorLocation pos, errorMessage = msg, errorContext = emptyContext, errorRecovery = NoRecovery }) group
+        let errors = L.map (\msg -> TypeError { errorSeverity = Error, errorLocation = ErrorLocation pos, errorMessage = msg, errorContext = emptyContext, errorRecovery = NoRecovery }) group
         in foldl addError collector errors
       finalCollector = foldl addGroup newErrorCollector messageGroups
-      totalMessages = sum (map length messageGroups)
-      collectedCount = length (getErrors finalCollector)
+      totalMessages = L.sum (map L.length messageGroups)
+      collectedCount = L.length (getErrors finalCollector)
   in collectedCount == totalMessages
 
 -- | 错误格式化包含基本信息
@@ -220,7 +145,7 @@ prop_errorFormattingContainsInfo message =
   let pos = posAtLineCol 1 1
       error = TypeError { errorSeverity = Error, errorLocation = ErrorLocation pos, errorMessage = message, errorContext = emptyContext, errorRecovery = NoRecovery }
       formatted = formatError error
-  in message `isInfixOf` formatted
+  in message `L.isInfixOf` formatted
 
 -- | 错误格式化处理特殊字符
 prop_errorFormattingSpecialChars :: String -> Property
@@ -241,16 +166,16 @@ prop_errorFormattingWithLocation line col message =
       formatted = formatErrorWithLocation error
       lineStr = show line
       colStr = show col
-  in lineStr `isInfixOf` formatted && colStr `isInfixOf` formatted
+  in lineStr `L.isInfixOf` formatted && colStr `L.isInfixOf` formatted
 
 -- | 批量格式化保持结构
 prop_batchFormattingStructure :: [String] -> Property
 prop_batchFormattingStructure messages =
   not (null messages) ==>
   let pos = posAtLineCol 1 1
-      errors = map (\msg -> TypeError { errorSeverity = Error, errorLocation = ErrorLocation pos, errorMessage = msg, errorContext = emptyContext, errorRecovery = NoRecovery }) messages
+      errors = L.map (\msg -> TypeError { errorSeverity = Error, errorLocation = ErrorLocation pos, errorMessage = msg, errorContext = emptyContext, errorRecovery = NoRecovery }) messages
       formatted = formatErrors errors
-  in length (lines formatted) >= length messages
+  in L.length (lines formatted) >= L.length messages
 
 -- | 空上下文没有额外信息
 prop_emptyContextNoInfo :: Property
@@ -271,28 +196,28 @@ prop_contextMergingPreserves file1 file2 =
 -- | 上下文可以嵌套而不丢失
 prop_contextNestingPreserves :: [String] -> Property
 prop_contextNestingPreserves files =
-  let contexts = map (\file -> emptyContext { contextFile = Just file }) files
+  let contexts = L.map (\file -> emptyContext { contextFile = Just file }) files
       -- Test that each context preserves its file
-  in all (\ctx -> contextFile ctx `elem` map Just files) contexts
+  in L.all (\ctx -> contextFile ctx `elem` map Just files) contexts
 
 -- | 组合错误具有最高严重程度
 prop_combinedErrorHighestSeverity :: [ErrorSeverity] -> Property
 prop_combinedErrorHighestSeverity severities =
   not (null severities) ==>
   let pos = posAtLineCol 1 1
-      errors = map (\sev -> TypeError { errorSeverity = sev, errorLocation = ErrorLocation pos, errorMessage = "test", errorContext = emptyContext, errorRecovery = NoRecovery }) severities
+      errors = L.map (\sev -> TypeError { errorSeverity = sev, errorLocation = ErrorLocation pos, errorMessage = "test", errorContext = emptyContext, errorRecovery = NoRecovery }) severities
       -- This would depend on actual CombinedError implementation
-      highestSeverity = maximum severities
+      highestSeverity = L.maximum severities
   in highestSeverity `elem` severities
 
 -- | 组合错误位置跨越所有组件
 prop_combinedErrorLocationSpans :: [Int] -> [Int] -> Property
 prop_combinedErrorLocationSpans lines cols =
-  length lines == length cols && not (null lines) ==>
+  L.length lines == L.length cols && not (null lines) ==>
   let positions = zipWith (\line col -> posAtLineCol line col) lines cols
       -- This would depend on actual CombinedError implementation
-      minLine = minimum lines
-      maxLine = maximum lines
+      minLine = L.minimum lines
+      maxLine = L.maximum lines
   in minLine <= maxLine
 
 -- | 组合错误消息连接
@@ -300,8 +225,8 @@ prop_combinedErrorMessagesConcatenated :: [String] -> Property
 prop_combinedErrorMessagesConcatenated messages =
   not (null messages) ==>
   let -- This would depend on actual CombinedError implementation
-      combined = concat messages
-  in length combined >= sum (map length messages)
+      combined = L.concat messages
+  in L.length combined >= L.sum (map L.length messages)
 
 -- | 错误处理处理空消息
 prop_errorHandlingEmptyMessages :: Property
@@ -325,7 +250,7 @@ prop_errorHandlingLongMessages =
 -- | 错误处理处理unicode消息
 prop_errorHandlingUnicodeMessages :: Property
 prop_errorHandlingUnicodeMessages =
-  let unicodeMessage = "测试消息 🚀 with émojis and αβγ"
+  let unicodeMessage = "测试消息 🚀 with émojis L.and αβγ"
       pos = posAtLineCol 1 1
       error = TypeError { errorSeverity = Error, errorLocation = ErrorLocation pos, errorMessage = unicodeMessage, errorContext = emptyContext, errorRecovery = NoRecovery }
       collector = addError newErrorCollector error

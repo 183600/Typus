@@ -9,6 +9,7 @@ import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify
 import ErrorHandler (handleError, ErrorContext(..), ErrorSeverity(..))
 import Compiler.Errors (CompilerError(..))
 import Utils (trim)
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 -- | 测试用例7: 错误处理器测试
@@ -18,24 +19,24 @@ tests =
     [ testCase "error handler formats syntax errors correctly" $ do
         let error = CompilerError "syntax error" ErrorContext
             formatted = handleError error
-        "syntax error" `isInfixOf` formatted @?= True
+        "syntax error" `L.isInfixOf` formatted @?= True
 
     , testCase "error handler provides context for type errors" $ do
         let error = CompilerError "type mismatch" ErrorContext
             formatted = handleError error
-        "type" `isInfixOf` formatted @?= True
+        "type" `L.isInfixOf` formatted @?= True
 
     , testCase "error handler handles multiple errors" $ do
         let errors = [ CompilerError "first error" ErrorContext
                      , CompilerError "second error" ErrorContext
                      ]
-            formatted = handleError (head errors)  -- Handle first error
-        "first error" `isInfixOf` formatted @?= True
+            formatted = handleError (L.head errors)  -- Handle first error
+        "first error" `L.isInfixOf` formatted @?= True
 
     , testCase "error handler includes source location information" $ do
         let error = CompilerError "error at line 5" ErrorContext
             formatted = handleError error
-        length formatted @?= 20  -- Basic check that output is not empty
+        L.length formatted @?= 20  -- Basic check that output is not empty
 
     -- QuickCheck properties
     , fastProperty "error handling is deterministic" prop_error_handling_deterministic
@@ -59,7 +60,7 @@ prop_error_messages_contain_text errorMsg =
   not (null errorMsg) ==> 
   let error = CompilerError errorMsg ErrorContext
       formatted = handleError error
-  in property $ errorMsg `isInfixOf` formatted
+  in property $ errorMsg `L.isInfixOf` formatted
 
 -- Property: error handler never returns empty string for valid error
 prop_error_handler_never_empty :: String -> Property

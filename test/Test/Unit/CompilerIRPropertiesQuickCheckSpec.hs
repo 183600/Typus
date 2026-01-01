@@ -3,9 +3,10 @@ module Test.Unit.CompilerIRPropertiesQuickCheckSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property)
 import Parser (parseTypus, TypusFile(..))
-import Compiler (compile, CompilerIR(..))
-import Compiler.IR (IRStatement(..), IRExpression(..))
+import Compiler (compile)
+import Compiler.IR (SourceIR(..), SemanticIR(..), GoIR(..), IRStatement(..), IRExpression(..))
 import Data.Either (isLeft, isRight)
+import qualified Data.List as L
 import Data.List (length)
 
 -- ============================================================================
@@ -34,7 +35,7 @@ prop_ir_preserves_structure content =
       let compileResult = compile tf
       in case compileResult of
         Left _ -> True  -- May fail compilation
-        Right ir -> length (irStatements ir) >= 0
+        Right ir -> L.length (irStatements ir) >= 0
 
 -- | IR statements should have valid source location information
 prop_ir_statements_valid_locations :: String -> Property
@@ -46,9 +47,9 @@ prop_ir_statements_valid_locations content =
       let compileResult = compile tf
       in case compileResult of
         Left _ -> True
-        Right ir -> all statementHasValidLocation (irStatements ir)
+        Right ir -> L.all statementHasValidLocation (irStatements ir)
 
--- | IR expressions should be well-formed and consistent
+-- | IR expressions should be well-formed L.and consistent
 prop_ir_expressions_well_formed :: String -> Property
 prop_ir_expressions_well_formed content = 
   let parseResult = parseTypus content
@@ -58,7 +59,7 @@ prop_ir_expressions_well_formed content =
       let compileResult = compile tf
       in case compileResult of
         Left _ -> True
-        Right ir -> all expressionWellFormed (concatMap extractExpressions (irStatements ir))
+        Right ir -> L.all expressionWellFormed (concatMap extractExpressions (irStatements ir))
 
 -- | IR generation should be deterministic for the same input
 prop_ir_generation_deterministic :: String -> Property
@@ -70,13 +71,13 @@ prop_ir_generation_deterministic content =
       let compileResult1 = compile tf
           compileResult2 = compile tf
       in case (compileResult1, compileResult2) of
-        (Right ir1, Right ir2) -> length (irStatements ir1) === length (irStatements ir2)
+        (Right ir1, Right ir2) -> L.length (irStatements ir1) === L.length (irStatements ir2)
         _ -> True  -- If either fails, consistency is not required
 
 -- | IR size should correlate reasonably with input size
 prop_ir_size_correlation :: String -> Int -> Property
 prop_ir_size_correlation base multiplier = 
-  let repeated = concat (replicate multiplier base)
+  let repeated = L.concat (replicate multiplier base)
       parseResult = parseTypus repeated
   in case parseResult of
     Left _ -> True
@@ -85,8 +86,8 @@ prop_ir_size_correlation base multiplier =
       in case compileResult of
         Left _ -> True
         Right ir -> 
-          let irSize = length (irStatements ir)
-              inputSize = length repeated
+          let irSize = L.length (irStatements ir)
+              inputSize = L.length repeated
           in irSize <= inputSize + 100  -- IR should not be dramatically larger
 
 -- | IR generation should handle edge cases gracefully
@@ -98,11 +99,11 @@ prop_ir_edge_cases =
         , "// Comment only\n"  -- Only comments
         , "\n\n\n"  -- Only newlines
         ]
-      results = map (\content -> 
+      results = L.map (\content -> 
         case parseTypus content of
           Left _ -> Left "parse failed"
           Right tf -> compile tf) edgeCases
-  in all (\result -> case result of
+  in L.all (\result -> case result of
         Left _ -> True  -- Failing is acceptable for edge cases
         Right _ -> True) results
 
@@ -116,7 +117,7 @@ prop_ir_type_information content =
       let compileResult = compile tf
       in case compileResult of
         Left _ -> True
-        Right ir -> all statementHasValidType (irStatements ir)
+        Right ir -> L.all statementHasValidType (irStatements ir)
 
 -- | IR compilation should preserve program semantics
 prop_ir_semantics_preserved :: String -> Property

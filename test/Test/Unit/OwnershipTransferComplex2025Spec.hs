@@ -3,6 +3,7 @@
 module Test.Unit.OwnershipTransferComplex2025Spec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, choose, listOf, elements)
 import Test.Tasty.HUnit (testCase, (@=?))
 
@@ -54,11 +55,11 @@ propOwnershipTransferPreservesUniqueness from to =
 -- Property 2: Transfer creates valid ownership chain
 propTransferCreatesValidChain :: [MockVariable] -> Bool
 propTransferCreatesValidChain vars =
-  length vars >= 2 ==> 
+  L.length vars >= 2 ==> 
   let transfers = createTransferChain vars
       result = foldl mockTransferEither (Right vars) transfers
   in case result of
-       Right finalVars -> all isValidOwnershipChain (zip finalVars (tail finalVars))
+       Right finalVars -> L.all isValidOwnershipChain (zip finalVars (L.tail finalVars))
        Left _ -> False
 
 -- Property 3: Borrowing rules enforced during transfer
@@ -136,7 +137,7 @@ propCircularOwnershipDetection var1 var2 =
                  Left _ -> Left "First transfer failed"
   in case result2 of
        Right _ -> False  -- Should not allow circular transfer
-       Left _ -> True    -- Should detect and prevent circular ownership
+       Left _ -> True    -- Should detect L.and prevent circular ownership
 
 -- Test Case 8: Partial ownership transfer
 testPartialOwnershipTransfer :: IO ()
@@ -200,7 +201,7 @@ canMockTransfer transfer =
 mockTransferEither :: Either String [MockVariable] -> MockOwnershipTransfer -> Either String [MockVariable]
 mockTransferEither (Right vars) transfer =
   case mockTransferOwnership transfer of
-    Right (newFrom, newTo) -> Right $ map (\v -> 
+    Right (newFrom, newTo) -> Right $ L.map (\v -> 
       if varName v == varName newFrom then newFrom
       else if varName v == varName newTo then newTo
       else v) vars
@@ -210,7 +211,7 @@ mockTransferEither (Left err) _ = Left err
 createTransferChain :: [MockVariable] -> [MockOwnershipTransfer]
 createTransferChain vars = 
   zipWith (\from to -> MockOwnershipTransfer from to Unique (spanBetween (varLocation from) (varLocation to))) 
-           vars (tail vars)
+           vars (L.tail vars)
 
 isValidOwnershipChain :: (MockVariable, MockVariable) -> Bool
 isValidOwnershipChain (from, to) =

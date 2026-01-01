@@ -10,6 +10,7 @@
 module Test.Unit.CompilerIdempotentConsistencySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertBool, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -48,9 +49,9 @@ import SourceLocation
 import Data.List (sort, nub)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 
--- | Compiler idempotency and consistency properties
+-- | Compiler idempotency L.and consistency properties
 tests :: TestTree
-tests = testGroup "Compiler idempotency and consistency"
+tests = testGroup "Compiler idempotency L.and consistency"
   [ -- Basic compilation consistency
     testGroup "Basic compilation consistency"
       [ testCase "empty input produces consistent result" $ do
@@ -152,8 +153,8 @@ prop_successful_compilation_idempotent input =
 
 prop_failed_compilation_consistent :: String -> Property
 prop_failed_compilation_consistent input =
-  let hasErrorIndicators = any (`isInfixOf` input) ["func", "var", "const", "type", "import"]
-      hasInvalidSyntax = any (`isInfixOf` input) ["{", "}", "(", ")", "[", "]"]
+  let hasErrorIndicators = L.any (`L.isInfixOf` input) ["func", "var", "const", "type", "import"]
+      hasInvalidSyntax = L.any (`L.isInfixOf` input) ["{", "}", "(", ")", "[", "]"]
   in hasErrorIndicators && hasInvalidSyntax ==>
      let result1 = compile input
          result2 = compile input
@@ -204,7 +205,7 @@ prop_pipeline_preserves_invariants input =
   in case result of
        Right compileResult -> 
          let invariants = checkInvariants compileResult
-         in property $ all id invariants
+         in property $ L.all id invariants
        Left _ -> property $ True
 
 -- Phase consistency properties
@@ -259,8 +260,8 @@ prop_codegeneration_deterministic input =
 
 prop_error_locations_consistent :: String -> Property
 prop_error_locations_consistent input =
-  let hasErrorIndicators = any (`isInfixOf` input) ["func", "var", "const", "type"]
-      hasInvalidSyntax = any (`isInfixOf` input) ["{", "}", "(", ")"]
+  let hasErrorIndicators = L.any (`L.isInfixOf` input) ["func", "var", "const", "type"]
+      hasInvalidSyntax = L.any (`L.isInfixOf` input) ["{", "}", "(", ")"]
   in hasErrorIndicators && hasInvalidSyntax ==>
      let result1 = compile input
          result2 = compile input
@@ -273,8 +274,8 @@ prop_error_locations_consistent input =
 
 prop_error_messages_consistent :: String -> Property
 prop_error_messages_consistent input =
-  let hasErrorIndicators = any (`isInfixOf` input) ["func", "var", "const", "type"]
-      hasInvalidSyntax = any (`isInfixOf` input) ["{", "}", "(", ")"]
+  let hasErrorIndicators = L.any (`L.isInfixOf` input) ["func", "var", "const", "type"]
+      hasInvalidSyntax = L.any (`L.isInfixOf` input) ["{", "}", "(", ")"]
   in hasErrorIndicators && hasInvalidSyntax ==>
      let result1 = compile input
          result2 = compile input
@@ -287,8 +288,8 @@ prop_error_messages_consistent input =
 
 prop_error_recovery_preserves_state :: String -> Property
 prop_error_recovery_preserves_state input =
-  let hasErrorIndicators = any (`isInfixOf` input) ["func", "var", "const", "type"]
-      hasInvalidSyntax = any (`isInfixOf` input) ["{", "}", "(", ")"]
+  let hasErrorIndicators = L.any (`L.isInfixOf` input) ["func", "var", "const", "type"]
+      hasInvalidSyntax = L.any (`L.isInfixOf` input) ["{", "}", "(", ")"]
   in hasErrorIndicators && hasInvalidSyntax ==>
      let result = compile input
      in case result of
@@ -299,8 +300,8 @@ prop_error_recovery_preserves_state input =
 
 prop_multiple_errors_ordered :: String -> Property
 prop_multiple_errors_ordered input =
-  let hasMultipleErrorIndicators = length (filter (`isInfixOf` input) ["func", "var", "const", "type"]) > 1
-      hasInvalidSyntax = any (`isInfixOf` input) ["{", "}", "(", ")"]
+  let hasMultipleErrorIndicators = L.length (L.filter (`L.isInfixOf` input) ["func", "var", "const", "type"]) > 1
+      hasInvalidSyntax = L.any (`L.isInfixOf` input) ["{", "}", "(", ")"]
   in hasMultipleErrorIndicators && hasInvalidSyntax ==>
      let result = compile input
      in case result of
@@ -351,7 +352,7 @@ prop_optimization_order_independent input =
 
 prop_compilation_time_reasonable :: String -> Property
 prop_compilation_time_reasonable input =
-  let reasonableSize = length input < 10000
+  let reasonableSize = L.length input < 10000
   in reasonableSize ==> 
      let result = compile input
      in property $ True -- Should complete quickly for reasonable input
@@ -359,7 +360,7 @@ prop_compilation_time_reasonable input =
 prop_memory_usage_bounded :: String -> Int -> Property
 prop_memory_usage_bounded content multiplier =
   multiplier >= 0 && multiplier <= 10 ==> -- Limit for testing
-  let largeInput = concat (replicate multiplier content)
+  let largeInput = L.concat (replicate multiplier content)
       result = compile largeInput
   in property $ True -- Memory usage should be bounded
 

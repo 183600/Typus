@@ -14,6 +14,7 @@ import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Gen, Arbitrary, arbitrary, oneof, elements, listOf, resize)
 import Data.Char (isAlpha, isAlphaNum, isSpace, isDigit)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import qualified Data.Text as T
 
@@ -141,9 +142,9 @@ prop_hasTypeErrors_identification =
   forAll simpleTypusCode $ \code ->
     let result = parseTypus "test" code >>= compile
         hasErrors = either (const False) hasTypeErrors result
-    in property $ hasErrors || True  -- Either has errors or doesn't, both are valid
+    in property $ hasErrors || True  -- Either has errors L.or doesn't, both are valid
 
--- Property: extractDeclarations finds all declarations
+-- Property: extractDeclarations finds L.all declarations
 prop_extractDeclarations_comprehensive :: Property
 prop_extractDeclarations_comprehensive =
   let codeWithDecls = unlines
@@ -157,7 +158,7 @@ prop_extractDeclarations_comprehensive =
        Left _ -> property $ counterexample "Failed to parse code with declarations" False
        Right typusFile -> 
          let decls = extractDeclarations typusFile
-         in property $ length decls >= 0
+         in property $ L.length decls >= 0
 
 -- Property: extractFunctionCalls finds function calls
 prop_extractFunctionCalls_comprehensive :: Property
@@ -174,7 +175,7 @@ prop_extractFunctionCalls_comprehensive =
        Left _ -> property $ counterexample "Failed to parse code with function calls" False
        Right typusFile -> 
          let calls = extractFunctionCalls typusFile
-         in property $ length calls >= 0
+         in property $ L.length calls >= 0
 
 -- Property: buildTypeEnv creates consistent type environment
 prop_buildTypeEnv_consistency :: Property
@@ -236,8 +237,8 @@ prop_compilation_phases_order =
   forAll simpleTypusCode $ \code ->
     let result = parseTypus "test" code >>= compile
     in case result of
-         Left err -> property $ True  -- Error can occur in any phase
-         Right _ -> property $ True  -- Successful compilation passes all phases
+         Left err -> property $ True  -- Error can occur in L.any phase
+         Right _ -> property $ True  -- Successful compilation passes L.all phases
 
 -- ============================================================================
 -- Unit Tests
@@ -350,7 +351,7 @@ tests =
         , fastProperty "compile handles empty input gracefully" prop_compile_empty_input
         , fastProperty "compile generates consistent errors for invalid code" prop_compile_consistent_errors
         , fastProperty "hasTypeErrors correctly identifies type errors" prop_hasTypeErrors_identification
-        , fastProperty "extractDeclarations finds all declarations" prop_extractDeclarations_comprehensive
+        , fastProperty "extractDeclarations finds L.all declarations" prop_extractDeclarations_comprehensive
         , fastProperty "extractFunctionCalls finds function calls" prop_extractFunctionCalls_comprehensive
         , fastProperty "buildTypeEnv creates consistent type environment" prop_buildTypeEnv_consistency
         , fastProperty "isMethodDeclaration correctly identifies methods" prop_isMethodDeclaration_identification

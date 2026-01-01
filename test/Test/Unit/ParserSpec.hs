@@ -1,6 +1,8 @@
 module Test.Unit.ParserSpec (tests) where
 
-import Data.List (find, isInfixOf)
+import Data.List (isInfixOf)
+import Data.List (find)
+import qualified Data.List as L
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ((@?=), assertBool, assertFailure, testCase)
 
@@ -87,7 +89,7 @@ tests =
                   Nothing -> assertFailure "expected dependent types flag"
                   Just loc -> locatedValue loc @?= True
                 bdConstraints directives @?= Nothing
-                assertBool "block content should include println call" ("println(\"inside\")" `isInfixOf` content)
+                assertBool "block content should include println call" ("println(\"inside\")" `L.isInfixOf` content)
                 posLine (spanStart blkSpan) @?= 4
                 posLine (spanEnd blkSpan) @?= 5
 
@@ -118,7 +120,7 @@ tests =
                 case bdOwnership directives of
                   Nothing -> assertFailure "expected ownership directive"
                   Just loc -> locatedValue loc @?= True
-                assertBool "ownership block should include println call" ("println(\"ownership block\")" `isInfixOf` content)
+                assertBool "ownership block should include println call" ("println(\"ownership block\")" `L.isInfixOf` content)
             case constraintsBlock of
               Nothing -> assertFailure "expected README constraints block"
               Just CodeBlock { cbDirectives = directives, cbContent = content } -> do
@@ -129,7 +131,7 @@ tests =
                   Nothing -> assertFailure "expected dependent types alias"
                   Just loc -> locatedValue loc @?= True
                 bdConstraints directives @?= bdDependentTypes directives
-                assertBool "constraints block should include println call" ("println(\"dependent block\")" `isInfixOf` content)
+                assertBool "constraints block should include println call" ("println(\"dependent block\")" `L.isInfixOf` content)
 
     , testCase "ignores trailing whitespace-only files" $ do
         let source :: String; source = "\n   \n\n"
@@ -161,7 +163,7 @@ tests =
               , "func main() {}"
               ]
         case parseTypus source of
-          Left err -> assertBool ("error should mention unknown directive: " <> err) ("Unknown file directive" `isInfixOf` err)
+          Left err -> assertBool ("error should mention unknown directive: " <> err) ("Unknown file directive" `L.isInfixOf` err)
           Right _ -> assertFailure "expected parse failure for unknown directive"
 
     , testCase "requires directive blocks to close" $ do
@@ -173,7 +175,7 @@ tests =
               , "}"
               ]
         case parseTypus source of
-          Left err -> assertBool ("error should mention missing closing brace: " <> err) ("Unclosed directive block" `isInfixOf` err)
+          Left err -> assertBool ("error should mention missing closing brace: " <> err) ("Unclosed directive block" `L.isInfixOf` err)
           Right _ -> assertFailure "expected parse failure for unterminated directive block"
 
     -- Additional test cases
@@ -188,7 +190,7 @@ tests =
         case parseTypus source of
           Left err -> assertFailure $ "parseTypus failed: " <> err
           Right typusFile -> do
-            assertBool "should parse complex function signatures" (not $ null $ tfBlocks typusFile)
+            assertBool "should parse complex function signatures" (not $ L.null $ tfBlocks typusFile)
 
     , testCase "handles interface definitions" $ do
         let source = unlines
@@ -202,7 +204,7 @@ tests =
         case parseTypus source of
           Left err -> assertFailure $ "parseTypus failed: " <> err
           Right typusFile -> do
-            assertBool "should parse interface definitions" (not $ null $ tfBlocks typusFile)
+            assertBool "should parse interface definitions" (not $ L.null $ tfBlocks typusFile)
 
     , testCase "parses struct definitions with multiple fields" $ do
         let source = unlines
@@ -217,7 +219,7 @@ tests =
         case parseTypus source of
           Left err -> assertFailure $ "parseTypus failed: " <> err
           Right typusFile -> do
-            assertBool "should parse struct definitions" (not $ null $ tfBlocks typusFile)
+            assertBool "should parse struct definitions" (not $ L.null $ tfBlocks typusFile)
 
     , testCase "handles method definitions" $ do
         let source = unlines
@@ -236,7 +238,7 @@ tests =
         case parseTypus source of
           Left err -> assertFailure $ "parseTypus failed: " <> err
           Right typusFile -> do
-            assertBool "should parse method definitions" (not $ null $ tfBlocks typusFile)
+            assertBool "should parse method definitions" (not $ L.null $ tfBlocks typusFile)
 
     , testCase "parses channel operations" $ do
         let source = unlines
@@ -256,9 +258,9 @@ tests =
         case parseTypus source of
           Left err -> assertFailure $ "parseTypus failed: " <> err
           Right typusFile -> do
-            assertBool "should parse channel operations" (not $ null $ tfBlocks typusFile)
+            assertBool "should parse channel operations" (not $ L.null $ tfBlocks typusFile)
 
-    , testCase "handles go statements and goroutines" $ do
+    , testCase "handles go statements L.and goroutines" $ do
         let source = unlines
               [ "package main"
               , "func worker() {"
@@ -274,7 +276,7 @@ tests =
         case parseTypus source of
           Left err -> assertFailure $ "parseTypus failed: " <> err
           Right typusFile -> do
-            assertBool "should parse goroutines" (not $ null $ tfBlocks typusFile)
+            assertBool "should parse goroutines" (not $ L.null $ tfBlocks typusFile)
 
     , testCase "parses defer statements" $ do
         let source = unlines
@@ -290,7 +292,7 @@ tests =
         case parseTypus source of
           Left err -> assertFailure $ "parseTypus failed: " <> err
           Right typusFile -> do
-            assertBool "should parse defer statements" (not $ null $ tfBlocks typusFile)
+            assertBool "should parse defer statements" (not $ L.null $ tfBlocks typusFile)
 
     , testCase "handles complex literals" $ do
         let source = unlines
@@ -307,15 +309,15 @@ tests =
         case parseTypus source of
           Left err -> assertFailure $ "parseTypus failed: " <> err
           Right typusFile -> do
-            assertBool "should parse complex literals" (not $ null $ tfBlocks typusFile)
+            assertBool "should parse complex literals" (not $ L.null $ tfBlocks typusFile)
 
-    , testCase "parses generic types and functions" $ do
+    , testCase "parses generic types L.and functions" $ do
         let source = unlines
               [ "package main"
-              , "type Container[T any] struct {"
+              , "type Container[T L.any] struct {"
               , "    value T"
               , "}"
-              , "func New[T any](v T) Container[T] {"
+              , "func New[T L.any](v T) Container[T] {"
               , "    return Container[T]{value: v}"
               , "}"
               , "func (c Container[T]) Get() T {"
@@ -326,7 +328,7 @@ tests =
         case parseTypus source of
           Left err -> assertFailure $ "parseTypus failed: " <> err
           Right typusFile -> do
-            assertBool "should parse generic types" (not $ null $ tfBlocks typusFile)
+            assertBool "should parse generic types" (not $ L.null $ tfBlocks typusFile)
 
     , testCase "handles embedded structs" $ do
         let source = unlines
@@ -343,7 +345,7 @@ tests =
         case parseTypus source of
           Left err -> assertFailure $ "parseTypus failed: " <> err
           Right typusFile -> do
-            assertBool "should parse embedded structs" (not $ null $ tfBlocks typusFile)
+            assertBool "should parse embedded structs" (not $ L.null $ tfBlocks typusFile)
 
     , testCase "parses import statements" $ do
         let source = unlines
@@ -361,7 +363,7 @@ tests =
         case parseTypus source of
           Left err -> assertFailure $ "parseTypus failed: " <> err
           Right typusFile -> do
-            assertBool "should parse import statements" (not $ null $ tfBlocks typusFile)
+            assertBool "should parse import statements" (not $ L.null $ tfBlocks typusFile)
 
     , testCase "handles multiple package declarations" $ do
         let source = unlines
@@ -373,7 +375,7 @@ tests =
           Left _ -> return ()  -- Expected to fail
           Right _ -> assertFailure "expected parsing to fail with multiple package declarations"
 
-    , testCase "parses constants and variables" $ do
+    , testCase "parses constants L.and variables" $ do
         let source = unlines
               [ "package main"
               , "const PI = 3.14159"
@@ -392,5 +394,5 @@ tests =
         case parseTypus source of
           Left err -> assertFailure $ "parseTypus failed: " <> err
           Right typusFile -> do
-            assertBool "should parse constants and variables" (not $ null $ tfBlocks typusFile)
+            assertBool "should parse constants L.and variables" (not $ L.null $ tfBlocks typusFile)
     ]

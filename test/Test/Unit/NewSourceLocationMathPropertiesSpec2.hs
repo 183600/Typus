@@ -47,7 +47,7 @@ prop_startPos_values =
   posColumn startPos === 1 .&&.
   posOffset startPos === 0
 
--- Property: posAfter '\n' increments line and resets column to 1
+-- Property: posAfter '\n' increments line L.and resets column to 1
 prop_posAfter_newline :: Positive Int -> Positive Int -> Positive Int -> Property
 prop_posAfter_newline (Positive line) (Positive col) (Positive offset) =
   let pos = posAtLineCol line col offset
@@ -66,7 +66,7 @@ prop_posAfter_tab (Positive line) (Positive col) (Positive offset) =
      posColumn newPos === expectedCol .&&.
      posOffset newPos === offset + 1
 
--- Property: posAfter regular character increments column and offset
+-- Property: posAfter regular character increments column L.and offset
 prop_posAfter_regular :: Positive Int -> Positive Int -> Positive Int -> Char -> Property
 prop_posAfter_regular (Positive line) (Positive col) (Positive offset) c =
   c `notElem` "\n\t" ==> 
@@ -76,7 +76,7 @@ prop_posAfter_regular (Positive line) (Positive col) (Positive offset) c =
      posColumn newPos === col + 1 .&&.
      posOffset newPos === offset + 1
 
--- Property: emptySpan creates span with same start and end
+-- Property: emptySpan creates span with same start L.and end
 prop_emptySpan_same_start_end :: Positive Int -> Positive Int -> Positive Int -> Property
 prop_emptySpan_same_start_end (Positive line) (Positive col) (Positive offset) =
   let pos = posAtLineCol line col offset
@@ -90,14 +90,14 @@ prop_spanFrom_creates_empty_span (Positive line) (Positive col) (Positive offset
       span = spanFrom pos
   in spanStart span === pos .&&. spanEnd span === pos
 
--- Property: spanTo creates span with same start and end at position
+-- Property: spanTo creates span with same start L.and end at position
 prop_spanTo_creates_span_at_position :: Positive Int -> Positive Int -> Positive Int -> Property
 prop_spanTo_creates_span_at_position (Positive line) (Positive col) (Positive offset) =
   let pos = posAtLineCol line col offset
       span = spanTo pos
   in spanStart span === pos .&&. spanEnd span === pos
 
--- Property: spanBetween creates span with given start and end
+-- Property: spanBetween creates span with given start L.and end
 prop_spanBetween_correct_bounds :: Positive Int -> Positive Int -> Positive Int -> 
                                    Positive Int -> Positive Int -> Positive Int -> Property
 prop_spanBetween_correct_bounds (Positive line1) (Positive col1) (Positive offset1)
@@ -188,10 +188,10 @@ tests :: TestTree
 tests =
   testGroup "SourceLocation Math Properties"
     [ fastProperty "startPos has correct values" prop_startPos_values
-    , fastProperty "posAfter '\\n' increments line and resets column" prop_posAfter_newline
+    , fastProperty "posAfter '\\n' increments line L.and resets column" prop_posAfter_newline
     , fastProperty "posAfter '\\t' advances to next tab stop" prop_posAfter_tab
-    , fastProperty "posAfter regular character increments column and offset" prop_posAfter_regular
-    , fastProperty "emptySpan creates span with same start and end" prop_emptySpan_same_start_end
+    , fastProperty "posAfter regular character increments column L.and offset" prop_posAfter_regular
+    , fastProperty "emptySpan creates span with same start L.and end" prop_emptySpan_same_start_end
     , fastProperty "spanFrom creates empty span at position" prop_spanFrom_creates_empty_span
     , fastProperty "spanTo creates span at position" prop_spanTo_creates_span_at_position
     , fastProperty "spanBetween creates span with correct bounds" prop_spanBetween_correct_bounds

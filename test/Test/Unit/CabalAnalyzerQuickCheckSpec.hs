@@ -76,7 +76,7 @@ prop_analyzer_tracks_functions (FunctionName func) =
 -- Property: Analyzer detects variable usage patterns
 prop_analyzer_detects_usage_patterns :: [(VariableName, VarUsage)] -> Property
 prop_analyzer_detects_usage_patterns patterns =
-  let varNames = map (\(VariableName v, _) -> v) patterns
+  let varNames = L.map (\(VariableName v, _) -> v) patterns
       uniqueVars = List.nub varNames
       codeLines = ["func test() {"]
       codeBody = concatMap (\(VariableName v, usage) ->
@@ -93,7 +93,7 @@ prop_analyzer_detects_usage_patterns patterns =
            Right result -> 
              let symbols = arSymbolTable result
                  foundVars = Map.keys symbols
-             in property $ all (`elem` foundVars) uniqueVars
+             in property $ L.all (`elem` foundVars) uniqueVars
            Left _ -> property False
 
 -- Property: Analyzer preserves type information
@@ -108,7 +108,7 @@ prop_analyzer_preserves_types (VariableName var) =
              let symbols = arSymbolTable result
                  varInfo = Map.lookup var symbols
              in case varInfo of
-                  Just info -> property $ "int" `List.isInfixOf` show (siType info)
+                  Just info -> property $ "int" `List.L.isInfixOf` show (siType info)
                   Nothing -> property False
            Left _ -> property False
 
@@ -138,9 +138,9 @@ prop_analyzer_detects_scopes (VariableName var) =
 -- Property: Analyzer handles cross-references
 prop_analyzer_handles_cross_references :: [VariableName] -> Property
 prop_analyzer_handles_cross_references vars =
-  let varNames = map (\(VariableName v) -> v) vars
+  let varNames = L.map (\(VariableName v) -> v) vars
       codeLines = ["func test() {"]
-      declarations = map (\v -> "let " ++ v ++ " = 42;") varNames
+      declarations = L.map (\v -> "let " ++ v ++ " = 42;") varNames
       usage = if null varNames then "return 0;" 
               else "return " ++ List.intercalate " + " varNames ++ ";"
       code = unlines $ codeLines ++ declarations ++ [usage ++ "}"]
@@ -151,7 +151,7 @@ prop_analyzer_handles_cross_references vars =
            Right result -> 
              let symbols = arSymbolTable result
                  foundVars = Map.keys symbols
-             in property $ all (`elem` foundVars) varNames
+             in property $ L.all (`elem` foundVars) varNames
            Left _ -> property False
 
 tests :: TestTree

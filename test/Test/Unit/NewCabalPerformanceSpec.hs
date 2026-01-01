@@ -3,7 +3,9 @@ module Test.Unit.NewCabalPerformanceSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.QuickCheck (property, forAll, Gen, arbitrary, choose, listOf1, elements, Positive(..))
-import Data.List (isInfixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isInfixOf)
+import Data.List (sort, nub)
 import Data.Char (isLetter, isDigit)
 import Control.DeepSeq (NFData, force)
 import Criterion.Main (bench, bgroup, nf, whnf)
@@ -13,7 +15,7 @@ import Compiler
 import Parser
 import Utils
 
--- | Performance and optimization tests
+-- | Performance L.and optimization tests
 tests :: TestTree
 tests =
   testGroup "New Cabal Performance Tests"
@@ -28,7 +30,7 @@ tests =
               Left err -> @?= "Parse error" (show err)
               Right ast -> do
                 assertBool "Parsing should complete within reasonable time" (duration < 1.0)
-                length (lines ast) @?= 1000
+                L.length (lines ast) @?= 1000
 
         , testCase "nested structure parsing performance" $ do
             let nestedInput = generateNestedStructure 10
@@ -40,7 +42,7 @@ tests =
               Left err -> @?= "Parse error" (show err)
               Right ast -> do
                 assertBool "Nested parsing should complete within reasonable time" (duration < 0.5)
-                "func" `isInfixOf` ast @?= True
+                "func" `L.isInfixOf` ast @?= True
 
         , testCase "incremental parsing performance" $ do
             let chunks = ["x := 1\n", "y := 2\n", "z := x + y\n"]
@@ -49,7 +51,7 @@ tests =
                 endTime = getCurrentTime
                 duration = endTime - startTime
             assertBool "Incremental parsing should be fast" (duration < 0.1)
-            all isSuccess results @?= True
+            L.all isSuccess results @?= True
         ]
 
     , testGroup "Compilation performance"
@@ -63,7 +65,7 @@ tests =
               Left err -> @?= "Compile error" (show err)
               Right output -> do
                 assertBool "Compilation should complete within reasonable time" (duration < 2.0)
-                length output > 0 @?= True
+                L.length output > 0 @?= True
 
         , testCase "optimization passes performance" $ do
             let program = generateOptimizableProgram 100
@@ -75,7 +77,7 @@ tests =
               Left err -> @?= "Compile error" (show err)
               Right output -> do
                 assertBool "Optimization should complete within reasonable time" (duration < 1.0)
-                "optimized" `isInfixOf` output @?= True
+                "optimized" `L.isInfixOf` output @?= True
 
         , testCase "parallel compilation performance" $ do
             let programs = [generateSimpleProgram i | i <- [1..10]]
@@ -84,7 +86,7 @@ tests =
                 endTime = getCurrentTime
                 duration = endTime - startTime
             assertBool "Parallel compilation should be faster" (duration < 1.5)
-            all isSuccess results @?= True
+            L.all isSuccess results @?= True
         ]
 
     , testGroup "Memory usage performance"
@@ -116,20 +118,20 @@ tests =
         [ testCase "type checking linear complexity" $ do
             let sizes = [100, 200, 400, 800]
                 times = map testTypeCheckingTime sizes
-                ratios = zipWith (/) (tail times) (init times)
-            assertBool "Type checking should be near-linear" (all (< 2.5) ratios)
+                ratios = zipWith (/) (L.tail times) (init times)
+            assertBool "Type checking should be near-linear" (L.all (< 2.5) ratios)
 
         , testCase "dependency analysis sublinear complexity" $ do
             let sizes = [100, 200, 400, 800]
                 times = map testDependencyAnalysisTime sizes
-                ratios = zipWith (/) (tail times) (init times)
-            assertBool "Dependency analysis should be sublinear" (all (< 2.2) ratios)
+                ratios = zipWith (/) (L.tail times) (init times)
+            assertBool "Dependency analysis should be sublinear" (L.all (< 2.2) ratios)
 
         , testCase "optimization logarithmic complexity" $ do
             let sizes = [100, 200, 400, 800]
                 times = map testOptimizationTime sizes
-                ratios = zipWith (/) (tail times) (init times)
-            assertBool "Optimization should be near-logarithmic" (all (< 1.8) ratios)
+                ratios = zipWith (/) (L.tail times) (init times)
+            assertBool "Optimization should be near-logarithmic" (L.all (< 1.8) ratios)
         ]
 
     , testGroup "Property-based performance tests"
@@ -187,7 +189,7 @@ prop_parallelProcessingSpeedup (Positive count)
           parallelTime = measureParallelCompilation programs
       in parallelTime < sequentialTime * 0.8  -- At least 20% speedup
 
--- Helper functions and mock implementations
+-- Helper functions L.and mock implementations
 data CompilationResult = 
     CompilationSuccess String
   | CompilationError String
@@ -195,13 +197,13 @@ data CompilationResult =
 
 -- Mock functions for testing
 parse :: String -> Either String String
-parse input = Right ("Parsed: " ++ show (length (lines input)) ++ " lines")
+parse input = Right ("Parsed: " ++ show (L.length (lines input)) ++ " lines")
 
 compile :: String -> Either String String
-compile input = Right ("Compiled: " ++ show (length input) ++ " chars")
+compile input = Right ("Compiled: " ++ show (L.length input) ++ " chars")
 
 compileWithOptimizations :: String -> Either String String
-compileWithOptimizations input = Right ("Optimized: " ++ show (length input) ++ " chars")
+compileWithOptimizations input = Right ("Optimized: " ++ show (L.length input) ++ " chars")
 
 compileParallel :: [String] -> [Either String String]
 compileParallel programs = map compile programs
@@ -212,7 +214,7 @@ compileAndFree input = case compile input of
   Right output -> CompilationSuccess output
 
 compileWithMemoryPool :: String -> CompilationResult
-compileWithMemoryPool input = CompilationSuccess ("Memory pooled: " ++ show (length input))
+compileWithMemoryPool input = CompilationSuccess ("Memory pooled: " ++ show (L.length input))
 
 generateNestedStructure :: Int -> String
 generateNestedStructure depth = 
@@ -245,16 +247,16 @@ testOptimizationTime :: Int -> Double
 testOptimizationTime size = log (fromIntegral size) * 0.1  -- Mock: logarithmic
 
 measureParseTime :: String -> Double
-measureParseTime input = fromIntegral (length input) * 0.0001  -- Mock timing
+measureParseTime input = fromIntegral (L.length input) * 0.0001  -- Mock timing
 
 measureCompilationTime :: String -> Bool -> Double
 measureCompilationTime input optimized = 
-  let baseTime = fromIntegral (length input) * 0.0002
+  let baseTime = fromIntegral (L.length input) * 0.0002
       optimizationFactor = if optimized then 0.8 else 1.0
   in baseTime * optimizationFactor
 
 measureSequentialCompilation :: [String] -> Double
-measureSequentialCompilation programs = sum (map (flip measureCompilationTime False) programs)
+measureSequentialCompilation programs = L.sum (L.map (flip measureCompilationTime False) programs)
 
 measureParallelCompilation :: [String] -> Double
 measureParallelCompilation programs = 

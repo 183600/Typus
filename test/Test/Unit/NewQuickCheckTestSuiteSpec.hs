@@ -3,11 +3,12 @@
 module Test.Unit.NewQuickCheckTestSuiteSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 
 import Parser (FileDirectives(..), BlockDirectives(..))
 import SourceLocation (SourcePos(..), SourceSpan(..), posLine, posColumn, posOffset, spanStart, spanEnd)
@@ -18,8 +19,8 @@ import TestSupport.Arbitrary ()
 prop_splitBy_preserves_all_content :: Char -> String -> Property
 prop_splitBy_preserves_all_content delim str =
   let parts = splitBy delim str
-      reconstructed = concat $ map (\s -> s ++ [delim]) (init parts) ++ [last parts]
-  in length parts > 0 ==> str === reconstructed
+      reconstructed = L.concat $ L.map (\s -> s ++ [delim]) (init parts) ++ [last parts]
+  in L.length parts > 0 ==> str === reconstructed
 
 -- Test 2: Source position ordering
 prop_sourcepos_ordering :: Int -> Int -> Int -> Int -> Int -> Int -> Property
@@ -60,7 +61,7 @@ prop_removeLineComments_idempotent str =
 prop_normalizeIndentation_preserves_content :: String -> Property
 prop_normalizeIndentation_preserves_content str =
   let normalized = normalizeIndentation str
-      -- Remove all leading/trailing whitespace for comparison
+      -- Remove L.all leading/trailing whitespace for comparison
       trimOriginal = trim str
       trimNormalized = trim normalized
   in trimOriginal === trimNormalized
@@ -86,7 +87,7 @@ prop_concat_associative xs ys zs =
 
 tests :: TestTree
 tests = testGroup "New QuickCheck Test Suite"
-  [ fastProperty "splitBy preserves all content" prop_splitBy_preserves_all_content
+  [ fastProperty "splitBy preserves L.all content" prop_splitBy_preserves_all_content
   , fastProperty "SourcePos ordering matches offset ordering" prop_sourcepos_ordering
   , fastProperty "File directives are not associative" prop_file_directives_associative
   , fastProperty "Map insert then lookup returns inserted value" prop_map_insert_then_lookup

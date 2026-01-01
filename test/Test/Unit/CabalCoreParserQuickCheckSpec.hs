@@ -6,6 +6,7 @@ import Test.Tasty (TestTree, testGroup)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 
 import Parser (FileDirectives(..), BlockDirectives(..), CodeBlock(..), TypusFile(..), 
@@ -41,14 +42,14 @@ prop_block_directives_reflexive bd = bd === bd
 prop_trim_idempotent :: String -> Property
 prop_trim_idempotent s = trim (trim s) === trim s
 
--- | Property: Trim should remove leading and trailing whitespace
+-- | Property: Trim should remove leading L.and trailing whitespace
 prop_trim_whitespace :: String -> String -> Property
 prop_trim_whitespace prefix suffix =
   let ws = " \t\n\r"
       s = prefix ++ ws ++ suffix ++ ws
       trimmed = trim s
   in not (null trimmed) ==> 
-     head trimmed `notElem` ws .&&. 
+     L.head trimmed `notElem` ws .&&. 
      last trimmed `notElem` ws
 
 -- | Property: String parsing should preserve content structure
@@ -57,8 +58,8 @@ prop_string_preservation s =
   not (null s) ==>
   let trimmed = trim s
       lines = lines trimmed
-  in length lines >= 1 .&&. 
-     concat lines === trimmed
+  in L.length lines >= 1 .&&. 
+     L.concat lines === trimmed
 
 -- | Property: Directive parsing should be consistent with boolean values
 prop_directive_boolean_consistency :: Bool -> Property
@@ -107,7 +108,7 @@ tests = testGroup "Cabal Core Parser QuickCheck Tests"
   , fastProperty "FileDirectives equality is reflexive" prop_file_directives_reflexive
   , fastProperty "BlockDirectives equality is reflexive" prop_block_directives_reflexive
   , fastProperty "trim operation is idempotent" prop_trim_idempotent
-  , fastProperty "trim removes leading and trailing whitespace" prop_trim_whitespace
+  , fastProperty "trim removes leading L.and trailing whitespace" prop_trim_whitespace
   , fastProperty "string parsing preserves content structure" prop_string_preservation
   , fastProperty "directive boolean parsing is consistent" prop_directive_boolean_consistency
   , fastProperty "empty input produces default directives" prop_empty_input_defaults

@@ -8,6 +8,7 @@ import Test.Tasty.HUnit (testCase, (@?=))
 
 import Utils (trim, splitBy, splitByCollapsed)
 import SourceLocation (SourcePos(..), SourceSpan(..), spanStart, spanEnd)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isSuffixOf)
 import Data.Char (isSpace, isAlphaNum)
 
@@ -21,22 +22,22 @@ tests =
 
         , fastProperty "splitBy delim . intercalate [delim] = original" $ \xs ->
             let delim = ','
-                s = concat $ map (\x -> x ++ [delim]) xs
+                s = L.concat $ L.map (\x -> x ++ [delim]) xs
             in splitBy delim (init s) == xs
 
         , fastProperty "splitByCollapsed removes empty segments" $ \s ->
             let delim = ','
                 result = splitByCollapsed delim s
-            in all (not . null) result
+            in L.all (not . null) result
 
         , fastProperty "trim doesn't change non-whitespace strings" $ \s ->
-            let noWhitespace = all (not . isSpace) s
+            let noWhitespace = L.all (not . isSpace) s
             in if noWhitespace then trim s == s else True
 
         , fastProperty "splitBy preserves order" $ \s ->
             let delim = ','
                 result = splitBy delim s
-            in concat result == s
+            in L.concat result == s
         ]
 
     , testGroup "SourceLocation properties"
@@ -61,14 +62,14 @@ tests =
         ]
 
     , testGroup "String manipulation properties"
-        [ fastProperty "length after trim is <= original length" $ \s ->
-            length (trim s) <= length s
+        [ fastProperty "L.length after trim is <= original L.length" $ \s ->
+            L.length (trim s) <= L.length s
 
         , fastProperty "trim removes only leading/trailing whitespace" $ \s ->
             let trimmed = trim s
-                hasInternalWhitespace = any isSpace trimmed
+                hasInternalWhitespace = L.any isSpace trimmed
             in if null trimmed then True 
-               else not (isSpace (head trimmed) || isSpace (last trimmed))
+               else not (isSpace (L.head trimmed) || isSpace (last trimmed))
 
         , fastProperty "splitBy on single character returns list of single characters" $ \c ->
             let s = [c]
@@ -87,37 +88,37 @@ tests =
         , fastProperty "parsing is idempotent for valid inputs" $ \s ->
             -- If parsing succeeds, parsing the result again should be consistent
             -- This is a placeholder since we don't have the full parser context
-            length s <= 1000  -- Reasonable size limit
+            L.length s <= 1000  -- Reasonable size limit
         ]
 
     , testGroup "List properties"
-        [ fastProperty "concat . splitBy delim = original (for delim not in string)" $ \s ->
+        [ fastProperty "L.concat . splitBy delim = original (for delim not in string)" $ \s ->
             let delim = '\0'  -- Null character unlikely to be in test strings
                 parts = splitBy delim s
-            in if delim `elem` s then True else concat parts == s
+            in if delim `elem` s then True else L.concat parts == s
 
         , fastProperty "splitBy preserves total character count" $ \s ->
             let delim = ','
                 parts = splitBy delim s
-                originalLength = length s
-                splitLength = sum (map length parts) + length (filter (== delim) s)
+                originalLength = L.length s
+                splitLength = L.sum (map L.length parts) + L.length (L.filter (== delim) s)
             in originalLength == splitLength
 
         , fastProperty "fold with splitBy can reconstruct original" $ \s ->
             let delim = ','
                 parts = splitBy delim s
             in if null parts then s == ""
-               else concat (intersperse [delim] parts) ++ (if last s == delim then [delim] else "") == s
+               else L.concat (intersperse [delim] parts) ++ (if last s == delim then [delim] else "") == s
         ]
 
     , testGroup "Character properties"
         [ fastProperty "isSpace is consistent with trim behavior" $ \s ->
             let trimmed = trim s
-                hasLeadingSpace = not (null s) && isSpace (head s)
+                hasLeadingSpace = not (null s) && isSpace (L.head s)
                 hasTrailingSpace = not (null s) && isSpace (last s)
             in if hasLeadingSpace || hasTrailingSpace 
-               then length trimmed < length s 
-               else length trimmed == length s
+               then L.length trimmed < L.length s 
+               else L.length trimmed == L.length s
 
         , fastProperty "alphanumeric strings are unchanged by trim" $ \s ->
             let alnumStr = filter isAlphaNum s

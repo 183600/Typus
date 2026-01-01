@@ -22,15 +22,17 @@ import ErrorHandler (runErrorHandler)
 
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, sort, group)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (sort, group)
 import Data.Maybe (isNothing, isJust, fromMaybe, catMaybes)
 import Data.Char (isSpace, isAscii, ord, chr)
 import Control.Exception (try, SomeException, evaluate)
 import Data.Either (isLeft, isRight)
 
--- | Regression and comprehensive tests
+-- | Regression L.and comprehensive tests
 tests :: TestTree
-tests = testGroup "Regression and Comprehensive Tests"
+tests = testGroup "Regression L.and Comprehensive Tests"
   [ testGroup "Historical Regression Tests"
     [ testCase "unicode handling regression" test_unicode_handling_regression
     , testCase "comment removal regression" test_comment_removal_regression
@@ -120,10 +122,10 @@ test_unicode_handling_regression = do
           trimmed = trim input
           processed = removeComments content
       case parseResult of
-        Right file -> assertBool "Should handle unicode" $ not (null (tfBlocks file))
+        Right file -> assertBool "Should handle unicode" $ not (L.null (tfBlocks file))
         Left _ -> assertFailure $ "Failed to parse unicode: " ++ input
       assertBool "Trim should preserve unicode" $ not (null trimmed)
-      assertBool "RemoveComments should preserve unicode" $ input `isInfixOf` processed
+      assertBool "RemoveComments should preserve unicode" $ input `L.isInfixOf` processed
 
 test_comment_removal_regression :: IO ()
 test_comment_removal_regression = do
@@ -165,7 +167,7 @@ test_error_handling_regression = do
   mapM_ testErrorHandling errorTests
   where
     testErrorHandling (description, content) = do
-      let parseResult = parseTypus content ("error-" ++ map (\c -> if c == ' ' then '-' else c) description ++ ".typus")
+      let parseResult = parseTypus content ("error-" ++ L.map (\c -> if c == ' ' then '-' else c) description ++ ".typus")
           errorHandlerResult = runErrorHandler content
       case parseResult of
         Right file -> assertBool ("Should handle " ++ description) $ True
@@ -189,7 +191,7 @@ test_parsing_performance_regression = do
   case result of
     Right file -> do
       assertBool "Performance regression: parsing should complete quickly" $ duration < 5.0
-      assertBool "Should handle large content" $ not (null (tfBlocks file))
+      assertBool "Should handle large content" $ not (L.null (tfBlocks file))
     Left _ -> assertFailure "Parsing failed for performance test"
 
 test_memory_usage_regression :: IO ()
@@ -203,24 +205,24 @@ test_memory_usage_regression = do
 
 test_large_file_handling_regression :: IO ()
 test_large_file_handling_regression = do
-  let complexContent = unlines $ concat
+  let complexContent = unlines $ L.concat
         [ replicate 100 "//! ownership=true"
         , replicate 100 "func test() { return 42; }"
         , replicate 100 "// comment line"
         ]
       result <- parseTypus complexContent "large-file-regression.typus"
   case result of
-    Right file -> assertBool "Should handle large files" $ not (null (tfBlocks file))
+    Right file -> assertBool "Should handle large files" $ not (L.null (tfBlocks file))
     Left _ -> return ()  -- May fail for large files
 
 prop_performance_consistency_regression :: String -> Property
 prop_performance_consistency_regression content =
-  length content <= 1000 ==>
+  L.length content <= 1000 ==>
   let parse1 = parseTypus content "perf1.typus"
       parse2 = parseTypus content "perf2.typus"
   in case (parse1, parse2) of
        (Right f1, Right f2) -> property $ 
-         length (tfBlocks f1) == length (tfBlocks f2)
+         L.length (tfBlocks f1) == L.length (tfBlocks f2)
        _ -> property True
 
 -- ============================================================================
@@ -240,7 +242,7 @@ test_pipeline_integration_regression = do
       errorHandlerResult = runErrorHandler content
       processedContent = normalizeIndentation $ removeComments content
   case parseResult of
-    Right file -> assertBool "Parser should work in pipeline" $ not (null (tfBlocks file))
+    Right file -> assertBool "Parser should work in pipeline" $ not (L.null (tfBlocks file))
     Left _ -> assertFailure "Parser failed in pipeline"
   case errorHandlerResult of
     Right (errors, _) -> assertBool "ErrorHandler should work in pipeline" $ True
@@ -260,7 +262,7 @@ test_module_interaction_regression = do
       parseResult = parseTypus content "interaction-regression.typus"
   case parseResult of
     Right file -> do
-      assertBool "Modules should interact correctly" $ not (null (tfBlocks file))
+      assertBool "Modules should interact correctly" $ not (L.null (tfBlocks file))
       let directives = tfDirectives file
       assertBool "Directives should be parsed" $ True
     Left _ -> assertFailure "Module interaction failed"
@@ -276,7 +278,7 @@ test_cross_platform_consistency_regression = do
       parseResult = parseTypus content "cross-platform.typus"
   case parseResult of
     Right file -> do
-      assertBool "Should be cross-platform consistent" $ not (null (tfBlocks file))
+      assertBool "Should be cross-platform consistent" $ not (L.null (tfBlocks file))
       let blocks = tfBlocks file
       assertBool "Should have consistent structure" $ not (null blocks)
     Left _ -> assertFailure "Cross-platform consistency failed"
@@ -291,13 +293,13 @@ test_boundary_condition_regression = do
         [ ("empty", "")
         , ("single char", "x")
         , ("max line", unlines $ replicate 1000 "x")
-        , ("max column", concat $ replicate 1000 "x")
+        , ("max column", L.concat $ replicate 1000 "x")
         , ("unicode boundaries", "\0\1\2\3\4\5\6\7\8\10\11\12\13\14\15\16\17\18\19\20\21\22\23\24\25\26\27\28\29\30\31\127")
         ]
   mapM_ testBoundary boundaryTests
   where
     testBoundary (description, content) = do
-      let result = parseTypus content ("boundary-" ++ map (\c -> if c == ' ' then '-' else c) description ++ ".typus")
+      let result = parseTypus content ("boundary-" ++ L.map (\c -> if c == ' ' then '-' else c) description ++ ".typus")
       case result of
         Right file -> assertBool ("Should handle boundary: " ++ description) $ True
         Left _ -> return ()  -- May fail for boundary cases
@@ -313,7 +315,7 @@ test_malformed_input_regression = do
   mapM_ testMalformed malformedTests
   where
     testMalformed (description, content) = do
-      let result = parseTypus content ("malformed-" ++ map (\c -> if c == ' ' then '-' else c) description ++ ".typus")
+      let result = parseTypus content ("malformed-" ++ L.map (\c -> if c == ' ' then '-' else c) description ++ ".typus")
       case result of
         Right file -> assertBool ("Should handle malformed: " ++ description) $ True
         Left _ -> return ()  -- Expected to fail for malformed input
@@ -323,7 +325,7 @@ test_concurrent_access_regression = do
   let content = "func test() { return 42; }"
       numThreads = 10
   results <- replicateM numThreads $ parseTypus content "concurrent-regression.typus"
-  let successCount = length $ filter isRight results
+  let successCount = L.length $ filter isRight results
   assertBool "Should handle concurrent access" $ successCount >= numThreads `div` 2
 
 -- ============================================================================
@@ -354,9 +356,9 @@ test_complete_language_features = do
       result <- parseTypus completeContent "complete-features.typus"
   case result of
     Right file -> do
-      assertBool "Should handle complete language features" $ not (null (tfBlocks file))
+      assertBool "Should handle complete language features" $ not (L.null (tfBlocks file))
       let blocks = tfBlocks file
-      assertBool "Should parse complex content" $ length blocks > 0
+      assertBool "Should parse complex content" $ L.length blocks > 0
     Left _ -> assertFailure "Failed to parse complete language features"
 
 test_complex_scenarios :: IO ()
@@ -380,7 +382,7 @@ test_complex_scenarios = do
         , ("complex comments", unlines
           [ "/* Block comment"
           , "   with multiple lines"
-          , "   and 中文 content */"
+          , "   L.and 中文 content */"
           , "func test() {"
           , "    // Line comment with emoji 🎉"
           , "    return 42"
@@ -390,9 +392,9 @@ test_complex_scenarios = do
   mapM_ testComplexScenario complexScenarios
   where
     testComplexScenario (description, content) = do
-      let result = parseTypus content ("complex-" ++ map (\c -> if c == ' ' then '-' else c) description ++ ".typus")
+      let result = parseTypus content ("complex-" ++ L.map (\c -> if c == ' ' then '-' else c) description ++ ".typus")
       case result of
-        Right file -> assertBool ("Should handle complex scenario: " ++ description) $ not (null (tfBlocks file))
+        Right file -> assertBool ("Should handle complex scenario: " ++ description) $ not (L.null (tfBlocks file))
         Left _ -> assertFailure $ "Failed complex scenario: " ++ description
 
 test_real_world_examples :: IO ()
@@ -419,20 +421,20 @@ test_real_world_examples = do
   mapM_ testRealWorldExample realWorldExamples
   where
     testRealWorldExample (description, content) = do
-      let result = parseTypus content ("realworld-" ++ map (\c -> if c == ' ' then '-' else c) description ++ ".typus")
+      let result = parseTypus content ("realworld-" ++ L.map (\c -> if c == ' ' then '-' else c) description ++ ".typus")
       case result of
-        Right file -> assertBool ("Should handle real-world example: " ++ description) $ not (null (tfBlocks file))
+        Right file -> assertBool ("Should handle real-world example: " ++ description) $ not (L.null (tfBlocks file))
         Left _ -> assertFailure $ "Failed real-world example: " ++ description
 
 prop_feature_interaction_consistency :: String -> Property
 prop_feature_interaction_consistency content =
-  length content <= 500 ==>
+  L.length content <= 500 ==>
   let parseResult = parseTypus content "feature-interaction.typus"
       processed = removeComments content
       normalized = normalizeIndentation content
   in case parseResult of
        Right file -> property $ 
-         length (tfBlocks file) >= 0 && 
+         L.length (tfBlocks file) >= 0 && 
          not (null processed) && 
          not (null normalized)
        _ -> property True
@@ -453,11 +455,11 @@ test_data_preservation = do
       parseResult = parseTypus originalContent "data-preservation.typus"
   case parseResult of
     Right file -> do
-      assertBool "Should preserve data through parsing" $ not (null (tfBlocks file))
+      assertBool "Should preserve data through parsing" $ not (L.null (tfBlocks file))
       let blocks = tfBlocks file
-      assertBool "Should preserve content" $ any ("preserve this" `isInfixOf` . cbContent) blocks
+      assertBool "Should preserve content" $ L.any ("preserve this" `L.isInfixOf` . cbContent) blocks
     Left _ -> assertFailure "Failed to preserve data"
-  assertBool "Should preserve data through processing" $ "preserve this" `isInfixOf` processedContent
+  assertBool "Should preserve data through processing" $ "preserve this" `L.isInfixOf` processedContent
 
 test_round_trip_consistency :: IO ()
 test_round_trip_consistency = do
@@ -484,11 +486,11 @@ test_transformation_invariants = do
       commentsRemoved = removeComments content
   assertBool "Trim should not introduce newlines" $ '\n' `notElem` trimmed || '\n' `elem` content
   assertBool "Normalize should preserve content" $ not (null normalized)
-  assertBool "RemoveComments should preserve non-comment content" $ "func test" `isInfixOf` commentsRemoved
+  assertBool "RemoveComments should preserve non-comment content" $ "func test" `L.isInfixOf` commentsRemoved
 
 prop_data_integrity_properties :: String -> Property
 prop_data_integrity_properties content =
-  length content <= 200 ==>
+  L.length content <= 200 ==>
   let trimmed = trim content
       trimmedAgain = trim trimmed
   in property $ trimmed == trimmedAgain
@@ -509,7 +511,7 @@ test_error_resilience = do
       parseResult = parseTypus errorInducingContent "error-resilience.typus"
   case parseResult of
     Right file -> do
-      assertBool "Should be resilient to errors" $ not (null (tfBlocks file))
+      assertBool "Should be resilient to errors" $ not (L.null (tfBlocks file))
       let syntaxErrors = tfSyntaxErrors file
       assertBool "Should detect errors" $ not (null syntaxErrors)
     Left _ -> assertFailure "Should be error resilient"
@@ -533,14 +535,14 @@ test_recovery_mechanisms = do
       parseResult = parseTypus recoverableContent "recovery.typus"
   case parseResult of
     Right file -> do
-      assertBool "Should recover from errors" $ not (null (tfBlocks file))
+      assertBool "Should recover from errors" $ not (L.null (tfBlocks file))
       let blocks = tfBlocks file
-      assertBool "Should parse valid parts" $ length blocks >= 1
+      assertBool "Should parse valid parts" $ L.length blocks >= 1
     Left _ -> return ()  -- May fail entirely
 
 prop_robustness_properties :: String -> Property
 prop_robustness_properties content =
-  length content <= 100 ==>
+  L.length content <= 100 ==>
   let result = try $ evaluate $ parseTypus content "robustness.typus"
   in case result of
        Right (Right _) -> property True
@@ -563,7 +565,7 @@ test_backward_compatibility = do
     testBackwardCompatibility (description, content) = do
       let result = parseTypus content "backward-compat.typus"
       case result of
-        Right file -> assertBool ("Should be backward compatible: " ++ description) $ not (null (tfBlocks file))
+        Right file -> assertBool ("Should be backward compatible: " ++ description) $ not (L.null (tfBlocks file))
         Left _ -> assertFailure $ "Backward compatibility failed: " ++ description
 
 test_format_compatibility :: IO ()
@@ -578,7 +580,7 @@ test_format_compatibility = do
     testFormatCompatibility (description, content) = do
       let result = parseTypus content "format-compat.typus"
       case result of
-        Right file -> assertBool ("Should handle format: " ++ description) $ not (null (tfBlocks file))
+        Right file -> assertBool ("Should handle format: " ++ description) $ not (L.null (tfBlocks file))
         Left _ -> return ()  -- May fail for some formats
 
 test_api_compatibility :: IO ()
@@ -605,7 +607,7 @@ test_high_volume_processing = do
       volumeContent = unlines $ replicate 10000 baseContent
       result <- parseTypus volumeContent "high-volume.typus"
   case result of
-    Right file -> assertBool "Should handle high volume" $ not (null (tfBlocks file))
+    Right file -> assertBool "Should handle high volume" $ not (L.null (tfBlocks file))
     Left _ -> return ()  -- May fail due to volume
 
 test_resource_exhaustion :: IO ()
@@ -620,14 +622,14 @@ test_resource_exhaustion = do
 test_extreme_inputs :: IO ()
 test_extreme_inputs = do
   let extremeInputs = 
-        [ ("very long line", concat $ replicate 10000 "x")
+        [ ("very long line", L.concat $ replicate 10000 "x")
         , ("very deep nesting", unlines $ replicate 1000 "    func nested() {")
-        , ("very wide content", unlines $ replicate 1000 (concat $ replicate 100 "x"))
+        , ("very wide content", unlines $ replicate 1000 (L.concat $ replicate 100 "x"))
         ]
   mapM_ testExtremeInput extremeInputs
   where
     testExtremeInput (description, content) = do
-      let result <- try $ evaluate $ parseTypus content ("extreme-" ++ map (\c -> if c == ' ' then '-' else c) description ++ ".typus")
+      let result <- try $ evaluate $ parseTypus content ("extreme-" ++ L.map (\c -> if c == ' ' then '-' else c) description ++ ".typus")
       case result of
         Right (Right _) -> assertBool ("Should handle extreme: " ++ description) $ True
         _ -> return ()  -- May fail for extreme inputs
@@ -649,9 +651,9 @@ test_code_quality_metrics = do
       result <- parseTypus content "quality.typus"
   case result of
     Right file -> do
-      assertBool "Should meet quality metrics" $ not (null (tfBlocks file))
+      assertBool "Should meet quality metrics" $ not (L.null (tfBlocks file))
       let blocks = tfBlocks file
-      assertBool "Should have proper structure" $ all (not . null . cbContent) blocks
+      assertBool "Should have proper structure" $ L.all (not . null . cbContent) blocks
     Left _ -> assertFailure "Quality metrics test failed"
 
 test_test_coverage_validation :: IO ()
@@ -666,7 +668,7 @@ test_test_coverage_validation = do
   case result of
     Right file -> do
       let blocks = tfBlocks file
-      assertBool "Should cover all test cases" $ length blocks >= length testCases
+      assertBool "Should cover L.all test cases" $ L.length blocks >= L.length testCases
     Left _ -> assertFailure "Coverage validation failed"
 
 test_documentation_consistency :: IO ()
@@ -682,7 +684,7 @@ test_documentation_consistency = do
       result <- parseTypus documentedContent "documentation.typus"
   case result of
     Right file -> do
-      assertBool "Should maintain documentation consistency" $ not (null (tfBlocks file))
+      assertBool "Should maintain documentation consistency" $ not (L.null (tfBlocks file))
     Left _ -> assertFailure "Documentation consistency failed"
 
 -- ============================================================================

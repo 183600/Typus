@@ -6,7 +6,9 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
-import Data.List (isInfixOf, sort)
+import qualified Data.List as L
+import Data.List (isInfixOf)
+import Data.List (sort)
 import qualified Data.Map.Strict as Map
 
 import Compiler.Errors.Core
@@ -35,14 +37,6 @@ import Compiler.Errors.Core
   , formatErrorsWithLocation
   , canRecoverFrom
   , shouldContinueAfter
-  , errorAt
-  , warningAt
-  , infoAt
-  , withLocation
-  , withContext
-  , combineErrors
-  , filterByCategory
-  , filterBySeverity
   , hasCategory
   )
 
@@ -75,7 +69,7 @@ errorCollectorTests = testGroup "Error Collector Tests"
               } emptyContext
           updatedCollector = addError collector error
       hasErrors updatedCollector @?= True
-      length (getErrors updatedCollector) @?= 1
+      L.length (getErrors updatedCollector) @?= 1
       
   , testCase "addWarning adds to warning collection" $ do
       let collector = newErrorCollector
@@ -88,7 +82,7 @@ errorCollectorTests = testGroup "Error Collector Tests"
               } emptyContext
           updatedCollector = addWarning collector warning
       hasWarnings updatedCollector @?= True
-      length (getWarnings updatedCollector) @?= 1
+      L.length (getWarnings updatedCollector) @?= 1
       
   , testCase "addInfo adds to info collection" $ do
       let collector = newErrorCollector
@@ -100,9 +94,9 @@ errorCollectorTests = testGroup "Error Collector Tests"
               , endColumn = Nothing
               } emptyContext
           updatedCollector = addInfo collector info
-      length (getInfo updatedCollector) @?= 1
+      L.length (getInfo updatedCollector) @?= 1
       
-  , testCase "getAllMessages returns all message types" $ do
+  , testCase "getAllMessages returns L.all message types" $ do
       let collector = newErrorCollector
           error = TypeError "error" TypeErrorCategory ErrorLocation
               { filePath = Nothing, line = 1, column = 1, endLine = Nothing, endColumn = Nothing
@@ -114,12 +108,12 @@ errorCollectorTests = testGroup "Error Collector Tests"
               { filePath = Nothing, line = 3, column = 1, endLine = Nothing, endColumn = Nothing
               } emptyContext
           updatedCollector = addInfo (addWarning (addError collector error) warning) info
-      length (getAllMessages updatedCollector) @?= 3
+      L.length (getAllMessages updatedCollector) @?= 3
   ]
 
 errorFormattingTests :: TestTree
 errorFormattingTests = testGroup "Error Formatting Tests"
-  [ testCase "formatError includes message and location" $ do
+  [ testCase "formatError includes message L.and location" $ do
       let error = TypeError "test error" SyntaxError ErrorLocation
               { filePath = Just "test.typus"
               , line = 10
@@ -128,9 +122,9 @@ errorFormattingTests = testGroup "Error Formatting Tests"
               , endColumn = Just 15
               } emptyContext
           formatted = formatError error
-      "test error" `isInfixOf` formatted @?= True
-      "test.typus" `isInfixOf` formatted @?= True
-      "10:5" `isInfixOf` formatted @?= True
+      "test error" `L.isInfixOf` formatted @?= True
+      "test.typus" `L.isInfixOf` formatted @?= True
+      "10:5" `L.isInfixOf` formatted @?= True
       
   , testCase "formatErrors handles multiple errors" $ do
       let error1 = TypeError "first error" SyntaxError ErrorLocation
@@ -140,8 +134,8 @@ errorFormattingTests = testGroup "Error Formatting Tests"
               { filePath = Nothing, line = 2, column = 1, endLine = Nothing, endColumn = Nothing
               } emptyContext
           formatted = formatErrors [error1, error2]
-      "first error" `isInfixOf` formatted @?= True
-      "second error" `isInfixOf` formatted @?= True
+      "first error" `L.isInfixOf` formatted @?= True
+      "second error" `L.isInfixOf` formatted @?= True
       
   , testCase "formatErrorWithLocation includes detailed location" $ do
       let error = TypeError "test error" SyntaxError ErrorLocation
@@ -152,7 +146,7 @@ errorFormattingTests = testGroup "Error Formatting Tests"
               , endColumn = Just 20
               } emptyContext
           formatted = formatErrorWithLocation error
-      "test.typus:5:10-20" `isInfixOf` formatted @?= True
+      "test.typus:5:10-20" `L.isInfixOf` formatted @?= True
   ]
 
 errorRecoveryTests :: TestTree
@@ -207,7 +201,7 @@ errorFilteringTests = testGroup "Error Filtering Tests"
               { filePath = Nothing, line = 3, column = 1, endLine = Nothing, endColumn = Nothing
               } emptyContext
           syntaxErrors = filterByCategory SyntaxError [error1, error2, error3]
-      length syntaxErrors @?= 2
+      L.length syntaxErrors @?= 2
       
   , testCase "filterBySeverity selects matching severity" $ do
       let error1 = TypeError "error" TypeErrorCategory ErrorLocation
@@ -220,7 +214,7 @@ errorFilteringTests = testGroup "Error Filtering Tests"
               { filePath = Nothing, line = 3, column = 1, endLine = Nothing, endColumn = Nothing
               } emptyContext
           errorsOnly = filterBySeverity ErrorSeverity [error1, warning, info]
-      length errorsOnly @?= 1
+      L.length errorsOnly @?= 1
       
   , testCase "hasCategory checks for category presence" $ do
       let error = TypeError "test error" SyntaxError ErrorLocation
@@ -241,7 +235,7 @@ errorCombinationTests = testGroup "Error Combination Tests"
               } emptyContext
           combined = combineErrors error1 error2
       case combined of
-        CombinedError errors -> length errors @?= 2
+        CombinedError errors -> L.length errors @?= 2
         _ -> "Expected CombinedError" @?= "Got TypeError"
         
   , testCase "combinedErrorSeverity chooses highest severity" $ do
@@ -273,12 +267,12 @@ prop_format_preserves error =
         CombinedError errors -> concatMap (\e -> case e of
           TypeError msg _ _ _ -> msg
           CombinedError _ -> "") errors
-  in not (null errorMsg) ==> errorMsg `isInfixOf` formatted
+  in not (null errorMsg) ==> errorMsg `L.isInfixOf` formatted
 
 prop_filtering_invariants :: [TypeError] -> ErrorCategory -> Property
 prop_filtering_invariants errors category =
   let filtered = filterByCategory category errors
-  in length filtered <= length errors ==> property True
+  in L.length filtered <= L.length errors ==> property True
 
 prop_combination_associative :: TypeError -> TypeError -> TypeError -> Property
 prop_combination_associative err1 err2 err3 =
@@ -286,5 +280,5 @@ prop_combination_associative err1 err2 err3 =
       combined2 = combineErrors err1 (combineErrors err2 err3)
   in case (combined1, combined2) of
     (CombinedError errors1, CombinedError errors2) -> 
-      length errors1 === length errors2
+      L.length errors1 === L.length errors2
     _ -> property True

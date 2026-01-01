@@ -2,6 +2,7 @@
 module Test.Unit.NewMemorySafetyQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -43,7 +44,7 @@ tests =
         [ fastProperty "resource cleanup is guaranteed" $
             \resources ->
               let cleaned = Ownership.cleanupAll resources
-              in all Ownership.isCleaned cleaned
+              in L.all Ownership.isCleaned cleaned
               
         , fastProperty "reference counting is accurate" $
             \resource operations ->
@@ -54,7 +55,7 @@ tests =
             \heap roots ->
               let reachable = Ownership.findReachable heap roots
                   garbage = Ownership.identifyGarbage heap reachable
-              in all (not . (`elem` reachable)) garbage
+              in L.all (not . (`elem` reachable)) garbage
         ]
 
     , testGroup "Borrowing Properties"
@@ -66,8 +67,8 @@ tests =
               
         , fastProperty "multiple immutable borrows are allowed" $
             \resource borrowers ->
-              let borrowed = map (Ownership.borrowImmutable resource) borrowers
-              in all Ownership.isValid borrowed
+              let borrowed = L.map (Ownership.borrowImmutable resource) borrowers
+              in L.all Ownership.isValid borrowed
               
         , fastProperty "mutable borrow excludes other borrows" $
             \resource borrower1 borrower2 ->

@@ -3,6 +3,7 @@
 module Test.Unit.NewComprehensiveTestSuite2025Spec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen)
 import Test.Tasty.HUnit (testCase, (@=?))
 
@@ -20,7 +21,7 @@ tests = testGroup "New Comprehensive Test Suite"
   , testProperty "SourcePos advance consistency" propSourcePosAdvanceConsistency
   , testProperty "SourceSpan merge associativity" propSourceSpanMergeAssociativity
   , testCase "splitByComma edge cases" testSplitByCommaEdgeCases
-  , testProperty "trim removes all whitespace" propTrimRemovesAllWhitespace
+  , testProperty "trim removes L.all whitespace" propTrimRemovesAllWhitespace
   , testProperty "SourcePos advance by newline increments line" propSourcePosAdvanceNewline
   , testProperty "SourceSpan merge preserves order" propSourceSpanMergePreservesOrder
   ]
@@ -29,9 +30,9 @@ tests = testGroup "New Comprehensive Test Suite"
 propTrimIdempotent :: String -> Bool
 propTrimIdempotent s = trim (trim s) == trim s
 
--- Property 2: splitBy consistency with concat
+-- Property 2: splitBy consistency with L.concat
 propSplitByConsistency :: Char -> String -> Bool
-propSplitByConsistency delim s = concat (splitBy delim s) == filter (/= delim) s
+propSplitByConsistency delim s = L.concat (splitBy delim s) == L.filter (/= delim) s
 
 -- Property 3: normalizeIndentation preserves relative structure
 propNormalizeIndentationPreservesRelative :: String -> Bool
@@ -39,7 +40,7 @@ propNormalizeIndentationPreservesRelative s =
   let normalized = normalizeIndentation s
       lines1 = lines s
       lines2 = lines normalized
-  in length lines1 == length lines2
+  in L.length lines1 == L.length lines2
 
 -- Property 4: removeLineComments preserves code structure
 propRemoveLineCommentsPreservesStructure :: String -> Bool
@@ -47,7 +48,7 @@ propRemoveLineCommentsPreservesStructure s =
   let withoutComments = removeLineComments s
       lines1 = lines s
       lines2 = lines withoutComments
-  in length lines2 <= length lines1
+  in L.length lines2 <= L.length lines1
 
 -- Property 5: SourcePos advance consistency
 propSourcePosAdvanceConsistency :: String -> Bool
@@ -73,11 +74,11 @@ testSplitByCommaEdgeCases = do
   splitByComma "a,b,c" @=? ["a", "b", "c"]
   splitByComma "a,,b" @=? ["a", "", "b"]
 
--- Property 8: trim removes all whitespace
+-- Property 8: trim removes L.all whitespace
 propTrimRemovesAllWhitespace :: String -> Bool
 propTrimRemovesAllWhitespace s =
   let trimmed = trim s
-  in null trimmed || (not (isSpace (head trimmed)) && not (isSpace (last trimmed)))
+  in null trimmed || (not (isSpace (L.head trimmed)) && not (isSpace (last trimmed)))
   where
     isSpace c = c `elem` " \t\n\r"
 

@@ -8,19 +8,20 @@ import Test.QuickCheck
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.List as List
+import qualified Data.List as L
 
 import Utils (trim, splitBy, splitByCollapsed, removeLineComments, normalizeIndentation)
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), posAfter, spanBetween, mergeSpans, posAt, posAtLineCol, advancePos, locatedSpan)
 import Parser (FileDirectives(..), BlockDirectives(..))
 import TestSupport.Arbitrary ()
 
--- Property 1: splitBy and splitByCollapsed relationship
+-- Property 1: splitBy L.and splitByCollapsed relationship
 prop_splitBy_vs_collapsed :: Char -> String -> Property
 prop_splitBy_vs_collapsed delim s =
   let normal = splitBy delim s
       collapsed = splitByCollapsed delim s
-      emptyCount = length $ filter null normal
-  in length collapsed === length normal - emptyCount
+      emptyCount = L.length $ filter null normal
+  in L.length collapsed === L.length normal - emptyCount
 
 -- Property 2: normalizeIndentation preserves relative indentation
 prop_normalizeIndentation_preserves_relative :: String -> Property
@@ -29,11 +30,11 @@ prop_normalizeIndentation_preserves_relative s =
   let linesOfS = lines s
       normalizedString = normalizeIndentation s
       normalizedLines = lines normalizedString
-      originalLengths = map (length . takeWhile (== ' ')) linesOfS
-      normalizedLengths = map (length . takeWhile (== ' ')) normalizedLines
-      relativeDiffs = zipWith (-) (tail originalLengths) (init originalLengths)
-      normalizedDiffs = zipWith (-) (tail normalizedLengths) (init normalizedLengths)
-  in if length relativeDiffs > 0 
+      originalLengths = L.map (L.length . takeWhile (== ' ')) linesOfS
+      normalizedLengths = L.map (L.length . takeWhile (== ' ')) normalizedLines
+      relativeDiffs = zipWith (-) (L.tail originalLengths) (init originalLengths)
+      normalizedDiffs = zipWith (-) (L.tail normalizedLengths) (init normalizedLengths)
+  in if L.length relativeDiffs > 0 
      then property $ normalizedDiffs === relativeDiffs
      else property $ True
 
@@ -41,7 +42,7 @@ prop_normalizeIndentation_preserves_relative s =
 prop_located_preserves_span :: String -> Int -> Property
 prop_located_preserves_span value offset =
   let pos = posAtLineCol 1 1 offset
-      span = spanBetween pos (posAtLineCol 1 1 (offset + length value))
+      span = spanBetween pos (posAtLineCol 1 1 (offset + L.length value))
       located = Located value pos span
   in locatedSpan located === span
 
@@ -63,12 +64,12 @@ prop_file_directives_merge_associative fd1 fd2 fd3 =
 -- Property 5: removeLineComments preserves non-comment content
 prop_removeLineComments_preserves_content :: String -> Property
 prop_removeLineComments_preserves_content s =
-  let hasComments = "//" `List.isInfixOf` s
+  let hasComments = "//" `L.isInfixOf` s
       result = removeLineComments s
-      linesWithoutComments = map (takeWhile (/= '/')) $ lines s
+      linesWithoutComments = L.map (takeWhile (/= '/')) $ lines s
       expected = unlines linesWithoutComments
   in if hasComments
-     then property $ length result <= length s
+     then property $ L.length result <= L.length s
      else property $ result === s
 
 -- Property 6: SourceSpan merging is commutative for adjacent spans
@@ -76,10 +77,10 @@ prop_span_merge_commutative :: Int -> Int -> Property
 prop_span_merge_commutative len1 len2 =
   len1 >= 0 && len2 >= 0 && len1 <= 10 && len2 <= 10 ==>
   let start1 = posAtLineCol 1 1 0
-      end1 = foldl (flip advancePos) start1 (replicate len1 'x')
+      end1 = L.foldl (flip advancePos) start1 (replicate len1 'x')
       span1 = spanBetween start1 end1
       start2 = end1
-      end2 = foldl (flip advancePos) start2 (replicate len2 'x')
+      end2 = L.foldl (flip advancePos) start2 (replicate len2 'x')
       span2 = spanBetween start2 end2
       merged1 = mergeSpans span1 span2
       merged2 = mergeSpans span2 span1
@@ -90,17 +91,15 @@ prop_splitByCommaCollapsed_removes_empty :: String -> Property
 prop_splitByCommaCollapsed_removes_empty s =
   let parts = splitBy ',' s
       collapsed = splitByCollapsed ',' s
-  in property $ not (any null collapsed)
+  in property $ not (L.any null collapsed)
 
--- Property 8: trim and normalizeIndentation work well together
+-- Property 8: trim L.and normalizeIndentation work well together
 prop_trim_normalize_interaction :: String -> Property
 prop_trim_normalize_interaction s =
   not (null s) ==>
   let normalized = normalizeIndentation s
       recombined = normalized
-  in property $ all (not . isPrefixOf " ") (lines recombined)
-  where
-    isPrefixOf prefix str = prefix `List.isPrefixOf` str
+  in property $ L.all (not . L.isPrefixOf " ") (lines recombined)
 
 -- Property 9: SourcePos arithmetic is consistent
 prop_sourcepos_arithmetic :: Int -> Int -> Int -> Property
@@ -153,7 +152,7 @@ tests = testGroup "Additional QuickCheck Tests"
   , fastProperty "removeLineComments preserves non-comment content" prop_removeLineComments_preserves_content
   , fastProperty "SourceSpan merging is commutative for adjacent spans" prop_span_merge_commutative
   , fastProperty "splitByCommaCollapsed removes empty segments" prop_splitByCommaCollapsed_removes_empty
-  , fastProperty "trim and normalizeIndentation interaction" prop_trim_normalize_interaction
+  , fastProperty "trim L.and normalizeIndentation interaction" prop_trim_normalize_interaction
   , fastProperty "SourcePos arithmetic is consistent" prop_sourcepos_arithmetic
   , fastProperty "BlockDirectives override works correctly" prop_block_directives_override
   ]

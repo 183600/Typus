@@ -20,7 +20,9 @@ import SourceLocation (SourcePos(..), SourceSpan(..), mkSourcePos, mkSourceSpan)
 
 import qualified Data.Text as T
 import Data.Char (isSpace, isAlphaNum, isLetter)
-import Data.List (isPrefixOf, isInfixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort, nub)
 
 -- | Generate variable names
 genVarName :: Gen String
@@ -167,7 +169,7 @@ prop_ownership_deterministic code =
           result2 = checkOwnership typusFile
       in property $ result1 == result2
 
--- | Property: Ownership checking doesn't crash on any input
+-- | Property: Ownership checking doesn't crash on L.any input
 prop_ownership_robustness :: String -> Property
 prop_ownership_robustness code =
   let parseResult = parseTypus code
@@ -203,7 +205,7 @@ prop_multiple_ownership_checks code =
     Left _ -> property True
     Right typusFile -> 
       let results = replicate 10 $ checkOwnership typusFile
-          allSame = all (== head results) (tail results)
+          allSame = L.all (== L.head results) (L.tail results)
       in property $ allSame
 
 -- | Property: Ownership errors are consistent
@@ -218,7 +220,7 @@ prop_ownership_error_consistency code =
         Left errors -> 
           -- Check that errors have reasonable properties
           let hasErrors = not (null errors)
-              hasLocations = any hasErrorLocation errors
+              hasLocations = L.any hasErrorLocation errors
           in property $ hasErrors .&&. hasLocations
         Right _ -> property True
   where hasErrorLocation _ = True  -- Simplified

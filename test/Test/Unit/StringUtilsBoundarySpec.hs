@@ -13,11 +13,13 @@ import Test.QuickCheck.Arbitrary (Arbitrary(..))
 
 import Utils (trim, splitBy, splitByCollapsed, removeLineComments, removeComments, 
              normalizeIndentation, breakOn)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 import Data.Char (isSpace, isAlphaNum, isLetter, isDigit, toLower, toUpper, isAscii, 
                  isControl, isPrint, isLetterOrDigit)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, isInfixOf, sort, nub, group, intercalate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort, nub, group, intercalate)
 
 -- | Generate strings with various character types
 genAsciiString :: Gen String
@@ -55,7 +57,7 @@ genRepeatedCharString = do
 genPalindromeString :: Gen String
 genPalindromeString = do
   base <- genAsciiString
-  return $ base ++ reverse base
+  return $ base ++ L.reverse base
 
 -- | Test string trimming with various character sets
 test_trim_character_sets :: TestTree
@@ -146,9 +148,9 @@ test_long_strings = testCase "string processing with long strings" $ do
   assertEqual "trim long string" longString (trim longWithSpaces)
   assertEqual "remove comments from long string" (longString ++ " ") (removeLineComments longWithComments)
 
--- | Test empty and edge case strings
+-- | Test empty L.and edge case strings
 test_edge_case_strings :: TestTree
-test_edge_case_strings = testCase "empty and edge case strings" $ do
+test_edge_case_strings = testCase "empty L.and edge case strings" $ do
   let edgeCases = 
         [ ("", "", "")  -- empty
         , (" ", "", "")  -- single space
@@ -166,23 +168,23 @@ test_edge_case_strings = testCase "empty and edge case strings" $ do
 prop_trim_preserves_content :: String -> Property
 prop_trim_preserves_content input =
   let trimmed = trim input
-      nonWhitespaceContent = filter (not . isSpace) input
-      trimmedContent = filter (not . isSpace) trimmed
+      nonWhitespaceContent = L.filter (not . isSpace) input
+      trimmedContent = L.filter (not . isSpace) trimmed
   in property $ trimmedContent == nonWhitespaceContent
 
--- | Property: splitBy is consistent for any delimiter
+-- | Property: splitBy is consistent for L.any delimiter
 prop_splitby_consistent :: Char -> String -> Property
 prop_splitby_consistent delim input =
   let result1 = splitBy delim input
       result2 = splitBy delim input
   in property $ result1 == result2
 
--- | Property: splitBy and splitByCollapsed relationship holds for Unicode
+-- | Property: splitBy L.and splitByCollapsed relationship holds for Unicode
 prop_splitby_unicode_relationship :: Char -> String -> Property
 prop_splitby_unicode_relationship delim input =
   let normal = splitBy delim input
       collapsed = splitByCollapsed delim input
-      filtered = filter (not . null) normal
+      filtered = L.filter (not . null) normal
   in property $ collapsed == filtered
 
 -- | Property: Comment removal is idempotent
@@ -202,7 +204,7 @@ prop_unicode_preservation =
       split = splitBy ',' unicodeStr
       noComments = removeLineComments unicodeStr
       normalized = normalizeIndentation unicodeStr
-  in property $ all (`elem` unicodeStr) (concat split)  -- All chars preserved in split
+  in property $ L.all (`elem` unicodeStr) (L.concat split)  -- All chars preserved in split
 
 -- | Property: String processing handles control characters gracefully
 prop_control_character_handling :: Property
@@ -210,7 +212,7 @@ prop_control_character_handling =
   forAll genControlString $ \controlStr ->
   let trimmed = trim controlStr
       processed = removeLineComments controlStr
-  in property $ length processed <= length controlStr  -- Processing doesn't add characters
+  in property $ L.length processed <= L.length controlStr  -- Processing doesn't add characters
 
 -- | Property: String operations are consistent with Data.Text operations
 prop_text_consistency :: String -> Property
@@ -220,21 +222,21 @@ prop_text_consistency input =
       haskellTrimmed = trim input
   in property $ T.unpack textTrimmed == haskellTrimmed
 
--- | Property: String splitting preserves total length (minus delimiters)
+-- | Property: String splitting preserves total L.length (minus delimiters)
 prop_split_length_preservation :: Char -> String -> Property
 prop_split_length_preservation delim input =
   let parts = splitBy delim input
       reconstructed = intercalate [delim] parts
-      originalLength = length input
-      reconstructedLength = length reconstructed
+      originalLength = L.length input
+      reconstructedLength = L.length reconstructed
   in property $ abs (originalLength - reconstructedLength) <= 1  -- Allow off-by-one due to edge cases
 
 -- | Property: Indentation normalization preserves line count
 prop_indentation_preserves_lines :: String -> Property
 prop_indentation_preserves_lines input =
-  let originalLines = length $ lines input
+  let originalLines = L.length $ lines input
       normalized = normalizeIndentation input
-      normalizedLines = length $ lines normalized
+      normalizedLines = L.length $ lines normalized
   in property $ originalLines == normalizedLines
 
 -- | Property: String processing works with very long inputs
@@ -245,7 +247,7 @@ prop_long_string_processing =
   let trimmed = trim longStr
       split = splitBy ',' longStr
       noComments = removeLineComments longStr
-  in property $ not (null trimmed) .&&. length split >= 1
+  in property $ not (null trimmed) .&&. L.length split >= 1
 
 tests :: TestTree
 tests = testGroup "String Utils Boundary Tests"
@@ -263,7 +265,7 @@ tests = testGroup "String Utils Boundary Tests"
   , fastProperty "Unicode preservation" prop_unicode_preservation
   , fastProperty "control character handling" prop_control_character_handling
   , fastProperty "text consistency" prop_text_consistency
-  , fastProperty "split length preservation" prop_split_length_preservation
+  , fastProperty "split L.length preservation" prop_split_length_preservation
   , fastProperty "indentation preserves lines" prop_indentation_preserves_lines
   , fastProperty "long string processing" prop_long_string_processing
   ]

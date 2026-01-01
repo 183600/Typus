@@ -51,13 +51,13 @@ instance Arbitrary CommaSeparatedString where
     parts <- listOf1 $ listOf1 $ elements ['a'..'z']
     return $ CommaSeparatedString $ List.intercalate "," parts
 
--- Property: trim removes leading and trailing whitespace
+-- Property: trim removes leading L.and trailing whitespace
 prop_trim_removes_whitespace :: StringWithSpaces -> Property
 prop_trim_removes_whitespace (StringWithSpaces str) =
   let trimmed = trim str
-      hasLeading = not (null str) && isSpace (head str)
+      hasLeading = not (null str) && isSpace (L.head str)
       hasTrailing = not (null str) && isSpace (last str)
-      noLeading = null trimmed || not (isSpace (head trimmed))
+      noLeading = null trimmed || not (isSpace (L.head trimmed))
       noTrailing = null trimmed || not (isSpace (last trimmed))
   in classify hasLeading "has leading spaces" $
      classify hasTrailing "has trailing spaces" $
@@ -68,14 +68,14 @@ prop_trim_preserves_content :: NonEmptyString -> String -> String -> Property
 prop_trim_preserves_content (NonEmptyString core) prefix suffix =
   let full = prefix ++ core ++ suffix
       trimmed = trim full
-  in property $ core `List.isInfixOf` trimmed
+  in property $ core `List.L.isInfixOf` trimmed
 
 -- Property: splitBy correctly splits on delimiter
 prop_split_by_correct :: String -> Char -> Property
 prop_split_by_correct str delim =
   let parts = splitBy delim str
       rejoined = List.intercalate [delim] parts
-  in property $ (filter (/= delim) str) == (filter (/= delim) rejoined)
+  in property $ (L.filter (/= delim) str) == (L.filter (/= delim) rejoined)
 
 -- Property: splitByComma handles empty strings
 prop_split_by_comma_empty :: Property
@@ -86,22 +86,22 @@ prop_split_by_comma_empty =
 -- Property: removeLineComments removes comment lines
 prop_remove_line_comments :: [String] -> Property
 prop_remove_line_comments lines =
-  let withComments = map (\l -> if even (length l) then "// " ++ l else l) lines
+  let withComments = L.map (\l -> if even (L.length l) then "// " ++ l else l) lines
       withoutComments = removeLineComments $ unlines withComments
-      commentLines = filter (isPrefixOf "//") withComments
-  in property $ not $ any (`List.isInfixOf` withoutComments) commentLines
+      commentLines = L.filter (L.isPrefixOf "//") withComments
+  in property $ not $ L.any (`List.L.isInfixOf` withoutComments) commentLines
   where
-    isPrefixOf prefix str = take (length prefix) str == prefix
+    L.isPrefixOf prefix str = take (L.length prefix) str == prefix
 
 -- Property: normalizeIndentation makes indentation consistent
 prop_normalize_indentation :: [String] -> Property
 prop_normalize_indentation lines =
-  let indented = map (\l -> "  " ++ l) lines
+  let indented = L.map (\l -> "  " ++ l) lines
       normalized = normalizeIndentation $ unlines indented
       lines' = lines normalized
-  in property $ all (\l -> not ("  " `List.isPrefixOf` l) || l == "  " ++ dropWhile isSpace l) lines'
+  in property $ L.all (\l -> not ("  " `List.L.isPrefixOf` l) || l == "  " ++ dropWhile isSpace l) lines'
 
--- Property: escapeString and unescapeString are inverses
+-- Property: escapeString L.and unescapeString are inverses
 prop_escape_unescape_inverse :: String -> Property
 prop_escape_unescape_inverse str =
   let escaped = escapeString str
@@ -118,7 +118,7 @@ prop_escape_special_chars str =
   in classify hasNewlines "has newlines" $
      classify hasTabs "has tabs" $
      classify hasQuotes "has quotes" $
-     property $ not (any (`elem` escaped) ['\n', '\t', '"'])
+     property $ not (L.any (`elem` escaped) ['\n', '\t', '"'])
 
 tests :: TestTree
 tests = testGroup "Cabal Utils QuickCheck Tests"

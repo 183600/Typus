@@ -1,6 +1,7 @@
 module Test.Unit.NewCoreCabalQuickCheckSpec7 (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 
@@ -16,7 +17,7 @@ tests =
         , fastProperty "compilation phase ordering is total" prop_compilationPhaseTotal
         , testCase "compilation phase ordering" $ do
             let phases = [ParsingPhase, TypeCheckingPhase, OwnershipPhase, CodeGenPhase]
-            length phases @?= 4
+            L.length phases @?= 4
         ]
     , testGroup "Compiler error properties"
         [ fastProperty "compiler error collection preserves severity" prop_compilerErrorCollectionPreservesSeverity
@@ -38,7 +39,7 @@ tests =
         , testCase "successful compiler result" $ do
             let result = CompilerSuccess (T.pack "generated code")
             case result of
-              CompilerSuccess code -> T.length code @?= 13
+              CompilerSuccess code -> T.L.length code @?= 13
               CompilerFailure _ -> assertFailure "Expected success"
         ]
     , testGroup "Compilation edge cases"
@@ -49,8 +50,8 @@ tests =
                 result = CompilerSuccessWithWarnings (T.pack "code") [warning]
             case result of
               CompilerSuccessWithWarnings code warnings -> do
-                T.length code @?= 4
-                length warnings @?= 1
+                T.L.length code @?= 4
+                L.length warnings @?= 1
               _ -> assertFailure "Expected success with warnings"
         ]
     ]
@@ -152,7 +153,7 @@ collectErrors = sortErrors
 
 sortErrors :: [CompilerError] -> [CompilerError]
 sortErrors errors = 
-  let withSeverity = map (\e -> (getSeverity (ceType e), e)) errors
+  let withSeverity = L.map (\e -> (getSeverity (ceType e), e)) errors
       sorted = sortBySeverity withSeverity
   in map snd sorted
 
@@ -163,13 +164,13 @@ getSeverity OwnershipError = 2
 getSeverity Warning = 1
 
 sortErrorTypes :: [CompilerErrorType] -> [CompilerErrorType]
-sortErrorTypes = sortBySeverity . map (\t -> (getSeverity t, t))
+sortErrorTypes = sortBySeverity . L.map (\t -> (getSeverity t, t))
 
 sortBySeverity :: [(Int, a)] -> [(Int, a)]
 sortBySeverity [] = []
 sortBySeverity ((s, x):xs) = 
-  let smaller = filter (\(s', _) -> s' < s) xs
-      larger = filter (\(s', _) -> s' >= s) xs
+  let smaller = L.filter (\(s', _) -> s' < s) xs
+      larger = L.filter (\(s', _) -> s' >= s) xs
   in sortBySeverity smaller ++ [(s, x)] ++ sortBySeverity larger
 
 combineResults :: CompilerResult -> CompilerResult -> CompilerResult
@@ -189,18 +190,18 @@ combineResults _ (CompilerFailure errors) = CompilerFailure errors
 compileCode :: String -> CompilerResult
 compileCode code
   | null code = CompilerSuccess T.empty
-  | "error" `isInfixOf` code = CompilerFailure [CompilerError { ceType = SyntaxError, cePhase = ParsingPhase, ceMessage = "Error in code", ceLine = 1, ceColumn = 1 }]
-  | "warning" `isInfixOf` code = CompilerSuccessWithWarnings (T.pack code) [CompilerError { ceType = Warning, cePhase = TypeCheckingPhase, ceMessage = "Warning", ceLine = 1, ceColumn = 1 }]
+  | "error" `L.isInfixOf` code = CompilerFailure [CompilerError { ceType = SyntaxError, cePhase = ParsingPhase, ceMessage = "Error in code", ceLine = 1, ceColumn = 1 }]
+  | "warning" `L.isInfixOf` code = CompilerSuccessWithWarnings (T.pack code) [CompilerError { ceType = Warning, cePhase = TypeCheckingPhase, ceMessage = "Warning", ceLine = 1, ceColumn = 1 }]
   | otherwise = CompilerSuccess (T.pack code)
 
 areResultsEquivalent :: CompilerResult -> CompilerResult -> Bool
 areResultsEquivalent (CompilerSuccess code1) (CompilerSuccess code2) = code1 == code2
-areResultsEquivalent (CompilerFailure errors1) (CompilerFailure errors2) = length errors1 == length errors2
+areResultsEquivalent (CompilerFailure errors1) (CompilerFailure errors2) = L.length errors1 == L.length errors2
 areResultsEquivalent (CompilerSuccessWithWarnings code1 warnings1) (CompilerSuccessWithWarnings code2 warnings2) = 
-  code1 == code2 && length warnings1 == length warnings2
+  code1 == code2 && L.length warnings1 == L.length warnings2
 areResultsEquivalent _ _ = False
 
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` substrings haystack
+L.isInfixOf needle haystack = needle `elem` substrings haystack
   where
-    substrings s = [take i s | i <- [1..length s]]
+    substrings s = [take i s | i <- [1..L.length s]]

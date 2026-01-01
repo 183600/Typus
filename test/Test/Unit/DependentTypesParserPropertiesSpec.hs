@@ -10,6 +10,7 @@
 module Test.Unit.DependentTypesParserPropertiesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertBool, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Positive(Positive), getPositive)
@@ -39,7 +40,7 @@ prop_dependent_type_error_equality msg line fragment =
       error3 = SyntaxError msg (line + 1) fragment
   in (error1 == error2) === True .&&. (error1 == error3) === False
 
--- Property: TypeRef equality based on name and args
+-- Property: TypeRef equality based on name L.and args
 prop_type_ref_equality :: String -> [TypeRef] -> String -> [TypeRef] -> Property
 prop_type_ref_equality name1 args1 name2 args2 =
   let ref1 = TypeRef name1 args1
@@ -52,7 +53,7 @@ prop_type_ref_total_ordering ref1 ref2 =
   let result = compare ref1 ref2
   in (result == LT || result == EQ || result == GT) === True
 
--- Property: Field equality based on name and type
+-- Property: Field equality based on name L.and type
 prop_field_equality :: String -> TypeRef -> String -> TypeRef -> Property
 prop_field_equality name1 type1 name2 type2 =
   let field1 = Field name1 type1
@@ -78,7 +79,7 @@ prop_type_body_total_ordering body1 body2 =
   let result = compare body1 body2
   in (result == LT || result == EQ || result == GT) === True
 
--- Property: TypeParameter equality based on all fields
+-- Property: TypeParameter equality based on L.all fields
 prop_type_parameter_equality :: String -> TypeRef -> [TypeConstraint] -> String -> TypeRef -> [TypeConstraint] -> Property
 prop_type_parameter_equality name1 type1 constraints1 name2 type2 constraints2 =
   let param1 = TypeParameter name1 type1 constraints1
@@ -134,7 +135,7 @@ prop_validate_malformed_input :: String -> Property
 prop_validate_malformed_input input =
   not (null input) && input `notElem` ["type X {}", "func f() {}", "alias Y = Z"] ==>
   let errors = validateDependentTypeSyntax input
-  in not (null errors) === True || length errors >= 0  -- May or may not have errors
+  in not (null errors) === True || L.length errors >= 0  -- May L.or may not have errors
 
 -- Property: parseTypeDeclaration handles valid type declaration
 prop_parse_valid_type_declaration :: String -> String -> Property
@@ -156,10 +157,10 @@ prop_parse_valid_simple_type typeName =
 prop_run_multiple_definitions :: [String] -> Property
 prop_run_multiple_definitions typeNames =
   not (null typeNames) ==>
-  let typeDefs = map (\name -> "type " ++ name ++ " { x: int }") typeNames
+  let typeDefs = L.map (\name -> "type " ++ name ++ " { x: int }") typeNames
       input = unlines typeDefs
       result = runDependentTypesParser input
-  in length result >= 0  -- May parse zero or more definitions
+  in L.length result >= 0  -- May parse zero L.or more definitions
 
 -- Property: TypeRef with no args has empty args list
 prop_type_ref_no_args :: String -> Property
@@ -172,7 +173,7 @@ prop_type_ref_no_args name =
 prop_type_ref_with_args :: String -> [String] -> Property
 prop_type_ref_with_args name argNames =
   not (null name) ==>
-  let args = map (\argName -> TypeRef argName []) argNames
+  let args = L.map (\argName -> TypeRef argName []) argNames
       ref = TypeRef name args
   in refArgs ref === args
 
@@ -195,13 +196,13 @@ tests :: TestTree
 tests =
   testGroup "DependentTypes Parser Properties"
     [ fastProperty "DependentTypeError equality based on content" prop_dependent_type_error_equality
-    , fastProperty "TypeRef equality based on name and args" prop_type_ref_equality
+    , fastProperty "TypeRef equality based on name L.and args" prop_type_ref_equality
     , fastProperty "TypeRef ordering is total" prop_type_ref_total_ordering
-    , fastProperty "Field equality based on name and type" prop_field_equality
+    , fastProperty "Field equality based on name L.and type" prop_field_equality
     , fastProperty "Field ordering is total" prop_field_total_ordering
     , fastProperty "TypeBody equality based on structure" prop_type_body_equality
     , fastProperty "TypeBody ordering is total" prop_type_body_total_ordering
-    , fastProperty "TypeParameter equality based on all fields" prop_type_parameter_equality
+    , fastProperty "TypeParameter equality based on L.all fields" prop_type_parameter_equality
     , fastProperty "TypeParameter ordering is total" prop_type_parameter_total_ordering
     , fastProperty "TypeConstraint equality based on structure" prop_type_constraint_equality
     , fastProperty "TypeConstraint ordering is total" prop_type_constraint_total_ordering

@@ -3,6 +3,7 @@
 module Test.Unit.NewGoToolchainCoreSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Text as T
@@ -18,7 +19,7 @@ import TestSupport.Arbitrary ()
 -- Test 1: Go version parsing
 prop_go_version_parsing :: String -> Property
 prop_go_version_parsing versionStr =
-  length versionStr > 0 && length versionStr < 20 ==>
+  L.length versionStr > 0 && L.length versionStr < 20 ==>
   case parseGoVersion versionStr of
     Left _ -> property True -- Invalid versions should fail gracefully
     Right version -> property True -- Valid versions should parse
@@ -35,30 +36,30 @@ prop_toolchain_version_comparison major1 minor1 patch1 major2 minor2 patch2 =
 -- Test 3: Go module path parsing
 prop_go_module_path_parsing :: String -> Property
 prop_go_module_path_parsing pathStr =
-  length pathStr > 0 && length pathStr < 50 ==>
+  L.length pathStr > 0 && L.length pathStr < 50 ==>
   let modulePath = ModulePath pathStr
   in case modulePath of
-    ModulePath p -> length p > 0
+    ModulePath p -> L.length p > 0
 
 -- Test 4: Go tokenization basic
 prop_go_tokenization_basic :: String -> Property
 prop_go_tokenization_basic str =
-  length str > 0 && length str < 100 ==>
+  L.length str > 0 && L.length str < 100 ==>
   let tokens = tokenize str
-  in length tokens >= 0 -- Should always return a list
+  in L.length tokens >= 0 -- Should always return a list
 
 -- Test 5: Token position consistency
 prop_token_position_consistency :: String -> Property
 prop_token_position_consistency str =
-  length str > 0 && length str < 50 ==>
+  L.length str > 0 && L.length str < 50 ==>
   let tokens = tokenize str
       positions = map tokenPos tokens
-  in length positions === length tokens
+  in L.length positions === L.length tokens
 
 -- Test 6: Go command execution safety
 prop_go_command_execution_safety :: String -> Property
 prop_go_command_execution_safety cmd =
-  length cmd > 0 && length cmd < 20 ==> -- Limit to reasonable size
+  L.length cmd > 0 && L.length cmd < 20 ==> -- Limit to reasonable size
   let toolchain = defaultToolchain
       result = runGoToolchain toolchain cmd
   in case result of
@@ -72,10 +73,10 @@ prop_go_command_execution_safety cmd =
 -- Test 7: Module dependency resolution
 prop_module_dependency_resolution :: String -> [String] -> Property
 prop_module_dependency_resolution moduleName deps =
-  length moduleName > 0 && length deps < 10 ==> -- Limit complexity
+  L.length moduleName > 0 && L.length deps < 10 ==> -- Limit complexity
   let module = GoModule (ModulePath moduleName) (map ModulePath deps)
       moduleDeps = getModuleDependencies module
-  in length moduleDeps === length deps
+  in L.length moduleDeps === L.length deps
 
   where
     getModuleDependencies (GoModule _ ds) = ds
@@ -92,10 +93,10 @@ prop_ast_node_roundtrip stmt =
 -- Test 9: Token type classification
 prop_token_type_classification :: String -> Property
 prop_token_type_classification str =
-  length str > 0 && length str < 20 ==>
+  L.length str > 0 && L.length str < 20 ==>
   let tokens = tokenize str
       tokenTypes = map tokenType tokens
-  in all isValidTokenType tokenTypes
+  in L.all isValidTokenType tokenTypes
 
   where
     isValidTokenType (Identifier _) = True
@@ -112,7 +113,7 @@ prop_toolchain_configuration_consistency :: GoToolchain -> Property
 prop_toolchain_configuration_consistency toolchain =
   let version = getToolchainVersion toolchain
       path = getToolchainPath toolchain
-  in length path > 0
+  in L.length path > 0
 
   where
     getToolchainVersion tc = ToolchainVersion 1 0 0 -- Default version

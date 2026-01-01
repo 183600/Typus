@@ -10,6 +10,7 @@
 module Test.Unit.NewIRQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -110,7 +111,7 @@ prop_raw_source_empty_typus_file =
 -- Property: Raw source from Typus file with blocks concatenates content
 prop_raw_source_concatenates_blocks :: [String] -> Property
 prop_raw_source_concatenates_blocks contents =
-  let blocks = map (\content -> CodeBlock undefined content undefined) contents
+  let blocks = L.map (\content -> CodeBlock undefined content undefined) contents
       typusFile = TypusFile [] [] blocks
       rawSource = rawSourceFromTypus typusFile
       expected = intercalate "\n" contents
@@ -142,22 +143,22 @@ prop_ensure_package_decl_preserves_existing goModule =
 -- Property: Ensure main function preserves existing main
 prop_ensure_main_function_preserves_existing :: GoModule -> Property
 prop_ensure_main_function_preserves_existing goModule =
-  let hasMain = any isMainFunc (gmDecls goModule)
+  let hasMain = L.any isMainFunc (gmDecls goModule)
       moduleWithMain = ensureMainFunction goModule
   in if hasMain
      then property $ moduleWithMain === goModule
-     else property $ length (gmDecls moduleWithMain) >= length (gmDecls goModule)
+     else property $ L.length (gmDecls moduleWithMain) >= L.length (gmDecls goModule)
   where
     isMainFunc (GoFunc _) = True  -- Simplified check
     isMainFunc _ = False
 
--- Property: Emit Go creates GoIR with module and source
+-- Property: Emit Go creates GoIR with module L.and source
 prop_emit_go_creates_go_ir :: GoModule -> Property
 prop_emit_go_creates_go_ir goModule =
   let semanticIR = SemanticIR undefined goModule undefined
       goIR = emitGo semanticIR
   in property $ goModule goIR === goModule .&&.
-             not (null (goSource goIR))
+             not (L.null (goSource goIR))
 
 -- Property: GoIR source contains package declaration
 prop_go_ir_source_contains_package :: GoModule -> Property
@@ -165,7 +166,7 @@ prop_go_ir_source_contains_package goModule =
   let semanticIR = SemanticIR undefined goModule undefined
       goIR = emitGo semanticIR
   in case gmPackage goModule of
-    Just pkg -> property $ ("package " ++ pdName pkg) `isInfixOf` goSource goIR
+    Just pkg -> property $ ("package " ++ pdName pkg) `L.isInfixOf` goSource goIR
     Nothing -> property $ True  -- No package to check
 
 -- Property: Attach inferred imports preserves existing imports
@@ -174,7 +175,7 @@ prop_attach_inferred_imports_preserves_existing goModule =
   let moduleWithImports = attachInferredImports goModule
       originalImportKeys = map importKey (gmImports goModule)
       newImportKeys = map importKey (gmImports moduleWithImports)
-  in property $ all (`elem` newImportKeys) originalImportKeys
+  in property $ L.all (`elem` newImportKeys) originalImportKeys
   where
     importKey imp = (importAlias imp, importPath imp)
 
@@ -182,7 +183,7 @@ prop_attach_inferred_imports_preserves_existing goModule =
 prop_module_content_text_concatenates_decls :: GoModule -> Property
 prop_module_content_text_concatenates_decls goModule =
   let content = moduleContentText goModule
-      hasDecls = not (null (gmDecls goModule))
+      hasDecls = not (L.null (gmDecls goModule))
   in if hasDecls
      then property $ not (null content)
      else property $ True  -- Empty module is valid
@@ -232,7 +233,7 @@ prop_ir_handles_modules_with_imports imports =
   let moduleWithImports = GoModule Nothing imports [] []
       semanticIR = SemanticIR undefined moduleWithImports undefined
       goIR = emitGo semanticIR
-  in property $ length (gmImports (goModule goIR)) === length imports
+  in property $ L.length (gmImports (goModule goIR)) === L.length imports
 
 -- Property: IR generation handles modules with declarations
 prop_ir_handles_modules_with_decls :: [GoDecl] -> Property
@@ -240,7 +241,7 @@ prop_ir_handles_modules_with_decls decls =
   let moduleWithDecls = GoModule Nothing [] decls []
       semanticIR = SemanticIR undefined moduleWithDecls undefined
       goIR = emitGo semanticIR
-  in property $ length (gmDecls (goModule goIR)) === length decls
+  in property $ L.length (gmDecls (goModule goIR)) === L.length decls
 
 -- Property: IR generation handles modules with build tags
 prop_ir_handles_modules_with_build_tags :: [String] -> Property
@@ -314,11 +315,11 @@ prop_ir_handles_package_name_changes packageName =
 -- Property: IR generation source is non-empty for non-empty modules
 prop_ir_source_non_empty_for_non_empty_modules :: GoModule -> Property
 prop_ir_source_non_empty_for_non_empty_modules goModule =
-  let hasContent = not (null (gmDecls goModule)) || not (null (gmImports goModule))
+  let hasContent = not (L.null (gmDecls goModule)) || not (L.null (gmImports goModule))
       semanticIR = SemanticIR undefined goModule undefined
       goIR = emitGo semanticIR
   in if hasContent
-     then property $ not (null (goSource goIR))
+     then property $ not (L.null (goSource goIR))
      else property $ True  -- Empty module is allowed
 
 tests :: TestTree
@@ -331,7 +332,7 @@ tests =
     , fastProperty "Ensure package decl adds main package when missing" prop_ensure_package_decl_adds_main
     , fastProperty "Ensure package decl preserves existing package" prop_ensure_package_decl_preserves_existing
     , fastProperty "Ensure main function preserves existing main" prop_ensure_main_function_preserves_existing
-    , fastProperty "Emit Go creates GoIR with module and source" prop_emit_go_creates_go_ir
+    , fastProperty "Emit Go creates GoIR with module L.and source" prop_emit_go_creates_go_ir
     , fastProperty "GoIR source contains package declaration" prop_go_ir_source_contains_package
     , fastProperty "Attach inferred imports preserves existing imports" prop_attach_inferred_imports_preserves_existing
     , fastProperty "Module content text concatenates declarations" prop_module_content_text_concatenates_decls

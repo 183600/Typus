@@ -20,7 +20,9 @@ import Compiler (compile)
 import Parser (parseTypus, TypusFile(..), CodeBlock(..))
 import SourceLocation (SourcePos(..), SourceSpan(..))
 import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, nub, lines, unlines, union, intersect)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (nub, lines, unlines, union, intersect)
 import Data.Char (isAlpha, isAlphaNum, isSpace, isDigit)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -139,7 +141,7 @@ genTypeDeclaration = oneof
         fieldName <- genIdentifier
         fieldType <- elements ["int", "string", "bool", "float"]
         return (fieldName, fieldType)
-      let fieldDecls = map (\(name, typ) -> name ++ " " ++ typ) fields
+      let fieldDecls = L.map (\(name, typ) -> name ++ " " ++ typ) fields
       return $ "type " ++ structName ++ " struct {\n  " ++ unlines fieldDecls ++ "\n}"
     
   , -- Function type
@@ -147,7 +149,7 @@ genTypeDeclaration = oneof
       funcName <- genIdentifier
       paramTypes <- listOf $ elements ["int", "string", "bool", "float"]
       returnType <- elements ["int", "string", "bool", "float"]
-      let params = if null paramTypes then "" else unwords (map (\t -> t + " param") paramTypes)
+      let params = if null paramTypes then "" else unwords (L.map (\t -> t + " param") paramTypes)
       return $ "type " ++ funcName ++ " = func(" ++ params ++ ") " ++ returnType
   ]
 
@@ -167,7 +169,7 @@ genFunctionDeclaration = do
   paramTypes <- listOf $ elements ["int", "string", "bool", "float"]
   returnType <- elements ["int", "string", "bool", "float", "void"]
   let params = unwords $ zipWith (\name typ -> name ++ " " ++ typ) paramNames paramTypes
-  return $ "func " ++ funcName ++ "(" ++ params ++ ") " ++ returnType ++ " {\n  return " ++ head (elements ["0", "\"hello\"", "true", "0.0"]) ++ "\n}"
+  return $ "func " ++ funcName ++ "(" ++ params ++ ") " ++ returnType ++ " {\n  return " ++ L.head (elements ["0", "\"hello\"", "true", "0.0"]) ++ "\n}"
 
 -- | Generate complete program with type definitions
 genTypedProgram :: Gen String
@@ -237,14 +239,14 @@ prop_basic_type_compatibility type1 type2 =
     (TypeName "void", TypeName "void") -> property $ areTypesCompatible type1 type2
     _ -> property $ not (areTypesCompatible type1 type2)
 
--- Property: Function type compatibility should check parameters and return types
+-- Property: Function type compatibility should check parameters L.and return types
 prop_function_type_compatibility :: [Type] -> Type -> [Type] -> Type -> Property
 prop_function_type_compatibility params1 ret1 params2 ret2 =
   let funcType1 = TypeFunction params1 ret1
       funcType2 = TypeFunction params2 ret2
-  in property $ areTypesCompatible funcType1 funcType2 === (length params1 == length params2 && ret1 == ret2)
+  in property $ areTypesCompatible funcType1 funcType2 === (L.length params1 == L.length params2 && ret1 == ret2)
 
--- Property: Struct type compatibility should check field names and types
+-- Property: Struct type compatibility should check field names L.and types
 prop_struct_type_compatibility :: String -> [(String, Type)] -> String -> [(String, Type)] -> Property
 prop_struct_type_compatibility name1 fields1 name2 fields2 =
   let structType1 = TypeRecord fields1
@@ -268,7 +270,7 @@ prop_type_unification_incompatible type1 type2 =
     (TypeName "int", TypeName "string") -> property $ unifyTypes type1 type2 === Nothing
     (TypeName "bool", TypeName "float") -> property $ unifyTypes type1 type2 === Nothing
     (TypeName "void", TypeName "int") -> property $ unifyTypes type1 type2 === Nothing
-    _ -> property $ True -- Other cases may succeed or fail
+    _ -> property $ True -- Other cases may succeed L.or fail
 
 -- Property: Type environment should handle duplicate types gracefully
 prop_typeenv_handle_duplicates :: String -> Type -> Type -> Property
@@ -284,14 +286,14 @@ prop_typeenv_preserve_order pairs =
   not (null pairs) ==>
   let typeEnv = buildTypeEnvFromPairs pairs
       allTypes = Map.elems (types typeEnv)
-  in property $ length allTypes === length (nub pairs)
+  in property $ L.length allTypes === L.length (nub pairs)
 
 -- Property: Function signature checking should validate parameter counts
 prop_function_signature_param_count :: [Type] -> Type -> [Type] -> Type -> Property
 prop_function_signature_param_count params1 ret1 params2 ret2 =
-  let signature1 = FunctionSignature (map (\t -> FunctionParam "param" t False) params1) ret1
-      signature2 = FunctionSignature (map (\t -> FunctionParam "param" t False) params2) ret2
-  in property $ checkFunctionSignature signature1 signature2 === (length params1 == length params2 && ret1 == ret2)
+  let signature1 = FunctionSignature (L.map (\t -> FunctionParam "param" t False) params1) ret1
+      signature2 = FunctionSignature (L.map (\t -> FunctionParam "param" t False) params2) ret2
+  in property $ checkFunctionSignature signature1 signature2 === (L.length params1 == L.length params2 && ret1 == ret2)
 
 -- Property: Type environment should handle complex nested types
 prop_typeenv_nested_types :: Type -> Type -> Property
@@ -321,7 +323,7 @@ prop_typeenv_generic_types typeName typeParams baseType =
       lookupResult = lookupType typeEnv typeName
   in property $ lookupResult === Just genericType
 
--- Export all tests
+-- Export L.all tests
 tests :: TestTree
 tests =
   testGroup "Type Environment Building QuickCheck Tests"
@@ -332,8 +334,8 @@ tests =
     , fastProperty "variable addition should work correctly" prop_variable_addition
     , fastProperty "type compatibility should be reflexive" prop_type_compatibility_reflexive
     , fastProperty "basic type compatibility should work correctly" prop_basic_type_compatibility
-    , fastProperty "function type compatibility should check parameters and return types" prop_function_type_compatibility
-    , fastProperty "struct type compatibility should check field names and types" prop_struct_type_compatibility
+    , fastProperty "function type compatibility should check parameters L.and return types" prop_function_type_compatibility
+    , fastProperty "struct type compatibility should check field names L.and types" prop_struct_type_compatibility
     , fastProperty "type unification should work for identical types" prop_type_unification_identical
     , fastProperty "type unification should fail for incompatible types" prop_type_unification_incompatible
     , fastProperty "type environment should handle duplicate types gracefully" prop_typeenv_handle_duplicates

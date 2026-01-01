@@ -11,18 +11,20 @@
 module Test.Unit.NewTextEncodingSafetyQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
 import Data.Char (isSpace, isControl, isAscii, ord)
 import Data.Text (Text)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Encoding.Error as TE
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Word (Word8)
-import Data.List (sort, nub, isInfixOf)
+import Data.List (isInfixOf)
+import Data.List (sort, nub)
 
 import Utils
   ( trim
@@ -60,7 +62,7 @@ genMixedLineEndings :: Gen String
 genMixedLineEndings = do
   parts <- listOf $ elements ["\n", "\r\n", "\r"]
   content <- listOf $ elements ['a'..'z']
-  return $ concat parts ++ concat content
+  return $ L.concat parts ++ L.concat content
 
 -- ============================================================================
 -- Text Encoding Properties
@@ -71,17 +73,17 @@ prop_trim_preserves_unicode :: String -> Property
 prop_trim_preserves_unicode input =
   let unicodeInput = input ++ "café naïve résumé 测试 🚀"
       trimmed = trim unicodeInput
-      unicodeChars = filter (not . isAscii) unicodeInput
-      trimmedUnicode = filter (not . isAscii) trimmed
+      unicodeChars = L.filter (not . isAscii) unicodeInput
+      trimmedUnicode = L.filter (not . isAscii) trimmed
   in not (null unicodeChars) ==> 
-     property $ sort trimmedUnicode === sort (filter (`elem` trimmed) unicodeChars)
+     property $ sort trimmedUnicode === sort (L.filter (`elem` trimmed) unicodeChars)
 
 -- Property: splitBy handles Unicode delimiters correctly
 prop_splitBy_unicode_delimiter :: Char -> String -> Property
 prop_splitBy_unicode_delimiter delim input =
   let unicodeInput = input ++ "测试" ++ [delim] ++ "café" ++ [delim] ++ "🚀"
       parts = splitBy delim unicodeInput
-  in property $ length parts >= 1 .&&.
+  in property $ L.length parts >= 1 .&&.
              concat parts === unicodeInput
 
 -- Property: removeLineComments preserves Unicode in strings
@@ -89,17 +91,17 @@ prop_removeLine_comments_unicode_strings :: String -> Property
 prop_removeLine_comments_unicode_strings comment =
   let content = "var s string = \"café naïve 测试 🚀\" // " ++ comment
       processed = removeLineComments content
-  in property $ "café naïve 测试 🚀" `isInfixOf` processed .&&.
-             not ("// " ++ comment `isInfixOf` processed)
+  in property $ "café naïve 测试 🚀" `L.isInfixOf` processed .&&.
+             not ("// " ++ comment `L.isInfixOf` processed)
 
 -- Property: removeComments handles Unicode in block comments
 prop_remove_comments_unicode_block :: String -> String -> Property
 prop_remove_comments_unicode_block before after =
   let content = before ++ "/* café naïve 测试 🚀 */" ++ after
       processed = removeComments content
-  in property $ not ("/* café naïve 测试 🚀 */" `isInfixOf` processed) .&&.
-             before `isInfixOf` processed .&&.
-             after `isInfixOf` processed
+  in property $ not ("/* café naïve 测试 🚀 */" `L.isInfixOf` processed) .&&.
+             before `L.isInfixOf` processed .&&.
+             after `L.isInfixOf` processed
 
 -- Property: normalizeIndentation preserves Unicode content
 prop_normalize_indentation_unicode :: String -> Property
@@ -107,11 +109,11 @@ prop_normalize_indentation_unicode content =
   let unicodeContent = "  café\n    naïve\n      测试\n  🚀"
       normalized = normalizeIndentation unicodeContent
       linesNorm = lines normalized
-  in property $ length linesNorm === 4 .&&.
-             any ("café" `isInfixOf`) linesNorm .&&.
-             any ("naïve" `isInfixOf`) linesNorm .&&.
-             any ("测试" `isInfixOf`) linesNorm .&&.
-             any ("🚀" `isInfixOf`) linesNorm
+  in property $ L.length linesNorm === 4 .&&.
+             any ("café" `L.isInfixOf`) linesNorm .&&.
+             any ("naïve" `L.isInfixOf`) linesNorm .&&.
+             any ("测试" `L.isInfixOf`) linesNorm .&&.
+             any ("🚀" `L.isInfixOf`) linesNorm
 
 -- Property: breakOn handles Unicode patterns
 prop_break_on_unicode :: String -> String -> Property
@@ -131,9 +133,9 @@ prop_trim_control_characters input =
   forAll genControlString $ \controls ->
     let content = controls ++ input ++ controls
         trimmed = trim content
-        hasLeadingControl = not (null controls) && isControl (head controls)
+        hasLeadingControl = not (null controls) && isControl (L.head controls)
         hasTrailingControl = not (null controls) && isControl (last controls)
-        noLeadingControl = null trimmed || not (isControl (head trimmed))
+        noLeadingControl = null trimmed || not (isControl (L.head trimmed))
         noTrailingControl = null trimmed || not (isControl (last trimmed))
     in classify hasLeadingControl "has leading control" $
        classify hasTrailingControl "has trailing control" $
@@ -145,8 +147,8 @@ prop_remove_line_comments_control prefix comment =
   let controls = "\1\2\3"
       content = prefix ++ controls ++ "// " ++ comment ++ "\n" ++ controls ++ "after"
       processed = removeLineComments content
-  in property $ not ("// " ++ comment `isInfixOf` processed) .&&.
-             controls `isInfixOf` processed
+  in property $ not ("// " ++ comment `L.isInfixOf` processed) .&&.
+             controls `L.isInfixOf` processed
 
 -- Property: splitBy handles control characters as delimiters
 prop_splitBy_control_delimiter :: Char -> String -> Property
@@ -154,7 +156,7 @@ prop_splitBy_control_delimiter delim input =
   isControl delim ==> 
   let content = input ++ [delim] ++ "test" ++ [delim] ++ input
       parts = splitBy delim content
-  in property $ length parts === 3 .&&.
+  in property $ L.length parts === 3 .&&.
              concat parts === content
 
 -- ============================================================================
@@ -168,8 +170,8 @@ prop_normalize_indentation_mixed_endings content =
     let mixedContent = content ++ endings ++ content
       normalized = normalizeIndentation mixedContent
       normalizedLines = lines normalized
-  in property $ length normalizedLines >= 2 .&&.
-             all (content `isInfixOf`) normalizedLines
+  in property $ L.length normalizedLines >= 2 .&&.
+             all (content `L.isInfixOf`) normalizedLines
 
 -- Property: removeLineComments preserves mixed line endings
 prop_remove_line_comments_mixed_endings :: String -> String -> Property
@@ -177,8 +179,8 @@ prop_remove_line_comments_mixed_endings before after =
   forAll genMixedLineEndings $ \endings ->
     let content = before ++ "// comment" ++ endings ++ after
         processed = removeLineComments content
-    in property $ not ("// comment" `isInfixOf` processed) .&&.
-               endings `isInfixOf` processed
+    in property $ not ("// comment" `L.isInfixOf` processed) .&&.
+               endings `L.isInfixOf` processed
 
 -- ============================================================================
 -- UTF-8 Encoding Safety Properties
@@ -195,20 +197,20 @@ prop_utf8_validity_preserved input =
 -- Property: String processing handles invalid UTF-8 gracefully
 prop_invalid_utf8_handling :: [Word8] -> Property
 prop_invalid_utf8_handling bytes =
-  let invalidBytes = take 100 $ filter (> 127) bytes
+  let invalidBytes = take 100 $ L.filter (> 127) bytes
       byteString = BS.pack invalidBytes
       -- Try to decode as UTF-8, which may fail
       decoded = TE.decodeUtf8With TE.lenientDecode byteString
       processed = T.unpack (T.pack (trim (T.unpack decoded)))
-  in property $ length processed >= 0
+  in property $ L.length processed >= 0
 
--- Property: Emoji and surrogate pairs are preserved
+-- Property: Emoji L.and surrogate pairs are preserved
 prop_emoji_preservation :: String -> Property
 prop_emoji_preservation input =
   let emojis = ["🚀", "💻", "🔧", "📝", "⚡", "🔥", "💡", "🎯"]
       contentWithEmojis = input ++ unwords emojis
       processed = trim contentWithEmojis
-  in property $ all (`isInfixOf` processed) emojis
+  in property $ L.all (`L.isInfixOf` processed) emojis
 
 -- ============================================================================
 -- Performance with Unicode Properties
@@ -219,10 +221,10 @@ prop_large_unicode_performance :: Int -> String -> Property
 prop_large_unicode_performance multiplier baseContent =
   multiplier > 0 && multiplier <= 100 ==> 
   let unicodeContent = baseContent ++ "café naïve 测试 🚀"
-      largeContent = concat $ replicate multiplier unicodeContent
+      largeContent = L.concat $ replicate multiplier unicodeContent
       trimmed = trim largeContent
       split = splitBy ',' largeContent
-  in property $ length trimmed <= length largeContent .&&.
+  in property $ L.length trimmed <= L.length largeContent .&&.
              length split >= 1
 
 -- Property: Unicode normalization is idempotent

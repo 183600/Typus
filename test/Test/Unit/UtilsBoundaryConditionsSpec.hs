@@ -7,6 +7,7 @@ import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isSuffixOf)
 
 import Utils
@@ -121,7 +122,7 @@ indentationBoundaryTests = testGroup "Indentation Boundary Tests"
   , testCase "normalizeIndentation preserves blank lines" $ do
       normalizeIndentation "\n\nline\n\n" @?= "\n\nline\n\n"
       
-  , testCase "normalizeIndentation with mixed tabs and spaces" $ do
+  , testCase "normalizeIndentation with mixed tabs L.and spaces" $ do
       normalizeIndentation "\t  line\n    \t  next" @?= "line\n  next"
       
   , testCase "forceSingleTabIndentation on empty string" $ do
@@ -161,8 +162,8 @@ searchBoundaryTests = testGroup "Search Boundary Tests"
 
 quickCheckProperties :: TestTree
 quickCheckProperties = testGroup "QuickCheck Boundary Properties"
-  [ fastProperty "trim removes all leading/trailing whitespace" prop_trim_boundary
-  , fastProperty "splitBy length relationship" prop_splitBy_length
+  [ fastProperty "trim removes L.all leading/trailing whitespace" prop_trim_boundary
+  , fastProperty "splitBy L.length relationship" prop_splitBy_length
   , fastProperty "splitByCollapsed never returns empty strings" prop_splitByCollapsed_no_empty
   , fastProperty "removeLineComments preserves non-comment lines" prop_removeLineComments_preserve
   , fastProperty "normalizeIndentation preserves line count" prop_normalizeIndentation_line_count
@@ -174,7 +175,7 @@ prop_trim_boundary :: String -> Property
 prop_trim_boundary s =
   let trimmed = trim s
   in conjoin
-    [ not (null trimmed) ==> property (not (isSpace (head trimmed)))
+    [ not (null trimmed) ==> property (not (isSpace (L.head trimmed)))
     , not (null trimmed) ==> property (not (isSpace (last trimmed)))
     , null trimmed ==> property True
     ]
@@ -182,17 +183,17 @@ prop_trim_boundary s =
 prop_splitBy_length :: Char -> String -> Property
 prop_splitBy_length delim s =
   let parts = splitBy delim s
-      delimiterCount = length (filter (== delim) s)
-  in length parts === delimiterCount + 1
+      delimiterCount = L.length (L.filter (== delim) s)
+  in L.length parts === delimiterCount + 1
 
 prop_splitByCollapsed_no_empty :: Char -> String -> Property
 prop_splitByCollapsed_no_empty delim s =
   let parts = splitByCollapsed delim s
-  in property $ all (not . null) parts
+  in property $ L.all (not . null) parts
 
 prop_removeLineComments_preserve :: String -> Property
 prop_removeLineComments_preserve s =
-  let hasNoComment = not ("//" `isPrefixOf` s)
+  let hasNoComment = not ("//" `L.isPrefixOf` s)
       result = removeLineComments s
   in hasNoComment ==> property (s == result)
 
@@ -200,14 +201,14 @@ prop_normalizeIndentation_line_count :: String -> Property
 prop_normalizeIndentation_line_count s =
   let originalLines = lines s
       normalizedLines = lines (normalizeIndentation s)
-  in length originalLines === length normalizedLines
+  in L.length originalLines === L.length normalizedLines
 
 prop_breakOn_concat :: String -> String -> Property
 prop_breakOn_concat pat s =
   not (null pat) ==>
   let (before, after) = breakOn pat s
-  in if pat `isInfixOf` s
+  in if pat `L.isInfixOf` s
      then before ++ pat ++ after === s
      else before === s && after === ""
   where
-    isInfixOf needle haystack = needle `isPrefixOf` dropWhile (not . (head needle ==)) haystack
+    L.isInfixOf needle haystack = needle `L.isPrefixOf` dropWhile (not . (L.head needle ==)) haystack

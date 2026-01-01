@@ -7,6 +7,7 @@ import ErrorHandler (ErrorHandler(..))
 import Compiler.Errors.Core (ErrorLocation(..))
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos, toErrorLocationWithSpan)
 import Data.Either (isLeft, isRight)
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 -- ============================================================================
@@ -32,7 +33,7 @@ prop_error_messages_have_location content =
   in case result of
     Left err -> 
       let errMsg = show err
-      in "line" `isInfixOf` errMsg || "column" `isInfixOf` errMsg || "position" `isInfixOf` errMsg
+      in "line" `L.isInfixOf` errMsg || "column" `L.isInfixOf` errMsg || "position" `L.isInfixOf` errMsg
     Right _ -> True  -- No error means property is vacuously true
 
 -- | Error handling should preserve input context in error messages
@@ -43,9 +44,9 @@ prop_error_preserves_context prefix suffix =
   in case result of
     Left err -> 
       let errMsg = show err
-          hasContext = take 10 prefix `isInfixOf` errMsg || 
-                      take 10 suffix `isInfixOf` errMsg
-      in length errMsg > 10  -- Error message should be substantial
+          hasContext = take 10 prefix `L.isInfixOf` errMsg || 
+                      take 10 suffix `L.isInfixOf` errMsg
+      in L.length errMsg > 10  -- Error message should be substantial
     Right _ -> True
 
 -- | Error recovery should maintain partial results when possible
@@ -57,32 +58,32 @@ prop_error_recovery_partial_results good bad =
     Left _ -> True  -- May fail completely
     Right _ -> True  -- Or succeed with partial results
 
--- | Multiple errors should be collected and reported appropriately
+-- | Multiple errors should be collected L.and reported appropriately
 prop_multiple_errors_collected :: String -> String -> String -> Property
 prop_multiple_errors_collected part1 part2 part3 = 
   let withErrors = part1 ++ "\n@@ ERROR1 @@\n" ++ part2 ++ "\n@@ ERROR2 @@\n" ++ part3
       result = parseTypus withErrors
   in case result of
-    Left err -> length (show err) >= 20  -- Should collect substantial error info
+    Left err -> L.length (show err) >= 20  -- Should collect substantial error info
     Right _ -> True
 
 -- | Error locations should be within source file bounds
 prop_error_locations_within_bounds :: String -> Property
 prop_error_locations_within_bounds content = 
   let result = parseTypus content
-      contentLength = length content
-      contentLines = length (lines content)
+      contentLength = L.length content
+      contentLines = L.length (lines content)
   in case result of
     Left _ -> True  -- Error location info should be valid
     Right tf -> 
       let spans = map cbSpan (tfBlocks tf)
-          validSpans = filter (\span -> 
+          validSpans = L.filter (\span -> 
             let start = spanStart span
                 end = spanEnd span
             in posLine start <= contentLines && posLine end <= contentLines) spans
-      in length validSpans >= 0
+      in L.length validSpans >= 0
 
--- | Error messages should be descriptive and helpful
+-- | Error messages should be descriptive L.and helpful
 prop_error_messages_descriptive :: String -> Property
 prop_error_messages_descriptive content = 
   let malformed = content ++ "\n@@ SYNTAX_ERROR_WITH_EXTRA_INFO @@"
@@ -90,7 +91,7 @@ prop_error_messages_descriptive content =
   in case result of
     Left err -> 
       let errMsg = show err
-      in length errMsg >= 5  -- Should have some descriptive content
+      in L.length errMsg >= 5  -- Should have some descriptive content
     Right _ -> True
 
 -- | Error handling should be consistent across similar inputs
@@ -111,5 +112,5 @@ prop_graceful_degradation =
   let malformed = "@@!@#@!#@!#@!#@@@!#@!#@!#@!#"
       result = parseTypus malformed
   in case result of
-    Left err -> length (show err) > 0  -- Should produce meaningful error
-    Right tf -> length (tfBlocks tf) >= 0  -- Or produce some structure
+    Left err -> L.length (show err) > 0  -- Should produce meaningful error
+    Right tf -> L.length (tfBlocks tf) >= 0  -- Or produce some structure

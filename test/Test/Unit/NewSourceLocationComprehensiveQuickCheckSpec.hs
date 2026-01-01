@@ -15,7 +15,7 @@ import SourceLocation (SourcePos(..), SourceSpan(..), Located(..),
 -- Generators
 -- ============================================================================
 
--- Generate valid source positions (1-based line and column)
+-- Generate valid source positions (1-based line L.and column)
 genValidSourcePos :: Gen SourcePos
 genValidSourcePos = do
   line <- choose (1, 1000)

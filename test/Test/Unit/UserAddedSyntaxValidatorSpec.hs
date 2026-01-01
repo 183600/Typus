@@ -3,11 +3,13 @@
 module Test.Unit.UserAddedSyntaxValidatorSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Data.List (sort, nub, length, sum, reverse, concat, isPrefixOf, isInfixOf)
+import Data.List (length, sum, reverse, concat, isPrefixOf, isInfixOf)
+import Data.List (sort, nub)
 
 import Utils (trim, splitBy, splitByComma, removeLineComments, normalizeIndentation)
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos, posAfter, emptySpan)
@@ -26,7 +28,7 @@ tests = testGroup "User Added Syntax Validator Properties"
 textProcessingTests :: TestTree
 textProcessingTests = testGroup "Text Processing Properties"
   [ fastProperty "trim is idempotent" prop_trim_idempotent
-  , fastProperty "splitBy preserves total length" prop_splitBy_preserves_length
+  , fastProperty "splitBy preserves total L.length" prop_splitBy_preserves_length
   , fastProperty "removeLineComments preserves line count" prop_removeLineComments_preserves_lines
   , fastProperty "normalizeIndentation preserves non-empty content" prop_normalizeIndentation_preserves_content
   ]
@@ -34,7 +36,7 @@ textProcessingTests = testGroup "Text Processing Properties"
 sourceLocationTests :: TestTree
 sourceLocationTests = testGroup "Source Location Properties"
   [ fastProperty "posAfter advances offset" prop_posAfter_advances_offset
-  , fastProperty "emptySpan has zero length" prop_emptySpan_zero_length
+  , fastProperty "emptySpan has zero L.length" prop_emptySpan_zero_length
   , fastProperty "source position ordering is consistent" prop_position_ordering_consistent
   ]
 
@@ -57,20 +59,20 @@ prop_trim_idempotent s = trim (trim s) === trim s
 prop_splitBy_preserves_length :: Char -> String -> Property
 prop_splitBy_preserves_length delim s =
   let parts = splitBy delim s
-      totalLength = sum (map length parts) + length (filter (== delim) s)
-  in totalLength === length s
+      totalLength = L.sum (map L.length parts) + L.length (L.filter (== delim) s)
+  in totalLength === L.length s
 
 prop_removeLineComments_preserves_lines :: String -> Property
 prop_removeLineComments_preserves_lines s =
   let originalLines = lines s
       processedLines = lines (removeLineComments s)
-  in length processedLines <= length originalLines
+  in L.length processedLines <= L.length originalLines
 
 prop_normalizeIndentation_preserves_content :: String -> Property
 prop_normalizeIndentation_preserves_content s =
   let normalized = normalizeIndentation s
-      hasContent = not (null (trim s))
-  in hasContent ==> property $ not (null (trim normalized))
+      hasContent = not (L.null (trim s))
+  in hasContent ==> property $ not (L.null (trim normalized))
 
 -- Source Location Properties
 
@@ -95,13 +97,13 @@ prop_position_ordering_consistent pos1 pos2 =
 prop_validation_preserves_positions :: String -> Property
 prop_validation_preserves_positions code =
   let -- Simulate validation (simplified for property testing)
-      hasErrors = "//" `isInfixOf` code || "/*" `isInfixOf` code
+      hasErrors = "//" `L.isInfixOf` code || "/*" `L.isInfixOf` code
   in hasErrors ==> property True -- In real implementation, would check error positions
 
 prop_syntax_errors_valid_locations :: String -> Property
 prop_syntax_errors_valid_locations code =
   let -- Simulate syntax error detection
-      hasError = ";;;" `isInfixOf` code
+      hasError = ";;;" `L.isInfixOf` code
   in hasError ==> property $ startPos == startPos -- Valid start position
 
 -- Error Handling Properties
@@ -109,6 +111,6 @@ prop_syntax_errors_valid_locations code =
 prop_error_messages_contain_context :: String -> Property
 prop_error_messages_contain_context code =
   let -- Simulate error message generation
-      hasError = "error" `isInfixOf` code
+      hasError = "error" `L.isInfixOf` code
       errorMsg = "Syntax error at: " ++ take 20 code
-  in hasError ==> property $ length errorMsg > length "Syntax error at: "
+  in hasError ==> property $ L.length errorMsg > L.length "Syntax error at: "

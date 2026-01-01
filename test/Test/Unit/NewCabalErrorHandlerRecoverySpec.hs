@@ -24,6 +24,7 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 
 -- | Test suite for Error Handler recovery mechanisms
@@ -118,7 +119,7 @@ deduplicateErrors = nub
 
 prop_error_recovery_preserves_context :: String -> ErrorType -> ErrorSeverity -> Property
 prop_error_recovery_preserves_context errId errType errSeverity =
-  not (null errId) && length errId <= 10 ==>
+  not (null errId) && L.length errId <= 10 ==>
   let errLoc = ErrorLocation Nothing 1 1 Nothing Nothing
       context = Map.fromList [("file", "test.typus"), ("phase", "parsing")]
       error = createError errId errType errSeverity "Test error" errLoc
@@ -128,13 +129,13 @@ prop_error_recovery_preserves_context errId errType errSeverity =
 
 prop_error_messages_contain_location :: String -> ErrorType -> Property
 prop_error_messages_contain_location errId errType =
-  not (null errId) && length errId <= 10 ==>
+  not (null errId) && L.length errId <= 10 ==>
   let line = 10
       col = 5
       errLoc = ErrorLocation Nothing line col Nothing Nothing
       error = createError errId errType Error "Test error" errLoc
       msg = errorMessage error
-  in property $ show line `isInfixOf` msg .||. show col `isInfixOf` msg
+  in property $ show line `L.isInfixOf` msg .||. show col `L.isInfixOf` msg
 
 prop_recovery_attempts_bounded :: Int -> Property
 prop_recovery_attempts_bounded initialAttempts =
@@ -146,7 +147,7 @@ prop_recovery_attempts_bounded initialAttempts =
 
 prop_error_classification_deterministic :: String -> ErrorType -> ErrorSeverity -> Property
 prop_error_classification_deterministic errId errType errSeverity =
-  not (null errId) && length errId <= 10 ==>
+  not (null errId) && L.length errId <= 10 ==>
   let errLoc = ErrorLocation Nothing 1 1 Nothing Nothing
       error = createError errId errType errSeverity "Test error" errLoc
       classification1 = classifyError error
@@ -159,9 +160,9 @@ prop_recovery_strategies_exhaustive :: ErrorType -> Property
 prop_recovery_strategies_exhaustive errType =
   let allStrategies = [SkipToken, InsertToken, ReplaceToken, Abort]
       state = ErrorState [] 0 3 Map.empty
-      results = map (\strategy -> attemptRecovery strategy state) allStrategies
-      hasSuccess = any isRight results
-      hasFailure = any isLeft results
+      results = L.map (\strategy -> attemptRecovery strategy state) allStrategies
+      hasSuccess = L.any isRight results
+      hasFailure = L.any isLeft results
   in property $ hasSuccess .&&. hasFailure
   where
     isRight (Right _) = True
@@ -175,7 +176,7 @@ prop_recovery_preserves_structure initialErrorCount =
   let errors = replicate initialErrorCount (createError "test" ParseError Error "test" (ErrorLocation Nothing 1 1 Nothing Nothing))
       state = ErrorState errors 0 3 Map.empty
   in case attemptRecovery SkipToken state of
-    Right recoveredState -> property $ length (errors recoveredState) === initialErrorCount
+    Right recoveredState -> property $ L.length (errors recoveredState) === initialErrorCount
     Left _ -> property $ True
 
 prop_recovery_no_new_errors :: Int -> Property
@@ -184,7 +185,7 @@ prop_recovery_no_new_errors initialErrorCount =
   let errors = replicate initialErrorCount (createError "test" ParseError Error "test" (ErrorLocation Nothing 1 1 Nothing Nothing))
       state = ErrorState errors 0 3 Map.empty
   in case attemptRecovery SkipToken state of
-    Right recoveredState -> property $ length (errors recoveredState) <= initialErrorCount
+    Right recoveredState -> property $ L.length (errors recoveredState) <= initialErrorCount
     Left _ -> property $ True
 
 prop_recovery_idempotent :: Int -> Property
@@ -204,22 +205,22 @@ prop_recovery_idempotent attempts =
 
 prop_error_accumulation_ordering :: [String] -> Property
 prop_error_accumulation_ordering errorIds =
-  not (null errorIds) && length errorIds <= 5 && all (not . null) errorIds ==>
+  not (null errorIds) && L.length errorIds <= 5 && L.all (not . null) errorIds ==>
   let errors = zipWith (\i errId -> createError errId ParseError Error ("Error " ++ show i) (ErrorLocation Nothing i 1 Nothing Nothing)) [1..] errorIds
-      state = foldl (flip addError) (ErrorState [] 0 3 Map.empty) errors
+      state = L.foldl (flip addError) (ErrorState [] 0 3 Map.empty) errors
       errorIdsInState = map errorId (errors state)
-  in property $ errorIdsInState === reverse errorIds
+  in property $ errorIdsInState === L.reverse errorIds
 
 prop_error_deduplication :: [String] -> Property
 prop_error_deduplication errorIds =
-  not (null errorIds) && length errorIds <= 5 ==>
-  let errors = map (\errId -> createError errId ParseError Error "Duplicate error" (ErrorLocation Nothing 1 1 Nothing Nothing)) errorIds
+  not (null errorIds) && L.length errorIds <= 5 ==>
+  let errors = L.map (\errId -> createError errId ParseError Error "Duplicate error" (ErrorLocation Nothing 1 1 Nothing Nothing)) errorIds
       deduplicated = deduplicateErrors errors
-  in property $ length deduplicated <= length errors
+  in property $ L.length deduplicated <= L.length errors
 
 prop_error_context_maintained :: String -> Property
 prop_error_context_maintained contextKey =
-  not (null contextKey) && length contextKey <= 10 ==>
+  not (null contextKey) && L.length contextKey <= 10 ==>
   let context = Map.fromList [(contextKey, "context value")]
       state = ErrorState [] 0 3 context
       error = createError "test" ParseError Error "Test error" (ErrorLocation Nothing 1 1 Nothing Nothing)
@@ -230,7 +231,7 @@ prop_error_context_maintained contextKey =
 
 prop_enhanced_better_context :: String -> ErrorType -> Property
 prop_enhanced_better_context errId errType =
-  not (null errId) && length errId <= 10 ==>
+  not (null errId) && L.length errId <= 10 ==>
   let errLoc = ErrorLocation Nothing 5 10 Nothing Nothing
       basicError = createError errId errType Error "Basic error" errLoc
       -- Simulate enhanced error handling with more context
@@ -250,7 +251,7 @@ prop_error_suggestions_relevant errType =
         TypeError -> ["Check types", "Verify imports"]
         SemanticError -> ["Check variable scope", "Verify function calls"]
         RuntimeError -> ["Check input", "Verify resources"]
-  in property $ not (null suggestions) && all (not . null) suggestions
+  in property $ not (null suggestions) && L.all (not . null) suggestions
 
 prop_recovery_hints_actionable :: ErrorType -> Property
 prop_recovery_hints_actionable errType =
@@ -259,7 +260,7 @@ prop_recovery_hints_actionable errType =
         TypeError -> "Add type annotation"
         SemanticError -> "Import required module"
         RuntimeError -> "Add error handling"
-  in property $ not (null hints) && length hints <= 50
+  in property $ not (null hints) && L.length hints <= 50
 
 -- Performance properties
 
@@ -267,15 +268,15 @@ prop_error_handling_performance :: Int -> Property
 prop_error_handling_performance errorCount =
   errorCount >= 0 && errorCount <= 100 ==>
   let errors = replicate errorCount (createError "test" ParseError Error "Performance test" (ErrorLocation Nothing 1 1 Nothing Nothing))
-      state = foldl (flip addError) (ErrorState [] 0 3 Map.empty) errors
-  in property $ length (errors state) === errorCount
+      state = L.foldl (flip addError) (ErrorState [] 0 3 Map.empty) errors
+  in property $ L.length (errors state) === errorCount
 
 prop_large_error_collections_efficient :: Int -> Property
 prop_large_error_collections_efficient errorCount =
   errorCount >= 0 && errorCount <= 50 ==>
   let errors = replicate errorCount (createError ("error_" ++ show errorCount) ParseError Error "Collection test" (ErrorLocation Nothing 1 1 Nothing Nothing))
       deduplicated = deduplicateErrors errors
-  in property $ length deduplicated <= errorCount
+  in property $ L.length deduplicated <= errorCount
 
 prop_recovery_memory_bounded :: Int -> Property
 prop_recovery_memory_bounded maxAttempts =

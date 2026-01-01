@@ -3,6 +3,7 @@
 module Test.Unit.NewBoundaryConditionQuickCheckTestSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Utils (trim, splitBy, splitByCollapsed, removeLineComments)
 import SourceLocation (SourcePos(..), startPos, posAfter, emptySpan, isValidSpan)
@@ -58,10 +59,10 @@ prop_default_directives_nothing =
 prop_trim_unicode :: Property
 prop_trim_unicode = forAll (listOf $ arbitraryUnicodeChar) $ \s ->
   let trimmed = trim s
-  in length trimmed <= length s
+  in L.length trimmed <= L.length s
 
 prop_split_by_unicode :: UnicodeChar -> String -> Bool
-prop_split_by_unicode (UnicodeChar c) s = length (splitBy c s) >= 1
+prop_split_by_unicode (UnicodeChar c) s = L.length (splitBy c s) >= 1
 
 prop_large_string_handling :: Positive Int -> Property
 prop_large_string_handling (Positive size) = 
@@ -69,7 +70,7 @@ prop_large_string_handling (Positive size) =
   let largeString = replicate size 'a'
       trimmed = trim largeString
       parts = splitBy ',' largeString
-  in length trimmed == size && length parts == 1
+  in L.length trimmed == size && L.length parts == 1
 
 -- 测试错误条件
 prop_negative_positions :: Bool
@@ -86,8 +87,8 @@ prop_zero_length_span =
 -- 测试内存效率
 prop_repeated_operations :: Small Int -> String -> Bool
 prop_repeated_operations (Small n) s = n >= 0 && n <= 100 ==>  -- 限制操作次数
-  let result = foldl (\acc _ -> trim acc) s [1..n]
-  in length result <= length s
+  let result = L.foldl (\acc _ -> trim acc) s [1..n]
+  in L.length result <= L.length s
 
 -- 生成测试套件
 tests :: TestTree
@@ -106,6 +107,6 @@ tests = testGroup "Boundary Condition QuickCheck Tests"
   , testProperty "splitBy unicode" prop_split_by_unicode
   , testProperty "large string handling" prop_large_string_handling
   , testProperty "negative positions" prop_negative_positions
-  , testProperty "zero length span" prop_zero_length_span
+  , testProperty "zero L.length span" prop_zero_length_span
   , testProperty "repeated operations" prop_repeated_operations
   ]

@@ -11,11 +11,12 @@ import Compiler (compile)
 import Compiler.Errors.Core (TypeError(..), ErrorSeverity(..), ErrorCategory(..), newErrorCollector, addError)
 import Dependencies.TypeSystem (newDependentTypeChecker, addType, checkType)
 import Ownership.Common.Types (OwnershipTransfer(..), OwnershipError(..))
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import Data.Maybe (isJust, isNothing)
 import qualified Data.Text as T
 
--- | Test boundary conditions and edge cases
+-- | Test boundary conditions L.and edge cases
 testBoundaryConditionsProperties :: TestTree
 testBoundaryConditionsProperties = testGroup "Boundary Conditions Properties"
   [ testProperty "utils handle empty strings" propUtilsHandleEmptyStrings
@@ -68,12 +69,12 @@ propErrorHandlingExtremeInputs message =
                         Compiler.Errors.Core.emptyContext
       collector = newErrorCollector
       collector1 = addError error collector
-  in not (null (getErrors collector1))
+  in not (L.null (getErrors collector1))
 
 -- | Type system should handle boundary conditions
 propTypeSystemBoundaryConditions :: String -> Property
 propTypeSystemBoundaryConditions typeName =
-  let extremeTypeName = if null typeName then "extremely_long_type_name_" ++ concat (replicate 100 "very_long") 
+  let extremeTypeName = if null typeName then "extremely_long_type_name_" ++ L.concat (replicate 100 "very_long") 
                        else typeName ++ "_boundary"
       typeDef = Dependencies.TypeSystem.TypeDefDecl [] []
       checker = newDependentTypeChecker
@@ -86,8 +87,8 @@ propTypeSystemBoundaryConditions typeName =
 -- | Ownership system should handle edge cases
 propOwnershipSystemEdgeCases :: String -> String -> Property
 propOwnershipSystemEdgeCases from to =
-  let extremeFrom = if null from then "extremely_long_variable_name_" ++ concat (replicate 100 "very_long") else from
-      extremeTo = if null to then "extremely_long_variable_name_" ++ concat (replicate 100 "very_long") else to
+  let extremeFrom = if null from then "extremely_long_variable_name_" ++ L.concat (replicate 100 "very_long") else from
+      extremeTo = if null to then "extremely_long_variable_name_" ++ L.concat (replicate 100 "very_long") else to
       transfer = OwnershipTransfer extremeFrom extremeTo
   in transferFrom transfer == extremeFrom && transferTo transfer == extremeTo
 
@@ -110,7 +111,7 @@ testUtilsBoundaryConditions = testGroup "Utils Boundary Conditions"
   , testCase "removeComments with only comments" $
       let commentsOnly = "// line 1\n/* block */\n// line 2"
           withoutComments = removeComments commentsOnly
-      in null (filter (not . null) (lines withoutComments))
+      in L.null (L.filter (not . null) (lines withoutComments))
       
   , testCase "normalizeIndentation with inconsistent indentation" $
       let inconsistent = "    line1\n\tline2\n        line3"
@@ -176,11 +177,11 @@ testParserBoundaryConditions = testGroup "Parser Boundary Conditions"
           parsed = parseTypus unicode
           compiled = compile parsed
       in case compiled of
-           Right goCode -> "你好世界" `isInfixOf` goCode
+           Right goCode -> "你好世界" `L.isInfixOf` goCode
            Left _ -> True  -- May fail but should not crash
            
   , testCase "parse extremely long line" $
-      let longLine = "package main\n\n" ++ concat (replicate 1000 "x") ++ "\n"
+      let longLine = "package main\n\n" ++ L.concat (replicate 1000 "x") ++ "\n"
           parsed = parseTypus longLine
       in parsed `seq` True  -- Should not crash
   ]
@@ -195,7 +196,7 @@ testErrorHandlingBoundaryConditions = testGroup "Error Handling Boundary Conditi
       in show error `seq` True  -- Should not crash
       
   , testCase "error with extremely long message" $
-      let longMessage = T.pack $ concat (replicate 1000 "very long error message ")
+      let longMessage = T.pack $ L.concat (replicate 1000 "very long error message ")
           error = TypeError longMessage ErrorSeverityError ErrorCategorySyntax 
                         (Compiler.Errors.Core.ErrorLocation Nothing 1 1 Nothing Nothing) 
                         Compiler.Errors.Core.emptyContext
@@ -212,9 +213,9 @@ testErrorHandlingBoundaryConditions = testGroup "Error Handling Boundary Conditi
           error = TypeError "test" ErrorSeverityError ErrorCategorySyntax 
                            (Compiler.Errors.Core.ErrorLocation Nothing 1 1 Nothing Nothing) 
                            Compiler.Errors.Core.emptyContext
-          collector1 = foldl (\c _ -> addError error c) collector [1..1000]
+          collector1 = L.foldl (\c _ -> addError error c) collector [1..1000]
           errors = getErrors collector1
-      in length errors == 1000
+      in L.length errors == 1000
   ]
 
 -- | Test type system boundary conditions
@@ -230,7 +231,7 @@ testTypeSystemBoundaryConditions = testGroup "Type System Boundary Conditions"
            Left _ -> True   -- Or fail gracefully
            
   , testCase "extremely long type name" $
-      let longName = concat (replicate 1000 "Type")
+      let longName = L.concat (replicate 1000 "Type")
           checker = newDependentTypeChecker
           typeDef = Dependencies.TypeSystem.TypeDefDecl [] []
           checker1 = addType longName typeDef checker
@@ -240,7 +241,7 @@ testTypeSystemBoundaryConditions = testGroup "Type System Boundary Conditions"
            Left _ -> True   -- Or fail gracefully
            
   , testCase "type with many parameters" $
-      let params = map (\i -> "param" ++ show i) [1..100]
+      let params = L.map (\i -> "param" ++ show i) [1..100]
           typeDef = Dependencies.TypeSystem.TypeDefDecl params []
           checker = newDependentTypeChecker
           checker1 = addType "ManyParams" typeDef checker
@@ -255,7 +256,7 @@ testOwnershipBoundaryConditions = testGroup "Ownership Boundary Conditions"
       in transferFrom transfer == "" && transferTo transfer == ""
       
   , testCase "ownership transfer with extremely long names" $
-      let longName = concat (replicate 1000 "variable")
+      let longName = L.concat (replicate 1000 "variable")
           transfer = OwnershipTransfer longName longName
       in transferFrom transfer == longName && transferTo transfer == longName
       
@@ -264,7 +265,7 @@ testOwnershipBoundaryConditions = testGroup "Ownership Boundary Conditions"
       in show error `seq` True  -- Should not crash
       
   , testCase "ownership error with extremely long variable name" $
-      let longName = concat (replicate 1000 "variable")
+      let longName = L.concat (replicate 1000 "variable")
           error = UseAfterMove longName
       in show error `seq` True  -- Should not crash
   ]
@@ -289,7 +290,7 @@ testCompilerBoundaryConditions = testGroup "Compiler Boundary Conditions"
            
   , testCase "compile extremely large file" $
       let largeContent = "package main\n\n" ++ 
-                        unlines [concat (replicate 100 "x") ++ " // line " ++ show i | i <- [1..100]]
+                        unlines [L.concat (replicate 100 "x") ++ " // line " ++ show i | i <- [1..100]]
           parsed = parseTypus largeContent
           compiled = compile parsed
       in case compiled of

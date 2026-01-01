@@ -3,6 +3,7 @@
 module Test.Unit.NewErrorHandlerValidationSpec (newErrorHandlerValidationSpec, errorHandlerQuickCheckProperties) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool, assertFailure)
 import Test.Tasty.QuickCheck (testProperty, Property(..), (==>), Positive(..))
 import ErrorHandler
@@ -13,7 +14,7 @@ import Data.Either (isLeft, isRight)
 -- | Test suite for ErrorHandler validation functions
 newErrorHandlerValidationSpec :: TestTree
 newErrorHandlerValidationSpec = testGroup "New Error Handler Validation Tests"
-  [ testCase "Basic error creation and formatting" $ do
+  [ testCase "Basic error creation L.and formatting" $ do
       let pos = posAt "test.typus" 1 1
       let err = basicError "Test error" pos
       
@@ -22,8 +23,8 @@ newErrorHandlerValidationSpec = testGroup "New Error Handler Validation Tests"
       isErrorType err @?= True
       
       let formatted = formatError err
-      assertBool "Formatted error contains message" $ "Test error" `isInfixOf` formatted
-      assertBool "Formatted error contains location" $ "test.typus:1:1" `isInfixOf` formatted
+      assertBool "Formatted error contains message" $ "Test error" `L.isInfixOf` formatted
+      assertBool "Formatted error contains location" $ "test.typus:1:1" `L.isInfixOf` formatted
   
   , testCase "Error severity levels" $ do
       let pos = posAt "test.typus" 1 1
@@ -39,7 +40,7 @@ newErrorHandlerValidationSpec = testGroup "New Error Handler Validation Tests"
       assertBool "Error should be blocking" $ isBlocking error
       assertBool "Fatal should be blocking" $ isBlocking fatal
   
-  , testCase "Error collection and aggregation" $ do
+  , testCase "Error collection L.and aggregation" $ do
       let pos1 = posAt "test.typus" 1 1
       let pos2 = posAt "test.typus" 2 1
       let err1 = basicError "First error" pos1
@@ -56,12 +57,12 @@ newErrorHandlerValidationSpec = testGroup "New Error Handler Validation Tests"
       getErrorCountByType Warning collection3 @?= 1
       
       let errors = getAllErrors collection3
-      length errors @?= 3
+      L.length errors @?= 3
       
       let blocking = getBlockingErrors collection3
-      length blocking @?= 2  -- err1 and err3 are errors, err2 is warning
+      L.length blocking @?= 2  -- err1 L.and err3 are errors, err2 is warning
   
-  , testCase "Error context and suggestions" $ do
+  , testCase "Error context L.and suggestions" $ do
       let pos = posAt "test.typus" 1 1
       let contextError = errorWithContext "Missing semicolon" pos "Expected ';' after statement" ["Add ';' at the end of the line", "Check if statement is complete"]
       
@@ -69,8 +70,8 @@ newErrorHandlerValidationSpec = testGroup "New Error Handler Validation Tests"
       getSuggestions contextError @?= ["Add ';' at the end of the line", "Check if statement is complete"]
       
       let formatted = formatErrorWithSuggestions contextError
-      assertBool "Formatted error contains context" $ "Expected ';' after statement" `isInfixOf` formatted
-      assertBool "Formatted error contains suggestions" $ "Add ';' at the end of the line" `isInfixOf` formatted
+      assertBool "Formatted error contains context" $ "Expected ';' after statement" `L.isInfixOf` formatted
+      assertBool "Formatted error contains suggestions" $ "Add ';' at the end of the line" `L.isInfixOf` formatted
   
   , testCase "Error recovery strategies" $ do
       let pos = posAt "test.typus" 1 1
@@ -83,7 +84,7 @@ newErrorHandlerValidationSpec = testGroup "New Error Handler Validation Tests"
       isRecoverable nonRecoverableError @?= False
       getRecoveryStrategy nonRecoverableError @?= Nothing
   
-  , testCase "Error filtering and prioritization" $ do
+  , testCase "Error filtering L.and prioritization" $ do
       let pos1 = posAt "test.typus" 1 1
       let pos2 = posAt "test.typus" 1 2
       let pos3 = posAt "test.typus" 2 1
@@ -96,13 +97,13 @@ newErrorHandlerValidationSpec = testGroup "New Error Handler Validation Tests"
       let collection = addError warning2 $ addError fatal1 $ addError error1 $ addError warning1 newErrorCollection
       
       let critical = getCriticalErrors collection
-      length critical @?= 1  -- Only the fatal error
+      L.length critical @?= 1  -- Only the fatal error
       
       let byLocation = getErrorsByLocation collection pos1
-      length byLocation @?= 2  -- warning1 and fatal1
+      L.length byLocation @?= 2  -- warning1 L.and fatal1
       
       let sorted = sortErrorsBySeverity collection
-      getSeverity (head sorted) @?= Fatal
+      getSeverity (L.head sorted) @?= Fatal
       getSeverity (last sorted) @?= Warning
   ]
   where
@@ -115,15 +116,15 @@ prop_error_formatting_contains_location msg =
     let pos = posAt "test.typus" 1 1
         err = basicError msg pos
         formatted = formatError err
-    in "test.typus:1:1" `isInfixOf` formatted &&
-       msg `isInfixOf` formatted
+    in "test.typus:1:1" `L.isInfixOf` formatted &&
+       msg `L.isInfixOf` formatted
 
 prop_error_collection_count :: [String] -> Property
 prop_error_collection_count msgs = 
   not (null msgs) ==> 
     let collection = foldr addError newErrorCollection 
                          [basicError msg (posAt "test.typus" i 1) | (i, msg) <- zip [1..] msgs]
-    in getErrorCount collection == length msgs
+    in getErrorCount collection == L.length msgs
 
 prop_error_severity_ordering :: Bool
 prop_error_severity_ordering = 
@@ -141,7 +142,7 @@ prop_blocking_error_filter msgs =
                   | (i, msg) <- zip [1..] msgs]
         collection = foldr addError newErrorCollection errors
         blocking = getBlockingErrors collection
-    in length blocking == length (filter (even . fst) (zip [1..] msgs))
+    in L.length blocking == L.length (L.filter (even . fst) (zip [1..] msgs))
 
 prop_error_context_preservation :: String -> String -> Property
 prop_error_context_preservation msg ctx = 

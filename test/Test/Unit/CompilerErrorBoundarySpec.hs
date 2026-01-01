@@ -1,5 +1,6 @@
 module Test.Unit.CompilerErrorBoundarySpec (tests) where
 
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ((@?=), assertBool, assertFailure, testCase)
@@ -17,10 +18,10 @@ expectParse source =
     Right typusFile -> return typusFile
 
 -- | 辅助函数：期望编译失败
-expectCompileFailure :: TypusFile -> IO CompilerError
+expectCompileFailure :: TypusFile -> IO [CompilerError]
 expectCompileFailure typusFile =
   case Compiler.compile typusFile of
-    Left err -> return err
+    Left errs -> return errs
     Right _ -> assertFailure "Expected compilation to fail"
 
 -- | 测试编译器在错误条件和边界情况下的行为
@@ -34,7 +35,7 @@ tests =
         result <- expectCompileFailure typusFile
         -- 应该产生关于缺少包声明的错误
         assertBool "Expected error about missing package" 
-          (any (\msg -> "package" `isInfixOf` msg) (lines $ show result))
+          (L.any (\msg -> "package" `L.isInfixOf` msg) (lines $ show result))
 
     , testCase "handles file with only package declaration" $ do
         let source = "package main\n"
@@ -42,7 +43,7 @@ tests =
         result <- expectCompileFailure typusFile
         -- 应该产生关于缺少main函数的错误
         assertBool "Expected error about missing main function"
-          (any (\msg -> "main" `isInfixOf` msg) (lines $ show result))
+          (L.any (\msg -> "main" `L.isInfixOf` msg) (lines $ show result))
 
     -- 语法错误处理测试
     , testCase "detects invalid Go syntax" $ do
@@ -58,7 +59,7 @@ tests =
         -- 应该检测到语法错误
         let errorMsg = show result
         assertBool "Expected syntax error detection" 
-          (any (\msg -> "syntax" `isInfixOf` msg || "brace" `isInfixOf` msg) (lines errorMsg))
+          (L.any (\msg -> "syntax" `L.isInfixOf` msg || "brace" `L.isInfixOf` msg) (lines errorMsg))
 
     , testCase "detects type mismatches" $ do
         let source = unlines
@@ -73,7 +74,7 @@ tests =
         -- 应该检测到类型错误
         let errorMsg = show result
         assertBool "Expected type error detection"
-          (any (\msg -> "type" `isInfixOf` msg) (lines errorMsg))
+          (L.any (\msg -> "type" `L.isInfixOf` msg) (lines errorMsg))
 
     -- 依赖类型错误测试
     , testCase "detects dependent type violations" $ do
@@ -92,7 +93,7 @@ tests =
         -- 应该检测到依赖类型错误
         let errorMsg = show result
         assertBool "Expected dependent type error"
-          (any (\msg -> "dependent" `isInfixOf` msg || "bounds" `isInfixOf` msg) (lines errorMsg))
+          (L.any (\msg -> "dependent" `L.isInfixOf` msg || "bounds" `L.isInfixOf` msg) (lines errorMsg))
 
     -- 所有权错误测试
     , testCase "detects ownership violations" $ do
@@ -114,7 +115,7 @@ tests =
         -- 应该检测到所有权错误
         let errorMsg = show result
         assertBool "Expected ownership error"
-          (any (\msg -> "ownership" `isInfixOf` msg || "moved" `isInfixOf` msg) (lines errorMsg))
+          (L.any (\msg -> "ownership" `L.isInfixOf` msg || "moved" `L.isInfixOf` msg) (lines errorMsg))
 
     -- 错误恢复测试
     , testCase "attempts error recovery with multiple errors" $ do
@@ -131,29 +132,29 @@ tests =
         -- 应该检测到多个错误
         let errorMsg = show result
         let errorLines = lines errorMsg
-        assertBool "Expected multiple errors" (length errorLines >= 2)
+        assertBool "Expected multiple errors" (L.length errorLines >= 2)
         assertBool "Expected type errors" 
-          (any (\msg -> "type" `isInfixOf` msg) errorLines)
+          (L.any (\msg -> "type" `L.isInfixOf` msg) errorLines)
 
     -- 边界值测试
     , testCase "handles extreme values in compilation" $ do
         let source = unlines
               [ "package main"
               , "func main() {"
-              , "  var maxInt int = 9223372036854775807"  // int64最大值
-              , "  var minInt int = -9223372036854775808" // int64最小值
-              , "  var bigUint uint = 18446744073709551615" // uint64最大值
+              , "  var maxInt int = 9223372036854775807"  -- int64最大值
+              , "  var minInt int = -9223372036854775808" -- int64最小值
+              , "  var bigUint uint = 18446744073709551615" -- uint64最大值
               , "  println(maxInt, minInt, bigUint)"
               , "}"
               ]
         typusFile <- expectParse source
-        result <- Compiler.compile typusFile
+        let result = Compiler.compile typusFile
         case result of
           Left err -> assertFailure $ "Failed to compile extreme values: " ++ show err
           Right goCode -> do
-            assertBool "Expected max int literal in output" ("9223372036854775807" `isInfixOf` goCode)
-            assertBool "Expected min int literal in output" ("-9223372036854775808" `isInfixOf` goCode)
-            assertBool "Expected max uint literal in output" ("18446744073709551615" `isInfixOf` goCode)
+            assertBool "Expected max int literal in output" ("9223372036854775807" `L.isInfixOf` goCode)
+            assertBool "Expected min int literal in output" ("-9223372036854775808" `L.isInfixOf` goCode)
+            assertBool "Expected max uint literal in output" ("18446744073709551615" `L.isInfixOf` goCode)
 
     -- 复杂嵌套结构测试
     , testCase "handles deeply nested structures" $ do
@@ -170,12 +171,12 @@ tests =
               , "}"
               ]
         typusFile <- expectParse source
-        result <- Compiler.compile typusFile
+        let result = Compiler.compile typusFile
         case result of
           Left err -> assertFailure $ "Failed to compile nested structures: " ++ show err
           Right goCode -> do
-            assertBool "Expected struct definitions" ("type A struct" `isInfixOf` goCode)
-            assertBool "Expected nested field access" ("a.B.C.D.Value" `isInfixOf` goCode)
+            assertBool "Expected struct definitions" ("type A struct" `L.isInfixOf` goCode)
+            assertBool "Expected nested field access" ("a.B.C.D.Value" `L.isInfixOf` goCode)
 
     -- Unicode和特殊字符测试
     , testCase "handles Unicode in generated code" $ do
@@ -188,13 +189,13 @@ tests =
               , "}"
               ]
         typusFile <- expectParse source
-        result <- Compiler.compile typusFile
+        let result = Compiler.compile typusFile
         case result of
           Left err -> assertFailure $ "Failed to compile Unicode strings: " ++ show err
           Right goCode -> do
-            assertBool "Expected Unicode variable name" ("问候" `isInfixOf` goCode)
-            assertBool "Expected Unicode string literal" ("你好世界" `isInfixOf` goCode)
-            assertBool "Expected emoji in string" ("🚀" `isInfixOf` goCode)
+            assertBool "Expected Unicode variable name" ("问候" `L.isInfixOf` goCode)
+            assertBool "Expected Unicode string literal" ("你好世界" `L.isInfixOf` goCode)
+            assertBool "Expected emoji in string" ("🚀" `L.isInfixOf` goCode)
 
     -- 性能边界测试
     , testCase "handles large functions" $ do
@@ -206,11 +207,11 @@ tests =
               [ "}"
               ]
         typusFile <- expectParse source
-        result <- Compiler.compile typusFile
+        let result = Compiler.compile typusFile
         case result of
           Left err -> assertFailure $ "Failed to compile large function: " ++ show err
           Right goCode -> do
-            let lineCount = length $ lines goCode
+            let lineCount = L.length $ lines goCode
             assertBool "Expected many lines in compiled output" (lineCount > 400)
 
     -- 错误信息质量测试
@@ -225,7 +226,7 @@ tests =
         let errorMsg = show result
         -- 错误信息应该包含有用的信息
         assertBool "Error message should contain line information" 
-          (any (\msg -> "line" `isInfixOf` msg || "Line" `isInfixOf` msg) (lines errorMsg))
+          (L.any (\msg -> "line" `L.isInfixOf` msg || "Line" `L.isInfixOf` msg) (lines errorMsg))
         assertBool "Error message should contain function name"
-          (any (\msg -> "undefinedFunction" `isInfixOf` msg) (lines errorMsg))
+          (L.any (\msg -> "undefinedFunction" `L.isInfixOf` msg) (lines errorMsg))
     ]

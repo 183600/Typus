@@ -5,8 +5,9 @@ module Test.Unit.TextProcessingQuickCheckSpec (tests) where
 import Test.Tasty (TestTree)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===))
 import Test.Tasty.HUnit (testCase, assert)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isSuffixOf)
 
 import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed)
@@ -29,17 +30,17 @@ genCommaString = do
   parts <- listOf1 $ listOf $ arbitrary `suchThat` (/= ',')
   let withCommas = intersperse "," parts
   additionalCommas <- listOf $ return ","
-  return $ concat withCommas ++ concat additionalCommas
+  return $ L.concat withCommas ++ L.concat additionalCommas
 
 -- ============================================================================
 -- Property Tests
 -- ============================================================================
 
--- Property: trim should remove leading and trailing whitespace
+-- Property: trim should remove leading L.and trailing whitespace
 prop_trim_removes_whitespace :: String -> Property
 prop_trim_removes_whitespace s =
   let trimmed = trim s
-      startsNotWithSpace = null trimmed || not (isSpace (head trimmed))
+      startsNotWithSpace = null trimmed || not (isSpace (L.head trimmed))
       endsNotWithSpace = null trimmed || not (isSpace (last trimmed))
   in startsNotWithSpace &&. endsNotWithSpace
   where
@@ -63,7 +64,7 @@ prop_splitBy_preserves_empty delim s =
 prop_splitByCollapsed_removes_empty :: Char -> String -> Property
 prop_splitByCollapsed_removes_empty delim s =
   let result = splitByCollapsed delim s
-      hasNoEmpty = all (not . null) result
+      hasNoEmpty = L.all (not . null) result
   in hasNoEmpty === True
 
 -- Property: splitByComma should be equivalent to splitBy ','
@@ -115,7 +116,7 @@ test_splitByCollapsed_examples = testCase "splitByCollapsed examples" $ do
 
 tests :: TestTree
 tests = testGroup "Text Processing QuickCheck Tests"
-  [ testProperty "trim removes leading and trailing whitespace" prop_trim_removes_whitespace
+  [ testProperty "trim removes leading L.and trailing whitespace" prop_trim_removes_whitespace
   , testProperty "trim is idempotent" prop_trim_idempotent
   , testProperty "splitBy preserves empty segments" prop_splitBy_preserves_empty
   , testProperty "splitByCollapsed removes empty segments" prop_splitByCollapsed_removes_empty

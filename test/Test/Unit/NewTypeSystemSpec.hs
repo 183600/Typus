@@ -3,6 +3,7 @@ module Test.Unit.NewTypeSystemSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ((@?=), assertBool, assertFailure, testCase)
+import qualified Data.List as L
 import Data.List (isInfixOf)
 import qualified Data.Map.Strict as Map
 
@@ -75,7 +76,7 @@ import Dependencies.AST
 tests :: TestTree
 tests =
   testGroup "New Type System Tests"
-    [ testCase "creates and manipulates basic types" $ do
+    [ testCase "creates L.and manipulates basic types" $ do
         let intType = TypeName "int"
             stringType = TypeName "string"
             funcType = TypeFunction [intType] stringType
@@ -96,14 +97,14 @@ tests =
           Just (TypeName "string") -> assertBool "y type found" True
           _ -> assertFailure "y type not found"
 
-    , testCase "adds and retrieves types from environment" $ do
+    , testCase "adds L.and retrieves types from environment" $ do
         let initialEnv = TypeEnv Map.empty Map.empty
             envWithInt = addType "Int" (TypeName "int") initialEnv
         case lookupType "Int" envWithInt of
-          Just (TypeName "int") -> assertBool "type added and retrieved" True
+          Just (TypeName "int") -> assertBool "type added L.and retrieved" True
           _ -> assertFailure "type not found after adding"
 
-    , testCase "adds and retrieves functions from environment" $ do
+    , testCase "adds L.and retrieves functions from environment" $ do
         let initialEnv = TypeEnv Map.empty Map.empty
             signature = FunctionSignature 
               [FunctionParam (Just "x") (TypeName "int") False]
@@ -282,7 +283,7 @@ tests =
           Left err -> assertFailure $ "parseTypus failed: " ++ err
           Right typusFile -> do
             let declarations = extractDeclarations typusFile
-                addFunction = filter (\decl -> "add" `isInfixOf` show decl) declarations
+                addFunction = L.filter (\decl -> "add" `L.isInfixOf` show decl) declarations
             assertBool "should extract add function" (not $ null addFunction)
 
     , testCase "extracts function calls" $ do
@@ -297,8 +298,8 @@ tests =
           Left err -> assertFailure $ "parseTypus failed: " ++ err
           Right typusFile -> do
             let calls = extractFunctionCalls typusFile
-                printlnCalls = filter (\call -> "println" `isInfixOf` show call) calls
-                addCalls = filter (\call -> "add" `isInfixOf` show call) calls
+                printlnCalls = L.filter (\call -> "println" `L.isInfixOf` show call) calls
+                addCalls = L.filter (\call -> "add" `L.isInfixOf` show call) calls
             assertBool "should extract println call" (not $ null printlnCalls)
             assertBool "should extract add call" (not $ null addCalls)
 
@@ -314,12 +315,12 @@ tests =
           DependentTypeChecker _ _ -> assertBool "dependent type checker created" True
 
     , testCase "converts type expressions" $ do
-        let typeExpr = SimpleT "int"
+        let typeExpr = SimpleT (T.pack "int")
         case convertTypeExpr typeExpr of
           Right (TypeName "int") -> assertBool "type expression converted" True
           _ -> assertFailure "type expression conversion failed"
 
-    , testCase "adds and solves constraints" $ do
+    , testCase "adds L.and solves constraints" $ do
         let checker = newDependentTypeChecker
             constraint = Equal (TypeVar "TVVar" "T") (TypeName "int")
         case addConstraint constraint checker of

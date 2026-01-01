@@ -10,6 +10,7 @@
 module Test.Unit.OwnershipTransferPropertiesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertBool, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -220,12 +221,12 @@ prop_borrowing_creates_relationship value owner borrower =
 
 prop_multiple_immutable_borrows :: String -> String -> [String] -> Property
 prop_multiple_immutable_borrows value owner borrowers =
-  not (null borrowers) && all (/= owner) borrowers && nub borrowers == borrowers ==>
+  not (null borrowers) && L.all (/= owner) borrowers && nub borrowers == borrowers ==>
   let analyzer = Own.newOwnershipAnalyzer
       state = Own.initialState analyzer
       ownedState = Own.ownValue state value
-      borrowedState = foldl (\s b -> Own.borrowValue s owner b) ownedState borrowers
-      allBorrowed = all (isBorrowed borrowedState) borrowers
+      borrowedState = L.foldl (\s b -> Own.borrowValue s owner b) ownedState borrowers
+      allBorrowed = L.all (isBorrowed borrowedState) borrowers
   in property $ allBorrowed
 
 prop_borrowing_prevents_mutation :: String -> String -> String -> Property
@@ -269,9 +270,9 @@ prop_lifetimes_nested value borrowers =
   let analyzer = Own.newOwnershipAnalyzer
       state = Own.initialState analyzer
       ownedState = Own.ownValue state value
-      borrowedState = foldl (\s b -> Own.borrowValue s value b) ownedState borrowers
-      lifetimes = map (Own.getBorrowLifetime borrowedState) borrowers
-  in property $ all isJust lifetimes
+      borrowedState = L.foldl (\s b -> Own.borrowValue s value b) ownedState borrowers
+      lifetimes = L.map (Own.getBorrowLifetime borrowedState) borrowers
+  in property $ L.all isJust lifetimes
 
 prop_lifetime_end_releases :: String -> String -> String -> Property
 prop_lifetime_end_releases value owner borrower =
@@ -350,17 +351,17 @@ prop_ownership_analysis_monotonic :: String -> [String] -> Property
 prop_ownership_analysis_monotonic value operations =
   let analyzer = Own.newOwnershipAnalyzer
       state = Own.initialState analyzer
-      finalState = foldl (\s op -> Own.applyOperation s value op) state operations
+      finalState = L.foldl (\s op -> Own.applyOperation s value op) state operations
       initialStateInfo = Own.getStateInfo state
       finalStateInfo = Own.getStateInfo finalState
-  in property $ length finalStateInfo >= length initialStateInfo
+  in property $ L.length finalStateInfo >= L.length initialStateInfo
 
 prop_ownership_state_finite :: String -> Property
 prop_ownership_state_finite value =
   let analyzer = Own.newOwnershipAnalyzer
       state = Own.initialState analyzer
       possibleStates = Own.enumerateStates state value
-  in property $ length possibleStates < 1000 -- Reasonable bound
+  in property $ L.length possibleStates < 1000 -- Reasonable bound
 
 prop_transfer_preserves_invariants :: String -> String -> String -> Property
 prop_transfer_preserves_invariants value oldOwner newOwner =
@@ -371,14 +372,14 @@ prop_transfer_preserves_invariants value oldOwner newOwner =
       invariants1 = Own.checkInvariants ownedState
       transferredState = Own.transferOwnership ownedState value oldOwner newOwner
       invariants2 = Own.checkInvariants transferredState
-  in property $ all id invariants1 ==> all id invariants2
+  in property $ L.all id invariants1 ==> L.all id invariants2
 
 prop_ownership_analysis_terminates :: String -> [String] -> Property
 prop_ownership_analysis_terminates value operations =
   let analyzer = Own.newOwnershipAnalyzer
       state = Own.initialState analyzer
       result = Own.analyzeOperations state value operations
-  in property $ True -- Should terminate for all inputs
+  in property $ True -- Should terminate for L.all inputs
 
 -- Edge cases
 
@@ -406,13 +407,13 @@ prop_empty_ownership_valid =
   let analyzer = Own.newOwnershipAnalyzer
       state = Own.initialState analyzer
       invariants = Own.checkInvariants state
-  in property $ all id invariants
+  in property $ L.all id invariants
 
 prop_complex_expressions :: String -> [String] -> Property
 prop_complex_expressions baseValue operations =
   not (null operations) ==>
   let analyzer = Own.newOwnershipAnalyzer
       state = Own.initialState analyzer
-      complexState = foldl (\s op -> Own.applyComplexOperation s baseValue op) state operations
+      complexState = L.foldl (\s op -> Own.applyComplexOperation s baseValue op) state operations
       invariants = Own.checkInvariants complexState
-  in property $ all id invariants
+  in property $ L.all id invariants

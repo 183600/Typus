@@ -3,6 +3,7 @@
 module Test.Unit.NewSourceLocationEnhancedQuickCheckSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import SourceLocation
@@ -27,7 +28,7 @@ sourcePosProperties = testGroup "SourcePos Properties"
   [ QC.testProperty "startPos has correct values" $
       startPos === SourcePos 1 1 0
 
-  , QC.testProperty "posAfter newline increments line and resets column" $
+  , QC.testProperty "posAfter newline increments line L.and resets column" $
       \line col offset -> let pos = SourcePos line col offset
                              newPos = posAfter '\n' pos
                          in posLine newPos === line + 1 &&
@@ -42,7 +43,7 @@ sourcePosProperties = testGroup "SourcePos Properties"
                             posColumn newPos === expectedCol &&
                             posOffset newPos === offset + 1
 
-  , QC.testProperty "posAfter regular char increments column and offset" $
+  , QC.testProperty "posAfter regular char increments column L.and offset" $
       \line col offset c -> let pos = SourcePos line col offset
                                 newPos = posAfter c pos
                             in c `notElem` "\n\t" ==> 
@@ -50,13 +51,13 @@ sourcePosProperties = testGroup "SourcePos Properties"
                                posColumn newPos === col + 1 &&
                                posOffset newPos === offset + 1
 
-  , QC.testProperty "posAt creates position with given line and column" $
+  , QC.testProperty "posAt creates position with given line L.and column" $
       \line col -> let pos = posAt line col
                    in posLine pos === line &&
                       posColumn pos === col &&
                       posOffset pos === 0
 
-  , QC.testProperty "posAtLineCol creates position with all fields" $
+  , QC.testProperty "posAtLineCol creates position with L.all fields" $
       \line col offset -> let pos = posAtLineCol line col offset
                           in posLine pos === line &&
                              posColumn pos === col &&
@@ -66,7 +67,7 @@ sourcePosProperties = testGroup "SourcePos Properties"
 -- | SourceSpan properties
 sourceSpanProperties :: TestTree
 sourceSpanProperties = testGroup "SourceSpan Properties"
-  [ QC.testProperty "emptySpan has same start and end" $
+  [ QC.testProperty "emptySpan has same start L.and end" $
       \pos -> let span = emptySpan pos
                in spanStart span === pos &&
                   spanEnd span === pos
@@ -79,7 +80,7 @@ sourceSpanProperties = testGroup "SourceSpan Properties"
       \pos -> let span = spanTo pos
                in span === emptySpan pos
 
-  , QC.testProperty "spanBetween creates span with given start and end" $
+  , QC.testProperty "spanBetween creates span with given start L.and end" $
       \start end -> let span = spanBetween start end
                      in spanStart span === start &&
                         spanEnd span === end
@@ -172,7 +173,7 @@ locationTrackerProperties = testGroup "Location Tracker Properties"
                      in spanStart span === start &&
                         spanEnd span === end
 
-  , QC.testProperty "withLocationTracking returns action result and final position" $
+  , QC.testProperty "withLocationTracking returns action result L.and final position" $
       \start pos -> let (result, finalPos) = withLocationTracking start $ do
                                                       setCurrentPos pos
                                                       getCurrentPos
@@ -187,7 +188,7 @@ positionAdvancementProperties = testGroup "Position Advancement Properties"
 
   , QC.testProperty "advancePosBy advances by each character in order" $
       \pos s -> let result1 = advancePosBy s pos
-                    result2 = foldl (flip advancePos) pos s
+                    result2 = L.foldl (flip advancePos) pos s
                 in result1 === result2
 
   , QC.testProperty "advancePosBy empty string returns original position" $
@@ -196,7 +197,7 @@ positionAdvancementProperties = testGroup "Position Advancement Properties"
   , QC.testProperty "advancePosByText equals advancePosBy on unpacked text" $
       \pos txt -> advancePosByText txt pos === advancePosBy (show txt) pos
 
-  , QC.testProperty "advancePosByLine increments line and resets column" $
+  , QC.testProperty "advancePosByLine increments line L.and resets column" $
       \line col offset numLines -> let pos = SourcePos line col offset
                                       newPos = advancePosByLine numLines pos
                                   in posLine newPos === line + numLines &&
@@ -230,10 +231,10 @@ spanUtilityProperties = testGroup "Span Utility Properties"
 
   , QC.testProperty "mergeSpans preserves ordering of merged spans" $
       \spans -> let sorted = sort spans
-                    merged = foldl mergeSpans (head sorted) (tail sorted)
-                in all (<= spanEnd merged) (map spanStart sorted)
+                    merged = foldl mergeSpans (L.head sorted) (L.tail sorted)
+                in L.all (<= spanEnd merged) (map spanStart sorted)
 
-  , QC.testProperty "spanBetween with same start and end creates empty span" $
+  , QC.testProperty "spanBetween with same start L.and end creates empty span" $
       \pos -> let span = spanBetween pos pos
                in spanStart span === pos && spanEnd span === pos
 

@@ -12,6 +12,7 @@ import qualified Parser
 import SourceLocation (Located(..))
 import qualified SourceLocation
 import qualified Data.Map as Map
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import Data.Maybe (isJust, isNothing)
 import qualified Data.Text as T
@@ -37,7 +38,7 @@ genValidType = elements validGoTypes
 -- Helper function to check if a string is a valid Go identifier
 isValidGoIdent :: String -> Bool
 isValidGoIdent [] = False
-isValidGoIdent (c:cs) = (isAlpha c || c == '_') && all (\x -> isAlphaNum x || x == '_') cs
+isValidGoIdent (c:cs) = (isAlpha c || c == '_') && L.all (\x -> isAlphaNum x || x == '_') cs
 
 -- Extended type checker property tests for comprehensive coverage
 
@@ -111,8 +112,8 @@ prop_type_checking_struct_declaration =
 -- Property: Interface declarations create abstract types
 prop_type_checking_interface_declaration :: String -> [String] -> [String] -> Property
 prop_type_checking_interface_declaration interfaceName methodNames returnTypes =
-  isValidGoIdent interfaceName && all isValidGoIdent methodNames && all isValidGoIdent returnTypes ==>
-  let minLen = min (length methodNames) (length returnTypes)
+  isValidGoIdent interfaceName && L.all isValidGoIdent methodNames && L.all isValidGoIdent returnTypes ==>
+  let minLen = min (L.length methodNames) (L.length returnTypes)
       limitedMethods = take minLen methodNames
       limitedReturns = take minLen returnTypes
       methodList = unlines $ zipWith (\name ret -> "  " ++ name ++ "() " ++ ret) limitedMethods limitedReturns
@@ -146,7 +147,7 @@ prop_type_checking_type_mismatch varName declaredType assignedValue =
 -- Property: Function parameter types are checked
 prop_type_checking_function_parameter_types :: String -> [String] -> [String] -> [String] -> Property
 prop_type_checking_function_parameter_types funcName paramNames paramTypes argValues =
-  let minLen = minimum [length paramNames, length paramTypes, length argValues]
+  let minLen = L.minimum [L.length paramNames, L.length paramTypes, L.length argValues]
       limitedParams = take minLen paramNames
       limitedTypes = take minLen paramTypes
       limitedArgs = take minLen argValues
@@ -157,7 +158,7 @@ prop_type_checking_function_parameter_types funcName paramNames paramTypes argVa
       code = funcDecl ++ "\n" ++ funcCall
       file = createTypusFile code
       hasTypeErrors = hasSimpleTypeErrors file
-  in property $ hasTypeErrors || True  -- May or may not have errors depending on types
+  in property $ hasTypeErrors || True  -- May L.or may not have errors depending on types
 
 -- Property: Return type checking works
 prop_type_checking_return_types :: String -> String -> String -> Property
@@ -165,7 +166,7 @@ prop_type_checking_return_types funcName returnType returnValue =
   let funcCode = "func " ++ funcName ++ "() " ++ returnType ++ " { return " ++ returnValue ++ " }"
       file = createTypusFile funcCode
       hasTypeErrors = hasSimpleTypeErrors file
-  in property $ hasTypeErrors || True  -- May or may not have errors depending on types
+  in property $ hasTypeErrors || True  -- May L.or may not have errors depending on types
 
 -- Property: Binary operations require compatible types
 prop_type_checking_binary_operations :: String -> String -> String -> Property
@@ -173,7 +174,7 @@ prop_type_checking_binary_operations leftExpr operator rightExpr =
   let binaryOp = leftExpr ++ " " ++ operator ++ " " ++ rightExpr
       file = createTypusFile binaryOp
       hasTypeErrors = hasSimpleTypeErrors file
-  in property $ hasTypeErrors || True  -- May or may not have errors depending on types
+  in property $ hasTypeErrors || True  -- May L.or may not have errors depending on types
 
 -- Property: Assignment type checking works
 prop_type_checking_assignment_types :: String -> String -> String -> Property
@@ -181,7 +182,7 @@ prop_type_checking_assignment_types varName varType value =
   let assignment = "var " ++ varName ++ " " ++ varType ++ "\n" ++ varName ++ " = " ++ value
       file = createTypusFile assignment
       hasTypeErrors = hasSimpleTypeErrors file
-  in property $ hasTypeErrors || True  -- May or may not have errors depending on types
+  in property $ hasTypeErrors || True  -- May L.or may not have errors depending on types
 
 -- Property: Array indexing requires integer indices
 prop_type_checking_array_indexing :: String -> String -> Property
@@ -189,7 +190,7 @@ prop_type_checking_array_indexing arrayVar index =
   let arrayAccess = arrayVar ++ "[" ++ index ++ "]"
       file = createTypusFile arrayAccess
       hasTypeErrors = hasSimpleTypeErrors file
-  in property $ hasTypeErrors || True  -- May or may not have errors depending on index type
+  in property $ hasTypeErrors || True  -- May L.or may not have errors depending on index type
 
 -- Property: Map operations require consistent key types
 prop_type_checking_map_operations :: String -> String -> String -> Property
@@ -197,7 +198,7 @@ prop_type_checking_map_operations mapVar keyType value =
   let mapAccess = mapVar ++ "[\"" ++ keyType ++ "\"] = " ++ value
       file = createTypusFile mapAccess
       hasTypeErrors = hasSimpleTypeErrors file
-  in property $ hasTypeErrors || True  -- May or may not have errors depending on types
+  in property $ hasTypeErrors || True  -- May L.or may not have errors depending on types
 
 -- Property: Struct field access checks field existence
 prop_type_checking_struct_field_access :: String -> String -> Property
@@ -205,7 +206,7 @@ prop_type_checking_struct_field_access structVar fieldName =
   let fieldAccess = structVar ++ "." ++ fieldName
       file = createTypusFile fieldAccess
       hasTypeErrors = hasSimpleTypeErrors file
-  in property $ hasTypeErrors || True  -- May or may not have errors depending on struct definition
+  in property $ hasTypeErrors || True  -- May L.or may not have errors depending on struct definition
 
 -- Property: Method calls check receiver types
 prop_type_checking_method_calls :: String -> String -> [String] -> Property
@@ -214,7 +215,7 @@ prop_type_checking_method_calls receiverVar methodName args =
       methodCall = receiverVar ++ "." ++ methodName ++ "(" ++ argList ++ ")"
       file = createTypusFile methodCall
       hasTypeErrors = hasSimpleTypeErrors file
-  in property $ hasTypeErrors || True  -- May or may not have errors depending on method definition
+  in property $ hasTypeErrors || True  -- May L.or may not have errors depending on method definition
 
 -- Property: Interface method calls check method existence
 prop_type_checking_interface_method_calls :: String -> String -> [String] -> Property
@@ -223,7 +224,7 @@ prop_type_checking_interface_method_calls interfaceVar methodName args =
       methodCall = interfaceVar ++ "." ++ methodName ++ "(" ++ argList ++ ")"
       file = createTypusFile methodCall
       hasTypeErrors = hasSimpleTypeErrors file
-  in property $ hasTypeErrors || True  -- May or may not have errors depending on interface definition
+  in property $ hasTypeErrors || True  -- May L.or may not have errors depending on interface definition
 
 -- Property: Generic type parameters are checked
 prop_type_checking_generic_types :: String -> String -> String -> Property
@@ -241,28 +242,28 @@ prop_type_checking_type_assertions interfaceVar assertedType =
   let typeAssertion = interfaceVar ++ ".(" ++ assertedType ++ ")"
       file = createTypusFile typeAssertion
       hasTypeErrors = hasSimpleTypeErrors file
-  in property $ hasTypeErrors || True  -- May or may not have errors depending on actual type
+  in property $ hasTypeErrors || True  -- May L.or may not have errors depending on actual type
 
--- Property: Type switches check all cases
+-- Property: Type switches check L.all cases
 prop_type_checking_type_switches :: String -> [String] -> Property
 prop_type_checking_type_switches interfaceVar typeCases =
-  let typeCasesList = unlines $ map (\t -> "case " ++ t ++ ":\n  // handle " ++ t) typeCases
+  let typeCasesList = unlines $ L.map (\t -> "case " ++ t ++ ":\n  // handle " ++ t) typeCases
       typeSwitch = "switch " ++ interfaceVar ++ ".(type) {\n" ++ typeCasesList ++ "default:\n  // default case\n}"
       file = createTypusFile typeSwitch
       hasTypeErrors = hasSimpleTypeErrors file
-  in property $ hasTypeErrors || True  -- May or may not have errors depending on interface type
+  in property $ hasTypeErrors || True  -- May L.or may not have errors depending on interface type
 
 -- Property: Function literals capture types correctly
 prop_type_checking_function_literals :: [String] -> [String] -> String -> Property
 prop_type_checking_function_literals paramNames paramTypes bodyExpr =
-  let minLen = min (length paramNames) (length paramTypes)
+  let minLen = min (L.length paramNames) (L.length paramTypes)
       limitedParams = take minLen paramNames
       limitedTypes = take minLen paramTypes
       paramList = unwords $ zipWith (\name t -> name ++ " " ++ t) limitedParams limitedTypes
       funcLiteral = "func(" ++ paramList ++ ") { return " ++ bodyExpr ++ " }"
       file = createTypusFile funcLiteral
       hasTypeErrors = hasSimpleTypeErrors file
-  in property $ hasTypeErrors || True  -- May or may not have errors depending on body expression
+  in property $ hasTypeErrors || True  -- May L.or may not have errors depending on body expression
 
 -- Property: Recursive function types are handled
 prop_type_checking_recursive_types :: String -> String -> Property
@@ -317,7 +318,7 @@ prop_type_checking_channel_types varName elementType =
 -- Property: Function types are handled correctly
 prop_type_checking_function_types :: String -> [String] -> [String] -> String -> Property
 prop_type_checking_function_types varName paramNames paramTypes returnType =
-  let minLen = min (length paramNames) (length paramTypes)
+  let minLen = min (L.length paramNames) (L.length paramTypes)
       limitedParams = take minLen paramNames
       limitedTypes = take minLen paramTypes
       paramList = unwords $ zipWith (\name t -> name ++ " " ++ t) limitedParams limitedTypes
@@ -331,7 +332,7 @@ prop_type_checking_function_types varName paramNames paramTypes returnType =
 -- Property: Multiple declarations don't conflict
 prop_type_checking_multiple_declarations :: [String] -> [String] -> Property
 prop_type_checking_multiple_declarations names types =
-  let minLen = min (length names) (length types)
+  let minLen = min (L.length names) (L.length types)
       limitedNames = take minLen names
       limitedTypes = take minLen types
       declarations = unlines $ zipWith (\name t -> "var " ++ name ++ " " ++ t) limitedNames limitedTypes
@@ -339,7 +340,7 @@ prop_type_checking_multiple_declarations names types =
       typeEnv = buildSimpleTypeEnv file
   in case typeEnv of
     Nothing -> property $ False
-    Just env -> property $ all (`Map.member` env) limitedNames
+    Just env -> property $ L.all (`Map.member` env) limitedNames
 
 -- Property: Shadowing declarations are handled
 prop_type_checking_variable_shadowing :: String -> String -> String -> Property
@@ -364,7 +365,7 @@ buildSimpleTypeEnv file =
     Right goModule ->
       let env = Compiler.TypeChecker.buildTypeEnv goModule
           vars = Compiler.TypeChecker.varTypes env
-      in Just $ Map.map (\t -> show t) vars
+      in Just $ Map.L.map (\t -> show t) vars
 
 hasSimpleTypeErrors :: TypusFile -> Bool
 hasSimpleTypeErrors = Compiler.TypeChecker.hasTypeErrors

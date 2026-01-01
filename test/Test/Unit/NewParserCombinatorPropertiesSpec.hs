@@ -15,13 +15,14 @@ import Parser
   )
 import SourceLocation (Located(..), SourcePos(..), startPos)
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf)
 
 -- ============================================================================
 -- Parser Module QuickCheck Property Tests
 -- ============================================================================
 
--- | Test that default file directives have all fields as Nothing
+-- | Test that default file directives have L.all fields as Nothing
 prop_default_file_directives_nothing :: Bool
 prop_default_file_directives_nothing = 
     let FileDirectives{..} = defaultFileDirectives
@@ -29,7 +30,7 @@ prop_default_file_directives_nothing =
        fdDependentTypes == Nothing &&
        fdConstraints == Nothing
 
--- | Test that default block directives have all fields as Nothing
+-- | Test that default block directives have L.all fields as Nothing
 prop_default_block_directives_nothing :: Bool
 prop_default_block_directives_nothing = 
     let BlockDirectives{..} = defaultBlockDirectives
@@ -37,13 +38,13 @@ prop_default_block_directives_nothing =
        bdDependentTypes == Nothing &&
        bdConstraints == Nothing
 
--- | Test that file directives with all Nothing are equal to default
+-- | Test that file directives with L.all Nothing are equal to default
 prop_file_directives_all_nothing_equals_default :: Bool
 prop_file_directives_all_nothing_equals_default = 
     let customDirectives = FileDirectives Nothing Nothing Nothing
     in customDirectives == defaultFileDirectives
 
--- | Test that block directives with all Nothing are equal to default
+-- | Test that block directives with L.all Nothing are equal to default
 prop_block_directives_all_nothing_equals_default :: Bool
 prop_block_directives_all_nothing_equals_default = 
     let customDirectives = BlockDirectives Nothing Nothing Nothing
@@ -91,7 +92,7 @@ prop_located_value_preserves_position value pos =
     let located = Located value pos
     in locatedPos located == pos
 
--- | Test that located values with same value and position are equal
+-- | Test that located values with same value L.and position are equal
 prop_located_equality :: String -> SourcePos -> Bool
 prop_located_equality value pos = 
     let located1 = Located value pos
@@ -136,17 +137,17 @@ prop_block_directives_show_deterministic ownership deps constraints =
 
 testSuite :: TestTree
 testSuite = testGroup "Parser Combinator Properties QuickCheck Tests"
-  [ QC.testProperty "default file directives have all fields as Nothing" prop_default_file_directives_nothing
-  , QC.testProperty "default block directives have all fields as Nothing" prop_default_block_directives_nothing
-  , QC.testProperty "file directives with all Nothing equals default" prop_file_directives_all_nothing_equals_default
-  , QC.testProperty "block directives with all Nothing equals default" prop_block_directives_all_nothing_equals_default
+  [ QC.testProperty "default file directives have L.all fields as Nothing" prop_default_file_directives_nothing
+  , QC.testProperty "default block directives have L.all fields as Nothing" prop_default_block_directives_nothing
+  , QC.testProperty "file directives with L.all Nothing equals default" prop_file_directives_all_nothing_equals_default
+  , QC.testProperty "block directives with L.all Nothing equals default" prop_block_directives_all_nothing_equals_default
   , QC.testProperty "file directives equality works correctly" prop_file_directives_equality
   , QC.testProperty "block directives equality works correctly" prop_block_directives_equality
   , QC.testProperty "file directives with different ownership are not equal" prop_file_directives_different_ownership
   , QC.testProperty "block directives with different dependent types are not equal" prop_block_directives_different_deps
   , QC.testProperty "located value preserves the value" prop_located_value_preserves_value
   , QC.testProperty "located value preserves the position" prop_located_value_preserves_position
-  , QC.testProperty "located values with same value and position are equal" prop_located_equality
+  , QC.testProperty "located values with same value L.and position are equal" prop_located_equality
   , QC.testProperty "located values with different values are not equal" prop_located_different_values
   , QC.testProperty "located values with different positions are not equal" prop_located_different_positions
   , QC.testProperty "file directives show is deterministic" prop_file_directives_show_deterministic

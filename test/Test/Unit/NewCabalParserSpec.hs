@@ -10,6 +10,7 @@
 module Test.Unit.NewCabalParserSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertBool, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -32,13 +33,13 @@ tests :: TestTree
 tests =
   testGroup "New Cabal Parser Tests"
     [ testGroup "Unit Tests"
-        [ testCase "defaultFileDirectives: all fields are Nothing" $
+        [ testCase "defaultFileDirectives: L.all fields are Nothing" $
             do
               fdOwnership defaultFileDirectives @?= Nothing
               fdDependentTypes defaultFileDirectives @?= Nothing
               fdConstraints defaultFileDirectives @?= Nothing
               
-        , testCase "defaultBlockDirectives: all fields are Nothing" $
+        , testCase "defaultBlockDirectives: L.all fields are Nothing" $
             do
               bdOwnership defaultBlockDirectives @?= Nothing
               bdDependentTypes defaultBlockDirectives @?= Nothing
@@ -52,7 +53,7 @@ tests =
             let content = "```go\nprint(\"hello\")\n```"
                 result = parseTypus content "test.typus"
             in case result of
-              Right typusFile -> length (tfBlocks typusFile) @?= 1
+              Right typusFile -> L.length (tfBlocks typusFile) @?= 1
               Left _ -> assertBool "Should parse successfully" False
               
         , testCase "parseTypus: file directive parsing" $
@@ -71,7 +72,7 @@ tests =
             \filename -> isRight (parseTypus "" filename)
             
         , fastProperty "parseTypus: whitespace-only content succeeds" $
-            \ws filename -> all isSpace ws ==> isRight (parseTypus ws filename)
+            \ws filename -> L.all isSpace ws ==> isRight (parseTypus ws filename)
             
         , fastProperty "parseTypus: single comment line succeeds" $
             \comment filename ->
@@ -95,7 +96,7 @@ tests =
               let content = "```\n" ++ code ++ "\n```"
               in case parseTypus content filename of
                 Right typusFile -> 
-                  property $ length (tfBlocks typusFile) >= 0
+                  property $ L.length (tfBlocks typusFile) >= 0
                 Left _ -> property True
         ]
     ]

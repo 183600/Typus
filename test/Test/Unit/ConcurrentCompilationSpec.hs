@@ -3,6 +3,7 @@
 module Test.Unit.ConcurrentCompilationSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty)
 import Test.QuickCheck (Arbitrary(..), Gen, oneof, listOf, choose, Property, (==>))
@@ -25,15 +26,15 @@ tests =
             let files = ["test1.typus", "test2.typus", "test3.typus"]
                 contents = ["func test1() {}", "func test2() {}", "func test3() {}"]
             results <- compileFilesConcurrently files contents
-            length results @?= length files
-            all isSuccess results @?= True
+            L.length results @?= L.length files
+            L.all isSuccess results @?= True
 
         , testCase "Handles compilation errors concurrently" $ do
             let files = ["good.typus", "bad.typus"]
                 contents = ["func good() {}", "invalid syntax here"]
             results <- compileFilesConcurrently files contents
-            length results @?= length files
-            any (not . isSuccess) results @?= True
+            L.length results @?= L.length files
+            L.any (not . isSuccess) results @?= True
 
         , testCase "Concurrent compilation is deterministic" $ do
             let files = ["test1.typus", "test2.typus"]
@@ -48,15 +49,15 @@ tests =
             let sharedInput = "func shared() {}"
                 numThreads = 10
             results <- parseConcurrently sharedInput numThreads
-            length results @?= numThreads
-            all (== "success") results @?= True
+            L.length results @?= numThreads
+            L.all (== "success") results @?= True
 
         , testCase "Symbol table operations are thread-safe" $ do
             let symbols = ["x", "y", "z"]
                 numThreads = 5
             results <- symbolTableOperationsConcurrently symbols numThreads
-            length results @?= numThreads
-            all (== "success") results @?= True
+            L.length results @?= numThreads
+            L.all (== "success") results @?= True
         ]
 
     , testGroup "Resource Management"
@@ -65,10 +66,10 @@ tests =
                 fileContent = "func test() { let x = 42 }"
             memoryBefore <- getMemoryUsage
             results <- compileFilesConcurrently 
-                (map (\i -> "test" ++ show i ++ ".typus") [1..numFiles])
+                (L.map (\i -> "test" ++ show i ++ ".typus") [1..numFiles])
                 (replicate numFiles fileContent)
             memoryAfter <- getMemoryUsage
-            length results @?= numFiles
+            L.length results @?= numFiles
             -- Memory growth should be reasonable (less than 100MB)
             memoryAfter - memoryBefore @?= 100 * 1024 * 1024
 
@@ -77,10 +78,10 @@ tests =
                 fileContent = "func test() {}"
             openHandlesBefore <- getOpenFileHandles
             results <- compileFilesConcurrently
-                (map (\i -> "test" ++ show i ++ ".typus") [1..numFiles])
+                (L.map (\i -> "test" ++ show i ++ ".typus") [1..numFiles])
                 (replicate numFiles fileContent)
             openHandlesAfter <- getOpenFileHandles
-            length results @?= numFiles
+            L.length results @?= numFiles
             -- Number of open handles should not grow significantly
             openHandlesAfter - openHandlesBefore @?= 10
         ]
@@ -166,20 +167,20 @@ getOpenFileHandles = return 0 -- Mock implementation
 prop_concurrentEquivalence :: [(String, String)] -> Property
 prop_concurrentEquivalence files =
     not (null files) ==>
-    let sequential = map (uncurry compileSingleFile) files
-    in length sequential == length files
+    let sequential = L.map (uncurry compileSingleFile) files
+    in L.length sequential == L.length files
 
 prop_noRaceConditions :: [String] -> Int -> Property
 prop_noRaceConditions symbols numThreads =
     not (null symbols) && numThreads > 0 && numThreads <= 10 ==>
-    let maxOps = length symbols * numThreads
-    in maxOps >= length symbols
+    let maxOps = L.length symbols * numThreads
+    in maxOps >= L.length symbols
 
 prop_concurrentErrorHandling :: [(String, String)] -> Property
 prop_concurrentErrorHandling files =
     not (null files) ==>
-    let hasErrors = any (isError . snd) files
-        isError content = "error" `elem` map (map toLower) (words content)
+    let hasErrors = L.any (isError . snd) files
+        isError content = "error" `elem` L.map (map toLower) (words content)
     in hasErrors || True -- Always true, just testing property structure
 
 prop_threadLocalIsolation :: String -> Int -> Property

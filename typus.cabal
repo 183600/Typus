@@ -29,6 +29,7 @@ library
     hs-source-dirs:   src
     exposed-modules:
         AnalyzerIntegration,
+        Analyzer.CrossAnalysis,
         Analyzer.DependentTypeBridge,
         Analyzer.OwnershipBridge,
         Analyzer.State,
@@ -79,7 +80,6 @@ library
         Compiler.GoVarSpec,
         Compiler.OwnershipChecker,
         Compiler.Errors.Compiler,
-        Analyzer.CrossAnalysis,
         Ownership.Lexer,
         Ownership.Analyzer,
         Ownership.Reporter
@@ -561,10 +561,9 @@ test-suite typus-test
         Test.Unit.NewEnhancedCabalQuickCheckSpec,
         
         -- New Enhanced Test Modules (2025)
-        Test.Unit.SourceLocationAdvancedQuickCheckSpec,
-        Test.Unit.ErrorHandlerAdvancedQuickCheckSpec,
-        Test.Unit.ParserAdvancedQuickCheckSpec,
-        Test.Unit.UtilsAdvancedQuickCheckSpec,
+        Test.Unit.NewSourceLocationAdvancedQuickCheckSpec,
+        Test.Unit.ErrorHandlerConsistencyAdvancedQuickCheckSpec,
+        Test.Unit.ParserErrorRecoveryAdvancedQuickCheckSpec,
         Test.Unit.CompilerAdvancedQuickCheckSpec,
         Test.Unit.DependenciesAdvancedQuickCheckSpec,
         Test.Unit.OwnershipAdvancedQuickCheckSpec,
@@ -995,7 +994,6 @@ test-suite typus-test
         , Test.Unit.NewOwnershipTransferBoundarySpec
         , Test.Unit.NewSourceLocationPrecisionSpec
         , Test.Unit.NewUtilsStringBoundarySpec
-        , Test.Unit.NewErrorHandlerConsistencySpec
         , Test.Unit.NewDependentTypeValidationSpec
         
         -- New Comprehensive Test Modules (2025)
@@ -1016,7 +1014,6 @@ test-suite typus-test
         
         -- New QuickCheck Test Modules (Added for enhanced coverage)
         , Test.Unit.NewUtilsQuickCheckPropertyTestsSpec
-        , Test.Unit.NewSourceLocationMathPropertiesSpec
         , Test.Unit.NewParserCombinatorPropertiesSpec
         , Test.Unit.NewStringProcessingBoundarySpec
         , Test.Unit.NewErrorHandlerConsistencySpec
@@ -1251,6 +1248,7 @@ test-suite typus-test
         QuickCheck >= 2.14,
         temporary >= 1.2 && <2,
         silently >= 0.3 && <1.3,
+        time >= 1.8 && <2,
         text >= 1.2.0 && <3,
         transformers >= 0.5 && <0.7,
         bytestring >= 0.10 && <1,

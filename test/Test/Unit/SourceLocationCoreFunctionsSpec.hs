@@ -1,6 +1,7 @@
 module Test.Unit.SourceLocationCoreFunctionsSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Arbitrary(..), Gen, choose, listOf, suchThat)
@@ -71,7 +72,7 @@ tests =
         ]
 
     , testGroup "Source Span Operations"
-        [ testCase "emptySpan has start and end at same position" $ do
+        [ testCase "emptySpan has start L.and end at same position" $ do
             let pos = SourcePos 1 1
             emptySpan pos @?= SourceSpan pos pos
 
@@ -98,14 +99,14 @@ tests =
             locatedValue located @?= value
             locatedSpan located @?= SourceSpan pos pos
 
-        , fastProperty "locatedWithSpan preserves value and span" 
+        , fastProperty "locatedWithSpan preserves value L.and span" 
             prop_locatedWithSpanPreserves
         , fastProperty "mapLocated applies function to contained value" 
             prop_mapLocatedApplies
         ]
 
     , testGroup "Position Arithmetic Properties"
-        [ fastProperty "advancing position never decreases line or column" 
+        [ fastProperty "advancing position never decreases line L.or column" 
             prop_advanceNeverDecreases
         , fastProperty "advancing by zero characters returns original position" 
             prop_advanceZeroReturns
@@ -114,7 +115,7 @@ tests =
         ]
 
     , testGroup "Span Boundary Properties"
-        [ fastProperty "span start is always less than or equal to end" 
+        [ fastProperty "span start is always less than L.or equal to end" 
             prop_spanStartLeEnd
         , fastProperty "mergeSpans is commutative" 
             prop_mergeSpansCommutative
@@ -188,7 +189,7 @@ prop_isValidSpanCorrect start end =
      then valid == (posColumn start <= posColumn end)
      else valid == (posLine start <= posLine end)
 
--- Property: locatedWithSpan preserves value and span
+-- Property: locatedWithSpan preserves value L.and span
 prop_locatedWithSpanPreserves :: String -> SourceSpan -> Bool
 prop_locatedWithSpanPreserves value span =
   let located = locatedWithSpan value span
@@ -198,11 +199,11 @@ prop_locatedWithSpanPreserves value span =
 prop_mapLocatedApplies :: String -> SourceSpan -> Bool
 prop_mapLocatedApplies value span =
   let located = locatedWithSpan value span
-      transformed = mapLocated length located
-  in locatedValue transformed == length value &&
+      transformed = mapLocated L.length located
+  in locatedValue transformed == L.length value &&
      locatedSpan transformed == span
 
--- Property: advancing position never decreases line or column
+-- Property: advancing position never decreases line L.or column
 prop_advanceNeverDecreases :: SourcePos -> String -> Bool
 prop_advanceNeverDecreases pos chars =
   let advanced = advancePosBy pos chars
@@ -217,11 +218,11 @@ prop_advanceZeroReturns pos =
 -- Property: advancePosBy is consistent with repeated advancePos
 prop_advanceByConsistent :: SourcePos -> String -> Bool
 prop_advanceByConsistent pos chars =
-  let singleAdvance = foldl (flip posAfter) pos chars
+  let singleAdvance = L.foldl (flip posAfter) pos chars
       multiAdvance = advancePosBy pos chars
   in singleAdvance == multiAdvance
 
--- Property: span start is always less than or equal to end
+-- Property: span start is always less than L.or equal to end
 prop_spanStartLeEnd :: SourceSpan -> Bool
 prop_spanStartLeEnd span =
   let start = spanStart span

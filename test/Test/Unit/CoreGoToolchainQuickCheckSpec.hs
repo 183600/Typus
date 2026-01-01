@@ -33,7 +33,9 @@ import Tooling.Error (ToolingError(..))
 
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, nub, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (nub, sort)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -161,12 +163,12 @@ prop_go_mod_contents_contains_required_fields :: String -> String -> Property
 prop_go_mod_contents_contains_required_fields modulePath goVersion =
   not (null modulePath) && not (null goVersion) ==> 
   let contents = goModContents modulePath goVersion
-  in property $ modulePath `isInfixOf` contents .&&. goVersion `isInfixOf` contents
+  in property $ modulePath `L.isInfixOf` contents .&&. goVersion `L.isInfixOf` contents
 
 prop_go_mod_contents_handles_empty_inputs :: Property
 prop_go_mod_contents_handles_empty_inputs =
   let contents = goModContents "" ""
-  in property $ length contents >= 0
+  in property $ L.length contents >= 0
 
 prop_write_go_module_creates_valid_file :: String -> String -> Property
 prop_write_go_module_creates_valid_file modulePath goVersion =
@@ -237,7 +239,7 @@ prop_should_skip_go_toolchain_is_consistent =
 prop_null_device_is_valid_path :: Property
 prop_null_device_is_valid_path =
   let device = nullDevice
-  in property $ length device > 0
+  in property $ L.length device > 0
 
 -- ============================================================================
 -- Properties for Error Handling
@@ -273,7 +275,7 @@ prop_go_toolchain_handles_large_files :: Int -> Property
 prop_go_toolchain_handles_large_files multiplier =
   multiplier > 0 && multiplier <= 100 ==> 
   let baseCode = "func test() { return " ++ show multiplier ++ " }\n"
-      largeCode = concat (replicate multiplier baseCode)
+      largeCode = L.concat (replicate multiplier baseCode)
       logFn = const $ return ()
       executor <- defaultGoExecutor logFn
       result = createTempGoFile executor largeCode
@@ -298,7 +300,7 @@ prop_go_executor_is_thread_safe numExecutions =
   let logFn = const $ return ()
       executor <- defaultGoExecutor logFn
       results = replicate numExecutions $ runGoCommand executor ["version"]
-  in property $ length results === numExecutions
+  in property $ L.length results === numExecutions
 
 -- ============================================================================
 -- Helper Functions

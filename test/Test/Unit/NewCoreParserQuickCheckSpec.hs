@@ -16,6 +16,7 @@ import Parser
   )
 import SourceLocation (SourcePos(..), startPos)
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf)
 
 -- ============================================================================
@@ -56,8 +57,8 @@ prop_parse_whitespace_safe s =
 -- | Parsing simple content should be idempotent for structure
 prop_parse_simple_structure :: String -> Bool
 prop_parse_simple_structure s = 
-  let simple = take 100 $ filter (\c -> c /= '\0' && c /= '\r') s
-  in length simple > 0 ==> 
+  let simple = take 100 $ L.filter (\c -> c /= '\0' && c /= '\r') s
+  in L.length simple > 0 ==> 
      case parseTypus simple of
        Left _ -> True
        Right parsed -> True  -- Basic structure validation

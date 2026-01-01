@@ -10,6 +10,7 @@
 module Test.Unit.NewTypusOwnershipQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import TestSupport.Arbitrary
@@ -21,9 +22,9 @@ import Ownership (analyzeOwnership)
 -- Property: Ownership analysis preserves variable count
 prop_ownership_preserves_variable_count :: [String] -> Property
 prop_ownership_preserves_variable_count vars =
-  let input = unlines $ map (\v -> "var " ++ v ++ " int") vars
+  let input = unlines $ L.map (\v -> "var " ++ v ++ " int") vars
       result = analyzeOwnership input
-      varCount = length vars
+      varCount = L.length vars
       analyzedCount = either (const 0) (const varCount) result
   in classify (not (null vars)) "has variables" $
      property $ (varCount === 0) .||. (analyzedCount === varCount)

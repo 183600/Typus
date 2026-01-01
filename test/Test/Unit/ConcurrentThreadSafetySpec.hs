@@ -10,6 +10,7 @@
 module Test.Unit.ConcurrentThreadSafetySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertFailure, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -217,7 +218,7 @@ prop_lockfree_correctness numThreads numOperations =
   let result = simulateLockfreeDataStructure numThreads numOperations
   in property $ isRight result
 
--- | Helper functions and data types
+-- | Helper functions L.and data types
 
 data ThreadId = ThreadId Int
   deriving (Show, Eq, Ord)
@@ -262,7 +263,7 @@ detectDeadlock :: Int -> Int -> [Int] -> Bool
 detectDeadlock numThreads numLocks lockOrdering = hasCircularDependency lockOrdering
 
 hasCircularDependency :: [Int] -> Bool
-hasCircularDependency ordering = length ordering /= length (nub ordering)
+hasCircularDependency ordering = L.length ordering /= L.length (nub ordering)
 
 simulateAtomicOperations :: Int -> Int -> Int -> Either String Int
 simulateAtomicOperations numThreads initialValue opsPerThread = 

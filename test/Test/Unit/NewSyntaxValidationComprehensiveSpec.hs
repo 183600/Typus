@@ -8,7 +8,9 @@ import Test.Tasty.HUnit (testCase, assertEqual, assertBool, assertFailure)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), forAll, elements, suchThat)
 import qualified Data.Text as T
 import Data.Maybe (isJust, isNothing, catMaybes)
-import Data.List (isInfixOf, nub, sort)
+import qualified Data.List as L
+import Data.List (isInfixOf)
+import Data.List (nub, sort)
 
 import SyntaxValidator (validateSyntax, SyntaxError(..), ValidationContext(..))
 import Parser (parseTypus, TypusFile(..))
@@ -40,9 +42,9 @@ basicSyntaxValidationTests =
               , "type Person = struct { name: string, age: int }"
               , "if x > 5 { return true }"
               ]
-            results = map (validateSyntax "test.typus") validInputs
+            results = L.map (validateSyntax "test.typus") validInputs
         in do
-           assertBool "All valid inputs should pass validation" (all isRight results)
+           assertBool "All valid inputs should pass validation" (L.all isRight results)
 
     , testCase "Invalid token sequences" $
         let invalidInputs = 
@@ -51,11 +53,11 @@ basicSyntaxValidationTests =
               , "if x > 5"           -- Missing body
               , "type Person = {"     -- Incomplete type definition
               ]
-            results = map (validateSyntax "test.typus") invalidInputs
+            results = L.map (validateSyntax "test.typus") invalidInputs
         in do
-           assertBool "All invalid inputs should fail validation" (all isLeft results)
+           assertBool "All invalid inputs should fail validation" (L.all isLeft results)
            let allErrors = concatMap extractLeft results
-           assertBool "Should detect syntax errors" (all isSyntaxError allErrors)
+           assertBool "Should detect syntax errors" (L.all isSyntaxError allErrors)
 
     , testCase "Token boundary validation" $
         let inputs = 
@@ -64,10 +66,10 @@ basicSyntaxValidationTests =
               , "letx = 5"           -- Missing space after keyword
               , "let x = 5;"         -- Semicolon (if not allowed)
               ]
-            results = map (validateSyntax "test.typus") inputs
+            results = L.map (validateSyntax "test.typus") inputs
         in do
            let (valid, invalid) = partition isRight results
-           assertBool "Should handle spacing variations" (length valid + length invalid == length inputs)
+           assertBool "Should handle spacing variations" (L.length valid + L.length invalid == L.length inputs)
 
     , testCase "Keyword validation" $
         let inputs = 
@@ -76,11 +78,11 @@ basicSyntaxValidationTests =
               , "type type = int"     -- Keyword as type name
               , "if if > 5 { }"       -- Keyword as variable
               ]
-            results = map (validateSyntax "test.typus") inputs
+            results = L.map (validateSyntax "test.typus") inputs
         in do
-           assertBool "Should handle keyword misuse" (all isLeft results)
+           assertBool "Should handle keyword misuse" (L.all isLeft results)
            let allErrors = concatMap extractLeft results
-           assertBool "Should detect keyword errors" (any isKeywordError allErrors)
+           assertBool "Should detect keyword errors" (L.any isKeywordError allErrors)
     ]
 
 -- | Expression validation tests
@@ -95,10 +97,10 @@ expressionValidationTests =
               , "x / y % z"
               , "-x + +y"
               ]
-            inputs = map (\expr -> "let result = " ++ expr) validExpressions
-            results = map (validateSyntax "test.typus") inputs
+            inputs = L.map (\expr -> "let result = " ++ expr) validExpressions
+            results = L.map (validateSyntax "test.typus") inputs
         in do
-           assertBool "All valid expressions should pass" (all isRight results)
+           assertBool "All valid expressions should pass" (L.all isRight results)
 
     , testCase "Invalid arithmetic expressions" $
         let invalidExpressions = 
@@ -108,10 +110,10 @@ expressionValidationTests =
               , "(x + y"            -- Unmatched parenthesis
               , "x / 0"             -- Division by zero (syntax level)
               ]
-            inputs = map (\expr -> "let result = " ++ expr) invalidExpressions
-            results = map (validateSyntax "test.typus") inputs
+            inputs = L.map (\expr -> "let result = " ++ expr) invalidExpressions
+            results = L.map (validateSyntax "test.typus") inputs
         in do
-           assertBool "All invalid expressions should fail" (all isLeft results)
+           assertBool "All invalid expressions should fail" (L.all isLeft results)
 
     , testCase "Valid logical expressions" $
         let validExpressions = 
@@ -120,10 +122,10 @@ expressionValidationTests =
               , "(x > 5) && (y < 10)"
               , "x == y || z != w"
               ]
-            inputs = map (\expr -> "let result = " ++ expr) validExpressions
-            results = map (validateSyntax "test.typus") inputs
+            inputs = L.map (\expr -> "let result = " ++ expr) validExpressions
+            results = L.map (validateSyntax "test.typus") inputs
         in do
-           assertBool "All valid logical expressions should pass" (all isRight results)
+           assertBool "All valid logical expressions should pass" (L.all isRight results)
 
     , testCase "Invalid logical expressions" $
         let invalidExpressions = 
@@ -132,10 +134,10 @@ expressionValidationTests =
               , "x && || y"         -- Invalid operator sequence
               , "!x &&"             -- Incomplete after negation
               ]
-            inputs = map (\expr -> "let result = " ++ expr) invalidExpressions
-            results = map (validateSyntax "test.typus") inputs
+            inputs = L.map (\expr -> "let result = " ++ expr) invalidExpressions
+            results = L.map (validateSyntax "test.typus") inputs
         in do
-           assertBool "All invalid logical expressions should fail" (all isLeft results)
+           assertBool "All invalid logical expressions should fail" (L.all isLeft results)
 
     , testCase "Function call expressions" $
         let callExpressions = 
@@ -147,11 +149,11 @@ expressionValidationTests =
               , "func(x,)"                  -- Invalid trailing comma
               , "func(x y)"                 -- Invalid missing comma
               ]
-            inputs = map (\expr -> "let result = " ++ expr) callExpressions
-            results = map (validateSyntax "test.typus") inputs
+            inputs = L.map (\expr -> "let result = " ++ expr) callExpressions
+            results = L.map (validateSyntax "test.typus") inputs
         in do
            let (valid, invalid) = partition isRight results
-           assertBool "Should validate function calls correctly" (length valid > 0 && length invalid > 0)
+           assertBool "Should validate function calls correctly" (L.length valid > 0 && L.length invalid > 0)
     ]
 
 -- | Statement validation tests
@@ -165,20 +167,20 @@ statementValidationTests =
               , "let z = func() { return 42 }"
               , "const PI = 3.14159"
               ]
-            results = map (validateSyntax "test.typus") validDeclarations
+            results = L.map (validateSyntax "test.typus") validDeclarations
         in do
-           assertBool "All valid declarations should pass" (all isRight results)
+           assertBool "All valid declarations should pass" (L.all isRight results)
 
     , testCase "Invalid declaration statements" $
         let invalidDeclarations = 
-              [ "let ="               -- Missing identifier and value
+              [ "let ="               -- Missing identifier L.and value
               , "let x ="             -- Missing value
               , "let 5 = 10"          -- Invalid identifier
               , "let x = "            -- Incomplete initialization
               ]
-            results = map (validateSyntax "test.typus") invalidDeclarations
+            results = L.map (validateSyntax "test.typus") invalidDeclarations
         in do
-           assertBool "All invalid declarations should fail" (all isLeft results)
+           assertBool "All invalid declarations should fail" (L.all isLeft results)
 
     , testCase "Valid assignment statements" $
         let validAssignments = 
@@ -187,10 +189,10 @@ statementValidationTests =
               , "obj.field = value"
               , "array[0] = 42"
               ]
-            inputs = map (\decl -> "let x = 0\n" ++ decl) validAssignments
-            results = map (validateSyntax "test.typus") inputs
+            inputs = L.map (\decl -> "let x = 0\n" ++ decl) validAssignments
+            results = L.map (validateSyntax "test.typus") inputs
         in do
-           assertBool "All valid assignments should pass" (all isRight results)
+           assertBool "All valid assignments should pass" (L.all isRight results)
 
     , testCase "Invalid assignment statements" $
         let invalidAssignments = 
@@ -199,10 +201,10 @@ statementValidationTests =
               , "5 = x"              -- Invalid target
               , "x = +"              -- Incomplete value
               ]
-            inputs = map (\decl -> "let x = 0\n" ++ decl) invalidAssignments
-            results = map (validateSyntax "test.typus") inputs
+            inputs = L.map (\decl -> "let x = 0\n" ++ decl) invalidAssignments
+            results = L.map (validateSyntax "test.typus") inputs
         in do
-           assertBool "All invalid assignments should fail" (all isLeft results)
+           assertBool "All invalid assignments should fail" (L.all isLeft results)
 
     , testCase "Valid control statements" $
         let validControlStatements = 
@@ -212,21 +214,21 @@ statementValidationTests =
               , "for i in 0..10 { }"
               , "match x { case 0 => true, case _ => false }"
               ]
-            results = map (validateSyntax "test.typus") validControlStatements
+            results = L.map (validateSyntax "test.typus") validControlStatements
         in do
-           assertBool "All valid control statements should pass" (all isRight results)
+           assertBool "All valid control statements should pass" (L.all isRight results)
 
     , testCase "Invalid control statements" $
         let invalidControlStatements = 
               [ "if x > 5"           -- Missing body
               , "if { }"             -- Missing condition
-              , "while"              -- Missing condition and body
+              , "while"              -- Missing condition L.and body
               , "for i in"           -- Missing range
               , "match x { }"        -- Missing cases
               ]
-            results = map (validateSyntax "test.typus") invalidControlStatements
+            results = L.map (validateSyntax "test.typus") invalidControlStatements
         in do
-           assertBool "All invalid control statements should fail" (all isLeft results)
+           assertBool "All invalid control statements should fail" (L.all isLeft results)
     ]
 
 -- | Declaration validation tests
@@ -240,21 +242,21 @@ declarationValidationTests =
               , "func generic<T>(x: T) -> T { return x }"
               , "func recursive(n: int) -> int { return n <= 1 ? 1 : recursive(n-1) }"
               ]
-            results = map (validateSyntax "test.typus") validFunctions
+            results = L.map (validateSyntax "test.typus") validFunctions
         in do
-           assertBool "All valid function declarations should pass" (all isRight results)
+           assertBool "All valid function declarations should pass" (L.all isRight results)
 
     , testCase "Invalid function declarations" $
         let invalidFunctions = 
-              [ "func ("              -- Missing name and parameters
-              , "func test"           -- Missing parameters and body
+              [ "func ("              -- Missing name L.and parameters
+              , "func test"           -- Missing parameters L.and body
               , "func test() ->"      -- Missing return type
               , "func test( x)"       -- Missing type annotation
               , "func test() { }"     -- Duplicate function (context-dependent)
               ]
-            results = map (validateSyntax "test.typus") invalidFunctions
+            results = L.map (validateSyntax "test.typus") invalidFunctions
         in do
-           assertBool "All invalid function declarations should fail" (all isLeft results)
+           assertBool "All invalid function declarations should fail" (L.all isLeft results)
 
     , testCase "Valid type declarations" $
         let validTypes = 
@@ -263,20 +265,20 @@ declarationValidationTests =
               , "type Result<T, E> = union { Ok(T), Err(E) }"
               , "type Alias = int"
               ]
-            results = map (validateSyntax "test.typus") validTypes
+            results = L.map (validateSyntax "test.typus") validTypes
         in do
-           assertBool "All valid type declarations should pass" (all isRight results)
+           assertBool "All valid type declarations should pass" (L.all isRight results)
 
     , testCase "Invalid type declarations" $
         let invalidTypes = 
-              [ "type ="              -- Missing name and definition
+              [ "type ="              -- Missing name L.and definition
               , "type Point"          -- Missing definition
               , "type Point = {"      -- Incomplete struct
               , "type Invalid = x"    -- Invalid type expression
               ]
-            results = map (validateSyntax "test.typus") invalidTypes
+            results = L.map (validateSyntax "test.typus") invalidTypes
         in do
-           assertBool "All invalid type declarations should fail" (all isLeft results)
+           assertBool "All invalid type declarations should fail" (L.all isLeft results)
 
     , testCase "Valid interface declarations" $
         let validInterfaces = 
@@ -284,9 +286,9 @@ declarationValidationTests =
               , "interface Comparable<T> { compare(other: T) -> int }"
               , "interface Iterator<T> { next() -> Option<T> }"
               ]
-            results = map (validateSyntax "test.typus") validInterfaces
+            results = L.map (validateSyntax "test.typus") validInterfaces
         in do
-           assertBool "All valid interface declarations should pass" (all isRight results)
+           assertBool "All valid interface declarations should pass" (L.all isRight results)
 
     , testCase "Invalid interface declarations" $
         let invalidInterfaces = 
@@ -294,9 +296,9 @@ declarationValidationTests =
               , "interface Test"      -- Missing body
               , "interface Test { }"  -- Empty interface (may be invalid)
               ]
-            results = map (validateSyntax "test.typus") invalidInterfaces
+            results = L.map (validateSyntax "test.typus") invalidInterfaces
         in do
-           assertBool "All invalid interface declarations should fail" (all isLeft results)
+           assertBool "All invalid interface declarations should fail" (L.all isLeft results)
     ]
 
 -- | Control flow validation tests
@@ -310,9 +312,9 @@ controlFlowValidationTests =
               , "for i in 0..10 { while j < 5 { j += 1 } }"
               , "match x { case 0 => { if true { return 0 } } }"
               ]
-            results = map (validateSyntax "test.typus") validNested
+            results = L.map (validateSyntax "test.typus") validNested
         in do
-           assertBool "All valid nested structures should pass" (all isRight results)
+           assertBool "All valid nested structures should pass" (L.all isRight results)
 
     , testCase "Invalid nested control structures" $
         let invalidNested = 
@@ -320,9 +322,9 @@ controlFlowValidationTests =
               , "while condition { for"  -- Incomplete nested structure
               , "match x { case 0 => if" -- Incomplete case
               ]
-            results = map (validateSyntax "test.typus") invalidNested
+            results = L.map (validateSyntax "test.typus") invalidNested
         in do
-           assertBool "All invalid nested structures should fail" (all isLeft results)
+           assertBool "All invalid nested structures should fail" (L.all isLeft results)
 
     , testCase "Valid jump statements" $
         let validJumps = 
@@ -331,9 +333,9 @@ controlFlowValidationTests =
               , "func test() { if condition { return 42 } }"
               , "loop { if done { break } }"
               ]
-            results = map (validateSyntax "test.typus") validJumps
+            results = L.map (validateSyntax "test.typus") validJumps
         in do
-           assertBool "All valid jump statements should pass" (all isRight results)
+           assertBool "All valid jump statements should pass" (L.all isRight results)
 
     , testCase "Invalid jump statements" $
         let invalidJumps = 
@@ -342,9 +344,9 @@ controlFlowValidationTests =
               , "return"              -- Return outside function
               , "if true { break }"   -- Break in wrong context
               ]
-            results = map (validateSyntax "test.typus") invalidJumps
+            results = L.map (validateSyntax "test.typus") invalidJumps
         in do
-           assertBool "All invalid jump statements should fail" (all isLeft results)
+           assertBool "All invalid jump statements should fail" (L.all isLeft results)
 
     , testCase "Valid exception handling" $
         let validExceptions = 
@@ -352,20 +354,20 @@ controlFlowValidationTests =
               , "try { } finally { cleanup() }"
               , "try { } catch (e) { } finally { }"
               ]
-            results = map (validateSyntax "test.typus") validExceptions
+            results = L.map (validateSyntax "test.typus") validExceptions
         in do
-           assertBool "All valid exception handling should pass" (all isRight results)
+           assertBool "All valid exception handling should pass" (L.all isRight results)
 
     , testCase "Invalid exception handling" $
         let invalidExceptions = 
-              [ "try { }"             -- Missing catch or finally
+              [ "try { }"             -- Missing catch L.or finally
               , "catch (e) { }"       -- Catch without try
               , "finally { }"          -- Finally without try
               , "try { catch (e) { }" -- Malformed structure
               ]
-            results = map (validateSyntax "test.typus") invalidExceptions
+            results = L.map (validateSyntax "test.typus") invalidExceptions
         in do
-           assertBool "All invalid exception handling should fail" (all isLeft results)
+           assertBool "All invalid exception handling should fail" (L.all isLeft results)
     ]
 
 -- | Type syntax validation tests
@@ -378,10 +380,10 @@ typeSyntaxValidationTests =
               , "uint8", "uint16", "uint32", "uint64"
               , "int8", "int16", "int32", "int64"
               ]
-            inputs = map (\t -> "let x: " ++ t ++ " = 0") validTypes
-            results = map (validateSyntax "test.typus") inputs
+            inputs = L.map (\t -> "let x: " ++ t ++ " = 0") validTypes
+            results = L.map (validateSyntax "test.typus") inputs
         in do
-           assertBool "All valid primitive types should pass" (all isRight results)
+           assertBool "All valid primitive types should pass" (L.all isRight results)
 
     , testCase "Invalid primitive types" $
         let invalidTypes = 
@@ -389,10 +391,10 @@ typeSyntaxValidationTests =
               , "int128", "uint128"                       -- Unsupported sizes
               , "string32", "float16"                     -- Non-standard types
               ]
-            inputs = map (\t -> "let x: " ++ t ++ " = 0") invalidTypes
-            results = map (validateSyntax "test.typus") inputs
+            inputs = L.map (\t -> "let x: " ++ t ++ " = 0") invalidTypes
+            results = L.map (validateSyntax "test.typus") inputs
         in do
-           assertBool "All invalid primitive types should fail" (all isLeft results)
+           assertBool "All invalid primitive types should fail" (L.all isLeft results)
 
     , testCase "Valid composite types" $
         let validTypes = 
@@ -401,10 +403,10 @@ typeSyntaxValidationTests =
               , "Pair<int, string>", "Triple<int, float, bool>"
               , "Ref<int>", "Ptr<string>", "Box<int>"
               ]
-            inputs = map (\t -> "let x: " ++ t ++ " = default") validTypes
-            results = map (validateSyntax "test.typus") inputs
+            inputs = L.map (\t -> "let x: " ++ t ++ " = default") validTypes
+            results = L.map (validateSyntax "test.typus") inputs
         in do
-           assertBool "All valid composite types should pass" (all isRight results)
+           assertBool "All valid composite types should pass" (L.all isRight results)
 
     , testCase "Invalid composite types" $
         let invalidTypes = 
@@ -413,10 +415,10 @@ typeSyntaxValidationTests =
               , "Pair[int", "Triple[int, float"  -- Incomplete tuple types
               , "Ref<", "Ptr["                   -- Incomplete pointer types
               ]
-            inputs = map (\t -> "let x: " ++ t ++ " = default") invalidTypes
-            results = map (validateSyntax "test.typus") inputs
+            inputs = L.map (\t -> "let x: " ++ t ++ " = default") invalidTypes
+            results = L.map (validateSyntax "test.typus") inputs
         in do
-           assertBool "All invalid composite types should fail" (all isLeft results)
+           assertBool "All invalid composite types should fail" (L.all isLeft results)
 
     , testCase "Valid function types" $
         let validTypes = 
@@ -424,10 +426,10 @@ typeSyntaxValidationTests =
               , "(int) -> (string)", "(int, string) -> (bool, float)"
               , "() -> ()", "(T) -> T", "(T, U) -> V"
               ]
-            inputs = map (\t -> "let f: " ++ t ++ " = default") validTypes
-            results = map (validateSyntax "test.typus") inputs
+            inputs = L.map (\t -> "let f: " ++ t ++ " = default") validTypes
+            results = L.map (validateSyntax "test.typus") inputs
         in do
-           assertBool "All valid function types should pass" (all isRight results)
+           assertBool "All valid function types should pass" (L.all isRight results)
 
     , testCase "Invalid function types" $
         let invalidTypes = 
@@ -435,10 +437,10 @@ typeSyntaxValidationTests =
               , "(int, -> string", "(int string) ->"   -- Malformed parameter lists
               , "int -> string -> bool"                -- Ambiguous arrow association
               ]
-            inputs = map (\t -> "let f: " ++ t ++ " = default") invalidTypes
-            results = map (validateSyntax "test.typus") inputs
+            inputs = L.map (\t -> "let f: " ++ t ++ " = default") invalidTypes
+            results = L.map (validateSyntax "test.typus") inputs
         in do
-           assertBool "All invalid function types should fail" (all isLeft results)
+           assertBool "All invalid function types should fail" (L.all isLeft results)
     ]
 
 -- | Error recovery tests
@@ -450,8 +452,8 @@ errorRecoveryTests =
             result = validateSyntax "test.typus" input
         in case result of
              Left errs -> do
-               assertBool "Should attempt recovery" (any attemptsRecovery errs)
-               assertBool "Should provide suggestions" (any providesSuggestions errs)
+               assertBool "Should attempt recovery" (L.any attemptsRecovery errs)
+               assertBool "Should provide suggestions" (L.any providesSuggestions errs)
              Right _ -> assertBool "Should succeed with optional semicolons" True
 
     , testCase "Recover from unmatched brackets" $
@@ -459,8 +461,8 @@ errorRecoveryTests =
             result = validateSyntax "test.typus" input
         in case result of
              Left errs -> do
-               assertBool "Should detect bracket mismatch" (any isBracketMismatch errs)
-               assertBool "Should suggest fix" (any suggestsBracketFix errs)
+               assertBool "Should detect bracket mismatch" (L.any isBracketMismatch errs)
+               assertBool "Should suggest fix" (L.any suggestsBracketFix errs)
              Right _ -> assertFailure "Should have failed with bracket mismatch"
 
     , testCase "Recover from incomplete expressions" $
@@ -468,8 +470,8 @@ errorRecoveryTests =
             result = validateSyntax "test.typus" input
         in case result of
              Left errs -> do
-               assertBool "Should detect incomplete expression" (any isIncompleteExpression errs)
-               assertBool "Should continue parsing" (any continuesParsing errs)
+               assertBool "Should detect incomplete expression" (L.any isIncompleteExpression errs)
+               assertBool "Should continue parsing" (L.any continuesParsing errs)
              Right _ -> assertFailure "Should have failed with incomplete expression"
 
     , testCase "Handle multiple errors gracefully" $
@@ -477,7 +479,7 @@ errorRecoveryTests =
             result = validateSyntax "test.typus" input
         in case result of
              Left errs -> do
-               assertBool "Should detect multiple errors" (length errs >= 2)
+               assertBool "Should detect multiple errors" (L.length errs >= 2)
                assertBool "Should order errors by location" (errorsOrderedByLocation errs)
                assertBool "Should avoid cascading errors" (not $ hasCascadingErrors errs)
              Right _ -> assertFailure "Should have failed with multiple errors"
@@ -520,31 +522,31 @@ extractLeft (Left err) = [err]
 extractLeft _ = []
 
 partition :: (a -> Bool) -> [a] -> ([a], [a])
-partition p xs = (filter p xs, filter (not . p) xs)
+partition p xs = (filter p xs, L.filter (not . p) xs)
 
 isSyntaxError :: SyntaxError -> Bool
 isSyntaxError _ = True  -- Simplified
 
 isKeywordError :: SyntaxError -> Bool
-isKeywordError err = "keyword" `isInfixOf` show err
+isKeywordError err = "keyword" `L.isInfixOf` show err
 
 attemptsRecovery :: SyntaxError -> Bool
-attemptsRecovery err = "recovery" `isInfixOf` show err
+attemptsRecovery err = "recovery" `L.isInfixOf` show err
 
 providesSuggestions :: SyntaxError -> Bool
-providesSuggestions err = "suggest" `isInfixOf` show err
+providesSuggestions err = "suggest" `L.isInfixOf` show err
 
 isBracketMismatch :: SyntaxError -> Bool
-isBracketMismatch err = "bracket" `isInfixOf` show err && "mismatch" `isInfixOf` show err
+isBracketMismatch err = "bracket" `L.isInfixOf` show err && "mismatch" `L.isInfixOf` show err
 
 suggestsBracketFix :: SyntaxError -> Bool
-suggestsBracketFix err = "bracket" `isInfixOf` show err && "fix" `isInfixOf` show err
+suggestsBracketFix err = "bracket" `L.isInfixOf` show err && "fix" `L.isInfixOf` show err
 
 isIncompleteExpression :: SyntaxError -> Bool
-isIncompleteExpression err = "incomplete" `isInfixOf` show err && "expression" `isInfixOf` show err
+isIncompleteExpression err = "incomplete" `L.isInfixOf` show err && "expression" `L.isInfixOf` show err
 
 continuesParsing :: SyntaxError -> Bool
-continuesParsing err = "continue" `isInfixOf` show err
+continuesParsing err = "continue" `L.isInfixOf` show err
 
 errorsOrderedByLocation :: [SyntaxError] -> Bool
 errorsOrderedByLocation errs = 
@@ -555,7 +557,7 @@ getErrorLocation :: SyntaxError -> (Int, Int)
 getErrorLocation err = (1, 1)  -- Simplified
 
 hasCascadingErrors :: [SyntaxError] -> Bool
-hasCascadingErrors errs = length errs > 5  -- Simplified cascade detection
+hasCascadingErrors errs = L.length errs > 5  -- Simplified cascade detection
 
 -- | Generators for QuickCheck testing
 genValidSyntax :: Gen String

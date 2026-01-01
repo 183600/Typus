@@ -38,6 +38,7 @@ import SourceLocation
   )
 
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf)
 
 -- Property: source position components are always positive
@@ -56,7 +57,7 @@ prop_advance_pos_line_non_decreasing (Positive line) (Positive col) text =
 -- Property: advancePosBy preserves line count for single-line text
 prop_advance_pos_by_single_line :: Positive Int -> Positive Int -> String -> Property
 prop_advance_pos_by_single_line (Positive line) (Positive col) text =
-  let singleLine = filter (/= '\n') text
+  let singleLine = L.filter (/= '\n') text
       start = SourcePos line col
       advanced = advancePosBy start singleLine
   in property $ sourceLine advanced === sourceLine start

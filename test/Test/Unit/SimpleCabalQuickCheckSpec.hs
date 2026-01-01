@@ -4,6 +4,7 @@
 module Test.Unit.SimpleCabalQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import Data.List (sort)
@@ -16,11 +17,11 @@ tests = testGroup "Simple Cabal QuickCheck Tests"
 
 basicListProperties :: TestTree
 basicListProperties = testGroup "Basic List Properties"
-  [ fastProperty "reverse twice is identity" $ \(xs :: [Int]) ->
-      reverse (reverse xs) === xs
+  [ fastProperty "L.reverse twice is identity" $ \(xs :: [Int]) ->
+      L.reverse (L.reverse xs) === xs
   
-  , fastProperty "length is preserved by reverse" $ \(xs :: [Int]) ->
-      length (reverse xs) === length xs
+  , fastProperty "L.length is preserved by L.reverse" $ \(xs :: [Int]) ->
+      L.length (L.reverse xs) === L.length xs
   
   , fastProperty "sort is idempotent" $ \(xs :: [Int]) ->
       sort (sort xs) === sort xs

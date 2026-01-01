@@ -1,6 +1,7 @@
 module Test.Unit.CompilerErrorHandlingSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), Gen, choose, oneof, listOf, elements)
 import TestSupport.QuickCheck (fastProperty)
@@ -27,7 +28,7 @@ import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives
 import SourceLocation (SourceSpan(..), SourcePos(..), defaultSpan)
 import qualified Data.Text as T
 
--- | Tests for compiler error handling and recovery mechanisms
+-- | Tests for compiler error handling L.and recovery mechanisms
 tests :: TestTree
 tests =
   testGroup "Compiler Error Handling"
@@ -43,8 +44,8 @@ tests =
                 result = compile typusFile
             case result of
                 Left errs -> do
-                    length errs @?= 2  -- typeCheckFailure + specific type error
-                    let typeError = head errs
+                    L.length errs @?= 2  -- typeCheckFailure + specific type error
+                    let typeError = L.head errs
                     errorCode typeError @?= "CP0003"
                     errorPhase typeError @?= TypeCheckingPhase
                     errorCategory typeError @?= TypeChecking
@@ -90,7 +91,7 @@ tests =
                 result = compile typusFile
             case result of
                 Left errs -> do
-                    assertBool "Should detect syntax error" $ any (\e -> errorPhase e == ParsingPhase) errs
+                    assertBool "Should detect syntax error" $ L.any (\e -> errorPhase e == ParsingPhase) errs
                 Right _ -> assertBool "Should have failed with syntax error" False
 
         , testCase "handles missing semicolon" $ do
@@ -104,7 +105,7 @@ tests =
                 result = compile typusFile
             case result of
                 Left _ -> assertBool "Should handle missing semicolon gracefully" True
-                Right _ -> assertBool "May or may not fail depending on Go syntax requirements" True
+                Right _ -> assertBool "May L.or may not fail depending on Go syntax requirements" True
 
         , testCase "handles invalid declaration syntax" $ do
             let typusFile = TypusFile 
@@ -117,7 +118,7 @@ tests =
                 result = compile typusFile
             case result of
                 Left _ -> assertBool "Should detect invalid identifier" True
-                Right _ -> assertBool "May or may not fail depending on parser strictness" True
+                Right _ -> assertBool "May L.or may not fail depending on parser strictness" True
         ]
 
     , testGroup "Dependent type errors"
@@ -177,7 +178,7 @@ tests =
                 Right _ -> assertBool "May pass if borrows are correctly scoped" True
         ]
 
-    , testGroup "Error reporting and formatting"
+    , testGroup "Error reporting L.and formatting"
         [ testCase "formats error messages correctly" $ do
             let error = CompilerError 
                     "TEST001"
@@ -191,9 +192,9 @@ tests =
                     []
                     Nothing
                 formatted = formatCompilerErrors [error]
-            assertBool "Should include error code" $ "TEST001" `isInfixOf` formatted
-            assertBool "Should include error message" $ "Test error message" `isInfixOf` formatted
-            assertBool "Should include suggestions" $ "Suggestion 1" `isInfixOf` formatted
+            assertBool "Should include error code" $ "TEST001" `L.isInfixOf` formatted
+            assertBool "Should include error message" $ "Test error message" `L.isInfixOf` formatted
+            assertBool "Should include suggestions" $ "Suggestion 1" `L.isInfixOf` formatted
 
         , testCase "generates detailed error report" $ do
             let errors = [CompilerError 
@@ -219,9 +220,9 @@ tests =
                     []
                     Nothing]
                 report = generateDetailedReport errors
-            assertBool "Should include error summary" $ "2 errors found" `isInfixOf` report
-            assertBool "Should categorize errors by phase" $ "Parsing" `isInfixOf` report
-            assertBool "Should categorize errors by severity" $ "Error" `isInfixOf` report
+            assertBool "Should include error summary" $ "2 errors found" `L.isInfixOf` report
+            assertBool "Should categorize errors by phase" $ "Parsing" `L.isInfixOf` report
+            assertBool "Should categorize errors by severity" $ "Error" `L.isInfixOf` report
 
         , testCase "analyzes error patterns" $ do
             let errors = [CompilerError 
@@ -247,8 +248,8 @@ tests =
                     []
                     Nothing]
                 analysis = analyzeErrors errors
-            assertBool "Should detect type checking phase dominance" $ "TypeChecking" `isInfixOf` analysis
-            assertBool "Should count error categories" $ "TypeChecking" `isInfixOf` analysis
+            assertBool "Should detect type checking phase dominance" $ "TypeChecking" `L.isInfixOf` analysis
+            assertBool "Should count error categories" $ "TypeChecking" `L.isInfixOf` analysis
         ]
 
     , testGroup "Error recovery mechanisms"
@@ -264,7 +265,7 @@ tests =
             case result of
                 Left errs -> do
                     assertBool "Should detect syntax error" $ not (null errs)
-                    assertBool "Should not fail completely" $ length errs < 10
+                    assertBool "Should not fail completely" $ L.length errs < 10
                 Right _ -> assertBool "May succeed if parser recovers" True
 
         , testCase "provides helpful error suggestions" $ do
@@ -289,7 +290,7 @@ tests =
         , fastProperty "error severities are categorized" prop_errorSeveritiesCategorized
         ]
 
-    , testGroup "Edge cases and stress tests"
+    , testGroup "Edge cases L.and stress tests"
         [ testCase "handles very large input files" $ do
             let largeContent = unlines $ replicate 1000 "var x int = 42"
                 typusFile = TypusFile 
@@ -301,7 +302,7 @@ tests =
                     []
                 result = compile typusFile
             case result of
-                Left errs -> assertBool "Should handle large input gracefully" $ length errs < 100
+                Left errs -> assertBool "Should handle large input gracefully" $ L.length errs < 100
                 Right _ -> assertBool "May succeed for valid large input" True
 
         , testCase "handles deeply nested expressions" $ do
@@ -322,11 +323,11 @@ tests =
 
 -- Helper function to check substring inclusion
 isInfixOf :: String -> String -> Bool
-isInfixOf = flip isInfixOf
+L.isInfixOf = flip L.isInfixOf
 
 -- | Property: error messages contain error codes
 prop_errorCodesPresent :: CompilerError -> Bool
-prop_errorCodesPresent error = not (null $ errorCode error)
+prop_errorCodesPresent error = not (L.null $ errorCode error)
 
 -- | Property: error phases are valid
 prop_errorPhasesValid :: CompilerError -> Bool

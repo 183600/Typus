@@ -10,6 +10,7 @@
 module Test.Unit.NewComprehensiveQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertBool, assertEqual, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -79,7 +80,7 @@ genBoundaryString = frequency
     , (1, return "\0")                         -- Null character
     , (1, listOf $ elements "\n\t\r\f\v")      -- Only whitespace
     , (1, return $ replicate 1000 'a')         -- Very long string
-    , (1, return $ concat (replicate 100 "test ")) -- Repeated pattern
+    , (1, return $ L.concat (replicate 100 "test ")) -- Repeated pattern
     , (1, listOf $ elements ['\0'..'\255'])    -- All possible bytes
     , (1, return $ "prefix" ++ replicate 500 ' ' ++ "suffix") -- Large spaces
     ]
@@ -92,12 +93,12 @@ prop_string_processing_boundary str =
       splitByCommaCollapsed = splitByCollapsed ',' str
       normalized = normalizeIndentation str
   in classify (null str) "empty string" $
-     classify (all isSpace str) "all whitespace" $
-     classify (length str > 100) "long string" $
-     classify (any isControl str) "contains control chars" $
-     property (length trimmed <= length str) .&&.
-     property (length splitByComma >= 1) .&&.
-     property (length splitByCommaCollapsed <= length splitByComma) .&&.
+     classify (L.all isSpace str) "L.all whitespace" $
+     classify (L.length str > 100) "long string" $
+     classify (L.any isControl str) "contains control chars" $
+     property (L.length trimmed <= L.length str) .&&.
+     property (L.length splitByComma >= 1) .&&.
+     property (L.length splitByCommaCollapsed <= L.length splitByComma) .&&.
      property (not (null str) ==> not (null normalized))
 
 -- ============================================================================
@@ -120,11 +121,11 @@ genMalformedCode = frequency
 -- | Test 2: Parser should handle malformed input gracefully
 prop_parser_error_recovery :: String -> Property
 prop_parser_error_recovery malformedCode =
-  classify (length malformedCode > 100) "long malformed code" $
-  classify (any (`elem` "{}()[]") malformedCode) "contains brackets" $
-  classify (any (`elem` "\"'") malformedCode) "contains quotes" $
+  classify (L.length malformedCode > 100) "long malformed code" $
+  classify (L.any (`elem` "{}()[]") malformedCode) "contains brackets" $
+  classify (L.any (`elem` "\"'") malformedCode) "contains quotes" $
   -- This is a placeholder - in real implementation, we'd test the actual parser
-  property (length malformedCode >= 0)
+  property (L.length malformedCode >= 0)
 
 -- ============================================================================
 -- Test 3: Error Handling System Consistency
@@ -161,7 +162,7 @@ prop_error_handling_consistency severity location message =
      classify (severity == Info) "info message" $
      classify (location == _unknownLocation) "unknown location" $
      classify (null message) "empty message" $
-     property (length filtered == 1) .&&.
+     property (L.length filtered == 1) .&&.
      property (not (T.null formatted))
 
 -- ============================================================================
@@ -178,7 +179,7 @@ data OwnershipScenario = OwnershipScenario
 instance Arbitrary OwnershipScenario where
   arbitrary = do
     owners <- listOf1 $ elements ["owner1", "owner2", "owner3", "owner4", "owner5"]
-    let initialOwner = head owners
+    let initialOwner = L.head owners
     transferCount <- choose (1, 4)
     transfers <- replicateM transferCount $ do
       from <- elements owners
@@ -192,12 +193,12 @@ prop_ownership_transfer_transitivity :: OwnershipScenario -> Property
 prop_ownership_transfer_transitivity scenario =
   let OwnershipScenario {..} = scenario
       -- Simulate ownership transfer chain
-      transferChain = foldl (\acc (from, to) -> 
+      transferChain = L.foldl (\acc (from, to) -> 
         if acc == from then to else acc) initialOwner transfers
   in classify (null transfers) "no transfers" $
-     classify (length transfers > 2) "multiple transfers" $
+     classify (L.length transfers > 2) "multiple transfers" $
      classify (transferChain == finalOwner) "successful transfer" $
-     property (length transfers >= 0)
+     property (L.length transfers >= 0)
 
 -- ============================================================================
 -- Test 5: Type System Constraint Solving
@@ -227,10 +228,10 @@ prop_type_constraint_solving constraints =
   let uniqueVars = nub $ map typeVar constraints
       uniqueExprs = nub $ map typeExpr constraints
   in classify (null constraints) "no constraints" $
-     classify (length constraints > 5) "many constraints" $
-     classify (length uniqueVars < length constraints) "has repeated variables" $
-     property (length uniqueVars <= length constraints) .&&.
-     property (length uniqueExprs <= length constraints)
+     classify (L.length constraints > 5) "many constraints" $
+     classify (L.length uniqueVars < L.length constraints) "has repeated variables" $
+     property (L.length uniqueVars <= L.length constraints) .&&.
+     property (L.length uniqueExprs <= L.length constraints)
 
 -- ============================================================================
 -- Test 6: Source Location Precision
@@ -256,7 +257,7 @@ prop_source_location_precision (startLine, startCol) (endLine, endCol) text =
   let startPos = posAt startLine startCol
       endPos = posAt endLine endCol
       span = SourceSpan startPos endPos
-      textLength = length text
+      textLength = L.length text
   in classify (startLine == endLine) "single line" $
      classify (startCol == endCol) "single column" $
      classify (textLength > 100) "long text" $
@@ -290,10 +291,10 @@ prop_ir_consistency operations =
       results = map result operations
       uniqueResults = nub results
   in classify (null operations) "no operations" $
-     classify (length operations > 10) "many operations" $
-     classify (length uniqueOpCodes < length opCodes) "has repeated ops" $
-     property (length uniqueResults <= length results) .&&.
-     property (all (not . null) opCodes)
+     classify (L.length operations > 10) "many operations" $
+     classify (L.length uniqueOpCodes < L.length opCodes) "has repeated ops" $
+     property (L.length uniqueResults <= L.length results) .&&.
+     property (L.all (not . null) opCodes)
 
 -- ============================================================================
 -- Test 8: Concurrent Safety
@@ -302,7 +303,7 @@ prop_ir_consistency operations =
 -- | Generate concurrent access patterns
 data ConcurrentAccess = ConcurrentAccess
   { resourceId :: String
-  , accessType :: String  -- "read" or "write"
+  , accessType :: String  -- "read" L.or "write"
   , threadId :: Int
   } deriving (Show, Eq)
 
@@ -317,12 +318,12 @@ instance Arbitrary ConcurrentAccess where
 prop_concurrent_safety :: [ConcurrentAccess] -> Property
 prop_concurrent_safety accesses =
   let resourceGroups = group $ sort accesses
-      hasConflicts = any (\group -> 
-        length (filter (\a -> accessType a == "write") group) > 1) resourceGroups
+      hasConflicts = L.any (\group -> 
+        L.length (L.filter (\a -> accessType a == "write") group) > 1) resourceGroups
   in classify (null accesses) "no accesses" $
      classify (hasConflicts) "has write conflicts" $
-     classify (length accesses > 20) "many accesses" $
-     property (length accesses >= 0)
+     classify (L.length accesses > 20) "many accesses" $
+     property (L.length accesses >= 0)
 
 -- ============================================================================
 -- Test 9: Memory Safety
@@ -350,14 +351,14 @@ prop_memory_safety :: MemoryPattern -> Property
 prop_memory_safety pattern =
   let MemoryPattern {..} = pattern
       allocatedVars = map fst allocations
-      totalAllocated = sum $ map snd allocations
+      totalAllocated = L.sum $ map snd allocations
       deallocatedVars = deallocations
       leakedVars = allocatedVars \\ deallocatedVars
   in classify (null allocations) "no allocations" $
      classify (null deallocations) "no deallocations" $
      classify (totalAllocated > 5000) "large allocation" $
      classify (not (null leakedVars)) "has leaks" $
-     property (length deallocatedVars <= length allocatedVars) .&&.
+     property (L.length deallocatedVars <= L.length allocatedVars) .&&.
      property (totalAllocated >= 0)
 
 -- ============================================================================
@@ -383,7 +384,7 @@ instance Arbitrary PerformanceScenario where
 prop_performance_boundaries :: PerformanceScenario -> Property
 prop_performance_boundaries scenario =
   let PerformanceScenario {..} = scenario
-      opCount = length operations
+      opCount = L.length operations
   in classify (inputSize == 0) "empty input" $
      classify (inputSize > 5000) "large input" $
      classify (complexity == "O(1)") "constant time" $
@@ -399,7 +400,7 @@ prop_performance_boundaries scenario =
 tests :: TestTree
 tests = testGroup "New Comprehensive QuickCheck Test Suite"
   [ testGroup "String Processing Boundary Tests"
-      [ fastProperty "trim and split handle boundary conditions" prop_string_processing_boundary
+      [ fastProperty "trim L.and split handle boundary conditions" prop_string_processing_boundary
       , testCase "extreme string cases" $ do
           assertEqual "empty string trim" "" (trim "")
           assertEqual "whitespace trim" "" (trim "   \t\n\r   ")
@@ -450,7 +451,7 @@ tests = testGroup "New Comprehensive QuickCheck Test Suite"
       [ fastProperty "IR operations maintain consistency" prop_ir_consistency
       , testCase "IR operation validation" $ do
           let op = IROperation "add" ["x", "y"] "z"
-          assertBool "valid IR operation" (not $ null $ opCode op)
+          assertBool "valid IR operation" (not $ L.null $ opCode op)
     ]
 
   , testGroup "Concurrent Safety Tests"

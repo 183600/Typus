@@ -1,6 +1,7 @@
 module Test.Unit.ConciseDependenciesQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Property, (===), Arbitrary(..), Gen, oneof, choose, elements, listOf)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -19,10 +20,10 @@ tests =
         , testProperty "Generic type expressions preserve structure" $
             \name args -> GenericT name args === GenericT name args
             
-        , testProperty "Refined type expressions preserve base and constraint" $
+        , testProperty "Refined type expressions preserve base L.and constraint" $
             \baseType constraint -> RefineT baseType constraint === RefineT baseType constraint
             
-        , testProperty "Function type expressions preserve domain and codomain" $
+        , testProperty "Function type expressions preserve domain L.and codomain" $
             \domain codomain -> FuncT domain codomain === FuncT domain codomain
         ]
         
@@ -46,11 +47,11 @@ tests =
             let env = Map.singleton name typeExpr
             in Map.lookup name env === Just typeExpr
             
-        , testProperty "Multiple type insertions preserve all" $
+        , testProperty "Multiple type insertions preserve L.all" $
             \pairs -> 
             let env = Map.fromList pairs
                 retrieved = Map.toList env
-            in all (\(k,v) -> Map.lookup k env === Just v) retrieved
+            in L.all (\(k,v) -> Map.lookup k env === Just v) retrieved
         ]
         
     , testGroup "Type substitution properties"
@@ -84,7 +85,7 @@ tests =
 -- Helper functions for testing
 applySubstitution :: Map String TypeExpr -> TypeExpr -> TypeExpr
 applySubstitution sub (SimpleT name) = Map.findWithDefault (SimpleT name) name sub
-applySubstitution sub (GenericT name args) = GenericT name (map (applySubstitution sub) args)
+applySubstitution sub (GenericT name args) = GenericT name (L.map (applySubstitution sub) args)
 applySubstitution sub (RefineT base constraint) = RefineT (applySubstitution sub base) constraint
 applySubstitution sub (FuncT domain codomain) = FuncT (applySubstitution sub domain) (applySubstitution sub codomain)
 
@@ -93,8 +94,8 @@ unifyTypes (SimpleT name1) (SimpleT name2)
   | name1 == name2 = Right Map.empty
   | otherwise = Right (Map.singleton name1 (SimpleT name2))
 unifyTypes (GenericT name1 args1) (GenericT name2 args2)
-  | name1 == name2 && length args1 == length args2 = 
-      foldr (\(arg1, arg2) acc -> 
+  | name1 == name2 && L.length args1 == L.length args2 = 
+      L.foldr (\(arg1, arg2) acc -> 
                 do
                   sub1 <- acc
                   sub2 <- unifyTypes (applySubstitution sub1 arg1) (applySubstitution sub1 arg2)

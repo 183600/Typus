@@ -3,6 +3,7 @@
 module Test.Unit.NewEnhancedTestSuiteSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
 
 import TestSupport.QuickCheck (fastProperty)
@@ -24,18 +25,18 @@ prop_trim_idempotent s = trim (trim s) == trim s
 prop_trim_no_leading_trailing_spaces :: String -> Bool
 prop_trim_no_leading_trailing_spaces s = 
     let trimmed = trim s
-    in null trimmed || (not (isSpace (head trimmed)) && not (isSpace (last trimmed)))
+    in null trimmed || (not (isSpace (L.head trimmed)) && not (isSpace (last trimmed)))
 
 prop_trim_preserves_internal_spaces :: String -> Bool  
 prop_trim_preserves_internal_spaces s =
     let trimmed = trim s
         spacesInside = dropWhile isSpace . dropWhileEnd isSpace $ s
-        dropWhileEnd p = reverse . dropWhile p . reverse
-    in length (filter isSpace spacesInside) == length (filter isSpace trimmed)
+        dropWhileEnd p = L.reverse . dropWhile p . L.reverse
+    in L.length (filter isSpace spacesInside) == L.length (filter isSpace trimmed)
 
 -- Test splitBy function properties
 prop_splitBy_concatenation :: Char -> String -> Bool
-prop_splitBy_concatenation delim s = concat (splitBy delim s) == s
+prop_splitBy_concatenation delim s = L.concat (splitBy delim s) == s
 
 prop_splitBy_empty_segments :: Char -> Bool
 prop_splitBy_empty_segments delim = splitBy delim [delim, delim] == ["", "", ""]
@@ -52,12 +53,12 @@ prop_splitBy_preserves_order delim s =
 
 -- Test splitByCollapsed function properties
 prop_splitByCollapsed_no_empty_segments :: Char -> String -> Bool
-prop_splitByCollapsed_no_empty_segments delim s = all (not . null) (splitByCollapsed delim s)
+prop_splitByCollapsed_no_empty_segments delim s = L.all (not . null) (splitByCollapsed delim s)
 
 prop_splitByCollapsed_concatenation_with_delim :: Char -> String -> Bool
 prop_splitByCollapsed_concatenation_with_delim delim s =
     let parts = splitByCollapsed delim s
-    in if null parts then True else concat (intersperse [delim] parts) == filter (/= delim) s
+    in if null parts then True else L.concat (intersperse [delim] parts) == L.filter (/= delim) s
   where
     intersperse _ [] = []
     intersperse _ [x] = [x]
@@ -65,13 +66,13 @@ prop_splitByCollapsed_concatenation_with_delim delim s =
 
 -- Test removeLineComments function properties
 prop_removeLineComments_no_comments :: String -> Property
-prop_removeLineComments_no_comments s = not ("//" `isInfixOf` s) ==> removeLineComments s == s
+prop_removeLineComments_no_comments s = not ("//" `L.isInfixOf` s) ==> removeLineComments s == s
 
 prop_removeLineComments_preserves_non_comment_content :: String -> String -> Property
 prop_removeLineComments_preserves_non_comment_content s content =
     let testInput = content ++ "// comment\n" ++ content
         result = removeLineComments testInput
-    in content `isInfixOf` result
+    in content `L.isInfixOf` result
 
 -- ============================================================================
 -- SourceLocation Module Tests  
@@ -94,7 +95,7 @@ prop_spanFrom_creates_valid_span line col =
 
 prop_mergeSpans_properties :: Int -> Int -> Int -> Int -> Property
 prop_mergeSpans_properties line1 col1 line2 col2 =
-    all (>= 0) [line1, col1, line2, col2] ==>
+    L.all (>= 0) [line1, col1, line2, col2] ==>
     let pos1 = SourcePos line1 col1 0
         pos2 = SourcePos line2 col2 0
         span1 = spanFrom pos1
@@ -127,18 +128,18 @@ test_normalizeIndentation_mixed :: IO ()
 test_normalizeIndentation_mixed = do
     let input = "\t    line1\n        \tline2\n    line3"
         result = normalizeIndentation input
-    assertBool "Mixed indentation should be normalized" (length result > 0)
+    assertBool "Mixed indentation should be normalized" (L.length result > 0)
 
 -- ============================================================================
 -- QuickCheck Utilities
 -- ============================================================================
 
 isInfixOf :: Eq a => [a] -> [a] -> Bool
-isInfixOf needle haystack = any (isPrefixOf needle) (tails haystack)
+L.isInfixOf needle haystack = L.any (L.isPrefixOf needle) (tails haystack)
   where
-    isPrefixOf [] _ = True
-    isPrefixOf _ [] = False
-    isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
+    L.isPrefixOf [] _ = True
+    L.isPrefixOf _ [] = False
+    L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
     tails [] = [[]]
     tails xs@(_:ys) = xs : tails ys
 

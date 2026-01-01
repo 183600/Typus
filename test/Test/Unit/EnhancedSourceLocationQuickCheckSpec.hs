@@ -2,12 +2,13 @@
 module Test.Unit.EnhancedSourceLocationQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), Gen, oneof, listOf, elements, choose, suchThat, (===), (.&&.), forAll)
 import TestSupport.QuickCheck (fastProperty)
 import SourceLocation
 import Compiler.Errors.Core (ErrorLocation(..))
 import Data.Text (Text)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 
 -- ============================================================================
 -- Enhanced QuickCheck tests for SourceLocation module
@@ -24,7 +25,7 @@ tests =
         , fastProperty "posAtLineCol creates position with correct values" prop_posAtLineColCorrect
         ]
     , testGroup "Source Span Properties"
-        [ fastProperty "emptySpan has same start and end" prop_emptySpanSameStartEnd
+        [ fastProperty "emptySpan has same start L.and end" prop_emptySpanSameStartEnd
         , fastProperty "spanBetween creates valid span" prop_spanBetweenValid
         , fastProperty "mergeSpans contains both original spans" prop_mergeSpansContainsBoth
         , fastProperty "isValidSpan checks start <= end" prop_isValidSpanCorrect
@@ -98,7 +99,7 @@ prop_posAtLineColCorrect line col offset =
 -- Source Span Properties
 -- ============================================================================
 
--- Property: emptySpan has same start and end
+-- Property: emptySpan has same start L.and end
 prop_emptySpanSameStartEnd :: SourcePos -> Bool
 prop_emptySpanSameStartEnd pos =
   let span = emptySpan pos
@@ -168,7 +169,7 @@ prop_locatedValueExtracts span value =
 prop_advancePosByCorrect :: SourcePos -> String -> Bool
 prop_advancePosByCorrect pos chars =
   let advanced = advancePosBy chars pos
-      expected = foldl (flip advancePos) pos chars
+      expected = L.foldl (flip advancePos) pos chars
   in advanced == expected
 
 -- Property: advancePosByText advances correctly for text
@@ -190,7 +191,7 @@ prop_advancePosByLineCorrect pos numLines =
 prop_positionAdvancementConsistent :: SourcePos -> String -> Bool
 prop_positionAdvancementConsistent pos chars =
   let byString = advancePosBy chars pos
-      byIndividual = foldl (flip advancePos) pos chars
+      byIndividual = L.foldl (flip advancePos) pos chars
   in byString == byIndividual
 
 -- ============================================================================

@@ -27,7 +27,7 @@ import Utils (trim, splitBy)
 -- | Test that syntax validation preserves line count
 prop_syntax_validation_preserves_lines :: [String] -> Property
 prop_syntax_validation_preserves_lines lines = 
-    let lineCount = length lines
+    let lineCount = L.length lines
         validation = validateSyntax (unlines lines)
     in lineCount >= 0
 
@@ -50,21 +50,21 @@ prop_malformed_function_detected :: Property
 prop_malformed_function_detected = 
     let malformedCode = "func add(a int, b int) { return a + b; }"  -- Missing return type
         hasError = True  -- Should detect syntax error
-    in hasError ==> length malformedCode > 0
+    in hasError ==> L.length malformedCode > 0
 
 -- | Test that syntax validation handles comments correctly
 prop_syntax_validation_handles_comments :: Property
 prop_syntax_validation_handles_comments = 
     let codeWithComments = "// This is a comment\nfunc main() { /* block comment */ return 42; }"
         validation = validateSyntax codeWithComments
-    in length codeWithComments > 0
+    in L.length codeWithComments > 0
 
 -- | Test that syntax validation preserves identifiers
 prop_syntax_validation_preserves_identifiers :: String -> Property
 prop_syntax_validation_preserves_identifiers identifier = 
-    let isValidIdentifier = all isAlphaNum identifier && not (null identifier)
+    let isValidIdentifier = L.all isAlphaNum identifier && not (null identifier)
         hasIdentifiers = isValidIdentifier
-    in hasIdentifiers ==> length identifier > 0
+    in hasIdentifiers ==> L.length identifier > 0
 
 -- ============================================================================
 -- Go Toolchain QuickCheck Tests
@@ -73,7 +73,7 @@ prop_syntax_validation_preserves_identifiers identifier =
 -- | Test that Go code generation preserves function count
 prop_go_code_generation_preserves_functions :: [String] -> Property
 prop_go_code_generation_preserves_functions functions = 
-    let functionCount = length functions
+    let functionCount = L.length functions
         goCode = generateGoCode functions
     in functionCount >= 0
 
@@ -81,7 +81,7 @@ prop_go_code_generation_preserves_functions functions =
 prop_go_code_has_package :: [String] -> Property
 prop_go_code_has_package functions = 
     let goCode = generateGoCode functions
-        hasPackage = "package main" `L.isInfixOf` goCode
+        hasPackage = "package main" `L.L.isInfixOf` goCode
     in not (null functions) ==> hasPackage
 
 -- | Test that Go syntax checking works on valid code
@@ -103,7 +103,7 @@ prop_go_compilation_preserves_semantics :: String -> Property
 prop_go_compilation_preserves_semantics code = 
     let trimmedCode = trim code
         hasContent = not (null trimmedCode)
-    in hasContent ==> length trimmedCode >= 0
+    in hasContent ==> L.length trimmedCode >= 0
 
 -- | Test that Go version compatibility is checked
 prop_go_version_compatibility :: GoVersion -> Property
@@ -115,13 +115,13 @@ prop_go_version_compatibility version =
 -- Integration QuickCheck Tests
 -- ============================================================================
 
--- | Test that syntax validation and Go code generation work together
+-- | Test that syntax validation L.and Go code generation work together
 prop_syntax_validation_go_generation :: [String] -> Property
 prop_syntax_validation_go_generation codeBlocks = 
     let combinedCode = unlines codeBlocks
         validation = validateSyntax combinedCode
         goCode = generateGoCode codeBlocks
-    in length codeBlocks == length codeBlocks
+    in L.length codeBlocks == L.length codeBlocks
 
 -- | Test that error reporting is consistent across modules
 prop_error_reporting_consistent :: String -> Property
@@ -129,14 +129,14 @@ prop_error_reporting_consistent code =
     let syntaxErrors = validateSyntax code
         goErrors = not (checkGoSyntax code)
         hasErrors = False  -- Simplified for testing
-    in hasErrors ==> length code >= 0
+    in hasErrors ==> L.length code >= 0
 
 -- | Test that code transformation preserves structure
 prop_code_transformation_preserves_structure :: Property
 prop_code_transformation_preserves_structure = 
     let originalCode = "func test() { return 42; }"
         goCode = generateGoCode [originalCode]
-        hasFunction = "func" `L.isInfixOf` goCode
+        hasFunction = "func" `L.L.isInfixOf` goCode
     in hasFunction
 
 -- ============================================================================
@@ -148,28 +148,28 @@ prop_syntax_validation_empty_string :: Property
 prop_syntax_validation_empty_string = 
     let emptyCode = ""
         validation = validateSyntax emptyCode
-    in length emptyCode == 0
+    in L.length emptyCode == 0
 
 -- | Test that syntax validation handles only whitespace
 prop_syntax_validation_whitespace_only :: Property
 prop_syntax_validation_whitespace_only = 
     let whitespaceCode = "   \n\t  \n  "
         validation = validateSyntax whitespaceCode
-    in all isSpace whitespaceCode
+    in L.all isSpace whitespaceCode
 
 -- | Test that Go code generation handles empty input
 prop_go_generation_empty_input :: Property
 prop_go_generation_empty_input = 
     let emptyFunctions = [] :: [String]
         goCode = generateGoCode emptyFunctions
-    in length emptyFunctions == 0
+    in L.length emptyFunctions == 0
 
 -- | Test that syntax validation handles Unicode characters
 prop_syntax_validation_unicode :: Property
 prop_syntax_validation_unicode = 
     let unicodeCode = "func 你好() { println(\"世界\"); }"
-        hasUnicode = any (> 127) (map fromEnum unicodeCode)
-    in hasUnicode ==> length unicodeCode > 0
+        hasUnicode = L.any (> 127) (map fromEnum unicodeCode)
+    in hasUnicode ==> L.length unicodeCode > 0
 
 -- ============================================================================
 -- Performance QuickCheck Tests
@@ -181,7 +181,7 @@ prop_syntax_validation_linear_scaling n =
     let n' = max 1 (min n 1000)  -- Limit size for practicality
         largeCode = unlines $ replicate n' "func test() { return 42; }"
         validation = validateSyntax largeCode
-    in length (lines largeCode) == n'
+    in L.length (lines largeCode) == n'
 
 -- | Test that Go code generation scales linearly
 prop_go_generation_linear_scaling :: Int -> Property
@@ -189,7 +189,7 @@ prop_go_generation_linear_scaling n =
     let n' = max 1 (min n 100)  -- Limit size for practicality
         functions = ["func test" ++ show i ++ "() { return " ++ show i ++ "; }" | i <- [1..n']]
         goCode = generateGoCode functions
-    in length functions == n'
+    in L.length functions == n'
 
 -- ============================================================================
 -- Custom Arbitrary Instances
@@ -219,7 +219,7 @@ instance Arbitrary a => Arbitrary (NonEmptyList a) where
 -- ============================================================================
 
 tests :: TestTree
-tests = testGroup "Syntax Validator and Go Toolchain QuickCheck Tests"
+tests = testGroup "Syntax Validator L.and Go Toolchain QuickCheck Tests"
     [ testGroup "Syntax Validator Tests"
         [ testProperty "syntax validation preserves lines" prop_syntax_validation_preserves_lines
         , testProperty "empty code is valid" prop_empty_code_valid
@@ -239,7 +239,7 @@ tests = testGroup "Syntax Validator and Go Toolchain QuickCheck Tests"
         ]
     
     , testGroup "Integration Tests"
-        [ testProperty "syntax validation and Go generation" prop_syntax_validation_go_generation
+        [ testProperty "syntax validation L.and Go generation" prop_syntax_validation_go_generation
         , testProperty "error reporting consistent" prop_error_reporting_consistent
         , testProperty "code transformation preserves structure" prop_code_transformation_preserves_structure
         ]
@@ -279,7 +279,7 @@ generateGoCode functions =
     "package main\n\n" ++ unlines functions
 
 checkGoSyntax :: String -> Bool
-checkGoSyntax code = "func" `L.isInfixOf` code && "package" `L.isInfixOf` code
+checkGoSyntax code = "func" `L.L.isInfixOf` code && "package" `L.L.isInfixOf` code
 
 compileGo :: String -> Bool
 compileGo _ = True  -- Simplified for testing

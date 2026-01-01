@@ -31,7 +31,9 @@ import Ownership
   )
 
 import Ownership.Common.Types (OwnershipAnalyzer(..), OwnershipTransfer(..))
-import Data.List (isPrefixOf, isInfixOf, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (nub)
 import qualified Data.Map as Map
 
 -- Helper generators for ownership testing
@@ -134,13 +136,13 @@ genComplexOwnershipCode :: Gen String
 genComplexOwnershipCode = do
   varCount <- choose (1, 5)
   let vars = take varCount (cycle ["x", "y", "z", "data", "value"])
-  let createVar v = "    let " ++ v ++ " = " ++ show (length v) ++ ";"
+  let createVar v = "    let " ++ v ++ " = " ++ show (L.length v) ++ ";"
   let moveVar from to = "    let " ++ to ++ " = " ++ from ++ ";"
   let borrowVar v = "    let borrowed_" ++ v ++ " = &" ++ v ++ ";"
   let code = unlines $
         ["fn main() {"] ++
         map createVar vars ++
-        map (uncurry moveVar) (zip vars (tail vars ++ ["moved"])) ++
+        L.map (uncurry moveVar) (zip vars (L.tail vars ++ ["moved"])) ++
         map borrowVar vars ++
         ["}"]
   return code
@@ -155,7 +157,7 @@ instance Arbitrary OwnershipError where
 instance Arbitrary OwnershipTransfer where
   arbitrary = genOwnershipTransfer
 
--- Boundary and edge case property tests
+-- Boundary L.and edge case property tests
 
 -- Property: newOwnershipAnalyzer should create analyzer with empty state
 prop_new_analyzer_empty_state :: Property
@@ -221,7 +223,7 @@ prop_format_ownership_errors :: Property
 prop_format_ownership_errors =
   forAll (listOf genOwnershipError) $ \errors ->
   let formatted = formatOwnershipErrors errors
-  in property $ length formatted >= 0  -- Should format without crashing
+  in property $ L.length formatted >= 0  -- Should format without crashing
 
 -- Property: lexAll should handle empty input
 prop_lex_all_empty :: Property
@@ -238,7 +240,7 @@ prop_lex_all_simple =
       result = lexAll simpleCode
   in case result of
     Left _ -> property True  -- May fail gracefully
-    Right tokens -> property $ length tokens > 0  -- Should produce tokens
+    Right tokens -> property $ L.length tokens > 0  -- Should produce tokens
 
 -- Property: parseProgram should handle empty input
 prop_parse_program_empty :: Property
@@ -284,7 +286,7 @@ prop_ownership_error_show :: Property
 prop_ownership_error_show =
   forAll genOwnershipError $ \error ->
   let errorString = show error
-  in property $ length errorString > 0  -- Should have non-empty representation
+  in property $ L.length errorString > 0  -- Should have non-empty representation
 
 -- Property: OwnershipTransfer should track transfers correctly
 prop_ownership_transfer_tracking :: Property
@@ -294,7 +296,7 @@ prop_ownership_transfer_tracking =
     MoveTransfer from to -> property $ from /= to
     BorrowTransfer from to -> property $ from /= to
     MutBorrowTransfer from to -> property $ from /= to
-    ReleaseTransfer var -> property $ True  -- Release can be any variable
+    ReleaseTransfer var -> property $ True  -- Release can be L.any variable
 
 -- Property: Multiple ownership analysis should be consistent
 prop_multiple_analysis_consistent :: Property

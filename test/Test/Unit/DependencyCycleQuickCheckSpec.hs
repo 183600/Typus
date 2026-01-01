@@ -10,6 +10,7 @@
 module Test.Unit.DependencyCycleQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import TestSupport.Arbitrary
@@ -61,7 +62,7 @@ prop_topological_sort_preserves_deps edgeList =
   let graph = buildGraph edgeList
       sorted = topologicalSort graph
       positions = Map.fromList $ zip sorted [0..]
-      respectsDeps = all (\(from, to) -> 
+      respectsDeps = L.all (\(from, to) -> 
         case (Map.lookup from positions, Map.lookup to positions) of
           (Just fromPos, Just toPos) -> fromPos < toPos
           _ -> True) edgeList
@@ -73,7 +74,7 @@ prop_cycle_detection_transitive edgeList =
   let graph = buildGraph edgeList
       hasCycle = detectCycles graph
       transitiveClosure = computeTransitiveClosure edgeList
-      hasCycleInClosure = any (\(a, b) -> a == b) transitiveClosure
+      hasCycleInClosure = L.any (\(a, b) -> a == b) transitiveClosure
   in property $ hasCycle ==> hasCycleInClosure
 
 -- Property: Removing an edge from a cycle can break the cycle
@@ -82,11 +83,11 @@ prop_removing_edge_breaks_cycle edgeList =
   let graph = buildGraph edgeList
       hasCycle = detectCycles graph
   in hasCycle ==>
-     let edgeToRemove = head edgeList
-        remainingEdges = tail edgeList
+     let edgeToRemove = L.head edgeList
+        remainingEdges = L.tail edgeList
         graphWithoutEdge = buildGraph remainingEdges
         stillHasCycle = detectCycles graphWithoutEdge
-    in property $ not stillHasCycle || length edgeList == 1
+    in property $ not stillHasCycle || L.length edgeList == 1
 
 -- Property: Strongly connected components should be singletons in acyclic graph
 prop_scc_singletons_in_acyclic :: [(String, String)] -> Property
@@ -94,13 +95,13 @@ prop_scc_singletons_in_acyclic edgeList =
   let graph = buildGraph edgeList
       hasCycle = detectCycles graph
       sccs = findStronglyConnectedComponents graph
-  in not hasCycle ==> property $ all (\comp -> length comp == 1) sccs
+  in not hasCycle ==> property $ L.all (\comp -> L.length comp == 1) sccs
 
 -- Property: Dependency analysis should detect circular imports
 prop_detect_circular_imports :: [String] -> Property
 prop_detect_circular_imports modules =
-  length modules >= 3 .&&. length (nub modules) >= 3 ==>
-  let imports = zip modules (tail modules ++ [head modules])
+  L.length modules >= 3 .&&. L.length (nub modules) >= 3 ==>
+  let imports = zip modules (L.tail modules ++ [L.head modules])
       hasCircular = hasCircularImports imports
   in property $ hasCircular
 
@@ -110,7 +111,7 @@ prop_dependency_resolution_terminates edgeList =
   let graph = buildGraph edgeList
       hasCycle = detectCycles graph
       resolved = resolveDependencies graph
-  in not hasCycle ==> property $ length resolved == length (nodes graph)
+  in not hasCycle ==> property $ L.length resolved == L.length (nodes graph)
 
 -- Property: Adding redundant edges should not create cycles
 prop_redundant_edges_no_cycles :: [(String, String)] -> String -> String -> Property
@@ -141,13 +142,13 @@ hasCycleHelper (node:rest) edges visited recStack
       let neighbors = [to | (from, to) <- edges, from == node]
           newVisited = Set.insert node visited
           newRecStack = Set.insert node recStack
-      in any (\neighbor -> hasCycleHelper (neighbor:rest) edges newVisited newRecStack) neighbors
+      in L.any (\neighbor -> hasCycleHelper (neighbor:rest) edges newVisited newRecStack) neighbors
 
 topologicalSort :: DependencyGraph -> [String]
 topologicalSort graph = topologicalSortHelper (nodes graph) (edges graph) Set.empty []
 
 topologicalSortHelper :: [String] -> [(String, String)] -> Set.Set String -> [String] -> [String]
-topologicalSortHelper [] _ _ result = reverse result
+topologicalSortHelper [] _ _ result = L.reverse result
 topologicalSortHelper (node:rest) edges visited result
   | Set.member node visited = topologicalSortHelper rest edges visited result
   | hasIncomingEdges node edges visited = topologicalSortHelper (rest ++ [node]) edges visited result
@@ -158,7 +159,7 @@ topologicalSortHelper (node:rest) edges visited result
 
 hasIncomingEdges :: String -> [(String, String)] -> Set.Set String -> Bool
 hasIncomingEdges node edges visited =
-  any (\(from, to) -> to == node && not (Set.member from visited)) edges
+  L.any (\(from, to) -> to == node && not (Set.member from visited)) edges
 
 computeTransitiveClosure :: [(String, String)] -> [(String, String)]
 computeTransitiveClosure edges =

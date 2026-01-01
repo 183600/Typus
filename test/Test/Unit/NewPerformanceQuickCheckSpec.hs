@@ -2,6 +2,7 @@
 module Test.Unit.NewPerformanceQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -31,7 +32,7 @@ tests =
             \input ->
               let parsed = Parser.parse input
                   memoryUsage = Parser.getMemoryUsage parsed
-              in memoryUsage <= length input * 10
+              in memoryUsage <= L.length input * 10
               
         , fastProperty "incremental parsing is faster than full parsing" $
             \input changes ->
@@ -66,7 +67,7 @@ tests =
               let beforeGC = Utils.getGCCount
                   result = Utils.performOperations operations
                   afterGC = Utils.getGCCount
-              in afterGC - beforeGC <= length operations
+              in afterGC - beforeGC <= L.length operations
               
         , fastProperty "memory allocation is bounded" $
             \inputSize ->
@@ -104,12 +105,12 @@ tests =
         [ fastProperty "type checking is polynomial time" $
             \expressions ->
               let complexity = Analyzer.Performance.measureTypeCheckingComplexity expressions
-              in complexity <= length expressions ^ 3 -- Cubic bound
+              in complexity <= L.length expressions ^ 3 -- Cubic bound
               
         , fastProperty "dependency analysis is linear in dependencies" $
             \dependencies ->
               let time = Analyzer.Performance.measureDependencyAnalysisTime dependencies
-              in time <= length dependencies * 10
+              in time <= L.length dependencies * 10
               
         , fastProperty "optimization is bounded by IR size" $
             \ir ->
@@ -126,7 +127,7 @@ tests =
               
         , fastProperty "batch processing is more efficient" $
             \files ->
-              let individual = sum (map Utils.measureProcessTime files)
+              let individual = L.sum (map Utils.measureProcessTime files)
                   batch = Utils.measureBatchProcessTime files
               in batch <= individual
               

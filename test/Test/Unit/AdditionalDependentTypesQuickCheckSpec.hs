@@ -10,6 +10,7 @@
 module Test.Unit.AdditionalDependentTypesQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose)
@@ -59,7 +60,7 @@ prop_type_ref_nested_args name args1 args2 =
       nestedType2 = TypeRef "Nested" args2
       topLevel = TypeRef "Top" [nestedType1, nestedType2]
   in property $ refName topLevel === "Top" .&&.
-     length (refArgs topLevel) === 2 .&&.
+     L.length (refArgs topLevel) === 2 .&&.
      refArgs topLevel !! 0 === nestedType1 .&&.
      refArgs topLevel !! 1 === nestedType2
 
@@ -185,7 +186,7 @@ prop_type_constraint_special_characters var1 var2 =
 
 -- Helper function to check substring containment
 contains :: String -> String -> Bool
-contains sub str = sub `isInfixOf` str
+contains sub str = sub `L.isInfixOf` str
 
 -- Property: DependentType with empty parameters
 prop_dependent_type_empty_params :: String -> Property
@@ -206,9 +207,9 @@ prop_complex_dependent_type_multiple_constraints name paramNames fieldNames =
       constraints = [EqualityConstraint "x" "y", SizeConstraint "arr" 10, NonEmptyConstraint "list"]
       complexType = TypeDecl name params (StructBody fields) constraints
   in property $ show complexType `contains` name .&&.
-     length (params complexType) === length paramNames .&&.
+     L.length (params complexType) === L.length paramNames .&&.
      case typeBody complexType of
-       StructBody fs -> length fs === length fieldNames
+       StructBody fs -> L.length fs === L.length fieldNames
        _ -> property False
 
 -- Property: TypeRef roundtrip through show/read (conceptual)
@@ -220,7 +221,7 @@ prop_type_ref_conceptual_roundtrip typeRef =
 
 -- Helper function to check string prefix
 startsWith :: String -> String -> Bool
-startsWith prefix str = take (length prefix) str == prefix
+startsWith prefix str = take (L.length prefix) str == prefix
 
 -- Property: TypeConstraint creation consistency
 prop_type_constraint_creation_consistency :: String -> String -> Int -> Int -> Int -> [String] -> Property

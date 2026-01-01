@@ -36,7 +36,9 @@ import Ownership.Analyzer
 import Ownership.Lexer (Token(..), TokenKind(..))
 import Ownership.Parser (Program(..), Stmt(..), Expr(..))
 
-import Data.List (isInfixOf, nub)
+import qualified Data.List as L
+import Data.List (isInfixOf)
+import Data.List (nub)
 import Data.Map.Strict as Map (Map, empty, insert, lookup, keys, member)
 
 -- ============================================================================
@@ -140,8 +142,8 @@ prop_ownership_type_show_roundtrip =
   forAll genOwnershipType $ \ownershipType ->
     let shown = show ownershipType
         -- 简单验证show函数包含必要信息
-        hasName = any (`elem` shown) ['a'..'z'] ++ ['0'..'9'] ++ ['_']
-        hasType = any (`isInfixOf` shown) ["Owned", "Borrowed", "MutBorrowed"]
+        hasName = L.any (`elem` shown) ['a'..'z'] ++ ['0'..'9'] ++ ['_']
+        hasType = L.any (`L.isInfixOf` shown) ["Owned", "Borrowed", "MutBorrowed"]
     in hasName .&&. hasType
 
 -- 属性: OwnershipType的排序性质
@@ -155,8 +157,8 @@ prop_ownership_error_show_contains_info :: Property
 prop_ownership_error_show_contains_info =
   forAll genOwnershipError $ \error ->
     let shown = show error
-        hasName = any (`elem` shown) ['a'..'z'] ++ ['0'..'9'] ++ ['_']
-        hasErrorType = any (`isInfixOf` shown) 
+        hasName = L.any (`elem` shown) ['a'..'z'] ++ ['0'..'9'] ++ ['_']
+        hasErrorType = L.any (`L.isInfixOf` shown) 
           [ "UseAfterMove", "DoubleMove", "BorrowWhileMoved"
           , "MutBorrowWhileBorrowed", "BorrowWhileMutBorrowed"
           , "MultipleMutBorrows", "UseWhileMutBorrowed"
@@ -175,14 +177,14 @@ prop_new_ownership_analyzer_valid =
 prop_builtin_functions_not_empty :: Property
 prop_builtin_functions_not_empty =
   let functions = builtInFunctions
-  in not (null functions) .&&. all (not . null) functions
+  in not (null functions) .&&. L.all (not . null) functions
 
 -- 属性: builtInFunctions没有重复
 prop_builtin_functions_unique :: Property
 prop_builtin_functions_unique =
   let functions = builtInFunctions
       uniqueFunctions = nub functions
-  in length functions === length uniqueFunctions
+  in L.length functions === L.length uniqueFunctions
 
 -- 属性: 基本程序分析不崩溃
 prop_basic_program_analysis_no_crash :: Property

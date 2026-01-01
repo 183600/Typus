@@ -3,6 +3,7 @@
 module Test.Unit.ErrorLocationSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty)
 import TestSupport.QuickCheck (fastProperty)
@@ -34,7 +35,7 @@ tests =
             endLine errorLoc @?= Nothing
             endColumn errorLoc @?= Nothing
             
-        , testCase "handles large line and column numbers" $ do
+        , testCase "handles large line L.and column numbers" $ do
             let pos = posAt 1000 500
                 errorLoc = toErrorLocation pos
             line errorLoc @?= 1000
@@ -62,7 +63,7 @@ tests =
             endLine errorLoc @?= Just 4
             endColumn errorLoc @?= Just 3
             
-        , testCase "handles zero-length span" $ do
+        , testCase "handles zero-L.length span" $ do
             let pos = posAt 7 12
                 span = spanBetween pos pos
                 errorLoc = toErrorLocationWithSpan span
@@ -81,12 +82,12 @@ tests =
         , testCase "error location line numbers are positive" $ do
             let positions = [startPos, posAt 1 1, posAt 100 50]
                 errorLocs = map toErrorLocation positions
-            all (\loc -> line loc > 0) errorLocs @?= True
+            L.all (\loc -> line loc > 0) errorLocs @?= True
             
         , testCase "error location column numbers are positive" $ do
             let positions = [startPos, posAt 1 1, posAt 100 50]
                 errorLocs = map toErrorLocation positions
-            all (\loc -> column loc > 0) errorLocs @?= True
+            L.all (\loc -> column loc > 0) errorLocs @?= True
             
         , testProperty "span error location has end positions" $ fastProperty $ \line1 col1 line2 col2 ->
             let start = posAt (abs line1 `mod` 1000 + 1) (abs col1 `mod` 1000 + 1)
@@ -175,7 +176,7 @@ tests =
             endColumn errorLoc @?= Just 15
         ]
         
-    , testGroup "Performance and Robustness"
+    , testGroup "Performance L.and Robustness"
         [ testProperty "error location conversion handles large values" $ fastProperty $ \line col ->
             let pos = posAt (abs line `mod` 100000 + 1) (abs col `mod` 100000 + 1)
                 errorLoc = toErrorLocation pos
@@ -203,7 +204,7 @@ tests =
             let pos = posAt 10 20
                 errorLoc = toErrorLocation pos
                 errorLocStr = show errorLoc
-            length errorLocStr > 0 @?= True
+            L.length errorLocStr > 0 @?= True
             
         , testCase "span error location can be converted to string" $ do
             let start = posAt 5 3
@@ -211,20 +212,20 @@ tests =
                 span = spanBetween start end
                 errorLoc = toErrorLocationWithSpan span
                 errorLocStr = show errorLoc
-            length errorLocStr > 0 @?= True
+            L.length errorLocStr > 0 @?= True
             
         , testProperty "error location string representation contains line number" $ fastProperty $ \line col ->
             let pos = posAt (abs line `mod` 1000 + 1) (abs col `mod` 1000 + 1)
                 errorLoc = toErrorLocation pos
                 errorLocStr = show errorLoc
                 lineStr = show (line errorLoc)
-            in lineStr `isInfixOf` errorLocStr
+            in lineStr `L.isInfixOf` errorLocStr
         ]
     ]
     
 -- Helper function to check if substring is in string
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` (tails haystack)
+L.isInfixOf needle haystack = needle `elem` (tails haystack)
   where
     tails [] = [[]]
     tails xs@(x:xs') = xs : tails xs'

@@ -19,6 +19,7 @@ import Test.QuickCheck
 import qualified Data.Map.Strict as Map
 import Data.Maybe (listToMaybe, isJust, isNothing, fromJust)
 import Data.Either (isLeft, isRight)
+import qualified Data.List as L
 import Data.List (isInfixOf)
 import qualified Data.Text as T
 
@@ -183,16 +184,16 @@ genFunctionParam depth = TC.FunctionParam <$> pure (Just "param") <*> genType de
 -- Property: Type environment preserves type bindings
 prop_type_env_preserves_bindings :: [(String, TC.Type)] -> Property
 prop_type_env_preserves_bindings bindings =
-  let typeDefs = Map.fromList $ map (\(name, typ) -> (name, DT.TypeDefDecl [] [])) bindings
+  let typeDefs = Map.fromList $ L.map (\(name, typ) -> (name, DT.TypeDefDecl [] [])) bindings
       typeEnv = DT.TypeEnv typeDefs []
-      retrieved = map (`Map.lookup` DT.typeDefinitions typeEnv) (map fst bindings)
-  in property $ all isJust retrieved
+      retrieved = L.map (`Map.lookup` DT.typeDefinitions typeEnv) (map fst bindings)
+  in property $ L.all isJust retrieved
 
 -- Property: Function type checking respects arity
 prop_function_arity_checking :: TC.FunctionSignature -> [TC.Type] -> Property
 prop_function_arity_checking signature argTypes =
-  let paramCount = length (TC.fsParams signature)
-      argCount = length argTypes
+  let paramCount = L.length (TC.fsParams signature)
+      argCount = L.length argTypes
       isValid = paramCount == argCount
   in classify isValid "correct arity" $
      classify (not isValid) "incorrect arity" $
@@ -224,7 +225,7 @@ prop_subtype_hierarchy superType subType =
 prop_generic_instantiation :: String -> [TC.Type] -> [DT.TypeConstraint] -> Property
 prop_generic_instantiation typeName typeArgs constraints =
   let instantiated = instantiateGenericType typeName typeArgs constraints
-  in property $ length typeArgs == length (getTypeParameters constraints)
+  in property $ L.length typeArgs == L.length (getTypeParameters constraints)
 
 -- Property: Recursive type detection works correctly
 prop_recursive_type_detection :: [TC.Type] -> String -> Property
@@ -238,17 +239,17 @@ prop_recursive_type_detection typeDefs typeName =
 prop_type_inference_safety :: [String] -> Property
 prop_type_inference_safety expressions =
   let inferred = map inferType expressions
-  in property $ all isRight inferred ==> all isWellTyped inferred
+  in property $ L.all isRight inferred ==> L.all isWellTyped inferred
 
 -- Property: Type checking respects variable scope
 prop_variable_scope_respect :: [(String, TC.Type)] -> String -> TC.Type -> Property
 prop_variable_scope_respect bindings varName varType =
-  let typeDefs = Map.fromList $ map (\(name, typ) -> (name, DT.TypeDefDecl [] [])) bindings
+  let typeDefs = Map.fromList $ L.map (\(name, typ) -> (name, DT.TypeDefDecl [] [])) bindings
       typeEnv = DT.TypeEnv typeDefs []
       result = lookupVariableType typeEnv varName
   in classify (varName `elem` map fst bindings) "variable exists" $
      classify (varName `notElem` map fst bindings) "variable undefined" $
-     property $ result == fmap (\_ -> TC.UnknownType) (Map.lookup varName (DT.typeDefinitions typeEnv))
+     property $ result == fL.map (\_ -> TC.UnknownType) (Map.lookup varName (DT.typeDefinitions typeEnv))
 
 -- Property: Function overloading resolution works correctly
 prop_overload_resolution :: String -> [TC.FunctionSignature] -> [TC.Type] -> Property
@@ -262,12 +263,12 @@ prop_overload_resolution funcName overloads argTypes =
 prop_constraint_validation :: TC.Type -> [DT.TypeConstraint] -> Property
 prop_constraint_validation typ constraints =
   let result = validateConstraints typ constraints
-  in property $ result == all (satisfiesConstraint typ) constraints
+  in property $ result == L.all (satisfiesConstraint typ) constraints
 
 -- Property: Generic type parameter substitution works correctly
 prop_generic_substitution :: [String] -> [TC.Type] -> TC.Type -> Property
 prop_generic_substitution typeParams typeArgs typeExpr =
-  length typeParams == length typeArgs ==>
+  L.length typeParams == L.length typeArgs ==>
   let substituted = substituteTypeParameters typeParams typeArgs typeExpr
   in property $ containsNoTypeVars substituted typeParams
 
@@ -288,7 +289,7 @@ prop_interface_implementation interfaceType implType =
 
 -- Helper functions for comprehensive type checking
 unifyTypes :: TC.Type -> TC.Type -> Either CE.TypeError TC.Type
-unifyTypes t1 t2 = if typesAreEqual t1 t2 then Right t1 else Left (CE.errorAt "unify-types" (T.pack "Type mismatch") (ErrorLocation Nothing 0 0 Nothing Nothing))
+unifyTypes t1 t2 = if typesAreEqual t1 t2 then Right t1 else Left (CE.errorAt "test-id" "Type mismatch") (ErrorLocation Nothing 0 0 Nothing Nothing))
 
 isUnifiable :: TC.Type -> TC.Type -> Bool
 isUnifiable t1 t2 = typesAreEqual t1 t2 || areGenericallyCompatible t1 t2
@@ -306,13 +307,13 @@ hasSubtypeRelationship :: TC.Type -> TC.Type -> Bool
 hasSubtypeRelationship _ _ = False -- Simplified
 
 instantiateGenericType :: String -> [TC.Type] -> [DT.TypeConstraint] -> TC.Type
-instantiateGenericType name args constraints = TC.TypeName $ name ++ "[" ++ show (length args) ++ "]"
+instantiateGenericType name args constraints = TC.TypeName $ name ++ "[" ++ show (L.length args) ++ "]"
 
 getTypeParameters :: [DT.TypeConstraint] -> [String]
-getTypeParameters constraints = map (\(DT.Predicate name vars) -> name) constraints
+getTypeParameters constraints = L.map (\(DT.Predicate name vars) -> name) constraints
 
 buildTypeEnvironment :: [TC.Type] -> DT.TypeEnv
-buildTypeEnvironment types = DT.TypeEnv (Map.fromList $ zip (map showType types) $ map (\_ -> DT.TypeDefDecl [] []) types) []
+buildTypeEnvironment types = DT.TypeEnv (Map.fromList $ zip (map showType types) $ L.map (\_ -> DT.TypeDefDecl [] []) types) []
 
 hasRecursiveType :: DT.TypeEnv -> String -> Bool
 hasRecursiveType _ _ = False -- Simplified
@@ -332,16 +333,16 @@ isWellTyped (Right _) = True
 isWellTyped (Left _) = False
 
 lookupVariableType :: DT.TypeEnv -> String -> Maybe TC.Type
-lookupVariableType env var = fmap (\_ -> TC.UnknownType) (Map.lookup var (DT.typeDefinitions env))
+lookupVariableType env var = fL.map (\_ -> TC.UnknownType) (Map.lookup var (DT.typeDefinitions env))
 
 resolveOverload :: String -> [TC.FunctionSignature] -> [TC.Type] -> Maybe TC.FunctionSignature
-resolveOverload _ overloads args = listToMaybe $ filter (\sig -> length (TC.fsParams sig) == length args) overloads
+resolveOverload _ overloads args = listToMaybe $ L.filter (\sig -> L.length (TC.fsParams sig) == L.length args) overloads
 
 isCompatibleOverload :: TC.FunctionSignature -> [TC.Type] -> Bool
-isCompatibleOverload sig args = length (TC.fsParams sig) == length args
+isCompatibleOverload sig args = L.length (TC.fsParams sig) == L.length args
 
 validateConstraints :: TC.Type -> [DT.TypeConstraint] -> Bool
-validateConstraints _ constraints = all (const True) constraints -- Simplified
+validateConstraints _ constraints = L.all (const True) constraints -- Simplified
 
 satisfiesConstraint :: TC.Type -> DT.TypeConstraint -> Bool
 satisfiesConstraint _ _ = True -- Simplified
@@ -350,7 +351,7 @@ substituteTypeParameters :: [String] -> [TC.Type] -> TC.Type -> TC.Type
 substituteTypeParameters _ _ t = t -- Simplified
 
 containsNoTypeVars :: TC.Type -> [String] -> Bool
-containsNoTypeVars t vars = not (any (`isInfixOf` showType t) vars)
+containsNoTypeVars t vars = not (L.any (`L.isInfixOf` showType t) vars)
 
 typesAreEqual :: TC.Type -> TC.Type -> Bool
 typesAreEqual (TC.TypeName n1) (TC.TypeName n2) = n1 == n2
@@ -366,7 +367,7 @@ hasAllRequiredMethods :: TC.Type -> TC.Type -> Bool
 hasAllRequiredMethods _ _ = True -- Simplified
 
 checkFunctionCall :: TC.FunctionSignature -> [TC.Type] -> Either CE.TypeError ()
-checkFunctionCall sig args = if length (TC.fsParams sig) == length args then Right () else Left (CE.errorAt "check-function-call" (T.pack "Arity mismatch") (ErrorLocation Nothing 0 0 Nothing Nothing))
+checkFunctionCall sig args = if L.length (TC.fsParams sig) == L.length args then Right () else Left (CE.errorAt "test-id" "Arity mismatch") (ErrorLocation Nothing 0 0 Nothing Nothing))
 
 -- Mock data types for constraints
 data TypeConstraint = TypeParamConstraint String TC.Type | EqualityConstraint TC.Type TC.Type deriving (Eq, Show)

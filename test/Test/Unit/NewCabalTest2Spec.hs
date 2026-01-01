@@ -10,6 +10,7 @@
 module Test.Unit.NewCabalTest2Spec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -123,7 +124,7 @@ prop_position_text_length_consistency text pos =
   let advanced = advancePosBy text pos
       SourcePos _ _ originalOffset = pos
       SourcePos _ _ newOffset = advanced
-      expectedOffset = originalOffset + length text
+      expectedOffset = originalOffset + L.length text
   in property $ newOffset === expectedOffset
 
 -- ErrorLocation转换的信息保持：转换前后的位置信息一致

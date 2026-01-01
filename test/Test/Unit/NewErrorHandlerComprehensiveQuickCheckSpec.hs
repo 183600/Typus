@@ -1,6 +1,7 @@
 module Test.Unit.ErrorHandlerAdvancedQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Property, (===), forAll, Gen, choose, arbitrary, listOf, elements, oneof, suchThat)
 import TestSupport.QuickCheck (fastProperty)
@@ -50,7 +51,7 @@ genErrorContext = do
   function <- oneof [return Nothing, Just <$> arbitrary]
   variable <- oneof [return Nothing, Just <$> arbitrary]
   type' <- oneof [return Nothing, Just <$> arbitrary]
-  additional <- listOf $ arbitrary `suchThat` (\(k, v) -> length k <= 20 && length v <= 50)
+  additional <- listOf $ arbitrary `suchThat` (\(k, v) -> L.length k <= 20 && L.length v <= 50)
   return $ ErrorContext code function variable type' additional
 
 -- Generate error recovery strategies
@@ -71,7 +72,7 @@ genText = T.pack <$> listOf1 (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ " ")
 -- Generate type errors
 genTypeError :: Gen TypeError
 genTypeError = do
-  errorId <- arbitrary `suchThat` (\s -> length s <= 20 && not (null s))
+  errorId <- arbitrary `suchThat` (\s -> L.length s <= 20 && not (null s))
   severity <- genErrorSeverity
   category <- genErrorCategory
   message <- genText
@@ -82,7 +83,7 @@ genTypeError = do
   relatedErrors <- listOf genTypeError
   errorChain <- listOf genTypeError
   timestamp <- oneof [return Nothing, Just <$> arbitrary]
-  return $ TypeError errorId severity category message location context recovery suggestions relatedErrors errorChain timestamp
+  return $ TypeError errId errorId severity category message location context recovery suggestions relatedErrors errorChain timestamp
 
 -- Generate combined errors
 genCombinedError :: Gen CombinedError
@@ -128,18 +129,18 @@ prop_filterBySeverityOrdering :: [TypeError] -> ErrorSeverity -> Bool
 prop_filterBySeverityOrdering errors minSeverity =
   let filtered = filterBySeverity minSeverity errors
       filteredSeverities = map severity filtered
-  in all (`isAtLeast` minSeverity) filteredSeverities
+  in L.all (`isAtLeast` minSeverity) filteredSeverities
 
 -- Property: Filtering by category only returns specified category
 prop_filterByCategoryCorrectness :: [TypeError] -> ErrorCategory -> Bool
 prop_filterByCategoryCorrectness errors cat =
   let filtered = filterByCategory cat errors
-  in all (\e -> category e == cat) filtered
+  in L.all (\e -> category e == cat) filtered
 
 -- Property: hasCategory is consistent with filtering
 prop_hasCategoryConsistency :: [TypeError] -> ErrorCategory -> Bool
 prop_hasCategoryConsistency errors cat =
-  hasCategory cat errors == not (null (filterByCategory cat errors))
+  hasCategory cat errors == not (L.null (filterByCategory cat errors))
 
 -- Property: Error recovery strategies follow logical rules
 prop_recoveryStrategyLogic :: ErrorRecovery -> Bool
@@ -156,25 +157,25 @@ prop_fatalErrorsNonRecoverable :: TypeError -> Property
 prop_fatalErrorsNonRecoverable err =
   severity err == Fatal ==> not (canRecoverFrom err)
 
--- Property: Combining errors preserves all errors
+-- Property: Combining errors preserves L.all errors
 prop_combineErrorsPreservesAll :: [TypeError] -> Bool
 prop_combineErrorsPreservesAll errors =
   let combined = combineErrors errors
       allOriginal = getAllMessages combined
-  in length allOriginal >= length errors
+  in L.length allOriginal >= L.length errors
 
--- Property: Combined error severity is maximum of components
+-- Property: Combined error severity is L.maximum of components
 prop_combinedErrorSeverityMax :: CombinedError -> Property
 prop_combinedErrorSeverityMax combinedErr =
   case combinedErr of
     CrossAnalyzerError _ sev subErrors -> 
       let subSeverities = map combinedErrorSeverity subErrors
-      in not (null subSeverities) ==> sev == maximum subSeverities
+      in not (null subSeverities) ==> sev == L.maximum subSeverities
     _ -> property True
 
 -- Property: Error formatting produces non-empty strings
 prop_errorFormattingNonEmpty :: TypeError -> Bool
-prop_errorFormattingNonEmpty err = not (null (formatError err))
+prop_errorFormattingNonEmpty err = not (L.null (formatError err))
 
 -- Property: Error formatting includes severity information
 prop_errorFormattingIncludesSeverity :: TypeError -> Bool
@@ -185,40 +186,40 @@ prop_errorFormattingIncludesSeverity err =
         Error -> "ERROR"
         Warning -> "WARNING"
         Info -> "INFO"
-  in severityStr `isInfixOf` formatted
+  in severityStr `L.isInfixOf` formatted
 
--- Property: getErrors only returns Error or Fatal severities
+-- Property: getErrors only returns Error L.or Fatal severities
 prop_getErrorsCorrectness :: [TypeError] -> Bool
 prop_getErrorsCorrectness errors =
   let errorList = getErrors errors
-  in all (\e -> severity e == Error || severity e == Fatal) errorList
+  in L.all (\e -> severity e == Error || severity e == Fatal) errorList
 
 -- Property: getWarnings only returns Warning severities
 prop_getWarningsCorrectness :: [TypeError] -> Bool
 prop_getWarningsCorrectness errors =
   let warningList = getWarnings errors
-  in all (\e -> severity e == Warning) warningList
+  in L.all (\e -> severity e == Warning) warningList
 
 -- Property: getInfo only returns Info severities
 prop_getInfoCorrectness :: [TypeError] -> Bool
 prop_getInfoCorrectness errors =
   let infoList = getInfo errors
-  in all (\e -> severity e == Info) infoList
+  in L.all (\e -> severity e == Info) infoList
 
 -- Property: hasErrors is consistent with getResults
 prop_hasErrorsConsistency :: [TypeError] -> Bool
-prop_hasErrorsConsistency errors = hasErrors errors == not (null (getErrors errors))
+prop_hasErrorsConsistency errors = hasErrors errors == not (L.null (getErrors errors))
 
 -- Property: hasWarnings is consistent with getWarnings
 prop_hasWarningsConsistency :: [TypeError] -> Bool
-prop_hasWarningsConsistency errors = hasWarnings errors == not (null (getWarnings errors))
+prop_hasWarningsConsistency errors = hasWarnings errors == not (L.null (getWarnings errors))
 
 -- Property: Error location fields are valid
 prop_errorLocationValidity :: ErrorLocation -> Bool
 prop_errorLocationValidity loc =
   line loc >= 0 && column loc >= 0 &&
-  all (\l -> l >= line loc) (endLine loc) &&
-  all (\c -> c >= column loc) (endColumn loc)
+  L.all (\l -> l >= line loc) (endLine loc) &&
+  L.all (\c -> c >= column loc) (endColumn loc)
 
 -- Property: Error context preserves additional information
 prop_errorContextPreservesAdditional :: [(String, String)] -> Bool
@@ -252,8 +253,8 @@ tests = testGroup "ErrorHandler Advanced QuickCheck Tests"
     ]
 
   , testGroup "Error Combination Properties"
-    [ testProperty "Combining errors preserves all errors" prop_combineErrorsPreservesAll
-    , testProperty "Combined error severity is maximum of components" prop_combinedErrorSeverityMax
+    [ testProperty "Combining errors preserves L.all errors" prop_combineErrorsPreservesAll
+    , testProperty "Combined error severity is L.maximum of components" prop_combinedErrorSeverityMax
     ]
 
   , testGroup "Formatting Properties"
@@ -262,32 +263,32 @@ tests = testGroup "ErrorHandler Advanced QuickCheck Tests"
     ]
 
   , testGroup "Error Retrieval Properties"
-    [ testProperty "getErrors only returns Error or Fatal severities" prop_getErrorsCorrectness
+    [ testProperty "getErrors only returns Error L.or Fatal severities" prop_getErrorsCorrectness
     , testProperty "getWarnings only returns Warning severities" prop_getWarningsCorrectness
     , testProperty "getInfo only returns Info severities" prop_getInfoCorrectness
     , testProperty "hasErrors is consistent with getResults" prop_hasErrorsConsistency
     , testProperty "hasWarnings is consistent with getWarnings" prop_hasWarningsConsistency
     ]
 
-  , testGroup "Location and Context Properties"
+  , testGroup "Location L.and Context Properties"
     [ testProperty "Error location fields are valid" prop_errorLocationValidity
     , testProperty "Error context preserves additional information" prop_errorContextPreservesAdditional
     ]
 
   , testGroup "Unit Tests"
     [ testCase "Create basic error" $ do
-        let err = errorAt (_atLocation 10 5) "Test error"
+        let err = errorAt "test-id" 10 5) "Test error"
         severity err @?= Error
         message err @?= "Test error"
         location err @?= _atLocation 10 5
 
     , testCase "Create warning" $ do
-        let warn = warningAt (_atLocation 1 1) "Test warning"
+        let warn = warningAt "test-id" 1 1) "Test warning"
         severity warn @?= Warning
         message warn @?= "Test warning"
 
     , testCase "Create info message" $ do
-        let info = infoAt (_atLocation 100 50) "Test info"
+        let info = infoAt "test-id" 100 50) "Test info"
         severity info @?= Info
         message info @?= "Test info"
 
@@ -302,13 +303,13 @@ tests = testGroup "ErrorHandler Advanced QuickCheck Tests"
         severity warn @?= Warning
 
     , testCase "Filter errors by severity" $ do
-        let fatal = errorAt (_atLocation 1 1) "Fatal" { severity = Fatal }
-            error = errorAt (_atLocation 2 2) "Error"
-            warning = warningAt (_atLocation 3 3) "Warning"
-            info = infoAt (_atLocation 4 4) "Info"
+        let fatal = errorAt "test-id" 1 1) "Fatal" { severity = Fatal }
+            error = errorAt "test-id" 2 2) "Error"
+            warning = warningAt "test-id" 3 3) "Warning"
+            info = infoAt "test-id" 4 4) "Info"
             errors = [fatal, error, warning, info]
             filtered = filterBySeverity Error errors
-        length filtered @?= 2
+        L.length filtered @?= 2
         Fatal `elem` map severity filtered @?= True
         Error `elem` map severity filtered @?= True
 
@@ -318,8 +319,8 @@ tests = testGroup "ErrorHandler Advanced QuickCheck Tests"
             parseErr = errorWithCategory Parsing "Parse error"
             errors = [typeErr, ownErr, parseErr]
             filtered = filterByCategory Ownership errors
-        length filtered @?= 1
-        head filtered @?= ownErr
+        L.length filtered @?= 1
+        L.head filtered @?= ownErr
 
     , testCase "Check for specific category" $ do
         let typeErr = errorWithCategory TypeChecking "Type error"
@@ -339,17 +340,17 @@ tests = testGroup "ErrorHandler Advanced QuickCheck Tests"
         shouldContinueAfter infoRecovery @?= True
 
     , testCase "Error formatting" $ do
-        let err = errorAt (_atLocation 10 5) "Test error"
+        let err = errorAt "test-id" 10 5) "Test error"
             formatted = formatError err
-        "[ERROR]" `isInfixOf` formatted @?= True
-        "Test error" `isInfixOf` formatted @?= True
-        "[TypeChecking]" `isInfixOf` formatted @?= True
+        "[ERROR]" `L.isInfixOf` formatted @?= True
+        "Test error" `L.isInfixOf` formatted @?= True
+        "[TypeChecking]" `L.isInfixOf` formatted @?= True
 
     , testCase "Error collection" $ do
-        let errors = [errorAt (_atLocation 1 1) "Error 1", warningAt (_atLocation 2 2) "Warning 1", infoAt (_atLocation 3 3) "Info 1"]
-        getErrors errors @?= [errorAt (_atLocation 1 1) "Error 1"]
-        getWarnings errors @?= [warningAt (_atLocation 2 2) "Warning 1"]
-        getInfo errors @?= [infoAt (_atLocation 3 3) "Info 1"]
+        let errors = [errorAt "test-id" 1 1) "Error 1", warningAt "test-id" 2 2) "Warning 1", infoAt "test-id" 3 3) "Info 1"]
+        getErrors errors @?= [errorAt "test-id" 1 1) "Error 1"]
+        getWarnings errors @?= [warningAt "test-id" 2 2) "Warning 1"]
+        getInfo errors @?= [infoAt "test-id" 3 3) "Info 1"]
         hasErrors errors @?= True
         hasWarnings errors @?= True
     ]
@@ -357,4 +358,4 @@ tests = testGroup "ErrorHandler Advanced QuickCheck Tests"
 
 -- Helper function to check if a string is contained in another
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `Data.List.isInfixOf` haystack
+L.isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack

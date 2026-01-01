@@ -3,6 +3,7 @@
 module Test.Unit.NewIntegrationAdvancedQuickCheckSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.TH
 import IntegratedCompiler
@@ -30,7 +31,7 @@ prop_compilation_parse_preserves_content content =
       in case reparseResult of
         Left _ -> False
         Right reparsed -> tfDirectives reparsed == tfDirectives parsed &&
-                         length (tfBlocks reparsed) == length (tfBlocks parsed)
+                         L.length (tfBlocks reparsed) == L.length (tfBlocks parsed)
 
 prop_compilation_pipeline_error_propagation :: String -> Property
 prop_compilation_pipeline_error_propagation content = 
@@ -61,7 +62,7 @@ prop_compilation_successful_pipeline_consistency content =
 -- Test cross-module analysis properties
 prop_ownership_dependency_interaction :: TypusFile -> Property
 prop_ownership_dependency_interaction file = 
-  not (null (tfBlocks file)) ==> 
+  not (L.null (tfBlocks file)) ==> 
   let ownershipResult = analyzeOwnership file
       dependencyResult = analyzeDependencies file
   in case (ownershipResult, dependencyResult) of
@@ -110,7 +111,7 @@ prop_incremental_compilation_detects_changes oldFile newFile =
 -- Test optimization properties
 prop_optimization_preserves_semantics :: TypusFile -> Property
 prop_optimization_preserves_semantics file = 
-  not (null (tfBlocks file)) ==> 
+  not (L.null (tfBlocks file)) ==> 
   let originalResult = compileFile file
       optimizedFile = optimizeTypusFile file
       optimizedResult = compileFile optimizedFile
@@ -121,7 +122,7 @@ prop_optimization_preserves_semantics file =
 
 prop_optimization_reduces_complexity :: TypusFile -> Property
 prop_optimization_reduces_complexity file = 
-  not (null (tfBlocks file)) ==> 
+  not (L.null (tfBlocks file)) ==> 
   let originalComplexity = computeComplexity file
       optimizedFile = optimizeTypusFile file
       optimizedComplexity = computeComplexity optimizedFile
@@ -130,14 +131,14 @@ prop_optimization_reduces_complexity file =
 -- Test concurrent compilation properties
 prop_concurrent_compilation_thread_safety :: TypusFile -> Property
 prop_concurrent_compilation_thread_safety file = 
-  not (null (tfBlocks file)) ==> 
+  not (L.null (tfBlocks file)) ==> 
   let sequentialResult = compileFile file
       concurrentResult = compileFileConcurrent file
   in sequentialResult == concurrentResult
 
 prop_concurrent_compilation_performance :: TypusFile -> Property
 prop_concurrent_compilation_performance file = 
-  length (tfBlocks file) >= 5 ==> 
+  L.length (tfBlocks file) >= 5 ==> 
   let sequentialTime = measureCompilationTime (compileFile file)
       concurrentTime = measureCompilationTime (compileFileConcurrent file)
   in concurrentTime <= sequentialTime
@@ -210,7 +211,7 @@ formatTypusFile :: TypusFile -> String
 formatTypusFile _ = ""  -- Simplified for testing
 
 contains :: String -> String -> Bool
-contains = isInfixOf
+contains = L.isInfixOf
 
 hasErrors :: Either a b -> Bool
 hasErrors (Left _) = True
@@ -247,7 +248,7 @@ semanticsEquivalent :: CompilationResult -> CompilationResult -> Bool
 semanticsEquivalent _ _ = True  -- Simplified for testing
 
 computeComplexity :: TypusFile -> Int
-computeComplexity file = length (tfBlocks file)  -- Simplified for testing
+computeComplexity file = L.length (tfBlocks file)  -- Simplified for testing
 
 compileFileConcurrent :: TypusFile -> Either CompilationError CompilationResult
 compileFileConcurrent = compileFile  -- Simplified for testing

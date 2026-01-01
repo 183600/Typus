@@ -13,7 +13,9 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
-import Data.List (isPrefixOf, isInfixOf, intercalate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (intercalate)
 import Data.Char (isSpace, isLetter, isDigit)
 
 -- Import core modules
@@ -102,7 +104,7 @@ prop_parser_empty_input input =
 
 prop_parser_position_tracking :: String -> Property
 prop_parser_position_tracking input =
-  not (null input) && length input <= 100 ==>  -- Limit input size
+  not (null input) && L.length input <= 100 ==>  -- Limit input size
   let result = Parser.parseWithPosition input
   in property $ case result of
     Left _ -> True
@@ -119,7 +121,7 @@ prop_parser_malformed_input input =
 -- Compiler properties
 prop_compiler_optimization_preserves_semantics :: String -> Property
 prop_compiler_optimization_preserves_semantics input =
-  not (null input) && length input <= 50 ==>
+  not (null input) && L.length input <= 50 ==>
   let unoptimized = Compiler.compileExpression input
       optimized = Compiler.compileOptimized input
   in case (unoptimized, optimized) of
@@ -129,8 +131,8 @@ prop_compiler_optimization_preserves_semantics input =
 
 prop_compiler_circular_dependencies :: [String] -> Property
 prop_compiler_circular_dependencies deps =
-  not (null deps) && length deps <= 5 ==>
-  let circularDeps = zip deps (tail deps ++ [head deps])
+  not (null deps) && L.length deps <= 5 ==>
+  let circularDeps = zip deps (L.tail deps ++ [L.head deps])
       result = Compiler.checkDependencies circularDeps
   in property $ case result of
     Left _ -> True  -- Should detect circular dependencies
@@ -150,36 +152,36 @@ prop_utils_string_processing_consistency s1 s2 =
       trimmed2 = Utils.trim (Utils.trim combined)
       split1 = Utils.splitBy ' ' combined
       split2 = Utils.splitBy ' ' trimmed1
-  in property $ trimmed1 == trimmed2 .&&. length split1 >= length split2
+  in property $ trimmed1 == trimmed2 .&&. L.length split1 >= L.length split2
 
 prop_utils_list_operations_invariants :: [Int] -> [Int] -> Property
 prop_utils_list_operations_invariants xs ys =
   let merged = Utils.mergeLists xs ys
       unique = Utils.removeDuplicates merged
-  in property $ length merged >= length unique .&&. 
-     all (`elem` merged) unique
+  in property $ L.length merged >= L.length unique .&&. 
+     L.all (`elem` merged) unique
 
 prop_utils_map_operations_properties :: [(String, Int)] -> Property
 prop_utils_map_operations_properties pairs =
   let dict = Utils.fromList pairs
       keys = Utils.keys dict
       values = Utils.values dict
-  in property $ length keys == length values .&&.
-     all (`elem` keys) (map fst pairs)
+  in property $ L.length keys == L.length values .&&.
+     L.all (`elem` keys) (map fst pairs)
 
 -- Source location properties
 prop_source_location_accuracy :: String -> Property
 prop_source_location_accuracy input =
-  not (null input) && length input <= 100 ==>
+  not (null input) && L.length input <= 100 ==>
   let lines' = lines input
       positions = [SourceLocation.Position line col | 
-                   line <- [1..length lines'], 
-                   col <- [1..length (lines' !! (line-1))]]
-  in property $ all SourceLocation.isValidPosition positions
+                   line <- [1..L.length lines'], 
+                   col <- [1..L.length (lines' !! (line-1))]]
+  in property $ L.all SourceLocation.isValidPosition positions
 
 prop_location_tracking_transformations :: String -> Property
 prop_location_tracking_transformations input =
-  not (null input) && length input <= 50 ==>
+  not (null input) && L.length input <= 50 ==>
   let ast = Parser.parseExpression input
       transformed = case ast of
         Left _ -> Nothing
@@ -192,10 +194,10 @@ prop_location_tracking_transformations input =
 
 prop_multiline_location_handling :: [String] -> Property
 prop_multiline_location_handling lines' =
-  not (null lines') && length lines' <= 10 ==>
+  not (null lines') && L.length lines' <= 10 ==>
   let input = intercalate "\n" lines'
       locations = SourceLocation.extractAllLocations input
-  in property $ all SourceLocation.isValidLocation locations
+  in property $ L.all SourceLocation.isValidLocation locations
 
 -- Error handling properties
 prop_error_messages_informative :: String -> String -> Property
@@ -203,9 +205,9 @@ prop_error_messages_informative msg context =
   not (null msg) && not (null context) ==>
   let error = ErrorHandler.mkError msg (SourceLocation.Position 1 1)
       errorMsg = ErrorHandler.errorMessage error
-  in property $ msg `isInfixOf` errorMsg .&&.
-     "line 1" `isInfixOf` errorMsg .&&.
-     "column 1" `isInfixOf` errorMsg
+  in property $ msg `L.isInfixOf` errorMsg .&&.
+     "line 1" `L.isInfixOf` errorMsg .&&.
+     "column 1" `L.isInfixOf` errorMsg
 
 prop_error_recovery_maintains_state :: String -> Property
 prop_error_recovery_maintains_state input =
@@ -218,7 +220,7 @@ prop_error_context_preservation input context =
   not (null input) && not (null context) ==>
   let error = ErrorHandler.mkErrorWithContext input context (SourceLocation.Position 1 1)
       preserved = ErrorHandler.getErrorContext error
-  in property $ context `isInfixOf` preserved
+  in property $ context `L.isInfixOf` preserved
 
 -- Syntax validation properties
 prop_validator_catches_invalid_syntax :: String -> Property
@@ -232,16 +234,16 @@ prop_validator_catches_invalid_syntax input =
 
 prop_validator_accepts_valid_syntax :: String -> Property
 prop_validator_accepts_valid_syntax input =
-  let validInput = filter (\c -> isLetter c || isDigit c || isSpace c) input
+  let validInput = L.filter (\c -> isLetter c || isDigit c || isSpace c) input
       validExpr = if null validInput then "x := 1" else validInput ++ " := 1"
       result = SyntaxValidator.validateExpression validExpr
   in property $ case result of
-    Left _ -> length validExpr < 3  -- Only fail for very short inputs
+    Left _ -> L.length validExpr < 3  -- Only fail for very short inputs
     Right _ -> True  -- Should accept valid syntax
 
 prop_validation_preserves_ast_structure :: String -> Property
 prop_validation_preserves_ast_structure input =
-  not (null input) && length input <= 50 ==>
+  not (null input) && L.length input <= 50 ==>
   let ast = Parser.parseExpression input
       validated = case ast of
         Left _ -> Nothing

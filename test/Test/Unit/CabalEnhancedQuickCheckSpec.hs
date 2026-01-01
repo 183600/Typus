@@ -3,11 +3,13 @@
 module Test.Unit.CabalEnhancedQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Data.List (sort, nub, isInfixOf)
+import Data.List (isInfixOf)
+import Data.List (sort, nub)
 
 import Utils (trim, splitBy, splitByCollapsed, removeComments, breakOn)
 import Parser (FileDirectives(..), BlockDirectives(..), defaultFileDirectives, defaultBlockDirectives)
@@ -37,22 +39,22 @@ tests = testGroup "Cabal Enhanced QuickCheck Tests"
 prop_trim_spaces :: String -> Property
 prop_trim_spaces s =
   let trimmed = trim s
-      hasLeadingSpace = not (null s) && head s == ' '
+      hasLeadingSpace = not (null s) && L.head s == ' '
       hasTrailingSpace = not (null s) && last s == ' '
-  in (not hasLeadingSpace || not (null trimmed) && head trimmed /= ' ') .&&.
+  in (not hasLeadingSpace || not (null trimmed) && L.head trimmed /= ' ') .&&.
      (not hasTrailingSpace || not (null trimmed) && last trimmed /= ' ')
 
 prop_splitBy_preserves :: Char -> NonEmptyList Char -> Property
 prop_splitBy_preserves delim (NonEmpty s) =
   let parts = splitBy delim s
-      rejoined = concat parts
-      originalWithoutDelim = filter (/= delim) s
+      rejoined = L.concat parts
+      originalWithoutDelim = L.filter (/= delim) s
   in rejoined === originalWithoutDelim
 
 prop_splitByCollapsed_nonempty :: Char -> String -> Property
 prop_splitByCollapsed_nonempty delim s =
   let parts = splitByCollapsed delim s
-  in all (not . null) parts === True
+  in L.all (not . null) parts === True
 
 -- SourceLocation Properties
 prop_posAfter_increments :: Char -> Positive Int -> Positive Int -> Positive Int -> Property

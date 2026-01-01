@@ -18,7 +18,9 @@ import SourceLocation (SourcePos(..), SourceSpan(..), mkSourcePos, mkSourceSpan)
 
 import qualified Data.Text as T
 import Data.Char (isSpace, isAlphaNum)
-import Data.List (isPrefixOf, isInfixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort, nub)
 import Control.DeepSeq (NFData, force)
 import System.CPUTime (getCPUTime)
 import Text.Printf (printf)
@@ -182,7 +184,7 @@ prop_utils_linear_time =
   let input = " " ++ replicate size 'a' ++ " "
       trimmed = trim input
       split = splitBy ',' input
-  in property $ length trimmed <= size + 2 .&&. length split >= 1
+  in property $ L.length trimmed <= size + 2 .&&. L.length split >= 1
 
 -- | Property: Deep nesting doesn't cause exponential behavior
 prop_deep_nesting_linear :: Property

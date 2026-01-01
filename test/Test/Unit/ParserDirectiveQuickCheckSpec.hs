@@ -1,6 +1,7 @@
 module Test.Unit.ParserDirectiveQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Arbitrary(..), Gen, choose, listOf, suchThat, oneof, elements, frequency)
@@ -45,7 +46,7 @@ genMultipleDirectives = do
     key <- genIdentifier
     value <- genDirectiveValue
     return $ key ++ ": " ++ value
-  return $ "//! " ++ unwords (map (\d -> d) directives)
+  return $ "//! " ++ unwords (L.map (\d -> d) directives)
 
 -- | Generate malformed directives
 genMalformedDirective :: Gen String
@@ -104,7 +105,7 @@ tests =
               let input = unlines directives
                   result = Parser.parseTypus input
               in case result of
-                   Right file -> length (tfBlocks file) >= 0 -- Should not crash
+                   Right file -> L.length (tfBlocks file) >= 0 -- Should not crash
                    Left _ -> True -- Parsing may fail, but shouldn't crash
 
         , fastProperty "file directives contain expected keys" $
@@ -125,8 +126,8 @@ tests =
             case result of
               Right file -> do
                 let blocks = tfBlocks file
-                length blocks @?= 1
-                let block = head blocks
+                L.length blocks @?= 1
+                let block = L.head blocks
                 bdOwnership (cbDirectives block) @?= Just (Located (SourcePos 1 18 17) False)
               Left _ -> assertFailure "Expected successful parse"
 
@@ -136,8 +137,8 @@ tests =
             case result of
               Right file -> do
                 let blocks = tfBlocks file
-                length blocks @?= 1
-                let block = head blocks
+                L.length blocks @?= 1
+                let block = L.head blocks
                     dirs = cbDirectives block
                 bdOwnership dirs @?= Just (Located (SourcePos 1 18 17) True)
                 bdDependentTypes dirs @?= Just (Located (SourcePos 1 41 40) False)
@@ -155,12 +156,12 @@ tests =
                    Right file -> 
                      let blocks = tfBlocks file
                      in if not (null blocks) 
-                        then cbContent (head blocks) `contains` codeContent
+                        then cbContent (L.head blocks) `contains` codeContent
                         else True
                    Left _ -> True
         ]
 
-    , testGroup "Error handling and edge cases"
+    , testGroup "Error handling L.and edge cases"
         [ testCase "handles empty input" $ do
             let result = Parser.parseTypus ""
             case result of
@@ -181,9 +182,9 @@ tests =
                 result = Parser.parseTypus input
             case result of
               Right file -> tfDirectives file @?= defaultFileDirectives
-              Left _ -> True -- Should either parse with defaults or fail gracefully
+              Left _ -> True -- Should either parse with defaults L.or fail gracefully
 
-        , fastProperty "parser never crashes on any input" $
+        , fastProperty "parser never crashes on L.any input" $
             \input ->
               let result = Parser.parseTypus input
               in case result of
@@ -193,7 +194,7 @@ tests =
         , fastProperty "parser preserves line structure" $
             \input ->
               let result = Parser.parseTypus input
-                  inputLines = length $ lines input
+                  inputLines = L.length $ lines input
               in case result of
                    Right file -> 
                      let blocks = tfBlocks file
@@ -243,7 +244,7 @@ tests =
                    Right file -> 
                      let syntaxErrors = tfSyntaxErrors file
                      in -- Syntax errors should be collected
-                        length syntaxErrors >= 0
+                        L.length syntaxErrors >= 0
                    Left _ -> True
 
         , testCase "syntax errors don't prevent parsing" $ do
@@ -252,14 +253,14 @@ tests =
             case result of
               Right file -> 
                 let syntaxErrors = tfSyntaxErrors file
-                in length syntaxErrors > 0 @?= "Expected syntax errors"
+                in L.length syntaxErrors > 0 @?= "Expected syntax errors"
               Left _ -> assertFailure "Expected parsing to succeed despite syntax errors"
         ]
     ]
 
 -- Helper function to check if string contains substring
 contains :: String -> String -> Bool
-contains sub str = sub `isInfixOf` str
+contains sub str = sub `L.isInfixOf` str
 
 -- Import Parser for testing
 import qualified Parser

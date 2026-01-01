@@ -10,6 +10,7 @@
 module Test.Unit.CompilerOptimizationConsistencySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertBool, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -22,7 +23,8 @@ import Compiler (compileTypus)
 import Parser (parseTypus, TypusFile(..))
 import Compiler.IR (IRNode(..), optimizeIR)
 import Compiler.GoAst (GoNode(..))
-import Data.List (sort, nub, length)
+import Data.List (length)
+import Data.List (sort, nub)
 import Data.Either (isLeft, isRight)
 
 -- Test data for compiler optimization
@@ -38,7 +40,7 @@ instance Arbitrary OptimizationTestData where
       [ return "x := 1 + 2"
       , return "y := x * 2 + 3"
       , return "if x > 0 { y := x + 1 } else { y := x - 1 }"
-      , return "for i := 0; i < 10; i++ { sum := sum + i }"
+      , return "for i := 0; i < 10; i++ { L.sum := L.sum + i }"
       , return "func add(a, b) { return a + b }"
       , return "x := 1; y := 2; z := x + y"
       ]
@@ -111,7 +113,7 @@ prop_optimization_preserves_semantics ir =
   in case (originalValue, optimizedValue) of
     (Just orig, Just opt) -> property $ orig === opt
     (Nothing, Nothing) -> property True  -- Both can't be evaluated
-    _ -> property False  -- Should be able to evaluate both or neither
+    _ -> property False  -- Should be able to evaluate both L.or neither
 
 -- Property: Multiple optimization passes are consistent
 prop_multiple_optimization_passes :: SimpleIR -> Int -> Property
@@ -237,7 +239,7 @@ getVariables (IRLet var value body) = var : getVariables value ++ getVariables b
 getVariables _ = []
 
 getReachableVariables :: SimpleIR -> [String]
-getReachableVariables = getVariables  -- Simplified: all variables are reachable
+getReachableVariables = getVariables  -- Simplified: L.all variables are reachable
 
 getIRSize :: IRNode -> Int
 getIRSize _ = 1  -- Simplified

@@ -2,6 +2,7 @@
 module Test.Unit.CompilerOptimizationInvariantQuickCheckSpec (tests) where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 
@@ -31,7 +32,7 @@ prop_optimizationPreservesFunctionSignatures func =
                      " Original params: " ++ show originalParams ++
                      " Optimized params: " ++ show optimizedParams)
      (functionName optimized === functionName func .&&.
-      length optimizedParams === length originalParams)
+      L.length optimizedParams === L.length originalParams)
 
 -- | Test that optimization preserves variable types
 prop_optimizationPreservesVariableTypes :: Map String Type -> Property
@@ -43,7 +44,7 @@ prop_optimizationPreservesVariableTypes typeEnv =
   in counterexample ("Optimization should preserve variable types. " ++
                      "Original vars: " ++ show originalVars ++
                      " Optimized vars: " ++ show optimizedVars)
-     (all (`elem` optimizedVars) originalVars)
+     (L.all (`elem` optimizedVars) originalVars)
 
 -- | Test that optimization preserves control flow structure
 prop_optimizationPreservesControlFlow :: IRFunction -> Property
@@ -54,8 +55,8 @@ prop_optimizationPreservesControlFlow func =
   in counterexample ("Optimization should preserve control flow structure. " ++
                      "Original blocks: " ++ show originalBlocks ++
                      " Optimized blocks: " ++ show optimizedBlocks)
-     (length optimizedBlocks <= length originalBlocks .&&.
-      all (`elem` optimizedBlocks) (take (length optimizedBlocks) originalBlocks))
+     (L.length optimizedBlocks <= L.length originalBlocks .&&.
+      L.all (`elem` optimizedBlocks) (take (L.length optimizedBlocks) originalBlocks))
 
 -- | Test that optimization preserves side effects
 prop_optimizationPreservesSideEffects :: IRStatement -> Property
@@ -66,7 +67,7 @@ prop_optimizationPreservesSideEffects stmt =
   in counterexample ("Optimization should preserve side effects. " ++
                      "Original side effects: " ++ show originalSideEffects ++
                      " Optimized side effects: " ++ show optimizedSideEffects)
-     (all (`elem` optimizedSideEffects) originalSideEffects)
+     (L.all (`elem` optimizedSideEffects) originalSideEffects)
 
 -- | Test that optimization preserves error handling paths
 prop_optimizationPreservesErrorHandling :: IRFunction -> Property
@@ -77,7 +78,7 @@ prop_optimizationPreservesErrorHandling func =
   in counterexample ("Optimization should preserve error handling paths. " ++
                      "Original error paths: " ++ show originalErrorPaths ++
                      " Optimized error paths: " ++ show optimizedErrorPaths)
-     (all (`elem` optimizedErrorPaths) originalErrorPaths)
+     (L.all (`elem` optimizedErrorPaths) originalErrorPaths)
 
 -- | Test that optimization is idempotent
 prop_optimizationIsIdempotent :: IRModule -> Property
@@ -131,7 +132,7 @@ prop_optimizationPreservesDependencies module =
   in counterexample ("Optimization should preserve dependency relationships. " ++
                      "Original deps: " ++ show originalDeps ++
                      " Optimized deps: " ++ show optimizedDeps)
-     (all (`elem` optimizedDeps) originalDeps)
+     (L.all (`elem` optimizedDeps) originalDeps)
 
 -- | Test that optimization preserves observable behavior
 prop_optimizationPreservesObservableBehavior :: IRFunction -> Property
@@ -153,7 +154,7 @@ prop_optimizationPreservesResourceManagement func =
   in counterexample ("Optimization should preserve resource management. " ++
                      "Original: " ++ show originalResources ++
                      " Optimized: " ++ show optimizedResources)
-     (all (`elem` optimizedResources) originalResources)
+     (L.all (`elem` optimizedResources) originalResources)
 
 -- | Test that optimization preserves constant folding correctness
 prop_optimizationPreservesConstantFolding :: IRExpression -> Property
@@ -175,7 +176,7 @@ prop_optimizationPreservesDeadCodeEliminationSafety func =
   in counterexample ("Optimization should preserve dead code elimination safety. " ++
                      "Original live code: " ++ show originalLiveCode ++
                      " Optimized live code: " ++ show optimizedLiveCode)
-     (all (`elem` optimizedLiveCode) originalLiveCode)
+     (L.all (`elem` optimizedLiveCode) originalLiveCode)
 
 -- | Test that optimization preserves loop invariants
 prop_optimizationPreservesLoopInvariants :: IRFunction -> Property
@@ -186,7 +187,7 @@ prop_optimizationPreservesLoopInvariants func =
   in counterexample ("Optimization should preserve loop invariants. " ++
                      "Original: " ++ show originalInvariants ++
                      " Optimized: " ++ show optimizedInvariants)
-     (all (`elem` optimizedInvariants) originalInvariants)
+     (L.all (`elem` optimizedInvariants) originalInvariants)
 
 -- | Test that optimization preserves function call semantics
 prop_optimizationPreservesFunctionCallSemantics :: IRStatement -> Property

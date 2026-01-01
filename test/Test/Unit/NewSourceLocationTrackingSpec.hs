@@ -15,7 +15,9 @@ import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
 
 import SourceLocation (SourcePos(..), SourceSpan(..), locatedWithSpan, locatedValue, startPos, advancePos, spanContains)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (sort)
 import Data.Char (isSpace, isAlpha, isAlphaNum)
 
 -- Property: SourcePos equality works correctly
@@ -134,7 +136,7 @@ prop_startpos_values :: Property
 prop_startpos_values =
   posLine startPos === 1 .&&. posCol startPos === 1
 
--- Property: SourceSpan length calculation works correctly
+-- Property: SourceSpan L.length calculation works correctly
 prop_sourcespan_length :: Int -> Int -> Int -> Int -> Property
 prop_sourcespan_length startLine startCol endLine endCol =
   startLine >= 1 && startCol >= 1 && endLine >= 1 && endCol >= 1 &&
@@ -143,9 +145,9 @@ prop_sourcespan_length startLine startCol endLine endCol =
   let start = SourcePos startLine startCol
       end = SourcePos endLine endCol
       span = SourceSpan start end
-      -- Simple length calculation (this would be more complex in reality)
+      -- Simple L.length calculation (this would be more complex in reality)
       expectedLength = if startLine == endLine then endCol - startCol + 1 else 1
-  in property True -- Placeholder - actual implementation would calculate span length
+  in property True -- Placeholder - actual implementation would calculate span L.length
 
 -- Property: SourceSpan merge works correctly
 prop_sourcespan_merge :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Property
@@ -210,7 +212,7 @@ prop_sourcepos_show line col =
   line >= 1 && col >= 1 && line <= 100 && col <= 100 ==>
   let pos = SourcePos line col
       posStr = show pos
-  in show line `isInfixOf` posStr .&&. show col `isInfixOf` posStr
+  in show line `L.isInfixOf` posStr .&&. show col `L.isInfixOf` posStr
 
 -- Property: SourceSpan show works correctly
 prop_sourcespan_show :: Int -> Int -> Int -> Int -> Property
@@ -222,7 +224,7 @@ prop_sourcespan_show startLine startCol endLine endCol =
       end = SourcePos endLine endCol
       span = SourceSpan start end
       spanStr = show span
-  in show start `isInfixOf` spanStr .&&. show end `isInfixOf` spanStr
+  in show start `L.isInfixOf` spanStr .&&. show end `L.isInfixOf` spanStr
 
 tests :: TestTree
 tests = testGroup "New Source Location Tracking tests"
@@ -237,7 +239,7 @@ tests = testGroup "New Source Location Tracking tests"
   , fastProperty "locatedValue extracts value correctly" prop_locatedvalue
   , fastProperty "locatedSpan extracts span correctly" prop_locatedspan
   , fastProperty "startPos has correct initial values" prop_startpos_values
-  , fastProperty "SourceSpan length calculation works correctly" prop_sourcespan_length
+  , fastProperty "SourceSpan L.length calculation works correctly" prop_sourcespan_length
   , fastProperty "SourceSpan merge works correctly" prop_sourcespan_merge
   , fastProperty "SourceSpan intersection works correctly" prop_sourcespan_intersection
   , fastProperty "SourceSpan contains span correctly" prop_sourcespan_contains_span

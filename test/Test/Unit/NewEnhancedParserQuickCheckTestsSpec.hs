@@ -37,6 +37,7 @@ import SourceLocation
   )
 
 import Data.Char (isSpace, isAlphaNum)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 import qualified Data.Text as T
 import Utils (trim)
@@ -140,7 +141,7 @@ genInvalidDirective = oneof
 -- FileDirectives Properties
 -- ============================================================================
 
--- Property: defaultFileDirectives should have all fields as Nothing
+-- Property: defaultFileDirectives should have L.all fields as Nothing
 prop_defaultFileDirectives_nothing :: Property
 prop_defaultFileDirectives_nothing =
   property $ fdOwnership defaultFileDirectives === Nothing .&&.
@@ -177,7 +178,7 @@ prop_parse_valid_file_directive =
        Left _ -> property $ False
        Right typusFile -> property $ tfDirectives typusFile /= defaultFileDirectives
 
--- Property: multiple valid directives should all be parsed
+-- Property: multiple valid directives should L.all be parsed
 prop_parse_multiple_file_directives :: Property
 prop_parse_multiple_file_directives =
   forAll (listOf genFileDirective `suchThat` (not . null)) $ \directives ->
@@ -202,7 +203,7 @@ prop_parse_invalid_directive_fails =
 -- Block Parsing Properties
 -- ============================================================================
 
--- Property: defaultBlockDirectives should have all fields as Nothing
+-- Property: defaultBlockDirectives should have L.all fields as Nothing
 prop_defaultBlockDirectives_nothing :: Property
 prop_defaultBlockDirectives_nothing =
   property $ bdOwnership defaultBlockDirectives === Nothing .&&.
@@ -216,7 +217,7 @@ prop_parse_simple_code_block =
       result = parseTypus content
   in case result of
        Left _ -> property $ False
-       Right typusFile -> property $ not (null (tfBlocks typusFile))
+       Right typusFile -> property $ not (L.null (tfBlocks typusFile))
 
 -- Property: code with block directives should create blocks with directives
 prop_parse_block_directives :: Property
@@ -241,9 +242,9 @@ prop_parse_build_tags =
   let result = parseTypus tag
   in case result of
        Left _ -> property $ False
-       Right typusFile -> property $ not (null (tfBuildTags typusFile))
+       Right typusFile -> property $ not (L.null (tfBuildTags typusFile))
 
--- Property: multiple build tags should all be parsed
+-- Property: multiple build tags should L.all be parsed
 prop_parse_multiple_build_tags :: Property
 prop_parse_multiple_build_tags =
   forAll (listOf genBuildTag `suchThat` (not . null)) $ \tags ->
@@ -252,7 +253,7 @@ prop_parse_multiple_build_tags =
   in case result of
        Left _ -> property $ False
        Right typusFile -> 
-         property $ length (tfBuildTags typusFile) == length tags
+         property $ L.length (tfBuildTags typusFile) == L.length tags
 
 -- ============================================================================
 -- Syntax Error Properties
@@ -265,7 +266,7 @@ prop_if_without_brace_syntax_error =
       result = parseTypus content
   in case result of
        Left _ -> property $ True  -- Should fail due to syntax error
-       Right typusFile -> property $ not (null (tfSyntaxErrors typusFile))
+       Right typusFile -> property $ not (L.null (tfSyntaxErrors typusFile))
 
 -- Property: well-formed Go code should have no syntax errors
 prop_well_formed_no_syntax_errors :: Property
@@ -282,13 +283,13 @@ prop_well_formed_no_syntax_errors =
       result = parseTypus content
   in case result of
        Left _ -> property $ False
-       Right typusFile -> property $ null (tfSyntaxErrors typusFile)
+       Right typusFile -> property $ L.null (tfSyntaxErrors typusFile)
 
 -- ============================================================================
 -- Content Preservation Properties
 -- ============================================================================
 
--- Property: parsing and extracting content should preserve meaningful parts
+-- Property: parsing L.and extracting content should preserve meaningful parts
 prop_parse_preserves_meaningful_content :: Property
 prop_parse_preserves_meaningful_content =
   forAll genSimpleTypusFile $ \content ->
@@ -296,10 +297,10 @@ prop_parse_preserves_meaningful_content =
   in case result of
        Left _ -> property $ False
        Right typusFile -> 
-         let hasContent = not (null (tfBlocks typusFile)) || 
-                        not (null (tfBuildTags typusFile)) ||
+         let hasContent = not (L.null (tfBlocks typusFile)) || 
+                        not (L.null (tfBuildTags typusFile)) ||
                         tfDirectives typusFile /= defaultFileDirectives
-         in property $ hasContent || all isSpace (trim content)
+         in property $ hasContent || L.all isSpace (trim content)
 
 -- Property: empty lines should be ignored in parsing
 prop_empty_lines_ignored :: Property
@@ -311,8 +312,8 @@ prop_empty_lines_ignored =
        Left _ -> property $ False
        Right typusFile -> 
          property $ tfDirectives typusFile === defaultFileDirectives .&&.
-                    null (tfBuildTags typusFile) .&&.
-                    null (tfBlocks typusFile)
+                    L.null (tfBuildTags typusFile) .&&.
+                    L.null (tfBlocks typusFile)
 
 -- ============================================================================
 -- Directive Value Properties
@@ -341,7 +342,7 @@ prop_malformed_directive_error_message =
   let content = "//! malformed directive"
       result = parseTypus content
   in case result of
-       Left errMsg -> property $ "Invalid file directive format" `isInfixOf` errMsg
+       Left errMsg -> property $ "Invalid file directive format" `L.isInfixOf` errMsg
        Right _ -> property $ False
 
 -- Property: unclosed block directives should fail
@@ -366,7 +367,7 @@ prop_parsed_blocks_valid_spans =
        Left _ -> property $ False
        Right typusFile -> 
          let blocks = tfBlocks typusFile
-             spansValid = all (\block -> 
+             spansValid = L.all (\block -> 
                let span = cbSpan block
                    start = spanStart span
                    end = spanEnd span

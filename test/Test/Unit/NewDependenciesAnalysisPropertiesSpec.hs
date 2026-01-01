@@ -1,6 +1,7 @@
 module Test.Unit.NewDependenciesAnalysisPropertiesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Arbitrary(..), Gen, oneof, choose, listOf, elements, suchThat)
@@ -8,7 +9,7 @@ import Dependencies.TypeSystem
 import Dependencies.AST (TypeExpr(..), Constraint(..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 
 -- | 新的依赖分析属性QuickCheck测试
 tests :: TestTree
@@ -161,11 +162,11 @@ prop_typeVarShowRoundtrip :: TypeVar -> Bool
 prop_typeVarShowRoundtrip tv =
     let shown = show tv
     in case tv of
-        TVCon name -> "TVCon" `isInfixOf` shown && name `isInfixOf` shown
-        TVVar name -> "TVVar" `isInfixOf` shown && name `isInfixOf` shown
-        TVApp name args -> "TVApp" `isInfixOf` shown && name `isInfixOf` shown
-        TVFun _ _ -> "TVFun" `isInfixOf` shown
-        TVTuple _ -> "TVTuple" `isInfixOf` shown
+        TVCon name -> "TVCon" `L.isInfixOf` shown && name `L.isInfixOf` shown
+        TVVar name -> "TVVar" `L.isInfixOf` shown && name `L.isInfixOf` shown
+        TVApp name args -> "TVApp" `L.isInfixOf` shown && name `L.isInfixOf` shown
+        TVFun _ _ -> "TVFun" `L.isInfixOf` shown
+        TVTuple _ -> "TVTuple" `L.isInfixOf` shown
 
 prop_typeVarEqualityReflexivity :: TypeVar -> Bool
 prop_typeVarEqualityReflexivity tv = tv == tv
@@ -188,19 +189,19 @@ prop_typeConstraintShowContainsInfo :: TypeConstraint -> Bool
 prop_typeConstraintShowContainsInfo tc =
     let shown = show tc
     in case tc of
-        Equal tv1 tv2 -> "Equal" `isInfixOf` shown
-        Subtype tv1 tv2 -> "Subtype" `isInfixOf` shown
-        Predicate name args -> "Predicate" `isInfixOf` shown && name `isInfixOf` shown
-        TypeSizeGE tv size -> "TypeSizeGE" `isInfixOf` shown
-        TypeSizeGT tv size -> "TypeSizeGT" `isInfixOf` shown
-        TypeRange tv min max -> "TypeRange" `isInfixOf` shown
+        Equal tv1 tv2 -> "Equal" `L.isInfixOf` shown
+        Subtype tv1 tv2 -> "Subtype" `L.isInfixOf` shown
+        Predicate name args -> "Predicate" `L.isInfixOf` shown && name `L.isInfixOf` shown
+        TypeSizeGE tv size -> "TypeSizeGE" `L.isInfixOf` shown
+        TypeSizeGT tv size -> "TypeSizeGT" `L.isInfixOf` shown
+        TypeRange tv min max -> "TypeRange" `L.isInfixOf` shown
 
 prop_typeConstraintValidity :: TypeConstraint -> Bool
 prop_typeConstraintValidity tc =
     case tc of
         Equal _ _ -> True
         Subtype _ _ -> True
-        Predicate name args -> not (null name) && length args >= 0
+        Predicate name args -> not (null name) && L.length args >= 0
         TypeSizeGE _ size -> size >= 0
         TypeSizeGT _ size -> size >= 0
         TypeRange _ min max -> min <= max
@@ -223,15 +224,15 @@ prop_dependentTypeErrorShowContainsType :: DependentTypeError -> Bool
 prop_dependentTypeErrorShowContainsType dte =
     let shown = show dte
     in case dte of
-        DependentTypeMismatch _ _ -> "DependentTypeMismatch" `isInfixOf` shown
-        ConstraintViolation msg _ -> "ConstraintViolation" `isInfixOf` shown && msg `isInfixOf` shown
-        TypeNotFound name -> "TypeNotFound" `isInfixOf` shown && name `isInfixOf` shown
-        InvalidTypeArgument msg -> "InvalidTypeArgument" `isInfixOf` shown && msg `isInfixOf` shown
-        UnsolvableConstraint _ -> "UnsolvableConstraint" `isInfixOf` shown
-        DependentInfiniteType msg _ -> "DependentInfiniteType" `isInfixOf` shown && msg `isInfixOf` shown
-        AmbiguousType msg -> "AmbiguousType" `isInfixOf` shown && msg `isInfixOf` shown
-        ParseError msg -> "ParseError" `isInfixOf` shown && msg `isInfixOf` shown
-        SemanticError msg -> "SemanticError" `isInfixOf` shown && msg `isInfixOf` shown
+        DependentTypeMismatch _ _ -> "DependentTypeMismatch" `L.isInfixOf` shown
+        ConstraintViolation msg _ -> "ConstraintViolation" `L.isInfixOf` shown && msg `L.isInfixOf` shown
+        TypeNotFound name -> "TypeNotFound" `L.isInfixOf` shown && name `L.isInfixOf` shown
+        InvalidTypeArgument msg -> "InvalidTypeArgument" `L.isInfixOf` shown && msg `L.isInfixOf` shown
+        UnsolvableConstraint _ -> "UnsolvableConstraint" `L.isInfixOf` shown
+        DependentInfiniteType msg _ -> "DependentInfiniteType" `L.isInfixOf` shown && msg `L.isInfixOf` shown
+        AmbiguousType msg -> "AmbiguousType" `L.isInfixOf` shown && msg `L.isInfixOf` shown
+        ParseError msg -> "ParseError" `L.isInfixOf` shown && msg `L.isInfixOf` shown
+        SemanticError msg -> "SemanticError" `L.isInfixOf` shown && msg `L.isInfixOf` shown
 
 prop_dependentTypeErrorUniqueness :: DependentTypeError -> DependentTypeError -> Bool
 prop_dependentTypeErrorUniqueness dte1 dte2 =
@@ -247,7 +248,7 @@ prop_typeEnvironmentCreation :: [(String, TypeDef)] -> Bool
 prop_typeEnvironmentCreation typeDefs =
     let typeMap = Map.fromList typeDefs
         env = TypeEnv typeMap []
-    in Map.size (typeDefinitions env) == length typeDefs
+    in Map.size (typeDefinitions env) == L.length typeDefs
 
 prop_typeAdditionPreservesConsistency :: TypeEnv -> String -> TypeDef -> Bool
 prop_typeAdditionPreservesConsistency env name typeDef =
@@ -284,7 +285,7 @@ prop_constraintSolvingProperties constraints =
     let checker = newDependentTypeChecker
         envWithConstraints = foldr addConstraint (dtcTypeEnv checker) constraints
         result = solveConstraints envWithConstraints
-    in length (pendingConstraints result) <= length constraints
+    in L.length (pendingConstraints result) <= L.length constraints
 
 -- ============================================================================
 -- Properties for AST Conversion
@@ -296,8 +297,8 @@ prop_typeExprConversionPreservesStructure typeExpr =
         converted = convertTypeExpr params typeExpr
     in case (typeExpr, converted) of
         (SimpleT name, TVCon n) -> T.unpack name == n
-        (GenericT name args, TVApp n argTVs) -> T.unpack name == n && length args == length argTVs
-        (FuncT params' ret, TVFun paramTVs retTV) -> length params' == length paramTVs
+        (GenericT name args, TVApp n argTVs) -> T.unpack name == n && L.length args == L.length argTVs
+        (FuncT params' ret, TVFun paramTVs retTV) -> L.length params' == L.length paramTVs
         (RefineT base _, _) -> True  -- Refinements are converted to constraints
         _ -> True  -- Basic structural preservation
 
@@ -307,7 +308,7 @@ prop_constraintConversionPreservesSemantics constraint =
         converted = convertConstraint params constraint
     in case (constraint, converted) of
         (RangeC tv min max, TypeRange t min' max') -> T.unpack tv == show t && min == min' && max == max'
-        (PredC name args, Predicate n argTVs) -> T.unpack name == n && length args == length argTVs
+        (PredC name args, Predicate n argTVs) -> T.unpack name == n && L.length args == L.length argTVs
         (SizeGE tv, TypeSizeGE t size) -> T.unpack tv == show t
         (SizeGT tv, TypeSizeGT t size) -> T.unpack tv == show t
         _ -> True  -- Basic semantic preservation
@@ -316,7 +317,7 @@ prop_conversionRoundtrip :: TypeExpr -> Bool
 prop_conversionRoundtrip typeExpr =
     let params = Set.empty
         converted = convertTypeExpr params typeExpr
-        -- Simple check that conversion doesn't crash and produces valid result
+        -- Simple check that conversion doesn't crash L.and produces valid result
     in case converted of
         TVCon _ -> True
         TVVar _ -> True
@@ -330,7 +331,7 @@ prop_conversionRoundtrip typeExpr =
 
 -- Check if a substring is in a string
 isInfixOf :: Eq a => [a] -> [a] -> Bool
-isInfixOf needle haystack = needle `elem` [take (length needle) (drop i haystack) | i <- [0..length haystack - length needle]]
+L.isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
 
 -- Mock implementations for testing
 addType :: String -> TypeDef -> TypeEnv -> TypeEnv

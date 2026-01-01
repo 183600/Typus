@@ -4,6 +4,7 @@
 module Test.Unit.AnalyzerSymbolTableQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
@@ -63,9 +64,9 @@ symbolInsertionTests = testGroup "Symbol Insertion Tests"
       in symbolTableSize table' @?= 1
   
   , fastProperty "Insert multiple symbols" $
-      \symbolNames -> let symbols = map (\n -> VariableSymbol n IntType (SourceSpan startPos startPos)) symbolNames
+      \symbolNames -> let symbols = L.map (\n -> VariableSymbol n IntType (SourceSpan startPos startPos)) symbolNames
                           table = foldl insertSymbol emptySymbolTable symbols
-                      in symbolTableSize table == length (nub symbolNames)
+                      in symbolTableSize table == L.length (nub symbolNames)
   ]
 
 -- | 3. 符号查找测试
@@ -157,8 +158,8 @@ symbolAttributeTests = testGroup "Symbol Attribute Tests"
       \attrs -> let table = emptySymbolTable
                     symbol = VariableSymbol "x" IntType (SourceSpan startPos startPos)
                     table' = insertSymbol table symbol
-                    table'' = foldl (\t (k, v) -> addSymbolAttribute t "x" k v) table' attrs
-                in all (\(k, v) -> getSymbolAttribute table'' "x" k == Just v) attrs
+                    table'' = L.foldl (\t (k, v) -> addSymbolAttribute t "x" k v) table' attrs
+                in L.all (\(k, v) -> getSymbolAttribute table'' "x" k == Just v) attrs
   ]
 
 -- | 7. 符号表合并测试
@@ -181,13 +182,13 @@ symbolTableTests = testGroup "SymbolTable Merge Tests"
       in symbolTableSize merged @?= 1  -- Conflict resolution keeps one
   
   , fastProperty "Merge non-conflicting tables" $
-      \names1 names2 -> let symbols1 = map (\n -> VariableSymbol n IntType (SourceSpan startPos startPos)) names1
-                            symbols2 = map (\n -> VariableSymbol n StringType (SourceSpan startPos startPos)) (names2 :: [String])
+      \names1 names2 -> let symbols1 = L.map (\n -> VariableSymbol n IntType (SourceSpan startPos startPos)) names1
+                            symbols2 = L.map (\n -> VariableSymbol n StringType (SourceSpan startPos startPos)) (names2 :: [String])
                             table1 = foldl insertSymbol emptySymbolTable symbols1
                             table2 = foldl insertSymbol emptySymbolTable symbols2
                             merged = mergeSymbolTables table1 table2
                             uniqueNames = nub (names1 ++ names2)
-                        in symbolTableSize merged == length uniqueNames
+                        in symbolTableSize merged == L.length uniqueNames
   ]
 
 -- | 8. 符号表验证测试
@@ -204,7 +205,7 @@ symbolTableValidationTests = testGroup "SymbolTable Validation Tests"
       in validateSymbolTable table' @?= True
   
   , fastProperty "Symbol table with valid symbols" $
-      \names -> let symbols = map (\n -> VariableSymbol n IntType (SourceSpan startPos startPos)) names
+      \names -> let symbols = L.map (\n -> VariableSymbol n IntType (SourceSpan startPos startPos)) names
                     table = foldl insertSymbol emptySymbolTable symbols
                 in validateSymbolTable table
   ]
@@ -215,17 +216,17 @@ symbolTableExportTests = testGroup "SymbolTable Export Tests"
   [ testCase "Export empty table" $
       let table = emptySymbolTable
           exported = exportSymbolTable table
-      in length exported @?= 0
+      in L.length exported @?= 0
   
   , testCase "Export table with symbols" $
       let table = emptySymbolTable
           symbol = VariableSymbol "x" IntType (SourceSpan startPos startPos)
           table' = insertSymbol table symbol
           exported = exportSymbolTable table'
-      in length exported @?= 1
+      in L.length exported @?= 1
   
   , fastProperty "Export preserves symbol names" $
-      \names -> let symbols = map (\n -> VariableSymbol n IntType (SourceSpan startPos startPos)) names
+      \names -> let symbols = L.map (\n -> VariableSymbol n IntType (SourceSpan startPos startPos)) names
                     table = foldl insertSymbol emptySymbolTable symbols
                     exported = exportSymbolTable table
                 in sort (map getSymbolName exported) == sort (nub names)
@@ -239,7 +240,7 @@ symbolTableExportTests = testGroup "SymbolTable Export Tests"
 symbolTablePerformanceTests :: TestTree
 symbolTablePerformanceTests = testGroup "SymbolTable Performance Tests"
   [ testCase "Large symbol table lookup performance" $
-      let table = foldl (\t i -> insertSymbol t (VariableSymbol ("var" ++ show i) IntType (SourceSpan startPos startPos))) 
+      let table = L.foldl (\t i -> insertSymbol t (VariableSymbol ("var" ++ show i) IntType (SourceSpan startPos startPos))) 
                         emptySymbolTable [1..1000]
           result = lookupSymbol table "var500"
       in case result of
@@ -247,10 +248,10 @@ symbolTablePerformanceTests = testGroup "SymbolTable Performance Tests"
            _ -> "Expected VariableSymbol" @?= "Found something else"
   
   , fastProperty "Lookup time complexity" $
-      \names -> let symbols = map (\n -> VariableSymbol n IntType (SourceSpan startPos startPos)) (take 100 names)
+      \names -> let symbols = L.map (\n -> VariableSymbol n IntType (SourceSpan startPos startPos)) (take 100 names)
                     table = foldl insertSymbol emptySymbolTable symbols
-                    lookupResults = map (\n -> lookupSymbol table n) (take 100 names)
-                in all isJust lookupResults
+                    lookupResults = L.map (\n -> lookupSymbol table n) (take 100 names)
+                in L.all isJust lookupResults
   ]
   where
     isJust Nothing = False

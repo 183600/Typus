@@ -6,6 +6,7 @@
 module Test.Unit.SourceLocationCoreTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertBool, assertEqual, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Gen, arbitrary, choose, listOf, elements, oneof, sized, suchThat)
@@ -46,14 +47,14 @@ import SourceLocation
   )
 
 import Data.Text (Text)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 import Data.Char (isSpace)
 
 -- ============================================================================
 -- Generators for QuickCheck
 -- ============================================================================
 
--- Generate a valid source position (1-based line and column)
+-- Generate a valid source position (1-based line L.and column)
 genValidSourcePos :: Gen SourcePos
 genValidSourcePos = do
   line <- choose (1, 1000)
@@ -78,7 +79,7 @@ genValidSourceSpan = do
                    posColumn = posColumn start + endOffset }
   return $ SourceSpan start end
 
--- Generate any source span (potentially invalid)
+-- Generate L.any source span (potentially invalid)
 genSourceSpan :: Gen SourceSpan
 genSourceSpan = do
   start <- genSourcePos
@@ -100,7 +101,7 @@ genText = T.pack <$> listOf (elements ['a'..'z', 'A'..'Z', '0'..'9', ' ', '\t', 
 -- Unit Tests
 -- ============================================================================
 
--- Test basic position creation and properties
+-- Test basic position creation L.and properties
 testPositionBasics :: TestTree
 testPositionBasics = testGroup "Position Basics"
   [ testCase "startPos has correct values" $ do
@@ -147,7 +148,7 @@ testPositionAdvancement = testGroup "Position Advancement"
 -- Test span operations
 testSpanOperations :: TestTree
 testSpanOperations = testGroup "Span Operations"
-  [ testCase "emptySpan creates span with same start and end" $ do
+  [ testCase "emptySpan creates span with same start L.and end" $ do
       let pos = posAt 2 3
           span = emptySpan pos
       spanStart span @?= pos
@@ -206,7 +207,7 @@ testLocationTracking = testGroup "Location Tracking"
       let result = runLocationTracker getCurrentPos
       result @?= startPos
       
-  , testCase "setCurrentPos and getCurrentPos work together" $ do
+  , testCase "setCurrentPos L.and getCurrentPos work together" $ do
       let newPos = posAt 5 10
           (result, finalPos) = withLocationTracking startPos $ do
               setCurrentPos newPos
@@ -214,7 +215,7 @@ testLocationTracking = testGroup "Location Tracking"
       result @?= newPos
       finalPos @?= newPos
       
-  , testCase "markSpanStart and markSpanEnd create span" $ do
+  , testCase "markSpanStart L.and markSpanEnd create span" $ do
       let start = posAt 1 1
           (result, _) = withLocationTracking start $ do
               setCurrentPos (posAt 1 5)
@@ -244,7 +245,7 @@ prop_posAfter_newline pos =
 prop_advancePosBy_consistency :: String -> SourcePos -> Property
 prop_advancePosBy_consistency chars pos =
   let advanced1 = advancePosBy chars pos
-      advanced2 = foldl (flip advancePos) pos chars
+      advanced2 = L.foldl (flip advancePos) pos chars
   in property $ advanced1 === advanced2
 
 -- Property: mergeSpans is commutative
@@ -325,7 +326,7 @@ prop_located_functor_identity value span =
   let located = locatedWithSpan span value
   in property $ mapLocated id located === located
 
--- Property: Located functor law: fmap (f . g) = fmap f . fmap g
+-- Property: Located functor law: fL.map (f . g) = fmap f . fmap g
 prop_located_functor_composition :: Int -> SourceSpan -> Property
 prop_located_functor_composition value span =
   let located = locatedWithSpan span value

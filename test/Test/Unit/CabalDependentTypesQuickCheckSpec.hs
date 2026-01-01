@@ -102,7 +102,7 @@ prop_dependent_type_validation (TypeName typeName) (ConstraintValue value) =
 -- Property: Complex type constraints are parsed correctly
 prop_complex_type_constraints :: [ConstraintValue] -> Property
 prop_complex_type_constraints values =
-  let valueStrs = map (\(ConstraintValue v) -> show v) values
+  let valueStrs = L.map (\(ConstraintValue v) -> show v) values
       constraintStr = List.intercalate ", " valueStrs
       typeString = "Matrix<" ++ constraintStr ++ ">"
   in case parseDependentType typeString of
@@ -110,7 +110,7 @@ prop_complex_type_constraints values =
        Right depType -> 
          case depType of
            DependentType name constraints -> 
-             name === "Matrix" .&&. (length constraints == length values)
+             name === "Matrix" .&&. (L.length constraints == L.length values)
            _ -> property False
 
 tests :: TestTree
@@ -125,9 +125,9 @@ tests = testGroup "Cabal Dependent Types QuickCheck Tests"
             [ "//! dependent_types: on"
             , "func vector_operations() {"
             , "    let vec = Vector<int, 5>{1, 2, 3, 4, 5}"
-            , "    let sum = vec.sum()"
+            , "    let L.sum = vec.L.sum()"
             , "    let size = vec.size()"
-            , "    return sum * size"
+            , "    return L.sum * size"
             , "}"
             ]
       case parseTypus source of

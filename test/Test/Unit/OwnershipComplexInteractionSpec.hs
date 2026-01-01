@@ -10,6 +10,7 @@
 module Test.Unit.OwnershipComplexInteractionSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertFailure, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -116,14 +117,14 @@ prop_borrowing_track_counts varName borrowCount =
 -- Property: Shared ownership should allow multiple references
 prop_shared_ownership_multiple_refs :: String -> [String] -> Property
 prop_shared_ownership_multiple_refs owner refs =
-  not (null refs) && all (/= owner) refs ==> 
+  not (null refs) && L.all (/= owner) refs ==> 
   let initialOwnership = Map.singleton owner (OwnershipInfo Owned "owner" 0)
-      sharedOwnership = foldl (shareOwnership owner) initialOwnership refs
+      sharedOwnership = L.foldl (shareOwnership owner) initialOwnership refs
       ownerInfo = Map.lookup owner sharedOwnership
-      refInfos = map (`Map.lookup` sharedOwnership) refs
+      refInfos = L.map (`Map.lookup` sharedOwnership) refs
   in property $ case ownerInfo of
     Just info -> ownershipState info == Shared &&
-                 all (\mi -> case mi of
+                 L.all (\mi -> case mi of
                    Just i -> ownershipState i == Shared
                    Nothing -> False) refInfos
     Nothing -> False
@@ -171,17 +172,17 @@ prop_lifetime_check_prevent_dangling ref target =
 -- Property: Ownership system should handle complex transfer chains
 prop_complex_transfer_chains :: [String] -> Property
 prop_complex_transfer_chains vars =
-  length vars >= 3 ==> 
+  L.length vars >= 3 ==> 
   let initialOwnership = Map.fromList $ zip vars (repeat (OwnershipInfo Owned "owner" 0))
-      chain = zip vars (tail vars)
-      finalOwnership = foldl (\acc (from, to) -> 
+      chain = zip vars (L.tail vars)
+      finalOwnership = L.foldl (\acc (from, to) -> 
         performOwnershipTransfer acc from to Move) initialOwnership chain
-      movedVars = filter (\v -> case Map.lookup v finalOwnership of
+      movedVars = L.filter (\v -> case Map.lookup v finalOwnership of
         Just info -> ownershipState info == Moved
         Nothing -> False) (init vars)
       finalVar = last vars
       finalVarInfo = Map.lookup finalVar finalOwnership
-  in property $ length movedVars == length vars - 1 &&
+  in property $ L.length movedVars == L.length vars - 1 &&
     case finalVarInfo of
       Just info -> ownershipState info == Owned
       Nothing -> False
@@ -215,14 +216,14 @@ prop_ownership_recovery_scope_exit ownership exitingVars =
   let beforeExit = Map.fromList ownership
       afterExit = exitScope beforeExit exitingVars
       remainingVars = Map.keys beforeExit \\ exitingVars
-      allRemainingPresent = all (`Map.member` afterExit) remainingVars
-      allExitingRemoved = all (`Map.notMember` afterExit) exitingVars
+      allRemainingPresent = L.all (`Map.member` afterExit) remainingVars
+      allExitingRemoved = L.all (`Map.notMember` afterExit) exitingVars
   in property $ allRemainingPresent && allExitingRemoved
 
 -- Property: Ownership system should handle circular dependencies
 prop_ownership_circular_dependencies :: [String] -> Property
 prop_ownership_circular_dependencies vars =
-  length vars >= 3 ==> 
+  L.length vars >= 3 ==> 
   let circularOwnership = Map.fromList $ zip vars (repeat (OwnershipInfo Borrowed "owner" 1))
       isValid = validateOwnershipGraph circularOwnership
   in property $ not isValid -- Circular borrowing should be invalid
@@ -242,9 +243,9 @@ prop_shared_ownership_deallocation :: String -> [String] -> Property
 prop_shared_ownership_deallocation owner sharers =
   not (null sharers) ==> 
   let initialOwnership = Map.singleton owner (OwnershipInfo Owned "owner" 0)
-      sharedOwnership = foldl (shareOwnership owner) initialOwnership sharers
-      allReleased = foldl (releaseOwnership owner) sharedOwnership (owner:sharers)
-      allUnowned = all (\info -> ownershipState info == Unowned) $ Map.elems allReleased
+      sharedOwnership = L.foldl (shareOwnership owner) initialOwnership sharers
+      allReleased = L.foldl (releaseOwnership owner) sharedOwnership (owner:sharers)
+      allUnowned = L.all (\info -> ownershipState info == Unowned) $ Map.elems allReleased
   in property $ allUnowned
 
 -- Property: Ownership system should track resource usage
@@ -253,10 +254,10 @@ prop_ownership_resource_tracking ownership =
   not (null ownership) ==> 
   let ownershipMap = Map.fromList ownership
       resourceCount = countResources ownershipMap
-      maxResources = length ownership
+      maxResources = L.length ownership
   in property $ resourceCount <= maxResources
 
--- | Helper functions and data types
+-- | Helper functions L.and data types
 
 data OwnershipState = Unowned | Owned | Borrowed | Shared | Moved | Invalid
   deriving (Show, Eq, Ord)
@@ -286,7 +287,7 @@ performOwnershipTransfer ownership from to transferType =
     Borrow -> Map.insert from (OwnershipInfo Borrowed (owner $ ownership Map.! from) (borrowCount (ownership Map.! from) + 1)) $
               Map.insert to (OwnershipInfo Borrowed from 0) ownership
     Share -> Map.insert from (OwnershipInfo Shared (owner $ ownership Map.! from) 0) $
-             foldl (\acc v -> Map.insert v (OwnershipInfo Shared (owner $ ownership Map.! from) 0) acc) ownership [to]
+             L.foldl (\acc v -> Map.insert v (OwnershipInfo Shared (owner $ ownership Map.! from) 0) acc) ownership [to]
     Copy -> Map.insert to (OwnershipInfo Owned to 0) ownership
 
 addBorrow :: String -> Map.Map String OwnershipInfo -> Map.Map String OwnershipInfo
@@ -308,11 +309,11 @@ addImmutableBorrow = addMutableBorrow
 
 validateBorrowing :: Map.Map String OwnershipInfo -> Bool
 validateBorrowing ownership = 
-  all (\info -> borrowCount info <= 3) (Map.elems ownership)
+  L.all (\info -> borrowCount info <= 3) (Map.elems ownership)
 
 validateLifetimes :: Map.Map String String -> [(String, String)] -> Bool
 validateLifetimes lifetimes relations = 
-  all (\(shorter, longer) -> 
+  L.all (\(shorter, longer) -> 
     case (Map.lookup shorter lifetimes, Map.lookup longer lifetimes) of
       (Just s, Just l) -> s /= l
       _ -> False) relations
@@ -323,8 +324,8 @@ exitScope ownership exitingVars =
 
 validateOwnershipGraph :: Map.Map String OwnershipInfo -> Bool
 validateOwnershipGraph ownership = 
-  let borrowedVars = Map.keys $ Map.filter (\info -> ownershipState info == Borrowed) ownership
-  in null borrowedVars || length borrowedVars < length ownership
+  let borrowedVars = Map.keys $ Map.L.filter (\info -> ownershipState info == Borrowed) ownership
+  in null borrowedVars || L.length borrowedVars < L.length ownership
 
 validateTypeSafety :: Map.Map String OwnershipInfo -> Map.Map String String -> Bool
 validateTypeSafety ownership typeSystem = True -- Simplified
@@ -335,7 +336,7 @@ releaseOwnership currentOwner ownership var =
 
 countResources :: Map.Map String OwnershipInfo -> Int
 countResources ownership = 
-  length $ Map.filter (\info -> ownershipState info `elem` [Owned, Shared, Borrowed]) ownership
+  L.length $ Map.L.filter (\info -> ownershipState info `elem` [Owned, Shared, Borrowed]) ownership
 
 tests :: TestTree
 tests = testGroup "Ownership Complex Interaction Tests"

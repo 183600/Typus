@@ -1,6 +1,7 @@
 module Test.Unit.EdgeCaseHandlingTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool, assertFailure)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, choose)
@@ -38,7 +39,7 @@ import Parser
 
 import Data.Char (isSpace, isControl)
 
--- | Edge case and error handling tests
+-- | Edge case L.and error handling tests
 tests :: TestTree
 tests =
   testGroup "Edge Case Handling Tests"
@@ -100,7 +101,7 @@ tests =
             let sameSpan = spanBetween pos1 pos2
             isValidSpan sameSpan @?= True
 
-        , testCase "advancePosByText with empty and special strings" $ do
+        , testCase "advancePosByText with empty L.and special strings" $ do
             advancePosByText startPos "" @?= startPos
             advancePosByText startPos "\0" @?= posAfter '\0' startPos
             advancePosByText startPos "\n\n\n" @?= posAt 4 1
@@ -133,7 +134,7 @@ tests =
               Left err -> assertBool ("Should handle malformed directives: " ++ show err) False
               Right typusFile -> do
                 -- Should still create a file structure
-                length (tfBlocks typusFile) @?= 0
+                L.length (tfBlocks typusFile) @?= 0
 
         , testCase "parse unclosed comments" $ do
             let unclosed = "/* unclosed\n//! ownership=true\ncode"
@@ -141,7 +142,7 @@ tests =
               Left err -> assertBool ("Should handle unclosed comment: " ++ show err) False
               Right typusFile -> do
                 -- Should parse what it can
-                length (tfBlocks typusFile) >= 0 @?= True
+                L.length (tfBlocks typusFile) >= 0 @?= True
 
         , testCase "parse extremely long lines" $ do
             let longLine = "//! " ++ replicate 10000 'a' ++ " = value"
@@ -156,17 +157,17 @@ tests =
             case parseTypus mixedEndings of
               Left err -> assertBool ("Should handle mixed line endings: " ++ show err) False
               Right typusFile -> do
-                length (tfBlocks typusFile) >= 0 @?= True
+                L.length (tfBlocks typusFile) >= 0 @?= True
 
-        , testCase "parse unicode and special characters" $ do
+        , testCase "parse unicode L.and special characters" $ do
             let unicodeContent = "//! ownership=true\n// Comment: café\n代码"
             case parseTypus unicodeContent of
               Left err -> assertBool ("Should handle unicode: " ++ show err) False
               Right typusFile -> do
-                length (tfBlocks typusFile) >= 0 @?= True
+                L.length (tfBlocks typusFile) >= 0 @?= True
         ]
 
-    , testGroup "Error recovery and resilience"
+    , testGroup "Error recovery L.and resilience"
         [ testCase "utils functions handle null input gracefully" $ do
             trim "" @?= ""
             splitBy ' ' "" @?= [""]
@@ -198,7 +199,7 @@ tests =
             case parseTypus largeContent of
               Left err -> assertBool ("Should handle moderate size: " ++ show err) False
               Right typusFile -> do
-                length (tfBlocks typusFile) @?= 100
+                L.length (tfBlocks typusFile) @?= 100
         ]
 
     , testGroup "Boundary condition tests"
@@ -208,15 +209,15 @@ tests =
             removeComments "a" @?= "a"
             case parseTypus "a" of
               Left err -> assertBool ("Should parse single char: " ++ show err) False
-              Right typusFile -> length (tfBlocks typusFile) @?= 1
+              Right typusFile -> L.length (tfBlocks typusFile) @?= 1
 
-        , testCase "maximum reasonable line lengths" $ do
+        , testCase "L.maximum reasonable line lengths" $ do
             let maxLine = replicate 1000 'a'
             case parseTypus maxLine of
               Left err -> assertBool ("Should handle long line: " ++ show err) False
               Right _ -> return ()
 
-        , testCase "minimum and maximum positions" $ do
+        , testCase "L.minimum L.and L.maximum positions" $ do
             let minPos = posAt 1 1 0
             let maxPos = posAt maxBound maxBound maxBound
             posAfter 'a' minPos @?= posAt 1 2 1

@@ -1,6 +1,7 @@
 module Test.Unit.CabalBoundaryConditionsSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty)
 
@@ -10,7 +11,7 @@ import qualified Utils (trim, splitBy, removeComments, normalizeIndentation)
 import qualified SourceLocation (SourcePos(..), SourceSpan(..), startPos, advancePos)
 import qualified Parser
 
--- | Boundary condition and edge case tests
+-- | Boundary condition L.and edge case tests
 tests :: TestTree
 tests =
   testGroup "Cabal Boundary Conditions Tests"
@@ -87,7 +88,7 @@ tests =
             let longIdent = "func " ++ replicate 1000 'a' ++ "() { return 1; }"
                 result = Parser.parseTypus "longident" longIdent
             case result of
-              Left err -> length (show err) > 0 @?= True
+              Left err -> L.length (show err) > 0 @?= True
               Right _ -> @?= "Handle long identifier" "Long identifier handling"
         ]
 
@@ -123,22 +124,22 @@ tests =
         [ testCase "Nested block comments" $ do
             let nested = "/* outer /* inner */ still outer */ func test() { return 1; }"
                 result = Utils.removeComments nested
-            "func test() { return 1; }" `isInfixOf` result @?= True
+            "func test() { return 1; }" `L.isInfixOf` result @?= True
 
         , testCase "Unclosed block comments" $ do
             let unclosed = "func test() { return 1; /* unterminated"
                 result = Utils.removeComments unclosed
-            "func test() { return 1; " `isInfixOf` result @?= True
+            "func test() { return 1; " `L.isInfixOf` result @?= True
 
         , testCase "Comments at string boundaries" $ do
             let stringBoundary = "func test() { s := \"/* not comment */\"; /* real comment */ }"
                 result = Utils.removeComments stringBoundary
-            "\"/* not comment */\"" `isInfixOf` result @?= True
+            "\"/* not comment */\"" `L.isInfixOf` result @?= True
 
         , testCase "Empty comments" $ do
             let emptyComments = "func test() { return 1; } /**/ //"
                 result = Utils.removeComments emptyComments
-            "func test() { return 1; } " `isInfixOf` result @?= True
+            "func test() { return 1; } " `L.isInfixOf` result @?= True
         ]
 
     , testGroup "Indentation Boundary Conditions"
@@ -150,17 +151,17 @@ tests =
         , testCase "Maximum indentation" $ do
             let maxIndent = "func test() {\n" ++ replicate 100 ' ' ++ "return 1;\n}"
                 normalized = Utils.normalizeIndentation maxIndent
-            "return 1;" `isInfixOf` normalized @?= True
+            "return 1;" `L.isInfixOf` normalized @?= True
 
         , testCase "Mixed indentation styles" $ do
             let mixed = "func test() {\n\treturn 1;\n    return 2;\n\t\treturn 3;\n}"
                 normalized = Utils.normalizeIndentation mixed
-            length (lines normalized) == 4 @?= True
+            L.length (lines normalized) == 4 @?= True
 
         , testCase "Indentation with empty lines" $ do
             let withEmpty = "func test() {\n    \n    return 1;\n    \n}"
                 normalized = Utils.normalizeIndentation withEmpty
-            length (lines normalized) == 5 @?= True
+            L.length (lines normalized) == 5 @?= True
         ]
 
     , testGroup "Error Boundary Conditions"
@@ -168,7 +169,7 @@ tests =
             let multipleErrors = "func test1() { return }\nfunc test2() { if }\nfunc test3() { { {"
                 result = Parser.parseTypus "multiple" multipleErrors
             case result of
-              Left err -> length (show err) > 0 @?= True
+              Left err -> L.length (show err) > 0 @?= True
               Right _ -> @?= "Should detect errors" "Error detection"
 
         , testCase "Errors at file boundaries" $ do
@@ -188,6 +189,6 @@ tests =
         ]
     ]
   where
-    isInfixOf needle haystack = needle `elem` (substrings haystack)
+    L.isInfixOf needle haystack = needle `elem` (substrings haystack)
     substrings [] = []
     substrings s@(x:xs) = takeWhile (const True) s : substrings xs

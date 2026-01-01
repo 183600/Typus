@@ -3,6 +3,7 @@
 module Test.Unit.NewAdvancedSourceLocationQuickCheckSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.TH
 import SourceLocation
@@ -59,7 +60,7 @@ prop_span_between_valid line1 col1 line2 col2 =
 
 prop_merge_spans_contains_originals :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Property
 prop_merge_spans_contains_originals l1 c1 l2 c2 l3 c3 l4 c4 = 
-  all (>0) [l1, c1, l2, c2, l3, c3, l4, c4] ==> 
+  L.all (>0) [l1, c1, l2, c2, l3, c3, l4, c4] ==> 
   let span1 = spanBetween (posAt l1 c1) (posAt l2 c2)
       span2 = spanBetween (posAt l3 c3) (posAt l4 c4)
       merged = mergeSpans span1 span2
@@ -76,7 +77,7 @@ prop_located_at_preserves_position line col value =
 
 prop_located_with_span_preserves_span :: Int -> Int -> Int -> Int -> String -> Property
 prop_located_with_span_preserves_span l1 c1 l2 c2 value = 
-  all (>0) [l1, c1, l2, c2] ==> 
+  L.all (>0) [l1, c1, l2, c2] ==> 
   let span = spanBetween (posAt l1 c1) (posAt l2 c2)
       located = locatedWithSpan span value
   in locatedSpan located == span && locatedValue located == value
@@ -97,7 +98,7 @@ prop_advance_pos_by_empty_string pos = advancePosBy "" pos == pos
 prop_advance_pos_by_consistency :: String -> SourcePos -> Bool
 prop_advance_pos_by_consistency s pos = 
   let advanced = advancePosBy s pos
-      charAdvanced = foldl (flip advancePos) pos s
+      charAdvanced = L.foldl (flip advancePos) pos s
   in advanced == charAdvanced
 
 prop_advance_pos_by_text_consistency :: String -> SourcePos -> Bool

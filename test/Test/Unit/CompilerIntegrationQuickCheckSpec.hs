@@ -9,7 +9,9 @@ import Test.Tasty.HUnit
 
 import qualified Data.Text as T
 import qualified Data.Map.Strict as Map
-import Data.List (isInfixOf, sort)
+import qualified Data.List as L
+import Data.List (isInfixOf)
+import Data.List (sort)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 
 import Compiler
@@ -31,7 +33,7 @@ testEndToEndCompilationPipeline =
         errors = IntegratedCompiler.getErrors compiled
         warnings = IntegratedCompiler.getWarnings compiled
     -- Pipeline should complete without crashing
-    in length errors >= 0 .&&. length warnings >= 0
+    in L.length errors >= 0 .&&. L.length warnings >= 0
 
 -- | Test compiler phase consistency
 testCompilerPhaseConsistency :: Property
@@ -44,9 +46,9 @@ testCompilerPhaseConsistency =
         compiled = IntegratedCompiler.compile analyzed
         compilationErrors = IntegratedCompiler.getCompilationErrors compiled
     -- Error counts should be non-decreasing through phases
-    in length syntaxErrors <= length analysisErrors + length syntaxErrors .&&.
-       length analysisErrors + length syntaxErrors <= 
-       length compilationErrors + length analysisErrors + length syntaxErrors
+    in L.length syntaxErrors <= L.length analysisErrors + L.length syntaxErrors .&&.
+       L.length analysisErrors + L.length syntaxErrors <= 
+       L.length compilationErrors + L.length analysisErrors + L.length syntaxErrors
 
 -- | Test compiler error propagation
 testCompilerErrorPropagation :: Property
@@ -57,7 +59,7 @@ testCompilerErrorPropagation =
         compiled = IntegratedCompiler.compile analyzed
         allErrors = IntegratedCompiler.getAllErrors compiled
     -- All errors should have valid source locations
-    in all hasValidLocation allErrors
+    in L.all hasValidLocation allErrors
 
 -- | Test compiler warning consistency
 testCompilerWarningConsistency :: Property
@@ -68,9 +70,9 @@ testCompilerWarningConsistency =
         compiled = IntegratedCompiler.compile analyzed
         warnings = IntegratedCompiler.getWarnings compiled
         warningMessages = map errorMessage warnings
-    -- Warning messages should be unique and informative
-    in length warningMessages === length (nub warningMessages) .&&.
-       all (not . null) warningMessages
+    -- Warning messages should be unique L.and informative
+    in L.length warningMessages === L.length (nub warningMessages) .&&.
+       L.all (not . null) warningMessages
 
 -- | Test compiler optimization invariants
 testCompilerOptimizationInvariants :: Property
@@ -99,9 +101,9 @@ testCompilerParallelProcessing =
   forAll arbitrary $ \sourceFiles ->
     let sequentialResults = map IntegratedCompiler.compile sourceFiles
         parallelResult = IntegratedCompiler.compileParallel sourceFiles
-        sequentialErrors = sum $ map IntegratedCompiler.getErrorCount sequentialResults
+        sequentialErrors = L.sum $ map IntegratedCompiler.getErrorCount sequentialResults
         parallelErrors = IntegratedCompiler.getErrorCount parallelResult
-    -- Parallel and sequential results should be equivalent
+    -- Parallel L.and sequential results should be equivalent
     in sequentialErrors === parallelErrors
 
 -- | Test compiler incremental compilation
@@ -136,8 +138,8 @@ testCompilerTypeCheckingIntegration =
         typeErrors = IntegratedCompiler.getTypeErrors typeCheck
         inferredTypes = IntegratedCompiler.getInferredTypes typeCheck
     -- Type checking should provide useful error information
-    in all hasValidTypeLocation typeErrors .&&.
-       all isValidInferredType inferredTypes
+    in L.all hasValidTypeLocation typeErrors .&&.
+       L.all isValidInferredType inferredTypes
 
 -- | Test compiler ownership analysis integration
 testCompilerOwnershipAnalysisIntegration :: Property
@@ -148,8 +150,8 @@ testCompilerOwnershipAnalysisIntegration =
         ownershipErrors = IntegratedCompiler.getOwnershipErrors ownershipAnalysis
         borrowChecks = IntegratedCompiler.getBorrowChecks ownershipAnalysis
     -- Ownership analysis should catch borrowing violations
-    in all hasValidOwnershipLocation ownershipErrors .&&.
-       all isValidBorrowCheck borrowChecks
+    in L.all hasValidOwnershipLocation ownershipErrors .&&.
+       L.all isValidBorrowCheck borrowChecks
 
 -- | Test compiler code generation consistency
 testCompilerCodeGenerationConsistency :: Property
@@ -182,7 +184,7 @@ testCompilerConfigurationValidation =
         errors = IntegratedCompiler.getConfigurationErrors validation
         warnings = IntegratedCompiler.getConfigurationWarnings validation
     -- Configuration validation should provide clear feedback
-    in length errors >= 0 .&&. length warnings >= 0
+    in L.length errors >= 0 .&&. L.length warnings >= 0
 
 -- | Test compiler performance characteristics
 testCompilerPerformanceCharacteristics :: Property
@@ -193,7 +195,7 @@ testCompilerPerformanceCharacteristics =
         analysisTime = IntegratedCompiler.getAnalysisTime compilation
         codeGenTime = IntegratedCompiler.getCodeGenTime compilation
         totalTime = IntegratedCompiler.getTotalTime compilation
-    -- Timing should be reasonable and additive
+    -- Timing should be reasonable L.and additive
     in parseTime >= 0 .&&. analysisTime >= 0 .&&. codeGenTime >= 0 .&&.
        totalTime >= parseTime + analysisTime + codeGenTime
 

@@ -30,6 +30,7 @@ import qualified Compiler.IR as IR
 import SourceLocation (SourceSpan(..))
 
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Char (isSpace, isAlphaNum, toUpper)
 
@@ -55,7 +56,7 @@ arbitraryTypeName :: Gen String
 arbitraryTypeName = do
   name <- arbitraryVarName
   firstChar <- toUpper <$> elements "abcdefghijklmnopqrstuvwxyz"
-  return $ firstChar : tail name
+  return $ firstChar : L.tail name
 
 -- Generate simple variable declarations
 arbitraryVarDecl :: Gen String
@@ -106,7 +107,7 @@ prop_compilation_preserves_semantics =
       case compile typusFile of
         Left _ -> property False
         Right goCode ->
-          property $ not (null goCode) .&&. "func" `isInfixOf` goCode
+          property $ not (null goCode) .&&. "func" `L.isInfixOf` goCode
 
 -- Property: Generated Go code is syntactically valid
 prop_generated_go_code_valid :: Property
@@ -117,8 +118,8 @@ prop_generated_go_code_valid =
     Right typusFile ->
       let goCode = generateGoCode typusFile
       in property $ not (null goCode) .&&. 
-                 not ("//!" `isInfixOf` goCode) .&&.
-                 not ("{//!" `isInfixOf` goCode)
+                 not ("//!" `L.isInfixOf` goCode) .&&.
+                 not ("{//!" `L.isInfixOf` goCode)
 
 -- Property: Compilation handles empty files gracefully
 prop_compilation_empty_file :: Property
@@ -151,8 +152,8 @@ prop_compilation_preserves_functions =
       case compile typusFile of
         Left _ -> property False
         Right goCode ->
-          let inputFuncCount = length $ filter ("func " `isPrefixOf`) (lines typusCode)
-              outputFuncCount = length $ filter ("func " `isPrefixOf`) (lines goCode)
+          let inputFuncCount = L.length $ L.filter ("func " `L.isPrefixOf`) (lines typusCode)
+              outputFuncCount = L.length $ L.filter ("func " `L.isPrefixOf`) (lines goCode)
           in property $ outputFuncCount >= inputFuncCount
 
 -- Property: Compilation handles variable declarations correctly
@@ -166,7 +167,7 @@ prop_compilation_handles_variables =
       case compile typusFile of
         Left _ -> property False
         Right goCode ->
-          property $ ":=" `isInfixOf` goCode
+          property $ ":=" `L.isInfixOf` goCode
 
 -- Property: Compilation optimizes redundant directives
 prop_compilation_optimizes_directives :: Property
@@ -178,7 +179,7 @@ prop_compilation_optimizes_directives =
       case compile typusFile of
         Left _ -> property False
         Right goCode ->
-          property $ not ("//!" `isInfixOf` goCode)
+          property $ not ("//!" `L.isInfixOf` goCode)
 
 -- Property: Compilation handles nested structures
 prop_compilation_handles_nested :: Property
@@ -190,8 +191,8 @@ prop_compilation_handles_nested =
       case compile typusFile of
         Left _ -> property False
         Right goCode ->
-          property $ "func outer" `isInfixOf` goCode .&&.
-                     "func inner" `isInfixOf` goCode
+          property $ "func outer" `L.isInfixOf` goCode .&&.
+                     "func inner" `L.isInfixOf` goCode
 
 -- Property: Compilation preserves type information
 prop_compilation_preserves_types :: Property
@@ -217,7 +218,7 @@ prop_compilation_handles_comments =
       case compile typusFile of
         Left _ -> property False
         Right goCode ->
-          property $ "func test" `isInfixOf` goCode
+          property $ "func test" `L.isInfixOf` goCode
 
 -- Property: Compilation is deterministic
 prop_compilation_deterministic :: Property
@@ -238,7 +239,7 @@ prop_compilation_deterministic =
 -- Error Handling Properties
 -- ============================================================================
 
--- Property: Type errors are detected and reported
+-- Property: Type errors are detected L.and reported
 prop_type_errors_detected :: Property
 prop_type_errors_detected =
   let codeWithTypeErrors = "func test() {\n  x := \"string\"\n  y := 1\n  z := x + y // type error\n}\n"
@@ -279,7 +280,7 @@ prop_compilation_small_files_fast =
 prop_compilation_repeated_patterns :: Property
 prop_compilation_repeated_patterns =
   let repeatedPattern = "x := 1\ny := 2\nz := x + y\n"
-      largeCode = "func test() {\n" ++ concat (replicate 10 repeatedPattern) ++ "}\n"
+      largeCode = "func test() {\n" ++ L.concat (replicate 10 repeatedPattern) ++ "}\n"
   in case parseTypus largeCode of
     Left _ -> property False
     Right typusFile ->
@@ -301,7 +302,7 @@ prop_dead_code_elimination =
       case compile typusFile of
         Left _ -> property False
         Right goCode ->
-          property $ "func test" `isInfixOf` goCode
+          property $ "func test" `L.isInfixOf` goCode
 
 -- Property: Constant folding
 prop_constant_folding :: Property
@@ -313,7 +314,7 @@ prop_constant_folding =
       case compile typusFile of
         Left _ -> property False
         Right goCode ->
-          property $ "func test" `isInfixOf` goCode
+          property $ "func test" `L.isInfixOf` goCode
 
 -- Property: Function inlining potential
 prop_function_inlining :: Property
@@ -325,8 +326,8 @@ prop_function_inlining =
       case compile typusFile of
         Left _ -> property False
         Right goCode ->
-          property $ "func small" `isInfixOf` goCode .&&.
-                     "func test" `isInfixOf` goCode
+          property $ "func small" `L.isInfixOf` goCode .&&.
+                     "func test" `L.isInfixOf` goCode
 
 -- ============================================================================
 -- Test Suite
@@ -355,7 +356,7 @@ tests = testGroup "Compiler IR Optimization Tests"
     ]
 
   , testGroup "Error Handling Properties"
-    [ fastProperty "Type errors are detected and reported" prop_type_errors_detected
+    [ fastProperty "Type errors are detected L.and reported" prop_type_errors_detected
     , fastProperty "Compilation handles syntax errors gracefully" prop_compilation_syntax_errors
     ]
 

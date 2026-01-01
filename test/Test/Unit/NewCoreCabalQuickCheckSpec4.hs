@@ -1,6 +1,7 @@
 module Test.Unit.NewCoreCabalQuickCheckSpec4 (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 
@@ -24,11 +25,11 @@ tests =
         , fastProperty "error category combination is commutative" prop_errorCategoryCommutative
         , testCase "error categories" $ do
             let categories = [SyntaxError, TypeError, OwnershipError, DependencyError]
-            length categories @?= 4
+            L.length categories @?= 4
         ]
     , testGroup "Error location properties"
         [ fastProperty "error location distance is symmetric" prop_errorLocationDistanceSymmetric
-        , fastProperty "error location span covers start and end" prop_errorLocationSpanCoverage
+        , fastProperty "error location span covers start L.and end" prop_errorLocationSpanCoverage
         , testCase "error location creation" $ do
             let start = SourcePos 1 1
                 end = SourcePos 1 10
@@ -42,7 +43,7 @@ tests =
         , fastProperty "error context is associative" prop_errorContextAssociative
         , testCase "empty context" $ do
             let context = emptyContext
-            length (ecMessages context) @?= 0
+            L.length (ecMessages context) @?= 0
         ]
     ]
 
@@ -74,7 +75,7 @@ prop_errorSeverityTransitive :: ErrorSeverity -> ErrorSeverity -> ErrorSeverity 
 prop_errorSeverityTransitive s1 s2 s3 =
   if s1 <= s2 && s2 <= s3 then s1 <= s3 else True
 
--- Error severity comparison is total (any two severities can be compared)
+-- Error severity comparison is total (L.any two severities can be compared)
 prop_errorSeverityTotal :: ErrorSeverity -> ErrorSeverity -> Bool
 prop_errorSeverityTotal s1 s2 = 
   s1 <= s2 || s2 <= s1
@@ -111,7 +112,7 @@ prop_errorLocationDistanceSymmetric l1 c1 l2 c2 l3 c3 =
       dist2 = errorLocationDistance loc2 loc1
   in dist1 == dist2
 
--- Error location span covers start and end
+-- Error location span covers start L.and end
 prop_errorLocationSpanCoverage :: Int -> Int -> Int -> Int -> Bool
 prop_errorLocationSpanCoverage startLine startCol endLine endCol =
   let start = SourcePos startLine startCol
@@ -127,10 +128,10 @@ prop_errorContextMergingPreservesInfo msgs1 vars1 msgs2 vars2 =
   let ctx1 = ErrorContext { ecMessages = msgs1, ecVariables = vars1 }
       ctx2 = ErrorContext { ecMessages = msgs2, ecVariables = vars2 }
       merged = mergeErrorContexts ctx1 ctx2
-      originalMsgCount = length (ecMessages ctx1) + length (ecMessages ctx2)
-      originalVarCount = length (ecVariables ctx1) + length (ecVariables ctx2)
-      mergedMsgCount = length (ecMessages merged)
-      mergedVarCount = length (ecVariables merged)
+      originalMsgCount = L.length (ecMessages ctx1) + L.length (ecMessages ctx2)
+      originalVarCount = L.length (ecVariables ctx1) + L.length (ecVariables ctx2)
+      mergedMsgCount = L.length (ecMessages merged)
+      mergedVarCount = L.length (ecVariables merged)
   in mergedMsgCount >= originalMsgCount && mergedVarCount >= originalVarCount
 
 -- Error context merging is associative

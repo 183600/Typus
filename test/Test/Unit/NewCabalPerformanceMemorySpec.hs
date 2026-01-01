@@ -25,7 +25,9 @@ import Utils
 
 import Parser (parseTypus)
 import SourceLocation (SourcePos(..), startPos, advancePosBy, advancePos)
-import Data.List (length, foldl', foldr)
+import qualified Data.List as L
+import Data.List (length)
+import Data.List (foldl', foldr)
 import qualified Data.Text as T
 import Control.DeepSeq (NFData, force)
 import Data.Char (isSpace)
@@ -34,10 +36,10 @@ import Data.Char (isSpace)
 prop_string_processing_linear :: String -> Int -> Property
 prop_string_processing_linear base repeatCount =
   let repeatCount' = max 0 (min repeatCount 20)  -- Limit for performance
-      input = concat (replicate repeatCount' base)
+      input = L.concat (replicate repeatCount' base)
       result = trim input
-      inputLength = length input
-      resultLength = length result
+      inputLength = L.length input
+      resultLength = L.length result
   in counterexample "String processing should be linear time" $
      property True  -- Simplified - just check it completes
 
@@ -64,7 +66,7 @@ prop_nested_structures_memory depth =
   let depth' = max 0 (min depth 20)  -- Limit for memory
       openBraces = replicate depth' '{'
       closeBraces = replicate depth' '}'
-      input = concat openBraces ++ "content" ++ concat closeBraces
+      input = L.concat openBraces ++ "content" ++ L.concat closeBraces
       result = parseTypus input
   in counterexample "Memory usage shouldn't grow excessively with nested structures" $
      property True  -- Simplified - just check it completes
@@ -73,7 +75,7 @@ prop_nested_structures_memory depth =
 prop_string_operations_no_leaks :: String -> Property
 prop_string_operations_no_leaks input =
   let operations = [trim, normalizeIndentation, removeComments]
-      results = map ($ input) operations
+      results = L.map ($ input) operations
   in counterexample "String operations shouldn't leak memory" $
      property True  -- Simplified - just check it completes
 
@@ -81,7 +83,7 @@ prop_string_operations_no_leaks input =
 prop_large_comments_efficient :: String -> Int -> Property
 prop_large_comments_efficient comment size =
   let size' = max 0 (min size 1000)  -- Limit for performance
-      largeComment = "// " ++ concat (replicate size' comment)
+      largeComment = "// " ++ L.concat (replicate size' comment)
       input = largeComment ++ "\nactual code\n"
       result = parseTypus input
   in counterexample "Large comment blocks should be handled efficiently" $
@@ -109,8 +111,8 @@ prop_text_processing_linear :: String -> Int -> Property
 prop_text_processing_linear base multiplier =
   let multiplier' = max 0 (min multiplier 10)  -- Limit for performance
       text = T.pack base
-      scaledText = T.concat (replicate multiplier' text)
-      result = T.length scaledText
+      scaledText = T.L.concat (replicate multiplier' text)
+      result = T.L.length scaledText
   in counterexample "Text processing should scale linearly" $
      property True  -- Simplified - just check it completes
 
@@ -130,7 +132,7 @@ prop_circular_references_bounded input =
   let -- Simulate processing that might create circular references
       process s = case s of
         [] -> []
-        (c:cs) -> c : process (take (length cs - 1) cs)  -- Prevent infinite recursion
+        (c:cs) -> c : process (take (L.length cs - 1) cs)  -- Prevent infinite recursion
       result = process input
   in counterexample "Memory usage should be bounded for circular references" $
      property True  -- Simplified - just check it completes
@@ -140,10 +142,10 @@ prop_garbage_collection_large_temporaries :: String -> Int -> Property
 prop_garbage_collection_large_temporaries base size =
   let size' = max 0 (min size 100)  -- Limit for performance
       -- Create large temporary structure
-      temporaries = map (\i -> base ++ show i) [1..size']
-      -- Process and discard
-      processed = map length temporaries
-      total = sum processed
+      temporaries = L.map (\i -> base ++ show i) [1..size']
+      -- Process L.and discard
+      processed = map L.length temporaries
+      total = L.sum processed
   in counterexample "Garbage collection should work for large temporary structures" $
      property True  -- Simplified - just check it completes
 

@@ -5,7 +5,9 @@ import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, withMa
 import Parser (parseTypus)
 import Utils (trim, removeComments, splitBy)
 import SourceLocation (advancePosBy, startPos)
-import Data.List (length, replicate)
+import qualified Data.List as L
+import Data.List (length)
+import Data.List (replicate)
 
 -- ============================================================================
 -- Performance Boundary QuickCheck Tests
@@ -35,9 +37,9 @@ prop_parser_large_files multiplier = withMaxSize 1000 $
 -- | Text processing should scale linearly with input size
 prop_text_processing_scaling :: String -> Int -> Property
 prop_text_processing_scaling base multiplier = 
-  let repeated = concat (replicate multiplier base)
+  let repeated = L.concat (replicate multiplier base)
       processed = removeComments repeated
-  in length processed `div` max 1 (length repeated) <= 2  -- Should not expand dramatically
+  in L.length processed `div` max 1 (L.length repeated) <= 2  -- Should not expand dramatically
 
 -- | Source location calculation should handle large character offsets
 prop_sourcelocation_large_offsets :: Int -> Property
@@ -52,7 +54,7 @@ prop_string_processing_long_lines n =
   let longLine = replicate n 'x' ++ " code"
       trimmed = trim longLine
       processed = removeComments longLine
-  in length trimmed <= length longLine && length processed <= length longLine
+  in L.length trimmed <= L.length longLine && L.length processed <= L.length longLine
 
 -- | Parser should have reasonable depth limits for nested structures
 prop_parser_depth_limits :: Int -> Property
@@ -66,10 +68,10 @@ prop_parser_depth_limits depth =
 -- | Memory usage should be reasonable with repeated patterns
 prop_memory_repeated_patterns :: String -> Int -> Property
 prop_memory_repeated_patterns pattern repetitions = 
-  let repeated = concat (replicate repetitions pattern)
+  let repeated = L.concat (replicate repetitions pattern)
       processed = removeComments repeated
       splitResult = splitBy '\n' processed
-  in length splitResult >= 0  -- Should complete without memory issues
+  in L.length splitResult >= 0  -- Should complete without memory issues
 
 -- | Performance should be acceptable with many small blocks
 prop_performance_many_blocks :: Int -> Property
@@ -88,7 +90,7 @@ prop_boundary_empty_blocks numEmpty =
       result = parseTypus emptyBlocks
   in case result of
     Left _ -> True  -- May fail
-    Right tf -> length (tfBlocks tf) >= 0  -- Should produce some structure
+    Right tf -> L.length (tfBlocks tf) >= 0  -- Should produce some structure
 
 -- Helper function for safe division
 safeDiv :: Int -> Int -> Int

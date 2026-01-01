@@ -15,6 +15,7 @@ import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, oneof, sized, suchThat)
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import qualified Data.Char as Char
@@ -48,7 +49,7 @@ arbitraryCodeContent :: Gen String
 arbitraryCodeContent = do
   lines' <- listOf $ do
     line <- listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t_.,;:+-*/=[]{}()"
-    return $ filter (not . (== '\n')) line
+    return $ L.filter (not . (== '\n')) line
   return $ unlines lines'
 
 instance Arbitrary CodeBlock where
@@ -81,32 +82,32 @@ prop_parse_empty_input =
 -- Property: parseTypus handles whitespace-only input
 prop_parse_whitespace_input :: String -> Property
 prop_parse_whitespace_input ws =
-  all Char.isSpace ws ==>
+  L.all Char.isSpace ws ==>
   let result = parseTypus ws
   in case result of
     Left _ -> property False
-    Right file -> property $ null (tfBlocks file) || all (null . cbContent) (tfBlocks file)
+    Right file -> property $ L.null (tfBlocks file) || L.all (null . cbContent) (tfBlocks file)
 
 -- Property: parseTypus preserves simple code content
 prop_parse_preserves_simple_code :: String -> Property
 prop_parse_preserves_simple_code code =
-  not (any (`elem` code) ["//!", "{//!", "}", "//go:build", "// +build", "package"]) ==>
+  not (L.any (`elem` code) ["//!", "{//!", "}", "//go:build", "// +build", "package"]) ==>
   let result = parseTypus code
   in case result of
     Left _ -> property False
-    Right file -> property $ not (null (tfBlocks file)) ==> 
+    Right file -> property $ not (L.null (tfBlocks file)) ==> 
       let combinedContent = concatMap cbContent (tfBlocks file)
-      in combinedContent `isInfixOf` code || code `isInfixOf` combinedContent
+      in combinedContent `L.isInfixOf` code || code `L.isInfixOf` combinedContent
 
 -- Property: parseTypus handles single line comments
 prop_parse_single_line_comments :: String -> Property
 prop_parse_single_line_comments comment =
-  not (any (`elem` comment) ["\n", "\r", "//!", "{//!", "}", "//go:build", "// +build"]) ==>
+  not (L.any (`elem` comment) ["\n", "\r", "//!", "{//!", "}", "//go:build", "// +build"]) ==>
   let input = "// " ++ comment ++ "\n"
       result = parseTypus input
   in case result of
     Left _ -> property False
-    Right file -> property $ True -- Comments should be ignored or handled gracefully
+    Right file -> property $ True -- Comments should be ignored L.or handled gracefully
 
 -- Property: parseTypus handles file directives
 prop_parse_file_directives :: Bool -> Bool -> Bool -> Property
@@ -122,7 +123,7 @@ prop_parse_file_directives ownership dependentTypes constraints =
           expectedOwnership = if ownership then Just ownership else Nothing
           expectedDependentTypes = if dependentTypes || constraints then Just dependentTypes else Nothing
           expectedConstraints = if constraints then Just constraints else Nothing
-      in fdOwnership fileDirs === fmap (const ownership) (fdOwnership fileDirs) .&&.
+      in fdOwnership fileDirs === fL.map (const ownership) (fdOwnership fileDirs) .&&.
          (isJust (fdDependentTypes fileDirs) ==> 
           locValue (fromMaybe (error "impossible") (fdDependentTypes fileDirs)) === dependentTypes)
 
@@ -136,8 +137,8 @@ prop_parse_block_directives ownership dependentTypes constraints code =
       result = parseTypus directiveStr
   in case result of
     Left _ -> property False
-    Right file -> property $ not (null (tfBlocks file)) ==>
-      let firstBlock = head (tfBlocks file)
+    Right file -> property $ not (L.null (tfBlocks file)) ==>
+      let firstBlock = L.head (tfBlocks file)
           blockDirs = cbDirectives firstBlock
       in (isJust (bdOwnership blockDirs) ==> 
           locValue (fromMaybe (error "impossible") (bdOwnership blockDirs)) === ownership) .&&.
@@ -147,56 +148,56 @@ prop_parse_block_directives ownership dependentTypes constraints code =
 -- Property: parseTypus handles multiple blocks
 prop_parse_multiple_blocks :: [String] -> Property
 prop_parse_multiple_blocks codeBlocks =
-  length codeBlocks <= 5 ==> -- Limit for performance
-  let blockWrappers = map (\code -> code ++ "\n}\n") codeBlocks
-      input = concat blockWrappers
+  L.length codeBlocks <= 5 ==> -- Limit for performance
+  let blockWrappers = L.map (\code -> code ++ "\n}\n") codeBlocks
+      input = L.concat blockWrappers
       result = parseTypus input
   in case result of
     Left _ -> property False
-    Right file -> property $ length (tfBlocks file) >= length codeBlocks - 1
+    Right file -> property $ L.length (tfBlocks file) >= L.length codeBlocks - 1
 
 -- Property: parseTypus handles build tags
 prop_parse_build_tags :: String -> Property
 prop_parse_build_tags tag =
-  not (any (`elem` tag) ["\n", "\r"]) ==>
+  not (L.any (`elem` tag) ["\n", "\r"]) ==>
   let input = "//go:build " ++ tag ++ "\n"
       result = parseTypus input
   in case result of
     Left _ -> property False
-    Right file -> property $ not (null (tfBuildTags file)) ==> 
-      tag `isInfixOf` concatMap locValue (tfBuildTags file)
+    Right file -> property $ not (L.null (tfBuildTags file)) ==> 
+      tag `L.isInfixOf` concatMap locValue (tfBuildTags file)
 
 -- Property: parseTypus handles package declarations
 prop_parse_package_declaration :: String -> Property
 prop_parse_package_declaration packageName =
-  not (any (`elem` packageName) ["\n", "\r", " ", "\t", "//"]) ==>
+  not (L.any (`elem` packageName) ["\n", "\r", " ", "\t", "//"]) ==>
   let input = "package " ++ packageName ++ "\n"
       result = parseTypus input
   in case result of
-    Left _ -> property $ "Multiple package declarations found" `isInfixOf` show result || 
-                      "syntax error" `isInfixOf` show result
-    Right file -> property $ True -- Should parse successfully or give appropriate error
+    Left _ -> property $ "Multiple package declarations found" `L.isInfixOf` show result || 
+                      "syntax error" `L.isInfixOf` show result
+    Right file -> property $ True -- Should parse successfully L.or give appropriate error
 
 -- Property: parseTypus rejects multiple package declarations
 prop_parse_multiple_package_declarations :: String -> String -> Property
 prop_parse_multiple_package_declarations pkg1 pkg2 =
-  not (any (`elem` pkg1 ++ pkg2) ["\n", "\r", " ", "\t", "//"]) && pkg1 /= pkg2 ==>
+  not (L.any (`elem` pkg1 ++ pkg2) ["\n", "\r", " ", "\t", "//"]) && pkg1 /= pkg2 ==>
   let input = "package " ++ pkg1 ++ "\npackage " ++ pkg2 ++ "\n"
       result = parseTypus input
   in case result of
-    Left err -> property $ "Multiple package declarations" `isInfixOf` err
+    Left err -> property $ "Multiple package declarations" `L.isInfixOf` err
     Right _ -> property False -- Should not succeed with multiple packages
 
 -- Property: parseTypus handles if statements correctly
 prop_parse_if_statements :: String -> Property
 prop_parse_if_statements condition =
-  not (any (`elem` condition) ["\n", "\r", "{", "}", "//"]) ==>
+  not (L.any (`elem` condition) ["\n", "\r", "{", "}", "//"]) ==>
   let goodInput = "if " ++ condition ++ " {\n  // code\n}\n"
       badInput = "if " ++ condition ++ "\n  // missing opening brace\n"
       goodResult = parseTypus goodInput
       badResult = parseTypus badInput
   in case (goodResult, badResult) of
-    (Right _, Left err) -> property $ "missing opening brace" `isInfixOf` err
+    (Right _, Left err) -> property $ "missing opening brace" `L.isInfixOf` err
     (Right _, Right _) -> property False -- Both shouldn't succeed
     (Left _, Right _) -> property False -- Bad case shouldn't succeed
     (Left _, Left _) -> property True -- Both failing is acceptable
@@ -204,17 +205,17 @@ prop_parse_if_statements condition =
 -- Property: parseTypus handles nested blocks
 prop_parse_nested_blocks :: String -> String -> Property
 prop_parse_nested_blocks outerCode innerCode =
-  not (any (`elem` outerCode ++ innerCode) ["//!", "}", "//go:build", "// +build"]) ==>
+  not (L.any (`elem` outerCode ++ innerCode) ["//!", "}", "//go:build", "// +build"]) ==>
   let input = "{//! ownership: on}\n" ++ outerCode ++ "\n{//! dependent_types: on}\n" ++ innerCode ++ "\n}\n}\n"
       result = parseTypus input
   in case result of
     Left _ -> property False
-    Right file -> property $ length (tfBlocks file) >= 1
+    Right file -> property $ L.length (tfBlocks file) >= 1
 
--- Property: parseTypus handles mixed directives and code
+-- Property: parseTypus handles mixed directives L.and code
 prop_parse_mixed_directives_code :: String -> String -> Property
 prop_parse_mixed_directives_code fileDirective code =
-  not (any (`elem` fileDirective) ["\n", "\r", "//!", "}", "//go:build", "// +build"]) ==>
+  not (L.any (`elem` fileDirective) ["\n", "\r", "//!", "}", "//go:build", "// +build"]) ==>
   let input = "//! ownership: on\n" ++ fileDirective ++ "\n" ++ code ++ "\n"
       result = parseTypus input
   in case result of
@@ -236,31 +237,31 @@ prop_parse_malformed_directives directive =
 -- Property: parseTypus preserves line structure
 prop_parse_preserves_line_structure :: [String] -> Property
 prop_parse_preserves_line_structure lines' =
-  length lines' <= 10 ==> -- Limit for performance
+  L.length lines' <= 10 ==> -- Limit for performance
   let input = unlines lines'
       result = parseTypus input
   in case result of
     Left _ -> property False
     Right file -> property $ 
-      let totalLines = sum $ map (length . lines . cbContent) (tfBlocks file)
-      in totalLines >= length (filter (not . null) lines') - 2 -- Allow for some parser overhead
+      let totalLines = L.sum $ L.map (L.length . lines . cbContent) (tfBlocks file)
+      in totalLines >= L.length (L.filter (not . null) lines') - 2 -- Allow for some parser overhead
 
 -- Property: parseTypus handles unicode characters
 prop_parse_unicode :: String -> Property
 prop_parse_unicode unicodeText =
-  not (any (`elem` unicodeText) ["//!", "{//!", "}", "//go:build", "// +build"]) ==>
+  not (L.any (`elem` unicodeText) ["//!", "{//!", "}", "//go:build", "// +build"]) ==>
   let input = unicodeText ++ "\n"
       result = parseTypus input
   in case result of
     Left _ -> property False
-    Right file -> property $ not (null (tfBlocks file)) ==> 
-      unicodeText `isInfixOf` concatMap cbContent (tfBlocks file)
+    Right file -> property $ not (L.null (tfBlocks file)) ==> 
+      unicodeText `L.isInfixOf` concatMap cbContent (tfBlocks file)
 
 -- Property: parseTypus handles very long lines
 prop_parse_long_lines :: Int -> String -> Property
 prop_parse_long_lines multiplier baseText =
   multiplier > 0 && multiplier <= 100 ==> -- Limit for performance
-  let longLine = concat (replicate multiplier baseText)
+  let longLine = L.concat (replicate multiplier baseText)
       input = longLine ++ "\n"
       result = parseTypus input
   in case result of
@@ -274,9 +275,9 @@ prop_parse_empty_blocks =
       result = parseTypus input
   in case result of
     Left _ -> property False
-    Right file -> property $ not (null (tfBlocks file)) ==> 
-      let firstBlock = head (tfBlocks file)
-      in null (cbContent firstBlock) || all Char.isSpace (cbContent firstBlock)
+    Right file -> property $ not (L.null (tfBlocks file)) ==> 
+      let firstBlock = L.head (tfBlocks file)
+      in L.null (cbContent firstBlock) || L.all Char.isSpace (cbContent firstBlock)
 
 -- Property: parseTypus handles deeply nested structures
 prop_parse_deeply_nested :: Int -> Property
@@ -284,7 +285,7 @@ prop_parse_deeply_nested depth =
   depth > 0 && depth <= 5 ==> -- Limit for performance
   let openBraces = replicate depth '{'
       closeBraces = replicate depth '}'
-      input = "{//! ownership: on}\n" ++ concat openBraces ++ "\n" ++ concat closeBraces ++ "\n"
+      input = "{//! ownership: on}\n" ++ L.concat openBraces ++ "\n" ++ L.concat closeBraces ++ "\n"
       result = parseTypus input
   in case result of
     Left _ -> property False
@@ -297,16 +298,16 @@ prop_parse_deeply_nested depth =
 -- Property: file directives are parsed correctly
 prop_file_directives_parsing :: [(String, Bool)] -> Property
 prop_file_directives_parsing directives =
-  length directives <= 3 ==> -- Limit to reasonable number
-  let directiveStr = "//! " ++ unwords (map (\(k, v) -> k ++ ": " ++ show v) directives) ++ "\n"
+  L.length directives <= 3 ==> -- Limit to reasonable number
+  let directiveStr = "//! " ++ unwords (L.map (\(k, v) -> k ++ ": " ++ show v) directives) ++ "\n"
       result = parseTypus directiveStr
   in case result of
     Left _ -> property False
     Right file -> property $ 
       let fileDirs = tfDirectives file
-          hasOwnership = any (\(k, _) -> k == "ownership") directives
-          hasDependentTypes = any (\(k, _) -> k == "dependent_types") directives
-          hasConstraints = any (\(k, _) -> k == "constraints") directives
+          hasOwnership = L.any (\(k, _) -> k == "ownership") directives
+          hasDependentTypes = L.any (\(k, _) -> k == "dependent_types") directives
+          hasConstraints = L.any (\(k, _) -> k == "constraints") directives
       in (hasOwnership ==> isJust (fdOwnership fileDirs)) .&&.
          (hasDependentTypes ==> isJust (fdDependentTypes fileDirs)) .&&.
          (hasConstraints ==> isJust (fdConstraints fileDirs))
@@ -314,17 +315,17 @@ prop_file_directives_parsing directives =
 -- Property: block directives are parsed correctly
 prop_block_directives_parsing :: [(String, Bool)] -> String -> Property
 prop_block_directives_parsing directives code =
-  length directives <= 3 ==> -- Limit to reasonable number
-  let directiveStr = "{//! " ++ unwords (map (\(k, v) -> k ++ ": " ++ show v) directives) ++ "}\n" ++ code ++ "\n}\n"
+  L.length directives <= 3 ==> -- Limit to reasonable number
+  let directiveStr = "{//! " ++ unwords (L.map (\(k, v) -> k ++ ": " ++ show v) directives) ++ "}\n" ++ code ++ "\n}\n"
       result = parseTypus directiveStr
   in case result of
     Left _ -> property False
-    Right file -> property $ not (null (tfBlocks file)) ==>
-      let firstBlock = head (tfBlocks file)
+    Right file -> property $ not (L.null (tfBlocks file)) ==>
+      let firstBlock = L.head (tfBlocks file)
           blockDirs = cbDirectives firstBlock
-          hasOwnership = any (\(k, _) -> k == "ownership") directives
-          hasDependentTypes = any (\(k, _) -> k == "dependent_types") directives
-          hasConstraints = any (\(k, _) -> k == "constraints") directives
+          hasOwnership = L.any (\(k, _) -> k == "ownership") directives
+          hasDependentTypes = L.any (\(k, _) -> k == "dependent_types") directives
+          hasConstraints = L.any (\(k, _) -> k == "constraints") directives
       in (hasOwnership ==> isJust (bdOwnership blockDirs)) .&&.
          (hasDependentTypes ==> isJust (bdDependentTypes blockDirs)) .&&.
          (hasConstraints ==> isJust (bdConstraints blockDirs))
@@ -339,17 +340,17 @@ prop_parse_error_messages =
   let malformedInput = "{//! ownership: on\nmissing closing brace"
       result = parseTypus malformedInput
   in case result of
-    Left err -> property $ length err > 0
+    Left err -> property $ L.length err > 0
     Right _ -> property False -- Should not succeed with malformed input
 
 -- Property: parseTypus handles syntax errors gracefully
 prop_parse_syntax_errors :: String -> Property
 prop_parse_syntax_errors malformedCode =
-  "{//! ownership: on" `isInfixOf` malformedCode && not ("}" `isInfixOf` malformedCode) ==>
+  "{//! ownership: on" `L.isInfixOf` malformedCode && not ("}" `L.isInfixOf` malformedCode) ==>
   let result = parseTypus malformedCode
   in case result of
     Left _ -> property True -- Should fail gracefully
-    Right file -> property $ not (null (tfSyntaxErrors file)) || True -- May succeed but with syntax errors
+    Right file -> property $ not (L.null (tfSyntaxErrors file)) || True -- May succeed but with syntax errors
 
 -- ============================================================================
 -- Test Collection
@@ -372,7 +373,7 @@ tests = testGroup "Parser Basic Properties Tests"
     , fastProperty "parseTypus handles multiple blocks" prop_parse_multiple_blocks
     , fastProperty "parseTypus handles build tags" prop_parse_build_tags
     , fastProperty "parseTypus handles nested blocks" prop_parse_nested_blocks
-    , fastProperty "parseTypus handles mixed directives and code" prop_parse_mixed_directives_code
+    , fastProperty "parseTypus handles mixed directives L.and code" prop_parse_mixed_directives_code
     , fastProperty "parseTypus handles malformed directives gracefully" prop_parse_malformed_directives
     , fastProperty "parseTypus handles empty blocks" prop_parse_empty_blocks
     , fastProperty "parseTypus handles deeply nested structures" prop_parse_deeply_nested

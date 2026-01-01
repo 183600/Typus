@@ -3,6 +3,7 @@
 module Test.Unit.NewCabalSourceLocationQuickCheckTestsSpec where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), forAll, counterexample, suchThat)
 import SourceLocation
   ( SourcePos(..)
@@ -32,14 +33,14 @@ import SourceLocation
   , toErrorLocationWithSpan
   )
 import Data.Text (Text)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 import Data.Char (isSpace)
 
 -- ============================================================================
 -- QuickCheck Generators
 -- ============================================================================
 
--- Generate valid source positions (line and column >= 1, offset >= 0)
+-- Generate valid source positions (line L.and column >= 1, offset >= 0)
 genSourcePos :: Gen SourcePos
 genSourcePos = do
   line <- choose (1, 1000)
@@ -71,7 +72,7 @@ genLocatedInt = do
 -- Generate strings for position advancement
 genAdvancementString :: Gen String
 genAdvancementString = do
-  length' <- choose (0, 100)
+  L.length' <- choose (0, 100)
   listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t\n\r.,;:!?()[]{}<>+-*/%=|&^~@#`'\""
 
 -- Generate text for position advancement
@@ -248,7 +249,7 @@ prop_advancePos_multiple_chars :: Property
 prop_advancePos_multiple_chars =
   forAll genAdvancementString $ \s ->
     forAll genSourcePos $ \pos ->
-      advancePosBy s pos === foldl (flip advancePos) pos s
+      advancePosBy s pos === L.foldl (flip advancePos) pos s
 
 prop_mergeSpans_associative :: SourceSpan -> SourceSpan -> SourceSpan -> Property
 prop_mergeSpans_associative span1 span2 span3 =
@@ -272,7 +273,7 @@ tests = testGroup "SourceLocation QuickCheck Tests"
     , testProperty "posAfter regular char increments column" prop_posAfter_regular_char_increments_column
     ]
   , testGroup "SourceSpan"
-    [ testProperty "emptySpan has same start and end" prop_emptySpan_same_start_end
+    [ testProperty "emptySpan has same start L.and end" prop_emptySpan_same_start_end
     , testProperty "spanFrom creates empty span" prop_spanFrom_creates_empty_span
     , testProperty "spanTo creates empty span" prop_spanTo_creates_empty_span
     , testProperty "spanBetween maintains order" prop_spanBetween_order
@@ -297,7 +298,7 @@ tests = testGroup "SourceLocation QuickCheck Tests"
     ]
   , testGroup "Position Mathematics"
     [ testProperty "position ordering consistent with offset" prop_pos_ordering_consistent
-    , testProperty "span length calculation" prop_span_length_calculation
+    , testProperty "span L.length calculation" prop_span_length_calculation
     ]
   , testGroup "Edge Cases"
     [ testProperty "advancePos multiple chars" prop_advancePos_multiple_chars

@@ -16,6 +16,7 @@ import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify)
 
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import Data.Maybe (isJust, isNothing)
 
@@ -42,7 +43,7 @@ tests = testGroup "Compiler Pipeline Integration Tests"
                 Left compileErr -> assertBool $ "Should compile successfully: " ++ show compileErr
                 Right compiled -> do
                   assertBool "Should have IR module" (isJust $ irModule compiled)
-                  assertBool "Should have generated Go code" (not $ T.null $ goCode compiled)
+                  assertBool "Should have generated Go code" (not $ T.L.null $ goCode compiled)
 
       , testCase "dependent types compilation pipeline" $ do
           let dependentTypesInput = unlines
@@ -57,7 +58,7 @@ tests = testGroup "Compiler Pipeline Integration Tests"
               let compileResult = compile parsedFile
               case compileResult of
                 Left compileErr -> 
-                  let hasDependentTypeError = any (\e -> "dependent type" `isInfixOf` errorMessage e) compileErr
+                  let hasDependentTypeError = L.any (\e -> "dependent type" `L.isInfixOf` errorMessage e) compileErr
                   in assertBool "Should handle dependent type errors gracefully" hasDependentTypeError
                 Right compiled -> do
                   assertBool "Should compile dependent types" (isJust $ irModule compiled)
@@ -77,13 +78,13 @@ tests = testGroup "Compiler Pipeline Integration Tests"
               let compileResult = compile parsedFile
               case compileResult of
                 Left compileErr -> 
-                  let hasOwnershipError = any (\e -> errorType e == OwnershipError) compileErr
+                  let hasOwnershipError = L.any (\e -> errorType e == OwnershipError) compileErr
                   in assertBool "Should detect ownership errors" hasOwnershipError
                 Right compiled -> do
                   assertBool "Should compile ownership code" (isJust $ irModule compiled)
       ]
 
-  , testGroup "IR Generation and Optimization"
+  , testGroup "IR Generation L.and Optimization"
       [ testCase "IR generation preserves semantics" $ do
           let semanticInput = unlines
                 [ "func calculate(x: int, y: int) -> int {"
@@ -101,8 +102,8 @@ tests = testGroup "Compiler Pipeline Integration Tests"
                 Right irModule -> do
                   let functions = irFunctions irModule
                   assertBool "Should have at least one function" (not $ null functions)
-                  let mainFunc = head functions
-                  assertBool "Should have IR statements" (not $ null $ irStmts mainFunc)
+                  let mainFunc = L.head functions
+                  assertBool "Should have IR statements" (not $ L.null $ irStmts mainFunc)
                 Left _ -> assertBool "Should parse successfully" False
 
       , testCase "IR optimization improves code" $ do
@@ -121,8 +122,8 @@ tests = testGroup "Compiler Pipeline Integration Tests"
               case irResult of
                 Right originalIR -> do
                   let optimizedIR = optimizeIR originalIR
-                      originalStmts = sum $ map (length . irStmts) $ irFunctions originalIR
-                      optimizedStmts = sum $ map (length . irStmts) $ irFunctions optimizedIR
+                      originalStmts = L.sum $ L.map (L.length . irStmts) $ irFunctions originalIR
+                      optimizedStmts = L.sum $ L.map (L.length . irStmts) $ irFunctions optimizedIR
                   assertBool "Optimization should not increase statement count" (optimizedStmts <= originalStmts)
                 Left _ -> assertBool "Should parse successfully" False
             Left _ -> assertBool "Should parse successfully" False
@@ -143,9 +144,9 @@ tests = testGroup "Compiler Pipeline Integration Tests"
               case compileResult of
                 Right compiled -> do
                   let goCode = goCode compiled
-                      hasFuncDecl = "func greet" `T.isInfixOf` goCode
-                      hasReturn = "return" `T.isInfixOf` goCode
-                      hasStringConcat = "+" `T.isInfixOf` goCode
+                      hasFuncDecl = "func greet" `L.isInfixOf` goCode
+                      hasReturn = "return" `L.isInfixOf` goCode
+                      hasStringConcat = "+" `L.isInfixOf` goCode
                   assertBool "Should contain function declaration" hasFuncDecl
                   assertBool "Should contain return statement" hasReturn
                   assertBool "Should contain string concatenation" hasStringConcat
@@ -167,8 +168,8 @@ tests = testGroup "Compiler Pipeline Integration Tests"
               case compileResult of
                 Right compiled -> do
                   let goCode = goCode compiled
-                      hasSlice = "[]int" `T.isInfixOf` goCode
-                      hasMap = "map[string]int" `T.isInfixOf` goCode
+                      hasSlice = "[]int" `L.isInfixOf` goCode
+                      hasMap = "map[string]int" `L.isInfixOf` goCode
                   assertBool "Should handle array/slice types" hasSlice
                   assertBool "Should handle map types" hasMap
                 Left _ -> assertBool "Should compile complex types" False
@@ -197,7 +198,7 @@ tests = testGroup "Compiler Pipeline Integration Tests"
               let compileResult = compile parsedFile
               case compileResult of
                 Left compileErr -> 
-                  let hasTypeError = any (\e -> errorPhase e == TypeChecking) compileErr
+                  let hasTypeError = L.any (\e -> errorPhase e == TypeChecking) compileErr
                   in assertBool "Should fail at type checking phase" hasTypeError
                 Right _ -> assertBool "Should fail with type error" False
             Left _ -> assertBool "Should parse successfully" False
@@ -216,7 +217,7 @@ tests = testGroup "Compiler Pipeline Integration Tests"
               let compileResult = compile parsedFile
               case compileResult of
                 Left compileErr -> 
-                  let hasOwnershipError = any (\e -> errorType e == OwnershipError) compileErr
+                  let hasOwnershipError = L.any (\e -> errorType e == OwnershipError) compileErr
                   in assertBool "Should fail with ownership error" hasOwnershipError
                 Right compiled -> 
                   let goCode = goCode compiled
@@ -224,7 +225,7 @@ tests = testGroup "Compiler Pipeline Integration Tests"
             Left _ -> assertBool "Should parse successfully" False
       ]
 
-  , testGroup "Pipeline Performance and Resource Management"
+  , testGroup "Pipeline Performance L.and Resource Management"
       [ testCase "pipeline handles large inputs efficiently" $ do
           let largeInput = unlines $ replicate 100 "func test" ++ ["func main() { return 42; }"]
               parseResult = parseTypus largeInput
@@ -252,7 +253,7 @@ tests = testGroup "Compiler Pipeline Integration Tests"
               case compileResult of
                 Right compiled -> do
                   let goCode = goCode compiled
-                      hasCleanup = "cleanup" `T.isInfixOf` goCode
+                      hasCleanup = "cleanup" `L.isInfixOf` goCode
                   assertBool "Should include cleanup calls" hasCleanup
                 Left _ -> assertBool "Should compile memory-safe code" False
             Left _ -> assertBool "Should parse successfully" False
@@ -266,9 +267,9 @@ tests = testGroup "Compiler Pipeline Integration Tests"
               Right parsedFile -> 
                 case compile parsedFile of
                   Right compiled -> 
-                    let inputFuncs = length $ filter ("func" `isPrefixOf`) $ lines input
+                    let inputFuncs = L.length $ L.filter ("func" `L.isPrefixOf`) $ lines input
                         goCode = goCode compiled
-                        outputFuncs = length $ filter ("func" `isInfixOf`) $ T.lines goCode
+                        outputFuncs = L.length $ L.filter ("func" `L.isInfixOf`) $ T.lines goCode
                     in inputFuncs <= outputFuncs
                   Left _ -> property True
               Left _ -> property True
@@ -279,7 +280,7 @@ tests = testGroup "Compiler Pipeline Integration Tests"
             in case parseResult of
               Right parsedFile ->
                 case compile parsedFile of
-                  Right compiled -> not $ T.null $ goCode compiled
+                  Right compiled -> not $ T.L.null $ goCode compiled
                   Left _ -> property True
               Left _ -> property True
       ]

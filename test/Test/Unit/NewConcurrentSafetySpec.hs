@@ -5,6 +5,7 @@
 module Test.Unit.NewConcurrentSafetySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit ((@?=), assertBool, assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, elements, listOf, oneof, sized, Positive(..))
@@ -14,7 +15,8 @@ import Ownership (OwnershipType(..), OwnershipError(..), newOwnershipAnalyzer, a
 import Compiler (compile, CompilationResult(..))
 import Control.Concurrent (forkIO, threadDelay, MVar, newEmptyMVar, putMVar, takeMVar)
 import Control.Monad (replicateM_)
-import Data.List (nub, sort, length)
+import Data.List (length)
+import Data.List (nub, sort)
 import Control.DeepSeq (force)
 
 tests :: TestTree
@@ -143,10 +145,10 @@ prop_concurrent_ownership_thread_safe source =
 -- Helper functions for concurrent safety checking
 
 isDataRaceWarning :: String -> Bool
-isDataRaceWarning err = "data race" `isInfixOf` err || "concurrent access" `isInfixOf` err
+isDataRaceWarning err = "data race" `L.isInfixOf` err || "concurrent access" `L.isInfixOf` err
 
 isDeadlockWarning :: String -> Bool
-isDeadlockWarning err = "deadlock" `isInfixOf` err || "lock ordering" `isInfixOf` err
+isDeadlockWarning err = "deadlock" `L.isInfixOf` err || "lock ordering" `L.isInfixOf` err
 
 isConcurrentMoveError :: OwnershipError -> Bool
 isConcurrentMoveError (OwnershipError _ "Concurrent move" _) = True
@@ -156,7 +158,7 @@ isInfixOf :: String -> String -> Bool
 isInfixOf needle haystack = needle `elem` (substrings haystack)
   where
     substrings [] = []
-    substrings s@(x:xs) = take (length needle) s : substrings xs
+    substrings s@(x:xs) = take (L.length needle) s : substrings xs
 
 -- Helper functions for QuickCheck
 generateConcurrentProgram :: Int -> String

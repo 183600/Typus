@@ -10,6 +10,7 @@
 module Test.Unit.DependenciesNewQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -84,8 +85,9 @@ import Dependencies.AST
 
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos)
 import Data.Text (Text)
-import qualified Data.Text as T
-import Data.List (sort, length, null, isPrefixOf, nub)
+import qualified Data.Text as T (pack, unpack)
+import Data.List (length, isPrefixOf)
+import Data.List (sort, null, nub)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -102,7 +104,7 @@ prop_new_type_variables_unique count =
   count > 0 && count <= 100 ==>
   let checker = newDependentTypeChecker
       typeVars = take count (iterate (const (newTypeVariable checker)) (newTypeVariable checker))
-  in property $ length (nub typeVars) === length typeVars
+  in property $ L.length (nub typeVars) === L.length typeVars
 
 -- Property: Fresh type variables are different
 prop_fresh_type_variables_different :: Property
@@ -119,7 +121,7 @@ prop_fresh_type_variables_different =
 -- Property: Simple type expressions are equal if names are equal
 prop_simple_type_equality :: String -> Property
 prop_simple_type_equality typeName =
-  not (null typeName) && all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"]) typeName ==>
+  not (null typeName) && L.all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"]) typeName ==>
   let type1 = SimpleT (T.pack typeName)
       type2 = SimpleT (T.pack typeName)
   in property $ type1 === type2
@@ -127,13 +129,13 @@ prop_simple_type_equality typeName =
 -- Property: Generic type expressions preserve parameters
 prop_generic_type_preserves_params :: String -> [String] -> Property
 prop_generic_type_preserves_params baseName params =
-  not (null baseName) && all (not . null) params && all (all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"])) params ==>
+  not (null baseName) && L.all (not . null) params && L.all (L.all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"])) params ==>
   let baseType = SimpleT (T.pack baseName)
-      paramTypes = map (\p -> SimpleT (T.pack p)) params
+      paramTypes = L.map (\p -> SimpleT (T.pack p)) params
       genericType = GenericT baseType paramTypes
-  in property $ length (typeArgs genericType) === length params
+  in property $ L.length (typeArgs genericType) === L.length params
 
--- Property: Function type expressions preserve domain and codomain
+-- Property: Function type expressions preserve domain L.and codomain
 prop_function_type_preserves_domain_codomain :: String -> String -> Property
 prop_function_type_preserves_domain_codomain domain codomain =
   not (null domain) && not (null codomain) ==>
@@ -178,12 +180,12 @@ prop_initial_env_contains_prelude :: Property
 prop_initial_env_contains_prelude =
   let env = initialTypeEnvironment
       preludeNames = Map.keys preludeTypeDefs
-  in property $ all (`Map.member` typeDefs env) preludeNames
+  in property $ L.all (`Map.member` typeDefs env) preludeNames
 
 -- Property: Adding type to environment makes it available
 prop_add_type_makes_available :: String -> Property
 prop_add_type_makes_available typeName =
-  not (null typeName) && all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"]) typeName ==>
+  not (null typeName) && L.all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"]) typeName ==>
   let checker = newDependentTypeChecker
       typeDef = TypeDef (T.pack typeName) [] Nothing
       checker' = addType typeDef checker
@@ -215,7 +217,7 @@ prop_check_simple_prelude_type typeName =
 -- Property: Checking undefined type fails
 prop_check_undefined_type_fails :: String -> Property
 prop_check_undefined_type_fails typeName =
-  not (null typeName) && not (typeName `elem` ["Int", "String", "Bool"]) && all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"]) typeName ==>
+  not (null typeName) && not (typeName `elem` ["Int", "String", "Bool"]) && L.all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"]) typeName ==>
   let checker = newDependentTypeChecker
       typeExpr = SimpleT (T.pack typeName)
   in property $ not (checkType typeExpr checker)
@@ -277,7 +279,7 @@ prop_unification_with_type_var :: Property
 prop_unification_with_type_var =
   let checker = newDependentTypeChecker
       typeVar = newTypeVariable checker
-      concreteType = SimpleT "Int"
+      concreteType = SimpleT (T.pack "Int")
       result = unify typeVar concreteType checker
   in property $ isJust result
 
@@ -296,8 +298,8 @@ prop_analyze_empty_ast =
 -- Property: Analyzing AST with simple statements works
 prop_analyze_simple_ast :: String -> Property
 prop_analyze_simple_ast varName =
-  not (null varName) && all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"]) varName ==>
-  let statement = VariableDeclaration (T.pack varName) (SimpleT "Int") Nothing
+  not (null varName) && L.all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"]) varName ==>
+  let statement = VariableDeclaration (T.pack varName) (SimpleT (T.pack "Int")) Nothing
       ast = AST { astStatements = [statement], astImports = [] }
       checker = newDependentTypeChecker
       result = analyzeAST ast checker
@@ -306,8 +308,8 @@ prop_analyze_simple_ast varName =
 -- Property: Validating simple statement works
 prop_validate_simple_statement :: String -> Property
 prop_validate_simple_statement varName =
-  not (null varName) && all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"]) varName ==>
-  let statement = VariableDeclaration (T.pack varName) (SimpleT "Int") Nothing
+  not (null varName) && L.all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"]) varName ==>
+  let statement = VariableDeclaration (T.pack varName) (SimpleT (T.pack "Int")) Nothing
       checker = newDependentTypeChecker
       result = validateStatement statement checker
   in property $ isJust result
@@ -319,7 +321,7 @@ prop_validate_simple_statement varName =
 -- Property: Inferring type of simple expression works
 prop_infer_simple_expression :: String -> Property
 prop_infer_simple_expression varName =
-  not (null varName) && all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"]) varName ==>
+  not (null varName) && L.all (`elem` ['a'..'z' ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"]) varName ==>
   let env = initialTypeEnvironment
       expr = Variable (T.pack varName)
       result = inferType expr env
@@ -376,12 +378,12 @@ prop_type_errors_have_location errorMsg pos =
 -- Property: Collecting errors preserves error messages
 prop_collect_errors_preserves_messages :: [String] -> Property
 prop_collect_errors_preserves_messages errorMessages =
-  not (null errorMessages) && all (not . null) errorMessages ==>
+  not (null errorMessages) && L.all (not . null) errorMessages ==>
   let checker = newDependentTypeChecker
-      errors = map (\msg -> DependentTypeError (T.pack msg) startPos) errorMessages
-      checker' = foldr (\err acc -> addTypeError err acc) checker errors
+      errors = L.map (\msg -> DependentTypeError (T.pack msg) startPos) errorMessages
+      checker' = L.foldr (\err acc -> addTypeError err acc) checker errors
       collectedErrors = getDependentTypeErrors checker'
-  in property $ length collectedErrors === length errorMessages
+  in property $ L.length collectedErrors === L.length errorMessages
 
 -- ============================================================================
 -- Test Suite

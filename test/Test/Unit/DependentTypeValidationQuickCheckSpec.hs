@@ -4,6 +4,7 @@
 module Test.Unit.DependentTypeValidationQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, QuickCheckTests(..))
 import Test.Tasty.HUnit (testCase, assert, assertBool)
 import DependentTypesParser (DependentType, TypeConstraint, TypeVariable(..))
@@ -30,7 +31,7 @@ instance Arbitrary TypeVar where
 data DependentType = 
     BaseType TypeVar
   | FunctionType DependentType DependentType
-  | VectorType DependentType TypeVar  -- Vector with length constraint
+  | VectorType DependentType TypeVar  -- Vector with L.length constraint
   | MatrixType DependentType TypeVar TypeVar  -- Matrix with dimensions
   deriving (Show, Eq)
 
@@ -100,7 +101,7 @@ tests = testGroup "Dependent Type Validation Tests"
       \var len -> let vectorType = VectorType typ var
                       constraint = LengthConstraint var len
                   in validateConstraint vectorType constraint == 
-                     (len > 0 && len <= 1000)  -- Reasonable length bounds
+                     (len > 0 && len <= 1000)  -- Reasonable L.length bounds
 
   , testProperty "matrix dimension constraints are validated" $ \typ ->
       \var rows cols -> let matrixType = MatrixType typ var var
@@ -115,7 +116,7 @@ tests = testGroup "Dependent Type Validation Tests"
             allConstraints = ConstraintSet (cs1 ++ cs2)
             sat1 = satisfyConstraints env constraints1
             sat2 = satisfyConstraints env allConstraints
-        in sat2 ==> sat1  -- If all constraints are satisfied, subset is also satisfied
+        in sat2 ==> sat1  -- If L.all constraints are satisfied, subset is also satisfied
 
   , testProperty "type unification preserves constraints" $ \typ1 ->
       \typ2 -> case unifyTypes typ1 typ2 of
@@ -137,12 +138,12 @@ tests = testGroup "Dependent Type Validation Tests"
           env = TypeEnvironment Map.empty
       assert (validateType env funcType)
 
-  , testCase "vector type with valid length constraint" $ do
+  , testCase "vector type with valid L.length constraint" $ do
       let vectorType = VectorType (BaseType (TypeVar "a")) (TypeVar "n")
           constraint = LengthConstraint (TypeVar "n") 10
       assert (validateConstraint vectorType constraint)
 
-  , testCase "vector type with invalid length constraint" $ do
+  , testCase "vector type with invalid L.length constraint" $ do
       let vectorType = VectorType (BaseType (TypeVar "a")) (TypeVar "n")
           constraint = LengthConstraint (TypeVar "n") (-5)
       assert (not $ validateConstraint vectorType constraint)
@@ -197,7 +198,7 @@ validateType env (VectorType elemType _) = validateType env elemType
 validateType env (MatrixType elemType _ _) = validateType env elemType
 
 satisfyConstraints :: TypeEnvironment -> ConstraintSet -> Bool
-satisfyConstraints env (ConstraintSet constraints) = all (validateConstraint' env) constraints
+satisfyConstraints env (ConstraintSet constraints) = L.all (validateConstraint' env) constraints
   where
     validateConstraint' _ (LengthConstraint _ len) = len > 0 && len <= 1000
     validateConstraint' _ (DimensionConstraint _ rows cols) = rows > 0 && cols > 0 && rows <= 100 && cols <= 100

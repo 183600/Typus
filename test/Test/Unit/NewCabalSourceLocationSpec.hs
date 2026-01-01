@@ -3,7 +3,9 @@ module Test.Unit.NewCabalSourceLocationSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.QuickCheck (property, forAll, Gen, arbitrary, choose, listOf1, elements, Positive(..))
-import Data.List (isInfixOf, sort, nub, isPrefixOf)
+import qualified Data.List as L
+import Data.List (isInfixOf, isPrefixOf)
+import Data.List (sort, nub)
 import Data.Char (isLetter, isDigit)
 
 import TestSupport.QuickCheck (fastProperty)
@@ -11,7 +13,7 @@ import SourceLocation
 import Parser
 import Utils
 
--- | Source location tracking and precision tests
+-- | Source location tracking L.and precision tests
 tests :: TestTree
 tests =
   testGroup "New Cabal Source Location Tests"
@@ -21,8 +23,8 @@ tests =
                 result = parseWithLocations input
             case result of
               ParseWithLocationsSuccess ast locations -> do
-                length locations @?= 1
-                let loc = head locations
+                L.length locations @?= 1
+                let loc = L.head locations
                 sourceLine loc @?= 1
                 sourceColumn loc @?= 1
                 sourceEndColumn loc @?= 6
@@ -37,7 +39,7 @@ tests =
                 result = parseWithLocations input
             case result of
               ParseWithLocationsSuccess ast locations -> do
-                length locations @?= 3
+                L.length locations @?= 3
                 sourceLine (locations !! 0) @?= 1
                 sourceLine (locations !! 1) @?= 2
                 sourceLine (locations !! 2) @?= 3
@@ -53,8 +55,8 @@ tests =
                 result = parseWithLocations input
             case result of
               ParseWithLocationsSuccess ast locations -> do
-                length locations @?= 4
-                let funcLoc = head locations
+                L.length locations @?= 4
+                let funcLoc = L.head locations
                     bodyLoc = locations !! 1
                 sourceLine funcLoc @?= 1
                 sourceColumn funcLoc @?= 1
@@ -69,7 +71,7 @@ tests =
                 result = parseWithLocations input
             case result of
               ParseWithLocationsSuccess ast locations -> do
-                let loc = head locations
+                let loc = L.head locations
                 sourceColumn loc @?= 5  -- After 4 spaces
                 sourceEndColumn loc @?= 10
               _ -> @?= "Expected parse success with locations" "Got failure"
@@ -79,7 +81,7 @@ tests =
                 result = parseWithLocations input
             case result of
               ParseWithLocationsSuccess ast locations -> do
-                let loc = head locations
+                let loc = L.head locations
                 sourceColumn loc @?= 1
                 -- Note: column counting should be in characters, not bytes
                 sourceEndColumn loc @?= 6  // 变量 takes 3 characters
@@ -90,7 +92,7 @@ tests =
                 result = parseWithLocations input
             case result of
               ParseWithLocationsSuccess ast locations -> do
-                let loc = head locations
+                let loc = L.head locations
                 sourceColumn loc @?= 5  -- Tab expanded to 4 spaces + 1
               _ -> @?= "Expected parse success with locations" "Got failure"
         ]
@@ -110,7 +112,7 @@ tests =
             case (originalResult, refactoredResult) of
               (ParseWithLocationsSuccess origAst origLocs, 
                ParseWithLocationsSuccess refAst refLocs) -> do
-                length origLocs @?= length refLocs
+                L.length origLocs @?= L.length refLocs
                 -- Line numbers should be preserved
                 map sourceLine origLocs @?= map sourceLine refLocs
               _ -> @?= "Expected parse success with locations" "Got failure"
@@ -147,7 +149,7 @@ tests =
             case result of
               ParseErrorWithLocation err loc -> do
                 sourceLine loc @?= 2
-                "24" `isInfixOf` showErrorContext loc input @?= True
+                "24" `L.isInfixOf` showErrorContext loc input @?= True
               _ -> @?= "Expected parse error with location" "Got success"
 
         , testCase "type error location accuracy" $ do
@@ -159,7 +161,7 @@ tests =
             case result of
               TypeErrorWithLocation err loc -> do
                 sourceLine loc @?= 1
-                "x" `isInfixOf` showErrorContext loc input @?= True
+                "x" `L.isInfixOf` showErrorContext loc input @?= True
               _ -> @?= "Expected type error with location" "Got success"
 
         , testCase "semantic error location accuracy" $ do
@@ -171,7 +173,7 @@ tests =
             case result of
               SemanticErrorWithLocation err loc -> do
                 sourceLine loc @?= 2
-                "undefined_var" `isInfixOf` showErrorContext loc input @?= True
+                "undefined_var" `L.isInfixOf` showErrorContext loc input @?= True
               _ -> @?= "Expected semantic error with location" "Got success"
         ]
 
@@ -239,8 +241,8 @@ prop_errorLocationsInBounds input =
   let result = parseWithErrorLocations input
   in case result of
        ParseErrorWithLocation err loc ->
-         let lineCount = length (lines input)
-             lineLength = length (lines input !! (sourceLine loc - 1))
+         let lineCount = L.length (lines input)
+             lineLength = L.length (lines input !! (sourceLine loc - 1))
          in sourceLine loc >= 1 && 
             sourceLine loc <= lineCount &&
             sourceColumn loc >= 1 && 
@@ -274,13 +276,13 @@ data AnalyzeResultWithLocations =
 parseWithLocations :: String -> ParseResultWithLocations
 parseWithLocations input =
   let linesList = lines input
-      locations = [SourceLocation (i+1) 1 (length line) "test.typus" | (i, line) <- zip [0..] linesList]
-  in ParseWithLocationsSuccess ("Parsed " ++ show (length linesList) ++ " lines") locations
+      locations = [SourceLocation (i+1) 1 (L.length line) "test.typus" | (i, line) <- zip [0..] linesList]
+  in ParseWithLocationsSuccess ("Parsed " ++ show (L.length linesList) ++ " lines") locations
 
 parseWithErrorLocations :: String -> ParseResultWithLocations
 parseWithErrorLocations input
   | "+" `isInfix` input && "++" `isInfix` input = 
-      let errorLine = head [i | (i, line) <- zip [1..] (lines input), "++" `isInfix` line]
+      let errorLine = L.head [i | (i, line) <- zip [1..] (lines input), "++" `isInfix` line]
       in ParseErrorWithLocation "Syntax error: unexpected token" (SourceLocation errorLine 10 12 "test.typus")
   | otherwise = parseWithLocations input
 
@@ -293,7 +295,7 @@ typeCheckWithErrorLocations input
 analyzeWithErrorLocations :: String -> AnalyzeResultWithLocations
 analyzeWithErrorLocations input
   | "undefined_var" `isInfix` input = 
-      let errorLine = head [i | (i, line) <- zip [1..] (lines input), "undefined_var" `isInfix` line]
+      let errorLine = L.head [i | (i, line) <- zip [1..] (lines input), "undefined_var" `isInfix` line]
       in SemanticErrorWithLocation "Semantic error: undefined variable" (SourceLocation errorLine 5 16 "test.typus")
   | otherwise = AnalyzeSuccessWithLocations "Analysis successful" []
 
@@ -321,7 +323,7 @@ mergeLocations loc1 loc2
 showErrorContext :: SourceLocation -> String -> String
 showErrorContext loc input =
   let linesList = lines input
-      targetLine = if sourceLine loc - 1 < length linesList
+      targetLine = if sourceLine loc - 1 < L.length linesList
                    then linesList !! (sourceLine loc - 1)
                    else ""
   in take (sourceEndColumn loc - sourceColumn loc + 1) 

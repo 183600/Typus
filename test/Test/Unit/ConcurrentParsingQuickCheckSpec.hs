@@ -20,23 +20,25 @@ import Compiler (compileTypus)
 import Control.Concurrent (forkIO, MVar, newEmptyMVar, putMVar, takeMVar)
 import Control.Monad (replicateM_, when)
 import Data.Char (isLetter, isDigit)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (sort, nub)
 import qualified Data.List as List
 import qualified Data.Map as Map
 
 -- Property: Concurrent parsing should handle multiple files simultaneously
 prop_concurrent_parsing_multiple_files :: [String] -> Property
 prop_concurrent_parsing_multiple_files fileContents =
-  not (null fileContents) && length (take 5 fileContents) <= 5 ==> -- Limit files
+  not (null fileContents) && L.length (take 5 fileContents) <= 5 ==> -- Limit files
   let limitedContents = take 5 fileContents
-      validContents = filter (\c -> length c <= 100) limitedContents
+      validContents = L.filter (\c -> L.length c <= 100) limitedContents
   in not (null validContents) ==> 
      property $ True  -- Concurrent parsing should be safe
 
 -- Property: Concurrent parsing should not interfere with each other
 prop_concurrent_parsing_isolation :: String -> String -> Property
 prop_concurrent_parsing_isolation content1 content2 =
-  length content1 <= 80 && length content2 <= 80 ==> -- Limit size
+  L.length content1 <= 80 && L.length content2 <= 80 ==> -- Limit size
   let source1 = "package main\nfunc main() { " ++ content1 ++ " }"
       source2 = "package main\nfunc main() { " ++ content2 ++ " }"
   in property $ True  -- Concurrent parsing should be isolated
@@ -53,7 +55,7 @@ prop_concurrent_parsing_large_files sizeMultiplier =
 -- Property: Concurrent parsing should handle mixed valid/invalid code
 prop_concurrent_parsing_mixed_validity :: String -> String -> Property
 prop_concurrent_parsing_mixed_validity validCode invalidCode =
-  length validCode <= 50 && length invalidCode <= 50 ==> -- Limit size
+  L.length validCode <= 50 && L.length invalidCode <= 50 ==> -- Limit size
   let validSource = "package main\nfunc main() { " ++ validCode ++ " }"
       invalidSource = "package main\nfunc main() { " ++ invalidCode ++ " malformed }"
   in property $ True  -- Should handle mixed validity gracefully
@@ -61,17 +63,17 @@ prop_concurrent_parsing_mixed_validity validCode invalidCode =
 -- Property: Concurrent parsing should preserve parse order independence
 prop_concurrent_parsing_order_independent :: [String] -> Property
 prop_concurrent_parsing_order_independent contents =
-  not (null contents) && length (take 3 contents) <= 3 ==> -- Limit contents
+  not (null contents) && L.length (take 3 contents) <= 3 ==> -- Limit contents
   let limitedContents = take 3 contents
-      sources = map (\c -> "package main\nfunc main() { " ++ c ++ " }") limitedContents
+      sources = L.map (\c -> "package main\nfunc main() { " ++ c ++ " }") limitedContents
   in property $ True  -- Order should not affect concurrent parsing
 
 -- Property: Concurrent parsing should handle Unicode content
 prop_concurrent_parsing_unicode :: [String] -> Property
 prop_concurrent_parsing_unicode unicodeStrings =
-  not (null unicodeStrings) && length (take 3 unicodeStrings) <= 3 ==> -- Limit strings
+  not (null unicodeStrings) && L.length (take 3 unicodeStrings) <= 3 ==> -- Limit strings
   let limitedStrings = take 3 unicodeStrings
-      sources = map (\u -> "package main\nfunc main() { x := \"" ++ u ++ "\" }") limitedStrings
+      sources = L.map (\u -> "package main\nfunc main() { x := \"" ++ u ++ "\" }") limitedStrings
   in property $ True  -- Should handle Unicode concurrently
 
 -- Property: Concurrent parsing should handle complex syntax
@@ -82,10 +84,10 @@ prop_concurrent_parsing_complex_syntax complexity =
       source = "package main\nfunc main() {\n   x := 0\n   " ++ unwords complexityLevel ++ "\n}"
   in property $ True  -- Should handle complex syntax concurrently
 
--- Property: Concurrent parsing should handle comments and directives
+-- Property: Concurrent parsing should handle comments L.and directives
 prop_concurrent_parsing_comments :: String -> String -> Property
 prop_concurrent_parsing_comments lineComment blockComment =
-  length lineComment <= 30 && length blockComment <= 30 ==> -- Limit size
+  L.length lineComment <= 30 && L.length blockComment <= 30 ==> -- Limit size
   let source = unlines 
         [ "package main"
         , "// " ++ lineComment
@@ -99,15 +101,15 @@ prop_concurrent_parsing_comments lineComment blockComment =
 -- Property: Concurrent parsing should handle different language features
 prop_concurrent_parsing_features :: [String] -> Property
 prop_concurrent_parsing_features features =
-  not (null features) && length (take 4 features) <= 4 ==> -- Limit features
+  not (null features) && L.length (take 4 features) <= 4 ==> -- Limit features
   let limitedFeatures = take 4 features
-      sources = map (\f -> "package main\nfunc main() { " ++ f ++ " }") limitedFeatures
+      sources = L.map (\f -> "package main\nfunc main() { " ++ f ++ " }") limitedFeatures
   in property $ True  -- Should handle different features concurrently
 
 -- Property: Concurrent parsing should be thread-safe
 prop_concurrent_parsing_thread_safety :: String -> Property
 prop_concurrent_parsing_thread_safety content =
-  length content <= 60 ==> -- Limit size
+  L.length content <= 60 ==> -- Limit size
   let source = "package main\nfunc main() { " ++ content ++ " }"
   in property $ True  -- Should be thread-safe
 
@@ -136,24 +138,24 @@ prop_concurrent_parsing_nested depth =
 -- Property: Concurrent parsing should handle error cases gracefully
 prop_concurrent_parsing_error_cases :: [String] -> Property
 prop_concurrent_parsing_error_cases errorPatterns =
-  not (null errorPatterns) && length (take 3 errorPatterns) <= 3 ==> -- Limit patterns
+  not (null errorPatterns) && L.length (take 3 errorPatterns) <= 3 ==> -- Limit patterns
   let limitedPatterns = take 3 errorPatterns
-      sources = map (\e -> "package main\nfunc main() { " ++ e ++ " }") limitedPatterns
+      sources = L.map (\e -> "package main\nfunc main() { " ++ e ++ " }") limitedPatterns
   in property $ True  -- Should handle errors gracefully
 
 -- Property: Concurrent parsing should maintain consistency
 prop_concurrent_parsing_consistency :: String -> Property
 prop_concurrent_parsing_consistency content =
-  length content <= 100 ==> -- Limit size
+  L.length content <= 100 ==> -- Limit size
   let source = "package main\nfunc main() { " ++ content ++ " }"
   in property $ True  -- Should maintain consistency
 
 -- Property: Concurrent parsing should handle different encodings
 prop_concurrent_parsing_encodings :: [String] -> Property
 prop_concurrent_parsing_encodings encodedStrings =
-  not (null encodedStrings) && length (take 3 encodedStrings) <= 3 ==> -- Limit strings
+  not (null encodedStrings) && L.length (take 3 encodedStrings) <= 3 ==> -- Limit strings
   let limitedStrings = take 3 encodedStrings
-      sources = map (\s -> "package main\nfunc main() { x := \"" ++ s ++ "\" }") limitedStrings
+      sources = L.map (\s -> "package main\nfunc main() { x := \"" ++ s ++ "\" }") limitedStrings
   in property $ True  -- Should handle different encodings
 
 -- Property: Concurrent parsing should handle resource limits
@@ -198,22 +200,22 @@ prop_concurrent_parsing_memory memoryFactor =
 -- Property: Concurrent parsing should handle mixed workloads
 prop_concurrent_parsing_mixed_workload :: [String] -> Property
 prop_concurrent_parsing_mixed_workload workloads =
-  not (null workloads) && length (take 5 workloads) <= 5 ==> -- Limit workloads
+  not (null workloads) && L.length (take 5 workloads) <= 5 ==> -- Limit workloads
   let limitedWorkloads = take 5 workloads
-      sources = map (\w -> "package main\nfunc main() { " ++ w ++ " }") limitedWorkloads
+      sources = L.map (\w -> "package main\nfunc main() { " ++ w ++ " }") limitedWorkloads
   in property $ True  -- Should handle mixed workloads
 
 -- Property: Concurrent parsing should handle cancellation gracefully
 prop_concurrent_parsing_cancellation :: String -> Property
 prop_concurrent_parsing_cancellation content =
-  length content <= 80 ==> -- Limit size
+  L.length content <= 80 ==> -- Limit size
   let source = "package main\nfunc main() { " ++ content ++ " }"
   in property $ True  -- Should handle cancellation gracefully
 
 -- Property: Concurrent parsing should maintain isolation of errors
 prop_concurrent_parsing_error_isolation :: String -> String -> Property
 prop_concurrent_parsing_error_isolation validContent invalidContent =
-  length validContent <= 50 && length invalidContent <= 50 ==> -- Limit size
+  L.length validContent <= 50 && L.length invalidContent <= 50 ==> -- Limit size
   let validSource = "package main\nfunc main() { " ++ validContent ++ " }"
       invalidSource = "package main\nfunc main() { " ++ invalidContent ++ " syntax error }"
   in property $ True  -- Should isolate errors properly

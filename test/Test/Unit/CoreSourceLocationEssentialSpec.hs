@@ -3,6 +3,7 @@
 module Test.Unit.CoreSourceLocationEssentialSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
 
 import SourceLocation
@@ -43,8 +44,8 @@ tests = testGroup "Core SourceLocation Essential Tests"
     ]
   
   , testGroup "Source Span Operations"
-    [ testCase "emptySpan has zero length" $
-        assertBool "emptySpan should have same start and end" 
+    [ testCase "emptySpan has zero L.length" $
+        assertBool "emptySpan should have same start L.and end" 
           (spanStart emptySpan == spanEnd emptySpan)
     
     , testCase "spanFrom creates span from position" $
@@ -92,7 +93,7 @@ tests = testGroup "Core SourceLocation Essential Tests"
     , testCase "mapLocated transforms located value" $
         let value = "hello"
             located = locatedAt (SourcePos 1 1) value
-            transformed = mapLocated length located
+            transformed = mapLocated L.length located
         in do
           assertEqual "should transform value" 5 (locatedValue transformed)
           assertEqual "should preserve location" (locatedSpan located) (locatedSpan transformed)

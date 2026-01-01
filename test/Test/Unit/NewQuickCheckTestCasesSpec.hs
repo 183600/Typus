@@ -8,6 +8,7 @@ import Test.QuickCheck
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isPrefixOf)
 
 import Utils (trim, splitBy, splitByCollapsed, removeLineComments, normalizeIndentation, breakOn)
@@ -29,14 +30,14 @@ prop_trim_idempotent s =
 prop_splitByCollapsed_no_empty :: Char -> String -> Property
 prop_splitByCollapsed_no_empty delim s =
   let parts = splitByCollapsed delim s
-  in property $ all (not . null) parts
+  in property $ L.all (not . null) parts
 
--- Property 3: splitBy length relationship
+-- Property 3: splitBy L.length relationship
 prop_splitBy_length :: Char -> String -> Property
 prop_splitBy_length delim s =
   let parts = splitBy delim s
-      expectedLength = length (filter (== delim) s) + 1
-  in property (length parts == expectedLength)
+      expectedLength = L.length (L.filter (== delim) s) + 1
+  in property (L.length parts == expectedLength)
 
 -- Property 4: SourcePos advancement maintains consistency
 prop_sourcepos_advancement_consistent :: String -> Property
@@ -59,7 +60,7 @@ prop_merge_spans_commutative span1 span2 =
       merged2 = mergeSpans span2 span1
   in merged1 === merged2
 
--- Property 6: Map union preserves all keys from both maps
+-- Property 6: Map union preserves L.all keys from both maps
 prop_map_union_preserves_keys :: Map.Map String Int -> Map.Map String Int -> Property
 prop_map_union_preserves_keys m1 m2 =
   let union = Map.union m1 m2
@@ -84,23 +85,23 @@ prop_normalize_indentation_idempotent s =
 prop_ownership_type_reflexive :: OwnershipType -> Property
 prop_ownership_type_reflexive t = t === t
 
--- Property 10: Set union contains all elements from both sets
+-- Property 10: Set union contains L.all elements from both sets
 prop_set_union_contains_all :: Set.Set Int -> Set.Set Int -> Property
 prop_set_union_contains_all s1 s2 =
   let union = Set.union s1 s2
-  in property $ all (`Set.member` union) (Set.toList s1) .&&.
-             all (`Set.member` union) (Set.toList s2)
+  in property $ L.all (`Set.member` union) (Set.toList s1) .&&.
+             L.all (`Set.member` union) (Set.toList s2)
 
 tests :: TestTree
 tests = testGroup "New QuickCheck Test Cases"
   [ fastProperty "trim is idempotent" prop_trim_idempotent
   , fastProperty "splitByCollapsed never returns empty strings" prop_splitByCollapsed_no_empty
-  , fastProperty "splitBy length relationship" prop_splitBy_length
+  , fastProperty "splitBy L.length relationship" prop_splitBy_length
   , fastProperty "SourcePos advancement maintains consistency" prop_sourcepos_advancement_consistent
   , fastProperty "mergeSpans is commutative" prop_merge_spans_commutative
-  , fastProperty "Map union preserves all keys" prop_map_union_preserves_keys
+  , fastProperty "Map union preserves L.all keys" prop_map_union_preserves_keys
   , fastProperty "removeLineComments is idempotent" prop_removeLine_comments_idempotent
   , fastProperty "normalizeIndentation is idempotent" prop_normalize_indentation_idempotent
   , fastProperty "OwnershipType equality is reflexive" prop_ownership_type_reflexive
-  , fastProperty "Set union contains all elements from both sets" prop_set_union_contains_all
+  , fastProperty "Set union contains L.all elements from both sets" prop_set_union_contains_all
   ]

@@ -3,6 +3,7 @@
 module Test.Unit.ParserDirectivesQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import Parser
@@ -38,12 +39,12 @@ prop_typusFile_blocks_valid file =
             start = spanStart span
             end = spanEnd span
         in posOffset start <= posOffset end
-  in property $ all validBlock blocks
+  in property $ L.all validBlock blocks
 
 tests :: TestTree
 tests = testGroup "Parser Directives QuickCheck"
-  [ fastProperty "FileDirectives default is all Nothing" prop_fileDirectives_default_all_nothing
-  , fastProperty "BlockDirectives default is all Nothing" prop_blockDirectives_default_all_nothing
+  [ fastProperty "FileDirectives default is L.all Nothing" prop_fileDirectives_default_all_nothing
+  , fastProperty "BlockDirectives default is L.all Nothing" prop_blockDirectives_default_all_nothing
   , fastProperty "CodeBlock has valid span" prop_codeBlock_has_span
   , fastProperty "TypusFile blocks are valid" prop_typusFile_blocks_valid
   ]

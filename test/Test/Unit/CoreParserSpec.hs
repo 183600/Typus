@@ -1,6 +1,7 @@
 module Test.Unit.CoreParserSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, choose, oneof, elements, listOf)
 import Data.Text (T)
@@ -29,9 +30,9 @@ tests =
             case result of
                 Left err -> assertBool ("should parse simple content: " ++ err) False
                 Right typusFile -> do
-                    length (tfBlocks typusFile) @?= 1
-                    let block = head (tfBlocks typusFile)
-                    assertBool "block should contain function" $ "func main()" `isInfixOf` cbContent block
+                    L.length (tfBlocks typusFile) @?= 1
+                    let block = L.head (tfBlocks typusFile)
+                    assertBool "block should contain function" $ "func main()" `L.isInfixOf` cbContent block
 
         , testCase "parseTypus handles file directives" $ do
             let content = "//! ownership: on, dependent_types: true\n\npackage main\n"
@@ -113,10 +114,10 @@ tests =
                 line3 = ParsedLine "}\n" "\n" (SourceSpan (SourcePos 3 1 39) (SourcePos 3 2 40))
             case parseBlocksFromParsedLines [line1, line2, line3] of
                 Right blocks -> do
-                    length blocks @?= 1
-                    let block = head blocks
-                    assertBool "block should contain function" $ "func main()" `isInfixOf` cbContent block
-                    assertBool "block should contain print statement" $ "fmt.Println" `isInfixOf` cbContent block
+                    L.length blocks @?= 1
+                    let block = L.head blocks
+                    assertBool "block should contain function" $ "func main()" `L.isInfixOf` cbContent block
+                    assertBool "block should contain print statement" $ "fmt.Println" `L.isInfixOf` cbContent block
                 Left _ -> assertBool "should parse simple blocks" False
 
         , testCase "parseBlocksFromParsedLines handles directive blocks" $ do
@@ -125,12 +126,12 @@ tests =
                 closingLine = ParsedLine "}\n" "\n" (SourceSpan (SourcePos 3 1 49) (SourcePos 3 2 50))
             case parseBlocksFromParsedLines [directiveLine, contentLine, closingLine] of
                 Right blocks -> do
-                    length blocks @?= 1
-                    let block = head blocks
+                    L.length blocks @?= 1
+                    let block = L.head blocks
                     case bdOwnership (cbDirectives block) of
                         Just val -> locValue val @?= True
                         Nothing -> assertBool "should have ownership directive" False
-                    assertBool "block should contain content" $ "ownership-enabled code" `isInfixOf` cbContent block
+                    assertBool "block should contain content" $ "ownership-enabled code" `L.isInfixOf` cbContent block
                 Left _ -> assertBool "should parse directive blocks" False
         ]
 
@@ -151,7 +152,7 @@ tests =
             curlyDelta "// { comment }" @?= 0
             curlyDelta "s := \"{not a brace}\"" @?= 0
 
-        , testCase "leadingIndentation counts spaces and tabs" $ do
+        , testCase "leadingIndentation counts spaces L.and tabs" $ do
             leadingIndentation "    hello" @?= 4
             leadingIndentation "\t\thello" @?= 2
             leadingIndentation " \t \t hello" @?= 4
@@ -167,21 +168,21 @@ tests =
                 Left _ -> assertBool "should detect syntax error" True
                 Right typusFile -> do
                     -- Should still parse despite syntax errors
-                    length (tfSyntaxErrors typusFile) @?= 1
-                    assertBool "should have blocks despite errors" $ not (null (tfBlocks typusFile))
+                    L.length (tfSyntaxErrors typusFile) @?= 1
+                    assertBool "should have blocks despite errors" $ not (L.null (tfBlocks typusFile))
 
         , testCase "multiple package declarations are rejected" $ do
             let content = "package main\n\npackage other\n"
                 result = parseTypus content
             case result of
-                Left err -> assertBool "should reject multiple packages" $ "Multiple package" `isInfixOf` err
+                Left err -> assertBool "should reject multiple packages" $ "Multiple package" `L.isInfixOf` err
                 Right _ -> assertBool "should not accept multiple packages" False
 
         , testCase "if statements without braces are rejected" $ do
             let content = "if true\n  fmt.Println(\"hello\")\n"
                 result = parseTypus content
             case result of
-                Left err -> assertBool "should reject if without brace" $ "missing opening brace" `isInfixOf` err
+                Left err -> assertBool "should reject if without brace" $ "missing opening brace" `L.isInfixOf` err
                 Right _ -> assertBool "should not accept if without brace" False
 
         , testCase "unclosed directive blocks are rejected" $ do
@@ -199,11 +200,11 @@ tests =
             case result of
                 Left err -> assertBool ("should parse build tags: " ++ err) False
                 Right typusFile -> do
-                    length (tfBuildTags typusFile) @?= 2
+                    L.length (tfBuildTags typusFile) @?= 2
                     assertBool "first tag should be go:build" $ 
-                        "//go:build linux" `isInfixOf` locValue (head (tfBuildTags typusFile))
+                        "//go:build linux" `L.isInfixOf` locValue (L.head (tfBuildTags typusFile))
                     assertBool "second tag should be +build" $ 
-                        "// +build darwin" `isInfixOf` locValue (tfBuildTags typusFile !! 1)
+                        "// +build darwin" `L.isInfixOf` locValue (tfBuildTags typusFile !! 1)
         ]
 
     , testGroup "Property-based tests"
@@ -224,9 +225,9 @@ tests =
             \input -> curlyDelta input == 0 ==> curlyDelta input == 0
 
         , testProperty "parseTypus on empty content returns empty blocks" $
-            \content -> null (trim content) ==> 
+            \content -> L.null (trim content) ==> 
                 case parseTypus content of
-                    Right typusFile -> null (tfBlocks typusFile)
+                    Right typusFile -> L.null (tfBlocks typusFile)
                     Left _ -> False
         ]
     ]

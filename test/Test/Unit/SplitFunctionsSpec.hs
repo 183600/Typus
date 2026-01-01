@@ -1,6 +1,7 @@
 module Test.Unit.SplitFunctionsSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, forAll, Gen, arbitrary, elements, choose, listOf)
@@ -24,7 +25,7 @@ tests =
             , testCase "preserves consecutive delimiters" $ do
                 splitBy ',' "a,,b" @?= ["a", "", "b"]
             
-            , testCase "handles all delimiters" $ do
+            , testCase "handles L.all delimiters" $ do
                 splitBy ',' ",,," @?= ["", "", "", ""]
             
             , testCase "handles empty input" $ do
@@ -47,27 +48,27 @@ tests =
         
         , testGroup "QuickCheck properties"
             [ fastProperty "splitBy preserves total content when concatenated with delimiter" $
-                \c s -> c /= '\0' ==> concat (splitBy c s) ++ [c | not (null s) && last s /= c] == 
-                         take (length s) (s ++ repeat c)
+                \c s -> c /= '\0' ==> L.concat (splitBy c s) ++ [c | not (null s) && last s /= c] == 
+                         take (L.length s) (s ++ repeat c)
             
             , fastProperty "splitBy on single character returns list with that character" $
                 \c -> splitBy c [c] == ["", ""]
             
             , fastProperty "splitBy on string without delimiter returns singleton list" $
-                \s -> not (elem '\n' s) ==> splitBy '\n' s == [s]
+                \s -> not (L.elem '\n' s) ==> splitBy '\n' s == [s]
             
             , fastProperty "splitBy preserves order of segments" $
                 \c s -> let segments = splitBy c s
-                        in concat segments `isSubsequenceOf` s
+                        in L.concat segments `isSubsequenceOf` s
             
-            , fastProperty "splitBy result length is delimiter count + 1" $
-                \c s -> length (splitBy c s) == countDelimiter c s + 1
+            , fastProperty "splitBy result L.length is delimiter count + 1" $
+                \c s -> L.length (splitBy c s) == countDelimiter c s + 1
             ]
         ]
     
     , testGroup "splitByCollapsed function"
         [ testGroup "Basic functionality"
-            [ testCase "splits and collapses consecutive delimiters" $ do
+            [ testCase "splits L.and collapses consecutive delimiters" $ do
                 splitByCollapsed ',' "a,b,c" @?= ["a", "b", "c"]
             
             , testCase "collapses consecutive delimiters" $ do
@@ -79,7 +80,7 @@ tests =
             , testCase "removes trailing delimiters" $ do
                 splitByCollapsed ',' "a,b," @?= ["a", "b"]
             
-            , testCase "handles all delimiters" $ do
+            , testCase "handles L.all delimiters" $ do
                 splitByCollapsed ',' ",,," @?= []
             
             , testCase "handles empty input" $ do
@@ -90,22 +91,22 @@ tests =
             [ testCase "handles complex collapsing scenarios" $ do
                 splitByCollapsed ',' "a,,,b,,c" @?= ["a", "b", "c"]
         
-        , testCase "handles mixed valid and empty segments" $ do
+        , testCase "handles mixed valid L.and empty segments" $ do
             splitByCollapsed ',' "a,,b,,c,,d" @?= ["a", "b", "c", "d"]
         ]
         
         , testGroup "QuickCheck properties"
             [ fastProperty "splitByCollapsed never returns empty strings" $
-                \c s -> all (not . null) (splitByCollapsed c s)
+                \c s -> L.all (not . null) (splitByCollapsed c s)
             
-            , fastProperty "splitByCollapsed result length <= splitBy result length" $
-                \c s -> length (splitByCollapsed c s) <= length (splitBy c s)
+            , fastProperty "splitByCollapsed result L.length <= splitBy result L.length" $
+                \c s -> L.length (splitByCollapsed c s) <= L.length (splitBy c s)
             
             , fastProperty "splitByCollapsed on string without delimiter returns singleton if non-empty" $
-                \s -> not (elem '\n' s) && not (null s) ==> splitByCollapsed '\n' s == [s]
+                \s -> not (L.elem '\n' s) && not (null s) ==> splitByCollapsed '\n' s == [s]
             
             , fastProperty "splitByCollapsed on string without delimiter returns empty if empty" $
-                \s -> not (elem '\n' s) ==> splitByCollapsed '\n' s == (if null s then [] else [s])
+                \s -> not (L.elem '\n' s) ==> splitByCollapsed '\n' s == (if null s then [] else [s])
             ]
         ]
     
@@ -174,23 +175,23 @@ tests =
             splitByCommaCollapsed input @?= splitByCollapsed ',' input
         ]
     
-    , testGroup "Edge cases and stress tests"
+    , testGroup "Edge cases L.and stress tests"
         [ testCase "handles very long segments" $ do
             let longSegment = replicate 1000 'a'
                 input = longSegment ++ "," ++ replicate 500 'b' ++ "," ++ longSegment
                 result = splitBy ',' input
-            length result @?= 3
-            head result @?= longSegment
+            L.length result @?= 3
+            L.head result @?= longSegment
             last result @?= longSegment
         
         , testCase "handles many delimiters" $ do
-            let input = concat $ replicate 1000 ","
+            let input = L.concat $ replicate 1000 ","
                 result = splitBy ',' input
-            length result @?= 1001
-            all (== "") result @?= True
+            L.length result @?= 1001
+            L.all (== "") result @?= True
         
         , testCase "handles many delimiters with collapsed function" $ do
-            let input = concat $ replicate 1000 ","
+            let input = L.concat $ replicate 1000 ","
                 result = splitByCollapsed ',' input
             result @?= []
         
@@ -206,16 +207,16 @@ tests =
         ]
     
     , testGroup "Performance properties"
-        [ fastProperty "splitBy is linear in input length" $
-            \s -> length (splitBy ',' s) <= length s + 1
+        [ fastProperty "splitBy is linear in input L.length" $
+            \s -> L.length (splitBy ',' s) <= L.length s + 1
         
-        , fastProperty "splitByCollapsed result length <= input length" $
-            \s -> length (splitByCollapsed ',' s) <= length s
+        , fastProperty "splitByCollapsed result L.length <= input L.length" $
+            \s -> L.length (splitByCollapsed ',' s) <= L.length s
         
-        , fastProperty "splitBy preserves all non-delimiter characters" $
+        , fastProperty "splitBy preserves L.all non-delimiter characters" $
             \s -> let segments = splitBy ',' s
-                       nonDelimiters = concat segments
-                       originalNonDelimiters = filter (/= ',') s
+                       nonDelimiters = L.concat segments
+                       originalNonDelimiters = L.filter (/= ',') s
                    in nonDelimiters == originalNonDelimiters
         ]
     ]
@@ -224,7 +225,7 @@ tests =
 
 -- Count occurrences of a delimiter in a string
 countDelimiter :: Char -> String -> Int
-countDelimiter c = length . filter (== c)
+countDelimiter c = L.length . L.filter (== c)
 
 -- Check if one string is a subsequence of another
 isSubsequenceOf :: Eq a => [a] -> [a] -> Bool

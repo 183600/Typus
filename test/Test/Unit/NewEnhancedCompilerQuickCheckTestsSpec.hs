@@ -14,8 +14,10 @@ import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, oneof)
 import Data.Text (Text)
-import qualified Data.Text as T
-import Data.List (isInfixOf, null)
+import qualified Data.Text as T (pack, unpack)
+import qualified Data.List as L
+import Data.List (isInfixOf)
+import Data.List (null)
 import Data.Maybe (isJust, isNothing)
 
 import Compiler
@@ -105,7 +107,7 @@ genInvalidGoCode = oneof
 -- Property: compile returns result for valid code
 prop_compile_valid_code :: String -> Property
 prop_compile_valid_code code =
-  not (null code) && not (any (== '\0') code) ==>
+  not (null code) && not (L.any (== '\0') code) ==>
   let typusFile = TypusFile defaultFileDirectives [] [CodeBlock defaultBlockDirectives code (SourceSpan startPos startPos)] []
       result = compile typusFile
   in case result of
@@ -164,13 +166,13 @@ prop_generate_non_empty_report errors =
 prop_analyze_errors_returns_stats :: [CompilerError] -> Property
 prop_analyze_errors_returns_stats errors =
   let stats = analyzeErrors errors
-  in stats.totalErrors >= length errors
+  in stats.totalErrors >= L.length errors
 
 -- Property: hasTypeErrors checks for type errors
 prop_has_type_errors_checks :: [TypeCheckDiagnostic] -> Property
 prop_has_type_errors_checks diagnostics =
   let hasErrors = hasTypeErrors diagnostics
-      errorDiagnostics = filter (\d -> case d of TypeCheckDiagnostic _ Error -> True; _ -> False) diagnostics
+      errorDiagnostics = L.filter (\d -> case d of TypeCheckDiagnostic _ Error -> True; _ -> False) diagnostics
   in hasErrors === not (null errorDiagnostics)
 
 -- Property: diagnoseTypeErrors returns result for valid file
@@ -185,13 +187,13 @@ prop_diagnose_type_errors_valid typusFile =
 prop_extract_declarations_returns_list :: TypusFile -> Property
 prop_extract_declarations_returns_list typusFile =
   let declarations = extractDeclarations typusFile
-  in length declarations >= 0
+  in L.length declarations >= 0
 
 -- Property: extractFunctionCalls returns list
 prop_extract_function_calls_returns_list :: TypusFile -> Property
 prop_extract_function_calls_returns_list typusFile =
   let functionCalls = extractFunctionCalls typusFile
-  in length functionCalls >= 0
+  in L.length functionCalls >= 0
 
 -- Property: buildTypeEnv creates environment
 prop_build_type_env_creates :: TypusFile -> Property
@@ -247,7 +249,7 @@ prop_check_ownership_examines typusFile =
        Left _ -> property True
        Right _ -> property True
 
--- Property: ensureSourceIR creates IR or error
+-- Property: ensureSourceIR creates IR L.or error
 prop_ensure_source_ir_creates :: TypusFile -> Property
 prop_ensure_source_ir_creates typusFile =
   let result = ensureSourceIR typusFile
@@ -264,7 +266,7 @@ prop_type_diagnostic_to_compiler_error_converts diagnostic =
 -- Property: generateGoCode produces Go code
 prop_generate_go_code_produces :: String -> Property
 prop_generate_go_code_produces code =
-  not (null code) && not (any (== '\0') code) ==>
+  not (null code) && not (L.any (== '\0') code) ==>
   let goCode = generateGoCode code
   in not (null goCode)
 
@@ -283,7 +285,7 @@ prop_error_handling_preserves message phase =
 -- Property: Compilation pipeline consistency
 prop_compilation_pipeline_consistent :: String -> Property
 prop_compilation_pipeline_consistent code =
-  not (null code) && not (any (== '\0') code) ==>
+  not (null code) && not (L.any (== '\0') code) ==>
   let typusFile = TypusFile defaultFileDirectives [] [CodeBlock defaultBlockDirectives code (SourceSpan startPos startPos)] []
       result1 = compile typusFile
       result2 = compile typusFile  -- Compile again
@@ -296,10 +298,10 @@ prop_compilation_pipeline_consistent code =
 prop_error_analysis_comprehensive :: [CompilerError] -> Property
 prop_error_analysis_comprehensive errors =
   let stats = analyzeErrors errors
-      errorCount = length errors
+      errorCount = L.length errors
   in stats.totalErrors >= errorCount .&&.
-     stats.errorsByPhase `length` >= 0 .&&.
-     stats.errorsBySeverity `length` >= 0
+     stats.errorsByPhase `L.length` >= 0 .&&.
+     stats.errorsBySeverity `L.length` >= 0
 
 -- Property: Type checking is deterministic
 prop_type_checking_deterministic :: TypusFile -> Property
@@ -307,7 +309,7 @@ prop_type_checking_deterministic typusFile =
   let result1 = diagnoseTypeErrors typusFile
       result2 = diagnoseTypeErrors typusFile
   in case (result1, result2) of
-       (Right diags1, Right diags2) -> length diags1 === length diags2
+       (Right diags1, Right diags2) -> L.length diags1 === L.length diags2
        (Left _, Left _) -> property True
        _ -> property True
 
@@ -324,17 +326,17 @@ prop_source_ir_consistent typusFile =
 -- Property: Go code generation preserves structure
 prop_go_generation_preserves :: String -> Property
 prop_go_generation_preserves code =
-  not (null code) && not (any (== '\0') code) ==>
+  not (null code) && not (L.any (== '\0') code) ==>
   let goCode = generateGoCode code
-      hasKeywords = "func" `isInfixOf` goCode || "var" `isInfixOf` goCode || "const" `isInfixOf` goCode || "type" `isInfixOf` goCode
+      hasKeywords = "func" `L.isInfixOf` goCode || "var" `L.isInfixOf` goCode || "const" `L.isInfixOf` goCode || "type" `L.isInfixOf` goCode
   in not (null goCode) ==> hasKeywords
 
 -- Property: Error formatting preserves essential info
 prop_error_formatting_preserves :: CompilerError -> Property
 prop_error_formatting_preserves error =
   let formatted = formatCompilerErrors [error]
-      hasCode = errorCode error `T.isInfixOf` formatted
-      hasMessage = errorMessage error `T.isInfixOf` formatted
+      hasCode = errorCode error `L.isInfixOf` formatted
+      hasMessage = errorMessage error `L.isInfixOf` formatted
   in hasCode .&&. hasMessage
 
 -- Property: Compilation handles unicode content
@@ -375,7 +377,7 @@ tests = testGroup "Compiler QuickCheck Tests"
   , fastProperty "hasMalformedSyntax checks syntax" prop_has_malformed_syntax_checks
   , fastProperty "checkDependentTypes examines dependent types" prop_check_dependent_types_examines
   , fastProperty "checkOwnership examines ownership" prop_check_ownership_examines
-  , fastProperty "ensureSourceIR creates IR or error" prop_ensure_source_ir_creates
+  , fastProperty "ensureSourceIR creates IR L.or error" prop_ensure_source_ir_creates
   , fastProperty "typeDiagnosticToCompilerError converts diagnostic" prop_type_diagnostic_to_compiler_error_converts
   , fastProperty "generateGoCode produces Go code" prop_generate_go_code_produces
   , fastProperty "Compilation phases are distinct" prop_compilation_phases_distinct

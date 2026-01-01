@@ -19,6 +19,7 @@ import SourceLocation (SourcePos(..), SourceSpan(..))
 
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import Data.Maybe (isJust, isNothing)
 
@@ -99,7 +100,7 @@ testBasicCompilation = testGroup "Basic Compilation"
   [ testCase "empty program compiles" $ do
       let program = ""
       case compileTypus program of
-        Left _ -> assertBool "Empty program should compile or handle gracefully" True
+        Left _ -> assertBool "Empty program should compile L.or handle gracefully" True
         Right result -> assertBool "Should produce compilation result" True
         
   , testCase "simple program compiles" $ do
@@ -127,7 +128,7 @@ testParserIntegration = testGroup "Parser Integration"
   , testCase "parser handles invalid input gracefully" $ do
       let program = "if condition:\n    doSomething()"
       case parseTypus program of
-        Left err -> assertBool "Should handle syntax errors" $ "missing opening brace" `isInfixOf` err
+        Left err -> assertBool "Should handle syntax errors" $ "missing opening brace" `L.isInfixOf` err
         Right _ -> assertBool "Should attempt recovery" True
         
   , testCase "parser preserves structure" $ do
@@ -135,7 +136,7 @@ testParserIntegration = testGroup "Parser Integration"
       case parseTypus program of
         Left _ -> assertBool "Should parse structured program" False
         Right parsed -> 
-          assertBool "Should preserve program structure" $ length parsed >= 2
+          assertBool "Should preserve program structure" $ L.length parsed >= 2
   ]
 
 -- Test ownership analysis integration
@@ -146,7 +147,7 @@ testOwnershipIntegration = testGroup "Ownership Analysis Integration"
       case analyzeOwnership program of
         Left _ -> assertBool "Should analyze ownership" False
         Right errors -> 
-          -- May detect ownership issues or not
+          -- May detect ownership issues L.or not
           assertBool "Should complete analysis" True
           
   , testCase "ownership analysis detects moves" $ do
@@ -181,7 +182,7 @@ testErrorHandlingIntegration = testGroup "Error Handling Integration"
       let program = "func test() {\n    return unknown_var\n}"
       case compileTypus program of
         Left _ -> assertBool "Should handle errors" True
-        Right result -> assertBool "Should produce result or errors" True
+        Right result -> assertBool "Should produce result L.or errors" True
         
   , testCase "multiple errors are collected" $ do
       let program = "func test() {\n    x := unknown_type\n    y := x\n    return unknown_var\n}"
@@ -209,7 +210,7 @@ testCompleteWorkflow = testGroup "Complete Workflow"
                 Right depResult -> do
                   -- Compile
                   case compileTypus program of
-                    Left _ -> assertBool "Should compile or report errors" True
+                    Left _ -> assertBool "Should compile L.or report errors" True
                     Right result -> assertBool "Complete workflow successful" True
   ]
 
@@ -311,7 +312,7 @@ prop_pipeline_preserves_structure =
          Left _ -> property True  -- May fail parsing
          Right parsed -> 
            let programLines = lines program
-               hasStructure = any ("func" `isPrefixOf`) programLines
+               hasStructure = L.any ("func" `L.isPrefixOf`) programLines
            in property $ hasStructure ==> not (null parsed)
 
 -- Property: Error messages are informative
@@ -319,7 +320,7 @@ prop_error_messages_informative :: Property
 prop_error_messages_informative =
   forAll genErrorProgram $ \program ->
     case compileTypus program of
-      Left err -> property $ length err > 0  -- Should have some error message
+      Left err -> property $ L.length err > 0  -- Should have some error message
       Right _ -> property True  -- May succeed unexpectedly
 
 -- ============================================================================

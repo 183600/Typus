@@ -3,11 +3,13 @@
 module Test.Unit.NewComprehensiveCabalQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Data.List (sort, nub, length, sum, reverse, concat, isInfixOf, isPrefixOf)
+import Data.List (length, sum, reverse, concat, isInfixOf, isPrefixOf)
+import Data.List (sort, nub)
 import Data.Char (isSpace, isAlphaNum, isDigit)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 
@@ -52,22 +54,22 @@ textProcessingBoundaryTests = testGroup "Text Processing Boundary Tests"
 prop_trim_unicode :: String -> Property
 prop_trim_unicode s =
   let trimmed = trim s
-      hasLeadingWhitespace = not (null s) && isSpace (head s)
+      hasLeadingWhitespace = not (null s) && isSpace (L.head s)
       hasTrailingWhitespace = not (null s) && isSpace (last s)
   in property $ 
     if hasLeadingWhitespace || hasTrailingWhitespace
-    then length trimmed < length s
+    then L.length trimmed < L.length s
     else trimmed == s
 
 prop_splitBy_boundaries :: Char -> String -> Property
 prop_splitBy_boundaries delim s =
   let result = splitBy delim s
-      startsWithDelim = not (null s) && head s == delim
+      startsWithDelim = not (null s) && L.head s == delim
       endsWithDelim = not (null s) && last s == delim
   in property $
     case (startsWithDelim, endsWithDelim) of
-      (True, True) -> not (null result) && head result == "" && last result == ""
-      (True, False) -> not (null result) && head result == ""
+      (True, True) -> not (null result) && L.head result == "" && last result == ""
+      (True, False) -> not (null result) && L.head result == ""
       (False, True) -> not (null result) && last result == ""
       (False, False) -> property True
 
@@ -82,7 +84,7 @@ prop_normalizeIndentation_mixed :: String -> Property
 prop_normalizeIndentation_mixed s =
   let withMixed = "\t  \t  " ++ s
       normalized = normalizeIndentation withMixed
-  in property $ not ("\t" `isInfixOf` normalized)
+  in property $ not ("\t" `L.isInfixOf` normalized)
 
 prop_breakOn_empty :: String -> Property
 prop_breakOn_empty s = breakOn "" s === (s, "")
@@ -101,9 +103,9 @@ sourceLocationMathTests = testGroup "Source Location Math Tests"
 
 prop_position_additive :: SourcePos -> String -> String -> Property
 prop_position_additive pos s1 s2 =
-  let posAfter1 = foldl (flip posAfter) pos s1
-      posAfter2 = foldl (flip posAfter) posAfter1 s2
-      posAfterBoth = foldl (flip posAfter) pos (s1 ++ s2)
+  let posAfter1 = L.foldl (flip posAfter) pos s1
+      posAfter2 = L.foldl (flip posAfter) posAfter1 s2
+      posAfterBoth = L.foldl (flip posAfter) pos (s1 ++ s2)
   in posAfter2 === posAfterBoth
 
 prop_span_merge_associative :: SourceSpan -> SourceSpan -> SourceSpan -> Property
@@ -121,7 +123,7 @@ prop_span_between_valid pos1 pos2 =
 
 prop_position_arithmetic_order :: SourcePos -> String -> Property
 prop_position_arithmetic_order pos text =
-  let finalPos = foldl (flip posAfter) pos text
+  let finalPos = L.foldl (flip posAfter) pos text
   in property $ posOffset finalPos >= posOffset pos
 
 -- ============================================================================
@@ -221,7 +223,7 @@ prop_error_locations_accurate pos msg = property True -- Placeholder: Error loca
 prop_error_messages_context :: String -> Property
 prop_error_messages_context msg = 
   let hasContent = not (null msg)
-  in hasContent ==> property $ length (words msg) > 0
+  in hasContent ==> property $ L.length (words msg) > 0
 
 prop_error_recovery_preserve :: Property
 prop_error_recovery_preserve = property True -- Placeholder: Error recovery should preserve compiler state

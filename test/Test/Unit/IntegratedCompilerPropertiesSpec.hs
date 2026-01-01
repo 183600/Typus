@@ -2,10 +2,12 @@
 module Test.Unit.IntegratedCompilerPropertiesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool, assertFailure)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck ((===), Property, forAll, Gen, choose, listOf, elements)
-import Data.List (sort, nub, length, intercalate, isInfixOf, isPrefixOf, partition)
+import Data.List (length, isInfixOf, isPrefixOf)
+import Data.List (sort, nub, intercalate, partition)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -34,12 +36,12 @@ tests =
     [ testGroup "CompilerConfig properties"
         [ fastProperty "CompilerConfig equality is reflexive" prop_compilerConfigEquality
         , fastProperty "defaultCompilerConfig is valid" prop_defaultCompilerConfigValid
-        , fastProperty "CompilerConfig preserves all fields" prop_compilerConfigPreservesFields
+        , fastProperty "CompilerConfig preserves L.all fields" prop_compilerConfigPreservesFields
         ]
 
     , testGroup "IntegratedCompileResult properties"
         [ fastProperty "IntegratedCompileResult equality is reflexive" prop_integratedCompileResultEquality
-        , fastProperty "IntegratedCompileResult preserves all fields" prop_integratedCompileResultPreservesFields
+        , fastProperty "IntegratedCompileResult preserves L.all fields" prop_integratedCompileResultPreservesFields
         , fastProperty "success field is consistent with errors" prop_successConsistentWithErrors
         ]
 
@@ -85,7 +87,7 @@ tests =
                   , compilationInfo = []
                   }
             success result @?= True
-            assertBool "should have compiled code" (not $ null $ compiledCode result)
+            assertBool "should have compiled code" (not $ L.null $ compiledCode result)
 
         , testCase "failed compilation has success=False" $ do
             let result = IntegratedCompileResult
@@ -99,7 +101,7 @@ tests =
                   , compilationInfo = []
                   }
             success result @?= False
-            assertBool "should have syntax errors" (not $ null $ syntaxErrors result)
+            assertBool "should have syntax errors" (not $ L.null $ syntaxErrors result)
 
         , testCase "result with analysis warnings" $ do
             let analysis = AnalysisResult
@@ -137,7 +139,7 @@ tests =
             length (filteredErrors result) @?= 1
         ]
 
-    , testGroup "Error handling and filtering"
+    , testGroup "Error handling L.and filtering"
         [ testCase "syntax errors are properly categorized" $ do
             let syntaxErrors = 
                   [ SyntaxError MissingBrace "missing brace" 10 5 "if true {"
@@ -212,7 +214,7 @@ tests =
                   , compilationInfo = ["analysis info"]
                   }
             success result @?= True
-            assertBool "should have compiled code" (not $ null $ compiledCode result)
+            assertBool "should have compiled code" (not $ L.null $ compiledCode result)
             length (compilationWarnings result) @?= 2
             length (compilationInfo result) @?= 1
 
@@ -241,18 +243,18 @@ tests =
               Nothing -> assertFailure "Expected analysis result"
         ]
 
-    , testGroup "Edge cases and boundary conditions"
+    , testGroup "Edge cases L.and boundary conditions"
         [ testCase "empty source code handling" $ do
             let emptySource = ""
                 config = defaultCompilerConfig
             -- Should handle empty source gracefully
-            assertBool "empty source is valid" (length emptySource == 0)
+            assertBool "empty source is valid" (L.length emptySource == 0)
 
         , testCase "very large source code handling" $ do
             let largeSource = unlines $ replicate 1000 "func test() {}"
                 config = defaultCompilerConfig
             -- Should handle large source gracefully
-            assertBool "large source is valid" (length (lines largeSource) == 1000)
+            assertBool "large source is valid" (L.length (lines largeSource) == 1000)
 
         , testCase "source code with special characters" $ do
             let specialSource = unlines
@@ -265,7 +267,7 @@ tests =
                   ]
                 config = defaultCompilerConfig
             -- Should handle special characters gracefully
-            assertBool "special characters are handled" ("特殊字符测试" `isInfixOf` specialSource)
+            assertBool "special characters are handled" ("特殊字符测试" `L.isInfixOf` specialSource)
 
         , testCase "malformed source code handling" $ do
             let malformedSource = unlines
@@ -296,8 +298,8 @@ tests =
         , testCase "error formatting preserves information" $ do
             let error = IntegrationError "test error message" Error
                 formatted = showCombinedError error
-            assertBool "should contain error message" ("test error message" `isInfixOf` formatted)
-            assertBool "should contain severity" ("Error" `isInfixOf` formatted)
+            assertBool "should contain error message" ("test error message" `L.isInfixOf` formatted)
+            assertBool "should contain severity" ("Error" `L.isInfixOf` formatted)
 
         , testCase "compilation result formatting is informative" $ do
             let result = IntegratedCompileResult
@@ -311,8 +313,8 @@ tests =
                   , compilationInfo = ["info"]
                   }
                 formatted = formatCompilationResult result
-            assertBool "should indicate success" ("Success" `isInfixOf` formatted)
-            assertBool "should contain compiled code indicator" ("Compiled" `isInfixOf` formatted)
+            assertBool "should indicate success" ("Success" `L.isInfixOf` formatted)
+            assertBool "should contain compiled code indicator" ("Compiled" `L.isInfixOf` formatted)
         ]
     ]
 
@@ -353,7 +355,7 @@ prop_defaultCompilerConfigValid =
   in enableOwnership config && enableDependentTypes config &&
      errorReportingLevel config == Warning
 
--- Property: CompilerConfig preserves all fields
+-- Property: CompilerConfig preserves L.all fields
 prop_compilerConfigPreservesFields :: Bool -> Bool -> ErrorSeverity -> Property
 prop_compilerConfigPreservesFields ownership dependentTypes severity =
   let config = CompilerConfig ownership dependentTypes severity
@@ -365,7 +367,7 @@ prop_compilerConfigPreservesFields ownership dependentTypes severity =
 prop_integratedCompileResultEquality :: IntegratedCompileResult -> Property
 prop_integratedCompileResultEquality result = result === result
 
--- Property: IntegratedCompileResult preserves all fields
+-- Property: IntegratedCompileResult preserves L.all fields
 prop_integratedCompileResultPreservesFields :: Bool -> String -> Maybe AnalysisResult -> [SyntaxError] -> [CombinedError] -> [CompilerError] -> [String] -> [String] -> Property
 prop_integratedCompileResultPreservesFields success compiledCode analysisResult syntaxErrors filteredErrors compilerErrors compilationWarnings compilationInfo =
   let result = IntegratedCompileResult success compiledCode analysisResult syntaxErrors filteredErrors compilerErrors compilationWarnings compilationInfo
@@ -381,12 +383,12 @@ prop_integratedCompileResultPreservesFields success compiledCode analysisResult 
 -- Property: success field is consistent with errors
 prop_successConsistentWithErrors :: IntegratedCompileResult -> Property
 prop_successConsistentWithErrors result =
-  let hasErrors = not $ null (syntaxErrors result) || 
-                  not $ null (filteredErrors result) || 
-                  not $ null (compilerErrors result)
+  let hasErrors = not $ L.null (syntaxErrors result) || 
+                  not $ L.null (filteredErrors result) || 
+                  not $ L.null (compilerErrors result)
   in if hasErrors 
      then success result === False
-     else property True  -- Success can be True or False when no errors
+     else property True  -- Success can be True L.or False when no errors
 
 -- Property: combined error conversion preserves severity
 prop_combinedErrorConversionPreservesSeverity :: CombinedError -> Property
@@ -397,10 +399,10 @@ prop_combinedErrorConversionPreservesSeverity error =
 prop_errorFormattingContainsInfo :: CombinedError -> Property
 prop_errorFormattingContainsInfo error =
   let formatted = showCombinedError error
-  in length formatted > 0
+  in L.length formatted > 0
 
 -- Property: compilation result formatting is consistent
 prop_compilationResultFormattingConsistent :: IntegratedCompileResult -> Property
 prop_compilationResultFormattingConsistent result =
   let formatted = formatCompilationResult result
-  in length formatted > 0
+  in L.length formatted > 0

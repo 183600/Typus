@@ -10,6 +10,7 @@
 module Test.Unit.ErrorRecoveryQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -29,14 +30,6 @@ import Compiler.Errors.Core
   , canRecoverFrom
   , shouldContinueAfter
   , formatError
-  , errorAt
-  , warningAt
-  , fatalError
-  , createRecoveryStrategy
-  , customRecovery
-  , fatalRecovery
-  , errorRecovery
-  , warningRecovery
   , infoRecovery
   )
 
@@ -61,7 +54,7 @@ import Compiler.Errors.Compiler
 
 import SourceLocation (SourcePos(..), startPos, SourceSpan(..), emptySpan)
 import Data.Text (Text)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 import Data.List (sort, nub)
 import Data.Maybe (isJust, isNothing, catMaybes)
 import Data.Either (isLeft, isRight)
@@ -139,7 +132,7 @@ prop_compilerError_contains_typeError :: Property
 prop_compilerError_contains_typeError =
   forAll genCompilerError $ \compilerError ->
     let typeError = ceError compilerError
-    in errorId typeError /= "" && not (T.null $ errorMessage typeError)
+    in errorId typeError /= "" && not (T.L.null $ errorMessage typeError)
 
 -- 属性：CompilerError应该包含有效的编译阶段
 prop_compilerError_valid_phase :: Property
@@ -180,7 +173,7 @@ prop_formatCompilerError_contains_message =
   forAll genCompilerError $ \compilerError ->
     let formatted = formatCompilerError compilerError
         message = T.unpack $ errorMessage $ ceError compilerError
-    in message `isInfixOf` formatted
+    in message `L.isInfixOf` formatted
 
 -- 属性：formatCompilerErrors应该处理空列表
 prop_formatCompilerErrors_empty_list :: Property
@@ -200,7 +193,7 @@ prop_generateDetailedReport_contains_stats :: Property
 prop_generateDetailedReport_contains_stats =
   forAll genCompilerErrorList $ \errors ->
     let report = generateDetailedReport errors
-    in "Error Statistics" `isInfixOf` report
+    in "Error Statistics" `L.isInfixOf` report
 
 -- 属性：analyzeErrors应该返回有效的统计信息
 prop_analyzeErrors_valid_stats :: Property
@@ -209,7 +202,7 @@ prop_analyzeErrors_valid_stats =
     let stats = analyzeErrors errors
         totalErrors = errorCount stats
         errorList = errorList stats
-    in totalErrors >= 0 && length errorList === length errors
+    in totalErrors >= 0 && L.length errorList === L.length errors
 
 -- 属性：makeUserFriendly应该简化错误消息
 prop_makeUserFriendly_simplifies_message :: Property
@@ -217,7 +210,7 @@ prop_makeUserFriendly_simplifies_message =
   forAll genCompilerError $ \compilerError ->
     let friendly = makeUserFriendly compilerError
         original = ceError compilerError
-    in not (T.null $ errorMessage friendly)
+    in not (T.L.null $ errorMessage friendly)
 
 -- 属性：suggestFix应该返回非空建议
 prop_suggestFix_non_empty :: Property
@@ -237,7 +230,7 @@ prop_collectErrors_collects_all :: Property
 prop_collectErrors_collects_all =
   forAll genCompilerErrorList $ \errors ->
     let collected = collectErrors errors
-    in length collected >= length errors
+    in L.length collected >= L.length errors
 
 -- 属性：recoverFrom应该处理可恢复错误
 prop_recoverFrom_handles_recoverable :: Property
@@ -325,7 +318,7 @@ tests =
     , fastProperty "makeUserFriendly simplifies message" prop_makeUserFriendly_simplifies_message
     , fastProperty "suggestFix non empty" prop_suggestFix_non_empty
     , fastProperty "runCompilerM success" prop_runCompilerM_success
-    , fastProperty "collectErrors collects all" prop_collectErrors_collects_all
+    , fastProperty "collectErrors collects L.all" prop_collectErrors_collects_all
     , fastProperty "recoverFrom handles recoverable" prop_recoverFrom_handles_recoverable
     , fastProperty "continueWith handles continuable" prop_continueWith_handles_continuable
     , fastProperty "createRecoveryStrategy valid" prop_createRecoveryStrategy_valid

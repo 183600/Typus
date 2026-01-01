@@ -33,7 +33,9 @@ import Utils
   )
 
 import Data.Char (isSpace, isAlphaNum, isLetter)
-import Data.List (isPrefixOf, isInfixOf, intercalate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (intercalate)
 
 -- ============================================================================
 -- 生成器定义
@@ -103,7 +105,7 @@ prop_trim_removes_whitespace :: Property
 prop_trim_removes_whitespace =
   forAll genStringWithWhitespace $ \s ->
     let trimmed = trim s
-        startsNotSpace = null trimmed || not (isSpace (head trimmed))
+        startsNotSpace = null trimmed || not (isSpace (L.head trimmed))
         endsNotSpace = null trimmed || not (isSpace (last trimmed))
     in startsNotSpace .&&. endsNotSpace
 
@@ -152,7 +154,7 @@ prop_removeLine_comments :: Property
 prop_removeLine_comments =
   forAll genCommentedString $ \s ->
     let withoutComments = removeLineComments s
-    in not ("//" `isInfixOf` withoutComments)
+    in not ("//" `L.isInfixOf` withoutComments)
 
 -- 属性: removeLineComments保留字符串字面量中的//
 prop_removeLine_comments_preserves_string_literals :: Property
@@ -160,14 +162,14 @@ prop_removeLine_comments_preserves_string_literals =
   forAll genStringLiteral $ \literal ->
     let code = literal ++ " // comment\n"
         withoutComments = removeLineComments code
-    in literal `isInfixOf` withoutComments
+    in literal `L.isInfixOf` withoutComments
 
 -- 属性: removeComments移除块注释
 prop_remove_block_comments :: Property
 prop_remove_block_comments =
   forAll genBlockCommentedString $ \s ->
     let withoutComments = removeComments s
-    in not ("/*" `isInfixOf` withoutComments) .&&. not ("*/" `isInfixOf` withoutComments)
+    in not ("/*" `L.isInfixOf` withoutComments) .&&. not ("*/" `L.isInfixOf` withoutComments)
 
 -- 属性: removeComments保留字符串字面量中的注释符号
 prop_remove_comments_preserves_string_literals :: Property
@@ -175,7 +177,7 @@ prop_remove_comments_preserves_string_literals =
   forAll genStringLiteral $ \literal ->
     let code = literal ++ " /* comment */"
         withoutComments = removeComments code
-    in literal `isInfixOf` withoutComments
+    in literal `L.isInfixOf` withoutComments
 
 -- 属性: normalizeIndentation保持相对缩进
 prop_normalize_indentation_preserves_relative :: Property
@@ -185,8 +187,8 @@ prop_normalize_indentation_preserves_relative =
         lines_s = lines s
         lines_normalized = lines normalized
         -- 检查非空行的数量是否相同
-        nonEmptyCount_s = length $ filter (not . all isSpace) lines_s
-        nonEmptyCount_normalized = length $ filter (not . all isSpace) lines_normalized
+        nonEmptyCount_s = L.length $ L.filter (not . L.all isSpace) lines_s
+        nonEmptyCount_normalized = L.length $ L.filter (not . L.all isSpace) lines_normalized
     in nonEmptyCount_s === nonEmptyCount_normalized
 
 -- 属性: normalizeIndentation不改变内容顺序
@@ -195,8 +197,8 @@ prop_normalize_indentation_preserves_order =
   forAll genMultiLineString $ \s ->
     let normalized = normalizeIndentation s
         -- 移除所有空白后比较
-        content_s = filter (not . isSpace) s
-        content_normalized = filter (not . isSpace) normalized
+        content_s = L.filter (not . isSpace) s
+        content_normalized = L.filter (not . isSpace) normalized
     in content_s === content_normalized
 
 -- 属性: forceSingleTabIndentation强制单制表符缩进
@@ -205,9 +207,9 @@ prop_force_single_tab_indentation =
   forAll genMultiLineString $ \s ->
     let forced = forceSingleTabIndentation s
         lines_forced = lines forced
-        nonEmptyLines = filter (not . null) lines_forced
+        nonEmptyLines = L.filter (not . null) lines_forced
         -- 检查所有非空行都以制表符开头
-        allStartWithTab = all ("\t" `isPrefixOf`) nonEmptyLines
+        allStartWithTab = L.all ("\t" `L.isPrefixOf`) nonEmptyLines
     in allStartWithTab
 
 -- 属性: fixIndentation等于normalizeIndentation
@@ -248,7 +250,7 @@ prop_trim_splitby_combination =
     let trimmed = trim s
         splitResult = splitBy delim trimmed
         -- 所有分割结果都不应该有前后空白
-        allTrimmed = all (\part -> trim part == part) splitResult
+        allTrimmed = L.all (\part -> trim part == part) splitResult
     in allTrimmed
 
 -- 属性: removeComments与removeLineComments的关系
@@ -257,7 +259,7 @@ prop_remove_comments_vs_line_comments =
   forAll genCommentedString $ \s ->
     let withoutLineComments = removeLineComments s
         withoutAllComments = removeComments s
-    in length withoutAllComments <= length withoutLineComments
+    in L.length withoutAllComments <= L.length withoutLineComments
 
 -- ============================================================================
 -- 测试套件
@@ -267,7 +269,7 @@ tests :: TestTree
 tests = testGroup "Core Utils QuickCheck Tests"
   [ fastProperty "Trim removes whitespace from both ends" prop_trim_removes_whitespace
   , fastProperty "Trim handles empty string" prop_trim_empty_string
-  , fastProperty "Trim handles all whitespace string" prop_trim_all_whitespace
+  , fastProperty "Trim handles L.all whitespace string" prop_trim_all_whitespace
   , fastProperty "SplitBy preserves empty segments" prop_splitBy_preserves_empty
   , fastProperty "SplitBy handles empty string" prop_splitBy_empty_string
   , fastProperty "SplitByCollapsed collapses empty segments" prop_splitByCollapsed_collapses
@@ -284,6 +286,6 @@ tests = testGroup "Core Utils QuickCheck Tests"
   , fastProperty "BreakOn with pattern splits correctly" prop_break_on_with_pattern
   , fastProperty "BreakOn without pattern returns original" prop_break_on_without_pattern
   , fastProperty "BreakOn handles empty pattern" prop_break_on_empty_pattern
-  , fastProperty "Trim and splitBy combination" prop_trim_splitby_combination
+  , fastProperty "Trim L.and splitBy combination" prop_trim_splitby_combination
   , fastProperty "RemoveComments vs removeLineComments relationship" prop_remove_comments_vs_line_comments
   ]

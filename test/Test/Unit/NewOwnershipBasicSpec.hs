@@ -1,6 +1,7 @@
 module Test.Unit.NewOwnershipBasicSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Property, (===), forAll, Gen, choose, arbitrary, listOf1, elements)
 import TestSupport.QuickCheck (fastProperty)
@@ -129,22 +130,22 @@ tests = testGroup "New Ownership Basic Tests"
     [ testCase "Lex simple ownership expression" $ do
         let input = "x := move(y)"
             tokens = lexAll input
-        length tokens @?= 4  -- x, :=, move, (, y, )
+        L.length tokens @?= 4  -- x, :=, move, (, y, )
 
     , testCase "Lex ownership keywords" $ do
         let input = "owned borrowed shared unique"
             tokens = lexAll input
-        length tokens @?= 4
+        L.length tokens @?= 4
 
     , testCase "Lex ownership function calls" $ do
         let input = "result := borrow(variable)"
             tokens = lexAll input
-        length tokens @?= 5
+        L.length tokens @?= 5
 
     , testCase "Lex complex ownership expression" $ do
         let input = "x := move(y).share()"
             tokens = lexAll input
-        length tokens >= 5 @?= True  -- At least basic tokens
+        L.length tokens >= 5 @?= True  -- At least basic tokens
     ]
 
   , testGroup "Parsing Analysis"
@@ -210,18 +211,18 @@ tests = testGroup "New Ownership Basic Tests"
         -- This is a simplified test since we don't have direct access to error constructors
         let errors = []  -- Would normally create actual errors
             formatted = formatOwnershipErrors errors
-        length formatted >= 0 @?= True
+        L.length formatted >= 0 @?= True
     ]
 
   , testGroup "Built-in Functions"
     [ testCase "Built-in functions list contains expected functions" $ do
         let functions = builtInFunctions
-        length functions >= 0 @?= True  -- Basic check that list exists
+        L.length functions >= 0 @?= True  -- Basic check that list exists
 
     , testCase "Built-in functions are unique" $ do
         let functions = builtInFunctions
             uniqueFunctions = functions  -- Simplified - would normally deduplicate
-        length uniqueFunctions >= 0 @?= True
+        L.length uniqueFunctions >= 0 @?= True
 
     , testCase "Built-in functions can be used in ownership analysis" $ do
         let input = "result := println(\"Hello\")"  -- Using a potential built-in

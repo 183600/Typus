@@ -22,6 +22,7 @@ import Compiler.GoParsing
 import SourceLocation (SourcePos, SourceSpan, Located(..))
 import Utils (trim)
 
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import qualified Data.Text as T
 import System.Process (readProcess)
@@ -56,12 +57,12 @@ prop_go_version_detection =
   in property $ versionValid
   where
     detectGoVersion = "go1.21.0" -- Simplified
-    isValidGoVersion v = "go" `isPrefixOf` v && length v >= 6
+    isValidGoVersion v = "go" `L.isPrefixOf` v && L.length v >= 6
 
 -- Property: Go module initialization succeeds
 prop_go_module_init :: String -> Property
 prop_go_module_init moduleName =
-  not (null moduleName) && all isValidModuleChar moduleName ==>
+  not (null moduleName) && L.all isValidModuleChar moduleName ==>
   let initResult = initializeGoModule moduleName
       success = isInitSuccessful initResult
   in property $ success
@@ -91,8 +92,8 @@ prop_go_test_execution testFiles =
       testsFound = areTestsFound testResult
   in property $ testsFound
   where
-    runGoTests _ = Right ("found " ++ show (length testFiles) ++ " tests") -- Simplified
-    areTestsFound (Right msg) = "found" `isInfixOf` msg
+    runGoTests _ = Right ("found " ++ show (L.length testFiles) ++ " tests") -- Simplified
+    areTestsFound (Right msg) = "found" `L.isInfixOf` msg
     areTestsFound (Left _) = False
 
 -- Property: Go formatting preserves semantics
@@ -104,7 +105,7 @@ prop_go_format_preserves_semantics goCode =
   in property $ semanticsPreserved
   where
     formatGoCode = trim -- Simplified
-    checkSemanticsPreserved original formatted = length formatted >= 0
+    checkSemanticsPreserved original formatted = L.length formatted >= 0
 
 -- Property: Go vet analysis detects issues
 prop_go_vet_detects_issues :: String -> Property
@@ -115,7 +116,7 @@ prop_go_vet_detects_issues goCode =
   in property $ issuesDetected || not issuesDetected -- Either way is fine
   where
     runGoVet _ = Right "no issues found" -- Simplified
-    hasVetIssues (Right msg) = "issues" `isInfixOf` msg
+    hasVetIssues (Right msg) = "issues" `L.isInfixOf` msg
     hasVetIssues (Left _) = True
 
 -- Property: Go mod tidy resolves dependencies
@@ -133,7 +134,7 @@ prop_go_mod_tidy_resolves dependencies =
 -- Property: Go run executes successfully
 prop_go_run_executes :: String -> Property
 prop_go_run_executes goFile =
-  ".go" `isSuffixOf` goFile ==> 
+  ".go" `L.isSuffixOf` goFile ==> 
   let runResult = runGoFile goFile
       executes = isRunSuccessful runResult
   in property $ executes
@@ -232,7 +233,7 @@ prop_concurrent_operations :: [String] -> Property
 prop_concurrent_operations commands =
   not (null commands) ==> 
   let results = map executeGoCommand commands
-      allSuccessful = all isSuccessful results
+      allSuccessful = L.all isSuccessful results
   in property $ allSuccessful
   where
     executeGoCommand _ = Right "command executed" -- Simplified
@@ -255,7 +256,7 @@ prop_state_consistency operation =
 -- Property: Go toolchain handles large projects
 prop_large_project_handling :: [String] -> Property
 prop_large_project_handling files =
-  length files >= 10 ==> 
+  L.length files >= 10 ==> 
   let result = processLargeProject files
       handles = isLargeProjectHandled result
   in property $ handles
@@ -311,7 +312,7 @@ buildGoPackage :: String -> Either String String
 buildGoPackage _ = Right "build successful"
 
 runGoTests :: [String] -> Either String String
-runGoTests files = Right ("found " ++ show (length files) ++ " tests")
+runGoTests files = Right ("found " ++ show (L.length files) ++ " tests")
 
 formatGoCode :: String -> String
 formatGoCode = trim

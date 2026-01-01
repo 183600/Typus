@@ -3,6 +3,7 @@
 module Test.Unit.SourceLocationTrackingSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit ((@?=), assertBool, assertFailure, testCase)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -95,7 +96,7 @@ sourcePositionTests = testGroup "Source Position Tests"
       posColumn pos2 @?= 17  -- Next tab stop
       posOffset pos2 @?= posOffset pos1 + 1
 
-  , testCase "creates position at specific line and column" $ do
+  , testCase "creates position at specific line L.and column" $ do
       let pos = posAt 5 10
       posLine pos @?= 5
       posColumn pos @?= 10
@@ -215,8 +216,8 @@ locatedValueTests = testGroup "Located Value Tests"
       let pos = posAt 1 5
           value = "hello"
           located = locatedAt pos value
-          mapped = mapLocated length located
-      locatedValue mapped @?= length value
+          mapped = mapLocated L.length located
+      locatedValue mapped @?= L.length value
       locatedPos mapped @?= pos
       locatedSpan mapped @?= locatedSpan located
 
@@ -224,7 +225,7 @@ locatedValueTests = testGroup "Located Value Tests"
       let pos = posAt 3 2
           value = [1, 2, 3]
           located = locatedAt pos value
-          doubled = fmap (*2) located
+          doubled = fL.map (*2) located
       locatedValue doubled @?= [2, 4, 6]
       locatedPos doubled @?= pos
 
@@ -240,14 +241,14 @@ locationTrackerTests = testGroup "Location Tracker Tests"
       let result = runLocationTracker getCurrentPos
       result @?= startPos
 
-  , testCase "sets and gets current position" $ do
+  , testCase "sets L.and gets current position" $ do
       let newPos = posAt 5 10
           result = runLocationTracker $ do
               setCurrentPos newPos
               getCurrentPos
       result @?= newPos
 
-  , testCase "marks span start and end" $ do
+  , testCase "marks span start L.and end" $ do
       let start = posAt 2 5
           result = runLocationTracker $ do
               setCurrentPos start
@@ -295,7 +296,7 @@ positionAdvancementTests = testGroup "Position Advancement Tests"
           result = advancePosBy text start
       posLine result @?= 1
       posColumn result @?= 8
-      posOffset result @?= posOffset start + length text
+      posOffset result @?= posOffset start + L.length text
 
   , testCase "advances position by text with newline" $ do
       let start = posAt 1 5
@@ -303,7 +304,7 @@ positionAdvancementTests = testGroup "Position Advancement Tests"
           result = advancePosBy text start
       posLine result @?= 2
       posColumn result @?= 6
-      posOffset result @?= posOffset start + length text
+      posOffset result @?= posOffset start + L.length text
 
   , testCase "advances position by Text value" $ do
       let start = posAt 1 2
@@ -311,7 +312,7 @@ positionAdvancementTests = testGroup "Position Advancement Tests"
           result = advancePosByText text start
       posLine result @?= 1
       posColumn result @?= 6
-      posOffset result @?= posOffset start + T.length text
+      posOffset result @?= posOffset start + T.L.length text
 
   , testCase "advances position by lines" $ do
       let start = posAt 3 15
@@ -340,7 +341,7 @@ positionAdvancementTests = testGroup "Position Advancement Tests"
           result = advancePosBy text start
       posLine result @?= 4
       posColumn result @?= 6
-      posOffset result @?= length text
+      posOffset result @?= L.length text
   ]
 
 errorLocationConversionTests :: TestTree
@@ -404,7 +405,7 @@ utilityFunctionTests = testGroup "Utility Function Tests"
           invalidSpan1 = spanBetween (posAt 1 2) (posAt 1 1)
           invalidSpan2 = spanBetween (posAt 2 1) (posAt 1 10)
       assertBool "forward span is valid" $ isValidSpan validSpan1
-      assertBool "zero-length span is valid" $ isValidSpan validSpan2
+      assertBool "zero-L.length span is valid" $ isValidSpan validSpan2
       assertBool "backward span is invalid" $ not $ isValidSpan invalidSpan1
       assertBool "cross-line backward span is invalid" $ not $ isValidSpan invalidSpan2
 
@@ -422,8 +423,8 @@ utilityFunctionTests = testGroup "Utility Function Tests"
   , testCase "handles located value mapping edge cases" $ do
       let pos = posAt 3 7
           original = locatedAt pos [1, 2, 3]
-          mapped1 = mapLocated reverse original
-          mapped2 = mapLocated (map (*2)) original
+          mapped1 = mapLocated L.reverse original
+          mapped2 = mapLocated (L.map (*2)) original
       locatedValue mapped1 @?= [3, 2, 1]
       locatedPos mapped1 @?= pos
       locatedValue mapped2 @?= [2, 4, 6]
@@ -445,7 +446,7 @@ utilityFunctionTests = testGroup "Utility Function Tests"
   , testCase "handles complex text advancement scenarios" $ do
       let start = posAt 1 1
           texts = ["", "a", "hello", "hello\nworld", "a\nb\nc", "\n\n", "hello\n\nworld"]
-          results = map (`advancePosBy` start) texts
+          results = L.map (`advancePosBy` start) texts
           expectedLines = [1, 1, 1, 2, 3, 3, 5]
           expectedColumns = [1, 2, 6, 6, 2, 1, 7]
       mapM_ (\((result, expectedLine, expectedCol), idx) -> 

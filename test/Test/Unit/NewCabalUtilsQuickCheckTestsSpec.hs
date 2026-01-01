@@ -6,6 +6,7 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), forAll, counterexample)
 import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed, removeLineComments, removeComments, normalizeIndentation, breakOn)
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -57,11 +58,11 @@ genIndentedString = do
     return $ replicate indent ' ' ++ content
   return $ unlines lines
 
--- Generate string and pattern for breakOn
+-- Generate string L.and pattern for breakOn
 genBreakOnInput :: Gen (String, String)
 genBreakOnInput = do
   pattern <- listOf1 arbitrary
-  before <- listOf $ arbitrary `suchThat` (\c -> c /= '\0' && not (pattern `isPrefixOf` [c]))
+  before <- listOf $ arbitrary `suchThat` (\c -> c /= '\0' && not (pattern `L.isPrefixOf` [c]))
   after <- listOf arbitrary
   return (before ++ pattern ++ after, pattern)
 
@@ -83,7 +84,7 @@ prop_trim_no_leading_trailing_whitespace s =
 
 prop_trim_whitespace_only :: String -> Property
 prop_trim_whitespace_only s =
-  let allWhitespace = all isSpace s
+  let allWhitespace = L.all isSpace s
   in if allWhitespace
      then trim s === ""
      else property True
@@ -98,7 +99,7 @@ prop_splitBy_empty_delimiter s =
 
 prop_splitBy_preserves_content :: Char -> String -> Property
 prop_splitBy_preserves_content delim s =
-  concat (splitBy delim s) === s
+  L.concat (splitBy delim s) === s
 
 prop_splitBy_comma_consistency :: String -> Property
 prop_splitBy_comma_consistency s =
@@ -110,7 +111,7 @@ prop_splitBy_comma_consistency s =
 
 prop_splitByCollapsed_no_empty_segments :: Char -> String -> Property
 prop_splitByCollapsed_no_empty_segments delim s =
-  all (not . null) (splitByCollapsed delim s)
+  L.all (not . null) (splitByCollapsed delim s)
 
 prop_splitByCollapsed_comma_consistency :: String -> Property
 prop_splitByCollapsed_comma_consistency s =
@@ -120,7 +121,7 @@ prop_splitByCollapsed_subset_of_splitBy :: Char -> String -> Property
 prop_splitByCollapsed_subset_of_splitBy delim s =
   let collapsed = splitByCollapsed delim s
       normal = splitBy delim s
-  in all (`elem` normal) collapsed
+  in L.all (`elem` normal) collapsed
 
 -- ============================================================================
 -- Properties for removeLineComments function
@@ -134,10 +135,10 @@ prop_removeLineComments_removes_slash_slash s =
 
 prop_removeLineComments_preserves_other_content :: String -> Property
 prop_removeLineComments_preserves_other_content s =
-  let withoutComments = filter (not . ("//" `isPrefixOf`)) (lines s)
+  let withoutComments = L.filter (not . ("//" `L.isPrefixOf`)) (lines s)
       result = removeLineComments s
-      resultLines = filter (not . null) $ lines result
-  in length resultLines >= length withoutComments
+      resultLines = L.filter (not . null) $ lines result
+  in L.length resultLines >= L.length withoutComments
 
 -- ============================================================================
 -- Properties for removeComments function
@@ -168,12 +169,12 @@ prop_normalizeIndentation_preserves_relative_indentation =
     let normalized = normalizeIndentation s
         originalLines = lines s
         normalizedLines = lines normalized
-        getIndent l = length $ takeWhile isSpace l
-    in if length originalLines > 1 && any (not . null) originalLines
-       then let originalIndents = map getIndent $ filter (not . null) originalLines
-                normalizedIndents = map getIndent $ filter (not . null) normalizedLines
-                originalDiffs = zipWith (-) (tail originalIndents) (init originalIndents)
-                normalizedDiffs = zipWith (-) (tail normalizedIndents) (init normalizedIndents)
+        getIndent l = L.length $ takeWhile isSpace l
+    in if L.length originalLines > 1 && L.any (not . null) originalLines
+       then let originalIndents = map getIndent $ L.filter (not . null) originalLines
+                normalizedIndents = map getIndent $ L.filter (not . null) normalizedLines
+                originalDiffs = zipWith (-) (L.tail originalIndents) (init originalIndents)
+                normalizedDiffs = zipWith (-) (L.tail normalizedIndents) (init normalizedIndents)
             in originalDiffs === normalizedDiffs
        else property True
 
@@ -182,10 +183,10 @@ prop_normalizeIndentation_no_leading_whitespace =
   forAll genIndentedString $ \s ->
     let normalized = normalizeIndentation s
         lines' = lines normalized
-        nonEmptyLines = filter (not . null) lines'
+        nonEmptyLines = L.filter (not . null) lines'
     in if null nonEmptyLines
        then property True
-       else all (not . isSpace . head) nonEmptyLines
+       else L.all (not . isSpace . L.head) nonEmptyLines
 
 -- ============================================================================
 -- Properties for breakOn function
@@ -205,7 +206,7 @@ prop_breakOn_not_found :: String -> String -> Property
 prop_breakOn_not_found s pat =
   let pat' = pat ++ "\0"  -- Ensure pattern not in string
       (before, after) = breakOn pat' s
-  in if pat' `isInfixOf` s
+  in if pat' `L.isInfixOf` s
      then property True
      else before === s && after === ""
 
@@ -235,7 +236,7 @@ tests = testGroup "Utils QuickCheck Tests"
     , testProperty "removeLineComments preserves other content" prop_removeLineComments_preserves_other_content
     ]
   , testGroup "removeComments"
-    [ testProperty "removeComments removes both // and /* */ comments" prop_removeComments_removes_both_types
+    [ testProperty "removeComments removes both // L.and /* */ comments" prop_removeComments_removes_both_types
     , testProperty "removeComments preserves // inside strings" prop_removeComments_preserves_strings
     ]
   , testGroup "normalizeIndentation"
@@ -243,7 +244,7 @@ tests = testGroup "Utils QuickCheck Tests"
     , testProperty "normalizeIndentation removes common leading whitespace" prop_normalizeIndentation_no_leading_whitespace
     ]
   , testGroup "breakOn"
-    [ testProperty "breakOn finds pattern and splits correctly" prop_breakOn_finds_pattern
+    [ testProperty "breakOn finds pattern L.and splits correctly" prop_breakOn_finds_pattern
     , testProperty "breakOn with empty pattern returns empty before" prop_breakOn_empty_pattern
     , testProperty "breakOn when pattern not found returns original" prop_breakOn_not_found
     ]

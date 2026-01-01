@@ -10,6 +10,7 @@ import TestSupport.ExtendedArbitrary ()
 import Test.QuickCheck 
 import qualified Data.List as Data.List
 import Data.List ((\\))
+import qualified Data.List as L
 import Data.List (isInfixOf)
 import Data.Char (toLower, isSpace)
 import Data.Maybe (isJust, isNothing, fromMaybe)
@@ -63,8 +64,8 @@ prop_typecheck_catches_errors expectedTypes actualTypes =
   not (null expectedTypes) && not (null actualTypes) ==>
   let typeEnv = generateTypeEnv expectedTypes
       expressions = generateExpressions actualTypes
-      results = map (checkExpression typeEnv) expressions
-      errorCount = length $ filter isLeft results
+      results = L.map (checkExpression typeEnv) expressions
+      errorCount = L.length $ filter isLeft results
   in property $ errorCount >= 0  -- Should catch some errors if types mismatch
 
 -- Property: Optimization preserves correctness
@@ -111,7 +112,7 @@ prop_constant_folding_correct values1 values2 =
   let expressions = map generateConstantExpression (zip values1 values2)
       folded = map foldConstants expressions
       results = map evaluateConstantExpression folded
-  in property $ all isJust results
+  in property $ L.all isJust results
 
 -- Property: Variable scoping is enforced correctly
 prop_variable_scoping_enforced :: [String] -> Property
@@ -126,16 +127,16 @@ prop_type_inference_consistent :: [String] -> Property
 prop_type_inference_consistent expressions =
   not (null expressions) ==>
   let typeEnv = emptyTypeEnv
-      inferredTypes = map (inferType typeEnv) expressions
-  in property $ all isRight inferredTypes
+      inferredTypes = L.map (inferType typeEnv) expressions
+  in property $ L.all isRight inferredTypes
 
 -- Property: Error recovery allows continued compilation
 prop_error_recovery_continues :: [String] -> Property
 prop_error_recovery_continues codeSnippets =
   not (null codeSnippets) ==>
   let results = map compileWithErrorRecovery codeSnippets
-      successCount = length $ filter isRight results
-  in property $ successCount > 0 || length codeSnippets == 0
+      successCount = L.length $ filter isRight results
+  in property $ successCount > 0 || L.length codeSnippets == 0
 
 -- Property: Cross-module linking preserves interfaces
 prop_cross_module_linking :: [GoModule] -> Property
@@ -167,7 +168,7 @@ prop_generated_code_optimized :: TestGoIR -> Property
 prop_generated_code_optimized goIR =
   let goCode = generateGoCodeForTest goIR
       optimizations = detectOptimizations goCode
-  in property $ length optimizations > 0
+  in property $ L.length optimizations > 0
 
 -- Property: Symbol resolution handles shadowing
 prop_symbol_resolution_shadowing :: [String] -> Property
@@ -175,7 +176,7 @@ prop_symbol_resolution_shadowing symbolNames =
   not (null symbolNames) ==>
   let goCode = generateShadowedSymbols symbolNames
       resolution = resolveSymbols goCode
-  in property $ all isResolved resolution
+  in property $ L.all isResolved resolution
 
 -- Property: Generic instantiation is correct
 prop_generic_instantiation_correct :: [String] -> [String] -> Property
@@ -183,7 +184,7 @@ prop_generic_instantiation_correct typeNames typeArgs =
   not (null typeNames) && not (null typeArgs) ==>
   let generics = generateGenericTypes typeNames
       instantiated = instantiateGenerics generics typeArgs
-  in property $ all isValidInstantiation instantiated
+  in property $ L.all isValidInstantiation instantiated
 
 -- Property: Interface implementation is verified
 prop_interface_implementation_verified :: [String] -> [String] -> Property
@@ -192,7 +193,7 @@ prop_interface_implementation_verified interfaceNames structNames =
   let interfaces = generateInterfaces interfaceNames
       structs = generateStructs structNames
       implementations = checkInterfaceImplementations interfaces structs
-  in property $ all isValidImplementation implementations
+  in property $ L.all isValidImplementation implementations
 
 -- Property: Ownership analysis respects constraints
 prop_ownership_analysis_constraints :: [String] -> Property
@@ -201,7 +202,7 @@ prop_ownership_analysis_constraints variableNames =
   let goCode = generateOwnershipCode variableNames
       analysis = analyzeOwnership goCode
       violations = checkOwnershipViolations analysis
-  in property $ all isValidOwnershipViolation violations
+  in property $ L.all isValidOwnershipViolation violations
 
 -- Property: Dependency analysis is complete
 prop_dependency_analysis_complete :: GoModule -> Property
@@ -216,7 +217,7 @@ prop_error_messages_helpful malformedCode =
   not (null malformedCode) ==>
   let results = map compileWithErrorReporting malformedCode
       errorMessages = [msg | Left msg <- results]
-  in property $ all isHelpfulErrorMessage errorMessages
+  in property $ L.all isHelpfulErrorMessage errorMessages
 
 -- Property: Warning messages are appropriate
 prop_warning_messages_appropriate :: [String] -> Property
@@ -224,7 +225,7 @@ prop_warning_messages_appropriate suspiciousCode =
   not (null suspiciousCode) ==>
   let results = map compileWithWarnings suspiciousCode
       warnings = [warn | (warn, _) <- results]
-  in property $ all isAppropriateWarning warnings
+  in property $ L.all isAppropriateWarning warnings
 
 -- Property: Source maps are accurate
 prop_source_maps_accurate :: TypusFile -> Property
@@ -234,7 +235,7 @@ prop_source_maps_accurate typusFile =
     Left _ -> property True
     Right (ir, sourceMap) -> 
       let mappings = extractSourceMappings sourceMap
-      in property $ all isValidSourceMapping mappings
+      in property $ L.all isValidSourceMapping mappings
 
 -- Property: Debug information is preserved
 prop_debug_info_preserved :: TestGoIR -> Property
@@ -257,10 +258,10 @@ prop_parallel_compilation_same files =
   not (null files) ==>
   let sequential = compileSequential files
       parallel = compileParallel files
-  in property $ length sequential == length parallel
+  in property $ L.length sequential == L.length parallel
 
 -- ============================================================================
--- Edge Case and Stress Tests
+-- Edge Case L.and Stress Tests
 -- ============================================================================
 
 -- Property: Extremely large functions are handled
@@ -286,7 +287,7 @@ prop_deeply_nested_expressions depth =
 -- Property: Circular dependencies are detected
 prop_circular_dependencies_detected :: [String] -> Property
 prop_circular_dependencies_detected moduleNames =
-  length moduleNames >= 2 ==> 
+  L.length moduleNames >= 2 ==> 
   let modules = generateCircularDependencies moduleNames
       dependencies = map analyzeDependencies modules
       cycles = detectCycles dependencies
@@ -298,7 +299,7 @@ prop_recursive_functions_compile functionNames =
   not (null functionNames) ==>
   let recursiveFuncs = generateRecursiveFunctions functionNames
       results = map compileFunction recursiveFuncs
-  in property $ all isRight results
+  in property $ L.all isRight results
 
 -- Property: Generic recursion is handled
 prop_generic_recursion_handled :: [String] -> [String] -> Property
@@ -355,7 +356,7 @@ generateTypeEnv :: [TC.Type] -> TC.TypeEnv
 generateTypeEnv types = TC.TypeEnv Map.empty Map.empty
 
 generateExpressions :: [TC.Type] -> [String]
-generateExpressions types = map (\t -> "x : " ++ show t) types
+generateExpressions types = L.map (\t -> "x : " ++ show t) types
 
 checkExpression :: TC.TypeEnv -> String -> Either TC.TypeError TC.Type
 checkExpression env expr = Right $ TC.TypeName "int"
@@ -381,10 +382,10 @@ generateGoCodeForTest (TestGoIR _ imports decls) =
     showDecl decl = "func generated() {}"
 
 isValidGoSyntax :: String -> Bool
-isValidGoSyntax code = "package" `isInfixOf` code
+isValidGoSyntax code = "package" `L.isInfixOf` code
 
 generateModuleWithImports :: [String] -> GoModule
-generateModuleWithImports paths = GoModule [] (Just (PackageDecl "main")) (map (\p -> ImportDecl Nothing p) paths) []
+generateModuleWithImports paths = GoModule [] (Just (PackageDecl "main")) (L.map (\p -> ImportDecl Nothing p) paths) []
 
 extractDependencies :: GoModule -> [String]
 extractDependencies (GoModule _ _ imports _) = 
@@ -400,7 +401,7 @@ eliminateDeadCode :: TestGoIR -> TestGoIR
 eliminateDeadCode = id  -- Simplified for testing
 
 countInstructions :: TestGoIR -> Int
-countInstructions (TestGoIR _ _ decls) = length decls
+countInstructions (TestGoIR _ _ decls) = L.length decls
 
 generateConstantExpression :: (Int, Int) -> String
 generateConstantExpression (x, y) = show x ++ " + " ++ show y
@@ -414,7 +415,7 @@ evaluateConstantExpression expr = Just 42  -- Simplified for testing
 generateScopedCode :: [String] -> String
 generateScopedCode names = unlines $
   ["package main", "func main() {" ] ++
-  map (\name -> "  " ++ name ++ " := 42") names ++
+  L.map (\name -> "  " ++ name ++ " := 42") names ++
   ["}"]
 
 checkScopeErrors :: String -> [String]
@@ -440,7 +441,7 @@ isSubsetOf [] _ = True
 isSubsetOf (x:xs) sup = x `elem` sup && isSubsetOf xs sup
 
 estimateMemoryUsage :: String -> Int
-estimateMemoryUsage code = length code * 10  -- Simplified estimation
+estimateMemoryUsage code = L.length code * 10  -- Simplified estimation
 
 measureCompilationTime :: String -> Float
 measureCompilationTime code = 0.1  -- Simplified measurement
@@ -452,10 +453,10 @@ measureCompilationThroughput :: [String] -> (Float, [TestGoIR])
 measureCompilationThroughput files = (1.0, [])  -- Simplified measurement
 
 generateTestFiles :: Int -> [String]
-generateTestFiles count = map (\i -> "file" ++ show i) [1..count]
+generateTestFiles count = L.map (\i -> "file" ++ show i) [1..count]
 
 compileSequential :: [String] -> [TestGoIR]
-compileSequential files = map (\f -> TestGoIR (PackageDecl f) [] []) files
+compileSequential files = L.map (\f -> TestGoIR (PackageDecl f) [] []) files
 
 compileParallel :: [String] -> [TestGoIR]
 compileParallel files = compileSequential files  -- Simplified
@@ -467,13 +468,13 @@ generateLargeCode :: Int -> String
 generateLargeCode size = unlines $ replicate size "func test() {}"
 
 measureMemoryUsage :: String -> Int
-measureMemoryUsage code = length code
+measureMemoryUsage code = L.length code
 
 generateScalableCode :: Int -> String
-generateScalableCode size = unlines $ map (\i -> "var x" ++ show i ++ " int = " ++ show i) [1..size]
+generateScalableCode size = unlines $ L.map (\i -> "var x" ++ show i ++ " int = " ++ show i) [1..size]
 
 compileAll :: [String] -> TestGoIR
-compileAll files = TestGoIR (PackageDecl "all") [] []
+compileAll files = TestGoIR (PackageDecl "L.all") [] []
 
 compileIncremental :: [String] -> [String] -> TestGoIR
 compileIncremental unchanged changed = TestGoIR (PackageDecl "incremental") [] []
@@ -486,7 +487,7 @@ compileExpression expr = Right $ TestGoIR (PackageDecl "expr") [] []
 
 generateCircularDependencies :: [String] -> [GoModule]
 generateCircularDependencies names = 
-  map (\name -> GoModule [] (Just (PackageDecl name)) [ImportDecl Nothing (nextName name)] []) names
+  L.map (\name -> GoModule [] (Just (PackageDecl name)) [ImportDecl Nothing (nextName name)] []) names
   where
     nextName name = case names of
       [] -> name
@@ -498,11 +499,11 @@ detectCycles dependencies = dependencies  -- Simplified cycle detection
 
 generateRecursiveFunctions :: [String] -> [String]
 generateRecursiveFunctions names = 
-  map (\name -> "func " ++ name ++ "() { " ++ name ++ "()}") names
+  L.map (\name -> "func " ++ name ++ "() { " ++ name ++ "()}") names
 
 generateGenericRecursion :: [String] -> [String] -> String
 generateGenericRecursion types functions = 
-  unlines $ map (\t -> "func recursive" ++ t ++ "[T any]() { recursive" ++ t ++ "[T]() }") types
+  unlines $ L.map (\t -> "func recursive" ++ t ++ "[T L.any]() { recursive" ++ t ++ "[T]() }") types
 
 compileGenericRecursion :: String -> Either CompilerError TestGoIR
 compileGenericRecursion code = Right $ TestGoIR (PackageDecl "generic") [] []
@@ -523,7 +524,7 @@ detectOptimizations code = ["constant_folding", "dead_code_elimination"]
 generateScopedSymbols :: [String] -> String
 generateScopedSymbols names = unlines $
   ["package main", "func main() {" ] ++
-  map (\name -> "  { " ++ name ++ " := 42 }") names ++
+  L.map (\name -> "  { " ++ name ++ " := 42 }") names ++
   ["}"]
 
 resolveSymbols :: String -> [Bool]
@@ -533,19 +534,19 @@ isResolved :: Bool -> Bool
 isResolved = id
 
 generateGenericTypes :: [String] -> [String]
-generateGenericTypes names = map (\name -> "type " ++ name ++ "[T any] struct { value T }") names
+generateGenericTypes names = L.map (\name -> "type " ++ name ++ "[T L.any] struct { value T }") names
 
 instantiateGenerics :: [String] -> [String] -> [String]
-instantiateGenerics types args = map (\t -> t ++ "[int]") types
+instantiateGenerics types args = L.map (\t -> t ++ "[int]") types
 
 isValidInstantiation :: String -> Bool
 isValidInstantiation = not . null
 
 generateInterfaces :: [String] -> [String]
-generateInterfaces names = map (\name -> "type " ++ name ++ " interface { Method() }") names
+generateInterfaces names = L.map (\name -> "type " ++ name ++ " interface { Method() }") names
 
 generateStructs :: [String] -> [String]
-generateStructs names = map (\name -> "type " ++ name ++ " struct { field int }") names
+generateStructs names = L.map (\name -> "type " ++ name ++ " struct { field int }") names
 
 checkInterfaceImplementations :: [String] -> [String] -> [Bool]
 checkInterfaceImplementations interfaces structs = [True | _ <- zip interfaces structs]
@@ -556,7 +557,7 @@ isValidImplementation = id
 generateOwnershipCode :: [String] -> String
 generateOwnershipCode names = unlines $
   ["package main", "func main() {"] ++
-  map (\name -> "  var " ++ name ++ " = new(int)") names ++
+  L.map (\name -> "  var " ++ name ++ " = new(int)") names ++
   ["}"]
 
 analyzeOwnership :: String -> String
@@ -582,7 +583,7 @@ compileWithErrorReporting :: String -> Either String TestGoIR
 compileWithErrorReporting code = Right $ TestGoIR (PackageDecl "error") [] []
 
 isHelpfulErrorMessage :: String -> Bool
-isHelpfulErrorMessage msg = length msg > 10
+isHelpfulErrorMessage msg = L.length msg > 10
 
 compileWithWarnings :: String -> (String, TestGoIR)
 compileWithWarnings code = (code, TestGoIR (PackageDecl code) [] [])
@@ -636,7 +637,7 @@ areAllInterfacesPreserved :: [String] -> GoModule -> Bool
 areAllInterfacesPreserved _interfaces _goModule = True  -- Simplified
 
 generateFunctions :: [String] -> [String]
-generateFunctions names = map (\name -> "func " ++ name ++ "() {}") names
+generateFunctions names = L.map (\name -> "func " ++ name ++ "() {}") names
 
 generateGoIRWithFunctions :: [TC.FunctionSignature] -> TestGoIR
 generateGoIRWithFunctions signatures = TestGoIR (PackageDecl "test") [] []
@@ -660,7 +661,7 @@ checkExpressions :: [String] -> [Either String String]
 checkExpressions exprs = map Right exprs
 
 areAllExpressionsValid :: [Either String String] -> Bool
-areAllExpressionsValid results = all isRight results
+areAllExpressionsValid results = L.all isRight results
 
 generateComplexExpressions :: Int -> [String]
 generateComplexExpressions count = replicate count "x + y * z"
@@ -669,82 +670,82 @@ checkComplexExpressions :: [String] -> [Either String String]
 checkComplexExpressions exprs = map Right exprs
 
 areComplexExpressionsValid :: [Either String String] -> Bool
-areComplexExpressionsValid results = all isRight results
+areComplexExpressionsValid results = L.all isRight results
 
 generateVariableNames :: Int -> [String]
-generateVariableNames count = map (\i -> "var" ++ show i) [1..count]
+generateVariableNames count = L.map (\i -> "var" ++ show i) [1..count]
 
 generateVariableCode :: [String] -> String
 generateVariableCode names = unlines $
   ["package main", "func main() {"] ++
-  map (\name -> "  " ++ name ++ " := 42") names ++
+  L.map (\name -> "  " ++ name ++ " := 42") names ++
   ["}"]
 
 checkVariableCode :: String -> [Either String String]
 checkVariableCode code = [Right code]
 
 areVariablesHandledCorrectly :: [Either String String] -> Bool
-areVariablesHandledCorrectly results = all isRight results
+areVariablesHandledCorrectly results = L.all isRight results
 
 generateFunctionNames :: Int -> [String]
-generateFunctionNames count = map (\i -> "func" ++ show i) [1..count]
+generateFunctionNames count = L.map (\i -> "func" ++ show i) [1..count]
 
 generateFunctionCode :: [String] -> String
 generateFunctionCode names = unlines $
   ["package main"] ++
-  map (\name -> "func " ++ name ++ "() {}") names ++
+  L.map (\name -> "func " ++ name ++ "() {}") names ++
   ["func main() {}"]
 
 checkFunctionCode :: String -> [Either String String]
 checkFunctionCode code = [Right code]
 
 areFunctionsHandledCorrectly :: [Either String String] -> Bool
-areFunctionsHandledCorrectly results = all isRight results
+areFunctionsHandledCorrectly results = L.all isRight results
 
 generateStructNames :: Int -> [String]
-generateStructNames count = map (\i -> "Struct" ++ show i) [1..count]
+generateStructNames count = L.map (\i -> "Struct" ++ show i) [1..count]
 
 generateStructCode :: [String] -> String
 generateStructCode names = unlines $
   ["package main"] ++
-  map (\name -> "type " ++ name ++ " struct { Field int }") names ++
+  L.map (\name -> "type " ++ name ++ " struct { Field int }") names ++
   ["func main() {}"]
 
 checkStructCode :: String -> [Either String String]
 checkStructCode code = [Right code]
 
 areStructsHandledCorrectly :: [Either String String] -> Bool
-areStructsHandledCorrectly results = all isRight results
+areStructsHandledCorrectly results = L.all isRight results
 
 generateInterfaceNames :: Int -> [String]
-generateInterfaceNames count = map (\i -> "Interface" ++ show i) [1..count]
+generateInterfaceNames count = L.map (\i -> "Interface" ++ show i) [1..count]
 
 generateInterfaceCode :: [String] -> String
 generateInterfaceCode names = unlines $
   ["package main"] ++
-  map (\name -> "type " ++ name ++ " interface { Method() }") names ++
+  L.map (\name -> "type " ++ name ++ " interface { Method() }") names ++
   ["func main() {}"]
 
 checkInterfaceCode :: String -> [Either String String]
 checkInterfaceCode code = [Right code]
 
 areInterfacesHandledCorrectly :: [Either String String] -> Bool
-areInterfacesHandledCorrectly results = all isRight results
+areInterfacesHandledCorrectly results = L.all isRight results
 
 generateImportPaths :: Int -> [String]
-generateImportPaths count = map (\i -> "package" ++ show i) [1..count]
+generateImportPaths count = L.map (\i -> "package" ++ show i) [1..count]
 
 generateImportCode :: [String] -> String
 generateImportCode paths = unlines $
   ["package main"] ++
-  map ("import \"" ++) paths ++
+  L.map ("import \"" ++) paths ++
   ["func main() {}"]
 
 checkImportCode :: String -> [Either String String]
 checkImportCode code = [Right code]
 
 areImportsHandledCorrectly :: [Either String String] -> Bool
-areImportsHandledCorrectly results = all isRight results
+areImportsHandledCorrectly results = L.all isRight results
 
 -- ============================================================================
 -- Test Suite

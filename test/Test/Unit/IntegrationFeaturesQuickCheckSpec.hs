@@ -12,7 +12,9 @@ import SyntaxValidator
 import qualified AnalyzerIntegration as AI
 
 import qualified Data.Map.Strict as Map
-import Data.List (isInfixOf, null)
+import qualified Data.List as L
+import Data.List (isInfixOf)
+import Data.List (null)
 import Data.Maybe (isJust, isNothing)
 
 -- Arbitrary instances for integration testing
@@ -119,9 +121,9 @@ testDefaultConfig =
 testCompilationStatus :: IC.IntegratedCompileResult -> Property
 testCompilationStatus result =
   let successFlag = IC.success result
-      hasErrors = not (null (IC.syntaxErrors result)) || 
-                  not (null (IC.filteredErrors result)) ||
-                  not (null (IC.compilerErrors result))
+      hasErrors = not (L.null (IC.syntaxErrors result)) || 
+                  not (L.null (IC.filteredErrors result)) ||
+                  not (L.null (IC.compilerErrors result))
       expectedSuccess = not hasErrors
   in successFlag === expectedSuccess
 
@@ -180,7 +182,7 @@ testErrorMessages result =
       info = IC.compilationInfo result
       syntaxErrors = IC.syntaxErrors result
       allMessages = warnings ++ info ++ map show syntaxErrors
-      allMessagesValid = all (\msg -> not (null msg) && length msg > 3) allMessages
+      allMessagesValid = L.all (\msg -> not (null msg) && L.length msg > 3) allMessages
   in allMessagesValid === True
 
 -- Helper functions

@@ -4,6 +4,7 @@
 module Test.Unit.CompilerIRQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
@@ -32,7 +33,7 @@ tests = testGroup "Compiler IR QuickCheck Tests"
 irNodePropertyTests :: TestTree
 irNodePropertyTests = testGroup "IR Node Properties"
   [ fastProperty "IRNode id is unique within a module" $
-      \nodes -> length (nub (map irNodeId nodes)) == length (map irNodeId (nodes :: [IRNode]))
+      \nodes -> L.length (nub (map irNodeId nodes)) == L.length (map irNodeId (nodes :: [IRNode]))
   
   , testCase "IRNode source span is valid" $
       let node = IRVarNode "x" (SourceSpan startPos startPos)
@@ -92,12 +93,12 @@ irFunctionTests = testGroup "IR Function Tests"
   , testCase "Function body statements" $
       let body = [IRVarDecl "x" IRInt (IRLiteralExpr (IntLiteral 0))]
           func = IRFunction (IRFunctionSig "f" [] IRInt) body
-      in length (irFunctionBody func) @?= 1
+      in L.length (irFunctionBody func) @?= 1
   
   , fastProperty "Function parameter count matches signature" $
       \paramTypes -> let sig = IRFunctionSig "test" paramTypes IRInt
                          func = IRFunction sig []
-                     in length (irFunctionParams func) == length paramTypes
+                     in L.length (irFunctionParams func) == L.length paramTypes
   ]
 
 -- | 5. IR模块测试
@@ -110,12 +111,12 @@ irModuleTests = testGroup "IR Module Tests"
   , testCase "Module functions" $
       let func = IRFunction (IRFunctionSig "f" [] IRInt) []
           mod = IRModule "Test" [func] []
-      in length (irModuleFunctions mod) @?= 1
+      in L.length (irModuleFunctions mod) @?= 1
   
   , fastProperty "Module function names are unique" $
-      \funcNames -> let funcs = map (\n -> IRFunction (IRFunctionSig n [] IRInt) []) funcNames
+      \funcNames -> let funcs = L.map (\n -> IRFunction (IRFunctionSig n [] IRInt) []) funcNames
                         mod = IRModule "Test" funcs []
-                    in length (nub (map irFunctionName (irModuleFunctions mod))) == length funcNames
+                    in L.length (nub (map irFunctionName (irModuleFunctions mod))) == L.length funcNames
   ]
 
 -- | 6. IR类型测试

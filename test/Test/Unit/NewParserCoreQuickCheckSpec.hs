@@ -3,6 +3,7 @@
 module Test.Unit.NewParserCoreQuickCheckSpec where
 
 import Test.Tasty (TestTree)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), counterexample)
 import Test.Tasty.HUnit (testCase, assertBool)
 
@@ -111,18 +112,18 @@ genCodeWithComments = do
 prop_trimPreservesContent :: String -> Property
 prop_trimPreservesContent str =
     let trimmed = trim str
-        nonTrimmed = filter (not . Char.isSpace) str
-        trimmedNonSpace = filter (not . Char.isSpace) trimmed
+        nonTrimmed = L.filter (not . Char.isSpace) str
+        trimmedNonSpace = L.filter (not . Char.isSpace) trimmed
     in counterexample ("Trim should preserve non-whitespace content")
        (trimmedNonSpace === nonTrimmed)
 
--- Property: Splitting by delimiter and joining with same delimiter recovers original (for simple cases)
+-- Property: Splitting by delimiter L.and joining with same delimiter recovers original (for simple cases)
 prop_splitJoinRoundtrip :: String -> Char -> Property
 prop_splitJoinRoundtrip str delim
     | delim `elem` str = property True  -- Skip complex cases with delimiter
     | otherwise =
         let parts = splitBy delim str
-            rejoined = concat $ intersperse [delim] parts
+            rejoined = L.concat $ intersperse [delim] parts
         in counterexample ("Split-join roundtrip should work for delimiter-free strings")
            (rejoined === str)
 
@@ -130,8 +131,8 @@ prop_splitJoinRoundtrip str delim
 prop_commentRemovalPreservesStructure :: String -> Property
 prop_commentRemovalPreservesStructure code =
     let withoutComments = removeComments code
-        lineCountOriginal = length $ lines code
-        lineCountProcessed = length $ lines withoutComments
+        lineCountOriginal = L.length $ lines code
+        lineCountProcessed = L.length $ lines withoutComments
     in counterexample ("Comment removal should preserve line structure")
        (lineCountProcessed <= lineCountOriginal === True)
 
@@ -139,8 +140,8 @@ prop_commentRemovalPreservesStructure code =
 prop_parseValidIdentifier :: String -> Property
 prop_parseValidIdentifier ident
     | null ident = property True
-    | not (Char.isLetter (head ident)) = property True
-    | any (not . Char.isAlphaNum) ident = property True
+    | not (Char.isLetter (L.head ident)) = property True
+    | L.any (not . Char.isAlphaNum) ident = property True
     | otherwise =
         let parseResult = parseIdentifier ident
         in counterexample ("Valid identifier should parse successfully")
@@ -150,7 +151,7 @@ prop_parseValidIdentifier ident
 prop_parseValidNumber :: String -> Property
 prop_parseValidNumber numStr
     | null numStr = property True
-    | any (not . Char.isDigit) numStr = property True
+    | L.any (not . Char.isDigit) numStr = property True
     | otherwise =
         let parseResult = parseNumber numStr
         in counterexample ("Valid number should parse successfully")
@@ -161,7 +162,7 @@ prop_parseNestedParentheses :: Int -> Property
 prop_parseNestedParentheses depth
     | depth < 0 || depth > 10 = property True  -- Limit depth for practicality
     | otherwise =
-        let nestedExpr = concat $ replicate depth "(" ++ "x" ++ concat (replicate depth ")")
+        let nestedExpr = L.concat $ replicate depth "(" ++ "x" ++ L.concat (replicate depth ")")
             parseResult = parseExpression nestedExpr
         in counterexample ("Nested parentheses should parse correctly")
            (isSuccess parseResult === True)
@@ -178,7 +179,7 @@ prop_parserHandlesWhitespace baseCode ws =
 -- Property: Parsing concatenated statements should work
 prop_parseConcatenatedStatements :: [String] -> Property
 prop_parseConcatenatedStatements stmts =
-    let concatenated = concat stmts
+    let concatenated = L.concat stmts
         parseResult = parseStatements concatenated
     in counterexample ("Concatenated statements should parse")
        (isSuccess parseResult === True)
@@ -187,7 +188,7 @@ prop_parseConcatenatedStatements stmts =
 prop_parserPositionTracking :: String -> Property
 prop_parserPositionTracking code =
     let parseResult = parseWithPositionTracking code
-        expectedLength = length code
+        expectedLength = L.length code
     in counterexample ("Parser position tracking should be accurate")
        (getFinalPosition parseResult === expectedLength)
 
@@ -225,14 +226,14 @@ tests = testGroup "New Parser Core QuickCheck Tests"
 parseIdentifier :: String -> ParseResult
 parseIdentifier str
     | null str = ParseError "Empty identifier"
-    | not (Char.isLetter (head str)) = ParseError "Identifier must start with letter"
-    | all Char.isAlphaNum str = ParseSuccess str
+    | not (Char.isLetter (L.head str)) = ParseError "Identifier must start with letter"
+    | L.all Char.isAlphaNum str = ParseSuccess str
     | otherwise = ParseError "Invalid identifier character"
 
 parseNumber :: String -> ParseResult
 parseNumber str
     | null str = ParseError "Empty number"
-    | all Char.isDigit str = ParseSuccess str
+    | L.all Char.isDigit str = ParseSuccess str
     | otherwise = ParseError "Invalid number character"
 
 parseExpression :: String -> ParseResult
@@ -245,7 +246,7 @@ parseStatements :: String -> ParseResult
 parseStatements stmts = ParseSuccess stmts  -- Simplified for testing
 
 parseWithPositionTracking :: String -> PositionResult
-parseWithPositionTracking code = PositionResult (length code)  -- Simplified
+parseWithPositionTracking code = PositionResult (L.length code)  -- Simplified
 
 parseWithErrorRecovery :: String -> RecoveryResult
 parseWithErrorRecovery code = RecoveryResult True  -- Simplified

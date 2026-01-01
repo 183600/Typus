@@ -3,6 +3,7 @@ module Test.Unit.NewCabalSyntaxValidatorQuickCheckTestSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), counterexample, forAll, oneof, elements, listOf, suchThat)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Maybe (isJust, isNothing)
 
@@ -43,9 +44,9 @@ tests =
         , testCase "SyntaxError Show instance contains error info" $ do
             let error = SyntaxError "test error" 10 5
                 showOutput = show error
-            "test error" `isInfixOf` showOutput @?= True
-            "10" `isInfixOf` showOutput @?= True
-            "5" `isInfixOf` showOutput @?= True
+            "test error" `L.isInfixOf` showOutput @?= True
+            "10" `L.isInfixOf` showOutput @?= True
+            "5" `L.isInfixOf` showOutput @?= True
         ]
     ]
 
@@ -89,28 +90,28 @@ prop_syntaxErrorShowContainsMessage :: String -> Int -> Int -> Property
 prop_syntaxErrorShowContainsMessage message line col = 
   let error = SyntaxError message line col
       showOutput = show error
-  in message `isInfixOf` showOutput
+  in message `L.isInfixOf` showOutput
 
 -- | Property: validateSyntax returns same errors for same input
 prop_validateSyntaxDeterministic :: String -> Property
 prop_validateSyntaxDeterministic code = 
   let errors1 = validateSyntax code
       errors2 = validateSyntax code
-  in length errors1 == length errors2
+  in L.length errors1 == L.length errors2
 
 -- | Property: validateSyntax line numbers are positive
 prop_validateSyntaxLineNumbersPositive :: String -> Property
 prop_validateSyntaxLineNumbersPositive code = 
   let errors = validateSyntax code
       lineNumbers = [line | SyntaxError _ line _ <- errors]
-  in all (> 0) lineNumbers
+  in L.all (> 0) lineNumbers
 
 -- | Property: validateSyntax column numbers are positive
 prop_validateSyntaxColumnNumbersPositive :: String -> Property
 prop_validateSyntaxColumnNumbersPositive code = 
   let errors = validateSyntax code
       columnNumbers = [col | SyntaxError _ _ col <- errors]
-  in all (> 0) columnNumbers
+  in L.all (> 0) columnNumbers
 
 -- Helper operator for composing properties
 (.&&.) :: Property -> Property -> Property

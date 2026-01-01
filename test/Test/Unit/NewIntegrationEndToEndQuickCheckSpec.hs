@@ -1,6 +1,7 @@
 module Test.Unit.NewIntegrationEndToEndQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), counterexample, forAll, oneof, elements, listOf, suchThat)
 
@@ -76,7 +77,7 @@ prop_pipelinePreservesSemantics input =
 prop_pipelineHandlesErrors :: String -> Property
 prop_pipelineHandlesErrors input =
   let result = runFullPipeline input
-  in counterexample ("input length=" ++ show (length input)) $
+  in counterexample ("input L.length=" ++ show (L.length input)) $
      case result of
        PipelineSuccess _ -> property True
        PipelineError _ -> property True  -- Errors should be handled gracefully
@@ -94,7 +95,7 @@ prop_pipelineMaintainsConsistency input =
          in counterexample ("phases consistency") $
             -- Basic consistency check
             case compiled of
-              Right _ -> length goCode > 0
+              Right _ -> L.length goCode > 0
               Left _ -> property True
 
 -- | Pipeline should handle edge cases
@@ -137,7 +138,7 @@ prop_compilerErrorsIncludeLocations input =
          in case compiled of
               Left errors ->
                 counterexample ("compiler errors should have locations") $
-                  all hasSourceLocation errors
+                  L.all hasSourceLocation errors
               Right _ -> property True
        Left _ -> property True  -- Skip if parsing fails
 
@@ -165,7 +166,7 @@ prop_ownershipIntegratesWithTypeChecking input =
             then counterexample ("ownership integration") $
                  case compiled of
                    Right _ -> property True
-                   Left errors -> all areOwnershipRelated errors
+                   Left errors -> L.all areOwnershipRelated errors
             else property True
        Left _ -> property True
 
@@ -193,7 +194,7 @@ prop_dependencyAnalysisAffectsCompilation input =
 prop_endToEndTimeReasonable :: String -> Property
 prop_endToEndTimeReasonable input =
   let result = runFullPipeline input
-  in counterexample ("processing time for input length=" ++ show (length input)) $
+  in counterexample ("processing time for input L.length=" ++ show (L.length input)) $
      -- Basic sanity check: if it completes, time is reasonable
      case result of
        PipelineSuccess _ -> property True
@@ -207,8 +208,8 @@ prop_memoryUsageReasonable input =
   in case parsed of
        Right typusFile ->
          let goCode = generateGoCode typusFile
-             inputSize = length input
-             outputSize = length goCode
+             inputSize = L.length input
+             outputSize = L.length goCode
          in counterexample ("memory usage: input=" ++ show inputSize ++ ", output=" ++ show outputSize) $
             outputSize <= max 10000 (inputSize * 10)  -- Reasonable upper bound
        Left _ -> property True
@@ -273,12 +274,12 @@ prop_resourceCleanupWorks input =
 prop_systemMaintainsInvariants :: [String] -> Property
 prop_systemMaintainsInvariants inputs =
   let results = map runFullPipeline inputs
-      successCount = length [r | r <- results, isSuccess r]
-  in counterexample ("stress test: " ++ show (length inputs) ++ " inputs") $
+      successCount = L.length [r | r <- results, isSuccess r]
+  in counterexample ("stress test: " ++ show (L.length inputs) ++ " inputs") $
      successCount >= 0  -- Basic invariant: count is non-negative
 
 -- ============================================================================
--- Helper Types and Functions
+-- Helper Types L.and Functions
 -- ============================================================================
 
 -- | Pipeline result type
@@ -309,13 +310,13 @@ runFullPipeline input =
              then PipelineError (GenerationError "No code generated")
              else PipelineSuccess goCode
 
--- | Check if string is null or empty
+-- | Check if string is null L.or empty
 isNullOrEmpty :: String -> Bool
 isNullOrEmpty = null
 
 -- | Check if string has special characters
 hasSpecialCharacters :: String -> Bool
-hasSpecialCharacters = any (`elem` "\0\1\2\3\4\5\6\7\8\10\11\12\13\14\15\16\17\18\19\20\21\22\23\24\25\26\27\28\29\30\31\127")
+hasSpecialCharacters = L.any (`elem` "\0\1\2\3\4\5\6\7\8\10\11\12\13\14\15\16\17\18\19\20\21\22\23\24\25\26\27\28\29\30\31\127")
 
 -- | Check if error has source location
 hasSourceLocation :: PipelineErrorType -> Bool
@@ -330,19 +331,19 @@ codeStructureMatches _ goCode = not (null goCode)  -- Simplified
 hasOwnershipDirectives :: TypusFile -> Bool
 hasOwnershipDirectives typusFile = 
   -- Simplified check
-  "ownership" `isInfixOf` show typusFile
+  "ownership" `L.isInfixOf` show typusFile
 
 -- | Check if errors are ownership related
 areOwnershipRelated :: PipelineErrorType -> Bool
 areOwnershipRelated (CompilerError errors) = 
-  any ("ownership" `isInfixOf`) errors
+  L.any ("ownership" `L.isInfixOf`) errors
 areOwnershipRelated _ = False
 
 -- | Check if file has dependency blocks
 hasDependencyBlocks :: TypusFile -> Bool
 hasDependencyBlocks typusFile = 
   -- Simplified check
-  "dependency" `isInfixOf` show typusFile
+  "dependency" `L.isInfixOf` show typusFile
 
 -- | Generate large input for testing
 generateLargeInput :: Int -> String
@@ -355,11 +356,11 @@ isSuccess _ = False
 
 -- | Check if substring is in string
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` (tails haystack >>= inits)
+L.isInfixOf needle haystack = needle `elem` (tails haystack >>= inits)
   where
     tails [] = [[]]
     tails xs@(x:xs') = xs : tails xs'
     inits [] = [[]]
     inits xs = inits' xs []
-    inits' [] acc = [reverse acc]
-    inits' (x:xs') acc = reverse acc : inits' xs' (x:acc)
+    inits' [] acc = [L.reverse acc]
+    inits' (x:xs') acc = L.reverse acc : inits' xs' (x:acc)

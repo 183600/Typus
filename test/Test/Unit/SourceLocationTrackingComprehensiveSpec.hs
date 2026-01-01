@@ -53,6 +53,7 @@ import SourceLocation
     )
 
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 import qualified Data.Text as T
 import Data.Maybe (isJust, isNothing, fromMaybe)
@@ -261,30 +262,30 @@ tests =
             let pos = posAt "test.typus" 5 12
                 errorLoc = toErrorLocation pos
             assertBool "Error location should contain line number" 
-                ("5" `isInfixOf` errorLoc)
+                ("5" `L.isInfixOf` errorLoc)
             assertBool "Error location should contain column number" 
-                ("12" `isInfixOf` errorLoc)
+                ("12" `L.isInfixOf` errorLoc)
             assertBool "Error location should contain filename" 
-                ("test.typus" `isInfixOf` errorLoc)
+                ("test.typus" `L.isInfixOf` errorLoc)
 
         , testCase "toErrorLocationWithSpan formats span correctly" $ do
             let span = spanBetween (posAt "test.typus" 2 3) (posAt "test.typus" 2 8)
                 errorLoc = toErrorLocationWithSpan span
             assertBool "Error location should contain line number" 
-                ("2" `isInfixOf` errorLoc)
+                ("2" `L.isInfixOf` errorLoc)
             assertBool "Error location should contain column range" 
-                ("3-8" `isInfixOf` errorLoc)
+                ("3-8" `L.isInfixOf` errorLoc)
 
         , testCase "toErrorLocationWithSpan handles multi-line spans" $ do
             let span = spanBetween (posAt "test.typus" 1 5) (posAt "test.typus" 3 2)
                 errorLoc = toErrorLocationWithSpan span
             assertBool "Error location should contain start line" 
-                ("1" `isInfixOf` errorLoc)
+                ("1" `L.isInfixOf` errorLoc)
             assertBool "Error location should contain end line" 
-                ("3" `isInfixOf` errorLoc)
+                ("3" `L.isInfixOf` errorLoc)
         ]
 
-    , testGroup "Edge Cases and Boundary Conditions"
+    , testGroup "Edge Cases L.and Boundary Conditions"
         [ testCase "SourcePos handles zero values" $ do
             let zeroPos = SourcePos "test.typus" 0 0
             assertEqual "Zero line should be preserved" 0 (sourceLine zeroPos)
@@ -318,7 +319,7 @@ tests =
             \pos -> let span = spanFrom pos
                     in spanStart span === pos && spanEnd span === pos
 
-        , fastProperty "locatedAt preserves value and position" $
+        , fastProperty "locatedAt preserves value L.and position" $
             \pos value -> let located = locatedAt pos value
                           in locatedValue located === value && locatedPos located === pos
 
@@ -341,7 +342,7 @@ tests =
 
 -- Helper functions for testing
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `Data.List.isInfixOf` haystack
+L.isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
 
 -- QuickCheck arbitraries for source location types
 instance Arbitrary SourcePos where

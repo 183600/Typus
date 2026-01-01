@@ -140,7 +140,7 @@ prop_multipleErrorsHandledGracefully errorCodes =
     let combinedCode = unlines errorCodes
         result = recoverFromErrors combinedCode
     in not (null errorCodes) ==> 
-        (rrSuccess result || length (rrRemainingErrors result) <= length errorCodes)
+        (rrSuccess result || L.length (rrRemainingErrors result) <= L.length errorCodes)
 
 -- | Property: Error recovery should not introduce new errors
 prop_recoveryNoNewErrors :: ErrorScenario -> Bool
@@ -149,7 +149,7 @@ prop_recoveryNoNewErrors scenario =
         originalErrors = extractErrors code
         result = recoverFromErrors code
         recoveredErrors = extractErrors (rrRecoveredCode result)
-    in length recoveredErrors <= length originalErrors + 1  -- Allow one new error for recovery
+    in L.length recoveredErrors <= L.length originalErrors + 1  -- Allow one new error for recovery
 
 -- | Property: Cascading errors should be resolved progressively
 prop_cascadingErrorsResolvedProgressively :: String -> Bool
@@ -160,8 +160,8 @@ prop_cascadingErrorsResolvedProgressively code =
         intermediateErrors = extractErrors intermediateCode
         result2 = recoverFromErrors intermediateCode
         finalErrors = extractErrors (rrRecoveredCode result2)
-    in length initialErrors >= length intermediateErrors ||
-       length intermediateErrors >= length finalErrors
+    in L.length initialErrors >= L.length intermediateErrors ||
+       L.length intermediateErrors >= L.length finalErrors
 
 -- | Property: Error patterns should be identified correctly
 prop_errorPatternsIdentified :: [ErrorScenario] -> Bool
@@ -169,7 +169,7 @@ prop_errorPatternsIdentified scenarios =
     let codes = map scenarioToCode scenarios
         allErrors = concatMap extractErrors codes
         patterns = analyzeErrorPatterns allErrors
-    in length patterns >= 0 && all isValidPattern patterns
+    in L.length patterns >= 0 && L.all isValidPattern patterns
 
 -- | Property: Suggested fixes should be relevant to errors
 prop_suggestedFixesRelevant :: ErrorScenario -> Bool
@@ -177,7 +177,7 @@ prop_suggestedFixesRelevant scenario =
     let code = scenarioToCode scenario
         errors = extractErrors code
         fixes = concatMap suggestFixes errors
-    in null fixes || all isValidFix fixes
+    in null fixes || L.all isValidFix fixes
 
 -- | Property: Recovery confidence should correlate with success
 prop_recoveryConfidenceCorrelates :: ErrorScenario -> Bool
@@ -195,10 +195,10 @@ prop_errorTypesUseAppropriateStrategies scenario =
         result = recoverFromErrors code
         strategies = rrAppliedStrategies result
     in case scenario of
-        SyntaxErrorScenario _ -> any isSyntaxStrategy strategies
-        TypeErrorScenario _ -> any isTypeStrategy strategies
-        OwnershipErrorScenario _ -> any isOwnershipStrategy strategies
-        DependencyErrorScenario _ -> any isDependencyStrategy strategies
+        SyntaxErrorScenario _ -> L.any isSyntaxStrategy strategies
+        TypeErrorScenario _ -> L.any isTypeStrategy strategies
+        OwnershipErrorScenario _ -> L.any isOwnershipStrategy strategies
+        DependencyErrorScenario _ -> L.any isDependencyStrategy strategies
         _ -> True  -- Multiple/cascading errors can use mixed strategies
 
 -- | Convert scenario to code
@@ -267,13 +267,13 @@ isDependencyStrategy = \case
 -- | Check if an error pattern is valid
 isValidPattern :: ErrorPattern -> Bool
 isValidPattern pattern = 
-    not (null (epPattern pattern)) &&
+    not (L.null (epPattern pattern)) &&
     epFrequency pattern >= 0 &&
-    length (epSuggestedFixes pattern) >= 0
+    L.length (epSuggestedFixes pattern) >= 0
 
 -- | Check if a fix is valid
 isValidFix :: String -> Bool
-isValidFix fix = not (null fix) && length fix <= 200  -- Reasonable length limit
+isValidFix fix = not (null fix) && L.length fix <= 200  -- Reasonable L.length limit
 
 -- | Simplified recovery implementation (for testing)
 recoverFromErrors :: String -> RecoveryResult
@@ -298,14 +298,14 @@ applyBasicRecovery code =
         fixedLines = map fixLine lines'
     in unlines fixedLines
   where
-    fixLine line = if "func main( {" `isInfixOf` line
+    fixLine line = if "func main( {" `L.isInfixOf` line
         then "func main() {"
-        else if "x :=" `isInfixOf` line && "+" `isSuffixOf` line
+        else if "x :=" `L.isInfixOf` line && "+" `L.isSuffixOf` line
         then line ++ " 0"
         else line
     
-    isInfixOf needle haystack = needle `L.isInfixOf` haystack
-    isSuffixOf suffix str = suffix `L.isSuffixOf` str
+    L.isInfixOf needle haystack = needle `L.L.isInfixOf` haystack
+    L.isSuffixOf suffix str = suffix `L.L.isSuffixOf` str
 
 -- | Simplified error pattern analysis
 analyzeErrorPatterns :: [CompilerError] -> [ErrorPattern]
@@ -316,9 +316,9 @@ analyzeErrorPatterns errors =
     sameCategory e1 e2 = errorCategory e1 == errorCategory e2
     compareCategory e1 e2 = compare (errorCategory e1) (errorCategory e2)
     createPattern group = ErrorPattern
-        { epPattern = show (errorCategory (head group))
-        , epFrequency = length group
-        , epSeverity = errorSeverity (head group)
+        { epPattern = show (errorCategory (L.head group))
+        , epFrequency = L.length group
+        , epSeverity = errorSeverity (L.head group)
         , epSuggestedFixes = ["Check syntax", "Verify types"]
         }
 
@@ -335,7 +335,7 @@ suggestFixes error =
 categorizeErrors :: [CompilerError] -> [(ErrorCategory, [CompilerError])]
 categorizeErrors errors = 
     let grouped = L.groupBy sameCategory $ L.sortBy compareCategory errors
-    in map (\group -> (errorCategory (head group), group)) grouped
+    in L.map (\group -> (errorCategory (L.head group), group)) grouped
   where
     sameCategory e1 e2 = errorCategory e1 == errorCategory e2
     compareCategory e1 e2 = compare (errorCategory e1) (errorCategory e2)
@@ -375,7 +375,7 @@ tests = testGroup "Error Recovery Consistency Tests"
         let code = scenarioToCode scenario
             result = recoverFromErrors code
             recovered = rrRecoveredCode result
-        in length (lines recovered) >= 1  -- Should maintain some structure
+        in L.length (lines recovered) >= 1  -- Should maintain some structure
   
   , testProperty "Recovery handles edge cases gracefully" $
       fastProperty "edge case inputs" $

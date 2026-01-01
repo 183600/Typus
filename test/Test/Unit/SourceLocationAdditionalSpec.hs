@@ -1,6 +1,7 @@
 module Test.Unit.SourceLocationAdditionalSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 
 import SourceLocation
@@ -25,7 +26,7 @@ tests =
                 result = posAfter 'x' start
             result @?= startPos { posColumn = 6, posOffset = 1 }
 
-        , testCase "posAt creates position at specific line and column" $ do
+        , testCase "posAt creates position at specific line L.and column" $ do
             let pos = posAt 10 20
             pos @?= SourcePos 10 20 0
 
@@ -35,7 +36,7 @@ tests =
         ]
 
     , testGroup "SourceSpan operations"
-        [ testCase "emptySpan creates span with same start and end" $ do
+        [ testCase "emptySpan creates span with same start L.and end" $ do
             let pos = posAt 3 7
                 span = emptySpan pos
             span @?= SourceSpan pos pos
@@ -89,7 +90,7 @@ tests =
         , testCase "mapLocated transforms located value" $ do
             let span = SourceSpan (posAt 1 1) (posAt 1 5)
                 original = locatedWithSpan span "hello"
-                transformed = mapLocated length original
+                transformed = mapLocated L.length original
             locatedValue transformed @?= 5
             locatedSpan transformed @?= span
         ]

@@ -93,15 +93,15 @@ prop_ownership_tracks_lifetimes (VariableName var) =
 -- Property: Ownership analysis should handle multiple moves
 prop_ownership_handles_multiple_moves :: [VariableName] -> Property
 prop_ownership_handles_multiple_moves vars =
-  let varNames = map (\(VariableName v) -> v) vars
+  let varNames = L.map (\(VariableName v) -> v) vars
       typusCode = unlines $ ["//! ownership: on", "func test() {"] ++
-        map (\v -> "    let " ++ v ++ " = String{\"hello\"}") varNames ++
-        ["    let result = " ++ (if null varNames then "x" else head varNames), "}"]
+        L.map (\v -> "    let " ++ v ++ " = String{\"hello\"}") varNames ++
+        ["    let result = " ++ (if null varNames then "x" else L.head varNames), "}"]
   in case parseTypus typusCode of
        Left err -> counterexample ("Parse failed: " ++ err) $ property False
        Right parsed -> 
          case analyzeOwnership parsed of
-           Right result -> property $ length varNames <= 1 || orMoveDetected result
+           Right result -> property $ L.length varNames <= 1 || orMoveDetected result
            Left _ -> property True  -- Ownership errors are acceptable
 
 -- Helper function to check if moves were detected

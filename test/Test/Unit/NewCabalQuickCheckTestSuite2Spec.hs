@@ -4,6 +4,7 @@
 module Test.Unit.NewCabalQuickCheckTestSuite2Spec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
@@ -30,7 +31,7 @@ coreDataStructureProperties = testGroup "Core Data Structure Properties"
       let m = Map.fromList kvs
           kvs' = Map.toList m
           uniqueKeys = nub (map fst kvs)
-      in length kvs' === length uniqueKeys
+      in L.length kvs' === L.length uniqueKeys
   
   , fastProperty "Set.union is commutative" $ \(s1 :: Set.Set Int) (s2 :: Set.Set Int) ->
       Set.union s1 s2 === Set.union s2 s1
@@ -41,14 +42,14 @@ advancedStringProperties :: TestTree
 advancedStringProperties = testGroup "Advanced String Properties"
   [ fastProperty "trim preserves non-whitespace content" $ \s ->
       let t = trim s
-          nonSpace = filter (not . (`elem` " \t\n\r")) s
+          nonSpace = L.filter (not . (`elem` " \t\n\r")) s
       in t === nonSpace .||. null t
   
-  , fastProperty "splitBy length equals number of delimiters plus one (non-empty)" $ \c s ->
+  , fastProperty "splitBy L.length equals number of delimiters plus one (non-empty)" $ \c s ->
       c /= '\0' && not (null s) ==>
       let parts = splitBy c s
-          delimCount = length (filter (== c) s)
-      in length parts === delimCount + 1
+          delimCount = L.length (L.filter (== c) s)
+      in L.length parts === delimCount + 1
   ]
 
 -- Test 5-6: 源位置高级属性
@@ -80,8 +81,8 @@ setOperationsProperties = testGroup "Set Operations Properties"
 compositionProperties :: TestTree
 compositionProperties = testGroup "Composition Properties"
   [ fastProperty "map composition distributes" $ \(Fun _ f :: Fun Int Int) (Fun _ g :: Fun Int Int) (xs :: [Int]) ->
-      map (f . g) xs === map f (map g xs)
+      L.map (f . g) xs === map f (map g xs)
   
   , fastProperty "filter composition is conjunction" $ \(Fun _ p :: Fun Int Bool) (Fun _ q :: Fun Int Bool) (xs :: [Int]) ->
-      filter (\x -> p x && q x) xs === filter p (filter q xs)
+      L.filter (\x -> p x && q x) xs === filter p (filter q xs)
   ]

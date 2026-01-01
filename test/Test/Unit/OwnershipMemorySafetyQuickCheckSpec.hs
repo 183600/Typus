@@ -1,6 +1,7 @@
 module Test.Unit.OwnershipMemorySafetyQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, elements, listOf, chooseInt, vectorOf, suchThat, Positive(..))
 import TestSupport.QuickCheck (fastProperty)
@@ -194,9 +195,9 @@ prop_ownershipTypeOrdering ot1 ot2 =
 prop_ownershipTypeShowInvertible :: OwnershipType -> Bool
 prop_ownershipTypeShowInvertible ot =
     let str = show ot
-    in "Owned" `isInfixOf` str || 
-       "Borrowed" `isInfixOf` str || 
-       "MutBorrowed" `isInfixOf` str
+    in "Owned" `L.isInfixOf` str || 
+       "Borrowed" `L.isInfixOf` str || 
+       "MutBorrowed" `L.isInfixOf` str
 
 prop_ownedGreaterThanBorrowed :: String -> String -> Bool
 prop_ownedGreaterThanBorrowed name1 name2 =
@@ -219,7 +220,7 @@ prop_ownershipErrorOrdering err1 err2 =
 prop_ownershipErrorShowContainsType :: OwnershipError -> Bool
 prop_ownershipErrorShowContainsType err =
     let str = show err
-    in any (`isInfixOf` str) 
+    in L.any (`L.isInfixOf` str) 
         [ "UseAfterMove", "DoubleMove", "BorrowWhileMoved"
         , "MutBorrowWhileBorrowed", "BorrowWhileMutBorrowed"
         , "MultipleMutBorrows", "UseWhileMutBorrowed", "OutOfScope"
@@ -232,7 +233,7 @@ prop_useAfterMoveReferencesMovedVar :: String -> Bool
 prop_useAfterMoveReferencesMovedVar var =
     let err = UseAfterMove var
         str = show err
-    in var `isInfixOf` str && "UseAfterMove" `isInfixOf` str
+    in var `L.isInfixOf` str && "UseAfterMove" `L.isInfixOf` str
 
 -- Memory Safety Properties
 
@@ -253,7 +254,7 @@ prop_moveInvalidatesSource source target =
         Left _ -> True  -- Parsing errors are acceptable
         Right errors -> 
             -- Should detect potential use-after-move if source is used after move
-            length errors >= 0  -- At least no crashes
+            L.length errors >= 0  -- At least no crashes
 
 prop_borrowingPreservesSource :: String -> String -> Bool
 prop_borrowingPreservesSource source borrower =
@@ -301,7 +302,7 @@ prop_analyzerErrorMessagesInformative :: OwnershipError -> Bool
 prop_analyzerErrorMessagesInformative err =
     let formatted = formatOwnershipErrors [err]
     in not (null formatted) && 
-       any (`isInfixOf` formatted) 
+       L.any (`L.isInfixOf` formatted) 
         [ "UseAfterMove", "DoubleMove", "BorrowWhileMoved"
         , "MutBorrowWhileBorrowed", "BorrowWhileMutBorrowed"
         ]
@@ -335,9 +336,9 @@ prop_handlesLongIdentifiers n =
 prop_handlesDeeplyNestedScopes :: Int -> Bool
 prop_handlesDeeplyNestedScopes depth =
     let nested = replicate (abs depth `mod` 10 + 1) "    "
-        code = concat (nested ++ ["{\n"]) ++ 
-               concat (nested ++ ["    x := 42\n"]) ++
-               concat (replicate (abs depth `mod` 10 + 1) "    }\n")
+        code = L.concat (nested ++ ["{\n"]) ++ 
+               L.concat (nested ++ ["    x := 42\n"]) ++
+               L.concat (replicate (abs depth `mod` 10 + 1) "    }\n")
         analyzer = newOwnershipAnalyzer
         result = analyzeOwnership analyzer code
     in case result of
@@ -346,7 +347,7 @@ prop_handlesDeeplyNestedScopes depth =
 
 prop_handlesComplexOwnershipChains :: [String] -> Bool
 prop_handlesComplexOwnershipChains vars =
-    let nonEmptyVars = take 5 (filter (not . null) vars)
+    let nonEmptyVars = take 5 (L.filter (not . null) vars)
         assignments = zipWith (\i var -> var ++ " := move(var" ++ show i ++ ")\n") [0..] nonEmptyVars
         code = unlines assignments
         analyzer = newOwnershipAnalyzer
@@ -357,4 +358,4 @@ prop_handlesComplexOwnershipChains vars =
 
 -- Helper functions
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` [take (length haystack - length needle + 1) (drop i haystack) | i <- [0..length haystack - length needle]]
+L.isInfixOf needle haystack = needle `elem` [take (L.length haystack - L.length needle + 1) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]

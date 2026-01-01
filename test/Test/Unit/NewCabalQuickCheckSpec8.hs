@@ -1,6 +1,7 @@
 module Test.Unit.NewCabalQuickCheckSpec8 (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, property, Arbitrary(..), Gen, choose, listOf, elements)
 import Data.Text (Text)
@@ -66,7 +67,7 @@ prop_syntaxErrorsCorrectlyLocated invalidProg =
     Right _ -> True  -- Unexpected success is acceptable
     Left errors ->
       let source = programSource invalidProg
-      in all (errorLocationValid source) errors
+      in L.all (errorLocationValid source) errors
 
 -- Property: syntax validation handles edge cases gracefully
 prop_validationHandlesEdgeCases :: EdgeCaseProgram -> Bool
@@ -82,7 +83,7 @@ prop_validationIsCompositional prog =
       parts = decomposeTree tree
       partResults = map validateSyntax parts
       wholeResult = validateSyntax tree
-  in all isRight partResults == isRight wholeResult
+  in L.all isRight partResults == isRight wholeResult
 
 -- Property: syntax validation respects language grammar rules
 prop_validationRespectsLanguageRules :: SyntaxProgram -> Bool
@@ -90,7 +91,7 @@ prop_validationRespectsLanguageRules prog =
   let tree = parseProgram prog
   case validateSyntax tree of
     Right validatedTree -> conformsToGrammar validatedTree
-    Left errors -> all grammarRelatedError errors
+    Left errors -> L.all grammarRelatedError errors
 
 -- Property: syntax validation always terminates
 prop_validationTerminates :: SyntaxProgram -> Bool

@@ -58,7 +58,9 @@ import Dependencies.TypeSystem (unify, TypeSubstitution)
 import Parser (parseTypus, TypusFile(..))
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..))
 
-import Data.List (isInfixOf, isPrefixOf, null, length, sort, nub)
+import qualified Data.List as L
+import Data.List (isInfixOf, isPrefixOf, length)
+import Data.List (null, sort, nub)
 import qualified Data.Text as T
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
@@ -67,15 +69,15 @@ import qualified Data.Set as Set
 -- | Generate simple type expressions
 genTypeExpr :: Gen TypeExpr
 genTypeExpr = oneof
-  [ return $ SimpleT "int"
-  , return $ SimpleT "string"
-  , return $ SimpleT "bool"
+  [ return $ SimpleT (T.pack "int")
+  , return $ SimpleT (T.pack "string")
+  , return $ SimpleT (T.pack "bool")
   , do
       base <- elements ["List", "Array", "Map"]
       param <- genTypeExpr
       return $ GenericT (T.pack base) [param]
   , do
-      params <- listOf $ elements [("x", SimpleT "int"), ("y", SimpleT "string")]
+      params <- listOf $ elements [("x", SimpleT (T.pack "int")), ("y", SimpleT (T.pack "string"))]
       ret <- genTypeExpr
       return $ FuncT params ret
   ]
@@ -95,11 +97,11 @@ genConstraint = oneof
 -- | Generate simple statements
 genStatement :: Gen Statement
 genStatement = oneof
-  [ return $ SVarDecl "x" (SimpleT "int")
-  , return $ STypeAlias "MyInt" (SimpleT "int") []
+  [ return $ SVarDecl (T.pack "x") (SimpleT (T.pack "int"))
+  , return $ STypeAlias "MyInt" (SimpleT (T.pack "int")) []
   , do
       name <- elements ["add", "multiply", "process"]
-      params <- listOf $ elements [("a", SimpleT "int"), ("b", SimpleT "string")]
+      params <- listOf $ elements [("a", SimpleT (T.pack "int")), ("b", SimpleT (T.pack "string"))]
       ret <- genTypeExpr
       return $ SFuncDecl name params (Just ret)
   , do
@@ -129,7 +131,7 @@ prop_new_checker_valid =
 prop_add_type_no_errors :: Property
 prop_add_type_no_errors =
   let checker = newDependentTypeChecker
-      checkerWithTypes = addType "MyType" (SimpleT "int") checker
+      checkerWithTypes = addType "MyType" (SimpleT (T.pack "int")) checker
       errors = getDependentTypeErrors checkerWithTypes
   in property $ null errors
 
@@ -196,21 +198,21 @@ unit_tests :: TestTree
 unit_tests = testGroup "Dependency Analysis Unit Tests"
   [ testCase "basic type checking" $ do
       let checker = newDependentTypeChecker
-          typeExpr = SimpleT "int"
+          typeExpr = SimpleT (T.pack "int")
           result = checkType typeExpr checker
       -- Should handle basic type checking
       return ()
 
   , testCase "function type checking" $ do
       let checker = newDependentTypeChecker
-          funcType = FuncT [("x", SimpleT "int"), ("y", SimpleT "int")] (SimpleT "int")
+          funcType = FuncT [("x", SimpleT (T.pack "int")), ("y", SimpleT (T.pack "int"))] (SimpleT (T.pack "int"))
           result = checkType funcType checker
       -- Should handle function types
       return ()
 
   , testCase "generic type checking" $ do
       let checker = newDependentTypeChecker
-          genericType = GenericT "List" [SimpleT "int"]
+          genericType = GenericT "List" [SimpleT (T.pack "int")]
           result = checkType genericType checker
       -- Should handle generic types
       return ()
@@ -233,41 +235,41 @@ unit_tests = testGroup "Dependency Analysis Unit Tests"
       return ()
 
   , testCase "AST validation" $ do
-      let ast = Program [SVarDecl "x" (SimpleT "int")]
+      let ast = Program [SVarDecl (T.pack "x") (SimpleT (T.pack "int"))]
           result = validateASTSemantics ast
       -- Should validate simple AST
       return ()
 
   , testCase "statement validation" $ do
-      let stmt = SVarDecl "x" (SimpleT "int")
+      let stmt = SVarDecl (T.pack "x") (SimpleT (T.pack "int"))
           checker = newDependentTypeChecker
           result = validateStatement stmt checker
       -- Should validate simple statement
       return ()
 
   , testCase "type inference" $ do
-      let stmt = SVarDecl "x" (SimpleT "int")
+      let stmt = SVarDecl (T.pack "x") (SimpleT (T.pack "int"))
           checker = newDependentTypeChecker
           result = inferStatement stmt checker
       -- Should infer types correctly
       return ()
 
   , testCase "type unification" $ do
-      let type1 = SimpleT "int"
-          type2 = SimpleT "int"
+      let type1 = SimpleT (T.pack "int")
+          type2 = SimpleT (T.pack "int")
           result = unifyTypes type1 type2
       -- Should unify identical types
       return ()
 
   , testCase "type generalization" $ do
-      let typeExpr = SimpleT "int"
+      let typeExpr = SimpleT (T.pack "int")
           env = initialTypeEnvironment
           scheme = generalize typeExpr env
       -- Should generalize types
       return ()
 
   , testCase "type instantiation" $ do
-      let scheme = TypeScheme [] $ SimpleT "int"
+      let scheme = TypeScheme [] $ SimpleT (T.pack "int")
           result = instantiate scheme
       -- Should instantiate type schemes
       return ()
@@ -364,11 +366,11 @@ advanced_tests = testGroup "Advanced Dependency Tests"
             ]
           graph = buildDependencyGraph multiCycleNodes
           cycles = detectCycles graph
-      assertBool "should detect multiple cycles" $ length cycles >= 2
+      assertBool "should detect multiple cycles" $ L.length cycles >= 2
 
   , testCase "dependency analysis with constraints" $ do
       let checker = newDependentTypeChecker
-          constraints = [SizeGT "x" 0, RangeC "y" 1 10, PredC "Valid" [SimpleT "int"]]
+          constraints = [SizeGT "x" 0, RangeC "y" 1 10, PredC "Valid" [SimpleT (T.pack "int")]]
           checkerWithConstraints = foldl addConstraint checker constraints
           errors = getDependentTypeErrors checkerWithConstraints
       -- Should handle multiple constraints
@@ -398,7 +400,7 @@ performance_tests :: TestTree
 performance_tests = testGroup "Performance Tests"
   [ testCase "large dependency graph" $ do
       let largeNodes = [DependencyNode ("module" ++ show i) 
-                        (take 3 $ map ("module" ++) (map show [i-1, i-2, i-3])) 
+                        (take 3 $ L.map ("module" ++) (map show [i-1, i-2, i-3])) 
                        | i <- [1..1000]]
           graph = buildDependencyGraph largeNodes
           cycles = detectCycles graph
@@ -406,8 +408,8 @@ performance_tests = testGroup "Performance Tests"
       return ()
 
   , testCase "complex type inference" $ do
-      let complexTypes = replicate 100 $ GenericT "Container" [SimpleT "int"]
-          checker = foldl (\c t -> addType ("Type" ++ show (length c)) t c) 
+      let complexTypes = replicate 100 $ GenericT "Container" [SimpleT (T.pack "int")]
+          checker = L.foldl (\c t -> addType ("Type" ++ show (L.length c)) t c) 
                          newDependentTypeChecker complexTypes
       -- Should handle many types
       return ()

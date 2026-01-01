@@ -15,6 +15,7 @@ import Parser (parseTypus, FileDirectives(..), BlockDirectives(..), CodeBlock(..
               defaultFileDirectives, defaultBlockDirectives)
 import qualified Data.Text as T
 import Data.Char (isSpace, isAlphaNum, isLetter)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 
 -- | Generate random strings with various characteristics
@@ -69,19 +70,19 @@ test_parse_malformed_directives = testCase "parseTypus handles malformed directi
         [ "@@invalid"  -- double @
         , "@ownership invalid"  -- non-boolean
         , "@dependent-types maybe"  -- non-boolean
-        , "@constraints true-or-false"  -- non-boolean
+        , "@constraints true-L.or-false"  -- non-boolean
         , "@ownership"  -- missing value
         , "@unknown-directive true"  -- unknown directive
         ]
   mapM_ (\input -> do
     let result = parseTypus input
-    -- Should either parse successfully (ignoring malformed parts) or fail gracefully
+    -- Should either parse successfully (ignoring malformed parts) L.or fail gracefully
     case result of
       Left _ -> assertBool $ "Malformed directive handled gracefully: " ++ input
       Right _ -> assertBool $ "Malformed directive parsed successfully: " ++ input
   ) malformedInputs
 
--- | Property: Parser should not crash on any string input
+-- | Property: Parser should not crash on L.any string input
 prop_parser_robustness :: String -> Property
 prop_parser_robustness input = 
   let result = parseTypus input

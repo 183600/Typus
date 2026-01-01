@@ -10,12 +10,14 @@
 module Test.Unit.NewSyntaxValidatorValidationQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@=?))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, oneof, suchThat)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (sort, nub, isPrefixOf, isInfixOf, isSuffixOf, (\\), delete, intersect, union, intercalate)
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (sort, nub, (\\), delete, intersect, union, intercalate)
 import Data.Set (Set, fromList, toList, union, intersection, difference)
 import qualified Data.Set as Set
 import Data.Map (Map, fromList, toList, keys, elems, insert, delete, lookup, member, empty)
@@ -34,7 +36,7 @@ import SyntaxValidator
   )
 
 -- ============================================================================
--- Helper Functions and Generators
+-- Helper Functions L.and Generators
 -- ============================================================================
 
 -- Generate valid identifiers
@@ -201,28 +203,28 @@ prop_missing_brace_detected :: String -> Property
 prop_missing_brace_detected funcName =
   let code = "func " ++ funcName ++ "() {\n  fmt.Println(\"test\")\n"
       errors = validateSyntax code
-  in property $ any (\e -> errorType e == MissingBrace) errors
+  in property $ L.any (\e -> errorType e == MissingBrace) errors
 
 -- Property: Missing parenthesis is detected
 prop_missing_parenthesis_detected :: String -> Property
 prop_missing_parenthesis_detected funcName =
   let code = "func " ++ funcName ++ " {\n  fmt.Println(\"test\"\n}"
       errors = validateSyntax code
-  in property $ any (\e -> errorType e == MissingParenthesis) errors
+  in property $ L.any (\e -> errorType e == MissingParenthesis) errors
 
 -- Property: Unclosed string is detected
 prop_unclosed_string_detected :: String -> Property
 prop_unclosed_string_detected content =
   let code = "fmt.Println(\"" ++ content ++ "\n"
       errors = validateSyntax code
-  in property $ any (\e -> errorType e == UnclosedString) errors
+  in property $ L.any (\e -> errorType e == UnclosedString) errors
 
 -- Property: Invalid identifier is detected
 prop_invalid_identifier_detected :: String -> Property
 prop_invalid_identifier_detected invalidId =
   let code = "var " ++ invalidId ++ " int"
       errors = validateSyntax code
-  in property $ any (\e -> errorType e == InvalidIdentifier) errors
+  in property $ L.any (\e -> errorType e == InvalidIdentifier) errors
 
 -- ============================================================================
 -- Language Detection Properties
@@ -233,14 +235,14 @@ prop_go_code_detected :: Property
 prop_go_code_detected =
   let goCode = "package main\n\nfunc main() {\n  fmt.Println(\"Hello\")\n}"
       errors = validateSyntax goCode
-  in property $ not (null errors) ==> all (\e -> errorType e /= MissingPackageDeclaration) errors
+  in property $ not (null errors) ==> L.all (\e -> errorType e /= MissingPackageDeclaration) errors
 
 -- Property: Typus code is detected correctly
 prop_typus_code_detected :: Property
 prop_typus_code_detected =
   let typusCode = "//! ownership: true\n\nfunc test() {\n  // code\n}"
       errors = validateSyntax typusCode
-  in property $ length errors >= 0  -- Just ensure it doesn't crash
+  in property $ L.length errors >= 0  -- Just ensure it doesn't crash
 
 -- ============================================================================
 -- Error Location Properties
@@ -251,14 +253,14 @@ prop_error_locations_within_bounds :: String -> Property
 prop_error_locations_within_bounds code =
   let errors = validateSyntax code
       lines' = lines code
-      numLines = length lines'
-  in property $ all (\e -> lineNumber e >= 1 && lineNumber e <= numLines + 1) errors
+      numLines = L.length lines'
+  in property $ L.all (\e -> lineNumber e >= 1 && lineNumber e <= numLines + 1) errors
 
 -- Property: Error columns are reasonable
 prop_error_columns_reasonable :: String -> Property
 prop_error_columns_reasonable code =
   let errors = validateSyntax code
-  in property $ all (\e -> columnNumber e >= 1 && columnNumber e <= 1000) errors
+  in property $ L.all (\e -> columnNumber e >= 1 && columnNumber e <= 1000) errors
 
 -- ============================================================================
 -- Error Message Properties
@@ -267,7 +269,7 @@ prop_error_columns_reasonable code =
 -- Property: Error messages are not empty
 prop_error_messages_not_empty :: SyntaxError -> Property
 prop_error_messages_not_empty error =
-  property $ not (null (errorMessage error))
+  property $ not (L.null (errorMessage error))
 
 -- Property: Error formatting produces valid output
 prop_error_formatting_valid :: SyntaxError -> Property
@@ -284,56 +286,56 @@ prop_nested_functions_validated :: String -> Property
 prop_nested_functions_validated outerFunc =
   let code = "func " ++ outerFunc ++ "() {\n  func inner() {}\n}"
       errors = validateSyntax code
-  in property $ length errors >= 0
+  in property $ L.length errors >= 0
 
 -- Property: Complex type declarations are validated
 prop_complex_type_declarations :: String -> Property
 prop_complex_type_declarations typeName =
   let code = "type " ++ typeName ++ " struct {\n  Field1 int\n  Field2 string\n}"
       errors = validateSyntax code
-  in property $ length errors >= 0
+  in property $ L.length errors >= 0
 
 -- Property: Multiple imports are validated
 prop_multiple_imports_validated :: [String] -> Property
 prop_multiple_imports_validated imports =
-  let importLines = map (\imp -> "import \"" ++ imp ++ "\"") imports
+  let importLines = L.map (\imp -> "import \"" ++ imp ++ "\"") imports
       code = "package main\n\n" ++ unlines importLines
       errors = validateSyntax code
-  in property $ length errors >= 0
+  in property $ L.length errors >= 0
 
 -- Property: Interface declarations are validated
 prop_interface_declarations :: String -> Property
 prop_interface_declarations interfaceName =
   let code = "type " ++ interfaceName ++ " interface {\n  Method() int\n}"
       errors = validateSyntax code
-  in property $ length errors >= 0
+  in property $ L.length errors >= 0
 
 -- ============================================================================
--- Edge Cases and Boundary Conditions
+-- Edge Cases L.and Boundary Conditions
 -- ============================================================================
 
 -- Property: Very long lines are handled
 prop_very_long_lines :: Int -> Property
-prop_very_long_lines length =
-  length >= 0 && length <= 10000 ==>
-  let longLine = replicate length 'x'
+prop_very_long_lines L.length =
+  length >= 0 && L.length <= 10000 ==>
+  let longLine = replicate L.length 'x'
       code = "var x string = \"" ++ longLine ++ "\""
       errors = validateSyntax code
-  in property $ length errors >= 0
+  in property $ L.length errors >= 0
 
 -- Property: Unicode characters are handled
 prop_unicode_characters :: String -> Property
 prop_unicode_characters unicodeContent =
   let code = "var s string = \"" ++ unicodeContent ++ "\""
       errors = validateSyntax code
-  in property $ length errors >= 0
+  in property $ L.length errors >= 0
 
 -- Property: Escape sequences are handled
 prop_escape_sequences :: String -> Property
 prop_escape_sequences content =
   let code = "var s string = \"" ++ content ++ "\\n\\t\\\"\\\\\""
       errors = validateSyntax code
-  in property $ length errors >= 0
+  in property $ L.length errors >= 0
 
 -- Property: Deep nesting is handled
 prop_deep_nesting :: Int -> Property
@@ -341,9 +343,9 @@ prop_deep_nesting depth =
   depth >= 0 && depth <= 20 ==>
   let nestedBraces = replicate depth "{" 
       closingBraces = replicate depth "}"
-      code = "func test() " ++ concat nestedBraces ++ " fmt.Println(\"test\") " ++ concat closingBraces
+      code = "func test() " ++ L.concat nestedBraces ++ " fmt.Println(\"test\") " ++ L.concat closingBraces
       errors = validateSyntax code
-  in property $ length errors >= 0
+  in property $ L.length errors >= 0
 
 -- ============================================================================
 -- Consistency Properties
@@ -381,7 +383,7 @@ prop_large_files_handled numLines =
   let lines' = replicate numLines "fmt.Println(\"test\")"
       code = "package main\n\nfunc main() {\n" ++ unlines lines' ++ "}\n"
       errors = validateSyntax code
-  in property $ length errors >= 0
+  in property $ L.length errors >= 0
 
 -- Property: Complex expressions are handled
 prop_complex_expressions :: Int -> Property
@@ -390,7 +392,7 @@ prop_complex_expressions complexity =
   let expr = intercalate " + " (replicate complexity "x")
       code = "func test() {\n  result := " ++ expr + "\n}"
       errors = validateSyntax code
-  in property $ length errors >= 0
+  in property $ L.length errors >= 0
 
 -- ============================================================================
 -- Test Collection
@@ -434,7 +436,7 @@ tests = testGroup "New Syntax Validator Validation QuickCheck Tests"
     , fastProperty "interface declarations" prop_interface_declarations
     ]
 
-  , testGroup "Edge Cases and Boundary Conditions"
+  , testGroup "Edge Cases L.and Boundary Conditions"
     [ fastProperty "very long lines" prop_very_long_lines
     , fastProperty "unicode characters" prop_unicode_characters
     , fastProperty "escape sequences" prop_escape_sequences

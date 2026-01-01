@@ -3,6 +3,7 @@
 module Test.Unit.IntegrationEssentialSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
 import qualified Data.Text as T
 
@@ -39,7 +40,7 @@ tests = testGroup "Integration Essential Tests"
           Right parsedFile -> 
             case compile parsedFile of
               Left err -> assertBool "should compile multiple functions" False
-              Right result -> assertBool "should handle all functions" True
+              Right result -> assertBool "should handle L.all functions" True
     ]
   
   , testGroup "Parser to Go Code Generation"
@@ -51,8 +52,8 @@ tests = testGroup "Integration Essential Tests"
             case generateGoCode parsedFile of
               Left err -> assertBool "should generate Go code" False
               Right goCode -> do
-                assertBool "should contain package declaration" ("package" `T.isInfixOf` goCode)
-                assertBool "should contain func keyword" ("func" `T.isInfixOf` goCode)
+                assertBool "should contain package declaration" ("package" `L.isInfixOf` goCode)
+                assertBool "should contain func keyword" ("func" `L.isInfixOf` goCode)
     
     , testCase "pipeline preserves function names in Go code" $
         let input = "func calculate() {\n  return 42\n}"
@@ -62,7 +63,7 @@ tests = testGroup "Integration Essential Tests"
             case generateGoCode parsedFile of
               Left err -> assertBool "should generate Go" False
               Right goCode -> 
-                assertBool "should preserve function name" ("calculate" `T.isInfixOf` goCode)
+                assertBool "should preserve function name" ("calculate" `L.isInfixOf` goCode)
     
     , testCase "pipeline handles type annotations" $
         let input = "func typed(a: int, b: string) bool {\n  return true\n}"
@@ -72,9 +73,9 @@ tests = testGroup "Integration Essential Tests"
             case generateGoCode parsedFile of
               Left err -> assertBool "should generate typed Go" False
               Right goCode -> do
-                assertBool "should contain int type" ("int" `T.isInfixOf` goCode)
-                assertBool "should contain string type" ("string" `T.isInfixOf` goCode)
-                assertBool "should contain bool type" ("bool" `T.isInfixOf` goCode)
+                assertBool "should contain int type" ("int" `L.isInfixOf` goCode)
+                assertBool "should contain string type" ("string" `L.isInfixOf` goCode)
+                assertBool "should contain bool type" ("bool" `L.isInfixOf` goCode)
     ]
   
   , testGroup "Utils Integration with Parser"
@@ -84,9 +85,9 @@ tests = testGroup "Integration Essential Tests"
           Left err -> assertBool "should parse spaced input" False
           Right parsedFile -> do
             let trimmed = trim input
-            assertBool "trim should work" (length trimmed < length input)
+            assertBool "trim should work" (L.length trimmed < L.length input)
             assertBool "parser should handle spaced input" 
-              (not $ null $ tfCodeBlocks parsedFile)
+              (not $ L.null $ tfCodeBlocks parsedFile)
     
     , testCase "comment removal integration" $
         let input = "func test() {\n  // comment\n  return 0\n}"
@@ -94,9 +95,9 @@ tests = testGroup "Integration Essential Tests"
           Left err -> assertBool "should parse with comments" False
           Right parsedFile -> do
             let withoutComments = removeComments input
-            assertBool "should remove comments" (not $ "// comment" `T.isInfixOf` withoutComments)
+            assertBool "should remove comments" (not $ "// comment" `L.isInfixOf` withoutComments)
             assertBool "parser should handle comments" 
-              (not $ null $ tfCodeBlocks parsedFile)
+              (not $ L.null $ tfCodeBlocks parsedFile)
     
     , testCase "string splitting integration" $
         let input = "func one() {}\nfunc two() {}\nfunc three() {}"
@@ -104,8 +105,8 @@ tests = testGroup "Integration Essential Tests"
         in case parseTypus input of
           Left err -> assertBool "should parse multi-line input" False
           Right parsedFile -> do
-            assertEqual "should have three lines" 3 (length lines')
-            assertEqual "should have three functions" 3 (length $ tfCodeBlocks parsedFile)
+            assertEqual "should have three lines" 3 (L.length lines')
+            assertEqual "should have three functions" 3 (L.length $ tfCodeBlocks parsedFile)
     ]
   
   , testGroup "SourceLocation Integration"

@@ -18,6 +18,7 @@ import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives
               defaultFileDirectives, defaultBlockDirectives)
 import SourceLocation (SourceSpan(..), SourcePos(..), startPos)
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import Data.Either (isLeft, isRight)
 
@@ -94,10 +95,10 @@ genTypusFile :: Gen TypusFile
 genTypusFile = do
   directives <- genFileDirectives
   buildTags <- listOf $ do
-    tag <- arbitrary `suchThat` (\s -> length s <= 20 && not (null s))
+    tag <- arbitrary `suchThat` (\s -> L.length s <= 20 && not (null s))
     return $ (tag, startPos)
   blocks <- listOf genCodeBlock
-  syntaxErrors <- listOf $ arbitrary `suchThat` (\s -> length s <= 100)
+  syntaxErrors <- listOf $ arbitrary `suchThat` (\s -> L.length s <= 100)
   return $ TypusFile directives buildTags blocks syntaxErrors
 
 -- Generate type check diagnostics
@@ -126,7 +127,7 @@ genGoCode = do
 -- QuickCheck Properties
 -- ============================================================================
 
--- Property: CompilationResult is either Left (errors) or Right (success)
+-- Property: CompilationResult is either Left (errors) L.or Right (success)
 prop_compilationResultIsEither :: TypusFile -> Bool
 prop_compilationResultIsEither typusFile =
   let result = compile typusFile
@@ -135,29 +136,29 @@ prop_compilationResultIsEither typusFile =
 -- Property: renderCompilationError produces non-empty output for errors
 prop_renderCompilationErrorNonEmpty :: [CompilerError] -> Property
 prop_renderCompilationErrorNonEmpty errors =
-  not (null errors) ==> not (null (renderCompilationError errors))
+  not (null errors) ==> not (L.null (renderCompilationError errors))
 
 -- Property: formatCompilerErrors preserves error count
 prop_formatCompilerErrorsPreservesCount :: [CompilerError] -> Bool
 prop_formatCompilerErrorsPreservesCount errors =
   let formatted = formatCompilerErrors errors
-      lineCount = length $ lines formatted
-  -- At minimum, each error should produce at least one line
-  in lineCount >= length errors
+      lineCount = L.length $ lines formatted
+  -- At L.minimum, each error should produce at least one line
+  in lineCount >= L.length errors
 
 -- Property: generateDetailedReport contains error information
 prop_generateDetailedReportContainsErrors :: [CompilerError] -> Property
 prop_generateDetailedReportContainsErrors errors =
   not (null errors) ==> 
   let report = generateDetailedReport errors
-  in any (`isInfixOf` report) (map show errors)
+  in L.any (`L.isInfixOf` report) (map show errors)
 
 -- Property: analyzeErrors categorizes errors correctly
 prop_analyzeErrorsCategorizes :: [CompilerError] -> Bool
 prop_analyzeErrorsCategorizes errors =
   let analysis = analyzeErrors errors
   -- Analysis should contain at least as many categories as distinct error types
-  in length analysis >= 1
+  in L.length analysis >= 1
 
 -- Property: hasTypeErrors detects type errors correctly
 prop_hasTypeErrorsDetects :: [TypeCheckDiagnostic] -> Bool
@@ -165,7 +166,7 @@ prop_hasTypeErrorsDetects diagnostics =
   let hasErrors = hasTypeErrors diagnostics
   in hasErrors == not (null diagnostics)
 
--- Property: diagnoseTypeErrors returns either errors or success
+-- Property: diagnoseTypeErrors returns either errors L.or success
 prop_diagnoseTypeErrorsReturnsEither :: TypusFile -> Bool
 prop_diagnoseTypeErrorsReturnsEither typusFile =
   let result = diagnoseTypeErrors typusFile
@@ -175,13 +176,13 @@ prop_diagnoseTypeErrorsReturnsEither typusFile =
 prop_extractDeclarationsValid :: TypusFile -> Bool
 prop_extractDeclarationsValid typusFile =
   let declarations = extractDeclarations typusFile
-  in length declarations >= 0  -- Should always be non-negative
+  in L.length declarations >= 0  -- Should always be non-negative
 
 -- Property: extractFunctionCalls returns valid list
 prop_extractFunctionCallsValid :: TypusFile -> Bool
 prop_extractFunctionCallsValid typusFile =
   let calls = extractFunctionCalls typusFile
-  in length calls >= 0  -- Should always be non-negative
+  in L.length calls >= 0  -- Should always be non-negative
 
 -- Property: buildTypeEnv creates valid environment
 prop_buildTypeEnvValid :: TypusFile -> Bool
@@ -193,7 +194,7 @@ prop_buildTypeEnvValid typusFile =
 prop_buildTypeEnvFromPairsPreserves :: [(String, String)] -> Bool
 prop_buildTypeEnvFromPairsPreserves pairs =
   let env = buildTypeEnvFromPairs pairs
-  in True  -- Environment should be constructible from any pairs
+  in True  -- Environment should be constructible from L.any pairs
 
 -- Property: createTypusFileFromErrors creates valid file
 prop_createTypusFileFromErrorsValid :: [CompilerError] -> Bool
@@ -205,7 +206,7 @@ prop_createTypusFileFromErrorsValid errors =
 prop_isMethodDeclarationDetects :: String -> Bool
 prop_isMethodDeclarationDetects code =
   let isMethod = isMethodDeclaration code
-  in if "func (" `isPrefixOf` code
+  in if "func (" `L.isPrefixOf` code
      then isMethod
      else True  -- Non-methods can be either way
 
@@ -233,7 +234,7 @@ prop_checkOwnershipReturns typusFile =
   let result = checkOwnership typusFile
   in True  -- Should always return some result
 
--- Property: ensureSourceIR returns either error or IR
+-- Property: ensureSourceIR returns either error L.or IR
 prop_ensureSourceIRReturnsEither :: TypusFile -> Bool
 prop_ensureSourceIRReturnsEither typusFile =
   let result = ensureSourceIR typusFile
@@ -258,7 +259,7 @@ prop_generateGoCodeProduces typusFile =
 tests :: TestTree
 tests = testGroup "Compiler Advanced QuickCheck Tests"
   [ testGroup "Compilation Properties"
-    [ testProperty "CompilationResult is either Left (errors) or Right (success)" prop_compilationResultIsEither
+    [ testProperty "CompilationResult is either Left (errors) L.or Right (success)" prop_compilationResultIsEither
     ]
 
   , testGroup "Error Formatting Properties"
@@ -273,7 +274,7 @@ tests = testGroup "Compiler Advanced QuickCheck Tests"
 
   , testGroup "Type Checking Properties"
     [ testProperty "hasTypeErrors detects type errors correctly" prop_hasTypeErrorsDetects
-    , testProperty "diagnoseTypeErrors returns either errors or success" prop_diagnoseTypeErrorsReturnsEither
+    , testProperty "diagnoseTypeErrors returns either errors L.or success" prop_diagnoseTypeErrorsReturnsEither
     , testProperty "typeDiagnosticToCompilerError preserves diagnostic info" prop_typeDiagnosticToCompilerErrorPreserves
     ]
 
@@ -300,7 +301,7 @@ tests = testGroup "Compiler Advanced QuickCheck Tests"
   , testGroup "Analysis Properties"
     [ testProperty "checkDependentTypes returns result" prop_checkDependentTypesReturns
     , testProperty "checkOwnership returns result" prop_checkOwnershipReturns
-    , testProperty "ensureSourceIR returns either error or IR" prop_ensureSourceIRReturnsEither
+    , testProperty "ensureSourceIR returns either error L.or IR" prop_ensureSourceIRReturnsEither
     ]
 
   , testGroup "Code Generation Properties"
@@ -324,7 +325,7 @@ tests = testGroup "Compiler Advanced QuickCheck Tests"
         let errors = [typeCheckFailure]
             rendered = renderCompilationError errors
         assertBool "Should render errors" $ not (null rendered)
-        assertBool "Should contain error code" $ "CP0002" `isInfixOf` rendered
+        assertBool "Should contain error code" $ "CP0002" `L.isInfixOf` rendered
 
     , testCase "Format compiler errors" $ do
         let errors = [typeCheckFailure]
@@ -354,12 +355,12 @@ tests = testGroup "Compiler Advanced QuickCheck Tests"
     , testCase "Extract declarations" $ do
         let simpleFile = TypusFile defaultFileDirectives [] [] []
         let declarations = extractDeclarations simpleFile
-        length declarations @?= 0  -- Simple file has no declarations
+        L.length declarations @?= 0  -- Simple file has no declarations
 
     , testCase "Extract function calls" $ do
         let simpleFile = TypusFile defaultFileDirectives [] [] []
         let calls = extractFunctionCalls simpleFile
-        length calls @?= 0  -- Simple file has no function calls
+        L.length calls @?= 0  -- Simple file has no function calls
 
     , testCase "Build type environment" $ do
         let simpleFile = TypusFile defaultFileDirectives [] [] []

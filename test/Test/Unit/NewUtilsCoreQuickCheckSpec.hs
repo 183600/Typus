@@ -3,6 +3,7 @@
 module Test.Unit.NewUtilsCoreQuickCheckSpec where
 
 import Test.Tasty (TestTree)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), counterexample)
 import Test.Tasty.HUnit (testCase, assertBool)
 
@@ -65,15 +66,15 @@ genIndentedString = do
 -- Utils Core Properties
 -- ============================================================================
 
--- Property: trim removes leading and trailing whitespace
+-- Property: trim removes leading L.and trailing whitespace
 prop_trimRemovesWhitespace :: String -> Property
 prop_trimRemovesWhitespace str =
     let trimmed = trim str
-        hasLeadingSpace = not (null str) && Char.isSpace (head str)
+        hasLeadingSpace = not (null str) && Char.isSpace (L.head str)
         hasTrailingSpace = not (null str) && Char.isSpace (last str)
-        trimmedStartEmpty = null trimmed || not (Char.isSpace (head trimmed))
+        trimmedStartEmpty = null trimmed || not (Char.isSpace (L.head trimmed))
         trimmedEndEmpty = null trimmed || not (Char.isSpace (last trimmed))
-    in counterexample ("Trim should remove leading and trailing whitespace")
+    in counterexample ("Trim should remove leading L.and trailing whitespace")
        (if hasLeadingSpace || hasTrailingSpace
         then trimmedStartEmpty && trimmedEndEmpty
         else property True)
@@ -82,7 +83,7 @@ prop_trimRemovesWhitespace str =
 prop_trimPreservesNonWhitespace :: String -> Property
 prop_trimPreservesNonWhitespace str
     | null str = property True
-    | Char.isSpace (head str) || Char.isSpace (last str) = property True
+    | Char.isSpace (L.head str) || Char.isSpace (last str) = property True
     | otherwise =
         let trimmed = trim str
         in counterexample ("Trim should preserve content without leading/trailing whitespace")
@@ -95,16 +96,16 @@ prop_splitByPreservesEmptySegments delim str =
         strWithDelim = [delim] ++ str ++ [delim]
         partsWithDelim = splitBy delim strWithDelim
     in counterexample ("Split should preserve empty segments at boundaries")
-       (length partsWithDelim === length parts + 2)
+       (L.length partsWithDelim === L.length parts + 2)
 
 -- Property: splitByCollapsed removes empty segments
 prop_splitByCollapsedRemovesEmpty :: Char -> String -> Property
 prop_splitByCollapsedRemovesEmpty delim str =
     let parts = splitBy delim str
         collapsedParts = splitByCollapsed delim str
-        hasEmpty = any null parts
+        hasEmpty = L.any null parts
     in counterexample ("SplitCollapsed should remove empty segments")
-       (if hasEmpty then length collapsedParts < length parts else property True)
+       (if hasEmpty then L.length collapsedParts < L.length parts else property True)
 
 -- Property: splitByComma is equivalent to splitBy ','
 prop_splitByCommaEquivalence :: String -> Property
@@ -129,34 +130,34 @@ prop_removeLineCommentsBehavior str =
         linesOriginal = lines str
         linesProcessed = lines withoutComments
     in counterexample ("removeLineComments should process line by line")
-       (length linesProcessed <= length linesOriginal === True)
+       (L.length linesProcessed <= L.length linesOriginal === True)
 
--- Property: removeComments handles both // and /* */ comments
+-- Property: removeComments handles both // L.and /* */ comments
 prop_removeCommentsHandlesBothTypes :: String -> Property
 prop_removeCommentsHandlesBothTypes str =
     let withoutComments = removeComments str
-        hasLineComment = "//" `isInfixOf` str
-        hasBlockComment = "/*" `isInfixOf` str && "*/" `isInfixOf` str
+        hasLineComment = "//" `L.isInfixOf` str
+        hasBlockComment = "/*" `L.isInfixOf` str && "*/" `L.isInfixOf` str
     in counterexample ("removeComments should handle both comment types")
        (if hasLineComment || hasBlockComment
-        then length withoutComments <= length str
+        then L.length withoutComments <= L.length str
         else property True)
 
 -- Property: normalizeIndentation preserves relative indentation
 prop_normalizeIndentationPreservesRelative :: String -> Property
 prop_normalizeIndentationPreservesRelative str =
     let normalized = normalizeIndentation str
-        originalLines = filter (not . all Char.isSpace) $ lines str
-        normalizedLines = filter (not . all Char.isSpace) $ lines normalized
+        originalLines = L.filter (not . L.all Char.isSpace) $ lines str
+        normalizedLines = L.filter (not . L.all Char.isSpace) $ lines normalized
     in counterexample ("normalizeIndentation should preserve relative structure")
-       (length normalizedLines === length originalLines)
+       (L.length normalizedLines === L.length originalLines)
 
 -- Property: normalizeIndentation removes common prefix
 prop_normalizeIndentationRemovesCommonPrefix :: String -> Property
 prop_normalizeIndentationRemovesCommonPrefix str =
     let normalized = normalizeIndentation str
         normalizedLines = lines normalized
-        hasLeadingSpaces = any (\line -> not (null line) && Char.isSpace (head line)) normalizedLines
+        hasLeadingSpaces = L.any (\line -> not (null line) && Char.isSpace (L.head line)) normalizedLines
     in counterexample ("normalizeIndentation should remove common prefix")
        (not (null normalizedLines) ==> not hasLeadingSpaces)
 
@@ -168,16 +169,16 @@ prop_fixIndentationEquivalence str =
     in counterexample ("fixIndentation should equal normalizeIndentation")
        (fixed === normalized)
 
--- Property: breakOn finds first occurrence or returns original
+-- Property: breakOn finds first occurrence L.or returns original
 prop_breakOnBehavior :: String -> String -> Property
 prop_breakOnBehavior pat str
     | null pat = 
         let (before, after) = breakOn pat str
         in counterexample ("breakOn with empty pattern should return (\"\", str)")
            (before === "" && after === str)
-    | pat `isInfixOf` str =
+    | pat `L.isInfixOf` str =
         let (before, after) = breakOn pat str
-            expectedBefore = takeWhile (/= head pat) str
+            expectedBefore = takeWhile (/= L.head pat) str
         in counterexample ("breakOn should split at first occurrence")
            (before ++ pat ++ after === str)
     | otherwise =

@@ -1,6 +1,7 @@
 module Test.Unit.NewCabalQuickCheckSpec7 (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, property, Arbitrary(..), Gen, choose, listOf, elements)
 import Data.Text (Text)
@@ -65,7 +66,7 @@ prop_errorAggregationPreservesInfo errors =
 prop_errorFilteringRespectsSeverity :: [CompilerError] -> ErrorSeverity -> Bool
 prop_errorFilteringRespectsSeverity errors minSeverity =
   let filtered = filterErrorsBySeverity errors minSeverity
-  in all (\e -> errorSeverity e >= minSeverity) filtered
+  in L.all (\e -> errorSeverity e >= minSeverity) filtered
 
 -- Property: error location tracking is accurate
 prop_errorLocationTrackingAccurate :: SourceCode -> CompilerError -> Bool
@@ -81,7 +82,7 @@ prop_errorMessagesInformative :: CompilerError -> Bool
 prop_errorMessagesInformative error =
   let message = errorMessage error
   in not (T.null message) && 
-     T.length message <= maxMessageLength &&
+     T.L.length message <= maxMessageLength &&
      containsRelevantInfo message error
 
 -- Property: error chaining preserves causality

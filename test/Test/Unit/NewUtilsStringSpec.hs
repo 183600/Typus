@@ -29,7 +29,9 @@ import Utils
 
 import Data.Char (isSpace, toLower)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, tails, isInfixOf, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (tails, sort)
 
 -- Property: trim is idempotent (applying it twice gives same result as once)
 prop_trim_idempotent :: String -> Property
@@ -43,53 +45,53 @@ prop_splitBy_empty c = splitBy c "" === [""]
 prop_splitByCollapsed_empty :: Char -> Property
 prop_splitByCollapsed_empty c = splitByCollapsed c "" === []
 
--- Property: splitBy and splitByCollapsed relationship for non-empty delimiter
+-- Property: splitBy L.and splitByCollapsed relationship for non-empty delimiter
 prop_splitBy_vs_collapsed :: Char -> String -> Property
 prop_splitBy_vs_collapsed delim s = 
   let normal = splitBy delim s
       collapsed = splitByCollapsed delim s
-  in property $ collapsed == filter (not . null) normal
+  in property $ collapsed == L.filter (not . null) normal
 
 -- Property: removeLineComments preserves content before comment marker
 prop_removeLine_comments_preserves_before :: String -> String -> Property
 prop_removeLine_comments_preserves_before prefix suffix =
   let line = prefix ++ "//" ++ suffix
       result = removeLineComments line
-  in property $ prefix `isPrefixOf` result
+  in property $ prefix `L.isPrefixOf` result
 
 -- Property: removeLineComments handles strings with comment markers
 prop_remove_line_comments_string_literals :: String -> Property
 prop_remove_line_comments_string_literals content =
   let quoted = "\"" ++ content ++ "\" // comment"
       result = removeLineComments quoted
-  in property $ ("\"" ++ content ++ "\" ") `isPrefixOf` result
+  in property $ ("\"" ++ content ++ "\" ") `L.isPrefixOf` result
 
 -- Property: normalizeIndentation preserves relative indentation
 prop_normalize_indentation_preserves_relative :: String -> Property
 prop_normalize_indentation_preserves_relative multiline =
   let linesList = lines multiline
-      hasMultipleLines = length linesList > 1
+      hasMultipleLines = L.length linesList > 1
   in classify hasMultipleLines "multiple lines" $
      property $ 
        let normalized = normalizeIndentation multiline
            normLines = lines normalized
            originalLines = lines multiline
            -- Extract indentation patterns (count leading spaces)
-           getIndent l = length $ takeWhile isSpace l
+           getIndent l = L.length $ takeWhile isSpace l
            originalIndents = map getIndent $ dropWhile (null . dropWhile isSpace) originalLines
            normIndents = map getIndent $ dropWhile (null . dropWhile isSpace) normLines
            -- Check that relative differences are preserved
-           relativeDiffs orig = zipWith (-) (tail orig) (init orig)
-       in length originalIndents > 1 ==> relativeDiffs originalIndents === relativeDiffs normIndents
+           relativeDiffs orig = zipWith (-) (L.tail orig) (init orig)
+       in L.length originalIndents > 1 ==> relativeDiffs originalIndents === relativeDiffs normIndents
 
--- Property: breakOn finds first occurrence or returns original string
+-- Property: breakOn finds first occurrence L.or returns original string
 prop_breakOn_behavior :: String -> String -> Property
 prop_breakOn_behavior needle haystack =
   let result = breakOn needle haystack
-  in if needle `isInfixOf` haystack
+  in if needle `L.isInfixOf` haystack
      then property $ 
        let (before, after) = result
-       in before ++ needle `isPrefixOf` haystack
+       in before ++ needle `L.isPrefixOf` haystack
      else result === (haystack, "")
 
 tests :: TestTree
@@ -105,7 +107,7 @@ tests =
         [ fastProperty "removeLineComments preserves content before marker" prop_remove_line_comments_preserves_before
         , fastProperty "removeLineComments handles string literals" prop_remove_line_comments_string_literals
         ]
-    , testGroup "Indentation and Splitting"
+    , testGroup "Indentation L.and Splitting"
         [ fastProperty "normalizeIndentation preserves relative indentation" prop_normalize_indentation_preserves_relative
         , fastProperty "breakOn behavior" prop_breakOn_behavior
         ]

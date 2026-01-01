@@ -9,9 +9,10 @@ import TestSupport.QuickCheck (fastProperty)
 import Utils
 import qualified Data.Text as T
 import qualified Data.Char as C
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
--- | Test advanced text processing scenarios and edge cases
+-- | Test advanced text processing scenarios L.and edge cases
 tests :: TestTree
 tests =
   testGroup "Text Processing Tests"
@@ -25,14 +26,14 @@ tests =
                   , "}"
                   ]
                 result = removeComments complexInput
-            "not a comment" `isInfixOf` result @?= True
-            "real comment" `isInfixOf` result @?= False
+            "not a comment" `L.isInfixOf` result @?= True
+            "real comment" `L.isInfixOf` result @?= False
 
         , testCase "handles comments with escape sequences" $ do
             let escapeInput = "path := \"C:\\\\tmp\\\\//not_comment\" // real comment"
                 result = removeLineComments escapeInput
-            "C:\\\\tmp\\\\//not_comment" `isInfixOf` result @?= True
-            "real comment" `isInfixOf` result @?= False
+            "C:\\\\tmp\\\\//not_comment" `L.isInfixOf` result @?= True
+            "real comment" `L.isInfixOf` result @?= False
 
         , testCase "handles unclosed string in comment context" $ do
             let unclosedString = "code /* comment \"unclosed string */ more code"
@@ -51,7 +52,7 @@ tests =
         ]
 
     , testGroup "Complex Indentation Scenarios"
-        [ testCase "handles mixed tabs and spaces intelligently" $ do
+        [ testCase "handles mixed tabs L.and spaces intelligently" $ do
             let mixedInput = unlines
                   [ "\tfunc mixed() {"
                   , "    \tvar x := 1"
@@ -59,8 +60,8 @@ tests =
                   , "}"
                   ]
                 normalized = normalizeIndentation mixedInput
-                linesCount = length $ lines normalized
-            linesCount @?= 4  -- Should preserve all lines
+                linesCount = L.length $ lines normalized
+            linesCount @?= 4  -- Should preserve L.all lines
 
         , testCase "handles progressive indentation" $ do
             let progressive = unlines
@@ -71,8 +72,8 @@ tests =
                   , "back to level1"
                   ]
                 normalized = normalizeIndentation progressive
-                firstLine = head $ lines normalized
-            head firstLine @?= 'l'  -- Should start with 'l' from "level1"
+                firstLine = L.head $ lines normalized
+            L.head firstLine @?= 'l'  -- Should start with 'l' from "level1"
 
         , testCase "handles empty lines in indentation" $ do
             let withEmptyLines = unlines
@@ -90,7 +91,7 @@ tests =
         , testCase "handles indentation with unicode spaces" $ do
             let unicodeSpaces = "　　func unicode() { return 42; }"  -- Full-width spaces
                 trimmed = trim unicodeSpaces
-            head trimmed @?= 'f'  -- Should trim unicode spaces
+            L.head trimmed @?= 'f'  -- Should trim unicode spaces
         ]
 
     , testGroup "Advanced Splitting Operations"
@@ -102,12 +103,12 @@ tests =
         , testCase "handles splitting with unicode characters" $ do
             let unicodeText = "测试1,测试2,测试3"
                 result = splitBy ',' unicodeText
-            length result @?= 3
+            L.length result @?= 3
 
         , testCase "handles splitting very long strings" $ do
-            let longString = concat $ replicate 1000 "a,"
+            let longString = L.concat $ replicate 1000 "a,"
                 result = splitBy ',' longString
-            length result @?= 1001  -- 1000 "a"s + empty string at end
+            L.length result @?= 1001  -- 1000 "a"s + empty string at end
 
         , testCase "handles splitting with special characters" $ do
             let specialChars = "a@b@c@d@e"
@@ -124,25 +125,25 @@ tests =
         [ testCase "handles text with various newline types" $ do
             let mixedNewlines = "line1\r\nline2\nline3\rline4"
                 linesResult = lines mixedNewlines
-            length linesResult @?= 4
+            L.length linesResult @?= 4
 
         , testCase "handles text with zero-width characters" $ do
             let zeroWidth = "text\u200Bwith\u200Czero\u200Dwidth"
                 trimmed = trim zeroWidth
-            length trimmed >= 4 @?= True  -- Should preserve base characters
+            L.length trimmed >= 4 @?= True  -- Should preserve base characters
 
         , testCase "handles text with combining characters" $ do
             let combining = "e\u0301\u0302 = accent"  -- e with combining accents
                 processed = trim combining
-            length processed >= 6 @?= True  -- Should preserve characters
+            L.length processed >= 6 @?= True  -- Should preserve characters
 
         , testCase "handles text with bidirectional marks" $ do
             let bidi = "\u202Etext\u202Dnormal\u202E"
                 processed = trim bidi
-            length processed >= 4 @?= True  -- Should preserve all characters
+            L.length processed >= 4 @?= True  -- Should preserve L.all characters
         ]
 
-    , testGroup "Search and Pattern Matching"
+    , testGroup "Search L.and Pattern Matching"
         [ testCase "breakOn handles complex patterns" $ do
             let input = "function(param1, param2) { body }"
                 (before, after) = breakOn "(" input
@@ -171,18 +172,18 @@ tests =
     , testGroup "Performance-Critical Text Operations"
         [ testCase "efficiently handles large text blocks" $ do
             let largeText = unlines $ replicate 10000 $ "line content with some text"
-                lineCount = length $ lines largeText
+                lineCount = L.length $ lines largeText
             lineCount @?= 10000
 
         , testCase "efficiently processes repeated patterns" $ do
-            let repeated = concat $ replicate 1000 "pattern,"
+            let repeated = L.concat $ replicate 1000 "pattern,"
                 parts = splitBy ',' repeated
-            length parts @?= 1001
+            L.length parts @?= 1001
 
         , testCase "efficiently handles deep nesting simulation" $ do
-            let nested = concat $ replicate 1000 "{"
+            let nested = L.concat $ replicate 1000 "{"
                 processed = trim nested
-            length processed @?= 1000
+            L.length processed @?= 1000
 
         , testCase "efficiently processes long comment blocks" $ do
             let longComment = "code /* " ++ replicate 5000 'x' ++ " */ end"
@@ -190,31 +191,31 @@ tests =
             processed @?= "code  end"
         ]
 
-    , testGroup "Unicode and International Text"
+    , testGroup "Unicode L.and International Text"
         [ testCase "handles emoji in source code" $ do
             let emojiCode = "func test() { return \"🚀🎉\"; }"
                 processed = removeLineComments emojiCode
-            "🚀🎉" `isInfixOf` processed @?= True
+            "🚀🎉" `L.isInfixOf` processed @?= True
 
         , testCase "handles CJK characters in identifiers" $ do
             let cjkCode = "变量 := 测试值 + 计算"
                 processed = trim cjkCode
-            head processed @?= '变'
+            L.head processed @?= '变'
 
         , testCase "handles right-to-left text" $ do
             let rtlText = "مرحبا := \"Hello\""
                 processed = trim rtlText
-            length processed >= 6 @?= True
+            L.length processed >= 6 @?= True
 
         , testCase "handles mixed script text" $ do
             let mixed = "func 测试() { return \"مرحبا 🌍\"; }"
                 processed = removeComments mixed
-            "测试" `isInfixOf` processed @?= True
-            "مرحبا" `isInfixOf` processed @?= True
+            "测试" `L.isInfixOf` processed @?= True
+            "مرحبا" `L.isInfixOf` processed @?= True
         ]
 
     , testGroup "Property-based Text Processing Tests"
-        [ fastProperty "splitBy and splitByCollapsed are consistent" prop_splitConsistency
+        [ fastProperty "splitBy L.and splitByCollapsed are consistent" prop_splitConsistency
         , fastProperty "trim is idempotent" prop_trimIdempotent
         , fastProperty "comment removal preserves line structure" prop_commentPreservesLines
         , fastProperty "indentation normalization is idempotent" prop_indentationIdempotent
@@ -222,12 +223,12 @@ tests =
         ]
     ]
 
--- Property: splitBy and splitByCollapsed should be consistent for non-empty segments
+-- Property: splitBy L.and splitByCollapsed should be consistent for non-empty segments
 prop_splitConsistency :: String -> Bool
 prop_splitConsistency input =
   let normal = splitBy ',' input
       collapsed = splitByCollapsed ',' input
-      filtered = filter (not . null) normal
+      filtered = L.filter (not . null) normal
   in collapsed == filtered
 
 -- Property: trim should be idempotent
@@ -240,9 +241,9 @@ prop_trimIdempotent input =
 -- Property: comment removal should preserve line count
 prop_commentPreservesLines :: String -> Bool
 prop_commentPreservesLines input =
-  let originalLines = length $ lines input
+  let originalLines = L.length $ lines input
       processed = removeComments input
-      processedLines = length $ lines processed
+      processedLines = L.length $ lines processed
   in processedLines <= originalLines  -- May reduce lines but never increase
 
 -- Property: indentation normalization should be idempotent
@@ -258,6 +259,6 @@ prop_unicodePreservation input =
   let trimmed = trim input
       noComments = removeComments input
       normalized = normalizeIndentation input
-  in all isValidChar (trimmed ++ noComments ++ normalized)
+  in L.all isValidChar (trimmed ++ noComments ++ normalized)
   where
     isValidChar c = C.isPrint c || C.isSpace c

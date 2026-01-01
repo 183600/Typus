@@ -25,30 +25,32 @@ import Utils
   )
 
 import Data.Char (isSpace, isAlpha, isDigit, isAlphaNum)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, sort, nub, group)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (sort, nub, group)
 import qualified Data.Text as T
 
--- Property: trim never increases string length
+-- Property: trim never increases string L.length
 prop_trim_never_increases_length :: String -> Property
 prop_trim_never_increases_length s =
   let trimmed = trim s
-  in property $ length trimmed <= length s
+  in property $ L.length trimmed <= L.length s
 
--- Property: trim preserves all non-space characters
+-- Property: trim preserves L.all non-space characters
 prop_trim_preserves_non_space :: String -> Property
 prop_trim_preserves_non_space s =
   let trimmed = trim s
-      nonSpaceOriginal = filter (not . isSpace) s
-      nonSpaceTrimmed = filter (not . isSpace) trimmed
+      nonSpaceOriginal = L.filter (not . isSpace) s
+      nonSpaceTrimmed = L.filter (not . isSpace) trimmed
   in property $ sort nonSpaceOriginal === sort nonSpaceTrimmed
 
 -- Property: splitBy preserves total character count (including delimiters)
 prop_splitBy_preserves_chars :: Char -> String -> Property
 prop_splitBy_preserves_chars delim s =
   let parts = splitBy delim s
-      reconstructed = foldr (\x acc -> x ++ [delim] ++ acc) (last parts) (init parts)
-      originalLength = length s
-      reconstructedLength = length reconstructed
+      reconstructed = L.foldr (\x acc -> x ++ [delim] ++ acc) (last parts) (init parts)
+      originalLength = L.length s
+      reconstructedLength = L.length reconstructed
   in property $ if null parts 
                    then originalLength === 0
                    else reconstructedLength === originalLength
@@ -57,7 +59,7 @@ prop_splitBy_preserves_chars delim s =
 prop_splitByCollapsed_no_empty :: Char -> String -> Property
 prop_splitByCollapsed_no_empty delim s =
   let parts = splitByCollapsed delim s
-  in property $ all (not . null) parts
+  in property $ L.all (not . null) parts
 
 -- Property: removeLineComments preserves non-commented lines
 prop_remove_line_comments_preserves_non_commented :: String -> Property
@@ -66,8 +68,8 @@ prop_remove_line_comments_preserves_non_commented s =
       withoutComments = removeLineComments s
       resultLines = lines withoutComments
       -- Count lines that don't start with // (ignoring leading spaces)
-      originalNonComment = length $ filter (\line -> not (("//" `isPrefixOf`) (dropWhile isSpace line))) lines'
-      resultNonComment = length resultLines
+      originalNonComment = L.length $ L.filter (\line -> not (("//" `L.isPrefixOf`) (dropWhile isSpace line))) lines'
+      resultNonComment = L.length resultLines
   in property $ resultNonComment <= originalNonComment
 
 -- Property: removeComments idempotent
@@ -81,24 +83,24 @@ prop_remove_comments_idempotent s =
 prop_normalize_preserves_line_count :: String -> Property
 prop_normalize_preserves_line_count s =
   let normalized = normalizeIndentation s
-      originalLines = length $ lines s
-      normalizedLines = length $ lines normalized
+      originalLines = L.length $ lines s
+      normalizedLines = L.length $ lines normalized
   in property $ originalLines === normalizedLines
 
 -- Property: normalizeIndentation never introduces trailing spaces
 prop_normalize_no_trailing_spaces :: String -> Property
 prop_normalize_no_trailing_spaces s =
   let normalized = normalizeIndentation s
-      hasTrailingSpaces = any (`isSuffixOf`) (map (:[]) " \t") (lines normalized)
+      hasTrailingSpaces = L.any (`L.isSuffixOf`) (L.map (:[]) " \t") (lines normalized)
   in property $ not hasTrailingSpaces
 
--- Property: breakOn consistency with isInfixOf
+-- Property: breakOn consistency with L.isInfixOf
 prop_breakOn_consistency :: String -> String -> Property
 prop_breakOn_consistency needle haystack =
   let (before, after) = breakOn needle haystack
-      found = needle `isInfixOf` haystack
+      found = needle `L.isInfixOf` haystack
   in property $ if found
-                   then needle `isPrefixOf` after
+                   then needle `L.isPrefixOf` after
                    else after === haystack
 
 -- Property: fixIndentation consistency with normalizeIndentation
@@ -120,20 +122,20 @@ prop_splitby_respects_boundaries :: Char -> NonEmptyList Char -> NonEmptyList Ch
 prop_splitby_respects_boundaries delim (NonEmpty prefix) (NonEmpty suffix) =
   let s = prefix ++ [delim] ++ suffix
       parts = splitBy delim s
-  in property $ length parts === 2 .&&. head parts === prefix .&&. last parts === suffix
+  in property $ L.length parts === 2 .&&. L.head parts === prefix .&&. last parts === suffix
 
 -- Property: comment removal preserves string literals
 prop_comment_preserves_string_literals :: String -> Property
 prop_comment_preserves_string_literals s =
   let withoutComments = removeComments s
       -- Count quote characters (simple heuristic for string literals)
-      originalQuotes = length $ filter (== '"') s
-      afterQuotes = length $ filter (== '"') withoutComments
+      originalQuotes = L.length $ L.filter (== '"') s
+      afterQuotes = L.length $ L.filter (== '"') withoutComments
   in property $ afterQuotes <= originalQuotes
 
 tests :: TestTree
 tests = testGroup "Text Processing Properties QuickCheck"
-  [ fastProperty "trim never increases length" prop_trim_never_increases_length
+  [ fastProperty "trim never increases L.length" prop_trim_never_increases_length
   , fastProperty "trim preserves non-space" prop_trim_preserves_non_space
   , fastProperty "splitBy preserves chars" prop_splitBy_preserves_chars
   , fastProperty "splitByCollapsed no empty" prop_splitByCollapsed_no_empty

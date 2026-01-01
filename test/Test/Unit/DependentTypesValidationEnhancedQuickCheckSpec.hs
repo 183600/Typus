@@ -3,6 +3,7 @@
 module Test.Unit.DependentTypesValidationEnhancedQuickCheckSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import DependentTypesParser (DependentTypesParser(..), DependentTypeError(..),
@@ -10,7 +11,8 @@ import DependentTypesParser (DependentTypesParser(..), DependentTypeError(..),
                            TypeParameter(..), TypeConstraint(..), DependentType(..),
                            runDependentTypesParser, parseDependentType, 
                            parseTypeDeclaration, validateDependentTypeSyntax)
-import Data.List (sort, nub, isInfixOf)
+import Data.List (isInfixOf)
+import Data.List (sort, nub)
 import Data.Either (isLeft, isRight)
 import Data.Map.Strict (Map)
 
@@ -29,7 +31,7 @@ tests = testGroup "Dependent Types Validation Enhanced QuickCheck Tests"
 -- | Type reference properties
 typeRefProperties :: TestTree
 typeRefProperties = testGroup "Type Reference Properties"
-  [ testProperty "TypeRef preserves name and args" $
+  [ testProperty "TypeRef preserves name L.and args" $
       \name args -> 
         let typeRef = TypeRef name args
         in refName typeRef === name .&&. refArgs typeRef === args
@@ -50,12 +52,12 @@ typeRefProperties = testGroup "Type Reference Properties"
       \name args -> 
         let typeRef = TypeRef name args
             typeRefStr = show typeRef
-        in name `isInfixOf` typeRefStr
+        in name `L.isInfixOf` typeRefStr
   
   , testProperty "TypeRef handles empty args" $
       \name -> 
         let typeRef = TypeRef name []
-        in null (refArgs typeRef)
+        in L.null (refArgs typeRef)
   
   , testProperty "TypeRef handles nested types" $
       \name1 name2 -> 
@@ -67,7 +69,7 @@ typeRefProperties = testGroup "Type Reference Properties"
 -- | Field properties
 fieldProperties :: TestTree
 fieldProperties = testGroup "Field Properties"
-  [ testProperty "Field preserves name and type" $
+  [ testProperty "Field preserves name L.and type" $
       \name typeRef -> 
         let field = Field name typeRef
         in fieldName field === name .&&. fieldType field === typeRef
@@ -88,7 +90,7 @@ fieldProperties = testGroup "Field Properties"
       \name typeRef -> 
         let field = Field name typeRef
             fieldStr = show field
-        in name `isInfixOf` fieldStr .&&. show typeRef `isInfixOf` fieldStr
+        in name `L.isInfixOf` fieldStr .&&. show typeRef `L.isInfixOf` fieldStr
   ]
 
 -- | Type body properties
@@ -122,13 +124,13 @@ typeBodyProperties = testGroup "Type Body Properties"
       \fields -> 
         let body = StructBody fields
             bodyStr = show body
-        in "StructBody" `isInfixOf` bodyStr
+        in "StructBody" `L.isInfixOf` bodyStr
   ]
 
 -- | Type parameter properties
 typeParameterProperties :: TestTree
 typeParameterProperties = testGroup "Type Parameter Properties"
-  [ testProperty "TypeParameter preserves all fields" $
+  [ testProperty "TypeParameter preserves L.all fields" $
       \name typeRef constraints -> 
         let param = TypeParameter name typeRef constraints
         in paramName param === name .&&. 
@@ -144,13 +146,13 @@ typeParameterProperties = testGroup "Type Parameter Properties"
   , testProperty "TypeParameter handles empty constraints" $
       \name typeRef -> 
         let param = TypeParameter name typeRef []
-        in null (paramConstraints param)
+        in L.null (paramConstraints param)
   
   , testProperty "TypeParameter show representation" $
       \name typeRef constraints -> 
         let param = TypeParameter name typeRef constraints
             paramStr = show param
-        in name `isInfixOf` paramStr
+        in name `L.isInfixOf` paramStr
   ]
 
 -- | Type constraint properties
@@ -212,26 +214,26 @@ typeConstraintProperties = testGroup "Type Constraint Properties"
             inequality = InequalityConstraint var1 var2
             equalityStr = show equality
             inequalityStr = show inequality
-        in "EqualityConstraint" `isInfixOf` equalityStr .&&. 
-           "InequalityConstraint" `isInfixOf` inequalityStr
+        in "EqualityConstraint" `L.isInfixOf` equalityStr .&&. 
+           "InequalityConstraint" `L.isInfixOf` inequalityStr
   ]
 
 -- | Dependent type properties
 dependentTypeProperties :: TestTree
 dependentTypeProperties = testGroup "Dependent Type Properties"
-  [ testProperty "TypeDecl preserves all fields" $
+  [ testProperty "TypeDecl preserves L.all fields" $
       \name params body constraints -> 
         let typeDecl = TypeDecl name params body constraints
         in case typeDecl of
           TypeDecl n p b c -> n === name .&&. p === params .&&. b === body .&&. c === constraints
   
-  , testProperty "DependentFunction preserves all fields" $
+  , testProperty "DependentFunction preserves L.all fields" $
       \name params returnType constraints -> 
         let func = DependentFunction name params returnType constraints
         in case func of
           DependentFunction n p r c -> n === name .&&. p === params .&&. r === returnType .&&. c === constraints
   
-  , testProperty "TypeAlias preserves all fields" $
+  , testProperty "TypeAlias preserves L.all fields" $
       \name typeRef constraints -> 
         let alias = TypeAlias name typeRef constraints
         in case alias of
@@ -247,7 +249,7 @@ dependentTypeProperties = testGroup "Dependent Type Properties"
       \name -> 
         let typeDecl = TypeDecl name [] (StructBody []) []
             typeStr = show typeDecl
-        in "TypeDecl" `isInfixOf` typeStr .&&. name `isInfixOf` typeStr
+        in "TypeDecl" `L.isInfixOf` typeStr .&&. name `L.isInfixOf` typeStr
   ]
 
 -- | Parser properties
@@ -303,7 +305,7 @@ validationProperties = testGroup "Validation Properties"
       \input -> 
         let result = validateDependentTypeSyntax input
         in case result of
-          Left errs -> length errs >= 0
+          Left errs -> L.length errs >= 0
           Right _ -> property True
   
   , testProperty "validateDependentTypeSyntax handles malformed input" $

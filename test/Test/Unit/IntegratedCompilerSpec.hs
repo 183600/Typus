@@ -87,8 +87,8 @@ tests =
             assertBool "Should format compilation result" $ not $ null formatted
 
         , testCase "getDetailedAnalysisSummary provides summary" $ do
-            let mockResult = "Analysis complete"
-            let summary <- getDetailedAnalysisSummary mockResult
+            let mockResult = AnalysisResult "Analysis complete" []
+            let summary = getDetailedAnalysisSummary mockResult
             assertBool "Should provide analysis summary" $ not $ null summary
 
         , testCase "showCombinedError formats error messages" $ do

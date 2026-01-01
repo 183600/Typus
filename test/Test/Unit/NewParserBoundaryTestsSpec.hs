@@ -2,6 +2,7 @@
 module Test.Unit.NewParserBoundaryTestsSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), Gen, choose, oneof, listOf, vectorOf, forAll, elements)
 import qualified Data.Text as T
@@ -11,7 +12,7 @@ import Parser
 import SourceLocation (SourcePos(..), SourceSpan(..))
 import TestSupport.QuickCheck (fastProperty)
 
--- | Test parser boundary conditions and error recovery
+-- | Test parser boundary conditions L.and error recovery
 tests :: TestTree
 tests =
   testGroup "New Parser Boundary Tests"
@@ -41,21 +42,21 @@ tests =
             case result of
               Left _ -> assertBool "Should parse dependent types directive" False
               Right (TypusFile directives blocks) -> do
-                length blocks @?= 1
-                let block = head blocks
+                L.length blocks @?= 1
+                let block = L.head blocks
                 case bdDependentTypes (blockDirectives block) of
                   Nothing -> assertBool "Should have dependent types directive" False
                   Just (Located _ val) -> val @?= False
         ]
 
-    , testGroup "Error recovery and malformed input"
+    , testGroup "Error recovery L.and malformed input"
         [ testCase "recovers from malformed directive" $ do
             let input = "// @ownership: maybe\nfunc test() {}\n"
                 result = parseTypus "test" input
             case result of
               Left _ -> assertBool "Should attempt recovery" False
               Right (TypusFile _ blocks) -> do
-                length blocks @?= 1
+                L.length blocks @?= 1
 
         , testCase "handles unterminated strings gracefully" $ do
             let input = "func test() {\n  s := \"unterminated string\n}\n"
@@ -65,13 +66,13 @@ tests =
               Right _ -> assertBool "Should not succeed with malformed input" False
 
         , testCase "handles deeply nested structures" $ do
-            let nested = concat $ replicate 100 "  if true { "
-                input = nested ++ "func test() {}" ++ concat (replicate 100 " }")
+            let nested = L.concat $ replicate 100 "  if true { "
+                input = nested ++ "func test() {}" ++ L.concat (replicate 100 " }")
                 result = parseTypus "test" input
             case result of
               Left _ -> assertBool "Should handle deep nesting" False
               Right (TypusFile _ blocks) -> do
-                length blocks @?= 1
+                L.length blocks @?= 1
 
         , testCase "recovers from missing closing brace" $ do
             let input = "func test() {\n  if true {\n    // missing closing braces\n"
@@ -81,14 +82,14 @@ tests =
               Right _ -> assertBool "Should not succeed with incomplete input" False
         ]
 
-    , testGroup "Unicode and special characters"
+    , testGroup "Unicode L.and special characters"
         [ testCase "handles Unicode identifiers" $ do
             let input = "func 测试函数() {\n  变量 := \"值\"\n}\n"
                 result = parseTypus "test" input
             case result of
               Left _ -> assertBool "Should handle Unicode" False
               Right (TypusFile _ blocks) -> do
-                length blocks @?= 1
+                L.length blocks @?= 1
 
         , testCase "handles special characters in strings" $ do
             let input = "func test() {\n  s := \"特殊字符: \\n\\t\\\"\\\\\"\n}\n"
@@ -96,7 +97,7 @@ tests =
             case result of
               Left _ -> assertBool "Should handle escaped characters" False
               Right (TypusFile _ blocks) -> do
-                length blocks @?= 1
+                L.length blocks @?= 1
 
         , testCase "handles mixed line endings" $ do
             let input = "func test() {\r\n  x := 1\n}\r\n"
@@ -104,10 +105,10 @@ tests =
             case result of
               Left _ -> assertBool "Should handle mixed line endings" False
               Right (TypusFile _ blocks) -> do
-                length blocks @?= 1
+                L.length blocks @?= 1
         ]
 
-    , testGroup "Performance and large inputs"
+    , testGroup "Performance L.and large inputs"
         [ fastProperty "handles large files efficiently" prop_largeFileParsing
         , fastProperty "handles long lines without stack overflow" prop_longLineParsing
         ]
@@ -138,15 +139,15 @@ tests =
               Right _ -> assertBool "Should not succeed with malformed comments" False
         ]
 
-    , testGroup "Directive precedence and inheritance"
+    , testGroup "Directive precedence L.and inheritance"
         [ testCase "block directives override file directives" $ do
             let input = "// @ownership: true\n// @ownership: false\nfunc test() {}\n"
                 result = parseTypus "test" input
             case result of
               Left _ -> assertBool "Should parse conflicting directives" False
               Right (TypusFile directives blocks) -> do
-                length blocks @?= 1
-                let block = head blocks
+                L.length blocks @?= 1
+                let block = L.head blocks
                 -- Block directive should override file directive
                 case bdOwnership (blockDirectives block) of
                   Nothing -> assertBool "Should have block ownership directive" False
@@ -159,7 +160,7 @@ tests =
               Left _ -> assertBool "Should ignore invalid directives" False
               Right (TypusFile directives blocks) -> do
                 directives @?= defaultFileDirectives
-                length blocks @?= 1
+                L.length blocks @?= 1
         ]
     ]
 
@@ -167,11 +168,11 @@ tests =
 prop_largeFileParsing :: Positive Int -> Property
 prop_largeFileParsing (Positive numBlocks) =
   let blocks = replicate numBlocks "func test() { return 42 }\n"
-      input = concat blocks
+      input = L.concat blocks
       result = parseTypus "test" input
   in case result of
        Left _ -> property False
-       Right (TypusFile _ parsedBlocks) -> length parsedBlocks == numBlocks
+       Right (TypusFile _ parsedBlocks) -> L.length parsedBlocks == numBlocks
 
 -- Property: Parser should handle long lines
 prop_longLineParsing :: Positive Int -> Property
@@ -181,7 +182,7 @@ prop_longLineParsing (Positive lineLength) =
       result = parseTypus "test" input
   in case result of
        Left _ -> property False
-       Right (TypusFile _ blocks) -> length blocks == 1
+       Right (TypusFile _ blocks) -> L.length blocks == 1
 
 -- Helper wrapper for positive integers
 newtype Positive a = Positive a

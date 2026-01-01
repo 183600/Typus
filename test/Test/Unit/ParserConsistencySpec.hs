@@ -17,6 +17,7 @@ import Parser
   , defaultBlockDirectives
   )
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 -- | Test parser consistency properties
@@ -52,7 +53,7 @@ prop_parse_preserves_whitespace code =
          Left _ -> property True -- Parsing errors are acceptable
          Right typusFile -> 
            case tfCodeBlocks typusFile of
-             (block:_) -> code `isInfixOf` cbContent block
+             (block:_) -> code `L.isInfixOf` cbContent block
              [] -> property False
 
 -- | parseTypus should handle directives consistently
@@ -75,14 +76,14 @@ prop_parse_directives_consistency ownership dependent constraints =
 -- | parseTypus round-trip property (simplified)
 prop_parse_round_trip :: String -> Property
 prop_parse_round_trip code =
-  length code < 100 ==> -- Keep it simple for round-trip
+  L.length code < 100 ==> -- Keep it simple for round-trip
     let input = "```go\n" ++ code ++ "\n```"
         result = parseTypus input
     in case result of
          Left _ -> property True
          Right typusFile -> 
            case tfCodeBlocks typusFile of
-             (block:_) -> length (cbContent block) >= length code
+             (block:_) -> L.length (cbContent block) >= L.length code
              [] -> property False
 
 -- | parseTypus error handling consistency
@@ -93,20 +94,20 @@ prop_parse_error_consistency malformedInput =
        Left err1 -> 
          let result2 = parseTypus malformedInput
          in case result2 of
-              Left err2 -> length (show err1) > 0 && length (show err2) > 0
+              Left err2 -> L.length (show err1) > 0 && L.length (show err2) > 0
               Right _ -> property False
        Right _ -> property True
 
 -- | parseTypus should handle multiple code blocks
 prop_parse_multiple_blocks :: [String] -> Property
 prop_parse_multiple_blocks codes =
-  not (null codes) && all (not . null) codes ==> 
-    let blocks = map (\code -> "```go\n" ++ code ++ "\n```") codes
+  not (null codes) && L.all (not . null) codes ==> 
+    let blocks = L.map (\code -> "```go\n" ++ code ++ "\n```") codes
         input = unlines blocks
         result = parseTypus input
     in case result of
          Left _ -> property True
-         Right typusFile -> length (tfCodeBlocks typusFile) >= length codes
+         Right typusFile -> L.length (tfCodeBlocks typusFile) >= L.length codes
 
 -- | parseTypus directive location tracking
 prop_parse_directive_locations :: String -> Property
@@ -132,26 +133,26 @@ prop_parse_comments comment =
 -- | parseTypus maintains block order
 prop_parse_block_order :: [String] -> Property
 prop_parse_block_order codes =
-  not (null codes) && all (not . null) codes ==> 
+  not (null codes) && L.all (not . null) codes ==> 
     let numberedBlocks = zipWith (\i code -> "// Block " ++ show i ++ "\n```go\n" ++ code ++ "\n```") 
                                 [1..] codes
         input = unlines numberedBlocks
         result = parseTypus input
     in case result of
          Left _ -> property True
-         Right typusFile -> length (tfCodeBlocks typusFile) >= length codes
+         Right typusFile -> L.length (tfCodeBlocks typusFile) >= L.length codes
 
 -- | parseTypus handles nested structures (simplified test)
 prop_parse_nested_structures :: String -> Property
 prop_parse_nested_structures nestedCode =
-  length nestedCode < 200 ==> -- Keep it manageable
+  L.length nestedCode < 200 ==> -- Keep it manageable
     let input = "```go\n" ++ nestedCode ++ "\n```"
         result = parseTypus input
     in case result of
          Left _ -> property True -- Parsing errors are acceptable for complex nested code
          Right typusFile -> 
            case tfCodeBlocks typusFile of
-             (block:_) -> length (cbContent block) > 0
+             (block:_) -> L.length (cbContent block) > 0
              [] -> property False
 
 -- Helper for equality in QuickCheck

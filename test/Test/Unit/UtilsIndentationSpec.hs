@@ -1,6 +1,7 @@
 module Test.Unit.UtilsIndentationSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, forAll, Gen, arbitrary, choose, listOf1)
@@ -27,11 +28,11 @@ tests =
                       ]
                 normalizeIndentation input @?= expected
             
-            , testCase "handles mixed spaces and tabs" $ do
+            , testCase "handles mixed spaces L.and tabs" $ do
                 let input = "\t  line1\n\t    line2\n  \tline3"
                     result = normalizeIndentation input
                 assertBool "Should preserve relative indentation" $
-                    all (\line -> not (all isSpace line)) (lines result)
+                    L.all (\line -> not (L.all isSpace line)) (lines result)
             
             , testCase "preserves empty lines" $ do
                 let input = "  line1\n\n  line2\n  \n  line3"
@@ -51,7 +52,7 @@ tests =
                 let input = "line1\nline2\nline3"
                 normalizeIndentation input @?= input
             
-            , testCase "handles input with all lines equally indented" $ do
+            , testCase "handles input with L.all lines equally indented" $ do
                 let input = "  line1\n  line2\n  line3"
                     expected = "line1\nline2\nline3"
                 normalizeIndentation input @?= expected
@@ -85,31 +86,31 @@ tests =
         
         , testGroup "QuickCheck properties"
             [ fastProperty "normalizeIndentation never adds indentation to first non-empty line" $
-                \s -> let nonEmptyLines = filter (not . all isSpace) (lines s)
+                \s -> let nonEmptyLines = L.filter (not . L.all isSpace) (lines s)
                        in case nonEmptyLines of
                             [] -> True
                             (first:_) -> let result = normalizeIndentation s
                                              resultLines = lines result
-                                             resultNonEmpty = filter (not . all isSpace) resultLines
+                                             resultNonEmpty = L.filter (not . L.all isSpace) resultLines
                                          in case resultNonEmpty of
                                               [] -> True
-                                              (rFirst:_) -> head rFirst /= ' ' && head rFirst /= '\t'
+                                              (rFirst:_) -> L.head rFirst /= ' ' && L.head rFirst /= '\t'
             
             , fastProperty "normalizeIndentation preserves relative indentation differences" $
-                \s -> let originalLines = filter (not . all isSpace) (lines s)
-                          resultLines = filter (not . all isSpace) (lines (normalizeIndentation s))
-                          indentDiff line = length (takeWhile isSpace line)
-                      in length originalLines == length resultLines ||
-                         all (>= 0) (zipWith (-) (map indentDiff originalLines) (map indentDiff resultLines))
+                \s -> let originalLines = L.filter (not . L.all isSpace) (lines s)
+                          resultLines = L.filter (not . L.all isSpace) (lines (normalizeIndentation s))
+                          indentDiff line = L.length (takeWhile isSpace line)
+                      in L.length originalLines == L.length resultLines ||
+                         L.all (>= 0) (zipWith (-) (map indentDiff originalLines) (map indentDiff resultLines))
             
             , fastProperty "normalizeIndentation preserves line count" $
-                \s -> length (lines s) == length (lines (normalizeIndentation s))
+                \s -> L.length (lines s) == L.length (lines (normalizeIndentation s))
             ]
         ]
     
     , testGroup "forceSingleTabIndentation function"
         [ testGroup "Basic functionality"
-            [ testCase "converts all non-empty lines to single tab" $ do
+            [ testCase "converts L.all non-empty lines to single tab" $ do
                 let input = unlines
                       [ "  line1"
                       , "    line2"
@@ -167,13 +168,13 @@ tests =
             fixIndentation input @?= expected
         ]
     
-    , testGroup "Regression and stress tests"
+    , testGroup "Regression L.and stress tests"
         [ testCase "handles very deep indentation" $ do
             let deepIndent = replicate 50 ' ' ++ "deep line"
                 input = unlines $ replicate 10 deepIndent
                 result = normalizeIndentation input
             assertBool "Should handle deep indentation" $
-                all (\line -> take 5 line /= "     ") (lines result)
+                L.all (\line -> take 5 line /= "     ") (lines result)
         
         , testCase "handles mixed indentation styles" $ do
             let input = unlines
@@ -184,7 +185,7 @@ tests =
                   ]
                 result = normalizeIndentation input
             assertBool "Should normalize mixed indentation" $
-                length (nub $ map (takeWhile isSpace) $ filter (not . null) $ lines result) <= 1
+                L.length (nub $ L.map (takeWhile isSpace) $ L.filter (not . null) $ lines result) <= 1
         
         , testCase "handles tabs of different sizes" $ do
             let input = unlines
@@ -194,18 +195,18 @@ tests =
                   ]
                 result = normalizeIndentation input
             assertBool "Should preserve tab structure" $
-                all (('\t' `elem`) . takeWhile isSpace) (filter (not . null) $ lines result)
+                L.all (('\t' `elem`) . takeWhile isSpace) (L.filter (not . null) $ lines result)
         ]
     
-    , testGroup "Performance and memory tests"
+    , testGroup "Performance L.and memory tests"
         [ testCase "handles large files efficiently" $ do
             let largeInput = unlines $ replicate 1000 "    test line"
                 result = normalizeIndentation largeInput
             lines result @?= replicate 1000 "test line"
         
         , testCase "handles files with many empty lines" $ do
-            let input = unlines $ concat $ replicate 100 ["    line", "", "", ""]
+            let input = unlines $ L.concat $ replicate 100 ["    line", "", "", ""]
                 result = normalizeIndentation input
-            length (lines result) @?= 300
+            L.length (lines result) @?= 300
         ]
     ]

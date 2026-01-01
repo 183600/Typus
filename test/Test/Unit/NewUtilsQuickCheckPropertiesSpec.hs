@@ -3,6 +3,7 @@
 module Test.Unit.NewUtilsQuickCheckPropertiesSpec (tests) where
 
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
@@ -89,8 +90,8 @@ genSearchPattern :: Gen (String, String)
 genSearchPattern = do
   haystack <- genString
   needle <- oneof 
-    [ genString `suchThat` (`isInfixOf` haystack)
-    , genString `suchThat` (not . (`isInfixOf` haystack))
+    [ genString `suchThat` (`L.isInfixOf` haystack)
+    , genString `suchThat` (not . (`L.isInfixOf` haystack))
     ]
   return (needle, haystack)
 
@@ -104,7 +105,7 @@ tests :: TestTree
 tests =
   testGroup "NewUtils QuickCheck Properties"
     [ testGroup "Trim properties"
-        [ fastProperty "trim removes leading and trailing whitespace" $
+        [ fastProperty "trim removes leading L.and trailing whitespace" $
             forAll genWhitespaceString $ \ws ->
               forAll genNonEmptyString $ \s ->
                 let input = ws ++ s ++ ws
@@ -115,12 +116,12 @@ tests =
             forAll genString $ \s ->
               trim (trim s) === trim s
 
-        , fastProperty "trim returns empty string for all-whitespace input" $
+        , fastProperty "trim returns empty string for L.all-whitespace input" $
             forAll genWhitespaceString $ \ws ->
               trim ws === ""
 
         , fastProperty "trim doesn't change non-whitespace strings" $
-            forAll (genString `suchThat` (not . all isSpace)) $ \s ->
+            forAll (genString `suchThat` (not . L.all isSpace)) $ \s ->
               trim s === s
         ]
 
@@ -128,8 +129,8 @@ tests =
         [ fastProperty "splitBy preserves empty segments" $
             forAll genStringWithDelimiter $ \(delim, input) ->
               let result = splitBy delim input
-                  expectedLength = length (filter (== delim) input) + 1
-              in length result === expectedLength
+                  expectedLength = L.length (L.filter (== delim) input) + 1
+              in L.length result === expectedLength
 
         , fastProperty "splitBy is inverse of join with delimiter" $
             forAll genStringWithDelimiter $ \(delim, original) ->
@@ -140,7 +141,7 @@ tests =
         , fastProperty "splitByCollapsed removes empty segments" $
             forAll genStringWithDelimiter $ \(delim, input) ->
               let result = splitByCollapsed delim input
-              in all (not . null) result
+              in L.all (not . null) result
 
         , fastProperty "splitByComma is equivalent to splitBy ','" $
             forAll genString $ \s ->
@@ -164,33 +165,33 @@ tests =
             forAll genCommentString $ \input ->
               let result = removeLineComments input
                   resultLines = lines result
-              in not (any ("//" `isPrefixOf`) resultLines)
+              in not (L.any ("//" `L.isPrefixOf`) resultLines)
 
         , fastProperty "removeLineComments preserves non-comment lines" $
             forAll genString $ \input ->
               let result = removeLineComments input
                   inputLines = lines input
                   resultLines = lines result
-              in length resultLines <= length inputLines
+              in L.length resultLines <= L.length inputLines
 
         , fastProperty "removeComments removes block comments" $
             forAll genBlockCommentString $ \input ->
               let result = removeComments input
-              in not ("/*" `isInfixOf` result) && not ("*/" `isInfixOf` result)
+              in not ("/*" `L.isInfixOf` result) && not ("*/" `L.isInfixOf` result)
 
         , fastProperty "removeComments preserves string literals" $
             forAll genStringWithQuotes $ \input ->
               let result = removeComments input
               in countQuotes input === countQuotes result
           where
-            countQuotes = length . filter (== '"')
+            countQuotes = L.length . L.filter (== '"')
 
         , fastProperty "removeComments preserves char literals" $
             forAll genStringWithCharLiteral $ \input ->
               let result = removeComments input
               in countSingleQuotes input === countSingleQuotes result
           where
-            countSingleQuotes = length . filter (== '\'')
+            countSingleQuotes = L.length . L.filter (== '\'')
 
         , fastProperty "removeComments is idempotent" $
             forAll genString $ \s ->
@@ -205,20 +206,20 @@ tests =
               let result = normalizeIndentation input
                   inputLines = lines input
                   resultLines = lines result
-              in length inputLines === length resultLines
+              in L.length inputLines === L.length resultLines
 
         , fastProperty "normalizeIndentation removes common leading whitespace" $
             forAll genIndentedString $ \input ->
               let result = normalizeIndentation input
                   resultLines = lines result
-              in all (not . isPrefixOf "  ") resultLines || 
-                 all (not . isPrefixOf "\t") resultLines
+              in L.all (not . L.isPrefixOf "  ") resultLines || 
+                 L.all (not . L.isPrefixOf "\t") resultLines
 
         , fastProperty "forceSingleTabIndentation adds tab to non-empty lines" $
             forAll genString $ \input ->
               let result = forceSingleTabIndentation input
                   resultLines = lines result
-              in all (\line -> null line || "\t" `isPrefixOf` line) resultLines
+              in L.all (\line -> null line || "\t" `L.isPrefixOf` line) resultLines
 
         , fastProperty "fixIndentation is equivalent to normalizeIndentation" $
             forAll genString $ \s ->
@@ -229,13 +230,13 @@ tests =
               let result = normalizeIndentation input
                   inputLines = lines input
                   resultLines = lines result
-              in length (filter null inputLines) === length (filter null resultLines)
+              in L.length (filter null inputLines) === L.length (filter null resultLines)
         ]
 
     , testGroup "Search properties"
         [ fastProperty "breakOn returns original string when pattern not found" $
             forAll genSearchPattern $ \(needle, haystack) ->
-              if needle `isInfixOf` haystack
+              if needle `L.isInfixOf` haystack
               then True
               else breakOn needle haystack === (haystack, "")
 
@@ -245,7 +246,7 @@ tests =
 
         , fastProperty "breakOn concatenates to original when pattern found" $
             forAll genSearchPattern $ \(needle, haystack) ->
-              if needle `isInfixOf` haystack
+              if needle `L.isInfixOf` haystack
               then 
                 let (before, after) = breakOn needle haystack
                 in before ++ needle ++ after === haystack
@@ -262,7 +263,7 @@ tests =
               forAll genNonEmptyString $ \needle ->
                 let haystackWithNeedles = haystack ++ needle ++ haystack ++ needle
                     (before, after) = breakOn needle haystackWithNeedles
-                in needle `isInfixOf` after
+                in needle `L.isInfixOf` after
         ]
 
     , testGroup "String manipulation properties"
@@ -270,14 +271,14 @@ tests =
             forAll genStringWithDelimiter $ \(delim, input) ->
               let parts = splitBy delim input
                   trimmedParts = map trim parts
-              in length trimmedParts === length parts
+              in L.length trimmedParts === L.length parts
 
         , fastProperty "splitBy after removeComments still works" $
             forAll genString $ \input ->
               forAll genDelimiter $ \delim ->
                 let noComments = removeComments input
                     parts = splitBy delim noComments
-                in length parts >= 1
+                in L.length parts >= 1
 
         , fastProperty "normalizeIndentation after removeLineComments preserves structure" $
             forAll genCommentString $ \input ->
@@ -285,13 +286,13 @@ tests =
                   normalized = normalizeIndentation noLineComments
                   originalLines = lines input
                   normalizedLines = lines normalized
-              in length normalizedLines <= length originalLines
+              in L.length normalizedLines <= L.length originalLines
 
         , fastProperty "breakOn with delimiter from splitBy finds correct position" $
             forAll genStringWithDelimiter $ \(delim, input) ->
               let parts = splitBy delim input
                   needle = [delim]
-              in if length parts > 1
+              in if L.length parts > 1
                  then 
                    let (before, after) = breakOn needle input
                    in delim `elem` after || null after
@@ -333,7 +334,7 @@ tests =
                 forAll genDelimiter $ \delim ->
                   let concatenated = s1 ++ [delim] ++ s2
                       parts = splitBy delim concatenated
-                  in length parts === 2 && head parts === s1 && last parts === s2
+                  in L.length parts === 2 && L.head parts === s1 && last parts === s2
 
         , fastProperty "trim after normalizeIndentation preserves content" $
             forAll genIndentedString $ \input ->
@@ -345,6 +346,6 @@ tests =
             forAll (listOf $ genString) $ \parts ->
               let largeInput = unlines parts
                   result = removeComments largeInput
-              in length result <= length largeInput
+              in L.length result <= L.length largeInput
         ]
     ]

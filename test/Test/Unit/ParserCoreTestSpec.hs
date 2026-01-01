@@ -1,6 +1,7 @@
 module Test.Unit.ParserCoreTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, (==>), oneof, elements)
 import qualified Test.Tasty.QuickCheck as QC
@@ -52,12 +53,12 @@ tests :: TestTree
 tests =
   testGroup "Parser Core Tests"
     [ testGroup "Default Directives"
-        [ testCase "defaultFileDirectives has all Nothing values" $ do
+        [ testCase "defaultFileDirectives has L.all Nothing values" $ do
             fdOwnership defaultFileDirectives @?= Nothing
             fdDependentTypes defaultFileDirectives @?= Nothing
             fdConstraints defaultFileDirectives @?= Nothing
 
-        , testCase "defaultBlockDirectives has all Nothing values" $ do
+        , testCase "defaultBlockDirectives has L.all Nothing values" $ do
             bdOwnership defaultBlockDirectives @?= Nothing
             bdDependentTypes defaultBlockDirectives @?= Nothing
             bdConstraints defaultBlockDirectives @?= Nothing
@@ -107,7 +108,7 @@ tests =
               Left err -> assertBool $ "Should parse simple code: " ++ err
               Right (TypusFile directives blocks) -> do
                 directives @?= defaultFileDirectives
-                assertBool "Should have one block" $ length blocks == 1
+                assertBool "Should have one block" $ L.length blocks == 1
 
         , testCase "parseTypus handles file directives" $ do
             let content = "// @ownership on\n// @dependent_types true\nfunc main() {}\n"
@@ -125,7 +126,7 @@ tests =
             case result of
               Left err -> assertBool $ "Should parse block directives: " ++ err
               Right (TypusFile directives blocks) -> do
-                assertBool "Should have one block" $ length blocks == 1
+                assertBool "Should have one block" $ L.length blocks == 1
 
         , testCase "parseTypus handles mixed content" $ do
             let content = unlines
@@ -146,14 +147,14 @@ tests =
             case result of
               Left err -> assertBool $ "Should parse mixed content: " ++ err
               Right (TypusFile directives blocks) -> do
-                assertBool "Should have multiple blocks" $ length blocks >= 1
+                assertBool "Should have multiple blocks" $ L.length blocks >= 1
         ]
 
     , testGroup "Directive Edge Cases"
         [ testCase "parseTypus handles malformed directives gracefully" $ do
             let content = "// @invalid_directive on\nfunc main() {}\n"
                 result = parseTypus content
-            -- Should either parse with warning or fail gracefully
+            -- Should either parse with warning L.or fail gracefully
             case result of
               Left _ -> assertBool "Should handle invalid directives" True
               Right _ -> assertBool "Should parse despite invalid directives" True
@@ -181,17 +182,17 @@ tests =
             case result of
               Left err -> assertBool $ "Should handle nested blocks: " ++ err
               Right (TypusFile _ blocks) -> do
-                assertBool "Should parse nested blocks" $ length blocks >= 1
+                assertBool "Should parse nested blocks" $ L.length blocks >= 1
         ]
 
     , testGroup "QuickCheck Properties"
-        [ testProperty "parseBool 'on' and 'true' always return True" $
+        [ testProperty "parseBool 'on' L.and 'true' always return True" $
             \input -> (input `elem` ["on", "true", "  on  ", "  true  "]) ==>
               case parseBool input of
                 Right True -> True
                 _ -> False
 
-        , testProperty "parseBool 'off' and 'false' always return False" $
+        , testProperty "parseBool 'off' L.and 'false' always return False" $
             \input -> (input `elem` ["off", "false", "  off  ", "  false  "]) ==>
               case parseBool input of
                 Right False -> True
@@ -203,8 +204,8 @@ tests =
               in case result of
                    Left _ -> True  -- Parsing failures are acceptable for arbitrary content
                    Right (TypusFile _ blocks) ->
-                     -- Number of blocks should be reasonable for content length
-                     length blocks <= length (lines content) + 1
+                     -- Number of blocks should be reasonable for content L.length
+                     L.length blocks <= L.length (lines content) + 1
 
         , testProperty "FileDirectives equality is reflexive" $
             \directives -> directives == directives
@@ -228,7 +229,7 @@ tests =
             case result of
               Left err -> 
                 assertBool "Error message should be informative" $ 
-                  length err > 10  -- Basic check for meaningful message
+                  L.length err > 10  -- Basic check for meaningful message
               Right _ -> 
                 assertBool "Should handle invalid boolean gracefully" True
 
@@ -238,6 +239,6 @@ tests =
             case result of
               Left err -> assertBool $ "Should handle Unicode: " ++ err
               Right (TypusFile _ blocks) -> 
-                assertBool "Should parse Unicode content" $ length blocks >= 1
+                assertBool "Should parse Unicode content" $ L.length blocks >= 1
         ]
     ]

@@ -143,8 +143,8 @@ tests =
             posColumn endPos @?= 6
         ]
 
-    , testGroup "Edge cases and error conditions"
-        [ testCase "spanBetween handles same start and end" $ do
+    , testGroup "Edge cases L.and error conditions"
+        [ testCase "spanBetween handles same start L.and end" $ do
             let pos = posAt 1 1
             let span = spanBetween pos pos
             spanStart span @?= pos

@@ -10,6 +10,7 @@
 module Test.Unit.AdditionalParserBoundarySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose)
@@ -89,7 +90,7 @@ test_malformed_file_directives = testCase "parseTypus handles malformed file dir
     let result = parseTypus input
     case result of
       Left _ -> assertBool "Should handle malformed file directives gracefully" True
-      Right file -> assertBool "Should parse successfully or fail gracefully" True
+      Right file -> assertBool "Should parse successfully L.or fail gracefully" True
     ) inputs
 
 -- Test: Malformed block directives
@@ -108,7 +109,7 @@ test_malformed_block_directives = testCase "parseTypus handles malformed block d
     let result = parseTypus input
     case result of
       Left _ -> assertBool "Should handle malformed block directives gracefully" True
-      Right file -> assertBool "Should parse successfully or fail gracefully" True
+      Right file -> assertBool "Should parse successfully L.or fail gracefully" True
     ) inputs
 
 -- Test: Very long lines
@@ -154,7 +155,7 @@ test_unicode_content = testCase "parseTypus handles Unicode content" $ do
         [ "café naïve résumé\n"
         , "测试内容\n"
         , "🚀 emoji test 🎉\n"
-        , "mixed 中文 and english 🌟\n"
+        , "mixed 中文 L.and english 🌟\n"
         ]
   mapM_ (\input -> do
     let result = parseTypus input
@@ -232,7 +233,7 @@ test_multiple_block_directives = testCase "parseTypus handles multiple block dir
     Right file -> do
       let blocks = tfBlocks file
       assertBool "Should have at least one block" (not (null blocks))
-      let firstBlock = head blocks
+      let firstBlock = L.head blocks
       let dirs = cbDirectives firstBlock
       assertBool "Should have ownership directive" (bdOwnership dirs /= Nothing)
       assertBool "Should have dependent-types directive" (bdDependentTypes dirs /= Nothing)
@@ -241,7 +242,7 @@ test_multiple_block_directives = testCase "parseTypus handles multiple block dir
 -- Property: Round-trip parsing for simple content
 prop_round_trip_simple :: String -> Property
 prop_round_trip_simple content =
-  not (any (`elem` "\n\r{}//!") content) ==> -- Avoid complex parsing
+  not (L.any (`elem` "\n\r{}//!") content) ==> -- Avoid complex parsing
   let input = content ++ "\n"
       result = parseTypus input
   in case result of
@@ -267,7 +268,7 @@ prop_parser_idempotent_directives content =
 prop_parser_large_input :: Int -> String -> Property
 prop_parser_large_input multiplier baseContent =
   multiplier > 0 && multiplier <= 100 ==> -- Limit for performance
-  let largeContent = concat (replicate multiplier (baseContent ++ "\n"))
+  let largeContent = L.concat (replicate multiplier (baseContent ++ "\n"))
       result = parseTypus largeContent
   in case result of
     Left _ -> property True -- May fail, but should not crash
@@ -276,13 +277,13 @@ prop_parser_large_input multiplier baseContent =
 -- Property: Parser preserves line count
 prop_parser_preserves_line_count :: String -> Property
 prop_parser_preserves_line_count content =
-  let inputLines = length (lines content)
+  let inputLines = L.length (lines content)
       result = parseTypus content
   in case result of
     Left _ -> property True
     Right file -> 
       let blocks = tfBlocks file
-          blockLines = sum $ map (length . lines . cbContent) blocks
+          blockLines = L.sum $ L.map (L.length . lines . cbContent) blocks
       in property (blockLines <= inputLines + 1) -- Allow some variance for directives
 
 -- ============================================================================

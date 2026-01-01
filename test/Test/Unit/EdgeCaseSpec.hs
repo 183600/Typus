@@ -1,5 +1,6 @@
 module Test.Unit.EdgeCaseSpec (tests) where
 
+import qualified Data.List as L
 import Data.List (isInfixOf)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ((@?=), assertBool, assertFailure, testCase)
@@ -32,7 +33,7 @@ tests =
           Left err -> assertFailure $ "parseTypus failed: " <> err
           Right typusFile -> 
             case tfBlocks typusFile of
-              [block] -> assertBool "should contain comment content" ("// This is a comment" `isInfixOf` cbContent block)
+              [block] -> assertBool "should contain comment content" ("// This is a comment" `L.isInfixOf` cbContent block)
               _ -> assertFailure "expected exactly one block with comments"
 
     , testCase "handles extremely long lines" $ do
@@ -171,10 +172,10 @@ tests =
               , "}"
               ]
         case Parser.parseTypus source of
-          Left _ -> return ()  -- Might fail due to identifier length limits
+          Left _ -> return ()  -- Might fail due to identifier L.length limits
           Right _ -> return ()
 
-    , testCase "handles zero-width and invisible characters" $ do
+    , testCase "handles zero-width L.and invisible characters" $ do
         let source = unlines
               [ "package main"
               , "func main() {"
@@ -212,7 +213,7 @@ tests =
         let source = unlines
               [ "package main"
               , "func main() {"
-              , "    " ++ concat (replicate 100 "    ") ++ "println(\"deeply indented\")"
+              , "    " ++ L.concat (replicate 100 "    ") ++ "println(\"deeply indented\")"
               , "}"
               ]
         case Parser.parseTypus source of
@@ -235,10 +236,10 @@ tests =
           Right _ -> return ()
 
     , testCase "handles memory pressure simulation" $ do
-        let source = unlines $ concat
+        let source = unlines $ L.concat
               [ ["package main"]
               , ["func main() {"]
-              , concat $ map (\i -> ["var arr" ++ show i ++ " [" ++ show (1000 * i :: Integer) ++ "]int"]) [1..100]
+              , L.concat $ L.map (\i -> ["var arr" ++ show i ++ " [" ++ show (1000 * i :: Integer) ++ "]int"]) [1..100]
               , ["println(\"memory pressure test\")"]
               , ["}"]
               ]

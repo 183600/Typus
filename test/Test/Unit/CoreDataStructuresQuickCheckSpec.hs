@@ -10,6 +10,7 @@
 module Test.Unit.CoreDataStructuresQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -42,7 +43,7 @@ tests =
     , testGroup "Source span properties"
         [ fastProperty "span creation preserves positions" prop_span_creation_preserves_positions
         , fastProperty "span merging is commutative" prop_span_merging_commutative
-        , fastProperty "span contains its start and end" prop_span_contains_bounds
+        , fastProperty "span contains its start L.and end" prop_span_contains_bounds
         , fastProperty "span intersection is associative" prop_span_intersection_associative
         , fastProperty "span union is idempotent" prop_span_union_idempotent
         ]
@@ -69,13 +70,13 @@ tests =
         ]
 
     , testGroup "String processing data structures"
-        [ fastProperty "string splitting preserves total length" prop_string_splitting_preserves_length
+        [ fastProperty "string splitting preserves total L.length" prop_string_splitting_preserves_length
         , fastProperty "string joining is inverse of splitting" prop_string_joining_inverse
         , fastProperty "string tokenization is deterministic" prop_string_tokenization_deterministic
         , fastProperty "string normalization is idempotent" prop_string_normalization_idempotent
         ]
 
-    , testGroup "List and set operations"
+    , testGroup "List L.and set operations"
         [ fastProperty "list deduplication preserves order" prop_list_deduplication_preserves_order
         , fastProperty "set operations follow mathematical laws" prop_set_operations_mathematical
         , fastProperty "list sorting is stable" prop_list_sorting_stable
@@ -103,7 +104,7 @@ prop_symbol_lookup_consistent :: [(String, String)] -> Property
 prop_symbol_lookup_consistent symbolPairs =
   not (null symbolPairs) ==>
   let symbolTable = Map.fromList symbolPairs
-      lookupResults = map (flip Map.lookup symbolTable . fst) symbolPairs
+      lookupResults = L.map (flip Map.lookup symbolTable . fst) symbolPairs
       expectedResults = map Just (map snd symbolPairs)
   in property $ lookupResults === expectedResults
 
@@ -118,12 +119,12 @@ prop_duplicate_symbols_overwrite :: [(String, String)] -> Property
 prop_duplicate_symbols_overwrite symbolPairs =
   not (null symbolPairs) ==>
   let groupedPairs = groupBy (\(a, _) (b, _) -> a == b) symbolPairs
-      duplicates = filter ((> 1) . length) groupedPairs
+      duplicates = L.filter ((> 1) . L.length) groupedPairs
       hasDuplicates = not (null duplicates)
   in classify hasDuplicates "has duplicate symbols" $
      let symbolTable = Map.fromList symbolPairs
-         finalValues = map (flip Map.lookup symbolTable . fst . head) duplicates
-     in property $ all isJust finalValues
+         finalValues = L.map (flip Map.lookup symbolTable . fst . L.head) duplicates
+     in property $ L.all isJust finalValues
 
 prop_symbol_scope_isolation :: [(String, String)] -> [(String, String)] -> Property
 prop_symbol_scope_isolation outerSymbols innerSymbols =
@@ -131,8 +132,8 @@ prop_symbol_scope_isolation outerSymbols innerSymbols =
       innerTable = Map.fromList innerSymbols
       mergedTable = Map.union innerTable outerTable
       innerKeys = Map.keys innerTable
-      innerValuesInMerged = map (flip Map.lookup mergedTable) innerKeys
-      innerValuesOriginal = map (flip Map.lookup innerTable) innerKeys
+      innerValuesInMerged = L.map (flip Map.lookup mergedTable) innerKeys
+      innerValuesOriginal = L.map (flip Map.lookup innerTable) innerKeys
   in property $ innerValuesInMerged === innerValuesOriginal
 
 prop_symbol_table_merge_associative :: [(String, String)] -> [(String, String)] -> [(String, String)] -> Property
@@ -251,8 +252,8 @@ prop_type_env_extension_preserves baseTypes newType =
   let baseEnv = Map.fromList baseTypes
       extendedEnv = Map.insert (fst newType) (snd newType) baseEnv
       baseKeys = Map.keys baseEnv
-      baseValuesInExtended = map (flip Map.lookup extendedEnv) baseKeys
-      baseValuesOriginal = map (flip Map.lookup baseEnv) baseKeys
+      baseValuesInExtended = L.map (flip Map.lookup extendedEnv) baseKeys
+      baseValuesOriginal = L.map (flip Map.lookup baseEnv) baseKeys
   in property $ baseValuesInExtended === baseValuesOriginal
 
 prop_type_env_substitution_idempotent :: [(String, String)] -> [(String, String)] -> Property
@@ -278,13 +279,13 @@ prop_dep_graph_addition_preserves graph newEdge =
   let graphMap = Map.fromList graph
       updatedGraph = Map.insert (fst newEdge) (snd newEdge) graphMap
       originalKeys = Map.keys graphMap
-      preservedValues = map (flip Map.lookup updatedGraph) originalKeys
-      originalValues = map (flip Map.lookup graphMap) originalKeys
+      preservedValues = L.map (flip Map.lookup updatedGraph) originalKeys
+      originalValues = L.map (flip Map.lookup graphMap) originalKeys
   in property $ preservedValues === originalValues
 
 prop_dep_graph_cycle_detection :: [(String, [String])] -> Property
 prop_dep_graph_cycle_detection dependencies =
-  let hasSelfDeps = any (\(name, deps) -> name `elem` deps) dependencies
+  let hasSelfDeps = L.any (\(name, deps) -> name `elem` deps) dependencies
       graphMap = Map.fromList dependencies
       -- Simplified cycle detection
       hasCycles = hasSelfDeps
@@ -294,7 +295,7 @@ prop_dep_graph_cycle_detection dependencies =
 prop_dep_graph_topological_sort_valid :: [(String, [String])] -> Property
 prop_dep_graph_topological_sort_valid dependencies =
   let graphMap = Map.fromList dependencies
-      allNodes = Set.fromList (Map.keys graphMap ++ concat (Map.elems graphMap))
+      allNodes = Set.fromList (Map.keys graphMap ++ L.concat (Map.elems graphMap))
       sortedNodes = map fst dependencies -- Simplified topological sort
       sortedSet = Set.fromList sortedNodes
   in property $ sortedSet `Set.isSubsetOf` allNodes
@@ -302,10 +303,10 @@ prop_dep_graph_topological_sort_valid dependencies =
 prop_dep_graph_transitive_closure :: [(String, [String])] -> Property
 prop_dep_graph_transitive_closure dependencies =
   let graphMap = Map.fromList dependencies
-      directDeps = concat (Map.elems graphMap)
+      directDeps = L.concat (Map.elems graphMap)
       allNodes = Map.keys graphMap
       -- Simplified transitive closure check
-      closureSize = length directDeps
+      closureSize = L.length directDeps
   in property $ closureSize >= 0
 
 -- String processing data structures
@@ -314,7 +315,7 @@ prop_string_splitting_preserves_length :: Char -> String -> Property
 prop_string_splitting_preserves_length delim input =
   let segments = splitBy delim input
       rejoined = intercalate [delim] segments
-  in property $ length rejoined === length input
+  in property $ L.length rejoined === L.length input
 
 prop_string_joining_inverse :: Char -> String -> Property
 prop_string_joining_inverse delim input =
@@ -334,7 +335,7 @@ prop_string_normalization_idempotent input =
       normalized2 = normalizeIndentation normalized1
   in property $ normalized1 === normalized2
 
--- List and set operations
+-- List L.and set operations
 
 prop_list_deduplication_preserves_order :: [Int] -> Property
 prop_list_deduplication_preserves_order input =
@@ -394,7 +395,7 @@ prop_map_intersection_preserves pairs1 pairs2 =
       intersectionKeys = Map.keys intersection
       keys1 = Set.fromList (Map.keys map1)
       keys2 = Set.fromList (Map.keys map2)
-  in property $ all (`Set.member` keys1) intersectionKeys .&&. 
+  in property $ L.all (`Set.member` keys1) intersectionKeys .&&. 
              all (`Set.member` keys2) intersectionKeys
 
 prop_map_difference_anti_symmetric :: [(String, Int)] -> [(String, Int)] -> Property
@@ -412,8 +413,8 @@ prop_text_concatenation_associative str1 str2 str3 =
   let t1 = T.pack str1
       t2 = T.pack str2
       t3 = T.pack str3
-      assoc1 = T.concat [t1, T.concat [t2, t3]]
-      assoc2 = T.concat [T.concat [t1, t2], t3]
+      assoc1 = T.L.concat [t1, T.L.concat [t2, t3]]
+      assoc2 = T.L.concat [T.L.concat [t1, t2], t3]
   in property $ assoc1 === assoc2
 
 prop_text_splitting_preserves :: String -> Property
@@ -425,7 +426,7 @@ prop_text_splitting_preserves input =
 
 prop_text_replacement_idempotent :: String -> String -> Property
 prop_text_replacement_idempotent input pattern =
-  not (T.null (T.pack pattern)) && not (T.pack pattern `T.isInfixOf` T.pack pattern) ==>
+  not (T.L.null (T.pack pattern)) && not (T.pack pattern `L.isInfixOf` T.pack pattern) ==>
   let text = T.pack input
       patternText = T.pack pattern
       replacement = T.pack "REPLACED"

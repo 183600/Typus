@@ -10,6 +10,7 @@ import GoToolchain (generateGoCode, GoCodeConfig(..))
 import Compiler.IR (IRModule(..), IRFunction(..))
 import Parser (parseTypus)
 import Utils (trim)
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 -- | 测试用例8: Go工具链代码生成测试
@@ -20,28 +21,28 @@ tests =
         let config = GoCodeConfig { packageName = "main" }
             irModule = IRModule { irFunctions = [] }
             goCode = generateGoCode config irModule
-        "package main" `isInfixOf` goCode @?= True
+        "package main" `L.isInfixOf` goCode @?= True
 
     , testCase "Go code generation handles function declarations" $ do
         let config = GoCodeConfig { packageName = "main" }
             func = IRFunction { functionName = "test", functionBody = "return 42" }
             irModule = IRModule { irFunctions = [func] }
             goCode = generateGoCode config irModule
-        "func test()" `isInfixOf` goCode @?= True
+        "func test()" `L.isInfixOf` goCode @?= True
 
     , testCase "Go code generation includes imports when needed" $ do
         let config = GoCodeConfig { packageName = "main" }
             func = IRFunction { functionName = "printHello", functionBody = "fmt.Println(\"hello\")" }
             irModule = IRModule { irFunctions = [func] }
             goCode = generateGoCode config irModule
-        "import" `isInfixOf` goCode @?= True
+        "import" `L.isInfixOf` goCode @?= True
 
     , testCase "Go code generation preserves function bodies" $ do
         let config = GoCodeConfig { packageName = "main" }
             func = IRFunction { functionName = "calculate", functionBody = "return 2 + 2" }
             irModule = IRModule { irFunctions = [func] }
             goCode = generateGoCode config irModule
-        "return 2 + 2" `isInfixOf` goCode @?= True
+        "return 2 + 2" `L.isInfixOf` goCode @?= True
 
     -- QuickCheck properties
     , fastProperty "code generation is deterministic" prop_code_generation_deterministic
@@ -67,7 +68,7 @@ prop_generated_code_contains_package packageName =
   let config = GoCodeConfig { packageName = packageName }
       irModule = IRModule { irFunctions = [] }
       goCode = generateGoCode config irModule
-  in property $ ("package " ++ packageName) `isInfixOf` goCode
+  in property $ ("package " ++ packageName) `L.isInfixOf` goCode
 
 -- Property: code generation preserves function count
 prop_code_generation_preserves_function_count :: String -> Property
@@ -77,4 +78,4 @@ prop_code_generation_preserves_function_count funcName =
       irModule = IRModule { irFunctions = [func] }
       config = GoCodeConfig { packageName = "main" }
       goCode = generateGoCode config irModule
-  in property $ funcName `isInfixOf` goCode
+  in property $ funcName `L.isInfixOf` goCode

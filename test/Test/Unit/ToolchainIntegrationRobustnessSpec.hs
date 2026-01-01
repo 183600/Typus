@@ -22,7 +22,9 @@ import GoToolchain
 import Compiler
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Data.List (isPrefixOf, isInfixOf, intercalate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (intercalate)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import Data.Either (isLeft, isRight)
 import System.FilePath (takeFileName, takeDirectory, (</>))
@@ -169,7 +171,7 @@ prop_memory_usage_bounds scenario =
 -- Property: Toolchain should handle concurrent operations safely
 prop_concurrent_operations_safe :: [CompilationTarget] -> Property
 prop_concurrent_operations_safe targets =
-  length targets >= 2 ==> 
+  L.length targets >= 2 ==> 
   let result = buildConcurrently targets
   in property $ isRight result || isLeft result
 
@@ -194,7 +196,7 @@ prop_large_project_efficiency scenario =
 -- Property: Toolchain should handle corrupted files gracefully
 prop_corrupted_file_handling :: FilePath -> Property
 prop_corrupted_file_handling filePath =
-  takeExtension filePath `elem` [".go", ".mod", ".sum"] ==> 
+  takeExtension filePath `elem` [".go", ".mod", ".L.sum"] ==> 
   let result = processCorruptedFile filePath
   in property $ isRight result || isLeft result
 
@@ -210,7 +212,7 @@ prop_cache_consistency buildConfig target =
 -- Property: Toolchain should handle network failures gracefully
 prop_network_failure_handling :: CompilationTarget -> Property
 prop_network_failure_handling target =
-  let hasNetworkDeps = any ("github.com" `isPrefixOf`) (dependencies target)
+  let hasNetworkDeps = L.any ("github.com" `L.isPrefixOf`) (dependencies target)
       result = buildWithNetworkFailures target
   in property $ if hasNetworkDeps 
                then isLeft result || isRight result
@@ -224,7 +226,7 @@ prop_output_correctness buildConfig target =
     Right outputPath -> validateOutput outputPath target
     Left _ -> property True
 
--- | Helper functions and data types
+-- | Helper functions L.and data types
 
 data ToolchainConfig = ToolchainConfig
   { goPath :: String
@@ -274,7 +276,7 @@ buildTarget :: BuildConfig -> CompilationTarget -> Either String String
 buildTarget buildConfig target = Right "built"
 
 validateToolchainConfig :: ToolchainConfig -> Bool
-validateToolchainConfig config = not (null $ goVersion config) && not (null $ goOS config)
+validateToolchainConfig config = not (L.null $ goVersion config) && not (L.null $ goOS config)
 
 setupEnvironment :: [(String, String)] -> Either String ()
 setupEnvironment envVars = Right ()
@@ -307,7 +309,7 @@ processTarget :: ToolchainState -> CompilationTarget -> ToolchainState
 processTarget state target = state { builtTargets = Set.insert (targetName target) (builtTargets state) }
 
 validateStateConsistency :: ToolchainState -> Bool
-validateStateConsistency state = not (Set.null $ builtTargets state)
+validateStateConsistency state = not (Set.L.null $ builtTargets state)
 
 runPerformanceTest :: StressScenario -> Either String PerformanceMetrics
 runPerformanceTest scenario = Right $ PerformanceMetrics 120 800 0.9
@@ -316,7 +318,7 @@ processCorruptedFile :: FilePath -> Either String String
 processCorruptedFile path = Right "processed"
 
 takeExtension :: FilePath -> String
-takeExtension path = reverse $ takeWhile (/= '.') $ reverse path
+takeExtension path = L.reverse $ takeWhile (/= '.') $ L.reverse path
 
 buildWithCache :: BuildConfig -> CompilationTarget -> Either String String
 buildWithCache buildConfig target = Right "built_cached"

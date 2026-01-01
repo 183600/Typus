@@ -12,6 +12,7 @@ import Ownership (OwnershipType(..), OwnershipError(..), OwnershipTransfer(..), 
 import GoToolchain (GoToolchain, initializeToolchain, checkGoInstallation, formatGoCode)
 import SourceLocation (SourcePos(..), startPos, spanFrom)
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isInfixOf)
 import Data.Maybe (isNothing, isJust)
 
@@ -23,11 +24,11 @@ import Data.Maybe (isNothing, isJust)
 test_ownership_analyzer_creation :: IO ()
 test_ownership_analyzer_creation = do
     let analyzer = newOwnershipAnalyzer
-    assertBool "Ownership analyzer should be created" (not (null (show analyzer)))
+    assertBool "Ownership analyzer should be created" (not (L.null (show analyzer)))
 
 -- Test ownership type properties
 prop_ownership_type_has_string :: OwnershipType -> Bool
-prop_ownership_type_has_string ownType = not (null (show ownType))
+prop_ownership_type_has_string ownType = not (L.null (show ownType))
 
 prop_ownership_transfer_validity :: OwnershipTransfer -> Bool
 prop_ownership_transfer_validity transfer = 
@@ -51,7 +52,7 @@ test_ownership_error_formatting :: IO ()
 test_ownership_error_formatting = do
     let error = OwnershipError (T.pack "Cannot move borrowed value") (spanFrom startPos)
         errorMsg = show error
-    assertBool "Error message should contain ownership info" ("ownership" `isInfixOf` errorMsg)
+    assertBool "Error message should contain ownership info" ("ownership" `L.isInfixOf` errorMsg)
 
 -- Test ownership transfer scenarios
 test_ownership_transfer_move :: IO ()
@@ -101,16 +102,16 @@ test_go_code_formatting = do
         result = formatGoCode goCode
     case result of
         Right formatted -> do
-            assertBool "Formatted code should contain package" ("package" `isInfixOf` formatted)
-            assertBool "Formatted code should contain func" ("func" `isInfixOf` formatted)
-        Left _ -> assertBool "Go formatting should work or fail gracefully" True
+            assertBool "Formatted code should contain package" ("package" `L.isInfixOf` formatted)
+            assertBool "Formatted code should contain func" ("func" `L.isInfixOf` formatted)
+        Left _ -> assertBool "Go formatting should work L.or fail gracefully" True
 
 -- Test Go code generation properties
 prop_go_code_has_package :: String -> Property
 prop_go_code_has_package code = 
-    not (null code) && "func" `isInfixOf` code ==>
+    not (null code) && "func" `L.isInfixOf` code ==>
     case formatGoCode code of
-        Right formatted -> "package" `isInfixOf` formatted
+        Right formatted -> "package" `L.isInfixOf` formatted
         Left _ -> True -- Formatting failure is acceptable
 
 -- ============================================================================
@@ -128,9 +129,9 @@ test_ownership_go_integration = do
             let goCode = "package main\n\nfunc process() {\n\tdata := create()\n\tmove(data)\n}"
             formatResult <- return $ formatGoCode goCode
             case formatResult of
-                Right formatted -> assertBool "Go code should be formatted" (length formatted > 0)
+                Right formatted -> assertBool "Go code should be formatted" (L.length formatted > 0)
                 Left _ -> assertBool "Formatting should not crash" True
-        Left _ -> assertBool "Ownership analysis should work or fail gracefully" True
+        Left _ -> assertBool "Ownership analysis should work L.or fail gracefully" True
 
 -- ============================================================================
 -- Arbitrary Instances for QuickCheck
@@ -149,7 +150,7 @@ instance Arbitrary OwnershipTransfer where
 elements :: [a] -> Gen a
 elements [] = error "elements: empty list"
 elements xs = do
-  idx <- arbitrary `suchThat` (\i -> i >= 0 && i < length xs)
+  idx <- arbitrary `suchThat` (\i -> i >= 0 && i < L.length xs)
   return (xs !! idx)
 
 suchThat :: Gen a -> (a -> Bool) -> Gen a
@@ -162,7 +163,7 @@ gen `suchThat` p = do
 -- ============================================================================
 
 tests :: TestTree
-tests = testGroup "Ownership and GoToolchain Test Suite"
+tests = testGroup "Ownership L.and GoToolchain Test Suite"
   [ testGroup "Ownership Tests"
       [ testCase "Ownership analyzer creation" test_ownership_analyzer_creation
       , fastProperty "Ownership type has string representation" prop_ownership_type_has_string

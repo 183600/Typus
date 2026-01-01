@@ -10,6 +10,7 @@
 module Test.Unit.ConcurrentSafetyQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertBool, assertEqual, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -89,7 +90,7 @@ instance Arbitrary ConcurrentOperationList where
 -- Property: concurrent trim operations are thread-safe
 prop_concurrent_trim_safety :: ConcurrentOperationList -> Property
 prop_concurrent_trim_safety opList =
-  let operations = filter (\op -> operationType op == TrimOperation) $ getConcurrentOperationList opList
+  let operations = L.filter (\op -> operationType op == TrimOperation) $ getConcurrentOperationList opList
   in not (null operations) ==>
      let testData = map operationData operations
          expectedResults = map trim testData
@@ -105,7 +106,7 @@ prop_concurrent_trim_safety opList =
            return ()
          ) (zip [1..] testData)
        
-       -- Wait for all operations to complete (simplified)
+       -- Wait for L.all operations to complete (simplified)
        threadDelay 100000  -- 100ms
        
        results <- readIORef resultsRef
@@ -116,12 +117,12 @@ prop_concurrent_trim_safety opList =
 -- Property: concurrent split operations are consistent
 prop_concurrent_split_consistency :: ConcurrentOperationList -> Char -> Property
 prop_concurrent_split_consistency opList delim =
-  let operations = filter (\op -> case operationType op of
+  let operations = L.filter (\op -> case operationType op of
                                    SplitOperation d -> d == delim
                                    _ -> False) $ getConcurrentOperationList opList
   in not (null operations) ==>
      let testData = map operationData operations
-         expectedResults = map (splitBy delim) testData
+         expectedResults = L.map (splitBy delim) testData
      in ioProperty $ do
        resultsRef <- newIORef []
        mvar <- newMVar ()
@@ -145,7 +146,7 @@ prop_concurrent_source_position_atomicity opList =
   let operations = take 10 $ getConcurrentOperationList opList  -- Limit to avoid too many threads
       initialPos = SourcePos 10 10
   in not (null operations) ==>
-     let advanceOperations = map (\op -> (operationId op, operationData op)) operations
+     let advanceOperations = L.map (\op -> (operationId op, operationData op)) operations
      in ioProperty $ do
        resultsRef <- newIORef []
        posVar <- newMVar initialPos
@@ -159,16 +160,16 @@ prop_concurrent_source_position_atomicity opList =
        
        threadDelay 100000
        results <- readIORef resultsRef
-       let allValid = all (\pos -> sourceLine pos >= 10 && sourceColumn pos >= 10) results
+       let allValid = L.all (\pos -> sourceLine pos >= 10 && sourceColumn pos >= 10) results
        return $ property allValid
 
 -- Property: concurrent comment removal is thread-safe
 prop_concurrent_comment_removal_safety :: ConcurrentOperationList -> Property
 prop_concurrent_comment_removal_safety opList =
-  let operations = filter (\op -> operationType op == CommentOperation) $ getConcurrentOperationList opList
+  let operations = L.filter (\op -> operationType op == CommentOperation) $ getConcurrentOperationList opList
   in not (null operations) ==>
      let testData = map operationData operations
-         testInputs = map (\dataStr -> dataStr ++ " // comment") testData
+         testInputs = L.map (\dataStr -> dataStr ++ " // comment") testData
          expectedResults = map removeLineComments testInputs
      in ioProperty $ do
        resultsRef <- newIORef []
@@ -190,10 +191,10 @@ prop_concurrent_comment_removal_safety opList =
 -- Property: concurrent indentation normalization is consistent
 prop_concurrent_indentation_consistency :: ConcurrentOperationList -> Property
 prop_concurrent_indentation_consistency opList =
-  let operations = filter (\op -> operationType op == IndentOperation) $ getConcurrentOperationList opList
+  let operations = L.filter (\op -> operationType op == IndentOperation) $ getConcurrentOperationList opList
   in not (null operations) ==>
      let testData = map operationData operations
-         indentedData = map (\dataStr -> "  " ++ dataStr ++ "\n    " ++ dataStr) testData
+         indentedData = L.map (\dataStr -> "  " ++ dataStr ++ "\n    " ++ dataStr) testData
          expectedResults = map normalizeIndentation indentedData
      in ioProperty $ do
        resultsRef <- newIORef []
@@ -216,9 +217,9 @@ prop_concurrent_indentation_consistency opList =
 prop_concurrent_span_merging_associative :: ConcurrentOperationList -> Property
 prop_concurrent_span_merging_associative opList =
   let operations = take 5 $ getConcurrentOperationList opList
-      spans = map (\i -> SourceSpan (posAt (i*2) (i*3)) (posAt (i*2+1) (i*3+1))) [1..length operations]
-  in length operations >= 3 ==>
-     let span1 = head spans
+      spans = L.map (\i -> SourceSpan (posAt (i*2) (i*3)) (posAt (i*2+1) (i*3+1))) [1..L.length operations]
+  in L.length operations >= 3 ==>
+     let span1 = L.head spans
          span2 = spans !! 1
          span3 = spans !! 2
          leftFirst = mergeSpans (mergeSpans span1 span2) span3
@@ -260,9 +261,9 @@ prop_stm_atomic_operations opList =
        finalCount <- readTVarIO counter
        let uniqueResults = nub $ map snd results
        return $ 
-         property (length results == length operations) .&&.
-         property (finalCount == length operations) .&&.
-         property (length uniqueResults == length operations)
+         property (L.length results == L.length operations) .&&.
+         property (finalCount == L.length operations) .&&.
+         property (L.length uniqueResults == L.length operations)
 
 -- Helper function for IO properties in QuickCheck
 ioProperty :: IO Property -> Property

@@ -151,23 +151,12 @@ import Compiler.Errors.Core
   , severityPriority
   , compareSeverity
   , isAtLeast
-  , errorAt
-  , errorWithCategory
-  , warningAt
-  , withLocation
-  , withContext
-  , withSuggestions
-  , combineErrors
-  , combinedErrorSeverity
-  , filterBySeverity
-  , hasCategory
-  , filterByCategory
-  , formatError
-  , canRecoverFrom
   , shouldContinueAfter
   )
 
-import Data.List (isPrefixOf, isInfixOf, intercalate, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (intercalate, sort, nub)
 import Data.Maybe (isJust, isNothing, catMaybes)
 import Data.Either (isLeft, isRight)
 import Data.Text (Text)
@@ -322,7 +311,7 @@ prop_parsed_program_has_main =
       Left _ -> property True  -- 解析失败时跳过
       Right typusFile ->
         let blocks = tfBlocks typusFile
-            hasMain = any (isInfixOf "func main") $ map cbContent blocks
+            hasMain = L.any (L.isInfixOf "func main") $ map cbContent blocks
         in hasMain === True
 
 -- 属性：解析后的程序应该包含指令信息
@@ -357,7 +346,7 @@ prop_compile_errors_informative =
           Right _ -> property True  -- 编译成功时跳过
           Left errors ->
             let errorMessages = map renderCompilationError errors
-            in all (not . null) errorMessages === True
+            in L.all (not . null) errorMessages === True
 
 -- 属性：生成的Go代码应该是有效的
 prop_generated_go_code_valid :: Property
@@ -383,7 +372,7 @@ prop_go_code_has_package =
           Left _ -> property True  -- 编译失败时跳过
           Right goCode ->
             let goLines = lines goCode
-                hasPackage = any (isPrefixOf "package") goLines
+                hasPackage = L.any (L.isPrefixOf "package") goLines
             in hasPackage === True
 
 -- 属性：Go代码应该包含main函数
@@ -397,7 +386,7 @@ prop_go_code_has_main =
           Left _ -> property True  -- 编译失败时跳过
           Right goCode ->
             let goLines = lines goCode
-                hasMain = any (isInfixOf "func main") goLines
+                hasMain = L.any (L.isInfixOf "func main") goLines
             in hasMain === True
 
 -- 属性：源码位置信息应该在整个流程中保持一致
@@ -409,7 +398,7 @@ prop_source_location_consistency =
       Right typusFile ->
         let blocks = tfBlocks typusFile
             spans = map cbSpan blocks
-            validSpans = all isValidSpan spans
+            validSpans = L.all isValidSpan spans
         in validSpans === True
 
 -- 属性：错误处理应该在整个流程中保持一致
@@ -422,7 +411,7 @@ prop_error_handling_consistency =
         case compile typusFile of
           Right _ -> property True  -- 编译成功
           Left compileErrors ->
-            let errorCount = length compileErrors
+            let errorCount = L.length compileErrors
             in errorCount >= 0  -- 至少应该有合理的错误数量
 
 -- 属性：字符串处理函数应该与解析器兼容
@@ -470,12 +459,12 @@ prop_compilation_data_integrity =
     case parseTypus program of
       Left _ -> property True  -- 解析失败时跳过
       Right typusFile ->
-        let originalBlocks = length $ tfBlocks typusFile
+        let originalBlocks = L.length $ tfBlocks typusFile
         in case compile typusFile of
              Left _ -> property True  -- 编译失败时跳过
              Right goCode ->
                let goLines = lines goCode
-               in length goLines >= 0  -- 至少应该生成一些行
+               in L.length goLines >= 0  -- 至少应该生成一些行
 
 -- 属性：错误报告应该包含有用的调试信息
 prop_error_report_useful :: Property
@@ -501,7 +490,7 @@ prop_type_check_diagnostics_detailed =
           Right _ -> property True  -- 编译成功时跳过
           Left compileErrors ->
             let diagnostics = diagnoseTypeErrors compileErrors
-            in length diagnostics >= 0  -- 至少应该有合理的诊断数量
+            in L.length diagnostics >= 0  -- 至少应该有合理的诊断数量
 
 -- 属性：编译器优化应该保持语义等价性
 prop_compiler_optimization_semantic_equivalence :: Property
@@ -514,7 +503,7 @@ prop_compiler_optimization_semantic_equivalence =
           Left _ -> property True  -- 编译失败时跳过
           Right goCode ->
             let goLines = lines goCode
-                hasOptimizations = any (isInfixOf "optimized") goLines
+                hasOptimizations = L.any (L.isInfixOf "optimized") goLines
             in hasOptimizations === hasOptimizations  -- 简单验证
 
 tests :: TestTree

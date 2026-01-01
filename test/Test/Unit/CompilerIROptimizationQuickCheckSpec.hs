@@ -10,6 +10,7 @@
 module Test.Unit.CompilerIROptimizationQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import TestSupport.Arbitrary
@@ -156,18 +157,18 @@ isReachable (MockIRNode _ MockBool (MockBoolValue False) _) = False
 isReachable _ = True
 
 countNodes :: MockIRNode -> Int
-countNodes node = 1 + sum (map countNodes (nodeChildren node))
+countNodes node = 1 + L.sum (map countNodes (nodeChildren node))
 
 countUnreachableNodes :: MockIRNode -> Int
 countUnreachableNodes node = 
   let isUnreachable = not . isReachable
-  in if isUnreachable node then 1 else 0 + sum (map countUnreachableNodes (nodeChildren node))
+  in if isUnreachable node then 1 else 0 + L.sum (map countUnreachableNodes (nodeChildren node))
 
 countRedundantSubexpressions :: MockIRNode -> Int
 countRedundantSubexpressions node =
   let subexpressions = collectSubexpressions node
       uniqueSubexpressions = nub subexpressions
-  in length subexpressions - length uniqueSubexpressions
+  in L.length subexpressions - L.length uniqueSubexpressions
 
 collectSubexpressions :: MockIRNode -> [MockIRNode]
 collectSubexpressions node = node : concatMap collectSubexpressions (nodeChildren node)
@@ -175,7 +176,7 @@ collectSubexpressions node = node : concatMap collectSubexpressions (nodeChildre
 findDuplicates :: [MockIRNode] -> [MockIRNode]
 findDuplicates nodes = 
   let grouped = groupByEqual nodes
-  in concatMap (\group -> if length group > 1 then [head group] else []) grouped
+  in concatMap (\group -> if L.length group > 1 then [L.head group] else []) grouped
 
 groupByEqual :: [MockIRNode] -> [[MockIRNode]]
 groupByEqual [] = []
@@ -187,8 +188,8 @@ groupByEqual (x:xs) =
 replaceDuplicates :: MockIRNode -> [MockIRNode] -> MockIRNode
 replaceDuplicates node duplicates = 
   if node `elem` duplicates
-  then head duplicates
-  else node { nodeChildren = map (\child -> replaceDuplicates child duplicates) (nodeChildren node) }
+  then L.head duplicates
+  else node { nodeChildren = L.map (\child -> replaceDuplicates child duplicates) (nodeChildren node) }
 
 collectTypes :: MockIRNode -> Set.Set MockIRType
 collectTypes node = Set.singleton (nodeType node) `Set.union` 
@@ -216,24 +217,24 @@ propagateConstants node = node { nodeChildren = map propagateConstants (nodeChil
 
 countVariables :: MockIRNode -> Int
 countVariables (MockIRNode _ _ (MockFunctionValue _) _) = 1
-countVariables node = sum (map countVariables (nodeChildren node))
+countVariables node = L.sum (map countVariables (nodeChildren node))
 
 countConstantVariables :: MockIRNode -> Int
-countConstantVariables node = length [() | MockIRNode _ _ (MockFunctionValue _) _ <- allNodes node]
+countConstantVariables node = L.length [() | MockIRNode _ _ (MockFunctionValue _) _ <- allNodes node]
   where
     allNodes n = n : concatMap allNodes (nodeChildren n)
 
 containsLoops :: MockIRNode -> Bool
-containsLoops node = any isLoopNode (allNodes node)
+containsLoops node = L.any isLoopNode (allNodes node)
   where
     allNodes n = n : concatMap allNodes (nodeChildren n)
-    isLoopNode (MockIRNode id _ _ _) = "loop" `isPrefixOf` id
+    isLoopNode (MockIRNode id _ _ _) = "loop" `L.isPrefixOf` id
 
 applyLoopInvariantCodeMotion :: MockIRNode -> MockIRNode
 applyLoopInvariantCodeMotion node = node { nodeChildren = map applyLoopInvariantCodeMotion (nodeChildren node) }
 
 countLoopInvariants :: MockIRNode -> Int
-countLoopInvariants = length . filter isInvariant . allNodes
+countLoopInvariants = L.length . filter isInvariant . allNodes
   where
     allNodes n = n : concatMap allNodes (nodeChildren n)
     isInvariant (MockIRNode _ MockInt (MockIntValue _) _) = True
@@ -249,7 +250,7 @@ simplifyPatterns :: MockIRNode -> MockIRNode
 simplifyPatterns node = node { nodeChildren = map simplifyPatterns (nodeChildren node) }
 
 calculateComplexity :: MockIRNode -> Int
-calculateComplexity node = 1 + sum (map calculateComplexity (nodeChildren node))
+calculateComplexity node = 1 + L.sum (map calculateComplexity (nodeChildren node))
 
 simulateExecution :: MockIRNode -> String
 simulateExecution node = case evaluateIR node of
@@ -259,9 +260,9 @@ simulateExecution node = case evaluateIR node of
   _ -> "unknown"
 
 isPrefixOf :: String -> String -> Bool
-isPrefixOf [] _ = True
-isPrefixOf _ [] = False
-isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
+L.isPrefixOf [] _ = True
+L.isPrefixOf _ [] = False
+L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
 
 tests :: TestTree
 tests = testGroup "Compiler IR Optimization QuickCheck Tests"

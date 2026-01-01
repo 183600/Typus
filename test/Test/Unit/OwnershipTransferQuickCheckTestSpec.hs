@@ -10,6 +10,7 @@
 module Test.Unit.OwnershipTransferQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -86,7 +87,7 @@ prop_ownershipType_show_contains_name =
                  Owned n -> n
                  Borrowed n -> n
                  MutBorrowed n -> n
-    in name `isInfixOf` showStr
+    in name `L.isInfixOf` showStr
 
 -- 属性：OwnershipType的Ord实例应该有正确的顺序
 prop_ownershipType_ordering :: Property
@@ -127,7 +128,7 @@ prop_ownershipError_show_contains_type =
           ControlFlowError _ -> "ControlFlowError"
           PathSensitiveError _ -> "PathSensitiveError"
           LoopOwnershipError _ -> "LoopOwnershipError"
-    in errorType `isInfixOf` showStr
+    in errorType `L.isInfixOf` showStr
 
 -- 属性：OwnershipTransfer的源和目标应该不同
 prop_ownership_transfer_different_vars :: Property
@@ -140,9 +141,9 @@ prop_ownership_transfer_show_contains_info :: Property
 prop_ownership_transfer_show_contains_info =
   forAll genOwnershipTransfer $ \transfer ->
     let showStr = show transfer
-    in "OwnershipTransfer" `isInfixOf` showStr &&
-       transferFrom transfer `isInfixOf` showStr &&
-       transferTo transfer `isInfixOf` showStr
+    in "OwnershipTransfer" `L.isInfixOf` showStr &&
+       transferFrom transfer `L.isInfixOf` showStr &&
+       transferTo transfer `L.isInfixOf` showStr
 
 -- 属性：newOwnershipAnalyzer应该返回有效的分析器
 prop_new_ownership_analyzer_valid :: Property
@@ -163,26 +164,26 @@ prop_ownership_transfer_list_valid_vars :: Property
 prop_ownership_transfer_list_valid_vars =
   forAll genOwnershipTransferList $ \transfers ->
     let allVars = concatMap (\t -> [transferFrom t, transferTo t]) transfers
-        isValidVar var = not (null var) && head var `elem` ['a'..'z']
-    in all isValidVar allVars
+        isValidVar var = not (null var) && L.head var `elem` ['a'..'z']
+    in L.all isValidVar allVars
 
 -- 属性：所有权类型列表中的变量名应该是有效的
 prop_ownership_type_list_valid_vars :: Property
 prop_ownership_type_list_valid_vars =
   forAll genOwnershipTypeList $ \types ->
-    let allVars = map (\t -> case t of
+    let allVars = L.map (\t -> case t of
                               Owned n -> n
                               Borrowed n -> n
                               MutBorrowed n -> n) types
-        isValidVar var = not (null var) && head var `elem` ['a'..'z']
-    in all isValidVar allVars
+        isValidVar var = not (null var) && L.head var `elem` ['a'..'z']
+    in L.all isValidVar allVars
 
 -- 属性：所有权错误列表应该可以排序
 prop_ownership_error_list_sortable :: Property
 prop_ownership_error_list_sortable =
   forAll (listOf genOwnershipError) $ \errors ->
     let sortedErrors = sort errors
-    in length sortedErrors === length errors
+    in L.length sortedErrors === L.length errors
 
 -- 属性：相同所有权类型的比较应该基于变量名
 prop_ownership_type_same_type_comparison :: Property
@@ -212,18 +213,18 @@ prop_ownership_error_contains_variables =
   forAll genOwnershipError $ \error ->
     let showStr = show error
         hasVar = case error of
-          UseAfterMove var -> var `isInfixOf` showStr
-          DoubleMove var1 var2 -> var1 `isInfixOf` showStr && var2 `isInfixOf` showStr
-          BorrowWhileMoved var -> var `isInfixOf` showStr
-          MutBorrowWhileBorrowed var -> var `isInfixOf` showStr
-          BorrowWhileMutBorrowed var -> var `isInfixOf` showStr
-          MultipleMutBorrows var -> var `isInfixOf` showStr
-          UseWhileMutBorrowed var -> var `isInfixOf` showStr
-          OutOfScope var -> var `isInfixOf` showStr
+          UseAfterMove var -> var `L.isInfixOf` showStr
+          DoubleMove var1 var2 -> var1 `L.isInfixOf` showStr && var2 `L.isInfixOf` showStr
+          BorrowWhileMoved var -> var `L.isInfixOf` showStr
+          MutBorrowWhileBorrowed var -> var `L.isInfixOf` showStr
+          BorrowWhileMutBorrowed var -> var `L.isInfixOf` showStr
+          MultipleMutBorrows var -> var `L.isInfixOf` showStr
+          UseWhileMutBorrowed var -> var `L.isInfixOf` showStr
+          OutOfScope var -> var `L.isInfixOf` showStr
           BorrowError msg -> not (null msg)
           ParseError msg -> not (null msg)
-          CrossFunctionMove var1 var2 -> var1 `isInfixOf` showStr && var2 `isInfixOf` showStr
-          ParameterMoveMismatch var -> var `isInfixOf` showStr
+          CrossFunctionMove var1 var2 -> var1 `L.isInfixOf` showStr && var2 `L.isInfixOf` showStr
+          ParameterMoveMismatch var -> var `L.isInfixOf` showStr
           ControlFlowError msg -> not (null msg)
           PathSensitiveError msg -> not (null msg)
           LoopOwnershipError msg -> not (null msg)
@@ -234,17 +235,17 @@ prop_ownership_transfer_list_deduplication :: Property
 prop_ownership_transfer_list_deduplication =
   forAll genOwnershipTransferList $ \transfers ->
     let uniqueTransfers = nub transfers
-    in length uniqueTransfers <= length transfers
+    in L.length uniqueTransfers <= L.length transfers
 
 -- 属性：所有权类型应该可以按类型分组
 prop_ownership_type_groupable :: Property
 prop_ownership_type_groupable =
   forAll genOwnershipTypeList $ \types ->
-    let ownedTypes = filter (\t -> case t of Owned _ -> True; _ -> False) types
-        borrowedTypes = filter (\t -> case t of Borrowed _ -> True; _ -> False) types
-        mutBorrowedTypes = filter (\t -> case t of MutBorrowed _ -> True; _ -> False) types
-        totalLength = length ownedTypes + length borrowedTypes + length mutBorrowedTypes
-    in totalLength === length types
+    let ownedTypes = L.filter (\t -> case t of Owned _ -> True; _ -> False) types
+        borrowedTypes = L.filter (\t -> case t of Borrowed _ -> True; _ -> False) types
+        mutBorrowedTypes = L.filter (\t -> case t of MutBorrowed _ -> True; _ -> False) types
+        totalLength = L.length ownedTypes + L.length borrowedTypes + L.length mutBorrowedTypes
+    in totalLength === L.length types
 
 tests :: TestTree
 tests =

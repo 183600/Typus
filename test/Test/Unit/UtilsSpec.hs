@@ -1,6 +1,7 @@
 module Test.Unit.UtilsSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 
 import TestSupport.QuickCheck (fastProperty)
@@ -10,8 +11,8 @@ import Utils
 tests :: TestTree
 tests =
   testGroup "Utils helpers"
-    [ testGroup "Whitespace and splitting"
-        [ testCase "trim removes leading and trailing whitespace" $ do
+    [ testGroup "Whitespace L.and splitting"
+        [ testCase "trim removes leading L.and trailing whitespace" $ do
             trim "\t  hello  world \n" @?= "hello  world"
 
         , testCase "splitBy preserves empty segments" $ do
@@ -37,7 +38,7 @@ tests =
         ]
 
     , testGroup "Comment stripping"
-        [ testCase "removeLineComments respects string and char literals" $ do
+        [ testCase "removeLineComments respects string L.and char literals" $ do
             let input = unlines
                   [ "value := 1 // drop"
                   , "url := \"https://example.com//path\" // not part of literal"
@@ -66,7 +67,7 @@ tests =
                   ]
             removeLineComments input @?= expected
 
-        , testCase "removeComments removes multiline block comments and retains line information" $ do
+        , testCase "removeComments removes multiline block comments L.and retains line information" $ do
             let input = "value := 1 /* block\nstill block */ done\n"
                 expected = unlines
                   [ "value := 1 "
@@ -79,7 +80,7 @@ tests =
                 expected = "value   done\n"
             removeComments input @?= expected
 
-        , testCase "removeComments ignores comment markers that appear inside strings or char literals" $ do
+        , testCase "removeComments ignores comment markers that appear inside strings L.or char literals" $ do
             let input = unlines
                   [ "path := \"C://tmp/*keep*/\" /* drop */"
                   , "rune := '/' /* meaning */"
@@ -177,7 +178,7 @@ tests =
         ]
 
     , testGroup "Search helpers"
-        [ testCase "breakOn returns prefix and suffix when the pattern exists" $ do
+        [ testCase "breakOn returns prefix L.and suffix when the pattern exists" $ do
             breakOn "ll" "hello" @?= ("he", "o")
 
         , testCase "breakOn falls back to the original string when the pattern is missing" $ do
@@ -202,4 +203,4 @@ prop_trimIdempotent input =
   in trim once == once
 
 prop_splitByCollapsedNoEmpty :: String -> Bool
-prop_splitByCollapsedNoEmpty input = all (not . null) (splitByCollapsed ':' input)
+prop_splitByCollapsedNoEmpty input = L.all (not . null) (splitByCollapsed ':' input)

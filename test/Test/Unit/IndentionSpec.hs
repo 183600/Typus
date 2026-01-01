@@ -10,6 +10,7 @@ import TestSupport.QuickCheck (fastProperty)
 import Utils (normalizeIndentation, forceSingleTabIndentation, fixIndentation)
 
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf)
 
 -- | 测试缩进处理功能的属性和边界情况
@@ -20,7 +21,7 @@ tests =
         [ testCase "removes common prefix indentation" $ do
             normalizeIndentation "  hello\n    world" @?= "hello\n  world"
             
-        , testCase "handles mixed spaces and tabs" $ do
+        , testCase "handles mixed spaces L.and tabs" $ do
             normalizeIndentation "\t  hello\n\t    world" @?= "hello\n  world"
             
         , testCase "handles single line" $ do
@@ -37,14 +38,14 @@ tests =
             let lines' = lines input
                 normalized = normalizeIndentation input
                 normalizedLines = lines normalized
-            in length normalizedLines == length lines'
+            in L.length normalizedLines == L.length lines'
             
         , testProperty "normalizeIndentation preserves relative indentation" $ fastProperty $ \input ->
             let originalLines = lines input
                 normalizedLines = lines (normalizeIndentation input)
-                getIndentation line = length $ takeWhile isSpace line
-            in length originalLines == length normalizedLines ===>
-               all (\(orig, norm) -> 
+                getIndentation line = L.length $ takeWhile isSpace line
+            in L.length originalLines == L.length normalizedLines ===>
+               L.all (\(orig, norm) -> 
                     if null orig || null norm
                     then True
                     else getIndentation norm >= 0) 
@@ -70,13 +71,13 @@ tests =
             let result = forceSingleTabIndentation input
                 originalLines = lines input
                 resultLines = lines result
-            in length originalLines == length resultLines ===>
-               all (\(orig, res) -> 
-                    if null (trim orig) 
-                    then null (trim res) 
+            in L.length originalLines == L.length resultLines ===>
+               L.all (\(orig, res) -> 
+                    if L.null (trim orig) 
+                    then L.null (trim res) 
                     else not (null res)) 
                    (zip originalLines resultLines)
-            where trim = reverse . dropWhile isSpace . dropWhile isSpace . reverse
+            where trim = L.reverse . dropWhile isSpace . dropWhile isSpace . L.reverse
         ]
         
     , testGroup "fixIndentation"
@@ -114,7 +115,7 @@ tests =
             let normalized = normalizeIndentation input
                 tabbed = forceSingleTabIndentation input
                 fixed = fixIndentation input
-            in length normalized >= 0 && length tabbed >= 0 && length fixed >= 0
+            in L.length normalized >= 0 && L.length tabbed >= 0 && L.length fixed >= 0
         ]
         
     , testGroup "Indentation Properties"
@@ -123,7 +124,7 @@ tests =
                 firstLine = case lines normalized of
                     [] -> ""
                     (x:_) -> x
-            in null firstLine || not (isSpace (head firstLine))
+            in null firstLine || not (isSpace (L.head firstLine))
             
         , testProperty "forceSingleTabIndentation uses only tabs for indentation" $ fastProperty $ \input ->
             let result = forceSingleTabIndentation input
@@ -131,13 +132,13 @@ tests =
                 hasLeadingSpaces line = case line of
                     [] -> False
                     (c:_) -> isSpace c && c /= '\t'
-            in not (any hasLeadingSpaces lines')
+            in not (L.any hasLeadingSpaces lines')
             
         , testProperty "indentation functions preserve content" $ fastProperty $ \input ->
             let normalized = normalizeIndentation input
                 tabbed = forceSingleTabIndentation input
                 fixed = fixIndentation input
-                stripIndentation = unlines . map (dropWhile isSpace) . lines
+                stripIndentation = unlines . L.map (dropWhile isSpace) . lines
             in stripIndentation normalized == stripIndentation input &&
                stripIndentation tabbed == stripIndentation input &&
                stripIndentation fixed == stripIndentation input

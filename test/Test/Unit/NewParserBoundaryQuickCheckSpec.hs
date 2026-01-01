@@ -6,6 +6,7 @@ import Test.Tasty (TestTree, testGroup)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import Data.Char (isSpace, isAlphaNum, isDigit, isLetter)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 import qualified Data.Text as T
 
@@ -32,7 +33,7 @@ inputBoundaryProperties = testGroup "Input Boundary Properties"
 
 tokenBoundaryProperties :: TestTree
 tokenBoundaryProperties = testGroup "Token Boundary Properties"
-  [ fastProperty "maximum token length handled" prop_max_token_length
+  [ fastProperty "L.maximum token L.length handled" prop_max_token_length
   , fastProperty "special character sequences parsed" prop_special_characters
   , fastProperty "numeric boundaries handled" prop_numeric_boundaries
   , fastProperty "identifier boundaries respected" prop_identifier_boundaries
@@ -72,7 +73,7 @@ prop_empty_input_error =
 
 prop_whitespace_only :: String -> Property
 prop_whitespace_only s =
-  let whitespaceOnly = all isSpace s
+  let whitespaceOnly = L.all isSpace s
   in whitespaceOnly ==>
   case parseTypus s of
     ParseError _ -> property True
@@ -80,7 +81,7 @@ prop_whitespace_only s =
 
 prop_long_input_stable :: String -> Property
 prop_long_input_stable s =
-  let longInput = concat (replicate 1000 s)
+  let longInput = L.concat (replicate 1000 s)
   in property $ not (null longInput) ==> 
   case parseTypus longInput of
     ParseError _ -> property True
@@ -89,7 +90,7 @@ prop_long_input_stable s =
 prop_deep_nesting :: Int -> Property
 prop_deep_nesting depth =
   let depth' = min (max depth 0) 100  -- Cap depth to prevent issues
-      nestedInput = concat (replicate depth' "func x = ")
+      nestedInput = L.concat (replicate depth' "func x = ")
       finalInput = nestedInput ++ "42"
   in property $ depth' > 0 ==>
   case parseTypus finalInput of
@@ -109,7 +110,7 @@ prop_repeated_characters c count =
 prop_max_token_length :: String -> Property
 prop_max_token_length s =
   let longToken = take 10000 s
-  in property $ length longToken > 1000 ==>
+  in property $ L.length longToken > 1000 ==>
   case parseTypus longToken of
     ParseError _ -> property True
     ParseSuccess _ _ -> property True
@@ -143,7 +144,7 @@ prop_identifier_boundaries s =
 prop_operator_parsing :: String -> Property
 prop_operator_parsing s =
   let operators = ["+", "-", "*", "/", "==", "!=", "<", ">", "<=", ">="]
-      op = operators `mod` length operators
+      op = operators `mod` L.length operators
       input = "x " ++ op !! 0 ++ " y"
   in case parseTypus input of
     ParseError _ -> property True
@@ -176,7 +177,7 @@ prop_error_positions s =
 
 prop_partial_parsing :: String -> Property
 prop_partial_parsing s =
-  let partial = take (length s `div` 2) s
+  let partial = take (L.length s `div` 2) s
   in property $ not (null partial) ==>
   case parseTypus partial of
     ParseError _ -> property True
@@ -229,13 +230,13 @@ prop_mixed_encoding s =
 prop_linear_parsing_time :: String -> Property
 prop_linear_parsing_time s =
   let sizes = [100, 200, 400]
-      inputs = map (\n -> take n (cycle s)) sizes
-      parseTimes = map (const 1) inputs  -- Simplified - actual timing would need deeper integration
-  in property $ length parseTimes == length sizes
+      inputs = L.map (\n -> take n (cycle s)) sizes
+      parseTimes = L.map (const 1) inputs  -- Simplified - actual timing would need deeper integration
+  in property $ L.length parseTimes == L.length sizes
 
 prop_bounded_memory :: String -> Property
 prop_bounded_memory s =
-  let largeInput = concat (replicate 1000 s)
+  let largeInput = L.concat (replicate 1000 s)
   in property $ not (null largeInput) ==>
   case parseTypus largeInput of
     ParseError _ -> property True
@@ -243,7 +244,7 @@ prop_bounded_memory s =
 
 prop_no_stack_overflow :: String -> Property
 prop_no_stack_overflow s =
-  let deeplyNested = concat (replicate 500 ("(" ++ s ++ ")"))
+  let deeplyNested = L.concat (replicate 500 ("(" ++ s ++ ")"))
   in property $ not (null s) ==>
   case parseTypus deeplyNested of
     ParseError _ -> property True
@@ -251,4 +252,4 @@ prop_no_stack_overflow s =
 
 -- Helper functions
 mod :: [a] -> Int -> a
-mod xs n = xs !! (n `mod` length xs)
+mod xs n = xs !! (n `mod` L.length xs)

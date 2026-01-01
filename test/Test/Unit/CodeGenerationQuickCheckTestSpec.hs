@@ -35,7 +35,9 @@ import Compiler.GoAst
   , flattenDeclLines
   )
 
-import Data.List (isPrefixOf, isInfixOf, intercalate, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (intercalate, sort, nub)
 import Data.Maybe (isJust, isNothing, catMaybes)
 import Data.Either (isLeft, isRight)
 
@@ -166,14 +168,14 @@ prop_parse_render_consistency =
       Left _ -> property True -- 解析失败时跳过
       Right parsedModule ->
         let renderedLines = lines $ renderGoModule parsedModule
-        in property $ length renderedLines >= 0 -- 至少应该生成一些行
+        in property $ L.length renderedLines >= 0 -- 至少应该生成一些行
 
 -- 属性：PackageDecl应该包含有效的包名
 prop_packageDecl_valid_name :: Property
 prop_packageDecl_valid_name =
   forAll genPackageName $ \name ->
     let pkgDecl = PackageDecl name
-    in not (null name) && head name `elem` ['a'..'z']
+    in not (null name) && L.head name `elem` ['a'..'z']
 
 -- 属性：ImportDecl应该包含有效的导入路径
 prop_importDecl_valid_path :: Property
@@ -187,7 +189,7 @@ prop_funcDecl_has_lines :: Property
 prop_funcDecl_has_lines =
   forAll genFuncLines $ \lines ->
     let funcDecl = FuncDecl lines
-    in not (null lines) && "func" `isPrefixOf` head lines
+    in not (null lines) && "func" `L.isPrefixOf` L.head lines
 
 -- 属性：TypeDecl应该包含类型行
 prop_typeDecl_has_lines :: Property
@@ -195,7 +197,7 @@ prop_typeDecl_has_lines =
   forAll genTypeLines $ \lines ->
   forAll arbitrary $ \isGroup ->
     let typeDecl = TypeDecl lines isGroup
-    in not (null lines) && "type" `isPrefixOf` head lines
+    in not (null lines) && "type" `L.isPrefixOf` L.head lines
 
 -- 属性：VarDecl应该包含变量行
 prop_varDecl_has_lines :: Property
@@ -203,7 +205,7 @@ prop_varDecl_has_lines =
   forAll genVarLines $ \lines ->
   forAll arbitrary $ \isGroup ->
     let varDecl = VarDecl lines isGroup
-    in not (null lines) && "var" `isPrefixOf` head lines
+    in not (null lines) && "var" `L.isPrefixOf` L.head lines
 
 -- 属性：ConstDecl应该包含常量行
 prop_constDecl_has_lines :: Property
@@ -211,7 +213,7 @@ prop_constDecl_has_lines =
   forAll genConstLines $ \lines ->
   forAll arbitrary $ \isGroup ->
     let constDecl = ConstDecl lines isGroup
-    in not (null lines) && "const" `isPrefixOf` head lines
+    in not (null lines) && "const" `L.isPrefixOf` L.head lines
 
 -- 属性：StatementBlock应该包含语句行
 prop_statementBlock_has_lines :: Property
@@ -235,7 +237,7 @@ prop_goModule_structure_integrity =
         package = gmPackage goModule
         imports = gmImports goModule
         decls = gmDecls goModule
-    in all (not . null) buildTags || null buildTags
+    in L.all (not . null) buildTags || null buildTags
 
 -- 属性：isMainFunction应该正确识别main函数
 prop_isMainFunction_identifies_main :: Property
@@ -301,7 +303,7 @@ prop_parse_with_package =
 prop_parse_with_imports :: Property
 prop_parse_with_imports =
   forAll (listOf genImportDecl) $ \imports ->
-    let importLines = map (\imp -> "import \"" ++ importPath imp ++ "\"") imports
+    let importLines = L.map (\imp -> "import \"" ++ importPath imp ++ "\"") imports
         code = ["package main"] ++ importLines
     in isRight (parseGoModule code) === True
 
@@ -309,7 +311,7 @@ prop_parse_with_imports =
 prop_parse_with_functions :: Property
 prop_parse_with_functions =
   forAll (listOf genFuncLines) $ \funcLinesList ->
-    let allFuncLines = concat funcLinesList
+    let allFuncLines = L.concat funcLinesList
         code = ["package main"] ++ allFuncLines
     in isRight (parseGoModule code) === True
 

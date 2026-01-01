@@ -12,8 +12,9 @@ module Test.Unit.AdditionalCabalQuickCheckTestSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
+import TestSupport.Arbitrary ()  -- Import Arbitrary instances for SourcePos L.and SourceSpan
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
-import Test.QuickCheck.Arbitrary (Arbitrary(..), arbitrary)
+import Test.QuickCheck.Arbitrary (arbitrary)
 import Test.QuickCheck (oneof, elements, listOf, sized)
 import Test.QuickCheck.Gen (Gen, choose, vectorOf)
 
@@ -47,22 +48,12 @@ import Utils
 
 import Data.Char (isSpace, isLetter, isDigit)
 import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, sort, lines)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort, lines)
 
 -- QuickCheck generators for SourceLocation types
-
-instance Arbitrary SourcePos where
-  arbitrary = do
-    line <- choose (1, 1000)
-    col <- choose (1, 1000)
-    offset <- choose (0, 10000)
-    return $ SourcePos line col offset
-
-instance Arbitrary SourceSpan where
-  arbitrary = do
-    start <- arbitrary
-    end <- arbitrary
-    return $ SourceSpan start end
+-- Note: Arbitrary instances for SourcePos L.and SourceSpan are defined in TestSupport.Arbitrary
 
 -- Test cases for SourceLocation module
 
@@ -80,14 +71,14 @@ prop_posAfter_next_column ch pos =
      then property $ posLine nextPos === posLine pos + 1 .&&. posColumn nextPos === 1
      else property $ posLine nextPos === posLine pos .&&. posColumn nextPos === posColumn pos + 1
 
--- Property: posAt creates position at specific line and column
+-- Property: posAt creates position at specific line L.and column
 prop_posAt_specific :: Int -> Int -> Property
 prop_posAt_specific line col =
   line >= 1 && col >= 1 && line <= 1000 && col <= 1000 ==>
   let pos = posAt line col
   in property $ posLine pos === line .&&. posColumn pos === col
 
--- Property: emptySpan has start and end at same position
+-- Property: emptySpan has start L.and end at same position
 prop_emptySpan_consistency :: SourcePos -> Property
 prop_emptySpan_consistency pos =
   let span = emptySpan pos
@@ -153,15 +144,15 @@ prop_advancePosBy_multiple str pos =
 
 -- Test cases for Utils module (additional properties)
 
--- Property: trim removes all leading and trailing whitespace
+-- Property: trim removes L.all leading L.and trailing whitespace
 prop_trim_comprehensive :: String -> String -> String -> Property
 prop_trim_comprehensive prefix content suffix =
-  let leading = replicate (length prefix `mod` 10) ' '
-      trailing = replicate (length suffix `mod` 10) '\t'
+  let leading = replicate (L.length prefix `mod` 10) ' '
+      trailing = replicate (L.length suffix `mod` 10) '\t'
       full = leading ++ content ++ trailing
       trimmed = trim full
   in property $ not (null trimmed) ==> 
-             not (isSpace (head trimmed)) .&&.
+             not (isSpace (L.head trimmed)) .&&.
              not (isSpace (last trimmed))
 
 -- Property: splitBy handles empty input correctly
@@ -184,8 +175,8 @@ prop_removeComments_preservation code1 code2 =
   let content = code1 ++ "/* comment */" ++ code2
       cleaned = removeComments content
   in not (null code1 || null code2) ==>
-     property $ code1 `isInfixOf` cleaned .&&.
-                code2 `isInfixOf` cleaned
+     property $ code1 `L.isInfixOf` cleaned .&&.
+                code2 `L.isInfixOf` cleaned
 
 -- Property: normalizeIndentation preserves line count
 prop_normalizeIndentation_line_count :: [String] -> Property
@@ -193,20 +184,20 @@ prop_normalizeIndentation_line_count inputLines =
   not (null inputLines) ==>
   let input = unlines inputLines
       normalized = normalizeIndentation input
-  in property $ length (Data.List.lines normalized) === length inputLines
+  in property $ L.length (Data.List.lines normalized) === L.length inputLines
 
 -- Property: normalizeIndentation removes common indentation
 prop_normalizeIndentation_common_removal :: String -> [String] -> Property
 prop_normalizeIndentation_common_removal indent inputLines =
-  not (null inputLines) && not (any null inputLines) ==>
-  let indentedLines = map (indent ++) inputLines
+  not (null inputLines) && not (L.any null inputLines) ==>
+  let indentedLines = L.map (indent ++) inputLines
       input = unlines indentedLines
       normalized = normalizeIndentation input
       normalizedLines = Data.List.lines normalized
-      hasCommonIndent = all (isPrefixOf indent) indentedLines
+      hasCommonIndent = L.all (L.isPrefixOf indent) indentedLines
   in if hasCommonIndent
-     then property $ not (any (isPrefixOf indent) normalizedLines)
-     else property $ length normalizedLines === length inputLines
+     then property $ not (L.any (L.isPrefixOf indent) normalizedLines)
+     else property $ L.length normalizedLines === L.length inputLines
 
 -- Additional comprehensive properties
 
@@ -243,13 +234,13 @@ prop_string_pipeline_consistency :: String -> Property
 prop_string_pipeline_consistency input =
   let pipeline1 = input |> trim |> removeComments |> normalizeIndentation
       pipeline2 = input |> removeComments |> trim |> normalizeIndentation
-  in property $ length pipeline1 >= 0 .&&. length pipeline2 >= 0
+  in property $ L.length pipeline1 >= 0 .&&. L.length pipeline2 >= 0
 
 -- Property: Position advancement with mixed content
 prop_position_advancement_mixed :: String -> SourcePos -> Property
 prop_position_advancement_mixed str pos =
   let finalPos = advancePosBy str pos
-      newlineCount = length $ filter (== '\n') str
+      newlineCount = L.length $ L.filter (== '\n') str
   in property $ posLine finalPos >= posLine pos .&&.
              posLine finalPos <= posLine pos + newlineCount + 1
 
@@ -273,30 +264,30 @@ prop_trim_unicode content =
   let unicodeContent = " \t\n " ++ content ++ " café 🚀 测试 \t\n "
       trimmed = trim unicodeContent
   in property $ not (null trimmed) ==> 
-             not (isSpace (head trimmed)) .&&.
+             not (isSpace (L.head trimmed)) .&&.
              not (isSpace (last trimmed))
 
 -- Property: Comment removal with nested patterns
 prop_removeComments_nested :: String -> String -> String -> Property
 prop_removeComments_nested before middle after =
-  not ("/*" `isInfixOf` before) && not ("*/" `isInfixOf` before) &&
-  not ("/*" `isInfixOf` middle) && not ("*/" `isInfixOf` middle) &&
-  not ("/*" `isInfixOf` after) && not ("*/" `isInfixOf` after) ==>
+  not ("/*" `L.isInfixOf` before) && not ("*/" `L.isInfixOf` before) &&
+  not ("/*" `L.isInfixOf` middle) && not ("*/" `L.isInfixOf` middle) &&
+  not ("/*" `L.isInfixOf` after) && not ("*/" `L.isInfixOf` after) ==>
   let content = before ++ "/* outer " ++ middle ++ " */" ++ after
       cleaned = removeComments content
-  in property $ before `isInfixOf` cleaned .&&.
-             after `isInfixOf` cleaned .&&.
-             not ("/* outer" `isInfixOf` cleaned) .&&.
-             not ("*/" `isInfixOf` cleaned)
+  in property $ before `L.isInfixOf` cleaned .&&.
+             after `L.isInfixOf` cleaned .&&.
+             not ("/* outer" `L.isInfixOf` cleaned) .&&.
+             not ("*/" `L.isInfixOf` cleaned)
 
--- Collect all tests
+-- Collect L.all tests
 tests :: TestTree
 tests = testGroup "Additional Cabal QuickCheck Tests"
   [ testGroup "SourceLocation Tests"
     [ fastProperty "startPos creates position at (1,1)" prop_startPos_basic
     , fastProperty "posAfter moves to next column" prop_posAfter_next_column
-    , fastProperty "posAt creates position at specific line and column" prop_posAt_specific
-    , fastProperty "emptySpan has consistent start and end" prop_emptySpan_consistency
+    , fastProperty "posAt creates position at specific line L.and column" prop_posAt_specific
+    , fastProperty "emptySpan has consistent start L.and end" prop_emptySpan_consistency
     , fastProperty "spanFrom creates span correctly" prop_spanFrom_creation
     , fastProperty "spanTo creates span correctly" prop_spanTo_creation
     , fastProperty "mergeSpans combines spans correctly" prop_mergeSpans_combination
@@ -312,7 +303,7 @@ tests = testGroup "Additional Cabal QuickCheck Tests"
     , fastProperty "Empty span is always valid" prop_empty_span_validity
     ]
   , testGroup "Utils Additional Tests"
-    [ fastProperty "trim removes all leading and trailing whitespace" prop_trim_comprehensive
+    [ fastProperty "trim removes L.all leading L.and trailing whitespace" prop_trim_comprehensive
     , fastProperty "splitBy handles empty input correctly" prop_splitBy_empty
     , fastProperty "splitBy handles single character input" prop_splitBy_single
     , fastProperty "removeComments preserves non-comment content" prop_removeComments_preservation

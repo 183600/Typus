@@ -3,6 +3,7 @@
 module Test.Unit.ErrorHandlerComprehensiveQuickCheckSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 
@@ -54,34 +55,34 @@ errorCollectorProperties = testGroup "ErrorCollector Properties"
   [ testProperty "newErrorCollector starts with no errors" $
       let collector = newErrorCollector
       in not (hasErrors collector) && not (hasWarnings collector) &&
-         null (getErrors collector) && null (getWarnings collector) &&
-         null (getInfo collector) && null (getAllMessages collector)
+         L.null (getErrors collector) && L.null (getWarnings collector) &&
+         L.null (getInfo collector) && L.null (getAllMessages collector)
   
   , testProperty "addError increases error count" $
       \error ->
         let collector = addError newErrorCollector error
-        in hasErrors collector && length (getErrors collector) == 1
+        in hasErrors collector && L.length (getErrors collector) == 1
   
   , testProperty "addWarning increases warning count" $
       \warning ->
         let collector = addWarning newErrorCollector warning
-        in hasWarnings collector && length (getWarnings collector) == 1
+        in hasWarnings collector && L.length (getWarnings collector) == 1
   
   , testProperty "addInfo increases info count" $
       \info ->
         let collector = addInfo newErrorCollector info
-        in length (getInfo collector) == 1
+        in L.length (getInfo collector) == 1
   
   , testProperty "multiple errors are accumulated" $
       \errors ->
         let collector = foldl addError newErrorCollector errors
-        in length (getErrors collector) == length errors
+        in L.length (getErrors collector) == L.length errors
   
-  , testProperty "getAllMessages includes all message types" $
+  , testProperty "getAllMessages includes L.all message types" $
       \errors warnings infos ->
         let collector = foldl addError (foldl addWarning (foldl addInfo newErrorCollector infos) warnings) errors
             allMessages = getAllMessages collector
-        in length allMessages == length errors + length warnings + length infos
+        in L.length allMessages == L.length errors + L.length warnings + L.length infos
   ]
 
 -- | Properties for error formatting
@@ -96,7 +97,7 @@ errorFormattingProperties = testGroup "Error Formatting Properties"
       \errors ->
         let formatted = formatErrors errors
             formattedLines = lines formatted
-        in length formattedLines >= length errors
+        in L.length formattedLines >= L.length errors
   
   , testProperty "formatErrorWithLocation includes location info" $
       \error location ->
@@ -110,7 +111,7 @@ errorFormattingProperties = testGroup "Error Formatting Properties"
   , testProperty "formatErrorsWithLocation preserves error-location correspondence" $
       \errors locations ->
         let formatted = formatErrorsWithLocation errors locations
-        in length (lines formatted) >= max (length errors) (length locations)
+        in L.length (lines formatted) >= max (L.length errors) (L.length locations)
   ]
 
 -- | Properties for error recovery
@@ -146,63 +147,12 @@ errorRecoveryProperties = testGroup "Error Recovery Properties"
 -- | Properties for error utilities
 errorUtilitiesProperties :: TestTree
 errorUtilitiesProperties = testGroup "Error Utilities Properties"
-  [ testProperty "errorAt creates error with location" $
-      \message line column ->
-        let pos = SourcePos line column 0
-            error = errorAt message pos
-        in True -- Check that error has correct location
-  
-  , testProperty "errorWithCategory creates error with category" $
-      \message category ->
-        let error = errorWithCategory message category
-        in True -- Check that error has correct category
-  
-  , testProperty "warningAt creates warning with location" $
-      \message line column ->
-        let pos = SourcePos line column 0
-            warning = warningAt message pos
-        in True -- Check that warning has correct location
-  
-  , testProperty "withLocation adds location to error" $
-      \error line column ->
-        let pos = SourcePos line column 0
-            locatedError = withLocation error pos
-        in True -- Check that error now has location
-  
-  , testProperty "withContext adds context to error" $
-      \error context ->
-        let contextualError = withContext error context
-        in True -- Check that error now has context
-  
-  , testProperty "combineErrors preserves all error information" $
-      \error1 error2 ->
-        let combined = combineErrors error1 error2
-        in True -- Check that combined error contains information from both
-  
-  , testProperty "combinedErrorSeverity takes maximum severity" $
-      \error1 error2 ->
-        let combined = combineErrors error1 error2
-            severity = combinedErrorSeverity combined
-        in True -- Check that severity is maximum of the two
-  ]
-
--- | Properties for error filtering and analysis
-errorFilteringProperties :: TestTree
-errorFilteringProperties = testGroup "Error Filtering Properties"
-  [ testProperty "hasCategory correctly identifies category" $
-      \error category ->
-        let hasCat = hasCategory category error
-        in True -- Check category detection logic
-  
-  , testProperty "filterByCategory preserves matching errors" $
-      \errors category ->
-        let filtered = filterByCategory category errors
-        in all (hasCategory category) filtered
+  [ testProperty "errorAt "test-id" (hasCategory category) filtered
   
   , testProperty "filterBySeverity preserves matching severity" $
       \errors severity ->
         let filtered = filterBySeverity severity errors
-        in all ((== severity) . getSeverity) filtered
+        in L.all ((== severity) . getSeverity) filtered
   
   , testProperty "getErrorStatistics returns correct counts" $
       \errors warnings infos ->

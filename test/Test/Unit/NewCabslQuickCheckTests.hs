@@ -3,6 +3,7 @@
 module Test.Unit.NewCabslQuickCheckTests (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Arbitrary(..), Gen, choose, Property, property)
 import qualified Data.Map as Map
@@ -29,7 +30,7 @@ stringProcessingTests :: TestTree
 stringProcessingTests = testGroup "String Processing Properties"
   [ fastProperty "trim removes only outer whitespace" prop_trim_outer_only
   , fastProperty "trim is idempotent" prop_trim_idempotent
-  , fastProperty "splitBy and join are inverses for simple cases" prop_split_join_inverse
+  , fastProperty "splitBy L.and join are inverses for simple cases" prop_split_join_inverse
   , fastProperty "splitByComma handles empty strings" prop_split_comma_empty
   , fastProperty "normalizeIndentation preserves relative structure" prop_normalize_preserves_structure
   ]
@@ -38,7 +39,7 @@ stringProcessingTests = testGroup "String Processing Properties"
 sourceLocationTests :: TestTree
 sourceLocationTests = testGroup "Source Location Properties"
   [ fastProperty "startPos has zero column" prop_start_pos_column
-  , fastProperty "spanBetween has positive length" prop_span_positive_length
+  , fastProperty "spanBetween has positive L.length" prop_span_positive_length
   , fastProperty "merge spans preserves containment" prop_merge_span_containment
   ]
 
@@ -46,7 +47,7 @@ sourceLocationTests = testGroup "Source Location Properties"
 dataStructureTests :: TestTree
 dataStructureTests = testGroup "Data Structure Properties"
   [ fastProperty "Map operations are consistent" prop_map_operations
-  , fastProperty "List operations preserve length" prop_list_operations
+  , fastProperty "List operations preserve L.length" prop_list_operations
   ]
 
 
@@ -55,11 +56,11 @@ dataStructureTests = testGroup "Data Structure Properties"
 prop_trim_outer_only :: String -> Property
 prop_trim_outer_only str =
   let trimmed = trim str
-      hasLeadingSpace = not (null str) && isSpace (head str)
+      hasLeadingSpace = not (null str) && isSpace (L.head str)
       hasTrailingSpace = not (null str) && isSpace (last str)
   in property $
     if hasLeadingSpace || hasTrailingSpace
-    then length trimmed < length str
+    then L.length trimmed < L.length str
     else trimmed == str
 
 prop_trim_idempotent :: String -> Property
@@ -70,7 +71,7 @@ prop_trim_idempotent str =
 
 prop_split_join_inverse :: [String] -> Char -> Property
 prop_split_join_inverse parts sep =
-  let joined = concat $ intersperse [sep] parts
+  let joined = L.concat $ intersperse [sep] parts
       splitParts = splitBy sep joined
   in property $ splitParts == parts
 
@@ -80,11 +81,11 @@ prop_split_comma_empty =
 
 prop_normalize_preserves_structure :: [String] -> Property
 prop_normalize_preserves_structure lineList =
-  let indented = map ("  " ++) lineList
+  let indented = L.map ("  " ++) lineList
       inputText = unlines indented
       normalized = normalizeIndentation inputText
       resultLines = Prelude.lines normalized
-  in property $ length resultLines == length indented
+  in property $ L.length resultLines == L.length indented
 
 -- Source location property implementations
 prop_start_pos_column :: Property
@@ -117,4 +118,4 @@ prop_list_operations :: [Int] -> Property
 prop_list_operations xs =
   let sorted = sort xs
       unique = nub xs
-  in property $ length unique <= length xs && length sorted == length xs
+  in property $ L.length unique <= L.length xs && L.length sorted == L.length xs

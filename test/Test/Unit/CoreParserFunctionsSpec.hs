@@ -3,6 +3,7 @@
 module Test.Unit.CoreParserFunctionsSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty)
 import TestSupport.QuickCheck (fastProperty)
@@ -10,32 +11,32 @@ import TestSupport.QuickCheck (fastProperty)
 import Parser (parseTypus, FileDirectives(..), BlockDirectives(..), CodeBlock(..), TypusFile(..), 
               defaultFileDirectives, defaultBlockDirectives)
 import SourceLocation (SourcePos(..), SourceSpan(..))
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 
 -- | 测试解析器核心函数的属性和边界情况
 tests :: TestTree
 tests =
   testGroup "Core Parser Functions"
     [ testGroup "Default Directives"
-        [ testCase "defaultFileDirectives should have all Nothing values" $ do
+        [ testCase "defaultFileDirectives should have L.all Nothing values" $ do
             defaultFileDirectives @?= FileDirectives Nothing Nothing Nothing
             
-        , testCase "defaultBlockDirectives should have all Nothing values" $ do
+        , testCase "defaultBlockDirectives should have L.all Nothing values" $ do
             defaultBlockDirectives @?= BlockDirectives Nothing Nothing Nothing
         ]
         
     , testGroup "Parser Properties"
         [ testProperty "parseTypus on empty string should not crash" $ fastProperty $ \input ->
             let result = parseTypus "" input
-            in length (show result) >= 0  -- 确保不崩溃且能显示结果
+            in L.length (show result) >= 0  -- 确保不崩溃且能显示结果
             
-        , testProperty "parseTypus preserves input length in error messages" $ fastProperty $ \input ->
+        , testProperty "parseTypus preserves input L.length in error messages" $ fastProperty $ \input ->
             let result = parseTypus "" input
                 resultStr = show result
             in if "error" `elem` (words $ map toLower resultStr)
-               then length input <= length resultStr || length resultStr > 10
+               then L.length input <= L.length resultStr || L.length resultStr > 10
                else True
-            where toLower = map (\c -> if c >= 'A' && c <= 'Z' then c + 32 else c)
+            where toLower = L.map (\c -> if c >= 'A' && c <= 'Z' then c + 32 else c)
         ]
         
     , testGroup "Directive Parsing"
@@ -57,28 +58,28 @@ tests =
             let malformedInput = "!!!@@@###$$$%%%"
                 result = parseTypus "" malformedInput
                 resultStr = show result
-            length resultStr > 0 @?= True  -- 确保产生一些输出（可能是错误信息）
+            L.length resultStr > 0 @?= True  -- 确保产生一些输出（可能是错误信息）
             
         , testProperty "parseTypus on Unicode input should not crash" $ fastProperty $ \input ->
             let unicodeInput = T.unpack $ T.pack input
                 result = parseTypus "" unicodeInput
-            in length (show result) >= 0
+            in L.length (show result) >= 0
         ]
         
     , testGroup "Parser Edge Cases"
         [ testCase "parseTypus handles very long lines" $ do
             let longLine = replicate 10000 'a'
                 result = parseTypus "" longLine
-            length (show result) >= 0 @?= True
+            L.length (show result) >= 0 @?= True
             
         , testCase "parseTypus handles input with only whitespace" $ do
             let whitespaceInput = "   \t\n\r   \t  \n\r   "
                 result = parseTypus "" whitespaceInput
-            length (show result) >= 0 @?= True
+            L.length (show result) >= 0 @?= True
             
         , testCase "parseTypus handles input with special characters" $ do
             let specialChars = "!@#$%^&*()_+-={}[]|\\:;\"'<>?,./~`"
                 result = parseTypus "" specialChars
-            length (show result) >= 0 @?= True
+            L.length (show result) >= 0 @?= True
         ]
     ]

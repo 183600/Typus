@@ -10,10 +10,12 @@
 module Test.Unit.NewOwnershipTransitivityQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@=?))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, oneof, suchThat)
-import Data.List (sort, nub, isPrefixOf, isInfixOf, isSuffixOf, (\\))
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (sort, nub, (\\))
 import Data.Set (Set, fromList, toList, union, intersection, difference)
 import qualified Data.Set as Set
 import Data.Map (Map, fromList, toList, keys, elems, union, intersection, difference)
@@ -28,7 +30,7 @@ import Ownership.Common.Types
   )
 
 -- ============================================================================
--- Helper Functions and Generators
+-- Helper Functions L.and Generators
 -- ============================================================================
 
 -- Generate valid variable names
@@ -114,7 +116,7 @@ prop_ownership_type_ordering ot1 ot2 =
       rank2 = typeRank ot2
   in property $ (ot1 <= ot2) === (rank1 <= rank2)
 
--- Property: Ownership type equality depends on name and type
+-- Property: Ownership type equality depends on name L.and type
 prop_ownership_type_equality :: String -> String -> Property
 prop_ownership_type_equality name1 name2 =
   let owned1 = Owned name1
@@ -150,27 +152,27 @@ prop_use_after_move_contains_var :: String -> Property
 prop_use_after_move_contains_var var =
   let err = UseAfterMove var
       errStr = show err
-  in property $ var `isInfixOf` errStr
+  in property $ var `L.isInfixOf` errStr
 
 -- Property: DoubleMove error contains both variable names
 prop_double_move_contains_vars :: String -> String -> Property
 prop_double_move_contains_vars var1 var2 =
   let err = DoubleMove var1 var2
       errStr = show err
-  in property $ var1 `isInfixOf` errStr .&&. var2 `isInfixOf` errStr
+  in property $ var1 `L.isInfixOf` errStr .&&. var2 `L.isInfixOf` errStr
 
 -- Property: CrossFunctionMove error contains both function names
 prop_cross_function_move_contains_vars :: String -> String -> Property
 prop_cross_function_move_contains_vars func1 func2 =
   let err = CrossFunctionMove func1 func2
       errStr = show err
-  in property $ func1 `isInfixOf` errStr .&&. func2 `isInfixOf` errStr
+  in property $ func1 `L.isInfixOf` errStr .&&. func2 `L.isInfixOf` errStr
 
 -- ============================================================================
 -- Ownership Transfer Properties
 -- ============================================================================
 
--- Property: Ownership transfer has distinct from and to variables
+-- Property: Ownership transfer has distinct from L.and to variables
 prop_ownership_transfer_distinct :: OwnershipTransfer -> Property
 prop_ownership_transfer_distinct transfer =
   property $ transferFrom transfer /= transferTo transfer
@@ -187,7 +189,7 @@ prop_ownership_transfer_equality from1 to1 to2 =
 prop_ownership_transfer_show_invertible :: OwnershipTransfer -> Property
 prop_ownership_transfer_show_invertible transfer =
   let shown = show transfer
-  in property $ "OwnershipTransfer" `isInfixOf` shown
+  in property $ "OwnershipTransfer" `L.isInfixOf` shown
 
 -- ============================================================================
 -- Transitivity Properties
@@ -197,24 +199,24 @@ prop_ownership_transfer_show_invertible transfer =
 prop_ownership_transfer_chain_transitive :: [String] -> Property
 prop_ownership_transfer_chain_transitive vars =
   length vars >= 3 ==>
-  let transfers = zipWith OwnershipTransfer vars (tail vars)
-      firstVar = head vars
+  let transfers = zipWith OwnershipTransfer vars (L.tail vars)
+      firstVar = L.head vars
       lastVar = last vars
-  in property $ length transfers === length vars - 1 .&&.
+  in property $ L.length transfers === L.length vars - 1 .&&.
              all (\t -> transferFrom t `elem` vars && transferTo t `elem` vars) transfers .&&.
-             transferFrom (head transfers) === firstVar .&&.
+             transferFrom (L.head transfers) === firstVar .&&.
              transferTo (last transfers) === lastVar
 
 -- Property: Circular ownership transfers are detectable
 prop_circular_transfers_detectable :: [String] -> Property
 prop_circular_transfers_detectable vars =
   length vars >= 3 ==>
-  let circularVars = vars ++ [head vars]
-      transfers = zipWith OwnershipTransfer circularVars (tail circularVars)
+  let circularVars = vars ++ [L.head vars]
+      transfers = zipWith OwnershipTransfer circularVars (L.tail circularVars)
       fromVars = map transferFrom transfers
       toVars = map transferTo transfers
-  in property $ length fromVars === length vars .&&.
-             length toVars === length vars .&&.
+  in property $ L.length fromVars === L.length vars .&&.
+             length toVars === L.length vars .&&.
              head fromVars `elem` toVars .&&.
              last toVars `elem` fromVars
 
@@ -222,9 +224,9 @@ prop_circular_transfers_detectable vars =
 prop_ownership_transfer_preserves_uniqueness :: [String] -> Property
 prop_ownership_transfer_preserves_uniqueness vars =
   let uniqueVars = nub vars
-      transfers = zipWith OwnershipTransfer vars (tail vars ++ [head vars])
+      transfers = zipWith OwnershipTransfer vars (L.tail vars ++ [L.head vars])
       allVars = concatMap (\t -> [transferFrom t, transferTo t]) transfers
-  in property $ length uniqueVars <= length allVars
+  in property $ L.length uniqueVars <= L.length allVars
 
 -- ============================================================================
 -- Ownership Analysis Properties
@@ -240,28 +242,28 @@ prop_empty_ownership_no_errors =
 prop_single_owned_no_conflicts :: String -> Property
 prop_single_owned_no_conflicts var =
   let ownershipMap = Map.singleton var (Owned var)
-      ownedVars = Map.keys $ Map.filter (\case Owned _ -> True; _ -> False) ownershipMap
-  in property $ length ownedVars === 1 .&&. head ownedVars === var
+      ownedVars = Map.keys $ Map.L.filter (\case Owned _ -> True; _ -> False) ownershipMap
+  in property $ L.length ownedVars === 1 .&&. L.head ownedVars === var
 
 -- Property: Multiple borrows from same owner are valid
 prop_multiple_borrows_same_owner :: String -> [String] -> Property
 prop_multiple_borrows_same_owner owner borrowers =
-  not (null borrowers) && all (/= owner) borrowers ==>
+  not (null borrowers) && L.all (/= owner) borrowers ==>
   let ownershipMap = Map.fromList $ (owner, Owned owner) : 
                                       map (\b -> (b, Borrowed owner)) borrowers
-      borrowedVars = Map.keys $ Map.filter (\case Borrowed _ -> True; _ -> False) ownershipMap
+      borrowedVars = Map.keys $ Map.L.filter (\case Borrowed _ -> True; _ -> False) ownershipMap
   in property | Set.fromList borrowedVars === Set.fromList borrowers
 
 -- Property: Multiple mutable borrows from same owner are invalid
 prop_multiple_mut_borrows_invalid :: String -> [String] -> Property
 prop_multiple_mut_borrows_invalid owner borrowers =
-  length borrowers >= 2 && all (/= owner) borrowers ==>
+  length borrowers >= 2 && L.all (/= owner) borrowers ==>
   let ownershipMap = Map.fromList $ (owner, Owned owner) : 
                                       map (\b -> (b, MutBorrowed owner)) borrowers
-      mutBorrowedVars = Map.keys $ Map.filter (\case MutBorrowed _ -> True; _ -> False) ownershipMap
-  in property $ length mutBorrowedVars >= 2
+      mutBorrowedVars = Map.keys $ Map.L.filter (\case MutBorrowed _ -> True; _ -> False) ownershipMap
+  in property $ L.length mutBorrowedVars >= 2
 
--- Property: Borrow and mut borrow from same owner conflict
+-- Property: Borrow L.and mut borrow from same owner conflict
 prop_borrow_mut_borrow_conflict :: String -> String -> String -> Property
 prop_borrow_mut_borrow_conflict owner borrower mutBorrower =
   borrower /= owner && mutBorrower /= owner && borrower /= mutBorrower ==>
@@ -312,11 +314,11 @@ prop_borrowing_preserves_owner owner borrower =
 prop_nested_borrowing_chains :: [String] -> Property
 prop_nested_borrowing_chains vars =
   length vars >= 3 ==>
-  let chain = zipWith (\owner borrower -> (borrower, Borrowed owner)) vars (tail vars)
-      ownershipMap = Map.fromList $ (head vars, Owned (head vars)) : chain
-      allBorrowed = all (\case Borrowed _ -> True; _ -> False) $ elems ownershipMap
-      hasOwner = Map.member (head vars) ownershipMap
-  in property $ length chain === length vars - 1 .&&.
+  let chain = zipWith (\owner borrower -> (borrower, Borrowed owner)) vars (L.tail vars)
+      ownershipMap = Map.fromList $ (L.head vars, Owned (L.head vars)) : chain
+      allBorrowed = L.all (\case Borrowed _ -> True; _ -> False) $ elems ownershipMap
+      hasOwner = Map.member (L.head vars) ownershipMap
+  in property $ L.length chain === L.length vars - 1 .&&.
              hasOwner .&&.
              allBorrowed
 
@@ -332,9 +334,9 @@ prop_borrow_from_moved_invalid owner mover borrower =
 -- Property: Multiple moves from same source are invalid
 prop_multiple_moves_invalid :: String -> [String] -> Property
 prop_multiple_moves_invalid source targets =
-  length targets >= 2 && all (/= source) targets ==>
-  let initial = Map.fromList $ (source, Owned source) : map (\t -> (t, Owned t)) targets
-      afterMoves = foldl (\acc target -> 
+  length targets >= 2 && L.all (/= source) targets ==>
+  let initial = Map.fromList $ (source, Owned source) : L.map (\t -> (t, Owned t)) targets
+      afterMoves = L.foldl (\acc target -> 
         Map.insert target (Owned source) $ Map.delete source acc) initial targets
       sourceExists = Map.member source afterMoves
   in property $ sourceExists
@@ -356,27 +358,27 @@ prop_double_move_detectable :: String -> String -> String -> Property
 prop_double_move_detectable source target1 target2 =
   all (/=) [source, target1, target2] && target1 /= target2 ==>
   let ownershipMap = Map.fromList [ (target1, Owned source), (target2, Owned source) ]
-      movedToMultiple = length (Map.filter (\case Owned src -> src == source; _ -> False) ownershipMap) >= 2
+      movedToMultiple = L.length (Map.L.filter (\case Owned src -> src == source; _ -> False) ownershipMap) >= 2
   in property $ movedToMultiple
 
 -- Property: Out of scope access is detectable
 prop_out_of_scope_detectable :: [String] -> String -> Property
 prop_out_of_scope_detectable inScopeVars var =
   not (var `elem` inScopeVars) ==>
-  let ownershipMap = Map.fromList $ map (\v -> (v, Owned v)) inScopeVars
+  let ownershipMap = Map.fromList $ L.map (\v -> (v, Owned v)) inScopeVars
       varInScope = Map.member var ownershipMap
   in property $ not varInScope
 
 -- ============================================================================
--- Performance and Scalability Properties
+-- Performance L.and Scalability Properties
 -- ============================================================================
 
 -- Property: Large ownership maps handle efficiently
 prop_large_ownership_maps :: Int -> Property
 prop_large_ownership_maps size =
   size >= 0 && size <= 1000 ==>
-  let vars = take size $ map (\i -> "var" ++ show i) [1..]
-      ownershipMap = Map.fromList $ map (\v -> (v, Owned v)) vars
+  let vars = take size $ L.map (\i -> "var" ++ show i) [1..]
+      ownershipMap = Map.fromList $ L.map (\v -> (v, Owned v)) vars
       mapSize = Map.size ownershipMap
   in property $ mapSize === size
 
@@ -384,10 +386,10 @@ prop_large_ownership_maps size =
 prop_complex_transfer_chains :: Int -> Int -> Property
 prop_complex_transfer_chains numVars chainLength =
   numVars >= 0 && chainLength >= 0 && chainLength <= numVars && numVars <= 100 ==>
-  let vars = take numVars $ map (\i -> "var" ++ show i) [1..]
+  let vars = take numVars $ L.map (\i -> "var" ++ show i) [1..]
       chainVars = take chainLength vars
-      transfers = zipWith OwnershipTransfer chainVars (tail chainVars)
-  in property $ length transfers === max 0 (chainLength - 1)
+      transfers = zipWith OwnershipTransfer chainVars (L.tail chainVars)
+  in property $ L.length transfers === max 0 (chainLength - 1)
 
 -- ============================================================================
 -- Test Collection
@@ -446,7 +448,7 @@ tests = testGroup "New Ownership Transitivity QuickCheck Tests"
     , fastProperty "out of scope detectable" prop_out_of_scope_detectable
     ]
 
-  , testGroup "Performance and Scalability Properties"
+  , testGroup "Performance L.and Scalability Properties"
     [ fastProperty "large ownership maps" prop_large_ownership_maps
     , fastProperty "complex transfer chains" prop_complex_transfer_chains
     ]

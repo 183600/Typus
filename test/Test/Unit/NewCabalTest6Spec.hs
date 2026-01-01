@@ -14,7 +14,9 @@ import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
 import Data.Char (isSpace, isAlpha)
-import Data.List (isPrefixOf, isInfixOf, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (nub)
 
 import Dependencies
   ( analyzeDependencies
@@ -44,13 +46,13 @@ tests =
                 result = analyzeDependencies code
             case result of
                 Left err -> assertBool "Should detect circular dependency" $ 
-                    "circular" `isInfixOf` (map toLower (show err))
+                    "circular" `L.isInfixOf` (map toLower (show err))
                 Right _ -> assertBool "Should detect circular dependency" False
 
         , testCase "依赖图格式化" $ do
             let deps = [Dependency "A" "B" DependencyTypeFunction]
                 formatted = formatDependencyGraph deps
-            assertBool "Should contain dependency info" $ "A -> B" `isInfixOf` formatted
+            assertBool "Should contain dependency info" $ "A -> B" `L.isInfixOf` formatted
 
         , testCase "类型系统依赖" $ do
             let typeDef = "type MyStruct struct { field int }"
@@ -76,15 +78,15 @@ tests =
 prop_dependency_transitivity :: String -> String -> String -> Property
 prop_dependency_transitivity funcA funcB funcC =
   not (null funcA) && not (null funcB) && not (null funcC) &&
-  all (all isAlpha) [funcA, funcB, funcC] ==> 
+  L.all (L.all isAlpha) [funcA, funcB, funcC] ==> 
   let code = "func " ++ funcA ++ "() { " ++ funcB ++ "() } " ++
              "func " ++ funcB ++ "() { " ++ funcC ++ "() } " ++
              "func " ++ funcC ++ "() { }"
       result = analyzeDependencies code
   in case result of
        Right deps -> 
-         let directDeps = filter (\d -> dFrom d == funcA) deps
-             indirectDeps = filter (\d -> dTo d == funcC) deps
+         let directDeps = L.filter (\d -> dFrom d == funcA) deps
+             indirectDeps = L.filter (\d -> dTo d == funcC) deps
          in property $ not (null directDeps) ==> not (null indirectDeps)
        Left _ -> property $ True  -- 分析失败时跳过此测试
 
@@ -95,24 +97,24 @@ prop_dependency_analysis_consistency code =
       result2 = analyzeDependencies code
   in case (result1, result2) of
        (Right deps1, Right deps2) -> 
-         property $ length deps1 === length deps2
+         property $ L.length deps1 === L.length deps2
        (Left _, Left _) -> property $ True
        _ -> property $ False
 
 -- 循环依赖的检测：包含循环依赖的代码应该被检测出来
 prop_circular_dependency_detection :: String -> Property
 prop_circular_dependency_detection funcName =
-  not (null funcName) && all isAlpha funcName ==>
+  not (null funcName) && L.all isAlpha funcName ==>
   let circularCode = "func " ++ funcName ++ "() { " ++ funcName ++ "() }"
       result = analyzeDependencies circularCode
   in case result of
-       Left err -> property $ "circular" `isInfixOf` (map toLower (show err))
+       Left err -> property $ "circular" `L.isInfixOf` (map toLower (show err))
        Right _ -> property $ False  -- 应该检测到循环依赖
 
 -- 依赖类型的分类：不同类型的依赖应该被正确分类
 prop_dependency_type_classification :: String -> String -> DependencyType -> Property
 prop_dependency_type_classification from to depType =
-  not (null from) && not (null to) && all isAlpha (from ++ to) ==>
+  not (null from) && not (null to) && L.all isAlpha (from ++ to) ==>
   let dep = Dependency from to depType
       correctType = dType dep == depType
   in property $ correctType
@@ -120,11 +122,11 @@ prop_dependency_type_classification from to depType =
 -- 依赖图的连通性：依赖图中的节点应该通过依赖关系相连
 prop_dependency_graph_connectivity :: [String] -> Property
 prop_dependency_graph_connectivity funcNames =
-  not (null funcNames) && all (all isAlpha) funcNames && length (nub funcNames) == length funcNames ==>
+  not (null funcNames) && L.all (L.all isAlpha) funcNames && L.length (nub funcNames) == L.length funcNames ==>
   let code = unlines $ zipWith (\i name -> 
         "func " ++ name ++ "() { " ++ 
-        (if i < length funcNames - 1 then funcNames !! (i + 1) else "") ++ 
-        (if i < length funcNames - 1 then "()" else "") ++ " }"
+        (if i < L.length funcNames - 1 then funcNames !! (i + 1) else "") ++ 
+        (if i < L.length funcNames - 1 then "()" else "") ++ " }"
         ) [0..] funcNames
       result = analyzeDependencies code
   in case result of
@@ -135,4 +137,4 @@ prop_dependency_graph_connectivity funcNames =
 
 -- 辅助函数
 toLower :: String -> String
-toLower = map (\c -> if c >= 'A' && c <= 'Z' then toEnum (fromEnum c + 32) else c)
+toLower = L.map (\c -> if c >= 'A' && c <= 'Z' then toEnum (fromEnum c + 32) else c)

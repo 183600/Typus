@@ -19,8 +19,9 @@ import Compiler (compile, CompilerError(..), generateGoCode)
 import Parser (parseTypus, TypusFile(..))
 import Compiler.IR (IRModule(..))
 
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf, length)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 
 -- Test 1: Compiler optimizes redundant variable declarations
 test_compiler_optimizes_redundant_variables :: TestTree
@@ -46,8 +47,8 @@ test_compiler_optimizes_redundant_variables =
             let goCode = generateGoCode result
             -- Should optimize away redundant variables
             assertBool "Should optimize redundant variables" $
-              T.unpack goCode `isInfixOf` "return 42" || 
-              not (T.unpack goCode `isInfixOf` "y :=")
+              T.unpack goCode `L.isInfixOf` "return 42" || 
+              not (T.unpack goCode `L.isInfixOf` "y :=")
 
 -- Test 2: Compiler performs constant folding
 test_compiler_constant_folding :: TestTree
@@ -69,20 +70,20 @@ test_compiler_constant_folding =
             let goCode = generateGoCode result
             -- Should contain the folded constant
             assertBool "Should perform constant folding" $
-              T.unpack goCode `isInfixOf` "return 14" ||
-              not (T.unpack goCode `isInfixOf` "2 + 3 * 4")
+              T.unpack goCode `L.isInfixOf` "return 14" ||
+              not (T.unpack goCode `L.isInfixOf` "2 + 3 * 4")
 
--- Test 3: Compiler optimizes tail recursion
+-- Test 3: Compiler optimizes L.tail recursion
 test_compiler_tail_recursion_optimization :: TestTree
 test_compiler_tail_recursion_optimization =
-  testCase "Compiler optimizes tail recursion" $ do
+  testCase "Compiler optimizes L.tail recursion" $ do
     let source = unlines
           [ "package main"
           , "func factorial(n int) int {"
           , "  if n <= 1 {"
           , "    return 1"
           , "  }"
-          , "  return n * factorial(n - 1)  // Not tail recursive"
+          , "  return n * factorial(n - 1)  // Not L.tail recursive"
           , "}"
           , "func factorialTail(n int, acc int) int {"
           , "  if n <= 1 {"
@@ -99,14 +100,14 @@ test_compiler_tail_recursion_optimization =
             assertFailure $ "Compilation failed: " ++ show compileErr
           Right result -> do
             let goCode = generateGoCode result
-            -- Should optimize tail recursive version
-            assertBool "Should optimize tail recursion" $
-              T.unpack goCode `isInfixOf` "factorialTail"
+            -- Should optimize L.tail recursive version
+            assertBool "Should optimize L.tail recursion" $
+              T.unpack goCode `L.isInfixOf` "factorialTail"
 
 -- QuickCheck property: Compiler optimization preserves semantics
 prop_optimization_preserves_semantics :: String -> Property
 prop_optimization_preserves_semantics expr =
-  length expr < 100 ==>  -- Keep expressions reasonable
+  L.length expr < 100 ==>  -- Keep expressions reasonable
   let source = unlines
         [ "package main"
         , "func test() int {"
@@ -120,7 +121,7 @@ prop_optimization_preserves_semantics expr =
            Left _ -> property True  -- Compilation errors are acceptable
            Right result -> 
              let goCode = generateGoCode result
-             in property $ T.length goCode > 0  -- Should generate some code
+             in property $ T.L.length goCode > 0  -- Should generate some code
 
 -- Test 4: Compiler removes dead code
 test_compiler_dead_code_elimination :: TestTree
@@ -148,8 +149,8 @@ test_compiler_dead_code_elimination =
             let goCode = generateGoCode result
             -- Should eliminate dead code branch
             assertBool "Should eliminate dead code" $
-              not (T.unpack goCode `isInfixOf` "This should be eliminated") &&
-              T.unpack goCode `isInfixOf` "This should remain"
+              not (T.unpack goCode `L.isInfixOf` "This should be eliminated") &&
+              T.unpack goCode `L.isInfixOf` "This should remain"
 
 -- Test 5: Compiler optimizes memory allocation
 test_compiler_memory_optimization :: TestTree
@@ -175,7 +176,7 @@ test_compiler_memory_optimization =
             let goCode = generateGoCode result
             -- Should optimize memory allocation
             assertBool "Should optimize memory allocation" $
-              T.length goCode > 0  -- Basic check that code is generated
+              T.L.length goCode > 0  -- Basic check that code is generated
 
 -- Test 6: Compiler inlines small functions
 test_compiler_function_inlining :: TestTree
@@ -198,15 +199,15 @@ test_compiler_function_inlining =
             assertFailure $ "Compilation failed: " ++ show compileErr
           Right result -> do
             let goCode = generateGoCode result
-            -- Should inline small function or optimize call
-            assertBool "Should inline small function or optimize call" $
-              T.unpack goCode `isInfixOf` "return 42" ||
-              T.unpack goCode `isInfixOf` "small()"
+            -- Should inline small function L.or optimize call
+            assertBool "Should inline small function L.or optimize call" $
+              T.unpack goCode `L.isInfixOf` "return 42" ||
+              T.unpack goCode `L.isInfixOf` "small()"
 
 -- QuickCheck property: Optimization doesn't increase code size significantly
 prop_optimization_reasonable_code_size :: String -> Property
 prop_optimization_reasonable_code_size code =
-  length code < 200 ==>  -- Keep input reasonable
+  L.length code < 200 ==>  -- Keep input reasonable
   let source = unlines
         [ "package main"
         , "func main() {"
@@ -220,8 +221,8 @@ prop_optimization_reasonable_code_size code =
            Left _ -> property True
            Right result -> 
              let goCode = generateGoCode result
-                 originalSize = length source
-                 optimizedSize = T.length goCode
+                 originalSize = L.length source
+                 optimizedSize = T.L.length goCode
              in property $ optimizedSize <= originalSize * 3  -- Reasonable limit
 
 tests :: TestTree

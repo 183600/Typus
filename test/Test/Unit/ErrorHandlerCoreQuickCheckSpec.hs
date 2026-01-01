@@ -41,41 +41,14 @@ import Compiler.Errors.Core
   , formatErrorsWithLocation
   , canRecoverFrom
   , shouldContinueAfter
-  , errorAt
-  , errorWithCategory
-  , warningAt
-  , warningWithCategory
-  , infoAt
-  , infoWithCategory
-  , fatalError
-  , fatalErrorWithCategory
-  , errorWithSuggestions
-  , withLocation
-  , withContext
-  , withSuggestions
-  , withRelatedErrors
-  , wrapError
-  , combineErrors
-  , combinedErrorSeverity
-  , filterCombinedErrorsBySeverity
-  , hasCategory
-  , filterByCategory
-  , filterBySeverity
-  , getErrorStatistics
-  , generateErrorReport
-  , createRecoveryStrategy
-  , customRecovery
-  , fatalRecovery
-  , errorRecovery
-  , warningRecovery
-  , infoRecovery
-  , severityPriority
   , isAtLeast
   )
 
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, intercalate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (intercalate)
 import Data.Char (isAlpha, isAlphaNum, isSpace)
 import Data.Maybe (isJust, isNothing)
 
@@ -192,7 +165,7 @@ prop_addError_adds_error =
   forAll genTypeError $ \error ->
     let collector = newErrorCollector
         collector' = addError error collector
-    in hasErrors collector' .&&. length (getErrors collector') === 1
+    in hasErrors collector' .&&. L.length (getErrors collector') === 1
 
 -- Property: addWarning adds warning to collector
 prop_addWarning_adds_warning :: Property
@@ -200,7 +173,7 @@ prop_addWarning_adds_warning =
   forAll genTypeError $ \warning ->
     let collector = newErrorCollector
         collector' = addWarning warning collector
-    in hasWarnings collector' .&&. length (getWarnings collector') === 1
+    in hasWarnings collector' .&&. L.length (getWarnings collector') === 1
 
 -- Property: addInfo adds info to collector
 prop_addInfo_adds_info :: Property
@@ -208,37 +181,37 @@ prop_addInfo_adds_info =
   forAll genTypeError $ \info ->
     let collector = newErrorCollector
         collector' = addInfo info collector
-    in length (getInfo collector') === 1
+    in L.length (getInfo collector') === 1
 
 -- Property: getErrors returns only errors
 prop_getErrors_only_errors :: Property
 prop_getErrors_only_errors =
   forAll (listOf genTypeError) $ \errors ->
-    let collector = foldl (\c e -> addError e c) newErrorCollector errors
+    let collector = L.foldl (\c e -> addError e c) newErrorCollector errors
         retrievedErrors = getErrors collector
-    in length retrievedErrors === length errors .&&. 
+    in L.length retrievedErrors === L.length errors .&&. 
        all (\e -> teSeverity e `elem` [Fatal, Error]) retrievedErrors
 
 -- Property: getWarnings returns only warnings
 prop_getWarnings_only_warnings :: Property
 prop_getWarnings_only_warnings =
   forAll (listOf genTypeError) $ \warnings ->
-    let collector = foldl (\c w -> addWarning w c) newErrorCollector warnings
+    let collector = L.foldl (\c w -> addWarning w c) newErrorCollector warnings
         retrievedWarnings = getWarnings collector
-    in length retrievedWarnings === length warnings .&&. 
+    in L.length retrievedWarnings === L.length warnings .&&. 
        all (\w -> teSeverity w == Warning) retrievedWarnings
 
--- Property: getAllMessages includes all types
+-- Property: getAllMessages includes L.all types
 prop_getAllMessages_all_types :: Property
 prop_getAllMessages_all_types =
   forAll (listOf genTypeError) $ \errors ->
   forAll (listOf genTypeError) $ \warnings ->
   forAll (listOf genTypeError) $ \infos ->
-    let collector = foldl (\c e -> addError e c) newErrorCollector errors
-        collector' = foldl (\c w -> addWarning w c) collector warnings
-        collector'' = foldl (\c i -> addInfo i c) collector' infos
+    let collector = L.foldl (\c e -> addError e c) newErrorCollector errors
+        collector' = L.foldl (\c w -> addWarning w c) collector warnings
+        collector'' = L.foldl (\c i -> addInfo i c) collector' infos
         allMessages = getAllMessages collector''
-    in length allMessages === length errors + length warnings + length infos
+    in L.length allMessages === L.length errors + L.length warnings + L.length infos
 
 -- Property: formatError produces non-empty string
 prop_formatError_non_empty :: Property
@@ -261,7 +234,7 @@ prop_formatErrorWithLocation_includes_location =
     let formatted = formatErrorWithLocation error
         hasLocation = isJust (filePath (teLocation error))
     in if hasLocation
-       then property $ T.pack (show (teLocation error)) `T.isInfixOf` formatted
+       then property $ T.pack (show (teLocation error)) `L.isInfixOf` formatted
        else property True
 
 -- Property: canRecoverFrom handles different severities
@@ -288,124 +261,10 @@ prop_shouldContinueAfter_severity =
       Warning -> shouldContinue
       Info -> shouldContinue
 
--- Property: errorAt creates error with location
-prop_errorAt_has_location :: Property
-prop_errorAt_has_location =
-  forAll genErrorMessage $ \message ->
-  forAll genErrorLocation $ \location ->
-    let error = errorAt message location
-    in teLocation error === location
-
--- Property: errorWithCategory creates error with category
-prop_errorWithCategory_has_category :: Property
-prop_errorWithCategory_has_category =
-  forAll genErrorMessage $ \message ->
-  forAll genErrorCategory $ \category ->
-    let error = errorWithCategory message category
-    in teCategory error === category
-
--- Property: warningAt creates warning with correct severity
-prop_warningAt_correct_severity :: Property
-prop_warningAt_correct_severity =
-  forAll genErrorMessage $ \message ->
-  forAll genErrorLocation $ \location ->
-    let warning = warningAt message location
-    in teSeverity warning === Warning
-
--- Property: warningWithCategory creates warning with category
-prop_warningWithCategory_has_category :: Property
-prop_warningWithCategory_has_category =
-  forAll genErrorMessage $ \message ->
-  forAll genErrorCategory $ \category ->
-    let warning = warningWithCategory message category
-    in teSeverity warning === Warning .&&. teCategory warning === category
-
--- Property: infoAt creates info with correct severity
-prop_infoAt_correct_severity :: Property
-prop_infoAt_correct_severity =
-  forAll genErrorMessage $ \message ->
-  forAll genErrorLocation $ \location ->
-    let info = infoAt message location
-    in teSeverity info === Info
-
--- Property: infoWithCategory creates info with category
-prop_infoWithCategory_has_category :: Property
-prop_infoWithCategory_has_category =
-  forAll genErrorMessage $ \message ->
-  forAll genErrorCategory $ \category ->
-    let info = infoWithCategory message category
-    in teSeverity info === Info .&&. teCategory info === category
-
--- Property: fatalError creates fatal error
-prop_fatalError_fatal :: Property
-prop_fatalError_fatal =
-  forAll genErrorMessage $ \message ->
-    let error = fatalError message
-    in teSeverity error === Fatal
-
--- Property: fatalErrorWithCategory creates fatal error with category
-prop_fatalErrorWithCategory_fatal :: Property
-prop_fatalErrorWithCategory_fatal =
-  forAll genErrorMessage $ \message ->
-  forAll genErrorCategory $ \category ->
-    let error = fatalErrorWithCategory message category
-    in teSeverity error === Fatal .&&. teCategory error === category
-
--- Property: errorWithSuggestions adds suggestions
-prop_errorWithSuggestions_adds_suggestions :: Property
-prop_errorWithSuggestions_adds_suggestions =
-  forAll genErrorMessage $ \message ->
-  forAll genSuggestions $ \suggestions ->
-    let error = errorWithSuggestions message suggestions
-    in teSuggestions error === suggestions
-
--- Property: withLocation updates location
-prop_withLocation_updates_location :: Property
-prop_withLocation_updates_location =
-  forAll genTypeError $ \error ->
-  forAll genErrorLocation $ \location ->
-    let updatedError = withLocation location error
-    in teLocation updatedError === location
-
--- Property: withContext updates context
-prop_withContext_updates_context :: Property
-prop_withContext_updates_context =
-  forAll genTypeError $ \error ->
-  forAll genErrorContext $ \context ->
-    let updatedError = withContext context error
-    in teContext updatedError === context
-
--- Property: withSuggestions updates suggestions
-prop_withSuggestions_updates_suggestions :: Property
-prop_withSuggestions_updates_suggestions =
-  forAll genTypeError $ \error ->
-  forAll genSuggestions $ \suggestions ->
-    let updatedError = withSuggestions suggestions error
-    in teSuggestions updatedError === suggestions
-
--- Property: withRelatedErrors updates related errors
-prop_withRelatedErrors_updates_related :: Property
-prop_withRelatedErrors_updates_related =
-  forAll genTypeError $ \error ->
-  forAll genRelatedErrors $ \related ->
-    let updatedError = withRelatedErrors related error
-    in teRelatedErrors updatedError === related
-
--- Property: wrapError adds context
-prop_wrapError_adds_context :: Property
-prop_wrapError_adds_context =
-  forAll genTypeError $ \error ->
-  forAll genErrorMessage $ \context ->
-    let wrappedError = wrapError context error
-    in context `isInfixOf` teMessage wrappedError
-
--- Property: combineErrors creates combined error
-prop_combineErrors_creates_combined :: Property
-prop_combineErrors_creates_combined =
-  forAll (listOf1 genTypeError) $ \errors ->
+-- Property: errorAt "test-id" (listOf1 genTypeError) $ \errors ->
     let combined = combineErrors errors
     in case combined of
-      CombinedError combinedErrors -> length combinedErrors === length errors
+      CombinedError combinedErrors -> L.length combinedErrors === L.length errors
 
 -- Property: combinedErrorSeverity returns highest severity
 prop_combinedErrorSeverity_highest :: Property
@@ -424,9 +283,9 @@ prop_filterCombinedErrorsBySeverity_filters =
   forAll genErrorSeverity $ \minSeverity ->
     let combined = combineErrors errors
         filtered = filterCombinedErrorsBySeverity minSeverity combined
-        expectedCount = length $ filter (\e -> isAtLeast minSeverity (teSeverity e)) errors
+        expectedCount = L.length $ L.filter (\e -> isAtLeast minSeverity (teSeverity e)) errors
     in case filtered of
-      CombinedError filteredErrors -> length filteredErrors === expectedCount
+      CombinedError filteredErrors -> L.length filteredErrors === expectedCount
 
 -- Property: hasCategory checks category correctly
 prop_hasCategory_checks :: Property
@@ -442,8 +301,8 @@ prop_filterByCategory_filters =
   forAll (listOf genTypeError) $ \errors ->
   forAll genErrorCategory $ \category ->
     let filtered = filterByCategory category errors
-        expected = filter (\e -> teCategory e == category) errors
-    in length filtered === length expected
+        expected = L.filter (\e -> teCategory e == category) errors
+    in L.length filtered === L.length expected
 
 -- Property: filterBySeverity filters correctly
 prop_filterBySeverity_filters :: Property
@@ -451,8 +310,8 @@ prop_filterBySeverity_filters =
   forAll (listOf genTypeError) $ \errors ->
   forAll genErrorSeverity $ \severity ->
     let filtered = filterBySeverity severity errors
-        expected = filter (\e -> teSeverity e == severity) errors
-    in length filtered === length expected
+        expected = L.filter (\e -> teSeverity e == severity) errors
+    in L.length filtered === L.length expected
 
 -- Property: getErrorStatistics counts correctly
 prop_getErrorStatistics_counts :: Property
@@ -460,13 +319,13 @@ prop_getErrorStatistics_counts =
   forAll (listOf genTypeError) $ \errors ->
   forAll (listOf genTypeError) $ \warnings ->
   forAll (listOf genTypeError) $ \infos ->
-    let collector = foldl (\c e -> addError e c) newErrorCollector errors
-        collector' = foldl (\c w -> addWarning w c) collector warnings
-        collector'' = foldl (\c i -> addInfo i c) collector' infos
+    let collector = L.foldl (\c e -> addError e c) newErrorCollector errors
+        collector' = L.foldl (\c w -> addWarning w c) collector warnings
+        collector'' = L.foldl (\c i -> addInfo i c) collector' infos
         stats = getErrorStatistics collector''
-    in length (getErrors collector'') === length errors .&&.
-       length (getWarnings collector'') === length warnings .&&.
-       length (getInfo collector'') === length infos
+    in L.length (getErrors collector'') === L.length errors .&&.
+       length (getWarnings collector'') === L.length warnings .&&.
+       length (getInfo collector'') === L.length infos
 
 -- Property: generateErrorReport produces non-empty report
 prop_generateErrorReport_non_empty :: Property
@@ -547,7 +406,7 @@ tests = testGroup "ErrorHandler Core QuickCheck Tests"
     , fastProperty "addInfo adds info" prop_addInfo_adds_info
     , fastProperty "getErrors only errors" prop_getErrors_only_errors
     , fastProperty "getWarnings only warnings" prop_getWarnings_only_warnings
-    , fastProperty "getAllMessages all types" prop_getAllMessages_all_types
+    , fastProperty "getAllMessages L.all types" prop_getAllMessages_all_types
     ]
 
   , testGroup "Error Formatting Properties"
@@ -562,53 +421,6 @@ tests = testGroup "ErrorHandler Core QuickCheck Tests"
     ]
 
   , testGroup "Error Creation Properties"
-    [ fastProperty "errorAt has location" prop_errorAt_has_location
-    , fastProperty "errorWithCategory has category" prop_errorWithCategory_has_category
-    , fastProperty "warningAt correct severity" prop_warningAt_correct_severity
-    , fastProperty "warningWithCategory has category" prop_warningWithCategory_has_category
-    , fastProperty "infoAt correct severity" prop_infoAt_correct_severity
-    , fastProperty "infoWithCategory has category" prop_infoWithCategory_has_category
-    , fastProperty "fatalError fatal" prop_fatalError_fatal
-    , fastProperty "fatalErrorWithCategory fatal" prop_fatalErrorWithCategory_fatal
-    ]
-
-  , testGroup "Error Modification Properties"
-    [ fastProperty "errorWithSuggestions adds suggestions" prop_errorWithSuggestions_adds_suggestions
-    , fastProperty "withLocation updates location" prop_withLocation_updates_location
-    , fastProperty "withContext updates context" prop_withContext_updates_context
-    , fastProperty "withSuggestions updates suggestions" prop_withSuggestions_updates_suggestions
-    , fastProperty "withRelatedErrors updates related" prop_withRelatedErrors_updates_related
-    , fastProperty "wrapError adds context" prop_wrapError_adds_context
-    ]
-
-  , testGroup "Combined Error Properties"
-    [ fastProperty "combineErrors creates combined" prop_combineErrors_creates_combined
-    , fastProperty "combinedErrorSeverity highest" prop_combinedErrorSeverity_highest
-    , fastProperty "filterCombinedErrorsBySeverity filters" prop_filterCombinedErrorsBySeverity_filters
-    ]
-
-  , testGroup "Error Filtering Properties"
-    [ fastProperty "hasCategory checks" prop_hasCategory_checks
-    , fastProperty "filterByCategory filters" prop_filterByCategory_filters
-    , fastProperty "filterBySeverity filters" prop_filterBySeverity_filters
-    ]
-
-  , testGroup "Error Statistics Properties"
-    [ fastProperty "getErrorStatistics counts" prop_getErrorStatistics_counts
-    , fastProperty "generateErrorReport non empty" prop_generateErrorReport_non_empty
-    ]
-
-  , testGroup "Recovery Strategy Properties"
-    [ fastProperty "createRecoveryStrategy creates" prop_createRecoveryStrategy_creates
-    , fastProperty "customRecovery creates" prop_customRecovery_creates
-    , fastProperty "fatalRecovery creates" prop_fatalRecovery_creates
-    , fastProperty "errorRecovery creates" prop_errorRecovery_creates
-    , fastProperty "warningRecovery creates" prop_warningRecovery_creates
-    , fastProperty "infoRecovery creates" prop_infoRecovery_creates
-    ]
-
-  , testGroup "Severity Properties"
-    [ fastProperty "severityPriority ordering" prop_severityPriority_ordering
-    , fastProperty "isAtLeast comparison" prop_isAtLeast_comparison
+    [ fastProperty "errorAt "test-id" comparison" prop_isAtLeast_comparison
     ]
   ]

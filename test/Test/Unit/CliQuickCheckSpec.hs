@@ -5,7 +5,9 @@ module Test.Unit.CliQuickCheckSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), property, forAll, counterexample, classify, Arbitrary(..), Gen, oneof, choose, listOf, elements, vectorOf)
-import Data.List (isPrefixOf, isInfixOf, nub, sort, intercalate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (nub, sort, intercalate)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import Data.Either (isLeft, isRight)
 import qualified Data.Text as T
@@ -39,7 +41,7 @@ prop_option_validation option =
 prop_file_path_validation :: String -> Property
 prop_file_path_validation path =
   let hasValidExtension = takeExtension path `elem` [".typus", ".go", ""]
-      hasValidName = length (takeFileName path) > 0
+      hasValidName = L.length (takeFileName path) > 0
   in classify (hasValidExtension && hasValidName) "valid path" $
      property $ True
 
@@ -93,7 +95,7 @@ prop_help_message_generation :: Property
 prop_help_message_generation =
   let help = generateHelpMessage
       hasContent = not (null help)
-      hasUsage = "usage" `isInfixOf` help
+      hasUsage = "usage" `L.isInfixOf` help
   in property $ hasContent && hasUsage
 
 -- Property: Version information display
@@ -101,7 +103,7 @@ prop_version_display :: Property
 prop_version_display =
   let version = getVersionInfo
       hasContent = not (null version)
-      hasVersion = "version" `isInfixOf` version
+      hasVersion = "version" `L.isInfixOf` version
   in property $ hasContent && hasVersion
 
 -- Property: Command line argument ordering
@@ -147,7 +149,7 @@ prop_argument_completion partial =
 prop_option_dependency :: [String] -> Property
 prop_option_dependency options =
   let dependencies = checkOptionDependencies options
-      validDependencies = all isValidDependency dependencies
+      validDependencies = L.all isValidDependency dependencies
   in property $ validDependencies
 
 -- Property: Input validation
@@ -243,9 +245,9 @@ prop_batch_mode files =
 prop_config_merging :: [(String, String)] -> [(String, String)] -> Property
 prop_config_merging config1 config2 =
   let merged = mergeConfigurations config1 config2
-      totalKeys = length config1 + length config2
-      mergedKeys = length merged
-  in property $ mergedKeys >= length config1 && mergedKeys >= length config2
+      totalKeys = L.length config1 + L.length config2
+      mergedKeys = L.length merged
+  in property $ mergedKeys >= L.length config1 && mergedKeys >= L.length config2
 
 -- Property: Command history management
 prop_command_history :: [String] -> Property
@@ -312,7 +314,7 @@ enableDebugMode :: [String] -> Bool
 enableDebugMode args = "--debug" `elem` args
 
 extractVerbosityLevel :: [String] -> Int
-extractVerbosityLevel args = length $ filter (`elem` ["-v", "--verbose"]) args
+extractVerbosityLevel args = L.length $ L.filter (`elem` ["-v", "--verbose"]) args
 
 processInputFile :: String -> Either String TypusFile
 processInputFile _ = Right undefined

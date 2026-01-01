@@ -15,7 +15,7 @@ import Compiler.IR (SourceIR(..), SemanticIR(..), GoIR(..))
 import Compiler.GoAst (GoModule(..), GoDecl(..), FuncDecl(..))
 import SourceLocation (SourceSpan(..), SourcePos(..))
 
--- | Compiler optimization and performance tests
+-- | Compiler optimization L.and performance tests
 tests :: TestTree
 tests =
   testGroup "Compiler Optimization Tests"
@@ -105,12 +105,12 @@ tests =
     , testGroup "Loop optimizations"
         [ testCase "optimizes simple for loops" $ do
             let input = unlines
-                  [ "sum := 0"
+                  [ "L.sum := 0"
                   , "for i := 0; i < 10; i++ {"
-                  , "    sum += i"
+                  , "    L.sum += i"
                   , "}"
                   ]
-                expected = "sum := 45"  -- Pre-calculated sum
+                expected = "L.sum := 45"  -- Pre-calculated L.sum
             optimizeLoops input @?= expected
 
         , testCase "detects loop invariants" $ do
@@ -156,15 +156,15 @@ tests =
     , testGroup "Performance benchmarks"
         [ testCase "compilation time scales linearly" $ do
             let sizes = [100, 200, 400, 800]
-                compileTimes = map (`compileWithSize` 1000) sizes
+                compileTimes = L.map (`compileWithSize` 1000) sizes
             -- Simple linear scaling check
-            assertBool "Linear scaling" $ all (>= 0) compileTimes
+            assertBool "Linear scaling" $ L.all (>= 0) compileTimes
 
         , testCase "optimization doesn't increase code size significantly" $ do
             let input = generateTestCode 1000
-                originalSize = length input
+                originalSize = L.length input
                 optimized = optimizeCode input
-                optimizedSize = length optimized
+                optimizedSize = L.length optimized
             assertBool "Optimization size constraint" $ 
                 optimizedSize <= originalSize * 2 `div` 3
         ]
@@ -229,12 +229,12 @@ compileWithSize :: Int -> Int -> Int
 compileWithSize linesCount complexity = linesCount * complexity `div` 1000
 
 generateTestCode :: Int -> String
-generateTestCode n = unlines $ map (\i -> "x" ++ show i ++ " := " ++ show i) [1..n]
+generateTestCode n = unlines $ L.map (\i -> "x" ++ show i ++ " := " ++ show i) [1..n]
 
 -- Property-based tests
 prop_optimizationPreservesSemantics :: String -> Property
 prop_optimizationPreservesSemantics input =
-    length input < 1000 ==>  -- Limit size for performance
+    L.length input < 1000 ==>  -- Limit size for performance
     let optimized = optimizeCode input
         originalResult = evaluateCode input
         optimizedResult = evaluateCode optimized
@@ -242,20 +242,20 @@ prop_optimizationPreservesSemantics input =
 
 prop_constantFoldingDeterministic :: String -> Property
 prop_constantFoldingDeterministic input =
-    length input < 100 ==> 
+    L.length input < 100 ==> 
     let result1 = foldConstants input
         result2 = foldConstants input
     in result1 == result2
 
 prop_deadCodeReducesSize :: String -> Property
 prop_deadCodeReducesSize input =
-    "unused" `List.isInfixOf` input ==>
+    "unused" `List.L.isInfixOf` input ==>
     let optimized = optimizeCode input
-    in length optimized <= length input
+    in L.length optimized <= L.length input
 
 prop_inliningControlsCallCount :: String -> Property
 prop_inliningControlsCallCount input =
-    "func small" `List.isInfixOf` input ==>
+    "func small" `List.L.isInfixOf` input ==>
     let optimized = inlineFunctions input
         originalCalls = countOccurrences "small(" input
         optimizedCalls = countOccurrences "small(" optimized
@@ -266,4 +266,4 @@ evaluateCode :: String -> Int
 evaluateCode _ = 0  -- Simplified evaluation
 
 countOccurrences :: String -> String -> Int
-countOccurrences pattern text = length $ filter (pattern `List.isPrefixOf`) (List.tails text)
+countOccurrences pattern text = L.length $ L.filter (pattern `List.L.isPrefixOf`) (List.tails text)

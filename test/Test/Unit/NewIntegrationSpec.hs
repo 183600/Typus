@@ -3,6 +3,7 @@ module Test.Unit.NewIntegrationSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ((@?=), assertBool, assertFailure, testCase)
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 import Parser
@@ -35,7 +36,7 @@ import SourceLocation
 tests :: TestTree
 tests =
   testGroup "New Integration Tests"
-    [ testCase "integrates parsing and compilation" $ do
+    [ testCase "integrates parsing L.and compilation" $ do
         let source = unlines
               [ "package main"
               , "func main() {"
@@ -48,10 +49,10 @@ tests =
             case compile typusFile of
               Left errs -> assertFailure $ "compile failed: " ++ show errs
               Right goCode -> do
-                assertBool "contains package main" ("package main" `isInfixOf` goCode)
-                assertBool "contains println" ("println" `isInfixOf` goCode)
+                assertBool "contains package main" ("package main" `L.isInfixOf` goCode)
+                assertBool "contains println" ("println" `L.isInfixOf` goCode)
 
-    , testCase "integrates parsing, type checking, and compilation" $ do
+    , testCase "integrates parsing, type checking, L.and compilation" $ do
         let source = unlines
               [ "package main"
               , "func add(x int, y int) int {"
@@ -73,8 +74,8 @@ tests =
                 case compile typusFile of
                   Left errs -> assertFailure $ "compile failed: " ++ show errs
                   Right goCode -> do
-                    assertBool "contains add function" ("func add" `isInfixOf` goCode)
-                    assertBool "contains function call" ("add(5, 3)" `isInfixOf` goCode)
+                    assertBool "contains add function" ("func add" `L.isInfixOf` goCode)
+                    assertBool "contains function call" ("add(5, 3)" `L.isInfixOf` goCode)
 
     , testCase "integrates ownership analysis with compilation" $ do
         let source = unlines
@@ -122,8 +123,8 @@ tests =
             case compile typusFile of
               Left errs -> assertFailure $ "compile failed: " ++ show errs
               Right goCode -> do
-                assertBool "contains fmt import" ("import \"fmt\"" `isInfixOf` goCode)
-                assertBool "contains greet function" ("func greet" `isInfixOf` goCode)
+                assertBool "contains fmt import" ("import \"fmt\"" `L.isInfixOf` goCode)
+                assertBool "contains greet function" ("func greet" `L.isInfixOf` goCode)
 
     , testCase "handles complex multi-feature integration" $ do
         let source = unlines
@@ -131,10 +132,10 @@ tests =
               , "//! ownership: on"
               , "//! dependent_types: on"
               , "import \"fmt\""
-              , "type Container[T any] struct {"
+              , "type Container[T L.any] struct {"
               , "    value T"
               , "}"
-              , "func New[T any](v T) Container[T] {"
+              , "func New[T L.any](v T) Container[T] {"
               , "    return Container[T]{value: v}"
               , "}"
               , "func (c Container[T]) Get() T {"
@@ -151,7 +152,7 @@ tests =
           Right typusFile -> do
             -- Multiple analyses
             let dependencies = analyzeDependencies typusFile
-            assertBool "should detect fmt dependency" (any (\dep -> show dep `isInfixOf` "fmt") dependencies)
+            assertBool "should detect fmt dependency" (L.any (\dep -> show dep `L.isInfixOf` "fmt") dependencies)
             
             -- Ownership analysis
             case analyzeOwnershipFile typusFile of
@@ -166,8 +167,8 @@ tests =
                 case compile typusFile of
                   Left errs -> assertFailure $ "compile failed: " ++ show errs
                   Right goCode -> do
-                    assertBool "contains generic type" ("Container" `isInfixOf` goCode)
-                    assertBool "contains generic function" ("func New" `isInfixOf` goCode)
+                    assertBool "contains generic type" ("Container" `L.isInfixOf` goCode)
+                    assertBool "contains generic function" ("func New" `L.isInfixOf` goCode)
 
     , testCase "handles error propagation through pipeline" $ do
         let source = unlines
@@ -201,7 +202,7 @@ tests =
         case parseTypus source of
           Left err -> assertFailure $ "parseTypus failed: " ++ err
           Right typusFile -> do
-            -- Parse and check that source locations are preserved
+            -- Parse L.and check that source locations are preserved
             let blocks = tfBlocks typusFile
             assertBool "should have blocks" (not $ null blocks)
             
@@ -261,7 +262,7 @@ tests =
           Right typusFile -> do
             -- Full pipeline: parsing + analysis + compilation
             let dependencies = analyzeDependencies typusFile
-            assertBool "should detect multiple dependencies" (length dependencies >= 2)
+            assertBool "should detect multiple dependencies" (L.length dependencies >= 2)
             
             case analyzeOwnershipFile typusFile of
               Left _ -> assertBool "ownership analysis attempted" True
@@ -273,8 +274,8 @@ tests =
                 case compile typusFile of
                   Left errs -> assertFailure $ "compile failed: " ++ show errs
                   Right goCode -> do
-                    assertBool "contains struct definition" ("type Processor" `isInfixOf` goCode)
-                    assertBool "contains method definition" ("func (p *Processor)" `isInfixOf` goCode)
+                    assertBool "contains struct definition" ("type Processor" `L.isInfixOf` goCode)
+                    assertBool "contains method definition" ("func (p *Processor)" `L.isInfixOf` goCode)
 
     , testCase "handles directive integration" $ do
         let source = unlines
@@ -302,7 +303,7 @@ tests =
             
             -- Check block directives
             let blocks = tfBlocks typusFile
-                directedBlocks = filter (\block -> 
+                directedBlocks = L.filter (\block -> 
                   maybe False locatedValue (bdOwnership (cbDirectives block)) ||
                   maybe False (not . locatedValue) (bdConstraints (cbDirectives block))
                   ) blocks

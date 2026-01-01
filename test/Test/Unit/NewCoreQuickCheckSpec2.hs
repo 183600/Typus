@@ -31,13 +31,15 @@ import Utils
 
 import Data.Char (isSpace, toLower)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, tails, isInfixOf, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (tails, sort)
 
 -- | Core functionality QuickCheck tests - Part 2
 tests :: TestTree
 tests = testGroup "New Core QuickCheck Tests 2"
   [ fastProperty "trim is idempotent" prop_trim_idempotent
-  , fastProperty "splitBy and join roundtrip" prop_splitBy_join_roundtrip
+  , fastProperty "splitBy L.and join roundtrip" prop_splitBy_join_roundtrip
   , fastProperty "removeComments preserves non-comment content" prop_removeComments_preserve_content
   , fastProperty "normalizeIndentation is idempotent" prop_normalizeIndentation_idempotent
   , fastProperty "forceSingleTabIndentation enforces tabs" prop_forceSingleTabIndentation_enforces
@@ -53,7 +55,7 @@ prop_trim_idempotent str =
       trimmedTwice = trim trimmedOnce
   in property $ trimmedOnce === trimmedTwice
 
--- Property: splitBy and join roundtrip
+-- Property: splitBy L.and join roundtrip
 prop_splitBy_join_roundtrip :: Char -> String -> Property
 prop_splitBy_join_roundtrip delim str =
   let parts = splitBy delim str
@@ -65,14 +67,14 @@ prop_removeComments_preserve_content :: String -> String -> Property
 prop_removeComments_preserve_content before after =
   not ('"' `elem` before) && not ('\'' `elem` before) && 
   not ('"' `elem` after) && not ('\'' `elem` after) &&
-  not ("/*" `isInfixOf` before) && not ("/*" `isInfixOf` after) &&
-  not ("//" `isInfixOf` before) && not ("//" `isInfixOf` after) ==>
+  not ("/*" `L.isInfixOf` before) && not ("/*" `L.isInfixOf` after) &&
+  not ("//" `L.isInfixOf` before) && not ("//" `L.isInfixOf` after) ==>
   let content = before ++ "code" ++ after
       withComments = before ++ "code /* comment */ // line comment\n" ++ after
       cleaned = removeComments withComments
-  in property $ "code" `isInfixOf` cleaned .&&.
-     before `isInfixOf` cleaned .&&.
-     after `isInfixOf` cleaned
+  in property $ "code" `L.isInfixOf` cleaned .&&.
+     before `L.isInfixOf` cleaned .&&.
+     after `L.isInfixOf` cleaned
 
 -- Property: normalizeIndentation is idempotent
 prop_normalizeIndentation_idempotent :: String -> Property
@@ -86,8 +88,8 @@ prop_forceSingleTabIndentation_enforces :: String -> Property
 prop_forceSingleTabIndentation_enforces str =
   let result = forceSingleTabIndentation str
       resultLines = lines result
-      nonEmptyLines = filter (not . null . trim) resultLines
-  in property $ all (\line -> case line of ('\t':_) -> True; _ -> False) nonEmptyLines
+      nonEmptyLines = L.filter (not . null . trim) resultLines
+  in property $ L.all (\line -> case line of ('\t':_) -> True; _ -> False) nonEmptyLines
 
 -- Property: fixIndentation equals normalizeIndentation
 prop_fixIndentation_equals_normalize :: String -> Property
@@ -101,7 +103,7 @@ prop_breakOn_edge_cases pat haystack =
       haystackReconstructed = before ++ pat ++ after
   in if null pat
      then property $ before === "" .&&. after === haystack
-     else if pat `isInfixOf` haystack
+     else if pat `L.isInfixOf` haystack
           then property $ haystackReconstructed === haystack
           else property $ before === haystack .&&. after === ""
 
@@ -111,9 +113,9 @@ prop_complex_pipeline prefix middle suffix =
   not ('"' `elem` prefix) && not ('\'' `elem` prefix) &&
   not ('"' `elem` middle) && not ('\'' `elem` middle) &&
   not ('"' `elem` suffix) && not ('\'' `elem` suffix) &&
-  not ("/*" `isInfixOf` prefix) && not ("/*" `isInfixOf` middle) && not ("/*" `isInfixOf` suffix) ==>
+  not ("/*" `L.isInfixOf` prefix) && not ("/*" `L.isInfixOf` middle) && not ("/*" `L.isInfixOf` suffix) ==>
   let input = prefix ++ "  /* comment */  " ++ middle ++ "  // line comment  " ++ suffix
       processed = removeComments $ trim $ normalizeIndentation input
-      hasNoComments = not ("/*" `isInfixOf` processed) .&&. not ("//" `isInfixOf` processed)
-      hasNoLeadingTrailingSpace = null processed || not (isSpace (head processed)) .&&. not (isSpace (last processed))
+      hasNoComments = not ("/*" `L.isInfixOf` processed) .&&. not ("//" `L.isInfixOf` processed)
+      hasNoLeadingTrailingSpace = null processed || not (isSpace (L.head processed)) .&&. not (isSpace (last processed))
   in property $ hasNoComments .&&. hasNoLeadingTrailingSpace

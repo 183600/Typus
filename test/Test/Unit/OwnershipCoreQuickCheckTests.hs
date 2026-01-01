@@ -4,6 +4,7 @@
 module Test.Unit.OwnershipCoreQuickCheckTests (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperties, (===), Property, forAll, Gen, Arbitrary(..), oneof, elements, listOf, listOf1, resize, suchThat)
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
 
@@ -69,7 +70,7 @@ instance Arbitrary OwnershipAnalyzer where
 prop_ownershipType_reflexive :: OwnershipType -> Bool
 prop_ownershipType_reflexive ot = ot == ot
 
--- | OwnershipType: Show and Read should be consistent
+-- | OwnershipType: Show L.and Read should be consistent
 prop_ownershipType_show_roundtrip :: OwnershipType -> Bool
 prop_ownershipType_show_roundtrip ot = 
     case ot of
@@ -100,39 +101,39 @@ prop_ownershipError_show_contains_type :: OwnershipError -> Bool
 prop_ownershipError_show_contains_type oe = 
     let showStr = show oe
     in case oe of
-      UseAfterMove _ -> "UseAfterMove" `isInfixOf` showStr
-      DoubleMove _ _ -> "DoubleMove" `isInfixOf` showStr
-      BorrowWhileMoved _ -> "BorrowWhileMoved" `isInfixOf` showStr
-      MutBorrowWhileBorrowed _ -> "MutBorrowWhileBorrowed" `isInfixOf` showStr
-      BorrowWhileMutBorrowed _ -> "BorrowWhileMutBorrowed" `isInfixOf` showStr
-      MultipleMutBorrows _ -> "MultipleMutBorrows" `isInfixOf` showStr
-      UseWhileMutBorrowed _ -> "UseWhileMutBorrowed" `isInfixOf` showStr
-      OutOfScope _ -> "OutOfScope" `isInfixOf` showStr
-      BorrowError _ -> "BorrowError" `isInfixOf` showStr
-      ParseError _ -> "ParseError" `isInfixOf` showStr
-      CrossFunctionMove _ _ -> "CrossFunctionMove" `isInfixOf` showStr
-      ParameterMoveMismatch _ -> "ParameterMoveMismatch" `isInfixOf` showStr
-      ControlFlowError _ -> "ControlFlowError" `isInfixOf` showStr
-      PathSensitiveError _ -> "PathSensitiveError" `isInfixOf` showStr
-      LoopOwnershipError _ -> "LoopOwnershipError" `isInfixOf` showStr
+      UseAfterMove _ -> "UseAfterMove" `L.isInfixOf` showStr
+      DoubleMove _ _ -> "DoubleMove" `L.isInfixOf` showStr
+      BorrowWhileMoved _ -> "BorrowWhileMoved" `L.isInfixOf` showStr
+      MutBorrowWhileBorrowed _ -> "MutBorrowWhileBorrowed" `L.isInfixOf` showStr
+      BorrowWhileMutBorrowed _ -> "BorrowWhileMutBorrowed" `L.isInfixOf` showStr
+      MultipleMutBorrows _ -> "MultipleMutBorrows" `L.isInfixOf` showStr
+      UseWhileMutBorrowed _ -> "UseWhileMutBorrowed" `L.isInfixOf` showStr
+      OutOfScope _ -> "OutOfScope" `L.isInfixOf` showStr
+      BorrowError _ -> "BorrowError" `L.isInfixOf` showStr
+      ParseError _ -> "ParseError" `L.isInfixOf` showStr
+      CrossFunctionMove _ _ -> "CrossFunctionMove" `L.isInfixOf` showStr
+      ParameterMoveMismatch _ -> "ParameterMoveMismatch" `L.isInfixOf` showStr
+      ControlFlowError _ -> "ControlFlowError" `L.isInfixOf` showStr
+      PathSensitiveError _ -> "PathSensitiveError" `L.isInfixOf` showStr
+      LoopOwnershipError _ -> "LoopOwnershipError" `L.isInfixOf` showStr
   where
-    isInfixOf needle haystack = needle `Data.List.isInfixOf` haystack
+    L.isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
 
 -- | OwnershipTransfer: equality should be reflexive
 prop_ownershipTransfer_reflexive :: OwnershipTransfer -> Bool
 prop_ownershipTransfer_reflexive ot = ot == ot
 
--- | OwnershipTransfer: Show should contain both from and to variables
+-- | OwnershipTransfer: Show should contain both from L.and to variables
 prop_ownershipTransfer_show_contains_vars :: OwnershipTransfer -> Bool
 prop_ownershipTransfer_show_contains_vars transfer = 
     let showStr = show transfer
         fromVar = transferFrom transfer
         toVar = transferTo transfer
-    in fromVar `isInfixOf` showStr && toVar `isInfixOf` showStr
+    in fromVar `L.isInfixOf` showStr && toVar `L.isInfixOf` showStr
   where
-    isInfixOf needle haystack = needle `Data.List.isInfixOf` haystack
+    L.isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
 
--- | OwnershipTransfer: creating transfer with same from and to should be valid
+-- | OwnershipTransfer: creating transfer with same from L.and to should be valid
 prop_ownershipTransfer_same_vars :: String -> Bool
 prop_ownershipTransfer_same_vars var = 
     let transfer = OwnershipTransfer var var
@@ -149,7 +150,7 @@ prop_newOwnershipAnalyzer_consistent =
 prop_ownershipType_sorting :: [OwnershipType] -> Bool
 prop_ownershipType_sorting types = 
     let sorted = sort types
-    in all (\(a, b) -> a <= b) (zip sorted (tail sorted)
+    in L.all (\(a, b) -> a <= b) (zip sorted (L.tail sorted)
 
 -- | OwnershipError: sorting should be deterministic
 prop_ownershipError_sorting :: [OwnershipError] -> Bool
@@ -158,7 +159,7 @@ prop_ownershipError_sorting errors =
         sorted2 = sort errors
     in sorted1 == sorted2
 
--- | OwnershipTransfer: reverse transfer should have different properties
+-- | OwnershipTransfer: L.reverse transfer should have different properties
 prop_ownershipTransfer_reverse :: OwnershipTransfer -> Bool
 prop_ownershipTransfer_reverse transfer = 
     let reversed = OwnershipTransfer (transferTo transfer) (transferFrom transfer)
@@ -208,7 +209,7 @@ tests = testGroup "Ownership Core QuickCheck Tests"
     [ ("OwnershipTransfer reflexive", prop_ownershipTransfer_reflexive)
     , ("OwnershipTransfer show contains vars", prop_ownershipTransfer_show_contains_vars)
     , ("OwnershipTransfer same vars", prop_ownershipTransfer_same_vars)
-    , ("OwnershipTransfer reverse", prop_ownershipTransfer_reverse)
+    , ("OwnershipTransfer L.reverse", prop_ownershipTransfer_reverse)
     ]
 
   , testProperties "OwnershipAnalyzer Properties"

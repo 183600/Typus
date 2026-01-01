@@ -20,6 +20,7 @@ import Compiler.Errors.Core
   )
 import Parser (parseTypus, FileDirectives(..), defaultFileDirectives)
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import Data.Maybe (isJust, isNothing)
 import qualified Data.Text as T
@@ -51,20 +52,20 @@ utilsSourceLocationIntegration = testGroup "Utils + SourceLocation Integration"
         in sourceLine trimmedPos <= sourceLine originalPos &&
            sourceColumn trimmedPos <= sourceColumn originalPos + 10  -- Allow some variance
         
-  , testProperty "splitBy and position tracking work together" $
+  , testProperty "splitBy L.and position tracking work together" $
       \delim str ->
         let parts = splitBy delim str
             positions = scanl (\pos part -> advancePosBy pos (part ++ [delim])) startPos parts
-        in delim /= '\0' && length str < 100 ==>
-           all (\pos -> sourceLine pos >= 1 && sourceColumn pos >= 1) positions
+        in delim /= '\0' && L.length str < 100 ==>
+           L.all (\pos -> sourceLine pos >= 1 && sourceColumn pos >= 1) positions
            
-  , testProperty "comment removal and position tracking" $
+  , testProperty "comment removal L.and position tracking" $
       \content ->
         let withComments = content ++ "\n// This is a comment\nmore content"
             withoutComments = removeComments withComments
             pos1 = advancePosBy startPos withComments
             pos2 = advancePosBy startPos withoutComments
-        in length content < 50 ==>
+        in L.length content < 50 ==>
            sourceLine pos2 <= sourceLine pos1 &&
            sourceColumn pos2 <= sourceColumn pos1 + 20
            
@@ -72,9 +73,9 @@ utilsSourceLocationIntegration = testGroup "Utils + SourceLocation Integration"
       \lines ->
         let input = unlines lines
             normalized = normalizeIndentation input
-            originalLines = length $ filter (not . null) lines
-            normalizedLines = length $ filter (not . null) $ lines normalized
-        in length lines < 20 ==> originalLines === normalizedLines
+            originalLines = L.length $ L.filter (not . null) lines
+            normalizedLines = L.length $ L.filter (not . null) $ lines normalized
+        in L.length lines < 20 ==> originalLines === normalizedLines
   ]
 
 -- ============================================================================
@@ -89,7 +90,7 @@ parserErrorHandlingIntegration = testGroup "Parser + ErrorHandling Integration"
         in case result of
              Left err -> 
                -- Check that error contains useful information
-               length (show err) > 10
+               L.length (show err) > 10
              Right _ -> 
                True  -- Successful parse is also valid
                
@@ -99,22 +100,22 @@ parserErrorHandlingIntegration = testGroup "Parser + ErrorHandling Integration"
         in case result of
              Left err -> 
                -- Error should mention location information
-               "line" `isInfixOf` show err || "position" `isInfixOf` show err
+               "line" `L.isInfixOf` show err || "position" `L.isInfixOf` show err
              Right _ -> 
                True  -- Successful parse
                
   , testProperty "multiple parsing attempts accumulate errors correctly" $
       \inputs ->
-        let results = map (parseTypus . take 30) (take 5 inputs)
-            errorCount = length $ filter isLeft results
+        let results = L.map (parseTypus . take 30) (take 5 inputs)
+            errorCount = L.length $ filter isLeft results
         in errorCount >= 0 && errorCount <= 5
         
   , testCase "error collector integration with parser" $
     do
       let collector = newErrorCollector
           collector' = addError startPos "Parse error" collector
-          formattedErrors = formatError $ head $ getErrors collector'
-      assertBool "error contains position information" $ "1:1" `isInfixOf` formattedErrors
+          formattedErrors = formatError $ L.head $ getErrors collector'
+      assertBool "error contains position information" $ "1:1" `L.isInfixOf` formattedErrors
   ]
 
 -- ============================================================================
@@ -126,21 +127,21 @@ multiModuleIntegration = testGroup "Multi-Module Integration"
   [ testProperty "source location tracking across multiple operations" $
       \operations ->
         let positions = scanl (\pos op -> advancePosBy pos (take 10 op)) startPos operations
-            spans = zipWith spanBetween positions (tail positions ++ [last positions])
+            spans = zipWith spanBetween positions (L.tail positions ++ [last positions])
             merged = foldl mergeSpans emptySpan spans
-        in length operations < 10 ==> 
-           all isValidSpan spans ==> isValidSpan merged
+        in L.length operations < 10 ==> 
+           L.all isValidSpan spans ==> isValidSpan merged
            
   , testProperty "error handling across multiple parsing stages" $
       \inputs ->
-        let parseResults = map (parseTypus . take 20) inputs
-            errorCollectors = map (\result -> 
+        let parseResults = L.map (parseTypus . take 20) inputs
+            errorCollectors = L.map (\result -> 
               case result of
                 Left err -> addError startPos (show err) newErrorCollector
                 Right _ -> newErrorCollector
             ) parseResults
-            totalErrors = sum $ map (length . getErrors) errorCollectors
-        in length inputs < 5 ==> totalErrors >= 0
+            totalErrors = L.sum $ L.map (L.length . getErrors) errorCollectors
+        in L.length inputs < 5 ==> totalErrors >= 0
         
   , testProperty "string processing pipeline consistency" $
       \input ->
@@ -149,7 +150,7 @@ multiModuleIntegration = testGroup "Multi-Module Integration"
             stage3 = normalizeIndentation stage2
             -- Final result should be consistent regardless of intermediate steps
             direct = normalizeIndentation $ removeComments $ trim input
-        in length input < 100 ==> stage3 === direct
+        in L.length input < 100 ==> stage3 === direct
   ]
 
 -- ============================================================================
@@ -158,7 +159,7 @@ multiModuleIntegration = testGroup "Multi-Module Integration"
 
 endToEndIntegration :: TestTree
 endToEndIntegration = testGroup "End-to-End Integration"
-  [ testCase "complete parsing and analysis pipeline" $
+  [ testCase "complete parsing L.and analysis pipeline" $
     do
       let input = "// @ownership: true\n// @dependentTypes: false\nfn test() { return 42; }"
           parseResult = parseTypus input
@@ -191,7 +192,7 @@ endToEndIntegration = testGroup "End-to-End Integration"
              
   , testCase "memory usage with large inputs" $
     do
-      let largeInput = concat $ replicate 1000 "// @ownership: true\n"
+      let largeInput = L.concat $ replicate 1000 "// @ownership: true\n"
           result = parseTypus largeInput
       case result of
         Left _ -> return ()  -- Expected to fail due to size
@@ -206,7 +207,7 @@ performanceIntegration :: TestTree
 performanceIntegration = testGroup "Performance Integration"
   [ testProperty "linear scaling with input size" $
       \baseInput multiplier ->
-        let input = concat $ replicate multiplier baseInput
+        let input = L.concat $ replicate multiplier baseInput
             result = parseTypus (take 1000 input)  -- Limit size
         in multiplier >= 1 && multiplier <= 10 ==> 
            case result of
@@ -215,11 +216,11 @@ performanceIntegration = testGroup "Performance Integration"
              
   , testProperty "efficient error collection" $
       \errorCount ->
-        let collector = foldl (\c i -> addError (SourcePos i 1) ("Error " ++ show i) c) 
+        let collector = L.foldl (\c i -> addError (SourcePos i 1) ("Error " ++ show i) c) 
                              newErrorCollector [1..errorCount]
             errors = getErrors collector
         in errorCount >= 0 && errorCount <= 100 ==> 
-           length errors === errorCount
+           L.length errors === errorCount
            
   , testProperty "position calculation performance" $
       \inputSize ->
@@ -242,10 +243,10 @@ isRight (Right _) = True
 isRight _ = False
 
 isInfixOf :: String -> String -> Bool
-isInfixOf = Data.List.isInfixOf
+L.isInfixOf = Data.List.L.isInfixOf
 
 isPrefixOf :: String -> String -> Bool
-isPrefixOf = Data.List.isPrefixOf
+L.isPrefixOf = Data.List.L.isPrefixOf
 
 lines :: String -> [String]
 lines = Data.List.lines

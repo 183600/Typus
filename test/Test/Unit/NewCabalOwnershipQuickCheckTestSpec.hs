@@ -13,7 +13,9 @@ import Ownership.Common.Types (OwnershipType(..), OwnershipError(..), OwnershipA
 import Ownership.Analyzer (analyzeOwnership, analyzeOwnershipFile, analyzeOwnershipDebug, builtInFunctions)
 import Ownership.Parser (parseProgram)
 import Ownership.Lexer (lexAll)
-import Data.List (isInfixOf, isPrefixOf, null)
+import qualified Data.List as L
+import Data.List (isInfixOf, isPrefixOf)
+import Data.List (null)
 import Data.Maybe (isJust, isNothing)
 import Data.Either (isLeft, isRight)
 import qualified Data.Map.Strict as Map
@@ -207,15 +209,15 @@ prop_analyze_ownership_returns_list :: Property
 prop_analyze_ownership_returns_list =
   forAll genSimpleOwnershipCode $ \code ->
     let errors = analyzeOwnership code
-    in length errors >= 0  -- Always returns a list
+    in L.length errors >= 0  -- Always returns a list
 
 prop_analyze_ownership_detects_errors :: Property
 prop_analyze_ownership_detects_errors =
   forAll genErrorOwnershipCode $ \code ->
     let errors = analyzeOwnership code
-    in not (null errors) || all isBuiltinFunction (words code)
+    in not (null errors) || L.all isBuiltinFunction (words code)
 
--- Test lexing and parsing
+-- Test lexing L.and parsing
 prop_lex_all_returns_tokens :: Property
 prop_lex_all_returns_tokens =
   forAll genSimpleOwnershipCode $ \code ->
@@ -236,13 +238,13 @@ prop_analyze_ownership_debug_returns_tuple :: Property
 prop_analyze_ownership_debug_returns_tuple =
   forAll genSimpleOwnershipCode $ \code ->
     let (errors, debugLog) = analyzeOwnershipDebug False code
-    in length errors >= 0 .&&. length debugLog >= 0
+    in L.length errors >= 0 .&&. L.length debugLog >= 0
 
 prop_analyze_ownership_debug_mode_includes_log :: Property
 prop_analyze_ownership_debug_mode_includes_log =
   forAll genSimpleOwnershipCode $ \code ->
     let (errors, debugLog) = analyzeOwnershipDebug True code
-    in length debugLog >= 0  -- Debug mode should include log entries
+    in L.length debugLog >= 0  -- Debug mode should include log entries
 
 -- ============================================================================
 -- Built-in Functions QuickCheck Tests
@@ -272,21 +274,21 @@ prop_detects_use_after_move :: Property
 prop_detects_use_after_move =
   let code = "x := 5\ny := x\nz := x"
       errors = analyzeOwnership code
-  in any isUseAfterMove errors
+  in L.any isUseAfterMove errors
 
 -- Test double move detection
 prop_detects_double_move :: Property
 prop_detects_double_move =
   let code = "x := 5\ny := x\ny := x"
       errors = analyzeOwnership code
-  in any isDoubleMove errors
+  in L.any isDoubleMove errors
 
 -- Test borrow conflict detection
 prop_detects_borrow_conflicts :: Property
 prop_detects_borrow_conflicts =
   let code = "x := 5\ny := &x\nz := &mut x"
       errors = analyzeOwnership code
-  in any isBorrowError errors
+  in L.any isBorrowError errors
 
 -- Helper functions to check error types
 isUseAfterMove :: OwnershipError -> Bool
@@ -308,7 +310,7 @@ isBorrowError _ = False
 -- Round-trip Tests
 -- ============================================================================
 
--- Test code parsing and analysis consistency
+-- Test code parsing L.and analysis consistency
 prop_parse_analyze_consistency :: Property
 prop_parse_analyze_consistency =
   forAll genSimpleOwnershipCode $ \code ->
@@ -316,7 +318,7 @@ prop_parse_analyze_consistency =
         program = parseProgram tokens
         errors = analyzeOwnership code
     in case program of
-      Program _ -> length errors >= 0
+      Program _ -> L.length errors >= 0
       _ -> property False
 
 -- Test error formatting
@@ -357,7 +359,7 @@ prop_analyze_mixed_content =
   forAll (listOf genSimpleStatement) $ \statements ->
     let code = unlines statements
         errors = analyzeOwnership code
-    in length errors >= 0
+    in L.length errors >= 0
 
 tests :: TestTree
 tests = testGroup "New Cabal Ownership QuickCheck Tests"
@@ -381,7 +383,7 @@ tests = testGroup "New Cabal Ownership QuickCheck Tests"
   , testGroup "Analysis functions tests"
       [ testProperty "analyzeOwnership returns list" prop_analyze_ownership_returns_list
       , testProperty "analyzeOwnership detects errors" prop_analyze_ownership_detects_errors
-      , testProperty "lex all returns tokens" prop_lex_all_returns_tokens
+      , testProperty "lex L.all returns tokens" prop_lex_all_returns_tokens
       , testProperty "parse program returns ast" prop_parse_program_returns_ast
       , testProperty "analyzeOwnershipDebug returns tuple" prop_analyze_ownership_debug_returns_tuple
       , testProperty "analyzeOwnershipDebug mode includes log" prop_analyze_ownership_debug_mode_includes_log

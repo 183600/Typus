@@ -2,6 +2,7 @@
 module Test.Unit.NewTypeSystemSubstitutionQuickCheckSpec (tests) where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Compiler.TypeChecker
   ( Type(..), TypeEnv(..), FunctionSignature(..), FunctionParam(..)
@@ -69,7 +70,7 @@ prop_substitution_composition typ subs1 subs2 =
 -- | Test generic type instantiation consistency
 prop_generic_instantiation_consistency :: String -> [Type] -> Property
 prop_generic_instantiation_consistency genericName args =
-    length genericName > 0 && not (null args) ==>
+    L.length genericName > 0 && not (null args) ==>
     let result1 = instantiateGeneric genericName args
         result2 = instantiateGeneric genericName args
     in case (result1, result2) of
@@ -123,7 +124,7 @@ prop_function_param_checking paramTypes argTypes =
 -- | Test type environment operations
 prop_type_environment_add_lookup :: String -> Type -> Property
 prop_type_environment_add_lookup typeName typ =
-    length typeName > 0 ==>
+    L.length typeName > 0 ==>
     let env = buildTypeEnv (GoModule Nothing [] [] [])
         envWithVar = addVariable typeName typ env
         lookedUp = lookupType typeName envWithVar
@@ -132,7 +133,7 @@ prop_type_environment_add_lookup typeName typ =
 -- | Test type environment substitution
 prop_type_environment_substitution :: String -> Type -> Type -> Property
 prop_type_environment_substitution varName oldType newType =
-    length varName > 0 ==>
+    L.length varName > 0 ==>
     let env = buildTypeEnv (GoModule Nothing [] [] [])
         env1 = addVariable varName oldType env
         env2 = addVariable varName newType env1
@@ -169,7 +170,7 @@ prop_union_type_compatibility unionTypes testType =
     not (null unionTypes) ==>
     let unionType = TypeUnion unionTypes
         isCompatible = areTypesCompatible unionType testType
-    in isCompatible ==> any (`areTypesCompatible` testType) unionTypes
+    in isCompatible ==> L.any (`areTypesCompatible` testType) unionTypes
 
 -- | Test nested type substitution
 prop_nested_type_substitution :: Type -> [(String, Type)] -> Property
@@ -177,13 +178,13 @@ prop_nested_type_substitution baseType substitutions =
     let nestedType = TypeFunction [baseType] (TypeRecord [("field", baseType)])
         substituted = substituteType nestedType substitutions
     in case substituted of
-         TypeFunction params ret -> length params == 1
+         TypeFunction params ret -> L.length params == 1
          _ -> True
 
 -- | Test generic type with constraints
 prop_generic_type_with_constraints :: String -> [Type] -> Type -> Property
 prop_generic_type_with_constraints genericName args constraintType =
-    length genericName > 0 && not (null args) ==>
+    L.length genericName > 0 && not (null args) ==>
     let genericResult = instantiateGeneric genericName args
         constraint = TypeConstraint "subtype" [constraintType]
     in case genericResult of
@@ -195,7 +196,7 @@ prop_generic_type_with_constraints genericName args constraintType =
 -- | Test type variable substitution
 prop_type_variable_substitution :: String -> Type -> Type -> Property
 prop_type_variable_substitution varName originalType substitutionType =
-    length varName > 0 ==>
+    L.length varName > 0 ==>
     let varType = TypeName varName
         substitutions = [(varName, substitutionType)]
         result = substituteType varType substitutions
@@ -205,8 +206,8 @@ prop_type_variable_substitution varName originalType substitutionType =
 prop_complex_type_unification :: [Type] -> [Type] -> Property
 prop_complex_type_unification types1 types2 =
     not (null types1) && not (null types2) ==>
-    let complexType1 = foldr TypeFunction (head types1) (tail types1)
-        complexType2 = foldr TypeFunction (head types2) (tail types2)
+    let complexType1 = foldr TypeFunction (L.head types1) (L.tail types1)
+        complexType2 = foldr TypeFunction (L.head types2) (L.tail types2)
         result = unifyTypes complexType1 complexType2
     in case result of
          Right unified -> True  -- Should be a valid type

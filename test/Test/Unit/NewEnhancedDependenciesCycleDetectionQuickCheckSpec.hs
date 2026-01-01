@@ -10,6 +10,7 @@
 module Test.Unit.NewEnhancedDependenciesCycleDetectionQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose, suchThat)
@@ -18,7 +19,8 @@ import TestSupport.Arbitrary
 import Dependencies
 import Dependencies.AST
 import Dependencies.TypeSystem
-import Data.List (sort, nub, group, intercalate, find, delete, isInfixOf, sortOn, (\\))
+import Data.List (isInfixOf)
+import Data.List (sort, nub, group, intercalate, find, delete, sortOn, (\\))
 import Data.Maybe (isJust, isNothing, catMaybes, fromMaybe, mapMaybe)
 import Data.Set (Set, empty, singleton, union, unions, member, size, difference, intersection)
 import qualified Data.Set as Set
@@ -38,7 +40,7 @@ prop_acyclic_graph_validation dependencies =
   let graph = buildDependencyGraph dependencies
       isAcyclic = isAcyclicGraph graph
       sorted = topologicalSort graph
-  in property $ isAcyclic ==> length sorted == length dependencies
+  in property $ isAcyclic ==> L.length sorted == L.length dependencies
 
 -- Property: Cycle detection consistency
 prop_cycle_detection_consistency :: [(String, [String])] -> Property
@@ -55,7 +57,7 @@ prop_cycle_path_reconstruction dependencies =
   not (null dependencies) ==> 
   let graph = buildDependencyGraph dependencies
       cycles = findCycles graph
-      validPaths = all isValidCyclePath cycles
+      validPaths = L.all isValidCyclePath cycles
   in property $ null cycles .||. validPaths
 
 -- Property: Dependency closure computation
@@ -103,7 +105,7 @@ prop_circular_dependency_detection dependencies =
   let graph = buildDependencyGraph dependencies
       circularDeps = findCircularDependencies graph
       hasCircular = not (null circularDeps)
-  in property $ hasCircular ==> all (hasCyclePath graph) circularDeps
+  in property $ hasCircular ==> L.all (hasCyclePath graph) circularDeps
 
 -- Property: Dependency level calculation
 prop_dependency_level_calculation :: [(String, [String])] -> String -> Property
@@ -155,7 +157,7 @@ prop_dependency_pruning dependencies keepNodes =
   in property $ prunedNodes == expectedNodes
 
 -- ============================================================================
--- Helper Functions and Types
+-- Helper Functions L.and Types
 -- ============================================================================
 
 -- Dependency graph types
@@ -172,12 +174,12 @@ data CyclePath = CyclePath
 -- Graph construction functions
 buildDependencyGraph :: [(String, [String])] -> DependencyGraph
 buildDependencyGraph dependencies = DependencyGraph
-  { graphNodes = Set.fromList $ map fst dependencies ++ concat (map snd dependencies)
+  { graphNodes = Set.fromList $ map fst dependencies ++ L.concat (map snd dependencies)
   , graphEdges = Map.fromList dependencies
   }
 
 isAcyclicGraph :: DependencyGraph -> Bool
-isAcyclicGraph graph = null $ findCycles graph
+isAcyclicGraph graph = L.null $ findCycles graph
 
 hasCycles :: DependencyGraph -> Bool
 hasCycles = not . isAcyclicGraph
@@ -186,7 +188,7 @@ findCycles :: DependencyGraph -> [CyclePath]
 findCycles graph = 
   let nodes = Set.toList $ graphNodes graph
       cycles = [detectCycleFromNode graph node | node <- nodes]
-  in filter (not . null . cycleNodes) cycles
+  in L.filter (not . null . cycleNodes) cycles
 
 detectCycleFromNode :: DependencyGraph -> String -> CyclePath
 detectCycleFromNode graph start = 
@@ -197,8 +199,8 @@ detectCycleFromNode graph start =
 detectCycle :: DependencyGraph -> String -> Set String -> [String] -> CyclePath
 detectCycle graph node visited path
   | node `Set.member` visited = 
-      case break (== node) (reverse path) of
-        (_, cyclePart) -> CyclePath (reverse cyclePart) node
+      case break (== node) (L.reverse path) of
+        (_, cyclePart) -> CyclePath (L.reverse cyclePart) node
         _ -> CyclePath [] node
   | otherwise = 
       case Map.lookup node (graphEdges graph) of
@@ -207,7 +209,7 @@ detectCycle graph node visited path
           let newVisited = Set.insert node visited
               newPath = node : path
               cycles = [detectCycle graph dep newVisited newPath | dep <- Set.toList deps]
-          in case filter (not . null . cycleNodes) cycles of
+          in case L.filter (not . null . cycleNodes) cycles of
                (c:_) -> c
                [] -> CyclePath [] node
 
@@ -221,23 +223,23 @@ topologicalSort :: DependencyGraph -> [String]
 topologicalSort graph = 
   let nodes = Set.toList $ graphNodes graph
       edges = [(from, to) | from <- nodes, to <- Set.toList $ fromMaybe empty (Map.lookup from (graphEdges graph))]
-      graph' = buildG (0, length nodes - 1) [(nodeIndex from, nodeIndex to) | (from, to) <- edges]
+      graph' = buildG (0, L.length nodes - 1) [(nodeIndex from, nodeIndex to) | (from, to) <- edges]
       sortedIndices = topSort graph'
       nodeIndex node = case elemIndex node nodes of
                         Just idx -> idx
                         Nothing -> 0
-  in map (nodes !!) sortedIndices
+  in L.map (nodes !!) sortedIndices
   where
     elemIndex x xs = findIndex (== x) xs
     findIndex _ [] = Nothing
-    findIndex p (x:xs) = if p x then Just 0 else fmap (+1) (findIndex p xs)
+    findIndex p (x:xs) = if p x then Just 0 else fL.map (+1) (findIndex p xs)
 
 checkTopologicalOrder :: DependencyGraph -> [String] -> Bool
 checkTopologicalOrder graph sorted = 
   all (\(i, node) -> 
     let deps = fromMaybe empty (Map.lookup node (graphEdges graph))
         earlierNodes = take i sorted
-    in all (`elem` earlierNodes) (Set.toList deps)
+    in L.all (`elem` earlierNodes) (Set.toList deps)
   ) (zip [0..] sorted)
 
 computeDependencyClosure :: DependencyGraph -> String -> Set String
@@ -266,13 +268,13 @@ findStronglyConnectedComponents graph =
                         Just idx -> idx
                         Nothing -> 0
       edges = [(nodeIndex from, nodeIndex to) | from <- nodes, to <- Set.toList $ fromMaybe empty (Map.lookup from (graphEdges graph))]
-      graph' = buildG (0, length nodes - 1) edges
+      graph' = buildG (0, L.length nodes - 1) edges
       sccs = components graph'
-  in map (\component -> Set.fromList $ map (nodes !!) component) sccs
+  in L.map (\component -> Set.fromList $ L.map (nodes !!) component) sccs
   where
     elemIndex x xs = findIndex (== x) xs
     findIndex _ [] = Nothing
-    findIndex p (x:xs) = if p x then Just 0 else fmap (+1) (findIndex p xs)
+    findIndex p (x:xs) = if p x then Just 0 else fL.map (+1) (findIndex p xs)
 
 removeDependency :: DependencyGraph -> String -> String -> DependencyGraph
 removeDependency graph from to = 
@@ -288,8 +290,8 @@ findCircularDependencies graph =
 hasCyclePath :: DependencyGraph -> [String] -> Bool
 hasCyclePath graph path = 
   length path >= 2 && 
-  all (\(from, to) -> hasDependency graph from to) (zip path (tail path)) &&
-  hasDependency graph (last path) (head path)
+  all (\(from, to) -> hasDependency graph from to) (zip path (L.tail path)) &&
+  hasDependency graph (last path) (L.head path)
 
 calculateDependencyLevel :: DependencyGraph -> String -> Int
 calculateDependencyLevel graph node = 
@@ -308,7 +310,7 @@ isReachable graph from to =
                         Just idx -> idx
                         Nothing -> 0
       edges = [(nodeIndex f, nodeIndex t) | f <- nodes, t <- Set.toList $ fromMaybe empty (Map.lookup f (graphEdges graph))]
-      graph' = buildG (0, length nodes - 1) edges
+      graph' = buildG (0, L.length nodes - 1) edges
   in nodeIndex to `elem` reachable graph' (nodeIndex from)
 
 mergeDependencyGraphs :: DependencyGraph -> DependencyGraph -> DependencyGraph
@@ -336,7 +338,7 @@ invertDependency graph from to =
 pruneDependencyGraph :: DependencyGraph -> Set String -> DependencyGraph
 pruneDependencyGraph graph keepNodes = 
   let prunedEdges = Map.filterWithKey (\node _ -> node `Set.member` keepNodes) (graphEdges graph)
-      filteredEdges = Map.map (`Set.intersection` keepNodes) prunedEdges
+      filteredEdges = Map.L.map (`Set.intersection` keepNodes) prunedEdges
   in DependencyGraph keepNodes filteredEdges
 
 -- ============================================================================

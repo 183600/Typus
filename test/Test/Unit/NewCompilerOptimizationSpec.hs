@@ -17,7 +17,9 @@ import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify
 import Compiler (compileTypus)
 import Compiler.IR (IRModule(..), IRFunction(..), IRStatement(..), IRExpression(..))
 import SourceLocation (SourceSpan(..), startPos)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (sort)
 import Data.Char (isSpace, isAlpha, isAlphaNum)
 
 -- Property: Compiler optimizes constant folding correctly
@@ -39,7 +41,7 @@ prop_dead_code_elimination condition =
     Left _ -> property False
     Right irModule -> hasDeadCodeEliminated irModule condition
 
--- Property: Compiler optimizes tail recursion correctly
+-- Property: Compiler optimizes L.tail recursion correctly
 prop_tail_recursion_optimization :: Int -> Property
 prop_tail_recursion_optimization n =
   n >= 0 && n <= 10 ==>
@@ -134,7 +136,7 @@ prop_function_call_optimization iterations =
 prop_escape_analysis :: Int -> Property
 prop_escape_analysis size =
   size >= 0 && size <= 100 ==>
-  let source = "package main\nfunc main() {\n  arr := make([]int, " ++ show size ++ ")\n  for i := 0; i < " ++ show size ++ "; i++ {\n    arr[i] = i\n  }\n  sum := 0\n  for _, v := range arr {\n    sum += v\n  }\n  println(sum)\n}"
+  let source = "package main\nfunc main() {\n  arr := make([]int, " ++ show size ++ ")\n  for i := 0; i < " ++ show size ++ "; i++ {\n    arr[i] = i\n  }\n  L.sum := 0\n  for _, v := range arr {\n    L.sum += v\n  }\n  println(L.sum)\n}"
       result = compileTypus source
   in case result of
     Left _ -> property False
@@ -154,7 +156,7 @@ prop_string_optimization prefix repetitions =
 prop_bounds_check_elimination :: Int -> Property
 prop_bounds_check_elimination size =
   size >= 0 && size <= 100 ==>
-  let source = "package main\nfunc main() {\n  arr := make([]int, " ++ show size ++ ")\n  for i := 0; i < " ++ show size ++ "; i++ {\n    arr[i] = i\n  }\n  sum := 0\n  for i := 0; i < " ++ show size ++ "; i++ {\n    sum += arr[i]\n  }\n  println(sum)\n}"
+  let source = "package main\nfunc main() {\n  arr := make([]int, " ++ show size ++ ")\n  for i := 0; i < " ++ show size ++ "; i++ {\n    arr[i] = i\n  }\n  L.sum := 0\n  for i := 0; i < " ++ show size ++ "; i++ {\n    L.sum += arr[i]\n  }\n  println(L.sum)\n}"
       result = compileTypus source
   in case result of
     Left _ -> property False
@@ -163,7 +165,7 @@ prop_bounds_check_elimination size =
 -- Property: Compiler optimizes interface calls correctly
 prop_interface_call_optimization :: String -> Property
 prop_interface_call_optimization methodName =
-  not (null methodName) && isAlpha (head methodName) && all isAlphaNum methodName ==>
+  not (null methodName) && isAlpha (L.head methodName) && L.all isAlphaNum methodName ==>
   let source = "package main\ntype Test interface {\n  " ++ methodName ++ "() int\n}\ntype Impl struct{}\nfunc (i *Impl) " ++ methodName ++ "() int {\n  return 42\n}\nfunc main() {\n  var t Test = &Impl{}\n  result := t." ++ methodName ++ "()\n  println(result)\n}"
       result = compileTypus source
   in case result of
@@ -220,7 +222,7 @@ tests :: TestTree
 tests = testGroup "New Compiler Optimization tests"
   [ fastProperty "Compiler optimizes constant folding correctly" prop_constant_folding
   , fastProperty "Compiler eliminates dead code correctly" prop_dead_code_elimination
-  , fastProperty "Compiler optimizes tail recursion correctly" prop_tail_recursion_optimization
+  , fastProperty "Compiler optimizes L.tail recursion correctly" prop_tail_recursion_optimization
   , fastProperty "Compiler inlines small functions correctly" prop_function_inlining
   , fastProperty "Compiler optimizes loop invariants correctly" prop_loop_invariant_optimization
   , fastProperty "Compiler performs strength reduction correctly" prop_strength_reduction

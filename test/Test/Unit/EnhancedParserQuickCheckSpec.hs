@@ -2,6 +2,7 @@
 module Test.Unit.EnhancedParserQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), Gen, oneof, listOf, elements, choose, suchThat, (===), (.&&.), forAll)
 import TestSupport.QuickCheck (fastProperty)
 import Parser
@@ -78,7 +79,7 @@ prop_blockDirectivesParse input =
       let blocks = tfBlocks typusFile
       in if null blocks
          then True
-         else let firstBlock = head blocks
+         else let firstBlock = L.head blocks
                   dirs = cbDirectives firstBlock
               in case bdOwnership dirs of
                    Just (Located True _) -> True
@@ -119,7 +120,7 @@ prop_parseDocumentPreservesLines input =
           totalContent = concatMap cbContent blocks
           resultLines = lines totalContent
       in -- Should preserve the general structure
-         length resultLines >= 0
+         L.length resultLines >= 0
     Left _ -> True
 
 -- Property: parseDocument handles empty input
@@ -128,8 +129,8 @@ prop_parseDocumentHandlesEmpty =
   let result = parseTypus ""
   in case result of
     Right typusFile -> 
-      null (tfBlocks typusFile) && 
-      null (tfBuildTags typusFile)
+      L.null (tfBlocks typusFile) && 
+      L.null (tfBuildTags typusFile)
     Left _ -> False  -- Should handle empty input successfully
 
 -- Property: parseDocument tracks positions correctly
@@ -140,20 +141,20 @@ prop_parseDocumentTracksPositions input =
     Right typusFile ->
       let blocks = tfBlocks typusFile
           spans = map cbSpan blocks
-      in all isValidSpan spans
+      in L.all isValidSpan spans
     Left _ -> True
 
 -- Property: parseDocument handles various line endings
 prop_parseDocumentHandlesLineEndings :: String -> Bool
 prop_parseDocumentHandlesLineEndings input =
-  let withUnix = map (\c -> if c == '\r' then '\n' else c) input
+  let withUnix = L.map (\c -> if c == '\r' then '\n' else c) input
       withWindows = concatMap (\c -> if c == '\n' then "\r\n" else [c]) input
       result1 = parseTypus withUnix
       result2 = parseTypus withWindows
   in case (result1, result2) of
     (Right f1, Right f2) -> 
       -- Should produce equivalent structure
-      length (tfBlocks f1) == length (tfBlocks f2)
+      L.length (tfBlocks f1) == L.length (tfBlocks f2)
     _ -> True
 
 -- ============================================================================
@@ -180,7 +181,7 @@ prop_buildTypusFileHandlesSyntaxErrors input =
   in case result of
     Right typusFile -> 
       -- Should still produce a file with syntax errors recorded
-      not (null (tfSyntaxErrors typusFile)) || True
+      not (L.null (tfSyntaxErrors typusFile)) || True
     Left _ -> True
 
 -- Property: buildTypusFile maintains directive order
@@ -203,7 +204,7 @@ prop_parseTypusErrorMessages input =
   let withError = input ++ "\n{//! unclosed directive\n"
       result = parseTypus withError
   in case result of
-    Left errMsg -> length errMsg > 0  -- Should provide some error message
+    Left errMsg -> L.length errMsg > 0  -- Should provide some error message
     Right _ -> True
 
 -- Property: syntax validation integrates correctly
@@ -213,7 +214,7 @@ prop_syntaxValidationIntegration input =
   in case result of
     Right typusFile -> 
       -- Syntax errors should be captured
-      length (tfSyntaxErrors typusFile) >= 0
+      L.length (tfSyntaxErrors typusFile) >= 0
     Left _ -> True
 
 -- Property: error recovery preserves structure
@@ -224,7 +225,7 @@ prop_errorRecoveryPreservesStructure input =
   in case result of
     Right typusFile -> 
       -- Should still parse some structure despite errors
-      length (tfBlocks typusFile) >= 0
+      L.length (tfBlocks typusFile) >= 0
     Left _ -> True
 
 -- ============================================================================
@@ -234,7 +235,7 @@ prop_errorRecoveryPreservesStructure input =
 -- Property: parser handles large inputs
 prop_parserHandlesLargeInputs :: String -> Bool
 prop_parserHandlesLargeInputs input =
-  let largeInput = concat (replicate 100 (input ++ "\n"))
+  let largeInput = L.concat (replicate 100 (input ++ "\n"))
       result = parseTypus largeInput
   in case result of
     Right _ -> True
@@ -263,9 +264,9 @@ prop_parserHandlesUnicode input =
 -- Property: parser handles deeply nested directives
 prop_parserHandlesNestedDirectives :: String -> Bool
 prop_parserHandlesNestedDirectives input =
-  let nested = concat (replicate 10 "{//! ownership: true\n") ++
+  let nested = L.concat (replicate 10 "{//! ownership: true\n") ++
                 input ++
-                concat (replicate 10 "}\n")
+                L.concat (replicate 10 "}\n")
       result = parseTypus nested
   in case result of
     Right _ -> True

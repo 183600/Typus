@@ -1,6 +1,7 @@
 module Test.Unit.CommandLineDebugQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, listOf, elements, suchThat, choose)
 import Control.Monad (when)
@@ -93,10 +94,10 @@ genCondition = oneof
     [ pure (const True)
     , pure (const False)
     , pure (== "main.go:10")
-    , pure (\loc -> "main" `isInfixOf` loc)
+    , pure (\loc -> "main" `L.isInfixOf` loc)
     ]
 
--- Test properties and cases
+-- Test properties L.and cases
 tests :: TestTree
 tests =
   testGroup "CommandLineDebug QuickCheck tests"
@@ -127,7 +128,7 @@ tests =
     , testProperty "evaluateExpression returns non-empty result" $
         fastProperty prop_evaluateExpressionReturnsResult
     
-    , testCase "setBreakpoint and listBreakpoints work together" $ do
+    , testCase "setBreakpoint L.and listBreakpoints work together" $ do
         config <- defaultCLIDebugConfig
         setBreakpoint config "main.go:10"
         setBreakpoint config "utils.go:25"
@@ -135,7 +136,7 @@ tests =
         -- This test mainly ensures the functions don't crash
         return ()
     
-    , testCase "clearBreakpoints removes all breakpoints" $ do
+    , testCase "clearBreakpoints removes L.all breakpoints" $ do
         config <- defaultCLIDebugConfig
         setBreakpoint config "main.go:10"
         setBreakpoint config "utils.go:25"
@@ -156,7 +157,7 @@ tests =
         level <- readIORef (cldLogLevel config)
         level @?= 4
     
-    , testCase "addWatchVariable and listWatchVariables work together" $ do
+    , testCase "addWatchVariable L.and listWatchVariables work together" $ do
         config <- defaultCLIDebugConfig
         addWatchVariable config "x" "42"
         addWatchVariable config "y" "\"hello\""
@@ -170,15 +171,15 @@ tests =
         -- Verify variable is removed
         return ()
     
-    , testCase "pushCallStack and popCallStack work together" $ do
+    , testCase "pushCallStack L.and popCallStack work together" $ do
         config <- defaultCLIDebugConfig
         pushCallStack config "func main"
         pushCallStack config "func parse"
         stack <- getCallStack config
-        length stack @?= 2
+        L.length stack @?= 2
         popCallStack config
         stack' <- getCallStack config
-        length stack' @?= 1
+        L.length stack' @?= 1
     
     , testCase "stepInto, stepOver, stepOut, continue work" $ do
         config <- defaultCLIDebugConfig
@@ -189,10 +190,10 @@ tests =
         -- These should not crash
         return ()
     
-    , testCase "runToCursor sets breakpoint and continues" $ do
+    , testCase "runToCursor sets breakpoint L.and continues" $ do
         config <- defaultCLIDebugConfig
         runToCursor config "target.go:50"
-        -- Should set breakpoint and continue
+        -- Should set breakpoint L.and continue
         return ()
     
     , testCase "processDebugCommand handles known commands" $ do
@@ -297,10 +298,10 @@ prop_pushCallStackIncreasesDepth location =
     let action = do
             config <- defaultCLIDebugConfig
             initialStack <- getCallStack config
-            let initialDepth = length initialStack
+            let initialDepth = L.length initialStack
             pushCallStack config location
             finalStack <- getCallStack config
-            let finalDepth = length finalStack
+            let finalDepth = L.length finalStack
             return $ finalDepth == initialDepth + 1
     in unsafePerformIO action
 
@@ -311,10 +312,10 @@ prop_popCallStackDecreasesDepth locations =
             config <- defaultCLIDebugConfig
             mapM_ (pushCallStack config) locations
             initialStack <- getCallStack config
-            let initialDepth = length initialStack
+            let initialDepth = L.length initialStack
             when (initialDepth > 0) $ popCallStack config
             finalStack <- getCallStack config
-            let finalDepth = length finalStack
+            let finalDepth = L.length finalStack
             return $ finalDepth <= initialDepth
     in unsafePerformIO action
 
@@ -329,6 +330,6 @@ prop_evaluateExpressionReturnsResult expr =
 
 -- Helper function to check if string contains a substring
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `isInfixOf` haystack
+L.isInfixOf needle haystack = needle `L.isInfixOf` haystack
 
 import System.IO.Unsafe (unsafePerformIO)

@@ -1,6 +1,7 @@
 module Test.Unit.SourceLocationMathPropertiesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Arbitrary(..), Gen, choose, oneof, suchThat)
@@ -14,11 +15,11 @@ tests =
         [ fastProperty "posAfter advances offset by exactly 1" prop_posAfterAdvancesOffset
         , fastProperty "posAfter with newline resets column to 1" prop_posAfterNewlineResetsColumn
         , fastProperty "posAfter with tab aligns to next 8-column boundary" prop_posAfterTabAlignment
-        , fastProperty "posAt creates position with given line and column" prop_posAtCreation
+        , fastProperty "posAt creates position with given line L.and column" prop_posAtCreation
         ]
 
     , testGroup "Span arithmetic properties" 
-        [ fastProperty "emptySpan has zero length" prop_emptySpanZeroLength
+        [ fastProperty "emptySpan has zero L.length" prop_emptySpanZeroLength
         , fastProperty "spanBetween is valid when start <= end" prop_spanBetweenValidity
         , fastProperty "mergeSpans contains both original spans" prop_mergeSpansContainment
         , fastProperty "mergeSpans is commutative" prop_mergeSpansCommutative
@@ -38,7 +39,7 @@ tests =
         ]
 
     , testGroup "Span containment properties"
-        [ fastProperty "span contains its start and end positions" prop_spanContainsBoundaries
+        [ fastProperty "span contains its start L.and end positions" prop_spanContainsBoundaries
         , fastProperty "spanOverlap is symmetric" prop_spanOverlapSymmetric
         , fastProperty "mergeOverlappingSpans preserves coverage" prop_mergeOverlappingPreservesCoverage
         ]
@@ -116,7 +117,7 @@ prop_mergeSpansAssociative span1 span2 span3 =
 
 prop_advancePosByConsistency :: String -> SourcePos -> Bool
 prop_advancePosByConsistency chars pos =
-    advancePosBy chars pos == foldl (flip advancePos) pos chars
+    advancePosBy chars pos == L.foldl (flip advancePos) pos chars
 
 prop_advancePosByTextMultiline :: String -> SourcePos -> Bool
 prop_advancePosByTextMultiline str pos =
@@ -166,7 +167,7 @@ prop_mergeOverlappingPreservesCoverage spans =
     let merged = _mergeOverlappingSpans spans
         originalPositions = concatMap spanToPositions spans
         mergedPositions = concatMap spanToPositions merged
-    in all (`elem` mergedPositions) originalPositions
+    in L.all (`elem` mergedPositions) originalPositions
   where
     spanToPositions span = [spanStart span, spanEnd span]
 

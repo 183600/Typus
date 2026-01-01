@@ -14,6 +14,7 @@ import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
 import Data.Char (isSpace, isAlpha)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 
 import Ownership
@@ -52,7 +53,7 @@ tests =
         , testCase "所有权错误的格式化" $ do
             let error = OwnershipError "Test ownership error" OwnershipErrorTypeMove 1 1
                 formatted = formatOwnershipErrors [error]
-            assertBool "Should contain error message" $ "Test ownership error" `isInfixOf` formatted
+            assertBool "Should contain error message" $ "Test ownership error" `L.isInfixOf` formatted
 
         , testCase "内置函数的所有权处理" $ do
             let builtinFuncs = builtInFunctions
@@ -74,13 +75,13 @@ tests =
 prop_ownership_transfer_transitivity :: String -> String -> String -> Property
 prop_ownership_transfer_transitivity varA varB varC =
   not (null varA) && not (null varB) && not (null varC) &&
-  all (all isAlpha) [varA, varB, varC] ==> 
+  L.all (L.all isAlpha) [varA, varB, varC] ==> 
   let code = "func test() { " ++ varA ++ " := 42; " ++ varB ++ " := " ++ varA ++ "; " ++ varC ++ " := " ++ varB ++ "; }"
       result = analyzeOwnership code
   in case result of
        Right transfers -> 
-         let transfersFromA = filter (\t -> otFrom t == varA) transfers
-             transfersToC = filter (\t -> otTo t == varC) transfers
+         let transfersFromA = L.filter (\t -> otFrom t == varA) transfers
+             transfersToC = L.filter (\t -> otTo t == varC) transfers
          in property $ not (null transfersFromA) ==> not (null transfersToC)
        Left _ -> property $ True  -- 分析失败时跳过此测试
 
@@ -91,7 +92,7 @@ prop_ownership_analysis_consistency code =
       result2 = analyzeOwnership code
   in case (result1, result2) of
        (Right transfers1, Right transfers2) -> 
-         property $ length transfers1 === length transfers2
+         property $ L.length transfers1 === L.length transfers2
        (Left _, Left _) -> property $ True
        _ -> property $ False
 
@@ -100,7 +101,7 @@ prop_ownership_error_completeness :: String -> OwnershipErrorType -> Int -> Int 
 prop_ownership_error_completeness message errorType line column =
   not (null message) && line > 0 && column > 0 ==>
   let error = OwnershipError message errorType line column
-      hasValidMessage = not $ null $ oeMessage error
+      hasValidMessage = not $ L.null $ oeMessage error
       hasValidType = errorType == oeType error
       hasValidLocation = line == oeLine error && column == oeColumn error
   in property $ hasValidMessage .&&. hasValidType .&&. hasValidLocation
@@ -123,7 +124,7 @@ prop_ownership_analyzer_idempotent code =
       result3 = analyzeOwnership code
   in case (result1, result2, result3) of
        (Right transfers1, Right transfers2, Right transfers3) -> 
-         property $ length transfers1 === length transfers2 .&&.
-                    length transfers2 === length transfers3
+         property $ L.length transfers1 === L.length transfers2 .&&.
+                    L.length transfers2 === L.length transfers3
        (Left _, Left _, Left _) -> property $ True
        _ -> property $ False

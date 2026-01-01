@@ -5,7 +5,9 @@ module Test.Unit.GoAstQuickCheckSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), property, forAll, counterexample, classify, Arbitrary(..), Gen, oneof, choose, listOf, elements, vectorOf)
-import Data.List (isPrefixOf, isInfixOf, nub, isSuffixOf)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (nub)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import Data.Either (isLeft, isRight)
 import qualified Data.Text as T
@@ -32,18 +34,18 @@ prop_gomodule_package_name pkg decls =
 prop_gomodule_decl_count :: [GoDecl] -> Property
 prop_gomodule_decl_count decls =
   let goModule = GoModule [] Nothing [] decls
-  in property $ length (gmDecls goModule) === length decls
+  in property $ L.length (gmDecls goModule) === L.length decls
 
 -- Property: GoModule import preservation
 prop_gomodule_import_preservation :: [ImportDecl] -> [GoDecl] -> Property
 prop_gomodule_import_preservation imports decls =
   let goModule = GoModule [] Nothing imports decls
-  in property $ length (gmImports goModule) === length imports
+  in property $ L.length (gmImports goModule) === L.length imports
 
 -- Property: ImportDecl path validation
 prop_import_path_valid :: String -> Property
 prop_import_path_valid path =
-  let validChars = all (\c -> c `elem` "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/.-_") path
+  let validChars = L.all (\c -> c `elem` "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/.-_") path
       importDecl = ImportDecl Nothing path
   in classify validChars "valid path characters" $
      property $ validChars ==> not (null path)
@@ -58,25 +60,25 @@ prop_import_alias_preservation alias path =
 prop_func_params_preservation :: [String] -> Property
 prop_func_params_preservation params =
   let func = FuncDecl params
-  in property $ length (funcLines func) === length params
+  in property $ L.length (funcLines func) === L.length params
 
 -- Property: TypeDecl field preservation
 prop_type_fields_preservation :: [String] -> Property
 prop_type_fields_preservation fields =
   let typeDecl = TypeDecl fields False
-  in property $ length (typeLines typeDecl) === length fields
+  in property $ L.length (typeLines typeDecl) === L.length fields
 
 -- Property: VarDecl variable preservation
 prop_var_names_preservation :: [String] -> Property
 prop_var_names_preservation names =
   let varDecl = VarDecl names False
-  in property $ length (varLines varDecl) === length names
+  in property $ L.length (varLines varDecl) === L.length names
 
 -- Property: ConstDecl constant preservation
 prop_const_names_preservation :: [String] -> Property
 prop_const_names_preservation names =
   let constDecl = ConstDecl names False
-  in property $ length (constLines constDecl) === length names
+  in property $ L.length (constLines constDecl) === L.length names
 
 -- Property: GoDecl type classification
 prop_godecl_classification :: GoDecl -> Property
@@ -103,8 +105,8 @@ prop_gomodule_build_tags tags decls =
 prop_import_uniqueness :: [ImportDecl] -> Property
 prop_import_uniqueness imports =
   let paths = map importPath imports
-      uniquePaths = length paths === length (nub paths)
-  in property $ True -- Just checking that we can handle both unique and non-unique imports
+      uniquePaths = L.length paths === L.length (nub paths)
+  in property $ True -- Just checking that we can handle both unique L.and non-unique imports
 
 -- Property: Function parameter ordering
 prop_func_param_ordering :: [String] -> Property
@@ -143,10 +145,10 @@ prop_gomodule_empty :: Property
 prop_gomodule_empty =
   let goModule = GoModule [] Nothing [] []
   in property $ 
-       null (gmBuildTags goModule) &&
+       L.null (gmBuildTags goModule) &&
        isNothing (gmPackage goModule) &&
-       null (gmImports goModule) &&
-       null (gmDecls goModule)
+       L.null (gmImports goModule) &&
+       L.null (gmDecls goModule)
 
 -- Property: GoModule large declaration handling
 prop_gomodule_large :: Int -> Property
@@ -154,15 +156,15 @@ prop_gomodule_large numDecls =
   numDecls >= 0 && numDecls <= 1000 ==>
   let decls = replicate numDecls (GoVar (VarDecl ["x"] False))
       goModule = GoModule [] Nothing [] decls
-  in property $ length (gmDecls goModule) === numDecls
+  in property $ L.length (gmDecls goModule) === numDecls
 
 -- Property: ImportDecl path format validation
 prop_import_path_format :: String -> Property
 prop_import_path_format path =
   let hasValidFormat = not (null path) && 
-                       not ( "." `isPrefixOf` path) &&
-                       not ( "/" `isPrefixOf` path) &&
-                       not ("/" `isSuffixOf` path)
+                       not ( "." `L.isPrefixOf` path) &&
+                       not ( "/" `L.isPrefixOf` path) &&
+                       not ("/" `L.isSuffixOf` path)
       importDecl = ImportDecl Nothing path
   in classify hasValidFormat "valid format" $
      property $ True -- Just checking format recognition
@@ -172,20 +174,20 @@ prop_gomodule_mixed_decls :: [GoDecl] -> [GoDecl] -> [GoDecl] -> [GoDecl] -> Pro
 prop_gomodule_mixed_decls funcs types vars consts =
   let allDecls = funcs ++ types ++ vars ++ consts
       goModule = GoModule [] Nothing [] allDecls
-      funcCount = length [() | GoFunc _ <- allDecls]
-      typeCount = length [() | GoType _ <- allDecls]
-      varCount = length [() | GoVar _ <- allDecls]
-      constCount = length [() | GoConst _ <- allDecls]
-      allCorrect = funcCount == length funcs &&
-                   typeCount == length types &&
-                   varCount == length vars &&
-                   constCount == length consts
+      funcCount = L.length [() | GoFunc _ <- allDecls]
+      typeCount = L.length [() | GoType _ <- allDecls]
+      varCount = L.length [() | GoVar _ <- allDecls]
+      constCount = L.length [() | GoConst _ <- allDecls]
+      allCorrect = funcCount == L.length funcs &&
+                   typeCount == L.length types &&
+                   varCount == L.length vars &&
+                   constCount == L.length consts
   in property $ allCorrect
 
 -- Property: PackageDecl name validation
 prop_package_name_validation :: String -> Property
 prop_package_name_validation name =
-  let hasValidChars = all (\c -> c `elem` "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_") name
+  let hasValidChars = L.all (\c -> c `elem` "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_") name
       pkg = PackageDecl name
   in classify hasValidChars "valid package name" $
      property $ True -- Just checking name validation
@@ -193,10 +195,10 @@ prop_package_name_validation name =
 -- Property: GoModule build tag validation
 prop_build_tags_validation :: [String] -> Property
 prop_build_tags_validation tags =
-  let hasValidTags = all (not . null) tags
+  let hasValidTags = L.all (not . null) tags
       goModule = GoModule tags Nothing [] []
-  in classify hasValidTags "all non-empty tags" $
-     property $ length (gmBuildTags goModule) === length tags
+  in classify hasValidTags "L.all non-empty tags" $
+     property $ L.length (gmBuildTags goModule) === L.length tags
 
 -- Property: ImportDecl with alias handling
 prop_import_with_alias :: String -> String -> Property

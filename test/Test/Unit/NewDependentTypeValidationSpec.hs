@@ -6,7 +6,9 @@ import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Arbitrary(..), Gen, oneof, choose, listOf, elements, suchThat)
 import DependentTypesParser
 import qualified Data.Map.Strict as Map
-import Data.List (isInfixOf, nub)
+import qualified Data.List as L
+import Data.List (isInfixOf)
+import Data.List (nub)
 import Data.Maybe (isJust, isNothing, catMaybes)
 import Data.Char (isAlphaNum, isAlpha)
 
@@ -157,9 +159,9 @@ prop_typeRefShowRoundtrip :: TypeRef -> Bool
 prop_typeRefShowRoundtrip typeRef =
     let shown = show typeRef
     in case typeRef of
-        SimpleRef name -> name `isInfixOf` shown
-        GenericRef name args -> name `isInfixOf` shown
-        FuncRef params ret -> "func" `isInfixOf` shown
+        SimpleRef name -> name `L.isInfixOf` shown
+        GenericRef name args -> name `L.isInfixOf` shown
+        FuncRef params ret -> "func" `L.isInfixOf` shown
 
 prop_typeRefEqualityReflexivity :: TypeRef -> Bool
 prop_typeRefEqualityReflexivity typeRef = typeRef == typeRef
@@ -172,18 +174,18 @@ prop_typeBodyStructurePreservation :: TypeBody -> Bool
 prop_typeBodyStructurePreservation typeBody =
     let shown = show typeBody
     in case typeBody of
-        AliasBody ref -> "AliasBody" `isInfixOf` shown
-        StructBody fields -> "StructBody" `isInfixOf` shown && show (length fields) `isInfixOf` shown
-        UnionBody variants -> "UnionBody" `isInfixOf` shown
-        EnumBody values -> "EnumBody" `isInfixOf` shown
+        AliasBody ref -> "AliasBody" `L.isInfixOf` shown
+        StructBody fields -> "StructBody" `L.isInfixOf` shown && show (L.length fields) `L.isInfixOf` shown
+        UnionBody variants -> "UnionBody" `L.isInfixOf` shown
+        EnumBody values -> "EnumBody" `L.isInfixOf` shown
 
 prop_typeBodyValidationCorrectness :: TypeBody -> Bool
 prop_typeBodyValidationCorrectness typeBody =
     case typeBody of
         AliasBody ref -> isValidTypeRef ref
-        StructBody fields -> all isValidField fields
-        UnionBody variants -> all isValidTypeRef variants
-        EnumBody values -> all (not . null) values
+        StructBody fields -> L.all isValidField fields
+        UnionBody variants -> L.all isValidTypeRef variants
+        EnumBody values -> L.all (not . null) values
 
 prop_typeBodyNestingProperties :: TypeBody -> Int -> Property
 prop_typeBodyNestingProperties typeBody depth =
@@ -211,10 +213,10 @@ prop_typeConstraintShowContainsInfo :: TypeConstraint -> Bool
 prop_typeConstraintShowContainsInfo typeConstraint =
     let shown = show typeConstraint
     in case typeConstraint of
-        EqualityConstraint name value -> name `isInfixOf` shown && show value `isInfixOf` shown
-        ComparisonConstraint name op value -> name `isInfixOf` shown && op `isInfixOf` shown
-        LengthConstraint name value -> "len" `isInfixOf` shown && name `isInfixOf` shown
-        PredicateConstraint name args -> name `isInfixOf` shown
+        EqualityConstraint name value -> name `L.isInfixOf` shown && show value `L.isInfixOf` shown
+        ComparisonConstraint name op value -> name `L.isInfixOf` shown && op `L.isInfixOf` shown
+        LengthConstraint name value -> "len" `L.isInfixOf` shown && name `L.isInfixOf` shown
+        PredicateConstraint name args -> name `L.isInfixOf` shown
 
 prop_typeConstraintValidity :: TypeConstraint -> Bool
 prop_typeConstraintValidity typeConstraint =
@@ -222,7 +224,7 @@ prop_typeConstraintValidity typeConstraint =
         EqualityConstraint name value -> not (null name)
         ComparisonConstraint name op value -> not (null name) && op `elem` ["==", ">", ">=", "<", "<="]
         LengthConstraint name value -> not (null name) && value >= 0
-        PredicateConstraint name args -> not (null name) && length args >= 0
+        PredicateConstraint name args -> not (null name) && L.length args >= 0
 
 -- ============================================================================
 -- Properties for DependentType
@@ -242,13 +244,13 @@ prop_dependentTypeValidationPreservesStructure dependentType =
         params = dtParameters dependentType
         body = dtBody dependentType
         constraints = dtConstraints dependentType
-    in not (null name) && length params >= 0 && isValidTypeBody body && length constraints >= 0
+    in not (null name) && L.length params >= 0 && isValidTypeBody body && L.length constraints >= 0
 
 prop_dependentTypeScopeManagement :: [DependentType] -> Bool
 prop_dependentTypeScopeManagement dependentTypes =
     let names = map dtName dependentTypes
         uniqueNames = nub names
-    in length names == length uniqueNames || length names > length uniqueNames
+    in L.length names == L.length uniqueNames || L.length names > L.length uniqueNames
 
 -- ============================================================================
 -- Properties for Parser
@@ -256,7 +258,7 @@ prop_dependentTypeScopeManagement dependentTypes =
 
 prop_parserHandlesValidInput :: String -> Property
 prop_parserHandlesValidInput input =
-    length input < 500 ==>
+    L.length input < 500 ==>
     let result = parseDependentType input
     in case result of
         Left _ -> True  -- Parsing may fail for invalid input
@@ -264,17 +266,17 @@ prop_parserHandlesValidInput input =
 
 prop_parserRecoversFromErrors :: String -> Property
 prop_parserRecoversFromErrors input =
-    length input < 500 ==>
+    L.length input < 500 ==>
     let result = runDependentTypesParser input
     in case result of
         Left _ -> True  -- May fail on completely invalid input
-        Right (types, _) -> length types >= 0  -- Should recover and parse some types
+        Right (types, _) -> L.length types >= 0  -- Should recover L.and parse some types
 
 prop_parserValidationConsistency :: String -> Property
 prop_parserValidationConsistency input =
-    length input < 500 ==>
+    L.length input < 500 ==>
     let errors = validateDependentTypeSyntax input
-    in length errors >= 0  -- Validation should not crash
+    in L.length errors >= 0  -- Validation should not crash
 
 -- ============================================================================
 -- Helper functions
@@ -283,8 +285,8 @@ prop_parserValidationConsistency input =
 -- Check if TypeRef is valid
 isValidTypeRef :: TypeRef -> Bool
 isValidTypeRef (SimpleRef name) = not (null name)
-isValidTypeRef (GenericRef name args) = not (null name) && all isValidTypeRef args
-isValidTypeRef (FuncRef params ret) = all isValidTypeRef params && isValidTypeRef ret
+isValidTypeRef (GenericRef name args) = not (null name) && L.all isValidTypeRef args
+isValidTypeRef (FuncRef params ret) = L.all isValidTypeRef params && isValidTypeRef ret
 
 -- Check if Field is valid
 isValidField :: Field -> Bool
@@ -293,22 +295,22 @@ isValidField (Field name typeRef) = not (null name) && isValidTypeRef typeRef
 -- Check if TypeBody is valid
 isValidTypeBody :: TypeBody -> Bool
 isValidTypeBody (AliasBody ref) = isValidTypeRef ref
-isValidTypeBody (StructBody fields) = all isValidField fields
-isValidTypeBody (UnionBody variants) = all isValidTypeRef variants
-isValidTypeBody (EnumBody values) = all (not . null) values
+isValidTypeBody (StructBody fields) = L.all isValidField fields
+isValidTypeBody (UnionBody variants) = L.all isValidTypeRef variants
+isValidTypeBody (EnumBody values) = L.all (not . null) values
 
 -- Calculate nesting level of TypeBody
 calculateNestingLevel :: TypeBody -> Int
 calculateNestingLevel (AliasBody ref) = calculateTypeRefNesting ref
-calculateNestingLevel (StructBody fields) = maximum $ map (calculateTypeRefNesting . fieldType) fields
-calculateNestingLevel (UnionBody variants) = maximum $ map calculateTypeRefNesting variants
+calculateNestingLevel (StructBody fields) = L.maximum $ L.map (calculateTypeRefNesting . fieldType) fields
+calculateNestingLevel (UnionBody variants) = L.maximum $ map calculateTypeRefNesting variants
 calculateNestingLevel (EnumBody _) = 0
 
 -- Calculate nesting level of TypeRef
 calculateTypeRefNesting :: TypeRef -> Int
 calculateTypeRefNesting (SimpleRef _) = 0
-calculateTypeRefNesting (GenericRef _ args) = 1 + maximum (map calculateTypeRefNesting args)
-calculateTypeRefNesting (FuncRef params ret) = 1 + maximum (map calculateTypeRefNesting (ret : params))
+calculateTypeRefNesting (GenericRef _ args) = 1 + L.maximum (map calculateTypeRefNesting args)
+calculateTypeRefNesting (FuncRef params ret) = 1 + L.maximum (map calculateTypeRefNesting (ret : params))
 
 -- Mock implementations for testing
 parseDependentType :: String -> Either String DependentType

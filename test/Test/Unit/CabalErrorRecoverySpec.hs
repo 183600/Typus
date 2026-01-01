@@ -1,6 +1,7 @@
 module Test.Unit.CabalErrorRecoverySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty)
 
@@ -10,7 +11,7 @@ import qualified Parser (parseTypus)
 import qualified ErrorHandler
 import qualified SourceLocation
 
--- | Error recovery and robustness tests
+-- | Error recovery L.and robustness tests
 tests :: TestTree
 tests =
   testGroup "Cabal Error Recovery Tests"
@@ -53,7 +54,7 @@ tests =
               Left err -> do
                 let errStr = show err
                 -- Error should contain position info
-                any (`elem` ["1:", "2:", "3:"]) (words errStr) @?= True
+                L.any (`elem` ["1:", "2:", "3:"]) (words errStr) @?= True
               Right _ -> @?= "Should fail with position" "Position tracking"
 
         , testCase "Multi-line errors show correct span" $ do
@@ -63,7 +64,7 @@ tests =
               Left err -> do
                 let errStr = show err
                 -- Should indicate multiple lines if applicable
-                length (lines errStr) @?= 1  -- At least one line
+                L.length (lines errStr) @?= 1  -- At least one line
               Right _ -> @?= "Should fail appropriately" "Appropriate failure"
         ]
 
@@ -75,7 +76,7 @@ tests =
               Left err -> do
                 -- ErrorHandler should format the error nicely
                 let formatted = ErrorHandler.formatError err
-                length formatted > 0 @?= True
+                L.length formatted > 0 @?= True
               Right _ -> @?= "Should not reach here" "Unexpected success"
 
         , testCase "ErrorHandler preserves source location information" $ do
@@ -96,14 +97,14 @@ tests =
         , testCase "Only whitespace input handled gracefully" $ do
             let result = Parser.parseTypus "whitespace" "   \n\t  \n  "
             case result of
-              Left err -> length (show err) > 0 @?= True
+              Left err -> L.length (show err) > 0 @?= True
               Right _ -> @?= "Handle whitespace" "Whitespace handling"
 
         , testCase "Extremely long line handled gracefully" $ do
             let longLine = replicate 1000 'a' ++ " func test() { return 1; }"
                 result = Parser.parseTypus "long" longLine
             case result of
-              Left err -> length (show err) > 0 @?= True
+              Left err -> L.length (show err) > 0 @?= True
               Right _ -> @?= "Handle long line" "Long line handling"
 
         , testProperty "Random input doesn't crash parser" $ do
@@ -120,7 +121,7 @@ tests =
             case result of
               Left err -> do
                 -- Should report first error but not crash
-                length (show err) > 0 @?= True
+                L.length (show err) > 0 @?= True
               Right _ -> @?= "Recovery attempt" "Recovery attempted"
 
         , testCase "Multiple errors collected when possible" $ do
@@ -130,7 +131,7 @@ tests =
               Left err -> do
                 -- Should indicate multiple issues if possible
                 let errStr = show err
-                length errStr > 10 @?= True  -- Reasonable error length
+                L.length errStr > 10 @?= True  -- Reasonable error L.length
               Right _ -> @?= "Error collection" "Error collection"
         ]
     ]

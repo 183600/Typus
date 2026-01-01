@@ -10,6 +10,7 @@
 module Test.Unit.NewSourceLocationQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, oneof, sized, vector)
@@ -31,7 +32,7 @@ import SourceLocation
 -- Enhanced Arbitrary Instances
 -- ============================================================================
 
--- Generate valid source positions (positive line and column)
+-- Generate valid source positions (positive line L.and column)
 genValidSourcePos :: Gen SourcePos
 genValidSourcePos = do
   line <- choose (1, 1000)
@@ -66,7 +67,7 @@ genAnySourceSpan = do
 -- Advanced Source Position Properties
 -- ============================================================================
 
--- Property: posAfter newline always increments line and resets column
+-- Property: posAfter newline always increments line L.and resets column
 prop_posAfter_newline_increments_line :: SourcePos -> Property
 prop_posAfter_newline_increments_line pos =
   let newPos = posAfter '\n' pos
@@ -83,7 +84,7 @@ prop_posAfter_tab_alignment pos =
              posColumn newPos === expectedCol .&&.
              posOffset newPos === posOffset pos + 1
 
--- Property: posAfter regular character increments column and offset
+-- Property: posAfter regular character increments column L.and offset
 prop_posAfter_regular_char :: SourcePos -> Char -> Property
 prop_posAfter_regular_char pos char =
   char `notElem` "\n\t" ==>
@@ -102,7 +103,7 @@ prop_posAt_zero_offset line col =
 -- Property: Multiple position advancements are consistent
 prop_multiple_advancements_consistent :: SourcePos -> String -> Property
 prop_multiple_advancements_consistent pos chars =
-  let singleAdvances = foldl (flip posAfter) pos chars
+  let singleAdvances = L.foldl (flip posAfter) pos chars
       batchAdvance = advancePosBy chars pos
   in property $ singleAdvances === batchAdvance
 
@@ -116,7 +117,7 @@ prop_advancement_monotonic pos chars =
 -- Advanced Source Span Properties
 -- ============================================================================
 
--- Property: emptySpan has zero length
+-- Property: emptySpan has zero L.length
 prop_emptySpan_zero_length :: SourcePos -> Property
 prop_emptySpan_zero_length pos =
   let span = emptySpan pos
@@ -180,16 +181,16 @@ prop_locatedAt_single_position pos value =
 prop_mapLocated_preserves_span :: SourceSpan -> [Int] -> Property
 prop_mapLocated_preserves_span span values =
   let located = locatedWithSpan span values
-      mapped = mapLocated sum located
+      mapped = mapLocated L.sum located
   in property $ locatedSpan mapped === locatedSpan located .&&.
              locatedPos mapped === locatedPos located .&&.
-             locatedValue mapped === sum values
+             locatedValue mapped === L.sum values
 
 -- Property: mapLocated composition law
 prop_mapLocated_composition_law :: SourceSpan -> String -> Property
 prop_mapLocated_composition_law span str =
   let located = locatedWithSpan span str
-      f = length
+      f = L.length
       g = (* 2)
   in property $ mapLocated (g . f) located === mapLocated g (mapLocated f located)
 
@@ -233,7 +234,7 @@ prop_advancePosByText_unicode :: SourcePos -> Property
 prop_advancePosByText_unicode pos =
   let unicodeText = T.pack "café 🚀 测试"
       advanced = advancePosByText unicodeText pos
-  in property $ posOffset advanced === posOffset pos + T.length unicodeText
+  in property $ posOffset advanced === posOffset pos + T.L.length unicodeText
 
 -- Property: advancePosByLine preserves column reset
 prop_advancePosByLine_column_reset :: SourcePos -> Int -> Property
@@ -293,30 +294,30 @@ prop_complex_text_position_tracking strings =
         ) strings
         final <- getCurrentPos
         return (positions, final)
-      totalChars = sum (map length strings)
-  in property $ length positions === length strings .&&.
+      totalChars = L.sum (map L.length strings)
+  in property $ L.length positions === L.length strings .&&.
              posOffset finalPos === totalChars .&&.
-             all (\pos -> posLine pos > 0 && posColumn pos > 0) positions
+             L.all (\pos -> posLine pos > 0 && posColumn pos > 0) positions
 
 -- Property: Span merging with multiple spans
 prop_multiple_span_merging :: [SourceSpan] -> Property
 prop_multiple_span_merging spans =
   not (null spans) ==>
-  let merged = foldl mergeSpans (head spans) (tail spans)
+  let merged = foldl mergeSpans (L.head spans) (L.tail spans)
       allStarts = map spanStart spans
       allEnds = map spanEnd spans
-  in property $ spanStart merged === minimum allStarts .&&.
-             spanEnd merged === maximum allEnds .&&.
-             all (`isValidSpan`) spans ==> isValidSpan merged
+  in property $ spanStart merged === L.minimum allStarts .&&.
+             spanEnd merged === L.maximum allEnds .&&.
+             L.all (`isValidSpan`) spans ==> isValidSpan merged
 
 -- Property: Located values with complex transformations
 prop_located_complex_transformations :: SourceSpan -> [Int] -> Property
 prop_located_complex_transformations span values =
   let located = locatedWithSpan span values
-      transformations = [sum, product, length, head]
-      results = map (\f -> mapLocated f located) transformations
-  in property $ all (\loc -> locatedSpan loc === locatedSpan located) results .&&.
-             all (\loc -> locatedPos loc === locatedPos located) results
+      transformations = [L.sum, L.product, L.length, L.head]
+      results = L.map (\f -> mapLocated f located) transformations
+  in property $ L.all (\loc -> locatedSpan loc === locatedSpan located) results .&&.
+             L.all (\loc -> locatedPos loc === locatedPos located) results
 
 -- Property: Position advancement with special characters
 prop_special_char_advancement :: SourcePos -> Property
@@ -324,12 +325,12 @@ prop_special_char_advancement pos =
   let specialChars = "\n\t\r"
       advanced = advancePosBy specialChars pos
       expectedLine = posLine pos + 1 -- Only one newline in our test
-      expectedOffset = posOffset pos + length specialChars
+      expectedOffset = posOffset pos + L.length specialChars
   in property $ posLine advanced === expectedLine .&&.
              posOffset advanced === expectedOffset
 
 -- ============================================================================
--- Performance and Edge Cases
+-- Performance L.and Edge Cases
 -- ============================================================================
 
 -- Property: Large offset handling
@@ -364,15 +365,15 @@ prop_span_validity_edge_cases pos1 pos2 =
 tests :: TestTree
 tests = testGroup "New SourceLocation QuickCheck Tests"
   [ testGroup "Advanced Source Position Properties"
-    [ fastProperty "posAfter newline always increments line and resets column" prop_posAfter_newline_increments_line
+    [ fastProperty "posAfter newline always increments line L.and resets column" prop_posAfter_newline_increments_line
     , fastProperty "posAfter tab aligns to 8-space tab stops" prop_posAfter_tab_alignment
-    , fastProperty "posAfter regular character increments column and offset" prop_posAfter_regular_char
+    , fastProperty "posAfter regular character increments column L.and offset" prop_posAfter_regular_char
     , fastProperty "posAt creates position with zero offset" prop_posAt_zero_offset
     , fastProperty "multiple position advancements are consistent" prop_multiple_advancements_consistent
     , fastProperty "position advancement preserves monotonicity" prop_advancement_monotonic
     ]
   , testGroup "Advanced Source Span Properties"
-    [ fastProperty "emptySpan has zero length" prop_emptySpan_zero_length
+    [ fastProperty "emptySpan has zero L.length" prop_emptySpan_zero_length
     , fastProperty "spanBetween always creates valid span if inputs are ordered" prop_spanBetween_valid_ordered
     , fastProperty "spanBetween handles reversed inputs" prop_spanBetween_reversed
     , fastProperty "mergeSpans always contains both input spans" prop_mergeSpans_contains_inputs
@@ -403,7 +404,7 @@ tests = testGroup "New SourceLocation QuickCheck Tests"
     , fastProperty "located values with complex transformations" prop_located_complex_transformations
     , fastProperty "position advancement with special characters" prop_special_char_advancement
     ]
-  , testGroup "Performance and Edge Cases"
+  , testGroup "Performance L.and Edge Cases"
     [ fastProperty "large offset handling" prop_large_offset_handling
     , fastProperty "edge case position values" prop_edge_case_positions
     , fastProperty "span validity edge cases" prop_span_validity_edge_cases

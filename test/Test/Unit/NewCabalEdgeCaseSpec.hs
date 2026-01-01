@@ -1,6 +1,7 @@
 module Test.Unit.NewCabalEdgeCaseSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, forAll, Arbitrary, arbitrary, (.&&.), (==>))
@@ -31,7 +32,7 @@ tests =
             assertBool "should handle empty files" $ True
         ]
 
-    , testGroup "Unicode and Encoding Edge Cases"
+    , testGroup "Unicode L.and Encoding Edge Cases"
         [ testCase "parser handles mixed unicode encodings" $ do
             let mixed = "Hello 世界 🌍 αβγ"
             let result = Parser.parse mixed
@@ -48,7 +49,7 @@ tests =
             assertBool "should handle control characters" $ True
         ]
 
-    , testGroup "Memory and Resource Edge Cases"
+    , testGroup "Memory L.and Resource Edge Cases"
         [ testCase "compiler handles memory pressure gracefully" $ do
             -- Test behavior under memory constraints
             assertBool "should handle memory pressure" $ True
@@ -62,7 +63,7 @@ tests =
             assertBool "should handle large symbol tables" $ True
         ]
 
-    , testGroup "Concurrent and Parallel Edge Cases"
+    , testGroup "Concurrent L.and Parallel Edge Cases"
         [ testCase "concurrent parsing works correctly" $ do
             -- Test thread safety of parser
             assertBool "concurrent parsing should work" $ True
@@ -126,10 +127,10 @@ tests =
         ]
 
     , testGroup "QuickCheck Properties"
-        [ fastProperty "any string can be parsed without crashing" $
+        [ fastProperty "L.any string can be parsed without crashing" $
             forAll arbitrary $ \input ->
               let result = Parser.parse input
-              in True -- Property ensures no crashes on any input
+              in True -- Property ensures no crashes on L.any input
               
         , fastProperty "compilation never crashes on valid input" $
             forAll arbitrary $ \input ->

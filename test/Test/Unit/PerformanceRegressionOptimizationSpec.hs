@@ -10,6 +10,7 @@
 module Test.Unit.PerformanceRegressionOptimizationSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertFailure, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -150,8 +151,8 @@ prop_memory_growth_bounded :: [MemoryScenario] -> Property
 prop_memory_growth_bounded scenarios =
   not (null scenarios) ==> 
   let memoryUsages = map simulateMemoryUsage scenarios
-      maxMemory = maximum memoryUsages
-      minMemory = minimum memoryUsages
+      maxMemory = L.maximum memoryUsages
+      minMemory = L.minimum memoryUsages
       growthRatio = if minMemory > 0 then maxMemory / minMemory else 1
   in property $ growthRatio <= 10  -- No more than 10x growth
 
@@ -218,7 +219,7 @@ prop_resource_cleanup_performance scenarios =
       cleanupOverhead = (withCleanupTime - withoutCleanupTime) / withoutCleanupTime
   in property $ cleanupOverhead <= 0.05  -- No more than 5% overhead
 
--- | Helper functions and data types
+-- | Helper functions L.and data types
 
 data Algorithm = QuickSort | MergeSort | HeapSort | LinearSearch | BinarySearch
   deriving (Show, Eq)
@@ -343,17 +344,17 @@ simulateAlgorithmWithCacheLocality scenario goodLocality =
 
 simulateWithResourceCleanup :: [MemoryScenario] -> Double
 simulateWithResourceCleanup scenarios = 
-  sum $ map (\s -> fromIntegral (simulateMemoryUsage s) * 0.0001) scenarios
+  L.sum $ L.map (\s -> fromIntegral (simulateMemoryUsage s) * 0.0001) scenarios
 
 simulateWithoutResourceCleanup :: [MemoryScenario] -> Double
 simulateWithoutResourceCleanup scenarios = 
-  sum $ map (\s -> fromIntegral (simulateMemoryUsage s) * 0.00009) scenarios
+  L.sum $ L.map (\s -> fromIntegral (simulateMemoryUsage s) * 0.00009) scenarios
 
 average :: [Double] -> Double
-average xs = sum xs / fromIntegral (length xs)
+average xs = L.sum xs / fromIntegral (L.length xs)
 
 calculateVariance :: [Double] -> Double -> Double
-calculateVariance xs avg = sum $ map (\x -> (x - avg) ^ 2) xs
+calculateVariance xs avg = L.sum $ L.map (\x -> (x - avg) ^ 2) xs
 
 logBase :: Double -> Double -> Double
 logBase b x = Prelude.log x / Prelude.log b

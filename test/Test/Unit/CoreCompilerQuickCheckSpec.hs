@@ -72,7 +72,9 @@ import SourceLocation
 
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, nub, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (nub, sort)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -345,7 +347,7 @@ prop_ir_type_is_well_formed irType =
   case irType of
     IRFunction paramType argTypes -> property $ True
     IRArray elementType -> property $ True
-    IRStruct fields -> property $ all (not . null . fst) fields
+    IRStruct fields -> property $ L.all (not . null . fst) fields
     _ -> property $ True
 
 prop_ir_variable_has_consistent_structure :: IRVariable -> Property
@@ -363,7 +365,7 @@ prop_ir_expression_is_well_formed expr =
         IRVar var -> True
         IRLiteral lit -> True
         IRBinaryOp op left right -> True
-        IRFunctionCall func args -> all isWellFormedIR args
+        IRFunctionCall func args -> L.all isWellFormedIR args
         IRTernary cond thenExpr elseExpr -> True
         IRArrayAccess base index -> True
         IRFieldAccess obj field -> not (null field)
@@ -379,24 +381,24 @@ prop_ir_statement_is_well_formed stmt =
         IRVarDecl var expr -> True
         IRAssignment var expr -> True
         IRReturn expr -> True
-        IRIf cond body elseBody -> all isWellFormedIR (body ++ elseBody)
-        IRWhile cond body -> all isWellFormedIR body
+        IRIf cond body elseBody -> L.all isWellFormedIR (body ++ elseBody)
+        IRWhile cond body -> L.all isWellFormedIR body
         IRExpressionStmt expr -> True
   in property $ isWellFormed === True
 
 -- ============================================================================
--- Properties for IR Functions and Modules
+-- Properties for IR Functions L.and Modules
 -- ============================================================================
 
 prop_ir_function_has_valid_structure :: IRFunction -> Property
 prop_ir_function_has_valid_structure func =
   let IRFunction name params returnType body = func
-  in property $ not (null name) .&&. all (not . null . fst) params .&&. all isWellFormedIR body
+  in property $ not (null name) .&&. L.all (not . null . fst) params .&&. L.all isWellFormedIR body
 
 prop_ir_module_preserves_function_order :: IRModule -> Property
 prop_ir_module_preserves_function_order module =
   let IRModule name functions globals = module
-  in property $ length functions >= 0 .&&. length globals >= 0
+  in property $ L.length functions >= 0 .&&. L.length globals >= 0
 
 -- ============================================================================
 -- Properties for Go AST Types
@@ -407,7 +409,7 @@ prop_go_type_is_well_formed goType =
   case goType of
     GoFunction paramType argTypes -> property $ True
     GoArray elementType -> property $ True
-    GoStruct fields -> property $ all (not . null . fst) fields
+    GoStruct fields -> property $ L.all (not . null . fst) fields
     _ -> property $ True
 
 prop_go_variable_has_consistent_structure :: GoVariable -> Property
@@ -425,7 +427,7 @@ prop_go_expression_is_well_formed expr =
         GoVar var -> True
         GoLiteral lit -> True
         GoBinaryOp op left right -> True
-        GoFunctionCall func args -> all isWellFormedGoAST args
+        GoFunctionCall func args -> L.all isWellFormedGoAST args
         GoTernary cond thenExpr elseExpr -> True
         GoArrayAccess base index -> True
         GoFieldAccess obj field -> not (null field)
@@ -441,24 +443,24 @@ prop_go_statement_is_well_formed stmt =
         GoVarDecl var expr -> True
         GoAssignment var expr -> True
         GoReturn expr -> True
-        GoIf cond body elseBody -> all isWellFormedGoAST (body ++ elseBody)
-        GoWhile cond body -> all isWellFormedGoAST body
+        GoIf cond body elseBody -> L.all isWellFormedGoAST (body ++ elseBody)
+        GoWhile cond body -> L.all isWellFormedGoAST body
         GoExpressionStmt expr -> True
   in property $ isWellFormed === True
 
 -- ============================================================================
--- Properties for Go Functions and Modules
+-- Properties for Go Functions L.and Modules
 -- ============================================================================
 
 prop_go_function_has_valid_structure :: GoFunction -> Property
 prop_go_function_has_valid_structure func =
   let GoFunction name params returnType body = func
-  in property $ not (null name) .&&. all (not . null . fst) params .&&. all isWellFormedGoAST body
+  in property $ not (null name) .&&. L.all (not . null . fst) params .&&. L.all isWellFormedGoAST body
 
 prop_go_module_preserves_function_order :: GoModule -> Property
 prop_go_module_preserves_function_order module =
   let GoModule name functions globals = module
-  in property $ length functions >= 0 .&&. length globals >= 0
+  in property $ L.length functions >= 0 .&&. L.length globals >= 0
 
 -- ============================================================================
 -- Properties for Compilation
@@ -503,13 +505,13 @@ prop_get_compilation_errors_returns_errors :: String -> Property
 prop_get_compilation_errors_returns_errors code =
   not (null code) ==> 
   let errors = getCompilationErrors code
-  in property $ length errors >= 0
+  in property $ L.length errors >= 0
 
 prop_get_compilation_warnings_returns_warnings :: String -> Property
 prop_get_compilation_warnings_returns_warnings code =
   not (null code) ==> 
   let warnings = getCompilationWarnings code
-  in property $ length warnings >= 0
+  in property $ L.length warnings >= 0
 
 prop_clear_compilation_state_resets_state :: Property
 prop_clear_compilation_state_resets_state =
@@ -581,7 +583,7 @@ tests = testGroup "Core Compiler QuickCheck Tests"
     [ fastProperty "ir statement is well formed" prop_ir_statement_is_well_formed
     ]
 
-  , testGroup "IR Functions and Modules Properties"
+  , testGroup "IR Functions L.and Modules Properties"
     [ fastProperty "ir function has valid structure" prop_ir_function_has_valid_structure
     , fastProperty "ir module preserves function order" prop_ir_module_preserves_function_order
     ]
@@ -599,7 +601,7 @@ tests = testGroup "Core Compiler QuickCheck Tests"
     [ fastProperty "go statement is well formed" prop_go_statement_is_well_formed
     ]
 
-  , testGroup "Go Functions and Modules Properties"
+  , testGroup "Go Functions L.and Modules Properties"
     [ fastProperty "go function has valid structure" prop_go_function_has_valid_structure
     , fastProperty "go module preserves function order" prop_go_module_preserves_function_order
     ]

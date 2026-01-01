@@ -23,6 +23,7 @@ import Ownership.Common.Types
 import Ownership.Analyzer (analyzeOwnership)
 import Data.List (sort, nub)
 import Data.Set (Set, fromList, toList, union, intersection)
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 -- | QuickCheck property tests for Ownership transfer properties
@@ -129,7 +130,7 @@ tests =
         , fastProperty "error ordering is consistent" $
             \error1 error2 ->
               let sorted = sort [error1, error2]
-              in length sorted === 2 .&&. head sorted <= last sorted
+              in L.length sorted === 2 .&&. L.head sorted <= last sorted
         ]
 
     , testGroup "Borrowing Properties"
@@ -152,7 +153,7 @@ tests =
             \owner ->
               let borrows = [Borrowed owner, MutBorrowed owner, Borrowed (owner ++ "_2")]
                   sorted = sort borrows
-              in length sorted === length borrows
+              in L.length sorted === L.length borrows
         ]
 
     , testGroup "Move Semantics Properties"
@@ -173,8 +174,8 @@ tests =
               not (null owners) ==>
               let uniqueOwners = nub owners
                   transfers = zipWith (\from to -> 
-                    OwnershipTransfer from to (Owned to)) uniqueOwners (tail uniqueOwners ++ [head uniqueOwners])
-              in length transfers === length uniqueOwners
+                    OwnershipTransfer from to (Owned to)) uniqueOwners (L.tail uniqueOwners ++ [L.head uniqueOwners])
+              in L.length transfers === L.length uniqueOwners
         ]
 
     , testGroup "Lifetime Properties"
@@ -188,7 +189,7 @@ tests =
         , fastProperty "scope boundaries are respected" $
             \variables scopes ->
               let scopedVars = zip variables scopes
-              in length scopedVars === min (length variables) (length scopes)
+              in L.length scopedVars === min (L.length variables) (L.length scopes)
               
         , fastProperty "borrow lifetimes don't exceed owner lifetime" $
             \owner ->
@@ -227,7 +228,7 @@ tests =
         , fastProperty "ownership constraints are preserved" $
             \constraints ->
               let constraintList = constraints
-              in length constraintList >= 0
+              in L.length constraintList >= 0
               
         , fastProperty "ownership inference is sound" $
             \program ->
@@ -240,4 +241,4 @@ tests =
 
 -- Helper function to check if string contains substring
 contains :: String -> String -> Bool
-contains substr str = substr `isInfixOf` str
+contains substr str = substr `L.isInfixOf` str

@@ -15,7 +15,9 @@ import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, oneof, suchThat)
 import Data.Char (isAlphaNum, isSpace, isLetter)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (sort, nub)
 import qualified Data.Text as T
 import Data.Void (Void)
 
@@ -39,7 +41,7 @@ import SourceLocation
   )
 
 -- ============================================================================
--- Helper Functions and Generators
+-- Helper Functions L.and Generators
 -- ============================================================================
 
 -- Generate valid identifiers (alphanumeric + underscore + hyphen)
@@ -76,7 +78,7 @@ genCodeLine = do
   content <- listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t.,;(){}[]+-*/%=<>!&|"
   let line = content
   -- Ensure it doesn't start with directive patterns
-  return $ if "//!" `isPrefixOf` line || "{//!" `isPrefixOf` line
+  return $ if "//!" `L.isPrefixOf` line || "{//!" `L.isPrefixOf` line
            then "code: " ++ line
            else line
 
@@ -132,13 +134,13 @@ prop_parse_empty_content =
   in case result of
     Left _ -> property False
     Right file -> property $ tfDirectives file === defaultFileDirectives .&&.
-                        null (tfBuildTags file) .&&.
-                        null (tfBlocks file)
+                        L.null (tfBuildTags file) .&&.
+                        L.null (tfBlocks file)
 
 -- Property: Parsing content with only file directives preserves them
 prop_parse_file_directives_preserved :: [String] -> Property
 prop_parse_file_directives_preserved directives =
-  all ("//! " `isPrefixOf`) directives ==>
+  L.all ("//! " `L.isPrefixOf`) directives ==>
   let content = unlines directives
       result = parseTypus content
   in case result of
@@ -153,7 +155,7 @@ prop_parse_preserves_line_count lines =
       result = parseTypus content
   in case result of
     Left _ -> property False
-    Right file -> property $ length (tfBlocks file) <= length (filter (not . null . trim) lines)
+    Right file -> property $ L.length (tfBlocks file) <= L.length (L.filter (not . null . trim) lines)
 
 -- Property: Parsing is idempotent for well-formed content
 prop_parse_idempotent :: String -> Property
@@ -163,7 +165,7 @@ prop_parse_idempotent content =
     Left _ -> property True  -- Can't test idempotency on parse failures
     Right file -> property True  -- We can't easily re-serialize, so just ensure it parses
 
--- Property: Parsing handles mixed directives and code correctly
+-- Property: Parsing handles mixed directives L.and code correctly
 prop_parse_mixed_content :: Property
 prop_parse_mixed_content =
   forAll genMixedLines $ \lines ->
@@ -171,7 +173,7 @@ prop_parse_mixed_content =
         result = parseTypus content
     in case result of
       Left _ -> property $ not (null content)  -- Empty content should parse
-      Right file -> property $ length (tfBlocks file) >= 0
+      Right file -> property $ L.length (tfBlocks file) >= 0
 
 -- Property: File directives are correctly extracted
 prop_file_directives_extraction :: Property
@@ -198,14 +200,14 @@ prop_block_directives_association =
 -- Property: Parsing preserves code content
 prop_parse_preserves_code_content :: String -> Property
 prop_parse_preserves_code_content code =
-  not ("//! " `isPrefixOf` code) && not ("{//!" `isPrefixOf` code) ==>
+  not ("//! " `L.isPrefixOf` code) && not ("{//!" `L.isPrefixOf` code) ==>
   let content = code ++ "\n"
       result = parseTypus content
   in case result of
     Left _ -> property False
     Right file -> property $ case tfBlocks file of
       [] -> property $ null code
-      (block:_) -> property $ code `isInfixOf` cbContent block
+      (block:_) -> property $ code `L.isInfixOf` cbContent block
 
 -- Property: Parsing handles Unicode characters
 prop_parse_unicode_handling :: Property
@@ -214,12 +216,12 @@ prop_parse_unicode_handling =
       result = parseTypus unicodeContent
   in case result of
     Left _ -> property False
-    Right file -> property $ "测试" `isInfixOf` (show file) .||. "🚀" `isInfixOf` (show file)
+    Right file -> property $ "测试" `L.isInfixOf` (show file) .||. "🚀" `L.isInfixOf` (show file)
 
 -- Property: Multiple file directives are accumulated
 prop_multiple_file_directives :: [String] -> Property
 prop_multiple_file_directives directives =
-  all ("//! " `isPrefixOf`) directives && not (null directives) ==>
+  L.all ("//! " `L.isPrefixOf`) directives && not (null directives) ==>
   let content = unlines directives
       result = parseTypus content
   in case result of
@@ -244,7 +246,7 @@ prop_parse_with_syntax_errors malformedCode =
       result = parseTypus content
   in case result of
     Left _ -> property False
-    Right file -> property $ length (tfSyntaxErrors file) >= 0
+    Right file -> property $ L.length (tfSyntaxErrors file) >= 0
 
 -- Property: Directive values are correctly parsed
 prop_directive_values_parsed :: String -> String -> Property
@@ -273,20 +275,20 @@ prop_complex_nested_structures =
       result = parseTypus complexContent
   in case result of
     Left _ -> property False
-    Right file -> property $ length (tfBlocks file) >= 2 .&&.
+    Right file -> property $ L.length (tfBlocks file) >= 2 .&&.
                         tfDirectives file /= defaultFileDirectives
 
 -- Property: Parsing is consistent with line endings
 prop_parse_line_endings_consistency :: String -> Property
 prop_parse_line_endings_consistency content =
   let unixContent = unlines (lines content)
-      windowsContent = unlines $ map (++ "\r") $ lines content
+      windowsContent = unlines $ L.map (++ "\r") $ lines content
       unixResult = parseTypus unixContent
       windowsResult = parseTypus windowsContent
   in case (unixResult, windowsResult) of
     (Left _, Left _) -> property True
     (Right unixFile, Right windowsFile) -> property $ 
-      length (tfBlocks unixFile) === length (tfBlocks windowsFile)
+      L.length (tfBlocks unixFile) === L.length (tfBlocks windowsFile)
     _ -> property False  -- One succeeded, one failed - inconsistency
 
 -- Property: Large files are parsed without stack overflow
@@ -294,11 +296,11 @@ prop_large_file_parsing :: Int -> Property
 prop_large_file_parsing multiplier =
   multiplier >= 0 && multiplier <= 100 ==>
   let baseLine = "code line with some content\n"
-      largeContent = concat (replicate multiplier baseLine)
+      largeContent = L.concat (replicate multiplier baseLine)
       result = parseTypus largeContent
   in case result of
     Left _ -> property $ multiplier == 0  -- Only allow failure for empty content
-    Right file -> property $ length (tfBlocks file) >= 0
+    Right file -> property $ L.length (tfBlocks file) >= 0
 
 -- Property: Parsing preserves order of blocks
 prop_parse_preserves_block_order :: [String] -> Property
@@ -307,7 +309,7 @@ prop_parse_preserves_block_order blocks =
       result = parseTypus content
   in case result of
     Left _ -> property False
-    Right file -> property $ length (tfBlocks file) >= 0
+    Right file -> property $ L.length (tfBlocks file) >= 0
 
 -- Property: Malformed directives are handled gracefully
 prop_malformed_directives_handling :: String -> Property
@@ -322,7 +324,7 @@ prop_malformed_directives_handling malformed =
 -- Error Handling Properties
 -- ============================================================================
 
--- Property: Parsing never crashes on any input
+-- Property: Parsing never crashes on L.any input
 prop_parse_never_crashes :: String -> Property
 prop_parse_never_crashes content =
   let result = parseTypus content
@@ -335,7 +337,7 @@ prop_error_messages_useful :: String -> Property
 prop_error_messages_useful content =
   let result = parseTypus content
   in case result of
-    Left errMsg -> property $ length errMsg > 0
+    Left errMsg -> property $ L.length errMsg > 0
     Right _ -> property True
 
 -- ============================================================================

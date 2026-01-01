@@ -2,10 +2,12 @@
 module Test.Unit.DependentTypeConstraintSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool, assertFailure)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck ((===), Property, forAll, Gen, choose, listOf, elements)
-import Data.List (sort, nub, length, intercalate)
+import Data.List (length)
+import Data.List (sort, nub, intercalate)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -27,7 +29,7 @@ import DependentTypesParser
   , tVoid
   )
 
--- | Constraint and validation tests for DependentTypes module
+-- | Constraint L.and validation tests for DependentTypes module
 tests :: TestTree
 tests =
   testGroup "DependentType Constraint Tests"
@@ -40,7 +42,7 @@ tests =
 
     , testGroup "Field properties"
         [ fastProperty "Field equality is reflexive" prop_fieldEquality
-        , fastProperty "Field with same name and type are equal" prop_fieldSameNameType
+        , fastProperty "Field with same name L.and type are equal" prop_fieldSameNameType
         , fastProperty "Field Show is informative" prop_fieldShow
         ]
 
@@ -59,7 +61,7 @@ tests =
 
     , testGroup "TypeParameter properties"
         [ fastProperty "TypeParameter equality is reflexive" prop_typeParamEquality
-        , fastProperty "TypeParameter preserves all fields" prop_typeParamPreservesFields
+        , fastProperty "TypeParameter preserves L.all fields" prop_typeParamPreservesFields
         ]
 
     , testGroup "DependentType properties"
@@ -80,7 +82,7 @@ tests =
             let errors = [SyntaxError "test error" 1 "fragment"]
                 parser = DependentTypesParser errors Map.empty "test"
             length (parserErrors parser) @?= 1
-            case head (parserErrors parser) of
+            case L.head (parserErrors parser) of
               SyntaxError msg line fragment -> do
                 msg @?= "test error"
                 line @?= 1
@@ -106,7 +108,7 @@ tests =
                   , PredicateConstraint "valid" ["param1", "param2"]
                   ]
             length constraints @?= 4
-            let constraintTypes = map (\c -> case c of
+            let constraintTypes = L.map (\c -> case c of
                   EqualityConstraint _ _ -> "Equality"
                   InequalityConstraint _ _ -> "Inequality"
                   RangeConstraint _ _ _ -> "Range"
@@ -124,7 +126,7 @@ tests =
                 deeplyNested = TypeRef "Container" [outerType, TypeRef "List" [outerType]]
             refName deeplyNested @?= "Container"
             length (refArgs deeplyNested) @?= 2
-            let firstArg = head (refArgs deeplyNested)
+            let firstArg = L.head (refArgs deeplyNested)
             refName firstArg @?= "Map"
             length (refArgs firstArg) @?= 2
 
@@ -149,7 +151,7 @@ tests =
                 length params' @?= 2
                 length constraints' @?= 3
                 case body' of
-                  StructBody fields' -> length fields' @?= 3
+                  StructBody fields' -> L.length fields' @?= 3
                   _ -> assertFailure "Expected StructBody"
               _ -> assertFailure "Expected TypeDecl"
 
@@ -189,7 +191,7 @@ tests =
                   , TypeVariableError "Type variable error"
                   ]
             length errors @?= 6
-            let errorTypes = map (\e -> case e of
+            let errorTypes = L.map (\e -> case e of
                   SyntaxError _ _ _ -> "Syntax"
                   InvalidTypeSyntax _ -> "InvalidType"
                   MissingConstraint _ -> "MissingConstraint"
@@ -264,15 +266,15 @@ prop_typeRefDifferentArgs name arg1 arg2 =
 prop_typeRefShow :: TypeRef -> Property
 prop_typeRefShow typeRef = 
   let typeString = show typeRef
-  in length typeString > 0 && refName typeRef `isInfixOf` typeString
+  in L.length typeString > 0 && refName typeRef `L.isInfixOf` typeString
   where
-    isInfixOf needle haystack = needle `elem` [take (length needle) $ drop i haystack | i <- [0..length haystack - length needle]]
+    isInfixOf needle haystack = needle `elem` [take (L.length needle) $ drop i haystack | i <- [0..L.length haystack - L.length needle]]
 
 -- Property: Field equality is reflexive
 prop_fieldEquality :: Field -> Property
 prop_fieldEquality field = field === field
 
--- Property: Field with same name and type are equal
+-- Property: Field with same name L.and type are equal
 prop_fieldSameNameType :: String -> TypeRef -> Property
 prop_fieldSameNameType name fieldType =
   let field1 = Field name fieldType
@@ -283,10 +285,10 @@ prop_fieldSameNameType name fieldType =
 prop_fieldShow :: Field -> Property
 prop_fieldShow field =
   let fieldString = show field
-  in length fieldString > 0 && 
-     fieldName field `isInfixOf` fieldString
+  in L.length fieldString > 0 && 
+     fieldName field `L.isInfixOf` fieldString
   where
-    isInfixOf needle haystack = needle `elem` [take (length needle) $ drop i haystack | i <- [0..length haystack - length needle]]
+    isInfixOf needle haystack = needle `elem` [take (L.length needle) $ drop i haystack | i <- [0..L.length haystack - L.length needle]]
 
 -- Property: TypeConstraint equality is reflexive
 prop_constraintEquality :: TypeConstraint -> Property
@@ -336,15 +338,15 @@ prop_structBodyShow :: [Field] -> Property
 prop_structBodyShow fields =
   let body = StructBody fields
       bodyString = show body
-  in length bodyString > 0 && "StructBody" `isInfixOf` bodyString
+  in L.length bodyString > 0 && "StructBody" `L.isInfixOf` bodyString
   where
-    isInfixOf needle haystack = needle `elem` [take (length needle) $ drop i haystack | i <- [0..length haystack - length needle]]
+    isInfixOf needle haystack = needle `elem` [take (L.length needle) $ drop i haystack | i <- [0..L.length haystack - L.length needle]]
 
 -- Property: TypeParameter equality is reflexive
 prop_typeParamEquality :: TypeParameter -> Property
 prop_typeParamEquality param = param === param
 
--- Property: TypeParameter preserves all fields
+-- Property: TypeParameter preserves L.all fields
 prop_typeParamPreservesFields :: String -> TypeRef -> [TypeConstraint] -> Property
 prop_typeParamPreservesFields name paramType constraints =
   let param = TypeParameter name paramType constraints

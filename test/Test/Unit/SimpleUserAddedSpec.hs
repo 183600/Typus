@@ -10,7 +10,7 @@ tests :: TestTree
 tests = testGroup "Simple User Added Properties"
   [ fastProperty "addition is commutative" prop_addition_commutative
   , fastProperty "addition is associative" prop_addition_associative
-  , fastProperty "list reverse is involution" prop_reverse_involution
+  , fastProperty "list L.reverse is involution" prop_reverse_involution
   ]
 
 prop_addition_commutative :: Int -> Int -> Property
@@ -20,4 +20,4 @@ prop_addition_associative :: Int -> Int -> Int -> Property
 prop_addition_associative x y z = (x + y) + z === x + (y + z)
 
 prop_reverse_involution :: [Int] -> Property
-prop_reverse_involution xs = reverse (reverse xs) === xs
+prop_reverse_involution xs = L.reverse (L.reverse xs) === xs

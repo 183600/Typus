@@ -13,6 +13,7 @@ import qualified Parser
 import SourceLocation (Located(..), locatedAt, startPos)
 import qualified SourceLocation
 import qualified Data.Map as Map
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import Data.Maybe (isJust, isNothing)
 import qualified Data.Text as T
@@ -64,7 +65,7 @@ prop_ownership_directive_disabled_skips_checks typusFile =
         fdOwnership = Just $ SourceLocation.locatedAt (SourceLocation.startPos) False } }
       fileStr = typusFileToString ownershipDisabled
       result = analyzeOwnership fileStr
-  in property $ not ("ownership" `isInfixOf` show result && "violation" `isInfixOf` show result)
+  in property $ not ("ownership" `L.isInfixOf` show result && "violation" `L.isInfixOf` show result)
 
 -- Property: Variable declarations create owned resources
 prop_ownership_variable_declaration_creates_ownership :: String -> String -> Property
@@ -78,7 +79,7 @@ prop_ownership_variable_declaration_creates_ownership varName varType =
 -- Property: Function parameters are borrowed by default
 prop_ownership_function_parameters_borrowed :: [String] -> [String] -> Property
 prop_ownership_function_parameters_borrowed paramNames paramTypes =
-  let minLen = min (length paramNames) (length paramTypes)
+  let minLen = min (L.length paramNames) (L.length paramTypes)
       limitedParams = take minLen paramNames
       limitedTypes = take minLen paramTypes
       paramList = unwords $ zipWith (\name t -> name ++ " " ++ t) limitedParams limitedTypes

@@ -7,13 +7,14 @@ import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), counterexample, forAll, choose, listOf, elements, suchThat)
 import Utils
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 
 -- | QuickCheck tests for Utils module
 tests :: TestTree
 tests =
   testGroup "New Cabal Utils QuickCheck Tests"
-    [ testProperty "splitBy and splitByCollapsed consistency" prop_splitByConsistency
+    [ testProperty "splitBy L.and splitByCollapsed consistency" prop_splitByConsistency
     , testProperty "trim removes only leading/trailing whitespace" prop_trimBehavior
     , testProperty "splitBy preserves order" prop_splitByOrder
     , testProperty "removeLineComments preserves non-comment content" prop_removeLineCommentsPreservesContent
@@ -23,16 +24,16 @@ tests =
     , testProperty "trim is idempotent" prop_trimIdempotent
     ]
 
--- | splitByCollapsed should be equivalent to filter (not . null) . splitBy
+-- | splitByCollapsed should be equivalent to L.filter (not . null) . splitBy
 prop_splitByConsistency :: String -> Char -> Bool
 prop_splitByConsistency input delim =
-  splitByCollapsed delim input == filter (not . null) (splitBy delim input)
+  splitByCollapsed delim input == L.filter (not . null) (splitBy delim input)
 
--- | trim should only remove whitespace from beginning and end
+-- | trim should only remove whitespace from beginning L.and end
 prop_trimBehavior :: String -> Bool
 prop_trimBehavior input =
   let trimmed = trim input
-      leadingRemoved = null input || not (isSpace (head input)) || isSpace (head trimmed) == False
+      leadingRemoved = null input || not (isSpace (L.head input)) || isSpace (L.head trimmed) == False
       trailingRemoved = null trimmed || not (isSpace (last trimmed))
   in leadingRemoved && trailingRemoved
 
@@ -53,7 +54,7 @@ prop_removeLineCommentsPreservesContent input =
   let withoutComments = removeLineComments input
       linesWithoutComments = lines withoutComments
       originalLines = lines input
-  in all (\line -> not ("//" `isInfixOf` line)) linesWithoutComments
+  in L.all (\line -> not ("//" `L.isInfixOf` line)) linesWithoutComments
 
 -- | normalizeIndentation should preserve the relative structure of indentation
 prop_normalizeIndentationStructure :: String -> Bool
@@ -61,17 +62,17 @@ prop_normalizeIndentationStructure input =
   let normalized = normalizeIndentation input
       originalLines = lines input
       normalizedLines = lines normalized
-  in length originalLines == length normalizedLines
+  in L.length originalLines == L.length normalizedLines
 
 -- | breakOn should correctly split strings
 prop_breakOnCorrectness :: String -> String -> Property
 prop_breakOnCorrectness input pattern =
-  forAll (choose (0, length input)) $ \idx ->
+  forAll (choose (0, L.length input)) $ \idx ->
     let pattern' = if null pattern then take 1 input else pattern
         (prefix, suffix) = breakOn pattern' input
-        expected = if pattern' `isInfixOf` input
-                   then let (pre, suf) = break (pattern' `isPrefixOf`) input
-                        in (pre, drop (length pattern') suf)
+        expected = if pattern' `L.isInfixOf` input
+                   then let (pre, suf) = break (pattern' `L.isPrefixOf`) input
+                        in (pre, drop (L.length pattern') suf)
                    else (input, "")
     in counterexample ("Input: " ++ show input ++ ", Pattern: " ++ show pattern') $
        (prefix, suffix) === expected

@@ -2,6 +2,7 @@
 module Test.Unit.DependencyCycleDetectionQuickCheckSpec (tests) where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 
@@ -18,21 +19,21 @@ import Data.List (nub, sort, (\\))
 -- Dependency Cycle Detection Property Tests
 -- ============================================================================
 
--- | Test that cycle detection finds all actual cycles
+-- | Test that cycle detection finds L.all actual cycles
 prop_cycleDetectionFindsAllCycles :: DependencyGraph -> Property
 prop_cycleDetectionFindsAllCycles graph =
   let detectedCycles = detectCycles graph
       actualCycles = findActualCycles graph
-  in counterexample ("Cycle detection should find all actual cycles. " ++
+  in counterexample ("Cycle detection should find L.all actual cycles. " ++
                      "Detected: " ++ show detectedCycles ++
                      " Actual: " ++ show actualCycles)
-     (all (`elem` detectedCycles) actualCycles)
+     (L.all (`elem` detectedCycles) actualCycles)
 
 -- | Test that cycle detection doesn't produce false positives
 prop_cycleDetectionNoFalsePositives :: DependencyGraph -> Property
 prop_cycleDetectionNoFalsePositives graph =
   let detectedCycles = detectCycles graph
-      falsePositives = filter (not . isValidCycle graph) detectedCycles
+      falsePositives = L.filter (not . isValidCycle graph) detectedCycles
   in counterexample ("Cycle detection shouldn't produce false positives. " ++
                      "Detected: " ++ show detectedCycles ++
                      " False positives: " ++ show falsePositives)
@@ -47,7 +48,7 @@ prop_cycleDetectionHandlesSelfDependencies node =
   in counterexample ("Cycle detection should handle self-dependencies. " ++
                      "Node: " ++ node ++
                      " Cycles: " ++ show cycles)
-     (any (== expectedCycle) cycles)
+     (L.any (== expectedCycle) cycles)
 
 -- | Test that cycle detection works with disconnected components
 prop_cycleDetectionHandlesDisconnectedComponents :: [String] -> [String] -> Property
@@ -55,13 +56,13 @@ prop_cycleDetectionHandlesDisconnectedComponents component1 component2 =
   not (null component1) && not (null component2) ==> 
     let graph = createDisconnectedGraph component1 component2
         cycles = detectCycles graph
-        component1Cycles = filter (any (`elem` component1)) cycles
-        component2Cycles = filter (any (`elem` component2)) cycles
+        component1Cycles = L.filter (L.any (`elem` component1)) cycles
+        component2Cycles = L.filter (L.any (`elem` component2)) cycles
     in counterexample ("Cycle detection should work with disconnected components. " ++
                        "Component1: " ++ show component1 ++
                        " Component2: " ++ show component2 ++
                        " Cycles: " ++ show cycles)
-       (length component1Cycles + length component2Cycles === length cycles)
+       (L.length component1Cycles + L.length component2Cycles === L.length cycles)
 
 -- | Test that cycle detection preserves cycle minimality
 prop_cycleDetectionPreservesMinimality :: DependencyGraph -> Property
@@ -71,7 +72,7 @@ prop_cycleDetectionPreservesMinimality graph =
   in counterexample ("Cycle detection should preserve cycle minimality. " ++
                      "All cycles: " ++ show cycles ++
                      " Minimal: " ++ show minimalCycles)
-     (all isMinimalCycle cycles)
+     (L.all isMinimalCycle cycles)
 
 -- | Test that cycle detection handles transitive dependencies
 prop_cycleDetectionHandlesTransitiveDependencies :: String -> String -> String -> Property
@@ -81,7 +82,7 @@ prop_cycleDetectionHandlesTransitiveDependencies a b c =
   in counterexample ("Cycle detection should handle transitive dependencies. " ++
                      "A: " ++ a ++ " B: " ++ b ++ " C: " ++ c ++
                      " Cycles: " ++ show cycles)
-     (length cycles >= 0)
+     (L.length cycles >= 0)
 
 -- | Test that cycle detection is deterministic
 prop_cycleDetectionIsDeterministic :: DependencyGraph -> Property
@@ -100,7 +101,7 @@ prop_cycleDetectionHandlesComplexGraphs dependencies =
     in counterexample ("Cycle detection should handle complex graphs. " ++
                        "Dependencies: " ++ show dependencies ++
                        " Cycles: " ++ show cycles)
-       (all isValidCycle cycles)
+       (L.all isValidCycle cycles)
 
 -- | Test that cycle detection identifies minimal cycles correctly
 prop_cycleDetectionIdentifiesMinimalCycles :: DependencyGraph -> Property
@@ -122,13 +123,13 @@ prop_cycleDetectionHandlesDiamondDependencies root left right bottom =
                      "Root: " ++ root ++ " Left: " ++ left ++ 
                      " Right: " ++ right ++ " Bottom: " ++ bottom ++
                      " Cycles: " ++ show cycles)
-     (length cycles >= 0)
+     (L.length cycles >= 0)
 
 -- | Test that cycle detection preserves dependency direction
 prop_cycleDetectionPreservesDependencyDirection :: DependencyGraph -> Property
 prop_cycleDetectionPreservesDependencyDirection graph =
   let cycles = detectCycles graph
-      validDirections = all (hasValidDirection graph) cycles
+      validDirections = L.all (hasValidDirection graph) cycles
   in counterexample ("Cycle detection should preserve dependency direction. " ++
                      "Cycles: " ++ show cycles)
      (validDirections === True)
@@ -149,7 +150,7 @@ prop_cycleDetectionHandlesSingleNodeGraph node =
   in counterexample ("Cycle detection should handle single node graphs. " ++
                      "Node: " ++ node ++
                      " Cycles: " ++ show cycles)
-     (length cycles >= 0)
+     (L.length cycles >= 0)
 
 -- | Test that cycle detection handles type dependencies
 prop_cycleDetectionHandlesTypeDependencies :: [TypeDependency] -> Property
@@ -160,13 +161,13 @@ prop_cycleDetectionHandlesTypeDependencies typeDeps =
     in counterexample ("Cycle detection should handle type dependencies. " ++
                        "Type deps: " ++ show typeDeps ++
                        " Cycles: " ++ show cycles)
-       (all isValidTypeCycle cycles)
+       (L.all isValidTypeCycle cycles)
 
 -- | Test that cycle detection provides meaningful cycle paths
 prop_cycleDetectionProvidesMeaningfulPaths :: DependencyGraph -> Property
 prop_cycleDetectionProvidesMeaningfulPaths graph =
   let cycles = detectCycles graph
-      meaningfulPaths = all hasMeaningfulPath cycles
+      meaningfulPaths = L.all hasMeaningfulPath cycles
   in counterexample ("Cycle detection should provide meaningful cycle paths. " ++
                      "Cycles: " ++ show cycles)
      (meaningfulPaths === True)
@@ -174,15 +175,15 @@ prop_cycleDetectionProvidesMeaningfulPaths graph =
 -- | Test that cycle detection handles circular imports
 prop_cycleDetectionHandlesCircularImports :: [String] -> Property
 prop_cycleDetectionHandlesCircularImports modules =
-  length modules > 1 ==> 
+  L.length modules > 1 ==> 
     let graph = createCircularImportGraph modules
         cycles = detectCycles graph
-        expectedCycle = modules ++ [head modules]
+        expectedCycle = modules ++ [L.head modules]
     in counterexample ("Cycle detection should handle circular imports. " ++
                        "Modules: " ++ show modules ++
                        " Expected: " ++ show expectedCycle ++
                        " Detected: " ++ show cycles)
-       (any (== expectedCycle) cycles)
+       (L.any (== expectedCycle) cycles)
 
 -- | Test that cycle detection is efficient for large graphs
 prop_cycleDetectionIsEfficient :: Int -> Property
@@ -191,7 +192,7 @@ prop_cycleDetectionIsEfficient size =
     let graph = createLargeGraph size
         cycles = detectCycles graph
     in counterexample ("Cycle detection should be efficient for large graphs")
-       (length cycles >= 0)
+       (L.length cycles >= 0)
 
 -- | Test that cycle detection handles bidirectional dependencies
 prop_cycleDetectionHandlesBidirectionalDependencies :: String -> String -> Property
@@ -203,7 +204,7 @@ prop_cycleDetectionHandlesBidirectionalDependencies a b =
                      "A: " ++ a ++ " B: " ++ b ++
                      " Expected: " ++ show expectedCycle ++
                      " Detected: " ++ show cycles)
-     (any (== expectedCycle) cycles)
+     (L.any (== expectedCycle) cycles)
 
 -- ============================================================================
 -- Helper Functions (Mock implementations for testing)
@@ -239,7 +240,7 @@ findActualCycles :: DependencyGraph -> [[String]]
 findActualCycles _ = [["a", "b", "a"]]
 
 isValidCycle :: DependencyGraph -> [String] -> Bool
-isValidCycle _ cycle = length cycle >= 2 && head cycle == last cycle
+isValidCycle _ cycle = L.length cycle >= 2 && L.head cycle == last cycle
 
 createSelfDependencyGraph :: String -> DependencyGraph
 createSelfDependencyGraph node = DependencyGraph 
@@ -259,7 +260,7 @@ filterMinimalCycles :: [[String]] -> [[String]]
 filterMinimalCycles = id
 
 isMinimalCycle :: [String] -> Bool
-isMinimalCycle cycle = length cycle <= 4
+isMinimalCycle cycle = L.length cycle <= 4
 
 findMinimalCycles :: DependencyGraph -> [[String]]
 findMinimalCycles _ = [["a", "b", "a"]]
@@ -302,7 +303,7 @@ createBidirectionalGraph a b = DependencyGraph Map.empty []
 
 tests :: TestTree
 tests = testGroup "Dependency Cycle Detection QuickCheck Tests"
-  [ testProperty "Cycle detection finds all actual cycles" prop_cycleDetectionFindsAllCycles
+  [ testProperty "Cycle detection finds L.all actual cycles" prop_cycleDetectionFindsAllCycles
   , testProperty "Cycle detection doesn't produce false positives" prop_cycleDetectionNoFalsePositives
   , testProperty "Cycle detection handles self-dependencies" prop_cycleDetectionHandlesSelfDependencies
   , testProperty "Cycle detection works with disconnected components" prop_cycleDetectionHandlesDisconnectedComponents

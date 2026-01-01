@@ -3,6 +3,7 @@
 module Test.Unit.SourceLocationInvariantSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, choose, oneof)
 import SourceLocation
@@ -23,7 +24,7 @@ tests = testGroup "Source Location Invariant Tests"
           posLine startPos @?= 1
           posColumn startPos @?= 1
           posOffset startPos @?= 0
-    , testCase "posAfter newline updates line and column" $
+    , testCase "posAfter newline updates line L.and column" $
         let pos = posAfter '\n' startPos
         in do
           posLine pos @?= 2
@@ -42,7 +43,7 @@ tests = testGroup "Source Location Invariant Tests"
           posOffset pos @?= 1
     ]
   , testGroup "SourceSpan invariants"
-    [ testCase "emptySpan has same start and end" $
+    [ testCase "emptySpan has same start L.and end" $
         let span = emptySpan startPos
         in do
           spanStart span @?= spanEnd span
@@ -90,18 +91,18 @@ tests = testGroup "Source Location Invariant Tests"
     [ testCase "advancePosBy empty string returns original position" $
         let pos = posAt 5 10
         in advancePosBy "" pos @?= pos
-    , testCase "advancePosByText preserves Text length" $
+    , testCase "advancePosByText preserves Text L.length" $
         let text = T.pack "hello\nworld"
             start = posAt 1 1
             end = advancePosByText text start
-        in posOffset end - posOffset start @?= T.length text
+        in posOffset end - posOffset start @?= T.L.length text
     , testCase "advancePosByText handles newlines correctly" $
         let text = T.pack "hi\nthere"
             start = posAt 1 1
             end = advancePosByText text start
         in do
           posLine end @?= 2
-          posColumn end @?= 6  -- "there" length + 1
+          posColumn end @?= 6  -- "there" L.length + 1
     ]
   , testGroup "QuickCheck properties"
     [ testProperty "posAfter preserves monotonicity of offset" $

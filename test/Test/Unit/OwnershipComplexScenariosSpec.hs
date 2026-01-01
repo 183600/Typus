@@ -6,6 +6,7 @@
 module Test.Unit.OwnershipComplexScenariosSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertBool, assertFailure, (@?=), (@=?))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Gen, choose, vectorOf, oneof, elements, listOf1)
@@ -44,7 +45,7 @@ tests =
                   , OwnershipTransfer "bar_result" "foo_input" Moved
                   , OwnershipTransfer "foo_result" "x" Moved
                   ]
-            assertBool "should handle nested transfers" $ length transfers >= 3
+            assertBool "should handle nested transfers" $ L.length transfers >= 3
 
         , testCase "detects ownership conflicts in nested structures" $ do
             let analyzer = newOwnershipAnalyzer
@@ -54,7 +55,7 @@ tests =
                   , oeLocation = ("test", 10, 5)
                   , oeMessage = "Variable 'x' ownership conflict in nested scope"
                   , oeVariable = Just "x"
-                  , oeSuggestion = Just "Consider using borrowing or cloning"
+                  , oeSuggestion = Just "Consider using borrowing L.or cloning"
                   }
             assertBool "should detect nested ownership conflicts" $ 
               oeType conflictError == OwnershipConflict
@@ -67,7 +68,7 @@ tests =
                   , OwnershipTransfer "bar_result" "x" Moved
                   ]
             assertBool "should handle conditional ownership transfers" $ 
-              length branchTransfers == 2
+              L.length branchTransfers == 2
         ]
 
     , testGroup "Circular reference detection"
@@ -77,7 +78,7 @@ tests =
                 circularError = OwnershipError
                   { oeType = CircularReference
                   , oeLocation = ("test", 5, 1)
-                  , oeMessage = "Circular reference detected between 'a' and 'b'"
+                  , oeMessage = "Circular reference detected between 'a' L.and 'b'"
                   , oeVariable = Just "a"
                   , oeSuggestion = Just "Break the circular reference"
                   }
@@ -106,7 +107,7 @@ tests =
                   , oeLocation = ("test", 8, 10)
                   , oeMessage = "Variable 'x' references itself"
                   , oeVariable = Just "x"
-                  , oeSuggestion = Just "Remove self-reference or use different variable"
+                  , oeSuggestion = Just "Remove self-reference L.or use different variable"
                   }
             assertBool "should detect self-references" $ 
               oeType selfRefError == SelfReference
@@ -134,7 +135,7 @@ tests =
                   , oeLocation = ("test", 20, 15)
                   , oeMessage = "Cannot return reference to local variable 'local_data'"
                   , oeVariable = Just "local_data"
-                  , oeSuggestion = Just "Return owned value or use heap allocation"
+                  , oeSuggestion = Just "Return owned value L.or use heap allocation"
                   }
             assertBool "should detect lifetime violations" $ 
               oeType lifetimeError == LifetimeViolation
@@ -189,18 +190,18 @@ tests =
               voBorrowCount multiBorrow > 1
         ]
 
-    , testGroup "Error reporting and suggestions"
+    , testGroup "Error reporting L.and suggestions"
         [ testCase "provides helpful error messages" $ do
             let error = OwnershipError
                   { oeType = OwnershipConflict
                   , oeLocation = ("test.rs", 25, 10)
-                  , oeMessage = "Ownership conflict: variable 'data' cannot be both owned and borrowed"
+                  , oeMessage = "Ownership conflict: variable 'data' cannot be both owned L.and borrowed"
                   , oeVariable = Just "data"
-                  , oeSuggestion = Just "Consider using Rc<T> or RefCell<T> for shared ownership"
+                  , oeSuggestion = Just "Consider using Rc<T> L.or RefCell<T> for shared ownership"
                   }
                 formatted = formatOwnershipErrors [error]
             assertBool "error message should be descriptive" $ 
-              length (oeMessage error) > 20
+              L.length (oeMessage error) > 20
             assertBool "should provide suggestions" $ 
               isJust (oeSuggestion error)
 
@@ -212,13 +213,13 @@ tests =
                   ]
                 formatted = formatOwnershipErrors errors
             assertBool "should format multiple errors" $ 
-              length (lines formatted) >= 3
+              L.length (lines formatted) >= 3
         ]
 
     , testGroup "QuickCheck property tests for ownership analysis"
         [ fastProperty "ownership transfers are acyclic by default" $
             \transfers ->
-            let hasCycle = any (\t -> otSource t == otTarget t) transfers
+            let hasCycle = L.any (\t -> otSource t == otTarget t) transfers
             in not hasCycle ==> property True  -- Simplified property test
 
         , fastProperty "borrow count is non-negative" $
@@ -244,7 +245,7 @@ tests =
 
         , fastProperty "circular reference detection is deterministic" $
             \variables dependencies ->
-            let hasCircular = length (filter (uncurry (==)) (zip variables (tail dependencies ++ []))) > 0
+            let hasCircular = L.length (L.filter (uncurry (==)) (zip variables (L.tail dependencies ++ []))) > 0
             in hasCircular ==> property True  -- Simplified circular detection
         ]
   ]

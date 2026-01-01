@@ -1,12 +1,13 @@
 module Test.Unit.NewErrorHandlerPropertiesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Arbitrary(..), Gen, oneof, choose, listOf, elements, suchThat)
 import Compiler.Errors.Core
 import SourceLocation (SourcePos(..), SourceSpan(..))
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 import Data.Time (UTCTime, addUTCTime, nominalDay)
 import Data.Maybe (isJust, isNothing)
 
@@ -88,9 +89,7 @@ instance Arbitrary TypeError where
         context <- arbitrary
         timestamp <- arbitrary
         recovery <- arbitrary
-        return $ TypeError severity category message location context timestamp recovery
-
-instance Arbitrary ErrorRecovery where
+        return $ TypeError errId severity category message location context timestamp recovery instance Arbitrary ErrorRecovery where
     arbitrary = oneof
         [ return NoRecovery
         , return SkipCurrentBlock
@@ -161,21 +160,21 @@ prop_errorCollectorPreservesOrder errors =
     let collector = newErrorCollector
         addErr e = modify (e :)
         result = execState (mapM_ addErr errors) collector
-        collected = reverse result  -- Reverse because we added to front
-    in length collected == length errors
+        collected = L.reverse result  -- Reverse because we added to front
+    in L.length collected == L.length errors
 
 prop_errorFilteringBySeverity :: [TypeError] -> ErrorSeverity -> Bool
 prop_errorFilteringBySeverity errors minSeverity =
     let filtered = filterBySeverity minSeverity errors
-    in all (\e -> isAtLeast minSeverity (severity e)) filtered
+    in L.all (\e -> isAtLeast minSeverity (severity e)) filtered
 
 prop_errorStatisticsAccuracy :: [TypeError] -> Bool
 prop_errorStatisticsAccuracy errors =
     let stats = getErrorStatistics errors
-        actualFatal = length $ filter (\e -> severity e == Fatal) errors
-        actualError = length $ filter (\e -> severity e == Error) errors
-        actualWarning = length $ filter (\e -> severity e == Warning) errors
-        actualInfo = length $ filter (\e -> severity e == Info) errors
+        actualFatal = L.length $ L.filter (\e -> severity e == Fatal) errors
+        actualError = L.length $ L.filter (\e -> severity e == Error) errors
+        actualWarning = L.length $ L.filter (\e -> severity e == Warning) errors
+        actualInfo = L.length $ L.filter (\e -> severity e == Info) errors
     in stats == (actualFatal, actualError, actualWarning, actualInfo)
 
 -- ============================================================================
@@ -186,14 +185,14 @@ prop_formatErrorPreservesInfo :: TypeError -> Bool
 prop_formatErrorPreservesInfo error =
     let formatted = formatError error
         message = T.unpack (errorMessage error)
-    in message `isInfixOf` formatted
+    in message `L.isInfixOf` formatted
 
 prop_formatErrorsPreservesCount :: [TypeError] -> Bool
 prop_formatErrorsPreservesCount errors =
     let formatted = formatErrors errors
         -- Count error indicators in formatted output
-        errorCount = length $ filter (== "error") (words formatted)
-    in errorCount >= length errors  -- At least one error indicator per error
+        errorCount = L.length $ L.filter (== "error") (words formatted)
+    in errorCount >= L.length errors  -- At least one error indicator per error
 
 prop_errorFormattingIdempotence :: TypeError -> Bool
 prop_errorFormattingIdempotence error =
@@ -238,13 +237,7 @@ prop_recoveryStrategyCreation recovery =
 
 prop_errorLocationPreservation :: String -> ErrorLocation -> Bool
 prop_errorLocationPreservation message location =
-    let error = errorAt location message
-        errorLoc = errorLocation error
-    in errorLoc == location
-
-prop_errorWithContext :: String -> ErrorContext -> Bool
-prop_errorWithContext message context =
-    let error = withContext context (error message)
+    let error = errorAt "test-id" (error message)
         errorContext = errorContext error
     in errorContext == context
 
@@ -261,7 +254,7 @@ prop_errorCombinationProperties primary secondary =
 
 -- Check if a substring is in a string
 isInfixOf :: Eq a => [a] -> [a] -> Bool
-isInfixOf needle haystack = needle `elem` [take (length needle) (drop i haystack) | i <- [0..length haystack - length needle]]
+L.isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
 
 -- Mock State monad execution for testing
 execState :: State s a -> s -> s

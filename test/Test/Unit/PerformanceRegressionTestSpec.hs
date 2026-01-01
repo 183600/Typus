@@ -18,7 +18,9 @@ import SourceLocation (SourcePos(..), SourceSpan(..))
 
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (length, replicate)
+import qualified Data.List as L
+import Data.List (length)
+import Data.List (replicate)
 import Data.Time.Clock (getCurrentTime, diffUTCTime)
 import Control.DeepSeq (NFData, force)
 import System.CPUTime (getCPUTime)
@@ -61,7 +63,7 @@ compileTimeThreshold = 5.0  -- 5 seconds for full compilation
 
 -- Memory usage estimation
 estimateMemoryUsage :: NFData a => a -> Int
-estimateMemoryUsage obj = length (show obj)  -- Rough estimate
+estimateMemoryUsage obj = L.length (show obj)  -- Rough estimate
 
 -- ============================================================================
 -- Test Data Generators
@@ -276,7 +278,7 @@ prop_parsing_time_scalability size =
   let program = unlines $ replicate size "func test() { return 42 }"
   -- Note: This is a simplified property test
   -- In real scenarios, you'd want to actually measure time
-  in property $ length program <= size * 25  -- Rough estimate
+  in property $ L.length program <= size * 25  -- Rough estimate
 
 -- Property: Memory usage scales linearly with program size
 prop_memory_usage_scalability :: Int -> Property
@@ -295,15 +297,15 @@ prop_complex_programs_reasonable_time complexity =
   complexity >= 1 && complexity <= 10 ==>
   let program = unlines $ replicate (complexity * 10) "func test() { return 42 }"
   -- Simplified check - in reality you'd measure actual time
-  in property $ length program <= complexity * 250
+  in property $ L.length program <= complexity * 250
 
 -- Property: Nested structures don't cause stack overflow
 prop_nested_structures_no_overflow :: Int -> Property
 prop_nested_structures_no_overflow depth =
   depth >= 1 && depth <= 50 ==>
-  let program = unlines $ map (\d -> "func level" ++ show d ++ "() int { return " ++ 
+  let program = unlines $ L.map (\d -> "func level" ++ show d ++ "() int { return " ++ 
                                    if d > 1 then "level" ++ show (d-1) ++ "()" else "42" ++ " }") [1..depth]
-  in property $ length program <= depth * 50
+  in property $ L.length program <= depth * 50
 
 -- Property: Analysis completes without hanging
 prop_analysis_completes :: String -> Property

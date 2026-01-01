@@ -1,6 +1,7 @@
 module Test.Unit.UtilsStringBoundaryQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Arbitrary(..), Gen, choose, listOf, suchThat, oneof, elements, frequency)
@@ -24,7 +25,7 @@ genDelimiter = elements [',', ':', ';', '|', '#', '@', ' ', '\t']
 -- | Generate strings with specific delimiters
 genStringWithDelimiter :: Char -> Gen String
 genStringWithDelimiter delim = listOf $ frequency
-    [ (8, elements $ filter (/= delim) ['a'..'z', 'A'..'Z', '0'..'9'])
+    [ (8, elements $ L.filter (/= delim) ['a'..'z', 'A'..'Z', '0'..'9'])
     , (2, return delim)
     ]
 
@@ -47,12 +48,12 @@ tests =
 
         , fastProperty "trim never adds characters" $
             \s ->
-              length (trim s) <= length s
+              L.length (trim s) <= L.length s
 
         , fastProperty "trim removes only leading/trailing whitespace" $
             \s ->
               let trimmed = trim s
-                  hasLeadingSpace = not (null s) && isSpace (head s) && null trimmed
+                  hasLeadingSpace = not (null s) && isSpace (L.head s) && null trimmed
                   hasTrailingSpace = not (null s) && isSpace (last s) && null trimmed
               in not (hasLeadingSpace || hasTrailingSpace) || null trimmed
 
@@ -73,19 +74,19 @@ tests =
         , fastProperty "splitBy preserves total content when rejoining" $
             \delim s ->
               let parts = splitBy delim s
-                  rejoined = concat $ parts `zip` repeat [delim] >>= \(part, d) -> part ++ [d]
+                  rejoined = L.concat $ parts `zip` repeat [delim] >>= \(part, d) -> part ++ [d]
                   rejoined' = if null parts then "" else init rejoined
               in rejoined' == s
 
-        , fastProperty "splitBy length is at least 1" $
+        , fastProperty "splitBy L.length is at least 1" $
             \delim s ->
-              length (splitBy delim s) >= 1
+              L.length (splitBy delim s) >= 1
 
         , fastProperty "splitBy with consecutive delimiters creates empty segments" $
             \s ->
               let parts = splitBy ',' s
-                  hasConsecutiveDelims = "##" `isInfixOf` s
-              in if hasConsecutiveDelims then any null parts else True
+                  hasConsecutiveDelims = "##" `L.isInfixOf` s
+              in if hasConsecutiveDelims then L.any null parts else True
         ]
 
     , testGroup "splitByCollapsed boundary conditions"
@@ -100,17 +101,17 @@ tests =
 
         , fastProperty "splitByCollapsed never returns empty segments" $
             \delim s ->
-              all (not . null) (splitByCollapsed delim s)
+              L.all (not . null) (splitByCollapsed delim s)
 
-        , fastProperty "splitByCollapsed result length <= splitBy result length" $
+        , fastProperty "splitByCollapsed result L.length <= splitBy result L.length" $
             \delim s ->
-              length (splitByCollapsed delim s) <= length (splitBy delim s)
+              L.length (splitByCollapsed delim s) <= L.length (splitBy delim s)
 
         , fastProperty "splitByCollapsed preserves non-empty segments" $
             \delim s ->
               let collapsed = splitByCollapsed delim s
                   normal = splitBy delim s
-                  nonEmptyInNormal = filter (not . null) normal
+                  nonEmptyInNormal = L.filter (not . null) normal
               in collapsed == nonEmptyInNormal
         ]
 
@@ -146,43 +147,43 @@ tests =
         , testCase "breakOn with pattern at end" $ do
             breakOn "de" "abcde" @?= ("abc", "")
 
-        , fastProperty "breakOn preserves total length" $
+        , fastProperty "breakOn preserves total L.length" $
             \pat s ->
               let (before, after) = breakOn pat s
-              in length before + length pat + length after == length s
+              in L.length before + L.length pat + L.length after == L.length s
 
         , fastProperty "breakOn pattern appears in after part" $
             \pat s ->
-              not (null pat) && pat `isInfixOf` s ==>
+              not (null pat) && pat `L.isInfixOf` s ==>
                 let (before, after) = breakOn pat s
-                in pat `isPrefixOf` after
+                in pat `L.isPrefixOf` after
 
         , fastProperty "breakOn is deterministic" $
             \pat s ->
               breakOn pat s == breakOn pat s
         ]
 
-    , testGroup "Edge cases and stress tests"
+    , testGroup "Edge cases L.and stress tests"
         [ testCase "functions handle very long strings" $ do
             let longString = replicate 10000 'a' ++ "," ++ replicate 10000 'b'
                 parts = splitBy ',' longString
                 collapsed = splitByCollapsed ',' longString
-            length parts @?= 2
-            length collapsed @?= 2
+            L.length parts @?= 2
+            L.length collapsed @?= 2
 
         , testCase "functions handle strings with special characters" $ do
             let special = "hello\x00world\x00test"
                 parts = splitBy '\x00' special
             parts @?= ["hello", "world", "test"]
 
-        , fastProperty "trim and splitBy interact correctly" $
+        , fastProperty "trim L.and splitBy interact correctly" $
             \s ->
               let trimmed = trim s
                   parts = splitBy ' ' trimmed
-                  noLeadingEmpty = null parts || not (null (head parts))
+                  noLeadingEmpty = null parts || not (L.null (L.head parts))
               in noLeadingEmpty
 
-        , fastProperty "splitBy and splitByCollapsed consistency on delimiter-free strings" $
+        , fastProperty "splitBy L.and splitByCollapsed consistency on delimiter-free strings" $
             \delim s ->
               not (delim `elem` s) ==>
                 splitBy delim s == splitByCollapsed delim s
@@ -191,10 +192,10 @@ tests =
 
 -- Helper function for infix check
 isInfixOf :: Eq a => [a] -> [a] -> Bool
-isInfixOf needle haystack = any (isPrefixOf needle) (tails haystack)
+L.isInfixOf needle haystack = L.any (L.isPrefixOf needle) (tails haystack)
   where
-    isPrefixOf [] _ = True
-    isPrefixOf _ [] = False
-    isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
+    L.isPrefixOf [] _ = True
+    L.isPrefixOf _ [] = False
+    L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
     tails [] = [[]]
     tails xs@(_:ys) = xs : tails ys

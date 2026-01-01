@@ -3,6 +3,7 @@
 module Test.Unit.SourceLocationEnhancedQuickCheckSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), 
@@ -13,7 +14,7 @@ import SourceLocation (SourcePos(..), SourceSpan(..), Located(..),
                       toErrorLocation, toErrorLocationWithSpan)
 import Compiler.Errors.Core (ErrorLocation(..))
 import Data.Text (Text)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 
 tests :: TestTree
 tests = testGroup "SourceLocation Enhanced QuickCheck Tests"
@@ -30,19 +31,19 @@ positionProperties = testGroup "Source Position Properties"
   [ testProperty "startPos is (1,1,0)" $
       posLine startPos === 1 .&&. posColumn startPos === 1 .&&. posOffset startPos === 0
   
-  , testProperty "posAt creates position with correct line and column" $
+  , testProperty "posAt creates position with correct line L.and column" $
       \line col -> 
         line > 0 && col > 0 ==> 
         let pos = posAt line col
         in posLine pos === line .&&. posColumn pos === col .&&. posOffset pos === 0
   
-  , testProperty "posAtLineCol creates position with correct line, column, and offset" $
+  , testProperty "posAtLineCol creates position with correct line, column, L.and offset" $
       \line col offset -> 
         line > 0 && col > 0 && offset >= 0 ==> 
         let pos = posAtLineCol line col offset
         in posLine pos === line .&&. posColumn pos === col .&&. posOffset pos === offset
   
-  , testProperty "posAfter newline increments line and resets column" $
+  , testProperty "posAfter newline increments line L.and resets column" $
       \pos -> 
         let newPos = posAfter '\n' pos
         in posLine newPos === posLine pos + 1 .&&. 
@@ -56,7 +57,7 @@ positionProperties = testGroup "Source Position Properties"
         in posColumn newPos === expectedCol .&&. 
            posOffset newPos === posOffset pos + 1
   
-  , testProperty "posAfter regular character increments column and offset" $
+  , testProperty "posAfter regular character increments column L.and offset" $
       \pos c -> 
         c /= '\n' && c /= '\t' ==> 
         let newPos = posAfter c pos
@@ -67,7 +68,7 @@ positionProperties = testGroup "Source Position Properties"
 -- | Source span properties
 spanProperties :: TestTree
 spanProperties = testGroup "Source Span Properties"
-  [ testProperty "emptySpan has same start and end" $
+  [ testProperty "emptySpan has same start L.and end" $
       \pos -> 
         let span = emptySpan pos
         in spanStart span === pos .&&. spanEnd span === pos
@@ -82,7 +83,7 @@ spanProperties = testGroup "Source Span Properties"
         let span = spanTo pos
         in spanStart span === pos .&&. spanEnd span === pos
   
-  , testProperty "spanBetween creates span with correct start and end" $
+  , testProperty "spanBetween creates span with correct start L.and end" $
       \start end -> 
         let span = spanBetween start end
         in spanStart span === start .&&. spanEnd span === end
@@ -150,14 +151,14 @@ positionAdvancementProperties = testGroup "Position Advancement Properties"
   , testProperty "advancePosBy is consistent with repeated advancePos" $
       \pos chars -> 
         let pos1 = advancePosBy chars pos
-            pos2 = foldl (flip advancePos) pos chars
+            pos2 = L.foldl (flip advancePos) pos chars
         in pos1 === pos2
   
   , testProperty "advancePosByText equals advancePosBy on unpacked text" $
       \pos text -> 
         advancePosByText text pos === advancePosBy (T.unpack text) pos
   
-  , testProperty "advancePosByLine increments line and resets column" $
+  , testProperty "advancePosByLine increments line L.and resets column" $
       \pos numLines -> 
         numLines >= 0 ==> 
         let newPos = advancePosByLine numLines pos
@@ -191,7 +192,7 @@ errorLocationProperties = testGroup "Error Location Properties"
            endLine errLoc === Just (posLine end) .&&. 
            endColumn errLoc === Just (posColumn end)
   
-  , testProperty "toErrorLocationWithSpan for empty span has same start and end" $
+  , testProperty "toErrorLocationWithSpan for empty span has same start L.and end" $
       \pos -> 
         let span = emptySpan pos
             errLoc = toErrorLocationWithSpan span

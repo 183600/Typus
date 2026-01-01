@@ -1,6 +1,7 @@
 module Test.Unit.IntegrationEndToEndQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, elements, listOf, chooseInt, vectorOf, suchThat, Positive(..))
 import TestSupport.QuickCheck (fastProperty)
@@ -67,9 +68,9 @@ genLoopProgram = do
     limit <- elements ["10", "100", "42"]
     return $ unlines
         [ "// Loop program"
-        , "sum := 0"
+        , "L.sum := 0"
         , "for " ++ counter ++ " in range(" ++ limit ++ ") {"
-        , "    sum := sum + " ++ counter
+        , "    L.sum := L.sum + " ++ counter
         , "}"
         ]
 
@@ -105,7 +106,7 @@ genSyntaxErrorProgram = do
     varName <- elements ["x", "y", "value"]
     return $ unlines
         [ "// Syntax error program"
-        , varName ++ " := 42"  -- Missing semicolon or proper syntax
+        , varName ++ " := 42"  -- Missing semicolon L.or proper syntax
         , "if x > 0 {"  -- Unclosed brace
         , "    result := 1"
         ]
@@ -134,7 +135,7 @@ genSemanticErrorProgram = do
 tests :: TestTree
 tests = testGroup "Integration End-to-End QuickCheck Tests"
     [ testGroup "Parsing Integration Properties"
-        [ testProperty "Parse and reparse produces same result" $
+        [ testProperty "Parse L.and reparse produces same result" $
             fastProperty prop_parseReparseConsistency
         
         , testProperty "Parser handles programs with directives" $
@@ -305,7 +306,7 @@ prop_ownershipAnalysisDetectsIssues baseCode =
         result = analyzeOwnership analyzer problematicCode
     in case result of
         Left _ -> True  -- Should handle gracefully
-        Right errors -> length errors >= 0  -- Should detect use-after-move
+        Right errors -> L.length errors >= 0  -- Should detect use-after-move
 
 prop_ownershipCompilationIntegration :: String -> Bool
 prop_ownershipCompilationIntegration code =
@@ -402,7 +403,7 @@ prop_completePipelineHandlesErrors baseCode =
         analyzer = newOwnershipAnalyzer
         ownershipResult = analyzeOwnership analyzer errorCode
     in case (parseResult, compileResult, ownershipResult) of
-        (Left _, Left _, _) -> True  -- Handle parse and compile errors
+        (Left _, Left _, _) -> True  -- Handle parse L.and compile errors
         _ -> True  -- Any combination is acceptable
 
 prop_pipelineStagesConsistent :: String -> Bool
@@ -472,8 +473,8 @@ prop_handlesVeryLongLines n baseCode =
 prop_handlesDeeplyNested :: Int -> Bool
 prop_handlesDeeplyNested depth =
     let nesting = max 1 (min 10 (abs depth))
-        nestedCode = concat $ replicate nesting "if true { "
-        baseCode = nestedCode ++ "result := 42" ++ concat (replicate nesting " }")
+        nestedCode = L.concat $ replicate nesting "if true { "
+        baseCode = nestedCode ++ "result := 42" ++ L.concat (replicate nesting " }")
         parseResult = parseTypus "" baseCode
         compileResult = compileTypus defaultCompilerOptions baseCode
     in case (parseResult, compileResult) of
@@ -483,4 +484,4 @@ prop_handlesDeeplyNested depth =
 
 -- Helper functions
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` [take (length haystack - length needle + 1) (drop i haystack) | i <- [0..length haystack - length needle]]
+L.isInfixOf needle haystack = needle `elem` [take (L.length haystack - L.length needle + 1) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]

@@ -14,7 +14,9 @@ import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose, resize, Positive(..))
 import Data.Char (isSpace, isAlphaNum, isPunctuation, isControl, chr)
-import Data.List (isPrefixOf, isInfixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort, nub)
 import qualified Data.Text as T
 
 import Utils
@@ -39,21 +41,21 @@ prop_trim_idempotent s =
   in counterexample "trim should be idempotent" $
      trimmedOnce === trimmedTwice
 
--- Property: trim never increases string length
+-- Property: trim never increases string L.length
 prop_trim_never_increases_length :: String -> Property
 prop_trim_never_increases_length s =
-  let originalLength = length s
-      trimmedLength = length (trim s)
-  in counterexample "trim should never increase string length" $
+  let originalLength = L.length s
+      trimmedLength = L.length (trim s)
+  in counterexample "trim should never increase string L.length" $
      trimmedLength <= originalLength
 
 -- Property: splitBy preserves total character count (excluding delimiters)
 prop_splitBy_preserves_content :: Char -> String -> Property
 prop_splitBy_preserves_content delim s =
   let parts = splitBy delim s
-      rejoined = concat parts
-      originalWithoutDelims = filter (/= delim) s
-  in counterexample "splitBy should preserve all non-delimiter characters" $
+      rejoined = L.concat parts
+      originalWithoutDelims = L.filter (/= delim) s
+  in counterexample "splitBy should preserve L.all non-delimiter characters" $
      rejoined === originalWithoutDelims
 
 -- Property: splitByCollapsed result contains no empty strings
@@ -61,7 +63,7 @@ prop_splitByCollapsed_no_empty :: Char -> String -> Property
 prop_splitByCollapsed_no_empty delim s =
   let parts = splitByCollapsed delim
   in counterexample "splitByCollapsed should never produce empty strings" $
-     all (not . null) parts
+     L.all (not . null) parts
 
 -- Property: splitByComma is equivalent to splitBy ','
 prop_splitByComma_equals_splitBy_comma :: String -> Property
@@ -77,9 +79,9 @@ prop_removeLineComments_preserves_non_comment s =
   let withoutLineComments = removeLineComments s
       linesWithoutComments = lines withoutLineComments
       linesWithComments = lines s
-      nonCommentLines = filter (not . isPrefixOf "//") linesWithComments
+      nonCommentLines = L.filter (not . L.isPrefixOf "//") linesWithComments
   in counterexample "removeLineComments should preserve non-comment content" $
-     length (filter (not . null) linesWithoutComments) >= length nonCommentLines
+     L.length (L.filter (not . null) linesWithoutComments) >= L.length nonCommentLines
 
 -- Property: normalizeIndentation preserves relative indentation
 prop_normalizeIndentation_preserves_structure :: String -> Property
@@ -88,7 +90,7 @@ prop_normalizeIndentation_preserves_structure s =
       originalLines = lines s
       normalizedLines = lines normalized
   in counterexample "normalizeIndentation should preserve line structure" $
-     length normalizedLines === length originalLines
+     L.length normalizedLines === L.length originalLines
 
 -- Property: breakOn always returns a pair where concatenation equals original
 prop_breakOn_concatenation :: String -> String -> Property
@@ -104,9 +106,9 @@ prop_breakOn_concatenation needle haystack =
 prop_trim_preserves_non_space :: String -> Property
 prop_trim_preserves_non_space s =
   let trimmed = trim s
-      originalNonSpaces = filter (not . isSpace) s
-      trimmedNonSpaces = filter (not . isSpace) trimmed
-  in counterexample "trim should preserve all non-space characters" $
+      originalNonSpaces = L.filter (not . isSpace) s
+      trimmedNonSpaces = L.filter (not . isSpace) trimmed
+  in counterexample "trim should preserve L.all non-space characters" $
      originalNonSpaces === trimmedNonSpaces
 
 -- Property: splitBy with delimiter not in string returns single-element list
@@ -122,8 +124,8 @@ prop_removeComments_preserves_structure :: String -> Property
 prop_removeComments_preserves_structure s =
   let withoutComments = removeComments s
       -- Rough check: preserve line count (approximately)
-      originalLines = length $ lines s
-      withoutCommentsLines = length $ lines withoutComments
+      originalLines = L.length $ lines s
+      withoutCommentsLines = L.length $ lines withoutComments
   in counterexample "removeComments should roughly preserve structure" $
      withoutCommentsLines <= originalLines + 1 -- Allow for some variation
 
@@ -143,9 +145,9 @@ prop_trim_unicode_whitespace :: Property
 prop_trim_unicode_whitespace =
   forAll genUnicodeString $ \s ->
   let trimmed = trim s
-      hasLeadingUnicodeSpace = not (null s) && isSpace (head s) && head s > ' '
+      hasLeadingUnicodeSpace = not (null s) && isSpace (L.head s) && L.head s > ' '
       hasTrailingUnicodeSpace = not (null s) && isSpace (last s) && last s > ' '
-      noLeadingSpace = null trimmed || not (isSpace (head trimmed))
+      noLeadingSpace = null trimmed || not (isSpace (L.head trimmed))
       noTrailingSpace = null trimmed || not (isSpace (last trimmed))
   in classify hasLeadingUnicodeSpace "has leading Unicode whitespace" $
      classify hasTrailingUnicodeSpace "has trailing Unicode whitespace" $
@@ -154,7 +156,7 @@ prop_trim_unicode_whitespace =
 tests :: TestTree
 tests = testGroup "Text Processing Boundary QuickCheck Tests"
   [ fastProperty "trim is idempotent" prop_trim_idempotent
-  , fastProperty "trim never increases length" prop_trim_never_increases_length
+  , fastProperty "trim never increases L.length" prop_trim_never_increases_length
   , fastProperty "splitBy preserves content" prop_splitBy_preserves_content
   , fastProperty "splitByCollapsed has no empty strings" prop_splitByCollapsed_no_empty
   , fastProperty "splitByComma equals splitBy ','" prop_splitByComma_equals_splitBy_comma

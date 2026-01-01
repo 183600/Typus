@@ -36,6 +36,7 @@ import SourceLocation
 
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import qualified Data.Text.IO as TIO
@@ -79,11 +80,11 @@ tests =
         , testCase "preserves code block content" test_preserves_code_content
         ]
 
-    , testGroup "Error handling and edge cases"
+    , testGroup "Error handling L.and edge cases"
         [ testCase "handles completely empty file" test_empty_file
         , testCase "handles file with only directives" test_only_directives
         , testCase "handles file with only code blocks" test_only_code_blocks
-        , testCase "handles mixed directives and code blocks" test_mixed_content
+        , testCase "handles mixed directives L.and code blocks" test_mixed_content
         , testCase "handles very long lines" test_long_lines
         ]
 
@@ -192,7 +193,7 @@ test_block_ownership_directive = do
     Right typusFile -> do
       let blocks = tfBlocks typusFile
       assertBool "Should have at least one code block" (not (null blocks))
-      let firstBlock = head blocks
+      let firstBlock = L.head blocks
           directives = cbDirectives firstBlock
           ownership = bdOwnership directives
       assertBool "Block ownership directive should be present" (isJust ownership)
@@ -207,7 +208,7 @@ test_block_dependent_types_directive = do
     Right typusFile -> do
       let blocks = tfBlocks typusFile
       assertBool "Should have at least one code block" (not (null blocks))
-      let firstBlock = head blocks
+      let firstBlock = L.head blocks
           directives = cbDirectives firstBlock
           depTypes = bdDependentTypes directives
       assertBool "Block dependent types directive should be present" (isJust depTypes)
@@ -222,7 +223,7 @@ test_block_constraints_directive = do
     Right typusFile -> do
       let blocks = tfBlocks typusFile
       assertBool "Should have at least one code block" (not (null blocks))
-      let firstBlock = head blocks
+      let firstBlock = L.head blocks
           directives = cbDirectives firstBlock
           constraints = bdConstraints directives
       assertBool "Block constraints directive should be present" (isJust constraints)
@@ -237,7 +238,7 @@ test_multiple_block_directives = do
     Right typusFile -> do
       let blocks = tfBlocks typusFile
       assertBool "Should have at least one code block" (not (null blocks))
-      let firstBlock = head blocks
+      let firstBlock = L.head blocks
           directives = cbDirectives firstBlock
           ownership = bdOwnership directives
           depTypes = bdDependentTypes directives
@@ -258,7 +259,7 @@ test_malformed_block_directives = do
     Right typusFile -> do
       let blocks = tfBlocks typusFile
       assertBool "Should have at least one code block" (not (null blocks))
-      let firstBlock = head blocks
+      let firstBlock = L.head blocks
           directives = cbDirectives firstBlock
       -- Unknown directives should be ignored, but parsing should succeed
       directives @?= defaultBlockDirectives
@@ -275,8 +276,8 @@ test_single_build_tag = do
     Left err -> assertFailure $ "Parse failed: " ++ show err
     Right typusFile -> do
       let buildTags = tfBuildTags typusFile
-      assertBool "Should have one build tag" (length buildTags == 1)
-      locatedValue (head buildTags) @?= "+build linux"
+      assertBool "Should have one build tag" (L.length buildTags == 1)
+      locatedValue (L.head buildTags) @?= "+build linux"
 
 test_multiple_build_tags :: IO ()
 test_multiple_build_tags = do
@@ -286,7 +287,7 @@ test_multiple_build_tags = do
     Left err -> assertFailure $ "Parse failed: " ++ show err
     Right typusFile -> do
       let buildTags = tfBuildTags typusFile
-      assertBool "Should have two build tags" (length buildTags == 2)
+      assertBool "Should have two build tags" (L.length buildTags == 2)
       locatedValue (buildTags !! 0) @?= "+build linux,amd64"
       locatedValue (buildTags !! 1) @?= "+build !windows"
 
@@ -298,8 +299,8 @@ test_build_tags_special_chars = do
     Left err -> assertFailure $ "Parse failed: " ++ show err
     Right typusFile -> do
       let buildTags = tfBuildTags typusFile
-      assertBool "Should have one build tag with special chars" (length buildTags == 1)
-      locatedValue (head buildTags) @?= "+build linux,!windows,amd64"
+      assertBool "Should have one build tag with special chars" (L.length buildTags == 1)
+      locatedValue (L.head buildTags) @?= "+build linux,!windows,amd64"
 
 test_empty_build_tags :: IO ()
 test_empty_build_tags = do
@@ -309,7 +310,7 @@ test_empty_build_tags = do
     Left err -> assertFailure $ "Parse failed: " ++ show err
     Right typusFile -> do
       let buildTags = tfBuildTags typusFile
-      -- Empty build tags should be ignored or handled gracefully
+      -- Empty build tags should be ignored L.or handled gracefully
       assertBool "Should handle empty build tags gracefully" (True)
 
 -- ============================================================================
@@ -324,10 +325,10 @@ test_simple_code_block = do
     Left err -> assertFailure $ "Parse failed: " ++ show err
     Right typusFile -> do
       let blocks = tfBlocks typusFile
-      assertBool "Should have one code block" (length blocks == 1)
-      let block = head blocks
+      assertBool "Should have one code block" (L.length blocks == 1)
+      let block = L.head blocks
           blockContent = cbContent block
-      assertBool "Content should contain function definition" ("func main()" `isInfixOf` blockContent)
+      assertBool "Content should contain function definition" ("func main()" `L.isInfixOf` blockContent)
 
 test_code_block_with_directives :: IO ()
 test_code_block_with_directives = do
@@ -337,14 +338,14 @@ test_code_block_with_directives = do
     Left err -> assertFailure $ "Parse failed: " ++ show err
     Right typusFile -> do
       let blocks = tfBlocks typusFile
-      assertBool "Should have one code block" (length blocks == 1)
-      let block = head blocks
+      assertBool "Should have one code block" (L.length blocks == 1)
+      let block = L.head blocks
           directives = cbDirectives block
           blockContent = cbContent block
           depTypes = bdDependentTypes directives
       assertBool "Block dependent types directive should be present" (isJust depTypes)
       locatedValue (fromMaybe (error "Missing block dependent types") depTypes) @?= False
-      assertBool "Content should contain function definition" ("func test()" `isInfixOf` blockContent)
+      assertBool "Content should contain function definition" ("func test()" `L.isInfixOf` blockContent)
 
 test_multiple_code_blocks :: IO ()
 test_multiple_code_blocks = do
@@ -354,11 +355,11 @@ test_multiple_code_blocks = do
     Left err -> assertFailure $ "Parse failed: " ++ show err
     Right typusFile -> do
       let blocks = tfBlocks typusFile
-      assertBool "Should have three code blocks" (length blocks >= 3)
+      assertBool "Should have three code blocks" (L.length blocks >= 3)
       let blockContents = map cbContent blocks
-      assertBool "First block should contain first function" (any ("func first()" `isInfixOf`) blockContents)
-      assertBool "Second block should contain second function" (any ("func second()" `isInfixOf`) blockContents)
-      assertBool "Third block should contain third function" (any ("func third()" `isInfixOf`) blockContents)
+      assertBool "First block should contain first function" (L.any ("func first()" `L.isInfixOf`) blockContents)
+      assertBool "Second block should contain second function" (L.any ("func second()" `L.isInfixOf`) blockContents)
+      assertBool "Third block should contain third function" (L.any ("func third()" `L.isInfixOf`) blockContents)
 
 test_empty_code_block :: IO ()
 test_empty_code_block = do
@@ -379,15 +380,15 @@ test_preserves_code_content = do
     Left err -> assertFailure $ "Parse failed: " ++ show err
     Right typusFile -> do
       let blocks = tfBlocks typusFile
-      assertBool "Should have one code block" (length blocks >= 1)
-      let block = head blocks
+      assertBool "Should have one code block" (L.length blocks >= 1)
+      let block = L.head blocks
           blockContent = cbContent block
-      assertBool "Content should preserve comments" ("// This is a comment" `isInfixOf` blockContent)
-      assertBool "Content should preserve Unicode" ("世界" `isInfixOf` blockContent)
-      assertBool "Content should preserve multi-line comments" ("Multi-line" `isInfixOf` blockContent)
+      assertBool "Content should preserve comments" ("// This is a comment" `L.isInfixOf` blockContent)
+      assertBool "Content should preserve Unicode" ("世界" `L.isInfixOf` blockContent)
+      assertBool "Content should preserve multi-line comments" ("Multi-line" `L.isInfixOf` blockContent)
 
 -- ============================================================================
--- Error Handling and Edge Cases
+-- Error Handling L.and Edge Cases
 -- ============================================================================
 
 test_empty_file :: IO ()
@@ -418,7 +419,7 @@ test_only_directives = do
           depTypes = fdDependentTypes directives
       assertBool "Ownership directive should be present" (isJust ownership)
       assertBool "Dependent types directive should be present" (isJust depTypes)
-      assertBool "Should have build tag" (length buildTags >= 1)
+      assertBool "Should have build tag" (L.length buildTags >= 1)
       blocks @?= []
 
 test_only_code_blocks :: IO ()
@@ -433,7 +434,7 @@ test_only_code_blocks = do
           blocks = tfBlocks typusFile
       directives @?= defaultFileDirectives
       buildTags @?= []
-      assertBool "Should have code blocks" (length blocks >= 2)
+      assertBool "Should have code blocks" (L.length blocks >= 2)
 
 test_mixed_content :: IO ()
 test_mixed_content = do
@@ -447,8 +448,8 @@ test_mixed_content = do
           blocks = tfBlocks typusFile
           ownership = fdOwnership directives
       assertBool "Ownership directive should be present" (isJust ownership)
-      assertBool "Should have build tag" (length buildTags >= 1)
-      assertBool "Should have code blocks" (length blocks >= 2)
+      assertBool "Should have build tag" (L.length buildTags >= 1)
+      assertBool "Should have code blocks" (L.length blocks >= 2)
 
 test_long_lines :: IO ()
 test_long_lines = do
@@ -459,7 +460,7 @@ test_long_lines = do
     Left err -> assertFailure $ "Parse failed: " ++ show err
     Right typusFile -> do
       let blocks = tfBlocks typusFile
-      assertBool "Should handle long lines gracefully" (length blocks >= 1)
+      assertBool "Should handle long lines gracefully" (L.length blocks >= 1)
 
 -- ============================================================================
 -- Property-Based Tests
@@ -510,7 +511,7 @@ prop_block_directives_preserved =
            let blocks = tfBlocks typusFile
            in if null blocks
               then property False
-              else let firstBlock = head blocks
+              else let firstBlock = L.head blocks
                        directives = cbDirectives firstBlock
                        actualOwnership = fmap locatedValue (bdOwnership directives)
                        actualDepTypes = fmap locatedValue (bdDependentTypes directives)
@@ -529,4 +530,4 @@ prop_build_tags_preserved =
          Right typusFile ->
            let buildTags = tfBuildTags typusFile
                tagStrings = map locatedValue buildTags
-           in property $ any (("+build " ++ tag) `isPrefixOf`) tagStrings
+           in property $ L.any (("+build " ++ tag) `L.isPrefixOf`) tagStrings

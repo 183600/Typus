@@ -11,7 +11,15 @@ module IntegratedCompiler (
     analysisToCombined,
     formatCompilationResult,
     getDetailedAnalysisSummary,
-    showCombinedError
+    showCombinedError,
+    -- Legacy compatibility functions
+    analyze,
+    compileSource,
+    getErrors,
+    getWarnings,
+    getAnalysisErrors,
+    getCompilationErrors,
+    getAllErrors
 ) where
 
 import qualified Parser as P
@@ -131,7 +139,7 @@ compileWithIntegratedAnalyzers source CompilerConfig{..} =
                                             , compilationInfo = info
                                             }
                                 else
-                                    case compile typusFile of
+                                    case Compiler.compile typusFile of
                                         Left compilerErrs ->
                                             pure
                                                 IntegratedCompileResult
@@ -294,3 +302,54 @@ getDetailedAnalysisSummary AnalysisResult
     analysisStatus _ 0 = "Ownership analysis reported issues"
     analysisStatus 0 _ = "Dependent type analysis reported issues"
     analysisStatus _ _ = "Multiple analyses reported issues"
+
+-- Legacy compatibility functions for test compatibility
+
+-- | Analyze source code and return analysis result
+analyze :: String -> IO (Either String AnalysisResult)
+analyze source = do
+    let config = defaultCompilerConfig
+    result <- compileWithIntegratedAnalyzers source config
+    case analysisResult result of
+        Nothing -> return $ Left "No analysis result"
+        Just analysis -> return $ Right analysis
+
+-- | Compile source code and return compiled code
+compileSource :: String -> IO (Either String String)
+compileSource source = do
+    let config = defaultCompilerConfig
+    result <- compileWithIntegratedAnalyzers source config
+    if success result
+        then return $ Right (compiledCode result)
+        else return $ Left "Compilation failed"
+
+-- | Get all errors from analysis
+getErrors :: AnalysisResult -> [String]
+getErrors analysis = 
+    let ownershipErrs = map show (ownershipErrors analysis)
+        dependentErrs = map show (dependentTypeErrors analysis)
+        combinedErrs = map showCombinedError (combinedErrors analysis)
+    in ownershipErrs ++ dependentErrs ++ combinedErrs
+
+-- | Get all warnings from analysis
+getWarnings :: AnalysisResult -> [String]
+getWarnings analysis = analysisWarnings analysis
+
+-- | Get analysis errors specifically
+getAnalysisErrors :: AnalysisResult -> [String]
+getAnalysisErrors analysis = 
+    let ownershipErrs = map show (ownershipErrors analysis)
+        dependentErrs = map show (dependentTypeErrors analysis)
+    in ownershipErrs ++ dependentErrs
+
+-- | Get compilation errors specifically
+getCompilationErrors :: AnalysisResult -> [String]
+getCompilationErrors analysis = 
+    map showCombinedError $ filter isCompilationError (combinedErrors analysis)
+  where
+    isCompilationError (IntegrationError _ _) = True
+    isCompilationError _ = False
+
+-- | Get all errors (analysis + compilation)
+getAllErrors :: AnalysisResult -> [String]
+getAllErrors analysis = getAnalysisErrors analysis ++ getCompilationErrors analysis

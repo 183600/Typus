@@ -9,6 +9,7 @@ import SyntaxValidator (SyntaxValidator(..), SyntaxError(..), ErrorType(..),
                         newSyntaxValidator, validateSyntax, validateFile, 
                         getSyntaxErrors, formatSyntaxError)
 import qualified Data.Set as Set
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import Data.Char (isSpace, isAlphaNum, isAlpha, isDigit)
 
@@ -99,7 +100,7 @@ genInvalidGoCode = oneof
   , return "/* unclosed comment"  -- Unclosed comment
   ]
 
--- Generate mixed code (valid and invalid)
+-- Generate mixed code (valid L.and invalid)
 genMixedCode :: Gen String
 genMixedCode = do
   validParts <- listOf genValidGoCode
@@ -142,9 +143,9 @@ genCodeWithInvalidIdentifiers = do
 prop_newSyntaxValidatorValid :: Bool
 prop_newSyntaxValidatorValid =
   let validator = newSyntaxValidator
-  in null (validatorErrors validator) && 
-     null (scopeStack validator) && 
-     null (braceStack validator) &&
+  in L.null (validatorErrors validator) && 
+     L.null (scopeStack validator) && 
+     L.null (braceStack validator) &&
      not (hasPackageDecl validator) &&
      not (hasMainFunc validator)
 
@@ -157,14 +158,14 @@ prop_validateFileSameAsValidateSyntax content =
 prop_validateSyntaxReturnsList :: String -> Bool
 prop_validateSyntaxReturnsList content =
   let errors = validateSyntax content
-  in length errors >= 0  -- Should always be non-negative
+  in L.length errors >= 0  -- Should always be non-negative
 
--- Property: getSyntaxErrors returns errors in reverse order
+-- Property: getSyntaxErrors returns errors in L.reverse order
 prop_getSyntaxErrorsReverses :: SyntaxValidator -> Bool
 prop_getSyntaxErrorsReverses validator =
   let errors = getSyntaxErrors validator
       originalErrors = validatorErrors validator
-  in errors == reverse originalErrors
+  in errors == L.reverse originalErrors
 
 -- Property: SyntaxError equality is reflexive
 prop_syntaxErrorReflexive :: SyntaxError -> Bool
@@ -193,47 +194,47 @@ prop_syntaxErrorOrderingConsistent error1 error2 =
 
 -- Property: formatSyntaxError produces non-empty output
 prop_formatSyntaxErrorNonEmpty :: SyntaxError -> Bool
-prop_formatSyntaxErrorNonEmpty error = not (null (formatSyntaxError error))
+prop_formatSyntaxErrorNonEmpty error = not (L.null (formatSyntaxError error))
 
 -- Property: formatSyntaxError contains error type
 prop_formatSyntaxErrorContainsType :: SyntaxError -> Bool
 prop_formatSyntaxErrorContainsType error =
   let formatted = formatSyntaxError error
       errorTypeStr = show (errorType error)
-  in errorTypeStr `isInfixOf` formatted
+  in errorTypeStr `L.isInfixOf` formatted
 
 -- Property: formatSyntaxError contains line number
 prop_formatSyntaxErrorContainsLine :: SyntaxError -> Bool
 prop_formatSyntaxErrorContainsLine error =
   let formatted = formatSyntaxError error
       lineStr = show (lineNumber error)
-  in lineStr `isInfixOf` formatted
+  in lineStr `L.isInfixOf` formatted
 
 -- Property: formatSyntaxError contains column number
 prop_formatSyntaxErrorContainsColumn :: SyntaxError -> Bool
 prop_formatSyntaxErrorContainsColumn error =
   let formatted = formatSyntaxError error
       columnStr = show (columnNumber error)
-  in columnStr `isInfixOf` formatted
+  in columnStr `L.isInfixOf` formatted
 
 -- Property: Valid Go code produces fewer errors
 prop_validGoCodeFewerErrors :: String -> Property
 prop_validGoCodeFewerErrors validCode =
   let validErrors = validateSyntax validCode
       invalidErrors = validateSyntax "func main( {"
-  in length validErrors <= length invalidErrors
+  in L.length validErrors <= L.length invalidErrors
 
 -- Property: Invalid Go code produces errors
 prop_invalidGoCodeProducesErrors :: String -> Property
 prop_invalidGoCodeProducesErrors invalidCode =
   let errors = validateSyntax invalidCode
-  in length errors >= 0  -- May or may not have errors depending on the invalid code
+  in L.length errors >= 0  -- May L.or may not have errors depending on the invalid code
 
 -- Property: Empty content produces minimal errors
 prop_emptyContentMinimalErrors :: Bool
 prop_emptyContentMinimalErrors =
   let errors = validateSyntax ""
-  in length errors <= 5  -- Should have very few errors for empty content
+  in L.length errors <= 5  -- Should have very few errors for empty content
 
 -- ============================================================================
 -- Unit Tests
@@ -245,7 +246,7 @@ tests = testGroup "SyntaxValidator Advanced QuickCheck Tests"
     [ testProperty "newSyntaxValidator creates valid validator" prop_newSyntaxValidatorValid
     , testProperty "validateFile returns same results as validateSyntax" prop_validateFileSameAsValidateSyntax
     , testProperty "validateSyntax returns list of errors" prop_validateSyntaxReturnsList
-    , testProperty "getSyntaxErrors returns errors in reverse order" prop_getSyntaxErrorsReverses
+    , testProperty "getSyntaxErrors returns errors in L.reverse order" prop_getSyntaxErrorsReverses
     ]
 
   , testGroup "SyntaxError Properties"
@@ -279,7 +280,7 @@ tests = testGroup "SyntaxValidator Advanced QuickCheck Tests"
 
     , testCase "Validate empty content" $ do
         let errors = validateSyntax ""
-        length errors @?= 0  -- Empty content should have no errors
+        L.length errors @?= 0  -- Empty content should have no errors
 
     , testCase "Validate valid Go code" $ do
         let validCode = unlines
@@ -290,7 +291,7 @@ tests = testGroup "SyntaxValidator Advanced QuickCheck Tests"
               , "}"
               ]
         let errors = validateSyntax validCode
-        length errors @?= 0  -- Valid code should have no errors
+        L.length errors @?= 0  -- Valid code should have no errors
 
     , testCase "Validate code with missing brace" $ do
         let invalidCode = unlines
@@ -300,17 +301,17 @@ tests = testGroup "SyntaxValidator Advanced QuickCheck Tests"
               -- Missing closing brace
               ]
         let errors = validateSyntax invalidCode
-        assertBool "Should detect missing brace" $ any (\e -> errorType e == MissingBrace) errors
+        assertBool "Should detect missing brace" $ L.any (\e -> errorType e == MissingBrace) errors
 
     , testCase "Validate code with unclosed string" $ do
         let invalidCode = "var s string = \"unclosed string"
         let errors = validateSyntax invalidCode
-        assertBool "Should detect unclosed string" $ any (\e -> errorType e == UnclosedString) errors
+        assertBool "Should detect unclosed string" $ L.any (\e -> errorType e == UnclosedString) errors
 
     , testCase "Validate code with invalid identifier" $ do
         let invalidCode = "var 123invalid int"
         let errors = validateSyntax invalidCode
-        assertBool "Should detect invalid identifier" $ any (\e -> errorType e == InvalidIdentifier) errors
+        assertBool "Should detect invalid identifier" $ L.any (\e -> errorType e == InvalidIdentifier) errors
 
     , testCase "Create syntax error" $ do
         let error = SyntaxError MissingBrace "Missing closing brace" 10 5 "func main() {"
@@ -323,10 +324,10 @@ tests = testGroup "SyntaxValidator Advanced QuickCheck Tests"
     , testCase "Format syntax error" $ do
         let error = SyntaxError MissingBrace "Missing closing brace" 10 5 "func main() {"
         let formatted = formatSyntaxError error
-        assertBool "Should contain error type" $ "MissingBrace" `isInfixOf` formatted
-        assertBool "Should contain line number" $ "10" `isInfixOf` formatted
-        assertBool "Should contain column number" $ "5" `isInfixOf` formatted
-        assertBool "Should contain error message" $ "Missing closing brace" `isInfixOf` formatted
+        assertBool "Should contain error type" $ "MissingBrace" `L.isInfixOf` formatted
+        assertBool "Should contain line number" $ "10" `L.isInfixOf` formatted
+        assertBool "Should contain column number" $ "5" `L.isInfixOf` formatted
+        assertBool "Should contain error message" $ "Missing closing brace" `L.isInfixOf` formatted
 
     , testCase "Compare syntax errors" $ do
         let error1 = SyntaxError MissingBrace "error1" 10 5 "line1"
@@ -367,6 +368,6 @@ tests = testGroup "SyntaxValidator Advanced QuickCheck Tests"
               , "}"
               ]
         let errors = validateSyntax complexCode
-        assertBool "Should detect multiple errors" $ length errors >= 2
+        assertBool "Should detect multiple errors" $ L.length errors >= 2
     ]
   ]

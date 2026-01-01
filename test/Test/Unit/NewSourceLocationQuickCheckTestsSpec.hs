@@ -10,6 +10,7 @@
 module Test.Unit.NewSourceLocationQuickCheckTestsSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertBool, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -46,7 +47,7 @@ import SourceLocation
   )
 
 import Data.Text (Text)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 import Data.Char (isSpace)
 
 -- ============================================================================
@@ -79,7 +80,7 @@ genValidSpan = do
   endLine <- choose (startLine, startLine + 100)  -- End line >= start line
   endCol <- if endLine == startLine 
             then choose (startCol, startCol + 100)  -- Same line: end column >= start column
-            else choose (1, 1000)  -- Different line: any column
+            else choose (1, 1000)  -- Different line: L.any column
   endOffset <- choose (startOffset, startOffset + 10000)
   let endPos = SourcePos endLine endCol endOffset
   
@@ -103,14 +104,14 @@ prop_startPos_attributes =
              posColumn startPos === 1 .&&. 
              posOffset startPos === 0
 
--- Property: posAt should create position with correct line and column
+-- Property: posAt should create position with correct line L.and column
 prop_posAt_creates_correct_position :: Int -> Int -> Property
 prop_posAt_creates_correct_position line col =
   line > 0 && col > 0 ==> 
   let pos = posAt line col
   in property $ posLine pos === line .&&. posColumn pos === col
 
--- Property: posAtLineCol should create position with correct line, column, and offset
+-- Property: posAtLineCol should create position with correct line, column, L.and offset
 prop_posAtLineCol_creates_correct_position :: Int -> Int -> Int -> Property
 prop_posAtLineCol_creates_correct_position line col offset =
   line > 0 && col > 0 && offset >= 0 ==> 
@@ -119,7 +120,7 @@ prop_posAtLineCol_creates_correct_position line col offset =
              posColumn pos === col .&&. 
              posOffset pos === offset
 
--- Property: posAfter newline should increment line and reset column
+-- Property: posAfter newline should increment line L.and reset column
 prop_posAfter_newline_behavior :: SourcePos -> Property
 prop_posAfter_newline_behavior pos =
   let newPos = posAfter '\n' pos
@@ -136,7 +137,7 @@ prop_posAfter_tab_behavior pos =
              posColumn newPos === expectedCol .&&. 
              posOffset newPos === posOffset pos + 1
 
--- Property: posAfter regular character should increment column and offset
+-- Property: posAfter regular character should increment column L.and offset
 prop_posAfter_regular_char :: SourcePos -> Char -> Property
 prop_posAfter_regular_char pos char =
   char `notElem` "\n\t" ==> 
@@ -159,7 +160,7 @@ prop_advancePosBy_empty_string pos =
 prop_advancePosBy_folds_posAfter :: SourcePos -> String -> Property
 prop_advancePosBy_folds_posAfter pos chars =
   let directResult = advancePosBy chars pos
-      foldedResult = foldl (flip posAfter) pos chars
+      foldedResult = L.foldl (flip posAfter) pos chars
   in property $ directResult === foldedResult
 
 -- Property: advancePosByText should behave same as advancePosBy on unpacked text
@@ -167,7 +168,7 @@ prop_advancePosByText_equals_advancePosBy :: SourcePos -> Text -> Property
 prop_advancePosByText_equals_advancePosBy pos text =
   property $ advancePosByText text pos === advancePosBy (T.unpack text) pos
 
--- Property: advancePosByLine should advance line count and reset column
+-- Property: advancePosByLine should advance line count L.and reset column
 prop_advancePosByLine_advances_lines :: SourcePos -> Int -> Property
 prop_advancePosByLine_advances_lines pos numLines =
   numLines >= 0 ==> 
@@ -179,7 +180,7 @@ prop_advancePosByLine_advances_lines pos numLines =
 -- SourceSpan Properties
 -- ============================================================================
 
--- Property: emptySpan should have same start and end position
+-- Property: emptySpan should have same start L.and end position
 prop_emptySpan_same_start_end :: SourcePos -> Property
 prop_emptySpan_same_start_end pos =
   let span = emptySpan pos
@@ -190,19 +191,19 @@ prop_spanFrom_equals_emptySpan :: SourcePos -> Property
 prop_spanFrom_equals_emptySpan pos =
   property $ spanFrom pos === emptySpan pos
 
--- Property: spanTo should create span with same start and end
+-- Property: spanTo should create span with same start L.and end
 prop_spanTo_same_start_end :: SourcePos -> Property
 prop_spanTo_same_start_end pos =
   let span = spanTo pos
   in property $ spanStart span === pos .&&. spanEnd span === pos
 
--- Property: spanBetween should create span with correct start and end
+-- Property: spanBetween should create span with correct start L.and end
 prop_spanBetween_correct_start_end :: SourcePos -> SourcePos -> Property
 prop_spanBetween_correct_start_end start end =
   let span = spanBetween start end
   in property $ spanStart span === start .&&. spanEnd span === end
 
--- Property: mergeSpans should have start as minimum and end as maximum
+-- Property: mergeSpans should have start as L.minimum L.and end as L.maximum
 prop_mergeSpans_min_max :: SourceSpan -> SourceSpan -> Property
 prop_mergeSpans_min_max span1 span2 =
   let merged = mergeSpans span1 span2
@@ -302,7 +303,7 @@ prop_toErrorLocationWithSpan_correct_conversion span =
 -- Position Ordering Properties
 -- ============================================================================
 
--- Property: positions with same line and column but different offsets should be ordered by offset
+-- Property: positions with same line L.and column but different offsets should be ordered by offset
 prop_position_ordering_by_offset :: Int -> Int -> Property
 prop_position_ordering_by_offset line col =
   line > 0 && col > 0 ==> 

@@ -24,7 +24,9 @@ import Dependencies
   , topologicalSort
   )
 
-import Data.List (isPrefixOf, isInfixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort, nub)
 
 -- Test 1: Simple dependency analysis
 prop_simple_dependency_analysis :: String -> Property
@@ -35,9 +37,9 @@ prop_simple_dependency_analysis code =
 -- Test 2: Cycle detection in dependencies
 prop_cycle_detection :: [String] -> Property
 prop_cycle_detection variables =
-  let code = unlines $ map (\v -> v ++ " := " ++ head variables) variables
+  let code = unlines $ L.map (\v -> v ++ " := " ++ L.head variables) variables
       result = analyzeDependencies code
-  in length variables > 0 ==> 
+  in L.length variables > 0 ==> 
      property $ True -- Should detect potential cycles
 
 -- Test 3: Dependency graph construction
@@ -56,7 +58,7 @@ prop_topological_sort_consistency :: [String] -> Property
 prop_topological_sort_consistency variables =
   let code = unlines $ zipWith (\i v -> v ++ " := " ++ show i) [1..] variables
       result = analyzeDependencies code
-  in length variables > 0 ==> 
+  in L.length variables > 0 ==> 
      property $ True -- Should produce valid ordering
 
 -- Test 5: Empty dependency analysis
@@ -76,18 +78,18 @@ prop_self_dependency_detection varName =
 -- Test 7: Multiple dependency chains
 prop_multiple_dependency_chains :: [String] -> Property
 prop_multiple_dependency_chains variables =
-  let pairs = zip variables (tail variables ++ [head variables])
-      code = unlines $ map (\(from, to) -> from ++ " := " ++ to) pairs
+  let pairs = zip variables (L.tail variables ++ [L.head variables])
+      code = unlines $ L.map (\(from, to) -> from ++ " := " ++ to) pairs
       result = analyzeDependencies code
-  in length variables > 1 ==> 
+  in L.length variables > 1 ==> 
      property $ True -- Should handle multiple chains
 
 -- Test 8: Dependency retrieval accuracy
 prop_dependency_retrieval_accuracy :: String -> [String] -> Property
 prop_dependency_retrieval_accuracy targetVar dependencies =
-  let code = unlines $ map (\dep -> targetVar ++ " := " ++ dep) dependencies
+  let code = unlines $ L.map (\dep -> targetVar ++ " := " ++ dep) dependencies
       result = analyzeDependencies code
-  in not (null targetVar) && length dependencies > 0 ==> 
+  in not (null targetVar) && L.length dependencies > 0 ==> 
      property $ True -- Should retrieve accurate dependencies
 
 -- Test 9: Complex dependency scenarios
@@ -95,7 +97,7 @@ prop_complex_dependency_scenarios :: [String] -> Property
 prop_complex_dependency_scenarios statements =
   let code = unlines statements
       result = analyzeDependencies code
-  in length statements > 0 ==> 
+  in L.length statements > 0 ==> 
      property $ True -- Should handle complex scenarios
 
 -- Test 10: Dependency error handling

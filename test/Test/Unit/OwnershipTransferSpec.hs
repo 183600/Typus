@@ -4,6 +4,7 @@
 module Test.Unit.OwnershipTransferSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import Ownership
@@ -137,13 +138,13 @@ ownershipErrorProperties = testGroup "Ownership Error Properties"
       \varName ->
         let error = UseAfterMove varName
             message = formatOwnershipError error
-        in varName `isInfixOf` message
+        in varName `L.isInfixOf` message
     
   , testProperty "double move error has correct structure" $
       \varName1 varName2 ->
         let error = DoubleMove varName1 varName2
             message = formatOwnershipError error
-        in varName1 `isInfixOf` message && varName2 `isInfixOf` message
+        in varName1 `L.isInfixOf` message && varName2 `L.isInfixOf` message
     
   , testProperty "borrow error messages are descriptive" $
       \varName ->
@@ -152,7 +153,7 @@ ownershipErrorProperties = testGroup "Ownership Error Properties"
                      BorrowWhileMutBorrowed varName,
                      MultipleMutBorrows varName]
             messages = map formatOwnershipError errors
-        in all (`isInfixOf` varName) messages
+        in L.all (`L.isInfixOf` varName) messages
     
   , testProperty "ownership error categorization is consistent" $
       \errorType ->
@@ -163,9 +164,9 @@ ownershipErrorProperties = testGroup "Ownership Error Properties"
       let useAfterMove = UseAfterMove "x"
           doubleMove = DoubleMove "x" "y"
           borrowError = BorrowWhileMoved "z"
-      assertBool "Use after move formatted" $ not $ null $ formatOwnershipError useAfterMove
-      assertBool "Double move formatted" $ not $ null $ formatOwnershipError doubleMove
-      assertBool "Borrow error formatted" $ not $ null $ formatOwnershipError borrowError
+      assertBool "Use after move formatted" $ not $ L.null $ formatOwnershipError useAfterMove
+      assertBool "Double move formatted" $ not $ L.null $ formatOwnershipError doubleMove
+      assertBool "Borrow error formatted" $ not $ L.null $ formatOwnershipError borrowError
   ]
 
 -- ============================================================================
@@ -194,7 +195,7 @@ ownershipAnalyzerProperties = testGroup "Ownership Analyzer Properties"
         let withOwned = addOwnedVariable analyzer varName
             withMove = moveVariable withOwned varName
             errors = getOwnershipErrors withMove
-        in any isUseAfterMove errors || null errors
+        in L.any isUseAfterMove errors || null errors
     
   , testProperty "analyzer handles borrow tracking" $
       \analyzer ownerName borrowerName ->
@@ -237,7 +238,7 @@ transferConsistencyProperties = testGroup "Transfer Consistency Properties"
             transfers = [(name1, name2), (name2, name3), (name3, name1)]
             finalState = foldl performTransferWith withOwned transfers
             errors = getOwnershipErrors finalState
-        in any isCircularTransfer errors || null errors
+        in L.any isCircularTransfer errors || null errors
     
   , testProperty "transfer preserves variable uniqueness" $
       \analyzer fromName toName ->
@@ -268,7 +269,7 @@ ownershipBoundaryProperties = testGroup "Ownership Boundary Properties"
     
   , testProperty "maximal ownership chains are handled" $
       \n -> n < 100 ==>
-        let names = map (\i -> "var" ++ show i) [1..n]
+        let names = L.map (\i -> "var" ++ show i) [1..n]
             analyzer = foldl addOwnedVariable newOwnershipAnalyzer names
             chain = createTransferChain names
             finalState = foldl performTransferWith analyzer chain
@@ -280,7 +281,7 @@ ownershipBoundaryProperties = testGroup "Ownership Boundary Properties"
             withScope = setVariableScope withOwned varName scope
             outOfScope = moveVariable withScope varName
             errors = getOwnershipErrors outOfScope
-        in any isOutOfScope errors || null errors
+        in L.any isOutOfScope errors || null errors
     
   , testCase "boundary condition handling" $ do
       let analyzer = newOwnershipAnalyzer
@@ -512,11 +513,11 @@ edgeCaseProperties = testGroup "Edge Case Tests"
           transfer = createValidTransfer unicodeName "english"
       in assertBool "Unicode names handled" $ isValidTransfer transfer
     
-  , testProperty "handle maximum transfer chain length" $
+  , testProperty "handle L.maximum transfer chain L.length" $
       \n -> n < 1000 ==>
-        let names = map (\i -> "var" ++ show i) [1..n]
+        let names = L.map (\i -> "var" ++ show i) [1..n]
             chain = createTransferChain names
-        in length chain === max 0 (n - 1)
+        in L.length chain === max 0 (n - 1)
   ]
 
 -- ============================================================================
@@ -527,13 +528,13 @@ performanceProperties :: TestTree
 performanceProperties = testGroup "Performance Properties"
   [ testProperty "ownership analysis is linear in variables" $
       \n -> n < 1000 ==>
-        let names = map (\i -> "var" ++ show i) [1..n]
+        let names = L.map (\i -> "var" ++ show i) [1..n]
             analyzer = foldl addOwnedVariable newOwnershipAnalyzer names
         in analyzerStateConsistent analyzer `seq` True
     
   , testProperty "transfer operations are efficient" $
       \n -> n < 1000 ==>
-        let names = map (\i -> "var" ++ show i) [1..n]
+        let names = L.map (\i -> "var" ++ show i) [1..n]
             analyzer = foldl addOwnedVariable newOwnershipAnalyzer names
             transfers = createTransferChain names
             finalState = foldl performTransferWith analyzer transfers
@@ -541,8 +542,8 @@ performanceProperties = testGroup "Performance Properties"
     
   , testProperty "error detection is efficient" $
       \n -> n < 1000 ==>
-        let names = map (\i -> "var" ++ show i) [1..n]
+        let names = L.map (\i -> "var" ++ show i) [1..n]
             analyzer = foldl addOwnedVariable newOwnershipAnalyzer names
             errors = getOwnershipErrors analyzer
-        in length errors `seq` True
+        in L.length errors `seq` True
   ]

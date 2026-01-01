@@ -47,7 +47,9 @@ import SourceLocation
 import qualified Data.Text as T
 import Data.Char (isSpace, isAlphaNum)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, isInfixOf, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort)
 
 -- ============================================================================
 -- Unit Tests
@@ -100,19 +102,19 @@ tests =
             
         , testCase "mapLocated preserves location information" $ do
             let original = Located "hello" (SourcePos 1 1 0) (SourceSpan (SourcePos 1 1 0) (SourcePos 1 6 5))
-                mapped = mapLocated reverse original
+                mapped = mapLocated L.reverse original
             locatedSpan mapped @?= locatedSpan original
             locatedValue mapped @?= "olleh"
         ]
         
     , testGroup "Integration tests"
-        [ testCase "Utils and SourceLocation integration" $ do
+        [ testCase "Utils L.and SourceLocation integration" $ do
             let code = "  x := 1  // comment\n  y := 2"
                 cleaned = removeLineComments code
                 linesList = lines cleaned
                 startPos' = startPos
-                posAfterFirstLine = advancePosByText (T.pack (head linesList)) startPos'
-            length linesList @?= 2
+                posAfterFirstLine = advancePosByText (T.pack (L.head linesList)) startPos'
+            L.length linesList @?= 2
             posAfterFirstLine @?= SourcePos 2 1 24
         ]
     ]
@@ -128,14 +130,14 @@ prop_trim_idempotent str =
       trimmedTwice = trim trimmedOnce
   in property $ trimmedOnce === trimmedTwice
 
--- Property: splitBy and splitByCollapsed relationship
+-- Property: splitBy L.and splitByCollapsed relationship
 prop_splitBy_relationship :: String -> Char -> Property
 prop_splitBy_relationship str delim =
   let normal = splitBy delim str
       collapsed = splitByCollapsed delim str
-      emptyCount = length (filter (== "") normal)
+      emptyCount = L.length (L.filter (== "") normal)
   in classify (emptyCount > 0) "has empty segments" $
-     property $ length collapsed + emptyCount === length normal
+     property $ L.length collapsed + emptyCount === L.length normal
 
 -- Property: removeComments is idempotent
 prop_removeComments_idempotent :: String -> Property
@@ -149,9 +151,9 @@ prop_sourcepos_consistent :: String -> Property
 prop_sourcepos_consistent str =
   let text = T.pack str
       finalPos = advancePosByText text startPos
-      lineCount = length $ T.lines text
+      lineCount = L.length $ T.lines text
       lastLine = if T.null text then "" else T.last $ T.lines text
-      colCount = T.length lastLine + 1
+      colCount = T.L.length lastLine + 1
   in property $ sourceLine finalPos === fromIntegral lineCount .&&.
                 sourceColumn finalPos === fromIntegral colCount
 
@@ -164,15 +166,15 @@ prop_mergeSpans_commutative start1 end1 start2 end2 =
       merged2 = mergeSpans span2 span1
   in property $ merged1 === merged2
 
--- Property: locatedAt and mapLocated composition
+-- Property: locatedAt L.and mapLocated composition
 prop_located_map_composition :: String -> Property
 prop_located_map_composition str =
   let pos = startPos
       located = locatedAt pos str
-      mapped1 = mapLocated length located
-      mapped2 = mapLocated (show . length) located
-  in property $ locatedValue mapped1 === length str .&&.
-                locatedValue mapped2 === show (length str)
+      mapped1 = mapLocated L.length located
+      mapped2 = mapLocated (show . L.length) located
+  in property $ locatedValue mapped1 === L.length str .&&.
+                locatedValue mapped2 === show (L.length str)
 
 -- Property: removeLineComments preserves line structure
 prop_removeLineComments_preserves_lines :: String -> Property
@@ -180,12 +182,12 @@ prop_removeLineComments_preserves_lines str =
   let originalLines = lines str
       cleaned = removeLineComments str
       cleanedLines = lines cleaned
-  in property $ length originalLines === length cleanedLines
+  in property $ L.length originalLines === L.length cleanedLines
 
 -- Property: normalizeIndentation preserves non-empty lines
 prop_normalizeIndentation_preserves_content :: String -> Property
 prop_normalizeIndentation_preserves_content str =
   let normalized = normalizeIndentation str
-      originalNonEmpty = filter (not . null) $ lines str
-      normalizedNonEmpty = filter (not . null) $ lines normalized
-  in property $ length originalNonEmpty === length normalizedNonEmpty
+      originalNonEmpty = L.filter (not . null) $ lines str
+      normalizedNonEmpty = L.filter (not . null) $ lines normalized
+  in property $ L.length originalNonEmpty === L.length normalizedNonEmpty

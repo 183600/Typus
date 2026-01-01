@@ -24,14 +24,16 @@ import Utils
 
 import Data.Char (isSpace, isLetter, isDigit)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, isInfixOf, intercalate, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (intercalate, nub)
 import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Map (Map)
 import qualified Data.Map as Map
 
--- | Tests for ownership analysis and memory leak prevention
+-- | Tests for ownership analysis L.and memory leak prevention
 tests :: TestTree
 tests =
   testGroup "Ownership Memory Leak Prevention Tests"
@@ -109,19 +111,19 @@ prop_copy_creates_independent_ownership originalVar copyVar =
 -- Property: Dropped value detection prevents leaks
 prop_dropped_value_detection :: [String] -> Property
 prop_dropped_value_detection variables =
-  not (null variables) && length variables <= 10 ==>
-  let code = unlines $ map (\v -> "let " ++ v ++ " = String::new()") variables
+  not (null variables) && L.length variables <= 10 ==>
+  let code = unlines $ L.map (\v -> "let " ++ v ++ " = String::new()") variables
       ownershipState = analyzeOwnership code
       leakedVars = detectLeaks ownershipState
-  in property $ length leakedVars <= length variables `div` 2
+  in property $ L.length leakedVars <= L.length variables `div` 2
 
 -- Property: Circular reference detection
 prop_circular_reference_detection :: [String] -> Property
 prop_circular_reference_detection nodes =
-  not (null nodes) && length nodes <= 5 ==>
+  not (null nodes) && L.length nodes <= 5 ==>
   let circularCode = createCircularReferences nodes
       hasCircular = detectCircularReferences circularCode
-  in property $ hasCircular ==> length nodes > 1
+  in property $ hasCircular ==> L.length nodes > 1
 
 -- Property: Resource cleanup verification
 prop_resource_cleanup_verification :: Int -> Property
@@ -138,12 +140,12 @@ prop_lifetime_boundaries code =
   not (null code) ==> 
   let lifetimeAnalysis = analyzeLifetimes code
       violations = detectLifetimeViolations lifetimeAnalysis
-  in property $ length violations <= 1
+  in property $ L.length violations <= 1
 
 -- Property: Lifetime elision rules
 prop_lifetime_elision_rules :: String -> Property
 prop_lifetime_elision_rules functionCode =
-  "fn" `isPrefixOf` functionCode ==> 
+  "fn" `L.isPrefixOf` functionCode ==> 
   let elidedLifetimes = analyzeLifetimeElision functionCode
       isCorrect = verifyLifetimeElision elidedLifetimes
   in property $ isCorrect
@@ -168,7 +170,7 @@ prop_unnecessary_copy_elimination code =
 -- Property: Move elision in return values
 prop_move_elision_return_values :: String -> Property
 prop_move_elision_return_values functionCode =
-  "fn" `isPrefixOf` functionCode ==> 
+  "fn" `L.isPrefixOf` functionCode ==> 
   let optimizedCode = applyMoveElision functionCode
       moveCount = countMoves optimizedCode
   in property $ moveCount >= 0
@@ -187,21 +189,21 @@ prop_use_after_move_prevention varName moveTarget =
   not (null varName) && not (null moveTarget) ==> 
   let code = "let " ++ varName ++ " = String::new()\nlet " ++ moveTarget ++ " = " ++ varName ++ "\nprintln(" ++ varName ++ ")"
       violations = detectUseAfterMoveViolations code
-  in property $ length violations > 0
+  in property $ L.length violations > 0
 
 -- Property: Dangling borrow prevention
 prop_dangling_borrow_prevention :: String -> Property
 prop_dangling_borrow_prevention code =
   not (null code) ==> 
   let violations = detectDanglingBorrowViolations code
-  in property $ length violations >= 0
+  in property $ L.length violations >= 0
 
 -- Property: Data race prevention
 prop_data_race_prevention :: String -> Property
 prop_data_race_prevention concurrentCode =
   not (null concurrentCode) ==> 
   let raceConditions = detectDataRaces concurrentCode
-  in property $ length raceConditions >= 0
+  in property $ L.length raceConditions >= 0
 
 -- Test cases for specific ownership scenarios
 
@@ -347,22 +349,22 @@ detectDataRaces _ = [] -- Placeholder
 
 -- Utility functions
 countCopies :: String -> Int
-countCopies code = length (filter (== "copy") (words code))
+countCopies code = L.length (L.filter (== "copy") (words code))
 
 countMoves :: String -> Int
-countMoves code = length (filter (== "move") (words code))
+countMoves code = L.length (L.filter (== "move") (words code))
 
 countBorrowChecks :: String -> Int
-countBorrowChecks code = length (filter (== "borrow_check") (words code))
+countBorrowChecks code = L.length (L.filter (== "borrow_check") (words code))
 
 createCircularReferences :: [String] -> String
-createCircularReferences nodes = unlines $ map (\n -> "let " ++ n ++ " = Ref::new()") nodes
+createCircularReferences nodes = unlines $ L.map (\n -> "let " ++ n ++ " = Ref::new()") nodes
 
 detectCircularReferences :: String -> Bool
-detectCircularReferences code = "Ref" `isInfixOf` code
+detectCircularReferences code = "Ref" `L.isInfixOf` code
 
 createResourceCode :: Int -> String
-createResourceCode count = unlines $ map (\i -> "let resource" ++ show i ++ " = Resource::new()") [1..count]
+createResourceCode count = unlines $ L.map (\i -> "let resource" ++ show i ++ " = Resource::new()") [1..count]
 
 detectLeaksInLoop :: String -> [String]
 detectLeaksInLoop _ = ["loop_leak"] -- Placeholder
@@ -377,10 +379,10 @@ verifyStructLifetimeFields :: LifetimeAnalysis -> Bool
 verifyStructLifetimeFields _ = True -- Placeholder
 
 containsNRVOPattern :: String -> Bool
-containsNRVOPattern code = "return" `isInfixOf` code
+containsNRVOPattern code = "return" `L.isInfixOf` code
 
 containsBorrowInferenceOptimization :: String -> Bool
-containsBorrowInferenceOptimization code = "borrow" `isInfixOf` code
+containsBorrowInferenceOptimization code = "borrow" `L.isInfixOf` code
 
 detectIteratorInvalidation :: String -> [IteratorInvalidation]
 detectIteratorInvalidation _ = [IteratorInvalidation "vec"] -- Placeholder

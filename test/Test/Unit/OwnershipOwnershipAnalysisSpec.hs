@@ -28,6 +28,7 @@ import Ownership
   , builtInFunctions
   )
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 
 -- ============================================================================
@@ -86,7 +87,7 @@ prop_analyze_empty_code =
 -- Property: 简单所有权分析
 prop_analyze_simple_ownership :: String -> Property
 prop_analyze_simple_ownership code =
-  not (null code) && not ("func" `isInfixOf` code) ==>
+  not (null code) && not ("func" `L.isInfixOf` code) ==>
   let analyzer = newOwnershipAnalyzer
       result = analyzeOwnership analyzer code
   in case result of
@@ -201,7 +202,7 @@ tests =
         , testCase "lexical analysis of simple code" $ do
             let code = "var x int = 42"
                 tokens = lexAll code
-            length tokens @?= 5  -- var, x, int, =, 42
+            L.length tokens @?= 5  -- var, x, int, =, 42
 
         , testCase "parse simple program" $ do
             let code = "var x int = 42"
@@ -216,12 +217,12 @@ tests =
                   , OwnershipError "Borrow checker" "Cannot borrow mutable reference" Nothing
                   ]
                 formatted = formatOwnershipErrors errors
-            "Use after move" `isInfixOf` formatted @?= True
-            "Borrow checker" `isInfixOf` formatted @?= True
+            "Use after move" `L.isInfixOf` formatted @?= True
+            "Borrow checker" `L.isInfixOf` formatted @?= True
 
         , testCase "builtin functions available" $ do
             let builtins = builtInFunctions
-                hasCommonFunctions = any (`elem` builtins) ["print", "len", "make", "new"]
+                hasCommonFunctions = L.any (`elem` builtins) ["print", "len", "make", "new"]
             assertBool "Should have common builtin functions" hasCommonFunctions
 
         , testCase "analyze complex ownership scenario" $ do
@@ -294,7 +295,7 @@ tests =
         , testCase "ownership transfer types" $ do
             let transfers = [MoveTransfer, BorrowTransfer, CopyTransfer, ShareTransfer]
                 transferNames = map show transfers
-            length transferNames @?= 4
-            all (not . null) transferNames @?= True
+            L.length transferNames @?= 4
+            L.all (not . null) transferNames @?= True
         ]
     ]

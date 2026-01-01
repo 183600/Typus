@@ -20,14 +20,16 @@ import Compiler (compile, checkDependentTypes)
 import Parser (TypusFile(..), CodeBlock(..))
 import SourceLocation (SourcePos(..), SourceSpan(..))
 import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (nub)
 import Data.Char (isAlpha, isAlphaNum, isDigit)
 import qualified Data.Map as Map
 
 -- | Generate dependent type expressions
 genDependentType :: Gen String
 genDependentType = oneof
-  [ -- Vector with length parameter
+  [ -- Vector with L.length parameter
     do
       len <- choose (0, 100)
       return $ "Vector<" ++ show len ++ ">"
@@ -67,8 +69,8 @@ genTypeConstraint = oneof
   [ -- Length constraint
     do
       varName <- genIdentifier
-      length <- choose (0, 100)
-      return $ "len(" ++ varName ++ ") == " ++ show length
+      L.length <- choose (0, 100)
+      return $ "len(" ++ varName ++ ") == " ++ show L.length
   
   , -- Range constraint
     do
@@ -107,7 +109,7 @@ genDependentTypeFunction = do
 -- | Generate malformed dependent type expressions
 genMalformedDependentType :: Gen String
 genMalformedDependentType = oneof
-  [ -- Negative length
+  [ -- Negative L.length
     do
       len <- choose (-100, -1)
       return $ "Vector<" ++ show len ++ ">"
@@ -138,7 +140,7 @@ genConstrainedDependentType :: Gen String
 genConstrainedDependentType = do
   baseType <- genDependentType
   constraints <- listOf genTypeConstraint
-  return $ baseType ++ " where " ++ unwords (map (\c -> "(" ++ c ++ ")") constraints)
+  return $ baseType ++ " where " ++ unwords (L.map (\c -> "(" ++ c ++ ")") constraints)
 
 -- Property: Valid dependent types should type-check
 prop_valid_dependent_types_typecheck :: String -> Property
@@ -155,14 +157,14 @@ prop_invalid_dependent_types_produce_errors malformedTypeCode =
   not (null malformedTypeCode) ==>
   let result = compile malformedTypeCode
   in case result of
-    Left errors -> property $ any isDependentTypeError errors
+    Left errors -> property $ L.any isDependentTypeError errors
     Right _ -> property $ True -- Unexpected success, but still valid test
   where
     isDependentTypeError error = 
       let errorMsg = show error
-      in "dependent" `isInfixOf` errorMsg || 
-         "type" `isInfixOf` errorMsg ||
-         "constraint" `isInfixOf` errorMsg
+      in "dependent" `L.isInfixOf` errorMsg || 
+         "type" `L.isInfixOf` errorMsg ||
+         "constraint" `L.isInfixOf` errorMsg
 
 -- Property: Type constraints should be consistent
 prop_type_constraints_consistent :: String -> String -> Property
@@ -171,7 +173,7 @@ prop_type_constraints_consistent varName constraint1 constraint2 =
   let code = "func test(x: Int) Bool {\n  " ++ constraint1 ++ "\n  " ++ constraint2 ++ "\n  return true\n}"
       result = compile code
   in property $ case result of
-    Left errors -> property $ True -- Should detect inconsistency or other errors
+    Left errors -> property $ True -- Should detect inconsistency L.or other errors
     Right _ -> property $ True -- Or accept consistent constraints
 
 -- Property: Dependent type parameters should be positive
@@ -221,12 +223,12 @@ prop_type_constraints_satisfiable constraint =
   let code = "func constraint_test() {\n  require " ++ constraint ++ "\n  return true\n}"
       result = compile code
   in property $ case result of
-    Left errors -> property $ any isConstraintError (map show errors)
+    Left errors -> property $ L.any isConstraintError (map show errors)
     Right _ -> property $ True
   where
     isConstraintError errorMsg = 
-      "constraint" `isInfixOf` errorMsg || 
-      "unsatisfiable" `isInfixOf` errorMsg
+      "constraint" `L.isInfixOf` errorMsg || 
+      "unsatisfiable" `L.isInfixOf` errorMsg
 
 -- Property: Dependent type equality should be transitive
 prop_dependent_type_equality_transitive :: String -> String -> String -> Property
@@ -255,13 +257,13 @@ prop_dependent_type_recursion_well_founded recursiveType =
   let code = "func recursion_test() {\n  type R = " ++ recursiveType ++ "\n  let x: R = ...\n  return x\n}"
       result = compile code
   in property $ case result of
-    Left errors -> property $ any isRecursionError (map show errors)
+    Left errors -> property $ L.any isRecursionError (map show errors)
     Right _ -> property $ True
   where
     isRecursionError errorMsg = 
-      "recursive" `isInfixOf` errorMsg || 
-      "infinite" `isInfixOf` errorMsg ||
-      "well-founded" `isInfixOf` errorMsg
+      "recursive" `L.isInfixOf` errorMsg || 
+      "infinite" `L.isInfixOf` errorMsg ||
+      "well-founded" `L.isInfixOf` errorMsg
 
 -- Property: Dependent type bounds should be respected
 prop_dependent_type_bounds_respected :: Int -> Int -> Property
@@ -273,7 +275,7 @@ prop_dependent_type_bounds_respected lower upper =
     Left errors -> property $ True -- Should detect bound violations
     Right _ -> property $ True -- Or accept valid bounds
 
--- Export all tests
+-- Export L.all tests
 tests :: TestTree
 tests =
   testGroup "Dependent Type System Boundary QuickCheck Tests"

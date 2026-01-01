@@ -3,6 +3,7 @@
 module Test.Unit.CoreQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import TestSupport.ExtendedArbitrary ()
@@ -50,9 +51,9 @@ prop_parse_valid_directives directive =
 -- Property: Parse error locations are reasonable
 prop_parse_error_locations :: String -> Property
 prop_parse_error_locations malformed =
-  length malformed > 10 ==> 
+  L.length malformed > 10 ==> 
   case parseTypus malformed of
-    Left err -> property $ "error" `Data.List.isInfixOf` map toLower err
+    Left err -> property $ "error" `Data.List.L.isInfixOf` map toLower err
     Right _ -> property True
 
 -- ============================================================================
@@ -81,7 +82,7 @@ prop_type_equality_transitive t1 t2 t3 =
 prop_ownership_errors_valid_ids :: OwnershipError -> Property
 prop_ownership_errors_valid_ids err = 
   let ids = extractOwnershipErrorIds err
-  in property $ all isValidIdentifier ids
+  in property $ L.all isValidIdentifier ids
 
 -- Property: Ownership type consistency
 prop_ownership_type_consistency :: OwnershipType -> Property
@@ -98,9 +99,9 @@ isTypeVarWellFormed :: Dep.TypeVar -> Bool
 isTypeVarWellFormed tv = case tv of
   Dep.TVCon name -> not (null name)
   Dep.TVVar name -> not (null name)
-  Dep.TVApp name args -> not (null name) && all isTypeVarWellFormed args
-  Dep.TVFun args ret -> all isTypeVarWellFormed args && isTypeVarWellFormed ret
-  Dep.TVTuple types -> all isTypeVarWellFormed types
+  Dep.TVApp name args -> not (null name) && L.all isTypeVarWellFormed args
+  Dep.TVFun args ret -> L.all isTypeVarWellFormed args && isTypeVarWellFormed ret
+  Dep.TVTuple types -> L.all isTypeVarWellFormed types
 
 -- Property: Type variables are well-formed
 prop_typevar_wellformed :: Dep.TypeVar -> Property
@@ -112,7 +113,7 @@ prop_type_constraints_satisfiable constraint =
   let isSatisfiable = case constraint of
         Dep.Equal t1 t2 -> isTypeVarWellFormed t1 && isTypeVarWellFormed t2
         Dep.Subtype t1 t2 -> isTypeVarWellFormed t1 && isTypeVarWellFormed t2
-        Dep.Predicate name args -> not (null name) && all isTypeVarWellFormed args
+        Dep.Predicate name args -> not (null name) && L.all isTypeVarWellFormed args
         Dep.TypeSizeGE tv size -> isTypeVarWellFormed tv && size >= 0
         Dep.TypeSizeGT tv size -> isTypeVarWellFormed tv && size >= 0
         Dep.TypeRange tv min max -> isTypeVarWellFormed tv && min <= max
@@ -211,7 +212,7 @@ extractOwnershipId (Borrowed id) = id
 extractOwnershipId (MutBorrowed id) = id
 
 isValidIdentifier :: String -> Bool
-isValidIdentifier name = not (null name) && all isAsciiAlphaNum name
+isValidIdentifier name = not (null name) && L.all isAsciiAlphaNum name
   where
     isAsciiAlphaNum char = (char >= 'a' && char <= 'z') || 
                           (char >= 'A' && char <= 'Z') || 
@@ -236,10 +237,10 @@ idPath (ImportDecl path _) = fromMaybe "" path
 isValidGoImportPath :: String -> Bool
 isValidGoImportPath path = 
   not (null path) && 
-  all (not . null) (words path) &&
-  not (isPrefixOf "." path)
+  L.all (not . null) (words path) &&
+  not (L.isPrefixOf "." path)
 
 isPrefixOf :: Eq a => [a] -> [a] -> Bool
-isPrefixOf [] _ = True
-isPrefixOf _ [] = False
-isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
+L.isPrefixOf [] _ = True
+L.isPrefixOf _ [] = False
+L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys

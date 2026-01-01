@@ -25,7 +25,9 @@ import Compiler.GoAst
 import SourceLocation (SourcePos(..), startPos)
 
 import Data.Char (isSpace, isLetter, isDigit, isAlphaNum)
-import Data.List (isPrefixOf, isSuffixOf, intercalate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isSuffixOf)
+import Data.List (intercalate)
 import qualified Data.Text as T
 
 -- Generate valid identifiers (letters, digits, underscores, not starting with digit)
@@ -132,7 +134,7 @@ genFunction = do
   returnType <- genIdentifier
   body <- listOf1 genStatement
   return $ "func " ++ name ++ "(" ++ intercalate "," params ++ ") " ++ returnType ++ " {\n" ++ 
-           unlines (map ("  " ++) body) ++ "\n}"
+           unlines (L.map ("  " ++) body) ++ "\n}"
 
 -- Generate tokens that should be lexable
 genLexableInput :: Gen String
@@ -161,8 +163,8 @@ genWhitespace = listOf $ oneof
 -- Property: identifier lexer recognizes valid identifiers
 prop_identifier_lexing :: String -> Property
 prop_identifier_lexing ident =
-  not (null ident) && all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ ['_']) ident &&
-  not (null ident) && isLetter (head ident) ==>
+  not (null ident) && L.all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ ['_']) ident &&
+  not (null ident) && isLetter (L.head ident) ==>
   let tokens = lexGo ident
   in not (null tokens) -- Should produce at least one token
 
@@ -189,12 +191,12 @@ prop_operator_lexing op =
 -- Property: literal lexer recognizes literals
 prop_literal_lexing :: String -> Property
 prop_literal_lexing literal =
-  let isStringLiteral = not (null literal) && head literal == '\"' && last literal == '\"'
-      isCharLiteral = not (null literal) && head literal == '\'' && last literal == '\'' && length literal >= 3
-      isIntLiteral = not (null literal) && all isDigit literal
-      isFloatLiteral = not (null literal) && elem '.' literal && 
-                       all (\c -> isDigit c || c == '.') literal &&
-                       length (filter (== '.') literal) == 1
+  let isStringLiteral = not (null literal) && L.head literal == '\"' && last literal == '\"'
+      isCharLiteral = not (null literal) && L.head literal == '\'' && last literal == '\'' && L.length literal >= 3
+      isIntLiteral = not (null literal) && L.all isDigit literal
+      isFloatLiteral = not (null literal) && L.elem '.' literal && 
+                       L.all (\c -> isDigit c || c == '.') literal &&
+                       L.length (L.filter (== '.') literal) == 1
       isBoolLiteral = literal `elem` ["true", "false"]
   in (isStringLiteral || isCharLiteral || isIntLiteral || isFloatLiteral || isBoolLiteral) ==>
   let tokens = lexGo literal
@@ -207,12 +209,12 @@ prop_whitespace_handling content ws =
       withWS = content ++ ws ++ content
       tokensWithoutWS = lexGo withoutWS
       tokensWithWS = lexGo withWS
-  in length tokensWithWS >= length tokensWithoutWS
+  in L.length tokensWithWS >= L.length tokensWithoutWS
 
 -- Property: lexer produces non-empty tokens for non-empty input
 prop_non_empty_input_produces_tokens :: String -> Property
 prop_non_empty_input_produces_tokens input =
-  not (all isSpace input) && not (null input) ==>
+  not (L.all isSpace input) && not (null input) ==>
   let tokens = lexGo input
   in not (null tokens)
 
@@ -223,12 +225,12 @@ prop_empty_input_handling = lexGo "" === []
 -- Property: lexer handles only whitespace
 prop_whitespace_only_input :: String -> Property
 prop_whitespace_only_input ws =
-  all isSpace ws ==> lexGo ws === []
+  L.all isSpace ws ==> lexGo ws === []
 
 -- Property: simple expression parsing
 prop_simple_expression_parsing :: String -> Property
 prop_simple_expression_parsing expr =
-  not (null expr) && all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "+-*/() ") expr ==>
+  not (null expr) && L.all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "+-*/() ") expr ==>
   let tokens = lexGo expr
       result = parseExpression tokens
   in not (null tokens) ==> 
@@ -239,8 +241,8 @@ prop_simple_expression_parsing expr =
 -- Property: identifier parsing is deterministic
 prop_identifier_parsing_deterministic :: String -> Property
 prop_identifier_parsing_deterministic ident =
-  not (null ident) && all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ ['_']) ident &&
-  not (null ident) && isLetter (head ident) ==>
+  not (null ident) && L.all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ ['_']) ident &&
+  not (null ident) && isLetter (L.head ident) ==>
   let tokens1 = lexGo ident
       tokens2 = lexGo ident
   in tokens1 === tokens2
@@ -248,9 +250,9 @@ prop_identifier_parsing_deterministic ident =
 -- Property: parsing preserves token count
 prop_parsing_preserves_token_count :: String -> Property
 prop_parsing_preserves_token_count input =
-  not (null input) && not (all isSpace input) ==>
+  not (null input) && not (L.all isSpace input) ==>
   let tokens = lexGo input
-      originalCount = length tokens
+      originalCount = L.length tokens
   in originalCount > 0 ==> property True -- Should have tokens to parse
 
 -- Property: lexer handles line endings correctly
@@ -261,12 +263,12 @@ prop_line_ending_handling content =
       tokensUnix = lexGo withUnix
       tokensWindows = lexGo withWindows
   in not (null content) ==> 
-     length tokensUnix >= 1 && length tokensWindows >= 1
+     L.length tokensUnix >= 1 && L.length tokensWindows >= 1
 
 -- Property: lexer is position-aware
 prop_lexer_position_aware :: String -> Property
 prop_lexer_position_aware input =
-  not (null input) && not (all isSpace input) ==>
+  not (null input) && not (L.all isSpace input) ==>
   let tokens = lexGo input
   in not (null tokens) -- Should produce tokens with position info
 
@@ -281,7 +283,7 @@ prop_parser_empty_tokens =
 -- Property: parser handles malformed input gracefully
 prop_parser_malformed_input :: String -> Property
 prop_parser_malformed_input malformed =
-  all (`elem` "!@#$%^&*()_+-=[]{}|;':\",./<>?") malformed && not (null malformed) ==>
+  L.all (`elem` "!@#$%^&*()_+-=[]{}|;':\",./<>?") malformed && not (null malformed) ==>
   let tokens = lexGo malformed
       result = parseExpression tokens
   in case result of

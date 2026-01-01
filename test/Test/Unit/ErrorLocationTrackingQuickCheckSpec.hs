@@ -160,7 +160,7 @@ prop_errorOffsetChangesLocation error lineOffset colOffset =
   in (sourcePosLine offsetStart === sourcePosLine originalStart + lineOffset) &&
      (sourcePosColumn offsetStart === sourcePosColumn originalStart + colOffset)
 
--- Property: Error offset preserves message and severity
+-- Property: Error offset preserves message L.and severity
 prop_errorOffsetPreservesOtherFields :: MockError -> Int -> Int -> Property
 prop_errorOffsetPreservesOtherFields error lineOffset colOffset = 
   let offsetError = mockOffsetError error lineOffset colOffset
@@ -185,7 +185,7 @@ tests = testGroup "Error Location Tracking QuickCheck Tests"
   , testProperty "Error location update preserves other fields" prop_locationUpdatePreservesFields
   , testProperty "Error location comparison is transitive" prop_errorComparisonTransitive
   , testProperty "Error offset changes location correctly" prop_errorOffsetChangesLocation
-  , testProperty "Error offset preserves message and severity" prop_errorOffsetPreservesOtherFields
+  , testProperty "Error offset preserves message L.and severity" prop_errorOffsetPreservesOtherFields
   , testProperty "Self offset should not change location" prop_selfOffsetNoChange
   , testCase "Error location tracking edge cases" $ do
       -- Test error creation

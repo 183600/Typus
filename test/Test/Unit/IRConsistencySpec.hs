@@ -44,7 +44,9 @@ import Compiler.Errors
 
 import SourceLocation (SourceSpan(..), SourcePos(..))
 
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, intercalate, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (intercalate, nub)
 import qualified Data.Set as Set
 import Data.Char (isSpace, isLetter)
 
@@ -72,7 +74,7 @@ tests =
             let typusFile = TypusFile defaultFileDirectives [] [] []
             let sourceIR = buildSourceIR typusFile
             
-            null (tfBlocks $ sourceTypusFile sourceIR) @?= True
+            L.null (tfBlocks $ sourceTypusFile sourceIR) @?= True
             sourceText sourceIR @?= ""
 
         , testCase "sourceIR maintains block order" $ do
@@ -93,7 +95,7 @@ tests =
             let typusFile = TypusFile defaultFileDirectives [] [block] []
             let sourceIR = buildSourceIR typusFile
             
-            let originalSpan = cbSpan (head $ tfBlocks $ sourceTypusFile sourceIR)
+            let originalSpan = cbSpan (L.head $ tfBlocks $ sourceTypusFile sourceIR)
             originalSpan @?= span
         ]
 
@@ -119,7 +121,7 @@ tests =
                 Right semanticIR -> do
                     let goModule = semanticModule semanticIR
                     assertBool "should have package declaration" (isJust $ gmPackage goModule)
-                    assertBool "should have declarations" (not $ null $ gmDecls goModule)
+                    assertBool "should have declarations" (not $ L.null $ gmDecls goModule)
 
         , testCase "semanticIR generates value information" $ do
             let block = CodeBlock defaultBlockDirectives "func main() {\n    x := 42\n    println(x)\n}" (spanBetween (posAt 1 1) (posAt 4 18))
@@ -144,7 +146,7 @@ tests =
                 Left _ -> assertBool "should build semantic IR with package" False
                 Right semanticIR -> do
                     let goModule = semanticModule semanticIR
-                    assertBool "should include package declarations" (length (gmDecls goModule) >= 1)
+                    assertBool "should include package declarations" (L.length (gmDecls goModule) >= 1)
         ]
 
     , testGroup "GoIR Consistency"
@@ -159,9 +161,9 @@ tests =
                     let goIR = emitGo semanticIR
                     let goSource = goSource goIR
                     
-                    assertBool "should contain package declaration" ("package main" `isInfixOf` goSource)
-                    assertBool "should contain main function" ("func main" `isInfixOf` goSource)
-                    assertBool "should contain println call" ("println" `isInfixOf` goSource)
+                    assertBool "should contain package declaration" ("package main" `L.isInfixOf` goSource)
+                    assertBool "should contain main function" ("func main" `L.isInfixOf` goSource)
+                    assertBool "should contain println call" ("println" `L.isInfixOf` goSource)
 
         , testCase "GoIR maintains module structure" $ do
             let block = CodeBlock defaultBlockDirectives "package main\n\nimport \"fmt\"\n\nfunc main() {\n    fmt.Println(\"Hello\")\n}" (spanBetween (posAt 1 1) (posAt 7 2))
@@ -176,9 +178,9 @@ tests =
                     let goSource = goSource goIR
                     
                     assertBool "should have package" (isJust $ gmPackage goModule)
-                    assertBool "should have imports" (not $ null $ gmImports goModule)
-                    assertBool "should have declarations" (not $ null $ gmDecls goModule)
-                    assertBool "source should contain import" ("import" `isInfixOf` goSource)
+                    assertBool "should have imports" (not $ L.null $ gmImports goModule)
+                    assertBool "should have declarations" (not $ L.null $ gmDecls goModule)
+                    assertBool "source should contain import" ("import" `L.isInfixOf` goSource)
 
         , testCase "GoIR handles multiple declarations" $ do
             let block = CodeBlock defaultBlockDirectives (unlines
@@ -204,10 +206,10 @@ tests =
                     let goSource = goSource goIR
                     
                     let decls = gmDecls goModule
-                    assertBool "should have multiple declarations" (length decls >= 3)
-                    assertBool "source should contain const" ("const" `isInfixOf` goSource)
-                    assertBool "source should contain var" ("var" `isInfixOf` goSource)
-                    assertBool "source should contain helper function" ("func helper" `isInfixOf` goSource)
+                    assertBool "should have multiple declarations" (L.length decls >= 3)
+                    assertBool "source should contain const" ("const" `L.isInfixOf` goSource)
+                    assertBool "source should contain var" ("var" `L.isInfixOf` goSource)
+                    assertBool "source should contain helper function" ("func helper" `L.isInfixOf` goSource)
         ]
 
     , testGroup "IR Transformation Consistency"
@@ -223,8 +225,8 @@ tests =
                     let goIR = emitGo semanticIR
                     let goSource = goSource goIR
                     
-                    assertBool "should preserve function name" ("func main" `isInfixOf` goSource)
-                    assertBool "should preserve function call" ("println" `isInfixOf` goSource)
+                    assertBool "should preserve function name" ("func main" `L.isInfixOf` goSource)
+                    assertBool "should preserve function call" ("println" `L.isInfixOf` goSource)
 
         , testCase "semantic to Go transformation is deterministic" $ do
             let block = CodeBlock defaultBlockDirectives "package main\n\nfunc main() { return }" (spanBetween (posAt 1 1) (posAt 3 20))
@@ -262,9 +264,9 @@ tests =
                     let goIR = emitGo semanticIR
                     let goSource = goSource goIR
                     
-                    assertBool "should contain type definition" ("type Data" `isInfixOf` goSource)
-                    assertBool "should contain struct definition" ("struct" `isInfixOf` goSource)
-                    assertBool "should contain function with struct parameter" ("func process(d Data)" `isInfixOf` goSource)
+                    assertBool "should contain type definition" ("type Data" `L.isInfixOf` goSource)
+                    assertBool "should contain struct definition" ("struct" `L.isInfixOf` goSource)
+                    assertBool "should contain function with struct parameter" ("func process(d Data)" `L.isInfixOf` goSource)
         ]
 
     , testGroup "Error Handling Consistency"
@@ -298,8 +300,8 @@ tests =
             case buildSemanticIR sourceIR of
                 Left errors -> do
                     assertBool "should have error messages" (not $ null errors)
-                    let firstError = head errors
-                    assertBool "error should have description" (not $ null $ ceDescription firstError)
+                    let firstError = L.head errors
+                    assertBool "error should have description" (not $ L.null $ ceDescription firstError)
                 Right _ -> assertBool "should produce errors for invalid syntax" False
         ]
 
@@ -321,8 +323,8 @@ tests =
                 let validBlocks = take 10 blocks  -- Limit for performance
                     typusFile = TypusFile defaultFileDirectives [] validBlocks []
                     sourceIR = buildSourceIR typusFile
-                    originalCount = length validBlocks
-                    preservedCount = length $ tfBlocks $ sourceTypusFile sourceIR
+                    originalCount = L.length validBlocks
+                    preservedCount = L.length $ tfBlocks $ sourceTypusFile sourceIR
                 in originalCount === preservedCount
 
         , fastProperty "semanticIR always contains module when source is valid" $
@@ -337,7 +339,7 @@ tests =
                         in property $ True  -- Always contains a GoModule when successful
         ]
 
-    , testGroup "Performance and Stress Tests"
+    , testGroup "Performance L.and Stress Tests"
         [ testCase "handles large files efficiently" $ do
             let largeContent = unlines $ ["func main() {" ++ replicate i ' ' ++ "x := " ++ show i | i <- [1..1000]] ++ ["}"]
             let block = CodeBlock defaultBlockDirectives largeContent (spanBetween (posAt 1 1) (posAt 1001 2))
@@ -360,7 +362,7 @@ tests =
                 Left _ -> assertBool "should handle many blocks" False
                 Right semanticIR -> do
                     let goModule = semanticModule semanticIR
-                    assertBool "should handle many declarations" (length (gmDecls goModule) >= 50)
+                    assertBool "should handle many declarations" (L.length (gmDecls goModule) >= 50)
 
         , testCase "handles deeply nested structures" $ do
             let nestedContent = unlines $ ["type Level" ++ show i ++ " struct {" ++ replicate (i `mod` 5) '\t' ++ "Field Level" ++ show (i+1) ++ "}" | i <- [1..20]] ++ ["type Level20 struct { Value int }"]
@@ -373,7 +375,7 @@ tests =
                 Right semanticIR -> do
                     let goIR = emitGo semanticIR
                     let goSource = goSource goIR
-                    assertBool "should generate nested type definitions" ("type Level1" `isInfixOf` goSource)
+                    assertBool "should generate nested type definitions" ("type Level1" `L.isInfixOf` goSource)
         ]
     ]
   where

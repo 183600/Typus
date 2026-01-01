@@ -1,6 +1,7 @@
 module Test.Unit.UtilsEnhancedTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify)
@@ -25,7 +26,7 @@ tests =
         [ testCase "trim handles unicode whitespace correctly" $ do
             trim "\160\2003hello\2002world\160" @?= "hello\2002world"
 
-        , testCase "trim handles empty and whitespace-only strings" $ do
+        , testCase "trim handles empty L.and whitespace-only strings" $ do
             trim "" @?= ""
             trim "   " @?= ""
             trim "\t\n\r " @?= ""
@@ -67,7 +68,7 @@ tests =
         ]
 
     , testGroup "Indentation normalization edge cases"
-        [ testCase "normalizeIndentation handles mixed tabs and spaces" $ do
+        [ testCase "normalizeIndentation handles mixed tabs L.and spaces" $ do
             let input = "\t    mixed\n\t    indentation"
             normalizeIndentation input @?= "mixed\nindentation"
 
@@ -75,7 +76,7 @@ tests =
             let input = "    line1\n\n    line2"
             normalizeIndentation input @?= "line1\n\nline2"
 
-        , testCase "normalizeIndentation handles all-whitespace lines" $ do
+        , testCase "normalizeIndentation handles L.all-whitespace lines" $ do
             let input = "    line1\n    \t  \n    line2"
             normalizeIndentation input @?= "line1\n    \t  \nline2"
         ]

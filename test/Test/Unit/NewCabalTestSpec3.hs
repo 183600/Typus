@@ -9,6 +9,7 @@ import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify
 import Compiler (compileTypus)
 import Compiler.Errors (CompilerError(..))
 import Utils (trim, splitBy)
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 -- | 测试用例3: 编译器错误处理测试
@@ -20,13 +21,13 @@ tests =
         case compileTypus invalidSource of
           Left err -> 
             -- Check that error message contains useful information
-            "syntax" `isInfixOf` show err @?= True
+            "syntax" `L.isInfixOf` show err @?= True
           Right _ -> fail "expected compilation to fail with invalid syntax"
 
     , testCase "compiler handles empty source gracefully" $ do
         let emptySource = ""
         case compileTypus emptySource of
-          Left _ -> property True  -- Expected to fail or succeed gracefully
+          Left _ -> property True  -- Expected to fail L.or succeed gracefully
           Right _ -> property True  -- Either outcome is acceptable
 
     , testCase "compiler preserves original code in error messages" $ do
@@ -39,7 +40,7 @@ tests =
         case compileTypus sourceWithMultipleLines of
           Left err -> 
             -- Check that error context is preserved
-            "main" `isInfixOf` show err @?= True
+            "main" `L.isInfixOf` show err @?= True
           Right _ -> fail "expected compilation to fail with unterminated string"
 
     -- QuickCheck properties
@@ -76,9 +77,9 @@ prop_compiler_whitespace_variations code =
 prop_compiler_error_context :: String -> Property
 prop_compiler_error_context source =
   -- Only test with sources that are likely to fail
-  length source > 0 && ("{" `isInfixOf` source) && not ("}" `isInfixOf` source) ==>
+  L.length source > 0 && ("{" `L.isInfixOf` source) && not ("}" `L.isInfixOf` source) ==>
   case compileTypus source of
     Left err -> 
       let errorMsg = show err
-      in property $ length errorMsg > 0  -- Error message should not be empty
+      in property $ L.length errorMsg > 0  -- Error message should not be empty
     Right _ -> property True  -- If compilation succeeds, that's also valid

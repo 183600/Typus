@@ -45,7 +45,7 @@ import SourceLocation
   )
 
 import Data.Text (Text)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 import Data.Char (isSpace)
 import qualified Data.List as L
 
@@ -64,7 +64,7 @@ instance Arbitrary SourceSpan where
   arbitrary = do
     start <- arbitrary
     end <- arbitrary
-    -- Ensure we get both valid and invalid spans
+    -- Ensure we get both valid L.and invalid spans
     let validEnd = if start <= end then end else start
     oneof [return $ spanBetween start validEnd, return $ spanBetween end start]
 
@@ -112,14 +112,14 @@ prop_posAfter_tab pos =
              posColumn newPos === expectedCol .&&.
              posOffset newPos === posOffset pos + 1
 
--- Property: posAt creates position with correct line and column
+-- Property: posAt creates position with correct line L.and column
 prop_posAt_correct :: Int -> Int -> Property
 prop_posAt_correct line col =
   line > 0 && col > 0 ==>
   let pos = posAt line col
   in property $ posLine pos === line .&&. posColumn pos === col .&&. posOffset pos === 0
 
--- Property: posAtLineCol creates position with all fields
+-- Property: posAtLineCol creates position with L.all fields
 prop_posAtLineCol_correct :: Int -> Int -> Int -> Property
 prop_posAtLineCol_correct line col offset =
   line > 0 && col > 0 && offset >= 0 ==>
@@ -130,7 +130,7 @@ prop_posAtLineCol_correct line col offset =
 -- SourceSpan Properties
 -- ============================================================================
 
--- Property: emptySpan has same start and end
+-- Property: emptySpan has same start L.and end
 prop_emptySpan_same_start_end :: SourcePos -> Property
 prop_emptySpan_same_start_end pos =
   let span = emptySpan pos
@@ -220,7 +220,7 @@ prop_hasLocation_instance located =
 -- Position Advancement Properties
 -- ============================================================================
 
--- Property: advancePos and posAfter are the same
+-- Property: advancePos L.and posAfter are the same
 prop_advancePos_equals_posAfter :: SourcePos -> Char -> Property
 prop_advancePos_equals_posAfter pos char =
   advancePos char pos === posAfter char pos
@@ -229,7 +229,7 @@ prop_advancePos_equals_posAfter pos char =
 prop_advancePosBy_consistent :: SourcePos -> String -> Property
 prop_advancePosBy_consistent pos chars =
   let advanced = advancePosBy chars pos
-      manual = foldl (flip advancePos) pos chars
+      manual = L.foldl (flip advancePos) pos chars
   in property $ advanced === manual
 
 -- Property: advancePosByText is consistent with advancePosBy
@@ -260,7 +260,7 @@ prop_advancePosByLine_preserves pos n1 n2 =
 -- Error Location Properties
 -- ============================================================================
 
--- Property: toErrorLocation preserves line and column
+-- Property: toErrorLocation preserves line L.and column
 prop_toErrorLocation_preserves_pos :: SourcePos -> Property
 prop_toErrorLocation_preserves_pos pos =
   let errLoc = toErrorLocation pos
@@ -287,7 +287,7 @@ prop_position_advancement_roundtrip :: SourcePos -> String -> Property
 prop_position_advancement_roundtrip pos chars =
   let advanced1 = advancePosBy chars pos
       -- Simulate going back (simplified)
-      roundtrip = advancePosBy (reverse chars) advanced1
+      roundtrip = advancePosBy (L.reverse chars) advanced1
   in property $ posOffset roundtrip >= posOffset pos
 
 -- Property: Span merging with nested spans
@@ -308,18 +308,18 @@ prop_located_mapping_chain :: SourceSpan -> Int -> Property
 prop_located_mapping_chain span value =
   let located = locatedWithSpan span value
       operations = [+1, (*2), (-1), (`div` 2)]
-      result = foldl (\acc op -> mapLocated op acc) located operations
-      expected = foldl (\acc op -> op acc) value operations
+      result = L.foldl (\acc op -> mapLocated op acc) located operations
+      expected = L.foldl (\acc op -> op acc) value operations
   in property $ locatedValue result === expected
 
--- Property: Complex text advancement with newlines and tabs
+-- Property: Complex text advancement with newlines L.and tabs
 prop_complex_text_advancement :: SourcePos -> [Char] -> Property
 prop_complex_text_advancement pos chars =
   let text = T.pack chars
       finalPos = advancePosByText text pos
-      -- Count newlines and tabs to verify consistency
-      newlineCount = length (filter (== '\n') chars)
-      tabCount = length (filter (== '\t') chars)
+      -- Count newlines L.and tabs to verify consistency
+      newlineCount = L.length (L.filter (== '\n') chars)
+      tabCount = L.length (L.filter (== '\t') chars)
   in property $ posLine finalPos >= posLine pos .&&.
              posLine finalPos <= posLine pos + newlineCount + 1
 
@@ -349,12 +349,12 @@ tests = testGroup "SourceLocation New QuickCheck Tests"
     , fastProperty "posAfter advances line for newline" prop_posAfter_newline
     , fastProperty "posAfter advances column for regular characters" prop_posAfter_regular_char
     , fastProperty "posAfter handles tab correctly" prop_posAfter_tab
-    , fastProperty "posAt creates position with correct line and column" prop_posAt_correct
-    , fastProperty "posAtLineCol creates position with all fields" prop_posAtLineCol_correct
+    , fastProperty "posAt creates position with correct line L.and column" prop_posAt_correct
+    , fastProperty "posAtLineCol creates position with L.all fields" prop_posAtLineCol_correct
     ]
 
   , testGroup "SourceSpan Properties"
-    [ fastProperty "emptySpan has same start and end" prop_emptySpan_same_start_end
+    [ fastProperty "emptySpan has same start L.and end" prop_emptySpan_same_start_end
     , fastProperty "spanFrom creates empty span at position" prop_spanFrom_creates_empty
     , fastProperty "spanTo creates empty span at position" prop_spanTo_creates_empty
     , fastProperty "spanBetween creates span with correct bounds" prop_spanBetween_correct_bounds
@@ -372,7 +372,7 @@ tests = testGroup "SourceLocation New QuickCheck Tests"
     ]
 
   , testGroup "Position Advancement Properties"
-    [ fastProperty "advancePos and posAfter are the same" prop_advancePos_equals_posAfter
+    [ fastProperty "advancePos L.and posAfter are the same" prop_advancePos_equals_posAfter
     , fastProperty "advancePosBy is consistent with repeated advancePos" prop_advancePosBy_consistent
     , fastProperty "advancePosByText is consistent with advancePosBy" prop_advancePosByText_consistent
     , fastProperty "advancePosByLine advances line number" prop_advancePosByLine_advances_line
@@ -380,7 +380,7 @@ tests = testGroup "SourceLocation New QuickCheck Tests"
     ]
 
   , testGroup "Error Location Properties"
-    [ fastProperty "toErrorLocation preserves line and column" prop_toErrorLocation_preserves_pos
+    [ fastProperty "toErrorLocation preserves line L.and column" prop_toErrorLocation_preserves_pos
     , fastProperty "toErrorLocationWithSpan preserves span information" prop_toErrorLocationWithSpan_preserves_span
     ]
 
@@ -388,7 +388,7 @@ tests = testGroup "SourceLocation New QuickCheck Tests"
     [ fastProperty "Position advancement roundtrip with different methods" prop_position_advancement_roundtrip
     , fastProperty "Span merging with nested spans" prop_span_merging_nested
     , fastProperty "Located value mapping chain" prop_located_mapping_chain
-    , fastProperty "Complex text advancement with newlines and tabs" prop_complex_text_advancement
+    , fastProperty "Complex text advancement with newlines L.and tabs" prop_complex_text_advancement
     , fastProperty "Span validity after merging" prop_span_validity_after_merge
     , fastProperty "Location tracking consistency" prop_location_tracking_consistency
     ]

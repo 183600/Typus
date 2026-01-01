@@ -7,6 +7,7 @@ import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===),
 import Test.Tasty.HUnit (testCase, assert, (@?=))
 import qualified Data.Text as T
 import Data.Char (isSpace, isAlpha, isDigit)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 
 import Parser
@@ -162,7 +163,7 @@ prop_block_directives_parsed =
         hasBlocksWithDirectives = case result of
           Left _ -> False
           Right (TypusFile _ blocks) ->
-            any hasBlockDirective blocks
+            L.any hasBlockDirective blocks
     in hasBlocksWithDirectives === True
 
 -- Property: parseTypus should handle malformed directives gracefully
@@ -189,7 +190,7 @@ prop_directive_case_insensitive =
         Left _ -> False
         Right _ -> True
   
-  in all testDirective directives === True
+  in L.all testDirective directives === True
 
 -- Property: default directives should be used when none specified
 prop_default_directives_when_missing :: Property
@@ -244,7 +245,7 @@ test_parse_block_directives = testCase "parse block directives" $ do
     Left _ -> assert False
     Right (TypusFile _ blocks) -> do
       -- Should have blocks with directives
-      length blocks @?= 2
+      L.length blocks @?= 2
 
 test_mixed_directives :: TestTree
 test_mixed_directives = testCase "mixed directives" $ do
@@ -260,8 +261,8 @@ test_mixed_directives = testCase "mixed directives" $ do
   case result of
     Left _ -> assert False
     Right (TypusFile _ blocks) -> do
-      -- Should parse both file and block directives
-      length blocks @?= 2
+      -- Should parse both file L.and block directives
+      L.length blocks @?= 2
 
 test_malformed_directives :: TestTree
 test_malformed_directives = testCase "malformed directives" $ do
@@ -293,7 +294,7 @@ test_directive_precedence = testCase "directive precedence" $ do
       -- File directive should be true
       fdOwnership fileDirectives @?= Just True
       -- Block directive should override for the block
-      assert $ length blocks >= 1
+      assert $ L.length blocks >= 1
 
 test_empty_directives :: TestTree
 test_empty_directives = testCase "empty directives" $ do
@@ -303,7 +304,7 @@ test_empty_directives = testCase "empty directives" $ do
     Left _ -> assert False
     Right (TypusFile directives blocks) -> do
       directives @?= defaultFileDirectives
-      length blocks @?= 1
+      L.length blocks @?= 1
 
 test_directive_combinations :: TestTree
 test_directive_combinations = testCase "directive combinations" $ do
@@ -319,7 +320,7 @@ test_directive_combinations = testCase "directive combinations" $ do
     case result of
       Left _ -> assert False
       Right (TypusFile fileDirectives blocks) -> do
-        -- Should parse all directives
+        -- Should parse L.all directives
         assert $ fileDirectives /= defaultFileDirectives
     ) combinations
 

@@ -11,6 +11,7 @@ import Ownership (analyzeOwnership, newOwnershipAnalyzer)
 import Dependencies (analyzeDependentTypes, newDependentTypeChecker)
 import ErrorHandler (newErrorHandler, handleError, ErrorMessage(..), ErrorSeverity(..), ErrorContext(..))
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 -- ============================================================================

@@ -19,7 +19,9 @@ import SourceLocation (SourcePos(..), SourceSpan(..), mkSourcePos, mkSourceSpan)
 
 import qualified Data.Text as T
 import Data.Char (isSpace, isAlphaNum, isLetter)
-import Data.List (isPrefixOf, isInfixOf, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort)
 
 -- | Generate simple Typus code snippets
 genSimpleCode :: Gen String
@@ -62,7 +64,7 @@ genProblematicCode = oneof
   , return "x := 1\nx := 2"  -- variable redefinition
   ]
 
--- | Test end-to-end parsing and compilation pipeline
+-- | Test end-to-end parsing L.and compilation pipeline
 test_parse_compile_pipeline :: TestTree
 test_parse_compile_pipeline = testCase "parse-compile pipeline works" $ do
   let validCodes = 
@@ -78,7 +80,7 @@ test_parse_compile_pipeline = testCase "parse-compile pipeline works" $ do
         let compileResult = compile code
         case compileResult of
           Left compileErr -> assertBool $ "Compile failed for valid code: " ++ code ++ " Error: " ++ show compileErr
-          Right _ -> assertBool $ "Successfully parsed and compiled: " ++ code
+          Right _ -> assertBool $ "Successfully parsed L.and compiled: " ++ code
   ) validCodes
 
 -- | Test error handling through the pipeline
@@ -149,13 +151,13 @@ test_source_location_tracking = testCase "source location tracking through pipel
       case compileResult of
         Left errors -> 
           -- Check that errors have proper source locations
-          let hasLocations = any (isJust . cePosition) errors
+          let hasLocations = L.any (isJust . cePosition) errors
           assertBool "Errors should have source locations" hasLocations
         Right _ -> assertBool "Compilation succeeded" True
   where isJust Nothing = False
         isJust (Just _) = True
 
--- | Property: Parse-compile pipeline is robust for any input
+-- | Property: Parse-compile pipeline is robust for L.any input
 prop_pipeline_robustness :: String -> Property
 prop_pipeline_robustness input = 
   let parseResult = parseTypus input

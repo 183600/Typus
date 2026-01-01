@@ -1,6 +1,7 @@
 module Test.Unit.CompilerIRConsistencyQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, elements, listOf, chooseInt, vectorOf, suchThat, Positive(..))
 import TestSupport.QuickCheck (fastProperty)
@@ -227,7 +228,7 @@ prop_irTypeShowInvertible :: IRType -> Bool
 prop_irTypeShowInvertible irType =
     let str = show irType
     in not (null str) && 
-       any (`isInfixOf` str) ["IRInt", "IRString", "IRBool", "IRVoid", "IRPtr", "IRArray", "IRFunc"]
+       L.any (`L.isInfixOf` str) ["IRInt", "IRString", "IRBool", "IRVoid", "IRPtr", "IRArray", "IRFunc"]
 
 prop_irTypeEquality :: IRType -> IRType -> Bool
 prop_irTypeEquality type1 type2 =
@@ -249,7 +250,7 @@ prop_irExpressionShowContainsType :: IRExpression -> Bool
 prop_irExpressionShowContainsType expr =
     let str = show expr
     in not (null str) && 
-       any (`isInfixOf` str) ["IRConst", "IRVar", "IRBinaryOp", "IRUnaryOp", "IRCall", "IRIndex", "IRMemberAccess"]
+       L.any (`L.isInfixOf` str) ["IRConst", "IRVar", "IRBinaryOp", "IRUnaryOp", "IRCall", "IRIndex", "IRMemberAccess"]
 
 prop_binaryOpsPreserveOperands :: IRExpression -> IRExpression -> String -> Bool
 prop_binaryOpsPreserveOperands left right op =
@@ -275,19 +276,19 @@ prop_irStatementShowContainsType :: IRStatement -> Bool
 prop_irStatementShowContainsType stmt =
     let str = show stmt
     in not (null str) && 
-       any (`isInfixOf` str) ["IRDecl", "IRAssign", "IRReturn", "IRIf", "IRWhile", "IRCallStmt", "IRBreak", "IRContinue"]
+       L.any (`L.isInfixOf` str) ["IRDecl", "IRAssign", "IRReturn", "IRIf", "IRWhile", "IRCallStmt", "IRBreak", "IRContinue"]
 
 prop_declarationsPreserveVarNames :: String -> IRType -> IRExpression -> Bool
 prop_declarationsPreserveVarNames varName varType initExpr =
     let stmt = IRDecl varName varType initExpr
         str = show stmt
-    in varName `isInfixOf` str
+    in varName `L.isInfixOf` str
 
 prop_assignmentsPreserveTargets :: String -> IRExpression -> Bool
 prop_assignmentsPreserveTargets targetVar valueExpr =
     let stmt = IRAssign targetVar valueExpr
         str = show stmt
-    in targetVar `isInfixOf` str
+    in targetVar `L.isInfixOf` str
 
 prop_controlFlowPreservesConditions :: IRExpression -> [IRStatement] -> [IRStatement] -> Bool
 prop_controlFlowPreservesConditions condition thenStmts elseStmts =
@@ -301,12 +302,12 @@ prop_irFunctionPreservesName :: String -> [(String, IRType)] -> IRType -> [IRSta
 prop_irFunctionPreservesName name params returnType body =
     let func = IRFunction name params returnType body
         str = show func
-    in name `isInfixOf` str
+    in name `L.isInfixOf` str
 
 prop_irFunctionPreservesParamCount :: String -> [(String, IRType)] -> IRType -> [IRStatement] -> Bool
 prop_irFunctionPreservesParamCount name params returnType body =
     let func = IRFunction name params returnType body
-        expectedCount = length params
+        expectedCount = L.length params
     in True  -- Parameter count is preserved by construction
 
 prop_irFunctionPreservesReturnType :: String -> [(String, IRType)] -> IRType -> [IRStatement] -> Bool
@@ -321,12 +322,12 @@ prop_irModulePreservesName :: String -> [IRFunction] -> [(String, IRType)] -> Bo
 prop_irModulePreservesName name functions globals =
     let module = IRModule name functions globals
         str = show module
-    in name `isInfixOf` str
+    in name `L.isInfixOf` str
 
 prop_irModulePreservesFunctionOrder :: String -> [IRFunction] -> [(String, IRType)] -> Bool
 prop_irModulePreservesFunctionOrder name functions globals =
     let module = IRModule name functions globals
-        expectedOrder = map (\f -> "function " ++ show f) functions
+        expectedOrder = L.map (\f -> "function " ++ show f) functions
     in True  -- Function order is preserved by construction
 
 -- Compilation Properties
@@ -431,4 +432,4 @@ intersperse _ [x] = [x]
 intersperse sep (x:xs) = x : sep : intersperse sep xs
 
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` [take (length haystack - length needle + 1) (drop i haystack) | i <- [0..length haystack - length needle]]
+L.isInfixOf needle haystack = needle `elem` [take (L.length haystack - L.length needle + 1) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]

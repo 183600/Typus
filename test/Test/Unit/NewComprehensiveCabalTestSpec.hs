@@ -3,6 +3,7 @@
 module Test.Unit.NewComprehensiveCabalTestSpec where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (Property, testProperty, (===), Arbitrary(..), Gen, oneof, elements, listOf, sized, resize)
 import Test.Tasty.HUnit (testCase, assertBool, assertEqual)
 
@@ -22,7 +23,7 @@ import Dependencies (DependencyGraph(..))
 prop_trim_boundary :: String -> Bool
 prop_trim_boundary s = 
     let trimmed = trim s
-        hasNoLeadingSpace = null trimmed || not (isSpace (head trimmed))
+        hasNoLeadingSpace = null trimmed || not (isSpace (L.head trimmed))
         hasNoTrailingSpace = null trimmed || not (isSpace (last trimmed))
     in hasNoLeadingSpace && hasNoTrailingSpace
   where
@@ -32,8 +33,8 @@ prop_trim_boundary s =
 prop_splitBy_consistency :: Char -> String -> Bool
 prop_splitBy_consistency delim s = 
     let parts = splitBy delim s
-        rejoined = concat $ intersperse [delim] parts
-    in length (filter (== delim) s) >= length parts - 1
+        rejoined = L.concat $ intersperse [delim] parts
+    in L.length (L.filter (== delim) s) >= L.length parts - 1
 
 -- 测试removeComments函数的幂等性
 prop_removeComments_idempotent :: String -> Bool
@@ -50,7 +51,7 @@ prop_removeComments_idempotent s =
 prop_parser_incomplete_input :: String -> Bool
 prop_parser_incomplete_input s = 
     let -- 简化的解析测试，检查是否能处理不完整的输入
-        canHandleIncomplete = length s < 1000 -- 简单的边界检查
+        canHandleIncomplete = L.length s < 1000 -- 简单的边界检查
     in canHandleIncomplete
 
 -- 测试解析器的容错性
@@ -87,8 +88,8 @@ prop_sourcelocation_span_containment line col offset =
 prop_errorhandler_classification_consistency :: String -> Bool
 prop_errorhandler_classification_consistency errorMsg = 
     let -- 简化的错误分类测试
-        isSyntaxError = "syntax" `isInfixOf` errorMsg
-        isTypeError = "type" `isInfixOf` errorMsg
+        isSyntaxError = "syntax" `L.isInfixOf` errorMsg
+        isTypeError = "type" `L.isInfixOf` errorMsg
         hasCategory = isSyntaxError || isTypeError || not (null errorMsg)
     in hasCategory
 
@@ -96,7 +97,7 @@ prop_errorhandler_classification_consistency errorMsg =
 prop_errorhandler_message_formatting :: String -> Property
 prop_errorhandler_message_formatting errorMsg = 
     let formatted = errorMsg ++ " [formatted]"
-    in length formatted >= length errorMsg
+    in L.length formatted >= L.length errorMsg
 
 -- ============================================================================
 -- Test 5: Ownership模块传递性测试
@@ -125,7 +126,7 @@ prop_ownership_transfer_atomicity hasOwnership shouldTransfer =
 prop_dependencies_cycle_detection :: [(String, [String])] -> Bool
 prop_dependencies_cycle_detection deps = 
     let -- 简化的循环依赖检测
-        hasCycle = any (\(name, deps') -> name `elem` deps') deps
+        hasCycle = L.any (\(name, deps') -> name `elem` deps') deps
         detected = hasCycle -- 简化：总是正确检测
     in detected == hasCycle
 
@@ -133,7 +134,7 @@ prop_dependencies_cycle_detection deps =
 prop_dependencies_topological_sort :: [(String, [String])] -> Property
 prop_dependencies_topological_sort deps = 
     let sorted = deps -- 简化：保持原顺序
-    in length sorted === length deps
+    in L.length sorted === L.length deps
 
 -- ============================================================================
 -- Test 7: Compiler模块优化一致性测试
@@ -145,7 +146,7 @@ prop_compiler_optimization_idempotent code =
     let -- 简化的优化测试
         optimizedOnce = code ++ "_optimized"
         optimizedTwice = optimizedOnce ++ "_optimized"
-    in length optimizedTwice >= length optimizedOnce
+    in L.length optimizedTwice >= L.length optimizedOnce
 
 -- 测试编译阶段的一致性
 prop_compiler_phase_consistency :: String -> Bool
@@ -154,7 +155,7 @@ prop_compiler_phase_consistency input =
         parsed = input ++ "_parsed"
         typeChecked = parsed ++ "_typechecked"
         optimized = typeChecked ++ "_optimized"
-    in length optimized >= length input
+    in L.length optimized >= L.length input
 
 -- ============================================================================
 -- Test 8: SyntaxValidator模块语法边界测试
@@ -164,14 +165,14 @@ prop_compiler_phase_consistency input =
 prop_syntaxvalidator_boundary :: String -> Bool
 prop_syntaxvalidator_boundary code = 
     let -- 简化的语法验证测试
-        isValid = length code < 10000 || not (null code)
-    in isValid || length code >= 10000
+        isValid = L.length code < 10000 || not (null code)
+    in isValid || L.length code >= 10000
 
 -- 测试语法规则的组合性
 prop_syntaxvalidator_composition :: String -> String -> Property
 prop_syntaxvalidator_composition code1 code2 = 
     let combined = code1 ++ " " ++ code2
-    in length combined === length code1 + length code2 + 1
+    in L.length combined === L.length code1 + L.length code2 + 1
 
 -- ============================================================================
 -- Test 9: 集成测试 - 端到端编译流程测试
@@ -185,13 +186,13 @@ prop_integration_end_to_end sourceCode =
         typeChecked = parsed ++ "_typechecked"
         optimized = typeChecked ++ "_optimized"
         generated = optimized ++ "_generated"
-    in length generated >= length sourceCode
+    in L.length generated >= L.length sourceCode
 
 -- 测试编译流程的错误传播
 prop_integration_error_propagation :: String -> Bool
 prop_integration_error_propagation sourceCode = 
     let -- 模拟错误在编译流程中的传播
-        hasErrors = "error" `isInfixOf` sourceCode
+        hasErrors = "error" `L.isInfixOf` sourceCode
         errorsPropagated = hasErrors || True
     in errorsPropagated
 
@@ -204,7 +205,7 @@ prop_performance_large_files :: Int -> Property
 prop_performance_large_files size = 
     let largeInput = replicate size 'x'
         processed = largeInput ++ "_processed"
-    in size >= 0 ==> length processed >= size
+    in size >= 0 ==> L.length processed >= size
 
 -- 测试内存使用的线性性
 prop_performance_memory_linear :: Int -> Property
@@ -223,11 +224,11 @@ intersperse _ [x] = [x]
 intersperse sep (x:xs) = x : sep : intersperse sep xs
 
 isInfixOf :: Eq a => [a] -> [a] -> Bool
-isInfixOf needle haystack = any (isPrefixOf needle) (tails haystack)
+L.isInfixOf needle haystack = L.any (L.isPrefixOf needle) (tails haystack)
   where
-    isPrefixOf [] _ = True
-    isPrefixOf _ [] = False
-    isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
+    L.isPrefixOf [] _ = True
+    L.isPrefixOf _ [] = False
+    L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
     tails [] = [[]]
     tails xs@(x:xs') = xs : tails xs'
 

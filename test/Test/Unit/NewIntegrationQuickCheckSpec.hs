@@ -2,6 +2,7 @@
 module Test.Unit.NewIntegrationQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -42,23 +43,23 @@ tests =
         ]
 
     , testGroup "Component Integration Properties"
-        [ fastProperty "parser and type checker integration is sound" $
+        [ fastProperty "parser L.and type checker integration is sound" $
             \sourceCode ->
               let parsed = Parser.parse sourceCode
                   typed = Compiler.typeCheck parsed
               in True -- Type checking should accept valid parse trees
               
-        , fastProperty "analyzer and optimizer integration preserves correctness" $
+        , fastProperty "analyzer L.and optimizer integration preserves correctness" $
             \ir ->
               let analyzed = Analyzer.analyze ir
                   optimized = Compiler.optimize analyzed
               in True -- Optimization should preserve analysis results
               
-        , fastProperty "error handler integrates with all phases" $
+        , fastProperty "error handler integrates with L.all phases" $
             \sourceCode ->
               let withErrors = IntegratedCompiler.compileWithErrorHandling sourceCode
                   errors = ErrorHandler.collectErrors withErrors
-              in True -- Should handle errors from all phases
+              in True -- Should handle errors from L.all phases
         ]
 
     , testGroup "Toolchain Integration Properties"
@@ -72,7 +73,7 @@ tests =
             \projectFiles ->
               let buildResult = IntegratedCompiler.buildProject projectFiles
                   artifacts = IntegratedCompiler.getArtifacts buildResult
-              in length artifacts > 0
+              in L.length artifacts > 0
               
         , fastProperty "dependency management integrates with compiler" $
             \dependencies sourceCode ->
@@ -85,7 +86,7 @@ tests =
         [ fastProperty "multi-file compilation is order-independent" $
             \files ->
               let order1 = IntegratedCompiler.compileMultiple files
-                  order2 = IntegratedCompiler.compileMultiple (reverse files)
+                  order2 = IntegratedCompiler.compileMultiple (L.reverse files)
               in True -- Should produce same result regardless of order
               
         , fastProperty "cross-module type checking is sound" $
@@ -104,7 +105,7 @@ tests =
             \config sourceCode ->
               let withConfig = IntegratedCompiler.applyConfiguration config sourceCode
                   result = IntegratedCompiler.compile withConfig
-              in True -- Configuration should affect all components
+              in True -- Configuration should affect L.all components
               
         , fastProperty "optimization levels integrate properly" $
             \optimizationLevel sourceCode ->
@@ -180,7 +181,7 @@ tests =
         [ fastProperty "test generation integrates with compiler" $
             \sourceCode ->
               let tests = IntegratedCompiler.generateTests sourceCode
-              in length tests >= 0
+              in L.length tests >= 0
               
         , fastProperty "property testing integration is sound" $
             \properties ->

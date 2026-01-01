@@ -31,30 +31,32 @@ import Utils
 
 import Data.Char (isSpace, toLower)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, tails, isInfixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (tails, sort, nub)
 
 -- ============================================================================
 -- Enhanced Property Tests for Utils Module
 -- ============================================================================
 
--- Property: trim removes all leading and trailing whitespace characters
+-- Property: trim removes L.all leading L.and trailing whitespace characters
 prop_trim_removes_all_whitespace :: String -> Property
 prop_trim_removes_all_whitespace input =
   let trimmed = trim input
-      hasLeadingSpace = not (null input) && isSpace (head input)
+      hasLeadingSpace = not (null input) && isSpace (L.head input)
       hasTrailingSpace = not (null input) && isSpace (last input)
   in classify hasLeadingSpace "has leading whitespace" $
      classify hasTrailingSpace "has trailing whitespace" $
      property $ 
-       (null trimmed || not (isSpace (head trimmed))) .&&.
+       (null trimmed || not (isSpace (L.head trimmed))) .&&.
        (null trimmed || not (isSpace (last trimmed)))
 
 -- Property: trim preserves the order of non-whitespace characters
 prop_trim_preserves_order :: String -> Property
 prop_trim_preserves_order input =
   let trimmed = trim input
-      nonWhitespaceInput = filter (not . isSpace) input
-      nonWhitespaceTrimmed = filter (not . isSpace) trimmed
+      nonWhitespaceInput = L.filter (not . isSpace) input
+      nonWhitespaceTrimmed = L.filter (not . isSpace) trimmed
   in property $ nonWhitespaceInput === nonWhitespaceTrimmed
 
 -- Property: splitBy with delimiter not in string returns single element list
@@ -68,21 +70,21 @@ prop_splitBy_no_delimiter delim input =
 prop_splitBy_delimiter_count :: Char -> String -> Property
 prop_splitBy_delimiter_count delim input =
   let result = splitBy delim input
-      expectedCount = length (filter (== delim) input) + 1
-  in property $ length result === expectedCount
+      expectedCount = L.length (L.filter (== delim) input) + 1
+  in property $ L.length result === expectedCount
 
 -- Property: splitByCollapsed never returns empty segments
 prop_splitByCollapsed_no_empty :: Char -> String -> Property
 prop_splitByCollapsed_no_empty delim input =
   let result = splitByCollapsed delim input
-  in property $ all (not . null) result
+  in property $ L.all (not . null) result
 
--- Property: splitByComma and splitBy ',' should give same results
+-- Property: splitByComma L.and splitBy ',' should give same results
 prop_splitByComma_consistency :: String -> Property
 prop_splitByComma_consistency input =
   splitByComma input === splitBy ',' input
 
--- Property: splitByCommaCollapsed and splitByCollapsed ',' should give same results
+-- Property: splitByCommaCollapsed L.and splitByCollapsed ',' should give same results
 prop_splitByCommaCollapsed_consistency :: String -> Property
 prop_splitByCommaCollapsed_consistency input =
   splitByCommaCollapsed input === splitByCollapsed ',' input
@@ -92,7 +94,7 @@ prop_removeLineComments_preserves_lines :: String -> Property
 prop_removeLineComments_preserves_lines input =
   let linesBefore = lines input
       linesAfter = lines (removeLineComments input)
-  in property $ length linesBefore === length linesAfter
+  in property $ L.length linesBefore === L.length linesAfter
 
 -- Property: removeLineComments removes // comments but preserves content
 prop_removeLineComments_removes_comments :: String -> String -> Property
@@ -100,7 +102,7 @@ prop_removeLineComments_removes_comments code comment =
   not ('"' `elem` code) && not ('\'' `elem` code) && not ('/' `elem` code) ==>
   let lineWithComment = code ++ " // " ++ comment ++ "\nnext line"
       cleaned = removeLineComments lineWithComment
-  in property $ "// " `isInfixOf` cleaned .||. not ("//" `isInfixOf` cleaned)
+  in property $ "// " `L.isInfixOf` cleaned .||. not ("//" `L.isInfixOf` cleaned)
 
 -- Property: removeComments preserves string literals
 prop_removeComments_preserves_strings :: String -> Property
@@ -108,7 +110,7 @@ prop_removeComments_preserves_strings content =
   not ('"' `elem` content) && not ('\\' `elem` content) ==>
   let stringWithComment = content ++ " /* comment */ \"string with // not comment\""
       cleaned = removeComments stringWithComment
-  in property $ "string with // not comment" `isInfixOf` cleaned
+  in property $ "string with // not comment" `L.isInfixOf` cleaned
 
 -- Property: normalizeIndentation removes common leading whitespace
 prop_normalizeIndentation_removes_common :: [String] -> Property
@@ -117,9 +119,9 @@ prop_normalizeIndentation_removes_common lineList =
   let input = unlines lineList
       normalized = normalizeIndentation input
       normalizedLines = lines normalized
-      nonEmptyLines = filter (not . all isSpace) normalizedLines
-      leadingSpaces = map (length . takeWhile isSpace) nonEmptyLines
-  in property $ if null leadingLines then True else minimum leadingSpaces === 0
+      nonEmptyLines = L.filter (not . L.all isSpace) normalizedLines
+      leadingSpaces = L.map (L.length . takeWhile isSpace) nonEmptyLines
+  in property $ if null leadingLines then True else L.minimum leadingSpaces === 0
   where
     leadingLines = if null nonEmptyLines then [] else leadingSpaces
 
@@ -128,8 +130,8 @@ prop_forceSingleTabIndentation_adds_tab :: String -> Property
 prop_forceSingleTabIndentation_adds_tab input =
   let result = forceSingleTabIndentation input
       resultLines = lines result
-      nonEmptyLines = filter (not . null . trim) resultLines
-  in property $ all (\line -> case line of ('\t':_) -> True; _ -> False) nonEmptyLines
+      nonEmptyLines = L.filter (not . null . trim) resultLines
+  in property $ L.all (\line -> case line of ('\t':_) -> True; _ -> False) nonEmptyLines
 
 -- Property: fixIndentation equals normalizeIndentation
 prop_fixIndentation_equals_normalize :: String -> Property
@@ -164,7 +166,7 @@ prop_trim_idempotent input =
       trimmedTwice = trim trimmedOnce
   in property $ trimmedOnce === trimmedTwice
 
--- Property: splitBy and join roundtrip
+-- Property: splitBy L.and join roundtrip
 prop_splitBy_join_roundtrip :: Char -> String -> Property
 prop_splitBy_join_roundtrip delim input =
   let parts = splitBy delim input
@@ -194,42 +196,42 @@ prop_complex_pipeline prefix content suffix =
                   |> removeComments
                   |> trim
                   |> normalizeIndentation
-  in property $ not ("// comment" `isInfixOf` processed) .&&.
-     (null content || content `isInfixOf` processed)
+  in property $ not ("// comment" `L.isInfixOf` processed) .&&.
+     (null content || content `L.isInfixOf` processed)
 
 -- Property: Unicode handling in trim
 prop_trim_unicode :: String -> Property
 prop_trim_unicode input =
   let unicodeInput = input ++ " café naïve "
       trimmed = trim unicodeInput
-      hasInternalUnicode = "café" `isInfixOf` trimmed || "naïve" `isInfixOf` trimmed
+      hasInternalUnicode = "café" `L.isInfixOf` trimmed || "naïve" `L.isInfixOf` trimmed
   in property $ hasInternalUnicode .||. (null input && null trimmed)
 
 -- Property: Performance constraint for large inputs
 prop_performance_large_input :: Int -> String -> Property
 prop_performance_large_input multiplier baseContent =
   multiplier >= 0 && multiplier <= 100 ==> -- Limit for performance testing
-  let largeContent = concat (replicate multiplier baseContent)
+  let largeContent = L.concat (replicate multiplier baseContent)
       result = trim largeContent
-  in property $ length result <= length largeContent
+  in property $ L.length result <= L.length largeContent
 
 -- Property: splitBy respects Unicode delimiters
 prop_splitBy_unicode :: String -> String -> Property
 prop_splitBy_unicode delim input =
   not (null delim) ==>
   let unicodeInput = input ++ delim ++ "测试🚀" ++ delim ++ input
-      parts = splitBy (head delim) unicodeInput
-  in property $ length parts >= 3
+      parts = splitBy (L.head delim) unicodeInput
+  in property $ L.length parts >= 3
 
 -- Property: Comment removal with nested structures
 prop_removeComments_nested :: String -> Property
 prop_removeComments_nested content =
-  not ('"' `elem` content) && not ('\'' `elem` content) && not ("/*" `isInfixOf` content) ==>
+  not ('"' `elem` content) && not ('\'' `elem` content) && not ("/*" `L.isInfixOf` content) ==>
   let nested = "var x = " ++ content ++ " /* outer /* inner */ still outer */ var y = " ++ content
       result = removeComments nested
-  in property $ not ("/* outer" `isInfixOf` result) .&&.
-     not ("/* inner" `isInfixOf` result) .&&.
-     (content `isInfixOf` result)
+  in property $ not ("/* outer" `L.isInfixOf` result) .&&.
+     not ("/* inner" `L.isInfixOf` result) .&&.
+     (content `L.isInfixOf` result)
 
 -- Property: Indentation normalization with mixed tabs/spaces
 prop_normalizeIndentation_mixed_whitespace :: [Int] -> String -> Property
@@ -242,9 +244,9 @@ prop_normalizeIndentation_mixed_whitespace indentLevels content =
       input = unlines inputLines
       normalized = normalizeIndentation input
       normalizedLines = lines normalized
-      nonEmptyLines = filter (not . null . trim) normalizedLines
-      leadingSpaces = map (length . takeWhile isSpace) nonEmptyLines
-  in property $ if null leadingSpaces then True else minimum leadingSpaces === 0
+      nonEmptyLines = L.filter (not . null . trim) normalizedLines
+      leadingSpaces = L.map (L.length . takeWhile isSpace) nonEmptyLines
+  in property $ if null leadingSpaces then True else L.minimum leadingSpaces === 0
 
 -- Helper function for pipeline operator
 (|>) :: a -> (a -> b) -> b
@@ -257,7 +259,7 @@ prop_normalizeIndentation_mixed_whitespace indentLevels content =
 tests :: TestTree
 tests = testGroup "New Enhanced Utils QuickCheck Tests"
   [ testGroup "String manipulation properties"
-    [ fastProperty "trim removes all whitespace" prop_trim_removes_all_whitespace
+    [ fastProperty "trim removes L.all whitespace" prop_trim_removes_all_whitespace
     , fastProperty "trim preserves order" prop_trim_preserves_order
     , fastProperty "trim is idempotent" prop_trim_idempotent
     , fastProperty "trim handles Unicode" prop_trim_unicode
@@ -269,7 +271,7 @@ tests = testGroup "New Enhanced Utils QuickCheck Tests"
     , fastProperty "splitByCollapsed never returns empty segments" prop_splitByCollapsed_no_empty
     , fastProperty "splitByComma consistency" prop_splitByComma_consistency
     , fastProperty "splitByCommaCollapsed consistency" prop_splitByCommaCollapsed_consistency
-    , fastProperty "splitBy and join roundtrip" prop_splitBy_join_roundtrip
+    , fastProperty "splitBy L.and join roundtrip" prop_splitBy_join_roundtrip
     , fastProperty "splitBy respects Unicode delimiters" prop_splitBy_unicode
     ]
 
@@ -289,7 +291,7 @@ tests = testGroup "New Enhanced Utils QuickCheck Tests"
     , fastProperty "fixIndentation equals normalizeIndentation" prop_fixIndentation_equals_normalize
     ]
 
-  , testGroup "Search and utility properties"
+  , testGroup "Search L.and utility properties"
     [ fastProperty "breakOn finds first occurrence" prop_breakOn_first_occurrence
     , fastProperty "breakOn handles empty pattern" prop_breakOn_empty_pattern
     , fastProperty "breakOn handles missing pattern" prop_breakOn_pattern_not_found

@@ -8,6 +8,7 @@ import Utils (trim, removeComments, splitBy)
 import Compiler (compile)
 import ErrorHandler (ErrorHandler(..))
 import Data.Either (isLeft, isRight)
+import qualified Data.List as L
 import Data.List (length)
 
 -- ============================================================================
@@ -32,7 +33,7 @@ prop_parser_source_location_integration content =
   let result = parseTypus content
   in case result of
     Left _ -> True  -- Parsing may fail
-    Right tf -> all isValidBlockSpan (tfBlocks tf)
+    Right tf -> L.all isValidBlockSpan (tfBlocks tf)
   where
     isValidBlockSpan block = spanStart (cbSpan block) <= spanEnd (cbSpan block)
 
@@ -42,12 +43,12 @@ prop_utils_parser_integration content =
   let result = parseTypus content
   in case result of
     Left _ -> True
-    Right tf -> all blockContentProcessable (tfBlocks tf)
+    Right tf -> L.all blockContentProcessable (tfBlocks tf)
   where
     blockContentProcessable block = 
       let processed = removeComments (cbContent block)
           trimmed = trim processed
-      in length trimmed <= length (cbContent block)
+      in L.length trimmed <= L.length (cbContent block)
 
 -- | Source location math should work correctly with parser-generated spans
 prop_sourcelocation_parser_integration :: String -> Property
@@ -55,7 +56,7 @@ prop_sourcelocation_parser_integration content =
   let result = parseTypus content
   in case result of
     Left _ -> True
-    Right tf -> all spansHaveValidPositions (tfBlocks tf)
+    Right tf -> L.all spansHaveValidPositions (tfBlocks tf)
   where
     spansHaveValidPositions block = 
       let span = cbSpan block
@@ -70,7 +71,7 @@ prop_errorhandler_parser_integration :: String -> Property
 prop_errorhandler_parser_integration content = 
   let result = parseTypus content
   in case result of
-    Left err -> length (show err) > 0  -- Error should have descriptive message
+    Left err -> L.length (show err) > 0  -- Error should have descriptive message
     Right _ -> True  -- Success is also valid
 
 -- | Compiler should handle parser output gracefully
@@ -94,7 +95,7 @@ prop_text_processing_pipeline content =
       lines1 = lines step1
       lines2 = lines step2
       lines3 = lines step3
-  in length lines3 <= length lines2 && length lines2 <= length lines1
+  in L.length lines3 <= L.length lines2 && L.length lines2 <= L.length lines1
 
 -- | Source location tracking should work through compilation pipeline
 prop_sourcelocation_compilation_tracking :: String -> Property
@@ -105,7 +106,7 @@ prop_sourcelocation_compilation_tracking content =
     Right tf -> 
       let spans = map cbSpan (tfBlocks tf)
           positions = map spanStart spans
-      in all isValidPosition positions
+      in L.all isValidPosition positions
   where
     isValidPosition pos = posLine pos > 0 && posColumn pos > 0
 
@@ -118,7 +119,7 @@ prop_error_recovery_sourcelocation content =
     Left _ -> True  -- May fail completely
     Right tf -> 
       let spans = map cbSpan (tfBlocks tf)
-      in all (\span -> isValidSpan span) spans
+      in L.all (\span -> isValidSpan span) spans
 
 -- Helper function to check span validity
 isValidSpan :: SourceSpan -> Bool

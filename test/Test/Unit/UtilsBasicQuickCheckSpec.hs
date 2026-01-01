@@ -7,6 +7,7 @@ import Test.Tasty (TestTree, testGroup)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import Data.Char (isSpace, toLower, toUpper)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isSuffixOf)
 
 import Utils (trim, splitBy, splitByCollapsed)
@@ -30,7 +31,7 @@ stringManipulationProperties = testGroup "String Manipulation Properties"
         (c:_) -> property (not (isSpace c))
   
   , fastProperty "trim result has no trailing spaces" $ \s ->
-      case reverse (trim s) of
+      case L.reverse (trim s) of
         [] -> property True
         (c:_) -> property (not (isSpace c))
   
@@ -43,12 +44,12 @@ splittingProperties = testGroup "Splitting Properties"
   [ fastProperty "splitBy preserves content" $ \c s ->
       c /= '\0' ==>
       let parts = splitBy c s
-      in concat parts === filter (/= c) s .||. any (== c) s
+      in L.concat parts === L.filter (/= c) s .||. L.any (== c) s
   
   , fastProperty "splitByCollapsed removes empty parts" $ \c s ->
       c /= '\0' ==>
       let parts = splitByCollapsed c s
-      in all (not . null) parts
+      in L.all (not . null) parts
   
   , fastProperty "splitting empty string gives one empty part" $
       splitBy ',' "" === [""]
@@ -63,15 +64,15 @@ splittingProperties = testGroup "Splitting Properties"
 
 predicateProperties :: TestTree
 predicateProperties = testGroup "Predicate Properties"
-  [ fastProperty "isPrefixOf is reflexive" $ \(s :: String) ->
-      s `isPrefixOf` s
+  [ fastProperty "L.isPrefixOf is reflexive" $ \(s :: String) ->
+      s `L.isPrefixOf` s
   
-  , fastProperty "isSuffixOf is reflexive" $ \(s :: String) ->
-      s `isSuffixOf` s
+  , fastProperty "L.isSuffixOf is reflexive" $ \(s :: String) ->
+      s `L.isSuffixOf` s
   
-  , fastProperty "empty string is prefix of any string" $ \(s :: String) ->
-      "" `isPrefixOf` s
+  , fastProperty "empty string is prefix of L.any string" $ \(s :: String) ->
+      "" `L.isPrefixOf` s
   
-  , fastProperty "empty string is suffix of any string" $ \(s :: String) ->
-      "" `isSuffixOf` s
+  , fastProperty "empty string is suffix of L.any string" $ \(s :: String) ->
+      "" `L.isSuffixOf` s
   ]

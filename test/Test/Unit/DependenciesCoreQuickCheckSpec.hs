@@ -4,6 +4,7 @@
 module Test.Unit.DependenciesCoreQuickCheckSpec (tests) where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Dependencies.TypeSystem
 import Dependencies.AST (TypeExpr(..), Constraint(..))
@@ -59,7 +60,7 @@ genTypeVarTuple = do
   elements <- listOf1 genTypeVar
   return $ TVTuple elements
 
--- Generate any TypeVar
+-- Generate L.any TypeVar
 genAnyTypeVar :: Gen TypeVar
 genAnyTypeVar = oneof
   [ genTypeVar
@@ -248,7 +249,7 @@ prop_checkTypeConNonExisting name =
       checker = evalState (checkType (TVCon name)) newDependentTypeChecker
       errors = tcErrors checker
   in counterexample "checkType should reject non-existing type constructors" $
-    not isPreludeType ==> any isTypeNotFoundError errors
+    not isPreludeType ==> L.any isTypeNotFoundError errors
   where
     isTypeNotFoundError (TypeNotFound _) = True
     isTypeNotFoundError _ = False

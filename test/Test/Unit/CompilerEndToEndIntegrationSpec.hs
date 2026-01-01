@@ -29,6 +29,7 @@ import Ownership (OwnershipAnalysis(..))
 import DependentTypesParser (parseDependentType)
 
 import Data.Char (isSpace, isAlphaNum)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import qualified Data.Text as T
 import Data.Maybe (isJust, isNothing, fromMaybe)
@@ -223,7 +224,7 @@ tests =
               Right _ -> assertFailure "Expected multiple errors"
               Left err -> do
                 assertBool "Should report multiple errors" 
-                    (length err > 20)  -- Longer error message for multiple issues
+                    (L.length err > 20)  -- Longer error message for multiple issues
         ]
 
     , testGroup "Integration with Utils"
@@ -269,7 +270,7 @@ tests =
                 assertBool "Whitespace should be normalized" True
         ]
 
-    , testGroup "Performance and Scalability"
+    , testGroup "Performance L.and Scalability"
         [ testCase "Large file compilation performance" $ do
             let largeFile = unlines $ replicate 100 "func test" ++ show [1..100] ++ "() { return " ++ show [1..100] ++ "; }"
                 result = compileTypus "test.typus" largeFile
@@ -277,7 +278,7 @@ tests =
               Left err -> do
                 -- May fail due to syntax issues, but should not crash
                 assertBool "Should handle large files gracefully" 
-                    (length err > 0)
+                    (L.length err > 0)
               Right compilationResult -> do
                 assertBool "Large file should compile" True
 
@@ -299,23 +300,23 @@ tests =
             case result of
               Left err -> do
                 assertBool "Nested structure error should be informative" 
-                    (length err > 10)
+                    (L.length err > 10)
               Right compilationResult -> do
                 assertBool "Nested structures should compile" True
 
         , testCase "Memory usage during compilation" $ do
-            let memoryTest = concat $ replicate 1000 "let x" ++ show [1..1000] ++ " = " ++ show [1..1000] ++ ";\n"
+            let memoryTest = L.concat $ replicate 1000 "let x" ++ show [1..1000] ++ " = " ++ show [1..1000] ++ ";\n"
                 result = compileTypus "test.typus" memoryTest
             case result of
               Left err -> do
                 assertBool "Should handle memory-intensive compilation" 
-                    (length err > 0)
+                    (L.length err > 0)
               Right compilationResult -> do
                 assertBool "Memory-intensive code should compile" True
         ]
 
     , testGroup "Integrated Compiler Tests"
-        [ testCase "Integrated compiler handles all phases" $ do
+        [ testCase "Integrated compiler handles L.all phases" $ do
             let integrationTest = unlines
                     [ "// @ownership: true"
                     , "// @dependent-types: true"
@@ -328,7 +329,7 @@ tests =
             case result of
               Left err -> do
                 assertBool "Integrated compilation error should be comprehensive" 
-                    (length err > 15)
+                    (L.length err > 15)
               Right compilationResult -> do
                 assertBool "Integrated compilation should succeed" True
 
@@ -368,7 +369,7 @@ tests =
             \program -> 
                 let result = compileTypus "test.typus" program
                 in case result of
-                     Left err -> property (length err > 5)
+                     Left err -> property (L.length err > 5)
                      Right _ -> property True
         ]
     ]
@@ -382,25 +383,25 @@ hasGeneratedCode result = case result of
 
 isOwnershipRelatedError :: String -> Bool
 isOwnershipRelatedError err = 
-    any (`isInfixOf` map toLower err) ["ownership", "move", "borrow", "lifetime"]
+    L.any (`L.isInfixOf` map toLower err) ["ownership", "move", "borrow", "lifetime"]
 
 isDependentTypeError :: String -> Bool
 isDependentTypeError err = 
-    any (`isInfixOf` map toLower err) ["dependent", "type", "constraint", "generic"]
+    L.any (`L.isInfixOf` map toLower err) ["dependent", "type", "constraint", "generic"]
 
 isParseError :: String -> Bool
 isParseError err = 
-    any (`isInfixOf` map toLower err) ["parse", "syntax", "unexpected", "expect"]
+    L.any (`L.isInfixOf` map toLower err) ["parse", "syntax", "unexpected", "expect"]
 
 isTypeError :: String -> Bool
 isTypeError err = 
-    any (`isInfixOf` map toLower err) ["type", "mismatch", "incompatible"]
+    L.any (`L.isInfixOf` map toLower err) ["type", "mismatch", "incompatible"]
 
 toLower :: String -> String
-toLower = map (\c -> if c >= 'A' && c <= 'Z' then toEnum (fromEnum c + 32) else c)
+toLower = L.map (\c -> if c >= 'A' && c <= 'Z' then toEnum (fromEnum c + 32) else c)
 
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `Data.List.isInfixOf` haystack
+L.isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
 
 -- Mock CompilationResult type for testing
 data CompilationResult = 
@@ -416,25 +417,25 @@ integratedCompile _ input = compileTypus "test.typus" input
 -- Mock compileTypus function for testing
 compileTypus :: FilePath -> String -> Either String CompilationResult
 compileTypus _ input
-    | "func invalid( {" `isInfixOf` input = 
+    | "func invalid( {" `L.isInfixOf` input = 
         Left "Parse error: unexpected token '{' at line 1, column 14"
-    | "return \"not an int\"" `isInfixOf` input = 
+    | "return \"not an int\"" `L.isInfixOf` input = 
         Left "Type error: cannot return String in function returning Int"
-    | "return \"string\"" `isInfixOf` input = 
+    | "return \"string\"" `L.isInfixOf` input = 
         Left "Type error: type mismatch"
-    | "use resource" `isInfixOf` input && "move resource" `isInfixOf` input = 
+    | "use resource" `L.isInfixOf` input && "move resource" `L.isInfixOf` input = 
         Left "Ownership error: use after move"
-    | "borrow data" `isInfixOf` input = 
+    | "borrow data" `L.isInfixOf` input = 
         CompilationSuccess "compiled with borrowing"
-    | "move resource" `isInfixOf` input = 
+    | "move resource" `L.isInfixOf` input = 
         CompilationSuccess "compiled with ownership"
-    | "vec_length" `isInfixOf` input = 
+    | "vec_length" `L.isInfixOf` input = 
         CompilationSuccess "compiled with dependent types"
-    | "where m > 0" `isInfixOf` input = 
+    | "where m > 0" `L.isInfixOf` input = 
         CompilationSuccess "compiled with constraints"
-    | "matrix_mult" `isInfixOf` input = 
+    | "matrix_mult" `L.isInfixOf` input = 
         CompilationSuccess "compiled with complex types"
-    | "func" `isInfixOf` input && "return" `isInfixOf` input = 
+    | "func" `L.isInfixOf` input && "return" `L.isInfixOf` input = 
         CompilationSuccess "compiled successfully"
     | otherwise = 
         Left "Unknown error"

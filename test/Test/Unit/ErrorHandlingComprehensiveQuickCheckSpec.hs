@@ -18,8 +18,10 @@ import Compiler.Errors.Core
 import qualified Compiler.Errors as CE
 import qualified Compiler.Errors.Core as Core
 import Compiler.Errors (CompilerError(..), CompilationPhase(..))
-import qualified Data.Text as T
-import Data.List (isInfixOf, nub, sort)
+import qualified Data.Text as T (pack, unpack)
+import qualified Data.List as L
+import Data.List (isInfixOf)
+import Data.List (nub, sort)
 import Data.Maybe (isJust, isNothing)
 
 -- ============================================================================
@@ -43,7 +45,7 @@ prop_severity_total_order severities =
   let rankings = map severityRank severities
       sortedRankings = Data.List.sort rankings
       isTotalOrder = rankings == sortedRankings || 
-                     rankings == reverse sortedRankings
+                     rankings == L.reverse sortedRankings
   in property $ isTotalOrder
 
 -- ============================================================================
@@ -113,7 +115,7 @@ prop_recovery_severity_ordering rec1 rec2 =
 prop_recovery_suggestions_helpful :: ErrorRecovery -> Property
 prop_recovery_suggestions_helpful recovery = 
   let suggestions = getRecoverySuggestions recovery
-  in property $ null suggestions || all (not . null) suggestions
+  in property $ null suggestions || L.all (not . null) suggestions
 
 -- ============================================================================
 -- Compiler Error Properties
@@ -124,7 +126,7 @@ prop_compiler_error_unique_ids :: [CE.CompilerError] -> Property
 prop_compiler_error_unique_ids errors = 
   let errorIds = map ceErrorId errors
       uniqueIds = nub errorIds
-  in property $ length errorIds == length uniqueIds
+  in property $ L.length errorIds == L.length uniqueIds
 
 -- Property: Compiler error messages are informative
 prop_compiler_error_informative :: CE.CompilerError -> Property
@@ -147,8 +149,8 @@ prop_compiler_error_valid_phase err =
 prop_error_report_formatting :: CE.CompilerError -> Property
 prop_error_report_formatting err = 
   let report = formatErrorReport err
-      hasHeader = "Error:" `isInfixOf` report
-      hasMessage = not (T.null (ceMessage err))
+      hasHeader = "Error:" `L.isInfixOf` report
+      hasMessage = not (T.L.null (ceMessage err))
   in property $ hasHeader && hasMessage
 
 -- Property: Error reports preserve severity information
@@ -156,7 +158,7 @@ prop_error_report_severity :: CE.CompilerError -> Property
 prop_error_report_severity err = 
   let report = formatErrorReport err
       severityStr = show (ceSeverity err)
-      containsSeverity = severityStr `isInfixOf` report
+      containsSeverity = severityStr `L.isInfixOf` report
   in property $ containsSeverity
 
 -- ============================================================================

@@ -3,6 +3,7 @@
 module Test.Unit.CoreCompilerEssentialSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
 import qualified Data.Text as T
 
@@ -65,8 +66,8 @@ tests = testGroup "Core Compiler Essential Tests"
         in case generateGoCode simpleFile of
           Left err -> assertBool "should generate Go code" False
           Right goCode -> do
-            assertBool "should contain package declaration" ("package" `T.isInfixOf` goCode)
-            assertBool "should contain func keyword" ("func" `T.isInfixOf` goCode)
+            assertBool "should contain package declaration" ("package" `L.isInfixOf` goCode)
+            assertBool "should contain func keyword" ("func" `L.isInfixOf` goCode)
     
     , testCase "generateGoCode handles multiple functions" $
         let multiFile = TypusFile defaultFileDirectives 
@@ -77,7 +78,7 @@ tests = testGroup "Core Compiler Essential Tests"
           Left err -> assertBool "should handle multiple functions" False
           Right goCode -> do
             assertBool "should contain both functions" 
-              ("func one()" `T.isInfixOf` goCode && "func two()" `T.isInfixOf` goCode)
+              ("func one()" `L.isInfixOf` goCode && "func two()" `L.isInfixOf` goCode)
     
     , testCase "generateGoCode preserves function signatures" $
         let signatureFile = TypusFile defaultFileDirectives 
@@ -86,7 +87,7 @@ tests = testGroup "Core Compiler Essential Tests"
           Left err -> assertBool "should preserve signatures" False
           Right goCode -> 
             assertBool "should contain parameter types" 
-              ("a int" `T.isInfixOf` goCode && "b int" `T.isInfixOf` goCode)
+              ("a int" `L.isInfixOf` goCode && "b int" `L.isInfixOf` goCode)
     ]
   
   , testGroup "Error Reporting"

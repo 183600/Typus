@@ -52,13 +52,13 @@ prop_pos_at_line_col_equals_pos_at :: Int -> Int -> Bool
 prop_pos_at_line_col_equals_pos_at line col = 
   line > 0 && col > 0 ==> posAtLineCol line col == posAt line col
 
--- | emptySpan should have same start and end position
+-- | emptySpan should have same start L.and end position
 prop_empty_span_same_positions :: SourcePos -> Bool
 prop_empty_span_same_positions pos = 
   let span = emptySpan pos
   in spanStart span == spanEnd span
 
--- | spanFrom should create span with same start and end
+-- | spanFrom should create span with same start L.and end
 prop_span_from_same_positions :: SourcePos -> Bool
 prop_span_from_same_positions pos = 
   let span = spanFrom pos

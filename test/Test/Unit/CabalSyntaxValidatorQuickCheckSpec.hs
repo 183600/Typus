@@ -70,7 +70,7 @@ prop_valid_type_name_passes (ValidTypeName name) =
 -- Property: Invalid identifiers fail validation
 prop_invalid_identifier_fails :: String -> Property
 prop_invalid_identifier_fails ident =
-  let isValid = not (null ident) && isLetter (head ident) && all (`elem` (['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ ['_'])) ident
+  let isValid = not (null ident) && isLetter (L.head ident) && L.all (`elem` (['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ ['_'])) ident
       code = "func " ++ ident ++ "() { return 42 }"
   in not isValid ==> 
     case parseTypus code of
@@ -83,7 +83,7 @@ prop_invalid_identifier_fails ident =
 -- Property: Valid function parameters pass validation
 prop_valid_parameters_pass :: [ValidIdentifier] -> Property
 prop_valid_parameters_pass idents =
-  let paramNames = map (\(ValidIdentifier name) -> name ++ ": int") idents
+  let paramNames = L.map (\(ValidIdentifier name) -> name ++ ": int") idents
       paramStr = if null paramNames then "" else List.intercalate ", " paramNames
       code = "func test(" ++ paramStr ++ ") int { return 42 }"
   in case parseTypus code of
@@ -113,7 +113,7 @@ prop_validation_preserves_error_locations code =
       case validateSyntax parsed of
         ValidationResult [] -> property True
         ValidationResult errors -> 
-          property $ all (\err -> seLocation err /= mkSourceSpan (mkSourcePos 0 0) (mkSourcePos 0 0)) errors
+          property $ L.all (\err -> seLocation err /= mkSourceSpan (mkSourcePos 0 0) (mkSourcePos 0 0)) errors
 
 tests :: TestTree
 tests = testGroup "Cabal Syntax Validator QuickCheck Tests"

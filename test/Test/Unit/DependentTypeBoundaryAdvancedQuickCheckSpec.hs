@@ -10,13 +10,15 @@
 module Test.Unit.DependentTypeBoundaryAdvancedQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose, suchThat)
 import TestSupport.Arbitrary
 
 import DependentTypesParser
-import Data.List (sort, nub, length, filter, elem, intercalate, concat)
+import Data.List (length, concat)
+import Data.List (sort, nub, filter, elem, intercalate)
 import Data.Set (Set, empty, singleton, union, unions, member, size, difference, intersection)
 import qualified Data.Set as Set
 import Data.Map (Map, empty, singleton, insert, lookup, keys, elems, unionWith)
@@ -32,15 +34,15 @@ import qualified Data.Text as T
 -- Property: Type parameter ordering is preserved
 prop_type_parameter_ordering :: [String] -> Property
 prop_type_parameter_ordering paramNames =
-  length paramNames > 0 && all (not . null) paramNames && nub paramNames == paramNames ==>
-  let typeParams = map (\n -> TypeParameter n Nothing) paramNames
+  length paramNames > 0 && L.all (not . null) paramNames && nub paramNames == paramNames ==>
+  let typeParams = L.map (\n -> TypeParameter n Nothing) paramNames
       paramNamesFromParams = map tpName typeParams
   in property $ paramNamesFromParams === paramNames
 
 -- Property: Type constraint validation is deterministic
 prop_type_constraint_deterministic :: String -> String -> String -> Property
 prop_type_constraint_deterministic op left right =
-  length op > 0 && length left > 0 && length right > 0 && op `elem` ["==", ">", ">=", "<", "<="] ==>
+  length op > 0 && L.length left > 0 && L.length right > 0 && op `elem` ["==", ">", ">=", "<", "<="] ==>
   let constraint1 = TypeConstraint op (TypeRef left []) Nothing
       constraint2 = TypeConstraint op (TypeRef right []) Nothing
       constraint1Str = show constraint1
@@ -53,12 +55,12 @@ prop_type_constraint_deterministic op left right =
 -- Property: Struct field ordering is preserved
 prop_struct_field_ordering :: [String] -> [String] -> Property
 prop_struct_field_ordering fieldNames typeNames =
-  length fieldNames > 0 && length typeNames > 0 && 
-  length fieldNames == length typeNames &&
-  all (not . null) fieldNames && all (not . null) typeNames ==>
+  length fieldNames > 0 && L.length typeNames > 0 && 
+  length fieldNames == L.length typeNames &&
+  all (not . null) fieldNames && L.all (not . null) typeNames ==>
   let fields = zipWith (\name typ -> Field name (TypeRef typ [])) fieldNames typeNames
       fieldNamesFromFields = map fieldName fields
-      typeNamesFromFields = map (\f -> case typeRef $ fieldType f of
+      typeNamesFromFields = L.map (\f -> case typeRef $ fieldType f of
                                          TypeRef name _ -> name) fields
   in property $ 
     fieldNamesFromFields === fieldNames .&&.
@@ -67,9 +69,9 @@ prop_struct_field_ordering fieldNames typeNames =
 -- Property: Type reference nesting is consistent
 prop_type_ref_nesting_consistency :: String -> [String] -> Property
 prop_type_ref_nesting_consistency baseName paramNames =
-  length baseName > 0 && all (not . null) paramNames ==>
+  length baseName > 0 && L.all (not . null) paramNames ==>
   let baseType = TypeRef baseName []
-      nestedType = TypeRef baseName (map (\n -> TypeRef n []) paramNames)
+      nestedType = TypeRef baseName (L.map (\n -> TypeRef n []) paramNames)
       baseTypeStr = show baseType
       nestedTypeStr = show nestedType
   in property $ 
@@ -85,13 +87,13 @@ prop_dependent_type_validation_preserves_errors typeName =
       validationResult = validateDependentTypeSyntax (show invalidType)
   in property $ 
     case validationResult of
-      Left errors -> length errors > 0
+      Left errors -> L.length errors > 0
       Right _ -> property True
 
 -- Property: Type parameter constraints are preserved
 prop_type_parameter_constraints_preserved :: String -> String -> Property
 prop_type_parameter_constraints_preserved paramName constraint =
-  length paramName > 0 && length constraint > 0 ==>
+  length paramName > 0 && L.length constraint > 0 ==>
   let typeParam = TypeParameter paramName (Just constraint)
       extractedConstraint = tpConstraint typeParam
   in property $ 
@@ -100,18 +102,18 @@ prop_type_parameter_constraints_preserved paramName constraint =
 -- Property: Complex type nesting maintains structure
 prop_complex_type_nesting_structure :: String -> [[String]] -> Property
 prop_complex_type_nesting_structure baseName nestedParams =
-  length baseName > 0 && all (not . null) (concat nestedParams) ==>
-  let nestedTypes = map (\params -> TypeRef baseName (map (\n -> TypeRef n []) params)) nestedParams
-      allNestedParamNames = concat nestedParams
+  length baseName > 0 && L.all (not . null) (L.concat nestedParams) ==>
+  let nestedTypes = L.map (\params -> TypeRef baseName (L.map (\n -> TypeRef n []) params)) nestedParams
+      allNestedParamNames = L.concat nestedParams
   in property $ 
-    length nestedTypes === length nestedParams .&&.
+    length nestedTypes === L.length nestedParams .&&.
     all (\t -> show t `contains` baseName) nestedTypes .&&.
-    all (\name -> any (\t -> show t `contains` name) nestedTypes) allNestedParamNames
+    all (\name -> L.any (\t -> show t `contains` name) nestedTypes) allNestedParamNames
 
 -- Property: Type alias resolution is consistent
 prop_type_alias_resolution_consistent :: String -> String -> Property
 prop_type_alias_resolution_consistent aliasName originalName =
-  length aliasName > 0 && length originalName > 0 && aliasName /= originalName ==>
+  length aliasName > 0 && L.length originalName > 0 && aliasName /= originalName ==>
   let aliasType = DependentType aliasName [] (AliasType (TypeRef originalName [])) []
       originalType = DependentType originalName [] (StructType []) []
   in property $ 
@@ -123,17 +125,17 @@ prop_type_alias_resolution_consistent aliasName originalName =
 -- Property: Function type parameter ordering is preserved
 prop_function_type_parameter_ordering :: [String] -> [String] -> Property
 prop_function_type_parameter_ordering inputTypes outputType =
-  length inputTypes > 0 && length outputType > 0 && all (not . null) inputTypes ==>
-  let funcType = DependentType "testFunc" [] (FunctionType (map (\n -> TypeRef n []) inputTypes) (TypeRef outputType [])) []
+  length inputTypes > 0 && L.length outputType > 0 && L.all (not . null) inputTypes ==>
+  let funcType = DependentType "testFunc" [] (FunctionType (L.map (\n -> TypeRef n []) inputTypes) (TypeRef outputType [])) []
       inputTypesFromFunc = case typeBody funcType of
-                              FunctionType inputs _ -> map (\(TypeRef name _) -> name) inputs
+                              FunctionType inputs _ -> L.map (\(TypeRef name _) -> name) inputs
                               _ -> []
   in property $ inputTypesFromFunc === inputTypes
 
 -- Property: Constraint satisfaction is monotonic
 prop_constraint_satisfaction_monotonic :: String -> String -> String -> Property
 prop_constraint_satisfaction_monotonic varName value1 value2 =
-  length varName > 0 && all (not . null) [value1, value2] ==>
+  length varName > 0 && L.all (not . null) [value1, value2] ==>
   let constraint1 = TypeConstraint "==" (TypeRef varName []) (Just value1)
       constraint2 = TypeConstraint "==" (TypeRef varName []) (Just value2)
       constraint1Str = show constraint1
@@ -145,21 +147,21 @@ prop_constraint_satisfaction_monotonic varName value1 value2 =
 -- Property: Type scope uniqueness is maintained
 prop_type_scope_uniqueness :: [String] -> Property
 prop_type_scope_uniqueness typeNames =
-  length typeNames > 0 && all (not . null) typeNames && nub typeNames == typeNames ==>
-  let types = map (\n -> DependentType n [] (StructType []) []) typeNames
+  length typeNames > 0 && L.all (not . null) typeNames && nub typeNames == typeNames ==>
+  let types = L.map (\n -> DependentType n [] (StructType []) []) typeNames
       uniqueTypeNames = nub (map dtName types)
   in property $ 
-    length uniqueTypeNames === length typeNames .&&.
+    length uniqueTypeNames === L.length typeNames .&&.
     uniqueTypeNames === typeNames
 
 -- Property: Generic type instantiation preserves type structure
 prop_generic_type_instantiation_preserves_structure :: String -> [String] -> [String] -> Property
 prop_generic_type_instantiation_preserves_structure genericName typeParams instanceParams =
   length genericName > 0 && 
-  length typeParams > 0 && all (not . null) typeParams &&
-  length instanceParams == length typeParams && all (not . null) instanceParams ==>
-  let genericType = TypeRef genericName (map (\n -> TypeRef n []) typeParams)
-      instanceType = TypeRef genericName (map (\n -> TypeRef n []) instanceParams)
+  length typeParams > 0 && L.all (not . null) typeParams &&
+  length instanceParams == L.length typeParams && L.all (not . null) instanceParams ==>
+  let genericType = TypeRef genericName (L.map (\n -> TypeRef n []) typeParams)
+      instanceType = TypeRef genericName (L.map (\n -> TypeRef n []) instanceParams)
   in property $ 
     show genericType `contains` genericName .&&.
     show instanceType `contains` genericName .&&.
@@ -168,7 +170,7 @@ prop_generic_type_instantiation_preserves_structure genericName typeParams insta
 
 -- Helper function to check string containment
 contains :: String -> String -> Bool
-contains needle haystack = needle `Data.List.isInfixOf` haystack
+contains needle haystack = needle `Data.List.L.isInfixOf` haystack
 
 -- Test collection
 tests :: TestTree

@@ -7,6 +7,7 @@ import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===),
 import Test.Tasty.HUnit (testCase, assert, (@?=))
 import qualified Data.Text as T
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 
 import Utils (removeLineComments, removeComments)
@@ -39,10 +40,10 @@ genStringWithBlockComments = do
   comments <- listOf $ do
     content <- listOf $ arbitrary `suchThat` (\c -> c /= '/' && c /= '*')
     return $ "/*" ++ content ++ "*/"
-  let withComments = foldl (\acc comment -> acc ++ comment ++ "\n") base comments
+  let withComments = L.foldl (\acc comment -> acc ++ comment ++ "\n") base comments
   return withComments
 
--- Generate strings with both line and block comments
+-- Generate strings with both line L.and block comments
 genStringWithMixedComments :: Gen String
 genStringWithMixedComments = do
   withLine <- genStringWithLineComments
@@ -59,11 +60,11 @@ interleaveLines (x:xs) (y:ys) = x : y : interleaveLines xs ys
 -- Property Tests
 -- ============================================================================
 
--- Property: removeLineComments should remove all // comments
+-- Property: removeLineComments should remove L.all // comments
 prop_removeLine_comments_removes_all :: String -> Property
 prop_removeLine_comments_removes_all s =
   let result = removeLineComments s
-      hasLineComment = "//" `isInfixOf` result
+      hasLineComment = "//" `L.isInfixOf` result
   in not hasLineComment === True
 
 -- Property: removeLineComments should preserve non-comment content
@@ -73,17 +74,17 @@ prop_removeLine_comments_preserves_content s =
       originalLines = lines s
       resultLines = lines result
       -- Count non-comment lines in original
-      nonCommentOriginal = length $ filter (not . ("//" `isPrefixOf`)) originalLines
+      nonCommentOriginal = L.length $ L.filter (not . ("//" `L.isPrefixOf`)) originalLines
       -- Result should have at least as many content lines as non-comment original
-      resultHasContent = not (null result) || all ("//" `isPrefixOf`) originalLines
+      resultHasContent = not (null result) || L.all ("//" `L.isPrefixOf`) originalLines
   in resultHasContent === True
 
--- Property: removeComments should remove both // and /* */ comments
+-- Property: removeComments should remove both // L.and /* */ comments
 prop_remove_comments_removes_both :: String -> Property
 prop_remove_comments_removes_both s =
   let result = removeComments s
-      hasLineComment = "//" `isInfixOf` result
-      hasBlockComment = "/*" `isInfixOf` result || "*/" `isInfixOf` result
+      hasLineComment = "//" `L.isInfixOf` result
+      hasBlockComment = "/*" `L.isInfixOf` result || "*/" `L.isInfixOf` result
   in not (hasLineComment || hasBlockComment) === True
 
 -- Property: removeComments should be idempotent
@@ -105,7 +106,7 @@ prop_remove_comments_preserves_strings :: String -> Property
 prop_remove_comments_preserves_strings s =
   let stringWithString = s ++ "\nlet x = \"// not a comment\""
       result = removeComments stringWithString
-      hasStringLiteral = "\"// not a comment\"" `isInfixOf` result
+      hasStringLiteral = "\"// not a comment\"" `L.isInfixOf` result
   in hasStringLiteral === True
 
 -- Property: removeComments should preserve char literals
@@ -116,7 +117,7 @@ prop_remove_comments_preserves_chars s =
       hasCharLiteral = "'/'" `isInfixString` result
   in hasCharLiteral === True
   where
-    isInfixString needle haystack = needle `isInfixOf` haystack
+    isInfixString needle haystack = needle `L.isInfixOf` haystack
 
 -- ============================================================================
 -- Unit Tests
@@ -156,9 +157,9 @@ test_comments_with_strings = testCase "comments with string literals" $ do
 
 tests :: TestTree
 tests = testGroup "Comment Handling QuickCheck Tests"
-  [ testProperty "removeLineComments removes all // comments" prop_removeLineComments_removes_all
-  , testProperty "removeLineComments preserves non-comment content" prop_removeLineComments_preserves_content
-  , testProperty "removeComments removes both // and /* */ comments" prop_remove_comments_removes_both
+  [ testProperty "removeLineComments removes L.all // comments" prop_removeLine_comments_removes_all
+  , testProperty "removeLineComments preserves non-comment content" prop_removeLine_comments_preserves_content
+  , testProperty "removeComments removes both // L.and /* */ comments" prop_remove_comments_removes_both
   , testProperty "removeComments is idempotent" prop_remove_comments_idempotent
   , testProperty "removeLineComments is idempotent" prop_remove_line_comments_idempotent
   , testProperty "removeComments preserves string literals" prop_remove_comments_preserves_strings

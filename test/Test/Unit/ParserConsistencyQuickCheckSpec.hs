@@ -18,14 +18,15 @@ import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify
 import Parser
 import Utils (trim, removeComments)
 
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 
--- Property: Parsing and then re-formatting should preserve structure for simple cases
+-- Property: Parsing L.and then re-formatting should preserve structure for simple cases
 prop_parser_preserves_simple_structure :: String -> Property
 prop_parser_preserves_simple_structure input =
   let trimmed = trim input
       notEmpty = not (null trimmed)
-      notOnlyComments = not (null $ removeComments trimmed)
+      notOnlyComments = not (L.null $ removeComments trimmed)
   in notEmpty .&&. notOnlyComments ==>
   property $ True -- Placeholder: actual parsing would be tested here
 
@@ -58,7 +59,7 @@ prop_parser_whitespace_idempotent input =
 -- Property: Parser should handle line endings consistently
 prop_parser_line_endings_consistent :: String -> Property
 prop_parser_line_endings_consistent input =
-  let unixStyle = map (\c -> if c == '\r' then '\n' else c) input
+  let unixStyle = L.map (\c -> if c == '\r' then '\n' else c) input
       windowsStyle = concatMap (\c -> if c == '\n' then "\r\n" else [c]) input
       normalized1 = normalizeLineEndings unixStyle
       normalized2 = normalizeLineEndings windowsStyle
@@ -94,7 +95,7 @@ normalizeWhitespace :: String -> String
 normalizeWhitespace = unwords . words
 
 normalizeLineEndings :: String -> String
-normalizeLineEndings = map (\c -> if c == '\r' then '\n' else c)
+normalizeLineEndings = L.map (\c -> if c == '\r' then '\n' else c)
 
 extractStringLiteral :: String -> Maybe String
 extractStringLiteral str = 

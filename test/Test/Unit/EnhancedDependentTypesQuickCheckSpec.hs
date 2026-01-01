@@ -33,7 +33,9 @@ import DependentTypesParser
   , validateDependentTypeSyntax
   )
 
-import Data.List (isInfixOf, isPrefixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isInfixOf, isPrefixOf)
+import Data.List (sort, nub)
 import Data.Char (isSpace, isAlpha, isAlphaNum)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isJust, isNothing)
@@ -46,7 +48,7 @@ prop_typeRef_equality_reflexive tr =
 -- Property: TypeRef with same name are equal
 prop_typeRef_same_name_equal :: String -> Property
 prop_typeRef_same_name_equal name =
-  not (null name) && all isAlphaNum name ==>
+  not (null name) && L.all isAlphaNum name ==>
   let tr1 = TypeRef name []
       tr2 = TypeRef name []
   in property (tr1 === tr2)
@@ -54,7 +56,7 @@ prop_typeRef_same_name_equal name =
 -- Property: TypeRef with different parameters are different
 prop_typeRef_different_params_unequal :: String -> [TypeRef] -> [TypeRef] -> Property
 prop_typeRef_different_params_unequal name params1 params2 =
-  not (null name) && all isAlphaNum name && params1 /= params2 ==>
+  not (null name) && L.all isAlphaNum name && params1 /= params2 ==>
   let tr1 = TypeRef name params1
       tr2 = TypeRef name params2
   in property (tr1 /= tr2)
@@ -64,10 +66,10 @@ prop_field_equality_reflexive :: Field -> Property
 prop_field_equality_reflexive field =
   property (field === field)
 
--- Property: Field with same name and type are equal
+-- Property: Field with same name L.and type are equal
 prop_field_same_name_type_equal :: String -> TypeRef -> Property
 prop_field_same_name_type_equal name typ =
-  not (null name) && all isAlphaNum name ==>
+  not (null name) && L.all isAlphaNum name ==>
   let field1 = Field name typ
       field2 = Field name typ
   in property (field1 === field2)
@@ -97,7 +99,7 @@ prop_parseDependentType_empty =
 -- Property: Parser handles whitespace-only input
 prop_parseDependentType_whitespace :: String -> Property
 prop_parseDependentType_whitespace whitespace =
-  all isSpace whitespace ==>
+  L.all isSpace whitespace ==>
   case parseDependentType whitespace of
     Left _ -> property True
     Right _ -> property True
@@ -105,7 +107,7 @@ prop_parseDependentType_whitespace whitespace =
 -- Property: Parser handles simple type definition
 prop_parseDependentType_simple :: String -> Property
 prop_parseDependentType_simple typeName =
-  not (null typeName) && all isAlphaNum typeName ==>
+  not (null typeName) && L.all isAlphaNum typeName ==>
   let source = "type " ++ typeName ++ " = int"
   in case parseDependentType source of
     Left _ -> property True
@@ -114,8 +116,8 @@ prop_parseDependentType_simple typeName =
 -- Property: Parser handles generic type definition
 prop_parseDependentType_generic :: String -> [String] -> Property
 prop_parseDependentType_generic typeName params =
-  not (null typeName) && all isAlphaNum typeName && 
-  all (all isAlphaNum) params && not (null params) ==>
+  not (null typeName) && L.all isAlphaNum typeName && 
+  L.all (L.all isAlphaNum) params && not (null params) ==>
   let paramStr = unwords params
       source = "type " ++ typeName ++ " [" ++ paramStr ++ "] = int"
   in case parseDependentType source of
@@ -125,9 +127,9 @@ prop_parseDependentType_generic typeName params =
 -- Property: Parser handles struct type definition
 prop_parseDependentType_struct :: String -> [(String, String)] -> Property
 prop_parseDependentType_struct typeName fields =
-  not (null typeName) && all isAlphaNum typeName && 
-  all (\(n, t) -> all isAlphaNum n && all isAlphaNum t) fields ==>
-  let fieldStr = unlines $ map (\(n, t) -> "  " ++ n ++ ": " ++ t) fields
+  not (null typeName) && L.all isAlphaNum typeName && 
+  L.all (\(n, t) -> L.all isAlphaNum n && L.all isAlphaNum t) fields ==>
+  let fieldStr = unlines $ L.map (\(n, t) -> "  " ++ n ++ ": " ++ t) fields
       source = unlines ["type " ++ typeName ++ " = struct {", fieldStr, "}"]
   in case parseDependentType source of
     Left _ -> property True
@@ -136,7 +138,7 @@ prop_parseDependentType_struct typeName fields =
 -- Property: Parser handles type with constraints
 prop_parseDependentType_constraints :: String -> String -> Property
 prop_parseDependentType_constraints typeName constraint =
-  not (null typeName) && all isAlphaNum typeName && 
+  not (null typeName) && L.all isAlphaNum typeName && 
   not (null constraint) ==>
   let source = unlines 
         [ "type " ++ typeName ++ " = int"
@@ -149,7 +151,7 @@ prop_parseDependentType_constraints typeName constraint =
 -- Property: validateDependentTypeSyntax handles valid input
 prop_validateDependentTypeSyntax_valid :: String -> Property
 prop_validateDependentTypeSyntax_valid source =
-  not (null source) && "type " `isPrefixOf` source ==>
+  not (null source) && "type " `L.isPrefixOf` source ==>
   let result = validateDependentTypeSyntax source
   in case result of
     Left _ -> property True -- Validation errors are acceptable
@@ -158,18 +160,18 @@ prop_validateDependentTypeSyntax_valid source =
 -- Property: runDependentTypesParser handles multiple definitions
 prop_runDependentTypesParser_multiple :: [String] -> Property
 prop_runDependentTypesParser_multiple typeNames =
-  not (null typeNames) && all (all isAlphaNum) typeNames && 
-  length typeNames <= 5 ==> -- Limit to avoid huge inputs
-  let definitions = map (\n -> "type " ++ n ++ " = int") typeNames
+  not (null typeNames) && L.all (L.all isAlphaNum) typeNames && 
+  L.length typeNames <= 5 ==> -- Limit to avoid huge inputs
+  let definitions = L.map (\n -> "type " ++ n ++ " = int") typeNames
       source = unlines definitions
   in case runDependentTypesParser source of
     Left _ -> property True
-    Right (dts, _) -> property (length dts >= 0)
+    Right (dts, _) -> property (L.length dts >= 0)
 
 -- Property: parseTypeDeclaration handles simple declaration
 prop_parseTypeDeclaration_simple :: String -> Property
 prop_parseTypeDeclaration_simple typeName =
-  not (null typeName) && all isAlphaNum typeName ==>
+  not (null typeName) && L.all isAlphaNum typeName ==>
   let source = "type " ++ typeName ++ " = int"
   in case parseTypeDeclaration source of
     Left _ -> property True

@@ -1,6 +1,7 @@
 module Test.Unit.NewCabalOwnershipQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.QuickCheck (property, forAll, Gen, arbitrary, choose, elements, listOf, Positive(..))
 import Data.List (nub, sort)
@@ -30,7 +31,7 @@ tests =
         ]
     
     , testGroup "Ownership analysis properties"
-        [ fastProperty "analyzeOwnership finds all ownership relationships" prop_analyzeOwnershipComplete
+        [ fastProperty "analyzeOwnership finds L.all ownership relationships" prop_analyzeOwnershipComplete
         , fastProperty "analyzeOwnership respects ownership rules" prop_analyzeOwnershipRespectsRules
         , fastProperty "checkOwnershipViolations detects violations" prop_checkOwnershipViolations
         , fastProperty "ownershipInference is sound" prop_ownershipInferenceSound
@@ -42,14 +43,14 @@ tests =
         , fastProperty "ownershipTransferMinimization reduces transfers" prop_ownershipTransferMinimization
         ]
     
-    , testGroup "Edge cases and robustness"
+    , testGroup "Edge cases L.and robustness"
         [ testCase "handle empty ownership graph" $ do
             let emptyGraph = createEmptyOwnershipGraph
             size emptyGraph @?= 0
             
         , testCase "handle deeply nested ownership chains" $ do
             let chain = createOwnershipChain 100
-            length chain @?= 100
+            L.length chain @?= 100
             
         , testCase "handle ownership cycles detection" $ do
             let cycleGraph = createOwnershipCycle
@@ -68,7 +69,7 @@ prop_createOwnedResourceValid resourceId =
   let resource = createOwnedResource resourceId
   in resourceId == ownedResourceId resource &&
      isOwner (ownerId resource) resource &&
-     null (borrowers resource)
+     L.null (borrowers resource)
 
 -- | Property: transferOwnership updates ownership correctly
 prop_transferOwnershipCorrect :: String -> String -> Bool
@@ -133,48 +134,48 @@ prop_ownershipGraphAcyclic resourceIds =
   let graph = createLinearOwnershipGraph resourceIds
   in not (hasOwnershipCycle graph)
 
--- | Property: analyzeOwnership finds all ownership relationships
+-- | Property: analyzeOwnership finds L.all ownership relationships
 prop_analyzeOwnershipComplete :: [String] -> Bool
 prop_analyzeOwnershipComplete resourceIds =
   let graph = createLinearOwnershipGraph resourceIds
       analysis = analyzeOwnership graph
-      expectedRelations = length resourceIds - 1
-  in length (ownershipRelations analysis) >= expectedRelations
+      expectedRelations = L.length resourceIds - 1
+  in L.length (ownershipRelations analysis) >= expectedRelations
 
 -- | Property: analyzeOwnership respects ownership rules
 prop_analyzeOwnershipRespectsRules :: [String] -> Bool
 prop_analyzeOwnershipRespectsRules resourceIds =
   let graph = createLinearOwnershipGraph resourceIds
       analysis = analyzeOwnership graph
-  in all isValidOwnershipRelation (ownershipRelations analysis)
+  in L.all isValidOwnershipRelation (ownershipRelations analysis)
 
 -- | Property: checkOwnershipViolations detects violations
 prop_checkOwnershipViolations :: [String] -> Bool
 prop_checkOwnershipViolations resourceIds =
   let graph = createLinearOwnershipGraph resourceIds
       violations = checkOwnershipViolations graph
-  in all isRealViolation violations
+  in L.all isRealViolation violations
 
 -- | Property: ownershipInference is sound
 prop_ownershipInferenceSound :: [String] -> Bool
 prop_ownershipInferenceSound resourceIds =
   let graph = createLinearOwnershipGraph resourceIds
       inferred = inferOwnership graph
-  in all (\rel -> rel `elem` ownershipRelations (analyzeOwnership graph)) inferred
+  in L.all (\rel -> rel `elem` ownershipRelations (analyzeOwnership graph)) inferred
 
 -- | Property: optimizeOwnershipReducesBorrows
 prop_optimizeOwnershipReducesBorrows :: [String] -> Bool
 prop_optimizeOwnershipReducesBorrows borrowerIds =
   let resource = createOwnedResource "test"
-      borrowed = foldl (\res borrower -> borrowResource res borrower) resource borrowerIds
+      borrowed = L.foldl (\res borrower -> borrowResource res borrower) resource borrowerIds
       optimized = optimizeOwnership borrowed
-  in length (borrowers optimized) <= length (borrowers borrowed)
+  in L.length (borrowers optimized) <= L.length (borrowers borrowed)
 
 -- | Property: optimizeOwnershipPreservesSemantics
 prop_optimizeOwnershipPreservesSemantics :: [String] -> Bool
 prop_optimizeOwnershipPreservesSemantics borrowerIds =
   let resource = createOwnedResource "test"
-      borrowed = foldl (\res borrower -> borrowResource res borrower) resource borrowerIds
+      borrowed = L.foldl (\res borrower -> borrowResource res borrower) resource borrowerIds
       optimized = optimizeOwnership borrowed
   in ownedResourceId optimized == ownedResourceId borrowed &&
      ownerId optimized == ownerId borrowed
@@ -184,15 +185,15 @@ prop_ownershipTransferMinimization :: [String] -> Bool
 prop_ownershipTransferMinimization ownerIds =
   let transfers = createTransferSequence ownerIds
       minimized = minimizeOwnershipTransfers transfers
-  in length minimized <= length transfers
+  in L.length minimized <= L.length transfers
 
 -- | Property: ownershipAnalysisScalesLinearly
 prop_ownershipAnalysisScalesLinearly :: Positive Int -> Bool
 prop_ownershipAnalysisScalesLinearly (Positive n) =
-  let resourceIds = map (("resource_" ++) . show) [1..n]
+  let resourceIds = L.map (("resource_" ++) . show) [1..n]
       graph = createLinearOwnershipGraph resourceIds
       analysis = analyzeOwnership graph
-  in length (ownershipRelations analysis) <= n * 2
+  in L.length (ownershipRelations analysis) <= n * 2
 
 -- | Property: ownershipTransferIsConstantTime
 prop_ownershipTransferIsConstantTime :: String -> String -> Bool
@@ -201,7 +202,7 @@ prop_ownershipTransferIsConstantTime oldOwner newOwner =
       transferred = transferOwnership resource newOwner
   in transferred /= resource && isOwner newOwner transferred
 
--- Helper data types and functions (mock implementations for demonstration)
+-- Helper data types L.and functions (mock implementations for demonstration)
 data OwnedResource = OwnedResource
   { ownedResourceId :: String
   , resourceType :: ResourceType
@@ -246,7 +247,7 @@ borrowResource :: OwnedResource -> String -> OwnedResource
 borrowResource resource borrower = resource { borrowers = borrower : borrowers resource }
 
 releaseBorrow :: OwnedResource -> String -> OwnedResource
-releaseBorrow resource borrower = resource { borrowers = filter (/= borrower) (borrowers resource) }
+releaseBorrow resource borrower = resource { borrowers = L.filter (/= borrower) (borrowers resource) }
 
 freeResource :: OwnedResource -> OwnedResource
 freeResource resource = resource { isFreed = True }
@@ -272,13 +273,13 @@ createLinearOwnershipGraph (x:y:xs) =
           , edges = (x, y) : edges graph }
 
 createOwnershipChain :: Int -> [OwnedResource]
-createOwnershipChain n = map (\i -> createOwnedResourceWithOwner ("resource_" ++ show i) ("owner_" ++ show i)) [1..n]
+createOwnershipChain n = L.map (\i -> createOwnedResourceWithOwner ("resource_" ++ show i) ("owner_" ++ show i)) [1..n]
 
 createOwnershipCycle :: OwnershipGraph
 createOwnershipCycle = OwnershipGraph (Set.fromList ["a", "b", "c"]) [("a", "b"), ("b", "c"), ("c", "a")]
 
 hasOwnershipCycle :: OwnershipGraph -> Bool
-hasOwnershipCycle graph = any (\(a, b) -> (b, a) `elem` edges graph) (edges graph)
+hasOwnershipCycle graph = L.any (\(a, b) -> (b, a) `elem` edges graph) (edges graph)
 
 analyzeOwnership :: OwnershipGraph -> OwnershipAnalysis
 analyzeOwnership graph = OwnershipAnalysis (edges graph) []

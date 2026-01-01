@@ -2,6 +2,7 @@
 module Test.Unit.CustomUtilsQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (==>), forAll, elements, listOf, listOf1, oneof)
 import qualified Data.Text as T
 import Data.Char (isSpace, isAlphaNum, isLetter)
@@ -31,7 +32,7 @@ genCommaString :: Gen String
 genCommaString = do
   numParts <- elements [0..5]
   parts <- sequence [listOf1 $ elements $ ['a'..'z'] ++ ['0'..'9'] | _ <- [1..numParts]]
-  let withCommas = concat $ zipWith (\p i -> if i == 0 then p else "," ++ p) parts [0..]
+  let withCommas = L.concat $ zipWith (\p i -> if i == 0 then p else "," ++ p) parts [0..]
   return withCommas
 
 -- | Generate strings with line comments
@@ -75,7 +76,7 @@ genDelimitedString :: Char -> Gen String
 genDelimitedString delim = do
   numParts <- elements [0..5]
   parts <- sequence [listOf $ elements $ ['a'..'z'] ++ ['0'..'9'] | _ <- [1..numParts]]
-  let withDelims = concat $ zipWith (\p i -> if i == 0 then p else [delim] ++ p) parts [0..]
+  let withDelims = L.concat $ zipWith (\p i -> if i == 0 then p else [delim] ++ p) parts [0..]
   return withDelims
 
 -- | Test trim property: trim(trim(x)) == trim(x)
@@ -83,24 +84,24 @@ prop_trimIdempotent :: Property
 prop_trimIdempotent = forAll genWhitespaceString $ \s ->
   trim (trim s) == trim s
 
--- | Test trim property: trim removes leading and trailing whitespace
+-- | Test trim property: trim removes leading L.and trailing whitespace
 prop_trimRemovesWhitespace :: Property
 prop_trimRemovesWhitespace = forAll genWhitespaceString $ \s ->
   let trimmed = trim s
-  in null trimmed || not (isSpace (head trimmed) || isSpace (last trimmed))
+  in null trimmed || not (isSpace (L.head trimmed) || isSpace (last trimmed))
 
--- | Test splitBy property: concat with delimiter should reconstruct original
+-- | Test splitBy property: L.concat with delimiter should reconstruct original
 prop_splitByReconstruction :: Property
 prop_splitByReconstruction = forAll (genDelimitedString ',') $ \s ->
   let parts = splitBy ',' s
-      reconstructed = concat $ zipWith (\p i -> if i == 0 then p else "," ++ p) parts [0..length parts - 1]
+      reconstructed = L.concat $ zipWith (\p i -> if i == 0 then p else "," ++ p) parts [0..L.length parts - 1]
   in reconstructed == s
 
 -- | Test splitByCollapsed property: no empty strings in result
 prop_splitByCollapsedNoEmpty :: Property
 prop_splitByCollapsedNoEmpty = forAll (genDelimitedString ',') $ \s ->
   let parts = splitByCollapsed ',' s
-  in all (not . null) parts
+  in L.all (not . null) parts
 
 -- | Test splitByComma property: should be same as splitBy ','
 prop_splitByCommaConsistency :: Property
@@ -111,22 +112,22 @@ prop_splitByCommaConsistency = forAll genCommaString $ \s ->
 prop_removeLineCommentsPreservesLiterals :: Property
 prop_removeLineCommentsPreservesLiterals = forAll genStringLiteralString $ \s ->
   let withComments = removeLineComments s
-      hasLiteral = "\"" `isInfixOf` s
-  in hasLiteral ==> ("\"" `isInfixOf` withComments)
+      hasLiteral = "\"" `L.isInfixOf` s
+  in hasLiteral ==> ("\"" `L.isInfixOf` withComments)
 
 -- | Test that removing comments removes line comments
 prop_removeLineCommentsRemovesComments :: Property
 prop_removeLineCommentsRemovesComments = forAll genCommentedString $ \s ->
   let withComments = removeLineComments s
-      hasComment = "//" `isInfixOf` s
-  in hasComment ==> not ("//" `isInfixOf` withComments)
+      hasComment = "//" `L.isInfixOf` s
+  in hasComment ==> not ("//" `L.isInfixOf` withComments)
 
 -- | Test block comment removal
 prop_removeBlockComments :: Property
 prop_removeBlockComments = forAll genBlockCommentedString $ \s ->
   let withComments = removeComments s
-      hasBlockComment = "/*" `isInfixOf` s && "*/" `isInfixOf` s
-  in hasBlockComment ==> not ("/*" `isInfixOf` withComments || "*/" `isInfixOf` withComments)
+      hasBlockComment = "/*" `L.isInfixOf` s && "*/" `L.isInfixOf` s
+  in hasBlockComment ==> not ("/*" `L.isInfixOf` withComments || "*/" `L.isInfixOf` withComments)
 
 -- | Test indentation normalization preserves relative indentation
 prop_normalizeIndentationPreservesRelative :: Property
@@ -134,7 +135,7 @@ prop_normalizeIndentationPreservesRelative = forAll genIndentedString $ \s ->
   let normalized = normalizeIndentation s
       originalLines = lines s
       normalizedLines = lines normalized
-  in length originalLines == length normalizedLines
+  in L.length originalLines == L.length normalizedLines
 
 -- | Test breakOn property
 prop_breakOnCorrectness :: Property
@@ -180,7 +181,7 @@ prop_splitByCollapsedEdgeCases =
   splitByCollapsed ',' "," == []
 
   where
-    isInfixOf needle haystack = needle `elem` (substrings haystack)
+    L.isInfixOf needle haystack = needle `elem` (substrings haystack)
     substrings [] = []
     substrings s@(x:xs) = s : substrings xs
 

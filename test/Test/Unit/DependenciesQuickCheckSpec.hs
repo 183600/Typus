@@ -32,18 +32,20 @@ import Dependencies.Parser
   , grammarDefinition
   )
 
-import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, sort)
+import qualified Data.Text as T (pack, unpack)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort)
 import Data.Char (isSpace, isAlphaNum)
 
 -- Property: AST construction with Program
 prop_ast_program_construction :: [String] -> Property
 prop_ast_program_construction statements =
-  not (null statements) && length statements <= 5 ==>
-  let dummyStatements = map (\s -> SVarDecl (T.pack s) (SimpleT (T.pack "int"))) statements
+  not (null statements) && L.length statements <= 5 ==>
+  let dummyStatements = L.map (\s -> SVarDecl (T.pack s) (SimpleT (T.pack "int"))) statements
       program = Program dummyStatements
   in case program of
-    Program stmts -> length stmts === length statements
+    Program stmts -> L.length stmts === L.length statements
 
 -- Property: Statement equality
 prop_statement_equality :: String -> TypeExpr -> Property
@@ -57,7 +59,7 @@ prop_statement_equality varName typeExpr =
 -- Property: TypeExpr construction
 prop_typeexpr_simple :: String -> Property
 prop_typeexpr_simple typeName =
-  not (null typeName) && all isAlphaNum typeName ==>
+  not (null typeName) && L.all isAlphaNum typeName ==>
   let typeExpr = SimpleT (T.pack typeName)
   in case typeExpr of
     SimpleT name -> T.unpack name === typeName
@@ -65,27 +67,27 @@ prop_typeexpr_simple typeName =
 -- Property: TypeExpr generic construction
 prop_typeexpr_generic :: String -> [String] -> Property
 prop_typeexpr_generic typeName typeArgs =
-  not (null typeName) && not (null typeArgs) && length typeArgs <= 3 ==>
-  let genericType = GenericT (T.pack typeName) (map (SimpleT . T.pack) typeArgs)
+  not (null typeName) && not (null typeArgs) && L.length typeArgs <= 3 ==>
+  let genericType = GenericT (T.pack typeName) (L.map (SimpleT . T.pack) typeArgs)
   in case genericType of
-    GenericT name args -> property $ T.unpack name === typeName .&&. length args === length typeArgs
+    GenericT name args -> property $ T.unpack name === typeName .&&. L.length args === L.length typeArgs
 
 -- Property: TypeExpr function construction
 prop_typeexpr_function :: [(String, TypeExpr)] -> TypeExpr -> Property
 prop_typeexpr_function params returnType =
-  not (null params) && length params <= 3 ==>
-  let funcType = FuncT (map (\(n, t) -> (T.pack n, t)) params) returnType
+  not (null params) && L.length params <= 3 ==>
+  let funcType = FuncT (L.map (\(n, t) -> (T.pack n, t)) params) returnType
   in case funcType of
-    FuncT paramTypes ret -> length paramTypes === length params
+    FuncT paramTypes ret -> L.length paramTypes === L.length params
 
 -- Property: TypeExpr refinement construction
 prop_typeexpr_refinement :: TypeExpr -> [String] -> Property
 prop_typeexpr_refinement baseType constraintNames =
-  not (null constraintNames) && length constraintNames <= 3 ==>
-  let constraints = map (\name -> PredC (T.pack name) []) constraintNames
+  not (null constraintNames) && L.length constraintNames <= 3 ==>
+  let constraints = L.map (\name -> PredC (T.pack name) []) constraintNames
       refinedType = RefineT baseType constraints
   in case refinedType of
-    RefineT base cons -> property $ base === baseType .&&. length cons === length constraintNames
+    RefineT base cons -> property $ base === baseType .&&. L.length cons === L.length constraintNames
 
 -- Property: Constraint construction
 prop_constraint_size_gt :: String -> Int -> Property
@@ -106,22 +108,22 @@ prop_constraint_range varName minVal maxVal =
 -- Property: Constraint predicate construction
 prop_constraint_predicate :: String -> [TypeExpr] -> Property
 prop_constraint_predicate predName args =
-  not (null predName) && not (null args) && length args <= 3 ==>
+  not (null predName) && not (null args) && L.length args <= 3 ==>
   let constraint = PredC (T.pack predName) args
   in case constraint of
-    PredC pred argTypes -> property $ T.unpack pred === predName .&&. length argTypes === length args
+    PredC pred argTypes -> property $ T.unpack pred === predName .&&. L.length argTypes === L.length args
 
 -- Property: DependencyNode construction
 prop_dependency_node_construction :: String -> [String] -> Property
 prop_dependency_node_construction nodeName dependencies =
-  not (null nodeName) && length dependencies <= 5 ==>
+  not (null nodeName) && L.length dependencies <= 5 ==>
   let node = DependencyNode nodeName dependencies
   in property $ nodeName node === nodeName .&&. nodeDependencies node === dependencies
 
 -- Property: parseStatement handles simple variable declarations
 prop_parse_statement_var_decl :: String -> String -> Property
 prop_parse_statement_var_decl varName typeName =
-  not (null varName) && not (null typeName) && all isAlphaNum varName && all isAlphaNum typeName ==>
+  not (null varName) && not (null typeName) && L.all isAlphaNum varName && L.all isAlphaNum typeName ==>
   let input = "var " ++ varName ++ " : " ++ typeName
       result = runParser parseStatement input
   in case result of
@@ -133,7 +135,7 @@ prop_parse_statement_var_decl varName typeName =
 -- Property: parseTypeExpr handles simple types
 prop_parse_typeexpr_simple :: String -> Property
 prop_parse_typeexpr_simple typeName =
-  not (null typeName) && all isAlphaNum typeName ==>
+  not (null typeName) && L.all isAlphaNum typeName ==>
   let input = typeName
       result = runParser parseTypeExpr input
   in case result of
@@ -144,21 +146,21 @@ prop_parse_typeexpr_simple typeName =
 -- Property: parseTypeExpr handles generic types
 prop_parse_typeexpr_generic :: String -> [String] -> Property
 prop_parse_typeexpr_generic typeName typeArgs =
-  not (null typeName) && not (null typeArgs) && length typeArgs <= 3 && 
-  all isAlphaNum typeName && all isAlphaNum (concat typeArgs) ==>
-  let argsStr = concat $ intersperse ", " typeArgs
+  not (null typeName) && not (null typeArgs) && L.length typeArgs <= 3 && 
+  L.all isAlphaNum typeName && L.all isAlphaNum (L.concat typeArgs) ==>
+  let argsStr = L.concat $ intersperse ", " typeArgs
       input = typeName ++ "<" ++ argsStr ++ ">"
       result = runParser parseTypeExpr input
   in case result of
     Left _ -> property False
     Right (GenericT name args) -> 
-      property $ T.unpack name === typeName .&&. length args === length typeArgs
+      property $ T.unpack name === typeName .&&. L.length args === L.length typeArgs
     Right _ -> property False
 
 -- Property: parseConstraint handles size constraints
 prop_parse_constraint_size :: String -> String -> Int -> Property
 prop_parse_constraint_size varName op size =
-  not (null varName) && all isAlphaNum varName && op `elem` [">", ">="] && size >= 0 && size <= 100 ==>
+  not (null varName) && L.all isAlphaNum varName && op `elem` [">", ">="] && size >= 0 && size <= 100 ==>
   let input = varName ++ " " ++ op ++ " " ++ show size
       result = runParser parseConstraint input
   in case (op, result) of
@@ -173,7 +175,7 @@ prop_parse_constraint_size varName op size =
 -- Property: parseConstraint handles range constraints
 prop_parse_constraint_range :: String -> Int -> Int -> Property
 prop_parse_constraint_range varName minVal maxVal =
-  not (null varName) && all isAlphaNum varName && minVal >= 0 && maxVal >= minVal && maxVal <= 100 ==>
+  not (null varName) && L.all isAlphaNum varName && minVal >= 0 && maxVal >= minVal && maxVal <= 100 ==>
   let input = varName ++ " < " ++ show minVal ++ ", " ++ show maxVal ++ " >"
       result = runParser parseConstraint input
   in case result of
@@ -185,20 +187,20 @@ prop_parse_constraint_range varName minVal maxVal =
 -- Property: parseProgram handles multiple statements
 prop_parse_program_multiple :: [String] -> Property
 prop_parse_program_multiple varNames =
-  not (null varNames) && length varNames <= 3 && all isAlphaNum (concat varNames) ==>
-  let statements = map (\name -> "var " ++ name ++ " : int") varNames
+  not (null varNames) && L.length varNames <= 3 && L.all isAlphaNum (L.concat varNames) ==>
+  let statements = L.map (\name -> "var " ++ name ++ " : int") varNames
       input = unlines statements
       result = runParser parseProgram input
   in case result of
     Left _ -> property False
-    Right (Program stmts) -> property $ length stmts === length varNames
+    Right (Program stmts) -> property $ L.length stmts === L.length varNames
     Right _ -> property False
 
 -- Property: grammarDefinition is non-empty
 prop_grammar_definition_non_empty :: Property
 prop_grammar_definition_non_empty =
   let grammar = grammarDefinition
-  in property $ not (null grammar) && "Typus Language BNF Grammar" `isInfixOf` grammar
+  in property $ not (null grammar) && "Typus Language BNF Grammar" `L.isInfixOf` grammar
 
 -- Property: AST roundtrip consistency
 prop_ast_roundtrip_consistency :: Statement -> Property
@@ -213,7 +215,7 @@ prop_ast_roundtrip_consistency stmt =
 prop_typeexpr_nested_generics :: String -> String -> String -> Property
 prop_typeexpr_nested_generics outerType innerType innermostType =
   not (null outerType) && not (null innerType) && not (null innermostType) &&
-  all isAlphaNum outerType && all isAlphaNum innerType && all isAlphaNum innermostType ==>
+  L.all isAlphaNum outerType && L.all isAlphaNum innerType && L.all isAlphaNum innermostType ==>
   let innerGeneric = GenericT (T.pack innerType) [SimpleT (T.pack innermostType)]
       outerGeneric = GenericT (T.pack outerType) [innerGeneric]
   in case outerGeneric of
@@ -224,7 +226,7 @@ prop_typeexpr_nested_generics outerType innerType innermostType =
 -- Property: Statement type definitions
 prop_statement_type_def :: String -> [String] -> Property
 prop_statement_type_def typeName typeParams =
-  not (null typeName) && length typeParams <= 3 && all isAlphaNum (typeName : concat typeParams) ==>
+  not (null typeName) && L.length typeParams <= 3 && L.all isAlphaNum (typeName : L.concat typeParams) ==>
   let params = map T.pack typeParams
       typeDef = STypeDef (T.pack typeName) params []
   in case typeDef of
@@ -234,9 +236,9 @@ prop_statement_type_def typeName typeParams =
 -- Property: Statement function declarations
 prop_statement_func_decl :: String -> [(String, TypeExpr)] -> Property
 prop_statement_func_decl funcName params =
-  not (null funcName) && not (null params) && length params <= 3 &&
-  all isAlphaNum funcName && all (all isAlphaNum . fst) params ==>
-  let paramPairs = map (\(n, t) -> (T.pack n, t)) params
+  not (null funcName) && not (null params) && L.length params <= 3 &&
+  L.all isAlphaNum funcName && L.all (L.all isAlphaNum . fst) params ==>
+  let paramPairs = L.map (\(n, t) -> (T.pack n, t)) params
       funcDecl = SFuncDecl (T.pack funcName) paramPairs Nothing
   in case funcDecl of
     SFuncDecl name ps ret -> 
@@ -245,7 +247,7 @@ prop_statement_func_decl funcName params =
 -- Property: Statement type aliases
 prop_statement_type_alias :: String -> TypeExpr -> Property
 prop_statement_type_alias aliasName underlyingType =
-  not (null aliasName) && all isAlphaNum aliasName ==>
+  not (null aliasName) && L.all isAlphaNum aliasName ==>
   let typeAlias = STypeAlias (T.pack aliasName) underlyingType []
   in case typeAlias of
     STypeAlias name typeExpr constraints ->
@@ -254,16 +256,16 @@ prop_statement_type_alias aliasName underlyingType =
 -- Property: Statement existential declarations
 prop_statement_exists_decl :: [String] -> Statement -> Property
 prop_statement_exists_decl typeVars innerStmt =
-  not (null typeVars) && length typeVars <= 3 && all isAlphaNum (concat typeVars) ==>
+  not (null typeVars) && L.length typeVars <= 3 && L.all isAlphaNum (L.concat typeVars) ==>
   let existsDecl = SExistsDecl (map T.pack typeVars) innerStmt
   in case existsDecl of
     SExistsDecl vars stmt ->
-      length vars === length typeVars && stmt === innerStmt
+      L.length vars === L.length typeVars && stmt === innerStmt
 
 -- Property: Statement constraint definitions
 prop_statement_constraint_def :: String -> Constraint -> Property
 prop_statement_constraint_def constraintName constraint =
-  not (null constraintName) && all isAlphaNum constraintName ==>
+  not (null constraintName) && L.all isAlphaNum constraintName ==>
   let constraintDef = SConstraintDef (T.pack constraintName) constraint
   in case constraintDef of
     SConstraintDef name c ->
@@ -277,13 +279,13 @@ prop_typeexpr_complex_combinations baseType argType returnType =
       refinedType = RefineT funcType [PredC "valid" [], SizeGT "size" 0]
   in case refinedType of
     RefineT (FuncT params ret) constraints ->
-      length params === 2 && length constraints === 2
+      L.length params === 2 && L.length constraints === 2
     _ -> property False
 
 -- Property: Error handling with invalid inputs
 prop_parse_error_handling :: String -> Property
 prop_parse_error_handling invalidInput =
-  null invalidInput || any (not . isAlphaNum) invalidInput ==>
+  null invalidInput || L.any (not . isAlphaNum) invalidInput ==>
   let input = T.pack invalidInput
       result = runParser parseStatement input
   in case result of

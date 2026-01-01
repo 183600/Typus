@@ -6,6 +6,7 @@ import Test.Tasty (TestTree, testGroup)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Char (isSpace, isAlpha, isDigit)
 
@@ -38,7 +39,7 @@ blockDirectiveTests = testGroup "Block Directive Properties"
 
 codeBlockTests :: TestTree
 codeBlockTests = testGroup "Code Block Properties"
-  [ fastProperty "code blocks preserve content length" prop_code_block_length
+  [ fastProperty "code blocks preserve content L.length" prop_code_block_length
   , fastProperty "code blocks handle empty content" prop_code_block_empty
   , fastProperty "code blocks preserve whitespace" prop_code_block_whitespace
   ]
@@ -65,7 +66,7 @@ prop_default_file_directives =
 
 prop_file_directives_order :: [String] -> Property
 prop_file_directives_order directives =
-  property $ length directives <= 10 ==> True -- Order should be preserved
+  property $ L.length directives <= 10 ==> True -- Order should be preserved
 
 prop_empty_file_directives :: Property
 prop_empty_file_directives =
@@ -88,7 +89,7 @@ prop_block_directives_indentation indent =
 -- Code block properties
 prop_code_block_length :: String -> Property
 prop_code_block_length content =
-  property $ length content <= 100 ==> True -- Length should be preserved
+  property $ L.length content <= 100 ==> True -- Length should be preserved
 
 prop_code_block_empty :: Property
 prop_code_block_empty =
@@ -96,32 +97,32 @@ prop_code_block_empty =
 
 prop_code_block_whitespace :: String -> Property
 prop_code_block_whitespace content =
-  property $ all isSpace content || not (any isSpace content) ==> True
+  property $ L.all isSpace content || not (L.any isSpace content) ==> True
 
 -- Parser round-trip properties
 prop_simple_roundtrip :: String -> Property
 prop_simple_roundtrip input =
-  property $ length input <= 50 && all isValidChar input ==> True
+  property $ L.length input <= 50 && L.all isValidChar input ==> True
   where
     isValidChar c = isAlpha c || isDigit c || c `elem` " \t\n"
 
 prop_structure_preserved :: String -> Property
 prop_structure_preserved input =
-  property $ length input <= 30 ==> True -- Structure should be preserved
+  property $ L.length input <= 30 ==> True -- Structure should be preserved
 
 prop_comments_preserved :: String -> Property
 prop_comments_preserved comment =
-  property $ length comment <= 20 ==> True -- Comments should be preserved
+  property $ L.length comment <= 20 ==> True -- Comments should be preserved
 
 -- Parser error properties
 prop_malformed_errors :: String -> Property
 prop_malformed_errors input =
-  property $ length input <= 20 ==> True -- Malformed input should produce errors
+  property $ L.length input <= 20 ==> True -- Malformed input should produce errors
 
 prop_unclosed_block_errors :: String -> Property
 prop_unclosed_block_errors input =
-  property $ length input <= 15 ==> True -- Unclosed blocks should error
+  property $ L.length input <= 15 ==> True -- Unclosed blocks should error
 
 prop_invalid_directive_errors :: String -> Property
 prop_invalid_directive_errors directive =
-  property $ length directive <= 10 ==> True -- Invalid directives should error
+  property $ L.length directive <= 10 ==> True -- Invalid directives should error

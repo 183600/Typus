@@ -42,6 +42,7 @@ import Compiler
   )
 import Parser (TypusFile(..), CodeBlock(..), BlockDirectives(..), defaultFileDirectives, defaultBlockDirectives)
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 
 -- ============================================================================
@@ -83,7 +84,7 @@ genTypusFile :: Gen TypusFile
 genTypusFile = do
   numBlocks <- choose (0, 3)
   codeSnippets <- listOf genGoCodeSnippet
-  let blocks = map (\code -> CodeBlock defaultBlockDirectives code undefined) codeSnippets
+  let blocks = L.map (\code -> CodeBlock defaultBlockDirectives code undefined) codeSnippets
   return $ TypusFile defaultFileDirectives [] blocks []
 
 -- ============================================================================
@@ -102,7 +103,7 @@ prop_compile_empty_file =
 -- Property: 简单Go代码编译
 prop_compile_simple_go_code :: String -> Property
 prop_compile_simple_go_code code =
-  not (null code) && not ("{" `isInfixOf` code) ==>
+  not (null code) && not ("{" `L.isInfixOf` code) ==>
   let block = CodeBlock defaultBlockDirectives code undefined
       file = TypusFile defaultFileDirectives [] [block] []
       result = compile file
@@ -113,7 +114,7 @@ prop_compile_simple_go_code code =
 -- Property: 错误代码检测
 prop_compile_detects_errors :: String -> Property
 prop_compile_detects_errors code =
-  "undefined" `isInfixOf` code ==>
+  "undefined" `L.isInfixOf` code ==>
   let block = CodeBlock defaultBlockDirectives code undefined
       file = TypusFile defaultFileDirectives [] [block] []
       result = compile file
@@ -126,7 +127,7 @@ prop_compilation_error_includes_phase :: CompilationPhase -> String -> Property
 prop_compilation_error_includes_phase phase code =
   let error = CompilerError phase "test error" Nothing
       rendered = renderCompilationError error
-  in property $ show phase `isInfixOf` rendered
+  in property $ show phase `L.isInfixOf` rendered
 
 -- Property: 类型错误诊断
 prop_type_error_diagnosis :: String -> Property
@@ -134,35 +135,35 @@ prop_type_error_diagnosis code =
   not (null code) ==>
   let diagnostics = diagnoseTypeErrors code
       hasErrors = not (null diagnostics)
-  in property $ hasErrors ==> all (\d -> diagnosticMessage d /= "") diagnostics
+  in property $ hasErrors ==> L.all (\d -> diagnosticMessage d /= "") diagnostics
 
 -- Property: 函数声明提取
 prop_extract_function_declarations :: String -> Property
 prop_extract_function_declarations code =
-  "func" `isInfixOf` code ==>
+  "func" `L.isInfixOf` code ==>
   let declarations = extractDeclarations code
-  in property $ all ("func" `isPrefixOf`) declarations
+  in property $ L.all ("func" `L.isPrefixOf`) declarations
 
 -- Property: 函数调用提取
 prop_extract_function_calls :: String -> Property
 prop_extract_function_calls code =
-  "(" `isInfixOf` code && ")" `isInfixOf` code ==>
+  "(" `L.isInfixOf` code && ")" `L.isInfixOf` code ==>
   let calls = extractFunctionCalls code
-  in property $ all (not . null) calls
+  in property $ L.all (not . null) calls
 
 -- Property: 类型环境构建
 prop_build_type_environment :: [(String, String)] -> Property
 prop_build_type_environment pairs =
   not (null pairs) ==>
   let typeEnv = buildTypeEnvFromPairs pairs
-  in property $ length typeEnv === length pairs
+  in property $ L.length typeEnv === L.length pairs
 
 -- Property: 方法声明检测
 prop_method_declaration_detection :: String -> Property
 prop_method_declaration_detection code =
-  "func" `isInfixOf` code ==>
+  "func" `L.isInfixOf` code ==>
   let isMethod = isMethodDeclaration code
-      hasReceiver = "(" `isInfixOf` code && ")" `isInfixOf` code
+      hasReceiver = "(" `L.isInfixOf` code && ")" `L.isInfixOf` code
   in property $ isMethod === hasReceiver
 
 -- Property: 语法错误检测
@@ -170,7 +171,7 @@ prop_syntax_error_detection :: String -> Property
 prop_syntax_error_detection code =
   not (null code) ==>
   let hasSyntaxError = hasMalformedSyntax code
-      hasUnmatchedBraces = (length (filter (== '{') code) /= length (filter (== '}') code))
+      hasUnmatchedBraces = (L.length (L.filter (== '{') code) /= L.length (L.filter (== '}') code))
   in property $ hasSyntaxError ==> hasUnmatchedBraces
 
 -- Property: 依赖类型检查
@@ -265,8 +266,8 @@ tests =
                   , "func (s *MyStruct) method() {}"
                   ]
                 declarations = extractDeclarations code
-            length declarations @?= 3
-            "func main()" `isInfixOf` unlines declarations @?= True
+            L.length declarations @?= 3
+            "func main()" `L.isInfixOf` unlines declarations @?= True
 
         , testCase "extract function calls correctly" $ do
             let code = unlines
@@ -277,7 +278,7 @@ tests =
                   , "}"
                   ]
                 calls = extractFunctionCalls code
-            length calls @?= 3
+            L.length calls @?= 3
             "fmt.Println" `elem` calls @?= True
             "helper" `elem` calls @?= True
             "obj.method" `elem` calls @?= True
@@ -285,7 +286,7 @@ tests =
         , testCase "build type environment from pairs" $ do
             let pairs = [("x", "int"), ("y", "string"), ("z", "bool")]
                 typeEnv = buildTypeEnvFromPairs pairs
-            length typeEnv @?= 3
+            L.length typeEnv @?= 3
 
         , testCase "detect method declarations" $ do
             let methodCode = "func (s *MyStruct) Method() {}"
@@ -302,8 +303,8 @@ tests =
         , testCase "render compilation error" $ do
             let error = CompilerError TypeCheckingPhase "type mismatch" Nothing
                 rendered = renderCompilationError error
-            "TypeCheckingPhase" `isInfixOf` rendered @?= True
-            "type mismatch" `isInfixOf` rendered @?= True
+            "TypeCheckingPhase" `L.isInfixOf` rendered @?= True
+            "type mismatch" `L.isInfixOf` rendered @?= True
 
         , testCase "format multiple compiler errors" $ do
             let errors = 
@@ -312,9 +313,9 @@ tests =
                   , CompilerError OwnershipAnalysisPhase "ownership error" Nothing
                   ]
                 formatted = formatCompilerErrors errors
-            "ParsingPhase" `isInfixOf` formatted @?= True
-            "TypeCheckingPhase" `isInfixOf` formatted @?= True
-            "OwnershipAnalysisPhase" `isInfixOf` formatted @?= True
+            "ParsingPhase" `L.isInfixOf` formatted @?= True
+            "TypeCheckingPhase" `L.isInfixOf` formatted @?= True
+            "OwnershipAnalysisPhase" `L.isInfixOf` formatted @?= True
 
         , testCase "generate detailed error report" $ do
             let errors = 
@@ -322,9 +323,9 @@ tests =
                   , CompilerError OwnershipAnalysisPhase "ownership error" Nothing
                   ]
                 report = generateDetailedReport errors
-            "Detailed Compilation Report" `isInfixOf` report @?= True
-            "type error" `isInfixOf` report @?= True
-            "ownership error" `isInfixOf` report @?= True
+            "Detailed Compilation Report" `L.isInfixOf` report @?= True
+            "type error" `L.isInfixOf` report @?= True
+            "ownership error" `L.isInfixOf` report @?= True
 
         , testCase "analyze errors by phase" $ do
             let errors = 
@@ -333,7 +334,7 @@ tests =
                   , CompilerError TypeCheckingPhase "type error" Nothing
                   ]
                 analysis = analyzeErrors errors
-            length analysis @?= 2  -- Two phases with errors
+            L.length analysis @?= 2  -- Two phases with errors
 
         , testCase "type diagnostic to compiler error conversion" $ do
             let diagnostic = TypeCheckDiagnostic "TypeError" "type mismatch" Nothing
@@ -345,6 +346,6 @@ tests =
             let result = generateGoCode "func test() { return 42 }"
             case result of
               Left _ -> assertFailure "Go code generation failed"
-              Right goCode -> "func test()" `isInfixOf` goCode @?= True
+              Right goCode -> "func test()" `L.isInfixOf` goCode @?= True
         ]
     ]

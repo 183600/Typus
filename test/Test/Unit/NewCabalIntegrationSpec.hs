@@ -1,6 +1,7 @@
 module Test.Unit.NewCabalIntegrationSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, forAll, Arbitrary, arbitrary, (.&&.), (==>))
@@ -16,11 +17,11 @@ tests :: TestTree
 tests =
   testGroup "New Cabal Integration Tests"
     [ testGroup "End-to-End Compilation"
-        [ testCase "simple programs compile and run correctly" $ do
+        [ testCase "simple programs compile L.and run correctly" $ do
             -- Test complete compilation pipeline
-            assertBool "simple programs should compile and run" $ True
+            assertBool "simple programs should compile L.and run" $ True
             
-        , testCase "complex programs handle all phases correctly" $ do
+        , testCase "complex programs handle L.all phases correctly" $ do
             -- Test with more complex programs
             assertBool "complex programs should compile correctly" $ True
             
@@ -30,15 +31,15 @@ tests =
         ]
 
     , testGroup "Component Integration"
-        [ testCase "parser and type checker work together" $ do
-            -- Test integration between parsing and type checking
-            assertBool "parser and type checker should integrate well" $ True
+        [ testCase "parser L.and type checker work together" $ do
+            -- Test integration between parsing L.and type checking
+            assertBool "parser L.and type checker should integrate well" $ True
             
-        , testCase "type system and ownership analysis cooperate" $ do
-            -- Test interaction between type system and ownership
-            assertBool "type system and ownership should cooperate" $ True
+        , testCase "type system L.and ownership analysis cooperate" $ do
+            -- Test interaction between type system L.and ownership
+            assertBool "type system L.and ownership should cooperate" $ True
             
-        , testCase "error handling works across all phases" $ do
+        , testCase "error handling works across L.all phases" $ do
             -- Test error handling throughout the pipeline
             assertBool "error handling should work across phases" $ True
         ]

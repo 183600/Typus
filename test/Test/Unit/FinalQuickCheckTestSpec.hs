@@ -3,13 +3,15 @@
 module Test.Unit.FinalQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import TestSupport.Arbitrary ()
 import TestSupport.ExtendedArbitrary ()
-import Data.List (sort, nub, length, sum, reverse, concat, (++), find, filter)
+import Data.List (length, sum, reverse, concat)
+import Data.List (sort, nub, (++), find, filter)
 
 import Utils (trim, splitBy, splitByComma, removeLineComments, normalizeIndentation)
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos, posAfter, emptySpan, mergeSpans)
@@ -75,7 +77,7 @@ prop_optimization_reduces_runtime :: Expr -> Property
 prop_optimization_reduces_runtime expr = property True
 
 prop_compiler_large_inputs :: String -> Property
-prop_compiler_large_inputs input = property $ length input <= 1000000
+prop_compiler_large_inputs input = property $ L.length input <= 1000000
 
 prop_error_recovery_robust :: String -> Property
 prop_error_recovery_robust input = property True

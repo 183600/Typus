@@ -40,7 +40,7 @@ import SourceLocation
   , spanEnd
   )
 
--- | Generate a valid source position (positive line and column)
+-- | Generate a valid source position (positive line L.and column)
 genValidPos :: Gen SourcePos
 genValidPos = do
   line <- choose (1, 1000)
@@ -78,19 +78,19 @@ prop_posAfter_sameLine =
     in posLine newPos === posLine pos .&&.
        posColumn newPos === posColumn pos + 1
 
--- Property: emptySpan has the same start and end position
+-- Property: emptySpan has the same start L.and end position
 prop_emptySpan_sameStartEnd :: Property
 prop_emptySpan_sameStartEnd =
   spanStart emptySpan === spanEnd emptySpan
 
--- Property: spanFrom creates a span with same start and end
+-- Property: spanFrom creates a span with same start L.and end
 prop_spanFrom_sameStartEnd :: Property
 prop_spanFrom_sameStartEnd =
   forAll genValidPos $ \pos ->
     let span = spanFrom pos
     in spanStart span === pos .&&. spanEnd span === pos
 
--- Property: spanTo creates a span with same start and end
+-- Property: spanTo creates a span with same start L.and end
 prop_spanTo_sameStartEnd :: Property
 prop_spanTo_sameStartEnd =
   forAll genValidPos $ \pos ->
@@ -176,9 +176,9 @@ tests =
   testGroup "SourceLocation Core Properties"
     [ fastProperty "startPos has line 1, column 1" prop_startPos_values
     , fastProperty "posAfter advances column by 1 on same line" prop_posAfter_sameLine
-    , fastProperty "emptySpan has same start and end position" prop_emptySpan_sameStartEnd
-    , fastProperty "spanFrom creates span with same start and end" prop_spanFrom_sameStartEnd
-    , fastProperty "spanTo creates span with same start and end" prop_spanTo_sameStartEnd
+    , fastProperty "emptySpan has same start L.and end position" prop_emptySpan_sameStartEnd
+    , fastProperty "spanFrom creates span with same start L.and end" prop_spanFrom_sameStartEnd
+    , fastProperty "spanTo creates span with same start L.and end" prop_spanTo_sameStartEnd
     , fastProperty "spanBetween creates valid span" prop_spanBetween_validSpan
     , fastProperty "mergeSpans contains both original spans" prop_mergeSpans_containsOriginals
     , fastProperty "locatedAt creates Located value with correct position" prop_locatedAt_correctPosition

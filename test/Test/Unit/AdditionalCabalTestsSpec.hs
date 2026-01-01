@@ -14,7 +14,9 @@ import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose)
 import Data.Char (isSpace, isAlphaNum, isLetter)
-import Data.List (isPrefixOf, isInfixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort, nub)
 import qualified Data.Text as T
 
 import Utils
@@ -49,13 +51,13 @@ import Parser (FileDirectives(..), BlockDirectives(..), defaultFileDirectives, d
 -- Utils Module Tests
 -- ============================================================================
 
--- Test 1: Property: splitBy and splitByCollapsed relationship
+-- Test 1: Property: splitBy L.and splitByCollapsed relationship
 prop_splitBy_collapsed_relationship :: Char -> String -> Property
 prop_splitBy_collapsed_relationship delim str =
   let normal = splitBy delim str
       collapsed = splitByCollapsed delim str
       -- Collapsed version should be normal version with empty strings removed
-      expectedCollapsed = filter (not . null) normal
+      expectedCollapsed = L.filter (not . null) normal
   in property $ collapsed === expectedCollapsed
 
 -- Test 2: Property: trim idempotency (trim(trim(x)) == trim(x))
@@ -81,9 +83,9 @@ prop_normalizeIndentation_preserves_relative multiLineStr =
       normalized = normalizeIndentation multiLineStr
       normalizedLines = lines normalized
       -- Check that relative indentation is preserved for non-empty lines
-      nonEmptyOriginal = filter (not . null) linesList
-      nonEmptyNormalized = filter (not . null) normalizedLines
-  in property $ length nonEmptyOriginal === length nonEmptyNormalized
+      nonEmptyOriginal = L.filter (not . null) linesList
+      nonEmptyNormalized = L.filter (not . null) normalizedLines
+  in property $ L.length nonEmptyOriginal === L.length nonEmptyNormalized
 
 -- ============================================================================
 -- SourceLocation Module Tests
@@ -97,7 +99,7 @@ prop_advancePos_line_consistency lineOffset chars =
       -- Use advancePosBy to advance by a string
       advanced = advancePosBy chars start
       expectedLine = posLine start + lineOffset + countNewlines chars
-      countNewlines = length . filter (== '\n')
+      countNewlines = L.length . L.filter (== '\n')
   in property $ posLine advanced === expectedLine
 
 -- Test 6: Property: mergeSpans is commutative for valid spans
@@ -137,15 +139,15 @@ prop_removeComments_preserves_content prefix suffix =
   let content = "valid content"
       withComments = prefix ++ "/* comment */" ++ content ++ "// line comment\n" ++ suffix
       withoutComments = removeComments withComments
-  in property $ content `isInfixOf` withoutComments
+  in property $ content `L.isInfixOf` withoutComments
 
 -- Test 10: Property: splitByComma handles edge cases
 prop_splitByComma_edge_cases :: String -> Property
 prop_splitByComma_edge_cases str =
   let result = splitByComma str
       -- Check that joining with commas gives back original (with empty strings for consecutive commas)
-      rejoined = foldr (\x acc -> if null acc then x else x ++ "," ++ acc) "" result
-  in property $ length result >= 1 -- Should always return at least one element
+      rejoined = L.foldr (\x acc -> if null acc then x else x ++ "," ++ acc) "" result
+  in property $ L.length result >= 1 -- Should always return at least one element
 
 -- ============================================================================
 -- Test Suite Definition

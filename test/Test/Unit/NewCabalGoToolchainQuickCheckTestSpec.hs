@@ -3,6 +3,7 @@ module Test.Unit.NewCabalGoToolchainQuickCheckTestSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), counterexample, forAll, oneof, elements, listOf, suchThat)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Maybe (isJust, isNothing)
 
@@ -51,7 +52,7 @@ tests =
             let version = GoVersion 1 21 5
                 showOutput = show version
             showOutput @?= "1.21.5"
-        , testCase "isGoVersionSupported checks minimum version" $ do
+        , testCase "isGoVersionSupported checks L.minimum version" $ do
             let version = GoVersion 1 21 0
                 minVersion = GoVersion 1 20 0
             isGoVersionSupported version minVersion @?= True
@@ -141,7 +142,7 @@ prop_parseGoVersionInvalid invalidVersion =
     isNothing (Just _) = False
     isValidVersionFormat s = case words s of
       [majorPart, minorPart, patchPart] -> 
-        all (all (`elem` ['0'..'9'])) [majorPart, minorPart, patchPart]
+        L.all (L.all (`elem` ['0'..'9'])) [majorPart, minorPart, patchPart]
       _ -> False
 
 -- | Property: isGoVersionSupported checks version compatibility

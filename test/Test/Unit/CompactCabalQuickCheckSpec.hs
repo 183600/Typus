@@ -16,7 +16,7 @@ tests = testGroup "Compact Cabal QuickCheck Tests"
 
 eitherProperties :: TestTree
 eitherProperties = testGroup "Either Properties"
-  [ fastProperty "isLeft and isRight are opposites" $ \(e :: Either Int String) ->
+  [ fastProperty "isLeft L.and isRight are opposites" $ \(e :: Either Int String) ->
       isLeft e === not (isRight e)
   
   , fastProperty "either with Left" $ \(x :: Int) ->
@@ -34,6 +34,6 @@ comparisonProperties = testGroup "Comparison Properties"
   , fastProperty "min is commutative" $ \(x :: Int) (y :: Int) ->
       min x y === min y x
   
-  , fastProperty "max and min relationship" $ \(x :: Int) (y :: Int) ->
+  , fastProperty "max L.and min relationship" $ \(x :: Int) (y :: Int) ->
       max x y + min x y === x + y
   ]

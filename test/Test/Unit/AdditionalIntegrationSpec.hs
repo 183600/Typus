@@ -10,6 +10,7 @@
 module Test.Unit.AdditionalIntegrationSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose)
@@ -33,38 +34,38 @@ import Data.Maybe (isJust, isNothing, fromMaybe)
 
 -- Test: Parser + ErrorHandler integration
 test_parser_error_handler_integration :: TestTree
-test_parser_error_handler_integration = testCase "Parser and ErrorHandler integration" $ do
+test_parser_error_handler_integration = testCase "Parser L.and ErrorHandler integration" $ do
   let input = "//! ownership: true\nif condition\n" -- Missing opening brace
   case parseTypus input of
     Left err -> do
       assertBool "Parser should detect syntax error" True
-      assertBool "Error message should contain relevant information" ("syntax error" `isInfixOf` err)
+      assertBool "Error message should contain relevant information" ("syntax error" `L.isInfixOf` err)
     Right file -> do
       let syntaxErrors = tfSyntaxErrors file
       assertBool "Should have syntax errors" (not (null syntaxErrors))
 
 -- Test: Parser + Utils integration
 test_parser_utils_integration :: TestTree
-test_parser_utils_integration = testCase "Parser and Utils integration" $ do
+test_parser_utils_integration = testCase "Parser L.and Utils integration" $ do
   let input = "  /* comment */  code  // line comment\n  more code  "
   case parseTypus input of
     Left err -> assertBool "Should parse successfully" False
     Right file -> do
       let blocks = tfBlocks file
       assertBool "Should have code blocks" (not (null blocks))
-      let firstBlock = head blocks
+      let firstBlock = L.head blocks
           content = cbContent firstBlock
       -- Test that utils functions work on parsed content
       let trimmed = trim content
           withoutComments = removeComments content
           normalized = normalizeIndentation content
-      assertBool "Utils trim should work" (length trimmed <= length content)
-      assertBool "Utils removeComments should work" (length withoutComments <= length content)
+      assertBool "Utils trim should work" (L.length trimmed <= L.length content)
+      assertBool "Utils removeComments should work" (L.length withoutComments <= L.length content)
       assertBool "Utils normalizeIndentation should work" (not (null normalized))
 
 -- Test: SourceLocation + ErrorHandler integration
 test_source_location_error_handler_integration :: TestTree
-test_source_location_error_handler_integration = testCase "SourceLocation and ErrorHandler integration" $ do
+test_source_location_error_handler_integration = testCase "SourceLocation L.and ErrorHandler integration" $ do
   let pos = SourcePos 10 5 100
       span = SourceSpan pos (SourcePos 10 10 105)
       location = ErrorLocation Nothing 10 5 (Just 10) (Just 5)
@@ -76,7 +77,7 @@ test_source_location_error_handler_integration = testCase "SourceLocation and Er
 
 -- Test: Ownership + ErrorHandler integration
 test_ownership_error_handler_integration :: TestTree
-test_ownership_error_handler_integration = testCase "Ownership and ErrorHandler integration" $ do
+test_ownership_error_handler_integration = testCase "Ownership L.and ErrorHandler integration" $ do
   let ownershipError = UseAfterMove "variable"
       error = TypeError "ownership-error" Error ErrorCategory (T.pack "Use after move") 
                         (ErrorLocation Nothing 1 1 Nothing Nothing) 
@@ -86,7 +87,7 @@ test_ownership_error_handler_integration = testCase "Ownership and ErrorHandler 
 
 -- Test: DependentTypes + ErrorHandler integration
 test_dependent_types_error_handler_integration :: TestTree
-test_dependent_types_error_handler_integration = testCase "DependentTypes and ErrorHandler integration" $ do
+test_dependent_types_error_handler_integration = testCase "DependentTypes L.and ErrorHandler integration" $ do
   let typeRef = TypeRef "MyType" [TypeRef "Int" [], TypeRef "String" []]
       error = TypeError "type-error" Error TypeChecking (T.pack "Type checking error")
                         (ErrorLocation Nothing 5 10 Nothing Nothing)
@@ -132,19 +133,19 @@ test_error_propagation_integration = testCase "Error propagation across modules"
   case parseTypus input of
     Left err -> do
       assertBool "Should detect syntax error" True
-      assertBool "Error should be informative" (length err > 10)
+      assertBool "Error should be informative" (L.length err > 10)
     Right file -> do
       let syntaxErrors = tfSyntaxErrors file
           blocks = tfBlocks file
       -- Even if parsing succeeds, syntax errors should be captured
       assertBool "Should capture syntax errors" (not (null syntaxErrors) || not (null blocks))
 
--- Test: Unicode and special characters handling
+-- Test: Unicode L.and special characters handling
 test_unicode_special_chars_integration :: TestTree
-test_unicode_special_chars_integration = testCase "Unicode and special characters integration" $ do
+test_unicode_special_chars_integration = testCase "Unicode L.and special characters integration" $ do
   let input = unlines
         [ "//! ownership: true"
-        , "// 注释 with 中文 and café naïve"
+        , "// 注释 with 中文 L.and café naïve"
         , "type 测试类型<T> {"
         , "    字段: T"
         , "}"
@@ -158,9 +159,9 @@ test_unicode_special_chars_integration = testCase "Unicode and special character
     Right file -> do
       let blocks = tfBlocks file
       assertBool "Should parse Unicode content" (not (null blocks))
-      let firstBlock = head blocks
+      let firstBlock = L.head blocks
           content = cbContent firstBlock
-      assertBool "Should preserve Unicode characters" ("测试类型" `isInfixOf` content)
+      assertBool "Should preserve Unicode characters" ("测试类型" `L.isInfixOf` content)
 
 -- Test: Performance with large inputs
 test_performance_large_input_integration :: TestTree
@@ -176,7 +177,7 @@ test_performance_large_input_integration = testCase "Performance with large inpu
 -- Property: Parser + Utils roundtrip
 prop_parser_utils_roundtrip :: String -> Property
 prop_parser_utils_roundtrip content =
-  not (any (`elem` "\0\r") content) ==> -- Avoid problematic characters
+  not (L.any (`elem` "\0\r") content) ==> -- Avoid problematic characters
   let processed = content |> removeComments |> trim |> normalizeIndentation
       result = parseTypus processed
   in case result of
@@ -185,7 +186,7 @@ prop_parser_utils_roundtrip content =
       let blocks = tfBlocks file
       in if null blocks
          then property True
-         else property (processed `isInfixOf` unlines (map cbContent blocks))
+         else property (processed `L.isInfixOf` unlines (map cbContent blocks))
 
 -- Property: Error handling consistency across modules
 prop_error_handling_consistency :: String -> ErrorSeverity -> ErrorCategory -> Property
@@ -220,7 +221,7 @@ infixl 0 |>
 
 -- Helper function to check substring containment
 contains :: String -> String -> Bool
-contains sub str = sub `isInfixOf` str
+contains sub str = sub `L.isInfixOf` str
 
 -- Property: Complex multi-module scenario
 prop_complex_multi_module_scenario :: String -> [String] -> Property
@@ -233,9 +234,9 @@ prop_complex_multi_module_scenario directiveName blockContents =
     Right file -> 
       let directives = tfDirectives file
           blocks = tfBlocks file
-      in property $ length blocks >= length blockContents - 1 -- Allow some variance
+      in property $ L.length blocks >= L.length blockContents - 1 -- Allow some variance
 
--- Property: Error recovery and continuation
+-- Property: Error recovery L.and continuation
 prop_error_recovery_continuation :: [String] -> Property
 prop_error_recovery_continuation lines =
   not (null lines) ==> 
@@ -267,5 +268,5 @@ tests = testGroup "Additional Integration Tests"
   , fastProperty "Error handling consistency across modules" prop_error_handling_consistency
   , fastProperty "Ownership + DependentTypes interaction" prop_ownership_dependent_types_interaction
   , fastProperty "Complex multi-module scenario" prop_complex_multi_module_scenario
-  , fastProperty "Error recovery and continuation" prop_error_recovery_continuation
+  , fastProperty "Error recovery L.and continuation" prop_error_recovery_continuation
   ]

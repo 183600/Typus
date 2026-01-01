@@ -3,6 +3,7 @@
 module Test.Unit.TypeInferenceEdgeCasesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty)
 import Test.QuickCheck (Arbitrary(..), Gen, oneof, listOf, choose, Property, (==>), sized)
@@ -39,12 +40,12 @@ tests =
         , testCase "Handles recursive data structures" $ do
             let input = unlines
                   [ "type List = struct {"
-                  , "  head: Int"
-                  , "  tail: List?"
+                  , "  L.head: Int"
+                  , "  L.tail: List?"
                   , "}"
-                  , "func length(l: List?) -> Int {"
+                  , "func L.length(l: List?) -> Int {"
                   , "  if l == nil { return 0 }"
-                  , "  return 1 + length(l.tail)"
+                  , "  return 1 + L.length(l.L.tail)"
                   , "}"
                   ]
                 result = inferTypes input
@@ -169,7 +170,7 @@ tests =
     , testGroup "Property-based Type Inference Tests"
         [ fastProperty "Type inference is deterministic" prop_typeInferenceDeterministic
         , fastProperty "Type inference preserves type safety" prop_typeSafetyPreservation
-        , fastProperty "Generic type inference works for all concrete types" prop_genericTypeInference
+        , fastProperty "Generic type inference works for L.all concrete types" prop_genericTypeInference
         , fastProperty "Recursive type inference terminates" prop_recursiveTypeInferenceTerminates
         ]
     ]
@@ -199,7 +200,7 @@ inferTypes input =
 
 prop_typeInferenceDeterministic :: String -> Property
 prop_typeInferenceDeterministic input =
-    length input > 0 ==>
+    L.length input > 0 ==>
     let result1 = inferTypes input
         result2 = inferTypes input
     in result1 == result2
@@ -208,15 +209,15 @@ prop_typeSafetyPreservation :: [(String, String)] -> Property
 prop_typeSafetyPreservation typeBindings =
     not (null typeBindings) ==>
     let validTypes = ["Int", "String", "Bool", "List<Int>", "Map<String, Int>"]
-        allValid = all (\(_, t) -> t `elem` validTypes) typeBindings
+        allValid = L.all (\(_, t) -> t `elem` validTypes) typeBindings
     in allValid ==> True
 
 prop_genericTypeInference :: [String] -> Property
 prop_genericTypeInference concreteTypes =
     not (null concreteTypes) ==>
     let validTypes = ["Int", "String", "Bool", "User", "Product"]
-        allValid = all (`elem` validTypes) concreteTypes
-    in allValid ==> length concreteTypes <= 100
+        allValid = L.all (`elem` validTypes) concreteTypes
+    in allValid ==> L.length concreteTypes <= 100
 
 prop_recursiveTypeInferenceTerminates :: Int -> Property
 prop_recursiveTypeInferenceTerminates depth =

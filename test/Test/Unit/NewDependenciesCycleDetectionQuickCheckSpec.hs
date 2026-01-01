@@ -10,12 +10,14 @@
 module Test.Unit.NewDependenciesCycleDetectionQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@=?))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, oneof, suchThat)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (sort, nub, isPrefixOf, isInfixOf, isSuffixOf, (\\), delete, intersect, union)
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (sort, nub, (\\), delete, intersect, union)
 import Data.Set (Set, fromList, toList, union, intersection, difference)
 import qualified Data.Set as Set
 import Data.Map (Map, fromList, toList, keys, elems, insert, delete, lookup, member, empty)
@@ -31,7 +33,7 @@ import Dependencies.AST
   )
 
 -- ============================================================================
--- Helper Functions and Generators
+-- Helper Functions L.and Generators
 -- ============================================================================
 
 -- Generate valid identifiers
@@ -50,7 +52,7 @@ genTypeExpr :: Gen TypeExpr
 genTypeExpr = oneof
   [ SimpleT <$> genTextIdentifier
   , GenericT <$> genTextIdentifier <*> listOf genTypeExpr
-  , FuncT <$> listOf (genTextIdentifier `suchThat` (not . T.null) `suchThat` (\t -> not (T.any isSpace t)) >>= (\n -> (,) n <$> genTypeExpr) <*> genTypeExpr
+  , FuncT <$> listOf (genTextIdentifier `suchThat` (not . T.null) `suchThat` (\t -> not (T.L.any isSpace t)) >>= (\n -> (,) n <$> genTypeExpr) <*> genTypeExpr
   , RefineT <$> genTypeExpr <*> listOf genConstraint
   ]
 
@@ -85,33 +87,33 @@ genDependencyNode = do
 genDependencyGraph :: Gen DependencyGraph
 genDependencyGraph = do
   nodes <- listOf genDependencyNode
-  let nodeMap = Map.fromList $ map (\n -> (nodeName n, n)) nodes
+  let nodeMap = Map.fromList $ L.map (\n -> (nodeName n, n)) nodes
   return $ DependencyGraph nodeMap
 
 -- Generate graphs with potential cycles
 genCyclicGraph :: Int -> Gen DependencyGraph
 genCyclicGraph numNodes = do
   numNodes `seq` return ()
-  let nodeNames = take numNodes $ map (\i -> "node" ++ show i) [1..]
+  let nodeNames = take numNodes $ L.map (\i -> "node" ++ show i) [1..]
   nodes <- mapM (\name -> do
     deps <- listOf $ elements nodeNames
     return $ DependencyNode name deps
   ) nodeNames
-  let nodeMap = Map.fromList $ map (\n -> (nodeName n, n)) nodes
+  let nodeMap = Map.fromList $ L.map (\n -> (nodeName n, n)) nodes
   return $ DependencyGraph nodeMap
 
 -- Generate acyclic graphs (DAGs)
 genAcyclicGraph :: Int -> Gen DependencyGraph
 genAcyclicGraph numNodes = do
   numNodes `seq` return ()
-  let nodeNames = take numNodes $ map (\i -> "node" ++ show i) [1..]
+  let nodeNames = take numNodes $ L.map (\i -> "node" ++ show i) [1..]
   nodes <- mapM (\(i, name) -> do
     -- Only depend on nodes with higher index to ensure acyclicity
     let possibleDeps = drop (i + 1) nodeNames
     deps <- listOf $ elements possibleDeps
     return $ DependencyNode name deps
   ) (zip [0..] nodeNames)
-  let nodeMap = Map.fromList $ map (\n -> (nodeName n, n)) nodes
+  let nodeMap = Map.fromList $ L.map (\n -> (nodeName n, n)) nodes
   return $ DependencyGraph nodeMap
 
 -- ============================================================================
@@ -144,8 +146,8 @@ detectCyclesDFS (DependencyGraph nodeMap) =
 -- Detect cycles using topological sort
 detectCyclesTopological :: DependencyGraph -> [[String]]
 detectCyclesTopological (DependencyGraph nodeMap) =
-  let inDegree = Map.fromList $ map (\n -> (nodeName n, 0)) (Map.elems nodeMap)
-      updatedInDegree = foldl (\acc (DependencyNode _ deps) ->
+  let inDegree = Map.fromList $ L.map (\n -> (nodeName n, 0)) (Map.elems nodeMap)
+      updatedInDegree = L.foldl (\acc (DependencyNode _ deps) ->
         foldl (\a dep -> Map.insertWith (+) dep 1 a) acc deps
       ) inDegree (Map.elems nodeMap)
   in topoSort (Map.keys updatedInDegree) updatedInDegree []
@@ -158,19 +160,19 @@ detectCyclesTopological (DependencyGraph nodeMap) =
           case Map.lookup node nodeMap of
             Nothing -> topoSort rest inDegree sorted
             Just depNode ->
-              let newInDegree = foldl (\acc dep -> Map.insertWith (+) dep (-1) acc) inDegree (nodeDependencies depNode)
+              let newInDegree = L.foldl (\acc dep -> Map.insertWith (+) dep (-1) acc) inDegree (nodeDependencies depNode)
               in topoSort rest newInDegree (node : sorted)
       | otherwise = topoSort rest inDegree sorted
 
 -- Check if graph has cycles
 hasCycles :: DependencyGraph -> Bool
-hasCycles graph = not (null (detectCyclesDFS graph))
+hasCycles graph = not (L.null (detectCyclesDFS graph))
 
--- Get all nodes in cycles
+-- Get L.all nodes in cycles
 getNodesInCycles :: DependencyGraph -> Set String
 getNodesInCycles graph = 
   let cycles = detectCyclesDFS graph
-  in Set.fromList $ concat cycles
+  in Set.fromList $ L.concat cycles
 
 -- ============================================================================
 -- Arbitrary Instances
@@ -190,21 +192,21 @@ instance Arbitrary DependencyGraph where
 prop_empty_graph_no_cycles :: Property
 prop_empty_graph_no_cycles =
   let emptyGraph = DependencyGraph Map.empty
-  in property $ not (hasCycles emptyGraph) .&&. null (detectCyclesDFS emptyGraph)
+  in property $ not (hasCycles emptyGraph) .&&. L.null (detectCyclesDFS emptyGraph)
 
 -- Property: Single node graph has no cycles
 prop_single_node_no_cycles :: String -> Property
 prop_single_node_no_cycles name =
   let node = DependencyNode name []
       graph = DependencyGraph $ Map.singleton name node
-  in property $ not (hasCycles graph) .&&. null (detectCyclesDFS graph)
+  in property $ not (hasCycles graph) .&&. L.null (detectCyclesDFS graph)
 
 -- Property: Self-dependency creates a cycle
 prop_self_dependency_cycle :: String -> Property
 prop_self_dependency_cycle name =
   let node = DependencyNode name [name]
       graph = DependencyGraph $ Map.singleton name node
-  in property $ hasCycles graph .&&. not (null (detectCyclesDFS graph))
+  in property $ hasCycles graph .&&. not (L.null (detectCyclesDFS graph))
 
 -- Property: Two-node cycle is detected
 prop_two_node_cycle :: String -> String -> Property
@@ -227,14 +229,14 @@ prop_three_node_cycle name1 name2 name3 =
       graph = DependencyGraph $ Map.fromList [(name1, node1), (name2, node2), (name3, node3)]
       cycles = detectCyclesDFS graph
   in property $ hasCycles graph .&&.
-             any (\cycle -> all (`elem` cycle) [name1, name2, name3]) cycles
+             any (\cycle -> L.all (`elem` cycle) [name1, name2, name3]) cycles
 
 -- Property: Acyclic graph has no cycles
 prop_acyclic_graph_no_cycles :: Int -> Property
 prop_acyclic_graph_no_cycles numNodes =
   numNodes >= 0 && numNodes <= 20 ==>
   forAll (genAcyclicGraph numNodes) $ \graph ->
-    property $ not (hasCycles graph) .&&. null (detectCyclesDFS graph)
+    property $ not (hasCycles graph) .&&. L.null (detectCyclesDFS graph)
 
 -- Property: Cycle detection algorithms agree
 prop_cycle_detection_algorithms_agree :: DependencyGraph -> Property
@@ -270,7 +272,7 @@ prop_remove_cycle_breaking_dependency name1 name2 name3 =
 -- Property: Nodes in cycle are correctly identified
 prop_nodes_in_cycle_identified :: [String] -> Property
 prop_nodes_in_cycle_identified names =
-  length names >= 3 && length (nub names) == length names ==>
+  length names >= 3 && L.length (nub names) == L.length names ==>
   let cycleNodes = take 3 names
       [n1, n2, n3] = cycleNodes
       otherNodes = drop 3 names
@@ -281,7 +283,7 @@ prop_nodes_in_cycle_identified names =
         , (n3, DependencyNode n3 [n1])
         ]
       -- Add other nodes without dependencies
-      otherNodesMap = Map.fromList $ map (\n -> (n, DependencyNode n [])) otherNodes
+      otherNodesMap = Map.fromList $ L.map (\n -> (n, DependencyNode n [])) otherNodes
       graph = DependencyGraph $ cycleGraph `Map.union` otherNodesMap
       cycleNodesSet = Set.fromList cycleNodes
       detectedCycleNodes = getNodesInCycles graph
@@ -305,9 +307,9 @@ prop_multiple_cycles_detected =
         , ("f", node3f)
         ]
       cycles = detectCyclesDFS graph
-  in property $ length cycles >= 2 .&&.
+  in property $ L.length cycles >= 2 .&&.
              any (\cycle -> "a" `elem` cycle && "b" `elem` cycle) cycles .&&.
-             any (\cycle -> all (`elem` cycle) ["c", "d", "e"]) cycles
+             any (\cycle -> L.all (`elem` cycle) ["c", "d", "e"]) cycles
 
 -- Property: Complex cycle detection works
 prop_complex_cycle_detection :: Int -> Property
@@ -328,7 +330,7 @@ prop_cycle_detection_large_graphs numNodes =
   numNodes >= 0 && numNodes <= 1000 ==>
   forAll (genCyclicGraph numNodes) $ \graph ->
     let cycles = detectCyclesDFS graph
-    in property $ length cycles >= 0
+    in property $ L.length cycles >= 0
 
 -- Property: Cycle detection is idempotent
 prop_cycle_detection_idempotent :: DependencyGraph -> Property
@@ -338,7 +340,7 @@ prop_cycle_detection_idempotent graph =
   in property $ sort cycles1 === sort cycles2
 
 -- ============================================================================
--- Edge Cases and Boundary Conditions
+-- Edge Cases L.and Boundary Conditions
 -- ============================================================================
 
 -- Property: Graph with disconnected components handles correctly
@@ -346,8 +348,8 @@ prop_disconnected_components :: [String] -> [String] -> Property
 prop_disconnected_components comp1 comp2 =
   not (null comp1) && not (null comp2) && 
   null (intersect comp1 comp2) ==>
-  let nodes1 = map (\n -> (n, DependencyNode n [])) comp1
-      nodes2 = map (\n -> (n, DependencyNode n [])) comp2
+  let nodes1 = L.map (\n -> (n, DependencyNode n [])) comp1
+      nodes2 = L.map (\n -> (n, DependencyNode n [])) comp2
       graph = DependencyGraph $ Map.fromList (nodes1 ++ nodes2)
   in property $ not (hasCycles graph)
 
@@ -355,8 +357,8 @@ prop_disconnected_components comp1 comp2 =
 prop_chain_dependencies_no_cycles :: [String] -> Property
 prop_chain_dependencies_no_cycles names =
   length names >= 2 ==>
-  let pairs = zip names (tail names)
-      nodes = map (\(from, to) -> (from, DependencyNode from [to])) pairs
+  let pairs = zip names (L.tail names)
+      nodes = L.map (\(from, to) -> (from, DependencyNode from [to])) pairs
       -- Last node has no dependencies
       lastNode = (last names, DependencyNode (last names) [])
       graph = DependencyGraph $ Map.fromList (nodes ++ [lastNode])
@@ -367,7 +369,7 @@ prop_star_topology_no_cycles :: String -> [String] -> Property
 prop_star_topology_no_cycles center leaves =
   not (null leaves) && not (center `elem` leaves) ==>
   let centerNode = (center, DependencyNode center leaves)
-      leafNodes = map (\leaf -> (leaf, DependencyNode leaf [])) leaves
+      leafNodes = L.map (\leaf -> (leaf, DependencyNode leaf [])) leaves
       graph = DependencyGraph $ Map.fromList (centerNode : leafNodes)
   in property $ not (hasCycles graph)
 
@@ -415,7 +417,7 @@ tests = testGroup "New Dependencies Cycle Detection QuickCheck Tests"
     , fastProperty "cycle detection idempotent" prop_cycle_detection_idempotent
     ]
 
-  , testGroup "Edge Cases and Boundary Conditions"
+  , testGroup "Edge Cases L.and Boundary Conditions"
     [ fastProperty "disconnected components" prop_disconnected_components
     , fastProperty "chain dependencies no cycles" prop_chain_dependencies_no_cycles
     , fastProperty "star topology no cycles" prop_star_topology_no_cycles

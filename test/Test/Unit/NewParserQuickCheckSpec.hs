@@ -28,6 +28,7 @@ import Parser
 import SourceLocation (Located(..), SourcePos(..), SourceSpan(..))
 import Data.Char (isAlphaNum, isSpace)
 import qualified Data.List as Data.List
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 import qualified Data.Text as T
 
@@ -55,7 +56,7 @@ prop_parse_empty =
 -- Property: parseTypus handles simple directives
 prop_parse_directives :: String -> Property
 prop_parse_directives directiveName =
-  length directiveName <= 10 && all isAlphaNum directiveName ==>
+  L.length directiveName <= 10 && L.all isAlphaNum directiveName ==>
   let input = "//! " ++ directiveName ++ "=true\n"
       result = parseTypus input
   in property $ tfBuildTags result === []
@@ -63,34 +64,34 @@ prop_parse_directives directiveName =
 -- Property: parseTypus handles code blocks
 prop_parse_code_blocks :: String -> Property
 prop_parse_code_blocks codeContent =
-  not ("\n" `isInfixOf` codeContent) && length codeContent <= 50 ==>
+  not ("\n" `L.isInfixOf` codeContent) && L.length codeContent <= 50 ==>
   let input = codeContent ++ "\n"
       result = parseTypus input
       blocks = tfBlocks result
   in property $ if null codeContent 
      then null blocks
-     else not (null blocks) .&&. cbContent (head blocks) === codeContent
+     else not (null blocks) .&&. cbContent (L.head blocks) === codeContent
 
 -- Property: parseTypus preserves content structure
 prop_parse_preserve_structure :: String -> String -> Property
 prop_parse_preserve_structure firstBlock secondBlock =
-  not ("\n" `isInfixOf` firstBlock) && not ("\n" `isInfixOf` secondBlock) &&
-  length firstBlock <= 30 && length secondBlock <= 30 ==>
+  not ("\n" `L.isInfixOf` firstBlock) && not ("\n" `L.isInfixOf` secondBlock) &&
+  L.length firstBlock <= 30 && L.length secondBlock <= 30 ==>
   let input = firstBlock ++ "\n\n" ++ secondBlock ++ "\n"
       result = parseTypus input
       blocks = tfBlocks result
-  in property $ length blocks >= 1 .&&.
+  in property $ L.length blocks >= 1 .&&.
      (if not (null firstBlock) && not (null secondBlock)
-      then length blocks >= 2
+      then L.length blocks >= 2
       else property True)
 
 -- Property: parseTypus handles malformed input gracefully
 prop_parse_malformed :: String -> Property
 prop_parse_malformed malformedInput =
-  length malformedInput <= 100 ==>
+  L.length malformedInput <= 100 ==>
   let result = parseTypus malformedInput
       blocks = tfBlocks result
-  in property $ length blocks >= 0 -- Should never crash and should return some result
+  in property $ L.length blocks >= 0 -- Should never crash L.and should return some result
 
 -- Property: File directives parsing consistency
 prop_file_directives_consistency :: Bool -> Bool -> Bool -> Property
@@ -123,10 +124,10 @@ prop_block_directives_consistency ownership dependent constraints =
 -- Property: Parser is position-aware
 prop_parser_position_aware :: String -> Property
 prop_parser_position_aware content =
-  length content <= 50 ==> 
+  L.length content <= 50 ==> 
   let result = parseTypus content
       blocks = tfBlocks result
-  in property $ all (\block -> 
+  in property $ L.all (\block -> 
     let span = cbSpan block
     in spanStart span `seq` spanEnd span `seq` True
   ) blocks

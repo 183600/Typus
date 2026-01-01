@@ -9,16 +9,18 @@ import Utils (trim, splitBy, removeLineComments, removeComments, normalizeIndent
 import Data.Char (isSpace, isAlphaNum)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, groupBy)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (groupBy)
 
 -- Test string processing properties
 prop_trim_whitespace_removal :: String -> Bool
 prop_trim_whitespace_removal s = 
   let trimmed = trim s
-      hasLeadingSpace = not (null s) && isSpace (head s)
+      hasLeadingSpace = not (null s) && isSpace (L.head s)
       hasTrailingSpace = not (null s) && isSpace (last s)
   in if hasLeadingSpace || hasTrailingSpace
-     then length trimmed < length s
+     then L.length trimmed < L.length s
      else trimmed == s
 
 prop_trim_idempotent :: String -> Bool
@@ -27,34 +29,34 @@ prop_trim_idempotent s = trim (trim s) == trim s
 prop_trim_preserves_internal_whitespace :: String -> Bool
 prop_trim_preserves_internal_whitespace s = 
   let trimmed = trim s
-      internalSpaces = filter isSpace (take (length s - 2) (drop 1 s))
-      trimmedInternalSpaces = filter isSpace (take (length trimmed - 2) (drop 1 trimmed))
-  in if length s >= 2 && length trimmed >= 2
+      internalSpaces = filter isSpace (take (L.length s - 2) (drop 1 s))
+      trimmedInternalSpaces = filter isSpace (take (L.length trimmed - 2) (drop 1 trimmed))
+  in if L.length s >= 2 && L.length trimmed >= 2
      then internalSpaces == trimmedInternalSpaces
      else True
 
 -- Test splitBy properties
 prop_split_by_concatenation :: Char -> String -> Bool
-prop_split_by_concatenation c s = concat (splitBy c s) == s
+prop_split_by_concatenation c s = L.concat (splitBy c s) == s
 
 prop_split_by_empty_segments :: Char -> String -> Bool
 prop_split_by_empty_segments c s = 
   let segments = splitBy c s
-      hasConsecutiveDelim = any (\(x:y:_) -> x == c && y == c) (zip s (tail s))
+      hasConsecutiveDelim = L.any (\(x:y:_) -> x == c && y == c) (zip s (L.tail s))
   in if hasConsecutiveDelim 
-     then any null segments
-     else all (not . null) segments
+     then L.any null segments
+     else L.all (not . null) segments
 
 prop_split_by_start_end_delimiter :: Char -> String -> Bool
 prop_split_by_start_end_delimiter c s = 
   let segments = splitBy c s
-      startsWithDelim = not (null s) && head s == c
+      startsWithDelim = not (null s) && L.head s == c
       endsWithDelim = not (null s) && last s == c
   in case (startsWithDelim, endsWithDelim) of
-    (True, True) -> head segments == "" && last segments == ""
-    (True, False) -> head segments == ""
+    (True, True) -> L.head segments == "" && last segments == ""
+    (True, False) -> L.head segments == ""
     (False, True) -> last segments == ""
-    (False, False) -> all (not . null) segments
+    (False, False) -> L.all (not . null) segments
 
 -- Test comment removal properties
 prop_remove_line_comments_preserves_line_structure :: String -> Bool
@@ -62,19 +64,19 @@ prop_remove_line_comments_preserves_line_structure s =
   let result = removeLineComments s
       originalLines = lines s
       resultLines = lines result
-  in length resultLines <= length originalLines
+  in L.length resultLines <= L.length originalLines
 
 prop_remove_line_comments_removes_comments :: String -> Property
 prop_remove_line_comments_removes_comments s = 
-  "//" `isInfixOf` s ==> 
+  "//" `L.isInfixOf` s ==> 
   let result = removeLineComments s
-      linesWithComments = filter ("//" `isInfixOf`) (lines s)
+      linesWithComments = L.filter ("//" `L.isInfixOf`) (lines s)
       resultLines = lines result
-  in all (not . ("//" `isInfixOf`)) resultLines
+  in L.all (not . ("//" `L.isInfixOf`)) resultLines
 
 prop_remove_comments_preserves_string_literals :: String -> Property
 prop_remove_comments_preserves_string_literals s = 
-  let hasStringLiteral = "\"" `isInfixOf` s
+  let hasStringLiteral = "\"" `L.isInfixOf` s
   in hasStringLiteral ==> 
   let result = removeComments s
       originalStrings = extractStringLiterals s
@@ -83,7 +85,7 @@ prop_remove_comments_preserves_string_literals s =
 
 prop_remove_comments_preserves_character_literals :: String -> Property
 prop_remove_comments_preserves_character_literals s = 
-  let hasCharLiteral = any (\(c1:c2:_) -> c1 == '\'' && c2 /= '\\') (zip s (tail s))
+  let hasCharLiteral = L.any (\(c1:c2:_) -> c1 == '\'' && c2 /= '\\') (zip s (L.tail s))
   in hasCharLiteral ==> 
   let result = removeComments s
       originalChars = extractCharLiterals s
@@ -96,26 +98,26 @@ prop_normalize_indentation_preserves_line_count s =
   let originalLines = lines s
       normalized = normalizeIndentation s
       normalizedLines = lines normalized
-  in length originalLines == length normalizedLines
+  in L.length originalLines == L.length normalizedLines
 
 prop_normalize_indentation_removes_common_prefix :: String -> Bool
 prop_normalize_indentation_removes_common_prefix s = 
   let normalized = normalizeIndentation s
-      nonEmptyLines = filter (not . all isSpace) (lines normalized)
+      nonEmptyLines = L.filter (not . L.all isSpace) (lines normalized)
   in if null nonEmptyLines
      then True
-     else all (\line -> null line || not (isSpace (head line))) nonEmptyLines
+     else L.all (\line -> null line || not (isSpace (L.head line))) nonEmptyLines
 
 prop_normalize_indentation_preserves_relative_structure :: String -> Bool
 prop_normalize_indentation_preserves_relative_structure s = 
-  let originalLines = filter (not . all isSpace) (lines s)
+  let originalLines = L.filter (not . L.all isSpace) (lines s)
       normalized = normalizeIndentation s
-      normalizedLines = filter (not . all isSpace) (lines normalized)
-  in if length originalLines >= 2 && length normalizedLines >= 2
-     then let originalIndents = map (length . takeWhile isSpace) originalLines
-              normalizedIndents = map (length . takeWhile isSpace) normalizedLines
-              originalDiffs = zipWith subtract (init originalIndents) (tail originalIndents)
-              normalizedDiffs = zipWith subtract (init normalizedIndents) (tail normalizedIndents)
+      normalizedLines = L.filter (not . L.all isSpace) (lines normalized)
+  in if L.length originalLines >= 2 && L.length normalizedLines >= 2
+     then let originalIndents = L.map (L.length . takeWhile isSpace) originalLines
+              normalizedIndents = L.map (L.length . takeWhile isSpace) normalizedLines
+              originalDiffs = zipWith subtract (init originalIndents) (L.tail originalIndents)
+              normalizedDiffs = zipWith subtract (init normalizedIndents) (L.tail normalizedIndents)
           in originalDiffs == normalizedDiffs
      else True
 
@@ -136,25 +138,25 @@ prop_whitespace_only_string n =
 
 prop_unicode_handling :: String -> Property
 prop_unicode_handling s = 
-  any (>= 128) (map fromEnum s) ==> 
+  L.any (>= 128) (map fromEnum s) ==> 
   let trimmed = trim s
       resultComments = removeComments s
       normalized = normalizeIndentation s
-  in length trimmed <= length s &&
-     length resultComments <= length s &&
-     length normalized <= length s
+  in L.length trimmed <= L.length s &&
+     L.length resultComments <= L.length s &&
+     L.length normalized <= L.length s
 
 -- Test performance properties
 prop_split_by_linear_performance :: Char -> String -> Bool
 prop_split_by_linear_performance c s = 
   let result = splitBy c s
-      expectedLength = length (filter (== c) s) + 1
-  in length result == expectedLength
+      expectedLength = L.length (L.filter (== c) s) + 1
+  in L.length result == expectedLength
 
 prop_comment_removal_no_exponential_growth :: String -> Bool
 prop_comment_removal_no_exponential_growth s = 
   let result = removeComments s
-  in length result <= length s + 1000  -- Allow some margin for error cases
+  in L.length result <= L.length s + 1000  -- Allow some margin for error cases
 
 -- Test string processing invariants
 prop_trim_split_interaction :: Char -> String -> Bool
@@ -164,14 +166,14 @@ prop_trim_split_interaction c s =
       splitTrimmed = splitBy c trimmed
   in if null trimmed
      then splitTrimmed == [""]
-     else length splitTrimmed == length splitOriginal
+     else L.length splitTrimmed == L.length splitOriginal
 
 prop_comment_indentation_interaction :: String -> Bool
 prop_comment_indentation_interaction s = 
   let withComments = removeComments s
       normalized = normalizeIndentation s
       normalizedAfterComments = normalizeIndentation withComments
-  in length (lines normalized) == length (lines normalizedAfterComments)
+  in L.length (lines normalized) == L.length (lines normalizedAfterComments)
 
 -- Helper functions
 extractStringLiterals :: String -> [String]

@@ -5,6 +5,7 @@
 module Test.Unit.CommentHandlingSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, choose, listOf, oneof, elements, forAll, (==>)
 import Utils (removeLineComments, removeComments)
@@ -62,15 +63,15 @@ tests = testGroup "Comment Handling Tests"
     , testCase "preserves line comments inside block comments" $
         removeComments "before /* // line comment in block */ after" @?= "before  after"
     ]
-  , testGroup "Mixed line and block comments"
-    [ testCase "removes both line and block comments" $
+  , testGroup "Mixed line L.and block comments"
+    [ testCase "removes both line L.and block comments" $
         removeComments "code // line comment\n/* block comment */\nmore code" @?= "code \n\nmore code"
     , testCase "handles line comment after block comment" $
         removeComments "/* block */ // line" @?= "  "
     , testCase "handles block comment after line comment" $
         removeComments "code // line\n/* block */" @?= "code \n "
     , testCase "preserves strings with mixed comment markers" $
-        removeComments "print(\"// line and /* block */ in string\") // real comment" @?= "print(\"// line and /* block */ in string\") "
+        removeComments "print(\"// line L.and /* block */ in string\") // real comment" @?= "print(\"// line L.and /* block */ in string\") "
     ]
   , testGroup "Edge cases"
     [ testCase "handles empty input" $
@@ -93,21 +94,21 @@ tests = testGroup "Comment Handling Tests"
         removeComments "variable_name_with_underscores // comment" @?= "variable_name_with_underscores "
     ]
   , testGroup "Property-based tests"
-    [ testProperty "removeLineComments never increases length" $
-        \s -> length (removeLineComments s) <= length s
+    [ testProperty "removeLineComments never increases L.length" $
+        \s -> L.length (removeLineComments s) <= L.length s
     , testProperty "removeLineComments preserves line count" $
-        \s -> length (lines (removeLineComments s)) == length (lines s)
-    , testProperty "removeComments never increases length" $
-        \s -> length (removeComments s) <= length s
-    , testProperty "removeComments removes all // patterns outside strings" $
-        \s -> "//" `isInfixOf` s ==> 
-              not ("//" `isInfixOf` removeComments s) ||
-              "//" `isInfixOf` someStringIn s
-    , testProperty "removeComments removes all /* */ patterns outside strings" $
+        \s -> L.length (lines (removeLineComments s)) == L.length (lines s)
+    , testProperty "removeComments never increases L.length" $
+        \s -> L.length (removeComments s) <= L.length s
+    , testProperty "removeComments removes L.all // patterns outside strings" $
+        \s -> "//" `L.isInfixOf` s ==> 
+              not ("//" `L.isInfixOf` removeComments s) ||
+              "//" `L.isInfixOf` someStringIn s
+    , testProperty "removeComments removes L.all /* */ patterns outside strings" $
         forAll genStringWithBlockComment $ \s -> 
-              "/*" `isInfixOf` s ==> 
-              not ("/*" `isInfixOf` removeComments s) ||
-              "/*" `isInfixOf` someStringIn s
+              "/*" `L.isInfixOf` s ==> 
+              not ("/*" `L.isInfixOf` removeComments s) ||
+              "/*" `L.isInfixOf` someStringIn s
     , testProperty "removeComments . removeLineComments = removeComments" $
         \s -> removeComments (removeLineComments s) == removeComments s
     ]
@@ -115,7 +116,7 @@ tests = testGroup "Comment Handling Tests"
 
 -- Helper functions
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` [take (length needle) $ drop i haystack | i <- [0..length haystack - length needle]]
+L.isInfixOf needle haystack = needle `elem` [take (L.length needle) $ drop i haystack | i <- [0..L.length haystack - L.length needle]]
 
 someStringIn :: String -> String
 someStringIn s = case extractFirstString s of

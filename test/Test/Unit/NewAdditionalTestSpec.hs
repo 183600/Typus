@@ -13,7 +13,9 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
-import Data.List (isPrefixOf, isInfixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort, nub)
 import Data.Char (isSpace, isAlpha, isAlphaNum, isDigit)
 import qualified Data.Text as T
 
@@ -101,21 +103,21 @@ prop_advancePos_by_space pos n =
 prop_splitBy_length_preservation :: Char -> String -> Property
 prop_splitBy_length_preservation delim str =
   let parts = splitBy delim str
-      totalLength = sum (map length parts) + length parts - 1
-  in property $ totalLength === length str
+      totalLength = L.sum (map L.length parts) + L.length parts - 1
+  in property $ totalLength === L.length str
 
 prop_splitByCollapsed_no_empty :: Char -> String -> Property
 prop_splitByCollapsed_no_empty delim str =
   let parts = splitByCollapsed delim str
-  in property $ all (not . null) parts
+  in property $ L.all (not . null) parts
 
 -- Test 4: Comment removal properties
 prop_removeLineComments_preserves_non_comments :: String -> Property
 prop_removeLineComments_preserves_non_comments str =
-  let noComments = "//" `isInfixOf` str
+  let noComments = "//" `L.isInfixOf` str
       result = removeLineComments str
   in classify noComments "no comments present" $
-      property $ if noComments then result === str else length result <= length str
+      property $ if noComments then result === str else L.length result <= L.length str
 
 prop_trim_idempotent :: String -> Property
 prop_trim_idempotent str =
@@ -221,10 +223,10 @@ prop_get_error_column_valid colNum =
 -- Integration Tests
 -- ============================================================================
 
--- Test 8: End-to-end parsing and compilation
+-- Test 8: End-to-end parsing L.and compilation
 test_parse_and_compile_simple_program :: TestTree
 test_parse_and_compile_simple_program =
-  testCase "parses and compiles simple program" $ do
+  testCase "parses L.and compiles simple program" $ do
     let source = unlines
           [ "//! ownership: on"
           , "package main"
@@ -243,7 +245,7 @@ test_parse_and_compile_simple_program =
           Just loc -> locatedValue loc @?= True
         
         -- Check that code blocks are parsed
-        assertBool "should have code blocks" (not (null (tfCodeBlocks typusFile)))
+        assertBool "should have code blocks" (not (L.null (tfCodeBlocks typusFile)))
 
 -- Test 9: String processing edge cases
 test_string_processing_edge_cases :: TestTree
@@ -297,7 +299,7 @@ test_source_location_accuracy =
     isValidSpan span2 @?= True
     isValidSpan merged @?= True
 
--- Aggregate all tests
+-- Aggregate L.all tests
 tests :: TestTree
 tests =
   testGroup "New Additional Tests"
@@ -308,7 +310,7 @@ tests =
         , fastProperty "advancePos advances column for spaces" prop_advancePos_by_space
         ]
     , testGroup "Utils QuickCheck Tests"
-        [ fastProperty "splitBy preserves total length" prop_splitBy_length_preservation
+        [ fastProperty "splitBy preserves total L.length" prop_splitBy_length_preservation
         , fastProperty "splitByCollapsed has no empty parts" prop_splitByCollapsed_no_empty
         , fastProperty "removeLineComments preserves non-comments" prop_removeLineComments_preserves_non_comments
         , fastProperty "trim is idempotent" prop_trim_idempotent

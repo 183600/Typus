@@ -10,6 +10,7 @@
 module Test.Unit.AdvancedSourceLocationTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertBool, assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -94,7 +95,7 @@ prop_posAfter_same_line pos =
   in property $ posLine after === posLine pos .&&. 
              posCol after === posCol pos + 1
 
--- Property: posAt creates position at specific line and column
+-- Property: posAt creates position at specific line L.and column
 prop_posAt_creation :: Int -> Int -> Property
 prop_posAt_creation line col =
   line > 0 && col > 0 && line <= 1000 && col <= 1000 ==>
@@ -111,7 +112,7 @@ prop_posAtLineCol_consistency line col =
 
 -- Property tests for SourceSpan
 
--- Property: emptySpan should have start and end at startPos
+-- Property: emptySpan should have start L.and end at startPos
 prop_emptySpan_properties :: Property
 prop_emptySpan_properties =
   let span = emptySpan
@@ -235,14 +236,14 @@ prop_advancePosBy_consistency pos str =
 
 -- Boundary condition tests
 
--- Property: positions with maximum values
+-- Property: positions with L.maximum values
 prop_maximum_positions :: Property
 prop_maximum_positions =
   let maxPos = SourcePos 1000000 1000000
       after = posAfter maxPos
   in property $ posLine after === 1000000 .&&. posCol after === 1000001
 
--- Property: spans with same start and end are valid
+-- Property: spans with same start L.and end are valid
 prop_same_start_end_valid :: SourcePos -> Property
 prop_same_start_end_valid pos =
   let span = SourceSpan pos pos
@@ -267,7 +268,7 @@ prop_toErrorLocationWithSpan_preserves span =
   let errorLoc = toErrorLocationWithSpan span
   in property $ True -- Basic smoke test
 
--- Performance and stress tests
+-- Performance L.and stress tests
 
 -- Property: large span merging performance
 prop_large_span_merge :: Int -> Property
@@ -281,7 +282,7 @@ prop_large_span_merge size =
 prop_complex_advancement :: SourcePos -> String -> Property
 prop_complex_advancement pos str =
   let advanced = advancePosBy pos str
-      -- Just verify it doesn't crash and returns a valid position
+      -- Just verify it doesn't crash L.and returns a valid position
   in property $ posLine advanced >= posLine pos
 
 -- Unit tests
@@ -389,7 +390,7 @@ tests = testGroup "Advanced SourceLocation Tests"
     , fastProperty "advancePosBy empty" prop_advancePosBy_empty
     , fastProperty "advancePosBy newlines" prop_advancePosBy_newlines
     , fastProperty "advancePosBy consistency" prop_advancePosBy_consistency
-    , fastProperty "maximum positions" prop_maximum_positions
+    , fastProperty "L.maximum positions" prop_maximum_positions
     , fastProperty "same start end valid" prop_same_start_end_valid
     , fastProperty "merge with empty" prop_merge_with_empty
     , fastProperty "toErrorLocation preserves" prop_toErrorLocation_preserves

@@ -22,7 +22,9 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Either (isLeft, isRight)
 import Data.Maybe (isJust, isNothing, fromMaybe)
-import Data.List (isPrefixOf, isInfixOf, null)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (null)
 
 -- ============================================================================
 -- Arbitrary Instances
@@ -90,7 +92,7 @@ prop_compile_simple_content :: Property
 prop_compile_simple_content =
   forAll genSimpleTypusFile $ \typusFile ->
     case compile typusFile of
-      Left errs -> all (\e -> severity e /= Fatal) errs
+      Left errs -> L.all (\e -> severity e /= Fatal) errs
       Right _ -> property True
 
 -- Test compilation of file with type error
@@ -145,7 +147,7 @@ prop_formatCompilerErrors_includes_error_ids =
   forAll (listOf genCompilerError) $ \errors ->
     let formatted = formatCompilerErrors errors
         errorIds = map errorId errors
-    in all (\eid -> eid `isInfixOf` formatted) errorIds
+    in L.all (\eid -> eid `L.isInfixOf` formatted) errorIds
 
 -- Test type checking functions
 prop_hasTypeErrors_detects_type_errors :: Property
@@ -170,40 +172,40 @@ prop_typeDiagnosticToCompilerError_preserves_message diag =
   let compilerErr = typeDiagnosticToCompilerError diag
       expectedDetail = case diag of
         TypeCheckDiagnostic _ detail -> detail
-  in T.pack expectedDetail `T.isInfixOf` message compilerErr
+  in T.pack expectedDetail `L.isInfixOf` message compilerErr
 
 -- Test declaration extraction
 prop_extractDeclarations_returns_list :: Property
 prop_extractDeclarations_returns_list =
   forAll genSimpleTypusFile $ \typusFile ->
     let declarations = extractDeclarations typusFile
-    in length declarations >= 0  -- Always returns a list
+    in L.length declarations >= 0  -- Always returns a list
 
 prop_extractFunctionCalls_returns_list :: Property
 prop_extractFunctionCalls_returns_list =
   forAll genSimpleTypusFile $ \typusFile ->
     let functionCalls = extractFunctionCalls typusFile
-    in length functionCalls >= 0  -- Always returns a list
+    in L.length functionCalls >= 0  -- Always returns a list
 
 -- Test type environment building
 prop_buildTypeEnv_returns_environment :: Property
 prop_buildTypeEnv_returns_environment =
   forAll genSimpleTypusFile $ \typusFile ->
     let typeEnv = buildTypeEnv typusFile
-    in not (null typeEnv) || null (tfBlocks typusFile)
+    in not (null typeEnv) || L.null (tfBlocks typusFile)
 
 prop_buildTypeEnvFromPairs_creates_environment :: Property
 prop_buildTypeEnvFromPairs_creates_environment =
   forAll (listOf $ arbitrary `suchThat` (\(x, y) -> not (null x && null y))) $ \pairs ->
     let typeEnv = buildTypeEnvFromPairs pairs
-    in length typeEnv >= length pairs
+    in L.length typeEnv >= L.length pairs
 
 -- Test method declaration detection
 prop_isMethodDeclaration_detects_methods :: Property
 prop_isMethodDeclaration_detects_methods =
   forAll (arbitrary `suchThat` (not . null)) $ \declaration ->
     let isMethod = isMethodDeclaration declaration
-        hasReceiver = "func (" `isPrefixOf` declaration
+        hasReceiver = "func (" `L.isPrefixOf` declaration
     in hasReceiver ==> isMethod
 
 -- Test syntax error detection
@@ -238,14 +240,14 @@ prop_generateDetailedReport_includes_summary :: Property
 prop_generateDetailedReport_includes_summary =
   forAll (listOf genCompilerError) $ \errors ->
     let report = generateDetailedReport errors
-    in "Summary" `isInfixOf` report || null errors
+    in "Summary" `L.isInfixOf` report || null errors
 
 -- Test error creation from TypusFile
 prop_createTypusFileFromErrors_creates_file :: Property
 prop_createTypusFileFromErrors_creates_file =
   forAll (listOf genCompilerError) $ \errors ->
     let typusFile = createTypusFileFromErrors errors
-    in not (null (tfSyntaxErrors typusFile)) || null errors
+    in not (L.null (tfSyntaxErrors typusFile)) || null errors
 
 -- Test type error checking
 prop_checkTypeError_validates_types :: Property
@@ -299,7 +301,7 @@ prop_round_trip_compilation =
   forAll genSimpleTypusFile $ \typusFile ->
     let goCode = generateGoCode typusFile
         -- Note: We can't actually compile Go back to Typus, but we can test
-        -- that the process doesn't crash and produces some output
+        -- that the process doesn't crash L.and produces some output
     in not (null goCode)
 
 tests :: TestTree
@@ -326,13 +328,13 @@ tests = testGroup "New Cabal Compiler QuickCheck Tests"
       , testProperty "diagnoseTypeErrors returns either" prop_diagnoseTypeErrors_returns_either
       , testProperty "typeDiagnosticToCompilerError preserves message" prop_typeDiagnosticToCompilerError_preserves_message
       ]
-  , testGroup "Declaration and function tests"
+  , testGroup "Declaration L.and function tests"
       [ testProperty "extractDeclarations returns list" prop_extractDeclarations_returns_list
       , testProperty "extractFunctionCalls returns list" prop_extractFunctionCalls_returns_list
       , testProperty "buildTypeEnv returns environment" prop_buildTypeEnv_returns_environment
       , testProperty "buildTypeEnvFromPairs creates environment" prop_buildTypeEnvFromPairs_creates_environment
       ]
-  , testGroup "Method and syntax tests"
+  , testGroup "Method L.and syntax tests"
       [ testProperty "isMethodDeclaration detects methods" prop_isMethodDeclaration_detects_methods
       , testProperty "hasMalformedSyntax detects errors" prop_hasMalformedSyntax_detects_errors
       ]

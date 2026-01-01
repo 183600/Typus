@@ -66,7 +66,9 @@ import Dependencies
 
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, nub, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (nub, sort)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -219,7 +221,7 @@ genSimpleProgram = do
       funcDecls = if hasFuncs
         then unlines
           [ "func add(a : Int, b : Int) : Int = a + b"
-          , "func concat(s1 : String, s2 : String) : String = s1 ++ s2"
+          , "func L.concat(s1 : String, s2 : String) : String = s1 ++ s2"
           ]
         else ""
       
@@ -240,18 +242,18 @@ prop_typeExpr_contains_type_variables :: TypeExpr -> Property
 prop_typeExpr_contains_type_variables expr =
   let hasTypeVar = case expr of
         TypeVar _ -> True
-        TypeConstructor _ args -> any hasTypeVar args
+        TypeConstructor _ args -> L.any hasTypeVar args
         TypeDependent var _ -> True
-        TypeIndexed base indices -> any hasTypeVar (base : indices)
+        TypeIndexed base indices -> L.any hasTypeVar (base : indices)
   in property $ hasTypeVar === True .||. hasTypeVar === False
 
 prop_typeExpr_structure_is_well_formed :: TypeExpr -> Property
 prop_typeExpr_structure_is_well_formed expr =
   let isWellFormed = case expr of
         TypeVar _ -> True
-        TypeConstructor _ args -> all isWellFormed args
+        TypeConstructor _ args -> L.all isWellFormed args
         TypeDependent var constraint -> isWellFormed constraint
-        TypeIndexed base indices -> all isWellFormed (base : indices)
+        TypeIndexed base indices -> L.all isWellFormed (base : indices)
   in property $ isWellFormed === True
 
 -- ============================================================================
@@ -287,7 +289,7 @@ prop_statement_has_valid_structure statement =
 prop_ast_preserves_statement_order :: AST -> Property
 prop_ast_preserves_statement_order ast =
   case ast of
-    AST statements -> property $ length statements >= 0
+    AST statements -> property $ L.length statements >= 0
 
 -- ============================================================================
 -- Properties for TypeScheme
@@ -296,7 +298,7 @@ prop_ast_preserves_statement_order ast =
 prop_typeScheme_contains_type_variables :: TypeScheme -> Property
 prop_typeScheme_contains_type_variables scheme =
   case scheme of
-    TypeScheme vars typ -> property $ length vars >= 0
+    TypeScheme vars typ -> property $ L.length vars >= 0
 
 -- ============================================================================
 -- Properties for TypeEnvironment
@@ -421,7 +423,7 @@ prop_get_fresh_type_var_generates_unique_vars count =
   let checker = newDependentTypeChecker
       vars = replicate count (getFreshTypeVar checker)
       uniqueVars = nub vars
-  in property $ length vars == length uniqueVars
+  in property $ L.length vars == L.length uniqueVars
 
 -- ============================================================================
 -- Properties for Type Inference
@@ -446,7 +448,7 @@ prop_infer_program_handles_valid_programs ast =
   in property $ True  -- Basic test that program inference doesn't crash
 
 -- ============================================================================
--- Properties for Type Generalization and Instantiation
+-- Properties for Type Generalization L.and Instantiation
 -- ============================================================================
 
 prop_generalize_preserves_type_meaning :: TypeExpr -> TypeEnvironment -> Property
@@ -578,7 +580,7 @@ tests = testGroup "Core Dependencies QuickCheck Tests"
     , fastProperty "infer program handles valid programs" prop_infer_program_handles_valid_programs
     ]
 
-  , testGroup "Type Generalization and Instantiation Properties"
+  , testGroup "Type Generalization L.and Instantiation Properties"
     [ fastProperty "generalize preserves type meaning" prop_generalize_preserves_type_meaning
     , fastProperty "instantiate preserves scheme structure" prop_instantiate_preserves_scheme_structure
     , fastProperty "instantiate scheme handles valid schemes" prop_instantiate_scheme_handles_valid_schemes

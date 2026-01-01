@@ -4,6 +4,7 @@
 module Test.Unit.IntegratedCompilerQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
@@ -51,7 +52,7 @@ compilerPipelineTests = testGroup "Compiler Pipeline Tests"
   , testCase "Compilation pipeline stages" =
       let result = compileWithPipeline "func test() int { return 42 }"
       in case result of
-           Right pipeline -> length pipeline @?= 3  -- Parse, IR, Generate
+           Right pipeline -> L.length pipeline @?= 3  -- Parse, IR, Generate
            Left _ -> "Expected successful compilation" @?= "Got error"
   
   , fastProperty "Source code preservation" =
@@ -97,7 +98,7 @@ irToGoTests = testGroup "IR to Go Tests"
       let ir = IRModule "test" [IRVarDecl "x" IRInt (IRLiteralExpr (IntLiteral 42))]
           result = irToGo ir
       in case result of
-           Right goCode -> "x" `isInfixOf` goCode @?= True
+           Right goCode -> "x" `L.isInfixOf` goCode @?= True
            Left _ -> "Expected successful generation" @?= "Got error"
   
   , testCase "Function IR to Go generation" =
@@ -105,7 +106,7 @@ irToGoTests = testGroup "IR to Go Tests"
           ir = IRModule "test" [func]
           result = irToGo ir
       in case result of
-           Right goCode -> "func test" `isInfixOf` goCode @?= True
+           Right goCode -> "func test" `L.isInfixOf` goCode @?= True
            Left _ -> "Expected successful generation" @?= "Got error"
   
   , fastProperty "Go code contains function names" =
@@ -114,11 +115,11 @@ irToGoTests = testGroup "IR to Go Tests"
                        ir = IRModule "test" [func]
                        result = irToGo ir
                    in case result of
-                        Right goCode -> funcName `isInfixOf` goCode
+                        Right goCode -> funcName `L.isInfixOf` goCode
                         _ -> False
   ]
   where
-    isInfixOf needle haystack = needle `elem` (words haystack)
+    L.isInfixOf needle haystack = needle `elem` (words haystack)
 
 -- | 4. 错误处理测试
 errorHandlingTests :: TestTree
@@ -127,28 +128,28 @@ errorHandlingTests = testGroup "Error Handling Tests"
       let source = "x := 42 +"
           result = compileSource source
       in case result of
-           Left errors -> length errors > 0 @?= True
+           Left errors -> L.length errors > 0 @?= True
            Right _ -> "Expected compilation error" @?= "Got success"
   
   , testCase "Type error handling" =
       let source = "x := \"hello\" + 42"
           result = compileSource source
       in case result of
-           Left errors -> length errors > 0 @?= True
+           Left errors -> L.length errors > 0 @?= True
            Right _ -> "Expected compilation error" @?= "Got success"
   
   , testCase "Error recovery" =
       let source = "x := 42 +; y := 10"
           result = compileWithRecovery source
       in case result of
-           Right _ -> True @?= True  -- Should recover and continue
+           Right _ -> True @?= True  -- Should recover L.and continue
            Left _ -> "Expected recovery" @?= "Got unrecoverable error"
   
   , fastProperty "Error detection" =
       \invalidSource -> let result = compileSource invalidSource
                        in case result of
-                            Left errors -> length errors > 0
-                            Right _ -> invalidSource == "" || all (`elem` " \n\t") invalidSource
+                            Left errors -> L.length errors > 0
+                            Right _ -> invalidSource == "" || L.all (`elem` " \n\t") invalidSource
   ]
 
 -- | 5. 优化测试
@@ -216,7 +217,7 @@ moduleCompilationTests = testGroup "Module Compilation Tests"
       let modules = [("main", "func main() {}")]
           result = compileModules modules
       in case result of
-           Right compiled -> length compiled @?= 1
+           Right compiled -> L.length compiled @?= 1
            Left _ -> "Expected successful compilation" @?= "Got error"
   
   , testCase "Multiple module compilation" =
@@ -224,13 +225,13 @@ moduleCompilationTests = testGroup "Module Compilation Tests"
                      ("main", "import \"utils\"\nfunc main() {}")]
           result = compileModules modules
       in case result of
-           Right compiled -> length compiled @?= 2
+           Right compiled -> L.length compiled @?= 2
            Left _ -> "Expected successful compilation" @?= "Got error"
   
   , fastProperty "Module count consistency" =
       \modules -> let result = compileModules modules
                   in case result of
-                       Right compiled -> length compiled == length modules
+                       Right compiled -> L.length compiled == L.length modules
                        Left _ -> False
   ]
 
@@ -250,7 +251,7 @@ dependencyTests = testGroup "Dependency Tests"
                      ("mod2", "import \"mod1\"")]
           result = compileWithDependencies modules
       in case result of
-           Left errors -> length errors > 0 @?= True
+           Left errors -> L.length errors > 0 @?= True
            Right _ -> "Expected circular dependency error" @?= "Got success"
   
   , fastProperty "Dependency ordering" =
@@ -261,8 +262,8 @@ dependencyTests = testGroup "Dependency Tests"
   ]
   where
     hasCircularDependency modules = 
-      let imports = map (\(name, content) -> (name, extractImports content)) modules
-      in any (\(name, deps) -> name `elem` deps) imports
+      let imports = L.map (\(name, content) -> (name, extractImports content)) modules
+      in L.any (\(name, deps) -> name `elem` deps) imports
     
     extractImports content = 
       case content of
@@ -272,7 +273,7 @@ dependencyTests = testGroup "Dependency Tests"
 performanceTests :: TestTree
 performanceTests = testGroup "Performance Tests"
   [ testCase "Large source compilation" =
-      let source = unlines $ map (\i -> "x" ++ show i ++ " := " ++ show i) [1..1000]
+      let source = unlines $ L.map (\i -> "x" ++ show i ++ " := " ++ show i) [1..1000]
           result = compileSource source
       in case result of
            Right _ -> True @?= True
@@ -284,7 +285,7 @@ performanceTests = testGroup "Performance Tests"
       in result > 0 @?= True
   
   , fastProperty "Compilation scalability" =
-      \n -> let source = unlines $ map (\i -> "x" ++ show i ++ " := " ++ show i) [1..n `mod` 100]
+      \n -> let source = unlines $ L.map (\i -> "x" ++ show i ++ " := " ++ show i) [1..n `mod` 100]
                 result = compileSource source
             in case result of
                  Right _ -> True

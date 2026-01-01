@@ -10,6 +10,7 @@
 module Test.Unit.NewTypusCoreQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import TestSupport.Arbitrary
@@ -23,11 +24,11 @@ import Utils (trim, splitBy)
 prop_typus_file_path_normalization :: String -> Property
 prop_typus_file_path_normalization path =
   let normalized = trim path
-      hasLeadingSlash = not (null path) && head path == '/'
+      hasLeadingSlash = not (null path) && L.head path == '/'
       hasTrailingSlash = not (null path) && last path == '/'
   in classify hasLeadingSlash "has leading slash" $
      classify hasTrailingSlash "has trailing slash" $
-     property $ not (null normalized) ==> (head normalized /= '/' && last normalized /= '/')
+     property $ not (null normalized) ==> (L.head normalized /= '/' && last normalized /= '/')
 
 -- Property: Code block directive parsing consistency
 prop_code_block_directive_consistency :: String -> Bool -> Property

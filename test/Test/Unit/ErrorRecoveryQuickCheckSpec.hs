@@ -24,30 +24,12 @@ import Compiler.Errors.Core
   , emptyContext
   , canRecoverFrom
   , shouldContinueAfter
-  , errorAt
-  , warningAt
-  , infoAt
-  , errorWithSuggestions
-  , withLocation
-  , withContext
-  , withSuggestions
-  , withRelatedErrors
-  , formatError
-  , formatErrorWithLocation
-  , hasCategory
-  , filterBySeverity
-  , filterByCategory
-  , getErrorStatistics
-  , generateErrorReport
-  , createRecoveryStrategy
-  , fatalRecovery
-  , errorRecovery
-  , warningRecovery
-  , infoRecovery
   , customRecovery
   )
 import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (sort)
 import Data.Char (isSpace, isDigit)
 
 -- Property: Error recovery strategies are consistent
@@ -62,7 +44,7 @@ prop_fatal_error_no_recovery :: String -> Property
 prop_fatal_error_no_recovery errorMsg =
   not (null errorMsg) ==>
   let location = ErrorLocation Nothing 1 1 Nothing Nothing
-      fatalError = errorAt "FATAL" (T.pack errorMsg) location { severity = Fatal }
+      fatalError = errorAt "test-id" (T.pack errorMsg) location { severity = Fatal }
   in property (not (canRecoverFrom fatalError) && not (shouldContinueAfter fatalError))
 
 -- Property: Warning errors can be recovered from
@@ -70,7 +52,7 @@ prop_warning_error_can_recover :: String -> Property
 prop_warning_error_can_recover warningMsg =
   not (null warningMsg) ==>
   let location = ErrorLocation Nothing 1 1 Nothing Nothing
-      warningError = warningAt "WARN" (T.pack warningMsg) location
+      warningError = warningAt "test-id" (T.pack warningMsg) location
   in property (canRecoverFrom warningError && shouldContinueAfter warningError)
 
 -- Property: Info errors can be recovered from
@@ -78,57 +60,57 @@ prop_info_error_can_recover :: String -> Property
 prop_info_error_can_recover infoMsg =
   not (null infoMsg) ==>
   let location = ErrorLocation Nothing 1 1 Nothing Nothing
-      infoError = infoAt "INFO" (T.pack infoMsg) location
+      infoError = infoAt "test-id" (T.pack infoMsg) location
   in property (canRecoverFrom infoError && shouldContinueAfter infoError)
 
 -- Property: Error filtering by severity works correctly
 prop_filter_by_severity :: [ErrorSeverity] -> ErrorSeverity -> Property
 prop_filter_by_severity severities targetSeverity =
   not (null severities) ==>
-  let errors = map (\sev -> errorAt "TEST" (T.pack "test") (ErrorLocation Nothing 1 1 Nothing Nothing) { severity = sev }) severities
+  let errors = L.map (\sev -> errorAt "TEST" (T.pack "test") (ErrorLocation Nothing 1 1 Nothing Nothing) { severity = sev }) severities
       filtered = filterBySeverity targetSeverity errors
-  in property (length filtered === length (filter (\e -> severity e == targetSeverity) errors))
+  in property (L.length filtered === L.length (L.filter (\e -> severity e == targetSeverity) errors))
 
 -- Property: Error filtering by category works correctly
 prop_filter_by_category :: [ErrorCategory] -> ErrorCategory -> Property
 prop_filter_by_category categories targetCategory =
   not (null categories) ==>
-  let errors = map (\cat -> errorWithCategory "TEST" cat (T.pack "test") (ErrorLocation Nothing 1 1 Nothing Nothing)) categories
+  let errors = L.map (\cat -> errorWithCategory "TEST" cat (T.pack "test") (ErrorLocation Nothing 1 1 Nothing Nothing)) categories
       filtered = filterByCategory targetCategory errors
-  in property (length filtered === length (filter (\e -> category e == targetCategory) errors))
+  in property (L.length filtered === L.length (L.filter (\e -> category e == targetCategory) errors))
 
 -- Property: Error statistics are accurate
 prop_error_statistics_accuracy :: [ErrorSeverity] -> [ErrorCategory] -> Property
 prop_error_statistics_accuracy severities categories =
-  not (null severities) && not (null categories) && length severities == length categories ==>
+  not (null severities) && not (null categories) && L.length severities == L.length categories ==>
   let errors = zipWith (\sev cat -> errorAt "TEST" (T.pack "test") (ErrorLocation Nothing 1 1 Nothing Nothing) { severity = sev, category = cat }) severities categories
       stats = getErrorStatistics errors
-  in property (stats "total" === length errors)
+  in property (stats "total" === L.length errors)
 
 -- Property: Error formatting includes essential information
 prop_error_formatting_essentials :: String -> ErrorSeverity -> ErrorCategory -> Property
 prop_error_formatting_essentials errorMsg sev cat =
   not (null errorMsg) ==>
-  let error = errorAt "TEST" (T.pack errorMsg) (ErrorLocation Nothing 1 1 Nothing Nothing) { severity = sev, category = cat }
+  let error = errorAt "test-id" (T.pack errorMsg) (ErrorLocation Nothing 1 1 Nothing Nothing) { severity = sev, category = cat }
       formatted = formatError error
-  in property (errorMsg `isInfixOf` formatted && show sev `isInfixOf` formatted && show cat `isInfixOf` formatted)
+  in property (errorMsg `L.isInfixOf` formatted && show sev `L.isInfixOf` formatted && show cat `L.isInfixOf` formatted)
 
 -- Property: Error formatting with location includes location info
 prop_error_formatting_with_location :: String -> Int -> Int -> Property
 prop_error_formatting_with_location errorMsg line col =
   not (null errorMsg) && line > 0 && col > 0 ==>
   let location = ErrorLocation Nothing line col Nothing Nothing
-      error = errorAt "TEST" (T.pack errorMsg) location
+      error = errorAt "test-id" (T.pack errorMsg) location
       formatted = formatErrorWithLocation error
-  in property (show line `isInfixOf` formatted && show col `isInfixOf` formatted && errorMsg `isInfixOf` formatted)
+  in property (show line `L.isInfixOf` formatted && show col `L.isInfixOf` formatted && errorMsg `L.isInfixOf` formatted)
 
 -- Property: Error suggestions are preserved in formatting
 prop_error_suggestions_preserved :: String -> [String] -> Property
 prop_error_suggestions_preserved errorMsg suggestions =
-  not (null errorMsg) && not (null suggestions) && all (not . null) suggestions ==>
+  not (null errorMsg) && not (null suggestions) && L.all (not . null) suggestions ==>
   let error = errorWithSuggestions "TEST" (T.pack errorMsg) (map T.pack suggestions) (ErrorLocation Nothing 1 1 Nothing Nothing)
       formatted = formatError error
-  in property (all (`isInfixOf` formatted) suggestions)
+  in property (L.all (`L.isInfixOf` formatted) suggestions)
 
 -- Property: Custom recovery strategies work as expected
 prop_custom_recovery_strategy :: Bool -> Bool -> String -> String -> Int -> Float -> Property

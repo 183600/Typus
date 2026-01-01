@@ -12,6 +12,7 @@ import SourceLocation (SourcePos(..), SourceSpan(..), startPos)
 import SyntaxValidator (validateSyntax, SyntaxError(..))
 import Utils (trim, splitBy, removeComments, normalizeIndentation)
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import Data.Either (isLeft, isRight)
 
@@ -65,8 +66,8 @@ genTypusFileContent = do
   blocks <- listOf $ do
     blockDirective <- oneof [return "", genBlockDirective]
     code <- genSimpleTypusCode
-    return $ unlines $ filter (not . null) [blockDirective, code]
-  return $ unlines $ filter (not . null) $ [fileDirective] ++ buildTags ++ blocks
+    return $ unlines $ L.filter (not . null) [blockDirective, code]
+  return $ unlines $ L.filter (not . null) $ [fileDirective] ++ buildTags ++ blocks
 
 -- Generate invalid Typus code
 genInvalidTypusCode :: Gen String
@@ -140,14 +141,14 @@ prop_parseCompilePipeline content =
               Left _ -> property True  -- May fail compilation
               Right goCode -> not (null goCode)  -- Should generate Go code
 
--- Property: Syntax validation and parsing are consistent
+-- Property: Syntax validation L.and parsing are consistent
 prop_syntaxValidationParsingConsistent :: String -> Bool
 prop_syntaxValidationParsingConsistent content =
   let syntaxErrors = validateSyntax content
       parseResult = parseTypus content
   in case (syntaxErrors, parseResult) of
        ([], Right _) -> True  -- No syntax errors, should parse successfully
-       (_, _) -> True  -- May have syntax errors and still parse (parser is tolerant)
+       (_, _) -> True  -- May have syntax errors L.and still parse (parser is tolerant)
 
 -- Property: Utils operations preserve content integrity
 prop_utilsPreserveIntegrity :: String -> Bool
@@ -156,9 +157,9 @@ prop_utilsPreserveIntegrity content =
       split = splitBy '\n' content
       commentsRemoved = removeComments content
       normalized = normalizeIndentation content
-  in length trimmed <= length content &&
-     length split >= 1 &&
-     length commentsRemoved <= length content
+  in L.length trimmed <= L.length content &&
+     L.length split >= 1 &&
+     L.length commentsRemoved <= L.length content
 
 -- Property: Error handling preserves context
 prop_errorHandlingPreservesContext :: String -> Property
@@ -175,7 +176,7 @@ prop_errorHandlingPreservesContext content =
 -- Property: File directives are preserved through pipeline
 prop_fileDirectivesPreserved :: String -> Property
 prop_fileDirectivesPreserved content =
-  "//!" `isInfixOf` content ==>
+  "//!" `L.isInfixOf` content ==>
   let parseResult = parseTypus content
   in case parseResult of
        Left _ -> property True
@@ -186,7 +187,7 @@ prop_fileDirectivesPreserved content =
 -- Property: Build tags are preserved through pipeline
 prop_buildTagsPreserved :: String -> Property
 prop_buildTagsPreserved content =
-  "// +build" `isInfixOf` content ==>
+  "// +build" `L.isInfixOf` content ==>
   let parseResult = parseTypus content
   in case parseResult of
        Left _ -> property True
@@ -197,7 +198,7 @@ prop_buildTagsPreserved content =
 -- Property: Code blocks are preserved through pipeline
 prop_codeBlocksPreserved :: String -> Property
 prop_codeBlocksPreserved content =
-  not (null (trim content)) ==>
+  not (L.null (trim content)) ==>
   let parseResult = parseTypus content
   in case parseResult of
        Left _ -> property True
@@ -208,7 +209,7 @@ prop_codeBlocksPreserved content =
 -- Property: Ownership scenarios are handled correctly
 prop_ownershipScenariosHandled :: String -> Property
 prop_ownershipScenariosHandled content =
-  "ownership" `isInfixOf` content ==>
+  "ownership" `L.isInfixOf` content ==>
   let parseResult = parseTypus content
   in case parseResult of
        Left _ -> property True
@@ -221,7 +222,7 @@ prop_ownershipScenariosHandled content =
 -- Property: Dependent types scenarios are handled correctly
 prop_dependentTypesScenariosHandled :: String -> Property
 prop_dependentTypesScenariosHandled content =
-  "dependent-types" `isInfixOf` content ==>
+  "dependent-types" `L.isInfixOf` content ==>
   let parseResult = parseTypus content
   in case parseResult of
        Left _ -> property True
@@ -234,7 +235,7 @@ prop_dependentTypesScenariosHandled content =
 -- Property: Error recovery scenarios are handled correctly
 prop_errorRecoveryScenariosHandled :: String -> Property
 prop_errorRecoveryScenariosHandled content =
-  "errorRecovery" `isInfixOf` content ==>
+  "errorRecovery" `L.isInfixOf` content ==>
   let parseResult = parseTypus content
   in case parseResult of
        Left _ -> property True
@@ -255,7 +256,7 @@ prop_endToEndIntegration content =
                                            Left errors -> Left $ map show errors
                                            Right goCode -> Right goCode
   in case compileResult of
-       Left _ -> True  -- May fail at any stage
+       Left _ -> True  -- May fail at L.any stage
        Right goCode -> not (null goCode)  -- Success should produce output
 
 -- ============================================================================
@@ -266,7 +267,7 @@ tests :: TestTree
 tests = testGroup "Integration Advanced QuickCheck Tests"
   [ testGroup "Pipeline Properties"
     [ testProperty "Parse-compile pipeline preserves structure" prop_parseCompilePipeline
-    , testProperty "Syntax validation and parsing are consistent" prop_syntaxValidationParsingConsistent
+    , testProperty "Syntax validation L.and parsing are consistent" prop_syntaxValidationParsingConsistent
     , testProperty "Utils operations preserve content integrity" prop_utilsPreserveIntegrity
     , testProperty "Error handling preserves context" prop_errorHandlingPreservesContext
     ]
@@ -341,7 +342,7 @@ tests = testGroup "Integration Advanced QuickCheck Tests"
               [ "//! dependent-types: true"
               , "func vectorOps() {"
               , "    vec: Vector<n> where n > 0"
-              , "    return vec.length"
+              , "    return vec.L.length"
               , "}"
               ]
         let parseResult = parseTypus dependentTypesCode
@@ -366,7 +367,7 @@ tests = testGroup "Integration Advanced QuickCheck Tests"
         let trimmed = trim content
         let normalized = normalizeIndentation content
         let commentsRemoved = removeComments content
-        assertBool "Trim should reduce length" $ length trimmed <= length content
+        assertBool "Trim should reduce L.length" $ L.length trimmed <= L.length content
         assertBool "Normalize should preserve structure" $ not (null normalized)
         assertBool "Remove comments should work" $ not (null commentsRemoved)
 
@@ -421,7 +422,7 @@ tests = testGroup "Integration Advanced QuickCheck Tests"
         let emptyContent = ""
         let syntaxErrors = validateSyntax emptyContent
         let parseResult = parseTypus emptyContent
-        length syntaxErrors @?= 0
+        L.length syntaxErrors @?= 0
         case parseResult of
           Left _ -> assertBool "Should parse empty content" False
           Right typusFile -> do

@@ -4,6 +4,7 @@
 module Test.Unit.ConciseCabalQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import Data.Char (isLower, isUpper, toLower, toUpper)
@@ -37,5 +38,5 @@ functorProperties = testGroup "Functor Properties"
   , fastProperty "fmap composition for Maybe" $ \(m :: Maybe Int) ->
       let f = (+1)
           g = (*2)
-      in fmap (f . g) m === (fmap f . fmap g) m
+      in fL.map (f . g) m === (fmap f . fmap g) m
   ]

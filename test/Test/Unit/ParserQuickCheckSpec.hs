@@ -32,7 +32,9 @@ import SourceLocation
   , startPos
   )
 
-import Data.List (isPrefixOf, isInfixOf, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort)
 import Data.Char (isSpace)
 
 -- Property: defaultFileDirectives has correct default values
@@ -56,36 +58,36 @@ prop_parseTypus_empty_input =
   in case result of
     Left _ -> property False
     Right typusFile -> tfDirectives typusFile === defaultFileDirectives &&
-                       null (tfBuildTags typusFile) &&
-                       null (tfBlocks typusFile)
+                       L.null (tfBuildTags typusFile) &&
+                       L.null (tfBlocks typusFile)
 
 -- Property: parseTypus handles whitespace-only input
 prop_parseTypus_whitespace_only :: String -> Property
 prop_parseTypus_whitespace_only whitespace =
-  all isSpace whitespace ==> 
+  L.all isSpace whitespace ==> 
   let result = parseTypus whitespace
   in case result of
     Left _ -> property False
     Right typusFile -> tfDirectives typusFile === defaultFileDirectives &&
-                       null (tfBuildTags typusFile) &&
-                       null (tfBlocks typusFile)
+                       L.null (tfBuildTags typusFile) &&
+                       L.null (tfBlocks typusFile)
 
 -- Property: parseTypus handles simple content without directives
 prop_parseTypus_simple_content :: String -> Property
 prop_parseTypus_simple_content content =
-  not (null content) && not ("//!" `isInfixOf` content) && 
-  not ("{//!" `isInfixOf` content) && not ("package " `isInfixOf` content) ==>
+  not (null content) && not ("//!" `L.isInfixOf` content) && 
+  not ("{//!" `L.isInfixOf` content) && not ("package " `L.isInfixOf` content) ==>
   let result = parseTypus content
   in case result of
     Left _ -> property False
     Right typusFile -> tfDirectives typusFile === defaultFileDirectives &&
-                       null (tfBuildTags typusFile) &&
-                       length (tfBlocks typusFile) >= 1
+                       L.null (tfBuildTags typusFile) &&
+                       L.length (tfBlocks typusFile) >= 1
 
 -- Property: parseTypus handles file directives correctly
 prop_parseTypus_file_directives :: String -> Property
 prop_parseTypus_file_directives directiveValue =
-  not (null directiveValue) && not ("//!" `isInfixOf` directiveValue) ==>
+  not (null directiveValue) && not ("//!" `L.isInfixOf` directiveValue) ==>
   let content = "//! ownership: " ++ directiveValue ++ "\npackage main\nfunc main() {}"
       result = parseTypus content
   in case result of
@@ -97,12 +99,12 @@ prop_parseTypus_file_directives directiveValue =
 -- Property: parseTypus handles block directives correctly
 prop_parseTypus_block_directives :: String -> Property
 prop_parseTypus_block_directives blockContent =
-  not (null blockContent) && not ("{//!" `isInfixOf` blockContent) ==>
+  not (null blockContent) && not ("{//!" `L.isInfixOf` blockContent) ==>
   let content = "package main\n{//! ownership: on}\n" ++ blockContent ++ "\n"
       result = parseTypus content
   in case result of
     Left _ -> property False
-    Right typusFile -> length (tfBlocks typusFile) >= 1
+    Right typusFile -> L.length (tfBlocks typusFile) >= 1
 
 -- Property: parseTypus handles multiple blocks
 prop_parseTypus_multiple_blocks :: String -> String -> Property
@@ -114,17 +116,17 @@ prop_parseTypus_multiple_blocks content1 content2 =
       result = parseTypus fullContent
   in case result of
     Left _ -> property False
-    Right typusFile -> length (tfBlocks typusFile) >= 2
+    Right typusFile -> L.length (tfBlocks typusFile) >= 2
 
 -- Property: parseTypus handles build tags
 prop_parseTypus_build_tags :: String -> Property
 prop_parseTypus_build_tags tagValue =
-  not (null tagValue) && not ("//go:build" `isInfixOf` tagValue) ==>
+  not (null tagValue) && not ("//go:build" `L.isInfixOf` tagValue) ==>
   let content = "//go:build " ++ tagValue ++ "\npackage main\nfunc main() {}"
       result = parseTypus content
   in case result of
     Left _ -> property False
-    Right typusFile -> length (tfBuildTags typusFile) >= 1
+    Right typusFile -> L.length (tfBuildTags typusFile) >= 1
 
 -- Property: parseTypus handles multiple build tags
 prop_parseTypus_multiple_build_tags :: String -> String -> Property
@@ -134,17 +136,17 @@ prop_parseTypus_multiple_build_tags tag1 tag2 =
       result = parseTypus content
   in case result of
     Left _ -> property False
-    Right typusFile -> length (tfBuildTags typusFile) >= 2
+    Right typusFile -> L.length (tfBuildTags typusFile) >= 2
 
 -- Property: parseTypus handles package declarations
 prop_parseTypus_package_declaration :: String -> Property
 prop_parseTypus_package_declaration packageName =
-  not (null packageName) && not ("package " `isInfixOf` packageName) ==>
+  not (null packageName) && not ("package " `L.isInfixOf` packageName) ==>
   let content = "package " ++ packageName ++ "\nfunc main() {}"
       result = parseTypus content
   in case result of
     Left _ -> property False
-    Right typusFile -> length (tfBlocks typusFile) >= 1
+    Right typusFile -> L.length (tfBlocks typusFile) >= 1
 
 -- Property: parseTypus detects multiple package declarations
 prop_parseTypus_multiple_package_declarations :: String -> String -> Property
@@ -153,23 +155,23 @@ prop_parseTypus_multiple_package_declarations pkg1 pkg2 =
   let content = "package " ++ pkg1 ++ "\npackage " ++ pkg2 ++ "\nfunc main() {}"
       result = parseTypus content
   in case result of
-    Left errMsg -> "Multiple package" `isInfixOf` errMsg
+    Left errMsg -> "Multiple package" `L.isInfixOf` errMsg
     Right _ -> property False
 
 -- Property: parseTypus handles nested block directives
 prop_parseTypus_nested_blocks :: String -> Property
 prop_parseTypus_nested_blocks innerContent =
-  not (null innerContent) && not ("{//!" `isInfixOf` innerContent) ==>
+  not (null innerContent) && not ("{//!" `L.isInfixOf` innerContent) ==>
   let content = "package main\n{//! ownership: on}\nfunc outer() {\n  {//! dependent_types: off}\n  " ++ innerContent ++ "\n}\n"
       result = parseTypus content
   in case result of
     Left _ -> property False
-    Right typusFile -> length (tfBlocks typusFile) >= 2
+    Right typusFile -> L.length (tfBlocks typusFile) >= 2
 
 -- Property: parseTypus handles malformed directives gracefully
 prop_parseTypus_malformed_directives :: String -> Property
 prop_parseTypus_malformed_directives badDirective =
-  not ("//!" `isInfixOf` badDirective) && not ("{//!" `isInfixOf` badDirective) ==>
+  not ("//!" `L.isInfixOf` badDirective) && not ("{//!" `L.isInfixOf` badDirective) ==>
   let content = "//! " ++ badDirective ++ "\npackage main\nfunc main() {}"
       result = parseTypus content
   in case result of
@@ -179,14 +181,14 @@ prop_parseTypus_malformed_directives badDirective =
 -- Property: parseTypus preserves content order
 prop_parseTypus_preserves_order :: [String] -> Property
 prop_parseTypus_preserves_order contents =
-  not (null contents) && length contents <= 5 ==>
+  not (null contents) && L.length contents <= 5 ==>
   let numberedContent = unlines $ zipWith (\i content -> show i ++ ": " ++ content) [1..] contents
       result = parseTypus numberedContent
   in case result of
     Left _ -> property False
     Right typusFile -> case tfBlocks typusFile of
       [] -> property False
-      (block:_) -> any (`isInfixOf` cbContent block) (map show [1..length contents])
+      (block:_) -> L.any (`L.isInfixOf` cbContent block) (map show [1..L.length contents])
 
 -- Property: parseTypus handles mixed directive types
 prop_parseTypus_mixed_directives :: String -> String -> String -> Property
@@ -196,18 +198,18 @@ prop_parseTypus_mixed_directives fileDirective blockDirective content =
       result = parseTypus fullContent
   in case result of
     Left _ -> property False
-    Right typusFile -> length (tfBuildTags typusFile) >= 1 &&
-                       length (tfBlocks typusFile) >= 1
+    Right typusFile -> L.length (tfBuildTags typusFile) >= 1 &&
+                       L.length (tfBlocks typusFile) >= 1
 
 -- Property: parseTypus handles large files
 prop_parseTypus_large_files :: Int -> String -> Property
 prop_parseTypus_large_files multiplier baseContent =
   multiplier > 0 && multiplier <= 100 ==> 
-  let largeContent = concat $ replicate multiplier (baseContent ++ "\n")
+  let largeContent = L.concat $ replicate multiplier (baseContent ++ "\n")
       result = parseTypus largeContent
   in case result of
     Left _ -> property False
-    Right typusFile -> length (tfBlocks typusFile) >= 1
+    Right typusFile -> L.length (tfBlocks typusFile) >= 1
 
 -- Property: parseTypus handles Unicode content
 prop_parseTypus_unicode_content :: String -> Property
@@ -216,7 +218,7 @@ prop_parseTypus_unicode_content unicodeContent =
       result = parseTypus content
   in case result of
     Left _ -> property False
-    Right typusFile -> length (tfBlocks typusFile) >= 1
+    Right typusFile -> L.length (tfBlocks typusFile) >= 1
 
 -- Property: parseTypus handles escaped braces in strings
 prop_parseTypus_escaped_braces :: String -> Property
@@ -226,17 +228,17 @@ prop_parseTypus_escaped_braces stringContent =
       result = parseTypus content
   in case result of
     Left _ -> property False
-    Right typusFile -> length (tfBlocks typusFile) >= 1
+    Right typusFile -> L.length (tfBlocks typusFile) >= 1
 
 -- Property: parseTypus handles comments with braces
 prop_parseTypus_comment_braces :: String -> Property
 prop_parseTypus_comment_braces commentContent =
   not (null commentContent) ==>
-  let content = "package main\nfunc main() {\n  // Comment with {braces} and " ++ commentContent ++ "\n}\n"
+  let content = "package main\nfunc main() {\n  // Comment with {braces} L.and " ++ commentContent ++ "\n}\n"
       result = parseTypus content
   in case result of
     Left _ -> property False
-    Right typusFile -> length (tfBlocks typusFile) >= 1
+    Right typusFile -> L.length (tfBlocks typusFile) >= 1
 
 -- Property: parseTypus handles function parameters
 prop_parseTypus_function_parameters :: String -> Property
@@ -246,7 +248,7 @@ prop_parseTypus_function_parameters paramList =
       result = parseTypus content
   in case result of
     Left _ -> property False
-    Right typusFile -> length (tfBlocks typusFile) >= 1
+    Right typusFile -> L.length (tfBlocks typusFile) >= 1
 
 -- Property: parseTypus handles complex Go structures
 prop_parseTypus_complex_structures :: String -> String -> Property
@@ -256,14 +258,14 @@ prop_parseTypus_complex_structures structName structBody =
       result = parseTypus content
   in case result of
     Left _ -> property False
-    Right typusFile -> length (tfBlocks typusFile) >= 1
+    Right typusFile -> L.length (tfBlocks typusFile) >= 1
 
 -- Property: FileDirectives equality
 prop_fileDirectives_equality :: Maybe Bool -> Maybe Bool -> Maybe Bool -> Property
 prop_fileDirectives_equality ownership dependentTypes constraints =
   let fd1 = FileDirectives ownership dependentTypes constraints
       fd2 = FileDirectives ownership dependentTypes constraints
-      fd3 = FileDirectives (fmap (fmap not) ownership) dependentTypes constraints
+      fd3 = FileDirectives (fL.map (fmap not) ownership) dependentTypes constraints
   in fd1 === fd2 .&&. 
      (if isJust ownership then fd1 /= fd3 else property True)
 
@@ -272,7 +274,7 @@ prop_blockDirectives_equality :: Maybe Bool -> Maybe Bool -> Maybe Bool -> Prope
 prop_blockDirectives_equality ownership dependentTypes constraints =
   let bd1 = BlockDirectives ownership dependentTypes constraints
       bd2 = BlockDirectives ownership dependentTypes constraints
-      bd3 = BlockDirectives (fmap (fmap not) ownership) dependentTypes constraints
+      bd3 = BlockDirectives (fL.map (fmap not) ownership) dependentTypes constraints
   in bd1 === bd2 .&&. 
      (if isJust ownership then bd1 /= bd3 else property True)
 

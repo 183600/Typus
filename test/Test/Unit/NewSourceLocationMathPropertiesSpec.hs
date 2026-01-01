@@ -3,6 +3,7 @@
 module Test.Unit.NewSourceLocationMathPropertiesSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck as QC
 import SourceLocation
@@ -27,7 +28,7 @@ import Data.Char (isSpace)
 -- SourceLocation Module QuickCheck Property Tests
 -- ============================================================================
 
--- | Test that startPos has line and column 1
+-- | Test that startPos has line L.and column 1
 prop_startPos_properties :: Bool
 prop_startPos_properties = 
     let pos = startPos
@@ -46,7 +47,7 @@ prop_posAfter_advances_line_for_newline pos =
     let newPos = posAfter '\n' pos
     in sourceLine newPos == sourceLine pos + 1
 
--- | Test that posAt creates position with correct line and column
+-- | Test that posAt creates position with correct line L.and column
 prop_posAt_correct_line_column :: Int -> Int -> Bool
 prop_posAt_correct_line_column line col = 
     let pos = posAt line col
@@ -57,7 +58,7 @@ prop_posAtLineCol_equals_posAt :: Int -> Int -> Bool
 prop_posAtLineCol_equals_posAt line col = 
     posAtLineCol line col == posAt line col
 
--- | Test that emptySpan has same start and end at startPos
+-- | Test that emptySpan has same start L.and end at startPos
 prop_emptySpan_properties :: Bool
 prop_emptySpan_properties = 
     let span = emptySpan
@@ -75,7 +76,7 @@ prop_spanTo_correct_end end =
     let span = spanTo end
     in spanEnd span == end
 
--- | Test that spanBetween creates span with correct start and end
+-- | Test that spanBetween creates span with correct start L.and end
 prop_spanBetween_correct_bounds :: SourcePos -> SourcePos -> Bool
 prop_spanBetween_correct_bounds start end = 
     let span = spanBetween start end
@@ -98,7 +99,7 @@ prop_advancePos_single_char c pos =
 -- | Test that advancePosBy advances position correctly for multiple characters
 prop_advancePosBy_multiple_chars :: String -> SourcePos -> Bool
 prop_advancePosBy_multiple_chars s pos = 
-    advancePosBy s (length s) pos == advancePos s pos
+    advancePosBy s (L.length s) pos == advancePos s pos
 
 -- | Test that isValidSpan correctly identifies valid spans
 prop_isValidSpan_start_before_end :: SourcePos -> Bool
@@ -130,15 +131,15 @@ prop_advancePos_newline pos =
 
 testSuite :: TestTree
 testSuite = testGroup "SourceLocation Math Properties QuickCheck Tests"
-  [ QC.testProperty "startPos has line and column 1" prop_startPos_properties
+  [ QC.testProperty "startPos has line L.and column 1" prop_startPos_properties
   , QC.testProperty "posAfter advances column by 1 for normal characters" prop_posAfter_advances_column
   , QC.testProperty "posAfter advances line by 1 for newline" prop_posAfter_advances_line_for_newline
-  , QC.testProperty "posAt creates position with correct line and column" prop_posAt_correct_line_column
+  , QC.testProperty "posAt creates position with correct line L.and column" prop_posAt_correct_line_column
   , QC.testProperty "posAtLineCol equals posAt" prop_posAtLineCol_equals_posAt
-  , QC.testProperty "emptySpan has same start and end at startPos" prop_emptySpan_properties
+  , QC.testProperty "emptySpan has same start L.and end at startPos" prop_emptySpan_properties
   , QC.testProperty "spanFrom creates span with correct start" prop_spanFrom_correct_start
   , QC.testProperty "spanTo creates span with correct end" prop_spanTo_correct_end
-  , QC.testProperty "spanBetween creates span with correct start and end" prop_spanBetween_correct_bounds
+  , QC.testProperty "spanBetween creates span with correct start L.and end" prop_spanBetween_correct_bounds
   , QC.testProperty "mergeSpans contains both original spans" prop_mergeSpans_contains_originals
   , QC.testProperty "advancePos advances position correctly for single character" prop_advancePos_single_char
   , QC.testProperty "advancePosBy advances position correctly for multiple characters" prop_advancePosBy_multiple_chars

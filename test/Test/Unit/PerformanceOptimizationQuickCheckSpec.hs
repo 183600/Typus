@@ -21,7 +21,9 @@ import Compiler.Optimizations (optimizeIR, PerformanceMetrics(..))
 import Utils (trim)
 
 import Data.Char (isLetter, isDigit)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (sort, nub)
 import qualified Data.List as List
 import qualified Data.Map as Map
 
@@ -57,7 +59,7 @@ prop_performance_optimization_memory allocationCount =
   let source = unlines 
         [ "package main"
         , "func main() {"
-        ] ++ map (\i -> "   ptr" ++ show i ++ " := new(int)") [1..allocationCount] ++
+        ] ++ L.map (\i -> "   ptr" ++ show i ++ " := new(int)") [1..allocationCount] ++
         [ "}"
         ]
   in case parseTypus source of
@@ -74,8 +76,8 @@ prop_performance_optimization_memory allocationCount =
 prop_performance_optimization_loops :: Int -> Property
 prop_performance_optimization_loops loopDepth =
   loopDepth >= 1 && loopDepth <= 3 ==> -- Reasonable loop depth
-  let nestedLoops = unlines $ map (\d -> replicate d ' ' ++ "for j := 0; j < 10; j++ {") [1..loopDepth]
-      loopEnds = unlines $ map (\d -> replicate d ' ' ++ "}") [loopDepth, loopDepth-1..1]
+  let nestedLoops = unlines $ L.map (\d -> replicate d ' ' ++ "for j := 0; j < 10; j++ {") [1..loopDepth]
+      loopEnds = unlines $ L.map (\d -> replicate d ' ' ++ "}") [loopDepth, loopDepth-1..1]
       source = unlines 
         [ "package main"
         , "func main() {"
@@ -99,12 +101,12 @@ prop_performance_optimization_loops loopDepth =
 -- Property: Performance optimization should handle function inlining
 prop_performance_optimization_inlining :: [String] -> Property
 prop_performance_optimization_inlining functionNames =
-  not (null functionNames) && length (take 3 functionNames) <= 3 &&
-  all (\f -> not (null f) && all isLetter f) (take 3 functionNames) ==>
+  not (null functionNames) && L.length (take 3 functionNames) <= 3 &&
+  L.all (\f -> not (null f) && L.all isLetter f) (take 3 functionNames) ==>
   let limitedFuncs = take 3 functionNames
-      funcDefs = map (\f -> 
+      funcDefs = L.map (\f -> 
         "func " ++ f ++ "() int { return 42 }") limitedFuncs
-      funcCalls = map (\f -> "   _ = " ++ f ++ "()") limitedFuncs
+      funcCalls = L.map (\f -> "   _ = " ++ f ++ "()") limitedFuncs
       source = unlines $ 
         [ "package main"
         ] ++ funcDefs ++
@@ -125,7 +127,7 @@ prop_performance_optimization_inlining functionNames =
 -- Property: Performance optimization should handle dead code elimination
 prop_performance_optimization_dead_code :: String -> Property
 prop_performance_optimization_dead_code unreachableCode =
-  length unreachableCode <= 50 ==> -- Limit size
+  L.length unreachableCode <= 50 ==> -- Limit size
   let source = unlines 
         [ "package main"
         , "func main() {"
@@ -165,7 +167,7 @@ prop_performance_optimization_constant_folding x y =
 -- Property: Performance optimization should handle common subexpression elimination
 prop_performance_optimization_cse :: String -> Property
 prop_performance_optimization_cse expression =
-  length expression <= 40 ==> -- Limit size
+  L.length expression <= 40 ==> -- Limit size
   let source = unlines 
         [ "package main"
         , "func main() {"
@@ -226,7 +228,7 @@ prop_performance_optimization_unrolling iterations =
                Left _ -> property $ True
                Right optimized -> property $ True
 
--- Property: Performance optimization should handle tail recursion optimization
+-- Property: Performance optimization should handle L.tail recursion optimization
 prop_performance_optimization_tail_recursion :: Int -> Property
 prop_performance_optimization_tail_recursion depth =
   depth >= 0 && depth <= 5 ==> -- Reasonable recursion depth
@@ -255,10 +257,10 @@ prop_performance_optimization_tail_recursion depth =
 -- Property: Performance optimization should handle register allocation
 prop_performance_optimization_registers :: [String] -> Property
 prop_performance_optimization_registers variableNames =
-  not (null variableNames) && length (take 6 variableNames) <= 6 &&
-  all (\v -> not (null v) && all isLetter v) (take 6 variableNames) ==>
+  not (null variableNames) && L.length (take 6 variableNames) <= 6 &&
+  L.all (\v -> not (null v) && L.all isLetter v) (take 6 variableNames) ==>
   let limitedVars = take 6 variableNames
-      varDecls = map (\v -> "   " ++ v ++ " := 0") limitedVars
+      varDecls = L.map (\v -> "   " ++ v ++ " := 0") limitedVars
       source = unlines $ 
         [ "package main"
         , "func main() {"
@@ -326,7 +328,7 @@ prop_performance_optimization_cache arraySize =
 -- Property: Performance optimization should handle branch prediction
 prop_performance_optimization_branches :: String -> Property
 prop_performance_optimization_branches condition =
-  length condition <= 30 ==> -- Limit size
+  L.length condition <= 30 ==> -- Limit size
   let source = unlines 
         [ "package main"
         , "func main() {"
@@ -352,7 +354,7 @@ prop_performance_optimization_branches condition =
 -- Property: Performance optimization should handle vectorization
 prop_performance_optimization_vectorization :: Int -> Property
 prop_performance_optimization_vectorization vectorLength =
-  vectorLength >= 1 && vectorLength <= 16 ==> -- Reasonable vector length
+  vectorLength >= 1 && vectorLength <= 16 ==> -- Reasonable vector L.length
   let source = unlines 
         [ "package main"
         , "func main() {"
@@ -375,7 +377,7 @@ prop_performance_optimization_vectorization vectorLength =
 -- Property: Performance optimization should be consistent
 prop_performance_optimization_consistency :: String -> Property
 prop_performance_optimization_consistency source =
-  length source <= 100 ==> -- Limit size
+  L.length source <= 100 ==> -- Limit size
   case parseTypus source of
     Left _ -> property $ True
     Right parseResult -> 
@@ -393,7 +395,7 @@ prop_performance_optimization_consistency source =
 prop_performance_optimization_large_functions :: Int -> Property
 prop_performance_optimization_large_functions statementCount =
   statementCount >= 1 && statementCount <= 50 ==> -- Reasonable statement count
-  let statements = map (\i -> "   x" ++ show i ++ " := " ++ show i) [1..statementCount]
+  let statements = L.map (\i -> "   x" ++ show i ++ " := " ++ show i) [1..statementCount]
       source = unlines $ 
         [ "package main"
         , "func main() {"
@@ -467,7 +469,7 @@ tests = testGroup "Performance Optimization QuickCheck Tests"
   , fastProperty "Performance optimization CSE" prop_performance_optimization_cse
   , fastProperty "Performance optimization strength" prop_performance_optimization_strength
   , fastProperty "Performance optimization unrolling" prop_performance_optimization_unrolling
-  , fastProperty "Performance optimization tail recursion" prop_performance_optimization_tail_recursion
+  , fastProperty "Performance optimization L.tail recursion" prop_performance_optimization_tail_recursion
   , fastProperty "Performance optimization registers" prop_performance_optimization_registers
   , fastProperty "Performance optimization scheduling" prop_performance_optimization_scheduling
   , fastProperty "Performance optimization cache" prop_performance_optimization_cache

@@ -4,6 +4,7 @@
 module Test.Unit.CompilerGoLexerQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
@@ -46,7 +47,7 @@ lexerTokenTests = testGroup "Lexer Token Tests"
   
   , fastProperty "Token count matches lexemes" $
       \input -> let tokens = lexGo input
-                in length tokens >= 0
+                in L.length tokens >= 0
   ]
 
 -- | 2. 关键字测试
@@ -99,7 +100,7 @@ lexerIdentifierTests = testGroup "Lexer Identifier Tests"
            _ -> "Expected single token" @?= "Got different number"
   
   , fastProperty "Valid identifier characters" $
-      \ident -> all isValidIdentifierChar ident && not (null ident) ==> 
+      \ident -> L.all isValidIdentifierChar ident && not (null ident) ==> 
         let tokens = lexGo ident
         in case tokens of
              [token] -> tokenType token == IdentifierToken
@@ -192,19 +193,19 @@ lexerWhitespaceTests :: TestTree
 lexerWhitespaceTests = testGroup "Lexer Whitespace Tests"
   [ testCase "Space handling" =
       let tokens = lexGo "x y"
-      in length tokens @?= 2
+      in L.length tokens @?= 2
   
   , testCase "Tab handling" =
       let tokens = lexGo "x\ty"
-      in length tokens @?= 2
+      in L.length tokens @?= 2
   
   , testCase "Newline handling" =
       let tokens = lexGo "x\ny"
-      in length tokens @?= 2
+      in L.length tokens @?= 2
   
   , fastProperty "Whitespace separation" =
       \s1 s2 -> let tokens = lexGo (s1 ++ " " ++ s2)
-                in length tokens >= 2
+                in L.length tokens >= 2
   ]
 
 -- | 8. 字符串测试
@@ -287,5 +288,5 @@ lexerErrorTests = testGroup "Lexer Error Tests"
   
   , fastProperty "Error token generation" =
       \invalidInput -> let tokens = lexGo invalidInput
-                       in any (\t -> tokenType t == ErrorToken) tokens || null tokens
+                       in L.any (\t -> tokenType t == ErrorToken) tokens || null tokens
   ]

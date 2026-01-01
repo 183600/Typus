@@ -16,13 +16,14 @@ import Compiler.IR
   , emitGo, rawSourceFromTypus, moduleFromTypus
   )
 import Compiler.GoAst (GoModule(..))
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import Data.Char (isSpace)
 
 -- | Test compilation idempotence
 prop_compile_idempotent :: String -> Property
 prop_compile_idempotent code =
-    length code > 0 && not ("var x int = \"string\"" `isInfixOf` code) ==>
+    L.length code > 0 && not ("var x int = \"string\"" `L.isInfixOf` code) ==>
     case parseTypus code of
       Left _ -> property True  -- Parse errors are expected for invalid code
       Right typusFile ->
@@ -36,7 +37,7 @@ prop_compile_idempotent code =
 -- | Test Go code generation idempotence
 prop_go_generation_idempotent :: String -> Property
 prop_go_generation_idempotent code =
-    length code > 0 ==>
+    L.length code > 0 ==>
     case parseTypus code of
       Left _ -> property True
       Right typusFile ->
@@ -47,7 +48,7 @@ prop_go_generation_idempotent code =
 -- | Test SourceIR building idempotence
 prop_source_ir_idempotent :: String -> Property
 prop_source_ir_idempotent code =
-    length code > 0 ==>
+    L.length code > 0 ==>
     case parseTypus code of
       Left _ -> property True
       Right typusFile ->
@@ -58,7 +59,7 @@ prop_source_ir_idempotent code =
 -- | Test SemanticIR building idempotence
 prop_semantic_ir_idempotent :: String -> Property
 prop_semantic_ir_idempotent code =
-    length code > 0 && not ("var x int = \"string\"" `isInfixOf` code) ==>
+    L.length code > 0 && not ("var x int = \"string\"" `L.isInfixOf` code) ==>
     case parseTypus code of
       Left _ -> property True
       Right typusFile ->
@@ -73,7 +74,7 @@ prop_semantic_ir_idempotent code =
 -- | Test GoIR emission idempotence
 prop_go_ir_emission_idempotent :: String -> Property
 prop_go_ir_emission_idempotent code =
-    length code > 0 && not ("var x int = \"string\"" `isInfixOf` code) ==>
+    L.length code > 0 && not ("var x int = \"string\"" `L.isInfixOf` code) ==>
     case parseTypus code of
       Left _ -> property True
       Right typusFile ->
@@ -88,7 +89,7 @@ prop_go_ir_emission_idempotent code =
 -- | Test raw source extraction consistency
 prop_raw_source_consistency :: String -> Property
 prop_raw_source_consistency code =
-    length code > 0 ==>
+    L.length code > 0 ==>
     case parseTypus code of
       Left _ -> property True
       Right typusFile ->
@@ -99,7 +100,7 @@ prop_raw_source_consistency code =
 -- | Test module parsing idempotence
 prop_module_parsing_idempotent :: String -> Property
 prop_module_parsing_idempotent code =
-    length code > 0 ==>
+    L.length code > 0 ==>
     case parseTypus code of
       Left _ -> property True
       Right typusFile ->
@@ -113,7 +114,7 @@ prop_module_parsing_idempotent code =
 -- | Test compilation pipeline idempotence
 prop_compilation_pipeline_idempotent :: String -> Property
 prop_compilation_pipeline_idempotent code =
-    length code > 0 && not ("var x int = \"string\"" `isInfixOf` code) ==>
+    L.length code > 0 && not ("var x int = \"string\"" `L.isInfixOf` code) ==>
     case parseTypus code of
       Left _ -> property True
       Right typusFile ->
@@ -124,7 +125,7 @@ prop_compilation_pipeline_idempotent code =
 -- | Test error reporting consistency
 prop_error_reporting_consistency :: String -> Property
 prop_error_reporting_consistency code =
-    length code > 0 ==>
+    L.length code > 0 ==>
     case parseTypus code of
       Left _ -> property True
       Right typusFile ->
@@ -133,12 +134,12 @@ prop_error_reporting_consistency code =
           Left errors1 ->
             case compile typusFile of
               Right _ -> property False
-              Left errors2 -> length errors1 == length errors2
+              Left errors2 -> L.length errors1 == L.length errors2
 
 -- | Test type checking idempotence
 prop_type_checking_idempotent :: String -> Property
 prop_type_checking_idempotent code =
-    length code > 0 ==>
+    L.length code > 0 ==>
     case parseTypus code of
       Left _ -> property True
       Right typusFile ->
@@ -149,7 +150,7 @@ prop_type_checking_idempotent code =
 -- | Test dependent type checking idempotence
 prop_dependent_type_checking_idempotent :: String -> Property
 prop_dependent_type_checking_idempotent code =
-    length code > 0 ==>
+    L.length code > 0 ==>
     case parseTypus code of
       Left _ -> property True
       Right typusFile ->
@@ -163,7 +164,7 @@ prop_dependent_type_checking_idempotent code =
 -- | Test ownership checking idempotence
 prop_ownership_checking_idempotent :: String -> Property
 prop_ownership_checking_idempotent code =
-    length code > 0 ==>
+    L.length code > 0 ==>
     case parseTypus code of
       Left _ -> property True
       Right typusFile ->
@@ -177,9 +178,9 @@ prop_ownership_checking_idempotent code =
 -- | Test compilation with whitespace variations
 prop_whitespace_variations :: String -> Property
 prop_whitespace_variations code =
-    length code > 0 && not ("var x int = \"string\"" `isInfixOf` code) ==>
-    let withExtraSpaces = unlines $ map (++ "  ") (lines code)
-        withTabs = unlines $ map ("\t" ++) (lines code)
+    L.length code > 0 && not ("var x int = \"string\"" `L.isInfixOf` code) ==>
+    let withExtraSpaces = unlines $ L.map (++ "  ") (lines code)
+        withTabs = unlines $ L.map ("\t" ++) (lines code)
     in case parseTypus code of
       Left _ -> property True
       Right typusFile ->
@@ -195,8 +196,8 @@ prop_whitespace_variations code =
                 in case (result1, result2, result3) of
                   (Right r1, Right r2, Right r3) -> 
                     -- Results should be functionally equivalent (ignoring whitespace)
-                    length (lines r1) == length (lines r2) && 
-                    length (lines r1) == length (lines r3)
+                    L.length (lines r1) == L.length (lines r2) && 
+                    L.length (lines r1) == L.length (lines r3)
                   _ -> True
 
 -- | Test empty file compilation
@@ -212,7 +213,7 @@ prop_empty_file_compilation =
 -- | Test comment handling consistency
 prop_comment_handling_consistency :: String -> Property
 prop_comment_handling_consistency code =
-    length code > 0 && not ("//" `isInfixOf` code) ==>
+    L.length code > 0 && not ("//" `L.isInfixOf` code) ==>
     let withComment = code ++ "\n// This is a comment"
     in case parseTypus code of
       Left _ -> property True
@@ -223,7 +224,7 @@ prop_comment_handling_consistency code =
             let result1 = compile typusFile
                 result2 = compile typusFileWithComment
             in case (result1, result2) of
-              (Right r1, Right r2) -> length (lines r1) <= length (lines r2)
+              (Right r1, Right r2) -> L.length (lines r1) <= L.length (lines r2)
               _ -> True
 
 -- Helper function to execute the full compilation pipeline
@@ -235,7 +236,7 @@ executeCompilationPipeline typusFile =
 
 -- Helper function to trim whitespace
 trim :: String -> String
-trim = dropWhile isSpace . reverse . dropWhile isSpace . reverse
+trim = dropWhile isSpace . L.reverse . dropWhile isSpace . L.reverse
 
 -- Helper function to split by comma
 splitByComma :: String -> [String]

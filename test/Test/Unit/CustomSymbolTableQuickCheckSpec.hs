@@ -2,6 +2,7 @@
 module Test.Unit.CustomSymbolTableQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (==>), forAll, elements, listOf, listOf1, oneof, choose)
 import Analyzer.SymbolTable
   ( collectSymbolsAndTypes
@@ -224,7 +225,7 @@ prop_augmentSymbolTableWithLocals =
 -- | Test identifier validation
 prop_identifierValidation :: Property
 prop_identifierValidation = forAll genIdentifier $ \identifier ->
-  let isValid = not (null identifier) && isLetter (head identifier) && all isAlphaNumOrUnderscore identifier
+  let isValid = not (null identifier) && isLetter (L.head identifier) && L.all isAlphaNumOrUnderscore identifier
   in isValid ==> True
   where
     isAlphaNumOrUnderscore c = isAlphaNum c || c == '_'
@@ -233,7 +234,7 @@ prop_identifierValidation = forAll genIdentifier $ \identifier ->
 prop_reservedNameListProperties :: Property
 prop_reservedNameListProperties = 
   let reservedNames = ["func", "var", "const", "type", "if", "else", "for", "return"]
-  in all isReservedName reservedNames
+  in L.all isReservedName reservedNames
 
 -- | Test symbol table consistency
 prop_symbolTableConsistency :: Property
@@ -243,7 +244,7 @@ prop_symbolTableConsistency = forAll genGoFile $ \goFile ->
     Left _ -> True  -- May fail, which is fine
     Right symbolTable -> 
       let keys = Map.keys symbolTable
-      in all isNonReservedKey keys
+      in L.all isNonReservedKey keys
   where
     isNonReservedKey key = not (isReservedName key)
 

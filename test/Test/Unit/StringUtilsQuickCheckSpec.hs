@@ -3,6 +3,7 @@
 module Test.Unit.StringUtilsQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import Utils (trim, splitBy, splitByCollapsed, removeLineComments)
@@ -17,36 +18,36 @@ prop_trim_removes_whitespace :: String -> Property
 prop_trim_removes_whitespace s =
   let result = trim s
       firstChar = listToMaybe result
-      lastChar = listToMaybe (reverse result)
+      lastChar = listToMaybe (L.reverse result)
   in not (null result) ==> maybe True (/= ' ') firstChar && maybe True (/= ' ') lastChar
 
 prop_splitBy_preserves_content :: Char -> NonEmptyList Char -> Property
 prop_splitBy_preserves_content delim (NonEmpty s) =
   delim `notElem` s ==>
   let parts = splitBy delim s
-  in concat parts === s
+  in L.concat parts === s
 
 prop_splitBy_count :: Char -> String -> Property
 prop_splitBy_count delim s =
   let parts = splitBy delim s
-      delimCount = length (filter (== delim) s)
-  in length parts === delimCount + 1
+      delimCount = L.length (L.filter (== delim) s)
+  in L.length parts === delimCount + 1
 
 prop_splitByCollapsed_no_empty :: Char -> String -> Property
 prop_splitByCollapsed_no_empty delim s =
   let parts = splitByCollapsed delim s
-  in property $ all (not . null) parts
+  in property $ L.all (not . null) parts
 
 prop_removeLineComments_preserves_non_comment :: Property
 prop_removeLineComments_preserves_non_comment =
   forAll (listOf $ elements ['a'..'z']) $ \s ->
-    (not $ "//" `isInfixOf` s) ==>
+    (not $ "//" `L.isInfixOf` s) ==>
     trim (removeLineComments s) === trim s
   where
-    isInfixOf needle haystack = any (needle `isPrefixOf`) (tails haystack)
-    isPrefixOf [] _ = True
-    isPrefixOf _ [] = False
-    isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
+    L.isInfixOf needle haystack = L.any (needle `L.isPrefixOf`) (tails haystack)
+    L.isPrefixOf [] _ = True
+    L.isPrefixOf _ [] = False
+    L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
     tails [] = [[]]
     tails xs@(_:xs') = xs : tails xs'
 

@@ -3,11 +3,13 @@
 module Test.Unit.BasicQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Data.List (sort, nub, length, sum, reverse, concat)
+import Data.List (length, sum, reverse, concat)
+import Data.List (sort, nub)
 
 import Utils (trim, splitBy, splitByComma, removeLineComments, normalizeIndentation)
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos, posAfter, emptySpan)
@@ -37,8 +39,8 @@ utilityFunctionTests = testGroup "Utility Function Properties"
 dataStructureTests :: TestTree
 dataStructureTests = testGroup "Data Structure Properties"
   [ fastProperty "Map insertion preserves existing keys" prop_map_insertion_preserve
-  , fastProperty "Set union preserves all elements" prop_set_union_preserve
-  , fastProperty "List reverse is involution" prop_reverse_involution
+  , fastProperty "Set union preserves L.all elements" prop_set_union_preserve
+  , fastProperty "List L.reverse is involution" prop_reverse_involution
   ]
 
 compilerComponentTests :: TestTree
@@ -81,11 +83,11 @@ prop_set_union_preserve xs ys =
   in property $ Set.isSubsetOf setX unionSet && Set.isSubsetOf setY unionSet
 
 prop_reverse_involution :: [Int] -> Property
-prop_reverse_involution xs = reverse (reverse xs) === xs
+prop_reverse_involution xs = L.reverse (L.reverse xs) === xs
 
 prop_position_advancement_monotonic :: SourcePos -> String -> Property
 prop_position_advancement_monotonic pos text =
-  let finalPos = foldl (flip posAfter) pos text
+  let finalPos = L.foldl (flip posAfter) pos text
   in property $ posOffset finalPos >= posOffset pos
 
 prop_token_lexeme_pattern :: GoTokenKind -> String -> Property
@@ -103,4 +105,4 @@ prop_error_location_valid pos =
 prop_error_message_useful :: String -> Property
 prop_error_message_useful msg =
   let hasContent = not (null msg)
-  in hasContent ==> property $ length (words msg) > 0
+  in hasContent ==> property $ L.length (words msg) > 0

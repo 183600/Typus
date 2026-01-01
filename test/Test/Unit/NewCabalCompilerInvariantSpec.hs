@@ -81,7 +81,7 @@ tests =
                   compiled2 = Compiler.compile compiled1
               in True -- Property depends on actual compiler API
               
-        , fastProperty "type checking before and after compilation yields same result" $
+        , fastProperty "type checking before L.and after compilation yields same result" $
             forAll arbitrary $ \input ->
               let beforeType = Compiler.TypeChecker.typeCheck input
                   compiled = Compiler.compile input

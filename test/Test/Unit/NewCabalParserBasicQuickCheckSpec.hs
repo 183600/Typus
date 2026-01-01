@@ -22,6 +22,7 @@ import Parser
 
 import Utils (trim, removeComments)
 
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Char (isSpace)
 
@@ -88,7 +89,7 @@ prop_parseTypus_simple_directive =
 -- Property: parseTypus preserves code content
 prop_parseTypus_preserves_code :: String -> Property
 prop_parseTypus_preserves_code code =
-  not (null code) && length code < 100 ==>
+  not (null code) && L.length code < 100 ==>
   let input = "// @ownership: true\n" ++ code
       result = parseTypus input
   in case result of
@@ -97,9 +98,9 @@ prop_parseTypus_preserves_code code =
       let blocks = tfCodeBlocks tf
       in if null blocks
          then property True
-         else let firstBlock = head blocks
+         else let firstBlock = L.head blocks
                   blockContent = cbContent firstBlock
-              in code `isInfixOf` blockContent
+              in code `L.isInfixOf` blockContent
 
 -- Property: parseTypus handles whitespace correctly
 prop_parseTypus_whitespace_handling :: String -> Property
@@ -154,8 +155,8 @@ prop_parseTypus_block_directives =
     Left _ -> property True  -- Parse error is acceptable
     Right tf -> 
       let blocks = tfCodeBlocks tf
-      in if length blocks >= 2
-         then let block1 = head blocks
+      in if L.length blocks >= 2
+         then let block1 = L.head blocks
                   block2 = blocks !! 1
                   bd1 = cbBlockDirectives block1
                   bd2 = cbBlockDirectives block2
@@ -168,7 +169,7 @@ prop_parseTypus_block_directives =
 -- Property: parseTypus is idempotent on well-formed input
 prop_parseTypus_idempotent :: String -> Property
 prop_parseTypus_idempotent content =
-  length content < 200 && not (null content) ==>
+  L.length content < 200 && not (null content) ==>
   let trimmed = trim content
       result1 = parseTypus trimmed
   in case result1 of
@@ -179,8 +180,8 @@ prop_parseTypus_idempotent content =
       in case result2 of
         Left _ -> property True  -- Parse failure is acceptable
         Right tf2 -> 
-          let blocks1 = length $ tfCodeBlocks tf1
-              blocks2 = length $ tfCodeBlocks tf2
+          let blocks1 = L.length $ tfCodeBlocks tf1
+              blocks2 = L.length $ tfCodeBlocks tf2
           in blocks1 === blocks2
 
 tests :: TestTree

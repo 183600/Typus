@@ -3,6 +3,7 @@
 module Test.Unit.NewParserQuickCheckPropertiesSpec (tests) where
 
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=), assertBool, assertFailure)
@@ -109,7 +110,7 @@ genImportDeclaration = oneof
       return $ "import " ++ importPath
   , do
       imports <- listOf $ elements ["\"fmt\"", "\"os\"", "\"strings\""]
-      return $ "import (\n" ++ unlines (map ("    " ++) imports) ++ ")"
+      return $ "import (\n" ++ unlines (L.map ("    " ++) imports) ++ ")"
   ]
 
 genVariableDeclaration :: Gen String
@@ -199,7 +200,7 @@ tests =
         , fastProperty "parseTypus preserves package declaration" $
             forAll genValidTypusCode $ \code ->
               case parseTypus code of
-                Right typusFile -> not (null $ tfBlocks typusFile)
+                Right typusFile -> not (L.null $ tfBlocks typusFile)
                 Left _ -> False
 
         , fastProperty "parseTypus handles empty input gracefully" $
@@ -230,7 +231,7 @@ tests =
               case parseTypus code of
                 Right typusFile -> 
                   let blocks = tfBlocks typusFile
-                      hasDirectiveBlock = any (\cb -> 
+                      hasDirectiveBlock = L.any (\cb -> 
                         bdOwnership (cbDirectives cb) /= Nothing ||
                         bdDependentTypes (cbDirectives cb) /= Nothing ||
                         bdConstraints (cbDirectives cb) /= Nothing) blocks
@@ -246,7 +247,7 @@ tests =
                          ownershipCount = if fdOwnership fileDirectives /= Nothing then 1 else 0
                          dependentTypesCount = if fdDependentTypes fileDirectives /= Nothing then 1 else 0
                          constraintsCount = if fdConstraints fileDirectives /= Nothing then 1 else 0
-                     in ownershipCount + dependentTypesCount + constraintsCount <= length directives
+                     in ownershipCount + dependentTypesCount + constraintsCount <= L.length directives
                    Left _ -> False
         ]
 
@@ -260,7 +261,7 @@ tests =
         , fastProperty "parseTypus provides meaningful error messages" $
             forAll genInvalidSyntax $ \code ->
               case parseTypus code of
-                Left err -> length err > 5  -- Error message should be meaningful
+                Left err -> L.length err > 5  -- Error message should be meaningful
                 Right _ -> False
 
         , fastProperty "parseTypus handles syntax errors gracefully" $
@@ -275,28 +276,28 @@ tests =
             forAll genFunctionDeclaration $ \code ->
               let fullCode = "package main\n" ++ code
               in case parseTypus fullCode of
-                   Right typusFile -> not (null $ tfBlocks typusFile)
+                   Right typusFile -> not (L.null $ tfBlocks typusFile)
                    Left _ -> False
 
         , fastProperty "parseTypus preserves struct structure" $
             forAll genStructDeclaration $ \code ->
               let fullCode = "package main\n" ++ code
               in case parseTypus fullCode of
-                   Right typusFile -> not (null $ tfBlocks typusFile)
+                   Right typusFile -> not (L.null $ tfBlocks typusFile)
                    Left _ -> False
 
         , fastProperty "parseTypus preserves interface structure" $
             forAll genInterfaceDeclaration $ \code ->
               let fullCode = "package main\n" ++ code
               in case parseTypus fullCode of
-                   Right typusFile -> not (null $ tfBlocks typusFile)
+                   Right typusFile -> not (L.null $ tfBlocks typusFile)
                    Left _ -> False
 
         , fastProperty "parseTypus preserves import structure" $
             forAll genImportDeclaration $ \code ->
               let fullCode = "package main\n" ++ code ++ "\nfunc main() {}"
               in case parseTypus fullCode of
-                   Right typusFile -> not (null $ tfBlocks typusFile)
+                   Right typusFile -> not (L.null $ tfBlocks typusFile)
                    Left _ -> False
         ]
 
@@ -305,28 +306,28 @@ tests =
             forAll genStringLiteral $ \strLit ->
               let code = "package main\nfunc main() { s := " ++ strLit ++ " }"
               in case parseTypus code of
-                   Right typusFile -> any (strLit `isInfixOf`) (map cbContent $ tfBlocks typusFile)
+                   Right typusFile -> L.any (strLit `L.isInfixOf`) (map cbContent $ tfBlocks typusFile)
                    Left _ -> False
 
         , fastProperty "parseTypus preserves numeric literals" $
             forAll genIntLiteral $ \intLit ->
               let code = "package main\nfunc main() { x := " ++ intLit ++ " }"
               in case parseTypus code of
-                   Right typusFile -> any (intLit `isInfixOf`) (map cbContent $ tfBlocks typusFile)
+                   Right typusFile -> L.any (intLit `L.isInfixOf`) (map cbContent $ tfBlocks typusFile)
                    Left _ -> False
 
         , fastProperty "parseTypus preserves comments" $
             forAll genComment $ \comment ->
               let code = "package main\n" ++ comment ++ "\nfunc main() {}"
               in case parseTypus code of
-                   Right typusFile -> any (comment `isInfixOf`) (map cbContent $ tfBlocks typusFile)
+                   Right typusFile -> L.any (comment `L.isInfixOf`) (map cbContent $ tfBlocks typusFile)
                    Left _ -> False
 
         , fastProperty "parseTypus preserves block comments" $
             forAll genBlockComment $ \comment ->
               let code = "package main\n" ++ comment ++ "\nfunc main() {}"
               in case parseTypus code of
-                   Right typusFile -> any (comment `isInfixOf`) (map cbContent $ tfBlocks typusFile)
+                   Right typusFile -> L.any (comment `L.isInfixOf`) (map cbContent $ tfBlocks typusFile)
                    Left _ -> False
         ]
 
@@ -370,13 +371,13 @@ tests =
         , fastProperty "parseTypus handles Unicode characters" $
             let unicodeCode = "package main\nfunc main() { println(\"¡Hola! 你好! 🌍\") }"
             in case parseTypus unicodeCode of
-                 Right typusFile -> not (null $ tfBlocks typusFile)
+                 Right typusFile -> not (L.null $ tfBlocks typusFile)
                  Left _ -> False
 
         , fastProperty "parseTypus handles escape sequences" $
             let escapeCode = "package main\nfunc main() { s := \"Hello\\nWorld\\t!\" }"
             in case parseTypus escapeCode of
-                 Right typusFile -> not (null $ tfBlocks typusFile)
+                 Right typusFile -> not (L.null $ tfBlocks typusFile)
                  Left _ -> False
         ]
     ]

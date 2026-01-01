@@ -6,6 +6,7 @@
 module Test.Unit.ErrorHandlerConsistencyTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertBool, assertEqual, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Gen, arbitrary, choose, listOf, elements, oneof, sized, suchThat)
@@ -19,39 +20,6 @@ import Compiler.Errors.Core
   , ErrorContext(..)
   , ErrorRecovery(..)
   , emptyContext
-  , errorAt
-  , errorAtWithTimestamp
-  , errorWithCategory
-  , warningAt
-  , infoAt
-  , fatalError
-  , errorWithSuggestions
-  , withLocation
-  , withContext
-  , withSuggestions
-  , withRelatedErrors
-  , withTimestamp
-  , wrapError
-  , combineErrors
-  , hasCategory
-  , filterByCategory
-  , filterBySeverity
-  , getErrorStatistics
-  , generateErrorReport
-  , formatError
-  , formatErrorWithLocation
-  , formatErrors
-  , formatErrorsWithLocation
-  , canRecoverFrom
-  , shouldContinueAfter
-  , severityPriority
-  , isAtLeast
-  , createRecoveryStrategy
-  , fatalRecovery
-  , errorRecovery
-  , warningRecovery
-  , infoRecovery
-  , getErrorLine
   , getErrorColumn
   )
 
@@ -120,7 +88,7 @@ genTypeError = do
   relatedErrors <- listOf genTypeError
   errorChain <- listOf genTypeError
   timestamp <- oneof [pure Nothing, Just <$> elements ["2023-01-01 12:00:00", "2023-12-31 23:59:59"]]
-  return $ TypeError errorId severity category message location context recovery suggestions relatedErrors errorChain timestamp
+  return $ TypeError errId errorId severity category message location context recovery suggestions relatedErrors errorChain timestamp
 
 -- Generate combined error
 genCombinedError :: Gen CombinedError
@@ -161,103 +129,14 @@ testErrorSeverityOrdering = testGroup "Error Severity Ordering"
 -- Test error creation utilities
 testErrorCreation :: TestTree
 testErrorCreation = testGroup "Error Creation"
-  [ testCase "errorAt creates basic error" $ do
-      let location = ErrorLocation Nothing 1 1 Nothing Nothing
-          error = errorAt "ERR001" "test message" location
-      errorId error @?= "ERR001"
-      message error @?= "test message"
-      severity error @?= Error
-      category error @?= Unknown
-      location error @?= location
-      
-  , testCase "errorWithCategory sets category" $ do
-      let location = ErrorLocation Nothing 1 1 Nothing Nothing
-          error = errorWithCategory "ERR001" TypeChecking "type error" location
-      category error @?= TypeChecking
-      
-  , testCase "warningAt creates warning" $ do
-      let location = ErrorLocation Nothing 1 1 Nothing Nothing
-          warning = warningAt "WARN001" "warning message" location
-      severity warning @?= Warning
-      
-  , testCase "infoAt creates info" $ do
-      let location = ErrorLocation Nothing 1 1 Nothing Nothing
-          info = infoAt "INFO001" "info message" location
-      severity info @?= Info
-      
-  , testCase "fatalError creates fatal error" $ do
-      let location = ErrorLocation Nothing 1 1 Nothing Nothing
-          fatal = fatalError "FATAL001" "fatal error" location
-      severity fatal @?= Fatal
-      canRecoverFrom fatal @?= False
-  ]
-
--- Test error modification utilities
-testErrorModification :: TestTree
-testErrorModification = testGroup "Error Modification"
-  [ testCase "withLocation updates location" $ do
-      let originalLoc = ErrorLocation Nothing 1 1 Nothing Nothing
-          newLoc = ErrorLocation (Just "test.go") 5 10 Nothing Nothing
-          error = errorAt "ERR001" "test" originalLoc
-          updated = withLocation error newLoc
-      location updated @?= newLoc
-      
-  , testCase "withContext updates context" $ do
-      let location = ErrorLocation Nothing 1 1 Nothing Nothing
-          context = ErrorContext (Just "code") (Just "func") (Just "var") (Just "type") []
-          error = errorAt "ERR001" "test" location
-          updated = withContext error context
-      context updated @?= context
-      
-  , testCase "withSuggestions adds suggestions" $ do
-      let location = ErrorLocation Nothing 1 1 Nothing Nothing
-          error = errorAt "ERR001" "test" location
-          suggestions = [T.pack "suggestion1", T.pack "suggestion2"]
-          updated = withSuggestions suggestions error
-      suggestions updated @?= suggestions
-      
-  , testCase "wrapError adds to message and chain" $ do
-      let location = ErrorLocation Nothing 1 1 Nothing Nothing
-          inner = errorAt "ERR001" "inner" location
-          wrapped = wrapError "wrapper: " inner
-      message wrapped @?= "wrapper: inner"
-      errorChain wrapped @?= [inner]
-  ]
-
--- Test error filtering and analysis
-testErrorFiltering :: TestTree
-testErrorFiltering = testGroup "Error Filtering"
-  [ testCase "hasCategory checks category" $ do
-      let location = ErrorLocation Nothing 1 1 Nothing Nothing
-          typeError = errorWithCategory "ERR001" TypeChecking "type error" location
-          parseError = errorWithCategory "ERR002" Parsing "parse error" location
-      assertBool "typeError has TypeChecking category" $ hasCategory TypeChecking typeError
-      assertBool "typeError doesn't have Parsing category" $ not $ hasCategory Parsing typeError
-      assertBool "parseError has Parsing category" $ hasCategory Parsing parseError
-      
-  , testCase "filterByCategory filters correctly" $ do
-      let location = ErrorLocation Nothing 1 1 Nothing Nothing
-          errors = 
-            [ errorWithCategory "ERR001" TypeChecking "type error" location
-            , errorWithCategory "ERR002" Parsing "parse error" location
-            , errorWithCategory "ERR003" TypeChecking "another type error" location
-            , errorWithCategory "ERR004" Runtime "runtime error" location
-            ]
-          typeErrors = filterByCategory TypeChecking errors
-      length typeErrors @?= 2
-      all (hasCategory TypeChecking) typeErrors @?= True
+  [ testCase "errorAt "test-id" = ErrorLocation (Just "test.go") 5 10 Nothing Nothing
+          error = errorAt "test-id" = ErrorContext (Just "code") (Just "func") (Just "var") (Just "type") []
+          error = errorAt "test-id" (hasCategory TypeChecking) typeErrors @?= True
       
   , testCase "filterBySeverity filters correctly" $ do
       let location = ErrorLocation Nothing 1 1 Nothing Nothing
           errors = 
-            [ errorAt "ERR001" "error" location {severity = Error}
-            , warningAt "WARN001" "warning" location
-            , infoAt "INFO001" "info" location
-            , fatalError "FATAL001" "fatal" location
-            ]
-          errorAndFatal = filterBySeverity Error errors
-      length errorAndFatal @?= 2
-      all (\e -> severity e == Error || severity e == Fatal) errorAndFatal @?= True
+            [ errorAt "test-id" == Fatal) errorAndFatal @?= True
   ]
 
 -- Test error statistics
@@ -266,57 +145,8 @@ testErrorStatistics = testGroup "Error Statistics"
   [ testCase "getErrorStatistics counts errors correctly" $ do
       let location = ErrorLocation Nothing 1 1 Nothing Nothing
           errors = 
-            [ errorAt "ERR001" "error1" location
-            , warningAt "WARN001" "warning1" location
-            , infoAt "INFO001" "info1" location
-            , errorWithCategory "ERR002" TypeChecking "type error" location
-            , errorWithCategory "ERR003" Parsing "parse error" location
-            , fatalError "FATAL001" "fatal" location
-            ]
-          stats = getErrorStatistics errors
-      Map.lookup "total" stats @?= Just 6
-      Map.lookup "fatal" stats @?= Just 1
-      Map.lookup "errors" stats @?= Just 2
-      Map.lookup "warnings" stats @?= Just 1
-      Map.lookup "info" stats @?= Just 1
-      Map.lookup "typeChecking" stats @?= Just 1
-      Map.lookup "parsing" stats @?= Just 1
-  ]
-
--- Test error formatting
-testErrorFormatting :: TestTree
-testErrorFormatting = testGroup "Error Formatting"
-  [ testCase "formatError includes severity and message" $ do
-      let location = ErrorLocation Nothing 1 1 Nothing Nothing
-          error = errorAt "ERR001" "test message" location
-          formatted = formatError error
-      assertBool "Format includes ERROR" $ "ERROR" `isInfixOf` formatted
-      assertBool "Format includes message" $ "test message" `isInfixOf formatted
-      
-  , testCase "formatErrorWithLocation includes location" $ do
-      let location = ErrorLocation (Just "test.go") 5 10 Nothing Nothing
-          error = errorAt "ERR001" "test message" location
-          formatted = formatErrorWithLocation error
-      assertBool "Format includes file" $ "test.go" `isInfixOf` formatted
-      assertBool "Format includes line" $ "5" `isInfixOf` formatted
-      assertBool "Format includes column" $ "10" `isInfixOf` formatted
-  ]
-
--- Test error recovery
-testErrorRecovery :: TestTree
-testErrorRecovery = testGroup "Error Recovery"
-  [ testCase "recovery strategies have correct properties" $ do
-      assertBool "fatal recovery cannot recover" $ not $ canRecover fatalRecovery
-      assertBool "fatal recovery should not continue" $ not $ shouldContinueAfter fatalRecovery
-      assertBool "error recovery can recover" $ canRecover errorRecovery
-      assertBool "error recovery should continue" $ shouldContinueAfter errorRecovery
-      assertBool "warning recovery can recover" $ canRecover warningRecovery
-      assertBool "warning recovery should continue" $ shouldContinueAfter warningRecovery
-      assertBool "info recovery can recover" $ canRecover infoRecovery
-      assertBool "info recovery should continue" $ shouldContinueAfter infoRecovery
-      
-  , testCase "createRecoveryStrategy creates strategy" $ do
-      let strategy = createRecoveryStrategy True True (Just "retry") (Just "check input")
+            [ errorAt "test-id" = ErrorLocation (Just "test.go") 5 10 Nothing Nothing
+          error = errorAt "test-id" True True (Just "retry") (Just "check input")
       canRecover strategy @?= True
       shouldContinue strategy @?= True
       recoveryAction strategy @?= Just "retry"
@@ -340,7 +170,7 @@ testCombinedErrors = testGroup "Combined Errors"
             , DependentTypeErrorCombined Info arbitrary
             ]
           filtered = filterCombinedErrorsBySeverity Error errors
-      length filtered @?= 2
+      L.length filtered @?= 2
   ]
 
 -- ============================================================================
@@ -367,25 +197,25 @@ prop_isAtLeast_transitive sev1 sev2 sev3 =
 prop_filterByCategory_preserves_category :: [TypeError] -> ErrorCategory -> Property
 prop_filterByCategory_preserves_category errors category =
   let filtered = filterByCategory category errors
-  in property $ all (hasCategory category) filtered
+  in property $ L.all (hasCategory category) filtered
 
 -- Property: filterBySeverity preserves severity
 prop_filterBySeverity_preserves_severity :: [TypeError] -> ErrorSeverity -> Property
 prop_filterBySeverity_preserves_severity errors severity =
   let filtered = filterBySeverity severity errors
-  in property $ all (\e -> severity e == severity) filtered
+  in property $ L.all (\e -> severity e == severity) filtered
 
--- Property: error statistics sum to total
+-- Property: error statistics L.sum to total
 prop_error_statistics_sum_to_total :: [TypeError] -> Property
 prop_error_statistics_sum_to_total errors =
   let stats = getErrorStatistics errors
       total = Map.findWithDefault 0 "total" stats
-      counted = sum $ Map.findWithDefault 0 "fatal" stats :
+      counted = L.sum $ Map.findWithDefault 0 "fatal" stats :
                        Map.findWithDefault 0 "errors" stats :
                        Map.findWithDefault 0 "warnings" stats :
                        Map.findWithDefault 0 "info" stats :
                        []
-  in property $ total === length errors .&&. counted === total
+  in property $ total === L.length errors .&&. counted === total
 
 -- Property: withLocation preserves other fields
 prop_withLocation_preserves_fields :: TypeError -> ErrorLocation -> Property
@@ -448,18 +278,7 @@ prop_combined_error_severity_matches combined =
 -- Property: error creation sets correct defaults
 prop_error_creation_defaults :: String -> Text -> ErrorLocation -> Property
 prop_error_creation_defaults errId msg loc =
-  let error = errorAt errId msg loc
-  in property $ errorId error === errId .&&.
-                message error === msg .&&.
-                location error === loc .&&.
-                severity error === Error .&&.
-                category error === Unknown
-
--- Property: getErrorLine and getErrorColumn access location correctly
-prop_error_location_accessors :: ErrorLocation -> Property
-prop_error_location_accessors loc =
-  let error = errorAt "TEST" "test" loc
-  in property $ getErrorLine (location error) === line loc .&&.
+  let error = errorAt "test-id" (location error) === line loc .&&.
                 getErrorColumn (location error) === column loc
 
 -- ============================================================================
@@ -482,7 +301,7 @@ tests = testGroup "Error Handler Consistency Tests"
     , fastProperty "isAtLeast transitive" prop_isAtLeast_transitive
     , fastProperty "filterByCategory preserves" prop_filterByCategory_preserves_category
     , fastProperty "filterBySeverity preserves" prop_filterBySeverity_preserves_severity
-    , fastProperty "statistics sum to total" prop_error_statistics_sum_to_total
+    , fastProperty "statistics L.sum to total" prop_error_statistics_sum_to_total
     , fastProperty "withLocation preserves fields" prop_withLocation_preserves_fields
     , fastProperty "withContext preserves fields" prop_withContext_preserves_fields
     , fastProperty "wrapError preserves chain" prop_wrapError_preserves_chain

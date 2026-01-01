@@ -33,7 +33,9 @@ import Utils
   )
 
 import Data.Char (isSpace, isAlphaNum)
-import Data.List (isPrefixOf, isInfixOf, intercalate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (intercalate)
 
 -- | 生成包含空白字符的字符串
 genStringWithWhitespace :: Gen String
@@ -44,7 +46,7 @@ genStringWithWhitespace = do
 -- | 生成不包含特定分隔符的字符串
 genStringWithout :: Char -> Gen String
 genStringWithout delim = do
-  content <- listOf $ elements $ filter (/= delim) $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ [' '] ++ ['_']
+  content <- listOf $ elements $ L.filter (/= delim) $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ [' '] ++ ['_']
   return content
 
 -- | 生成包含特定分隔符的字符串
@@ -59,7 +61,7 @@ genCommentedCode = do
   codeLines <- listOf1 $ listOf $ elements $ ['a'..'z'] ++ [' '] ++ ['0'..'9']
   commentLines <- listOf $ listOf $ elements $ ['a'..'z'] ++ [' '] ++ ['0'..'9']
   let mixed = interleave codeLines commentLines
-  return $ unlines $ map (\(i, line) -> 
+  return $ unlines $ L.map (\(i, line) -> 
     if even i then line else "// " ++ line) (zip [0..] mixed)
   where
     interleave [] _ = []
@@ -89,12 +91,12 @@ prop_trim_removes_whitespace :: Property
 prop_trim_removes_whitespace =
   forAll genStringWithWhitespace $ \s ->
     let trimmed = trim s
-        hasLeadingSpace = not (null s) && isSpace (head s)
+        hasLeadingSpace = not (null s) && isSpace (L.head s)
         hasTrailingSpace = not (null s) && isSpace (last s)
     in classify (hasLeadingSpace || hasTrailingSpace) "had whitespace" $
        classify (trimmed == s) "no change" $
        not (null trimmed) ==> 
-       (not (isSpace (head trimmed)) && not (isSpace (last trimmed)))
+       (not (isSpace (L.head trimmed)) && not (isSpace (last trimmed)))
 
 -- 属性：splitBy应该正确处理空字符串
 prop_splitBy_empty_string :: Property
@@ -108,7 +110,7 @@ prop_splitByCollapsed_removes_empty =
   forAll (genStringWith ',') $ \s ->
     let normal = splitBy ',' s
         collapsed = splitByCollapsed ',' s
-    in all (not . null) collapsed === True
+    in L.all (not . null) collapsed === True
 
 -- 属性：splitByComma应该是splitBy ','的别名
 prop_splitByComma_alias :: Property
@@ -151,16 +153,16 @@ prop_normalizeIndentation_preserves_relative =
         originalLines = lines code
         normalizedLines = lines normalized
         -- 检查非空行的相对缩进是否保持
-        calcIndent line = length $ takeWhile isSpace line
-        originalIndents = map calcIndent $ filter (not . all isSpace) originalLines
-        normalizedIndents = map calcIndent $ filter (not . all isSpace) normalizedLines
+        calcIndent line = L.length $ takeWhile isSpace line
+        originalIndents = map calcIndent $ L.filter (not . L.all isSpace) originalLines
+        normalizedIndents = map calcIndent $ L.filter (not . L.all isSpace) normalizedLines
     in case (originalIndents, normalizedIndents) of
          ([], []) -> property True
          (orig, norm) -> 
-           let minOrig = minimum orig
-               minNorm = minimum norm
-               relativeOrig = map (subtract minOrig) orig
-               relativeNorm = map (subtract minNorm) norm
+           let minOrig = L.minimum orig
+               minNorm = L.minimum norm
+               relativeOrig = L.map (subtract minOrig) orig
+               relativeNorm = L.map (subtract minNorm) norm
            in relativeOrig === relativeNorm
 
 -- 属性：forceSingleTabIndentation应该将所有非空行转换为单个制表符
@@ -169,7 +171,7 @@ prop_forceSingleTabIndentation_single_tab =
   forAll genIndentedCode $ \code ->
     let forced = forceSingleTabIndentation code
         lines' = lines forced
-    in all (\line -> null line || take 1 line == "\t") lines'
+    in L.all (\line -> null line || take 1 line == "\t") lines'
 
 -- 属性：fixIndentation应该是normalizeIndentation的别名
 prop_fixIndentation_alias :: Property
@@ -195,10 +197,10 @@ prop_breakOn_pattern_found :: Property
 prop_breakOn_pattern_found =
   forAll arbitrary $ \s ->
     let notNull = not (null s)
-        firstChar = if notNull then [head s] else ""
+        firstChar = if notNull then [L.head s] else ""
     in notNull ==> 
        let (before, after) = breakOn firstChar s
-       in before === "" && after === tail s
+       in before === "" && after === L.tail s
 
 -- 属性：trim的幂等性 - 多次trim应该产生相同结果
 prop_trim_idempotent :: Property
@@ -216,7 +218,7 @@ prop_splitBy_consistency =
 prop_removeLineComments_no_change_without_comments :: Property
 prop_removeLineComments_no_change_without_comments =
   forAll (listOf $ elements $ ['a'..'z'] ++ [' '] ++ ['0'..'9'] ++ ['\n']) $ \s ->
-    not ("//" `isInfixOf` s) ==> removeLineComments s === s
+    not ("//" `L.isInfixOf` s) ==> removeLineComments s === s
 
 tests :: TestTree
 tests =

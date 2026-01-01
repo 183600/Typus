@@ -63,7 +63,9 @@ import SourceLocation
 
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, intercalate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (intercalate)
 import Data.Char (isAlpha, isAlphaNum, isSpace)
 
 -- ============================================================================
@@ -256,7 +258,7 @@ prop_emitGo_creates_valid_source =
       Left _ -> property False
       Right semanticIR ->
         let goIR = emitGo semanticIR
-        in not (null (goSource goIR))
+        in not (L.null (goSource goIR))
 
 -- Property: GoIR contains module information
 prop_goIR_contains_module_info :: Property
@@ -297,16 +299,16 @@ prop_render_preserves_package =
       Nothing -> property True
       Just pkg ->
         let rendered = renderGoModule goModule
-        in "package " `isPrefixOf` rendered
+        in "package " `L.isPrefixOf` rendered
 
 -- Property: Go module rendering preserves imports
 prop_render_preserves_imports :: Property
 prop_render_preserves_imports =
   forAll genGoModule $ \goModule ->
     let rendered = renderGoModule goModule
-        hasImports = not (null (gmImports goModule))
+        hasImports = not (L.null (gmImports goModule))
     in if hasImports
-       then "import" `isInfixOf` rendered
+       then "import" `L.isInfixOf` rendered
        else property True
 
 -- Property: Go module rendering preserves declarations
@@ -314,9 +316,9 @@ prop_render_preserves_declarations :: Property
 prop_render_preserves_declarations =
   forAll genGoModule $ \goModule ->
     let rendered = renderGoModule goModule
-        hasDecls = not (null (gmDecls goModule))
+        hasDecls = not (L.null (gmDecls goModule))
     in if hasDecls
-       then property $ length (lines rendered) >= 3
+       then property $ L.length (lines rendered) >= 3
        else property True
 
 -- Property: Function declarations are preserved in IR
@@ -325,7 +327,7 @@ prop_func_decls_preserved =
   forAll genFuncDecl $ \funcDecl ->
     let goModule = GoModule [] Nothing [] [GoFunc funcDecl]
         rendered = renderGoModule goModule
-    in "func " `isInfixOf` rendered
+    in "func " `L.isInfixOf` rendered
 
 -- Property: Type declarations are preserved in IR
 prop_type_decls_preserved :: Property
@@ -333,7 +335,7 @@ prop_type_decls_preserved =
   forAll genTypeDecl $ \typeDecl ->
     let goModule = GoModule [] Nothing [] [GoType typeDecl]
         rendered = renderGoModule goModule
-    in "type " `isInfixOf` rendered
+    in "type " `L.isInfixOf` rendered
 
 -- Property: Variable declarations are preserved in IR
 prop_var_decls_preserved :: Property
@@ -341,7 +343,7 @@ prop_var_decls_preserved =
   forAll genVarDecl $ \varDecl ->
     let goModule = GoModule [] Nothing [] [GoVar varDecl]
         rendered = renderGoModule goModule
-    in "var " `isInfixOf` rendered
+    in "var " `L.isInfixOf` rendered
 
 -- Property: Constant declarations are preserved in IR
 prop_const_decls_preserved :: Property
@@ -349,7 +351,7 @@ prop_const_decls_preserved =
   forAll genConstDecl $ \constDecl ->
     let goModule = GoModule [] Nothing [] [GoConst constDecl]
         rendered = renderGoModule goModule
-    in "const " `isInfixOf` rendered
+    in "const " `L.isInfixOf` rendered
 
 -- Property: Raw blocks are preserved in IR
 prop_raw_blocks_preserved :: Property
@@ -358,7 +360,7 @@ prop_raw_blocks_preserved =
     let goModule = GoModule [] Nothing [] [GoRaw rawBlock]
         rendered = renderGoModule goModule
         rawContent = intercalate "\n" (rawLines rawBlock)
-    in rawContent `isInfixOf` rendered
+    in rawContent `L.isInfixOf` rendered
 
 -- Property: IR transformation maintains consistency
 prop_ir_transformation_consistency :: Property
@@ -379,14 +381,14 @@ prop_ir_transformation_consistency =
 prop_goIR_source_non_empty :: Property
 prop_goIR_source_non_empty =
   forAll genTypusFile $ \typusFile ->
-    not (null (tfBlocks typusFile)) ==>
+    not (L.null (tfBlocks typusFile)) ==>
     let sourceIR = buildSourceIR typusFile
         result = buildSemanticIR sourceIR
     in case result of
       Left _ -> property False
       Right semanticIR ->
         let goIR = emitGo semanticIR
-        in not (null (goSource goIR))
+        in not (L.null (goSource goIR))
 
 -- ============================================================================
 -- Test Suite

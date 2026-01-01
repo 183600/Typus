@@ -41,6 +41,7 @@ import Compiler.GoAst
 import SourceLocation (SourcePos(..), startPos)
 import Utils (trim)
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 import qualified Data.Text as T
 
@@ -57,8 +58,8 @@ prop_buildSourceIR_preserves_structure content =
 -- Property: rawSourceFromTypus extracts content from code blocks
 prop_rawSourceFromTypus_extracts_blocks :: [String] -> Property
 prop_rawSourceFromTypus_extracts_blocks blockContents =
-  not (null blockContents) && all (not . null) blockContents ==>
-  let codeBlocks = map (\content -> CodeBlock 
+  not (null blockContents) && L.all (not . null) blockContents ==>
+  let codeBlocks = L.map (\content -> CodeBlock 
         { cbDirectives = defaultBlockDirectives
         , cbSpan = undefined  -- Simplified for test
         , cbContent = content
@@ -82,7 +83,7 @@ prop_buildSemanticIR_valid_source content =
           semanticResult = buildSemanticIR sourceIR
       in case semanticResult of
         Left _ -> property True  -- Compilation errors are expected
-        Right semanticIR -> property $ not (null (gmDecls (semanticModule semanticIR)))
+        Right semanticIR -> property $ not (L.null (gmDecls (semanticModule semanticIR)))
 
 -- Property: emitGo produces valid Go source
 prop_emitGo_produces_valid_source :: String -> Property
@@ -103,8 +104,8 @@ prop_emitGo_produces_valid_source content =
 -- Property: IR generation preserves import declarations
 prop_IR_preserves_imports :: String -> [String] -> Property
 prop_IR_preserves_imports baseContent imports =
-  not (null baseContent) && all (not . null) imports ==>
-  let importLines = map (\imp -> "import \"" ++ imp ++ "\"") imports
+  not (null baseContent) && L.all (not . null) imports ==>
+  let importLines = L.map (\imp -> "import \"" ++ imp ++ "\"") imports
       contentWithImports = unlines $ baseContent : importLines
       result = parseTypus contentWithImports startPos
   in case result of
@@ -117,7 +118,7 @@ prop_IR_preserves_imports baseContent imports =
         Right semanticIR ->
           let goModule = semanticModule semanticIR
               importDecls = gmImports goModule
-          in property $ length importDecls >= length imports
+          in property $ L.length importDecls >= L.length imports
 
 -- Property: IR generation handles empty files
 prop_IR_handles_empty_files :: Property
@@ -132,13 +133,13 @@ prop_IR_handles_empty_files =
     Left _ -> property True
     Right semanticIR ->
       let goIR = emitGo semanticIR
-      in property $ not (null (goSource goIR))
+      in property $ not (L.null (goSource goIR))
 
 -- Property: IR generation preserves function declarations
 prop_IR_preserves_functions :: [String] -> Property
 prop_IR_preserves_functions functionNames =
-  not (null functionNames) && all (not . null) functionNames ==>
-  let functionDecls = map (\name -> "func " ++ name ++ "() {}") functionNames
+  not (null functionNames) && L.all (not . null) functionNames ==>
+  let functionDecls = L.map (\name -> "func " ++ name ++ "() {}") functionNames
       content = unlines functionDecls
       result = parseTypus content startPos
   in case result of
@@ -151,12 +152,12 @@ prop_IR_preserves_functions functionNames =
         Right semanticIR ->
           let goModule = semanticModule semanticIR
               decls = gmDecls goModule
-          in property $ length decls >= length functionNames
+          in property $ L.length decls >= L.length functionNames
 
 -- Property: IR generation handles package declarations
 prop_IR_handles_package :: String -> Property
 prop_IR_handles_package packageName =
-  not (null packageName) && not (any (`elem` packageName) " \t\n\r\"'\\") ==>
+  not (null packageName) && not (L.any (`elem` packageName) " \t\n\r\"'\\") ==>
   let packageContent = "package " ++ packageName
       result = parseTypus packageContent startPos
   in case result of
@@ -173,8 +174,8 @@ prop_IR_handles_package packageName =
 -- Property: IR generation handles variable declarations
 prop_IR_handles_variables :: [String] -> [String] -> Property
 prop_IR_handles_variables varNames varTypes =
-  not (null varNames) && length varNames == length varTypes &&
-  all (not . null) varNames && all (not . null) varTypes ==>
+  not (null varNames) && L.length varNames == L.length varTypes &&
+  L.all (not . null) varNames && L.all (not . null) varTypes ==>
   let varDecls = zipWith (\name typ -> "var " ++ name ++ " " ++ typ) varNames varTypes
       content = unlines varDecls
       result = parseTypus content startPos
@@ -188,13 +189,13 @@ prop_IR_handles_variables varNames varTypes =
         Right semanticIR ->
           let goModule = semanticModule semanticIR
               decls = gmDecls goModule
-          in property $ length decls >= length varNames
+          in property $ L.length decls >= L.length varNames
 
 -- Property: IR generation handles type declarations
 prop_IR_handles_types :: [String] -> [String] -> Property
 prop_IR_handles_types typeNames baseTypes =
-  not (null typeNames) && length typeNames == length baseTypes &&
-  all (not . null) typeNames && all (not . null) baseTypes ==>
+  not (null typeNames) && L.length typeNames == L.length baseTypes &&
+  L.all (not . null) typeNames && L.all (not . null) baseTypes ==>
   let typeDecls = zipWith (\name base -> "type " ++ name ++ " " ++ base) typeNames baseTypes
       content = unlines typeDecls
       result = parseTypus content startPos
@@ -208,13 +209,13 @@ prop_IR_handles_types typeNames baseTypes =
         Right semanticIR ->
           let goModule = semanticModule semanticIR
               decls = gmDecls goModule
-          in property $ length decls >= length typeNames
+          in property $ L.length decls >= L.length typeNames
 
 -- Property: IR generation handles comments
 prop_IR_handles_comments :: [String] -> Property
 prop_IR_handles_comments comments =
-  not (null comments) && all (not . any (`elem` "\"'\\") ) comments ==>
-  let commentLines = map (\comment -> "// " ++ comment) comments
+  not (null comments) && L.all (not . L.any (`elem` "\"'\\") ) comments ==>
+  let commentLines = L.map (\comment -> "// " ++ comment) comments
       content = unlines commentLines
       result = parseTypus content startPos
   in case result of
@@ -232,7 +233,7 @@ prop_IR_handles_comments comments =
 -- Property: IR generation handles multiline strings
 prop_IR_handles_multiline_strings :: [String] -> Property
 prop_IR_handles_multiline_strings stringLines =
-  not (null stringLines) && all (not . any (`elem` "\\\"") ) stringLines ==>
+  not (null stringLines) && L.all (not . L.any (`elem` "\\\"") ) stringLines ==>
   let multilineString = unlines stringLines
       content = "var s string = `" ++ multilineString ++ "`"
       result = parseTypus content startPos
@@ -246,7 +247,7 @@ prop_IR_handles_multiline_strings stringLines =
         Right semanticIR ->
           let goIR = emitGo semanticIR
               goSource = goSource goIR
-          in property $ multilineString `isInfixOf` goSource
+          in property $ multilineString `L.isInfixOf` goSource
 
 -- Property: IR generation is deterministic
 prop_IR_deterministic :: String -> Property
@@ -269,7 +270,7 @@ prop_IR_deterministic content =
 -- Property: IR generation handles complex expressions
 prop_IR_handles_expressions :: String -> Property
 prop_IR_handles_expressions expression =
-  not (null expression) && not (any (`elem` expression) "\"'\\") ==>
+  not (null expression) && not (L.any (`elem` expression) "\"'\\") ==>
   let content = "func test() { result := " ++ expression ++ " }"
       result = parseTypus content startPos
   in case result of
@@ -282,14 +283,14 @@ prop_IR_handles_expressions expression =
         Right semanticIR ->
           let goIR = emitGo semanticIR
               goSource = goSource goIR
-          in property $ expression `isInfixOf` goSource
+          in property $ expression `L.isInfixOf` goSource
 
 -- Property: IR generation handles struct definitions
 prop_IR_handles_structs :: [String] -> [String] -> Property
 prop_IR_handles_structs structNames fieldTypes =
   not (null structNames) && not (null fieldTypes) &&
-  all (not . null) structNames && all (not . null) fieldTypes ==>
-  let structDef = "type " ++ head structNames ++ " struct { Field " ++ head fieldTypes ++ " }"
+  L.all (not . null) structNames && L.all (not . null) fieldTypes ==>
+  let structDef = "type " ++ L.head structNames ++ " struct { Field " ++ L.head fieldTypes ++ " }"
       content = structDef
       result = parseTypus content startPos
   in case result of
@@ -307,8 +308,8 @@ prop_IR_handles_structs structNames fieldTypes =
 -- Property: IR generation handles interface definitions
 prop_IR_handles_interfaces :: [String] -> Property
 prop_IR_handles_interfaces methodNames =
-  not (null methodNames) && all (not . null) methodNames ==>
-  let methodDecls = map (\name -> name ++ "()") methodNames
+  not (null methodNames) && L.all (not . null) methodNames ==>
+  let methodDecls = L.map (\name -> name ++ "()") methodNames
       interfaceDef = "type TestInterface interface { " ++ unwords methodDecls ++ " }"
       content = interfaceDef
       result = parseTypus content startPos

@@ -10,6 +10,7 @@
 module Test.Unit.EnhancedIntegrationQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -43,8 +44,9 @@ import Compiler.Errors.Core
 
 import Parser (TypusFile(..), FileDirectives(..), BlockDirectives(..))
 import Data.Text (Text, pack)
-import qualified Data.Text as T
-import Data.List (sort, intercalate, isInfixOf)
+import qualified Data.Text as T (pack, unpack)
+import Data.List (isInfixOf)
+import Data.List (sort, intercalate)
 import Data.Char (isSpace, isAlphaNum)
 import qualified Data.Map.Strict as Map
 
@@ -122,7 +124,7 @@ instance Arbitrary BlockDirectives where
 -- Utils + SourceLocation Integration Properties
 -- ============================================================================
 
--- Property: trim and position advancement are consistent
+-- Property: trim L.and position advancement are consistent
 prop_trim_position_consistency :: String -> Property
 prop_trim_position_consistency s =
   let trimmed = trim s
@@ -132,15 +134,15 @@ prop_trim_position_consistency s =
       trimmedLength = posOffset trimmedPos
   in trimmedLength <= originalLength
 
--- Property: splitBy and span creation are consistent
+-- Property: splitBy L.and span creation are consistent
 prop_splitBy_span_consistency :: Char -> String -> Property
 prop_splitBy_span_consistency delim s =
   let parts = splitBy delim s
       positions = scanl (\pos part -> advancePosBy (delim:part) pos) startPos parts
-      spans = zipWith (\start end -> spanBetween start (advancePosBy end start)) positions (tail positions ++ [advancePosBy "" (last positions)])
-  in length spans === length parts
+      spans = zipWith (\start end -> spanBetween start (advancePosBy end start)) positions (L.tail positions ++ [advancePosBy "" (last positions)])
+  in L.length spans === L.length parts
 
--- Property: removeComments and position tracking
+-- Property: removeComments L.and position tracking
 prop_removeComments_position_tracking :: String -> Property
 prop_removeComments_position_tracking s =
   let original = s
@@ -153,15 +155,15 @@ prop_removeComments_position_tracking s =
 prop_normalizeIndentation_relative_structure :: String -> Property
 prop_normalizeIndentation_relative_structure s =
   let lines' = lines s
-      hasMultipleLines = length lines' > 1
+      hasMultipleLines = L.length lines' > 1
       normalized = normalizeIndentation s
       normalizedLines = lines normalized
   in hasMultipleLines ==>
-     let originalIndents = map (takeWhile isSpace) lines'
-         normalizedIndents = map (takeWhile isSpace) normalizedLines
+     let originalIndents = L.map (takeWhile isSpace) lines'
+         normalizedIndents = L.map (takeWhile isSpace) normalizedLines
          -- Check that relative ordering is preserved
-         originalOrder = sort (map length originalIndents)
-         normalizedOrder = sort (map length normalizedIndents)
+         originalOrder = sort (map L.length originalIndents)
+         normalizedOrder = sort (map L.length normalizedIndents)
      in originalOrder === normalizedOrder
 
 -- ============================================================================
@@ -190,18 +192,18 @@ prop_sourcespan_errorlocation_conversion span =
 prop_located_error_handling :: SourceSpan -> String -> Property
 prop_located_error_handling span value =
   let located = locatedWithSpan span value
-      err = errorAt "TEST001" (pack value) (_atLocation (posLine (spanStart span)) (posColumn (spanStart span)))
+      err = errorAt "test-id" (pack value) (_atLocation (posLine (spanStart span)) (posColumn (spanStart span)))
       locatedErr = withLocation err (toErrorLocationWithSpan span)
   in location locatedErr === toErrorLocationWithSpan span
 
 -- Property: Error chaining preserves location information
 prop_error_chaining_locations :: SourcePos -> SourcePos -> Property
 prop_error_chaining_locations pos1 pos2 =
-  let err1 = errorAt "ERR001" "First error" (toErrorLocation pos1)
-      err2 = errorAt "ERR002" "Second error" (toErrorLocation pos2)
+  let err1 = errorAt "test-id" (toErrorLocation pos1)
+      err2 = errorAt "test-id" (toErrorLocation pos2)
       chained = wrapError "Chain error" err1
   in location chained === location err1 .&&.
-     not (null (errorChain chained))
+     not (L.null (errorChain chained))
 
 -- ============================================================================
 -- Utils + ErrorHandler Integration Properties
@@ -211,17 +213,17 @@ prop_error_chaining_locations pos1 pos2 =
 prop_error_processed_content :: String -> Property
 prop_error_processed_content s =
   let processed = removeComments (trim s)
-      err = errorAt "PROC001" (pack processed) (_atLocation 1 1)
+      err = errorAt "test-id" (pack processed) (_atLocation 1 1)
       formatted = formatError err
-  in not (null processed) ==> T.unpack (message err) `isInfixOf` formatted
+  in not (null processed) ==> T.unpack (message err) `L.isInfixOf` formatted
 
 -- Property: Error statistics with filtered content
 prop_error_statistics_filtered :: [TypeError] -> String -> Property
 prop_error_statistics_filtered errors content =
   let processed = removeComments content
-      filtered = filter (\e -> T.unpack (message e) `isInfixOf` processed) errors
+      filtered = L.filter (\e -> T.unpack (message e) `L.isInfixOf` processed) errors
       stats = getErrorStatistics filtered
-  in Map.lookup "total" stats === Just (length filtered)
+  in Map.lookup "total" stats === Just (L.length filtered)
 
 -- ============================================================================
 -- Multi-Module Integration Properties
@@ -236,14 +238,14 @@ prop_end_to_end_processing content =
       parts = splitBy '\n' normalized
       -- Create errors for each part
       errors = zipWith (\i part -> 
-        errorAt ("PROC" ++ show i) (pack part) (_atLocation i 1)) [1..] parts
-      -- Filter and format
-      errorCount = length errors
+        errorAt "test-id" show i) (pack part) (_atLocation i 1)) [1..] parts
+      -- Filter L.and format
+      errorCount = L.length errors
       stats = getErrorStatistics errors
       report = generateErrorReport errors
   in errorCount > 0 ==>
      Map.lookup "total" stats === Just errorCount .&&.
-     "Error Report" `isInfixOf` report
+     "Error Report" `L.isInfixOf` report
 
 -- Property: Position tracking through multiple transformations
 prop_position_tracking_transformations :: String -> Property
@@ -265,7 +267,7 @@ prop_position_tracking_transformations content =
 prop_error_recovery_location_aware :: SourcePos -> String -> Property
 prop_error_recovery_location_aware pos content =
   let processed = removeComments content
-      err = errorAt "RECOVER001" (pack processed) (toErrorLocation pos)
+      err = errorAt "test-id" (pack processed) (toErrorLocation pos)
       canRecover = canRecoverFrom err
       shouldContinue = shouldContinueAfter err
   in canRecover ==> shouldContinue
@@ -273,23 +275,23 @@ prop_error_recovery_location_aware pos content =
 -- Property: Complex error scenarios with multiple modules
 prop_complex_error_scenarios :: [String] -> [SourcePos] -> Property
 prop_complex_error_scenarios contents positions =
-  let processedContents = map (removeComments . trim) contents
+  let processedContents = L.map (removeComments . trim) contents
       errors = zipWith (\content pos -> 
-        errorWithCategory ("COMP" ++ show (length content)) TypeChecking (pack content) (toErrorLocation pos)
+        errorWithCategory ("COMP" ++ show (L.length content)) TypeChecking (pack content) (toErrorLocation pos)
         ) processedContents positions
-      -- Apply various filters and operations
+      -- Apply various filters L.and operations
       typeCheckingErrors = filterByCategory TypeChecking errors
       recoverableErrors = filter canRecoverFrom errors
       stats = getErrorStatistics errors
       report = generateErrorReport errors
   in not (null errors) ==>
-     length typeCheckingErrors === length errors .&&.
-     length recoverableErrors <= length errors .&&.
-     Map.lookup "typeChecking" stats === Just (length errors) .&&.
-     "Statistics:" `isInfixOf` report
+     length typeCheckingErrors === L.length errors .&&.
+     length recoverableErrors <= L.length errors .&&.
+     Map.lookup "typeChecking" stats === Just (L.length errors) .&&.
+     "Statistics:" `L.isInfixOf` report
 
 -- ============================================================================
--- Performance and Scalability Properties
+-- Performance L.and Scalability Properties
 -- ============================================================================
 
 -- Property: Large content processing performance
@@ -299,10 +301,10 @@ prop_large_content_processing contentLines =
       processed = removeComments (normalizeIndentation (trim content))
       parts = splitBy '\n' processed
       errors = zipWith (\i part -> 
-        errorAt ("LARGE" ++ show i) (pack part) (_atLocation i 1)) [1..] parts
+        errorAt "test-id" show i) (pack part) (_atLocation i 1)) [1..] parts
       stats = getErrorStatistics errors
-  in length contentLines > 0 ==>
-     Map.lookup "total" stats === Just (length errors)
+  in L.length contentLines > 0 ==>
+     Map.lookup "total" stats === Just (L.length errors)
 
 -- Property: Memory efficiency with repeated operations
 prop_memory_efficiency_operations :: String -> Int -> Property
@@ -324,16 +326,16 @@ prop_empty_content_handling :: Property
 prop_empty_content_handling =
   let content = ""
       processed = removeComments (normalizeIndentation (trim content))
-      errors = if null processed then [] else [errorAt "EMPTY001" (pack processed) (_atLocation 1 1)]
+      errors = if null processed then [] else [errorAt "test-id" (pack processed) (_atLocation 1 1)]
       stats = getErrorStatistics errors
   in Map.lookup "total" stats === Just 0
 
 -- Property: Special character handling
 prop_special_character_handling :: String -> Property
 prop_special_character_handling content =
-  let hasSpecialChars = any (not . isAlphaNum . not . isSpace) content
+  let hasSpecialChars = L.any (not . isAlphaNum . not . isSpace) content
       processed = removeComments content
-      err = errorAt "SPECIAL001" (pack processed) (_atLocation 1 1)
+      err = errorAt "test-id" (pack processed) (_atLocation 1 1)
       formatted = formatError err
   in hasSpecialChars ==> not (null formatted)
 
@@ -341,17 +343,17 @@ prop_special_character_handling content =
 prop_unicode_content_handling :: String -> Property
 prop_unicode_content_handling content =
   let processed = removeComments content
-      err = errorAt "UNICODE001" (pack processed) (_atLocation 1 1)
+      err = errorAt "test-id" (pack processed) (_atLocation 1 1)
       formatted = formatErrorWithLocation err
-  in length processed >= 0 ==> not (null formatted)
+  in L.length processed >= 0 ==> not (null formatted)
 
 -- Test collection
 tests :: TestTree
 tests = testGroup "Integration QuickCheck Properties"
   [ testGroup "Utils + SourceLocation Integration"
-    [ fastProperty "trim and position advancement consistency" prop_trim_position_consistency
-    , fastProperty "splitBy and span creation consistency" prop_splitBy_span_consistency
-    , fastProperty "removeComments and position tracking" prop_removeComments_position_tracking
+    [ fastProperty "trim L.and position advancement consistency" prop_trim_position_consistency
+    , fastProperty "splitBy L.and span creation consistency" prop_splitBy_span_consistency
+    , fastProperty "removeComments L.and position tracking" prop_removeComments_position_tracking
     , fastProperty "normalizeIndentation preserves relative structure" prop_normalizeIndentation_relative_structure
     ]
   , testGroup "SourceLocation + ErrorHandler Integration"
@@ -370,7 +372,7 @@ tests = testGroup "Integration QuickCheck Properties"
     , fastProperty "Error recovery with location-aware processing" prop_error_recovery_location_aware
     , fastProperty "Complex error scenarios" prop_complex_error_scenarios
     ]
-  , testGroup "Performance and Scalability"
+  , testGroup "Performance L.and Scalability"
     [ fastProperty "Large content processing performance" prop_large_content_processing
     , fastProperty "Memory efficiency with repeated operations" prop_memory_efficiency_operations
     ]

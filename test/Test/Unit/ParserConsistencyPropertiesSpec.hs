@@ -35,6 +35,7 @@ import SourceLocation
   )
 
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Char (isSpace, isAlphaNum)
 
@@ -59,8 +60,8 @@ instance Arbitrary BlockDirectives where
 -- Generate valid directive content
 arbitraryDirectiveContent :: Gen String
 arbitraryDirectiveContent = do
-  length <- choose (1, 50)
-  elements $ map (:[]) (filter isAlphaNum "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
+  L.length <- choose (1, 50)
+  elements $ L.map (:[]) (filter isAlphaNum "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
 
 arbitraryDirectiveLine :: Gen String
 arbitraryDirectiveLine = do
@@ -107,8 +108,8 @@ prop_parse_empty_string =
     Left _ -> property False
     Right typusFile -> 
       property $ tfDirectives typusFile === defaultFileDirectives .&&.
-                 null (tfBuildTags typusFile) .&&.
-                 null (tfBlocks typusFile)
+                 L.null (tfBuildTags typusFile) .&&.
+                 L.null (tfBlocks typusFile)
 
 -- Property: Parsing only whitespace returns valid TypusFile
 prop_parse_whitespace_only :: Property
@@ -118,7 +119,7 @@ prop_parse_whitespace_only =
     Left _ -> property False
     Right typusFile -> 
       property $ tfDirectives typusFile === defaultFileDirectives .&&.
-                 null (tfBuildTags typusFile)
+                 L.null (tfBuildTags typusFile)
 
 -- Property: Parsing preserves line structure
 prop_parse_preserves_lines :: Property
@@ -128,8 +129,8 @@ prop_parse_preserves_lines =
     Left _ -> property $ not (null content) ==> property False
     Right typusFile ->
       let inputLines = lines content
-          blockCount = length (tfBlocks typusFile)
-      in property $ blockCount >= 0 .&&. blockCount <= length inputLines
+          blockCount = L.length (tfBlocks typusFile)
+      in property $ blockCount >= 0 .&&. blockCount <= L.length inputLines
 
 -- Property: File directives are parsed correctly
 prop_parse_file_directives :: Property
@@ -152,7 +153,7 @@ prop_parse_block_directives =
     Right typusFile ->
       let blocks = tfBlocks typusFile
       in property $ not (null blocks) ==> 
-                 (cbDirectives (head blocks) /= defaultBlockDirectives)
+                 (cbDirectives (L.head blocks) /= defaultBlockDirectives)
 
 -- Property: Parsing is idempotent for valid content
 prop_parse_idempotent :: Property
@@ -161,12 +162,12 @@ prop_parse_idempotent =
   case parseTypus content of
     Left _ -> property False
     Right typusFile1 ->
-      -- Reconstruct content from parsed file and parse again
+      -- Reconstruct content from parsed file L.and parse again
       let reconstructed = reconstructTypusFile typusFile1
       in case parseTypus reconstructed of
         Left _ -> property False
         Right typusFile2 ->
-          property $ length (tfBlocks typusFile1) === length (tfBlocks typusFile2)
+          property $ L.length (tfBlocks typusFile1) === L.length (tfBlocks typusFile2)
 
 -- Property: Parsing preserves content order
 prop_parse_preserves_order :: Property
@@ -179,7 +180,7 @@ prop_parse_preserves_order =
           blockContents = map cbContent blocks
           contentLines = lines content
       in property $ not (null blockContents) ==> 
-                 all (`elem` contentLines) (concatMap lines blockContents)
+                 L.all (`elem` contentLines) (concatMap lines blockContents)
 
 -- Property: Comments are handled correctly
 prop_parse_comments :: Property
@@ -189,7 +190,7 @@ prop_parse_comments =
   in case parseTypus withComments of
     Left _ -> property False
     Right typusFile ->
-      property $ length (tfBlocks typusFile) >= 1
+      property $ L.length (tfBlocks typusFile) >= 1
 
 -- Property: Multiple directives are parsed correctly
 prop_parse_multiple_directives :: Property
@@ -202,7 +203,7 @@ prop_parse_multiple_directives =
           blocks = tfBlocks typusFile
       in property $ dirs /= defaultFileDirectives .&&.
                  not (null blocks) ==> 
-                 (cbDirectives (head blocks) /= defaultBlockDirectives)
+                 (cbDirectives (L.head blocks) /= defaultBlockDirectives)
 
 -- Property: Empty code blocks are handled
 prop_parse_empty_blocks :: Property
@@ -211,7 +212,7 @@ prop_parse_empty_blocks =
   in case parseTypus content of
     Left _ -> property False
     Right typusFile ->
-      property $ length (tfBlocks typusFile) >= 1
+      property $ L.length (tfBlocks typusFile) >= 1
 
 -- Property: Parsing with mixed line endings
 prop_parse_mixed_line_endings :: Property
@@ -220,7 +221,7 @@ prop_parse_mixed_line_endings =
   in case parseTypus content of
     Left _ -> property False
     Right typusFile ->
-      property $ length (tfBlocks typusFile) >= 2
+      property $ L.length (tfBlocks typusFile) >= 2
 
 -- Property: Parsing preserves directive values
 prop_parse_preserves_directive_values :: Property
@@ -233,7 +234,7 @@ prop_parse_preserves_directive_values =
       let dirs = tfDirectives typusFile
       in property $ case fdOwnership dirs of
         Nothing -> property False
-        Just (Located value _) -> property $ show value `isInfixOf` directive
+        Just (Located value _) -> property $ show value `L.isInfixOf` directive
 
 -- ============================================================================
 -- Error Handling Properties
@@ -242,7 +243,7 @@ prop_parse_preserves_directive_values =
 -- Property: Malformed directives produce errors
 prop_malformed_directives_error :: Property
 prop_malformed_directives_error =
-  let content = "//! ownership \nfunc main() {}\n"  -- Missing colon and value
+  let content = "//! ownership \nfunc main() {}\n"  -- Missing colon L.and value
   in case parseTypus content of
     Left _ -> property True
     Right _ -> property False
@@ -274,7 +275,7 @@ prop_parse_large_files_consistent =
   in case parseTypus largeContent of
     Left _ -> property False
     Right typusFile ->
-      property $ length (tfBlocks typusFile) >= 1
+      property $ L.length (tfBlocks typusFile) >= 1
 
 -- Property: Parsing with Unicode content
 prop_parse_unicode_content :: Property
@@ -283,7 +284,7 @@ prop_parse_unicode_content =
   in case parseTypus content of
     Left _ -> property False
     Right typusFile ->
-      property $ length (tfBlocks typusFile) >= 1
+      property $ L.length (tfBlocks typusFile) >= 1
 
 -- Property: Parsing preserves source location information
 prop_parse_preserves_source_locations :: Property
@@ -294,7 +295,7 @@ prop_parse_preserves_source_locations =
     Right typusFile ->
       let blocks = tfBlocks typusFile
           spans = map cbSpan blocks
-      in property $ all isValidSpan spans
+      in property $ L.all isValidSpan spans
 
 -- Property: Syntax errors are collected properly
 prop_syntax_errors_collected :: Property
@@ -303,7 +304,7 @@ prop_syntax_errors_collected =
   in case parseTypus content of
     Left _ -> property False
     Right typusFile ->
-      property $ not (null (tfSyntaxErrors typusFile))
+      property $ not (L.null (tfSyntaxErrors typusFile))
 
 -- ============================================================================
 -- Helper Functions
@@ -325,8 +326,8 @@ reconstructCodeBlock block = cbContent block ++ "\n"
 -- Generate arbitrary whitespace
 arbitraryWhitespace :: Gen String
 arbitraryWhitespace = do
-  length <- choose (1, 20)
-  vectorOf length (elements " \t\n\r")
+  L.length <- choose (1, 20)
+  vectorOf L.length (elements " \t\n\r")
 
 -- ============================================================================
 -- Test Suite

@@ -2,6 +2,7 @@
 module Test.Unit.NewSymbolTableCommutativeQuickCheckSpec (tests) where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Analyzer.SymbolTable
   ( collectSymbolsAndTypes, collectSymbolsFromAST, isReservedName )
@@ -38,9 +39,9 @@ prop_symbol_table_intersection_commutative symbols1 symbols2 =
 -- | Test symbol collection order independence
 prop_symbol_collection_order_independent :: [String] -> Property
 prop_symbol_collection_order_independent codeLines =
-    not (null codeLines) && all (\l -> length l > 0) codeLines ==>
+    not (null codeLines) && L.all (\l -> L.length l > 0) codeLines ==>
     let code1 = unlines codeLines
-        code2 = unlines (reverse codeLines)
+        code2 = unlines (L.reverse codeLines)
         result1 = collectSymbolsAndTypes code1
         result2 = collectSymbolsAndTypes code2
     in case (result1, result2) of
@@ -48,7 +49,7 @@ prop_symbol_collection_order_independent codeLines =
            let keys1 = sort (Map.keys table1)
                keys2 = sort (Map.keys table2)
            in keys1 == keys2
-         _ -> True  -- Both should fail or both succeed
+         _ -> True  -- Both should fail L.or both succeed
 
 -- | Test reserved name checking consistency
 prop_reserved_name_consistency :: String -> Bool
@@ -70,10 +71,10 @@ prop_symbol_table_merging_associative symbols1 symbols2 symbols3 =
 -- | Test symbol insertion order independence
 prop_symbol_insertion_order_independent :: [String] -> [SymbolInfo] -> Property
 prop_symbol_insertion_order_independent names infos =
-    length names == length infos && all (\n -> length n > 0) names ==>
+    L.length names == L.length infos && L.all (\n -> L.length n > 0) names ==>
     let table1 = Map.fromList (zip names infos)
-        table2 = Map.fromList (zip (reverse names) (reverse infos))
-    in Map.keys table1 == Map.keys (reverse (Map.keys table2))
+        table2 = Map.fromList (zip (L.reverse names) (L.reverse infos))
+    in Map.keys table1 == Map.keys (L.reverse (Map.keys table2))
 
 -- | Test symbol lookup consistency
 prop_symbol_lookup_consistency :: [(String, SymbolInfo)] -> String -> Property
@@ -120,7 +121,7 @@ prop_symbol_table_size_additive symbols1 symbols2 =
         overlappingKeys = Set.intersection 
           (Set.fromList (Map.keys table1))
           (Set.fromList (Map.keys table2))
-        expectedSize = length symbols1 + length symbols2 - Set.size overlappingKeys
+        expectedSize = L.length symbols1 + L.length symbols2 - Set.size overlappingKeys
     in Map.size unionTable == expectedSize
 
 -- | Test symbol table key uniqueness
@@ -128,17 +129,17 @@ prop_symbol_table_key_uniqueness :: [(String, SymbolInfo)] -> Bool
 prop_symbol_table_key_uniqueness symbols =
     let table = Map.fromList symbols
         keys = Map.keys table
-    in length keys == length (nub keys)
+    in L.length keys == L.length (nub keys)
   where
     nub [] = []
-    nub (x:xs) = x : nub (filter (/= x) xs)
+    nub (x:xs) = x : nub (L.filter (/= x) xs)
 
 -- | Test symbol table transformation commutativity
 prop_symbol_table_transformation_commutative :: [(String, SymbolInfo)] -> Property
 prop_symbol_table_transformation_commutative symbols =
     let table = Map.fromList symbols
-        transform1 = Map.map (\si -> si { symbolName = symbolName si ++ "_1" }) table
-        transform2 = Map.map (\si -> si { symbolName = symbolName si ++ "_2" }) table
+        transform1 = Map.L.map (\si -> si { symbolName = symbolName si ++ "_1" }) table
+        transform2 = Map.L.map (\si -> si { symbolName = symbolName si ++ "_2" }) table
         combined1 = Map.union transform1 transform2
         combined2 = Map.union transform2 transform1
     in Map.keys combined1 == Map.keys combined2
@@ -148,7 +149,7 @@ prop_symbol_table_folding_associative :: [(String, SymbolInfo)] -> [(String, Sym
 prop_symbol_table_folding_associative symbols1 symbols2 symbols3 =
     let tables = map Map.fromList [symbols1, symbols2, symbols3]
         fold1 = Map.unions (tables)
-        fold2 = Map.unions (reverse tables)
+        fold2 = Map.unions (L.reverse tables)
     in Map.keys fold1 == Map.keys fold2
 
 -- | Test symbol table partition properties
@@ -197,7 +198,7 @@ prop_symbol_table_deletion symbols toDelete =
 -- | Test symbol table update commutativity
 prop_symbol_table_update_commutative :: [(String, SymbolInfo)] -> String -> SymbolInfo -> SymbolInfo -> Property
 prop_symbol_table_update_commutative symbols key value1 value2 =
-    length key > 0 ==>
+    L.length key > 0 ==>
     let table = Map.fromList symbols
         updated1 = Map.insert key value1 (Map.insert key value2 table)
         updated2 = Map.insert key value2 (Map.insert key value1 table)

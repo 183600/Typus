@@ -20,6 +20,7 @@ import Debug
   , withDebugConfig
   )
 
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 import Data.Char (isSpace)
 
@@ -67,7 +68,7 @@ prop_debugConfig_no_location logLevel showTime =
   let config = DebugConfig True logLevel showTime False
   in property $ not (dcShowLocation config)
 
--- Property: DebugConfig with all features disabled
+-- Property: DebugConfig with L.all features disabled
 prop_debugConfig_all_disabled :: Int -> Property
 prop_debugConfig_all_disabled logLevel =
   logLevel >= 0 && logLevel <= 4 ==>
@@ -76,7 +77,7 @@ prop_debugConfig_all_disabled logLevel =
              not (dcShowTime config) && 
              not (dcShowLocation config)
 
--- Property: DebugConfig with all features enabled
+-- Property: DebugConfig with L.all features enabled
 prop_debugConfig_all_enabled :: Int -> Property
 prop_debugConfig_all_enabled logLevel =
   logLevel >= 0 && logLevel <= 4 ==>
@@ -118,7 +119,7 @@ prop_debugConfig_show enabled logLevel showTime showLocation =
   logLevel >= 0 && logLevel <= 4 ==>
   let config = DebugConfig enabled logLevel showTime showLocation
       configStr = show config
-  in property $ not (null configStr) && "DebugConfig" `isInfixOf` configStr
+  in property $ not (null configStr) && "DebugConfig" `L.isInfixOf` configStr
 
 -- Property: DebugConfig read/show roundtrip
 prop_debugConfig_read_show :: Bool -> Int -> Bool -> Bool -> Property
@@ -195,8 +196,8 @@ tests = testGroup "Debug QuickCheck tests"
   , fastProperty "DebugConfig log level filtering" prop_debugConfig_log_level_filtering
   , fastProperty "DebugConfig with time disabled" prop_debugConfig_no_time
   , fastProperty "DebugConfig with location disabled" prop_debugConfig_no_location
-  , fastProperty "DebugConfig with all features disabled" prop_debugConfig_all_disabled
-  , fastProperty "DebugConfig with all features enabled" prop_debugConfig_all_enabled
+  , fastProperty "DebugConfig with L.all features disabled" prop_debugConfig_all_disabled
+  , fastProperty "DebugConfig with L.all features enabled" prop_debugConfig_all_enabled
   , fastProperty "DebugConfig log level boundaries" prop_debugConfig_log_level_boundaries
   , fastProperty "withDebugConfig preserves action result" prop_withDebugConfig_preserves_result
   , fastProperty "DebugConfig combinations" prop_debugConfig_combinations

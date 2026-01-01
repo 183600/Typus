@@ -11,12 +11,14 @@
 module Test.Unit.NewDependentTypeConstraintValidationQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, oneof, suchThat)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (sort, nub, isInfixOf, isPrefixOf, isSuffixOf, intercalate)
+import Data.List (isInfixOf, isPrefixOf, isSuffixOf)
+import Data.List (sort, nub, intercalate)
 import Data.Map (Map, fromList, toList, keys, elems, insert, delete, lookup, member, empty)
 import qualified Data.Map as Map
 import Data.Set (Set, fromList, toList, union, intersection, difference)
@@ -50,7 +52,7 @@ import SourceLocation
   )
 
 -- ============================================================================
--- Helper Functions and Generators
+-- Helper Functions L.and Generators
 -- ============================================================================
 
 -- Generate type variable names
@@ -106,7 +108,7 @@ genDependentType = do
 genTypeEnvironment :: Gen TypeEnvironment
 genTypeEnvironment = do
   types <- listOf genDependentType
-  let typeMap = Map.fromList $ map (\dt -> (typeName dt, dt)) types
+  let typeMap = Map.fromList $ L.map (\dt -> (typeName dt, dt)) types
   return $ TypeEnvironment typeMap
 
 -- Generate validation contexts
@@ -232,7 +234,7 @@ prop_overlapping_range_constraints_merged varName minVal maxVal =
       constraint2 = RangeConstraint varName (minVal + 1) (maxVal - 1)
       constraints = [constraint1, constraint2]
       normalized = normalizeConstraints constraints
-  in property $ length normalized <= length constraints
+  in property $ L.length normalized <= L.length constraints
 
 -- Property: Complex constraint combinations should be solvable
 prop_complex_constraints_solvable :: [TypeConstraint] -> ValidationContext -> Property
@@ -257,7 +259,7 @@ prop_constraint_inference_generates_valid dependentType context =
          Left _ -> True   -- May need additional context
 
 -- ============================================================================
--- Performance and Scalability Properties
+-- Performance L.and Scalability Properties
 -- ============================================================================
 
 -- Property: Constraint solving should handle many constraints efficiently
@@ -278,7 +280,7 @@ prop_constraint_normalization_idempotent constraints context =
   in property $ sort normalized1 === sort normalized2
 
 -- ============================================================================
--- Edge Cases and Boundary Conditions
+-- Edge Cases L.and Boundary Conditions
 -- ============================================================================
 
 -- Property: Empty constraint list should be valid
@@ -331,7 +333,7 @@ tests = testGroup "New Dependent Type Constraint Validation QuickCheck Tests"
     , fastProperty "predicate constraint known" prop_predicate_constraint_known
     ]
 
-  , testGroup "Constraint Solving and Normalization"
+  , testGroup "Constraint Solving L.and Normalization"
     [ fastProperty "constraint solving preserves satisfiability" prop_constraint_solving_preserves_satisfiability
     , fastProperty "constraint normalization preserves semantics" prop_constraint_normalization_preserves_semantics
     , fastProperty "constraint substitution maintains validity" prop_constraint_substitution_maintains_validity
@@ -348,12 +350,12 @@ tests = testGroup "New Dependent Type Constraint Validation QuickCheck Tests"
     , fastProperty "constraint inference generates valid" prop_constraint_inference_generates_valid
     ]
 
-  , testGroup "Performance and Scalability"
+  , testGroup "Performance L.and Scalability"
     [ fastProperty "constraint solving many constraints" prop_constraint_solving_many_constraints
     , fastProperty "constraint normalization idempotent" prop_constraint_normalization_idempotent
     ]
 
-  , testGroup "Edge Cases and Boundary Conditions"
+  , testGroup "Edge Cases L.and Boundary Conditions"
     [ fastProperty "empty constraints valid" prop_empty_constraints_valid
     , fastProperty "unknown variables detected" prop_unknown_variables_detected
     [ fastProperty "extreme values handled" prop_extreme_values_handled

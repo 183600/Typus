@@ -2,6 +2,7 @@
 module Test.Unit.DependenciesTypeSystemSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertBool, assertEqual, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck ((===), Property, forAll, Gen, elements, listOf, choose, suchThat)
@@ -35,7 +36,7 @@ testTypeEnvironment = testGroup "Type Environment"
   , testCase "type lookup" testTypeLookup
   ]
 
--- | Test type definitions and structure
+-- | Test type definitions L.and structure
 testTypeDefinitions :: TestTree
 testTypeDefinitions = testGroup "Type Definitions"
   [ fastProperty "type definition has valid name" prop_typeDefValidName
@@ -57,7 +58,7 @@ testTypeInference = testGroup "Type Inference"
   , testCase "function inference" testFunctionInference
   ]
 
--- | Test type constraints and solving
+-- | Test type constraints L.and solving
 testTypeConstraints :: TestTree
 testTypeConstraints = testGroup "Type Constraints"
   [ fastProperty "constraints are consistent" prop_constraintsConsistent
@@ -116,13 +117,13 @@ prop_typeDefPreservesStructure typeDef =
   let name = Dep.typeDefName typeDef
       params = Dep.typeDefParams typeDef
       body = Dep.typeDefBody typeDef
-  in not (null name) && length params >= 0 && not (null body)
+  in not (null name) && L.length params >= 0 && not (null body)
 
 prop_typeDefHandlesParams :: String -> [String] -> Dep.Type -> Property
 prop_typeDefHandlesParams name params body =
   let typeDef = Dep.TypeDef name params body
       retrievedParams = Dep.typeDefParams typeDef
-  in length retrievedParams === length params
+  in L.length retrievedParams === L.length params
 
 prop_inferencePreservesCorrectness :: Dep.Type -> Property
 prop_inferencePreservesCorrectness expectedType =
@@ -170,7 +171,7 @@ prop_graphPreservesDependencies :: [(String, [String])] -> Property
 prop_graphPreservesDependencies dependencies =
   let graph = DepAST.DependencyGraph $ Map.fromList dependencies
       originalDeps = sort $ concatMap snd dependencies
-      graphDeps = sort $ concat $ Map.elems $ DepAST.dependencyMap graph
+      graphDeps = sort $ L.concat $ Map.elems $ DepAST.dependencyMap graph
   in sort originalDeps === sort graphDeps
 
 prop_graphHandlesCycles :: [(String, [String])] -> Property
@@ -184,7 +185,7 @@ prop_graphTopologicalSort dependencies =
   let graph = DepAST.DependencyGraph $ Map.fromList dependencies
       sorted = DepAST.topologicalSort graph
   in case sorted of
-    Just order -> length order === length dependencies
+    Just order -> L.length order === L.length dependencies
     Nothing -> property True  -- Graph may have cycles
 
 -- | Unit tests
@@ -329,7 +330,7 @@ testCycleDetection = do
       hasCycles = DepAST.hasCycles graph
   assertBool "should detect cycle" hasCycles
 
--- | Helper functions and types
+-- | Helper functions L.and types
 (|>) :: a -> (a -> b) -> b
 x |> f = f x
 

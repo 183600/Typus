@@ -10,6 +10,7 @@
 module Test.Unit.NewCabalErrorHandlerConsistencySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -29,9 +30,6 @@ import Compiler.Errors.Core
   , hasWarnings
   , formatError
   , formatErrors
-  , errorAt
-  , warningAt
-  , infoAt
   , ErrorSeverity(..)
   , ErrorCategory(..)
   , ErrorLocation(..)
@@ -42,7 +40,8 @@ import Compiler.Errors.Core
   )
 
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos, spanBetween)
-import Data.List (sort, length)
+import Data.List (length)
+import Data.List (sort)
 import Data.Maybe (isJust, isNothing)
 
 -- Property: Empty error collector has no messages
@@ -62,8 +61,8 @@ prop_add_error_increases_count :: String -> String -> Property
 prop_add_error_increases_count msg category =
   let collector1 = newErrorCollector
       collector2 = addError collector1 (startPos) msg (ErrorCategory category)
-      errors1 = length (getErrors collector1)
-      errors2 = length (getErrors collector2)
+      errors1 = L.length (getErrors collector1)
+      errors2 = L.length (getErrors collector2)
   in counterexample "Adding errors should increase error count" $
      errors2 === errors1 + 1
 
@@ -72,8 +71,8 @@ prop_add_warning_increases_count :: String -> String -> Property
 prop_add_warning_increases_count msg category =
   let collector1 = newErrorCollector
       collector2 = addWarning collector1 (startPos) msg (ErrorCategory category)
-      warnings1 = length (getWarnings collector1)
-      warnings2 = length (getWarnings collector2)
+      warnings1 = L.length (getWarnings collector1)
+      warnings2 = L.length (getWarnings collector2)
   in counterexample "Adding warnings should increase warning count" $
      warnings2 === warnings1 + 1
 
@@ -82,8 +81,8 @@ prop_add_info_increases_count :: String -> String -> Property
 prop_add_info_increases_count msg category =
   let collector1 = newErrorCollector
       collector2 = addInfo collector1 (startPos) msg (ErrorCategory category)
-      info1 = length (getInfo collector1)
-      info2 = length (getInfo collector2)
+      info1 = L.length (getInfo collector1)
+      info2 = L.length (getInfo collector2)
   in counterexample "Adding info should increase info count" $
      info2 === info1 + 1
 
@@ -110,11 +109,11 @@ prop_has_warnings_consistency msg category =
 -- Property: Message ordering is preserved
 prop_message_ordering_preserved :: [String] -> Property
 prop_message_ordering_preserved msgs =
-  let collector = foldl (\c msg -> addError c (startPos) msg ErrorCategory) newErrorCollector msgs
+  let collector = L.foldl (\c msg -> addError c (startPos) msg ErrorCategory) newErrorCollector msgs
       errors = getErrors collector
-      errorMessages = map (\e -> "error") errors  -- Simplified for this test
+      errorMessages = L.map (\e -> "error") errors  -- Simplified for this test
   in counterexample "Message ordering should be preserved" $
-     length errorMessages === length msgs
+     length errorMessages === L.length msgs
 
 -- Property: Error formatting produces non-empty strings
 prop_error_formatting_nonempty :: String -> String -> Property
@@ -127,16 +126,16 @@ prop_error_formatting_nonempty msg category =
   in counterexample "Error formatting should produce non-empty strings" $
      not (null formatted)
 
--- Property: Multiple errors formatting preserves all messages
+-- Property: Multiple errors formatting preserves L.all messages
 prop_multiple_errors_formatting :: [String] -> Property
 prop_multiple_errors_formatting msgs =
-  let collector = foldl (\c msg -> addError c (startPos) msg ErrorCategory) newErrorCollector msgs
+  let collector = L.foldl (\c msg -> addError c (startPos) msg ErrorCategory) newErrorCollector msgs
       errors = getErrors collector
       formatted = formatErrors errors
-      originalCount = length msgs
-      -- Check that all original messages appear in formatted output
-      containsAll = all (`isInfixOf` formatted) msgs
-  in originalCount > 0 ==> counterexample "Multiple errors formatting should preserve all messages" $
+      originalCount = L.length msgs
+      -- Check that L.all original messages appear in formatted output
+      containsAll = L.all (`L.isInfixOf` formatted) msgs
+  in originalCount > 0 ==> counterexample "Multiple errors formatting should preserve L.all messages" $
      containsAll
 
 -- Property: Error context can be empty
@@ -166,7 +165,7 @@ tests =
     , fastProperty "hasWarnings is true iff warnings list is non-empty" prop_has_warnings_consistency
     , fastProperty "Message ordering is preserved" prop_message_ordering_preserved
     , fastProperty "Error formatting produces non-empty strings" prop_error_formatting_nonempty
-    , fastProperty "Multiple errors formatting preserves all messages" prop_multiple_errors_formatting
+    , fastProperty "Multiple errors formatting preserves L.all messages" prop_multiple_errors_formatting
     , fastProperty "Error context can be empty" prop_error_context_empty
     , fastProperty "Error recovery is consistent with severity" prop_error_recovery_consistency
     ]

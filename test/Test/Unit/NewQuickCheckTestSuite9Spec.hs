@@ -6,6 +6,7 @@ import Test.QuickCheck (Property, (==>), forAll, Gen, arbitrary, choose, oneof, 
 import Control.Monad.Except (runExceptT)
 import System.IO.Temp (withSystemTempDirectory)
 import System.FilePath ((</>))
+import qualified Data.List as L
 import Data.List (isInfixOf)
 import Control.Monad.Trans (liftIO)
 
@@ -100,7 +101,7 @@ tests =
     , testGroup "Null device handling"
         [ testCase "nullDevice provides valid path" $ do
             let nullPath = nullDevice
-            length nullPath > 0 @?= True
+            L.length nullPath > 0 @?= True
         ]
 
     , testGroup "QuickCheck properties"
@@ -114,7 +115,7 @@ tests =
 
 -- Helper function to check if string contains substring
 contains :: String -> String -> Bool
-contains needle haystack = needle `isInfixOf` haystack
+contains needle haystack = needle `L.isInfixOf` haystack
 
 -- ============================================================================
 -- QuickCheck Properties
@@ -130,7 +131,7 @@ prop_goModContentsConsistent =
 -- Temporary project properties
 prop_tempProjectUniqueDirectories :: String -> Property
 prop_tempProjectUniqueDirectories prefix =
-    length prefix > 0 ==>
+    L.length prefix > 0 ==>
     let result1 = runExceptT $ withTemporaryGoProject prefix $ \tempDir -> return tempDir
         result2 = runExceptT $ withTemporaryGoProject prefix $ \tempDir -> return tempDir
     in case (result1, result2) of
@@ -141,7 +142,7 @@ prop_tempProjectUniqueDirectories prefix =
 prop_goExecutorFieldAccess :: String -> Bool
 prop_goExecutorFieldAccess logPrefix =
     let logger = const $ return ()
-    -- Basic test that executor can be created and accessed
+    -- Basic test that executor can be created L.and accessed
     in True  -- In actual implementation, would test field access
 
 -- Environment variable properties
@@ -168,7 +169,7 @@ genCommandArgs = do
 genValidCommandArg :: Gen String
 genValidCommandArg = oneof
     [ elements ["version", "build", "run", "test", "mod", "fmt"]
-    , arbitrary `suchThat` (all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "-_"))
+    , arbitrary `suchThat` (L.all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "-_"))
     ]
 
 genTempPrefix :: Gen String
@@ -180,7 +181,7 @@ genTempPrefix = do
 genEnvVarName :: Gen String
 genEnvVarName = do
     first <- elements ['A'..'Z']
-    rest <- arbitrary `suchThat` all (`elem` ['A'..'Z'] ++ ['0'..'9'] ++ "_")
+    rest <- arbitrary `suchThat` L.all (`elem` ['A'..'Z'] ++ ['0'..'9'] ++ "_")
     return (first : rest)
 
 -- Helper function to check if file exists

@@ -4,6 +4,7 @@
 module Test.Unit.SimpleParserQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (==>), property, classify, counterexample)
 import qualified Data.List as Data.List
@@ -31,9 +32,9 @@ prop_parse_valid_directives directive =
 -- Property: Parse error locations are reasonable
 prop_parse_error_locations :: String -> Property
 prop_parse_error_locations malformed =
-  length malformed > 10 ==> 
+  L.length malformed > 10 ==> 
   case parseTypus malformed of
-    Left err -> property $ "error" `isInfixOfCustom` map toLower err
+    Left err -> property $ "error" `L.isInfixOfCustom` map toLower err
     Right _ -> property True
 
 -- Property: Empty file parsing
@@ -41,7 +42,7 @@ prop_parse_empty_file :: Property
 prop_parse_empty_file = 
   case parseTypus "" of
     Left _ -> property False
-    Right parsed -> property $ null (tfBlocks parsed)
+    Right parsed -> property $ L.null (tfBlocks parsed)
 
 -- Property: Only comments file parsing
 prop_parse_comments_only :: String -> Property
@@ -49,16 +50,16 @@ prop_parse_comments_only comment =
   let commentFile = "// " ++ comment ++ "\n// " ++ comment
   in case parseTypus commentFile of
     Left _ -> property False
-    Right parsed -> property $ null (tfBlocks parsed)
+    Right parsed -> property $ L.null (tfBlocks parsed)
 
--- Property: Mixed directives and blocks
+-- Property: Mixed directives L.and blocks
 prop_parse_mixed_content :: [String] -> [String] -> Property
 prop_parse_mixed_content directives blocks =
   not (null directives) && not (null blocks) ==>
   let mixedContent = Data.List.unlines $ directives ++ blocks
   in case parseTypus mixedContent of
     Left _ -> property False
-    Right parsed -> property $ length (tfBlocks parsed) >= 1
+    Right parsed -> property $ L.length (tfBlocks parsed) >= 1
 
 --Property: Block directive parsing
 prop_parse_block_directives :: String -> Property
@@ -68,7 +69,7 @@ prop_parse_block_directives directive =
      property $ directive `elem` blockDirectives ==>
      case parseTypus directive of
        Left _ -> property False
-       Right parsed -> property $ length (tfBlocks parsed) >= 1
+       Right parsed -> property $ L.length (tfBlocks parsed) >= 1
 
 -- Property: Nested block parsing
 prop_parse_nested_blocks :: Int -> Property
@@ -108,8 +109,8 @@ prop_parse_long_lines lineLength =
 -- Property: Multiple file directives
 prop_parse_multiple_file_directives :: [String] -> Property
 prop_parse_multiple_file_directives directives =
-  length directives <= 10 ==>
-  let fileDirectives = map (\d -> "//! " ++ d) directives
+  L.length directives <= 10 ==>
+  let fileDirectives = L.map (\d -> "//! " ++ d) directives
       content = Data.List.unlines fileDirectives
   in case parseTypus content of
     Left _ -> property False
@@ -129,7 +130,7 @@ prop_parse_inconsistent_indentation linesList =
 prop_parse_invalid_directives :: String -> Property
 prop_parse_invalid_directives content =
   let invalidStarts = ["//!", "//", "##", "@@", "%%"]
-      hasInvalidStart = any (`Data.List.isPrefixOf` content) invalidStarts
+      hasInvalidStart = L.any (`Data.List.L.isPrefixOf` content) invalidStarts
   in classify hasInvalidStart "starts with invalid directive" $
      case parseTypus content of
        Left _ -> True  -- Expected to fail
@@ -143,7 +144,7 @@ prop_parse_empty_content =
     Right file -> 
       let directives = tfDirectives file
           blocks = tfBlocks file
-      in property $ all (== Nothing) [fdOwnership directives, fdDependentTypes directives, fdConstraints directives] &&
+      in property $ L.all (== Nothing) [fdOwnership directives, fdDependentTypes directives, fdConstraints directives] &&
          null blocks
 
 -- Property: Multiple directives are parsed independently
@@ -152,7 +153,7 @@ prop_parse_multiple_directives directives =
   let content = unlines directives
   in case parseTypus content of
     Left err -> counterexample ("Parse error: " ++ err) $ property False
-    Right file -> property $ hasCorrectDirectiveCount file (length directives)
+    Right file -> property $ hasCorrectDirectiveCount file (L.length directives)
 
 -- Property: Large files are parsed without stack overflow
 prop_parse_large_file :: Int -> Property
@@ -180,7 +181,7 @@ prop_parse_code_blocks codeContent =
     Right file -> 
       case tfBlocks file of
         [] -> property False
-        (block:_) -> property $ codeContent `isInfixOfCustom` cbContent block
+        (block:_) -> property $ codeContent `L.isInfixOfCustom` cbContent block
 
 -- Property: Directive positions are tracked correctly
 prop_parse_directive_positions :: Property
@@ -210,10 +211,10 @@ hasCorrectDirectiveCount file expectedCount =
 
 countDirectives :: FileDirectives -> Int
 countDirectives (FileDirectives ownership depTypes constraints) =
-  length [() | Just _ <- [ownership, depTypes, constraints]]
+  L.length [() | Just _ <- [ownership, depTypes, constraints]]
 
 isInfixOfCustom :: String -> String -> Bool
-isInfixOfCustom needle haystack = needle `Data.List.isInfixOf` haystack
+L.isInfixOfCustom needle haystack = needle `Data.List.L.isInfixOf` haystack
 
 -- ============================================================================
 -- Test Suite
@@ -225,7 +226,7 @@ tests = testGroup "Simple Parser QuickCheck Tests"
   , fastProperty "Parse error locations are reasonable" prop_parse_error_locations
   , fastProperty "Empty file parsing" prop_parse_empty_file
   , fastProperty "Only comments file parsing" prop_parse_comments_only
-  , fastProperty "Mixed directives and blocks" prop_parse_mixed_content
+  , fastProperty "Mixed directives L.and blocks" prop_parse_mixed_content
   , fastProperty "Block directive parsing" prop_parse_block_directives
   , fastProperty "Nested block parsing" prop_parse_nested_blocks
   , fastProperty "Special characters in content" prop_parse_special_characters

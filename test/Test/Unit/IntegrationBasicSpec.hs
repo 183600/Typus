@@ -11,6 +11,7 @@ import Parser (parseTypus, parseModule, parseFunction)
 import Compiler.TypeChecker (TypeChecker, runTypeChecker)
 import Analyzer.SymbolTable (SymbolTable, emptySymbolTable)
 import Ownership (OwnershipChecker, runOwnershipChecker)
+import qualified Data.List as L
 
 -- | Test suite for Integration Basic operations
 tests :: TestTree
@@ -72,7 +73,7 @@ propErrorPropagationThroughPipeline :: String -> Property
 propErrorPropagationThroughPipeline sourceCode =
   let result = fullCompilationPipeline sourceCode
   in case result of
-    Left errorMsg -> property $ "error" `L.isInfixOf` errorMsg
+    Left errorMsg -> property $ "error" `L.L.isInfixOf` errorMsg
     Right _ -> property $ True
 
 -- | Unit tests for simple module compilation
@@ -110,7 +111,7 @@ testErrorHandlingInPipeline = do
   
   result <- fullCompilationPipeline sourceCode
   case result of
-    Left errorMsg -> assertBool "error message contains type error" $ "type" `L.isInfixOf` errorMsg
+    Left errorMsg -> assertBool "error message contains type error" $ "type" `L.L.isInfixOf` errorMsg
     Right _ -> assertFailure "Expected compilation to fail with type error"
 
 -- | Unit tests for symbol table integration
@@ -150,8 +151,7 @@ testOwnershipIntegration = do
             Left errorMsg -> assertFailure $ "Ownership checking failed: " ++ errorMsg
             Right _ -> return ()
 
--- Helper functions and imports
-import qualified Data.List as L
+-- Helper functions
 
 -- Mock types
 type AST = String
@@ -162,17 +162,17 @@ type OwnershipResult = Either String ()
 
 -- Mock functions
 parseTypus :: String -> ParseResult
-parseTypus sourceCode = if "module" `L.isPrefixOf` sourceCode
+parseTypus sourceCode = if "module" `L.L.isPrefixOf` sourceCode
                         then Right "parsed_ast"
                         else Left "Parse error"
 
 parseModule :: String -> CompilationResult
-parseModule sourceCode = if "module" `L.isPrefixOf` sourceCode
+parseModule sourceCode = if "module" `L.L.isPrefixOf` sourceCode
                         then Right "compiled_module"
                         else Left "Module parse error"
 
 parseFunction :: String -> ParseResult
-parseFunction sourceCode = if ":" `L.isInfixOf` sourceCode
+parseFunction sourceCode = if ":" `L.L.isInfixOf` sourceCode
                           then Right "function_ast"
                           else Left "Function parse error"
 
@@ -184,7 +184,7 @@ compileModule = parseModule
 
 runTypeChecker :: SymbolTable -> AST -> TypeCheckResult
 runTypeChecker symbolTable ast = 
-  if "hello" `L.isInfixOf` ast
+  if "hello" `L.L.isInfixOf` ast
   then Left "Type error: string assigned to int"
   else Right $ symbolTable ++ [("x", "Int")]
 

@@ -207,7 +207,7 @@ prop_largeProgramsHandleScale :: String -> Bool
 prop_largeProgramsHandleScale program = 
     let metrics = measurePerformance program
         thresholds = defaultThresholds { ptTotalTimeLimit = 30000.0 }  -- 30 seconds
-        lines = length $ lines program
+        lines = L.length $ lines program
     in pmTotalTime metrics <= ptTotalTimeLimit thresholds &&
        pmLinesProcessed metrics == lines &&
        pmMemoryUsage metrics <= ptMemoryLimit thresholds
@@ -241,7 +241,7 @@ prop_massiveCodebaseScalesLinearly :: [String] -> Bool
 prop_massiveCodebaseScalesLinearly modules = 
     let combinedProgram = unlines modules
         metrics = measurePerformance combinedProgram
-        moduleCount = length modules
+        moduleCount = L.length modules
         expectedMaxTime = fromIntegral moduleCount * 1000.0  -- 1 second per module
     in pmTotalTime metrics <= expectedMaxTime &&
        pmMemoryUsage metrics <= ptMemoryLimit defaultThresholds
@@ -253,15 +253,15 @@ prop_performanceConsistentAcrossRuns program =
         metrics2 = measurePerformance program
         metrics3 = measurePerformance program
         times = [pmTotalTime metrics1, pmTotalTime metrics2, pmTotalTime metrics3]
-        avgTime = sum times / fromIntegral (length times)
-        maxDeviation = maximum $ map (\t -> abs (t - avgTime)) times
+        avgTime = L.sum times / fromIntegral (L.length times)
+        maxDeviation = L.maximum $ L.map (\t -> abs (t - avgTime)) times
     in maxDeviation <= avgTime * 0.2  -- Within 20% deviation
 
 -- | Property: Memory usage should not grow excessively
 prop_memoryUsageReasonable :: String -> Bool
 prop_memoryUsageReasonable program = 
     let metrics = measurePerformance program
-        lines = length $ lines program
+        lines = L.length $ lines program
         memoryPerLine = fromIntegral (pmMemoryUsage metrics) / fromIntegral lines
     in memoryPerLine <= 10.0  -- Max 10KB per line
 
@@ -275,8 +275,8 @@ prop_performanceImprovesWithOptimizations program =
 -- | Measure performance of a program
 measurePerformance :: String -> PerformanceMetrics
 measurePerformance program = 
-    let linesCount = length $ lines program
-        tokensCount = length $ words program
+    let linesCount = L.length $ lines program
+        tokensCount = L.length $ words program
         
         -- Measure parsing time
         (parseTime, _) = measureTime $ parseTypus program
@@ -406,7 +406,7 @@ tests = testGroup "Performance Regression Tests"
         let result = runRegressionTest scenario
         in case result of
             RegressionResult _ _ _ passed regressions -> 
-                passed || not (null regressions)  -- Either passes or detects issues
+                passed || not (null regressions)  -- Either passes L.or detects issues
   
   , testProperty "Performance metrics are accurate" $
       fastProperty "program" $

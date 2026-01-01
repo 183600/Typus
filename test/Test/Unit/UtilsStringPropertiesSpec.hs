@@ -11,6 +11,7 @@ import Utils
       removeLineComments, removeComments, normalizeIndentation, 
       forceSingleTabIndentation, fixIndentation, breakOn )
 import Data.Char (isSpace, isAlphaNum)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 
 -- | Generate strings with various whitespace patterns
@@ -18,7 +19,7 @@ genWhitespaceString :: Gen String
 genWhitespaceString = do
     parts <- listOf $ elements ["", " ", "\t", "\n", "  ", "\t\t", "\n\n"]
     content <- elements ["", "content", "test", "data"]
-    return $ concat parts ++ content ++ concat parts
+    return $ L.concat parts ++ content ++ L.concat parts
 
 -- | Generate strings with comma separators
 genCommaString :: Gen String
@@ -66,7 +67,7 @@ tests :: TestTree
 tests =
   testGroup "Utils String Processing Properties"
     [ testGroup "Trim Function Properties"
-        [ testCase "removes leading and trailing whitespace" $ do
+        [ testCase "removes leading L.and trailing whitespace" $ do
             trim "  hello world  " @?= "hello world"
             trim "\t\n  test  \n\t" @?= "test"
             trim "no_whitespace" @?= "no_whitespace"
@@ -83,7 +84,7 @@ tests =
 
         , fastProperty "trim is idempotent" $ 
             prop_trimIdempotent
-        , fastProperty "trim never increases length" $ 
+        , fastProperty "trim never increases L.length" $ 
             prop_trimNeverIncreasesLength
         , fastProperty "trim removes only whitespace" $ 
             prop_trimRemovesOnlyWhitespace
@@ -137,9 +138,9 @@ tests =
             let expected = "\ncontent"
             removeComments input @?= expected
 
-        , fastProperty "removeLineComments never increases length" $ 
+        , fastProperty "removeLineComments never increases L.length" $ 
             prop_removeLineCommentsNeverIncreases
-        , fastProperty "removeComments never increases length" $ 
+        , fastProperty "removeComments never increases L.length" $ 
             prop_removeCommentsNeverIncreases
         , fastProperty "comment removal preserves code structure" $ 
             prop_commentRemovalPreservesStructure
@@ -174,7 +175,7 @@ tests =
         ]
 
     , testGroup "Search Function Properties"
-        [ testCase "breakOn returns prefix and suffix when pattern exists" $ do
+        [ testCase "breakOn returns prefix L.and suffix when pattern exists" $ do
             breakOn "ll" "hello" @?= ("he", "o")
             breakOn "test" "this is a test" @?= ("this is a ", "")
 
@@ -209,13 +210,13 @@ tests =
             let input = "    // comment\n    code /* block */ more,\n        final\n"
             let result = splitByCommaCollapsed $ normalizeIndentation $ removeComments input
             assertBool "Complex pipeline should work" $ 
-                length result > 0 && all (not . null) result
+                L.length result > 0 && L.all (not . null) result
 
         , fastProperty "composition of string functions is associative where appropriate" $ 
             prop_stringCompositionAssociative
         ]
 
-    , testGroup "Edge Cases and Boundary Conditions"
+    , testGroup "Edge Cases L.and Boundary Conditions"
         [ testCase "handles empty strings consistently" $ do
             trim "" @?= ""
             splitBy ',' "" @?= [""]
@@ -236,7 +237,7 @@ tests =
             let longString = replicate 10000 'a' ++ "middle" ++ replicate 10000 'b'
             let result = trim longString
             assertBool "Should handle long strings" $ 
-                length result > 0 && head result == 'a' && last result == 'b'
+                L.length result > 0 && L.head result == 'a' && last result == 'b'
 
         , fastProperty "string functions handle arbitrary unicode" $ 
             prop_handleUnicode
@@ -252,7 +253,7 @@ tests =
             let normalized = normalizeIndentation testString
             let withoutComments = removeComments testString
             assertBool "Operations should complete" $ 
-                length trimmed > 0 && length normalized > 0 && length withoutComments > 0
+                L.length trimmed > 0 && L.length normalized > 0 && L.length withoutComments > 0
 
         , fastProperty "string operations don't have exponential behavior" $ 
             prop_noExponentialBehavior
@@ -266,16 +267,16 @@ prop_trimIdempotent input =
       twice = trim once
   in once == twice
 
--- Property: trim never increases length
+-- Property: trim never increases L.length
 prop_trimNeverIncreasesLength :: String -> Bool
 prop_trimNeverIncreasesLength input =
-  length (trim input) <= length input
+  L.length (trim input) <= L.length input
 
 -- Property: trim removes only whitespace
 prop_trimRemovesOnlyWhitespace :: String -> Bool
 prop_trimRemovesOnlyWhitespace input =
   let trimmed = trim input
-  in all (not . isSpace) trimmed || null trimmed
+  in L.all (not . isSpace) trimmed || null trimmed
 
 -- Property: splitBy is consistent with delimiter
 prop_splitByConsistent :: Char -> String -> Bool
@@ -287,30 +288,30 @@ prop_splitByConsistent delim input =
 -- Property: splitByCollapsed never returns empty strings
 prop_splitByCollapsedNeverEmpty :: Char -> String -> Bool
 prop_splitByCollapsedNeverEmpty delim input =
-  all (not . null) (splitByCollapsed delim input)
+  L.all (not . null) (splitByCollapsed delim input)
 
 -- Property: splitBy preserves total character count
 prop_splitByPreservesCount :: Char -> String -> Bool
 prop_splitByPreservesCount delim input =
   let segments = splitBy delim input
-  in length (concat segments) + length segments - 1 == length input || null input
+  in L.length (L.concat segments) + L.length segments - 1 == L.length input || null input
 
--- Property: removeLineComments never increases length
+-- Property: removeLineComments never increases L.length
 prop_removeLineCommentsNeverIncreases :: String -> Bool
 prop_removeLineCommentsNeverIncreases input =
-  length (removeLineComments input) <= length input
+  L.length (removeLineComments input) <= L.length input
 
--- Property: removeComments never increases length  
+-- Property: removeComments never increases L.length  
 prop_removeCommentsNeverIncreases :: String -> Bool
 prop_removeCommentsNeverIncreases input =
-  length (removeComments input) <= length input
+  L.length (removeComments input) <= L.length input
 
 -- Property: comment removal preserves code structure
 prop_commentRemovalPreservesStructure :: String -> Bool
 prop_commentRemovalPreservesStructure input =
   let withoutComments = removeComments input
-      lineCount = length $ lines input
-      newLineCount = length $ lines withoutComments
+      lineCount = L.length $ lines input
+      newLineCount = L.length $ lines withoutComments
   in newLineCount <= lineCount  -- Should not create more lines
 
 -- Property: normalizeIndentation preserves relative indentation
@@ -319,7 +320,7 @@ prop_normalizeIndentationPreservesRelative input =
   let normalized = normalizeIndentation input
       originalLines = lines input
       normalizedLines = lines normalized
-  in length normalizedLines == length originalLines
+  in L.length normalizedLines == L.length originalLines
 
 -- Property: forceSingleTabIndentation is deterministic
 prop_forceSingleTabDeterministic :: String -> Bool
@@ -333,14 +334,14 @@ prop_indentationPreservesLineCount :: String -> Bool
 prop_indentationPreservesLineCount input =
   let normalized = normalizeIndentation input
       tabForced = forceSingleTabIndentation input
-  in length (lines normalized) == length (lines input) &&
-     length (lines tabForced) == length (lines input)
+  in L.length (lines normalized) == L.length (lines input) &&
+     L.length (lines tabForced) == L.length (lines input)
 
 -- Property: breakOn concatenation equals original when pattern found
 prop_breakOnConcatenates :: String -> String -> Bool
 prop_breakOnConcatenates pattern input =
   let (prefix, suffix) = breakOn pattern input
-  in if pattern `isInfixOf` input
+  in if pattern `L.isInfixOf` input
      then prefix ++ pattern ++ suffix == input
      else True  -- Property only applies when pattern is found
 
@@ -348,7 +349,7 @@ prop_breakOnConcatenates pattern input =
 prop_breakOnOriginalWhenMissing :: String -> String -> Bool
 prop_breakOnOriginalWhenMissing pattern input =
   let (prefix, suffix) = breakOn pattern input
-  in if not (pattern `isInfixOf` input)
+  in if not (pattern `L.isInfixOf` input)
      then prefix == input && suffix == ""
      else True  -- Property only applies when pattern not found
 
@@ -372,18 +373,18 @@ prop_handleUnicode input =
   let trimmed = trim input
       split = splitBy ',' input
       withoutComments = removeLineComments input
-  in length trimmed >= 0 && length split >= 0 && length withoutComments >= 0
+  in L.length trimmed >= 0 && L.length split >= 0 && L.length withoutComments >= 0
 
 -- Property: string functions handle extreme inputs
 prop_handleExtremeInputs :: String -> Bool
 prop_handleExtremeInputs input =
-  let extremeInput = concat $ replicate 1000 input
+  let extremeInput = L.concat $ replicate 1000 input
       result = trim extremeInput
-  in length result >= 0
+  in L.length result >= 0
 
 -- Property: string operations don't have exponential behavior
 prop_noExponentialBehavior :: String -> Bool
 prop_noExponentialBehavior input =
-  let nestedInput = concat $ replicate 10 $ "  " ++ input ++ "  "
+  let nestedInput = L.concat $ replicate 10 $ "  " ++ input ++ "  "
       result = normalizeIndentation nestedInput
-  in length result < length nestedInput * 2  -- Reasonable bound
+  in L.length result < L.length nestedInput * 2  -- Reasonable bound

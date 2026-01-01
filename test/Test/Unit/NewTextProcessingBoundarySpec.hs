@@ -32,13 +32,15 @@ import Utils
 import Data.Char (isSpace, isControl, isAscii)
 import qualified Data.Text as T
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, isInfixOf, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort)
 
 -- | Text processing boundary tests
 tests :: TestTree
 tests =
   testGroup "New Text Processing Boundary Tests"
-    [ testGroup "Unicode and special character handling"
+    [ testGroup "Unicode L.and special character handling"
         [ testCase "trim handles Unicode whitespace correctly" $ do
             trim "\x2003hello\x2002world\x00A0" @?= "hello\x2002world"
             
@@ -54,10 +56,10 @@ tests =
     , testGroup "Control character edge cases"
         [ fastProperty "trim preserves control characters in content" $
             \content -> 
-                let hasControl = any isControl content
+                let hasControl = L.any isControl content
                     trimmed = trim content
                     contentPreserved = not (null trimmed) ==> 
-                        any (not . isSpace) trimmed
+                        L.any (not . isSpace) trimmed
                 in classify hasControl "has control characters" $
                    property contentPreserved
                     
@@ -74,9 +76,9 @@ tests =
         [ testCase "splitBy on very long string doesn't crash" $ do
             let longInput = replicate 1000000 'a' ++ "," ++ replicate 1000000 'b'
                 result = splitBy ',' longInput
-            length result @?= 2
-            length (head result) @?= 1000000
-            length (last result) @?= 1000000
+            L.length result @?= 2
+            L.length (L.head result) @?= 1000000
+            L.length (last result) @?= 1000000
             
         , testCase "removeComments on large nested structure" $ do
             let largeComment = "/* " ++ replicate 50000 'x' ++ " */"
@@ -95,27 +97,27 @@ tests =
                 expected = "x /////"
             removeLineComments input @?= expected
             
-        , fastProperty "splitByCollapsed handles all delimiter patterns" $
+        , fastProperty "splitByCollapsed handles L.all delimiter patterns" $
             \delim content ->
                 let result = splitByCollapsed delim content
-                    hasNoEmpty = all (not . null) result
-                    onlyDelimiters = all (== delim) content
+                    hasNoEmpty = L.all (not . null) result
+                    onlyDelimiters = L.all (== delim) content
                     expectedEmpty = onlyDelimiters ==> null result
                 in property $ hasNoEmpty .&&. expectedEmpty
         ]
         
     , testGroup "Memory efficiency edge cases"
         [ testCase "trim on extremely nested whitespace" $ do
-            let nestedWhitespace = concat (replicate 10000 " \t\n\r")
+            let nestedWhitespace = L.concat (replicate 10000 " \t\n\r")
                 result = trim nestedWhitespace
             result @?= ""
             
         , testCase "breakOn efficiency with repeating patterns" $ do
             let pattern = "pattern"
-                repeated = concat (replicate 10000 (pattern ++ "x"))
+                repeated = L.concat (replicate 10000 (pattern ++ "x"))
                 (before, after) = breakOn pattern repeated
             before @?= ""
-            length after @?= length repeated
+            L.length after @?= L.length repeated
         ]
         
     , testGroup "Unicode normalization edge cases"

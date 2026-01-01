@@ -1,5 +1,6 @@
 module Test.Unit.EnhancedParserTestSpec (tests) where
 
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ((@?=), assertBool, assertFailure, testCase)
@@ -63,8 +64,8 @@ tests =
             locatedValue (fromMaybe (error "missing constraints") constraints) @?= True
             
             let blocks = tfBlocks typusFile
-            assertBool "should have one code block" (length blocks == 1)
-            let block = head blocks
+            assertBool "should have one code block" (L.length blocks == 1)
+            let block = L.head blocks
                 directives = cbDirectives block
             locatedValue (fromMaybe (error "missing block ownership") (bdOwnership directives)) @?= False
             locatedValue (fromMaybe (error "missing block dependent types") (bdDependentTypes directives)) @?= True
@@ -85,12 +86,12 @@ tests =
           Left err -> assertFailure $ "parseTypus failed: " <> err
           Right typusFile -> do
             let blocks = tfBlocks typusFile
-            assertBool "should have multiple code blocks" (length blocks >= 2)
+            assertBool "should have multiple code blocks" (L.length blocks >= 2)
             
             -- Check that directives are properly parsed at each level
-            let hasOwnershipDirective = any (maybe False locatedValue . bdOwnership . cbDirectives) blocks
-            let hasDependentTypesDirective = any (maybe False locatedValue . bdDependentTypes . cbDirectives) blocks
-            let hasConstraintsDirective = any (maybe False locatedValue . bdConstraints . cbDirectives) blocks
+            let hasOwnershipDirective = L.any (maybe False locatedValue . bdOwnership . cbDirectives) blocks
+            let hasDependentTypesDirective = L.any (maybe False locatedValue . bdDependentTypes . cbDirectives) blocks
+            let hasConstraintsDirective = L.any (maybe False locatedValue . bdConstraints . cbDirectives) blocks
             
             assertBool "should find ownership directive" hasOwnershipDirective
             assertBool "should find dependent types directive" hasDependentTypesDirective
@@ -106,7 +107,7 @@ tests =
               ]
         case parseTypus source of
           Left err -> assertBool ("error should mention malformed directive: " <> err) 
-                           (any (`isInfixOf` err) ["malformed", "invalid", "directive"])
+                           (L.any (`L.isInfixOf` err) ["malformed", "invalid", "directive"])
           Right _ -> assertFailure "expected parse failure for malformed directives"
 
     , testCase "handles unicode characters in source" $ do
@@ -122,10 +123,10 @@ tests =
         case parseTypus source of
           Left err -> assertFailure $ "parseTypus failed with unicode: " <> err
           Right typusFile -> do
-            assertBool "should parse unicode content" (not $ null $ tfBlocks typusFile)
-            let block = head $ tfBlocks typusFile
+            assertBool "should parse unicode content" (not $ L.null $ tfBlocks typusFile)
+            let block = L.head $ tfBlocks typusFile
             assertBool "should contain unicode characters" 
-                     (any (`isInfixOf` cbContent block) ["世界", "🌍", "🚀"])
+                     (L.any (`L.isInfixOf` cbContent block) ["世界", "🌍", "🚀"])
 
     , testCase "handles very long lines" $ do
         let longString = replicate 1000 'a'
@@ -140,7 +141,7 @@ tests =
         case parseTypus source of
           Left err -> assertFailure $ "parseTypus failed with long lines: " <> err
           Right typusFile -> do
-            assertBool "should handle long lines" (not $ null $ tfBlocks typusFile)
+            assertBool "should handle long lines" (not $ L.null $ tfBlocks typusFile)
 
     , testCase "detects unclosed string literals" $ do
         let source = unlines
@@ -152,7 +153,7 @@ tests =
               ]
         case parseTypus source of
           Left err -> assertBool ("error should mention string: " <> err) 
-                           (any (`isInfixOf` err) ["string", "unclosed", "literal"])
+                           (L.any (`L.isInfixOf` err) ["string", "unclosed", "literal"])
           Right _ -> assertFailure "expected parse failure for unclosed string"
 
     , testCase "handles complex go build tags" $ do
@@ -167,7 +168,7 @@ tests =
           Left err -> assertFailure $ "parseTypus failed with complex build tags: " <> err
           Right typusFile -> do
             let buildTags = tfBuildTags typusFile
-            assertBool "should have multiple build tags" (length buildTags >= 3)
+            assertBool "should have multiple build tags" (L.length buildTags >= 3)
             map locatedValue buildTags @?= 
               ["//go:build linux && amd64", "// +build linux,amd64", "//go:build !cgo"]
 
@@ -193,8 +194,8 @@ tests =
             locatedValue (fromMaybe (error "missing dependent types") dependentTypes) @?= False
             
             let blocks = tfBlocks typusFile
-            assertBool "should have one code block" (length blocks == 1)
-            let block = head blocks
+            assertBool "should have one code block" (L.length blocks == 1)
+            let block = L.head blocks
                 directives = cbDirectives block
             locatedValue (fromMaybe (error "missing constraints") (bdConstraints directives)) @?= True
     ]

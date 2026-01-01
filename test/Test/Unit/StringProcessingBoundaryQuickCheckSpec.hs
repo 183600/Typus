@@ -26,6 +26,7 @@ import Utils
   )
 
 import Data.Char (isSpace, isControl, isAscii)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 
 -- Property: trim should be idempotent
@@ -35,56 +36,56 @@ prop_trim_idempotent input =
       trimmedTwice = trim trimmedOnce
   in property $ trimmedOnce === trimmedTwice
 
--- Property: trim should remove all leading and trailing whitespace
+-- Property: trim should remove L.all leading L.and trailing whitespace
 prop_trim_removes_all_whitespace :: String -> String -> Property
 prop_trim_removes_all_whitespace prefix suffix =
   let hasLeadingSpace = not (null prefix) && isSpace (last prefix)
-      hasTrailingSpace = not (null suffix) && isSpace (head suffix)
+      hasTrailingSpace = not (null suffix) && isSpace (L.head suffix)
       input = prefix ++ "content" ++ suffix
       trimmed = trim input
   in (hasLeadingSpace .||. hasTrailingSpace) ==>
   property $ not (null trimmed) ==> 
-           (not (isSpace (head trimmed)) .&&. not (isSpace (last trimmed)))
+           (not (isSpace (L.head trimmed)) .&&. not (isSpace (last trimmed)))
 
 -- Property: splitBy should preserve empty segments
 prop_split_by_preserves_empty :: Char -> String -> Property
 prop_split_by_preserves_empty delim input =
   let segments = splitBy delim input
-      expectedCount = length input + 1
-  in property $ length segments === expectedCount
+      expectedCount = L.length input + 1
+  in property $ L.length segments === expectedCount
 
 -- Property: splitByCollapsed should remove empty segments
 prop_split_by_collapsed_removes_empty :: Char -> String -> Property
 prop_split_by_collapsed_removes_empty delim input =
   let segments = splitByCollapsed delim input
-  in property $ all (not . null) segments
+  in property $ L.all (not . null) segments
 
--- Property: splitBy and splitByCollapsed relationship
+-- Property: splitBy L.and splitByCollapsed relationship
 prop_split_by_relationship :: Char -> String -> Property
 prop_split_by_relationship delim input =
   let normal = splitBy delim input
       collapsed = splitByCollapsed delim input
-  in property $ length collapsed <= length normal
+  in property $ L.length collapsed <= L.length normal
 
 -- Property: removeLineComments should preserve string literals
 prop_remove_line_comments_preserves_strings :: String -> Property
 prop_remove_line_comments_preserves_strings content =
   let input = "code // comment\n\"" ++ content ++ "\" // another comment"
       result = removeLineComments input
-  in property $ ("\"" ++ content ++ "\"") `isInfixOf` result
+  in property $ ("\"" ++ content ++ "\"") `L.isInfixOf` result
 
 -- Property: removeComments should handle nested block comments
 prop_remove_comments_nested_blocks :: String -> String -> Property
 prop_remove_comments_nested_blocks outer inner =
   let input = "code /* outer " ++ outer ++ " /* inner " ++ inner ++ " */ still outer */ more code"
       result = removeComments input
-  in property $ not ("/*" `isInfixOf` result) .&&. not ("*/" `isInfixOf` result)
+  in property $ not ("/*" `L.isInfixOf` result) .&&. not ("*/" `L.isInfixOf` result)
 
 -- Property: normalizeIndentation should preserve relative indentation
 prop_normalize_indentation_preserves_relative :: String -> Property
 prop_normalize_indentation_preserves_relative input =
   let lines' = lines input
-      hasMultipleLines = length lines' > 1
+      hasMultipleLines = L.length lines' > 1
   in hasMultipleLines ==>
      let normalized = normalizeIndentation input
          normLines = lines normalized
@@ -104,19 +105,19 @@ prop_break_on_first_occurrence needle haystack =
 -- Property: String processing should handle Unicode correctly
 prop_unicode_handling :: String -> Property
 prop_unicode_handling input =
-  let hasUnicode = any (not . isAscii) input
+  let hasUnicode = L.any (not . isAscii) input
   in hasUnicode ==>
      let trimmed = trim input
          split = splitBy ',' input
-     in property $ length trimmed >= 0 .&&. length split >= 1
+     in property $ L.length trimmed >= 0 .&&. L.length split >= 1
 
 -- Property: String processing should handle control characters
 prop_control_character_handling :: String -> Property
 prop_control_character_handling input =
-  let hasControl = any isControl input
+  let hasControl = L.any isControl input
   in hasControl ==>
      let processed = trim input
-     in property $ length processed >= 0
+     in property $ L.length processed >= 0
 
 -- Property: Empty string handling consistency
 prop_empty_string_consistency :: Char -> Property
@@ -135,22 +136,22 @@ prop_large_string_processing size delim =
   size >= 0 .&&. size < 10000 ==>
   let largeString = replicate size delim
       result = splitBy delim largeString
-  in property $ length result === size + 1
+  in property $ L.length result === size + 1
 
 -- Property: String processing should be memory safe
 prop_memory_safety :: String -> Property
 prop_memory_safety input =
   let processed = trim input
       split = splitBy ',' processed
-  in property $ length processed >= 0 .&&. all (>= 0) (map length split)
+  in property $ L.length processed >= 0 .&&. L.all (>= 0) (map L.length split)
 
 -- Helper functions
 calculateRelativeIndentation :: [String] -> [Int]
 calculateRelativeIndentation [] = []
 calculateRelativeIndentation (first:rest) =
-  let firstIndent = length $ takeWhile isSpace first
+  let firstIndent = L.length $ takeWhile isSpace first
       baseIndent = firstIndent
-  in firstIndent : map (\line -> length (takeWhile isSpace line) - baseIndent) rest
+  in firstIndent : L.map (\line -> L.length (takeWhile isSpace line) - baseIndent) rest
 
 isAscii :: Char -> Bool
 isAscii c = fromEnum c < 128
@@ -158,10 +159,10 @@ isAscii c = fromEnum c < 128
 tests :: TestTree
 tests = testGroup "String Processing Boundary QuickCheck Tests"
   [ fastProperty "trim is idempotent" prop_trim_idempotent
-  , fastProperty "trim removes all leading and trailing whitespace" prop_trim_removes_all_whitespace
+  , fastProperty "trim removes L.all leading L.and trailing whitespace" prop_trim_removes_all_whitespace
   , fastProperty "splitBy preserves empty segments" prop_split_by_preserves_empty
   , fastProperty "splitByCollapsed removes empty segments" prop_split_by_collapsed_removes_empty
-  , fastProperty "splitBy and splitByCollapsed relationship" prop_split_by_relationship
+  , fastProperty "splitBy L.and splitByCollapsed relationship" prop_split_by_relationship
   , fastProperty "removeLineComments preserves string literals" prop_remove_line_comments_preserves_strings
   , fastProperty "removeComments handles nested block comments" prop_remove_comments_nested_blocks
   , fastProperty "normalizeIndentation preserves relative indentation" prop_normalize_indentation_preserves_relative

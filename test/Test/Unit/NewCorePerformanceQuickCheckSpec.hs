@@ -9,34 +9,35 @@ import Utils (trim, splitBy, splitByCollapsed, removeComments, normalizeIndentat
 import SourceLocation (SourcePos(..), startPos, posAt, advancePosBy, mergeSpans, spanFrom)
 import Parser (parseTypus)
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (length)
 import Control.DeepSeq (NFData, force)
 
 -- ============================================================================
--- Performance and Efficiency Tests
+-- Performance L.and Efficiency Tests
 -- ============================================================================
 
 -- | Utils: trim should be linear time
 prop_trim_linear_performance :: String -> Bool
 prop_trim_linear_performance s = 
   let result = trim s
-      inputLength = length s
-      resultLength = length result
+      inputLength = L.length s
+      resultLength = L.length result
   in resultLength <= inputLength  -- Basic efficiency check
 
 -- | Utils: splitBy should handle large inputs efficiently
 prop_split_by_large_input :: Int -> String -> Bool
 prop_split_by_large_input n s = 
   let n > 0 && n < 1000 ==>
-      let largeInput = concat $ replicate n s
+      let largeInput = L.concat $ replicate n s
           result = splitBy ',' largeInput
-      in length result >= 1  -- Should complete without issues
+      in L.length result >= 1  -- Should complete without issues
 
 -- | Utils: removeComments should not increase size
 prop_remove_comments_size :: String -> Bool
 prop_remove_comments_size s = 
   let result = removeComments s
-  in length result <= length s + 10  -- Allow small overhead
+  in L.length result <= L.length s + 10  -- Allow small overhead
 
 -- | Utils: normalizeIndentation should be idempotent
 prop_normalize_indentation_idempotent :: String -> Bool
@@ -70,7 +71,7 @@ prop_parser_repeated_patterns :: String -> Int -> Bool
 prop_parser_repeated_patterns s n = 
   let n > 0 && n < 100 ==>
       let pattern = "// @ownership true\n" ++ s
-          repeated = concat $ replicate n pattern
+          repeated = L.concat $ replicate n pattern
       in case parseTypus repeated of
         Left _ -> True
         Right _ -> True
@@ -87,7 +88,7 @@ prop_parser_whitespace_efficiency s =
 prop_memory_usage_reasonable :: Int -> String -> Bool
 prop_memory_usage_reasonable n s = 
   let n > 0 && n < 100 ==>
-      let input = concat $ replicate n s
+      let input = L.concat $ replicate n s
           processed = normalizeIndentation input
           parsed = parseTypus processed
       in case parsed of
@@ -101,7 +102,7 @@ prop_string_composition_efficient s1 s2 =
       trimmed = trim combined
       split = splitBy '\n' trimmed
       rejoined = unlines split
-  in length rejoined >= length trimmed
+  in L.length rejoined >= L.length trimmed
 
 -- | Property: Recursive operations should terminate
 prop_recursive_operations_terminate :: String -> Bool
@@ -109,7 +110,7 @@ prop_recursive_operations_terminate s =
   let processed = normalizeIndentation s
       commented = removeComments processed
       final = trim commented
-  in length final >= 0  -- Should terminate
+  in L.length final >= 0  -- Should terminate
 
 -- | Property: Large position calculations should work
 prop_large_position_calculations :: Int -> Bool
@@ -127,7 +128,7 @@ prop_complex_text_processing s =
       step2 = normalizeIndentation step1
       step3 = trim step2
       step4 = splitBy '\n' step3
-  in length step4 >= 0  -- Should complete all steps
+  in L.length step4 >= 0  -- Should complete L.all steps
 
 -- ============================================================================
 -- Test Suite

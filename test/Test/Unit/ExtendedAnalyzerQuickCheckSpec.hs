@@ -18,6 +18,7 @@ import qualified Parser
 import SourceLocation (Located(..))
 import qualified SourceLocation
 import qualified Data.Map as Map
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import Data.Maybe (isJust, isNothing)
 import qualified Data.Text as T
@@ -67,7 +68,7 @@ prop_analyzer_variable_symbols varName varType =
 -- Property: Function declarations create function symbols
 prop_analyzer_function_symbols :: String -> [String] -> [String] -> String -> Property
 prop_analyzer_function_symbols funcName paramNames paramTypes returnType =
-  let minLen = min (length paramNames) (length paramTypes)
+  let minLen = min (L.length paramNames) (L.length paramTypes)
       limitedParams = take minLen paramNames
       limitedTypes = take minLen paramTypes
       paramList = unwords $ zipWith (\name t -> name ++ " " ++ t) limitedParams limitedTypes
@@ -87,7 +88,7 @@ prop_analyzer_type_symbols typeName typeDef =
 -- Property: Struct declarations create struct symbols with fields
 prop_analyzer_struct_symbols :: String -> [String] -> [String] -> Property
 prop_analyzer_struct_symbols structName fieldNames fieldTypes =
-  let minLen = min (length fieldNames) (length fieldTypes)
+  let minLen = min (L.length fieldNames) (L.length fieldTypes)
       limitedFields = take minLen fieldNames
       limitedTypes = take minLen fieldTypes
       fieldList = unlines $ zipWith (\name t -> "  " ++ name ++ " " ++ t) limitedFields limitedTypes
@@ -99,7 +100,7 @@ prop_analyzer_struct_symbols structName fieldNames fieldTypes =
 -- Property: Interface declarations create interface symbols with methods
 prop_analyzer_interface_symbols :: String -> [String] -> [String] -> Property
 prop_analyzer_interface_symbols interfaceName methodNames returnTypes =
-  let minLen = min (length methodNames) (length returnTypes)
+  let minLen = min (L.length methodNames) (L.length returnTypes)
       limitedMethods = take minLen methodNames
       limitedReturns = take minLen returnTypes
       methodList = unlines $ zipWith (\name ret -> "  " ++ name ++ "() " ++ ret) limitedMethods limitedReturns
@@ -151,7 +152,7 @@ prop_analyzer_return_type_checking funcName returnType returnValue =
 -- Property: Import statements are analyzed
 prop_analyzer_import_statements :: [String] -> Property
 prop_analyzer_import_statements importPaths =
-  let imports = map ("import \"" ++) importPaths
+  let imports = L.map ("import \"" ++) importPaths
       importCode = unlines imports
       file = createSimpleTypusFile importCode
       result = runIntegratedAnalysis (mkAnalysisInput (typusFileToString file)) newAnalyzerState
@@ -209,7 +210,7 @@ prop_analyzer_receiver_symbols structName methodName isPointerReceiver =
 -- Property: Generic type parameters create type symbols
 prop_analyzer_generic_type_parameters :: String -> String -> Property
 prop_analyzer_generic_type_parameters typeName typeParam =
-  let genericCode = "type " ++ typeName ++ "[" ++ typeParam ++ " any] struct { Value " ++ typeParam ++ " }"
+  let genericCode = "type " ++ typeName ++ "[" ++ typeParam ++ " L.any] struct { Value " ++ typeParam ++ " }"
       file = createSimpleTypusFile genericCode
       result = runIntegratedAnalysis (mkAnalysisInput (typusFileToString file)) newAnalyzerState
   in property $ True

@@ -22,7 +22,9 @@ import Utils (trim, removeComments)
 
 import Data.Char (isSpace, isLetter, isDigit, toLower)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, tails, isInfixOf, sort, intercalate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (tails, sort, intercalate)
 import Data.String (IsString)
 
 -- Property: Parser handles empty input gracefully
@@ -35,7 +37,7 @@ prop_parser_handles_empty_input =
 -- Property: Parser handles whitespace-only input
 prop_parser_handles_whitespace_only :: String -> Property
 prop_parser_handles_whitespace_only ws =
-  all isSpace ws ==>
+  L.all isSpace ws ==>
   case parseProgram ws of
     Left _ -> property True
     Right ast -> property $ null ast
@@ -52,15 +54,15 @@ prop_parser_handles_comments_only comment =
 -- Property: Parser handles malformed input gracefully
 prop_parser_handles_malformed_input :: String -> Property
 prop_parser_handles_malformed_input malformed =
-  length malformed <= 100 ==> -- Limit for performance
+  L.length malformed <= 100 ==> -- Limit for performance
   case parseProgram malformed of
     Left _ -> property True
-    Right ast -> property $ not (null ast) || length malformed == 0
+    Right ast -> property $ not (null ast) || L.length malformed == 0
 
 -- Property: Parser preserves valid tokens in malformed input
 prop_parser_preserves_valid_tokens :: String -> String -> Property
 prop_parser_preserves_valid_tokens validPrefix malformedSuffix =
-  length validPrefix <= 50 && length malformedSuffix <= 50 ==>
+  L.length validPrefix <= 50 && L.length malformedSuffix <= 50 ==>
   let input = validPrefix ++ malformedSuffix
   in case parseProgram input of
        Left _ -> property True
@@ -69,17 +71,17 @@ prop_parser_preserves_valid_tokens validPrefix malformedSuffix =
 -- Property: Parser handles extremely long lines
 prop_parser_handles_long_lines :: String -> Property
 prop_parser_handles_long_lines base =
-  length base <= 20 ==> -- Limit base size
-  let longLine = concat (replicate 100 base) ++ ";\n"
+  L.length base <= 20 ==> -- Limit base size
+  let longLine = L.concat (replicate 100 base) ++ ";\n"
   in case parseProgram longLine of
        Left _ -> property True
-       Right ast -> property $ length ast <= 1
+       Right ast -> property $ L.length ast <= 1
 
 -- Property: Parser handles deeply nested structures
 prop_parser_handles_nested_structures :: Int -> Property
 prop_parser_handles_nested_structures depth =
   depth >= 0 && depth <= 10 ==> -- Limit depth for performance
-  let nestedBraces = concat (replicate depth "{") ++ "x" ++ concat (replicate depth "}")
+  let nestedBraces = L.concat (replicate depth "{") ++ "x" ++ L.concat (replicate depth "}")
   in case parseProgram nestedBraces of
        Left _ -> property True
        Right ast -> property $ depth <= 5 ==> not (null ast)
@@ -87,7 +89,7 @@ prop_parser_handles_nested_structures depth =
 -- Property: Parser handles Unicode characters
 prop_parser_handles_unicode :: String -> Property
 prop_parser_handles_unicode base =
-  length base <= 30 ==> -- Limit for performance
+  L.length base <= 30 ==> -- Limit for performance
   let unicodeInput = base ++ "测试café naïve résumé 🚀"
   in case parseProgram unicodeInput of
        Left _ -> property True
@@ -96,7 +98,7 @@ prop_parser_handles_unicode base =
 -- Property: Parser handles special characters
 prop_parser_handles_special_chars :: String -> Property
 prop_parser_handles_special_chars base =
-  length base <= 30 && not (any (`elem` "\"'\\") base) ==> -- Avoid string literals
+  L.length base <= 30 && not (L.any (`elem` "\"'\\") base) ==> -- Avoid string literals
   let specialChars = base ++ "!@#$%^&*()_+-=[]{}|;':\",./<>?"
   in case parseProgram specialChars of
        Left _ -> property True
@@ -105,7 +107,7 @@ prop_parser_handles_special_chars base =
 -- Property: Parser handles mixed indentation
 prop_parser_handles_mixed_indentation :: String -> Property
 prop_parser_handles_mixed_indentation content =
-  length content <= 50 ==> -- Limit for performance
+  L.length content <= 50 ==> -- Limit for performance
   let mixedIndent = "  " ++ content ++ "\n\t" ++ content ++ "\n    " ++ content
   in case parseProgram mixedIndent of
        Left _ -> property True
@@ -114,34 +116,34 @@ prop_parser_handles_mixed_indentation content =
 -- Property: Parser recovery after error
 prop_parser_recovery_after_error :: String -> String -> Property
 prop_parser_recovery_after_error before after =
-  length before <= 30 && length after <= 30 ==> -- Limit for performance
+  L.length before <= 30 && L.length after <= 30 ==> -- Limit for performance
   let input = before ++ " SYNTAX_ERROR " ++ after
   in case parseProgram input of
        Left _ -> property True
-       Right ast -> property $ not (null after) ==> length ast >= 0
+       Right ast -> property $ not (null after) ==> L.length ast >= 0
 
 -- Property: Parser handles incomplete statements
 prop_parser_handles_incomplete_statements :: String -> Property
 prop_parser_handles_incomplete_statements stmt =
-  length stmt <= 40 ==> -- Limit for performance
+  L.length stmt <= 40 ==> -- Limit for performance
   let incomplete = stmt ++ " {"
   in case parseProgram incomplete of
        Left _ -> property True
-       Right ast -> property $ length ast >= 0
+       Right ast -> property $ L.length ast >= 0
 
 -- Property: Parser handles multiple errors
 prop_parser_handles_multiple_errors :: String -> String -> String -> Property
 prop_parser_handles_multiple_errors part1 part2 part3 =
-  length part1 <= 20 && length part2 <= 20 && length part3 <= 20 ==> -- Limit for performance
+  L.length part1 <= 20 && L.length part2 <= 20 && L.length part3 <= 20 ==> -- Limit for performance
   let input = part1 ++ " ERROR1 " ++ part2 ++ " ERROR2 " ++ part3
   in case parseProgram input of
        Left _ -> property True
-       Right ast -> property $ length ast >= 0
+       Right ast -> property $ L.length ast >= 0
 
 -- Property: Parser position tracking accuracy
 prop_parser_position_tracking :: String -> String -> Property
 prop_parser_position_tracking prefix suffix =
-  length prefix <= 30 && length suffix <= 30 ==> -- Limit for performance
+  L.length prefix <= 30 && L.length suffix <= 30 ==> -- Limit for performance
   let input = prefix ++ "\n" ++ suffix
   in case parseProgram input of
        Left err -> property True -- Error should contain position info
@@ -150,16 +152,16 @@ prop_parser_position_tracking prefix suffix =
 -- Property: Parser handles large files efficiently
 prop_parser_handles_large_files :: String -> Int -> Property
 prop_parser_handles_large_files base multiplier =
-  length base <= 20 && multiplier >= 1 && multiplier <= 50 ==> -- Limit for performance
-  let largeContent = concat (replicate multiplier (base ++ ";\n"))
+  L.length base <= 20 && multiplier >= 1 && multiplier <= 50 ==> -- Limit for performance
+  let largeContent = L.concat (replicate multiplier (base ++ ";\n"))
   in case parseProgram largeContent of
        Left _ -> property True
-       Right ast -> property $ length ast <= multiplier
+       Right ast -> property $ L.length ast <= multiplier
 
 -- Property: Parser handles escaped characters
 prop_parser_handles_escaped_chars :: String -> Property
 prop_parser_handles_escaped_chars content =
-  length content <= 30 && not (any (`elem` "\"\\") content) ==> -- Avoid conflicts
+  L.length content <= 30 && not (L.any (`elem` "\"\\") content) ==> -- Avoid conflicts
   let escaped = "var s = \"\\n\\t\\\"\\\\\\" ++ content ++ "\\\"\";"
   in case parseProgram escaped of
        Left _ -> property True
@@ -168,16 +170,16 @@ prop_parser_handles_escaped_chars content =
 -- Property: Parser handles malformed comments
 prop_parser_handles_malformed_comments :: String -> String -> Property
 prop_parser_handles_malformed_comments before after =
-  length before <= 30 && length after <= 30 && not (any (`elem` "\"'") before) && not (any (`elem` "\"'") after) ==>
+  L.length before <= 30 && L.length after <= 30 && not (L.any (`elem` "\"'") before) && not (L.any (`elem` "\"'") after) ==>
   let malformed = before ++ "/* unclosed comment " ++ after
   in case parseProgram malformed of
        Left _ -> property True
-       Right ast -> property $ length ast >= 0
+       Right ast -> property $ L.length ast >= 0
 
 -- Property: Parser handles null bytes
 prop_parser_handles_null_bytes :: String -> Property
 prop_parser_handles_null_bytes content =
-  length content <= 30 ==> -- Limit for performance
+  L.length content <= 30 ==> -- Limit for performance
   let withNull = content ++ "\0" ++ content
   in case parseProgram withNull of
        Left _ -> property True
@@ -186,8 +188,8 @@ prop_parser_handles_null_bytes content =
 -- Property: Parser handles very long identifiers
 prop_parser_handles_long_identifiers :: String -> Property
 prop_parser_handles_long_identifiers base =
-  length base <= 10 ==> -- Limit base size
-  let longIdent = concat (replicate 20 base)
+  L.length base <= 10 ==> -- Limit base size
+  let longIdent = L.concat (replicate 20 base)
       input = "var " ++ longIdent ++ " = 42;"
   in case parseProgram input of
        Left _ -> property True
@@ -205,7 +207,7 @@ prop_parser_handles_numeric_literals num =
 -- Property: Parser handles string literals
 prop_parser_handles_string_literals :: String -> Property
 prop_parser_handles_string_literals content =
-  length content <= 30 && not (any (`elem` "\"\\") content) ==> -- Avoid conflicts
+  L.length content <= 30 && not (L.any (`elem` "\"\\") content) ==> -- Avoid conflicts
   let input = "var s = \"" ++ content ++ "\";"
   in case parseProgram input of
        Left _ -> property True
@@ -217,8 +219,8 @@ prop_parser_handles_string_literals content =
 prop_parser_complex_nested :: Int -> Int -> Property
 prop_parser_complex_nested braceDepth parenDepth =
   braceDepth >= 0 && parenDepth <= 5 && parenDepth >= 0 && parenDepth <= 5 ==> -- Limit for performance
-  let braces = concat (replicate braceDepth "{") ++ "x" ++ concat (replicate braceDepth "}")
-      parens = concat (replicate parenDepth "(") ++ "y" ++ concat (replicate parenDepth ")")
+  let braces = L.concat (replicate braceDepth "{") ++ "x" ++ L.concat (replicate braceDepth "}")
+      parens = L.concat (replicate parenDepth "(") ++ "y" ++ L.concat (replicate parenDepth ")")
       input = braces ++ parens ++ ";"
   in case parseProgram input of
        Left _ -> property True
@@ -227,15 +229,15 @@ prop_parser_complex_nested braceDepth parenDepth =
 -- Property: Parser error messages contain useful information
 prop_parser_error_messages_useful :: String -> Property
 prop_parser_error_messages_useful malformed =
-  length malformed <= 50 ==> -- Limit for performance
+  L.length malformed <= 50 ==> -- Limit for performance
   case parseProgram malformed of
-    Left err -> property $ length (show err) > 0 -- Error message should not be empty
+    Left err -> property $ L.length (show err) > 0 -- Error message should not be empty
     Right ast -> property True
 
 -- Property: Parser handles mixed language content
 prop_parser_mixed_language :: String -> Property
 prop_parser_mixed_language base =
-  length base <= 20 ==> -- Limit for performance
+  L.length base <= 20 ==> -- Limit for performance
   let mixed = base ++ " variable 测试变量 café变量 naïve变量"
   in case parseProgram mixed of
        Left _ -> property True
@@ -244,7 +246,7 @@ prop_parser_mixed_language base =
 -- Property: Parser handles edge case characters
 prop_parser_edge_case_chars :: String -> Property
 prop_parser_edge_case_chars base =
-  length base <= 20 ==> -- Limit for performance
+  L.length base <= 20 ==> -- Limit for performance
   let edgeChars = base ++ "\x01\x02\x03\x7F\x80\xFF"
   in case parseProgram edgeChars of
        Left _ -> property True
@@ -253,20 +255,20 @@ prop_parser_edge_case_chars base =
 -- Property: Parser handles repeated parsing
 prop_parser_repeated_parsing :: String -> Int -> Property
 prop_parser_repeated_parsing content iterations =
-  length content <= 30 && iterations >= 1 && iterations <= 10 ==> -- Limit for performance
+  L.length content <= 30 && iterations >= 1 && iterations <= 10 ==> -- Limit for performance
   let results = replicate iterations (parseProgram content)
-      successes = length [() | Right _ <- results]
+      successes = L.length [() | Right _ <- results]
   in property $ successes >= 0 && successes <= iterations
 
 -- Property: Parser handles concurrent parsing simulation
 prop_parser_concurrent_simulation :: String -> Property
 prop_parser_concurrent_simulation content =
-  length content <= 30 ==> -- Limit for performance
+  L.length content <= 30 ==> -- Limit for performance
   let results = replicate 5 (parseProgram content) -- Simulate concurrent parsing
-      consistent = all (\r1 r2 -> case (r1, r2) of
+      consistent = L.all (\r1 r2 -> case (r1, r2) of
                                     (Left _, Left _) -> True
-                                    (Right a1, Right a2) -> length a1 == length a2
-                                    _ -> False) results (tail results)
+                                    (Right a1, Right a2) -> L.length a1 == L.length a2
+                                    _ -> False) results (L.tail results)
   in property $ consistent
 
 tests :: TestTree

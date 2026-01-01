@@ -8,7 +8,9 @@ import Compiler
 import Compiler.Errors (CompilerError(..), CompilationPhase(..), ErrorCategory(..), ErrorSeverity(..))
 import Parser (TypusFile(..))
 import qualified Data.Text as T
-import Data.List (isInfixOf, nub)
+import qualified Data.List as L
+import Data.List (isInfixOf)
+import Data.List (nub)
 import Data.Maybe (isJust, isNothing, catMaybes)
 
 -- | 新的编译优化属性QuickCheck测试
@@ -176,7 +178,7 @@ prop_errorSeverityOrdering sev1 sev2 =
 prop_errorAnalysisPreservesInfo :: [CompilerError] -> Bool
 prop_errorAnalysisPreservesInfo errors =
     let analysis = analyzeErrors errors
-        errorCount = length errors
+        errorCount = L.length errors
     in errorCount >= 0  -- Analysis preserves error count information
 
 -- ============================================================================
@@ -193,15 +195,15 @@ prop_typeErrorDetectionConsistency typusFile =
 
 prop_declarationExtractionCorrectness :: String -> Property
 prop_declarationExtractionCorrectness sourceCode =
-    length sourceCode < 1000 ==>
+    L.length sourceCode < 1000 ==>
     let declarations = extractDeclarations sourceCode
-    in all isValidDeclaration declarations
+    in L.all isValidDeclaration declarations
 
 prop_functionCallExtraction :: String -> Property
 prop_functionCallExtraction sourceCode =
-    length sourceCode < 1000 ==>
+    L.length sourceCode < 1000 ==>
     let functionCalls = extractFunctionCalls sourceCode
-    in all isValidFunctionCall functionCalls
+    in L.all isValidFunctionCall functionCalls
 
 -- ============================================================================
 -- Properties for Optimization
@@ -209,21 +211,21 @@ prop_functionCallExtraction sourceCode =
 
 prop_deadCodeElimination :: String -> Property
 prop_deadCodeElimination sourceCode =
-    length sourceCode < 500 ==>
+    L.length sourceCode < 500 ==>
     let optimized = eliminateDeadCode sourceCode
-    in length optimized <= length sourceCode
+    in L.length optimized <= L.length sourceCode
 
 prop_constantFolding :: String -> Property
 prop_constantFolding sourceCode =
-    "x + 1" `isInfixOf` sourceCode ==>
+    "x + 1" `L.isInfixOf` sourceCode ==>
     let optimized = foldConstants sourceCode
-    in not ("x + 1" `isInfixOf` optimized) || "43" `isInfixOf` optimized
+    in not ("x + 1" `L.isInfixOf` optimized) || "43" `L.isInfixOf` optimized
 
 prop_inliningOpportunities :: String -> Property
 prop_inliningOpportunities sourceCode =
-    length sourceCode < 500 ==>
+    L.length sourceCode < 500 ==>
     let opportunities = findInliningOpportunities sourceCode
-    in all isValidInliningOpportunity opportunities
+    in L.all isValidInliningOpportunity opportunities
 
 -- ============================================================================
 -- Properties for Code Generation
@@ -238,13 +240,13 @@ prop_goCodeGenerationValidity typusFile =
 
 prop_codeSizeOptimization :: String -> Property
 prop_codeSizeOptimization sourceCode =
-    length sourceCode < 1000 ==>
+    L.length sourceCode < 1000 ==>
     let optimized = optimizeCodeSize sourceCode
-    in length optimized <= length sourceCode + 50  -- Allow some overhead
+    in L.length optimized <= L.length sourceCode + 50  -- Allow some overhead
 
 prop_generatedCodeCorrectness :: String -> Property
 prop_generatedCodeCorrectness sourceCode =
-    length sourceCode < 500 ==>
+    L.length sourceCode < 500 ==>
     let result = compile (parseTypusFile sourceCode)
     in case result of
         Left _ -> True
@@ -286,12 +288,12 @@ severityPriority Info = 10
 isValidDeclaration :: String -> Bool
 isValidDeclaration decl = 
     not (null decl) && 
-    ("func " `isInfixOf` decl || "var " `isInfixOf` decl || "const " `isInfixOf` decl)
+    ("func " `L.isInfixOf` decl || "var " `L.isInfixOf` decl || "const " `L.isInfixOf` decl)
 
 -- Check if function call is valid
 isValidFunctionCall :: String -> Bool
 isValidFunctionCall call = 
-    not (null call) && "(" `isInfixOf` call && ")" `isInfixOf` call
+    not (null call) && "(" `L.isInfixOf` call && ")" `L.isInfixOf` call
 
 -- Mock dead code elimination
 eliminateDeadCode :: String -> String
@@ -300,27 +302,27 @@ eliminateDeadCode source = source  -- Simplified for testing
 -- Mock constant folding
 foldConstants :: String -> String
 foldConstants source = 
-    if "x + 1" `isInfixOf` source
+    if "x + 1" `L.isInfixOf` source
     then replace "x + 1" "43" source
     else source
 
 -- Mock inlining opportunity detection
 findInliningOpportunities :: String -> [String]
 findInliningOpportunities source = 
-    if "func small()" `isInfixOf` source
+    if "func small()" `L.isInfixOf` source
     then ["small()"]
     else []
 
 -- Check if inlining opportunity is valid
 isValidInliningOpportunity :: String -> Bool
 isValidInliningOpportunity opportunity = 
-    not (null opportunity) && "(" `isInfixOf` opportunity
+    not (null opportunity) && "(" `L.isInfixOf` opportunity
 
 -- Check if Go code is valid
 isValidGoCode :: String -> Bool
 isValidGoCode code = 
     not (null code) && 
-    ("package" `isInfixOf` code || "func" `isInfixOf` code || "var" `isInfixOf` code)
+    ("package" `L.isInfixOf` code || "func" `L.isInfixOf` code || "var" `L.isInfixOf` code)
 
 -- Mock code size optimization
 optimizeCodeSize :: String -> String
@@ -333,11 +335,11 @@ parseTypusFile source = TypusFile defaultFileDirectives [] [] []
 -- Check semantic equivalence
 maintainsSemanticEquivalence :: String -> String -> Bool
 maintainsSemanticEquivalence original generated = 
-    length generated > 0  -- Simplified for testing
+    L.length generated > 0  -- Simplified for testing
 
 -- String replacement helper
 replace :: String -> String -> String -> String
-replace old new = unwords . map (\w -> if w == old then new else w) . words
+replace old new = unwords . L.map (\w -> if w == old then new else w) . words
 
 -- Mock default file directives
 defaultFileDirectives :: FileDirectives

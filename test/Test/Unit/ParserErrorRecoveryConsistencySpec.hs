@@ -35,7 +35,9 @@ import SourceLocation
 
 import qualified Text.Megaparsec as MP
 import Text.Megaparsec (errorBundlePretty)
-import Data.List (isPrefixOf, isInfixOf, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 
 -- | Parser error recovery consistency properties
@@ -48,7 +50,7 @@ tests = testGroup "Parser error recovery consistency"
           in case result of
                Left err -> assertBool "Should parse empty input" False
                Right file -> do
-                 length (blocks file) @?= 0
+                 L.length (blocks file) @?= 0
                  directives file @?= defaultFileDirectives
 
       , testCase "well-formed directive parses correctly" $ do
@@ -122,13 +124,13 @@ prop_parse_deterministic input =
 
 prop_parse_valid_code_succeeds :: String -> Property
 prop_parse_valid_code_succeeds input =
-  let isSimpleDirective = any (`isPrefixOf` input) 
+  let isSimpleDirective = L.any (`L.isPrefixOf` input) 
         [ "//! ownership: on"
         , "//! ownership: off" 
         , "//! dependent_types: on"
         , "//! dependent_types: off"
         ]
-      hasNoSpecialChars = not (any (`elem` "\\`~!@#$%^&*()+=[]{}|;:'\",<>?/") input)
+      hasNoSpecialChars = not (L.any (`elem` "\\`~!@#$%^&*()+=[]{}|;:'\",<>?/") input)
   in isSimpleDirective && hasNoSpecialChars ==> 
      case parseTypus input of
        Left _ -> property False
@@ -136,7 +138,7 @@ prop_parse_valid_code_succeeds input =
 
 prop_parse_errors_have_location :: String -> Property
 prop_parse_errors_have_location input =
-  let hasInvalidContent = any (`isInfixOf` input) ["//! ownership: maybe", "//! @invalid", "\0"]
+  let hasInvalidContent = L.any (`L.isInfixOf` input) ["//! ownership: maybe", "//! @invalid", "\0"]
   in hasInvalidContent ==>
      case parseTypus input of
        Left err -> property $ True -- Error bundle contains location info
@@ -145,13 +147,13 @@ prop_parse_errors_have_location input =
 prop_parse_recovery_preserves_valid :: String -> String -> Property
 prop_parse_recovery_preserves_valid validPrefix invalidSuffix =
   let validDirectives = ["//! ownership: on", "//! dependent_types: off"]
-      isValid = any (`isPrefixOf` validPrefix) validDirectives
-      hasInvalid = any (`isInfixOf` invalidSuffix) ["//! ownership: maybe", "\0"]
+      isValid = L.any (`L.isPrefixOf` validPrefix) validDirectives
+      hasInvalid = L.any (`L.isInfixOf` invalidSuffix) ["//! ownership: maybe", "\0"]
   in isValid && hasInvalid ==>
      let fullInput = validPrefix ++ "\n" ++ invalidSuffix
      in case parseTypus fullInput of
-          Left _ -> property True -- Should recover and potentially fail gracefully
-          Right file -> property $ length (blocks file) >= 0 -- Should preserve structure
+          Left _ -> property True -- Should recover L.and potentially fail gracefully
+          Right file -> property $ L.length (blocks file) >= 0 -- Should preserve structure
 
 prop_parse_monotonic_extension :: String -> String -> Property
 prop_parse_monotonic_extension baseInput extension =
@@ -160,7 +162,7 @@ prop_parse_monotonic_extension baseInput extension =
       extendedResult = parseTypus extendedInput
   in case (baseResult, extendedResult) of
        (Right baseFile, Right extFile) -> 
-         property $ length (blocks extFile) >= length (blocks baseFile)
+         property $ L.length (blocks extFile) >= L.length (blocks baseFile)
        (Left _, Left _) -> property True
        (Left _, Right _) -> property True -- Extension might fix issues
        (Right _, Left _) -> property True -- Extension might introduce issues
@@ -169,7 +171,7 @@ prop_parse_monotonic_extension baseInput extension =
 
 prop_directive_case_sensitive :: String -> Property
 prop_directive_case_sensitive input =
-  let hasMixedCase = "//! Ownership: On" `isInfixOf` input || "//! OWNERSHIP: ON" `isInfixOf` input
+  let hasMixedCase = "//! Ownership: On" `L.isInfixOf` input || "//! OWNERSHIP: ON" `L.isInfixOf` input
   in hasMixedCase ==>
      case parseTypus input of
        Right file -> 
@@ -182,7 +184,7 @@ prop_multiple_directives_accumulate directives =
   let validDirectives = ["//! ownership: on", "//! ownership: off", 
                          "//! dependent_types: on", "//! dependent_types: off",
                          "//! constraints: on", "//! constraints: off"]
-      filteredDirectives = filter (`elem` validDirectives) directives
+      filteredDirectives = L.filter (`elem` validDirectives) directives
       input = unlines filteredDirectives
   in not (null filteredDirectives) ==>
      case parseTypus input of
@@ -193,33 +195,33 @@ prop_multiple_directives_accumulate directives =
 
 prop_invalid_directives_ignored :: String -> Property
 prop_invalid_directives_ignored input =
-  let hasInvalidDirective = any (`isInfixOf` input) ["//! ownership: maybe", "//! @invalid", "//! unknown: value"]
+  let hasInvalidDirective = L.any (`L.isInfixOf` input) ["//! ownership: maybe", "//! @invalid", "//! unknown: value"]
   in hasInvalidDirective ==>
      case parseTypus input of
-       Right file -> property $ True -- Should ignore invalid and continue
+       Right file -> property $ True -- Should ignore invalid L.and continue
        Left _ -> property True -- Might fail, but should attempt recovery
 
 prop_directive_values_validated :: String -> Property
 prop_directive_values_validated input =
-  let hasInvalidValue = any (`isInfixOf` input) ["//! ownership: maybe", "//! dependent_types: perhaps"]
+  let hasInvalidValue = L.any (`L.isInfixOf` input) ["//! ownership: maybe", "//! dependent_types: perhaps"]
   in hasInvalidValue ==>
      case parseTypus input of
        Right file -> 
          let fd = directives file
-         in property $ True -- Should validate and reject invalid values
+         in property $ True -- Should validate L.and reject invalid values
        Left _ -> property True -- Should fail appropriately
 
 -- Code block parsing consistency properties
 
 prop_code_blocks_preserve_content :: String -> Property
 prop_code_blocks_preserve_content content =
-  let hasNoDirectives = not (any (`isPrefixOf` content) ["//!", "/*", "//"])
-      isSimpleContent = all (`elem` " \t\n\rabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789(){}[];:,." ++ "\n\r\t ") content
+  let hasNoDirectives = not (L.any (`L.isPrefixOf` content) ["//!", "/*", "//"])
+      isSimpleContent = L.all (`elem` " \t\n\rabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789(){}[];:,." ++ "\n\r\t ") content
   in hasNoDirectives && isSimpleContent && not (null content) ==>
      let input = content
      in case parseTypus input of
           Right file -> 
-            property $ any (content `isInfixOf`) [blockContent b | b <- blocks file]
+            property $ L.any (content `L.isInfixOf`) [blockContent b | b <- blocks file]
           Left _ -> property False
 
 prop_nested_code_blocks :: String -> String -> Property
@@ -229,14 +231,14 @@ prop_nested_code_blocks outer inner =
       input = outerContent ++ "\n" ++ innerContent
   in not (null outer) && not (null inner) ==>
      case parseTypus input of
-       Right file -> property $ length (blocks file) >= 1
+       Right file -> property $ L.length (blocks file) >= 1
        Left _ -> property True -- Might fail due to nesting issues
 
 prop_empty_code_blocks :: Property
 prop_empty_code_blocks =
   let input = ""
   in case parseTypus input of
-       Right file -> property $ length (blocks file) >= 0
+       Right file -> property $ L.length (blocks file) >= 0
        Left _ -> property False
 
 prop_code_block_boundaries :: String -> String -> Property
@@ -244,15 +246,15 @@ prop_code_block_boundaries block1 block2 =
   let input = block1 ++ "\n---\n" ++ block2
   in not (null block1) && not (null block2) ==>
      case parseTypus input of
-       Right file -> property $ length (blocks file) >= 2
+       Right file -> property $ L.length (blocks file) >= 2
        Left _ -> property True -- Boundary parsing might fail
 
 -- Error location consistency properties
 
 prop_error_locations_in_bounds :: String -> Property
 prop_error_locations_in_bounds input =
-  let hasInvalidContent = any (`isInfixOf` input) ["\0", "\1", "\2"]
-      inputLength = length input
+  let hasInvalidContent = L.any (`L.isInfixOf` input) ["\0", "\1", "\2"]
+      inputLength = L.length input
   in hasInvalidContent && inputLength > 0 ==>
      case parseTypus input of
        Left err -> property $ True -- Error locations should be within bounds
@@ -261,8 +263,8 @@ prop_error_locations_in_bounds input =
 prop_error_locations_accurate :: String -> Property
 prop_error_locations_accurate input =
   let errorMarker = "//! ownership: maybe"
-      hasErrorMarker = errorMarker `isInfixOf` input
-      markerPos = length $ takeWhile (/= '!') input
+      hasErrorMarker = errorMarker `L.isInfixOf` input
+      markerPos = L.length $ takeWhile (/= '!') input
   in hasErrorMarker ==>
      case parseTypus input of
        Left err -> property $ True -- Error should be near marker position
@@ -271,7 +273,7 @@ prop_error_locations_accurate input =
 prop_multiple_errors_distinct :: String -> String -> Property
 prop_multiple_errors_distinct error1 error2 =
   let input = error1 ++ "\n" ++ error2
-      hasErrors = any (`isInfixOf` input) ["//! ownership: maybe", "//! @invalid", "\0"]
+      hasErrors = L.any (`L.isInfixOf` input) ["//! ownership: maybe", "//! @invalid", "\0"]
   in hasErrors ==>
      case parseTypus input of
        Left err -> property $ True -- Multiple errors should have distinct locations
@@ -290,7 +292,7 @@ prop_parse_recovery_idempotent input =
 
 prop_parse_preserves_semantics :: String -> Property
 prop_parse_preserves_semantics input =
-  let hasSemanticContent = any (`isInfixOf` input) ["func", "var", "const", "type"]
+  let hasSemanticContent = L.any (`L.isInfixOf` input) ["func", "var", "const", "type"]
   in hasSemanticContent ==>
      case parseTypus input of
        Right file -> property $ True -- Should preserve semantic elements
@@ -307,7 +309,7 @@ prop_parse_unicode_correctly baseContent =
 prop_parse_performance_reasonable :: String -> Int -> Property
 prop_parse_performance_reasonable content repetitions =
   repetitions >= 0 && repetitions <= 100 ==> -- Limit for performance testing
-  let largeInput = concat (replicate repetitions content)
+  let largeInput = L.concat (replicate repetitions content)
       result = parseTypus largeInput
   in case result of
        Right file -> property $ True -- Should complete in reasonable time

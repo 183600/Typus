@@ -3,13 +3,15 @@
 module Test.Unit.AdvancedQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import TestSupport.Arbitrary ()
 import TestSupport.ExtendedArbitrary ()
-import Data.List (sort, nub, length, sum, reverse, concat, (++), find)
+import Data.List (length, sum, reverse, concat)
+import Data.List (sort, nub, (++), find)
 
 import Utils (trim, splitBy, splitByComma, removeLineComments, normalizeIndentation)
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos, posAfter, emptySpan, mergeSpans)
@@ -58,7 +60,7 @@ advancedOptimizationTests = testGroup "Advanced Optimization Tests"
 
 prop_parser_nested_structures :: String -> Property
 prop_parser_nested_structures input =
-  let depth = length $ filter (== '(') input
+  let depth = L.length $ L.filter (== '(') input
   in property $ depth >= 0
 
 prop_parser_error_recovery :: String -> Property

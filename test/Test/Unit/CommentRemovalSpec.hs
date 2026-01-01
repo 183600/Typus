@@ -10,6 +10,7 @@ import TestSupport.QuickCheck (fastProperty)
 import Utils (removeLineComments, removeComments)
 
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 -- | 测试注释移除功能的属性和边界情况
@@ -44,7 +45,7 @@ tests =
         ]
         
     , testGroup "removeComments"
-        [ testCase "removes both line and block comments" $ do
+        [ testCase "removes both line L.and block comments" $ do
             let input = "code /* block */ more // line\nfinal"
             let expected = "code  more \nfinal"
             removeComments input @?= expected
@@ -68,7 +69,7 @@ tests =
             removeComments "code /**/ more" @?= "code  more"
         ]
         
-    , testGroup "String and Character Literal Preservation"
+    , testGroup "String L.and Character Literal Preservation"
         [ testCase "preserves complex string literals" $ do
             let input = "s := \"http://test.com/path?param=value&other=123\" // comment"
             let expected = "s := \"http://test.com/path?param=value&other=123\" "
@@ -116,13 +117,13 @@ tests =
         ]
         
     , testGroup "Property Tests"
-        [ fastProperty "removeLineComments never increases length" $ \input ->
+        [ fastProperty "removeLineComments never increases L.length" $ \input ->
             let result = removeLineComments input
-            in length result <= length input
+            in L.length result <= L.length input
             
-        , fastProperty "removeComments never increases length" $ \input ->
+        , fastProperty "removeComments never increases L.length" $ \input ->
             let result = removeComments input
-            in length result <= length input
+            in L.length result <= L.length input
             
         , fastProperty "removeLineComments is idempotent" $ \input ->
             let once = removeLineComments input
@@ -134,37 +135,37 @@ tests =
                 twice = removeComments once
             in once == twice
             
-        , fastProperty "removeComments removes all comment markers" $ \input ->
+        , fastProperty "removeComments removes L.all comment markers" $ \input ->
             let result = removeComments input
-            in not ("//" `isInfixOf` result) && not ("/*" `isInfixOf` result) && not ("*/" `isInfixOf` result)
+            in not ("//" `L.isInfixOf` result) && not ("/*" `L.isInfixOf` result) && not ("*/" `L.isInfixOf` result)
             
         , fastProperty "removeLineComments preserves code structure" $ \input ->
             let result = removeLineComments input
                 originalLines = lines input
                 resultLines = lines result
-            in length resultLines == length originalLines
+            in L.length resultLines == L.length originalLines
             
         , fastProperty "functions handle Unicode correctly" $ \input ->
             let lineResult = removeLineComments input
                 blockResult = removeComments input
-            in length lineResult >= 0 && length blockResult >= 0
+            in L.length lineResult >= 0 && L.length blockResult >= 0
         ]
         
-    , testGroup "Performance and Robustness"
+    , testGroup "Performance L.and Robustness"
         [ testCase "handles very long lines" $ do
             let longLine = "code " ++ replicate 10000 'a' ++ " // comment"
             let result = removeLineComments longLine
-            length result >= 0 @?= True
+            L.length result >= 0 @?= True
             
         , testCase "handles deeply nested block comments" $ do
-            let nested = concat $ replicate 100 "/*"
-            let input = "code " ++ nested ++ " comment " ++ concat (replicate 100 "*/") ++ " end"
+            let nested = L.concat $ replicate 100 "/*"
+            let input = "code " ++ nested ++ " comment " ++ L.concat (replicate 100 "*/") ++ " end"
             let result = removeComments input
-            length result >= 0 @?= True
+            L.length result >= 0 @?= True
             
-        , fastProperty "functions don't crash on any input" $ \input ->
+        , fastProperty "functions don't crash on L.any input" $ \input ->
             let lineResult = removeLineComments input
                 blockResult = removeComments input
-            in length lineResult >= 0 && length blockResult >= 0
+            in L.length lineResult >= 0 && L.length blockResult >= 0
         ]
     ]

@@ -8,6 +8,7 @@
 module Test.Unit.WorkingQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
@@ -47,14 +48,14 @@ prop_map_keys_distinct :: [(String, Int)] -> Property
 prop_map_keys_distinct pairs =
   let m = Map.fromList pairs
       keys = Map.keys m
-  in property (length keys == length (nub keys))
+  in property (L.length keys == L.length (nub keys))
 
 prop_map_union_preserves_left :: [(String, Int)] -> [(String, Int)] -> Property
 prop_map_union_preserves_left leftPairs rightPairs =
   let leftMap = Map.fromList leftPairs
       rightMap = Map.fromList rightPairs
       unioned = Map.union leftMap rightMap
-  in property (all (`Map.member` unioned) (Map.keys leftMap))
+  in property (L.all (`Map.member` unioned) (Map.keys leftMap))
 
 -- Working Set properties
 prop_set_insert_then_member :: Int -> Property
@@ -66,14 +67,14 @@ prop_set_fromList_preserves_unique :: [Int] -> Property
 prop_set_fromList_preserves_unique xs =
   let s = Set.fromList xs
       uniqueXs = nub xs
-  in Set.size s === length uniqueXs
+  in Set.size s === L.length uniqueXs
 
 prop_set_difference_removes_all :: [Int] -> [Int] -> Property
 prop_set_difference_removes_all xs ys =
   let s1 = Set.fromList xs
       s2 = Set.fromList ys
       diff = Set.difference s1 s2
-  in property (all (`Set.notMember` s2) (Set.toList diff))
+  in property (L.all (`Set.notMember` s2) (Set.toList diff))
 
 -- Working List properties
 prop_sort_preserves_elements :: [Int] -> Property
@@ -83,19 +84,19 @@ prop_sort_preserves_elements xs =
 prop_partition_splits :: [Int] -> Property
 prop_partition_splits xs =
   let (evens, odds) = partition even xs
-  in all even evens .&&. all odd odds
+  in L.all even evens .&&. L.all odd odds
 
 prop_find_returns_first :: [Int] -> Property
 prop_find_returns_first xs =
   let firstEven = find even xs
   in case firstEven of
     Just x -> property (even x)
-    Nothing -> property (all odd xs)
+    Nothing -> property (L.all odd xs)
 
 prop_elemIndex_correct :: Int -> [Int] -> Property
 prop_elemIndex_correct x xs =
   case elemIndex x xs of
-    Just idx -> property (idx >= 0 && idx < length xs && xs !! idx == x)
+    Just idx -> property (idx >= 0 && idx < L.length xs && xs !! idx == x)
     Nothing -> property (x `notElem` xs)
 
 -- Working String properties
@@ -103,12 +104,12 @@ prop_toUpper_toLower :: String -> Property
 prop_toUpper_toLower s =
   let upper = map toUpper s
       lower = map toLower upper
-  in length s === length lower
+  in L.length s === L.length lower
 
 prop_isAlphaNum_filter :: String -> Property
 prop_isAlphaNum_filter s =
   let alphanum = filter isAlphaNum s
-  in property (all isAlphaNum alphanum)
+  in property (L.all isAlphaNum alphanum)
 
 -- Working Maybe properties
 prop_fromMaybe_default :: Int -> Maybe Int -> Property
@@ -150,7 +151,7 @@ tests = testGroup "Working QuickCheck Tests"
   , fastProperty "Map union preserves left side" prop_map_union_preserves_left
   , fastProperty "Set insert then member" prop_set_insert_then_member
   , fastProperty "Set fromList preserves unique elements" prop_set_fromList_preserves_unique
-  , fastProperty "Set difference removes all elements" prop_set_difference_removes_all
+  , fastProperty "Set difference removes L.all elements" prop_set_difference_removes_all
   , fastProperty "Sort preserves elements" prop_sort_preserves_elements
   , fastProperty "Partition splits correctly" prop_partition_splits
   , fastProperty "Find returns first matching element" prop_find_returns_first

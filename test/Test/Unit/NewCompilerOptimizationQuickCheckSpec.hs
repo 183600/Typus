@@ -2,6 +2,7 @@
 module Test.Unit.NewCompilerOptimizationQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -67,7 +68,7 @@ tests =
             \objects ->
               let analysis = Compiler.Optimizer.analyzeEscape objects
                   stackAllocated = Compiler.Optimizer.allocateOnStack analysis
-              in length stackAllocated >= 0
+              in L.length stackAllocated >= 0
               
         , fastProperty "garbage collection optimization reduces pressure" $
             \ir ->
@@ -107,7 +108,7 @@ tests =
               let simplified = Compiler.Optimizer.simplifyControlFlow cfg
               in Compiler.Optimizer.isSemanticallyEquivalent cfg simplified
               
-        , fastProperty "tail call optimization reduces stack usage" $
+        , fastProperty "L.tail call optimization reduces stack usage" $
             \functions ->
               let optimized = Compiler.Optimizer.optimizeTailCalls functions
                   stackUsage = Compiler.Optimizer.measureStackUsage optimized

@@ -19,7 +19,9 @@ import Compiler (compile, CompilerError(..))
 import Parser (parseTypus, TypusFile(..))
 import ErrorHandler (formatCompilerErrors)
 
-import Data.List (isInfixOf, isPrefixOf, length, sort, isSuffixOf)
+import qualified Data.List as L
+import Data.List (isInfixOf, isPrefixOf, length, isSuffixOf)
+import Data.List (sort)
 import qualified Data.Text as T
 
 -- Test 1: Security validation prevents buffer overflow
@@ -44,7 +46,7 @@ test_security_buffer_overflow =
           Left compileErr -> do
             -- Should catch potential buffer overflow
             assertBool "Should detect potential buffer overflow" $
-              any (`isInfixOf` show compileErr) 
+              L.any (`L.isInfixOf` show compileErr) 
                 ["buffer", "overflow", "copy", "bounds"]
           Right result -> do
             -- May compile with runtime checks
@@ -71,7 +73,7 @@ test_security_integer_overflow =
           Left compileErr -> do
             -- Should catch potential integer overflow
             assertBool "Should detect potential integer overflow" $
-              any (`isInfixOf` show compileErr) 
+              L.any (`L.isInfixOf` show compileErr) 
                 ["overflow", "integer", "bounds", "check"]
           Right result -> do
             -- May compile with overflow checks
@@ -98,7 +100,7 @@ test_security_sql_injection =
           Left compileErr -> do
             -- Should catch SQL injection vulnerability
             assertBool "Should detect SQL injection vulnerability" $
-              any (`isInfixOf` show compileErr) 
+              L.any (`L.isInfixOf` show compileErr) 
                 ["SQL", "injection", "concatenation", "sanitize"]
           Right result -> do
             -- May compile with warnings
@@ -127,7 +129,7 @@ test_security_unsafe_casting =
           Left compileErr -> do
             -- Should catch unsafe pointer operations
             assertBool "Should detect unsafe pointer operations" $
-              any (`isInfixOf` show compileErr) 
+              L.any (`L.isInfixOf` show compileErr) 
                 ["unsafe", "pointer", "cast", "security"]
           Right result -> do
             -- May compile with safety warnings
@@ -155,7 +157,7 @@ test_security_path_traversal =
           Left compileErr -> do
             -- Should catch path traversal vulnerability
             assertBool "Should detect path traversal vulnerability" $
-              any (`isInfixOf` show compileErr) 
+              L.any (`L.isInfixOf` show compileErr) 
                 ["path", "traversal", "filename", "sanitize"]
           Right result -> do
             -- May compile with warnings
@@ -164,9 +166,9 @@ test_security_path_traversal =
 -- QuickCheck property: Security validation catches dangerous patterns
 prop_security_catches_dangerous_patterns :: String -> Property
 prop_security_catches_dangerous_patterns code =
-  length code < 100 ==>  -- Keep code reasonable
+  L.length code < 100 ==>  -- Keep code reasonable
   let dangerousPatterns = ["eval", "exec", "system", "shell", "cmd"]
-      hasDangerous = any (`isInfixOf` code) dangerousPatterns
+      hasDangerous = L.any (`L.isInfixOf` code) dangerousPatterns
   in if hasDangerous
      then
        let source = unlines
@@ -180,7 +182,7 @@ prop_security_catches_dangerous_patterns code =
             Right typusFile ->
               case compile typusFile of
                 Left compileErr -> 
-                  property $ any (`isInfixOf` show compileErr) 
+                  property $ L.any (`L.isInfixOf` show compileErr) 
                     ["security", "dangerous", "unsafe"]
                 Right _ -> property True  -- May compile with warnings
      else property True  -- Safe code is skipped
@@ -206,7 +208,7 @@ test_security_command_injection =
           Left compileErr -> do
             -- Should catch command injection vulnerability
             assertBool "Should detect command injection vulnerability" $
-              any (`isInfixOf` show compileErr) 
+              L.any (`L.isInfixOf` show compileErr) 
                 ["command", "injection", "system", "exec"]
           Right result -> do
             -- May compile with warnings
@@ -235,7 +237,7 @@ test_security_cryptographic_issues =
           Left compileErr -> do
             -- Should catch cryptographic weaknesses
             assertBool "Should detect cryptographic weaknesses" $
-              any (`isInfixOf` show compileErr) 
+              L.any (`L.isInfixOf` show compileErr) 
                 ["crypto", "weak", "key", "hardcoded"]
           Right result -> do
             -- May compile with warnings
@@ -262,7 +264,7 @@ test_security_information_disclosure =
           Left compileErr -> do
             -- Should catch information disclosure
             assertBool "Should detect information disclosure" $
-              any (`isInfixOf` show compileErr) 
+              L.any (`L.isInfixOf` show compileErr) 
                 ["password", "sensitive", "disclosure", "debug"]
           Right result -> do
             -- May compile with warnings
@@ -271,7 +273,7 @@ test_security_information_disclosure =
 -- QuickCheck property: Security validation is comprehensive
 prop_security_validation_comprehensive :: String -> Property
 prop_security_validation_comprehensive input =
-  length input < 50 ==>  -- Keep input reasonable
+  L.length input < 50 ==>  -- Keep input reasonable
   let source = unlines
         [ "package main"
         , "func main() {"

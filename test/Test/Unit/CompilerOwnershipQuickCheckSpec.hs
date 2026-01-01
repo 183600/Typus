@@ -59,14 +59,14 @@ prop_check_type_error_invalid_syntax =
 prop_typus_file_empty_blocks :: Property
 prop_typus_file_empty_blocks = 
     let file = TypusFile "" [] [] defaultFileDirectives
-    in null (tfBlocks file)
+    in L.null (tfBlocks file)
 
 -- | Test that adding blocks to TypusFile increases block count
 prop_typus_file_add_blocks :: [CodeBlock] -> Property
 prop_typus_file_add_blocks blocks = 
     let file = TypusFile "" blocks [] defaultFileDirectives
-        blockCount = length (tfBlocks file)
-    in blockCount === length blocks
+        blockCount = L.length (tfBlocks file)
+    in blockCount === L.length blocks
 
 -- ============================================================================
 -- Code Block QuickCheck Tests
@@ -83,7 +83,7 @@ prop_code_block_trim_content :: String -> Property
 prop_code_block_trim_content content = 
     let block = CodeBlock content defaultBlockDirectives Nothing
         trimmedBlock = block { cbContent = trim (cbContent block) }
-    in length (cbContent trimmedBlock) <= length (cbContent block)
+    in L.length (cbContent trimmedBlock) <= L.length (cbContent block)
 
 -- ============================================================================
 -- Ownership Analysis QuickCheck Tests
@@ -99,14 +99,14 @@ prop_ownership_preserves_variables vars =
 -- | Test that ownership analysis handles duplicate variables
 prop_ownership_handles_duplicates :: NonEmptyList String -> Property
 prop_ownership_handles_duplicates (NonEmpty vars) = 
-    let hasDuplicates = length vars > length (L.nub vars)
-    in hasDuplicates ==> length (L.nub vars) <= length vars
+    let hasDuplicates = L.length vars > L.length (L.nub vars)
+    in hasDuplicates ==> L.length (L.nub vars) <= L.length vars
 
 -- | Test that ownership transfer maintains variable count
 prop_ownership_transfer_count :: [String] -> Property
 prop_ownership_transfer_count vars = 
-    let beforeCount = length vars
-        afterCount = length (L.nub vars)  -- Simulate ownership transfer
+    let beforeCount = L.length vars
+        afterCount = L.length (L.nub vars)  -- Simulate ownership transfer
     in afterCount <= beforeCount
 
 -- ============================================================================
@@ -129,7 +129,7 @@ prop_type_check_ill_formed =
 prop_type_inference_consistent :: String -> Property
 prop_type_inference_consistent expr = 
     let hasTypeErrors = checkTypeError expr
-    in not hasTypeErrors ==> length (filter isAlphaNum expr) >= 0
+    in not hasTypeErrors ==> L.length (filter isAlphaNum expr) >= 0
 
 -- ============================================================================
 -- Code Generation QuickCheck Tests
@@ -138,15 +138,15 @@ prop_type_inference_consistent expr =
 -- | Test that code generation preserves function count
 prop_code_generation_preserves_functions :: [String] -> Property
 prop_code_generation_preserves_functions functions = 
-    let functionCount = length functions
+    let functionCount = L.length functions
     in functionCount >= 0
 
 -- | Test that generated Go code is syntactically valid (basic check)
 prop_go_code_basic_syntax :: Property
 prop_go_code_basic_syntax = 
     let goCode = "package main\n\nfunc main() {\n    println(\"Hello, World!\")\n}"
-        hasPackage = "package main" `L.isInfixOf` goCode
-        hasMain = "func main" `L.isInfixOf` goCode
+        hasPackage = "package main" `L.L.isInfixOf` goCode
+        hasMain = "func main" `L.L.isInfixOf` goCode
     in hasPackage && hasMain
 
 -- ============================================================================
@@ -158,7 +158,7 @@ prop_compilation_preserves_semantics :: String -> Property
 prop_compilation_preserves_semantics code = 
     let trimmedCode = trim code
         hasContent = not (null trimmedCode)
-    in hasContent ==> length trimmedCode >= 0
+    in hasContent ==> L.length trimmedCode >= 0
 
 -- | Test that error reporting is consistent
 prop_error_reporting_consistent :: String -> Property
@@ -199,7 +199,7 @@ instance Arbitrary a => Arbitrary (NonEmptyList a) where
 -- ============================================================================
 
 tests :: TestTree
-tests = testGroup "Compiler and Ownership QuickCheck Tests"
+tests = testGroup "Compiler L.and Ownership QuickCheck Tests"
     [ testGroup "Compiler Error Tests"
         [ testProperty "compiler errors have valid phases" prop_compiler_error_valid_phase
         , testProperty "compiler error messages are non-empty" prop_compiler_error_non_empty_message

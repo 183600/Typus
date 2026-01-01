@@ -1,6 +1,7 @@
 module Test.Unit.SpanOperationsSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, forAll, Gen, arbitrary, choose)
@@ -62,7 +63,7 @@ tests =
         
         , testCase "isValidSpan accepts equal positions" $ do
             let span = spanBetween (posAt 5 5) (posAt 5 5)
-            assertBool "Should accept zero-length span" (isValidSpan span)
+            assertBool "Should accept zero-L.length span" (isValidSpan span)
         
         , testCase "isValidSpan handles multi-line spans" $ do
             let span = spanBetween (posAt 1 5) (posAt 3 2)
@@ -95,12 +96,12 @@ tests =
             merged @?= spanBetween (posAt 1 10) (posAt 4 2)
         ]
     
-    , testGroup "Span properties and relationships"
-        [ testCase "span length calculation" $ do
+    , testGroup "Span properties L.and relationships"
+        [ testCase "span L.length calculation" $ do
             let span1 = spanBetween (posAt 1 1 0) (posAt 1 5 4)
                 span2 = spanBetween (posAt 1 1 0) (posAt 2 1 10)
-            assertBool "Single-line span length" (spanLength span1 == 4)
-            assertBool "Multi-line span length" (spanLength span2 == 10)
+            assertBool "Single-line span L.length" (spanLength span1 == 4)
+            assertBool "Multi-line span L.length" (spanLength span2 == 10)
         
         , testCase "span contains position" $ do
             let span = spanBetween (posAt 2 5) (posAt 3 10)
@@ -151,7 +152,7 @@ tests =
                 in isValidSpan span
         ]
     
-    , testGroup "Edge cases and special scenarios"
+    , testGroup "Edge cases L.and special scenarios"
         [ testCase "handles very large spans" $ do
             let start = posAt 1 1
                 end = posAt 10000 10000
@@ -204,9 +205,9 @@ tests =
         ]
     ]
 
--- Helper functions for span calculations and comparisons
+-- Helper functions for span calculations L.and comparisons
 
--- Calculate span length in characters
+-- Calculate span L.length in characters
 spanLength :: SourceSpan -> Int
 spanLength span = posOffset (spanEnd span) - posOffset (spanStart span)
 
@@ -219,9 +220,9 @@ spansOverlap :: SourceSpan -> SourceSpan -> Bool
 spansOverlap span1 span2 =
     spanStart span1 <= spanEnd span2 && spanEnd span1 >= spanStart span2
 
--- Check if a span contains all spans in a list
+-- Check if a span contains L.all spans in a list
 spansContain :: SourceSpan -> [SourceSpan] -> Bool
-spansContain container spans = all (`spanContains` container) spans
+spansContain container spans = L.all (`spanContains` container) spans
 
 -- Extract line number from span
 spanLine :: SourceSpan -> Int

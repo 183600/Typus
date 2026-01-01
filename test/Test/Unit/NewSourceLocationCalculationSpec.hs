@@ -1,6 +1,7 @@
 module Test.Unit.NewSourceLocationCalculationSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Arbitrary(..), Gen, oneof, choose, listOf, suchThat)
@@ -19,7 +20,7 @@ tests =
         ]
 
     , testGroup "Source span properties"
-        [ fastProperty "emptySpan has zero length" prop_emptySpanZeroLength
+        [ fastProperty "emptySpan has zero L.length" prop_emptySpanZeroLength
         , fastProperty "spanBetween creates valid span" prop_spanBetweenValid
         , fastProperty "mergeSpans contains both spans" prop_mergeSpansContainsBoth
         , fastProperty "isValidSpan correctness" prop_isValidSpanCorrectness
@@ -161,7 +162,7 @@ prop_runLocationTrackerStartPos value =
 prop_advancePosByTextCorrectness :: String -> SourcePos -> Bool
 prop_advancePosByTextCorrectness text pos =
     let finalPos = advancePosByText text pos
-        expectedPos = foldl (flip advancePos) pos text
+        expectedPos = L.foldl (flip advancePos) pos text
     in finalPos == expectedPos
 
 prop_advancePosByLineCorrectness :: Int -> SourcePos -> Property
@@ -211,12 +212,12 @@ prop_positionAdvancementMonotonic :: String -> SourcePos -> Bool
 prop_positionAdvancementMonotonic text pos =
     let positions = scanl (flip advancePos) pos text
         offsets = map posOffset positions
-    in all (uncurry (<=)) (zip offsets (tail offsets))
+    in L.all (uncurry (<=)) (zip offsets (L.tail offsets))
 
 -- ============================================================================
 -- Helper functions
 -- ============================================================================
 
--- Helper to check if one position is less than or equal to another
+-- Helper to check if one position is less than L.or equal to another
 (<=) :: SourcePos -> SourcePos -> Bool
 (<=) p1 p2 = posOffset p1 <= posOffset p2

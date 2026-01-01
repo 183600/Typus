@@ -10,6 +10,7 @@
 module Test.Unit.CoreSourceLocationMathQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements)
@@ -42,7 +43,7 @@ prop_pos_advancement_consistent line col text =
   line > 0 && col > 0 && not (null text) ==>
   let start = SourcePos line col
       after = advancePos start text
-      lineCount = length (filter (== '\n') text)
+      lineCount = L.length (L.filter (== '\n') text)
   in property $ sourceLine after >= line .&&. sourceLine after <= line + lineCount + 1
 
 -- Property: Empty span validity
@@ -65,7 +66,7 @@ prop_span_creation_order startLine startCol endLine endCol =
 -- Property: Span merging is associative
 prop_span_merging_associative :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Property
 prop_span_merging_associative l1 c1 l2 c2 l3 c3 l4 c4 =
-  all (>0) [l1, c1, l2, c2, l3, c3, l4, c4] ==>
+  L.all (>0) [l1, c1, l2, c2, l3, c3, l4, c4] ==>
   let p1 = SourcePos l1 c1
       p2 = SourcePos l2 c2
       p3 = SourcePos l3 c3
@@ -119,7 +120,7 @@ prop_multiple_pos_advancements line col text1 text2 =
 -- Property: Span containment relationship
 prop_span_containment :: Int -> Int -> Int -> Int -> Int -> Int -> Property
 prop_span_containment outerL outerC innerL innerC offset =
-  all (>0) [outerL, outerC, innerL, innerC] && offset >= 0 && offset <= 10 ==>
+  L.all (>0) [outerL, outerC, innerL, innerC] && offset >= 0 && offset <= 10 ==>
   let outerStart = SourcePos outerL outerC
       innerStart = SourcePos innerL innerC
       innerEnd = advancePosBy innerStart offset
@@ -131,7 +132,7 @@ prop_span_containment outerL outerC innerL innerC offset =
 -- Property: Source position ordering
 prop_source_position_ordering :: Int -> Int -> Int -> Int -> Property
 prop_source_position_ordering line1 col1 line2 col2 =
-  all (>0) [line1, col1, line2, col2] ==>
+  L.all (>0) [line1, col1, line2, col2] ==>
   let pos1 = SourcePos line1 col1
       pos2 = SourcePos line2 col2
       lineCompare = compare line1 line2

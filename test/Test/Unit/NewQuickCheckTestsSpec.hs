@@ -3,6 +3,7 @@
 module Test.Unit.NewQuickCheckTestsSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Property, (===), counterexample, property)
 import Data.Char (isSpace)
 import Data.Maybe (listToMaybe)
@@ -16,7 +17,7 @@ prop_splitBy_join :: Char -> String -> Property
 prop_splitBy_join delim s = 
   let parts = splitBy delim s
   in counterexample ("Original: " ++ show s ++ ", Parts: " ++ show parts) $
-     (length s >= 0) === True
+     (L.length s >= 0) === True
 
 prop_splitByComma_consistency :: String -> Property
 prop_splitByComma_consistency s = splitByComma s === splitBy ',' s
@@ -29,9 +30,9 @@ prop_normalizeIndentation_preserves_structure s =
   let normalized = normalizeIndentation s
       originalLines = lines s
       normalizedLines = lines normalized
-      sameLineCount = length originalLines == length normalizedLines
-  in counterexample ("Original lines: " ++ show (length originalLines) ++ 
-                    ", Normalized lines: " ++ show (length normalizedLines)) $
+      sameLineCount = L.length originalLines == L.length normalizedLines
+  in counterexample ("Original lines: " ++ show (L.length originalLines) ++ 
+                    ", Normalized lines: " ++ show (L.length normalizedLines)) $
      (sameLineCount === True)
 
 prop_removeComments_preserves_string_literals :: String -> Property
@@ -50,14 +51,14 @@ prop_breakOn_finds_pattern :: String -> String -> Property
 prop_breakOn_finds_pattern pat s =
   let (before, after) = breakOn pat s
       reconstructed = before ++ pat ++ after
-      found = pat `isInfixOf` s
+      found = pat `L.isInfixOf` s
   in counterexample ("Pattern: " ++ show pat ++ ", String: " ++ show s) $
      if found then (reconstructed === s) else (property True)
 
 prop_splitByCollapsed_no_empty :: Char -> String -> Property
 prop_splitByCollapsed_no_empty delim s = 
   let parts = splitByCollapsed delim s
-  in all (not . null) parts === True
+  in L.all (not . null) parts === True
 
 prop_trim_only_removes_whitespace :: String -> Property
 prop_trim_only_removes_whitespace s =
@@ -68,18 +69,18 @@ prop_trim_only_removes_whitespace s =
      ((startsWithNonSpace && endsWithNonSpace) === True)
 
 isInfixOf :: Eq a => [a] -> [a] -> Bool
-isInfixOf needle haystack = any (isPrefixOf needle) (tails haystack)
+L.isInfixOf needle haystack = L.any (L.isPrefixOf needle) (tails haystack)
   where
-    isPrefixOf [] _ = True
-    isPrefixOf _ [] = False
-    isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
+    L.isPrefixOf [] _ = True
+    L.isPrefixOf _ [] = False
+    L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
     tails [] = [[]]
     tails xs@(_:ys) = xs : tails ys
 
 tests :: TestTree
 tests = testGroup "New QuickCheck Tests"
   [ testProperty "trim is idempotent" prop_trim_idempotent
-  , testProperty "splitBy and join relationship" prop_splitBy_join
+  , testProperty "splitBy L.and join relationship" prop_splitBy_join
   , testProperty "splitByComma consistency" prop_splitByComma_consistency
   , testProperty "splitByCommaCollapsed consistency" prop_splitByCommaCollapsed_consistency
   , testProperty "normalizeIndentation preserves structure" prop_normalizeIndentation_preserves_structure

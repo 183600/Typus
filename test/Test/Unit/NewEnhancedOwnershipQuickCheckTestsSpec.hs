@@ -10,6 +10,7 @@
 module Test.Unit.NewOwnershipQuickCheckTestsSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertBool, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -39,7 +40,8 @@ import Ownership.Common.Types
   , newOwnershipAnalyzer
   )
 
-import Data.List (sort, nub, isInfixOf)
+import Data.List (isInfixOf)
+import Data.List (sort, nub)
 import Data.Maybe (isJust, isNothing)
 import qualified Data.Map.Strict as Map
 
@@ -139,11 +141,11 @@ prop_ownership_type_show_format :: OwnershipType -> Property
 prop_ownership_type_show_format ownershipType =
   let showStr = show ownershipType
   in case ownershipType of
-       Owned name -> property $ "Owned " `isInfixOf` showStr .&&. name `isInfixOf` showStr
-       Borrowed name -> property $ "Borrowed " `isInfixOf` showStr .&&. name `isInfixOf` showStr
-       MutBorrowed name -> property $ "MutBorrowed " `isInfixOf` showStr .&&. name `isInfixOf` showStr
+       Owned name -> property $ "Owned " `L.isInfixOf` showStr .&&. name `L.isInfixOf` showStr
+       Borrowed name -> property $ "Borrowed " `L.isInfixOf` showStr .&&. name `L.isInfixOf` showStr
+       MutBorrowed name -> property $ "MutBorrowed " `L.isInfixOf` showStr .&&. name `L.isInfixOf` showStr
 
--- Property: Owned should be less than Borrowed and MutBorrowed in ordering
+-- Property: Owned should be less than Borrowed L.and MutBorrowed in ordering
 prop_owned_less_than_borrowed :: String -> String -> Property
 prop_owned_less_than_borrowed name1 name2 =
   let owned = Owned name1
@@ -176,21 +178,21 @@ prop_ownership_error_show_format :: OwnershipError -> Property
 prop_ownership_error_show_format ownershipError =
   let showStr = show ownershipError
   in case ownershipError of
-       UseAfterMove var -> property $ "UseAfterMove " `isInfixOf` showStr .&&. var `isInfixOf` showStr
-       DoubleMove var1 var2 -> property $ "DoubleMove " `isInfixOf` showStr .&&. var1 `isInfixOf` showStr .&&. var2 `isInfixOf` showStr
-       BorrowWhileMoved var -> property $ "BorrowWhileMoved " `isInfixOf` showStr .&&. var `isInfixOf` showStr
-       MutBorrowWhileBorrowed var -> property $ "MutBorrowWhileBorrowed " `isInfixOf` showStr .&&. var `isInfixOf` showStr
-       BorrowWhileMutBorrowed var -> property $ "BorrowWhileMutBorrowed " `isInfixOf` showStr .&&. var `isInfixOf` showStr
-       MultipleMutBorrows var -> property $ "MultipleMutBorrows " `isInfixOf` showStr .&&. var `isInfixOf` showStr
-       UseWhileMutBorrowed var -> property $ "UseWhileMutBorrowed " `isInfixOf` showStr .&&. var `isInfixOf` showStr
-       OutOfScope var -> property $ "OutOfScope " `isInfixOf` showStr .&&. var `isInfixOf` showStr
-       BorrowError msg -> property $ "BorrowError " `isInfixOf` showStr .&&. msg `isInfixOf` showStr
-       ParseError msg -> property $ "ParseError " `isInfixOf` showStr .&&. msg `isInfixOf` showStr
-       CrossFunctionMove var1 var2 -> property $ "CrossFunctionMove " `isInfixOf` showStr .&&. var1 `isInfixOf` showStr .&&. var2 `isInfixOf` showStr
-       ParameterMoveMismatch var -> property $ "ParameterMoveMismatch " `isInfixOf` showStr .&&. var `isInfixOf` showStr
-       ControlFlowError msg -> property $ "ControlFlowError " `isInfixOf` showStr .&&. msg `isInfixOf` showStr
-       PathSensitiveError msg -> property $ "PathSensitiveError " `isInfixOf` showStr .&&. msg `isInfixOf` showStr
-       LoopOwnershipError msg -> property $ "LoopOwnershipError " `isInfixOf` showStr .&&. msg `isInfixOf` showStr
+       UseAfterMove var -> property $ "UseAfterMove " `L.isInfixOf` showStr .&&. var `L.isInfixOf` showStr
+       DoubleMove var1 var2 -> property $ "DoubleMove " `L.isInfixOf` showStr .&&. var1 `L.isInfixOf` showStr .&&. var2 `L.isInfixOf` showStr
+       BorrowWhileMoved var -> property $ "BorrowWhileMoved " `L.isInfixOf` showStr .&&. var `L.isInfixOf` showStr
+       MutBorrowWhileBorrowed var -> property $ "MutBorrowWhileBorrowed " `L.isInfixOf` showStr .&&. var `L.isInfixOf` showStr
+       BorrowWhileMutBorrowed var -> property $ "BorrowWhileMutBorrowed " `L.isInfixOf` showStr .&&. var `L.isInfixOf` showStr
+       MultipleMutBorrows var -> property $ "MultipleMutBorrows " `L.isInfixOf` showStr .&&. var `L.isInfixOf` showStr
+       UseWhileMutBorrowed var -> property $ "UseWhileMutBorrowed " `L.isInfixOf` showStr .&&. var `L.isInfixOf` showStr
+       OutOfScope var -> property $ "OutOfScope " `L.isInfixOf` showStr .&&. var `L.isInfixOf` showStr
+       BorrowError msg -> property $ "BorrowError " `L.isInfixOf` showStr .&&. msg `L.isInfixOf` showStr
+       ParseError msg -> property $ "ParseError " `L.isInfixOf` showStr .&&. msg `L.isInfixOf` showStr
+       CrossFunctionMove var1 var2 -> property $ "CrossFunctionMove " `L.isInfixOf` showStr .&&. var1 `L.isInfixOf` showStr .&&. var2 `L.isInfixOf` showStr
+       ParameterMoveMismatch var -> property $ "ParameterMoveMismatch " `L.isInfixOf` showStr .&&. var `L.isInfixOf` showStr
+       ControlFlowError msg -> property $ "ControlFlowError " `L.isInfixOf` showStr .&&. msg `L.isInfixOf` showStr
+       PathSensitiveError msg -> property $ "PathSensitiveError " `L.isInfixOf` showStr .&&. msg `L.isInfixOf` showStr
+       LoopOwnershipError msg -> property $ "LoopOwnershipError " `L.isInfixOf` showStr .&&. msg `L.isInfixOf` showStr
 
 -- Property: Error ordering should be consistent with string representation
 prop_error_ordering_consistent_with_show :: OwnershipError -> OwnershipError -> Property
@@ -203,19 +205,19 @@ prop_error_ordering_consistent_with_show err1 err2 =
 -- OwnershipTransfer Properties
 -- ============================================================================
 
--- Property: OwnershipTransfer should preserve from and to fields
+-- Property: OwnershipTransfer should preserve from L.and to fields
 prop_ownership_transfer_preserves_fields :: String -> String -> Property
 prop_ownership_transfer_preserves_fields fromVar toVar =
   let transfer = OwnershipTransfer fromVar toVar
   in property $ transferFrom transfer === fromVar .&&. transferTo transfer === toVar
 
--- Property: Show should include both from and to variables
+-- Property: Show should include both from L.and to variables
 prop_ownership_transfer_show_format :: OwnershipTransfer -> Property
 prop_ownership_transfer_show_format transfer =
   let showStr = show transfer
       from = transferFrom transfer
       to = transferTo transfer
-  in property $ from `isInfixOf` showStr .&&. to `isInfixOf` showStr
+  in property $ from `L.isInfixOf` showStr .&&. to `L.isInfixOf` showStr
 
 -- ============================================================================
 -- OwnershipAnalyzer Properties
@@ -240,14 +242,14 @@ prop_built_in_functions_not_empty =
 prop_built_in_functions_contains_common :: Property
 prop_built_in_functions_contains_common =
   let commonFunctions = ["println", "len", "make", "append"]
-      hasCommon = all (`elem` builtInFunctions) commonFunctions
+      hasCommon = L.all (`elem` builtInFunctions) commonFunctions
   in property $ hasCommon
 
 -- Property: builtInFunctions should not contain duplicates
 prop_built_in_functions_no_duplicates :: Property
 prop_built_in_functions_no_duplicates =
   let uniqueFunctions = nub builtInFunctions
-  in property $ length builtInFunctions === length uniqueFunctions
+  in property $ L.length builtInFunctions === L.length uniqueFunctions
 
 -- ============================================================================
 -- Ownership Analysis Properties
@@ -271,7 +273,7 @@ prop_analyze_ownership_detects_problems :: Property
 prop_analyze_ownership_detects_problems =
   forAll genOwnershipProblemCode $ \code ->
   let result = analyzeOwnership newOwnershipAnalyzer code
-  in property $ True  -- Should not crash and potentially detect issues
+  in property $ True  -- Should not crash L.and potentially detect issues
 
 -- Property: analyzeOwnershipFile should handle file path
 prop_analyze_ownership_file_path :: Property
@@ -302,10 +304,10 @@ prop_format_errors_includes_messages =
   forAll (listOf genOwnershipError `suchThat` (not . null)) $ \errors ->
   let formatted = formatOwnershipErrors errors
       errorStrings = map show errors
-  in property $ all (`isInfixOf` formatted) errorStrings
+  in property $ L.all (`L.isInfixOf` formatted) errorStrings
 
 -- ============================================================================
--- Lexer and Parser Properties
+-- Lexer L.and Parser Properties
 -- ============================================================================
 
 -- Property: lexAll should handle empty input
@@ -361,7 +363,7 @@ prop_debug_more_info_than_regular =
   forAll genSimpleGoCode $ \code ->
   let regular = analyzeOwnership newOwnershipAnalyzer code
       debug = analyzeOwnershipDebug newOwnershipAnalyzer code
-  in property $ length debug >= length regular  -- Debug should have at least as much info
+  in property $ L.length debug >= L.length regular  -- Debug should have at least as much info
 
 -- ============================================================================
 -- Test Collection
@@ -402,9 +404,9 @@ tests = testGroup "New Ownership QuickCheck Tests"
     [ fastProperty "format empty errors" prop_format_empty_errors
     , fastProperty "format errors includes messages" prop_format_errors_includes_messages
     ]
-  , testGroup "Lexer and Parser Properties"
-    [ fastProperty "lex all empty" prop_lex_all_empty
-    , fastProperty "lex all simple code" prop_lex_all_simple_code
+  , testGroup "Lexer L.and Parser Properties"
+    [ fastProperty "lex L.all empty" prop_lex_all_empty
+    , fastProperty "lex L.all simple code" prop_lex_all_simple_code
     , fastProperty "parse program empty" prop_parse_program_empty
     , fastProperty "parse program simple code" prop_parse_program_simple_code
     ]

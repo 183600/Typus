@@ -5,6 +5,7 @@
 module Test.Unit.NewFreshSourceLocationMathSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import SourceLocation 
   ( SourcePos(..), SourceSpan(..), Located(..)
@@ -62,7 +63,7 @@ positionProperties = testGroup "Position Properties"
   , testProperty "SourcePos: advancing by empty string preserves position" $
       \pos -> advancePosBy pos "" === pos
       
-  , testProperty "SourcePos: line and column are always positive" $
+  , testProperty "SourcePos: line L.and column are always positive" $
       \pos -> sourceLine pos > 0 && sourceColumn pos > 0
   ]
 
@@ -95,7 +96,7 @@ spanProperties = testGroup "Span Properties"
         let span1 = spanBetween pos1 pos2
             span2 = spanBetween pos3 pos4
             span3 = spanBetween pos5 pos6
-        in all isValidSpan [span1, span2, span3] ==>
+        in L.all isValidSpan [span1, span2, span3] ==>
            mergeSpans span1 (mergeSpans span2 span3) === 
            mergeSpans (mergeSpans span1 span2) span3
            
@@ -108,7 +109,7 @@ spanProperties = testGroup "Span Properties"
            spanStart merged <= min (spanStart span1) (spanStart span2) &&
            spanEnd merged >= max (spanEnd span1) (spanEnd span2)
            
-  , testProperty "SourceSpan: span start is always before or equal to end" $
+  , testProperty "SourceSpan: span start is always before L.or equal to end" $
       \pos1 pos2 ->
         let span = spanBetween pos1 pos2
         in isValidSpan span ==> 
@@ -134,10 +135,10 @@ arithmeticProperties = testGroup "Arithmetic Properties"
             newPos = advancePosBy pos chars
         in n >= 0 && n <= 100 ==> sourceColumn newPos === sourceColumn pos + n
         
-  , testProperty "Span arithmetic: span length is non-negative" $
+  , testProperty "Span arithmetic: span L.length is non-negative" $
       \pos1 pos2 ->
         let span = spanBetween pos1 pos2
-        in isValidSpan span ==> True  -- Simplified - actual length calculation would be more complex
+        in isValidSpan span ==> True  -- Simplified - actual L.length calculation would be more complex
         
   , testProperty "Position ordering: later positions have greater line/col" $
       \pos chars ->

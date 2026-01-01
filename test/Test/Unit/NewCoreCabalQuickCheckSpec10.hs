@@ -1,6 +1,7 @@
 module Test.Unit.NewCoreCabalQuickCheckSpec10 (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 
@@ -8,7 +9,7 @@ import qualified Data.Text as T
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 
--- | Security and robustness tests with QuickCheck properties
+-- | Security L.and robustness tests with QuickCheck properties
 tests :: TestTree
 tests =
   testGroup "New Core Cabal QuickCheck Tests 10 - Security & Robustness"
@@ -27,7 +28,7 @@ tests =
         , testCase "memory safety" $ do
             let largeInput = replicate 1000000 'a'
                 result = processLargeInput largeInput
-            length result @?= 1000000
+            L.length result @?= 1000000
         ]
     , testGroup "Error handling robustness"
         [ fastProperty "error recovery preserves state" prop_errorRecoveryPreservesState
@@ -36,7 +37,7 @@ tests =
             let initialState = CompilerState { csErrors = [], csWarnings = [] }
                 errorState = addError initialState "Test error"
                 recoveredState = recoverFromError errorState
-            length (csErrors recoveredState) @?= 1
+            L.length (csErrors recoveredState) @?= 1
         ]
     , testGroup "Concurrency safety"
         [ fastProperty "thread-safe compilation" prop_threadSafeCompilation
@@ -44,7 +45,7 @@ tests =
         , testCase "concurrent compilation" $ do
             let inputs = ["input1", "input2", "input3"]
                 results = map compileInParallel inputs
-            length results @?= 3
+            L.length results @?= 3
         ]
     ]
 
@@ -92,7 +93,7 @@ prop_bufferOverflowProtection n =
       largeInput = replicate n' 'a'
       result = processLargeInput largeInput
       maxSize = 1000000
-  in length result <= maxSize
+  in L.length result <= maxSize
 
 -- Null pointer dereference prevention
 prop_nullPointerPrevention :: Maybe String -> Bool
@@ -106,8 +107,8 @@ prop_errorRecoveryPreservesState errors =
   let initialState = CompilerState { csErrors = [], csWarnings = [], csMemory = 100 }
       errorState = foldl addError initialState errors
       recoveredState = recoverFromError errorState
-      originalErrorCount = length errors
-      recoveredErrorCount = length (csErrors recoveredState)
+      originalErrorCount = L.length errors
+      recoveredErrorCount = L.length (csErrors recoveredState)
   in recoveredErrorCount == originalErrorCount
 
 -- Graceful degradation under stress
@@ -123,7 +124,7 @@ prop_threadSafeCompilation :: [String] -> Bool
 prop_threadSafeCompilation inputs =
   let results = map compileInParallel inputs
       uniqueResults = Set.fromList results
-  in length results == Set.size uniqueResults  -- Each compilation should be independent
+  in L.length results == Set.size uniqueResults  -- Each compilation should be independent
 
 -- Concurrent access protection
 prop_concurrentAccessProtection :: [Int] -> Bool
@@ -131,33 +132,33 @@ prop_concurrentAccessProtection threadIds =
   let threads = map createThread threadIds
       lockedResources = map acquireResource threads
       releasedResources = map releaseResource lockedResources
-  in all (not . tsIsLocked) releasedResources
+  in L.all (not . tsIsLocked) releasedResources
 
 -- Helper functions
 sanitizeInput :: String -> String
 sanitizeInput input = 
-  let cleaned = filter (\c -> c /= '\'' && c /= ';' && c /= '-') input
-  in filter (\c -> c /= ' ' || (length (takeWhile (== ' ') cleaned) < 2)) cleaned
+  let cleaned = L.filter (\c -> c /= '\'' && c /= ';' && c /= '-') input
+  in L.filter (\c -> c /= ' ' || (L.length (takeWhile (== ' ') cleaned) < 2)) cleaned
 
 containsSQLInjection :: String -> Bool
 containsSQLInjection input = 
   let sqlKeywords = ["DROP", "DELETE", "UPDATE", "INSERT"]
       upperInput = map toUpper input
-  in any (`isInfixOf` upperInput) sqlKeywords
+  in L.any (`L.isInfixOf` upperInput) sqlKeywords
 
 containsScriptInjection :: String -> Bool
 containsScriptInjection input = 
   let scriptPatterns = ["<script>", "</script>", "javascript:"]
       lowerInput = map toLower input
-  in any (`isInfixOf` lowerInput) scriptPatterns
+  in L.any (`L.isInfixOf` lowerInput) scriptPatterns
 
 extractInputSemantics :: String -> String
-extractInputSemantics input = filter (`elem` "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789") input
+extractInputSemantics input = L.filter (`elem` "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789") input
 
 processLargeInput :: String -> String
 processLargeInput input = 
   let maxSize = 1000000
-      inputSize = length input
+      inputSize = L.length input
   in if inputSize > maxSize then take maxSize input else input
 
 processMaybeInput :: Maybe String -> String
@@ -172,10 +173,10 @@ recoverFromError :: CompilerState -> CompilerState
 recoverFromError state = state  -- Simplified: state is preserved
 
 isSuccessful :: String -> Bool
-isSuccessful result = "success" `isInfixOf` result
+isSuccessful result = "success" `L.isInfixOf` result
 
 isGracefulDegradation :: String -> Bool
-isGracefulDegradation result = "degraded" `isInfixOf` result
+isGracefulDegradation result = "degraded" `L.isInfixOf` result
 
 compileUnderStress :: Int -> String
 compileUnderStress stressLevel
@@ -205,6 +206,6 @@ toLower c
   | otherwise = c
 
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` substrings haystack
+L.isInfixOf needle haystack = needle `elem` substrings haystack
   where
-    substrings s = [take i s | i <- [1..length s]]
+    substrings s = [take i s | i <- [1..L.length s]]

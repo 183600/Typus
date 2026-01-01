@@ -10,6 +10,7 @@
 module Test.Unit.SourceLocationTrackingQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -244,10 +245,10 @@ prop_locatedWithSpan_correct =
 prop_mapLocated_correct :: Property
 prop_mapLocated_correct =
   forAll genLocated $ \located ->
-    let doubled = mapLocated (map (*2)) located
+    let doubled = mapLocated (L.map (*2)) located
         originalValue = locatedValue located
         mappedValue = locatedValue doubled
-    in mappedValue === map (*2) originalValue
+    in mappedValue === L.map (*2) originalValue
 
 -- 属性：advancePos应该正确处理文本
 prop_advancePos_correct :: Property
@@ -264,7 +265,7 @@ prop_advancePosBy_correct :: Property
 prop_advancePosBy_correct =
   forAll genSourcePos $ \startPos ->
   forAll genString $ \text ->
-  forAll (choose (0, length text)) $ \n ->
+  forAll (choose (0, L.length text)) $ \n ->
     let endPos = advancePosBy startPos n text
         offsetIncreased = posOffset endPos >= posOffset startPos
     in offsetIncreased === True

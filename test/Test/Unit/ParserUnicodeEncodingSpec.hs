@@ -24,6 +24,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.ByteString as BS
 import Data.Char (isAscii, isLatin1, isControl, isPrint, ord, chr)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isSuffixOf, isInfixOf)
 import Data.Maybe (isJust, isNothing)
 import Data.Either (isLeft, isRight)
@@ -104,21 +105,21 @@ genInvalidUTF8 = oneof
 -- Property: Parser should handle ASCII correctly
 prop_parser_ascii_handling :: String -> Property
 prop_parser_ascii_handling asciiText =
-  all isAscii asciiText ==> 
+  L.all isAscii asciiText ==> 
   let result = parseString asciiText
   in property $ isRight result
 
 -- Property: Parser should handle Unicode correctly
 prop_parser_unicode_handling :: String -> Property
 prop_parser_unicode_handling unicodeText =
-  any (not . isAscii) unicodeText ==> 
+  L.any (not . isAscii) unicodeText ==> 
   let result = parseString unicodeText
   in property $ isRight result || isLeft result
 
 -- Property: Parser should preserve Unicode content
 prop_parser_unicode_preservation :: String -> Property
 prop_parser_unicode_preservation originalText =
-  length originalText > 5 ==> 
+  L.length originalText > 5 ==> 
   let result = parseString originalText
   in case result of
     Right parsed -> property $ hasUnicodeContent originalText ==> hasUnicodeContent (show parsed)
@@ -148,19 +149,19 @@ prop_parser_combining_handling combiningText =
 -- Property: Parser should handle control characters gracefully
 prop_parser_control_handling :: String -> Property
 prop_parser_control_handling controlText =
-  any isControl controlText ==> 
+  L.any isControl controlText ==> 
   let result = parseString controlText
   in property $ isRight result || isLeft result
 
 -- Property: UTF-8 encoding should be preserved
 prop_utf8_encoding_preservation :: BS.ByteString -> Property
 prop_utf8_encoding_preservation utf8Bytes =
-  BS.length utf8Bytes > 0 ==> 
+  BS.L.length utf8Bytes > 0 ==> 
   case TE.decodeUtf8' utf8Bytes of
     Right text -> 
       let result = parseText text
           reencoded = TE.encodeUtf8 $ show result
-      in property $ BS.length reencoded >= 0
+      in property $ BS.L.length reencoded >= 0
     Left _ -> property True
 
 -- Property: Invalid UTF-8 should be handled gracefully
@@ -182,11 +183,11 @@ prop_mixed_encoding_handling mixedText =
 -- Property: Unicode normalization should be consistent
 prop_unicode_normalization_consistent :: String -> Property
 prop_unicode_normalization_consistent unicodeText =
-  length unicodeText > 3 ==> 
+  L.length unicodeText > 3 ==> 
   let result1 = parseString unicodeText
       result2 = parseString (normalizeUnicode unicodeText)
   in property $ case (result1, result2) of
-    (Right r1, Right r2) -> length (show r1) >= 0 && length (show r2) >= 0
+    (Right r1, Right r2) -> L.length (show r1) >= 0 && L.length (show r2) >= 0
     _ -> True
 
 -- Property: Parser should handle zero-width characters
@@ -227,7 +228,7 @@ prop_unicode_identifiers identifier =
 -- Property: Parser should handle Unicode string literals
 prop_unicode_string_literals :: String -> Property
 prop_unicode_string_literals stringContent =
-  length stringContent > 0 ==> 
+  L.length stringContent > 0 ==> 
   let quoted = "\"" ++ stringContent ++ "\""
       result = parseString quoted
   in property $ isRight result || isLeft result
@@ -235,7 +236,7 @@ prop_unicode_string_literals stringContent =
 -- Property: Parser should handle Unicode comments
 prop_unicode_comments :: String -> Property
 prop_unicode_comments commentContent =
-  length commentContent > 0 ==> 
+  L.length commentContent > 0 ==> 
   let comment = "// " ++ commentContent ++ "\n"
       result = parseString comment
   in property $ isRight result || isLeft result
@@ -255,41 +256,41 @@ parseIdentifier :: String -> Either String String
 parseIdentifier ident = Right $ "identifier: " ++ ident  -- Mock implementation
 
 hasUnicodeContent :: String -> Bool
-hasUnicodeContent = any (not . isAscii)
+hasUnicodeContent = L.any (not . isAscii)
 
 hasEmoji :: String -> Bool
-hasEmoji = any (\c -> ord c >= 0x1F600 && ord c <= 0x1F64F)
+hasEmoji = L.any (\c -> ord c >= 0x1F600 && ord c <= 0x1F64F)
 
 hasCJK :: String -> Bool
-hasCJK = any (\c -> (ord c >= 0x4E00 && ord c <= 0x4FFF) ||
+hasCJK = L.any (\c -> (ord c >= 0x4E00 && ord c <= 0x4FFF) ||
                     (ord c >= 0x3040 && ord c <= 0x309F) ||
                     (ord c >= 0x30A0 && ord c <= 0x30FF) ||
                     (ord c >= 0xAC00 && ord c <= 0xD7AF))
 
 hasCombining :: String -> Bool
-hasCombining = any (\c -> ord c >= 0x0300 && ord c <= 0x036F)
+hasCombining = L.any (\c -> ord c >= 0x0300 && ord c <= 0x036F)
 
 hasMixedEncoding :: String -> Bool
 hasMixedEncoding text = 
-  let asciiCount = length $ filter isAscii text
-      unicodeCount = length text - asciiCount
+  let asciiCount = L.length $ filter isAscii text
+      unicodeCount = L.length text - asciiCount
   in asciiCount > 0 && unicodeCount > 0
 
 normalizeUnicode :: String -> String
 normalizeUnicode = id  -- Simplified - would use proper Unicode normalization
 
 hasZeroWidth :: String -> Bool
-hasZeroWidth = any (\c -> ord c `elem` [0x200B, 0x200C, 0x200D, 0xFEFF])
+hasZeroWidth = L.any (\c -> ord c `elem` [0x200B, 0x200C, 0x200D, 0xFEFF])
 
 hasRTL :: String -> Bool
-hasRTL = any (\c -> ord c >= 0x0590 && ord c <= 0x08FF)
+hasRTL = L.any (\c -> ord c >= 0x0590 && ord c <= 0x08FF)
 
 hasUnicodeWhitespace :: String -> Bool
-hasUnicodeWhitespace = any (\c -> ord c `elem` 
+hasUnicodeWhitespace = L.any (\c -> ord c `elem` 
   [0x00A0, 0x1680, 0x2000..0x200A, 0x2028, 0x2029, 0x202F, 0x205F, 0x3000])
 
 hasUnicodeLineSeparators :: String -> Bool
-hasUnicodeLineSeparators = any (\c -> ord c `elem` [0x2028, 0x2029, 0x0085])
+hasUnicodeLineSeparators = L.any (\c -> ord c `elem` [0x2028, 0x2029, 0x0085])
 
 isValidUnicodeIdentifier :: String -> Bool
 isValidUnicodeIdentifier = not . null  -- Simplified validation

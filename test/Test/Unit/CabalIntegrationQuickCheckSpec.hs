@@ -61,18 +61,18 @@ prop_end_to_end_compilation complexity =
           , "func main() { return processData() }"
           ]
   in case compileProgram code of
-       Right result -> property $ not $ null $ crGoCode result
+       Right result -> property $ not $ L.null $ crGoCode result
        Left err -> counterexample ("Compilation failed: " ++ show err) $ property False
 
 -- Property: Multiple compilation steps are executed in order
 prop_compilation_steps_ordered :: [ProgramFeature] -> Property
 prop_compilation_steps_ordered features =
-  let directives = map (\(ProgramFeature f) -> "//! " ++ f ++ ": on") features
+  let directives = L.map (\(ProgramFeature f) -> "//! " ++ f ++ ": on") features
       code = unlines $ directives ++ ["func main() { return 42 }"]
   in case compileProgram code of
        Right result -> 
          let steps = crCompilationSteps result
-         in property $ length steps >= 3  -- Should have at least parse, analyze, compile
+         in property $ L.length steps >= 3  -- Should have at least parse, analyze, compile
        Left err -> counterexample ("Compilation failed: " ++ show err) $ property False
 
 -- Property: Error handling works across pipeline stages
@@ -99,7 +99,7 @@ prop_error_handling_pipeline complexity =
 -- Property: Feature combinations are handled correctly
 prop_feature_combinations :: [ProgramFeature] -> Property
 prop_feature_combinations features =
-  let directives = map (\(ProgramFeature f) -> "//! " ++ f ++ ": on") features
+  let directives = L.map (\(ProgramFeature f) -> "//! " ++ f ++ ": on") features
       code = unlines $ directives ++ 
         [ "func process<T>(data: T) T {"
         , "    return data"
@@ -110,10 +110,10 @@ prop_feature_combinations features =
         , "}"
         ]
   in case compileProgram code of
-       Right result -> property $ not $ null $ crGoCode result
+       Right result -> property $ not $ L.null $ crGoCode result
        Left err -> 
          -- Some feature combinations might legitimately fail
-         property $ length features <= 2
+         property $ L.length features <= 2
 
 -- Property: Compilation preserves program semantics
 prop_compilation_preserves_semantics :: ProgramComplexity -> Property
@@ -134,8 +134,8 @@ prop_compilation_preserves_semantics complexity =
   in case compileProgram code of
        Right result -> 
          let goCode = crGoCode result
-             hasMain = "func main" `List.isInfixOf` goCode
-             hasReturn = "return" `List.isInfixOf` goCode
+             hasMain = "func main" `List.L.isInfixOf` goCode
+             hasReturn = "return" `List.L.isInfixOf` goCode
          in property $ hasMain .&&. hasReturn
        Left err -> counterexample ("Compilation failed: " ++ show err) $ property False
 
@@ -143,12 +143,12 @@ prop_compilation_preserves_semantics complexity =
 prop_integration_handles_large_programs :: Int -> Property
 prop_integration_handles_large_programs size =
   let funcCount = min (abs size `mod` 20 + 1) 10
-      functions = map (\i -> "func test" ++ show i ++ "() { return " ++ show i ++ " }") [1..funcCount]
+      functions = L.map (\i -> "func test" ++ show i ++ "() { return " ++ show i ++ " }") [1..funcCount]
       code = unlines $ functions ++ ["func main() { return 0 }"]
   in case compileProgram code of
        Right result -> 
          let goCode = crGoCode result
-             funcCount' = length $ filter ("func test" `List.isPrefixOf`) (lines goCode)
+             funcCount' = L.length $ L.filter ("func test" `List.L.isPrefixOf`) (lines goCode)
          in property $ funcCount' == funcCount
        Left err -> 
          -- Large programs might legitimately fail
@@ -170,7 +170,7 @@ tests = testGroup "Cabal Integration QuickCheck Tests"
             , ""
             , "func processData<T: Clone>(data: Vector<T>) Result<T, Error> {"
             , "    match data {"
-            , "        Vector(head, _) => Ok(head),"
+            , "        Vector(L.head, _) => Ok(L.head),"
             , "        _ => Error(Error{message: \"Empty data\"})"
             , "    }"
             , "}"
@@ -186,5 +186,5 @@ tests = testGroup "Cabal Integration QuickCheck Tests"
         Right result -> do
           let goCode = crGoCode result
               steps = crCompilationSteps result
-          assertFailure $ "Compilation succeeded with " ++ show (length steps) ++ " steps and code length " ++ show (length goCode)
+          assertFailure $ "Compilation succeeded with " ++ show (L.length steps) ++ " steps L.and code L.length " ++ show (L.length goCode)
   ]

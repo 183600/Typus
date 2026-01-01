@@ -6,6 +6,7 @@ import Test.Tasty
 import Test.Tasty.QuickCheck
 import Parser
 import SourceLocation (SourceSpan(..), SourcePos(..))
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import Data.Maybe (isJust, isNothing)
 import qualified Data.Text as T
@@ -27,8 +28,8 @@ propEmptyFileDefaults =
   let result = parseTypus ""
       expectedDirectives = defaultFileDirectives
   in tfDirectives result == expectedDirectives &&
-     null (tfBuildTags result) &&
-     null (tfBlocks result)
+     L.null (tfBuildTags result) &&
+     L.null (tfBlocks result)
 
 -- | ParseTypus should preserve the order of content
 propParsePreservesOrder :: String -> String -> String -> Property
@@ -39,9 +40,9 @@ propParsePreservesOrder content1 content2 content3 =
       blockContents = map cbContent blocks
   in not (null blocks) ==> 
      let reconstructed = unlines blockContents
-     in content1 `isInfixOf` reconstructed &&
-        content2 `isInfixOf` reconstructed &&
-        content3 `isInfixOf` reconstructed
+     in content1 `L.isInfixOf` reconstructed &&
+        content2 `L.isInfixOf` reconstructed &&
+        content3 `L.isInfixOf` reconstructed
 
 -- | Directives should be parsed correctly when present
 propDirectivesParsed :: Bool -> Bool -> Bool -> Property
@@ -60,7 +61,7 @@ propDirectivesParsed ownership dependent constraints =
 -- | Build tags should be extracted from comments
 propBuildTagsExtracted :: String -> Property
 propBuildTagsExtracted tag =
-  not (null tag) && not (any isSpace tag) ==>
+  not (null tag) && not (L.any isSpace tag) ==>
   let content = "/" "+build " ++ tag ++ "\n// Some content"
       result = parseTypus content
       buildTags = tfBuildTags result
@@ -74,8 +75,8 @@ propCodeBlocksMaintainContent content =
       result = parseTypus testContent
       blocks = tfBlocks result
   in not (null blocks) ==> 
-     let blockContent = head (map cbContent blocks)
-     in content `isInfixOf` blockContent
+     let blockContent = L.head (map cbContent blocks)
+     in content `L.isInfixOf` blockContent
 
 -- | Parsing should be deterministic (same input gives same output)
 propParsingDeterministic :: String -> Bool
@@ -115,7 +116,7 @@ testDirectiveParsingEdgeCases = testGroup "Directive Parsing Edge Cases"
       let content = "/" "+build linux,amd64\n" "+build !windows\n// Some code"
           result = parseTypus content
           buildTags = tfBuildTags result
-      in length buildTags == 2 && 
+      in L.length buildTags == 2 && 
          "linux,amd64" `elem` map locValue buildTags &&
          "!windows" `elem` map locValue buildTags
          
@@ -123,9 +124,9 @@ testDirectiveParsingEdgeCases = testGroup "Directive Parsing Edge Cases"
       let content = "//! ownership=true\nfunc main() {\n    println(\"Hello\")\n}\n//! ownership=false\nfunc helper() {\n    return 42\n}"
           result = parseTypus content
           blocks = tfBlocks result
-      in length blocks == 2 &&
-         "func main()" `isInfixOf` cbContent (head blocks) &&
-         "func helper()" `isInfixOf` cbContent (blocks !! 1)
+      in L.length blocks == 2 &&
+         "func main()" `L.isInfixOf` cbContent (L.head blocks) &&
+         "func helper()" `L.isInfixOf` cbContent (blocks !! 1)
   ]
 
 -- | Test block directive parsing
@@ -185,12 +186,12 @@ testParserRobustness :: TestTree
 testParserRobustness = testGroup "Parser Robustness"
   [ testCase "parse empty file" $
       let result = parseTypus ""
-      in null (tfBlocks result) && tfDirectives result == defaultFileDirectives
+      in L.null (tfBlocks result) && tfDirectives result == defaultFileDirectives
       
   , testCase "parse file with only comments" $
       let content = "// This is a comment\n// Another comment"
           result = parseTypus content
-      in not (null (tfBlocks result)) ==> pure ()
+      in not (L.null (tfBlocks result)) ==> pure ()
       
   , testCase "parse file with only directives" $
       let content = "//! ownership=true\n//! dependent-types=false"
@@ -203,7 +204,7 @@ testParserRobustness = testGroup "Parser Robustness"
   , testCase "parse file with unicode content" $
       let content = "//! ownership=true\n// Unicode test: 你好世界 🌍"
           result = parseTypus content
-      in not (null (tfBlocks result)) ==> pure ()
+      in not (L.null (tfBlocks result)) ==> pure ()
   ]
 
 -- | All parser directive tests

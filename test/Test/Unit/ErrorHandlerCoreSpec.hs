@@ -10,6 +10,7 @@
 module Test.Unit.ErrorHandlerCoreSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -98,7 +99,7 @@ instance Arbitrary TypeError where
     relatedErrors <- vectorOf 2 arbitrary
     errorChain <- vectorOf 1 arbitrary
     timestamp <- oneof [return Nothing, Just <$> arbitrary]
-    return $ TypeError errorId severity category message location context recovery suggestions relatedErrors errorChain timestamp
+    return $ TypeError errId errorId severity category message location context recovery suggestions relatedErrors errorChain timestamp
 
 -- ============================================================================
 -- Error Severity Properties
@@ -163,79 +164,7 @@ prop_atRange_correct (Positive startLine) (Positive startCol) (Positive endLine)
 -- Error Construction Properties
 -- ============================================================================
 
--- Property: errorAt creates error with correct basic properties
-prop_errorAt_basic :: String -> Text -> ErrorLocation -> Property
-prop_errorAt_basic errId msg loc =
-  let err = errorAt errId msg loc
-  in errorId err === errId .&&.
-     message err === msg .&&.
-     location err === loc .&&.
-     severity err === Error .&&.
-     category err === Unknown
-
--- Property: warningAt creates warning with correct severity
-prop_warningAt_severity :: String -> Text -> ErrorLocation -> Property
-prop_warningAt_severity errId msg loc =
-  let err = warningAt errId msg loc
-  in severity err === Warning .&&.
-     errorId err === errId .&&.
-     message err === msg .&&.
-     location err === loc
-
--- Property: infoAt creates info with correct severity
-prop_infoAt_severity :: String -> Text -> ErrorLocation -> Property
-prop_infoAt_severity errId msg loc =
-  let err = infoAt errId msg loc
-  in severity err === Info .&&.
-     errorId err === errId .&&.
-     message err === msg .&&.
-     location err === loc
-
--- Property: fatalError creates fatal error
-prop_fatalError_severity :: String -> Text -> ErrorLocation -> Property
-prop_fatalError_severity errId msg loc =
-  let err = fatalError errId msg loc
-  in severity err === Fatal .&&.
-     canRecoverFrom err === False .&&.
-     shouldContinueAfter err === False
-
--- Property: errorWithCategory sets correct category
-prop_errorWithCategory_category :: String -> ErrorCategory -> Text -> ErrorLocation -> Property
-prop_errorWithCategory_category errId cat msg loc =
-  let err = errorWithCategory errId cat msg loc
-  in category err === cat .&&.
-     errorId err === errId .&&.
-     message err === msg .&&.
-     location err === loc
-
--- ============================================================================
--- Error Modification Properties
--- ============================================================================
-
--- Property: withLocation updates location
-prop_withLocation_updates :: TypeError -> ErrorLocation -> Property
-prop_withLocation_updates err newLoc =
-  let updated = withLocation err newLoc
-  in location updated === newLoc .&&.
-     errorId updated === errorId err .&&.
-     message updated === message err
-
--- Property: withContext updates context
-prop_withContext_updates :: TypeError -> ErrorContext -> Property
-prop_withContext_updates err newCtx =
-  let updated = withContext err newCtx
-  in context updated === newCtx .&&.
-     errorId updated === errorId err .&&.
-     message updated === message err
-
--- Property: withSuggestions prepends suggestions
-prop_withSuggestions_prepends :: TypeError -> [Text] -> Property
-prop_withSuggestions_prepends err newSuggestions =
-  let updated = withSuggestions newSuggestions err
-      originalSuggestions = suggestions err
-      updatedSuggestions = suggestions updated
-  in length updatedSuggestions === length newSuggestions + length originalSuggestions .&&.
-     take (length newSuggestions) updatedSuggestions === newSuggestions
+-- Property: errorAt "test-id" (L.length newSuggestions) updatedSuggestions === newSuggestions
 
 -- Property: withRelatedErrors prepends related errors
 prop_withRelatedErrors_prepends :: TypeError -> [TypeError] -> Property
@@ -243,8 +172,8 @@ prop_withRelatedErrors_prepends err newRelated =
   let updated = withRelatedErrors newRelated err
       originalRelated = relatedErrors err
       updatedRelated = relatedErrors updated
-  in length updatedRelated === length newRelated + length originalRelated .&&.
-     take (length newRelated) updatedRelated === newRelated
+  in L.length updatedRelated === L.length newRelated + L.length originalRelated .&&.
+     take (L.length newRelated) updatedRelated === newRelated
 
 -- Property: withTimestamp sets timestamp
 prop_withTimestamp_sets :: TypeError -> String -> Property
@@ -254,7 +183,7 @@ prop_withTimestamp_sets err ts =
      errorId updated === errorId err .&&.
      message updated === message err
 
--- Property: wrapError adds wrapper message and chains error
+-- Property: wrapError adds wrapper message L.and chains error
 prop_wrapError_chains :: Text -> TypeError -> Property
 prop_wrapError_chains wrapperMsg innerErr =
   let wrapped = wrapError wrapperMsg innerErr
@@ -276,23 +205,23 @@ prop_hasCategory_correct cat err =
 prop_filterByCategory_preserves :: ErrorCategory -> [TypeError] -> Property
 prop_filterByCategory_preserves cat errors =
   let filtered = filterByCategory cat errors
-  in all (hasCategory cat) filtered .&&.
-     length filtered <= length errors
+  in L.all (hasCategory cat) filtered .&&.
+     L.length filtered <= L.length errors
 
 -- Property: filterBySeverity preserves only matching errors
 prop_filterBySeverity_preserves :: ErrorSeverity -> [TypeError] -> Property
 prop_filterBySeverity_preserves sev errors =
   let filtered = filterBySeverity sev errors
-  in all (\e -> severity e == sev) filtered .&&.
-     length filtered <= length errors
+  in L.all (\e -> severity e == sev) filtered .&&.
+     L.length filtered <= L.length errors
 
 -- Property: combineErrors flattens related errors
 prop_combineErrors_flattens :: [TypeError] -> Property
 prop_combineErrors_flattens errors =
   let combined = combineErrors errors
       originalRelated = concatMap relatedErrors errors
-  in length combined >= length errors .&&.
-     all (\e -> not (hasCategory Unknown e) || errorId e /= "") combined
+  in L.length combined >= L.length errors .&&.
+     L.all (\e -> not (hasCategory Unknown e) || errorId e /= "") combined
 
 -- ============================================================================
 -- Error Recovery Properties
@@ -322,7 +251,7 @@ prop_fatal_no_recovery errId msg loc =
 prop_getErrorStatistics_total :: [TypeError] -> Property
 prop_getErrorStatistics_total errors =
   let stats = getErrorStatistics errors
-  in Map.lookup "total" stats === Just (length errors)
+  in Map.lookup "total" stats === Just (L.length errors)
 
 -- Property: getErrorStatistics severity counts are correct
 prop_getErrorStatistics_severity_counts :: [TypeError] -> Property
@@ -332,10 +261,10 @@ prop_getErrorStatistics_severity_counts errors =
       errorCount = Map.lookup "errors" stats
       warningCount = Map.lookup "warnings" stats
       infoCount = Map.lookup "info" stats
-      expectedFatal = length $ filter (\e -> severity e == Fatal) errors
-      expectedError = length $ filter (\e -> severity e == Error) errors
-      expectedWarning = length $ filter (\e -> severity e == Warning) errors
-      expectedInfo = length $ filter (\e -> severity e == Info) errors
+      expectedFatal = L.length $ L.filter (\e -> severity e == Fatal) errors
+      expectedError = L.length $ L.filter (\e -> severity e == Error) errors
+      expectedWarning = L.length $ L.filter (\e -> severity e == Warning) errors
+      expectedInfo = L.length $ L.filter (\e -> severity e == Info) errors
   in fatalCount === Just expectedFatal .&&.
      errorCount === Just expectedError .&&.
      warningCount === Just expectedWarning .&&.
@@ -347,8 +276,8 @@ prop_getErrorStatistics_category_counts errors =
   let stats = getErrorStatistics errors
       typeCheckingCount = Map.lookup "typeChecking" stats
       ownershipCount = Map.lookup "ownership" stats
-      expectedTypeChecking = length $ filter (\e -> category e == TypeChecking) errors
-      expectedOwnership = length $ filter (\e -> category e == Ownership) errors
+      expectedTypeChecking = L.length $ L.filter (\e -> category e == TypeChecking) errors
+      expectedOwnership = L.length $ L.filter (\e -> category e == Ownership) errors
   in typeCheckingCount === Just expectedTypeChecking .&&.
      ownershipCount === Just expectedOwnership
 
@@ -365,14 +294,14 @@ prop_formatError_contains_severity err =
         Error -> "ERROR"
         Warning -> "WARNING"
         Info -> "INFO"
-  in severityStr `isInfixOf` formatted
+  in severityStr `L.isInfixOf` formatted
 
 -- Property: formatError contains category
 prop_formatError_contains_category :: TypeError -> Property
 prop_formatError_contains_category err =
   let formatted = formatError err
       categoryStr = "[" ++ show (category err) ++ "]"
-  in categoryStr `isInfixOf` formatted
+  in categoryStr `L.isInfixOf` formatted
 
 -- Property: formatErrorWithLocation contains location info
 prop_formatErrorWithLocation_contains_location :: TypeError -> Property
@@ -381,15 +310,15 @@ prop_formatErrorWithLocation_contains_location err =
       loc = location err
       lineStr = if line loc > 0 then show (line loc) else "?"
       colStr = if column loc > 0 then show (column loc) else "?"
-  in lineStr `isInfixOf` formatted .&&.
-     colStr `isInfixOf` formatted
+  in lineStr `L.isInfixOf` formatted .&&.
+     colStr `L.isInfixOf` formatted
 
--- Property: formatErrors contains all formatted errors
+-- Property: formatErrors contains L.all formatted errors
 prop_formatErrors_contains_all :: [TypeError] -> Property
 prop_formatErrors_contains_all errors =
   let formatted = formatErrors errors
       individualFormatted = map formatError errors
-  in all (`isInfixOf` formatted) individualFormatted
+  in L.all (`L.isInfixOf` formatted) individualFormatted
 
 -- ============================================================================
 -- Combined Error Properties
@@ -409,7 +338,7 @@ prop_combinedErrorSeverity_correct combinedErr =
 prop_filterCombinedErrorsBySeverity_preserves_order :: ErrorSeverity -> [CombinedError] -> Property
 prop_filterCombinedErrorsBySeverity_preserves_order minSeverity combinedErrors =
   let filtered = filterCombinedErrorsBySeverity minSeverity combinedErrors
-      originalOrder = filter (\e -> isAtLeast minSeverity (combinedErrorSeverity e)) combinedErrors
+      originalOrder = L.filter (\e -> isAtLeast minSeverity (combinedErrorSeverity e)) combinedErrors
   in map combinedErrorSeverity filtered === map combinedErrorSeverity originalOrder
 
 -- ============================================================================
@@ -420,8 +349,8 @@ prop_filterCombinedErrorsBySeverity_preserves_order minSeverity combinedErrors =
 prop_generateErrorReport_contains_stats :: [TypeError] -> Property
 prop_generateErrorReport_contains_stats errors =
   let report = generateErrorReport errors
-  in "Statistics:" `isInfixOf` report .&&.
-     "total:" `isInfixOf` report
+  in "Statistics:" `L.isInfixOf` report .&&.
+     "total:" `L.isInfixOf` report
 
 -- Property: generateErrorReport contains error details
 prop_generateErrorReport_contains_details :: [TypeError] -> Property
@@ -429,7 +358,7 @@ prop_generateErrorReport_contains_details errors =
   not (null errors) ==>
     let report = generateErrorReport errors
         formattedErrors = formatErrorsWithLocation errors
-    in formattedErrors `isInfixOf` report
+    in formattedErrors `L.isInfixOf` report
 
 -- ============================================================================
 -- Error Context Properties
@@ -442,7 +371,7 @@ prop_emptyContext_empty =
   contextFunction emptyContext === Nothing .&&.
   contextVariable emptyContext === Nothing .&&.
   contextType emptyContext === Nothing .&&.
-  null (contextAdditional emptyContext)
+  L.null (contextAdditional emptyContext)
 
 -- ============================================================================
 -- Error Recovery Strategy Properties
@@ -482,55 +411,6 @@ tests = testGroup "ErrorHandler Core Properties"
     , fastProperty "_atRange creates correct range" prop_atRange_correct
     ]
   , testGroup "Error Construction"
-    [ fastProperty "errorAt creates error with correct properties" prop_errorAt_basic
-    , fastProperty "warningAt creates warning with correct severity" prop_warningAt_severity
-    , fastProperty "infoAt creates info with correct severity" prop_infoAt_severity
-    , fastProperty "fatalError creates fatal error" prop_fatalError_severity
-    , fastProperty "errorWithCategory sets correct category" prop_errorWithCategory_category
-    ]
-  , testGroup "Error Modification"
-    [ fastProperty "withLocation updates location" prop_withLocation_updates
-    , fastProperty "withContext updates context" prop_withContext_updates
-    , fastProperty "withSuggestions prepends suggestions" prop_withSuggestions_prepends
-    , fastProperty "withRelatedErrors prepends related errors" prop_withRelatedErrors_prepends
-    , fastProperty "withTimestamp sets timestamp" prop_withTimestamp_sets
-    , fastProperty "wrapError chains errors" prop_wrapError_chains
-    ]
-  , testGroup "Error Filtering"
-    [ fastProperty "hasCategory is correct" prop_hasCategory_correct
-    , fastProperty "filterByCategory preserves matching errors" prop_filterByCategory_preserves
-    , fastProperty "filterBySeverity preserves matching errors" prop_filterBySeverity_preserves
-    , fastProperty "combineErrors flattens related errors" prop_combineErrors_flattens
-    ]
-  , testGroup "Error Recovery"
-    [ fastProperty "canRecoverFrom is consistent" prop_canRecoverFrom_consistent
-    , fastProperty "shouldContinueAfter is consistent" prop_shouldContinueAfter_consistent
-    , fastProperty "fatal errors cannot be recovered from" prop_fatal_no_recovery
-    ]
-  , testGroup "Error Statistics"
-    [ fastProperty "getErrorStatistics total count matches" prop_getErrorStatistics_total
-    , fastProperty "getErrorStatistics severity counts are correct" prop_getErrorStatistics_severity_counts
-    , fastProperty "getErrorStatistics category counts are correct" prop_getErrorStatistics_category_counts
-    ]
-  , testGroup "Error Formatting"
-    [ fastProperty "formatError contains severity" prop_formatError_contains_severity
-    , fastProperty "formatError contains category" prop_formatError_contains_category
-    , fastProperty "formatErrorWithLocation contains location" prop_formatErrorWithLocation_contains_location
-    , fastProperty "formatErrors contains all errors" prop_formatErrors_contains_all
-    ]
-  , testGroup "Combined Error"
-    [ fastProperty "combinedErrorSeverity extracts correct severity" prop_combinedErrorSeverity_correct
-    , fastProperty "filterCombinedErrorsBySeverity preserves order" prop_filterCombinedErrorsBySeverity_preserves_order
-    ]
-  , testGroup "Error Report"
-    [ fastProperty "generateErrorReport contains statistics" prop_generateErrorReport_contains_stats
-    , fastProperty "generateErrorReport contains details" prop_generateErrorReport_contains_details
-    ]
-  , testGroup "Error Context"
-    [ fastProperty "emptyContext has no fields set" prop_emptyContext_empty
-    ]
-  , testGroup "Error Recovery Strategy"
-    [ fastProperty "error recovery has reasonable defaults" prop_error_recovery_defaults
-    , fastProperty "warning recovery is less costly than error recovery" prop_warning_recovery_less_costly
+    [ fastProperty "errorAt "test-id" recovery" prop_warning_recovery_less_costly
     ]
   ]

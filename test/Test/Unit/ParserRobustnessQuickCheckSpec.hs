@@ -1,6 +1,7 @@
 module Test.Unit.ParserRobustnessQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, elements, listOf, chooseInt, vectorOf, suchThat)
 import TestSupport.QuickCheck (fastProperty)
@@ -8,7 +9,7 @@ import TestSupport.QuickCheck (fastProperty)
 import Parser (parseTypus, FileDirectives(..), BlockDirectives(..), CodeBlock(..), TypusFile(..), 
               defaultFileDirectives, defaultBlockDirectives)
 import SourceLocation (SourcePos(..), SourceSpan(..))
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 
 -- ============================================================================
 -- Arbitrary instances for Parser types
@@ -158,7 +159,7 @@ prop_parseEmptyInput =
     let result = parseTypus "" ""
     in case result of
         Left _ -> False
-        Right file -> null (tfBlocks file)
+        Right file -> L.null (tfBlocks file)
 
 prop_parseWhitespaceOnly :: String -> Bool
 prop_parseWhitespaceOnly ws =
@@ -166,7 +167,7 @@ prop_parseWhitespaceOnly ws =
         result = parseTypus "" whitespaceOnly
     in case result of
         Left _ -> False
-        Right file -> null (tfBlocks file)
+        Right file -> L.null (tfBlocks file)
   where
     isSpace c = c `elem` " \t\n\r"
 
@@ -176,7 +177,7 @@ prop_parseSimpleComments comment =
         result = parseTypus "" input
     in case result of
         Left _ -> False
-        Right file -> not (null (tfBlocks file))
+        Right file -> not (L.null (tfBlocks file))
 
 -- Directive Parsing Properties
 
@@ -215,7 +216,7 @@ prop_preserveCodeBlockContent content =
         Right file -> 
             case tfBlocks file of
                 [] -> True
-                (block:_) -> content `isInfixOf` cbContent block
+                (block:_) -> content `L.isInfixOf` cbContent block
 
 prop_handleMultipleBlocks :: [String] -> Bool
 prop_handleMultipleBlocks contents =
@@ -223,11 +224,11 @@ prop_handleMultipleBlocks contents =
         result = parseTypus "" input
     in case result of
         Left _ -> False
-        Right file -> length (tfBlocks file) >= length (filter (not . null) contents)
+        Right file -> L.length (tfBlocks file) >= L.length (L.filter (not . null) contents)
 
 prop_maintainBlockOrder :: [String] -> Bool
 prop_maintainBlockOrder contents =
-    let nonEmptyContents = filter (not . null) contents
+    let nonEmptyContents = L.filter (not . null) contents
         input = unlines $ concatMap (\c -> [c, ""]) nonEmptyContents
         result = parseTypus "" input
     in case result of
@@ -235,7 +236,7 @@ prop_maintainBlockOrder contents =
         Right file -> 
             let blocks = tfBlocks file
                 contents' = map cbContent blocks
-            in length contents' >= length nonEmptyContents
+            in L.length contents' >= L.length nonEmptyContents
 
 -- Error Recovery Properties
 
@@ -245,7 +246,7 @@ prop_errorRecovery good bad =
         result = parseTypus "" input
     in case result of
         Left _ -> False
-        Right file -> True  -- Parser should recover and produce some result
+        Right file -> True  -- Parser should recover L.and produce some result
 
 prop_handleMalformedDirectives :: [String] -> Bool
 prop_handleMalformedDirectives malformed =
@@ -286,7 +287,7 @@ prop_handleUnicodeContent content =
 prop_handleNestedStructures :: Int -> Bool
 prop_handleNestedStructures depth =
     let nested = replicate (abs depth `mod` 10 + 1) "    "
-        input = concat nested ++ "nested {\n" ++ concat nested ++ "    value := 42\n" ++ concat nested ++ "}\n"
+        input = L.concat nested ++ "nested {\n" ++ L.concat nested ++ "    value := 42\n" ++ L.concat nested ++ "}\n"
         result = parseTypus "" input
     in case result of
         Left _ -> True  -- Should handle gracefully
@@ -294,4 +295,4 @@ prop_handleNestedStructures depth =
 
 -- Helper functions
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` [take (length haystack - length needle + 1) (drop i haystack) | i <- [0..length haystack - length needle]]
+L.isInfixOf needle haystack = needle `elem` [take (L.length haystack - L.length needle + 1) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]

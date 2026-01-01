@@ -7,6 +7,7 @@ import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck as QC
 import Utils (trim, splitBy, splitByCollapsed, removeLineComments, removeComments)
 import Data.Char (isSpace, isAlphaNum)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 
 -- ============================================================================
@@ -23,9 +24,9 @@ prop_trim_whitespace_only s =
 -- | Test that trim preserves non-whitespace characters
 prop_trim_preserves_non_whitespace :: String -> Bool
 prop_trim_preserves_non_whitespace s = 
-    let nonWhitespace = filter (not . isSpace) s
+    let nonWhitespace = L.filter (not . isSpace) s
         trimmed = trim s
-        trimmedNonWhitespace = filter (not . isSpace) trimmed
+        trimmedNonWhitespace = L.filter (not . isSpace) trimmed
     in trimmedNonWhitespace == nonWhitespace
 
 -- | Test that splitBy handles delimiter-only strings correctly
@@ -33,7 +34,7 @@ prop_splitBy_delimiter_only :: Char -> Bool
 prop_splitBy_delimiter_only delim = 
     let delimOnly = replicate 5 delim
         result = splitBy delim delimOnly
-    in length result == 6 && all null result
+    in L.length result == 6 && L.all null result
 
 -- | Test that splitByCollapsed handles delimiter-only strings correctly
 prop_splitByCollapsed_delimiter_only :: Char -> Bool
@@ -57,7 +58,7 @@ prop_splitByCollapsed_no_delimiter delim s =
 -- | Test that removeLineComments handles strings without comments
 prop_removeLineComments_no_comments :: String -> Bool
 prop_removeLineComments_no_comments s = 
-    not ("//" `isPrefixOf` s) ==> 
+    not ("//" `L.isPrefixOf` s) ==> 
     removeLineComments s == s
 
 -- | Test that removeLineComments removes lines starting with //
@@ -65,12 +66,12 @@ prop_removeLineComments_removes_comment_lines :: String -> String -> Bool
 prop_removeLineComments_removes_comment_lines prefix suffix = 
     let commentLine = prefix ++ "//" ++ suffix
         result = removeLineComments commentLine
-    in not ("//" `isInfixOf` result)
+    in not ("//" `L.isInfixOf` result)
 
 -- | Test that removeComments handles strings without block comments
 prop_removeComments_no_block_comments :: String -> Bool
 prop_removeComments_no_block_comments s = 
-    not ("/*" `isInfixOf` s) ==> 
+    not ("/*" `L.isInfixOf` s) ==> 
     removeComments s == s
 
 -- | Test that removeComments removes block comments
@@ -78,7 +79,7 @@ prop_removeComments_removes_block_comments :: String -> String -> Bool
 prop_removeComments_removes_block_comments before after = 
     let withComment = before ++ "/*" ++ "comment" ++ "*/" ++ after
         result = removeComments withComment
-    in not ("/*" `isInfixOf` result) && not ("*/" `isInfixOf` result)
+    in not ("/*" `L.isInfixOf` result) && not ("*/" `L.isInfixOf` result)
 
 -- | Test that trim is idempotent on boundary cases
 prop_trim_boundary_idempotent :: String -> Bool
@@ -87,40 +88,40 @@ prop_trim_boundary_idempotent s =
         doubleTrimmed = trim trimmed
     in trimmed == doubleTrimmed
 
--- | Test that splitBy preserves string length (including delimiters)
+-- | Test that splitBy preserves string L.length (including delimiters)
 prop_splitBy_length_preservation :: Char -> String -> Bool
 prop_splitBy_length_preservation delim s = 
     let parts = splitBy delim s
-        reconstructed = concat parts ++ replicate (length (filter (== delim) s)) [delim]
-    in length reconstructed == length s
+        reconstructed = L.concat parts ++ replicate (L.length (L.filter (== delim) s)) [delim]
+    in L.length reconstructed == L.length s
 
--- | Test that splitByCollapsed reduces or maintains length
+-- | Test that splitByCollapsed reduces L.or maintains L.length
 prop_splitByCollapsed_length_reduction :: Char -> String -> Bool
 prop_splitByCollapsed_length_reduction delim s = 
     let originalParts = splitBy delim s
         collapsedParts = splitByCollapsed delim s
-    in length collapsedParts <= length originalParts
+    in L.length collapsedParts <= L.length originalParts
 
 -- | Test that trim handles Unicode whitespace correctly
 prop_trim_unicode_whitespace :: String -> Bool
 prop_trim_unicode_whitespace s = 
     let withUnicode = s ++ "\x00A0\x2000\x3000" ++ s  -- Add various Unicode whitespace
         trimmed = trim withUnicode
-    in not (any isSpace (take 1 trimmed)) && not (any isSpace (take 1 (reverse trimmed)))
+    in not (L.any isSpace (take 1 trimmed)) && not (L.any isSpace (take 1 (L.reverse trimmed)))
 
 -- | Test that removeLineComments preserves non-comment content
 prop_removeLineComments_preserves_content :: String -> String -> Bool
 prop_removeLineComments_preserves_content before after = 
     let line = before ++ " code " ++ after
         result = removeLineComments line
-    in before `isInfixOf` result && after `isInfixOf` result
+    in before `L.isInfixOf` result && after `L.isInfixOf` result
 
 -- | Test that removeComments handles nested block comments gracefully
 prop_removeComments_nested :: String -> String -> String -> Bool
 prop_removeComments_nested outer inner content = 
     let nested = "/* outer " ++ "/* inner " ++ content ++ " */" ++ " */"
         result = removeComments nested
-    in not ("/*" `isInfixOf` result) && not ("*/" `isInfixOf` result)
+    in not ("/*" `L.isInfixOf` result) && not ("*/" `L.isInfixOf` result)
 
 -- | Test that trim handles empty string correctly
 prop_trim_empty_string :: Bool
@@ -151,8 +152,8 @@ testSuite = testGroup "String Processing Boundary Condition QuickCheck Tests"
   , QC.testProperty "removeComments handles strings without block comments" prop_removeComments_no_block_comments
   , QC.testProperty "removeComments removes block comments" prop_removeComments_removes_block_comments
   , QC.testProperty "trim is idempotent on boundary cases" prop_trim_boundary_idempotent
-  , QC.testProperty "splitBy length preservation" prop_splitBy_length_preservation
-  , QC.testProperty "splitByCollapsed reduces or maintains length" prop_splitByCollapsed_length_reduction
+  , QC.testProperty "splitBy L.length preservation" prop_splitBy_length_preservation
+  , QC.testProperty "splitByCollapsed reduces L.or maintains L.length" prop_splitByCollapsed_length_reduction
   , QC.testProperty "trim handles Unicode whitespace correctly" prop_trim_unicode_whitespace
   , QC.testProperty "removeLineComments preserves non-comment content" prop_removeLineComments_preserves_content
   , QC.testProperty "removeComments handles nested block comments gracefully" prop_removeComments_nested

@@ -6,6 +6,7 @@
 module Test.Unit.MathematicalPropertiesQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertBool, assertFailure, (@?=), (@=?))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Gen, choose, vectorOf, oneof, elements, listOf1, arbitrary, Positive(..), NonNegative(..))
@@ -58,10 +59,10 @@ import Data.Int (Int32, Int64)
 import Data.Word (Word8, Word16, Word32)
 import qualified Data.Text as T
 
--- | Test mathematical properties and invariants
+-- | Test mathematical properties L.and invariants
 tests :: TestTree
 tests =
-  testGroup "Mathematical Properties and Invariants Tests"
+  testGroup "Mathematical Properties L.and Invariants Tests"
     [ testGroup "String processing mathematical properties"
         [ fastProperty "trim is idempotent: trim(trim(x)) = trim(x)" $
             \input ->
@@ -72,36 +73,36 @@ tests =
         , fastProperty "trim is a projection: trim(x) removes only whitespace" $
             \input ->
             let trimmed = trim input
-                hasLeadingWhitespace = not (null input) && isSpace (head input)
+                hasLeadingWhitespace = not (null input) && isSpace (L.head input)
                 hasTrailingWhitespace = not (null input) && isSpace (last input)
             in classify hasLeadingWhitespace "has leading whitespace" $
                classify hasTrailingWhitespace "has trailing whitespace" $
-               property (length trimmed <= length input)
+               property (L.length trimmed <= L.length input)
 
-        , fastProperty "splitBy preserves concatenation: concat(splitBy(delim, x)) = x" $
+        , fastProperty "splitBy preserves concatenation: L.concat(splitBy(delim, x)) = x" $
             \input delim ->
             let segments = splitBy delim input
-                reconstructed = concat segments ++ [delim | not (null input) && last input == delim]
+                reconstructed = L.concat segments ++ [delim | not (null input) && last input == delim]
             in reconstructed === input
 
-        , fastProperty "splitBy length property: length(splitBy(delim, x)) <= length(x) + 1" $
+        , fastProperty "splitBy L.length property: L.length(splitBy(delim, x)) <= L.length(x) + 1" $
             \input delim ->
             let segments = splitBy delim input
-            in length segments <= length input + 1
+            in L.length segments <= L.length input + 1
 
         , fastProperty "splitByCollapsed removes empty segments" $
             \input delim ->
             let normal = splitBy delim input
                 collapsed = splitByCollapsed delim input
-            in length collapsed <= length normal
+            in L.length collapsed <= L.length normal
 
         , fastProperty "removeLineComments preserves non-comment lines" $
             \codeLines ->
             let code = unlines codeLines
-                nonCommentLines = filter (not . isPrefixOf "//") codeLines
+                nonCommentLines = L.filter (not . L.isPrefixOf "//") codeLines
                 cleaned = removeLineComments code
                 cleanedLines = lines cleaned
-            in length cleanedLines === length nonCommentLines
+            in L.length cleanedLines === L.length nonCommentLines
         ]
 
     , testGroup "Source location mathematical properties"
@@ -167,24 +168,24 @@ tests =
         , fastProperty "function type arity is preserved" $
             \inputTypes outputType ->
             let funcType = foldr IRFunctionType outputType inputTypes
-                expectedArity = length inputTypes
+                expectedArity = L.length inputTypes
             in countFunctionParameters funcType === expectedArity
           where
             countFunctionParameters (IRFunctionType from to) = 1 + countFunctionParameters to
             countFunctionParameters _ = 0
         ]
 
-    , testGroup "List and collection properties"
+    , testGroup "List L.and collection properties"
         [ fastProperty "sort is idempotent: sort(sort(x)) = sort(x)" $
             \list ->
             let sorted1 = sort list
                 sorted2 = sort sorted1
             in sorted1 === sorted2
 
-        , fastProperty "nub removes duplicates: length(nub(x)) <= length(x)" $
+        , fastProperty "nub removes duplicates: L.length(nub(x)) <= L.length(x)" $
             \list ->
             let unique = nub list
-            in length unique <= length list
+            in L.length unique <= L.length list
 
         , fastProperty "union is commutative: a ∪ b = b ∪ a" $
             \list1 list2 ->
@@ -290,14 +291,14 @@ tests =
                 upperLower = toUpper (toLower str)
             in map toLower lowerUpper === map toLower upperLower
 
-        , fastProperty "length is preserved under case conversion" $
+        , fastProperty "L.length is preserved under case conversion" $
             \str ->
-            length (map toLower str) === length str .&&.
-            length (map toUpper str) === length str
+            L.length (map toLower str) === L.length str .&&.
+            L.length (map toUpper str) === L.length str
 
-        , fastProperty "concatenation length property: length(a ++ b) = length(a) + length(b)" $
+        , fastProperty "concatenation L.length property: L.length(a ++ b) = L.length(a) + L.length(b)" $
             \str1 str2 ->
-            length (str1 ++ str2) === length str1 + length str2
+            L.length (str1 ++ str2) === L.length str1 + L.length str2
 
         , fastProperty "concatenation identity: [] ++ s = s, s ++ [] = s" $
             \str ->
@@ -308,7 +309,7 @@ tests =
             (str1 ++ str2) ++ str3 === str1 ++ (str2 ++ str3)
         ]
 
-    , testGroup "Map and Set properties"
+    , testGroup "Map L.and Set properties"
         [ fastProperty "Map union is commutative: m1 ∪ m2 = m2 ∪ m1" $
             \map1 map2 ->
             let union1 = Map.union map1 map2

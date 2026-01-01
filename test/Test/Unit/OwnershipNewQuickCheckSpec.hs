@@ -10,6 +10,7 @@
 module Test.Unit.OwnershipNewQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -46,7 +47,8 @@ import Ownership.Reporter
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (sort, length, null, isPrefixOf, nub, isInfixOf)
+import Data.List (length, isPrefixOf, isInfixOf)
+import Data.List (sort, null, nub)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -115,36 +117,36 @@ prop_use_after_move_contains_name :: String -> Property
 prop_use_after_move_contains_name varName =
   not (null varName) ==>
   let error = UseAfterMove varName
-  in property $ varName `isInfixOf` show error
+  in property $ varName `L.isInfixOf` show error
 
 -- Property: DoubleMove errors contain both variable names
 prop_double_move_contains_names :: String -> String -> Property
 prop_double_move_contains_names var1 var2 =
   not (null var1) && not (null var2) ==>
   let error = DoubleMove var1 var2
-  in property $ var1 `isInfixOf` show error .&&.
-             var2 `isInfixOf` show error
+  in property $ var1 `L.isInfixOf` show error .&&.
+             var2 `L.isInfixOf` show error
 
 -- Property: BorrowWhileMoved errors contain variable name
 prop_borrow_while_moved_contains_name :: String -> Property
 prop_borrow_while_moved_contains_name varName =
   not (null varName) ==>
   let error = BorrowWhileMoved varName
-  in property $ varName `isInfixOf` show error
+  in property $ varName `L.isInfixOf` show error
 
 -- Property: MutBorrowWhileBorrowed errors contain variable name
 prop_mut_borrow_while_borrowed_contains_name :: String -> Property
 prop_mut_borrow_while_borrowed_contains_name varName =
   not (null varName) ==>
   let error = MutBorrowWhileBorrowed varName
-  in property $ varName `isInfixOf` show error
+  in property $ varName `L.isInfixOf` show error
 
 -- Property: OutOfScope errors contain variable name
 prop_out_of_scope_contains_name :: String -> Property
 prop_out_of_scope_contains_name varName =
   not (null varName) ==>
   let error = OutOfScope varName
-  in property $ varName `isInfixOf` show error
+  in property $ varName `L.isInfixOf` show error
 
 -- ============================================================================
 -- OwnershipAnalyzer Properties
@@ -154,7 +156,7 @@ prop_out_of_scope_contains_name varName =
 prop_new_analyzer_empty :: Property
 prop_new_analyzer_empty =
   let analyzer = newOwnershipAnalyzer
-  in property $ null (oaErrors analyzer) .&&.
+  in property $ L.null (oaErrors analyzer) .&&.
              null (oaVariables analyzer)
 
 -- Property: Built-in functions are available in new analyzer
@@ -168,22 +170,22 @@ prop_analyze_empty_code :: Property
 prop_analyze_empty_code =
   let analyzer = newOwnershipAnalyzer
       result = analyzeOwnership "" analyzer
-  in property $ null (oaErrors result)
+  in property $ L.null (oaErrors result)
 
 -- Property: Analyzing simple variable declaration works
 prop_analyze_simple_declaration :: String -> Property
 prop_analyze_simple_declaration varName =
-  not (null varName) && all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_") varName ==>
+  not (null varName) && L.all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_") varName ==>
   let code = "let " ++ varName ++ " = 42;"
       analyzer = newOwnershipAnalyzer
       result = analyzeOwnership code analyzer
-  in property $ length (oaVariables result) >= 1
+  in property $ L.length (oaVariables result) >= 1
 
 -- ============================================================================
 -- OwnershipTransfer Properties
 -- ============================================================================
 
--- Property: Ownership transfer preserves source and destination
+-- Property: Ownership transfer preserves source L.and destination
 prop_ownership_transfer_preserves_src_dst :: String -> String -> Property
 prop_ownership_transfer_preserves_src_dst src dst =
   not (null src) && not (null dst) ==>
@@ -212,7 +214,7 @@ prop_lex_empty_string =
 -- Property: Lexing simple identifier works
 prop_lex_simple_identifier :: String -> Property
 prop_lex_simple_identifier identifier =
-  not (null identifier) && all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_") identifier ==>
+  not (null identifier) && L.all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_") identifier ==>
   let code = identifier
       tokens = lexAll code
   in property $ not (null tokens)
@@ -222,7 +224,7 @@ prop_lex_preserves_whitespace :: String -> Property
 prop_lex_preserves_whitespace content =
   not (null content) ==>
   let tokens = lexAll content
-  in property $ length tokens >= 1
+  in property $ L.length tokens >= 1
 
 -- ============================================================================
 -- Parser Properties
@@ -238,7 +240,7 @@ prop_parse_empty_string =
 -- Property: Parsing simple declaration works
 prop_parse_simple_declaration :: String -> Property
 prop_parse_simple_declaration varName =
-  not (null varName) && all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_") varName ==>
+  not (null varName) && L.all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_") varName ==>
   let code = "let " ++ varName ++ " = 42;"
       tokens = lexAll code
       program = parseProgram tokens
@@ -251,7 +253,7 @@ prop_parse_idempotent code =
   let tokens1 = lexAll code
       program1 = parseProgram tokens1
       -- Re-parse would require program->code conversion which we don't have
-  in property $ not (null program1) ==> length program1 >= 1
+  in property $ not (null program1) ==> L.length program1 >= 1
 
 -- ============================================================================
 -- Error Formatting Properties
@@ -271,15 +273,15 @@ prop_format_single_error varName =
   let error = UseAfterMove varName
       errors = [error]
       formatted = formatOwnershipErrors errors
-  in property $ varName `isInfixOf` formatted
+  in property $ varName `L.isInfixOf` formatted
 
--- Property: Formatting multiple errors includes all messages
+-- Property: Formatting multiple errors includes L.all messages
 prop_format_multiple_errors :: [String] -> Property
 prop_format_multiple_errors varNames =
-  not (null varNames) && all (not . null) varNames ==>
+  not (null varNames) && L.all (not . null) varNames ==>
   let errors = map UseAfterMove varNames
       formatted = formatOwnershipErrors errors
-  in property $ all (`isInfixOf` formatted) varNames
+  in property $ L.all (`L.isInfixOf` formatted) varNames
 
 -- ============================================================================
 -- Analysis Properties
@@ -292,7 +294,7 @@ prop_analyze_move_produces_errors var1 var2 =
   let code = "let " ++ var1 ++ " = 42;\nlet " ++ var2 ++ " = " ++ var1 ++ ";\nprintln(" ++ var1 ++ ");"
       analyzer = newOwnershipAnalyzer
       result = analyzeOwnership code analyzer
-  in property $ not (null (oaErrors result)) ==> 
+  in property $ not (L.null (oaErrors result)) ==> 
              any (\e -> case e of UseAfterMove name -> name == var1; _ -> False) (oaErrors result)
 
 -- Property: Analyzing code with borrow works correctly
@@ -302,7 +304,7 @@ prop_analyze_borrow_works var1 var2 =
   let code = "let " ++ var1 ++ " = 42;\nlet " ++ var2 ++ " = &" ++ var1 ++ ";\nprintln(*" ++ var2 ++ ");"
       analyzer = newOwnershipAnalyzer
       result = analyzeOwnership code analyzer
-  in property $ length (oaVariables result) >= 2
+  in property $ L.length (oaVariables result) >= 2
 
 -- Property: Analyzing code with mutable borrow works
 prop_analyze_mutable_borrow_works :: String -> String -> Property
@@ -311,17 +313,17 @@ prop_analyze_mutable_borrow_works var1 var2 =
   let code = "let mut " ++ var1 ++ " = 42;\nlet " ++ var2 ++ " = &mut " ++ var1 ++ ";\n*" ++ var2 ++ " = 10;"
       analyzer = newOwnershipAnalyzer
       result = analyzeOwnership code analyzer
-  in property $ length (oaVariables result) >= 2
+  in property $ L.length (oaVariables result) >= 2
 
 -- Property: Analysis preserves variable order
 prop_analysis_preserves_order :: [String] -> Property
 prop_analysis_preserves_order varNames =
-  not (null varNames) && all (not . null) varNames && all (all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_")) varNames ==>
-  let declarations = map (\name -> "let " ++ name ++ " = 42;") varNames
+  not (null varNames) && L.all (not . null) varNames && L.all (L.all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_")) varNames ==>
+  let declarations = L.map (\name -> "let " ++ name ++ " = 42;") varNames
       code = unlines declarations
       analyzer = newOwnershipAnalyzer
       result = analyzeOwnership code analyzer
-  in property $ length (oaVariables result) >= length varNames
+  in property $ L.length (oaVariables result) >= L.length varNames
 
 -- ============================================================================
 -- Edge Case Properties
@@ -334,25 +336,25 @@ prop_analyze_unicode unicodeText =
   let code = "let x = \"" ++ unicodeText ++ "\";"
       analyzer = newOwnershipAnalyzer
       result = analyzeOwnership code analyzer
-  in property $ length (oaVariables result) >= 1
+  in property $ L.length (oaVariables result) >= 1
 
 -- Property: Analyzing very long code works
 prop_analyze_long_code :: Int -> Property
-prop_analyze_long_code length =
-  length > 0 && length <= 1000 ==>
-  let longCode = concat (replicate length "let x = 42;\n")
+prop_analyze_long_code L.length =
+  length > 0 && L.length <= 1000 ==>
+  let longCode = L.concat (replicate L.length "let x = 42;\n")
       analyzer = newOwnershipAnalyzer
       result = analyzeOwnership longCode analyzer
-  in property $ length (oaVariables result) >= 1
+  in property $ L.length (oaVariables result) >= 1
 
 -- Property: Analyzing code with comments works
 prop_analyze_with_comments :: String -> String -> Property
 prop_analyze_with_comments varName comment =
-  not (null varName) && not (null comment) && not ("//" `isInfixOf` comment) ==>
+  not (null varName) && not (null comment) && not ("//" `L.isInfixOf` comment) ==>
   let code = "// " ++ comment ++ "\nlet " ++ varName ++ " = 42; // " ++ comment
       analyzer = newOwnershipAnalyzer
       result = analyzeOwnership code analyzer
-  in property $ length (oaVariables result) >= 1
+  in property $ L.length (oaVariables result) >= 1
 
 -- ============================================================================
 -- Test Suite
@@ -381,7 +383,7 @@ tests = testGroup "Ownership New QuickCheck Tests"
     , fastProperty "analyze simple declaration" prop_analyze_simple_declaration
     ]
   , testGroup "OwnershipTransfer"
-    [ fastProperty "preserves source and destination" prop_ownership_transfer_preserves_src_dst
+    [ fastProperty "preserves source L.and destination" prop_ownership_transfer_preserves_src_dst
     , fastProperty "deterministic" prop_ownership_transfer_deterministic
     ]
   , testGroup "Lexer"

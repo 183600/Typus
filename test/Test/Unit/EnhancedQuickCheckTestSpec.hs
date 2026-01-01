@@ -3,11 +3,13 @@
 module Test.Unit.EnhancedQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Data.List (sort, nub, intersperse, isInfixOf)
+import Data.List (isInfixOf)
+import Data.List (sort, nub, intersperse)
 import Data.Char (isSpace, isAlpha, isDigit)
 
 import Utils (trim, splitBy, splitByComma, removeLineComments, normalizeIndentation)
@@ -15,12 +17,12 @@ import SourceLocation (SourcePos(..), SourceSpan(..), posLine, posColumn, posOff
 import Parser (FileDirectives(..), BlockDirectives(..))
 import TestSupport.Arbitrary ()
 
--- Property 1: trim is idempotent and removes only whitespace
+-- Property 1: trim is idempotent L.and removes only whitespace
 prop_trim_idempotent_and_whitespace :: String -> Property
 prop_trim_idempotent_and_whitespace s =
   let trimmed = trim s
       trimmedTwice = trim trimmed
-      hasOnlyEndWhitespace = all isSpace s || (not (null trimmed) && not (isSpace (head trimmed)) && not (isSpace (last trimmed)))
+      hasOnlyEndWhitespace = L.all isSpace s || (not (null trimmed) && not (isSpace (L.head trimmed)) && not (isSpace (last trimmed)))
   in conjoin
     [ trim trimmedTwice === trimmed
     , property hasOnlyEndWhitespace
@@ -30,22 +32,22 @@ prop_trim_idempotent_and_whitespace s =
 prop_splitBy_consistent :: Char -> String -> Property
 prop_splitBy_consistent delim s =
   let mySplit = splitBy delim s
-      builtinSplit = map (takeWhile (/= delim)) $ map (drop 1) $ 
+      builtinSplit = L.map (takeWhile (/= delim)) $ L.map (drop 1) $ 
                      (takeWhile (not . null) . iterate (drop 1 . dropWhile (/= delim))) (s ++ [delim])
-  in length mySplit === countSegments delim s
+  in L.length mySplit === countSegments delim s
   where
-    countSegments d str = length (filter (== d) str) + 1
+    countSegments d str = L.length (L.filter (== d) str) + 1
 
 -- Property 3: splitByComma handles edge cases correctly
 prop_splitBy_comma_edge_cases :: String -> Property
 prop_splitBy_comma_edge_cases s =
   let parts = splitByComma s
-  in property $ length parts >= 1
+  in property $ L.length parts >= 1
 
 -- Property 4: removeLineComments preserves non-comment lines
 prop_remove_line_comments_preserve :: String -> Property
 prop_remove_line_comments_preserve s =
-  let hasComments = "//" `isInfixOf` s
+  let hasComments = "//" `L.isInfixOf` s
       result = removeLineComments s
   in not hasComments ==> result === s
 
@@ -83,13 +85,13 @@ prop_map_operations_consistent pairs =
   let m = Map.fromList pairs
       keys = Map.keys m
       values = Map.elems m
-      lookups = map (`Map.lookup` m) keys
+      lookups = L.map (`Map.lookup` m) keys
       isJust Nothing = False
       isJust (Just _) = True
   in conjoin
-    [ property $ length lookups === length keys
-    , property $ all isJust lookups
-    , property $ length (nub keys) === length keys
+    [ property $ L.length lookups === L.length keys
+    , property $ L.all isJust lookups
+    , property $ L.length (nub keys) === L.length keys
     ]
 
 -- Property 8: Set operations preserve uniqueness
@@ -97,10 +99,10 @@ prop_set_operations_unique :: [Int] -> Property
 prop_set_operations_unique xs =
   let s = Set.fromList xs
       sortedElems = sort $ Set.toList s
-      allUnique xs = length xs == length (nub xs)
+      allUnique xs = L.length xs == L.length (nub xs)
   in conjoin
     [ property $ allUnique sortedElems
-    , property $ length sortedElems === length (nub xs)
+    , property $ L.length sortedElems === L.length (nub xs)
     ]
 
 -- Property 9: FileDirectives round-trip properties
@@ -115,11 +117,11 @@ prop_normalize_indentation_preserves s =
   let normalized = normalizeIndentation s
       originalLines = lines s
       normalizedLines = lines normalized
-  in property $ length normalizedLines === length originalLines
+  in property $ L.length normalizedLines === L.length originalLines
 
 tests :: TestTree
 tests = testGroup "Enhanced QuickCheck Test Suite"
-  [ fastProperty "trim is idempotent and removes only whitespace" prop_trim_idempotent_and_whitespace
+  [ fastProperty "trim is idempotent L.and removes only whitespace" prop_trim_idempotent_and_whitespace
   , fastProperty "splitBy is consistent with segment counting" prop_splitBy_consistent
   , fastProperty "splitByComma handles edge cases correctly" prop_splitBy_comma_edge_cases
   , fastProperty "removeLineComments preserves non-comment lines" prop_remove_line_comments_preserve

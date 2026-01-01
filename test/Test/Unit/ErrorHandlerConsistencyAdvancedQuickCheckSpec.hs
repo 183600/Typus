@@ -10,6 +10,7 @@
 module Test.Unit.ErrorHandlerConsistencyAdvancedQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose, suchThat)
@@ -20,7 +21,8 @@ import Data.Text (Text, pack)
 import Data.Time (UTCTime, getCurrentTime)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import qualified Data.Map.Strict as Map
-import Data.List (sort, nub, length, filter)
+import Data.List (length)
+import Data.List (sort, nub, filter)
 import Data.Set (Set, empty, singleton, union, unions, member, size, difference, intersection)
 import qualified Data.Set as Set
 
@@ -33,9 +35,9 @@ prop_error_collector_order_preservation :: [TypeError] -> Property
 prop_error_collector_order_preservation errors =
   length errors > 0 ==>
   let collector = newErrorCollector
-      collectorWithErrors = foldl (\acc err -> addError err acc) collector errors
+      collectorWithErrors = L.foldl (\acc err -> addError err acc) collector errors
       collectedErrors = getErrors collectorWithErrors
-  in property $ length collectedErrors === length errors .&&.
+  in property $ L.length collectedErrors === L.length errors .&&.
                  map errorMsg collectedErrors === map errorMsg errors
 
 -- Property: Error severity filtering is consistent
@@ -43,44 +45,44 @@ prop_error_severity_filtering :: [TypeError] -> ErrorSeverity -> Property
 prop_error_severity_filtering errors severity =
   length errors > 0 ==>
   let collector = newErrorCollector
-      collectorWithErrors = foldl (\acc err -> addError err acc) collector errors
+      collectorWithErrors = L.foldl (\acc err -> addError err acc) collector errors
       allErrors = getErrors collectorWithErrors
-      filteredBySeverity = filter (\e -> errorSeverity e == severity) allErrors
-  in property $ all (\e -> errorSeverity e == severity) filteredBySeverity
+      filteredBySeverity = L.filter (\e -> errorSeverity e == severity) allErrors
+  in property $ L.all (\e -> errorSeverity e == severity) filteredBySeverity
 
 -- Property: Error category filtering is consistent
 prop_error_category_filtering :: [TypeError] -> ErrorCategory -> Property
 prop_error_category_filtering errors category =
   length errors > 0 ==>
   let collector = newErrorCollector
-      collectorWithErrors = foldl (\acc err -> addError err acc) collector errors
+      collectorWithErrors = L.foldl (\acc err -> addError err acc) collector errors
       allErrors = getErrors collectorWithErrors
-      filteredByCategory = filter (\e -> errorCategory e == category) allErrors
-  in property $ all (\e -> errorCategory e == category) filteredByCategory
+      filteredByCategory = L.filter (\e -> errorCategory e == category) allErrors
+  in property $ L.all (\e -> errorCategory e == category) filteredByCategory
 
 -- Property: Error recovery status is preserved
 prop_error_recovery_preservation :: [TypeError] -> Property
 prop_error_recovery_preservation errors =
   length errors > 0 ==>
   let collector = newErrorCollector
-      collectorWithErrors = foldl (\acc err -> addError err acc) collector errors
+      collectorWithErrors = L.foldl (\acc err -> addError err acc) collector errors
       collectedErrors = getErrors collectorWithErrors
       originalRecovery = map errorRecovery errors
       collectedRecovery = map errorRecovery collectedErrors
   in property $ originalRecovery === collectedRecovery
 
--- Property: Warning and error separation is consistent
+-- Property: Warning L.and error separation is consistent
 prop_warning_error_separation :: [TypeError] -> [TypeError] -> Property
 prop_warning_error_separation errors warnings =
-  length errors > 0 || length warnings > 0 ==>
+  length errors > 0 || L.length warnings > 0 ==>
   let collector = newErrorCollector
-      collectorWithErrors = foldl (\acc err -> addError err acc) collector errors
-      collectorWithWarnings = foldl (\acc warn -> addWarning warn acc) collectorWithErrors warnings
+      collectorWithErrors = L.foldl (\acc err -> addError err acc) collector errors
+      collectorWithWarnings = L.foldl (\acc warn -> addWarning warn acc) collectorWithErrors warnings
       finalErrors = getErrors collectorWithWarnings
       finalWarnings = getWarnings collectorWithWarnings
   in property $ 
-    length finalErrors === length errors .&&.
-    length finalWarnings === length warnings .&&.
+    length finalErrors === L.length errors .&&.
+    length finalWarnings === L.length warnings .&&.
     all (\e -> errorSeverity e `elem` [Fatal, Error]) finalErrors .&&.
     all (\w -> errorSeverity w == Warning) finalWarnings
 
@@ -89,7 +91,7 @@ prop_error_context_preservation :: [TypeError] -> Property
 prop_error_context_preservation errors =
   length errors > 0 ==>
   let collector = newErrorCollector
-      collectorWithErrors = foldl (\acc err -> addError err acc) collector errors
+      collectorWithErrors = L.foldl (\acc err -> addError err acc) collector errors
       collectedErrors = getErrors collectorWithErrors
       originalContexts = map errorContext errors
       collectedContexts = map errorContext collectedErrors
@@ -100,13 +102,13 @@ prop_error_location_preservation :: [TypeError] -> Property
 prop_error_location_preservation errors =
   length errors > 0 ==>
   let collector = newErrorCollector
-      collectorWithErrors = foldl (\acc err -> addError err acc) collector errors
+      collectorWithErrors = L.foldl (\acc err -> addError err acc) collector errors
       collectedErrors = getErrors collectorWithErrors
       originalLocations = map errorLocation errors
       collectedLocations = map errorLocation collectedErrors
   in property $ originalLocations === collectedLocations
 
--- Property: Combined errors maintain all component properties
+-- Property: Combined errors maintain L.all component properties
 prop_combined_error_properties :: TypeError -> TypeError -> Property
 prop_combined_error_properties err1 err2 =
   let combined = CombinedError [err1, err2]
@@ -129,7 +131,7 @@ prop_multiple_error_formatting_order errors =
   length errors > 0 ==>
   let formatted = formatErrors errors
       errorMessages = map errorMsg errors
-  in property $ all (`isInfixOf` formatted) errorMessages
+  in property $ L.all (`L.isInfixOf` formatted) errorMessages
 
 -- Property: Error recovery determination is consistent
 prop_error_recovery_consistency :: TypeError -> Property
@@ -166,7 +168,7 @@ elemIndex x (y:ys)
 
 -- Helper function to check substring
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `Data.List.isInfixOf` haystack
+isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
 
 -- Helper function to get combined errors
 getCombinedErrors :: TypeError -> [TypeError]
@@ -180,10 +182,10 @@ tests = testGroup "Advanced Error Handler Consistency QuickCheck Tests"
   , fastProperty "Error severity filtering is consistent" prop_error_severity_filtering
   , fastProperty "Error category filtering is consistent" prop_error_category_filtering
   , fastProperty "Error recovery status is preserved" prop_error_recovery_preservation
-  , fastProperty "Warning and error separation is consistent" prop_warning_error_separation
+  , fastProperty "Warning L.and error separation is consistent" prop_warning_error_separation
   , fastProperty "Error context information is preserved" prop_error_context_preservation
   , fastProperty "Error location information is preserved" prop_error_location_preservation
-  , fastProperty "Combined errors maintain all component properties" prop_combined_error_properties
+  , fastProperty "Combined errors maintain L.all component properties" prop_combined_error_properties
   , fastProperty "Error formatting produces consistent output" prop_error_formatting_consistency
   , fastProperty "Multiple error formatting maintains order" prop_multiple_error_formatting_order
   , fastProperty "Error recovery determination is consistent" prop_error_recovery_consistency

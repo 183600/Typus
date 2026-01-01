@@ -4,8 +4,10 @@
 module Test.Unit.CompilerCoreQuickCheckTests (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperties, (===), Property, forAll, Gen, Arbitrary(..), oneof, elements, listOf, listOf1, resize, suchThat)
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
+import Control.Monad.State (execState)
 
 import Compiler
 import Compiler.Errors.Core 
@@ -16,10 +18,10 @@ import Compiler.Errors.Core
   , getErrorStatistics
   )
 import Parser (TypusFile(..), CodeBlock(..), defaultFileDirectives, defaultBlockDirectives)
-import SourceLocation (SourcePos(..), SourceSpan(..), locatedWithSpan)
+import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), locatedWithSpan)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (sort, length)
+import Data.List (sort)
 
 -- ============================================================================
 -- Arbitrary Instances
@@ -30,37 +32,58 @@ instance Arbitrary ErrorSeverity where
 
 instance Arbitrary ErrorCategory where
   arbitrary = oneof 
-    [ pure SyntaxError
-    , pure TypeError
-    , pure NameResolutionError
-    , pure SemanticError
-    , pure OwnershipError
-    , pure DependentTypeError
-    , pure InternalError
+    [ pure TypeChecking
+    , pure Ownership
+    , pure Parsing
+    , pure Semantic
+    , pure Runtime
+    , pure Constraint
+    , pure Inference
+    , pure Integration
+    , pure Unknown
     ]
 
 instance Arbitrary ErrorLocation where
   arbitrary = do
+    filePath <- arbitrary
     line <- arbitrary
     column <- arbitrary
-    return $ ErrorLocation line column
+    endLine <- arbitrary
+    endColumn <- arbitrary
+    return $ ErrorLocation filePath line column endLine endColumn
 
 instance Arbitrary ErrorContext where
   arbitrary = do
-    messages <- listOf (listOf1 (elements ['a'..'z']))
-    return $ ErrorContext messages
+    contextCode <- arbitrary
+    contextFunction <- arbitrary
+    contextVariable <- arbitrary
+    contextType <- arbitrary
+    contextAdditional <- listOf $ do
+      key <- listOf1 (elements ['a'..'z'])
+      value <- listOf1 (elements ['a'..'z'])
+      return (key, value)
+    return $ ErrorContext contextCode contextFunction contextVariable contextType contextAdditional
+
+instance Arbitrary a => Arbitrary (Located a) where
+  arbitrary = do
+    value <- arbitrary
+    span <- arbitrary
+    return $ locatedWithSpan value span
 
 instance Arbitrary TypusFile where
   arbitrary = do
     directives <- pure defaultFileDirectives
+    buildTags <- listOf arbitrary
     blocks <- listOf arbitrary
-    return $ TypusFile directives blocks
+    syntaxErrors <- listOf arbitrary
+    return $ TypusFile directives buildTags blocks syntaxErrors
 
 instance Arbitrary CodeBlock where
   arbitrary = do
     directives <- pure defaultBlockDirectives
     content <- listOf1 (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \n\t")
-    return $ CodeBlock directives content
+    span <- arbitrary
+    return $ CodeBlock directives content span
 
 -- ============================================================================
 -- QuickCheck Properties for Compiler Module
@@ -69,74 +92,72 @@ instance Arbitrary CodeBlock where
 -- | emptyContext: should have no messages
 prop_emptyContext_no_messages :: Bool
 prop_emptyContext_no_messages = 
-    null (ecMessages emptyContext)
+    null (contextAdditional emptyContext)
 
--- | newErrorCollector: should start with no errors or warnings
+-- | newErrorCollector: should start with no errors L.or warnings
 prop_newErrorCollector_empty :: Bool
 prop_newErrorCollector_empty = 
-    let collector = newErrorCollector
-    in not (hasErrors collector) && not (hasWarnings collector)
+    let errors = execState newErrorCollector []
+    in null errors
 
 -- | addError: should result in hasErrors returning True
 prop_addError_has_errors :: ErrorLocation -> String -> Bool
 prop_addError_has_errors location message = 
-    let collector = addError newErrorCollector location message
-    in hasErrors collector
+    let error = errorAt "test" (T.pack message) location
+        errors = execState (addError error) []
+    in not (null errors)
 
 -- | addWarning: should result in hasWarnings returning True
 prop_addWarning_has_warnings :: ErrorLocation -> String -> Bool
 prop_addWarning_has_warnings location message = 
-    let collector = addWarning newErrorCollector location message
-    in hasWarnings collector
+    let warning = warningAt "test" (T.pack message) location
+        errors = execState (addWarning warning) []
+    in not (null errors)
 
 -- | getErrors: should return errors in insertion order
 prop_getErrors_order :: [String] -> Bool
 prop_getErrors_order messages = 
-    let collector = foldr (\msg acc -> addError acc (ErrorLocation 0 0) msg) newErrorCollector messages
-        errors = getErrors collector
-    in length errors == length messages
+    let createError msg = errorAt "test" (T.pack msg) (ErrorLocation Nothing 0 0 Nothing Nothing)
+        errors = execState (mapM_ addError (map createError messages)) []
+    in L.length errors == L.length messages
 
 -- | getWarnings: should return warnings in insertion order
 prop_getWarnings_order :: [String] -> Bool
 prop_getWarnings_order messages = 
-    let collector = foldr (\msg acc -> addWarning acc (ErrorLocation 0 0) msg) newErrorCollector messages
-        warnings = getWarnings collector
-    in length warnings == length messages
+    let createWarning msg = warningAt "test" (T.pack msg) (ErrorLocation Nothing 0 0 Nothing Nothing)
+        warnings = execState (mapM_ addWarning (map createWarning messages)) []
+    in L.length warnings == L.length messages
 
 -- | formatError: should include the error message
 prop_formatError_contains_message :: ErrorLocation -> String -> Bool
 prop_formatError_contains_message location message = 
-    let formatted = formatError location message
-    in message `isInfixOf` formatted
-  where
-    isInfixOf needle haystack = needle `Data.List.isInfixOf` haystack
+    let error = errorAt "test" (T.pack message) location
+        formatted = formatError error
+    in message `L.isInfixOf` formatted
 
 -- | errorAt: should create error at specific location
 prop_errorAt_location :: Int -> Int -> String -> Bool
 prop_errorAt_location line column message = 
-    let location = ErrorLocation line column
-        collector = errorAt newErrorCollector location message
-        errors = getErrors collector
-    in not (null errors) && 
-       case head errors of
-         (loc, msg) -> loc == location && msg == message
+    let location = ErrorLocation Nothing line column Nothing Nothing
+        textMsg = T.pack message
+        typeError = errorAt "test-id" textMsg location
+    in location typeError == location && T.unpack (message typeError) == message
 
 -- | warningAt: should create warning at specific location
 prop_warningAt_location :: Int -> Int -> String -> Bool
 prop_warningAt_location line column message = 
-    let location = ErrorLocation line column
-        collector = warningAt newErrorCollector location message
-        warnings = getWarnings collector
-    in not (null warnings) &&
-       case head warnings of
-         (loc, msg) -> loc == location && msg == message
+    let location = ErrorLocation Nothing line column Nothing Nothing
+        textMsg = T.pack message
+        typeError = warningAt "test-id" textMsg location
+    in location typeError == location && T.unpack (message typeError) == message
 
 -- | errorWithCategory: should create error with category
 prop_errorWithCategory_category :: ErrorCategory -> ErrorLocation -> String -> Bool
 prop_errorWithCategory_category category location message = 
-    let collector = errorWithCategory newErrorCollector category location message
-        errors = getErrors collector
-    in not (null errors) -- Basic check that error was added
+    let textMsg = T.pack message
+        error = errorWithCategory "test-id" category textMsg location
+        errors = execState (addError error) []
+    in not (null errors) && category (head errors) == category
     -- Note: We can't easily test category storage without exposing internal types
 
 -- | filterBySeverity: should filter correctly
@@ -144,20 +165,20 @@ prop_filterBySeverity_correct :: [ErrorSeverity] -> Bool
 prop_filterBySeverity_correct severities = 
     let allSeverities = [Error, Warning, Info]
         filtered = filterBySeverity severities allSeverities
-    in all (`elem` severities) filtered
+    in L.all (`elem` severities) filtered
 
 -- | filterByCategory: should filter correctly
 prop_filterByCategory_correct :: [ErrorCategory] -> Bool
 prop_filterByCategory_correct categories = 
     let allCategories = [SyntaxError, TypeError, NameResolutionError, SemanticError, OwnershipError, DependentTypeError, InternalError]
         filtered = filterByCategory categories allCategories
-    in all (`elem` categories) filtered
+    in L.all (`elem` categories) filtered
 
--- | getErrorStatistics: should count errors and warnings
+-- | getErrorStatistics: should count errors L.and warnings
 prop_getErrorStatistics_counts :: Int -> Int -> Property
 prop_getErrorStatistics_counts errorCount warningCount = 
-    let collector = foldr (\_ acc -> addError acc (ErrorLocation 0 0) "error") newErrorCollector (replicate errorCount ())
-        collector' = foldr (\_ acc -> addWarning acc (ErrorLocation 0 0) "warning") collector (replicate warningCount ())
+    let collector = L.foldr (\_ acc -> addError acc (ErrorLocation 0 0) "error") newErrorCollector (replicate errorCount ())
+        collector' = L.foldr (\_ acc -> addWarning acc (ErrorLocation 0 0) "warning") collector (replicate warningCount ())
         stats = getErrorStatistics collector'
     in errorCount >= 0 && warningCount >= 0 ==> 
        property True  -- Basic sanity check that stats can be computed
@@ -182,7 +203,7 @@ prop_errorSeverity_ordering sev1 sev2 =
       (Info, Warning) -> sev1 > sev2
       (Info, Info) -> sev1 == sev2
 
--- | ErrorLocation: should track line and column correctly
+-- | ErrorLocation: should track line L.and column correctly
 prop_errorLocation_coordinates :: Int -> Int -> Bool
 prop_errorLocation_coordinates line column = 
     let location = ErrorLocation line column
@@ -192,7 +213,7 @@ prop_errorLocation_coordinates line column =
 prop_errorContext_messages :: [String] -> Bool
 prop_errorContext_messages messages = 
     let context = ErrorContext messages
-    in length (ecMessages context) == length messages
+    in L.length (ecMessages context) == L.length messages
 
 -- ============================================================================
 -- Test Suite

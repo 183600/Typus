@@ -33,7 +33,9 @@ import Utils
   )
 
 import Data.Char (isSpace, toLower, toUpper)
-import Data.List (isPrefixOf, isSuffixOf, isInfixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isSuffixOf, isInfixOf)
+import Data.List (sort, nub)
 import qualified Data.Text as T
 
 -- | Generate strings with various whitespace patterns
@@ -82,12 +84,12 @@ genCSVString = do
 
 -- Property tests
 
--- Property: trim removes all leading and trailing whitespace
+-- Property: trim removes L.all leading L.and trailing whitespace
 prop_trim_removes_whitespace :: Property
 prop_trim_removes_whitespace =
   forAll genWhitespaceString $ \str ->
     let trimmed = trim str
-        hasLeading = not (null trimmed) && isSpace (head trimmed)
+        hasLeading = not (null trimmed) && isSpace (L.head trimmed)
         hasTrailing = not (null trimmed) && isSpace (last trimmed)
     in property $ not (hasLeading .||. hasTrailing)
 
@@ -105,8 +107,8 @@ prop_splitBy_preserves_empty =
   forAll (choose ('a', 'z')) $ \delim ->
   forAll (listOf $ elements [delim, 'x']) $ \str ->
     let segments = splitBy delim str
-        expectedCount = length (filter (== delim) str) + 1
-    in property $ length segments === expectedCount
+        expectedCount = L.length (L.filter (== delim) str) + 1
+    in property $ L.length segments === expectedCount
 
 -- Property: splitByCollapsed removes empty segments
 prop_splitByCollapsed_removes_empty :: Property
@@ -114,7 +116,7 @@ prop_splitByCollapsed_removes_empty =
   forAll (choose ('a', 'z')) $ \delim ->
   forAll (listOf $ elements [delim, 'x']) $ \str ->
     let segments = splitByCollapsed delim str
-    in property $ all (not . null) segments
+    in property $ L.all (not . null) segments
 
 -- Property: splitByComma is splitBy with comma
 prop_splitByComma_is_splitBy :: Property
@@ -133,14 +135,14 @@ prop_removeLineComments_removes :: Property
 prop_removeLineComments_removes =
   forAll genCommentString $ \str ->
     let cleaned = removeLineComments str
-    in property $ not ("//" `isInfixOf` cleaned)
+    in property $ not ("//" `L.isInfixOf` cleaned)
 
--- Property: removeComments removes both // and /* */ comments
+-- Property: removeComments removes both // L.and /* */ comments
 prop_removeComments_removes_both :: Property
 prop_removeComments_removes_both =
   forAll genBlockCommentString $ \str ->
     let cleaned = removeComments str
-    in property $ not ("/*" `isInfixOf` cleaned) .&&. not ("*/" `isInfixOf` cleaned)
+    in property $ not ("/*" `L.isInfixOf` cleaned) .&&. not ("*/" `L.isInfixOf` cleaned)
 
 -- Property: normalizeIndentation removes common prefix
 prop_normalizeIndentation_removes_prefix :: Property
@@ -148,10 +150,10 @@ prop_normalizeIndentation_removes_prefix =
   forAll genIndentedString $ \str ->
     let normalized = normalizeIndentation str
         lines' = lines normalized
-        nonEmptyLines = filter (not . null) lines'
+        nonEmptyLines = L.filter (not . null) lines'
     in if null nonEmptyLines
        then property True
-       else property $ all (\line -> not (isPrefixOf "    " line)) nonEmptyLines
+       else property $ L.all (\line -> not (L.isPrefixOf "    " line)) nonEmptyLines
 
 -- Property: forceSingleTabIndentation uses tabs
 prop_forceSingleTabIndentation_uses_tabs :: Property
@@ -159,10 +161,10 @@ prop_forceSingleTabIndentation_uses_tabs =
   forAll genIndentedString $ \str ->
     let tabbed = forceSingleTabIndentation str
         lines' = lines tabbed
-        nonEmptyLines = filter (not . null . trim) lines'
+        nonEmptyLines = L.filter (not . null . trim) lines'
     in if null nonEmptyLines
        then property True
-       else property $ all (\line -> isPrefixOf "\t" line) nonEmptyLines
+       else property $ L.all (\line -> L.isPrefixOf "\t" line) nonEmptyLines
 
 -- Property: fixIndentation equals normalizeIndentation
 prop_fixIndentation_equals_normalize :: Property
@@ -193,17 +195,17 @@ prop_breakOn_missing_pattern :: Property
 prop_breakOn_missing_pattern =
   forAll (listOf $ elements ['a'..'z']) $ \pat ->
   forAll (listOf $ elements ['a'..'z']) $ \haystack ->
-    not (null pat) && not (pat `isInfixOf` haystack) ==>
+    not (null pat) && not (pat `L.isInfixOf` haystack) ==>
     let (before, after) = breakOn pat haystack
     in property $ before === haystack .&&. after === ""
 
--- Property: splitBy and join roundtrip
+-- Property: splitBy L.and join roundtrip
 prop_splitBy_join_roundtrip :: Property
 prop_splitBy_join_roundtrip =
   forAll (choose ('a', 'z')) $ \delim ->
   forAll (listOf $ elements ['a'..'z', delim]) $ \input ->
     let parts = splitBy delim input
-        rejoined = concat $ intersperse [delim] parts
+        rejoined = L.concat $ intersperse [delim] parts
     in rejoined === input
   where
     intersperse _ [] = []
@@ -217,13 +219,13 @@ prop_removeComments_preserves_content =
   forAll (listOf $ elements ['A'..'Z']) $ \comment ->
     let input = content ++ " /* " ++ comment ++ " */ " ++ content
         cleaned = removeComments input
-    in property $ content `isInfixOf` cleaned
+    in property $ content `L.isInfixOf` cleaned
 
 -- Unit tests
 
 unit_tests :: TestTree
 unit_tests = testGroup "Utils String Processing Unit Tests"
-  [ testCase "trim removes leading and trailing whitespace" $ do
+  [ testCase "trim removes leading L.and trailing whitespace" $ do
       trim "  hello  " @?= "hello"
       trim "\t\n  hello\r\n  " @?= "hello"
       trim "hello" @?= "hello"
@@ -253,7 +255,7 @@ unit_tests = testGroup "Utils String Processing Unit Tests"
       removeLineComments "code // comment // another" @?= "code  "
       removeLineComments "no comment" @?= "no comment"
 
-  , testCase "removeComments with line and block comments" $ do
+  , testCase "removeComments with line L.and block comments" $ do
       removeComments "code // line comment\nmore /* block */ code" @?= "code \nmore  code"
       removeComments "/* block comment */ code" @?= "  code"
       removeComments "code /* multi\nline\ncomment */ more" @?= "code  more"
@@ -294,7 +296,7 @@ unit_tests = testGroup "Utils String Processing Unit Tests"
   , testCase "performance with large strings" $ do
       let largeString = replicate 10000 'a' ++ "   "
           trimmed = trim largeString
-      assertBool "should handle large strings" $ length trimmed >= 10000
+      assertBool "should handle large strings" $ L.length trimmed >= 10000
 
   , testCase "complex scenarios" $ do
       let complexCode = unlines
@@ -306,9 +308,9 @@ unit_tests = testGroup "Utils String Processing Unit Tests"
             ]
           processed = removeComments $ normalizeIndentation complexCode
       assertBool "should process complex code" $ 
-        not ("//" `isInfixOf` processed) && 
-        not ("/*" `isInfixOf` processed) &&
-        not ("    " `isPrefixOf` processed)
+        not ("//" `L.isInfixOf` processed) && 
+        not ("/*" `L.isInfixOf` processed) &&
+        not ("    " `L.isPrefixOf` processed)
   ]
 
 -- Advanced tests
@@ -319,38 +321,38 @@ advanced_tests = testGroup "Advanced String Processing Tests"
       let nested = "code /* outer /* inner */ still outer */ end"
           cleaned = removeComments nested
       assertBool "should handle nested comments" $ 
-        not ("/*" `isInfixOf` cleaned) && 
-        not ("*/" `isInfixOf` cleaned)
+        not ("/*" `L.isInfixOf` cleaned) && 
+        not ("*/" `L.isInfixOf` cleaned)
 
   , testCase "comments in strings" $ do
       let withStrings = "var s = \"// not a comment\" // real comment"
           cleaned = removeLineComments withStrings
       assertBool "should preserve comments in strings" $ 
-        "// not a comment" `isInfixOf` cleaned
+        "// not a comment" `L.isInfixOf` cleaned
       assertBool "should remove real comments" $ 
-        not ("// real comment" `isInfixOf` cleaned)
+        not ("// real comment" `L.isInfixOf` cleaned)
 
   , testCase "mixed line endings" $ do
       let mixed = "line1\r\nline2\nline3\r\nline4"
           normalized = normalizeIndentation mixed
       assertBool "should handle mixed line endings" $ 
-        "line1" `isInfixOf` normalized &&
-        "line2" `isInfixOf` normalized &&
-        "line3" `isInfixOf` normalized &&
-        "line4" `isInfixOf` normalized
+        "line1" `L.isInfixOf` normalized &&
+        "line2" `L.isInfixOf` normalized &&
+        "line3" `L.isInfixOf` normalized &&
+        "line4" `L.isInfixOf` normalized
 
-  , testCase "tab and space mixing" $ do
+  , testCase "tab L.and space mixing" $ do
       let mixedTabs = "\tline1\n    line2\n\t\tline3"
           normalized = normalizeIndentation mixedTabs
       assertBool "should normalize mixed indentation" $ 
-        not (isPrefixOf "\t" normalized) &&
-        not (isPrefixOf "    " normalized)
+        not (L.isPrefixOf "\t" normalized) &&
+        not (L.isPrefixOf "    " normalized)
 
   , testCase "malformed comments" $ do
       let malformed = "code /* unclosed comment\nmore code"
           cleaned = removeComments malformed
       assertBool "should handle malformed comments gracefully" $ 
-        length cleaned > 0
+        L.length cleaned > 0
 
   , testCase "consecutive delimiters" $ do
       splitBy ',' "a,,,b" @?= ["a", "", "", "b"]
@@ -367,21 +369,21 @@ performance_tests = testGroup "Performance Tests"
       let largeFile = unlines $ replicate 10000 "    line with some content // comment"
           processed = removeLineComments $ normalizeIndentation largeFile
       assertBool "should process large files" $ 
-        length (lines processed) >= 10000
+        L.length (lines processed) >= 10000
 
   , testCase "deep nesting" $ do
-      let deepNesting = concat $ replicate 1000 "    "
+      let deepNesting = L.concat $ replicate 1000 "    "
           content = deepNesting ++ "content"
           normalized = normalizeIndentation content
       assertBool "should handle deep nesting" $ 
-        not (isPrefixOf "    " normalized)
+        not (L.isPrefixOf "    " normalized)
 
   , testCase "many small operations" $ do
       let operations = replicate 1000 "a,b,c"
           results = map splitByComma operations
       assertBool "should handle many operations" $ 
-        length results == 1000 &&
-        all (\res -> length res == 3) results
+        L.length results == 1000 &&
+        L.all (\res -> L.length res == 3) results
   ]
 
 tests :: TestTree

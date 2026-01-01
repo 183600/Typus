@@ -27,6 +27,7 @@ import Ownership (OwnershipAnalysis(..))
 import Dependencies (DependencyAnalysis(..))
 
 import Data.Char (isSpace, isAlphaNum)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import qualified Data.Text as T
 import Data.Maybe (isJust, isNothing, fromMaybe)
@@ -171,10 +172,10 @@ tests =
                        show errorTime ++ " microseconds)") (errorTime < 2000000)
         ]
 
-    , testGroup "Memory and Resource Usage"
+    , testGroup "Memory L.and Resource Usage"
         [ testCase "Memory usage doesn't grow excessively" $ do
             let memoryTest = replicate 10 $ generateLargeFile 500
-                totalMemoryTime = sum [time | (time, _) <- map timeParseTypus memoryTest]
+                totalMemoryTime = L.sum [time | (time, _) <- map timeParseTypus memoryTest]
             assertBool ("Memory usage should be reasonable for multiple files (took " ++ 
                        show totalMemoryTime ++ " microseconds total)") 
                        (totalMemoryTime < 20000000)  -- 20 seconds total
@@ -244,7 +245,7 @@ tests =
         , fastProperty "Memory usage doesn't explode" $
             \iterations -> iterations >= 0 && iterations <= 100 ==>
                 let testCode = generateLargeFile 100
-                    totalTime = sum [time | (time, _) <- 
+                    totalTime = L.sum [time | (time, _) <- 
                                    replicate (fromIntegral iterations) (timeParseTypus testCode)]
                     maxTotalTime = fromIntegral iterations * 1000000  -- 1 second per iteration
                 in totalTime <= maxTotalTime
@@ -291,7 +292,7 @@ generatePipelineCode n = unlines $
     ["}"]
 
 generateText :: Int -> String
-generateText n = concat $ replicate n "This is a test string with some content to process. "
+generateText n = L.concat $ replicate n "This is a test string with some content to process. "
 
 generateCommentHeavyCode :: Int -> String
 generateCommentHeavyCode n = unlines $ 
@@ -321,7 +322,7 @@ generateResourceCode n = unlines $
     ["}"]
 
 generateGCTest :: Int -> String
-generateGCTest n = concat $ 
+generateGCTest n = L.concat $ 
     ["func gc_test" ++ show i ++ "() { " ++ 
      "let data" ++ show i ++ " = generate_large_data(); " ++
      "process(data" ++ show i ++ "); " ++
@@ -403,14 +404,14 @@ timePositionTracking input = do
 timeSpanOperations :: [String] -> Integer
 timeSpanOperations spans = do
     start <- getCPUTime
-    let _ = length spans  -- Mock span operations
+    let _ = L.length spans  -- Mock span operations
     end <- getCPUTime
     return ((end - start) `div` 1000)
 
 timeErrorLocationTracking :: String -> (Integer, Int)
 timeErrorLocationTracking input = do
     start <- getCPUTime
-    let errorCount = length (filter ("undefined_var" `isInfixOf`) (lines input))
+    let errorCount = L.length (L.filter ("undefined_var" `L.isInfixOf`) (lines input))
     end <- getCPUTime
     let time = (end - start) `div` 1000
     return (time, errorCount)
@@ -418,7 +419,7 @@ timeErrorLocationTracking input = do
 timeResourceHandling :: String -> (Integer, Int)
 timeResourceHandling input = do
     start <- getCPUTime
-    let resourceCount = length (filter ("Resource()" `isInfixOf`) (lines input))
+    let resourceCount = L.length (L.filter ("Resource()" `L.isInfixOf`) (lines input))
     end <- getCPUTime
     let time = (end - start) `div` 1000
     return (time, resourceCount)
@@ -426,7 +427,7 @@ timeResourceHandling input = do
 timeGCTest :: String -> (Integer, Int)
 timeGCTest input = do
     start <- getCPUTime
-    let dataCount = length (filter ("generate_large_data" `isInfixOf`) (lines input))
+    let dataCount = L.length (L.filter ("generate_large_data" `L.isInfixOf`) (lines input))
     end <- getCPUTime
     let time = (end - start) `div` 1000
     return (time, dataCount)
@@ -434,18 +435,18 @@ timeGCTest input = do
 -- Mock functions for testing
 compileTypus :: FilePath -> String -> Either String String
 compileTypus _ input
-    | "undefined_var" `isInfixOf` input = Left "Undefined variable"
-    | "acquire_resource" `isInfixOf` input = Right "compiled with resources"
-    | "generate_large_data" `isInfixOf` input = Right "compiled with large data"
-    | "complex_algorithm" `isInfixOf` input = Right "compiled with complex algorithm"
-    | "process(move" `isInfixOf` input = Right "compiled with ownership"
-    | "Data<" `isInfixOf` input = Right "compiled with dependent types"
-    | "func" `isInfixOf` input = Right "compiled successfully"
+    | "undefined_var" `L.isInfixOf` input = Left "Undefined variable"
+    | "acquire_resource" `L.isInfixOf` input = Right "compiled with resources"
+    | "generate_large_data" `L.isInfixOf` input = Right "compiled with large data"
+    | "complex_algorithm" `L.isInfixOf` input = Right "compiled with complex algorithm"
+    | "process(move" `L.isInfixOf` input = Right "compiled with ownership"
+    | "Data<" `L.isInfixOf` input = Right "compiled with dependent types"
+    | "func" `L.isInfixOf` input = Right "compiled successfully"
     | otherwise = Right "compiled"
 
 -- Helper functions
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `Data.List.isInfixOf` haystack
+L.isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
 
 -- QuickCheck generators
 instance Arbitrary String where

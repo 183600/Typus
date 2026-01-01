@@ -35,20 +35,22 @@ import ErrorHandler
 
 import Data.Char (isSpace, isAlphaNum, isLetter)
 import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, intercalate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (intercalate)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 
 -- ============================================================================
 -- Test 1: Utils Module - String Processing Properties
 -- ============================================================================
 
--- Property: splitBy and splitByCollapsed relationship
+-- Property: splitBy L.and splitByCollapsed relationship
 prop_split_by_relationship :: Char -> String -> Property
 prop_split_by_relationship delim str =
   let collapsed = splitByCollapsed delim str
       normal = splitBy delim str
-  in property $ all (not . null) collapsed .&&. 
-             (null collapsed ==> all null normal)
+  in property $ L.all (not . null) collapsed .&&. 
+             (null collapsed ==> L.all null normal)
 
 -- Property: trim is idempotent
 prop_trim_idempotent :: String -> Property
@@ -59,7 +61,7 @@ prop_remove_line_comments_preserves_content :: String -> String -> Property
 prop_remove_line_comments_preserves_content prefix content =
   let line = prefix ++ "// this is a comment\n" ++ content
       processed = removeLineComments line
-      containsContent = content `isInfixOf` processed
+      containsContent = content `L.isInfixOf` processed
   in not (null content) ==> containsContent
 
 -- ============================================================================
@@ -71,7 +73,7 @@ prop_pos_advancement_consistent :: Positive Int -> Positive Int -> String -> Pro
 prop_pos_advancement_consistent (Positive lineOffset) (Positive colOffset) text =
   let start = startPos
       advanced = advancePosBy start lineOffset colOffset
-      lineCount = length $ filter (== '\n') text
+      lineCount = L.length $ L.filter (== '\n') text
   in lineOffset > 0 ==> 
      sourceLine advanced >= sourceLine start + min lineOffset lineCount
 
@@ -156,8 +158,8 @@ prop_string_pipeline_consistency input =
       step2 = normalizeIndentation step1
       step3 = removeLineComments step2
   in property $ 
-     not (null step1) ==> length step3 <= length step2 .&&.
-     length step2 <= length step1
+     not (null step1) ==> L.length step3 <= L.length step2 .&&.
+     L.length step2 <= L.length step1
 
 -- Property: Location tracking through processing
 prop_location_tracking_consistency :: Positive Int -> String -> Property

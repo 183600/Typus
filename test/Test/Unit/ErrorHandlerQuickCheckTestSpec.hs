@@ -4,6 +4,7 @@
 module Test.Unit.ErrorHandlerQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
@@ -110,11 +111,11 @@ errorCollectionTests = testGroup "Error Collection Tests"
           warning = createWarning "test" (SourceSpan startPos startPos)
           collection' = addError (addError collection error) warning
           errors = getErrorsBySeverity collection' Error
-      in length errors @?= 1
+      in L.length errors @?= 1
   
   , fastProperty "Error count consistency" =
       \errors -> let collection = foldl addError emptyErrorCollection errors
-                 in errorCount collection == length errors
+                 in errorCount collection == L.length errors
   ]
 
 -- | 5. 错误报告测试
@@ -123,28 +124,28 @@ errorReportingTests = testGroup "Error Reporting Tests"
   [ testCase "Format single error" =
       let error = createError SyntaxError "Unexpected token" (SourceSpan startPos startPos)
           report = formatError error
-      in "Unexpected token" `isInfixOf` report @?= True
+      in "Unexpected token" `L.isInfixOf` report @?= True
   
   , testCase "Format error collection" =
       let collection = emptyErrorCollection
           error = createError SyntaxError "test" (SourceSpan startPos startPos)
           collection' = addError collection error
           report = formatErrorCollection collection'
-      in length (lines report) @?= 1
+      in L.length (lines report) @?= 1
   
   , testCase "Error report includes location" =
       let span = SourceSpan startPos (posAfter 'a' startPos)
           error = createError SyntaxError "test" span
           report = formatError error
-      in "line 1" `isInfixOf` report @?= True
+      in "line 1" `L.isInfixOf` report @?= True
   
   , fastProperty "Error message in report" =
       \message -> let error = createError SyntaxError message (SourceSpan startPos startPos)
                       report = formatError error
-                  in message `isInfixOf` report
+                  in message `L.isInfixOf` report
   ]
   where
-    isInfixOf needle haystack = needle `elem` (words haystack)
+    L.isInfixOf needle haystack = needle `elem` (words haystack)
 
 -- | 6. 错误恢复测试
 errorRecoveryTests :: TestTree
@@ -232,7 +233,7 @@ errorFormattingTests = testGroup "Error Formatting Tests"
           context = ErrorContext [("file", "test.go")]
           error' = addErrorContext error context
           formatted = formatErrorWithContext error'
-      in "test.go" `isInfixOf` formatted @?= True
+      in "test.go" `L.isInfixOf` formatted @?= True
   
   , testCase "Format error collection with summary" =
       let collection = emptyErrorCollection
@@ -240,18 +241,18 @@ errorFormattingTests = testGroup "Error Formatting Tests"
           warning = createWarning "test" (SourceSpan startPos startPos)
           collection' = addError (addError collection error) warning
           formatted = formatErrorCollectionWithSummary collection'
-      in "2 issues" `isInfixOf` formatted @?= True
+      in "2 issues" `L.isInfixOf` formatted @?= True
   
   , fastProperty "Formatting includes severity" =
       \severity -> let error = Error severity SyntaxError "test" (SourceSpan startPos startPos) Nothing
                        formatted = formatError error
                    in case severity of
-                        Error -> "error" `isInfixOf` formatted
-                        Warning -> "warning" `isInfixOf` formatted
-                        Info -> "info" `isInfixOf` formatted
+                        Error -> "error" `L.isInfixOf` formatted
+                        Warning -> "warning" `L.isInfixOf` formatted
+                        Info -> "info" `L.isInfixOf` formatted
   ]
   where
-    isInfixOf needle haystack = needle `elem` (words haystack)
+    L.isInfixOf needle haystack = needle `elem` (words haystack)
 
 -- | 10. 错误处理器验证测试
 errorHandlerValidationTests :: TestTree
@@ -273,9 +274,9 @@ errorHandlerValidationTests = testGroup "ErrorHandler Validation Tests"
           processed = processErrors handler collection'
       in errorCount processed @?= 1
   
-  , fastProperty "Handler processes all errors" =
+  , fastProperty "Handler processes L.all errors" =
       \errors -> let handler = createErrorHandler []
                       collection = foldl addError emptyErrorCollection errors
                       processed = processErrors handler collection
-                  in errorCount processed == length errors
+                  in errorCount processed == L.length errors
   ]

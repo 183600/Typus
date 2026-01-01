@@ -3,6 +3,7 @@
 module Test.Unit.EnhancedCoreQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
@@ -19,13 +20,13 @@ prop_splitBy_empty_idempotent delim =
 -- | 测试分割后的连接：分割再连接应该恢复原始字符串
 prop_splitBy_join_roundtrip :: Char -> String -> Property
 prop_splitBy_join_roundtrip delim s =
-  not (elem delim s) ==>
-  concat (splitBy delim s) === s
+  not (L.elem delim s) ==>
+  L.concat (splitBy delim s) === s
 
 -- | 测试折叠分割的等价性：折叠分割应该等于普通分割后过滤空字符串
 prop_splitByCollapsed_equivalence :: Char -> String -> Property
 prop_splitByCollapsed_equivalence delim s =
-  splitByCollapsed delim s === filter (not . null) (splitBy delim s)
+  splitByCollapsed delim s === L.filter (not . null) (splitBy delim s)
 
 -- | 测试trim的幂等性：多次trim应该与一次trim结果相同
 prop_trim_idempotent :: String -> Property
@@ -65,12 +66,12 @@ prop_set_insert_member value =
 tests :: TestTree
 tests = testGroup "Enhanced Core QuickCheck Tests"
   [ fastProperty "splitBy on empty string is idempotent" prop_splitBy_empty_idempotent
-  , fastProperty "splitBy and concat roundtrip preserves string" prop_splitBy_join_roundtrip
+  , fastProperty "splitBy L.and L.concat roundtrip preserves string" prop_splitBy_join_roundtrip
   , fastProperty "splitByCollapsed equals splitBy filtered" prop_splitByCollapsed_equivalence
   , fastProperty "trim is idempotent" prop_trim_idempotent
   , fastProperty "trim then split equals split then trim parts" prop_trim_split_equivalence
   , fastProperty "posAfter increments column for single char" prop_posAfter_increments_column
-  , fastProperty "empty span has same start and end" prop_empty_span_same_start_end
+  , fastProperty "empty span has same start L.and end" prop_empty_span_same_start_end
   , fastProperty "Map insert then lookup returns Just value" prop_map_insert_lookup
   , fastProperty "Set insert then member returns True" prop_set_insert_member
   ]

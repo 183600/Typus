@@ -24,7 +24,9 @@ import Ownership.Analyzer
   , builtInFunctions
   )
 import qualified Data.Map.Strict as Map
-import Data.List (isInfixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isInfixOf)
+import Data.List (sort, nub)
 import Data.Maybe (isJust, isNothing)
 
 -- ============================================================================
@@ -192,7 +194,7 @@ testOwnershipAnalyzer :: TestTree
 testOwnershipAnalyzer = testGroup "OwnershipAnalyzer"
   [ testCase "newOwnershipAnalyzer creates analyzer" $ do
       let analyzer = newOwnershipAnalyzer
-      -- Should not crash and create a valid analyzer
+      -- Should not crash L.and create a valid analyzer
       case analyzer of
         OwnershipAnalyzer () -> assertBool "Analyzer created" True
         
@@ -212,7 +214,7 @@ testBuiltInFunctions = testGroup "Built-in Functions"
         
   , testCase "Built-in functions are unique" $ do
       let uniqueBuiltins = nub builtInFunctions
-      length builtInFunctions @?= length uniqueBuiltins
+      L.length builtInFunctions @?= L.length uniqueBuiltins
       
   , testCase "Built-in functions are sorted" $ do
       let sortedBuiltins = sort builtInFunctions
@@ -226,13 +228,13 @@ testBasicOwnershipAnalysis = testGroup "Basic Ownership Analysis"
       let result = analyzeOwnership ""
       case result of
         Left _ -> assertBool "Empty code should not error" False
-        Right errors -> length errors @?= 0
+        Right errors -> L.length errors @?= 0
         
   , testCase "Simple assignment analyzes" $ do
       let code = "x := 42"
       case analyzeOwnership code of
         Left _ -> assertBool "Simple assignment should not error" False
-        Right errors -> -- May have errors or not depending on implementation
+        Right errors -> -- May have errors L.or not depending on implementation
           assertBool "Should produce result" True
           
   , testCase "Move operation detects use after move" $ do
@@ -284,7 +286,7 @@ prop_ownership_transfer_reflexive :: OwnershipTransfer -> Property
 prop_ownership_transfer_reflexive transfer =
   property $ transfer === transfer
 
--- Property: OwnershipTransfer from and to are accessible
+-- Property: OwnershipTransfer from L.and to are accessible
 prop_ownership_transfer_fields :: String -> String -> Property
 prop_ownership_transfer_fields from to =
   let transfer = OwnershipTransfer from to
@@ -306,14 +308,14 @@ prop_ownership_error_show_deterministic error =
 prop_built_in_functions_have_types :: Property
 prop_built_in_functions_have_types =
   let commonTypes = ["int", "string", "bool", "float32", "float64"]
-      hasAllTypes = all (`elem` builtInFunctions) commonTypes
+      hasAllTypes = L.all (`elem` builtInFunctions) commonTypes
   in property $ hasAllTypes === True
 
 -- Property: Built-in functions contain common packages
 prop_built_in_functions_have_packages :: Property
 prop_built_in_functions_have_packages =
   let commonPackages = ["fmt", "os", "io", "strings", "time"]
-      hasAllPackages = all (`elem` builtInFunctions) commonPackages
+      hasAllPackages = L.all (`elem` builtInFunctions) commonPackages
   in property $ hasAllPackages === True
 
 -- Property: Analysis of empty code never crashes

@@ -5,6 +5,7 @@ module Test.Unit.IRPropertiesQuickCheckSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 import Compiler.IR
@@ -61,7 +62,7 @@ prop_attachInferredImports_preserves_existing =
   forAll genModule $ \goMod ->
   let result = attachInferredImports goMod
       originalImports = gmImports goMod
-  in all (`elem` gmImports result) originalImports === True
+  in L.all (`elem` gmImports result) originalImports === True
   where
     genModule = do
       imports <- listOf genImport
@@ -74,10 +75,10 @@ prop_ensureMainFunction_adds_main :: Property
 prop_ensureMainFunction_adds_main =
   let module1 = GoModule [] Nothing [] []
       module2 = ensureMainFunction module1
-      hasMain = any isMainFunc (gmDecls module2)
+      hasMain = L.any isMainFunc (gmDecls module2)
   in property hasMain
   where
-    isMainFunc (GoFunc (FuncDecl funcLines)) = any (isInfixOf "main") funcLines
+    isMainFunc (GoFunc (FuncDecl funcLines)) = L.any (L.isInfixOf "main") funcLines
     isMainFunc _ = False
 
 prop_emitGo_produces_valid_structure :: Property
@@ -117,7 +118,7 @@ prop_moduleFromTypus_handles_empty =
         , tfSyntaxErrors = []
         }
   in case moduleFromTypus typusFile of
-       Right goMod -> (length (gmDecls goMod) >= 0) === True
+       Right goMod -> (L.length (gmDecls goMod) >= 0) === True
        Left _ -> property True
 
 tests :: TestTree

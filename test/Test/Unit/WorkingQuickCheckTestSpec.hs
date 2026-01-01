@@ -3,6 +3,7 @@
 module Test.Unit.WorkingQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
@@ -59,7 +60,7 @@ locationTests = testGroup "Location Tests"
 
 prop_lexer_nonempty_input :: String -> Property
 prop_lexer_nonempty_input s =
-  not (null s) ==> not (null (tokenizeGo s))
+  not (null s) ==> not (L.null (tokenizeGo s))
 
 prop_lexer_preserves_positions :: String -> Property
 prop_lexer_preserves_positions s =
@@ -69,8 +70,8 @@ prop_lexer_preserves_positions s =
 prop_lexer_whitespace :: String -> Property
 prop_lexer_whitespace s =
   let tokens = tokenizeGo s
-      whitespaceTokens = filter (\t -> tokenKind t == TokWhitespace) tokens
-  in property $ all (\t -> not (null (tokenText t))) whitespaceTokens
+      whitespaceTokens = L.filter (\t -> tokenKind t == TokWhitespace) tokens
+  in property $ L.all (\t -> not (L.null (tokenText t))) whitespaceTokens
 
 prop_binary_precedence :: Expr -> Expr -> Expr -> Property
 prop_binary_precedence left right middle =
@@ -79,7 +80,7 @@ prop_binary_precedence left right middle =
   in property True
 
 prop_stmt_order :: [Stmt] -> Property
-prop_stmt_order stmts = length stmts >= 0 ==> property True
+prop_stmt_order stmts = L.length stmts >= 0 ==> property True
 
 prop_type_inference_deterministic :: Expr -> Property
 prop_type_inference_deterministic _expr = property True
@@ -112,5 +113,5 @@ prop_span_merge_containment span1 span2 =
 
 prop_position_monotonic :: SourcePos -> String -> Property
 prop_position_monotonic pos text =
-  let finalPos = foldl (flip posAfter) pos text
+  let finalPos = L.foldl (flip posAfter) pos text
   in property $ posOffset finalPos >= posOffset pos

@@ -2,10 +2,12 @@
 module Test.Unit.CompilerIREdgeCaseSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool, assertFailure)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck ((===), Property, forAll, Gen, choose, listOf, elements)
-import Data.List (sort, nub, length, intercalate, isInfixOf, isPrefixOf)
+import Data.List (length, isInfixOf, isPrefixOf)
+import Data.List (sort, nub, intercalate)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import qualified Data.Text as T
 import qualified Data.Set as Set
@@ -24,7 +26,7 @@ import Parser (TypusFile(..), FileDirectives(..), BlockDirectives(..), CodeBlock
 import Compiler.GoAst (GoModule(..), GoDecl(..))
 import SourceLocation (Located(..), SourceSpan(..), mkSourcePos, mkSourceSpan, locatedWithSpan)
 
--- | Edge case and property-based tests for Compiler.IR module
+-- | Edge case L.and property-based tests for Compiler.IR module
 tests :: TestTree
 tests =
   testGroup "Compiler IR Edge Case Tests"
@@ -145,9 +147,9 @@ tests =
                 let goIR = emitGo semanticIR
                 case goIR of
                   GoIR { goModule = module, goSource = source } -> do
-                    assertBool "source should contain package" ("package main" `isInfixOf` source)
-                    assertBool "source should contain main function" ("func main" `isInfixOf` source)
-                    assertBool "source should contain println" ("println" `isInfixOf` source)
+                    assertBool "source should contain package" ("package main" `L.isInfixOf` source)
+                    assertBool "source should contain main function" ("func main" `L.isInfixOf` source)
+                    assertBool "source should contain println" ("println" `L.isInfixOf` source)
                   _ -> assertFailure "Expected GoIR"
               Left _ -> assertFailure "Expected successful semantic analysis"
         ]
@@ -198,7 +200,7 @@ tests =
                   }
                 ir = buildSourceIR typusFile
             length (tfBuildTags $ sourceTypusFile ir) @?= 2
-            locatedValue (head (tfBuildTags $ sourceTypusFile ir)) @?= "//go:build ignore"
+            locatedValue (L.head (tfBuildTags $ sourceTypusFile ir)) @?= "//go:build ignore"
 
         , testCase "directives are preserved through IR transformations" $ do
             let pos = mkSourcePos 1 1 0
@@ -239,7 +241,7 @@ tests =
                 complexGoCode = unlines
                   [ "package main"
                   , ""
-                  , "type Container[T any] struct {"
+                  , "type Container[T L.any] struct {"
                   , "    data T"
                   , "}"
                   , ""
@@ -270,15 +272,15 @@ tests =
                 let goIR = emitGo semanticIR
                 case goIR of
                   GoIR { goSource = source } -> do
-                    assertBool "source should contain Container" ("Container" `isInfixOf` source)
-                    assertBool "source should contain Writer interface" ("Writer" `isInfixOf` source)
-                    assertBool "source should contain empty function" ("func empty" `isInfixOf` source)
-                    assertBool "source should contain main function" ("func main" `isInfixOf` source)
+                    assertBool "source should contain Container" ("Container" `L.isInfixOf` source)
+                    assertBool "source should contain Writer interface" ("Writer" `L.isInfixOf` source)
+                    assertBool "source should contain empty function" ("func empty" `L.isInfixOf` source)
+                    assertBool "source should contain main function" ("func main" `L.isInfixOf` source)
                   _ -> assertFailure "Expected GoIR"
               Left _ -> assertFailure "Expected successful semantic analysis"
         ]
 
-    , testGroup "Error handling and edge cases"
+    , testGroup "Error handling L.and edge cases"
         [ testCase "IR handles malformed Go code gracefully" $ do
             let pos = mkSourcePos 1 1 0
                 span = mkSourceSpan pos pos
@@ -312,7 +314,7 @@ tests =
                 let goIR = emitGo semanticIR
                 case goIR of
                   GoIR { goSource = source } -> do
-                    assertBool "source should contain package" ("package" `isInfixOf` source)
+                    assertBool "source should contain package" ("package" `L.isInfixOf` source)
                   _ -> assertFailure "Expected GoIR"
               Left _ -> assertFailure "Expected successful semantic analysis for empty file"
         ]

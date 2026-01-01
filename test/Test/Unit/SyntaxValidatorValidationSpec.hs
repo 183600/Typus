@@ -1,6 +1,7 @@
 module Test.Unit.SyntaxValidatorValidationSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), Gen, choose, oneof, listOf, elements)
 import TestSupport.QuickCheck (fastProperty)
@@ -57,7 +58,7 @@ tests =
                 result = validateSyntax noPackage
                 errors = getSyntaxErrors result
             assertBool "Should detect missing package declaration" $ 
-                    any (\e -> errorType e == MissingPackageDeclaration) errors
+                    L.any (\e -> errorType e == MissingPackageDeclaration) errors
 
         , testCase "detects missing closing brace" $ do
             let missingBrace = unlines
@@ -69,10 +70,10 @@ tests =
                 result = validateSyntax missingBrace
                 errors = getSyntaxErrors result
             assertBool "Should detect missing closing brace" $ 
-                    any (\e -> errorType e == MissingBrace) errors
+                    L.any (\e -> errorType e == MissingBrace) errors
         ]
 
-    , testGroup "Bracket and delimiter validation"
+    , testGroup "Bracket L.and delimiter validation"
         [ testCase "detects missing parenthesis" $ do
             let missingParen = unlines
                   [ "package main"
@@ -83,7 +84,7 @@ tests =
                 result = validateSyntax missingParen
                 errors = getSyntaxErrors result
             assertBool "Should detect missing parenthesis" $ 
-                    any (\e -> errorType e == MissingParenthesis) errors
+                    L.any (\e -> errorType e == MissingParenthesis) errors
 
         , testCase "detects missing bracket" $ do
             let missingBracket = unlines
@@ -95,7 +96,7 @@ tests =
                 result = validateSyntax missingBracket
                 errors = getSyntaxErrors result
             assertBool "Should detect missing bracket" $ 
-                    any (\e -> errorType e == MissingBracket) errors
+                    L.any (\e -> errorType e == MissingBracket) errors
 
         , testCase "detects unclosed string literal" $ do
             let unclosedString = unlines
@@ -107,7 +108,7 @@ tests =
                 result = validateSyntax unclosedString
                 errors = getSyntaxErrors result
             assertBool "Should detect unclosed string" $ 
-                    any (\e -> errorType e == UnclosedString) errors
+                    L.any (\e -> errorType e == UnclosedString) errors
 
         , testCase "detects unclosed comment" $ do
             let unclosedComment = unlines
@@ -120,10 +121,10 @@ tests =
                 result = validateSyntax unclosedComment
                 errors = getSyntaxErrors result
             assertBool "Should detect unclosed comment" $ 
-                    any (\e -> errorType e == UnclosedComment) errors
+                    L.any (\e -> errorType e == UnclosedComment) errors
         ]
 
-    , testGroup "Identifier and declaration validation"
+    , testGroup "Identifier L.and declaration validation"
         [ testCase "validates correct identifiers" $ do
             let validIdentifiers = unlines
                   [ "package main"
@@ -147,7 +148,7 @@ tests =
                 result = validateSyntax invalidIdentifiers
                 errors = getSyntaxErrors result
             assertBool "Should detect invalid identifiers" $ 
-                    any (\e -> errorType e == InvalidIdentifier) errors
+                    L.any (\e -> errorType e == InvalidIdentifier) errors
 
         , testCase "detects duplicate declarations" $ do
             let duplicateDecls = unlines
@@ -160,7 +161,7 @@ tests =
                 result = validateSyntax duplicateDecls
                 errors = getSyntaxErrors result
             assertBool "Should detect duplicate declarations" $ 
-                    any (\e -> errorType e == DuplicateDeclaration) errors
+                    L.any (\e -> errorType e == DuplicateDeclaration) errors
 
         , testCase "detects undeclared variables" $ do
             let undeclaredVars = unlines
@@ -172,10 +173,10 @@ tests =
                 result = validateSyntax undeclaredVars
                 errors = getSyntaxErrors result
             assertBool "Should detect undeclared variables" $ 
-                    any (\e -> errorType e == UndeclaredVariable) errors
+                    L.any (\e -> errorType e == UndeclaredVariable) errors
         ]
 
-    , testGroup "Function and type validation"
+    , testGroup "Function L.and type validation"
         [ testCase "validates correct function declarations" $ do
             let validFunctions = unlines
                   [ "package main"
@@ -201,7 +202,7 @@ tests =
                 result = validateSyntax invalidFunctions
                 errors = getSyntaxErrors result
             assertBool "Should detect invalid function declarations" $ 
-                    any (\e -> errorType e == InvalidFunctionDeclaration) errors
+                    L.any (\e -> errorType e == InvalidFunctionDeclaration) errors
 
         , testCase "validates type declarations" $ do
             let validTypes = unlines
@@ -228,10 +229,10 @@ tests =
                 result = validateSyntax invalidTypes
                 errors = getSyntaxErrors result
             assertBool "Should detect invalid type declarations" $ 
-                    any (\e -> errorType e == InvalidTypeDeclaration) errors
+                    L.any (\e -> errorType e == InvalidTypeDeclaration) errors
         ]
 
-    , testGroup "Statement and expression validation"
+    , testGroup "Statement L.and expression validation"
         [ testCase "validates correct statements" $ do
             let validStatements = unlines
                   [ "package main"
@@ -262,7 +263,7 @@ tests =
                 result = validateSyntax invalidStatements
                 errors = getSyntaxErrors result
             assertBool "Should detect invalid statements" $ 
-                    any (\e -> errorType e == InvalidStatement) errors
+                    L.any (\e -> errorType e == InvalidStatement) errors
 
         , testCase "detects missing semicolons where required" $ do
             let missingSemicolons = unlines
@@ -274,8 +275,8 @@ tests =
                   ]
                 result = validateSyntax missingSemicolons
                 errors = getSyntaxErrors result
-            -- May or may not detect depending on language requirements
-            assertBool "Should handle semicolon requirements" $ length errors >= 0
+            -- May L.or may not detect depending on language requirements
+            assertBool "Should handle semicolon requirements" $ L.length errors >= 0
         ]
 
     , testGroup "Import validation"
@@ -307,7 +308,7 @@ tests =
                 result = validateSyntax invalidImports
                 errors = getSyntaxErrors result
             assertBool "Should detect invalid imports" $ 
-                    any (\e -> errorType e == InvalidImport) errors
+                    L.any (\e -> errorType e == InvalidImport) errors
         ]
 
     , testGroup "Block structure validation"
@@ -338,7 +339,7 @@ tests =
                 result = validateSyntax invalidBlocks
                 errors = getSyntaxErrors result
             assertBool "Should detect invalid block structures" $ 
-                    any (\e -> errorType e == InvalidBlockStructure) errors
+                    L.any (\e -> errorType e == InvalidBlockStructure) errors
 
         , testCase "detects unterminated blocks" $ do
             let unterminatedBlocks = unlines
@@ -351,10 +352,10 @@ tests =
                 result = validateSyntax unterminatedBlocks
                 errors = getSyntaxErrors result
             assertBool "Should detect unterminated blocks" $ 
-                    any (\e -> errorType e == UnterminatedBlock) errors
+                    L.any (\e -> errorType e == UnterminatedBlock) errors
         ]
 
-    , testGroup "Error reporting and formatting"
+    , testGroup "Error reporting L.and formatting"
         [ testCase "provides clear error messages" $ do
             let invalidCode = unlines
                   [ "package main"
@@ -368,7 +369,7 @@ tests =
                 (err:_) -> do
                     let formatted = formatSyntaxError err
                     assertBool "Error message should be descriptive" $ 
-                        length (errorMessage err) > 10
+                        L.length (errorMessage err) > 10
                     assertBool "Error should include line number" $ lineNumber err > 0
                     assertBool "Error should include column number" $ columnNumber err > 0
                 [] -> assertBool "Should have detected an error" False
@@ -384,7 +385,7 @@ tests =
                 result = validateSyntax invalidCode
                 errors = getSyntaxErrors result
             assertBool "Errors should be sorted by location" $ 
-                all (\(e1, e2) -> lineNumber e1 <= lineNumber e2) $ zip errors (tail errors)
+                L.all (\(e1, e2) -> lineNumber e1 <= lineNumber e2) $ zip errors (L.tail errors)
         ]
 
     , testGroup "Property-based validation"
@@ -393,7 +394,7 @@ tests =
         , fastProperty "error detection is consistent" prop_errorDetectionConsistent
         ]
 
-    , testGroup "Performance and stress tests"
+    , testGroup "Performance L.and stress tests"
         [ testCase "handles large files efficiently" $ do
             let largeFile = unlines $ 
                   ["package main", "func main() {"] ++
@@ -401,18 +402,18 @@ tests =
                   ["}"]
                 result = validateSyntax largeFile
                 errors = getSyntaxErrors result
-            assertBool "Should handle large files" $ length errors < 100
+            assertBool "Should handle large files" $ L.length errors < 100
 
         , testCase "handles deeply nested structures" $ do
             let deeplyNested = unlines $ 
                   ["package main", "func main() {"] ++
-                  concat [["    if true {"] | _ <- [1..50]] ++
+                  L.concat [["    if true {"] | _ <- [1..50]] ++
                   ["        fmt.Println(\"deeply nested\")"] ++
-                  concat ["    }" | _ <- [1..50]] ++
+                  L.concat ["    }" | _ <- [1..50]] ++
                   ["}"]
                 result = validateSyntax deeplyNested
                 errors = getSyntaxErrors result
-            assertBool "Should handle deep nesting" $ length errors < 20
+            assertBool "Should handle deep nesting" $ L.length errors < 20
 
         , testCase "handles complex expressions" $ do
             let complexExpression = unlines
@@ -423,11 +424,11 @@ tests =
                   ]
                 result = validateSyntax complexExpression
                 errors = getSyntaxErrors result
-            assertBool "Should handle complex expressions" $ length errors >= 0
+            assertBool "Should handle complex expressions" $ L.length errors >= 0
         ]
 
     , testGroup "Mixed language validation"
-        [ testCase "validates mixed Go and Typus code" $ do
+        [ testCase "validates mixed Go L.and Typus code" $ do
             let mixedCode = unlines
                   [ "//! ownership=true"
                   , "package main"
@@ -441,7 +442,7 @@ tests =
                   ]
                 result = validateSyntax mixedCode
                 errors = getSyntaxErrors result
-            assertBool "Should handle mixed language code" $ length errors >= 0
+            assertBool "Should handle mixed language code" $ L.length errors >= 0
 
         , testCase "detects language-specific syntax errors" $ do
             let languageSpecific = unlines
@@ -453,13 +454,13 @@ tests =
                   ]
                 result = validateSyntax languageSpecific
                 errors = getSyntaxErrors result
-            assertBool "Should detect language-specific errors" $ length errors >= 0
+            assertBool "Should detect language-specific errors" $ L.length errors >= 0
         ]
     ]
 
 -- Helper functions
 hasErrorType :: [SyntaxError] -> ErrorType -> Bool
-hasErrorType errors errType = any (\e -> errorType e == errType) errors
+hasErrorType errors errType = L.any (\e -> errorType e == errType) errors
 
 -- | Property: validation is deterministic
 prop_validationDeterministic :: String -> Bool
@@ -475,20 +476,20 @@ prop_validCodeNoErrors code =
         errors = getSyntaxErrors result
     in not (isValidGoLikeCode code) || null errors
   where
-    isValidGoLikeCode c = any (`isInfixOf` c) ["package", "func", "{", "}"]
+    isValidGoLikeCode c = L.any (`L.isInfixOf` c) ["package", "func", "{", "}"]
 
 -- | Property: error detection is consistent
 prop_errorDetectionConsistent :: String -> Bool
 prop_errorDetectionConsistent code =
     let result = validateSyntax code
         errors = getSyntaxErrors result
-    in all isValidError errors
+    in L.all isValidError errors
 
 isValidError :: SyntaxError -> Bool
 isValidError err = 
     lineNumber err > 0 && 
     columnNumber err > 0 && 
-    not (null (errorMessage err))
+    not (L.null (errorMessage err))
 
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` [take (length needle) $ drop i haystack | i <- [0..length haystack - length needle]]
+L.isInfixOf needle haystack = needle `elem` [take (L.length needle) $ drop i haystack | i <- [0..L.length haystack - L.length needle]]

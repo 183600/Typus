@@ -6,6 +6,7 @@ import Test.Tasty (TestTree, testGroup)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import Data.Char (isAlphaNum, isSpace)
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import qualified Data.Text as T
 
@@ -70,7 +71,7 @@ errorHandlerStateProperties = testGroup "Error Handler State Properties"
 -- Error creation properties
 prop_error_preserves_message :: String -> Property
 prop_error_preserves_message msg =
-  let errorMsg = take 1000 msg  -- Limit message length
+  let errorMsg = take 1000 msg  -- Limit message L.length
       errorInfo = ErrorInfo errorMsg ErrorWarning SourceContext (SourcePosition 1 1)
   in not (null errorMsg) ==>
   property $ errorMessage errorInfo == errorMsg
@@ -103,7 +104,7 @@ prop_error_validates_input :: String -> Property
 prop_error_validates_input msg =
   let errorMsg = take 1000 msg
       errorInfo = ErrorInfo errorMsg ErrorWarning SourceContext (SourcePosition 1 1)
-  in property $ not (null (errorMessage errorInfo))
+  in property $ not (L.null (errorMessage errorInfo))
 
 -- Error reporting properties
 prop_error_reporting_records :: String -> Property
@@ -117,14 +118,14 @@ prop_error_reporting_records msg =
 
 prop_error_reporting_order :: [String] -> Property
 prop_error_reporting_order msgs =
-  let errorMessages = map (take 50) (filter (not . null) msgs)
+  let errorMessages = L.map (take 50) (L.filter (not . null) msgs)
       handler = createErrorHandler
-      handlerWithErrors = foldl (\h msg -> 
+      handlerWithErrors = L.foldl (\h msg -> 
         let errorInfo = ErrorInfo msg ErrorWarning SourceContext (SourcePosition 1 1)
         in reportError h errorInfo
       ) handler errorMessages
-  in length errorMessages > 1 ==>
-  property $ length errorMessages <= length errorMessages
+  in L.length errorMessages > 1 ==>
+  property $ L.length errorMessages <= L.length errorMessages
 
 prop_error_reporting_duplicates :: String -> Property
 prop_error_reporting_duplicates msg =
@@ -148,14 +149,14 @@ prop_error_reporting_filters msg severity =
 prop_error_reporting_aggregates :: [String] -> Property
 prop_error_reporting_aggregates msgs =
   let baseMsg = "Base error"
-      variations = map (\m -> baseMsg ++ ": " ++ take 50 m) (filter (not . null) msgs)
+      variations = L.map (\m -> baseMsg ++ ": " ++ take 50 m) (L.filter (not . null) msgs)
       handler = createErrorHandler
-      handlerWithErrors = foldl (\h msg -> 
+      handlerWithErrors = L.foldl (\h msg -> 
         let errorInfo = ErrorInfo msg ErrorWarning SourceContext (SourcePosition 1 1)
         in reportError h errorInfo
       ) handler variations
-  in length variations > 2 ==>
-  property $ length variations == length variations
+  in L.length variations > 2 ==>
+  property $ L.length variations == L.length variations
 
 -- Error recovery properties
 prop_recovery_preserves_state :: String -> Property
@@ -194,7 +195,7 @@ prop_recovery_multiple_attempts msg attempts =
       attempts' = min (max attempts 0) 10  -- Limit attempts
       recoveryResults = replicate attempts' (recoverFromError handler errorInfo)
   in not (null errorMsg) && attempts' > 1 ==>
-  property $ length recoveryResults == attempts'
+  property $ L.length recoveryResults == attempts'
 
 prop_recovery_fallback :: String -> Property
 prop_recovery_fallback msg =
@@ -208,25 +209,25 @@ prop_recovery_fallback msg =
 -- Error context properties
 prop_context_preserves_stack :: [String] -> Property
 prop_context_preserves_stack functions =
-  let functionNames = filter (not . null) (map (take 20) functions)
-      context = foldl (\ctx fn -> FunctionContext fn ctx) SourceContext functionNames
-  in length functionNames > 1 ==>
+  let functionNames = L.filter (not . null) (L.map (take 20) functions)
+      context = L.foldl (\ctx fn -> FunctionContext fn ctx) SourceContext functionNames
+  in L.length functionNames > 1 ==>
   property $ True  -- Would check stack preservation in real implementation
 
 prop_context_captures_environment :: [(String, String)] -> Property
 prop_context_captures_environment envVars =
-  let validEnv = filter (\(k, v) -> not (null k) && not (null v)) envVars
+  let validEnv = L.filter (\(k, v) -> not (null k) && not (null v)) envVars
       context = EnvironmentContext validEnv SourceContext
-  in length validEnv > 0 ==>
+  in L.length validEnv > 0 ==>
   property $ True  -- Would check environment capture
 
 prop_context_nesting :: [String] -> Property
 prop_context_nesting contexts =
-  let contextNames = filter (not . null) (map (take 10) contexts)
-      nestedContext = foldl (\ctx name -> 
+  let contextNames = L.filter (not . null) (L.map (take 10) contexts)
+      nestedContext = L.foldl (\ctx name -> 
         FunctionContext name ctx
       ) SourceContext contextNames
-  in length contextNames > 2 ==>
+  in L.length contextNames > 2 ==>
   property $ True  -- Would check context nesting
 
 prop_context_useful_info :: String -> String -> Property
@@ -239,13 +240,13 @@ prop_context_useful_info file function =
 
 prop_context_cleanup :: [String] -> Property
 prop_context_cleanup contexts =
-  let contextNames = filter (not . null) (map (take 10) contexts)
-      nestedContext = foldl (\ctx name -> 
+  let contextNames = L.filter (not . null) (L.map (take 10) contexts)
+      nestedContext = L.foldl (\ctx name -> 
         FunctionContext name ctx
       ) SourceContext contextNames
       -- Simulate context cleanup
       cleanedContext = SourceContext
-  in length contextNames > 0 ==>
+  in L.length contextNames > 0 ==>
   property $ True  -- Would check cleanup mechanism
 
 -- Error handler state properties
@@ -256,24 +257,24 @@ prop_handler_initialization_clean =
 
 prop_handler_maintains_count :: [String] -> Property
 prop_handler_maintains_count msgs =
-  let errorMessages = filter (not . null) (map (take 50) msgs)
+  let errorMessages = L.filter (not . null) (L.map (take 50) msgs)
       handler = createErrorHandler
-      handlerWithErrors = foldl (\h msg -> 
+      handlerWithErrors = L.foldl (\h msg -> 
         let errorInfo = ErrorInfo msg ErrorWarning SourceContext (SourcePosition 1 1)
         in reportError h errorInfo
       ) handler errorMessages
-  in property $ length errorMessages <= length errorMessages
+  in property $ L.length errorMessages <= L.length errorMessages
 
 prop_handler_can_reset :: [String] -> Property
 prop_handler_can_reset msgs =
-  let errorMessages = filter (not . null) (map (take 50) msgs)
+  let errorMessages = L.filter (not . null) (L.map (take 50) msgs)
       handler = createErrorHandler
-      handlerWithErrors = foldl (\h msg -> 
+      handlerWithErrors = L.foldl (\h msg -> 
         let errorInfo = ErrorInfo msg ErrorWarning SourceContext (SourcePosition 1 1)
         in reportError h errorInfo
       ) handler errorMessages
       resetHandler = createErrorHandler  -- Simulate reset
-  in length errorMessages > 0 ==>
+  in L.length errorMessages > 0 ==>
   property $ True  -- Would check reset functionality
 
 prop_handler_state_consistent :: String -> ErrorSeverity -> Property
@@ -287,12 +288,12 @@ prop_handler_state_consistent msg severity =
 
 prop_handler_concurrent_errors :: [String] -> Property
 prop_handler_concurrent_errors msgs =
-  let errorMessages = filter (not . null) (map (take 50) msgs)
+  let errorMessages = L.filter (not . null) (L.map (take 50) msgs)
       handler = createErrorHandler
       -- Simulate concurrent error reporting
-      handlersWithErrors = map (\msg -> 
+      handlersWithErrors = L.map (\msg -> 
         let errorInfo = ErrorInfo msg ErrorWarning SourceContext (SourcePosition 1 1)
         in reportError handler errorInfo
       ) errorMessages
-  in length errorMessages > 1 ==>
-  property $ length handlersWithErrors == length errorMessages
+  in L.length errorMessages > 1 ==>
+  property $ L.length handlersWithErrors == L.length errorMessages

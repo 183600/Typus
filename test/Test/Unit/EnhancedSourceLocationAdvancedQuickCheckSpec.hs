@@ -4,6 +4,7 @@
 module Test.Unit.EnhancedSourceLocationAdvancedQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), (.&&.), counterexample, forAll, oneof, elements, listOf, sized, choose, Positive(..))
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
 import SourceLocation
@@ -15,7 +16,7 @@ import SourceLocation
   , toErrorLocation, toErrorLocationWithSpan
   )
 import Data.Text (Text)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 import Data.Char (isSpace)
 import Compiler.Errors.Core (ErrorLocation(..))
 
@@ -26,7 +27,7 @@ import Compiler.Errors.Core (ErrorLocation(..))
 tests :: TestTree
 tests = testGroup "SourceLocation Advanced QuickCheck Tests"
   [ testProperty "SourcePos ordering is consistent with offset" prop_pos_ordering_consistent
-  , testProperty "posAfter updates line and column correctly" prop_pos_after_updates_correctly
+  , testProperty "posAfter updates line L.and column correctly" prop_pos_after_updates_correctly
   , testProperty "spanBetween always creates valid span" prop_span_between_valid
   , testProperty "mergeSpans is associative" prop_merge_spans_associative
   , testProperty "mergeSpans is commutative" prop_merge_spans_commutative
@@ -35,7 +36,7 @@ tests = testGroup "SourceLocation Advanced QuickCheck Tests"
   , testProperty "advancePosBy is consistent with repeated posAfter" prop_advance_pos_by_consistent
   , testProperty "advancePosByText handles Unicode correctly" prop_advance_pos_by_text_unicode
   , testProperty "toErrorLocationWithSpan preserves range information" prop_to_error_location_with_span_preserves
-  , testProperty "spanFrom and spanTo create single-point spans" prop_span_from_to_single_point
+  , testProperty "spanFrom L.and spanTo create single-point spans" prop_span_from_to_single_point
   , testProperty "posAtLineCol creates valid positions" prop_pos_at_line_col_valid
   , testCase "SourceLocation handles edge cases" test_source_location_edge_cases
   , testCase "Located values maintain invariants" test_located_invariants
@@ -109,8 +110,8 @@ prop_located_with_span_preserves span value =
 prop_map_located_preserves :: SourceSpan -> String -> Property
 prop_map_located_preserves span value =
   let located = locatedWithSpan span value
-      mapped = mapLocated reverse located
-  in locatedSpan mapped === span .&&. locatedValue mapped === reverse value
+      mapped = mapLocated L.reverse located
+  in locatedSpan mapped === span .&&. locatedValue mapped === L.reverse value
 
 -- ============================================================================
 -- Position Advancement Properties
@@ -119,7 +120,7 @@ prop_map_located_preserves span value =
 prop_advance_pos_by_consistent :: SourcePos -> String -> Property
 prop_advance_pos_by_consistent pos chars =
   let advanceBy = advancePosBy chars pos
-      advanceFold = foldl (flip posAfter) pos chars
+      advanceFold = L.foldl (flip posAfter) pos chars
   in advanceBy === advanceFold
 
 prop_advance_pos_by_text_unicode :: SourcePos -> Property
@@ -251,7 +252,7 @@ genStringWithNewlines = do
     , return "\t"
     , return " "
     ]
-  return $ concat parts
+  return $ L.concat parts
 
 genStringWithTabs :: Gen String
 genStringWithTabs = do
@@ -260,4 +261,4 @@ genStringWithTabs = do
     , return "\t"
     , return " "
     ]
-  return $ concat parts
+  return $ L.concat parts

@@ -13,7 +13,9 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
-import Data.List (isPrefixOf, isInfixOf, intercalate, nub, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (intercalate, nub, sort)
 import Data.Char (isSpace, isLetter, isDigit)
 
 -- Import type system modules
@@ -25,7 +27,7 @@ import qualified Utils
 import qualified ErrorHandler
 import qualified SourceLocation
 
--- | Type system consistency tests covering type checking, inference, and dependent types
+-- | Type system consistency tests covering type checking, inference, L.and dependent types
 tests :: TestTree
 tests =
   testGroup "Type System Consistency"
@@ -74,7 +76,7 @@ tests =
             Compiler.TypeSystem.isValidEnvironment env @?= True
         ]
 
-    , testGroup "Subtyping and Polymorphism"
+    , testGroup "Subtyping L.and Polymorphism"
         [ fastProperty "Subtyping transitivity" prop_subtyping_transitivity
         , fastProperty "Polymorphic type instantiation" prop_polymorphic_instantiation
         , fastProperty "Type variance correctness" prop_type_variance_correctness
@@ -94,7 +96,7 @@ tests =
             let expr = "x: int := \"hello\""  -- Type mismatch
             result <- Compiler.TypeChecker.checkExpression expr
             case result of
-              Left err -> "type mismatch" `isInfixOf` show err @?= True
+              Left err -> "type mismatch" `L.isInfixOf` show err @?= True
               Right _ -> assertFailure "Expected type error"
         ]
 
@@ -116,7 +118,7 @@ tests =
 -- Basic type checking properties
 prop_type_checking_preserves_safety :: String -> Property
 prop_type_checking_preserves_safety input =
-  not (null input) && length input <= 50 && isWellTyped input ==>
+  not (null input) && L.length input <= 50 && isWellTyped input ==>
   let checked = Compiler.TypeChecker.checkExpression input
       isSafe = case checked of
         Left _ -> False
@@ -125,7 +127,7 @@ prop_type_checking_preserves_safety input =
 
 prop_type_inference_consistency :: String -> Property
 prop_type_inference_consistency input =
-  not (null input) && length input <= 30 && isValidExpression input ==>
+  not (null input) && L.length input <= 30 && isValidExpression input ==>
   let inferred1 = Compiler.TypeChecker.inferType input
       inferred2 = Compiler.TypeChecker.inferTypeAgain input
       consistent = case (inferred1, inferred2) of
@@ -136,7 +138,7 @@ prop_type_inference_consistency input =
 prop_type_equivalence_properties :: String -> String -> Property
 prop_type_equivalence_properties type1 type2 =
   not (null type1) && not (null type2) && 
-  all isValidTypeName [type1, type2] ==>
+  L.all isValidTypeName [type1, type2] ==>
   let equiv1 = Compiler.TypeSystem.areEquivalent type1 type2
       equiv2 = Compiler.TypeSystem.areEquivalent type2 type1
       transitive = equiv1 && equiv2 ==> type1 == type2 || 
@@ -155,7 +157,7 @@ prop_type_substitution_maintains_correctness typeName substitution =
 prop_type_unification_properties :: String -> String -> Property
 prop_type_unification_properties type1 type2 =
   not (null type1) && not (null type2) && 
-  all isValidTypeName [type1, type2] ==>
+  L.all isValidTypeName [type1, type2] ==>
   let unified = Compiler.TypeSystem.unifyTypes type1 type2
       hasSolution = case unified of
         Left _ -> False
@@ -168,7 +170,7 @@ prop_type_unification_properties type1 type2 =
 
 prop_type_generalization_correctness :: String -> Property
 prop_type_generalization_correctness input =
-  not (null input) && length input <= 30 && isValidExpression input ==>
+  not (null input) && L.length input <= 30 && isValidExpression input ==>
   let specialized = Compiler.TypeChecker.inferType input
       generalized = case specialized of
         Right t -> Just <$> Compiler.TypeSystem.generalizeType t
@@ -187,12 +189,12 @@ prop_dependent_type_validation input =
       isValid = case validated of
         Left _ -> False
         Right _ -> True
-  in property $ isValid || length input > 20  -- May fail for complex inputs
+  in property $ isValid || L.length input > 20  -- May fail for complex inputs
 
 prop_type_dependency_tracking :: String -> String -> Property
 prop_type_dependency_tracking var1 var2 =
   not (null var1) && not (null var2) && 
-  all isValidVariableName [var1, var2] ==>
+  L.all isValidVariableName [var1, var2] ==>
   let expr = var1 ++ ": int = 42; " ++ var2 ++ ": int = " ++ var1 ++ " + 1"
       dependencies = DependentTypes.extractDependencies expr
       hasDependency = var1 `elem` dependencies || var2 `elem` dependencies
@@ -200,34 +202,34 @@ prop_type_dependency_tracking var1 var2 =
 
 prop_dependent_type_reduction :: String -> Property
 prop_dependent_type_reduction input =
-  not (null input) && length input <= 20 ==>
+  not (null input) && L.length input <= 20 ==>
   let dependentType = "vector<" ++ input ++ ">"
       reduced = DependentTypes.reduce dependentType
       isSimplified = case reduced of
         Left _ -> False
-        Right r -> length r <= length dependentType
+        Right r -> L.length r <= L.length dependentType
   in property $ isSimplified
 
 -- Type environment properties
 prop_type_environment_consistency :: [(String, String)] -> Property
 prop_type_environment_consistency bindings =
-  not (null bindings) && length bindings <= 5 &&
-  all (\(v, t) -> isValidVariableName v && isValidTypeName t) bindings ==>
+  not (null bindings) && L.length bindings <= 5 &&
+  L.all (\(v, t) -> isValidVariableName v && isValidTypeName t) bindings ==>
   let env = Compiler.TypeSystem.createEnvironment bindings
       consistent = Compiler.TypeSystem.isConsistent env
-      bindingsPresent = all (\(v, _) -> Compiler.TypeSystem.hasBinding env v) bindings
+      bindingsPresent = L.all (\(v, _) -> Compiler.TypeSystem.hasBinding env v) bindings
   in property $ consistent .&&. bindingsPresent
 
 prop_scope_handling_correctness :: [String] -> Property
 prop_scope_handling_correctness variables =
-  not (null variables) && length variables <= 5 &&
-  all isValidVariableName variables ==>
+  not (null variables) && L.length variables <= 5 &&
+  L.all isValidVariableName variables ==>
   let env = Compiler.TypeSystem.emptyEnvironment
-      envWithScopes = foldr (\var env' -> Compiler.TypeSystem.enterScope env' >>= 
+      envWithScopes = L.foldr (\var env' -> Compiler.TypeSystem.enterScope env' >>= 
                               Compiler.TypeSystem.addBinding var "int") (Right env) variables
       scopeCorrect = case envWithScopes of
         Left _ -> False
-        Right e -> all (Compiler.TypeSystem.hasBinding e) variables
+        Right e -> L.all (Compiler.TypeSystem.hasBinding e) variables
   in property $ scopeCorrect
 
 prop_type_variable_binding :: String -> String -> Property
@@ -244,10 +246,10 @@ prop_type_variable_binding var typeName =
         Right e -> Compiler.TypeSystem.lookupType e var == Right typeName
   in property $ bindingExists .&&. typeCorrect
 
--- Subtyping and polymorphism properties
+-- Subtyping L.and polymorphism properties
 prop_subtyping_transitivity :: String -> String -> String -> Property
 prop_subtyping_transitivity type1 type2 type3 =
-  all isValidTypeName [type1, type2, type3] ==>
+  L.all isValidTypeName [type1, type2, type3] ==>
   let sub12 = Compiler.TypeSystem.isSubtype type1 type2
       sub23 = Compiler.TypeSystem.isSubtype type2 type3
       sub13 = Compiler.TypeSystem.isSubtype type1 type3
@@ -282,8 +284,8 @@ prop_type_error_messages_informative expr expectedType =
   not (null expr) && not (null expectedType) ==>
   let typeError = Compiler.TypeChecker.checkTypeMismatch expr expectedType
       messageInformative = case typeError of
-        Left err -> "type" `isInfixOf` show err && 
-                   expectedType `isInfixOf` show err
+        Left err -> "type" `L.isInfixOf` show err && 
+                   expectedType `L.isInfixOf` show err
         Right _ -> False
   in property $ messageInformative
 
@@ -294,14 +296,14 @@ prop_type_error_recovery input =
       hasRecovery = case recovered of
         Left _ -> False
         Right r -> Compiler.TypeChecker.hasPartialTypes r
-  in property $ hasRecovery || length input < 3
+  in property $ hasRecovery || L.length input < 3
 
 prop_type_error_context_preservation :: String -> String -> Property
 prop_type_error_context_preservation input context =
   not (null input) && not (null context) ==>
   let result = Compiler.TypeChecker.checkWithContext input context
       contextPreserved = case result of
-        Left err -> context `isInfixOf` show err
+        Left err -> context `L.isInfixOf` show err
         Right _ -> True  -- Success is also acceptable
   in property $ contextPreserved
 
@@ -315,11 +317,11 @@ prop_generic_type_constraints typeName constraint =
       isValidConstraint = case validated of
         Left _ -> False
         Right _ -> True
-  in property $ isValidConstraint || length constraint > 30
+  in property $ isValidConstraint || L.length constraint > 30
 
 prop_type_level_computation :: String -> Property
 prop_type_level_computation input =
-  not (null input) && length input <= 20 ==>
+  not (null input) && L.length input <= 20 ==>
   let typeExpr = "int[" ++ input ++ "]"
       computed = Compiler.TypeSystem.computeType typeExpr
       isComputable = case computed of
@@ -329,23 +331,23 @@ prop_type_level_computation input =
 
 prop_higher_kinded_types :: String -> Property
 prop_higher_kinded_types constructor =
-  not (null constructor) && length constructor <= 15 ==>
+  not (null constructor) && L.length constructor <= 15 ==>
   let higherKinded = "Functor<" ++ constructor ++ ">"
       validated = Compiler.TypeSystem.checkHigherKinded higherKinded
       isValid = case validated of
         Left _ -> False
         Right _ -> True
-  in property $ isValid || length constructor > 10
+  in property $ isValid || L.length constructor > 10
 
 -- Helper functions
 isValidExpression :: String -> Bool
-isValidExpression = all (`elem` "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 +-*/()=;{}<>")
+isValidExpression = L.all (`elem` "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 +-*/()=;{}<>")
 
 isValidTypeName :: String -> Bool
-isValidTypeName = all (`elem` "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
+isValidTypeName = L.all (`elem` "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
 
 isValidVariableName :: String -> Bool
-isValidVariableName = all (`elem` "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
+isValidVariableName = L.all (`elem` "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
 
 isWellTyped :: String -> Bool
 isWellTyped input = case Compiler.TypeChecker.quickCheck input of

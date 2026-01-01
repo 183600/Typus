@@ -5,6 +5,7 @@ module Test.Unit.EnhancedCoreFunctionalityQuickCheckSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (Property, testProperty, Arbitrary(..), Gen, oneof, elements, listOf, choose, arbitrary, forAll, (===), (==>), suchThat)
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 
 import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed, removeLineComments, removeComments, normalizeIndentation)
@@ -55,26 +56,26 @@ genSourceSpan = do
 prop_trim_preserves_content :: Property
 prop_trim_preserves_content = forAll genString $ \s ->
   let trimmed = trim s
-      nonSpaceContent = filter (not . isSpace) s
-  in null nonSpaceContent || (filter (not . isSpace) trimmed) === nonSpaceContent
+      nonSpaceContent = L.filter (not . isSpace) s
+  in null nonSpaceContent || (L.filter (not . isSpace) trimmed) === nonSpaceContent
 
--- | Test that trim removes leading and trailing whitespace
+-- | Test that trim removes leading L.and trailing whitespace
 prop_trim_removes_whitespace :: Property
 prop_trim_removes_whitespace = forAll genString $ \s ->
   let trimmed = trim s
-  in not (null trimmed) ==> (isSpace (head trimmed) == False) && (isSpace (last trimmed) == False)
+  in not (null trimmed) ==> (isSpace (L.head trimmed) == False) && (isSpace (last trimmed) == False)
 
 -- | Test that splitBy preserves empty segments
 prop_splitBy_preserves_empty :: Property
 prop_splitBy_preserves_empty = forAll arbitrary $ \delim ->
   forAll genString $ \s ->
-    splitBy delim s === map (unlines . lines) (splitBy delim (unlines . lines $ s))
+    splitBy delim s === L.map (unlines . lines) (splitBy delim (unlines . lines $ s))
 
 -- | Test that splitByCollapsed removes empty segments
 prop_splitByCollapsed_removes_empty :: Property
 prop_splitByCollapsed_removes_empty = forAll arbitrary $ \delim ->
   forAll genString $ \s ->
-    all (not . null) (splitByCollapsed delim s)
+    L.all (not . null) (splitByCollapsed delim s)
 
 -- | Test that splitByComma is equivalent to splitBy ','
 prop_splitByComma_equivalence :: Property
@@ -89,17 +90,17 @@ prop_splitByCommaCollapsed_equivalence = forAll genString $ \s ->
 -- | Test that removeLineComments removes content after //
 prop_removeLineComments_removes_content :: Property
 prop_removeLineComments_removes_content = forAll genCommentString $ \s ->
-  let hasComment = "//" `isInfixOf` s
+  let hasComment = "//" `L.isInfixOf` s
       cleaned = removeLineComments s
       lines' = lines cleaned
-  in hasComment ==> all (not . ("//" `isPrefixOf`)) lines'
+  in hasComment ==> L.all (not . ("//" `L.isPrefixOf`)) lines'
 
 -- | Test that removeComments handles block comments
 prop_removeComments_handles_blocks :: Property
 prop_removeComments_handles_blocks = forAll genCommentString $ \s ->
-  let hasBlock = "/*" `isInfixOf` s && "*/" `isInfixOf` s
+  let hasBlock = "/*" `L.isInfixOf` s && "*/" `L.isInfixOf` s
       cleaned = removeComments s
-  in hasBlock ==> not ("/*" `isInfixOf` cleaned) && not ("*/" `isInfixOf` cleaned)
+  in hasBlock ==> not ("/*" `L.isInfixOf` cleaned) && not ("*/" `L.isInfixOf` cleaned)
 
 -- | Test that normalizeIndentation preserves relative indentation
 prop_normalizeIndentation_preserves_relative :: Property
@@ -107,7 +108,7 @@ prop_normalizeIndentation_preserves_relative = forAll genIndentedString $ \s ->
   let normalized = normalizeIndentation s
       originalLines = lines s
       normalizedLines = lines normalized
-  in length originalLines === length normalizedLines
+  in L.length originalLines === L.length normalizedLines
 
 -- | Test that startPos creates a valid position
 prop_startPos_valid :: Property
@@ -162,7 +163,7 @@ prop_locatedWithSpan_valid = forAll arbitrary $ \value ->
 tests :: TestTree
 tests = testGroup "Enhanced Core Functionality QuickCheck Tests"
   [ testProperty "trim preserves non-whitespace content" prop_trim_preserves_content
-  , testProperty "trim removes leading and trailing whitespace" prop_trim_removes_whitespace
+  , testProperty "trim removes leading L.and trailing whitespace" prop_trim_removes_whitespace
   , testProperty "splitBy preserves empty segments" prop_splitBy_preserves_empty
   , testProperty "splitByCollapsed removes empty segments" prop_splitByCollapsed_removes_empty
   , testProperty "splitByComma is equivalent to splitBy ','" prop_splitByComma_equivalence

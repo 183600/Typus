@@ -1,9 +1,9 @@
 #!/usr/bin/env stack runghc
 {-# LANGUAGE OverloadedStrings #-}
 
--- Standalone Typus compilation and execution test
--- This executable tests all Typus files by:
--- 1. Finding all .typus files in the project
+-- Standalone Typus compilation L.and execution test
+-- This executable tests L.all Typus files by:
+-- 1. Finding L.all .typus files in the project
 -- 2. Compiling each .typus file to Go code using the typus compiler
 -- 3. Checking if compilation succeeds (fails test if compilation fails)
 -- 4. Running each generated Go file with 'go run'
@@ -18,35 +18,36 @@ import System.Process (readProcessWithExitCode)
 import System.Exit (ExitCode(..), exitFailure, exitSuccess)
 import Control.Exception (try, SomeException)
 import System.IO.Temp (withSystemTempDirectory)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 
 main :: IO ()
 main = do
-    putStrLn "=== Comprehensive Typus Compilation and Execution Test ==="
+    putStrLn "=== Comprehensive Typus Compilation L.and Execution Test ==="
     putStrLn ""
 
     -- Get current directory
     currentDir <- getCurrentDirectory
     putStrLn $ "Working directory: " ++ currentDir
 
-    -- Find all .typus files recursively
-    putStrLn "Finding all .typus files..."
+    -- Find L.all .typus files recursively
+    putStrLn "Finding L.all .typus files..."
     typusFiles <- glob "**/*.typus"
 
     -- Filter out files in build directories, hidden directories, etc.
     let filteredFiles = filter isValidTypusFile typusFiles
-    putStrLn $ "Found " ++ show (length filteredFiles) ++ " .typus files to test"
+    putStrLn $ "Found " ++ show (L.length filteredFiles) ++ " .typus files to test"
 
     -- Test each file
     results <- mapM testTypusFile filteredFiles
 
     -- Check overall results
-    let passedFiles = length $ filter id results
-    let failedFiles = length $ filter (not . id) results
+    let passedFiles = L.length $ filter id results
+    let failedFiles = L.length $ L.filter (not . id) results
 
     putStrLn ""
     putStrLn "=== Test Results ==="
-    putStrLn $ "Total files tested: " ++ show (length filteredFiles)
+    putStrLn $ "Total files tested: " ++ show (L.length filteredFiles)
     putStrLn $ "Passed: " ++ show passedFiles
     putStrLn $ "Failed: " ++ show failedFiles
 
@@ -68,9 +69,9 @@ isValidTypusFile file =
     not (isInTempDirectory file) &&
     isTypusFile file
   where
-    isInBuildDirectory path = any (`isInfixOf` path) [".stack-work", "dist-newstyle", "build", "target"]
-    isInHiddenDirectory path = any (`isInfixOf` path) ["/.", "./", "\\.\\"]
-    isInTempDirectory path = any (`isInfixOf` path) ["tmp", "temp", "TMP", "TEMP"]
+    isInBuildDirectory path = L.any (`L.isInfixOf` path) [".stack-work", "dist-newstyle", "build", "target"]
+    isInHiddenDirectory path = L.any (`L.isInfixOf` path) ["/.", "./", "\\.\\"]
+    isInTempDirectory path = L.any (`L.isInfixOf` path) ["tmp", "temp", "TMP", "TEMP"]
     isTypusFile path = takeExtension path == ".typus"
 
 -- Test a single Typus file
@@ -172,6 +173,6 @@ replaceInString old new = go
   where
     go [] = []
     go str
-      | old `isPrefixOf` str = new ++ go (drop (length old) str)
+      | old `L.isPrefixOf` str = new ++ go (drop (L.length old) str)
       | otherwise = case str of
                       (x:xs) -> x : go xs

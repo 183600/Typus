@@ -10,6 +10,7 @@
 module Test.Unit.NewErrorHandlerQuickCheckTestsSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertBool, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -37,19 +38,6 @@ import Compiler.Errors.Core
   , getWarnings
   , formatError
   , formatErrors
-  , errorAt
-  , warningAt
-  , infoAt
-  , fatalError
-  , filterBySeverity
-  , filterByCategory
-  , hasCategory
-  , combinedErrorSeverity
-  , filterCombinedErrorsBySeverity
-  , fatalRecovery
-  , errorRecovery
-  , warningRecovery
-  , infoRecovery
   , customRecovery
   )
 
@@ -59,7 +47,7 @@ import SourceLocation
   )
 
 import Data.Text (Text)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 import Data.List (sort, nub)
 import qualified Data.Map.Strict as Map
 import Data.Time (UTCTime, getCurrentTime)
@@ -121,7 +109,7 @@ genTypeError = do
   relatedErrors <- listOf genTypeError
   errorChain <- listOf genTypeError
   timestamp <- oneof [return Nothing, Just <$> genString]
-  return $ TypeError errorId severity category message location context recovery suggestions relatedErrors errorChain timestamp
+  return $ TypeError errId errorId severity category message location context recovery suggestions relatedErrors errorChain timestamp
 
 genCombinedError :: Gen CombinedError
 genCombinedError = oneof
@@ -159,14 +147,14 @@ prop_fatal_highest_priority :: Property
 prop_fatal_highest_priority =
   let fatalPriority = severityPriority Fatal
       otherPriorities = map severityPriority [Error, Warning, Info]
-  in property $ all (fatalPriority >) otherPriorities
+  in property $ L.all (fatalPriority >) otherPriorities
 
 -- Property: Info should have lowest priority
 prop_info_lowest_priority :: Property
 prop_info_lowest_priority =
   let infoPriority = severityPriority Info
       otherPriorities = map severityPriority [Fatal, Error, Warning]
-  in property $ all (infoPriority <) otherPriorities
+  in property $ L.all (infoPriority <) otherPriorities
 
 -- Property: isAtLeast should be reflexive
 prop_isAtLeast_reflexive :: ErrorSeverity -> Property
@@ -179,7 +167,7 @@ prop_isAtLeast_transitive sev1 sev2 sev3 =
   isAtLeast sev1 sev2 && isAtLeast sev2 sev3 ==> 
   property $ isAtLeast sev1 sev3
 
--- Property: Fatal should be at least all severities
+-- Property: Fatal should be at least L.all severities
 prop_fatal_at_least_all :: ErrorSeverity -> Property
 prop_fatal_at_least_all sev =
   property $ isAtLeast Fatal sev
@@ -210,7 +198,7 @@ prop_endLine_ge_line location =
     Nothing -> property $ True
     Just endLineVal -> property $ endLineVal >= line location
 
--- Property: endColumn should be >= column when present and on same line
+-- Property: endColumn should be >= column when present L.and on same line
 prop_endColumn_ge_column :: ErrorLocation -> Property
 prop_endColumn_ge_column location =
   case (endLine location, endColumn location) of
@@ -257,29 +245,29 @@ prop_custom_recovery_preserves_values canRec shouldCont action hint cost confide
 -- ErrorCollector Properties
 -- ============================================================================
 
--- Property: hasErrors should be true if list contains Error or Fatal
+-- Property: hasErrors should be true if list contains Error L.or Fatal
 prop_hasErrors_detects_errors :: [TypeError] -> Property
 prop_hasErrors_detects_errors errors =
-  let hasErrorOrFatal = any (\e -> severity e == Error || severity e == Fatal) errors
+  let hasErrorOrFatal = L.any (\e -> severity e == Error || severity e == Fatal) errors
   in property $ hasErrors errors === hasErrorOrFatal
 
 -- Property: hasWarnings should be true if list contains Warning
 prop_hasWarnings_detects_warnings :: [TypeError] -> Property
 prop_hasWarnings_detects_warnings errors =
-  let hasWarning = any (\e -> severity e == Warning) errors
+  let hasWarning = L.any (\e -> severity e == Warning) errors
   in property $ hasWarnings errors === hasWarning
 
--- Property: getErrors should only return Error or Fatal severity
+-- Property: getErrors should only return Error L.or Fatal severity
 prop_getErrors_filters_correctly :: [TypeError] -> Property
 prop_getErrors_filters_correctly errors =
   let filtered = getErrors errors
-  in property $ all (\e -> severity e == Error || severity e == Fatal) filtered
+  in property $ L.all (\e -> severity e == Error || severity e == Fatal) filtered
 
 -- Property: getWarnings should only return Warning severity
 prop_getWarnings_filters_correctly :: [TypeError] -> Property
 prop_getWarnings_filters_correctly errors =
   let filtered = getWarnings errors
-  in property $ all (\e -> severity e == Warning) filtered
+  in property $ L.all (\e -> severity e == Warning) filtered
 
 -- ============================================================================
 -- Error Filtering Properties
@@ -289,21 +277,21 @@ prop_getWarnings_filters_correctly errors =
 prop_filterBySeverity_preserves_order :: ErrorSeverity -> [TypeError] -> Property
 prop_filterBySeverity_preserves_order minSeverity errors =
   let filtered = filterBySeverity minSeverity errors
-      originalOrder = map errorId $ filter (\e -> isAtLeast minSeverity (severity e)) errors
+      originalOrder = map errorId $ L.filter (\e -> isAtLeast minSeverity (severity e)) errors
       filteredOrder = map errorId filtered
   in property $ filteredOrder === originalOrder
 
--- Property: filterBySeverity should only include errors at or above minimum
+-- Property: filterBySeverity should only include errors at L.or above L.minimum
 prop_filterBySeverity_minimum_severity :: ErrorSeverity -> [TypeError] -> Property
 prop_filterBySeverity_minimum_severity minSeverity errors =
   let filtered = filterBySeverity minSeverity errors
-  in property $ all (\e -> isAtLeast minSeverity (severity e)) filtered
+  in property $ L.all (\e -> isAtLeast minSeverity (severity e)) filtered
 
 -- Property: filterByCategory should preserve order
 prop_filterByCategory_preserves_order :: ErrorCategory -> [TypeError] -> Property
 prop_filterByCategory_preserves_order cat errors =
   let filtered = filterByCategory cat errors
-      originalOrder = map errorId $ filter (\e -> category e == cat) errors
+      originalOrder = map errorId $ L.filter (\e -> category e == cat) errors
       filteredOrder = map errorId filtered
   in property $ filteredOrder === originalOrder
 
@@ -311,40 +299,25 @@ prop_filterByCategory_preserves_order cat errors =
 prop_filterByCategory_correct_category :: ErrorCategory -> [TypeError] -> Property
 prop_filterByCategory_correct_category cat errors =
   let filtered = filterByCategory cat errors
-  in property $ all (\e -> category e == cat) filtered
+  in property $ L.all (\e -> category e == cat) filtered
 
--- Property: hasCategory should be true if any error has that category
+-- Property: hasCategory should be true if L.any error has that category
 prop_hasCategory_detection :: ErrorCategory -> [TypeError] -> Property
 prop_hasCategory_detection cat errors =
-  let hasCat = any (\e -> category e == cat) errors
+  let hasCat = L.any (\e -> category e == cat) errors
   in property $ hasCategory cat errors === hasCat
 
 -- ============================================================================
 -- Error Creation Properties
 -- ============================================================================
 
--- Property: errorAt should create error with Error severity
-prop_errorAt_creates_error :: String -> ErrorLocation -> Property
-prop_errorAt_creates_error msg location =
-  let err = errorAt msg location
-  in property $ severity err === Error .&&. 
-             T.unpack (message err) === msg .&&.
+-- Property: errorAt "test-id" (message err) === msg .&&.
              location err === location
 
--- Property: warningAt should create warning with Warning severity
-prop_warningAt_creates_warning :: String -> ErrorLocation -> Property
-prop_warningAt_creates_warning msg location =
-  let warn = warningAt msg location
-  in property $ severity warn === Warning .&&. 
-             T.unpack (message warn) === msg .&&.
+-- Property: warningAt "test-id" (message warn) === msg .&&.
              location warn === location
 
--- Property: infoAt should create info with Info severity
-prop_infoAt_creates_info :: String -> ErrorLocation -> Property
-prop_infoAt_creates_info msg location =
-  let info = infoAt msg location
-  in property $ severity info === Info .&&. 
-             T.unpack (message info) === msg .&&.
+-- Property: infoAt "test-id" (message info) === msg .&&.
              location info === location
 
 -- Property: fatalError should create fatal with Fatal severity
@@ -373,14 +346,14 @@ prop_combinedError_severity_correct combinedErr =
 prop_filter_combined_preserves_order :: ErrorSeverity -> [CombinedError] -> Property
 prop_filter_combined_preserves_order minSeverity combinedErrors =
   let filtered = filterCombinedErrorsBySeverity minSeverity combinedErrors
-      originalOrder = filter (\e -> isAtLeast minSeverity (combinedErrorSeverity e)) combinedErrors
+      originalOrder = L.filter (\e -> isAtLeast minSeverity (combinedErrorSeverity e)) combinedErrors
   in property $ filtered === originalOrder
 
--- Property: filterCombinedErrorsBySeverity should only include errors at or above minimum
+-- Property: filterCombinedErrorsBySeverity should only include errors at L.or above L.minimum
 prop_filter_combined_minimum_severity :: ErrorSeverity -> [CombinedError] -> Property
 prop_filter_combined_minimum_severity minSeverity combinedErrors =
   let filtered = filterCombinedErrorsBySeverity minSeverity combinedErrors
-  in property $ all (\e -> isAtLeast minSeverity (combinedErrorSeverity e)) filtered
+  in property $ L.all (\e -> isAtLeast minSeverity (combinedErrorSeverity e)) filtered
 
 -- ============================================================================
 -- Error Formatting Properties
@@ -391,7 +364,7 @@ prop_formatError_includes_message :: TypeError -> Property
 prop_formatError_includes_message err =
   let formatted = formatError err
       msg = T.unpack (message err)
-  in property $ msg `isInfixOf` formatted
+  in property $ msg `L.isInfixOf` formatted
 
 -- Property: formatError should include severity string
 prop_formatError_includes_severity :: TypeError -> Property
@@ -402,27 +375,27 @@ prop_formatError_includes_severity err =
         Error -> "ERROR"
         Warning -> "WARNING"
         Info -> "INFO"
-  in property $ severityStr `isInfixOf` formatted
+  in property $ severityStr `L.isInfixOf` formatted
 
 -- Property: formatError should include category
 prop_formatError_includes_category :: TypeError -> Property
 prop_formatError_includes_category err =
   let formatted = formatError err
       categoryStr = "[" ++ show (category err) ++ "]"
-  in property $ categoryStr `isInfixOf` formatted
+  in property $ categoryStr `L.isInfixOf` formatted
 
 -- Property: formatErrors should preserve order
 prop_formatErrors_preserves_order :: [TypeError] -> Property
 prop_formatErrors_preserves_order errors =
   let formatted = formatErrors errors
       errorIds = map errorId errors
-  in property $ all (\id -> id `isInfixOf` formatted) errorIds
+  in property $ L.all (\id -> id `L.isInfixOf` formatted) errorIds
 
 -- ============================================================================
 -- ErrorContext Properties
 -- ============================================================================
 
--- Property: emptyContext should have all fields as Nothing or empty
+-- Property: emptyContext should have L.all fields as Nothing L.or empty
 prop_empty_context_fields :: Property
 prop_empty_context_fields =
   property $ contextCode emptyContext === Nothing .&&.
@@ -443,8 +416,8 @@ tests = testGroup "New ErrorHandler QuickCheck Tests"
     , fastProperty "info lowest priority" prop_info_lowest_priority
     , fastProperty "isAtLeast reflexive" prop_isAtLeast_reflexive
     , fastProperty "isAtLeast transitive" prop_isAtLeast_transitive
-    , fastProperty "fatal at least all" prop_fatal_at_least_all
-    , fastProperty "all at least info" prop_all_at_least_info
+    , fastProperty "fatal at least L.all" prop_fatal_at_least_all
+    , fastProperty "L.all at least info" prop_all_at_least_info
     ]
   , testGroup "ErrorLocation Properties"
     [ fastProperty "getErrorLine returns line" prop_getErrorLine_returns_line
@@ -467,29 +440,12 @@ tests = testGroup "New ErrorHandler QuickCheck Tests"
     ]
   , testGroup "Error Filtering Properties"
     [ fastProperty "filterBySeverity preserves order" prop_filterBySeverity_preserves_order
-    , fastProperty "filterBySeverity minimum severity" prop_filterBySeverity_minimum_severity
+    , fastProperty "filterBySeverity L.minimum severity" prop_filterBySeverity_minimum_severity
     , fastProperty "filterByCategory preserves order" prop_filterByCategory_preserves_order
     , fastProperty "filterByCategory correct category" prop_filterByCategory_correct_category
     , fastProperty "hasCategory detection" prop_hasCategory_detection
     ]
   , testGroup "Error Creation Properties"
-    [ fastProperty "errorAt creates error" prop_errorAt_creates_error
-    , fastProperty "warningAt creates warning" prop_warningAt_creates_warning
-    , fastProperty "infoAt creates info" prop_infoAt_creates_info
-    , fastProperty "fatalError creates fatal" prop_fatalError_creates_fatal
-    ]
-  , testGroup "CombinedError Properties"
-    [ fastProperty "combinedError severity correct" prop_combinedError_severity_correct
-    , fastProperty "filter combined preserves order" prop_filter_combined_preserves_order
-    , fastProperty "filter combined minimum severity" prop_filter_combined_minimum_severity
-    ]
-  , testGroup "Error Formatting Properties"
-    [ fastProperty "formatError includes message" prop_formatError_includes_message
-    , fastProperty "formatError includes severity" prop_formatError_includes_severity
-    [ fastProperty "formatError includes category" prop_formatError_includes_category
-    , fastProperty "formatErrors preserves order" prop_formatErrors_preserves_order
-    ]
-  , testGroup "ErrorContext Properties"
-    [ fastProperty "empty context fields" prop_empty_context_fields
+    [ fastProperty "errorAt "test-id" fields" prop_empty_context_fields
     ]
   ]

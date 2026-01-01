@@ -10,6 +10,7 @@
 module Test.Unit.OwnershipNewQuickCheckTests (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertBool, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, choose, listOf, suchThat)
@@ -29,7 +30,8 @@ import Ownership
   )
 
 import Ownership.Common.Types
-import Data.List (sort, nub, isInfixOf, isPrefixOf)
+import Data.List (isInfixOf, isPrefixOf)
+import Data.List (sort, nub)
 import Data.Maybe (isJust, isNothing)
 import Data.Char (isAlphaNum)
 
@@ -79,8 +81,8 @@ genVarName = do
 genSimpleCode :: Gen String
 genSimpleCode = do
   vars <- listOf genVarName
-  let assignments = map (\v -> v ++ " := " ++ "value") vars
-      uses = map (\v -> "println(" ++ v ++ ")") vars
+  let assignments = L.map (\v -> v ++ " := " ++ "value") vars
+      uses = L.map (\v -> "println(" ++ v ++ ")") vars
   return $ unlines $ assignments ++ uses
 
 -- Generate code with ownership moves
@@ -189,7 +191,7 @@ prop_ownership_transfer_show_informative from to =
   not (null from) && not (null to) ==>
   let transfer = OwnershipTransfer from to
       shown = show transfer
-  in property $ from `isInfixOf` shown .&&. to `isInfixOf` shown
+  in property $ from `L.isInfixOf` shown .&&. to `L.isInfixOf` shown
 
 -- ============================================================================
 -- Analyzer Properties
@@ -334,7 +336,7 @@ prop_format_includes_error_info =
   forAll arbitrary $ \err ->
   let formatted = formatOwnershipErrors [err]
       errStr = show err
-  in property $ errStr `isInfixOf` formatted
+  in property $ errStr `L.isInfixOf` formatted
 
 -- ============================================================================
 -- Built-in Functions Properties
@@ -349,12 +351,12 @@ prop_builtin_functions_not_empty =
 prop_builtin_functions_contains_expected :: Property
 prop_builtin_functions_contains_expected =
   let expected = ["println", "len", "make", "new", "fmt.Println"]
-  in property $ all (`elem` builtInFunctions) expected
+  in property $ L.all (`elem` builtInFunctions) expected
 
 -- Property: builtInFunctions has no duplicates
 prop_builtin_functions_no_duplicates :: Property
 prop_builtin_functions_no_duplicates =
-  property $ length builtInFunctions === length (nub builtInFunctions)
+  property $ L.length builtInFunctions === L.length (nub builtInFunctions)
 
 -- ============================================================================
 -- Complex Interaction Properties

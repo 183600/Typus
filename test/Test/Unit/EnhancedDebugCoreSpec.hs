@@ -3,6 +3,7 @@
 module Test.Unit.EnhancedDebugCoreSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Text as T
@@ -20,8 +21,8 @@ import TestSupport.Arbitrary ()
 prop_debug_level_ordering :: DebugLevel -> DebugLevel -> Property
 prop_debug_level_ordering level1 level2 =
   let levels = [Trace, Debug, Info, Warning, Error, Critical]
-      level1Index = length $ takeWhile (/= level1) levels
-      level2Index = length $ takeWhile (/= level2) levels
+      level1Index = L.length $ takeWhile (/= level1) levels
+      level2Index = L.length $ takeWhile (/= level2) levels
   in (level1Index <= level2Index) ==> level1 <= level2
 
 -- Test 2: Debug context preservation
@@ -41,7 +42,7 @@ prop_debug_message_formatting msg level =
       debugResult = debugMessage context
   in case runDebug debugResult of
     Left _ -> property True
-    Right output -> msg `isInfixOf` output
+    Right output -> msg `L.isInfixOf` output
 
 -- Test 4: Debug integration consistency
 prop_debug_integration_consistency :: String -> DebugLevel -> Property
@@ -82,20 +83,20 @@ prop_debug_context_positions msg level line col =
 -- Test 8: Multiple debug messages
 prop_multiple_debug_messages :: [String] -> DebugLevel -> Property
 prop_multiple_debug_messages msgs level =
-  length msgs < 10 ==> -- Limit complexity
-  let contexts = map (\msg -> DebugContext (SourcePos 1 1 0) level msg) msgs
+  L.length msgs < 10 ==> -- Limit complexity
+  let contexts = L.map (\msg -> DebugContext (SourcePos 1 1 0) level msg) msgs
       debugResults = map debugMessage contexts
       runResults = map runDebug debugResults
-  in length runResults === length msgs
+  in L.length runResults === L.length msgs
 
 -- Test 9: Debug output types
 prop_debug_output_types :: DebugOutput -> Property
 prop_debug_output_types output =
   case output of
-    DebugMessage msg -> length msg >= 0
-    DebugError err -> length err >= 0
-    DebugWarning warn -> length warn >= 0
-    DebugInfo info -> length info >= 0
+    DebugMessage msg -> L.length msg >= 0
+    DebugError err -> L.length err >= 0
+    DebugWarning warn -> L.length warn >= 0
+    DebugInfo info -> L.length info >= 0
 
 -- Test 10: Enhanced debug with spans
 prop_enhanced_debug_spans :: String -> DebugLevel -> SourceSpan -> Property

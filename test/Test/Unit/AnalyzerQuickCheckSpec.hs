@@ -3,6 +3,7 @@
 module Test.Unit.AnalyzerQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import TestSupport.Arbitrary
@@ -42,7 +43,7 @@ prop_symbolinfo_default name =
      isBorrowed symbolInfo === False .&&.
      constraints symbolInfo === []
 
--- Property: SymbolInfo with all values set
+-- Property: SymbolInfo with L.all values set
 prop_symbolinfo_complete :: String -> DepTS.TypeVar -> Own.OwnershipType -> Int -> [Dep.Constraint] -> Property
 prop_symbolinfo_complete name typeVar ownership scope constraintList =
   let symbolInfo = SymbolInfo name (Just typeVar) (Just ownership) scope True True constraintList
@@ -76,9 +77,9 @@ prop_analyzer_state_updates :: [(String, SymbolInfo)] -> Property
 prop_analyzer_state_updates symbols =
   not (null symbols) ==> 
   let state = AnalyzerState undefined undefined 0 Map.empty (AnalysisContext True True "test" InitialPhase) [] [] []
-      updated = foldl (\st (name, info) -> 
+      updated = L.foldl (\st (name, info) -> 
         st { symbolTable = Map.insert name info (symbolTable st) }) state symbols
-  in property $ Map.size (symbolTable updated) === length symbols
+  in property $ Map.size (symbolTable updated) === L.length symbols
 
 -- Property: SymbolKind classification
 prop_symbol_kind_classification :: SymbolKind -> Property
@@ -126,17 +127,17 @@ prop_symbol_resolution symbols query =
 prop_error_collection :: [CombinedError] -> Property
 prop_error_collection errors =
   let initial = AnalysisResult [] [] [] [] [] Map.empty
-      withErrors = foldl (\result err -> 
+      withErrors = L.foldl (\result err -> 
         result { combinedErrors = err : combinedErrors result }) initial errors
-  in property $ length (combinedErrors withErrors) === length errors
+  in property $ L.length (combinedErrors withErrors) === L.length errors
 
 -- Property: Warning collection
 prop_warning_collection :: [String] -> Property
 prop_warning_collection warnings =
   let initial = AnalysisResult [] [] [] [] [] Map.empty
-      withWarnings = foldl (\result warn -> 
+      withWarnings = L.foldl (\result warn -> 
         result { analysisWarnings = warn : analysisWarnings result }) initial warnings
-  in property $ length (analysisWarnings withWarnings) === length warnings
+  in property $ L.length (analysisWarnings withWarnings) === L.length warnings
 
 -- Property: Symbol dependency tracking
 prop_symbol_dependencies :: [(String, [String])] -> Property
@@ -205,12 +206,12 @@ prop_error_recovery errors =
 prop_config_validation :: Property
 prop_config_validation =
   let result = AnalysisResult [] [] [] [] [] Map.empty
-  in property $ null (ownershipErrors result) &&
-                null (dependentTypeErrors result) &&
-                null (combinedErrors result) &&
-                null (analysisWarnings result) &&
-                null (analysisInfo result) &&
-                Map.null (typeEnvironment result)
+  in property $ L.null (ownershipErrors result) &&
+                L.null (dependentTypeErrors result) &&
+                L.null (combinedErrors result) &&
+                L.null (analysisWarnings result) &&
+                L.null (analysisInfo result) &&
+                Map.L.null (typeEnvironment result)
 
 -- Property: AnalysisResult with values
 prop_analysisresult_with_values :: [DepTS.DependentTypeError] -> [String] -> [String] -> Property
@@ -218,10 +219,10 @@ prop_analysisresult_with_values typeErrors warnings info =
   let ownershipErrs = [(Error, Own.UseAfterMove "test")]
       combinedErrs = [OwnershipErrorCombined Error (Own.UseAfterMove "test")]
       typeEnv = Map.singleton "Test" (DepTS.TVCon "Int")
-      result = AnalysisResult ownershipErrs (map ((,) Error) typeErrors) combinedErrs warnings info typeEnv
-  in property $ not (null (ownershipErrors result)) .&&.
-     length (dependentTypeErrors result) === length typeErrors .&&.
-     not (null (combinedErrors result)) .&&.
+      result = AnalysisResult ownershipErrs (L.map ((,) Error) typeErrors) combinedErrs warnings info typeEnv
+  in property $ not (L.null (ownershipErrors result)) .&&.
+     L.length (dependentTypeErrors result) === L.length typeErrors .&&.
+     not (L.null (combinedErrors result)) .&&.
      analysisWarnings result === warnings .&&.
      analysisInfo result === info .&&.
      Map.size (typeEnvironment result) === 1
@@ -241,10 +242,10 @@ prop_analyzerstate_basic context scope =
   let state = AnalyzerState undefined undefined scope Map.empty context [] [] []
   in currentScope state === scope .&&.
      analysisContext state === context .&&.
-     Map.null (symbolTable state) .&&.
-     null (combinedErrorsAcc state) .&&.
-     null (ownershipErrorsAcc state) .&&.
-     null (dependentTypeErrorsAcc state)
+     Map.L.null (symbolTable state) .&&.
+     L.null (combinedErrorsAcc state) .&&.
+     L.null (ownershipErrorsAcc state) .&&.
+     L.null (dependentTypeErrorsAcc state)
 
 -- Property: AnalysisPhase equality
 prop_analysisphase_eq :: AnalysisPhase -> AnalysisPhase -> Bool
@@ -264,7 +265,7 @@ prop_errorseverity_ordering sev1 sev2 =
   let result = compare sev1 sev2
   in (result == LT || result == EQ || result == GT) === True
 
--- Property: SymbolInfo with moved and borrowed flags
+-- Property: SymbolInfo with moved L.and borrowed flags
 prop_symbolinfo_moved_borrowed :: String -> Bool -> Bool -> Property
 prop_symbolinfo_moved_borrowed name moved borrowed =
   let symbolInfo = SymbolInfo name Nothing Nothing 0 moved borrowed []
@@ -276,7 +277,7 @@ prop_symbolinfo_constraints :: String -> [Dep.Constraint] -> Property
 prop_symbolinfo_constraints name constraintList =
   let symbolInfo = SymbolInfo name Nothing Nothing 0 False False constraintList
   in constraints symbolInfo === constraintList .&&.
-     length (constraints symbolInfo) === length constraintList
+     L.length (constraints symbolInfo) === L.length constraintList
 
 -- Property: AnalysisResult type environment operations
 prop_analysisresult_typeenv :: [(String, DepTS.TypeVar)] -> Property
@@ -284,16 +285,16 @@ prop_analysisresult_typeenv pairs =
   let typeEnv = Map.fromList pairs
       result = AnalysisResult [] [] [] [] [] typeEnv
       uniquePairs = Map.toList typeEnv
-  in Map.size (typeEnvironment result) === length uniquePairs .&&.
-     property (all (\(k, v) -> Map.lookup k (typeEnvironment result) == Just v) uniquePairs)
+  in Map.size (typeEnvironment result) === L.length uniquePairs .&&.
+     property (L.all (\(k, v) -> Map.lookup k (typeEnvironment result) == Just v) uniquePairs)
 
 -- Property: AnalysisContext with different phases
 prop_analysiscontext_phases :: Bool -> Bool -> String -> Property
 prop_analysiscontext_phases ownership deps file =
   let phases = [InitialPhase, OwnershipPhase, DependentTypePhase, IntegrationPhase]
-      contexts = map (\phase -> AnalysisContext ownership deps file phase) phases
-  in property (all (\ctx -> enableOwnership ctx == ownership && enableDependentTypes ctx == deps) contexts) .&&.
-     property (all (\ctx -> currentFile ctx == file) contexts)
+      contexts = L.map (\phase -> AnalysisContext ownership deps file phase) phases
+  in property (L.all (\ctx -> enableOwnership ctx == ownership && enableDependentTypes ctx == deps) contexts) .&&.
+     property (L.all (\ctx -> currentFile ctx == file) contexts)
 
 -- Property: AnalyzerState symbol table operations
 prop_analyzerstate_symboltable :: [(String, SymbolInfo)] -> AnalysisContext -> Property
@@ -301,26 +302,26 @@ prop_analyzerstate_symboltable pairs context =
   let symTable = Map.fromList pairs
       state = AnalyzerState undefined undefined 0 symTable context [] [] []
       uniquePairs = Map.toList symTable
-  in Map.size (symbolTable state) === length uniquePairs .&&.
-     property (all (\(k, v) -> Map.lookup k (symbolTable state) == Just v) uniquePairs)
+  in Map.size (symbolTable state) === L.length uniquePairs .&&.
+     property (L.all (\(k, v) -> Map.lookup k (symbolTable state) == Just v) uniquePairs)
 
 -- Property: AnalysisResult error accumulation
 prop_analysisresult_errors :: [Own.OwnershipError] -> [DepTS.DependentTypeError] -> Property
 prop_analysisresult_errors ownErrors depErrors =
-  let ownErrs = map ((,) Error) ownErrors
-      depErrs = map ((,) Warning) depErrors
+  let ownErrs = L.map ((,) Error) ownErrors
+      depErrs = L.map ((,) Warning) depErrors
       result = AnalysisResult ownErrs depErrs [] [] [] Map.empty
-  in length (ownershipErrors result) === length ownErrors .&&.
-     length (dependentTypeErrors result) === length depErrors
+  in L.length (ownershipErrors result) === L.length ownErrors .&&.
+     L.length (dependentTypeErrors result) === L.length depErrors
 
 -- Property: AnalysisResult combined errors
 prop_analysisresult_combined :: [CombinedError] -> Property
 prop_analysisresult_combined combinedErrs =
   let result = AnalysisResult [] [] combinedErrs [] [] Map.empty
   in combinedErrors result === combinedErrs .&&.
-     length (combinedErrors result) === length combinedErrs
+     L.length (combinedErrors result) === L.length combinedErrs
 
--- Property: AnalysisResult warnings and info
+-- Property: AnalysisResult warnings L.and info
 prop_analysisresult_warnings_info :: [String] -> [String] -> Property
 prop_analysisresult_warnings_info warnings info =
   let result = AnalysisResult [] [] [] warnings info Map.empty
@@ -355,20 +356,20 @@ prop_analysiscontext_settings =
         , AnalysisContext False False "test4.typus" IntegrationPhase
         ]
   in property $ 
-       all (\ctx -> not (null (currentFile ctx))) contexts .&&.
-       length contexts === 4
+       L.all (\ctx -> not (L.null (currentFile ctx))) contexts .&&.
+       L.length contexts === 4
 
 -- Property: AnalyzerState error accumulation
 prop_analyzerstate_errors :: [CombinedError] -> [Own.OwnershipError] -> [DepTS.DependentTypeError] -> AnalysisContext -> Property
 prop_analyzerstate_errors combined own dep context =
-  let ownErrs = map ((,) Error) own
-      depErrs = map ((,) Warning) dep
+  let ownErrs = L.map ((,) Error) own
+      depErrs = L.map ((,) Warning) dep
       state = AnalyzerState undefined undefined 0 Map.empty context combined ownErrs depErrs
   in combinedErrorsAcc state === combined .&&.
      ownershipErrorsAcc state === ownErrs .&&.
      dependentTypeErrorsAcc state === depErrs
 
--- Property: SymbolInfo with all fields
+-- Property: SymbolInfo with L.all fields
 prop_symbolinfo_all_fields :: String -> Maybe DepTS.TypeVar -> Maybe Own.OwnershipType -> Int -> Bool -> Bool -> [Dep.Constraint] -> Property
 prop_symbolinfo_all_fields name maybeType maybeOwnership scope moved borrowed constraintList =
   let symbolInfo = SymbolInfo name maybeType maybeOwnership scope moved borrowed constraintList
@@ -383,8 +384,8 @@ prop_symbolinfo_all_fields name maybeType maybeOwnership scope moved borrowed co
 -- Property: AnalysisResult comprehensive
 prop_analysisresult_comprehensive :: [Own.OwnershipError] -> [DepTS.DependentTypeError] -> [CombinedError] -> [String] -> [String] -> [(String, DepTS.TypeVar)] -> Property
 prop_analysisresult_comprehensive ownErrors depErrors combinedErrs warnings info typePairs =
-  let ownErrs = map ((,) Error) ownErrors
-      depErrs = map ((,) Warning) depErrors
+  let ownErrs = L.map ((,) Error) ownErrors
+      depErrs = L.map ((,) Warning) depErrors
       typeEnv = Map.fromList typePairs
       result = AnalysisResult ownErrs depErrs combinedErrs warnings info typeEnv
   in ownershipErrors result === ownErrs .&&.
@@ -398,8 +399,8 @@ prop_analysisresult_comprehensive ownErrors depErrors combinedErrs warnings info
 prop_analyzerstate_comprehensive :: Int -> [(String, SymbolInfo)] -> [CombinedError] -> [Own.OwnershipError] -> [DepTS.DependentTypeError] -> Bool -> Bool -> String -> AnalysisPhase -> Property
 prop_analyzerstate_comprehensive scope symbolPairs combined own dep ownership deps file phase =
   let symTable = Map.fromList symbolPairs
-      ownErrs = map ((,) Error) own
-      depErrs = map ((,) Warning) dep
+      ownErrs = L.map ((,) Error) own
+      depErrs = L.map ((,) Warning) dep
       context = AnalysisContext ownership deps file phase
       state = AnalyzerState undefined undefined scope symTable context combined ownErrs depErrs
   in currentScope state === scope .&&.
@@ -413,8 +414,8 @@ prop_analyzerstate_comprehensive scope symbolPairs combined own dep ownership de
 prop_analysisphase_ordering :: Property
 prop_analysisphase_ordering =
   let phases = [InitialPhase, OwnershipPhase, DependentTypePhase, IntegrationPhase]
-      ordered = zip phases (tail phases)
-  in property $ all (\(p1, p2) -> p1 < p2) ordered
+      ordered = zip phases (L.tail phases)
+  in property $ L.all (\(p1, p2) -> p1 < p2) ordered
 
 -- Property: SymbolKind exhaustive
 prop_symbolkind_exhaustive :: SymbolKind -> Property
@@ -486,24 +487,24 @@ prop_dependent_type_inference_consistency :: [(String, SymbolInfo)] -> [DepTS.Ty
 prop_dependent_type_inference_consistency symbols expectedTypes =
   (not (null expectedTypes) && not (null symbols)) ==>
   let inference = inferDependentTypes symbols
-      expectedExprs = map (\tv -> ("expected", convertDepTypeVarToExpr tv)) expectedTypes
+      expectedExprs = L.map (\tv -> ("expected", convertDepTypeVarToExpr tv)) expectedTypes
   in property $ typeInferenceConsistent inference symbols (map snd expectedExprs)
   where
     convertDepTypeVarToExpr :: DepTS.TypeVar -> Dep.TypeExpr
     convertDepTypeVarToExpr (DepTS.TVCon name) = Dep.SimpleT (T.pack name)
     convertDepTypeVarToExpr (DepTS.TVVar name) = Dep.SimpleT (T.pack name)
     convertDepTypeVarToExpr (DepTS.TVApp name args) = Dep.GenericT (T.pack name) (map convertDepTypeVarToExpr args)
-    convertDepTypeVarToExpr (DepTS.TVFun params ret) = Dep.FuncT (zip (map (const (T.pack "param")) params) (map convertDepTypeVarToExpr params)) (convertDepTypeVarToExpr ret)
+    convertDepTypeVarToExpr (DepTS.TVFun params ret) = Dep.FuncT (zip (L.map (const (T.pack "param")) params) (map convertDepTypeVarToExpr params)) (convertDepTypeVarToExpr ret)
     convertDepTypeVarToExpr (DepTS.TVTuple types) = Dep.GenericT (T.pack "Tuple") (map convertDepTypeVarToExpr types)
 
 -- Property: Analysis performance with large symbol tables
 prop_analysis_performance_large_tables :: [(String, SymbolInfo)] -> Property
 prop_analysis_performance_large_tables symbols =
-  length symbols <= 1000 ==> -- Limit for performance testing
+  L.length symbols <= 1000 ==> -- Limit for performance testing
   let performance = measureAnalysisPerformance symbols
   in performanceIsAcceptable performance symbols
 
--- Property: Error recovery and continuation
+-- Property: Error recovery L.and continuation
 prop_error_recovery_continuation :: [CombinedError] -> AnalyzerState -> Property
 prop_error_recovery_continuation errors state =
   let recovery = attemptErrorRecovery errors state
@@ -566,7 +567,7 @@ prop_analysis_error_classification errors =
 -- Property: Type environment consistency checks
 prop_type_environment_consistency :: [(String, DepTS.TypeVar)] -> Property
 prop_type_environment_consistency typeEnv =
-  let typeExprEnv = map (\(name, tv) -> (name, convertDepTypeVarToExpr tv)) typeEnv
+  let typeExprEnv = L.map (\(name, tv) -> (name, convertDepTypeVarToExpr tv)) typeEnv
       consistency = checkTypeEnvironmentConsistency typeExprEnv
   in property $ typeEnvironmentConsistencyIsCorrect consistency typeExprEnv
   where
@@ -574,7 +575,7 @@ prop_type_environment_consistency typeEnv =
     convertDepTypeVarToExpr (DepTS.TVCon name) = Dep.SimpleT (T.pack name)
     convertDepTypeVarToExpr (DepTS.TVVar name) = Dep.SimpleT (T.pack name)
     convertDepTypeVarToExpr (DepTS.TVApp name args) = Dep.GenericT (T.pack name) (map convertDepTypeVarToExpr args)
-    convertDepTypeVarToExpr (DepTS.TVFun params ret) = Dep.FuncT (zip (map (const (T.pack "param")) params) (map convertDepTypeVarToExpr params)) (convertDepTypeVarToExpr ret)
+    convertDepTypeVarToExpr (DepTS.TVFun params ret) = Dep.FuncT (zip (L.map (const (T.pack "param")) params) (map convertDepTypeVarToExpr params)) (convertDepTypeVarToExpr ret)
     convertDepTypeVarToExpr (DepTS.TVTuple types) = Dep.GenericT (T.pack "Tuple") (map convertDepTypeVarToExpr types)
 
 -- Property: Symbol shadowing detection
@@ -592,7 +593,7 @@ prop_analysis_optimization_strategies state strategies =
 -- Property: Memory usage analysis
 prop_memory_usage_analysis :: [(String, SymbolInfo)] -> Property
 prop_memory_usage_analysis symbols =
-  length symbols <= 500 ==> -- Limit for memory testing
+  L.length symbols <= 500 ==> -- Limit for memory testing
   let memoryUsage = analyzeMemoryUsage symbols
   in property $ memoryUsageIsAcceptable memoryUsage symbols
 
@@ -629,20 +630,20 @@ symbolTableConsistencyMaintained consistency _ _ = consistency
 
 aggregateErrorsAcrossPhases :: [Own.OwnershipError] -> [DepTS.DependentTypeError] -> [AnalysisPhase] -> [CombinedError]
 aggregateErrorsAcrossPhases own dep _ = 
-  map (uncurry OwnershipErrorCombined) (zip (repeat Error) own) ++ 
-  map (uncurry DependentTypeErrorCombined) (zip (repeat Warning) dep)
+  L.map (uncurry OwnershipErrorCombined) (zip (repeat Error) own) ++ 
+  L.map (uncurry DependentTypeErrorCombined) (zip (repeat Warning) dep)
 
 errorAggregationIsCorrect :: [CombinedError] -> [Own.OwnershipError] -> [DepTS.DependentTypeError] -> [AnalysisPhase] -> Bool
 errorAggregationIsCorrect aggregated own dep phases = 
-  length aggregated >= length own + length dep && length phases >= 0
+  L.length aggregated >= L.length own + L.length dep && L.length phases >= 0
 
 propagateAnalysisContext :: AnalysisContext -> [String] -> [(String, AnalysisContext)]
 propagateAnalysisContext context files = zip files (repeat context)
 
 contextPropagationIsCorrect :: [(String, AnalysisContext)] -> AnalysisContext -> [String] -> Bool
 contextPropagationIsCorrect propagated context files = 
-  length propagated == length files && 
-  all (\(_, ctx) -> ctx == context) propagated
+  L.length propagated == L.length files && 
+  L.all (\(_, ctx) -> ctx == context) propagated
 
 integrateAnalysisResults :: AnalysisResult -> AnalysisResult -> AnalysisPhase -> AnalysisResult
 integrateAnalysisResults result1 result2 _ = 
@@ -657,35 +658,35 @@ integrateAnalysisResults result1 result2 _ =
 
 crossPhaseIntegrationIsCorrect :: AnalysisResult -> AnalysisResult -> AnalysisResult -> AnalysisPhase -> Bool
 crossPhaseIntegrationIsCorrect integrated result1 result2 _ = 
-  length (ownershipErrors integrated) >= length (ownershipErrors result1) &&
-  length (ownershipErrors integrated) >= length (ownershipErrors result2)
+  L.length (ownershipErrors integrated) >= L.length (ownershipErrors result1) &&
+  L.length (ownershipErrors integrated) >= L.length (ownershipErrors result2)
 
 analyzeSymbolInheritance :: SymbolInfo -> [SymbolInfo] -> [(String, SymbolInfo)]
-analyzeSymbolInheritance parent children = zip (map (const "child") children) children
+analyzeSymbolInheritance parent children = zip (L.map (const "child") children) children
 
 symbolInheritanceIsCorrect :: [(String, SymbolInfo)] -> SymbolInfo -> [SymbolInfo] -> Bool
 symbolInheritanceIsCorrect inheritance parent children = 
-  length inheritance == length children
+  L.length inheritance == L.length children
 
 mergeTypeEnvironments :: [(String, DepTS.TypeVar)] -> [(String, DepTS.TypeVar)] -> [(String, DepTS.TypeVar)]
 mergeTypeEnvironments env1 env2 = env1 ++ env2 -- Simplified
 
 typeEnvironmentMergingIsCorrect :: [(String, DepTS.TypeVar)] -> [(String, DepTS.TypeVar)] -> [(String, DepTS.TypeVar)] -> Bool
 typeEnvironmentMergingIsCorrect merged env1 env2 = 
-  length merged == length env1 + length env2
+  L.length merged == L.length env1 + L.length env2
 
 applyStateTransitions :: AnalyzerState -> [AnalysisPhase] -> [AnalyzerState]
-applyStateTransitions state phases = map (\phase -> state { analysisContext = (analysisContext state) { analysisPhase = phase } }) phases
+applyStateTransitions state phases = L.map (\phase -> state { analysisContext = (analysisContext state) { analysisPhase = phase } }) phases
 
 stateTransitionsAreValid :: [AnalyzerState] -> AnalyzerState -> [AnalysisPhase] -> Bool
 stateTransitionsAreValid transitions initial phases = 
-  length transitions == length phases &&
-  all (\state -> currentScope state == currentScope initial) transitions
+  L.length transitions == L.length phases &&
+  L.all (\state -> currentScope state == currentScope initial) transitions
 
 propagateConstraints :: [(String, SymbolInfo)] -> [DepTS.TypeConstraint] -> [(String, SymbolInfo)]
 propagateConstraints symbols newConstraints = 
   let depConstraints = map convertDepTypeConstraintToDep newConstraints
-  in map (\(name, info) -> (name, info { constraints = depConstraints })) symbols
+  in L.map (\(name, info) -> (name, info { constraints = depConstraints })) symbols
   where
     convertDepTypeConstraintToDep :: DepTS.TypeConstraint -> Dep.Constraint
     convertDepTypeConstraintToDep (DepTS.Equal tv1 tv2) = Dep.PredC (T.pack "equal") [convertDepTypeVarToExpr tv1, convertDepTypeVarToExpr tv2]
@@ -699,7 +700,7 @@ propagateConstraints symbols newConstraints =
     convertDepTypeVarToExpr (DepTS.TVCon name) = Dep.SimpleT (T.pack name)
     convertDepTypeVarToExpr (DepTS.TVVar name) = Dep.SimpleT (T.pack name)
     convertDepTypeVarToExpr (DepTS.TVApp name args) = Dep.GenericT (T.pack name) (map convertDepTypeVarToExpr args)
-    convertDepTypeVarToExpr (DepTS.TVFun params ret) = Dep.FuncT (zip (map (const (T.pack "param")) params) (map convertDepTypeVarToExpr params)) (convertDepTypeVarToExpr ret)
+    convertDepTypeVarToExpr (DepTS.TVFun params ret) = Dep.FuncT (zip (L.map (const (T.pack "param")) params) (map convertDepTypeVarToExpr params)) (convertDepTypeVarToExpr ret)
     convertDepTypeVarToExpr (DepTS.TVTuple types) = Dep.GenericT (T.pack "Tuple") (map convertDepTypeVarToExpr types)
     
     convertDepTypeVarToText :: DepTS.TypeVar -> T.Text
@@ -711,36 +712,36 @@ propagateConstraints symbols newConstraints =
 
 constraintPropagationIsCorrect :: [(String, SymbolInfo)] -> [(String, SymbolInfo)] -> [Dep.Constraint] -> Bool
 constraintPropagationIsCorrect propagated symbols newConstraints = 
-  length propagated == length symbols &&
-  all (\(_, info) -> constraints info == newConstraints) propagated
+  L.length propagated == L.length symbols &&
+  L.all (\(_, info) -> constraints info == newConstraints) propagated
 
 trackOwnershipStates :: [(String, SymbolInfo)] -> [String] -> [(String, Maybe Own.OwnershipType)]
-trackOwnershipStates symbols _ = map (\(name, info) -> (name, ownershipState info)) symbols
+trackOwnershipStates symbols _ = L.map (\(name, info) -> (name, ownershipState info)) symbols
 
 ownershipStateTrackingIsCorrect :: [(String, Maybe Own.OwnershipType)] -> [(String, SymbolInfo)] -> [String] -> Bool
 ownershipStateTrackingIsCorrect tracking symbols _ = 
-  length tracking == length symbols
+  L.length tracking == L.length symbols
 
 inferDependentTypes :: [(String, SymbolInfo)] -> [(String, Dep.TypeExpr)]
-inferDependentTypes symbols = map (\(name, info) -> (name, maybe (Dep.SimpleT (T.pack "Unknown")) convertDepTypeVarToExpr (symbolType info))) symbols
+inferDependentTypes symbols = L.map (\(name, info) -> (name, maybe (Dep.SimpleT (T.pack "Unknown")) convertDepTypeVarToExpr (symbolType info))) symbols
   where
     convertDepTypeVarToExpr :: DepTS.TypeVar -> Dep.TypeExpr
     convertDepTypeVarToExpr (DepTS.TVCon name) = Dep.SimpleT (T.pack name)
     convertDepTypeVarToExpr (DepTS.TVVar name) = Dep.SimpleT (T.pack name)
     convertDepTypeVarToExpr (DepTS.TVApp name args) = Dep.GenericT (T.pack name) (map convertDepTypeVarToExpr args)
-    convertDepTypeVarToExpr (DepTS.TVFun params ret) = Dep.FuncT (zip (map (const (T.pack "param")) params) (map convertDepTypeVarToExpr params)) (convertDepTypeVarToExpr ret)
+    convertDepTypeVarToExpr (DepTS.TVFun params ret) = Dep.FuncT (zip (L.map (const (T.pack "param")) params) (map convertDepTypeVarToExpr params)) (convertDepTypeVarToExpr ret)
     convertDepTypeVarToExpr (DepTS.TVTuple types) = Dep.GenericT (T.pack "Tuple") (map convertDepTypeVarToExpr types)
 
 typeInferenceConsistent :: [(String, Dep.TypeExpr)] -> [(String, SymbolInfo)] -> [Dep.TypeExpr] -> Bool
 typeInferenceConsistent inferred symbols _expected = 
-  length inferred == length symbols &&
-  all (\(name, _) -> any (\(sname, _) -> name == sname) symbols) inferred
+  L.length inferred == L.length symbols &&
+  L.all (\(name, _) -> L.any (\(sname, _) -> name == sname) symbols) inferred
 
 measureAnalysisPerformance :: [(String, SymbolInfo)] -> (Int, Int)
-measureAnalysisPerformance symbols = (length symbols, length symbols * 2) -- Simplified
+measureAnalysisPerformance symbols = (L.length symbols, L.length symbols * 2) -- Simplified
 
 performanceIsAcceptable :: (Int, Int) -> [(String, SymbolInfo)] -> Bool
-performanceIsAcceptable _ symbols = length symbols <= 1000
+performanceIsAcceptable _ symbols = L.length symbols <= 1000
 
 attemptErrorRecovery :: [CombinedError] -> AnalyzerState -> Maybe AnalyzerState
 attemptErrorRecovery _ state = Just state
@@ -753,18 +754,18 @@ resolveSymbolsAcrossScopes :: [(String, SymbolInfo)] -> [(String, Int)] -> [(Str
 resolveSymbolsAcrossScopes symbols _ = symbols
 
 symbolResolutionIsCorrect :: [(String, SymbolInfo)] -> [(String, SymbolInfo)] -> [(String, Int)] -> Bool
-symbolResolutionIsCorrect resolved original _ = length resolved == length original
+symbolResolutionIsCorrect resolved original _ = L.length resolved == L.length original
 
 validateAnalysisResult :: AnalysisResult -> [String]
 validateAnalysisResult result = 
-  if null (ownershipErrors result) && null (dependentTypeErrors result)
+  if L.null (ownershipErrors result) && L.null (dependentTypeErrors result)
   then ["valid"]
   else ["invalid"]
 
 resultValidationIsCorrect :: [String] -> AnalysisResult -> Bool
 resultValidationIsCorrect validation result = 
-  (head validation == "valid") == 
-  (null (ownershipErrors result) && null (dependentTypeErrors result))
+  (L.head validation == "valid") == 
+  (L.null (ownershipErrors result) && L.null (dependentTypeErrors result))
 
 solveDepTypeConstraints :: [(String, DepTS.TypeVar)] -> [DepTS.TypeConstraint] -> [(String, DepTS.TypeVar)]
 solveDepTypeConstraints typeEnv _ = typeEnv
@@ -777,14 +778,14 @@ manageSymbolLifecycles names lifecycles = zip names lifecycles
 
 lifecycleManagementIsCorrect :: [(String, Int)] -> [String] -> [Int] -> Bool
 lifecycleManagementIsCorrect managed names lifecycles = 
-  length managed == min (length names) (length lifecycles)
+  L.length managed == min (L.length names) (L.length lifecycles)
 
 measureCachingEfficiency :: [(String, SymbolInfo)] -> [String] -> (Int, Int)
-measureCachingEfficiency symbols queries = (length symbols, length queries)
+measureCachingEfficiency symbols queries = (L.length symbols, L.length queries)
 
 cachingEfficiencyIsAcceptable :: (Int, Int) -> [(String, SymbolInfo)] -> [String] -> Bool
 cachingEfficiencyIsAcceptable _ symbols queries = 
-  length symbols >= 0 && length queries >= 0
+  L.length symbols >= 0 && L.length queries >= 0
 
 facilitateAnalyzerCommunication :: AnalyzerState -> AnalyzerState -> (AnalyzerState, AnalyzerState)
 facilitateAnalyzerCommunication state1 state2 = (state1, state2)
@@ -801,18 +802,18 @@ incrementalAnalysisIsCorrect incremental original _ = incremental == original
 
 trackSymbolDependencies :: [(String, SymbolInfo)] -> [(String, String)] -> [(String, [String])]
 trackSymbolDependencies symbols dependencies = 
-  map (\(name, _) -> (name, [dep | (from, dep) <- dependencies, from == name])) symbols
+  L.map (\(name, _) -> (name, [dep | (from, dep) <- dependencies, from == name])) symbols
 
 dependencyTrackingIsCorrect :: [(String, [String])] -> [(String, SymbolInfo)] -> [(String, String)] -> Bool
 dependencyTrackingIsCorrect tracking symbols dependencies = 
-  length tracking == length symbols &&
-  all (\(name, deps) -> all (`elem` map snd (filter ((== name) . fst) dependencies)) deps) tracking
+  L.length tracking == L.length symbols &&
+  L.all (\(name, deps) -> L.all (`elem` map snd (L.filter ((== name) . fst) dependencies)) deps) tracking
 
 classifyAnalysisErrors :: [CombinedError] -> [(CombinedError, String)]
 classifyAnalysisErrors errors = zip errors (repeat "general")
 
 errorClassificationIsCorrect :: [(CombinedError, String)] -> [CombinedError] -> Bool
-errorClassificationIsCorrect classified original = length classified == length original
+errorClassificationIsCorrect classified original = L.length classified == L.length original
 
 checkTypeEnvironmentConsistency :: [(String, Dep.TypeExpr)] -> Bool
 checkTypeEnvironmentConsistency _ = True
@@ -826,7 +827,7 @@ detectSymbolShadowing symbols scopes =
 
 shadowingDetectionIsCorrect :: [(String, Int)] -> [(String, SymbolInfo)] -> [(String, Int)] -> Bool
 shadowingDetectionIsCorrect shadowing symbols scopes = 
-  length shadowing >= 0 && length symbols >= 0 && length scopes >= 0
+  L.length shadowing >= 0 && L.length symbols >= 0 && L.length scopes >= 0
 
 applyAnalysisOptimization :: AnalyzerState -> [String] -> AnalyzerState
 applyAnalysisOptimization state _ = state
@@ -835,11 +836,11 @@ optimizationIsEffective :: AnalyzerState -> AnalyzerState -> [String] -> Bool
 optimizationIsEffective optimized original _ = optimized == original
 
 analyzeMemoryUsage :: [(String, SymbolInfo)] -> (Int, Int)
-analyzeMemoryUsage symbols = (length symbols, length symbols * 100) -- Simplified
+analyzeMemoryUsage symbols = (L.length symbols, L.length symbols * 100) -- Simplified
 
 memoryUsageIsAcceptable :: (Int, Int) -> [(String, SymbolInfo)] -> Bool
 memoryUsageIsAcceptable (count, bytes) symbols = 
-  count == length symbols && bytes >= 0
+  count == L.length symbols && bytes >= 0
 
 checkConcurrentAnalysisSafety :: [(String, SymbolInfo)] -> [String] -> Bool
 checkConcurrentAnalysisSafety _ _ = True
@@ -848,7 +849,7 @@ concurrentAnalysisIsSafe :: Bool -> [(String, SymbolInfo)] -> [String] -> Bool
 concurrentAnalysisIsSafe safety _ _ = safety
 
 testAnalysisResultSerialization :: AnalysisResult -> (Bool, Int)
-testAnalysisResultSerialization result = (True, length (show result))
+testAnalysisResultSerialization result = (True, L.length (show result))
 
 serializationIsCorrect :: (Bool, Int) -> AnalysisResult -> Bool
 serializationIsCorrect (success, _) _ = success
@@ -864,7 +865,7 @@ validateAnalysisPipeline phases _ = map show phases
 
 pipelineValidationIsCorrect :: [String] -> [AnalysisPhase] -> [(String, SymbolInfo)] -> Bool
 pipelineValidationIsCorrect validation phases _ = 
-  length validation == length phases
+  L.length validation == L.length phases
 
 -- Additional comprehensive QuickCheck tests for Analyzer module
 
@@ -920,14 +921,14 @@ prop_error_propagation_advanced :: [AnalysisError] -> Property
 prop_error_propagation_advanced errors =
   let errorContext = createErrorContext errors
       propagatedErrors = propagateErrors errorContext
-  in property $ all isValidErrorPropagation propagatedErrors
+  in property $ L.all isValidErrorPropagation propagatedErrors
 
 -- Property: Symbol lifecycle management
 prop_symbol_lifecycle_advanced :: [String] -> Property
 prop_symbol_lifecycle_advanced symbolNames =
   let symbolLifecycles = map createSymbolLifecycle symbolNames
       managedLifecycles = manageSymbolLifecyclesAdvanced symbolLifecycles
-  in property $ all isValidLifecycleManagement managedLifecycles
+  in property $ L.all isValidLifecycleManagement managedLifecycles
 
 -- Property: Type constraint solving optimization
 prop_constraint_solving_optimization :: [DepTS.TypeConstraint] -> Property
@@ -948,7 +949,7 @@ prop_complex_scope_resolution :: [String] -> [Int] -> Property
 prop_complex_scope_resolution symbolNames scopes =
   let complexScopes = zipWith createComplexScope symbolNames scopes
       resolutionResults = resolveSymbolsInComplexScopes complexScopes
-  in property $ all isValidResolutionResult resolutionResults
+  in property $ L.all isValidResolutionResult resolutionResults
 
 -- Property: Analysis result validation
 prop_analysis_result_validation_advanced :: AnalysisResult -> Property
@@ -1008,7 +1009,7 @@ prop_type_environment_consistency_advanced typeEnv newTypes =
 prop_shadowing_detection_advanced :: [String] -> [Int] -> Property
 prop_shadowing_detection_advanced symbolNames scopes =
   let shadowingPairs = detectSymbolShadowingAdvanced symbolNames scopes
-  in property $ all isValidShadowingPair shadowingPairs
+  in property $ L.all isValidShadowingPair shadowingPairs
 
 -- Property: Analysis result serialization
 prop_result_serialization_advanced :: AnalysisResult -> Property
@@ -1060,7 +1061,7 @@ instance IsEquivalent PipelineResult where
   isEquivalentTo _ _ = True
 
 buildDependencyGraph :: [(String, [String])] -> DependencyGraph
-buildDependencyGraph dependencies = DependencyGraph (length dependencies)
+buildDependencyGraph dependencies = DependencyGraph (L.length dependencies)
 
 detectDependencyCycles :: DependencyGraph -> [Cycle]
 detectDependencyCycles _ = []
@@ -1088,10 +1089,10 @@ isConsistentEvolution :: TypeSystem -> TypeSystem -> Bool
 isConsistentEvolution _ _ = True -- Simplified
 
 generateLargeSymbolTable :: Int -> [(String, SymbolInfo)]
-generateLargeSymbolTable n = map (\i -> ("symbol" ++ show i, undefined)) [1..n]
+generateLargeSymbolTable n = L.map (\i -> ("symbol" ++ show i, undefined)) [1..n]
 
 measureAnalysisPerformanceAdvanced :: [(String, SymbolInfo)] -> Int
-measureAnalysisPerformanceAdvanced symbols = length symbols * 2
+measureAnalysisPerformanceAdvanced symbols = L.length symbols * 2
 
 analyzeSerially :: [Module] -> AnalysisResult
 analyzeSerially _ = emptyAnalysisResult
@@ -1154,7 +1155,7 @@ isValidCommunicationResult :: CommunicationResult -> Bool
 isValidCommunicationResult (CommunicationResult valid) = valid
 
 profileMemoryUsage :: [(String, SymbolInfo)] -> MemoryProfile
-profileMemoryUsage symbols = MemoryProfile (length symbols) (length symbols * 100)
+profileMemoryUsage symbols = MemoryProfile (L.length symbols) (L.length symbols * 100)
 
 optimizeMemoryUsage :: MemoryProfile -> OptimizedMemoryProfile
 optimizeMemoryUsage profile = OptimizedMemoryProfile profile 0.9
@@ -1263,7 +1264,7 @@ instance Arbitrary AnalysisError where
 tests :: TestTree
 tests = testGroup "Analyzer QuickCheck tests"
   [ fastProperty "SymbolInfo with default values" prop_symbolinfo_default
-  , fastProperty "SymbolInfo with all values set" prop_symbolinfo_complete
+  , fastProperty "SymbolInfo with L.all values set" prop_symbolinfo_complete
   , fastProperty "AnalysisResult with empty collections" prop_analysisresult_empty
   , fastProperty "AnalysisResult with values" prop_analysisresult_with_values
   , fastProperty "AnalysisContext values are preserved" prop_analysiscontext_preserves
@@ -1271,20 +1272,20 @@ tests = testGroup "Analyzer QuickCheck tests"
   , fastProperty "AnalysisPhase equality" prop_analysisphase_eq
   , fastProperty "SymbolKind equality" prop_symbolkind_eq
   , fastProperty "ErrorSeverity ordering" prop_errorseverity_ordering
-  , fastProperty "SymbolInfo with moved and borrowed flags" prop_symbolinfo_moved_borrowed
+  , fastProperty "SymbolInfo with moved L.and borrowed flags" prop_symbolinfo_moved_borrowed
   , fastProperty "SymbolInfo with constraints" prop_symbolinfo_constraints
   , fastProperty "AnalysisResult type environment operations" prop_analysisresult_typeenv
   , fastProperty "AnalysisContext with different phases" prop_analysiscontext_phases
   , fastProperty "AnalyzerState symbol table operations" prop_analyzerstate_symboltable
   , fastProperty "AnalysisResult error accumulation" prop_analysisresult_errors
   , fastProperty "AnalysisResult combined errors" prop_analysisresult_combined
-  , fastProperty "AnalysisResult warnings and info" prop_analysisresult_warnings_info
+  , fastProperty "AnalysisResult warnings L.and info" prop_analysisresult_warnings_info
   , fastProperty "SymbolInfo scope changes" prop_symbolinfo_scope
   , fastProperty "SymbolInfo type operations" prop_symbolinfo_type
   , fastProperty "SymbolInfo ownership state" prop_symbolinfo_ownership
   , fastProperty "AnalysisContext with different settings" prop_analysiscontext_settings
   , fastProperty "AnalyzerState error accumulation" prop_analyzerstate_errors
-  , fastProperty "SymbolInfo with all fields" prop_symbolinfo_all_fields
+  , fastProperty "SymbolInfo with L.all fields" prop_symbolinfo_all_fields
   , fastProperty "AnalysisResult comprehensive" prop_analysisresult_comprehensive
   , fastProperty "AnalyzerState comprehensive" prop_analyzerstate_comprehensive
   , fastProperty "AnalysisPhase ordering" prop_analysisphase_ordering
@@ -1302,7 +1303,7 @@ tests = testGroup "Analyzer QuickCheck tests"
   , fastProperty "ownership state tracking" prop_ownership_state_tracking
   , fastProperty "dependent type inference consistency" prop_dependent_type_inference_consistency
   , fastProperty "analysis performance with large symbol tables" prop_analysis_performance_large_tables
-  , fastProperty "error recovery and continuation" prop_error_recovery_continuation
+  , fastProperty "error recovery L.and continuation" prop_error_recovery_continuation
   , fastProperty "symbol resolution across scopes" prop_symbol_resolution_scopes
   , fastProperty "analysis result validation" prop_analysis_result_validation
   , fastProperty "type constraint solving" prop_type_constraint_solving

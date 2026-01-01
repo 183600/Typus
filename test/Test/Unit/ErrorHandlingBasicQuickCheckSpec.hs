@@ -6,6 +6,7 @@ module Test.Unit.ErrorHandlingBasicQuickCheckSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 import SourceLocation (SourcePos(..), SourceSpan(..), posLine, posColumn)
@@ -21,7 +22,7 @@ tests = testGroup "ErrorHandling Basic QuickCheck Tests"
 errorReportingProperties :: TestTree
 errorReportingProperties = testGroup "Error Reporting Properties"
   [ fastProperty "error messages are non-empty" $ \(msg :: String) ->
-      not (null msg) ==> length msg > 0
+      not (null msg) ==> L.length msg > 0
   
   , fastProperty "error contains location information" $ \pos ->
       let line = posLine pos
@@ -30,16 +31,16 @@ errorReportingProperties = testGroup "Error Reporting Properties"
   
   , fastProperty "multiple errors are accumulated" $ \(e1 :: String) (e2 :: String) ->
       let errors = [e1, e2]
-      in length errors === 2
+      in L.length errors === 2
   ]
 
 errorRecoveryProperties :: TestTree
 errorRecoveryProperties = testGroup "Error Recovery Properties"
   [ fastProperty "recovery continues parsing after error" $ \(tokens :: [String]) ->
-      not (null tokens) ==> length tokens > 0
+      not (null tokens) ==> L.length tokens > 0
   
   , fastProperty "recovered parse has partial results" $ \(parsed :: [String]) (errors :: [String]) ->
-      length parsed >= 0 && length errors >= 0
+      L.length parsed >= 0 && L.length errors >= 0
   ]
 
 errorLocationProperties :: TestTree

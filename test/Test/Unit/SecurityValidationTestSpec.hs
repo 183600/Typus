@@ -18,7 +18,9 @@ import SourceLocation (SourcePos(..), SourceSpan(..))
 
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (isInfixOf, isPrefixOf, isInfixOf, intercalate)
+import qualified Data.List as L
+import Data.List (isInfixOf, isPrefixOf, isInfixOf)
+import Data.List (intercalate)
 import Data.Char (isAscii, isControl, isSpace)
 import Data.Maybe (isJust, isNothing)
 import Text.Read (readMaybe)
@@ -46,7 +48,7 @@ checkDangerousPatterns code =
         , "unsafe.Pointer" -- Unsafe pointers
         , "C." -- C interop
         ]
-  in filter (`isInfixOf` code) patterns
+  in L.filter (`L.isInfixOf` code) patterns
 
 -- Check for injection vulnerabilities
 checkInjectionVulnerabilities :: String -> [String]
@@ -64,14 +66,14 @@ checkInjectionVulnerabilities code =
         , "javascript:" -- XSS
         , "innerHTML" -- XSS
         ]
-  in filter (`isInfixOf` code) patterns
+  in L.filter (`L.isInfixOf` code) patterns
 
 -- Check for buffer overflow patterns
 checkBufferOverflowPatterns :: String -> [String]
 checkBufferOverflowPatterns code =
   let patterns =
         [ "strcpy" -- Unsafe string copy
-        , "strcat" -- Unsafe string concat
+        , "strcat" -- Unsafe string L.concat
         , "sprintf" -- Unsafe formatting
         , "gets" -- Unsafe input
         , "scanf" -- Unsafe input
@@ -79,7 +81,7 @@ checkBufferOverflowPatterns code =
         , "memset" -- Memory operations
         , "alloca" -- Stack allocation
         ]
-  in filter (`isInfixOf` code) patterns
+  in L.filter (`L.isInfixOf` code) patterns
 
 -- Check for cryptographic issues
 checkCryptoIssues :: String -> [String]
@@ -94,14 +96,14 @@ checkCryptoIssues code =
         , "time" -- Time-based seed
         , "uuid" -- Predictable UUID
         ]
-  in filter (`isInfixOf` code) patterns
+  in L.filter (`L.isInfixOf` code) patterns
 
 -- Check for input validation issues
 checkInputValidation :: String -> [String]
 checkInputValidation code =
-  let hasValidation = any (`isInfixOf` code) 
+  let hasValidation = L.any (`L.isInfixOf` code) 
         [ "validate", "sanitize", "escape", "filter", "check", "verify" ]
-      hasInput = any (`isInfixOf` code)
+      hasInput = L.any (`L.isInfixOf` code)
         [ "input", "user", "form", "request", "param", "query" ]
   in if hasInput && not hasValidation
      then ["Missing input validation"]
@@ -118,7 +120,7 @@ checkAuthIssues code =
         , "key" ++ "==" -- Hardcoded key
         , "root" ++ "==" -- Hardcoded root check
         ]
-  in filter (`isInfixOf` code) patterns
+  in L.filter (`L.isInfixOf` code) patterns
 
 -- ============================================================================
 -- Test Data Generators
@@ -220,7 +222,7 @@ testInjectionDetection = testGroup "Injection Vulnerability Detection"
   [ testCase "detects SQL injection" $ do
       let code = "func query(id string) { db.Exec(\"SELECT * FROM users WHERE id = \" + id) }"
           patterns = checkInjectionVulnerabilities code
-      assertBool "Should detect SQL injection" $ any (`isInfixOf` code) ["sql" ++ "query", "exec" ++ "sql"]
+      assertBool "Should detect SQL injection" $ L.any (`L.isInfixOf` code) ["sql" ++ "query", "exec" ++ "sql"]
       
   , testCase "detects command injection" $ do
       let code = "func exec(cmd string) { system(\"sh -c \" + cmd) }"
@@ -426,7 +428,7 @@ prop_security_checks_comprehensive code =
       input = checkInputValidation code
       auth = checkAuthIssues code
       allChecks = dangerous ++ injection ++ buffer ++ crypto ++ input ++ auth
-  in property $ length allChecks >= 0  -- Always true, ensures all checks run
+  in property $ L.length allChecks >= 0  -- Always true, ensures L.all checks run
 
 -- ============================================================================
 -- Test Collection

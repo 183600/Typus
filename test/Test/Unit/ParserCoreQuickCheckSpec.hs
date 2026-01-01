@@ -35,6 +35,7 @@ import SourceLocation
 
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Char (isAlpha, isAlphaNum, isSpace)
 
@@ -85,9 +86,9 @@ genBlockDirectiveLine = do
 -- Generate a simple code line
 genCodeLine :: Gen String
 genCodeLine = do
-  length <- choose (1, 50)
+  L.length <- choose (1, 50)
   chars <- listOf1 (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t.,;:()[]{}+-*/=<>'\"")
-  return $ take length chars
+  return $ take L.length chars
 
 -- Generate a comment line
 genCommentLine :: Gen String
@@ -108,11 +109,11 @@ genEmptyLine = return ""
 -- Generate a line with whitespace only
 genWhitespaceLine :: Gen String
 genWhitespaceLine = do
-  length <- choose (1, 10)
+  L.length <- choose (1, 10)
   chars <- listOf (elements " \t")
-  return $ take length chars
+  return $ take L.length chars
 
--- Generate any line
+-- Generate L.any line
 genLine :: Gen String
 genLine = oneof
   [ genFileDirectiveLine
@@ -180,7 +181,7 @@ prop_parse_simple_code =
     let result = parseTypus content
     in case result of
       Left _ -> property False
-      Right file -> property $ not (null (tfBlocks file))
+      Right file -> property $ not (L.null (tfBlocks file))
 
 -- Property: Parsed file preserves directives
 prop_parse_preserves_directives :: Property
@@ -198,18 +199,18 @@ prop_parse_blocks_valid_spans =
     let result = parseTypus content
     in case result of
       Left _ -> property False
-      Right file -> all (\block -> spanStart (cbSpan block) <= spanEnd (cbSpan block)) (tfBlocks file)
+      Right file -> L.all (\block -> spanStart (cbSpan block) <= spanEnd (cbSpan block)) (tfBlocks file)
 
 -- Property: Parsing preserves line count
 prop_parse_preserves_line_count :: Property
 prop_parse_preserves_line_count =
   forAll genLines $ \lines ->
     let content = unlines lines
-        lineCount = length lines
+        lineCount = L.length lines
         result = parseTypus content
     in case result of
       Left _ -> property False
-      Right file -> property $ length (tfBlocks file) <= lineCount
+      Right file -> property $ L.length (tfBlocks file) <= lineCount
 
 -- Property: Parsing content with comments works
 prop_parse_with_comments :: Property
@@ -219,7 +220,7 @@ prop_parse_with_comments =
         result = parseTypus content
     in case result of
       Left _ -> property False
-      Right file -> property $ not (null (tfBlocks file))
+      Right file -> property $ not (L.null (tfBlocks file))
 
 -- Property: Parsing content with block directives works
 prop_parse_with_block_directives :: Property
@@ -229,7 +230,7 @@ prop_parse_with_block_directives =
         result = parseTypus content
     in case result of
       Left _ -> property False
-      Right file -> property $ not (null (tfBlocks file))
+      Right file -> property $ not (L.null (tfBlocks file))
 
 -- Property: Parsing handles whitespace correctly
 prop_parse_handles_whitespace :: Property
@@ -239,7 +240,7 @@ prop_parse_handles_whitespace =
         result = parseTypus content
     in case result of
       Left _ -> property False
-      Right file -> property $ not (null (tfBlocks file))
+      Right file -> property $ not (L.null (tfBlocks file))
 
 -- Property: Parsing multiple blocks works
 prop_parse_multiple_blocks :: Property
@@ -249,7 +250,7 @@ prop_parse_multiple_blocks =
         result = parseTypus content
     in case result of
       Left _ -> property False
-      Right file -> property $ length (tfBlocks file) >= 1
+      Right file -> property $ L.length (tfBlocks file) >= 1
 
 -- Property: Block directives affect block properties
 prop_block_directives_affect_blocks :: Property
@@ -271,7 +272,7 @@ prop_parse_error_handling =
     let result = parseTypus content
     in case result of
       Left _ -> property True  -- Expected to fail
-      Right file -> property $ not (null (tfSyntaxErrors file))
+      Right file -> property $ not (L.null (tfSyntaxErrors file))
 
 -- Property: Round-trip parsing preserves structure
 prop_roundtrip_preserves_structure :: Property
@@ -282,7 +283,7 @@ prop_roundtrip_preserves_structure =
       Left _ -> property False
       Right file -> 
         let reconstructed = unlines $ map cbContent (tfBlocks file)
-        in property $ length reconstructed > 0
+        in property $ L.length reconstructed > 0
 
 -- Property: Parsing preserves directive ordering
 prop_parse_preserves_directive_ordering :: Property
@@ -301,8 +302,8 @@ prop_parse_handles_mixed_content =
     let content = unlines lines
         result = parseTypus content
     in case result of
-      Left err -> property $ "syntax error" `isInfixOf` err .||. "directive" `isInfixOf` err
-      Right file -> property $ length (tfBlocks file) >= 0
+      Left err -> property $ "syntax error" `L.isInfixOf` err .||. "directive" `L.isInfixOf` err
+      Right file -> property $ L.length (tfBlocks file) >= 0
 
 -- Property: Block content is preserved correctly
 prop_block_content_preserved :: Property
@@ -315,7 +316,7 @@ prop_block_content_preserved =
       Right file -> 
         case tfBlocks file of
           [] -> property False
-          (block:_) -> codeLine `isInfixOf` cbContent block
+          (block:_) -> codeLine `L.isInfixOf` cbContent block
 
 -- Property: Parsing handles Unicode characters
 prop_parse_handles_unicode :: Property
@@ -324,7 +325,7 @@ prop_parse_handles_unicode =
       result = parseTypus unicodeContent
   in case result of
     Left _ -> property False
-    Right file -> property $ not (null (tfBlocks file))
+    Right file -> property $ not (L.null (tfBlocks file))
 
 -- Property: File directives are parsed correctly
 prop_file_directives_parsed_correctly :: Property
@@ -353,7 +354,7 @@ prop_parsing_idempotent =
           Left _ -> Left ""
           Right file -> parseTypus $ unlines $ map cbContent (tfBlocks file)
     in case (result1, result2) of
-      (Right _, Right file2) -> property $ not (null (tfBlocks file2))
+      (Right _, Right file2) -> property $ not (L.null (tfBlocks file2))
       _ -> property False
 
 -- Helper function to generate list of at least 2 elements

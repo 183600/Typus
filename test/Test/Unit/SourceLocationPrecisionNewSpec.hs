@@ -114,7 +114,7 @@ generateCodeWithError line col errorType = case errorType of
         pure $ unlines updatedLines
     _ -> pure $ unlines ["package main", "func main() {", "    x := 42", "}", ""]
 
--- | Property: Single line spans should have correct length
+-- | Property: Single line spans should have correct L.length
 prop_singleLineSpanLength :: Int -> Int -> Int -> Bool
 prop_singleLineSpanLength line startCol endCol = 
     let startCol' = min startCol endCol
@@ -124,7 +124,7 @@ prop_singleLineSpanLength line startCol endCol =
         expectedLength = endCol' - startCol'
     in spanLength span == expectedLength
 
--- | Property: Multi-line spans should calculate length correctly
+-- | Property: Multi-line spans should calculate L.length correctly
 prop_multiLineSpanLength :: Int -> Int -> Int -> Int -> Bool
 prop_multiLineSpanLength startLine startCol endLine endCol =
     let startPos = SourcePos startLine startCol (startLine * 100 + startCol)
@@ -177,13 +177,13 @@ prop_positionTrackingConsistent :: PositionTrackingTest -> Bool
 prop_positionTrackingConsistent (PositionTrackingTest code positions) = 
     let lines' = lines code
         checkPosition (line, col, expected) = 
-            if line > 0 && line <= length lines'
+            if line > 0 && line <= L.length lines'
                 then let lineContent = lines' !! (line - 1)
-                     in if col > 0 && col <= length lineContent
-                        then take (length expected) (drop (col - 1) lineContent) == expected
+                     in if col > 0 && col <= L.length lineContent
+                        then take (L.length expected) (drop (col - 1) lineContent) == expected
                         else True  -- Out of bounds is acceptable for test
                 else True  -- Out of bounds is acceptable for test
-    in all checkPosition positions
+    in L.all checkPosition positions
 
 -- | Property: Located values should preserve span information
 prop_locatedPreservesSpan :: String -> SourceSpan -> Bool
@@ -202,16 +202,16 @@ prop_spanOrderingConsistent span1 span2 =
         compareEnds = compare end1 end2
     in if compareStarts == EQ
         then compareEnds == compareEnds
-        else True  -- Different starts can have any end ordering
+        else True  -- Different starts can have L.any end ordering
 
 -- | Property: Adjacent spans should not overlap
 prop_adjacentSpansNoOverlap :: Int -> Int -> Int -> Bool
-prop_adjacentSpansNoOverlap line startCol length = 
-    let endCol = startCol + length
+prop_adjacentSpansNoOverlap line startCol L.length = 
+    let endCol = startCol + L.length
         span1 = SourceSpan (SourcePos line startCol (line * 100 + startCol))
                            (SourcePos line endCol (line * 100 + endCol))
         span2 = SourceSpan (SourcePos line (endCol + 1) (line * 100 + endCol + 1))
-                           (SourcePos line (endCol + length + 1) (line * 100 + endCol + length + 1))
+                           (SourcePos line (endCol + L.length + 1) (line * 100 + endCol + L.length + 1))
     in not (spanOverlap span1 span2)
 
 -- | Property: Nested spans should have proper containment
@@ -233,19 +233,19 @@ extractCodeAtLocation code span =
     let lines' = lines code
         SourcePos startLine startCol _ = spanStart span
         SourcePos endLine endCol _ = spanEnd span
-    in if startLine == endLine && startLine <= length lines'
+    in if startLine == endLine && startLine <= L.length lines'
         then let lineContent = lines' !! (startLine - 1)
                  startIdx = max 0 (startCol - 1)
-                 endIdx = min (length lineContent) (endCol - 1)
+                 endIdx = min (L.length lineContent) (endCol - 1)
              in take (endIdx - startIdx) (drop startIdx lineContent)
         else ""  -- Multi-line extraction is more complex
 
 tests :: TestTree
 tests = testGroup "Source Location Precision Tests"
-  [ testProperty "Single line span length calculation" $
+  [ testProperty "Single line span L.length calculation" $
       fastProperty "line, start col, end col" prop_singleLineSpanLength
   
-  , testProperty "Multi-line span length calculation" $
+  , testProperty "Multi-line span L.length calculation" $
       fastProperty "start line, start col, end line, end col" prop_multiLineSpanLength
   
   , testProperty "Span containment works correctly" $
@@ -273,7 +273,7 @@ tests = testGroup "Source Location Precision Tests"
       fastProperty "span1, span2" prop_spanOrderingConsistent
   
   , testProperty "Adjacent spans do not overlap" $
-      fastProperty "line, start col, length" prop_adjacentSpansNoOverlap
+      fastProperty "line, start col, L.length" prop_adjacentSpansNoOverlap
   
   , testProperty "Nested spans have proper containment" $
       fastProperty "line, outer start, outer end, inner start, inner end" prop_nestedSpansProperContainment
@@ -282,5 +282,5 @@ tests = testGroup "Source Location Precision Tests"
       fastProperty "code, span" $
       \code span -> 
         let extracted = extractCodeAtLocation code span
-        in length extracted <= spanLength span
+        in L.length extracted <= spanLength span
   ]

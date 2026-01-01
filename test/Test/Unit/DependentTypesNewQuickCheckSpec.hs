@@ -32,7 +32,9 @@ import DependentTypesParser
 import Data.Text (Text, pack, unpack)
 import qualified Data.Text as T
 import Data.Char (isAlphaNum, isSpace)
-import Data.List (isPrefixOf, isInfixOf, intercalate, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (intercalate, sort, nub)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import qualified Data.Map.Strict as Map
 import Data.Either (isLeft, isRight, partitionEithers)

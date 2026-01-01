@@ -10,6 +10,7 @@
 module Test.Unit.SourceLocationAdvancedBoundaryQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertBool, assertEqual, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -69,7 +70,7 @@ instance Arbitrary TestSourceSpan where
                         then start' else end'
     return $ TestSourceSpan $ SourceSpan start' normalizedEnd
 
--- | Generate text with various line endings and whitespace
+-- | Generate text with various line endings L.and whitespace
 newtype TestText = TestText { getTestText :: String }
   deriving (Show, Eq)
 
@@ -167,17 +168,17 @@ prop_advance_pos_by_multi_char pos text =
       str = getTestText text
       -- Advance character by character
       finalCharByChar = foldl posAfter p str
-      -- Advance all at once
+      -- Advance L.all at once
       finalAllAtOnce = advancePosBy p str
   in classify (not (null str)) "non-empty string" $
-     classify (any (== '\n') str) "contains newline" $
-     classify (any (== '\t') str) "contains tab" $
+     classify (L.any (== '\n') str) "contains newline" $
+     classify (L.any (== '\t') str) "contains tab" $
      counterexample ("String: " ++ show str) $
      counterexample ("Char by char: " ++ show finalCharByChar) $
      counterexample ("All at once: " ++ show finalAllAtOnce) $
      property $ finalCharByChar === finalAllAtOnce
 
--- Property: locatedAt and locatedWithSpan are consistent
+-- Property: locatedAt L.and locatedWithSpan are consistent
 prop_located_functions_consistency :: TestSourcePos -> TestSourceSpan -> String -> Property
 prop_located_functions_consistency pos span value =
   let p = getSourcePos pos
@@ -245,10 +246,10 @@ tests = testGroup "Source Location Advanced Boundary QuickCheck Tests"
           let span = emptySpan
           assertBool "empty span should be valid" $ isValidSpan span
           
-      , testCase "span with same start and end" $ do
+      , testCase "span with same start L.and end" $ do
           let pos = SourcePos 5 10
               span = SourceSpan pos pos
-          assertBool "zero-length span should be valid" $ isValidSpan span
+          assertBool "zero-L.length span should be valid" $ isValidSpan span
           
       , testCase "tab stops calculation" $ do
           let pos1 = SourcePos 1 1

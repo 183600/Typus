@@ -14,6 +14,7 @@ import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
 import Data.Char (isSpace, isAlpha)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, length)
 import Control.DeepSeq (NFData, force)
 import System.CPUTime (getCPUTime)
@@ -46,7 +47,7 @@ tests =
                     assertBool ("Parsing should complete in reasonable time: " ++ show duration ++ "s") $ duration < 5.0
 
         , testCase "内存使用边界测试" $ do
-            let deepNesting = "func main() " ++ concat (replicate 100 "{ ") ++ "return 42" ++ concat (replicate 100 " }")
+            let deepNesting = "func main() " ++ L.concat (replicate 100 "{ ") ++ "return 42" ++ L.concat (replicate 100 " }")
                 result = parseTypus deepNesting "deep.typus"
             case result of
                 Left err -> 
@@ -56,18 +57,18 @@ tests =
                     assertBool "Should handle deep nesting" $ True
 
         , testCase "字符串处理性能" $ do
-            let largeString = concat $ replicate 10000 "hello world "
+            let largeString = L.concat $ replicate 10000 "hello world "
                 trimmed = trim largeString
                 split = splitBy ' ' largeString
                 commentsRemoved = removeComments largeString
                 normalized = normalizeIndentation largeString
             assertBool "String processing should handle large inputs" $ 
-                length trimmed <= length largeString && 
-                length split >= 1 &&
-                length commentsRemoved <= length largeString
+                L.length trimmed <= L.length largeString && 
+                L.length split >= 1 &&
+                L.length commentsRemoved <= L.length largeString
 
         , testCase "位置计算性能" $ do
-            let largeText = concat $ replicate 10000 "line\n"
+            let largeText = L.concat $ replicate 10000 "line\n"
                 finalPos = advancePosBy largeText startPos
                 SourcePos line col offset = finalPos
             assertBool "Position calculation should handle large texts" $ 
@@ -103,11 +104,11 @@ tests =
 prop_string_processing_linear_time :: String -> Int -> Property
 prop_string_processing_linear_time base multiplier =
   multiplier > 0 && multiplier <= 100 ==>  -- 限制测试规模
-  let largeInput = concat $ replicate multiplier base
+  let largeInput = L.concat $ replicate multiplier base
       result1 = trim base
       result2 = trim largeInput
       -- 简化的性能检查：确保能处理大输入
-  in property $ length result2 <= length largeInput
+  in property $ L.length result2 <= L.length largeInput
 
 -- 解析器的内存效率：解析大文件不应该导致内存泄漏
 prop_parser_memory_efficiency :: String -> Int -> Property
@@ -140,7 +141,7 @@ prop_compiler_resource_limits baseCode multiplier =
 prop_deep_recursion_safety :: Int -> Property
 prop_deep_recursion_safety depth =
   depth > 0 && depth <= 50 ==>  -- 限制深度避免实际栈溢出
-  let nestedBraces = "func main() " ++ concat (replicate depth "{ ") ++ "return 42" ++ concat (replicate depth " }")
+  let nestedBraces = "func main() " ++ L.concat (replicate depth "{ ") ++ "return 42" ++ L.concat (replicate depth " }")
       result = parseTypus nestedBraces "deep.typus"
   in case result of
        Right _ -> property $ True

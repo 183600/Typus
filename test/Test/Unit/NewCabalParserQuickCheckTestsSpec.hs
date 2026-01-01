@@ -15,6 +15,7 @@ import Parser
   )
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos, spanStart, spanEnd)
 import Data.Char (isAlphaNum, isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 import qualified Data.Text as T
 import Text.Megaparsec (errorBundlePretty)
@@ -33,7 +34,7 @@ genDirectiveKey = do
 -- Generate directive values
 genDirectiveValue :: Gen String
 genDirectiveValue = do
-  length' <- choose (1, 20)
+  L.length' <- choose (1, 20)
   listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ '_' ++ '-'
 
 -- Generate file directive content
@@ -110,7 +111,7 @@ genMalformedDirective = oneof
   , return "/// key=trailing space "
   ]
 
--- Generate empty or whitespace-only content
+-- Generate empty L.or whitespace-only content
 genEmptyContent :: Gen String
 genEmptyContent = elements ["", "   ", "\n", "  \n  ", "\n\n"]
 
@@ -163,19 +164,19 @@ prop_parse_empty_content =
 prop_parse_file_directive_structure :: Property
 prop_parse_file_directive_structure =
   forAll genFileDirective $ \directive ->
-    "//! " `isPrefixOf` directive &&
-    "=" `isInfixOf` directive
+    "//! " `L.isPrefixOf` directive &&
+    "=" `L.isInfixOf` directive
 
 prop_parse_block_directive_structure :: Property
 prop_parse_block_directive_structure =
   forAll genBlockDirective $ \directive ->
-    "/// " `isPrefixOf` directive &&
-    "=" `isInfixOf` directive
+    "/// " `L.isPrefixOf` directive &&
+    "=" `L.isInfixOf` directive
 
 prop_parse_build_tag_structure :: Property
 prop_parse_build_tag_structure =
   forAll genBuildTag $ \tag ->
-    "//build:" `isPrefixOf` tag
+    "//build:" `L.isPrefixOf` tag
 
 -- ============================================================================
 -- Properties for Code Block Structure
@@ -184,18 +185,18 @@ prop_parse_build_tag_structure =
 prop_code_block_has_content :: Property
 prop_code_block_has_content =
   forAll genCodeBlock $ \block ->
-    let nonEmptyLines = filter (not . all isSpace) $ lines block
-    in length nonEmptyLines > 0
+    let nonEmptyLines = L.filter (not . L.all isSpace) $ lines block
+    in L.length nonEmptyLines > 0
 
 prop_code_block_preserves_line_count :: Property
 prop_code_block_preserves_line_count =
   forAll genCodeBlock $ \block ->
-    let originalLines = length $ lines block
+    let originalLines = L.length $ lines block
         result = parseTypus block
     in case result of
          Left _ -> property True
          Right typusFile -> 
-           let totalBlocks = length $ tfBlocks typusFile
+           let totalBlocks = L.length $ tfBlocks typusFile
            in totalBlocks >= 1  -- At least one block should be parsed
 
 -- ============================================================================
@@ -224,7 +225,7 @@ prop_parsed_spans_valid =
            let blocks = tfBlocks typusFile
                spans = map cbSpan blocks
                isValidSpan span = spanStart span <= spanEnd span
-           in all isValidSpan spans
+           in L.all isValidSpan spans
 
 -- ============================================================================
 -- Properties for Content Preservation
@@ -238,9 +239,9 @@ prop_parse_preserves_non_directive_content =
          Left _ -> property True
          Right typusFile ->
            let blocks = tfBlocks typusFile
-               hasContent = any (not . null . cbContent) blocks
+               hasContent = L.any (not . null . cbContent) blocks
            in if null content
-              then not hasContent || all (all isSpace . cbContent) blocks
+              then not hasContent || L.all (L.all isSpace . cbContent) blocks
               else hasContent
 
 -- ============================================================================
@@ -251,13 +252,13 @@ prop_multiple_blocks_parsed_separately :: Property
 prop_multiple_blocks_parsed_separately =
   forAll (choose (2, 4)) $ \numBlocks ->
     forAll (sequence $ replicate numBlocks genCodeBlock) $ \blocks ->
-      let content = unlines $ map (\b -> b ++ "\n---\n") blocks
+      let content = unlines $ L.map (\b -> b ++ "\n---\n") blocks
           result = parseTypus content
       in case result of
            Left _ -> property True
            Right typusFile ->
              let parsedBlocks = tfBlocks typusFile
-             in length parsedBlocks >= numBlocks - 1  -- At least most blocks should be parsed
+             in L.length parsedBlocks >= numBlocks - 1  -- At least most blocks should be parsed
 
 -- ============================================================================
 -- Test Suite

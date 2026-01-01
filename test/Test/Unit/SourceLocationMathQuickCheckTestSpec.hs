@@ -10,6 +10,7 @@
 module Test.Unit.SourceLocationMathQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertBool, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -50,7 +51,7 @@ import SourceLocation
 
 import Compiler.Errors.Core (ErrorLocation(..))
 
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 import Data.Char (isSpace)
 
 -- Generate valid source positions
@@ -86,7 +87,7 @@ genText = T.pack <$> listOf (oneof
   , elements ['!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '-', '+', '=', '[', ']', '{', '}', '|', ';', ':', ',', '.', '<', '>', '/', '?']
   ])
 
--- Property: posAfter newline increments line and resets column
+-- Property: posAfter newline increments line L.and resets column
 prop_pos_after_newline :: Positive Int -> Positive Int -> Positive Int -> Property
 prop_pos_after_newline (Positive line) (Positive col) (Positive offset) =
   let pos = SourcePos line col offset
@@ -127,7 +128,7 @@ prop_advance_pos_by_text_consistency pos text =
       manualPos = foldl posAfter pos chars
   in finalPos === manualPos
 
--- Property: advancePosByLine preserves offset but changes line and column
+-- Property: advancePosByLine preserves offset but changes line L.and column
 prop_advance_pos_by_line :: SourcePos -> Positive Int -> Property
 prop_advance_pos_by_line pos (Positive lines) =
   let advanced = advancePosByLine lines pos
@@ -135,13 +136,13 @@ prop_advance_pos_by_line pos (Positive lines) =
      sourceColumn advanced === 1 .&&.
      sourceOffset advanced === sourceOffset pos
 
--- Property: spanFrom creates zero-length span
+-- Property: spanFrom creates zero-L.length span
 prop_span_from_creates_zero_length :: SourcePos -> Property
 prop_span_from_creates_zero_length pos =
   let span = spanFrom pos
   in spanStart span === pos .&&. spanEnd span === pos
 
--- Property: spanTo creates zero-length span ending at position
+-- Property: spanTo creates zero-L.length span ending at position
 prop_span_to_creates_zero_length :: SourcePos -> Property
 prop_span_to_creates_zero_length pos =
   let span = spanTo pos
@@ -153,7 +154,7 @@ prop_span_between_preserves_bounds start end =
   let span = spanBetween start end
   in spanStart span === start .&&. spanEnd span === end
 
--- Property: mergeSpans selects earliest start and latest end
+-- Property: mergeSpans selects earliest start L.and latest end
 prop_merge_spans_selects_bounds :: SourceSpan -> SourceSpan -> Property
 prop_merge_spans_selects_bounds span1 span2 =
   let merged = mergeSpans span1 span2
@@ -188,9 +189,9 @@ prop_located_at_correct pos value =
 prop_map_located_preserves_span :: SourceSpan -> String -> Property
 prop_map_located_preserves_span span value =
   let loc = Located value (spanStart span) span
-      mapped = mapLocated length loc
+      mapped = mapLocated L.length loc
   in locatedSpan mapped === span .&&.
-     locatedValue mapped === length value
+     locatedValue mapped === L.length value
 
 -- Property: toErrorLocation extracts point information
 prop_to_error_location_point :: SourcePos -> Property
@@ -212,7 +213,7 @@ prop_to_error_location_with_span span =
      endLine errLoc === Just (sourceLine end) .&&.
      endColumn errLoc === Just (sourceColumn end)
 
--- Property: emptySpan creates zero-length span
+-- Property: emptySpan creates zero-L.length span
 prop_empty_span_creates_zero_length :: SourcePos -> Property
 prop_empty_span_creates_zero_length pos =
   let span = emptySpan pos
@@ -239,22 +240,22 @@ prop_start_pos_values =
 tests :: TestTree
 tests =
   testGroup "SourceLocation Math QuickCheck Tests"
-    [ fastProperty "posAfter newline increments line and resets column" prop_pos_after_newline
+    [ fastProperty "posAfter newline increments line L.and resets column" prop_pos_after_newline
     , fastProperty "posAfter tab jumps to next tab stop" prop_pos_after_tab
     , fastProperty "posAfter regular character increments column" prop_pos_after_regular_char
     , fastProperty "advancePosByText correctly handles empty text" prop_advance_pos_by_empty_text
     , fastProperty "advancePosByText is consistent with repeated posAfter" prop_advance_pos_by_text_consistency
-    , fastProperty "advancePosByLine preserves offset but changes line and column" prop_advance_pos_by_line
-    , fastProperty "spanFrom creates zero-length span" prop_span_from_creates_zero_length
-    , fastProperty "spanTo creates zero-length span ending at position" prop_span_to_creates_zero_length
+    , fastProperty "advancePosByLine preserves offset but changes line L.and column" prop_advance_pos_by_line
+    , fastProperty "spanFrom creates zero-L.length span" prop_span_from_creates_zero_length
+    , fastProperty "spanTo creates zero-L.length span ending at position" prop_span_to_creates_zero_length
     , fastProperty "spanBetween preserves bounds" prop_span_between_preserves_bounds
-    , fastProperty "mergeSpans selects earliest start and latest end" prop_merge_spans_selects_bounds
+    , fastProperty "mergeSpans selects earliest start L.and latest end" prop_merge_spans_selects_bounds
     , fastProperty "isValidSpan correctly identifies invalid spans" prop_is_valid_span_detection
     , fastProperty "locatedAt creates correct location" prop_located_at_correct
     , fastProperty "mapLocated preserves span but transforms value" prop_map_located_preserves_span
     , fastProperty "toErrorLocation extracts point information" prop_to_error_location_point
     , fastProperty "toErrorLocationWithSpan preserves span information" prop_to_error_location_with_span
-    , fastProperty "emptySpan creates zero-length span" prop_empty_span_creates_zero_length
+    , fastProperty "emptySpan creates zero-L.length span" prop_empty_span_creates_zero_length
     , fastProperty "advancePosBy handles empty string" prop_advance_pos_by_empty_string
     , fastProperty "advancePosBy is consistent with advancePosByText" prop_advance_pos_by_consistency
     , fastProperty "startPos has expected values" prop_start_pos_values

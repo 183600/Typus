@@ -252,12 +252,12 @@ prop_complexConstraintSystemsSolvable constraints =
         result = solveConstraints initialContext constraints
     in case result of
         Solved _ -> True
-        Unsolved remaining -> length remaining <= length constraints  -- Should make progress
+        Unsolved remaining -> L.length remaining <= L.length constraints  -- Should make progress
         Contradiction _ -> hasActualContradiction constraints
 
 -- | Check if constraints actually contain contradictions
 hasActualContradiction :: [TypeConstraint] -> Bool
-hasActualContradiction constraints = any isContradictory constraints
+hasActualContradiction constraints = L.any isContradictory constraints
   where
     isContradictory (EqualityConstraint (BaseType name1) (BaseType name2)) = name1 /= name2
     isContradictory (RangeConstraint _ minVal maxVal) = minVal > maxVal
@@ -301,8 +301,8 @@ generateDependentTypeCode constraints =
 renderType :: DependentType -> String
 renderType = \case
     BaseType name -> name
-    VectorType elem size -> "Vector<" ++ renderType elem ++ ", " ++ renderType size ++ ">"
-    MatrixType elem rows cols -> "Matrix<" ++ renderType elem ++ ", " ++ renderType rows ++ ", " ++ renderType cols ++ ">"
+    VectorType L.elem size -> "Vector<" ++ renderType L.elem ++ ", " ++ renderType size ++ ">"
+    MatrixType L.elem rows cols -> "Matrix<" ++ renderType L.elem ++ ", " ++ renderType rows ++ ", " ++ renderType cols ++ ">"
     FunctionType input output -> "(" ++ renderType input ++ " -> " ++ renderType output ++ ")"
     DependentFunction name retType -> name ++ "() -> " ++ renderType retType
     RefType typ -> "&" ++ renderType typ
@@ -335,10 +335,10 @@ tests = testGroup "Dependent Type Constraint Validation Tests"
       fastProperty "constraint list" prop_complexConstraintSystemsSolvable
   
   , testProperty "Type substitutions are applied correctly" $
-      fastProperty "type variables and substitutions" $
+      fastProperty "type variables L.and substitutions" $
       \typeVars -> 
-        let substitutions = Map.fromList $ take (length typeVars `div` 2) $ 
-              zip (map (("T" ++) . show) [0..]) (map BaseType ["Int", "String", "Bool"])
+        let substitutions = Map.fromList $ take (L.length typeVars `div` 2) $ 
+              zip (L.map (("T" ++) . show) [0..]) (map BaseType ["Int", "String", "Bool"])
             context = TypeContext typeVars [] substitutions
         in Map.size (tcSubstitutions context) >= 0
   

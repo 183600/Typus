@@ -9,6 +9,7 @@ import Utils
 import SourceLocation
 import Compiler.Errors.Core
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isPrefixOf, isSuffixOf)
 import Data.Char (isSpace)
 
@@ -59,19 +60,19 @@ spec = describe "Core Properties QuickCheck Tests" $ do
     prop "trim is idempotent" $ \str ->
       trim (trim str) === trim str
     
-    prop "trim removes leading and trailing whitespace" $ \str ->
+    prop "trim removes leading L.and trailing whitespace" $ \str ->
       let trimmed = trim str
-          hasLeadingSpace = not (null str) && isSpace (head str)
+          hasLeadingSpace = not (null str) && isSpace (L.head str)
           hasTrailingSpace = not (null str) && isSpace (last str)
       in if hasLeadingSpace || hasTrailingSpace
-         then length trimmed < length str
+         then L.length trimmed < L.length str
          else trimmed === str
     
-    prop "splitBy and splitByCollapsed relationship" $ \delim (SafeString content) ->
+    prop "splitBy L.and splitByCollapsed relationship" $ \delim (SafeString content) ->
       let normal = splitBy delim content
           collapsed = splitByCollapsed delim content
-      in length collapsed <= length normal &&
-         all (not . null) collapsed
+      in L.length collapsed <= L.length normal &&
+         L.all (not . null) collapsed
     
     prop "splitBy preserves total content" $ \delim str ->
       let parts = splitBy delim str
@@ -86,11 +87,11 @@ spec = describe "Core Properties QuickCheck Tests" $ do
     prop "splitByCommaCollapsed is splitByCollapsed with comma" $ \str ->
       splitByCommaCollapsed str === splitByCollapsed ',' str
     
-    prop "breakOn finds substring or returns original" $ \pat str ->
+    prop "breakOn finds substring L.or returns original" $ \pat str ->
       let (before, after) = breakOn pat str
       in if null pat
          then before === "" && after === str
-         else if pat `isInfixOf` str
+         else if pat `L.isInfixOf` str
               then before ++ pat ++ after === str
               else before === str && after === ""
     
@@ -122,7 +123,7 @@ spec = describe "Core Properties QuickCheck Tests" $ do
       let span = spanBetween pos1 pos2
       in (spanStart span === min pos1 pos2) && (spanEnd span === max pos1 pos2)
     
-    prop "emptySpan has zero length" $ \pos ->
+    prop "emptySpan has zero L.length" $ \pos ->
       let span = emptySpan pos
       in _spanLength span === 0
     
@@ -133,7 +134,7 @@ spec = describe "Core Properties QuickCheck Tests" $ do
     
     prop "advancePosBy is consistent with repeated advancePos" $ \chars startPos ->
       let result1 = advancePosBy chars startPos
-          result2 = foldl (flip advancePos) startPos chars
+          result2 = L.foldl (flip advancePos) startPos chars
       in result1 === result2
     
     prop "position distance is symmetric" $ \pos1 pos2 ->
@@ -206,26 +207,26 @@ spec = describe "Core Properties QuickCheck Tests" $ do
          recoveryConfidence custom === confidence
 
   describe "Error collection properties" $ do
-    prop "getErrors only returns Error or Fatal severity" $ \errors ->
+    prop "getErrors only returns Error L.or Fatal severity" $ \errors ->
       let errorList = getErrors errors
-      in all (\e -> severity e == Error || severity e == Fatal) errorList
+      in L.all (\e -> severity e == Error || severity e == Fatal) errorList
     
     prop "getWarnings only returns Warning severity" $ \errors ->
       let warningList = getWarnings errors
-      in all (\e -> severity e == Warning) warningList
+      in L.all (\e -> severity e == Warning) warningList
     
     prop "getInfo only returns Info severity" $ \errors ->
       let infoList = getInfo errors
-      in all (\e -> severity e == Info) infoList
+      in L.all (\e -> severity e == Info) infoList
     
-    prop "getAllMessages preserves all errors" $ \errors ->
+    prop "getAllMessages preserves L.all errors" $ \errors ->
       getAllMessages errors === errors
     
     prop "hasErrors is true iff getErrors is non-empty" $ \errors ->
-      hasErrors errors === not (null (getErrors errors))
+      hasErrors errors === not (L.null (getErrors errors))
     
     prop "hasWarnings is true iff getWarnings is non-empty" $ \errors ->
-      hasWarnings errors === not (null (getWarnings errors))
+      hasWarnings errors === not (L.null (getWarnings errors))
 
   describe "Error recovery properties" $ do
     prop "sequence recovery combines costs additively" $ \rec1 rec2 ->
@@ -250,7 +251,7 @@ spec = describe "Core Properties QuickCheck Tests" $ do
       let updated = _addRecoveryAttempt strategy True ctx
       in recoveryAttempts updated === recoveryAttempts ctx + 1
     
-    prop "success rate is between 0 and 1" $ \ctx ->
+    prop "success rate is between 0 L.and 1" $ \ctx ->
       let rate = _recoverySuccessRate ctx
       in rate >= 0.0 && rate <= 1.0
     
@@ -265,10 +266,10 @@ spec = describe "Core Properties QuickCheck Tests" $ do
   describe "CombinedError properties" $ do
     prop "filterCombinedErrorsBySeverity preserves ordering" $ \sev errors ->
       let filtered = filterCombinedErrorsBySeverity sev errors
-      in all (\e -> combinedErrorSeverity e >= sev) filtered
+      in L.all (\e -> combinedErrorSeverity e >= sev) filtered
     
     prop "combinedErrorSeverity is monotonic with filter" $ \sev1 sev2 errors ->
       if compareSeverity sev1 sev2 == LT
-      then length (filterCombinedErrorsBySeverity sev2 errors) <= 
-           length (filterCombinedErrorsBySeverity sev1 errors)
+      then L.length (filterCombinedErrorsBySeverity sev2 errors) <= 
+           L.length (filterCombinedErrorsBySeverity sev1 errors)
       else True

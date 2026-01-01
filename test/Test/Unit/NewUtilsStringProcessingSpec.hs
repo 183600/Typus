@@ -1,6 +1,7 @@
 module Test.Unit.NewUtilsStringProcessingSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Arbitrary(..), Gen, oneof, listOf, elements, suchThat)
@@ -12,8 +13,8 @@ tests :: TestTree
 tests =
   testGroup "New Utils String Processing Tests"
     [ testGroup "String splitting properties"
-        [ fastProperty "splitBy and splitByCollapsed relationship" prop_splitByRelationship
-        , fastProperty "splitBy preserves total length" prop_splitByPreservesLength
+        [ fastProperty "splitBy L.and splitByCollapsed relationship" prop_splitByRelationship
+        , fastProperty "splitBy preserves total L.length" prop_splitByPreservesLength
         , fastProperty "splitByCollapsed removes empty segments" prop_splitByCollapsedRemovesEmpty
         , fastProperty "splitBy comma behavior" prop_splitByCommaBehavior
         ]
@@ -26,7 +27,7 @@ tests =
 
     , testGroup "Comment removal properties"
         [ fastProperty "removeLineComments preserves non-comment content" prop_removeLineCommentsPreservesContent
-        , fastProperty "removeComments shrinks or preserves length" prop_removeCommentsShrinksOrPreserves
+        , fastProperty "removeComments shrinks L.or preserves L.length" prop_removeCommentsShrinksOrPreserves
         , fastProperty "removeComments handles nested patterns" prop_removeCommentsNested
         ]
 
@@ -85,17 +86,17 @@ genStringWithComments = listOf $ oneof
 
 prop_splitByRelationship :: Char -> String -> Bool
 prop_splitByRelationship delim input =
-    splitByCollapsed delim input == filter (not . null) (splitBy delim input)
+    splitByCollapsed delim input == L.filter (not . null) (splitBy delim input)
 
 prop_splitByPreservesLength :: Char -> String -> Bool
 prop_splitByPreservesLength delim input =
     let segments = splitBy delim input
         reconstructed = concatMap (\s -> s ++ [delim]) (init segments) ++ last segments
-    in length input == length reconstructed
+    in L.length input == L.length reconstructed
 
 prop_splitByCollapsedRemovesEmpty :: Char -> String -> Bool
 prop_splitByCollapsedRemovesEmpty delim input =
-    all (not . null) (splitByCollapsed delim input)
+    L.all (not . null) (splitByCollapsed delim input)
 
 prop_splitByCommaBehavior :: String -> Bool
 prop_splitByCommaBehavior input =
@@ -115,16 +116,16 @@ prop_trimIdempotent input =
 prop_trimRemovesOnlyWhitespace :: String -> Bool
 prop_trimRemovesOnlyWhitespace input =
     let trimmed = trim input
-        hasLeadingWhitespace = not (null input) && isSpace (head input)
+        hasLeadingWhitespace = not (null input) && isSpace (L.head input)
         hasTrailingWhitespace = not (null input) && isSpace (last input)
     in if hasLeadingWhitespace || hasTrailingWhitespace
-       then length trimmed < length input
+       then L.length trimmed < L.length input
        else trimmed == input
 
 prop_trimPreservesContent :: String -> Bool
 prop_trimPreservesContent input =
     let trimmed = trim input
-        core = dropWhile isSpace (reverse (dropWhile isSpace (reverse input)))
+        core = dropWhile isSpace (L.reverse (dropWhile isSpace (L.reverse input)))
     in trimmed == core
 
 -- ============================================================================
@@ -136,20 +137,20 @@ prop_removeLineCommentsPreservesContent input =
     let withoutComments = removeLineComments input
         linesInput = lines input
         linesOutput = lines withoutComments
-    in length linesInput == length linesOutput
+    in L.length linesInput == L.length linesOutput
 
 prop_removeCommentsShrinksOrPreserves :: String -> Bool
 prop_removeCommentsShrinksOrPreserves input =
     let withoutComments = removeComments input
-    in length withoutComments <= length input
+    in L.length withoutComments <= L.length input
 
 prop_removeCommentsNested :: String -> Bool
 prop_removeCommentsNested input =
     let withNested = input ++ "/* outer /* inner */ still outer */ end"
         withoutComments = removeComments withNested
-    in not ("/*" `isInfixOf` withoutComments) && not ("*/" `isInfixOf` withoutComments)
+    in not ("/*" `L.isInfixOf` withoutComments) && not ("*/" `L.isInfixOf` withoutComments)
   where
-    isInfixOf needle haystack = needle `elem` [take (length needle) (drop i haystack) | i <- [0..length haystack - length needle]]
+    L.isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
 
 -- ============================================================================
 -- Properties for indentation
@@ -160,13 +161,13 @@ prop_normalizeIndentationPreservesStructure input =
     let normalized = normalizeIndentation input
         originalLines = lines input
         normalizedLines = lines normalized
-    in length originalLines == length normalizedLines
+    in L.length originalLines == L.length normalizedLines
 
 prop_forceSingleTabCreatesConsistentFormat :: String -> Bool
 prop_forceSingleTabCreatesConsistentFormat input =
     let formatted = forceSingleTabIndentation input
-        nonEmptyLines = filter (not . null) (lines formatted)
-    in all (\line -> take 1 line == "\t") nonEmptyLines
+        nonEmptyLines = L.filter (not . null) (lines formatted)
+    in L.all (\line -> take 1 line == "\t") nonEmptyLines
 
 -- ============================================================================
 -- Properties for search functions
@@ -175,12 +176,12 @@ prop_forceSingleTabCreatesConsistentFormat input =
 prop_breakOnCorrectness :: String -> String -> Bool
 prop_breakOnCorrectness pattern text
     | null pattern = breakOn pattern text == ("", text)
-    | pattern `isInfixOf` text = 
+    | pattern `L.isInfixOf` text = 
         let (before, after) = breakOn pattern text
         in before ++ pattern ++ after == text
     | otherwise = breakOn pattern text == (text, "")
   where
-    isInfixOf needle haystack = needle `elem` [take (length needle) (drop i haystack) | i <- [0..length haystack - length needle]]
+    L.isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
 
 prop_breakOnEmptyPattern :: String -> Bool
 prop_breakOnEmptyPattern text = breakOn "" text == ("", text)

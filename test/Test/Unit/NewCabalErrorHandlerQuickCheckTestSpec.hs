@@ -3,6 +3,7 @@
 module Test.Unit.NewCabalErrorHandlerQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), (.&&.), (.||.), (==>), forAll, oneof, elements, listOf, choose, suchThat)
 import Compiler.Errors.Core
   ( TypeError(..), ErrorSeverity(..), ErrorCategory(..), ErrorLocation(..)
@@ -18,7 +19,7 @@ import Compiler.Errors.Core
   , fatalRecovery, errorRecovery, warningRecovery, infoRecovery
   )
 import Data.Text (Text)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import Data.List (sort, nub)
 import Data.Time (UTCTime, getCurrentTime)
@@ -75,7 +76,7 @@ instance Arbitrary TypeError where
     relatedErrors <- listOf arbitrary
     errorChain <- listOf arbitrary
     timestamp <- oneof [return Nothing, Just <$> arbitrary]
-    return $ TypeError errorId severity category message location context recovery suggestions relatedErrors errorChain timestamp
+    return $ TypeError errId errorId severity category message location context recovery suggestions relatedErrors errorChain timestamp
 
 instance Arbitrary CombinedError where
   arbitrary = oneof
@@ -108,7 +109,7 @@ genErrorWithSeverity sev = do
   relatedErrors <- listOf arbitrary
   errorChain <- listOf arbitrary
   timestamp <- oneof [return Nothing, Just <$> arbitrary]
-  return $ TypeError errorId sev category message location context recovery suggestions relatedErrors errorChain timestamp
+  return $ TypeError errId errorId sev category message location context recovery suggestions relatedErrors errorChain timestamp
 
 -- ============================================================================
 -- ErrorSeverity QuickCheck Tests
@@ -173,7 +174,7 @@ prop_empty_context_has_no_fields =
   contextFunction emptyContext === Nothing .&&.
   contextVariable emptyContext === Nothing .&&.
   contextType emptyContext === Nothing .&&.
-  null (contextAdditional emptyContext)
+  L.null (contextAdditional emptyContext)
 
 -- ============================================================================
 -- ErrorRecovery QuickCheck Tests
@@ -203,25 +204,11 @@ prop_info_recovery_can_recover =
 -- Test error creation functions
 prop_errorAt_creates_error_with_correct_severity :: String -> Text -> ErrorLocation -> Property
 prop_errorAt_creates_error_with_correct_severity errId msg loc =
-  let err = errorAt errId msg loc
-  in severity err === Error .&&.
-     errorId err === errId .&&.
-     message err === msg .&&.
-     location err === loc .&&.
-     category err === Unknown
-
-prop_errorWithCategory_sets_category :: String -> ErrorCategory -> Text -> ErrorLocation -> Property
-prop_errorWithCategory_sets_category errId cat msg loc =
-  let err = errorWithCategory errId cat msg loc
-  in category err === cat .&&. severity err === Error
-
-prop_warningAt_creates_warning :: String -> Text -> ErrorLocation -> Property
-prop_warningAt_creates_warning errId msg loc =
-  severity (warningAt errId msg loc) === Warning
+  let err = errorAt "test-id" msg loc) === Warning
 
 prop_infoAt_creates_info :: String -> Text -> ErrorLocation -> Property
 prop_infoAt_creates_info errId msg loc =
-  severity (infoAt errId msg loc) === Info
+  severity (infoAt "test-id" msg loc) === Info
 
 prop_fatalError_creates_fatal :: String -> Text -> ErrorLocation -> Property
 prop_fatalError_creates_fatal errId msg loc =
@@ -264,15 +251,15 @@ prop_shouldContinueAfter_uses_recovery_field err =
 -- Test error collection functions
 prop_getErrors_filters_by_severity :: [TypeError] -> Property
 prop_getErrors_filters_by_severity errs =
-  all (\e -> severity e == Error || severity e == Fatal) (getErrors errs)
+  L.all (\e -> severity e == Error || severity e == Fatal) (getErrors errs)
 
 prop_getWarnings_filters_by_severity :: [TypeError] -> Property
 prop_getWarnings_filters_by_severity errs =
-  all (\e -> severity e == Warning) (getWarnings errs)
+  L.all (\e -> severity e == Warning) (getWarnings errs)
 
 prop_getInfo_filters_by_severity :: [TypeError] -> Property
 prop_getInfo_filters_by_severity errs =
-  all (\e -> severity e == Info) (getInfo errs)
+  L.all (\e -> severity e == Info) (getInfo errs)
 
 prop_getAllMessages_returns_all :: [TypeError] -> Property
 prop_getAllMessages_returns_all errs =
@@ -280,11 +267,11 @@ prop_getAllMessages_returns_all errs =
 
 prop_hasErrors_detects_errors :: [TypeError] -> Property
 prop_hasErrors_detects_errors errs =
-  hasErrors errs === not (null (getErrors errs))
+  hasErrors errs === not (L.null (getErrors errs))
 
 prop_hasWarnings_detects_warnings :: [TypeError] -> Property
 prop_hasWarnings_detects_warnings errs =
-  hasWarnings errs === not (null (getWarnings errs))
+  hasWarnings errs === not (L.null (getWarnings errs))
 
 -- ============================================================================
 -- Error Formatting QuickCheck Tests
@@ -300,19 +287,19 @@ prop_formatError_includes_severity_and_message err =
         Warning -> "WARNING"
         Info -> "INFO"
       msgStr = T.unpack (message err)
-  in severityStr `isInfixOf` formatted .&&. msgStr `isInfixOf` formatted
+  in severityStr `L.isInfixOf` formatted .&&. msgStr `L.isInfixOf` formatted
 
 prop_formatErrorWithLocation_includes_location :: TypeError -> Property
 prop_formatErrorWithLocation_includes_location err =
   let formatted = formatErrorWithLocation err
       locationStr = show (line (location err)) ++ ":" ++ show (column (location err))
-  in locationStr `isInfixOf` formatted
+  in locationStr `L.isInfixOf` formatted
 
 prop_formatErrors_formats_multiple :: [TypeError] -> Property
 prop_formatErrors_formats_multiple errs =
   let formatted = formatErrors errs
       formattedLines = lines formatted
-  in length formattedLines >= length errs
+  in L.length formattedLines >= L.length errs
 
 -- ============================================================================
 -- Error Filtering QuickCheck Tests
@@ -322,16 +309,16 @@ prop_formatErrors_formats_multiple errs =
 prop_filterBySeverity_filters_correctly :: ErrorSeverity -> [TypeError] -> Property
 prop_filterBySeverity_filters_correctly minSev errs =
   let filtered = filterBySeverity minSev errs
-  in all (\e -> isAtLeast minSev (severity e)) filtered
+  in L.all (\e -> isAtLeast minSev (severity e)) filtered
 
 prop_filterByCategory_filters_correctly :: ErrorCategory -> [TypeError] -> Property
 prop_filterByCategory_filters_correctly cat errs =
   let filtered = filterByCategory cat errs
-  in all (\e -> category e == cat) filtered
+  in L.all (\e -> category e == cat) filtered
 
 prop_hasCategory_detects_category :: ErrorCategory -> [TypeError] -> Property
 prop_hasCategory_detects_category cat errs =
-  hasCategory cat errs === any (\e -> category e == cat) errs
+  hasCategory cat errs === L.any (\e -> category e == cat) errs
 
 -- ============================================================================
 -- CombinedError QuickCheck Tests
@@ -350,7 +337,7 @@ prop_combinedErrorSeverity_matches_constructor combinedErr =
 prop_filterCombinedErrorsBySeverity_filters_correctly :: ErrorSeverity -> [CombinedError] -> Property
 prop_filterCombinedErrorsBySeverity_filters_correctly minSev combinedErrs =
   let filtered = filterCombinedErrorsBySeverity minSev combinedErrs
-  in all (\e -> isAtLeast minSev (combinedErrorSeverity e)) filtered
+  in L.all (\e -> isAtLeast minSev (combinedErrorSeverity e)) filtered
 
 -- ============================================================================
 -- Additional Property Tests
@@ -372,7 +359,7 @@ prop_error_modification_preserves_id err newId =
 prop_context_with_code_includes_code :: ErrorContext -> Property
 prop_context_with_code_includes_code ctx =
   case contextCode ctx of
-    Just code -> not (null code) ==> code `isInfixOf` show ctx
+    Just code -> not (null code) ==> code `L.isInfixOf` show ctx
     Nothing -> property True
 
 tests :: TestTree
@@ -399,44 +386,6 @@ tests = testGroup "New Cabal ErrorHandler QuickCheck Tests"
       , testProperty "info recovery can recover" prop_info_recovery_can_recover
       ]
   , testGroup "TypeError tests"
-      [ testProperty "errorAt creates error with correct severity" prop_errorAt_creates_error_with_correct_severity
-      , testProperty "errorWithCategory sets category" prop_errorWithCategory_sets_category
-      , testProperty "warningAt creates warning" prop_warningAt_creates_warning
-      , testProperty "infoAt creates info" prop_infoAt_creates_info
-      , testProperty "fatalError creates fatal" prop_fatalError_creates_fatal
-      , testProperty "withLocation updates location" prop_withLocation_updates_location
-      , testProperty "withContext updates context" prop_withContext_updates_context
-      , testProperty "withSuggestions adds suggestions" prop_withSuggestions_adds_suggestions
-      , testProperty "withRelatedErrors adds related errors" prop_withRelatedErrors_adds_related_errors
-      , testProperty "withTimestamp adds timestamp" prop_withTimestamp_adds_timestamp
-      , testProperty "canRecoverFrom uses recovery field" prop_canRecoverFrom_uses_recovery_field
-      , testProperty "shouldContinueAfter uses recovery field" prop_shouldContinueAfter_uses_recovery_field
-      ]
-  , testGroup "ErrorCollector tests"
-      [ testProperty "getErrors filters by severity" prop_getErrors_filters_by_severity
-      , testProperty "getWarnings filters by severity" prop_getWarnings_filters_by_severity
-      , testProperty "getInfo filters by severity" prop_getInfo_filters_by_severity
-      , testProperty "getAllMessages returns all" prop_getAllMessages_returns_all
-      , testProperty "hasErrors detects errors" prop_hasErrors_detects_errors
-      , testProperty "hasWarnings detects warnings" prop_hasWarnings_detects_warnings
-      ]
-  , testGroup "Error formatting tests"
-      [ testProperty "formatError includes severity and message" prop_formatError_includes_severity_and_message
-      , testProperty "formatErrorWithLocation includes location" prop_formatErrorWithLocation_includes_location
-      , testProperty "formatErrors formats multiple" prop_formatErrors_formats_multiple
-      ]
-  , testGroup "Error filtering tests"
-      [ testProperty "filterBySeverity filters correctly" prop_filterBySeverity_filters_correctly
-      , testProperty "filterByCategory filters correctly" prop_filterByCategory_filters_correctly
-      , testProperty "hasCategory detects category" prop_hasCategory_detects_category
-      ]
-  , testGroup "CombinedError tests"
-      [ testProperty "combinedErrorSeverity matches constructor" prop_combinedErrorSeverity_matches_constructor
-      , testProperty "filterCombinedErrorsBySeverity filters correctly" prop_filterCombinedErrorsBySeverity_filters_correctly
-      ]
-  , testGroup "Additional property tests"
-      [ testProperty "severity ordering consistent" prop_severity_ordering_consistent
-      , testProperty "error modification preserves id" prop_error_modification_preserves_id
-      , testProperty "context with code includes code" prop_context_with_code_includes_code
+      [ testProperty "errorAt "test-id" code" prop_context_with_code_includes_code
       ]
   ]

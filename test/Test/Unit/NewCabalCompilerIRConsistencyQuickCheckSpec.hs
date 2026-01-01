@@ -3,6 +3,7 @@
 module Test.Unit.NewCabalCompilerIRConsistencyQuickCheckSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Compiler.IR
 import Parser (TypusFile(..), CodeBlock(..), BlockDirectives(..), defaultFileDirectives, defaultBlockDirectives)
@@ -55,7 +56,7 @@ propSemanticIRContainsValidModule typusFile =
   in case result of
        Right semanticIR -> 
          let module' = semanticModule semanticIR
-         in not (null (gmName module'))  -- Module should have a name
+         in not (L.null (gmName module'))  -- Module should have a name
        Left _ -> property True  -- Errors are acceptable for malformed input
 
 -- | Go IR should preserve the module structure from semantic IR
@@ -93,7 +94,7 @@ testSourceIROperations = testGroup "Source IR Operations"
       let emptyFile = TypusFile defaultFileDirectives [] [] []
           sourceIR = buildSourceIR emptyFile
       in sourceTypusFile sourceIR == emptyFile &&
-         null (sourceText sourceIR)
+         L.null (sourceText sourceIR)
          
   , testCase "build source IR with code blocks" $
       let block = CodeBlock defaultBlockDirectives "func main() {}" (spanBetween (posAt 1 1) (posAt 1 20))
@@ -121,7 +122,7 @@ testSemanticIROperations = testGroup "Semantic IR Operations"
       in case result of
            Right semanticIR -> 
              semanticTypusFile semanticIR == file &&
-             not (null (gmName (semanticModule semanticIR)))
+             not (L.null (gmName (semanticModule semanticIR)))
            Left _ -> fail "Failed to build semantic IR"
            
   , testCase "semantic IR includes value analysis" $
@@ -131,7 +132,7 @@ testSemanticIROperations = testGroup "Semantic IR Operations"
           result = buildSemanticIR sourceIR
       in case result of
            Right semanticIR -> 
-             not (null (semanticValueInfo semanticIR))
+             not (L.null (semanticValueInfo semanticIR))
            Left _ -> fail "Failed to build semantic IR"
            
   , testCase "build semantic IR with package" $
@@ -145,7 +146,7 @@ testSemanticIROperations = testGroup "Semantic IR Operations"
       in case result of
            Right semanticIR -> 
              let module' = semanticModule semanticIR
-             in length (gmImports module') > 0  -- Should have imports from package
+             in L.length (gmImports module') > 0  -- Should have imports from package
            Left _ -> fail "Failed to build semantic IR with package"
   ]
 
@@ -158,7 +159,7 @@ testGoIROperations = testGroup "Go IR Operations"
           sourceIR = buildSourceIR file
           Right semanticIR = buildSemanticIR sourceIR
           goIR = emitGo semanticIR
-      in not (null (goSource goIR)) &&
+      in not (L.null (goSource goIR)) &&
          gmName (goModule goIR) == gmName (semanticModule semanticIR)
          
   , testCase "Go IR source contains module content" $
@@ -169,9 +170,9 @@ testGoIROperations = testGroup "Go IR Operations"
           Right semanticIR = buildSemanticIR sourceIR
           goIR = emitGo semanticIR
           goSource = goSource goIR
-      in "package main" `isInfixOf` goSource &&
-         "func main" `isInfixOf` goSource &&
-         "println" `isInfixOf` goSource
+      in "package main" `L.isInfixOf` goSource &&
+         "func main" `L.isInfixOf` goSource &&
+         "println" `L.isInfixOf` goSource
          
   , testCase "Go IR preserves module declarations" $
       let decl = GoFuncDecl "test" [] [] Nothing
@@ -184,7 +185,7 @@ testGoIROperations = testGroup "Go IR Operations"
           goIR = emitGo semanticIR
           goModule = goModule goIR
       in gmName goModule == "testmod" &&
-         length (gmDecls goModule) == 1
+         L.length (gmDecls goModule) == 1
   ]
 
 -- | Test IR edge cases
@@ -197,7 +198,7 @@ testIREdgeCases = testGroup "IR Edge Cases"
       in case result of
            Right semanticIR -> 
              let goIR = emitGo semanticIR
-             in not (null (goSource goIR))  -- Should still generate some output
+             in not (L.null (goSource goIR))  -- Should still generate some output
            Left _ -> fail "Failed to handle empty file"
            
   , testCase "file with only comments" $
@@ -230,8 +231,8 @@ testIRConsistencyTransformations = testGroup "IR Consistency Transformations"
           Right semanticIR = buildSemanticIR sourceIR
           goIR = emitGo semanticIR
           goSource = goSource goIR
-      in "package main" `isInfixOf` goSource &&
-         "func test" `isInfixOf` goSource
+      in "package main" `L.isInfixOf` goSource &&
+         "func test" `L.isInfixOf` goSource
          
   , testCase "multiple transformations are idempotent" $
       let block = CodeBlock defaultBlockDirectives "package main\n\nfunc main() {}" (spanBetween (posAt 1 1) (posAt 3 15))

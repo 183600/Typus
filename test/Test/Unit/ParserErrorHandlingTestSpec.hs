@@ -21,6 +21,7 @@ import Test.QuickCheck
 import Parser (parseTypus, TypusFile(..))
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..))
 
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf, isSuffixOf)
 import qualified Data.Text as T
 
@@ -131,7 +132,7 @@ prop_empty_string_parses =
   let empty = ""
   in case parseTypus empty of
        Left _ -> property False
-       Right typusFile -> property $ null (tfBlocks typusFile)
+       Right typusFile -> property $ L.null (tfBlocks typusFile)
 
 -- Property: code with only whitespace should parse
 prop_whitespace_only_parses :: Property
@@ -158,13 +159,13 @@ prop_error_messages_informative :: Property
 prop_error_messages_informative =
   forAll genMalformedCode $ \code ->
     case parseTypus code of
-      Left err -> property $ length err > 0
+      Left err -> property $ L.length err > 0
       Right _ -> property False
 
 -- Property: adding package declaration should help parsing
 prop_package_declaration_helps :: String -> Property
 prop_package_declaration_helps code =
-  not (null code) && not ("package" `isInfixOf` code) ==>
+  not (null code) && not ("package" `L.isInfixOf` code) ==>
   let withoutPackage = code
       withPackage = "package main\n" ++ code
       resultWithout = parseTypus withoutPackage
@@ -187,7 +188,7 @@ unit_tests = testGroup "Parser Error Handling Unit Tests"
             ]
       case parseTypus code of
         Left err -> assertBool "error should mention unclosed" $ 
-                     "unclosed" `isInfixOf` err || "brace" `isInfixOf` err
+                     "unclosed" `L.isInfixOf` err || "brace" `L.isInfixOf` err
         Right _ -> assertFailure "expected parsing to fail"
 
   , testCase "unclosed string error" $ do
@@ -199,7 +200,7 @@ unit_tests = testGroup "Parser Error Handling Unit Tests"
             ]
       case parseTypus code of
         Left err -> assertBool "error should mention string" $ 
-                     "string" `isInfixOf` err || "unclosed" `isInfixOf` err
+                     "string" `L.isInfixOf` err || "unclosed" `L.isInfixOf` err
         Right _ -> assertFailure "expected parsing to fail"
 
   , testCase "invalid character error" $ do
@@ -211,7 +212,7 @@ unit_tests = testGroup "Parser Error Handling Unit Tests"
             ]
       case parseTypus code of
         Left err -> assertBool "error should mention invalid character" $ 
-                     length err > 0
+                     L.length err > 0
         Right _ -> assertFailure "expected parsing to fail"
 
   , testCase "mismatched parentheses error" $ do
@@ -223,7 +224,7 @@ unit_tests = testGroup "Parser Error Handling Unit Tests"
             ]
       case parseTypus code of
         Left err -> assertBool "error should mention parentheses" $ 
-                     "paren" `isInfixOf` err || "mismatch" `isInfixOf` err
+                     "paren" `L.isInfixOf` err || "mismatch" `L.isInfixOf` err
         Right _ -> assertFailure "expected parsing to fail"
 
   , testCase "double else error" $ do
@@ -238,7 +239,7 @@ unit_tests = testGroup "Parser Error Handling Unit Tests"
             ]
       case parseTypus code of
         Left err -> assertBool "error should mention else" $ 
-                     "else" `isInfixOf` err
+                     "else" `L.isInfixOf` err
         Right _ -> assertFailure "expected parsing to fail"
 
   , testCase "unclosed block comment error" $ do
@@ -251,7 +252,7 @@ unit_tests = testGroup "Parser Error Handling Unit Tests"
             ]
       case parseTypus code of
         Left err -> assertBool "error should mention comment" $ 
-                     "comment" `isInfixOf` err || "unclosed" `isInfixOf` err
+                     "comment" `L.isInfixOf` err || "unclosed" `L.isInfixOf` err
         Right _ -> assertFailure "expected parsing to fail"
 
   , testCase "multiple package declarations error" $ do
@@ -262,7 +263,7 @@ unit_tests = testGroup "Parser Error Handling Unit Tests"
             ]
       case parseTypus code of
         Left err -> assertBool "error should mention package" $ 
-                     "package" `isInfixOf` err
+                     "package" `L.isInfixOf` err
         Right _ -> assertFailure "expected parsing to fail"
 
   , testCase "valid simple function parses correctly" $ do
@@ -275,7 +276,7 @@ unit_tests = testGroup "Parser Error Handling Unit Tests"
       case parseTypus code of
         Left err -> assertFailure $ "parsing failed: " ++ err
         Right typusFile -> do
-          assertBool "should have blocks" $ not $ null $ tfBlocks typusFile
+          assertBool "should have blocks" $ not $ L.null $ tfBlocks typusFile
 
   , testCase "valid function with parameters parses correctly" $ do
       let code = unlines
@@ -291,7 +292,7 @@ unit_tests = testGroup "Parser Error Handling Unit Tests"
       case parseTypus code of
         Left err -> assertFailure $ "parsing failed: " ++ err
         Right typusFile -> do
-          assertBool "should have blocks" $ not $ null $ tfBlocks typusFile
+          assertBool "should have blocks" $ not $ L.null $ tfBlocks typusFile
 
   , testCase "valid struct definition parses correctly" $ do
       let code = unlines
@@ -305,7 +306,7 @@ unit_tests = testGroup "Parser Error Handling Unit Tests"
       case parseTypus code of
         Left err -> assertFailure $ "parsing failed: " ++ err
         Right typusFile -> do
-          assertBool "should have blocks" $ not $ null $ tfBlocks typusFile
+          assertBool "should have blocks" $ not $ L.null $ tfBlocks typusFile
 
   , testCase "empty input parses successfully" $ do
       let code = ""
@@ -355,7 +356,7 @@ unit_tests = testGroup "Parser Error Handling Unit Tests"
             , "}"
             ]
       case parseTypus code of
-        Left err -> assertBool "error should be reported" $ length err > 0
+        Left err -> assertBool "error should be reported" $ L.length err > 0
         Right _ -> return ()  -- Might succeed with partial parsing
 
   , testCase "unicode characters in code" $ do
@@ -370,7 +371,7 @@ unit_tests = testGroup "Parser Error Handling Unit Tests"
       case parseTypus code of
         Left err -> assertFailure $ "parsing failed: " ++ err
         Right typusFile -> do
-          assertBool "should have blocks" $ not $ null $ tfBlocks typusFile
+          assertBool "should have blocks" $ not $ L.null $ tfBlocks typusFile
 
   , testCase "very long line handling" $ do
       let longString = replicate 1000 'a'
@@ -383,7 +384,7 @@ unit_tests = testGroup "Parser Error Handling Unit Tests"
       case parseTypus code of
         Left err -> assertFailure $ "parsing failed: " ++ err
         Right typusFile -> do
-          assertBool "should have blocks" $ not $ null $ tfBlocks typusFile
+          assertBool "should have blocks" $ not $ L.null $ tfBlocks typusFile
 
   , testCase "deeply nested structures" $ do
       let nestedDepth = 50
@@ -398,7 +399,7 @@ unit_tests = testGroup "Parser Error Handling Unit Tests"
       case parseTypus code of
         Left err -> assertFailure $ "parsing failed: " ++ err
         Right typusFile -> do
-          assertBool "should have blocks" $ not $ null $ tfBlocks typusFile
+          assertBool "should have blocks" $ not $ L.null $ tfBlocks typusFile
   ]
 
 -- Error recovery tests
@@ -418,12 +419,12 @@ error_recovery_tests = testGroup "Parser Error Recovery Tests"
             , "    println(\"also good\")"
             , "}"
             ]
-      -- Test that parser can recover and continue after errors
+      -- Test that parser can recover L.and continue after errors
       case parseTypus code of
         Left _ -> return ()  -- Parser might fail completely, that's OK
         Right typusFile -> do
           -- If it succeeds, it should contain some valid content
-          assertBool "should parse some content" $ not $ null $ tfBlocks typusFile
+          assertBool "should parse some content" $ not $ L.null $ tfBlocks typusFile
 
   , testCase "error location tracking" $ do
       let code = unlines
@@ -437,7 +438,7 @@ error_recovery_tests = testGroup "Parser Error Recovery Tests"
       case parseTypus code of
         Left err -> do
           -- Error message should ideally contain location information
-          assertBool "error should have content" $ length err > 0
+          assertBool "error should have content" $ L.length err > 0
         Right _ -> return ()  -- Might succeed with error recovery
 
   , testCase "multiple errors in one file" $ do
@@ -453,7 +454,7 @@ error_recovery_tests = testGroup "Parser Error Recovery Tests"
       case parseTypus code of
         Left err -> do
           -- Should report at least one error
-          assertBool "should report errors" $ length err > 0
+          assertBool "should report errors" $ L.length err > 0
         Right _ -> return ()  -- Might succeed with partial parsing
   ]
 
@@ -471,13 +472,13 @@ performance_tests = testGroup "Parser Performance Tests"
             , "    println(x)"
             , "}"
             ]
-          manyFuncs = concat $ replicate 100 largeFunc
+          manyFuncs = L.concat $ replicate 100 largeFunc
           code = "package main\n\n" ++ manyFuncs
       case parseTypus code of
         Left err -> assertFailure $ "parsing failed: " ++ err
         Right typusFile -> do
           assertBool "should parse many functions" $ 
-            length (tfBlocks typusFile) > 0
+            L.length (tfBlocks typusFile) > 0
 
   , testCase "deep nesting performance" $ do
       let maxDepth = 100
@@ -495,7 +496,7 @@ performance_tests = testGroup "Parser Performance Tests"
         Left err -> assertFailure $ "parsing failed: " ++ err
         Right typusFile -> do
           assertBool "should parse deeply nested code" $ 
-            not $ null $ tfBlocks typusFile
+            not $ L.null $ tfBlocks typusFile
   ]
 
 tests :: TestTree

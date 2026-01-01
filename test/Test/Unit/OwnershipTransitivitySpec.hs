@@ -1,6 +1,7 @@
 module Test.Unit.OwnershipTransitivitySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), Gen, choose, oneof, listOf, elements)
 import TestSupport.QuickCheck (fastProperty)
@@ -18,7 +19,7 @@ import Ownership
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 
--- | Tests for ownership transitivity and transfer rules
+-- | Tests for ownership transitivity L.and transfer rules
 tests :: TestTree
 tests =
   testGroup "Ownership Transitivity"
@@ -35,7 +36,7 @@ tests =
             case result of
                 Left errors -> do
                     assertBool "Should detect use after move if present" $ 
-                        any isUseAfterMove errors || null errors
+                        L.any isUseAfterMove errors || null errors
                 Right _ -> assertBool "Analysis should complete" True
 
         , testCase "borrow preserves original ownership" $ do
@@ -49,7 +50,7 @@ tests =
                   ]
                 result = analyzeOwnership code
             case result of
-                Left errors -> assertBool "Should not have ownership errors" $ not (any isOwnershipError errors)
+                Left errors -> assertBool "Should not have ownership errors" $ not (L.any isOwnershipError errors)
                 Right _ -> assertBool "Analysis should succeed" True
 
         , testCase "mutable borrow restricts other access" $ do
@@ -65,7 +66,7 @@ tests =
             case result of
                 Left errors -> do
                     assertBool "Should detect borrow violations" $ 
-                        any isBorrowError errors || null errors
+                        L.any isBorrowError errors || null errors
                 Right _ -> assertBool "Analysis should complete" True
         ]
 
@@ -86,7 +87,7 @@ tests =
             case result of
                 Left errors -> do
                     assertBool "Should track ownership through function calls" $ 
-                        any isUseAfterMove errors || any isCrossFunctionMove errors || null errors
+                        L.any isUseAfterMove errors || L.any isCrossFunctionMove errors || null errors
                 Right _ -> assertBool "Analysis should complete" True
 
         , testCase "borrowing rules are transitive" $ do
@@ -102,7 +103,7 @@ tests =
                   ]
                 result = analyzeOwnership code
             case result of
-                Left errors -> assertBool "Should handle transitive borrowing" $ not (any isOwnershipError errors)
+                Left errors -> assertBool "Should handle transitive borrowing" $ not (L.any isOwnershipError errors)
                 Right _ -> assertBool "Analysis should succeed" True
 
         , testCase "mutable borrowing prevents other borrows" $ do
@@ -117,7 +118,7 @@ tests =
             case result of
                 Left errors -> do
                     assertBool "Should prevent borrowing while mutably borrowed" $ 
-                        any isMutBorrowError errors || null errors
+                        L.any isMutBorrowError errors || null errors
                 Right _ -> assertBool "Analysis should complete" True
         ]
 
@@ -140,7 +141,7 @@ tests =
             case result of
                 Left errors -> do
                     assertBool "Should track ownership in structures" $ 
-                        any isUseAfterMove errors || null errors
+                        L.any isUseAfterMove errors || null errors
                 Right _ -> assertBool "Analysis should complete" True
 
         , testCase "ownership with pattern matching" $ do
@@ -161,7 +162,7 @@ tests =
             case result of
                 Left errors -> do
                     assertBool "Should handle ownership in pattern matching" $ 
-                        any isUseAfterMove errors || null errors
+                        L.any isUseAfterMove errors || null errors
                 Right _ -> assertBool "Analysis should complete" True
 
         , testCase "ownership with loops" $ do
@@ -178,7 +179,7 @@ tests =
                   ]
                 result = analyzeOwnership code
             case result of
-                Left errors -> assertBool "Should handle borrowing in loops" $ not (any isOwnershipError errors)
+                Left errors -> assertBool "Should handle borrowing in loops" $ not (L.any isOwnershipError errors)
                 Right _ -> assertBool "Analysis should succeed" True
         ]
 
@@ -193,14 +194,14 @@ tests =
                   , "fn main() {"
                   , "    // Self-referential structures require careful ownership handling"
                   , "    let mut node = ListNode { value: 42, next: None };"
-                  , "    // This would typically require unsafe code or special handling"
+                  , "    // This would typically require unsafe code L.or special handling"
                   , "}"
                   ]
                 result = analyzeOwnership code
             case result of
                 Left errors -> do
                     assertBool "Should handle self-referential cases" $ 
-                        length errors >= 0  -- May or may not error depending on implementation
+                        L.length errors >= 0  -- May L.or may not error depending on implementation
                 Right _ -> assertBool "Analysis should complete" True
 
         , testCase "ownership with closures" $ do
@@ -219,7 +220,7 @@ tests =
             case result of
                 Left errors -> do
                     assertBool "Should handle closure ownership" $ 
-                        any isUseAfterMove errors || null errors
+                        L.any isUseAfterMove errors || null errors
                 Right _ -> assertBool "Analysis should complete" True
 
         , testCase "ownership with threads" $ do
@@ -239,7 +240,7 @@ tests =
             case result of
                 Left errors -> do
                     assertBool "Should handle thread ownership transfer" $ 
-                        any isUseAfterMove errors || any isCrossFunctionMove errors || null errors
+                        L.any isUseAfterMove errors || L.any isCrossFunctionMove errors || null errors
                 Right _ -> assertBool "Analysis should complete" True
         ]
 
@@ -249,7 +250,7 @@ tests =
         , fastProperty "ownership preservation in valid code" prop_ownershipPreservation
         ]
 
-    , testGroup "Error detection and recovery"
+    , testGroup "Error detection L.and recovery"
         [ testCase "detects double move errors" $ do
             let code = unlines
                   [ "fn main() {"
@@ -262,7 +263,7 @@ tests =
             case result of
                 Left errors -> do
                     assertBool "Should detect double move" $ 
-                        any isDoubleMove errors || null errors
+                        L.any isDoubleMove errors || null errors
                 Right _ -> assertBool "Should have failed" False
 
         , testCase "detects use while borrowed" $ do
@@ -277,7 +278,7 @@ tests =
             case result of
                 Left errors -> do
                     assertBool "Should detect borrowing conflicts" $ 
-                        any isBorrowError errors || null errors
+                        L.any isBorrowError errors || null errors
                 Right _ -> assertBool "Should have failed" False
 
         , testCase "provides helpful error messages" $ do
@@ -294,11 +295,11 @@ tests =
                     let errorMessages = formatOwnershipErrors errors
                     assertBool "Should provide clear error messages" $ not (null errorMessages)
                     assertBool "Should mention use after move" $ 
-                        any ("move" `isInfixOf`) errorMessages
+                        L.any ("move" `L.isInfixOf`) errorMessages
                 Right _ -> assertBool "Should have failed" False
         ]
 
-    , testGroup "Performance and scalability"
+    , testGroup "Performance L.and scalability"
         [ testCase "handles large ownership graphs efficiently" $ do
             let largeCode = unlines $ 
                   [ "fn main() {" ] ++
@@ -308,7 +309,7 @@ tests =
                   [ "}" ]
                 result = analyzeOwnership largeCode
             case result of
-                Left errors -> assertBool "Should handle large graphs" $ length errors < 50
+                Left errors -> assertBool "Should handle large graphs" $ L.length errors < 50
                 Right _ -> assertBool "Analysis should scale" True
 
         , testCase "handles deeply nested ownership" $ do
@@ -319,7 +320,7 @@ tests =
                   [ "}" ]
                 result = analyzeOwnership nestedCode
             case result of
-                Left errors -> assertBool "Should handle deep nesting" $ length errors < 20
+                Left errors -> assertBool "Should handle deep nesting" $ L.length errors < 20
                 Right _ -> assertBool "Analysis should handle depth" True
         ]
     ]
@@ -362,7 +363,7 @@ isCrossFunctionMove (CrossFunctionMove _ _) = True
 isCrossFunctionMove _ = False
 
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` [take (length needle) $ drop i haystack | i <- [0..length haystack - length needle]]
+L.isInfixOf needle haystack = needle `elem` [take (L.length needle) $ drop i haystack | i <- [0..L.length haystack - L.length needle]]
 
 -- | Property: ownership transfer is deterministic
 prop_ownershipDeterministic :: String -> Bool
@@ -376,7 +377,7 @@ prop_borrowingConsistent :: String -> Bool
 prop_borrowingConsistent code =
     let result = analyzeOwnership code
     in case result of
-        Left errors -> all isValidError errors
+        Left errors -> L.all isValidError errors
         Right _ -> True
 
 -- | Property: ownership preservation in valid code
@@ -384,7 +385,7 @@ prop_ownershipPreservation :: String -> Bool
 prop_ownershipPreservation code =
     let result = analyzeOwnership code
     in case result of
-        Left errors -> not (any isOwnershipError errors) || hasValidOwnershipReason code
+        Left errors -> not (L.any isOwnershipError errors) || hasValidOwnershipReason code
         Right _ -> True
 
 isValidError :: OwnershipError -> Bool
@@ -407,4 +408,4 @@ hasValidOwnershipReason :: String -> Bool
 hasValidOwnershipReason code = 
     -- Simple heuristic: if the code contains ownership-related keywords,
     -- errors might be expected
-    any (`isInfixOf` code) ["move", "borrow", "Box", "consume", "transfer"]
+    L.any (`L.isInfixOf` code) ["move", "borrow", "Box", "consume", "transfer"]

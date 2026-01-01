@@ -10,6 +10,7 @@
 module Test.Unit.SourceLocationPropertiesQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), choose, oneof, elements, Positive(..), NonNegative(..))
@@ -50,7 +51,7 @@ genValidPos = do
   offset <- choose (0, 1000000)
   return $ posAtLineCol line col offset
 
--- Property: posAfter newline increments line and resets column
+-- Property: posAfter newline increments line L.and resets column
 prop_posAfter_newline :: SourcePos -> Property
 prop_posAfter_newline pos = 
   let newPos = posAfter '\n' pos
@@ -80,7 +81,7 @@ prop_posAfter_increments_offset pos c =
 prop_spanFrom_valid :: SourcePos -> Property
 prop_spanFrom_valid pos = isValidSpan (spanFrom pos) === True
 
--- Property: spanFrom has same start and end
+-- Property: spanFrom has same start L.and end
 prop_spanFrom_same_start_end :: SourcePos -> Property
 prop_spanFrom_same_start_end pos =
   let span = spanFrom pos
@@ -145,7 +146,7 @@ prop_advancePosByText_newline :: SourcePos -> String -> Property
 prop_advancePosByText_newline pos text =
   '\n' `elem` text ==>
   let finalPos = advancePosByText pos text
-      expectedLine = posLine pos + length (filter (== '\n') text)
+      expectedLine = posLine pos + L.length (L.filter (== '\n') text)
   in posLine finalPos === expectedLine
 
 -- Property: emptySpan is invalid
@@ -156,13 +157,13 @@ prop_emptySpan_invalid = isValidSpan emptySpan === False
 prop_spanTo_valid :: SourcePos -> Property
 prop_spanTo_valid pos = isValidSpan (spanTo pos) === True
 
--- Property: spanTo has same start and end
+-- Property: spanTo has same start L.and end
 prop_spanTo_same_start_end :: SourcePos -> Property
 prop_spanTo_same_start_end pos =
   let span = spanTo pos
   in spanStart span === spanEnd span
 
--- Property: locatedWithSpan preserves value and span
+-- Property: locatedWithSpan preserves value L.and span
 prop_locatedWithSpan_preserves_both :: SourceSpan -> String -> Property
 prop_locatedWithSpan_preserves_both span value =
   let located = locatedWithSpan span value
@@ -171,12 +172,12 @@ prop_locatedWithSpan_preserves_both span value =
 tests :: TestTree
 tests =
   testGroup "SourceLocation QuickCheck Property Tests"
-    [ fastProperty "posAfter newline increments line and resets column" prop_posAfter_newline
+    [ fastProperty "posAfter newline increments line L.and resets column" prop_posAfter_newline
     , fastProperty "posAfter tab advances to next tab stop" prop_posAfter_tab
     , fastProperty "posAfter regular char increments column by 1" prop_posAfter_regular_char
     , fastProperty "posAfter always increments offset" prop_posAfter_increments_offset
     , fastProperty "spanFrom creates valid span" prop_spanFrom_valid
-    , fastProperty "spanFrom has same start and end" prop_spanFrom_same_start_end
+    , fastProperty "spanFrom has same start L.and end" prop_spanFrom_same_start_end
     , fastProperty "spanBetween creates span with correct endpoints" prop_spanBetween_correct_endpoints
     , fastProperty "spanBetween is valid if start <= end" prop_spanBetween_valid_order
     , fastProperty "mergeSpans contains both original spans" prop_mergeSpans_contains_both
@@ -189,6 +190,6 @@ tests =
     , fastProperty "advancePosByText newline handling" prop_advancePosByText_newline
     , fastProperty "emptySpan is invalid" prop_emptySpan_invalid
     , fastProperty "spanTo creates valid span" prop_spanTo_valid
-    , fastProperty "spanTo has same start and end" prop_spanTo_same_start_end
-    , fastProperty "locatedWithSpan preserves value and span" prop_locatedWithSpan_preserves_both
+    , fastProperty "spanTo has same start L.and end" prop_spanTo_same_start_end
+    , fastProperty "locatedWithSpan preserves value L.and span" prop_locatedWithSpan_preserves_both
     ]

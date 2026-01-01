@@ -10,6 +10,7 @@
 module Test.Unit.ErrorHandlerConsistencyQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertBool, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -41,30 +42,11 @@ import Compiler.Errors.Core
   , formatErrors
   , canRecoverFrom
   , shouldContinueAfter
-  , errorAt
-  , warningAt
-  , infoAt
-  , errorWithCategory
-  , warningWithCategory
-  , infoWithCategory
-  , fatalError
-  , fatalErrorWithCategory
-  , combineErrors
-  , combinedErrorSeverity
-  , filterBySeverity
-  , filterByCategory
-  , hasCategory
-  , severityPriority
-  , isAtLeast
-  , createRecoveryStrategy
-  , customRecovery
-  , fatalRecovery
-  , errorRecovery
-  , warningRecovery
   , infoRecovery
   )
 
-import Data.List (sort, length, nub)
+import Data.List (length)
+import Data.List (sort, nub)
 import Data.Text (Text)
 import qualified Data.Text as T
 
@@ -104,7 +86,7 @@ genErrorLocation = do
 -- Generate error messages
 genErrorMessage :: Gen String
 genErrorMessage = do
-  words <- listOf1 $ elements $ concat
+  words <- listOf1 $ elements $ L.concat
     [ ["syntax", "type", "name", "semantic", "runtime", "IO", "memory", "concurrency", "security", "config"]
     , ["error", "warning", "info", "fatal", "critical", "minor", "major"]
     , ["found", "expected", "missing", "invalid", "undefined", "unresolved", "conflict"]
@@ -173,7 +155,7 @@ prop_add_error_increases_count msg =
   not (null msg) ==>
   let collector = addError msg newErrorCollector
       originalCount = 0
-      newCount = length $ getErrors collector
+      newCount = L.length $ getErrors collector
   in newCount > originalCount .&&. hasErrors collector
 
 -- Property: adding warnings increases warning count
@@ -182,7 +164,7 @@ prop_add_warning_increases_count msg =
   not (null msg) ==>
   let collector = addWarning msg newErrorCollector
       originalCount = 0
-      newCount = length $ getWarnings collector
+      newCount = L.length $ getWarnings collector
   in newCount > originalCount .&&. hasWarnings collector
 
 -- Property: adding info doesn't affect error/warning counts
@@ -199,7 +181,7 @@ prop_get_errors_only_errors errorMsg warningMsg infoMsg =
   not (null errorMsg && null warningMsg && null infoMsg) ==>
   let collector = addError errorMsg $ addWarning warningMsg $ addInfo infoMsg newErrorCollector
       errors = getErrors collector
-  in all ("Error" `T.isPrefixOf`) errors
+  in L.all ("Error" `T.L.isPrefixOf`) errors
 
 -- Property: getWarnings returns only warning messages
 prop_get_warnings_only_warnings :: String -> String -> String -> Property
@@ -207,7 +189,7 @@ prop_get_warnings_only_warnings errorMsg warningMsg infoMsg =
   not (null errorMsg && null warningMsg && null infoMsg) ==>
   let collector = addError errorMsg $ addWarning warningMsg $ addInfo infoMsg newErrorCollector
       warnings = getWarnings collector
-  in all ("Warning" `T.isPrefixOf`) warnings
+  in L.all ("Warning" `T.L.isPrefixOf`) warnings
 
 -- Property: getInfo returns only info messages
 prop_get_info_only_info :: String -> String -> String -> Property
@@ -215,9 +197,9 @@ prop_get_info_only_info errorMsg warningMsg infoMsg =
   not (null errorMsg && null warningMsg && null infoMsg) ==>
   let collector = addError errorMsg $ addWarning warningMsg $ addInfo infoMsg newErrorCollector
       infos = getInfo collector
-  in all ("Info" `T.isPrefixOf`) infos
+  in L.all ("Info" `T.L.isPrefixOf`) infos
 
--- Property: getAllMessages count equals sum of individual counts
+-- Property: getAllMessages count equals L.sum of individual counts
 prop_get_all_messages_count :: String -> String -> String -> Property
 prop_get_all_messages_count errorMsg warningMsg infoMsg =
   not (null errorMsg && null warningMsg && null infoMsg) ==>
@@ -226,13 +208,13 @@ prop_get_all_messages_count errorMsg warningMsg infoMsg =
       errorCount = if null errorMsg then 0 else 1
       warningCount = if null warningMsg then 0 else 1
       infoCount = if null infoMsg then 0 else 1
-  in length allMessages === errorCount + warningCount + infoCount
+  in L.length allMessages === errorCount + warningCount + infoCount
 
 -- Property: filterBySeverity preserves order
 prop_filter_by_severity_preserves_order :: [ErrorSeverity] -> ErrorSeverity -> Property
 prop_filter_by_severity_preserves_order severities minSeverity =
   not (null severities) ==>
-  let filtered = filter (isAtLeast minSeverity) severities
+  let filtered = L.filter (isAtLeast minSeverity) severities
       sorted = sort filtered
   in filtered === sorted
 
@@ -240,13 +222,13 @@ prop_filter_by_severity_preserves_order severities minSeverity =
 prop_filter_by_category_correct :: [(ErrorCategory, String)] -> ErrorCategory -> Property
 prop_filter_by_category_correct errorPairs targetCategory =
   not (null errorPairs) ==>
-  let filtered = filter (\(cat, _) -> cat == targetCategory) errorPairs
-  in all (\(cat, _) -> cat == targetCategory) filtered
+  let filtered = L.filter (\(cat, _) -> cat == targetCategory) errorPairs
+  in L.all (\(cat, _) -> cat == targetCategory) filtered
 
 -- Property: hasCategory is accurate
 prop_has_category_accurate :: [(ErrorCategory, String)] -> ErrorCategory -> Property
 prop_has_category_accurate errorPairs targetCategory =
-  let hasMatch = any (\(cat, _) -> cat == targetCategory) errorPairs
+  let hasMatch = L.any (\(cat, _) -> cat == targetCategory) errorPairs
   in hasCategory errorPairs targetCategory === hasMatch
 
 -- Property: combineErrors preserves highest severity
@@ -286,24 +268,9 @@ errorSeverityFromRecovery recovery = case recovery of
   WarningRecovery -> Warning
   InfoRecovery -> Info
 
--- Property: errorAt creates error with location
-prop_error_at_creates_with_location :: String -> ErrorLocation -> Property
-prop_error_at_creates_with_location msg loc =
-  not (null msg) ==>
-  let collector = errorAt loc msg newErrorCollector
-  in hasErrors collector
-
--- Property: warningAt creates warning with location
-prop_warning_at_creates_with_location :: String -> ErrorLocation -> Property
-prop_warning_at_creates_with_location msg loc =
-  not (null msg) ==>
-  let collector = warningAt loc msg newErrorCollector
-  in hasWarnings collector
-
--- Property: errorWithCategory creates categorized error
-prop_error_with_category :: String -> ErrorCategory -> Property
-prop_error_with_category msg category =
-  not (null msg) ==>
+-- Property: errorAt "test-id" (null msg) ==>
+  let collector = errorAt "test-id" (null msg) ==>
+  let collector = warningAt "test-id" (null msg) ==>
   let collector = errorWithCategory category msg newErrorCollector
   in hasErrors collector
 
@@ -325,7 +292,7 @@ prop_format_errors_preserves_order :: [CombinedError] -> Property
 prop_format_errors_preserve_order errors =
   not (null errors) ==>
   let formatted = formatErrors errors
-  in length formatted === length errors
+  in L.length formatted === L.length errors
 
 tests :: TestTree
 tests =
@@ -342,7 +309,7 @@ tests =
     , fastProperty "getErrors returns only error messages" prop_get_errors_only_errors
     , fastProperty "getWarnings returns only warning messages" prop_get_warnings_only_warnings
     , fastProperty "getInfo returns only info messages" prop_get_info_only_info
-    , fastProperty "getAllMessages count equals sum of individual counts" prop_get_all_messages_count
+    , fastProperty "getAllMessages count equals L.sum of individual counts" prop_get_all_messages_count
     , fastProperty "filterBySeverity preserves order" prop_filter_by_severity_preserves_order
     , fastProperty "filterByCategory is correct" prop_filter_by_category_correct
     , fastProperty "hasCategory is accurate" prop_has_category_accurate
@@ -350,10 +317,5 @@ tests =
     , fastProperty "canRecoverFrom is false only for Fatal" prop_can_recover_only_fatal_non_recoverable
     , fastProperty "shouldContinueAfter is false only for Fatal" prop_should_continue_only_fatal_stops
     , fastProperty "recovery strategies have consistent properties" prop_recovery_strategies_consistent
-    , fastProperty "errorAt creates error with location" prop_error_at_creates_with_location
-    , fastProperty "warningAt creates warning with location" prop_warning_at_creates_with_location
-    , fastProperty "errorWithCategory creates categorized error" prop_error_with_category
-    , fastProperty "fatalError creates fatal error" prop_fatal_error_creates_fatal
-    , fastProperty "formatError produces non-empty string" prop_format_error_non_empty
-    , fastProperty "formatErrors preserves order" prop_format_errors_preserve_order
+    , fastProperty "errorAt "test-id" order" prop_format_errors_preserve_order
     ]

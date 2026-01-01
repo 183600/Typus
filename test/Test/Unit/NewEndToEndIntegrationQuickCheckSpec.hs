@@ -10,12 +10,14 @@
 module Test.Unit.NewEndToEndIntegrationQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@=?))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, oneof, suchThat)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (sort, nub, isPrefixOf, isInfixOf, isSuffixOf, (\\), delete, intersect, union, intercalate)
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (sort, nub, (\\), delete, intersect, union, intercalate)
 import Data.Set (Set, fromList, toList, union, intersection, difference)
 import qualified Data.Set as Set
 import Data.Map (Map, fromList, toList, keys, elems, insert, delete, lookup, member, empty)
@@ -34,7 +36,7 @@ import SourceLocation (SourcePos(..), SourceSpan(..), startPos)
 import Utils (trim, splitBy, removeComments, normalizeIndentation)
 
 -- ============================================================================
--- Helper Functions and Generators
+-- Helper Functions L.and Generators
 -- ============================================================================
 
 -- Generate valid identifiers
@@ -49,7 +51,7 @@ genTypusContent :: Gen String
 genTypusContent = do
   directives <- listOf genDirective
   codeBlocks <- listOf genCodeBlock
-  return $ unlines directives ++ "\n" ++ unlines (map (\cb -> cbContent cb) codeBlocks)
+  return $ unlines directives ++ "\n" ++ unlines (L.map (\cb -> cbContent cb) codeBlocks)
 
 -- Generate file directives
 genDirective :: Gen String
@@ -137,7 +139,7 @@ prop_complete_pipeline_preserves_structure typusFile =
       parsedContent = intercalate "\n" $ map cbContent (tfBlocks typusFile)
   in property $ originalContent === parsedContent
 
--- Property: Parsing and validation are consistent
+-- Property: Parsing L.and validation are consistent
 prop_parsing_validation_consistent :: String -> Property
 prop_parsing_validation_consistent content =
   let parseResult = parseTypus content
@@ -198,7 +200,7 @@ prop_multi_file_compilation_consistent typusFiles =
   not (null typusFiles) ==>
   let sourceIRs = map buildSourceIR typusFiles
       semanticResults = map buildSemanticIR sourceIRs
-      successCount = length [() | Right _ <- semanticResults]
+      successCount = L.length [() | Right _ <- semanticResults]
   in property $ successCount >= 0
 
 -- Property: Dependency resolution handles complex graphs
@@ -206,8 +208,8 @@ prop_dependency_resolution_complex :: [String] -> Property
 prop_dependency_resolution_complex dependencies =
   not (null dependencies) ==>
   let uniqueDeps = nub dependencies
-      depCount = length uniqueDeps
-  in property $ depCount <= length dependencies
+      depCount = L.length uniqueDeps
+  in property $ depCount <= L.length dependencies
 
 -- Property: Type checking preserves type safety
 prop_type_checking_preserves_safety :: TypusFile -> Property
@@ -218,11 +220,11 @@ prop_type_checking_preserves_safety typusFile =
     Right semanticIR ->
       let goIR = emitGo semanticIR
           goSource = goSource goIR
-          hasValidGo = "func" `isInfixOf` goSource || "var" `isInfixOf` goSource
+          hasValidGo = "func" `L.isInfixOf` goSource || "var" `L.isInfixOf` goSource
       in property $ hasValidGo
 
 -- ============================================================================
--- Performance and Scalability Properties
+-- Performance L.and Scalability Properties
 -- ============================================================================
 
 -- Property: Large files are processed efficiently
@@ -233,7 +235,7 @@ prop_large_files_processed_efficiently numBlocks =
                     (replicate numBlocks $ CodeBlock defaultBlockDirectives "fmt.Println(\"test\")" (emptySpan startPos))
                     []
       sourceIR = buildSourceIR typusFile
-      contentLength = length (sourceText sourceIR)
+      contentLength = L.length (sourceText sourceIR)
   in property $ contentLength >= numBlocks
 
 -- Property: Complex expressions are handled correctly
@@ -251,7 +253,7 @@ prop_complex_expressions_handled complexity =
     Right semanticIR ->
       let goIR = emitGo semanticIR
           goSource = goSource goIR
-      in property $ expr `isInfixOf` goSource
+      in property $ expr `L.isInfixOf` goSource
 
 -- ============================================================================
 -- Error Recovery Properties
@@ -265,7 +267,7 @@ prop_error_recovery_preserves_partial content =
     Left _ -> property True
     Right typusFile ->
       let sourceIR = buildSourceIR typusFile
-          contentLength = length (sourceText sourceIR)
+          contentLength = L.length (sourceText sourceIR)
       in property $ contentLength >= 0
 
 -- Property: Graceful degradation on malformed input
@@ -297,7 +299,7 @@ prop_round_trip_consistent typusFile =
       let goIR = emitGo semanticIR
           goSource = goSource goIR
           -- Parse the generated Go back (simplified check)
-          hasValidStructure = "package" `isInfixOf` goSource || "func" `isInfixOf` goSource
+          hasValidStructure = "package" `L.isInfixOf` goSource || "func" `L.isInfixOf` goSource
       in property $ hasValidStructure
 
 -- Property: Multiple runs produce identical results
@@ -310,7 +312,7 @@ prop_multiple_runs_identical typusFile =
   in property $ content1 === content2
 
 -- ============================================================================
--- Edge Cases and Boundary Conditions
+-- Edge Cases L.and Boundary Conditions
 -- ============================================================================
 
 -- Property: Empty input handles gracefully
@@ -330,7 +332,7 @@ prop_unicode_content_preserved unicode =
                     []
       sourceIR = buildSourceIR typusFile
       sourceContent = sourceText sourceIR
-  in property $ unicode `isInfixOf` sourceContent
+  in property $ unicode `L.isInfixOf` sourceContent
 
 -- Property: Deep nesting is handled correctly
 prop_deep_nesting_handled :: Int -> Property
@@ -338,7 +340,7 @@ prop_deep_nesting_handled depth =
   depth >= 0 && depth <= 20 ==>
   let nestedBlocks = replicate depth "  if true {\n"
       closingBlocks = replicate depth "  }\n"
-      content = "func test() {\n" ++ concat nestedBlocks ++ "fmt.Println(\"nested\")\n" ++ concat closingBlocks
+      content = "func test() {\n" ++ L.concat nestedBlocks ++ "fmt.Println(\"nested\")\n" ++ L.concat closingBlocks
       typusFile = TypusFile defaultFileDirectives [] 
                     [CodeBlock defaultBlockDirectives content (emptySpan startPos)]
                     []
@@ -348,7 +350,7 @@ prop_deep_nesting_handled depth =
     Right semanticIR ->
       let goIR = emitGo semanticIR
           goSource = goSource goIR
-      in property $ "nested" `isInfixOf` goSource
+      in property $ "nested" `L.isInfixOf` goSource
 
 -- ============================================================================
 -- Cross-Module Integration Properties
@@ -359,21 +361,21 @@ prop_module_dependencies_resolved :: [String] -> Property
 prop_module_dependencies_resolved modules =
   not (null modules) ==>
   let uniqueModules = nub modules
-      moduleCount = length uniqueModules
+      moduleCount = L.length uniqueModules
   in property $ moduleCount > 0
 
 -- Property: Import statements are preserved
 prop_import_statements_preserved :: [String] -> Property
 prop_import_statements_preserved imports =
   not (null imports) ==>
-  let importLines = map (\imp -> "import \"" ++ imp ++ "\"") imports
+  let importLines = L.map (\imp -> "import \"" ++ imp ++ "\"") imports
       content = "package main\n\n" ++ unlines importLines
       typusFile = TypusFile defaultFileDirectives [] 
                     [CodeBlock defaultBlockDirectives content (emptySpan startPos)]
                     []
       sourceIR = buildSourceIR typusFile
       sourceContent = sourceText sourceIR
-  in property $ all (`isInfixOf` sourceContent) (take 5 imports)  -- Check first 5 to avoid long tests
+  in property $ L.all (`L.isInfixOf` sourceContent) (take 5 imports)  -- Check first 5 to avoid long tests
 
 -- ============================================================================
 -- Test Collection
@@ -394,7 +396,7 @@ tests = testGroup "New End-to-End Integration QuickCheck Tests"
     , fastProperty "type checking preserves safety" prop_type_checking_preserves_safety
     ]
 
-  , testGroup "Performance and Scalability Properties"
+  , testGroup "Performance L.and Scalability Properties"
     [ fastProperty "large files processed efficiently" prop_large_files_processed_efficiently
     , fastProperty "complex expressions handled" prop_complex_expressions_handled
     ]
@@ -409,7 +411,7 @@ tests = testGroup "New End-to-End Integration QuickCheck Tests"
     , fastProperty "multiple runs identical" prop_multiple_runs_identical
     ]
 
-  , testGroup "Edge Cases and Boundary Conditions"
+  , testGroup "Edge Cases L.and Boundary Conditions"
     [ fastProperty "empty input handles" prop_empty_input_handles
     , fastProperty "unicode content preserved" prop_unicode_content_preserved
     , fastProperty "deep nesting handled" prop_deep_nesting_handled

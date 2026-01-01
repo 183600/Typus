@@ -30,7 +30,9 @@ import Compiler.OwnershipChecker (checkOwnership, checkOwnershipWithValueInfo)
 import Parser (TypusFile(..), parseTypus)
 import Compiler (compile)
 
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (nub)
 import Data.Char (isLetter, isDigit)
 import qualified Data.Text as T
 import qualified Data.Map as Map
@@ -43,7 +45,7 @@ test_use_after_move_prevention = testCase "Ownership system prevents use-after-m
   case result of
     Right _ -> assertFailure "Expected ownership error for use-after-move"
     Left errs -> do
-      let hasOwnershipError = any (\err -> "ownership" `isInfixOf` show err || "move" `isInfixOf` show err) errs
+      let hasOwnershipError = L.any (\err -> "ownership" `L.isInfixOf` show err || "move" `L.isInfixOf` show err) errs
       if hasOwnershipError
         then return ()  -- Expected error
         else assertFailure $ "Expected ownership error, got: " ++ unlines (map show errs)
@@ -52,12 +54,12 @@ test_use_after_move_prevention = testCase "Ownership system prevents use-after-m
 prop_ownership_transfer_rules :: String -> String -> Property
 prop_ownership_transfer_rules var1 var2 =
   not (null var1) && not (null var2) && 
-  all isLetter var1 && all isLetter var2 && var1 /= var2 ==>
+  L.all isLetter var1 && L.all isLetter var2 && var1 /= var2 ==>
   let code = "//! ownership: true\n\npackage main\n\nfunc main() {\n  " ++ var1 ++ " := make([]int, 10)\n  " ++ var2 ++ " := " ++ var1 ++ "\n  // " ++ var1 ++ " should no longer be accessible\n}"
       result = compile code
   in case result of
     Right _ -> property False  -- Should detect ownership violation
-    Left errs -> property $ any (\err -> "ownership" `isInfixOf` show err) errs
+    Left errs -> property $ L.any (\err -> "ownership" `L.isInfixOf` show err) errs
 
 -- Test: Ownership system allows borrowing without transfer
 test_borrowing_without_transfer :: TestTree
@@ -71,12 +73,12 @@ test_borrowing_without_transfer = testCase "Ownership system allows borrowing" $
 -- Property: Ownership checker tracks function parameter ownership correctly
 prop_function_parameter_ownership :: String -> Property
 prop_function_parameter_ownership paramName =
-  not (null paramName) && all isLetter paramName ==>
+  not (null paramName) && L.all isLetter paramName ==>
   let code = "//! ownership: true\n\npackage main\n\nfunc consume(" ++ paramName ++ " []int) int {\n  return len(" ++ paramName ++ ")\n}\n\nfunc main() {\n  data := make([]int, 10)\n  result := consume(data)\n}"
       result = compile code
   in case result of
     Right _ -> property True  -- Should succeed - parameter ownership handled correctly
-    Left errs -> property $ not (any (\err -> "ownership" `isInfixOf` show err && "error" `isInfixOf` show err) errs)
+    Left errs -> property $ not (L.any (\err -> "ownership" `L.isInfixOf` show err && "error" `L.isInfixOf` show err) errs)
 
 -- Test: Ownership system handles shared ownership correctly
 test_shared_ownership :: TestTree
@@ -90,12 +92,12 @@ test_shared_ownership = testCase "Ownership system handles shared ownership" $ d
 -- Property: Ownership system prevents double free scenarios
 prop_double_free_prevention :: String -> Property
 prop_double_free_prevention varName =
-  not (null varName) && all isLetter varName ==>
+  not (null varName) && L.all isLetter varName ==>
   let code = "//! ownership: true\n\npackage main\n\nfunc main() {\n  " ++ varName ++ " := make([]int, 10)\n  // First release\n  " ++ varName ++ " = nil\n  // Second access should be prevented\n  " ++ varName ++ "[0] = 42\n}"
       result = compile code
   in case result of
     Right _ -> property False  -- Should prevent double access
-    Left errs -> property $ any (\err -> "ownership" `isInfixOf` show err || "null" `isInfixOf` show err) errs
+    Left errs -> property $ L.any (\err -> "ownership" `L.isInfixOf` show err || "null" `L.isInfixOf` show err) errs
 
 -- Test: Ownership system handles lifetime annotations correctly
 test_lifetime_annotations :: TestTree
@@ -109,13 +111,13 @@ test_lifetime_annotations = testCase "Ownership system handles lifetime annotati
 -- Property: Ownership analyzer correctly identifies ownership transfer patterns
 prop_ownership_transfer_identification :: [String] -> Property
 prop_ownership_transfer_identification operations =
-  length operations >= 2 && length operations <= 5 ==>
-  let validOps = filter (all isLetter) operations
-      code = "//! ownership: true\n\npackage main\n\nfunc main() {\n  data := make([]int, 10)\n" ++ unlines (map (\op -> "  " ++ op ++ " := data") validOps) ++ "\n}"
+  L.length operations >= 2 && L.length operations <= 5 ==>
+  let validOps = L.filter (L.all isLetter) operations
+      code = "//! ownership: true\n\npackage main\n\nfunc main() {\n  data := make([]int, 10)\n" ++ unlines (L.map (\op -> "  " ++ op ++ " := data") validOps) ++ "\n}"
       result = compile code
   in case result of
     Right _ -> property False  -- Should detect ownership issues with multiple transfers
-    Left errs -> property $ any (\err -> "ownership" `isInfixOf` show err) errs
+    Left errs -> property $ L.any (\err -> "ownership" `L.isInfixOf` show err) errs
 
 -- Test: Ownership system respects move semantics in function returns
 test_move_semantics_in_returns :: TestTree
@@ -129,12 +131,12 @@ test_move_semantics_in_returns = testCase "Ownership system respects move semant
 -- Property: Ownership system handles complex data structures correctly
 prop_complex_data_structure_ownership :: String -> Property
 prop_complex_data_structure_ownership structName =
-  not (null structName) && all isLetter structName ==>
+  not (null structName) && L.all isLetter structName ==>
   let code = "//! ownership: true\n\npackage main\n\ntype " ++ structName ++ " struct {\n  data []int\n  next *" ++ structName ++ "\n}\n\nfunc main() {\n  node := &" ++ structName ++ "{data: make([]int, 10)}\n  node.data[0] = 42\n}"
       result = compile code
   in case result of
     Right _ -> property True  -- Should succeed - complex structures handled correctly
-    Left errs -> property $ not (any (\err -> "ownership" `isInfixOf` show err && "error" `isInfixOf` show err) errs)
+    Left errs -> property $ not (L.any (\err -> "ownership" `L.isInfixOf` show err && "error" `L.isInfixOf` show err) errs)
 
 tests :: TestTree
 tests = testGroup "Ownership Memory Safety Tests"

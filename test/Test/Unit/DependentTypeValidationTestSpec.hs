@@ -24,12 +24,14 @@ import Utils
 
 import Data.Char (isSpace, isLetter, isDigit, toLower)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, tails, isInfixOf, sort, intercalate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (tails, sort, intercalate)
 import Data.String (IsString)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 
--- Property: Vector length type checking
+-- Property: Vector L.length type checking
 prop_vector_length_typechecking :: Int -> Int -> Property
 prop_vector_length_typechecking vecLen index =
   vecLen >= 0 && vecLen <= 100 && index >= 0 && index <= 100 ==>
@@ -123,10 +125,10 @@ prop_type_families n =
 -- Property: GADT validation
 prop_gadt_validation :: String -> Property
 prop_gadt_validation constructor =
-  length constructor <= 10 && all isLetter constructor ==>
+  L.length constructor <= 10 && L.all isLetter constructor ==>
   let gadtCode = "data Expr a where Lit :: Int -> Expr Int; " ++ constructor ++ " :: Expr Bool -> Expr Bool;"
       result = checkDependentTypes gadtCode
-  in property $ not (hasTypeError result) || not (constructor `isInfixOf` gadtCode)
+  in property $ not (hasTypeError result) || not (constructor `L.isInfixOf` gadtCode)
 
 -- Property: Dependent records
 prop_dependent_records :: Int -> Property
@@ -157,7 +159,7 @@ prop_dependent_type_equality m n =
 -- Property: Higher-kinded types
 prop_higher_kinded_types :: String -> Property
 prop_higher_kinded_types typeName =
-  length typeName <= 10 && all isLetter typeName ==>
+  L.length typeName <= 10 && L.all isLetter typeName ==>
   let hktCode = "type " ++ typeName ++ " f = forall a. f a -> a;"
       result = checkDependentTypes hktCode
   in property $ not (hasTypeError result)
@@ -165,7 +167,7 @@ prop_higher_kinded_types typeName =
 -- Property: Quantified types
 prop_quantified_types :: String -> Property
 prop_quantified_types varName =
-  length varName <= 8 && all isLetter varName ==>
+  L.length varName <= 8 && L.all isLetter varName ==>
   let quantifiedCode = "let id : forall " ++ varName ++ ". " ++ varName ++ " -> " ++ varName ++ " = \\x. x;"
       result = checkDependentTypes quantifiedCode
   in property $ not (hasTypeError result)
@@ -173,15 +175,15 @@ prop_quantified_types varName =
 -- Property: Type class constraints
 prop_typeclass_constraints :: String -> Property
 prop_typeclass_constraints className =
-  length className <= 10 && all isLetter className ==>
-  let classCode = "class " ++ className ++ " a where " ++ toLower (head className) : tail className ++ " :: a -> Int;"
+  L.length className <= 10 && L.all isLetter className ==>
+  let classCode = "class " ++ className ++ " a where " ++ toLower (L.head className) : L.tail className ++ " :: a -> Int;"
       result = checkDependentTypes classCode
   in property $ not (hasTypeError result)
 
 -- Property: Dependent type inference
 prop_dependent_type_inference :: String -> Property
 prop_dependent_type_inference expr =
-  length expr <= 30 ==> -- Limit for performance
+  L.length expr <= 30 ==> -- Limit for performance
   let inferenceCode = "let x = " ++ expr ++ "; // type should be inferred"
       result = checkDependentTypes inferenceCode
   in property |]
@@ -198,7 +200,7 @@ prop_type_level_functions n =
 prop_dependent_type_reduction :: Int -> Property
 prop_dependent_type_reduction n =
   n >= 0 && n <= 10 ==>
-  let reductionCode = "type Fact n where Fact 0 = 1; Fact (n+1) = (n+1) * Fact n; let x : Fact " ++ show n ++ " = " ++ show (product [1..n]) ++ ";"
+  let reductionCode = "type Fact n where Fact 0 = 1; Fact (n+1) = (n+1) * Fact n; let x : Fact " ++ show n ++ " = " ++ show (L.product [1..n]) ++ ";"
       result = checkDependentTypes reductionCode
   in property $ not (hasTypeError result)
 
@@ -215,7 +217,7 @@ prop_type_level_conditionals cond m n =
 -- Property: Complex type expressions
 prop_complex_type_expressions :: [Int] -> Property
 prop_complex_type_expressions values =
-  not (null values) && all (>=0) values && all (<=10) values && length values <= 5 ==>
+  not (null values) && L.all (>=0) values && L.all (<=10) values && L.length values <= 5 ==>
   let complexCode = "let v : NestedVector<" ++ intercalate "," (map show values) ++ ", int> = make_nested();"
       result = checkDependentTypes complexCode
   in property |]
@@ -244,7 +246,7 @@ hasTypeError result = case result of
 
 tests :: TestTree
 tests = testGroup "Dependent Type Validation Tests"
-  [ fastProperty "Vector length type checking" prop_vector_length_typechecking
+  [ fastProperty "Vector L.length type checking" prop_vector_length_typechecking
   , fastProperty "Matrix dimensions validation" prop_matrix_dimensions_validation
   , fastProperty "Refinement type checking" prop_refinement_typechecking
   , fastProperty "Dependent function types" prop_dependent_function_types

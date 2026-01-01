@@ -3,6 +3,7 @@
 module Test.Unit.NewCabalSourceLocationQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), (.&&.), (.||.), (==>))
 import SourceLocation
   ( SourcePos(..), SourceSpan(..), Located(..)
@@ -14,7 +15,7 @@ import SourceLocation
   , advancePos, advancePosBy, advancePosByText, advancePosByLine
   )
 import Data.Text (Text)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 import Compiler.Errors.Core (ErrorLocation(..))
 import Data.Char (isSpace)
 
@@ -209,12 +210,12 @@ prop_runLocationTracker_starts_at_startPos :: Property
 prop_runLocationTracker_starts_at_startPos =
   runLocationTracker getCurrentPos === startPos
 
--- Test setCurrentPos and getCurrentPos properties
+-- Test setCurrentPos L.and getCurrentPos properties
 prop_setCurrentPos_getCurrentPos :: SourcePos -> Property
 prop_setCurrentPos_getCurrentPos pos =
   runLocationTracker (setCurrentPos pos >> getCurrentPos) === pos
 
--- Test markSpanStart and markSpanEnd properties
+-- Test markSpanStart L.and markSpanEnd properties
 prop_markSpan_creates_valid_span :: SourcePos -> Property
 prop_markSpan_creates_valid_span pos =
   let (span, _) = withLocationTracking pos $ do
@@ -237,7 +238,7 @@ prop_advancePosBy_empty_string pos = advancePosBy "" pos === pos
 
 prop_advancePosBy_consistent_with_posAfter :: String -> SourcePos -> Property
 prop_advancePosBy_consistent_with_posAfter chars pos =
-  advancePosBy chars pos === foldl (flip posAfter) pos chars
+  advancePosBy chars pos === L.foldl (flip posAfter) pos chars
 
 -- Test advancePosByText function properties
 prop_advancePosByText_equals_advancePosBy :: Text -> SourcePos -> Property
@@ -345,7 +346,7 @@ tests = testGroup "New Cabal SourceLocation QuickCheck Tests"
       , testProperty "advancePosByLine increments line" prop_advancePosByLine_increments_line
       ]
   , testGroup "Error location conversion tests"
-      [ testProperty "toErrorLocation preserves line and column" prop_toErrorLocation_preserves_line_column
+      [ testProperty "toErrorLocation preserves line L.and column" prop_toErrorLocation_preserves_line_column
       , testProperty "toErrorLocationWithSpan preserves span" prop_toErrorLocationWithSpan_preserves_span
       ]
   , testGroup "Additional property tests"

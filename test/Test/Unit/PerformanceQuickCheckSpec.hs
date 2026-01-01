@@ -23,7 +23,7 @@ prop_large_file_parsing =
       parseTime = measureParseTime content
   in classify (parseTime < 100000) "fast parsing" $
      classify (parseTime >= 100000) "slow parsing" $
-     property $ parseTime >= 0 && parseTime <= length content * 2
+     property $ parseTime >= 0 && parseTime <= L.length content * 2
 
 -- Property: Type checking scalability
 prop_typechecking_scalability :: Property
@@ -211,19 +211,19 @@ instance NFData NFTypusFile where
 
 -- Helper functions for performance measurement
 measureParseTime :: String -> Int
-measureParseTime content = length content
+measureParseTime content = L.length content
 
 measureTypecheckTime :: [SymbolInfo] -> Int
-measureTypecheckTime symbols = length symbols
+measureTypecheckTime symbols = L.length symbols
 
 measureLookupTime :: [(String, SymbolInfo)] -> Int
-measureLookupTime symbolTable = length symbolTable
+measureLookupTime symbolTable = L.length symbolTable
 
 getMemoryUsage :: Int
 getMemoryUsage = 1000
 
 processLargeInput :: String -> Int
-processLargeInput input = length input
+processLargeInput input = L.length input
 
 generateLargeInput :: Int -> String
 generateLargeInput size = List.unlines $ replicate size "test content"
@@ -232,40 +232,40 @@ generateFiles :: Int -> [String]
 generateFiles count = replicate count "test file content"
 
 measureSequentialParsing :: [String] -> Int
-measureSequentialParsing files = length files
+measureSequentialParsing files = L.length files
 
 measureConcurrentParsing :: [String] -> Int
-measureConcurrentParsing files = length files
+measureConcurrentParsing files = L.length files
 
 generateChanges :: Int -> [String]
 generateChanges count = replicate count "test change"
 
 measureIncrementalAnalysis :: [String] -> Int
-measureIncrementalAnalysis changes = length changes
+measureIncrementalAnalysis changes = L.length changes
 
 measureFullRebuild :: [String] -> Int
-measureFullRebuild changes = length changes * 2
+measureFullRebuild changes = L.length changes * 2
 
 measureTrimTime :: String -> Int
-measureTrimTime input = length input
+measureTrimTime input = L.length input
 
 measureSplitTime :: String -> Int
-measureSplitTime input = length input
+measureSplitTime input = L.length input
 
 measureNormalizeTime :: String -> Int
-measureNormalizeTime input = length input
+measureNormalizeTime input = L.length input
 
 generateNestedStructure :: Int -> String
-generateNestedStructure depth = List.concat $ replicate depth "("
+generateNestedStructure depth = List.L.concat $ replicate depth "("
 
 measureDeepProcessing :: String -> Int
-measureDeepProcessing structure = length structure
+measureDeepProcessing structure = L.length structure
 
 generateConstraints :: Int -> [String]
 generateConstraints count = replicate count "constraint"
 
 measureConstraintSolving :: [String] -> Int
-measureConstraintSolving constraints = length constraints
+measureConstraintSolving constraints = L.length constraints
 
 repeatOperations :: Int -> Int
 repeatOperations iterations = iterations
@@ -283,25 +283,25 @@ generateCode :: Int -> String
 generateCode loc = List.unlines $ replicate loc "func test() {}"
 
 measureCompilationTime :: String -> Int
-measureCompilationTime code = length code * 10
+measureCompilationTime code = L.length code * 10
 
 generateErrors :: Int -> [String]
 generateErrors count = replicate count "error message"
 
 measureErrorHandling :: [String] -> Int
-measureErrorHandling errors = length errors * 1000
+measureErrorHandling errors = L.length errors * 1000
 
 generateComplexCode :: Int -> String
 generateComplexCode complexity = List.unlines $ replicate complexity "complex code"
 
 measureOptimizationTime :: String -> Int
-measureOptimizationTime code = length code * 5
+measureOptimizationTime code = L.length code * 5
 
 generateSymbols :: Int -> [SymbolInfo]
 generateSymbols count = replicate count (SymbolInfo "test" Nothing Nothing 0 False False [])
 
 generateSymbolTable :: Int -> [(String, SymbolInfo)]
-generateSymbolTable count = zip (map (\i -> "symbol" ++ show i) [1..count]) (generateSymbols count)
+generateSymbolTable count = zip (L.map (\i -> "symbol" ++ show i) [1..count]) (generateSymbols count)
 
 tests :: TestTree
 tests = testGroup "Performance QuickCheck Tests"

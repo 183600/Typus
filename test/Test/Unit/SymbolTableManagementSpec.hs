@@ -9,7 +9,9 @@ import Compiler (compile, formatCompilerErrors)
 import Analyzer.SymbolTable (collectSymbolsAndTypes)
 import Parser (parseTypus)
 import qualified Data.Text as T
-import Data.List (isInfixOf, lines, sort)
+import qualified Data.List as L
+import Data.List (isInfixOf)
+import Data.List (lines, sort)
 import Data.Map (Map, fromList, keys, toList)
 import Data.Set (Set, fromList, toList)
 
@@ -31,7 +33,7 @@ test_variable_symbol_table = testCase "Variable declarations populate symbol tab
       Left errs -> do
         let errorMessages = formatCompilerErrors errs
         assertBool "Should handle variable declarations" $ 
-          length errorMessages >= 0
+          L.length errorMessages >= 0
 
 -- Test symbol table for function definitions
 test_function_symbol_table :: TestTree
@@ -55,7 +57,7 @@ test_function_symbol_table = testCase "Function definitions populate symbol tabl
       Left errs -> do
         let errorMessages = formatCompilerErrors errs
         assertBool "Should handle function definitions" $ 
-          length errorMessages >= 0
+          L.length errorMessages >= 0
 
 -- Test symbol table for type definitions
 test_type_symbol_table :: TestTree
@@ -83,7 +85,7 @@ test_type_symbol_table = testCase "Type definitions populate symbol table" $ do
       Left errs -> do
         let errorMessages = formatCompilerErrors errs
         assertBool "Should handle type definitions" $ 
-          length errorMessages >= 0
+          L.length errorMessages >= 0
 
 -- Test symbol table scope management
 test_scope_management :: TestTree
@@ -109,7 +111,7 @@ test_scope_management = testCase "Symbol table manages scopes correctly" $ do
       Left errs -> do
         let errorMessages = formatCompilerErrors errs
         assertBool "Should handle scope management" $ 
-          length errorMessages >= 0
+          L.length errorMessages >= 0
 
 -- Test symbol table for duplicate detection
 test_duplicate_detection :: TestTree
@@ -129,7 +131,7 @@ test_duplicate_detection = testCase "Symbol table detects duplicates" $ do
       Left errs -> do
         let errorMessages = formatCompilerErrors errs
         assertBool "Should detect duplicate symbols" $ 
-          any (\msg -> "duplicate" `isInfixOf` msg || "redeclared" `isInfixOf` msg) errorMessages
+          L.any (\msg -> "duplicate" `L.isInfixOf` msg || "redeclared" `L.isInfixOf` msg) errorMessages
       Right _ -> assertFailure "Expected duplicate symbol errors"
 
 -- Test symbol table for undefined references
@@ -150,7 +152,7 @@ test_undefined_references = testCase "Symbol table detects undefined references"
       Left errs -> do
         let errorMessages = formatCompilerErrors errs
         assertBool "Should detect undefined symbols" $ 
-          any (\msg -> "undefined" `isInfixOf` msg || "not declared" `isInfixOf` msg) errorMessages
+          L.any (\msg -> "undefined" `L.isInfixOf` msg || "not declared" `L.isInfixOf` msg) errorMessages
       Right _ -> assertFailure "Expected undefined symbol errors"
 
 -- Test symbol table for imported symbols
@@ -172,7 +174,7 @@ test_imported_symbols = testCase "Symbol table handles imported symbols" $ do
       Left errs -> do
         let errorMessages = formatCompilerErrors errs
         assertBool "Should handle imported symbols" $ 
-          length errorMessages >= 0
+          L.length errorMessages >= 0
 
 -- Test symbol table for method resolution
 test_method_resolution :: TestTree
@@ -200,14 +202,14 @@ test_method_resolution = testCase "Symbol table resolves methods correctly" $ do
       Left errs -> do
         let errorMessages = formatCompilerErrors errs
         assertBool "Should handle method resolution" $ 
-          length errorMessages >= 0
+          L.length errorMessages >= 0
 
 -- Test symbol table for generic types
 test_generic_types :: TestTree
 test_generic_types = testCase "Symbol table handles generic types" $ do
     let source = unlines
           [ "package main"
-          , "type Container[T any] struct {"
+          , "type Container[T L.any] struct {"
           , "    data []T"
           , "}"
           , "func (c Container[T]) Add(item T) Container[T] {"
@@ -225,7 +227,7 @@ test_generic_types = testCase "Symbol table handles generic types" $ do
       Left errs -> do
         let errorMessages = formatCompilerErrors errs
         assertBool "Should handle generic types" $ 
-          length errorMessages >= 0
+          L.length errorMessages >= 0
 
 -- Test symbol table for interface implementations
 test_interface_implementations :: TestTree
@@ -252,12 +254,12 @@ test_interface_implementations = testCase "Symbol table tracks interface impleme
       Left errs -> do
         let errorMessages = formatCompilerErrors errs
         assertBool "Should handle interface implementations" $ 
-          length errorMessages >= 0
+          L.length errorMessages >= 0
 
 -- QuickCheck property: Symbol table lookup is consistent
 prop_symbol_lookup_consistent :: String -> Property
 prop_symbol_lookup_consistent symbolName =
-  let validSymbol = not (null symbolName) && head symbolName `elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['_']
+  let validSymbol = not (null symbolName) && L.head symbolName `elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['_']
   in classify validSymbol "valid symbol name" $
      property validSymbol ==> property True
 
@@ -265,9 +267,9 @@ prop_symbol_lookup_consistent symbolName =
 prop_symbol_table_uniqueness :: [String] -> Property
 prop_symbol_table_uniqueness symbolNames =
   let uniqueSymbols = fromList symbolNames
-      uniqueCount = length uniqueSymbols
-      originalCount = length symbolNames
-  in classify (uniqueCount == originalCount) "all unique" $
+      uniqueCount = L.length uniqueSymbols
+      originalCount = L.length symbolNames
+  in classify (uniqueCount == originalCount) "L.all unique" $
      classify (uniqueCount < originalCount) "has duplicates" $
      property $ uniqueCount <= originalCount
 

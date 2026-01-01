@@ -30,7 +30,9 @@ import Data.Char (isSpace, isAscii, isControl, ord, chr)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Data.ByteString as BS
-import Data.List (isPrefixOf, isInfixOf, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort)
 import Data.String (IsString)
 
 -- | Generate Unicode strings including edge cases
@@ -66,7 +68,7 @@ instance Arbitrary EncodingTestString where
         [ (80, choose ('\32', '\126'))  -- Mostly ASCII
         , (10, elements ['\128', '\255']) -- Extended ASCII
         , (5, choose ('\256', '\511'))   -- Basic multilingual plane
-        , (3, elements ['\8232', '\8233']) -- Line separator and paragraph separator
+        , (3, elements ['\8232', '\8233']) -- Line separator L.and paragraph separator
         , (2, elements ['\xFEFF'])       -- Zero-width no-break space (BOM)
         ]
 
@@ -76,8 +78,8 @@ prop_trim_preserves_unicode_content prefix suffix =
   let content = getUnicodeString prefix ++ "测试内容" ++ getUnicodeString suffix
       trimmed = trim content
       expectedContent = "测试内容"
-  in classify (not (null (getUnicodeString prefix))) "has leading unicode" $
-     classify (not (null (getUnicodeString suffix))) "has trailing unicode" $
+  in classify (not (L.null (getUnicodeString prefix))) "has leading unicode" $
+     classify (not (L.null (getUnicodeString suffix))) "has trailing unicode" $
      counterexample ("Original: " ++ show content) $
      counterexample ("Trimmed: " ++ show trimmed) $
      property $ trimmed === expectedContent
@@ -89,8 +91,8 @@ prop_splitBy_unicode_delimiters delim content =
       contentStr = getUnicodeString content
       -- Ensure delimiter is not empty
   in not (null delimStr) ==>
-     let result = splitBy (head delimStr) contentStr
-         reconstructed = intercalate [head delimStr] result
+     let result = splitBy (L.head delimStr) contentStr
+         reconstructed = intercalate [L.head delimStr] result
      in counterexample ("Delimiter: " ++ show delimStr) $
         counterexample ("Content: " ++ show contentStr) $
         counterexample ("Result: " ++ show result) $
@@ -119,15 +121,15 @@ prop_normalizeIndentation_unicode_preservation indent content =
   let indentStr = getUnicodeString indent
       contentStr = getUnicodeString content
       -- Create indented content with Unicode
-      indentedLines = map (\line -> indentStr ++ line) (lines contentStr)
+      indentedLines = L.map (\line -> indentStr ++ line) (lines contentStr)
       input = unlines indentedLines
       result = normalizeIndentation input
       -- Unicode content should be preserved
-      hasUnicode = any (not . isAscii) contentStr
+      hasUnicode = L.any (not . isAscii) contentStr
   in classify hasUnicode "contains unicode characters" $
      counterexample ("Input: " ++ show input) $
      counterexample ("Result: " ++ show result) $
-     property $ contentStr `isInfixOf` result
+     property $ contentStr `L.isInfixOf` result
 
 -- Property: breakOn handles Unicode correctly
 prop_breakOn_unicode_safety :: UnicodeString -> UnicodeString -> UnicodeString -> Property
@@ -137,7 +139,7 @@ prop_breakOn_unicode_safety prefix delimiter suffix =
       suffixStr = getUnicodeString suffix
       input = prefixStr ++ delimStr ++ suffixStr
   in not (null delimStr) ==>
-     let (before, after) = breakOn (head delimStr) input
+     let (before, after) = breakOn (L.head delimStr) input
          expectedBefore = prefixStr
          expectedAfter = delimStr ++ suffixStr
      in counterexample ("Input: " ++ show input) $
@@ -158,25 +160,25 @@ prop_zero_width_character_handling content =
      in counterexample ("With zero-width: " ++ show withZW) $
         counterexample ("Trimmed: " ++ show trimmed) $
         counterexample ("Split: " ++ show splitResult) $
-        property $ length splitResult >= 2 .&&. baseStr `isInfixOf` trimmed
+        property $ L.length splitResult >= 2 .&&. baseStr `L.isInfixOf` trimmed
 
 -- Property: Encoding safety - functions don't crash on malformed input
 prop_encoding_safety :: EncodingTestString -> Property
 prop_encoding_safety content =
   let testStr = getEncodingTestString content
-      -- Test all functions don't crash
+      -- Test L.all functions don't crash
       trimResult = trim testStr
       splitResult = splitBy ',' testStr
       commentResult = removeLineComments testStr
       indentResult = normalizeIndentation testStr
       breakResult = breakOn 'x' testStr
   in property $ 
-       length trimResult >= 0 .&&.
-       length splitResult >= 0 .&&.
-       length commentResult >= 0 .&&.
-       length indentResult >= 0 .&&.
-       length (fst breakResult) >= 0 .&&.
-       length (snd breakResult) >= 0
+       L.length trimResult >= 0 .&&.
+       L.length splitResult >= 0 .&&.
+       L.length commentResult >= 0 .&&.
+       L.length indentResult >= 0 .&&.
+       L.length (fst breakResult) >= 0 .&&.
+       L.length (snd breakResult) >= 0
 
 tests :: TestTree
 tests = testGroup "Text Processing Safety QuickCheck Tests"
@@ -199,7 +201,7 @@ tests = testGroup "Text Processing Safety QuickCheck Tests"
           assertBool "should split on line separator" $ result == ["第一", "第二\u2029第三"]
           
       , testCase "removeComments handles Unicode in comments" $ do
-          let input = "code // 注释 with 🚀 and test"
+          let input = "code // 注释 with 🚀 L.and test"
               result = removeLineComments input
               expected = "code "
           assertBool "should handle Unicode in comments" $ result == expected

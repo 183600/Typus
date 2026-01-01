@@ -1,6 +1,7 @@
 module Test.Unit.NewCoreCabalQuickCheckSpec9 (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 
@@ -8,7 +9,7 @@ import qualified Data.Text as T
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 
--- | Performance and optimization tests with QuickCheck properties
+-- | Performance L.and optimization tests with QuickCheck properties
 tests :: TestTree
 tests =
   testGroup "New Core Cabal QuickCheck Tests 9 - Performance & Optimization"
@@ -32,7 +33,7 @@ tests =
                 expected = "x = 3; y = 6;"
             optimized @?= expected
         ]
-    , testGroup "Caching and memoization"
+    , testGroup "Caching L.and memoization"
         [ fastProperty "type checking cache is consistent" prop_typeCheckingCacheConsistent
         , fastProperty "parsing cache preserves results" prop_parsingCachePreservesResults
         , testCase "caching behavior" $ do
@@ -49,7 +50,7 @@ tests =
         , testCase "resource management" $ do
             let resources = allocateResources 10
                 cleaned = cleanupResources resources
-            length cleaned @?= 0
+            L.length cleaned @?= 0
         ]
     ]
 
@@ -91,7 +92,7 @@ prop_memoryUsageBounded n =
   let n' = max 1 (abs n `mod` 1000)
       input = replicate n' "x"
       memory = measureMemoryUsage input
-      inputSize = length input
+      inputSize = L.length input
   in memory <= inputSize * 100  -- Memory should be bounded by some factor of input
 
 -- Dead code elimination preserves semantics
@@ -131,7 +132,7 @@ prop_resourceCleanupComplete n =
   let n' = max 0 (abs n `mod` 20)
       resources = allocateResources n'
       cleaned = cleanupResources resources
-  in all (not . isAllocated) cleaned
+  in L.all (not . isAllocated) cleaned
 
 -- File handle management is safe
 prop_fileHandleManagementSafe :: [String] -> Bool
@@ -139,42 +140,42 @@ prop_fileHandleManagementSafe files =
   let handles = map openFile files
       processed = map processFile handles
       closed = map closeFile handles
-  in all isClosed closed
+  in L.all isClosed closed
 
 -- Helper functions
 measureCompilationTime :: String -> Double
 measureCompilationTime input = 
-  let inputSize = length input
+  let inputSize = L.length input
   in fromIntegral inputSize * 0.001  -- Simulated compilation time
 
 measureMemoryUsage :: String -> Int
 measureMemoryUsage input = 
-  let inputSize = length input
+  let inputSize = L.length input
   in inputSize * 10  -- Simulated memory usage
 
 eliminateDeadCode :: String -> String
 eliminateDeadCode input = 
-  if "unused" `isInfixOf` input then filter (/= 'u') input else input
+  if "unused" `L.isInfixOf` input then L.filter (/= 'u') input else input
 
 extractSemantics :: String -> String
-extractSemantics input = filter (`elem` "0123456789+-*/=") input
+extractSemantics input = L.filter (`elem` "0123456789+-*/=") input
 
 foldConstants :: String -> String
 foldConstants input
-  | "1 + 2" `isInfixOf` input = replace "1 + 2" "3" input
-  | "2 * 3" `isInfixOf` input = replace "2 * 3" "6" input
+  | "1 + 2" `L.isInfixOf` input = replace "1 + 2" "3" input
+  | "2 * 3" `L.isInfixOf` input = replace "2 * 3" "6" input
   | otherwise = input
 
 replace :: String -> String -> String -> String
 replace old new str = 
-  if old `isInfixOf` str
-  then takeWhile (not . isPrefixOf old) str ++ new ++ drop (length old + length (takeWhile (not . isPrefixOf old) str)) str
+  if old `L.isInfixOf` str
+  then takeWhile (not . L.isPrefixOf old) str ++ new ++ drop (L.length old + L.length (takeWhile (not . L.isPrefixOf old) str)) str
   else str
 
 isPrefixOf :: String -> String -> String -> Bool
-isPrefixOf [] _ = True
-isPrefixOf _ [] = False
-isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
+L.isPrefixOf [] _ = True
+L.isPrefixOf _ [] = False
+L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
 
 emptyCache :: Cache
 emptyCache = Cache { cacheEntries = Map.empty, cacheSize = 0 }
@@ -214,7 +215,7 @@ allocateResources n =
 
 cleanupResources :: [Resource] -> [Resource]
 cleanupResources resources = 
-  map (\r -> r { isAllocated = False }) resources
+  L.map (\r -> r { isAllocated = False }) resources
 
 openFile :: String -> FileHandle
 openFile path = FileHandle { filePath = path, isOpen = True }
@@ -235,6 +236,6 @@ data FileHandle = FileHandle
 
 optimizeCode :: String -> String
 optimizeCode input
-  | "1 + 2" `isInfixOf` input = replace "1 + 2" "3" input
-  | "x + 3" `isInfixOf` input = replace "x + 3" "6" input
+  | "1 + 2" `L.isInfixOf` input = replace "1 + 2" "3" input
+  | "x + 3" `L.isInfixOf` input = replace "x + 3" "6" input
   | otherwise = input

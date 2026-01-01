@@ -10,6 +10,7 @@
 module Test.Unit.ParserNewQuickCheckTests (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertBool, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, choose, listOf, suchThat)
@@ -115,7 +116,7 @@ prop_empty_input =
   let result = parseTypus ""
   in case result of
     Left _ -> property False
-    Right file -> property $ null (tfBlocks file)
+    Right file -> property $ L.null (tfBlocks file)
 
 -- Property: Simple code without directives parses
 prop_simple_code :: Property
@@ -124,7 +125,7 @@ prop_simple_code =
   let result = parseTypus content
   in case result of
     Left _ -> property False
-    Right file -> property $ not (null (tfBlocks file))
+    Right file -> property $ not (L.null (tfBlocks file))
 
 -- Property: File directives are parsed correctly
 prop_file_directives_parsed :: Property
@@ -158,7 +159,7 @@ prop_build_tags_parsed =
       result = parseTypus fullContent
   in case result of
     Left _ -> property False
-    Right file -> property $ not (null (tfBuildTags file))
+    Right file -> property $ not (L.null (tfBuildTags file))
 
 -- Property: Multiple file directives are handled
 prop_multiple_file_directives :: Property
@@ -170,7 +171,7 @@ prop_multiple_file_directives =
     Left _ -> property False
     Right file -> property $ tfDirectives file /= defaultFileDirectives
 
--- Property: Mixed directives and code are parsed
+-- Property: Mixed directives L.and code are parsed
 prop_mixed_directives_and_code :: Property
 prop_mixed_directives_and_code =
   forAll genFileDirectiveLine $ \fileDirective ->
@@ -183,7 +184,7 @@ prop_mixed_directives_and_code =
     Left _ -> property False
     Right file -> 
       let hasFileDirectives = tfDirectives file /= defaultFileDirectives
-          hasBuildTags = not (null (tfBuildTags file))
+          hasBuildTags = not (L.null (tfBuildTags file))
           hasBlockDirectives = case tfBlocks file of
             [] -> False
             (block:_) -> cbDirectives block /= defaultBlockDirectives
@@ -197,7 +198,7 @@ prop_parser_handles_comments =
       result = parseTypus contentWithComments
   in case result of
     Left _ -> property False
-    Right file -> property $ not (null (tfBlocks file))
+    Right file -> property $ not (L.null (tfBlocks file))
 
 -- Property: Parser handles empty lines correctly
 prop_parser_handles_empty_lines :: Property
@@ -207,7 +208,7 @@ prop_parser_handles_empty_lines =
       result = parseTypus contentWithEmptyLines
   in case result of
     Left _ -> property False
-    Right file -> property $ not (null (tfBlocks file))
+    Right file -> property $ not (L.null (tfBlocks file))
 
 -- Property: Parser preserves code content
 prop_parser_preserves_content :: Property
@@ -219,7 +220,7 @@ prop_parser_preserves_content =
     Right file -> 
       case tfBlocks file of
         [] -> property False
-        (block:_) -> property $ content `isInfixOf` cbContent block
+        (block:_) -> property $ content `L.isInfixOf` cbContent block
 
 -- Property: Parser handles whitespace correctly
 prop_parser_handles_whitespace :: Property
@@ -229,7 +230,7 @@ prop_parser_handles_whitespace =
       result = parseTypus contentWithWhitespace
   in case result of
     Left _ -> property False
-    Right file -> property $ not (null (tfBlocks file))
+    Right file -> property $ not (L.null (tfBlocks file))
 
 -- Property: Invalid directive values are rejected
 prop_invalid_directive_rejected :: Property
@@ -267,7 +268,7 @@ prop_parser_nested_braces =
       result = parseTypus contentWithNestedBraces
   in case result of
     Left _ -> property False
-    Right file -> property $ not (null (tfBlocks file))
+    Right file -> property $ not (L.null (tfBlocks file))
 
 -- Property: Parser handles strings with braces correctly
 prop_parser_strings_with_braces :: Property
@@ -276,7 +277,7 @@ prop_parser_strings_with_braces =
       result = parseTypus contentWithStringBraces
   in case result of
     Left _ -> property False
-    Right file -> property $ not (null (tfBlocks file))
+    Right file -> property $ not (L.null (tfBlocks file))
 
 -- Property: Parser handles line comments with braces correctly
 prop_parser_comments_with_braces :: Property
@@ -285,7 +286,7 @@ prop_parser_comments_with_braces =
       result = parseTypus contentWithCommentBraces
   in case result of
     Left _ -> property False
-    Right file -> property $ not (null (tfBlocks file))
+    Right file -> property $ not (L.null (tfBlocks file))
 
 -- Property: Parser roundtrip consistency
 prop_parser_roundtrip :: Property
@@ -297,7 +298,7 @@ prop_parser_roundtrip =
     Right file -> 
       let reconstructed = unlines (map cbContent (tfBlocks file))
       in property $ not (null content) ==> 
-                 trim content `isInfixOf` trim reconstructed
+                 trim content `L.isInfixOf` trim reconstructed
 
 -- Property: Parser handles complex directive combinations
 prop_parser_complex_directives :: Property
@@ -316,7 +317,7 @@ prop_parser_complex_directives =
             Nothing -> False
             Just (Located _ True) -> True
             _ -> False
-          hasBuildTags = not (null (tfBuildTags file))
+          hasBuildTags = not (L.null (tfBuildTags file))
       in property $ hasOwnership .&&. hasDependentTypes .&&. hasBuildTags
 
 -- Property: Parser error handling consistency
@@ -346,7 +347,7 @@ tests = testGroup "Parser New QuickCheck Tests"
 
   , testGroup "Complex Parsing Properties"
     [ fastProperty "Multiple file directives are handled" prop_multiple_file_directives
-    , fastProperty "Mixed directives and code are parsed" prop_mixed_directives_and_code
+    , fastProperty "Mixed directives L.and code are parsed" prop_mixed_directives_and_code
     , fastProperty "Parser handles comments correctly" prop_parser_handles_comments
     , fastProperty "Parser handles empty lines correctly" prop_parser_handles_empty_lines
     , fastProperty "Parser preserves code content" prop_parser_preserves_content

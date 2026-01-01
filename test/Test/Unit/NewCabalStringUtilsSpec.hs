@@ -28,7 +28,9 @@ import Utils
 
 import Data.Char (isSpace, toLower)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, tails, isInfixOf, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (tails, sort)
 
 -- Property: trim is idempotent (applying it twice gives same result)
 prop_trim_idempotent :: String -> Property
@@ -36,27 +38,27 @@ prop_trim_idempotent s = trim (trim s) === trim s
 
 -- Property: trim never adds characters
 prop_trim_never_adds :: String -> Property
-prop_trim_never_adds s = length (trim s) <= length s
+prop_trim_never_adds s = L.length (trim s) <= L.length s
 
--- Property: splitBy and splitByCollapsed relationship for non-empty segments
+-- Property: splitBy L.and splitByCollapsed relationship for non-empty segments
 prop_split_by_relationship :: Char -> String -> Property
 prop_split_by_relationship delim s = 
   let normal = splitBy delim s
       collapsed = splitByCollapsed delim s
-      hasEmpty = any null normal
+      hasEmpty = L.any null normal
   in classify hasEmpty "has empty segments" $
-     property $ null collapsed ==> all (not . null) collapsed
+     property $ null collapsed ==> L.all (not . null) collapsed
 
 -- Property: splitByCommaCollapsed removes empty segments
 prop_split_by_comma_collapsed_no_empty :: String -> Property
 prop_split_by_comma_collapsed_no_empty s = 
   let result = splitByCommaCollapsed s
-  in property $ all (not . null) result
+  in property $ L.all (not . null) result
 
 -- Property: removeLineComments preserves non-comment lines
 prop_remove_line_comments_preserves_non_comment :: String -> Property
 prop_remove_line_comments_preserves_non_comment s =
-  let hasNoLineComment = not $ "//" `isInfixOf` s
+  let hasNoLineComment = not $ "//" `L.isInfixOf` s
       processed = removeLineComments s
   in classify hasNoLineComment "no line comments" $
      property $ hasNoLineComment ==> processed === s
@@ -68,13 +70,13 @@ prop_remove_comments_idempotent s =
       twice = removeComments once
   in property $ once === twice
 
--- Property: breakOn finds first occurrence or returns original
+-- Property: breakOn finds first occurrence L.or returns original
 prop_break_on_behavior :: String -> String -> Property
 prop_break_on_behavior needle haystack =
   let result = breakOn needle haystack
   in case result of
     (before, after) -> 
-      if needle `isInfixOf` haystack
+      if needle `L.isInfixOf` haystack
       then property $ before ++ needle ++ after === haystack
       else property $ before === haystack &&. after === ""
 
@@ -83,9 +85,9 @@ prop_normalize_indentation_preserves_relative :: String -> Property
 prop_normalize_indentation_preserves_relative s =
   let lines' = lines s
       normalizedLines = lines $ normalizeIndentation s
-      hasMultipleLines = length lines' > 1
+      hasMultipleLines = L.length lines' > 1
   in classify hasMultipleLines "multiple lines" $
-     property $ hasMultipleLines ==> length normalizedLines === length lines'
+     property $ hasMultipleLines ==> L.length normalizedLines === L.length lines'
 
 -- Property: trim splitByComma trim roundtrip for simple cases
 prop_trim_split_trim_roundtrip :: String -> Property
@@ -94,7 +96,7 @@ prop_trim_split_trim_roundtrip s =
       parts = splitByComma trimmed
       rejoined = intercalate "," parts
       finalTrimmed = trim rejoined
-  in property $ not (',' `isInfixOf` trimmed) ==> finalTrimmed === trimmed
+  in property $ not (',' `L.isInfixOf` trimmed) ==> finalTrimmed === trimmed
   where
     intercalate :: String -> [String] -> String
     intercalate _ [] = ""

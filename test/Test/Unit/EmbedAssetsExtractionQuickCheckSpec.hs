@@ -7,7 +7,9 @@ import Test.Tasty.HUnit
 
 import EmbedAssets (extractEmbeddedPatterns, MissingEmbed(..))
 import Data.Char (isSpace)
-import Data.List (isPrefixOf, words, unwords)
+import qualified Data.List as L
+import Data.List (isPrefixOf)
+import Data.List (words, unwords)
 
 -- ============================================================================
 -- Embed Assets Extraction Property Tests
@@ -181,7 +183,7 @@ prop_handlesMalformedQuotes pattern =
   in counterexample ("Should handle malformed quotes gracefully. " ++
                      "Content: " ++ content ++
                      " Extracted: " ++ show extracted)
-     (length extracted >= 0)  -- Should not crash
+     (L.length extracted >= 0)  -- Should not crash
 
 -- | Test that extractEmbeddedPatterns handles Unicode patterns
 prop_handlesUnicodePatterns :: String -> Property

@@ -13,13 +13,14 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
-import Test.QuickCheck.Arbitrary (Arbitrary(..), oneof, frequency)
+import Test.QuickCheck.Arbitrary (Arbitrary(..))
 import qualified Test.QuickCheck as QC
+import qualified Data.Map as Map
 
 import SourceLocation 
 import Compiler.Errors.Core
 import Utils
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 import qualified Data.List as L
 import Data.Char (isSpace, isLetter, isDigit, isPunctuation, ord, chr)
 import Data.Maybe (isJust, isNothing, fromMaybe)
@@ -185,20 +186,20 @@ prop_severity_ordering_transitive sev1 sev2 sev3 =
 -- Property: Error filtering preserves ordering
 prop_error_filtering_preserves_ordering :: [TypeError] -> ErrorSeverity -> Property
 prop_error_filtering_preserves_ordering errors minSeverity =
-    let filtered = filter (\e -> severity e >= minSeverity) errors
+    let filtered = L.filter (\e -> severity e >= minSeverity) errors
         sorted = L.sortBy (\e1 e2 -> compare (severity e2) (severity e1)) filtered
-    in property $ all (\e -> severity e >= minSeverity) sorted
+    in property $ L.all (\e -> severity e >= minSeverity) sorted
 
 -- ============================================================================
--- Test 3: Parser and SourceLocation Integration
+-- Test 3: Parser L.and SourceLocation Integration
 -- ============================================================================
 
 -- Property: Text processing preserves position tracking consistency
 prop_text_processing_position_consistency :: String -> Property
 prop_text_processing_position_consistency text =
     let processed = removeComments text
-        originalLength = length text
-        processedLength = length processed
+        originalLength = L.length text
+        processedLength = L.length processed
         -- Position tracking should account for removed characters
         positions = scanl (\pos char -> advancePos char pos) startPos text
         finalPos = last positions
@@ -207,12 +208,12 @@ prop_text_processing_position_consistency text =
 -- Property: Comment removal preserves line structure
 prop_comment_removal_preserves_lines :: String -> Property
 prop_comment_removal_preserves_lines text =
-    let originalLines = length $ lines text
+    let originalLines = L.length $ lines text
         processed = removeComments text
-        processedLines = length $ lines processed
+        processedLines = L.length $ lines processed
     in property $ processedLines <= originalLines
 
--- Property: String splitting and rejoining preserves content
+-- Property: String splitting L.and rejoining preserves content
 prop_string_splitting_roundtrip :: String -> Char -> Property
 prop_string_splitting_roundtrip text delim =
     let parts = splitBy delim text
@@ -227,24 +228,24 @@ prop_string_splitting_roundtrip text delim =
 prop_error_chain_chronological :: [TypeError] -> Property
 prop_error_chain_chronological errors =
     not (null errors) ==>
-    let chained = foldl (\acc err -> err { errorChain = acc }) [] errors
+    let chained = L.foldl (\acc err -> err { errorChain = acc }) [] errors
         timestamps = concatMap (maybe [] (:[]) . timestamp) chained
-    in property $ length timestamps === length errors
+    in property $ L.length timestamps === L.length errors
 
 -- Property: Error wrapping preserves original error information
 prop_error_wrapping_preserves_original :: TypeError -> String -> Property
 prop_error_wrapping_preserves_original err wrapperMsg =
     let wrapped = wrapError (T.pack wrapperMsg) err
         chain = errorChain wrapped
-    in property $ not (null chain) && head chain === err
+    in property $ not (null chain) && L.head chain === err
 
 -- Property: Combined error severity reflects most severe component
 prop_combined_error_severity :: [CombinedError] -> Property
 prop_combined_error_severity errors =
     not (null errors) ==>
     let severities = map combinedErrorSeverity errors
-        maxSeverity = maximum severities
-    in property $ all (\sev -> sev <= maxSeverity) severities
+        maxSeverity = L.maximum severities
+    in property $ L.all (\sev -> sev <= maxSeverity) severities
 
 -- ============================================================================
 -- Test 5: Multi-module Coordination
@@ -256,15 +257,15 @@ prop_cross_module_location_tracking pos content =
     let locatedValue = locatedAt pos content
         extractedPos = locatedPos locatedValue
         extractedSpan = locatedSpan locatedValue
-    in property $ extractedPos === pos && spanStart extractedSpan === pos
+    in extractedPos === pos .&. spanStart extractedSpan === pos
 
 -- Property: Error context accumulation preserves information
 prop_error_context_accumulation :: ErrorContext -> ErrorContext -> Property
 prop_error_context_accumulation ctx1 ctx2 =
     let combined = ctx1 
             { contextAdditional = contextAdditional ctx1 ++ contextAdditional ctx2 }
-    in property $ length (contextAdditional combined) >= 
-                  max (length $ contextAdditional ctx1) (length $ contextAdditional ctx2)
+    in property $ L.length (contextAdditional combined) >= 
+                  max (L.length $ contextAdditional ctx1) (L.length $ contextAdditional ctx2)
 
 -- ============================================================================
 -- Test 6: Performance Boundary Tests
@@ -274,9 +275,9 @@ prop_error_context_accumulation ctx1 ctx2 =
 prop_large_string_processing_performance :: Int -> String -> Property
 prop_large_string_processing_performance multiplier baseString =
     multiplier >= 0 && multiplier <= 100 ==>  -- Limit for reasonable test time
-    let largeString = concat $ replicate multiplier baseString
+    let largeString = L.concat $ replicate multiplier baseString
         processed = trim largeString
-    in property $ length processed <= length largeString
+    in property $ L.length processed <= L.length largeString
 
 -- Property: Error collection scales linearly
 prop_error_collection_linear_scaling :: Int -> TypeError -> Property
@@ -291,10 +292,10 @@ prop_memory_usage_repeated_operations :: String -> Int -> Property
 prop_memory_usage_repeated_operations content iterations =
     iterations >= 0 && iterations <= 100 ==>  -- Limit for performance
     let repeated = iterate normalizeIndentation content !! iterations
-    in property $ length repeated <= length content * 2
+    in property $ L.length repeated <= L.length content * 2
 
 -- ============================================================================
--- Test 7: Unicode and Special Character Handling
+-- Test 7: Unicode L.and Special Character Handling
 -- ============================================================================
 
 -- Property: Unicode character processing preserves content
@@ -302,10 +303,10 @@ prop_unicode_processing_preserves_content :: String -> Property
 prop_unicode_processing_preserves_content content =
     let processed = trim content
         -- Check that Unicode characters are preserved
-        hasUnicode = any (> '\127') content
+        hasUnicode = L.any (> '\127') content
     in classify hasUnicode "contains Unicode" $
        property $ if hasUnicode 
-                  then any (> '\127') processed
+                  then L.any (> '\127') processed
                   else True
 
 -- Property: Special whitespace normalization
@@ -313,17 +314,17 @@ prop_special_whitespace_normalization :: String -> Property
 prop_special_whitespace_normalization content =
     let withSpecialWhitespace = content ++ "\t\n\r\v\f" ++ content
         normalized = normalizeIndentation withSpecialWhitespace
-    in property $ not (any (`elem` "\v\f") normalized)
+    in property $ not (L.any (`elem` "\v\f") normalized)
 
--- Property: Emoji and symbol handling
+-- Property: Emoji L.and symbol handling
 prop_emoji_symbol_handling :: String -> Property
 prop_emoji_symbol_handling content =
     let withEmoji = content ++ "😀🚀🔥💡⚡" ++ content
         processed = removeComments withEmoji
-    in property $ "😀" `isInfixOf` processed && "🚀" `isInfixOf` processed
+    in property $ "😀" `L.isInfixOf` processed && "🚀" `L.isInfixOf` processed
 
 -- ============================================================================
--- Test 8: Memory Efficiency and Resource Management
+-- Test 8: Memory Efficiency L.and Resource Management
 -- ============================================================================
 
 -- Property: String sharing in repeated operations
@@ -332,23 +333,23 @@ prop_string_sharing_efficiency base count =
     count >= 0 && count <= 50 ==>  -- Limit for memory testing
     let strings = replicate count base
         processed = map trim strings
-        totalLength = sum $ map length processed
-    in property $ totalLength <= length base * count
+        totalLength = L.sum $ map L.length processed
+    in property $ totalLength <= L.length base * count
 
 -- Property: Error collection cleanup
 prop_error_collection_cleanup :: [TypeError] -> Property
 prop_error_collection_cleanup errors =
     let filtered = filterBySeverity Error errors
         warnings = filterBySeverity Warning errors
-    in property $ length filtered + length warnings <= length errors
+    in property $ L.length filtered + L.length warnings <= L.length errors
 
 -- Property: Location tracking memory efficiency
 prop_location_tracking_memory_efficiency :: Int -> Property
 prop_location_tracking_memory_efficiency count =
     count >= 0 && count <= 1000 ==>  -- Reasonable limit
     let positions = replicate count startPos
-        located = map (`locatedAt` ()) positions
-    in property $ length located === count
+        located = L.map (`locatedAt` ()) positions
+    in property $ L.length located === count
 
 -- ============================================================================
 -- Test 9: Concurrent Safety (simulated)
@@ -379,11 +380,12 @@ prop_position_tracking_concurrent_consistency pos text1 text2 =
 -- Property: Complete error processing pipeline
 prop_complete_error_processing_pipeline :: TypeError -> Property
 prop_complete_error_processing_pipeline baseError =
-    let withLocation = baseError { location = _atLocation 10 5 }
+    let testPos = SourcePos 10 5 0
+        withLocation = baseError { location = toErrorLocation testPos }
         withContext = withLocation { context = emptyContext { contextFunction = Just "test" } }
         withRecovery = withContext { recovery = errorRecovery }
         formatted = formatErrorWithRecovery withRecovery
-    in property $ length formatted > 0 && "test" `isInfixOf` formatted
+    in property $ L.length formatted > 0 .&. "test" `L.isInfixOf` formatted
 
 -- Property: Multi-stage text processing consistency
 prop_multistage_text_processing_consistency :: String -> Property
@@ -395,7 +397,7 @@ prop_multistage_text_processing_consistency content =
         stage1_alt = removeComments content
         stage2_alt = normalizeIndentation stage1_alt
         stage3_alt = trim stage2_alt
-    in property $ length stage3 >= 0 && length stage3_alt >= 0
+    in property $ L.length stage3 >= 0 && L.length stage3_alt >= 0
 
 -- Property: Error reporting completeness
 prop_error_reporting_completeness :: [TypeError] -> Property
@@ -403,8 +405,8 @@ prop_error_reporting_completeness errors =
     not (null errors) ==>
     let report = generateErrorReport errors
         stats = getErrorStatistics errors
-        hasStats = any (`isInfixOf` report) (map show (Map.toList stats))
-        hasErrors = "Detailed Errors:" `isInfixOf` report
+        hasStats = L.any (`L.isInfixOf` report) (map show (Map.toList stats))
+        hasErrors = "Detailed Errors:" `L.isInfixOf` report
     in property $ hasStats && hasErrors
 
 -- Helper function for error formatting with recovery
@@ -433,7 +435,7 @@ tests = testGroup "Advanced Edge Case QuickCheck Tests"
         , fastProperty "Severity ordering transitive" prop_severity_ordering_transitive
         , fastProperty "Error filtering preserves ordering" prop_error_filtering_preserves_ordering
         ]
-    , testGroup "Parser and SourceLocation Integration"
+    , testGroup "Parser L.and SourceLocation Integration"
         [ fastProperty "Text processing position consistency" prop_text_processing_position_consistency
         , fastProperty "Comment removal preserves lines" prop_comment_removal_preserves_lines
         , fastProperty "String splitting roundtrip" prop_string_splitting_roundtrip
@@ -452,12 +454,12 @@ tests = testGroup "Advanced Edge Case QuickCheck Tests"
         , fastProperty "Error collection linear scaling" prop_error_collection_linear_scaling
         , fastProperty "Memory usage repeated operations" prop_memory_usage_repeated_operations
         ]
-    , testGroup "Unicode and Special Character Handling"
+    , testGroup "Unicode L.and Special Character Handling"
         [ fastProperty "Unicode processing preserves content" prop_unicode_processing_preserves_content
         , fastProperty "Special whitespace normalization" prop_special_whitespace_normalization
-        , fastProperty "Emoji and symbol handling" prop_emoji_symbol_handling
+        , fastProperty "Emoji L.and symbol handling" prop_emoji_symbol_handling
         ]
-    , testGroup "Memory Efficiency and Resource Management"
+    , testGroup "Memory Efficiency L.and Resource Management"
         [ fastProperty "String sharing efficiency" prop_string_sharing_efficiency
         , fastProperty "Error collection cleanup" prop_error_collection_cleanup
         , fastProperty "Location tracking memory efficiency" prop_location_tracking_memory_efficiency

@@ -55,7 +55,7 @@ prop_error_formatting_includes_message :: ErrorMessage -> Property
 prop_error_formatting_includes_message (ErrorMessage message) =
   let context = createError ErrorError message "Fix it"
       formatted = formatError context
-  in property $ message `List.isInfixOf` formatted
+  in property $ message `List.L.isInfixOf` formatted
 
 -- Property: Error formatting includes severity information
 prop_error_formatting_includes_severity :: ErrorSeverity -> Property
@@ -66,7 +66,7 @@ prop_error_formatting_includes_severity severity =
                      ErrorWarning -> "Warning"
                      ErrorError -> "Error"
                      ErrorFatal -> "Fatal"
-  in property $ severityStr `List.isInfixOf` formatted
+  in property $ severityStr `List.L.isInfixOf` formatted
 
 -- Property: Error handling preserves suggestions
 prop_error_preserves_suggestions :: String -> String -> Property
@@ -81,8 +81,8 @@ prop_error_preserves_suggestions message suggestion =
 prop_multiple_errors_independent :: [ErrorContext] -> Property
 prop_multiple_errors_independent contexts =
   let handled = map handleError contexts
-      successCount = length $ filter isRight handled
-      expectedCount = length contexts
+      successCount = L.length $ filter isRight handled
+      expectedCount = L.length contexts
   in property $ successCount == expectedCount
   where
     isRight (Right _) = True
@@ -118,7 +118,7 @@ tests = testGroup "Cabal Error Handler QuickCheck Tests"
           ecSuggestion handled @?= "Check types"
           ecLocation handled @?= span
   , testCase "Error formatting produces readable output" $ do
-      let context = createError ErrorWarning "Unused variable" "Remove or use variable"
+      let context = createError ErrorWarning "Unused variable" "Remove L.or use variable"
           formatted = formatError context
       assertFailure $ "Formatted error: " ++ formatted
   ]

@@ -6,7 +6,9 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), counterexample, forAll, elements, listOf1, choose, oneof, resize)
 import Data.Char (isSpace, isAscii, ord)
-import Data.List (isPrefixOf, isInfixOf, nub, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (nub, sort)
 import qualified Data.Text as T
 import qualified Data.Set as Set
 
@@ -43,7 +45,7 @@ tests = testGroup "New Comprehensive Typus Tests"
 utilsBoundaryTests :: TestTree
 utilsBoundaryTests = testGroup "Utils Boundary Tests"
   [ testCase "trim handles extreme whitespace" $
-      assertEqual "trim should handle all whitespace" "" (trim "   \n\t  \r\n  ")
+      assertEqual "trim should handle L.all whitespace" "" (trim "   \n\t  \r\n  ")
   
   , testCase "splitBy handles empty input" $
       assertEqual "splitBy on empty should return [\"\"]" [""] (splitBy ',' "")
@@ -54,7 +56,7 @@ utilsBoundaryTests = testGroup "Utils Boundary Tests"
   , testCase "splitByCollapsed removes empty segments" $
       assertEqual "splitByCollapsed should remove empty segments" ["a", "b"] (splitByCollapsed ',' "a,,b")
   
-  , testProperty "splitBy length property" $
+  , testProperty "splitBy L.length property" $
       forAll arbitraryString $ \s delim ->
         let parts = splitBy delim s
             reconstructed = concatMap (\p -> if null p then "" else p ++ [delim]) (init parts) ++ last parts
@@ -113,14 +115,14 @@ parserErrorRecoveryTests = testGroup "Parser Error Recovery Tests"
       let input = "// @ownership true\n// @dependent_types invalid\nfunc test() {}"
       result <- parseTypus input
       case result of
-        Left err -> assertBool "should provide meaningful error" (not $ null $ show err)
+        Left err -> assertBool "should provide meaningful error" (not $ L.null $ show err)
         Right _ -> assertBool "unexpected success" False
         
   , testCase "parser handles incomplete code blocks" $ do
       let input = "func incomplete() {"
       result <- parseTypus input
       case result of
-        Left err -> assertBool "should detect incomplete block" ("incomplete" `isInfixOf` show err)
+        Left err -> assertBool "should detect incomplete block" ("incomplete" `L.isInfixOf` show err)
         Right _ -> assertBool "unexpected success" False
         
   , testCase "parser handles unicode in identifiers" $ do
@@ -177,7 +179,7 @@ dependencyCycleTests = testGroup "Dependency Cycle Detection Tests"
             , ("G", "H")                          -- No cycle
             ]
       cycles <- findCycles graph
-      assertBool "should detect both cycles" (length cycles >= 2)
+      assertBool "should detect both cycles" (L.length cycles >= 2)
   ]
 
 -- ============================================================================
@@ -202,7 +204,7 @@ errorHandlerConsistencyTests = testGroup "Error Handler Consistency Tests"
       forAll (listOf1 arbitraryError) $ \errors ->
         let unique = nub errors
             aggregated = aggregateErrors errors
-        in length unique <= length aggregated
+        in L.length unique <= L.length aggregated
   ]
 
 -- ============================================================================
@@ -221,7 +223,7 @@ compilerIRConsistencyTests = testGroup "Compiler IR Consistency Tests"
       forAll arbitrarySource $ \source ->
         do
           ir <- generateIR source
-          let sourceSize = length source
+          let sourceSize = L.length source
               irSize = irSize ir
           return $ property $ irSize >= sourceSize `div` 10 && irSize <= sourceSize * 5
   ]
@@ -243,7 +245,7 @@ integrationEndToEndTests = testGroup "Integration End-to-End Tests"
       let source = "func invalid_syntax {"
       result <- compileToEndToEnd source
       case result of
-        Left err -> assertBool "should propagate parse error" ("parse" `isInfixOf` show err)
+        Left err -> assertBool "should propagate parse error" ("parse" `L.isInfixOf` show err)
         Right _ -> assertBool "should not succeed" False
   ]
 
@@ -271,7 +273,7 @@ performanceRegressionTests = testGroup "Performance Regression Tests"
 
 unicodeSafetyTests :: TestTree
 unicodeSafetyTests = testGroup "Unicode Safety Tests"
-  [ testCase "handles mixed ASCII and Unicode" $ do
+  [ testCase "handles mixed ASCII L.and Unicode" $ do
       let source = "func 测试() { let value = \"混合text\"; return value; }"
       result <- parseTypus source
       case result of
@@ -292,7 +294,7 @@ unicodeSafetyTests = testGroup "Unicode Safety Tests"
   ]
 
 -- ============================================================================
--- Arbitrary Instances and Helper Functions
+-- Arbitrary Instances L.and Helper Functions
 -- ============================================================================
 
 -- Arbitrary instances for QuickCheck
@@ -381,7 +383,7 @@ generateIR :: String -> IO CompilerIR
 generateIR _ = return $ CompilerIR []  -- Placeholder implementation
 
 irSize :: CompilerIR -> Int
-irSize (CompilerIR nodes) = length nodes
+irSize (CompilerIR nodes) = L.length nodes
 
 compileToEndToEnd :: String -> IO (Either String String)
 compileToEndToEnd source = do
@@ -391,7 +393,7 @@ compileToEndToEnd source = do
     Right _ -> return $ Right "compiled_output"
 
 isValidOutput :: String -> Bool
-isValidOutput output = not (null output) && length output > 5
+isValidOutput output = not (null output) && L.length output > 5
 
 timeParse :: String -> IO (Double, ())
 timeParse source = do

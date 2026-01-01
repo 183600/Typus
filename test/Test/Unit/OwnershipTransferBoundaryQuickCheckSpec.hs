@@ -10,6 +10,7 @@
 module Test.Unit.OwnershipTransferBoundaryQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertBool, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -64,9 +65,9 @@ prop_borrow_from_owned owner borrower =
 -- Property: Multiple borrows from the same resource are handled correctly
 prop_multiple_borrows :: String -> [String] -> Property
 prop_multiple_borrows owner borrowers =
-  not (null borrowers) && all (/= owner) borrowers ==>
+  not (null borrowers) && L.all (/= owner) borrowers ==>
   let owned = Owned owner
-      borrows = map (\b -> createBorrow owned b False) borrowers
+      borrows = L.map (\b -> createBorrow owned b False) borrowers
       borrowOwners = map getBorrowOwner borrows
   in property $ sort borrowOwners === sort borrowers
 
@@ -85,25 +86,25 @@ prop_mutable_borrow_conflicts owner borrower1 borrower2 =
 prop_transfer_invalidates_borrows :: OwnershipTransferData -> [String] -> Property
 prop_transfer_invalidates_borrows transferData borrowers =
   let original = Owned (originalOwner transferData)
-      borrows = map (\b -> createBorrow original b False) borrowers
+      borrows = L.map (\b -> createBorrow original b False) borrowers
       transferred = transferOwnership (newOwner transferData) original
-      allValid = all (isValidBorrow transferred) borrows
+      allValid = L.all (isValidBorrow transferred) borrows
   in property $ not allValid || null borrowers
 
 -- Property: Shared ownership allows concurrent access
 prop_shared_allows_concurrent :: [String] -> Property
 prop_shared_allows_concurrent owners =
-  length owners >= 2 ==>
+  L.length owners >= 2 ==>
   let shared = Shared
-      accesses = map (\_ -> canAccess shared) owners
-  in property $ all id accesses
+      accesses = L.map (\_ -> canAccess shared) owners
+  in property $ L.all id accesses
 
 -- Property: Ownership transfer chain is maintained correctly
 prop_ownership_transfer_chain :: [String] -> Property
 prop_ownership_transfer_chain owners =
-  length owners >= 3 ==>
-  let initialOwner = head owners
-      transfers = tail owners
+  L.length owners >= 3 ==>
+  let initialOwner = L.head owners
+      transfers = L.tail owners
       finalOwnership = foldl transferOwnership (Owned initialOwner) transfers
       expectedOwner = last transfers
   in case finalOwnership of
@@ -182,7 +183,7 @@ checkBorrowConflict :: OwnershipType -> OwnershipType -> Bool
 checkBorrowConflict borrow1 borrow2 =
   case (borrow1, borrow2) of
     (MutBorrowed _, MutBorrowed _) -> True  -- Two mutable borrows conflict
-    (MutBorrowed _, Borrowed _) -> True     -- Mutable and immutable borrows conflict
+    (MutBorrowed _, Borrowed _) -> True     -- Mutable L.and immutable borrows conflict
     (Borrowed _, MutBorrowed _) -> True
     _ -> False
 
@@ -253,7 +254,7 @@ tests = testGroup "Ownership Transfer Boundary QuickCheck Tests"
         MutBorrowed "borrower2" -> True
         _ -> False
       
-      assertBool "Mutable and immutable borrows conflict" $ checkBorrowConflict borrow2 borrow1
+      assertBool "Mutable L.and immutable borrows conflict" $ checkBorrowConflict borrow2 borrow1
       
       assertBool "Transfer creates correct new ownership" $ case transferred of
         Owned "owner2" -> True

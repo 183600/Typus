@@ -10,6 +10,7 @@
 module Test.Unit.NewEnhancedOwnershipMemorySafetyQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose, suchThat)
@@ -51,10 +52,10 @@ prop_borrowing_prevents_double_free borrower1 borrower2 =
 prop_reference_counting_correctness :: [String] -> Property
 prop_reference_counting_correctness borrowers =
   not (null borrowers) ==> 
-  let resource = Resource "testResource" (head borrowers)
-      withRefs = foldl (\res borrower -> addReference res borrower) resource borrowers
+  let resource = Resource "testResource" (L.head borrowers)
+      withRefs = L.foldl (\res borrower -> addReference res borrower) resource borrowers
       finalCount = countReferences withRefs
-  in property $ finalCount === length (nub borrowers)
+  in property $ finalCount === L.length (nub borrowers)
 
 -- Property: Lifetime tracking prevents use-after-free
 prop_lifetime_tracking_prevents_use_after_free :: String -> Int -> Property
@@ -77,11 +78,11 @@ prop_move_semantics_invalidate_source source target =
 -- Property: Shared borrowing allows multiple readers
 prop_shared_borrowing_multiple_readers :: [String] -> Property
 prop_shared_borrowing_multiple_readers readers =
-  length readers >= 2 ==> 
-  let resource = Resource "testResource" (head readers)
-      sharedBorrows = map (\reader -> sharedBorrow resource reader) readers
+  L.length readers >= 2 ==> 
+  let resource = Resource "testResource" (L.head readers)
+      sharedBorrows = L.map (\reader -> sharedBorrow resource reader) readers
       successfulBorrows = catMaybes sharedBorrows
-  in property $ length successfulBorrows === length readers
+  in property $ L.length successfulBorrows === L.length readers
 
 -- Property: Mutable borrowing prevents other borrows
 prop_mutable_borrow_prevents_other_borrows :: String -> [String] -> Property
@@ -89,7 +90,7 @@ prop_mutable_borrow_prevents_other_borrows mutBorrower otherBorrowers =
   not (null otherBorrowers) ==> 
   let resource = Resource "testResource" mutBorrower
       mutableBorrow = mutableBorrowResource resource mutBorrower
-      otherBorrows = map (\borrower -> borrowResource resource borrower) otherBorrowers
+      otherBorrows = L.map (\borrower -> borrowResource resource borrower) otherBorrowers
       successfulOthers = catMaybes otherBorrows
   in property $ isJust mutableBorrow .&&. null successfulOthers
 
@@ -97,7 +98,7 @@ prop_mutable_borrow_prevents_other_borrows mutBorrower otherBorrowers =
 prop_ownership_scope_cleanup :: [String] -> Property
 prop_ownership_scope_cleanup owners =
   not (null owners) ==> 
-  let resources = map (\owner -> Resource ("resource" ++ owner) owner) owners
+  let resources = L.map (\owner -> Resource ("resource" ++ owner) owner) owners
       scope = createScope resources
       cleaned = cleanupScope scope
       remainingResources = getActiveResources cleaned
@@ -106,44 +107,44 @@ prop_ownership_scope_cleanup owners =
 -- Property: Borrowing hierarchy enforcement
 prop_borrowing_hierarchy_enforcement :: [String] -> Property
 prop_borrowing_hierarchy_enforcement hierarchy =
-  length hierarchy >= 3 ==> 
-  let rootOwner = head hierarchy
+  L.length hierarchy >= 3 ==> 
+  let rootOwner = L.head hierarchy
       resource = Resource "testResource" rootOwner
-      borrowChain = foldl (\res owner -> 
+      borrowChain = L.foldl (\res owner -> 
         case res of
           Just r -> borrowResource r owner
           Nothing -> Nothing
-      ) (Just resource) (tail hierarchy)
+      ) (Just resource) (L.tail hierarchy)
   in property $ isJust borrowChain
 
 -- Property: Resource leak detection
 prop_resource_leak_detection :: [(String, Int)] -> Property
 prop_resource_leak_detection resourceLifetimes =
   not (null resourceLifetimes) ==> 
-  let resources = map (\(name, lifetime) -> Resource name "system") resourceLifetimes
+  let resources = L.map (\(name, lifetime) -> Resource name "system") resourceLifetimes
       tracker = createResourceTracker resources
       leaks = detectLeaks tracker
-  in property $ length leaks <= length resourceLifetimes
+  in property $ L.length leaks <= L.length resourceLifetimes
 
 -- Property: Concurrent access safety
 prop_concurrent_access_safety :: [String] -> Property
 prop_concurrent_access_safety threads =
-  length threads >= 2 ==> 
-  let resource = Resource "sharedResource" (head threads)
-      accessResults = map (\thread -> safeAccess resource thread) threads
+  L.length threads >= 2 ==> 
+  let resource = Resource "sharedResource" (L.head threads)
+      accessResults = L.map (\thread -> safeAccess resource thread) threads
       successfulAccesses = catMaybes accessResults
-  in property $ length successfulAccesses <= 1
+  in property $ L.length successfulAccesses <= 1
 
 -- Property: Ownership transfer chain validity
 prop_ownership_transfer_chain_validity :: [String] -> Property
 prop_ownership_transfer_chain_validity owners =
-  length owners >= 3 ==> 
-  let initialResource = Resource "testResource" (head owners)
-      transferChain = foldl (\res owner -> 
+  L.length owners >= 3 ==> 
+  let initialResource = Resource "testResource" (L.head owners)
+      transferChain = L.foldl (\res owner -> 
         case res of
           Just r -> Just (transferOwnership r owner)
           Nothing -> Nothing
-      ) (Just initialResource) (tail owners)
+      ) (Just initialResource) (L.tail owners)
       finalOwner = transferChain >>= Just . resourceOwner
   in property $ finalOwner === Just (last owners)
 
@@ -152,12 +153,12 @@ prop_borrow_checker_rules_consistency :: String -> [String] -> Property
 prop_borrow_checker_rules_consistency owner borrowers =
   not (null borrowers) ==> 
   let resource = Resource "testResource" owner
-      borrowResults = map (\borrower -> checkBorrowRules resource borrower) borrowers
+      borrowResults = L.map (\borrower -> checkBorrowRules resource borrower) borrowers
       validBorrows = filter id borrowResults
-  in property $ length validBorrows <= 1 || all (== owner) (take 1 borrowers)
+  in property $ L.length validBorrows <= 1 || L.all (== owner) (take 1 borrowers)
 
 -- ============================================================================
--- Helper Functions and Types
+-- Helper Functions L.and Types
 -- ============================================================================
 
 -- Ownership system types
@@ -221,7 +222,7 @@ sharedBorrow resource borrower = borrowResource resource borrower
 
 mutableBorrowResource :: Resource -> String -> Maybe Resource
 mutableBorrowResource resource borrower
-  | resourceOwner resource == borrower && null (resourceRefs resource) = 
+  | resourceOwner resource == borrower && L.null (resourceRefs resource) = 
       Just resource
   | otherwise = Nothing
 
@@ -236,12 +237,12 @@ getActiveResources = filter resourceValid . scopeResources
 
 createResourceTracker :: [Resource] -> ResourceTracker
 createResourceTracker resources = ResourceTracker 
-  (Map.fromList $ map (\r -> (resourceName r, r)) resources)
-  (Map.fromList $ map (\r -> (resourceName r, resourceRefs r)) resources)
+  (Map.fromList $ L.map (\r -> (resourceName r, r)) resources)
+  (Map.fromList $ L.map (\r -> (resourceName r, resourceRefs r)) resources)
 
 detectLeaks :: ResourceTracker -> [String]
 detectLeaks tracker = 
-  Map.keys $ Map.filter (\r -> resourceValid r && isNothing (resourceLifetime r)) (trackedResources tracker)
+  Map.keys $ Map.L.filter (\r -> resourceValid r && isNothing (resourceLifetime r)) (trackedResources tracker)
 
 safeAccess :: Resource -> String -> Maybe Resource
 safeAccess resource thread = 

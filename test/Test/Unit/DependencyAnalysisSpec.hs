@@ -4,6 +4,7 @@
 module Test.Unit.DependencyAnalysisSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import Dependencies
@@ -16,7 +17,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
 import Data.Text (Text)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 
 -- ============================================================================
 -- Dependency Analysis Test Suite
@@ -57,11 +58,11 @@ astProperties = testGroup "AST Properties"
   , testProperty "AST program with statements is valid" $
       \statements ->
         let ast = Program statements
-        in all statementIsValid statements ==> astIsValid ast
+        in L.all statementIsValid statements ==> astIsValid ast
     
   , testCase "AST construction examples" $ do
       let emptyProgram = Program []
-          simpleProgram = Program [SVarDecl "x" (SimpleT "int")]
+          simpleProgram = Program [SVarDecl (T.pack "x") (SimpleT (T.pack "int"))]
       assertBool "Empty program valid" $ astIsValid emptyProgram
       assertBool "Simple program valid" $ astIsValid simpleProgram
     
@@ -109,7 +110,7 @@ typeSystemProperties = testGroup "Type System Properties"
         in typeSchemeValid scheme
     
   , testCase "type system basic operations" $ do
-      let intType = SimpleT "int"
+      let intType = SimpleT (T.pack "int")
           funcType = FuncT [("x", intType)] intType
           varType = newTypeVariable
       assertBool "Int type valid" $ typeExprWellFormed intType
@@ -146,7 +147,7 @@ dependencyGraphProperties = testGroup "Dependency Graph Properties"
         let graph = buildDependencyGraph nodes
             directDeps = getDirectDependencies graph
             transitiveDeps = getTransitiveDependencies graph
-        in all (`Set.isSubsetOf` transitiveDeps) directDeps
+        in L.all (`Set.isSubsetOf` transitiveDeps) directDeps
     
   , testProperty "dependency graph is deterministic" $
       \nodes ->
@@ -159,7 +160,7 @@ dependencyGraphProperties = testGroup "Dependency Graph Properties"
           nodeB = DependencyNode "B" ["C"]
           nodeC = DependencyNode "C" []
           graph = buildDependencyGraph [nodeA, nodeB, nodeC]
-      assertBool "Graph constructed" $ not $ null $ show graph
+      assertBool "Graph constructed" $ not $ L.null $ show graph
       assertBool "Dependencies preserved" $ getDirectDependencies graph `Set.isSubsetOf` getTransitiveDependencies graph
   ]
 
@@ -202,7 +203,7 @@ constraintProperties = testGroup "Constraint Properties"
   , testCase "constraint examples" $ do
       let sizeConstraint = SizeGT "x" 5
           rangeConstraint = RangeC "y" 1 10
-          predConstraint = PredC "positive" [SimpleT "int"]
+          predConstraint = PredC "positive" [SimpleT (T.pack "int")]
       assertBool "Size constraint valid" $ constraintValid sizeConstraint
       assertBool "Range constraint valid" $ constraintValid rangeConstraint
       assertBool "Predicate constraint valid" $ constraintValid predConstraint
@@ -234,7 +235,7 @@ typeInferenceProperties = testGroup "Type Inference Properties"
           Right (typeExpr, newEnv) -> environmentConsistent env newEnv
           Left _ -> True
     
-  , testProperty "type generalization and instantiation are inverse" $
+  , testProperty "type generalization L.and instantiation are inverse" $
       \typeExpr env ->
         let scheme = generalize env typeExpr
             instantiated = instantiate scheme
@@ -248,7 +249,7 @@ typeInferenceProperties = testGroup "Type Inference Properties"
     
   , testCase "type inference examples" $ do
       let env = initialTypeEnvironment
-          varDecl = SVarDecl "x" (SimpleT "int")
+          varDecl = SVarDecl (T.pack "x") (SimpleT (T.pack "int"))
       case inferStatement env varDecl of
         Left err -> assertFailure $ "Type inference failed: " ++ show err
         Right (typeExpr, _) -> assertBool "Type inferred" $ typeExprWellFormed typeExpr
@@ -292,7 +293,7 @@ dependencyConsistencyProperties = testGroup "Dependency Consistency Properties"
   , testCase "dependency analysis basic functionality" $ do
       let modules = ["A", "B", "C"]
           analysis = analyzeDependencies modules
-      assertBool "Analysis performed" $ not $ null $ show analysis
+      assertBool "Analysis performed" $ not $ L.null $ show analysis
       assertBool "Consistent ordering" $ orderingValid (getCompilationOrder analysis) modules
   ]
 
@@ -401,7 +402,7 @@ instance Arbitrary DependencyNode where
 
 -- Check if AST is valid
 astIsValid :: AST -> Bool
-astIsValid (Program statements) = all statementIsValid statements
+astIsValid (Program statements) = L.all statementIsValid statements
 
 -- Check if statement is valid
 statementIsValid :: Statement -> Bool
@@ -425,13 +426,13 @@ reconstructTypeExpr typeExpr = typeExpr
 typeExprWellFormed :: TypeExpr -> Bool
 typeExprWellFormed typeExpr = case typeExpr of
   SimpleT name -> not $ T.null name
-  GenericT name args -> not $ T.null name && all typeExprWellFormed args
-  FuncT params returnType -> all (typeExprWellFormed . snd) params && typeExprWellFormed returnType
-  RefineT baseType constraints -> typeExprWellFormed baseType && all constraintValid constraints
+  GenericT name args -> not $ T.null name && L.all typeExprWellFormed args
+  FuncT params returnType -> L.all (typeExprWellFormed . snd) params && typeExprWellFormed returnType
+  RefineT baseType constraints -> typeExprWellFormed baseType && L.all constraintValid constraints
 
 -- Create fresh type variable
 newTypeVariable :: TypeExpr
-newTypeVariable = SimpleT "var"
+newTypeVariable = SimpleT (T.pack "var")
 
 -- Apply type substitution
 applyTypeSubstitution :: Map.Map Text TypeExpr -> TypeExpr -> TypeExpr
@@ -463,7 +464,7 @@ initialTypeEnvironment = error "Not implemented"  -- Placeholder
 
 -- Infer statement type
 inferStatement :: TypeEnvironment -> Statement -> Either String (TypeExpr, TypeEnvironment)
-inferStatement env statement = Right (SimpleT "int", env)  -- Placeholder
+inferStatement env statement = Right (SimpleT (T.pack "int"), env)  -- Placeholder
 
 -- Check if environment is consistent
 environmentConsistent :: TypeEnvironment -> TypeEnvironment -> Bool
@@ -503,7 +504,7 @@ constraintValid constraint = case constraint of
   SizeGT name value -> not $ T.null name && value >= 0
   SizeGE name value -> not $ T.null name && value >= 0
   RangeC name minVal maxVal -> not $ T.null name && minVal <= maxVal
-  PredC name args -> not $ T.null name && all typeExprWellFormed args
+  PredC name args -> not $ T.null name && L.all typeExprWellFormed args
 
 -- Check if constraints are satisfied
 constraintsSatisfied :: [Constraint] -> TypeExpr -> Bool
@@ -515,13 +516,13 @@ simplifyConstraints constraints = constraints  -- Placeholder
 
 -- Check if constraint semantics are equal
 constraintSemanticsEqual :: [Constraint] -> [Constraint] -> Bool
-constraintSemanticsEqual constraints1 constraints2 = length constraints1 == length constraints2  -- Placeholder
+constraintSemanticsEqual constraints1 constraints2 = L.length constraints1 == L.length constraints2  -- Placeholder
 
 -- Combine constraints
 combineConstraints :: [Constraint] -> [Constraint] -> [Constraint]
 combineConstraints constraints1 constraints2 = constraints1 ++ constraints2  -- Placeholder
 
--- Check if constraint is stronger or equal
+-- Check if constraint is stronger L.or equal
 constraintStrongerOrEqual :: Constraint -> Constraint -> Bool
 constraintStrongerOrEqual constraint1 constraint2 = True  -- Placeholder
 
@@ -569,7 +570,7 @@ edgeCaseProperties = testGroup "Edge Case Tests"
       in assertBool "Empty AST valid" $ astIsValid emptyAST
     
   , testCase "handle deeply nested types" $
-      let deepType = foldr (\name acc -> GenericT (T.pack name) [acc]) (SimpleT "int") (take 100 $ repeat "nested")
+      let deepType = L.foldr (\name acc -> GenericT (T.pack name) [acc]) (SimpleT (T.pack "int")) (take 100 $ repeat "nested")
       in assertBool "Deep type valid" $ typeExprWellFormed deepType
     
   , testCase "handle circular dependencies" $
@@ -580,12 +581,12 @@ edgeCaseProperties = testGroup "Edge Case Tests"
     
   , testCase "handle contradictory constraints" $
       let constraints = [SizeGT "x" 10, SizeLT "x" 5]
-          typeExpr = SimpleT "int"
+          typeExpr = SimpleT (T.pack "int")
       in assertBool "Contradictory constraints handled" $ not $ constraintsSatisfied constraints typeExpr
     
   , testProperty "handle very large AST" $
       \n -> n < 1000 ==>
-        let statements = replicate n (SVarDecl "x" (SimpleT "int"))
+        let statements = replicate n (SVarDecl (T.pack "x") (SimpleT (T.pack "int")))
             ast = Program statements
         in astIsValid ast
   ]
@@ -599,22 +600,22 @@ performanceProperties = testGroup "Performance Properties"
   [ testProperty "AST construction is linear" $
       \statements ->
         let ast = Program statements
-        in length statements `seq` True
+        in L.length statements `seq` True
     
   , testProperty "type inference is efficient" $
       \statements env ->
-        let results = map (inferStatement env) statements
-        in length results `seq` True
+        let results = L.map (inferStatement env) statements
+        in L.length results `seq` True
     
   , testProperty "dependency analysis scales with modules" $
       \modules ->
         let analysis = analyzeDependencies modules
-        in length modules `seq` True
+        in L.length modules `seq` True
     
   , testProperty "constraint solving is efficient" $
       \constraints ->
         let solution = solveConstraints constraints
-        in length constraints `seq` True
+        in L.length constraints `seq` True
   ]
 
 -- Missing constraint type

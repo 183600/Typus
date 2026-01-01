@@ -3,13 +3,14 @@
 module Test.Unit.NewCabalErrorHandlerConsistencyQuickCheckSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Compiler.Errors.Core
 import SourceLocation (SourcePos(..), SourceSpan(..), posAt, spanBetween)
 import Data.Time (UTCTime)
 import Data.List (sort)
 import Data.Maybe (isJust, isNothing)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 
 -- | Test error handler consistency properties
 testErrorHandlerConsistencyProperties :: TestTree
@@ -17,7 +18,7 @@ testErrorHandlerConsistencyProperties = testGroup "Error Handler Consistency Pro
   [ testProperty "error collector preserves order" propErrorCollectorPreservesOrder
   , testProperty "error filtering maintains invariants" propErrorFilteringMaintainsInvariants
   , testProperty "error severity ordering is consistent" propSeverityOrderingConsistent
-  , testProperty "error combination preserves all information" propErrorCombinationPreservesInfo
+  , testProperty "error combination preserves L.all information" propErrorCombinationPreservesInfo
   , testProperty "error location utilities are consistent" propErrorLocationConsistent
   , testProperty "error context operations are idempotent" propErrorContextIdempotent
   ]
@@ -27,9 +28,9 @@ propErrorCollectorPreservesOrder :: [String] -> [String] -> [String] -> Property
 propErrorCollectorPreservesOrder errorMessages warningMessages infoMessages =
   not (null errorMessages) ==> 
   let collector = newErrorCollector
-      collector1 = foldl addError collector (map (errorAt (posAt 1 1)) errorMessages)
-      collector2 = foldl addWarning collector1 (map (warningAt (posAt 1 1)) warningMessages)
-      collector3 = foldl addInfo collector2 (map (infoAt (posAt 1 1)) infoMessages)
+      collector1 = foldl addError collector (L.map (errorAt "test-id" 1 1)) errorMessages)
+      collector2 = foldl addWarning collector1 (L.map (warningAt "test-id" 1 1)) warningMessages)
+      collector3 = foldl addInfo collector2 (L.map (infoAt "test-id" 1 1)) infoMessages)
       
       errors = getErrors collector3
       warnings = getWarnings collector3
@@ -56,8 +57,8 @@ propErrorFilteringMaintainsInvariants severities =
       filteredErrors = filterBySeverity ErrorSeverityError errors
       filteredWarnings = filterBySeverity ErrorSeverityWarning errors
       
-      hasOnlyErrors = all (\e -> teSeverity e == ErrorSeverityError) filteredErrors
-      hasOnlyWarnings = all (\e -> teSeverity e == ErrorSeverityWarning) filteredWarnings
+      hasOnlyErrors = L.all (\e -> teSeverity e == ErrorSeverityError) filteredErrors
+      hasOnlyWarnings = L.all (\e -> teSeverity e == ErrorSeverityWarning) filteredWarnings
   in hasOnlyErrors && hasOnlyWarnings
 
 -- | Error severity ordering should be consistent
@@ -75,7 +76,7 @@ propSeverityOrderingConsistent sev1 sev2 =
                    (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext)
   in combinedErrorSeverity combined1 == combinedErrorSeverity combined2
 
--- | Error combination should preserve all information from both errors
+-- | Error combination should preserve L.all information from both errors
 propErrorCombinationPreservesInfo :: String -> String -> ErrorSeverity -> ErrorSeverity -> Property
 propErrorCombinationPreservesInfo msg1 msg2 sev1 sev2 =
   not (null msg1) && not (null msg2) ==> 
@@ -117,7 +118,7 @@ testErrorHandlingEdgeCases :: TestTree
 testErrorHandlingEdgeCases = testGroup "Error Handling Edge Cases"
   [ testCase "empty error collector" $
       let collector = newErrorCollector
-      in null (getErrors collector) && 
+      in L.null (getErrors collector) && 
          null (getWarnings collector) && 
          null (getInfo collector) &&
          not (hasErrors collector) &&
@@ -157,7 +158,7 @@ testErrorHandlingEdgeCases = testGroup "Error Handling Edge Cases"
             ]
           syntaxErrors = filterByCategory ErrorCategorySyntax errors
           typeErrors = filterByCategory ErrorCategoryType errors
-      in length syntaxErrors == 2 && length typeErrors == 1
+      in L.length syntaxErrors == 2 && L.length typeErrors == 1
   ]
 
 -- | Test error formatting
@@ -167,17 +168,17 @@ testErrorFormatting = testGroup "Error Formatting"
       let error = TypeError "Test error" ErrorSeverityError ErrorCategorySyntax 
                            (ErrorLocation Nothing 0 0 Nothing Nothing) emptyContext
           formatted = formatError error
-      in "Test error" `T.isInfixOf` formatted &&
-         "Error" `T.isInfixOf` formatted &&
-         "Syntax" `T.isInfixOf` formatted
+      in "Test error" `L.isInfixOf` formatted &&
+         "Error" `L.isInfixOf` formatted &&
+         "Syntax" `L.isInfixOf` formatted
          
   , testCase "format error with location" $
       let error = TypeError "Test error" ErrorSeverityError ErrorCategorySyntax 
                            (ErrorLocation Nothing 5 10 (Just 5) (Just 15)) emptyContext
           formatted = formatErrorWithLocation error
-      in "Test error" `T.isInfixOf` formatted &&
-         "5:10" `T.isInfixOf` formatted &&
-         "5:15" `T.isInfixOf` formatted
+      in "Test error" `L.isInfixOf` formatted &&
+         "5:10" `L.isInfixOf` formatted &&
+         "5:15" `L.isInfixOf` formatted
          
   , testCase "format multiple errors" $
       let errors = 
@@ -187,8 +188,8 @@ testErrorFormatting = testGroup "Error Formatting"
                         (ErrorLocation Nothing 2 2 Nothing Nothing) emptyContext
             ]
           formatted = formatErrors errors
-      in "First error" `T.isInfixOf` formatted &&
-         "Second error" `T.isInfixOf` formatted
+      in "First error" `L.isInfixOf` formatted &&
+         "Second error" `L.isInfixOf` formatted
   ]
 
 -- | Test error recovery
@@ -226,10 +227,10 @@ testErrorStatistics = testGroup "Error Statistics"
         
   , testCase "statistics with mixed errors" $
       let collector = newErrorCollector
-          collector1 = addError (errorAt (posAt 1 1) "Error1") collector
-          collector2 = addError (errorAt (posAt 2 2) "Error2") collector1
-          collector3 = addWarning (warningAt (posAt 3 3) "Warning1") collector2
-          collector4 = addInfo (infoAt (posAt 4 4) "Info1") collector3
+          collector1 = addError (errorAt "test-id" 1 1) "Error1") collector
+          collector2 = addError (errorAt "test-id" 2 2) "Error2") collector1
+          collector3 = addWarning (warningAt "test-id" 3 3) "Warning1") collector2
+          collector4 = addInfo (infoAt "test-id" 4 4) "Info1") collector3
           stats = getErrorStatistics collector4
       in Map.lookup ErrorSeverityError stats == Just 2 &&
          Map.lookup ErrorSeverityWarning stats == Just 1 &&

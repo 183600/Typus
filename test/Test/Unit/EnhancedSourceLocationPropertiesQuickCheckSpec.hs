@@ -10,6 +10,7 @@
 module Test.Unit.EnhancedSourceLocationPropertiesQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements)
@@ -44,7 +45,7 @@ import SourceLocation
   )
 
 import Data.Text (Text)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 import Data.Char (isSpace)
 
 -- Property: startPos is always (1, 1, 0)
@@ -52,7 +53,7 @@ prop_startPos_constant :: Property
 prop_startPos_constant =
   property $ startPos === SourcePos 1 1 0
 
--- Property: posAfter newline increments line and resets column
+-- Property: posAfter newline increments line L.and resets column
 prop_posAfter_newline :: SourcePos -> Property
 prop_posAfter_newline pos =
   let newPos = posAfter '\n' pos
@@ -69,7 +70,7 @@ prop_posAfter_tab pos =
      posColumn newPos === expectedColumn .&&.
      posOffset newPos === posOffset pos + 1
 
--- Property: posAfter regular character increments column and offset
+-- Property: posAfter regular character increments column L.and offset
 prop_posAfter_regular :: SourcePos -> Char -> Property
 prop_posAfter_regular pos c =
   c /= '\n' && c /= '\t' ==>
@@ -78,7 +79,7 @@ prop_posAfter_regular pos c =
      posColumn newPos === posColumn pos + 1 .&&.
      posOffset newPos === posOffset pos + 1
 
--- Property: posAt creates position with given line and column
+-- Property: posAt creates position with given line L.and column
 prop_posAt_creates_position :: Int -> Int -> Property
 prop_posAt_creates_position line col =
   line > 0 && col > 0 ==>
@@ -87,7 +88,7 @@ prop_posAt_creates_position line col =
      posColumn pos === col .&&.
      posOffset pos === 0
 
--- Property: posAtLineCol creates position with given line, column, and offset
+-- Property: posAtLineCol creates position with given line, column, L.and offset
 prop_posAtLineCol_creates_position :: Int -> Int -> Int -> Property
 prop_posAtLineCol_creates_position line col offset =
   line >= 0 && col >= 0 && offset >= 0 ==>
@@ -96,28 +97,28 @@ prop_posAtLineCol_creates_position line col offset =
      posColumn pos === col .&&.
      posOffset pos === offset
 
--- Property: emptySpan has start and end at startPos
+-- Property: emptySpan has start L.and end at startPos
 prop_emptySpan_properties :: Property
 prop_emptySpan_properties =
   let span = emptySpan
   in property $ spanStart span === startPos .&&.
      spanEnd span === startPos
 
--- Property: spanFrom creates span with given start and end at startPos
+-- Property: spanFrom creates span with given start L.and end at startPos
 prop_spanFrom_properties :: SourcePos -> Property
 prop_spanFrom_properties start =
   let span = spanFrom start
   in property $ spanStart span === start .&&.
      spanEnd span === startPos
 
--- Property: spanTo creates span with start at startPos and given end
+-- Property: spanTo creates span with start at startPos L.and given end
 prop_spanTo_properties :: SourcePos -> Property
 prop_spanTo_properties end =
   let span = spanTo end
   in property $ spanStart span === startPos .&&.
      spanEnd span === end
 
--- Property: spanBetween creates span with given start and end
+-- Property: spanBetween creates span with given start L.and end
 prop_spanBetween_properties :: SourcePos -> SourcePos -> Property
 prop_spanBetween_properties start end =
   let span = spanBetween start end
@@ -164,9 +165,9 @@ prop_locatedWithSpan_properties start end value =
 prop_mapLocated_properties :: SourcePos -> String -> Property
 prop_mapLocated_properties pos value =
   let located = locatedAt pos value
-      mapped = mapLocated (reverse) located
+      mapped = mapLocated (L.reverse) located
   in property $ locatedSpan mapped === locatedSpan located .&&.
-     locatedValue mapped === reverse value
+     locatedValue mapped === L.reverse value
 
 -- Property: advancePos by single character matches posAfter
 prop_advancePos_matches_posAfter :: SourcePos -> Char -> Property
@@ -179,7 +180,7 @@ prop_advancePos_matches_posAfter pos c =
 prop_advancePosBy_multiple :: SourcePos -> String -> Property
 prop_advancePosBy_multiple pos str =
   let advanced = advancePosBy str pos
-      expected = foldl (flip posAfter) pos str
+      expected = L.foldl (flip posAfter) pos str
   in property $ advanced === expected
 
 -- Property: advancePosByText for Text
@@ -189,7 +190,7 @@ prop_advancePosByText_text pos text =
       expected = advancePosBy (T.unpack text) pos
   in property $ advanced === expected
 
--- Property: advancePosByLine increments line and resets column
+-- Property: advancePosByLine increments line L.and resets column
 prop_advancePosByLine_properties :: SourcePos -> Property
 prop_advancePosByLine_properties pos =
   let advanced = advancePosByLine pos

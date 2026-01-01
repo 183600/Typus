@@ -3,6 +3,7 @@
 module Test.Unit.SourceLocationComprehensiveQuickCheckSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 
@@ -25,7 +26,7 @@ sourcePosProperties = testGroup "SourcePos Properties"
   [ testProperty "startPos has correct values" $
       posLine startPos == 1 && posColumn startPos == 1 && posOffset startPos == 0
   
-  , testProperty "posAt creates position with correct line and column" $
+  , testProperty "posAt creates position with correct line L.and column" $
       \line col -> line > 0 && col > 0 ==>
         let pos = posAt line col
         in posLine pos == line && posColumn pos == col
@@ -35,7 +36,7 @@ sourcePosProperties = testGroup "SourcePos Properties"
         let pos = posAtLineCol line col offset
         in posLine pos == line && posColumn pos == col && posOffset pos == offset
   
-  , testProperty "posAfter newline increments line and resets column" $
+  , testProperty "posAfter newline increments line L.and resets column" $
       \pos ->
         let newPos = posAfter '\n' pos
         in posLine newPos == posLine pos + 1 && posColumn newPos == 1 &&
@@ -59,7 +60,7 @@ sourcePosProperties = testGroup "SourcePos Properties"
 -- | Properties for SourceSpan
 sourceSpanProperties :: TestTree
 sourceSpanProperties = testGroup "SourceSpan Properties"
-  [ testProperty "emptySpan has same start and end" $
+  [ testProperty "emptySpan has same start L.and end" $
       \pos ->
         let span = emptySpan pos
         in spanStart span == pos && spanEnd span == pos
@@ -74,7 +75,7 @@ sourceSpanProperties = testGroup "SourceSpan Properties"
         let span = spanTo pos
         in spanStart span == pos && spanEnd span == pos
   
-  , testProperty "spanBetween creates span with correct start and end" $
+  , testProperty "spanBetween creates span with correct start L.and end" $
       \start end ->
         let span = spanBetween start end
         in spanStart span == start && spanEnd span == end
@@ -171,13 +172,13 @@ positionAdvancementProperties = testGroup "Position Advancement Properties"
   , testProperty "advancePosBy advances by multiple characters" $
       \pos chars ->
         let result = advancePosBy chars pos
-            expected = foldl (flip posAfter) pos chars
+            expected = L.foldl (flip posAfter) pos chars
         in result == expected
   
   , testProperty "advancePosBy empty string returns original position" $
       \pos -> advancePosBy "" pos == pos
   
-  , testProperty "advancePosByLine increments line and resets column" $
+  , testProperty "advancePosByLine increments line L.and resets column" $
       \pos numLines ->
         let result = advancePosByLine numLines pos
         in posLine result == posLine pos + numLines &&

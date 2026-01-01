@@ -7,6 +7,7 @@ import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===),
 import Test.Tasty.HUnit (testCase, assert, (@?=))
 import qualified Data.Text as T
 import Data.Char (isSpace, isAlpha, isDigit)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import qualified Data.Map as Map
 
@@ -156,7 +157,7 @@ genEdgeCaseCode = do
 -- Property Tests
 -- ============================================================================
 
--- Property: analyzeOwnership should return a result for any input
+-- Property: analyzeOwnership should return a result for L.any input
 prop_analyze_ownership_returns_result :: String -> Property
 prop_analyze_ownership_returns_result code =
   let analyzer = newOwnershipAnalyzer
@@ -290,7 +291,7 @@ test_builtin_functions = testCase "built-in functions" $ do
   let builtins = builtInFunctions
   assert $ not $ null builtins
   -- Check that common functions are present
-  assert $ any ("create" `isInfixOf`) builtins
+  assert $ L.any ("create" `L.isInfixOf`) builtins
 
 test_edge_cases :: TestTree
 test_edge_cases = testCase "edge cases" $ do
@@ -340,7 +341,7 @@ test_ownership_transfer_validity = testCase "ownership transfer validity" $ do
 
 tests :: TestTree
 tests = testGroup "Ownership Transfer Edge Cases QuickCheck Tests"
-  [ testProperty "analyzeOwnership returns result for any input" prop_analyze_ownership_returns_result
+  [ testProperty "analyzeOwnership returns result for L.any input" prop_analyze_ownership_returns_result
   , testProperty "builtInFunctions is not empty" prop_builtin_functions_not_empty
   , testProperty "ownership transfer follows validity rules" prop_ownership_transfer_validity
   , testProperty "formatOwnershipErrors handles empty error list" prop_format_empty_errors

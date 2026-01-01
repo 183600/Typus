@@ -3,6 +3,7 @@
 module Test.Unit.NewCompactUtilsSpec where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), forAll)
 import Utils (trim, splitBy, splitByCollapsed, splitByComma, removeLineComments, removeComments)
@@ -15,12 +16,12 @@ testTrimProperties = testGroup "trim函数属性测试"
     
   , testProperty "trim不改变字符串中间的空格" $
       \s -> let trimmed = trim s
-                 middleSpaces = filter (== ' ') $ dropWhile (== ' ') $ reverse $ dropWhile (== ' ') trimmed
-             in length middleSpaces >= 0
+                 middleSpaces = L.filter (== ' ') $ dropWhile (== ' ') $ L.reverse $ dropWhile (== ' ') trimmed
+             in L.length middleSpaces >= 0
     
   , testProperty "trim只移除首尾空格" $
       \s -> let trimmed = trim s
-                 originalWithoutSpaces = dropWhile (== ' ') $ reverse $ dropWhile (== ' ') s
+                 originalWithoutSpaces = dropWhile (== ' ') $ L.reverse $ dropWhile (== ' ') s
              in trimmed === originalWithoutSpaces
   ]
 
@@ -28,16 +29,16 @@ testTrimProperties = testGroup "trim函数属性测试"
 testSplitByProperties :: TestTree
 testSplitByProperties = testGroup "splitBy函数属性测试"
   [ testProperty "splitBy与join的逆属性" $
-      \c s -> not (elem c s) ==> splitBy c s === [s]
+      \c s -> not (L.elem c s) ==> splitBy c s === [s]
     
   , testProperty "splitByComma等于splitBy ','" $
       \s -> splitByComma s === splitBy ',' s
     
   , testProperty "splitByCollapsed不产生空字符串" $
-      \c s -> all (not . null) (splitByCollapsed c s)
+      \c s -> L.all (not . null) (splitByCollapsed c s)
     
   , testProperty "splitByCollapsed长度小于等于splitBy" $
-      \c s -> length (splitByCollapsed c s) <= length (splitBy c s)
+      \c s -> L.length (splitByCollapsed c s) <= L.length (splitBy c s)
   ]
 
 -- | 测试注释移除函数的属性
@@ -87,7 +88,7 @@ testPerformanceProperties = testGroup "性能属性测试"
   [ testProperty "splitByCollapsed的复杂度属性" $
       \c s -> let splits = splitBy c s
                   collapsed = splitByCollapsed c s
-              in length collapsed <= length splits
+              in L.length collapsed <= L.length splits
   ]
 
 -- | 组合所有测试

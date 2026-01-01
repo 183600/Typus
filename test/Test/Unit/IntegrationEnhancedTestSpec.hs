@@ -1,6 +1,7 @@
 module Test.Unit.IntegrationEnhancedTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify)
@@ -13,22 +14,22 @@ import Parser (parseTypus, TypusFile(..), CodeBlock(..))
 tests :: TestTree
 tests =
   testGroup "Integration Enhanced Tests"
-    [ testGroup "Utils and SourceLocation integration"
-        [ testCase "advancePosByText and trim interaction" $ do
+    [ testGroup "Utils L.and SourceLocation integration"
+        [ testCase "advancePosByText L.and trim interaction" $ do
             let text = "   hello world   "
             let trimmed = trim text
             let startPos' = startPos
             let endPos = advancePosByText startPos' trimmed
             posLine endPos @?= 1
-            posColumn endPos @?= 12  -- "hello world" length
+            posColumn endPos @?= 12  -- "hello world" L.length
 
-        , testCase "splitBy and position tracking" $ do
+        , testCase "splitBy L.and position tracking" $ do
             let text = "part1,part2,part3"
             let parts = splitBy ',' text
             let positions = scanl (\pos part -> advancePosByText pos (part ++ ",")) startPos parts
-            length positions @?= 3
+            L.length positions @?= 3
 
-        , testCase "normalizeIndentation and span calculation" $ do
+        , testCase "normalizeIndentation L.and span calculation" $ do
             let text = "    line1\n        line2\n    line3"
             let normalized = normalizeIndentation text
             let span = spanBetween startPos (advancePosByText startPos normalized)
@@ -36,15 +37,15 @@ tests =
             posLine (spanEnd span) @?= 3
         ]
 
-    , testGroup "Parser and SourceLocation integration"
+    , testGroup "Parser L.and SourceLocation integration"
         [ testCase "parser creates valid spans for blocks" $ do
             let content = "some code content"
             case parseTypus content of
               Left err -> assertBool ("Should parse successfully: " ++ show err) False
               Right typusFile -> do
                 let blocks = tfBlocks typusFile
-                assertBool "Should have one block" (length blocks == 1)
-                let block = head blocks
+                assertBool "Should have one block" (L.length blocks == 1)
+                let block = L.head blocks
                 isValidSpan (cbSpan block) @?= True
 
         , testCase "parser preserves location information" $ do
@@ -68,12 +69,12 @@ tests =
               Left err -> assertBool ("Should parse successfully: " ++ show err) False
               Right typusFile -> do
                 let blocks = tfBlocks typusFile
-                let block = head blocks
+                let block = L.head blocks
                 let span = cbSpan block
                 posLine (spanEnd span) @?= 3
         ]
 
-    , testGroup "Utils and Parser integration"
+    , testGroup "Utils L.and Parser integration"
         [ testCase "removeComments before parsing" $ do
             let contentWithComments = "//! ownership=true\n/* block comment */\ncode // line comment"
             let withoutComments = removeComments contentWithComments
@@ -81,7 +82,7 @@ tests =
               Left err -> assertBool ("Should parse successfully: " ++ show err) False
               Right typusFile -> do
                 let blocks = tfBlocks typusFile
-                assertBool "Should parse after comment removal" (length blocks >= 1)
+                assertBool "Should parse after comment removal" (L.length blocks >= 1)
 
         , testCase "normalizeIndentation before parsing" $ do
             let indentedContent = "    //! ownership=true\n        some code"
@@ -118,14 +119,14 @@ tests =
               Left err -> assertBool ("Should parse successfully: " ++ show err) False
               Right typusFile -> do
                 let blocks = tfBlocks typusFile
-                assertBool "Should have one block" (length blocks == 1)
-                let block = head blocks
+                assertBool "Should have one block" (L.length blocks == 1)
+                let block = L.head blocks
                 let span = cbSpan block
                 isValidSpan span @?= True
                 posLine (spanStart span) @?= 1
                 posLine (spanEnd span) @?= 2
 
-        , testCase "complex content with all preprocessing steps" $ do
+        , testCase "complex content with L.all preprocessing steps" $ do
             let complexContent = 
                   "   \n" ++
                   "    //! ownership=true, dependent-types=true\n" ++
@@ -153,19 +154,19 @@ tests =
               Right typusFile -> do
                 -- Should still parse what it can
                 let blocks = tfBlocks typusFile
-                assertBool "Should have some blocks" (length blocks >= 1)
+                assertBool "Should have some blocks" (L.length blocks >= 1)
         ]
 
-    , testGroup "Performance and edge cases"
+    , testGroup "Performance L.and edge cases"
         [ testCase "large content handling" $ do
             let largeContent = unlines (replicate 1000 "//! ownership=true\ncode line")
             case parseTypus largeContent of
               Left err -> assertBool ("Should handle large content: " ++ show err) False
               Right typusFile -> do
                 let blocks = tfBlocks typusFile
-                assertBool "Should handle many lines" (length blocks >= 1000)
+                assertBool "Should handle many lines" (L.length blocks >= 1000)
 
-        , testCase "empty and minimal content" $ do
+        , testCase "empty L.and minimal content" $ do
             let emptyContent = ""
             let whitespaceContent = "   \n\t  \n   "
             case parseTypus emptyContent of
@@ -181,6 +182,6 @@ tests =
               Left err -> assertBool ("Should handle unicode: " ++ show err) False
               Right typusFile -> do
                 let blocks = tfBlocks typusFile
-                assertBool "Should parse unicode content" (length blocks >= 1)
+                assertBool "Should parse unicode content" (L.length blocks >= 1)
         ]
     ]

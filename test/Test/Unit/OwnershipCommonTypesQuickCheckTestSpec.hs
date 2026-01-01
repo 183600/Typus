@@ -4,6 +4,7 @@
 module Test.Unit.OwnershipCommonTypesQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
@@ -80,7 +81,7 @@ ownershipTransferTests = testGroup "Ownership Transfer Tests"
       let transfer = OwnershipTransfer "src" "dest" (SourceSpan startPos startPos)
       in ownershipTransferDestination transfer @?= "dest"
   
-  , fastProperty "Transfer source and destination are different" $
+  , fastProperty "Transfer source L.and destination are different" $
       \src dest -> let transfer = OwnershipTransfer src dest (SourceSpan startPos startPos)
                    in (src == dest) || (ownershipTransferSource transfer /= ownershipTransferDestination transfer)
   ]
@@ -94,12 +95,12 @@ ownershipRegionTests = testGroup "Ownership Region Tests"
   
   , testCase "Region with variables" $
       let region = OwnershipRegion "region" ["var1", "var2"]
-      in length (ownershipRegionVariables region) @?= 2
+      in L.length (ownershipRegionVariables region) @?= 2
   
   , fastProperty "Region variable uniqueness" $
       \varNames -> let region = OwnershipRegion "test" varNames
                        uniqueVars = nub varNames
-                   in length (ownershipRegionVariables region) >= length uniqueVars
+                   in L.length (ownershipRegionVariables region) >= L.length uniqueVars
   ]
 
 -- | 5. 所有权权限测试
@@ -180,7 +181,7 @@ ownershipFunctionTests = testGroup "Ownership Function Tests"
   
   , testCase "Function parameter ownership" $
       let func = OwnershipFunction "f" [Owned, Shared] Borrowed
-      in length (ownershipFunctionParams func) @?= 2
+      in L.length (ownershipFunctionParams func) @?= 2
   
   , fastProperty "Function return ownership" $
       \params returnOwnership -> let func = OwnershipFunction "test" params returnOwnership

@@ -3,6 +3,7 @@
 module Test.Unit.ComprehensiveQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
@@ -46,17 +47,17 @@ prop_map_composition xs ys zs =
 prop_map_filter_preserves_structure :: [(String, Int)] -> Property
 prop_map_filter_preserves_structure pairs =
   let m = Map.fromList pairs
-      filtered = Map.filter (> 0) m
+      filtered = Map.L.filter (> 0) m
       allKeys = Map.keys m
       filteredKeys = Map.keys filtered
-  in property (all (`elem` allKeys) filteredKeys)
+  in property (L.all (`elem` allKeys) filteredKeys)
 
 prop_map_intersection_with :: [(String, Int)] -> [(String, Int)] -> Property
 prop_map_intersection_with xs ys =
   let m1 = Map.fromList xs
       m2 = Map.fromList ys
       intersected = Map.intersectionWith (+) m1 m2
-  in property (all (\(k, v) -> 
+  in property (L.all (\(k, v) -> 
     case (Map.lookup k m1, Map.lookup k m2) of
       (Just a, Just b) -> v == a + b
       _ -> False) (Map.toList intersected))
@@ -84,31 +85,31 @@ prop_group_by_properties pairs =
   let grouped = groupBy (\(a, _) (b, _) -> a == b) (sortBy (comparing fst) pairs)
       checkGroup group = case group of
         [] -> False
-        (x:_) -> all ((== fst x) . fst) group
-  in property (all checkGroup grouped)
+        (x:_) -> L.all ((== fst x) . fst) group
+  in property (L.all checkGroup grouped)
 
 prop_intercalate_associative :: String -> [String] -> Property
 prop_intercalate_associative sep strings =
-  property (length (intercalate sep strings) >= 0)
+  property (L.length (intercalate sep strings) >= 0)
 
 prop_list_comprehension :: [Int] -> Property
 prop_list_comprehension xs =
   let evens = [x | x <- xs, even x]
       squares = [x * x | x <- xs]
-  in property (all even evens .&&. all (\x -> any (== (sqrt (fromIntegral x :: Double))) (map fromIntegral xs)) squares)
+  in property (L.all even evens .&&. L.all (\x -> L.any (== (sqrt (fromIntegral x :: Double))) (map fromIntegral xs)) squares)
 
 -- Comprehensive String properties
 prop_string_transformation :: String -> Property
 prop_string_transformation s =
   let words' = words s
       lines' = lines s
-  in property (length words' >= 0 .&&. length lines' >= 0)
+  in property (L.length words' >= 0 .&&. L.length lines' >= 0)
 
 prop_case_manipulation :: String -> Property
 prop_case_manipulation s =
   let upper = map toUpper s
       lower = map toLower s
-  in length upper == length lower .&&. length s == length upper
+  in L.length upper == L.length lower .&&. L.length s == L.length upper
 
 -- Comprehensive Maybe properties
 prop_maybe_monad_laws :: Maybe Int -> Property
@@ -122,7 +123,7 @@ prop_maybe_monad_laws mx =
 prop_maybe_functor_laws :: Maybe Int -> Property
 prop_maybe_functor_laws mx =
   let identity = fmap id mx === mx
-      composition = fmap ((+1) . (*2)) mx === fmap (+1) (fmap (*2) mx)
+      composition = fL.map ((+1) . (*2)) mx === fL.map (+1) (fL.map (*2) mx)
   in identity .&&. composition
 
 -- Comprehensive numeric properties
@@ -145,7 +146,7 @@ tests = testGroup "Comprehensive QuickCheck Tests"
   , fastProperty "Map composition is associative" prop_map_composition
   , fastProperty "Map filter preserves structure" prop_map_filter_preserves_structure
   , fastProperty "Map intersection with combines values" prop_map_intersection_with
-  , fastProperty "Set cartesian product size" prop_set_cartesian_product
+  , fastProperty "Set cartesian L.product size" prop_set_cartesian_product
   , fastProperty "Set powerset" prop_set_powerset
   , fastProperty "Set partition" prop_set_partition
   , fastProperty "Group by properties" prop_group_by_properties

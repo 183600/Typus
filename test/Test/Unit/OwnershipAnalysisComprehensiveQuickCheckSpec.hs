@@ -3,6 +3,7 @@
 module Test.Unit.OwnershipAnalysisComprehensiveQuickCheckSpec (tests) where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 
@@ -164,9 +165,9 @@ testOwnershipTypeShow ownershipType =
   let showString = show ownershipType
       hasContent = not (null showString)
       containsType = case ownershipType of
-        Owned _ -> "Owned" `isInfixOf` showString
-        Borrowed _ -> "Borrowed" `isInfixOf` showString
-        MutBorrowed _ -> "MutBorrowed" `isInfixOf` showString
+        Owned _ -> "Owned" `L.isInfixOf` showString
+        Borrowed _ -> "Borrowed" `L.isInfixOf` showString
+        MutBorrowed _ -> "MutBorrowed" `L.isInfixOf` showString
   in hasContent .&&. containsType
 
 testOwnershipErrorShow :: OwnershipError -> Property
@@ -174,21 +175,21 @@ testOwnershipErrorShow ownershipError =
   let showString = show ownershipError
       hasContent = not (null showString)
       containsErrorType = case ownershipError of
-        UseAfterMove _ -> "UseAfterMove" `isInfixOf` showString
-        DoubleMove _ _ -> "DoubleMove" `isInfixOf` showString
-        BorrowWhileMoved _ -> "BorrowWhileMoved" `isInfixOf` showString
-        MutBorrowWhileBorrowed _ -> "MutBorrowWhileBorrowed" `isInfixOf` showString
-        BorrowWhileMutBorrowed _ -> "BorrowWhileMutBorrowed" `isInfixOf` showString
-        MultipleMutBorrows _ -> "MultipleMutBorrows" `isInfixOf` showString
-        UseWhileMutBorrowed _ -> "UseWhileMutBorrowed" `isInfixOf` showString
-        OutOfScope _ -> "OutOfScope" `isInfixOf` showString
-        BorrowError _ -> "BorrowError" `isInfixOf` showString
-        ParseError _ -> "ParseError" `isInfixOf` showString
-        CrossFunctionMove _ _ -> "CrossFunctionMove" `isInfixOf` showString
-        ParameterMoveMismatch _ -> "ParameterMoveMismatch" `isInfixOf` showString
-        ControlFlowError _ -> "ControlFlowError" `isInfixOf` showString
-        PathSensitiveError _ -> "PathSensitiveError" `isInfixOf` showString
-        LoopOwnershipError _ -> "LoopOwnershipError" `isInfixOf` showString
+        UseAfterMove _ -> "UseAfterMove" `L.isInfixOf` showString
+        DoubleMove _ _ -> "DoubleMove" `L.isInfixOf` showString
+        BorrowWhileMoved _ -> "BorrowWhileMoved" `L.isInfixOf` showString
+        MutBorrowWhileBorrowed _ -> "MutBorrowWhileBorrowed" `L.isInfixOf` showString
+        BorrowWhileMutBorrowed _ -> "BorrowWhileMutBorrowed" `L.isInfixOf` showString
+        MultipleMutBorrows _ -> "MultipleMutBorrows" `L.isInfixOf` showString
+        UseWhileMutBorrowed _ -> "UseWhileMutBorrowed" `L.isInfixOf` showString
+        OutOfScope _ -> "OutOfScope" `L.isInfixOf` showString
+        BorrowError _ -> "BorrowError" `L.isInfixOf` showString
+        ParseError _ -> "ParseError" `L.isInfixOf` showString
+        CrossFunctionMove _ _ -> "CrossFunctionMove" `L.isInfixOf` showString
+        ParameterMoveMismatch _ -> "ParameterMoveMismatch" `L.isInfixOf` showString
+        ControlFlowError _ -> "ControlFlowError" `L.isInfixOf` showString
+        PathSensitiveError _ -> "PathSensitiveError" `L.isInfixOf` showString
+        LoopOwnershipError _ -> "LoopOwnershipError" `L.isInfixOf` showString
   in hasContent .&&. containsErrorType
 
 testOwnershipTransferShow :: OwnershipTransfer -> Property
@@ -197,10 +198,10 @@ testOwnershipTransferShow transfer =
       hasContent = not (null showString)
       fromVar = transferFrom transfer
       toVar = transferTo transfer
-      containsFrom = fromVar `isInfixOf` showString
-      containsTo = toVar `isInfixOf` showString
+      containsFrom = fromVar `L.isInfixOf` showString
+      containsTo = toVar `L.isInfixOf` showString
   in hasContent .&&. containsFrom .&&. containsTo
 
 -- Helper functions
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` [take (length needle) (drop i haystack) | i <- [0..length haystack - length needle]]
+L.isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]

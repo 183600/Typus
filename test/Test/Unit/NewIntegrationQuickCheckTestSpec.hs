@@ -7,6 +7,7 @@ import Test.Tasty.QuickCheck
 import Utils (trim, splitBy, removeLineComments)
 import SourceLocation (SourcePos(..), startPos, posAfter, advancePos)
 import Parser (FileDirectives(..), defaultFileDirectives)
+import qualified Data.List as L
 import Data.List (length)
 import Data.Maybe (isNothing)
 
@@ -17,21 +18,21 @@ prop_trim_position_tracking s =
       trimmed = trim original
       originalLines = lines original
       trimmedLines = lines trimmed
-  in length trimmedLines <= length originalLines
+  in L.length trimmedLines <= L.length originalLines
 
 -- 测试字符串处理和位置跟踪的集成
 prop_split_position_consistency :: String -> Bool
 prop_split_position_consistency s =
   let parts = splitBy ',' s
-      totalLength = sum (map length parts) + length (filter (== ',') s)
-  in totalLength >= length s
+      totalLength = L.sum (map L.length parts) + L.length (L.filter (== ',') s)
+  in totalLength >= L.length s
 
 -- 测试注释移除和位置跟踪的集成
 prop_comment_removal_position_impact :: String -> Bool
 prop_comment_removal_position_impact s =
   let withoutComments = removeLineComments s
       withComments = s
-  in length withoutComments <= length withComments
+  in L.length withoutComments <= L.length withComments
 
 -- 测试解析器和字符串处理的集成
 prop_parser_utils_integration :: String -> Bool
@@ -54,9 +55,9 @@ prop_multiline_string_processing :: String -> String -> Bool
 prop_multiline_string_processing s1 s2 =
   let combined = s1 ++ "\n" ++ s2
       trimmed = trim combined
-      lines1 = length (lines s1)
-      lines2 = length (lines s2)
-      combinedLines = length (lines trimmed)
+      lines1 = L.length (lines s1)
+      lines2 = L.length (lines s2)
+      combinedLines = L.length (lines trimmed)
   in combinedLines >= max lines1 lines2
 
 -- 测试字符串分割和位置计算的集成
@@ -64,14 +65,14 @@ prop_split_position_calculation :: Positive Int -> String -> Bool
 prop_split_position_calculation (Positive seed) s =
   let parts = splitBy ',' s
       positions = scanl (\pos part -> posAfter pos part) startPos parts
-  in length positions == length parts + 1
+  in L.length positions == L.length parts + 1
 
 -- 测试错误处理的一致性
 prop_error_handling_consistency :: String -> Bool
 prop_error_handling_consistency s =
   let trimmed = trim s
       split = splitBy ' ' trimmed
-  in all (not . null) split || any null split
+  in L.all (not . null) split || L.any null split
 
 -- 生成测试套件
 tests :: TestTree

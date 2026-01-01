@@ -1,6 +1,7 @@
 module Test.Unit.OwnershipAdvancedQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Property, (===), forAll, Gen, choose, arbitrary, listOf, elements, oneof, suchThat)
 import TestSupport.QuickCheck (fastProperty)
@@ -105,7 +106,7 @@ prop_ownershipErrorTransitive :: OwnershipError -> OwnershipError -> OwnershipEr
 prop_ownershipErrorTransitive oe1 oe2 oe3 =
   (oe1 == oe2 && oe2 == oe3) ==> (oe1 == oe3)
 
--- Property: OwnershipTransfer preserves from and to fields
+-- Property: OwnershipTransfer preserves from L.and to fields
 prop_ownershipTransferPreservesFields :: String -> String -> Bool
 prop_ownershipTransferPreservesFields from to =
   let transfer = OwnershipTransfer from to
@@ -120,15 +121,15 @@ prop_ownershipTransferEquality from1 to1 from2 to2 =
 
 -- Property: Show instances produce non-empty strings
 prop_ownershipTypeShowNonEmpty :: OwnershipType -> Bool
-prop_ownershipTypeShowNonEmpty ot = not (null (show ot))
+prop_ownershipTypeShowNonEmpty ot = not (L.null (show ot))
 
 -- Property: Show instances produce non-empty strings for errors
 prop_ownershipErrorShowNonEmpty :: OwnershipError -> Bool
-prop_ownershipErrorShowNonEmpty oe = not (null (show oe))
+prop_ownershipErrorShowNonEmpty oe = not (L.null (show oe))
 
 -- Property: Show instances produce non-empty strings for transfers
 prop_ownershipTransferShowNonEmpty :: OwnershipTransfer -> Bool
-prop_ownershipTransferShowNonEmpty ot = not (null (show ot))
+prop_ownershipTransferShowNonEmpty ot = not (L.null (show ot))
 
 -- Property: OwnershipAnalyzer constructor produces consistent result
 prop_ownershipAnalyzerConsistent :: Bool
@@ -141,25 +142,25 @@ prop_ownershipAnalyzerConsistent =
 prop_sortOwnershipTypesPreservesOrder :: [OwnershipType] -> Bool
 prop_sortOwnershipTypesPreservesTypes ots =
   let sorted = sort ots
-  in length sorted == length ots && all (`elem` ots) sorted
+  in L.length sorted == L.length ots && L.all (`elem` ots) sorted
 
 -- Property: Sorting ownership errors preserves order properties
 prop_sortOwnershipErrorsPreservesOrder :: [OwnershipError] -> Bool
 prop_sortOwnershipErrorsPreservesOrder oes =
   let sorted = sort oes
-  in length sorted == length oes && all (`elem` oes) sorted
+  in L.length sorted == L.length oes && L.all (`elem` oes) sorted
 
 -- Property: Unique ownership types can be deduplicated
 prop_uniqueOwnershipTypes :: [OwnershipType] -> Bool
 prop_uniqueOwnershipTypes ots =
   let unique = nub ots
-  in length unique <= length ots && all (`elem` ots) unique
+  in L.length unique <= L.length ots && L.all (`elem` ots) unique
 
 -- Property: Unique ownership errors can be deduplicated
 prop_uniqueOwnershipErrors :: [OwnershipError] -> Bool
 prop_uniqueOwnershipErrors oes =
   let unique = nub oes
-  in length unique <= length oes && all (`elem` oes) unique
+  in L.length unique <= L.length oes && L.all (`elem` oes) unique
 
 -- Property: OwnershipType constructors produce valid types
 prop_ownedConstructorValid :: String -> Bool
@@ -208,7 +209,7 @@ tests = testGroup "Ownership Advanced QuickCheck Tests"
     ]
 
   , testGroup "OwnershipTransfer Properties"
-    [ testProperty "OwnershipTransfer preserves from and to fields" prop_ownershipTransferPreservesFields
+    [ testProperty "OwnershipTransfer preserves from L.and to fields" prop_ownershipTransferPreservesFields
     , testProperty "OwnershipTransfer equality is based on fields" prop_ownershipTransferEquality
     , testProperty "Show instances produce non-empty strings for transfers" prop_ownershipTransferShowNonEmpty
     ]

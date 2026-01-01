@@ -51,7 +51,9 @@ import Utils
 
 import Data.Char (isSpace, toLower)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, tails, isInfixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (tails, sort, nub)
 import qualified Data.Text as T
 
 -- Test trim function with various edge cases
@@ -89,7 +91,7 @@ test_splitby_collapsed_edge_cases = testCase "SplitByCollapsed function handles 
   splitByCollapsed ',' ",a,b," @?= ["a", "b"]
   splitByCollapsed ',' "a,b," @?= ["a", "b"]
 
--- Test splitByComma and splitByCommaCollapsed consistency
+-- Test splitByComma L.and splitByCommaCollapsed consistency
 test_comma_split_consistency :: TestTree
 test_comma_split_consistency = testCase "Comma split functions are consistent" $ do
   let testString = "a,b,,c,"
@@ -170,7 +172,7 @@ test_long_strings = testCase "String functions handle long inputs" $ do
       veryLongString = longString ++ "," ++ longString
   splitBy ',' veryLongString @?= [longString, longString]
   trim ("  " ++ longString ++ "  ") @?= longString
-  length (splitBy ',' (replicate 100 ',')) @?= 101
+  L.length (splitBy ',' (replicate 100 ',')) @?= 101
 
 -- Test string functions with special characters
 test_special_characters :: TestTree
@@ -187,24 +189,24 @@ prop_trim_idempotent str =
       trimmedAgain = trim trimmed
   in trimmed === trimmedAgain
 
--- Property: splitBy and splitByCollapsed are related
+-- Property: splitBy L.and splitByCollapsed are related
 prop_splitby_relationship :: Char -> String -> Property
 prop_splitby_relationship delim str = 
   let normalSplit = splitBy delim str
       collapsedSplit = splitByCollapsed delim str
-  in property $ filter (not . null) normalSplit === collapsedSplit
+  in property $ L.filter (not . null) normalSplit === collapsedSplit
 
--- Property: splitBy preserves total length
+-- Property: splitBy preserves total L.length
 prop_splitby_preserves_length :: Char -> String -> Property
 prop_splitby_preserves_length delim str = 
   let parts = splitBy delim str
       reconstructed = intercalate [delim] parts
-  in length str === length reconstructed + (if null str then 0 else -1)
+  in L.length str === L.length reconstructed + (if null str then 0 else -1)
 
 -- Property: removeLineComments doesn't change content without comments
 prop_remove_line_comments_preserves_content :: String -> Property
 prop_remove_line_comments_preserves_content str = 
-  not (isInfixOf "//" str) ==> removeLineComments str === str
+  not (L.isInfixOf "//" str) ==> removeLineComments str === str
 
 -- Property: normalizeIndentation preserves relative indentation
 prop_normalize_preserves_relative :: String -> Property
@@ -212,7 +214,7 @@ prop_normalize_preserves_relative str =
   let lines' = lines str
       normalized = normalizeIndentation str
       normalizedLines = lines normalized
-  in property $ length lines' === length normalizedLines
+  in property $ L.length lines' === L.length normalizedLines
 
 -- Property: breakOn is consistent with splitBy
 prop_break_on_consistent :: Char -> String -> Property
@@ -241,7 +243,7 @@ prop_unicode_string_handling :: UnicodeString -> Property
 prop_unicode_string_handling (UnicodeString str) = 
   let trimmed = trim str
       parts = splitBy ' ' str
-  in property $ all (not . null) parts .&&. length trimmed <= length str
+  in property $ L.all (not . null) parts .&&. L.length trimmed <= L.length str
 
 -- Helper function for property tests
 intercalate :: String -> [String] -> String
@@ -265,8 +267,8 @@ tests = testGroup "New Utils String Boundary Tests"
   , test_long_strings
   , test_special_characters
   , fastProperty "Trim is idempotent" prop_trim_idempotent
-  , fastProperty "SplitBy and SplitByCollapsed relationship" prop_splitby_relationship
-  , fastProperty "SplitBy preserves total length" prop_splitby_preserves_length
+  , fastProperty "SplitBy L.and SplitByCollapsed relationship" prop_splitby_relationship
+  , fastProperty "SplitBy preserves total L.length" prop_splitby_preserves_length
   , fastProperty "RemoveLineComments preserves content without comments" prop_remove_line_comments_preserves_content
   , fastProperty "NormalizeIndentation preserves relative indentation" prop_normalize_preserves_relative
   , fastProperty "BreakOn is consistent with SplitBy" prop_break_on_consistent

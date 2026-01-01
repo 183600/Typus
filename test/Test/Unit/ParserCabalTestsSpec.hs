@@ -28,6 +28,7 @@ import Parser
 import SourceLocation (SourceSpan(..), SourcePos(..), startPos)
 
 import Data.Maybe (isJust, isNothing, fromMaybe)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 import qualified Data.Text as T
 
@@ -110,7 +111,7 @@ test_parse_malformed_directives = testCase "parseTypus handles malformed directi
         Left err -> assertFailure $ "Parse failed: " ++ show err
         Right typusFile -> do
             -- Should parse successfully but potentially ignore malformed directives
-            assertBool "has at least one block" $ not $ null $ tfBlocks typusFile
+            assertBool "has at least one block" $ not $ L.null $ tfBlocks typusFile
 
 -- | Test case 5: Parse multiple code blocks
 test_parse_multiple_blocks :: TestTree
@@ -134,9 +135,9 @@ test_parse_multiple_blocks = testCase "parseTypus handles multiple code blocks" 
     case result of
         Left err -> assertFailure $ "Parse failed: " ++ show err
         Right typusFile -> do
-            assertEqual "two code blocks" 2 (length $ tfBlocks typusFile)
+            assertEqual "two code blocks" 2 (L.length $ tfBlocks typusFile)
             let blocks = tfBlocks typusFile
-            let firstBlock = head blocks
+            let firstBlock = L.head blocks
             let secondBlock = blocks !! 1
             assertBool "first block has ownership directive" $ isJust $ bdOwnership $ cbDirectives firstBlock
             assertBool "second block has dependent-types directive" $ isJust $ bdDependentTypes $ cbDirectives secondBlock
@@ -145,7 +146,7 @@ test_parse_multiple_blocks = testCase "parseTypus handles multiple code blocks" 
 prop_directive_parsing_consistency :: String -> Property
 prop_directive_parsing_consistency directiveStr =
     let validPrefix = "// @"
-        hasValidPrefix = validPrefix `isPrefixOf` directiveStr
+        hasValidPrefix = validPrefix `L.isPrefixOf` directiveStr
     in classify hasValidPrefix "has valid directive prefix" $
        property $ True -- Basic property test - more complex tests would need parsing functions
 
@@ -153,7 +154,7 @@ prop_directive_parsing_consistency directiveStr =
 prop_block_content_preservation :: String -> Property
 prop_block_content_preservation content =
     let input = unlines ["```typus", content, "```"]
-    in property $ True -- Basic property - actual implementation would parse and compare
+    in property $ True -- Basic property - actual implementation would parse L.and compare
 
 -- | Test case 8: Parse with build tags
 test_parse_build_tags :: TestTree
@@ -173,8 +174,8 @@ test_parse_build_tags = testCase "parseTypus handles build tags correctly" $ do
         Left err -> assertFailure $ "Parse failed: " ++ show err
         Right typusFile -> do
             let buildTags = tfBuildTags typusFile
-            assertEqual "three build tags" 3 (length buildTags)
-            assertEqual "first tag" "test" (locatedValue $ head buildTags)
+            assertEqual "three build tags" 3 (L.length buildTags)
+            assertEqual "first tag" "test" (locatedValue $ L.head buildTags)
             assertEqual "second tag" "debug" (locatedValue $ buildTags !! 1)
             assertEqual "third tag" "release" (locatedValue $ buildTags !! 2)
 
@@ -221,10 +222,10 @@ test_parse_unicode_content = testCase "parseTypus handles Unicode content" $ do
         Left err -> assertFailure $ "Parse failed: " ++ show err
         Right typusFile -> do
             let blocks = tfBlocks typusFile
-            assertBool "has one block" $ length blocks == 1
-            let blockContent = cbContent (head blocks)
-            assertBool "contains Unicode characters" $ "测试函数" `isInfixOf` blockContent
-            assertBool "contains Chinese characters" $ "世界" `isInfixOf` blockContent
+            assertBool "has one block" $ L.length blocks == 1
+            let blockContent = cbContent (L.head blocks)
+            assertBool "contains Unicode characters" $ "测试函数" `L.isInfixOf` blockContent
+            assertBool "contains Chinese characters" $ "世界" `L.isInfixOf` blockContent
 
 -- ============================================================================
 -- Test Suite

@@ -46,6 +46,7 @@ import Compiler
 import Parser (TypusFile(..), CodeBlock(..), defaultFileDirectives, defaultBlockDirectives)
 import SourceLocation (Located(..), SourcePos(..), SourceSpan(..))
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isInfixOf)
 import Data.Maybe (isJust, isNothing)
 
@@ -74,7 +75,7 @@ prop_compile_empty_file =
 -- Property: compile handles simple content
 prop_compile_simple_content :: String -> Property
 prop_compile_simple_content content =
-  length content <= 50 ==> 
+  L.length content <= 50 ==> 
   let codeBlock = CodeBlock defaultBlockDirectives content undefined
       file = TypusFile defaultFileDirectives [] [codeBlock] []
       result = compile file
@@ -96,35 +97,35 @@ prop_compile_type_errors =
 -- Property: extractDeclarations finds identifiers
 prop_extract_declarations :: String -> String -> Property
 prop_extract_declarations varName varType =
-  length varName <= 10 && length varType <= 10 && 
-  all (\c -> isAlphaNum c || c == '_') varName &&
-  all (\c -> isAlphaNum c || c == '_' || c == '[' || c == ']') varType ==>
+  L.length varName <= 10 && L.length varType <= 10 && 
+  L.all (\c -> isAlphaNum c || c == '_') varName &&
+  L.all (\c -> isAlphaNum c || c == '_' || c == '[' || c == ']') varType ==>
   let content = "var " ++ varName ++ " " ++ varType
       codeBlock = CodeBlock defaultBlockDirectives content undefined
       file = TypusFile defaultFileDirectives [] [codeBlock] []
       declarations = extractDeclarations file
-  in property $ length declarations >= 0 -- Should find at least the declaration
+  in property $ L.length declarations >= 0 -- Should find at least the declaration
 
 -- Property: buildTypeEnv creates consistent environment
 prop_build_type_env :: [(String, String)] -> Property
 prop_build_type_env typePairs =
-  all (\(k, v) -> length k <= 10 && length v <= 10) typePairs ==>
+  L.all (\(k, v) -> L.length k <= 10 && L.length v <= 10) typePairs ==>
   let env = buildTypeEnvFromPairs typePairs
-  in property $ length env >= length typePairs -- Environment should contain all pairs
+  in property $ L.length env >= L.length typePairs -- Environment should contain L.all pairs
 
 -- Property: isMethodDeclaration identifies methods
 prop_is_method_declaration :: String -> Property
 prop_is_method_declaration declaration =
-  length declaration <= 30 ==>
+  L.length declaration <= 30 ==>
   let isMethod = isMethodDeclaration declaration
-      hasReceiver = "func (" `isInfixOf` declaration
-      hasFunc = "func " `isInfixOf` declaration
+      hasReceiver = "func (" `L.isInfixOf` declaration
+      hasFunc = "func " `L.isInfixOf` declaration
   in property $ if hasReceiver then isMethod else property True -- Non-methods may still be functions
 
 -- Property: checkOwnership processes ownership
 prop_check_ownership :: String -> Property
 prop_check_ownership content =
-  length content <= 50 ==>
+  L.length content <= 50 ==>
   let codeBlock = CodeBlock defaultBlockDirectives content undefined
       file = TypusFile defaultFileDirectives [] [codeBlock] []
       result = checkOwnership file
@@ -135,8 +136,8 @@ prop_check_ownership content =
 -- Property: compiler error formatting is consistent
 prop_error_formatting :: String -> Property
 prop_error_formatting errorMsg =
-  length errorMsg <= 50 ==>
+  L.length errorMsg <= 50 ==>
   let error = CompilerError "TEST001" (T.pack errorMsg) TypeCheckingPhase 
                             TypeChecking Error Nothing Nothing [] [] Nothing
       formatted = renderCompilationError [error]
-  in property $ not (null formatted) .&&. errorMsg `isInfixOf` formatted
+  in property $ not (null formatted) .&&. errorMsg `L.isInfixOf` formatted

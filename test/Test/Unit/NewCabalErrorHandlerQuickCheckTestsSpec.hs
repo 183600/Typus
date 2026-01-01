@@ -4,6 +4,7 @@
 module Test.Unit.NewCabalErrorHandlerQuickCheckTestsSpec where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), forAll, counterexample, suchThat, oneof, elements, listOf, choose)
 import Compiler.Errors.Core
   ( TypeError(..)
@@ -26,30 +27,10 @@ import Compiler.Errors.Core
   , hasWarnings
   , formatError
   , formatErrors
-  , errorAt
-  , errorWithCategory
-  , warningAt
-  , warningWithCategory
-  , infoAt
-  , infoWithCategory
-  , fatalError
-  , fatalErrorWithCategory
-  , errorWithSuggestions
-  , withLocation
-  , withContext
-  , withSuggestions
-  , withRelatedErrors
-  , wrapError
-  , combineErrors
-  , combinedErrorSeverity
-  , filterByCategory
-  , filterBySeverity
-  , hasCategory
-  , getErrorLine
   , getErrorColumn
   )
 import Data.Text (Text)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 import Data.Time (UTCTime, getCurrentTime)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -127,7 +108,7 @@ genCombinedError = do
 -- Generate strings for error messages
 genErrorMessage :: Gen String
 genErrorMessage = do
-  length' <- choose (5, 50)
+  L.length' <- choose (5, 50)
   listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " .,;:!?()-"
 
 -- Generate suggestions
@@ -135,7 +116,7 @@ genSuggestions :: Gen [Text]
 genSuggestions = do
   count <- choose (0, 3)
   sequence $ replicate count $ do
-    length' <- choose (5, 30)
+    L.length' <- choose (5, 30)
     T.pack <$> listOf1 (elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " ")
 
 -- ============================================================================
@@ -145,8 +126,8 @@ genSuggestions = do
 prop_severity_ordering :: ErrorSeverity -> ErrorSeverity -> Property
 prop_severity_ordering sev1 sev2 =
   let ordering = [Fatal, Error, Warning, Info]
-      index1 = length $ takeWhile (/= sev1) ordering
-      index2 = length $ takeWhile (/= sev2) ordering
+      index1 = L.length $ takeWhile (/= sev1) ordering
+      index2 = L.length $ takeWhile (/= sev2) ordering
   in (sev1 <= sev2) === (index1 <= index2)
 
 -- ============================================================================
@@ -190,7 +171,7 @@ prop_context_lookup =
     let ErrorContext ctxMap = ctx
         keyCount = Map.size ctxMap
     in if keyCount > 0
-       then let (key, _) = head $ Map.toList ctxMap
+       then let (key, _) = L.head $ Map.toList ctxMap
             in hasContext ctx key
        else property True
   where
@@ -210,21 +191,21 @@ prop_add_error_increases_count =
   forAll genTypeError $ \err ->
     let collector = newErrorCollector
         collector' = addError err collector
-    in hasErrors collector' && length (getErrors collector') >= 1
+    in hasErrors collector' && L.length (getErrors collector') >= 1
 
 prop_add_warning_increases_count :: Property
 prop_add_warning_increases_count =
   forAll genTypeError $ \warn ->
     let collector = newErrorCollector
         collector' = addWarning warn collector
-    in hasWarnings collector' && length (getWarnings collector') >= 1
+    in hasWarnings collector' && L.length (getWarnings collector') >= 1
 
 prop_add_info_increases_count :: Property
 prop_add_info_increases_count =
   forAll genTypeError $ \info ->
     let collector = newErrorCollector
         collector' = addInfo info collector
-    in length (getInfo collector') >= 1
+    in L.length (getInfo collector') >= 1
 
 prop_all_messages_include_all_types :: Property
 prop_all_messages_include_all_types =
@@ -236,7 +217,7 @@ prop_all_messages_include_all_types =
             collector2 = addWarning warn collector1
             collector3 = addInfo info collector2
             allMsgs = getAllMessages collector3
-        in length allMsgs >= 3
+        in L.length allMsgs >= 3
 
 -- ============================================================================
 -- Properties for Error Creation
@@ -246,7 +227,7 @@ prop_error_at_sets_location :: Property
 prop_error_at_sets_location =
   forAll genErrorLocation $ \loc ->
     forAll genErrorMessage $ \msg ->
-      let err = errorAt loc (T.pack msg)
+      let err = errorAt "test-id" (T.pack msg)
       in errorLocation err === loc
 
 prop_error_with_category_sets_category :: Property
@@ -260,7 +241,7 @@ prop_warning_at_has_warning_severity :: Property
 prop_warning_at_has_warning_severity =
   forAll genErrorLocation $ \loc ->
     forAll genErrorMessage $ \msg ->
-      let warn = warningAt loc (T.pack msg)
+      let warn = warningAt "test-id" (T.pack msg)
       in errorSeverity warn === Warning
 
 prop_fatal_error_has_fatal_severity :: Property
@@ -285,8 +266,8 @@ prop_with_suggestions_adds_suggestions =
   forAll genTypeError $ \err ->
     forAll genSuggestions $ \suggestions ->
       let updated = withSuggestions suggestions err
-          oldCount = length $ errorSuggestions err
-          newCount = length $ errorSuggestions updated
+          oldCount = L.length $ errorSuggestions err
+          newCount = L.length $ errorSuggestions updated
       in newCount >= oldCount
 
 prop_with_context_adds_context :: Property
@@ -306,7 +287,7 @@ prop_combine_errors_preserves_all =
     forAll genTypeError $ \err2 ->
       let combined = combineErrors err1 err2
           CombinedError errors = combined
-      in length errors === 2 && err1 `elem` errors && err2 `elem` errors
+      in L.length errors === 2 && err1 `elem` errors && err2 `elem` errors
 
 prop_combined_severity_is_maximum :: Property
 prop_combined_severity_is_maximum =
@@ -327,14 +308,14 @@ prop_filter_by_category =
   forAll (listOf1 genTypeError) $ \errors ->
     forAll genErrorCategory $ \cat ->
       let filtered = filterByCategory cat errors
-      in all (\e -> errorCategory e === cat) filtered
+      in L.all (\e -> errorCategory e === cat) filtered
 
 prop_filter_by_severity :: Property
 prop_filter_by_severity =
   forAll (listOf1 genTypeError) $ \errors ->
     forAll genErrorSeverity $ \sev ->
       let filtered = filterBySeverity sev errors
-      in all (\e -> errorSeverity e === sev) filtered
+      in L.all (\e -> errorSeverity e === sev) filtered
 
 prop_has_category_check :: Property
 prop_has_category_check =
@@ -351,7 +332,7 @@ prop_format_error_includes_message =
   forAll genTypeError $ \err ->
     let formatted = formatError err
         msg = errorMessage err
-    in T.unpack msg `isInfixOf` formatted
+    in T.unpack msg `L.isInfixOf` formatted
 
 prop_format_errors_non_empty :: Property
 prop_format_errors_non_empty =
@@ -382,7 +363,7 @@ tests = testGroup "ErrorHandler QuickCheck Tests"
     , testProperty "add error increases count" prop_add_error_increases_count
     , testProperty "add warning increases count" prop_add_warning_increases_count
     , testProperty "add info increases count" prop_add_info_increases_count
-    , testProperty "all messages include all types" prop_all_messages_include_all_types
+    , testProperty "L.all messages include L.all types" prop_all_messages_include_all_types
     ]
   , testGroup "Error Creation"
     [ testProperty "error at sets location" prop_error_at_sets_location
@@ -396,8 +377,8 @@ tests = testGroup "ErrorHandler QuickCheck Tests"
     , testProperty "with context adds context" prop_with_context_adds_context
     ]
   , testGroup "Error Combination"
-    [ testProperty "combine errors preserves all" prop_combine_errors_preserves_all
-    , testProperty "combined severity is maximum" prop_combined_severity_is_maximum
+    [ testProperty "combine errors preserves L.all" prop_combine_errors_preserves_all
+    , testProperty "combined severity is L.maximum" prop_combined_severity_is_maximum
     ]
   , testGroup "Error Filtering"
     [ testProperty "filter by category" prop_filter_by_category

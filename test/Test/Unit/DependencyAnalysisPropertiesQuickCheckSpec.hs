@@ -10,6 +10,7 @@
 module Test.Unit.DependencyAnalysisPropertiesQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Positive(..), NonEmptyList(..))
 
@@ -66,25 +67,25 @@ prop_dependency_checking_consistent from to graph =
       check2 = hasDependency from to graph
   in property $ check1 === check2
 
--- Property: dependents list includes all dependent nodes
+-- Property: dependents list includes L.all dependent nodes
 prop_dependents_list_complete :: String -> [String] -> DependencyType -> DependencyGraph -> Property
 prop_dependents_list_complete node dependents depType graph =
-  let withDeps = foldl (\g dep -> addDependency dep node depType g) graph dependents
+  let withDeps = L.foldl (\g dep -> addDependency dep node depType g) graph dependents
       foundDependents = getDependents node withDeps
-  in property $ all (`elem` foundDependents) dependents
+  in property $ L.all (`elem` foundDependents) dependents
 
--- Property: dependencies list includes all dependencies
+-- Property: dependencies list includes L.all dependencies
 prop_dependencies_list_complete :: String -> [String] -> DependencyType -> DependencyGraph -> Property
 prop_dependencies_list_complete node dependencies depType graph =
-  let withDeps = foldl (\g dep -> addDependency node dep depType g) graph dependencies
+  let withDeps = L.foldl (\g dep -> addDependency node dep depType g) graph dependencies
       foundDeps = getDependencies node withDeps
-  in property $ all (`elem` foundDeps) dependencies
+  in property $ L.all (`elem` foundDeps) dependencies
 
 -- Property: cycle detection is accurate
 prop_cycle_detection_accurate :: [String] -> DependencyType -> Property
 prop_cycle_detection_accurate nodes depType =
-  let graph = foldl (\g (i, j) -> addDependency i j depType g) emptyDependencyGraph 
-                     $ zip nodes (tail nodes ++ [head nodes])
+  let graph = L.foldl (\g (i, j) -> addDependency i j depType g) emptyDependencyGraph 
+                     $ zip nodes (L.tail nodes ++ [L.head nodes])
       hasCycle = isCyclic graph
   in property $ hasCycle
 
@@ -115,14 +116,14 @@ prop_self_dependency_creates_cycle node depType =
 prop_graph_preserves_uniqueness :: [String] -> [String] -> DependencyType -> Property
 prop_graph_preserves_uniqueness fromNodes toNodes depType =
   let pairs = zip fromNodes toNodes
-      graph = foldl (\g (f, t) -> addDependency f t depType g) emptyDependencyGraph pairs
+      graph = L.foldl (\g (f, t) -> addDependency f t depType g) emptyDependencyGraph pairs
       allNodes = nub $ fromNodes ++ toNodes
-  in property $ length allNodes >= 0
+  in property $ L.length allNodes >= 0
 
 -- Property: multiple dependencies between same nodes handled
 prop_multiple_deps_same_nodes :: String -> String -> [DependencyType] -> Property
 prop_multiple_deps_same_nodes from to depTypes =
-  let graph = foldl (\g dt -> addDependency from to dt g) emptyDependencyGraph depTypes
+  let graph = L.foldl (\g dt -> addDependency from to dt g) emptyDependencyGraph depTypes
       hasDep = hasDependency from to graph
   in property $ hasDep
 

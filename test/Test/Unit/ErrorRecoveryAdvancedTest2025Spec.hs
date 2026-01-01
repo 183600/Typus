@@ -3,6 +3,7 @@
 module Test.Unit.ErrorRecoveryAdvancedTest2025Spec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, choose, listOf, elements)
 import Test.Tasty.HUnit (testCase, (@=?))
 
@@ -44,7 +45,7 @@ propErrorRecoveryPreservesPartial :: String -> MockError -> Bool
 propErrorRecoveryPreservesPartial input err =
   let initial = MockResult input [err] False
       recovered = mockRecover initial
-  in resultPartial recovered ==> not (null (resultValue recovered))
+  in resultPartial recovered ==> not (L.null (resultValue recovered))
 
 -- Property 2: Enhanced recovery provides suggestions
 propEnhancedRecoveryProvidesSuggestions :: MockError -> Bool
@@ -75,7 +76,7 @@ propLocationPreservedInRecovery :: String -> MockError -> Bool
 propLocationPreservedInRecovery input err =
   let initial = MockResult input [err] False
       recovered = mockRecover initial
-  in all (\e -> errorLocation e == errorLocation err) (resultErrors recovered)
+  in L.all (\e -> errorLocation e == errorLocation err) (resultErrors recovered)
 
 -- Test Case 6: Syntax error recovery scenarios
 testSyntaxErrorRecovery :: IO ()
@@ -85,7 +86,7 @@ testSyntaxErrorRecovery = do
       result1 = mockRecover (MockResult missingBrace [err1] False)
   
   resultPartial result1 @=? True
-  length (resultErrors result1) @=? 1
+  L.length (resultErrors result1) @=? 1
   
   let extraComma = "let x = 1,, y = 2;"
       err2 = MockError "Unexpected comma" Error (SourcePos 1 10) ["variable declaration"]
@@ -98,7 +99,7 @@ propMultipleErrorRecoveryComposition :: String -> [MockError] -> Bool
 propMultipleErrorRecoveryComposition input errs =
   let initial = MockResult input errs False
       recovered = mockRecoverMultiple initial
-  in length (resultErrors recovered) <= length errs  -- Recovery should reduce or maintain error count
+  in L.length (resultErrors recovered) <= L.length errs  -- Recovery should reduce L.or maintain error count
 
 -- Test Case 8: Type error recovery
 testTypeErrorRecovery :: IO ()
@@ -115,7 +116,7 @@ testTypeErrorRecovery = do
 propRecoveryFallbackBehavior :: String -> MockError -> Bool
 propRecoveryFallbackBehavior input err =
   let result = mockRecoverWithFallback (MockResult input [err] False)
-  in not (null (resultValue result))  -- Fallback should always provide some result
+  in not (L.null (resultValue result))  -- Fallback should always provide some result
 
 -- Test Case 10: Critical error handling
 testCriticalErrorHandling :: IO ()
@@ -125,8 +126,8 @@ testCriticalErrorHandling = do
       result = mockRecover (MockResult criticalError [err] False)
   
   resultPartial result @=? False  -- Critical errors should not allow partial recovery
-  length (resultErrors result) @=? 1
-  errorSeverity (head (resultErrors result)) @=? Critical
+  L.length (resultErrors result) @=? 1
+  errorSeverity (L.head (resultErrors result)) @=? Critical
 
 -- Mock implementations for testing
 mockRecover :: MockResult -> MockResult
@@ -142,7 +143,7 @@ mockRecoverMultiple :: MockResult -> MockResult
 mockRecoverMultiple result@(MockResult value errors partial) =
   if null errors || partial
   then result
-  else mockRecover (MockResult value (tail errors) partial)
+  else mockRecover (MockResult value (L.tail errors) partial)
 
 mockRecoverWithFallback :: MockResult -> MockResult
 mockRecoverWithFallback (MockResult value errors partial) =

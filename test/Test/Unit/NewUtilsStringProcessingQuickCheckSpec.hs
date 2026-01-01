@@ -6,6 +6,7 @@ import Test.Tasty (TestTree, testGroup)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import Data.Char (isSpace, isAlphaNum, isDigit, isLetter)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isSuffixOf, isInfixOf)
 import qualified Data.Text as T
 
@@ -35,7 +36,7 @@ trimProperties = testGroup "Trim Properties"
 
 splitByProperties :: TestTree
 splitByProperties = testGroup "Split By Properties"
-  [ fastProperty "splitBy preserves total length when concatenated with delimiter" prop_splitby_preserves_length
+  [ fastProperty "splitBy preserves total L.length when concatenated with delimiter" prop_splitby_preserves_length
   , fastProperty "splitByCollapsed removes empty segments" prop_splitbycollapsed_no_empty
   , fastProperty "splitBy on empty string returns singleton" prop_splitby_empty_string
   , fastProperty "splitByCollapsed on empty string returns empty" prop_splitbycollapsed_empty_string
@@ -48,7 +49,7 @@ commentRemovalProperties :: TestTree
 commentRemovalProperties = testGroup "Comment Removal Properties"
   [ fastProperty "removeLineComments preserves lines without // marker" prop_removelinecomments_preserves_noncomment
   , fastProperty "removeLineComments reduces line count when removing comments" prop_removelinecomments_line_count
-  , fastProperty "removeComments never increases string length" prop_removecomments_never_increases
+  , fastProperty "removeComments never increases string L.length" prop_removecomments_never_increases
   , fastProperty "removeComments preserves non-comment content" prop_removecomments_preserves_content
   , fastProperty "removeComments handles nested comments" prop_removecomments_nested
   ]
@@ -74,7 +75,7 @@ textProcessingProperties :: TestTree
 textProcessingProperties = testGroup "Text Processing Properties"
   [ fastProperty "string processing preserves alphanumeric sequences" prop_preserves_alphanumeric_sequences
   , fastProperty "whitespace normalization is consistent" prop_whitespace_normalization_consistent
-  , fastProperty "case conversion preserves length" prop_case_conversion_preserves_length
+  , fastProperty "case conversion preserves L.length" prop_case_conversion_preserves_length
   ]
 
 -- Trim properties
@@ -83,19 +84,19 @@ prop_trim_removes_leading s =
   let trimmed = trim s
       originalLines = lines s
       trimmedLines = lines trimmed
-  in not (null originalLines) && not (null (head originalLines)) && isSpace (head (head originalLines)) ==>
+  in not (null originalLines) && not (L.null (L.head originalLines)) && isSpace (L.head (L.head originalLines)) ==>
      property $ case trimmedLines of
        [] -> True
-       (t:_) -> null t || not (isSpace (head t))
+       (t:_) -> null t || not (isSpace (L.head t))
 
 prop_trim_removes_trailing :: String -> Property
 prop_trim_removes_trailing s =
   let trimmed = trim s
       originalLines = lines s
-  in not (null originalLines) && not (null (last originalLines)) && isSpace (last (last originalLines)) ==>
+  in not (null originalLines) && not (L.null (last originalLines)) && isSpace (last (last originalLines)) ==>
      property $ case lines trimmed of
        [] -> True
-       ts -> null (last ts) || not (isSpace (last (last ts)))
+       ts -> L.null (last ts) || not (isSpace (last (last ts)))
 
 prop_trim_idempotent :: String -> Property
 prop_trim_idempotent s =
@@ -107,7 +108,7 @@ prop_trim_preserves_internal s =
   let trimmed = trim s
       wordsOriginal = words s
       wordsTrimmed = words trimmed
-  in property $ length wordsOriginal == length wordsTrimmed
+  in property $ L.length wordsOriginal == L.length wordsTrimmed
 
 prop_trim_empty :: Property
 prop_trim_empty = property $ trim "" == ""
@@ -123,13 +124,13 @@ prop_trim_preserves_alphanumeric s =
 prop_splitby_preserves_length :: Char -> String -> Property
 prop_splitby_preserves_length delim s =
   let parts = splitBy delim s
-      reconstructed = concat $ intersperse [delim] parts
+      reconstructed = L.concat $ intersperse [delim] parts
   in property $ s == reconstructed
 
 prop_splitbycollapsed_no_empty :: Char -> String -> Property
 prop_splitbycollapsed_no_empty delim s =
   let parts = splitByCollapsed delim s
-  in property $ all (not . null) parts
+  in property $ L.all (not . null) parts
 
 prop_splitby_empty_string :: Char -> Property
 prop_splitby_empty_string delim =
@@ -151,7 +152,7 @@ prop_splitby_unicode :: String -> Property
 prop_splitby_unicode s =
   let delim = '∑'  -- Unicode character
       parts = splitBy delim s
-  in property $ concat (intersperse [delim] parts) == s
+  in property $ L.concat (intersperse [delim] parts) == s
 
 -- Comment removal properties
 prop_removelinecomments_preserves_noncomment :: String -> Property
@@ -163,19 +164,19 @@ prop_removelinecomments_line_count :: String -> Property
 prop_removelinecomments_line_count s =
   let originalLines = lines s
       processedLines = lines (removeLineComments s)
-  in property $ length processedLines <= length originalLines
+  in property $ L.length processedLines <= L.length originalLines
 
 prop_removecomments_never_increases :: String -> Property
 prop_removecomments_never_increases s =
-  property $ length (removeComments s) <= length s
+  property $ L.length (removeComments s) <= L.length s
 
 prop_removecomments_preserves_content :: String -> Property
 prop_removecomments_preserves_content s =
   let withoutComments = removeComments s
       -- Check that alphanumeric words are preserved
-      originalWords = filter (all isAlphaNum) $ words s
-      processedWords = filter (all isAlphaNum) $ words withoutComments
-  in property $ all (`elem` processedWords) originalWords
+      originalWords = L.filter (L.all isAlphaNum) $ words s
+      processedWords = L.filter (L.all isAlphaNum) $ words withoutComments
+  in property $ L.all (`elem` processedWords) originalWords
 
 prop_removecomments_nested :: String -> Property
 prop_removecomments_nested s =
@@ -188,7 +189,7 @@ prop_normalizeindentation_preserves_lines :: String -> Property
 prop_normalizeindentation_preserves_lines s =
   let originalLines = lines s
       normalizedLines = lines (normalizeIndentation s)
-  in property $ length originalLines == length normalizedLines
+  in property $ L.length originalLines == L.length normalizedLines
 
 prop_normalizeindentation_idempotent :: String -> Property
 prop_normalizeindentation_idempotent s =
@@ -199,8 +200,8 @@ prop_forcesingletab_adds_tab :: String -> Property
 prop_forcesingletab_adds_tab s =
   let processed = forceSingleTabIndentation s
       processedLines = lines processed
-      nonEmptyLines = filter (not . null) processedLines
-  in property $ all ("\t" `isPrefixOf`) nonEmptyLines
+      nonEmptyLines = L.filter (not . null) processedLines
+  in property $ L.all ("\t" `L.isPrefixOf`) nonEmptyLines
 
 prop_fixindentation_equals_normalize :: String -> Property
 prop_fixindentation_equals_normalize s =
@@ -210,14 +211,14 @@ prop_normalizeindentation_mixed_whitespace :: String -> Property
 prop_normalizeindentation_mixed_whitespace s =
   let mixed = "  \t   \t  " ++ s ++ "\t\t  "
       normalized = normalizeIndentation mixed
-  in property $ not (any (isPrefixOf "  \t") (lines normalized))
+  in property $ not (L.any (L.isPrefixOf "  \t") (lines normalized))
 
 -- Search properties
 prop_breakon_finds_pattern :: String -> String -> Property
 prop_breakon_finds_pattern pattern s =
-  not (null pattern) && pattern `isInfixOf` s ==>
+  not (null pattern) && pattern `L.isInfixOf` s ==>
   let (prefix, suffix) = breakOn pattern s
-  in property $ pattern `isSuffixOf` prefix && pattern `isPrefixOf` suffix
+  in property $ pattern `L.isSuffixOf` prefix && pattern `L.isPrefixOf` suffix
 
 prop_breakon_absent_pattern :: String -> String -> Property
 prop_breakon_absent_pattern pattern s =
@@ -232,18 +233,18 @@ prop_breakon_empty_pattern s =
 
 prop_breakon_multiple_occurrences :: String -> String -> Property
 prop_breakon_multiple_occurrences pattern s =
-  not (null pattern) && pattern `isInfixOf` s ==>
+  not (null pattern) && pattern `L.isInfixOf` s ==>
   let (prefix, suffix) = breakOn pattern s
-      prefixLength = length prefix
-  in property $ prefixLength < length s
+      prefixLength = L.length prefix
+  in property $ prefixLength < L.length s
 
 -- Text processing properties
 prop_preserves_alphanumeric_sequences :: String -> Property
 prop_preserves_alphanumeric_sequences s =
-  let alphaSequences = filter (all isAlphaNum) $ words s
+  let alphaSequences = L.filter (L.all isAlphaNum) $ words s
       processed = removeComments (trim s)
-      processedSequences = filter (all isAlphaNum) $ words processed
-  in property $ all (`elem` processedSequences) alphaSequences
+      processedSequences = L.filter (L.all isAlphaNum) $ words processed
+  in property $ L.all (`elem` processedSequences) alphaSequences
 
 prop_whitespace_normalization_consistent :: String -> Property
 prop_whitespace_normalization_consistent s =
@@ -255,7 +256,7 @@ prop_case_conversion_preserves_length :: String -> Property
 prop_case_conversion_preserves_length s =
   let upper = map toUpper s
       lower = map toLower s
-  in property $ length s == length upper && length s == length lower
+  in property $ L.length s == L.length upper && L.length s == L.length lower
   where
     toUpper c
       | isLower c = toEnum (fromEnum c - 32)

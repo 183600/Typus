@@ -3,7 +3,9 @@ module Test.Unit.NewCoreFunctionalitySpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, assertBool, assertEqual, (@?=))
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, elements, listOf, choose, Property, counterexample)
-import Data.List (isInfixOf, sort)
+import qualified Data.List as L
+import Data.List (isInfixOf)
+import Data.List (sort)
 import Data.Char (isSpace, isLetter, isDigit)
 import Control.Monad.State (runState, evalState)
 
@@ -52,7 +54,7 @@ tests :: TestTree
 tests = testGroup "New Core Functionality Tests"
     [ -- SourceLocation tests
       testGroup "SourceLocation Advanced Tests"
-      [ testCase "spanBetween handles reverse order correctly" $ do
+      [ testCase "spanBetween handles L.reverse order correctly" $ do
           let pos1 = SourcePos 1 10 100
               pos2 = SourcePos 1 5 50
               span = spanBetween pos1 pos2
@@ -63,8 +65,8 @@ tests = testGroup "New Core Functionality Tests"
           let span1 = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)
               span2 = SourceSpan (SourcePos 1 5 4) (SourcePos 1 15 14)
               merged = mergeSpans span1 span2
-          assertEqual "merged span start should be minimum" (SourcePos 1 1 0) (spanStart merged)
-          assertEqual "merged span end should be maximum" (SourcePos 1 15 14) (spanEnd merged)
+          assertEqual "merged span start should be L.minimum" (SourcePos 1 1 0) (spanStart merged)
+          assertEqual "merged span end should be L.maximum" (SourcePos 1 15 14) (spanEnd merged)
 
       , testCase "isValidSpan correctly identifies invalid spans" $ do
           let validSpan = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)
@@ -91,7 +93,7 @@ tests = testGroup "New Core Functionality Tests"
       , testCase "validateSyntaxSimple detects bracket mismatches" $ do
           let code = "package main\n\nfunc main() {\n    if true {\n        fmt.Println(\"test\")\n    // Missing closing brace\n}"
               errors = validateSyntaxSimple code
-          assertBool "should detect missing brace" $ any (\e -> errorType e == MissingBrace) errors
+          assertBool "should detect missing brace" $ L.any (\e -> errorType e == MissingBrace) errors
 
       , testCase "countBraces handles string literals correctly" $ do
           let code1 = "func test() { return \"{\"; }"  -- braces in string should not count
@@ -107,14 +109,14 @@ tests = testGroup "New Core Functionality Tests"
           let pkgName' = filter isLetter pkgName
               code = "package " ++ pkgName' ++ "\nfunc main() {}"
               errors = validateSyntaxSimple code
-          in not (null pkgName') ==> all (\e -> errorType e /= MissingPackageDeclaration) errors
+          in not (null pkgName') ==> L.all (\e -> errorType e /= MissingPackageDeclaration) errors
       ]
 
     , -- Utils enhanced tests
       testGroup "Utils Enhanced Tests"
       [ testCase "trim handles various whitespace combinations" $ do
-          assertEqual "leading and trailing spaces" "test" (trim "  test  ")
-          assertEqual "tabs and newlines" "test" (trim "\t\n test \n\t")
+          assertEqual "leading L.and trailing spaces" "test" (trim "  test  ")
+          assertEqual "tabs L.and newlines" "test" (trim "\t\n test \n\t")
           assertEqual "mixed whitespace" "test" (trim "  \t\n test \n\t  ")
 
       , testCase "splitBy handles edge cases" $ do
@@ -134,7 +136,7 @@ tests = testGroup "New Core Functionality Tests"
 
       , testProperty "splitByCollapsed never produces empty strings" $ \input ->
           let chunks = splitByCollapsed ',' input
-          in all (not . null) chunks
+          in L.all (not . null) chunks
       ]
 
     , -- Error handling tests
@@ -159,8 +161,8 @@ tests = testGroup "New Core Functionality Tests"
               warnings = ["Warning 1", "Warning 2"]
               handler = ErrorHandler errors warnings mempty Error
               criticalHandler = ErrorHandler errors warnings mempty Critical
-          assertEqual "Error severity should include all" 2 (length $ errors handler)
-          assertEqual "Critical severity should include all" 4 (length $ errors criticalHandler + length $ warnings criticalHandler)
+          assertEqual "Error severity should include L.all" 2 (L.length $ errors handler)
+          assertEqual "Critical severity should include L.all" 4 (L.length $ errors criticalHandler + L.length $ warnings criticalHandler)
       ]
 
     , -- Ownership tests
@@ -178,7 +180,7 @@ tests = testGroup "New Core Functionality Tests"
                   resourceStatus = Active
               }
           assertEqual "current owner should be updated" "owner2" (currentOwner state)
-          assertEqual "transfer should be recorded" 1 (length $ transferHistory state)
+          assertEqual "transfer should be recorded" 1 (L.length $ transferHistory state)
 
       , testCase "checkOwnershipTransfer validates transfer rules" $ do
           let validTransfer = OwnershipTransfer "owner1" "owner2" "resource1" 1000
@@ -190,10 +192,10 @@ tests = testGroup "New Core Functionality Tests"
     , -- Parser tests
       testGroup "Parser Enhanced Tests"
       [ testCase "parseStatement handles incomplete input gracefully" $ do
-          let incomplete = "func test("  -- missing closing parenthesis and body
+          let incomplete = "func test("  -- missing closing parenthesis L.and body
               result = parseStatement incomplete
           case result of
-              Left err -> assertBool "should provide meaningful error" $ not $ null $ show err
+              Left err -> assertBool "should provide meaningful error" $ not $ L.null $ show err
               Right _ -> assertFailure "should fail on incomplete input"
 
       , testCase "parseStatement accepts various function signatures" $ do
@@ -201,7 +203,7 @@ tests = testGroup "New Core Functionality Tests"
                 [ "func test() {}"
                 , "func add(a int, b int) int { return a + b }"
                 , "func (r *Receiver) method() {}"
-                , "func generic[T any](value T) T { return value }"
+                , "func generic[T L.any](value T) T { return value }"
                 ]
           mapM_ (\func -> 
               case parseStatement func of
@@ -216,13 +218,13 @@ tests = testGroup "New Core Functionality Tests"
           let simpleAST = "func add(a int, b int) int { return a + b }"
               optimized = optimizeAST simpleAST
           assertBool "optimization should not change function signature" $ 
-              "func add" `isInfixOf` optimized
+              "func add" `L.isInfixOf` optimized
 
       , testCase "validateAST detects structural issues" $ do
           let invalidAST = "func test() { return }"  -- missing return value
               result = validateAST invalidAST
           case result of
-              Left err -> assertBool "should detect missing return value" $ "return" `isInfixOf` show err
+              Left err -> assertBool "should detect missing return value" $ "return" `L.isInfixOf` show err
               Right _ -> assertFailure "should detect invalid AST"
       ]
 
@@ -237,7 +239,7 @@ tests = testGroup "New Core Functionality Tests"
               }
           assertEqual "debug level should be Debug" Debug (level debugInfo)
           assertEqual "message should be preserved" "Test message" (message debugInfo)
-          assertEqual "context should have 2 entries" 2 (length $ context debugInfo)
+          assertEqual "context should have 2 entries" 2 (L.length $ context debugInfo)
 
       , testCase "withDebugInfo preserves execution flow" $ do
           let result = withDebugInfo Info "Processing data" $ do
@@ -253,15 +255,15 @@ tests = testGroup "New Core Functionality Tests"
               endPos = advancePosBy code startPos'
               span = spanBetween startPos' endPos
           assertBool "span should be valid" $ isValidSpan span
-          assertEqual "end position should reflect code length" 
-              (length code) (posOffset endPos)
+          assertEqual "end position should reflect code L.length" 
+              (L.length code) (posOffset endPos)
 
       , testCase "Error handling integration with validation" $ do
           let invalidCode = "package main\n\nfunc main() {\n    if true {\n        // Missing closing brace\n}"
               syntaxErrors = validateSyntaxSimple invalidCode
           assertBool "should detect syntax errors" $ not $ null syntaxErrors
           assertBool "errors should include line information" $ 
-              all (\e -> lineNumber e > 0) syntaxErrors
+              L.all (\e -> lineNumber e > 0) syntaxErrors
       ]
 
     , -- Property-based tests
@@ -278,10 +280,10 @@ tests = testGroup "New Core Functionality Tests"
               trimmedTwice = trim trimmedOnce
           in trimmedOnce == trimmedTwice
 
-      , testProperty "splitBy and splitByCollapsed relationship" $ \input ->
+      , testProperty "splitBy L.and splitByCollapsed relationship" $ \input ->
           let normal = splitBy ',' input
               collapsed = splitByCollapsed ',' input
-          in length collapsed <= length normal
+          in L.length collapsed <= L.length normal
 
       , testProperty "SourceSpan merge is associative" $ \span1 span2 span3 ->
           let merge12 = mergeSpans span1 span2

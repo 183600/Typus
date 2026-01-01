@@ -11,6 +11,7 @@ import Parser (parseTypus, parseBool, trimRight, curlyDelta, leadingIndentation)
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), locatedWithSpan, spanStart, spanEnd)
 import qualified SyntaxValidator
 import Data.Char (isAlphaNum, isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 
 -- ============================================================================
@@ -129,7 +130,7 @@ prop_trim_right_no_trailing_newlines s =
 prop_trim_right_preserves_content :: String -> Bool
 prop_trim_right_preserves_content s = 
   let trimmed = trimRight s
-      contentWithoutTrailingNewlines = reverse $ dropWhile (`elem` ['\r', '\n']) $ reverse s
+      contentWithoutTrailingNewlines = L.reverse $ dropWhile (`elem` ['\r', '\n']) $ L.reverse s
   in trimmed == contentWithoutTrailingNewlines
 
 -- Test curlyDelta function
@@ -163,7 +164,7 @@ prop_leading_indentation_empty = leadingIndentation "" == 0
 
 prop_leading_indentation_no_indent :: String -> Property
 prop_leading_indentation_no_indent s = 
-  not (null s) && not (isSpace (head s)) ==>
+  not (null s) && not (isSpace (L.head s)) ==>
   leadingIndentation s == 0
 
 prop_leading_indentation_counts_spaces :: Int -> Property
@@ -187,14 +188,14 @@ prop_parse_typus_empty :: Bool
 prop_parse_typus_empty = 
   case parseTypus "" of
     Left _ -> False
-    Right result -> null (tfBlocks result) && null (tfSyntaxErrors result)
+    Right result -> L.null (tfBlocks result) && L.null (tfSyntaxErrors result)
 
 prop_parse_typus_simple_code :: Property
 prop_parse_typus_simple_code = 
   forAll genGoCode $ \code ->
   case parseTypus code of
     Left _ -> False
-    Right result -> not (null (tfBlocks result)) || not (null (tfSyntaxErrors result))
+    Right result -> not (L.null (tfBlocks result)) || not (L.null (tfSyntaxErrors result))
 
 prop_parse_typus_with_file_directives :: Property
 prop_parse_typus_with_file_directives = 
@@ -208,13 +209,13 @@ prop_parse_typus_with_build_tags =
   forAll genBuildTagLine $ \tag ->
   case parseTypus tag of
     Left _ -> False
-    Right result -> not (null (tfBuildTags result))
+    Right result -> not (L.null (tfBuildTags result))
 
 -- Test that parsing preserves structure
 prop_parse_typus_preserves_package :: Property
 prop_parse_typus_preserves_package = 
   forAll genGoCode $ \code ->
-    "package main" `isInfixOf` code ==>
+    "package main" `L.isInfixOf` code ==>
     case parseTypus code of
       Left _ -> True  -- May fail due to syntax errors, which is ok
       Right result -> True  -- If succeeds, structure should be preserved
@@ -278,7 +279,7 @@ test_parse_typus_simple_file = testCase "parseTypus simple file" $ do
   case parseTypus content of
     Left err -> assertFailure $ "Failed to parse simple file: " ++ err
     Right result -> do
-      assertBool "has blocks" $ not (null (tfBlocks result))
+      assertBool "has blocks" $ not (L.null (tfBlocks result))
 
 test_parse_typus_with_file_directives :: TestTree
 test_parse_typus_with_file_directives = testCase "parseTypus with file directives" $ do
@@ -296,8 +297,8 @@ test_parse_typus_with_block_directives = testCase "parseTypus with block directi
   case parseTypus content of
     Left err -> assertFailure $ "Failed to parse file with block directives: " ++ err
     Right result -> do
-      assertBool "has blocks" $ not (null (tfBlocks result))
-      let firstBlock = head (tfBlocks result)
+      assertBool "has blocks" $ not (L.null (tfBlocks result))
+      let firstBlock = L.head (tfBlocks result)
       let dirs = cbDirectives firstBlock
       assertBool "has block ownership directive" $ bdOwnership dirs /= Nothing
       assertBool "has block dependent_types directive" $ bdDependentTypes dirs /= Nothing
@@ -308,7 +309,7 @@ test_parse_typus_with_build_tags = testCase "parseTypus with build tags" $ do
   case parseTypus content of
     Left err -> assertFailure $ "Failed to parse file with build tags: " ++ err
     Right result -> do
-      assertEqual "has build tags" 2 (length (tfBuildTags result))
+      assertEqual "has build tags" 2 (L.length (tfBuildTags result))
 
 test_parse_typus_syntax_errors :: TestTree
 test_parse_typus_syntax_errors = testCase "parseTypus syntax errors" $ do
@@ -317,13 +318,13 @@ test_parse_typus_syntax_errors = testCase "parseTypus syntax errors" $ do
     Left err -> assertFailure $ "Parser should handle syntax errors gracefully: " ++ err
     Right result -> do
       -- Should still parse but with syntax errors
-      assertBool "has syntax errors" $ not (null (tfSyntaxErrors result))
+      assertBool "has syntax errors" $ not (L.null (tfSyntaxErrors result))
 
 test_parse_typus_multiple_package_declarations :: TestTree
 test_parse_typus_multiple_package_declarations = testCase "parseTypus multiple package declarations" $ do
   let content = "package main\n\npackage other"
   case parseTypus content of
-    Left err -> assertBool "fails with multiple packages" $ "Multiple package declarations" `isInfixOf` err
+    Left err -> assertBool "fails with multiple packages" $ "Multiple package declarations" `L.isInfixOf` err
     Right _ -> assertFailure "Should have failed with multiple package declarations"
 
 -- ============================================================================

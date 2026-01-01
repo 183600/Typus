@@ -65,7 +65,7 @@ extractFunctionName _ = Just "test" -- Simplified for demo
 prop_parse_empty_input :: Property
 prop_parse_empty_input =
   case parseTypus "" of
-    Left _ -> property True  -- Expected to fail or succeed gracefully
+    Left _ -> property True  -- Expected to fail L.or succeed gracefully
     Right _ -> property True  -- Or succeed with minimal structure
 
 -- Property: Parser should handle whitespace variations
@@ -77,7 +77,7 @@ prop_parse_whitespace_variations (SimpleIdentifier ident) =
         , "\nfunc " ++ ident ++ "() { return 42 }\n"
         , "  func " ++ ident ++ "() { return 42 }  "
         ]
-  in property $ all (\code -> case parseTypus code of
+  in property $ L.all (\code -> case parseTypus code of
                                Left _ -> False
                                Right _ -> True) variants
 

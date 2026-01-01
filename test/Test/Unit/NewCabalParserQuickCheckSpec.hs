@@ -8,6 +8,7 @@ import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===),
 import Parser
 import SourceLocation (SourcePos(..), startPos)
 import Data.Maybe (isJust, isNothing, fromMaybe)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 
 -- | QuickCheck tests for Parser module
@@ -24,7 +25,7 @@ tests =
     , testProperty "CodeBlock content consistency" prop_codeBlockConsistency
     ]
 
--- | defaultFileDirectives should have all fields as Nothing
+-- | defaultFileDirectives should have L.all fields as Nothing
 prop_defaultFileDirectivesEmpty :: Bool
 prop_defaultFileDirectivesEmpty =
   let directives = defaultFileDirectives
@@ -32,7 +33,7 @@ prop_defaultFileDirectivesEmpty =
      isNothing (fdDependentTypes directives) &&
      isNothing (fdConstraints directives)
 
--- | defaultBlockDirectives should have all fields as Nothing  
+-- | defaultBlockDirectives should have L.all fields as Nothing  
 prop_defaultBlockDirectivesEmpty :: Bool
 prop_defaultBlockDirectivesEmpty =
   let directives = defaultBlockDirectives
@@ -46,18 +47,18 @@ prop_parseEmptyInput =
   let result = parseTypus "" startPos
   in case result of
     Left _ -> True  -- Parsing empty input might fail, which is acceptable
-    Right file -> null (tfCodeBlocks file)  -- Should have no code blocks
+    Right file -> L.null (tfCodeBlocks file)  -- Should have no code blocks
 
 -- | parseTypus should handle whitespace-only input
 prop_parseWhitespaceInput :: String -> Property
 prop_parseWhitespaceInput input =
-  forAll (elements $ replicate (length input) ' ' ++ 
-                    replicate (length input) '\t' ++ 
-                    replicate (length input) '\n') $ \whitespace ->
+  forAll (elements $ replicate (L.length input) ' ' ++ 
+                    replicate (L.length input) '\t' ++ 
+                    replicate (L.length input) '\n') $ \whitespace ->
     let result = parseTypus whitespace startPos
     in case result of
       Left _ -> property True  -- Parsing might fail, which is acceptable
-      Right file -> null (tfCodeBlocks file)  -- Should have no meaningful code blocks
+      Right file -> L.null (tfCodeBlocks file)  -- Should have no meaningful code blocks
 
 -- | FileDirectives equality should work correctly
 prop_fileDirectivesEquality :: Maybe Bool -> Maybe Bool -> Maybe Bool -> Bool
@@ -82,10 +83,10 @@ prop_parsePreservesLines input =
     Left _ -> property True  -- Parsing might fail
     Right file -> 
       let blocks = tfCodeBlocks file
-          totalBlockLines = sum $ map (length . lines . cbContent) blocks
-      in counterexample ("Original lines: " ++ show (length originalLines) ++ 
+          totalBlockLines = L.sum $ L.map (L.length . lines . cbContent) blocks
+      in counterexample ("Original lines: " ++ show (L.length originalLines) ++ 
                         ", Block lines: " ++ show totalBlockLines) $
-         totalBlockLines <= length originalLines  -- Should not create more lines than input
+         totalBlockLines <= L.length originalLines  -- Should not create more lines than input
 
 -- | CodeBlock content should be consistent
 prop_codeBlockConsistency :: String -> Bool

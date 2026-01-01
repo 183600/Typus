@@ -26,34 +26,36 @@ import Utils
   , breakOn
   )
 
-import Data.List (isPrefixOf, isInfixOf, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort)
 import Data.Char (isSpace)
 
 -- Property: trim is idempotent (trimming twice is same as trimming once)
 prop_trim_idempotent :: String -> Property
 prop_trim_idempotent s = trim (trim s) === trim s
 
--- Property: trim removes only leading and trailing whitespace
+-- Property: trim removes only leading L.and trailing whitespace
 prop_trim_removes_whitespace :: String -> Property
 prop_trim_removes_whitespace s = 
   let trimmed = trim s
-      hasLeadingOrTrailingSpace = not (null s) && (isSpace (head s) || isSpace (last s))
+      hasLeadingOrTrailingSpace = not (null s) && (isSpace (L.head s) || isSpace (last s))
   in classify (hasLeadingOrTrailingSpace) "has whitespace" $
      counterexample ("Original: " ++ show s ++ ", Trimmed: " ++ show trimmed) $
-     not (isSpace (head trimmed)) .&&. not (isSpace (last trimmed)) .||. null trimmed
+     not (isSpace (L.head trimmed)) .&&. not (isSpace (last trimmed)) .||. null trimmed
 
 -- Property: splitBy preserves empty segments
 prop_splitBy_preserves_empty :: Char -> String -> Property
 prop_splitBy_preserves_empty delim s = 
   let parts = splitBy delim s
-      rejoined = concat $ map (\p -> p ++ [delim]) (init parts) ++ [last parts]
-  in length parts > 0 ==> rejoined === s
+      rejoined = L.concat $ L.map (\p -> p ++ [delim]) (init parts) ++ [last parts]
+  in L.length parts > 0 ==> rejoined === s
 
 -- Property: splitByCollapsed removes empty segments
 prop_splitByCollapsed_removes_empty :: Char -> String -> Property
 prop_splitByCollapsed_removes_empty delim s = 
   let parts = splitByCollapsed delim s
-  in all (not . null) parts === True
+  in L.all (not . null) parts === True
 
 -- Property: splitByComma is splitBy with comma delimiter
 prop_splitByComma_equals_splitBy :: String -> Property
@@ -63,12 +65,12 @@ prop_splitByComma_equals_splitBy s = splitByComma s === splitBy ',' s
 prop_splitByCommaCollapsed_equals_splitByCollapsed :: String -> Property
 prop_splitByCommaCollapsed s = splitByCommaCollapsed s === splitByCollapsed ',' s
 
--- Property: trim after splitByCollapsed produces no empty or whitespace-only parts
+-- Property: trim after splitByCollapsed produces no empty L.or whitespace-only parts
 prop_splitByCollapsed_then_trim :: Char -> String -> Property
 prop_splitByCollapsed_then_trim delim s = 
   let parts = splitByCollapsed delim
       trimmedParts = map trim parts
-  in all (not . null) trimmedParts === True
+  in L.all (not . null) trimmedParts === True
 
 -- Property: removeLineComments removes only lines starting with //
 prop_removeLineComments_structure :: String -> Property
@@ -76,16 +78,16 @@ prop_removeLineComments_structure s =
   let cleaned = removeLineComments s
       lines' = lines s
       cleanedLines = lines cleaned
-  in length cleanedLines <= length lines' === True
+  in L.length cleanedLines <= L.length lines' === True
 
--- Property: removeComments removes content between /* and */
+-- Property: removeComments removes content between /* L.and */
 prop_removeComments_removes_block_comments :: String -> Property
 prop_removeComments_removes_block_comments s = 
   let withComment = "before" ++ "/* comment */" ++ "after"
       cleaned = removeComments withComment
-  in "before" `isInfixOf` cleaned .&&. "after" `isInfixOf` cleaned .&&. " comment " `isNotInfixOf` cleaned
+  in "before" `L.isInfixOf` cleaned .&&. "after" `L.isInfixOf` cleaned .&&. " comment " `isNotInfixOf` cleaned
   where
-    x `isNotInfixOf` y = not (x `isInfixOf` y)
+    x `isNotInfixOf` y = not (x `L.isInfixOf` y)
 
 -- Property: normalizeIndentation preserves relative indentation
 prop_normalizeIndentation_preserves_structure :: String -> Property
@@ -93,15 +95,15 @@ prop_normalizeIndentation_preserves_structure s =
   let normalized = normalizeIndentation s
       originalLines = lines s
       normalizedLines = lines normalized
-  in length originalLines === length normalizedLines
+  in L.length originalLines === L.length normalizedLines
 
--- Property: breakOn finds first occurrence or returns original string
+-- Property: breakOn finds first occurrence L.or returns original string
 prop_breakOn_finds_first :: String -> String -> Property
 prop_breakOn_finds_first needle haystack = 
   let result = breakOn needle haystack
   in case result of
     (before, after) -> 
-      if needle `isInfixOf` haystack
+      if needle `L.isInfixOf` haystack
       then before ++ needle ++ after === haystack
       else before === haystack .&&. after === ""
 
@@ -109,7 +111,7 @@ tests :: TestTree
 tests =
   testGroup "Utils Properties"
     [ fastProperty "trim is idempotent" prop_trim_idempotent
-    , fastProperty "trim removes only leading and trailing whitespace" prop_trim_removes_whitespace
+    , fastProperty "trim removes only leading L.and trailing whitespace" prop_trim_removes_whitespace
     , fastProperty "splitBy preserves empty segments" prop_splitBy_preserves_empty
     , fastProperty "splitByCollapsed removes empty segments" prop_splitByCollapsed_removes_empty
     , fastProperty "splitByComma equals splitBy with comma" prop_splitByComma_equals_splitBy

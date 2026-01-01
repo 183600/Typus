@@ -10,6 +10,7 @@
 module Test.Unit.ErrorHandlingRecoveryQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import TestSupport.Arbitrary
@@ -30,8 +31,6 @@ import Compiler.Errors.Core
   , canRecoverFrom
   , shouldContinueAfter
   , formatError
-  , errorAt
-  , warningAt
   , infoAt
   )
 
@@ -70,7 +69,7 @@ prop_error_count_increases msg1 msg2 =
       collector2 = addError startPos msg2 collector1
       errors1 = getErrors collector1
       errors2 = getErrors collector2
-  in property $ length errors2 === length errors1 + 1
+  in property $ L.length errors2 === L.length errors1 + 1
 
 -- Property: Warning count should increase when adding warnings
 prop_warning_count_increases :: String -> String -> Property
@@ -81,7 +80,7 @@ prop_warning_count_increases msg1 msg2 =
       collector2 = addWarning startPos msg2 collector1
       warnings1 = getWarnings collector1
       warnings2 = getWarnings collector2
-  in property $ length warnings2 === length warnings1 + 1
+  in property $ L.length warnings2 === L.length warnings1 + 1
 
 -- Property: Info messages don't affect error/warning status
 prop_info_doesnt_affect_status :: String -> Property
@@ -101,7 +100,7 @@ prop_error_formatting_includes_message msg =
       formatted = case errors of
         (e:_) -> formatError e
         [] -> ""
-  in property $ msg `isInfixOf` formatted
+  in property $ msg `L.isInfixOf` formatted
 
 -- Property: Recovery should be possible for non-critical errors
 prop_recovery_possible_for_warnings :: String -> Property
@@ -125,23 +124,23 @@ prop_continuation_possible_after_warnings msg =
     (w:_) -> property $ shouldContinueAfter w
     [] -> property $ True
 
--- Property: Error and warning counts should be independent
+-- Property: Error L.and warning counts should be independent
 prop_error_warning_independence :: String -> String -> Property
 prop_error_warning_independence errorMsg warningMsg =
   not (null errorMsg) .&&. not (null warningMsg) ==>
   let collector = newErrorCollector
       collectorWithError = addError startPos errorMsg collector
       collectorWithBoth = addWarning startPos warningMsg collectorWithError
-      errorCount = length $ getErrors collectorWithBoth
-      warningCount = length $ getWarnings collectorWithBoth
+      errorCount = L.length $ getErrors collectorWithBoth
+      warningCount = L.length $ getWarnings collectorWithBoth
   in property $ errorCount === 1 .&&. warningCount === 1
 
 -- Helper functions
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` (substrings haystack)
+L.isInfixOf needle haystack = needle `elem` (substrings haystack)
   where
     substrings [] = []
-    substrings s@(x:xs) = take (length needle) s : substrings xs
+    substrings s@(x:xs) = take (L.length needle) s : substrings xs
 
 tests :: TestTree
 tests = testGroup "Error Handling Recovery QuickCheck Tests"
@@ -154,5 +153,5 @@ tests = testGroup "Error Handling Recovery QuickCheck Tests"
   , fastProperty "Error formatting includes the message" prop_error_formatting_includes_message
   , fastProperty "Recovery is possible for warnings" prop_recovery_possible_for_warnings
   , fastProperty "Continuation is possible after warnings" prop_continuation_possible_after_warnings
-  , fastProperty "Error and warning counts are independent" prop_error_warning_independence
+  , fastProperty "Error L.and warning counts are independent" prop_error_warning_independence
   ]

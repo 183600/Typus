@@ -1,6 +1,7 @@
 module Test.Unit.NewParserDirectivesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Property, (===), forAll, Gen, choose, arbitrary, listOf1, elements)
 import TestSupport.QuickCheck (fastProperty)
@@ -51,7 +52,7 @@ genCodeContent = listOf1 $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ 
 -- QuickCheck Properties
 -- ============================================================================
 
--- Property: Default directives have all Nothing values
+-- Property: Default directives have L.all Nothing values
 prop_defaultDirectivesNothing :: Bool
 prop_defaultDirectivesNothing =
   let fileDirs = defaultFileDirectives
@@ -77,7 +78,7 @@ prop_parseEmptyContent =
 tests :: TestTree
 tests = testGroup "New Parser Directives Tests"
   [ testGroup "Directive Properties"
-    [ testProperty "Default directives have all Nothing values" prop_defaultDirectivesNothing
+    [ testProperty "Default directives have L.all Nothing values" prop_defaultDirectivesNothing
     , testProperty "Parsing empty content returns default directives" prop_parseEmptyContent
     ]
 
@@ -108,8 +109,8 @@ tests = testGroup "New Parser Directives Tests"
         let input = "//! build-tags=linux,amd64\n"
             result = parseTypus input
             tags = tfBuildTags result
-        length tags @?= 1
-        case head tags of
+        L.length tags @?= 1
+        case L.head tags of
           Located tag _ -> tag @?= "linux,amd64"
 
     , testCase "Parse mixed directive formats" $ do
@@ -127,8 +128,8 @@ tests = testGroup "New Parser Directives Tests"
         let input = "//@ ownership=true\nfunc main() {}\n"
             result = parseTypus input
             blocks = tfBlocks result
-        length blocks @?= 1
-        let block = head blocks
+        L.length blocks @?= 1
+        let block = L.head blocks
             directives = cbDirectives block
         case bdOwnership directives of
           Just (Located value _) -> value @?= True
@@ -138,8 +139,8 @@ tests = testGroup "New Parser Directives Tests"
         let input = "//@ ownership=true\n//@ dependent-types=false\nfunc test() {}\n"
             result = parseTypus input
             blocks = tfBlocks result
-        length blocks @?= 1
-        let block = head blocks
+        L.length blocks @?= 1
+        let block = L.head blocks
             directives = cbDirectives block
         case bdOwnership directives of
           Just (Located value _) -> value @?= True
@@ -152,7 +153,7 @@ tests = testGroup "New Parser Directives Tests"
         let input = "//@ ownership=true\nfunc first() {}\n\n//@ ownership=false\nfunc second() {}\n"
             result = parseTypus input
             blocks = tfBlocks result
-        length blocks @?= 2
+        L.length blocks @?= 2
         let firstBlock = blocks !! 0
             secondBlock = blocks !! 1
             firstDirs = cbDirectives firstBlock
@@ -170,30 +171,30 @@ tests = testGroup "New Parser Directives Tests"
         let input = "func main() {\n    println(\"Hello\")\n}\n"
             result = parseTypus input
             blocks = tfBlocks result
-        length blocks @?= 1
-        let block = head blocks
+        L.length blocks @?= 1
+        let block = L.head blocks
             content = cbContent block
-        "func main()" `isInfixOf` content @?= True
-        "println" `isInfixOf` content @?= True
+        "func main()" `L.isInfixOf` content @?= True
+        "println" `L.isInfixOf` content @?= True
 
     , testCase "Parse code block with comments" $ do
         let input = "// This is a comment\nfunc main() {\n    // Another comment\n    println(\"Hello\")\n}\n"
             result = parseTypus input
             blocks = tfBlocks result
-        length blocks @?= 1
-        let block = head blocks
+        L.length blocks @?= 1
+        let block = L.head blocks
             content = cbContent block
-        "This is a comment" `isInfixOf` content @?= True
-        "Another comment" `isInfixOf` content @?= True
+        "This is a comment" `L.isInfixOf` content @?= True
+        "Another comment" `L.isInfixOf` content @?= True
 
     , testCase "Parse code block with strings" $ do
         let input = "func main() {\n    str := \"Hello // not a comment\"\n    println(str)\n}\n"
             result = parseTypus input
             blocks = tfBlocks result
-        length blocks @?= 1
-        let block = head blocks
+        L.length blocks @?= 1
+        let block = L.head blocks
             content = cbContent block
-        "Hello // not a comment" `isInfixOf` content @?= True
+        "Hello // not a comment" `L.isInfixOf` content @?= True
     ]
 
   , testGroup "Error Handling"
@@ -208,9 +209,9 @@ tests = testGroup "New Parser Directives Tests"
         let input = "//@ dependent-types\nfunc test() {}\n"  -- Missing value
             result = parseTypus input
             blocks = tfBlocks result
-        length blocks @?= 1
+        L.length blocks @?= 1
 
-    , testCase "Handle mixed valid and invalid directives" $ do
+    , testCase "Handle mixed valid L.and invalid directives" $ do
         let input = "//! ownership=true\n//! invalid-directive\n//! dependent-types=false\n"
             result = parseTypus input
             tf = tfDirectives result
@@ -221,7 +222,7 @@ tests = testGroup "New Parser Directives Tests"
     ]
 
   , testGroup "Complex Scenarios"
-    [ testCase "Parse file with file directives, blocks, and block directives" $ do
+    [ testCase "Parse file with file directives, blocks, L.and block directives" $ do
         let input = "//! ownership=true\n//! dependent-types=false\n\n//@ ownership=false\nfunc block1() {}\n\n//@ constraints=true\nfunc block2() {}\n"
             result = parseTypus input
             tf = tfDirectives result
@@ -234,7 +235,7 @@ tests = testGroup "New Parser Directives Tests"
           Just (Located value _) -> value @?= False
           Nothing -> assertBool "Expected file dependent-types directive" False
         -- Check blocks
-        length blocks @?= 2
+        L.length blocks @?= 2
         let block1 = blocks !! 0
             block2 = blocks !! 1
             dirs1 = cbDirectives block1
@@ -252,8 +253,8 @@ tests = testGroup "New Parser Directives Tests"
             tf = tfDirectives result
             blocks = tfBlocks result
         tf @?= defaultFileDirectives
-        length blocks @?= 1
-        let block = head blocks
+        L.length blocks @?= 1
+        let block = L.head blocks
             directives = cbDirectives block
         directives @?= defaultBlockDirectives
     ]
@@ -261,10 +262,10 @@ tests = testGroup "New Parser Directives Tests"
 
 -- Helper function to check if a string is contained in another
 isInfixOf :: Eq a => [a] -> [a] -> Bool
-isInfixOf needle haystack = any (isPrefixOf needle) (tails haystack)
+L.isInfixOf needle haystack = L.any (L.isPrefixOf needle) (tails haystack)
   where
-    isPrefixOf [] _ = True
-    isPrefixOf _ [] = False
-    isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
+    L.isPrefixOf [] _ = True
+    L.isPrefixOf _ [] = False
+    L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
     tails [] = [[]]
     tails xs@(x:xs') = xs : tails xs'

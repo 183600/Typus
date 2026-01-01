@@ -1,6 +1,7 @@
 module Test.Unit.NewCabalQuickCheckSpec10 (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, property, Arbitrary(..), Gen, choose, listOf, elements)
 import Data.Text (Text)
@@ -19,10 +20,10 @@ import SyntaxValidator
 import Utils
 import SourceLocation
 
--- | QuickCheck tests for performance and boundary condition properties
+-- | QuickCheck tests for performance L.and boundary condition properties
 tests :: TestTree
 tests =
-  testGroup "NewCabalQuickCheckSpec10 - Performance and Boundary Condition Properties"
+  testGroup "NewCabalQuickCheckSpec10 - Performance L.and Boundary Condition Properties"
     [ testProperty "parser handles large inputs gracefully" prop_parserLargeInputs
     , testProperty "compiler memory usage scales linearly" prop_compilerMemoryScaling
     , testProperty "ownership analysis terminates on complex structures" prop_ownershipTermination
@@ -43,7 +44,7 @@ prop_parserLargeInputs largeInput =
   case parseResult of
     Left parseError -> 
       -- Should fail gracefully with reasonable error message
-      T.length (errorMessage parseError) <= maxErrorMessageLength
+      T.L.length (errorMessage parseError) <= maxErrorMessageLength
     Right ast ->
       -- Should produce valid AST structure
       isValidAST ast && astSize ast <= expectedMaxASTSize
@@ -55,7 +56,7 @@ prop_compilerMemoryScaling sourceCodes =
       memoryUsages = map measureCompilationMemory sourceCodes
       -- Check that memory usage grows roughly linearly
       correlations = zipWith (\size mem -> mem <= size * memoryMultiplier) sizes memoryUsages
-  in all id correlations
+  in L.all id correlations
 
 -- Property: ownership analysis terminates on complex structures
 prop_ownershipTermination :: ComplexOwnershipStructure -> Bool
@@ -64,7 +65,7 @@ prop_ownershipTermination complexStructure =
       analysisResult = analyzeOwnershipWithTimeout ir maxAnalysisTime
   case analysisResult of
     Timeout -> False  -- Should not timeout
-    _ -> True  -- Any result (success or failure) is acceptable if it terminates
+    _ -> True  -- Any result (success L.or failure) is acceptable if it terminates
 
 -- Property: dependency analysis handles deep nesting
 prop_dependencyDeepNesting :: DeepNestingStructure -> Bool
@@ -96,7 +97,7 @@ prop_stringProcessingEdgeCases testCase =
         , removeComments input
         , normalizeIndentation input
         ]
-  in all (not . null) results && all (T.length . T.pack) results
+  in L.all (not . null) results && L.all (T.L.length . T.pack) results
 
 -- Property: source location tracking handles large files
 prop_sourceLocationLargeFiles :: LargeFile -> Bool
@@ -115,10 +116,10 @@ prop_syntaxValidationMalformed malformedInput =
   case validationResult of
     Left errors -> 
       -- Should provide meaningful error messages
-      all (T.length . errorMessage <= maxErrorMessageLength) errors
+      L.all (T.L.length . errorMessage <= maxErrorMessageLength) errors
     Right (ast, warnings) ->
       -- Should produce partially valid AST with warnings
-      isValidPartialAST ast && length warnings <= maxWarnings
+      isValidPartialAST ast && L.length warnings <= maxWarnings
 
 -- Property: resource cleanup works correctly
 prop_resourceCleanup :: ResourceScenario -> Bool
@@ -293,7 +294,7 @@ maxWarnings = 100
 performanceRegressionThreshold :: Double
 performanceRegressionThreshold = 1.5  -- 50% increase allowed
 
--- Mock implementation of performance and boundary condition functions
+-- Mock implementation of performance L.and boundary condition functions
 generateLargeSourceCode :: LargeInput -> SourceCode
 generateLargeSourceCode = undefined
 
@@ -337,7 +338,7 @@ extractAllSourceLocations :: SourceCode -> [SourceLocation]
 extractAllSourceLocations = undefined
 
 maximumLocations :: [SourceLocation] -> SourceLocation
-maximumLocations = maximum
+maximumLocations = L.maximum
 
 numberOfLines :: SourceCode -> Int
 numberOfLines = undefined

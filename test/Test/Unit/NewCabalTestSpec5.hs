@@ -10,6 +10,7 @@ import DependentTypes (checkDependentTypes)
 import DependentTypes.TypeSystem (TypeConstraint(..), DependentType(..))
 import Parser (parseTypus)
 import Utils (trim)
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 -- | 测试用例5: 依赖类型检查测试
@@ -21,7 +22,7 @@ tests =
               [ "//! dependent_types: on"
               , "package main"
               , "func processArray(arr [n]int) {"
-              , "    // Array length n is part of type"
+              , "    // Array L.length n is part of type"
               , "}"
               ]
         case parseTypus source >>= checkDependentTypes of
@@ -35,7 +36,7 @@ tests =
               [ "//! dependent_types: on"
               , "package main"
               , "func processArray(arr [n]int) {"
-              , "    // Function expects array of length n"
+              , "    // Function expects array of L.length n"
               , "}"
               , "func main() {"
               , "    small := [3]int{1, 2, 3}"
@@ -45,7 +46,7 @@ tests =
         case parseTypus source >>= checkDependentTypes of
           Left err -> 
             -- Check that error mentions type constraints
-            "type" `isInfixOf` err @?= True
+            "type" `L.isInfixOf` err @?= True
           Right _ -> fail "expected type checking to detect constraint violation"
 
     , testCase "dependent type checker handles complex type expressions" $ do
@@ -101,7 +102,7 @@ prop_dependent_types_respects_directives code =
 prop_dependent_types_preserves_types :: String -> Property
 prop_dependent_types_preserves_types code =
   -- Only test with code that contains type annotations
-  "func" `isInfixOf` code && "(" `isInfixOf` code && ")" `isInfixOf` code ==>
+  "func" `L.isInfixOf` code && "(" `L.isInfixOf` code && ")" `L.isInfixOf` code ==>
   case parseTypus code of
     Left _ -> property True  -- Parse failures are acceptable
     Right parsed -> 

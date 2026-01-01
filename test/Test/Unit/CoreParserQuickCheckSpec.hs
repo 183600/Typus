@@ -32,7 +32,9 @@ import SourceLocation
   , startPos
   )
 
-import Data.List (isPrefixOf, isInfixOf, sort, isPrefixOf)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isPrefixOf)
+import Data.List (sort)
 import Data.Char (isSpace, isAlpha, isAlphaNum)
 
 -- ============================================================================

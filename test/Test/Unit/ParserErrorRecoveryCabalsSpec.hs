@@ -18,6 +18,7 @@ import TestSupport.Arbitrary (genString, genNonEmptyString)
 import Parser (parseTypus, TypusFile(..), CodeBlock(..))
 import SourceLocation (SourcePos(..), SourceSpan(..))
 
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import qualified Data.Text as T
 
@@ -37,12 +38,12 @@ test_parser_recovers_from_malformed_function =
       Left err -> do
         -- Should parse successfully with error recovery
         assertBool "Parser should recover from syntax errors" $
-          "malformed" `isInfixOf` err || "valid" `isInfixOf` err
+          "malformed" `L.isInfixOf` err || "valid" `L.isInfixOf` err
       Right typusFile -> do
         -- Should have parsed the valid function despite the error
         let codeBlocks = tfCodeBlocks typusFile
         assertBool "Should parse valid function after error" $
-          any (isInfixOf "valid" . unlines . cbLines) codeBlocks
+          L.any (L.isInfixOf "valid" . unlines . cbLines) codeBlocks
 
 -- Test 2: Parser handles incomplete type declarations
 test_parser_handles_incomplete_types :: TestTree
@@ -60,7 +61,7 @@ test_parser_handles_incomplete_types =
       Left err -> do
         -- Should provide helpful error message
         assertBool "Error should mention incomplete type" $
-          any (`isInfixOf` err) ["Incomplete", "struct", "brace", "missing"]
+          L.any (`L.isInfixOf` err) ["Incomplete", "struct", "brace", "missing"]
       Right _ -> do
         -- Parser recovered successfully
         assertFailure "Expected parsing error for incomplete type"
@@ -80,7 +81,7 @@ prop_parser_robust_to_random_injections injection =
        Left _ -> property True -- Parser gracefully handles errors
        Right typusFile -> property $ 
          -- Should still extract some structure despite injection
-         not (null $ tfCodeBlocks typusFile)
+         not (L.null $ tfCodeBlocks typusFile)
 
 -- QuickCheck property: Parser preserves line numbers in error messages
 prop_parser_preserves_line_numbers :: Int -> String -> Property
@@ -89,7 +90,7 @@ prop_parser_preserves_line_numbers lineNum content =
   let source = unlines $ replicate lineNum "// comment" ++ ["func invalid( {"]
   in case parseTypus source of
        Left err -> 
-         property $ any (`isInfixOf` err) [show (lineNum + 1), "line", "Line"]
+         property $ L.any (`L.isInfixOf` err) [show (lineNum + 1), "line", "Line"]
        Right _ -> property True
 
 -- Test 3: Parser recovers from nested block errors
@@ -110,13 +111,13 @@ test_parser_recovers_from_nested_errors =
     case parseTypus source of
       Left err -> do
         -- Should report error but continue parsing
-        assertBool "Should mention brace or block issue" $
-          any (`isInInfix` err) ["brace", "block", "nested", "missing"]
+        assertBool "Should mention brace L.or block issue" $
+          L.any (`isInInfix` err) ["brace", "block", "nested", "missing"]
       Right typusFile -> do
         -- Should have found the inner function
         let codeBlocks = tfCodeBlocks typusFile
         assertBool "Should find inner function" $
-          any (isInfixOf "inner" . unlines . cbLines) codeBlocks
+          L.any (L.isInfixOf "inner" . unlines . cbLines) codeBlocks
 
 -- Test 4: Parser handles directive errors gracefully
 test_parser_handles_directive_errors :: TestTree
@@ -134,12 +135,12 @@ test_parser_handles_directive_errors =
       Left err -> do
         -- Should handle directive parsing errors
         assertBool "Should mention directive error" $
-          any (`isInfixOf` err) ["directive", "invalid", "ownership", "dependent_types"]
+          L.any (`L.isInfixOf` err) ["directive", "invalid", "ownership", "dependent_types"]
       Right typusFile -> do
         -- Should still parse the main function
         let codeBlocks = tfCodeBlocks typusFile
         assertBool "Should parse main function despite directive errors" $
-          any (isInfixOf "main" . unlines . cbLines) codeBlocks
+          L.any (L.isInfixOf "main" . unlines . cbLines) codeBlocks
 
 -- Test 5: Parser error recovery with Unicode content
 test_parser_unicode_error_recovery :: TestTree
@@ -158,12 +159,12 @@ test_parser_unicode_error_recovery =
       Left err -> do
         -- Should handle Unicode gracefully
         assertBool "Should handle Unicode content" $
-          length err > 0  -- Just check we get some response
+          L.length err > 0  -- Just check we get some response
       Right typusFile -> do
         -- Should parse the normal function
         let codeBlocks = tfCodeBlocks typusFile
         assertBool "Should parse normal function after Unicode error" $
-          any (isInfixOf "normal" . unlines . cbLines) codeBlocks
+          L.any (L.isInfixOf "normal" . unlines . cbLines) codeBlocks
 
 tests :: TestTree
 tests =

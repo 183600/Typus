@@ -10,6 +10,7 @@
 module Test.Unit.NewSourceLocationMathPropertiesQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements)
@@ -71,7 +72,7 @@ prop_startPos_is_minimal :: SourcePos -> Property
 prop_startPos_is_minimal pos =
   property $ startPos <= pos
 
--- Property: posAfter newline increments line and resets column
+-- Property: posAfter newline increments line L.and resets column
 prop_posAfter_newline :: SourcePos -> Property
 prop_posAfter_newline pos =
   let newPos = posAfter '\n' pos
@@ -88,7 +89,7 @@ prop_posAfter_tab_alignment pos =
   in property $ posColumn newPos === expectedColumn .&&.
              posOffset newPos === posOffset pos' + 1
 
--- Property: posAfter regular character increments column and offset
+-- Property: posAfter regular character increments column L.and offset
 prop_posAfter_regular_char :: SourcePos -> Char -> Property
 prop_posAfter_regular_char pos char =
   char `notElem` "\n\t" ==> 
@@ -97,14 +98,14 @@ prop_posAfter_regular_char pos char =
              posColumn newPos === posColumn pos + 1 .&&.
              posOffset newPos === posOffset pos + 1
 
--- Property: posAt creates position with correct line and column
+-- Property: posAt creates position with correct line L.and column
 prop_posAt_correct :: Int -> Int -> Property
 prop_posAt_correct line col =
   line > 0 && col > 0 ==>
   let pos = posAt line col
   in property $ posLine pos === line .&&. posColumn pos === col .&&. posOffset pos === 0
 
--- Property: posAtLineCol creates position with all fields correct
+-- Property: posAtLineCol creates position with L.all fields correct
 prop_posAtLineCol_correct :: Int -> Int -> Int -> Property
 prop_posAtLineCol_correct line col offset =
   line > 0 && col > 0 && offset >= 0 ==>
@@ -117,7 +118,7 @@ prop_posAtLineCol_correct line col offset =
 -- Source Span Properties
 -- ============================================================================
 
--- Property: emptySpan creates span with same start and end
+-- Property: emptySpan creates span with same start L.and end
 prop_empty_span_same_start_end :: SourcePos -> Property
 prop_empty_span_same_start_end pos =
   let span = emptySpan pos
@@ -135,7 +136,7 @@ prop_span_to_creates_empty pos =
   let span = spanTo pos
   in property $ spanStart span === pos .&&. spanEnd span === pos
 
--- Property: spanBetween creates span with correct start and end
+-- Property: spanBetween creates span with correct start L.and end
 prop_span_between_correct :: SourcePos -> SourcePos -> Property
 prop_span_between_correct start end =
   let span = spanBetween start end
@@ -211,7 +212,7 @@ prop_advance_pos_by_empty pos =
 -- Property: advancePosBy is equivalent to sequential posAfter
 prop_advance_pos_by_sequential :: SourcePos -> String -> Property
 prop_advance_pos_by_sequential pos chars =
-  let sequential = foldl (flip posAfter) pos chars
+  let sequential = L.foldl (flip posAfter) pos chars
       direct = advancePosBy chars pos
   in property $ sequential === direct
 
@@ -223,7 +224,7 @@ prop_advance_pos_by_repeated pos char count =
       result = advancePosBy repeated pos
   in property $ posOffset result === posOffset pos + count
 
--- Property: advancePosByLine preserves column and increments offset
+-- Property: advancePosByLine preserves column L.and increments offset
 prop_advance_pos_by_line :: SourcePos -> Int -> Property
 prop_advance_pos_by_line pos numLines =
   numLines >= 0 && numLines <= 100 ==>
@@ -271,15 +272,15 @@ prop_merge_identical_spans_idempotent :: SourceSpan -> Property
 prop_merge_identical_spans_idempotent span =
   mergeSpans span span === span
 
--- Property: Span length is non-negative
+-- Property: Span L.length is non-negative
 prop_span_length_non_negative :: SourceSpan -> Property
 prop_span_length_non_negative span =
   let start = spanStart span
       end = spanEnd span
-      length = posOffset end - posOffset start
-  in property $ length >= 0
+      L.length = posOffset end - posOffset start
+  in property $ L.length >= 0
 
--- Property: Empty span has zero length
+-- Property: Empty span has zero L.length
 prop_empty_span_zero_length :: SourcePos -> Property
 prop_empty_span_zero_length pos =
   let span = emptySpan pos
@@ -295,7 +296,7 @@ prop_pos_comparison_offset pos1 pos2 =
   in property $ offsetComparison === posComparison
 
 -- ============================================================================
--- Edge Cases and Boundary Conditions
+-- Edge Cases L.and Boundary Conditions
 -- ============================================================================
 
 -- Property: Advancing position by newlines updates line count correctly
@@ -313,7 +314,7 @@ prop_tab_advancement_boundaries pos =
       newPos = posAfter '\t' pos'
   in property $ posColumn newPos === 9 -- First tab stop at column 9
 
--- Property: Large line and column numbers are handled correctly
+-- Property: Large line L.and column numbers are handled correctly
 prop_large_line_column_numbers :: Property
 prop_large_line_column_numbers =
   let largePos = posAt 10000 10000
@@ -341,7 +342,7 @@ tests = testGroup "New Source Location Math Properties QuickCheck Tests"
     ]
 
   , testGroup "Source Span Properties"
-    [ fastProperty "emptySpan has same start and end" prop_empty_span_same_start_end
+    [ fastProperty "emptySpan has same start L.and end" prop_empty_span_same_start_end
     , fastProperty "spanFrom creates empty span" prop_span_from_creates_empty
     , fastProperty "spanTo creates empty span" prop_span_to_creates_empty
     , fastProperty "spanBetween creates correct span" prop_span_between_correct
@@ -373,15 +374,15 @@ tests = testGroup "New Source Location Math Properties QuickCheck Tests"
   , testGroup "Mathematical Properties"
     [ fastProperty "position advancement is monotonic" prop_pos_advancement_monotonic
     , fastProperty "merge identical spans is idempotent" prop_merge_identical_spans_idempotent
-    , fastProperty "span length is non-negative" prop_span_length_non_negative
-    , fastProperty "empty span has zero length" prop_empty_span_zero_length
+    , fastProperty "span L.length is non-negative" prop_span_length_non_negative
+    , fastProperty "empty span has zero L.length" prop_empty_span_zero_length
     , fastProperty "position comparison consistent with offset" prop_pos_comparison_offset
     ]
 
-  , testGroup "Edge Cases and Boundary Conditions"
+  , testGroup "Edge Cases L.and Boundary Conditions"
     [ fastProperty "advancing by newlines updates line count" prop_advance_by_newlines_line_count
     , fastProperty "tab advancement respects boundaries" prop_tab_advancement_boundaries
-    , fastProperty "large line and column numbers" prop_large_line_column_numbers
+    , fastProperty "large line L.and column numbers" prop_large_line_column_numbers
     , fastProperty "zero offset position is valid" prop_zero_offset_valid
     ]
   ]

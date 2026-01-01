@@ -10,6 +10,7 @@
 module Test.Unit.TypeSystemBoundarySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertFailure, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -28,7 +29,7 @@ import Data.Maybe (isJust, isNothing, fromMaybe)
 -- | Generate basic type names
 genBasicType :: Gen String
 genBasicType = elements 
-  [ "int", "string", "bool", "float", "char", "void", "any", "never"
+  [ "int", "string", "bool", "float", "char", "void", "L.any", "never"
   , "i32", "i64", "f32", "f64", "u8", "u16", "u32", "u64"
   ]
 
@@ -171,7 +172,7 @@ prop_type_checking_mismatch expression expectedType =
 -- Property: Dependent type constraints should be validated
 prop_dependent_type_constraints :: String -> Property
 prop_dependent_type_constraints dependentType =
-  "{" `isInfixOf` dependentType ==> 
+  "{" `L.isInfixOf` dependentType ==> 
   let isValid = validateDependentType dependentType
   in property $ isValid ==> hasValidConstraint dependentType
 
@@ -213,25 +214,25 @@ prop_type_variable_scoping varName substitutions =
 -- Property: Generic type instantiation should preserve constraints
 prop_generic_type_instantiation :: String -> [(String, String)] -> Property
 prop_generic_type_instantiation genericType typeArgs =
-  "T" `isInfixOf` genericType ==> 
+  "T" `L.isInfixOf` genericType ==> 
   let instantiated = instantiateGenericType genericType typeArgs
-  in property $ not ("T" `isInfixOf` instantiated) || null typeArgs
+  in property $ not ("T" `L.isInfixOf` instantiated) || null typeArgs
 
 -- Property: Type system should handle union types correctly
 prop_union_type_handling :: [String] -> Property
 prop_union_type_handling types =
-  not (null types) && all (not . null) types ==> 
+  not (null types) && L.all (not . null) types ==> 
   let unionType = "(" ++ intercalate "|" types ++ ")"
       isValid = validateUnionType unionType
-  in property $ isValid ==> all (flip isMemberOfUnion unionType) types
+  in property $ isValid ==> L.all (flip isMemberOfUnion unionType) types
 
 -- Property: Type system should handle intersection types correctly
 prop_intersection_type_handling :: [String] -> Property
 prop_intersection_type_handling types =
-  not (null types) && all (not . null) types ==> 
+  not (null types) && L.all (not . null) types ==> 
   let intersectionType = "(" ++ intercalate "&" types ++ ")"
       isValid = validateIntersectionType intersectionType
-  in property $ isValid ==> length types <= 3 -- Reasonable constraint
+  in property $ isValid ==> L.length types <= 3 -- Reasonable constraint
 
 -- Property: Type inference should fail gracefully on invalid input
 prop_type_inference_invalid :: String -> Property
@@ -265,16 +266,16 @@ unifyTypes t1 t2
 
 applyTypeSubstitution :: [(String, String)] -> String -> String
 applyTypeSubstitution subs typ = 
-  foldl (\acc (var, replacement) -> 
+  L.foldl (\acc (var, replacement) -> 
     if acc == var then replacement else acc) typ subs
 
 inferType :: String -> Maybe String
 inferType expr
-  | all isDigit expr = Just "int"
-  | head expr == '"' && last expr == '"' = Just "string"
+  | L.all isDigit expr = Just "int"
+  | L.head expr == '"' && last expr == '"' = Just "string"
   | expr == "true" || expr == "false" = Just "bool"
-  | any isDigit expr && any (== '.') expr = Just "float"
-  | length expr == 3 && head expr == '\'' && last expr == '\'' = Just "char"
+  | L.any isDigit expr && L.any (== '.') expr = Just "float"
+  | L.length expr == 3 && L.head expr == '\'' && last expr == '\'' = Just "char"
   | otherwise = Nothing
 
 checkType :: String -> String -> Bool
@@ -285,15 +286,15 @@ checkType expr expectedType =
 
 validateDependentType :: String -> Bool
 validateDependentType typ = 
-  "{" `isInfixOf` typ && "}" `isInfixOf` typ
+  "{" `L.isInfixOf` typ && "}" `L.isInfixOf` typ
 
 hasValidConstraint :: String -> Bool
 hasValidConstraint typ = 
   let constraint = takeWhile (/= '}') $ dropWhile (/= '{') typ
-  in any (`isInfixOf` constraint) [">", "<", ">=", "<="]
+  in L.any (`L.isInfixOf` constraint) [">", "<", ">=", "<="]
 
 validateRecursiveType :: String -> Bool
-validateRecursiveType typ = "List<" `isPrefixOf` typ && ">" `isSuffixOf` typ
+validateRecursiveType typ = "List<" `L.isPrefixOf` typ && ">" `L.isSuffixOf` typ
 
 areTypesEqual :: String -> String -> Bool
 areTypesEqual t1 t2 = t1 == t2
@@ -302,8 +303,8 @@ isSubtype :: String -> String -> Bool
 isSubtype subtype supertype
   | subtype == supertype = True
   | subtype == "int" && supertype == "float" = True
-  | subtype == "any" = True
-  | supertype == "any" = True
+  | subtype == "L.any" = True
+  | supertype == "L.any" = True
   | otherwise = False
 
 isTypeVar :: String -> Bool
@@ -312,11 +313,11 @@ isTypeVar _ = False
 
 instantiateGenericType :: String -> [(String, String)] -> String
 instantiateGenericType genericType typeArgs = 
-  foldl (\acc (var, replacement) -> 
+  L.foldl (\acc (var, replacement) -> 
     replaceVar var replacement acc) genericType typeArgs
 
 replaceVar :: String -> String -> String -> String
-replaceVar var replacement = map (\c -> if [c] == var then replacement else [c])
+replaceVar var replacement = L.map (\c -> if [c] == var then replacement else [c])
 
 isMemberOfUnion :: String -> String -> Bool
 isMemberOfUnion typ unionType = 
@@ -324,22 +325,22 @@ isMemberOfUnion typ unionType =
   in typ `elem` members
 
 splitUnionType :: String -> [String]
-splitUnionType = splitOn '|' . filter (`notElem` "()")
+splitUnionType = splitOn '|' . L.filter (`notElem` "()")
 
 splitOn :: Eq a => a -> [a] -> [[a]]
 splitOn _ [] = [[]]
 splitOn delim xs = go xs []
   where
-    go [] acc = [reverse acc]
+    go [] acc = [L.reverse acc]
     go (y:ys) acc
-      | y == delim = reverse acc : go ys []
+      | y == delim = L.reverse acc : go ys []
       | otherwise = go ys (y:acc)
 
 validateUnionType :: String -> Bool
-validateUnionType typ = "(" `isPrefixOf` typ && ")" `isSuffixOf` typ && "|" `isInfixOf` typ
+validateUnionType typ = "(" `L.isPrefixOf` typ && ")" `L.isSuffixOf` typ && "|" `L.isInfixOf` typ
 
 validateIntersectionType :: String -> Bool
-validateIntersectionType typ = "(" `isPrefixOf` typ && ")" `isSuffixOf` typ && "&" `isInfixOf` typ
+validateIntersectionType typ = "(" `L.isPrefixOf` typ && ")" `L.isSuffixOf` typ && "&" `L.isInfixOf` typ
 
 checkBinaryOperation :: String -> String -> String -> Maybe String
 checkBinaryOperation left op right
@@ -357,7 +358,7 @@ refineDependentType baseType constraint = baseType ++ "{" ++ constraint ++ "}"
 isRefinementValid :: String -> String -> Bool
 isRefinementValid baseType constraint = 
   not (null baseType) && not (null constraint) && 
-  any (`isInfixOf` constraint) [">", "<", ">=", "<="]
+  L.any (`L.isInfixOf` constraint) [">", "<", ">=", "<="]
 
 tests :: TestTree
 tests = testGroup "Type System Boundary Tests"
@@ -407,6 +408,6 @@ tests = testGroup "Type System Boundary Tests"
         isSubtype "int" "int" @?= True
         isSubtype "int" "float" @?= True
         isSubtype "string" "int" @?= False
-        isSubtype "any" "int" @?= True
+        isSubtype "L.any" "int" @?= True
     ]
   ]

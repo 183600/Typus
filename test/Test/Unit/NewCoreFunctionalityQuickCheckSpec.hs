@@ -3,6 +3,7 @@
 module Test.Unit.NewCoreFunctionalityQuickCheckSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.TH
 import Compiler
@@ -93,7 +94,7 @@ prop_value_analysis_preserves_constants ast =
   hasConstants ast ==> 
   let analysis = analyzeValues ast
       constants = extractConstants analysis
-  in all isConstantValue constants
+  in L.all isConstantValue constants
 
 -- Test compilation pipeline properties
 prop_compilation_pipeline_type_safety :: AST -> Property
@@ -164,7 +165,7 @@ prop_memory_management_no_leaks ast =
 
 prop_memory_management_garbage_collection :: [AST] -> Property
 prop_memory_management_garbage_collection asts = 
-  all isValidAST asts && length asts <= 10 ==> 
+  L.all isValidAST asts && L.length asts <= 10 ==> 
   let memoryBefore = measureMemoryUsage
       mapM_ compileAST asts
       performGC
@@ -236,7 +237,7 @@ data CompilationError = CompilationError String SourceSpan
   deriving (Show, Eq, Ord)
 
 isValidAST :: AST -> Bool
-isValidAST ast = not (null (astNodes ast)) && astRoot ast `elem` astNodes ast
+isValidAST ast = not (L.null (astNodes ast)) && astRoot ast `elem` astNodes ast
 
 generateIR :: AST -> IR
 generateIR _ = IR [] []  -- Simplified for testing
@@ -293,7 +294,7 @@ combineAnalyses analysis1 analysis2 = ValueAnalysis
   (variableTypes analysis1 `Map.union` variableTypes analysis2)  -- Simplified for testing
 
 hasConstants :: AST -> Bool
-hasConstants ast = any (\node -> nodeType node == NodeTypeConst) (astNodes ast)  -- Simplified for testing
+hasConstants ast = L.any (\node -> nodeType node == NodeTypeConst) (astNodes ast)  -- Simplified for testing
 
 extractConstants :: ValueAnalysis -> [Value]
 extractConstants analysis = Map.elems (constantValues analysis)  -- Simplified for testing

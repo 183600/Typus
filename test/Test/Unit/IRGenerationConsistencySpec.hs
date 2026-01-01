@@ -10,7 +10,9 @@ import Compiler.IR (IRModule(..), IRFunction(..), IRStatement(..), IRExpression(
 import Compiler.GoAst (renderGoModule)
 import Parser (parseTypus)
 import qualified Data.Text as T
-import Data.List (isInfixOf, lines, sort)
+import qualified Data.List as L
+import Data.List (isInfixOf)
+import Data.List (lines, sort)
 import Data.Set (Set, fromList, toList)
 
 -- Test IR generation for basic expressions
@@ -30,9 +32,9 @@ test_basic_expressions_ir = testCase "Basic expressions generate consistent IR" 
       Right compiled -> do
         goCode <- renderGoModule compiled
         assertBool "IR should contain variable declarations" $ 
-          "x :=" `isInfixOf` goCode
+          "x :=" `L.isInfixOf` goCode
         assertBool "IR should contain arithmetic operations" $ 
-          "x + y" `isInfixOf` goCode
+          "x + y" `L.isInfixOf` goCode
       Left errs -> assertFailure $ "Compilation failed: " ++ show errs
 
 -- Test IR generation for function definitions
@@ -56,11 +58,11 @@ test_function_definitions_ir = testCase "Function definitions generate consisten
       Right compiled -> do
         goCode <- renderGoModule compiled
         assertBool "IR should contain function definitions" $ 
-          "func add" `isInfixOf` goCode
+          "func add" `L.isInfixOf` goCode
         assertBool "IR should contain function calls" $ 
-          "add(5, 3)" `isInfixOf` goCode
+          "add(5, 3)" `L.isInfixOf` goCode
         assertBool "IR should contain return statements" $ 
-          "return" `isInfixOf` goCode
+          "return" `L.isInfixOf` goCode
       Left errs -> assertFailure $ "Compilation failed: " ++ show errs
 
 -- Test IR generation for control structures
@@ -73,7 +75,7 @@ test_control_structures_ir = testCase "Control structures generate consistent IR
           , "    if x > 5 {"
           , "        println(\"greater\")"
           , "    } else {"
-          , "        println(\"less or equal\")"
+          , "        println(\"less L.or equal\")"
           , "    }"
           , "    for i := 0; i < 3; i++ {"
           , "        println(i)"
@@ -85,11 +87,11 @@ test_control_structures_ir = testCase "Control structures generate consistent IR
       Right compiled -> do
         goCode <- renderGoModule compiled
         assertBool "IR should contain if statements" $ 
-          "if x > 5" `isInfixOf` goCode
+          "if x > 5" `L.isInfixOf` goCode
         assertBool "IR should contain else clauses" $ 
-          "else" `isInfixOf` goCode
+          "else" `L.isInfixOf` goCode
         assertBool "IR should contain for loops" $ 
-          "for i := 0" `isInfixOf` goCode
+          "for i := 0" `L.isInfixOf` goCode
       Left errs -> assertFailure $ "Compilation failed: " ++ show errs
 
 -- Test IR generation for struct types
@@ -112,14 +114,14 @@ test_struct_types_ir = testCase "Struct types generate consistent IR" $ do
       Right compiled -> do
         goCode <- renderGoModule compiled
         assertBool "IR should contain struct definitions" $ 
-          "type Person struct" `isInfixOf` goCode
+          "type Person struct" `L.isInfixOf` goCode
         assertBool "IR should contain struct field access" $ 
-          "p.Name" `isInfixOf` goCode
+          "p.Name" `L.isInfixOf` goCode
       Left errs -> assertFailure $ "Compilation failed: " ++ show errs
 
--- Test IR generation for array and slice operations
+-- Test IR generation for array L.and slice operations
 test_array_slice_operations_ir :: TestTree
-test_array_slice_operations_ir = testCase "Array and slice operations generate consistent IR" $ do
+test_array_slice_operations_ir = testCase "Array L.and slice operations generate consistent IR" $ do
     let source = unlines
           [ "package main"
           , "func main() {"
@@ -135,11 +137,11 @@ test_array_slice_operations_ir = testCase "Array and slice operations generate c
       Right compiled -> do
         goCode <- renderGoModule compiled
         assertBool "IR should contain array declarations" $ 
-          "[5]int" `isInfixOf` goCode
+          "[5]int" `L.isInfixOf` goCode
         assertBool "IR should contain slice declarations" $ 
-          "[]int" `isInfixOf` goCode
+          "[]int" `L.isInfixOf` goCode
         assertBool "IR should contain slice operations" $ 
-          "append" `isInfixOf` goCode
+          "append" `L.isInfixOf` goCode
       Left errs -> assertFailure $ "Compilation failed: " ++ show errs
 
 -- Test IR generation for ownership-aware code
@@ -162,9 +164,9 @@ test_ownership_aware_ir = testCase "Ownership-aware code generates consistent IR
       Right compiled -> do
         goCode <- renderGoModule compiled
         assertBool "IR should contain ownership annotations" $ 
-          "make([]int, 10)" `isInfixOf` goCode
+          "make([]int, 10)" `L.isInfixOf` goCode
         assertBool "IR should contain function literals" $ 
-          "func(d []int)" `isInfixOf` goCode
+          "func(d []int)" `L.isInfixOf` goCode
       Left errs -> assertFailure $ "Compilation failed: " ++ show errs
 
 -- Test IR generation for dependent types
@@ -176,8 +178,8 @@ test_dependent_types_ir = testCase "Dependent types generate consistent IR" $ do
           , "func main() {"
           , "    type Vec3 = [3]int"
           , "    v := Vec3{1, 2, 3}"
-          , "    sum := v[0] + v[1] + v[2]"
-          , "    _ := sum"
+          , "    L.sum := v[0] + v[1] + v[2]"
+          , "    _ := L.sum"
           , "}"
           ]
     result <- compile source
@@ -185,9 +187,9 @@ test_dependent_types_ir = testCase "Dependent types generate consistent IR" $ do
       Right compiled -> do
         goCode <- renderGoModule compiled
         assertBool "IR should contain dependent type definitions" $ 
-          "Vec3" `isInfixOf` goCode
+          "Vec3" `L.isInfixOf` goCode
         assertBool "IR should contain constrained operations" $ 
-          "v[0] + v[1] + v[2]" `isInfixOf` goCode
+          "v[0] + v[1] + v[2]" `L.isInfixOf` goCode
       Left errs -> assertFailure $ "Compilation failed: " ++ show errs
 
 -- Test IR generation consistency across multiple compilations
@@ -238,11 +240,11 @@ test_ir_semantic_preservation = testCase "IR generation preserves semantic meani
       Right compiled -> do
         goCode <- renderGoModule compiled
         assertBool "IR should preserve recursive structure" $ 
-          "factorial(n-1)" `isInfixOf` goCode
+          "factorial(n-1)" `L.isInfixOf` goCode
         assertBool "IR should preserve base case" $ 
-          "return 1" `isInfixOf` goCode
+          "return 1" `L.isInfixOf` goCode
         assertBool "IR should preserve recursive case" $ 
-          "return n * factorial" `isInfixOf` goCode
+          "return n * factorial" `L.isInfixOf` goCode
       Left errs -> assertFailure $ "Compilation failed: " ++ show errs
 
 -- QuickCheck property: IR generation preserves function signatures
@@ -253,8 +255,8 @@ prop_ir_preserves_function_signatures source =
       Right compiled -> 
         case renderGoModule compiled of
           Right goCode -> 
-            let hasFunc = "func " `isInfixOf` goCode
-                hasParams = "(" `isInfixOf` goCode && ")" `isInfixOf` goCode
+            let hasFunc = "func " `L.isInfixOf` goCode
+                hasParams = "(" `L.isInfixOf` goCode && ")" `L.isInfixOf` goCode
             in hasFunc ==> hasParams
           Left _ -> property False
       Left _ -> property True
@@ -267,8 +269,8 @@ prop_ir_maintains_variable_scope source =
       Right compiled -> 
         case renderGoModule compiled of
           Right goCode -> 
-            let hasVarDecls := `isInfixOf` goCode
-                hasBlockStructure = "{" `isInfixOf` goCode && "}" `isInfixOf` goCode
+            let hasVarDecls := `L.isInfixOf` goCode
+                hasBlockStructure = "{" `L.isInfixOf` goCode && "}" `L.isInfixOf` goCode
             in hasVarDecls ==> hasBlockStructure
           Left _ -> property False
       Left _ -> property True
@@ -281,8 +283,8 @@ prop_ir_preserves_control_flow source =
       Right compiled -> 
         case renderGoModule compiled of
           Right goCode -> 
-            let hasControl = any (`isInfixOf` goCode) ["if ", "for ", "switch "]
-                hasBranches = any (`isInfixOf` goCode) ["else", "break", "continue"]
+            let hasControl = L.any (`L.isInfixOf` goCode) ["if ", "for ", "switch "]
+                hasBranches = L.any (`L.isInfixOf` goCode) ["else", "break", "continue"]
             in hasControl ==> hasBranches
           Left _ -> property False
       Left _ -> property True

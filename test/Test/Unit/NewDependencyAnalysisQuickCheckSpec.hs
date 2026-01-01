@@ -3,6 +3,7 @@
 module Test.Unit.NewDependencyAnalysisQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import Data.Char (isAlphaNum, isLetter)
@@ -27,8 +28,8 @@ tests = testGroup "New Dependency Analysis QuickCheck Tests"
 
 graphConstructionProperties :: TestTree
 graphConstructionProperties = testGroup "Graph Construction Properties"
-  [ fastProperty "graph construction preserves all nodes" prop_graph_preserves_nodes
-  , fastProperty "graph construction preserves all edges" prop_graph_preserves_edges
+  [ fastProperty "graph construction preserves L.all nodes" prop_graph_preserves_nodes
+  , fastProperty "graph construction preserves L.all edges" prop_graph_preserves_edges
   , fastProperty "graph handles duplicate edges" prop_graph_handles_duplicates
   , fastProperty "graph maintains edge direction" prop_graph_maintains_direction
   , fastProperty "graph handles self-dependencies" prop_graph_handles_self_deps
@@ -63,8 +64,8 @@ transitiveDependenciesProperties = testGroup "Transitive Dependencies Properties
 
 graphMergingProperties :: TestTree
 graphMergingProperties = testGroup "Graph Merging Properties"
-  [ fastProperty "merging preserves all nodes" prop_merge_preserves_nodes
-  , fastProperty "merging preserves all edges" prop_merge_preserves_edges
+  [ fastProperty "merging preserves L.all nodes" prop_merge_preserves_nodes
+  , fastProperty "merging preserves L.all edges" prop_merge_preserves_edges
   , fastProperty "merging handles overlapping graphs" prop_merge_overlapping
   , fastProperty "merging is associative" prop_merge_associative
   , fastProperty "merging handles empty graphs" prop_merge_empty
@@ -73,31 +74,31 @@ graphMergingProperties = testGroup "Graph Merging Properties"
 -- Graph construction properties
 prop_graph_preserves_nodes :: [String] -> Property
 prop_graph_preserves_nodes moduleNames =
-  let validModules = filter (not . null) (map (take 10) (nub moduleNames))
-      modules = map (\name -> Module name [] []) validModules
+  let validModules = L.filter (not . null) (L.map (take 10) (nub moduleNames))
+      modules = L.map (\name -> Module name [] []) validModules
       graph = analyzeDependencies modules
       graphNodes = map dependencySource (dependencies graph)
-  in length validModules > 0 ==>
-  property $ all (`elem` graphNodes) validModules
+  in L.length validModules > 0 ==>
+  property $ L.all (`elem` graphNodes) validModules
 
 prop_graph_preserves_edges :: [String] -> Property
 prop_graph_preserves_edges moduleNames =
-  let validModules = filter (not . null) (map (take 10) (nub moduleNames))
+  let validModules = L.filter (not . null) (L.map (take 10) (nub moduleNames))
       modules = case validModules of
         (m1:m2:rest) -> 
           let import1 = Import m2 NormalImport
               module1 = Module m1 [] [import1]
               module2 = Module m2 [] []
-          in module1 : module2 : map (\name -> Module name [] []) rest
-        _ -> map (\name -> Module name [] []) validModules
+          in module1 : module2 : L.map (\name -> Module name [] []) rest
+        _ -> L.map (\name -> Module name [] []) validModules
       graph = analyzeDependencies modules
       graphEdges = dependencies graph
-  in length validModules > 1 ==>
-  property $ length graphEdges >= 0  -- At least preserves structure
+  in L.length validModules > 1 ==>
+  property $ L.length graphEdges >= 0  -- At least preserves structure
 
 prop_graph_handles_duplicates :: [String] -> Property
 prop_graph_handles_duplicates moduleNames =
-  let validModules = filter (not . null) (map (take 10) moduleNames)
+  let validModules = L.filter (not . null) (L.map (take 10) moduleNames)
       modules = case validModules of
         (m1:m2:_) -> 
           let import1 = Import m2 NormalImport
@@ -105,43 +106,43 @@ prop_graph_handles_duplicates moduleNames =
               module1 = Module m1 [] [import1, import2]
               module2 = Module m2 [] []
           in [module1, module2]
-        _ -> map (\name -> Module name [] []) validModules
+        _ -> L.map (\name -> Module name [] []) validModules
       graph = analyzeDependencies modules
       uniqueEdges = nub (dependencies graph)
-  in length validModules > 1 ==>
-  property $ length uniqueEdges <= length (dependencies graph)
+  in L.length validModules > 1 ==>
+  property $ L.length uniqueEdges <= L.length (dependencies graph)
 
 prop_graph_maintains_direction :: [String] -> Property
 prop_graph_maintains_direction moduleNames =
-  let validModules = filter (not . null) (map (take 10) (nub moduleNames))
+  let validModules = L.filter (not . null) (L.map (take 10) (nub moduleNames))
       modules = case validModules of
         (m1:m2:rest) -> 
           let import1 = Import m2 NormalImport
               module1 = Module m1 [] [import1]
               module2 = Module m2 [] []
-          in module1 : module2 : map (\name -> Module name [] []) rest
-        _ -> map (\name -> Module name [] []) validModules
+          in module1 : module2 : L.map (\name -> Module name [] []) rest
+        _ -> L.map (\name -> Module name [] []) validModules
       graph = analyzeDependencies modules
-  in length validModules > 1 ==>
-  property $ all (\dep -> dependencySource dep /= dependencyTarget dep) (dependencies graph)
+  in L.length validModules > 1 ==>
+  property $ L.all (\dep -> dependencySource dep /= dependencyTarget dep) (dependencies graph)
 
 prop_graph_handles_self_deps :: [String] -> Property
 prop_graph_handles_self_deps moduleNames =
-  let validModules = filter (not . null) (map (take 10) (nub moduleNames))
+  let validModules = L.filter (not . null) (L.map (take 10) (nub moduleNames))
       modules = case validModules of
         (m:_) -> 
           let selfImport = Import m NormalImport
               module1 = Module m [] [selfImport]
           in [module1]
-        _ -> map (\name -> Module name [] []) validModules
+        _ -> L.map (\name -> Module name [] []) validModules
       graph = analyzeDependencies modules
-  in length validModules > 0 ==>
+  in L.length validModules > 0 ==>
   property $ True  -- Should handle self-dependencies gracefully
 
 -- Cycle detection properties
 prop_cycle_detection_finds_cycles :: [String] -> Property
 prop_cycle_detection_finds_cycles moduleNames =
-  let validModules = filter (not . null) (map (take 10) (nub moduleNames))
+  let validModules = L.filter (not . null) (L.map (take 10) (nub moduleNames))
       modules = case validModules of
         (m1:m2:m3:_) -> 
           let import1 = Import m2 NormalImport
@@ -151,30 +152,30 @@ prop_cycle_detection_finds_cycles moduleNames =
               module2 = Module m2 [] [import2]
               module3 = Module m3 [] [import3]
           in [module1, module2, module3]
-        _ -> map (\name -> Module name [] []) validModules
+        _ -> L.map (\name -> Module name [] []) validModules
       graph = analyzeDependencies modules
       cycles = findCircularDependencies graph
-  in length validModules > 2 ==>
-  property $ length cycles > 0
+  in L.length validModules > 2 ==>
+  property $ L.length cycles > 0
 
 prop_cycle_detection_acyclic :: [String] -> Property
 prop_cycle_detection_acyclic moduleNames =
-  let validModules = filter (not . null) (map (take 10) (nub moduleNames))
+  let validModules = L.filter (not . null) (L.map (take 10) (nub moduleNames))
       modules = case validModules of
         (m1:m2:rest) -> 
           let import1 = Import m2 NormalImport
               module1 = Module m1 [] [import1]
               module2 = Module m2 [] []
-          in module1 : module2 : map (\name -> Module name [] []) rest
-        _ -> map (\name -> Module name [] []) validModules
+          in module1 : module2 : L.map (\name -> Module name [] []) rest
+        _ -> L.map (\name -> Module name [] []) validModules
       graph = analyzeDependencies modules
       cycles = findCircularDependencies graph
-  in length validModules > 1 ==>
-  property $ length cycles == 0
+  in L.length validModules > 1 ==>
+  property $ L.length cycles == 0
 
 prop_cycle_detection_minimal :: [String] -> Property
 prop_cycle_detection_minimal moduleNames =
-  let validModules = filter (not . null) (map (take 10) (nub moduleNames))
+  let validModules = L.filter (not . null) (L.map (take 10) (nub moduleNames))
       modules = case validModules of
         (m1:m2:m3:m4:_) -> 
           let import1 = Import m2 NormalImport
@@ -186,15 +187,15 @@ prop_cycle_detection_minimal moduleNames =
               module3 = Module m3 [] [import3]
               module4 = Module m4 [] []
           in [module1, module2, module3, module4]
-        _ -> map (\name -> Module name [] []) validModules
+        _ -> L.map (\name -> Module name [] []) validModules
       graph = analyzeDependencies modules
       cycles = findCircularDependencies graph
-  in length validModules > 3 ==>
-  property $ all (\cycle -> length cycle <= length validModules) cycles
+  in L.length validModules > 3 ==>
+  property $ L.all (\cycle -> L.length cycle <= L.length validModules) cycles
 
 prop_cycle_detection_complex :: [String] -> Property
 prop_cycle_detection_complex moduleNames =
-  let validModules = filter (not . null) (map (take 10) (nub moduleNames))
+  let validModules = L.filter (not . null) (L.map (take 10) (nub moduleNames))
       modules = case validModules of
         (m1:m2:m3:m4:m5:_) -> 
           let import1 = Import m2 NormalImport
@@ -208,15 +209,15 @@ prop_cycle_detection_complex moduleNames =
               module4 = Module m4 [] [import4]
               module5 = Module m5 [] [import5]
           in [module1, module2, module3, module4, module5]
-        _ -> map (\name -> Module name [] []) validModules
+        _ -> L.map (\name -> Module name [] []) validModules
       graph = analyzeDependencies modules
       cycles = findCircularDependencies graph
-  in length validModules > 4 ==>
-  property $ length cycles > 0
+  in L.length validModules > 4 ==>
+  property $ L.length cycles > 0
 
 prop_cycle_detection_deterministic :: [String] -> Property
 prop_cycle_detection_deterministic moduleNames =
-  let validModules = filter (not . null) (map (take 10) (nub moduleNames))
+  let validModules = L.filter (not . null) (L.map (take 10) (nub moduleNames))
       modules = case validModules of
         (m1:m2:m3:_) -> 
           let import1 = Import m2 NormalImport
@@ -226,32 +227,32 @@ prop_cycle_detection_deterministic moduleNames =
               module2 = Module m2 [] [import2]
               module3 = Module m3 [] [import3]
           in [module1, module2, module3]
-        _ -> map (\name -> Module name [] []) validModules
+        _ -> L.map (\name -> Module name [] []) validModules
       graph = analyzeDependencies modules
       cycles1 = findCircularDependencies graph
       cycles2 = findCircularDependencies graph
-  in length validModules > 2 ==>
+  in L.length validModules > 2 ==>
   property $ sort cycles1 == sort cycles2
 
 -- Topological sort properties
 prop_topo_sort_respects_deps :: [String] -> Property
 prop_topo_sort_respects_deps moduleNames =
-  let validModules = filter (not . null) (map (take 10) (nub moduleNames))
+  let validModules = L.filter (not . null) (L.map (take 10) (nub moduleNames))
       modules = case validModules of
         (m1:m2:rest) -> 
           let import1 = Import m2 NormalImport
               module1 = Module m1 [] [import1]
               module2 = Module m2 [] []
-          in module1 : module2 : map (\name -> Module name [] []) rest
-        _ -> map (\name -> Module name [] []) validModules
+          in module1 : module2 : L.map (\name -> Module name [] []) rest
+        _ -> L.map (\name -> Module name [] []) validModules
       graph = analyzeDependencies modules
       sorted = topologicalSort graph
-  in length validModules > 1 ==>
-  property $ length sorted == length validModules
+  in L.length validModules > 1 ==>
+  property $ L.length sorted == L.length validModules
 
 prop_topo_sort_fails_cycles :: [String] -> Property
 prop_topo_sort_fails_cycles moduleNames =
-  let validModules = filter (not . null) (map (take 10) (nub moduleNames))
+  let validModules = L.filter (not . null) (L.map (take 10) (nub moduleNames))
       modules = case validModules of
         (m1:m2:m3:_) -> 
           let import1 = Import m2 NormalImport
@@ -261,45 +262,45 @@ prop_topo_sort_fails_cycles moduleNames =
               module2 = Module m2 [] [import2]
               module3 = Module m3 [] [import3]
           in [module1, module2, module3]
-        _ -> map (\name -> Module name [] []) validModules
+        _ -> L.map (\name -> Module name [] []) validModules
       graph = analyzeDependencies modules
       sorted = topologicalSort graph
-  in length validModules > 2 ==>
-  property $ length sorted <= length validModules  -- May fail or return partial
+  in L.length validModules > 2 ==>
+  property $ L.length sorted <= L.length validModules  -- May fail L.or return partial
 
 prop_topo_sort_preserves_nodes :: [String] -> Property
 prop_topo_sort_preserves_nodes moduleNames =
-  let validModules = filter (not . null) (map (take 10) (nub moduleNames))
-      modules = map (\name -> Module name [] []) validModules
+  let validModules = L.filter (not . null) (L.map (take 10) (nub moduleNames))
+      modules = L.map (\name -> Module name [] []) validModules
       graph = analyzeDependencies modules
       sorted = topologicalSort graph
-  in length validModules > 0 ==>
+  in L.length validModules > 0 ==>
   property $ sort validModules == sort sorted
 
 prop_topo_sort_multiple_orders :: [String] -> Property
 prop_topo_sort_multiple_orders moduleNames =
-  let validModules = filter (not . null) (map (take 10) (nub moduleNames))
-      modules = map (\name -> Module name [] []) validModules
+  let validModules = L.filter (not . null) (L.map (take 10) (nub moduleNames))
+      modules = L.map (\name -> Module name [] []) validModules
       graph = analyzeDependencies modules
       sorted1 = topologicalSort graph
       sorted2 = topologicalSort graph
-  in length validModules > 2 ==>
+  in L.length validModules > 2 ==>
   property $ sort sorted1 == sort sorted2  -- Same elements, possibly different order
 
 prop_topo_sort_deterministic :: [String] -> Property
 prop_topo_sort_deterministic moduleNames =
-  let validModules = filter (not . null) (map (take 10) (nub moduleNames))
-      modules = map (\name -> Module name [] []) validModules
+  let validModules = L.filter (not . null) (L.map (take 10) (nub moduleNames))
+      modules = L.map (\name -> Module name [] []) validModules
       graph = analyzeDependencies modules
       sorted1 = topologicalSort graph
       sorted2 = topologicalSort graph
-  in length validModules > 0 ==>
+  in L.length validModules > 0 ==>
   property $ sorted1 == sorted2
 
 -- Transitive dependencies properties
 prop_transitive_complete :: [String] -> Property
 prop_transitive_complete moduleNames =
-  let validModules = filter (not . null) (map (take 10) (nub moduleNames))
+  let validModules = L.filter (not . null) (L.map (take 10) (nub moduleNames))
       modules = case validModules of
         (m1:m2:m3:rest) -> 
           let import1 = Import m2 NormalImport
@@ -307,25 +308,25 @@ prop_transitive_complete moduleNames =
               module1 = Module m1 [] [import1]
               module2 = Module m2 [] [import2]
               module3 = Module m3 [] []
-          in module1 : module2 : module3 : map (\name -> Module name [] []) rest
-        _ -> map (\name -> Module name [] []) validModules
+          in module1 : module2 : module3 : L.map (\name -> Module name [] []) rest
+        _ -> L.map (\name -> Module name [] []) validModules
       graph = analyzeDependencies modules
       transitive = computeTransitiveDependencies graph
-  in length validModules > 2 ==>
+  in L.length validModules > 2 ==>
   property $ True  -- Would check completeness
 
 prop_transitive_minimal :: [String] -> Property
 prop_transitive_minimal moduleNames =
-  let validModules = filter (not . null) (map (take 10) (nub moduleNames))
-      modules = map (\name -> Module name [] []) validModules
+  let validModules = L.filter (not . null) (L.map (take 10) (nub moduleNames))
+      modules = L.map (\name -> Module name [] []) validModules
       graph = analyzeDependencies modules
       transitive = computeTransitiveDependencies graph
-  in length validModules > 0 ==>
+  in L.length validModules > 0 ==>
   property $ True  -- Would check minimality
 
 prop_transitive_chains :: [String] -> Property
 prop_transitive_chains moduleNames =
-  let validModules = filter (not . null) (map (take 10) (nub moduleNames))
+  let validModules = L.filter (not . null) (L.map (take 10) (nub moduleNames))
       modules = case validModules of
         (m1:m2:m3:m4:_) -> 
           let import1 = Import m2 NormalImport
@@ -336,15 +337,15 @@ prop_transitive_chains moduleNames =
               module3 = Module m3 [] [import3]
               module4 = Module m4 [] []
           in [module1, module2, module3, module4]
-        _ -> map (\name -> Module name [] []) validModules
+        _ -> L.map (\name -> Module name [] []) validModules
       graph = analyzeDependencies modules
       transitive = computeTransitiveDependencies graph
-  in length validModules > 3 ==>
+  in L.length validModules > 3 ==>
   property $ True  -- Would check chain handling
 
 prop_transitive_diamonds :: [String] -> Property
 prop_transitive_diamonds moduleNames =
-  let validModules = filter (not . null) (map (take 10) (nub moduleNames))
+  let validModules = L.filter (not . null) (L.map (take 10) (nub moduleNames))
       modules = case validModules of
         (m1:m2:m3:m4:_) -> 
           let import1 = Import m2 NormalImport
@@ -356,93 +357,93 @@ prop_transitive_diamonds moduleNames =
               module3 = Module m3 [] [import4]
               module4 = Module m4 [] []
           in [module1, module2, module3, module4]
-        _ -> map (\name -> Module name [] []) validModules
+        _ -> L.map (\name -> Module name [] []) validModules
       graph = analyzeDependencies modules
       transitive = computeTransitiveDependencies graph
-  in length validModules > 3 ==>
+  in L.length validModules > 3 ==>
   property $ True  -- Would check diamond handling
 
 prop_transitive_preserves_acyclic :: [String] -> Property
 prop_transitive_preserves_acyclic moduleNames =
-  let validModules = filter (not . null) (map (take 10) (nub moduleNames))
+  let validModules = L.filter (not . null) (L.map (take 10) (nub moduleNames))
       modules = case validModules of
         (m1:m2:rest) -> 
           let import1 = Import m2 NormalImport
               module1 = Module m1 [] [import1]
               module2 = Module m2 [] []
-          in module1 : module2 : map (\name -> Module name [] []) rest
-        _ -> map (\name -> Module name [] []) validModules
+          in module1 : module2 : L.map (\name -> Module name [] []) rest
+        _ -> L.map (\name -> Module name [] []) validModules
       graph = analyzeDependencies modules
       transitive = computeTransitiveDependencies graph
       cycles = findCircularDependencies transitive
-  in length validModules > 1 ==>
-  property $ length cycles == 0
+  in L.length validModules > 1 ==>
+  property $ L.length cycles == 0
 
 -- Graph merging properties
 prop_merge_preserves_nodes :: [String] -> [String] -> Property
 prop_merge_preserves_nodes names1 names2 =
-  let validModules1 = filter (not . null) (map (take 10) (nub names1))
-      validModules2 = filter (not . null) (map (take 10) (nub names2))
-      modules1 = map (\name -> Module name [] []) validModules1
-      modules2 = map (\name -> Module name [] []) validModules2
+  let validModules1 = L.filter (not . null) (L.map (take 10) (nub names1))
+      validModules2 = L.filter (not . null) (L.map (take 10) (nub names2))
+      modules1 = L.map (\name -> Module name [] []) validModules1
+      modules2 = L.map (\name -> Module name [] []) validModules2
       graph1 = analyzeDependencies modules1
       graph2 = analyzeDependencies modules2
       merged = mergeDependencyGraphs graph1 graph2
       allNodes = validModules1 ++ validModules2
-  in length allNodes > 0 ==>
+  in L.length allNodes > 0 ==>
   property $ True  -- Would check node preservation
 
 prop_merge_preserves_edges :: [String] -> [String] -> Property
 prop_merge_preserves_edges names1 names2 =
-  let validModules1 = filter (not . null) (map (take 10) (nub names1))
-      validModules2 = filter (not . null) (map (take 10) (nub names2))
-      modules1 = map (\name -> Module name [] []) validModules1
-      modules2 = map (\name -> Module name [] []) validModules2
+  let validModules1 = L.filter (not . null) (L.map (take 10) (nub names1))
+      validModules2 = L.filter (not . null) (L.map (take 10) (nub names2))
+      modules1 = L.map (\name -> Module name [] []) validModules1
+      modules2 = L.map (\name -> Module name [] []) validModules2
       graph1 = analyzeDependencies modules1
       graph2 = analyzeDependencies modules2
       merged = mergeDependencyGraphs graph1 graph2
-  in length validModules1 > 0 || length validModules2 > 0 ==>
+  in L.length validModules1 > 0 || L.length validModules2 > 0 ==>
   property $ True  -- Would check edge preservation
 
 prop_merge_overlapping :: [String] -> Property
 prop_merge_overlapping moduleNames =
-  let validModules = filter (not . null) (map (take 10) (nub moduleNames))
-      modules1 = map (\name -> Module name [] []) validModules
-      modules2 = map (\name -> Module name [] []) validModules
+  let validModules = L.filter (not . null) (L.map (take 10) (nub moduleNames))
+      modules1 = L.map (\name -> Module name [] []) validModules
+      modules2 = L.map (\name -> Module name [] []) validModules
       graph1 = analyzeDependencies modules1
       graph2 = analyzeDependencies modules2
       merged = mergeDependencyGraphs graph1 graph2
-  in length validModules > 0 ==>
+  in L.length validModules > 0 ==>
   property $ True  -- Would check overlapping handling
 
 prop_merge_associative :: [String] -> [String] -> [String] -> Property
 prop_merge_associative names1 names2 names3 =
-  let validModules1 = filter (not . null) (map (take 10) (nub names1))
-      validModules2 = filter (not . null) (map (take 10) (nub names2))
-      validModules3 = filter (not . null) (map (take 10) (nub names3))
-      modules1 = map (\name -> Module name [] []) validModules1
-      modules2 = map (\name -> Module name [] []) validModules2
-      modules3 = map (\name -> Module name [] []) validModules3
+  let validModules1 = L.filter (not . null) (L.map (take 10) (nub names1))
+      validModules2 = L.filter (not . null) (L.map (take 10) (nub names2))
+      validModules3 = L.filter (not . null) (L.map (take 10) (nub names3))
+      modules1 = L.map (\name -> Module name [] []) validModules1
+      modules2 = L.map (\name -> Module name [] []) validModules2
+      modules3 = L.map (\name -> Module name [] []) validModules3
       graph1 = analyzeDependencies modules1
       graph2 = analyzeDependencies modules2
       graph3 = analyzeDependencies modules3
       merged1 = mergeDependencyGraphs (mergeDependencyGraphs graph1 graph2) graph3
       merged2 = mergeDependencyGraphs graph1 (mergeDependencyGraphs graph2 graph3)
-  in length validModules1 > 0 || length validModules2 > 0 || length validModules3 > 0 ==>
+  in L.length validModules1 > 0 || L.length validModules2 > 0 || L.length validModules3 > 0 ==>
   property $ True  -- Would check associativity
 
 prop_merge_empty :: [String] -> Property
 prop_merge_empty moduleNames =
-  let validModules = filter (not . null) (map (take 10) (nub moduleNames))
-      modules = map (\name -> Module name [] []) validModules
+  let validModules = L.filter (not . null) (L.map (take 10) (nub moduleNames))
+      modules = L.map (\name -> Module name [] []) validModules
       graph = analyzeDependencies modules
       emptyGraph = DependencyGraph [] []
       merged1 = mergeDependencyGraphs graph emptyGraph
       merged2 = mergeDependencyGraphs emptyGraph graph
-  in length validModules > 0 ==>
+  in L.length validModules > 0 ==>
   property $ True  -- Would check empty graph handling
 
--- Helper types and functions (simplified for demonstration)
+-- Helper types L.and functions (simplified for demonstration)
 data DependencyGraph = DependencyGraph 
   { nodes :: [String]
   , dependencies :: [Dependency]

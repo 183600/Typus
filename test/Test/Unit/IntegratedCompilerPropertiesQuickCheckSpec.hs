@@ -3,6 +3,7 @@
 module Test.Unit.IntegratedCompilerPropertiesQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 
@@ -32,7 +33,7 @@ prop_compilerConfig_equality_reflexive =
 prop_integratedCompileResult_success_consistency :: Property
 prop_integratedCompileResult_success_consistency =
   forAll genResult $ \result ->
-  let hasErrors = not (null (filteredErrors result)) || not (null (compilerErrors result))
+  let hasErrors = not (L.null (filteredErrors result)) || not (L.null (compilerErrors result))
   in (success result && hasErrors) === False
   where
     genResult = do
@@ -52,7 +53,7 @@ prop_integratedCompileResult_success_consistency =
 prop_formatCompilationResult_nonempty :: Property
 prop_formatCompilationResult_nonempty =
   forAll genResult $ \result ->
-  not (null (formatCompilationResult result)) === True
+  not (L.null (formatCompilationResult result)) === True
   where
     genResult = return $ IntegratedCompileResult
       { success = True

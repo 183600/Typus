@@ -10,6 +10,7 @@
 module Test.Unit.DependenciesAnalysisQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, oneof)
@@ -101,7 +102,7 @@ prop_constraint_reflexive :: Constraint -> Property
 prop_constraint_reflexive constraint =
   property $ constraint === constraint
 
--- Property: DependencyNode preserves name and dependencies
+-- Property: DependencyNode preserves name L.and dependencies
 prop_dependency_node_preserves :: String -> [String] -> Property
 prop_dependency_node_preserves name deps =
   not (null name) ==>
@@ -112,9 +113,9 @@ prop_dependency_node_preserves name deps =
 prop_dependency_graph_preserves :: [DependencyNode] -> Property
 prop_dependency_graph_preserves nodes =
   not (null nodes) ==>
-  let nodeMap = Map.fromList $ map (\n -> (nodeName n, n)) nodes
+  let nodeMap = Map.fromList $ L.map (\n -> (nodeName n, n)) nodes
       graph = DependencyGraph nodeMap
-  in property $ all (\n -> Map.lookup (nodeName n) (graphNodes graph) == Just n) nodes
+  in property $ L.all (\n -> Map.lookup (nodeName n) (graphNodes graph) == Just n) nodes
 
 -- Property: newDependentTypeChecker creates valid checker
 prop_new_type_checker_valid :: Property
@@ -125,8 +126,8 @@ prop_new_type_checker_valid =
 -- Property: newDependentTypeCheckerWithTypes preserves initial types
 prop_new_type_checker_with_types :: [String] -> Property
 prop_new_type_checker_with_types typeNames =
-  not (null typeNames) && all (not . null) typeNames && 
-  all (all isAlphaNum) typeNames ==>
+  not (null typeNames) && L.all (not . null) typeNames && 
+  L.all (L.all isAlphaNum) typeNames ==>
   let checker = newDependentTypeCheckerWithTypes typeNames
   in property $ True  -- Basic smoke test
 
@@ -143,7 +144,7 @@ prop_analyze_empty_ast =
 -- Property: analyzeDependentTypes handles simple type declarations
 prop_analyze_simple_type :: String -> Property
 prop_analyze_simple_type typeName =
-  not (null typeName) && all isAlphaNum typeName ==>
+  not (null typeName) && L.all isAlphaNum typeName ==>
   let checker = newDependentTypeChecker
       typeDecl = STypeDef (T.pack typeName) [] []
       ast = Program [typeDecl]
@@ -156,7 +157,7 @@ prop_analyze_simple_type typeName =
 prop_analyze_variable_decl :: String -> String -> Property
 prop_analyze_variable_decl varName typeName =
   not (null varName) && not (null typeName) &&
-  all isAlphaNum varName && all isAlphaNum typeName ==>
+  L.all isAlphaNum varName && L.all isAlphaNum typeName ==>
   let checker = newDependentTypeChecker
       varDecl = SVarDecl (T.pack varName) (SimpleT (T.pack typeName))
       ast = Program [varDecl]
@@ -169,10 +170,10 @@ prop_analyze_variable_decl varName typeName =
 prop_analyze_function_decl :: String -> [String] -> String -> Property
 prop_analyze_function_decl funcName paramNames returnTypeName =
   not (null funcName) && not (null returnTypeName) &&
-  all isAlphaNum funcName && all isAlphaNum returnTypeName &&
-  all (not . null) paramNames && all (all isAlphaNum) paramNames ==>
+  L.all isAlphaNum funcName && L.all isAlphaNum returnTypeName &&
+  L.all (not . null) paramNames && L.all (L.all isAlphaNum) paramNames ==>
   let checker = newDependentTypeChecker
-      params = map (\name -> (T.pack name, SimpleT (T.pack "Int"))) paramNames
+      params = L.map (\name -> (T.pack name, SimpleT (T.pack "Int"))) paramNames
       returnType = Just (SimpleT (T.pack returnTypeName))
       funcDecl = SFuncDecl (T.pack funcName) params returnType
       ast = Program [funcDecl]
@@ -194,7 +195,7 @@ prop_validate_empty_ast =
 -- Property: validateStatement handles simple statements
 prop_validate_simple_statement :: String -> Property
 prop_validate_simple_statement varName =
-  not (null varName) && all isAlphaNum varName ==>
+  not (null varName) && L.all isAlphaNum varName ==>
   let checker = newDependentTypeChecker
       stmt = SVarDecl (T.pack varName) (SimpleT (T.pack "Int"))
       result = validateStatement checker stmt
@@ -205,7 +206,7 @@ prop_validate_simple_statement varName =
 -- Property: checkType handles simple types
 prop_check_simple_type :: String -> Property
 prop_check_simple_type typeName =
-  not (null typeName) && all isAlphaNum typeName ==>
+  not (null typeName) && L.all isAlphaNum typeName ==>
   let checker = newDependentTypeChecker
       typeExpr = SimpleT (T.pack typeName)
       result = checkType checker typeExpr
@@ -216,7 +217,7 @@ prop_check_simple_type typeName =
 -- Property: addType preserves type information
 prop_add_type_preserves :: String -> Property
 prop_add_type_preserves typeName =
-  not (null typeName) && all isAlphaNum typeName ==>
+  not (null typeName) && L.all isAlphaNum typeName ==>
   let checker = newDependentTypeChecker
       typeExpr = SimpleT (T.pack typeName)
       result = addType checker (T.pack typeName) typeExpr
@@ -261,7 +262,7 @@ prop_unify_identical typeExpr =
 -- Property: inferType handles simple expressions
 prop_infer_simple_type :: String -> Property
 prop_infer_simple_type typeName =
-  not (null typeName) && all isAlphaNum typeName ==>
+  not (null typeName) && L.all isAlphaNum typeName ==>
   let checker = newDependentTypeChecker
       typeExpr = SimpleT (T.pack typeName)
       result = inferType checker typeExpr
@@ -272,7 +273,7 @@ prop_infer_simple_type typeName =
 -- Property: inferStatement handles simple statements
 prop_infer_simple_statement :: String -> Property
 prop_infer_simple_statement varName =
-  not (null varName) && all isAlphaNum varName ==>
+  not (null varName) && L.all isAlphaNum varName ==>
   let checker = newDependentTypeChecker
       stmt = SVarDecl (T.pack varName) (SimpleT (T.pack "Int"))
       result = inferStatement checker stmt
@@ -315,7 +316,7 @@ prop_instantiate_scheme typeExpr =
 -- Property: unifyTypes handles compatible types
 prop_unify_compatible :: String -> Property
 prop_unify_compatible typeName =
-  not (null typeName) && all isAlphaNum typeName ==>
+  not (null typeName) && L.all isAlphaNum typeName ==>
   let checker = newDependentTypeChecker
       type1 = SimpleT (T.pack typeName)
       type2 = SimpleT (T.pack typeName)
@@ -340,7 +341,7 @@ prop_new_type_variable_unique count =
   count > 0 && count <= 10 ==>
   let checker = newDependentTypeChecker
       typeVars = take count $ iterate (\_ -> newTypeVariable checker) (newTypeVariable checker)
-  in property $ length (nub typeVars) === length typeVars
+  in property $ L.length (nub typeVars) === L.length typeVars
 
 -- Property: getFreshTypeVar returns fresh variables
 prop_get_fresh_type_var :: Int -> Property
@@ -359,10 +360,10 @@ prop_initial_type_environment =
 -- Property: Complex type expressions are handled
 prop_complex_type_expressions :: [String] -> Property
 prop_complex_type_expressions typeNames =
-  not (null typeNames) && all (not . null) typeNames &&
-  all (all isAlphaNum) typeNames ==>
+  not (null typeNames) && L.all (not . null) typeNames &&
+  L.all (L.all isAlphaNum) typeNames ==>
   let checker = newDependentTypeChecker
-      complexType = foldr (\name acc -> GenericT (T.pack name) [acc]) 
+      complexType = L.foldr (\name acc -> GenericT (T.pack name) [acc]) 
                           (SimpleT (T.pack "Base")) 
                           typeNames
       result = checkType checker complexType

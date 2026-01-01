@@ -10,6 +10,7 @@
 module Test.Unit.CoreErrorHandlerConsistencyQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements)
@@ -37,11 +38,6 @@ import Compiler.Errors.Core
   , hasWarnings
   , formatError
   , formatErrors
-  , errorAt
-  , errorWithCategory
-  , warningAt
-  , warningWithCategory
-  , canRecoverFrom
   , shouldContinueAfter
   )
 
@@ -57,9 +53,9 @@ prop_empty_collector_no_messages =
   let collector = newErrorCollector
   in property $ not (hasErrors collector) .&&. 
              not (hasWarnings collector) .&&.
-             null (getErrors collector) .&&.
-             null (getWarnings collector) .&&.
-             null (getInfo collector)
+             L.null (getErrors collector) .&&.
+             L.null (getWarnings collector) .&&.
+             L.null (getInfo collector)
 
 -- Property: Adding error increases error count
 prop_add_error_increases_count :: String -> ErrorSeverity -> ErrorCategory -> Property
@@ -70,7 +66,7 @@ prop_add_error_increases_count msg severity category =
       span = spanBetween pos pos
       error = errorAt (Just span) msg
       collector' = addError collector error
-  in property $ hasErrors collector' .&&. length (getErrors collector') === 1
+  in property $ hasErrors collector' .&&. L.length (getErrors collector') === 1
 
 -- Property: Adding warning increases warning count
 prop_add_warning_increases_count :: String -> ErrorSeverity -> ErrorCategory -> Property
@@ -81,9 +77,9 @@ prop_add_warning_increases_count msg severity category =
       span = spanBetween pos pos
       warning = warningAt (Just span) msg
       collector' = addWarning collector warning
-  in property $ hasWarnings collector' .&&. length (getWarnings collector') === 1
+  in property $ hasWarnings collector' .&&. L.length (getWarnings collector') === 1
 
--- Property: Error and warning counts are independent
+-- Property: Error L.and warning counts are independent
 prop_error_warning_independence :: String -> String -> Property
 prop_error_warning_independence errorMsg warnMsg =
   not (null errorMsg) && not (null warnMsg) ==>
@@ -94,13 +90,13 @@ prop_error_warning_independence errorMsg warnMsg =
       warning = warningAt (Just span) warnMsg
       collector' = addError (addWarning collector error) warning
   in property $ hasErrors collector' .&&. hasWarnings collector' .&&.
-             length (getErrors collector') === 1 .&&.
-             length (getWarnings collector') === 1
+             L.length (getErrors collector') === 1 .&&.
+             L.length (getWarnings collector') === 1
 
 -- Property: Message ordering is preserved
 prop_message_ordering_preserved :: [String] -> Property
 prop_message_ordering_preserved msgs =
-  all (not . null) msgs && length msgs <= 10 ==>
+  L.all (not . null) msgs && L.length msgs <= 10 ==>
   let collector = newErrorCollector
       pos = SourcePos 1 1
       span = spanBetween pos pos
@@ -117,17 +113,17 @@ prop_error_formatting_preserves_content msg severity category =
       span = spanBetween pos pos
       error = errorAt (Just span) msg
       formatted = formatError error
-  in property $ msg `isInfixOf` formatted
+  in property $ msg `L.isInfixOf` formatted
 
--- Property: Multiple errors formatting preserves all messages
+-- Property: Multiple errors formatting preserves L.all messages
 prop_multiple_errors_formatting :: [String] -> Property
 prop_multiple_errors_formatting msgs =
-  all (not . null) msgs && length msgs <= 5 ==>
+  L.all (not . null) msgs && L.length msgs <= 5 ==>
   let pos = SourcePos 1 1
       span = spanBetween pos pos
-      errors = map (\msg -> errorAt (Just span) msg) msgs
+      errors = L.map (\msg -> errorAt (Just span) msg) msgs
       formatted = formatErrors errors
-  in property $ all (`isInfixOf` formatted) msgs
+  in property $ L.all (`L.isInfixOf` formatted) msgs
 
 -- Property: Error severity classification is consistent
 prop_error_severity_consistent :: String -> ErrorSeverity -> ErrorCategory -> Property
@@ -162,7 +158,7 @@ prop_context_merging_preserves_info key1 key2 =
 -- Property: Error location tracking is accurate
 prop_error_location_tracking :: Int -> Int -> Int -> Int -> String -> Property
 prop_error_location_tracking startLine startCol endLine endCol msg =
-  all (>0) [startLine, startCol, endLine, endCol] && not (null msg) ==>
+  L.all (>0) [startLine, startCol, endLine, endCol] && not (null msg) ==>
   let startPos = SourcePos startLine startCol
       endPos = SourcePos endLine endCol
       span = spanBetween startPos endPos

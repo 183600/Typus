@@ -10,13 +10,15 @@
 module Test.Unit.NewEnhancedUtilsStringProcessingQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose, suchThat)
 import TestSupport.Arbitrary
 
 import Utils
-import Data.List (sort, nub, group, intercalate, find, delete, isInfixOf, sortOn, stripPrefix, stripSuffix)
+import Data.List (isInfixOf)
+import Data.List (sort, nub, group, intercalate, find, delete, sortOn, stripPrefix, stripSuffix)
 import Data.Maybe (isJust, isNothing, catMaybes, fromMaybe, mapMaybe)
 import Data.Set (Set, empty, singleton, union, unions, member, size, difference, intersection)
 import qualified Data.Set as Set
@@ -40,8 +42,8 @@ prop_whitespace_preservation :: String -> String -> Property
 prop_whitespace_preservation prefix suffix =
   let input = prefix ++ "   " ++ suffix
       processed = preserveWhitespace input
-      expectedSpaces = length (filter isSpace input)
-      actualSpaces = length (filter isSpace processed)
+      expectedSpaces = L.length (filter isSpace input)
+      actualSpaces = L.length (filter isSpace processed)
   in property $ actualSpaces === expectedSpaces
 
 -- Property: Case conversion roundtrip
@@ -80,8 +82,8 @@ prop_string_prefix_suffix_extraction :: String -> String -> Property
 prop_string_prefix_suffix_extraction prefix suffix =
   not (null prefix) && not (null suffix) ==> 
   let combined = prefix ++ "middle" ++ suffix
-      extractedPrefix = extractPrefix combined (length prefix)
-      extractedSuffix = extractSuffix combined (length suffix)
+      extractedPrefix = extractPrefix combined (L.length prefix)
+      extractedSuffix = extractSuffix combined (L.length suffix)
   in property $ extractedPrefix === prefix .&&. extractedSuffix === suffix
 
 -- Property: String substitution correctness
@@ -89,11 +91,11 @@ prop_string_substitution_correctness :: String -> String -> String -> Property
 prop_string_substitution_correctness original old new =
   not (null old) ==> 
   let substituted = substituteString original old new
-      containsNew = new `isInfixOf` substituted
-      containsOld = old `isInfixOf` substituted
-  in property $ (old `isInfixOf` original) ==> (containsNew .&&. not containsOld)
+      containsNew = new `L.isInfixOf` substituted
+      containsOld = old `L.isInfixOf` substituted
+  in property $ (old `L.isInfixOf` original) ==> (containsNew .&&. not containsOld)
 
--- Property: String splitting and joining
+-- Property: String splitting L.and joining
 prop_string_splitting_joining :: String -> String -> Property
 prop_string_splitting_joining content delimiter =
   not (null delimiter) ==> 
@@ -107,7 +109,7 @@ prop_string_word_count_accuracy words =
   not (null words) ==> 
   let content = unwords words
       counted = countWords content
-  in property $ counted === length words
+  in property $ counted === L.length words
 
 -- Property: String line counting
 prop_string_line_counting :: [String] -> Property
@@ -115,7 +117,7 @@ prop_string_line_counting lines =
   not (null lines) ==> 
   let content = unlines lines
       counted = countLines content
-  in property $ counted === length lines
+  in property $ counted === L.length lines
 
 -- Property: String character classification
 prop_string_character_classification :: String -> Property
@@ -125,13 +127,13 @@ prop_string_character_classification input =
       spaces = countSpaceChars input
       punctuation = countPunctuationChars input
       total = alphas + numerics + spaces + punctuation
-  in property $ total <= length input
+  in property $ total <= L.length input
 
 -- Property: String palindrome detection
 prop_string_palindrome_detection :: String -> Property
 prop_string_palindrome_detection input =
   let cleaned = filter isAlphaNum (map toLower input)
-      isPalindrome = cleaned == reverse cleaned
+      isPalindrome = cleaned == L.reverse cleaned
       detected = isPalindromeString input
   in property $ isPalindrome === detected
 
@@ -185,26 +187,26 @@ unescapeString = unescape
     unescapeChar _ = ""
 
 trimString :: String -> String
-trimString = reverse . dropWhile isSpace . reverse . dropWhile isSpace
+trimString = L.reverse . dropWhile isSpace . L.reverse . dropWhile isSpace
 
 extractPrefix :: String -> Int -> String
 extractPrefix str n = take n str
 
 extractSuffix :: String -> Int -> String
-extractSuffix str n = drop (length str - n) str
+extractSuffix str n = drop (L.length str - n) str
 
 substituteString :: String -> String -> String -> String
 substituteString original old new = 
-  if old `isInfixOf` original
-  then takeWhile (not . isPrefixOf old) original ++ new ++ substituteString (drop (length old + length (takeWhile (not . isPrefixOf old) original)) original) old new
+  if old `L.isInfixOf` original
+  then takeWhile (not . L.isPrefixOf old) original ++ new ++ substituteString (drop (L.length old + L.length (takeWhile (not . L.isPrefixOf old) original)) original) old new
   else original
   where
-    isPrefixOf prefix str = take (length prefix) str == prefix
+    isPrefixOf prefix str = take (L.length prefix) str == prefix
 
 splitString :: String -> String -> [String]
 splitString [] _ = [""]
 splitString s delimiter
-  | delimiter `isPrefixOf` s = "" : splitString (drop (length delimiter) s) delimiter
+  | delimiter `L.isPrefixOf` s = "" : splitString (drop (L.length delimiter) s) delimiter
   | otherwise = case s of
       [] -> [""]
       (c:cs) -> case splitString cs delimiter of
@@ -217,32 +219,32 @@ joinString [x] _ = x
 joinString (x:xs) delimiter = x ++ delimiter ++ joinString xs delimiter
 
 countWords :: String -> Int
-countWords = length . words
+countWords = L.length . words
 
 countLines :: String -> Int
-countLines = length . lines
+countLines = L.length . lines
 
 countAlphaChars :: String -> Int
-countAlphaChars = length . filter isAlpha
+countAlphaChars = L.length . filter isAlpha
 
 countNumericChars :: String -> Int
-countNumericChars = length . filter isDigit
+countNumericChars = L.length . filter isDigit
 
 countSpaceChars :: String -> Int
-countSpaceChars = length . filter isSpace
+countSpaceChars = L.length . filter isSpace
 
 countPunctuationChars :: String -> Int
-countPunctuationChars = length . filter isPunctuation
+countPunctuationChars = L.length . filter isPunctuation
 
 isPalindromeString :: String -> Bool
 isPalindromeString input = 
   let cleaned = filter isAlphaNum (map toLower input)
-  in cleaned == reverse cleaned
+  in cleaned == L.reverse cleaned
 
 calculateStringSimilarity :: String -> String -> Double
 calculateStringSimilarity str1 str2 =
-  let commonChars = length $ intersect str1 str2
-      totalChars = max (length str1) (length str2)
+  let commonChars = L.length $ intersect str1 str2
+      totalChars = max (L.length str1) (L.length str2)
   in if totalChars == 0 then 1.0 else fromIntegral commonChars / fromIntegral totalChars
 
 -- Helper function for string intersection
@@ -267,7 +269,7 @@ tests = testGroup "Utils String Processing QuickCheck Tests"
   , fastProperty "String trimming idempotency" prop_string_trimming_idempotency
   , fastProperty "String prefix/suffix extraction" prop_string_prefix_suffix_extraction
   , fastProperty "String substitution correctness" prop_string_substitution_correctness
-  , fastProperty "String splitting and joining" prop_string_splitting_joining
+  , fastProperty "String splitting L.and joining" prop_string_splitting_joining
   , fastProperty "String word count accuracy" prop_string_word_count_accuracy
   , fastProperty "String line counting" prop_string_line_counting
   , fastProperty "String character classification" prop_string_character_classification

@@ -10,6 +10,7 @@
 module Test.Unit.NewCabalCompilerIRConsistencySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -50,7 +51,7 @@ tests =
         , fastProperty "inlining does not duplicate side effects" prop_inlining_no_side_effects
         ]
 
-    , testGroup "Memory and resource properties"
+    , testGroup "Memory L.and resource properties"
         [ fastProperty "IR allocation tracking is consistent" prop_allocation_tracking_consistent
         , fastProperty "lifetime analysis is conservative" prop_lifetime_analysis_conservative
         , fastProperty "resource usage is bounded" prop_resource_usage_bounded
@@ -112,7 +113,7 @@ addNode node graph =
   in graph { nodes = newNodes, types = newTypes }
 
 isWellTyped :: IRGraph -> Bool
-isWellTyped graph = all nodeWellTyped (Map.elems (nodes graph))
+isWellTyped graph = L.all nodeWellTyped (Map.elems (nodes graph))
   where
     nodeWellTyped node = 
       let declaredType = nodeType node
@@ -124,7 +125,7 @@ isWellTyped graph = all nodeWellTyped (Map.elems (nodes graph))
 hasUniqueIds :: IRGraph -> Bool
 hasUniqueIds graph = 
   let nodeIds = Map.keys (nodes graph)
-  in length nodeIds == length (nub nodeIds)
+  in L.length nodeIds == L.length (nub nodeIds)
 
 isAcyclic :: IRGraph -> Bool
 isAcyclic graph = not $ hasCycle (root graph) Set.empty
@@ -133,13 +134,13 @@ isAcyclic graph = not $ hasCycle (root graph) Set.empty
       nodeId `Set.member` visited ||
       case Map.lookup nodeId (nodes graph) of
         Nothing -> False
-        Just node -> any (\childId -> hasCycle childId (Set.insert nodeId visited)) (nodeChildren node)
+        Just node -> L.any (\childId -> hasCycle childId (Set.insert nodeId visited)) (nodeChildren node)
 
 -- IR structure properties
 
 prop_ir_consistent_typing :: String -> IRType -> Property
 prop_ir_consistent_typing nodeId nodeType' =
-  not (null nodeId) && length nodeId <= 10 ==>
+  not (null nodeId) && L.length nodeId <= 10 ==>
   let pos = posAt 1 1
       node = createSimpleNode nodeId nodeType' pos
       graph = addNode node (IRGraph Map.empty "" Map.empty)
@@ -157,12 +158,12 @@ prop_ir_preserves_locations nodeId nodeType' line col =
 
 prop_ir_acyclic :: [String] -> Property
 prop_ir_acyclic nodeIds =
-  not (null nodeIds) && length nodeIds <= 5 && all (not . null) nodeIds && all distinct nodeIds ==>
+  not (null nodeIds) && L.length nodeIds <= 5 && L.all (not . null) nodeIds && L.all distinct nodeIds ==>
   let nodesList = zipWith (\i nodeId -> 
                             let pos = posAt i 1
                                 node = createSimpleNode nodeId IRInt pos
                             in (nodeId, node)) [1..] nodeIds
-      graph = IRGraph (Map.fromList nodesList) (head nodeIds) Map.empty
+      graph = IRGraph (Map.fromList nodesList) (L.head nodeIds) Map.empty
   in property $ isAcyclic graph
   where
     distinct [] = True
@@ -170,19 +171,19 @@ prop_ir_acyclic nodeIds =
 
 prop_ir_unique_ids :: [String] -> Property
 prop_ir_unique_ids nodeIds =
-  not (null nodeIds) && length nodeIds <= 5 ==>
+  not (null nodeIds) && L.length nodeIds <= 5 ==>
   let nodesList = zipWith (\i nodeId -> 
                             let pos = posAt i 1
                                 node = createSimpleNode nodeId IRInt pos
                             in (nodeId, node)) [1..] nodeIds
-      graph = IRGraph (Map.fromList nodesList) (head nodeIds) Map.empty
+      graph = IRGraph (Map.fromList nodesList) (L.head nodeIds) Map.empty
   in property $ hasUniqueIds graph
 
 -- Type consistency properties
 
 prop_type_inference_deterministic :: String -> IRValue -> Property
 prop_type_inference_deterministic nodeId value =
-  not (null nodeId) && length nodeId <= 10 ==>
+  not (null nodeId) && L.length nodeId <= 10 ==>
   let pos = posAt 1 1
       node1 = createConstantNode nodeId value pos
       node2 = createConstantNode nodeId value pos
@@ -198,7 +199,7 @@ prop_type_inference_deterministic nodeId value =
 
 prop_type_substitution_well_formed :: String -> IRType -> Property
 prop_type_substitution_well_formed nodeId nodeType' =
-  not (null nodeId) && length nodeId <= 10 ==>
+  not (null nodeId) && L.length nodeId <= 10 ==>
   let pos = posAt 1 1
       node = createSimpleNode nodeId nodeType' pos
       graph = addNode node (IRGraph Map.empty "" Map.empty)
@@ -216,12 +217,12 @@ prop_type_unification_mgu type1 type2 =
     (IRString, IRString) -> property $ True
     (IRBool, IRBool) -> property $ True
     (IRFunction args1 ret1, IRFunction args2 ret2) -> 
-      property $ length args1 == length args2 -- Simplified: just check arity
+      property $ L.length args1 == L.length args2 -- Simplified: just check arity
     _ -> property $ False -- Different types don't unify in this simplified test
 
 prop_type_checking_safety :: String -> IRValue -> Property
 prop_type_checking_safety nodeId value =
-  not (null nodeId) && length nodeId <= 10 ==>
+  not (null nodeId) && L.length nodeId <= 10 ==>
   let pos = posAt 1 1
       node = createConstantNode nodeId value pos
       graph = addNode node (IRGraph Map.empty "" Map.empty)
@@ -245,7 +246,7 @@ prop_optimization_preserves_semantics nodeId value =
 
 prop_dead_code_elimination :: String -> Property
 prop_dead_code_elimination nodeId =
-  not (null nodeId) && length nodeId <= 10 ==>
+  not (null nodeId) && L.length nodeId <= 10 ==>
   let pos = posAt 1 1
       node = createSimpleNode nodeId IRInt pos
       graph = addNode node (IRGraph Map.empty "" Map.empty)
@@ -268,7 +269,7 @@ prop_constant_folding_preserves nodeId val1 val2 =
 
 prop_inlining_no_side_effects :: String -> Property
 prop_inlining_no_side_effects nodeId =
-  not (null nodeId) && length nodeId <= 10 ==>
+  not (null nodeId) && L.length nodeId <= 10 ==>
   let pos = posAt 1 1
       node = createSimpleNode nodeId IRInt pos
       graph = addNode node (IRGraph Map.empty "" Map.empty)
@@ -276,11 +277,11 @@ prop_inlining_no_side_effects nodeId =
       inlinedGraph = graph
   in property $ Map.size (nodes inlinedGraph) >= Map.size (nodes graph)
 
--- Memory and resource properties
+-- Memory L.and resource properties
 
 prop_allocation_tracking_consistent :: String -> Property
 prop_allocation_tracking_consistent nodeId =
-  not (null nodeId) && length nodeId <= 10 ==>
+  not (null nodeId) && L.length nodeId <= 10 ==>
   let pos = posAt 1 1
       node = createSimpleNode nodeId IRInt pos
       graph = addNode node (IRGraph Map.empty "" Map.empty)
@@ -288,30 +289,30 @@ prop_allocation_tracking_consistent nodeId =
 
 prop_lifetime_analysis_conservative :: String -> Property
 prop_lifetime_analysis_conservative nodeId =
-  not (null nodeId) && length nodeId <= 10 ==>
+  not (null nodeId) && L.length nodeId <= 10 ==>
   let pos = posAt 1 1
       node = createSimpleNode nodeId IRInt pos
       graph = addNode node (IRGraph Map.empty "" Map.empty)
-      -- Conservative analysis: assume maximum lifetime
+      -- Conservative analysis: assume L.maximum lifetime
       maxLifetime = True
   in property $ maxLifetime
 
 prop_resource_usage_bounded :: [String] -> Property
 prop_resource_usage_bounded nodeIds =
-  not (null nodeIds) && length nodeIds <= 10 ==>
+  not (null nodeIds) && L.length nodeIds <= 10 ==>
   let nodesList = zipWith (\i nodeId -> 
                             let pos = posAt i 1
                                 node = createSimpleNode nodeId IRInt pos
                             in (nodeId, node)) [1..] nodeIds
-      graph = IRGraph (Map.fromList nodesList) (head nodeIds) Map.empty
+      graph = IRGraph (Map.fromList nodesList) (L.head nodeIds) Map.empty
       resourceUsage = Map.size (nodes graph)
-  in property $ resourceUsage <= length nodeIds
+  in property $ resourceUsage <= L.length nodeIds
 
 -- Code generation properties
 
 prop_ir_translation_total :: String -> IRType -> Property
 prop_ir_translation_total nodeId nodeType' =
-  not (null nodeId) && length nodeId <= 10 ==>
+  not (null nodeId) && L.length nodeId <= 10 ==>
   let pos = posAt 1 1
       node = createSimpleNode nodeId nodeType' pos
       graph = addNode node (IRGraph Map.empty "" Map.empty)
@@ -321,7 +322,7 @@ prop_ir_translation_total nodeId nodeType' =
 
 prop_generated_code_preserves_types :: String -> IRType -> Property
 prop_generated_code_preserves_types nodeId nodeType' =
-  not (null nodeId) && length nodeId <= 10 ==>
+  not (null nodeId) && L.length nodeId <= 10 ==>
   let pos = posAt 1 1
       node = createSimpleNode nodeId nodeType' pos
       graph = addNode node (IRGraph Map.empty "" Map.empty)
@@ -333,13 +334,13 @@ prop_generated_code_preserves_types nodeId nodeType' =
 
 prop_register_allocation_optimal :: [String] -> Property
 prop_register_allocation_optimal nodeIds =
-  not (null nodeIds) && length nodeIds <= 5 ==>
+  not (null nodeIds) && L.length nodeIds <= 5 ==>
   let nodesList = zipWith (\i nodeId -> 
                             let pos = posAt i 1
                                 node = createSimpleNode nodeId IRInt pos
                             in (nodeId, node)) [1..] nodeIds
-      graph = IRGraph (Map.fromList nodesList) (head nodeIds) Map.empty
+      graph = IRGraph (Map.fromList nodesList) (L.head nodeIds) Map.empty
       -- Simulate register allocation (simplified: one register per value)
       requiredRegisters = Map.size (nodes graph)
       availableRegisters = 8  -- Typical x86-64 has more, but using 8 for test
-  in property $ requiredRegisters <= availableRegisters || requiredRegisters <= length nodeIds
+  in property $ requiredRegisters <= availableRegisters || requiredRegisters <= L.length nodeIds

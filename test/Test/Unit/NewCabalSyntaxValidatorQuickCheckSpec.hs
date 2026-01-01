@@ -43,6 +43,7 @@ import SyntaxValidator
   )
 
 import qualified Data.Set as Set
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import Data.Char (isSpace, isAlphaNum, isAlpha, isDigit)
 
@@ -157,35 +158,35 @@ prop_syntax_error_fields err =
     not (null msg) .&&.
     line > 0 .&&.
     col > 0 .&&.
-    length content >= 0
+    L.length content >= 0
 
 -- Property: formatSyntaxError includes error message
 prop_formatSyntax_error_includes_message :: SyntaxError -> Property
 prop_formatSyntax_error_includes_message err =
   let formatted = formatSyntaxError err
       msg = errorMessage err
-  in property $ msg `isInfixOf` formatted
+  in property $ msg `L.isInfixOf` formatted
 
 -- Property: formatSyntaxError includes line number
 prop_formatSyntax_error_includes_line :: SyntaxError -> Property
 prop_formatSyntax_error_includes_line err =
   let formatted = formatSyntaxError err
       line = show $ lineNumber err
-  in property $ line `isInfixOf` formatted
+  in property $ line `L.isInfixOf` formatted
 
 -- Property: validateFile is equivalent to validateSyntax
 prop_validateFile_equivalent :: String -> Property
 prop_validateFile_equivalent code =
   let syntaxErrors = validateSyntax code
       fileErrors = validateFile code
-  in property $ length syntaxErrors === length fileErrors
+  in property $ L.length syntaxErrors === L.length fileErrors
 
 -- Property: getSyntaxErrors returns errors from validator
 prop_get_syntax_errors :: SyntaxError -> Property
 prop_get_syntax_errors err =
   let validator = newSyntaxValidator
       errors = getSyntaxErrors validator
-  in property $ length errors >= 0
+  in property $ L.length errors >= 0
 
 -- Property: ErrorType classification
 prop_error_type_classification :: ErrorType -> Property
@@ -211,19 +212,19 @@ prop_syntax_error_long_content content =
         , columnNumber = 1
         , lineContent = longContent
         }
-  in property $ length (lineContent err) <= 1000
+  in property $ L.length (lineContent err) <= 1000
 
 -- Property: validateSyntax handles empty input
 prop_validateSyntax_empty_input :: Property
 prop_validateSyntax_empty_input =
   let errors = validateSyntax ""
-  in property $ length errors >= 0
+  in property $ L.length errors >= 0
 
 -- Property: validateSyntax handles whitespace-only input
 prop_validateSyntax_whitespace_only :: Property
 prop_validateSyntax_whitespace_only =
   let errors = validateSyntax "   \n\t  \n  "
-  in property $ length errors >= 0
+  in property $ L.length errors >= 0
 
 -- Property: validateSyntax handles very long lines
 prop_validateSyntax_long_lines :: Property
@@ -231,14 +232,14 @@ prop_validateSyntax_long_lines =
   let longLine = replicate 1000 'a' ++ "\n"
       code = "package main\n\nfunc main() {\n    " ++ longLine ++ "}"
       errors = validateSyntax code
-  in property $ length errors >= 0
+  in property $ L.length errors >= 0
 
 -- Property: validateSyntax handles Unicode characters
 prop_validateSyntax_unicode :: Property
 prop_validateSyntax_unicode =
   let unicodeCode = "package main\n\nfunc main() {\n    // 测试 Unicode: café naïve résumé 🚀\n    println(\"Hello\")\n}"
       errors = validateSyntax unicodeCode
-  in property $ length errors >= 0
+  in property $ L.length errors >= 0
 
 -- ============================================================================
 -- Test Suite

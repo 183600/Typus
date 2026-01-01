@@ -1,6 +1,7 @@
 module Test.Unit.StringProcessingSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, forAll, Gen, arbitrary, choose, listOf)
@@ -12,10 +13,10 @@ tests =
   testGroup "Utils String Processing"
     [ testGroup "trim function"
         [ testGroup "Basic functionality"
-            [ testCase "removes leading and trailing spaces" $ do
+            [ testCase "removes leading L.and trailing spaces" $ do
                 trim "  hello  " @?= "hello"
             
-            , testCase "removes leading and trailing tabs" $ do
+            , testCase "removes leading L.and trailing tabs" $ do
                 trim "\thello\t" @?= "hello"
             
             , testCase "removes mixed whitespace" $ do
@@ -46,15 +47,15 @@ tests =
             ]
         
         , testGroup "QuickCheck properties"
-            [ fastProperty "trim never increases string length" $
-                \s -> length (trim s) <= length s
+            [ fastProperty "trim never increases string L.length" $
+                \s -> L.length (trim s) <= L.length s
             
             , fastProperty "trim is idempotent" $
                 \s -> trim (trim s) == trim s
             
-            , fastProperty "trim removes all leading and trailing whitespace" $
+            , fastProperty "trim removes L.all leading L.and trailing whitespace" $
                 \s -> let trimmed = trim s
-                       in (null trimmed || head trimmed `notElem` " \t\n\r") &&
+                       in (null trimmed || L.head trimmed `notElem` " \t\n\r") &&
                           (null trimmed || last trimmed `notElem` " \t\n\r")
             ]
         ]
@@ -96,7 +97,7 @@ tests =
         ]
     
     , testGroup "Combined string operations"
-        [ testCase "trim and breakOn combination" $ do
+        [ testCase "trim L.and breakOn combination" $ do
             let input = "  https://example.com/path  "
                 trimmed = trim input
                 (domain, path) = breakOn "/path" trimmed
@@ -113,12 +114,12 @@ tests =
             remaining @?= "to/resource"
         ]
     
-    , testGroup "Performance and stress tests"
+    , testGroup "Performance L.and stress tests"
         [ testCase "handles very long strings" $ do
             let longString = replicate 10000 'a' ++ "marker" ++ replicate 10000 'b'
                 (prefix, suffix) = breakOn "marker" longString
-            length prefix @?= 10000
-            length suffix @?= 10000
+            L.length prefix @?= 10000
+            L.length suffix @?= 10000
         
         , testCase "handles many small operations" $ do
             let words = ["word1", "word2", "word3", "word4", "word5"]
@@ -141,10 +142,10 @@ tests =
         , fastProperty "breakOn on trimmed string behaves predictably" $
             \s pat -> let trimmed = trim s
                           (prefix, suffix) = breakOn pat trimmed
-                      in null prefix || head prefix `notElem` " \t\n\r"
+                      in null prefix || L.head prefix `notElem` " \t\n\r"
         
         , fastProperty "trim doesn't affect breakOn results for non-whitespace patterns" $
-            \s pat -> not (any (`elem` " \t\n\r") pat) ==>
+            \s pat -> not (L.any (`elem` " \t\n\r") pat) ==>
                       let (p1, s1) = breakOn pat s
                           (p2, s2) = breakOn pat (trim s)
                       in (trim p1, s1) == (p2, s2)

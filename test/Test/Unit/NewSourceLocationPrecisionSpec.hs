@@ -63,10 +63,12 @@ import SourceLocation
 
 import Data.Char (isSpace, toLower)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, tails, isInfixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (tails, sort, nub)
 import qualified Data.Text as T
 
--- Test source position creation and arithmetic
+-- Test source position creation L.and arithmetic
 test_source_position_arithmetic :: TestTree
 test_source_position_arithmetic = testCase "Source position arithmetic works correctly" $ do
   let pos1 = SourcePos 1 1 0
@@ -77,9 +79,9 @@ test_source_position_arithmetic = testCase "Source position arithmetic works cor
   pos3 @?= SourcePos 2 1 2
   pos4 @?= SourcePos 2 2 3
 
--- Test source span creation and validation
+-- Test source span creation L.and validation
 test_source_span_creation :: TestTree
-test_source_span_creation = testCase "Source span creation and validation" $ do
+test_source_span_creation = testCase "Source span creation L.and validation" $ do
   let start = SourcePos 1 1 0
       end = SourcePos 1 5 4
       span = SourceSpan start end
@@ -97,7 +99,7 @@ test_span_merging = testCase "Span merging works correctly" $ do
       merged = mergeSpans span1 span2
   merged @?= SourceSpan (SourcePos 1 1 0) (SourcePos 1 8 7)
 
--- Test located values and their positions
+-- Test located values L.and their positions
 test_located_values :: TestTree
 test_located_values = testCase "Located values track positions correctly" $ do
   let pos = SourcePos 2 3 10
@@ -142,9 +144,9 @@ test_error_location_conversion = testCase "Error location conversion" $ do
       errorLoc2 = toErrorLocationWithSpan span
   -- Test that error locations contain position information
   assertBool "Error location should contain line info" $ 
-    isInfixOf "3" (show errorLoc1)
+    L.isInfixOf "3" (show errorLoc1)
   assertBool "Error location with span should contain line info" $ 
-    isInfixOf "3" (show errorLoc2)
+    L.isInfixOf "3" (show errorLoc2)
 
 -- Test location tracking with multi-line content
 test_multiline_location_tracking :: TestTree
@@ -168,17 +170,17 @@ test_unicode_location_precision = testCase "Unicode location precision" $ do
   let start = SourcePos 1 1 0
       unicodeText = "测试Unicode🚀"
       posAfter = advancePosBy start unicodeText
-  posAfter @?= SourcePos 1 (1 + length unicodeText) (length unicodeText)
+  posAfter @?= SourcePos 1 (1 + L.length unicodeText) (L.length unicodeText)
 
--- Test span boundaries and containment
+-- Test span boundaries L.and containment
 test_span_boundaries :: TestTree
-test_span_boundaries = testCase "Span boundaries and containment" $ do
+test_span_boundaries = testCase "Span boundaries L.and containment" $ do
   let outerSpan = SourceSpan (SourcePos 1 1 0) (SourcePos 3 1 20)
       innerSpan1 = SourceSpan (SourcePos 1 5 4) (SourcePos 1 10 9)
       innerSpan2 = SourceSpan (SourcePos 2 1 10) (SourcePos 2 8 17)
       overlappingSpan = SourceSpan (SourcePos 3 1 20) (SourcePos 4 1 25)
   
-  -- Test span creation and validation
+  -- Test span creation L.and validation
   isValidSpan outerSpan @?= True
   isValidSpan innerSpan1 @?= True
   isValidSpan innerSpan2 @?= True
@@ -229,9 +231,9 @@ prop_position_newline_handling (Positive lines) (Positive cols) =
 
 -- Property: Span boundaries are consistent
 prop_span_boundaries_consistent :: Int -> Int -> Property
-prop_span_boundaries_consistent (Positive startLine) (Positive length) = 
+prop_span_boundaries_consistent (Positive startLine) (Positive L.length) = 
   let startL = min startLine 100
-      len = min length 100
+      len = min L.length 100
       start = SourcePos startL 1 (startL * 10)
       end = advancePosBy start (replicate len 'a')
       span = SourceSpan start end
@@ -243,8 +245,8 @@ prop_error_locations_contain_position pos =
   let errorLoc = toErrorLocation pos
       posStr = show pos
       errorStr = show errorLoc
-  in property $ isInfixOf (show (posLine pos)) errorStr .&&. 
-             isInfixOf (show (posColumn pos)) errorStr
+  in property $ L.isInfixOf (show (posLine pos)) errorStr .&&. 
+             L.isInfixOf (show (posColumn pos)) errorStr
 
 tests :: TestTree
 tests = testGroup "New Source Location Precision Tests"

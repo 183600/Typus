@@ -6,6 +6,7 @@ import Test.Tasty (TestTree, testGroup)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import Data.Char (isSpace, isAlphaNum)
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import qualified Data.Set as Set
 
@@ -85,7 +86,7 @@ prop_rawsource_extracts_blocks :: TypusFile -> Property
 prop_rawsource_extracts_blocks tf =
   let extracted = rawSourceFromTypus tf
       originalBlocks = tfCodeBlocks tf
-  in property $ length (lines extracted) >= length originalBlocks
+  in property $ L.length (lines extracted) >= L.length originalBlocks
 
 -- SemanticIR properties
 prop_semanticir_reflexive :: SemanticIR -> Property
@@ -119,7 +120,7 @@ prop_goir_symmetric ir1 ir2 =
 prop_emitgo_valid_structure :: GoIR -> Property
 prop_emitgo_valid_structure ir =
   let result = emitGo ir
-  in property $ length result >= 0 -- Basic validity - should not crash
+  in property $ L.length result >= 0 -- Basic validity - should not crash
 
 prop_goir_preserves_module :: GoModule -> String -> Property
 prop_goir_preserves_module goModule code =
@@ -135,39 +136,39 @@ prop_modulefromtypus_consistent tf =
 
 prop_ensurepackagedecl_adds_when_missing :: String -> Property
 prop_ensurepackagedecl_adds_when_missing code =
-  not ("package" `isPrefixOf` code) ==>
+  not ("package" `L.isPrefixOf` code) ==>
   let result = ensurePackageDecl code
-  in property $ "package" `isPrefixOf` result
+  in property $ "package" `L.isPrefixOf` result
 
 prop_ensuremainfunction_adds_when_missing :: String -> Property
 prop_ensuremainfunction_adds_when_missing code =
-  not ("func main()" `isInfixOf` code) ==>
+  not ("func main()" `L.isInfixOf` code) ==>
   let result = ensureMainFunction code
-  in property $ "func main()" `isInfixOf` result
+  in property $ "func main()" `L.isInfixOf` result
 
 prop_attachinferredimports_preserves_existing :: String -> [String] -> Property
 prop_attachinferredimports_preserves_existing code existingImports =
   let result = attachInferredImports code existingImports
-  in property $ all (`isInfixOf` result) existingImports
+  in property $ L.all (`L.isInfixOf` result) existingImports
 
 -- Code generation properties
 prop_emitgo_syntactically_valid :: GoIR -> Property
 prop_emitgo_syntactically_valid ir =
   let result = emitGo ir
-  in property $ length result >= 0 -- Basic syntactic validity
+  in property $ L.length result >= 0 -- Basic syntactic validity
 
 prop_emitgo_preserves_signatures :: GoIR -> Property
 prop_emitgo_preserves_signatures ir =
   let result = emitGo ir
       originalModule = goIRGoModule ir
-  in property $ length result >= 0 -- Preserve structure in some form
+  in property $ L.length result >= 0 -- Preserve structure in some form
 
 prop_emitgo_handles_empty_modules :: Property
 prop_emitgo_handles_empty_modules =
   let emptyModule = GoModule "" []
       emptyIR = GoIR emptyModule ""
       result = emitGo emptyIR
-  in property $ length result >= 0
+  in property $ L.length result >= 0
 
 -- Helper functions for creating test data
 createTestTypusFile :: [CodeBlock] -> TypusFile

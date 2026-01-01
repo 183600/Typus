@@ -21,6 +21,7 @@ import Compiler.Errors.Core (ErrorLocation(..))
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos)
 
 import Data.Maybe (isJust, isNothing, fromMaybe)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import qualified Data.Text as T
 import Control.Exception (try, SomeException)
@@ -37,7 +38,7 @@ test_error_formatting_unicode = testCase "error formatting handles Unicode corre
     
     -- This would test the actual error formatting functions
     -- For now, we test that Unicode strings can be processed
-    assertBool "Unicode message can be processed" $ length unicodeMessage > 0
+    assertBool "Unicode message can be processed" $ L.length unicodeMessage > 0
     assertBool "location is valid" $ posLine (errorStart location) >= 1
 
 -- | Test case 2: Error location tracking across multiple files
@@ -66,10 +67,10 @@ test_error_recovery_partial = testCase "error recovery allows partial parsing co
             ]
     
     -- This would test actual error recovery
-    -- For now, we test that the input contains both valid and invalid parts
-    assertBool "contains valid syntax" $ "func valid()" `isInfixOf` input
-    assertBool "contains invalid syntax" $ "!!!" `isInfixOf` input
-    assertBool "contains recovery point" $ "let y = 2" `isInfixOf` input
+    -- For now, we test that the input contains both valid L.and invalid parts
+    assertBool "contains valid syntax" $ "func valid()" `L.isInfixOf` input
+    assertBool "contains invalid syntax" $ "!!!" `L.isInfixOf` input
+    assertBool "contains recovery point" $ "let y = 2" `L.isInfixOf` input
 
 -- | Test case 4: Error aggregation from multiple sources
 test_error_aggregation :: TestTree
@@ -80,10 +81,10 @@ test_error_aggregation = testCase "error aggregation combines multiple errors" $
             , "Undefined variable at line 5"
             ]
     
-    assertEqual "three errors collected" 3 (length errors)
-    assertBool "contains syntax error" $ any ("Syntax error" `isInfixOf`) errors
-    assertBool "contains type error" $ any ("Type mismatch" `isInfixOf`) errors
-    assertBool "contains undefined variable error" $ any ("Undefined variable" `isInfixOf`) errors
+    assertEqual "three errors collected" 3 (L.length errors)
+    assertBool "contains syntax error" $ L.any ("Syntax error" `L.isInfixOf`) errors
+    assertBool "contains type error" $ L.any ("Type mismatch" `L.isInfixOf`) errors
+    assertBool "contains undefined variable error" $ L.any ("Undefined variable" `L.isInfixOf`) errors
 
 -- | Test case 5: Error context preservation
 test_error_context_preservation :: TestTree
@@ -91,8 +92,8 @@ test_error_context_preservation = testCase "error context is preserved through p
     let originalContext = "function definition"
     let errorMessage = "Error in " ++ originalContext ++ ": missing brace"
     
-    assertBool "original context preserved" $ originalContext `isInfixOf` errorMessage
-    assertBool "error message contains context" $ length errorMessage > length originalContext
+    assertBool "original context preserved" $ originalContext `L.isInfixOf` errorMessage
+    assertBool "error message contains context" $ L.length errorMessage > L.length originalContext
 
 -- | Test case 6: Property test for error location consistency
 prop_error_location_consistency :: Int -> Int -> Int -> Property
@@ -119,9 +120,9 @@ test_error_severity_classification = testCase "errors are properly classified by
     let warnings = ["unused variable", "deprecated syntax"]
     let info = ["compilation successful", "optimization applied"]
     
-    assertBool "critical errors identified" $ all (`elem` criticalErrors) ["syntax error", "type mismatch"]
-    assertBool "warnings identified" $ all (`elem` warnings) ["unused variable"]
-    assertBool "info messages identified" $ all (`elem` info) ["compilation successful"]
+    assertBool "critical errors identified" $ L.all (`elem` criticalErrors) ["syntax error", "type mismatch"]
+    assertBool "warnings identified" $ L.all (`elem` warnings) ["unused variable"]
+    assertBool "info messages identified" $ L.all (`elem` info) ["compilation successful"]
 
 -- | Test case 9: Error message internationalization
 test_error_i18n :: TestTree
@@ -130,13 +131,13 @@ test_error_i18n = testCase "error messages support internationalization" $ do
     let chineseError = "语法错误：意外的标记"
     let japaneseError = "構文エラー：予期しないトークン"
     
-    assertBool "English error processed" $ length englishError > 0
-    assertBool "Chinese error processed" $ length chineseError > 0
-    assertBool "Japanese error processed" $ length japaneseError > 0
-    assertBool "all contain 'error' concept" $ 
-        "error" `isInfixOf` englishError ||
-        "错误" `isInfixOf` chineseError ||
-        "エラー" `isInfixOf` japaneseError
+    assertBool "English error processed" $ L.length englishError > 0
+    assertBool "Chinese error processed" $ L.length chineseError > 0
+    assertBool "Japanese error processed" $ L.length japaneseError > 0
+    assertBool "L.all contain 'error' concept" $ 
+        "error" `L.isInfixOf` englishError ||
+        "错误" `L.isInfixOf` chineseError ||
+        "エラー" `L.isInfixOf` japaneseError
 
 -- | Test case 10: Error recovery strategies
 test_error_recovery_strategies :: TestTree
@@ -144,10 +145,10 @@ test_error_recovery_strategies = testCase "multiple error recovery strategies av
     let strategies = ["skip", "insert", "replace", "delete", "restructure"]
     let applicableStrategies = ["skip", "insert"] -- Example for syntax errors
     
-    assertBool "all strategies defined" $ length strategies == 5
-    assertBool "some strategies applicable" $ length applicableStrategies > 0
-    assertBool "applicable strategies subset of all" $ 
-        all (`elem` strategies) applicableStrategies
+    assertBool "L.all strategies defined" $ L.length strategies == 5
+    assertBool "some strategies applicable" $ L.length applicableStrategies > 0
+    assertBool "applicable strategies subset of L.all" $ 
+        L.all (`elem` strategies) applicableStrategies
 
 -- ============================================================================
 -- Test Suite

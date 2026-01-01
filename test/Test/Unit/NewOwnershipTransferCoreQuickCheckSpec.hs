@@ -3,6 +3,7 @@
 module Test.Unit.NewOwnershipTransferCoreQuickCheckSpec where
 
 import Test.Tasty (TestTree)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), counterexample)
 import Test.Tasty.HUnit (testCase, assertBool)
 
@@ -181,15 +182,15 @@ prop_borrowingCreatesRelationships context fromVar toVar =
 -- Property: Shared ownership allows multiple borrows
 prop_sharedOwnershipAllowsMultipleBorrows :: OwnershipContext -> String -> [String] -> Property
 prop_sharedOwnershipAllowsMultipleBorrows context fromVar toVars =
-    let initialTransfer = OwnershipTransfer fromVar (head toVars) ShareOwnership
+    let initialTransfer = OwnershipTransfer fromVar (L.head toVars) ShareOwnership
         result1 = performOwnershipTransfer initialTransfer context
     in case result1 of
         Right sharedContext -> 
-            let borrowTransfers = [OwnershipTransfer fromVar toVar BorrowOwnership | toVar <- tail toVars]
-                results = map (`performOwnershipTransfer` sharedContext) borrowTransfers
-                successCount = length $ filter isRight results
+            let borrowTransfers = [OwnershipTransfer fromVar toVar BorrowOwnership | toVar <- L.tail toVars]
+                results = L.map (`performOwnershipTransfer` sharedContext) borrowTransfers
+                successCount = L.length $ filter isRight results
             in counterexample ("Shared ownership should allow multiple borrows")
-               (successCount === length (tail toVars))
+               (successCount === L.length (L.tail toVars))
         Left _ -> property True
 
 -- Property: Ownership context maintains variable uniqueness
@@ -199,7 +200,7 @@ prop_contextMaintainsUniqueness context =
         varNames = map varName vars
         uniqueNames = nub varNames
     in counterexample ("Context should maintain variable uniqueness")
-       (length varNames === length uniqueNames)
+       (L.length varNames === L.length uniqueNames)
 
 -- Property: Permission checking works correctly
 prop_permissionCheckingWorks :: OwnershipVariable -> OwnershipPermission -> Property

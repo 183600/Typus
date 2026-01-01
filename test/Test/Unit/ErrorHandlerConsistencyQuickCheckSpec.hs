@@ -10,6 +10,7 @@
 module Test.Unit.ErrorHandlerConsistencyQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertBool, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -50,7 +51,7 @@ instance Arbitrary ErrorSeverity where
 -- Property: Error messages are non-empty
 prop_error_messages_nonempty :: TestError -> Property
 prop_error_messages_nonempty error =
-  property $ not (null (errorMsg error))
+  property $ not (L.null (errorMsg error))
 
 -- Property: Error codes are within valid range
 prop_error_codes_valid_range :: TestError -> Property
@@ -74,28 +75,28 @@ prop_error_positions_positive_column error =
 prop_error_severity_ordering :: ErrorSeverity -> ErrorSeverity -> Property
 prop_error_severity_ordering sev1 sev2 =
   let ordered = sort [sev1, sev2]
-  in property $ head ordered <= last ordered
+  in property $ L.head ordered <= last ordered
 
 -- Property: Error list sorting maintains consistency
 prop_error_list_sorting :: [TestError] -> Property
 prop_error_list_sorting errors =
   let sortedByCode = sort $ map errorCode errors
       sortedByMsg = sort $ map errorMsg errors
-  in property $ length sortedByCode == length errors &&
-                length sortedByMsg == length errors
+  in property $ L.length sortedByCode == L.length errors &&
+                L.length sortedByMsg == L.length errors
 
 -- Property: Error deduplication works correctly
 prop_error_deduplication :: [TestError] -> Property
 prop_error_deduplication errors =
   let uniqueErrors = nub errors
       uniqueCodes = nub $ map errorCode errors
-  in property $ length uniqueErrors == length uniqueCodes
+  in property $ L.length uniqueErrors == L.length uniqueCodes
 
 -- Property: Error severity filtering works correctly
 prop_error_severity_filtering :: [TestError] -> ErrorSeverity -> Property
 prop_error_severity_filtering errors targetSeverity =
-  let filtered = filter (\e -> errorSeverity e == targetSeverity) errors
-      allCorrect = all (\e -> errorSeverity e == targetSeverity) filtered
+  let filtered = L.filter (\e -> errorSeverity e == targetSeverity) errors
+      allCorrect = L.all (\e -> errorSeverity e == targetSeverity) filtered
   in property $ allCorrect
 
 -- Property: Error position ordering is consistent
@@ -112,7 +113,7 @@ prop_error_message_formatting :: TestError -> Property
 prop_error_message_formatting error =
   let msg = errorMsg error
       hasContent = not (null msg)
-      startsProperly = not (null msg) && head msg /= ' '
+      startsProperly = not (null msg) && L.head msg /= ' '
   in property $ hasContent .&&. startsProperly
 
 -- Property: Error creation consistency
@@ -142,11 +143,11 @@ tests = testGroup "Error Handler Consistency QuickCheck Tests"
       let error1 = TestError "Test error 1" 1001 (SourcePos 1 5 0) ErrorError
           error2 = TestError "Test error 2" 1002 (SourcePos 2 10 0) ErrorWarning
           error3 = TestError "Test error 1" 1001 (SourcePos 3 15 0) ErrorError  -- Duplicate code
-      assertBool "Error messages should be non-empty" $ not (null $ errorMsg error1)
+      assertBool "Error messages should be non-empty" $ not (L.null $ errorMsg error1)
       assertBool "Error codes should be in valid range" $ errorCode error1 >= 1000 && errorCode error1 <= 9999
       assertBool "Error positions should have positive line numbers" $ posLine (errorPos error1) > 0
       assertBool "Error positions should have positive column numbers" $ posColumn (errorPos error1) > 0
       let errors = [error1, error2, error3]
           uniqueErrors = nub errors
-      assertBool "Deduplication should work" $ length uniqueErrors == 2
+      assertBool "Deduplication should work" $ L.length uniqueErrors == 2
   ]

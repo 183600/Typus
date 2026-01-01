@@ -1,6 +1,7 @@
 module Main (main) where
 
 import System.Exit (exitFailure)
+import qualified Data.List as L
 import Parser (parseTypus)
 import Compiler (compile, renderCompilationError)
 
@@ -8,7 +9,7 @@ main :: IO ()
 main = do
     putStrLn "Testing compiler..."
     content <- readFile "fixtures/reference/simple_test.typus"
-    putStrLn $ "Parsing content of length: " ++ show (length content)
+    putStrLn $ "Parsing content of L.length: " ++ show (L.length content)
     
     case parseTypus content of
         Left err -> do
@@ -24,5 +25,5 @@ main = do
                     exitFailure
                 Right goCode -> do
                     putStrLn "Compilation successful!"
-                    putStrLn $ "Generated code length: " ++ show (length goCode)
+                    putStrLn $ "Generated code L.length: " ++ show (L.length goCode)
                     putStrLn $ "Generated code:\n" ++ goCode

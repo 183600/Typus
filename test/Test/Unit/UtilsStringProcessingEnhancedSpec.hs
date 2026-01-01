@@ -28,7 +28,9 @@ import Utils
   )
 import Data.Char (isSpace, toLower, isAlphaNum, isLetter)
 import qualified Data.List as Data.List
-import Data.List (isPrefixOf, tails, isInfixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (tails, sort, nub)
 
 -- ============================================================================
 -- 生成测试数据
@@ -102,9 +104,9 @@ prop_trim_handles_all_whitespace prefix suffix =
   let whitespace = " \t\n\r\f\v"
       content = prefix ++ "content" ++ suffix
       trimmed = trim content
-      hasLeading = any (`elem` whitespace) prefix
-      hasTrailing = any (`elem` whitespace) suffix
-      noLeadingSpace = null trimmed || not (head trimmed `elem` whitespace)
+      hasLeading = L.any (`elem` whitespace) prefix
+      hasTrailing = L.any (`elem` whitespace) suffix
+      noLeadingSpace = null trimmed || not (L.head trimmed `elem` whitespace)
       noTrailingSpace = null trimmed || not (last trimmed `elem` whitespace)
   in classify hasLeading "has leading whitespace" $
      classify hasTrailing "has trailing whitespace" $
@@ -131,21 +133,21 @@ prop_removeLineComments_preserves_string_literals code comment =
   not ('"' `elem` comment) ==>
   let stringWithComment = code ++ " // " ++ comment ++ " \"" ++ "text with // comment" ++ "\""
       cleaned = removeLineComments stringWithComment
-  in property $ "\"text with // comment\"" `isInfixOf` cleaned
+  in property $ "\"text with // comment\"" `L.isInfixOf` cleaned
 
 -- Property: removeLineComments保留字符字面量中的注释标记
 prop_removeLineComments_preserves_char_literals :: String -> Char -> Property
 prop_removeLineComments_preserves_char_literals code char =
   let stringWithComment = code ++ " // comment '" ++ [char] ++ "' // more"
       cleaned = removeLineComments stringWithComment
-  in property $ "'" ++ [char] ++ "'" `isInfixOf` cleaned
+  in property $ "'" ++ [char] ++ "'" `L.isInfixOf` cleaned
 
 -- Property: removeComments处理嵌套结构
 prop_removeComments_nested_structures :: String -> String -> String -> Property
 prop_removeComments_nested_structures code1 code2 comment =
   not ('"' `elem` code1) && not ('"' `elem` code2) &&
   not ('\'' `elem` code1) && not ('\'' `elem` code2) &&
-  not ("/*" `isInfixOf` code1) && not ("/*" `isInfixOf` code2) ==>
+  not ("/*" `L.isInfixOf` code1) && not ("/*" `L.isInfixOf` code2) ==>
   let nested = code1 ++ " /* outer " ++ comment ++ " */ " ++ code2
       cleaned = removeComments nested
   in property $ cleaned === (code1 ++ "  " ++ code2)
@@ -154,26 +156,26 @@ prop_removeComments_nested_structures code1 code2 comment =
 prop_normalizeIndentation_preserves_relative :: String -> Property
 prop_normalizeIndentation_preserves_relative input =
   let lines' = lines input
-      nonEmpty = filter (not . all isSpace) lines'
-  in length nonEmpty >= 2 ==>
+      nonEmpty = L.filter (not . L.all isSpace) lines'
+  in L.length nonEmpty >= 2 ==>
      let normalized = normalizeIndentation input
          normLines = lines normalized
-         firstNonEmpty = head nonEmpty
-         firstIndent = length $ takeWhile isSpace firstNonEmpty
-         relativeIndents = map (\l -> length (takeWhile isSpace l) - firstIndent) nonEmpty
-         normIndents = map (length . takeWhile isSpace) (filter (not . all isSpace) normLines)
-     in property $ all (>= 0) normIndents
+         firstNonEmpty = L.head nonEmpty
+         firstIndent = L.length $ takeWhile isSpace firstNonEmpty
+         relativeIndents = L.map (\l -> L.length (takeWhile isSpace l) - firstIndent) nonEmpty
+         normIndents = L.map (L.length . takeWhile isSpace) (L.filter (not . L.all isSpace) normLines)
+     in property $ L.all (>= 0) normIndents
 
 -- Property: forceSingleTabIndentation转换为制表符
 prop_forceSingleTabIndentation_converts_to_tabs :: String -> Property
 prop_forceSingleTabIndentation_converts_to_tabs input =
   let lines' = lines input
-      nonEmpty = filter (not . all isSpace) lines'
+      nonEmpty = L.filter (not . L.all isSpace) lines'
   in not (null nonEmpty) ==>
      let tabbed = forceSingleTabIndentation input
          tabLines = lines tabbed
-         nonEmptyTabbed = filter (not . null) tabLines
-     in property $ all (\l -> head l == '\t') nonEmptyTabbed
+         nonEmptyTabbed = L.filter (not . null) tabLines
+     in property $ L.all (\l -> L.head l == '\t') nonEmptyTabbed
 
 -- Property: breakOn处理空模式
 prop_breakOn_empty_pattern :: String -> Property
@@ -184,7 +186,7 @@ prop_breakOn_empty_pattern str =
 -- Property: breakOn处理不存在的模式
 prop_breakOn_nonexistent_pattern :: String -> String -> Property
 prop_breakOn_nonexistent_pattern str pattern =
-  not (pattern `isInfixOf` str) ==>
+  not (pattern `L.isInfixOf` str) ==>
   let (before, after) = breakOn pattern str
   in property $ before === str .&&. after === ""
 
@@ -204,15 +206,15 @@ prop_breakOn_existing_pattern prefix pattern suffix =
 prop_large_string_processing :: Int -> Property
 prop_large_string_processing size =
   size > 0 && size <= 10000 ==>
-  let largeString = concat (replicate size "test ")
+  let largeString = L.concat (replicate size "test ")
       trimmed = trim largeString
-  in property $ not (null trimmed) && head trimmed == 't' && last trimmed == 't'
+  in property $ not (null trimmed) && L.head trimmed == 't' && last trimmed == 't'
 
 -- Property: 深度嵌套注释
 prop_deep_nested_comments :: Int -> Property
 prop_deep_nested_comments depth =
   depth > 0 && depth <= 100 ==>
-  let nestedComment = "/*" ++ concat (replicate depth "nested ") ++ "*/"
+  let nestedComment = "/*" ++ L.concat (replicate depth "nested ") ++ "*/"
       code = "before " ++ nestedComment ++ " after"
       cleaned = removeComments code
   in property $ cleaned === "before  after"
@@ -223,7 +225,7 @@ prop_complex_indentation_patterns lines =
   lines > 0 && lines <= 50 ==>
   let indentPattern = cycle ["", " ", "  ", "   ", "    ", "\t", "\t ", " \t"]
       lines' = take lines $ zipWith (++) indentPattern (repeat "content\n")
-      content = concat lines'
+      content = L.concat lines'
       normalized = normalizeIndentation content
   in property $ not (null normalized)
 
@@ -235,7 +237,7 @@ tests :: TestTree
 tests =
   testGroup "Utils String Processing Enhanced Tests"
     [ testGroup "Property Tests"
-        [ fastProperty "trim handles all whitespace characters" prop_trim_handles_all_whitespace
+        [ fastProperty "trim handles L.all whitespace characters" prop_trim_handles_all_whitespace
         , fastProperty "splitBy handles Unicode characters" prop_splitBy_unicode
         , fastProperty "splitByCollapsed handles consecutive delimiters" prop_splitByCollapsed_consecutive
         , fastProperty "removeLineComments preserves string literals" prop_removeLineComments_preserves_string_literals
@@ -270,18 +272,18 @@ tests =
                 expected = "code \"string with /* not a comment */\"  more"
             removeComments input @?= expected
 
-        , testCase "normalizeIndentation with mixed tabs and spaces" $ do
+        , testCase "normalizeIndentation with mixed tabs L.and spaces" $ do
             let input = unlines ["    line1", "\tline2", "  \t line3", "        line4"]
                 result = normalizeIndentation input
                 resultLines = lines result
-            length resultLines @?= 4
-            head resultLines @?= "line1"
+            L.length resultLines @?= 4
+            L.head resultLines @?= "line1"
 
         , testCase "forceSingleTabIndentation with complex content" $ do
             let input = unlines ["    line1", "        line2", "", "  line3"]
                 result = forceSingleTabIndentation input
                 resultLines = lines result
-            filter (not . null) resultLines @?= ["\tline1", "\tline2", "\tline3"]
+            L.filter (not . null) resultLines @?= ["\tline1", "\tline2", "\tline3"]
 
         , testCase "breakOn with multiple occurrences" $ do
             let input = "hello world hello universe"
@@ -298,15 +300,15 @@ tests =
                   ]
                 result = removeComments input
                 resultLines = lines result
-            head resultLines @?= "code before "
+            L.head resultLines @?= "code before "
             resultLines !! 1 @?= "code  after"
-            "\"string with // not comment\"" `isInfixOf` result
+            "\"string with // not comment\"" `L.isInfixOf` result
 
         , testCase "indentation normalization edge cases" $ do
             let input = unlines ["", "    ", "  content", "\t\tmore", ""]
                 result = normalizeIndentation input
                 resultLines = lines result
-            length resultLines @?= 5
+            L.length resultLines @?= 5
             resultLines !! 0 @?= ""
             resultLines !! 1 @?= ""
             resultLines !! 2 @?= "content"
@@ -314,7 +316,7 @@ tests =
         , testCase "splitByComma with quoted commas" $ do
             let csv = "item1,\"item2,with,commas\",item3"
                 result = splitByComma csv
-            length result @?= 3
+            L.length result @?= 3
             result !! 0 @?= "item1"
             result !! 1 @?= "\"item2"
             result !! 2 @?= "with,commas\",item3"

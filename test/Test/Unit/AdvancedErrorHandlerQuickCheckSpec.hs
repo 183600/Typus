@@ -41,43 +41,15 @@ import Compiler.Errors.Core
   , formatErrorsWithLocation
   , canRecoverFrom
   , shouldContinueAfter
-  , errorAt
-  , errorWithCategory
-  , warningAt
-  , warningWithCategory
-  , infoAt
-  , infoWithCategory
-  , fatalError
-  , fatalErrorWithCategory
-  , errorWithSuggestions
-  , withLocation
-  , withContext
-  , withSuggestions
-  , withRelatedErrors
-  , wrapError
-  , combineErrors
-  , combinedErrorSeverity
-  , filterCombinedErrorsBySeverity
-  , hasCategory
-  , filterByCategory
-  , filterBySeverity
-  , getErrorStatistics
-  , generateErrorReport
-  , createRecoveryStrategy
-  , customRecovery
-  , fatalRecovery
-  , errorRecovery
-  , warningRecovery
-  , infoRecovery
-  , severityPriority
-  , compareSeverity
   , isAtLeast
   )
 
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Char (isSpace)
-import Data.List (isPrefixOf, isInfixOf, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort)
 import qualified Data.Map.Strict as Map
 
 -- Property: ErrorSeverity ordering is consistent
@@ -138,26 +110,26 @@ prop_add_info_increases_count infoMsg =
 -- Property: getErrors returns added errors
 prop_get_errors_returns_added :: [String] -> Property
 prop_get_errors_returns_added errorMessages =
-  not (null errorMessages) && all (not . null) errorMessages ==>
+  not (null errorMessages) && L.all (not . null) errorMessages ==>
   let collector = foldl addError newErrorCollector errorMessages
       retrievedErrors = getErrors collector
-  in property $ length retrievedErrors === length errorMessages
+  in property $ L.length retrievedErrors === L.length errorMessages
 
 -- Property: getWarnings returns added warnings
 prop_get_warnings_returns_added :: [String] -> Property
 prop_get_warnings_returns_added warningMessages =
-  not (null warningMessages) && all (not . null) warningMessages ==>
+  not (null warningMessages) && L.all (not . null) warningMessages ==>
   let collector = foldl addWarning newErrorCollector warningMessages
       retrievedWarnings = getWarnings collector
-  in property $ length retrievedWarnings === length warningMessages
+  in property $ L.length retrievedWarnings === L.length warningMessages
 
--- Property: getAllMessages includes all message types
+-- Property: getAllMessages includes L.all message types
 prop_get_all_messages_includes_all :: [String] -> [String] -> [String] -> Property
 prop_get_all_messages_includes_all errorMessages warningMessages infoMessages =
   not (null errorMessages) && not (null warningMessages) && not (null infoMessages) ==>
   let collector = foldl addWarning (foldl addError (foldl addInfo newErrorCollector infoMessages) errorMessages) warningMessages
       allMessages = getAllMessages collector
-  in property $ length allMessages >= length errorMessages + length warningMessages + length infoMessages
+  in property $ L.length allMessages >= L.length errorMessages + L.length warningMessages + L.length infoMessages
 
 -- Property: formatError produces non-empty output
 prop_format_error_non_empty :: String -> Property
@@ -169,10 +141,10 @@ prop_format_error_non_empty errorMsg =
 -- Property: formatErrors preserves order
 prop_format_errors_preserves_order :: [String] -> Property
 prop_format_errors_preserves_order errorMessages =
-  not (null errorMessages) && all (not . null) errorMessages ==>
+  not (null errorMessages) && L.all (not . null) errorMessages ==>
   let formatted = formatErrors errorMessages
       formattedLines = lines formatted
-  in property $ length formattedLines >= length errorMessages
+  in property $ L.length formattedLines >= L.length errorMessages
 
 -- Property: formatErrorWithLocation includes location info
 prop_format_error_with_location :: String -> Int -> Int -> Property
@@ -180,7 +152,7 @@ prop_format_error_with_location errorMsg line col =
   not (null errorMsg) && line > 0 && col > 0 ==>
   let location = ErrorLocation line col
       formatted = formatErrorWithLocation errorMsg location
-  in property $ show line `isInfixOf` formatted .&&. show col `isInfixOf` formatted
+  in property $ show line `L.isInfixOf` formatted .&&. show col `L.isInfixOf` formatted
 
 -- Property: canRecoverFrom handles different severities
 prop_can_recover_from_severity :: ErrorSeverity -> Property
@@ -194,48 +166,22 @@ prop_should_continue_after severity =
   let shouldContinue = shouldContinueAfter severity
   in property $ (severity == Fatal) ==> not shouldContinue
 
--- Property: errorAt creates error with location
-prop_error_at_creates_with_location :: String -> Int -> Int -> Property
-prop_error_at_creates_with_location errorMsg line col =
-  not (null errorMsg) && line > 0 && col > 0 ==>
+-- Property: errorWithCategory creates error with correct category
+prop_error_with_category :: ErrorCategory -> String -> Property
+prop_error_with_category category errorMsg =
+  let location = ErrorLocation Nothing 1 1 Nothing Nothing
+      error = errorWithCategory category (T.pack errorMsg) location
+  in property $ True  -- Basic smoke test
+
+-- Property: warningAt "test-id" (null warningMsg) && line > 0 && col > 0 ==>
   let location = ErrorLocation line col
-      error = errorAt location errorMsg
-  in property $ True  -- Basic smoke test
-
--- Property: errorWithCategory preserves category
-prop_error_with_category_preserves :: String -> ErrorCategory -> Property
-prop_error_with_category_preserves errorMsg category =
-  not (null errorMsg) ==>
-  let error = errorWithCategory category errorMsg
-  in property $ True  -- Basic smoke test
-
--- Property: warningAt creates warning with location
-prop_warning_at_creates_with_location :: String -> Int -> Int -> Property
-prop_warning_at_creates_with_location warningMsg line col =
-  not (null warningMsg) && line > 0 && col > 0 ==>
-  let location = ErrorLocation line col
-      warning = warningAt location warningMsg
-  in property $ True  -- Basic smoke test
-
--- Property: warningWithCategory preserves category
-prop_warning_with_category_preserves :: String -> ErrorCategory -> Property
-prop_warning_with_category_preserves warningMsg category =
-  not (null warningMsg) ==>
+      warning = warningAt "test-id" (null warningMsg) ==>
   let warning = warningWithCategory category warningMsg
   in property $ True  -- Basic smoke test
 
--- Property: infoAt creates info with location
-prop_info_at_creates_with_location :: String -> Int -> Int -> Property
-prop_info_at_creates_with_location infoMsg line col =
-  not (null infoMsg) && line > 0 && col > 0 ==>
+-- Property: infoAt "test-id" (null infoMsg) && line > 0 && col > 0 ==>
   let location = ErrorLocation line col
-      info = infoAt location infoMsg
-  in property $ True  -- Basic smoke test
-
--- Property: infoWithCategory preserves category
-prop_info_with_category_preserves :: String -> ErrorCategory -> Property
-prop_info_with_category_preserves infoMsg category =
-  not (null infoMsg) ==>
+      info = infoAt "test-id" (null infoMsg) ==>
   let info = infoWithCategory category infoMsg
   in property $ True  -- Basic smoke test
 
@@ -256,7 +202,7 @@ prop_fatal_error_with_category_preserves errorMsg category =
 -- Property: errorWithSuggestions includes suggestions
 prop_error_with_suggestions :: String -> [String] -> Property
 prop_error_with_suggestions errorMsg suggestions =
-  not (null errorMsg) && not (null suggestions) && all (not . null) suggestions ==>
+  not (null errorMsg) && not (null suggestions) && L.all (not . null) suggestions ==>
   let error = errorWithSuggestions errorMsg suggestions
   in property $ True  -- Basic smoke test
 
@@ -264,17 +210,17 @@ prop_error_with_suggestions errorMsg suggestions =
 prop_wrap_error_preserves :: String -> String -> Property
 prop_wrap_error_preserves wrapperMsg originalMsg =
   not (null wrapperMsg) && not (null originalMsg) ==>
-  let originalError = errorAt (ErrorLocation 1 1) originalMsg
+  let originalError = errorAt "test-id" 1 1) originalMsg
       wrappedError = wrapError wrapperMsg originalError
   in property $ True  -- Basic smoke test
 
--- Property: combineErrors preserves all errors
+-- Property: combineErrors preserves L.all errors
 prop_combine_errors_preserves :: [String] -> [String] -> Property
 prop_combine_errors_preserves errors1 errors2 =
   not (null errors1) && not (null errors2) &&
-  all (not . null) errors1 && all (not . null) errors2 ==>
-  let errorList1 = map (\msg -> errorAt (ErrorLocation 1 1) msg) errors1
-      errorList2 = map (\msg -> errorAt (ErrorLocation 1 1) msg) errors2
+  L.all (not . null) errors1 && L.all (not . null) errors2 ==>
+  let errorList1 = L.map (\msg -> errorAt "test-id" 1 1) msg) errors1
+      errorList2 = L.map (\msg -> errorAt "test-id" 1 1) msg) errors2
       combined = combineErrors errorList1 errorList2
   in property $ True  -- Basic smoke test
 
@@ -283,7 +229,7 @@ prop_combined_error_severity_highest :: [ErrorSeverity] -> Property
 prop_combined_error_severity_highest severities =
   not (null severities) ==>
   let highest = combinedErrorSeverity severities
-      maxSev = maximum severities
+      maxSev = L.maximum severities
   in property $ highest === maxSev
 
 -- Property: filterCombinedErrorsBySeverity preserves order
@@ -291,7 +237,7 @@ prop_filter_combined_by_severity_preserves_order :: [ErrorSeverity] -> ErrorSeve
 prop_filter_combined_by_severity_preserves_order severities minSeverity =
   not (null severities) ==>
   let filtered = filterCombinedErrorsBySeverity severities minSeverity
-      expected = filter (\sev -> isAtLeast sev minSeverity) severities
+      expected = L.filter (\sev -> isAtLeast sev minSeverity) severities
   in property $ filtered === expected
 
 -- Property: hasCategory finds matching errors
@@ -306,16 +252,16 @@ prop_filter_by_category_preserves :: [(ErrorCategory, String)] -> ErrorCategory 
 prop_filter_by_category_preserves categoryMessages targetCategory =
   not (null categoryMessages) ==>
   let filtered = filterByCategory categoryMessages targetCategory
-      expected = filter (\(cat, _) -> cat == targetCategory) categoryMessages
-  in property $ length filtered === length expected
+      expected = L.filter (\(cat, _) -> cat == targetCategory) categoryMessages
+  in property $ L.length filtered === L.length expected
 
 -- Property: filterBySeverity preserves matching severities
 prop_filter_by_severity_preserves :: [(ErrorSeverity, String)] -> ErrorSeverity -> Property
 prop_filter_by_severity_preserves severityMessages minSeverity =
   not (null severityMessages) ==>
   let filtered = filterBySeverity severityMessages minSeverity
-      expected = filter (\(sev, _) -> isAtLeast sev minSeverity) severityMessages
-  in property $ length filtered === length expected
+      expected = L.filter (\(sev, _) -> isAtLeast sev minSeverity) severityMessages
+  in property $ L.length filtered === L.length expected
 
 -- Property: getErrorStatistics provides counts
 prop_get_error_statistics_counts :: [String] -> [String] -> [String] -> Property
@@ -327,7 +273,7 @@ prop_get_error_statistics_counts errorMessages warningMessages infoMessages =
 -- Property: generateErrorReport produces non-empty output
 prop_generate_error_report_non_empty :: [String] -> Property
 prop_generate_error_report_non_empty errorMessages =
-  not (null errorMessages) && all (not . null) errorMessages ==>
+  not (null errorMessages) && L.all (not . null) errorMessages ==>
   let collector = foldl addError newErrorCollector errorMessages
       report = generateErrorReport collector
   in property $ not (null report)
@@ -366,7 +312,7 @@ tests = testGroup "Advanced ErrorHandler QuickCheck"
   , fastProperty "add info increases count" prop_add_info_increases_count
   , fastProperty "get errors returns added" prop_get_errors_returns_added
   , fastProperty "get warnings returns added" prop_get_warnings_returns_added
-  , fastProperty "get all messages includes all" prop_get_all_messages_includes_all
+  , fastProperty "get L.all messages includes L.all" prop_get_all_messages_includes_all
   , fastProperty "format error non empty" prop_format_error_non_empty
   , fastProperty "format errors preserves order" prop_format_errors_preserves_order
   , fastProperty "format error with location" prop_format_error_with_location

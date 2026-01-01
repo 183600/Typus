@@ -16,7 +16,9 @@ import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, Gen, arbitrary, choose, listOf, elements, vectorOf)
 
 import qualified Data.Text as T
-import Data.List (isInfixOf, isPrefixOf, null, length, reverse, sort, group, intercalate)
+import qualified Data.List as L
+import Data.List (isInfixOf, isPrefixOf, length, reverse)
+import Data.List (null, sort, group, intercalate)
 import Data.Char (isSpace, isAlphaNum, isLetter, isDigit, toLower, toUpper, ord, chr)
 import qualified Data.Map as Map
 import Data.Maybe (isJust, isNothing, fromMaybe)
@@ -36,7 +38,7 @@ import Utils
   , breakOn
   )
 
--- | Text processing robustness tests covering edge cases and performance
+-- | Text processing robustness tests covering edge cases L.and performance
 tests :: TestTree
 tests = testGroup "Text Processing Robustness Tests"
   [ testGroup "String Manipulation Edge Cases"
@@ -51,13 +53,13 @@ tests = testGroup "Text Processing Robustness Tests"
 
       , testCase "whitespace-only strings" $ do
           let whitespaceStrings = [" ", "\t", "\n", "\r", "   ", "\t\t", "\n\n", " \t \n \r "]
-              results = map (\ws -> (trim ws, splitBy "," ws, removeComments ws)) whitespaceStrings
-              allTrimmedEmpty = all (\(t, _, _) -> null t) results
-              allSplitHandled = all (\(_, s, _) -> length s >= 1) results
-              allCommentHandled = all (\(_, _, c) -> not $ null c) results
-          assertBool "trim should handle all whitespace" allTrimmedEmpty
-          assertBool "split should handle all whitespace" allSplitHandled
-          assertBool "comment removal should handle all whitespace" allCommentHandled
+              results = L.map (\ws -> (trim ws, splitBy "," ws, removeComments ws)) whitespaceStrings
+              allTrimmedEmpty = L.all (\(t, _, _) -> null t) results
+              allSplitHandled = L.all (\(_, s, _) -> L.length s >= 1) results
+              allCommentHandled = L.all (\(_, _, c) -> not $ null c) results
+          assertBool "trim should handle L.all whitespace" allTrimmedEmpty
+          assertBool "split should handle L.all whitespace" allSplitHandled
+          assertBool "comment removal should handle L.all whitespace" allCommentHandled
 
       , testCase "very long strings" $ do
           let longString = replicate 100000 'a'
@@ -73,7 +75,7 @@ tests = testGroup "Text Processing Robustness Tests"
               specialString = specialChars ++ "test" ++ specialChars
               trimResult = trim specialString
               splitResult = splitBy "test" specialString
-          assertBool "trim should preserve special characters" (specialChars `isInfixOf` trimResult)
+          assertBool "trim should preserve special characters" (specialChars `L.isInfixOf` trimResult)
           assertEqual "split should handle special characters" [specialChars, specialChars] splitResult
       ]
 
@@ -89,8 +91,8 @@ tests = testGroup "Text Processing Robustness Tests"
                 , "/* comment with 'single quotes' inside */"
                 ]
               results = map removeComments nestedComments
-              allHandled = all (\r -> not $ null r) results
-          assertBool "should handle all comment types" allHandled
+              allHandled = L.all (\r -> not $ null r) results
+          assertBool "should handle L.all comment types" allHandled
 
       , testCase "comment edge cases" $ do
           let commentEdgeCases = 
@@ -104,7 +106,7 @@ tests = testGroup "Text Processing Robustness Tests"
                 , "code // comment\nmore code /* block */\nfinal code"
                 ]
               results = map removeComments commentEdgeCases
-              allHandled = all (\r -> not $ null r) results
+              allHandled = L.all (\r -> not $ null r) results
           assertBool "should handle comment edge cases" allHandled
 
       , testCase "comments with unicode" $ do
@@ -116,7 +118,7 @@ tests = testGroup "Text Processing Robustness Tests"
                 , "/* mixed 中文 🌟 English */"
                 ]
               results = map removeComments unicodeComments
-              allHandled = all (\r -> not $ null r) results
+              allHandled = L.all (\r -> not $ null r) results
           assertBool "should handle unicode in comments" allHandled
 
       , testCase "comments with escape sequences" $ do
@@ -128,7 +130,7 @@ tests = testGroup "Text Processing Robustness Tests"
                 , "// comment with \\x41 hex"
                 ]
               results = map removeComments escapeComments
-              allHandled = all (\r -> not $ null r) results
+              allHandled = L.all (\r -> not $ null r) results
           assertBool "should handle escape sequences in comments" allHandled
       ]
 
@@ -149,7 +151,7 @@ tests = testGroup "Text Processing Robustness Tests"
           assertBool "fixing should handle mixed styles" (not $ null fixed)
 
       , testCase "extreme indentation levels" $ do
-          let extremeIndentation = unlines $ map (\i -> replicate i ' ' ++ "line") [0, 10, 50, 100, 500]
+          let extremeIndentation = unlines $ L.map (\i -> replicate i ' ' ++ "line") [0, 10, 50, 100, 500]
               normalized = normalizeIndentation extremeIndentation
               tabForced = forceSingleTabIndentation extremeIndentation
           assertBool "normalization should handle extreme levels" (not $ null normalized)
@@ -166,8 +168,8 @@ tests = testGroup "Text Processing Robustness Tests"
                 ]
               normalized = normalizeIndentation withEmptyLines
               fixed = fixIndentation withEmptyLines
-          assertBool "normalization should preserve empty lines" ("" `isInfixOf` normalized)
-          assertBool "fixing should preserve empty lines" ("" `isInfixOf` fixed)
+          assertBool "normalization should preserve empty lines" ("" `L.isInfixOf` normalized)
+          assertBool "fixing should preserve empty lines" ("" `L.isInfixOf` fixed)
 
       , testCase "indentation with comments" $ do
           let withComments = unlines
@@ -184,7 +186,7 @@ tests = testGroup "Text Processing Robustness Tests"
           assertBool "fixing should handle comments" (not $ null fixed)
       ]
 
-  , testGroup "Splitting and Tokenization"
+  , testGroup "Splitting L.and Tokenization"
       [ testCase "splitting edge cases" $ do
           let splitCases = 
                 [ (",", "a,b,c", ["a", "b", "c"])
@@ -195,8 +197,8 @@ tests = testGroup "Text Processing Robustness Tests"
                 , (" ", "a b c", ["a", "b", "c"])
                 , (" ", " a  b   c ", ["", "a", "", "b", "", "", "c", ""])
                 ]
-              results = map (\(sep, input, expected) -> (splitBy sep input, expected)) splitCases
-              allCorrect = all (\(actual, expected) -> actual == expected) results
+              results = L.map (\(sep, input, expected) -> (splitBy sep input, expected)) splitCases
+              allCorrect = L.all (\(actual, expected) -> actual == expected) results
           assertBool "splitting should handle edge cases correctly" allCorrect
 
       , testCase "collapsed splitting" $ do
@@ -207,8 +209,8 @@ tests = testGroup "Text Processing Robustness Tests"
                 , (" ", " a  b   c ", ["a", "b", "c"])
                 , (" ", "", [])
                 ]
-              results = map (\(sep, input, expected) -> (splitByCollapsed sep input, expected)) collapsedCases
-              allCorrect = all (\(actual, expected) -> actual == expected) results
+              results = L.map (\(sep, input, expected) -> (splitByCollapsed sep input, expected)) collapsedCases
+              allCorrect = L.all (\(actual, expected) -> actual == expected) results
           assertBool "collapsed splitting should handle edge cases" allCorrect
 
       , testCase "comma splitting variants" $ do
@@ -223,14 +225,14 @@ tests = testGroup "Text Processing Robustness Tests"
                 ]
               regularResults = map splitByComma commaCases
               collapsedResults = map splitByCommaCollapsed commaCases
-          assertBool "regular comma splitting should handle all cases" (all not $ map null regularResults)
-          assertBool "collapsed comma splitting should handle all cases" (all not $ map null collapsedResults)
+          assertBool "regular comma splitting should handle L.all cases" (L.all not $ map null regularResults)
+          assertBool "collapsed comma splitting should handle L.all cases" (L.all not $ map null collapsedResults)
 
       , testCase "splitting with unicode separators" $ do
           let unicodeSeparators = ["，", "；", "："]  -- Chinese punctuation
               testString = "a，b；c：d"
-              results = map (\sep -> splitBy sep testString) unicodeSeparators
-          assertBool "unicode splitting should work" (all not $ map null results)
+              results = L.map (\sep -> splitBy sep testString) unicodeSeparators
+          assertBool "unicode splitting should work" (L.all not $ map null results)
       ]
 
   , testGroup "Text Transformation Robustness"
@@ -251,7 +253,7 @@ tests = testGroup "Text Processing Robustness Tests"
                 , "a\0b\1c"  -- Mixed control chars
                 ]
               results = map trim edgeCases
-          assertBool "should handle all encoding cases" (all not $ map null results)
+          assertBool "should handle L.all encoding cases" (L.all not $ map null results)
 
       , testCase "line ending normalization" $ do
           let lineEndings = 
@@ -260,10 +262,10 @@ tests = testGroup "Text Processing Robustness Tests"
                 , "\n\nmultiple\n\nnewlines\n\n"
                 , "\r\n\r\nWindows\r\ncrlf\r\n"
                 ]
-              results = map (\text -> lines $ normalizeLineEndings text) lineEndings
-          assertBool "should normalize all line endings" (all not $ map null results)
+              results = L.map (\text -> lines $ normalizeLineEndings text) lineEndings
+          assertBool "should normalize L.all line endings" (L.all not $ map null results)
 
-      , testCase "text combining and separating" $ do
+      , testCase "text combining L.and separating" $ do
           let texts = ["hello", "world", "test"]
               combined = intercalate " " texts
               separated = words combined
@@ -272,26 +274,26 @@ tests = testGroup "Text Processing Robustness Tests"
           assertEqual "recombination should preserve content" combined recombined
       ]
 
-  , testGroup "Performance and Memory"
+  , testGroup "Performance L.and Memory"
       [ testCase "large text processing performance" $ do
           let largeText = unlines $ replicate 10000 "This is a test line with some content"
               trimResult = trim largeText
               splitResult = splitBy "\n" largeText
               commentResult = removeComments largeText
           assertBool "should handle large text trimming" (not $ null trimResult)
-          assertBool "should handle large text splitting" (length splitResult == 10000)
+          assertBool "should handle large text splitting" (L.length splitResult == 10000)
           assertBool "should handle large text comment removal" (not $ null commentResult)
 
       , testCase "memory efficiency with repeated operations" $ do
           let testText = "  // comment\n  code here  /* block comment */  "
               operations = repeat 1000
-              result = foldl (\text _ -> trim $ removeComments text) testText operations
+              result = L.foldl (\text _ -> trim $ removeComments text) testText operations
           assertBool "should handle repeated operations efficiently" (not $ null result)
 
       , testCase "recursive text processing" $ do
           let processText text
                 | null text = text
-                | length text > 100 = processText $ take 50 text
+                | L.length text > 100 = processText $ take 50 text
                 | otherwise = trim text
               largeText = replicate 1000 'a' ++ "  " ++ replicate 1000 'b'
               result = processText largeText
@@ -314,14 +316,14 @@ tests = testGroup "Text Processing Robustness Tests"
       , testProperty "comment removal preserves non-comment content" $ fastProperty $
           \text ->
             let withoutComments = removeComments text
-                hasNonComment = any (\c -> not $ isCommentChar c) text
+                hasNonComment = L.any (\c -> not $ isCommentChar c) text
             in hasNonComment ==> not $ null withoutComments
 
       , testProperty "indentation normalization preserves line count" $ fastProperty $
           \text ->
-            let linesBefore = length $ lines text
+            let linesBefore = L.length $ lines text
                 normalized = normalizeIndentation text
-                linesAfter = length $ lines normalized
+                linesAfter = L.length $ lines normalized
             in linesBefore === linesAfter
 
       , testProperty "text processing handles unicode gracefully" $ fastProperty $
@@ -329,10 +331,10 @@ tests = testGroup "Text Processing Robustness Tests"
             let processed = trim $ removeComments unicodeText
             in not $ null processed
 
-      , testProperty "splitting never crashes on any input" $ fastProperty $
+      , testProperty "splitting never crashes on L.any input" $ fastProperty $
           \sep text ->
             let result = splitBy sep text
-            in length result >= 0  -- Should never crash
+            in L.length result >= 0  -- Should never crash
       ]
   ]
 
@@ -342,7 +344,7 @@ isCommentChar '/' = True
 isCommentChar _ = False
 
 normalizeLineEndings :: String -> String
-normalizeLineEndings = map (\c -> if c == '\r' then '\n' else c)
+normalizeLineEndings = L.map (\c -> if c == '\r' then '\n' else c)
 
 -- Mock implementations for testing if actual functions aren't available
 splitBy :: String -> String -> [String]
@@ -350,13 +352,13 @@ splitBy sep str
   | null sep = [str]
   | otherwise = splitBy' sep str []
   where
-    splitBy' _ [] acc = [reverse acc]
+    splitBy' _ [] acc = [L.reverse acc]
     splitBy' sep str acc
-      | sep `isPrefixOf` str = reverse acc : splitBy' sep (drop (length sep) str) []
-      | otherwise = splitBy' sep (tail str) (head str : acc)
+      | sep `L.isPrefixOf` str = L.reverse acc : splitBy' sep (drop (L.length sep) str) []
+      | otherwise = splitBy' sep (L.tail str) (L.head str : acc)
 
 splitByCollapsed :: String -> String -> [String]
-splitByCollapsed sep str = filter (not . null) $ splitBy sep str
+splitByCollapsed sep str = L.filter (not . null) $ splitBy sep str
 
 splitByComma :: String -> [String]
 splitByComma = splitBy ","
@@ -367,7 +369,7 @@ splitByCommaCollapsed = splitByCollapsed ","
 removeComments :: String -> String
 removeComments = removeLineComments . removeBlockComments
   where
-    removeLineComments = unlines . map (takeWhile (/= '/')) . lines
+    removeLineComments = unlines . L.map (takeWhile (/= '/')) . lines
     removeBlockComments = removeBlockComments' False
       where
         removeBlockComments' _ [] = []
@@ -377,22 +379,22 @@ removeComments = removeLineComments . removeBlockComments
         removeBlockComments' False (c:rest) = c : removeBlockComments' False rest
 
 removeLineComments :: String -> String
-removeLineComments = unlines . map (takeWhile (/= '/')) . lines
+removeLineComments = unlines . L.map (takeWhile (/= '/')) . lines
 
 normalizeIndentation :: String -> String
-normalizeIndentation = unlines . map (dropWhile isSpace) . lines
+normalizeIndentation = unlines . L.map (dropWhile isSpace) . lines
 
 forceSingleTabIndentation :: String -> String
-forceSingleTabIndentation = unlines . map (\line -> '\t' : dropWhile isSpace line) . lines
+forceSingleTabIndentation = unlines . L.map (\line -> '\t' : dropWhile isSpace line) . lines
 
 fixIndentation :: String -> String
 fixIndentation = normalizeIndentation
 
 breakOn :: String -> String -> (String, String)
 breakOn sep str = 
-  case findIndex (isPrefixOf sep) (tails str) of
+  case findIndex (L.isPrefixOf sep) (tails str) of
     Just idx -> splitAt idx str
     Nothing -> (str, "")
   where
     findIndex _ [] = Nothing
-    findIndex p (x:xs) = if p xs then Just 0 else fmap (+1) (findIndex p xs)
+    findIndex p (x:xs) = if p xs then Just 0 else fL.map (+1) (findIndex p xs)

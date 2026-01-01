@@ -10,13 +10,15 @@
 module Test.Unit.SourceLocationAdvancedMathQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose, suchThat)
 import TestSupport.Arbitrary
 
 import SourceLocation
-import Data.List (sort, nub, group, intercalate, find, delete, isInfixOf, sortOn)
+import Data.List (isInfixOf)
+import Data.List (sort, nub, group, intercalate, find, delete, sortOn)
 import Data.Maybe (isJust, isNothing, catMaybes, fromMaybe, mapMaybe)
 import Data.Set (Set, empty, singleton, union, unions, member, size, difference, intersection)
 import qualified Data.Set as Set
@@ -81,7 +83,7 @@ prop_pos_advance_newlines :: Int -> Int -> Int -> Property
 prop_pos_advance_newlines line col numLines =
   line >= 0 && col >= 0 && numLines >= 0 && numLines <= 100 ==>
   let pos = SourcePos line col
-      textWithNewlines = concat (replicate numLines "\n")
+      textWithNewlines = L.concat (replicate numLines "\n")
       advancedPos = advancePos pos textWithNewlines
   in property $ 
     sourceLine advancedPos === line + numLines .&&.

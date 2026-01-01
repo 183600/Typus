@@ -6,6 +6,7 @@
 module Test.Unit.TypeSystemInferenceBoundarySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertBool, assertFailure, (@?=), (@=?))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Gen, choose, vectorOf, oneof, elements, listOf1, arbitrary)
@@ -117,7 +118,7 @@ tests =
     , testGroup "Type environment boundaries"
         [ testCase "handles large type environments" $ do
             let baseEnv = emptyTypeEnvironment
-                env = foldr (\i acc -> extendTypeEnvironment acc ("var" ++ show i) IRTypeInt) baseEnv [1..1000]
+                env = L.foldr (\i acc -> extendTypeEnvironment acc ("var" ++ show i) IRTypeInt) baseEnv [1..1000]
                 expr = IRVariable "var500"
                 result = inferType env expr
             assertBool "should handle large environments" $ 
@@ -196,7 +197,7 @@ tests =
                 Left _ -> False   -- Or detect as unsolvable
         ]
 
-    , testGroup "Generalization and instantiation"
+    , testGroup "Generalization L.and instantiation"
         [ testCase "generalizes polymorphic types correctly" $ do
             let env = emptyTypeEnvironment
                 expr = IRLambda "x" (IRVariable "x")
@@ -254,7 +255,7 @@ tests =
 
     , testGroup "Performance boundaries"
         [ testCase "handles deeply nested type expressions" $ do
-            let nestedType = foldr (\t acc -> IRFunctionType t acc) IRTypeInt 
+            let nestedType = L.foldr (\t acc -> IRFunctionType t acc) IRTypeInt 
                               (replicate 100 IRTypeBool)
                 expr = IRVariable "deeply_nested"
                 env = extendTypeEnvironment emptyTypeEnvironment "deeply_nested" nestedType
@@ -286,7 +287,7 @@ tests =
             \constraints ->
             let result1 = unifyTypes constraints
                 result2 = case result1 of
-                  Right substitution -> unifyTypes (map (applySubstitution substitution) constraints)
+                  Right substitution -> unifyTypes (L.map (applySubstitution substitution) constraints)
                   Left _ -> result1
             in result1 === result2
           where

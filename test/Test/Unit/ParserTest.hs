@@ -1,13 +1,14 @@
 module Main (main) where
 
 import System.Exit (exitFailure)
+import qualified Data.List as L
 import Parser (parseTypus)
 
 main :: IO ()
 main = do
     putStrLn "Testing parser..."
     content <- readFile "fixtures/reference/simple_test.typus"
-    putStrLn $ "Parsing content of length: " ++ show (length content)
+    putStrLn $ "Parsing content of L.length: " ++ show (L.length content)
     
     case parseTypus content of
         Left err -> do

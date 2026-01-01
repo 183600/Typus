@@ -3,6 +3,7 @@
 module Test.Unit.SimpleQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
@@ -65,14 +66,14 @@ prop_removeLineComments_empty =
 
 tests :: TestTree
 tests = testGroup "Simple QuickCheck Tests"
-  [ fastProperty "trim removes all whitespace" prop_trim_removes_spaces
+  [ fastProperty "trim removes L.all whitespace" prop_trim_removes_spaces
   , fastProperty "splitBy on empty string returns singleton list" prop_splitBy_empty_string
   , fastProperty "splitByComma on string without comma returns singleton" prop_splitByComma_single_element
   , fastProperty "Map lookup on empty map returns Nothing" prop_map_empty_lookup
   , fastProperty "Set member on empty set returns False" prop_set_empty_not_member
   , fastProperty "SourcePos components are preserved" prop_sourcepos_components
   , fastProperty "SourceSpan start offset <= end offset" prop_sourcespan_components
-  , fastProperty "FileDirectives with all Nothing are equal" prop_file_directives_equality
-  , fastProperty "BlockDirectives with all Nothing are equal" prop_block_directives_equality
+  , fastProperty "FileDirectives with L.all Nothing are equal" prop_file_directives_equality
+  , fastProperty "BlockDirectives with L.all Nothing are equal" prop_block_directives_equality
   , fastProperty "removeLineComments on empty string returns empty" prop_removeLineComments_empty
   ]

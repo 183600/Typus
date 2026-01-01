@@ -15,6 +15,7 @@ import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify
 import Test.QuickCheck.Gen (Gen, choose, listOf1, elements, suchThat)
 import Test.QuickCheck.Arbitrary (Arbitrary(..))
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import Data.Maybe (isJust, isNothing)
 import Data.Char (isSpace, isAlpha, isDigit)
@@ -52,7 +53,7 @@ prop_parser_recovers_from_malformed_directives malformed goodCode =
   in not (null goodCode) ==>
      case parseTypus source of
        Left _ -> property False  -- Should not completely fail
-       Right result -> property $ not (null (tfCodeBlocks result))
+       Right result -> property $ not (L.null (tfCodeBlocks result))
 
 -- Property: Parser handles incomplete syntax gracefully
 prop_parser_handles_incomplete_syntax :: String -> Property
@@ -67,8 +68,8 @@ prop_parser_handles_incomplete_syntax prefix =
 prop_parser_preserves_valid_blocks :: String -> String -> String -> Property
 prop_parser_preserves_valid_blocks before error after =
   let source = unlines [before, error, after]
-      hasValidBefore = not (null before) && not ("func" `isInfixOf` error)
-      hasValidAfter = not (null after) && not ("func" `isInfixOf` error)
+      hasValidBefore = not (null before) && not ("func" `L.isInfixOf` error)
+      hasValidAfter = not (null after) && not ("func" `L.isInfixOf` error)
   in (hasValidBefore || hasValidAfter) ==>
      case parseTypus source of
        Left _ -> property False
@@ -79,7 +80,7 @@ prop_parser_preserves_valid_blocks before error after =
 -- Property: Parser handles mixed valid/invalid directives
 prop_parser_handles_mixed_directives :: Bool -> Bool -> Bool -> Property
 prop_parser_handles_mixed_directives hasValid hasInvalid hasExtra =
-  let directives = concat
+  let directives = L.concat
         [ if hasValid then ["//! ownership: on"] else []
         , if hasInvalid then ["//! ownership invalid"] else []
         , if hasExtra then ["//! unknown_directive: value"] else []
@@ -98,7 +99,7 @@ prop_parser_error_position_accurate prefix errorLine =
       errorLineContent = "invalid syntax with unclosed {"
       source = unlines $ linesBefore ++ [errorLineContent] ++ ["func main() {}"]
   in case parseTypus source of
-       Left err -> property $ "line" `isInfixOf` err  -- Error should mention line
+       Left err -> property $ "line" `L.isInfixOf` err  -- Error should mention line
        Right _ -> property $ True  -- May succeed despite error
 
 -- Property: Parser handles Unicode characters in error recovery
@@ -126,23 +127,23 @@ prop_parser_recovers_from_mismatched_braces before after =
        Left _ -> property True  -- May fail but not crash
        Right result -> 
          let blocks = tfCodeBlocks result
-         in property $ length blocks >= 1  -- Should parse at least one block
+         in property $ L.length blocks >= 1  -- Should parse at least one block
 
 -- Property: Parser handles empty input gracefully
 prop_parser_handles_empty_input :: Property
 prop_parser_handles_empty_input =
   case parseTypus "" of
     Left _ -> property True  -- Expected to fail gracefully
-    Right result -> property $ null (tfCodeBlocks result)  -- Should have no blocks
+    Right result -> property $ L.null (tfCodeBlocks result)  -- Should have no blocks
 
 -- Property: Parser handles whitespace-only input
 prop_parser_handles_whitespace_only :: String -> Property
 prop_parser_handles_whitespace_only ws =
-  let whitespaceOnly = all isSpace ws
+  let whitespaceOnly = L.all isSpace ws
   in whitespaceOnly ==>
      case parseTypus ws of
        Left _ -> property True
-       Right result -> property $ null (tfCodeBlocks result)
+       Right result -> property $ L.null (tfCodeBlocks result)
 
 -- Property: Parser preserves directive values despite syntax errors
 prop_parser_preserves_directive_values :: Bool -> String -> Property
@@ -164,14 +165,14 @@ prop_parser_error_recovery_deterministic source =
       result2 = parseTypus source
   in case (result1, result2) of
        (Left _, Left _) -> property True
-       (Right r1, Right r2) -> property $ length (tfCodeBlocks r1) == length (tfCodeBlocks r2)
+       (Right r1, Right r2) -> property $ L.length (tfCodeBlocks r1) == L.length (tfCodeBlocks r2)
        _ -> property False  -- Should be consistent
 
 -- Property: Parser handles extremely long lines
 prop_parser_handles_long_lines :: Int -> String -> Property
 prop_parser_handles_long_lines multiplier content =
   multiplier >= 0 && multiplier <= 100 ==>  -- Limit for performance
-  let longLine = content ++ concat (replicate multiplier "very_long_content_")
+  let longLine = content ++ L.concat (replicate multiplier "very_long_content_")
       source = longLine ++ "\nfunc main() {}"
   in case parseTypus source of
        Left _ -> property True  -- May fail but not crash
@@ -191,8 +192,8 @@ prop_parser_recovers_from_comment_like content =
 prop_parser_handles_nested_blocks_with_errors :: Int -> Property
 prop_parser_handles_nested_blocks_with_errors depth =
   depth >= 0 && depth <= 5 ==>  -- Limit complexity
-  let nested = concat $ replicate depth "  if true {\n"
-      source = nested ++ "func main() {}\n" ++ concat (replicate depth "}\n")
+  let nested = L.concat $ replicate depth "  if true {\n"
+      source = nested ++ "func main() {}\n" ++ L.concat (replicate depth "}\n")
   in case parseTypus source of
        Left _ -> property True  -- May fail on mismatched nesting
        Right result -> property $ True  -- May succeed with partial parsing
@@ -201,7 +202,7 @@ prop_parser_handles_nested_blocks_with_errors depth =
 prop_parser_maintains_line_numbering :: String -> String -> Property
 prop_parser_maintains_line_numbering before after =
   let source = unlines [before, "invalid { syntax", after]
-      expectedLines = length $ lines source
+      expectedLines = L.length $ lines source
   in not (null before) && not (null after) ==>
      case parseTypus source of
        Left err -> property $ True  -- Error should include line info
@@ -212,7 +213,7 @@ prop_parser_handles_special_chars :: String -> Property
 prop_parser_handles_special_chars suffix =
   let identifier = "func" ++ suffix ++ "() {}"
       source = identifier ++ "\nfunc main() {}"
-  in not (null suffix) && all (`elem` "_123") suffix ==>  -- Only valid identifier chars
+  in not (null suffix) && L.all (`elem` "_123") suffix ==>  -- Only valid identifier chars
      case parseTypus source of
        Left _ -> property True  -- May fail on invalid identifiers
        Right result -> property $ True  -- May succeed with valid ones

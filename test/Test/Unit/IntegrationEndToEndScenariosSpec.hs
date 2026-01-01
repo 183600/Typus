@@ -25,6 +25,7 @@ import Ownership (analyzeOwnership)
 import Dependencies (analyzeDependencies)
 import Compiler.TypeChecker (validateTypes)
 
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes)
 import qualified Data.Map as Map
@@ -78,15 +79,15 @@ tests =
                   ]
                 options = defaultCompilationOptions
                 result = compileProgram options source
-            assertBool "should track all compilation phases" $ 
+            assertBool "should track L.all compilation phases" $ 
               case result of
                 Right (CompilationResult _ phases) -> 
-                  length phases >= 4  -- Parsing, Analysis, TypeChecking, CodeGen
+                  L.length phases >= 4  -- Parsing, Analysis, TypeChecking, CodeGen
                 _ -> False
         ]
 
     , testGroup "Cross-feature integration"
-        [ testCase "integrates ownership and type checking" $ do
+        [ testCase "integrates ownership L.and type checking" $ do
             let source = unlines
                   [ "//! ownership: on"
                   , "package main"
@@ -98,12 +99,12 @@ tests =
                   ]
                 options = defaultCompilationOptions { enableOwnership = True }
                 result = compileProgram options source
-            assertBool "should integrate ownership and type checking" $ 
+            assertBool "should integrate ownership L.and type checking" $ 
               case result of
                 Right (CompilationResult True _) -> True
                 Left _ -> False  -- May fail due to ownership rules
 
-        , testCase "integrates dependency analysis and compilation" $ do
+        , testCase "integrates dependency analysis L.and compilation" $ do
             let source = unlines
                   [ "package main"
                   , "import \"utils\""
@@ -118,7 +119,7 @@ tests =
             assertBool "should analyze dependencies during compilation" $ 
               case result of
                 Right (CompilationResult _ phases) -> 
-                  any isDependencyAnalysis phases
+                  L.any isDependencyAnalysis phases
                 _ -> False
           where
             isDependencyAnalysis phase = case phase of
@@ -158,9 +159,9 @@ tests =
                 result = compileProgram options source
             assertBool "should propagate parsing errors" $ 
               case result of
-                Left error -> "parsing" `isInfixOf` show error || "syntax" `isInfixOf` show error
+                Left error -> "parsing" `L.isInfixOf` show error || "syntax" `L.isInfixOf` show error
                 Right (CompilationResult False phases) -> 
-                  any hasParseError phases
+                  L.any hasParseError phases
                 _ -> False
           where
             hasParseError phase = case phase of
@@ -179,7 +180,7 @@ tests =
                 result = compileProgram options source
             assertBool "should propagate type errors" $ 
               case result of
-                Left error -> "type" `isInfixOf` show error
+                Left error -> "type" `L.isInfixOf` show error
                 Right (CompilationResult False _) -> True
                 _ -> False
 
@@ -198,7 +199,7 @@ tests =
                 result = compileProgram options source
             assertBool "should propagate ownership errors" $ 
               case result of
-                Left error -> "ownership" `isInfixOf` show error || "move" `isInfixOf` show error
+                Left error -> "ownership" `L.isInfixOf` show error || "move" `L.isInfixOf` show error
                 Right (CompilationResult False _) -> True
                 _ -> False
         ]
@@ -269,7 +270,7 @@ tests =
                 Right (CompilationResult _ _) -> True
                 Left _ -> True  -- Should handle gracefully
 
-        , testCase "integrates all features simultaneously" $ do
+        , testCase "integrates L.all features simultaneously" $ do
             let source = unlines
                   [ "//! ownership: on"
                   , "//! dependent_types: on"
@@ -287,14 +288,14 @@ tests =
                   , enableDependencyAnalysis = True
                   }
                 result = compileProgram options source
-            assertBool "should handle all features" $ 
+            assertBool "should handle L.all features" $ 
               case result of
                 Right (CompilationResult True _) -> True
                 Right (CompilationResult False _) -> True  -- May fail but should not crash
                 Left _ -> True  -- Should handle gracefully
         ]
 
-    , testGroup "Recovery and resilience"
+    , testGroup "Recovery L.and resilience"
         [ testCase "recovers from intermediate phase failures" $ do
             let source = unlines
                   [ "package main"
@@ -310,7 +311,7 @@ tests =
             assertBool "should recover from partial failures" $ 
               case result of
                 Right (CompilationResult _ phases) -> 
-                  length phases >= 2  -- Should complete some phases
+                  L.length phases >= 2  -- Should complete some phases
                 _ -> False
 
         , testCase "provides comprehensive error reports" $ do
@@ -326,7 +327,7 @@ tests =
                 result = compileProgram options source
             assertBool "should provide comprehensive error reports" $ 
               case result of
-                Left errors -> length (lines (show errors)) >= 2
+                Left errors -> L.length (lines (show errors)) >= 2
                 Right (CompilationResult False _) -> True
                 _ -> False
         ]
@@ -343,7 +344,7 @@ tests =
             let result = compileProgram defaultCompilationOptions source
             in case result of
                  Right (CompilationResult True phases) -> 
-                   not (null phases) && all isValidPhase phases
+                   not (null phases) && L.all isValidPhase phases
                  _ -> property True
           where
             isValidPhase phase = case phase of
@@ -368,7 +369,7 @@ tests =
             in case result of
                  Left _ -> property True
                  Right (CompilationResult success _) -> 
-                   success || property True  -- Either succeeds or fails gracefully
+                   success || property True  -- Either succeeds L.or fails gracefully
 
         , fastProperty "pipeline phases are ordered correctly" $
             \source ->

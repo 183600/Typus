@@ -2,6 +2,7 @@
 module Test.Unit.NewCoreParsingQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -25,13 +26,13 @@ tests =
         , fastProperty "splitBy preserves order" $
             \delim s ->
               let parts = Utils.splitBy delim s
-                  rejoined = concat (Utils.intersperse delim parts)
-              in length rejoined >= length s
+                  rejoined = L.concat (Utils.intersperse delim parts)
+              in L.length rejoined >= L.length s
               
         , fastProperty "splitByCollapsed removes empty segments" $
             \delim s -> 
               let collapsed = Utils.splitByCollapsed delim s
-              in all (not . null) collapsed
+              in L.all (not . null) collapsed
         ]
 
     , testGroup "Parser Consistency Properties"
@@ -48,7 +49,7 @@ tests =
               
         , fastProperty "parsing preserves line count" $
             \input ->
-              let linesIn = length (lines input)
+              let linesIn = L.length (lines input)
                   parsed = Parser.parse input
               in True -- Parser should track line numbers
         ]
@@ -56,32 +57,32 @@ tests =
     , testGroup "Token Properties"
         [ fastProperty "tokenization is reversible for simple cases" $
             \tokens ->
-              let simple = concat tokens
+              let simple = L.concat tokens
                   tokenized = Parser.tokenize simple
-              in length tokenized >= 1
+              in L.length tokenized >= 1
               
-        , fastProperty "comment removal reduces string length" $
+        , fastProperty "comment removal reduces string L.length" $
             \input ->
               let withoutComments = Utils.removeComments input
-              in length withoutComments <= length input
+              in L.length withoutComments <= L.length input
               
         , fastProperty "indentation normalization preserves structure" $
             \input ->
               let normalized = Utils.normalizeIndentation input
-                  linesIn = length (lines input)
-                  linesOut = length (lines normalized)
+                  linesIn = L.length (lines input)
+                  linesOut = L.length (lines normalized)
               in linesIn == linesOut
         ]
 
     , testGroup "Error Recovery Properties"
-        [ fastProperty "parser never crashes on any input" $
+        [ fastProperty "parser never crashes on L.any input" $
             \input ->
               let result = Parser.parse input
-              in True -- Should handle any input gracefully
+              in True -- Should handle L.any input gracefully
               
         , fastProperty "partial parsing succeeds on truncated input" $
             \input ->
-              let truncated = take (length input `div` 2) input
+              let truncated = take (L.length input `div` 2) input
                   result = Parser.parse truncated
               in True -- Should handle incomplete input
         ]
@@ -89,7 +90,7 @@ tests =
     , testGroup "Performance Properties"
         [ fastProperty "parsing time scales linearly with input size" $
             \input ->
-              let small = take (length input `div` 10) input
+              let small = take (L.length input `div` 10) input
                   large = input
               in True -- Should have reasonable performance
               

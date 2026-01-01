@@ -6,6 +6,7 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty, Property, (===), counterexample, property, (.&&.))
 import TestSupport.Arbitrary ()
 
+import qualified Data.List as L
 import Data.List (isInfixOf)
 import Data.Char (isSpace)
 
@@ -29,19 +30,19 @@ import SourceLocation
 
 -- Test properties for Utils module
 
--- Property 1: trim should remove leading and trailing whitespace
+-- Property 1: trim should remove leading L.and trailing whitespace
 prop_trim_roundtrip :: String -> Property
 prop_trim_roundtrip s = 
   let trimmed = trim s
       hasLeadingOrTrailingSpace = case s of
         [] -> False
         (c:_) | isSpace c -> True
-        _ -> case reverse s of
+        _ -> case L.reverse s of
           [] -> False
           (c:_) -> isSpace c
   in if hasLeadingOrTrailingSpace
      then counterexample ("Original: " ++ show s ++ ", Trimmed: " ++ show trimmed) $
-          length trimmed < length s
+          L.length trimmed < L.length s
      else counterexample ("No spaces to trim: " ++ show s) $
           trimmed === s
 
@@ -49,19 +50,19 @@ prop_trim_roundtrip s =
 prop_splitBy_preserves_empty :: Char -> String -> Property
 prop_splitBy_preserves_empty delim str = 
   let parts = splitBy delim str
-      expectedLength = length str + 1
+      expectedLength = L.length str + 1
   in counterexample ("splitBy '" ++ [delim] ++ "' " ++ show str ++ " = " ++ show parts) $
-     length parts === expectedLength
+     L.length parts === expectedLength
 
 -- Property 3: splitByCollapsed should remove consecutive delimiters
 prop_splitByCollapsed_no_consecutive :: Char -> String -> Property
 prop_splitByCollapsed_no_consecutive delim str = 
   let parts = splitByCollapsed delim str
       hasConsecutive = delim `elem` str && 
-                      ([delim, delim]) `isInfixOf` str
+                      ([delim, delim]) `L.isInfixOf` str
   in if hasConsecutive
      then counterexample ("Should have no consecutive delimiters") $
-          all (not . null) parts
+          L.all (not . null) parts
      else property True
 
 -- Property 4: splitByComma should be equivalent to splitBy ','
@@ -75,9 +76,9 @@ prop_removeLineComments_preserves_lines str =
   let result = removeLineComments str
       originalLines = lines str
       resultLines = lines result
-  in counterexample ("Original lines: " ++ show (length originalLines) ++ 
-                    ", Result lines: " ++ show (length resultLines)) $
-     length resultLines <= length originalLines
+  in counterexample ("Original lines: " ++ show (L.length originalLines) ++ 
+                    ", Result lines: " ++ show (L.length resultLines)) $
+     L.length resultLines <= L.length originalLines
 
 -- Property 6: normalizeIndentation should preserve relative indentation
 prop_normalizeIndentation_preserves_structure :: String -> Property
@@ -86,10 +87,10 @@ prop_normalizeIndentation_preserves_structure str =
       originalLines = lines str
       resultLines = lines result
       -- Check that non-empty lines are preserved
-      originalNonEmpty = filter (not . all isSpace) originalLines
-      resultNonEmpty = filter (not . all isSpace) resultLines
+      originalNonEmpty = L.filter (not . L.all isSpace) originalLines
+      resultNonEmpty = L.filter (not . L.all isSpace) resultLines
   in counterexample ("Non-empty lines should be preserved") $
-     length resultNonEmpty === length originalNonEmpty
+     L.length resultNonEmpty === L.length originalNonEmpty
 
 -- Property 7: breakOn should correctly split strings
 prop_breakOn_correct_split :: String -> String -> Property
@@ -99,7 +100,7 @@ prop_breakOn_correct_split pat str =
   in if null pat
      then property True -- Empty pattern is a special case
      else counterexample ("breakOn " ++ show pat ++ " " ++ show str) $
-          if pat `isInfixOf` str
+          if pat `L.isInfixOf` str
           then combined === str
           else (before === str) .&&. (after === "")
 

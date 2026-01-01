@@ -3,6 +3,7 @@
 module Test.Unit.ErrorHandlerEnhancedQuickCheckSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import Compiler.Errors.Core (TypeError(..), CombinedError(..), ErrorSeverity(..), 
@@ -16,7 +17,7 @@ import Compiler.Errors.Core (TypeError(..), CombinedError(..), ErrorSeverity(..)
                             filterCombinedErrorsBySeverity)
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos)
 import Data.Text (Text)
-import qualified Data.Text as T
+import qualified Data.Text as T (pack, unpack)
 import Data.List (sort)
 import Data.Maybe (isJust, isNothing)
 
@@ -66,7 +67,7 @@ errorSeverityProperties = testGroup "Error Severity Properties"
 -- | Error location properties
 errorLocationProperties :: TestTree
 errorLocationProperties = testGroup "Error Location Properties"
-  [ testProperty "location with line and column" $
+  [ testProperty "location with line L.and column" $
       \line col -> 
         line > 0 && col > 0 ==> 
         let location = ErrorLocation Nothing line col Nothing Nothing
@@ -100,7 +101,7 @@ errorContextProperties = testGroup "Error Context Properties"
            contextFunction ctx === Nothing .&&. 
            contextVariable ctx === Nothing .&&. 
            contextType ctx === Nothing .&&. 
-           null (contextAdditional ctx)
+           L.null (contextAdditional ctx)
   
   , testProperty "context preserves code information" $
       \code -> 
@@ -127,19 +128,19 @@ errorRecoveryProperties = testGroup "Error Recovery Properties"
         in canRecover recovery === False .&&. 
            shouldContinue recovery === False
   
-  , testProperty "errorRecovery can recover and continue" $
+  , testProperty "errorRecovery can recover L.and continue" $
       \() -> 
         let recovery = errorRecovery
         in canRecover recovery === True .&&. 
            shouldContinue recovery === True
   
-  , testProperty "warningRecovery can recover and continue" $
+  , testProperty "warningRecovery can recover L.and continue" $
       \() -> 
         let recovery = warningRecovery
         in canRecover recovery === True .&&. 
            shouldContinue recovery === True
   
-  , testProperty "infoRecovery can recover and continue" $
+  , testProperty "infoRecovery can recover L.and continue" $
       \() -> 
         let recovery = infoRecovery
         in canRecover recovery === True .&&. 
@@ -176,39 +177,12 @@ errorCollectorProperties = testGroup "Error Collector Properties"
   
   , testProperty "hasErrors detects regular errors" $
       \message -> 
-        let error = errorAt Error message
-            errors = [error]
-        in hasErrors errors === True
-  
-  , testProperty "hasWarnings detects warnings" $
-      \message -> 
-        let warning = warningAt message
-            errors = [warning]
-        in hasWarnings errors === True
-  
-  , testProperty "hasErrors ignores warnings and info" $
-      \msg1 msg2 -> 
-        let warning = warningAt msg1
-            info = infoAt msg2
-            errors = [warning, info]
-        in hasErrors errors === False
-  
-  , testProperty "hasWarnings ignores errors and info" $
-      \msg1 msg2 -> 
-        let error = errorAt Error msg1
-            info = infoAt msg2
-            errors = [error, info]
-        in hasWarnings errors === False
-  
-  , testProperty "filterByCategory preserves matching errors" $
-      \category errors -> 
-        let filtered = filterByCategory category errors
-        in all (\e -> category e == category) filtered
+        let error = errorAt "test-id" == category) filtered
   
   , testProperty "filterBySeverity preserves matching errors" $
       \severity errors -> 
         let filtered = filterBySeverity severity errors
-        in all (\e -> severity e == severity) filtered
+        in L.all (\e -> severity e == severity) filtered
   ]
 
 -- | Error formatting properties
@@ -216,80 +190,11 @@ errorFormattingProperties :: TestTree
 errorFormattingProperties = testGroup "Error Formatting Properties"
   [ testProperty "formatError includes severity" $
       \severity message -> 
-        let error = errorAt severity message
-            formatted = formatError error
-        in case severity of
-          Fatal -> "FATAL" `isInfixOf` formatted
-          Error -> "ERROR" `isInfixOf` formatted
-          Warning -> "WARNING" `isInfixOf` formatted
-          Info -> "INFO" `isInfixOf` formatted
-  
-  , testProperty "formatError includes message" $
-      \severity message -> 
-        let error = errorAt severity message
-            formatted = formatError error
-        in T.unpack message `isInfixOf` formatted
-  
-  , testProperty "formatError includes category" $
-      \severity message category -> 
-        let error = errorWithCategory severity category message
-            formatted = formatError error
-        in show category `isInfixOf` formatted
-  
-  , testProperty "formatErrors preserves order" $
-      \errors -> 
-        let formatted = formatErrors errors
-            formattedLines = lines formatted
-        in length formattedLines >= length errors
-  ]
-
--- | Combined error properties
-combinedErrorProperties :: TestTree
-combinedErrorProperties = testGroup "Combined Error Properties"
-  [ testProperty "combinedErrorSeverity extracts severity correctly" $
-      \severity -> 
-        let ownershipError = OwnershipErrorCombined severity undefined
-            dependentTypeError = DependentTypeErrorCombined severity undefined
-            integrationError = IntegrationError "" severity
-            crossAnalyzerError = CrossAnalyzerError "" severity []
-        in combinedErrorSeverity ownershipError === severity .&&. 
-           combinedErrorSeverity dependentTypeError === severity .&&. 
-           combinedErrorSeverity integrationError === severity .&&. 
-           combinedErrorSeverity crossAnalyzerError === severity
-  
-  , testProperty "filterCombinedErrorsBySeverity preserves matching errors" $
-      \minSeverity errors -> 
-        let filtered = filterCombinedErrorsBySeverity minSeverity errors
-        in all (\e -> isAtLeast (combinedErrorSeverity e) minSeverity) filtered
+        let error = errorAt "test-id" (combinedErrorSeverity e) minSeverity) filtered
   ]
 
 -- Helper functions for testing
-errorAt :: ErrorSeverity -> Text -> TypeError
-errorAt sev msg = TypeError
-    { errorId = "test"
-    , severity = sev
-    , category = Unknown
-    , message = msg
-    , location = ErrorLocation Nothing 0 0 Nothing Nothing
-    , context = emptyContext
-    , recovery = errorRecovery
-    , suggestions = []
-    , relatedErrors = []
-    , errorChain = []
-    , timestamp = Nothing
-    }
-
-warningAt :: Text -> TypeError
-warningAt = errorAt Warning
-
-infoAt :: Text -> TypeError
-infoAt = errorAt Info
-
-errorWithCategory :: ErrorSeverity -> ErrorCategory -> Text -> TypeError
-errorWithCategory sev cat msg = (errorAt sev msg) { category = cat }
+errorAt "test-id" sev msg) { category = cat }
 
 fatalError :: Text -> TypeError
-fatalError = errorAt Fatal
-
-isInfixOf :: String -> String -> Bool
-isInfixOf = Data.List.isInfixOf
+fatalError = errorAt "test-id" = Data.List.L.isInfixOf

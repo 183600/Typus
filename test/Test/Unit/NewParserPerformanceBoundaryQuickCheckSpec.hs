@@ -11,13 +11,15 @@
 module Test.Unit.NewParserPerformanceBoundaryQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, oneof, suchThat)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
-import Data.List (sort, nub, isInfixOf, isPrefixOf, isSuffixOf, length, foldl')
+import Data.List (isInfixOf, isPrefixOf, isSuffixOf, length)
+import Data.List (sort, nub, foldl')
 import Data.Char (isSpace, isDigit, isLetter, isAlphaNum)
 import Data.Time.Clock (getCurrentTime, diffUTCTime)
 import Control.DeepSeq (NFData, force)
@@ -40,7 +42,7 @@ import Utils
   )
 
 -- ============================================================================
--- Helper Functions and Generators
+-- Helper Functions L.and Generators
 -- ============================================================================
 
 -- Generate large input strings for performance testing
@@ -80,12 +82,12 @@ genCommentHeavy numComments = do
     ]
   code <- listOf $ elements ["var x = 1;", "func test() {}", "class Test {}"]
   let interleaved = take numComments $ zipWith (\c code' -> c ++ code' ++ "\n") comments (cycle code)
-  return $ concat interleaved
+  return $ L.concat interleaved
 
 -- Generate input with long identifiers
 genLongIdentifiers :: Int -> Gen String
-genLongIdentifiers length = do
-  let longId = replicate length 'a'
+genLongIdentifiers L.length = do
+  let longId = replicate L.length 'a'
   return $ "var " ++ longId ++ " = function() { return " ++ longId ++ "; };"
 
 -- ============================================================================
@@ -138,9 +140,9 @@ prop_parser_comment_heavy numComments =
 
 -- Property: Parser should handle long identifiers
 prop_parser_long_identifiers :: Int -> Property
-prop_parser_long_identifiers length =
-  length > 0 && length <= 1000 ==> 
-  forAll (genLongIdentifiers length) $ \input ->
+prop_parser_long_identifiers L.length =
+  length > 0 && L.length <= 1000 ==> 
+  forAll (genLongIdentifiers L.length) $ \input ->
     let result = parse input
     in property $ case result of
          ParseSuccess _ _ -> True
@@ -224,7 +226,7 @@ prop_parser_graceful_degradation smallSize largeSize =
          _ -> property False
 
 -- ============================================================================
--- Memory and Resource Management Properties
+-- Memory L.and Resource Management Properties
 -- ============================================================================
 
 -- Property: Parser should not leak memory on repeated parsing
@@ -233,7 +235,7 @@ prop_parser_no_memory_leak inputs =
   not (null inputs) ==> 
   let results = map parse inputs
       forcedResults = map force results
-  in property $ all (\r -> case r of
+  in property $ L.all (\r -> case r of
          ParseSuccess _ _ -> True
          ParseError _ -> True
          _ -> False) forcedResults
@@ -251,7 +253,7 @@ prop_parser_resource_exhaustion size =
          _ -> property False
 
 -- ============================================================================
--- Edge Cases and Boundary Conditions
+-- Edge Cases L.and Boundary Conditions
 -- ============================================================================
 
 -- Property: Parser should handle empty input
@@ -288,7 +290,7 @@ prop_parser_extreme_line_length lineLength =
 prop_parser_many_escape_sequences :: Int -> Property
 prop_parser_many_escape_sequences numEscapes =
   numEscapes > 0 && numEscapes <= 1000 ==> 
-  let escapes = concat $ replicate numEscapes "\n\t\r\\\\\"'"
+  let escapes = L.concat $ replicate numEscapes "\n\t\r\\\\\"'"
       input = "var s = \"" ++ escapes ++ "\";"
       result = parse input
   in property $ case result of
@@ -310,18 +312,18 @@ tests = testGroup "New Parser Performance Boundary QuickCheck Tests"
     , fastProperty "parser long identifiers" prop_parser_long_identifiers
     ]
 
-  , testGroup "Memory and Resource Management"
+  , testGroup "Memory L.and Resource Management"
     [ fastProperty "parser memory bounded" prop_parser_memory_bounded
     , fastProperty "parser no memory leak" prop_parser_no_memory_leak
     , fastProperty "parser resource exhaustion" prop_parser_resource_exhaustion
     ]
 
-  , testGroup "Unicode and Special Characters"
+  , testGroup "Unicode L.and Special Characters"
     [ fastProperty "parser unicode performance" prop_parser_unicode_performance
     , fastProperty "parser malformed graceful" prop_parser_malformed_graceful
     ]
 
-  , testGroup "Timeout and Incremental Parsing"
+  , testGroup "Timeout L.and Incremental Parsing"
     [ fastProperty "parser timeout works" prop_parser_timeout_works
     , fastProperty "parser incremental" prop_parser_incremental
     ]
@@ -330,10 +332,10 @@ tests = testGroup "New Parser Performance Boundary QuickCheck Tests"
     [ fastProperty "parser graceful degradation" prop_parser_graceful_degradation
     ]
 
-  , testGroup "Edge Cases and Boundary Conditions"
+  , testGroup "Edge Cases L.and Boundary Conditions"
     [ fastProperty "parser empty input" prop_parser_empty_input
     , fastProperty "parser whitespace only" prop_parser_whitespace_only
-    , fastProperty "parser extreme line length" prop_parser_extreme_line_length
+    , fastProperty "parser extreme line L.length" prop_parser_extreme_line_length
     , fastProperty "parser many escape sequences" prop_parser_many_escape_sequences
     ]
   ]

@@ -6,6 +6,7 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import System.FilePath ((</>))
 
@@ -55,23 +56,23 @@ goModTests = testGroup "Go Module Tests"
   [ testCase "goModContents generates valid go.mod" $ do
       let moduleName = "test.module"
           contents = goModContents moduleName
-      "module test.module" `isInfixOf` contents @?= True
-      "go 1.21" `isInfixOf` contents @?= True
+      "module test.module" `L.isInfixOf` contents @?= True
+      "go 1.21" `L.isInfixOf` contents @?= True
       
   , testCase "goModContents handles complex module names" $ do
       let moduleName = "github.com/user/project"
           contents = goModContents moduleName
-      "module github.com/user/project" `isInfixOf` contents @?= True
+      "module github.com/user/project" `L.isInfixOf` contents @?= True
       
   , testCase "goModContents escapes special characters" $ do
       let moduleName = "module-with-dashes"
           contents = goModContents moduleName
-      "module module-with-dashes" `isInfixOf` contents @?= True
+      "module module-with-dashes" `L.isInfixOf` contents @?= True
       
   , testCase "writeGoModule creates valid file structure" $ do
       let moduleName = "test.module"
           goMod = goModContents moduleName
-      length goMod > 10 @?= True  -- Should have reasonable content
+      L.length goMod > 10 @?= True  -- Should have reasonable content
   ]
 
 tempFileTests :: TestTree
@@ -132,7 +133,7 @@ commandExecutionTests = testGroup "Command Execution Tests"
       
   , testCase "nullDevice provides valid device path" $ do
       nullDevice `seq` True @?= True  -- Should not crash
-      length nullDevice > 0 @?= True  -- Should be non-empty
+      L.length nullDevice > 0 @?= True  -- Should be non-empty
   ]
 
 quickCheckProperties :: TestTree
@@ -146,12 +147,12 @@ quickCheckProperties = testGroup "QuickCheck GoToolchain Properties"
 prop_gomod_contains_module :: String -> Property
 prop_gomod_contains_module moduleName =
   let contents = goModContents moduleName
-  in not (null moduleName) ==> ("module " ++ moduleName) `isInfixOf` contents
+  in not (null moduleName) ==> ("module " ++ moduleName) `L.isInfixOf` contents
 
 prop_gomod_contains_version :: String -> Property
 prop_gomod_contains_version moduleName =
   let contents = goModContents moduleName
-  in "go 1.21" `isInfixOf` contents
+  in "go 1.21" `L.isInfixOf` contents
 
 prop_run_command_total :: [String] -> String -> Property
 prop_run_command_total args dir =

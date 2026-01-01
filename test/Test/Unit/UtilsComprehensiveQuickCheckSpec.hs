@@ -3,6 +3,7 @@
 module Test.Unit.UtilsComprehensiveQuickCheckSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 
@@ -23,7 +24,7 @@ utilsComprehensiveQuickCheckSpec = testGroup "Utils Comprehensive QuickCheck Tes
 -- | Properties for trim function
 trimProperties :: TestTree
 trimProperties = testGroup "Trim Properties"
-  [ testProperty "trim removes leading and trailing whitespace" $
+  [ testProperty "trim removes leading L.and trailing whitespace" $
       \s -> trim ("  " ++ s ++ "  ") == trim s
   
   , testProperty "trim idempotent" $
@@ -32,13 +33,13 @@ trimProperties = testGroup "Trim Properties"
   , testProperty "trim preserves internal whitespace" $
       \s -> not (null s) ==> 
         let trimmed = trim s
-        in length (filter (== ' ') trimmed) >= length (filter (== ' ') s) - 2
+        in L.length (L.filter (== ' ') trimmed) >= L.length (L.filter (== ' ') s) - 2
   
   , testProperty "trim of empty string is empty" $
       trim "" == ""
   
   , testProperty "trim of only whitespace is empty" $
-      \ws -> all (`elem` " \t\n\r") ws ==> trim ws == ""
+      \ws -> L.all (`elem` " \t\n\r") ws ==> trim ws == ""
   ]
 
 -- | Properties for split functions
@@ -46,14 +47,14 @@ splitProperties :: TestTree
 splitProperties = testGroup "Split Properties"
   [ testProperty "splitBy preserves empty segments" $
       \delim s -> not (null delim) ==> 
-        concat (splitBy delim s) == s
+        L.concat (splitBy delim s) == s
   
   , testProperty "splitByCollapsed removes empty segments" $
       \delim s -> not (null delim) ==> 
         let collapsed = splitByCollapsed delim
             normal = splitBy delim
-        in all (not . null) (collapsed s) && 
-           length (collapsed s) <= length (normal s)
+        in L.all (not . null) (collapsed s) && 
+           L.length (collapsed s) <= L.length (normal s)
   
   , testProperty "splitByComma equals splitBy ','" $
       \s -> splitByComma s == splitBy ',' s
@@ -78,10 +79,10 @@ commentProperties = testGroup "Comment Properties"
         in "// this is a comment" `notElem` lines result
   
   , testProperty "removeLineComments preserves non-comment content" $
-      \content -> not (any (`elem` "//") content) ==> 
+      \content -> not (L.any (`elem` "//") content) ==> 
         removeLineComments content == content
   
-  , testProperty "removeComments removes both // and /* */ comments" $
+  , testProperty "removeComments removes both // L.and /* */ comments" $
       \prefix middle suffix ->
         let input = prefix ++ "// line comment\n" ++ middle ++ "/* block comment */" ++ suffix
             result = removeComments input
@@ -92,13 +93,13 @@ commentProperties = testGroup "Comment Properties"
       \strContent -> 
         let input = "// comment\n\"" ++ strContent ++ "\"\n// another comment"
             result = removeComments input
-        in "\"" ++ strContent ++ "\"" `isInfixOf` result
+        in "\"" ++ strContent ++ "\"" `L.isInfixOf` result
   
   , testProperty "comment removal idempotent" $
       \s -> removeComments (removeComments s) == removeComments s
   ]
   where
-    isInfixOf needle haystack = needle `elem` [take (length needle) (drop i haystack) | i <- [0..length haystack - length needle]]
+    L.isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
 
 -- | Properties for indentation functions
 indentationProperties :: TestTree
@@ -108,15 +109,15 @@ indentationProperties = testGroup "Indentation Properties"
         let input = unlines ["  " ++ lines1, "    " ++ lines2]
             result = normalizeIndentation input
             resultLines = lines result
-        in length resultLines == 2 &&
-           all (not . isPrefixOf "  ") resultLines
+        in L.length resultLines == 2 &&
+           L.all (not . L.isPrefixOf "  ") resultLines
   
   , testProperty "normalizeIndentation preserves empty lines" $
       \lines1 lines2 lines3 ->
         let input = unlines ["  " ++ lines1, "", "    " ++ lines2, "", "  " ++ lines3]
             result = normalizeIndentation input
             resultLines = lines result
-        in length (filter null resultLines) == 2
+        in L.length (filter null resultLines) == 2
   
   , testProperty "normalizeIndentation of empty string is empty" $
       normalizeIndentation "" == ""
@@ -125,10 +126,10 @@ indentationProperties = testGroup "Indentation Properties"
       \s -> let ls = lines s
                 result = normalizeIndentation s
                 resultLines = lines result
-            in length ls == length resultLines
+            in L.length ls == L.length resultLines
   ]
   where
-    isPrefixOf needle haystack = take (length needle) haystack == needle
+    L.isPrefixOf needle haystack = take (L.length needle) haystack == needle
 
 -- | Properties for breakOn function
 breakOnProperties :: TestTree
@@ -143,7 +144,7 @@ breakOnProperties = testGroup "BreakOn Properties"
         in before == prefix && after == suffix
   
   , testProperty "breakOn returns (input, \"\") when pattern not found" $
-      \s pat -> not (null pat) && not (pat `isInfixOf` s) ==> 
+      \s pat -> not (null pat) && not (pat `L.isInfixOf` s) ==> 
         breakOn pat s == (s, "")
   
   , testProperty "breakOn with pattern at start returns (\"\", rest)" $
@@ -159,4 +160,4 @@ breakOnProperties = testGroup "BreakOn Properties"
         in before == prefix && after == ""
   ]
   where
-    isInfixOf needle haystack = needle `elem` [take (length needle) (drop i haystack) | i <- [0..length haystack - length needle]]
+    L.isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]

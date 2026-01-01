@@ -10,6 +10,7 @@
 module Test.Unit.NewSyntaxValidatorQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -105,7 +106,7 @@ instance Arbitrary Language where
 prop_new_validator_no_errors :: Property
 prop_new_validator_no_errors =
   let validator = newSyntaxValidator
-  in property $ null (validatorErrors validator)
+  in property $ L.null (validatorErrors validator)
 
 -- Property: New syntax validator has global scope
 prop_new_validator_global_scope :: Property
@@ -113,8 +114,8 @@ prop_new_validator_global_scope =
   let validator = newSyntaxValidator
       scope = currentScope validator
   in property $ scopeName scope === "global" .&&.
-             Set.null (scopeVariables scope) .&&.
-             Set.null (scopeFunctions scope) .&&.
+             Set.L.null (scopeVariables scope) .&&.
+             Set.L.null (scopeFunctions scope) .&&.
              parentScope scope === Nothing
 
 -- Property: Create global scope creates correct scope
@@ -122,11 +123,11 @@ prop_create_global_scope :: Property
 prop_create_global_scope =
   let scope = createGlobalScope
   in property $ scopeName scope === "global" .&&.
-             Set.null (scopeVariables scope) .&&.
-             Set.null (scopeFunctions scope) .&&.
+             Set.L.null (scopeVariables scope) .&&.
+             Set.L.null (scopeFunctions scope) .&&.
              parentScope scope === Nothing
 
--- Property: Syntax error preserves all fields
+-- Property: Syntax error preserves L.all fields
 prop_syntax_error_preserves_fields :: ErrorType -> String -> Int -> Int -> String -> Property
 prop_syntax_error_preserves_fields errorType message line col content =
   let error = SyntaxError errorType message line col content
@@ -211,7 +212,7 @@ prop_tokenization_preserves_newlines numLines =
   numLines >= 0 && numLines <= 10 ==>
   let code = unlines (replicate numLines "x")
       tokens = tokenize code
-      newlineTokens = length $ filter isNewlineToken tokens
+      newlineTokens = L.length $ filter isNewlineToken tokens
   in property $ newlineTokens === numLines
   where
     isNewlineToken (TNewline _) = True
@@ -220,7 +221,7 @@ prop_tokenization_preserves_newlines numLines =
 -- Property: Tokenization handles strings correctly
 prop_tokenization_handles_strings :: String -> Property
 prop_tokenization_handles_strings content =
-  not (any (`elem` "\\\"") content) ==>
+  not (L.any (`elem` "\\\"") content) ==>
   let code = "s := \"" ++ content ++ "\""
       tokens = tokenize code
       stringTokens = filter isStringToken tokens
@@ -232,7 +233,7 @@ prop_tokenization_handles_strings content =
 -- Property: Tokenization handles comments correctly
 prop_tokenization_handles_comments :: String -> Property
 prop_tokenization_handles_comments content =
-  not (any (`elem` "\n\r") content) ==>
+  not (L.any (`elem` "\n\r") content) ==>
   let code = "// " ++ content ++ "\nfunc main() {}"
       tokens = tokenize code
       commentTokens = filter isCommentToken tokens
@@ -273,7 +274,7 @@ prop_validation_detects_missing_braces :: Property
 prop_validation_detects_missing_braces =
   let code = "func main() {\n    println(\"test\")\n"  -- Missing closing brace
       errors = validateSyntax code
-      hasBraceError = any isMissingBraceError errors
+      hasBraceError = L.any isMissingBraceError errors
   in property $ hasBraceError
   where
     isMissingBraceError (SyntaxError MissingBrace _ _ _ _) = True
@@ -284,7 +285,7 @@ prop_validation_detects_missing_package :: Property
 prop_validation_detects_missing_package =
   let code = "func main() {\n    println(\"test\")\n}\n"  -- Missing package declaration
       errors = validateSyntax code
-      hasPackageError = any isMissingPackageError errors
+      hasPackageError = L.any isMissingPackageError errors
   in property $ hasPackageError
   where
     isMissingPackageError (SyntaxError MissingPackageDeclaration _ _ _ _) = True
@@ -300,28 +301,28 @@ prop_validation_detects_duplicate_declarations name =
         , "func " ++ name ++ "() {}"  -- Duplicate function
         ]
       errors = validateSyntax code
-      hasDuplicateError = any isDuplicateDeclarationError errors
+      hasDuplicateError = L.any isDuplicateDeclarationError errors
   in property $ hasDuplicateError
   where
     isDuplicateDeclarationError (SyntaxError DuplicateDeclaration _ _ _ _) = True
     isDuplicateDeclarationError _ = False
 
--- Property: Get syntax errors returns errors in reverse order
+-- Property: Get syntax errors returns errors in L.reverse order
 prop_get_syntax_errors_reverse_order :: SyntaxValidator -> Property
 prop_get_syntax_errors_reverse_order validator =
   let errors = getSyntaxErrors validator
       originalErrors = validatorErrors validator
-  in property $ errors === reverse originalErrors
+  in property $ errors === L.reverse originalErrors
 
 -- Property: Format syntax error contains expected information
 prop_format_syntax_error_contains_info :: SyntaxError -> Property
 prop_format_syntax_error_contains_info error =
   let formatted = formatSyntaxError error
-      hasType = show (errorType error) `isInfixOf` formatted
-      hasMessage = errorMessage error `isInfixOf` formatted
+      hasType = show (errorType error) `L.isInfixOf` formatted
+      hasMessage = errorMessage error `L.isInfixOf` formatted
       hasLocation = lineNumber error > 0 && columnNumber error > 0
   in property $ hasType .&&. hasMessage .&&.
-             (if hasLocation then ("Line " ++ show (lineNumber error)) `isInfixOf` formatted else property True)
+             (if hasLocation then ("Line " ++ show (lineNumber error)) `L.isInfixOf` formatted else property True)
 
 -- Property: Validate file is same as validate syntax
 prop_validate_file_same_as_validate_syntax :: String -> Property
@@ -339,7 +340,7 @@ prop_validation_handles_empty_input =
 -- Property: Validation handles whitespace-only input
 prop_validation_handles_whitespace_only :: String -> Property
 prop_validation_handles_whitespace_only whitespace =
-  all (`elem` " \t\n\r") whitespace ==>
+  L.all (`elem` " \t\n\r") whitespace ==>
   let errors = validateSyntax whitespace
   in property $ null errors
 
@@ -348,7 +349,7 @@ prop_validation_detects_invalid_function :: Property
 prop_validation_detects_invalid_function =
   let code = "func\n"  -- Invalid function declaration
       errors = validateSyntax code
-      hasFunctionError = any isInvalidFunctionError errors
+      hasFunctionError = L.any isInvalidFunctionError errors
   in property $ hasFunctionError
   where
     isInvalidFunctionError (SyntaxError InvalidFunctionDeclaration _ _ _ _) = True
@@ -359,7 +360,7 @@ prop_validation_detects_invalid_import :: Property
 prop_validation_detects_invalid_import =
   let code = "import\n"  -- Invalid import declaration
       errors = validateSyntax code
-      hasImportError = any isInvalidImportError errors
+      hasImportError = L.any isInvalidImportError errors
   in property $ hasImportError
   where
     isInvalidImportError (SyntaxError InvalidImport _ _ _ _) = True
@@ -380,7 +381,7 @@ prop_tokenization_handles_operators =
   let code = "x := a + b * c / d - e"
       tokens = tokenize code
       operatorTokens = filter isOperatorToken tokens
-  in property $ length operatorTokens >= 4  -- Should find +, *, -, /
+  in property $ L.length operatorTokens >= 4  -- Should find +, *, -, /
   where
     isOperatorToken (TOperator _ _ _) = True
     isOperatorToken _ = False
@@ -391,7 +392,7 @@ prop_tokenization_handles_delimiters =
   let code = "func main() { return (1 + 2) }"
       tokens = tokenize code
       delimiterTokens = filter isDelimiterToken tokens
-  in property $ length delimiterTokens >= 6  -- Should find (, ), {, }
+  in property $ L.length delimiterTokens >= 6  -- Should find (, ), {, }
   where
     isDelimiterToken (TDelimiter _ _ _) = True
     isDelimiterToken _ = False
@@ -399,7 +400,7 @@ prop_tokenization_handles_delimiters =
 -- Property: Tokenization handles identifiers correctly
 prop_tokenization_handles_identifiers :: String -> Property
 prop_tokenization_handles_identifiers identifier =
-  not (null identifier) && all (`elem` ('_' : ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'])) identifier ==>
+  not (null identifier) && L.all (`elem` ('_' : ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'])) identifier ==>
   let code = "var " ++ identifier ++ " int"
       tokens = tokenize code
       identifierTokens = filter isIdentifierToken tokens
@@ -430,7 +431,7 @@ tests =
     [ fastProperty "New syntax validator has no errors" prop_new_validator_no_errors
     , fastProperty "New syntax validator has global scope" prop_new_validator_global_scope
     , fastProperty "Create global scope creates correct scope" prop_create_global_scope
-    , fastProperty "Syntax error preserves all fields" prop_syntax_error_preserves_fields
+    , fastProperty "Syntax error preserves L.all fields" prop_syntax_error_preserves_fields
     , fastProperty "Syntax error ordering works correctly" prop_syntax_error_ordering
     , fastProperty "Token preserves position information" prop_token_preserves_position
     , fastProperty "Language detection works for Go code" prop_language_detection_go
@@ -447,7 +448,7 @@ tests =
     , fastProperty "Validation detects missing braces" prop_validation_detects_missing_braces
     , fastProperty "Validation detects missing package declaration" prop_validation_detects_missing_package
     , fastProperty "Validation detects duplicate declarations" prop_validation_detects_duplicate_declarations
-    , fastProperty "Get syntax errors returns errors in reverse order" prop_get_syntax_errors_reverse_order
+    , fastProperty "Get syntax errors returns errors in L.reverse order" prop_get_syntax_errors_reverse_order
     , fastProperty "Format syntax error contains expected information" prop_format_syntax_error_contains_info
     , fastProperty "Validate file is same as validate syntax" prop_validate_file_same_as_validate_syntax
     , fastProperty "Validation handles empty input" prop_validation_handles_empty_input

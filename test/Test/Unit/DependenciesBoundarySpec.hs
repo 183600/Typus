@@ -5,6 +5,7 @@
 module Test.Unit.DependenciesBoundarySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertBool, assertFailure, (@?=), assertEqual)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property)
@@ -29,13 +30,13 @@ tests = testGroup "Dependencies boundary condition tests"
             assertBool "Empty program should be valid" True
             
         , testCase "Program with single statement is valid" $ do
-            let singleStmt = SVarDecl "x" (SimpleT "Int")
+            let singleStmt = SVarDecl (T.pack "x") (SimpleT (T.pack "Int"))
                 program = Program [singleStmt]
             assertBool "Single statement program should be valid" True
             
         , testCase "Nested type expressions handle depth correctly" $ do
-            let nestedType = FuncT [("x", GenericT "List" [SimpleT "Int"])] 
-                                   (GenericT "Maybe" [SimpleT "String"])
+            let nestedType = FuncT [("x", GenericT "List" [SimpleT (T.pack "Int")])] 
+                                   (GenericT "Maybe" [SimpleT (T.pack "String")])
                 stmt = SFuncDecl "nested" [("x", nestedType)] (Just nestedType)
                 program = Program [stmt]
             assertBool "Nested type expressions should be handled" True
@@ -55,12 +56,12 @@ tests = testGroup "Dependencies boundary condition tests"
             assertBool "Should handle generic type with no parameters" True
             
         , testCase "Function type with no parameters" $ do
-            let funcNoParams = FuncT [] (SimpleT "Void")
+            let funcNoParams = FuncT [] (SimpleT (T.pack "Void"))
                 stmt = SFuncDecl "empty" [] (Just funcNoParams)
             assertBool "Should handle function with no parameters" True
             
         , testCase "Refined type with no constraints" $ do
-            let refinedNoConstraints = RefineT (SimpleT "Int") []
+            let refinedNoConstraints = RefineT (SimpleT (T.pack "Int")) []
                 stmt = STypeAlias "EmptyRefined" refinedNoConstraints []
             assertBool "Should handle refined type with no constraints" True
         ]
@@ -106,14 +107,14 @@ tests = testGroup "Dependencies boundary condition tests"
             assertBool "Should handle duplicate type definitions" True
             
         , testCase "Type checker with circular dependencies" $ do
-            let typeA = STypeAlias "A" (SimpleT "B") []
-                typeB = STypeAlias "B" (SimpleT "A") []
+            let typeA = STypeAlias "A" (SimpleT (T.pack "B")) []
+                typeB = STypeAlias "B" (SimpleT (T.pack "A")) []
                 checker = newDependentTypeChecker
-            -- Should detect or handle circular dependencies
+            -- Should detect L.or handle circular dependencies
             assertBool "Should handle circular dependencies" True
             
         , testCase "Type checker with undefined type references" $ do
-            let undefinedRef = SVarDecl "x" (SimpleT "UndefinedType")
+            let undefinedRef = SVarDecl (T.pack "x") (SimpleT (T.pack "UndefinedType"))
                 checker = newDependentTypeChecker
             -- Should handle undefined type references
             assertBool "Should handle undefined type references" True
@@ -122,20 +123,20 @@ tests = testGroup "Dependencies boundary condition tests"
     , testGroup "Inference boundary conditions"
         [ testCase "Inference with insufficient information" $ do
             let checker = newDependentTypeChecker
-                stmt = SVarDecl "x" (SimpleT "")  -- Empty type
+                stmt = SVarDecl (T.pack "x") (SimpleT "")  -- Empty type
             -- Should handle cases with insufficient type information
             assertBool "Should handle insufficient information" True
             
         , testCase "Inference with conflicting constraints" $ do
             let constraint1 = SizeGT "x" 10
                 constraint2 = SizeLT "x" 5  -- Conflicting constraint
-                stmt = SVarDecl "x" (RefineT (SimpleT "Int") [constraint1, constraint2])
+                stmt = SVarDecl (T.pack "x") (RefineT (SimpleT (T.pack "Int")) [constraint1, constraint2])
             -- Should detect conflicting constraints
             assertBool "Should detect conflicting constraints" True
             
         , testCase "Inference with recursive types" $ do
             let recursiveType = STypeDef "List" ["a"] 
-                                   [PredC "Cons" [SimpleT "a", GenericT "List" [SimpleT "a"]]]
+                                   [PredC "Cons" [SimpleT (T.pack "a"), GenericT "List" [SimpleT (T.pack "a")]]]
                 checker = newDependentTypeChecker
             -- Should handle recursive type definitions
             assertBool "Should handle recursive types" True
@@ -152,13 +153,13 @@ tests = testGroup "Dependencies boundary condition tests"
             assertBool "Should handle malformed syntax" True
             
         , testCase "Parser with extremely long input" $ do
-            let longInput = concat (replicate 10000 "type T = Int\n")
+            let longInput = L.concat (replicate 10000 "type T = Int\n")
             -- Should handle very long input
             assertBool "Should handle long input" True
             
         , testCase "Parser with deeply nested structures" $ do
-            let nested = concat (replicate 100 "List<")
-                deeplyNested = nested ++ "Int" ++ concat (replicate 100 ">")
+            let nested = L.concat (replicate 100 "List<")
+                deeplyNested = nested ++ "Int" ++ L.concat (replicate 100 ">")
             -- Should handle deeply nested structures
             assertBool "Should handle deeply nested structures" True
         ]
@@ -190,7 +191,7 @@ tests = testGroup "Dependencies boundary condition tests"
             assertBool "Should handle missing dependencies" True
         ]
     
-    , testGroup "Memory and performance boundaries"
+    , testGroup "Memory L.and performance boundaries"
         [ testCase "Large number of type variables" $ do
             let manyVars = ["var" ++ show i | i <- [1..1000]]
                 checker = newDependentTypeChecker
@@ -198,8 +199,8 @@ tests = testGroup "Dependencies boundary condition tests"
             assertBool "Should handle many type variables" True
             
         , testCase "Deeply nested type constraints" $ do
-            let deepConstraint = foldl (\acc i -> RefineT acc [SizeGT ("level" ++ show i) i]) 
-                                       (SimpleT "Int") [1..100]
+            let deepConstraint = L.foldl (\acc i -> RefineT acc [SizeGT ("level" ++ show i) i]) 
+                                       (SimpleT (T.pack "Int")) [1..100]
             -- Should handle deeply nested constraints
             assertBool "Should handle deeply nested constraints" True
             

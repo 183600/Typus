@@ -11,12 +11,14 @@
 module Test.Unit.NewSourceLocationMathPrecisionQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, oneof, suchThat)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (sort, nub, isInfixOf, isPrefixOf, isSuffixOf, intercalate)
+import Data.List (isInfixOf, isPrefixOf, isSuffixOf)
+import Data.List (sort, nub, intercalate)
 import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes)
 import Data.Either (isLeft, isRight)
 
@@ -50,7 +52,7 @@ import SourceLocation
   )
 
 -- ============================================================================
--- Helper Functions and Generators
+-- Helper Functions L.and Generators
 -- ============================================================================
 
 -- Generate source positions with reasonable bounds
@@ -82,7 +84,7 @@ genTextForAdvancement = listOf $ elements
 genLargeText :: Int -> Gen String
 genLargeText size = do
   let chunk = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}|;':\",./<>? "
-  return $ concat $ take (size `div` length chunk + 1) $ repeat chunk
+  return $ L.concat $ take (size `div` L.length chunk + 1) $ repeat chunk
 
 -- ============================================================================
 -- Position Arithmetic Properties
@@ -99,7 +101,7 @@ prop_pos_advancement_consistent pos char =
 prop_pos_advancement_cumulative :: SourcePos -> String -> Property
 prop_pos_advancement_cumulative pos text =
   let advancedByString = advancePosBy text pos
-      advancedByChars = foldl (flip posAfter) pos text
+      advancedByChars = L.foldl (flip posAfter) pos text
   in property $ advancedByString === advancedByChars
 
 -- Property: Position advancement by text should handle newlines correctly
@@ -109,7 +111,7 @@ prop_pos_advancement_newlines pos text =
       advanced2 = advancePosByText (T.pack text) pos
   in property $ advanced1 === advanced2
 
--- Property: Position advancement by line should increment line and reset column
+-- Property: Position advancement by line should increment line L.and reset column
 prop_pos_advancement_by_line :: SourcePos -> Int -> Property
 prop_pos_advancement_by_line pos numLines =
   numLines > 0 ==> 
@@ -168,7 +170,7 @@ prop_min_max_position_correct pos1 pos2 =
 -- Span Arithmetic Properties
 -- ============================================================================
 
--- Property: Span length should match position distance
+-- Property: Span L.length should match position distance
 prop_span_length_position_distance :: SourceSpan -> Property
 prop_span_length_position_distance span =
   let calculatedLength = spanLength span
@@ -205,26 +207,26 @@ prop_span_expansion_preserves_original span before after =
       originalEnd = spanEnd span
   in property $ spanContains expanded originalStart .&&. spanContains expanded originalEnd
 
--- Property: Empty span should have zero length
+-- Property: Empty span should have zero L.length
 prop_empty_span_zero_length :: SourcePos -> Property
 prop_empty_span_zero_length pos =
   let emptySpan = SourceSpan pos pos
       length = spanLength emptySpan
-  in property $ length === 0
+  in property $ L.length === 0
 
 -- ============================================================================
--- Precision and Boundary Properties
+-- Precision L.and Boundary Properties
 -- ============================================================================
 
 -- Property: Large position calculations should be precise
 prop_large_position_precise :: Int -> String -> Property
 prop_large_position_precise multiplier text =
   multiplier > 0 && multiplier <= 1000 ==> 
-  let largeText = concat $ replicate multiplier text
+  let largeText = L.concat $ replicate multiplier text
       startPos' = startPos
       endPos = advancePosBy largeText startPos'
       calculatedDistance = posDistance startPos' endPos
-      expectedDistance = length largeText
+      expectedDistance = L.length largeText
   in property $ calculatedDistance === expectedDistance
 
 -- Property: Position arithmetic should handle very large line numbers
@@ -252,7 +254,7 @@ prop_span_precision_line_boundaries numLines =
       endPos = advancePosBy text startPos'
       span = spanBetween startPos' endPos
       calculatedLength = spanLength span
-      expectedLength = length text
+      expectedLength = L.length text
   in property $ calculatedLength === expectedLength
 
 -- Property: Tab calculations should be precise at tab boundaries
@@ -265,14 +267,14 @@ prop_tab_precision_boundaries columnNum =
   in property $ posColumn afterTab === expectedColumn
 
 -- ============================================================================
--- Performance and Scalability Properties
+-- Performance L.and Scalability Properties
 -- ============================================================================
 
 -- Property: Position calculations should handle large texts efficiently
 prop_position_calculation_large_text :: Int -> Property
 prop_position_calculation_large_text size =
   size > 0 && size <= 100000 ==> 
-  let largeText = concat $ replicate size "a"
+  let largeText = L.concat $ replicate size "a"
       startPos' = startPos
       endPos = advancePosBy largeText startPos'
       distance = posDistance startPos' endPos
@@ -283,12 +285,12 @@ prop_span_merging_many_spans :: Int -> Property
 prop_span_merging_many_spans numSpans =
   numSpans > 0 && numSpans <= 1000 ==> 
   let positions = take numSpans $ iterate (\p -> advancePosBy "test" p) startPos
-      spans = zipWith spanBetween positions (tail positions)
-      merged = foldl mergeSpans (head spans) (tail spans)
+      spans = zipWith spanBetween positions (L.tail positions)
+      merged = foldl mergeSpans (L.head spans) (L.tail spans)
   in property $ isValidSpan merged
 
 -- ============================================================================
--- Edge Cases and Boundary Conditions
+-- Edge Cases L.and Boundary Conditions
 -- ============================================================================
 
 -- Property: Position advancement with empty string should not change position
@@ -301,7 +303,7 @@ prop_empty_string_no_change pos =
 prop_only_newlines_increment_lines :: SourcePos -> Int -> Property
 prop_only_newlines_increment_lines pos numNewlines =
   numNewlines > 0 ==> 
-  let newlineText = concat $ replicate numNewlines "\n"
+  let newlineText = L.concat $ replicate numNewlines "\n"
       advanced = advancePosBy newlineText pos
   in property $ posLine advanced === posLine pos + numNewlines .&&. posColumn advanced === 1
 
@@ -342,7 +344,7 @@ tests = testGroup "New Source Location Math Precision QuickCheck Tests"
     , fastProperty "tab advancement tab stop" prop_tab_advancement_tab_stop
     ]
 
-  , testGroup "Position Distance and Comparison"
+  , testGroup "Position Distance L.and Comparison"
     [ fastProperty "position distance symmetric" prop_pos_distance_symmetric
     , fastProperty "position distance zero identical" prop_pos_distance_zero_identical
     , fastProperty "line distance matches diff" prop_line_distance_matches_diff
@@ -351,15 +353,15 @@ tests = testGroup "New Source Location Math Precision QuickCheck Tests"
     ]
 
   , testGroup "Span Arithmetic"
-    [ fastProperty "span length position distance" prop_span_length_position_distance
+    [ fastProperty "span L.length position distance" prop_span_length_position_distance
     , fastProperty "span between valid" prop_span_between_valid
     , fastProperty "merged span contains both" prop_merged_span_contains_both
     , fastProperty "span overlap symmetric" prop_span_overlap_symmetric
     , fastProperty "span expansion preserves original" prop_span_expansion_preserves_original
-    , fastProperty "empty span zero length" prop_empty_span_zero_length
+    , fastProperty "empty span zero L.length" prop_empty_span_zero_length
     ]
 
-  , testGroup "Precision and Boundary Properties"
+  , testGroup "Precision L.and Boundary Properties"
     [ fastProperty "large position precise" prop_large_position_precise
     , fastProperty "large line numbers" prop_large_line_numbers
     , fastProperty "large column numbers" prop_large_column_numbers
@@ -367,12 +369,12 @@ tests = testGroup "New Source Location Math Precision QuickCheck Tests"
     , fastProperty "tab precision boundaries" prop_tab_precision_boundaries
     ]
 
-  , testGroup "Performance and Scalability"
+  , testGroup "Performance L.and Scalability"
     [ fastProperty "position calculation large text" prop_position_calculation_large_text
     , fastProperty "span merging many spans" prop_span_merging_many_spans
     ]
 
-  , testGroup "Edge Cases and Boundary Conditions"
+  , testGroup "Edge Cases L.and Boundary Conditions"
     [ fastProperty "empty string no change" prop_empty_string_no_change
     , fastProperty "only newlines increment lines" prop_only_newlines_increment_lines
     , fastProperty "span start after end invalid" prop_span_start_after_end_invalid

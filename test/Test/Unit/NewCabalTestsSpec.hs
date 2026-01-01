@@ -45,7 +45,9 @@ import SyntaxValidator
   )
 
 import Data.Char (isSpace, isAlpha, isDigit)
-import Data.List (isPrefixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf)
+import Data.List (sort, nub)
 import qualified Data.Text as T
 import Text.Read (readMaybe)
 
@@ -69,14 +71,14 @@ prop_format_missing_message missing =
       uniqueMissing = nub missing
   in property $ 
     (null missing ==> msg == "Missing embedded assets detected:\n") .&&.
-    (not (null missing) ==> "Missing embedded assets detected:" `isPrefixOf` msg)
+    (not (null missing) ==> "Missing embedded assets detected:" `L.isPrefixOf` msg)
 
 -- Test 3: MissingEmbed ordering property
 prop_missing_embed_ordering :: MissingEmbed -> MissingEmbed -> Property
 prop_missing_embed_ordering me1 me2 =
   let list = [me2, me1]
       sorted = sort list
-  in property $ length sorted == 2
+  in property $ L.length sorted == 2
 
 -- ============================================================================
 -- SourceLocation Tests
@@ -116,7 +118,7 @@ prop_split_by_roundtrip :: Char -> String -> Property
 prop_split_by_roundtrip delim str =
   let parts = splitBy delim str
       rejoined = intercalate [delim] parts
-  in property $ length rejoined >= length str
+  in property $ L.length rejoined >= L.length str
 
 -- Test 8: trim idempotency property
 prop_trim_idempotent :: String -> Property
@@ -130,14 +132,14 @@ prop_remove_line_comments_preserves_literals :: String -> String -> Property
 prop_remove_line_comments_preserves_literals prefix suffix =
   let content = prefix ++ "url := \"http://example.com//path\" // comment" ++ suffix
       processed = removeLineComments content
-  in property $ "http://example.com//path" `isInfixOf` processed
+  in property $ "http://example.com//path" `L.isInfixOf` processed
 
 -- Test 10: splitByCollapsed vs splitBy property
 prop_split_by_collapsed_vs_split_by :: Char -> String -> Property
 prop_split_by_collapsed_vs_split_by delim str =
   let collapsed = splitByCollapsed delim str
       regular = splitBy delim str
-  in property $ length collapsed <= length regular
+  in property $ L.length collapsed <= L.length regular
 
 -- ============================================================================
 -- Test Collection
@@ -155,7 +157,7 @@ tests =
     , testGroup "SourceLocation Properties"
         [ fastProperty "SourcePos advancement works correctly" prop_source_pos_advancement
         , fastProperty "span merging preserves bounds" prop_span_merging
-        , fastProperty "emptySpan has same start and end" prop_empty_span_property
+        , fastProperty "emptySpan has same start L.and end" prop_empty_span_property
         ]
     
     , testGroup "Utils Properties"
@@ -174,8 +176,8 @@ tests =
         , testCase "formatMissingMessage formats correctly" $ do
             let missing = [ MissingEmbed "*.txt" "/src" "main.go" ]
                 msg = formatMissingMessage missing
-            assertBool "Message contains header" $ "Missing embedded assets detected:" `isPrefixOf` msg
-            assertBool "Message contains pattern" $ "*.txt" `isInfixOf` msg
+            assertBool "Message contains header" $ "Missing embedded assets detected:" `L.isPrefixOf` msg
+            assertBool "Message contains pattern" $ "*.txt" `L.isInfixOf` msg
         ]
     ]
 
@@ -186,7 +188,7 @@ intercalate _ [x] = x
 intercalate sep (x:xs) = x ++ sep ++ intercalate sep xs
 
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `Data.List.isInfixOf` haystack
+L.isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
 
 -- Arbitrary instances for QuickCheck
 instance Arbitrary MissingEmbed where

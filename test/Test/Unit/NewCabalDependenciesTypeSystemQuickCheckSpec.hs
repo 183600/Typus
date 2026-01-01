@@ -3,6 +3,7 @@
 module Test.Unit.NewCabalDependenciesTypeSystemQuickCheckSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Dependencies.TypeSystem
 import Dependencies.AST (TypeExpr(..), Constraint(..))
@@ -48,11 +49,11 @@ propSubstitutionComposition x y z tv =
     applySubstitution (TVVar name) subst = Map.findWithDefault (TVVar name) name subst
     applySubstitution (TVCon name) subst = Map.findWithDefault (TVCon name) name subst
     applySubstitution (TVApp name args) subst = 
-      TVApp name (map (`applySubstitution` subst) args)
+      TVApp name (L.map (`applySubstitution` subst) args)
     applySubstitution (TVFun args result) subst = 
-      TVFun (map (`applySubstitution` subst) args) (applySubstitution result subst)
+      TVFun (L.map (`applySubstitution` subst) args) (applySubstitution result subst)
     applySubstitution (TVTuple vars) subst = 
-      TVTuple (map (`applySubstitution` subst) vars)
+      TVTuple (L.map (`applySubstitution` subst) vars)
 
 -- | Type environment should preserve added types
 propTypeEnvironmentPreservesTypes :: String -> [String] -> [TypeConstraint] -> Property
@@ -77,7 +78,7 @@ propConstraintSolvingConsistency tv1 tv2 =
   in case (tv1, tv2) of
        (TVVar name1, TVVar name2) | name1 == name2 -> null errors
        (TVCon name1, TVCon name2) | name1 == name2 -> null errors
-       _ -> True  -- Different types should either unify or produce consistent errors
+       _ -> True  -- Different types should either unify L.or produce consistent errors
 
 -- | Type checking should preserve type safety
 propTypeCheckingPreservesSafety :: String -> TypeVar -> Property
@@ -102,7 +103,7 @@ testTypeSystemEdgeCases = testGroup "Type System Edge Cases"
           errors = getDependentTypeErrors checker
       in null errors
       
-  , testCase "add and lookup type" $
+  , testCase "add L.and lookup type" $
       let typeName = "TestType"
           typeDef = TypeDefDecl ["a"] [Equal (TVVar "a") (TVCon "int")]
           checker = newDependentTypeChecker
@@ -122,7 +123,7 @@ testTypeSystemEdgeCases = testGroup "Type System Edge Cases"
       let checker = newDependentTypeChecker
           result = checkType "NonExistent" (TVCon "NonExistent") checker
           errors = getDependentTypeErrors result
-      in not (null errors) && any isTypeNotFoundError errors
+      in not (null errors) && L.any isTypeNotFoundError errors
       where
         isTypeNotFoundError (TypeNotFound _) = True
         isTypeNotFoundError _ = False
@@ -134,7 +135,7 @@ testTypeSystemEdgeCases = testGroup "Type System Edge Cases"
           checker = newDependentTypeChecker
           checker1 = addConstraint constraint checker
           result = solveConstraints checker1
-      in -- Should either succeed or produce consistent errors
+      in -- Should either succeed L.or produce consistent errors
          let errors = getDependentTypeErrors result
          in True  -- Simplified - would check for successful unification in practice
   ]
@@ -148,21 +149,21 @@ testTypeVariableOperations = testGroup "Type Variable Operations"
           tv3 = TVApp "List" [tv1, tv2]
       in show tv1 == "TVVar \"test\"" &&
          show tv2 == "TVCon \"Int\"" &&
-         "List" `isInfixOf` show tv3
+         "List" `L.isInfixOf` show tv3
          
   , testCase "function type construction" $
       let argTypes = [TVVar "a", TVVar "b"]
           resultType = TVVar "c"
           funcType = TVFun argTypes resultType
       in case funcType of
-           TVFun args result -> length args == 2 && result == resultType
+           TVFun args result -> L.length args == 2 && result == resultType
            _ -> fail "Function type construction failed"
            
   , testCase "tuple type construction" $
       let elements = [TVCon "Int", TVCon "String", TVVar "a"]
           tupleType = TVTuple elements
       in case tupleType of
-           TVTuple vars -> length vars == 3
+           TVTuple vars -> L.length vars == 3
            _ -> fail "Tuple type construction failed"
   ]
 
@@ -189,7 +190,7 @@ testConstraintOperations = testGroup "Constraint Operations"
       let args = [TVVar "a", TVVar "b"]
           constraint = Predicate "Numeric" args
       in case constraint of
-           Predicate name vars -> name == "Numeric" && length vars == 2
+           Predicate name vars -> name == "Numeric" && L.length vars == 2
            _ -> fail "Predicate constraint construction failed"
            
   , testCase "size constraint" $
@@ -213,13 +214,13 @@ testTypeEnvironmentOperations = testGroup "Type Environment Operations"
   [ testCase "initial type environment" $
       let checker = newDependentTypeChecker
           typeEnv = dtcTypeEnv checker
-      in Map.null (typeDefinitions typeEnv) &&
-         null (pendingConstraints typeEnv)
+      in Map.L.null (typeDefinitions typeEnv) &&
+         L.null (pendingConstraints typeEnv)
          
   , testCase "prelude type environment" $
       let checker = newDependentTypeCheckerWithTypes preludeTypeDefs
           typeEnv = dtcTypeEnv checker
-      in not (Map.null (typeDefinitions typeEnv)) &&
+      in not (Map.L.null (typeDefinitions typeEnv)) &&
          Map.member "int" (typeDefinitions typeEnv)
          
   , testCase "add multiple types" $
@@ -240,22 +241,22 @@ testTypeEnvironmentOperations = testGroup "Type Environment Operations"
           checker = newDependentTypeChecker
           checker1 = addConstraint constraint checker
           typeEnv = dtcTypeEnv checker1
-      in length (pendingConstraints typeEnv) == 1 &&
-         head (pendingConstraints typeEnv) == constraint
+      in L.length (pendingConstraints typeEnv) == 1 &&
+         L.head (pendingConstraints typeEnv) == constraint
   ]
 
 -- | Test type conversion operations
 testTypeConversionOperations :: TestTree
 testTypeConversionOperations = testGroup "Type Conversion Operations"
   [ testCase "convert simple type expression" $
-      let typeExpr = SimpleT "Int"
+      let typeExpr = SimpleT (T.pack "Int")
           result = convertTypeExpr typeExpr
       in case result of
            Right tv -> tv == TVCon "Int"
            Left _ -> fail "Type conversion failed"
            
   , testCase "convert generic type expression" $
-      let typeExpr = GenericT "List" [SimpleT "Int"]
+      let typeExpr = GenericT "List" [SimpleT (T.pack "Int")]
           result = convertTypeExpr typeExpr
       in case result of
            Right (TVApp "List" [TVCon "Int"]) -> pure ()
@@ -263,7 +264,7 @@ testTypeConversionOperations = testGroup "Type Conversion Operations"
            Left _ -> fail "Type conversion failed"
            
   , testCase "convert function type expression" $
-      let typeExpr = FuncT [SimpleT "Int"] (SimpleT "String")
+      let typeExpr = FuncT [SimpleT (T.pack "Int")] (SimpleT (T.pack "String"))
           result = convertTypeExpr typeExpr
       in case result of
            Right (TVFun [TVCon "Int"] (TVCon "String")) -> pure ()

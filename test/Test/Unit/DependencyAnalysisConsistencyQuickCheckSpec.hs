@@ -10,6 +10,7 @@
 module Test.Unit.DependencyAnalysisConsistencyQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertBool, assertEqual, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -78,7 +79,7 @@ instance Arbitrary TestDependencyGraph where
     where
       buildGraphFromDeps :: [Dependency] -> DependencyGraph
       buildGraphFromDeps deps = Map.fromListWith (++) $
-        map (\dep -> (depFrom dep, [dep])) deps
+        L.map (\dep -> (depFrom dep, [dep])) deps
 
 -- | Generate sets of module names
 newtype TestModuleSet = TestModuleSet { getTestModuleSet :: Set ModuleName }
@@ -100,7 +101,7 @@ prop_dependency_graph_construction deps =
   where
     buildGraphFromDeps :: [Dependency] -> DependencyGraph
     buildGraphFromDeps deps = Map.fromListWith (++) $
-      map (\dep -> (depFrom dep, [dep])) deps
+      L.map (\dep -> (depFrom dep, [dep])) deps
 
 -- Property: transitive dependencies are transitive
 prop_transitive_dependencies_are_transitive :: Dependency -> Dependency -> Dependency -> Property
@@ -114,22 +115,22 @@ prop_transitive_dependencies_are_transitive dep1 dep2 dep3 =
   where
     buildGraphFromDeps :: [Dependency] -> DependencyGraph
     buildGraphFromDeps deps = Map.fromListWith (++) $
-      map (\dep -> (depFrom dep, [dep])) deps
+      L.map (\dep -> (depFrom dep, [dep])) deps
 
 -- Property: topological sort respects dependencies
 prop_topological_sort_respects_dependencies :: TestDependencyGraph -> Property
 prop_topological_sort_respects_dependencies graphWrapper =
   let graph = getTestDependencyGraph graphWrapper
       sorted = topologicalSort graph
-      hasCycles = not (null (findCircularDependencies graph))
+      hasCycles = not (L.null (findCircularDependencies graph))
   in not hasCycles ==>
      let modulePositions = Map.fromList $ zip sorted [0..]
          respectsDep dep = 
            let fromPos = Map.findWithDefault (-1) (depFrom dep) modulePositions
                toPos = Map.findWithDefault (-1) (depTo dep) modulePositions
            in fromPos < toPos
-         allDeps = concat $ Map.elems graph
-     in property $ all respectsDep allDeps
+         allDeps = L.concat $ Map.elems graph
+     in property $ L.all respectsDep allDeps
 
 -- Property: circular dependency detection is sound
 prop_circular_dependency_detection_sound :: [Dependency] -> Property
@@ -137,15 +138,15 @@ prop_circular_dependency_detection_sound deps =
   let graph = buildGraphFromDeps deps
       cycles = findCircularDependencies graph
       -- For each detected cycle, verify it's actually a cycle
-      isActualCycle cycle = all (\dep -> 
+      isActualCycle cycle = L.all (\dep -> 
         let nextModule = depTo dep
             nextDeps = Map.findWithDefault [] nextModule graph
-        in any (\nextDep -> depFrom nextDep == depFrom cycle) nextDeps) cycle
-  in property $ all isActualCycle cycles
+        in L.any (\nextDep -> depFrom nextDep == depFrom cycle) nextDeps) cycle
+  in property $ L.all isActualCycle cycles
   where
     buildGraphFromDeps :: [Dependency] -> DependencyGraph
     buildGraphFromDeps deps = Map.fromListWith (++) $
-      map (\dep -> (depFrom dep, [dep])) deps
+      L.map (\dep -> (depFrom dep, [dep])) deps
 
 -- Property: dependency level calculation is consistent
 prop_dependency_level_consistency :: TestDependencyGraph -> TestModuleName -> Property
@@ -153,22 +154,22 @@ prop_dependency_level_consistency graphWrapper moduleWrapper =
   let graph = getTestDependencyGraph graphWrapper
       module' = getTestModuleName moduleWrapper
       level = getDependencyLevel graph module'
-      -- Check that all dependencies have lower levels
+      -- Check that L.all dependencies have lower levels
       deps = Map.findWithDefault [] module' graph
-      depLevels = map (\dep -> getDependencyLevel graph (depTo dep)) deps
-  in property $ all (< level) depLevels
+      depLevels = L.map (\dep -> getDependencyLevel graph (depTo dep)) deps
+  in property $ L.all (< level) depLevels
 
 -- Property: graph inversion preserves relationships
 prop_graph_inversion_preserves_relationships :: TestDependencyGraph -> Property
 prop_graph_inversion_preserves_relationships graphWrapper =
   let graph = getTestDependencyGraph graphWrapper
       inverted = invertDependencyGraph graph
-      originalDeps = concat $ Map.elems graph
-      invertedDeps = concat $ Map.elems inverted
+      originalDeps = L.concat $ Map.elems graph
+      invertedDeps = L.concat $ Map.elems inverted
       -- Check that every original dependency has a corresponding inverted one
-      hasCorrespondence dep = any (\invDep -> 
+      hasCorrespondence dep = L.any (\invDep -> 
         depFrom dep == depTo invDep && depTo dep == depFrom invDep) invertedDeps
-  in property $ all hasCorrespondence originalDeps
+  in property $ L.all hasCorrespondence originalDeps
 
 -- Property: graph merging is associative
 prop_graph_merging_associative :: TestDependencyGraph -> TestDependencyGraph -> TestDependencyGraph -> Property
@@ -206,7 +207,7 @@ prop_conflict_detection_finds_conflicts deps1 deps2 =
   where
     buildGraphFromDeps :: [Dependency] -> DependencyGraph
     buildGraphFromDeps deps = Map.fromListWith (++) $
-      map (\dep -> (depFrom dep, [dep])) deps
+      L.map (\dep -> (depFrom dep, [dep])) deps
 
 -- Property: transitive dependency closure is idempotent
 prop_transitive_closure_idempotent :: TestDependencyGraph -> TestModuleName -> Property
@@ -227,7 +228,7 @@ prop_dependency_analysis_deterministic deps =
   where
     buildGraphFromDeps :: [Dependency] -> DependencyGraph
     buildGraphFromDeps deps = Map.fromListWith (++) $
-      map (\dep -> (depFrom dep, [dep])) deps
+      L.map (\dep -> (depFrom dep, [dep])) deps
 
 -- Property: empty graph has no dependencies
 prop_empty_graph_has_no_dependencies :: TestModuleName -> Property
@@ -275,7 +276,7 @@ tests = testGroup "Dependency Analysis Consistency QuickCheck Tests"
               depC = Dependency "A" "D" Import
               graph = buildGraphFromDeps [depA, depB, depC]
               transitive = getTransitiveDependencies graph "A"
-          assertEqual "should include all transitive dependencies" 
+          assertEqual "should include L.all transitive dependencies" 
                      ["B", "C", "D"] (sort transitive)
           
       , testCase "dependency level calculation" $ do

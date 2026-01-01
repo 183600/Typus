@@ -10,6 +10,7 @@
 module Test.Unit.NewSymbolTableQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -84,14 +85,14 @@ instance Arbitrary GoDecl where
 -- Property Tests for Symbol Table
 -- ============================================================================
 
--- Property: Trim removes leading and trailing whitespace
+-- Property: Trim removes leading L.and trailing whitespace
 prop_trim_removes_whitespace :: String -> String -> Property
 prop_trim_removes_whitespace prefix suffix =
   let content = prefix ++ "content" ++ suffix
       trimmed = trim content
-      hasLeading = any (`elem` " \t\n\r") prefix
-      hasTrailing = any (`elem` " \t\n\r") suffix
-      noLeadingSpace = null trimmed || not (head trimmed `elem` " \t\n\r")
+      hasLeading = L.any (`elem` " \t\n\r") prefix
+      hasTrailing = L.any (`elem` " \t\n\r") suffix
+      noLeadingSpace = null trimmed || not (L.head trimmed `elem` " \t\n\r")
       noTrailingSpace = null trimmed || not (last trimmed `elem` " \t\n\r")
   in classify hasLeading "has leading whitespace" $
      classify hasTrailing "has trailing whitespace" $
@@ -102,7 +103,7 @@ prop_trim_preserves_internal :: String -> String -> String -> Property
 prop_trim_preserves_internal before middle after =
   let content = before ++ "  " ++ middle ++ "  " ++ after
       trimmed = trim content
-      expected = filter (not . (`elem` " \t\n\r")) before ++ "  " ++ middle ++ "  " ++ filter (not . (`elem` " \t\n\r")) after
+      expected = L.filter (not . (`elem` " \t\n\r")) before ++ "  " ++ middle ++ "  " ++ L.filter (not . (`elem` " \t\n\r")) after
   in not (null middle) ==> property $ trimmed === expected
 
 -- Property: Trim is idempotent
@@ -120,7 +121,7 @@ prop_trim_empty =
 -- Property: Trim of whitespace-only string is empty
 prop_trim_whitespace_only :: String -> Property
 prop_trim_whitespace_only whitespace =
-  all (`elem` " \t\n\r") whitespace ==>
+  L.all (`elem` " \t\n\r") whitespace ==>
   property $ trim whitespace === ""
 
 -- Property: Reserved names detection works
@@ -131,7 +132,7 @@ prop_reserved_names_detection =
                       , "interface", "const", "true", "false", "nil"
                       , "int", "string", "bool", "float64"
                       ]
-  in property $ all isReservedName reservedNames
+  in property $ L.all isReservedName reservedNames
 
 -- Property: Non-reserved names are not detected as reserved
 prop_non_reserved_names_not_detected :: String -> Property
@@ -194,13 +195,13 @@ prop_type_declaration_creates_symbol typeName =
 -- Property: Multiple declarations create multiple symbols
 prop_multiple_declarations_multiple_symbols :: [String] -> Property
 prop_multiple_declarations_multiple_symbols names =
-  let validNames = filter (\n -> not (null n) && not (isReservedName n)) names
-      code = unlines $ map (\n -> "var " ++ n ++ " int") validNames
+  let validNames = L.filter (\n -> not (null n) && not (isReservedName n)) names
+      code = unlines $ L.map (\n -> "var " ++ n ++ " int") validNames
       result = runExceptT (collectSymbolsAndTypes code)
   in not (null validNames) ==>
     case result of
       Left _ -> property $ False
-      Right symbols -> property $ all (`Map.member` symbols) validNames
+      Right symbols -> property $ L.all (`Map.member` symbols) validNames
 
 -- Property: Symbol table preserves symbol information
 prop_symbol_table_preserves_info :: String -> Property
@@ -219,7 +220,7 @@ prop_symbol_table_preserves_info symbolName =
 prop_extract_type_environment_returns_types :: Map.Map String SymbolInfo -> Property
 prop_extract_type_environment_returns_types symbolTable =
   let typeEnv = extractTypeEnvironment symbolTable
-      hasTypes = any isJust (Map.elems typeEnv)
+      hasTypes = L.any isJust (Map.elems typeEnv)
   in property $ hasTypes ==> not (Map.null typeEnv)
 
 -- Property: Augment symbol table with locals preserves globals
@@ -228,7 +229,7 @@ prop_augment_preserves_globals globals localCode =
   let augmented = augmentSymbolTableWithLocals localCode globals
       globalKeys = Map.keys globals
       augmentedKeys = Map.keys augmented
-  in property $ all (`elem` augmentedKeys) globalKeys
+  in property $ L.all (`elem` augmentedKeys) globalKeys
 
 -- Property: Augment symbol table adds local variables
 prop_augment_adds_locals :: String -> String -> Property
@@ -323,7 +324,7 @@ prop_symbol_table_ownership_tracking =
 prop_symbol_table_constraint_tracking :: Property
 prop_symbol_table_constraint_tracking =
   let constraintCode = unlines
-        [ "func test[T any](value T) T {"
+        [ "func test[T L.any](value T) T {"
         , "    return value"
         , "}"
         ]
@@ -336,7 +337,7 @@ prop_symbol_table_constraint_tracking =
 prop_symbol_table_handles_generics :: String -> Property
 prop_symbol_table_handles_generics typeName =
   not (null typeName) && not (isReservedName typeName) ==>
-  let genericCode = "type " ++ typeName ++ "[T any] struct { value T }"
+  let genericCode = "type " ++ typeName ++ "[T L.any] struct { value T }"
       result = runExceptT (collectSymbolsAndTypes genericCode)
   in case result of
     Left _ -> property $ False
@@ -394,7 +395,7 @@ prop_symbol_table_handles_nested_scopes =
 tests :: TestTree
 tests =
   testGroup "New Symbol Table QuickCheck Tests"
-    [ fastProperty "Trim removes leading and trailing whitespace" prop_trim_removes_whitespace
+    [ fastProperty "Trim removes leading L.and trailing whitespace" prop_trim_removes_whitespace
     , fastProperty "Trim preserves internal whitespace" prop_trim_preserves_internal
     , fastProperty "Trim is idempotent" prop_trim_idempotent
     , fastProperty "Trim of empty string is empty" prop_trim_empty

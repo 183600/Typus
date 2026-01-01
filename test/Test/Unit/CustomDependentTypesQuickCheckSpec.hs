@@ -2,6 +2,7 @@
 module Test.Unit.CustomDependentTypesQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (==>), forAll, elements, listOf, listOf1, oneof, choose)
 import DependentTypesParser
   ( DependentTypesParser(..)
@@ -97,8 +98,8 @@ genComparisonConstraint = do
 genLengthConstraint :: Gen TypeConstraint
 genLengthConstraint = do
   targetType <- genTypeRef
-  length <- choose (1, 100)
-  return $ LengthConstraint targetType length
+  L.length <- choose (1, 100)
+  return $ LengthConstraint targetType L.length
 
 genNonEmptyConstraint :: Gen TypeConstraint
 genNonEmptyConstraint = do
@@ -130,7 +131,7 @@ genTypeDeclaration = do
     fieldType <- genIdentifier
     return $ fieldName ++ ": " ++ fieldType
     | _ <- [1..numFields]]
-  let fieldsStr = unlines $ map ("  " ++) fields
+  let fieldsStr = unlines $ L.map ("  " ++) fields
   return $ "type " ++ typeName ++ " {\n" ++ fieldsStr ++ "}"
 
 -- | Generate function declarations
@@ -197,9 +198,9 @@ prop_comparisonConstraintProperties = forAll genTypeRef $ \left ->
 -- | Test LengthConstraint properties
 prop_lengthConstraintProperties :: Property
 prop_lengthConstraintProperties = forAll genTypeRef $ \targetType ->
-  forAll (choose (1, 100)) $ \length ->
-    let constraint = LengthConstraint targetType length
-    in show constraint == "LengthConstraint " ++ show targetType ++ " " ++ show length
+  forAll (choose (1, 100)) $ \L.length ->
+    let constraint = LengthConstraint targetType L.length
+    in show constraint == "LengthConstraint " ++ show targetType ++ " " ++ show L.length
 
 -- | Test NonEmptyConstraint properties
 prop_nonEmptyConstraintProperties :: Property

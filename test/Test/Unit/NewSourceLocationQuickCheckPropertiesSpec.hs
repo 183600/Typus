@@ -3,6 +3,7 @@
 module Test.Unit.NewSourceLocationQuickCheckPropertiesSpec (tests) where
 
 import qualified Data.Text as T
+import qualified Data.List as L
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.QuickCheck (Property, (===), forAll, Gen, choose, listOf1, elements)
@@ -71,7 +72,7 @@ tests :: TestTree
 tests =
   testGroup "NewSourceLocation QuickCheck Properties"
     [ testGroup "Position properties"
-        [ fastProperty "posAfter newline increments line and resets column" $
+        [ fastProperty "posAfter newline increments line L.and resets column" $
             forAll genSourcePos $ \pos ->
               let newPos = posAfter '\n' pos
               in posLine newPos === posLine pos + 1 &&
@@ -97,7 +98,7 @@ tests =
         , fastProperty "advancePosByText correctly tracks position" $
             forAll genString $ \str ->
               let finalPos = advancePosByText (T.pack str) startPos
-                  expectedOffset = length str
+                  expectedOffset = L.length str
               in posOffset finalPos === expectedOffset
 
         , fastProperty "advancePosByLine preserves offset, increments line, resets column" $
@@ -130,7 +131,7 @@ tests =
                     then isValidSpan span 
                     else not (isValidSpan span))
 
-        , fastProperty "mergeSpans creates span with earliest start and latest end" $
+        , fastProperty "mergeSpans creates span with earliest start L.and latest end" $
             forAll genSourceSpan $ \span1 ->
               forAll genSourceSpan $ \span2 ->
                 let merged = mergeSpans span1 span2
@@ -168,17 +169,17 @@ tests =
             forAll genSourcePos $ \pos ->
               forAll genString $ \value ->
                 let loc = locatedAt pos value
-                    mapped = mapLocated length loc
+                    mapped = mapLocated L.length loc
                 in locatedSpan mapped === locatedSpan loc &&
-                   locatedValue mapped === length value
+                   locatedValue mapped === L.length value
 
         , fastProperty "mapLocated is function composition" $
             forAll genSourcePos $ \pos ->
               forAll genString $ \value ->
                 let loc = locatedAt pos value
-                    mapped1 = mapLocated length loc
+                    mapped1 = mapLocated L.length loc
                     mapped2 = mapLocated (*2) mapped1
-                    mapped3 = mapLocated ((*2) . length) loc
+                    mapped3 = mapLocated ((*2) . L.length) loc
                 in locatedValue mapped2 === locatedValue mapped3
         ]
 
@@ -217,7 +218,7 @@ tests =
               let span = emptySpan pos
               in isValidSpan span
 
-        , fastProperty "span with same start and end is valid" $
+        , fastProperty "span with same start L.and end is valid" $
             forAll genSourcePos $ \pos ->
               let span = SourceSpan pos pos
               in isValidSpan span

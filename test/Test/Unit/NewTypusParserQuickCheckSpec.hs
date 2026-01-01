@@ -10,6 +10,7 @@
 module Test.Unit.NewTypusParserQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
 import TestSupport.Arbitrary
@@ -23,7 +24,7 @@ prop_parser_produces_valid_structure :: String -> Property
 prop_parser_produces_valid_structure input =
   let result = parseTypusFile "test.typus" input
       isValid = either (const False) (const True) result
-  in classify (length input > 0) "non-empty input" $
+  in classify (L.length input > 0) "non-empty input" $
      property $ isValid
 
 -- Property: Comment removal preserves meaningful content
@@ -33,13 +34,13 @@ prop_comment_removal_preserves_content code comments =
       withoutComments = removeComments codeWithComments
       codeTrimmed = trim code
       withoutCommentsTrimmed = trim withoutComments
-  in property $ not (null code) ==> (codeTrimmed `isInfixOf` withoutCommentsTrimmed)
+  in property $ not (null code) ==> (codeTrimmed `L.isInfixOf` withoutCommentsTrimmed)
 
 -- Property: Parser handles empty input gracefully
 prop_parser_handles_empty_input :: Property
 prop_parser_handles_empty_input =
   let result = parseTypusFile "empty.typus" ""
-      isEmpty = either (const False) (\file -> null (getFileBlocks file)) result
+      isEmpty = either (const False) (\file -> L.null (getFileBlocks file)) result
   in property $ isEmpty
 
 -- Property: Parser preserves file directives
@@ -63,7 +64,7 @@ prop_parser_handles_nested_blocks outer inner =
 
 -- Helper functions
 isInfixOf :: String -> String -> Bool
-isInfixOf = undefined  -- Simplified for test
+L.isInfixOf = undefined  -- Simplified for test
 
 getFileBlocks :: TypusFile -> [CodeBlock]
 getFileBlocks (TypusFile _ _ _ blocks) = blocks

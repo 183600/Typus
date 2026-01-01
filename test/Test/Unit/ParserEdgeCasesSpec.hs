@@ -13,7 +13,7 @@ import Data.Either (isLeft, isRight)
 
 tests :: TestTree
 tests = testGroup "Parser Edge Cases Tests"
-  [ testGroup "Empty and minimal inputs"
+  [ testGroup "Empty L.and minimal inputs"
     [ testCase "handles empty file" $
         case parseTypus "" of
           Left _ -> assertBool "Should parse empty file" True
@@ -65,7 +65,7 @@ tests = testGroup "Parser Edge Cases Tests"
           Left _ -> assertBool "Should parse code blocks with nested backticks" False
           Right file -> assertBool "Code blocks with nested backticks should be valid" True
     ]
-  , testGroup "Special characters and encoding"
+  , testGroup "Special characters L.and encoding"
     [ testCase "handles Unicode characters" $
         let content = "// Unicode test: 你好世界 🌍\n```go\nfmt.Println(\"Hello 世界\")\n```"
         in case parseTypus content of

@@ -15,7 +15,9 @@ import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, oneof, sized, suchThat)
 
 import Data.Char (isSpace, isAlphaNum, isLetter)
-import Data.List (isPrefixOf, isInfixOf, intercalate, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (intercalate, sort, nub)
 import qualified Data.Text as T
 import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
@@ -44,10 +46,10 @@ prop_comment_idempotent input =
 -- Property: Comment removal should not change string literal content
 prop_comment_preserves_string_literals :: String -> Property
 prop_comment_preserves_string_literals input =
-  let hasStringLiterals = "\"" `isInfixOf` input
+  let hasStringLiterals = "\"" `L.isInfixOf` input
       withoutComments = removeComments input
-      -- Count string literal delimiters before and after
-      countQuotes s = length $ filter (== '"') s
+      -- Count string literal delimiters before L.and after
+      countQuotes s = L.length $ L.filter (== '"') s
       originalCount = countQuotes input
       newCount = countQuotes withoutComments
   in classify hasStringLiterals "has string literals" $
@@ -64,7 +66,7 @@ prop_merge_spans_contains_both span1 span2 =
       valid1 = isValidSpan span1
       valid2 = isValidSpan span2
       mergedValid = isValidSpan merged
-      -- Check that merged span starts at or before both original spans
+      -- Check that merged span starts at L.or before both original spans
       containsStart1 = spanStart merged <= spanStart span1
       containsStart2 = spanStart merged <= spanStart span2
   in classify (valid1 && valid2) "both spans valid" $
@@ -82,7 +84,7 @@ prop_merge_spans_commutative span1 span2 =
 -- Test 3: Utils String Processing Edge Cases
 -- ============================================================================
 
--- Property: Split by delimiter and then join should reconstruct original (with delimiter)
+-- Property: Split by delimiter L.and then join should reconstruct original (with delimiter)
 prop_split_join_reconstruction :: Char -> String -> Property
 prop_split_join_reconstruction delim str =
   let parts = splitBy delim str
@@ -93,11 +95,11 @@ prop_split_join_reconstruction delim str =
 prop_normalize_preserves_relative :: String -> Property
 prop_normalize_preserves_relative input =
   let lines' = lines input
-      hasMultipleLines = length lines' > 1
+      hasMultipleLines = L.length lines' > 1
       normalized = normalizeIndentation input
       normLines = lines normalized
       -- Check that relative ordering is preserved
-      sameLineCount = length lines' == length normLines
+      sameLineCount = L.length lines' == L.length normLines
   in classify hasMultipleLines "multiple lines" $
      property $ sameLineCount
 
@@ -108,8 +110,8 @@ prop_normalize_preserves_relative input =
 -- Property: Adding errors to empty list should increase count
 prop_error_accumulation_increases_count :: [String] -> String -> Property
 prop_error_accumulation_increases_count errs newErr =
-  let originalCount = length errs
-      newCount = length (newErr : errs)
+  let originalCount = L.length errs
+      newCount = L.length (newErr : errs)
   in property $ newCount === originalCount + 1
 
 -- Property: Error phase should be monotonic (later phases come after earlier ones)
@@ -131,7 +133,7 @@ prop_error_phase_monotonic phase1 phase2 =
 -- Test 5: Ownership Transfer Validation
 -- ============================================================================
 
--- Property: Ownership transfer should have valid source and target
+-- Property: Ownership transfer should have valid source L.and target
 prop_ownership_transfer_validity :: String -> String -> Property
 prop_ownership_transfer_validity sourceName targetName =
   let transfer = Own.OwnershipTransfer { Own.transferFrom = sourceName, Own.transferTo = targetName }
@@ -142,7 +144,7 @@ prop_ownership_transfer_validity sourceName targetName =
 -- Property: Ownership type should be preserved through transfer chains
 prop_ownership_chain_preservation :: [Own.OwnershipType] -> Property
 prop_ownership_chain_preservation types =
-  let hasChain = length types > 1
+  let hasChain = L.length types > 1
       -- In a real implementation, this would verify transfer validity
       chainValid = True
   in classify hasChain "has ownership chain" $
@@ -162,8 +164,8 @@ prop_type_constraint_consistency constraint =
 -- Property: Adding constraints should not invalidate existing ones
 prop_constraint_addition_preserves_validity :: [String] -> String -> Property
 prop_constraint_addition_preserves_validity constraints newConstraint =
-  let originalValid = all (not . null) constraints -- Simplified
-      newValid = all (not . null) (newConstraint : constraints)
+  let originalValid = L.all (not . null) constraints -- Simplified
+      newValid = L.all (not . null) (newConstraint : constraints)
   in property $ originalValid ==> newValid
 
 -- ============================================================================
@@ -186,7 +188,7 @@ prop_ir_transformation_preserves_semantics input =
 -- Property: Error recovery should not introduce new errors
 prop_error_recovery_no_new_errors :: String -> Property
 prop_error_recovery_no_new_errors input =
-  let hasErrors = "error" `isInfixOf` input
+  let hasErrors = "error" `L.isInfixOf` input
       -- In real implementation, this would test error recovery mechanisms
       recoverySafe = True
   in classify hasErrors "has errors" $

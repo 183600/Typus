@@ -4,6 +4,7 @@
 module Test.Unit.OwnershipRobustnessQuickCheckSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 
@@ -27,7 +28,7 @@ testOwnershipTransferInvariants =
           originalOwners = Own.getOwners initialState
           newOwners = Own.getOwners newState
       in if Own.isValidTransfer initialSate transfer
-         then all (\res -> Own.hasOwner newOwners res) transferredResources
+         then L.all (\res -> Own.hasOwner newOwners res) transferredResources
          else newState === initialSate -- Invalid transfers should not change state
 
 -- | Test borrowing rules enforcement
@@ -48,7 +49,7 @@ testLifetimeTrackingProperties =
     let sortedLifetimes = Own.sortLifetimes lifetimes
         overlapping = Own.findOverlappingLifetimes lifetimes
         validOrder = Own.isValidLifetimeOrder sortedLifetimes
-    in length sortedLifetimes === length lifetimes .&&.
+    in L.length sortedLifetimes === L.length lifetimes .&&.
        (if null overlapping then validOrder else property True)
 
 -- | Test resource ownership consistency
@@ -59,8 +60,8 @@ testResourceOwnershipConsistency =
         owners = Own.getAllOwners state
         ownedResources = Own.getOwnedResources owners
         unownedResources = Own.getUnownedResources state
-    in all (`elem` ownedResources) resources .&&.
-       null (resources `intersect` unownedResources)
+    in L.all (`elem` ownedResources) resources .&&.
+       L.null (resources `intersect` unownedResources)
 
 -- | Test ownership move semantics
 testOwnershipMoveSemantics :: Property
@@ -140,7 +141,7 @@ testOwnershipGraphProperties =
         isAcyclic = Own.isAcyclic graph
     in if isAcyclic
        then null cycles
-       else length cycles >= 0
+       else L.length cycles >= 0
 
 -- | Test borrow checker completeness
 testBorrowCheckerCompleteness :: Property
@@ -149,8 +150,8 @@ testBorrowCheckerCompleteness =
     let borrowAnalysis = Own.checkBorrows program
         actualViolations = Own.findActualViolations program
         detectedViolations = Own.getDetectedViolations borrowAnalysis
-    -- Should detect all actual violations (no false negatives)
-    in all (`elem` detectedViolations) actualViolations
+    -- Should detect L.all actual violations (no false negatives)
+    in L.all (`elem` detectedViolations) actualViolations
 
 -- | Test ownership transfer transitivity
 testOwnershipTransferTransitivity :: Property
@@ -183,7 +184,7 @@ testOwnershipRegionIsolation =
         crossReferences = Own.findCrossRegionReferences regions
     in if isolated
        then null crossReferences
-       else length crossReferences >= 0
+       else L.length crossReferences >= 0
 
 tests :: TestTree
 tests = testGroup "Ownership Robustness QuickCheck Tests"

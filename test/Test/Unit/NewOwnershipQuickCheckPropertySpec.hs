@@ -5,6 +5,7 @@
 module Test.Unit.NewOwnershipQuickCheckPropertySpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 
@@ -12,7 +13,8 @@ import Ownership.Common.Types
 import Ownership.Analyzer (analyzeOwnership, analyzeOwnershipDebug, builtInFunctions)
 import Ownership.Lexer (lexAll)
 import Ownership.Parser (parseProgram)
-import Data.List (sort, nub, isInfixOf)
+import Data.List (isInfixOf)
+import Data.List (sort, nub)
 import Data.Maybe (isJust, isNothing)
 import qualified Data.Map.Strict as Map
 import Data.Either (isLeft, isRight)
@@ -69,7 +71,7 @@ ownershipTypeProperties = testGroup "OwnershipType properties"
     \name -> 
       let types = [Owned name, Borrowed name, MutBorrowed name]
           showStrings = map show types
-      in all (`isInfixOf` name) showStrings
+      in L.all (`L.isInfixOf` name) showStrings
   ]
 
 -- | Properties for OwnershipError
@@ -145,16 +147,16 @@ ownershipErrorProperties = testGroup "OwnershipError properties"
 -- | Properties for OwnershipTransfer
 ownershipTransferProperties :: TestTree
 ownershipTransferProperties = testGroup "OwnershipTransfer properties"
-  [ testProperty "OwnershipTransfer preserves from and to" $
+  [ testProperty "OwnershipTransfer preserves from L.and to" $
     \from to -> 
       let transfer = OwnershipTransfer from to
       in transferFrom transfer === from && transferTo transfer === to
   
-  , testProperty "OwnershipTransfer Show contains from and to" $
+  , testProperty "OwnershipTransfer Show contains from L.and to" $
     \from to -> 
       let transfer = OwnershipTransfer from to
           transferStr = show transfer
-      in from `isInfixOf` transferStr && to `isInfixOf` transferStr
+      in from `L.isInfixOf` transferStr && to `L.isInfixOf` transferStr
   
   , testProperty "OwnershipTransfer equality is correct" $
     \from1 to1 from2 to2 -> 
@@ -178,12 +180,12 @@ analyzerProperties = testGroup "OwnershipAnalyzer properties"
   , testProperty "builtInFunctions contains expected functions" $
     \_ -> 
       let expected = ["int", "string", "fmt.Println", "len", "make"]
-      in all (`elem` builtInFunctions) expected
+      in L.all (`elem` builtInFunctions) expected
   
   , testProperty "builtInFunctions has no duplicates" $
     \_ -> 
       let uniqueBuiltIns = nub builtInFunctions
-      in length uniqueBuiltIns === length builtInFunctions
+      in L.length uniqueBuiltIns === L.length builtInFunctions
   ]
 
 -- | Properties for lexer
@@ -193,20 +195,20 @@ lexerProperties = testGroup "Lexer properties"
     \_ -> 
       case lexAll "" of
         Left _ -> property True
-        Right tokens -> null tokens || all isValidToken tokens
+        Right tokens -> null tokens || L.all isValidToken tokens
   
   , testProperty "lexAll handles whitespace" $
     \whitespace -> 
       let input = replicate 10 whitespace
       in case lexAll input of
         Left _ -> property True
-        Right tokens -> all isValidToken tokens
+        Right tokens -> L.all isValidToken tokens
   
   , testProperty "lexAll preserves non-whitespace characters" $
     \content -> 
       case lexAll content of
         Left _ -> property True
-        Right tokens -> length tokens > 0 || null content
+        Right tokens -> L.length tokens > 0 || null content
   
   where
     isValidToken token = property True  -- Simplified for this example
@@ -298,7 +300,7 @@ edgeCaseProperties = testGroup "Ownership edge case properties"
   , testProperty "OwnershipError with empty strings" $
     \_ -> 
       let errors = [UseAfterMove "", DoubleMove "" "", BorrowError "", ParseError ""]
-      in all (\err -> case err of
+      in L.all (\err -> case err of
               UseAfterMove var -> null var
               DoubleMove var1 var2 -> null var1 && null var2
               BorrowError msg -> null msg

@@ -3,6 +3,7 @@ module Test.Unit.SimpleSyntaxValidatorQuickCheckSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, listOf, elements, suchThat, choose)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 import Data.Char (isSpace)
 
@@ -72,7 +73,7 @@ genInvalidOperators = oneof
     [ pure "x = y +++ z"
     , pure "result = a --- b"
     , pure "value = x ///// y"
-    , pure "sum = a ***** b"
+    , pure "L.sum = a ***** b"
     ]
 
 -- | Generate strings with valid Go syntax
@@ -83,7 +84,7 @@ genValidGoSyntax = oneof
     , pure "package utils\n\ntype Point struct {\n    X int\n    Y int\n}\n\nfunc (p Point) String() string {\n    return fmt.Sprintf(\"(%d, %d)\", p.X, p.Y)\n}"
     ]
 
--- Test properties and cases
+-- Test properties L.and cases
 tests :: TestTree
 tests =
   testGroup "SimpleSyntaxValidator QuickCheck tests"
@@ -122,20 +123,20 @@ tests =
     , testCase "validateSyntaxSimple detects missing package declaration" $ do
         let content = "func main() { return 42; }"
             errors = validateSyntaxSimple content
-            missingPackage = filter (\e -> errorType e == MissingPackageDeclaration) errors
-        length missingPackage @?= 1
+            missingPackage = L.filter (\e -> errorType e == MissingPackageDeclaration) errors
+        L.length missingPackage @?= 1
     
     , testCase "validateSyntaxSimple detects invalid function declaration" $ do
         let content = "package main\n\nfunc main return 42; }"
             errors = validateSyntaxSimple content
-            invalidFunc = filter (\e -> errorType e == InvalidFunctionDeclaration) errors
-        length invalidFunc @?= 1
+            invalidFunc = L.filter (\e -> errorType e == InvalidFunctionDeclaration) errors
+        L.length invalidFunc @?= 1
     
     , testCase "validateSyntaxSimple detects invalid import" $ do
         let content = "package main\n\nimport"
             errors = validateSyntaxSimple content
-            invalidImport = filter (\e -> errorType e == InvalidImport) errors
-        length invalidImport @?= 1
+            invalidImport = L.filter (\e -> errorType e == InvalidImport) errors
+        L.length invalidImport @?= 1
     
     , testCase "validateSyntaxSimple handles complex nested structures" $ do
         let content = unlines
@@ -153,7 +154,7 @@ tests =
                 , "}"
                 ]
             errors = validateSyntaxSimple content
-        length errors @?= 0
+        L.length errors @?= 0
     
     , testCase "validateSyntaxSimple detects unclosed braces" $ do
         let content = unlines
@@ -164,8 +165,8 @@ tests =
                 , "    // missing closing braces"
                 ]
             errors = validateSyntaxSimple content
-            unclosedBraces = filter (\e -> errorType e == MissingBrace) errors
-        length unclosedBraces @?= 2
+            unclosedBraces = L.filter (\e -> errorType e == MissingBrace) errors
+        L.length unclosedBraces @?= 2
     ]
 
 -- Property: countBraces is zero for balanced braces
@@ -179,7 +180,7 @@ prop_countBracesBalanced code =
 prop_countBracesUnclosed :: Int -> Bool
 prop_countBracesUnclosed n =
     let unclosedCode = "package main\n\nfunc main() {\n" ++ 
-                       concat (replicate n "    if true {\n") ++
+                       L.concat (replicate n "    if true {\n") ++
                        "        return 42;\n"
         braceCount = countBraces unclosedCode
     in braceCount >= n && braceCount > 0
@@ -188,23 +189,23 @@ prop_countBracesUnclosed n =
 prop_detectsBracketMismatches :: String -> Bool
 prop_detectsBracketMismatches code =
     let errors = validateSyntaxSimple code
-        bracketErrors = filter (\e -> errorType e `elem` 
+        bracketErrors = L.filter (\e -> errorType e `elem` 
             [MissingBrace, MissingParenthesis, MissingBracket, BracketMismatch]) errors
-    in null bracketErrors || all (\e -> lineNumber e > 0) bracketErrors
+    in null bracketErrors || L.all (\e -> lineNumber e > 0) bracketErrors
 
 -- Property: validateSyntaxSimple handles empty input
 prop_handlesEmptyInput :: String -> Bool
 prop_handlesEmptyInput _ =
     let errors = validateSyntaxSimple ""
-    in null errors || all (\e -> lineNumber e > 0) errors
+    in null errors || L.all (\e -> lineNumber e > 0) errors
 
 -- Property: validateSyntaxSimple detects invalid operators
 prop_detectsInvalidOperators :: String -> String -> Bool
 prop_detectsInvalidOperators prefix suffix =
     let invalidCode = prefix ++ " +++ " ++ suffix
         errors = validateSyntaxSimple invalidCode
-        invalidOpErrors = filter (\e -> errorType e == InvalidOperator) errors
-    in not (null invalidOpErrors) || all (\e -> lineNumber e > 0) errors
+        invalidOpErrors = L.filter (\e -> errorType e == InvalidOperator) errors
+    in not (null invalidOpErrors) || L.all (\e -> lineNumber e > 0) errors
 
 -- Property: validateSyntaxSimple allows valid Go syntax
 prop_allowsValidSyntax :: String -> Bool
@@ -215,4 +216,4 @@ prop_allowsValidSyntax _ =
 
 -- Helper function to check if string contains a substring
 contains :: String -> String -> Bool
-contains needle haystack = needle `isInfixOf` haystack
+contains needle haystack = needle `L.isInfixOf` haystack

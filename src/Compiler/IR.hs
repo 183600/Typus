@@ -4,6 +4,8 @@ module Compiler.IR (
     SourceIR(..),
     SemanticIR(..),
     GoIR(..),
+    IRStatement(..),
+    IRExpression(..),
     buildSourceIR,
     buildSemanticIR,
     buildSemanticIRWithPackage,
@@ -36,6 +38,18 @@ import Control.Monad (forM)
 import qualified Data.Set as Set
 import qualified Data.Text as T
 
+-- | Intermediate representation statements
+data IRStatement = IRStatement
+    { irStmtType :: String
+    , irStmtContent :: String
+    } deriving (Show, Eq)
+
+-- | Intermediate representation expressions
+data IRExpression = IRExpression
+    { irExprType :: String
+    , irExprContent :: String
+    } deriving (Show, Eq)
+
 -- | Lightweight representation of the parsed Typus source prior to any
 -- analysis. It keeps the parsed file together with the raw Go-like source
 -- extracted from code blocks.
@@ -50,13 +64,13 @@ data SemanticIR = SemanticIR
     { semanticTypusFile :: TypusFile
     , semanticModule :: GoModule
     , semanticValueInfo :: [ValueInfo]
-    } deriving (Show)
+    } deriving (Eq, Show)
 
 -- | Final Go artefact ready to be rendered to source code.
 data GoIR = GoIR
     { goModule :: GoModule
     , goSource :: String
-    } deriving (Show)
+    } deriving (Eq, Show)
 
 buildSourceIR :: TypusFile -> SourceIR
 buildSourceIR typusFile = SourceIR

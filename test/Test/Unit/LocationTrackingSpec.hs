@@ -3,6 +3,7 @@
 module Test.Unit.LocationTrackingSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty)
 import TestSupport.QuickCheck (fastProperty)
@@ -25,14 +26,14 @@ tests =
             let (pos, _) = runLocationTracker getCurrentPos
             pos @?= startPos
             
-        , testCase "can set and get position" $ do
+        , testCase "can set L.and get position" $ do
             let newPos = posAt 5 10
                 (pos, _) = runLocationTracker $ do
                     setCurrentPos newPos
                     getCurrentPos
             pos @?= newPos
             
-        , testCase "can mark span start and end" $ do
+        , testCase "can mark span start L.and end" $ do
             let start = posAt 2 3
                 end = posAt 2 8
                 (span, _) = runLocationTracker $ do
@@ -116,11 +117,11 @@ tests =
                     getCurrentPos
             in currentPos == pos
             
-        , testProperty "advancePosByText increases offset by text length" $ fastProperty $ \text ->
+        , testProperty "advancePosByText increases offset by text L.length" $ fastProperty $ \text ->
             let (pos, _) = runLocationTracker $ do
                     advancePosByText text
                     getCurrentPos
-            in posOffset pos == length text
+            in posOffset pos == L.length text
             
         , testProperty "advancePosByLine increases line number" $ fastProperty $ \lines ->
             let lines' = abs lines `mod` 100 + 1
@@ -152,8 +153,8 @@ tests =
                     markSpanEnd
                     return (undefined, undefined)  -- Simplified
             -- This is a simplified test - real implementation would need proper span storage
-            length (show outerSpan) >= 0 @?= True
-            length (show innerSpan) >= 0 @?= True
+            L.length (show outerSpan) >= 0 @?= True
+            L.length (show innerSpan) >= 0 @?= True
             
         , testCase "handles back-to-back spans" $ do
             let text1 = "first"
@@ -166,8 +167,8 @@ tests =
                     advancePosByText text2
                     markSpanEnd
                     return (undefined, undefined)  -- Simplified
-            length (show span1) >= 0 @?= True
-            length (show span2) >= 0 @?= True
+            L.length (show span1) >= 0 @?= True
+            L.length (show span2) >= 0 @?= True
         ]
         
     , testGroup "Edge Cases"
@@ -184,11 +185,11 @@ tests =
             pos @?= startPos
             
         , testCase "handles very long text" $ do
-            let longText = concat $ replicate 1000 "a"
+            let longText = L.concat $ replicate 1000 "a"
                 (pos, _) = runLocationTracker $ do
                     advancePosByText longText
                     getCurrentPos
-            posOffset pos @?= length longText
+            posOffset pos @?= L.length longText
             
         , testCase "handles text with only newlines" $ do
             let newlineText = "\n\n\n"
@@ -206,19 +207,19 @@ tests =
                     setCurrentPos invalidPos
                     getCurrentPos
             -- Should handle gracefully (implementation dependent)
-            length (show pos) >= 0 @?= True
+            L.length (show pos) >= 0 @?= True
             
         , testProperty "tracking operations don't crash" $ fastProperty $ \text ->
             let (pos, _) = runLocationTracker $ do
                     advancePosByText text
                     getCurrentPos
                 (pos2, _) = runLocationTracker $ do
-                    advancePosByLine (abs (length text) `mod` 10)
+                    advancePosByLine (abs (L.length text) `mod` 10)
                     getCurrentPos
-            in length (show pos) >= 0 && length (show pos2) >= 0
+            in L.length (show pos) >= 0 && L.length (show pos2) >= 0
         ]
         
-    , testGroup "Performance and Robustness"
+    , testGroup "Performance L.and Robustness"
         [ testCase "handles many position updates" $ do
             let (pos, _) = runLocationTracker $ do
                     sequence_ [setCurrentPos (posAt i 1) | i <- [1..1000]]
@@ -226,11 +227,11 @@ tests =
             posLine pos @?= 1000
             
         , testCase "handles large text efficiently" $ do
-            let hugeText = concat $ replicate 10000 "test"
+            let hugeText = L.concat $ replicate 10000 "test"
                 (pos, _) = runLocationTracker $ do
                     advancePosByText hugeText
                     getCurrentPos
-            posOffset pos @?= length hugeText
+            posOffset pos @?= L.length hugeText
             
         , testProperty "tracking is consistent across operations" $ fastProperty $ \text1 text2 ->
             let (pos1, _) = runLocationTracker $ do
@@ -256,7 +257,7 @@ tests =
                 (pos, _) = runLocationTracker $ do
                     advancePosByText text
                     getCurrentPos
-            -- Should account for newline and tab
+            -- Should account for newline L.and tab
             posLine pos @?= 2
             posColumn pos >= 6 @?= True  -- At least column 6 after tab
         ]

@@ -11,7 +11,9 @@ import Parser (parseTypus)
 import Compiler.TypeChecker (typeCheck)
 import Test.QuickCheck.Arbitrary (Arbitrary(..))
 import Test.QuickCheck.Gen (elements, choose, listOf, oneof, sized)
-import Data.List (length, foldl')
+import qualified Data.List as L
+import Data.List (length)
+import Data.List (foldl')
 import Control.DeepSeq (NFData, force)
 import Control.Exception (evaluate)
 import System.CPUTime (getCPUTime)
@@ -147,14 +149,14 @@ tests = testGroup "Performance Regression Tests"
 generateCode :: Int -> Int -> Int -> String
 generateCode size minVars maxVars = 
   let varCount = min maxVars (size `div` 10)
-      vars = take varCount $ map (\i -> "x" ++ show i) [1..]
-      declarations = concatMap (\v -> "let " ++ v ++ " = " ++ show (length v) ++ " in ") vars
+      vars = take varCount $ L.map (\i -> "x" ++ show i) [1..]
+      declarations = concatMap (\v -> "let " ++ v ++ " = " ++ show (L.length v) ++ " in ") vars
       body = concatMap (\v -> v ++ " + ") vars ++ "0"
   in take size $ declarations ++ body
 
 generateComplexCode :: Int -> Int -> String
 generateComplexCode size varCount = 
-  let vars = take varCount $ map (\i -> "x" ++ show i) [1..]
+  let vars = take varCount $ L.map (\i -> "x" ++ show i) [1..]
       makeExpr i = if i < varCount 
                    then "(" ++ vars !! i ++ " + " ++ makeExpr (i + 1) ++ ")"
                    else "0"
@@ -178,15 +180,15 @@ generateDeeplyNestedCode depth =
 
 generateVariableHeavyCode :: Int -> String
 generateVariableHeavyCode count = 
-  let vars = take count $ map (\i -> "var" ++ show i) [1..]
-      declarations = concatMap (\v -> "let " ++ v ++ " = " ++ show (length v) ++ " in ") vars
+  let vars = take count $ L.map (\i -> "var" ++ show i) [1..]
+      declarations = concatMap (\v -> "let " ++ v ++ " = " ++ show (L.length v) ++ " in ") vars
       uses = concatMap (\v -> v ++ " + ") vars ++ "0"
   in declarations ++ uses
 
 generateRepeatedPatternCode :: Int -> String
 generateRepeatedPatternCode repetitions = 
   let pattern = "let x = 1 + 2 * 3 - 4 / 5 in x"
-      repeated = concat $ replicate repetitions pattern
+      repeated = L.concat $ replicate repetitions pattern
   in repeated
 
 generateComplexExpressionCode :: Int -> Int -> String
@@ -204,18 +206,18 @@ measureParsingTime code =
       result = parseTypus "test" code
       end = getCPUTime
       time = fromIntegral (end - start) / (10^9)  -- Convert to milliseconds
-  in force result `seq` PerformanceResult time (length code) (length code)
+  in force result `seq` PerformanceResult time (L.length code) (L.length code)
 
 measureTypeCheckingTime :: String -> PerformanceResult
 measureTypeCheckingTime code = 
   case parseTypus "test" code of
-    Left _ -> PerformanceResult 0.0 (length code) (length code)
+    Left _ -> PerformanceResult 0.0 (L.length code) (L.length code)
     Right parsedFile -> 
       let start = getCPUTime
           result = typeCheck parsedFile
           end = getCPUTime
           time = fromIntegral (end - start) / (10^9)
-      in force result `seq` PerformanceResult time (length code) (length code)
+      in force result `seq` PerformanceResult time (L.length code) (L.length code)
 
 measureCompilationTime :: String -> PerformanceResult
 measureCompilationTime code = 
@@ -223,13 +225,13 @@ measureCompilationTime code =
       result = compile code "test" []
       end = getCPUTime
       time = fromIntegral (end - start) / (10^9)
-  in force result `seq` PerformanceResult time (length code) (length code)
+  in force result `seq` PerformanceResult time (L.length code) (L.length code)
 
 measureMemoryUsage :: String -> PerformanceResult
 measureMemoryUsage code = 
   let result = compile code "test" []
-      estimatedMemory = length code * 10  -- Rough estimate
-  in force result `seq` PerformanceResult 0.0 estimatedMemory (length code)
+      estimatedMemory = L.length code * 10  -- Rough estimate
+  in force result `seq` PerformanceResult 0.0 estimatedMemory (L.length code)
 
 -- Baseline code for regression testing
 baselineCode :: String

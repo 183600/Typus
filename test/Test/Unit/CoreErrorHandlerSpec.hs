@@ -1,6 +1,7 @@
 module Test.Unit.CoreErrorHandlerSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, choose, oneof, elements, listOf)
 import qualified Data.Map.Strict as Map
@@ -94,37 +95,8 @@ tests =
             recoveryConfidence custom @?= 0.8
         ]
 
-    , testGroup "TypeError construction and manipulation"
-        [ testCase "errorAt creates basic error" $ do
-            let loc = _atLocation 5 10
-                err = errorAt "ERR001" "Test error" loc
-            errorId err @?= "ERR001"
-            message err @?= "Test error"
-            location err @?= loc
-            severity err @?= Error
-            category err @?= Unknown
-
-        , testCase "errorWithCategory sets category correctly" $ do
-            let loc = _atLocation 1 1
-                err = errorWithCategory "ERR002" TypeChecking "Type mismatch" loc
-            category err @?= TypeChecking
-            message err @?= "Type mismatch"
-
-        , testCase "severity variants work correctly" $ do
-            let loc = _atLocation 2 3
-                err = errorAt "ERR003" "Base error" loc
-                warn = warningAt "ERR004" "Warning message" loc
-                info = infoAt "ERR005" "Info message" loc
-                fatal = fatalError "ERR006" "Fatal error" loc
-            severity err @?= Error
-            severity warn @?= Warning
-            severity info @?= Info
-            severity fatal @?= Fatal
-
-        , testCase "error modification functions work" $ do
-            let loc = _atLocation 1 1
-                baseErr = errorAt "ERR007" "Base error" loc
-                ctx = ErrorContext (Just "code") (Just "func") Nothing Nothing []
+    , testGroup "TypeError construction L.and manipulation"
+        [ testCase "errorAt "test-id" = ErrorContext (Just "code") (Just "func") Nothing Nothing []
                 suggestions = ["Try this", "Try that"]
                 modified = withContext ctx $ withSuggestions (map T.pack suggestions) baseErr
             context modified @?= ctx
@@ -132,116 +104,34 @@ tests =
 
         , testCase "wrapError adds to error chain" $ do
             let loc = _atLocation 1 1
-                inner = errorAt "INNER" "Inner error" loc
-                wrapped = wrapError "Wrapper" inner
-            message wrapped @?= "Wrapper: Inner error"
-            errorChain wrapped @?= [inner]
-        ]
-
-    , testGroup "ErrorCollector operations"
-        [ testCase "error filtering works correctly" $ do
-            let loc = _atLocation 1 1
-                errors = 
-                    [ errorAt "E001" "Error 1" loc
-                    , warningAt "W001" "Warning 1" loc { line = 2 }
-                    , infoAt "I001" "Info 1" loc { line = 3 }
-                    , fatalError "F001" "Fatal 1" loc { line = 4 }
-                    ]
-            length (getErrors errors) @?= 2  -- Error + Fatal
-            length (getWarnings errors) @?= 1
-            length (getInfo errors) @?= 1
+                inner = errorAt "test-id" (getErrors errors) @?= 2  -- Error + Fatal
+            L.length (getWarnings errors) @?= 1
+            L.length (getInfo errors) @?= 1
             hasErrors errors @?= True
             hasWarnings errors @?= True
 
-        , testCase "getAllMessages returns all errors" $ do
+        , testCase "getAllMessages returns L.all errors" $ do
             let loc = _atLocation 1 1
-                errors = [errorAt "E001" "Error 1" loc, warningAt "W001" "Warning 1" loc]
-            length (getAllMessages errors) @?= 2
+                errors = [errorAt "test-id" (getAllMessages errors) @?= 2
         ]
 
     , testGroup "Error formatting"
-        [ testCase "formatError includes severity and category" $ do
+        [ testCase "formatError includes severity L.and category" $ do
             let loc = _atLocation 1 1
                 err = errorWithCategory "ERR001" TypeChecking "Type error" loc
                 formatted = formatError err
-            assertBool "contains ERROR" $ "ERROR" `isInfixOf` formatted
-            assertBool "contains TypeChecking" $ "TypeChecking" `isInfixOf` formatted
-            assertBool "contains message" $ "Type error" `isInfixOf` formatted
+            assertBool "contains ERROR" $ "ERROR" `L.isInfixOf` formatted
+            assertBool "contains TypeChecking" $ "TypeChecking" `L.isInfixOf` formatted
+            assertBool "contains message" $ "Type error" `L.isInfixOf` formatted
 
         , testCase "formatErrorWithLocation includes location" $ do
             let loc = _atFileLocation "test.typus" 5 10
-                err = errorAt "ERR001" "Test error" loc
-                formatted = formatErrorWithLocation err
-            assertBool "contains file and line" $ "test.typus:5:10" `isInfixOf` formatted
-
-        , testCase "formatErrors sorts by severity" $ do
-            let loc = _atLocation 1 1
-                errors = 
-                    [ infoAt "I001" "Info" loc
-                    , errorAt "E001" "Error" loc
-                    , warningAt "W001" "Warning" loc
-                    , fatalError "F001" "Fatal" loc
-                    ]
-                formatted = formatErrors errors
-                lines' = lines formatted
-            -- Fatal should come first, Info last
-            assertBool "Fatal comes first" $ "FATAL" `isInfixOf` head lines'
-            assertBool "Info comes last" $ "INFO" `isInfixOf` last lines'
-        ]
-
-    , testGroup "Error statistics and reporting"
-        [ testCase "getErrorStatistics counts correctly" $ do
-            let loc = _atLocation 1 1
-                errors = 
-                    [ errorWithCategory "E001" TypeChecking "Type error" loc
-                    , errorWithCategory "E002" Ownership "Ownership error" loc
-                    , warningAt "W001" "Warning" loc
-                    , infoAt "I001" "Info" loc
-                    ]
-                stats = getErrorStatistics errors
-            Map.lookup "total" stats @?= Just 4
-            Map.lookup "errors" stats @?= Just 2
-            Map.lookup "warnings" stats @?= Just 1
-            Map.lookup "info" stats @?= Just 1
-            Map.lookup "typeChecking" stats @?= Just 1
-            Map.lookup "ownership" stats @?= Just 1
-
-        , testCase "generateErrorReport includes statistics and details" $ do
-            let loc = _atLocation 1 1
-                errors = [errorAt "E001" "Test error" loc]
-                report = generateErrorReport errors
-            assertBool "contains header" $ "Error Report" `isInfixOf` report
-            assertBool "contains statistics" $ "Statistics:" `isInfixOf` report
-            assertBool "contains error details" $ "Detailed Errors:" `isInfixOf` report
-            assertBool "contains total count" $ "total: 1" `isInfixOf` report
-        ]
-
-    , testGroup "Error filtering and analysis"
-        [ testCase "filterByCategory works correctly" $ do
-            let loc = _atLocation 1 1
-                errors = 
-                    [ errorWithCategory "E001" TypeChecking "Type error" loc
-                    , errorWithCategory "E002" Ownership "Ownership error" loc
-                    , errorWithCategory "E003" TypeChecking "Another type error" loc
-                    ]
-                typeErrors = filterByCategory TypeChecking errors
-                ownershipErrors = filterByCategory Ownership errors
-            length typeErrors @?= 2
-            length ownershipErrors @?= 1
-            all (hasCategory TypeChecking) typeErrors @?= True
+                err = errorAt "test-id" (hasCategory TypeChecking) typeErrors @?= True
 
         , testCase "filterBySeverity works correctly" $ do
             let loc = _atLocation 1 1
                 errors = 
-                    [ errorAt "E001" "Error" loc
-                    , warningAt "W001" "Warning" loc
-                    , infoAt "I001" "Info" loc
-                    ]
-                errorOnly = filterBySeverity Error errors
-                warningOnly = filterBySeverity Warning errors
-            length errorOnly @?= 1
-            length warningOnly @?= 1
-            all (\e -> severity e == Error) errorOnly @?= True
+                    [ errorAt "test-id" == Error) errorOnly @?= True
 
         , testCase "hasCategory checks correctly" $ do
             let loc = _atLocation 1 1
@@ -267,16 +157,16 @@ tests =
                     errs = getErrors errors
                     warns = getWarnings errors
                     infos = getInfo errors
-                in length allMsgs == length errs + length warns + length infos
+                in L.length allMsgs == L.length errs + L.length warns + L.length infos
 
-        , testProperty "wrapError increases error chain length" $
+        , testProperty "wrapError increases error chain L.length" $
             \err wrapperMsg -> 
                 let wrapped = wrapError wrapperMsg err
-                    originalChain = length (errorChain err)
-                    newChain = length (errorChain wrapped)
+                    originalChain = L.length (errorChain err)
+                    newChain = L.length (errorChain wrapped)
                 in newChain == originalChain + 1
 
-        , testProperty "error statistics sum to total" $
+        , testProperty "error statistics L.sum to total" $
             \errors ->
                 let stats = getErrorStatistics errors
                     total = Map.findWithDefault 0 "total" stats

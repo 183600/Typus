@@ -3,6 +3,7 @@
 module Test.Unit.ParserComprehensiveQuickCheckSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 
@@ -24,7 +25,7 @@ parserComprehensiveQuickCheckSpec = testGroup "Parser Comprehensive QuickCheck T
 -- | Properties for FileDirectives
 fileDirectivesProperties :: TestTree
 fileDirectivesProperties = testGroup "FileDirectives Properties"
-  [ testProperty "defaultFileDirectives has all Nothing values" $
+  [ testProperty "defaultFileDirectives has L.all Nothing values" $
       let fd = defaultFileDirectives
       in fdOwnership fd == Nothing &&
          fdDependentTypes fd == Nothing &&
@@ -43,7 +44,7 @@ fileDirectivesProperties = testGroup "FileDirectives Properties"
 -- | Properties for BlockDirectives
 blockDirectivesProperties :: TestTree
 blockDirectivesProperties = testGroup "BlockDirectives Properties"
-  [ testProperty "defaultBlockDirectives has all Nothing values" $
+  [ testProperty "defaultBlockDirectives has L.all Nothing values" $
       let bd = defaultBlockDirectives
       in bdOwnership bd == Nothing &&
          bdDependentTypes bd == Nothing &&
@@ -97,7 +98,7 @@ typusFileProperties = testGroup "TypusFile Properties"
       \tf1 tf2 tf3 -> (tf1 == tf2 && tf2 == tf3) ==> (tf1 == tf3)
   
   , testProperty "TypusFile with different block counts is not equal" $
-      \directives buildTags blocks1 blocks2 -> length blocks1 /= length blocks2 ==>
+      \directives buildTags blocks1 blocks2 -> L.length blocks1 /= L.length blocks2 ==>
         let tf1 = TypusFile directives buildTags blocks1 []
             tf2 = TypusFile directives buildTags blocks2 []
         in tf1 /= tf2
@@ -122,14 +123,14 @@ parsingProperties = testGroup "Parsing Properties"
         let input = "```typus\n" ++ content ++ "\n```\n"
             result = parseTypus input
             blocks = tfBlocks result
-        in not (null blocks) ==> cbContent (head blocks) `contains` content
+        in not (null blocks) ==> cbContent (L.head blocks) `contains` content
   
   , testProperty "parseTypus handles multiple code blocks" $
       \content1 content2 ->
         let input = "```typus\n" ++ content1 ++ "\n```\n```typus\n" ++ content2 ++ "\n```\n"
             result = parseTypus input
             blocks = tfBlocks result
-        in length blocks >= 2
+        in L.length blocks >= 2
   
   , testProperty "parseTypus extracts file directives" $
       \ ->
@@ -145,14 +146,14 @@ parsingProperties = testGroup "Parsing Properties"
             result = parseTypus input
             blocks = tfBlocks result
         in not (null blocks) ==> 
-           let directives = cbDirectives (head blocks)
+           let directives = cbDirectives (L.head blocks)
            in -- Check that block directives are parsed
               True
   
   , testProperty "parseTypus is idempotent for well-formed input" $
       \input ->
         let result1 = parseTypus input
-            -- Re-serialize and re-parse (would need serialization function)
+            -- Re-serialize L.and re-parse (would need serialization function)
             -- For now, just check that parsing same input twice gives same result
             result2 = parseTypus input
         in result1 == result2
@@ -163,14 +164,14 @@ parsingProperties = testGroup "Parsing Properties"
             input2 = "  ```typus  \n  " ++ content ++ "  \n  ```  \n"
             result1 = parseTypus input1
             result2 = parseTypus input2
-        in length (tfBlocks result1) == length (tfBlocks result2)
+        in L.length (tfBlocks result1) == L.length (tfBlocks result2)
   ]
 
 -- Helper function to check if a string contains another string
 contains :: String -> String -> Bool
-contains needle haystack = needle `isInfixOf` haystack
+contains needle haystack = needle `L.isInfixOf` haystack
   where
-    isInfixOf needle haystack = needle `elem` [take (length needle) (drop i haystack) | i <- [0..length haystack - length needle]]
+    L.isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
 
 -- Arbitrary instances for testing
 instance Arbitrary FileDirectives where

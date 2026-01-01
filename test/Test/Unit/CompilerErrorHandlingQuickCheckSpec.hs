@@ -3,6 +3,7 @@
 module Test.Unit.CompilerErrorHandlingQuickCheckSpec (tests) where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 
@@ -19,13 +20,15 @@ instance Arbitrary ErrorSeverity where
 
 instance Arbitrary ErrorCategory where
   arbitrary = elements 
-    [ SyntaxError
-    , TypeError
-    , NameError
-    , OwnershipError
-    , DependentTypeError
-    , ConstraintError
-    , InternalError
+    [ TypeChecking
+    , Ownership
+    , Parsing
+    , Semantic
+    , Runtime
+    , Constraint
+    , Inference
+    , Integration
+    , Unknown
     ]
 
 instance Arbitrary SourcePos where
@@ -65,7 +68,7 @@ instance Arbitrary CompilationPhase where
 tests :: TestTree
 tests = testGroup "Compiler Error Handling QuickCheck Tests"
   [ testProperty "Error severity ordering works correctly" testSeverityOrdering
-  , testProperty "Error context can be created and retrieved" testErrorContext
+  , testProperty "Error context can be created L.and retrieved" testErrorContext
   , testProperty "Error location formatting is consistent" testErrorLocationFormatting
   , testProperty "Error collector maintains error counts" testErrorCollector
   , testProperty "Error recovery decisions are consistent" testErrorRecovery
@@ -91,14 +94,14 @@ testErrorContext context =
 testErrorLocationFormatting :: ErrorLocation -> Property
 testErrorLocationFormatting location =
   let formatted = formatErrorWithLocation location "Test message"
-  in T.length formatted > 0 === True
+  in (T.length formatted > 0) === True
 
 testErrorCollector :: [CompilerError] -> Property
 testErrorCollector errors =
   let collector = newErrorCollector
       collectorWithErrors = foldl addError collector errors
       finalErrors = getErrors collectorWithErrors
-  in length finalErrors === length errors
+  in L.length finalErrors === L.length errors
 
 testErrorRecovery :: ErrorSeverity -> Property
 testErrorRecovery severity =
@@ -114,20 +117,15 @@ testCombinedErrors :: CompilerError -> CompilerError -> Property
 testCombinedErrors error1 error2 =
   let combined = CombinedError [error1, error2]
       combinedSeverity = getCombinedSeverity combined
-  in combinedSeverity `elem` [Info, Warning, Error, Fatal] === True
+  in (combinedSeverity `elem` [Info, Warning, Error, Fatal]) === True
 
 testErrorTimestamps :: Property
 testErrorTimestamps =
-  let error = errorAt SyntaxError "Test message"
-      hasValidStructure = True  -- Simplified test
-  in hasValidStructure === True
-
--- Helper functions
-getCombinedSeverity :: CombinedError -> ErrorSeverity
-getCombinedSeverity (CombinedError errors) =
-  case map getErrorSeverity errors of
-    [] -> Info
-    severities -> maximum severities
+  let errors = []
+      combined = CombinedError errors
+  in case map getErrorSeverity errors of
+    [] -> Info === getCombinedSeverity combined
+    severities -> L.maximum severities === getCombinedSeverity combined
 
 getErrorSeverity :: CompilerError -> ErrorSeverity
 getErrorSeverity (CompilerError severity _ _ _ _ _) = severity

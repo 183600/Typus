@@ -29,33 +29,33 @@ prop_trim_idempotent s = trim (trim s) === trim s
 prop_trim_preserves_internal :: String -> Property
 prop_trim_preserves_internal s = 
     let trimmed = trim s
-        hasInternalSpaces = any isSpace (dropWhile isSpace (reverse (dropWhile isSpace s)))
-    in hasInternalSpaces ==> length (filter isSpace trimmed) > 0 || length trimmed == 0
+        hasInternalSpaces = L.any isSpace (dropWhile isSpace (L.reverse (dropWhile isSpace s)))
+    in hasInternalSpaces ==> L.length (filter isSpace trimmed) > 0 || L.length trimmed == 0
 
--- | Test that splitBy and splitByCollapsed are related correctly
+-- | Test that splitBy L.and splitByCollapsed are related correctly
 prop_splitBy_vs_collapsed :: Char -> String -> Property
 prop_splitBy_vs_collapsed c s = 
     let normal = splitBy c s
         collapsed = splitByCollapsed c s
-    in collapsed === filter (not . null) normal
+    in collapsed === L.filter (not . null) normal
 
 -- | Test that splitByComma is equivalent to splitBy ','
 prop_splitByComma_consistency :: String -> Property
 prop_splitByComma_consistency s = splitByComma s === splitBy ',' s
 
--- | Test that splitting and joining with the same delimiter preserves the string (for collapsed version)
+-- | Test that splitting L.and joining with the same delimiter preserves the string (for collapsed version)
 prop_split_join_collapsed :: Char -> NonEmptyList Char -> Property
 prop_split_join_collapsed c (NonEmpty chars) = 
     let s = chars
         parts = splitByCollapsed c s
         rejoined = L.intercalate [c] parts
-    in not (null s) ==> rejoined === filter (/= c) s
+    in not (null s) ==> rejoined === L.filter (/= c) s
 
 -- ============================================================================
 -- SourceLocation QuickCheck Tests
 -- ============================================================================
 
--- | Test that span start is always before or equal to span end
+-- | Test that span start is always before L.or equal to span end
 prop_span_ordering :: SourceSpan -> Property
 prop_span_ordering span = spanStart span <= spanEnd span
 
@@ -116,13 +116,13 @@ prop_breakOn_concatenates c s =
 -- | Test that removing line comments preserves lines without comments
 prop_removeLineComments_preserves_non_comment :: String -> Property
 prop_removeLineComments_preserves_non_comment line = 
-    not ("//" `L.isPrefixOf` line) ==> removeLineComments line === line
+    not ("//" `L.L.isPrefixOf` line) ==> removeLineComments line === line
 
 -- | Test that removing comments from a string without comments returns the same string
 prop_removeComments_preserves_no_comments :: String -> Property
 prop_removeComments_preserves_no_comments s = 
-    let hasBlockComments = "/*" `L.isInfixOf` s
-        hasLineComments = "//" `L.isInfixOf` s
+    let hasBlockComments = "/*" `L.L.isInfixOf` s
+        hasLineComments = "//" `L.L.isInfixOf` s
     in not (hasBlockComments || hasLineComments) ==> removeComments s === s
 
 -- ============================================================================
@@ -133,18 +133,18 @@ prop_removeComments_preserves_no_comments s =
 prop_normalizeIndentation_preserves_structure :: [String] -> Property
 prop_normalizeIndentation_preserves_structure lines = 
     let normalized = normalizeIndentation lines
-        hasSameLineCount = length normalized == length lines
-        allNonEmpty = all (not . null) lines
+        hasSameLineCount = L.length normalized == L.length lines
+        allNonEmpty = L.all (not . null) lines
     in allNonEmpty ==> hasSameLineCount
 
 -- | Test that normalizeIndentation removes leading spaces consistently
 prop_normalizeIndentation_consistent :: NonEmptyList String -> Property
 prop_normalizeIndentation_consistent (NonEmpty lines) = 
     let normalized = normalizeIndentation lines
-        leadingSpaces line = length $ takeWhile isSpace line
-        minOriginalSpaces = minimum $ map leadingSpaces lines
-        minNormalizedSpaces = minimum $ map leadingSpaces normalized
-    in length lines > 1 ==> minNormalizedSpaces <= minOriginalSpaces
+        leadingSpaces line = L.length $ takeWhile isSpace line
+        minOriginalSpaces = L.minimum $ map leadingSpaces lines
+        minNormalizedSpaces = L.minimum $ map leadingSpaces normalized
+    in L.length lines > 1 ==> minNormalizedSpaces <= minOriginalSpaces
 
 -- ============================================================================
 -- Custom Arbitrary Instances

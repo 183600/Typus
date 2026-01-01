@@ -4,6 +4,7 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ((@?=), assertBool, assertFailure, testCase)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), forAll, elements, listOf)
 import qualified Data.Text as T
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 import Compiler (compile, CompilerError(..), CompilationPhase(..))
@@ -16,7 +17,7 @@ import Compiler.OwnershipChecker (checkOwnership)
 tests :: TestTree
 tests =
   testGroup "Type System Interaction Tests"
-    [ testGroup "Type System and Ownership Integration"
+    [ testGroup "Type System L.and Ownership Integration"
         [ testCase "handles ownership in generic types correctly" $ do
             let code = unlines
                   [ "//! ownership: on"
@@ -48,7 +49,7 @@ tests =
             result <- compile code
             case result of
               Left errs -> do
-                let hasOwnershipError = any (\e -> compilationPhase e == OwnershipPhase) errs
+                let hasOwnershipError = L.any (\e -> compilationPhase e == OwnershipPhase) errs
                 assertBool "should detect ownership error in complex types" hasOwnershipError
               Right _ -> assertFailure "expected compilation failure due to ownership violation"
 
@@ -64,12 +65,12 @@ tests =
             result <- compile code
             case result of
               Left errs -> do
-                let hasExpectedError = any (\e -> "moved" `T.isInfixOf` formatError e) errs
+                let hasExpectedError = L.any (\e -> "moved" `L.isInfixOf` formatError e) errs
                 assertBool "should handle move semantics correctly" hasExpectedError
               Right _ -> assertBool "move semantics should work" True
         ]
 
-    , testGroup "Dependent Types and Regular Types Interaction"
+    , testGroup "Dependent Types L.and Regular Types Interaction"
         [ testCase "combines dependent types with regular type checking" $ do
             let code = unlines
                   [ "//! dependent_types: on"
@@ -80,7 +81,7 @@ tests =
                   , "  return float(a) / float(b)"
                   , "}"
                   , "func processVector(v: Vector(n:10)) {"
-                  , "  var result = safeDivide(v.length, 2)"
+                  , "  var result = safeDivide(v.L.length, 2)"
                   , "  var x = v.get(5)"
                   , "}"
                   ]
@@ -103,7 +104,7 @@ tests =
             result <- compile code
             case result of
               Left errs -> do
-                let hasTypeError = any (\e -> compilationPhase e == TypeCheckPhase) errs
+                let hasTypeError = L.any (\e -> compilationPhase e == TypeCheckPhase) errs
                 assertBool "should catch dependent type constraint violations" hasTypeError
               Right _ -> assertFailure "expected compilation failure"
         ]
@@ -121,8 +122,8 @@ tests =
             result <- compile code
             case result of
               Left errs -> do
-                let hasTypeError = any (\e -> compilationPhase e == TypeCheckPhase) errs
-                let hasDependentTypeError = any (\e -> compilationPhase e == DependentTypesPhase) errs
+                let hasTypeError = L.any (\e -> compilationPhase e == TypeCheckPhase) errs
+                let hasDependentTypeError = L.any (\e -> compilationPhase e == DependentTypesPhase) errs
                 assertBool "should have type errors" hasTypeError
                 assertBool "should propagate to dependent type checking" hasDependentTypeError
               Right _ -> assertFailure "expected compilation failure"
@@ -143,8 +144,8 @@ tests =
             result <- compile code
             case result of
               Left errs -> do
-                let shouldNotCrash = any (\e -> "circular" `T.isInfixOf` formatError e || 
-                                                     "recursive" `T.isInfixOf` formatError e) errs
+                let shouldNotCrash = L.any (\e -> "circular" `L.isInfixOf` formatError e || 
+                                                     "recursive" `L.isInfixOf` formatError e) errs
                 assertBool "should handle circular dependencies gracefully" shouldNotCrash
               Right _ -> assertBool "circular dependencies should be handled" True
         ]

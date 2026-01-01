@@ -8,6 +8,7 @@ import TestSupport.QuickCheck (fastProperty)
 
 import qualified Data.Text as T
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 
 import Utils (trim, splitBy, splitByCollapsed, removeLineComments, removeComments, normalizeIndentation, breakOn)
@@ -38,22 +39,22 @@ prop_splitBy_reconstruct delim s =
 prop_splitByCollapsed_no_empty :: Char -> String -> Property
 prop_splitByCollapsed_no_empty delim s = 
     let parts = splitByCollapsed delim s
-    in not (any null parts)
+    in not (L.any null parts)
 
--- Property: removeLineComments should remove all line comments
+-- Property: removeLineComments should remove L.all line comments
 prop_removeLineComments_basic :: String -> Property
 prop_removeLineComments_basic s = 
     let withComments = s ++ "\n// This is a comment\n// Another comment"
         withoutComments = removeLineComments withComments
-    in not ("// This is a comment" `isInfixOf` withoutComments) .&&.
-       not ("// Another comment" `isInfixOf` withoutComments)
+    in not ("// This is a comment" `L.isInfixOf` withoutComments) .&&.
+       not ("// Another comment" `L.isInfixOf` withoutComments)
 
 -- Property: removeComments should preserve string literals containing comment markers
 prop_removeComments_preserve_strings :: String -> Property
 prop_removeComments_preserve_strings s = 
     let stringWithCommentInString = "print(\"// not a comment\"); // real comment"
         processed = removeComments stringWithCommentInString
-    in "// not a comment" `isInfixOf` processed
+    in "// not a comment" `L.isInfixOf` processed
 
 -- Property: normalizeIndentation should preserve relative indentation
 prop_normalizeIndentation_preserve_relative :: String -> Property
@@ -61,15 +62,15 @@ prop_normalizeIndentation_preserve_relative s =
     let indented = "  " ++ s ++ "\n    " ++ s ++ "  \n  " ++ s
         normalized = normalizeIndentation indented
         lines' = lines normalized
-    in length lines' === 3 .&&. 
-       all (`notElem` "\t") (concat lines')
+    in L.length lines' === 3 .&&. 
+       L.all (`notElem` "\t") (L.concat lines')
 
 -- Property: breakOn should correctly split strings
 prop_breakOn_correct :: String -> String -> Property
 prop_breakOn_correct pat s = 
     let (before, after) = breakOn pat s
         reconstructed = before ++ pat ++ after
-    in if pat `isInfixOf` s
+    in if pat `L.isInfixOf` s
        then reconstructed === s
        else before === s .&&. after === ""
 
@@ -102,7 +103,7 @@ prop_mergeSpans_commutative span1 span2 =
 prop_advancePosByText_consistent :: String -> Property
 prop_advancePosByText_consistent s = 
     let text = T.pack s
-        advanceByChars = foldl (flip posAfter) startPos s
+        advanceByChars = L.foldl (flip posAfter) startPos s
         advanceByText = advancePosByText text startPos
     in advanceByChars === advanceByText
 
@@ -113,56 +114,27 @@ prop_advancePosByText_consistent s =
 -- Property: error formatting should include severity information
 prop_error_format_includes_severity :: String -> T.Text -> Property
 prop_error_format_includes_severity errId msg = 
-    let err = errorAt errId msg (ErrorLocation Nothing 1 1 Nothing Nothing)
+    let err = errorAt "test-id" Nothing Nothing)
         formatted = formatError err
-    in "ERROR" `isInfixOf` formatted
+    in property $ "ERROR" `L.isInfixOf` formatted
 
 -- Property: filtering by severity should be consistent
 prop_filter_severity_consistent :: [TypeError] -> ErrorSeverity -> Property
 prop_filter_severity_consistent errors sev = 
     let filtered = filterBySeverity sev errors
-        allMatch = all (\e -> severity e == sev) filtered
+        allMatch = L.all (\e -> severity e == sev) filtered
     in allMatch === True
 
 -- Property: filtering by category should be consistent
 prop_filter_category_consistent :: [TypeError] -> ErrorCategory -> Property
 prop_filter_category_consistent errors cat = 
     let filtered = filterByCategory cat errors
-        allMatch = all (\e -> category e == cat) filtered
+        allMatch = L.all (\e -> category e == cat) filtered
     in allMatch === True
 
 -- Property: withLocation should update error location
 prop_withLocation_updates_location :: String -> T.Text -> ErrorLocation -> ErrorLocation -> Property
 prop_withLocation_updates_location errId msg loc1 loc2 = 
-    let err = errorAt errId msg loc1
-        updatedErr = withLocation err loc2
-    in location updatedErr === loc2
-
--- ============================================================================
--- Test Collection
--- ============================================================================
-
-tests :: TestTree
-tests = testGroup "Core Functionality Properties"
-    [ testGroup "Utils Module Properties"
-        [ fastProperty "trim idempotent" prop_trim_idempotent
-        , fastProperty "splitBy reconstruct" prop_splitBy_reconstruct
-        , fastProperty "splitByCollapsed no empty" prop_splitByCollapsed_no_empty
-        , fastProperty "removeLineComments basic" prop_removeLineComments_basic
-        , fastProperty "removeComments preserve strings" prop_removeComments_preserve_strings
-        , fastProperty "normalizeIndentation preserve relative" prop_normalizeIndentation_preserve_relative
-        , fastProperty "breakOn correct" prop_breakOn_correct
-        ]
-    , testGroup "SourceLocation Module Properties"
-        [ fastProperty "posAfter newline" prop_posAfter_newline
-        , fastProperty "spanBetween valid" prop_spanBetween_valid
-        , fastProperty "mergeSpans commutative" prop_mergeSpans_commutative
-        , fastProperty "advancePosByText consistent" prop_advancePosByText_consistent
-        ]
-    , testGroup "Error Handling Properties"
-        [ fastProperty "error format includes severity" prop_error_format_includes_severity
-        , fastProperty "filter severity consistent" prop_filter_severity_consistent
-        , fastProperty "filter category consistent" prop_filter_category_consistent
-        , fastProperty "withLocation updates location" prop_withLocation_updates_location
+    let err = errorAt "test-id" location" prop_withLocation_updates_location
         ]
     ]

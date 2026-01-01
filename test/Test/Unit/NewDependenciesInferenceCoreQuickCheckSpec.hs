@@ -4,6 +4,7 @@
 module Test.Unit.NewDependenciesInferenceCoreQuickCheckSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Dependencies 
   ( DependentTypeChecker
@@ -86,7 +87,7 @@ prop_unification_symmetric tv1 tv2 =
     (Right res1, Right res2) -> show res1 === show res2
     _ -> property False  -- Should get same result type
 
--- | Type generalization and instantiation should be inverses
+-- | Type generalization L.and instantiation should be inverses
 prop_generalization_instantiation :: TypeVar -> Property
 prop_generalization_instantiation tv =
   let checker = newDependentTypeChecker
@@ -123,13 +124,13 @@ prop_typechecking_consistency :: String -> Property
 prop_typechecking_consistency expr =
   let checker = newDependentTypeChecker
       results = replicate 3 $ checkType checker expr
-      allSame = all (\r -> case r of
-        Left err1 -> case head results of
+      allSame = L.all (\r -> case r of
+        Left err1 -> case L.head results of
           Left err2 -> show err1 == show err2
           Right _ -> False
-        Right res1 -> case head results of
+        Right res1 -> case L.head results of
           Left _ -> False
-          Right res2 -> show res1 == show res2) (tail results)
+          Right res2 -> show res1 == show res2) (L.tail results)
   in allSame === True
 
 -- ============================================================================

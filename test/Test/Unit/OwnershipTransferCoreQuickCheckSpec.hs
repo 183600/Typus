@@ -22,7 +22,9 @@ import Ownership.Common.Types
   , newOwnershipAnalyzer
   )
 
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, null, length, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf, length)
+import Data.List (null, sort)
 import Data.Char (isAlphaNum)
 
 -- Property: OwnershipType ordering is consistent
@@ -106,17 +108,17 @@ prop_newOwnershipAnalyzer_valid =
 -- Property: OwnershipType Show roundtrip
 prop_ownershipType_show_roundtrip :: String -> OwnershipType -> Property
 prop_ownershipType_show_roundtrip name baseType =
-  not (null name) ==> all (\c -> isAlphaNum c || c == '_') name ==>
+  not (null name) ==> L.all (\c -> isAlphaNum c || c == '_') name ==>
   let ot = case baseType of
              Owned _ -> Owned name
              Borrowed _ -> Borrowed name
              MutBorrowed _ -> MutBorrowed name
       shown = show ot
-      hasCorrectName = name `isInfixOf` shown
+      hasCorrectName = name `L.isInfixOf` shown
       hasCorrectType = case baseType of
-                         Owned _ -> "Owned" `isPrefixOf` shown
-                         Borrowed _ -> "Borrowed" `isPrefixOf` shown
-                         MutBorrowed _ -> "MutBorrowed" `isPrefixOf` shown
+                         Owned _ -> "Owned" `L.isPrefixOf` shown
+                         Borrowed _ -> "Borrowed" `L.isPrefixOf` shown
+                         MutBorrowed _ -> "MutBorrowed" `L.isPrefixOf` shown
   in property $ hasCorrectName .&&. hasCorrectType
 
 -- Property: OwnershipError Show contains relevant information
@@ -138,10 +140,10 @@ prop_ownershipError_show_contains_info name baseError =
                 ParameterMoveMismatch _ -> ParameterMoveMismatch name
                 ControlFlowError _ -> ControlFlowError name
       shown = show error
-      containsName = name `isInfixOf` shown
+      containsName = name `L.isInfixOf` shown
   in property $ containsName
 
--- Property: OwnershipTransfer contains source and target
+-- Property: OwnershipTransfer contains source L.and target
 prop_ownershipTransfer_has_source_target :: String -> String -> Property
 prop_ownershipTransfer_has_source_target source target =
   not (null source) ==> not (null target) ==> 
@@ -204,7 +206,7 @@ prop_doubleMove_contains_names name1 name2 =
        DoubleMove n1 n2 -> property $ n1 === name1 .&&. n2 === name2
        _ -> property $ False
 
--- Property: CrossFunctionMove error contains function and variable names
+-- Property: CrossFunctionMove error contains function L.and variable names
 prop_crossFunctionMove_contains_names :: String -> String -> Property
 prop_crossFunctionMove_contains_names funcName varName =
   not (null funcName) ==> not (null varName) ==> 
@@ -217,7 +219,7 @@ prop_crossFunctionMove_contains_names funcName varName =
 prop_ownershipType_sorting :: [OwnershipType] -> Property
 prop_ownershipType_sorting types =
   let sorted = sort types
-      isSorted = all (\(a, b) -> a <= b) (zip sorted (drop 1 sorted))
+      isSorted = L.all (\(a, b) -> a <= b) (zip sorted (drop 1 sorted))
   in property $ isSorted
 
 -- Property: OwnershipError types are distinguishable
@@ -263,14 +265,14 @@ tests =
     , fastProperty "newOwnershipAnalyzer creates valid analyzer" prop_newOwnershipAnalyzer_valid
     , fastProperty "OwnershipType Show roundtrip" prop_ownershipType_show_roundtrip
     , fastProperty "OwnershipError Show contains relevant information" prop_ownershipError_show_contains_info
-    , fastProperty "OwnershipTransfer has source and target" prop_ownershipTransfer_has_source_target
+    , fastProperty "OwnershipTransfer has source L.and target" prop_ownershipTransfer_has_source_target
     , fastProperty "OwnershipTransfer equality is consistent" prop_ownershipTransfer_equality
     , fastProperty "Owned type has correct name" prop_owned_type_has_name
     , fastProperty "Borrowed type has correct name" prop_borrowed_type_has_name
     , fastProperty "MutBorrowed type has correct name" prop_mutBorrowed_type_has_name
     , fastProperty "UseAfterMove error contains variable name" prop_useAfterMove_contains_name
     , fastProperty "DoubleMove error contains both names" prop_doubleMove_contains_names
-    , fastProperty "CrossFunctionMove error contains function and variable names" prop_crossFunctionMove_contains_names
+    , fastProperty "CrossFunctionMove error contains function L.and variable names" prop_crossFunctionMove_contains_names
     , fastProperty "OwnershipType sorting preserves order" prop_ownershipType_sorting
     , fastProperty "OwnershipError types are distinguishable" prop_ownershipError_distinguishable
     ]

@@ -23,11 +23,13 @@ import SourceLocation
   , mkSourceSpan
   )
 import Text.Megaparsec (errorBundlePretty)
-import Data.List (length, foldl')
+import qualified Data.List as L
+import Data.List (length)
+import Data.List (foldl')
 
 tests :: TestTree
 tests = testGroup "New Source Location Accuracy Tests"
-    [ testCase "accurately tracks line and column positions" $ do
+    [ testCase "accurately tracks line L.and column positions" $ do
         let source = unlines
               [ "package main"
               , "func test() {"
@@ -89,7 +91,7 @@ tests = testGroup "New Source Location Accuracy Tests"
           Left err -> assertFailure $ "Parse failed: " ++ err
           Right typusFile -> do
             let spans = getAllFunctionSpans typusFile
-            assertBool "Should find both functions" $ length spans >= 2
+            assertBool "Should find both functions" $ L.length spans >= 2
             -- Check that inner function is properly nested
             case spans of
               (outer:inner:_) -> do
@@ -133,12 +135,12 @@ prop_line_numbers_consistent source =
     Right typusFile -> do
       let spans = getAllFunctionSpans typusFile
       let sourceLines = lines source
-      property $ all (isSpanConsistent sourceLines) spans
+      property $ L.all (isSpanConsistent sourceLines) spans
   where
     isSpanConsistent lines span = 
       let startLine = posLine (spanStart span)
           endLine = posLine (spanEnd span)
-      in startLine >= 1 && endLine >= startLine && endLine <= length lines
+      in startLine >= 1 && endLine >= startLine && endLine <= L.length lines
 
 -- Property: Column numbers should be within reasonable bounds
 prop_column_numbers_reasonable :: String -> Property
@@ -147,7 +149,7 @@ prop_column_numbers_reasonable source =
     Left _ -> property $ True
     Right typusFile -> do
       let spans = getAllFunctionSpans typusFile
-      property $ all (isColumnReasonable source) spans
+      property $ L.all (isColumnReasonable source) spans
   where
     isColumnReasonable source span =
       let startCol = posColumn (spanStart span)
@@ -155,7 +157,7 @@ prop_column_numbers_reasonable source =
           sourceLines = lines source
           lineLength = case sourceLines of
             [] -> 0
-            (l:_) -> length l
+            (l:_) -> L.length l
       in startCol >= 1 && endCol >= startCol && endCol <= lineLength + 1000  -- Allow some margin
 
 -- Helper functions
@@ -169,7 +171,7 @@ getAllFunctionSpans :: TypusFile -> [SourceSpan]
 getAllFunctionSpans typusFile = map cbSpan (tfCodeBlocks typusFile)
 
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` (substrings haystack)
+L.isInfixOf needle haystack = needle `elem` (substrings haystack)
   where
     substrings [] = []
-    substrings s@(x:xs) = take (length needle) s : substrings xs
+    substrings s@(x:xs) = take (L.length needle) s : substrings xs

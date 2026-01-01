@@ -11,12 +11,14 @@
 module Test.Unit.NewOwnershipTransferBoundaryQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, oneof, suchThat)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (sort, nub, isInfixOf, isPrefixOf, isSuffixOf, intercalate, delete, union)
+import Data.List (isInfixOf, isPrefixOf, isSuffixOf)
+import Data.List (sort, nub, intercalate, delete, union)
 import Data.Map (Map, fromList, toList, keys, elems, insert, delete, lookup, member, empty)
 import qualified Data.Map as Map
 import Data.Set (Set, fromList, toList, union, intersection, difference)
@@ -57,7 +59,7 @@ import Dependencies
   )
 
 -- ============================================================================
--- Helper Functions and Generators
+-- Helper Functions L.and Generators
 -- ============================================================================
 
 -- Generate variable names
@@ -124,7 +126,7 @@ genDependencyGraph = do
     name <- genVariableName
     deps <- listOf genVariableName
     return $ DependencyNode name deps
-  return $ DependencyGraph $ Map.fromList $ map (\n -> (nodeName n, n)) nodes
+  return $ DependencyGraph $ Map.fromList $ L.map (\n -> (nodeName n, n)) nodes
 
 -- ============================================================================
 -- Ownership Transfer Properties
@@ -244,7 +246,7 @@ prop_ownership_analysis_detects_conflicts :: OwnershipContext -> Property
 prop_ownership_analysis_detects_conflicts context =
   let analysis = analyzeOwnership context
       conflicts = findOwnershipConflicts analysis
-  in property $ length conflicts >= 0
+  in property $ L.length conflicts >= 0
 
 -- Property: Ownership validation should catch invalid states
 prop_ownership_validation_catches_invalid :: OwnershipContext -> Property
@@ -292,14 +294,14 @@ prop_transfer_unknown_variable fromVar toVar =
 -- Find constraints for a variable in context
 findConstraintsForVariable :: String -> OwnershipContext -> [OwnershipConstraint]
 findConstraintsForVariable varName context =
-  case filter (\vo -> variableName vo == varName) (contextVariables context) of
+  case L.filter (\vo -> variableName vo == varName) (contextVariables context) of
     [] -> []
     (varOwnership:_) -> variableConstraints varOwnership
 
 -- Create initial ownership context with given variables
 createInitialContext :: [String] -> OwnershipContext
 createInitialContext varNames =
-  let variables = map (\name -> VariableOwnership name (Owned name) [] startPos) varNames
+  let variables = L.map (\name -> VariableOwnership name (Owned name) [] startPos) varNames
   in OwnershipContext variables [] "main"
 
 -- Check if ownership state is available for transfer
@@ -313,18 +315,18 @@ isAvailableForTransfer state = case state of
   Unknown -> False
 
 -- ============================================================================
--- Performance and Scalability Properties
+-- Performance L.and Scalability Properties
 -- ============================================================================
 
 -- Property: Ownership transfer should handle many variables efficiently
 prop_ownership_transfer_many_variables :: Int -> Property
 prop_ownership_transfer_many_variables numVariables =
   numVariables > 0 && numVariables <= 1000 ==> 
-  let varNames = take numVariables $ map (\i -> "var" ++ show i) [1..]
+  let varNames = take numVariables $ L.map (\i -> "var" ++ show i) [1..]
       initialContext = createInitialContext varNames
       -- Transfer ownership from first to last
       transfer = case varNames of
-                   (first:rest) -> case reverse rest of
+                   (first:rest) -> case L.reverse rest of
                                      (last:_) -> Just $ OwnershipTransfer first last MoveOwnership startPos
                                      [] -> Nothing
                    [] -> Nothing
@@ -339,13 +341,13 @@ prop_ownership_transfer_many_variables numVariables =
 prop_ownership_analysis_scalability :: Int -> Property
 prop_ownership_analysis_scalability numVariables =
   numVariables > 0 && numVariables <= 500 ==> 
-  let varNames = take numVariables $ map (\i -> "var" ++ show i) [1..]
+  let varNames = take numVariables $ L.map (\i -> "var" ++ show i) [1..]
       initialContext = createInitialContext varNames
       analysis = analyzeOwnership initialContext
   in property $ True  -- If this completes without timeout, scaling is acceptable
 
 -- ============================================================================
--- Edge Cases and Boundary Conditions
+-- Edge Cases L.and Boundary Conditions
 -- ============================================================================
 
 -- Property: Self-transfer should be handled appropriately
@@ -397,7 +399,7 @@ tests = testGroup "New Ownership Transfer Boundary QuickCheck Tests"
     , fastProperty "return ownership to caller" prop_return_ownership_to_caller
     ]
 
-  , testGroup "Constraints and Validation"
+  , testGroup "Constraints L.and Validation"
     [ fastProperty "ownership transfer respects constraints" prop_ownership_transfer_respects_constraints
     , fastProperty "ownership validation catches invalid" prop_ownership_validation_catches_invalid
     ]
@@ -408,14 +410,14 @@ tests = testGroup "New Ownership Transfer Boundary QuickCheck Tests"
     , fastProperty "ownership analysis detects conflicts" prop_ownership_analysis_detects_conflicts
     ]
 
-  , testGroup "Error Handling and Edge Cases"
+  , testGroup "Error Handling L.and Edge Cases"
     [ fastProperty "transfer unknown variable" prop_transfer_unknown_variable
     , fastProperty "self transfer handled" prop_self_transfer_handled
     , fastProperty "transfer to same owner" prop_transfer_to_same_owner
     , fastProperty "empty context transfer" prop_empty_context_transfer
     ]
 
-  , testGroup "Performance and Scalability"
+  , testGroup "Performance L.and Scalability"
     [ fastProperty "ownership transfer many variables" prop_ownership_transfer_many_variables
     , fastProperty "ownership analysis scalability" prop_ownership_analysis_scalability
     ]

@@ -18,6 +18,7 @@ import TestSupport.Arbitrary
 import Parser (parseTypus, TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..))
 import qualified Text.Megaparsec as MP
 import Utils (trim)
+import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
 import Data.Maybe (isNothing, isJust)
 
@@ -28,7 +29,7 @@ prop_parser_recovery_partial_results validPrefix invalidSuffix =
       result = parseTypus input
       hasPartialResult = case result of
         Right _ -> True
-        Left _ -> False -- For this test, we consider any parse as success
+        Left _ -> False -- For this test, we consider L.any parse as success
   in counterexample "Parser should handle partial input gracefully" $
      property hasPartialResult
 
@@ -45,7 +46,7 @@ prop_parser_empty_input =
 -- Property: Only whitespace input should parse to empty file
 prop_parser_whitespace_input :: String -> Property
 prop_parser_whitespace_input ws =
-  let allWhitespace = all (`elem` " \t\n\r") ws
+  let allWhitespace = L.all (`elem` " \t\n\r") ws
       result = parseTypus ws
       isEmptyFile = case result of
         Right (TypusFile _ [] _) -> True
@@ -79,7 +80,7 @@ prop_parser_unmatched_braces_recovery before after =
 -- Property: Parser should handle very long lines
 prop_parser_long_lines :: String -> Int -> Property
 prop_parser_long_lines base repeatCount =
-  let longLine = concat (replicate repeatCount base)
+  let longLine = L.concat (replicate repeatCount base)
       input = longLine ++ "\n"
       result = parseTypus input
       canHandle = case result of
@@ -105,7 +106,7 @@ prop_parser_nested_blocks :: Int -> Property
 prop_parser_nested_blocks depth =
   let openBraces = replicate depth '{'
       closeBraces = replicate depth '}'
-      input = concat openBraces ++ concat closeBraces
+      input = L.concat openBraces ++ L.concat closeBraces
       result = parseTypus input
       hasResult = case result of
         Right _ -> True

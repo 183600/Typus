@@ -8,6 +8,7 @@ import Test.Tasty.HUnit
 import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed,
              removeLineComments, removeComments, normalizeIndentation, breakOn)
 import Data.Char (isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 
 tests :: TestTree
@@ -22,27 +23,27 @@ tests = testGroup "Utils Enhanced QuickCheck Tests"
 -- | Trim function properties
 trimProperties :: TestTree
 trimProperties = testGroup "Trim Properties"
-  [ testProperty "trim removes leading and trailing whitespace" $
-      \s -> trim s === dropWhile isSpace (reverse (dropWhile isSpace (reverse s)))
+  [ testProperty "trim removes leading L.and trailing whitespace" $
+      \s -> trim s === dropWhile isSpace (L.reverse (dropWhile isSpace (L.reverse s)))
   
   , testProperty "trim idempotent" $
       \s -> trim (trim s) === trim s
   
   , testProperty "trim of whitespace-only string is empty" $
-      \s -> all isSpace s ==> trim s === ""
+      \s -> L.all isSpace s ==> trim s === ""
   
   , testProperty "trim preserves non-whitespace content" $
-      \s -> not (all isSpace s) ==> not (null (trim s)) || any (not . isSpace) s
+      \s -> not (L.all isSpace s) ==> not (L.null (trim s)) || L.any (not . isSpace) s
   ]
 
 -- | Split function properties
 splitProperties :: TestTree
 splitProperties = testGroup "Split Properties"
-  [ testProperty "splitBy preserves total length" $
-      \c s -> sum (map length (splitBy c s)) === length s
+  [ testProperty "splitBy preserves total L.length" $
+      \c s -> L.sum (map L.length (splitBy c s)) === L.length s
   
   , testProperty "splitByCollapsed removes empty segments" $
-      \c s -> all (not . null) (splitByCollapsed c s)
+      \c s -> L.all (not . null) (splitByCollapsed c s)
   
   , testProperty "splitByComma equals splitBy with comma" $
       \s -> splitByComma s === splitBy ',' s
@@ -67,27 +68,27 @@ commentProperties = testGroup "Comment Properties"
       \prefix comment suffix -> 
         let input = prefix ++ "//" ++ comment ++ "\n" ++ suffix
             result = removeLineComments input
-        in "//" `isInfixOf` result === False
+        in "//" `L.isInfixOf` result === False
   
   , testProperty "removeLineComments preserves line breaks" $
       \lines -> 
         let input = unlines lines
             result = removeLineComments input
-        in length (lines result) === length lines
+        in L.length (lines result) === L.length lines
   
-  , testProperty "removeComments removes both // and /* */ comments" $
+  , testProperty "removeComments removes both // L.and /* */ comments" $
       \prefix comment suffix -> 
         let input1 = prefix ++ "//" ++ comment ++ "\n" ++ suffix
             input2 = prefix ++ "/*" ++ comment ++ "*/" ++ suffix
             result1 = removeComments input1
             result2 = removeComments input2
-        in "//" `isInfixOf` result1 === False .&&. "/*" `isInfixOf` result2 === False
+        in "//" `L.isInfixOf` result1 === False .&&. "/*" `L.isInfixOf` result2 === False
   
   , testProperty "removeComments preserves string literals" $
       \s1 s2 -> 
         let input = "\"" ++ s1 ++ "\" // comment\n\"" ++ s2 ++ "\""
             result = removeComments input
-        in s1 `isInfixOf` result .&&. s2 `isInfixOf` result
+        in s1 `L.isInfixOf` result .&&. s2 `L.isInfixOf` result
   
   , testProperty "removeComments preserves character literals" $
       \c1 c2 -> 
@@ -99,7 +100,7 @@ commentProperties = testGroup "Comment Properties"
       \s -> 
         let input = "\"\\\"" ++ s ++ "\\\"\" // comment"
             result = removeComments input
-        in "\\\"" `isInfixOf` result
+        in "\\\"" `L.isInfixOf` result
   ]
 
 -- | Indentation normalization properties  
@@ -110,27 +111,27 @@ indentationProperties = testGroup "Indentation Properties"
         let input = unlines lines
             result = normalizeIndentation input
             resultLines = lines result
-        in length resultLines === length lines
+        in L.length resultLines === L.length lines
   
   , testProperty "normalizeIndentation preserves non-empty content" $
       \lines -> 
-        let hasContent = any (not . all isSpace) lines
+        let hasContent = L.any (not . L.all isSpace) lines
             input = unlines lines
             result = normalizeIndentation input
-            resultHasContent = any (not . all isSpace) (lines result)
+            resultHasContent = L.any (not . L.all isSpace) (lines result)
         in hasContent ==> resultHasContent
   
   , testProperty "normalizeIndentation removes common prefix indentation" $
       \lines -> 
-        let nonEmpty = filter (not . all isSpace) lines
+        let nonEmpty = L.filter (not . L.all isSpace) lines
             input = unlines lines
             result = normalizeIndentation input
             resultLines = lines result
-            leadingSpaces line = length (takeWhile isSpace line)
+            leadingSpaces line = L.length (takeWhile isSpace line)
         in not (null nonEmpty) ==> 
-           let minLeading = minimum (map leadingSpaces nonEmpty)
-               resultLeading = map leadingSpaces (filter (not . all isSpace) resultLines)
-           in all (<= minLeading) resultLeading
+           let minLeading = L.minimum (map leadingSpaces nonEmpty)
+               resultLeading = map leadingSpaces (L.filter (not . L.all isSpace) resultLines)
+           in L.all (<= minLeading) resultLeading
   ]
 
 -- | Search function properties
@@ -141,12 +142,12 @@ searchProperties = testGroup "Search Properties"
         not (null pattern) ==> 
         let input = prefix ++ pattern ++ suffix
             (before, after) = breakOn pattern input
-        in pattern `isPrefixOf` (prefix ++ pattern) .&&. 
+        in pattern `L.isPrefixOf` (prefix ++ pattern) .&&. 
            before ++ pattern ++ after === input
   
   , testProperty "breakOn returns original string when pattern not found" $
       \s pattern -> 
-        not (pattern `isInfixOf` s) ==> 
+        not (pattern `L.isInfixOf` s) ==> 
         let (before, after) = breakOn pattern s
         in before === s .&&. after === ""
   

@@ -10,6 +10,7 @@
 module Test.Unit.NewAdditionalQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), Positive(..), NonEmptyList(..))
 
@@ -19,7 +20,8 @@ import Parser (FileDirectives(..), BlockDirectives(..), defaultFileDirectives, d
 import ErrorHandler (ErrorSeverity(..))
 
 import Data.Char (isSpace)
-import Data.List (null, head, last, all, length, concat)
+import Data.List (head, all, length, concat)
+import Data.List (null, last)
 
 -- ============================================================================
 -- Utils Module Tests
@@ -37,9 +39,9 @@ prop_splitBy_vs_collapsed :: Char -> String -> Property
 prop_splitBy_vs_collapsed delim input =
   let splitResult = splitBy delim input
       collapsedResult = splitByCollapsed delim input
-      hasEmptyStrings = any null splitResult
+      hasEmptyStrings = L.any null splitResult
   in property $ if hasEmptyStrings 
-                then length collapsedResult < length splitResult
+                then L.length collapsedResult < L.length splitResult
                 else collapsedResult === splitResult
 
 -- ============================================================================
@@ -71,7 +73,7 @@ prop_merge_spans_valid span1 span2 =
 -- Parser Module Tests
 -- ============================================================================
 
--- Property: Default directives are all Nothing
+-- Property: Default directives are L.all Nothing
 prop_default_directives_nothing :: Property
 prop_default_directives_nothing =
   let fileDirectives = defaultFileDirectives
@@ -91,8 +93,8 @@ prop_default_directives_nothing =
 prop_error_severity_comparison :: ErrorSeverity -> ErrorSeverity -> Property
 prop_error_severity_comparison sev1 sev2 =
   let severityOrder = [Info, Warning, Error, Fatal]
-      sev1Index = length $ takeWhile (/= sev1) severityOrder
-      sev2Index = length $ takeWhile (/= sev2) severityOrder
+      sev1Index = L.length $ takeWhile (/= sev1) severityOrder
+      sev2Index = L.length $ takeWhile (/= sev2) severityOrder
   in property $ (sev1 == sev2) === (sev1Index == sev2Index)
 
 -- Test collection

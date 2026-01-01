@@ -3,6 +3,7 @@
 module Test.Unit.NewDataConsistencyQuickCheckTestSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Utils (trim, splitBy, splitByCollapsed, removeLineComments)
 import SourceLocation (SourcePos(..), startPos, posAfter, SourceSpan(..), spanFrom, mergeSpans, isValidSpan)
@@ -17,21 +18,21 @@ prop_trim_associative s = trim (trim s) == trim s
 prop_split_by_idempotent :: Char -> String -> Bool
 prop_split_by_idempotent delim s = 
   let parts1 = splitBy delim s
-      parts2 = splitBy delim (concat parts1)
-  in length parts1 == length parts2
+      parts2 = splitBy delim (L.concat parts1)
+  in L.length parts1 == L.length parts2
 
 prop_split_by_collapsed_consistency :: Char -> String -> Bool
 prop_split_by_collapsed_consistency delim s =
   let normal = splitBy delim s
       collapsed = splitByCollapsed delim s
-  in all (not . null) collapsed && length collapsed <= length normal
+  in L.all (not . null) collapsed && L.length collapsed <= L.length normal
 
 -- 测试位置操作的一致性
 prop_position_monotonic :: String -> Bool
 prop_position_monotonic s = 
   let chars = take 10 s  -- 限制长度
       positions = scanl posAfter startPos chars
-      isMonotonic ps = all (uncurry (<=)) (zip ps (tail ps))
+      isMonotonic ps = L.all (uncurry (<=)) (zip ps (L.tail ps))
   in isMonotonic positions
 
 prop_span_merge_associative :: SourcePos -> SourcePos -> SourcePos -> Bool
@@ -60,13 +61,13 @@ prop_block_directives_roundtrip own deps cons =
 
 -- 测试数据不变量
 prop_trim_length_invariant :: String -> Bool
-prop_trim_length_invariant s = length (trim s) <= length s
+prop_trim_length_invariant s = L.length (trim s) <= L.length s
 
 prop_split_by_length_invariant :: Char -> String -> Bool
 prop_split_by_length_invariant delim s =
   let parts = splitBy delim s
-      totalLength = sum (map length parts) + length (filter (== delim) s)
-  in totalLength == length s
+      totalLength = L.sum (map L.length parts) + L.length (L.filter (== delim) s)
+  in totalLength == L.length s
 
 prop_position_ordering_invariant :: SourcePos -> SourcePos -> Bool
 prop_position_ordering_invariant pos1 pos2 =
@@ -87,9 +88,9 @@ prop_string_processing_pipeline s =
   let step1 = trim s
       step2 = removeLineComments step1
       step3 = splitBy ' ' step2
-      step4 = concat step3
+      step4 = L.concat step3
       step5 = trim step4
-  in length step5 <= length s
+  in L.length step5 <= L.length s
 
 -- 测试数据完整性
 prop_span_integrity :: SourcePos -> SourcePos -> Bool
@@ -110,7 +111,7 @@ prop_directives_integrity own deps cons =
 prop_split_join_reversibility :: Char -> String -> Bool
 prop_split_join_reversibility delim s = 
   let parts = splitBy delim s
-      rejoined = concat (intersperse [delim] parts)
+      rejoined = L.concat (intersperse [delim] parts)
   in rejoined == s
   where
     intersperse _ [] = []
@@ -127,8 +128,8 @@ tests = testGroup "Data Consistency QuickCheck Tests"
   , testProperty "span merge associative" prop_span_merge_associative
   , testProperty "file directives roundtrip" prop_file_directives_roundtrip
   , testProperty "block directives roundtrip" prop_block_directives_roundtrip
-  , testProperty "trim length invariant" prop_trim_length_invariant
-  , testProperty "splitBy length invariant" prop_split_by_length_invariant
+  , testProperty "trim L.length invariant" prop_trim_length_invariant
+  , testProperty "splitBy L.length invariant" prop_split_by_length_invariant
   , testProperty "position ordering invariant" prop_position_ordering_invariant
   , testProperty "comment removal idempotent" prop_comment_removal_idempotent
   , testProperty "string processing pipeline" prop_string_processing_pipeline

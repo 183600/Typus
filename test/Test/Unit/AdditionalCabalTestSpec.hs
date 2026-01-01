@@ -1,14 +1,20 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE DeriveGeneric #-}
 module Test.Unit.AdditionalCabalTestSpec (tests) where
 
-import Data.List (isInfixOf, null)
+import qualified Data.List as L
+import Data.List (isInfixOf)
+import Data.List (null)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ((@?=), assertBool, assertFailure, testCase)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), counterexample)
 import Test.QuickCheck (property)
+import GHC.Generics (Generic)
 
 import Parser (parseTypus, TypusFile(..), FileDirectives(..))
 import Compiler (compile, generateGoCode)
+import Compiler.IR (rawSourceFromTypus)
 import Ownership (analyzeOwnership)
 import DependentTypesParser (validateDependentTypeSyntax)
 import SourceLocation (SourceSpan(..), SourcePos(..))
@@ -20,10 +26,15 @@ import Compiler.Errors.Core (TypeError(..))
 import Test.QuickCheck.Gen (Gen, choose, vectorOf, elements)
 import Test.QuickCheck.Arbitrary (Arbitrary(..))
 
-instance Arbitrary String where
+-- Newtype wrapper for String to avoid duplicate instance
+newtype TestString = TestString { getTestString :: String }
+  deriving (Eq, Show, Generic)
+
+instance Arbitrary TestString where
   arbitrary = do
     n <- choose (0, 20)
-    vectorOf n (elements ['a'..'z'])
+    str <- vectorOf n (elements ['a'..'z'])
+    return (TestString str)
 
 -- Helper functions
 validTypusCode :: String
@@ -94,7 +105,7 @@ parserBoundaryTests =
               , "func main() {}"
               ]
         case parseTypus source of
-          Left err -> assertBool "Should reject invalid directive" ("Unknown file directive" `isInfixOf` err)
+          Left err -> assertBool "Should reject invalid directive" ("Unknown file directive" `L.isInfixOf` err)
           Right _ -> assertFailure "Expected parse failure for invalid directive"
 
     , testCase "handles unclosed blocks" $ do
@@ -106,7 +117,7 @@ parserBoundaryTests =
               , "}"
               ]
         case parseTypus source of
-          Left err -> assertBool "Should detect unclosed block" ("Unclosed directive block" `isInfixOf` err)
+          Left err -> assertBool "Should detect unclosed block" ("Unclosed directive block" `L.isInfixOf` err)
           Right _ -> assertFailure "Expected parse failure for unclosed block"
 
     , testCase "handles deeply nested structures" $ do
@@ -130,7 +141,7 @@ parserBoundaryTests =
               ]
         case parseTypus source of
           Left err -> assertFailure $ "Failed to parse nested structures: " ++ err
-          Right typusFile -> assertBool "Should handle deeply nested structures" (not $ null $ tfBlocks typusFile)
+          Right typusFile -> assertBool "Should handle deeply nested structures" (not $ L.null $ tfBlocks typusFile)
     ]
 
 -- 2. Compiler Error Handling Tests
@@ -144,9 +155,12 @@ compilerErrorHandlingTests =
               , "    var x int = \"not an int\""
               , "}"
               ]
-        case compile invalidCode of
-          Left err -> assertBool "Error should be meaningful" (length (show err) > 10)
-          Right _ -> assertFailure "Expected compilation to fail with type error"
+        case parseTypus invalidCode of
+          Left parseErr -> assertBool "Parse error should be meaningful" (L.length parseErr > 10)
+          Right typusFile -> 
+            case compile typusFile of
+              Left err -> assertBool "Error should be meaningful" (L.length (show err) > 10)
+              Right _ -> assertFailure "Expected compilation to fail with type error"
 
     , testCase "handles undefined references gracefully" $ do
         let invalidCode = unlines
@@ -155,9 +169,12 @@ compilerErrorHandlingTests =
               , "    undefinedFunction()"
               , "}"
               ]
-        case compile invalidCode of
-          Left err -> assertBool "Should detect undefined function" ("undefined" `isInfixOf` show err)
-          Right _ -> assertFailure "Expected compilation to fail with undefined reference"
+        case parseTypus invalidCode of
+          Left parseErr -> assertBool "Parse error should be meaningful" (L.length parseErr > 10)
+          Right typusFile ->
+            case compile typusFile of
+              Left err -> assertBool "Should detect undefined function" ("undefined" `L.isInfixOf` show err)
+              Right _ -> assertFailure "Expected compilation to fail with undefined reference"
 
     , testCase "recovers from syntax errors" $ do
         let codeWithSyntaxError = unlines
@@ -167,9 +184,12 @@ compilerErrorHandlingTests =
               , "        println(\"missing braces\")"
               , "}"
               ]
-        case compile codeWithSyntaxError of
-          Left err -> assertBool "Should provide syntax error location" ("syntax" `isInfixOf` show err)
-          Right _ -> assertFailure "Expected compilation to fail with syntax error"
+        case parseTypus codeWithSyntaxError of
+          Left parseErr -> assertBool "Parse error should be meaningful" (L.length parseErr > 10)
+          Right typusFile ->
+            case compile typusFile of
+              Left err -> assertBool "Should provide syntax error location" ("syntax" `L.isInfixOf` show err)
+              Right _ -> assertFailure "Expected compilation to fail with syntax error"
 
     , testCase "validates type constraints" $ do
         let invalidTypeCode = unlines
@@ -179,9 +199,12 @@ compilerErrorHandlingTests =
               , "    var y int = \"hello\""
               , "}"
               ]
-        case compile invalidTypeCode of
-          Left err -> assertBool "Should detect type mismatch" ("type" `isInfixOf` show err)
-          Right _ -> assertFailure "Expected compilation to fail with type mismatch"
+        case parseTypus invalidTypeCode of
+          Left parseErr -> assertBool "Parse error should be meaningful" (L.length parseErr > 10)
+          Right typusFile ->
+            case compile typusFile of
+              Left err -> assertBool "Should detect type mismatch" ("type" `L.isInfixOf` show err)
+              Right _ -> assertFailure "Expected compilation to fail with type mismatch"
     ]
 
 -- 3. Ownership Analysis Tests
@@ -192,7 +215,7 @@ ownershipAnalysisTests =
         case parseTypus ownershipCode of
           Left err -> assertFailure $ "Parse failed: " ++ err
           Right typusFile -> do
-            let result = analyzeOwnership typusFile
+            let result = analyzeOwnership (rawSourceFromTypus typusFile)
             assertBool "Should detect ownership transfers" (not $ null result)
 
     , testCase "validates ownership constraints" $ do
@@ -208,7 +231,7 @@ ownershipAnalysisTests =
         case parseTypus ownershipConstraintCode of
           Left err -> assertFailure $ "Parse failed: " ++ err
           Right typusFile -> do
-            let result = analyzeOwnership typusFile
+            let result = analyzeOwnership (rawSourceFromTypus typusFile)
             assertBool "Should detect ownership constraint violations" (not $ null result)
 
     , testCase "handles borrowing scenarios" $ do
@@ -224,8 +247,8 @@ ownershipAnalysisTests =
         case parseTypus borrowingCode of
           Left err -> assertFailure $ "Parse failed: " ++ err
           Right typusFile -> do
-            let result = analyzeOwnership typusFile
-            assertBool "Should handle borrowing correctly" (null result || length result <= 1)
+            let result = analyzeOwnership (rawSourceFromTypus typusFile)
+            assertBool "Should handle borrowing correctly" (null result || L.length result <= 1)
     ]
 
 -- 4. Dependent Types Tests
@@ -236,7 +259,7 @@ dependentTypesTests =
         case parseTypus dependentTypesCode of
           Left err -> assertFailure $ "Parse failed: " ++ err
           Right typusFile -> do
-            let result = validateDependentTypeSyntax typusFile
+            let result = validateDependentTypeSyntax (rawSourceFromTypus typusFile)
             assertBool "Should validate dependent type constraints" (not $ null result)
 
     , testCase "detects constraint violations" $ do
@@ -251,7 +274,7 @@ dependentTypesTests =
         case parseTypus invalidDependentCode of
           Left err -> assertFailure $ "Parse failed: " ++ err
           Right typusFile -> do
-            let result = validateDependentTypeSyntax typusFile
+            let result = validateDependentTypeSyntax (rawSourceFromTypus typusFile)
             assertBool "Should detect constraint violations" (not $ null result)
 
     , testCase "handles complex type expressions" $ do
@@ -266,7 +289,7 @@ dependentTypesTests =
         case parseTypus complexTypeCode of
           Left err -> assertFailure $ "Parse failed: " ++ err
           Right typusFile -> do
-            let result = validateDependentTypeSyntax typusFile
+            let result = validateDependentTypeSyntax (rawSourceFromTypus typusFile)
             assertBool "Should handle complex type expressions" (not $ null result)
     ]
 
@@ -362,7 +385,7 @@ toolchainIntegrationTests =
               ]
         case parseTypus cgoCode of
           Left err -> assertFailure $ "Parse failed: " ++ err
-          Right typusFile -> assertBool "Should process cgo directives" (not $ null $ tfBlocks typusFile)
+          Right typusFile -> assertBool "Should process cgo directives" (not $ L.null $ tfBlocks typusFile)
     ]
 
 -- 7. Syntax Validation Tests
@@ -379,7 +402,7 @@ syntaxValidationTests =
         case parseTypus functionCode of
           Left err -> assertFailure $ "Parse failed: " ++ err
           Right typusFile -> do
-            let validation = validateSyntax typusFile
+            let validation = validateSyntax (rawSourceFromTypus typusFile)
             assertBool "Should validate function signatures" (null validation)
 
     , testCase "detects invalid syntax" $ do
@@ -404,7 +427,7 @@ syntaxValidationTests =
         case parseTypus typeCode of
           Left err -> assertFailure $ "Parse failed: " ++ err
           Right typusFile -> do
-            let validation = validateSyntax typusFile
+            let validation = validateSyntax (rawSourceFromTypus typusFile)
             assertBool "Should validate type declarations" (null validation)
     ]
 
@@ -428,7 +451,7 @@ dependencyAnalysisTests =
         case parseTypus importCode of
           Left err -> assertFailure $ "Parse failed: " ++ err
           Right typusFile -> do
-            let dependencies = analyzeDependentTypes typusFile
+            let dependencies = analyzeDependentTypes (rawSourceFromTypus typusFile)
             assertBool "Should track import dependencies" (not $ null dependencies)
 
     , testCase "detects circular dependencies" $ do
@@ -442,7 +465,7 @@ dependencyAnalysisTests =
         case parseTypus circularCode of
           Left err -> assertFailure $ "Parse failed: " ++ err
           Right typusFile -> do
-            let dependencies = analyzeDependentTypes typusFile
+            let dependencies = analyzeDependentTypes (rawSourceFromTypus typusFile)
             assertBool "Should detect potential circular dependencies" (not $ null dependencies)
 
     , testCase "analyzes function call dependencies" $ do
@@ -459,7 +482,7 @@ dependencyAnalysisTests =
         case parseTypus callDepCode of
           Left err -> assertFailure $ "Parse failed: " ++ err
           Right typusFile -> do
-            let dependencies = analyzeDependentTypes typusFile
+            let dependencies = analyzeDependentTypes (rawSourceFromTypus typusFile)
             assertBool "Should analyze function call dependencies" (not $ null dependencies)
     ]
 
@@ -488,12 +511,13 @@ integrationTests =
         case parseTypus completeCode of
           Left err -> assertFailure $ "Parse failed: " ++ err
           Right typusFile -> do
-            let ownershipResult = analyzeOwnership typusFile
-                dependentResult = validateDependentTypeSyntax typusFile
-                syntaxResult = validateSyntax typusFile
-            assertBool "Should handle complete pipeline" (not $ null $ tfBlocks typusFile)
+            let sourceText = rawSourceFromTypus typusFile
+                ownershipResult = analyzeOwnership sourceText
+                dependentResult = validateDependentTypeSyntax sourceText
+                syntaxResult = validateSyntax sourceText
+            assertBool "Should handle complete pipeline" (not $ L.null $ tfBlocks typusFile)
 
-    , testCase "integrates ownership and dependent types" $ do
+    , testCase "integrates ownership L.and dependent types" $ do
         let integratedCode = unlines
               [ "//! ownership: on"
               , "//! dependent_types: on"
@@ -511,9 +535,10 @@ integrationTests =
         case parseTypus integratedCode of
           Left err -> assertFailure $ "Parse failed: " ++ err
           Right typusFile -> do
-            let ownershipResult = analyzeOwnership typusFile
-                dependentResult = validateDependentTypeSyntax typusFile
-            assertBool "Should integrate ownership and dependent types" (not $ null $ tfBlocks typusFile)
+            let sourceText = rawSourceFromTypus typusFile
+                ownershipResult = analyzeOwnership sourceText
+                dependentResult = validateDependentTypeSyntax sourceText
+            assertBool "Should integrate ownership L.and dependent types" (not $ L.null $ tfBlocks typusFile)
 
     , testCase "handles error recovery" $ do
         let errorRecoveryCode = unlines
@@ -530,14 +555,14 @@ integrationTests =
               ]
         case parseTypus errorRecoveryCode of
           Left _ -> assertBool "Should handle errors gracefully" True
-          Right typusFile -> assertBool "Should attempt error recovery" (not $ null $ tfBlocks typusFile)
+          Right typusFile -> assertBool "Should attempt error recovery" (not $ L.null $ tfBlocks typusFile)
     ]
 
 -- 10. QuickCheck Property Tests
 quickCheckPropertyTests :: TestTree
 quickCheckPropertyTests =
   testGroup "QuickCheck Property Tests"
-    [ testProperty "parseTypus is idempotent for valid code" $ \code ->
+    [ testProperty "parseTypus is idempotent for valid code" $ \(TestString code) ->
         let normalizedCode = if null code then validTypusCode else code
         in case parseTypus normalizedCode of
              Left _ -> property True  -- Invalid code is allowed to fail
@@ -546,7 +571,7 @@ quickCheckPropertyTests =
                  Left _ -> property False  -- Should not fail on second parse
                  Right secondResult -> firstResult === secondResult
 
-    , testProperty "source location spans are consistent" $ \code ->
+    , testProperty "source location spans are consistent" $ \(TestString code) ->
         let testCode = if null code then validTypusCode else code
         in case parseTypus testCode of
              Left _ -> property True  -- Invalid code is allowed to fail
@@ -554,7 +579,7 @@ quickCheckPropertyTests =
                let blocks = tfBlocks typusFile
                in property $ not $ null blocks
 
-    , testProperty "file directives are parsed correctly" $ \code ->
+    , testProperty "file directives are parsed correctly" $ \(TestString code) ->
         let directiveCode = "//! ownership: on\n" ++ (if null code then validTypusCode else code)
         in case parseTypus directiveCode of
              Left _ -> property True  -- Invalid code is allowed to fail
@@ -562,12 +587,13 @@ quickCheckPropertyTests =
                let FileDirectives { fdOwnership = ownership } = tfDirectives typusFile
                in property $ ownership /= Nothing
 
-    , testProperty "syntax validation is deterministic" $ \code ->
+    , testProperty "syntax validation is deterministic" $ \(TestString code) ->
         let testCode = if null code then validTypusCode else code
         in case parseTypus testCode of
              Left _ -> property True  -- Invalid code is allowed to fail
              Right typusFile -> 
-               let validation1 = validateSyntax typusFile
-                   validation2 = validateSyntax typusFile
+               let sourceText = rawSourceFromTypus typusFile
+                   validation1 = validateSyntax sourceText
+                   validation2 = validateSyntax sourceText
                in validation1 === validation2
     ]

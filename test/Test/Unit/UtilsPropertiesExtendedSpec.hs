@@ -28,23 +28,25 @@ import Utils
   )
 
 import Data.Char (isSpace, isAlphaNum)
-import Data.List (isPrefixOf, isInfixOf, intercalate)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (intercalate)
 import qualified Data.Text as T
 
 -- ============================================================================
 -- String Trimming Properties
 -- ============================================================================
 
--- Property: trim removes all leading and trailing whitespace
+-- Property: trim removes L.all leading L.and trailing whitespace
 prop_trim_removes_leading_trailing :: String -> Property
 prop_trim_removes_leading_trailing s =
   let trimmed = trim s
-      hasLeading = not (null s) && isSpace (head s)
+      hasLeading = not (null s) && isSpace (L.head s)
       hasTrailing = not (null s) && isSpace (last s)
   in classify hasLeading "has leading whitespace" $
      classify hasTrailing "has trailing whitespace" $
      counterexample ("Original: " ++ show s ++ ", Trimmed: " ++ show trimmed) $
-     (null trimmed || not (isSpace (head trimmed))) &&
+     (null trimmed || not (isSpace (L.head trimmed))) &&
      (null trimmed || not (isSpace (last trimmed)))
 
 -- Property: trim is idempotent (trimming twice gives same result)
@@ -58,10 +60,10 @@ prop_trim_idempotent s =
 prop_trim_preserves_content :: String -> Property
 prop_trim_preserves_content s =
   let trimmed = trim s
-      nonSpaceContent = filter (not . isSpace) s
+      nonSpaceContent = L.filter (not . isSpace) s
   in not (null nonSpaceContent) ==> 
      counterexample ("Original non-space: " ++ nonSpaceContent ++ ", Trimmed: " ++ trimmed) $
-     isInfixOf nonSpaceContent trimmed
+     L.isInfixOf nonSpaceContent trimmed
 
 -- ============================================================================
 -- String Splitting Properties
@@ -71,19 +73,19 @@ prop_trim_preserves_content s =
 prop_splitBy_preserves_empty :: Char -> String -> Property
 prop_splitBy_preserves_empty delim s =
   let result = splitBy delim s
-      expectedCount = length s + 1
-  in length result === expectedCount
+      expectedCount = L.length s + 1
+  in L.length result === expectedCount
 
 -- Property: splitByCollapsed removes empty segments
 prop_splitByCollapsed_removes_empty :: Char -> String -> Property
 prop_splitByCollapsed_removes_empty delim s =
   let result = splitByCollapsed delim s
-  in not (any null result)
+  in not (L.any null result)
 
--- Property: splitBy and splitByCollapsed are equivalent when no consecutive delimiters
+-- Property: splitBy L.and splitByCollapsed are equivalent when no consecutive delimiters
 prop_splitBy_equivalent_when_no_consecutive :: Char -> String -> Property
 prop_splitBy_equivalent_when_no_consecutive delim s =
-  let hasNoConsecutive = not (isInfixOf [delim, delim] s)
+  let hasNoConsecutive = not (L.isInfixOf [delim, delim] s)
       normal = splitBy delim s
       collapsed = splitByCollapsed delim s
   in hasNoConsecutive ==> normal === collapsed
@@ -114,32 +116,32 @@ prop_removeLineComments_preserves_line_count :: String -> Property
 prop_removeLineComments_preserves_line_count s =
   let original = lines s
       processed = lines (removeLineComments s)
-  in length original === length processed
+  in L.length original === L.length processed
 
 -- Property: removeLineComments doesn't affect strings containing //
 prop_removeLineComments_preserves_strings :: String -> Property
 prop_removeLineComments_preserves_strings s =
   let stringWithComment = "code with // comment\nand \"string with // not comment\"\n"
       processed = removeLineComments stringWithComment
-  in isInfixOf "\"string with // not comment\"" processed
+  in L.isInfixOf "\"string with // not comment\"" processed
 
--- Property: removeComments removes both // and /* */ comments
+-- Property: removeComments removes both // L.and /* */ comments
 prop_removeComments_removes_both_types :: String -> Property
 prop_removeComments_removes_both_types s =
   let testCode = "code // line comment\nmore code /* block comment */\nfinal code"
       processed = removeComments testCode
-  in not (isInfixOf "// line comment" processed) &&
-     not (isInfixOf "/* block comment */" processed) &&
-     isInfixOf "code" processed &&
-     isInfixOf "more code" processed &&
-     isInfixOf "final code" processed
+  in not (L.isInfixOf "// line comment" processed) &&
+     not (L.isInfixOf "/* block comment */" processed) &&
+     L.isInfixOf "code" processed &&
+     L.isInfixOf "more code" processed &&
+     L.isInfixOf "final code" processed
 
 -- Property: removeComments preserves string literals containing comment markers
 prop_removeComments_preserves_string_literals :: String -> Property
 prop_removeComments_preserves_string_literals s =
-  let testCode = "code \"string with // comment\" and /* not comment */\n"
+  let testCode = "code \"string with // comment\" L.and /* not comment */\n"
       processed = removeComments testCode
-  in isInfixOf "\"string with // comment\"" processed
+  in L.isInfixOf "\"string with // comment\"" processed
 
 -- ============================================================================
 -- Indentation Properties
@@ -149,24 +151,24 @@ prop_removeComments_preserves_string_literals s =
 prop_normalizeIndentation_preserves_relative :: String -> Property
 prop_normalizeIndentation_preserves_relative s =
   let ls = lines s
-      hasMultipleLines = length ls > 1
+      hasMultipleLines = L.length ls > 1
       processed = lines (normalizeIndentation s)
   in hasMultipleLines ==>
-     let originalIndents = map (takeWhile isSpace) ls
-         processedIndents = map (takeWhile isSpace) processed
+     let originalIndents = L.map (takeWhile isSpace) ls
+         processedIndents = L.map (takeWhile isSpace) processed
          -- Check that relative differences are preserved
          differences original [] = []
-         differences (x:xs) (y:ys) = (length x - length y) : differences xs ys
+         differences (x:xs) (y:ys) = (L.length x - L.length y) : differences xs ys
          differences [] [] = []
          differences _ _ = []
      in counterexample ("Original: " ++ show originalIndents ++ ", Processed: " ++ show processedIndents) $
-        all (>= 0) (differences processedIndents originalIndents)
+        L.all (>= 0) (differences processedIndents originalIndents)
 
 -- Property: normalizeIndentation doesn't change content (only indentation)
 prop_normalizeIndentation_preserves_content :: String -> Property
 prop_normalizeIndentation_preserves_content s =
-  let originalContent = filter (not . isSpace) s
-      processedContent = filter (not . isSpace) (normalizeIndentation s)
+  let originalContent = L.filter (not . isSpace) s
+      processedContent = L.filter (not . isSpace) (normalizeIndentation s)
   in originalContent === processedContent
 
 -- Property: normalizeIndentation is idempotent
@@ -184,7 +186,7 @@ prop_normalizeIndentation_idempotent s =
 prop_breakOn_finds_pattern :: String -> String -> Property
 prop_breakOn_finds_pattern pat s =
   let patNotEmpty = not (null pat)
-      patExists = isInfixOf pat s
+      patExists = L.isInfixOf pat s
       (before, after) = breakOn pat s
   in patNotEmpty && patExists ==>
      before ++ pat ++ after === s
@@ -193,7 +195,7 @@ prop_breakOn_finds_pattern pat s =
 prop_breakOn_no_match :: String -> String -> Property
 prop_breakOn_no_match pat s =
   let patNotEmpty = not (null pat)
-      patNotExists = not (isInfixOf pat s)
+      patNotExists = not (L.isInfixOf pat s)
       (before, after) = breakOn pat s
   in patNotEmpty && patNotExists ==>
      before === s && after === ""
@@ -208,7 +210,7 @@ prop_breakOn_empty_pattern s =
 prop_breakOn_prefix_consistency :: String -> String -> Property
 prop_breakOn_prefix_consistency pat s =
   let patNotEmpty = not (null pat)
-      patIsPrefix = isPrefixOf pat s
+      patIsPrefix = L.isPrefixOf pat s
       (before, after) = breakOn pat s
   in patNotEmpty && patIsPrefix ==>
      before === ""
@@ -217,7 +219,7 @@ prop_breakOn_prefix_consistency pat s =
 -- Complex Integration Properties
 -- ============================================================================
 
--- Property: trim and normalizeIndentation commute in most cases
+-- Property: trim L.and normalizeIndentation commute in most cases
 prop_trim_normalize_commute :: String -> Property
 prop_trim_normalize_commute s =
   let trimmedThenNormalized = normalizeIndentation (trim s)
@@ -238,7 +240,7 @@ prop_splitBy_comment_removal_consistent delim s =
       noCommentsSplit = splitBy delim (removeComments s)
   in -- This is a weak property since comment removal can change structure
      -- but we can at least say the number of parts shouldn't increase dramatically
-     length noCommentsSplit <= length normalSplit + 10
+     L.length noCommentsSplit <= L.length normalSplit + 10
 
 -- Test collection
 tests :: TestTree
@@ -274,8 +276,8 @@ tests = testGroup "Utils Extended Properties"
     , fastProperty "breakOn prefix consistency" prop_breakOn_prefix_consistency
     ]
   , testGroup "Integration"
-    [ fastProperty "trim and normalizeIndentation commute" prop_trim_normalize_commute
-    , fastProperty "removeComments and trim commute" prop_removeComments_trim_commute
+    [ fastProperty "trim L.and normalizeIndentation commute" prop_trim_normalize_commute
+    , fastProperty "removeComments L.and trim commute" prop_removeComments_trim_commute
     , fastProperty "splitBy comment removal consistency" prop_splitBy_comment_removal_consistent
     ]
   ]

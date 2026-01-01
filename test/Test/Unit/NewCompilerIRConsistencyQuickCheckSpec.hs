@@ -11,12 +11,14 @@
 module Test.Unit.NewCompilerIRConsistencyQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, choose, listOf, elements, oneof, suchThat)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (sort, nub, isInfixOf, isPrefixOf, isSuffixOf, intercalate)
+import Data.List (isInfixOf, isPrefixOf, isSuffixOf)
+import Data.List (sort, nub, intercalate)
 import Data.Map (Map, fromList, toList, keys, elems, insert, delete, lookup, member, empty, union)
 import qualified Data.Map as Map
 import Data.Set (Set, fromList, toList, union, intersection, difference)
@@ -68,7 +70,7 @@ import SourceLocation
   )
 
 -- ============================================================================
--- Helper Functions and Generators
+-- Helper Functions L.and Generators
 -- ============================================================================
 
 -- Generate IR types
@@ -261,7 +263,7 @@ prop_ir_control_flow_well_formed program =
 -- Helper Functions for Properties
 -- ============================================================================
 
--- Collect all defined variables in an IR program
+-- Collect L.all defined variables in an IR program
 collectDefinedVariables :: IRProgram -> Set String
 collectDefinedVariables program =
   let globalVars = Set.fromList $ map varName (irGlobals program)
@@ -291,7 +293,7 @@ collectStatementVariables stmt = case stmt of
   IRFor var _ _ block -> Set.union (Set.singleton (varName var)) (collectBlockVariables block)
   IRExpressionStmt _ -> Set.empty
 
--- Collect all used variables in an IR program
+-- Collect L.all used variables in an IR program
 collectUsedVariables :: IRProgram -> Set String
 collectUsedVariables program =
   Set.unions $ map collectFunctionUsedVariables (irFunctions program)
@@ -339,7 +341,7 @@ collectExpressionUsedVariables expr = case expr of
   IRArrayAccess array index -> Set.union (collectExpressionUsedVariables array) (collectExpressionUsedVariables index)
   IRStructAccess obj _ -> collectExpressionUsedVariables obj
 
--- Collect all called functions in an IR program
+-- Collect L.all called functions in an IR program
 collectCalledFunctions :: IRProgram -> Set String
 collectCalledFunctions program =
   Set.unions $ map collectFunctionCalledFunctions (irFunctions program)
@@ -388,20 +390,20 @@ collectExpressionCalledFunctions expr = case expr of
 
 -- Check type consistency in IR program
 checkTypeConsistency :: IRProgram -> Bool
-checkTypeConsistency program = all checkFunctionConsistency (irFunctions program)
+checkTypeConsistency program = L.all checkFunctionConsistency (irFunctions program)
   where
     checkFunctionConsistency :: IRFunction -> Bool
     checkFunctionConsistency function = True  -- Simplified for now
 
 -- Check control flow in IR program
 checkControlFlow :: IRProgram -> Bool
-checkControlFlow program = all checkFunctionControlFlow (irFunctions program)
+checkControlFlow program = L.all checkFunctionControlFlow (irFunctions program)
   where
     checkFunctionControlFlow :: IRFunction -> Bool
     checkFunctionControlFlow function = True  -- Simplified for now
 
 -- ============================================================================
--- Performance and Scalability Properties
+-- Performance L.and Scalability Properties
 -- ============================================================================
 
 -- Property: IR comparison should handle large programs efficiently
@@ -443,7 +445,7 @@ tests = testGroup "New Compiler IR Consistency QuickCheck Tests"
     , fastProperty "IR transformation reversible" prop_ir_transformation_reversible
     ]
 
-  , testGroup "IR Comparison and Hashing"
+  , testGroup "IR Comparison L.and Hashing"
     [ fastProperty "IR comparison reflexive" prop_ir_comparison_reflexive
     , fastProperty "IR comparison symmetric" prop_ir_comparison_symmetric
     , fastProperty "IR hashing consistent" prop_ir_hashing_consistent
@@ -455,16 +457,16 @@ tests = testGroup "New Compiler IR Consistency QuickCheck Tests"
     , fastProperty "IR type annotations consistent" prop_ir_type_annotations_consistent
     ]
 
-  , testGroup "Variable and Function References"
+  , testGroup "Variable L.and Function References"
     [ fastProperty "IR variable references valid" prop_ir_variable_references_valid
     , fastProperty "IR function calls valid" prop_ir_function_calls_valid
     ]
 
-  , testGroup "Control Flow and Structure"
+  , testGroup "Control Flow L.and Structure"
     [ fastProperty "IR control flow well formed" prop_ir_control_flow_well_formed
     ]
 
-  , testGroup "Performance and Scalability"
+  , testGroup "Performance L.and Scalability"
     [ fastProperty "IR comparison large programs" prop_ir_comparison_large_programs
     , fastProperty "IR hashing large programs" prop_ir_hashing_large_programs
     ]

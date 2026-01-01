@@ -4,6 +4,7 @@
 module Test.Unit.ErrorHandlerCoreQuickCheckTests (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.QuickCheck (testProperties, (===), Property, forAll, Gen, Arbitrary(..), oneof, elements, listOf, listOf1, resize, suchThat)
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
 
@@ -24,8 +25,9 @@ import Compiler.Errors.Compiler
 
 import SourceLocation (SourcePos(..), SourceSpan(..))
 import Data.Text (Text)
-import qualified Data.Text as T
-import Data.List (sort, length, isInfixOf)
+import qualified Data.Text as T (pack, unpack)
+import Data.List (length, isInfixOf)
+import Data.List (sort)
 
 -- ============================================================================
 -- Arbitrary Instances
@@ -85,7 +87,7 @@ prop_errorWithSuggestions_preserves_message location message suggestions =
     let baseError = (location, message)
         enhancedError = errorWithSuggestions baseError suggestions
     in case enhancedError of
-      (loc, msg) -> loc == location && message `isInfixOf` msg
+      (loc, msg) -> loc == location && message `L.isInfixOf` msg
 
 -- | withLocation: should update error location
 prop_withLocation_updates_location :: ErrorLocation -> ErrorLocation -> String -> Bool
@@ -140,16 +142,16 @@ prop_formatCompilerError_contains_message ce =
     let formatted = formatCompilerError ce
         baseError = ceError ce
         message = teMessage baseError
-    in not (T.null message) && T.unpack message `isInfixOf` formatted
+    in not (T.null message) && T.unpack message `L.isInfixOf` formatted
   where
-    isInfixOf needle haystack = needle `Data.List.isInfixOf` haystack
+    isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
 
 -- | analyzeErrors: should count errors correctly
 prop_analyzeErrors_counts :: [CompilerError] -> Bool
 prop_analyzeErrors_counts errors = 
     let stats = analyzeErrors errors
         errorCount = esErrorCount stats
-    in errorCount == length errors
+    in errorCount == L.length errors
 
 -- | runCompilerM: Right result should have no errors
 prop_runCompilerM_success :: String -> Bool
@@ -193,7 +195,7 @@ prop_semanticError_phase message =
         phase = cePhase error
     in phase == TypeCheckingPhase  -- Semantic errors typically during type checking
 
--- | ErrorStatistics: should sum counts correctly
+-- | ErrorStatistics: should L.sum counts correctly
 prop_errorStatistics_sum :: Int -> Int -> Int -> Bool
 prop_errorStatistics_sum errors warnings infos = 
     let stats = ErrorStatistics errors warnings infos
@@ -238,6 +240,6 @@ tests = testGroup "ErrorHandler Core QuickCheck Tests"
     ]
 
   , testProperties "Statistics Properties"
-    [ ("ErrorStatistics sum", prop_errorStatistics_sum)
+    [ ("ErrorStatistics L.sum", prop_errorStatistics_sum)
     ]
   ]

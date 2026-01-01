@@ -9,38 +9,39 @@ import Utils (trim, splitBy, splitByCollapsed, removeComments, normalizeIndentat
 import SourceLocation (SourcePos(..), startPos, posAt, advancePos, isValidSpan)
 import Parser (parseTypus, FileDirectives(..), BlockDirectives(..))
 import Data.Char (isControl, isSpace)
+import qualified Data.List as L
 import Data.List (isPrefixOf)
 
 -- ============================================================================
--- Error Handling and Recovery Tests
+-- Error Handling L.and Recovery Tests
 -- ============================================================================
 
 -- | Utils: trim should handle control characters gracefully
 prop_trim_control_chars :: String -> Bool
 prop_trim_control_chars s = 
-  let withControl = filter (\c -> isControl c || isSpace c) s
+  let withControl = L.filter (\c -> isControl c || isSpace c) s
       result = trim withControl
-  in length result >= 0  -- Should not crash
+  in L.length result >= 0  -- Should not crash
 
 -- | Utils: splitBy should handle invalid input gracefully
 prop_split_by_invalid_input :: Char -> String -> Bool
 prop_split_by_invalid_input delim s = 
   let result = splitBy delim s
-  in length result >= 1  -- Should always return at least one segment
+  in L.length result >= 1  -- Should always return at least one segment
 
 -- | Utils: removeComments should handle malformed comments
 prop_remove_comments_malformed :: String -> Bool
 prop_remove_comments_malformed s = 
   let malformed = s ++ "/* unterminated comment" ++ s
       result = removeComments malformed
-  in length result >= 0  -- Should handle gracefully
+  in L.length result >= 0  -- Should handle gracefully
 
 -- | Utils: normalizeIndentation should handle mixed tabs/spaces
 prop_normalize_indentation_mixed :: String -> Bool
 prop_normalize_indentation_mixed s = 
   let mixed = concatMap (\c -> if c `elem` " \t" then "\t  \t" else [c]) s
       result = normalizeIndentation mixed
-  in length result >= 0  -- Should handle gracefully
+  in L.length result >= 0  -- Should handle gracefully
 
 -- | SourceLocation: position handling should be robust
 prop_position_handling_robust :: Int -> Int -> Bool
@@ -118,7 +119,7 @@ prop_extreme_input_safe s =
 prop_nested_error_recovery :: String -> Int -> Bool
 prop_nested_error_recovery s depth = 
   let depth > 0 && depth < 10 ==>
-      let nestedErrors = concat $ replicate depth ("@error {\n" ++ s)
+      let nestedErrors = L.concat $ replicate depth ("@error {\n" ++ s)
       in case parseTypus nestedErrors of
         Left _ -> True
         Right parsed -> True

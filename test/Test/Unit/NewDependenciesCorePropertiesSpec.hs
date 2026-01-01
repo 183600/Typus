@@ -1,6 +1,7 @@
 module Test.Unit.NewDependenciesCorePropertiesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty, Property, (===), Arbitrary(..), Gen, choose, listOf, elements, forAll, oneof, suchThat)
 
@@ -57,7 +58,7 @@ genAppTypeVar = do
   args <- listOf genSimpleTypeVar
   pure $ TVApp name args
 
--- Generate any type variable
+-- Generate L.any type variable
 genTypeVar :: Gen TypeVar
 genTypeVar = oneof
   [ genSimpleTypeVar
@@ -218,7 +219,7 @@ prop_type_def_equality_symmetric =
     forAll genTypeDef $ \td2 ->
       (td1 == td2) === (td2 == td1)
 
--- Property: TypeDef with same params and constraints should be equal
+-- Property: TypeDef with same params L.and constraints should be equal
 prop_type_def_structural_equality :: Property
 prop_type_def_structural_equality = 
   forAll (listOf genTypeVarName) $ \params ->
@@ -270,8 +271,8 @@ prop_add_constraint_increases_count =
         newChecker = addConstraint constraint checker
         originalEnv = dtcTypeEnv checker
         newEnv = dtcTypeEnv newChecker
-        originalCount = length (pendingConstraints originalEnv)
-        newCount = length (pendingConstraints newEnv)
+        originalCount = L.length (pendingConstraints originalEnv)
+        newCount = L.length (pendingConstraints newEnv)
     in newCount === originalCount + 1
 
 -- ============================================================================
@@ -350,9 +351,9 @@ test_constraint_operations = do
       constraints1 = pendingConstraints env1
       constraints2 = pendingConstraints env2
   
-  length constraints1 @?= 1
-  length constraints2 @?= 2
-  head constraints1 @?= constraint1
+  L.length constraints1 @?= 1
+  L.length constraints2 @?= 2
+  L.head constraints1 @?= constraint1
   last constraints2 @?= constraint2
 
 test_complex_type_scenarios :: IO ()
@@ -386,13 +387,13 @@ test_complex_type_scenarios = do
   show complexConstraint @?= "Predicate \"monad\" [TVApp \"list\" [TVVar \"a\"],TVVar \"a\"]"
   
   -- Verify type definition properties
-  length (tdParams complexTypeDef) @?= 2
-  length (tdConstraints complexTypeDef) @?= 3
+  L.length (tdParams complexTypeDef) @?= 2
+  L.length (tdConstraints complexTypeDef) @?= 3
   
   -- Verify environment operations
   let env3 = dtcTypeEnv checker3
-  length (Map.toList (typeDefinitions env3)) @?= 1
-  length (pendingConstraints env3) @?= 1
+  L.length (Map.toList (typeDefinitions env3)) @?= 1
+  L.length (pendingConstraints env3) @?= 1
 
 -- ============================================================================
 -- Test Suite

@@ -32,7 +32,9 @@ import Utils
     )
 
 import Data.Char (isSpace, isAlphaNum, isLetter, isDigit)
-import Data.List (isPrefixOf, isInfixOf, intercalate, group, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (intercalate, group, sort)
 import qualified Data.Text as T
 import Data.Maybe (isJust, isNothing)
 import Data.Either (isLeft, isRight)
@@ -48,22 +50,22 @@ tests =
         , fastProperty "trim removes no characters from already trimmed string" $
             \s -> isTrimmed s ==> trim s === s
           where
-            isTrimmed str = null str || not (isSpace (head str)) && not (isSpace (last str))
+            isTrimmed str = null str || not (isSpace (L.head str)) && not (isSpace (last str))
 
         , fastProperty "trim is idempotent: trim(trim(x)) == trim(x)" $
             \s -> trim (trim s) === trim s
 
         , fastProperty "trim preserves internal whitespace" $
             \s -> let trimmed = trim s
-                       internal = dropWhile isSpace (reverse (dropWhile isSpace (reverse trimmed)))
+                       internal = dropWhile isSpace (L.reverse (dropWhile isSpace (L.reverse trimmed)))
                    in counterexample "Internal whitespace should be preserved" $
-                      all (\c -> not (isSpace c) || c `elem` internal) (trim s)
+                      L.all (\c -> not (isSpace c) || c `elem` internal) (trim s)
 
         , fastProperty "trim removes only whitespace characters" $
             \s -> let trimmed = trim s
-                       removed = take (length s - length trimmed) s
+                       removed = take (L.length s - L.length trimmed) s
                    in counterexample "Only whitespace should be removed" $
-                      all isSpace removed
+                      L.all isSpace removed
         ]
 
     , testGroup "Split Function Properties"
@@ -73,8 +75,8 @@ tests =
         , fastProperty "splitBy preserves total character count (excluding delimiters)" $
             \delim s -> delim /= '\0' ==> 
                 let segments = splitBy delim s
-                    totalLength = sum (map length segments)
-                    originalLength = length (filter (/= delim) s)
+                    totalLength = L.sum (map L.length segments)
+                    originalLength = L.length (L.filter (/= delim) s)
                 in counterexample ("Segments: " ++ show segments) $
                    totalLength === originalLength
 
@@ -82,14 +84,14 @@ tests =
             \delim s -> delim /= '\0' ==> 
                 let segments = splitByCollapsed delim s
                 in counterexample ("Collapsed segments: " ++ show segments) $
-                   all (not . null) segments
+                   L.all (not . null) segments
 
-        , fastProperty "splitByCollapsed length <= splitBy length" $
+        , fastProperty "splitByCollapsed L.length <= splitBy L.length" $
             \delim s -> delim /= '\0' ==> 
                 let normalSegments = splitBy delim s
                     collapsedSegments = splitByCollapsed delim s
                 in counterexample ("Normal: " ++ show normalSegments ++ ", Collapsed: " ++ show collapsedSegments) $
-                   length collapsedSegments <= length normalSegments
+                   L.length collapsedSegments <= L.length normalSegments
 
         , fastProperty "splitByComma delegates to splitBy with ','" $
             \s -> splitByComma s === splitBy ',' s
@@ -102,23 +104,23 @@ tests =
         [ fastProperty "removeLineComments preserves non-comment content" $
             \s -> not ('/' `elem` s) ==> removeLineComments s === s
 
-        , fastProperty "removeLineComments never increases string length" $
-            \s -> length (removeLineComments s) <= length s
+        , fastProperty "removeLineComments never increases string L.length" $
+            \s -> L.length (removeLineComments s) <= L.length s
 
         , fastProperty "removeLineComments preserves line structure" $
             \s -> let originalLines = lines s
                       processedLines = lines (removeLineComments s)
                   in counterexample ("Original lines: " ++ show originalLines ++ 
                                     ", Processed lines: " ++ show processedLines) $
-                     length processedLines === length originalLines
+                     L.length processedLines === L.length originalLines
 
         , fastProperty "removeComments handles nested block comments" $
             \s -> let processed = removeComments s
                   in counterexample ("Processed: " ++ processed) $
-                     not ("/*" `isInfixOf` processed) && not ("*/" `isInfixOf` processed)
+                     not ("/*" `L.isInfixOf` processed) && not ("*/" `L.isInfixOf` processed)
 
         , fastProperty "removeComments preserves string literals" $
-            \s -> let hasStringLiteral = "\"" `isInfixOf` s
+            \s -> let hasStringLiteral = "\"" `L.isInfixOf` s
                       processed = removeComments s
                   in not hasStringLiteral || processed === s ||
                      counterexample ("String literals should be preserved") True
@@ -131,9 +133,9 @@ tests =
                       linesOfOutput = lines normalized
                   in counterexample ("Input lines: " ++ show linesOfInput ++ 
                                     ", Output lines: " ++ show linesOfOutput) $
-                     if null linesOfInput || length linesOfInput == 1
+                     if null linesOfInput || L.length linesOfInput == 1
                      then True
-                     else length linesOfOutput == length linesOfInput
+                     else L.length linesOfOutput == L.length linesOfInput
 
         , fastProperty "normalizeIndentation removes only leading whitespace" $
             \s -> let normalized = normalizeIndentation s
@@ -141,14 +143,14 @@ tests =
                       normalizedLines = lines normalized
                   in counterexample ("Should preserve line content") $
                      if null originalLines then True
-                     else all (\(orig, norm) -> 
+                     else L.all (\(orig, norm) -> 
                                dropWhile isSpace orig == dropWhile isSpace norm) 
                              (zip originalLines normalizedLines)
 
         , fastProperty "forceSingleTabIndentation converts spaces to tabs" $
             \s -> let tabbed = forceSingleTabIndentation s
                   in counterexample ("Tabbed: " ++ tabbed) $
-                     not ("    " `isInfixOf` tabbed) || 
+                     not ("    " `L.isInfixOf` tabbed) || 
                      counterexample "Should convert multiple spaces to tabs" True
 
         , fastProperty "indentation functions are idempotent" $
@@ -168,18 +170,18 @@ tests =
                 let (before, after) = breakOn needle haystack
                     combined = before ++ needle ++ after
                 in counterexample ("Needle: " ++ needle ++ ", Haystack: " ++ haystack) $
-                   if needle `isInfixOf` haystack
+                   if needle `L.isInfixOf` haystack
                    then combined === haystack
                    else before === haystack && after === ""
 
         , fastProperty "breakOn with empty needle returns (original, empty)" $
             \s -> breakOn "" s === (s, "")
 
-        , fastProperty "breakOn preserves total length" $
+        , fastProperty "breakOn preserves total L.length" $
             \needle haystack -> 
                 let (before, after) = breakOn needle haystack
                 in counterexample ("Lengths should match") $
-                   length before + length needle + length after === length haystack
+                   L.length before + L.length needle + L.length after === L.length haystack
 
         , fastProperty "breakOn returns empty after when needle is at end" $
             \s -> breakOn (s ++ "end") s === (s, "end")
@@ -190,8 +192,8 @@ tests =
             \s -> let normalized = normalizeIndentation s
                       trimmed = trim normalized
                   in counterexample ("Content should be preserved") $
-                     length (filter (not . isSpace) trimmed) === 
-                     length (filter (not . isSpace) s)
+                     L.length (L.filter (not . isSpace) trimmed) === 
+                     L.length (L.filter (not . isSpace) s)
 
         , fastProperty "splitBy after removeComments is consistent" $
             \delim s -> delim /= '\0' && delim /= '/' && delim /= '*' =>
@@ -199,14 +201,14 @@ tests =
                     splitOriginal = splitBy delim s
                     splitCleaned = splitBy delim withoutComments
                 in counterexample ("Comment removal should not affect splitting structure") $
-                   length splitOriginal === length splitCleaned ||
+                   L.length splitOriginal === L.length splitCleaned ||
                    counterexample "Comments may affect structure" True
 
-        , fastProperty "trim and splitBy commute for simple cases" $
+        , fastProperty "trim L.and splitBy commute for simple cases" $
             \delim s -> delim `notElem` " \t\n\r" && delim /= '\0' =>
                 let trimThenSplit = splitBy delim (trim s)
                     splitThenTrim = map trim (splitBy delim s)
-                in counterexample ("Trim and split should commute for simple cases") $
+                in counterexample ("Trim L.and split should commute for simple cases") $
                    trimThenSplit === splitThenTrim ||
                    counterexample "Edge case with whitespace" True
         ]
@@ -218,54 +220,54 @@ tests =
                     split = splitBy ',' unicodeStr
                     noComments = removeLineComments unicodeStr
                 in counterexample "Unicode should be handled gracefully" $
-                   length trimmed >= 0 && length split >= 0 && length noComments >= 0
+                   L.length trimmed >= 0 && L.length split >= 0 && L.length noComments >= 0
 
         , fastProperty "functions handle control characters" $
             \controlStr -> 
                 let trimmed = trim controlStr
                     processed = removeComments controlStr
                 in counterexample "Control characters should be handled" $
-                   length trimmed >= 0 && length processed >= 0
+                   L.length trimmed >= 0 && L.length processed >= 0
 
         , fastProperty "functions handle very long strings" $
             \baseStr repeatCount -> repeatCount >= 0 && repeatCount < 100 =>
-                let longStr = concat $ replicate repeatCount baseStr
+                let longStr = L.concat $ replicate repeatCount baseStr
                     result = trim longStr
                 in counterexample "Long strings should be handled" $
-                   length result <= length longStr
+                   L.length result <= L.length longStr
         ]
 
     , testGroup "Performance Properties"
         [ fastProperty "trim is linear time" $
             \s -> let result = trim s
                   in counterexample "Trim should complete" $
-                     length result >= 0  -- Simple completion test
+                     L.length result >= 0  -- Simple completion test
 
         , fastProperty "splitBy is linear in input size" $
             \delim s -> delim /= '\0' =>
                 let result = splitBy delim s
                 in counterexample "Split should complete" $
-                     length result >= 0
+                     L.length result >= 0
 
-        , fastProperty "removeComments completes for all inputs" $
+        , fastProperty "removeComments completes for L.all inputs" $
             \s -> let result = removeComments s
                   in counterexample "Comment removal should complete" $
-                     length result >= 0
+                     L.length result >= 0
         ]
     ]
 
 -- Additional helper functions for property testing
 isAllWhitespace :: String -> Bool
-isAllWhitespace = all isSpace
+isAllWhitespace = L.all isSpace
 
 hasLeadingWhitespace :: String -> Bool
-hasLeadingWhitespace s = not (null s) && isSpace (head s)
+hasLeadingWhitespace s = not (null s) && isSpace (L.head s)
 
 hasTrailingWhitespace :: String -> Bool
 hasTrailingWhitespace s = not (null s) && isSpace (last s)
 
 countOccurrences :: Eq a => a -> [a] -> Int
-countOccurrences x = length . filter (== x)
+countOccurrences x = L.length . L.filter (== x)
 
 -- Custom Arbitrary instances for more targeted testing
 instance Arbitrary Char where

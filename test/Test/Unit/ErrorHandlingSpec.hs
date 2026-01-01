@@ -2,6 +2,7 @@ module Test.Unit.ErrorHandlingSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, assertFailure, testCase)
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 import qualified Compiler
@@ -18,9 +19,9 @@ tests =
               ]
         case Parser.parseTypus source of
           Right typusFile -> do
-            assertBool "should have syntax errors" (not (null (Parser.tfSyntaxErrors typusFile)))
+            assertBool "should have syntax errors" (not (L.null (Parser.tfSyntaxErrors typusFile)))
             case Compiler.compile typusFile of
-              Left err -> assertBool "compile error should be informative" (length (Compiler.renderCompilationError err) > 10)
+              Left err -> assertBool "compile error should be informative" (L.length (Compiler.renderCompilationError err) > 10)
               Right _ -> assertFailure "expected compilation error"
           Left _ -> assertFailure "parse should succeed with errors"
 
@@ -38,8 +39,8 @@ tests =
         case Compiler.compile typusFile of
           Left err -> do
             let rendered = Compiler.renderCompilationError err
-            assertBool "error should include line information" ("1:" `isInfixOf` rendered)
-            assertBool "error should include type information" ("Type error" `isInfixOf` rendered)
+            assertBool "error should include line information" ("1:" `L.isInfixOf` rendered)
+            assertBool "error should include type information" ("Type error" `L.isInfixOf` rendered)
           Right _ -> assertFailure "expected compilation error"
 
     , testCase "aggregates multiple errors in single compilation" $ do
@@ -60,8 +61,8 @@ tests =
         case Compiler.compile typusFile of
           Left err -> do
             let rendered = Compiler.renderCompilationError err
-            assertBool "should report multiple errors" (length (lines rendered) > 2)
-            assertBool "should include both function errors" ("add" `isInfixOf` rendered && "multiply" `isInfixOf` rendered)
+            assertBool "should report multiple errors" (L.length (lines rendered) > 2)
+            assertBool "should include both function errors" ("add" `L.isInfixOf` rendered && "multiply" `L.isInfixOf` rendered)
           Right _ -> assertFailure "expected multiple compilation errors"
 
     , testCase "provides helpful error messages for undefined variables" $ do
@@ -75,8 +76,8 @@ tests =
         case Compiler.compile typusFile of
           Left err -> do
             let rendered = Compiler.renderCompilationError err
-            assertBool "should mention undefined variable" ("undefinedVar" `isInfixOf` rendered)
-            assertBool "should suggest similar names if available" (length rendered > 20)
+            assertBool "should mention undefined variable" ("undefinedVar" `L.isInfixOf` rendered)
+            assertBool "should suggest similar names if available" (L.length rendered > 20)
           Right _ -> assertFailure "expected undefined variable error"
 
     , testCase "handles circular dependency detection" $ do
@@ -96,10 +97,10 @@ tests =
         case Compiler.compile typusFile of
           Left err -> do
             let rendered = Compiler.renderCompilationError err
-            assertBool "should detect circular dependency" ("Circular dependency" `isInfixOf` rendered)
+            assertBool "should detect circular dependency" ("Circular dependency" `L.isInfixOf` rendered)
           Right _ -> assertFailure "expected circular dependency error"
 
-    , testCase "reports type mismatch errors with expected and actual types" $ do
+    , testCase "reports type mismatch errors with expected L.and actual types" $ do
         let source = unlines
               [ "package main"
               , "func expectInt(x int) int { return x }"
@@ -111,8 +112,8 @@ tests =
         case Compiler.compile typusFile of
           Left err -> do
             let rendered = Compiler.renderCompilationError err
-            assertBool "should mention expected type" ("expected type int" `isInfixOf` rendered)
-            assertBool "should mention actual type" ("got string" `isInfixOf` rendered)
+            assertBool "should mention expected type" ("expected type int" `L.isInfixOf` rendered)
+            assertBool "should mention actual type" ("got string" `L.isInfixOf` rendered)
           Right _ -> assertFailure "expected type mismatch error"
 
     , testCase "provides context for errors in nested blocks" $ do
@@ -130,7 +131,7 @@ tests =
         case Compiler.compile typusFile of
           Left err -> do
             let rendered = Compiler.renderCompilationError err
-            assertBool "should include nested context" ("nested" `isInfixOf` rendered || "block" `isInfixOf` rendered)
+            assertBool "should include nested context" ("nested" `L.isInfixOf` rendered || "block" `L.isInfixOf` rendered)
           Right _ -> assertFailure "expected error with nested context"
 
     , testCase "handles errors in dependent type constraints" $ do
@@ -146,8 +147,8 @@ tests =
         case Compiler.compile typusFile of
           Left err -> do
             let rendered = Compiler.renderCompilationError err
-            assertBool "should mention dependent type error" ("dependent" `isInfixOf` rendered)
-            assertBool "should mention undefined variable in constraint" ("undefinedVar" `isInfixOf` rendered)
+            assertBool "should mention dependent type error" ("dependent" `L.isInfixOf` rendered)
+            assertBool "should mention undefined variable in constraint" ("undefinedVar" `L.isInfixOf` rendered)
           Right _ -> assertFailure "expected dependent type constraint error"
 
     , testCase "reports ownership violations with clear explanations" $ do
@@ -165,8 +166,8 @@ tests =
         case Compiler.compile typusFile of
           Left err -> do
             let rendered = Compiler.renderCompilationError err
-            assertBool "should mention ownership error" ("ownership" `isInfixOf` rendered || "use after move" `isInfixOf` rendered)
-            assertBool "should mention the variable" ("data" `isInfixOf` rendered)
+            assertBool "should mention ownership error" ("ownership" `L.isInfixOf` rendered || "use after move" `L.isInfixOf` rendered)
+            assertBool "should mention the variable" ("data" `L.isInfixOf` rendered)
           Right _ -> assertFailure "expected ownership violation error"
 
     , testCase "provides error recovery suggestions" $ do
@@ -180,8 +181,8 @@ tests =
         case Compiler.compile typusFile of
           Left err -> do
             let rendered = Compiler.renderCompilationError err
-            assertBool "should provide type mismatch info" ("type" `isInfixOf` rendered)
-            assertBool "should be detailed enough for fixing" (length rendered > 30)
+            assertBool "should provide type mismatch info" ("type" `L.isInfixOf` rendered)
+            assertBool "should be detailed enough for fixing" (L.length rendered > 30)
           Right _ -> assertFailure "expected error with recovery suggestions"
 
     , testCase "handles malformed directive errors" $ do
@@ -191,7 +192,7 @@ tests =
               , "func main() {}"
               ]
         case Parser.parseTypus source of
-          Left err -> assertBool "should report directive error" ("directive" `isInfixOf` err || "unknown" `isInfixOf` err)
+          Left err -> assertBool "should report directive error" ("directive" `L.isInfixOf` err || "unknown" `L.isInfixOf` err)
           Right _ -> assertFailure "expected directive parsing error"
 
     , testCase "reports syntax errors with position information" $ do
@@ -203,7 +204,7 @@ tests =
               , "}"
               ]
         case Parser.parseTypus source of
-          Left err -> assertBool "should include line information" ("line" `isInfixOf` err)
+          Left err -> assertBool "should include line information" ("line" `L.isInfixOf` err)
           Right _ -> assertFailure "expected syntax error with position"
     ]
 

@@ -4,6 +4,7 @@
 module Test.Unit.CompilerTypeCheckerQuickCheckTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
@@ -241,7 +242,7 @@ typeSchemeTests = testGroup "Type Scheme Tests"
       \typeVars -> let scheme = TypeScheme typeVars (FunctionType (map TypeVar typeVars) (TypeVar "a"))
                         instanceType = instantiateTypeScheme scheme
                     in case instanceType of
-                         FunctionType argTypes retType -> length argTypes == length typeVars
+                         FunctionType argTypes retType -> L.length argTypes == L.length typeVars
                          _ -> False
   ]
 

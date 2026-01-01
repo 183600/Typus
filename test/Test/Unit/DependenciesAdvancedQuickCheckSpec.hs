@@ -1,6 +1,7 @@
 module Test.Unit.DependenciesAdvancedQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.Tasty.QuickCheck (testProperty, Property, (===), forAll, Gen, choose, arbitrary, listOf, elements, oneof, suchThat)
 import TestSupport.QuickCheck (fastProperty)
@@ -62,7 +63,7 @@ genTypeVarTuple = do
   elements <- listOf genSimpleTypeVar
   return $ TVTuple elements
 
--- Generate any type variable
+-- Generate L.any type variable
 genTypeVar :: Gen TypeVar
 genTypeVar = oneof
   [ genSimpleTypeVar
@@ -208,13 +209,13 @@ prop_typeEnvPreservesTypeDefs typeDefs constraints =
 
 -- Property: Show instances produce non-empty strings
 prop_typeVarShowNonEmpty :: TypeVar -> Bool
-prop_typeVarShowNonEmpty tv = not (null (show tv))
+prop_typeVarShowNonEmpty tv = not (L.null (show tv))
 
 prop_typeConstraintShowNonEmpty :: TypeConstraint -> Bool
-prop_typeConstraintShowNonEmpty tc = not (null (show tc))
+prop_typeConstraintShowNonEmpty tc = not (L.null (show tc))
 
 prop_dependentTypeErrorShowNonEmpty :: DependentTypeError -> Bool
-prop_dependentTypeErrorShowNonEmpty dte = not (null (show dte))
+prop_dependentTypeErrorShowNonEmpty dte = not (L.null (show dte))
 
 -- Property: TypeVar constructors produce correct types
 prop_tvConstructorCorrect :: String -> Bool

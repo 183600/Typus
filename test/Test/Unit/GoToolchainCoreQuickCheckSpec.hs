@@ -3,6 +3,7 @@
 module Test.Unit.GoToolchainCoreQuickCheckSpec (tests) where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import GoToolchain
 import Tooling.Error (ToolingError(..))
@@ -41,9 +42,9 @@ genFilePath = do
 
 prop_goModContentsProperties :: Property
 prop_goModContentsProperties =
-  counterexample "goModContents should contain module declaration and go version" $
-    "module temp" `isInfixOf` goModContents .&.
-    "go 1.21" `isInfixOf` goModContents
+  counterexample "goModContents should contain module declaration L.and go version" $
+    "module temp" `L.isInfixOf` goModContents .&.
+    "go 1.21" `L.isInfixOf` goModContents
 
 prop_nullDeviceProperties :: Property
 prop_nullDeviceProperties =
@@ -59,7 +60,7 @@ prop_isEnvVarEnabledTrueValues :: Property
 prop_isEnvVarEnabledTrueValues =
   let trueValues = ["1", "true", "TRUE", "True", "yes", "YES", "on", "ON"]
   in counterexample "isEnvVarEnabled should recognize true values" $
-    conjoin $ map (\val -> ioProperty $ isEnvVarEnabled "TEST_VAR_TRUE" >>= \result -> 
+    conjoin $ L.map (\val -> ioProperty $ isEnvVarEnabled "TEST_VAR_TRUE" >>= \result -> 
                       case result of
                         True -> return (val `elem` trueValues)
                         False -> return (val `notElem` trueValues)) trueValues
@@ -68,7 +69,7 @@ prop_isEnvVarEnabledFalseValues :: Property
 prop_isEnvVarEnabledFalseValues =
   let falseValues = ["0", "false", "FALSE", "False", "no", "NO", "off", "OFF", ""]
   in counterexample "isEnvVarEnabled should reject false values" $
-    conjoin $ map (\val -> ioProperty $ isEnvVarEnabled "TEST_VAR_FALSE" >>= \result -> 
+    conjoin $ L.map (\val -> ioProperty $ isEnvVarEnabled "TEST_VAR_FALSE" >>= \result -> 
                       case result of
                         False -> return (val `elem` falseValues)
                         True -> return (val `notElem` falseValues)) falseValues
@@ -78,7 +79,7 @@ prop_isEnvVarEnabledCaseInsensitive =
   let testCases = [("TRUE", True), ("True", True), ("true", True),
                   ("FALSE", False), ("False", False), ("false", False)]
   in counterexample "isEnvVarEnabled should be case insensitive" $
-    conjoin $ map (\(val, expected) -> ioProperty $ isEnvVarEnabled "TEST_VAR_CASE" >>= \result ->
+    conjoin $ L.map (\(val, expected) -> ioProperty $ isEnvVarEnabled "TEST_VAR_CASE" >>= \result ->
                       return (result === expected)) testCases
 
 -- ============================================================================
@@ -137,7 +138,7 @@ prop_takeBaseNameMultipleExtensions :: Property
 prop_takeBaseNameMultipleExtensions =
   let path = "/path/to/filename.test.go"
       baseName = takeBaseName path
-  in counterexample "takeBaseName should remove all extensions" $
+  in counterexample "takeBaseName should remove L.all extensions" $
     baseName === "filename.test"
 
 prop_takeBaseNameJustExtension :: Property
@@ -154,7 +155,7 @@ prop_takeBaseNameJustExtension =
 prop_pathCombinationProperties :: String -> String -> Property
 prop_pathCombinationProperties dir file =
   let combined = dir </> file
-      hasSeparator = dir `isSuffixOf` combined || file `isPrefixOf` combined
+      hasSeparator = dir `L.isSuffixOf` combined || file `L.isPrefixOf` combined
   in counterexample "(</>) should combine paths correctly" $
     not (null dir && null file) ==> hasSeparator
 
@@ -210,7 +211,7 @@ prop_toolingErrorProperties :: Property
 prop_toolingErrorProperties =
   counterexample "ToolingError should be a valid type" $
     -- We can't test the constructor directly without knowing its structure
-    -- but we can test that it exists and is used
+    -- but we can test that it exists L.and is used
     property True
 
 -- ============================================================================
@@ -218,21 +219,21 @@ prop_toolingErrorProperties =
 -- ============================================================================
 
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = any (isPrefixOf needle) (tails haystack)
+L.isInfixOf needle haystack = L.any (L.isPrefixOf needle) (tails haystack)
   where
-    isPrefixOf [] _ = True
-    isPrefixOf _ [] = False
-    isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
+    L.isPrefixOf [] _ = True
+    L.isPrefixOf _ [] = False
+    L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
     tails [] = [[]]
     tails xs@(x:xs') = xs : tails xs'
 
 isSuffixOf :: String -> String -> Bool
-isSuffixOf needle haystack = needle `isInfixOf` haystack && length needle <= length haystack
+L.isSuffixOf needle haystack = needle `L.isInfixOf` haystack && L.length needle <= L.length haystack
 
 isPrefixOf :: String -> String -> Bool
-isPrefixOf [] _ = True
-isPrefixOf _ [] = False
-isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
+L.isPrefixOf [] _ = True
+L.isPrefixOf _ [] = False
+L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
 
 -- ============================================================================
 -- Test Collection
@@ -241,7 +242,7 @@ isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
 tests :: TestTree
 tests = testGroup "GoToolchain Core QuickCheck Tests"
   [ testGroup "Constants Tests"
-      [ testProperty "goModContents contains module declaration and go version" prop_goModContentsProperties
+      [ testProperty "goModContents contains module declaration L.and go version" prop_goModContentsProperties
       , testProperty "nullDevice is platform-appropriate" prop_nullDeviceProperties
       ]
   , testGroup "Environment Variable Tests"
@@ -258,7 +259,7 @@ tests = testGroup "GoToolchain Core QuickCheck Tests"
       , testProperty "takeBaseName handles empty string" prop_takeBaseNameEmpty
       , testProperty "takeBaseName handles paths without extensions" prop_takeBaseNameNoExtension
       , testProperty "takeBaseName removes extension" prop_takeBaseNameWithExtension
-      , testProperty "takeBaseName removes all extensions" prop_takeBaseNameMultipleExtensions
+      , testProperty "takeBaseName removes L.all extensions" prop_takeBaseNameMultipleExtensions
       , testProperty "takeBaseName handles dotfiles" prop_takeBaseNameJustExtension
       ]
   , testGroup "Path Combination Tests"

@@ -24,7 +24,9 @@ import Dependencies (analyzeDependencies, DependencyResult(..), DependencyIssue(
 
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, sort)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort)
 import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes)
 import qualified Data.Map.Strict as Map
 
@@ -36,7 +38,7 @@ tests :: TestTree
 tests =
   testGroup "Advanced Integration Tests"
     [ testGroup "Parser to Compiler integration"
-        [ testCase "parses and compiles simple function" test_parse_compile_simple
+        [ testCase "parses L.and compiles simple function" test_parse_compile_simple
         , testCase "handles compilation errors with locations" test_compilation_errors_with_locations
         , testCase "propagates warnings through compilation pipeline" test_warnings_propagation
         , testCase "handles ownership analysis integration" test_ownership_integration
@@ -50,7 +52,7 @@ tests =
         , testCase "error recovery strategies work across modules" test_error_recovery_integration
         ]
 
-    , testGroup "Ownership and Dependencies integration"
+    , testGroup "Ownership L.and Dependencies integration"
         [ testCase "ownership analysis uses parser output" test_ownership_uses_parser
         , testCase "dependency analysis respects ownership constraints" test_dependency_respects_ownership
         , testCase "combined analysis produces consistent results" test_combined_analysis_consistency
@@ -64,7 +66,7 @@ tests =
         , testCase "error reporting uses accurate locations" test_accurate_error_reporting
         ]
 
-    , testGroup "Performance and scalability"
+    , testGroup "Performance L.and scalability"
         [ testCase "handles large files efficiently" test_large_file_handling
         , testCase "manages memory usage with many errors" test_memory_management
         , testCase "performance scales with file complexity" test_performance_scaling
@@ -107,7 +109,7 @@ test_compilation_errors_with_locations = do
         Right result -> assertFailure "Expected compilation error but got success"
         Left errors -> do
           assertBool "Should have compilation errors" (not (null errors))
-          let firstError = head errors
+          let firstError = L.head errors
               errorLoc = ceLocation firstError
           -- Error location should be meaningful
           assertBool "Error should have valid location" (line errorLoc > 0)
@@ -124,7 +126,7 @@ test_warnings_propagation = do
         Left compileErr -> assertFailure $ "Compile failed: " ++ show compileErr
         Right result -> do
           let warnings = crWarnings result
-          -- Should have some warnings about unused variables or similar
+          -- Should have some warnings about unused variables L.or similar
           assertBool "Should propagate warnings through pipeline" (not (null warnings))
 
 test_ownership_integration :: IO ()
@@ -142,7 +144,7 @@ test_ownership_integration = do
 
 test_dependency_integration :: IO ()
 test_dependency_integration = do
-  let content = "//! dependent-types=true\n\nfunc main() {\n    vec := Vector[int]{1, 2, 3}\n    return vec.length\n}\n"
+  let content = "//! dependent-types=true\n\nfunc main() {\n    vec := Vector[int]{1, 2, 3}\n    return vec.L.length\n}\n"
       parseResult = parseTypus content
   case parseResult of
     Left parseErr -> assertFailure $ "Parse failed: " ++ show parseErr
@@ -169,7 +171,7 @@ test_error_locations_preserved = do
         Right result -> assertFailure "Expected compilation error"
         Left errors -> do
           assertBool "Should have errors" (not (null errors))
-          let firstError = head errors
+          let firstError = L.head errors
               errorLoc = ceLocation firstError
           -- Location should point to the invalid syntax
           assertBool "Error location should be meaningful" (line errorLoc >= 2)
@@ -186,10 +188,10 @@ test_multiple_errors_collected = do
         Right result -> assertFailure "Expected compilation error"
         Left errors -> do
           -- Should collect multiple errors
-          assertBool "Should have multiple errors" (length errors >= 2)
-          let errorLines = sort $ map (line . ceLocation) errors
+          assertBool "Should have multiple errors" (L.length errors >= 2)
+          let errorLines = sort $ L.map (line . ceLocation) errors
           -- Errors should be on different lines
-          assertBool "Errors should be on different lines" (length (nub errorLines) >= 2)
+          assertBool "Errors should be on different lines" (L.length (nub errorLines) >= 2)
 
 test_error_contexts_maintained :: IO ()
 test_error_contexts_maintained = do
@@ -203,7 +205,7 @@ test_error_contexts_maintained = do
         Right result -> assertFailure "Expected compilation error"
         Left errors -> do
           assertBool "Should have errors" (not (null errors))
-          let firstError = head errors
+          let firstError = L.head errors
               context = ceContext firstError
           -- Error context should include function nesting information
           assertBool "Error context should include function information" (not (null context))
@@ -222,11 +224,11 @@ test_error_recovery_integration = do
           let warnings = crWarnings result
           assertBool "Should have warnings about invalid syntax" (not (null warnings))
         Left errors -> do
-          -- Should still attempt to recover and find multiple errors
-          assertBool "Should find multiple errors despite recovery attempts" (length errors >= 2)
+          -- Should still attempt to recover L.and find multiple errors
+          assertBool "Should find multiple errors despite recovery attempts" (L.length errors >= 2)
 
 -- ============================================================================
--- Ownership and Dependencies Integration Tests
+-- Ownership L.and Dependencies Integration Tests
 -- ============================================================================
 
 test_ownership_uses_parser :: IO ()
@@ -244,7 +246,7 @@ test_ownership_uses_parser = do
 
 test_dependency_respects_ownership :: IO ()
 test_dependency_respects_ownership = do
-  let content = "//! ownership=true, dependent-types=true\n\nfunc test() {\n    vec := Vector[int]{1, 2, 3}\n    data := vec.data\n    return data.length\n}\n"
+  let content = "//! ownership=true, dependent-types=true\n\nfunc test() {\n    vec := Vector[int]{1, 2, 3}\n    data := vec.data\n    return data.L.length\n}\n"
       parseResult = parseTypus content
   case parseResult of
     Left parseErr -> assertFailure $ "Parse failed: " ++ show parseErr
@@ -261,7 +263,7 @@ test_dependency_respects_ownership = do
 
 test_combined_analysis_consistency :: IO ()
 test_combined_analysis_consistency = do
-  let content = "//! ownership=true, dependent-types=true\n\nfunc test() {\n    vec := make(Vector[int], 10)\n    for i := 0; i < 10; i++ {\n        vec.push(i)\n    }\n    return vec.length\n}\n"
+  let content = "//! ownership=true, dependent-types=true\n\nfunc test() {\n    vec := make(Vector[int], 10)\n    for i := 0; i < 10; i++ {\n        vec.push(i)\n    }\n    return vec.L.length\n}\n"
       parseResult = parseTypus content
   case parseResult of
     Left parseErr -> assertFailure $ "Parse failed: " ++ show parseErr
@@ -304,7 +306,7 @@ test_source_location_tracking = do
     Right typusFile -> do
       let blocks = tfBlocks typusFile
       assertBool "Should have code blocks" (not (null blocks))
-      let firstBlock = head blocks
+      let firstBlock = L.head blocks
           span = cbSpan firstBlock
       assertBool "Span should be valid" (spanStart span <= spanEnd span)
 
@@ -317,7 +319,7 @@ test_span_calculation = do
     Right typusFile -> do
       let blocks = tfBlocks typusFile
       assertBool "Should have code blocks" (not (null blocks))
-      let firstBlock = head blocks
+      let firstBlock = L.head blocks
           span = cbSpan firstBlock
           start = spanStart span
           end = spanEnd span
@@ -335,13 +337,13 @@ test_location_survival = do
       case compileResult of
         Left errors -> do
           assertBool "Should have errors with locations" (not (null errors))
-          let firstError = head errors
+          let firstError = L.head errors
               location = ceLocation firstError
           assertBool "Error should have meaningful location" (line location > 0)
         Right result -> do
           let warnings = crWarnings result
           if not (null warnings)
-            then let firstWarning = head warnings
+            then let firstWarning = L.head warnings
                      location = wLocation firstWarning
                  in assertBool "Warning should have meaningful location" (line location > 0)
             else assertBool "Compilation succeeded without warnings" True
@@ -358,21 +360,21 @@ test_accurate_error_reporting = do
         Right result -> assertFailure "Expected compilation error"
         Left errors -> do
           assertBool "Should have errors" (not (null errors))
-          let firstError = head errors
+          let firstError = L.head errors
               location = ceLocation firstError
               message = ceMessage firstError
           -- Error should point to the undefined variable
           assertBool "Error should be on line 2" (line location == 2)
-          assertBool "Error message should mention undefined variable" ("undefined_var" `isInfixOf` message)
+          assertBool "Error message should mention undefined variable" ("undefined_var" `L.isInfixOf` message)
 
 -- ============================================================================
--- Performance and Scalability Tests
+-- Performance L.and Scalability Tests
 -- ============================================================================
 
 test_large_file_handling :: IO ()
 test_large_file_handling = do
   let largeFunction = "func large() {\n"
-      functionBody = concat $ replicate 100 "    x := x + 1\n"
+      functionBody = L.concat $ replicate 100 "    x := x + 1\n"
       largeContent = largeFunction ++ functionBody ++ "}\n"
       parseResult = parseTypus largeContent
   case parseResult of
@@ -388,7 +390,7 @@ test_large_file_handling = do
 
 test_memory_management :: IO ()
 test_memory_management = do
-  let errorContent = concat $ replicate 100 "func test" ++ show [1..100] ++ "() { invalid }\n"
+  let errorContent = L.concat $ replicate 100 "func test" ++ show [1..100] ++ "() { invalid }\n"
       parseResult = parseTypus errorContent
   case parseResult of
     Left parseErr -> assertFailure $ "Parse failed: " ++ show parseErr
@@ -397,15 +399,15 @@ test_memory_management = do
       case compileResult of
         Left errors -> do
           -- Should handle many errors without running out of memory
-          assertBool "Should handle many errors" (length errors >= 10)
+          assertBool "Should handle many errors" (L.length errors >= 10)
         Right result -> do
           assertBool "Should handle many functions" (True)
 
 test_performance_scaling :: IO ()
 test_performance_scaling = do
   let simpleContent = "func test() { return 42 }\n"
-      mediumContent = concat $ replicate 10 simpleContent
-      largeContent = concat $ replicate 100 simpleContent
+      mediumContent = L.concat $ replicate 10 simpleContent
+      largeContent = L.concat $ replicate 100 simpleContent
       
       simpleParse = parseTypus simpleContent
       mediumParse = parseTypus mediumContent
@@ -413,9 +415,9 @@ test_performance_scaling = do
       
   case (simpleParse, mediumParse, largeParse) of
     (Right simple, Right medium, Right large) -> do
-      let simpleBlocks = length (tfBlocks simple)
-          mediumBlocks = length (tfBlocks medium)
-          largeBlocks = length (tfBlocks large)
+      let simpleBlocks = L.length (tfBlocks simple)
+          mediumBlocks = L.length (tfBlocks medium)
+          largeBlocks = L.length (tfBlocks large)
       assertBool "Should scale linearly with content size" (mediumBlocks >= simpleBlocks && largeBlocks >= mediumBlocks)
     _ -> assertFailure "All parses should succeed"
 
@@ -442,7 +444,7 @@ prop_error_count_bounded =
          Right typusFile ->
            let compileResult = compileTypus typusFile
            in case compileResult of
-                Left errors -> length errors <= length (lines content) + 10
+                Left errors -> L.length errors <= L.length (lines content) + 10
                 Right _ -> property True
 
 prop_compilation_preserves_semantics :: Property
@@ -469,4 +471,4 @@ prop_ownership_soundness =
            let ownershipResult = analyzeOwnership typusFile
            in property $ orSuccess ownershipResult ==> 
                         let issues = orIssues ownershipResult
-                        in all (\issue -> oiLine issue > 0) issues
+                        in L.all (\issue -> oiLine issue > 0) issues

@@ -10,6 +10,7 @@
 module Test.Unit.CompilerIRConsistencyAdvancedQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose, suchThat)
@@ -20,7 +21,8 @@ import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives
 import Compiler.Errors (CompilerError(..), CompilationPhase(..), ErrorCategory(..), ErrorSeverity(..))
 import Compiler.GoAst
 import SourceLocation (SourcePos(..), SourceSpan(..))
-import Data.List (sort, nub, length, filter, elem, intercalate, concat)
+import Data.List (length, concat)
+import Data.List (sort, nub, filter, elem, intercalate)
 import Data.Set (Set, empty, singleton, union, unions, member, size, difference, intersection)
 import qualified Data.Set as Set
 import Data.Map (Map, empty, singleton, insert, lookup, keys, elems, unionWith)
@@ -52,7 +54,7 @@ prop_semantic_ir_maintains_structure typusFile packageName =
       originalBlocks = tfBlocks typusFile
       semanticBlocks = tfBlocks extractedFile
   in property $ 
-    length semanticBlocks >= length originalBlocks
+    length semanticBlocks >= L.length originalBlocks
 
 -- Property: IR transformation preserves function signatures
 prop_ir_preserves_function_signatures :: TypusFile -> Property
@@ -113,7 +115,7 @@ prop_import_inference_preservation typusFile requiredImports =
       goIR = emitGo enhancedIR
       goCode = goIR goIR
   in property $ 
-    all (`elem` requiredImports) (filter (`elem` goCode) requiredImports)
+    all (`elem` requiredImports) (L.filter (`elem` goCode) requiredImports)
 
 -- Property: IR error handling preserves error information
 prop_ir_error_preservation :: TypusFile -> [CompilerError] -> Property
@@ -133,7 +135,7 @@ prop_ir_optimization_preserves_semantics typusFile =
       -- Check that optimization doesn't break basic structure
   in property $ 
     length goCode > 0 .&&.
-    goCode `contains` "func" || length (filter (`elem` goCode) "func") == 0
+    goCode `contains` "func" || L.length (L.filter (`elem` goCode) "func") == 0
 
 -- Property: IR round-trip consistency
 prop_ir_round_trip_consistency :: TypusFile -> String -> Property
@@ -172,17 +174,17 @@ prop_ir_handles_edge_cases typusFile =
 
 -- Helper function to check string containment
 contains :: String -> String -> Bool
-contains needle haystack = needle `Data.List.isInfixOf` haystack
+contains needle haystack = needle `Data.List.L.isInfixOf` haystack
 
 -- Helper function to extract function names from TypusFile
 extractFunctionNames :: TypusFile -> [String]
 extractFunctionNames typusFile = 
   let blocks = tfBlocks typusFile
       extractFromBlock (CodeBlock content directives) = 
-        if "func " `isInfixOf` content
-        then takeWhile (not . (`elem` " (\n")) (drop (length "func ") content)
+        if "func " `L.isInfixOf` content
+        then takeWhile (not . (`elem` " (\n")) (drop (L.length "func ") content)
         else ""
-  in filter (not . null) (map extractFromBlock blocks)
+  in L.filter (not . null) (map extractFromBlock blocks)
 
 -- Helper function to check if file has main function
 hasMainFunction :: TypusFile -> Bool
@@ -195,7 +197,7 @@ extractTypeInformation :: TypusFile -> [String]
 extractTypeInformation typusFile = 
   let blocks = tfBlocks typusFile
       extractFromBlock (CodeBlock content directives) = 
-        filter (`isInfixOf` content) ["int", "string", "bool", "float", "struct"]
+        filter (`L.isInfixOf` content) ["int", "string", "bool", "float", "struct"]
   in nub (concatMap extractFromBlock blocks)
 
 -- Test collection

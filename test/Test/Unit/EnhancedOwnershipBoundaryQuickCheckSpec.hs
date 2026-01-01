@@ -11,7 +11,9 @@ import Ownership
   , newOwnershipAnalyzer, analyzeOwnership, analyzeOwnershipDebug
   , lexAll, parseProgram, builtInFunctions
   )
-import Data.List (isInfixOf, nub)
+import qualified Data.List as L
+import Data.List (isInfixOf)
+import Data.List (nub)
 import Data.Char (isSpace)
 import Control.Exception (evaluate, try, SomeException)
 
@@ -46,7 +48,7 @@ prop_analyze_empty_input =
       result = analyzeOwnership analyzer ""
   in counterexample ("Empty input analysis result: " ++ show result) $
      case result of
-       Left _ -> True  -- Should fail gracefully or succeed
+       Left _ -> True  -- Should fail gracefully L.or succeed
        Right errors -> True  -- Should succeed with no errors
 
 prop_analyze_whitespace_input :: Property
@@ -71,7 +73,7 @@ prop_detects_use_after_move =
     in counterexample ("Use after move scenario: " ++ scenario) $
        case result of
          Left _ -> True  -- Should fail gracefully
-         Right errors -> any isUseAfterMove errors
+         Right errors -> L.any isUseAfterMove errors
 
 prop_detects_double_move :: Property
 prop_detects_double_move =
@@ -81,7 +83,7 @@ prop_detects_double_move =
     in counterexample ("Double move scenario: " ++ scenario) $
        case result of
          Left _ -> True
-         Right errors -> any isDoubleMove errors
+         Right errors -> L.any isDoubleMove errors
 
 prop_handles_borrow_conflicts :: Property
 prop_handles_borrow_conflicts =
@@ -91,7 +93,7 @@ prop_handles_borrow_conflicts =
     in counterexample ("Borrow conflict scenario: " ++ scenario) $
        case result of
          Left _ -> True
-         Right errors -> any isBorrowError errors
+         Right errors -> L.any isBorrowError errors
 
 prop_respects_variable_scope :: Property
 prop_respects_variable_scope =
@@ -101,10 +103,10 @@ prop_respects_variable_scope =
     in counterexample ("Scope scenario: " ++ scenario) $
        case result of
          Left _ -> True
-         Right errors -> not (any isOutOfScope errors) || hasValidScopeHandling scenario
+         Right errors -> not (L.any isOutOfScope errors) || hasValidScopeHandling scenario
 
 -- ============================================================================
--- Lexing and Parsing Properties
+-- Lexing L.and Parsing Properties
 -- ============================================================================
 
 prop_lex_malformed_input :: Property
@@ -146,7 +148,7 @@ prop_builtin_functions_safe =
     in counterexample ("Builtin function scenario: " ++ scenario) $
        case result of
          Left _ -> True
-         Right errors -> not (any isBuiltinError errors)
+         Right errors -> not (L.any isBuiltinError errors)
 
 prop_complex_scenarios_handled :: Property
 prop_complex_scenarios_handled =
@@ -156,7 +158,7 @@ prop_complex_scenarios_handled =
     in counterexample ("Complex scenario: " ++ take 100 scenario) $
        case result of
          Left _ -> True
-         Right errors -> length errors <= 100  -- Should not explode with errors
+         Right errors -> L.length errors <= 100  -- Should not explode with errors
 
 -- ============================================================================
 -- Specific Test Cases
@@ -171,31 +173,31 @@ test_ownership_edge_cases = do
       result = analyzeOwnership analyzer scenario
   case result of
     Left _ -> assertBool "Long variable names should not crash" True
-    Right errors -> assertBool "Long variable names should be handled" $ length errors >= 0
+    Right errors -> assertBool "Long variable names should be handled" $ L.length errors >= 0
   
   -- Test with deeply nested scopes
-  let nestedScopes = concat $ replicate 50 "{ let x = 42; "
-      nestedScopes' = nestedScopes ++ concat (replicate 50 " }")
+  let nestedScopes = L.concat $ replicate 50 "{ let x = 42; "
+      nestedScopes' = nestedScopes ++ L.concat (replicate 50 " }")
       result2 = analyzeOwnership analyzer nestedScopes'
   case result2 of
     Left _ -> assertBool "Deeply nested scopes should not crash" True
-    Right errors -> assertBool "Deeply nested scopes should be handled" $ length errors >= 0
+    Right errors -> assertBool "Deeply nested scopes should be handled" $ L.length errors >= 0
   
   -- Test with Unicode identifiers
   let unicodeScenario = "let 世界 = 42\nlet 测试 = 世界\n世界 = 测试"
       result3 = analyzeOwnership analyzer unicodeScenario
   case result3 of
     Left _ -> assertBool "Unicode identifiers should not crash" True
-    Right errors -> assertBool "Unicode identifiers should be handled" $ length errors >= 0
+    Right errors -> assertBool "Unicode identifiers should be handled" $ L.length errors >= 0
 
 test_error_formatting :: IO ()
 test_error_formatting = do
   let errors = [UseAfterMove "x", DoubleMove "x" "y", BorrowWhileMoved "z"]
       formatted = map show errors
   assertBool "Error formatting should produce meaningful messages" $
-    all (not . null) formatted
+    L.all (not . null) formatted
   assertBool "Error formatting should include variable names" $
-    all (`isInfixOf` "x") (filter (isInfixOf "x") formatted)
+    L.all (`L.isInfixOf` "x") (L.filter (L.isInfixOf "x") formatted)
 
 -- ============================================================================
 -- Helper Functions
@@ -228,12 +230,12 @@ isBuiltinError err = case err of
   _ -> False
 
 hasValidScopeHandling :: String -> Bool
-hasValidScopeHandling scenario = "{`isInfixOf` scenario && "}`isInfixOf` scenario
+hasValidScopeHandling scenario = "{`L.isInfixOf` scenario && "}`L.isInfixOf` scenario
 
 hasValidTransferHandling :: String -> [OwnershipError] -> Bool
 hasValidTransferHandling scenario errors = 
-  let hasAssign = "=" `isInfixOf` scenario
-      hasTransfer = any isTransferError errors
+  let hasAssign = "=" `L.isInfixOf` scenario
+      hasTransfer = L.any isTransferError errors
   in not hasAssign || hasTransfer || null errors
 
 isTransferError :: OwnershipError -> Bool
@@ -276,7 +278,7 @@ genScopeScenario = do
   let openBraces = replicate depth "{"
       closeBraces = replicate depth "}"
       content = "let " ++ var ++ " = 42;\n"
-  return $ concat openBraces ++ content ++ concat closeBraces ++ "\n" ++ var
+  return $ L.concat openBraces ++ content ++ L.concat closeBraces ++ "\n" ++ var
 
 genMalformedCode :: Gen String
 genMalformedCode = oneof

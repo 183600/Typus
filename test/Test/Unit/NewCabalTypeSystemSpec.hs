@@ -83,7 +83,7 @@ tests =
             assertBool "type system should prevent corruption" $ True
         ]
 
-    , testGroup "Subtyping and Type Coercion"
+    , testGroup "Subtyping L.and Type Coercion"
         [ testCase "subtype relationships are correctly identified" $ do
             -- Test subtype checking
             assertBool "subtypes should be correctly identified" $ True

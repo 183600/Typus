@@ -10,6 +10,7 @@
 module Test.Unit.NewEnhancedCompilerOptimizationQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), Gen, oneof, elements, listOf, choose, suchThat)
@@ -49,7 +50,7 @@ prop_constant_folding_correctness a b c =
 -- Property: Common subexpression elimination
 prop_common_subexpression_elimination :: [Int] -> [Int] -> Property
 prop_common_subexpression_elimination expr1 expr2 =
-  length expr1 >= 2 && length expr2 >= 2 ==> 
+  L.length expr1 >= 2 && L.length expr2 >= 2 ==> 
   let program = makeProgramWithCommonSubexpr expr1 expr2
       optimized = eliminateCommonSubexpressions program
       originalOps = countOperations program
@@ -159,7 +160,7 @@ prop_optimization_preserves_control_flow conditions =
   in property $ originalPaths === optimizedPaths
 
 -- ============================================================================
--- Helper Functions and Types
+-- Helper Functions L.and Types
 -- ============================================================================
 
 -- Simple IR types for testing
@@ -190,7 +191,7 @@ data TypedValue = TypedInt Int | TypedBool Bool deriving (Eq, Show)
 -- Helper functions for program construction
 makeSimpleProgram :: [Int] -> Int -> SimpleProgram
 makeSimpleProgram values initialValue =
-  let statements = map (\(i, v) -> Assignment ("x" ++ show i) (Constant v)) (zip [0..] values)
+  let statements = L.map (\(i, v) -> Assignment ("x" ++ show i) (Constant v)) (zip [0..] values)
   in SimpleProgram statements (singleton "result")
 
 makeArithmeticProgram :: Int -> Int -> Int -> SimpleProgram
@@ -205,7 +206,7 @@ makeArithmeticProgram a b c =
 
 makeProgramWithCommonSubexpr :: [Int] -> [Int] -> SimpleProgram
 makeProgramWithCommonSubexpr expr1 expr2 =
-  let commonExpr = Binary (Constant (head expr1)) Add (Constant (head expr2))
+  let commonExpr = Binary (Constant (L.head expr1)) Add (Constant (L.head expr2))
       statements = 
         [ Assignment "x" commonExpr
         , Assignment "y" commonExpr
@@ -221,14 +222,14 @@ makeLoopProgram invariantValue loopValues =
       statements = 
         [ Assignment "invariant" (Constant invariantValue)
         , Assignment "acc" (Constant 0)
-        , While (Constant $ length loopValues) loopBody
+        , While (Constant $ L.length loopValues) loopBody
         ]
   in SimpleProgram statements (singleton "result")
 
 makeProgramWithFunctionCalls :: [Int] -> SimpleProgram
 makeProgramWithFunctionCalls args =
-  let statements = map (\(i, arg) -> Assignment ("result" ++ show i) (FunctionCall "identity" [Constant arg])) (zip [0..] args)
-  in SimpleProgram statements (fromList ["result" ++ show i | i <- [0..length args - 1]])
+  let statements = L.map (\(i, arg) -> Assignment ("result" ++ show i) (FunctionCall "identity" [Constant arg])) (zip [0..] args)
+  in SimpleProgram statements (fromList ["result" ++ show i | i <- [0..L.length args - 1]])
 
 makeMultiplicationProgram :: Int -> Int -> SimpleProgram
 makeMultiplicationProgram base multiplier =
@@ -250,20 +251,20 @@ makeRecursiveProgram n accumulator =
 
 makeProgramWithVariables :: [Int] -> SimpleProgram
 makeProgramWithVariables values =
-  let statements = map (\(i, v) -> Assignment ("var" ++ show i) (Constant v)) (zip [0..] values)
-      allVars = fromList ["var" ++ show i | i <- [0..length values - 1]]
+  let statements = L.map (\(i, v) -> Assignment ("var" ++ show i) (Constant v)) (zip [0..] values)
+      allVars = fromList ["var" ++ show i | i <- [0..L.length values - 1]]
   in SimpleProgram statements allVars
 
 makeProgramFromInstructions :: [String] -> SimpleProgram
 makeProgramFromInstructions instructions =
-  let statements = map (\(i, instr) -> Assignment ("temp" ++ show i) (Constant (length instr))) (zip [0..] instructions)
-  in SimpleProgram statements (fromList ["temp" ++ show i | i <- [0..length instructions - 1]])
+  let statements = L.map (\(i, instr) -> Assignment ("temp" ++ show i) (Constant (L.length instr))) (zip [0..] instructions)
+  in SimpleProgram statements (fromList ["temp" ++ show i | i <- [0..L.length instructions - 1]])
 
 makeComplexProgram :: [Int] -> SimpleProgram
 makeComplexProgram values =
   let statements = 
-        [ Assignment "x" (Constant (head values))
-        , Assignment "y" (Constant (if length values > 1 then values !! 1 else 0))
+        [ Assignment "x" (Constant (L.head values))
+        , Assignment "y" (Constant (if L.length values > 1 then values !! 1 else 0))
         , Assignment "z" (Binary (Variable "x") Add (Variable "y"))
         , Assignment "result" (Binary (Variable "z") Multiply (Constant 2))
         ]
@@ -271,18 +272,18 @@ makeComplexProgram values =
 
 makeTypedProgram :: [TypedValue] -> SimpleProgram
 makeTypedProgram typedValues =
-  let statements = map (\(i, tv) -> Assignment ("typed" ++ show i) (convertTypedToExpression tv)) (zip [0..] typedValues)
-      allVars = fromList ["typed" ++ show i | i <- [0..length typedValues - 1]]
+  let statements = L.map (\(i, tv) -> Assignment ("typed" ++ show i) (convertTypedToExpression tv)) (zip [0..] typedValues)
+      allVars = fromList ["typed" ++ show i | i <- [0..L.length typedValues - 1]]
   in SimpleProgram statements allVars
 
 makeConditionalProgram :: [Bool] -> SimpleProgram
 makeConditionalProgram conditions =
-  let statements = map (\(i, cond) -> 
+  let statements = L.map (\(i, cond) -> 
         If (convertBoolToExpression cond) 
            (SimpleProgram [Assignment ("branch" ++ show i) (Constant 1)] (singleton ("branch" ++ show i)))
            (SimpleProgram [Assignment ("branch" ++ show i) (Constant 0)] (singleton ("branch" ++ show i)))
       ) (zip [0..] conditions)
-      allVars = fromList ["branch" ++ show i | i <- [0..length conditions - 1]]
+      allVars = fromList ["branch" ++ show i | i <- [0..L.length conditions - 1]]
   in SimpleProgram statements allVars
 
 convertTypedToExpression :: TypedValue -> Expression
@@ -324,15 +325,15 @@ applyPeepholeOptimization program = program -- Simplified
 applyAllOptimizations :: SimpleProgram -> SimpleProgram
 applyAllOptimizations program = program -- Simplified
 
--- Evaluation and analysis functions
+-- Evaluation L.and analysis functions
 evaluateProgram :: SimpleProgram -> Int
 evaluateProgram program = 42 -- Simplified evaluation
 
 countOperations :: SimpleProgram -> Int
-countOperations program = length (programStatements program)
+countOperations program = L.length (programStatements program)
 
 programSize :: SimpleProgram -> Int
-programSize program = length (programStatements program)
+programSize program = L.length (programStatements program)
 
 isWellTyped :: SimpleProgram -> Bool
 isWellTyped program = True -- Simplified type checking

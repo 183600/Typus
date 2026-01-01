@@ -25,7 +25,9 @@ import Utils
   )
 
 import Data.Char (isSpace, isLetter, isDigit)
-import Data.List (isPrefixOf, isSuffixOf, intersperse)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isSuffixOf)
+import Data.List (intersperse)
 import qualified Data.Text as T
 
 -- Generate strings with various whitespace patterns
@@ -80,20 +82,20 @@ prop_trim_idempotent s = trim (trim s) === trim s
 prop_trim_preserves_internal_whitespace :: String -> Property
 prop_trim_preserves_internal_whitespace s =
   let trimmed = trim s
-      hasInternalWS = any isSpace (dropWhile isSpace (reverse (dropWhile isSpace (reverse s))))
+      hasInternalWS = L.any isSpace (dropWhile isSpace (L.reverse (dropWhile isSpace (L.reverse s))))
   in not (null trimmed && hasInternalWS) ==> 
-     let originalInternal = filter (not . isSpace) $ dropWhile isSpace $ reverse $ dropWhile isSpace $ reverse s
-         trimmedInternal = filter (not . isSpace) trimmed
+     let originalInternal = L.filter (not . isSpace) $ dropWhile isSpace $ L.reverse $ dropWhile isSpace $ L.reverse s
+         trimmedInternal = L.filter (not . isSpace) trimmed
      in originalInternal === trimmedInternal
 
--- Property: splitBy and splitByCollapsed relationship
+-- Property: splitBy L.and splitByCollapsed relationship
 prop_split_by_collapsed_relationship :: Char -> String -> Property
 prop_split_by_collapsed_relationship delim s =
   let normal = splitBy delim s
       collapsed = splitByCollapsed delim s
-  in collapsed === filter (not . null) normal
+  in collapsed === L.filter (not . null) normal
 
--- Property: splitBy preserves total length when concatenated with delimiter
+-- Property: splitBy preserves total L.length when concatenated with delimiter
 prop_split_by_preserves_length :: Char -> String -> Property
 prop_split_by_preserves_length delim s =
   let parts = splitBy delim s
@@ -109,24 +111,24 @@ prop_split_by_comma_collapsed_is_split_by_collapsed :: String -> Property
 prop_split_by_comma_collapsed_is_split_by_collapsed s = 
   splitByCommaCollapsed s === splitByCollapsed ',' s
 
--- Property: breakOn finds first occurrence or returns original
+-- Property: breakOn finds first occurrence L.or returns original
 prop_break_on_correctness :: String -> String -> Property
 prop_break_on_correctness pattern s =
   let (prefix, suffix) = breakOn pattern s
       combined = prefix ++ pattern ++ suffix
-  in if pattern `isInfixOf` s
+  in if pattern `L.isInfixOf` s
      then combined === s
      else (prefix, suffix) === (s, "")
 
 -- Property: removeLineComments doesn't affect strings without // 
 prop_remove_line_comments_no_effect_without_delimiter :: String -> Property
 prop_remove_line_comments_no_effect_without_delimiter s =
-  not ("//" `isInfixOf` s) ==> removeLineComments s === s
+  not ("//" `L.isInfixOf` s) ==> removeLineComments s === s
 
 -- Property: removeComments doesn't affect strings without comment markers
 prop_remove_comments_no_effect_without_markers :: String -> Property
 prop_remove_comments_no_effect_without_markers s =
-  not ("//" `isInfixOf` s) && not ("/*" `isInfixOf` s) ==> removeComments s === s
+  not ("//" `L.isInfixOf` s) && not ("/*" `L.isInfixOf` s) ==> removeComments s === s
 
 -- Property: normalizeIndentation preserves relative indentation
 prop_normalize_indentation_preserves_structure :: String -> Property
@@ -134,11 +136,11 @@ prop_normalize_indentation_preserves_structure s =
   let normalized = normalizeIndentation s
       originalLines = lines s
       normalizedLines = lines normalized
-  in length originalLines === length normalizedLines .&&.
+  in L.length originalLines === L.length normalizedLines .&&.
      not (null originalLines) ==> 
-       let firstNonEmptyOriginal = head $ filter (not . all isSpace) originalLines
-           firstNonEmptyNormalized = head $ filter (not . all isSpace) normalizedLines
-       in all isSpace firstNonEmptyOriginal === all isSpace firstNonEmptyNormalized
+       let firstNonEmptyOriginal = L.head $ L.filter (not . L.all isSpace) originalLines
+           firstNonEmptyNormalized = L.head $ L.filter (not . L.all isSpace) normalizedLines
+       in L.all isSpace firstNonEmptyOriginal === L.all isSpace firstNonEmptyNormalized
 
 -- Property: forceSingleTabIndentation adds tab to non-empty lines
 prop_force_single_tab_adds_tab :: String -> Property
@@ -146,7 +148,7 @@ prop_force_single_tab_adds_tab s =
   let result = forceSingleTabIndentation s
       resultLines = lines result
   not (null resultLines) ==> 
-    all (\line -> null line || '\t' `elem` take 1 line) resultLines
+    L.all (\line -> null line || '\t' `elem` take 1 line) resultLines
 
 -- Property: fixIndentation is normalizeIndentation
 prop_fix_indentation_is_normalize :: String -> Property
@@ -167,7 +169,7 @@ prop_trim_empty_string = trim "" === ""
 -- Property: trim only whitespace string becomes empty
 prop_trim_whitespace_only :: Property
 prop_trim_whitespace_only = forAll genWhitespaceString $ \s ->
-  all isSpace s ==> trim s === ""
+  L.all isSpace s ==> trim s === ""
 
 -- Property: splitBy with delimiter not in string returns singleton
 prop_split_by_delimiter_not_in_string :: Char -> String -> Property
@@ -183,7 +185,7 @@ prop_remove_line_comments_preserves_lines :: String -> Property
 prop_remove_line_comments_preserves_lines s =
   let originalLines = lines s
       processedLines = lines $ removeLineComments s
-  in length originalLines === length processedLines
+  in L.length originalLines === L.length processedLines
 
 -- Property: normalizeIndentation of already normalized string is idempotent
 prop_normalize_indentation_idempotent :: String -> Property
@@ -197,8 +199,8 @@ tests =
   testGroup "Utils String Processing QuickCheck Tests"
     [ fastProperty "trim is idempotent" prop_trim_idempotent
     , fastProperty "trim preserves internal whitespace" prop_trim_preserves_internal_whitespace
-    , fastProperty "splitBy and splitByCollapsed relationship" prop_split_by_collapsed_relationship
-    , fastProperty "splitBy preserves length when reconstructed" prop_split_by_preserves_length
+    , fastProperty "splitBy L.and splitByCollapsed relationship" prop_split_by_collapsed_relationship
+    , fastProperty "splitBy preserves L.length when reconstructed" prop_split_by_preserves_length
     , fastProperty "splitByComma is splitBy with comma" prop_split_by_comma_is_split_by
     , fastProperty "splitByCommaCollapsed is splitByCollapsed with comma" prop_split_by_comma_collapsed_is_split_by_collapsed
     , fastProperty "breakOn correctness" prop_break_on_correctness

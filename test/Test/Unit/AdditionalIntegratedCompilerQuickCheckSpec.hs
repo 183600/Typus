@@ -37,8 +37,12 @@ import AnalyzerIntegration
 import qualified SyntaxValidator as SV
 import qualified Parser as P
 -- import Compiler.Errors.Compiler (CompilerError)  -- Module is hidden
+import Ownership.Common.Types (OwnershipError(..))
+import Dependencies.TypeSystem (DependentTypeError(..), TypeVar, TypeConstraint)
 
-import Data.List (isPrefixOf, isInfixOf, null, length)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf, length)
+import Data.List (null)
 import Data.Maybe (isJust, isNothing)
 import qualified Data.Map as Map
 
@@ -48,6 +52,42 @@ import qualified Data.Map as Map
 
 instance Arbitrary ErrorSeverity where
     arbitrary = elements [Info, Warning, Error, Fatal]
+
+instance Arbitrary OwnershipError where
+    arbitrary = oneof
+        [ UseAfterMove <$> arbitrary
+        , DoubleMove <$> arbitrary <*> arbitrary
+        , BorrowWhileMoved <$> arbitrary
+        , MutBorrowWhileBorrowed <$> arbitrary
+        , BorrowWhileMutBorrowed <$> arbitrary
+        , MultipleMutBorrows <$> arbitrary
+        , UseWhileMutBorrowed <$> arbitrary
+        , OutOfScope <$> arbitrary
+        , BorrowError <$> arbitrary
+        , Ownership.Common.Types.ParseError <$> arbitrary
+        , CrossFunctionMove <$> arbitrary <*> arbitrary
+        , ParameterMoveMismatch <$> arbitrary
+        , ControlFlowError <$> arbitrary
+        ]
+
+instance Arbitrary TypeVar where
+    arbitrary = arbitrary  -- Simplified - TypeVar is abstract
+
+instance Arbitrary TypeConstraint where
+    arbitrary = arbitrary  -- Simplified - TypeConstraint is abstract
+
+instance Arbitrary DependentTypeError where
+    arbitrary = oneof
+        [ DependentTypeMismatch <$> arbitrary <*> arbitrary
+        , ConstraintViolation <$> arbitrary <*> arbitrary
+        , TypeNotFound <$> arbitrary
+        , InvalidTypeArgument <$> arbitrary
+        , UnsolvableConstraint <$> arbitrary
+        , DependentInfiniteType <$> arbitrary <*> arbitrary
+        , AmbiguousType <$> arbitrary
+        , Dependencies.TypeSystem.ParseError <$> arbitrary
+        , SemanticError <$> arbitrary
+        ]
 
 instance Arbitrary CompilerConfig where
     arbitrary = do
@@ -120,7 +160,7 @@ prop_empty_source_compilation :: CompilerConfig -> Property
 prop_empty_source_compilation config =
     monadicIO $ do
         result <- run $ compileWithIntegratedAnalyzers "" config
-        assert $ not (null (formatCompilationResult result))
+        assert $ not (L.null (formatCompilationResult result))
 
 -- Property: Invalid source code produces compilation failure
 prop_invalid_source_failure :: CompilerConfig -> Property
@@ -136,7 +176,7 @@ prop_valid_simple_source config =
     monadicIO $ do
         let validSource = "//go:embed *\npackage main\nfunc main() {}"
         result <- run $ compileWithIntegratedAnalyzers validSource config
-        -- Result may succeed or fail depending on parser, but should be consistent
+        -- Result may succeed L.or fail depending on parser, but should be consistent
         assert $ True  -- If we get here without crashing, it's consistent
 
 -- ============================================================================
@@ -149,8 +189,8 @@ prop_format_contains_status config source =
     monadicIO $ do
         result <- run $ compileWithIntegratedAnalyzers source config
         let formatted = formatCompilationResult result
-        assert $ "✅ Compilation Successful" `isInfixOf` formatted ||
-                 "❌ Compilation Failed" `isInfixOf` formatted
+        assert $ "✅ Compilation Successful" `L.isInfixOf` formatted ||
+                 "❌ Compilation Failed" `L.isInfixOf` formatted
 
 -- Property: Successful result contains success indicator
 prop_format_success_indicator :: CompilerConfig -> String -> Property
@@ -159,8 +199,8 @@ prop_format_success_indicator config source =
         result <- run $ compileWithIntegratedAnalyzers source config
         let formatted = formatCompilationResult result
         assert $ if success result
-                 then "✅ Compilation Successful" `isInfixOf` formatted
-                 else "❌ Compilation Failed" `isInfixOf` formatted
+                 then "✅ Compilation Successful" `L.isInfixOf` formatted
+                 else "❌ Compilation Failed" `L.isInfixOf` formatted
 
 -- Property: Failed result contains error information
 prop_format_failure_contains_errors :: CompilerConfig -> String -> Property
@@ -170,10 +210,10 @@ prop_format_failure_contains_errors config source =
         let formatted = formatCompilationResult result
         assert $ if not (success result)
                  then not (null formatted) &&
-                      ("Syntax Errors" `isInfixOf` formatted ||
-                       "Analysis Errors" `isInfixOf` formatted ||
-                       "Compiler Errors" `isInfixOf` formatted ||
-                       "Warnings" `isInfixOf` formatted)
+                      ("Syntax Errors" `L.isInfixOf` formatted ||
+                       "Analysis Errors" `L.isInfixOf` formatted ||
+                       "Compiler Errors" `L.isInfixOf` formatted ||
+                       "Warnings" `L.isInfixOf` formatted)
                  else True
 
 -- ============================================================================
@@ -184,13 +224,13 @@ prop_format_failure_contains_errors config source =
 prop_analysis_summary_sections :: AnalysisResult -> Property
 prop_analysis_summary_sections analysis =
     let summary = getDetailedAnalysisSummary analysis
-    in property $ "Analysis Summary" `isInfixOf` summary .&&.
-                 "Ownership errors:" `isInfixOf` summary .&&.
-                 "Dependent type errors:" `isInfixOf` summary .&&.
-                 "Warnings:" `isInfixOf` summary .&&.
-                 "Info messages:" `isInfixOf` summary .&&.
-                 "Type environment bindings:" `isInfixOf` summary .&&.
-                 "Status:" `isInfixOf` summary
+    in property $ "Analysis Summary" `L.isInfixOf` summary .&&.
+                 "Ownership errors:" `L.isInfixOf` summary .&&.
+                 "Dependent type errors:" `L.isInfixOf` summary .&&.
+                 "Warnings:" `L.isInfixOf` summary .&&.
+                 "Info messages:" `L.isInfixOf` summary .&&.
+                 "Type environment bindings:" `L.isInfixOf` summary .&&.
+                 "Status:" `L.isInfixOf` summary
 
 -- Property: Analysis summary reflects error counts
 prop_analysis_summary_error_counts :: Int -> Int -> Property
@@ -206,8 +246,8 @@ prop_analysis_summary_error_counts ownershipCount dependentCount =
             , combinedErrors = []
             }
         summary = getDetailedAnalysisSummary analysis
-    in property $ show ownershipCount `isInfixOf` summary .&&.
-                 show dependentCount `isInfixOf` summary
+    in property $ show ownershipCount `L.isInfixOf` summary .&&.
+                 show dependentCount `L.isInfixOf` summary
 
 -- ============================================================================
 -- Property Tests for Combined Error Conversion
@@ -218,7 +258,7 @@ prop_analysis_to_combined_preserves :: AnalysisResult -> Property
 prop_analysis_to_combined_preserves analysis =
     let converted = analysisToCombined analysis
         original = combinedErrors analysis
-    in property $ length converted === length original
+    in property $ L.length converted === L.length original
 
 -- Property: showCombinedError produces non-empty output
 prop_show_combined_error_non_empty :: CombinedError -> Property
@@ -230,10 +270,10 @@ prop_show_combined_error_non_empty error =
 prop_show_combined_error_contains_type :: CombinedError -> Property
 prop_show_combined_error_contains_type error =
     let shown = showCombinedError error
-    in property $ ("Ownership error:" `isInfixOf` shown .||.
-                 "Dependent type error:" `isInfixOf` shown .||.
-                 "Integration error:" `isInfixOf` shown .||.
-                 "Cross-analyzer error:" `isInfixOf` shown)
+    in property $ ("Ownership error:" `L.isInfixOf` shown .||.
+                 "Dependent type error:" `L.isInfixOf` shown .||.
+                 "Integration error:" `L.isInfixOf` shown .||.
+                 "Cross-analyzer error:" `L.isInfixOf` shown)
 
 -- ============================================================================
 -- Property Tests for Error Severity
@@ -273,7 +313,7 @@ prop_large_input_handling n =
     let largeSource = unlines $ replicate n "package main\nfunc main() {}"
     in monadicIO $ do
         result <- run $ compileWithIntegratedAnalyzers largeSource defaultCompilerConfig
-        assert $ not (null (formatCompilationResult result))
+        assert $ not (L.null (formatCompilationResult result))
 
 -- ============================================================================
 -- Edge Case Tests
@@ -285,7 +325,7 @@ prop_unicode_handling base =
     let unicodeSource = base ++ " café naïve résumé 🚀 测试"
     in monadicIO $ do
         result <- run $ compileWithIntegratedAnalyzers unicodeSource defaultCompilerConfig
-        assert $ not (null (formatCompilationResult result))
+        assert $ not (L.null (formatCompilationResult result))
 
 -- Property: Compilation handles special characters
 prop_special_characters :: String -> Property
@@ -293,17 +333,17 @@ prop_special_characters base =
     let specialSource = base ++ " \t\n\r\\\"'`!@#$%^&*()[]{}|;:,.<>?"
     in monadicIO $ do
         result <- run $ compileWithIntegratedAnalyzers specialSource defaultCompilerConfig
-        assert $ not (null (formatCompilationResult result))
+        assert $ not (L.null (formatCompilationResult result))
 
 -- Property: Compilation handles extremely long lines
 prop_long_lines :: Int -> Property
-prop_long_lines length =
-    length >= 0 && length <= 1000 ==>  -- Limit for performance testing
-    let longLine = replicate length 'x'
+prop_long_lines len =
+    len >= 0 && len <= 1000 ==>  -- Limit for performance testing
+    let longLine = replicate len 'x'
         source = longLine ++ "\npackage main\nfunc main() {}"
     in monadicIO $ do
         result <- run $ compileWithIntegratedAnalyzers source defaultCompilerConfig
-        assert $ not (null (formatCompilationResult result))
+        assert $ not (L.null (formatCompilationResult result))
 
 -- ============================================================================
 -- Test Suite

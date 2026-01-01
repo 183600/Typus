@@ -6,6 +6,7 @@
 module Test.Unit.DependentTypeSystemPropertiesQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck 
@@ -52,7 +53,7 @@ tests =
         , fastProperty "type variable ordering is consistent" $
             \vars ->
               let sorted = sort vars
-              in length sorted === length vars
+              in L.length sorted === L.length vars
               
         , fastProperty "type variable generation is fresh" $
             \_ ->
@@ -71,7 +72,7 @@ tests =
         , fastProperty "constraint combination preserves consistency" $
             \constraints ->
               let combined = constraints
-              in length combined >= 0
+              in L.length combined >= 0
               
         , fastProperty "constraint solving is deterministic" $
             \constraints ->

@@ -10,6 +10,7 @@
 module Test.Unit.NewOwnershipTransitivitySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -30,7 +31,8 @@ import SourceLocation (SourceSpan(..), SourcePos(..), startPos, spanBetween)
 
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (sort, nub, isInfixOf, isPrefixOf, intercalate)
+import Data.List (isInfixOf, isPrefixOf)
+import Data.List (sort, nub, intercalate)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import Data.Either (isLeft, isRight)
 
@@ -187,7 +189,7 @@ prop_double_move_equality var1 var2 =
 -- Property: Ownership analysis handles basic code gracefully
 prop_basic_ownership_analysis :: String -> Property
 prop_basic_ownership_analysis code =
-  not (null code) && length code <= 500 ==>  -- Limit for performance
+  not (null code) && L.length code <= 500 ==>  -- Limit for performance
   let typusFile = createTypusFile [code]
       analyzer = newOwnershipAnalyzer
       result = analyzeOwnership analyzer typusFile
@@ -198,21 +200,21 @@ prop_basic_ownership_analysis code =
 -- Property: Ownership analysis is deterministic
 prop_ownership_analysis_deterministic :: String -> Property
 prop_ownership_analysis_deterministic code =
-  not (null code) && length code <= 500 ==>  -- Limit for performance
+  not (null code) && L.length code <= 500 ==>  -- Limit for performance
   let typusFile = createTypusFile [code]
       analyzer = newOwnershipAnalyzer
       result1 = analyzeOwnership analyzer typusFile
       result2 = analyzeOwnership analyzer typusFile
   in case (result1, result2) of
        (Right _, Right _) -> property $ True  -- Both succeeded
-       (Left err1, Left err2) -> property $ length err1 === length err2  -- Same number of errors
+       (Left err1, Left err2) -> property $ L.length err1 === L.length err2  -- Same number of errors
        (Right _, Left _) -> property $ False  -- Shouldn't happen
        (Left _, Right _) -> property $ False  -- Shouldn't happen
 
 -- Property: Ownership analysis handles multiple code blocks
 prop_multiple_blocks_ownership_analysis :: [String] -> Property
 prop_multiple_blocks_ownership_analysis codeBlocks =
-  not (null codeBlocks) && length codeBlocks <= 5 ==>  -- Limit for performance
+  not (null codeBlocks) && L.length codeBlocks <= 5 ==>  -- Limit for performance
   let typusFile = createTypusFile codeBlocks
       analyzer = newOwnershipAnalyzer
       result = analyzeOwnership analyzer typusFile
@@ -233,7 +235,7 @@ prop_empty_code_ownership_analysis =
 -- Property: Ownership analysis preserves variable naming
 prop_ownership_analysis_preserves_variables :: String -> Property
 prop_ownership_analysis_preserves_variables varName =
-  not (null varName) && all isAlphaNum varName ==>  -- Ensure valid identifier
+  not (null varName) && L.all isAlphaNum varName ==>  -- Ensure valid identifier
   let code = "let " ++ varName ++ " = 42\nprintln!(" ++ varName ++ ")"
       typusFile = createTypusFile [code]
       analyzer = newOwnershipAnalyzer
@@ -246,7 +248,7 @@ prop_ownership_analysis_preserves_variables varName =
 prop_ownership_analysis_handles_moves :: String -> String -> Property
 prop_ownership_analysis_handles_moves var1 var2 =
   not (null var1) && not (null var2) && 
-  all isAlphaNum var1 && all isAlphaNum var2 ==>  -- Ensure valid identifiers
+  all isAlphaNum var1 && L.all isAlphaNum var2 ==>  -- Ensure valid identifiers
   let code = "let " ++ var1 ++ " = 42\nlet " ++ var2 ++ " = " ++ var1 ++ "\nprintln!(" ++ var2 ++ ")"
       typusFile = createTypusFile [code]
       analyzer = newOwnershipAnalyzer
@@ -259,7 +261,7 @@ prop_ownership_analysis_handles_moves var1 var2 =
 prop_ownership_analysis_handles_borrows :: String -> String -> Property
 prop_ownership_analysis_handles_borrows var1 var2 =
   not (null var1) && not (null var2) && 
-  all isAlphaNum var1 && all isAlphaNum var2 ==>  -- Ensure valid identifiers
+  all isAlphaNum var1 && L.all isAlphaNum var2 ==>  -- Ensure valid identifiers
   let code = "let " ++ var1 ++ " = 42\nlet " ++ var2 ++ " = &" ++ var1 ++ "\nprintln!(" ++ var1 ++ ")"
       typusFile = createTypusFile [code]
       analyzer = newOwnershipAnalyzer
@@ -271,19 +273,19 @@ prop_ownership_analysis_handles_borrows var1 var2 =
 -- Property: Ownership error messages contain variable names
 prop_ownership_error_contains_variable :: String -> Property
 prop_ownership_error_contains_variable varName =
-  not (null varName) && all isAlphaNum varName ==>  -- Ensure valid identifier
+  not (null varName) && L.all isAlphaNum varName ==>  -- Ensure valid identifier
   let error = UseAfterMove varName
       errorMsg = show error
-  in property $ varName `isInfixOf` errorMsg
+  in property $ varName `L.isInfixOf` errorMsg
 
 -- Property: Ownership transfer chain preserves consistency
 prop_ownership_transfer_chain :: [String] -> Property
 prop_ownership_transfer_chain varNames =
-  not (null varNames) && length varNames <= 5 && all isAlphaNum (concat varNames) ==>  -- Limit for performance
-  let transfers = zipWith OwnershipTransfer varNames (tail varNames)
+  not (null varNames) && L.length varNames <= 5 && L.all isAlphaNum (L.concat varNames) ==>  -- Limit for performance
+  let transfers = zipWith OwnershipTransfer varNames (L.tail varNames)
       allFromVars = map transferFrom transfers
       allToVars = map transferTo transfers
-  in property $ allFromVars === init varNames .&&. allToVars === tail varNames
+  in property $ allFromVars === init varNames .&&. allToVars === L.tail varNames
 
 -- Property: Ownership type comparisons are consistent
 prop_ownership_type_consistent_comparisons :: OwnershipType -> OwnershipType -> Property
@@ -296,7 +298,7 @@ prop_ownership_type_consistent_comparisons own1 own2 =
 
 -- Helper function to check if a string contains only alphanumeric characters
 isAlphaNum :: String -> Bool
-isAlphaNum = all (\c -> (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'))
+isAlphaNum = L.all (\c -> (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'))
 
 -- Tests collection
 tests :: TestTree

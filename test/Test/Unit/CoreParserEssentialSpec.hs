@@ -3,6 +3,7 @@
 module Test.Unit.CoreParserEssentialSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
 import qualified Data.Text as T
 
@@ -32,7 +33,7 @@ tests = testGroup "Core Parser Essential Tests"
         in case parseTypus input of
           Left err -> assertBool "should parse simple block" False
           Right result -> assertBool "should have one code block" 
-            (length (tfCodeBlocks result) == 1)
+            (L.length (tfCodeBlocks result) == 1)
     ]
   
   , testGroup "Code Block Recognition"
@@ -41,17 +42,17 @@ tests = testGroup "Core Parser Essential Tests"
         in case parseTypus input of
           Left err -> assertBool "should parse function" False
           Right result -> do
-            assertBool "should have code block" (not $ null $ tfCodeBlocks result)
-            let block = head $ tfCodeBlocks result
+            assertBool "should have code block" (not $ L.null $ tfCodeBlocks result)
+            let block = L.head $ tfCodeBlocks result
             assertBool "should contain function keyword" 
-              ("func" `T.isInfixOf` cbContent block)
+              ("func" `L.isInfixOf` cbContent block)
     
     , testCase "parseTypus handles multiple blocks" $
         let input = "func one() {}\nfunc two() {}\nfunc three() {}"
         in case parseTypus input of
           Left err -> assertBool "should parse multiple blocks" False
           Right result -> 
-            assertEqual "should have three blocks" 3 (length $ tfCodeBlocks result)
+            assertEqual "should have three blocks" 3 (L.length $ tfCodeBlocks result)
     
     , testCase "parseTypus preserves block content" $
         let input = "func test() {\n  let x = 42\n  return x\n}"
@@ -60,8 +61,8 @@ tests = testGroup "Core Parser Essential Tests"
           Right result -> do
             let blocks = tfCodeBlocks result
             assertBool "should have block" (not $ null blocks)
-            let content = cbContent $ head blocks
-            assertBool "should contain let statement" ("let x = 42" `T.isInfixOf` content)
+            let content = cbContent $ L.head blocks
+            assertBool "should contain let statement" ("let x = 42" `L.isInfixOf` content)
     ]
   
   , testGroup "File Structure Parsing"
@@ -82,7 +83,7 @@ tests = testGroup "Core Parser Essential Tests"
             assertBool "should have dependent-types directive" 
               (isJust $ fdDependentTypes $ tfDirectives result)
             assertBool "should have code block" 
-              (not $ null $ tfCodeBlocks result)
+              (not $ L.null $ tfCodeBlocks result)
     ]
   
   , testGroup "Error Handling"
@@ -98,7 +99,7 @@ tests = testGroup "Core Parser Essential Tests"
           Left err -> assertBool "should handle unicode" False
           Right result -> 
             assertBool "should parse unicode correctly" 
-              (not $ null $ tfCodeBlocks result)
+              (not $ L.null $ tfCodeBlocks result)
     ]
   
   , testGroup "Block Directive Parsing"
@@ -109,7 +110,7 @@ tests = testGroup "Core Parser Essential Tests"
           Right result -> do
             let blocks = tfCodeBlocks result
             assertBool "should have block" (not $ null blocks)
-            let block = head blocks
+            let block = L.head blocks
             let directives = cbDirectives block
             assertBool "should have block ownership directive" 
               (isJust $ bdOwnership directives)

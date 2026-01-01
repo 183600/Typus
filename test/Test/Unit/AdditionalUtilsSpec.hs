@@ -70,7 +70,7 @@ tests =
         ]
 
     , testGroup "Indentation normalization"
-        [ testCase "normalizeIndentation with mixed tabs and spaces" $ do
+        [ testCase "normalizeIndentation with mixed tabs L.and spaces" $ do
             let input = "\t    content\n\t    \tcontent2"
                 expected = "content\n\tcontent2"
             normalizeIndentation input @?= expected
@@ -86,15 +86,15 @@ tests =
 
     , testGroup "Break on functionality"
         [ testCase "breakOn finds first occurrence" $ do
-            breakOn ',' "a,b,c" @?= ("a", ",b,c")
+            breakOn "," "a,b,c" @?= ("a", ",b,c")
             
         , testCase "breakOn with delimiter not found" $ do
-            breakOn 'x' "abc" @?= ("abc", "")
+            breakOn "x" "abc" @?= ("abc", "")
             
         , testCase "breakOn with empty string" $ do
-            breakOn 'x' "" @?= ("", "")
+            breakOn "x" "" @?= ("", "")
             
         , testCase "breakOn with delimiter at start" $ do
-            breakOn 'x' "xyz" @?= ("", "xyz")
+            breakOn "x" "xyz" @?= ("", "xyz")
         ]
     ]

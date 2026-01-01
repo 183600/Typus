@@ -3,13 +3,14 @@
 module Test.Unit.DirectiveInteractionSpec (tests) where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 import Parser (parseTypus, FileDirectives(..), BlockDirectives(..), CodeBlock(..), TypusFile(..))
 import Data.Maybe (isJust, isNothing)
 import Control.Exception (try, SomeException)
 
--- | Test directive interaction between file-level and block-level directives
+-- | Test directive interaction between file-level L.and block-level directives
 tests :: TestTree
 tests = testGroup "Directive Interaction Tests"
   [ testCase "File-level ownership overrides block-level" testFileOwnershipOverride
@@ -34,18 +35,18 @@ testFileOwnershipOverride = do
       assertBool "File-level ownership should be enabled" $ 
         isJust (fdOwnership (tfDirectives typusFile))
       -- Block should still inherit file-level setting
-      assertBool "Should have code blocks" $ not (null (tfCodeBlocks typusFile))
+      assertBool "Should have code blocks" $ not (L.null (tfCodeBlocks typusFile))
 
 -- | Test that block-level dependent types work independently
 testBlockDependentTypes :: Assertion
 testBlockDependentTypes = do
-  let input = "package main\n\nfunc main() {\n    {//! dependent_types: on\n        type Vector(n int) struct {\n            length int\n            data []float64\n        }\n    }\n}"
+  let input = "package main\n\nfunc main() {\n    {//! dependent_types: on\n        type Vector(n int) struct {\n            L.length int\n            data []float64\n        }\n    }\n}"
   result <- try $ parseTypus input
   case result of
     Left (e :: SomeException) -> assertFailure $ "Parse failed: " ++ show e
     Right typusFile -> do
       assertBool "Should have code blocks with dependent types" $ 
-        any (hasDependentTypesDirective . cbDirectives) (tfCodeBlocks typusFile)
+        L.any (hasDependentTypesDirective . cbDirectives) (tfCodeBlocks typusFile)
   where
     hasDependentTypesDirective directives = 
       isJust (bdDependentTypes directives) || isJust (bdConstraints directives)
@@ -53,13 +54,13 @@ testBlockDependentTypes = do
 -- | Test mixed directives in nested blocks
 testNestedMixedDirectives :: Assertion
 testNestedMixedDirectives = do
-  let input = "//! ownership: on\n//! dependent_types: on\n\npackage main\n\nfunc main() {\n    {//! ownership: off\n        // Ownership off, dependent types on (inherited)\n        type SafeString struct {\n            data string\n        }\n        \n        {//! dependent_types: off\n            // Both ownership and dependent types off\n        }\n    }\n}"
+  let input = "//! ownership: on\n//! dependent_types: on\n\npackage main\n\nfunc main() {\n    {//! ownership: off\n        // Ownership off, dependent types on (inherited)\n        type SafeString struct {\n            data string\n        }\n        \n        {//! dependent_types: off\n            // Both ownership L.and dependent types off\n        }\n    }\n}"
   result <- try $ parseTypus input
   case result of
     Left (e :: SomeException) -> assertFailure $ "Parse failed: " ++ show e
     Right typusFile -> do
       assertBool "Should have multiple nested blocks" $ 
-        length (tfCodeBlocks typusFile) >= 2
+        L.length (tfCodeBlocks typusFile) >= 2
 
 -- | Test directive parsing edge cases
 testDirectiveParsingEdgeCases :: Assertion
@@ -92,7 +93,7 @@ testDirectiveInheritance = do
       assertBool "File should have ownership directive" $ 
         isJust (fdOwnership (tfDirectives typusFile))
       assertBool "Should have code blocks" $ 
-        not (null (tfCodeBlocks typusFile))
+        not (L.null (tfCodeBlocks typusFile))
 
 -- | Property: Directive parsing should be idempotent
 directiveParsingIdempotent :: String -> Property
@@ -105,7 +106,7 @@ directiveParsingIdempotent input =
         Left _ -> property False -- Should parse consistently
         Right secondParse -> firstParse === secondParse
   where
-    isValidTypus str = "package" `isInfixOf` str || "func" `isInfixOf` str
+    isValidTypus str = "package" `L.isInfixOf` str || "func" `L.isInfixOf` str
 
 -- | Test multiple block directives combine correctly
 testMultipleBlockDirectives :: Assertion

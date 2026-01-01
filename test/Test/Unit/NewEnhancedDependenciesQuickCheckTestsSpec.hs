@@ -10,6 +10,7 @@
 module Test.Unit.NewDependenciesQuickCheckTestsSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertBool, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -71,8 +72,9 @@ import Control.Monad.State (runState, evalState)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Text (Text)
-import qualified Data.Text as T
-import Data.List (sort, nub, isInfixOf)
+import qualified Data.Text as T (pack, unpack)
+import Data.List (isInfixOf)
+import Data.List (sort, nub)
 
 -- ============================================================================
 -- Custom Generators
@@ -105,7 +107,7 @@ genTypeVar = oneof
       args <- listOf genTypeVar `suchThat` (not . null)
       ret <- genTypeVar
       return $ TVFun args ret
-  , TVTuple <$> listOf genTypeVar `suchThat` (\l -> length l >= 2)
+  , TVTuple <$> listOf genTypeVar `suchThat` (\l -> L.length l >= 2)
   ]
 
 genTypeConstraint :: Gen TypeConstraint
@@ -214,7 +216,7 @@ prop_tv_var_preserves_name name =
        TVVar n -> property $ n === name
        _ -> property $ False
 
--- Property: TVApp should preserve constructor name and arguments
+-- Property: TVApp should preserve constructor name L.and arguments
 prop_tv_app_preserves_fields :: String -> [TypeVar] -> Property
 prop_tv_app_preserves_fields name args =
   let tv = TVApp name args
@@ -222,7 +224,7 @@ prop_tv_app_preserves_fields name args =
        TVApp n a -> property $ n === name .&&. a === args
        _ -> property $ False
 
--- Property: TVFun should preserve parameters and return type
+-- Property: TVFun should preserve parameters L.and return type
 prop_tv_fun_preserves_fields :: [TypeVar] -> TypeVar -> Property
 prop_tv_fun_preserves_fields params ret =
   let tv = TVFun params ret
@@ -233,7 +235,7 @@ prop_tv_fun_preserves_fields params ret =
 -- Property: TVTuple should preserve elements
 prop_tv_tuple_preserves_elements :: [TypeVar] -> Property
 prop_tv_tuple_preserves_elements elements =
-  not (null elements) && length elements >= 2 ==>
+  not (null elements) && L.length elements >= 2 ==>
   let tv = TVTuple elements
   in case tv of
        TVTuple e -> property $ e === elements
@@ -259,7 +261,7 @@ prop_subtype_preserves_types tv1 tv2 =
        Subtype t1 t2 -> property $ t1 === tv1 .&&. t2 === tv2
        _ -> property $ False
 
--- Property: Predicate should preserve name and arguments
+-- Property: Predicate should preserve name L.and arguments
 prop_predicate_preserves_fields :: String -> [TypeVar] -> Property
 prop_predicate_preserves_fields name args =
   let constraint = Predicate name args
@@ -267,7 +269,7 @@ prop_predicate_preserves_fields name args =
        Predicate n a -> property $ n === name .&&. a === args
        _ -> property $ False
 
--- Property: TypeSizeGE should preserve type variable and size
+-- Property: TypeSizeGE should preserve type variable L.and size
 prop_type_size_ge_preserves_fields :: TypeVar -> Int -> Property
 prop_type_size_ge_preserves_fields tv size =
   let constraint = TypeSizeGE tv size
@@ -287,7 +289,7 @@ prop_type_mismatch_preserves_types tv1 tv2 =
        DependentTypeMismatch t1 t2 -> property $ t1 === tv1 .&&. t2 === tv2
        _ -> property $ False
 
--- Property: ConstraintViolation should preserve message and type variable
+-- Property: ConstraintViolation should preserve message L.and type variable
 prop_constraint_violation_preserves_fields :: String -> TypeVar -> Property
 prop_constraint_violation_preserves_fields msg tv =
   let error = ConstraintViolation msg tv
@@ -307,7 +309,7 @@ prop_type_not_found_preserves_name name =
 -- TypeDef Properties
 -- ============================================================================
 
--- Property: TypeDefDecl should preserve parameters and constraints
+-- Property: TypeDefDecl should preserve parameters L.and constraints
 prop_type_def_preserves_fields :: [String] -> [TypeConstraint] -> Property
 prop_type_def_preserves_fields params constraints =
   let typeDef = TypeDefDecl params constraints
@@ -319,7 +321,7 @@ prop_type_def_preserves_fields params constraints =
 -- TypeEnv Properties
 -- ============================================================================
 
--- Property: TypeEnv should preserve type definitions and constraints
+-- Property: TypeEnv should preserve type definitions L.and constraints
 prop_type_env_preserves_fields :: Map.Map String TypeDef -> [TypeConstraint] -> Property
 prop_type_env_preserves_fields defs constraints =
   let env = TypeEnv defs constraints
@@ -341,7 +343,7 @@ prop_new_checker_has_prelude =
 prop_new_checker_no_errors :: Property
 prop_new_checker_no_errors =
   let checker = newDependentTypeChecker
-  in property $ null (tcErrors checker)
+  in property $ L.null (tcErrors checker)
 
 -- Property: newDependentTypeCheckerWithTypes should include custom types
 prop_new_checker_with_custom_types :: Property
@@ -373,7 +375,7 @@ prop_convert_refine_type_returns_constraints base constraints =
   let typeExpr = RefineT base constraints
       params = Set.empty
       (tv, constraintList) = convertTypeExprAndRefinements params typeExpr
-  in property $ length constraintList >= length constraints
+  in property $ L.length constraintList >= L.length constraints
 
 -- Property: convertConstraint should handle SizeGE
 prop_convert_size_ge_constraint :: Text -> Int -> Property
@@ -458,7 +460,7 @@ prop_unify_identical_succeeds :: TypeVar -> Property
 prop_unify_identical_succeeds tv =
   let checker = newDependentTypeChecker
       (result, checker') = runState (unify tv tv) checker
-  in property $ null (tcErrors checker')
+  in property $ L.null (tcErrors checker')
 
 -- Property: unify should handle simple concrete types
 prop_unify_concrete_types :: Property
@@ -467,7 +469,7 @@ prop_unify_concrete_types =
       tv2 = TVCon "Int"
       checker = newDependentTypeChecker
       (result, checker') = runState (unify tv1 tv2) checker
-  in property $ null (tcErrors checker')
+  in property $ L.null (tcErrors checker')
 
 -- ============================================================================
 -- AST Properties
@@ -481,7 +483,7 @@ prop_program_preserves_statements statements =
        Program stmts -> property $ stmts === statements
        _ -> property $ False
 
--- Property: VarDecl should preserve name and type
+-- Property: VarDecl should preserve name L.and type
 prop_var_decl_preserves_fields :: String -> TypeExpr -> Property
 prop_var_decl_preserves_fields name varType =
   let stmt = VarDecl name varType

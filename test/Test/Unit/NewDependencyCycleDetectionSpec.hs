@@ -10,6 +10,7 @@
 module Test.Unit.NewDependencyCycleDetectionSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
@@ -79,7 +80,7 @@ tests =
                 errors = analyzeDependentTypes src
             -- This should be allowed (recursive types are OK)
             let cycleErrors = filter isCycleError errors
-            length cycleErrors @?= 0
+            L.length cycleErrors @?= 0
                 
         , testCase "detects constraint dependency cycles" $ do
             let src = unlines
@@ -101,7 +102,7 @@ tests =
                 errors = analyzeDependentTypes src
             -- Recursive functions should be allowed
             let cycleErrors = filter isCycleError errors
-            length cycleErrors @?= 0
+            L.length cycleErrors @?= 0
                 
         , testCase "detects mutually recursive function cycles" $ do
             let src = unlines
@@ -113,7 +114,7 @@ tests =
                 errors = analyzeDependentTypes src
             -- Mutually recursive functions should be allowed
             let cycleErrors = filter isCycleError errors
-            length cycleErrors @?= 0
+            L.length cycleErrors @?= 0
         ]
         
     , testGroup "Type constraint cycles"
@@ -151,7 +152,7 @@ tests =
                 errors = analyzeDependentTypes src
             -- Should detect potential cross-module cycle
             let crossModuleErrors = filter isCrossModuleCycleError errors
-            length crossModuleErrors @>= 1
+            L.length crossModuleErrors @>= 1
         ]
         
     , testGroup "Advanced cycle detection"
@@ -160,12 +161,12 @@ tests =
                   [ "type Container<T> = Box<T> | Array<T>"
                   , "type Box<T> = { item: T, container: Container<T> }"
                   , "type Array<T> = { elements: List<T>, container: Container<T> }"
-                  , "type List<T> = { head: T, tail: List<T> } | Nil"
+                  , "type List<T> = { L.head: T, L.tail: List<T> } | Nil"
                   ]
                 errors = analyzeDependentTypes src
             -- Should handle complex recursive structures
             let cycleErrors = filter isInvalidCycleError errors
-            length cycleErrors @?= 0
+            L.length cycleErrors @?= 0
                 
         , testCase "detects cycles with dependent types" $ do
             let src = unlines
@@ -181,13 +182,13 @@ tests =
     , testGroup "Cycle resolution strategies"
         [ testCase "resolves valid recursive types" $ do
             let src = unlines
-                  [ "type List<T> = { head: T, tail: List<T> } | Nil"
+                  [ "type List<T> = { L.head: T, L.tail: List<T> } | Nil"
                   , "type Tree<T> = { value: T, left: Tree<T>, right: Tree<T> } | Empty"
                   ]
                 errors = analyzeDependentTypes src
             -- Should resolve valid recursive types without errors
             let invalidErrors = filter isInvalidCycleError errors
-            length invalidErrors @?= 0
+            L.length invalidErrors @?= 0
                 
         , testCase "rejects paradoxical constraints" $ do
             let src = unlines
@@ -201,16 +202,16 @@ tests =
         
     , testGroup "Performance with large dependency graphs"
         [ testCase "handles large acyclic dependency graphs efficiently" $ do
-            let src = unlines $ concat
+            let src = unlines $ L.concat
                   [ ["type A" ++ show i ++ " = B" ++ show (i+1) | i <- [1..99]]
                   , ["type A100 = Int"]
                   ]
                 errors = analyzeDependentTypes src
             -- Should handle large linear chains without performance issues
-            length errors @?= 0
+            L.length errors @?= 0
                 
         , testCase "detects cycles in large dependency graphs" $ do
-            let src = unlines $ concat
+            let src = unlines $ L.concat
                   [ ["type B" ++ show i ++ " = B" ++ show (i+1) | i <- [1..99]]
                   , ["type B100 = B1"]  -- Creates a cycle
                   ]
@@ -254,7 +255,7 @@ isConstraintCycleError (ConstraintViolation _ _) = True
 isConstraintCycleError _ = False
 
 isCrossModuleCycleError :: DependentTypeError -> Bool
-isCrossModuleCycleError (SemanticError msg) = "cross-module" `isInfixOf` msg
+isCrossModuleCycleError (SemanticError msg) = "cross-module" `L.isInfixOf` msg
 isCrossModuleCycleError _ = False
 
 isInvalidCycleError :: DependentTypeError -> Bool
@@ -277,4 +278,4 @@ isSelfReferenceError (DependentInfiniteType name _) = name == name
 isSelfReferenceError _ = False
 
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `Data.List.isInfixOf` haystack
+L.isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack

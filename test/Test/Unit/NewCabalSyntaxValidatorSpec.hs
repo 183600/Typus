@@ -27,7 +27,9 @@ import SyntaxValidator
   )
 
 import Parser (parseTypus)
-import Data.List (isPrefixOf, isInfixOf, sort, nub)
+import qualified Data.List as L
+import Data.List (isPrefixOf, isInfixOf)
+import Data.List (sort, nub)
 
 -- Test 1: Syntax validator creation
 prop_syntax_validator_creation :: Property
@@ -64,7 +66,7 @@ prop_validation_error_accumulation codeSegments =
       result = case parsed of
                  Right typusFile -> validateSyntax validator typusFile
                  Left _ -> Right ()
-  in length codeSegments > 0 ==> 
+  in L.length codeSegments > 0 ==> 
      property $ True -- Should accumulate errors appropriately
 
 -- Test 5: Error clearing functionality
@@ -111,7 +113,7 @@ prop_complex_syntax_validation statements =
       result = case parsed of
                  Right typusFile -> validateSyntax validator typusFile
                  Left _ -> Right ()
-  in length statements > 0 ==> 
+  in L.length statements > 0 ==> 
      property $ True -- Should handle complex syntax
 
 -- Test 9: Validation error formatting

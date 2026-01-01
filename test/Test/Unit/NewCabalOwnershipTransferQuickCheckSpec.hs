@@ -3,6 +3,7 @@
 module Test.Unit.NewCabalOwnershipTransferQuickCheckSpec where
 
 import Test.Tasty
+import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Ownership.Common.Types
 import Data.List (sort, nub)
@@ -18,7 +19,7 @@ testOwnershipTransferProperties = testGroup "Ownership Transfer Properties"
   , testProperty "ownership analyzer is consistent" propOwnershipAnalyzerConsistent
   ]
 
--- | Ownership type ordering should be total (any two types can be compared)
+-- | Ownership type ordering should be total (L.any two types can be compared)
 propOwnershipTypeOrderingTotal :: OwnershipType -> OwnershipType -> Bool
 propOwnershipTypeOrderingTotal ot1 ot2 =
   let comparison = compare ot1 ot2
@@ -154,7 +155,7 @@ testOwnershipTransferOperations = testGroup "Ownership Transfer Operations"
   , testCase "ownership transfer show" $
       let transfer = OwnershipTransfer "x" "y"
           shown = show transfer
-      in "x" `isInfixOf` shown && "y" `isInfixOf` shown
+      in "x" `L.isInfixOf` shown && "y" `L.isInfixOf` shown
   ]
 
 -- | Test ownership analyzer operations
@@ -174,7 +175,7 @@ testOwnershipAnalyzerOperations = testGroup "Ownership Analyzer Operations"
   , testCase "ownership analyzer show" $
       let analyzer = newOwnershipAnalyzer
           shown = show analyzer
-      in "OwnershipAnalyzer" `isInfixOf` shown
+      in "OwnershipAnalyzer" `L.isInfixOf` shown
   ]
 
 -- | Test ownership scenarios
@@ -196,8 +197,8 @@ testOwnershipScenarios = testGroup "Ownership Scenarios"
           mutBorrow = MutBorrowed "data"
           types = [owner, borrow, mutBorrow]
           sortedTypes = sort types
-      in length sortedTypes == 3 &&
-         head sortedTypes == owner &&
+      in L.length sortedTypes == 3 &&
+         L.head sortedTypes == owner &&
          last sortedTypes == mutBorrow
          
   , testCase "error categorization" $
@@ -206,7 +207,7 @@ testOwnershipScenarios = testGroup "Ownership Scenarios"
           parseError = ParseError "syntax error"
           errors = [moveError, borrowError, parseError]
           sortedErrors = sort errors
-      in length sortedErrors == 3 &&
+      in L.length sortedErrors == 3 &&
          moveError `elem` sortedErrors &&
          borrowError `elem` sortedErrors &&
          parseError `elem` sortedErrors
@@ -237,7 +238,7 @@ testOwnershipEdgeCases = testGroup "Ownership Edge Cases"
            _ -> False
            
   , testCase "long variable names" $
-      let longName = concat (replicate 100 "very_long_variable_name_")
+      let longName = L.concat (replicate 100 "very_long_variable_name_")
           transfer = OwnershipTransfer longName "target"
       in transferFrom transfer == longName
   ]

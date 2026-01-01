@@ -1,6 +1,7 @@
 module Test.Unit.NewCoreCabalQuickCheckSpec8 (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
 
@@ -41,7 +42,7 @@ tests =
                 expected = Just "Int"
             inferred @?= expected
         ]
-    , testGroup "Ownership and dependent types integration"
+    , testGroup "Ownership L.and dependent types integration"
         [ fastProperty "ownership analysis respects type constraints" prop_ownershipAnalysisRespectsTypeConstraints
         , fastProperty "dependent type validation preserves invariants" prop_dependentTypeValidationPreservesInvariants
         , testCase "ownership type integration" $ do
@@ -98,7 +99,7 @@ prop_compilationPipelinePreservesSemantics input =
       ownership = cpOwnershipAnalyzer pipeline ast
       generated = cpCodeGenerator pipeline ast
       -- Simplified semantic preservation check
-      hasNoErrors = null (tcrErrors typeCheck) && null (orErrors ownership)
+      hasNoErrors = L.null (tcrErrors typeCheck) && L.null (orErrors ownership)
   in hasNoErrors ==> not (null generated)
 
 -- Round-trip compilation is idempotent
@@ -120,7 +121,7 @@ prop_moduleDependencyResolutionDeterministic modules dependencies =
 prop_moduleImportOrderingPreservesSemantics :: [String] -> [(String, [String])] -> Bool
 prop_moduleImportOrderingPreservesSemantics modules dependencies =
   let resolved1 = resolveDependencies modules dependencies
-      resolved2 = resolveDependencies (reverse modules) dependencies
+      resolved2 = resolveDependencies (L.reverse modules) dependencies
       -- Both should result in the same valid topological order
       valid1 = isValidDependencyOrder dependencies resolved1
       valid2 = isValidDependencyOrder dependencies resolved2
@@ -129,7 +130,7 @@ prop_moduleImportOrderingPreservesSemantics modules dependencies =
 -- Type inference across modules is consistent
 prop_typeInferenceAcrossModulesConsistent :: [(String, String)] -> [(String, [String])] -> Bool
 prop_typeInferenceAcrossModulesConsistent moduleContents dependencies =
-  let modules = map (\(name, content) -> Module { mName = name, mContent = content, mDependencies = [] }) moduleContents
+  let modules = L.map (\(name, content) -> Module { mName = name, mContent = content, mDependencies = [] }) moduleContents
       modulesWithDeps = addDependencies modules dependencies
       typeEnv1 = inferTypesAcrossModules modulesWithDeps
       typeEnv2 = inferTypesAcrossModules modulesWithDeps
@@ -167,13 +168,13 @@ compileToGo input = "func main() { " ++ input ++ " }"
 
 compileFromGo :: String -> String
 compileFromGo goCode
-  | "func main()" `isInfixOf` goCode = extractBody goCode
+  | "func main()" `L.isInfixOf` goCode = extractBody goCode
   | otherwise = goCode
 
 extractBody :: String -> String
 extractBody goCode = 
   let start = dropWhile (/= '{') goCode
-      body = tail start
+      body = L.tail start
       end = takeWhile (/= '}') body
   in end
 
@@ -215,14 +216,14 @@ isValidDependencyOrder dependencies order =
   let positionMap = Map.fromList $ zip order [0..]
       checkDependency (module', deps) = 
         let modulePos = Map.findWithDefault (-1) module' positionMap
-            depPos = map (\dep -> Map.findWithDefault (-1) dep positionMap) deps
-        in all (\pos -> pos < modulePos || pos == -1) depPos
-  in all checkDependency dependencies
+            depPos = L.map (\dep -> Map.findWithDefault (-1) dep positionMap) deps
+        in L.all (\pos -> pos < modulePos || pos == -1) depPos
+  in L.all checkDependency dependencies
 
 addDependencies :: [Module] -> [(String, [String])] -> [Module]
 addDependencies modules dependencies = 
   let dependencyMap = Map.fromList dependencies
-  in map (\m -> m { mDependencies = Map.findWithDefault [] (mName m) dependencyMap }) modules
+  in L.map (\m -> m { mDependencies = Map.findWithDefault [] (mName m) dependencyMap }) modules
 
 inferTypesAcrossModules :: [Module] -> Map.Map String String
 inferTypesAcrossModules modules = 
@@ -232,8 +233,8 @@ inferTypesAcrossModules modules =
 extractModuleTypes :: Module -> [(String, String)]
 extractModuleTypes module' = 
   -- Simplified: extract type annotations from module content
-  if "int" `isInfixOf` mContent module' then [(mName module' ++ "_var", "Int")]
-  else if "string" `isInfixOf` mContent module' then [(mName module' ++ "_var", "String")]
+  if "int" `L.isInfixOf` mContent module' then [(mName module' ++ "_var", "Int")]
+  else if "string" `L.isInfixOf` mContent module' then [(mName module' ++ "_var", "String")]
   else []
 
 hasSameBehavior :: TypeCheckResult -> TypeCheckResult -> Bool
@@ -245,8 +246,8 @@ optimizeAST ast = ast  -- Simplified: no optimization
 
 inferType :: Map.Map String String -> String -> Maybe String
 inferType typeEnv expr
-  | "add" `isInfixOf` expr = Map.lookup "int" typeEnv
-  | "concat" `isInfixOf` expr = Map.lookup "string" typeEnv
+  | "add" `L.isInfixOf` expr = Map.lookup "int" typeEnv
+  | "L.concat" `L.isInfixOf` expr = Map.lookup "string" typeEnv
   | otherwise = Nothing
 
 findOwnershipTypeViolations :: Map.Map String OwnershipType -> Map.Map String String -> [String]
@@ -260,7 +261,7 @@ findOwnershipTypeViolations ownershipMap typeMap =
 
 validateOwnershipWithTypes :: Map.Map String OwnershipType -> Map.Map String String -> Bool
 validateOwnershipWithTypes ownershipMap typeMap =
-  null $ findOwnershipTypeViolations ownershipMap typeMap
+  L.null $ findOwnershipTypeViolations ownershipMap typeMap
 
 validateDependentTypes :: Map.Map String String -> Map.Map String String -> Map.Map String String
 validateDependentTypes types constraints = types  -- Simplified
@@ -269,6 +270,6 @@ checkTypeInvariants :: Map.Map String String -> Bool
 checkTypeInvariants typeMap = Map.size typeMap >= 0  -- Simplified
 
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` substrings haystack
+L.isInfixOf needle haystack = needle `elem` substrings haystack
   where
-    substrings s = [take i s | i <- [1..length s]]
+    substrings s = [take i s | i <- [1..L.length s]]

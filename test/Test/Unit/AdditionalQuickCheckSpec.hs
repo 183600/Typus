@@ -7,6 +7,7 @@ import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 import Parser (FileDirectives(..), BlockDirectives(..), CodeBlock(..), defaultFileDirectives, defaultBlockDirectives)
@@ -20,12 +21,12 @@ prop_trim_idempotent s =
 
 prop_splitBy_concat :: Char -> [String] -> Property
 prop_splitBy_concat delim parts =
-  delim `notElem` concat parts ==>
-  length (splitBy delim (concat parts)) === 1
+  delim `notElem` L.concat parts ==>
+  L.length (splitBy delim (L.concat parts)) === 1
 
 prop_removeLineComments_preserves_code :: String -> Property
 prop_removeLineComments_preserves_code s =
-  not ("//" `isInfixOf` s) ==>
+  not ("//" `L.isInfixOf` s) ==>
   removeLineComments s === s
 
 prop_posAfter_newline_increments_line :: SourcePos -> Property
@@ -78,11 +79,11 @@ tests = testGroup "Additional QuickCheck Tests"
   [ fastProperty "trim is idempotent" prop_trim_idempotent
   , fastProperty "splitBy on concatenated parts without delimiter" prop_splitBy_concat
   , fastProperty "removeLineComments preserves code without //" prop_removeLineComments_preserves_code
-  , fastProperty "posAfter newline increments line and resets column" prop_posAfter_newline_increments_line
+  , fastProperty "posAfter newline increments line L.and resets column" prop_posAfter_newline_increments_line
   , fastProperty "mergeSpans contains both spans" prop_mergeSpans_contains_both
   , fastProperty "isValidSpan checks start <= end" prop_isValidSpan_reflexive
-  , fastProperty "defaultFileDirectives has all Nothing" prop_defaultFileDirectives_all_nothing
-  , fastProperty "defaultBlockDirectives has all Nothing" prop_defaultBlockDirectives_all_nothing
+  , fastProperty "defaultFileDirectives has L.all Nothing" prop_defaultFileDirectives_all_nothing
+  , fastProperty "defaultBlockDirectives has L.all Nothing" prop_defaultBlockDirectives_all_nothing
   , fastProperty "normalizeIndentation on empty string" prop_normalizeIndentation_empty
   , fastProperty "Map insert then lookup returns value" prop_map_insert_lookup
   ]

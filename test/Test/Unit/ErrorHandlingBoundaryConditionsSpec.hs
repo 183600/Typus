@@ -24,6 +24,7 @@ import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), startPos)
 import qualified Data.Text as T
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import Data.Either (isLeft, isRight)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 import Control.Exception (try, SomeException, evaluate)
 
@@ -31,10 +32,10 @@ import Control.Exception (try, SomeException, evaluate)
 tests :: TestTree
 tests =
   testGroup "Error Handling Boundary Conditions"
-    [ testGroup "Empty and Null Input Handling"
+    [ testGroup "Empty L.and Null Input Handling"
         [ testCase "Error handler handles empty input gracefully" $ do
             let emptyInput = ""
-                result = try $ evaluate (length emptyInput)
+                result = try $ evaluate (L.length emptyInput)
             case result of
               Left (e :: SomeException) -> 
                 assertFailure $ "Empty input caused exception: " ++ show e
@@ -43,7 +44,7 @@ tests =
 
         , testCase "Error handler handles null-like input" $ do
             let nullLikeInput = "\0\0\0"
-                result = try $ evaluate (length nullLikeInput)
+                result = try $ evaluate (L.length nullLikeInput)
             case result of
               Left (e :: SomeException) -> 
                 assertFailure $ "Null-like input caused exception: " ++ show e
@@ -63,7 +64,7 @@ tests =
     , testGroup "Extreme Input Sizes"
         [ testCase "Error handler handles very long lines" $ do
             let longLine = replicate 10000 'a' ++ "syntax_error_here"
-                result = try $ evaluate (length longLine)
+                result = try $ evaluate (L.length longLine)
             case result of
               Left (e :: SomeException) -> 
                 assertFailure $ "Very long line caused exception: " ++ show e
@@ -71,8 +72,8 @@ tests =
                 assertBool "Should handle long lines" (len > 10000)
 
         , testCase "Error handler handles deeply nested structures" $ do
-            let nestedInput = concat $ replicate 1000 "func test() { "
-                result = try $ evaluate (length nestedInput)
+            let nestedInput = L.concat $ replicate 1000 "func test() { "
+                result = try $ evaluate (L.length nestedInput)
             case result of
               Left (e :: SomeException) -> 
                 assertFailure $ "Deeply nested structure caused exception: " ++ show e
@@ -80,8 +81,8 @@ tests =
                 assertBool "Should handle deeply nested structures" True
 
         , testCase "Error handler handles input with many special characters" $ do
-            let specialChars = concat $ replicate 100 "!@#$%^&*()_+-=[]{}|;':\",./<>?"
-                result = try $ evaluate (length specialChars)
+            let specialChars = L.concat $ replicate 100 "!@#$%^&*()_+-=[]{}|;':\",./<>?"
+                result = try $ evaluate (L.length specialChars)
             case result of
               Left (e :: SomeException) -> 
                 assertFailure $ "Special characters caused exception: " ++ show e
@@ -89,10 +90,10 @@ tests =
                 assertBool "Should handle special characters" True
         ]
 
-    , testGroup "Unicode and Encoding Edge Cases"
+    , testGroup "Unicode L.and Encoding Edge Cases"
         [ testCase "Error handler handles Unicode input" $ do
             let unicodeInput = "func test() { return \"Hello 世界 🌍\"; }"
-                result = try $ evaluate (length unicodeInput)
+                result = try $ evaluate (L.length unicodeInput)
             case result of
               Left (e :: SomeException) -> 
                 assertFailure $ "Unicode input caused exception: " ++ show e
@@ -101,7 +102,7 @@ tests =
 
         , testCase "Error handler handles mixed encodings" $ do
             let mixedEncoding = "func test() { return \"Hello\xC3\x28 World\"; }"  -- Invalid UTF-8 sequence
-                result = try $ evaluate (length mixedEncoding)
+                result = try $ evaluate (L.length mixedEncoding)
             case result of
               Left (e :: SomeException) -> 
                 assertFailure $ "Mixed encoding caused exception: " ++ show e
@@ -110,7 +111,7 @@ tests =
 
         , testCase "Error handler handles zero-width characters" $ do
             let zeroWidthInput = "func test() { return \"Hello\u200BWorld\"; }"  -- Zero-width space
-                result = try $ evaluate (length zeroWidthInput)
+                result = try $ evaluate (L.length zeroWidthInput)
             case result of
               Left (e :: SomeException) -> 
                 assertFailure $ "Zero-width characters caused exception: " ++ show e
@@ -129,9 +130,9 @@ tests =
             case error of
               CompilerError{errorMessage = msg} -> do
                 assertBool "Error message should contain long identifier" 
-                    (longIdentifier `isInfixOf` msg)
-                assertBool "Error message should be reasonable length" 
-                    (length msg < 2000)  -- Should truncate or summarize
+                    (longIdentifier `L.isInfixOf` msg)
+                assertBool "Error message should be reasonable L.length" 
+                    (L.length msg < 2000)  -- Should truncate L.or summarize
 
         , testCase "Error messages handle special characters in identifiers" $ do
             let specialId = "test!@#$%^&*()_+-=[]{}|;':\",./<>?"
@@ -143,7 +144,7 @@ tests =
             case error of
               CompilerError{errorMessage = msg} -> do
                 assertBool "Error message should handle special characters" 
-                    (specialId `isInfixOf` msg)
+                    (specialId `L.isInfixOf` msg)
 
         , testCase "Error messages handle empty context" $ do
             let error = CompilerError 
@@ -154,7 +155,7 @@ tests =
             case error of
               CompilerError{errorMessage = msg} -> do
                 assertBool "Should handle empty error message" 
-                    (length msg >= 0)  -- Should not crash
+                    (L.length msg >= 0)  -- Should not crash
         ]
 
     , testGroup "Source Location Edge Cases"
@@ -204,9 +205,9 @@ tests =
                     ]
             case cascadingErrors of
               errors -> do
-                assertEqual "Should handle multiple errors" 3 (length errors)
+                assertEqual "Should handle multiple errors" 3 (L.length errors)
                 assertBool "All errors should be preserved" 
-                    (all (\e -> errorSeverity e == Error) errors)
+                    (L.all (\e -> errorSeverity e == Error) errors)
 
         , testCase "Error recovery handles contradictory errors" $ do
             let contradictoryErrors = 
@@ -227,18 +228,18 @@ tests =
             case circularDepError of
               CoreError{coreErrorMessage = msg, coreErrorContext = ctx} -> do
                 assertBool "Should detect circular dependency" 
-                    ("circular" `isInfixOf` map toLower msg)
-                assertBool "Should provide context" (length ctx > 1)
+                    ("circular" `L.isInfixOf` map toLower msg)
+                assertBool "Should provide context" (L.length ctx > 1)
         ]
 
-    , testGroup "Memory and Performance Boundaries"
+    , testGroup "Memory L.and Performance Boundaries"
         [ testCase "Error handling doesn't leak memory with repeated errors" $ do
             let generateErrors n = replicate n $ 
                     CompilerError Error "Test error" (startPos "test.typus")
                 errors = generateErrors 1000
             case errors of
               _ -> do
-                assertEqual "Should handle many errors without issues" 1000 (length errors)
+                assertEqual "Should handle many errors without issues" 1000 (L.length errors)
 
         , testCase "Error handling performs well with large error messages" $ do
             let largeMessage = replicate 1000 "This is a very long error message. "
@@ -250,7 +251,7 @@ tests =
             case error of
               CompilerError{errorMessage = msg} -> do
                 assertBool "Should handle large error messages" 
-                    (length msg > 1000)
+                    (L.length msg > 1000)
 
         , testCase "Error handling gracefully handles stack overflow scenarios" $ do
             let deepError = CompilerError 
@@ -266,8 +267,8 @@ tests =
 
 -- Helper function for trimming
 trim :: String -> String
-trim = dropWhile (`elem` " \t\n\r") . reverse . dropWhile (`elem` " \t\n\r") . reverse
+trim = dropWhile (`elem` " \t\n\r") . L.reverse . dropWhile (`elem` " \t\n\r") . L.reverse
 
 -- Helper function for case conversion
 toLower :: String -> String
-toLower = map (\c -> if c >= 'A' && c <= 'Z' then toEnum (fromEnum c + 32) else c)
+toLower = L.map (\c -> if c >= 'A' && c <= 'Z' then toEnum (fromEnum c + 32) else c)

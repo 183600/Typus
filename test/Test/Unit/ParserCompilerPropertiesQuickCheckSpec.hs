@@ -10,7 +10,9 @@ import Parser (parseTypus, TypusFile(..), FileDirectives(..), BlockDirectives(..
 import Compiler (compile, CompilerError(..), extractDeclarations, extractFunctionCalls)
 import SourceLocation (SourceSpan(..))
 
-import Data.List (isInfixOf, isPrefixOf, sort)
+import qualified Data.List as L
+import Data.List (isInfixOf, isPrefixOf)
+import Data.List (sort)
 
 -- Helper functions
 validIdentifier :: Gen String
@@ -70,8 +72,8 @@ tests =
     [ testProperty "parseTypus handles empty input" $ prop_parse_empty
     , testProperty "parseTypus handles simple package declaration" $ prop_parse_simple_package
     , testProperty "parseTypus preserves function declarations" $ prop_parse_preserves_functions
-    , testProperty "extractDeclarations finds all function names" $ prop_extract_declarations_completeness
-    , testProperty "extractFunctionCalls finds all function calls" $ prop_extract_calls_completeness
+    , testProperty "extractDeclarations finds L.all function names" $ prop_extract_declarations_completeness
+    , testProperty "extractFunctionCalls finds L.all function calls" $ prop_extract_calls_completeness
     , testProperty "parseTypus roundtrip with simple programs" $ prop_parse_roundtrip_simple
     , testProperty "compile handles syntactically valid programs" $ prop_compile_valid_syntax
     , testProperty "compile fails on invalid syntax" $ prop_compile_invalid_syntax
@@ -84,7 +86,7 @@ prop_parse_empty :: Property
 prop_parse_empty = ioProperty $ do
   case parseTypus "" of
     Left _ -> return False
-    Right typusFile -> return $ null (tfBlocks typusFile)
+    Right typusFile -> return $ L.null (tfBlocks typusFile)
 
 -- | parseTypus should handle simple package declarations
 prop_parse_simple_package :: Property
@@ -92,7 +94,7 @@ prop_parse_simple_package = ioProperty $ do
   let source = "package main\nfunc main() {}\n"
   case parseTypus source of
     Left _ -> return False
-    Right typusFile -> return $ not $ null $ tfBlocks typusFile
+    Right typusFile -> return $ not $ L.null $ tfBlocks typusFile
 
 -- | parseTypus should preserve function declarations in content
 prop_parse_preserves_functions :: Property
@@ -102,17 +104,17 @@ prop_parse_preserves_functions = forAll simpleFunction $ \func -> ioProperty $ d
     Left _ -> return False
     Right typusFile -> do
       let content = unwords $ map cbContent $ tfBlocks typusFile
-      return $ any (`isInfixOf` content) ["func", "main"]
+      return $ L.any (`L.isInfixOf` content) ["func", "main"]
 
--- | extractDeclarations should find all function names present in source
+-- | extractDeclarations should find L.all function names present in source
 prop_extract_declarations_completeness :: Property
 prop_extract_declarations_completeness = forAll simpleProgram $ \program -> ioProperty $ do
   case parseTypus program of
     Left _ -> return True  -- If parsing fails, property is vacuously true
     Right typusFile -> do
       let declarations = extractDeclarations typusFile
-      let hasMain = any ("main" `isInfixOf`) declarations
-      return $ if "func main" `isInfixOf` program 
+      let hasMain = L.any ("main" `L.isInfixOf`) declarations
+      return $ if "func main" `L.isInfixOf` program 
                then hasMain 
                else True
 
@@ -123,8 +125,8 @@ prop_extract_calls_completeness = forAll programWithCalls $ \program -> ioProper
     Left _ -> return True
     Right typusFile -> do
       let calls = extractFunctionCalls typusFile
-      let hasPrintln = any ("println" `isInfixOf`) calls
-      return $ if "println(" `isInfixOf` program
+      let hasPrintln = L.any ("println" `L.isInfixOf`) calls
+      return $ if "println(" `L.isInfixOf` program
                then hasPrintln
                else True
 
@@ -138,7 +140,7 @@ prop_parse_roundtrip_simple = forAll simpleProgram $ \program -> ioProperty $ do
       let content = unlines $ map cbContent blocks
       case parseTypus content of
         Left _ -> return False
-        Right typusFile2 -> return $ length (tfBlocks typusFile) == length (tfBlocks typusFile2)
+        Right typusFile2 -> return $ L.length (tfBlocks typusFile) == L.length (tfBlocks typusFile2)
 
 -- | compile should handle syntactically valid programs without crashing
 prop_compile_valid_syntax :: Property
@@ -171,8 +173,8 @@ prop_parse_directive_consistency = forAll programWithDirectives $ \program -> io
       let FileDirectives { fdOwnership = ownership, fdDependentTypes = dependentTypes } = tfDirectives typusFile
       let hasOwnershipDirective = isJust ownership
       let hasDependentTypesDirective = isJust dependentTypes
-      let sourceHasOwnership = "ownership:" `isInfixOf` program
-      let sourceHasDependentTypes = "dependent_types:" `isInfixOf` program
+      let sourceHasOwnership = "ownership:" `L.isInfixOf` program
+      let sourceHasDependentTypes = "dependent_types:" `L.isInfixOf` program
       return $ hasOwnershipDirective == sourceHasOwnership &&
                 hasDependentTypesDirective == sourceHasDependentTypes
 
@@ -243,7 +245,7 @@ programWithDirectives :: Gen String
 programWithDirectives = do
   hasOwnership <- arbitrary
   hasDependentTypes <- arbitrary
-  let directives = concat 
+  let directives = L.concat 
         [ ["//! ownership: on" | hasOwnership]
         , ["//! dependent_types: off" | hasDependentTypes]
         ]

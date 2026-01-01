@@ -5,6 +5,7 @@ import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck (Property, forAll, Gen, arbitrary, elements, choose)
 import Utils (removeComments, removeLineComments)
+import qualified Data.List as L
 import Data.List (isInfixOf)
 
 -- | Tests for comment processing functions in Utils module
@@ -71,21 +72,21 @@ tests =
             ]
         
         , testGroup "QuickCheck properties"
-            [ fastProperty "removeLineComments never increases string length" $
-                \s -> length (removeLineComments s) <= length s
+            [ fastProperty "removeLineComments never increases string L.length" $
+                \s -> L.length (removeLineComments s) <= L.length s
             
             , fastProperty "removeLineComments preserves line count" $
-                \s -> length (lines s) == length (lines (removeLineComments s))
+                \s -> L.length (lines s) == L.length (lines (removeLineComments s))
             
-            , fastProperty "removeLineComments removes all // not in literals" $
+            , fastProperty "removeLineComments removes L.all // not in literals" $
                 \s -> not (hasUnescapedCommentMarker s) || 
-                       not (isInfixOf "//" (removeLineComments s))
+                       not (L.isInfixOf "//" (removeLineComments s))
             ]
         ]
     
     , testGroup "removeComments function"
         [ testGroup "Basic functionality"
-            [ testCase "removes both line and block comments" $ do
+            [ testCase "removes both line L.and block comments" $ do
                 let input = "hello // line comment\nworld /* block comment */\nend"
                     expected = "hello \nworld \nend"
                 removeComments input @?= expected
@@ -101,7 +102,7 @@ tests =
                 removeComments input @?= expected
             ]
         
-        , testGroup "String and char literal preservation"
+        , testGroup "String L.and char literal preservation"
             [ testCase "preserves // in strings within block comments" $ do
                 let input = "/* \"http://example.com\" */ let x = 1"
                     expected = "  let x = 1"
@@ -128,7 +129,7 @@ tests =
                 let input = "before /* unclosed\nafter"
                     result = removeComments input
                 assertBool "Should handle unclosed block comment" 
-                    (not (isInfixOf "/*" result))
+                    (not (L.isInfixOf "/*" result))
             
             , testCase "handles consecutive block comments" $ do
                 let input = "text1 /*c1*/ text2 /*c2*/ text3"
@@ -137,16 +138,16 @@ tests =
             ]
         
         , testGroup "QuickCheck properties"
-            [ fastProperty "removeComments never increases string length" $
-                \s -> length (removeComments s) <= length s
+            [ fastProperty "removeComments never increases string L.length" $
+                \s -> L.length (removeComments s) <= L.length s
             
-            , fastProperty "removeComments removes all /* not in literals" $
+            , fastProperty "removeComments removes L.all /* not in literals" $
                 \s -> not (hasUnescapedBlockCommentStart s) ||
-                       not (isInfixOf "/*" (removeComments s))
+                       not (L.isInfixOf "/*" (removeComments s))
             
-            , fastProperty "removeComments removes all */ not in literals" $
+            , fastProperty "removeComments removes L.all */ not in literals" $
                 \s -> not (hasUnescapedBlockCommentEnd s) ||
-                       not (isInfixOf "*/" (removeComments s))
+                       not (L.isInfixOf "*/" (removeComments s))
             ]
         ]
     
@@ -163,8 +164,8 @@ tests =
                   , "path := \"C:\\\\Program Files\\\\App\" // Windows path"
                   ]
                 result = removeComments input
-            assertBool "Should remove all comments correctly" $
-                not (isInfixOf "//" result) && not (isInfixOf "/*" result) && not (isInfixOf "*/" result)
+            assertBool "Should remove L.all comments correctly" $
+                not (L.isInfixOf "//" result) && not (L.isInfixOf "/*" result) && not (L.isInfixOf "*/" result)
         ]
     ]
 
@@ -188,7 +189,7 @@ hasMarkerOutsideLiterals marker = goNormal
   where
     goNormal [] = False
     goNormal s@(c:cs)
-        | marker `isPrefixOf` s = True
+        | marker `L.isPrefixOf` s = True
         | c == '"' = goInString cs
         | c == '\' = goInChar cs
         | otherwise = goNormal cs

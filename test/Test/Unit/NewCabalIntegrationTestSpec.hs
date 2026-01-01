@@ -3,6 +3,7 @@ module Test.Unit.NewCabalIntegrationTestSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.QuickCheck (property, forAll, Gen, arbitrary, choose, listOf1, elements)
+import qualified Data.List as L
 import Data.List (isPrefixOf, isSuffixOf, isInfixOf)
 import Data.Char (isSpace, isLetter, isDigit)
 
@@ -18,7 +19,7 @@ tests :: TestTree
 tests =
   testGroup "New Cabal Integration Tests"
     [ testGroup "Parser to Compiler integration"
-        [ testCase "simple variable declaration parses and compiles" $ do
+        [ testCase "simple variable declaration parses L.and compiles" $ do
             let input = "x := 42\n"
                 parseResult = parse input
             case parseResult of
@@ -43,7 +44,7 @@ tests =
                 case compileResult of
                   Left compileErr -> @?= "Compile error" (show compileErr)
                   Right output -> 
-                    "func add" `isInfixOf` output @?= True
+                    "func add" `L.isInfixOf` output @?= True
 
         , testCase "multiple statements in sequence" $ do
             let input = unlines
@@ -58,7 +59,7 @@ tests =
                 let compileResult = compile ast
                 case compileResult of
                   Left compileErr -> @?= "Compile error" (show compileErr)
-                  Right output -> length (lines output) @?= 3
+                  Right output -> L.length (lines output) @?= 3
         ]
 
     , testGroup "Error handling integration"
@@ -66,7 +67,7 @@ tests =
             let input = "x := 42  // invalid syntax"
                 parseResult = parse input
             case parseResult of
-              Left err -> "syntax" `isInfixOf` map toLower (show err) @?= True
+              Left err -> "syntax" `L.isInfixOf` map toLower (show err) @?= True
               Right _ -> @?= "Expected parse error" "Got success"
 
         , testCase "type errors are caught during compilation" $ do
@@ -80,7 +81,7 @@ tests =
               Right ast -> do
                 let compileResult = compile ast
                 case compileResult of
-                  Left compileErr -> "type" `isInfixOf` map toLower (show compileErr) @?= True
+                  Left compileErr -> "type" `L.isInfixOf` map toLower (show compileErr) @?= True
                   Right _ -> @?= "Expected compile error" "Got success"
         ]
 
@@ -95,11 +96,11 @@ tests =
             case parseResult of
               Left err -> @?= "Parse error" (show err)
               Right (ast, locations) -> do
-                length locations @?= 3
+                L.length locations @?= 3
                 let compileResult = compileWithLocations ast locations
                 case compileResult of
                   Left compileErr -> @?= "Compile error" (show compileErr)
-                  Right (output, outLocations) -> length outLocations @?= 3
+                  Right (output, outLocations) -> L.length outLocations @?= 3
         ]
 
     , testGroup "Property-based integration tests"
@@ -129,13 +130,13 @@ prop_errorLocationConsistency input =
        Right (ast, locations) ->
          case compileWithLocations ast locations of
            Left _ -> True
-           Right (_, outLocations) -> length outLocations >= length locations
+           Right (_, outLocations) -> L.length outLocations >= L.length locations
 
 -- | Property: multiple function definitions compile correctly
 prop_multipleFunctionsCompile :: [String] -> Bool
 prop_multipleFunctionsCompile funcNames =
-  let validNames = filter (all isLetter) funcNames
-      funcDefs = map (\name -> "func " ++ name ++ "() int { return 42 }") validNames
+  let validNames = L.filter (L.all isLetter) funcNames
+      funcDefs = L.map (\name -> "func " ++ name ++ "() int { return 42 }") validNames
       input = unlines funcDefs
       parseResult = parse input
   in case parseResult of
@@ -143,34 +144,34 @@ prop_multipleFunctionsCompile funcNames =
        Right ast ->
          case compile ast of
            Left _ -> True
-           Right output -> all (`isInfixOf` output) validNames
+           Right output -> L.all (`L.isInfixOf` output) validNames
 
 -- Helper function to convert to lowercase
 toLower :: String -> String
-toLower = map (\c -> if c >= 'A' && c <= 'Z' then toEnum (fromEnum c + 32) else c)
+toLower = L.map (\c -> if c >= 'A' && c <= 'Z' then toEnum (fromEnum c + 32) else c)
 
 -- Mock parse function for testing
 parse :: String -> Either String String
-parse input = if "invalid" `isInfixOf` input 
+parse input = if "invalid" `L.isInfixOf` input 
               then Left "Parse error: invalid syntax"
               else Right input
 
 -- Mock compile function for testing
 compile :: String -> Either String String
-compile ast = if "type" `isInfixOf` ast && "mismatch" `isInfixOf` ast
+compile ast = if "type" `L.isInfixOf` ast && "mismatch" `L.isInfixOf` ast
               then Left "Type error: type mismatch"
-              else Right (map (\c -> if c == ':' then '=' else c) ast)
+              else Right (L.map (\c -> if c == ':' then '=' else c) ast)
 
 -- Mock parseWithLocations function
 parseWithLocations :: String -> Either String (String, [Int])
 parseWithLocations input = 
-  if "invalid" `isInfixOf` input 
+  if "invalid" `L.isInfixOf` input 
   then Left "Parse error: invalid syntax"
   else Right (input, [1,2,3])
 
 -- Mock compileWithLocations function
 compileWithLocations :: String -> [Int] -> Either String (String, [Int])
 compileWithLocations ast locations = 
-  if "type" `isInfixOf` ast && "mismatch" `isInfixOf` ast
+  if "type" `L.isInfixOf` ast && "mismatch" `L.isInfixOf` ast
   then Left "Type error: type mismatch"
-  else Right (map (\c -> if c == ':' then '=' else c) ast, locations)
+  else Right (L.map (\c -> if c == ':' then '=' else c) ast, locations)

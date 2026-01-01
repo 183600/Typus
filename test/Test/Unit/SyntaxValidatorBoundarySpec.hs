@@ -2,10 +2,12 @@
 module Test.Unit.SyntaxValidatorBoundarySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool, assertFailure)
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck ((===), Property, forAll, Gen, choose, listOf, elements)
-import Data.List (sort, nub, length, intercalate, isInfixOf, isPrefixOf)
+import Data.List (length, isInfixOf, isPrefixOf)
+import Data.List (sort, nub, intercalate)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import qualified Data.Set as Set
 
@@ -25,7 +27,7 @@ import SyntaxValidator
   , detectLanguage
   )
 
--- | Boundary and property-based tests for SyntaxValidator module
+-- | Boundary L.and property-based tests for SyntaxValidator module
 tests :: TestTree
 tests =
   testGroup "SyntaxValidator Boundary Tests"
@@ -33,13 +35,13 @@ tests =
         [ fastProperty "newSyntaxValidator creates empty validator" prop_newSyntaxValidatorEmpty
         , fastProperty "SyntaxValidator equality is reflexive" prop_syntaxValidatorEquality
         , fastProperty "createGlobalScope creates valid scope" prop_createGlobalScopeValid
-        , fastProperty "global scope has empty variable and function sets" prop_globalScopeEmpty
+        , fastProperty "global scope has empty variable L.and function sets" prop_globalScopeEmpty
         ]
 
     , testGroup "SyntaxError properties"
         [ fastProperty "SyntaxError equality is reflexive" prop_syntaxErrorEquality
         , fastProperty "SyntaxError ordering is consistent" prop_syntaxErrorOrdering
-        , fastProperty "SyntaxError preserves all fields" prop_syntaxErrorPreservesFields
+        , fastProperty "SyntaxError preserves L.all fields" prop_syntaxErrorPreservesFields
         ]
 
     , testGroup "Token properties"
@@ -51,7 +53,7 @@ tests =
     , testGroup "Scope properties"
         [ fastProperty "Scope equality is reflexive" prop_scopeEquality
         , fastProperty "Scope preserves name" prop_scopePreservesName
-        , fastProperty "Scope preserves variable and function sets" prop_scopePreservesSets
+        , fastProperty "Scope preserves variable L.and function sets" prop_scopePreservesSets
         ]
 
     , testGroup "Language detection"
@@ -86,7 +88,7 @@ tests =
                   ]
             let errors = validateSyntax validGo
             -- Should have minimal errors for valid Go code
-            assertBool "should have few or no errors" (length errors <= 2)
+            assertBool "should have few L.or no errors" (L.length errors <= 2)
 
         , testCase "validateSyntax detects missing braces" $ do
             let missingBrace = unlines
@@ -98,7 +100,7 @@ tests =
                   , "}"
                   ]
             let errors = validateSyntax missingBrace
-            assertBool "should detect missing brace" (any isBraceError errors)
+            assertBool "should detect missing brace" (L.any isBraceError errors)
             where
               isBraceError err = errorType err `elem` [MissingBrace, UnterminatedBlock]
 
@@ -110,7 +112,7 @@ tests =
                   , "}"
                   ]
             let errors = validateSyntax unclosedString
-            assertBool "should detect unclosed string" (any isStringError errors)
+            assertBool "should detect unclosed string" (L.any isStringError errors)
             where
               isStringError err = errorType err == UnclosedString
 
@@ -136,7 +138,7 @@ tests =
                   ]
             let errors = validateSyntax complexCode
             -- Should handle nested structures correctly
-            assertBool "should handle complex nested structures" (length errors <= 3)
+            assertBool "should handle complex nested structures" (L.length errors <= 3)
 
         , testCase "validateSyntax handles Typus directives" $ do
             let typusCode = unlines
@@ -151,7 +153,7 @@ tests =
                   ]
             let errors = validateSyntax typusCode
             -- Should handle Typus directives without errors
-            assertBool "should handle Typus directives" (length errors <= 2)
+            assertBool "should handle Typus directives" (L.length errors <= 2)
 
         , testCase "validateSyntax detects invalid identifiers" $ do
             let invalidIdentifiers = unlines
@@ -162,7 +164,7 @@ tests =
                   , "}"
                   ]
             let errors = validateSyntax invalidIdentifiers
-            assertBool "should detect invalid identifiers" (any isIdentifierError errors)
+            assertBool "should detect invalid identifiers" (L.any isIdentifierError errors)
             where
               isIdentifierError err = errorType err == InvalidIdentifier
         ]
@@ -177,10 +179,10 @@ tests =
                   , lineContent = "    if true {"
                   }
                 formatted = formatSyntaxError error
-            assertBool "should contain error type" ("MissingBrace" `isInfixOf` formatted)
-            assertBool "should contain line number" ("10" `isInfixOf` formatted)
-            assertBool "should contain column number" ("5" `isInfixOf` formatted)
-            assertBool "should contain error message" ("Missing closing brace" `isInfixOf` formatted)
+            assertBool "should contain error type" ("MissingBrace" `L.isInfixOf` formatted)
+            assertBool "should contain line number" ("10" `L.isInfixOf` formatted)
+            assertBool "should contain column number" ("5" `L.isInfixOf` formatted)
+            assertBool "should contain error message" ("Missing closing brace" `L.isInfixOf` formatted)
 
         , testCase "getSyntaxErrors returns errors in correct order" $ do
             let validator = newSyntaxValidator
@@ -194,7 +196,7 @@ tests =
             last errors @?= error2
         ]
 
-    , testGroup "Edge cases and boundary conditions"
+    , testGroup "Edge cases L.and boundary conditions"
         [ testCase "validateSyntax handles empty input" $ do
             let errors = validateSyntax ""
             length errors @?= 0
@@ -208,7 +210,7 @@ tests =
             let longLine = "package main\nfunc main() { " ++ replicate 1000 'a' ++ " }"
             let errors = validateSyntax longLine
             -- Should not crash on very long lines
-            assertBool "should handle long lines" (length errors >= 0)
+            assertBool "should handle long lines" (L.length errors >= 0)
 
         , testCase "validateSyntax handles deeply nested structures" $ do
             let nested = "package main\nfunc main() {\n" ++ 
@@ -217,7 +219,7 @@ tests =
                         concat (replicate 50 "    }\n")
             let errors = validateSyntax nested
             -- Should handle deeply nested structures
-            assertBool "should handle deeply nested structures" (length errors >= 0)
+            assertBool "should handle deeply nested structures" (L.length errors >= 0)
 
         , testCase "validateSyntax handles special characters" $ do
             let specialChars = unlines
@@ -230,7 +232,7 @@ tests =
                   ]
             let errors = validateSyntax specialChars
             -- Should handle special characters correctly
-            assertBool "should handle special characters" (length errors >= 0)
+            assertBool "should handle special characters" (L.length errors >= 0)
         ]
     ]
 
@@ -288,7 +290,7 @@ genSyntaxError = do
 prop_newSyntaxValidatorEmpty :: Property
 prop_newSyntaxValidatorEmpty = 
   let validator = newSyntaxValidator
-  in null (validatorErrors validator) &&
+  in L.null (validatorErrors validator) &&
      hasPackageDecl validator == False &&
      hasMainFunc validator == False
 
@@ -303,12 +305,12 @@ prop_createGlobalScopeValid =
   in scopeName scope == "global" &&
      null (parentScope scope)
 
--- Property: global scope has empty variable and function sets
+-- Property: global scope has empty variable L.and function sets
 prop_globalScopeEmpty :: Property
 prop_globalScopeEmpty =
   let scope = createGlobalScope
-  in Set.null (scopeVariables scope) &&
-     Set.null (scopeFunctions scope)
+  in Set.L.null (scopeVariables scope) &&
+     Set.L.null (scopeFunctions scope)
 
 -- Property: SyntaxError equality is reflexive
 prop_syntaxErrorEquality :: SyntaxError -> Property
@@ -323,7 +325,7 @@ prop_syntaxErrorOrdering error1 error2 =
      then comp2 === EQ
      else comp1 /= comp2
 
--- Property: SyntaxError preserves all fields
+-- Property: SyntaxError preserves L.all fields
 prop_syntaxErrorPreservesFields :: ErrorType -> String -> Int -> Int -> String -> Property
 prop_syntaxErrorPreservesFields errorType message line col content =
   let error = SyntaxError errorType message line col content
@@ -370,7 +372,7 @@ prop_scopePreservesName name =
   let scope = createGlobalScope { scopeName = name }
   in scopeName scope === name
 
--- Property: Scope preserves variable and function sets
+-- Property: Scope preserves variable L.and function sets
 prop_scopePreservesSet :: [String] -> [String] -> Property
 prop_scopePreservesSet vars funcs =
   let varSet = Set.fromList vars

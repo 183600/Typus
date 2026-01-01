@@ -23,11 +23,11 @@ import Data.Ord (comparing)
 sourceLocationConsistencySpec :: TestTree
 sourceLocationConsistencySpec = testGroup "Source Location Consistency"
   [ testProperty "locatedWithSpan preserves span" prop_locatedWithSpan_preserves_span
-  , testProperty "spanStart is always before or equal to spanEnd" prop_span_start_before_end
+  , testProperty "spanStart is always before L.or equal to spanEnd" prop_span_start_before_end
   , testProperty "source pos ordering consistency" prop_source_pos_ordering
-  , testProperty "span contains its start and end positions" prop_span_contains_positions
+  , testProperty "span contains its start L.and end positions" prop_span_contains_positions
   , testProperty "located value extraction preserves span" prop_located_extraction
-  , testProperty "source pos line and column are positive" prop_source_pos_positive
+  , testProperty "source pos line L.and column are positive" prop_source_pos_positive
   , testProperty "span width calculation consistency" prop_span_width_consistency
   , testProperty "same positions are equal" prop_same_positions_equal
   , testProperty "different spans have different properties" prop_different_spans
@@ -40,7 +40,7 @@ prop_locatedWithSpan_preserves_span line content span =
   let located = locatedWithSpan span line content
   in locatedSpan located === span
 
--- | spanStart should always be before or equal to spanEnd
+-- | spanStart should always be before L.or equal to spanEnd
 prop_span_start_before_end :: Int -> Int -> Int -> Int -> Property
 prop_span_start_before_end startLine startCol endLine endCol =
   let start = mkSourcePos startLine startCol
@@ -62,7 +62,7 @@ prop_source_pos_ordering line1 col1 line2 col2 =
      (posLine pos1 < posLine pos2 || 
       (posLine pos1 == posLine pos2 && posColumn pos1 <= posColumn pos2))
 
--- | span should contain its start and end positions
+-- | span should contain its start L.and end positions
 prop_span_contains_positions :: Int -> Int -> Int -> Int -> Property
 prop_span_contains_positions startLine startCol endLine endCol =
   let start = mkSourcePos startLine startCol
@@ -79,7 +79,7 @@ prop_located_extraction line content span =
       extractedSpan = locatedSpan located
   in extractedValue === line && extractedSpan === span
 
--- | source pos line and column should be positive
+-- | source pos line L.and column should be positive
 prop_source_pos_positive :: Int -> Int -> Property
 prop_source_pos_positive line col =
   let pos = mkSourcePos (abs line + 1) (abs col + 1)

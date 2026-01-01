@@ -1,6 +1,7 @@
 module Test.Unit.NewQuickCheckTestSuite5Spec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
+import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
 import Test.QuickCheck (Property, (==>), forAll, Gen, arbitrary, choose, oneof, elements)
 
@@ -136,21 +137,21 @@ tests =
                     , BorrowWhileMutBorrowed "x"
                     , MultipleMutBorrows "x"
                     ]
-            all (`contains` "x") (map show errors) @?= True
+            L.all (`contains` "x") (map show errors) @?= True
         ]
 
     , testGroup "QuickCheck properties"
         [ fastProperty "OwnershipType ordering is transitive" prop_ownershipTypeOrderingTransitive
         , fastProperty "OwnershipType ordering is antisymmetric" prop_ownershipTypeOrderingAntisymmetric
         , fastProperty "OwnershipError ordering is consistent" prop_ownershipErrorOrderingConsistent
-        , fastProperty "OwnershipTransfer preserves source and dest" prop_ownershipTransferPreservesFields
+        , fastProperty "OwnershipTransfer preserves source L.and dest" prop_ownershipTransferPreservesFields
         , fastProperty "OwnershipError string roundtrip" prop_ownershipErrorStringRoundtrip
         ]
     ]
 
 -- Helper function to check if string contains substring
 contains :: String -> String -> Bool
-contains needle haystack = needle `isInfixOf` haystack
+contains needle haystack = needle `L.isInfixOf` haystack
 
 -- ============================================================================
 -- QuickCheck Properties
@@ -173,7 +174,7 @@ prop_ownershipErrorOrderingConsistent err1 err2 =
 prop_ownershipErrorStringRoundtrip :: OwnershipError -> Bool
 prop_ownershipErrorStringRoundtrip err =
     let errStr = show err
-    in length errStr > 0  -- Basic check that string representation is non-empty
+    in L.length errStr > 0  -- Basic check that string representation is non-empty
 
 -- OwnershipTransfer properties
 prop_ownershipTransferPreservesFields :: String -> String -> Bool
@@ -217,5 +218,5 @@ genOwnershipTransfer = do
 genValidIdentifier :: Gen String
 genValidIdentifier = do
     first <- elements ['a'..'z']
-    rest <- arbitrary `suchThat` all (`elem` ['a'..'z'] ++ ['0'..'9'] ++ "_")
+    rest <- arbitrary `suchThat` L.all (`elem` ['a'..'z'] ++ ['0'..'9'] ++ "_")
     return (first : rest)

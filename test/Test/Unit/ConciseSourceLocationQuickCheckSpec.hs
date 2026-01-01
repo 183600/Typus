@@ -14,7 +14,7 @@ tests =
         [ testProperty "startPos has consistent values" $
             \_ -> posLine startPos === 1 && posColumn startPos === 1 && posOffset startPos === 0
             
-        , testProperty "posAfter newline increments line and resets column" $
+        , testProperty "posAfter newline increments line L.and resets column" $
             \pos -> posAfter '\n' pos === 
                 SourcePos (posLine pos + 1) 1 (posOffset pos + 1)
                 
@@ -24,7 +24,7 @@ tests =
                     in posColumn newPos === expectedCol
                     && posOffset newPos === posOffset pos + 1
                     
-        , testProperty "posAfter regular character increments column and offset" $
+        , testProperty "posAfter regular character increments column L.and offset" $
             \pos c -> not (c `elem` ['\n', '\t']) ==> 
                 posAfter c pos === 
                 SourcePos (posLine pos) (posColumn pos + 1) (posOffset pos + 1)
