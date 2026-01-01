@@ -1227,7 +1227,7 @@ test-suite typus-test
         Test.Unit.OwnershipBoundarySpec,
         Test.Unit.DependentTypesBoundarySpec,
         Test.Unit.StringUtilsBoundarySpec,
-        Test.Unit.PerformanceBoundarySpec,
+        Test.Unit.PerformanceBoundarySpec
         
         -- New QuickCheck Test Modules (Added for enhanced coverage)
         -- Note: These modules are already listed above
