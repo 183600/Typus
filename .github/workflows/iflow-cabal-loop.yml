@@ -28,8 +28,15 @@ jobs:
 
       GH_TOKEN: ${{ github.token }}
 
-      # 你需要在 GitHub Secrets 里配置它（见下方说明）
+      # 你需要在 GitHub Secrets 里配置它
       GITEE_REMOTE_URL: ${{ secrets.GITEE_REMOTE_URL }}
+
+      # 可选：如需走镜像（更适合国内网络），把它改成你的镜像地址
+      # 例如：https://mirrors.tuna.tsinghua.edu.cn/hackage/
+      CABAL_MIRROR_URL: ""
+
+      # 可选：强制 cabal 使用 curl 传输（CI 上通常更稳）
+      CABAL_TRANSPORT: "curl"
 
     steps:
       - name: Checkout with PAT
@@ -77,16 +84,64 @@ jobs:
         with:
           ghc-version: 'latest'
           cabal-version: 'latest'
+          # 关键：不要让 setup action 内部自动 cabal update（它失败会直接让整个 step exit 1）
+          cabal-update: false
 
-      - name: Cache cabal store
+      - name: Show tool versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          ghc --version
+          cabal --version
+
+      - name: Cache cabal (store + index) and dist-newstyle
         uses: actions/cache@v4
         with:
           path: |
             ~/.cabal/store
+            ~/.cabal/packages
             dist-newstyle
           key: cabal-${{ runner.os }}-${{ hashFiles('**/*.cabal','cabal.project*') }}
           restore-keys: |
             cabal-${{ runner.os }}-
+
+      - name: Configure cabal (transport + optional mirror)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p ~/.cabal
+          if [ ! -f ~/.cabal/config ]; then
+            cabal user-config init
+          fi
+
+          # transport: curl（更稳）
+          if [ "${CABAL_TRANSPORT:-}" = "curl" ]; then
+            if ! grep -qE '^[[:space:]]*transport:[[:space:]]*curl[[:space:]]*$' ~/.cabal/config; then
+              printf '\ntransport: curl\n' >> ~/.cabal/config
+            fi
+          fi
+
+          # 可选：切换到镜像（仅当 CABAL_MIRROR_URL 非空）
+          if [ -n "${CABAL_MIRROR_URL:-}" ]; then
+            # 将 hackage-repo 的 url 替换为镜像
+            # 兼容常见的 config 形式：直接替换任意包含 hackage.haskell.org 的 url 行
+            sed -i "s#^url: .*hackage\\.haskell\\.org.*#url: ${CABAL_MIRROR_URL}#g" ~/.cabal/config || true
+          fi
+
+      - name: Cabal update (retry)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in 1 2 3 4 5; do
+            echo "cabal update attempt $i"
+            if cabal update; then
+              exit 0
+            fi
+            sleep $((i * 5))
+          done
+          echo "cabal update failed after retries" >&2
+          exit 1
 
       - name: Make loop script executable
         shell: bash
@@ -107,7 +162,7 @@ jobs:
           set -euo pipefail
           BRANCH="${WORK_BRANCH:-master}"
 
-          # 确保 gitee 远端存在（不打印 URL，避免日志泄漏；Secrets 会被 mask，但仍建议谨慎）
+          # 确保 gitee 远端存在（不打印 URL，避免日志泄漏）
           if git remote get-url gitee >/dev/null 2>&1; then
             git remote set-url gitee "${GITEE_REMOTE_URL}"
           else
@@ -131,6 +186,5 @@ jobs:
           fi
 
           # 推送到 GitHub（origin）和 Gitee（gitee）
-          # --follow-tags 会推送可达的 annotated tags（你的 release tag 是 annotated）
           git push origin "HEAD:${BRANCH}" --follow-tags
           git push gitee "HEAD:${BRANCH}" --follow-tags --force
