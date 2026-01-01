@@ -84,7 +84,7 @@ jobs:
         with:
           ghc-version: 'latest'
           cabal-version: 'latest'
-          # 关键：不要让 setup action 内部自动 cabal update（它失败会直接让整个 step exit 1）
+          # 关键：不要让 setup action 内部自动 cabal update
           cabal-update: false
 
       - name: Show tool versions
@@ -105,7 +105,7 @@ jobs:
           restore-keys: |
             cabal-${{ runner.os }}-
 
-      - name: Configure cabal (transport + optional mirror)
+      - name: Configure cabal (http-transport + optional mirror)
         shell: bash
         run: |
           set -euo pipefail
@@ -115,27 +115,26 @@ jobs:
             cabal user-config init
           fi
 
-          # transport: curl（更稳）
+          # 使用 curl 作为 http 传输（cabal 识别的是 http-transport）
           if [ "${CABAL_TRANSPORT:-}" = "curl" ]; then
-            if ! grep -qE '^[[:space:]]*transport:[[:space:]]*curl[[:space:]]*$' ~/.cabal/config; then
-              printf '\ntransport: curl\n' >> ~/.cabal/config
+            if ! grep -qE '^[[:space:]]*http-transport:[[:space:]]*curl[[:space:]]*$' ~/.cabal/config; then
+              printf '\nhttp-transport: curl\n' >> ~/.cabal/config
             fi
           fi
 
           # 可选：切换到镜像（仅当 CABAL_MIRROR_URL 非空）
           if [ -n "${CABAL_MIRROR_URL:-}" ]; then
-            # 将 hackage-repo 的 url 替换为镜像
-            # 兼容常见的 config 形式：直接替换任意包含 hackage.haskell.org 的 url 行
-            sed -i "s#^url: .*hackage\\.haskell\\.org.*#url: ${CABAL_MIRROR_URL}#g" ~/.cabal/config || true
+            # 兼容缩进：匹配任何以 url: 开头且包含 hackage.haskell.org 的行
+            sed -i -E "s#^([[:space:]]*url:[[:space:]]*).*(hackage\\.haskell\\.org).*#\\1${CABAL_MIRROR_URL}#g" ~/.cabal/config || true
           fi
 
-      - name: Cabal update (retry)
+      - name: Cabal update (retry, ignore project)
         shell: bash
         run: |
           set -euo pipefail
           for i in 1 2 3 4 5; do
             echo "cabal update attempt $i"
-            if cabal update; then
+            if cabal update --ignore-project; then
               exit 0
             fi
             sleep $((i * 5))
