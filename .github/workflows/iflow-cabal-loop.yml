@@ -14,7 +14,35 @@ permissions:
   contents: write
 
 jobs:
+  # 检查是否应该运行
+  check-trigger:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+      - name: Check commit message
+        id: check
+        run: |
+          # workflow_dispatch 总是运行
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # 获取最新的 commit message
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          
+          # 只有包含 [LOOP-CONTINUE] 标记的 push 才触发
+          if [[ "$COMMIT_MSG" == *"[LOOP-CONTINUE]"* ]]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ 跳过：commit message 不包含 [LOOP-CONTINUE] 标记"
+          fi
+
   run-5h:
+    needs: check-trigger
+    if: needs.check-trigger.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 360
     env:
@@ -169,9 +197,13 @@ jobs:
           fi
 
           # 最后统一提交一次（如果有 staged 变更）
+          # 使用 [LOOP-CONTINUE] 标记，确保这次 push 能触发下一轮
           git add -A
           if ! git diff --cached --quiet; then
-            git commit -m "ci: ${RUN_HOURS}h batch update (run $GITHUB_RUN_ID)" || true
+            git commit -m "ci: ${RUN_HOURS}h batch update (run $GITHUB_RUN_ID) [LOOP-CONTINUE]" || true
+          else
+            # 即使没有变更，也创建一个空提交来触发下一轮
+            git commit --allow-empty -m "ci: ${RUN_HOURS}h loop continue (run $GITHUB_RUN_ID) [LOOP-CONTINUE]" || true
           fi
 
           # marker 可能在 env 指定路径，也可能在真实 gitdir 下（兼容 worktree 场景）
