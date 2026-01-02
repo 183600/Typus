@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
+
 {-# OPTIONS_GHC -Wno-unused-matches #-}
 {-# OPTIONS_GHC -Wno-type-defaults #-}
 {-# OPTIONS_GHC -Wno-unused-local-binds #-}
@@ -18,10 +18,10 @@ import Data.Char (isSpace, isAlphaNum, isLetter)
 import Data.Maybe (isJust, isNothing)
 
 import ErrorHandler
-  ( ErrorHandler(..), ErrorContext(..), ErrorSeverity(..)
-  , handleError, createError, formatError
+  ( TypeError(..), ErrorContext(..), ErrorSeverity(..)
+  , formatError, errorAt, errorWithCategory
   )
-import SourceLocation (SourcePos(..), SourceSpan(..), mkSourceSpan, mkSourcePos)
+import SourceLocation (SourcePos(..), SourceSpan(..))
 
 -- Simple arbitrary instances for error handling testing
 instance Arbitrary ErrorSeverity where

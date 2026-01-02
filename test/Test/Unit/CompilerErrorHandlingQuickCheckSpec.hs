@@ -6,13 +6,17 @@ import Test.Tasty
 import qualified Data.List as L
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
+import Control.Monad.State (execState)
 
 import Compiler.Errors.Core
-import Compiler (CompilerError(..), CompilationPhase(..))
+import Compiler (CompilationPhase(..))
 import SourceLocation (SourcePos(..), SourceSpan(..))
 
 import qualified Data.Text as T
 import Data.Maybe (isJust, isNothing)
+
+instance Arbitrary T.Text where
+  arbitrary = T.pack <$> arbitrary
 
 -- Arbitrary instances for error types
 instance Arbitrary ErrorSeverity where
@@ -38,23 +42,31 @@ instance Arbitrary SourceSpan where
   arbitrary = SourceSpan <$> arbitrary <*> arbitrary
 
 instance Arbitrary ErrorLocation where
-  arbitrary = ErrorLocation <$> arbitrary <*> arbitrary
+  arbitrary = ErrorLocation <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 instance Arbitrary ErrorContext where
   arbitrary = do
-    pos <- arbitrary
-    ctx <- arbitrary
-    return $ ErrorContext pos ctx
+    contextCode <- arbitrary
+    contextFunction <- arbitrary
+    contextVariable <- arbitrary
+    contextType <- arbitrary
+    contextAdditional <- arbitrary
+    return $ ErrorContext contextCode contextFunction contextVariable contextType contextAdditional
 
-instance Arbitrary CompilerError where
+instance Arbitrary TypeError where
   arbitrary = do
+    errorId <- arbitrary
     severity <- arbitrary
     category <- arbitrary
-    location <- arbitrary
     message <- arbitrary
-    phase <- arbitrary
-    suggestion <- arbitrary
-    return $ CompilerError severity category location message phase suggestion
+    location <- arbitrary
+    context <- arbitrary
+    let recovery = errorRecovery
+    suggestions <- arbitrary
+    relatedErrors <- arbitrary
+    errorChain <- arbitrary
+    timestamp <- arbitrary
+    return $ TypeError errorId severity category message location context recovery suggestions relatedErrors errorChain timestamp
 
 instance Arbitrary CompilationPhase where
   arbitrary = elements
@@ -87,48 +99,42 @@ testSeverityOrdering severity1 severity2 =
 
 testErrorContext :: ErrorContext -> Property
 testErrorContext context =
-  let pos = errorContextPosition context
-      ctx = errorContextInfo context
-  in isJust pos && isJust ctx === True
+  let code = contextCode context
+      func = contextFunction context
+  in (isJust code || isJust func) === True
 
 testErrorLocationFormatting :: ErrorLocation -> Property
 testErrorLocationFormatting location =
-  let formatted = formatErrorWithLocation location "Test message"
-  in (T.length formatted > 0) === True
+  let error = errorAt "test" (T.pack "Test message") location
+      formatted = formatErrorWithLocation error
+  in (T.length (T.pack formatted) > 0) === True
 
-testErrorCollector :: [CompilerError] -> Property
+testErrorCollector :: [TypeError] -> Property
 testErrorCollector errors =
-  let collector = newErrorCollector
-      collectorWithErrors = foldl addError collector errors
-      finalErrors = getErrors collectorWithErrors
+  let collectorErrors = execState (mapM_ addError errors) []
+      finalErrors = getErrors collectorErrors
   in L.length finalErrors === L.length errors
 
-testErrorRecovery :: ErrorSeverity -> Property
-testErrorRecovery severity =
-  let canRecover = canRecoverFrom severity
-      shouldContinue = shouldContinueAfter severity
-  in case severity of
+testErrorRecovery :: TypeError -> Property
+testErrorRecovery typeError =
+  let canRecover = canRecoverFrom typeError
+      shouldContinue = shouldContinueAfter typeError
+      errorSeverity = severity typeError
+  in case errorSeverity of
     Info -> canRecover === True .&&. shouldContinue === True
     Warning -> canRecover === True .&&. shouldContinue === True
-    Error -> canRecover === False .&&. shouldContinue === True
+    Error -> canRecover === True .&&. shouldContinue === True
     Fatal -> canRecover === False .&&. shouldContinue === False
 
-testCombinedErrors :: CompilerError -> CompilerError -> Property
+testCombinedErrors :: TypeError -> TypeError -> Property
 testCombinedErrors error1 error2 =
-  let combined = CombinedError [error1, error2]
-      combinedSeverity = getCombinedSeverity combined
-  in (combinedSeverity `elem` [Info, Warning, Error, Fatal]) === True
+  let combinedErrors = combineErrors [error1, error2]
+      maxSeverity = maximum [severity error1, severity error2]
+  in all (\e -> severity e <= maxSeverity) combinedErrors === True
 
-testErrorTimestamps :: Property
-testErrorTimestamps =
-  let errors = []
-      combined = CombinedError errors
-  in case map getErrorSeverity errors of
-    [] -> Info === getCombinedSeverity combined
-    severities -> L.maximum severities === getCombinedSeverity combined
-
-getErrorSeverity :: CompilerError -> ErrorSeverity
-getErrorSeverity (CompilerError severity _ _ _ _ _) = severity
-
-getErrorTimestamp :: CompilerError -> Maybe String
-getErrorTimestamp (CompilerError _ _ _ _ _ _) = Nothing  -- Simplified for test
+testErrorTimestamps :: TypeError -> Property
+testErrorTimestamps typeError =
+  let ts = timestamp typeError
+  in case ts of
+    Nothing -> property True
+    Just timestamp -> property $ not (null timestamp)  -- Timestamp should not be empty if present

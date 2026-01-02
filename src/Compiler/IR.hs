@@ -56,7 +56,7 @@ data IRExpression = IRExpression
 data SourceIR = SourceIR
     { sourceTypusFile :: TypusFile
     , sourceText :: String
-    } deriving (Show)
+    } deriving (Show, Eq)
 
 -- | Semantic IR captures the Go AST after structural rewrites have been
 -- applied (imports inferred, main function synthesised, ...).

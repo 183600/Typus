@@ -211,7 +211,7 @@ prop_config_validation =
                 L.null (combinedErrors result) &&
                 L.null (analysisWarnings result) &&
                 L.null (analysisInfo result) &&
-                Map.L.null (typeEnvironment result)
+                Map.null (typeEnvironment result)
 
 -- Property: AnalysisResult with values
 prop_analysisresult_with_values :: [DepTS.DependentTypeError] -> [String] -> [String] -> Property
@@ -242,7 +242,7 @@ prop_analyzerstate_basic context scope =
   let state = AnalyzerState undefined undefined scope Map.empty context [] [] []
   in currentScope state === scope .&&.
      analysisContext state === context .&&.
-     Map.L.null (symbolTable state) .&&.
+     Map.null (symbolTable state) .&&.
      L.null (combinedErrorsAcc state) .&&.
      L.null (ownershipErrorsAcc state) .&&.
      L.null (dependentTypeErrorsAcc state)

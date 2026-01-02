@@ -3,11 +3,11 @@ module Test.Unit.CabalBoundaryConditionsSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
-import Test.Tasty.QuickCheck (testProperty)
+import Test.Tasty.QuickCheck (testProperty, property)
 
 import TestSupport.QuickCheck (fastProperty)
 
-import qualified Utils (trim, splitBy, removeComments, normalizeIndentation)
+import qualified Utils (trim, splitBy, splitByCollapsed, removeComments, normalizeIndentation)
 import qualified SourceLocation (SourcePos(..), SourceSpan(..), startPos, advancePos)
 import qualified Parser
 
@@ -47,49 +47,49 @@ tests =
 
     , testGroup "Numeric Boundary Conditions"
         [ testCase "Zero values" $ do
-            let pos = SourceLocation.SourcePos 0 0
-            SourceLocation.sourceLine pos @?= 0
-            SourceLocation.sourceColumn pos @?= 0
+            let pos = SourceLocation.SourcePos 0 0 0
+            SourceLocation.posLine pos @?= 0
+            SourceLocation.posColumn pos @?= 0
 
         , testCase "Maximum reasonable values" $ do
-            let pos = SourceLocation.SourcePos maxBound maxBound
-            SourceLocation.sourceLine pos @?= maxBound
-            SourceLocation.sourceColumn pos @?= maxBound
+            let pos = SourceLocation.SourcePos maxBound maxBound maxBound
+            SourceLocation.posLine pos @?= maxBound
+            SourceLocation.posColumn pos @?= maxBound
 
         , testCase "Minimum reasonable values" $ do
-            let pos = SourceLocation.SourcePos 1 1
-            SourceLocation.sourceLine pos @?= 1
-            SourceLocation.sourceColumn pos @?= 1
+            let pos = SourceLocation.SourcePos 1 1 0
+            SourceLocation.posLine pos @?= 1
+            SourceLocation.posColumn pos @?= 1
         ]
 
     , testGroup "Parser Boundary Conditions"
         [ testCase "Parser with only directives" $ do
             let directivesOnly = "// @ownership: true\n// @dependent-types: false\n"
-                result = Parser.parseTypus "directives" directivesOnly
+                result = Parser.parseTypus directivesOnly
             case result of
-              Left err -> @?= "Should handle directives only" (show err)
-              Right _ -> @?= "Success" "Directives success"
+              Left err -> "Should handle directives only" @?= show err
+              Right _ -> "Success" @?= "Directives success"
 
         , testCase "Parser with only comments" $ do
             let commentsOnly = "// line comment\n/* block comment */\n// another comment\n"
-                result = Parser.parseTypus "comments" commentsOnly
+                result = Parser.parseTypus commentsOnly
             case result of
-              Left err -> @?= "Should handle comments only" (show err)
-              Right _ -> @?= "Success" "Comments success"
+              Left err -> "Should handle comments only" @?= show err
+              Right _ -> "Success" @?= "Comments success"
 
         , testCase "Parser with malformed directives" $ do
             let malformed = "// @ownership: maybe\n// @invalid: directive\n"
-                result = Parser.parseTypus "malformed" malformed
+                result = Parser.parseTypus malformed
             case result of
-              Left _ -> @?= "Should handle gracefully" "Graceful handling"
-              Right _ -> @?= "Success" "Malformed success"
+              Left _ -> "Should handle gracefully" @?= "Graceful handling"
+              Right _ -> "Success" @?= "Malformed success"
 
         , testCase "Parser with extremely long identifiers" $ do
             let longIdent = "func " ++ replicate 1000 'a' ++ "() { return 1; }"
-                result = Parser.parseTypus "longident" longIdent
+                result = Parser.parseTypus longIdent
             case result of
               Left err -> L.length (show err) > 0 @?= True
-              Right _ -> @?= "Handle long identifier" "Long identifier handling"
+              Right _ -> "Handle long identifier" @?= "Long identifier handling"
         ]
 
     , testGroup "Source Location Boundary Conditions"
@@ -100,24 +100,24 @@ tests =
             SourceLocation.spanEnd span @?= pos
 
         , testCase "Single character spans" $ do
-            let start = SourceLocation.SourcePos 1 1
-                end = SourceLocation.SourcePos 1 1
+            let start = SourceLocation.SourcePos 1 1 0
+                end = SourceLocation.SourcePos 1 1 0
                 span = SourceLocation.SourceSpan start end
             SourceLocation.spanStart span @?= start
             SourceLocation.spanEnd span @?= end
 
         , testCase "Multi-line spans" $ do
-            let start = SourceLocation.SourcePos 1 10
-                end = SourceLocation.SourcePos 5 20
+            let start = SourceLocation.SourcePos 1 10 0
+                end = SourceLocation.SourcePos 5 20 100
                 span = SourceLocation.SourceSpan start end
             SourceLocation.spanStart span @?= start
             SourceLocation.spanEnd span @?= end
 
         , testCase "Position advancement at boundaries" $ do
-            let pos = SourceLocation.SourcePos maxBound maxBound
+            let pos = SourceLocation.startPos
                 advanced = SourceLocation.advancePos 'a' pos
             -- Should handle gracefully without overflow
-            SourceLocation.sourceLine advanced >= 1 @?= True
+            SourceLocation.posLine advanced >= 1 @?= True
         ]
 
     , testGroup "Comment Processing Boundary Conditions"
@@ -167,28 +167,27 @@ tests =
     , testGroup "Error Boundary Conditions"
         [ testCase "Multiple simultaneous errors" $ do
             let multipleErrors = "func test1() { return }\nfunc test2() { if }\nfunc test3() { { {"
-                result = Parser.parseTypus "multiple" multipleErrors
+                result = Parser.parseTypus multipleErrors
             case result of
               Left err -> L.length (show err) > 0 @?= True
-              Right _ -> @?= "Should detect errors" "Error detection"
+              Right _ -> "Should detect errors" @?= "Error detection"
 
         , testCase "Errors at file boundaries" $ do
             let startError = "{ return 1; }"
                 endError = "func test() { return 1;"
-                result1 = Parser.parseTypus "start" startError
-                result2 = Parser.parseTypus "end" endError
+                result1 = Parser.parseTypus startError
+                result2 = Parser.parseTypus endError
             case (result1, result2) of
-              (Left _, Left _) -> @?= "Both should fail" "Boundary errors"
-              _ -> @?= "Error handling" "Error handling"
+              (Left _, Left _) -> "Both should fail" @?= "Boundary errors"
+              _ -> "Error handling" @?= "Error handling"
 
-        , testProperty "Random unicode input doesn't crash" $ do
-            \input -> let result = Parser.parseTypus "unicode" input
-                      in case result of
-                           Left _ -> True
-                           Right _ -> True
+        , testProperty "Random unicode input doesn't crash" $ 
+            \input -> case Parser.parseTypus input of
+                           Left _ -> property True
+                           Right _ -> property True
         ]
     ]
   where
-    L.isInfixOf needle haystack = needle `elem` (substrings haystack)
+    isInfixOf needle haystack = needle `elem` (substrings haystack)
     substrings [] = []
     substrings s@(x:xs) = takeWhile (const True) s : substrings xs

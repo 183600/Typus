@@ -82,7 +82,12 @@ module Compiler.Errors.Core (
     fatalRecovery,
     errorRecovery,
     warningRecovery,
-    infoRecovery
+    infoRecovery,
+
+    -- Severity comparison utilities
+    isAtLeast,
+    severityPriority,
+    compareSeverity
 ) where
 
 import Data.Text (Text)

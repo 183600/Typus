@@ -20,18 +20,18 @@ tests =
         [ testCase "Parser handles comments removed by Utils" $ do
             let input = "// This is a comment\nfunc main() { /* block comment */ return 42; }"
                 cleaned = Utils.removeComments input
-                result = Parser.parseTypus "test" cleaned
+                result = Parser.parseTypus cleaned
             case result of
-              Left err -> @?= "Should parse successfully" (show err)
-              Right _ -> @?= "Success" "Success"
+              Left err -> "Should parse successfully" @?= show err
+              Right _ -> "Success" @?= "Success"
 
         , testCase "Parser handles trimmed whitespace" $ do
             let input = "  \n  func main() { return 42; }  \n  "
                 trimmed = Utils.trim input
                 result = Parser.parseTypus "test" trimmed
             case result of
-              Left err -> @?= "Should parse successfully" (show err)
-              Right _ -> @?= "Success" "Success"
+              Left err -> "Should parse successfully" @?= show err
+              Right _ -> "Success" @?= "Success"
 
         , testProperty "splitBy integration with parser line handling" $ do
             \input -> let lines = Utils.splitBy '\n' input
@@ -44,11 +44,11 @@ tests =
             let input = "func test() { return 1; }"
                 result = Parser.parseTypus "test" input
             case result of
-              Left _ -> @?= "Should parse successfully" "Parse failed"
+              Left _ -> "Should parse successfully" @?= "Parse failed"
               Right typusFile -> 
-                case Parser.tfCodeBlocks typusFile of
-                  [] -> @?= "Should have code blocks" "No code blocks found"
-                  (block:_) -> @?= "Should have valid span" "Valid span"
+                case Parser.tfBlocks typusFile of
+                  [] -> "Should have code blocks" @?= "No code blocks found"
+                  (block:_) -> "Should have valid span" @?= "Valid span"
 
         , testCase "Source position calculations are consistent" $ do
             let pos1 = SourceLocation.SourcePos 1 1
@@ -63,17 +63,17 @@ tests =
             let input = "func validated() { return true; }"
                 result = Parser.parseTypus "test" input
             case result of
-              Left _ -> @?= "Should parse successfully" "Parse failed"
+              Left _ -> "Parse failed" @?= "Should parse successfully"
               Right typusFile -> do
                 -- Assuming syntax validation would pass for simple valid code
-                @?= "Should validate" "Validation should pass"
+                "Validation should pass" @?= "Should validate"
 
         , testCase "Syntax validation catches parser edge cases" $ do
             let input = "func invalid() { return ; }"  -- Missing expression
                 result = Parser.parseTypus "test" input
             case result of
-              Left _ -> @?= "Expected parse failure" "Parse should fail"
-              Right _ -> @?= "Should not reach here" "Unexpected success"
+              Left _ -> "Parse should fail" @?= "Expected parse failure"
+              Right _ -> "Unexpected success" @?= "Should not reach here"
         ]
 
     , testGroup "FileDirectives Integration"
@@ -81,11 +81,11 @@ tests =
             let input = "// @ownership: true\n// @dependent-types: false\nfunc main() {}"
                 result = Parser.parseTypus "test" input
             case result of
-              Left _ -> @?= "Should parse successfully" "Parse failed"
+              Left _ -> "Parse failed" @?= "Should parse successfully"
               Right typusFile -> do
                 let directives = Parser.tfDirectives typusFile
-                Parser.fdOwnership directives @?= Just (SourceLocation.Located (SourceLocation.SourceSpan (SourceLocation.SourcePos 1 1) (SourceLocation.SourcePos 1 1)) True)
-                Parser.fdDependentTypes directives @?= Just (SourceLocation.Located (SourceLocation.SourceSpan (SourceLocation.SourcePos 1 2) (SourceLocation.SourcePos 1 2)) False)
+                Parser.fdOwnership directives @?= Just (SourceLocation.Located True (SourceLocation.SourcePos 1 1 0) (SourceLocation.SourceSpan (SourceLocation.SourcePos 1 1 0) (SourceLocation.SourcePos 1 1 0)))
+                Parser.fdDependentTypes directives @?= Just (SourceLocation.Located False (SourceLocation.SourcePos 1 2 0) (SourceLocation.SourceSpan (SourceLocation.SourcePos 1 2 0) (SourceLocation.SourcePos 1 2 0)))
         ]
 
     , testGroup "Error handling integration"
@@ -97,6 +97,6 @@ tests =
                 -- Error should contain location information
                 let errStr = show err
                 in "line" `elem` words errStr @?= True
-              Right _ -> @?= "Should fail" "Unexpected success"
+              Right _ -> "Unexpected success" @?= "Should fail"
         ]
     ]

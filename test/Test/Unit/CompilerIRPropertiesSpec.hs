@@ -12,6 +12,7 @@ import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives
 import Compiler.GoAst
 import Compiler.Errors
 import SourceLocation
+import TestSupport.Arbitrary ()
 import Data.Char (isSpace, isAlphaNum)
 import qualified Data.List as L
 import Data.List (isInfixOf, isPrefixOf)
@@ -50,14 +51,14 @@ sourceIRProperties = testGroup "Source IR Properties"
         let typusFile = TypusFile defaultFileDirectives [] codeBlocks []
             ir = buildSourceIR typusFile
             extractedText = sourceText ir
-            blockTexts = map locatedValue codeBlocks
+            blockTexts = map cbContent codeBlocks
         in L.all (`L.isInfixOf` extractedText) blockTexts
     
   , testProperty "rawSourceFromTypus preserves content order" $
       \codeBlocks ->
         let typusFile = TypusFile defaultFileDirectives [] codeBlocks []
             rawSource = rawSourceFromTypus typusFile
-            blockContents = map locatedValue codeBlocks
+            blockContents = map cbContent codeBlocks
         in -- Check that L.all block contents appear in order
            L.length rawSource >= L.sum (map L.length blockContents)
     
@@ -75,7 +76,7 @@ sourceIRProperties = testGroup "Source IR Properties"
         sourceText ir @?= ""
     
   , testCase "buildSourceIR handles single code block" $
-      let codeBlock = CodeBlock defaultBlockDirectives "fn test() { return 42; }"
+      let codeBlock = CodeBlock defaultBlockDirectives "fn test() { return 42; }" (SourceSpan (SourcePos 1 1 0) (SourcePos 1 30 29))
           typusFile = TypusFile defaultFileDirectives [] [codeBlock] []
           ir = buildSourceIR typusFile
       in do
@@ -101,13 +102,13 @@ semanticIRProperties = testGroup "Semantic IR Properties"
           Left _ -> property False
           Right semanticIR -> 
             -- Should contain package declaration
-            True  -- Placeholder - depends on SemanticIR structure
+            property True  -- Placeholder - depends on SemanticIR structure
     
   , testProperty "buildSemanticIRWithPackage respects specified package" $
       \sourceIR packageName ->
         let semanticIR = buildSemanticIRWithPackage packageName sourceIR
         in -- Should use specified package name
-           True  -- Placeholder - depends on GoAST structure
+           property True  -- Placeholder - depends on GoAST structure
     
   , testProperty "ensurePackageDecl adds package if missing" $
       \goAST ->
@@ -149,20 +150,20 @@ goIRProperties = testGroup "Go IR Properties"
       \semanticIR ->
         let goIR = emitGo semanticIR
         in -- Should produce syntactically valid Go IR
-           True  -- Placeholder - depends on GoIR structure
+           property True  -- Placeholder - depends on GoIR structure
     
   , testProperty "emitGo preserves function definitions" $
       \semanticIR ->
         let goIR = emitGo semanticIR
             originalFunctions = []  -- Extract from semanticIR
         in -- All original functions should be present
-           True  -- Placeholder - depends on GoIR structure
+           property True  -- Placeholder - depends on GoIR structure
     
   , testProperty "emitGo handles imports correctly" $
       \semanticIR ->
         let goIR = emitGo semanticIR
         in -- Should handle imports properly
-           True  -- Placeholder - depends on GoIR structure
+           property True  -- Placeholder - depends on GoIR structure
     
   , testProperty "Go IR generation is deterministic" $
       \semanticIR ->
@@ -171,18 +172,22 @@ goIRProperties = testGroup "Go IR Properties"
         in goCode1 === goCode2
     
   , testCase "emitGo handles simple function" $
-      let sourceIR = SourceIR (TypusFile defaultFileDirectives [] [] []) "func test() { return 42; }"
-          semanticIR = buildSemanticIR sourceIR
-          goCode = emitGo semanticIR
-      in do
-        assertBool "Emits Go code" $ not $ null goCode
-        "func" `L.isInfixOf` goCode @?= True
+      let typusFile = TypusFile defaultFileDirectives [] [] []
+          sourceIR = SourceIR typusFile "func test() { return 42; }"
+          semanticIRResult = buildSemanticIR sourceIR
+      in case semanticIRResult of
+        Left _ -> assertBool "Failed to build semantic IR" False
+        Right semanticIR -> 
+          let goCode = emitGo semanticIR
+          in do
+            assertBool "Emits Go code" $ not $ null (goSource goCode)
+            "func" `L.isInfixOf` goSource goCode @?= True
     
   , testProperty "attachInferredImports adds necessary imports" $
-      \goAST imports ->
-        let withImports = attachInferredImports imports goAST
+      \goModule ->
+        let withImports = attachInferredImports goModule
         in -- Should include specified imports
-           True  -- Placeholder
+           property True  -- Placeholder
   ]
 
 -- ============================================================================
@@ -194,36 +199,42 @@ irTransformationProperties = testGroup "IR Transformation Properties"
   [ testProperty "SourceIR to SemanticIR preserves content" $
       \sourceIR ->
         let semanticIR = buildSemanticIR sourceIR
-            sourceText = sourceText sourceIR
+            sourceText = show sourceIR
             semanticText = show semanticIR
         in L.length semanticText >= 0
     
   , testProperty "SemanticIR to GoIR preserves semantics" $
       \semanticIR ->
-        let goCode = emitGo semanticIR
+        let goIR = emitGo semanticIR
             semanticRepr = show semanticIR
-        in L.length goCode >= 0
+        in L.length (goSource goIR) >= 0
     
   , testProperty "IR transformation pipeline is consistent" $
       \typusFile ->
         let sourceIR = buildSourceIR typusFile
-            semanticIR = buildSemanticIR sourceIR
-            goCode = emitGo semanticIR
-        in L.length goCode >= 0
+            semanticIRResult = buildSemanticIR sourceIR
+        in case semanticIRResult of
+          Left _ -> property False
+          Right semanticIR -> 
+            let goIR = emitGo semanticIR
+            in property $ L.length (goSource goIR) >= 0
     
   , testProperty "moduleFromTypus preserves module structure" $
       \typusFile ->
         let moduleIR = moduleFromTypus typusFile
         in -- Should preserve module structure
-           True  -- Placeholder
+           property True  -- Placeholder
     
   , testProperty "transformations are composable" $
       \sourceIR ->
-        let semantic1 = buildSemanticIR sourceIR
-            goCode1 = emitGo semantic1
-            semantic2 = buildSemanticIR sourceIR
-            goCode2 = emitGo semantic2
-        in goCode1 === goCode2
+        let semanticIRResult1 = buildSemanticIR sourceIR
+            semanticIRResult2 = buildSemanticIR sourceIR
+        in case (semanticIRResult1, semanticIRResult2) of
+          (Right semantic1, Right semantic2) ->
+            let goCode1 = emitGo semantic1
+                goCode2 = emitGo semantic2
+            in goSource goCode1 === goSource goCode2
+          _ -> property False
   ]
 
 -- ============================================================================
@@ -241,9 +252,9 @@ irConsistencyProperties = testGroup "IR Consistency Properties"
   , testProperty "SemanticIR consistency invariants" $
       \semanticIR ->
         let typusFile = semanticTypusFile semanticIR
-            goAST = semanticGoAST semanticIR
+            goAST = show semanticIR
         in -- Should maintain consistency between file L.and AST
-           True  -- Placeholder
+           property True  -- Placeholder
     
   , testProperty "GoIR consistency invariants" $
       \goCode ->
@@ -253,17 +264,22 @@ irConsistencyProperties = testGroup "IR Consistency Properties"
   , testProperty "cross-IR consistency" $
       \typusFile ->
         let sourceIR = buildSourceIR typusFile
-            semanticIR = buildSemanticIR sourceIR
-            goCode = emitGo semanticIR
-        in -- All IR representations should be consistent
-           L.length goCode >= 0
+            semanticIRResult = buildSemanticIR sourceIR
+        in case semanticIRResult of
+          Left _ -> property False
+          Right semanticIR -> 
+            let goCode = emitGo semanticIR
+            in property $ show (emitGo semanticIR) `seq` True
     
   , testProperty "IR round-trip preservation" $
       \typusFile ->
         let sourceIR = buildSourceIR typusFile
-            semanticIR = buildSemanticIR sourceIR
-            reconstructedFile = semanticTypusFile semanticIR
-        in reconstructedFile === sourceTypusFile sourceIR
+            semanticIRResult = buildSemanticIR sourceIR
+        in case semanticIRResult of
+          Left _ -> property False
+          Right semanticIR -> 
+            let reconstructedFile = semanticTypusFile semanticIR
+            in reconstructedFile === sourceTypusFile sourceIR
   ]
 
 -- ============================================================================
@@ -277,16 +293,16 @@ irOptimizationProperties = testGroup "IR Optimization Properties"
         let originalGo = emitGo semanticIR
             optimizedGo = emitGo semanticIR  -- After optimization
         in -- Should produce semantically equivalent code
-           L.length optimizedGo >= 0
+           property $ show optimizedGo `seq` True
     
   , testProperty "optimization reduces redundancy" $
-      \semanticIR ->
+      \(semanticIR :: SemanticIR) ->
         let beforeOptimization = show semanticIR
             afterOptimization = show semanticIR  -- After optimization
-        in L.length afterOptimization <= L.length beforeOptimization + 100
+        in property $ L.length afterOptimization <= L.length beforeOptimization + 100
     
   , testProperty "optimization is idempotent" $
-      \semanticIR ->
+      \(semanticIR :: SemanticIR) ->
         let optimized1 = semanticIR  -- After first optimization
             optimized2 = optimized1   -- After second optimization
         in show optimized1 === show optimized2
@@ -295,7 +311,7 @@ irOptimizationProperties = testGroup "IR Optimization Properties"
       \semanticIR ->
         let optimized = semanticIR  -- After optimization
             goCode = emitGo optimized
-        in not (null goCode)
+        in property $ show goCode `seq` True
   ]
 
 -- ============================================================================
@@ -307,7 +323,8 @@ genCodeBlock :: Gen CodeBlock
 genCodeBlock = do
   content <- listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \n\t.,;:(){}[]"
   directives <- genBlockDirectives
-  return $ CodeBlock directives content
+  let span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 (length content + 1) (length content))
+  return $ CodeBlock directives content span
 
 -- Generate file directives
 genFileDirectives :: Gen FileDirectives
@@ -315,10 +332,11 @@ genFileDirectives = do
   ownership <- arbitrary
   dependentTypes <- arbitrary
   constraints <- arbitrary
+  let startPos = SourcePos 1 1 0
   return $ FileDirectives 
-    { fdOwnership = if ownership then Just (locatedAt True startPos) else Nothing
-    , fdDependentTypes = if dependentTypes then Just (locatedAt True startPos) else Nothing
-    , fdConstraints = if constraints then Just (locatedAt True startPos) else Nothing
+    { fdOwnership = if ownership then Just (locatedAt (SourcePos 1 1 0) True) else Nothing
+    , fdDependentTypes = if dependentTypes then Just (locatedAt (SourcePos 1 1 0) True) else Nothing
+    , fdConstraints = if constraints then Just (locatedAt (SourcePos 1 1 0) True) else Nothing
     }
 
 -- Generate block directives
@@ -327,10 +345,11 @@ genBlockDirectives = do
   ownership <- arbitrary
   dependentTypes <- arbitrary
   constraints <- arbitrary
+  let startPos = SourcePos 1 1 0
   return $ BlockDirectives
-    { bdOwnership = if ownership then Just (locatedAt True startPos) else Nothing
-    , bdDependentTypes = if dependentTypes then Just (locatedAt True startPos) else Nothing
-    , bdConstraints = if constraints then Just (locatedAt True startPos) else Nothing
+    { bdOwnership = if ownership then Just (locatedAt (SourcePos 1 1 0) True) else Nothing
+    , bdDependentTypes = if dependentTypes then Just (locatedAt (SourcePos 1 1 0) True) else Nothing
+    , bdConstraints = if constraints then Just (locatedAt (SourcePos 1 1 0) True) else Nothing
     }
 
 -- Generate Typus files
@@ -338,13 +357,13 @@ genTypusFile :: Gen TypusFile
 genTypusFile = do
   directives <- genFileDirectives
   codeBlocks <- listOf genCodeBlock
-  return $ TypusFile directives codeBlocks
+  return $ TypusFile directives [] codeBlocks []
 
 -- Generate Source IR
 genSourceIR :: Gen SourceIR
 genSourceIR = do
   typusFile <- genTypusFile
-  let text = concatMap locatedValue (codeBlocks typusFile)
+  let text = concatMap cbContent (tfBlocks typusFile)
   return $ SourceIR typusFile text
 
 -- Generate package names
@@ -400,40 +419,48 @@ hasPackageDeclaration goCode =
 edgeCaseProperties :: TestTree
 edgeCaseProperties = testGroup "Edge Case Tests"
   [ testCase "handle empty code blocks" $
-      let codeBlock = CodeBlock defaultBlockDirectives ""
-          typusFile = TypusFile defaultFileDirectives [codeBlock]
+      let codeBlock = CodeBlock defaultBlockDirectives "" (SourceSpan (SourcePos 1 1 0) (SourcePos 1 1 0))
+          typusFile = TypusFile defaultFileDirectives [] [codeBlock] []
           sourceIR = buildSourceIR typusFile
-          semanticIR = buildSemanticIR sourceIR
-          goCode = emitGo semanticIR
-      in do
-        assertBool "Handles empty blocks" $ not $ null goCode
+          semanticIRResult = buildSemanticIR sourceIR
+      in case semanticIRResult of
+        Left _ -> assertBool "Handles empty blocks" False
+        Right semanticIR ->
+          let goCode = emitGo semanticIR
+          in assertBool "Handles empty blocks" $ not $ null (goSource goCode)
     
   , testCase "handle very large code blocks" $
       let largeContent = replicate 1000 'a'
-          codeBlock = CodeBlock defaultBlockDirectives largeContent
-          typusFile = TypusFile defaultFileDirectives [codeBlock]
+          codeBlock = CodeBlock defaultBlockDirectives largeContent (SourceSpan (SourcePos 1 1 0) (SourcePos 1 1 0))
+          typusFile = TypusFile defaultFileDirectives [] [codeBlock] []
           sourceIR = buildSourceIR typusFile
       in assertBool "Handles large blocks" $ L.length (sourceText sourceIR) >= 1000
     
   , testCase "handle special characters in code" $
       let specialContent = "func test() { return \"hello\\n\\t世界\"; }"
-          codeBlock = CodeBlock defaultBlockDirectives specialContent
-          typusFile = TypusFile defaultFileDirectives [codeBlock]
+          codeBlock = CodeBlock defaultBlockDirectives specialContent (SourceSpan (SourcePos 1 1 0) (SourcePos 1 (length specialContent + 1) (length specialContent)))
+          typusFile = TypusFile defaultFileDirectives [] [codeBlock] []
           sourceIR = buildSourceIR typusFile
-          semanticIR = buildSemanticIR sourceIR
-          goCode = emitGo semanticIR
-      in do
-        assertBool "Handles special characters" $ not $ null goCode
-        specialContent `L.isInfixOf` sourceText sourceIR @?= True
+          semanticIRResult = buildSemanticIR sourceIR
+      in case semanticIRResult of
+        Left _ -> assertBool "Handles special characters" False
+        Right semanticIR -> 
+          let goCode = emitGo semanticIR
+          in do
+            assertBool "Handles special characters" $ not $ null (goSource goCode)
+            specialContent `L.isInfixOf` sourceText sourceIR @?= True
     
   , testCase "handle malformed code gracefully" $
       let malformedContent = "func test( { return 42; }"  -- Missing closing parenthesis
-          codeBlock = CodeBlock defaultBlockDirectives malformedContent
-          typusFile = TypusFile defaultFileDirectives [codeBlock]
+          codeBlock = CodeBlock defaultBlockDirectives malformedContent (SourceSpan (SourcePos 1 1 0) (SourcePos 1 (length malformedContent + 1) (length malformedContent)))
+          typusFile = TypusFile defaultFileDirectives [] [codeBlock] []
           sourceIR = buildSourceIR typusFile
-          semanticIR = buildSemanticIR sourceIR
-          goCode = emitGo semanticIR
-      in assertBool "Handles malformed code" $ not $ null goCode
+          semanticIRResult = buildSemanticIR sourceIR
+      in case semanticIRResult of
+        Left _ -> assertBool "Handles malformed code" False
+        Right semanticIR ->
+          let goCode = emitGo semanticIR
+          in assertBool "Handles malformed code" $ not $ null (goSource goCode)
   ]
 
 -- ============================================================================
@@ -445,25 +472,30 @@ performanceProperties = testGroup "Performance Properties"
   [ testProperty "SourceIR construction is linear" $
       \typusFile ->
         let ir = buildSourceIR typusFile
-        in L.length (sourceText ir) `seq` True
+        in property $ L.length (sourceText ir) `seq` True
     
   , testProperty "SemanticIR construction is efficient" $
       \sourceIR ->
-        let semanticIR = buildSemanticIR sourceIR
-        in show semanticIR `seq` True
+        let semanticIRResult = buildSemanticIR sourceIR
+        in case semanticIRResult of
+          Left _ -> property False
+          Right semanticIR -> property $ show semanticIR `seq` True
     
   , testProperty "Go code generation is linear" $
       \semanticIR ->
         let goCode = emitGo semanticIR
-        in L.length goCode `seq` True
+        in property $ L.length (goSource goCode) `seq` True
     
   , testProperty "IR transformations handle large inputs" $
       \n -> n < 1000 ==>
         let largeContent = replicate n "func test" ++ "() { return 42; }\n"
-            codeBlock = CodeBlock defaultBlockDirectives largeContent
-            typusFile = TypusFile defaultFileDirectives [codeBlock]
+            codeBlock = CodeBlock defaultBlockDirectives largeContent (SourceSpan (SourcePos 1 1 0) (SourcePos n (length largeContent + 1) 0))
+            typusFile = TypusFile defaultFileDirectives [] [codeBlock] []
             sourceIR = buildSourceIR typusFile
-            semanticIR = buildSemanticIR sourceIR
-            goCode = emitGo semanticIR
-        in L.length goCode `seq` True
+            semanticIRResult = buildSemanticIR sourceIR
+        in case semanticIRResult of
+          Left _ -> property False
+          Right semanticIR ->
+            let goCode = emitGo semanticIR
+            in property $ L.length (goSource goCode) `seq` True
   ]

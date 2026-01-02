@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
+
 {-# OPTIONS_GHC -Wno-unused-matches #-}
 {-# OPTIONS_GHC -Wno-type-defaults #-}
 {-# OPTIONS_GHC -Wno-unused-local-binds #-}
@@ -75,7 +75,7 @@ prop_parse_nested_braces depth =
   depth >= 0 && depth <= 10 ==>
   let openBraces = replicate depth '{'
       closeBraces = replicate depth '}'
-      input = "func main() " ++ L.concat openBraces ++ L.concat closeBraces
+      input = "func main() " ++ openBraces ++ closeBraces
       result = parseTypus input
   in case result of
     Left _ -> property True
@@ -87,7 +87,7 @@ prop_parse_unbalanced_braces opens closes =
   opens /= closes && opens >= 0 && closes >= 0 && opens <= 10 && closes <= 10 ==>
   let openBraces = replicate opens '{'
       closeBraces = replicate closes '}'
-      input = "func main() " ++ L.concat openBraces ++ L.concat closeBraces
+      input = "func main() " ++ openBraces ++ closeBraces
       result = parseTypus input
   in case result of
     Left _ -> property True  -- Should detect unbalanced braces
@@ -99,7 +99,7 @@ prop_parse_nested_parens depth =
   depth >= 0 && depth <= 10 ==>
   let openParens = replicate depth '('
       closeParens = replicate depth ')'
-      input = "func main" ++ L.concat openParens ++ L.concat closeParens ++ " {}"
+      input = "func main" ++ openParens ++ closeParens ++ " {}"
       result = parseTypus input
   in case result of
     Left _ -> property True
@@ -111,7 +111,7 @@ prop_parse_unbalanced_parens opens closes =
   opens /= closes && opens >= 0 && closes >= 0 && opens <= 10 && closes <= 10 ==>
   let openParens = replicate opens '('
       closeParens = replicate closes ')'
-      input = "func main" ++ L.concat openParens ++ L.concat closeParens ++ " {}"
+      input = "func main" ++ openParens ++ closeParens ++ " {}"
       result = parseTypus input
   in case result of
     Left _ -> property True  -- Should detect unbalanced parentheses

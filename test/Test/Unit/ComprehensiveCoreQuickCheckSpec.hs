@@ -1,5 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Test.Unit.ComprehensiveCoreQuickCheckSpec (tests) where
 
@@ -57,17 +58,17 @@ prop_split_join_collapsed c (NonEmpty chars) =
 
 -- | Test that span start is always before L.or equal to span end
 prop_span_ordering :: SourceSpan -> Property
-prop_span_ordering span = spanStart span <= spanEnd span
+prop_span_ordering span = property $ spanStart span <= spanEnd span
 
 -- | Test that merging spans produces a valid span
 prop_merge_spans_valid :: SourceSpan -> SourceSpan -> Property
 prop_merge_spans_valid span1 span2 = 
     let merged = mergeSpans span1 span2
-    in spanStart merged <= spanEnd merged
+    in property $ spanStart merged <= spanEnd merged
 
 -- | Test that emptySpan has start <= end
 prop_empty_span_valid :: Property
-prop_empty_span_valid = spanStart emptySpan <= spanEnd emptySpan
+prop_empty_span_valid = property $ spanStart emptySpan <= spanEnd emptySpan
 
 -- | Test that locatedAt preserves the value
 prop_locatedAt_preserves_value :: Int -> SourcePos -> Property
@@ -116,13 +117,13 @@ prop_breakOn_concatenates c s =
 -- | Test that removing line comments preserves lines without comments
 prop_removeLineComments_preserves_non_comment :: String -> Property
 prop_removeLineComments_preserves_non_comment line = 
-    not ("//" `L.L.isPrefixOf` line) ==> removeLineComments line === line
+    not ("//" `L.isPrefixOf` line) ==> removeLineComments line === line
 
 -- | Test that removing comments from a string without comments returns the same string
 prop_removeComments_preserves_no_comments :: String -> Property
 prop_removeComments_preserves_no_comments s = 
-    let hasBlockComments = "/*" `L.L.isInfixOf` s
-        hasLineComments = "//" `L.L.isInfixOf` s
+    let hasBlockComments = "/*" `L.isInfixOf` s
+        hasLineComments = "//" `L.isInfixOf` s
     in not (hasBlockComments || hasLineComments) ==> removeComments s === s
 
 -- ============================================================================

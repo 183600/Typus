@@ -82,8 +82,8 @@ prop_optimizationPreservesErrorHandling func =
 
 -- | Test that optimization is idempotent
 prop_optimizationIsIdempotent :: IRModule -> Property
-prop_optimizationIsIdempotent module =
-  let optimizedOnce = optimizeModule module
+prop_optimizationIsIdempotent irModule =
+  let optimizedOnce = optimizeModule irModule
       optimizedTwice = optimizeModule optimizedOnce
   in counterexample ("Optimization should be idempotent. " ++
                      "Once: " ++ show optimizedOnce ++
@@ -103,9 +103,9 @@ prop_optimizationPreservesOwnershipAnnotations func =
 
 -- | Test that optimization preserves type safety
 prop_optimizationPreservesTypeSafety :: IRModule -> Property
-prop_optimizationPreservesTypeSafety module =
-  let originalTypeErrors = checkTypeSafety module
-      optimized = optimizeModule module
+prop_optimizationPreservesTypeSafety irModule =
+  let originalTypeErrors = checkTypeSafety irModule
+      optimized = optimizeModule irModule
       optimizedTypeErrors = checkTypeSafety optimized
   in counterexample ("Optimization should preserve type safety. " ++
                      "Original errors: " ++ show originalTypeErrors ++
@@ -125,9 +125,9 @@ prop_optimizationPreservesMemorySafety func =
 
 -- | Test that optimization preserves dependency relationships
 prop_optimizationPreservesDependencies :: IRModule -> Property
-prop_optimizationPreservesDependencies module =
-  let originalDeps = extractDependencies module
-      optimized = optimizeModule module
+prop_optimizationPreservesDependencies irModule =
+  let originalDeps = extractDependencies irModule
+      optimized = optimizeModule irModule
       optimizedDeps = extractDependencies optimized
   in counterexample ("Optimization should preserve dependency relationships. " ++
                      "Original deps: " ++ show originalDeps ++
@@ -202,9 +202,9 @@ prop_optimizationPreservesFunctionCallSemantics stmt =
 
 -- | Test that optimization preserves module interface
 prop_optimizationPreservesModuleInterface :: IRModule -> Property
-prop_optimizationPreservesModuleInterface module =
-  let originalInterface = extractModuleInterface module
-      optimized = optimizeModule module
+prop_optimizationPreservesModuleInterface irModule =
+  let originalInterface = extractModuleInterface irModule
+      optimized = optimizeModule irModule
       optimizedInterface = extractModuleInterface optimized
   in counterexample ("Optimization should preserve module interface. " ++
                      "Original: " ++ show originalInterface ++

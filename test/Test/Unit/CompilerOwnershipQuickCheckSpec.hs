@@ -14,7 +14,7 @@ import Control.Monad (when, unless)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 
-import Compiler (CompilerError(..), CompilationPhase(..), hasTypeErrors, checkTypeError)
+import Compiler (CompilerError(..), CompilationPhase(..), hasTypeErrors, checkTypeError, errorPhase)
 import Parser (TypusFile(..), CodeBlock(..))
 import SourceLocation (SourcePos(..), SourceSpan(..), locatedAt)
 import Utils (trim, splitBy)
@@ -27,7 +27,7 @@ import Utils (trim, splitBy)
 prop_compiler_error_valid_phase :: CompilerError -> Property
 prop_compiler_error_valid_phase err = 
     let phase = errorPhase err
-    in phase `elem` [Parsing, TypeChecking, OwnershipChecking, CodeGeneration]
+    in phase `elem` [ParsingPhase, TypeCheckingPhase, OwnershipAnalysisPhase, CodeGenerationPhase]
 
 -- | Test that error messages are non-empty
 prop_compiler_error_non_empty_message :: CompilerError -> Property
@@ -145,8 +145,8 @@ prop_code_generation_preserves_functions functions =
 prop_go_code_basic_syntax :: Property
 prop_go_code_basic_syntax = 
     let goCode = "package main\n\nfunc main() {\n    println(\"Hello, World!\")\n}"
-        hasPackage = "package main" `L.L.isInfixOf` goCode
-        hasMain = "func main" `L.L.isInfixOf` goCode
+        hasPackage = "package main" `L.isInfixOf` goCode
+        hasMain = "func main" `L.isInfixOf` goCode
     in hasPackage && hasMain
 
 -- ============================================================================

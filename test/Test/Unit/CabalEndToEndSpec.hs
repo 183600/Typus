@@ -35,17 +35,17 @@ tests =
                 -- Step 1: Parse
                 parseResult = Parser.parseTypus "end-to-end" input
             case parseResult of
-              Left err -> @?= "Parse failed" (show err)
+              Left err -> (show err) @?= "Parse failed"
               Right parsed -> do
                 -- Step 2: Validate (assuming validation exists)
                 let validationResult = SyntaxValidator.validate parsed
                 case validationResult of
-                  Left validationErr -> @?= "Validation failed" (show validationErr)
+                  Left validationErr -> (show validationErr) @?= "Validation failed"
                   Right validated -> do
                     -- Step 3: Compile (assuming compilation exists)
                     let compileResult = Compiler.compile validated
                     case compileResult of
-                      Left compileErr -> @?= "Compilation failed" (show compileErr)
+                      Left compileErr -> (show compileErr) @?= "Compilation failed"
                       Right compiled -> 
                         -- Should have successful compilation result
                         compiled `seq` True @?= True

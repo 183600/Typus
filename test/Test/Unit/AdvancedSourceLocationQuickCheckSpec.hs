@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
+
 {-# OPTIONS_GHC -Wno-unused-matches #-}
 {-# OPTIONS_GHC -Wno-type-defaults #-}
 {-# OPTIONS_GHC -Wno-unused-local-binds #-}
@@ -46,6 +46,7 @@ import Data.Char (isSpace)
 import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)
 import qualified Data.Text as T
+import Data.Text (Text)
 
 -- Property: SourcePos ordering is consistent
 prop_source_pos_ordering :: SourcePos -> SourcePos -> Property
@@ -94,9 +95,9 @@ prop_pos_at_line_col_correct line col offset =
   in property $ posLine pos === line .&&. posColumn pos === col .&&. posOffset pos === offset
 
 -- Property: emptySpan has start equal to end
-prop_empty_span_start_end :: Property
-prop_empty_span_start_end =
-  let span = emptySpan
+prop_empty_span_start_end :: SourcePos -> Property
+prop_empty_span_start_end pos =
+  let span = emptySpan pos
   in property $ spanStart span === spanEnd span
 
 -- Property: spanFrom creates span from position
@@ -159,36 +160,36 @@ prop_map_located_transforms pos value =
 -- Property: advancePos advances position by character
 prop_advance_pos_correct :: SourcePos -> Char -> Property
 prop_advance_pos_correct pos char =
-  let advanced = advancePos pos char
+  let advanced = advancePos char pos
       expected = posAfter char pos
   in property $ advanced === expected
 
 -- Property: advancePosBy advances position by multiple characters
 prop_advance_pos_by_correct :: SourcePos -> String -> Property
 prop_advance_pos_by_correct pos text =
-  let advanced = advancePosBy pos text
-      expected = foldl posAfter pos text
+  let advanced = advancePosBy text pos
+      expected = foldl (\p c -> posAfter c p) pos text
   in property $ advanced === expected
 
 -- Property: advancePosByText advances position by text
 prop_advance_pos_by_text_correct :: SourcePos -> String -> Property
 prop_advance_pos_by_text_correct pos text =
-  let advanced = advancePosByText pos text
-      expected = advancePosBy pos text
+  let advanced = advancePosByText (T.pack text) pos
+      expected = advancePosBy text pos
   in property $ advanced === expected
 
 -- Property: advancePosByLine advances to next line
-prop_advance_pos_by_line_correct :: SourcePos -> Property
-prop_advance_pos_by_line_correct pos =
-  let advanced = advancePosByLine pos
-      expected = pos { posLine = posLine pos + 1, posColumn = 1, posOffset = posOffset pos + 1 }
+prop_advance_pos_by_line_correct :: Int -> SourcePos -> Property
+prop_advance_pos_by_line_correct lines pos =
+  let advanced = advancePosByLine lines pos
+      expected = pos { posLine = posLine pos + lines, posColumn = 1 }
   in property $ advanced === expected
 
 -- Property: Source position arithmetic is consistent
 prop_source_pos_arithmetic :: SourcePos -> String -> Property
 prop_source_pos_arithmetic pos text =
-  let advanced1 = advancePosBy pos text
-      advanced2 = foldl advancePos pos text
+  let advanced1 = advancePosBy text pos
+      advanced2 = foldl (\p c -> advancePos c p) pos text
   in property $ advanced1 === advanced2
 
 -- Property: Source span ordering is consistent
@@ -231,7 +232,7 @@ prop_span_between_symmetric :: SourcePos -> SourcePos -> Property
 prop_span_between_symmetric pos1 pos2 =
   let span1 = spanBetween pos1 pos2
       span2 = spanBetween pos2 pos1
-  in property $ spanStart span1 === spanEnd span2 .&&. spanEnd span1 === spanStart pos2
+  in property $ spanStart span1 === spanStart span2 .&&. spanEnd span1 === spanEnd span2
 
 tests :: TestTree
 tests = testGroup "Advanced SourceLocation QuickCheck"

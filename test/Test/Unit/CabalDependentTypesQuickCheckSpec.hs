@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
+
 {-# OPTIONS_GHC -Wno-unused-matches #-}
 {-# OPTIONS_GHC -Wno-type-defaults #-}
 {-# OPTIONS_GHC -Wno-unused-local-binds #-}
@@ -12,7 +12,7 @@ module Test.Unit.CabalDependentTypesQuickCheckSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
+import Test.QuickCheck (Arbitrary, Property, (===), (==>), forAll, counterexample, classify, property, elements, listOf, (.&&.), (.||.))
 import qualified Data.List as List
 import Data.Char (isSpace, isAlphaNum, isLetter)
 import Data.Maybe (isJust, isNothing)
@@ -50,7 +50,7 @@ prop_dependent_type_preserves_structure (TypeName typeName) (ConstraintValue val
        Left err -> counterexample ("Parse failed: " ++ err) $ property False
        Right depType -> 
          case depType of
-           DependentType name constraints -> 
+           TypeDecl name _ _ constraints -> 
              name === typeName .&&. (not $ null constraints)
            _ -> property False
 
@@ -67,7 +67,7 @@ prop_type_constraints_preserved (TypeName typeName) op (ConstraintValue value) =
        Left err -> counterexample ("Parse failed: " ++ err) $ property False
        Right depType -> 
          case depType of
-           DependentType name constraints -> 
+           TypeDecl name _ _ constraints -> 
              name === typeName .&&. (not $ null constraints)
            _ -> property False
 
@@ -79,7 +79,7 @@ prop_nested_dependent_types (TypeName typeName) (ConstraintValue value) =
        Left err -> counterexample ("Parse failed: " ++ err) $ property False
        Right depType -> 
          case depType of
-           DependentType name constraints -> 
+           TypeDecl name _ _ constraints -> 
              name === typeName .&&. (not $ null constraints)
            _ -> property False
 
@@ -102,15 +102,15 @@ prop_dependent_type_validation (TypeName typeName) (ConstraintValue value) =
 -- Property: Complex type constraints are parsed correctly
 prop_complex_type_constraints :: [ConstraintValue] -> Property
 prop_complex_type_constraints values =
-  let valueStrs = L.map (\(ConstraintValue v) -> show v) values
+  let valueStrs = List.map (\(ConstraintValue v) -> show v) values
       constraintStr = List.intercalate ", " valueStrs
       typeString = "Matrix<" ++ constraintStr ++ ">"
   in case parseDependentType typeString of
        Left err -> counterexample ("Parse failed: " ++ err) $ property False
        Right depType -> 
          case depType of
-           DependentType name constraints -> 
-             name === "Matrix" .&&. (L.length constraints == L.length values)
+           TypeDecl name _ _ constraints -> 
+             name === "Matrix" .&&. (List.length constraints == List.length values)
            _ -> property False
 
 tests :: TestTree

@@ -21,20 +21,20 @@ tests =
     [ testGroup "Thread Safety of Utils"
         [ testCase "Concurrent trim operations" $ do
             let testStrings = ["  test1  ", "\ttest2\n", "  test3  ", "test4  "]
-                results <- newEmptyMVar
-                _ <- forkIO $ do
-                    trimmed <- mapM Utils.trim testStrings
-                    putMVar results trimmed
-                finalResults <- takeMVar results
+            results <- newEmptyMVar
+            _ <- forkIO $ do
+                trimmed <- mapM Utils.trim testStrings
+                putMVar results trimmed
+            finalResults <- takeMVar results
             finalResults @?= ["test1", "test2", "test3", "test4"]
 
         , testCase "Concurrent splitBy operations" $ do
             let testInputs = ["a,b,c", "x,y,z", "1,2,3"]
-                results <- newEmptyMVar
-                _ <- forkIO $ do
-                    split <- mapM (Utils.splitBy ',') testInputs
-                    putMVar results split
-                finalResults <- takeMVar results
+            results <- newEmptyMVar
+            _ <- forkIO $ do
+                split <- mapM (Utils.splitBy ',') testInputs
+                putMVar results split
+            finalResults <- takeMVar results
             finalResults @?= [["a", "b", "c"], ["x", "y", "z"], ["1", "2", "3"]]
 
         , testCase "Concurrent comment removal" $ do
@@ -43,11 +43,11 @@ tests =
                   , "func test2() { return 2; } /* comment2 */"
                   , "func test3() { return 3; } // comment3"
                   ]
-                results <- newEmptyMVar
-                _ <- forkIO $ do
-                    uncommented <- mapM Utils.removeComments commentedInputs
-                    putMVar results uncommented
-                finalResults <- takeMVar results
+            results <- newEmptyMVar
+            _ <- forkIO $ do
+                uncommented <- mapM Utils.removeComments commentedInputs
+                putMVar results uncommented
+            finalResults <- takeMVar results
             L.all (`L.isInfixOf` L.concat finalResults) ["return 1;", "return 2;", "return 3;"] @?= True
         ]
 
@@ -58,20 +58,20 @@ tests =
                   , "func test2() { return 2; }"
                   , "func test3() { return 3; }"
                   ]
-                results <- newEmptyMVar
-                _ <- forkIO $ do
-                    parseResults <- mapM (Parser.parseTypus "concurrent") inputs
-                    putMVar results parseResults
-                finalResults <- takeMVar results
+            results <- newEmptyMVar
+            _ <- forkIO $ do
+                parseResults <- mapM (Parser.parseTypus "concurrent") inputs
+                putMVar results parseResults
+            finalResults <- takeMVar results
             L.all isSuccess finalResults @?= True
 
         , testCase "Concurrent parsing of same input" $ do
             let input = "func shared() { return 42; }"
-                results <- newEmptyMVar
-                _ <- forkIO $ do
-                    parseResults <- replicateM 3 $ Parser.parseTypus "shared" input
-                    putMVar results parseResults
-                finalResults <- takeMVar results
+            results <- newEmptyMVar
+            _ <- forkIO $ do
+                parseResults <- replicateM 3 $ Parser.parseTypus "shared" input
+                putMVar results parseResults
+            finalResults <- takeMVar results
             L.all isSuccess finalResults @?= True
 
         , testCase "Concurrent parsing with errors" $ do
@@ -80,11 +80,11 @@ tests =
                   , "func bad2() { if }"
                   , "func bad3() { { {"
                   ]
-                results <- newEmptyMVar
-                _ <- forkIO $ do
-                    parseResults <- mapM (Parser.parseTypus "errors") invalidInputs
-                    putMVar results parseResults
-                finalResults <- takeMVar results
+            results <- newEmptyMVar
+            _ <- forkIO $ do
+                parseResults <- mapM Parser.parseTypus invalidInputs
+                putMVar results parseResults
+            finalResults <- takeMVar results
             L.all isFailure finalResults @?= True
         ]
 

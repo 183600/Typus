@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
+
 {-# OPTIONS_GHC -Wno-unused-matches #-}
 {-# OPTIONS_GHC -Wno-type-defaults #-}
 {-# OPTIONS_GHC -Wno-unused-local-binds #-}
@@ -23,7 +23,7 @@ import Compiler (compileTypus)
 import Analyzer (analyzeProgram)
 import Ownership (analyzeOwnership)
 import SyntaxValidator (validateSyntax)
-import ErrorHandler (handleError, createError)
+import ErrorHandler (errorAt, errorWithCategory)
 
 -- Simple arbitrary instances for integration testing
 newtype ProgramFeature = ProgramFeature String deriving (Show, Eq)

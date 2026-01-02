@@ -23,7 +23,7 @@ tests =
               Left err -> 
                 -- Should provide helpful error message
                 show err @?= "Expected ';' at end of statement"
-              Right _ -> @?= "Should handle gracefully" "Graceful handling"
+              Right _ -> "Graceful handling" @?= "Should handle gracefully"
 
         , testCase "Parser handles unclosed blocks gracefully" $ do
             let input = "func test() { if (true) { return 1;"

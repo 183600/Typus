@@ -4,7 +4,7 @@
 {-# OPTIONS_GHC -Wno-unused-local-binds #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-x-partial #-}
+
 
 module Test.Unit.CompilerQuickCheckSpec (tests) where
 

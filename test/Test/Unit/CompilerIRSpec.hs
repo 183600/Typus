@@ -9,7 +9,7 @@ import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, elements,
 import Test.QuickCheck ((==>), Property)
 import Compiler.IR (SourceIR(..), SemanticIR(..), GoIR(..))
 import Compiler.GoAst (GoModule(..), GoDecl(..), FuncDecl(..))
-import Parser (TypusFile(..), CodeBlock(..))
+import Parser (TypusFile(..), CodeBlock(..), defaultFileDirectives)
 import qualified Data.Text as T
 import qualified Data.List as L
 import Data.List (isInfixOf)
@@ -33,9 +33,9 @@ compilerIRSpec = testGroup "Compiler IR Generation"
 prop_source_ir_preserves_structure :: String -> Property
 prop_source_ir_preserves_structure code =
   not (null code) ==> 
-    let sourceIR = SourceIR code
+    let sourceIR = SourceIR (TypusFile defaultFileDirectives [] [] []) ""
         -- Simulate source IR structure preservation
-        preservesContent = L.length sourceIR > 0
+        preservesContent = L.length (sourceText sourceIR) > 0
     in preservesContent === True
 
 -- | semantic IR should capture type information
@@ -43,48 +43,33 @@ prop_semantic_ir_captures_types :: String -> String -> Property
 prop_semantic_ir_captures_types variable typeName =
   not (null variable) && not (null typeName) ==> 
     let typeInfo = variable ++ ":" ++ typeName
-        semanticIR = SemanticIR typeInfo
+        dummyFile = TypusFile defaultFileDirectives [] [] []
+        dummyModule = GoModule [] Nothing [] []
+        semanticIR = SemanticIR dummyFile dummyModule []
         -- Simulate semantic IR type capture
         capturesType = typeName `L.isInfixOf` typeInfo
     in capturesType === True
-  where
-    infix 4 `isInfixOf`
-    [] `isInfixOf` _ = False
-    (_:_) `isInfixOf` [] = False
-    needle `isInfixOf` haystack = L.any (L.isPrefixOf needle) (tails haystack)
-    tails [] = [[]]
-    tails xs@(_:xs') = xs : tails xs'
-    [] `L.isPrefixOf` _ = False
-    (_:_) `L.isPrefixOf` [] = False
-    needle `L.isPrefixOf` haystack = take (L.length needle) haystack === needle
 
 -- | Go IR should generate valid Go code structure
 prop_go_ir_valid_structure :: String -> Property
 prop_go_ir_valid_structure functionName =
   not (null functionName) ==> 
     let goFunction = "func " ++ functionName ++ "() {}"
-        goIR = GoIR goFunction
+        goModule = GoModule [] Nothing [] []
+        goIR = GoIR goModule ""
         -- Simulate Go IR structure validation
         hasGoSyntax = "func" `L.isInfixOf` goFunction && "()" `L.isInfixOf` goFunction
     in hasGoSyntax === True
-  where
-    infix isInfixOf
-    [] `L.isInfixOf` _ = False
-    (_:_) `L.isInfixOf` [] = False
-    needle `L.isInfixOf` haystack = L.any (L.isPrefixOf needle) (tails haystack)
-    tails [] = [[]]
-    tails xs@(_:xs') = xs : tails xs'
-    [] `L.isPrefixOf` _ = False
-    (_:_) `L.isPrefixOf` [] = False
-    needle `L.isPrefixOf` haystack = take (L.length needle) haystack === needle
 
 -- | IR transformation should maintain information
 prop_ir_transformation_maintains_info :: String -> Property
 prop_ir_transformation_maintains_info originalCode =
   not (null originalCode) ==> 
-    let sourceIR = SourceIR originalCode
-        semanticIR = SemanticIR originalCode
-        goIR = GoIR originalCode
+    let dummyFile = TypusFile defaultFileDirectives [] [] []
+        sourceIR = SourceIR dummyFile originalCode
+        dummyModule = GoModule [] Nothing [] []
+        semanticIR = SemanticIR dummyFile dummyModule []
+        goIR = GoIR dummyModule ""
         -- Simulate IR transformation information maintenance
         infoMaintained = L.length originalCode > 0
     in infoMaintained === True
@@ -93,7 +78,9 @@ prop_ir_transformation_maintains_info originalCode =
 prop_ir_expressions :: String -> Property
 prop_ir_expressions expression =
   not (null expression) ==> 
-    let exprIR = SemanticIR expression
+    let dummyFile = TypusFile defaultFileDirectives [] [] []
+        dummyModule = GoModule [] Nothing [] []
+        exprIR = SemanticIR dummyFile dummyModule []
         -- Simulate expression IR generation
         handlesExpression = L.length expression > 0
     in handlesExpression === True
@@ -103,7 +90,8 @@ prop_ir_functions :: String -> [String] -> Property
 prop_ir_functions functionName parameters =
   not (null functionName) && L.all (not . null) parameters ==> 
     let funcDecl = "func " ++ functionName ++ "(" ++ unwords parameters ++ ") {}"
-        funcIR = GoIR funcDecl
+        dummyModule = GoModule [] Nothing [] []
+        funcIR = GoIR dummyModule funcDecl
         -- Simulate function IR generation
         handlesFunction = L.length funcDecl > L.length functionName
     in handlesFunction === True
@@ -113,40 +101,22 @@ prop_ir_variables :: String -> String -> Property
 prop_ir_variables varName varType =
   not (null varName) && not (null varType) ==> 
     let varDecl = "var " ++ varName ++ " " ++ varType
-        varIR = GoIR varDecl
+        dummyModule = GoModule [] Nothing [] []
+        varIR = GoIR dummyModule varDecl
         -- Simulate variable IR generation
         handlesVariable = varName `L.isInfixOf` varDecl && varType `L.isInfixOf` varDecl
     in handlesVariable === True
-  where
-    infix isInfixOf
-    [] `L.isInfixOf` _ = False
-    (_:_) `L.isInfixOf` [] = False
-    needle `isInInfixOf` haystack = L.any (L.isPrefixOf needle) (tails haystack)
-    tails [] = [[]]
-    tails xs@(_:xs') = xs : tails xs'
-    [] `L.isPrefixOf` _ = False
-    (_:_) `L.isPrefixOf` [] = False
-    needle `L.isPrefixOf` haystack = take (L.length needle) haystack === needle
 
 -- | IR generation should handle type declarations
 prop_ir_types :: String -> Property
 prop_ir_types typeName =
   not (null typeName) ==> 
     let typeDecl = "type " ++ typeName ++ " struct{}"
-        typeIR = GoIR typeDecl
+        dummyModule = GoModule [] Nothing [] []
+        typeIR = GoIR dummyModule typeDecl
         -- Simulate type IR generation
         handlesType = typeName `L.isInfixOf` typeDecl && "type" `L.isInfixOf` typeDecl
     in handlesType === True
-  where
-    infix isInfixOf
-    [] `L.isInfixOf` _ = False
-    (_:_) `L.isInfixOf` [] = False
-    needle `L.isInfixOf` haystack = L.any (L.isPrefixOf needle) (tails haystack)
-    tails [] = [[]]
-    tails xs@(_:xs') = xs : tails xs'
-    [] `L.isPrefixOf` _ = False
-    (_:_) `L.isPrefixOf` [] = False
-    needle `L.isPrefixOf` haystack = take (L.length needle) haystack === needle
 
 -- | IR generation should maintain symbol table consistency
 prop_ir_symbol_table :: [String] -> Property
@@ -162,25 +132,13 @@ prop_ir_imports :: [String] -> Property
 prop_ir_imports imports =
   not (null imports) && L.all (not . null) imports ==> 
     let importDecls = L.map (\imp -> "import \"" ++ imp ++ "\"") imports
-        importIR = GoIR (unlines importDecls)
+        importCode = unlines importDecls
+        dummyModule = GoModule [] Nothing [] []
+        importIR = GoIR dummyModule importCode
         -- Simulate import IR generation
-        handlesImports = L.all (`L.isInfixOf` importIR) imports
+        handlesImports = L.all (`L.isInfixOf` importCode) imports
     in handlesImports === True
-  where
-    infix isInfixOf
-    [] `L.isInfixOf` _ = False
-    (_:_) `L.isInfixOf` [] = False
-    needle `L.isInfixOf` haystack = L.any (L.isPrefixOf needle) (tails haystack)
-    tails [] = [[]]
-    tails xs@(_:xs') = xs : tails xs'
-    [] `L.isPrefixOf` _ = False
-    (_:_) `L.isPrefixOf` [] = False
-    needle `L.isPrefixOf` haystack = take (L.length needle) haystack === needle
 
 -- Helper for equality in QuickCheck
 (===) :: Eq a => a -> a -> Bool
 (===) = (==)
-
--- Helper for property testing
-property :: Bool -> Property
-property = id
