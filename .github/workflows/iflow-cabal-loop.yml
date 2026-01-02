@@ -27,23 +27,13 @@ jobs:
       IFLOW_MODEL_NAME: glm-4.6
 
       GH_TOKEN: ${{ github.token }}
-
-      # 你需要在 GitHub Secrets 里配置它
       GITEE_REMOTE_URL: ${{ secrets.GITEE_REMOTE_URL }}
-
-      # 可选：如需走镜像（更适合国内网络），把它改成你的镜像地址
-      # 例如：https://mirrors.tuna.tsinghua.edu.cn/hackage/
       CABAL_MIRROR_URL: ""
-
-      # 可选：强制 cabal 使用 curl 传输（CI 上通常更稳）
       CABAL_TRANSPORT: "curl"
 
     steps:
-      - name: Ensure hostedtoolcache exists
-        run: |
-         sudo mkdir -p /opt/hostedtoolcache
-         sudo chmod -R 777 /opt/hostedtoolcache
-         
+      # !!! 已删除手动创建 hostedtoolcache 的步骤，这是导致报错的主要原因 !!!
+      
       - name: Checkout with PAT
         uses: actions/checkout@v4
         with:
@@ -87,9 +77,9 @@ jobs:
       - name: Setup Haskell (GHC + Cabal)
         uses: haskell-actions/setup@v2
         with:
-          ghc-version: 'latest'
-          cabal-version: 'latest'
-          # 关键：不要让 setup action 内部自动 cabal update
+          # 修改建议：不要使用 latest，指定具体版本以避免解析错误
+          ghc-version: '9.6.3'      
+          cabal-version: '3.10.2.0' 
           cabal-update: false
 
       - name: Show tool versions
@@ -120,16 +110,15 @@ jobs:
             cabal user-config init
           fi
 
-          # 使用 curl 作为 http 传输（cabal 识别的是 http-transport）
+          # 使用 curl 作为 http 传输
           if [ "${CABAL_TRANSPORT:-}" = "curl" ]; then
             if ! grep -qE '^[[:space:]]*http-transport:[[:space:]]*curl[[:space:]]*$' ~/.cabal/config; then
               printf '\nhttp-transport: curl\n' >> ~/.cabal/config
             fi
           fi
 
-          # 可选：切换到镜像（仅当 CABAL_MIRROR_URL 非空）
+          # 可选：切换到镜像
           if [ -n "${CABAL_MIRROR_URL:-}" ]; then
-            # 兼容缩进：匹配任何以 url: 开头且包含 hackage.haskell.org 的行
             sed -i -E "s#^([[:space:]]*url:[[:space:]]*).*(hackage\\.haskell\\.org).*#\\1${CABAL_MIRROR_URL}#g" ~/.cabal/config || true
           fi
 
@@ -166,20 +155,17 @@ jobs:
           set -euo pipefail
           BRANCH="${WORK_BRANCH:-master}"
 
-          # 确保 gitee 远端存在（不打印 URL，避免日志泄漏）
           if git remote get-url gitee >/dev/null 2>&1; then
             git remote set-url gitee "${GITEE_REMOTE_URL}"
           else
             git remote add gitee "${GITEE_REMOTE_URL}"
           fi
 
-          # 最后统一提交一次（如果有 staged 变更）
           git add -A
           if ! git diff --cached --quiet; then
             git commit -m "ci: ${RUN_HOURS}h batch update (run $GITHUB_RUN_ID)" || true
           fi
 
-          # marker 可能在 env 指定路径，也可能在真实 gitdir 下（兼容 worktree 场景）
           MARKER_FILE="${RELEASE_MARKER_FILE}"
           if [[ ! -f "${MARKER_FILE}" ]]; then
             GIT_DIR_REAL="$(git rev-parse --git-dir 2>/dev/null || echo ".git")"
@@ -189,6 +175,5 @@ jobs:
             echo "Release tag prepared: $(cat "${MARKER_FILE}")"
           fi
 
-          # 推送到 GitHub（origin）和 Gitee（gitee）
           git push origin "HEAD:${BRANCH}" --follow-tags
           git push gitee "HEAD:${BRANCH}" --follow-tags --force
