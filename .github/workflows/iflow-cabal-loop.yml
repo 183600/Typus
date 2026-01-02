@@ -39,6 +39,11 @@ jobs:
       CABAL_TRANSPORT: "curl"
 
     steps:
+      - name: Ensure hostedtoolcache exists
+        run: |
+         sudo mkdir -p /opt/hostedtoolcache
+         sudo chmod -R 777 /opt/hostedtoolcache
+         
       - name: Checkout with PAT
         uses: actions/checkout@v4
         with:
