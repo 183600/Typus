@@ -32,10 +32,6 @@ jobs:
       CABAL_TRANSPORT: "curl"
 
     steps:
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
       - name: Increase Swap space (防止内存溢出断连)
         run: |
           sudo fallocate -l 12G /swapfile # 分配 Swap
@@ -43,8 +39,7 @@ jobs:
           sudo mkswap /swapfile
           sudo swapon /swapfile
           swapon -s
-      # !!! 已删除手动创建 hostedtoolcache 的步骤，这是导致报错的主要原因 !!!
-      
+
       - name: Checkout with PAT
         uses: actions/checkout@v4
         with:
