@@ -83,8 +83,9 @@ jobs:
       - name: Setup Haskell (GHC + Cabal)
         uses: haskell-actions/setup@v2
         with:
-          ghc-version: '9.6.3'      
-          cabal-version: '3.10.2.0' 
+          # 修改建议：不要使用 latest，指定具体版本以避免解析错误
+          ghc-version: '9.6.3'
+          cabal-version: '3.10.2.0'
           cabal-update: false
 
       - name: Show tool versions
@@ -153,38 +154,32 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM $(( RUN_HOURS * 3600 )) bash scripts/typus_cabal_loop.sh || true
 
-      - name: Commit & push once (GitHub + Gitee)
+      - name: 'Commit & push once (GitHub + Gitee)'
         if: always()
         shell: bash
         run: |
           set -euo pipefail
           BRANCH="${WORK_BRANCH:-master}"
 
-          # 配置 Gitee 远程仓库
           if git remote get-url gitee >/dev/null 2>&1; then
             git remote set-url gitee "${GITEE_REMOTE_URL}"
           else
             git remote add gitee "${GITEE_REMOTE_URL}"
           fi
 
-          # 提交更改
           git add -A
           if ! git diff --cached --quiet; then
             git commit -m "ci: ${RUN_HOURS}h batch update (run $GITHUB_RUN_ID)" || true
           fi
 
-          # 检查并打印 Release 标记
           MARKER_FILE="${RELEASE_MARKER_FILE}"
           if [[ ! -f "${MARKER_FILE}" ]]; then
-             # 尝试获取真实的 .git 路径
-             GIT_DIR_REAL="$(git rev-parse --git-dir 2>/dev/null || echo ".git")"
-             MARKER_FILE="${GIT_DIR_REAL%/}/azimuth_release_tag"
+            GIT_DIR_REAL="$(git rev-parse --git-dir 2>/dev/null || echo ".git")"
+            MARKER_FILE="${GIT_DIR_REAL%/}/azimuth_release_tag"
           fi
-          
           if [[ -f "${MARKER_FILE}" ]]; then
             echo "Release tag prepared: $(cat "${MARKER_FILE}")"
           fi
 
-          # 推送到 GitHub 和 Gitee
           git push origin "HEAD:${BRANCH}" --follow-tags
           git push gitee "HEAD:${BRANCH}" --follow-tags --force
