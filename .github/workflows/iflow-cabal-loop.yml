@@ -38,7 +38,7 @@ jobs:
     steps:
       - name: Increase Swap space (防止内存溢出断连)
         run: |
-          sudo fallocate -l 12G /swapfile # 分配 10GB 的 Swap
+          sudo fallocate -l 12G /swapfile # 分配 Swap
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
           sudo swapon /swapfile
