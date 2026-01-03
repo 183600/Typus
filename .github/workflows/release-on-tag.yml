@@ -1,217 +1,34 @@
-name: iflow-cabal-autoloop
+name: release-on-tag
 
 on:
-  workflow_dispatch:
   push:
-    branches:
-      - master
+    tags:
+      - "v*"
 
 concurrency:
-  group: iflow-autoflow-${{ github.ref }}
+  group: release-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
   contents: write
 
 jobs:
-  run-5h:
+  release:
     runs-on: ubuntu-latest
-    timeout-minutes: 360
     env:
-      RUN_HOURS: 5
-      WORK_BRANCH: master
-      RELEASE_MARKER_FILE: .git/typus_release_tag
-
-      IFLOW_API_KEY: ${{ secrets.IFLOW_API_KEY }}
-      IFLOW_BASE_URL: https://apis.iflow.cn/v1
-      IFLOW_MODEL_NAME: glm-4.6
-
       GH_TOKEN: ${{ github.token }}
-
-      GITEE_REMOTE_URL: ${{ secrets.GITEE_REMOTE_URL }}
-
-      CABAL_MIRROR_URL: ""
-      CABAL_TRANSPORT: "curl"
-
     steps:
-      - name: Checkout with PAT
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.IFLOW_PAT }}
-          fetch-depth: 0
-
-      - name: Ensure branch and git identity
+      - name: Create GitHub Release if missing
         shell: bash
         run: |
           set -euo pipefail
-          BRANCH="${WORK_BRANCH:-master}"
-          git fetch origin "${BRANCH}" --prune
-          git checkout -B "${BRANCH}" "origin/${BRANCH}"
-          git config user.name "iflow-bot"
-          git config user.email "iflow-bot@users.noreply.github.com"
+          TAG="${GITHUB_REF_NAME}"
 
-      - name: Setup Node (for iFlow CLI)
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Install iFlow CLI
-        shell: bash
-        run: |
-          set -euo pipefail
-          npm i -g @iflow-ai/iflow-cli@latest
-          iflow --version
-
-      - name: Verify IFLOW_API_KEY is present
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -n "${IFLOW_API_KEY:-}" || { echo "Missing IFLOW_API_KEY secret"; exit 1; }
-
-      - name: Verify GITEE_REMOTE_URL is present
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -n "${GITEE_REMOTE_URL:-}" || { echo "Missing GITEE_REMOTE_URL secret"; exit 1; }
-
-      - name: Setup Haskell (GHC + Cabal)
-        uses: haskell-actions/setup@v2
-        with:
-          ghc-version: 'latest'
-          cabal-version: 'latest'
-          cabal-update: false
-
-      - name: Show tool versions
-        shell: bash
-        run: |
-          set -euo pipefail
-          ghc --version
-          cabal --version
-
-      - name: Cache cabal (store + index) and dist-newstyle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cabal/store
-            ~/.cabal/packages
-            dist-newstyle
-          key: cabal-${{ runner.os }}-${{ hashFiles('**/*.cabal','cabal.project*') }}
-          restore-keys: |
-            cabal-${{ runner.os }}-
-
-      - name: Configure cabal (http-transport + optional mirror)
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          mkdir -p ~/.cabal
-          if [ ! -f ~/.cabal/config ]; then
-            cabal user-config init
+          if gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "Release ${TAG} already exists. Skipping."
+            exit 0
           fi
 
-          if [ "${CABAL_TRANSPORT:-}" = "curl" ]; then
-            if ! grep -qE '^[[:space:]]*http-transport:[[:space:]]*curl[[:space:]]*$' ~/.cabal/config; then
-              printf '\nhttp-transport: curl\n' >> ~/.cabal/config
-            fi
-          fi
-
-          if [ -n "${CABAL_MIRROR_URL:-}" ]; then
-            sed -i -E "s#^([[:space:]]*url:[[:space:]]*).*(hackage\\.haskell\\.org).*#\\1${CABAL_MIRROR_URL}#g" ~/.cabal/config || true
-          fi
-
-      - name: Cabal update (retry, ignore project)
-        shell: bash
-        run: |
-          set -euo pipefail
-          for i in 1 2 3 4 5; do
-            echo "cabal update attempt $i"
-            if cabal update --ignore-project; then
-              exit 0
-            fi
-            sleep $((i * 5))
-          done
-          echo "cabal update failed after retries" >&2
-          exit 1
-
-      - name: Make loop script executable
-        shell: bash
-        run: |
-          set -euo pipefail
-          chmod +x scripts/typus_cabal_loop.sh
-
-      - name: Run for ${{ env.RUN_HOURS }} hours
-        shell: bash
-        run: |
-          set -euo pipefail
-          timeout --signal=TERM $(( RUN_HOURS * 3600 )) bash scripts/typus_cabal_loop.sh || true
-
-      - name: Finalize: push (release tag triggers release-on-tag only)
-        if: always()
-        shell: bash
-        run: |
-          set -euo pipefail
-          BRANCH="${WORK_BRANCH:-master}"
-
-          # gitee remote（不打印 URL）
-          if git remote get-url gitee >/dev/null 2>&1; then
-            git remote set-url gitee "${GITEE_REMOTE_URL}"
-          else
-            git remote add gitee "${GITEE_REMOTE_URL}"
-          fi
-
-          # 找 marker（兼容 worktree 场景）
-          MARKER_FILE="${RELEASE_MARKER_FILE}"
-          if [[ ! -f "${MARKER_FILE}" ]]; then
-            GIT_DIR_REAL="$(git rev-parse --git-dir 2>/dev/null || echo ".git")"
-            MARKER_FILE="${GIT_DIR_REAL%/}/typus_release_tag"
-          fi
-
-          TAG=""
-          if [[ -f "${MARKER_FILE}" ]]; then
-            TAG="$(tr -d '\r\n' < "${MARKER_FILE}" | sed -e 's/^[[:space:]]*//; s/[[:space:]]*$//')"
-            echo "Release tag prepared: ${TAG}"
-          fi
-
-          # 先把本地变更 stage
-          git add -A
-
-          # 如果有 staged 变更：release 场景用 [skip ci] 提交，保证 push master 不触发 iflow-cabal-loop
-          if ! git diff --cached --quiet; then
-            if [[ -n "${TAG}" ]]; then
-              git commit -m "ci: ${RUN_HOURS}h batch update [skip ci] (run $GITHUB_RUN_ID)" || true
-            else
-              git commit -m "ci: ${RUN_HOURS}h batch update (run $GITHUB_RUN_ID)" || true
-            fi
-          fi
-
-          # release 场景：确保 master 的 HEAD 含 [skip ci]，否则补一个空提交当“护栏”
-          if [[ -n "${TAG}" ]]; then
-            HEAD_MSG="$(git log -1 --pretty=%B 2>/dev/null || true)"
-            if ! echo "${HEAD_MSG}" | grep -Eiq '\[(skip ci|ci skip)\]'; then
-              git commit --allow-empty -m "ci: autoloop guard [skip ci] (run $GITHUB_RUN_ID)"
-            fi
-          fi
-
-          # 1) 先 push 分支（不带 --follow-tags，避免把 tag 混在同一次 push 里）
-          #    release 场景 master push 因为 HEAD 有 [skip ci]，不会触发 iflow-cabal-loop
-          GIT_TERMINAL_PROMPT=0 git push --quiet gitee "HEAD:${BRANCH}" --force-with-lease || true
-          GIT_TERMINAL_PROMPT=0 git push --quiet origin "HEAD:${BRANCH}" || true
-
-          # 2) 如果有 release tag：单独 push tag（只触发 release-on-tag，不触发 iflow-cabal-loop）
-          if [[ -n "${TAG}" ]]; then
-            # 如果远端已存在 tag，则跳过（避免 push 失败）
-            if git ls-remote --tags origin "refs/tags/${TAG}" | grep -q "${TAG}"; then
-              echo "origin already has tag ${TAG}, skip pushing tag."
-            else
-              GIT_TERMINAL_PROMPT=0 git push --quiet origin "refs/tags/${TAG}"
-            fi
-
-            if git ls-remote --tags gitee "refs/tags/${TAG}" 2>/dev/null | grep -q "${TAG}"; then
-              echo "gitee already has tag ${TAG}, skip pushing tag."
-            else
-              GIT_TERMINAL_PROMPT=0 git push --quiet gitee "refs/tags/${TAG}" || true
-            fi
-          fi
-
-          # 非 release 场景：保留你之前的“5 小时后 push 触发下一轮”的逻辑（这里不再强制加 tick）
-          # 如果你还需要“必定 tick 触发下一轮”，再把之前的 tick 逻辑加回这个分支即可。
+          gh release create "${TAG}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --generate-notes
