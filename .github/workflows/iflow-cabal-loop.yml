@@ -81,7 +81,7 @@ jobs:
           test -n "${GITEE_REMOTE_URL:-}" || { echo "Missing GITEE_REMOTE_URL secret"; exit 1; }
 
       - name: Setup Haskell (GHC + Cabal)
-        uses: haskell-actions/setup@v2
+        uses: haskell-actions/setup@v3
         with:
           # 修改建议：不要使用 latest，指定具体版本以避免解析错误
           ghc-version: '9.6.3'
