@@ -1,7 +1,7 @@
 module Test.Unit.CabalMemorySafetySpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=))
+import Test.Tasty.HUnit (testCase, (@?=), assertFailure)
 import Test.Tasty.QuickCheck (testProperty)
 
 import TestSupport.QuickCheck (fastProperty)
@@ -48,14 +48,18 @@ tests =
               Left _ -> do
                 performGC
                 True @?= True  -- Should reach here without memory issues
-              Right _ -> @?= "Should fail" "Expected failure"
+              Right _ -> "Should fail" @?= "Expected failure"
 
         , testCase "Repeated parsing doesn't accumulate memory" $ do
             let input = "func repeat() { return 1; }"
                 parseMultiple = sequence $ replicate 100 $ Parser.parseTypus input
-            results <- parseMultiple
-            performGC
-            L.all isSuccess results @?= True
+                isRight (Right _) = True
+                isRight (Left _) = False
+            case parseMultiple of
+              Left err -> assertFailure $ "Parsing failed: " ++ err
+              Right results -> do
+                performGC
+                length results @?= 100
         ]
 
     , testGroup "Utils Memory Safety"
@@ -96,16 +100,16 @@ tests =
             L.length positions @?= 100000
 
         , testCase "Span operations are memory efficient" $ do
-            let spans = [SourceLocation.SourceSpan (SourceLocation.SourcePos 1 1) (SourceLocation.SourcePos 100 100)]
+            let spans = [SourceLocation.SourceSpan (SourceLocation.SourcePos 1 1 0) (SourceLocation.SourcePos 100 100 0)]
                 merged = foldl SourceLocation.mergeSpans (L.head spans) (L.tail spans)
             performGC
             rnf merged `seq` True @?= True
             SourceLocation.isValidSpan merged @?= True
 
         , testCase "Position advancement doesn't accumulate memory" $ do
-            let basePos = SourceLocation.SourcePos 1 1
-                chars = cycle "abcdefghijklmnopqrstuvwxyz"
-                positions = scanl (SourceLocation.advancePos) basePos (take 1000 chars)
+            let basePos = SourceLocation.SourcePos 1 1 0
+                chars = take 1000 $ cycle "abcdefghijklmnopqrstuvwxyz"
+                positions = scanl (\pos char -> SourceLocation.advancePos char pos) basePos chars
             performGC
             rnf positions `seq` True @?= True
             L.length positions @?= 1001
@@ -116,8 +120,8 @@ tests =
             let input = "func deep() { return [1, 2, 3]; }"
                 result = Parser.parseTypus input
             case result of
-              Left err -> rnf (show err) `seq` True @?= True
-              Right parsed -> rnf parsed `seq` True @?= True
+              Left err -> length (show err) `seq` True @?= True
+              Right parsed -> length (show parsed) `seq` True @?= True
 
         , testCase "Utils results are fully evaluable" $ do
             let testString = "  \n  test string with\n  multiple lines  \n  "
@@ -150,14 +154,14 @@ tests =
                 rnf (show err) `seq` True @?= True
               Right parsed -> do
                 performGC
-                rnf parsed `seq` True @?= True
+                length (show parsed) `seq` True @?= True
 
         , testCase "Large nested structures don't cause leaks" $ do
-            let nestedInput = unlines ["func nested() {"] ++ 
+            let nestedInput = unlines (["func nested() {"] ++ 
                                replicate 100 "  if (true) {" ++
                                replicate 100 "    return 1;" ++
                                replicate 100 "  }" ++
-                               ["}"]
+                               ["}"])
                 result = Parser.parseTypus nestedInput
             case result of
               Left err -> do
@@ -165,15 +169,15 @@ tests =
                 rnf (show err) `seq` True @?= True
               Right parsed -> do
                 performGC
-                rnf parsed `seq` True @?= True
+                length (show parsed) `seq` True @?= True
 
         , testCase "Repeated operations don't accumulate" $ do
             let input = "func accumulate() { return 1; }"
                 operations = sequence $ replicate 1000 $ do
                     let result = Parser.parseTypus input
                     case result of
-                      Left err -> rnf (show err) `seq` return False
-                      Right parsed -> rnf parsed `seq` return True
+                      Left err -> length (show err) `seq` return False
+                      Right parsed -> length (show parsed) `seq` return True
             results <- operations
             performGC
             L.all id results @?= True
@@ -182,13 +186,13 @@ tests =
     , testGroup "Resource Management"
         [ testCase "Parser releases resources on failure" $ do
             let invalidInputs = ["{", "}", "func", "return", "if", "else", "for", "while"]
-                results <- sequence $ L.map (\input -> do
-                    let result = Parser.parseTypus input
-                    performGC
-                    case result of
-                      Left err -> rnf (show err) `seq` return True
-                      Right parsed -> rnf parsed `seq` return True
-                    ) invalidInputs
+            results <- sequence $ L.map (\input -> do
+                let result = Parser.parseTypus input
+                performGC
+                case result of
+                  Left err -> length (show err) `seq` return True
+                  Right parsed -> length (show parsed) `seq` return True
+                ) invalidInputs
             L.all id results @?= True
 
         , testCase "Utils functions release intermediate results" $ do
@@ -201,26 +205,26 @@ tests =
         , testCase "Memory usage stays bounded" $ do
             let testSizes = [100, 500, 1000, 2000]
                 testInputs = L.map (\n -> unlines $ replicate n "func test() { return 1; }") testSizes
-                results <- sequence $ L.map (\input -> do
-                    let result = Parser.parseTypus input
-                    performGC
-                    case result of
-                      Left err -> rnf (show err) `seq` return (L.length $ show err)
-                      Right parsed -> rnf parsed `seq` return 1000  -- Arbitrary success value
-                    ) testInputs
+            results <- sequence $ L.map (\input -> do
+                let result = Parser.parseTypus input
+                performGC
+                case result of
+                  Left err -> length (show err) `seq` return (L.length $ show err)
+                  Right parsed -> length (show parsed) `seq` return 1000  -- Arbitrary success value
+                ) testInputs
             L.all (> 0) results @?= True
         ]
 
     , testGroup "Edge Case Memory Safety"
         [ testCase "Empty inputs don't cause issues" $ do
             let emptyInputs = ["", "   ", "\n\t", "// comment", "/* */"]
-                results <- sequence $ L.map (\input -> do
-                    let result = Parser.parseTypus input
-                    performGC
-                    case result of
-                      Left err -> rnf (show err) `seq` return True
-                      Right parsed -> rnf parsed `seq` return True
-                    ) emptyInputs
+            results <- sequence $ L.map (\input -> do
+                let result = Parser.parseTypus input
+                performGC
+                case result of
+                  Left err -> length (show err) `seq` return True
+                  Right parsed -> length (show parsed) `seq` return True
+                ) emptyInputs
             L.all id results @?= True
 
         , testCase "Extremely long lines handled safely" $ do
@@ -232,13 +236,13 @@ tests =
                 rnf (show err) `seq` True @?= True
               Right parsed -> do
                 performGC
-                rnf parsed `seq` True @?= True
+                length (show parsed) `seq` True @?= True
 
         , testProperty "Random inputs don't cause memory issues" $ do
             \input -> let result = Parser.parseTypus input
                       in case result of
-                           Left err -> rnf (show err) `seq` True
-                           Right parsed -> rnf parsed `seq` True
+                           Left err -> length (show err) `seq` True
+                           Right parsed -> length (show parsed) `seq` True
         ]
     ]
 

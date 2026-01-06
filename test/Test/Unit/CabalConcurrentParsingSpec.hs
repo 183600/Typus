@@ -11,7 +11,7 @@ import qualified Parser (parseTypus)
 import qualified Utils (trim, splitBy, removeComments)
 import qualified SourceLocation
 import Control.Concurrent (forkIO, MVar, newEmptyMVar, putMVar, takeMVar)
-import Control.Monad (replicateM_)
+import Control.Monad (replicateM_, replicateM)
 import Data.List (nub)
 
 -- | Concurrent parsing L.and thread safety tests
@@ -23,7 +23,7 @@ tests =
             let testStrings = ["  test1  ", "\ttest2\n", "  test3  ", "test4  "]
             resultsVar <- newEmptyMVar
             _ <- forkIO $ do
-                trimmed <- mapM Utils.trim testStrings
+                let trimmed = map Utils.trim testStrings
                 putMVar resultsVar trimmed
             finalResults <- takeMVar resultsVar
             finalResults @?= ["test1", "test2", "test3", "test4"]
@@ -32,7 +32,7 @@ tests =
             let testInputs = ["a,b,c", "x,y,z", "1,2,3"]
             resultsVar <- newEmptyMVar
             _ <- forkIO $ do
-                split <- mapM (Utils.splitBy ',') testInputs
+                let split = map (Utils.splitBy ',') testInputs
                 putMVar resultsVar split
             finalResults <- takeMVar resultsVar
             finalResults @?= [["a", "b", "c"], ["x", "y", "z"], ["1", "2", "3"]]
@@ -45,10 +45,10 @@ tests =
                   ]
             resultsVar <- newEmptyMVar
             _ <- forkIO $ do
-                uncommented <- mapM Utils.removeComments commentedInputs
+                let uncommented = map Utils.removeComments commentedInputs
                 putMVar resultsVar uncommented
             finalResults <- takeMVar resultsVar
-            L.all (`L.isInfixOf` L.concat finalResults) ["return 1;", "return 2;", "return 3;"] @?= True
+            L.all (`L.isInfixOf` L.concat (map show finalResults)) ["return 1;", "return 2;", "return 3;"] @?= True
         ]
 
     , testGroup "Concurrent Parsing"
@@ -60,7 +60,7 @@ tests =
                   ]
             resultsVar <- newEmptyMVar
             _ <- forkIO $ do
-                parseResults <- mapM (Parser.parseTypus "concurrent") inputs
+                let parseResults = map Parser.parseTypus inputs
                 putMVar resultsVar parseResults
             finalResults <- takeMVar resultsVar
             L.all isSuccess finalResults @?= True
@@ -69,7 +69,7 @@ tests =
             let input = "func shared() { return 42; }"
             resultsVar <- newEmptyMVar
             _ <- forkIO $ do
-                parseResults <- replicateM 3 $ Parser.parseTypus input
+                let parseResults = replicate 3 $ Parser.parseTypus input
                 putMVar resultsVar parseResults
             finalResults <- takeMVar resultsVar
             L.all isSuccess finalResults @?= True
@@ -82,7 +82,7 @@ tests =
                   ]
             resultsVar <- newEmptyMVar
             _ <- forkIO $ do
-                parseResults <- mapM Parser.parseTypus invalidInputs
+                let parseResults = map Parser.parseTypus invalidInputs
                 putMVar resultsVar parseResults
             finalResults <- takeMVar resultsVar
             L.all isFailure finalResults @?= True
@@ -113,7 +113,7 @@ tests =
                 chars = "abcdefghijklmnopqrstuvwxyz"
             resultsVar <- newEmptyMVar
             _ <- forkIO $ do
-                advanced <- mapM (SourceLocation.advancePos basePos) chars
+                let advanced = map (\c -> SourceLocation.advancePos c basePos) chars
                 putMVar resultsVar advanced
             finalResults <- takeMVar resultsVar
             L.length finalResults @?= 26
@@ -124,7 +124,7 @@ tests =
             let input = "func memory() { return 1; }"
             resultsVar <- newEmptyMVar
             _ <- forkIO $ do
-                parseResults <- replicateM 100 $ Parser.parseTypus input
+                let parseResults = replicate 100 $ Parser.parseTypus input
                 putMVar resultsVar parseResults
             finalResults <- takeMVar resultsVar
             L.all isSuccess finalResults @?= True
@@ -134,15 +134,14 @@ tests =
             results1 <- newEmptyMVar
             results2 <- newEmptyMVar
             _ <- forkIO $ do
-                result1 <- Parser.parseTypus input
+                let result1 = Parser.parseTypus input
                 putMVar results1 result1
             _ <- forkIO $ do
-                result2 <- Parser.parseTypus input
-                    putMVar results2 result2
-                final1 <- takeMVar results1
-                final2 <- takeMVar results2
+                let result2 = Parser.parseTypus input
+                putMVar results2 result2
+            final1 <- takeMVar results1
+            final2 <- takeMVar results2
             (isSuccess final1 && isSuccess final2) @?= True
-
         , testProperty "Concurrent operations yield consistent results" $ do
             \input -> do
                 let result1 = Utils.trim input
@@ -165,7 +164,7 @@ tests =
                   ]
             resultsVar <- newEmptyMVar
             _ <- forkIO $ do
-                parseResults <- replicateM 5 $ Parser.parseTypus complexInput
+                let parseResults = replicate 5 $ Parser.parseTypus complexInput
                 putMVar resultsVar parseResults
             finalResults <- takeMVar resultsVar
             L.all isSuccess finalResults @?= True
@@ -183,7 +182,7 @@ tests =
             let errorInputs = ["{", "}", "func", "return", "if"]
             resultsVar <- newEmptyMVar
             _ <- forkIO $ do
-                errorResults <- mapM Parser.parseTypus errorInputs
+                let errorResults = map Parser.parseTypus errorInputs
                 putMVar resultsVar errorResults
             finalResults <- takeMVar resultsVar
             L.all isFailure finalResults @?= True
@@ -194,7 +193,7 @@ tests =
             let inputs = [unlines ["func test" ++ show i ++ "() { return " ++ show i ++ "; }"] | i <- [1..50]]
             resultsVar <- newEmptyMVar
             _ <- forkIO $ do
-                parseResults <- mapM Parser.parseTypus inputs
+                let parseResults = map Parser.parseTypus inputs
                 putMVar resultsVar parseResults
             finalResults <- takeMVar resultsVar
             L.length finalResults @?= 50
@@ -214,7 +213,7 @@ tests =
             let input = "func stress() { return 0; }"
             resultsVar <- newEmptyMVar
             _ <- forkIO $ do
-                parseResults <- replicateM 1000 $ Parser.parseTypus input
+                let parseResults = replicate 1000 $ Parser.parseTypus input
                 putMVar resultsVar parseResults
             finalResults <- takeMVar resultsVar
             L.length finalResults @?= 1000
@@ -234,8 +233,8 @@ tests =
                   ]
             resultsVar <- newEmptyMVar
             _ <- forkIO $ do
-                    parseResults <- replicateM 100 $ Parser.parseTypus complexInput
-                    processed <- mapM processParseResult parseResults
+                    let parseResults = replicate 100 $ Parser.parseTypus complexInput
+                        processed = map processParseResult parseResults
                     putMVar resultsVar processed
             finalResults <- takeMVar resultsVar
             L.all (== True) finalResults @?= True
@@ -264,9 +263,9 @@ processString = return . Utils.trim
 processLargeString :: String -> IO String
 processLargeString = return . Utils.removeComments
 
-processParseResult :: Either a b -> IO Bool
-processParseResult (Right _) = return True
-processParseResult (Left _) = return False
+processParseResult :: Either a b -> Bool
+processParseResult (Right _) = True
+processParseResult (Left _) = False
 
 isInfixOf :: Eq a => [a] -> [[a]] -> Bool
 isInfixOf needle haystack = L.any (needle `L.isPrefixOf`) haystack

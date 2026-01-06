@@ -2,13 +2,13 @@ module Test.Unit.CabalRegressionSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import qualified Data.List as L
-import Test.Tasty.HUnit (testCase, (@?=))
+import Test.Tasty.HUnit (testCase, (@?=), assertFailure)
 import Test.Tasty.QuickCheck (testProperty)
 
 import TestSupport.QuickCheck (fastProperty)
 
 import qualified Parser (parseTypus, TypusFile(..), FileDirectives(..))
-import qualified Utils (trim, splitBy, removeComments, normalizeIndentation)
+import qualified Utils (trim, splitBy, splitByCollapsed, removeComments, normalizeIndentation)
 import qualified SourceLocation
 import qualified SyntaxValidator
 
@@ -25,7 +25,7 @@ tests =
               Left err -> 
                 -- Should provide helpful error message, not crash
                 "semicolon" `L.isInfixOf` show err || "expected" `L.isInfixOf` show err @?= True
-              Right _ -> @?= "Should handle gracefully" "Graceful handling"
+              Right _ -> "Graceful handling" @?= "Should handle gracefully"
 
         , testCase "Regression: Parser recovers from unclosed blocks" $ do
             -- Previously this would cause infinite loops
@@ -35,14 +35,14 @@ tests =
               Left err -> 
                 -- Should detect unclosed block
                 L.length (show err) > 0 @?= True
-              Right _ -> @?= "Should detect error" "Error detection"
+              Right _ -> "Error detection" @?= "Should detect error"
 
         , testCase "Regression: Parser handles empty directives" $ do
             -- Previously empty directives would cause parsing failures
             let input = "// @ownership: \n// @dependent-types: \nfunc test() { return 1; }"
                 result = Parser.parseTypus input
             case result of
-              Left err -> @?= "Should handle empty directives" (show err)
+              Left err -> assertFailure $ "Should handle empty directives: " ++ show err
               Right parsed -> 
                 -- Should parse successfully with default directive handling
                 Parser.tfDirectives parsed `seq` True @?= True
@@ -50,20 +50,20 @@ tests =
         , testCase "Regression: Parser handles deeply nested structures" $ do
             -- Previously deep nesting would cause stack overflow
             let nestedInput = unlines ["func deep() {"] ++ 
-                               L.concat (replicate 50 ["  if (true) {\n"]) ++
+                               concat (replicate 50 "  if (true) {\n") ++
                                "    return 1;\n" ++
-                               L.concat (replicate 50 ["  }\n"]) ++
-                               ["}"]
+                               concat (replicate 50 "  }\n") ++
+                               "}"
                 result = Parser.parseTypus nestedInput
             case result of
               Left err -> L.length (show err) > 0 @?= True
-              Right _ -> @?= "Handle deep nesting" "Deep nesting handled"
+              Right _ -> "Deep nesting handled" @?= "Handle deep nesting"
         ]
 
     , testGroup "Utils Regression Tests"
         [ testCase "Regression: trim handles unicode whitespace correctly" $ do
             -- Previously certain unicode whitespace wasn't trimmed
-            let unicodeSpace = "\u3000测试\u3000"  -- Chinese full-width space
+            let unicodeSpace = "\3000\27979\35797\3000"  -- Chinese full-width space
                 trimmed = Utils.trim unicodeSpace
             trimmed @?= "测试"
 
@@ -91,15 +91,15 @@ tests =
     , testGroup "SourceLocation Regression Tests"
         [ testCase "Regression: Source position handles large line numbers" $ do
             -- Previously large line numbers would cause overflow
-            let largePos = SourceLocation.SourcePos 1000000 100
+            let largePos = SourceLocation.SourcePos 1000000 100 1000000
                 advanced = SourceLocation.advancePos 'a' largePos
-            SourceLocation.sourceLine advanced >= 1000000 @?= True
+            SourceLocation.posLine advanced >= 1000000 @?= True
 
         , testCase "Regression: Span merging handles edge cases" $ do
             -- Previously merging certain spans would fail
-            let pos1 = SourceLocation.SourcePos 1 1
-                pos2 = SourceLocation.SourcePos 1 10
-                pos3 = SourceLocation.SourcePos 2 5
+            let pos1 = SourceLocation.SourcePos 1 1 0
+                pos2 = SourceLocation.SourcePos 1 10 9
+                pos3 = SourceLocation.SourcePos 2 5 15
                 span1 = SourceLocation.SourceSpan pos1 pos2
                 span2 = SourceLocation.SourceSpan pos2 pos3
                 merged = SourceLocation.mergeSpans span1 span2
@@ -107,10 +107,10 @@ tests =
 
         , testCase "Regression: Position advancement handles newlines correctly" $ do
             -- Previously newline advancement was inconsistent
-            let pos = SourceLocation.SourcePos 5 10
+            let pos = SourceLocation.SourcePos 5 10 50
                 advanced = SourceLocation.advancePos '\n' pos
-            SourceLocation.sourceLine advanced @?= 6
-            SourceLocation.sourceColumn advanced @?= 1
+            SourceLocation.posLine advanced @?= 6
+            SourceLocation.posColumn advanced @?= 1
         ]
 
     , testGroup "Error Handling Regression Tests"
@@ -122,7 +122,7 @@ tests =
               Left err -> 
                 let errStr = show err
                 in "line" `L.isInfixOf` errStr || L.any (`L.isInfixOf` errStr) ["1:", "2:", "3:", "4:"] @?= True
-              Right _ -> @?= "Should fail with location" "Location info"
+              Right _ -> "Location info" @?= "Should fail with location"
 
         , testCase "Regression: Multiple errors are reported when possible" $ do
             -- Previously only first error was reported
@@ -132,7 +132,7 @@ tests =
               Left err -> 
                 -- Should provide meaningful error information
                 L.length (show err) > 10 @?= True
-              Right _ -> @?= "Should detect errors" "Error detection"
+              Right _ -> "Error detection" @?= "Should detect errors"
         ]
 
     , testGroup "Performance Regression Tests"
@@ -142,7 +142,7 @@ tests =
                 result = Parser.parseTypus largeInput
             case result of
               Left err -> L.length (show err) > 0 @?= True
-              Right _ -> @?= "Handle large input" "Large input handled"
+              Right _ -> "Large input handled" @?= "Handle large input"
 
         , testCase "Regression: Utils operations maintain performance" $ do
             -- Ensure utils don't have performance regressions
@@ -160,7 +160,7 @@ tests =
             let input = "func validated() { return true; }"
                 parseResult = Parser.parseTypus input
             case parseResult of
-              Left _ -> @?= "Should parse successfully" "Parse failed"
+              Left _ -> "Parse failed" @?= "Should parse successfully"
               Right parsed -> 
                 -- Should be able to validate without issues
                 parsed `seq` True @?= True
@@ -170,7 +170,7 @@ tests =
             let input = "// @ownership: true\n// @dependent-types: false\nfunc main() {}"
                 result = Parser.parseTypus input
             case result of
-              Left err -> @?= "Should parse with directives" (show err)
+              Left err -> assertFailure $ "Should parse with directives: " ++ show err
               Right parsed -> do
                 let directives = Parser.tfDirectives parsed
                 directives `seq` True @?= True
@@ -191,7 +191,7 @@ tests =
                 let errStr = show err
                 -- Should indicate line number around where error occurs
                 L.any (`L.isInfixOf` errStr) ["3:", "4:", "5:"] @?= True
-              Right _ -> @?= "Should detect error" "Error detection"
+              Right _ -> "Error detection" @?= "Should detect error"
         ]
 
     , testGroup "Edge Case Regression Tests"
@@ -201,7 +201,7 @@ tests =
                 result = Parser.parseTypus whitespaceOnly
             case result of
               Left err -> L.length (show err) > 0 @?= True
-              Right _ -> @?= "Handle whitespace" "Whitespace handled"
+              Right _ -> "Whitespace handled" @?= "Handle whitespace"
 
         , testCase "Regression: Comment removal handles edge cases" $ do
             -- Previously certain comment patterns caused issues

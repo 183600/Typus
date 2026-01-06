@@ -33,10 +33,9 @@ tests = testGroup "Cabal QuickCheck Test Properties"
       , fastProperty "removeComments removes L.all comment types" prop_removeComments_complete
       , fastProperty "normalizeIndentation preserves relative indentation" prop_normalizeIndentation_relative
       , fastProperty "intercalate with empty separator" prop_intercalate_empty
-      , fastProperty "isPrefixOf reflexive" prop_L.isPrefixOf_reflexive
-      , fastProperty "L.isSuffixOf reflexive" prop_L.isSuffixOf_reflexive
-      , fastProperty "isInfixOf reflexive" prop_L.isInfixOf_reflexive
-      ]
+      , fastProperty "isPrefixOf reflexive" prop_L_isPrefixOf_reflexive
+        , fastProperty "L.isSuffixOf reflexive" prop_L_isSuffixOf_reflexive
+        , fastProperty "isInfixOf reflexive" prop_L_isInfixOf_reflexive      ]
   , testGroup "Data Structure Properties"
       [ fastProperty "Map insertion is idempotent" prop_map_insert_idempotent
       , fastProperty "Map lookup after insert" prop_map_lookup_after_insert
@@ -159,16 +158,16 @@ prop_intercalate_empty :: [String] -> Property
 prop_intercalate_empty xs =
   intercalate "" xs === L.concat xs
 
-prop_L.isPrefixOf_reflexive :: String -> Property
-prop_L.isPrefixOf_reflexive s =
+prop_L_isPrefixOf_reflexive :: String -> Property
+prop_L_isPrefixOf_reflexive s =
   property $ s `L.isPrefixOf` s
 
-prop_L.isSuffixOf_reflexive :: String -> Property
-prop_L.isSuffixOf_reflexive s =
+prop_L_isSuffixOf_reflexive :: String -> Property
+prop_L_isSuffixOf_reflexive s =
   property $ s `L.isSuffixOf` s
 
-prop_L.isInfixOf_reflexive :: String -> Property
-prop_L.isInfixOf_reflexive s =
+prop_L_isInfixOf_reflexive :: String -> Property
+prop_L_isInfixOf_reflexive s =
   property $ s `L.isInfixOf` s
 
 -- Data Structure Properties
@@ -278,7 +277,7 @@ prop_sourcespan_length_nonnegative = forAll genValidSpan $ \span ->
   let start = spanStart span
       end = spanEnd span
       length = posOffset end - posOffset start
-  in L.length >= 0
+  in length >= 0
   where
     genValidSpan = do
       l1 <- choose (1, 100)

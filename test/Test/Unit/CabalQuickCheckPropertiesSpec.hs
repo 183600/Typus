@@ -1,7 +1,9 @@
 module Test.Unit.CabalQuickCheckPropertiesSpec (tests) where
+{-# LANGUAGE ScopedTypeVariables #-}
 
 import Test.Tasty (TestTree, testGroup)
 import qualified Data.List as L
+import Data.List (intersperse)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.QuickCheck (testProperty)
 
@@ -29,18 +31,19 @@ tests =
 
         , testProperty "splitBy L.and splitByCollapsed relationship" $ do
             \input delim -> let normal = Utils.splitBy delim input
-                              collapsed = Utils.splitByCollapsed delim input
-                          in L.all (`elem` normal) collapsed
+                                collapsed = Utils.splitByCollapsed delim input
+                in L.all (`elem` normal) collapsed
 
         , testProperty "splitBy preserves total content" $ do
-            \input delim -> let parts = Utils.splitBy delim input
-                              rejoined = L.concat (intersperse [delim] parts)
-                          in L.length rejoined >= L.length input - L.length (L.filter (== delim) input)
+            \input delim -> 
+                let parts = Utils.splitBy delim input
+                    rejoined = L.concat (intersperse [delim] parts)
+                in L.length rejoined >= L.length input - L.length (L.filter (== delim) input)
 
         , testProperty "removeComments doesn't change string literals" $ do
             \input -> let withComments = "func test() { s := \"" ++ input ++ "\"; // comment }\n"
                           withoutComments = Utils.removeComments withComments
-                      in "\"" ++ input ++ "\"" `L.isInfixOf` withoutComments
+                      in ("\"" ++ input ++ "\"") `L.isInfixOf` withoutComments
 
         , testProperty "normalizeIndentation preserves line structure" $ do
             \input -> let normalized = Utils.normalizeIndentation input
@@ -52,15 +55,15 @@ tests =
     , testGroup "SourceLocation Properties"
         [ testProperty "SourcePos ordering is consistent" $ do
             \line1 col1 line2 col2 -> 
-                let pos1 = SourceLocation.SourcePos (abs line1 `mod` 1000 + 1) (abs col1 `mod` 1000 + 1)
-                    pos2 = SourceLocation.SourcePos (abs line2 `mod` 1000 + 1) (abs col2 `mod` 1000 + 1)
+                let pos1 = SourceLocation.SourcePos (abs line1 `mod` 1000 + 1) (abs col1 `mod` 1000 + 1) 0
+                    pos2 = SourceLocation.SourcePos (abs line2 `mod` 1000 + 1) (abs col2 `mod` 1000 + 1) 0
                 in pos1 == pos2 || pos1 /= pos2  -- Basic equality property
 
         , testProperty "Span merging is associative" $ do
             \line1 col1 line2 col2 line3 col3 ->
-                let pos1 = SourceLocation.SourcePos (abs line1 `mod` 100 + 1) (abs col1 `mod` 100 + 1)
-                    pos2 = SourceLocation.SourcePos (abs line2 `mod` 100 + 1) (abs col2 `mod` 100 + 1)
-                    pos3 = SourceLocation.SourcePos (abs line3 `mod` 100 + 1) (abs col3 `mod` 100 + 1)
+                let pos1 = SourceLocation.SourcePos (abs line1 `mod` 100 + 1) (abs col1 `mod` 100 + 1) 0
+                    pos2 = SourceLocation.SourcePos (abs line2 `mod` 100 + 1) (abs col2 `mod` 100 + 1) 0
+                    pos3 = SourceLocation.SourcePos (abs line3 `mod` 100 + 1) (abs col3 `mod` 100 + 1) 0
                     span1 = SourceLocation.SourceSpan pos1 pos2
                     span2 = SourceLocation.SourceSpan pos2 pos3
                     merged1 = SourceLocation.mergeSpans span1 span2
@@ -68,15 +71,15 @@ tests =
 
         , testProperty "advancePos behaves correctly for newlines" $ do
             \line col -> 
-                let pos = SourceLocation.SourcePos (abs line `mod` 100 + 1) (abs col `mod` 100 + 1)
+                let pos = SourceLocation.SourcePos (abs line `mod` 100 + 1) (abs col `mod` 100 + 1) 0
                     advanced = SourceLocation.advancePos '\n' pos
-                in SourceLocation.sourceLine advanced > SourceLocation.sourceLine pos ||
-                   SourceLocation.sourceColumn advanced == 1
+                in SourceLocation.posLine advanced > SourceLocation.posLine pos ||
+                   SourceLocation.posColumn advanced == 1
 
         , testProperty "isValidSpan is consistent" $ do
             \line1 col1 line2 col2 ->
-                let pos1 = SourceLocation.SourcePos (abs line1 `mod` 100 + 1) (abs col1 `mod` 100 + 1)
-                    pos2 = SourceLocation.SourcePos (abs line2 `mod` 100 + 1) (abs col2 `mod` 100 + 1)
+                let pos1 = SourceLocation.SourcePos (abs line1 `mod` 100 + 1) (abs col1 `mod` 100 + 1) 0
+                    pos2 = SourceLocation.SourcePos (abs line2 `mod` 100 + 1) (abs col2 `mod` 100 + 1) 0
                     span = SourceLocation.SourceSpan pos1 pos2
                 in SourceLocation.isValidSpan span == True || SourceLocation.isValidSpan span == False
         ]
@@ -97,13 +100,14 @@ tests =
                              inputLines <= 1 || "line" `L.isInfixOf` show err
                            Right _ -> True
 
-        , testProperty "Parser handles empty input consistently" $ do
-            \_ -> let result1 = Parser.parseTypus ""
-                      result2 = Parser.parseTypus ""
-                  in case (result1, result2) of
-                       (Left _, Left _) -> True
-                       (Right _, Right _) -> True
-                       _ -> False
+        , testProperty "Parser handles empty input consistently" $ 
+            \(_ :: ()) -> 
+                let result1 = Parser.parseTypus ""
+                    result2 = Parser.parseTypus ""
+                in case (result1, result2) of
+                     (Left _, Left _) -> True
+                     (Right _, Right _) -> True
+                     _ -> False
         ]
 
     , testGroup "String Processing Properties"
@@ -114,10 +118,11 @@ tests =
             \input delim -> L.all (not . null) (Utils.splitByCollapsed delim input)
 
         , testProperty "removeComments preserves non-comment content" $ do
-            \input -> let code = "func test() { return " ++ show input ++ "; }"
-                          withComments = code ++ " // comment"
-                          withoutComments = Utils.removeComments withComments
-                      in show input `L.isInfixOf` withoutComments
+            \input -> 
+                let code = "func test() { return " ++ show (input :: String) ++ "; }"
+                    withComments = code ++ " // comment"
+                    withoutComments = Utils.removeComments withComments
+                in show (input :: String) `L.isInfixOf` withoutComments
 
         , testProperty "normalizeIndentation doesn't introduce trailing whitespace" $ do
             \input -> let normalized = Utils.normalizeIndentation input
@@ -127,9 +132,10 @@ tests =
 
     , testGroup "Combinatorial Properties"
         [ testProperty "trim after splitBy maintains consistency" $ do
-            \input delim -> let parts = Utils.splitBy delim input
-                              trimmedParts = map Utils.trim parts
-                          in L.length parts == L.length trimmedParts
+            \input delim -> 
+                let parts = Utils.splitBy delim input
+                    trimmedParts = map Utils.trim parts
+                in L.length parts == L.length trimmedParts
 
         , testProperty "removeComments L.and normalizeIndentation commute" $ do
             \input -> let order1 = Utils.normalizeIndentation (Utils.removeComments input)

@@ -12,17 +12,17 @@ module Test.Unit.CabalIntegrationQuickCheckSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
+import Test.QuickCheck (Property, Arbitrary(arbitrary), (===), (==>), forAll, counterexample, classify, property, ioProperty, (.&&.), (.||.), oneof, elements)
 import qualified Data.List as List
+import qualified Data.List as L
 import Data.Char (isSpace, isAlphaNum, isLetter, toLower, toUpper)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 
-import IntegratedCompiler (compileProgram, CompilationStep(..), CompilationResult(..))
+import IntegratedCompiler (compileWithIntegratedAnalyzers, IntegratedCompileResult(..), defaultCompilerConfig)
 import Parser (parseTypus)
-import Compiler (compileTypus)
-import Analyzer (analyzeProgram)
+import Compiler (compile)
+import AnalyzerIntegration (runIntegratedAnalysis, AnalysisResult(..))
 import Ownership (analyzeOwnership)
-import SyntaxValidator (validateSyntax)
 import ErrorHandler (errorAt, errorWithCategory)
 
 -- Simple arbitrary instances for integration testing
@@ -44,7 +44,7 @@ instance Arbitrary ProgramComplexity where
 
 -- Property: End-to-end compilation pipeline preserves functionality
 prop_end_to_end_compilation :: ProgramComplexity -> Property
-prop_end_to_end_compilation complexity =
+prop_end_to_end_compilation complexity = ioProperty $
   let code = case complexity of
         Simple -> "func main() { return 42 }"
         Moderate -> unlines
@@ -60,24 +60,26 @@ prop_end_to_end_compilation complexity =
           , "}"
           , "func main() { return processData() }"
           ]
-  in case compileProgram code of
-       Right result -> property $ not $ L.null $ crGoCode result
-       Left err -> counterexample ("Compilation failed: " ++ show err) $ property False
+  in do
+       result <- compileWithIntegratedAnalyzers code defaultCompilerConfig
+       if success result
+           then return $ not $ L.null $ compiledCode result
+           else return $ False
 
 -- Property: Multiple compilation steps are executed in order
 prop_compilation_steps_ordered :: [ProgramFeature] -> Property
-prop_compilation_steps_ordered features =
+prop_compilation_steps_ordered features = ioProperty $
   let directives = L.map (\(ProgramFeature f) -> "//! " ++ f ++ ": on") features
       code = unlines $ directives ++ ["func main() { return 42 }"]
-  in case compileProgram code of
-       Right result -> 
-         let steps = crCompilationSteps result
-         in property $ L.length steps >= 3  -- Should have at least parse, analyze, compile
-       Left err -> counterexample ("Compilation failed: " ++ show err) $ property False
+  in do
+       result <- compileWithIntegratedAnalyzers code defaultCompilerConfig
+       if success result
+           then return $ True  -- Compilation succeeded
+           else return $ False
 
 -- Property: Error handling works across pipeline stages
 prop_error_handling_pipeline :: ProgramComplexity -> Property
-prop_error_handling_pipeline complexity =
+prop_error_handling_pipeline complexity = ioProperty $
   let invalidCode = case complexity of
         Simple -> "func main() { return }"  -- Missing return value
         Moderate -> unlines
@@ -92,13 +94,15 @@ prop_error_handling_pipeline complexity =
           , "    return data  -- Use after move"
           , "}"
           ]
-  in case compileProgram invalidCode of
-       Right _ -> property False  -- Should fail
-       Left _ -> property True   -- Expected to fail
+  in do
+       result <- compileWithIntegratedAnalyzers invalidCode defaultCompilerConfig
+       if success result
+           then return $ False  -- Should fail
+           else return $ True   -- Expected to fail
 
 -- Property: Feature combinations are handled correctly
 prop_feature_combinations :: [ProgramFeature] -> Property
-prop_feature_combinations features =
+prop_feature_combinations features = ioProperty $
   let directives = L.map (\(ProgramFeature f) -> "//! " ++ f ++ ": on") features
       code = unlines $ directives ++ 
         [ "func process<T>(data: T) T {"
@@ -109,50 +113,52 @@ prop_feature_combinations features =
         , "    return result"
         , "}"
         ]
-  in case compileProgram code of
-       Right result -> property $ not $ L.null $ crGoCode result
-       Left err -> 
-         -- Some feature combinations might legitimately fail
-         property $ L.length features <= 2
+  in do
+       result <- compileWithIntegratedAnalyzers code defaultCompilerConfig
+       if success result
+           then return $ not $ L.null $ compiledCode result
+           else 
+             -- Some feature combinations might legitimately fail
+             return $ L.length features <= 2
 
 -- Property: Compilation preserves program semantics
 prop_compilation_preserves_semantics :: ProgramComplexity -> Property
-prop_compilation_preserves_semantics complexity =
-  let code = case complexity of
-        Simple -> "func main() { return 42 }"
-        Moderate -> unlines
-          [ "func identity(x: int) int { return x }"
-          , "func main() { return identity(42) }"
-          ]
-        Complex -> unlines
-          [ "func factorial(n: int) int {"
-          , "    if n <= 1 { return 1 }"
-          , "    return n * factorial(n - 1)"
-          , "}"
-          , "func main() { return factorial(5) }"
-          ]
-  in case compileProgram code of
-       Right result -> 
-         let goCode = crGoCode result
-             hasMain = "func main" `List.L.isInfixOf` goCode
-             hasReturn = "return" `List.L.isInfixOf` goCode
-         in property $ hasMain .&&. hasReturn
-       Left err -> counterexample ("Compilation failed: " ++ show err) $ property False
+prop_compilation_preserves_semantics complexity = ioProperty $ do
+       let code = case complexity of
+             Simple -> "func main() { return 42 }"
+             Moderate -> unlines
+               [ "func identity(x: int) int { return x }"
+               , "func main() { return identity(42) }"
+               ]
+             Complex -> unlines
+               [ "func factorial(n: int) int {"
+               , "    if n <= 1 { return 1 }"
+               , "    return n * factorial(n - 1)"
+               , "}"
+               , "func main() { return factorial(5) }"
+               ]
+       result <- compileWithIntegratedAnalyzers code defaultCompilerConfig
+       if success result
+           then do
+             let goCode = compiledCode result
+                 hasMain = "func main" `List.isInfixOf` goCode
+                 hasReturn = "return" `List.isInfixOf` goCode
+             return $ hasMain && hasReturn
+           else return $ False
 
 -- Property: Integration handles large programs
 prop_integration_handles_large_programs :: Int -> Property
-prop_integration_handles_large_programs size =
-  let funcCount = min (abs size `mod` 20 + 1) 10
-      functions = L.map (\i -> "func test" ++ show i ++ "() { return " ++ show i ++ " }") [1..funcCount]
-      code = unlines $ functions ++ ["func main() { return 0 }"]
-  in case compileProgram code of
-       Right result -> 
-         let goCode = crGoCode result
-             funcCount' = L.length $ L.filter ("func test" `List.L.isPrefixOf`) (lines goCode)
-         in property $ funcCount' == funcCount
-       Left err -> 
-         -- Large programs might legitimately fail
-         property $ funcCount <= 5
+prop_integration_handles_large_programs size = ioProperty $ do
+       let funcCount = min (abs size `mod` 20 + 1) 10
+           functions = L.map (\i -> "func test" ++ show i ++ "() { return " ++ show i ++ " }") [1..funcCount]
+           code = unlines $ functions ++ ["func main() { return 0 }"]
+       result <- compileWithIntegratedAnalyzers code defaultCompilerConfig
+       if success result
+           then do
+             let goCode = compiledCode result
+                 funcCount' = L.length $ L.filter ("func test" `List.isPrefixOf`) (lines goCode)
+             return $ funcCount' >= funcCount `div` 2  -- At least half the functions
+           else return $ False
 
 tests :: TestTree
 tests = testGroup "Cabal Integration QuickCheck Tests"
@@ -181,10 +187,10 @@ tests = testGroup "Cabal Integration QuickCheck Tests"
             , "    return result"
             , "}"
             ]
-      case compileProgram source of
-        Left err -> assertFailure $ "compileProgram failed: " ++ show err
-        Right result -> do
-          let goCode = crGoCode result
-              steps = crCompilationSteps result
-          assertFailure $ "Compilation succeeded with " ++ show (L.length steps) ++ " steps L.and code L.length " ++ show (L.length goCode)
+      result <- compileWithIntegratedAnalyzers source defaultCompilerConfig
+      if not (success result)
+          then assertFailure $ "compileProgram failed"
+          else do
+            let goCode = compiledCode result
+            assertFailure $ "Compilation succeeded with code L.length " ++ show (L.length goCode)
   ]

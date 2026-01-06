@@ -12,9 +12,9 @@ module Test.Unit.CabalParserQuickCheckSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
-import Test.QuickCheck.Arbitrary (Arbitrary(..), oneof, elements, listOf, sized)
+import Test.QuickCheck (Property, Arbitrary(..), (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), sized, oneof, elements, listOf)
 import qualified Data.List as List
+import qualified Data.List as L
 import Data.Char (isSpace, isAlphaNum, isLetter)
 import Data.Maybe (isJust, isNothing)
 

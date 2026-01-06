@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances, ScopedTypeVariables #-}
 module Test.Unit.ConciseOwnershipQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
@@ -15,87 +15,87 @@ tests =
   testGroup "Concise Ownership QuickCheck Tests"
     [ testGroup "Ownership type properties"
         [ testProperty "Owned types are equal if names match" $
-            \name -> Owned name === Owned name
+            (\name -> Owned name === Owned name)
             
         , testProperty "Borrowed types are equal if names match" $
-            \name -> Borrowed name === Borrowed name
+            (\name -> Borrowed name === Borrowed name)
             
         , testProperty "MutBorrowed types are equal if names match" $
-            \name -> MutBorrowed name === MutBorrowed name
+            (\name -> MutBorrowed name === MutBorrowed name)
             
         , testProperty "Different ownership types with same name are not equal" $
-            \name -> Owned name /= Borrowed name && 
+            (\name -> Owned name /= Borrowed name && 
                       Borrowed name /= MutBorrowed name &&
-                      Owned name /= MutBorrowed name
+                      Owned name /= MutBorrowed name)
         ]
         
     , testGroup "Ownership ordering properties"
         [ testProperty "Owned < Borrowed < MutBorrowed ordering" $
-            \name1 name2 -> 
+            (\name1 name2 -> 
             let owned = Owned name1
                 borrowed = Borrowed name2
                 mutBorrowed = MutBorrowed name1
-            in owned < borrowed && borrowed < mutBorrowed
+            in owned < borrowed && borrowed < mutBorrowed)
             
         , testProperty "Ordering is total for same type" $
-            \name1 name2 -> 
+            (\name1 name2 -> 
             let owned1 = Owned name1
                 owned2 = Owned name2
                 result = compare owned1 owned2
-            in result `elem` [LT, EQ, GT]
+            in result `elem` [LT, EQ, GT])
         ]
         
     , testGroup "Ownership transfer properties"
         [ testProperty "Valid transfer preserves source ownership" $
-            \source target -> 
+            (\source target -> 
             let transfer = OwnershipTransfer source target
-            in transferSource transfer === source
+            in transferSource transfer === source)
             
         , testProperty "Valid transfer preserves target ownership" $
-            \source target -> 
+            (\source target -> 
             let transfer = OwnershipTransfer source target
-            in transferTarget transfer === target
+            in transferTarget transfer === target)
             
         , testProperty "Transfer type consistency" $
-            \source target -> 
+            (\source target -> 
             let transfer = OwnershipTransfer source target
-            in property (transferFrom transfer == source && transferTo transfer == target)
+            in property (transferFrom transfer == source && transferTo transfer == target))
         ]
         
     , testGroup "Ownership error properties"
         [ testProperty "Use after move errors preserve variable name" $
-            \varName -> 
+            (\varName -> 
             let error = UseAfterMove varName
             in case error of
                  UseAfterMove name -> name === varName
-                 _ -> property False
+                 _ -> property False)
                  
         , testProperty "Double move errors preserve both variable names" $
-            \var1 var2 -> 
+            (\var1 var2 -> 
             let error = DoubleMove var1 var2
             in case error of
                  DoubleMove name1 name2 -> property (name1 == var1 && name2 == var2)
-                 _ -> property False
+                 _ -> property False)
                  
         , testProperty "Borrow errors preserve context" $
-            \context -> 
+            (\context -> 
             let error = BorrowError context
             in case error of
                  BorrowError ctx -> ctx === context
-                 _ -> property False
+                 _ -> property False)
         ]
         
     , testGroup "Ownership state consistency"
         [ testProperty "Empty ownership state has no owners" $
-            \_ -> Map.null Map.empty
+            \(_ :: Map String OwnershipType) -> Map.null Map.empty
             
         , testProperty "Adding ownership creates retrievable entry" $
-            \varName ownershipType -> 
+            \(varName :: String) (ownershipType :: OwnershipType) -> 
             let state = Map.singleton varName ownershipType
             in Map.lookup varName state === Just ownershipType
             
         , testProperty "Ownership transfer updates state correctly" $
-            \source target transferType state -> 
+            \(source :: String) (target :: String) (transferType :: String) (state :: Map String OwnershipType) -> 
             let transfer = OwnershipTransfer { transferFrom = source, transferTo = target }
                 newState = performTransfer transfer state
             in Map.lookup target newState === Just (convertTransferType transferType)
@@ -155,12 +155,4 @@ instance Arbitrary OwnershipError where
     , CrossFunctionMove <$> arbitrary <*> arbitrary
     , ParameterMoveMismatch <$> arbitrary
     , ControlFlowError <$> arbitrary
-    ]
-
-instance Arbitrary String where
-  arbitrary = oneof
-    [ return ""
-    , listOf $ elements ['a'..'z']
-    , listOf $ elements ['A'..'Z']
-    , listOf $ elements "0123456789_"
     ]

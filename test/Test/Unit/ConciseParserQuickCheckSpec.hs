@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
-{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances, ScopedTypeVariables #-}
 module Test.Unit.ConciseParserQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
@@ -16,9 +16,9 @@ tests =
   testGroup "Concise Parser QuickCheck Tests"
     [ testGroup "Basic parsing properties"
         [ testProperty "parseTypus handles empty input" $
-            \_ -> case parseTypus "" of
+            \(_ :: ()) -> case parseTypus "" of
                     Left _ -> property True
-                    Right file -> property (tfBlocks file === [])
+                    Right file -> tfBlocks file === []
                     
         , testProperty "parseTypus preserves line count in simple cases" $
             \lines -> not (null lines) ==> 
@@ -45,29 +45,10 @@ tests =
                      ++ if dependent then "//!dependentTypes:true\n" else ""
             in case parseTypus input of
                  Left _ -> property True
-                 Right file -> property (property True  -- If parsing succeeds, we consider it a success)
-                 
-            -- Temporarily disabled due to syntax error
--- , testProperty "Block directives are preserved when present" $
---             \content -> 
---             let input = "{//!ownership:true}\n" ++ content ++ "\n"
---             in case parseTypus input of
---                  Left _ -> property True
---                  Right file -> property (property True)
+                 Right file -> property True  -- If parsing succeeds, we consider it a success
         ]
     ]
 
 -- Helper function for QuickCheck properties
 property :: Bool -> Property
-
-
--- Generate simple valid code blocks for testing
-instance Arbitrary String where
-  arbitrary = oneof 
-    [ listOf $ elements ['a'..'z']
-    , listOf $ elements ['A'..'Z']
-    , listOf $ elements "0123456789"
-    , return ""
-    , return " "
-    , return "\t"
-    ]
+property b = b === True

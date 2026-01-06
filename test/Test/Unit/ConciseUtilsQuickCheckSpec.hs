@@ -1,7 +1,7 @@
 module Test.Unit.ConciseUtilsQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperty, Property, (===))
+import Test.Tasty.QuickCheck (testProperty, Property, (===), (==>))
 import Data.Char (isSpace)
 import qualified Data.List as L
 import Data.List (isPrefixOf, isSuffixOf)
@@ -22,11 +22,12 @@ tests =
                 hasTrailing = not (null s) && isSpace (last s)
             in if hasLeading || hasTrailing 
                then L.length trimmed < L.length s
-               else trimmed === s
+               else trimmed == s
                
         , testProperty "splitBy preserves total characters" $
-            \c s -> splitBy c s `sumLengths` L.length s
-                          sumLengths xs n = L.sum (map L.length xs) + L.length xs - 1 === n
+            \c s -> let parts = splitBy c s
+                        sumLengths xs = L.sum (map L.length xs) + L.length xs - 1
+                    in sumLengths parts === L.length s
               
         , testProperty "splitByCollapsed never produces empty strings" $
             \c s -> L.all (not . null) (splitByCollapsed c s)
@@ -40,4 +41,3 @@ tests =
     ]
 
 -- Helper function for property testing
-infix 1 `sumLengths`

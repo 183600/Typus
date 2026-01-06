@@ -34,8 +34,8 @@ basicParsingTests =
         in case result of
              Left err -> assertFailure $ "Failed to parse empty file: " ++ err
              Right typusFile -> do
-               assertEqual "Empty file should have no directives" defaultFileDirectives (tfFileDirectives typusFile)
-               assertEqual "Empty file should have no code blocks" [] (tfCodeBlocks typusFile)
+               assertEqual "Empty file should have no directives" defaultFileDirectives (tfDirectives typusFile)
+               assertEqual "Empty file should have no code blocks" [] (tfBlocks typusFile)
 
     , testCase "Parse simple function" $
         let input = "func add(x int, y int) int { return x + y }"
@@ -43,8 +43,8 @@ basicParsingTests =
         in case result of
              Left err -> assertFailure $ "Failed to parse simple function: " ++ err
              Right typusFile -> do
-               assertBool "Should have at least one code block" (not $ L.null $ tfCodeBlocks typusFile)
-               let firstBlock = L.head $ tfCodeBlocks typusFile
+               assertBool "Should have at least one code block" (not $ L.null $ tfBlocks typusFile)
+               let firstBlock = L.head $ tfBlocks typusFile
                assertBool "First block should contain function code" ("func" `L.isInfixOf` cbContent firstBlock)
 
     , testCase "Parse multiple statements" $
@@ -53,8 +53,8 @@ basicParsingTests =
         in case result of
              Left err -> assertFailure $ "Failed to parse multiple statements: " ++ err
              Right typusFile -> do
-               assertBool "Should have code blocks" (not $ L.null $ tfCodeBlocks typusFile)
-               let content = concatMap cbContent $ tfCodeBlocks typusFile
+               assertBool "Should have code blocks" (not $ L.null $ tfBlocks typusFile)
+               let content = concatMap cbContent $ tfBlocks typusFile
                assertBool "Should contain L.all variables" ("x" `L.isInfixOf` content && "y" `L.isInfixOf` content && "z" `L.isInfixOf` content)
     ]
 
@@ -68,7 +68,7 @@ directiveParsingTests =
         in case result of
              Left err -> assertFailure $ "Failed to parse ownership directive: " ++ err
              Right typusFile -> do
-               let directives = tfFileDirectives typusFile
+               let directives = tfDirectives typusFile
                assertBool "Should have ownership directive" (isJust $ fdOwnership directives)
                assertEqual "Ownership should be true" True (unLoc $ fdOwnership directives)
 
@@ -78,7 +78,7 @@ directiveParsingTests =
         in case result of
              Left err -> assertFailure $ "Failed to parse dependent types directive: " ++ err
              Right typusFile -> do
-               let directives = tfFileDirectives typusFile
+               let directives = tfDirectives typusFile
                assertBool "Should have dependent types directive" (isJust $ fdDependentTypes directives)
                assertEqual "Dependent types should be true" True (unLoc $ fdDependentTypes directives)
 
@@ -88,7 +88,7 @@ directiveParsingTests =
         in case result of
              Left err -> assertFailure $ "Failed to parse multiple directives: " ++ err
              Right typusFile -> do
-               let directives = tfFileDirectives typusFile
+               let directives = tfDirectives typusFile
                assertBool "Should have ownership directive" (isJust $ fdOwnership directives)
                assertBool "Should have dependent types directive" (isJust $ fdDependentTypes directives)
                assertEqual "Ownership should be true" True (unLoc $ fdOwnership directives)
@@ -105,8 +105,8 @@ codeBlockParsingTests =
         in case result of
              Left err -> assertFailure $ "Failed to parse single code block: " ++ err
              Right typusFile -> do
-               assertEqual "Should have exactly one code block" 1 (L.length $ tfCodeBlocks typusFile)
-               let block = L.head $ tfCodeBlocks typusFile
+               assertEqual "Should have exactly one code block" 1 (L.length $ tfBlocks typusFile)
+               let block = L.head $ tfBlocks typusFile
                assertEqual "Block content should match" input (cbContent block)
 
     , testCase "Parse multiple code blocks" $
@@ -115,8 +115,8 @@ codeBlockParsingTests =
         in case result of
              Left err -> assertFailure $ "Failed to parse multiple code blocks: " ++ err
              Right typusFile -> do
-               assertBool "Should have multiple code blocks" (L.length (tfCodeBlocks typusFile) >= 1)
-               let blocks = tfCodeBlocks typusFile
+               assertBool "Should have multiple code blocks" (L.length (tfBlocks typusFile) >= 1)
+               let blocks = tfBlocks typusFile
                    totalContent = concatMap cbContent blocks
                assertBool "Should contain both functions" ("test1" `L.isInfixOf` totalContent && "test2" `L.isInfixOf` totalContent)
 
@@ -126,10 +126,10 @@ codeBlockParsingTests =
         in case result of
              Left err -> assertFailure $ "Failed to parse code block with directives: " ++ err
              Right typusFile -> do
-               let blocks = tfCodeBlocks typusFile
+               let blocks = tfBlocks typusFile
                assertBool "Should have at least one code block" (not $ null blocks)
                let firstBlock = L.head blocks
-                   blockDirectives = cbBlockDirectives firstBlock
+                   blockDirectives = cbDirectives firstBlock
                assertBool "Block should have ownership directive" (isJust $ bdOwnership blockDirectives)
     ]
 
@@ -167,7 +167,7 @@ quickCheckProperties =
         forAll genSimpleFunction $ \funcStr ->
             case parseTypus "test.typus" funcStr of
               Right typusFile -> 
-                let reconstructed = concatMap cbContent (tfCodeBlocks typusFile)
+                let reconstructed = concatMap cbContent (tfBlocks typusFile)
                 in funcStr === reconstructed
               Left _ -> property True  -- Skip invalid inputs
 
@@ -176,7 +176,7 @@ quickCheckProperties =
             let input = directives ++ "\n" ++ code
             in case parseTypus "test.typus" input of
                  Right typusFile -> 
-                   let parsedDirectives = tfFileDirectives typusFile
+                   let parsedDirectives = tfDirectives typusFile
                    in property $ isJust (fdOwnership parsedDirectives) || isJust (fdDependentTypes parsedDirectives)
                  Left _ -> property True  -- Skip invalid inputs
 
@@ -184,7 +184,7 @@ quickCheckProperties =
         forAll genValidCode $ \code ->
             case parseTypus "test.typus" code of
               Right typusFile -> 
-                let blocks = tfCodeBlocks typusFile
+                let blocks = tfBlocks typusFile
                 in if null blocks 
                    then property True
                    else property $ L.all (not . null . cbContent) blocks

@@ -21,22 +21,22 @@ tests =
             let input = "func quick() { return 42; }"
                 result = Parser.parseTypus input
             case result of
-              Left err -> @?= "Should parse successfully" (show err)
-              Right _ -> @?= "Success" "Quick parsing"
+              Left err -> "Should parse successfully" @?= (show err)
+              Right _ -> "Success" @?= "Quick parsing"
 
         , testCase "Medium files parse efficiently" $ do
-            let mediumInput = unlines $ replicate 100 "func test" ++ show [1..100] ++ "{ return " ++ show [1..100] ++ "; }"
+            let mediumInput = unlines $ replicate 100 "func test" ++ [show [1..100] ++ "{ return " ++ show [1..100] ++ "; }"]
                 result = Parser.parseTypus mediumInput
             case result of
-              Left _ -> @?= "Should handle medium input" "Medium handling"
-              Right _ -> @?= "Success" "Medium success"
+              Left _ -> "Should handle medium input" @?= "Medium handling"
+              Right _ -> "Success" @?= "Medium success"
 
         , testCase "Large files don't cause memory issues" $ do
             let largeInput = unlines $ replicate 1000 "func large() { return 1; }"
                 result = Parser.parseTypus largeInput
             case result of
               Left err -> L.length (show err) > 0 @?= True
-              Right _ -> @?= "Handle large input" "Large handling"
+              Right _ -> "Handle large input" @?= "Large handling"
         ]
 
     , testGroup "Utils Performance"
@@ -62,12 +62,12 @@ tests =
             L.length positions @?= 10000
 
         , testCase "Span merging is efficient" $ do
-            let spans = [SourceLocation.SourceSpan (SourceLocation.SourcePos 1 1) (SourceLocation.SourcePos 10 10)]
+            let spans = [SourceLocation.SourceSpan (SourceLocation.SourcePos 1 1 0) (SourceLocation.SourcePos 10 10 0)]
                 merged = foldl SourceLocation.mergeSpans (L.head spans) (L.tail spans)
             SourceLocation.isValidSpan merged @?= True
 
         , testProperty "Source location operations don't crash" $ do
-            \line col -> let pos = SourceLocation.SourcePos (abs line `mod` 1000 + 1) (abs col `mod` 1000 + 1)
+            \line col -> let pos = SourceLocation.SourcePos (abs line `mod` 1000 + 1) (abs col `mod` 1000 + 1) 0
                          in rnf pos `seq` True
         ]
 
@@ -80,7 +80,7 @@ tests =
                               Right _ -> True) results @?= True
 
         , testCase "Utils functions are space-efficient" $ do
-            let testString = "test\n" ++ replicate 1000 "content\n"
+            let testString = "test\n" ++ concat (replicate 1000 "content\n")
                 processed = Utils.removeComments testString
             rnf (L.length processed) `seq` True @?= True
 
@@ -110,21 +110,21 @@ tests =
 
     , testGroup "Resource Usage"
         [ testCase "Parser handles nested structures efficiently" $ do
-            let nestedInput = unlines ["func test() {"] ++ 
-                               replicate 50 "  if (true) {" ++
-                               replicate 50 "    return 1;" ++
-                               replicate 50 "  }" ++
-                               ["]"]
-                result = Parser.parseTypus nestedInput
+            let nestedCode = "func test() {\n" ++
+                               concat (replicate 50 "  if (true) {") ++
+                               concat (replicate 50 "    return 1;") ++
+                               concat (replicate 50 "  }") ++
+                               "]"
+                result = Parser.parseTypus nestedCode
             case result of
               Left err -> L.length (show err) > 0 @?= True
-              Right _ -> @?= "Handle nested" "Nested handling"
+              Right _ -> "Handle nested" @?= "Nested handling"
 
         , testCase "Large comments don't cause overflow" $ do
             let largeComment = "/* " ++ replicate 10000 'x' ++ " */\nfunc test() { return 1; }"
                 result = Parser.parseTypus largeComment
             case result of
               Left err -> L.length (show err) > 0 @?= True
-              Right _ -> @?= "Handle large comment" "Large comment handling"
+              Right _ -> "Large comment handling" @?= "Handle large comment"
         ]
     ]

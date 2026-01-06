@@ -1,9 +1,9 @@
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances, ScopedTypeVariables #-}
 module Test.Unit.ConciseTypeSystemQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import qualified Data.List as L
-import Test.Tasty.QuickCheck (testProperty, Property, (===), Arbitrary(..), Gen, oneof, choose, elements, listOf)
+import Test.Tasty.QuickCheck (testProperty, Property, (===), (.&.), Arbitrary(..), Gen, oneof, choose, elements, listOf)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Map.Strict (Map)
@@ -19,36 +19,37 @@ tests =
         [ testProperty "Simple types are equal if names match" $
             \name -> SimpleType name === SimpleType name
             
-        , testProperty "Function types preserve domain L.and codomain" $
+        , testProperty "Function types preserve domain and codomain" $
             \domain codomain -> 
             let funcType = FunctionType domain codomain
             in case funcType of
-                 FunctionType d c -> d === domain && c === codomain
+                 FunctionType d c -> property (d == domain && c == codomain)
                  _ -> property False
                  
-        , testProperty "Generic types preserve name L.and parameters" $
+        , testProperty "Generic types preserve name and parameters" $
             \name params -> 
             let genType = GenericType name params
             in case genType of
-                 GenericType n p -> n === name && p === params
+                 GenericType n p -> property (n == name && p == params)
                  _ -> property False
         ]
         
     , testGroup "Type environment properties"
         [ testProperty "Empty environment has no types" $
-            \name -> Map.null (unTypeEnv emptyTypeEnv) && 
-                     lookupTypeInEnv name emptyTypeEnv === Nothing
-            
+            \name -> property (Map.null (unTypeEnv emptyTypeEnv)) .&. 
+                                  (lookupTypeInEnv name emptyTypeEnv === Nothing)            
         , testProperty "Type insertion is retrievable" $
             \name typeExpr -> 
             let env = addTypeToEnv name typeExpr emptyTypeEnv
-            in lookupTypeInEnv name env === Just typeExpr
+            in lookupTypeInEnv name env === Just (typeExpr :: Type)
             
-        , testProperty "Multiple insertions preserve L.all entries" $
-            \pairs -> 
+        , testProperty "Multiple insertions preserve all entries" $
+            \(pairs :: [(String, Type)]) -> 
             let env = L.foldr (\(name, typ) acc -> addTypeToEnv name typ acc) emptyTypeEnv pairs
-                checkPair (name, typ) = lookupTypeInEnv name env === Just typ
-            in L.all checkPair pairs
+                checkPair (name, typ) = case lookupTypeInEnv name env of
+                                          Just t -> t == typ
+                                          Nothing -> False
+            in property (L.all checkPair pairs)
         ]
         
     , testGroup "Type unification properties"
@@ -70,14 +71,14 @@ tests =
             \type1 type2 -> 
             let constraint = EqualityConstraint type1 type2
             in case constraint of
-                 EqualityConstraint t1 t2 -> t1 === type1 && t2 === type2
+                 EqualityConstraint t1 t2 -> property (t1 == type1 && t2 == type2)
                  _ -> property False
                  
         , testProperty "Subtype constraint preserves relationship" $
             \subtype supertype -> 
             let constraint = SubtypeConstraint subtype supertype
             in case constraint of
-                 SubtypeConstraint sub sup -> sub === subtype && sup === supertype
+                 SubtypeConstraint sub sup -> property (sub == subtype && sup == supertype)
                  _ -> property False
         ]
         
@@ -97,7 +98,7 @@ tests =
             \depth -> 
             let nestedType = buildNestedType (min depth 5) "base"
             in case nestedType of
-                 SimpleType name -> not (null name)
+                 SimpleType name -> property (not (null name))
                  _ -> property True  -- Any valid type structure is acceptable
                  
         , testProperty "Large type environments maintain performance" $
@@ -105,17 +106,17 @@ tests =
             let count = min numTypes 100  -- Cap to avoid performance issues
                 types = [(show i, SimpleType ("Type" ++ show i)) | i <- [1..count]]
                 env = L.foldr (\(name, typ) acc -> addTypeToEnv name typ acc) emptyTypeEnv types
-            in L.length (Map.toList (unTypeEnv env)) === count
+            in property (L.length (Map.toList (unTypeEnv env)) == count)
         ]
     ]
 
 -- Helper types L.and functions for testing
-newtype TypeEnv = TypeEnv { unTypeEnv :: Map String CT.Type }
+newtype TypeEnv = TypeEnv { unTypeEnv :: Map String Type }
 
 emptyTypeEnv :: TypeEnv
 emptyTypeEnv = TypeEnv Map.empty
 
-addTypeToEnv :: String -> CT.Type -> TypeEnv -> TypeEnv
+addTypeToEnv :: String -> Type -> TypeEnv -> TypeEnv
 addTypeToEnv name typ (TypeEnv env) = TypeEnv (Map.insert name typ env)
 
 lookupTypeInEnv :: String -> TypeEnv -> Maybe Type
@@ -133,6 +134,13 @@ data TypeConstraint
     = EqualityConstraint Type Type
     | SubtypeConstraint Type Type
     deriving (Eq, Show)
+
+-- Convert our mock Type to the real CT.Type
+convertToCTType :: Type -> CT.Type
+convertToCTType (SimpleType name) = CT.TypeName name
+convertToCTType (FunctionType domain codomain) = CT.TypeFunction [convertToCTType domain] (convertToCTType codomain)
+convertToCTType (GenericType name params) = CT.TypeUnion (map convertToCTType params)
+convertToCTType (TypeVar name) = CT.TypeName name
 
 -- Mock functions for testing
 unifyTypes :: Type -> Type -> Either String (Map String Type)
@@ -173,14 +181,8 @@ instance Arbitrary TypeConstraint where
     , SubtypeConstraint <$> arbitrary <*> arbitrary
     ]
 
-instance Arbitrary String where
-  arbitrary = oneof
-    [ return ""
-    , listOf $ elements ['a'..'z']
-    , listOf $ elements ['A'..'Z']
-    , listOf $ elements "0123456789_"
-    ]
+
 
 -- Helper property function
 property :: Bool -> Property
-property = id
+property b = b === True

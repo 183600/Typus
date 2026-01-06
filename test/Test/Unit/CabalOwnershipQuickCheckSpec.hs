@@ -12,14 +12,15 @@ module Test.Unit.CabalOwnershipQuickCheckSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary(..), elements, listOf)
 import qualified Data.List as List
 import Data.Char (isSpace, isAlphaNum, isLetter)
 import Data.Maybe (isJust, isNothing)
 
-import Ownership (analyzeOwnership, OwnershipResult(..), OwnershipError(..))
+import Ownership (analyzeOwnership, OwnershipError(..))
 import Parser (parseTypus)
 import SourceLocation (SourceSpan(..))
+import Test.QuickCheck (Arbitrary(..), elements, listOf)
 
 -- Simple arbitrary instances for ownership testing
 newtype VariableName = VariableName String deriving (Show, Eq)
@@ -49,9 +50,8 @@ prop_ownership_detects_moves (VariableName var) =
   in case parseTypus typusCode of
        Left err -> counterexample ("Parse failed: " ++ err) $ property False
        Right parsed -> 
-         case analyzeOwnership parsed of
-           Right result -> property $ orMoveDetected result
-           Left _ -> property True  -- Ownership errors are expected
+         let errors = analyzeOwnership (show parsed)
+         in property $ not $ null errors  -- Ownership errors are expected
 
 -- Property: Ownership analysis should allow borrows
 prop_ownership_allows_borrows :: VariableName -> Property
@@ -67,9 +67,8 @@ prop_ownership_allows_borrows (VariableName var) =
   in case parseTypus typusCode of
        Left err -> counterexample ("Parse failed: " ++ err) $ property False
        Right parsed -> 
-         case analyzeOwnership parsed of
-           Right result -> property $ not $ orMoveDetected result
-           Left _ -> property False  -- Should not fail with borrowing
+         let errors = analyzeOwnership (show parsed)
+         in property $ null errors  -- Should not fail with borrowing
 
 -- Property: Ownership analysis should track variable lifetimes
 prop_ownership_tracks_lifetimes :: VariableName -> Property
@@ -86,27 +85,21 @@ prop_ownership_tracks_lifetimes (VariableName var) =
   in case parseTypus typusCode of
        Left err -> counterexample ("Parse failed: " ++ err) $ property False
        Right parsed -> 
-         case analyzeOwnership parsed of
-           Right _ -> property False  -- Should not succeed
-           Left _ -> property True   -- Should fail due to lifetime error
+         let errors = analyzeOwnership (show parsed)
+         in property $ not $ null errors  -- Should fail due to lifetime error
 
 -- Property: Ownership analysis should handle multiple moves
 prop_ownership_handles_multiple_moves :: [VariableName] -> Property
 prop_ownership_handles_multiple_moves vars =
-  let varNames = L.map (\(VariableName v) -> v) vars
+  let varNames = List.map (\(VariableName v) -> v) vars
       typusCode = unlines $ ["//! ownership: on", "func test() {"] ++
-        L.map (\v -> "    let " ++ v ++ " = String{\"hello\"}") varNames ++
-        ["    let result = " ++ (if null varNames then "x" else L.head varNames), "}"]
+        List.map (\v -> "    let " ++ v ++ " = String{\"hello\"}") varNames ++
+        ["    let result = " ++ (if null varNames then "x" else List.head varNames), "}"]
   in case parseTypus typusCode of
        Left err -> counterexample ("Parse failed: " ++ err) $ property False
        Right parsed -> 
-         case analyzeOwnership parsed of
-           Right result -> property $ L.length varNames <= 1 || orMoveDetected result
-           Left _ -> property True  -- Ownership errors are acceptable
-
--- Helper function to check if moves were detected
-orMoveDetected :: OwnershipResult -> Bool
-orMoveDetected _ = False  -- Simplified for demo
+         let errors = analyzeOwnership (show parsed)
+         in property $ not $ null errors  -- Ownership errors are acceptable
 
 tests :: TestTree
 tests = testGroup "Cabal Ownership QuickCheck Tests"
@@ -127,9 +120,8 @@ tests = testGroup "Cabal Ownership QuickCheck Tests"
       case parseTypus source of
         Left err -> assertFailure $ "parseTypus failed: " ++ err
         Right parsed -> 
-          case analyzeOwnership parsed of
-            Left err -> assertFailure $ "analyzeOwnership failed: " ++ show err
-            Right result -> do
-              -- Verify that ownership transfer was detected
-              return ()
+          let errors = analyzeOwnership (show parsed)
+          in if null errors
+             then return ()
+             else assertFailure $ "analyzeOwnership failed: " ++ show errors
   ]

@@ -3,6 +3,7 @@ module Compiler
   , CompilerError(..)
   , CompilerResult
   , CompilationPhase(..)
+  , malformedSyntaxError
   , renderCompilationError
   , formatCompilerErrors
   , generateDetailedReport

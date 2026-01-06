@@ -1,8 +1,8 @@
-{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances, ScopedTypeVariables #-}
 module Test.Unit.ConciseSyntaxValidatorQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperty, Property, (===), (==>), Arbitrary(..), Gen, oneof, choose, elements, listOf)
+import Test.Tasty.QuickCheck (testProperty, Property, (===), (==>), (.&.), Arbitrary(..), Gen, oneof, choose, elements, listOf)
 import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Char (isAlphaNum, isAlpha, isDigit, isSpace)
@@ -14,17 +14,17 @@ tests =
   testGroup "Concise SyntaxValidator QuickCheck Tests"
     [ testGroup "Error type properties"
         [ testProperty "Error types are distinguishable" $
-            \err1 err2 -> err1 === err2 || errorType err1 /= errorType err2
+            \err1 err2 -> (err1 === err2) .&. property (errorType err1 /= errorType err2)
             
         , testProperty "Syntax errors preserve error type" $
-            \errorType line msg -> 
-            let error = SyntaxError errorType line msg ""
-            in errorType error === errorType
+            \errType line msg -> 
+            let error = SyntaxError { errorType = errType, errorMessage = msg, lineNumber = line, columnNumber = 0, lineContent = "" }
+            in errorType error === errType
         ]
         
     , testGroup "Basic syntax validation"
         [ testProperty "Empty input produces no syntax errors" $
-            \_ -> L.null (validateSyntax "")
+            (\(_ :: ()) -> L.null (validateSyntax ""))
             
         , testProperty "Whitespace-only input produces no syntax errors" $
             \ws -> L.all isSpace ws ==> L.null (validateSyntax ws)
@@ -35,7 +35,7 @@ tests =
                 
         , testProperty "Mismatched braces produce errors" $
             \open close -> not (isMatchingPair open close) ==> 
-                not (L.null (validateSyntax (open ++ "content" ++ close)))
+                not (L.null (validateSyntax ([open] ++ "content" ++ [close])))
         ]
         
     , testGroup "String literal validation"
@@ -171,18 +171,10 @@ instance Arbitrary SyntaxError where
     line <- choose (1, 1000)
     message <- listOf $ elements ['a'..'z']
     context <- listOf $ elements ['a'..'z']
-    return $ SyntaxError errorType line message context
+    return $ SyntaxError errorType message line 0 context
 
-instance Arbitrary String where
-  arbitrary = oneof
-    [ return ""
-    , listOf $ elements ['a'..'z']
-    , listOf $ elements ['A'..'Z']
-    , listOf $ elements "0123456789"
-    , listOf $ elements "(){}[];, ."
-    , listOf $ elements " \t\n\r"
-    ]
+
 
 -- Helper property function
 property :: Bool -> Property
-property = id
+property b = b === True

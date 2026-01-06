@@ -12,14 +12,14 @@ module Test.Unit.CabalSyntaxValidatorQuickCheckSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.))
+import Test.QuickCheck (Property, (===), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), Arbitrary, arbitrary, listOf, elements)
 import qualified Data.List as List
 import Data.Char (isSpace, isAlphaNum, isLetter, toLower, toUpper)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 
-import SyntaxValidator (validateSyntax, SyntaxError(..), ValidationResult(..))
+import SyntaxValidator (validateSyntax, SyntaxError(..))
 import Parser (parseTypus)
-import SourceLocation (SourceSpan(..), mkSourceSpan, mkSourcePos)
+import SourceLocation (SourceSpan(..), spanBetween, posAt)
 
 -- Simple arbitrary instances for syntax validation testing
 newtype ValidIdentifier = ValidIdentifier String deriving (Show, Eq)
@@ -53,8 +53,8 @@ prop_valid_function_name_passes (ValidFunctionName name) =
        Left err -> counterexample ("Parse failed: " ++ err) $ property False
        Right parsed -> 
          case validateSyntax parsed of
-           ValidationResult [] -> property True
-           ValidationResult errors -> counterexample ("Validation failed: " ++ show errors) $ property False
+           [] -> property True
+           errors -> counterexample ("Validation failed: " ++ show errors) $ property False
 
 -- Property: Valid type names pass validation
 prop_valid_type_name_passes :: ValidTypeName -> Property
@@ -64,34 +64,34 @@ prop_valid_type_name_passes (ValidTypeName name) =
        Left err -> counterexample ("Parse failed: " ++ err) $ property False
        Right parsed -> 
          case validateSyntax parsed of
-           ValidationResult [] -> property True
-           ValidationResult errors -> counterexample ("Validation failed: " ++ show errors) $ property False
+           [] -> property True
+           errors -> counterexample ("Validation failed: " ++ show errors) $ property False
 
 -- Property: Invalid identifiers fail validation
 prop_invalid_identifier_fails :: String -> Property
 prop_invalid_identifier_fails ident =
-  let isValid = not (null ident) && isLetter (L.head ident) && L.all (`elem` (['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ ['_'])) ident
+  let isValid = not (null ident) && isLetter (List.head ident) && List.all (`elem` (['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ ['_'])) ident
       code = "func " ++ ident ++ "() { return 42 }"
   in not isValid ==> 
     case parseTypus code of
       Left _ -> property True  -- Parse failure is acceptable
       Right parsed -> 
         case validateSyntax parsed of
-          ValidationResult [] -> property False  -- Should not validate
-          ValidationResult _ -> property True   -- Should fail validation
+          [] -> property False  -- Should not validate
+          _ -> property True   -- Should fail validation
 
 -- Property: Valid function parameters pass validation
 prop_valid_parameters_pass :: [ValidIdentifier] -> Property
 prop_valid_parameters_pass idents =
-  let paramNames = L.map (\(ValidIdentifier name) -> name ++ ": int") idents
+  let paramNames = List.map (\(ValidIdentifier name) -> name ++ ": int") idents
       paramStr = if null paramNames then "" else List.intercalate ", " paramNames
       code = "func test(" ++ paramStr ++ ") int { return 42 }"
   in case parseTypus code of
        Left err -> counterexample ("Parse failed: " ++ err) $ property False
        Right parsed -> 
          case validateSyntax parsed of
-           ValidationResult [] -> property True
-           ValidationResult errors -> counterexample ("Validation failed: " ++ show errors) $ property False
+           [] -> property True
+           errors -> counterexample ("Validation failed: " ++ show errors) $ property False
 
 -- Property: Valid return types pass validation
 prop_valid_return_type_passes :: ValidTypeName -> Property
@@ -101,8 +101,8 @@ prop_valid_return_type_passes (ValidTypeName typeName) =
        Left err -> counterexample ("Parse failed: " ++ err) $ property False
        Right parsed -> 
          case validateSyntax parsed of
-           ValidationResult [] -> property True
-           ValidationResult errors -> counterexample ("Validation failed: " ++ show errors) $ property False
+           [] -> property True
+           errors -> counterexample ("Validation failed: " ++ show errors) $ property False
 
 -- Property: Syntax validation preserves error locations
 prop_validation_preserves_error_locations :: String -> Property
@@ -111,9 +111,9 @@ prop_validation_preserves_error_locations code =
     Left _ -> property True  -- Parse failure is acceptable
     Right parsed -> 
       case validateSyntax parsed of
-        ValidationResult [] -> property True
-        ValidationResult errors -> 
-          property $ L.all (\err -> seLocation err /= mkSourceSpan (mkSourcePos 0 0) (mkSourcePos 0 0)) errors
+        [] -> property True
+        errors -> 
+          property $ List.all (\err -> spanBetween (posAt (lineNumber err) (columnNumber err)) (posAt (lineNumber err) (columnNumber err)) /= spanBetween (posAt 0 0) (posAt 0 0)) errors
 
 tests :: TestTree
 tests = testGroup "Cabal Syntax Validator QuickCheck Tests"
@@ -140,7 +140,7 @@ tests = testGroup "Cabal Syntax Validator QuickCheck Tests"
       case parseTypus source of
         Left err -> assertFailure $ "parseTypus failed: " ++ err
         Right parsed -> 
-          case validateSyntax parsed of
-            ValidationResult [] -> return ()
-            ValidationResult errors -> assertFailure $ "Validation failed: " ++ show errors
+          case validateSyntax (show parsed) of
+            [] -> return ()
+            errors -> assertFailure $ "Validation failed: " ++ show errors
   ]
