@@ -34,7 +34,7 @@ jobs:
     steps:
       - name: Increase Swap space (防止内存溢出断连)
         run: |
-          sudo fallocate -l 12G /swapfile # 分配 Swap
+          sudo fallocate -l 2G /swapfile # 分配 Swap
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
           sudo swapon /swapfile
@@ -81,7 +81,7 @@ jobs:
           test -n "${GITEE_REMOTE_URL:-}" || { echo "Missing GITEE_REMOTE_URL secret"; exit 1; }
 
       - name: Setup Haskell (GHC + Cabal)
-        uses: haskell-actions/setup@v3
+        uses: haskell-actions/setup@v2
         with:
           # 修改建议：不要使用 latest，指定具体版本以避免解析错误
           ghc-version: '9.6.3'
