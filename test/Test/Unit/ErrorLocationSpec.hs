@@ -225,7 +225,7 @@ tests =
     
 -- Helper function to check if substring is in string
 isInfixOf :: String -> String -> Bool
-L.isInfixOf needle haystack = needle `elem` (tails haystack)
+isInfixOf needle haystack = needle `elem` (tails haystack)
   where
     tails [] = [[]]
     tails xs@(x:xs') = xs : tails xs'

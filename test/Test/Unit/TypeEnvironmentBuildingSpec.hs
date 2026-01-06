@@ -255,8 +255,8 @@ tests =
             
             let warnings = filterWarnings errors
             L.length warnings @?= 2
-            assertBool "contains ownership warning" (L.any (L.isInfixOf "UseAfterMove") warnings)
-            assertBool "contains integration warning" (L.any (L.isInfixOf "integration warning") warnings)
+            assertBool "contains ownership warning" (L.any (isInfixOf "UseAfterMove") warnings)
+            assertBool "contains integration warning" (L.any (isInfixOf "integration warning") warnings)
 
         , testCase "filterInfo extracts info messages" $ do
             let errors = 
@@ -268,8 +268,8 @@ tests =
             
             let infoMessages = filterInfo errors
             L.length infoMessages @?= 2
-            assertBool "contains ownership info" (L.any (L.isInfixOf "UseAfterMove") infoMessages)
-            assertBool "contains integration info" (L.any (L.isInfixOf "integration info") infoMessages)
+            assertBool "contains ownership info" (L.any (isInfixOf "UseAfterMove") infoMessages)
+            assertBool "contains integration info" (L.any (isInfixOf "integration info") infoMessages)
 
         , testCase "collectMessages works for different severities" $ do
             let errors = 
@@ -489,4 +489,4 @@ isFatal (CrossAnalyzerError _ Fatal _) = True
 isFatal _ = False
 
 isInfixOf :: String -> String -> Bool
-L.isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
+isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack

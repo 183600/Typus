@@ -3,7 +3,7 @@ module Test.Unit.EmbedAssetsSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertBool, assertEqual)
-import Test.Tasty.QuickCheck (testProperty, Property, forAll, Gen, arbitrary, listOf1, elements)
+import Test.Tasty.QuickCheck (testProperty, Property, forAll, Gen, arbitrary, listOf1, elements, property)
 import Control.Monad (unless)
 import System.Directory (createDirectoryIfMissing, removeDirectoryRecursive, doesFileExist, doesDirectoryExist)
 import System.FilePath ((</>))
@@ -192,7 +192,7 @@ arbitraryEmbedContent = do
 
 -- Helper function to check if a string is contained in another
 isInfixOf :: String -> String -> Bool
-L.isInfixOf needle haystack = needle `elem` (words haystack)
+isInfixOf needle haystack = needle `elem` (words haystack)
 
 -- Helper to get filename from path
 takeFileName :: FilePath -> String

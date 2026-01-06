@@ -4,7 +4,7 @@ module Test.Unit.ParserComprehensiveQuickCheckSpec where
 
 import Test.Tasty
 import qualified Data.List as L
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Test.Tasty.HUnit
 
 import Parser
@@ -171,7 +171,7 @@ parsingProperties = testGroup "Parsing Properties"
 contains :: String -> String -> Bool
 contains needle haystack = needle `L.isInfixOf` haystack
   where
-    L.isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
+    isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
 
 -- Arbitrary instances for testing
 instance Arbitrary FileDirectives where

@@ -5,7 +5,7 @@ module Test.Unit.OwnershipCoreQuickCheckTests (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import qualified Data.List as L
-import Test.Tasty.QuickCheck (testProperties, (===), Property, forAll, Gen, Arbitrary(..), oneof, elements, listOf, listOf1, resize, suchThat)
+import Test.Tasty.QuickCheck (testProperty, Property, (===), (==>), testProperties, property), Property, forAll, Gen, Arbitrary(..), oneof, elements, listOf, listOf1, resize, suchThat)
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
 
 import Ownership.Common.Types 
@@ -117,7 +117,7 @@ prop_ownershipError_show_contains_type oe =
       PathSensitiveError _ -> "PathSensitiveError" `L.isInfixOf` showStr
       LoopOwnershipError _ -> "LoopOwnershipError" `L.isInfixOf` showStr
   where
-    L.isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
+    isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
 
 -- | OwnershipTransfer: equality should be reflexive
 prop_ownershipTransfer_reflexive :: OwnershipTransfer -> Bool
@@ -131,7 +131,7 @@ prop_ownershipTransfer_show_contains_vars transfer =
         toVar = transferTo transfer
     in fromVar `L.isInfixOf` showStr && toVar `L.isInfixOf` showStr
   where
-    L.isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
+    isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
 
 -- | OwnershipTransfer: creating transfer with same from L.and to should be valid
 prop_ownershipTransfer_same_vars :: String -> Bool

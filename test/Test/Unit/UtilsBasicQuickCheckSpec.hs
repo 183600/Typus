@@ -64,7 +64,7 @@ splittingProperties = testGroup "Splitting Properties"
 
 predicateProperties :: TestTree
 predicateProperties = testGroup "Predicate Properties"
-  [ fastProperty "L.isPrefixOf is reflexive" $ \(s :: String) ->
+  [ fastProperty "isPrefixOf is reflexive" $ \(s :: String) ->
       s `L.isPrefixOf` s
   
   , fastProperty "L.isSuffixOf is reflexive" $ \(s :: String) ->

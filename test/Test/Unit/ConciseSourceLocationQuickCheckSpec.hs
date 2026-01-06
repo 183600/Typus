@@ -1,7 +1,8 @@
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 module Test.Unit.ConciseSourceLocationQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperty, Property, (===), Arbitrary(..), Gen, oneof, choose, elements)
+import Test.Tasty.QuickCheck (testProperty, Property, (===), (==>), Arbitrary(..), Gen, oneof, choose, elements, listOf, property)
 import SourceLocation 
     ( SourcePos(..), SourceSpan(..), startPos, posAfter, posAt, 
       spanFrom, spanTo, mergeSpans, isValidSpan, advancePosByText )

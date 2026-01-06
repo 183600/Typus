@@ -3,7 +3,7 @@
 module Test.Unit.NewUtilsQuickCheckTestSpec where
 
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Utils (trim, splitBy, splitByCollapsed, splitByComma, removeLineComments)
 import qualified Data.List as L
 import Data.List (isPrefixOf)

@@ -3,7 +3,7 @@
 module Test.Unit.DependentTypesSystemQuickCheckSpec (tests) where
 
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Test.Tasty.HUnit
 
 import DependentTypesParser
@@ -170,7 +170,7 @@ testGenericTypeArguments ref =
 testConstraintExpressions :: TypeConstraint -> Property
 testConstraintExpressions constraint =
   let expressionString = show constraint
-      isWellFormed = not (null expressionString) && not (L.isInfixOf "!!" expressionString)
+      isWellFormed = not (null expressionString) && not (isInfixOf "!!" expressionString)
   in isWellFormed === True
 
 -- Helper functions

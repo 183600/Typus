@@ -358,4 +358,4 @@ tests = testGroup "ErrorHandler Advanced QuickCheck Tests"
 
 -- Helper function to check if a string is contained in another
 isInfixOf :: String -> String -> Bool
-L.isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
+isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack

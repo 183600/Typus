@@ -254,7 +254,7 @@ prop_errorCombinationProperties primary secondary =
 
 -- Check if a substring is in a string
 isInfixOf :: Eq a => [a] -> [a] -> Bool
-L.isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
+isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
 
 -- Mock State monad execution for testing
 execState :: State s a -> s -> s

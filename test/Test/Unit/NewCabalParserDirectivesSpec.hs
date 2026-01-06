@@ -135,7 +135,7 @@ prop_parse_preserves_content =
     Left _ -> property False
     Right file ->
       let blocks = tfBlocks file
-          hasContent = L.any (L.isInfixOf "x := 1" . cbContent) blocks
+          hasContent = L.any (isInfixOf "x := 1" . cbContent) blocks
       in property $ hasContent
 
 -- Property: parsing handles mixed line endings

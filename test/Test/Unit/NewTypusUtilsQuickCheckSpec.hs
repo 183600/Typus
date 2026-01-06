@@ -81,9 +81,9 @@ countOccurrences str delim = if delim `L.isPrefixOf` str
                             else countOccurrences (L.tail str) delim
 
 isPrefixOf :: String -> String -> Bool
-L.isPrefixOf [] _ = True
-L.isPrefixOf _ [] = False
-L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
+isPrefixOf [] _ = True
+isPrefixOf _ [] = False
+isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
 
 addMixedIndentation :: String -> String
 addMixedIndentation = unlines . map addIndent . splitBy "\n"

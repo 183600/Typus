@@ -278,7 +278,7 @@ isRelevantToErrorType _ _ = False
 
 -- Helper functions
 isInfixOf :: Eq a => [a] -> [a] -> Bool
-L.isInfixOf needle haystack = L.any (L.isPrefixOf needle) (tails haystack)
+isInfixOf needle haystack = L.any (isPrefixOf needle) (tails haystack)
   where
     tails [] = [[]]
     tails xs@(_:ys) = xs : tails ys

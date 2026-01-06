@@ -4,7 +4,7 @@
 module Test.Unit.ParserCoreQuickCheckTests (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperties, (===), Property, forAll, Gen, Arbitrary(..), oneof, elements, listOf, listOf1, resize, suchThat)
+import Test.Tasty.QuickCheck (testProperty, Property, (===), (==>), testProperties, (===), Property, forAll, Gen, Arbitrary(..), oneof, elements, listOf, listOf1, resize, suchThat)
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
 
 import Parser 

@@ -173,7 +173,7 @@ indentationPerformanceTests =
         let indentedFile = unlines $ L.map (\i -> replicate (i `mod` 20) ' ' ++ "line " ++ show i) [1..1000]
             result = normalizeIndentation indentedFile
         in do
-           assertBool "Should normalize indentation" (not $ L.any (L.isPrefixOf "    ") (lines result))
+           assertBool "Should normalize indentation" (not $ L.any (isPrefixOf "    ") (lines result))
            assertBool "Should preserve content" ("line 1" `L.isInfixOf` result && "line 1000" `L.isInfixOf` result)
 
     , testCase "Mixed tab/space indentation" $
@@ -186,7 +186,7 @@ indentationPerformanceTests =
             result = normalizeIndentation mixedIndentation
         in do
            assertBool "Should handle mixed indentation" (L.length (lines result) == 4)
-           assertBool "Should normalize consistently" (L.all (not . L.isPrefixOf "\t") (lines result))
+           assertBool "Should normalize consistently" (L.all (not . isPrefixOf "\t") (lines result))
 
     , testCase "Force single tab indentation" $
         let spaceIndented = unlines
@@ -196,7 +196,7 @@ indentationPerformanceTests =
               ]
             result = forceSingleTabIndentation spaceIndented
         in do
-           assertBool "Should convert to tabs" (L.any (L.isPrefixOf "\t") (lines result))
+           assertBool "Should convert to tabs" (L.any (isPrefixOf "\t") (lines result))
            assertBool "Should preserve structure" (L.length (lines result) == 3)
 
     , testCase "Indentation with empty lines" $
@@ -210,7 +210,7 @@ indentationPerformanceTests =
             result = normalizeIndentation withEmptyLines
         in do
            assertBool "Should preserve empty lines" (L.null (lines result !! 1) && L.null (lines result !! 3))
-           assertBool "Should normalize non-empty lines" (L.all (not . L.isPrefixOf "    ") $ L.filter (not . null) (lines result))
+           assertBool "Should normalize non-empty lines" (L.all (not . isPrefixOf "    ") $ L.filter (not . null) (lines result))
 
     , testCase "Performance with deeply nested code" $
         let deeplyNested = unlines $ L.concat $ replicate 100 
@@ -340,15 +340,15 @@ quickCheckProperties =
     , testProperty "Comment removal preserves non-comment content" $
         forAll genCommentString $ \s ->
             let withoutComments = removeLineComments s
-                hasCode = L.any (not . L.isPrefixOf "//") (lines s)
+                hasCode = L.any (not . isPrefixOf "//") (lines s)
             in hasCode ==> L.length (L.filter (not . null) (lines withoutComments)) > 0
     ]
 
 -- | Helper functions L.and generators
 isPrefixOf :: String -> String -> Bool
-L.isPrefixOf [] _ = True
-L.isPrefixOf _ [] = False
-L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
+isPrefixOf [] _ = True
+isPrefixOf _ [] = False
+isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
 
 dropWhileEnd :: (a -> Bool) -> [a] -> [a]
 dropWhileEnd p = L.foldr (\x xs -> if p x && null xs then [] else x:xs) []

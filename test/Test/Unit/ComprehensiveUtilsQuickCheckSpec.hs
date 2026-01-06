@@ -297,10 +297,10 @@ splitLines :: String -> [String]
 splitLines = Data.List.lines
 
 isInfixOf :: String -> String -> Bool
-L.isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
+isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
 
 isPrefixOf :: String -> String -> Bool
-L.isPrefixOf needle haystack = needle `Data.List.L.isPrefixOf` haystack
+isPrefixOf needle haystack = needle `Data.List.L.isPrefixOf` haystack
 
 relativeIndentationPreserved :: [String] -> [String] -> Bool
 relativeIndentationPreserved original normalized = L.length original == L.length normalized

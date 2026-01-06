@@ -3,7 +3,7 @@
 module Test.Unit.NewIntegrationQuickCheckTestSpec where
 
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Utils (trim, splitBy, removeLineComments)
 import SourceLocation (SourcePos(..), startPos, posAfter, advancePos)
 import Parser (FileDirectives(..), defaultFileDirectives)

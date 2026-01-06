@@ -3,7 +3,7 @@
 module Test.Unit.NewCabalBoundaryConditionsQuickCheckSpec where
 
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Utils (trim, splitBy, removeComments, normalizeIndentation, breakOn)
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos, posAt, spanBetween, advancePosBy)
 import Parser (parseTypus, TypusFile(..), CodeBlock(..), defaultFileDirectives)
@@ -191,14 +191,14 @@ testErrorHandlingBoundaryConditions :: TestTree
 testErrorHandlingBoundaryConditions = testGroup "Error Handling Boundary Conditions"
   [ testCase "error with empty message" $
       let error = TypeError T.empty ErrorSeverityError ErrorCategorySyntax 
-                        (Compiler.Errors.Core.ErrorLocation Nothing 1 1 Nothing Nothing) 
+                        (Compiler.Errors.Core.ErrorLocation (startPos) Nothing) 
                         Compiler.Errors.Core.emptyContext
       in show error `seq` True  -- Should not crash
       
   , testCase "error with extremely long message" $
       let longMessage = T.pack $ L.concat (replicate 1000 "very long error message ")
           error = TypeError longMessage ErrorSeverityError ErrorCategorySyntax 
-                        (Compiler.Errors.Core.ErrorLocation Nothing 1 1 Nothing Nothing) 
+                        (Compiler.Errors.Core.ErrorLocation (startPos) Nothing) 
                         Compiler.Errors.Core.emptyContext
       in show error `seq` True  -- Should not crash
       
@@ -211,7 +211,7 @@ testErrorHandlingBoundaryConditions = testGroup "Error Handling Boundary Conditi
   , testCase "error collector with many errors" $
       let collector = newErrorCollector
           error = TypeError "test" ErrorSeverityError ErrorCategorySyntax 
-                           (Compiler.Errors.Core.ErrorLocation Nothing 1 1 Nothing Nothing) 
+                           (Compiler.Errors.Core.ErrorLocation (startPos) Nothing) 
                            Compiler.Errors.Core.emptyContext
           collector1 = L.foldl (\c _ -> addError error c) collector [1..1000]
           errors = getErrors collector1

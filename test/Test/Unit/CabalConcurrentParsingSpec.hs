@@ -21,20 +21,20 @@ tests =
     [ testGroup "Thread Safety of Utils"
         [ testCase "Concurrent trim operations" $ do
             let testStrings = ["  test1  ", "\ttest2\n", "  test3  ", "test4  "]
-            results <- newEmptyMVar
+            resultsVar <- newEmptyMVar
             _ <- forkIO $ do
                 trimmed <- mapM Utils.trim testStrings
-                putMVar results trimmed
-            finalResults <- takeMVar results
+                putMVar resultsVar trimmed
+            finalResults <- takeMVar resultsVar
             finalResults @?= ["test1", "test2", "test3", "test4"]
 
         , testCase "Concurrent splitBy operations" $ do
             let testInputs = ["a,b,c", "x,y,z", "1,2,3"]
-            results <- newEmptyMVar
+            resultsVar <- newEmptyMVar
             _ <- forkIO $ do
                 split <- mapM (Utils.splitBy ',') testInputs
-                putMVar results split
-            finalResults <- takeMVar results
+                putMVar resultsVar split
+            finalResults <- takeMVar resultsVar
             finalResults @?= [["a", "b", "c"], ["x", "y", "z"], ["1", "2", "3"]]
 
         , testCase "Concurrent comment removal" $ do
@@ -43,11 +43,11 @@ tests =
                   , "func test2() { return 2; } /* comment2 */"
                   , "func test3() { return 3; } // comment3"
                   ]
-            results <- newEmptyMVar
+            resultsVar <- newEmptyMVar
             _ <- forkIO $ do
                 uncommented <- mapM Utils.removeComments commentedInputs
-                putMVar results uncommented
-            finalResults <- takeMVar results
+                putMVar resultsVar uncommented
+            finalResults <- takeMVar resultsVar
             L.all (`L.isInfixOf` L.concat finalResults) ["return 1;", "return 2;", "return 3;"] @?= True
         ]
 
@@ -58,20 +58,20 @@ tests =
                   , "func test2() { return 2; }"
                   , "func test3() { return 3; }"
                   ]
-            results <- newEmptyMVar
+            resultsVar <- newEmptyMVar
             _ <- forkIO $ do
                 parseResults <- mapM (Parser.parseTypus "concurrent") inputs
-                putMVar results parseResults
-            finalResults <- takeMVar results
+                putMVar resultsVar parseResults
+            finalResults <- takeMVar resultsVar
             L.all isSuccess finalResults @?= True
 
         , testCase "Concurrent parsing of same input" $ do
             let input = "func shared() { return 42; }"
-            results <- newEmptyMVar
+            resultsVar <- newEmptyMVar
             _ <- forkIO $ do
-                parseResults <- replicateM 3 $ Parser.parseTypus "shared" input
-                putMVar results parseResults
-            finalResults <- takeMVar results
+                parseResults <- replicateM 3 $ Parser.parseTypus input
+                putMVar resultsVar parseResults
+            finalResults <- takeMVar resultsVar
             L.all isSuccess finalResults @?= True
 
         , testCase "Concurrent parsing with errors" $ do
@@ -80,64 +80,64 @@ tests =
                   , "func bad2() { if }"
                   , "func bad3() { { {"
                   ]
-            results <- newEmptyMVar
+            resultsVar <- newEmptyMVar
             _ <- forkIO $ do
                 parseResults <- mapM Parser.parseTypus invalidInputs
-                putMVar results parseResults
-            finalResults <- takeMVar results
+                putMVar resultsVar parseResults
+            finalResults <- takeMVar resultsVar
             L.all isFailure finalResults @?= True
         ]
 
     , testGroup "Source Location Thread Safety"
         [ testCase "Concurrent source position creation" $ do
-            let positions = [SourceLocation.SourcePos line col | line <- [1..100], col <- [1..10]]
-                results <- newEmptyMVar
-                _ <- forkIO $ do
-                    let chunked = chunks 20 positions
-                        processed <- mapM processPositions chunked
-                    putMVar results (L.concat processed)
-                finalResults <- takeMVar results
+            let positions = [SourceLocation.SourcePos line col 0 | line <- [1..100], col <- [1..10]]
+            resultsVar <- newEmptyMVar
+            _ <- forkIO $ do
+                let chunked = chunks 20 positions
+                processed <- mapM processPositions chunked
+                putMVar resultsVar (L.concat processed)
+            finalResults <- takeMVar resultsVar
             L.length finalResults @?= 1000
 
         , testCase "Concurrent span operations" $ do
-            let spans = [SourceLocation.SourceSpan (SourceLocation.SourcePos 1 1) (SourceLocation.SourcePos 10 10)]
-                results <- newEmptyMVar
-                _ <- forkIO $ do
-                    merged <- replicateM 10 $ return (foldl SourceLocation.mergeSpans (L.head spans) (L.tail spans))
-                    putMVar results merged
-                finalResults <- takeMVar results
+            let spans = [SourceLocation.SourceSpan (SourceLocation.SourcePos 1 1 0) (SourceLocation.SourcePos 10 10 0)]
+            resultsVar <- newEmptyMVar
+            _ <- forkIO $ do
+                merged <- replicateM 10 $ return (foldl SourceLocation.mergeSpans (L.head spans) (L.tail spans))
+                putMVar resultsVar merged
+            finalResults <- takeMVar resultsVar
             L.all SourceLocation.isValidSpan finalResults @?= True
 
         , testCase "Concurrent position advancement" $ do
-            let basePos = SourceLocation.SourcePos 1 1
+            let basePos = SourceLocation.SourcePos 1 1 0
                 chars = "abcdefghijklmnopqrstuvwxyz"
-                results <- newEmptyMVar
-                _ <- forkIO $ do
-                    advanced <- mapM (SourceLocation.advancePos basePos) chars
-                    putMVar results advanced
-                finalResults <- takeMVar results
+            resultsVar <- newEmptyMVar
+            _ <- forkIO $ do
+                advanced <- mapM (SourceLocation.advancePos basePos) chars
+                putMVar resultsVar advanced
+            finalResults <- takeMVar resultsVar
             L.length finalResults @?= 26
         ]
 
     , testGroup "Memory Consistency"
         [ testCase "No memory leaks in concurrent parsing" $ do
             let input = "func memory() { return 1; }"
-                results <- newEmptyMVar
-                _ <- forkIO $ do
-                    parseResults <- replicateM 100 $ Parser.parseTypus "memory" input
-                    putMVar results parseResults
-                finalResults <- takeMVar results
+            resultsVar <- newEmptyMVar
+            _ <- forkIO $ do
+                parseResults <- replicateM 100 $ Parser.parseTypus input
+                putMVar resultsVar parseResults
+            finalResults <- takeMVar resultsVar
             L.all isSuccess finalResults @?= True
 
         , testCase "Consistent results across threads" $ do
             let input = "func consistent() { return true; }"
-                results1 <- newEmptyMVar
-                results2 <- newEmptyMVar
-                _ <- forkIO $ do
-                    result1 <- Parser.parseTypus "thread1" input
-                    putMVar results1 result1
-                _ <- forkIO $ do
-                    result2 <- Parser.parseTypus "thread2" input
+            results1 <- newEmptyMVar
+            results2 <- newEmptyMVar
+            _ <- forkIO $ do
+                result1 <- Parser.parseTypus input
+                putMVar results1 result1
+            _ <- forkIO $ do
+                result2 <- Parser.parseTypus input
                     putMVar results2 result2
                 final1 <- takeMVar results1
                 final2 <- takeMVar results2
@@ -163,60 +163,60 @@ tests =
                   , "  }"
                   , "}"
                   ]
-                results <- newEmptyMVar
-                _ <- forkIO $ do
-                    parseResults <- replicateM 5 $ Parser.parseTypus "race" complexInput
-                    putMVar results parseResults
-                finalResults <- takeMVar results
+            resultsVar <- newEmptyMVar
+            _ <- forkIO $ do
+                parseResults <- replicateM 5 $ Parser.parseTypus complexInput
+                putMVar resultsVar parseResults
+            finalResults <- takeMVar resultsVar
             L.all isSuccess finalResults @?= True
 
         , testCase "Concurrent access to utils functions" $ do
             let testStrings = ["test1", "test2", "test3", "test4", "test5"]
-                results <- newEmptyMVar
-                _ <- forkIO $ do
-                    processed <- mapM processString testStrings
-                    putMVar results processed
-                finalResults <- takeMVar results
+            resultsVar <- newEmptyMVar
+            _ <- forkIO $ do
+                processed <- mapM processString testStrings
+                putMVar resultsVar processed
+            finalResults <- takeMVar resultsVar
             L.length (nub finalResults) == L.length finalResults @?= True  -- All should be unique
 
         , testCase "Thread-safe error handling" $ do
             let errorInputs = ["{", "}", "func", "return", "if"]
-                results <- newEmptyMVar
-                _ <- forkIO $ do
-                    errorResults <- mapM (Parser.parseTypus "error") errorInputs
-                    putMVar results errorResults
-                finalResults <- takeMVar results
+            resultsVar <- newEmptyMVar
+            _ <- forkIO $ do
+                errorResults <- mapM Parser.parseTypus errorInputs
+                putMVar resultsVar errorResults
+            finalResults <- takeMVar resultsVar
             L.all isFailure finalResults @?= True
         ]
 
     , testGroup "Performance under Concurrency"
         [ testCase "Concurrent parsing performance" $ do
             let inputs = [unlines ["func test" ++ show i ++ "() { return " ++ show i ++ "; }"] | i <- [1..50]]
-                results <- newEmptyMVar
-                _ <- forkIO $ do
-                    parseResults <- mapM (Parser.parseTypus "perf") inputs
-                    putMVar results parseResults
-                finalResults <- takeMVar results
+            resultsVar <- newEmptyMVar
+            _ <- forkIO $ do
+                parseResults <- mapM Parser.parseTypus inputs
+                putMVar resultsVar parseResults
+            finalResults <- takeMVar resultsVar
             L.length finalResults @?= 50
 
         , testCase "Concurrent utils processing" $ do
             let largeStrings = [unlines ["line " ++ show j | j <- [1..100]] | i <- [1..10]]
-                results <- newEmptyMVar
-                _ <- forkIO $ do
-                    processed <- mapM processLargeString largeStrings
-                    putMVar results processed
-                finalResults <- takeMVar results
+            resultsVar <- newEmptyMVar
+            _ <- forkIO $ do
+                processed <- mapM processLargeString largeStrings
+                putMVar resultsVar processed
+            finalResults <- takeMVar resultsVar
             L.all (> 0) (map L.length finalResults) @?= True
         ]
 
     , testGroup "Stress Testing"
         [ testCase "High concurrency stress test" $ do
             let input = "func stress() { return 0; }"
-                results <- newEmptyMVar
-                _ <- forkIO $ do
-                    parseResults <- replicateM 1000 $ Parser.parseTypus "stress" input
-                    putMVar results parseResults
-                finalResults <- takeMVar results
+            resultsVar <- newEmptyMVar
+            _ <- forkIO $ do
+                parseResults <- replicateM 1000 $ Parser.parseTypus input
+                putMVar resultsVar parseResults
+            finalResults <- takeMVar resultsVar
             L.length finalResults @?= 1000
 
         , testCase "Complex concurrent operations" $ do
@@ -232,12 +232,12 @@ tests =
                   , "  }"
                   , "}"
                   ]
-                results <- newEmptyMVar
-                _ <- forkIO $ do
-                    parseResults <- replicateM 100 $ Parser.parseTypus "complex" complexInput
+            resultsVar <- newEmptyMVar
+            _ <- forkIO $ do
+                    parseResults <- replicateM 100 $ Parser.parseTypus complexInput
                     processed <- mapM processParseResult parseResults
-                    putMVar results processed
-                finalResults <- takeMVar results
+                    putMVar resultsVar processed
+            finalResults <- takeMVar resultsVar
             L.all (== True) finalResults @?= True
         ]
     ]
@@ -256,7 +256,7 @@ chunks _ [] = []
 chunks n xs = take n xs : chunks n (drop n xs)
 
 processPositions :: [SourceLocation.SourcePos] -> IO [SourceLocation.SourcePos]
-processPositions = return . L.map (\pos -> pos { SourceLocation.sourceColumn = SourceLocation.sourceColumn pos + 1 })
+processPositions = return . L.map (\pos -> pos { SourceLocation.posColumn = SourceLocation.posColumn pos + 1 })
 
 processString :: String -> IO String
 processString = return . Utils.trim
@@ -269,8 +269,8 @@ processParseResult (Right _) = return True
 processParseResult (Left _) = return False
 
 isInfixOf :: Eq a => [a] -> [[a]] -> Bool
-L.isInfixOf needle haystack = L.any (needle `L.isPrefixOf`) haystack
+isInfixOf needle haystack = L.any (needle `L.isPrefixOf`) haystack
   where
-    L.isPrefixOf [] _ = True
-    L.isPrefixOf _ [] = False
-    L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
+    isPrefixOf [] _ = True
+    isPrefixOf _ [] = False
+    isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys

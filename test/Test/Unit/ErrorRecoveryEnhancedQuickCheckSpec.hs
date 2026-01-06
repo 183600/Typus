@@ -5,7 +5,7 @@ module Test.Unit.ErrorRecoveryEnhancedQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree)
 import qualified Data.List as L
-import Test.Tasty.QuickCheck (testProperty, QuickCheckTests(..))
+import Test.Tasty.QuickCheck (testProperty)
 import Test.Tasty.HUnit (testCase, assert)
 import Compiler.Errors.Core
   ( TypeError(..), ErrorSeverity(..), ErrorCategory(..)
@@ -153,7 +153,7 @@ tests = testGroup "Error Recovery Advanced Tests"
       assert (shouldContinueAfter collector)
   ]
   where
-    L.isInfixOf needle haystack = needle `elem` (substrings haystack)
+    isInfixOf needle haystack = needle `elem` (substrings haystack)
     substrings s = take (L.length s - L.length needle + 1) $ L.map (take (L.length needle)) $ tails s
     needle = ""
     tails [] = [[]]

@@ -169,13 +169,13 @@ foldConstants input
 replace :: String -> String -> String -> String
 replace old new str = 
   if old `L.isInfixOf` str
-  then takeWhile (not . L.isPrefixOf old) str ++ new ++ drop (L.length old + L.length (takeWhile (not . L.isPrefixOf old) str)) str
+  then takeWhile (not . isPrefixOf old) str ++ new ++ drop (L.length old + L.length (takeWhile (not . isPrefixOf old) str)) str
   else str
 
 isPrefixOf :: String -> String -> String -> Bool
-L.isPrefixOf [] _ = True
-L.isPrefixOf _ [] = False
-L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
+isPrefixOf [] _ = True
+isPrefixOf _ [] = False
+isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
 
 emptyCache :: Cache
 emptyCache = Cache { cacheEntries = Map.empty, cacheSize = 0 }

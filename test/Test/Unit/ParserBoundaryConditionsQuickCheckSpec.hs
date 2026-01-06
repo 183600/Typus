@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase, FlexibleInstances #-}
 module Test.Unit.ParserBoundaryConditionsQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
@@ -263,7 +263,7 @@ propUnicodeContentParsing content =
   in case parseTypus unicodeInput of
        Left _ -> True  -- 解析失败是可接受的
        Right file -> not (L.null (tfBlocks file)) ==> 
-                     L.any (L.isInfixOf "αβγδεζηθ" . cbContent) (tfBlocks file)
+                     L.any (isInfixOf "αβγδεζηθ" . cbContent) (tfBlocks file)
 
 -- | 非常长的行
 propVeryLongLines :: Int -> String -> Bool

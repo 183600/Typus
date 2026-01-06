@@ -1,50 +1,41 @@
 #!/usr/bin/env python3
-import re
-import sys
+
 import os
+import re
 
-def fix_pattern_in_file(file_path, pattern, replacement):
-    """Fix a pattern in a file"""
-    try:
-        with open(file_path, 'r') as f:
-            content = f.read()
-        
-        if re.search(pattern, content):
-            new_content = re.sub(pattern, replacement, content)
-            with open(file_path, 'w') as f:
-                f.write(new_content)
-            print(f"Fixed {file_path}")
-            return True
-        return False
-    except Exception as e:
-        print(f"Error fixing {file_path}: {e}")
-        return False
+# Find all test files
+test_dir = "/home/runner/work/Typus/Typus/test/Test/Unit"
+fixed_files = []
 
-def main():
-    # Common pattern fixes
-    fixes = [
-        # Fix runExceptT pattern matching
-        (r'(\s+)result <- runExceptT \(evalStateT (.+) (.+)\)\s+case result of:\s+\[\] ->',
-         r'\1result <- runExceptT (evalStateT \2 \3)\n\1case result of:\n\1  Left _ -> assertBool "Should not fail" False\n\1  Right [] ->'),
-        
-        # Fix evalState with TypeInference
-        (r'evalState \(([^)]+)\) newTypeInferenceState', r'runTypeInference (\1)'),
-        
-        # Fix getDetailedAnalysisSummary call
-        (r'let summary <- getDetailedAnalysisSummary ([^)]+)', r'let summary = getDetailedAnalysisSummary \1'),
-        
-        # Fix String to Text conversions
-        (r'SVarDecl "([^"]+)"', r'SVarDecl (T.pack "\1")'),
-        (r'SimpleT "([^"]+)"', r'SimpleT (T.pack "\1")'),
-    ]
-    
-    # Find all test files
-    test_dir = "/home/runner/work/Typus/Typus/test/Test/Unit"
-    for filename in os.listdir(test_dir):
-        if filename.endswith(".hs"):
-            file_path = os.path.join(test_dir, filename)
-            for pattern, replacement in fixes:
-                fix_pattern_in_file(file_path, pattern, replacement)
+for root, dirs, files in os.walk(test_dir):
+    for file in files:
+        if file.endswith(".hs"):
+            file_path = os.path.join(root, file)
+            
+            # Read the file
+            with open(file_path, 'r') as f:
+                content = f.read()
+            
+            original_content = content
+            
+            # Fix parseTypus calls with extra parameter
+            content = re.sub(r'Parser\.parseTypus\s+"[^"]*"\s+', 'Parser.parseTypus ', content)
+            
+            # Fix let bindings with <- operator
+            content = re.sub(r'(\s+)let\s+(\w+)\s+<-', r'\1\2 <-', content)
+            
+            # Fix qualified names in binding position
+            content = re.sub(r'L\.isInfixOf\s+', 'isInfixOf ', content)
+            content = re.sub(r'L\.isPrefixOf\s+', 'isPrefixOf ', content)
+            
+            # Write back if changed
+            if content != original_content:
+                with open(file_path, 'w') as f:
+                    f.write(content)
+                fixed_files.append(file_path)
 
-if __name__ == "__main__":
-    main()
+print(f"Fixed {len(fixed_files)} files:")
+for file_path in fixed_files[:10]:  # Show first 10 files
+    print(f"  {file_path}")
+if len(fixed_files) > 10:
+    print(f"  ... and {len(fixed_files) - 10} more files")

@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE CPP, FlexibleInstances #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
@@ -446,7 +446,7 @@ compileTypus _ input
 
 -- Helper functions
 isInfixOf :: String -> String -> Bool
-L.isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
+isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
 
 -- QuickCheck generators
 instance Arbitrary String where

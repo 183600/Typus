@@ -3,7 +3,7 @@ module Test.Unit.OwnershipReporterSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertBool, assertEqual)
-import Test.Tasty.QuickCheck (testProperty, Property, forAll, Gen, arbitrary, elements, listOf1)
+import Test.Tasty.QuickCheck (testProperty, Property, forAll, Gen, arbitrary, elements, listOf1, property)
 
 import Ownership.Common.Types 
   ( OwnershipError(..)
@@ -198,4 +198,4 @@ arbitraryErrorList = listOf1 arbitraryError
 
 -- Helper function to check if a string is contained in another
 isInfixOf :: String -> String -> Bool
-L.isInfixOf needle haystack = needle `elem` words haystack
+isInfixOf needle haystack = needle `elem` words haystack

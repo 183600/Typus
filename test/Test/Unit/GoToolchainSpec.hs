@@ -90,5 +90,5 @@ tests =
             Left err -> assertFailure ("runGoCommand failed unexpectedly: " ++ show err)
             Right _ -> pure ()
           logs <- readIORef ref
-          assertBool "expected skip message" (L.any (L.isPrefixOf "Skipping Go command") logs)
+          assertBool "expected skip message" (L.any (isPrefixOf "Skipping Go command") logs)
     ]

@@ -4,7 +4,7 @@ module Test.Unit.OwnershipAnalysisComprehensiveQuickCheckSpec (tests) where
 
 import Test.Tasty
 import qualified Data.List as L
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Test.Tasty.HUnit
 
 import Ownership.Common.Types
@@ -204,4 +204,4 @@ testOwnershipTransferShow transfer =
 
 -- Helper functions
 isInfixOf :: String -> String -> Bool
-L.isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
+isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]

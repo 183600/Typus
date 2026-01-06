@@ -4,7 +4,7 @@ module Test.Unit.NewErrorHandlingQuickCheckTestSpec where
 
 import Test.Tasty
 import qualified Data.List as L
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Utils (trim, splitBy, removeLineComments)
 import SourceLocation (SourcePos(..), startPos, posAfter, emptySpan, isValidSpan)
 import Parser (FileDirectives(..), defaultFileDirectives)

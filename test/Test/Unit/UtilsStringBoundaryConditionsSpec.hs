@@ -228,7 +228,7 @@ prop_normalizeIndentation_mixed content =
       normalized = normalizeIndentation mixedInput
       lines' = lines normalized
   in property $ L.length lines' === 3 .&&.
-             L.all (\line -> null line || not (L.isPrefixOf "    " line)) lines'
+             L.all (\line -> null line || not (isPrefixOf "    " line)) lines'
 
 prop_forceSingleTab_mixed :: String -> Property
 prop_forceSingleTab_mixed content =

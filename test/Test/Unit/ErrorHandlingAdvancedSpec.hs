@@ -108,7 +108,7 @@ tests =
 
     , testGroup "Error Modification L.and Enhancement"
         [ testCase "withLocation updates error location" $ do
-            let originalLocation = ErrorLocation Nothing 1 1 Nothing Nothing
+            let originalLocation = ErrorLocation (startPos) Nothing
             let newLocation = ErrorLocation (Just "new.typus") 5 10 (Just 5) (Just 15)
             let error = errorAt "ERR001" (T.pack "Test") originalLocation
             let updatedError = withLocation error newLocation
@@ -118,7 +118,7 @@ tests =
             message updatedError @?= message error
 
         , testCase "withContext adds context information" $ do
-            let location = ErrorLocation Nothing 1 1 Nothing Nothing
+            let location = ErrorLocation (startPos) Nothing
             let context = ErrorContext (Just "code") (Just "func") (Just "var") (Just "type") [("extra", "info")]
             let error = errorAt "ERR001" (T.pack "Test") location
             let contextError = withContext error context
@@ -127,7 +127,7 @@ tests =
             location contextError @?= location
 
         , testCase "withSuggestions adds suggestion list" $ do
-            let location = ErrorLocation Nothing 1 1 Nothing Nothing
+            let location = ErrorLocation (startPos) Nothing
             let error = errorAt "ERR001" (T.pack "Test") location
             let suggestions = ["Suggestion 1", "Suggestion 2"]
             let enhancedError = withSuggestions suggestions error
@@ -136,7 +136,7 @@ tests =
             errorId enhancedError @?= errorId error
 
         , testCase "wrapError creates error chain" $ do
-            let location = ErrorLocation Nothing 1 1 Nothing Nothing
+            let location = ErrorLocation (startPos) Nothing
             let innerError = errorAt "test-id" "Inner error") location
             let wrappedError = wrapError (T.pack "Wrapper: ") innerError
             
@@ -145,7 +145,7 @@ tests =
             errorId wrappedError @?= errorId innerError
 
         , testCase "timestamp handling" $ do
-            let location = ErrorLocation Nothing 1 1 Nothing Nothing
+            let location = ErrorLocation (startPos) Nothing
             let error = errorAt "ERR001" (T.pack "Test") location
             let timestamp = "2023-12-25 10:30:45.123"
             let timestampedError = withTimestamp timestamp error
@@ -156,7 +156,7 @@ tests =
 
     , testGroup "Error Collection L.and Management"
         [ testCase "ErrorCollector manages different error types" $ do
-            let location = ErrorLocation Nothing 1 1 Nothing Nothing
+            let location = ErrorLocation (startPos) Nothing
             let error = errorAt "ERR001" (T.pack "Error") location
             let warning = warningAt "WARN001" (T.pack "Warning") location
             let info = infoAt "INFO001" (T.pack "Info") location
@@ -171,7 +171,7 @@ tests =
             length (getInfo allErrors) @?= 1
 
         , testCase "filterByCategory L.and filterBySeverity work correctly" $ do
-            let location = ErrorLocation Nothing 1 1 Nothing Nothing
+            let location = ErrorLocation (startPos) Nothing
             let typeError = errorWithCategory "TYPE001" TypeChecking (T.pack "Type error") location
             let parseError = errorWithCategory "PARSE001" Parsing (T.pack "Parse error") location
             let warning = warningAt "WARN001" (T.pack "Warning") location
@@ -188,7 +188,7 @@ tests =
             length warningSeverity @?= 1
 
         , testCase "getErrorStatistics provides correct counts" $ do
-            let location = ErrorLocation Nothing 1 1 Nothing Nothing
+            let location = ErrorLocation (startPos) Nothing
             let errors = 
                   [ errorWithCategory "TYPE001" TypeChecking (T.pack "Type error") location
                   , errorWithCategory "OWN001" Ownership (T.pack "Ownership error") location
@@ -235,7 +235,7 @@ tests =
             recoveryConfidence recovery @?= 0.85
 
         , testCase "errors use correct recovery strategies" $ do
-            let location = ErrorLocation Nothing 1 1 Nothing Nothing
+            let location = ErrorLocation (startPos) Nothing
             let regularError = errorAt "ERR001" (T.pack "Error") location
             let warning = warningAt "WARN001" (T.pack "Warning") location
             let info = infoAt "INFO001" (T.pack "Info") location
@@ -247,7 +247,7 @@ tests =
             recovery fatal @?= fatalRecovery
 
         , testCase "canRecoverFrom L.and shouldContinueAfter work correctly" $ do
-            let location = ErrorLocation Nothing 1 1 Nothing Nothing
+            let location = ErrorLocation (startPos) Nothing
             let recoverableError = errorAt "ERR001" (T.pack "Error") location
             let nonRecoverableError = fatalError "FATAL001" (T.pack "Fatal") location
             
@@ -281,7 +281,7 @@ tests =
             assertBool "includes column number" (":5" `L.isInfixOf` formatted)
 
         , testCase "formatErrors handles multiple errors" $ do
-            let location = ErrorLocation Nothing 1 1 Nothing Nothing
+            let location = ErrorLocation (startPos) Nothing
             let error1 = errorAt "test-id" "First error") location
             let error2 = warningAt "WARN001" (T.pack "Warning") location
             let error3 = infoAt "INFO001" (T.pack "Info") location
@@ -321,7 +321,7 @@ tests =
     , testGroup "Property-Based Error Handling Tests"
         [ fastProperty "error creation preserves L.all fields" $
             \errId severity category message ->
-                let location = ErrorLocation Nothing 1 1 Nothing Nothing
+                let location = ErrorLocation (startPos) Nothing
                     error = errorAt "test-id" (T.pack message) location
                     categorizedError = errorWithCategory errId category (T.pack message) location
                 in errorId error === errId .&&.

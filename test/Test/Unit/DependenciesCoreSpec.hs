@@ -3,7 +3,7 @@ module Test.Unit.DependenciesCoreSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, assertBool, assertEqual)
-import Test.Tasty.QuickCheck (testProperty, Property, forAll, Gen, arbitrary, elements)
+import Test.Tasty.QuickCheck (testProperty, Property, forAll, Gen, arbitrary, elements, property)
 import qualified Data.Text as T (pack, unpack)
 import qualified Data.Map.Strict as Map
 

@@ -264,7 +264,7 @@ trim :: String -> String
 trim = dropWhile isSpace . L.reverse . dropWhile isSpace . L.reverse
 
 isInfixOf :: String -> String -> Bool
-L.isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
+isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
 
 isValidSpan :: SourceSpan -> Bool
 isValidSpan span = spanStart span <= spanEnd span

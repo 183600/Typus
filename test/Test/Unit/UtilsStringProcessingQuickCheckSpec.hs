@@ -230,11 +230,11 @@ prop_normalizeIndentationRemovesCommon input =
        then let normalized = normalizeIndentation input
                 normalizedLines = lines normalized
                 nonEmptyNormalized = L.filter (not . L.all isSpace) normalizedLines
-            in L.all (not . L.isPrefixOf "    ") nonEmptyNormalized
+            in L.all (not . isPrefixOf "    ") nonEmptyNormalized
        else True
   where
     isSpace c = c `elem` " \t"
-    L.isPrefixOf prefix str = take (L.length prefix) str == prefix
+    isPrefixOf prefix str = take (L.length prefix) str == prefix
 
 prop_normalizeIndentationPreservesRelative :: String -> Bool
 prop_normalizeIndentationPreservesRelative input =
@@ -352,13 +352,13 @@ prop_commentRemovalIsLinear input =
 
 -- Helper functions
 isInfixOf :: String -> String -> Bool
-L.isInfixOf needle haystack = needle `elem` [take (L.length haystack - L.length needle + 1) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
+isInfixOf needle haystack = needle `elem` [take (L.length haystack - L.length needle + 1) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
 
 notInfixOf :: String -> String -> Bool
-notInfixOf needle haystack = not (L.isInfixOf needle haystack)
+notInfixOf needle haystack = not (isInfixOf needle haystack)
 
 isPrefixOf :: String -> String -> Bool
-L.isPrefixOf prefix str = take (L.length prefix) str == prefix
+isPrefixOf prefix str = take (L.length prefix) str == prefix
 
 isSpace :: Char -> Bool
 isSpace c = c `elem` " \t\n\r"

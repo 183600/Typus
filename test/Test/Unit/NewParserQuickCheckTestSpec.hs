@@ -4,7 +4,7 @@ module Test.Unit.NewParserQuickCheckTestSpec where
 
 import Test.Tasty
 import qualified Data.List as L
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Parser (FileDirectives(..), BlockDirectives(..), defaultFileDirectives, defaultBlockDirectives)
 import SourceLocation (Located(..), SourcePos(..))
 import Data.Maybe (isJust, isNothing)

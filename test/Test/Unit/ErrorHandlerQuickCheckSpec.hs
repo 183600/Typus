@@ -261,7 +261,7 @@ prop_severity_comparison_transitive sev1 sev2 sev3 =
 
 -- Helper function for string infix check
 isInfixOf :: String -> String -> Bool
-L.isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
+isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
 
 -- Test group containing L.all QuickCheck properties
 tests :: TestTree

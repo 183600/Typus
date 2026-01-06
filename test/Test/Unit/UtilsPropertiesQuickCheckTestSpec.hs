@@ -77,7 +77,7 @@ prop_splitByCommaCollapsed_equals_splitByCollapsed s =
 -- Property: removeLineComments preserves non-commented lines
 prop_removeLineComments_preserves_non_commented :: String -> Property
 prop_removeLineComments_preserves_non_commented s =
-  let linesWithoutComments = L.filter (not . L.isPrefixOf "//") (lines s)
+  let linesWithoutComments = L.filter (not . isPrefixOf "//") (lines s)
       resultLines = L.filter (not . L.all isSpace) (lines (removeLineComments s))
   in property $ L.length resultLines >= L.length linesWithoutComments
 

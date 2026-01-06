@@ -5,7 +5,7 @@
 module Test.Unit.NewFreshUtilsQuickCheckProperties where
 
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Utils 
   ( trim, splitBy, splitByCollapsed, splitByComma
   , removeLineComments, removeComments, normalizeIndentation
@@ -156,7 +156,5 @@ indentationProperties = testGroup "Indentation Properties"
 -- ============================================================================
 
 isInfixOf :: String -> String -> Bool
-L.isInfixOf = Data.List.L.isInfixOf
-
-lines :: String -> [String]
+isInfixOf = Data.List.isInfixOf lines :: String -> [String]
 lines = Data.List.lines

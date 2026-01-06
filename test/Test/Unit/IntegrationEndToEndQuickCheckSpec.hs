@@ -484,4 +484,4 @@ prop_handlesDeeplyNested depth =
 
 -- Helper functions
 isInfixOf :: String -> String -> Bool
-L.isInfixOf needle haystack = needle `elem` [take (L.length haystack - L.length needle + 1) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
+isInfixOf needle haystack = needle `elem` [take (L.length haystack - L.length needle + 1) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]

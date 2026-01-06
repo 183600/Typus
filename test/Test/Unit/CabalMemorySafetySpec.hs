@@ -21,7 +21,7 @@ tests =
     [ testGroup "Parser Memory Safety"
         [ testCase "Parser doesn't retain references to input strings" $ do
             let input = "func memory_test() { return 42; }"
-                result = Parser.parseTypus "memory" input
+                result = Parser.parseTypus input
             case result of
               Left err -> do
                 performGC  -- Force garbage collection
@@ -32,7 +32,7 @@ tests =
 
         , testCase "Parser handles large inputs without memory blowup" $ do
             let largeInput = unlines $ replicate 1000 "func large() { return 1; }"
-                result = Parser.parseTypus "large" largeInput
+                result = Parser.parseTypus largeInput
             case result of
               Left err -> do
                 performGC
@@ -43,7 +43,7 @@ tests =
 
         , testCase "Parser releases memory after parsing errors" $ do
             let errorInput = "func error() { return }"  -- Missing semicolon
-                result = Parser.parseTypus "error" errorInput
+                result = Parser.parseTypus errorInput
             case result of
               Left _ -> do
                 performGC
@@ -52,7 +52,7 @@ tests =
 
         , testCase "Repeated parsing doesn't accumulate memory" $ do
             let input = "func repeat() { return 1; }"
-                parseMultiple = sequence $ replicate 100 $ Parser.parseTypus "repeat" input
+                parseMultiple = sequence $ replicate 100 $ Parser.parseTypus input
             results <- parseMultiple
             performGC
             L.all isSuccess results @?= True
@@ -114,7 +114,7 @@ tests =
     , testGroup "Deep Evaluation Safety"
         [ testCase "Parser results can be deeply evaluated" $ do
             let input = "func deep() { return [1, 2, 3]; }"
-                result = Parser.parseTypus "deep" input
+                result = Parser.parseTypus input
             case result of
               Left err -> rnf (show err) `seq` True @?= True
               Right parsed -> rnf parsed `seq` True @?= True
@@ -143,7 +143,7 @@ tests =
     , testGroup "Memory Leak Prevention"
         [ testCase "Circular references don't cause leaks" $ do
             let input = "func circular() { let x := x; return x; }"
-                result = Parser.parseTypus "circular" input
+                result = Parser.parseTypus input
             case result of
               Left err -> do
                 performGC
@@ -158,7 +158,7 @@ tests =
                                replicate 100 "    return 1;" ++
                                replicate 100 "  }" ++
                                ["}"]
-                result = Parser.parseTypus "nested" nestedInput
+                result = Parser.parseTypus nestedInput
             case result of
               Left err -> do
                 performGC
@@ -170,7 +170,7 @@ tests =
         , testCase "Repeated operations don't accumulate" $ do
             let input = "func accumulate() { return 1; }"
                 operations = sequence $ replicate 1000 $ do
-                    let result = Parser.parseTypus "accumulate" input
+                    let result = Parser.parseTypus input
                     case result of
                       Left err -> rnf (show err) `seq` return False
                       Right parsed -> rnf parsed `seq` return True
@@ -183,7 +183,7 @@ tests =
         [ testCase "Parser releases resources on failure" $ do
             let invalidInputs = ["{", "}", "func", "return", "if", "else", "for", "while"]
                 results <- sequence $ L.map (\input -> do
-                    let result = Parser.parseTypus "resource" input
+                    let result = Parser.parseTypus input
                     performGC
                     case result of
                       Left err -> rnf (show err) `seq` return True
@@ -202,7 +202,7 @@ tests =
             let testSizes = [100, 500, 1000, 2000]
                 testInputs = L.map (\n -> unlines $ replicate n "func test() { return 1; }") testSizes
                 results <- sequence $ L.map (\input -> do
-                    let result = Parser.parseTypus "bounded" input
+                    let result = Parser.parseTypus input
                     performGC
                     case result of
                       Left err -> rnf (show err) `seq` return (L.length $ show err)
@@ -215,7 +215,7 @@ tests =
         [ testCase "Empty inputs don't cause issues" $ do
             let emptyInputs = ["", "   ", "\n\t", "// comment", "/* */"]
                 results <- sequence $ L.map (\input -> do
-                    let result = Parser.parseTypus "empty" input
+                    let result = Parser.parseTypus input
                     performGC
                     case result of
                       Left err -> rnf (show err) `seq` return True
@@ -225,7 +225,7 @@ tests =
 
         , testCase "Extremely long lines handled safely" $ do
             let longLine = replicate 10000 'a' ++ " func test() { return 1; }"
-                result = Parser.parseTypus "longline" longLine
+                result = Parser.parseTypus longLine
             case result of
               Left err -> do
                 performGC
@@ -235,7 +235,7 @@ tests =
                 rnf parsed `seq` True @?= True
 
         , testProperty "Random inputs don't cause memory issues" $ do
-            \input -> let result = Parser.parseTypus "random" input
+            \input -> let result = Parser.parseTypus input
                       in case result of
                            Left err -> rnf (show err) `seq` True
                            Right parsed -> rnf parsed `seq` True
@@ -248,5 +248,5 @@ isSuccess (Right _) = True
 isSuccess (Left _) = False
 
 isInfixOf :: Eq a => [a] -> [a] -> Bool
-L.isInfixOf needle haystack = needle `L.isPrefixOf` haystack || 
-                            (not (null haystack) && L.isInfixOf needle (L.tail haystack))
+isInfixOf needle haystack = needle `L.isPrefixOf` haystack || 
+                            (not (null haystack) && isInfixOf needle (L.tail haystack))

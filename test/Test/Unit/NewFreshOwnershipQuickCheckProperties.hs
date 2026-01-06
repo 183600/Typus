@@ -6,7 +6,7 @@ module Test.Unit.NewFreshOwnershipQuickCheckProperties where
 
 import Test.Tasty
 import qualified Data.List as L
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Test.Tasty.HUnit
 import Ownership (OwnershipAnalysis(..), OwnershipTransfer(..), OwnershipPolicy(..))
 import SourceLocation (SourcePos(..), Located(..), startPos)

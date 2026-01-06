@@ -5,7 +5,7 @@
 module Test.Unit.NewFreshIntegrationQuickCheckSpec where
 
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Test.Tasty.HUnit
 import Utils (trim, splitBy, removeComments, normalizeIndentation)
 import SourceLocation 
@@ -243,12 +243,8 @@ isRight (Right _) = True
 isRight _ = False
 
 isInfixOf :: String -> String -> Bool
-L.isInfixOf = Data.List.L.isInfixOf
-
-isPrefixOf :: String -> String -> Bool
-L.isPrefixOf = Data.List.L.isPrefixOf
-
-lines :: String -> [String]
+isInfixOf = Data.List.isInfixOf isPrefixOf :: String -> String -> Bool
+isPrefixOf = Data.List.isPrefixOf lines :: String -> [String]
 lines = Data.List.lines
 
 unlines :: [String] -> String

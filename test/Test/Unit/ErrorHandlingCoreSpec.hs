@@ -226,14 +226,14 @@ spec = describe "Error Handling Core Functions" $ do
     
     it "formats multiple errors sorted by severity" $ do
       let loc = _atLocation 1 1
-          errors = [ errorAt "test-id" $ L.filter (L.isInfixOf "FATAL") ls
-            errorLine = L.head $ L.filter (L.isInfixOf "ERROR") ls
-            warningLine = L.head $ L.filter (L.isInfixOf "WARNING") ls
+          errors = [ errorAt "test-id" $ L.filter (isInfixOf "FATAL") ls
+            errorLine = L.head $ L.filter (isInfixOf "ERROR") ls
+            warningLine = L.head $ L.filter (isInfixOf "WARNING") ls
         in indexOf fatalLine ls < indexOf errorLine ls && 
            indexOf errorLine ls < indexOf warningLine ls)
       where
         indexOf x xs = case elemIndex x xs of Just i -> i; Nothing -> -1
-        L.isInfixOf needle haystack = needle `elem` (substrings haystack)
+        isInfixOf needle haystack = needle `elem` (substrings haystack)
         substrings [] = []
         substrings s = L.map (take (L.length needle)) (tails s)
         needle = ""  -- dummy value

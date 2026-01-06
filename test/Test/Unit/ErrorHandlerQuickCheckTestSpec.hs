@@ -145,7 +145,7 @@ errorReportingTests = testGroup "Error Reporting Tests"
                   in message `L.isInfixOf` report
   ]
   where
-    L.isInfixOf needle haystack = needle `elem` (words haystack)
+    isInfixOf needle haystack = needle `elem` (words haystack)
 
 -- | 6. 错误恢复测试
 errorRecoveryTests :: TestTree
@@ -252,7 +252,7 @@ errorFormattingTests = testGroup "Error Formatting Tests"
                         Info -> "info" `L.isInfixOf` formatted
   ]
   where
-    L.isInfixOf needle haystack = needle `elem` (words haystack)
+    isInfixOf needle haystack = needle `elem` (words haystack)
 
 -- | 10. 错误处理器验证测试
 errorHandlerValidationTests :: TestTree

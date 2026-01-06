@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, FlexibleInstances #-}
 
 module Test.Unit.NewCompactErrorHandlerSpec where
 

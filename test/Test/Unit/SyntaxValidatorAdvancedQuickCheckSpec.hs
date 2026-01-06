@@ -2,7 +2,7 @@ module Test.Unit.SyntaxValidatorAdvancedQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
-import Test.Tasty.QuickCheck (testProperty, Property, (===), forAll, Gen, choose, arbitrary, listOf, elements, oneof, suchThat)
+import Test.Tasty.QuickCheck ((===), property, testProperty, Property, forAll, Gen, choose, arbitrary, listOf, elements, oneof, suchThat)
 import TestSupport.QuickCheck (fastProperty)
 
 import SyntaxValidator (SyntaxValidator(..), SyntaxError(..), ErrorType(..), 

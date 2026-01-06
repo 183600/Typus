@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase, FlexibleInstances #-}
 module Test.Unit.NewComprehensiveCabalTestsSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)

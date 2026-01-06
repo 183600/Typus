@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 module Test.Unit.ParserDirectiveQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
@@ -163,8 +164,7 @@ tests =
 
     , testGroup "Error handling L.and edge cases"
         [ testCase "handles empty input" $ do
-            let result = Parser.parseTypus ""
-            case result of
+            let result = Parser.parseTypus case result of
               Right file -> do
                 tfDirectives file @?= defaultFileDirectives
                 tfBlocks file @?= []

@@ -323,9 +323,7 @@ tests =
 
 -- Helper function to check substring inclusion
 isInfixOf :: String -> String -> Bool
-L.isInfixOf = flip L.isInfixOf
-
--- | Property: error messages contain error codes
+isInfixOf = flip isInfixOf -- | Property: error messages contain error codes
 prop_errorCodesPresent :: CompilerError -> Bool
 prop_errorCodesPresent error = not (L.null $ errorCode error)
 

@@ -83,13 +83,13 @@ tests =
 
     , testGroup "Parser Properties"
         [ testProperty "Parser doesn't crash on L.any input" $ do
-            \input -> let result = Parser.parseTypus "property" input
+            \input -> let result = Parser.parseTypus input
                       in case result of
                            Left _ -> True
                            Right _ -> True
 
         , testProperty "Parser preserves line count information" $ do
-            \input -> let result = Parser.parseTypus "lines" input
+            \input -> let result = Parser.parseTypus input
                           inputLines = L.length (lines input) + 1
                       in case result of
                            Left err -> 
@@ -98,8 +98,8 @@ tests =
                            Right _ -> True
 
         , testProperty "Parser handles empty input consistently" $ do
-            \_ -> let result1 = Parser.parseTypus "empty1" ""
-                      result2 = Parser.parseTypus "empty2" ""
+            \_ -> let result1 = Parser.parseTypus ""
+                      result2 = Parser.parseTypus ""
                   in case (result1, result2) of
                        (Left _, Left _) -> True
                        (Right _, Right _) -> True
@@ -144,7 +144,7 @@ tests =
         ]
     ]
   where
-    L.isInfixOf needle haystack = needle `elem` (substrings haystack)
+    isInfixOf needle haystack = needle `elem` (substrings haystack)
     substrings [] = []
     substrings s@(x:xs) = takeWhile (const True) s : substrings xs
     intersperse _ [] = []

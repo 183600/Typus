@@ -329,7 +329,7 @@ prop_mixed_indentation =
       normalized = normalizeIndentation mixed
       normalizedLines = lines normalized
   in property $ L.length normalizedLines === 4 .&&.
-                not (L.any (L.isPrefixOf " ") $ L.filter (not . null) normalizedLines)
+                not (L.any (isPrefixOf " ") $ L.filter (not . null) normalizedLines)
 
 -- Property: Split L.and rejoin consistency
 prop_split_rejoin_consistent :: Char -> String -> Property

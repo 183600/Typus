@@ -26,8 +26,7 @@ tests =
                
         , testProperty "splitBy preserves total characters" $
             \c s -> splitBy c s `sumLengths` L.length s
-            where
-              sumLengths xs n = L.sum (map L.length xs) + L.length xs - 1 === n
+                          sumLengths xs n = L.sum (map L.length xs) + L.length xs - 1 === n
               
         , testProperty "splitByCollapsed never produces empty strings" $
             \c s -> L.all (not . null) (splitByCollapsed c s)

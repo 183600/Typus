@@ -3,7 +3,7 @@ module Test.Unit.SourceLocationMathPrecisionQuickCheckSpec (tests) where
 
 import Test.Tasty
 import qualified Data.List as L
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Test.Tasty.HUnit
 
 import SourceLocation

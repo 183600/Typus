@@ -44,10 +44,10 @@ prop_removeLineComments_preserves_non_comment =
     (not $ "//" `L.isInfixOf` s) ==>
     trim (removeLineComments s) === trim s
   where
-    L.isInfixOf needle haystack = L.any (needle `L.isPrefixOf`) (tails haystack)
-    L.isPrefixOf [] _ = True
-    L.isPrefixOf _ [] = False
-    L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
+    isInfixOf needle haystack = L.any (needle `L.isPrefixOf`) (tails haystack)
+    isPrefixOf [] _ = True
+    isPrefixOf _ [] = False
+    isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
     tails [] = [[]]
     tails xs@(_:xs') = xs : tails xs'
 

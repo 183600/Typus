@@ -12,7 +12,7 @@ module Test.Unit.CabalDependentTypesQuickCheckSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Arbitrary, Property, (===), (==>), forAll, counterexample, classify, property, elements, listOf, (.&&.), (.||.))
+import Test.QuickCheck (Arbitrary(..), Property, (===), (==>), forAll, counterexample, classify, property, elements, listOf, (.&&.), (.||.))
 import qualified Data.List as List
 import Data.Char (isSpace, isAlphaNum, isLetter)
 import Data.Maybe (isJust, isNothing)
@@ -40,7 +40,7 @@ instance Arbitrary ConstraintValue where
 data TypeOperator = GreaterThan | LessThan | Equal | NotEqual deriving (Show, Eq)
 
 instance Arbitrary TypeOperator where
-  arbitrary = elements [GreaterThan, LessThan, Equal, NotEqual]
+  arbitrary = return =<< elements [GreaterThan, LessThan, Equal, NotEqual]
 
 -- Property: Dependent type parsing preserves type structure
 prop_dependent_type_preserves_structure :: TypeName -> ConstraintValue -> Property
@@ -48,7 +48,7 @@ prop_dependent_type_preserves_structure (TypeName typeName) (ConstraintValue val
   let typeString = typeName ++ "<" ++ show value ++ ">"
   in case parseDependentType typeString of
        Left err -> counterexample ("Parse failed: " ++ err) $ property False
-       Right depType -> 
+       Right (depType, _) -> 
          case depType of
            TypeDecl name _ _ constraints -> 
              name === typeName .&&. (not $ null constraints)
@@ -65,7 +65,7 @@ prop_type_constraints_preserved (TypeName typeName) op (ConstraintValue value) =
       typeString = typeName ++ opStr ++ show value
   in case parseDependentType typeString of
        Left err -> counterexample ("Parse failed: " ++ err) $ property False
-       Right depType -> 
+       Right (depType, _) -> 
          case depType of
            TypeDecl name _ _ constraints -> 
              name === typeName .&&. (not $ null constraints)
@@ -77,7 +77,7 @@ prop_nested_dependent_types (TypeName typeName) (ConstraintValue value) =
   let typeString = typeName ++ "<Vector<" ++ show value ++ ">>"
   in case parseDependentType typeString of
        Left err -> counterexample ("Parse failed: " ++ err) $ property False
-       Right depType -> 
+       Right (depType, _) -> 
          case depType of
            TypeDecl name _ _ constraints -> 
              name === typeName .&&. (not $ null constraints)
@@ -107,7 +107,7 @@ prop_complex_type_constraints values =
       typeString = "Matrix<" ++ constraintStr ++ ">"
   in case parseDependentType typeString of
        Left err -> counterexample ("Parse failed: " ++ err) $ property False
-       Right depType -> 
+       Right (depType, _) -> 
          case depType of
            TypeDecl name _ _ constraints -> 
              name === "Matrix" .&&. (List.length constraints == List.length values)

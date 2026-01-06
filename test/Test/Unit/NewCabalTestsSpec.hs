@@ -188,7 +188,7 @@ intercalate _ [x] = x
 intercalate sep (x:xs) = x ++ sep ++ intercalate sep xs
 
 isInfixOf :: String -> String -> Bool
-L.isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
+isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
 
 -- Arbitrary instances for QuickCheck
 instance Arbitrary MissingEmbed where

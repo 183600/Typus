@@ -4,7 +4,7 @@ module Test.Unit.NewCabalDependenciesTypeSystemQuickCheckSpec where
 
 import Test.Tasty
 import qualified Data.List as L
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Dependencies.TypeSystem
 import Dependencies.AST (TypeExpr(..), Constraint(..))
 import qualified Data.Map.Strict as Map

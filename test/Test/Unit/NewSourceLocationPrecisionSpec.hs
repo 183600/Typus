@@ -144,9 +144,9 @@ test_error_location_conversion = testCase "Error location conversion" $ do
       errorLoc2 = toErrorLocationWithSpan span
   -- Test that error locations contain position information
   assertBool "Error location should contain line info" $ 
-    L.isInfixOf "3" (show errorLoc1)
+    isInfixOf "3" (show errorLoc1)
   assertBool "Error location with span should contain line info" $ 
-    L.isInfixOf "3" (show errorLoc2)
+    isInfixOf "3" (show errorLoc2)
 
 -- Test location tracking with multi-line content
 test_multiline_location_tracking :: TestTree
@@ -245,8 +245,8 @@ prop_error_locations_contain_position pos =
   let errorLoc = toErrorLocation pos
       posStr = show pos
       errorStr = show errorLoc
-  in property $ L.isInfixOf (show (posLine pos)) errorStr .&&. 
-             L.isInfixOf (show (posColumn pos)) errorStr
+  in property $ isInfixOf (show (posLine pos)) errorStr .&&. 
+             isInfixOf (show (posColumn pos)) errorStr
 
 tests :: TestTree
 tests = testGroup "New Source Location Precision Tests"

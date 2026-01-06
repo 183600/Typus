@@ -2,7 +2,7 @@
 module Test.Unit.LexerBoundaryQuickCheckSpec (tests) where
 
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Test.Tasty.HUnit
 
 import Compiler.GoLexer (GoToken(..), GoTokenKind(..), tokenizeGo)

@@ -167,7 +167,7 @@ prop_forceSingleTabIndentation_starts_with_tab =
         linesForced = lines forced
         nonEmptyLines = L.filter (not . L.all isSpace) linesForced
     in not (null nonEmptyLines) ==> 
-       property $ L.all (L.isPrefixOf "\t") nonEmptyLines
+       property $ L.all (isPrefixOf "\t") nonEmptyLines
 
 -- ============================================================================
 -- BreakOn Function Properties
@@ -200,7 +200,7 @@ prop_breakOn_consistent_with_break :: String -> String -> Property
 prop_breakOn_consistent_with_break pat input =
   not (null pat) ==> 
   let (before, after) = breakOn pat input
-      (before', after') = Data.List.break (L.isPrefixOf pat) (tails input)
+      (before', after') = Data.List.break (isPrefixOf pat) (tails input)
   in case after' of
        [] -> property $ before === input .&&. after === ""
        (x:_) -> property $ before === Data.List.take (L.length input - L.length x) input

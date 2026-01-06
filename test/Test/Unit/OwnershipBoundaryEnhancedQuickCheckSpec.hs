@@ -245,4 +245,4 @@ boundaryCaseProperties = testGroup "Boundary Case Properties"
 
 -- Helper function
 isInfixOf :: String -> String -> Bool
-L.isInfixOf = Data.List.L.isInfixOf
+isInfixOf = Data.List.L.isInfixOf

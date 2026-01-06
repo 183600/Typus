@@ -5,7 +5,7 @@ module Test.Unit.CompilerCoreQuickCheckTests (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import qualified Data.List as L
-import Test.Tasty.QuickCheck (testProperties, (===), Property, forAll, Gen, Arbitrary(..), oneof, elements, listOf, listOf1, resize, suchThat, property, (==>))
+import Test.Tasty.QuickCheck (testProperty, Property, (===), (==>), testProperties, (===), Property, forAll, Gen, Arbitrary(..), oneof, elements, listOf, listOf1, resize, suchThat, property, (==>))
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
 import Control.Monad.State (execState)
 

@@ -240,7 +240,7 @@ prop_normalize_indentation_preserves_structure lines =
 prop_break_on_consistency :: String -> String -> Property
 prop_break_on_consistency delim str =
   let (before, after) = breakOn delim str
-      expectedBefore = takeWhile (not . L.isPrefixOf delim . take (L.length delim)) (tails str) >>= L.head
+      expectedBefore = takeWhile (not . isPrefixOf delim . take (L.length delim)) (tails str) >>= L.head
   in property $ before === expectedBefore
 
 -- ============================================================================

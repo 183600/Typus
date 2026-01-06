@@ -258,7 +258,7 @@ hasSourceLocation :: ProjectError -> Bool
 hasSourceLocation = isJust . peLocation
 
 isInfixOf :: String -> String -> Bool
-L.isInfixOf needle haystack = needle `elem` words haystack
+isInfixOf needle haystack = needle `elem` words haystack
 
 isJust :: Maybe a -> Bool
 isJust Nothing = False

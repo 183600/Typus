@@ -3,7 +3,7 @@
 module Test.Unit.NewCabalStringUtilsQuickCheckSpec where
 
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Utils
 import Data.Char (isSpace)
 import qualified Data.List as L
@@ -59,7 +59,7 @@ propSplitByCollapsedRemovesEmpty delim s = delim /= 'undefined' ==>
 -- | removeLineComments should not modify lines without //
 propRemoveLineCommentsPreservesNonComment :: String -> Property
 propRemoveLineCommentsPreservesNonComment s = 
-  let linesWithoutComment = L.filter (not . (L.isPrefixOf "//")) (lines s)
+  let linesWithoutComment = L.filter (not . (isPrefixOf "//")) (lines s)
       processed = removeLineComments s
       processedLines = lines processed
   in L.all (`elem` processedLines) linesWithoutComment
@@ -118,7 +118,7 @@ propBreakOnBehavior pat s
       let (before, after) = breakOn pat s
       in before == s && after == ""
   where
-    L.isInfixOf needle haystack = needle `L.isPrefixOf` dropWhile (/= L.head needle) haystack
+    isInfixOf needle haystack = needle `L.isPrefixOf` dropWhile (/= L.head needle) haystack
 
 -- | Additional tests for edge cases
 testStringUtilsEdgeCases :: TestTree

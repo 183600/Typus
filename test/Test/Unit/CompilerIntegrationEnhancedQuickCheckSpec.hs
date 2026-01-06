@@ -5,12 +5,14 @@ module Test.Unit.CompilerIntegrationEnhancedQuickCheckSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import Compiler (compile, CompilerError(..), CompilationPhase(..), 
+import Compiler (compile, CompilationPhase(..), 
                 renderCompilationError, formatCompilerErrors,
                 hasTypeErrors, TypeCheckDiagnostic(..), diagnoseTypeErrors,
                 checkDependentTypes, checkOwnership, generateGoCode)
+import Compiler.Errors (CompilerError(..))
 import Parser (parseTypus, TypusFile(..), CodeBlock(..))
 import Compiler.Errors (ErrorSeverity(..), ErrorCategory(..), TypeError(..), ErrorLocation(..), ErrorContext(..), ErrorRecovery(..), emptyContext, defaultLocation, fatalRecovery)
+import TestSupport.ExtendedArbitrary ()
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.List as L

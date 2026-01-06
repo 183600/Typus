@@ -211,4 +211,4 @@ prop_breakOn_concat pat s =
      then before ++ pat ++ after === s
      else before === s && after === ""
   where
-    L.isInfixOf needle haystack = needle `L.isPrefixOf` dropWhile (not . (L.head needle ==)) haystack
+    isInfixOf needle haystack = needle `L.isPrefixOf` dropWhile (not . (L.head needle ==)) haystack

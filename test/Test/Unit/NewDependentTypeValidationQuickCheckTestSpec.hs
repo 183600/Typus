@@ -151,7 +151,7 @@ prop_typeDefinitionValidNames typeName =
   let input = "type " ++ typeName ++ " = Nat"
       result = validateDependentTypeSyntax input
   in case result of
-       Left errors -> not (L.any (L.isInfixOf "invalid name" . unpack) errors)
+       Left errors -> not (L.any (isInfixOf "invalid name" . unpack) errors)
        Right _ -> True
 
 -- | 类型定义保留结构
@@ -170,7 +170,7 @@ propTypeDefinitionHandleGenerics paramName =
   let input = "type Container(" ++ paramName ++ ": Type) where true"
       result = validateDependentTypeSyntax input
   in case result of
-       Left errors -> not (L.any (L.isInfixOf "parameter" . unpack) errors)
+       Left errors -> not (L.any (isInfixOf "parameter" . unpack) errors)
        Right _ -> True
 
 -- | 类型定义验证约束
@@ -229,7 +229,7 @@ prop_genericTypesPreserveParameterNames paramNames =
       input = "type GenericType(" ++ paramStr ++ ") where true"
       result = validateDependentTypeSyntax input
   in case result of
-       Left errors -> not (L.any (L.isInfixOf "parameter" . unpack) errors)
+       Left errors -> not (L.any (isInfixOf "parameter" . unpack) errors)
        Right _ -> True
 
 -- | 泛型类型处理多个参数
@@ -283,10 +283,10 @@ prop_structsEnforceFieldUniqueness fieldNames =
       result = validateDependentTypeSyntax input
   in if hasDuplicates
      then case result of
-            Left errors -> L.any (L.isInfixOf "duplicate" . unpack) errors
+            Left errors -> L.any (isInfixOf "duplicate" . unpack) errors
             Right _ -> False
      else case result of
-            Left errors -> not (L.any (L.isInfixOf "duplicate" . unpack) errors)
+            Left errors -> not (L.any (isInfixOf "duplicate" . unpack) errors)
             Right _ -> True
 
 -- | 结构体支持依赖字段类型
@@ -340,7 +340,7 @@ prop_aliasesPreventCircularDefinitions typeName =
   let input = "type " ++ typeName ++ " = " ++ typeName
       result = validateDependentTypeSyntax input
   in case result of
-       Left errors -> L.any (L.isInfixOf "circular" . unpack) errors
+       Left errors -> L.any (isInfixOf "circular" . unpack) errors
        Right _ -> False
 
 -- | 别名正确解析

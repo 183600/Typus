@@ -117,8 +117,8 @@ setOperationTests = testGroup "Set Operation Properties"
 
 stringOperationTests :: TestTree
 stringOperationTests = testGroup "String Operation Properties"
-  [ fastProperty "L.isPrefixOf is reflexive" $ \(s :: String) ->
-      property (L.isPrefixOf s s)
+  [ fastProperty "isPrefixOf is reflexive" $ \(s :: String) ->
+      property (isPrefixOf s s)
   
   , fastProperty "L.isSuffixOf is reflexive" $ \(s :: String) ->
       property (L.isSuffixOf s s)

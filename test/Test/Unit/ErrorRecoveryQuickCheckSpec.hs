@@ -36,14 +36,14 @@ import Data.Char (isSpace, isDigit)
 prop_recovery_strategy_consistency :: Bool -> Bool -> Property
 prop_recovery_strategy_consistency canRec shouldCont =
   let strategy = createRecoveryStrategy canRec shouldCont Nothing Nothing
-      error = errorAt "TEST" (T.pack "test") (ErrorLocation Nothing 1 1 Nothing Nothing) { recovery = strategy }
+      error = errorAt "TEST" (T.pack "test") (ErrorLocation (startPos) Nothing) { recovery = strategy }
   in property (canRecoverFrom error === canRec && shouldContinueAfter error === shouldCont)
 
 -- Property: Fatal errors cannot be recovered from
 prop_fatal_error_no_recovery :: String -> Property
 prop_fatal_error_no_recovery errorMsg =
   not (null errorMsg) ==>
-  let location = ErrorLocation Nothing 1 1 Nothing Nothing
+  let location = ErrorLocation (startPos) Nothing
       fatalError = errorAt "test-id" (T.pack errorMsg) location { severity = Fatal }
   in property (not (canRecoverFrom fatalError) && not (shouldContinueAfter fatalError))
 
@@ -51,7 +51,7 @@ prop_fatal_error_no_recovery errorMsg =
 prop_warning_error_can_recover :: String -> Property
 prop_warning_error_can_recover warningMsg =
   not (null warningMsg) ==>
-  let location = ErrorLocation Nothing 1 1 Nothing Nothing
+  let location = ErrorLocation (startPos) Nothing
       warningError = warningAt "test-id" (T.pack warningMsg) location
   in property (canRecoverFrom warningError && shouldContinueAfter warningError)
 
@@ -59,7 +59,7 @@ prop_warning_error_can_recover warningMsg =
 prop_info_error_can_recover :: String -> Property
 prop_info_error_can_recover infoMsg =
   not (null infoMsg) ==>
-  let location = ErrorLocation Nothing 1 1 Nothing Nothing
+  let location = ErrorLocation (startPos) Nothing
       infoError = infoAt "test-id" (T.pack infoMsg) location
   in property (canRecoverFrom infoError && shouldContinueAfter infoError)
 
@@ -67,7 +67,7 @@ prop_info_error_can_recover infoMsg =
 prop_filter_by_severity :: [ErrorSeverity] -> ErrorSeverity -> Property
 prop_filter_by_severity severities targetSeverity =
   not (null severities) ==>
-  let errors = L.map (\sev -> errorAt "TEST" (T.pack "test") (ErrorLocation Nothing 1 1 Nothing Nothing) { severity = sev }) severities
+  let errors = L.map (\sev -> errorAt "TEST" (T.pack "test") (ErrorLocation (startPos) Nothing) { severity = sev }) severities
       filtered = filterBySeverity targetSeverity errors
   in property (L.length filtered === L.length (L.filter (\e -> severity e == targetSeverity) errors))
 
@@ -75,7 +75,7 @@ prop_filter_by_severity severities targetSeverity =
 prop_filter_by_category :: [ErrorCategory] -> ErrorCategory -> Property
 prop_filter_by_category categories targetCategory =
   not (null categories) ==>
-  let errors = L.map (\cat -> errorWithCategory "TEST" cat (T.pack "test") (ErrorLocation Nothing 1 1 Nothing Nothing)) categories
+  let errors = L.map (\cat -> errorWithCategory "TEST" cat (T.pack "test") (ErrorLocation (startPos) Nothing)) categories
       filtered = filterByCategory targetCategory errors
   in property (L.length filtered === L.length (L.filter (\e -> category e == targetCategory) errors))
 
@@ -83,7 +83,7 @@ prop_filter_by_category categories targetCategory =
 prop_error_statistics_accuracy :: [ErrorSeverity] -> [ErrorCategory] -> Property
 prop_error_statistics_accuracy severities categories =
   not (null severities) && not (null categories) && L.length severities == L.length categories ==>
-  let errors = zipWith (\sev cat -> errorAt "TEST" (T.pack "test") (ErrorLocation Nothing 1 1 Nothing Nothing) { severity = sev, category = cat }) severities categories
+  let errors = zipWith (\sev cat -> errorAt "TEST" (T.pack "test") (ErrorLocation (startPos) Nothing) { severity = sev, category = cat }) severities categories
       stats = getErrorStatistics errors
   in property (stats "total" === L.length errors)
 
@@ -91,7 +91,7 @@ prop_error_statistics_accuracy severities categories =
 prop_error_formatting_essentials :: String -> ErrorSeverity -> ErrorCategory -> Property
 prop_error_formatting_essentials errorMsg sev cat =
   not (null errorMsg) ==>
-  let error = errorAt "test-id" (T.pack errorMsg) (ErrorLocation Nothing 1 1 Nothing Nothing) { severity = sev, category = cat }
+  let error = errorAt "test-id" (T.pack errorMsg) (ErrorLocation (startPos) Nothing) { severity = sev, category = cat }
       formatted = formatError error
   in property (errorMsg `L.isInfixOf` formatted && show sev `L.isInfixOf` formatted && show cat `L.isInfixOf` formatted)
 
@@ -108,7 +108,7 @@ prop_error_formatting_with_location errorMsg line col =
 prop_error_suggestions_preserved :: String -> [String] -> Property
 prop_error_suggestions_preserved errorMsg suggestions =
   not (null errorMsg) && not (null suggestions) && L.all (not . null) suggestions ==>
-  let error = errorWithSuggestions "TEST" (T.pack errorMsg) (map T.pack suggestions) (ErrorLocation Nothing 1 1 Nothing Nothing)
+  let error = errorWithSuggestions "TEST" (T.pack errorMsg) (map T.pack suggestions) (ErrorLocation (startPos) Nothing)
       formatted = formatError error
   in property (L.all (`L.isInfixOf` formatted) suggestions)
 
@@ -117,13 +117,13 @@ prop_custom_recovery_strategy :: Bool -> Bool -> String -> String -> Int -> Floa
 prop_custom_recovery_strategy canRec shouldCont action hint cost confidence =
   cost >= 0 && cost <= 100 && confidence >= 0.0 && confidence <= 1.0 ==>
   let strategy = customRecovery canRec shouldCont (Just action) (Just hint) cost confidence
-      error = errorAt "TEST" (T.pack "test") (ErrorLocation Nothing 1 1 Nothing Nothing) { recovery = strategy }
+      error = errorAt "TEST" (T.pack "test") (ErrorLocation (startPos) Nothing) { recovery = strategy }
   in property (canRecoverFrom error === canRec && shouldContinueAfter error === shouldCont)
 
 -- Property: Recovery strategy selection based on severity
 prop_recovery_by_severity :: ErrorSeverity -> Property
 prop_recovery_by_severity sev =
-  let error = errorAt "TEST" (T.pack "test") (ErrorLocation Nothing 1 1 Nothing Nothing) { severity = sev }
+  let error = errorAt "TEST" (T.pack "test") (ErrorLocation (startPos) Nothing) { severity = sev }
       canRec = canRecoverFrom error
       shouldCont = shouldContinueAfter error
   in case sev of

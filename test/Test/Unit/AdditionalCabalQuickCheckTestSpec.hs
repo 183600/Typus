@@ -194,9 +194,9 @@ prop_normalizeIndentation_common_removal indent inputLines =
       input = unlines indentedLines
       normalized = normalizeIndentation input
       normalizedLines = Data.List.lines normalized
-      hasCommonIndent = L.all (L.isPrefixOf indent) indentedLines
+      hasCommonIndent = L.all (isPrefixOf indent) indentedLines
   in if hasCommonIndent
-     then property $ not (L.any (L.isPrefixOf indent) normalizedLines)
+     then property $ not (L.any (isPrefixOf indent) normalizedLines)
      else property $ L.length normalizedLines === L.length inputLines
 
 -- Additional comprehensive properties

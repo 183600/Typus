@@ -1,30 +1,34 @@
 #!/usr/bin/env python3
-import re
+import os
 
-# 读取文件
-with open('/home/runner/work/Typus/Typus/test/Test/Unit/CodeGenerationConsistencyQuickCheckSpec.hs', 'r') as f:
-    content = f.read()
+def fix_indentation(file_path):
+    """Fix indentation issues in test files"""
+    with open(file_path, 'r') as f:
+        lines = f.readlines()
+    
+    # Fix specific indentation issues
+    new_lines = []
+    for line in lines:
+        # Fix the specific line with wrong indentation
+        if "processed <- mapM processPositions chunked" in line:
+            # Ensure proper indentation (16 spaces)
+            new_lines.append("                    processed <- mapM processPositions chunked\n")
+        else:
+            new_lines.append(line)
+    
+    with open(file_path, 'w') as f:
+        f.writelines(new_lines)
+    print(f"Fixed indentation in {file_path}")
 
-# 修复 let 绑定中的 assert 语句
-# 模式: let goCode = generateGoCode typusFile
-#       assert $ not $ null goCode
-content = re.sub(
-    r'let goCode = generateGoCode (\w+)\s*\n\s*assert \$ not \$ null goCode',
-    r'let goCode = generateGoCode \1\n      assert $ not $ null goCode',
-    content
-)
+def main():
+    # Fix specific files
+    files_to_fix = [
+        "test/Test/Unit/CabalConcurrentParsingSpec.hs",
+    ]
+    
+    for file_path in files_to_fix:
+        if os.path.exists(file_path):
+            fix_indentation(file_path)
 
-# 修复其他类似的模式
-# 模式: let goCode = generateGoCode typusFile
-#       assert $ "func" `isInfixOf` goCode
-content = re.sub(
-    r'let goCode = generateGoCode (\w+)\s*\n\s*assert \$ "func" `isInfixOf` goCode',
-    r'let goCode = generateGoCode \1\n      assert $ "func" `isInfixOf` goCode',
-    content
-)
-
-# 写回文件
-with open('/home/runner/work/Typus/Typus/test/Test/Unit/CodeGenerationConsistencyQuickCheckSpec.hs', 'w') as f:
-    f.write(content)
-
-print("Fixed let binding indentation issues")
+if __name__ == "__main__":
+    main()

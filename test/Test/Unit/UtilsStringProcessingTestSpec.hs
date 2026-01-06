@@ -153,7 +153,7 @@ prop_normalizeIndentation_removes_prefix =
         nonEmptyLines = L.filter (not . null) lines'
     in if null nonEmptyLines
        then property True
-       else property $ L.all (\line -> not (L.isPrefixOf "    " line)) nonEmptyLines
+       else property $ L.all (\line -> not (isPrefixOf "    " line)) nonEmptyLines
 
 -- Property: forceSingleTabIndentation uses tabs
 prop_forceSingleTabIndentation_uses_tabs :: Property
@@ -164,7 +164,7 @@ prop_forceSingleTabIndentation_uses_tabs =
         nonEmptyLines = L.filter (not . null . trim) lines'
     in if null nonEmptyLines
        then property True
-       else property $ L.all (\line -> L.isPrefixOf "\t" line) nonEmptyLines
+       else property $ L.all (\line -> isPrefixOf "\t" line) nonEmptyLines
 
 -- Property: fixIndentation equals normalizeIndentation
 prop_fixIndentation_equals_normalize :: Property
@@ -345,8 +345,8 @@ advanced_tests = testGroup "Advanced String Processing Tests"
       let mixedTabs = "\tline1\n    line2\n\t\tline3"
           normalized = normalizeIndentation mixedTabs
       assertBool "should normalize mixed indentation" $ 
-        not (L.isPrefixOf "\t" normalized) &&
-        not (L.isPrefixOf "    " normalized)
+        not (isPrefixOf "\t" normalized) &&
+        not (isPrefixOf "    " normalized)
 
   , testCase "malformed comments" $ do
       let malformed = "code /* unclosed comment\nmore code"
@@ -376,7 +376,7 @@ performance_tests = testGroup "Performance Tests"
           content = deepNesting ++ "content"
           normalized = normalizeIndentation content
       assertBool "should handle deep nesting" $ 
-        not (L.isPrefixOf "    " normalized)
+        not (isPrefixOf "    " normalized)
 
   , testCase "many small operations" $ do
       let operations = replicate 1000 "a,b,c"

@@ -19,21 +19,21 @@ tests =
     [ testGroup "Parsing Performance"
         [ testCase "Small files parse quickly" $ do
             let input = "func quick() { return 42; }"
-                result = Parser.parseTypus "small" input
+                result = Parser.parseTypus input
             case result of
               Left err -> @?= "Should parse successfully" (show err)
               Right _ -> @?= "Success" "Quick parsing"
 
         , testCase "Medium files parse efficiently" $ do
             let mediumInput = unlines $ replicate 100 "func test" ++ show [1..100] ++ "{ return " ++ show [1..100] ++ "; }"
-                result = Parser.parseTypus "medium" mediumInput
+                result = Parser.parseTypus mediumInput
             case result of
               Left _ -> @?= "Should handle medium input" "Medium handling"
               Right _ -> @?= "Success" "Medium success"
 
         , testCase "Large files don't cause memory issues" $ do
             let largeInput = unlines $ replicate 1000 "func large() { return 1; }"
-                result = Parser.parseTypus "large" largeInput
+                result = Parser.parseTypus largeInput
             case result of
               Left err -> L.length (show err) > 0 @?= True
               Right _ -> @?= "Handle large input" "Large handling"
@@ -74,7 +74,7 @@ tests =
     , testGroup "Memory Efficiency"
         [ testCase "Parser doesn't leak memory on repeated calls" $ do
             let testInput = "func memory() { return 1; }"
-                results = L.map (\_ -> Parser.parseTypus "memory" testInput) [1..10]
+                results = L.map (\_ -> Parser.parseTypus testInput) [1..10]
             L.all (\result -> case result of
                               Left _ -> True
                               Right _ -> True) results @?= True
@@ -92,7 +92,7 @@ tests =
     , testGroup "Time Complexity Tests"
         [ testCase "Parsing time scales reasonably" $ do
             let inputs = [unlines $ replicate n "func test() { return 1; }" | n <- [10, 50, 100]]
-                results = L.map (\input -> Parser.parseTypus "scale" input) inputs
+                results = L.map (\input -> Parser.parseTypus input) inputs
             L.all (\result -> case result of
                               Left _ -> True
                               Right _ -> True) results @?= True
@@ -115,14 +115,14 @@ tests =
                                replicate 50 "    return 1;" ++
                                replicate 50 "  }" ++
                                ["]"]
-                result = Parser.parseTypus "nested" nestedInput
+                result = Parser.parseTypus nestedInput
             case result of
               Left err -> L.length (show err) > 0 @?= True
               Right _ -> @?= "Handle nested" "Nested handling"
 
         , testCase "Large comments don't cause overflow" $ do
             let largeComment = "/* " ++ replicate 10000 'x' ++ " */\nfunc test() { return 1; }"
-                result = Parser.parseTypus "largecomment" largeComment
+                result = Parser.parseTypus largeComment
             case result of
               Left err -> L.length (show err) > 0 @?= True
               Right _ -> @?= "Handle large comment" "Large comment handling"

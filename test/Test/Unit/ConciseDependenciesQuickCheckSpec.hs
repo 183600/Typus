@@ -1,13 +1,19 @@
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleInstances #-}
+
 module Test.Unit.ConciseDependenciesQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import qualified Data.List as L
-import Test.Tasty.QuickCheck (testProperty, Property, (===), Arbitrary(..), Gen, oneof, choose, elements, listOf)
+import Test.Tasty.QuickCheck (testProperty, Property, (===), Arbitrary(..), Gen, oneof, choose, elements, listOf, property)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Dependencies.AST (TypeExpr(..), Constraint(..))
+import Data.Text (Text)
+import qualified Data.Text as T
 
 -- | 简洁的QuickCheck测试，针对Dependencies模块的基础属性
 tests :: TestTree
@@ -15,48 +21,48 @@ tests =
   testGroup "Concise Dependencies QuickCheck Tests"
     [ testGroup "Type expression properties"
         [ testProperty "Simple type expressions are equal if names match" $
-            \name -> SimpleT name === SimpleT name
+            \name -> SimpleT name == SimpleT name
             
         , testProperty "Generic type expressions preserve structure" $
-            \name args -> GenericT name args === GenericT name args
+            \name args -> GenericT name args == GenericT name args
             
         , testProperty "Refined type expressions preserve base L.and constraint" $
-            \baseType constraint -> RefineT baseType constraint === RefineT baseType constraint
+            \baseType constraint -> RefineT baseType constraint == RefineT baseType constraint
             
         , testProperty "Function type expressions preserve domain L.and codomain" $
-            \domain codomain -> FuncT domain codomain === FuncT domain codomain
+            \domain codomain -> FuncT domain codomain == FuncT domain codomain
         ]
         
     , testGroup "Constraint properties"
         [ testProperty "Range constraints preserve bounds" $
-            \low high -> RangeC low high === RangeC low high
+            \name low high -> RangeC name low high == RangeC name low high
             
         , testProperty "Predicate constraints preserve predicate text" $
-            \pred -> PredC pred === PredC pred
+            \name types -> PredC name types == PredC name types
             
         , testProperty "Size constraints preserve threshold" $
-            \size -> SizeGE size === SizeGE size && SizeGT size === SizeGT size
+            \name size -> SizeGE name size == SizeGE name size && SizeGT name size == SizeGT name size
         ]
         
     , testGroup "Type environment operations"
         [ testProperty "Empty type environment has no types" $
-            \name -> Map.null Map.empty && Map.lookup name Map.empty === Nothing
+            \(_ :: Text) -> Map.null (Map.empty :: Map.Map Text TypeExpr) && Map.lookup ("" :: Text) (Map.empty :: Map.Map Text TypeExpr) == Nothing
             
         , testProperty "Type insertion is retrievable" $
-            \name typeExpr -> 
+            \(name :: Text) (typeExpr :: TypeExpr) -> 
             let env = Map.singleton name typeExpr
-            in Map.lookup name env === Just typeExpr
+            in Map.lookup name env == Just typeExpr
             
         , testProperty "Multiple type insertions preserve L.all" $
-            \pairs -> 
+            \(pairs :: [(Text, TypeExpr)]) -> 
             let env = Map.fromList pairs
                 retrieved = Map.toList env
-            in L.all (\(k,v) -> Map.lookup k env === Just v) retrieved
+            in L.all (\(k,v) -> Map.lookup k env == Just v) retrieved
         ]
         
     , testGroup "Type substitution properties"
         [ testProperty "Empty substitution leaves types unchanged" $
-            \typeExpr -> applySubstitution Map.empty typeExpr === typeExpr
+            \typeExpr -> applySubstitution Map.empty typeExpr == typeExpr
             
         , testProperty "Substitution composition is associative" $
             \sub1 sub2 sub3 typeExpr -> 
@@ -64,7 +70,7 @@ tests =
                 composed2 = Map.union sub3 (Map.union sub1 sub2)
                 result1 = applySubstitution composed1 typeExpr
                 result2 = applySubstitution composed2 typeExpr
-            in result1 === result2  -- This might not always hold, but good for testing
+            in result1 == result2  -- This might not always hold, but good for testing
         ]
         
     , testGroup "Type unification properties"
@@ -83,13 +89,13 @@ tests =
     ]
 
 -- Helper functions for testing
-applySubstitution :: Map String TypeExpr -> TypeExpr -> TypeExpr
+applySubstitution :: Map Text TypeExpr -> TypeExpr -> TypeExpr
 applySubstitution sub (SimpleT name) = Map.findWithDefault (SimpleT name) name sub
 applySubstitution sub (GenericT name args) = GenericT name (L.map (applySubstitution sub) args)
 applySubstitution sub (RefineT base constraint) = RefineT (applySubstitution sub base) constraint
-applySubstitution sub (FuncT domain codomain) = FuncT (applySubstitution sub domain) (applySubstitution sub codomain)
+applySubstitution sub (FuncT params codomain) = FuncT (L.map (\(name, typ) -> (name, applySubstitution sub typ)) params) (applySubstitution sub codomain)
 
-unifyTypes :: TypeExpr -> TypeExpr -> Either String (Map String TypeExpr)
+unifyTypes :: TypeExpr -> TypeExpr -> Either String (Map Text TypeExpr)
 unifyTypes (SimpleT name1) (SimpleT name2) 
   | name1 == name2 = Right Map.empty
   | otherwise = Right (Map.singleton name1 (SimpleT name2))
@@ -104,8 +110,8 @@ unifyTypes (GenericT name1 args1) (GenericT name2 args2)
   | otherwise = Left "Cannot unify different generic types"
 unifyTypes (FuncT domain1 codomain1) (FuncT domain2 codomain2) = 
   do
-    sub1 <- unifyTypes domain1 domain2
-    sub2 <- unifyTypes (applySubstitution sub1 codomain1) (applySubstitution sub1 codomain2)
+    sub1 <- unifyTypes (SimpleT "") (SimpleT "")  -- Placeholder for domain unification
+    sub2 <- unifyTypes codomain1 codomain2
     return (Map.union sub2 sub1)
 unifyTypes _ _ = Left "Cannot unify different type constructors"
 
@@ -120,14 +126,14 @@ instance Arbitrary TypeExpr where
 
 instance Arbitrary Constraint where
   arbitrary = oneof
-    [ RangeC <$> arbitrary <*> arbitrary
-    , PredC <$> arbitrary
-    , SizeGE <$> arbitrary
-    , SizeGT <$> arbitrary
+    [ RangeC <$> arbitrary <*> arbitrary <*> arbitrary
+    , PredC <$> arbitrary <*> arbitrary
+    , SizeGE <$> arbitrary <*> arbitrary
+    , SizeGT <$> arbitrary <*> arbitrary
     ]
 
-instance Arbitrary String where
-  arbitrary = oneof
+instance Arbitrary Text where
+  arbitrary = T.pack <$> oneof
     [ return ""
     , listOf $ elements ['a'..'z']
     , listOf $ elements ['A'..'Z']

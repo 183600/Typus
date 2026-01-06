@@ -33,9 +33,9 @@ tests = testGroup "Cabal QuickCheck Test Properties"
       , fastProperty "removeComments removes L.all comment types" prop_removeComments_complete
       , fastProperty "normalizeIndentation preserves relative indentation" prop_normalizeIndentation_relative
       , fastProperty "intercalate with empty separator" prop_intercalate_empty
-      , fastProperty "L.isPrefixOf reflexive" prop_L.isPrefixOf_reflexive
+      , fastProperty "isPrefixOf reflexive" prop_L.isPrefixOf_reflexive
       , fastProperty "L.isSuffixOf reflexive" prop_L.isSuffixOf_reflexive
-      , fastProperty "L.isInfixOf reflexive" prop_L.isInfixOf_reflexive
+      , fastProperty "isInfixOf reflexive" prop_L.isInfixOf_reflexive
       ]
   , testGroup "Data Structure Properties"
       [ fastProperty "Map insertion is idempotent" prop_map_insert_idempotent

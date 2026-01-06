@@ -5,7 +5,7 @@ module Test.Unit.DependentTypeValidationQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree)
 import qualified Data.List as L
-import Test.Tasty.QuickCheck (testProperty, QuickCheckTests(..))
+import Test.Tasty.QuickCheck (testProperty)
 import Test.Tasty.HUnit (testCase, assert, assertBool)
 import DependentTypesParser (DependentType, TypeConstraint, TypeVariable(..))
 import Test.QuickCheck.Arbitrary (Arbitrary(..))

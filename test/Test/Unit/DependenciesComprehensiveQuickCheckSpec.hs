@@ -3,7 +3,7 @@
 module Test.Unit.DependenciesComprehensiveQuickCheckSpec where
 
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Test.Tasty.HUnit
 
 import Dependencies

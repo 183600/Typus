@@ -3,7 +3,7 @@
 module Test.Unit.NewCoreUtilsQuickCheckSpec where
 
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Test.Tasty.HUnit
 import Utils (trim, splitBy, splitByCollapsed, splitByComma, removeLineComments, removeComments)
 import Data.Char (isSpace)
@@ -81,9 +81,7 @@ prop_splitByCollapsed_consecutive delim n s =
 
 -- Helper function
 isInfixOf :: Eq a => [a] -> [[a]] -> Bool
-L.isInfixOf = L.any . flip L.isPrefixOf
-
--- ============================================================================
+isInfixOf = L.any . flip isPrefixOf -- ============================================================================
 -- Test Suite
 -- ============================================================================
 

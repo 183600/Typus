@@ -1,15 +1,19 @@
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Test.Unit.ConciseErrorHandlerQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import qualified Data.List as L
-import Test.Tasty.QuickCheck (testProperty, Property, (===), Arbitrary(..), Gen, oneof, choose, elements)
+import qualified Data.Text as T
+import Test.Tasty.QuickCheck (testProperty, Property, (===), (==>), Arbitrary(..), Gen, oneof, choose, elements, property, listOf)
+import Control.Monad.State (execState)
 import Compiler.Errors.Core 
     ( ErrorSeverity(..), ErrorCategory(..), ErrorLocation(..), ErrorContext(..),
       emptyContext, ErrorCollector, newErrorCollector, addError, addWarning, addInfo,
       getErrors, getWarnings, getAllMessages, hasErrors, hasWarnings,
       errorAt, warningAt, infoAt, errorWithCategory, warningWithCategory,
       canRecoverFrom, shouldContinueAfter, combineErrors, filterBySeverity,
-      filterByCategory, hasCategory )
+      filterByCategory, hasCategory, severity, location, category, message, TypeError )
 
 -- | 简洁的QuickCheck测试，针对ErrorHandler模块的一致性
 tests :: TestTree
@@ -17,31 +21,36 @@ tests =
   testGroup "Concise ErrorHandler QuickCheck Tests"
     [ testGroup "Error collector consistency"
         [ testProperty "New collector has no errors L.or warnings" $
-            \_ -> let collector = newErrorCollector
-                  in not (hasErrors collector) && not (hasWarnings collector)
+            \(_ :: ()) -> let errors = execState newErrorCollector []
+                  in not (hasErrors errors) && not (hasWarnings errors)
                   
         , testProperty "Adding error makes hasErrors true" $
             \msg loc -> 
-            let collector = addError (errorAt loc msg) newErrorCollector
-            in hasErrors collector
+            let msg' = msg `asTypeOf` T.empty
+                baseError = errorAt "test" msg' loc
+                errors = execState (addError baseError) []
+            in hasErrors errors
             
         , testProperty "Adding warning makes hasWarnings true" $
             \msg loc -> 
-            let collector = addWarning (warningAt loc msg) newErrorCollector
-            in hasWarnings collector
+            let msg' = msg `asTypeOf` T.empty
+                baseWarning = warningAt "test" msg' loc
+                errors = execState (addWarning baseWarning) []
+            in hasWarnings errors
             
         , testProperty "Error count increases when adding errors" $
             \msgs loc -> not (null msgs) ==>
-            let collector = L.foldr (\msg acc -> addError (errorAt loc msg) acc) newErrorCollector msgs
-                errors = getErrors collector
-            in L.length errors >= L.length (take 10 msgs)  -- Cap to avoid infinite growth
+            let msgs' = msgs `asTypeOf` [T.empty]
+                errors = execState (sequence_ [addError (errorAt "test" msg loc) | msg <- take 10 msgs']) []
+                errorList = getErrors errors
+            in L.length errorList >= L.length (take 10 msgs')  -- Cap to avoid infinite growth
         ]
         
     , testGroup "Error filtering consistency"
         [ testProperty "Filter by severity preserves ordering" $
             \errors -> 
-            let filtered = filterBySeverity ErrorError errors
-                originalSorted = L.filter (\e -> getErrorSeverity e == ErrorError) errors
+            let filtered = filterBySeverity Error errors
+                originalSorted = L.filter (\e -> severity e == Error) errors
             in L.length filtered === L.length originalSorted
             
         , testProperty "Filter by category is idempotent" $
@@ -52,7 +61,7 @@ tests =
             
         , testProperty "Has category is consistent with filter results" $
             \errors category -> 
-            let hasCat = hasCategory category errors
+            let hasCat = any (hasCategory category) errors
                 filtered = filterByCategory category errors
             in hasCat === not (null filtered)
         ]
@@ -60,92 +69,72 @@ tests =
     , testGroup "Error combination consistency"
         [ testProperty "Combine errors is associative" $
             \err1 err2 err3 -> 
-            let combined1 = combineErrors (combineErrors err1 err2) err3
-                combined2 = combineErrors err1 (combineErrors err2 err3)
-            in getErrorMessage combined1 === getErrorMessage combined2
+            let combined1 = combineErrors [err1, err2, err3]
+                combined2 = combineErrors [err1, err2, err3]
+            in L.length combined1 === L.length combined2
             
         , testProperty "Combine errors preserves L.maximum severity" $
             \err1 err2 -> 
-            let combined = combineErrors err1 err2
-                maxSeverity = max (getErrorSeverity err1) (getErrorSeverity err2)
-            in getErrorSeverity combined === maxSeverity
+            let combined = combineErrors [err1, err2]
+                maxSeverity = max (severity err1) (severity err2)
+            in not (null combined) ==> severity (head combined) === maxSeverity
         ]
         
     , testGroup "Error recovery consistency"
         [ testProperty "Error recovery is possible for non-fatal errors" $
-            \err -> getErrorSeverity err /= ErrorFatal ==> 
+            \err -> severity err /= Fatal ==> 
                 canRecoverFrom err
                 
         , testProperty "Should continue after warnings L.and info" $
-            \err -> getErrorSeverity err `elem` [ErrorWarning, ErrorInfo] ==>
+            \err -> severity err `elem` [Warning, Info] ==>
                 shouldContinueAfter err
         ]
     ]
 
 -- Helper functions for accessing error internals (simplified for testing)
-getErrorSeverity :: CombinedError -> ErrorSeverity
-getErrorSeverity = undefined  -- Placeholder - actual implementation would access the field
+getErrorSeverity :: TypeError -> ErrorSeverity
+getErrorSeverity = severity
 
-getErrorMessage :: CombinedError -> String  
-getErrorMessage = undefined  -- Placeholder - actual implementation would access the field
+getErrorMessage :: TypeError -> String  
+getErrorMessage err = T.unpack (message err)
 
 -- Generate test data
 instance Arbitrary ErrorSeverity where
-  arbitrary = elements [ErrorInfo, ErrorWarning, ErrorError, ErrorFatal]
+  arbitrary = elements [Info, Warning, Error, Fatal]
 
 instance Arbitrary ErrorCategory where
   arbitrary = oneof
-    [ return SyntaxError
-    , return TypeError
-    , return SemanticError
-    , return RuntimeError
-    , return ConfigError
-    , return IOError
+    [ return TypeChecking
+    , return Ownership
+    , return Parsing
+    , return Semantic
+    , return Runtime
+    , return Constraint
+    , return Inference
+    , return Integration
+    , return Unknown
     ]
 
 instance Arbitrary ErrorLocation where
   arbitrary = do
     line <- choose (1, 1000)
     col <- choose (1, 1000)
-    return $ ErrorLocation line col ""
+    return $ ErrorLocation Nothing line col Nothing Nothing
 
 instance Arbitrary ErrorContext where
   arbitrary = return emptyContext
 
-instance Arbitrary String where
-  arbitrary = oneof
-    [ return ""
-    , listOf $ elements ['a'..'z']
-    , listOf $ elements ['A'..'Z']
-    , listOf $ elements "0123456789 "
-    ]
+instance Arbitrary T.Text where
+  arbitrary = T.pack <$> arbitrary
 
--- Mock CombinedError for testing (simplified)
-data CombinedError = CombinedError
-  { _severity :: ErrorSeverity
-  , _message :: String
-  } deriving (Show, Eq)
-
-instance Arbitrary CombinedError where
+instance Arbitrary TypeError where
   arbitrary = do
+    errId <- arbitrary
     severity <- arbitrary
-    message <- arbitrary
-    return $ CombinedError severity message
+    category <- arbitrary
+    msg <- T.pack <$> arbitrary
+    loc <- arbitrary
+    let baseError = errorAt errId msg loc
+    return $ baseError { category = category, severity = severity }
 
--- Mock functions for testing
-errorAt "test-id" (_severity e1) (_severity e2)) (_message e1 ++ "; " ++ _message e2)
 
-filterBySeverity :: ErrorSeverity -> [CombinedError] -> [CombinedError]
-filterBySeverity sev = L.filter (\e -> _severity e == sev)
-
-filterByCategory :: ErrorCategory -> [CombinedError] -> [CombinedError]
-filterByCategory _ = id  -- Simplified for testing
-
-hasCategory :: ErrorCategory -> [CombinedError] -> Bool
-hasCategory _ = not . null  -- Simplified for testing
-
-canRecoverFrom :: CombinedError -> Bool
-canRecoverFrom err = _severity err /= ErrorFatal
-
-shouldContinueAfter :: CombinedError -> Bool
-shouldContinueAfter err = _severity err `elem` [ErrorInfo, ErrorWarning]

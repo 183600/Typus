@@ -2,7 +2,7 @@
 module Test.Unit.NewOwnershipConsistencyQuickCheckSpec (tests) where
 
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Ownership
   ( OwnershipType(..), OwnershipError(..), OwnershipTransfer(..)
   , analyzeOwnership, analyzeOwnershipDebug, builtInFunctions

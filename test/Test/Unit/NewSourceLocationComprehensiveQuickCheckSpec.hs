@@ -2,7 +2,7 @@ module Test.Unit.SourceLocationAdvancedQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
-import Test.Tasty.QuickCheck (testProperty, Property, (===), forAll, Gen, choose, arbitrary, listOf1, elements)
+import Test.Tasty.QuickCheck ((===), property, testProperty, Property, forAll, Gen, choose, arbitrary, listOf1, elements)
 import TestSupport.QuickCheck (fastProperty)
 
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), 

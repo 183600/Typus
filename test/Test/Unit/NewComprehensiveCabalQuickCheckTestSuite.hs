@@ -36,9 +36,7 @@ unlines :: [String] -> String
 unlines = Prelude.unlines
 
 isInfixOf :: String -> String -> Bool
-L.isInfixOf = Prelude.L.isInfixOf
-
-spanLength :: SourceSpan -> Int
+isInfixOf = Prelude.isInfixOf spanLength :: SourceSpan -> Int
 spanLength span = 
   let start = spanStart span
       end = spanEnd span

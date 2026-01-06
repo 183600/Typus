@@ -629,7 +629,7 @@ test_extreme_inputs = do
   mapM_ testExtremeInput extremeInputs
   where
     testExtremeInput (description, content) = do
-      let result <- try $ evaluate $ parseTypus content ("extreme-" ++ L.map (\c -> if c == ' ' then '-' else c) description ++ ".typus")
+      result <- try $ evaluate $ parseTypus content ("extreme-" ++ L.map (\c -> if c == ' ' then '-' else c) description ++ ".typus")
       case result of
         Right (Right _) -> assertBool ("Should handle extreme: " ++ description) $ True
         _ -> return ()  -- May fail for extreme inputs

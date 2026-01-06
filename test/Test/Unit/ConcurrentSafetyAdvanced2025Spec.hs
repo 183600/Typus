@@ -8,7 +8,7 @@ import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, choose, listOf, 
 import Test.Tasty.HUnit (testCase, (@=?))
 
 import Control.Concurrent (forkIO, threadDelay, MVar, newEmptyMVar, putMVar, takeMVar)
-import Control.Concurrent.STM (TVar, atomically, newTVar, readTVar, writeTVar, modifyTVar)
+ (TVar, atomically, newTVar, readTVar, writeTVar, modifyTVar)
 import Control.Monad (replicateM, when)
 import Data.IORef
 import SourceLocation (SourcePos(..), SourceSpan(..))

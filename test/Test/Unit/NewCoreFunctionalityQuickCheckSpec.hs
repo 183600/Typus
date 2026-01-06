@@ -4,7 +4,7 @@ module Test.Unit.NewCoreFunctionalityQuickCheckSpec where
 
 import Test.Tasty
 import qualified Data.List as L
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (testProperty, Property, (===), (==>))
 import Test.Tasty.TH
 import Compiler
 import Compiler.IR

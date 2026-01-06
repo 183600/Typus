@@ -3,7 +3,7 @@ module Test.Unit.NewEnhancedUtilsSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
-import Test.Tasty.QuickCheck (testProperty, Property, (===), forAll, Gen, choose, arbitrary, listOf1, elements)
+import Test.Tasty.QuickCheck ((===), property, testProperty, Property, forAll, Gen, choose, arbitrary, listOf1, elements)
 import TestSupport.QuickCheck (fastProperty)
 
 import Utils
@@ -89,11 +89,11 @@ prop_fixIndentationAlias input = fixIndentation input == normalizeIndentation in
 
 -- Helper function to check if a string is contained in another
 isInfixOf :: Eq a => [a] -> [a] -> Bool
-L.isInfixOf needle haystack = L.any (L.isPrefixOf needle) (tails haystack)
+isInfixOf needle haystack = L.any (isPrefixOf needle) (tails haystack)
   where
-    L.isPrefixOf [] _ = True
-    L.isPrefixOf _ [] = False
-    L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
+    isPrefixOf [] _ = True
+    isPrefixOf _ [] = False
+    isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
     tails [] = [[]]
     tails xs@(x:xs') = xs : tails xs'
 

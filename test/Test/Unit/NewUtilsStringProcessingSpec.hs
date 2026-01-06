@@ -150,7 +150,7 @@ prop_removeCommentsNested input =
         withoutComments = removeComments withNested
     in not ("/*" `L.isInfixOf` withoutComments) && not ("*/" `L.isInfixOf` withoutComments)
   where
-    L.isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
+    isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
 
 -- ============================================================================
 -- Properties for indentation
@@ -181,7 +181,7 @@ prop_breakOnCorrectness pattern text
         in before ++ pattern ++ after == text
     | otherwise = breakOn pattern text == (text, "")
   where
-    L.isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
+    isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
 
 prop_breakOnEmptyPattern :: String -> Bool
 prop_breakOnEmptyPattern text = breakOn "" text == ("", text)

@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, FlexibleInstances #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
 
@@ -185,7 +185,7 @@ indentationProperties = testGroup "Indentation Properties"
          else let result = normalizeIndentation str
                   resultLines = lines result
                   resultNonEmpty = L.filter (not . null . trim) resultLines
-                  hasCommonIndent = L.any (L.isPrefixOf "  ") resultNonEmpty
+                  hasCommonIndent = L.any (isPrefixOf "  ") resultNonEmpty
               in not hasCommonIndent
               
   , testProperty "normalizeIndentation preserves relative indentation" $ \str ->

@@ -4,7 +4,7 @@
 module Test.Unit.TextProcessingPropertiesSpec where
 
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Test.Tasty.HUnit
 import Utils
 import SourceLocation

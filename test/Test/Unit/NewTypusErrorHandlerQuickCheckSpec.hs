@@ -76,7 +76,7 @@ getErrorMessage :: String -> String
 getErrorMessage msg = msg  -- Simplified for test
 
 isInfixOf :: String -> String -> Bool
-L.isInfixOf = undefined  -- Simplified for test
+isInfixOf = undefined  -- Simplified for test
 
 emptyContext :: ErrorContext
 emptyContext = ErrorContext ""

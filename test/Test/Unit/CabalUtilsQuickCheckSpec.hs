@@ -88,10 +88,10 @@ prop_remove_line_comments :: [String] -> Property
 prop_remove_line_comments lines =
   let withComments = L.map (\l -> if even (L.length l) then "// " ++ l else l) lines
       withoutComments = removeLineComments $ unlines withComments
-      commentLines = L.filter (L.isPrefixOf "//") withComments
+      commentLines = L.filter (isPrefixOf "//") withComments
   in property $ not $ L.any (`List.L.isInfixOf` withoutComments) commentLines
   where
-    L.isPrefixOf prefix str = take (L.length prefix) str == prefix
+    isPrefixOf prefix str = take (L.length prefix) str == prefix
 
 -- Property: normalizeIndentation makes indentation consistent
 prop_normalize_indentation :: [String] -> Property

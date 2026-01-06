@@ -3,7 +3,7 @@
 module Test.Unit.NewParserEnhancedQuickCheckSpec where
 
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Test.Tasty.HUnit
 import Parser
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos, spanBetween)

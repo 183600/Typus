@@ -275,7 +275,7 @@ prop_formatSyntaxErrorIncludesMessage = forAll genSyntaxError $ \error ->
   in msg `L.isInfixOf` formatted
 
   where
-    L.isInfixOf needle haystack = needle `elem` (substrings haystack)
+    isInfixOf needle haystack = needle `elem` (substrings haystack)
     substrings [] = []
     substrings s@(x:xs) = s : substrings xs
 

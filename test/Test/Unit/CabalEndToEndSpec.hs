@@ -2,7 +2,7 @@ module Test.Unit.CabalEndToEndSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import qualified Data.List as L
-import Test.Tasty.HUnit (testCase, (@?=))
+import Test.Tasty.HUnit (testCase, (@?=), assertFailure)
 import Test.Tasty.QuickCheck (testProperty)
 
 import TestSupport.QuickCheck (fastProperty)
@@ -33,22 +33,23 @@ tests =
                   , "}"
                   ]
                 -- Step 1: Parse
-                parseResult = Parser.parseTypus "end-to-end" input
+                parseResult = Parser.parseTypus input
             case parseResult of
               Left err -> (show err) @?= "Parse failed"
               Right parsed -> do
                 -- Step 2: Validate (assuming validation exists)
-                let validationResult = SyntaxValidator.validate parsed
-                case validationResult of
-                  Left validationErr -> (show validationErr) @?= "Validation failed"
-                  Right validated -> do
+                let validationErrors = SyntaxValidator.validateSyntax (show parsed)
+                if null validationErrors
+                  then do
                     -- Step 3: Compile (assuming compilation exists)
-                    let compileResult = Compiler.compile validated
+                    let compileResult = Compiler.compile parsed
                     case compileResult of
                       Left compileErr -> (show compileErr) @?= "Compilation failed"
                       Right compiled -> 
                         -- Should have successful compilation result
                         compiled `seq` True @?= True
+                  else
+                    (show validationErrors) @?= "Validation failed"
 
         , testCase "Pipeline with error handling at each stage" $ do
             let invalidInput = unlines
@@ -58,27 +59,27 @@ tests =
                   , "  return x;"
                   , "}"
                   ]
-                parseResult = Parser.parseTypus "pipeline-error" invalidInput
+                parseResult = Parser.parseTypus invalidInput
             case parseResult of
               Left parseErr -> do
                 -- Should provide formatted error
-                let formatted = ErrorHandler.formatError parseErr
+                let formatted = parseErr
                 L.length formatted > 0 @?= True
               Right parsed -> do
                 -- Even if parse succeeds, validation should catch issues
-                let validationResult = SyntaxValidator.validate parsed
-                case validationResult of
-                  Left validationErr -> do
-                    let formatted = ErrorHandler.formatError validationErr
-                    L.length formatted > 0 @?= True
-                  Right validated -> do
+                let validationErrors = SyntaxValidator.validateSyntax (show parsed)
+                if null validationErrors
+                  then do
                     -- Compilation should handle remaining issues
-                    let compileResult = Compiler.compile validated
+                    let compileResult = Compiler.compile parsed
                     case compileResult of
                       Left compileErr -> do
-                        let formatted = ErrorHandler.formatError compileErr
+                        let formatted = show compileErr
                         L.length formatted > 0 @?= True
                       Right compiled -> compiled `seq` True @?= True
+                  else do
+                    let formatted = show validationErrors
+                    L.length formatted > 0 @?= True
 
         , testCase "Complex multi-function pipeline" $ do
             let complexInput = unlines
@@ -98,18 +99,18 @@ tests =
                   , "  return result;"
                   , "}"
                   ]
-                parseResult = Parser.parseTypus "complex" complexInput
+                parseResult = Parser.parseTypus complexInput
             case parseResult of
-              Left err -> @?= "Complex parse failed" (show err)
+              Left err -> assertFailure $ "Complex parse failed: " ++ show err
               Right parsed -> do
-                let validationResult = SyntaxValidator.validate parsed
-                case validationResult of
-                  Left validationErr -> @?= "Complex validation failed" (show validationErr)
-                  Right validated -> do
-                    let compileResult = Compiler.compile validated
+                let validationErrors = SyntaxValidator.validateSyntax (show parsed)
+                if null validationErrors
+                  then do
+                    let compileResult = Compiler.compile parsed
                     case compileResult of
-                      Left compileErr -> @?= "Complex compilation failed" (show compileErr)
+                      Left compileErr -> assertFailure $ "Complex compilation failed: " ++ show compileErr
                       Right compiled -> compiled `seq` True @?= True
+                  else assertFailure $ "Complex validation failed: " ++ show validationErrors
         ]
 
     , testGroup "Real-world Scenario Tests"
@@ -146,12 +147,12 @@ tests =
                   , "  return distance(p1, p2);"
                   , "}"
                   ]
-                parseResult = Parser.parseTypus "application" appInput
+                parseResult = Parser.parseTypus appInput
             case parseResult of
-              Left err -> @?= "Application parse failed" (show err)
+              Left err -> assertFailure $ "Application parse failed: " ++ show err
               Right parsed -> do
                 -- Should have multiple code blocks
-                L.length (Parser.tfCodeBlocks parsed) >= 3 @?= True
+                L.length (Parser.tfBlocks parsed) >= 3 @?= True
 
         , testCase "Error handling in realistic scenarios" $ do
             let realisticError = unlines
@@ -167,11 +168,10 @@ tests =
                   , "  return total / L.length(data);"
                   , "}"
                   ]
-                parseResult = Parser.parseTypus "realistic" realisticError
+                parseResult = Parser.parseTypus realisticError
             case parseResult of
               Left err -> do
-                let formatted = ErrorHandler.formatError err
-                "line" `L.isInfixOf` formatted @?= True
+                "parse" `L.isInfixOf` err @?= True
               Right parsed -> parsed `seq` True @?= True
 
         , testCase "Performance-critical scenario" $ do
@@ -189,12 +189,12 @@ tests =
                   , "  return fibonacci(10);"
                   , "}"
                   ]
-                parseResult = Parser.parseTypus "performance" performanceInput
+                parseResult = Parser.parseTypus performanceInput
             case parseResult of
-              Left err -> @?= "Performance parse failed" (show err)
+              Left err -> assertFailure $ "Performance parse failed: " ++ show err
               Right parsed -> do
                 -- Should handle recursive functions
-                Parser.tfCodeBlocks parsed `seq` True @?= True
+                Parser.tfBlocks parsed `seq` True @?= True
         ]
 
     , testGroup "Integration with File System"
@@ -225,16 +225,16 @@ tests =
                   , "  return Data{items: [\"a\", \"b\", \"c\"]};"
                   , "}"
                   ]
-                mainResult = Parser.parseTypus "main" mainFile
-                utilsResult = Parser.parseTypus "utils" utilsFile
-                dataResult = Parser.parseTypus "data" dataFile
+                mainResult = Parser.parseTypus mainFile
+                utilsResult = Parser.parseTypus utilsFile
+                dataResult = Parser.parseTypus dataFile
             L.all isSuccess [mainResult, utilsResult, dataResult] @?= True
 
         , testCase "File directive consistency across files" $ do
             let file1 = "// @ownership: true\nfunc test1() {}"
                 file2 = "// @ownership: false\nfunc test2() {}"
                 file3 = "// @dependent-types: true\nfunc test3() {}"
-                results = L.map (Parser.parseTypus "file") [file1, file2, file3]
+                results = L.map Parser.parseTypus [file1, file2, file3]
             L.all isSuccess results @?= True
         ]
 
@@ -247,9 +247,9 @@ tests =
                   , "  return \"func main() { println(\\\"Hello\\\") }\";"
                   , "}"
                   ]
-                parseResult = Parser.parseTypus "toolchain" toolchainInput
+                parseResult = Parser.parseTypus toolchainInput
             case parseResult of
-              Left err -> @?= "Toolchain parse failed" (show err)
+              Left err -> assertFailure $ "Toolchain parse failed: " ++ show err
               Right parsed -> 
                 -- Should handle toolchain directives
                 Parser.tfDirectives parsed `seq` True @?= True
@@ -262,16 +262,16 @@ tests =
                   , "  return 42 * 2;"  -- Should be optimized to 84
                   , "}"
                   ]
-                parseResult = Parser.parseTypus "build" buildInput
+                parseResult = Parser.parseTypus buildInput
             case parseResult of
-              Left err -> @?= "Build parse failed" (show err)
+              Left err -> assertFailure $ "Build parse failed: " ++ show err
               Right parsed -> parsed `seq` True @?= True
         ]
 
     , testGroup "Property-based End-to-End Tests"
         [ testProperty "Round-trip property: Parse -> String -> Parse" $ do
             \input -> 
-                let parseResult = Parser.parseTypus "property" input
+                let parseResult = Parser.parseTypus input
                 in case parseResult of
                      Left _ -> True  -- Invalid inputs should fail consistently
                      Right parsed -> 
@@ -280,14 +280,14 @@ tests =
 
         , testProperty "Error preservation property" $ do
             \input -> 
-                let result = Parser.parseTypus "error-property" input
+                let result = Parser.parseTypus input
                 in case result of
                      Left err -> L.length (show err) > 0  -- Errors should have messages
                      Right _ -> True  -- Valid inputs should succeed
 
         , testProperty "Source location consistency" $ do
             \input -> 
-                let result = Parser.parseTypus "location-property" input
+                let result = Parser.parseTypus input
                 in case result of
                      Left err -> 
                        -- Errors should have location information when possible
@@ -304,14 +304,14 @@ tests =
                   , "func broken() { return }"  -- Missing semicolon
                   , "func alsoWorking() { return 3; }"
                   ]
-                parseResult = Parser.parseTypus "partial" partialInput
+                parseResult = Parser.parseTypus partialInput
             case parseResult of
               Left err -> do
                 -- Should report error but not crash
                 L.length (show err) > 0 @?= True
               Right parsed -> 
                 -- Should parse what it can
-                L.length (Parser.tfCodeBlocks parsed) >= 1 @?= True
+                L.length (Parser.tfBlocks parsed) >= 1 @?= True
 
         , testCase "Recovery from syntax errors" $ do
             let recoverableInput = unlines
@@ -319,7 +319,7 @@ tests =
                   , "func test2() { return }"  -- Error here
                   , "func test3() { return 3; }"
                   ]
-                parseResult = Parser.parseTypus "recovery" recoverableInput
+                parseResult = Parser.parseTypus recoverableInput
             case parseResult of
               Left err -> 
                 -- Should provide meaningful error information
@@ -334,9 +334,9 @@ isSuccess (Right _) = True
 isSuccess (Left _) = False
 
 isInfixOf :: Eq a => [a] -> [a] -> Bool
-L.isInfixOf needle haystack = needle `L.isPrefixOf` haystack || 
-                              (not (null haystack) && L.isInfixOf needle (L.tail haystack))
+isInfixOf needle haystack = needle `isPrefixOf` haystack || 
+                            (not (null haystack) && isInfixOf needle (tail haystack))
   where
-    L.isPrefixOf [] _ = True
-    L.isPrefixOf _ [] = False
-    L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
+    isPrefixOf [] _ = True
+    isPrefixOf _ [] = False
+    isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys

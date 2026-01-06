@@ -101,7 +101,7 @@ prop_comment_removal :: String -> String -> Property
 prop_comment_removal code comment =
   let input = code ++ " // " ++ comment
       tokens = simpleTokenize input
-      commentTokens = L.filter (L.isPrefixOf "//") tokens
+      commentTokens = L.filter (isPrefixOf "//") tokens
   in property $ null commentTokens
 
 -- Property: Nested structure parsing
@@ -163,7 +163,7 @@ simpleTokenize :: String -> [String]
 simpleTokenize input = words $ L.filter (`notElem` "();") input
 
 isPrefixOf :: String -> String -> Bool
-L.isPrefixOf prefix str = take (L.length prefix) str == prefix
+isPrefixOf prefix str = take (L.length prefix) str == prefix
 
 -- ============================================================================
 -- Test Collection

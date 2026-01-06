@@ -28,7 +28,7 @@ tests =
         , testCase "Parser handles trimmed whitespace" $ do
             let input = "  \n  func main() { return 42; }  \n  "
                 trimmed = Utils.trim input
-                result = Parser.parseTypus "test" trimmed
+                result = Parser.parseTypus trimmed
             case result of
               Left err -> "Should parse successfully" @?= show err
               Right _ -> "Success" @?= "Success"
@@ -42,7 +42,7 @@ tests =
     , testGroup "SourceLocation L.and Parser Integration"
         [ testCase "Source locations are preserved in parse results" $ do
             let input = "func test() { return 1; }"
-                result = Parser.parseTypus "test" input
+                result = Parser.parseTypus input
             case result of
               Left _ -> "Should parse successfully" @?= "Parse failed"
               Right typusFile -> 
@@ -51,8 +51,8 @@ tests =
                   (block:_) -> "Should have valid span" @?= "Valid span"
 
         , testCase "Source position calculations are consistent" $ do
-            let pos1 = SourceLocation.SourcePos 1 1
-                pos2 = SourceLocation.SourcePos 1 5
+            let pos1 = SourceLocation.SourcePos 1 1 0
+                pos2 = SourceLocation.SourcePos 1 5 0
                 span = SourceLocation.SourceSpan pos1 pos2
             SourceLocation.spanStart span @?= pos1
             SourceLocation.spanEnd span @?= pos2
@@ -61,7 +61,7 @@ tests =
     , testGroup "SyntaxValidator L.and Parser Integration"
         [ testCase "Validated parsed code passes syntax validation" $ do
             let input = "func validated() { return true; }"
-                result = Parser.parseTypus "test" input
+                result = Parser.parseTypus input
             case result of
               Left _ -> "Parse failed" @?= "Should parse successfully"
               Right typusFile -> do
@@ -70,7 +70,7 @@ tests =
 
         , testCase "Syntax validation catches parser edge cases" $ do
             let input = "func invalid() { return ; }"  -- Missing expression
-                result = Parser.parseTypus "test" input
+                result = Parser.parseTypus input
             case result of
               Left _ -> "Parse should fail" @?= "Expected parse failure"
               Right _ -> "Unexpected success" @?= "Should not reach here"
@@ -79,7 +79,7 @@ tests =
     , testGroup "FileDirectives Integration"
         [ testCase "Parser correctly extracts file directives" $ do
             let input = "// @ownership: true\n// @dependent-types: false\nfunc main() {}"
-                result = Parser.parseTypus "test" input
+                result = Parser.parseTypus input
             case result of
               Left _ -> "Parse failed" @?= "Should parse successfully"
               Right typusFile -> do
@@ -91,7 +91,7 @@ tests =
     , testGroup "Error handling integration"
         [ testCase "Parser provides meaningful error locations" $ do
             let input = "func broken() { return }"  -- Missing semicolon
-                result = Parser.parseTypus "test" input
+                result = Parser.parseTypus input
             case result of
               Left err -> 
                 -- Error should contain location information

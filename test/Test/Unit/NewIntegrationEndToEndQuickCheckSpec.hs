@@ -356,7 +356,7 @@ isSuccess _ = False
 
 -- | Check if substring is in string
 isInfixOf :: String -> String -> Bool
-L.isInfixOf needle haystack = needle `elem` (tails haystack >>= inits)
+isInfixOf needle haystack = needle `elem` (tails haystack >>= inits)
   where
     tails [] = [[]]
     tails xs@(x:xs') = xs : tails xs'

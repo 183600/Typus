@@ -181,7 +181,7 @@ prop_splitByCollapsedEdgeCases =
   splitByCollapsed ',' "," == []
 
   where
-    L.isInfixOf needle haystack = needle `elem` (substrings haystack)
+    isInfixOf needle haystack = needle `elem` (substrings haystack)
     substrings [] = []
     substrings s@(x:xs) = s : substrings xs
 

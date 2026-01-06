@@ -1,7 +1,8 @@
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 module Test.Unit.ConciseSyntaxValidatorQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperty, Property, (===), Arbitrary(..), Gen, oneof, choose, elements, listOf)
+import Test.Tasty.QuickCheck (testProperty, Property, (===), (==>), Arbitrary(..), Gen, oneof, choose, elements, listOf)
 import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Char (isAlphaNum, isAlpha, isDigit, isSpace)
@@ -13,12 +14,12 @@ tests =
   testGroup "Concise SyntaxValidator QuickCheck Tests"
     [ testGroup "Error type properties"
         [ testProperty "Error types are distinguishable" $
-            \err1 err2 -> err1 === err2 || errType err1 /= errType err2
+            \err1 err2 -> err1 === err2 || errorType err1 /= errorType err2
             
         , testProperty "Syntax errors preserve error type" $
             \errorType line msg -> 
             let error = SyntaxError errorType line msg ""
-            in errType error === errorType
+            in errorType error === errorType
         ]
         
     , testGroup "Basic syntax validation"

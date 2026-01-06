@@ -99,7 +99,7 @@ tests =
         , fastProperty "removeLineComments preserves non-comment lines" $
             \codeLines ->
             let code = unlines codeLines
-                nonCommentLines = L.filter (not . L.isPrefixOf "//") codeLines
+                nonCommentLines = L.filter (not . isPrefixOf "//") codeLines
                 cleaned = removeLineComments code
                 cleanedLines = lines cleaned
             in L.length cleanedLines === L.length nonCommentLines

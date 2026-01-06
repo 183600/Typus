@@ -229,7 +229,7 @@ prop_forceSingleTabAddsTab input =
       nonEmptyLines = L.filter (not . null) (lines processed)
   in L.all ("\t" `L.isPrefixOf`) nonEmptyLines
   where
-    L.isPrefixOf prefix str = take (L.length prefix) str == prefix
+    isPrefixOf prefix str = take (L.length prefix) str == prefix
 
 -- Property: breakOn result concatenates to original
 prop_breakOnConcatenates :: String -> String -> Property

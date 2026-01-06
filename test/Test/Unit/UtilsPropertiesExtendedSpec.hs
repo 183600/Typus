@@ -63,7 +63,7 @@ prop_trim_preserves_content s =
       nonSpaceContent = L.filter (not . isSpace) s
   in not (null nonSpaceContent) ==> 
      counterexample ("Original non-space: " ++ nonSpaceContent ++ ", Trimmed: " ++ trimmed) $
-     L.isInfixOf nonSpaceContent trimmed
+     isInfixOf nonSpaceContent trimmed
 
 -- ============================================================================
 -- String Splitting Properties
@@ -85,7 +85,7 @@ prop_splitByCollapsed_removes_empty delim s =
 -- Property: splitBy L.and splitByCollapsed are equivalent when no consecutive delimiters
 prop_splitBy_equivalent_when_no_consecutive :: Char -> String -> Property
 prop_splitBy_equivalent_when_no_consecutive delim s =
-  let hasNoConsecutive = not (L.isInfixOf [delim, delim] s)
+  let hasNoConsecutive = not (isInfixOf [delim, delim] s)
       normal = splitBy delim s
       collapsed = splitByCollapsed delim s
   in hasNoConsecutive ==> normal === collapsed
@@ -123,25 +123,25 @@ prop_removeLineComments_preserves_strings :: String -> Property
 prop_removeLineComments_preserves_strings s =
   let stringWithComment = "code with // comment\nand \"string with // not comment\"\n"
       processed = removeLineComments stringWithComment
-  in L.isInfixOf "\"string with // not comment\"" processed
+  in isInfixOf "\"string with // not comment\"" processed
 
 -- Property: removeComments removes both // L.and /* */ comments
 prop_removeComments_removes_both_types :: String -> Property
 prop_removeComments_removes_both_types s =
   let testCode = "code // line comment\nmore code /* block comment */\nfinal code"
       processed = removeComments testCode
-  in not (L.isInfixOf "// line comment" processed) &&
-     not (L.isInfixOf "/* block comment */" processed) &&
-     L.isInfixOf "code" processed &&
-     L.isInfixOf "more code" processed &&
-     L.isInfixOf "final code" processed
+  in not (isInfixOf "// line comment" processed) &&
+     not (isInfixOf "/* block comment */" processed) &&
+     isInfixOf "code" processed &&
+     isInfixOf "more code" processed &&
+     isInfixOf "final code" processed
 
 -- Property: removeComments preserves string literals containing comment markers
 prop_removeComments_preserves_string_literals :: String -> Property
 prop_removeComments_preserves_string_literals s =
   let testCode = "code \"string with // comment\" L.and /* not comment */\n"
       processed = removeComments testCode
-  in L.isInfixOf "\"string with // comment\"" processed
+  in isInfixOf "\"string with // comment\"" processed
 
 -- ============================================================================
 -- Indentation Properties
@@ -186,7 +186,7 @@ prop_normalizeIndentation_idempotent s =
 prop_breakOn_finds_pattern :: String -> String -> Property
 prop_breakOn_finds_pattern pat s =
   let patNotEmpty = not (null pat)
-      patExists = L.isInfixOf pat s
+      patExists = isInfixOf pat s
       (before, after) = breakOn pat s
   in patNotEmpty && patExists ==>
      before ++ pat ++ after === s
@@ -195,7 +195,7 @@ prop_breakOn_finds_pattern pat s =
 prop_breakOn_no_match :: String -> String -> Property
 prop_breakOn_no_match pat s =
   let patNotEmpty = not (null pat)
-      patNotExists = not (L.isInfixOf pat s)
+      patNotExists = not (isInfixOf pat s)
       (before, after) = breakOn pat s
   in patNotEmpty && patNotExists ==>
      before === s && after === ""
@@ -210,7 +210,7 @@ prop_breakOn_empty_pattern s =
 prop_breakOn_prefix_consistency :: String -> String -> Property
 prop_breakOn_prefix_consistency pat s =
   let patNotEmpty = not (null pat)
-      patIsPrefix = L.isPrefixOf pat s
+      patIsPrefix = isPrefixOf pat s
       (before, after) = breakOn pat s
   in patNotEmpty && patIsPrefix ==>
      before === ""

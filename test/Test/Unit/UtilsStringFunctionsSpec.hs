@@ -4,7 +4,7 @@
 module Test.Unit.UtilsStringFunctionsSpec where
 
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Test.Tasty.HUnit
 import Utils
 import Data.Char (isSpace, isAlphaNum, isLetter, isDigit)
@@ -196,8 +196,8 @@ indentationProperties = testGroup "Indentation Properties"
             originalLines = lines s
             normalizedLines = lines normalized
         in if L.length originalLines > 1
-           then L.all (not . L.isPrefixOf "  ") normalizedLines || 
-                L.all (L.isPrefixOf "  ") normalizedLines
+           then L.all (not . isPrefixOf "  ") normalizedLines || 
+                L.all (isPrefixOf "  ") normalizedLines
            else True
     
   , testProperty "normalizeIndentation is idempotent" $

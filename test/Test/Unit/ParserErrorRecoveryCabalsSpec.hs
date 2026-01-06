@@ -43,7 +43,7 @@ test_parser_recovers_from_malformed_function =
         -- Should have parsed the valid function despite the error
         let codeBlocks = tfCodeBlocks typusFile
         assertBool "Should parse valid function after error" $
-          L.any (L.isInfixOf "valid" . unlines . cbLines) codeBlocks
+          L.any (isInfixOf "valid" . unlines . cbLines) codeBlocks
 
 -- Test 2: Parser handles incomplete type declarations
 test_parser_handles_incomplete_types :: TestTree
@@ -117,7 +117,7 @@ test_parser_recovers_from_nested_errors =
         -- Should have found the inner function
         let codeBlocks = tfCodeBlocks typusFile
         assertBool "Should find inner function" $
-          L.any (L.isInfixOf "inner" . unlines . cbLines) codeBlocks
+          L.any (isInfixOf "inner" . unlines . cbLines) codeBlocks
 
 -- Test 4: Parser handles directive errors gracefully
 test_parser_handles_directive_errors :: TestTree
@@ -140,7 +140,7 @@ test_parser_handles_directive_errors =
         -- Should still parse the main function
         let codeBlocks = tfCodeBlocks typusFile
         assertBool "Should parse main function despite directive errors" $
-          L.any (L.isInfixOf "main" . unlines . cbLines) codeBlocks
+          L.any (isInfixOf "main" . unlines . cbLines) codeBlocks
 
 -- Test 5: Parser error recovery with Unicode content
 test_parser_unicode_error_recovery :: TestTree
@@ -164,7 +164,7 @@ test_parser_unicode_error_recovery =
         -- Should parse the normal function
         let codeBlocks = tfCodeBlocks typusFile
         assertBool "Should parse normal function after Unicode error" $
-          L.any (L.isInfixOf "normal" . unlines . cbLines) codeBlocks
+          L.any (isInfixOf "normal" . unlines . cbLines) codeBlocks
 
 tests :: TestTree
 tests =

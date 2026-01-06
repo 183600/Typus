@@ -206,7 +206,7 @@ prop_splitby_preserves_length delim str =
 -- Property: removeLineComments doesn't change content without comments
 prop_remove_line_comments_preserves_content :: String -> Property
 prop_remove_line_comments_preserves_content str = 
-  not (L.isInfixOf "//" str) ==> removeLineComments str === str
+  not (isInfixOf "//" str) ==> removeLineComments str === str
 
 -- Property: normalizeIndentation preserves relative indentation
 prop_normalize_preserves_relative :: String -> Property

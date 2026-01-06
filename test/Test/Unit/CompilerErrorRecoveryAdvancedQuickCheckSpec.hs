@@ -151,7 +151,7 @@ prop_error_formatting_preserves_info err =
        show sev `L.isInfixOf` formatted .&&.
        show ctx `L.isInfixOf` formatted
   where
-    L.isInfixOf needle haystack = needle `elem` words haystack
+    isInfixOf needle haystack = needle `elem` words haystack
 
 -- Property: error filtering preserves ordering
 prop_error_filtering_preserves_order :: ErrorList -> ErrorSeverity -> Property
@@ -245,7 +245,7 @@ prop_error_suggestion_handling err =
        Just suggestion -> property $ suggestion `L.isInfixOf` formatted
        Nothing -> property $ True
   where
-    L.isInfixOf needle haystack = needle `elem` words haystack
+    isInfixOf needle haystack = needle `elem` words haystack
 
 -- Property: error context distribution
 prop_error_context_distribution :: ErrorList -> Property

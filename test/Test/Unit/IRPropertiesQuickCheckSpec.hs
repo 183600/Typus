@@ -78,7 +78,7 @@ prop_ensureMainFunction_adds_main =
       hasMain = L.any isMainFunc (gmDecls module2)
   in property hasMain
   where
-    isMainFunc (GoFunc (FuncDecl funcLines)) = L.any (L.isInfixOf "main") funcLines
+    isMainFunc (GoFunc (FuncDecl funcLines)) = L.any (isInfixOf "main") funcLines
     isMainFunc _ = False
 
 prop_emitGo_produces_valid_structure :: Property

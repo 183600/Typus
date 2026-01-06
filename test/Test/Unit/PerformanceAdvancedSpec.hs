@@ -378,7 +378,7 @@ test_string_operations_memory = do
 
 test_error_creation_performance :: IO ()
 test_error_creation_performance = do
-  let location = ErrorLocation Nothing 1 1 Nothing Nothing
+  let location = ErrorLocation (startPos) Nothing
       startTime <- getCPUTime
       let errors = L.map (\i -> errorAt "test-id" show i)) [1..10000]
       endTime <- getCPUTime
@@ -387,7 +387,7 @@ test_error_creation_performance = do
 
 test_error_collection_performance :: IO ()
 test_error_collection_performance = do
-  let location = ErrorLocation Nothing 1 1 Nothing Nothing
+  let location = ErrorLocation (startPos) Nothing
       errors = L.map (\i -> errorAt "test-id" show i)) [1..10000]
       startTime <- getCPUTime
       let errorCount = L.length errors
@@ -397,7 +397,7 @@ test_error_collection_performance = do
 
 test_error_formatting_performance :: IO ()
 test_error_formatting_performance = do
-  let location = ErrorLocation Nothing 1 1 Nothing Nothing
+  let location = ErrorLocation (startPos) Nothing
       errors = L.map (\i -> errorAt "test-id" show i)) [1..1000]
       startTime <- getCPUTime
       let formatted = map show errors

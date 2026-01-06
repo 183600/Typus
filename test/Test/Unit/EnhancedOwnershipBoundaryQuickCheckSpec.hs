@@ -197,7 +197,7 @@ test_error_formatting = do
   assertBool "Error formatting should produce meaningful messages" $
     L.all (not . null) formatted
   assertBool "Error formatting should include variable names" $
-    L.all (`L.isInfixOf` "x") (L.filter (L.isInfixOf "x") formatted)
+    L.all (`L.isInfixOf` "x") (L.filter (isInfixOf "x") formatted)
 
 -- ============================================================================
 -- Helper Functions

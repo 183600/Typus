@@ -4,7 +4,7 @@ module Test.Unit.NewComprehensiveCabalTestSpec where
 
 import Test.Tasty (TestTree, testGroup)
 import qualified Data.List as L
-import Test.Tasty.QuickCheck (Property, testProperty, (===), Arbitrary(..), Gen, oneof, elements, listOf, sized, resize)
+import Test.Tasty.QuickCheck ((===), Property, testProperty, Arbitrary(..), Gen, oneof, elements, listOf, sized, resize)
 import Test.Tasty.HUnit (testCase, assertBool, assertEqual)
 
 import Utils (trim, splitBy, splitByCollapsed, removeLineComments, removeComments, normalizeIndentation)
@@ -224,11 +224,11 @@ intersperse _ [x] = [x]
 intersperse sep (x:xs) = x : sep : intersperse sep xs
 
 isInfixOf :: Eq a => [a] -> [a] -> Bool
-L.isInfixOf needle haystack = L.any (L.isPrefixOf needle) (tails haystack)
+isInfixOf needle haystack = L.any (isPrefixOf needle) (tails haystack)
   where
-    L.isPrefixOf [] _ = True
-    L.isPrefixOf _ [] = False
-    L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
+    isPrefixOf [] _ = True
+    isPrefixOf _ [] = False
+    isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
     tails [] = [[]]
     tails xs@(x:xs') = xs : tails xs'
 

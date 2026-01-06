@@ -82,7 +82,7 @@ tests =
                   ]
                 result = analyzeOwnership input
             case result of
-                Left errors -> L.any (L.isInfixOf "use after move" . unpack) errors @?= True
+                Left errors -> L.any (isInfixOf "use after move" . unpack) errors @?= True
                 Right _ -> @?= False True
 
         , testCase "double move is detected" $ do
@@ -95,7 +95,7 @@ tests =
                   ]
                 result = analyzeOwnership input
             case result of
-                Left errors -> L.any (L.isInfixOf "double move" . unpack) errors @?= True
+                Left errors -> L.any (isInfixOf "double move" . unpack) errors @?= True
                 Right _ -> @?= False True
 
         , testCase "borrowing prevents mutation" $ do
@@ -108,7 +108,7 @@ tests =
                   ]
                 result = analyzeOwnership input
             case result of
-                Left errors -> L.any (L.isInfixOf "borrowed" . unpack) errors @?= True
+                Left errors -> L.any (isInfixOf "borrowed" . unpack) errors @?= True
                 Right _ -> @?= False True
 
         , testCase "scope-based destruction" $ do
@@ -170,7 +170,7 @@ prop_transferPreventsUseAfterMove variableName =
         ]
       result = analyzeOwnership input
   in case result of
-       Left errors -> L.any (L.isInfixOf "use after move" . unpack) errors
+       Left errors -> L.any (isInfixOf "use after move" . unpack) errors
        Right _ -> variableName == "" -- May pass if variable name is empty
 
 -- | 所有权转移跟踪已移动的值
@@ -200,7 +200,7 @@ prop_transferAllowsValidMoves variableName =
         ]
       result = analyzeOwnership input
   in case result of
-       Left errors -> not (L.any (L.isInfixOf "use after move" . unpack) errors)
+       Left errors -> not (L.any (isInfixOf "use after move" . unpack) errors)
        Right _ -> True
 
 -- | 所有权转移处理复杂场景
@@ -230,7 +230,7 @@ prop_noDoubleFree variableName =
         ]
       result = analyzeOwnership input
   in case result of
-       Left errors -> not (L.any (L.isInfixOf "double free" . unpack) errors)
+       Left errors -> not (L.any (isInfixOf "double free" . unpack) errors)
        Right _ -> True
 
 -- | 没有悬空指针
@@ -244,7 +244,7 @@ prop_noDanglingPointers input =
         ]
       result = analyzeOwnership testInput
   in case result of
-       Left errors -> not (L.any (L.isInfixOf "dangling" . unpack) errors)
+       Left errors -> not (L.any (isInfixOf "dangling" . unpack) errors)
        Right _ -> True
 
 -- | 没有内存泄漏
@@ -258,7 +258,7 @@ prop_noMemoryLeaks input =
         ]
       result = analyzeOwnership testInput
   in case result of
-       Left errors -> not (L.any (L.isInfixOf "leak" . unpack) errors)
+       Left errors -> not (L.any (isInfixOf "leak" . unpack) errors)
        Right _ -> True
 
 -- | 正确的生命周期管理
@@ -287,7 +287,7 @@ prop_borrowingPreventsMutation variableName =
         ]
       result = analyzeOwnership input
   in case result of
-       Left errors -> L.any (L.isInfixOf "borrowed" . unpack) errors || variableName == ""
+       Left errors -> L.any (isInfixOf "borrowed" . unpack) errors || variableName == ""
        Right _ -> variableName == ""
 
 -- | 允许多个不可变借用
@@ -304,7 +304,7 @@ prop_multipleImmutableBorrows variableName =
         ]
       result = analyzeOwnership input
   in case result of
-       Left errors -> not (L.any (L.isInfixOf "borrow" . unpack) errors) || variableName == ""
+       Left errors -> not (L.any (isInfixOf "borrow" . unpack) errors) || variableName == ""
        Right _ -> True
 
 -- | 强制执行单个可变借用
@@ -319,7 +319,7 @@ prop_singleMutableBorrow variableName =
         ]
       result = analyzeOwnership input
   in case result of
-       Left errors -> L.any (L.isInfixOf "borrow" . unpack) errors || variableName == ""
+       Left errors -> L.any (isInfixOf "borrow" . unpack) errors || variableName == ""
        Right _ -> variableName == ""
 
 -- | 借用生命周期被跟踪
@@ -389,7 +389,7 @@ prop_referencesOutliveValues input =
         ]
       result = analyzeOwnership testInput
   in case result of
-       Left errors -> not (L.any (L.isInfixOf "outlive" . unpack) errors)
+       Left errors -> not (L.any (isInfixOf "outlive" . unpack) errors)
        Right _ -> True
 
 -- | 临时值有正确的生命周期

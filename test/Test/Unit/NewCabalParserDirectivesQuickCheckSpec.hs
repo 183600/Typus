@@ -3,7 +3,7 @@
 module Test.Unit.NewCabalParserDirectivesQuickCheckSpec where
 
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Parser
 import SourceLocation (SourceSpan(..), SourcePos(..))
 import qualified Data.List as L

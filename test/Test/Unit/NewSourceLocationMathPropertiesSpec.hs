@@ -5,7 +5,7 @@ module Test.Unit.NewSourceLocationMathPropertiesSpec where
 import Test.Tasty
 import qualified Data.List as L
 import Test.Tasty.HUnit
-import Test.Tasty.QuickCheck as QC
+import Test.Tasty.QuickCheck (property) as QC
 import SourceLocation
   ( SourcePos(..)
   , SourceSpan(..)

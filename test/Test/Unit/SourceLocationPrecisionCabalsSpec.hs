@@ -147,7 +147,7 @@ test_source_location_unicode =
         -- Should parse Unicode correctly
         let codeBlocks = tfCodeBlocks typusFile
         assertBool "Should parse Unicode content" $
-          L.any (L.isInfixOf "测试函数" . unlines . cbLines) codeBlocks
+          L.any (isInfixOf "测试函数" . unlines . cbLines) codeBlocks
 
 -- Test 6: Source location precision in error messages
 test_source_location_error_precision :: TestTree
@@ -218,7 +218,7 @@ test_source_location_nested_structures =
         -- Should parse nested structures correctly
         let codeBlocks = tfCodeBlocks typusFile
         assertBool "Should parse nested structures" $
-          L.any (L.isInfixOf "Outer" . unlines . cbLines) codeBlocks
+          L.any (isInfixOf "Outer" . unlines . cbLines) codeBlocks
 
 tests :: TestTree
 tests =

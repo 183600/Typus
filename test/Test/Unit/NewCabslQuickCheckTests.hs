@@ -5,7 +5,7 @@ module Test.Unit.NewCabslQuickCheckTests (tests) where
 import Test.Tasty (TestTree, testGroup)
 import qualified Data.List as L
 import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck (Arbitrary(..), Gen, choose, Property, property)
+import Test.QuickCheck (Arbitrary(..), Gen, choose, Property)
 import qualified Data.Map as Map
 import Data.List (sort, nub, intersperse)
 import Data.Char (isSpace, toLower, toUpper)

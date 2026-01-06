@@ -3,7 +3,7 @@ module Test.Unit.DependencyCycleDetectionQuickCheckSpec (tests) where
 
 import Test.Tasty
 import qualified Data.List as L
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Test.Tasty.HUnit
 
 import Dependencies (DependencyGraph(..), DependencyNode(..), DependencyEdge(..))

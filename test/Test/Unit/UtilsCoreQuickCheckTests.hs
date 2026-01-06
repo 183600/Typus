@@ -4,7 +4,7 @@
 module Test.Unit.UtilsCoreQuickCheckTests (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperties, (===), Property, forAll, Gen, Arbitrary(..), oneof, elements, listOf, listOf1, resize, suchThat)
+import Test.Tasty.QuickCheck (testProperty, Property, (===), (==>), testProperties, Property, (===), forAll, Gen, Arbitrary(..), oneof, elements, listOf, listOf1, resize, suchThat, property)
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
 
 import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed, removeLineComments, removeComments, normalizeIndentation, breakOn)
@@ -71,7 +71,7 @@ prop_breakOn_correctness needle haystack =
        then needle `L.isInfixOf` after && not (needle `L.isInfixOf` before)
        else before == haystack && null after
   where
-    L.isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
+    isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
 
 -- | splitBy: empty string should return list with one empty string
 prop_splitBy_empty :: Char -> Bool

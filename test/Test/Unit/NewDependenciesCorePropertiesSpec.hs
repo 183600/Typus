@@ -3,7 +3,7 @@ module Test.Unit.NewDependenciesCorePropertiesSpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
-import Test.Tasty.QuickCheck (testProperty, Property, (===), Arbitrary(..), Gen, choose, listOf, elements, forAll, oneof, suchThat)
+import Test.Tasty.QuickCheck ((===), property, testProperty, Property, Arbitrary(..), Gen, choose, listOf, elements, forAll, oneof, suchThat)
 
 import Dependencies.TypeSystem
   ( TypeVar(..), TypeConstraint(..), DependentTypeError(..), TypeDef(..), TypeEnv(..)

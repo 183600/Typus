@@ -198,7 +198,7 @@ extractSuffix str n = drop (L.length str - n) str
 substituteString :: String -> String -> String -> String
 substituteString original old new = 
   if old `L.isInfixOf` original
-  then takeWhile (not . L.isPrefixOf old) original ++ new ++ substituteString (drop (L.length old + L.length (takeWhile (not . L.isPrefixOf old) original)) original) old new
+  then takeWhile (not . isPrefixOf old) original ++ new ++ substituteString (drop (L.length old + L.length (takeWhile (not . isPrefixOf old) original)) original) old new
   else original
   where
     isPrefixOf prefix str = take (L.length prefix) str == prefix

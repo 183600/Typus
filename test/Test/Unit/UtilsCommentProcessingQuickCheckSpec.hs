@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 module Test.Unit.UtilsCommentProcessingQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
@@ -254,10 +255,10 @@ countOccurrences x = L.length . L.filter (== x)
 
 -- Helper function for infix check
 isInfixOf :: Eq a => [a] -> [a] -> Bool
-L.isInfixOf needle haystack = L.any (L.isPrefixOf needle) (tails haystack)
+isInfixOf needle haystack = L.any (isPrefixOf needle) (tails haystack)
   where
-    L.isPrefixOf [] _ = True
-    L.isPrefixOf _ [] = False
-    L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
+    isPrefixOf [] _ = True
+    isPrefixOf _ [] = False
+    isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
     tails [] = [[]]
     tails xs@(_:ys) = xs : tails ys

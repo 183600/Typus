@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, FlexibleInstances #-}
 
 module Test.Unit.StringUtilsProcessingAdvanced2025Spec (tests) where
 
@@ -120,9 +120,9 @@ testMultiLineStringProcessing = do
 
 -- Helper function
 isPrefixOf :: Eq a => [a] -> [a] -> Bool
-L.isPrefixOf [] _ = True
-L.isPrefixOf _ [] = False
-L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
+isPrefixOf [] _ = True
+isPrefixOf _ [] = False
+isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
 
 -- Arbitrary instances for testing
 instance Arbitrary Char where

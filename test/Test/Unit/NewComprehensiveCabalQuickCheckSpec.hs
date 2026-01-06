@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE CPP, FlexibleInstances #-}
 
 module Test.Unit.NewComprehensiveCabalQuickCheckSpec (tests) where
 

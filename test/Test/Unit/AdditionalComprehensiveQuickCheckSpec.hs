@@ -120,11 +120,11 @@ prop_advancePosBy_consistent s pos =
 -- | Property: removeComments removes L.all // comments
 prop_removeComments_removes_slash_comments :: String -> Property
 prop_removeComments_removes_slash_comments s =
-  let hasComment = L.isInfixOf "//" s
+  let hasComment = isInfixOf "//" s
       processed = removeComments s
-  in not (L.isInfixOf "//" processed) QC.|| QC.label "no original comment" (not hasComment)
+  in not (isInfixOf "//" processed) QC.|| QC.label "no original comment" (not hasComment)
   where
-    L.isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
+    isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
 
 -- | Property: removeComments preserves string literals
 prop_removeComments_preserves_strings :: String -> Property  
@@ -261,7 +261,7 @@ prop_file_directives_consistent directive =
   let isDirective = "//!" `L.isPrefixOf` directive
   in isDirective ==> L.length directive >= 3
   where
-    L.isPrefixOf prefix str = take (L.length prefix) str == prefix
+    isPrefixOf prefix str = take (L.length prefix) str == prefix
 
 -- | Property: Code blocks maintain structure
 prop_code_blocks_structure :: String -> Int -> Property

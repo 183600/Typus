@@ -4,7 +4,7 @@
 module Test.Unit.UtilsBoundaryQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree)
-import Test.Tasty.QuickCheck (testProperty, QuickCheckTests(..), arbitrary)
+import Test.Tasty.QuickCheck (testProperty, arbitrary)
 import Test.Tasty.HUnit (testCase, assert)
 import Utils (trim, splitBy, splitByCollapsed, splitByComma, removeLineComments, normalizeIndentation)
 import Test.QuickCheck.Arbitrary (Arbitrary(..))

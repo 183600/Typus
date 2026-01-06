@@ -3,7 +3,7 @@ module Test.Unit.NewSyntaxValidatorBoundarySpec (tests) where
 import Test.Tasty (TestTree, testGroup)
 import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
-import Test.Tasty.QuickCheck (testProperty, Property, (===), Arbitrary(..), Gen, choose, listOf, elements, forAll, oneof, suchThat)
+import Test.Tasty.QuickCheck ((===), property, testProperty, Property, Arbitrary(..), Gen, choose, listOf, elements, forAll, oneof, suchThat)
 
 import SyntaxValidator
   ( SyntaxValidator(..), SyntaxError(..), ErrorType(..), Token(..), Scope(..), Language(..)

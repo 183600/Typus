@@ -18,13 +18,13 @@ tests = testGroup "Efficient Cabal QuickCheck Tests"
 stringSearchProperties :: TestTree
 stringSearchProperties = testGroup "String Search Properties"
   [ fastProperty "prefix of itself" $ \(s :: String) ->
-      L.isPrefixOf s s === True
+      isPrefixOf s s === True
   
   , fastProperty "suffix of itself" $ \(s :: String) ->
       L.isSuffixOf s s === True
   
   , fastProperty "infix of itself" $ \(s :: String) ->
-      L.isInfixOf s s === True
+      isInfixOf s s === True
   ]
 
 listCombinationProperties :: TestTree

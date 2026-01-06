@@ -212,8 +212,8 @@ tests =
             forAll genIndentedString $ \input ->
               let result = normalizeIndentation input
                   resultLines = lines result
-              in L.all (not . L.isPrefixOf "  ") resultLines || 
-                 L.all (not . L.isPrefixOf "\t") resultLines
+              in L.all (not . isPrefixOf "  ") resultLines || 
+                 L.all (not . isPrefixOf "\t") resultLines
 
         , fastProperty "forceSingleTabIndentation adds tab to non-empty lines" $
             forAll genString $ \input ->

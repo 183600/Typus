@@ -64,7 +64,7 @@ prop_parser_handles_nested_blocks outer inner =
 
 -- Helper functions
 isInfixOf :: String -> String -> Bool
-L.isInfixOf = undefined  -- Simplified for test
+isInfixOf = undefined  -- Simplified for test
 
 getFileBlocks :: TypusFile -> [CodeBlock]
 getFileBlocks (TypusFile _ _ _ blocks) = blocks

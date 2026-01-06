@@ -3,7 +3,7 @@
 module Test.Unit.NewCorePerformanceQuickCheckSpec where
 
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Test.Tasty.HUnit
 import Utils (trim, splitBy, splitByCollapsed, removeComments, normalizeIndentation)
 import SourceLocation (SourcePos(..), startPos, posAt, advancePosBy, mergeSpans, spanFrom)

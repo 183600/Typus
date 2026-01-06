@@ -18,28 +18,28 @@ tests =
     [ testGroup "Basic Unicode Support"
         [ testCase "Chinese characters in identifiers" $ do
             let chineseCode = "func 测试函数() { return 结果; }"
-                result = Parser.parseTypus "chinese" chineseCode
+                result = Parser.parseTypus chineseCode
             case result of
               Left err -> @?= "Should handle Chinese" (show err)
               Right _ -> @?= "Success" "Chinese success"
 
         , testCase "Emoji in comments" $ do
             let emojiComment = "// This is a test 🚀\nfunc test() { return 1; } // Done! ✅"
-                result = Parser.parseTypus "emoji" emojiComment
+                result = Parser.parseTypus emojiComment
             case result of
               Left err -> @?= "Should handle emoji" (show err)
               Right _ -> @?= "Success" "Emoji success"
 
         , testCase "Unicode in string literals" $ do
             let unicodeString = "func test() { s := \"Hello 世界 🌍\"; return s; }"
-                result = Parser.parseTypus "unicode" unicodeString
+                result = Parser.parseTypus unicodeString
             case result of
               Left err -> @?= "Should handle unicode strings" (show err)
               Right _ -> @?= "Success" "Unicode string success"
 
         , testCase "Mixed language identifiers" $ do
             let mixedCode = "func 测试_test() { let 变量 = hello; return 变量; }"
-                result = Parser.parseTypus "mixed" mixedCode
+                result = Parser.parseTypus mixedCode
             case result of
               Left err -> @?= "Should handle mixed languages" (show err)
               Right _ -> @?= "Success" "Mixed language success"
@@ -83,7 +83,7 @@ tests =
 
         , testCase "Unicode in error messages" $ do
             let unicodeError = "func 测试() { return }"
-                result = Parser.parseTypus "unicode-error" unicodeError
+                result = Parser.parseTypus unicodeError
             case result of
               Left err -> do
                 let errStr = show err
@@ -94,28 +94,28 @@ tests =
     , testGroup "Parser Unicode Edge Cases"
         [ testCase "Right-to-left scripts" $ do
             let rtlCode = "func دالة() { return نتيجة; }"  -- Arabic
-                result = Parser.parseTypus "rtl" rtlCode
+                result = Parser.parseTypus rtlCode
             case result of
               Left err -> @?= "Should handle RTL" (show err)
               Right _ -> @?= "Success" "RTL success"
 
         , testCase "Combining characters" $ do
             let combining = "func tést() { return résultat; }"  -- With combining accents
-                result = Parser.parseTypus "combining" combining
+                result = Parser.parseTypus combining
             case result of
               Left err -> @?= "Should handle combining" (show err)
               Right _ -> @?= "Success" "Combining success"
 
         , testCase "Zero-width characters" $ do
             let zeroWidth = "func\u200Btest() { return\u200C1; }"  -- Zero-width space L.and non-joiner
-                result = Parser.parseTypus "zerowidth" zeroWidth
+                result = Parser.parseTypus zeroWidth
             case result of
               Left err -> @?= "Should handle zero-width" (show err)
               Right _ -> @?= "Success" "Zero-width success"
 
         , testCase "Mixed unicode L.and ASCII" $ do
             let mixed = "func test函数() { let 变量 = 42; return 变量; }"
-                result = Parser.parseTypus "mixedunicode" mixed
+                result = Parser.parseTypus mixed
             case result of
               Left err -> @?= "Should handle mixed unicode" (show err)
               Right _ -> @?= "Success" "Mixed unicode success"
@@ -124,14 +124,14 @@ tests =
     , testGroup "Internationalization Features"
         [ testCase "Unicode in directives" $ do
             let unicodeDirectives = "// @所有权: true\n// @依赖类型: false\nfunc 测试() {}"
-                result = Parser.parseTypus "unicode-directives" unicodeDirectives
+                result = Parser.parseTypus unicodeDirectives
             case result of
               Left err -> @?= "Should handle unicode directives" (show err)
               Right _ -> @?= "Success" "Unicode directives success"
 
         , testCase "Unicode identifiers with numbers" $ do
             let unicodeWithNumbers = "func 变量1() { let 测试2 = 42; return 测试2; }"
-                result = Parser.parseTypus "unicode-numbers" unicodeWithNumbers
+                result = Parser.parseTypus unicodeWithNumbers
             case result of
               Left err -> @?= "Should handle unicode with numbers" (show err)
               Right _ -> @?= "Success" "Unicode numbers success"
@@ -143,7 +143,7 @@ tests =
 
         , testCase "Unicode string escaping" $ do
             let unicodeEscape = "func test() { s := \"Hello \\u4e16\\u754c\"; return s; }"
-                result = Parser.parseTypus "unicode-escape" unicodeEscape
+                result = Parser.parseTypus unicodeEscape
             case result of
               Left err -> @?= "Should handle unicode escapes" (show err)
               Right _ -> @?= "Success" "Unicode escape success"
@@ -176,7 +176,7 @@ tests =
     , testGroup "Unicode Performance"
         [ testCase "Large unicode text processing" $ do
             let largeUnicode = unlines $ replicate 100 "测试函数" ++ show [1..100] ++ "{ 返回 " ++ show [1..100] ++ "; }"
-                result = Parser.parseTypus "large-unicode" largeUnicode
+                result = Parser.parseTypus largeUnicode
             case result of
               Left _ -> @?= "Handle large unicode" "Large unicode handling"
               Right _ -> @?= "Success" "Large unicode success"
@@ -190,14 +190,14 @@ tests =
                   , "  return 变量1 + 变量2;"
                   , "}"
                   ]
-                result = Parser.parseTypus "complex-unicode" complexUnicode
+                result = Parser.parseTypus complexUnicode
             case result of
               Left err -> @?= "Should handle complex unicode" (show err)
               Right _ -> @?= "Success" "Complex unicode success"
         ]
     ]
   where
-    L.isInfixOf needle haystack = needle `elem` (substrings haystack)
+    isInfixOf needle haystack = needle `elem` (substrings haystack)
     substrings [] = []
     substrings s@(x:xs) = takeWhile (const True) s : substrings xs
     intersperse _ [] = []

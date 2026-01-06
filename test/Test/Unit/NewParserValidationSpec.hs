@@ -4,7 +4,7 @@ module Test.Unit.NewParserValidationSpec (newParserValidationSpec, parserQuickCh
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=), assertBool, assertFailure)
-import Test.Tasty.QuickCheck (testProperty, Property(..), (==>), Positive(..))
+import Test.Tasty.QuickCheck (testProperty, Property, (==>), Positive(..))
 import Parser
 import SourceLocation
 import Data.Maybe (isJust, isNothing)

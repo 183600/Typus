@@ -47,8 +47,8 @@ test_error_recovery_mechanism =
     case parseTypus source of
       Left err -> do
         -- 确保错误信息包含有用的位置信息
-        assertBool "Error should contain line information" (L.isInfixOf "line" err)
-        assertBool "Error should contain column information" (L.isInfixOf "column" err)
+        assertBool "Error should contain line information" (isInfixOf "line" err)
+        assertBool "Error should contain column information" (isInfixOf "column" err)
       Right _ -> assertFailure "Expected parsing to fail with syntax errors"
 
 -- ============================================================================
@@ -241,7 +241,7 @@ test_parser_error_recovery =
       Left err -> do
         -- 确保错误信息包含有用的上下文
         assertBool "Error should provide context" (L.length err > 10)
-        assertBool "Error should mention syntax" (L.isInfixOf "syntax" err || L.isInfixOf "parse" err)
+        assertBool "Error should mention syntax" (isInfixOf "syntax" err || isInfixOf "parse" err)
       Right _ -> assertFailure "Expected parsing to fail with syntax error"
 
 -- ============================================================================

@@ -211,7 +211,7 @@ prop_normalizeindentation_mixed_whitespace :: String -> Property
 prop_normalizeindentation_mixed_whitespace s =
   let mixed = "  \t   \t  " ++ s ++ "\t\t  "
       normalized = normalizeIndentation mixed
-  in property $ not (L.any (L.isPrefixOf "  \t") (lines normalized))
+  in property $ not (L.any (isPrefixOf "  \t") (lines normalized))
 
 -- Search properties
 prop_breakon_finds_pattern :: String -> String -> Property

@@ -3,7 +3,7 @@
 module Test.Unit.UtilsEnhancedQuickCheckSpec where
 
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Test.Tasty.HUnit
 import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed,
              removeLineComments, removeComments, normalizeIndentation, breakOn)

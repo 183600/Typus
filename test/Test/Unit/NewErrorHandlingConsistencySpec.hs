@@ -155,7 +155,7 @@ tests =
 
 -- Helper function to check if substring is in string
 isInfixOf :: String -> String -> Bool
-L.isInfixOf sub str = sub `elem` (words str)
+isInfixOf sub str = sub `elem` (words str)
 
 -- Property: Error messages should never be empty
 prop_errorMessagesNotEmpty :: String -> Bool

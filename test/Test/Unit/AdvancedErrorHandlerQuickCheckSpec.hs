@@ -18,9 +18,14 @@ import TestSupport.Arbitrary
 import Compiler.Errors.Core
   ( TypeError(..)
   , CombinedError(..)
-  , ErrorSeverity(..)
+  , errorAt
+  , warningAt
+  , infoAt
+  , ErrorLocation(..) )
+import SourceLocation (SourcePos(..), startPos)
+import Compiler.Errors.Core
+  ( ErrorSeverity(..)
   , ErrorCategory(..)
-  , ErrorLocation(..)
   , ErrorContext(..)
   , emptyContext
   , ErrorRecovery(..)
@@ -67,8 +72,7 @@ import Compiler.Errors.Core
   , errorWithSuggestions
   , fatalError
   , severityPriority
-  , compareSeverity
-  )
+  , compareSeverity )
 
 import Data.Text (Text)
 import qualified Data.Text as T

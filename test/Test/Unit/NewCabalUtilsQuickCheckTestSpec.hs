@@ -137,7 +137,7 @@ prop_normalizeIndentation_removes_common_prefix :: String -> Property
 prop_normalizeIndentation_removes_common_prefix s =
   let normalized = normalizeIndentation s
       normalizedLines = lines normalized
-  in L.all (not . L.isPrefixOf "    ") normalizedLines
+  in L.all (not . isPrefixOf "    ") normalizedLines
 
 -- Test forceSingleTabIndentation function properties
 prop_forceSingleTabIndentation_adds_tab_to_nonempty :: String -> Property

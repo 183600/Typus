@@ -204,7 +204,7 @@ prop_error_formatting =
   forAll errorMessage $ \msg ->
   forAll arbitrary $ \severity ->
     let error = TypeError errorId severity Parsing (T.pack msg) 
-                    (ErrorLocation Nothing 1 1 Nothing Nothing) 
+                    (ErrorLocation (startPos) Nothing) 
                     emptyContext errorRecovery [] [] [] Nothing
         formatted = formatError error
         severityStr = case severity of
@@ -284,7 +284,7 @@ prop_timestamp_formatting :: Property
 prop_timestamp_formatting =
   forAll errorMessage $ \timestamp ->
     let error = TypeError "TEST001" Error Parsing (T.pack "test") 
-                    (ErrorLocation Nothing 1 1 Nothing Nothing) 
+                    (ErrorLocation (startPos) Nothing) 
                     emptyContext errorRecovery [] [] [] (Just timestamp)
         withTimestamp = error `withTimestamp` timestamp
     in property $ timestamp === timestamp withTimestamp
@@ -308,7 +308,7 @@ test_error_creation :: TestTree
 test_error_creation =
   testCase "Basic error creation" $ do
     let error = TypeError "TYPE001" Error TypeChecking (T.pack "Type mismatch")
-                         (ErrorLocation Nothing 1 1 Nothing Nothing) 
+                         (ErrorLocation (startPos) Nothing) 
                          emptyContext errorRecovery [] [] [] Nothing
     errorId error @?= "TYPE001"
     severity error @?= Error
@@ -321,7 +321,7 @@ test_error_collector =
   testCase "Error collector functionality" $ do
     let errors = 
           [ TypeError "ERR001" Error Parsing (T.pack "Parse error") 
-              (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext errorRecovery [] [] [] Nothing
+              (ErrorLocation (startPos) Nothing) emptyContext errorRecovery [] [] [] Nothing
           , TypeError "WARN001" Warning Parsing (T.pack "Warning") 
               (ErrorLocation Nothing 2 1 Nothing Nothing) emptyContext warningRecovery [] [] [] Nothing
           , TypeError "INFO001" Info Parsing (T.pack "Info") 
@@ -339,7 +339,7 @@ test_error_filtering =
   testCase "Error filtering" $ do
     let errors = 
           [ TypeError "ERR001" Error TypeChecking (T.pack "Type error") 
-              (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext errorRecovery [] [] [] Nothing
+              (ErrorLocation (startPos) Nothing) emptyContext errorRecovery [] [] [] Nothing
           , TypeError "ERR002" Error Ownership (T.pack "Ownership error") 
               (ErrorLocation Nothing 2 1 Nothing Nothing) emptyContext errorRecovery [] [] [] Nothing
           , TypeError "WARN001" Warning TypeChecking (T.pack "Type warning") 

@@ -83,7 +83,7 @@ validateSyntax input =
   else Warning
 
 isInfixOf :: String -> String -> Bool
-L.isInfixOf = undefined  -- Simplified for test
+isInfixOf = undefined  -- Simplified for test
 
 tests :: TestTree
 tests = testGroup "New Typus Syntax Validator QuickCheck Tests"

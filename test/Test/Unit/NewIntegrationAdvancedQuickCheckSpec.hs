@@ -4,7 +4,7 @@ module Test.Unit.NewIntegrationAdvancedQuickCheckSpec where
 
 import Test.Tasty
 import qualified Data.List as L
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (testProperty, Property, (===), (==>), property)
 import Test.Tasty.TH
 import IntegratedCompiler
 import Parser (parseTypus, TypusFile(..))
@@ -211,9 +211,7 @@ formatTypusFile :: TypusFile -> String
 formatTypusFile _ = ""  -- Simplified for testing
 
 contains :: String -> String -> Bool
-contains = L.isInfixOf
-
-hasErrors :: Either a b -> Bool
+contains = isInfixOf hasErrors :: Either a b -> Bool
 hasErrors (Left _) = True
 hasErrors (Right _) = False
 

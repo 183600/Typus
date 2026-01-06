@@ -3,7 +3,7 @@
 module Test.Unit.NewCoreSourceLocationQuickCheckSpec where
 
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Test.Tasty.HUnit
 import SourceLocation
   ( SourcePos(..)

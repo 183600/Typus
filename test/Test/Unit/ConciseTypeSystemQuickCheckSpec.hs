@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 module Test.Unit.ConciseTypeSystemQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
@@ -7,7 +8,8 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Compiler.TypeChecker (Type(..), TypeEnv(..), TypeConstraint(..))
+import qualified Compiler.TypeChecker as CT
+
 
 -- | 简洁的QuickCheck测试，针对TypeSystem模块的边界条件
 tests :: TestTree
@@ -34,7 +36,7 @@ tests =
         
     , testGroup "Type environment properties"
         [ testProperty "Empty environment has no types" $
-            \name -> Map.L.null (unTypeEnv emptyTypeEnv) && 
+            \name -> Map.null (unTypeEnv emptyTypeEnv) && 
                      lookupTypeInEnv name emptyTypeEnv === Nothing
             
         , testProperty "Type insertion is retrievable" $
@@ -108,12 +110,12 @@ tests =
     ]
 
 -- Helper types L.and functions for testing
-newtype TypeEnv = TypeEnv { unTypeEnv :: Map String Type }
+newtype TypeEnv = TypeEnv { unTypeEnv :: Map String CT.Type }
 
 emptyTypeEnv :: TypeEnv
 emptyTypeEnv = TypeEnv Map.empty
 
-addTypeToEnv :: String -> Type -> TypeEnv -> TypeEnv
+addTypeToEnv :: String -> CT.Type -> TypeEnv -> TypeEnv
 addTypeToEnv name typ (TypeEnv env) = TypeEnv (Map.insert name typ env)
 
 lookupTypeInEnv :: String -> TypeEnv -> Maybe Type

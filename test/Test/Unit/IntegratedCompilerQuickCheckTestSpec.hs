@@ -119,7 +119,7 @@ irToGoTests = testGroup "IR to Go Tests"
                         _ -> False
   ]
   where
-    L.isInfixOf needle haystack = needle `elem` (words haystack)
+    isInfixOf needle haystack = needle `elem` (words haystack)
 
 -- | 4. 错误处理测试
 errorHandlingTests :: TestTree

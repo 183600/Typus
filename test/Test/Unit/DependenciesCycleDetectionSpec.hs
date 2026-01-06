@@ -259,7 +259,7 @@ isCycleError err = case err of
     ParseError _ -> False
 
 isInfixOf :: String -> String -> Bool
-L.isInfixOf needle haystack = needle `elem` [take (L.length needle) $ drop i haystack | i <- [0..L.length haystack - L.length needle]]
+isInfixOf needle haystack = needle `elem` [take (L.length needle) $ drop i haystack | i <- [0..L.length haystack - L.length needle]]
 
 -- | Property: cycle detection is sound (if it reports a cycle, there really is one)
 prop_cycleDetectionSound :: [String] -> Bool

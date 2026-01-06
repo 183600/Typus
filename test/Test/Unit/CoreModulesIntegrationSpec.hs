@@ -214,4 +214,4 @@ isMeaningfulCompilationError err =
     L.length err > 15 && L.any (`L.isInfixOf` err) ["type", "function", "variable", "syntax"]
 
 isInfixOf :: String -> String -> Bool
-L.isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
+isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack

@@ -342,7 +342,7 @@ tests =
 
 -- Helper functions for testing
 isInfixOf :: String -> String -> Bool
-L.isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
+isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
 
 -- QuickCheck arbitraries for source location types
 instance Arbitrary SourcePos where

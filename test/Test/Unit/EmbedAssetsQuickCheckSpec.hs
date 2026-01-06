@@ -138,13 +138,13 @@ prop_missingEmbedOrdering embed1 embed2 =
 
 -- Helper function to check if string is prefix of another
 isPrefixOf :: String -> String -> Bool
-L.isPrefixOf [] _ = True
-L.isPrefixOf _ [] = False
-L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
+isPrefixOf [] _ = True
+isPrefixOf _ [] = False
+isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
 
 -- Helper function to check if string is infix of another
 isInfixOf :: String -> String -> Bool
-L.isInfixOf needle haystack = L.any (L.isPrefixOf needle) (tails haystack)
+isInfixOf needle haystack = L.any (isPrefixOf needle) (tails haystack)
   where
     tails [] = [[]]
     tails xs@(x:xs') = xs : tails xs'

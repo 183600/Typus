@@ -573,7 +573,7 @@ generateNestedTypes n =
   in (parent, child) : generateNestedTypes (n - 1)
 
 isInfixOf :: String -> String -> Bool
-L.isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
+isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
 
 -- Additional comprehensive property tests for compiler optimization L.and error handling
 

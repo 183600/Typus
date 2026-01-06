@@ -273,7 +273,7 @@ prop_moveSemanticsCorrectness originalVar newVar =
 
 -- Check if a substring is in a string
 isInfixOf :: Eq a => [a] -> [a] -> Bool
-L.isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
+isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
 
 -- Check if ownership type is a borrow
 isBorrow :: OwnershipType -> Bool

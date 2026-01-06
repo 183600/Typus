@@ -2,7 +2,7 @@
 module Test.Unit.ParserErrorRecoveryAdvancedQuickCheckSpec (tests) where
 
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Test.Tasty.HUnit
 
 import Parser
@@ -26,7 +26,7 @@ prop_parserRecoversFromMalformedDirectives :: String -> String -> Property
 prop_parserRecoversFromMalformedDirectives badDirective goodDirective =
   let input = "//!" ++ badDirective ++ "\n//!" ++ goodDirective ++ "\n```go\ncode\n```"
       result = parseTypus input
-      hasGoodDirective = L.any (L.isInfixOf goodDirective . show) (tfSyntaxErrors result)
+      hasGoodDirective = L.any (isInfixOf goodDirective . show) (tfSyntaxErrors result)
   in counterexample ("Parser should recover from malformed directives. " ++
                      "Input: " ++ show input ++
                      " Errors: " ++ show (tfSyntaxErrors result))

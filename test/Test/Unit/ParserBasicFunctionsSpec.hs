@@ -174,7 +174,7 @@ testOwnershipDirective = do
       ownership = Located True (SourcePos 1 1 0) (SourceSpan (SourcePos 1 1 0) (SourcePos 1 17 17))
       directives = FileDirectives (Just ownership) Nothing Nothing
   
-  assertBool "directive should be recognized" $ L.isPrefixOf "ownership:" directive
+  assertBool "directive should be recognized" $ isPrefixOf "ownership:" directive
   assertEqual "ownership should be enabled" (Just ownership) (fileOwnership directives)
 
 testDependentTypesDirective :: IO ()
@@ -183,7 +183,7 @@ testDependentTypesDirective = do
       dependent = Located False (SourcePos 1 1 0) (SourceSpan (SourcePos 1 1 0) (SourcePos 1 24 24))
       directives = FileDirectives Nothing (Just dependent) Nothing
   
-  assertBool "directive should be recognized" $ L.isPrefixOf "dependent_types:" directive
+  assertBool "directive should be recognized" $ isPrefixOf "dependent_types:" directive
   assertEqual "dependent types should be disabled" (Just dependent) (fileDependentTypes directives)
 
 testCombinedDirectives :: IO ()

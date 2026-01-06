@@ -253,4 +253,4 @@ intercalate _ [x] = x
 intercalate sep (x:xs) = x ++ sep ++ intercalate sep xs
 
 isInfixOf :: String -> String -> Bool
-L.isInfixOf pat s = pat `elem` [take (L.length pat) (drop i s) | i <- [0..L.length s - L.length pat]]
+isInfixOf pat s = pat `elem` [take (L.length pat) (drop i s) | i <- [0..L.length s - L.length pat]]

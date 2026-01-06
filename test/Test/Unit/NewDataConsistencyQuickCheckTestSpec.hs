@@ -4,7 +4,7 @@ module Test.Unit.NewDataConsistencyQuickCheckTestSpec where
 
 import Test.Tasty
 import qualified Data.List as L
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Utils (trim, splitBy, splitByCollapsed, removeLineComments)
 import SourceLocation (SourcePos(..), startPos, posAfter, SourceSpan(..), spanFrom, mergeSpans, isValidSpan)
 import Parser (FileDirectives(..), BlockDirectives(..))

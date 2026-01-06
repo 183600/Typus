@@ -4,7 +4,7 @@ module Test.Unit.NewCabalErrorHandlerConsistencyQuickCheckSpec where
 
 import Test.Tasty
 import qualified Data.List as L
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Compiler.Errors.Core
 import SourceLocation (SourcePos(..), SourceSpan(..), posAt, spanBetween)
 import Data.Time (UTCTime)
@@ -66,14 +66,14 @@ propSeverityOrderingConsistent :: ErrorSeverity -> ErrorSeverity -> Bool
 propSeverityOrderingConsistent sev1 sev2 =
   let combined1 = combineErrors 
         (TypeError "Error1" sev1 ErrorCategorySyntax 
-                   (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext)
+                   (ErrorLocation (startPos) Nothing) emptyContext)
         (TypeError "Error2" sev2 ErrorCategorySyntax 
                    (ErrorLocation Nothing 2 2 Nothing Nothing) emptyContext)
       combined2 = combineErrors 
         (TypeError "Error2" sev2 ErrorCategorySyntax 
                    (ErrorLocation Nothing 2 2 Nothing Nothing) emptyContext)
         (TypeError "Error1" sev1 ErrorCategorySyntax 
-                   (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext)
+                   (ErrorLocation (startPos) Nothing) emptyContext)
   in combinedErrorSeverity combined1 == combinedErrorSeverity combined2
 
 -- | Error combination should preserve L.all information from both errors
@@ -81,7 +81,7 @@ propErrorCombinationPreservesInfo :: String -> String -> ErrorSeverity -> ErrorS
 propErrorCombinationPreservesInfo msg1 msg2 sev1 sev2 =
   not (null msg1) && not (null msg2) ==> 
   let error1 = TypeError (T.pack msg1) sev1 ErrorCategorySyntax 
-                         (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext
+                         (ErrorLocation (startPos) Nothing) emptyContext
       error2 = TypeError (T.pack msg2) sev2 ErrorCategoryType 
                          (ErrorLocation Nothing 2 2 Nothing Nothing) emptyContext
       combined = combineErrors error1 error2
@@ -140,7 +140,7 @@ testErrorHandlingEdgeCases = testGroup "Error Handling Edge Cases"
       
   , testCase "combine errors with different severities" $
       let error1 = TypeError "Error1" ErrorSeverityError ErrorCategorySyntax 
-                             (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext
+                             (ErrorLocation (startPos) Nothing) emptyContext
           error2 = TypeError "Error2" ErrorSeverityWarning ErrorCategoryType 
                              (ErrorLocation Nothing 2 2 Nothing Nothing) emptyContext
           combined = combineErrors error1 error2
@@ -150,7 +150,7 @@ testErrorHandlingEdgeCases = testGroup "Error Handling Edge Cases"
   , testCase "filter errors by category" $
       let errors = 
             [ TypeError "Syntax error" ErrorSeverityError ErrorCategorySyntax 
-                        (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext
+                        (ErrorLocation (startPos) Nothing) emptyContext
             , TypeError "Type error" ErrorSeverityError ErrorCategoryType 
                         (ErrorLocation Nothing 2 2 Nothing Nothing) emptyContext
             , TypeError "Another syntax error" ErrorSeverityWarning ErrorCategorySyntax 
@@ -183,7 +183,7 @@ testErrorFormatting = testGroup "Error Formatting"
   , testCase "format multiple errors" $
       let errors = 
             [ TypeError "First error" ErrorSeverityError ErrorCategorySyntax 
-                        (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext
+                        (ErrorLocation (startPos) Nothing) emptyContext
             , TypeError "Second error" ErrorSeverityWarning ErrorCategoryType 
                         (ErrorLocation Nothing 2 2 Nothing Nothing) emptyContext
             ]
@@ -197,22 +197,22 @@ testErrorRecovery :: TestTree
 testErrorRecovery = testGroup "Error Recovery"
   [ testCase "can recover from warning" $
       let error = TypeError "Warning" ErrorSeverityWarning ErrorCategorySyntax 
-                           (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext
+                           (ErrorLocation (startPos) Nothing) emptyContext
       in canRecoverFrom error
       
   , testCase "cannot recover from error" $
       let error = TypeError "Error" ErrorSeverityError ErrorCategorySyntax 
-                           (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext
+                           (ErrorLocation (startPos) Nothing) emptyContext
       in not (canRecoverFrom error)
       
   , testCase "should continue after warning" $
       let error = TypeError "Warning" ErrorSeverityWarning ErrorCategorySyntax 
-                           (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext
+                           (ErrorLocation (startPos) Nothing) emptyContext
       in shouldContinueAfter error
       
   , testCase "should not continue after error" $
       let error = TypeError "Error" ErrorSeverityError ErrorCategorySyntax 
-                           (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext
+                           (ErrorLocation (startPos) Nothing) emptyContext
       in not (shouldContinueAfter error)
   ]
 

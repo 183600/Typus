@@ -94,8 +94,7 @@ prop_normalize_no_trailing_spaces s =
       hasTrailingSpaces = L.any (`L.isSuffixOf`) (L.map (:[]) " \t") (lines normalized)
   in property $ not hasTrailingSpaces
 
--- Property: breakOn consistency with L.isInfixOf
-prop_breakOn_consistency :: String -> String -> Property
+-- Property: breakOn consistency with isInfixOf prop_breakOn_consistency :: String -> String -> Property
 prop_breakOn_consistency needle haystack =
   let (before, after) = breakOn needle haystack
       found = needle `L.isInfixOf` haystack

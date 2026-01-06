@@ -4,7 +4,7 @@ module Test.Unit.NewStringProcessingBoundarySpec where
 
 import Test.Tasty
 import Test.Tasty.HUnit
-import Test.Tasty.QuickCheck as QC
+import Test.Tasty.QuickCheck (property) as QC
 import Utils (trim, splitBy, splitByCollapsed, removeLineComments, removeComments)
 import Data.Char (isSpace, isAlphaNum)
 import qualified Data.List as L

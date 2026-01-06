@@ -202,6 +202,6 @@ areResultsEquivalent (CompilerSuccessWithWarnings code1 warnings1) (CompilerSucc
 areResultsEquivalent _ _ = False
 
 isInfixOf :: String -> String -> Bool
-L.isInfixOf needle haystack = needle `elem` substrings haystack
+isInfixOf needle haystack = needle `elem` substrings haystack
   where
     substrings s = [take i s | i <- [1..L.length s]]

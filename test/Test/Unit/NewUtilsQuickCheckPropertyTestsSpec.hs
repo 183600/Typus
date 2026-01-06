@@ -4,7 +4,7 @@ module Test.Unit.NewUtilsQuickCheckPropertyTestsSpec where
 
 import Test.Tasty
 import Test.Tasty.HUnit
-import Test.Tasty.QuickCheck as QC
+import Test.Tasty.QuickCheck (property) as QC
 import Utils (trim, splitBy, splitByCollapsed, splitByComma, removeLineComments)
 import Data.Char (isSpace)
 import qualified Data.List as L

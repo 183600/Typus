@@ -278,4 +278,4 @@ isSelfReferenceError (DependentInfiniteType name _) = name == name
 isSelfReferenceError _ = False
 
 isInfixOf :: String -> String -> Bool
-L.isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
+isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack

@@ -70,8 +70,8 @@ tests =
             let indentedText = unlines $ replicate 5000 (replicate 20 ' ' ++ "line")
                 normalized = normalizeIndentation indentedText
             assertBool "should normalize large indented text" $ 
-              not (L.any (L.isPrefixOf "    ") (lines normalized))
-          where L.isPrefixOf prefix str = take (L.length prefix) str == prefix
+              not (L.any (isPrefixOf "    ") (lines normalized))
+          where isPrefixOf prefix str = take (L.length prefix) str == prefix
 
         , testCase "breakOn handles large texts efficiently" $ do
             let largeText = "prefix" ++ L.concat (replicate 10000 "middle") ++ "suffix"
@@ -80,7 +80,7 @@ tests =
               after == "suffix"
             assertBool "should preserve prefix" $ 
               "prefix" `L.isPrefixOf` before
-          where L.isPrefixOf prefix str = take (L.length prefix) str == prefix
+          where isPrefixOf prefix str = take (L.length prefix) str == prefix
 
         , testCase "removeComments handles nested comments efficiently" $ do
             let nestedCommentCode = unlines 
@@ -145,8 +145,8 @@ tests =
             let deepIndent = unlines $ L.map (\i -> replicate i ' ' ++ "line") [1..1000]
                 normalized = normalizeIndentation deepIndent
             assertBool "should normalize deep indentation" $ 
-              not (L.any (L.isPrefixOf "    ") (lines normalized))
-          where L.isPrefixOf prefix str = take (L.length prefix) str == prefix
+              not (L.any (isPrefixOf "    ") (lines normalized))
+          where isPrefixOf prefix str = take (L.length prefix) str == prefix
 
         , testCase "handles massive comment blocks" $ do
             let massiveComments = "/*" ++ L.concat (replicate 50000 "comment ") ++ "*/ code"

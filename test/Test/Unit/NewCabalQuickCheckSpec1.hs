@@ -2,7 +2,7 @@ module Test.Unit.NewCabalQuickCheckSpec1 (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
-import Test.Tasty.QuickCheck (testProperty, property, Arbitrary(..), Gen, oneof, listOf, elements)
+import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, listOf, elements)
 import Data.Char (isSpace)
 import qualified Data.List as L
 import Data.List (isPrefixOf, isSuffixOf)
@@ -75,7 +75,7 @@ prop_removeCommentsPreservesContent input =
       hasNoUnmatchedCommentMarkers = not ("/*" `L.isInfixOf` processed) && not ("*/" `L.isInfixOf` processed)
   in hasNoUnmatchedCommentMarkers
   where
-    L.isInfixOf needle haystack = L.any (needle `L.isPrefixOf`) (tails haystack)
+    isInfixOf needle haystack = L.any (needle `L.isPrefixOf`) (tails haystack)
     tails [] = [[]]
     tails s@(_:xs) = s : tails xs
 
@@ -111,7 +111,7 @@ prop_breakOnProperties pat input
       in before ++ pat ++ after == input
   | otherwise = breakOn pat input == (input, "")
   where
-    L.isInfixOf needle haystack = L.any (needle `L.isPrefixOf`) (tails haystack)
+    isInfixOf needle haystack = L.any (needle `L.isPrefixOf`) (tails haystack)
     tails [] = [[]]
     tails s@(_:xs) = s : tails xs
 

@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase, FlexibleInstances #-}
 module Test.Unit.OwnershipPropertiesQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)

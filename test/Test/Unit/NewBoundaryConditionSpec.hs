@@ -5,7 +5,7 @@ module Test.Unit.NewBoundaryConditionSpec (newBoundaryConditionSpec, boundaryCon
 import Test.Tasty (TestTree, testGroup)
 import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=), assertBool, assertFailure)
-import Test.Tasty.QuickCheck (testProperty, Property(..), (==>), Positive(..))
+import Test.Tasty.QuickCheck (testProperty, Property, (==>), Positive(..))
 import Parser
 import Utils
 import SourceLocation

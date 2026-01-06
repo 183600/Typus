@@ -141,7 +141,7 @@ testIndentationProperties = testGroup "Indentation Properties"
           resultNonEmpty = L.filter (not . null . trim) resultLines
       in if null nonEmptyLines 
          then property True
-         else L.all (not . L.isPrefixOf commonIndent . takeWhile isSpace) resultNonEmpty
+         else L.all (not . isPrefixOf commonIndent . takeWhile isSpace) resultNonEmpty
          
   , testProperty "normalizeIndentation preserves line count" $ \str ->
       let originalLines = lines str

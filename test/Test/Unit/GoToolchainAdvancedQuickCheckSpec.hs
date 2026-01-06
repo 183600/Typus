@@ -245,7 +245,7 @@ tests = testGroup "GoToolchain Advanced QuickCheck Tests"
 
 -- Helper function to check if a string is contained in another
 isInfixOf :: String -> String -> Bool
-L.isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
+isInfixOf needle haystack = needle `Data.List.L.isInfixOf` haystack
 
 -- Helper function to check if a string is a suffix of another
 isSuffixOf :: String -> String -> Bool
@@ -253,4 +253,4 @@ L.isSuffixOf suffix haystack = suffix `Data.List.L.isSuffixOf` haystack
 
 -- Helper function to check if a string is a prefix of another
 isPrefixOf :: String -> String -> Bool
-L.isPrefixOf prefix haystack = prefix `Data.List.L.isPrefixOf` haystack
+isPrefixOf prefix haystack = prefix `Data.List.L.isPrefixOf` haystack

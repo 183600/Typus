@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 module Test.Unit.ParserCoreTestSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)

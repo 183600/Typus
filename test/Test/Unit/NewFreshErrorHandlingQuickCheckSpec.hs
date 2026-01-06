@@ -5,7 +5,7 @@
 module Test.Unit.NewFreshErrorHandlingQuickCheckSpec where
 
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Test.Tasty.HUnit
 import Compiler.Errors.Core 
   ( TypeError(..), CombinedError(..), ErrorSeverity(..), ErrorCategory(..)
@@ -173,7 +173,5 @@ errorFormattingProperties = testGroup "Error Formatting Properties"
 -- ============================================================================
 
 isInfixOf :: String -> String -> Bool
-L.isInfixOf = Data.List.L.isInfixOf
-
-isPrefixOf :: String -> String -> Bool
-L.isPrefixOf = Data.List.L.isPrefixOf
+isInfixOf = Data.List.isInfixOf isPrefixOf :: String -> String -> Bool
+isPrefixOf = Data.List.L.isPrefixOf

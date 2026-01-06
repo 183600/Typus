@@ -3,7 +3,7 @@ module Test.Unit.NewCabalQuickCheckSpec3 (tests) where
 import Test.Tasty (TestTree, testGroup)
 import qualified Data.List as L
 import Test.Tasty.HUnit (testCase, (@?=))
-import Test.Tasty.QuickCheck (testProperty, property, Arbitrary(..), Gen, oneof, elements, listOf)
+import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, elements, listOf)
 import Data.Text (Text)
 import qualified Data.Text as T (pack, unpack)
 import Data.Char (isSpace, isAlpha, isDigit)

@@ -124,7 +124,7 @@ prop_split_by_comma_collapsed s = splitByCommaCollapsed s == splitByCollapsed ',
 -- Test removeLineComments properties
 prop_remove_line_comments_no_double_slash :: String -> Bool
 prop_remove_line_comments s = 
-  let filtered = L.filter (not . L.isPrefixOf "//") (lines s)
+  let filtered = L.filter (not . isPrefixOf "//") (lines s)
       result = removeLineComments s
   in "//" `notElem` lines result
 
@@ -132,7 +132,7 @@ prop_remove_line_comments_preserves_non_comment_lines :: String -> Bool
 prop_remove_line_comments s =
   let originalLines = lines s
       resultLines = lines $ removeLineComments s
-      nonCommentLines = L.filter (not . L.isPrefixOf "//") originalLines
+      nonCommentLines = L.filter (not . isPrefixOf "//") originalLines
   in L.length resultLines == L.length nonCommentLines
 
 -- Test removeComments properties

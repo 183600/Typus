@@ -3,7 +3,7 @@
 module Test.Unit.NewTextProcessingQuickCheckSpec where
 
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (testProperty, Property, (===), (==>), property)
 import Test.Tasty.TH
 import Utils (trim, splitBy, removeLineComments, removeComments, normalizeIndentation)
 import Data.Char (isSpace, isAlphaNum)

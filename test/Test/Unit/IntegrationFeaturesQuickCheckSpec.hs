@@ -3,7 +3,7 @@
 module Test.Unit.IntegrationFeaturesQuickCheckSpec (tests) where
 
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Test.Tasty.HUnit
 
 import qualified IntegratedCompiler as IC

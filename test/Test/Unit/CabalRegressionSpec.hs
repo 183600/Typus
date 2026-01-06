@@ -20,7 +20,7 @@ tests =
         [ testCase "Regression: Parser handles missing semicolons gracefully" $ do
             -- Previously this would crash the parser
             let input = "func test() { return 1\n  return 2\n}"
-                result = Parser.parseTypus "regression1" input
+                result = Parser.parseTypus input
             case result of
               Left err -> 
                 -- Should provide helpful error message, not crash
@@ -30,7 +30,7 @@ tests =
         , testCase "Regression: Parser recovers from unclosed blocks" $ do
             -- Previously this would cause infinite loops
             let input = "func test() { if (true) { return 1"
-                result = Parser.parseTypus "regression2" input
+                result = Parser.parseTypus input
             case result of
               Left err -> 
                 -- Should detect unclosed block
@@ -40,7 +40,7 @@ tests =
         , testCase "Regression: Parser handles empty directives" $ do
             -- Previously empty directives would cause parsing failures
             let input = "// @ownership: \n// @dependent-types: \nfunc test() { return 1; }"
-                result = Parser.parseTypus "regression3" input
+                result = Parser.parseTypus input
             case result of
               Left err -> @?= "Should handle empty directives" (show err)
               Right parsed -> 
@@ -54,7 +54,7 @@ tests =
                                "    return 1;\n" ++
                                L.concat (replicate 50 ["  }\n"]) ++
                                ["}"]
-                result = Parser.parseTypus "regression4" nestedInput
+                result = Parser.parseTypus nestedInput
             case result of
               Left err -> L.length (show err) > 0 @?= True
               Right _ -> @?= "Handle deep nesting" "Deep nesting handled"
@@ -117,7 +117,7 @@ tests =
         [ testCase "Regression: Error messages include line numbers" $ do
             -- Previously some errors lacked location info
             let input = "func test() {\n  return\n  invalid syntax\n}"
-                result = Parser.parseTypus "regression-error" input
+                result = Parser.parseTypus input
             case result of
               Left err -> 
                 let errStr = show err
@@ -127,7 +127,7 @@ tests =
         , testCase "Regression: Multiple errors are reported when possible" $ do
             -- Previously only first error was reported
             let input = "func bad1() { return }\nfunc bad2() { if }"
-                result = Parser.parseTypus "regression-multi" input
+                result = Parser.parseTypus input
             case result of
               Left err -> 
                 -- Should provide meaningful error information
@@ -139,7 +139,7 @@ tests =
         [ testCase "Regression: Large file parsing doesn't regress" $ do
             -- Ensure performance doesn't regress for large files
             let largeInput = unlines $ replicate 1000 "func test() { return 1; }"
-                result = Parser.parseTypus "regression-perf" largeInput
+                result = Parser.parseTypus largeInput
             case result of
               Left err -> L.length (show err) > 0 @?= True
               Right _ -> @?= "Handle large input" "Large input handled"
@@ -158,7 +158,7 @@ tests =
         [ testCase "Regression: Parser L.and SyntaxValidator integration" $ do
             -- Previously integration would miss certain edge cases
             let input = "func validated() { return true; }"
-                parseResult = Parser.parseTypus "regression-integration" input
+                parseResult = Parser.parseTypus input
             case parseResult of
               Left _ -> @?= "Should parse successfully" "Parse failed"
               Right parsed -> 
@@ -168,7 +168,7 @@ tests =
         , testCase "Regression: File directives are preserved through parsing" $ do
             -- Previously directives could be lost during parsing
             let input = "// @ownership: true\n// @dependent-types: false\nfunc main() {}"
-                result = Parser.parseTypus "regression-directives" input
+                result = Parser.parseTypus input
             case result of
               Left err -> @?= "Should parse with directives" (show err)
               Right parsed -> do
@@ -185,7 +185,7 @@ tests =
                   , "  }"
                   , "}"
                   ]
-                result = Parser.parseTypus "regression-location" complexInput
+                result = Parser.parseTypus complexInput
             case result of
               Left err -> do
                 let errStr = show err
@@ -198,7 +198,7 @@ tests =
         [ testCase "Regression: Parser handles L.all whitespace input" $ do
             -- Previously L.all-whitespace input could cause issues
             let whitespaceOnly = "   \n\t  \n   \t\n"
-                result = Parser.parseTypus "regression-whitespace" whitespaceOnly
+                result = Parser.parseTypus whitespaceOnly
             case result of
               Left err -> L.length (show err) > 0 @?= True
               Right _ -> @?= "Handle whitespace" "Whitespace handled"
@@ -231,8 +231,8 @@ tests =
         ]
     ]
   where
-    L.isInfixOf needle haystack = needle `L.isPrefixOf` haystack || 
-                              (not (null haystack) && L.isInfixOf needle (L.tail haystack))
-    L.isPrefixOf [] _ = True
-    L.isPrefixOf _ [] = False
-    L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
+    isInfixOf needle haystack = needle `L.isPrefixOf` haystack || 
+                              (not (null haystack) && isInfixOf needle (L.tail haystack))
+    isPrefixOf [] _ = True
+    isPrefixOf _ [] = False
+    isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys

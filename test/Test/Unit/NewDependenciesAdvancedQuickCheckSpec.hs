@@ -4,7 +4,7 @@ module Test.Unit.NewDependenciesAdvancedQuickCheckSpec where
 
 import Test.Tasty
 import qualified Data.List as L
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (testProperty, Property, (===), (==>), property)
 import Test.Tasty.TH
 import Dependencies
 import Dependencies.AST

@@ -3,7 +3,7 @@ module Test.Unit.NewTypeSystemSubstitutionQuickCheckSpec (tests) where
 
 import Test.Tasty
 import qualified Data.List as L
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Compiler.TypeChecker
   ( Type(..), TypeEnv(..), FunctionSignature(..), FunctionParam(..)
   , unifyTypes, substituteType, instantiateGeneric, areTypesCompatible

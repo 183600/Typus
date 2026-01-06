@@ -3,7 +3,7 @@
 module Test.Unit.NewCabalIntegrationEndToEndQuickCheckSpec where
 
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Parser (parseTypus, TypusFile(..), CodeBlock(..), BlockDirectives(..), defaultFileDirectives, defaultBlockDirectives)
 import Compiler (compile, CompilerError(..), CompilationPhase(..))
 import Compiler.IR (buildSourceIR, buildSemanticIR, emitGo)

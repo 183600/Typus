@@ -3,7 +3,7 @@ module Test.Unit.NewDependencyAssociativityQuickCheckSpec (tests) where
 
 import Test.Tasty
 import qualified Data.List as L
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Dependencies
   ( TypeVar(..), TypeConstraint(..), DependentTypeError(..), TypeDef(..)
   , Substitution, newDependentTypeChecker, addType, addConstraint

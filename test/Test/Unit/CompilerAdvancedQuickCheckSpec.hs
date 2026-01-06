@@ -2,7 +2,7 @@ module Test.Unit.CompilerAdvancedQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
-import Test.Tasty.QuickCheck (testProperty, Property, (===), forAll, Gen, choose, arbitrary, listOf, elements, oneof, suchThat)
+import Test.Tasty.QuickCheck (testProperty, Property, (===), forAll, Gen, choose, arbitrary, listOf, elements, oneof, suchThat, property)
 import TestSupport.QuickCheck (fastProperty)
 
 import Compiler (compile, CompilerError(..), CompilerResult, CompilationPhase(..),

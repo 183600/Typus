@@ -212,4 +212,4 @@ integrationProperties = testGroup "Integration Properties"
 -- ============================================================================
 
 isInfixOf :: String -> String -> Bool
-L.isInfixOf = Data.List.L.isInfixOf
+isInfixOf = Data.List.L.isInfixOf

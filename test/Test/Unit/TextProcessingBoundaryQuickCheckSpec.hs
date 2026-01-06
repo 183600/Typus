@@ -79,7 +79,7 @@ prop_removeLineComments_preserves_non_comment s =
   let withoutLineComments = removeLineComments s
       linesWithoutComments = lines withoutLineComments
       linesWithComments = lines s
-      nonCommentLines = L.filter (not . L.isPrefixOf "//") linesWithComments
+      nonCommentLines = L.filter (not . isPrefixOf "//") linesWithComments
   in counterexample "removeLineComments should preserve non-comment content" $
      L.length (L.filter (not . null) linesWithoutComments) >= L.length nonCommentLines
 

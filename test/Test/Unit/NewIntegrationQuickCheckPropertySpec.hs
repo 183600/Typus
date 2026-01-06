@@ -146,7 +146,7 @@ ownershipErrorHandlerIntegration = testGroup "Ownership + ErrorHandler integrati
   [ testProperty "ownership errors can be converted to TypeError" $
     \varName -> 
       let ownershipError = UseAfterMove varName
-          errorLoc = ErrorLocation Nothing 1 1 Nothing Nothing
+          errorLoc = ErrorLocation (startPos) Nothing
           typeError = errorAt "test-id" show ownershipError) errorLoc
       in errorId typeError === "ownership-error" &&
          T.unpack (message typeError) === show ownershipError
@@ -176,7 +176,7 @@ ownershipErrorHandlerIntegration = testGroup "Ownership + ErrorHandler integrati
   , testProperty "multiple ownership errors are handled correctly" $
     \var1 var2 -> 
       let errors = [UseAfterMove var1, DoubleMove var1 var2]
-          errorLoc = ErrorLocation Nothing 1 1 Nothing Nothing
+          errorLoc = ErrorLocation (startPos) Nothing
           typeErrors = L.map (\err -> errorAt "test-id" show err) errorLoc) errors
       in L.length typeErrors === L.length errors &&
          L.all (\te -> errorId te === "ownership-error") typeErrors
@@ -188,7 +188,7 @@ dependenciesErrorHandlerIntegration = testGroup "Dependencies + ErrorHandler int
   [ testProperty "dependency type errors can be converted to TypeError" $
     \typeName -> 
       let depError = TypeNotFound typeName
-          errorLoc = ErrorLocation Nothing 1 1 Nothing Nothing
+          errorLoc = ErrorLocation (startPos) Nothing
           typeError = errorAt "test-id" show depError) errorLoc
       in errorId typeError === "dependency-error" &&
          T.unpack (message typeError) === show depError
@@ -235,7 +235,7 @@ multiModuleIntegration = testGroup "Multi-module integration"
       in case parseResult of
         Left parseErr -> 
           -- Parse errors should be handled gracefully
-          let errorLoc = ErrorLocation Nothing 1 1 Nothing Nothing
+          let errorLoc = ErrorLocation (startPos) Nothing
               typeError = errorAt "test-id" (T.pack parseErr) errorLoc
           in errorId typeError === "parse-error"
         Right typusFile -> 
@@ -263,7 +263,7 @@ multiModuleIntegration = testGroup "Multi-module integration"
               in ownershipErrs ++ dependencyErrs
       in -- All errors should be collectible L.and formatable
          L.all (\err -> 
-           let errorLoc = ErrorLocation Nothing 1 1 Nothing Nothing
+           let errorLoc = ErrorLocation (startPos) Nothing
                typeError = errorAt "test-id" (T.pack err) errorLoc
            in not (L.null $ formatErrorWithLocation typeError)) errors
   

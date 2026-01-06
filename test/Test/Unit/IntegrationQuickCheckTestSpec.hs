@@ -311,7 +311,7 @@ prop_parsed_program_has_main =
       Left _ -> property True  -- 解析失败时跳过
       Right typusFile ->
         let blocks = tfBlocks typusFile
-            hasMain = L.any (L.isInfixOf "func main") $ map cbContent blocks
+            hasMain = L.any (isInfixOf "func main") $ map cbContent blocks
         in hasMain === True
 
 -- 属性：解析后的程序应该包含指令信息
@@ -372,7 +372,7 @@ prop_go_code_has_package =
           Left _ -> property True  -- 编译失败时跳过
           Right goCode ->
             let goLines = lines goCode
-                hasPackage = L.any (L.isPrefixOf "package") goLines
+                hasPackage = L.any (isPrefixOf "package") goLines
             in hasPackage === True
 
 -- 属性：Go代码应该包含main函数
@@ -386,7 +386,7 @@ prop_go_code_has_main =
           Left _ -> property True  -- 编译失败时跳过
           Right goCode ->
             let goLines = lines goCode
-                hasMain = L.any (L.isInfixOf "func main") goLines
+                hasMain = L.any (isInfixOf "func main") goLines
             in hasMain === True
 
 -- 属性：源码位置信息应该在整个流程中保持一致
@@ -503,7 +503,7 @@ prop_compiler_optimization_semantic_equivalence =
           Left _ -> property True  -- 编译失败时跳过
           Right goCode ->
             let goLines = lines goCode
-                hasOptimizations = L.any (L.isInfixOf "optimized") goLines
+                hasOptimizations = L.any (isInfixOf "optimized") goLines
             in hasOptimizations === hasOptimizations  -- 简单验证
 
 tests :: TestTree

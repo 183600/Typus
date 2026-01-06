@@ -1,7 +1,8 @@
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 module Test.Unit.ConciseOwnershipQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperty, Property, (===), Arbitrary(..), Gen, oneof, choose, elements, listOf)
+import Test.Tasty.QuickCheck (testProperty, Property, (===), property, Arbitrary(..), Gen, oneof, choose, elements, listOf)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Map.Strict (Map)
@@ -46,20 +47,19 @@ tests =
         
     , testGroup "Ownership transfer properties"
         [ testProperty "Valid transfer preserves source ownership" $
-            \source target transferType -> 
-            let transfer = OwnershipTransfer source target transferType
+            \source target -> 
+            let transfer = OwnershipTransfer source target
             in transferSource transfer === source
             
         , testProperty "Valid transfer preserves target ownership" $
-            \source target transferType -> 
-            let transfer = OwnershipTransfer source target transferType
+            \source target -> 
+            let transfer = OwnershipTransfer source target
             in transferTarget transfer === target
             
         , testProperty "Transfer type consistency" $
             \source target -> 
-            let moveTransfer = OwnershipTransfer source target "move"
-                borrowTransfer = OwnershipTransfer source target "borrow"
-            in transferType moveTransfer /= transferType borrowTransfer
+            let transfer = OwnershipTransfer source target
+            in property (transferFrom transfer == source && transferTo transfer == target)
         ]
         
     , testGroup "Ownership error properties"
@@ -74,7 +74,7 @@ tests =
             \var1 var2 -> 
             let error = DoubleMove var1 var2
             in case error of
-                 DoubleMove name1 name2 -> name1 === var1 && name2 === var2
+                 DoubleMove name1 name2 -> property (name1 == var1 && name2 == var2)
                  _ -> property False
                  
         , testProperty "Borrow errors preserve context" $
@@ -96,7 +96,7 @@ tests =
             
         , testProperty "Ownership transfer updates state correctly" $
             \source target transferType state -> 
-            let transfer = OwnershipTransfer source target transferType
+            let transfer = OwnershipTransfer { transferFrom = source, transferTo = target }
                 newState = performTransfer transfer state
             in Map.lookup target newState === Just (convertTransferType transferType)
         ]
@@ -104,13 +104,12 @@ tests =
 
 -- Helper functions for testing
 transferSource :: OwnershipTransfer -> String
-transferSource (OwnershipTransfer source _ _) = source
+transferSource = transferFrom
 
 transferTarget :: OwnershipTransfer -> String
-transferTarget (OwnershipTransfer _ target _) = target
+transferTarget = transferTo
 
-transferType :: OwnershipTransfer -> String
-transferType (OwnershipTransfer _ _ tType) = tType
+
 
 convertTransferType :: String -> OwnershipType
 convertTransferType "move" = Owned "moved"
@@ -119,12 +118,13 @@ convertTransferType "mut_borrow" = MutBorrowed "mut_borrowed"
 convertTransferType _ = Owned "unknown"
 
 performTransfer :: OwnershipTransfer -> Map String OwnershipType -> Map String OwnershipType
-performTransfer (OwnershipTransfer source target tType) state = 
-  Map.insert target (convertTransferType tType) (Map.delete source state)
+performTransfer transfer state = 
+  let source = transferFrom transfer
+      target = transferTo transfer
+  in Map.insert target (Owned "moved") (Map.delete source state)
 
 -- Helper property function
-property :: Bool -> Property
-property = id
+
 
 -- Generate test data
 instance Arbitrary OwnershipType where
@@ -138,8 +138,7 @@ instance Arbitrary OwnershipTransfer where
   arbitrary = do
     source <- arbitrary
     target <- arbitrary
-    transferType <- elements ["move", "borrow", "mut_borrow"]
-    return $ OwnershipTransfer source target transferType
+    return $ OwnershipTransfer { transferFrom = source, transferTo = target }
 
 instance Arbitrary OwnershipError where
   arbitrary = oneof

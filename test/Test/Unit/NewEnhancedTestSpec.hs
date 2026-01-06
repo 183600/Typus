@@ -248,4 +248,4 @@ commentHandlingProperties = testGroup "Comment Handling Properties"
 -- ============================================================================
 
 isInfixOf :: String -> String -> Bool
-L.isInfixOf = L.L.isInfixOf
+isInfixOf = L.L.isInfixOf

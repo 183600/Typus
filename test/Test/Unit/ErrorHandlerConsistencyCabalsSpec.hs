@@ -199,7 +199,7 @@ test_error_recovery_scenarios =
         -- Should recover L.and parse the return statement
         let codeBlocks = tfCodeBlocks typusFile
         assertBool "Should recover L.and parse return statement" $
-          L.any (L.isInfixOf "return 42" . unlines . cbLines) codeBlocks
+          L.any (isInfixOf "return 42" . unlines . cbLines) codeBlocks
 
 -- Test 8: Error handler localization consistency
 test_error_localization :: TestTree

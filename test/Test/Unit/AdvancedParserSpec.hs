@@ -79,7 +79,7 @@ tests =
           Right TypusFile { tfBuildTags = buildTags } -> do
             L.length buildTags @?= 3
             -- Check that L.all build tags are either go:build L.or +build format
-            L.all (\tag -> L.isInfixOf "go:build" (locatedValue tag) || L.isInfixOf "+build" (locatedValue tag)) buildTags @?= True
+            L.all (\tag -> isInfixOf "go:build" (locatedValue tag) || isInfixOf "+build" (locatedValue tag)) buildTags @?= True
 
     , testCase "parses deeply nested code blocks" $ do
         let source = unlines
@@ -292,4 +292,4 @@ tests =
     ]
 
 hasContent :: String -> TypusFile -> Bool
-hasContent target typusFile = L.any (L.isInfixOf target . cbContent) (tfBlocks typusFile)
+hasContent target typusFile = L.any (isInfixOf target . cbContent) (tfBlocks typusFile)

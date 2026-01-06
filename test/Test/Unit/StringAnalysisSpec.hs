@@ -55,7 +55,7 @@ prop_normalizeIndentation_removes_common content =
   let indented = "    " ++ content ++ "\n    " ++ content ++ "\n"
       normalized = normalizeIndentation indented
       lines' = lines normalized
-  in property $ L.all (not . L.L.isPrefixOf "    ") (L.filter (not . null) lines')
+  in property $ L.all (not . L.isPrefixOf "    ") (L.filter (not . null) lines')
 
 -- Property: breakOn finds first occurrence
 prop_breakOn_first :: String -> String -> String -> Property

@@ -3,7 +3,7 @@ module Test.Unit.NewSymbolTableCommutativeQuickCheckSpec (tests) where
 
 import Test.Tasty
 import qualified Data.List as L
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Analyzer.SymbolTable
   ( collectSymbolsAndTypes, collectSymbolsFromAST, isReservedName )
 import Analyzer.Types (SymbolInfo(..), SymbolKind(..))

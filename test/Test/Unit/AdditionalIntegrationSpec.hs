@@ -80,7 +80,7 @@ test_ownership_error_handler_integration :: TestTree
 test_ownership_error_handler_integration = testCase "Ownership L.and ErrorHandler integration" $ do
   let ownershipError = UseAfterMove "variable"
       error = TypeError "ownership-error" Error ErrorCategory (T.pack "Use after move") 
-                        (ErrorLocation Nothing 1 1 Nothing Nothing) 
+                        (ErrorLocation (startPos) Nothing) 
                         undefined undefined undefined [] [] Nothing
   assertBool "Should handle ownership errors" (severity error == Error)
   assertBool "Should have error category" (category error == ErrorCategory)
@@ -192,7 +192,7 @@ prop_parser_utils_roundtrip content =
 prop_error_handling_consistency :: String -> ErrorSeverity -> ErrorCategory -> Property
 prop_error_handling_consistency message severity category =
   let error = TypeError "test-id" severity category (T.pack message)
-                        (ErrorLocation Nothing 1 1 Nothing Nothing)
+                        (ErrorLocation (startPos) Nothing)
                         undefined undefined undefined [] [] Nothing
   in property $ severity error === severity .&&.
      category error === category .&&.
@@ -204,7 +204,7 @@ prop_ownership_dependent_types_interaction varName typeName =
   let ownershipType = Owned varName
       typeRef = TypeRef typeName [TypeRef "Int" []]
       error1 = TypeError "ownership-error" Error ErrorCategory (T.pack ("Ownership error with " ++ varName))
-                        (ErrorLocation Nothing 1 1 Nothing Nothing)
+                        (ErrorLocation (startPos) Nothing)
                         undefined undefined undefined [] [] Nothing
       error2 = TypeError "type-error" Error TypeChecking (T.pack ("Type error with " ++ typeName))
                         (ErrorLocation Nothing 2 1 Nothing Nothing)

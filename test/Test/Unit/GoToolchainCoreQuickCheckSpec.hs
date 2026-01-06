@@ -219,11 +219,11 @@ prop_toolingErrorProperties =
 -- ============================================================================
 
 isInfixOf :: String -> String -> Bool
-L.isInfixOf needle haystack = L.any (L.isPrefixOf needle) (tails haystack)
+isInfixOf needle haystack = L.any (isPrefixOf needle) (tails haystack)
   where
-    L.isPrefixOf [] _ = True
-    L.isPrefixOf _ [] = False
-    L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
+    isPrefixOf [] _ = True
+    isPrefixOf _ [] = False
+    isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
     tails [] = [[]]
     tails xs@(x:xs') = xs : tails xs'
 
@@ -231,9 +231,9 @@ isSuffixOf :: String -> String -> Bool
 L.isSuffixOf needle haystack = needle `L.isInfixOf` haystack && L.length needle <= L.length haystack
 
 isPrefixOf :: String -> String -> Bool
-L.isPrefixOf [] _ = True
-L.isPrefixOf _ [] = False
-L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
+isPrefixOf [] _ = True
+isPrefixOf _ [] = False
+isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
 
 -- ============================================================================
 -- Test Collection

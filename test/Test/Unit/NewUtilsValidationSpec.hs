@@ -4,7 +4,7 @@ module Test.Unit.NewUtilsValidationSpec (newUtilsValidationSpec, utilsQuickCheck
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=), assertBool)
-import Test.Tasty.QuickCheck (testProperty, Property(..), (==>), Positive(..))
+import Test.Tasty.QuickCheck (testProperty, Property, (==>), Positive(..))
 import Utils
 import Data.Char (isSpace)
 import qualified Data.List as L

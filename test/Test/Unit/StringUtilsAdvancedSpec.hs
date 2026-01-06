@@ -262,7 +262,7 @@ test_mixed_tabs_spaces = do
       result = normalizeIndentation input
       resultLines = lines result
   -- Should normalize to remove common leading whitespace
-  assertBool "Should normalize mixed indentation" (L.all (not . L.isPrefixOf "    ") resultLines)
+  assertBool "Should normalize mixed indentation" (L.all (not . isPrefixOf "    ") resultLines)
 
 test_relative_indentation_preservation :: IO ()
 test_relative_indentation_preservation = do

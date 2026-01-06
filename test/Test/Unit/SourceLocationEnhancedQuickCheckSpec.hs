@@ -4,7 +4,7 @@ module Test.Unit.SourceLocationEnhancedQuickCheckSpec where
 
 import Test.Tasty
 import qualified Data.List as L
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Test.Tasty.HUnit
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), 
                       startPos, posAfter, posAt, posAtLineCol,

@@ -5,11 +5,11 @@
 module Test.Unit.AdditionalQuickCheckTests2025 where
 
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (testProperty, (===), (==>))
 import Test.Tasty.HUnit
 import Test.QuickCheck (Arbitrary, arbitrary, suchThat)
 import Utils (trim, splitBy, removeComments)
-import SourceLocation (SourcePos(..), startPos, advancePos)
+import SourceLocation (SourcePos(..), startPos, advancePos, toErrorLocation)
 
 import Compiler.Errors.Core (TypeError(..), ErrorSeverity(..), formatError, errorAt, ErrorLocation(..))
 import qualified Data.Text as T (pack, isInfixOf)
@@ -91,14 +91,14 @@ basicErrorHandlingProperties :: TestTree
 basicErrorHandlingProperties = testGroup "Basic ErrorHandling Properties"
   [ testProperty "error formatting contains message" $
       \msg ->
-        let location = ErrorLocation Nothing 1 1 Nothing Nothing
+        let location = toErrorLocation startPos
             err = errorAt "test-id" (T.pack msg) location
             formatted = formatError err
         in not (null msg) ==> T.pack msg `T.isInfixOf` T.pack formatted
         
   , testProperty "error formatting contains position" $
       \msg ->
-        let location = ErrorLocation Nothing 1 1 Nothing Nothing
+        let location = toErrorLocation startPos
             err = errorAt "test-id" (T.pack msg) location
             formatted = formatError err
         in "1:1" `L.isInfixOf` formatted

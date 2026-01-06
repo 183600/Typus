@@ -350,7 +350,7 @@ tests =
 
 -- Helper functions
 isInfixOf :: String -> String -> Bool
-L.isInfixOf needle haystack = needle `elem` [take (L.length needle) $ drop i haystack | i <- [0..L.length haystack - L.length needle]]
+isInfixOf needle haystack = needle `elem` [take (L.length needle) $ drop i haystack | i <- [0..L.length haystack - L.length needle]]
 
 -- | Property: executor creation is deterministic
 prop_executorDeterministic :: String -> Bool

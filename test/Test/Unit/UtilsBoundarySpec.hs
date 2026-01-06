@@ -185,14 +185,14 @@ prop_splitby_relationship delim input =
 -- | Property: removeLineComments doesn't affect strings without comments
 prop_remove_line_comments_no_effect :: String -> Property
 prop_remove_line_comments_no_effect input =
-  let hasNoLineComment = not (L.isInfixOf "//" input)
+  let hasNoLineComment = not (isInfixOf "//" input)
       result = removeLineComments input
   in hasNoLineComment ==> property $ result == input
 
 -- | Property: removeComments doesn't affect strings without comments
 prop_remove_comments_no_effect :: String -> Property
 prop_remove_comments_no_effect input =
-  let hasNoComments = not (L.isInfixOf "//" input) && not (L.isInfixOf "/*" input)
+  let hasNoComments = not (isInfixOf "//" input) && not (isInfixOf "/*" input)
       result = removeComments input
   in hasNoComments ==> property $ result == input
 

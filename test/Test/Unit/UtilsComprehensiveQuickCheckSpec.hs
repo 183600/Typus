@@ -4,7 +4,7 @@ module Test.Unit.UtilsComprehensiveQuickCheckSpec where
 
 import Test.Tasty
 import qualified Data.List as L
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property)
 import Test.Tasty.HUnit
 
 import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed, 
@@ -99,7 +99,7 @@ commentProperties = testGroup "Comment Properties"
       \s -> removeComments (removeComments s) == removeComments s
   ]
   where
-    L.isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
+    isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
 
 -- | Properties for indentation functions
 indentationProperties :: TestTree
@@ -110,7 +110,7 @@ indentationProperties = testGroup "Indentation Properties"
             result = normalizeIndentation input
             resultLines = lines result
         in L.length resultLines == 2 &&
-           L.all (not . L.isPrefixOf "  ") resultLines
+           L.all (not . isPrefixOf "  ") resultLines
   
   , testProperty "normalizeIndentation preserves empty lines" $
       \lines1 lines2 lines3 ->
@@ -129,7 +129,7 @@ indentationProperties = testGroup "Indentation Properties"
             in L.length ls == L.length resultLines
   ]
   where
-    L.isPrefixOf needle haystack = take (L.length needle) haystack == needle
+    isPrefixOf needle haystack = take (L.length needle) haystack == needle
 
 -- | Properties for breakOn function
 breakOnProperties :: TestTree
@@ -160,4 +160,4 @@ breakOnProperties = testGroup "BreakOn Properties"
         in before == prefix && after == ""
   ]
   where
-    L.isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
+    isInfixOf needle haystack = needle `elem` [take (L.length needle) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]

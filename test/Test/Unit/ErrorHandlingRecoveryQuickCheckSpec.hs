@@ -137,7 +137,7 @@ prop_error_warning_independence errorMsg warningMsg =
 
 -- Helper functions
 isInfixOf :: String -> String -> Bool
-L.isInfixOf needle haystack = needle `elem` (substrings haystack)
+isInfixOf needle haystack = needle `elem` (substrings haystack)
   where
     substrings [] = []
     substrings s@(x:xs) = take (L.length needle) s : substrings xs

@@ -80,7 +80,7 @@ tests =
             
             , fastProperty "removeLineComments removes L.all // not in literals" $
                 \s -> not (hasUnescapedCommentMarker s) || 
-                       not (L.isInfixOf "//" (removeLineComments s))
+                       not (isInfixOf "//" (removeLineComments s))
             ]
         ]
     
@@ -129,7 +129,7 @@ tests =
                 let input = "before /* unclosed\nafter"
                     result = removeComments input
                 assertBool "Should handle unclosed block comment" 
-                    (not (L.isInfixOf "/*" result))
+                    (not (isInfixOf "/*" result))
             
             , testCase "handles consecutive block comments" $ do
                 let input = "text1 /*c1*/ text2 /*c2*/ text3"
@@ -143,11 +143,11 @@ tests =
             
             , fastProperty "removeComments removes L.all /* not in literals" $
                 \s -> not (hasUnescapedBlockCommentStart s) ||
-                       not (L.isInfixOf "/*" (removeComments s))
+                       not (isInfixOf "/*" (removeComments s))
             
             , fastProperty "removeComments removes L.all */ not in literals" $
                 \s -> not (hasUnescapedBlockCommentEnd s) ||
-                       not (L.isInfixOf "*/" (removeComments s))
+                       not (isInfixOf "*/" (removeComments s))
             ]
         ]
     
@@ -165,7 +165,7 @@ tests =
                   ]
                 result = removeComments input
             assertBool "Should remove L.all comments correctly" $
-                not (L.isInfixOf "//" result) && not (L.isInfixOf "/*" result) && not (L.isInfixOf "*/" result)
+                not (isInfixOf "//" result) && not (isInfixOf "/*" result) && not (isInfixOf "*/" result)
         ]
     ]
 

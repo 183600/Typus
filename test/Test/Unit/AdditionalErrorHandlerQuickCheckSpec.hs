@@ -192,7 +192,7 @@ prop_withRelatedErrors_adds_related baseMsg relatedMsgs =
 prop_formatError_contains_elements :: ErrorSeverity -> ErrorCategory -> String -> Property
 prop_formatError_contains_elements sev cat msg =
   let err = TypeError "test-id" sev cat (T.pack msg) 
-                      (ErrorLocation Nothing 1 1 Nothing Nothing) 
+                      (ErrorLocation (startPos) Nothing) 
                       emptyContext undefined undefined [] [] Nothing
       formatted = formatError err
       sevStr = case sev of

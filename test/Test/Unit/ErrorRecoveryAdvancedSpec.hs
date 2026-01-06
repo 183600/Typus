@@ -38,7 +38,7 @@ tests =
             case result of
                 Right (Recovered warnings) -> 
                     assertBool "Should suggest bracket completion" $ 
-                        L.any (List.L.isInfixOf "missing closing") warnings
+                        L.any (List.isInfixOf "missing closing") warnings
                 _ -> assertBool "Expected recovery" False
 
         , testCase "recovers from malformed function signatures" $ do
@@ -47,7 +47,7 @@ tests =
             case result of
                 Right (Recovered warnings) -> 
                     assertBool "Should suggest parameter name" $ 
-                        L.any (List.L.isInfixOf "parameter name") warnings
+                        L.any (List.isInfixOf "parameter name") warnings
                 _ -> assertBool "Expected recovery" False
         ]
 
@@ -107,7 +107,7 @@ tests =
             case result of
                 Right (FixSuggestions fixes) -> 
                     assertBool "Should suggest removal L.or prefix" $ 
-                        L.any (List.L.isInfixOf "_unused") fixes
+                        L.any (List.isInfixOf "_unused") fixes
                 _ -> assertBool "Expected fix suggestions" False
 
         , testCase "handles function redefinition" $ do
@@ -198,13 +198,13 @@ tests =
                     }
                 docs = suggestDocumentation errorType context
             assertBool "Should provide relevant docs" $ 
-                L.any (List.L.isInfixOf "type conversion") docs
+                L.any (List.isInfixOf "type conversion") docs
 
         , testCase "provides code examples for fixes" $ do
             let errorType = "MissingImport"
                 examples = getCodeExamples errorType
             assertBool "Should provide code examples" $ 
-                L.any (List.L.isInfixOf "import") examples
+                L.any (List.isInfixOf "import") examples
         ]
 
     , testGroup "Incremental error recovery"

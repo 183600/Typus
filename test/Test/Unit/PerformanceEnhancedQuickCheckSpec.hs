@@ -4,7 +4,7 @@
 module Test.Unit.PerformanceEnhancedQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree)
-import Test.Tasty.QuickCheck (testProperty, QuickCheckTests(..))
+import Test.Tasty.QuickCheck (testProperty)
 import Test.Tasty.HUnit (testCase, assert, assertBool)
 import Compiler (compile)
 import Parser (parseTypus)

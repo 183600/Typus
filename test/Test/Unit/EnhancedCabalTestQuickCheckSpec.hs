@@ -146,8 +146,8 @@ prop_set_intersection_commutative s1 s2 = Set.intersection s1 s2 == Set.intersec
 stringManipulationProperties :: TestTree
 stringManipulationProperties = testGroup "String Manipulation Properties"
   [ fastProperty "L.reverse twice is identity" prop_reverse_identity
-  , fastProperty "L.isPrefixOf reflexive" prop_L.isPrefixOf_reflexive
-  , fastProperty "L.isInfixOf reflexive" prop_L.isInfixOf_reflexive
+  , fastProperty "isPrefixOf reflexive" prop_L.isPrefixOf_reflexive
+  , fastProperty "isInfixOf reflexive" prop_L.isInfixOf_reflexive
   ]
 
 prop_reverse_identity :: [Int] -> Bool

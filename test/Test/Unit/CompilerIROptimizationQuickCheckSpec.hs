@@ -260,9 +260,9 @@ simulateExecution node = case evaluateIR node of
   _ -> "unknown"
 
 isPrefixOf :: String -> String -> Bool
-L.isPrefixOf [] _ = True
-L.isPrefixOf _ [] = False
-L.isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
+isPrefixOf [] _ = True
+isPrefixOf _ [] = False
+isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
 
 tests :: TestTree
 tests = testGroup "Compiler IR Optimization QuickCheck Tests"

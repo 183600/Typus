@@ -129,7 +129,7 @@ indentationProperties = testGroup "Indentation Properties"
       \s -> let indented = "    " ++ s ++ "\n    " ++ s ++ "  \n  " ++ s
                  normalized = normalizeIndentation indented
                  firstLine = L.head (lines normalized)
-             in not (L.isPrefixOf "    " firstLine)  -- Common prefix removed
+             in not (isPrefixOf "    " firstLine)  -- Common prefix removed
 
   , QC.testProperty "normalizeIndentation idempotent" $
       \s -> normalizeIndentation (normalizeIndentation s) === normalizeIndentation s
@@ -138,7 +138,7 @@ indentationProperties = testGroup "Indentation Properties"
       \s -> let result = forceSingleTabIndentation s
                  lines' = lines result
                  nonEmptyLines = L.filter (not . null) lines'
-             in L.all (L.isPrefixOf "\t") nonEmptyLines
+             in L.all (isPrefixOf "\t") nonEmptyLines
 
   , QC.testProperty "fixIndentation equals normalizeIndentation" $
       \s -> fixIndentation s === normalizeIndentation s

@@ -71,7 +71,7 @@ prop_removeComments_handles_nested outer inner =
 prop_normalizeIndentation_preserves_relative :: String -> Property
 prop_normalizeIndentation_preserves_relative s =
   let lines' = lines s
-      hasIndent = L.any (L.isPrefixOf " " . dropWhile isSpace) lines'
+      hasIndent = L.any (isPrefixOf " " . dropWhile isSpace) lines'
   in hasIndent ==>
      let normalized = normalizeIndentation s
          normLines = lines normalized

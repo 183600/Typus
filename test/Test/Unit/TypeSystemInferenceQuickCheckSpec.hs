@@ -206,7 +206,7 @@ substituteInConstraint oldVar newType (MockSubtype t1 t2) =
   MockSubtype (substituteInType oldVar newType t1) (substituteInType oldVar newType t2)
 
 isInfixOf :: String -> String -> Bool
-L.isInfixOf needle haystack = needle `elem` (substrings haystack)
+isInfixOf needle haystack = needle `elem` (substrings haystack)
   where
     substrings [] = []
     substrings s@(x:xs) = take (L.length needle) s : substrings xs

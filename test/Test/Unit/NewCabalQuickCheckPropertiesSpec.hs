@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, FlexibleInstances #-}
 module Test.Unit.NewCabalQuickCheckPropertiesSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)

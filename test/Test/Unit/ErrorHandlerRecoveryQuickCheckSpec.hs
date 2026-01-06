@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase, FlexibleInstances #-}
 module Test.Unit.ErrorHandlerRecoveryQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)

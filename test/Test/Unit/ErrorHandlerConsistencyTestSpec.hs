@@ -134,7 +134,7 @@ testErrorCreation = testGroup "Error Creation"
           error = errorAt "test-id" (hasCategory TypeChecking) typeErrors @?= True
       
   , testCase "filterBySeverity filters correctly" $ do
-      let location = ErrorLocation Nothing 1 1 Nothing Nothing
+      let location = ErrorLocation (startPos) Nothing
           errors = 
             [ errorAt "test-id" == Fatal) errorAndFatal @?= True
   ]
@@ -143,7 +143,7 @@ testErrorCreation = testGroup "Error Creation"
 testErrorStatistics :: TestTree
 testErrorStatistics = testGroup "Error Statistics"
   [ testCase "getErrorStatistics counts errors correctly" $ do
-      let location = ErrorLocation Nothing 1 1 Nothing Nothing
+      let location = ErrorLocation (startPos) Nothing
           errors = 
             [ errorAt "test-id" = ErrorLocation (Just "test.go") 5 10 Nothing Nothing
           error = errorAt "test-id" True True (Just "retry") (Just "check input")

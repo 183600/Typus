@@ -195,4 +195,4 @@ tests =
         ]
     ]
   where
-    -- Using the imported L.isInfixOf function
+    -- Using the imported isInfixOf function

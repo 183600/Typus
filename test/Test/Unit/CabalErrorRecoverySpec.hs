@@ -18,7 +18,7 @@ tests =
     [ testGroup "Parser Error Recovery"
         [ testCase "Parser recovers from missing semicolons" $ do
             let input = "func test() { return 1\n  return 2\n}"
-                result = Parser.parseTypus "test" input
+                result = Parser.parseTypus input
             case result of
               Left err -> 
                 -- Should provide helpful error message
@@ -27,7 +27,7 @@ tests =
 
         , testCase "Parser handles unclosed blocks gracefully" $ do
             let input = "func test() { if (true) { return 1;"
-                result = Parser.parseTypus "test" input
+                result = Parser.parseTypus input
             case result of
               Left err -> 
                 -- Error should indicate unclosed block
@@ -37,7 +37,7 @@ tests =
 
         , testCase "Parser provides line numbers in errors" $ do
             let input = "func test() {\n  return\n  invalid syntax here\n}"
-                result = Parser.parseTypus "test" input
+                result = Parser.parseTypus input
             case result of
               Left err -> do
                 let errStr = show err
@@ -49,7 +49,7 @@ tests =
     , testGroup "Source Location Error Tracking"
         [ testCase "Source locations are preserved in error messages" $ do
             let input = "func broken() { return }"
-                result = Parser.parseTypus "test" input
+                result = Parser.parseTypus input
             case result of
               Left err -> do
                 let errStr = show err
@@ -59,7 +59,7 @@ tests =
 
         , testCase "Multi-line errors show correct span" $ do
             let input = "func test() {\n  return\n  invalid\n  syntax\n}"
-                result = Parser.parseTypus "test" input
+                result = Parser.parseTypus input
             case result of
               Left err -> do
                 let errStr = show err
@@ -71,7 +71,7 @@ tests =
     , testGroup "Error Handler Integration"
         [ testCase "ErrorHandler formats parser errors correctly" $ do
             let input = "func invalid() {"
-                parseResult = Parser.parseTypus "test" input
+                parseResult = Parser.parseTypus input
             case parseResult of
               Left err -> do
                 -- ErrorHandler should format the error nicely
@@ -89,26 +89,26 @@ tests =
 
     , testGroup "Robustness Edge Cases"
         [ testCase "Empty input handled gracefully" $ do
-            let result = Parser.parseTypus "empty" ""
+            let result = Parser.parseTypus ""
             case result of
               Left err -> show err @?= "Empty input"
               Right _ -> @?= "Handle empty" "Empty handling"
 
         , testCase "Only whitespace input handled gracefully" $ do
-            let result = Parser.parseTypus "whitespace" "   \n\t  \n  "
+            let result = Parser.parseTypus "   \n\t  \n  "
             case result of
               Left err -> L.length (show err) > 0 @?= True
               Right _ -> @?= "Handle whitespace" "Whitespace handling"
 
         , testCase "Extremely long line handled gracefully" $ do
             let longLine = replicate 1000 'a' ++ " func test() { return 1; }"
-                result = Parser.parseTypus "long" longLine
+                result = Parser.parseTypus longLine
             case result of
               Left err -> L.length (show err) > 0 @?= True
               Right _ -> @?= "Handle long line" "Long line handling"
 
         , testProperty "Random input doesn't crash parser" $ do
-            \input -> let result = Parser.parseTypus "random" input
+            \input -> let result = Parser.parseTypus input
                       in case result of
                            Left _ -> True
                            Right _ -> True
@@ -117,7 +117,7 @@ tests =
     , testGroup "Error Recovery Strategies"
         [ testCase "Parser attempts to continue after first error" $ do
             let input = "func test1() { return }\nfunc test2() { return 1; }"
-                result = Parser.parseTypus "multi" input
+                result = Parser.parseTypus input
             case result of
               Left err -> do
                 -- Should report first error but not crash
@@ -126,7 +126,7 @@ tests =
 
         , testCase "Multiple errors collected when possible" $ do
             let input = "func bad1() { return }\nfunc bad2() { if }"
-                result = Parser.parseTypus "multiple" input
+                result = Parser.parseTypus input
             case result of
               Left err -> do
                 -- Should indicate multiple issues if possible

@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, FlexibleInstances #-}
 module Test.Unit.EnhancedDependenciesQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)

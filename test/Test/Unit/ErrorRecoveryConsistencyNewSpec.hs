@@ -304,7 +304,7 @@ applyBasicRecovery code =
         then line ++ " 0"
         else line
     
-    L.isInfixOf needle haystack = needle `L.L.isInfixOf` haystack
+    isInfixOf needle haystack = needle `L.L.isInfixOf` haystack
     L.isSuffixOf suffix str = suffix `L.L.isSuffixOf` str
 
 -- | Simplified error pattern analysis

@@ -330,6 +330,6 @@ prop_evaluateExpressionReturnsResult expr =
 
 -- Helper function to check if string contains a substring
 isInfixOf :: String -> String -> Bool
-L.isInfixOf needle haystack = needle `L.isInfixOf` haystack
+isInfixOf needle haystack = needle `L.isInfixOf` haystack
 
 import System.IO.Unsafe (unsafePerformIO)

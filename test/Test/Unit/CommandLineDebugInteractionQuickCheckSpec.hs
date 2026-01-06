@@ -3,7 +3,7 @@ module Test.Unit.CommandLineDebugInteractionQuickCheckSpec (tests) where
 
 import Test.Tasty
 import qualified Data.List as L
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (testProperty, Property, ioProperty, counterexample, (===), (==>), (.&&.), (==>))
 import Test.Tasty.HUnit
 
 import CommandLineDebug

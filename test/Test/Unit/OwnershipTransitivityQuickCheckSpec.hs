@@ -1,8 +1,9 @@
+{-# LANGUAGE FlexibleInstances #-}
 module Test.Unit.OwnershipTransitivityQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
-import Test.Tasty.QuickCheck (testProperty, property, Arbitrary(..), Gen, oneof, listOf, elements, choose)
+import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, listOf, elements, choose)
 import Data.Char (isAlphaNum)
 import qualified Data.List as L
 import Data.List (isPrefixOf, isInfixOf)

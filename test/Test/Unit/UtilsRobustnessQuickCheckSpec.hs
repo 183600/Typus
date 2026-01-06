@@ -88,7 +88,7 @@ testNormalizeIndentationProperties =
         originalLines = lines code
         normalizedLines = lines normalized
     in L.length normalizedLines === L.length originalLines .&&.
-       L.all (not . L.isPrefixOf "    ") normalizedLines
+       L.all (not . isPrefixOf "    ") normalizedLines
 
 -- | Test forceSingleTabIndentation function properties
 testForceSingleTabIndentationProperties :: Property

@@ -78,7 +78,7 @@ test_ownership_simple_assignment = testCase "Ownership transfer with simple assi
           let errorStr = formatOwnershipErrors errors
           -- Should detect ownership transfer
           assertBool "Should detect ownership transfer" $ 
-            L.isInfixOf "move" errorStr || L.isInfixOf "ownership" errorStr
+            isInfixOf "move" errorStr || isInfixOf "ownership" errorStr
         Right _ -> pure () -- Analysis successful
 
 -- Test ownership transfer with function parameters
@@ -106,7 +106,7 @@ test_ownership_function_parameters = testCase "Ownership transfer with function 
           let errorStr = formatOwnershipErrors errors
           -- Should detect cross-function ownership transfer
           assertBool "Should detect cross-function ownership transfer" $ 
-            L.isInfixOf "move" errorStr || L.isInfixOf "ownership" errorStr
+            isInfixOf "move" errorStr || isInfixOf "ownership" errorStr
         Right _ -> pure () -- Analysis successful
 
 -- Test ownership transfer with return values
@@ -133,7 +133,7 @@ test_ownership_return_values = testCase "Ownership transfer with return values" 
           let errorStr = formatOwnershipErrors errors
           -- Should detect ownership transfer through return values
           assertBool "Should handle return value ownership" $ 
-            not (L.isInfixOf "error" errorStr) || L.isInfixOf "move" errorStr
+            not (isInfixOf "error" errorStr) || isInfixOf "move" errorStr
         Right _ -> pure () -- Analysis successful
 
 -- Test ownership transfer with complex data structures
@@ -162,7 +162,7 @@ test_ownership_complex_structures = testCase "Ownership transfer with complex da
           let errorStr = formatOwnershipErrors errors
           -- Should detect ownership transfer of complex structures
           assertBool "Should handle complex structure ownership" $ 
-            not (L.isInfixOf "error" errorStr) || L.isInfixOf "move" errorStr
+            not (isInfixOf "error" errorStr) || isInfixOf "move" errorStr
         Right _ -> pure () -- Analysis successful
 
 -- Test ownership transfer with loops
@@ -192,7 +192,7 @@ test_ownership_loops = testCase "Ownership transfer with loops" $ do
           let errorStr = formatOwnershipErrors errors
           -- Should handle ownership in loop contexts
           assertBool "Should handle loop ownership" $ 
-            not (L.isInfixOf "error" errorStr) || L.isInfixOf "borrow" errorStr
+            not (isInfixOf "error" errorStr) || isInfixOf "borrow" errorStr
         Right _ -> pure () -- Analysis successful
 
 -- Test ownership transfer with conditionals
@@ -221,7 +221,7 @@ test_ownership_conditionals = testCase "Ownership transfer with conditionals" $ 
           let errorStr = formatOwnershipErrors errors
           -- Should detect conditional ownership transfer
           assertBool "Should handle conditional ownership" $ 
-            not (L.isInfixOf "error" errorStr) || L.isInfixOf "move" errorStr
+            not (isInfixOf "error" errorStr) || isInfixOf "move" errorStr
         Right _ -> pure () -- Analysis successful
 
 -- Property: Ownership analysis should be deterministic
@@ -250,7 +250,7 @@ prop_single_ownership_preserved source =
       case result of
         Left errors -> 
           let errorStr = formatOwnershipErrors errors
-          in property $ not (L.isInfixOf "DoubleMove" errorStr)
+          in property $ not (isInfixOf "DoubleMove" errorStr)
         Right _ -> property True
 
 -- Property: Borrow checker should prevent use-after-move
@@ -264,7 +264,7 @@ prop_borrow_prevents_use_after_move source =
       case result of
         Left errors -> 
           let errorStr = formatOwnershipErrors errors
-          in property $ not (L.isInfixOf "UseAfterMove" errorStr && L.isInfixOf "BorrowError" errorStr)
+          in property $ not (isInfixOf "UseAfterMove" errorStr && isInfixOf "BorrowError" errorStr)
         Right _ -> property True
 
 -- Property: Ownership transfer should handle nested scopes correctly
@@ -288,7 +288,7 @@ prop_nested_scope_ownership (Positive n) =
       case result of
         Left errors -> 
           let errorStr = formatOwnershipErrors errors
-          in property $ L.isInfixOf "move" errorStr || L.isInfixOf "borrow" errorStr
+          in property $ isInfixOf "move" errorStr || isInfixOf "borrow" errorStr
         Right _ -> property True
 
 -- Property: Ownership analysis should handle concurrent access patterns
@@ -313,7 +313,7 @@ prop_concurrent_access_patterns source =
       case result of
         Left errors -> 
           let errorStr = formatOwnershipErrors errors
-          in property $ L.isInfixOf "borrow" errorStr || L.isInfixOf "move" errorStr
+          in property $ isInfixOf "borrow" errorStr || isInfixOf "move" errorStr
         Right _ -> property True
 
 tests :: TestTree

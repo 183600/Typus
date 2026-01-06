@@ -145,7 +145,7 @@ tests =
 
 -- Helper function to check substring inclusion
 isInfixOf :: String -> String -> Bool
-L.isInfixOf needle haystack = needle `elem` [take (L.length needle) $ drop i haystack | i <- [0..L.length haystack - L.length needle]]
+isInfixOf needle haystack = needle `elem` [take (L.length needle) $ drop i haystack | i <- [0..L.length haystack - L.length needle]]
 
 -- | Property: error messages contain error codes
 prop_errorCodesPresent :: CompilerError -> Bool

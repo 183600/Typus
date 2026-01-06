@@ -159,12 +159,12 @@ prop_breakOn_splits needle haystack =
     isInfixOf _ [] = False
     isInfixOf needle haystack@(_:hs)
       | needle `L.isPrefixOf` haystack = True
-      | otherwise = L.isInfixOf needle hs
+      | otherwise = isInfixOf needle hs
     
     isPrefixOf :: String -> String -> Bool
     isPrefixOf [] _ = True
     isPrefixOf _ [] = False
-    isPrefixOf (x:xs) (y:ys) = x == y && L.isPrefixOf xs ys
+    isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
 
 prop_removeComments_complete :: Property
 prop_removeComments_complete =

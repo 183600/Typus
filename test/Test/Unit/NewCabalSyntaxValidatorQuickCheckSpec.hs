@@ -11,7 +11,7 @@
 module Test.Unit.NewCabalSyntaxValidatorQuickCheckSpec (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperty)
+import Test.Tasty.QuickCheck (testProperty, (==>))
 import TestSupport.QuickCheck (fastProperty)
 import Test.QuickCheck
   ( Arbitrary(..)

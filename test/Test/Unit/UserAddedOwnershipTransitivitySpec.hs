@@ -223,7 +223,7 @@ isCrossFunctionMove (CrossFunctionMove _ _) = True
 isCrossFunctionMove _ = False
 
 isInfixOf :: String -> String -> Bool
-L.isInfixOf needle haystack = needle `elem` [take (L.length needle) $ drop i haystack | i <- [0..L.length haystack - L.length needle]]
+isInfixOf needle haystack = needle `elem` [take (L.length needle) $ drop i haystack | i <- [0..L.length haystack - L.length needle]]
 
 -- | Property: ownership transfer is deterministic
 prop_ownershipDeterministic :: String -> Bool

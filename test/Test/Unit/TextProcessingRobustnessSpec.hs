@@ -392,7 +392,7 @@ fixIndentation = normalizeIndentation
 
 breakOn :: String -> String -> (String, String)
 breakOn sep str = 
-  case findIndex (L.isPrefixOf sep) (tails str) of
+  case findIndex (isPrefixOf sep) (tails str) of
     Just idx -> splitAt idx str
     Nothing -> (str, "")
   where

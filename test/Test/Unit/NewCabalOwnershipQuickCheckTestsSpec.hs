@@ -141,8 +141,8 @@ prop_ownership_error_use_after_move_structure =
         shown = show err
     in "UseAfterMove" `L.isPrefixOf` shown && var `L.isInfixOf` shown
   where
-    L.isPrefixOf prefix str = take (L.length prefix) str == prefix
-    L.isInfixOf substr str = substr `elem` [take (L.length substr) $ drop i str | i <- [0..L.length str - L.length substr]]
+    isPrefixOf prefix str = take (L.length prefix) str == prefix
+    isInfixOf substr str = substr `elem` [take (L.length substr) $ drop i str | i <- [0..L.length str - L.length substr]]
 
 prop_ownership_error_double_move_structure :: Property
 prop_ownership_error_double_move_structure =
@@ -154,8 +154,8 @@ prop_ownership_error_double_move_structure =
          var1 `L.isInfixOf` shown && 
          var2 `L.isInfixOf` shown
   where
-    L.isPrefixOf prefix str = take (L.length prefix) str == prefix
-    L.isInfixOf substr str = substr `elem` [take (L.length substr) $ drop i str | i <- [0..L.length str - L.length substr]]
+    isPrefixOf prefix str = take (L.length prefix) str == prefix
+    isInfixOf substr str = substr `elem` [take (L.length substr) $ drop i str | i <- [0..L.length str - L.length substr]]
 
 -- ============================================================================
 -- Properties for OwnershipTransfer
@@ -192,7 +192,7 @@ prop_ownership_analyzer_show =
       shown = show analyzer
   in "OwnershipAnalyzer" `L.isPrefixOf` shown
   where
-    L.isPrefixOf prefix str = take (L.length prefix) str == prefix
+    isPrefixOf prefix str = take (L.length prefix) str == prefix
 
 -- ============================================================================
 -- Properties for OwnershipType Lists
