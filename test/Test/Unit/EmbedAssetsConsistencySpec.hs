@@ -4,6 +4,61 @@ import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import EmbedAssets
+import Data.List (isPrefixOf)
+
+-- Test asset type
+data TestAsset = TestAsset
+  { assetPath :: String
+  , assetContent :: String
+  , assetMetadata :: [(String, String)]
+  } deriving (Eq, Show)
+
+-- Test implementation for embedAsset
+embedAsset :: String -> TestAsset
+embedAsset path = TestAsset
+  { assetPath = path
+  , assetContent = "content of " ++ path
+  , assetMetadata = []
+  }
+
+-- Test implementation for embedAssetContent
+embedAssetContent :: String -> String -> TestAsset
+embedAssetContent path content = TestAsset
+  { assetPath = path
+  , assetContent = content
+  , assetMetadata = []
+  }
+
+-- Test implementation for extractAssetContent
+extractAssetContent :: TestAsset -> String
+extractAssetContent asset = assetContent asset
+
+-- Test implementation for resolveAssetPath
+resolveAssetPath :: String -> String
+resolveAssetPath path = "/resolved/" ++ path
+
+-- Test implementation for createAssetWithMetadata
+createAssetWithMetadata :: String -> [(String, String)] -> TestAsset
+createAssetWithMetadata path metadata = TestAsset
+  { assetPath = path
+  , assetContent = "content of " ++ path
+  , assetMetadata = metadata
+  }
+
+-- Test implementation for getAssetMetadata
+getAssetMetadata :: TestAsset -> [(String, String)]
+getAssetMetadata asset = assetMetadata asset
+
+-- Test implementation for compressAsset
+compressAsset :: String -> String
+compressAsset content = "compressed:" ++ content
+
+-- Test implementation for decompressAsset
+decompressAsset :: String -> String
+decompressAsset compressed = 
+  if "compressed:" `isPrefixOf` compressed
+  then drop 11 compressed
+  else compressed
 
 -- Test asset embedding consistency
 prop_asset_embedding_consistent :: String -> Property

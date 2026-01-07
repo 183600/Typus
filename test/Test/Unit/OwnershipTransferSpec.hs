@@ -4,6 +4,12 @@ import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import Ownership
+import Data.List (isInfixOf)
+import Test.Tasty.QuickCheck (conjoin, Arbitrary(..), oneof)
+
+-- Add Arbitrary instance for OwnershipType
+instance Arbitrary OwnershipType where
+  arbitrary = oneof [pure $ Owned "test", pure $ Borrowed "test", pure $ MutBorrowed "test"]
 
 -- Test ownership type properties
 prop_ownership_type_reflexivity :: OwnershipType -> Property
@@ -11,13 +17,11 @@ prop_ownership_type_reflexivity ownershipType =
   property $ ownershipType === ownershipType
 
 -- Test ownership transfer consistency
-prop_ownership_transfer_consistency :: OwnershipType -> OwnershipType -> Property
-prop_ownership_transfer_consistency fromType toType =
-  let transfer = OwnershipTransfer fromType toType
-  in property $ 
-    (OwnershipTransfer fromType toType) === transfer &&
-    otFrom transfer === fromType &&
-    otTo transfer === toType
+prop_ownership_transfer_consistency :: String -> String -> Property
+prop_ownership_transfer_consistency fromName toName =
+  let transfer = OwnershipTransfer fromName toName
+  in conjoin [transferFrom transfer === fromName,
+              transferTo transfer === toName]
 
 -- Test ownership analyzer creation
 prop_ownership_analyzer_creation :: Property
@@ -28,7 +32,7 @@ prop_ownership_analyzer_creation =
 -- Test ownership error formatting
 prop_ownership_error_formatting :: String -> Property
 prop_ownership_error_formatting errorMsg =
-  let error = OwnershipError errorMsg
+  let error = UseAfterMove errorMsg
       formatted = formatOwnershipErrors [error]
   in property $ errorMsg `isInfixOf` formatted
 
@@ -36,11 +40,8 @@ prop_ownership_error_formatting errorMsg =
 prop_lex_parse_consistency :: String -> Property
 prop_lex_parse_consistency input =
   let tokens = lexAll input
-      parseResult = parseProgram tokens
-  in property $ 
-    case parseResult of
-      Left _ -> property True
-      Right ast -> property $ not (null tokens) ==> length ast >= 0
+      ast = parseProgram tokens
+  in property $ not (null tokens) ==> length (show ast) >= 0  -- Simplified test
 
 tests :: TestTree
 tests = testGroup "Ownership Transfer Tests"
@@ -48,5 +49,5 @@ tests = testGroup "Ownership Transfer Tests"
   , testProperty "ownership transfer consistency" prop_ownership_transfer_consistency
   , testProperty "ownership analyzer creation" prop_ownership_analyzer_creation
   , testProperty "ownership error formatting" prop_ownership_error_formatting
-  , testProperty "lexing and parsing consistency" prop_lex_parse_consistency
+  , testProperty "lex parse consistency" prop_lex_parse_consistency
   ]

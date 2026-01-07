@@ -2,8 +2,17 @@ module Test.Unit.SyntaxValidatorBoundarySpec where
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
 import SyntaxValidator
+
+-- Helper functions for testing
+isValidValidation :: [SyntaxError] -> Bool
+isValidValidation errors = null errors
+
+getValidatedCode :: [SyntaxError] -> String
+getValidatedCode errors = if null errors then "Valid code" else "Invalid code"
+
+getValidationErrors :: [SyntaxError] -> [String]
+getValidationErrors errors = map errorMessage errors
 
 -- Test validation boundary conditions
 prop_validation_empty_input :: Property

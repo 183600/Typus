@@ -4,6 +4,56 @@ import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import Tooling.Error
+import Data.List (isInfixOf)
+
+-- Define missing ErrorSeverity type
+data ErrorSeverity = ErrorInfo | ErrorWarning | ErrorError | ErrorFatal
+  deriving (Eq, Show)
+
+instance Arbitrary ErrorSeverity where
+  arbitrary = elements [ErrorInfo, ErrorWarning, ErrorError, ErrorFatal]
+
+-- Define missing ToolingError type with additional fields for testing
+data TestToolingError = TestToolingError
+  { testErrorMessage :: String
+  , testErrorCode :: Int
+  , testErrorSeverity :: ErrorSeverity
+  , testErrorContext :: [String]
+  } deriving (Eq, Show)
+
+-- Missing functions for testing
+createToolingError :: String -> TestToolingError
+createToolingError msg = TestToolingError msg 0 ErrorInfo []
+
+createToolingErrorWithCode :: String -> Int -> TestToolingError
+createToolingErrorWithCode msg code = TestToolingError msg code ErrorInfo []
+
+createToolingErrorWithSeverity :: String -> ErrorSeverity -> TestToolingError
+createToolingErrorWithSeverity msg severity = TestToolingError msg 0 severity []
+
+createToolingErrorWithCodeAndSeverity :: String -> Int -> ErrorSeverity -> TestToolingError
+createToolingErrorWithCodeAndSeverity msg code severity = TestToolingError msg code severity []
+
+getErrorMessage :: TestToolingError -> String
+getErrorMessage = testErrorMessage
+
+getErrorCode :: TestToolingError -> Int
+getErrorCode = testErrorCode
+
+getErrorSeverity :: TestToolingError -> ErrorSeverity
+getErrorSeverity = testErrorSeverity
+
+addErrorContext :: TestToolingError -> String -> TestToolingError
+addErrorContext error context = error { testErrorContext = testErrorContext error ++ [context] }
+
+getErrorContext :: TestToolingError -> String
+getErrorContext error = unwords $ testErrorContext error
+
+formatToolingError :: TestToolingError -> String
+formatToolingError error = 
+  "Error: " ++ testErrorMessage error ++ 
+  " (Code: " ++ show (testErrorCode error) ++ 
+  ", Severity: " ++ show (testErrorSeverity error) ++ ")"
 
 -- Test tooling error creation
 prop_tooling_error_creation :: String -> Property

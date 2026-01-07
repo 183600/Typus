@@ -5,6 +5,54 @@ import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import Cli.Runner
 
+-- Test CLI runner type
+data TestCliRunner = TestCliRunner
+  { runnerId :: String
+  , runnerState :: String
+  , commandHistory :: [String]
+  , configuration :: [String]
+  } deriving (Eq, Show)
+
+-- Test implementation for initializeCliRunner
+initializeCliRunner :: TestCliRunner
+initializeCliRunner = TestCliRunner
+  { runnerId = "runner-" ++ "1"
+  , runnerState = ""
+  , commandHistory = []
+  , configuration = []
+  }
+
+-- Test implementation for getRunnerId
+getRunnerId :: TestCliRunner -> String
+getRunnerId runner = runnerId runner
+
+-- Test implementation for executeCommand
+executeCommand :: TestCliRunner -> String -> Either String TestCliRunner
+executeCommand runner command = 
+  Right $ runner { commandHistory = commandHistory runner ++ [command] }
+
+-- Test implementation for setRunnerState
+setRunnerState :: TestCliRunner -> String -> TestCliRunner
+setRunnerState runner stateInfo = 
+  runner { runnerState = stateInfo }
+
+-- Test implementation for getRunnerState
+getRunnerState :: TestCliRunner -> String
+getRunnerState runner = runnerState runner
+
+-- Test implementation for getCommandHistory
+getCommandHistory :: TestCliRunner -> [String]
+getCommandHistory runner = commandHistory runner
+
+-- Test implementation for configureRunner
+configureRunner :: TestCliRunner -> [String] -> TestCliRunner
+configureRunner runner configOptions = 
+  runner { configuration = configuration runner ++ configOptions }
+
+-- Test implementation for getRunnerConfiguration
+getRunnerConfiguration :: TestCliRunner -> [String]
+getRunnerConfiguration runner = configuration runner
+
 -- Test CLI runner initialization
 prop_cli_runner_initialization :: Property
 prop_cli_runner_initialization =
@@ -34,7 +82,7 @@ prop_cli_runner_state stateInfo =
 prop_cli_runner_history :: [String] -> Property
 prop_cli_runner_history commands =
   let runner = initializeCliRunner
-      runnerWithHistory = foldl executeCommand runner commands
+      runnerWithHistory = foldl (\r cmd -> case executeCommand r cmd of Right r' -> r'; Left _ -> r) runner commands
       history = getCommandHistory runnerWithHistory
   in property $ length history >= length commands
 

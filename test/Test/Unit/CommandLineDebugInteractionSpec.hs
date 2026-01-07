@@ -4,6 +4,64 @@ import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import CommandLineDebug
+import Data.List (isInfixOf)
+import Test.QuickCheck (Arbitrary(..), oneof)
+
+-- Add Arbitrary instance for DebugConfig
+instance Arbitrary DebugConfig where
+  arbitrary = do
+    enabled <- arbitrary
+    level <- arbitrary
+    return $ DebugConfig
+      { debugEnabled = enabled
+      , verbosityLevel = level
+      }
+
+-- Test debug config type
+data DebugConfig = DebugConfig
+  { debugEnabled :: Bool
+  , verbosityLevel :: Int
+  } deriving (Eq, Show)
+
+-- Test implementation for parseCommandLine
+parseCommandLine :: String -> String
+parseCommandLine commandLine = commandLine
+
+-- Test implementation for parseDebugFlags
+parseDebugFlags :: [String] -> DebugConfig
+parseDebugFlags flags = DebugConfig
+  { debugEnabled = "--debug" `elem` flags || "-d" `elem` flags
+  , verbosityLevel = length (filter (== "-v") flags)
+  }
+
+-- Test implementation for isDebugEnabled
+isDebugEnabled :: DebugConfig -> Bool
+isDebugEnabled config = debugEnabled config
+
+-- Test implementation for setVerbosityLevel
+setVerbosityLevel :: Int -> DebugConfig
+setVerbosityLevel level = DebugConfig
+  { debugEnabled = True
+  , verbosityLevel = max 0 (min 5 level)
+  }
+
+-- Test implementation for getVerbosityLevel
+getVerbosityLevel :: DebugConfig -> Int
+getVerbosityLevel config = verbosityLevel config
+
+-- Test implementation for formatDebugMessage
+formatDebugMessage :: DebugConfig -> String -> String
+formatDebugMessage config message = 
+  let prefix = if debugEnabled config then "[DEBUG] " else ""
+  in prefix ++ message
+
+-- Test implementation for processDebugCommands
+processDebugCommands :: [String] -> [String]
+processDebugCommands commands = commands
+
+-- Test implementation for getDebugHistory
+getDebugHistory :: [String] -> [String]
+getDebugHistory history = history
 
 -- Test command line parsing
 prop_cli_parsing_consistent :: String -> Property

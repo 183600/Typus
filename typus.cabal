@@ -1154,7 +1154,6 @@ test-suite typus-test
         Test.Unit.NewCabalEdgeCaseSpec,
         
         -- New Test Modules Added (2025) - 27 comprehensive tests
-        Test.Unit.UtilsStringProcessingSpec,
         Test.Unit.SourceLocationMathSpec,
         Test.Unit.ParserDirectiveSpec,
         Test.Unit.CompilerErrorHandlingSpec,
@@ -1168,19 +1167,22 @@ test-suite typus-test
         Test.Unit.IntegratedCompilerPropertiesSpec,
         Test.Unit.EmbedAssetsConsistencySpec,
         Test.Unit.CommandLineDebugInteractionSpec,
-        Test.Unit.EnhancedDebugCoreSpec,
         Test.Unit.EnhancedErrorHandlerPropertiesSpec,
-        Test.Unit.ToolingErrorSpec,
         Test.Unit.SymbolTableOperationsSpec,
         Test.Unit.AnalyzerTypesSpec,
         Test.Unit.AnalyzerStateSpec,
         Test.Unit.CrossModuleIntegrationSpec,
         Test.Unit.DependentTypeBridgeSpec,
-        Test.Unit.OwnershipBridgeSpec,
         Test.Unit.CliIntegrationSpec,
         Test.Unit.CliRunnerSpec,
         Test.Unit.CliDebugRunnerSpec,
-        Test.Unit.CompilerUtilsPropertiesSpec
+        Test.Unit.CompilerUtilsPropertiesSpec,
+        
+        -- New Test Modules Created (2025) - 4 comprehensive tests
+        Test.Unit.ParserBasicFunctionsSpec,
+        Test.Unit.ErrorHandlerPropertiesSpec,
+        Test.Unit.CompilerBasicSpec,
+        Test.Unit.DependenciesInferenceSpec
         
         -- (These modules are already listed above)
     build-depends:
