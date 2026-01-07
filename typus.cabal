@@ -178,9 +178,10 @@ test-suite typus-test
                       -Wno-unused-top-binds -Wno-unused-matches 
                       -Wno-orphans -Wno-name-shadowing
                       -Wno-type-defaults -Wno-unused-local-binds
-                      -Wno-unused-imports -Wno-x-partial
+                      -Wno-unused-imports
     other-modules:
 
+        Test.Unit,
         Test.Unit.Tests,
         Test.Unit.CLISpec,
         Test.Unit.CommandLineDebugSpec,
@@ -1150,7 +1151,36 @@ test-suite typus-test
         Test.Unit.NewCabalTypeSystemSpec,
         Test.Unit.NewCabalErrorRecoverySpec,
         Test.Unit.NewCabalPerformanceSpec,
-        Test.Unit.NewCabalEdgeCaseSpec
+        Test.Unit.NewCabalEdgeCaseSpec,
+        
+        -- New Test Modules Added (2025) - 27 comprehensive tests
+        Test.Unit.UtilsStringProcessingSpec,
+        Test.Unit.SourceLocationMathSpec,
+        Test.Unit.ParserDirectiveSpec,
+        Test.Unit.CompilerErrorHandlingSpec,
+        Test.Unit.OwnershipTransferSpec,
+        Test.Unit.DependenciesTypeSystemSpec,
+        Test.Unit.GoToolchainIntegrationSpec,
+        Test.Unit.ErrorHandlerRecoverySpec,
+        Test.Unit.SyntaxValidatorBoundarySpec,
+        Test.Unit.ValueAnalysisFlowSpec,
+        Test.Unit.DebugIntegrationFlowSpec,
+        Test.Unit.IntegratedCompilerPropertiesSpec,
+        Test.Unit.EmbedAssetsConsistencySpec,
+        Test.Unit.CommandLineDebugInteractionSpec,
+        Test.Unit.EnhancedDebugCoreSpec,
+        Test.Unit.EnhancedErrorHandlerPropertiesSpec,
+        Test.Unit.ToolingErrorSpec,
+        Test.Unit.SymbolTableOperationsSpec,
+        Test.Unit.AnalyzerTypesSpec,
+        Test.Unit.AnalyzerStateSpec,
+        Test.Unit.CrossModuleIntegrationSpec,
+        Test.Unit.DependentTypeBridgeSpec,
+        Test.Unit.OwnershipBridgeSpec,
+        Test.Unit.CliIntegrationSpec,
+        Test.Unit.CliRunnerSpec,
+        Test.Unit.CliDebugRunnerSpec,
+        Test.Unit.CompilerUtilsPropertiesSpec
         
         -- (These modules are already listed above)
     build-depends:

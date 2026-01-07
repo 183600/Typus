@@ -14,7 +14,8 @@ module Compiler.IR (
     moduleFromTypus,
     ensurePackageDecl,
     ensureMainFunction,
-    attachInferredImports
+    attachInferredImports,
+    hasRequiredElements
 ) where
 
 import Parser (TypusFile(..), CodeBlock(..))
@@ -476,3 +477,10 @@ packageUsed usage pkg = pkg `Set.member` usagePackages usage
 
 qualifiedSymbolUsed :: ImportUsage -> String -> String -> Bool
 qualifiedSymbolUsed usage pkg sym = (pkg, sym) `Set.member` usageQualified usage
+
+-- | Check if SemanticIR has all required elements
+hasRequiredElements :: SemanticIR -> Bool
+hasRequiredElements ir = 
+  let hasTypusFile = not (null (tfBlocks (semanticTypusFile ir)))
+      hasModule = not (null (gmDecls (semanticModule ir)))
+  in hasTypusFile && hasModule

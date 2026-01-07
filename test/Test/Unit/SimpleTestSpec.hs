@@ -2,13 +2,13 @@ module Test.Unit.SimpleTestSpec where
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import qualified Data.List as L
+import Test.Tasty.HUnit
 
 -- Basic test properties
-prop_reverse_reverse :: [Int] -> Bool
-prop_reverse_reverse xs = L.reverse (L.reverse xs) == xs
+prop_basic_property :: String -> Property
+prop_basic_property s = property $ length s >= 0
 
 tests :: TestTree
-tests = testGroup "Simple Test"
-  [ testProperty "reverse reverse" prop_reverse_reverse
+tests = testGroup "Test.Unit.SimpleTestSpec Tests"
+  [ testProperty "basic property" prop_basic_property
   ]

@@ -23,6 +23,7 @@ module SourceLocation (
     spanBetween,
     mergeSpans,
     isValidSpan,
+    isValidBlockSpan,
 
     -- Located value utilities
     locatedAt,
@@ -134,6 +135,10 @@ mergeSpans span1 span2 = SourceSpan
 -- Check if span is valid (start <= end)
 isValidSpan :: SourceSpan -> Bool
 isValidSpan srcSpan = spanStart srcSpan <= spanEnd srcSpan
+
+-- | Check if a block span is valid (alias for isValidSpan for backward compatibility)
+isValidBlockSpan :: SourceSpan -> Bool
+isValidBlockSpan = isValidSpan
 
 -- ============================================================================
 -- Located Values

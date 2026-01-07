@@ -15,6 +15,9 @@ module Utils
   , fixIndentation        -- 兼容名 = normalizeIndentation
     -- Search
   , breakOn               -- 更高效的实现
+    -- String processing
+  , safeProcessString,    -- 安全处理字符串
+    isValidChar           -- 检查字符是否有效
   ) where
 
 import Data.Char (isSpace)
@@ -213,4 +216,16 @@ breakOn pat s
       in case T.stripPrefix patText remainder of
            Just after -> (T.unpack before, T.unpack after)
            Nothing    -> (s, "")
+
+-- | 安全处理字符串，过滤掉控制字符
+safeProcessString :: String -> Either String String
+safeProcessString s = 
+  let filtered = filter (\c -> c >= ' ' || c == '\n' || c == '\r' || c == '\t') s
+  in if null filtered 
+     then Left "Empty string after processing"
+     else Right filtered
+
+-- | 检查字符是否有效（非控制字符）
+isValidChar :: Char -> Bool
+isValidChar c = c >= ' ' || c == '\n' || c == '\r' || c == '\t'
 

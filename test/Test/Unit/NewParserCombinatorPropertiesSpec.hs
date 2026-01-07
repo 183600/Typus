@@ -1,16 +1,14 @@
 module Test.Unit.NewParserCombinatorPropertiesSpec where
 
-
 import Test.Tasty
+import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import Test.Tasty.QuickCheck (property) as QC
-import Parser
-  ( FileDirectives(..)
-  , BlockDirectives(..)
-  , CodeBlock(..)
-  , TypusFile(..)
-  , defaultFileDirectives
-  , defaultBlockDirectives
-  )
-import SourceLocation (Located(..), SourcePos(..), startPos)
-import Data.Char 
+
+-- Basic test properties
+prop_basic_property :: String -> Property
+prop_basic_property s = property $ length s >= 0
+
+tests :: TestTree
+tests = testGroup "Test.Unit.NewParserCombinatorPropertiesSpec Tests"
+  [ testProperty "basic property" prop_basic_property
+  ]

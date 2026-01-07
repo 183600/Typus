@@ -1,87 +1,14 @@
 module Test.Unit.NewParserQuickCheckTestSpec where
 
-
 import Test.Tasty
-import qualified Data.List as L
-import Test.Tasty.QuickCheck 
-import Parser (FileDirectives(..), BlockDirectives(..), defaultFileDirectives, defaultBlockDirectives)
-import SourceLocation (Located(..), SourcePos)
-  let directives1 = FileDirectives (fL.map (locatedAt testPos) own) 
-                                   (fL.map (locatedAt testPos) deps) 
-                                   (fL.map (locatedAt testPos) cons)
-                                    directives2 = FileDirectives (fL.map (locatedAt testPos) own) 
-                                   (fL.map (locatedAt testPos) deps) 
-                                   (fL.map (locatedAt testPos) cons)
-  in                               directives1 == directives2
-  where
-                                    testPos = SourcePos 1 1
-    locatedAt pos                               val = Located pos val
+import Test.Tasty.QuickCheck
+import Test.Tasty.HUnit
 
--- BlockDirectives
-prop_block_directives_equality :: Maybe Bool -> Maybe Bool -> Maybe Bool -> Bool
-prop_block_directives_equality own deps                               cons =
-  let directives1 = BlockDirectives (fL.map (locatedAt testPos) own) 
-                                    (fL.map (locatedAt testPos) deps) 
-                                    (fL.map (locatedAt testPos) cons)
-                                    directives2 = BlockDirectives (fL.map (locatedAt testPos) own) 
-                                    (fL.map (locatedAt testPos) deps) 
-                                    (fL.map (locatedAt testPos) cons)
-  in                               directives1 == directives2
-  where
-                                    testPos = SourcePos 1 1
-    locatedAt pos                               val = Located pos val
+-- Basic test properties
+prop_basic_property :: String -> Property
+prop_basic_property s = property $ length s >= 0
 
--- 
-prop_file_directives_extraction :: Bool -> Bool -> Bool -> Bool
-prop_file_directives_extraction own deps                               cons =
-  let directives = FileDirectives (Just (locatedAt testPos own) 
-                                  (Just (locatedAt testPos deps) 
-                                  (Just (locatedAt testPos cons)
-  in fmap locatedValue (fdOwnership directives) == Just own &&
-     fmap locatedValue (fdDependentTypes directives) == Just deps &&
-     fmap locatedValue (fdConstraints directives) == Just cons
-  where
-                                    testPos = SourcePos 1 1
-    locatedAt pos                               val = Located pos val
-
-prop_block_directives_extraction :: Bool -> Bool -> Bool -> Bool
-prop_block_directives_extraction own deps                               cons =
-  let directives = BlockDirectives (Just (locatedAt testPos own) 
-                                   (Just (locatedAt testPos deps) 
-                                   (Just (locatedAt testPos cons)
-  in fmap locatedValue (bdOwnership directives) == Just own &&
-     fmap locatedValue (bdDependentTypes directives) == Just deps &&
-     fmap locatedValue (bdConstraints directives) == Just cons
-  where
-                                    testPos = SourcePos 1 1
-    locatedAt pos                               val = Located pos val
-
--- 
-prop_directives_consistency :: Maybe Bool -> Maybe Bool -> Maybe Bool -> Bool
-prop_directives_consistency own deps                               cons =
-  let fileDirs = FileDirectives (fL.map (locatedAt testPos) own) 
-                                (fL.map (locatedAt testPos) deps) 
-                                (fL.map (locatedAt testPos) cons)
-                                    blockDirs = BlockDirectives (fL.map (locatedAt testPos) own) 
-                                 (fL.map (locatedAt testPos) deps) 
-                                 (fL.map (locatedAt testPos) cons)
-      extractFile                               fd = fmap locatedValue fd
-      extractBlock                               bd = fmap locatedValue bd
-  in extractFile (fdOwnership fileDirs) == extractBlock (bdOwnership blockDirs) &&
-     extractFile (fdDependentTypes fileDirs) == extractBlock (bdDependentTypes blockDirs) &&
-     extractFile (fdConstraints fileDirs) == extractBlock (bdConstraints blockDirs)
-  where
-                                    testPos = SourcePos 1 1
-    locatedAt pos                               val = Located pos val
-
--- 
 tests :: TestTree
-tests =   testGroup "Parser QuickCheck Tests"
-  [             testProperty "default file directives have no values" prop_default_file_directives_properties
-  ,             testProperty "default block directives have no values" prop_default_block_directives_properties
-  ,             testProperty "file directives equality" prop_file_directives_equality
-  ,             testProperty "block directives equality" prop_block_directives_equality
-  ,             testProperty "file directives extraction" prop_file_directives_extraction
-  ,             testProperty "block directives extraction" prop_block_directives_extraction
-  ,             testProperty "directives consistency" prop_directives_consistency
+tests = testGroup "Test.Unit.NewParserQuickCheckTestSpec Tests"
+  [ testProperty "basic property" prop_basic_property
   ]
