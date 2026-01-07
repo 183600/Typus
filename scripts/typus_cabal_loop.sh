@@ -146,7 +146,7 @@ while true; do
   fi
 
   if [[ "$CABAL_STATUS" -eq 0 ]]; then
-    iflow "给这个项目增加一些cabal test测试用例，不要超过10个，如果需要使用QuickCheck就使用QuickCheck think:high" --yolo || true
+    iflow "给这个项目增加一些cabal test测试用例，不要超过27个，如果需要使用QuickCheck就使用QuickCheck think:high" --yolo || true
 
     git add -A
     if git diff --cached --quiet; then
