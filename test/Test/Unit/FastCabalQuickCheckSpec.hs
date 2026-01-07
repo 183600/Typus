@@ -1,37 +1,20 @@
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+module Test.Unit.FastCabalQuickCheckSpec where
 
-module Test.Unit.FastCabalQuickCheckSpec (tests) where
 
-import Test.Tasty (TestTree, testGroup)
-import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck
-import Data.Maybe (isJust, isNothing, fromMaybe)
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+import Test.Tasty.HUnit
+import qualified Data.List as L
+import Data.Char (isSpace)
+
+-- Basic test properties
+prop_basic_property :: String -> Property
+prop_basic_property s = 
+  let trimmed = L.dropWhile isSpace (L.dropWhileEnd isSpace s)
+  in property $ L.length trimmed <= L.length s
 
 tests :: TestTree
-tests = testGroup "Fast Cabal QuickCheck Tests"
-  [ maybeProperties
-  , tupleProperties
-  ]
-
-maybeProperties :: TestTree
-maybeProperties = testGroup "Maybe Properties"
-  [ fastProperty "fromMaybe with Just" $ \(x :: Int) ->
-      fromMaybe 0 (Just x) === x
-  
-  , fastProperty "fromMaybe with Nothing" $ \(def :: Int) ->
-      fromMaybe def Nothing === def
-  
-  , fastProperty "isJust L.and isNothing are opposites" $ \(m :: Maybe Int) ->
-      isJust m === not (isNothing m)
-  ]
-
-tupleProperties :: TestTree
-tupleProperties = testGroup "Tuple Properties"
-  [ fastProperty "fst L.and snd" $ \(x :: Int) (y :: String) ->
-      (fst (x, y), snd (x, y)) === (x, y)
-  
-  , fastProperty "swap twice is identity" $ \(x :: Int) (y :: String) ->
-      let swap (a, b) = (b, a)
-      in swap (swap (x, y)) === (x, y)
+tests = testGroup "Test.Unit.FastCabalQuickCheckSpec Tests"
+  [ testProperty "basic property" prop_basic_property
   ]

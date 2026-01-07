@@ -1,46 +1,12 @@
-{-# OPTIONS_GHC -Wno-missing-export-lists #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Test.Unit.NewCompilerIRQuickCheckTestsSpec where
 
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=))
-import Test.Tasty.QuickCheck (testProperty)
-import Test.QuickCheck (Arbitrary(..), Gen, oneof, elements, listOf, choose, property, (==>), forAll)
-import TestSupport.QuickCheck (fastProperty)
 
-import Compiler.IR
-import SourceLocation (Located(..), SourceSpan(..), SourcePos(..))
-import Compiler.GoAst
-import qualified Data.Text as T
-import qualified Data.Map as Map
-import qualified Data.List as List
-
--- Additional generators for IR testing
-genIRNode :: Gen IRNode
-genIRNode = oneof
-  [ IRVariable <$> genIdentifier
-  , IRConstant <$> genLiteralValue
-  , IRFunctionCall <$> genIdentifier <*> listOf genIRNode
-  , IRBinaryOp <$> genBinaryOperator <*> genIRNode <*> genIRNode
-  , IRUnaryOp <$> genUnaryOperator <*> genIRNode
-  , IRConditional <$> genIRNode <*> genIRNode <*> genIRNode
-  , IRLetBinding <$> genIdentifier <*> genIRNode
-  , IRSequence <$> listOf genIRNode
-  ]
-
-genBinaryOperator :: Gen BinaryOperator
-genBinaryOperator = elements
-  [ Add, Subtract, Multiply, Divide, Modulo
-  , Equal, NotEqual, LessThan, LessEqual, GreaterThan, GreaterEqual
-  , And, Or, BitAnd, BitOr, BitXor, ShiftLeft, ShiftRight
-  ]
-
-genUnaryOperator :: Gen UnaryOperator
-genUnaryOperator = elements [Negate, Not, BitComplement]
-
-genLiteralValue :: Gen LiteralValue
-genLiteralValue = oneof
+import Test.Tasty 
+import Test.Tasty.HUnit (testCase, assertFailure, assertBool, (@?=)
+import Test.Tasty.QuickCheck 
+import Test.QuickCheck (Gen, choose, vectorOf, elements, Arbitrary(..), Gen, oneof, elements, listOf, choose, property, (==>), forAll)
+import TestSupport.QuickCheck 
+import SourceLocation (Located(..), SourceSpan(..), SourcePos)
   [ IntLiteral <$> choose (-1000, 1000)
   , FloatLiteral <$> choose (-1000.0, 1000.0)
   , StringLiteral <$> genStringLiteral
@@ -48,31 +14,30 @@ genLiteralValue = oneof
   ]
 
 genStringLiteral :: Gen String
-genStringLiteral = do
-  chars <- listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ [' ', '.', '!', '?']
+                              genStringLiteral = do
+              chars <- listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ [' ', '.', '!', '?']
   return chars
 
 genIdentifier :: Gen String
-genIdentifier = do
-  first <- elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['_']
+                              genIdentifier = do
+              first <- elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['_']
   rest <- listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ ['_']
-  return (first : rest)
+return (first : rest)
 
 genType :: Gen IRType
-genType = oneof
+                              genType = oneof
   [ pure IRInt
-  , pure IRFloat
-  , pure IRBool
-  , pure IRString
-  , pure IRUnit
+    , pure IRFloat
+    , pure IRBool
+    , pure IRString
+    , pure IRUnit
   , IRFunction <$> listOf genType <*> genType
   , IRTuple <$> listOf genType
   , IRList <$> genType
   , IRCustom <$> genIdentifier
   ]
-
 genIRStatement :: Gen IRStatement
-genIRStatement = oneof
+                              genIRStatement = oneof
   [ IRExprStmt <$> genIRNode
   , IRReturn <$> genIRNode
   , IRVarDecl <$> genIdentifier <*> genType <*> genIRNode
@@ -83,14 +48,14 @@ genIRStatement = oneof
   ]
 
 genIRFunction :: Gen IRFunction
-genIRFunction = IRFunction <$> genIdentifier <*> listOf (genIdentifier, genType) <*> genType <*> listOf genIRStatement
+                              genIRFunction = IRFunction <$> genIdentifier <*> listOf (genIdentifier, genType) <*> genType <*> listOf genIRStatement
 
 genIRModule :: Gen IRModule
-genIRModule = IRModule <$> genIdentifier <*> listOf genIRFunction <*> listOf genIRStatement
+                              genIRModule = IRModule <$> genIdentifier <*> listOf genIRFunction <*> listOf genIRStatement
 
 -- Property: IR node type consistency
 prop_irNodeTypeConsistency :: IRNode -> Bool
-prop_irNodeTypeConsistency node = 
+prop_irNodeTypeConsistency                               node = 
   case node of
     IRVariable _ -> True
     IRConstant _ -> True
@@ -104,7 +69,7 @@ prop_irNodeTypeConsistency node =
 
 -- Property: IR statement well-formedness
 prop_irStatementWellFormed :: IRStatement -> Bool
-prop_irStatementWellFormed stmt = 
+prop_irStatementWellFormed                               stmt = 
   case stmt of
     IRExprStmt expr -> prop_irNodeTypeConsistency expr
     IRReturn expr -> prop_irNodeTypeConsistency expr
@@ -115,7 +80,7 @@ prop_irStatementWellFormed stmt =
       prop_irNodeTypeConsistency cond && L.all prop_irStatementWellFormed body
     IRFor _ initExpr body -> 
       prop_irNodeTypeConsistency initExpr && L.all prop_irStatementWellFormed body
-    IRFunctionDecl _ params retType body -> 
+IRFunctionDecl _ params retType body -> 
       L.all prop_irStatementWellFormed body
 
 -- Property: Function parameter types are consistent
@@ -128,24 +93,24 @@ prop_functionParameterTypes (IRFunction _ params retType body) =
 prop_moduleUniqueFunctionNames :: IRModule -> Bool
 prop_moduleUniqueFunctionNames (IRModule _ functions _) = 
   let functionNames = map functionName functions
-      uniqueNames = functionNames ++ functionNames
-  in L.length functionNames == L.length uniqueNames
+                                    uniqueNames = functionNames ++ functionNames
+  in L.length                               functionNames == L.length uniqueNames
   where
-    functionName (IRFunction name _ _ _) = name
+      functionName (IRFunction name _ _ _) = name
 
 -- Property: Binary operator operands are compatible
 prop_binaryOperatorCompatibility :: BinaryOperator -> IRNode -> IRNode -> Bool
-prop_binaryOperatorCompatibility op left right = 
+prop_binaryOperatorCompatibility op left                               right = 
   prop_irNodeTypeConsistency left && prop_irNodeTypeConsistency right
 
 -- Property: Unary operator operand is valid
 prop_unaryOperatorValidity :: UnaryOperator -> IRNode -> Bool
-prop_unaryOperatorValidity op operand = 
+prop_unaryOperatorValidity op                               operand = 
   prop_irNodeTypeConsistency operand
 
 -- Property: Literal values are within expected ranges
 prop_literalValueRanges :: LiteralValue -> Bool
-prop_literalValueRanges literal = 
+prop_literalValueRanges                               literal = 
   case literal of
     IntLiteral i -> i >= -10000 && i <= 10000
     FloatLiteral f -> f >= -10000.0 && f <= 10000.0
@@ -154,7 +119,7 @@ prop_literalValueRanges literal =
 
 -- Property: Type system consistency
 prop_typeSystemConsistency :: IRType -> Bool
-prop_typeSystemConsistency typ = 
+prop_typeSystemConsistency                               typ = 
   case typ of
     IRFunction paramTypes retType -> 
       L.all prop_typeSystemConsistency paramTypes && prop_typeSystemConsistency retType
@@ -169,10 +134,10 @@ prop_irNodeCountFinite (IRModule _ functions statements) =
   let countNodes = countIRNodes functions + countStatements statements
   in countNodes >= 0 && countNodes < 10000  -- Reasonable upper bound
   where
-    countIRNodes = L.length . map countFunctionNodes
+                                    countIRNodes = L.length . map countFunctionNodes
     countFunctionNodes (IRFunction _ _ _ body) = countStatements body
-    countStatements = L.sum . map countStatementNodes
-    countStatementNodes stmt = 
+                                  countStatements = L.sum . map countStatementNodes
+    countStatementNodes                               stmt = 
       case stmt of
         IRExprStmt expr -> countExpressionNodes expr
         IRReturn expr -> countExpressionNodes expr
@@ -182,7 +147,7 @@ prop_irNodeCountFinite (IRModule _ functions statements) =
         IRWhile cond body -> countExpressionNodes cond + countStatements body
         IRFor _ initExpr body -> countExpressionNodes initExpr + countStatements body
         IRFunctionDecl _ _ _ body -> countStatements body
-    countExpressionNodes expr = 
+    countExpressionNodes                               expr = 
       case expr of
         IRVariable _ -> 1
         IRConstant _ -> 1
@@ -196,45 +161,45 @@ prop_irNodeCountFinite (IRModule _ functions statements) =
 
 -- Property: IR serialization round-trip preserves structure
 prop_irSerializationRoundTrip :: IRModule -> Bool
-prop_irSerializationRoundTrip module = 
-  let serialized = show module  -- Simplified serialization
-      reconstructed = module  -- Simplified deserialization
+prop_irSerializationRoundTrip                               module Test.Unit.NewCompilerIRQuickCheckTestsSpec 
+  let serialized = show module Test.Unit.NewCompilerIRQuickCheckTestsSpec Simplified serialization
+                                    reconstructed = module Test.Unit.NewCompilerIRQuickCheckTestsSpec Simplified deserialization
   in True  -- Would implement actual serialization/deserialization
 
 -- Helper functions
 isValidType :: IRType -> Bool
-isValidType = prop_typeSystemConsistency
+                              isValidType = prop_typeSystemConsistency
 
 -- Test suite
 tests :: TestTree
-tests = testGroup "New Compiler IR QuickCheck Tests"
-  [ testProperty "IR node type consistency" $
+tests =   testGroup "New Compiler IR QuickCheck Tests"
+  [             testProperty "IR node type consistency" $
       fastProperty "IR node type consistency" prop_irNodeTypeConsistency
   
-  , testProperty "IR statement well-formedness" $
+  ,             testProperty "IR statement well-formedness" $
       fastProperty "IR statement well-formedness" prop_irStatementWellFormed
   
-  , testProperty "Function parameter types are consistent" $
+  ,             testProperty "Function parameter types are consistent" $
       fastProperty "Function parameter types" prop_functionParameterTypes
   
-  , testProperty "Module contains unique function names" $
+  ,             testProperty "Module contains unique function names" $
       fastProperty "Module unique function names" prop_moduleUniqueFunctionNames
   
-  , testProperty "Binary operator operands are compatible" $
+  ,             testProperty "Binary operator operands are compatible" $
       fastProperty "Binary operator compatibility" prop_binaryOperatorCompatibility
   
-  , testProperty "Unary operator operand is valid" $
+  ,             testProperty "Unary operator operand is valid" $
       fastProperty "Unary operator validity" prop_unaryOperatorValidity
   
-  , testProperty "Literal values are within expected ranges" $
+  ,             testProperty "Literal values are within expected ranges" $
       fastProperty "Literal value ranges" prop_literalValueRanges
   
-  , testProperty "Type system consistency" $
+  ,             testProperty "Type system consistency" $
       fastProperty "Type system consistency" prop_typeSystemConsistency
   
-  , testProperty "IR node count is finite" $
+  ,             testProperty "IR node count is finite" $
       fastProperty "IR node count finite" prop_irNodeCountFinite
   
-  , testProperty "IR serialization round-trip preserves structure" $
+  ,             testProperty "IR serialization round-trip preserves structure" $
       fastProperty "IR serialization round-trip" prop_irSerializationRoundTrip
   ]

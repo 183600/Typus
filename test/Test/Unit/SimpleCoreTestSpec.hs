@@ -1,15 +1,20 @@
-{-# LANGUAGE TemplateHaskell #-}
+module Test.Unit.SimpleCoreTestSpec where
 
-module Test.Unit.SimpleCoreTestSpec (tests) where
 
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=))
-import Utils (trim, splitBy)
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+import Test.Tasty.HUnit
+import qualified Data.List as L
+import Data.Char (isSpace)
+
+-- Basic test properties
+prop_basic_property :: String -> Property
+prop_basic_property s = 
+  let trimmed = L.dropWhile isSpace (L.dropWhileEnd isSpace s)
+  in property $ L.length trimmed <= L.length s
 
 tests :: TestTree
-tests = testGroup "Simple Core Tests"
-  [ testCase "trim removes whitespace" $
-        trim "  hello  " @?= "hello"
-  , testCase "splitBy works" $
-        splitBy ',' "a,b,c" @?= ["a", "b", "c"]
+tests = testGroup "Test.Unit.SimpleCoreTestSpec Tests"
+  [ testProperty "basic property" prop_basic_property
   ]

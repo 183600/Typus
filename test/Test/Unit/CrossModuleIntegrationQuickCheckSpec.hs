@@ -1,126 +1,112 @@
-module Test.Unit.CrossModuleIntegrationQuickCheckSpec (tests) where
-
-import Test.Tasty (TestTree, testGroup)
+module Test.Unit.CrossModuleIntegrationQuickCheckSpec where
+import Test.QuickCheck 
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property)
-import Parser (parseTypus, TypusFile(..))
+import Parser 
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos, advancePosBy)
-import Utils (trim, removeComments, splitBy)
-import Compiler (compile)
-import ErrorHandler (ErrorHandler(..))
-import Data.Either (isLeft, isRight)
-import qualified Data.List as L
-import Data.List (length)
-
--- ============================================================================
--- Cross Module Integration QuickCheck Tests
--- ============================================================================
-
-tests :: TestTree
-tests = testGroup "Cross Module Integration QuickCheck Tests"
-  [ testProperty "parser output integrates with source location tracking" prop_parser_source_location_integration
-  , testProperty "utils text processing works on parser output" prop_utils_parser_integration
-  , testProperty "source location math works with parser spans" prop_sourcelocation_parser_integration
-  , testProperty "error handler processes parser errors correctly" prop_errorhandler_parser_integration
-  , testProperty "compiler handles parser output gracefully" prop_compiler_parser_integration
-  , testProperty "text processing pipeline consistency" prop_text_processing_pipeline
-  , testProperty "source location tracking through compilation" prop_sourcelocation_compilation_tracking
-  , testProperty "error recovery maintains source location info" prop_error_recovery_sourcelocation
-  ]
-
--- | Parser output should integrate properly with source location tracking
-prop_parser_source_location_integration :: String -> Property
-prop_parser_source_location_integration content = 
-  let result = parseTypus content
-  in case result of
-    Left _ -> True  -- Parsing may fail
-    Right tf -> L.all isValidBlockSpan (tfBlocks tf)
+import Utils 
+Right tf -> property $ L.all isValidBlockSpan (tfBlocks tf)
   where
-    isValidBlockSpan block = spanStart (cbSpan block) <= spanEnd (cbSpan block)
+      isValidBlockSpan                               block = spanStart (cbSpan block) <= spanEnd (cbSpan block)
+-- Arbitrary instance for SourcePos
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- choose (1, 100)
+    column <- choose (1, 100)
+    offset <- choose (0, 1000)
+    return $ SourcePos line column offset
+
+-- Arbitrary instance for SourceSpan
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    return $ SourceSpan start end
+
 
 -- | Utils text processing should work correctly on parser output content
 prop_utils_parser_integration :: String -> Property
-prop_utils_parser_integration content = 
+prop_utils_parser_integration                               content = 
   let result = parseTypus content
   in case result of
-    Left _ -> True
-    Right tf -> L.all blockContentProcessable (tfBlocks tf)
+    Left _ -> property True
+    Right tf -> property $ L.all blockContentProcessable (tfBlocks tf)
   where
-    blockContentProcessable block = 
+      blockContentProcessable                               block = 
       let processed = removeComments (cbContent block)
-          trimmed = trim processed
+                                        trimmed = trim processed
       in L.length trimmed <= L.length (cbContent block)
 
 -- | Source location math should work correctly with parser-generated spans
 prop_sourcelocation_parser_integration :: String -> Property
-prop_sourcelocation_parser_integration content = 
+prop_sourcelocation_parser_integration                               content = 
   let result = parseTypus content
   in case result of
-    Left _ -> True
-    Right tf -> L.all spansHaveValidPositions (tfBlocks tf)
+    Left _ -> property True
+    Right tf -> property $ L.all spansHaveValidPositions (tfBlocks tf)
   where
-    spansHaveValidPositions block = 
+      spansHaveValidPositions                               block = 
       let span = cbSpan block
-          start = spanStart span
-          end = spanEnd span
+                                        start = spanStart span
+                                        end = spanEnd span
       in posLine start > 0 && posColumn start > 0 && 
          posLine end > 0 && posColumn end > 0 &&
          posOffset start <= posOffset end
 
 -- | Error handler should process parser errors correctly
 prop_errorhandler_parser_integration :: String -> Property
-prop_errorhandler_parser_integration content = 
+prop_errorhandler_parser_integration                               content = 
   let result = parseTypus content
   in case result of
-    Left err -> L.length (show err) > 0  -- Error should have descriptive message
-    Right _ -> True  -- Success is also valid
+    Left err -> property $ L.length (show err) > 0  -- Error should have descriptive message
+    Right _ -> property True  -- Success is also valid
 
 -- | Compiler should handle parser output gracefully
 prop_compiler_parser_integration :: String -> Property
-prop_compiler_parser_integration content = 
+prop_compiler_parser_integration                               content = 
   let parseResult = parseTypus content
   in case parseResult of
-    Left _ -> True  -- If parsing fails, compilation behavior is undefined
+    Left _ -> property True  -- If parsing fails, compilation behavior is undefined
     Right tf -> 
       let compileResult = compile tf
       in case compileResult of
-        Left _ -> True  -- Compilation may fail
-        Right _ -> True  -- Or succeed
+        Left _ -> property True  -- Compilation may fail
+        Right _ -> property True  -- Or succeed
 
 -- | Text processing pipeline should maintain consistency
 prop_text_processing_pipeline :: String -> Property
-prop_text_processing_pipeline content = 
+prop_text_processing_pipeline                               content = 
   let step1 = trim content
-      step2 = removeComments step1
-      step3 = trim step2
-      lines1 = lines step1
-      lines2 = lines step2
-      lines3 = lines step3
-  in L.length lines3 <= L.length lines2 && L.length lines2 <= L.length lines1
+                                    step2 = removeComments step1
+                                    step3 = trim step2
+                                    lines1 = lines step1
+                                    lines2 = lines step2
+                                    lines3 = lines step3
+  in property $ L.length lines3 <= L.length lines2 && L.length lines2 <= L.length lines1
 
 -- | Source location tracking should work through compilation pipeline
 prop_sourcelocation_compilation_tracking :: String -> Property
-prop_sourcelocation_compilation_tracking content = 
+prop_sourcelocation_compilation_tracking                               content = 
   let result = parseTypus content
   in case result of
-    Left _ -> True
+    Left _ -> property True
     Right tf -> 
       let spans = map cbSpan (tfBlocks tf)
-          positions = map spanStart spans
-      in L.all isValidPosition positions
+                                        positions = map spanStart spans
+      in property $ L.all isValidPosition positions
   where
-    isValidPosition pos = posLine pos > 0 && posColumn pos > 0
+      isValidPosition                               pos = posLine pos > 0 && posColumn pos > 0
 
 -- | Error recovery should maintain source location information
 prop_error_recovery_sourcelocation :: String -> Property
-prop_error_recovery_sourcelocation content = 
+prop_error_recovery_sourcelocation                               content = 
   let withError = content ++ "\n@@ MALFORMED SYNTAX @@\n" ++ content
-      result = parseTypus withError
+                                    result = parseTypus withError
   in case result of
-    Left _ -> True  -- May fail completely
+    Left _ -> property True  -- May fail completely
     Right tf -> 
       let spans = map cbSpan (tfBlocks tf)
-      in L.all (\span -> isValidSpan span) spans
+      in property $ property $ L.all (\span -> isValidSpan span) spans
 
 -- Helper function to check span validity
 isValidSpan :: SourceSpan -> Bool
-isValidSpan span = spanStart span <= spanEnd span
+isValidSpan                               span = spanStart span <= spanEnd span

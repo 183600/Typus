@@ -1,81 +1,33 @@
-{-# LANGUAGE OverloadedStrings, FlexibleInstances #-}
-module Test.Unit.EnhancedOwnershipQuickCheckSpec (tests) where
-
-import Test.Tasty (TestTree, testGroup)
+module Test.Unit.EnhancedOwnershipQuickCheckSpec where
+import Test.QuickCheck 
 import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), Gen, oneof, listOf, elements, choose, suchThat, (===), (.&&.), forAll)
-import TestSupport.QuickCheck (fastProperty)
-import Ownership
+import TestSupport.QuickCheck 
 import Ownership.Common.Types (OwnershipAnalyzer, OwnershipError(..), OwnershipType(..), OwnershipTransfer(..), newOwnershipAnalyzer)
 import SourceLocation (SourcePos(..), startPos)
-import Data.Text (Text)
-import qualified Data.Text as T
-import qualified Data.List as L
-import Data.List (isInfixOf)
-
--- ============================================================================
--- Enhanced QuickCheck tests for Ownership module
--- ============================================================================
-
-tests :: TestTree
-tests =
-  testGroup "Enhanced Ownership QuickCheck Tests"
-    [ testGroup "Ownership Analysis Properties"
-        [ fastProperty "ownership analyzer handles empty input" prop_ownershipAnalyzerHandlesEmpty
-        , fastProperty "ownership analysis is deterministic" prop_ownershipAnalysisDeterministic
-        , fastProperty "ownership transfer preserves invariants" prop_ownershipTransferPreservesInvariants
-        , fastProperty "ownership type checking is sound" prop_ownershipTypeCheckingSound
-        ]
-    , testGroup "Lexing Properties"
-        [ fastProperty "lexer handles basic tokens" prop_lexerHandlesBasicTokens
-        , fastProperty "lexer preserves token order" prop_lexerPreservesTokenOrder
-        , fastProperty "lexer handles whitespace correctly" prop_lexerHandlesWhitespace
-        , fastProperty "lexer handles special characters" prop_lexerHandlesSpecialChars
-        ]
-    , testGroup "Parsing Properties"
-        [ fastProperty "parser handles valid programs" prop_parserHandlesValidPrograms
-        , fastProperty "parser handles invalid syntax gracefully" prop_parserHandlesInvalidSyntax
-        , fastProperty "parser preserves program structure" prop_parserPreservesStructure
-        , fastProperty "parser is deterministic" prop_parserDeterministic
-        ]
-    , testGroup "Error Handling Properties"
-        [ fastProperty "error formatting preserves information" prop_errorFormattingPreservesInfo
-        , fastProperty "error detection is comprehensive" prop_errorDetectionComprehensive
-        , fastProperty "error recovery is graceful" prop_errorRecoveryGraceful
-        ]
-    , testGroup "Integration Properties"
-        [ fastProperty "ownership analysis integrates with lexer" prop_ownershipIntegratesWithLexer
-        , fastProperty "ownership analysis integrates with parser" prop_ownershipIntegratesWithParser
-        , fastProperty "complete pipeline maintains consistency" prop_completePipelineConsistent
-        ]
-    ]
-
--- ============================================================================
--- Ownership Analysis Properties
--- ============================================================================
-
--- Property: ownership analyzer handles empty input
-prop_ownershipAnalyzerHandlesEmpty :: Bool
-prop_ownershipAnalyzerHandlesEmpty =
-  let analyzer = newOwnershipAnalyzer
-      result = analyzeOwnership analyzer ""
-  in case result of
-    Left _ -> True  -- May fail, but shouldn't crash
-    Right _ -> True
-
--- Property: ownership analysis is deterministic
-prop_ownershipAnalysisDeterministic :: String -> Bool
-prop_ownershipAnalysisDeterministic input =
-  let analyzer = newOwnershipAnalyzer
-      result1 = analyzeOwnership analyzer input
-      result2 = analyzeOwnership analyzer input
-  in case (result1, result2) of
-    (Left e1, Left e2) -> e1 == e2
-    (Right r1, Right r2) -> r1 == r2
+import Data.Text 
+in case (result1, result2) of
+    (Left e1, Left e2) ->                               e1 == e2
+    (Right r1, Right r2) ->                               r1 == r2
     _ -> False  -- Should be deterministic
+-- Arbitrary instance for SourcePos
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- choose (1, 100)
+    column <- choose (1, 100)
+    offset <- choose (0, 1000)
+    return $ SourcePos line column offset
+
+-- Arbitrary instance for SourceSpan
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    return $ SourceSpan start end
+
 
 -- Property: ownership transfer preserves invariants
 prop_ownershipTransferPreservesInvariants :: OwnershipTransfer -> Bool
-prop_ownershipTransferPreservesInvariants transfer =
+prop_ownershipTransferPreservesInvariants                               transfer =
   -- Basic sanity check for ownership transfer
   case transfer of
     Move from to -> from /= to  -- Should not transfer to self
@@ -85,7 +37,7 @@ prop_ownershipTransferPreservesInvariants transfer =
 
 -- Property: ownership type checking is sound
 prop_ownershipTypeCheckingSound :: OwnershipType -> Bool
-prop_ownershipTypeCheckingSound ownershipType =
+prop_ownershipTypeCheckingSound                               ownershipType =
   case ownershipType of
     Owned -> True  -- Owned is always valid
     Borrowed -> True  -- Borrowed is always valid
@@ -98,7 +50,7 @@ prop_ownershipTypeCheckingSound ownershipType =
 
 -- Property: lexer handles basic tokens
 prop_lexerHandlesBasicTokens :: String -> Bool
-prop_lexerHandlesBasicTokens input =
+prop_lexerHandlesBasicTokens                               input =
   let result = lexAll input
   in case result of
     Left _ -> True  -- May fail, but shouldn't crash
@@ -106,29 +58,29 @@ prop_lexerHandlesBasicTokens input =
 
 -- Property: lexer preserves token order
 prop_lexerPreservesTokenOrder :: String -> Bool
-prop_lexerPreservesTokenOrder input =
+prop_lexerPreservesTokenOrder                               input =
   let result1 = lexAll input
-      result2 = lexAll input
+                                    result2 = lexAll input
   in case (result1, result2) of
-    (Right tokens1, Right tokens2) -> tokens1 == tokens2
-    (Left e1, Left e2) -> e1 == e2
+    (Right tokens1, Right tokens2) ->                               tokens1 == tokens2
+    (Left e1, Left e2) ->                               e1 == e2
     _ -> False  -- Should be deterministic
 
 -- Property: lexer handles whitespace correctly
 prop_lexerHandlesWhitespace :: String -> Bool
-prop_lexerHandlesWhitespace input =
+prop_lexerHandlesWhitespace                               input =
   let withWhitespace = "  " ++ input ++ "  \t\n  "
-      result = lexAll withWhitespace
+                                    result = lexAll withWhitespace
   in case result of
     Left _ -> True
     Right tokens -> L.length tokens >= 0
 
 -- Property: lexer handles special characters
 prop_lexerHandlesSpecialChars :: String -> Bool
-prop_lexerHandlesSpecialChars input =
+prop_lexerHandlesSpecialChars                               input =
   let specialChars = "!@#$%^&*()_+-=[]{}|;':\",./<>?"
-      testInput = input ++ specialChars
-      result = lexAll testInput
+                                    testInput = input ++ specialChars
+                                    result = lexAll testInput
   in case result of
     Left _ -> True
     Right tokens -> L.length tokens >= 0
@@ -139,7 +91,7 @@ prop_lexerHandlesSpecialChars input =
 
 -- Property: parser handles valid programs
 prop_parserHandlesValidPrograms :: String -> Bool
-prop_parserHandlesValidPrograms input =
+prop_parserHandlesValidPrograms                               input =
   let tokens = lexAll input
   in case tokens of
     Left _ -> True  -- Lexing may fail
@@ -151,9 +103,9 @@ prop_parserHandlesValidPrograms input =
 
 -- Property: parser handles invalid syntax gracefully
 prop_parserHandlesInvalidSyntax :: String -> Bool
-prop_parserHandlesInvalidSyntax input =
+prop_parserHandlesInvalidSyntax                               input =
   let invalidInput = "invalid syntax with mismatched brackets [[["
-      tokens = lexAll invalidInput
+                                    tokens = lexAll invalidInput
   in case tokens of
     Left _ -> True  -- Lexing may fail
     Right toks ->
@@ -164,29 +116,29 @@ prop_parserHandlesInvalidSyntax input =
 
 -- Property: parser preserves program structure
 prop_parserPreservesStructure :: String -> Bool
-prop_parserPreservesStructure input =
+prop_parserPreservesStructure                               input =
   let tokens = lexAll input
   in case tokens of
     Right toks ->
       let result1 = parseProgram toks
-          result2 = parseProgram toks
+                                        result2 = parseProgram toks
       in case (result1, result2) of
-        (Right p1, Right p2) -> p1 == p2  -- Should be deterministic
-        (Left e1, Left e2) -> e1 == e2
+        (Right p1, Right p2) ->                               p1 == p2  -- Should be deterministic
+        (Left e1, Left e2) ->                               e1 == e2
         _ -> False
     Left _ -> True
 
 -- Property: parser is deterministic
 prop_parserDeterministic :: String -> Bool
-prop_parserDeterministic input =
+prop_parserDeterministic                               input =
   let tokens = lexAll input
   in case tokens of
     Right toks ->
       let result1 = parseProgram toks
-          result2 = parseProgram toks
+                                        result2 = parseProgram toks
       in case (result1, result2) of
-        (Right p1, Right p2) -> p1 == p2
-        (Left e1, Left e2) -> e1 == e2
+        (Right p1, Right p2) ->                               p1 == p2
+        (Left e1, Left e2) ->                               e1 == e2
         _ -> False
     Left _ -> True
 
@@ -196,24 +148,24 @@ prop_parserDeterministic input =
 
 -- Property: error formatting preserves information
 prop_errorFormattingPreservesInfo :: OwnershipError -> Bool
-prop_errorFormattingPreservesInfo err =
+prop_errorFormattingPreservesInfo                               err =
   let formatted = formatOwnershipErrors [err]
   in not (null formatted)  -- Should produce some output
 
 -- Property: error detection is comprehensive
 prop_errorDetectionComprehensive :: String -> Bool
-prop_errorDetectionComprehensive input =
+prop_errorDetectionComprehensive                               input =
   let analyzer = newOwnershipAnalyzer
-      result = analyzeOwnership analyzer input
+                                    result = analyzeOwnership analyzer input
   in case result of
     Left errors -> L.length errors >= 0  -- Should detect errors
     Right _ -> True
 
 -- Property: error recovery is graceful
 prop_errorRecoveryGraceful :: String -> Bool
-prop_errorRecoveryGraceful input =
+prop_errorRecoveryGraceful                               input =
   let analyzer = newOwnershipAnalyzer
-      result = analyzeOwnershipDebug analyzer input
+                                    result = analyzeOwnershipDebug analyzer input
   in case result of
     Left _ -> True  -- Should fail gracefully
     Right _ -> True
@@ -224,31 +176,31 @@ prop_errorRecoveryGraceful input =
 
 -- Property: ownership analysis integrates with lexer
 prop_ownershipIntegratesWithLexer :: String -> Bool
-prop_ownershipIntegratesWithLexer input =
+prop_ownershipIntegratesWithLexer                               input =
   let analyzer = newOwnershipAnalyzer
-      result = analyzeOwnership analyzer input
+                                    result = analyzeOwnership analyzer input
   in case result of
     Left _ -> True  -- May fail, but shouldn't crash
     Right _ -> True
 
 -- Property: ownership analysis integrates with parser
 prop_ownershipIntegratesWithParser :: String -> Bool
-prop_ownershipIntegratesWithParser input =
+prop_ownershipIntegratesWithParser                               input =
   let analyzer = newOwnershipAnalyzer
-      result = analyzeOwnership analyzer input
+                                    result = analyzeOwnership analyzer input
   in case result of
     Left _ -> True  -- May fail, but shouldn't crash
     Right _ -> True
 
 -- Property: complete pipeline maintains consistency
 prop_completePipelineConsistent :: String -> Bool
-prop_completePipelineConsistent input =
+prop_completePipelineConsistent                               input =
   let analyzer = newOwnershipAnalyzer
-      result1 = analyzeOwnership analyzer input
-      result2 = analyzeOwnership analyzer input
+                                    result1 = analyzeOwnership analyzer input
+                                    result2 = analyzeOwnership analyzer input
   in case (result1, result2) of
-    (Left e1, Left e2) -> e1 == e2
-    (Right r1, Right r2) -> r1 == r2
+    (Left e1, Left e2) ->                               e1 == e2
+    (Right r1, Right r2) ->                               r1 == r2
     _ -> False  -- Should be deterministic
 
 -- ============================================================================
@@ -257,50 +209,50 @@ prop_completePipelineConsistent input =
 
 -- Generate ownership types
 genOwnershipType :: Gen OwnershipType
-genOwnershipType = elements [Owned, Borrowed, Shared, Moved]
+                              genOwnershipType = elements [Owned, Borrowed, Shared, Moved]
 
 -- Generate ownership transfers
 genOwnershipTransfer :: Gen OwnershipTransfer
-genOwnershipTransfer = do
-  from <- elements ["var1", "var2", "var3"]
+                              genOwnershipTransfer = do
+              from <- elements ["var1", "var2", "var3"]
   to <- elements ["var4", "var5", "var6"]
   oneof
     [ return $ Move from to
-    , return $ Borrow from to
-    , return $ Copy from to
-    , return $ Share from to
+                  , return $ Borrow from to
+                  , return $ Copy from to
+                    , return $ Share from to
     ]
 
 -- Generate ownership errors
 genOwnershipError :: Gen OwnershipError
-genOwnershipError = do
-  message <- listOf $ elements "abcdefghijklmnopqrstuvwxyz "
+                              genOwnershipError = do
+              message <- listOf $ elements "abcdefghijklmnopqrstuvwxyz "
   return $ OwnershipError message startPos
 
 -- Generate simple ownership code snippets
 genOwnershipCode :: Gen String
-genOwnershipCode = oneof
+                              genOwnershipCode = oneof
   [ return "x := 5"
-  , return "y := move x"
-  , return "z := borrow y"
-  , return "a := copy z"
-  , return "b := share a"
-  , return "func test() { x := 1; return x; }"
+                , return "y := move x"
+                , return "z := borrow y"
+                , return "a := copy z"
+                , return "b := share a"
+                  , return "func test() { x := 1; return x; }"
   ]
 
 instance Arbitrary OwnershipType where
-  arbitrary = genOwnershipType
+                                              arbitrary = genOwnershipType
 
 instance Arbitrary OwnershipTransfer where
-  arbitrary = genOwnershipTransfer
+                                              arbitrary = genOwnershipTransfer
 
 instance Arbitrary OwnershipError where
-  arbitrary = genOwnershipError
+                                              arbitrary = genOwnershipError
 
 instance Arbitrary String where
-  arbitrary = oneof
+                                              arbitrary = oneof
     [ genOwnershipCode
     , listOf $ elements ['a'..'z']
     , listOf $ elements " \n\t{}();:"
-    , return ""
-    ]
+                  , return ""
+    ]]]]

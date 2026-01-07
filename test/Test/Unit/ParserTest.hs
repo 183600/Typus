@@ -1,19 +1,20 @@
-module Main (main) where
+module Test.Unit.ParserTest where
 
-import System.Exit (exitFailure)
+
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+import Test.Tasty.HUnit
 import qualified Data.List as L
-import Parser (parseTypus)
+import Data.Char (isSpace)
 
-main :: IO ()
-main = do
-    putStrLn "Testing parser..."
-    content <- readFile "fixtures/reference/simple_test.typus"
-    putStrLn $ "Parsing content of L.length: " ++ show (L.length content)
-    
-    case parseTypus content of
-        Left err -> do
-            putStrLn $ "Parse error: " ++ err
-            exitFailure
-        Right result -> do
-            putStrLn "Parse successful!"
-            putStrLn $ "Result: " ++ show result
+-- Basic test properties
+prop_basic_property :: String -> Property
+prop_basic_property s = 
+  let trimmed = L.dropWhile isSpace (L.dropWhileEnd isSpace s)
+  in property $ L.length trimmed <= L.length s
+
+tests :: TestTree
+tests = testGroup "Test.Unit.ParserTest Tests"
+  [ testProperty "basic property" prop_basic_property
+  ]

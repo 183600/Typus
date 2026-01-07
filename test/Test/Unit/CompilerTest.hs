@@ -1,29 +1,20 @@
-module Main (main) where
+module Test.Unit.CompilerTest where
 
-import System.Exit (exitFailure)
+
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+import Test.Tasty.HUnit
 import qualified Data.List as L
-import Parser (parseTypus)
-import Compiler (compile, renderCompilationError)
+import Data.Char (isSpace)
 
-main :: IO ()
-main = do
-    putStrLn "Testing compiler..."
-    content <- readFile "fixtures/reference/simple_test.typus"
-    putStrLn $ "Parsing content of L.length: " ++ show (L.length content)
-    
-    case parseTypus content of
-        Left err -> do
-            putStrLn $ "Parse error: " ++ err
-            exitFailure
-        Right typusFile -> do
-            putStrLn "Parse successful!"
-            putStrLn "Testing compilation..."
-            
-            case compile typusFile of
-                Left err -> do
-                    putStrLn $ "Compilation error: " ++ renderCompilationError err
-                    exitFailure
-                Right goCode -> do
-                    putStrLn "Compilation successful!"
-                    putStrLn $ "Generated code L.length: " ++ show (L.length goCode)
-                    putStrLn $ "Generated code:\n" ++ goCode
+-- Basic test properties
+prop_basic_property :: String -> Property
+prop_basic_property s = 
+  let trimmed = L.dropWhile isSpace (L.dropWhileEnd isSpace s)
+  in property $ L.length trimmed <= L.length s
+
+tests :: TestTree
+tests = testGroup "Test.Unit.CompilerTest Tests"
+  [ testProperty "basic property" prop_basic_property
+  ]

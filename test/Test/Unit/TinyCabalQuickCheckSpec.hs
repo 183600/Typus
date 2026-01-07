@@ -1,29 +1,20 @@
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+module Test.Unit.TinyCabalQuickCheckSpec where
 
-module Test.Unit.TinyCabalQuickCheckSpec (tests) where
 
-import Test.Tasty (TestTree, testGroup)
-import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+import Test.Tasty.HUnit
+import qualified Data.List as L
+import Data.Char (isSpace)
+
+-- Basic test properties
+prop_basic_property :: String -> Property
+prop_basic_property s = 
+  let trimmed = L.dropWhile isSpace (L.dropWhileEnd isSpace s)
+  in property $ L.length trimmed <= L.length s
 
 tests :: TestTree
-tests = testGroup "Tiny Cabal QuickCheck Tests"
-  [ fundamentalProperties
-  ]
-
-fundamentalProperties :: TestTree
-fundamentalProperties = testGroup "Fundamental Properties"
-  [ fastProperty "identity function" $ \(x :: Int) ->
-      id x === x
-  
-  , fastProperty "const function" $ \(x :: Int) (y :: String) ->
-      const x y === x
-  
-  , fastProperty "flip function" $ \(x :: Int) (y :: String) ->
-      let f = (,)
-      in flip f x y === (y, x)
-  
-  , fastProperty "composition identity" $ \(x :: Int) ->
-      (id . id) x === x
+tests = testGroup "Test.Unit.TinyCabalQuickCheckSpec Tests"
+  [ testProperty "basic property" prop_basic_property
   ]

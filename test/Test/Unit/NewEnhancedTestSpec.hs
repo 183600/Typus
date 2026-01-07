@@ -1,28 +1,20 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module Test.Unit.NewEnhancedTestSpec where
 
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
-import Test.Tasty.QuickCheck (testProperty)
-import Test.QuickCheck (Arbitrary(..), Gen, Property, (==>), forAll, choose, listOf1, elements, resize)
-import TestSupport.QuickCheck (fastProperty)
-import qualified Data.Text as T
-import qualified Data.List as L
-import Data.Char (isSpace, isAlphaNum, isDigit, isLetter)
-import Data.Maybe (isJust, isNothing, fromMaybe)
 
-import Utils (trim, splitBy, splitByCollapsed, splitByComma, removeComments, normalizeIndentation)
+import Test.Tasty 
+import Test.Tasty.HUnit (testCase, assertFailure, assertBool, (@?=))
+import Test.Tasty.QuickCheck 
+import Test.QuickCheck (Gen, choose, vectorOf, elements, Arbitrary(..), Gen, Property, (==>), forAll, choose, listOf1, elements, resize)
+import TestSupport.QuickCheck 
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), startPos, posAfter, emptySpan, spanFrom, mergeSpans, isValidSpan)
 import Parser (FileDirectives(..), BlockDirectives(..), defaultFileDirectives, defaultBlockDirectives)
 import Compiler.Errors.Core (ErrorSeverity(..), ErrorCategory(..), ErrorLocation(..), ErrorContext(..), emptyContext, formatError)
-
 -- ============================================================================
 -- Test Suite Definition
 -- ============================================================================
 
 tests :: TestTree
-tests = testGroup "New Enhanced Test Suite"
+tests =   testGroup "New Enhanced Test Suite"
   [ textProcessingProperties
   , sourceLocationMathProperties
   , parsingDirectiveProperties
@@ -36,28 +28,27 @@ tests = testGroup "New Enhanced Test Suite"
 -- ============================================================================
 -- Text Processing Properties
 -- ============================================================================
-
 textProcessingProperties :: TestTree
 textProcessingProperties = testGroup "Text Processing Properties"
-  [ testProperty "trim is idempotent" $
+  [             testProperty "trim is idempotent" $
       \s -> trim (trim s) == trim s
 
-  , testProperty "splitBy preserves concatenation with delimiter" $
+  ,             testProperty "splitBy preserves concatenation with delimiter" $
       \c s -> splitBy c s `L.intercalate` [c] == s
 
-  , testProperty "splitByCollapsed removes empty segments" $
+  ,             testProperty "splitByCollapsed removes empty segments" $
       \c s -> L.all (not . null) (splitByCollapsed c s)
 
-  , testProperty "normalizeIndentation preserves relative structure" $
+  ,             testProperty "normalizeIndentation preserves relative structure" $
       \lineList -> let normalized = normalizeIndentation lineList
-                       indentLevels = L.map (L.length . takeWhile isSpace) normalized
+                                                     indentLevels = L.map (L.length . takeWhile isSpace) normalized
                    in L.all (>= 0) indentLevels
 
-  , testCase "trim handles empty strings" $
-      assertEqual "trim empty" "" (trim "")
+    ,             testCase "trim handles empty strings" $
+                  assertEqual "trim empty" "" (trim "")
 
-  , testCase "trim handles whitespace-only strings" $
-      assertEqual "trim whitespace" "" (trim "   \t\n  ")
+    ,             testCase "trim handles whitespace-only strings" $
+                  assertEqual "trim whitespace" "" (trim "   \t\n  ")
   ]
 
 -- ============================================================================
@@ -66,23 +57,23 @@ textProcessingProperties = testGroup "Text Processing Properties"
 
 sourceLocationMathProperties :: TestTree
 sourceLocationMathProperties = testGroup "Source Location Math Properties"
-  [ testProperty "posAfter advances column by 1 for same line" $
+  [             testProperty "posAfter advances column by 1 for same line" $
       \pos -> posAfter pos (SourcePos 0 1) == SourcePos (sourceLine pos) (sourceColumn pos + 1)
 
-  , testProperty "spanFrom creates valid spans" $
+  ,             testProperty "spanFrom creates valid spans" $
       \pos -> isValidSpan (spanFrom pos 5)
 
-  , testProperty "mergeSpans is commutative for overlapping spans" $
+  ,             testProperty "mergeSpans is commutative for overlapping spans" $
       \span1 span2 -> let merged1 = mergeSpans span1 span2
-                          merged2 = mergeSpans span2 span1
-                      in spanStart merged1 == spanStart merged2 && spanEnd merged1 == spanEnd merged2
+                                                        merged2 = mergeSpans span2 span1
+                      in spanStart                               merged1 == spanStart merged2 && spanEnd                               merged1 == spanEnd merged2
 
-  , testProperty "emptySpan has zero L.length" $
+  ,             testProperty "emptySpan has zero L.length" $
       \pos -> let span = emptySpan pos
-              in spanStart span == spanEnd span
+              in spanStart                               span == spanEnd span
 
-  , testCase "startPos is at line 1, column 1" $
-      assertEqual "startPos" (SourcePos 1 1) startPos
+    ,             testCase "startPos is at line 1, column 1" $
+                  assertEqual "startPos" (SourcePos 1 1) startPos
   ]
 
 -- ============================================================================
@@ -91,25 +82,25 @@ sourceLocationMathProperties = testGroup "Source Location Math Properties"
 
 parsingDirectiveProperties :: TestTree
 parsingDirectiveProperties = testGroup "Parsing Directive Properties"
-  [ testProperty "default file directives have no values" $
+  [             testProperty "default file directives have no values" $
       let defaults = defaultFileDirectives
-      in isNothing (fdOwnership defaults) &&
+in isNothing (fdOwnership defaults) &&
          isNothing (fdDependentTypes defaults) &&
          isNothing (fdConstraints defaults)
 
-  , testProperty "default block directives have no values" $
+  ,             testProperty "default block directives have no values" $
       let defaults = defaultBlockDirectives
       in isNothing (bdOwnership defaults) &&
          isNothing (bdDependentTypes defaults) &&
          isNothing (bdConstraints defaults)
 
-  , testCase "file directives roundtrip" $
+    ,             testCase "file directives roundtrip" $
       let directives = FileDirectives
-            { fdOwnership = Just (Located (SourcePos 1 1) True)
-            , fdDependentTypes = Just (Located (SourcePos 1 2) False)
-            , fdConstraints = Nothing
+            {                               fdOwnership = Just (Located (SourcePos 1 1) True)
+            ,                               fdDependentTypes = Just (Located (SourcePos 1 2) False)
+            ,                               fdConstraints = Nothing
             }
-      in assertEqual "ownership" True (locatedValue $ fromMaybe (Located (SourcePos 0 0) False) (fdOwnership directives))
+      in             assertEqual "ownership" True (locatedValue $ fromMaybe (Located (SourcePos 0 0) False) (fdOwnership directives)
   ]
 
 -- ============================================================================
@@ -118,29 +109,29 @@ parsingDirectiveProperties = testGroup "Parsing Directive Properties"
 
 errorHandlingProperties :: TestTree
 errorHandlingProperties = testGroup "Error Handling Properties"
-  [ testProperty "empty context has no information" $
+  [             testProperty "empty context has no information" $
       let context = emptyContext
-      in null context
+in null context
 
-  , testProperty "error severity ordering" $
-      \sev1 sev2 -> (sev1 == ErrorError && sev2 == ErrorWarning) ==> 
-        let severityLevel ErrorCritical = 3
-            severityLevel ErrorError = 2
-            severityLevel ErrorWarning = 1
-            severityLevel ErrorInfo = 0
+  ,             testProperty "error severity ordering" $
+      \sev1 sev2 -> (sev1 == ErrorError &&                               sev2 == ErrorWarning) ==> 
+        let severityLevel                               ErrorCritical = 3
+            severityLevel                               ErrorError = 2
+            severityLevel                               ErrorWarning = 1
+            severityLevel                               ErrorInfo = 0
         in severityLevel sev1 > severityLevel sev2
 
-  , testProperty "error categories are distinct" $
+  ,             testProperty "error categories are distinct" $
       \cat1 cat2 -> (cat1 /= cat2) ==> 
-        let categoryToString ErrorSyntax = "Syntax"
-            categoryToString ErrorType = "Type"
-            categoryToString ErrorOwnership = "Ownership"
-            categoryToString ErrorDependentType = "DependentType"
-            categoryToString ErrorParsing = "Parsing"
+        let categoryToString                               ErrorSyntax = "Syntax"
+            categoryToString                               ErrorType = "Type"
+            categoryToString                               ErrorOwnership = "Ownership"
+            categoryToString                               ErrorDependentType = "DependentType"
+            categoryToString                               ErrorParsing = "Parsing"
         in categoryToString cat1 /= categoryToString cat2
 
-  , testCase "format error includes location" $
-      let error = formatError "Test error" ErrorError (ErrorLocation (SourcePos 1 1) (SourcePos 1 5)) emptyContext
+    ,             testCase "format error includes location" $
+      let error = formatError "Test error" ErrorError (ErrorLocation (SourcePos 1 1) (SourcePos 1 5) emptyContext
       in assertBool "error contains position" ("1:1" `L.isInfixOf` error)
   ]
 
@@ -150,20 +141,20 @@ errorHandlingProperties = testGroup "Error Handling Properties"
 
 utilsBoundaryProperties :: TestTree
 utilsBoundaryProperties = testGroup "Utils Boundary Properties"
-  [ testProperty "splitBy handles single character strings" $
+  [             testProperty "splitBy handles single character strings" $
       \c -> splitBy c [c] == ["", ""]
 
-  , testProperty "splitByCollapsed handles empty input" $
+  ,             testProperty "splitByCollapsed handles empty input" $
       \c -> L.null (splitByCollapsed c "")
 
-  , testProperty "trim preserves non-whitespace content" $
-      \s -> not (L.all isSpace s) ==> not (L.null (trim s))
+  ,             testProperty "trim preserves non-whitespace content" $
+      \s -> not (L.all isSpace s) ==> not (L.null (trim s)
 
-  , testProperty "splitByComma handles consecutive commas" $
+  ,             testProperty "splitByComma handles consecutive commas" $
       \s -> splitByComma (",," ++ s ++ ",,") `L.L.isPrefixOf` ["", "", ""]
 
-  , testCase "removeComments handles empty input" $
-      assertEqual "removeComments empty" "" (removeComments "")
+    ,             testCase "removeComments handles empty input" $
+                  assertEqual "removeComments empty" "" (removeComments "")
   ]
 
 -- ============================================================================
@@ -172,27 +163,27 @@ utilsBoundaryProperties = testGroup "Utils Boundary Properties"
 
 parserConsistencyProperties :: TestTree
 parserConsistencyProperties = testGroup "Parser Consistency Properties"
-  [ testProperty "file directives maintain consistency" $
+  [             testProperty "file directives maintain consistency" $
       \ownership dependent constraints ->
-        let directives = FileDirectives
-              { fdOwnership = if ownership then Just (Located (SourcePos 1 1) True) else Nothing
-              , fdDependentTypes = if dependent then Just (Located (SourcePos 1 2) True) else Nothing
-              , fdConstraints = if constraints then Just (Located (SourcePos 1 3) True) else Nothing
+let directives = FileDirectives
+              {                               fdOwnership = if ownership then Just (Located (SourcePos 1 1) True) else Nothing
+              ,                               fdDependentTypes = if dependent then Just (Located (SourcePos 1 2) True) else Nothing
+              ,                               fdConstraints = if constraints then Just (Located (SourcePos 1 3) True) else Nothing
               }
-        in (isJust (fdOwnership directives)) == ownership &&
-           (isJust (fdDependentTypes directives)) == dependent &&
-           (isJust (fdConstraints directives)) == constraints
+        in (isJust (fdOwnership directives) == ownership &&
+           (isJust (fdDependentTypes directives) == dependent &&
+           (isJust (fdConstraints directives) == constraints
 
-  , testProperty "block directives maintain consistency" $
+  ,             testProperty "block directives maintain consistency" $
       \ownership dependent constraints ->
         let directives = BlockDirectives
-              { bdOwnership = if ownership then Just (Located (SourcePos 2 1) False) else Nothing
-              , bdDependentTypes = if dependent then Just (Located (SourcePos 2 2) False) else Nothing
-              , bdConstraints = if constraints then Just (Located (SourcePos 2 3) False) else Nothing
+              {                               bdOwnership = if ownership then Just (Located (SourcePos 2 1) False) else Nothing
+              ,                               bdDependentTypes = if dependent then Just (Located (SourcePos 2 2) False) else Nothing
+              ,                               bdConstraints = if constraints then Just (Located (SourcePos 2 3) False) else Nothing
               }
-        in (isJust (bdOwnership directives)) == ownership &&
-           (isJust (bdDependentTypes directives)) == dependent &&
-           (isJust (bdConstraints directives)) == constraints
+        in (isJust (bdOwnership directives) == ownership &&
+           (isJust (bdDependentTypes directives) == dependent &&
+           (isJust (bdConstraints directives) == constraints
   ]
 
 -- ============================================================================
@@ -201,22 +192,22 @@ parserConsistencyProperties = testGroup "Parser Consistency Properties"
 
 locationTrackingProperties :: TestTree
 locationTrackingProperties = testGroup "Location Tracking Properties"
-  [ testProperty "located values preserve their content" $
+  [             testProperty "located values preserve their content" $
       \pos val -> locatedValue (Located pos val) == val
 
-  , testProperty "located values track their position" $
+  ,             testProperty "located values track their position" $
       \pos val -> locatedPos (Located pos val) == pos
 
-  , testProperty "span positions are ordered" $
+  ,             testProperty "span positions are ordered" $
       \pos1 pos2 len -> 
         let span = spanFrom pos1 len
         in sourceLine (spanStart span) <= sourceLine (spanEnd span)
 
-  , testCase "empty span at specific position" $
+    ,             testCase "empty span at specific position" $
       let pos = SourcePos 5 10
-          span = emptySpan pos
-      in assertEqual "empty span start" pos (spanStart span) `seq`
-         assertEqual "empty span end" pos (spanEnd span)
+                                        span = emptySpan pos
+      in             assertEqual "empty span start" pos (spanStart span) `seq`
+                     assertEqual "empty span end" pos (spanEnd span)
   ]
 
 -- ============================================================================
@@ -225,22 +216,22 @@ locationTrackingProperties = testGroup "Location Tracking Properties"
 
 commentHandlingProperties :: TestTree
 commentHandlingProperties = testGroup "Comment Handling Properties"
-  [ testProperty "removeComments preserves non-comment content" $
-      \s -> not ('/' `elem` s) ==> removeComments s == s
+  [             testProperty "removeComments preserves non-comment content" $
+      \s -> not ('/' `elem` s) ==> removeComments                               s == s
 
-  , testProperty "removeComments handles line comments" $
+  ,             testProperty "removeComments handles line comments" $
       \s -> removeComments ("// " ++ s) == ""
 
-  , testProperty "removeComments handles block comments" $
+  ,             testProperty "removeComments handles block comments" $
       \s -> removeComments ("/* " ++ s ++ " */") == ""
 
-  , testCase "removeComments handles nested line comments" $
-      assertEqual "nested line comments" "" (removeComments "// comment // another")
+    ,             testCase "removeComments handles nested line comments" $
+                  assertEqual "nested line comments" "" (removeComments "// comment // another")
 
-  , testCase "removeComments handles mixed comments" $
+    ,             testCase "removeComments handles mixed comments" $
       let input = "code /* block */ // line\nmore code"
-          expected = "code  \nmore code"
-      in assertEqual "mixed comments" expected (removeComments input)
+                                        expected = "code  \nmore code"
+      in             assertEqual "mixed comments" expected (removeComments input)
   ]
 
 -- ============================================================================
@@ -248,4 +239,4 @@ commentHandlingProperties = testGroup "Comment Handling Properties"
 -- ============================================================================
 
 isInfixOf :: String -> String -> Bool
-isInfixOf = L.L.isInfixOf
+                              isInfixOf = L.L.isInfixOf

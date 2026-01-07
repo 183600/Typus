@@ -1,48 +1,43 @@
-{-# LANGUAGE CPP #-}
+module Test.Unit.DirectiveProcessingSpec where
 
-module Test.Unit.DirectiveProcessingSpec (tests) where
 
-import Test.Tasty (TestTree, testGroup)
-import qualified Data.List as L
-import Test.Tasty.HUnit (testCase, (@?=))
-import Test.Tasty.QuickCheck (testProperty)
-import TestSupport.QuickCheck (fastProperty)
-
-import Parser (parseTypus, FileDirectives(..), BlockDirectives(..), CodeBlock(..), TypusFile(..), 
+import Test.Tasty 
+import Test.Tasty.HUnit (testCase, assertFailure, assertBool, (@?=))
+import Test.Tasty.QuickCheck 
+import Parser (parseTypus, FileDirectives(..), BlockDirectives(..), CodeBlock(..), TypusFile(..), )
               defaultFileDirectives, defaultBlockDirectives)
 import SourceLocation (SourcePos(..), SourceSpan(..), spanBetween)
-
 import qualified Data.Text as T
 
--- | 测试指令处理功能的属性和边界情况
+-- | 
 tests :: TestTree
 tests =
-  testGroup "Directive Processing"
+    testGroup "Directive Processing"
     [ testGroup "File Directives"
-        [ testCase "parses simple file directive" $ do
-            let input = "//! ownership: true\nsome code"
+        [             testCase "parses simple file directive" $ do
+                        let input = "//! ownership: true\nsome code"
             result <- case parseTypus input of
                 Left _ -> return $ defaultFileDirectives
                 Right file -> return $ tfDirectives file
             case result of
-                FileDirectives (Just (Located _ True)) Nothing Nothing -> 
+                FileDirectives (Just (Located _ True) Nothing Nothing -> 
                     return ()  -- Success
-                _ -> testCase "Expected ownership directive" $ return ()
+                _ ->             testCase "Expected ownership directive" $ return ()
                 
-        , testCase "parses multiple file directives" $ do
-            let input = "//! ownership: true, dependent-types: false, constraints: true\ncode"
+          ,             testCase "parses multiple file directives" $ do
+                        let input = "//! ownership: true, dependent-types: false, constraints: true\ncode"
             result <- case parseTypus input of
                 Left _ -> return $ defaultFileDirectives
                 Right file -> return $ tfDirectives file
             case result of
-                FileDirectives (Just (Located _ True)) 
-                              (Just (Located _ False)) 
-                              (Just (Located _ True)) -> 
+                FileDirectives (Just (Located _ True) 
+                              (Just (Located _ False) 
+                              (Just (Located _ True) -> 
                     return ()  -- Success
-                _ -> testCase "Expected multiple directives" $ return ()
+                _ ->             testCase "Expected multiple directives" $ return ()
                 
-        , testCase "handles missing file directives" $ do
-            let input = "just code without directives"
+          ,             testCase "handles missing file directives" $ do
+                        let input = "just code without directives"
             result <- case parseTypus input of
                 Left _ -> return $ defaultFileDirectives
                 Right file -> return $ tfDirectives file
@@ -50,94 +45,94 @@ tests =
         ]
         
     , testGroup "Block Directives"
-        [ testCase "parses simple block directive" $ do
-            let input = "{//! ownership: false}\nblock content"
+        [             testCase "parses simple block directive" $ do
+                        let input = "{//! ownership: false}\nblock content"
             result <- case parseTypus input of
                 Left _ -> return []
                 Right file -> return $ tfBlocks file
             case result of
                 (block:_) -> case cbDirectives block of
-                    BlockDirectives (Just (Located _ False)) Nothing Nothing -> 
+                    BlockDirectives (Just (Located _ False) Nothing Nothing -> 
                         return ()  -- Success
-                    _ -> testCase "Expected block ownership directive" $ return ()
-                [] -> testCase "Expected at least one block" $ return ()
+                    _ ->             testCase "Expected block ownership directive" $ return ()
+                [] ->             testCase "Expected at least one block" $ return ()
                 
-        , testCase "parses multiple block directives" $ do
-            let input = "{//! ownership: true, dependent-types: true}\ncontent"
+          ,             testCase "parses multiple block directives" $ do
+                        let input = "{//! ownership: true, dependent-types: true}\ncontent"
             result <- case parseTypus input of
                 Left _ -> return []
                 Right file -> return $ tfBlocks file
             case result of
                 (block:_) -> case cbDirectives block of
-                    BlockDirectives (Just (Located _ True)) 
-                                  (Just (Located _ True)) 
+                    BlockDirectives (Just (Located _ True) 
+                                  (Just (Located _ True) 
                                   Nothing -> 
                         return ()  -- Success
-                    _ -> testCase "Expected multiple block directives" $ return ()
-                [] -> testCase "Expected at least one block" $ return ()
+                    _ ->             testCase "Expected multiple block directives" $ return ()
+                [] ->             testCase "Expected at least one block" $ return ()
         ]
         
     , testGroup "Directive Values"
-        [ testCase "handles boolean true values" $ do
-            let inputs = ["//! ownership: true", "{//! dependent-types: true}"]
+        [             testCase "handles boolean true values" $ do
+                        let inputs = ["//! ownership: true", "{//! dependent-types: true}"]
             mapM_ checkTrueDirective inputs
-            where checkTrueDirective input = do
-                    result <- case parseTypus input of
+            where checkTrueDirective                               input = do
+              result <- case parseTypus input of
                         Left _ -> return Nothing
                         Right file -> return $ extractDirectiveValue file
                     case result of
                         Just True -> return ()  -- Success
-                        _ -> testCase "Expected true value" $ return ()
+                        _ ->             testCase "Expected true value" $ return ()
                     
-        , testCase "handles boolean false values" $ do
-            let inputs = ["//! ownership: false", "{//! dependent-types: false}"]
+          ,             testCase "handles boolean false values" $ do
+                        let inputs = ["//! ownership: false", "{//! dependent-types: false}"]
             mapM_ checkFalseDirective inputs
-            where checkFalseDirective input = do
-                    result <- case parseTypus input of
+            where checkFalseDirective                               input = do
+              result <- case parseTypus input of
                         Left _ -> return Nothing
                         Right file -> return $ extractDirectiveValue file
                     case result of
                         Just False -> return ()  -- Success
-                        _ -> testCase "Expected false value" $ return ()
+                        _ ->             testCase "Expected false value" $ return ()
         ]
         
     , testGroup "Directive Syntax"
-        [ testCase "handles whitespace in directives" $ do
-            let input = "//!   ownership   :   true   \ncode"
+        [             testCase "handles whitespace in directives" $ do
+                        let input = "//!   ownership   :   true   \ncode"
             result <- case parseTypus input of
                 Left _ -> return $ defaultFileDirectives
                 Right file -> return $ tfDirectives file
             case result of
-                FileDirectives (Just (Located _ True)) _ _ -> 
+                FileDirectives (Just (Located _ True) _ _ -> 
                     return ()  -- Success
-                _ -> testCase "Expected ownership directive with whitespace" $ return ()
+                _ ->             testCase "Expected ownership directive with whitespace" $ return ()
                 
-        , testCase "handles multiple directive separators" $ do
-            let input = "//! ownership: true, dependent-types: false, constraints: true"
+          ,             testCase "handles multiple directive separators" $ do
+                        let input = "//! ownership: true, dependent-types: false, constraints: true"
             result <- case parseTypus input of
                 Left _ -> return $ defaultFileDirectives
                 Right file -> return $ tfDirectives file
             case result of
-                FileDirectives (Just (Located _ True)) 
-                              (Just (Located _ False)) 
-                              (Just (Located _ True)) -> 
+                FileDirectives (Just (Located _ True) 
+                              (Just (Located _ False) 
+                              (Just (Located _ True) -> 
                     return ()  -- Success
-                _ -> testCase "Expected multiple directives with commas" $ return ()
+                _ ->             testCase "Expected multiple directives with commas" $ return ()
         ]
         
     , testGroup "Error Handling"
-        [ testCase "handles malformed directives gracefully" $ do
-            let inputs = ["//! ownership:", "//! :true", "{//! ownership}"]
+        [             testCase "handles malformed directives gracefully" $ do
+                        let inputs = ["//! ownership:", "//! :true", "{//! ownership}"]
             mapM_ checkMalformed inputs
-            where checkMalformed input = do
-                    result <- case parseTypus input of
+            where checkMalformed                               input = do
+              result <- case parseTypus input of
                         Left _ -> return "parse_error"
                         Right file -> return "parse_success"
                     -- Should either parse successfully L.or fail gracefully
                     result @?= result
                     
-        , testCase "handles unterminated block directives" $ do
-            let input = "{//! ownership: true\ncode without closing brace"
+          ,             testCase "handles unterminated block directives" $ do
+                        let input = "{//! ownership: true\ncode without closing brace"
             result <- case parseTypus input of
                 Left _ -> return "parse_error"
                 Right file -> return "parse_success"
@@ -146,13 +141,13 @@ tests =
         ]
         
     , testGroup "Property Tests"
-        [ testProperty "parseTypus never crashes on L.any input" $ fastProperty $ \input ->
+        [             testProperty "parseTypus never crashes on L.any input" $ fastProperty $ \input ->
             let result = parseTypus input
             in case result of
                 Left _ -> True
                 Right file -> L.length (show file) >= 0
                 
-        , testProperty "directive consistency: file directives preserve structure" $ fastProperty $ \input ->
+        ,             testProperty "directive consistency: file directives preserve structure" $ fastProperty $ \input ->
             let result = parseTypus input
             in case result of
                 Left _ -> True
@@ -160,7 +155,7 @@ tests =
                     FileDirectives ownership dependentTypes constraints ->
                         L.length [ownership, dependentTypes, constraints] == 3
                         
-        , testProperty "block directives preserve structure" $ fastProperty $ \input ->
+        ,             testProperty "block directives preserve structure" $ fastProperty $ \input ->
             let result = parseTypus input
             in case result of
                 Left _ -> True
@@ -171,30 +166,30 @@ tests =
         ]
         
     , testGroup "Edge Cases"
-        [ testCase "handles empty input" $ do
-            result <- case parseTypus "" of
+        [             testCase "handles empty input" $ do
+              result <- case parseTypus "" of
                 Left _ -> return $ defaultFileDirectives
                 Right file -> return $ tfDirectives file
             result @?= defaultFileDirectives
             
-        , testCase "handles only directives" $ do
-            let input = "//! ownership: true\n{//! dependent-types: false}"
+          ,             testCase "handles only directives" $ do
+                        let input = "//! ownership: true\n{//! dependent-types: false}"
             result <- case parseTypus input of
                 Left _ -> return 0
                 Right file -> return $ L.length (tfBlocks file)
             -- Should parse without crashing
             result >= 0 @?= True
             
-        , testCase "handles nested directives" $ do
-            let input = "//! ownership: true\n{//! dependent-types: false\ncode\n{//! constraints: true\nnested\n}}"
+          ,             testCase "handles nested directives" $ do
+                        let input = "//! ownership: true\n{//! dependent-types: false\ncode\n{//! constraints: true\nnested\n}}"
             result <- case parseTypus input of
                 Left _ -> return 0
                 Right file -> return $ L.length (tfBlocks file)
             -- Should parse without crashing
             result >= 0 @?= True
             
-        , testCase "handles Unicode in directive values" $ do
-            let input = "//! ownership: trüé\ncode"
+          ,             testCase "handles Unicode in directive values" $ do
+                        let input = "//! ownership: tr\ncode"
             result <- case parseTypus input of
                 Left _ -> return "parse_error"
                 Right file -> return "parse_success"
@@ -203,8 +198,8 @@ tests =
         ]
         
     , testGroup "Integration Tests"
-        [ testCase "complete file with directives L.and code" $ do
-            let input = unlines
+        [             testCase "complete file with directives L.and code" $ do
+                        let input = unlines
                   [ "//! ownership: true, dependent-types: true"
                   , "func main() {"
                   , "  {//! constraints: false"
@@ -217,20 +212,20 @@ tests =
                 Left _ -> return $ defaultFileDirectives
                 Right file -> return $ tfDirectives file
             case result of
-                FileDirectives (Just (Located _ True)) 
-                              (Just (Located _ True)) 
+                FileDirectives (Just (Located _ True) 
+                              (Just (Located _ True) 
                               _ -> 
                     return ()  -- Success
-                _ -> testCase "Expected file directives" $ return ()
+                _ ->             testCase "Expected file directives" $ return ()
         ]
     ]
     
 -- Helper function to extract directive value for testing
 extractDirectiveValue :: TypusFile -> Maybe Bool
-extractDirectiveValue file = case tfDirectives file of
-    FileDirectives (Just (Located _ value)) _ _ -> Just value
+extractDirectiveValue                               file = case tfDirectives file of
+    FileDirectives (Just (Located _ value) _ _ -> Just value
     _ -> case tfBlocks file of
         (block:_) -> case cbDirectives block of
-            BlockDirectives (Just (Located _ value)) _ _ -> Just value
+            BlockDirectives (Just (Located _ value []) _ _ -> Just value
             _ -> Nothing
         [] -> Nothing

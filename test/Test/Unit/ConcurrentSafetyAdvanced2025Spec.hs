@@ -1,96 +1,86 @@
-{-# LANGUAGE TemplateHaskell #-}
-
-module Test.Unit.ConcurrentSafetyAdvanced2025Spec (tests) where
-
-import Test.Tasty (TestTree, testGroup)
-import qualified Data.List as L
+module Test.Unit.ConcurrentSafetyAdvanced2025Spec where
+import Test.QuickCheck 
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, choose, listOf, elements, (==>), ioProperty, Property)
-import Test.Tasty.HUnit (testCase, (@=?))
+import Test.Tasty.HUnit (testCase, assertFailure, assertBool, (@?=))
+import Control.Concurrent 
+import SourceLocation (SourcePos(..), SourceSpan)
+data                               MockSymbolTable = MockSymbolTable (IORef [(String, Int)])
+-- Arbitrary instance for SourcePos
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- choose (1, 100)
+    column <- choose (1, 100)
+    offset <- choose (0, 1000)
+    return $ SourcePos line column offset
 
-import Control.Concurrent (forkIO, threadDelay, MVar, newEmptyMVar, putMVar, takeMVar)
-import Control.Concurrent.STM (TVar, atomically, newTVar, readTVar, writeTVar, modifyTVar)
-import Control.Monad (replicateM, replicateM_, when)
+-- Arbitrary instance for SourceSpan
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    return $ SourceSpan start end
 
-import Data.IORef
-import SourceLocation (SourcePos(..), SourceSpan(..))
 
-tests :: TestTree
-tests = testGroup "Concurrent Safety Advanced Tests"
-  [ testProperty "Concurrent parser access is thread-safe" propConcurrentParserAccess
-  , testProperty "Concurrent type inference maintains consistency" propConcurrentTypeInferenceConsistency
-  , testProperty "Concurrent ownership tracking prevents conflicts" propConcurrentOwnershipTracking
-  , testProperty "Concurrent error handling is thread-safe" propConcurrentErrorHandling
-  , testProperty "STM-based symbol table operations" propSTMSymbolTableOperations
-  , testCase "Concurrent compilation pipeline" testConcurrentCompilationPipeline
-  , testProperty "Concurrent dependency analysis" propConcurrentDependencyAnalysis
-  , testCase "Thread-safe source location tracking" testThreadSafeSourceLocationTracking
-  , testProperty "Concurrent memory management" propConcurrentMemoryManagement
-  , testCase "Concurrent test execution isolation" testConcurrentTestExecutionIsolation
-  ]
-
--- Mock data types for testing
-data MockSymbolTable = MockSymbolTable (IORef [(String, Int)])
-
-data MockCompilationState = MockCompilationState 
+data                               MockCompilationState = MockCompilationState 
   { stateSymbols :: MockSymbolTable
   , stateErrors :: IORef [String]
   , stateProgress :: IORef Int
   }
 
-data MockConcurrentResource = MockConcurrentResource 
+data                               MockConcurrentResource = MockConcurrentResource 
   { resourceCounter :: TVar Int
   , resourceLock :: MVar ()
   }
 
 -- Property 1: Concurrent parser access is thread-safe
 propConcurrentParserAccess :: String -> Int -> Property
-propConcurrentParserAccess input numThreads = 
-  numThreads > 0 && numThreads <= 10 ==> ioProperty $ do
-    testResult <- runConcurrentParserTest input numThreads
+propConcurrentParserAccess input                               numThreads = 
+  numThreads > 0 && numThreads <=                               10 ==> ioProperty $ do
+              testResult <- runConcurrentParserTest input numThreads
     return $ case testResult of
        Right results -> L.all (== L.head results) results  -- All results should be identical
        Left _ -> False
 
 -- Property 2: Concurrent type inference maintains consistency
 propConcurrentTypeInferenceConsistency :: String -> Int -> Property
-propConcurrentTypeInferenceConsistency expr numThreads =
-  numThreads > 0 && numThreads <= 10 ==> ioProperty $ do
-    testResult <- runConcurrentTypeInferenceTest expr numThreads
+propConcurrentTypeInferenceConsistency expr                               numThreads =
+  numThreads > 0 && numThreads <=                               10 ==> ioProperty $ do
+              testResult <- runConcurrentTypeInferenceTest expr numThreads
     return $ case testResult of
        Right results -> L.length (nub results) <= 1  -- Should have at most one unique result
        Left _ -> False
 
 -- Property 3: Concurrent ownership tracking prevents conflicts
 propConcurrentOwnershipTracking :: Int -> Property
-propConcurrentOwnershipTracking numOperations =
-  numOperations > 0 && numOperations <= 20 ==> ioProperty $ do
-    testResult <- runConcurrentOwnershipTest numOperations
+propConcurrentOwnershipTracking                               numOperations =
+  numOperations > 0 && numOperations <=                               20 ==> ioProperty $ do
+              testResult <- runConcurrentOwnershipTest numOperations
     return $ case testResult of
       Right finalCount -> finalCount >= 0  -- Count should never be negative
       Left _ -> False
 
 -- Property 4: Concurrent error handling is thread-safe
 propConcurrentErrorHandling :: [String] -> Int -> Property
-propConcurrentErrorHandling errors numThreads =
-  numThreads > 0 && numThreads <= 10 ==> ioProperty $ do
-    testResult <- runConcurrentErrorHandlingTest errors numThreads
+propConcurrentErrorHandling errors                               numThreads =
+  numThreads > 0 && numThreads <=                               10 ==> ioProperty $ do
+              testResult <- runConcurrentErrorHandlingTest errors numThreads
     return $ case testResult of
       Right collectedErrors -> L.length collectedErrors >= L.length errors
       Left _ -> False
 
 -- Property 5: STM-based symbol table operations
 propSTMSymbolTableOperations :: [(String, Int)] -> Property
-propSTMSymbolTableOperations operations =
+propSTMSymbolTableOperations                               operations =
   ioProperty $ do
-    testResult <- runSTMSymbolTableTest operations
+              testResult <- runSTMSymbolTableTest operations
     return $ case testResult of
-      Right finalTable -> L.length finalTable == L.length (nub (map fst operations))
+      Right finalTable -> L.length                               finalTable == L.length (nub (map fst operations)
       Left _ -> False
 
 -- Test Case 6: Concurrent compilation pipeline
 testConcurrentCompilationPipeline :: IO ()
-testConcurrentCompilationPipeline = do
-  state <- createMockCompilationState
+                              testConcurrentCompilationPipeline = do
+              state <- createMockCompilationState
   results <- runConcurrentCompilationPipeline state ["file1.typus", "file2.typus", "file3.typus"]
   
   -- Should have processed L.all files
@@ -102,21 +92,21 @@ testConcurrentCompilationPipeline = do
 
 -- Property 7: Concurrent dependency analysis
 propConcurrentDependencyAnalysis :: [(String, [String])] -> Property
-propConcurrentDependencyAnalysis dependencies =
+propConcurrentDependencyAnalysis                               dependencies =
   ioProperty $ do
-    testResult <- runConcurrentDependencyAnalysis dependencies
+              testResult <- runConcurrentDependencyAnalysis dependencies
     return $ case testResult of
       Right graph -> isValidDependencyGraph graph
       Left _ -> False
 
 -- Test Case 8: Thread-safe source location tracking
 testThreadSafeSourceLocationTracking :: IO ()
-testThreadSafeSourceLocationTracking = do
-  locationTracker <- createMockLocationTracker
+                              testThreadSafeSourceLocationTracking = do
+              locationTracker <- createMockLocationTracker
   
   -- Concurrent updates
   results <- replicateM 10 $ do
-    forkIO $ updateMockLocation locationTracker (SourcePos 1 1 0) (SourcePos 2 10 0)
+                forkIO $ updateMockLocation locationTracker (SourcePos 1 1 0) (SourcePos 2 10 0)
     threadDelay 1000
     readMockLocation locationTracker
   
@@ -127,17 +117,17 @@ testThreadSafeSourceLocationTracking = do
 
 -- Property 9: Concurrent memory management
 propConcurrentMemoryManagement :: Int -> Property
-propConcurrentMemoryManagement numAllocations =
-  numAllocations > 0 && numAllocations <= 100 ==> ioProperty $ do
-    testResult <- runConcurrentMemoryTest numAllocations
+propConcurrentMemoryManagement                               numAllocations =
+  numAllocations > 0 && numAllocations <=                               100 ==> ioProperty $ do
+              testResult <- runConcurrentMemoryTest numAllocations
     return $ case testResult of
       Right finalMemory -> finalMemory >= 0
       Left _ -> False
 
 -- Test Case 10: Concurrent test execution isolation
 testConcurrentTestExecutionIsolation :: IO ()
-testConcurrentTestExecutionIsolation = do
-  results <- replicateM 5 $ runIsolatedTest "test"
+                              testConcurrentTestExecutionIsolation = do
+              results <- replicateM 5 $ runIsolatedTest "test"
   
   -- Each test should have its own isolated environment
   let uniqueResults = nub results
@@ -145,12 +135,12 @@ testConcurrentTestExecutionIsolation = do
 
 -- Helper functions for concurrent testing
 runConcurrentParserTest :: String -> Int -> IO (Either String [String])
-runConcurrentParserTest input numThreads = do
-  resultsVar <- newIORef []
+runConcurrentParserTest input                               numThreads = do
+              resultsVar <- newIORef []
   done <- newEmptyMVar
   
   let worker = do
-        result <- return $ "parsed: " ++ input  -- Mock parsing
+              result <- return $ "parsed: " ++ input  -- Mock parsing
         modifyIORef resultsVar (result:)
         putMVar done ()
   
@@ -161,12 +151,12 @@ runConcurrentParserTest input numThreads = do
   return $ Right results
 
 runConcurrentTypeInferenceTest :: String -> Int -> IO (Either String [String])
-runConcurrentTypeInferenceTest expr numThreads = do
-  resultsVar <- newIORef []
+runConcurrentTypeInferenceTest expr                               numThreads = do
+              resultsVar <- newIORef []
   done <- newEmptyMVar
   
   let worker = do
-        result <- return $ "type: " ++ expr  -- Mock type inference
+              result <- return $ "type: " ++ expr  -- Mock type inference
         modifyIORef resultsVar (result:)
         putMVar done ()
   
@@ -177,12 +167,12 @@ runConcurrentTypeInferenceTest expr numThreads = do
   return $ Right results
 
 runConcurrentOwnershipTest :: Int -> IO (Either String Int)
-runConcurrentOwnershipTest numOperations = do
-  counter <- newTVarIO 0
+runConcurrentOwnershipTest                               numOperations = do
+              counter <- newTVarIO 0
   done <- newEmptyMVar
   
   let worker = do
-        atomically $ modifyTVar counter (+1)
+                    atomically $ modifyTVar counter (+1)
         threadDelay 100
         atomically $ modifyTVar counter (subtract 1)
         putMVar done ()
@@ -194,26 +184,26 @@ runConcurrentOwnershipTest numOperations = do
   return $ Right finalCount
 
 runConcurrentErrorHandlingTest :: [String] -> Int -> IO (Either String [String])
-runConcurrentErrorHandlingTest errors numThreads = do
-  errorsVar <- newIORef []
+runConcurrentErrorHandlingTest errors                               numThreads = do
+              errorsVar <- newIORef []
   done <- newEmptyMVar
   
-  let worker err = do
-        modifyIORef errorsVar (err:)
+  let worker                               err = do
+                    modifyIORef errorsVar (err:)
         putMVar done ()
   
-  mapM_ (\err -> forkIO $ worker err) (take numThreads (cycle errors))
+  mapM_ (\err -> forkIO $ worker err) (take numThreads (cycle errors)
   replicateM_ numThreads (takeMVar done)
   
   collectedErrors <- readIORef errorsVar
   return $ Right collectedErrors
 
 runSTMSymbolTableTest :: [(String, Int)] -> IO (Either String [(String, Int)])
-runSTMSymbolTableTest operations = do
-  table <- newTVarIO []
+runSTMSymbolTableTest                               operations = do
+              table <- newTVarIO []
   
   let insert (key, value) = atomically $ do
-        current <- readTVar table
+              current <- readTVar table
         writeTVar table ((key, value) : current)
   
   mapM_ (forkIO . insert) operations
@@ -223,19 +213,19 @@ runSTMSymbolTableTest operations = do
   return $ Right finalTable
 
 createMockCompilationState :: IO MockCompilationState
-createMockCompilationState = do
-  symbols <- MockSymbolTable <$> newIORef []
+                              createMockCompilationState = do
+              symbols <- MockSymbolTable <$> newIORef []
   errors <- newIORef []
   progress <- newIORef 0
   return $ MockCompilationState symbols errors progress
 
 runConcurrentCompilationPipeline :: MockCompilationState -> [String] -> IO [String]
-runConcurrentCompilationPipeline state files = do
-  resultsVar <- newIORef []
+runConcurrentCompilationPipeline state                               files = do
+              resultsVar <- newIORef []
   
-  let processFile file = do
-        threadDelay 100000  -- Mock processing time
-        modifyIORef (stateProgress state) (+ (100 `div` L.length files))
+  let processFile                               file = do
+                    threadDelay 100000  -- Mock processing time
+modifyIORef (stateProgress state) (+ (100 `div` L.length files)
         return $ "processed: " ++ file
   
   results <- mapM processFile files
@@ -244,11 +234,11 @@ runConcurrentCompilationPipeline state files = do
   readIORef resultsVar
 
 runConcurrentDependencyAnalysis :: [(String, [String])] -> IO (Either String [(String, [String])])
-runConcurrentDependencyAnalysis dependencies = do
-  graphVar <- newIORef []
+runConcurrentDependencyAnalysis                               dependencies = do
+              graphVar <- newIORef []
   
   let analyze (file, deps) = do
-        threadDelay 50000  -- Mock analysis time
+                    threadDelay 50000  -- Mock analysis time
         return (file, deps)
   
   results <- mapM analyze dependencies
@@ -256,28 +246,28 @@ runConcurrentDependencyAnalysis dependencies = do
   graph <- readIORef graphVar
   return $ Right graph
 
-createMockLocationTracker :: IO (IORef (Maybe SourcePos))
-createMockLocationTracker = newIORef Nothing
+createMockLocationTracker :: IO (IORef (Maybe SourcePos)
+                              createMockLocationTracker = newIORef Nothing
 
 updateMockLocation :: IORef (Maybe SourcePos) -> SourcePos -> SourcePos -> IO ()
-updateMockLocation tracker start end = do
-  threadDelay 10000
+updateMockLocation tracker start                               end = do
+              threadDelay 10000
   writeIORef tracker (Just end)
 
 readMockLocation :: IORef (Maybe SourcePos) -> IO SourcePos
-readMockLocation tracker = do
-  location <- readIORef tracker
+readMockLocation                               tracker = do
+              location <- readIORef tracker
   return $ case location of
     Just pos -> pos
     Nothing -> SourcePos 1 1 0
 
 runConcurrentMemoryTest :: Int -> IO (Either String Int)
-runConcurrentMemoryTest numAllocations = do
-  memory <- newTVarIO 0
+runConcurrentMemoryTest                               numAllocations = do
+              memory <- newTVarIO 0
   done <- newEmptyMVar
   
   let allocate = do
-        atomically $ modifyTVar memory (+1)
+                    atomically $ modifyTVar memory (+1)
         threadDelay 1000
         atomically $ modifyTVar memory (subtract 1)
         putMVar done ()
@@ -289,20 +279,20 @@ runConcurrentMemoryTest numAllocations = do
   return $ Right finalMemory
 
 runIsolatedTest :: String -> IO String
-runIsolatedTest testName = do
+runIsolatedTest                               testName = do
   -- Each test gets its own isolated environment
   envId <- return "env1"  -- Mock environment ID
   threadDelay 100000  -- Mock test execution
-  return $ testName ++ "-" ++ envId
+return $ testName ++ "-" ++ envId
 
 -- Utility functions
 isValidDependencyGraph :: [(String, [String])] -> Bool
-isValidDependencyGraph graph = L.all (\(file, deps) -> file `notElem` deps) graph
+isValidDependencyGraph                               graph = L.all (\(file, deps) -> file `notElem` deps) graph
 
-nub :: Eq a => [a] -> [a]
+nub :: Eq                               a => [a] -> [a]
 nub [] = []
 nub (x:xs) = x : nub (L.filter (/= x) xs)
 
 -- STM helper
 newTVarIO :: a -> IO (TVar a)
-newTVarIO = atomically . newTVar
+                              newTVarIO = atomically . newTVar

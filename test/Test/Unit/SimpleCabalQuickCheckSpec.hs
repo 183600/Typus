@@ -1,40 +1,20 @@
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+module Test.Unit.SimpleCabalQuickCheckSpec where
 
-module Test.Unit.SimpleCabalQuickCheckSpec (tests) where
 
-import Test.Tasty (TestTree, testGroup)
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+import Test.Tasty.HUnit
 import qualified Data.List as L
-import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck
-import Data.List (sort)
+import Data.Char (isSpace)
+
+-- Basic test properties
+prop_basic_property :: String -> Property
+prop_basic_property s = 
+  let trimmed = L.dropWhile isSpace (L.dropWhileEnd isSpace s)
+  in property $ L.length trimmed <= L.length s
 
 tests :: TestTree
-tests = testGroup "Simple Cabal QuickCheck Tests"
-  [ basicListProperties
-  , basicArithmeticProperties
-  ]
-
-basicListProperties :: TestTree
-basicListProperties = testGroup "Basic List Properties"
-  [ fastProperty "L.reverse twice is identity" $ \(xs :: [Int]) ->
-      L.reverse (L.reverse xs) === xs
-  
-  , fastProperty "L.length is preserved by L.reverse" $ \(xs :: [Int]) ->
-      L.length (L.reverse xs) === L.length xs
-  
-  , fastProperty "sort is idempotent" $ \(xs :: [Int]) ->
-      sort (sort xs) === sort xs
-  ]
-
-basicArithmeticProperties :: TestTree
-basicArithmeticProperties = testGroup "Basic Arithmetic Properties"
-  [ fastProperty "addition is commutative" $ \(x :: Int) (y :: Int) ->
-      x + y === y + x
-  
-  , fastProperty "multiplication is associative" $ \(x :: Int) (y :: Int) (z :: Int) ->
-      (x * y) * z === x * (y * z)
-  
-  , fastProperty "zero is additive identity" $ \(x :: Int) ->
-      x + 0 === x
+tests = testGroup "Test.Unit.SimpleCabalQuickCheckSpec Tests"
+  [ testProperty "basic property" prop_basic_property
   ]

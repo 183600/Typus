@@ -1,41 +1,32 @@
-{-# LANGUAGE OverloadedStrings #-}
-module Test.Unit.ParserPropertySpec (tests) where
-
-import Test.Tasty (TestTree, testGroup)
+module Test.Unit.ParserPropertySpec where
+import Test.QuickCheck 
 import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), Gen)
-import Data.Char (isSpace)
-import qualified Data.List as L
-import Data.List (isPrefixOf)
-
-import Parser (parseTypus, TypusFile(..), FileDirectives(..), BlockDirectives(..))
-import SourceLocation (locatedValue)
-
--- | Property tests for Parser module
-tests :: TestTree
-tests = testGroup "Parser Property Tests"
-  [ testProperty "round-trip parsing" propRoundTripParsing
-  , testProperty "directive parsing consistency" propDirectiveParsingConsistency
-  , testProperty "whitespace preservation" propWhitespacePreservation
-  , testProperty "empty input handling" propEmptyInputHandling
-  ]
-
--- | Parsing L.and re-serializing should preserve essential structure
-propRoundTripParsing :: String -> Property
-propRoundTripParsing input =
-  let result = parseTypus input
-  in case result of
-    Left _ -> property True  -- Invalid inputs can fail, that's OK
-    Right typusFile -> 
-      let reconstructed = reconstructTypusFile typusFile
+import Data.Char 
+import Parser (parseTypus, TypusFile(..), FileDirectives(..), BlockDirectives)
       in L.length (lines reconstructed) >= L.length (lines input)
+-- Arbitrary instance for SourcePos
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- choose (1, 100)
+    column <- choose (1, 100)
+    offset <- choose (0, 1000)
+    return $ SourcePos line column offset
+
+-- Arbitrary instance for SourceSpan
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    return $ SourceSpan start end
+
 
 -- | Directive parsing should be consistent regardless of whitespace
 propDirectiveParsingConsistency :: String -> Property
-propDirectiveParsingConsistency input =
+propDirectiveParsingConsistency                               input =
   let withExtraWhitespace = addWhitespace input
-      result1 = parseTypus input
-      result2 = parseTypus withExtraWhitespace
-  in case (result1, result2) of
+                                    result1 = parseTypus input
+                                    result2 = parseTypus withExtraWhitespace
+  in case (result1, result2 [] of
     (Left _, Left _) -> property True
     (Right file1, Right file2) -> 
       locatedValue <$> fdOwnership (tfDirectives file1) ==
@@ -44,7 +35,7 @@ propDirectiveParsingConsistency input =
 
 -- | Whitespace should be preserved in code blocks
 propWhitespacePreservation :: String -> Property
-propWhitespacePreservation input =
+propWhitespacePreservation                               input =
   let result = parseTypus input
   in case result of
     Left _ -> property True
@@ -54,9 +45,9 @@ propWhitespacePreservation input =
 
 -- | Empty input should be handled gracefully
 propEmptyInputHandling :: String -> Property
-propEmptyInputHandling input =
+propEmptyInputHandling                               input =
   let emptyInput = ""
-      result = parseTypus emptyInput
+                                    result = parseTypus emptyInput
   in case result of
     Left _ -> property True
     Right _ -> property True
@@ -67,21 +58,21 @@ propEmptyInputHandling input =
 
 -- | Reconstruct a TypusFile from its components (simplified)
 reconstructTypusFile :: TypusFile -> String
-reconstructTypusFile file = 
+reconstructTypusFile                               file = 
   unlines $ map cbContent (tfBlocks file)
 
 -- | Add random whitespace to input
 addWhitespace :: String -> String
-addWhitespace = concatMap (\c -> 
+                              addWhitespace = concatMap (\c -> 
   if isSpace c then c ++ "  "
-  else if c == '\n' then "\n  "
+  else if                               c == '\n' then "\n  "
   else [c])
 
 -- | Check if content has consistent whitespace
 hasConsistentWhitespace :: String -> Bool
-hasConsistentWhitespace content =
+hasConsistentWhitespace                               content =
   let lines' = lines content
-      leadingSpaces = L.map (L.length . takeWhile isSpace) lines'
+                                    leadingSpaces = L.map (L.length . takeWhile isSpace) lines'
   in L.all (>= 0) leadingSpaces
 
 -- ============================================================================
@@ -89,4 +80,4 @@ hasConsistentWhitespace content =
 -- ============================================================================
 
 instance Arbitrary Char where
-  arbitrary = arbitrary `suchThat` (/= '\0')
+                                              arbitrary = arbitrary `suchThat` (/= '\0' [])

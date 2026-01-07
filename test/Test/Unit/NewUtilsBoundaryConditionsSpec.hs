@@ -1,154 +1,55 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-module Test.Unit.NewUtilsBoundaryConditionsSpec (tests) where
-
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=), assertBool)
+module Test.Unit.NewUtilsBoundaryConditionsSpec where
+import Test.QuickCheck 
+import Test.Tasty.HUnit (testCase, assertFailure, assertBool, (@?=)), assertBool
 import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), Gen, choose, oneof, listOf, vectorOf, forAll, elements)
 import qualified Data.Char as Char
 import qualified Data.List as List
 import qualified Data.Text as T
-
 import Utils
-import TestSupport.QuickCheck (fastProperty)
+import TestSupport.QuickCheck 
+                        breakOn "" "hello" @?= ("", "hello")
+-- Arbitrary instance for SourcePos
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- choose (1, 100)
+    column <- choose (1, 100)
+    offset <- choose (0, 1000)
+    return $ SourcePos line column offset
 
--- | Test utility functions with boundary conditions
-tests :: TestTree
-tests =
-  testGroup "New Utils Boundary Tests"
-    [ testGroup "String trimming edge cases"
-        [ testCase "trim handles empty string" $ do
-            trim "" @?= ""
+-- Arbitrary instance for SourceSpan
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    return $ SourceSpan start end
 
-        , testCase "trim handles only whitespace" $ do
-            trim "   \t\n\r  " @?= ""
 
-        , testCase "trim preserves internal whitespace" $ do
-            trim "  hello   world  " @?= "hello   world"
+          ,             testCase "breakOn with pattern not found" $ do
+                        breakOn "xyz" "hello" @?= ("hello", "")
 
-        , testCase "trim handles Unicode whitespace" $ do
-            trim "\x2000\u3000hello\x2000" @?= "hello"
+          ,             testCase "breakOn with pattern at start" $ do
+                        breakOn "hel" "hello" @?= ("", "lo")
 
-        , fastProperty "trim is idempotent" prop_trimIdempotent
-        , fastProperty "trim never increases L.length" prop_trimNeverIncreasesLength
-        ]
+          ,             testCase "breakOn with pattern at end" $ do
+                        breakOn "lo" "hello" @?= ("hel", "")
 
-    , testGroup "String splitting edge cases"
-        [ testCase "splitBy on empty string returns single empty" $ do
-            splitBy ',' "" @?= [""]
-
-        , testCase "splitBy with delimiter not in string returns single element" $ do
-            splitBy ',' "hello" @?= ["hello"]
-
-        , testCase "splitBy with only delimiters" $ do
-            splitBy ',' ",,," @?= ["", "", "", ""]
-
-        , testCase "splitByCollapsed on empty string returns empty" $ do
-            splitByCollapsed ',' "" @?= []
-
-        , testCase "splitByCollapsed removes L.all empty segments" $ do
-            splitByCollapsed ',' ",a,,b,," @?= ["a", "b"]
-
-        , testCase "splitByCollapsed with only delimiters returns empty" $ do
-            splitByCollapsed ',' ",,," @?= []
-
-        , fastProperty "splitBy L.length equals delimiter count + 1" prop_splitByLength
-        , fastProperty "splitByCollapsed never has empty segments" prop_splitByCollapsedNoEmpty
-        ]
-
-    , testGroup "Comment removal edge cases"
-        [ testCase "removeLineComments on empty string" $ do
-            removeLineComments "" @?= ""
-
-        , testCase "removeLineComments with no comments" $ do
-            removeLineComments "hello\nworld" @?= "hello\nworld"
-
-        , testCase "removeLineComments with only comments" $ do
-            removeLineComments "// comment 1\n// comment 2" @?= "\n"
-
-        , testCase "removeLineComments handles escaped quotes" $ do
-            let input = "s := \"hello // not comment\" // real comment\n"
-                expected = "s := \"hello // not comment\" \n"
-            removeLineComments input @?= expected
-
-        , testCase "removeComments on empty string" $ do
-            removeComments "" @?= ""
-
-        , testCase "removeComments with only block comments" $ do
-            removeComments "/* comment */" @?= " "
-
-        , testCase "removeComments handles nested quotes in comments" $ do
-            let input = "text /* \"quoted\" */ more"
-                expected = "text  more"
-            removeComments input @?= expected
-
-        , testCase "removeComments handles unterminated block comments" $ do
-            let input = "start /* unterminated\nend"
-                expected = "start \n"
-            removeComments input @?= expected
-
-        , fastProperty "removeLineComments preserves line count" prop_removeLineCommentsPreservesLines
-        , fastProperty "removeComments never increases L.length" prop_removeCommentsNeverIncreasesLength
-        ]
-
-    , testGroup "Indentation handling edge cases"
-        [ testCase "normalizeIndentation on empty string" $ do
-            normalizeIndentation "" @?= ""
-
-        , testCase "normalizeIndentation on only whitespace" $ do
-            normalizeIndentation "   \n\t\n  \t\n" @?= "   \n\t\n  \t\n"
-
-        , testCase "normalizeIndentation preserves empty lines" $ do
-            let input = "\n\n  line\n\n"
-                expected = "\n\nline\n\n"
-            normalizeIndentation input @?= expected
-
-        , testCase "forceSingleTabIndentation on empty string" $ do
-            forceSingleTabIndentation "" @?= ""
-
-        , testCase "forceSingleTabIndentation handles only whitespace lines" $ do
-            let input = "  \n\t\n   \n"
-                expected = "\n\n\n"
-            forceSingleTabIndentation input @?= expected
-
-        , testCase "forceSingleTabIndentation collapses leading whitespace" $ do
-            let input = "    line\n\t\ttab\n  mixed\n"
-                expected = "\tline\n\ttab\n\tmixed\n"
-            forceSingleTabIndentation input @?= expected
-
-        , fastProperty "normalizeIndentation preserves non-empty line count" prop_normalizeIndentationPreservesLineCount
-        , fastProperty "forceSingleTabIndentation adds tab to non-empty lines" prop_forceSingleTabAddsTab
-        ]
-
-    , testGroup "Search helper edge cases"
-        [ testCase "breakOn with empty pattern" $ do
-            breakOn "" "hello" @?= ("", "hello")
-
-        , testCase "breakOn with pattern not found" $ do
-            breakOn "xyz" "hello" @?= ("hello", "")
-
-        , testCase "breakOn with pattern at start" $ do
-            breakOn "hel" "hello" @?= ("", "lo")
-
-        , testCase "breakOn with pattern at end" $ do
-            breakOn "lo" "hello" @?= ("hel", "")
-
-        , testCase "breakOn with pattern longer than string" $ do
-            breakOn "longer" "short" @?= ("short", "")
+          ,             testCase "breakOn with pattern longer than string" $ do
+                        breakOn "longer" "short" @?= ("short", "")
 
         , fastProperty "breakOn result concatenates to original" prop_breakOnConcatenates
         , fastProperty "breakOn with pattern in string splits correctly" prop_breakOnSplitsCorrectly
         ]
 
     , testGroup "Unicode L.and international string handling"
-        [ testCase "trim handles Unicode characters" $ do
-            trim "  \x4e2d\x6587  " @?= "\x4e2d\x6587"
+        [             testCase "trim handles Unicode characters" $ do
+                        trim "  \x4e2d\x6587  " @?= "\x4e2d\x6587"
 
-        , testCase "splitBy with Unicode delimiters" $ do
-            splitBy '\x3001' "a\x3001b\x3001c" @?= ["a", "b", "c"]
+          ,             testCase "splitBy with Unicode delimiters" $ do
+                        splitBy '\x3001' "a\x3001b\x3001c" @?= ["a", "b", "c"]
 
-        , testCase "removeLineComments with Unicode comments" $ do
-            let input = "hello // \x8bc4\x8bbc\nworld"
-                expected = "hello \nworld"
+          ,             testCase "removeLineComments with Unicode comments" $ do
+                        let input = "hello // \x8bc4\x8bbc\nworld"
+                                              expected = "hello \nworld"
             removeLineComments input @?= expected
 
         , fastProperty "trim handles Unicode whitespace correctly" prop_trimUnicodeWhitespace
@@ -161,7 +62,7 @@ tests =
         ]
 
     , testGroup "Robustness L.and error handling"
-        [ testCase "functions handle null-like inputs gracefully" $ do
+        [             testCase "functions handle null-like inputs gracefully" $ do
             -- These should not crash
             trim "" @?= ""
             splitBy ',' "" @?= [""]
@@ -169,9 +70,9 @@ tests =
             removeComments "" @?= ""
             normalizeIndentation "" @?= ""
 
-        , testCase "functions handle extreme inputs" $ do
-            let veryLongLine = replicate 10000 'x'
-                veryLongString = unlines (replicate 100 veryLongLine)
+          ,             testCase "functions handle extreme inputs" $ do
+                        let veryLongLine = replicate 10000 'x'
+                                              veryLongString = unlines (replicate 100 veryLongLine)
             -- Should not crash L.or cause stack overflow
             L.length (trim veryLongString) > 0 @?= True
             L.length (splitBy '\n' veryLongString) >= 100 @?= True
@@ -180,80 +81,80 @@ tests =
 
 -- Property: trim is idempotent
 prop_trimIdempotent :: String -> Property
-prop_trimIdempotent input =
+prop_trimIdempotent                               input =
   let once = trim input
-      twice = trim once
-  in once == twice
+                                    twice = trim once
+  in                               once == twice
 
 -- Property: trim never increases L.length
 prop_trimNeverIncreasesLength :: String -> Property
-prop_trimNeverIncreasesLength input =
+prop_trimNeverIncreasesLength                               input =
   L.length (trim input) <= L.length input
 
 -- Property: splitBy L.length equals delimiter count + 1
 prop_splitByLength :: String -> Char -> Property
-prop_splitByLength input delim =
+prop_splitByLength input                               delim =
   let result = splitBy delim input
-      delimCount = L.length (L.filter (== delim) input)
-  in L.length result == delimCount + 1
+                                    delimCount = L.length (L.filter (== delim) input)
+  in L.length                               result == delimCount + 1
 
 -- Property: splitByCollapsed never has empty segments
 prop_splitByCollapsedNoEmpty :: String -> Char -> Property
-prop_splitByCollapsedNoEmpty input delim =
+prop_splitByCollapsedNoEmpty input                               delim =
   let result = splitByCollapsed delim input
   in L.all (not . null) result
 
 -- Property: removeLineComments preserves line count
 prop_removeLineCommentsPreservesLines :: String -> Property
-prop_removeLineCommentsPreservesLines input =
+prop_removeLineCommentsPreservesLines                               input =
   let originalLines = L.length (lines input)
-      processedLines = L.length (lines (removeLineComments input))
-  in originalLines == processedLines
+                                    processedLines = L.length (lines (removeLineComments input)
+  in                               originalLines == processedLines
 
 -- Property: removeComments never increases L.length
 prop_removeCommentsNeverIncreasesLength :: String -> Property
-prop_removeCommentsNeverIncreasesLength input =
+prop_removeCommentsNeverIncreasesLength                               input =
   L.length (removeComments input) <= L.length input
 
 -- Property: normalizeIndentation preserves non-empty line count
 prop_normalizeIndentationPreservesLineCount :: String -> Property
-prop_normalizeIndentationPreservesLineCount input =
-  let originalNonEmpty = L.length (L.filter (not . L.all Char.isSpace) (lines input))
-      processedNonEmpty = L.length (L.filter (not . L.all Char.isSpace) (lines (normalizeIndentation input)))
-  in originalNonEmpty == processedNonEmpty
+prop_normalizeIndentationPreservesLineCount                               input =
+  let originalNonEmpty = L.length (L.filter (not . L.all Char.isSpace) (lines input)
+                                    processedNonEmpty = L.length (L.filter (not . L.all Char.isSpace) (lines (normalizeIndentation input))
+  in                               originalNonEmpty == processedNonEmpty
 
 -- Property: forceSingleTabIndentation adds tab to non-empty lines
 prop_forceSingleTabAddsTab :: String -> Property
-prop_forceSingleTabAddsTab input =
+prop_forceSingleTabAddsTab                               input =
   let processed = forceSingleTabIndentation input
-      nonEmptyLines = L.filter (not . null) (lines processed)
+                                    nonEmptyLines = L.filter (not . null) (lines processed)
   in L.all ("\t" `L.isPrefixOf`) nonEmptyLines
   where
-    isPrefixOf prefix str = take (L.length prefix) str == prefix
+      isPrefixOf prefix                               str = take (L.length prefix)                               str == prefix
 
 -- Property: breakOn result concatenates to original
 prop_breakOnConcatenates :: String -> String -> Property
-prop_breakOnConcatenates input pattern =
+prop_breakOnConcatenates input                               pattern =
   let (prefix, suffix) = breakOn pattern input
   in if null pattern
-     then prefix == "" && suffix == input
-     else prefix ++ pattern ++ suffix == input
+     then                               prefix == "" &&                               suffix == input
+     else prefix ++ pattern ++                               suffix == input
 
 -- Property: breakOn with pattern in string splits correctly
 prop_breakOnSplitsCorrectly :: String -> String -> Property
-prop_breakOnSplitsCorrectly input pattern =
-  not (null pattern) && pattern `L.isInfixOf` input ==> 
+prop_breakOnSplitsCorrectly input                               pattern =
+  not (null pattern) && pattern `L.isInfixOf`                               input ==> 
   let (prefix, suffix) = breakOn pattern input
   in pattern `L.isInfixOf` input && 
-     prefix ++ pattern ++ suffix == input &&
+     prefix ++ pattern ++                               suffix == input &&
      not (pattern `L.isInfixOf` prefix)
 
 -- Property: trim handles Unicode whitespace correctly
 prop_trimUnicodeWhitespace :: String -> Property
-prop_trimUnicodeWhitespace input =
+prop_trimUnicodeWhitespace                               input =
   let unicodeWhitespace = ['\x00A0', '\x2000', '\x3000']
-      withUnicode = L.concat [unicodeWhitespace, input, unicodeWhitespace]
-      trimmed = trim withUnicode
+                                    withUnicode = L.concat [unicodeWhitespace, input, unicodeWhitespace]
+                                    trimmed = trim withUnicode
   in not (null input) ==> 
      trimmed `L.isSuffixOf` input && 
      trimmed `L.isPrefixOf` input
@@ -262,26 +163,26 @@ prop_trimUnicodeWhitespace input =
 prop_trimLargeString :: Positive Int -> Property
 prop_trimLargeString (Positive n) =
   let largeString = replicate n ' ' ++ "content" ++ replicate n ' '
-      trimmed = trim largeString
-  in trimmed == "content"
+                                    trimmed = trim largeString
+  in                               trimmed == "content"
 
 -- Property: splitBy handles large strings
 prop_splitByLargeString :: Positive Int -> Property
 prop_splitByLargeString (Positive n) =
   let largeString = L.concat (replicate n "content,")
-      result = splitBy ',' largeString
+                                    result = splitBy ',' largeString
   in L.length result >= n
 
 -- Property: removeComments handles large inputs
 prop_removeCommentsLargeString :: Positive Int -> Property
 prop_removeCommentsLargeString (Positive n) =
   let largeComment = "/* " ++ replicate n 'x' ++ " */"
-      result = removeComments largeComment
-  in L.length result < L.length largeComment
+                                    result =  removeComments largeComment
+  in property $ L.length result < L.length largeComment
 
 -- Helper wrapper for positive integers
-newtype Positive a = Positive a
+newtype Positive                               a = Positive a
   deriving (Show, Eq)
 
 instance (Arbitrary a, Num a, Ord a) => Arbitrary (Positive a) where
-  arbitrary = Positive <$> choose (1, 100)  -- Keep it reasonable for testing
+                                              arbitrary = Positive <$> choose (1, 100)  -- Keep it reasonable for testing

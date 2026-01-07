@@ -1,35 +1,30 @@
-{-# LANGUAGE TemplateHaskell #-}
-
-module Test.Unit.OwnershipTransferEdgeCasesQuickCheckSpec (tests) where
-
-import Test.Tasty (TestTree)
-import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), (==>))
-import Test.Tasty.HUnit (testCase, assert, (@?=))
+module Test.Unit.OwnershipTransferEdgeCasesQuickCheckSpec where
+import Test.QuickCheck 
+import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), )
+import Test.Tasty.HUnit (testCase, assertFailure, assertBool, (@?=))
 import qualified Data.Text as T
-import Data.Char (isSpace, isAlpha, isDigit)
-import qualified Data.List as L
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
-import qualified Data.Map as Map
-
-import Ownership
-  ( OwnershipType(..)
-  , OwnershipError(..)
-  , OwnershipTransfer(..)
-  , OwnershipAnalyzer
-  , newOwnershipAnalyzer
-  , analyzeOwnership
-  , analyzeOwnershipFile
-  , formatOwnershipErrors
-  , builtInFunctions
-  )
-
--- ============================================================================
+import Data.Char ()
 -- Test Data Generators
 -- ============================================================================
+-- Arbitrary instance for SourcePos
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- choose (1, 100)
+    column <- choose (1, 100)
+    offset <- choose (0, 1000)
+    return $ SourcePos line column offset
+
+-- Arbitrary instance for SourceSpan
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    return $ SourceSpan start end
+
 
 -- Generate ownership types
 genOwnershipType :: Gen OwnershipType
-genOwnershipType = elements
+                              genOwnershipType = elements
   [ Owned
   , Borrowed
   , Shared
@@ -38,23 +33,23 @@ genOwnershipType = elements
 
 -- Generate ownership transfer operations
 genOwnershipTransfer :: Gen OwnershipTransfer
-genOwnershipTransfer = do
-  fromType <- genOwnershipType
+                              genOwnershipTransfer = do
+              fromType <- genOwnershipType
   toType <- genOwnershipType
   isValidTransfer <- arbitrary
   return $ OwnershipTransfer fromType toType isValidTransfer
 
 -- Generate variable names
 genVarName :: Gen String
-genVarName = do
-  first <- elements ['a'..'z']
+                              genVarName = do
+              first <- elements ['a'..'z']
   rest <- listOf $ elements $ ['a'..'z'] ++ ['0'..'9'] ++ ['_']
   return $ first : rest
 
 -- Generate ownership-related code snippets
 genOwnershipCode :: Gen String
-genOwnershipCode = do
-  codeType <- elements
+                              genOwnershipCode = do
+              codeType <- elements
     [ "simple_assignment"
     , "function_call"
     , "move_operation"
@@ -103,8 +98,8 @@ genOwnershipCode = do
 
 -- Generate edge case scenarios
 genEdgeCaseCode :: Gen String
-genEdgeCaseCode = do
-  edgeType <- elements
+                              genEdgeCaseCode = do
+              edgeType <- elements
     [ "use_after_move"
     , "double_borrow"
     , "circular_reference"
@@ -159,25 +154,25 @@ genEdgeCaseCode = do
 
 -- Property: analyzeOwnership should return a result for L.any input
 prop_analyze_ownership_returns_result :: String -> Property
-prop_analyze_ownership_returns_result code =
+prop_analyze_ownership_returns_result                               code =
   let analyzer = newOwnershipAnalyzer
-      result = analyzeOwnership analyzer code
-      hasResult = case result of
+                                    result = analyzeOwnership analyzer code
+                                    hasResult = case result of
         Left _ -> False
         Right _ -> True
-  in hasResult === True
+  in                               hasResult === True
 
 -- Property: builtInFunctions should contain essential functions
 prop_builtin_functions_not_empty :: Property
-prop_builtin_functions_not_empty =
+                              prop_builtin_functions_not_empty =
   let builtins = builtInFunctions
   in not (null builtins) === True
 
 -- Property: ownership transfer should follow validity rules
 prop_ownership_transfer_validity :: OwnershipTransfer -> Property
-prop_ownership_transfer_validity transfer =
-  let OwnershipTransfer from to isValid = transfer
-      shouldBeValid = case (from, to) of
+prop_ownership_transfer_validity                               transfer =
+  let OwnershipTransfer from to                               isValid = transfer
+                                    shouldBeValid = case (from, to) of
         (Owned, Borrowed) -> True
         (Owned, Shared) -> True
         (Owned, Moved) -> True
@@ -187,51 +182,51 @@ prop_ownership_transfer_validity transfer =
         (Shared, Moved) -> False
         (Moved, _) -> False
         _ -> False
-  in isValid === shouldBeValid
+  in                               isValid === shouldBeValid
 
 -- Property: formatOwnershipErrors should handle empty error list
 prop_format_empty_errors :: Property
-prop_format_empty_errors =
+                              prop_format_empty_errors =
   let emptyErrors = []
-      formatted = formatOwnershipErrors emptyErrors
-  in null formatted === True
+                                    formatted = formatOwnershipErrors emptyErrors
+  in null                               formatted === True
 
 -- Property: analyzeOwnership should be idempotent for valid code
 prop_analyze_ownership_idempotent :: String -> Property
-prop_analyze_ownership_idempotent code =
+prop_analyze_ownership_idempotent                               code =
   let analyzer = newOwnershipAnalyzer
-      result1 = analyzeOwnership analyzer code
-      result2 = analyzeOwnership analyzer code
-  in result1 === result2
+                                    result1 = analyzeOwnership analyzer code
+                                    result2 = analyzeOwnership analyzer code
+  in                               result1 === result2
 
 -- Property: ownership analysis should handle empty input
 prop_analyze_ownership_empty_input :: Property
-prop_analyze_ownership_empty_input =
+                              prop_analyze_ownership_empty_input =
   let analyzer = newOwnershipAnalyzer
-      result = analyzeOwnership analyzer ""
-      hasResult = case result of
+                                    result = analyzeOwnership analyzer ""
+                                    hasResult = case result of
         Left _ -> False
         Right _ -> True
-  in hasResult === True
+  in                               hasResult === True
 
 -- Property: ownership analysis should handle whitespace-only input
 prop_analyze_ownership_whitespace_only :: Property
-prop_analyze_ownership_whitespace_only =
+                              prop_analyze_ownership_whitespace_only =
   let analyzer = newOwnershipAnalyzer
-      whitespace = "   \n  \t  \n   "
-      result = analyzeOwnership analyzer whitespace
-      hasResult = case result of
+                                    whitespace = "   \n  \t  \n   "
+                                    result = analyzeOwnership analyzer whitespace
+                                    hasResult = case result of
         Left _ -> False
         Right _ -> True
-  in hasResult === True
+  in                               hasResult === True
 
 -- ============================================================================
 -- Unit Tests
 -- ============================================================================
 
 test_simple_ownership_analysis :: TestTree
-test_simple_ownership_analysis = testCase "simple ownership analysis" $ do
-  let code = "let x = create();\nlet y = x;\n"
+test_simple_ownership_analysis =             testCase "simple ownership analysis" $ do
+                    let code = "let x = create();\nlet y = x;\n"
   let analyzer = newOwnershipAnalyzer
   let result = analyzeOwnership analyzer code
   case result of
@@ -241,8 +236,8 @@ test_simple_ownership_analysis = testCase "simple ownership analysis" $ do
       assert True
 
 test_move_operation_analysis :: TestTree
-test_move_operation_analysis = testCase "move operation analysis" $ do
-  let code = "let x = create();\nlet y = move(x);\n"
+test_move_operation_analysis =             testCase "move operation analysis" $ do
+                    let code = "let x = create();\nlet y = move(x);\n"
   let analyzer = newOwnershipAnalyzer
   let result = analyzeOwnership analyzer code
   case result of
@@ -252,8 +247,8 @@ test_move_operation_analysis = testCase "move operation analysis" $ do
       assert True
 
 test_borrow_operation_analysis :: TestTree
-test_borrow_operation_analysis = testCase "borrow operation analysis" $ do
-  let code = "let x = create();\nlet y = borrow(x);\n"
+test_borrow_operation_analysis =             testCase "borrow operation analysis" $ do
+                    let code = "let x = create();\nlet y = borrow(x);\n"
   let analyzer = newOwnershipAnalyzer
   let result = analyzeOwnership analyzer code
   case result of
@@ -263,8 +258,8 @@ test_borrow_operation_analysis = testCase "borrow operation analysis" $ do
       assert True
 
 test_shared_reference_analysis :: TestTree
-test_shared_reference_analysis = testCase "shared reference analysis" $ do
-  let code = "let x = create();\nlet y = shared(x);\nlet z = shared(x);\n"
+test_shared_reference_analysis =             testCase "shared reference analysis" $ do
+                    let code = "let x = create();\nlet y = shared(x);\nlet z = shared(x);\n"
   let analyzer = newOwnershipAnalyzer
   let result = analyzeOwnership analyzer code
   case result of
@@ -274,8 +269,8 @@ test_shared_reference_analysis = testCase "shared reference analysis" $ do
       assert True
 
 test_error_detection :: TestTree
-test_error_detection = testCase "error detection" $ do
-  let code = "let x = create();\nlet y = move(x);\nuse(x);\n"  -- Use after move
+test_error_detection =             testCase "error detection" $ do
+                    let code = "let x = create();\nlet y = move(x);\nuse(x);\n"  -- Use after move
   let analyzer = newOwnershipAnalyzer
   let result = analyzeOwnership analyzer code
   case result of
@@ -287,15 +282,15 @@ test_error_detection = testCase "error detection" $ do
       assert True
 
 test_builtin_functions :: TestTree
-test_builtin_functions = testCase "built-in functions" $ do
-  let builtins = builtInFunctions
+test_builtin_functions =             testCase "built-in functions" $ do
+              let builtins = builtInFunctions
   assert $ not $ null builtins
   -- Check that common functions are present
-  assert $ L.any ("create" `L.isInfixOf`) builtins
+assert $ L.any ("create" `L.isInfixOf`) builtins
 
 test_edge_cases :: TestTree
-test_edge_cases = testCase "edge cases" $ do
-  let testCases = 
+test_edge_cases =             testCase "edge cases" $ do
+                    let testCases = 
         [ ""  -- Empty input
         , "   "  -- Whitespace only
         , "// comment only"
@@ -303,16 +298,16 @@ test_edge_cases = testCase "edge cases" $ do
         ]
   
   mapM_ (\code -> do
-    let analyzer = newOwnershipAnalyzer
+                let analyzer = newOwnershipAnalyzer
     let result = analyzeOwnership analyzer code
     case result of
       Left _ -> assert $ null code  -- Only allow failure for empty input
       Right _ -> assert True
-    ) testCases
+    )             testCases
 
 test_ownership_transfer_validity :: TestTree
-test_ownership_transfer_validity = testCase "ownership transfer validity" $ do
-  let validTransfers = 
+test_ownership_transfer_validity =             testCase "ownership transfer validity" $ do
+              let validTransfers = 
         [ OwnershipTransfer Owned Borrowed True
         , OwnershipTransfer Owned Shared True
         , OwnershipTransfer Owned Moved True
@@ -326,13 +321,13 @@ test_ownership_transfer_validity = testCase "ownership transfer validity" $ do
         ]
   
   mapM_ (\transfer -> 
-    let OwnershipTransfer _ _ isValid = transfer
-    in isValid @?= True
+    let OwnershipTransfer _ _                               isValid = transfer
+in isValid @?= True
     ) validTransfers
   
   mapM_ (\transfer -> 
-    let OwnershipTransfer _ _ isValid = transfer
-    in isValid @?= False
+    let OwnershipTransfer _ _                               isValid = transfer
+    in property $ isValid @?= False
     ) invalidTransfers
 
 -- ============================================================================
@@ -340,14 +335,14 @@ test_ownership_transfer_validity = testCase "ownership transfer validity" $ do
 -- ============================================================================
 
 tests :: TestTree
-tests = testGroup "Ownership Transfer Edge Cases QuickCheck Tests"
-  [ testProperty "analyzeOwnership returns result for L.any input" prop_analyze_ownership_returns_result
-  , testProperty "builtInFunctions is not empty" prop_builtin_functions_not_empty
-  , testProperty "ownership transfer follows validity rules" prop_ownership_transfer_validity
-  , testProperty "formatOwnershipErrors handles empty error list" prop_format_empty_errors
-  , testProperty "analyzeOwnership is idempotent for valid code" prop_analyze_ownership_idempotent
-  , testProperty "analyzeOwnership handles empty input" prop_analyze_ownership_empty_input
-  , testProperty "analyzeOwnership handles whitespace-only input" prop_analyze_ownership_whitespace_only
+tests =   testGroup "Ownership Transfer Edge Cases QuickCheck Tests"
+  [             testProperty "analyzeOwnership returns result for L.any input" prop_analyze_ownership_returns_result
+  ,             testProperty "builtInFunctions is not empty" prop_builtin_functions_not_empty
+  ,             testProperty "ownership transfer follows validity rules" prop_ownership_transfer_validity
+  ,             testProperty "formatOwnershipErrors handles empty error list" prop_format_empty_errors
+  ,             testProperty "analyzeOwnership is idempotent for valid code" prop_analyze_ownership_idempotent
+  ,             testProperty "analyzeOwnership handles empty input" prop_analyze_ownership_empty_input
+  ,             testProperty "analyzeOwnership handles whitespace-only input" prop_analyze_ownership_whitespace_only
   , test_simple_ownership_analysis
   , test_move_operation_analysis
   , test_borrow_operation_analysis

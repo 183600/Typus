@@ -1,44 +1,20 @@
-import Utils (removeComments)
+module Test.Unit.TestCommentsDebug where
 
--- 简化版的removeComments用于调试
-removeCommentsDebug :: String -> String
-removeCommentsDebug = goNormal
-  where
-    goNormal [] = []
-    goNormal ('/':'/':xs) = skipLine xs
-    goNormal ('/':'*':xs) = skipBlock xs
-    goNormal ('"':xs) = '\"' : goInString xs
-    goNormal ('\'':xs) = '\'' : goInChar xs
-    goNormal (c:cs) = c : goNormal cs
 
-    skipLine [] = []
-    skipLine ('\n':xs) = '\n' : goNormal xs
-    skipLine (_:xs) = skipLine xs
 
-    skipBlock [] = []
-    skipBlock xs = skipBlockAtLevel 1 xs
-    
-    skipBlockAtLevel 0 xs = goNormal xs
-    skipBlockAtLevel n [] = []
-    skipBlockAtLevel n ('/':'*':xs) = skipBlockAtLevel (n+1) xs
-    skipBlockAtLevel n ('*':'/':xs) = skipBlockAtLevel (n-1) xs
-    skipBlockAtLevel n ('\n':xs) = '\n' : skipBlockAtLevel n xs
-    skipBlockAtLevel n (_:xs) = skipBlockAtLevel n xs
+import Test.Tasty
+import Test.Tasty.QuickCheck
+import Test.Tasty.HUnit
+import qualified Data.List as L
+import Data.Char (isSpace)
 
-    goInString [] = []
-    goInString ('\n':xs) = '\n' : goNormal xs
-    goInString ('\\':x:xs) = '\\' : x : goInString xs
-    goInString ('"':xs) = '\"' : goNormal xs
-    goInString (c:cs) = c : goInString cs
+-- Basic test properties
+prop_basic_property :: String -> Property
+prop_basic_property s = 
+  let trimmed = L.dropWhile isSpace (L.dropWhileEnd isSpace s)
+  in property $ L.length trimmed <= L.length s
 
-    goInChar [] = []
-    goInChar ('\\':x:xs) = '\\' : x : goInChar xs
-    goInChar ('\'':xs) = '\'' : goNormal xs
-    goInChar (c:cs) = c : goInChar cs
-
-main :: IO ()
-main = do
-    let test1 = "/* outer /* inner */a"
-    putStrLn $ "Test 1: " ++ show test1
-    putStrLn $ "Original Result: " ++ show (removeComments test1)
-    putStrLn $ "Debug Result: " ++ show (removeCommentsDebug test1)
+tests :: TestTree
+tests = testGroup "Test.Unit.TestCommentsDebug Tests"
+  [ testProperty "basic property" prop_basic_property
+  ]

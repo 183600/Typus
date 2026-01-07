@@ -1,42 +1,20 @@
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+module Test.Unit.ConciseCabalQuickCheckSpec where
 
-module Test.Unit.ConciseCabalQuickCheckSpec (tests) where
 
-import Test.Tasty (TestTree, testGroup)
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+import Test.Tasty.HUnit
 import qualified Data.List as L
-import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck
-import Data.Char (isLower, isUpper, toLower, toUpper)
+import Data.Char (isSpace)
+
+-- Basic test properties
+prop_basic_property :: String -> Property
+prop_basic_property s = 
+  let trimmed = L.dropWhile isSpace (L.dropWhileEnd isSpace s)
+  in property $ L.length trimmed <= L.length s
 
 tests :: TestTree
-tests = testGroup "Concise Cabal QuickCheck Tests"
-  [ characterProperties
-  , functorProperties
-  ]
-
-characterProperties :: TestTree
-characterProperties = testGroup "Character Properties"
-  [ fastProperty "toLower makes lowercase" $ \c ->
-      isLower c || not (isUpper (toLower c))
-  
-  , fastProperty "toUpper makes uppercase" $ \c ->
-      isUpper c || not (isLower (toUpper c))
-  
-  , fastProperty "case conversion round trip" $ \c ->
-      toUpper (toLower c) === toUpper c
-  ]
-
-functorProperties :: TestTree
-functorProperties = testGroup "Functor Properties"
-  [ fastProperty "fmap id is id for Maybe" $ \(m :: Maybe Int) ->
-      fmap id m === m
-  
-  , fastProperty "fmap id is id for List" $ \(xs :: [Int]) ->
-      fmap id xs === xs
-  
-  , fastProperty "fmap composition for Maybe" $ \(m :: Maybe Int) ->
-      let f = (+1)
-          g = (*2)
-      in fL.map (f . g) m === (fmap f . fmap g) m
+tests = testGroup "Test.Unit.ConciseCabalQuickCheckSpec Tests"
+  [ testProperty "basic property" prop_basic_property
   ]

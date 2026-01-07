@@ -1,85 +1,43 @@
-module Test.Unit.NewCabalQuickCheckSpec7 (tests) where
-
-import Test.Tasty (TestTree, testGroup)
-import qualified Data.List as L
-import Test.Tasty.HUnit (testCase, (@?=))
+module Test.Unit.NewCabalQuickCheckSpec7 where
+import Test.QuickCheck 
+import Test.Tasty.HUnit (testCase, assertFailure, assertBool, (@?=))
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, choose, listOf, elements)
-import Data.Text (Text)
-import qualified Data.Text as T
-import Data.Map (Map)
-import qualified Data.Map as Map
-import Data.Set (Set)
-import qualified Data.Set as Set
-
-import ErrorHandler
-import EnhancedErrorHandler
-import Compiler.Errors.Core
-
--- | QuickCheck tests for ErrorHandler module focusing on error handling consistency
-tests :: TestTree
-tests =
-  testGroup "NewCabalQuickCheckSpec7 - ErrorHandler Consistency Properties"
-    [ testProperty "error collection is deterministic" prop_errorCollectionDeterministic
-    , testProperty "error context is preserved" prop_errorContextPreserved
-    , testProperty "error recovery maintains consistency" prop_errorRecoveryMaintainsConsistency
-    , testProperty "error aggregation doesn't lose information" prop_errorAggregationPreservesInfo
-    , testProperty "error filtering respects severity" prop_errorFilteringRespectsSeverity
-    , testProperty "error location tracking is accurate" prop_errorLocationTrackingAccurate
-    , testProperty "error messages are informative" prop_errorMessagesInformative
-    , testProperty "error chaining preserves causality" prop_errorChainingPreservesCausality
-    , testProperty "error suppression doesn't hide critical errors" prop_errorSuppressionPreservesCritical
-    , testProperty "error formatting is consistent" prop_errorFormattingConsistent
-    ]
-
--- Property: error collection is deterministic
-prop_errorCollectionDeterministic :: [CompilerError] -> Bool
-prop_errorCollectionDeterministic errors =
-  let collected1 = collectErrors errors
-      collected2 = collectErrors errors
-  in collected1 == collected2
-
--- Property: error context is preserved through transformations
-prop_errorContextPreserved :: CompilerError -> ErrorContext -> Bool
-prop_errorContextPreserved error context =
-  let contextualized = addErrorContext error context
-      extracted = extractErrorContext contextualized
-  in context == extracted
-
--- Property: error recovery maintains program consistency
-prop_errorRecoveryMaintainsConsistency :: ProgramState -> CompilerError -> Bool
-prop_errorRecoveryMaintainsConsistency state error =
-  case attemptErrorRecovery state error of
-    Left _ -> True  -- Failed recovery preserves invariants
-    Right recoveredState ->
-      let originalInvariants = checkProgramInvariants state
-          recoveredInvariants = checkProgramInvariants recoveredState
-      in originalInvariants == recoveredInvariants
-
--- Property: error aggregation doesn't lose information
-prop_errorAggregationPreservesInfo :: [CompilerError] -> Bool
-prop_errorAggregationPreservesInfo errors =
-  let aggregated = aggregateErrors errors
-      extracted = extractIndividualErrors aggregated
+import Data.Text 
   in errorSetsEquivalent (Set.fromList errors) (Set.fromList extracted)
+-- Arbitrary instance for SourcePos
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- choose (1, 100)
+    column <- choose (1, 100)
+    offset <- choose (0, 1000)
+    return $ SourcePos line column offset
+
+-- Arbitrary instance for SourceSpan
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    return $ SourceSpan start end
+
 
 -- Property: error filtering respects severity levels
 prop_errorFilteringRespectsSeverity :: [CompilerError] -> ErrorSeverity -> Bool
-prop_errorFilteringRespectsSeverity errors minSeverity =
+prop_errorFilteringRespectsSeverity errors                               minSeverity =
   let filtered = filterErrorsBySeverity errors minSeverity
   in L.all (\e -> errorSeverity e >= minSeverity) filtered
 
 -- Property: error location tracking is accurate
 prop_errorLocationTrackingAccurate :: SourceCode -> CompilerError -> Bool
-prop_errorLocationTrackingAccurate sourceCode error =
+prop_errorLocationTrackingAccurate sourceCode                               error =
   let location = errorLocation error
-      actualContent = extractLocationContent sourceCode location
+                                    actualContent = extractLocationContent sourceCode location
   case actualContent of
     Nothing -> False  -- Location should be valid
     Just content -> isRelatedToError content error
 
 -- Property: error messages are informative
 prop_errorMessagesInformative :: CompilerError -> Bool
-prop_errorMessagesInformative error =
+prop_errorMessagesInformative                               error =
   let message = errorMessage error
   in not (T.null message) && 
      T.L.length message <= maxMessageLength &&
@@ -87,31 +45,31 @@ prop_errorMessagesInformative error =
 
 -- Property: error chaining preserves causality
 prop_errorChainingPreservesCausality :: CompilerError -> CompilerError -> Bool
-prop_errorChainingPreservesCausality cause effect =
+prop_errorChainingPreservesCausality cause                               effect =
   let chained = chainErrors cause effect
-      extractedCause = extractRootCause chained
-      extractedEffect = extractFinalEffect chained
-  in extractedCause == cause && extractedEffect == effect
+                                    extractedCause = extractRootCause chained
+                                    extractedEffect = extractFinalEffect chained
+  in                               extractedCause == cause &&                               extractedEffect == effect
 
 -- Property: error suppression doesn't hide critical errors
 prop_errorSuppressionPreservesCritical :: [CompilerError] -> Bool
-prop_errorSuppressionPreservesCritical errors =
+prop_errorSuppressionPreservesCritical                               errors =
   let suppressed = suppressNonCriticalErrors errors
-      criticalErrors = filter isCritical errors
-      criticalInSuppressed = filter isCritical suppressed
+                                    criticalErrors = filter isCritical errors
+                                    criticalInSuppressed = filter isCritical suppressed
   in Set.fromList (map errorId criticalErrors) == Set.fromList (map errorId criticalInSuppressed)
 
 -- Property: error formatting is consistent
 prop_errorFormattingConsistent :: CompilerError -> Bool
-prop_errorFormattingConsistent error =
+prop_errorFormattingConsistent                               error =
   let formatted1 = formatError error
-      formatted2 = formatError error
-  in formatted1 == formatted2
+                                    formatted2 = formatError error
+  in                               formatted1 == formatted2
 
 -- Helper functions (would be implemented based on actual error handling API)
 
 -- Mock data types for illustration
-data CompilerError = CompilerError
+data                               CompilerError = CompilerError
   { errorId :: ErrorId
   , errorSeverity :: ErrorSeverity
   , errorMessage :: Text
@@ -120,118 +78,117 @@ data CompilerError = CompilerError
   , errorCause :: Maybe CompilerError
   } deriving (Eq, Show)
 
-data ErrorId = ErrorId Int deriving (Eq, Show, Ord)
+data                               ErrorId = ErrorId Int deriving (Eq, Show, Ord)
 
-data ErrorSeverity = ErrorWarning | ErrorError | ErrorFatal deriving (Eq, Show, Ord)
+data                               ErrorSeverity = ErrorWarning | ErrorError | ErrorFatal deriving (Eq, Show, Ord)
 
-data ErrorContext = ErrorContext
+data                               ErrorContext = ErrorContext
   { contextFunction :: Text
   , contextModule :: Text
   , contextVariables :: Map Text Text
   } deriving (Eq, Show)
 
-data ProgramState = ProgramState
+data                               ProgramState = ProgramState
   { stateSymbols :: Map Text Symbol
   , stateErrors :: [CompilerError]
   , stateWarnings :: [CompilerError]
   } deriving (Eq, Show)
 
-data SourceCode = SourceCode
+data                               SourceCode = SourceCode
   { codeContent :: Text
   , codeLines :: [Text]
   } deriving (Eq, Show)
 
-data Symbol = Symbol
+data                               Symbol = Symbol
   { symbolName :: Text
   , symbolType :: Text
   } deriving (Eq, Show)
 
 -- Mock implementation of error handling functions
 collectErrors :: [CompilerError] -> ErrorCollection
-collectErrors = undefined
+                              collectErrors = undefined
 
 addErrorContext :: CompilerError -> ErrorContext -> CompilerError
-addErrorContext = undefined
+                              addErrorContext = undefined
 
 extractErrorContext :: CompilerError -> ErrorContext
-extractErrorContext = undefined
+                              extractErrorContext = undefined
 
 attemptErrorRecovery :: ProgramState -> CompilerError -> Either RecoveryError ProgramState
-attemptErrorRecovery = undefined
+                              attemptErrorRecovery = undefined
 
 checkProgramInvariants :: ProgramState -> [Invariant]
-checkProgramInvariants = undefined
+                              checkProgramInvariants = undefined
 
 aggregateErrors :: [CompilerError] -> AggregatedErrors
-aggregateErrors = undefined
+                              aggregateErrors = undefined
 
 extractIndividualErrors :: AggregatedErrors -> [CompilerError]
-extractIndividualErrors = undefined
+                              extractIndividualErrors = undefined
 
 errorSetsEquivalent :: Set CompilerError -> Set CompilerError -> Bool
-errorSetsEquivalent = undefined
+                              errorSetsEquivalent = undefined
 
 filterErrorsBySeverity :: [CompilerError] -> ErrorSeverity -> [CompilerError]
-filterErrorsBySeverity = undefined
+                              filterErrorsBySeverity = undefined
 
 extractLocationContent :: SourceCode -> ErrorLocation -> Maybe Text
-extractLocationContent = undefined
+                              extractLocationContent = undefined
 
 isRelatedToError :: Text -> CompilerError -> Bool
-isRelatedToError = undefined
+                              isRelatedToError = undefined
 
 maxMessageLength :: Int
-maxMessageLength = 500
+                              maxMessageLength = 500
 
 containsRelevantInfo :: Text -> CompilerError -> Bool
-containsRelevantInfo = undefined
+                              containsRelevantInfo = undefined
 
 chainErrors :: CompilerError -> CompilerError -> CompilerError
-chainErrors = undefined
+                              chainErrors = undefined
 
 extractRootCause :: CompilerError -> CompilerError
-extractRootCause = undefined
+                              extractRootCause = undefined
 
 extractFinalEffect :: CompilerError -> CompilerError
-extractFinalEffect = undefined
+                              extractFinalEffect = undefined
 
 isCritical :: CompilerError -> Bool
-isCritical error = errorSeverity error >= ErrorError
+isCritical                               error = errorSeverity error >= ErrorError
 
 suppressNonCriticalErrors :: [CompilerError] -> [CompilerError]
-suppressNonCriticalErrors = undefined
+                              suppressNonCriticalErrors = undefined
 
 formatError :: CompilerError -> Text
-formatError = undefined
-
-data ErrorCollection = ErrorCollection
+                              formatError = undefined
+data                               ErrorCollection = ErrorCollection
   { collectionErrors :: [CompilerError]
   , collectionSummary :: ErrorSummary
   } deriving (Eq, Show)
 
-data AggregatedErrors = AggregatedErrors
+data                               AggregatedErrors = AggregatedErrors
   { aggregatedGroups :: [ErrorGroup]
   , aggregatedTotal :: Int
   } deriving (Eq, Show)
 
-data ErrorGroup = ErrorGroup
+data                               ErrorGroup = ErrorGroup
   { groupType :: ErrorType
   , groupErrors :: [CompilerError]
   } deriving (Eq, Show)
 
-data ErrorType = TypeError | WarningType | InfoType deriving (Eq, Show)
+data                               ErrorType = TypeError | WarningType | InfoType deriving (Eq, Show)
 
-data ErrorSummary = ErrorSummary
+data                               ErrorSummary = ErrorSummary
   { summaryErrors :: Int
   , summaryWarnings :: Int
   , summaryFatals :: Int
   } deriving (Eq, Show)
 
-data RecoveryError = RecoveryError
+data                               RecoveryError = RecoveryError
   { recoveryMessage :: Text
   } deriving (Eq, Show)
 
-data Invariant = Invariant
+data                               Invariant = Invariant
   { invariantName :: Text
   , invariantValue :: Bool
   } deriving (Eq, Show)

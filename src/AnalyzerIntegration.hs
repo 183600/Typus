@@ -33,8 +33,7 @@ import Analyzer.Types ( AnalyzerState(..)
                       , AnalysisResult(..)
                       , CombinedError(..)
                       , ErrorSeverity(..)
-                      , IntegratedAnalyzer
-                      )
+                      , IntegratedAnalyzer )
 
 import qualified Ownership as Own
 import qualified Dependencies as Dep

@@ -1,13 +1,8 @@
-module Test.Unit.GoToolchainIntegrationAdvancedSpec (tests) where
-
-import Test.Tasty (TestTree, testGroup)
-import qualified Data.List as L
-import Test.Tasty.HUnit (testCase, (@?=), assertBool)
+module Test.Unit.GoToolchainIntegrationAdvancedSpec where
+import Test.QuickCheck 
+import Test.Tasty.HUnit (testCase, assertFailure, assertBool, (@?=)), assertBool
 import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), Gen, choose, oneof, listOf, elements)
-import TestSupport.QuickCheck (fastProperty)
-
-import GoToolchain
-  ( IOResult
+import TestSupport.QuickCheck 
   , GoExecutor(..)
   , defaultGoExecutor
   , runGoCommand
@@ -19,62 +14,66 @@ import GoToolchain
   , isEnvVarEnabled
   , shouldSkipGoToolchain
   )
-import Tooling.Error (ToolingError(..))
-import Control.Monad.Except (runExceptT)
-import System.Directory (doesFileExist, doesDirectoryExist)
-import System.FilePath ((</>))
-import qualified Data.Text as T
-
--- | Tests for GoToolchain integration functionality
-tests :: TestTree
-tests =
-  testGroup "GoToolchain Integration"
-    [ testGroup "Go executor configuration"
-        [ testCase "creates default executor" $ do
-            let mockLogger _ = return ()
+import Tooling.Error 
+                        let mockLogger                               _ = return ()
             executor <- defaultGoExecutor mockLogger
             skip <- goShouldSkip executor
             -- Should return a boolean indicating whether to skip
-            assertBool "Should return skip status" $ skip == True || skip == False
+            assertBool "Should return skip status" $                               skip == True ||                               skip == False
+-- Arbitrary instance for SourcePos
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- choose (1, 100)
+    column <- choose (1, 100)
+    offset <- choose (0, 1000)
+    return $ SourcePos line column offset
 
-        , testCase "detects Go availability" $ do
-            let mockLogger _ = return ()
+-- Arbitrary instance for SourceSpan
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    return $ SourceSpan start end
+
+
+          ,             testCase "detects Go availability" $ do
+                        let mockLogger                               _ = return ()
             executor <- defaultGoExecutor mockLogger
             -- Test that executor can check Go availability
             skip <- goShouldSkip executor
             assertBool "Should handle Go availability check" $ True
 
-        , testCase "respects skip environment variable" $ do
-            skipEnabled <- isEnvVarEnabled "TYPUS_SKIP_GO_BUILD"
+          ,             testCase "respects skip environment variable" $ do
+              skipEnabled <- isEnvVarEnabled "TYPUS_SKIP_GO_BUILD"
             shouldSkip <- shouldSkipGoToolchain
             -- Should be consistent with environment variable
             assertBool "Should respect skip environment variable" $ 
                 if skipEnabled then shouldSkip else True
         ]
 
-    , testGroup "Go module management"
-        [ testCase "creates go.mod file with correct content" $ do
-            let mockLogger _ = return ()
+    , testGroup "Go module Test.Unit.GoToolchainIntegrationAdvancedSpec
+        [             testCase "creates go.mod file with correct content" $ do
+                        let mockLogger                               _ = return ()
             result <- runExceptT $ withTemporaryGoProject "typus-test" $ \tempDir -> do
-                writeGoModule tempDir
+                            writeGoModule tempDir
                 liftIO $ do
-                    let goModPath = tempDir </> "go.mod"
+                                let goModPath = tempDir </> "go.mod"
                     exists <- doesFileExist goModPath
                     assertBool "go.mod file should exist" exists
                     content <- readFile goModPath
-                    assertBool "go.mod should contain module declaration" $ 
-                        "module temp" `L.isInfixOf` content
+                    assertBool "go.mod should contain module Test.Unit.GoToolchainIntegrationAdvancedSpec $ 
+                        "module Test.Unit.GoToolchainIntegrationAdvancedSpec `L.isInfixOf` content
                     assertBool "go.mod should contain Go version" $ 
                         "go 1.21" `L.isInfixOf` content
             case result of
                 Left _ -> assertBool "Should complete successfully" False
                 Right _ -> assertBool "Should succeed" True
 
-        , testCase "handles temporary project creation" $ do
-            let mockLogger _ = return ()
+          ,             testCase "handles temporary project creation" $ do
+                        let mockLogger                               _ = return ()
             result <- runExceptT $ withTemporaryGoProject "typus-test" $ \tempDir -> do
-                liftIO $ do
-                    exists <- doesDirectoryExist tempDir
+                            liftIO $ do
+              exists <- doesDirectoryExist tempDir
                     assertBool "Temporary directory should exist" exists
                     goModExists <- doesFileExist (tempDir </> "go.mod")
                     assertBool "go.mod should exist in temp directory" goModExists
@@ -83,10 +82,10 @@ tests =
                 Left err -> assertBool ("Should complete successfully: " ++ show err) False
                 Right _ -> assertBool "Should succeed" True
 
-        , testCase "cleans up temporary projects" $ do
-            let mockLogger _ = return ()
+          ,             testCase "cleans up temporary projects" $ do
+                        let mockLogger                               _ = return ()
             tempDirRef <- runExceptT $ withTemporaryGoProject "typus-test" $ \tempDir -> do
-                return tempDir
+                            return tempDir
             case tempDirRef of
                 Right tempDir -> do
                     -- After the withTemporaryGoProject block, the directory should be cleaned up
@@ -97,10 +96,10 @@ tests =
         ]
 
     , testGroup "Go command execution"
-        [ testCase "executes simple Go commands" $ do
-            let mockLogger _ = return ()
+        [             testCase "executes simple Go commands" $ do
+                        let mockLogger                               _ = return ()
             result <- runExceptT $ withTemporaryGoProject "typus-test" $ \tempDir -> do
-                executor <- liftIO $ defaultGoExecutor mockLogger
+              executor <- liftIO $ defaultGoExecutor mockLogger
                 skip <- liftIO $ goShouldSkip executor
                 if skip
                     then liftIO $ mockLogger "Skipping Go command test"
@@ -116,10 +115,10 @@ tests =
                         "go command failed" `L.isInfixOf` show err
                 Right _ -> assertBool "Should succeed when Go is available" True
 
-        , testCase "handles Go command failures gracefully" $ do
-            let mockLogger _ = return ()
+          ,             testCase "handles Go command failures gracefully" $ do
+                        let mockLogger                               _ = return ()
             result <- runExceptT $ withTemporaryGoProject "typus-test" $ \tempDir -> do
-                executor <- liftIO $ defaultGoExecutor mockLogger
+              executor <- liftIO $ defaultGoExecutor mockLogger
                 skip <- liftIO $ goShouldSkip executor
                 if skip
                     then liftIO $ mockLogger "Skipping Go command failure test"
@@ -134,10 +133,10 @@ tests =
                         "go command failed" `L.isInfixOf` show err
                 Right _ -> assertBool "Should not succeed with invalid command" False
 
-        , testCase "executes Go commands in specific directory" $ do
-            let mockLogger _ = return ()
+          ,             testCase "executes Go commands in specific directory" $ do
+                        let mockLogger                               _ = return ()
             result <- runExceptT $ withTemporaryGoProject "typus-test" $ \tempDir -> do
-                executor <- liftIO $ defaultGoExecutor mockLogger
+              executor <- liftIO $ defaultGoExecutor mockLogger
                 skip <- liftIO $ goShouldSkip executor
                 if skip
                     then liftIO $ mockLogger "Skipping directory-specific Go command test"
@@ -154,9 +153,9 @@ tests =
         ]
 
     , testGroup "File operations"
-        [ testCase "creates temporary Go files" $ do
-            let mockLogger _ = return ()
-                goCode = unlines
+        [             testCase "creates temporary Go files" $ do
+                        let mockLogger                               _ = return ()
+                                              goCode = unlines
                     [ "package main"
                     , "import \"fmt\""
                     , "func main() {"
@@ -164,9 +163,9 @@ tests =
                     , "}"
                     ]
             result <- runExceptT $ withTemporaryGoProject "typus-test" $ \tempDir -> do
-                goFile <- createTempGoFile tempDir "test" goCode
+              goFile <- createTempGoFile tempDir "test" goCode
                 liftIO $ do
-                    exists <- doesFileExist goFile
+              exists <- doesFileExist goFile
                     assertBool "Go file should exist" exists
                     content <- readFile goFile
                     assertBool "Go file should contain correct code" $ 
@@ -176,13 +175,13 @@ tests =
                 Left _ -> assertBool "Should complete successfully" False
                 Right _ -> assertBool "Should succeed" True
 
-        , testCase "handles file creation errors" $ do
-            let mockLogger _ = return ()
-                invalidGoCode = ""  -- Empty content should still be handled
+          ,             testCase "handles file creation errors" $ do
+                        let mockLogger                               _ = return ()
+                                              invalidGoCode = ""  -- Empty content should still be handled
             result <- runExceptT $ withTemporaryGoProject "typus-test" $ \tempDir -> do
-                goFile <- createTempGoFile tempDir "test" invalidGoCode
+              goFile <- createTempGoFile tempDir "test" invalidGoCode
                 liftIO $ do
-                    exists <- doesFileExist goFile
+              exists <- doesFileExist goFile
                     assertBool "Even empty Go file should exist" exists
                     return goFile
             case result of
@@ -191,10 +190,10 @@ tests =
         ]
 
     , testGroup "Error handling L.and recovery"
-        [ testCase "handles missing Go installation" $ do
-            let mockLogger _ = return ()
+        [             testCase "handles missing Go installation" $ do
+                        let mockLogger                               _ = return ()
             result <- runExceptT $ do
-                executor <- liftIO $ defaultGoExecutor mockLogger
+              executor <- liftIO $ defaultGoExecutor mockLogger
                 -- Force skip to simulate missing Go
                 liftIO $ mockLogger "Simulating missing Go installation"
                 return ()
@@ -205,10 +204,10 @@ tests =
                         "GoToolchainUnavailable" `L.isInfixOf` show err
                 Right _ -> assertBool "Should succeed when skip is enabled" True
 
-        , testCase "provides clear error messages" $ do
-            let mockLogger _ = return ()
+          ,             testCase "provides clear error messages" $ do
+                        let mockLogger                               _ = return ()
             result <- runExceptT $ withTemporaryGoProject "typus-test" $ \tempDir -> do
-                executor <- liftIO $ defaultGoExecutor mockLogger
+              executor <- liftIO $ defaultGoExecutor mockLogger
                 skip <- liftIO $ goShouldSkip executor
                 if skip
                     then liftIO $ mockLogger "Skipping error message test"
@@ -218,12 +217,12 @@ tests =
                         return ()
             case result of
                 Left err -> do
-                    assertBool "Error should be descriptive" $ L.length (show err) > 10
+                                assertBool "Error should be descriptive" $ L.length (show err) > 10
                     assertBool "Error should mention Go" $ "go" `L.isInfixOf` show err
                 Right _ -> assertBool "Should not succeed with invalid command" False
 
-        , testCase "handles permission errors gracefully" $ do
-            let mockLogger _ = return ()
+          ,             testCase "handles permission errors gracefully" $ do
+                        let mockLogger                               _ = return ()
             result <- runExceptT $ withTemporaryGoProject "typus-test" $ \tempDir -> do
                 -- Try to write to a potentially restricted location
                 writeGoModule tempDir
@@ -239,29 +238,29 @@ tests =
 
     , testGroup "Property-based tests"
         [ fastProperty "executor creation is deterministic" prop_executorDeterministic
-        , fastProperty "go module content is consistent" prop_goModuleConsistent
+        , fastProperty "go module Test.Unit.GoToolchainIntegrationAdvancedSpec is consistent" prop_goModuleConsistent
         , fastProperty "temporary project names are unique" prop_tempProjectUnique
         ]
 
     , testGroup "Performance L.and resource management"
-        [ testCase "handles concurrent operations" $ do
-            let mockLogger _ = return ()
+        [             testCase "handles concurrent operations" $ do
+                        let mockLogger                               _ = return ()
             result <- runExceptT $ do
                 -- Create multiple temporary projects concurrently
                 projects <- sequence $ replicate 3 $ withTemporaryGoProject "typus-test" $ \tempDir -> do
-                    writeGoModule tempDir
+                                writeGoModule tempDir
                     return tempDir
                 return projects
             case result of
                 Left err -> assertBool ("Should handle concurrent operations: " ++ show err) False
                 Right projects -> do
-                    assertBool "Should create multiple projects" $ L.length projects == 3
+                                assertBool "Should create multiple projects" $ L.length                               projects == 3
 
-        , testCase "cleans up resources properly" $ do
-            let mockLogger _ = return ()
+          ,             testCase "cleans up resources properly" $ do
+                        let mockLogger                               _ = return ()
             -- Test that resources are cleaned up even if an error occurs
             result <- runExceptT $ withTemporaryGoProject "typus-test" $ \tempDir -> do
-                writeGoModule tempDir
+                            writeGoModule tempDir
                 -- Simulate an error condition
                 liftIO $ mockLogger "Simulating error condition"
                 return tempDir
@@ -271,16 +270,16 @@ tests =
                     assertBool "Should clean up resources" $ True
                 Left _ -> assertBool "Should handle errors gracefully" True
 
-        , testCase "handles large Go files efficiently" $ do
-            let mockLogger _ = return ()
-                largeGoCode = unlines $ 
+          ,             testCase "handles large Go files efficiently" $ do
+                        let mockLogger                               _ = return ()
+                                              largeGoCode = unlines $ 
                     ["package main", "import \"fmt\"", "func main() {"] ++
                     ["\tfmt.Println(\"line " ++ show i ++ "\")" | i <- [1..1000]] ++
                     ["}"]
             result <- runExceptT $ withTemporaryGoProject "typus-test" $ \tempDir -> do
-                goFile <- createTempGoFile tempDir "large" largeGoCode
+              goFile <- createTempGoFile tempDir "large" largeGoCode
                 liftIO $ do
-                    exists <- doesFileExist goFile
+              exists <- doesFileExist goFile
                     assertBool "Large Go file should exist" exists
                     return goFile
             case result of
@@ -289,9 +288,9 @@ tests =
         ]
 
     , testGroup "Integration scenarios"
-        [ testCase "complete Go build workflow" $ do
-            let mockLogger _ = return ()
-                goCode = unlines
+        [             testCase "complete Go build workflow" $ do
+                        let mockLogger                               _ = return ()
+                                              goCode = unlines
                     [ "package main"
                     , "import \"fmt\""
                     , "func main() {"
@@ -299,7 +298,7 @@ tests =
                     , "}"
                     ]
             result <- runExceptT $ withTemporaryGoProject "typus-test" $ \tempDir -> do
-                executor <- liftIO $ defaultGoExecutor mockLogger
+              executor <- liftIO $ defaultGoExecutor mockLogger
                 skip <- liftIO $ goShouldSkip executor
                 if skip
                     then liftIO $ mockLogger "Skipping complete workflow test"
@@ -316,9 +315,9 @@ tests =
                         "go command failed" `L.isInfixOf` show err
                 Right _ -> assertBool "Should succeed when Go is available" True
 
-        , testCase "handles Typus-generated Go code" $ do
-            let mockLogger _ = return ()
-                typusGeneratedCode = unlines
+          ,             testCase "handles Typus-generated Go code" $ do
+                        let mockLogger                               _ = return ()
+                                              typusGeneratedCode = unlines
                     [ "// Generated by Typus compiler"
                     , "package main"
                     , ""
@@ -326,17 +325,17 @@ tests =
                     , ""
                     , "func main() {"
                     , "    // Typus ownership-managed variable"
-                    , "    var x int = 42"
+                    , "    var x                               int = 42"
                     , "    fmt.Printf(\"x = %d\\n\", x)"
                     , "}"
                     ]
             result <- runExceptT $ withTemporaryGoProject "typus-test" $ \tempDir -> do
-                executor <- liftIO $ defaultGoExecutor mockLogger
+              executor <- liftIO $ defaultGoExecutor mockLogger
                 skip <- liftIO $ goShouldSkip executor
                 if skip
                     then liftIO $ mockLogger "Skipping Typus code test"
                     else do
-                        goFile <- createTempGoFile tempDir "generated" typusGeneratedCode
+              goFile <- createTempGoFile tempDir "generated" typusGeneratedCode
                         goRunCommandInDir executor ["run", goFile] tempDir
                         return goFile
             case result of
@@ -350,18 +349,18 @@ tests =
 
 -- Helper functions
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` [take (L.length needle) $ drop i haystack | i <- [0..L.length haystack - L.length needle]]
+isInfixOf needle                               haystack = needle `elem` [take (L.length needle) $ drop i haystack | i <- [0..L.length haystack - L.length needle]]
 
 -- | Property: executor creation is deterministic
 prop_executorDeterministic :: String -> Bool
-prop_executorDeterministic _ = True  -- Executor creation should always succeed
+prop_executorDeterministic                               _ = True  -- Executor creation should always succeed
 
--- | Property: go module content is consistent
+-- | Property: go module Test.Unit.GoToolchainIntegrationAdvancedSpec is consistent
 prop_goModuleConsistent :: String -> Bool
-prop_goModuleConsistent _ = 
-    "module temp" `L.isInfixOf` goModContents && 
+prop_goModuleConsistent                               _ = 
+    "module Test.Unit.GoToolchainIntegrationAdvancedSpec `L.isInfixOf` goModContents && 
     "go 1.21" `L.isInfixOf` goModContents
 
 -- | Property: temporary project names are unique
 prop_tempProjectUnique :: String -> Bool
-prop_tempProjectUnique _ = True  -- withSystemTempDirectory ensures uniqueness
+prop_tempProjectUnique                               _ = True  -- withSystemTempDirectory ensures uniqueness

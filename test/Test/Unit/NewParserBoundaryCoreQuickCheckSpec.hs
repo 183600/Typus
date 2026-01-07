@@ -1,48 +1,33 @@
 {-# LANGUAGE TemplateHaskell #-}
 
--- | Boundary condition tests for Parser module
 module Test.Unit.NewParserBoundaryCoreQuickCheckSpec where
 
+-- Arbitrary instance for SourcePos
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- choose (1, 100)
+    column <- choose (1, 100)
+    offset <- choose (0, 1000)
+    return $ SourcePos line column offset
+
+-- Arbitrary instance for SourceSpan
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    return $ SourceSpan start end
+
+
+-- | Boundary condition tests for Parser module Test.Unit.NewParserBoundaryCoreQuickCheckSpec Test.Unit.NewParserBoundaryCoreQuickCheckSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Parser 
-  ( parseTypus
-  , FileDirectives(..)
-  , BlockDirectives(..)
-  , CodeBlock(..)
-  , TypusFile(..)
-  , defaultFileDirectives
-  , defaultBlockDirectives
-  )
-import qualified Data.Text as T
-import Data.Char (isSpace, isAlphaNum)
+import Parser
 
--- ============================================================================
--- Test Properties
--- ============================================================================
-
--- | Empty input should parse to minimal structure
-prop_parse_empty_input :: Property
-prop_parse_empty_input =
-  let result = parseTypus ""
-  in case result of
-    Left _ -> property True  -- Parsing error is acceptable for empty input
-    Right file -> tfCodeBlocks file === []
-
--- | Whitespace-only input should be handled gracefully
-prop_parse_whitespace_only :: Property
-prop_parse_whitespace_only =
-  let whitespace = replicate 100 ' '
-      result = parseTypus whitespace
-  in case result of
-    Left _ -> property True
-    Right file -> tfCodeBlocks file === []
-
--- | Very long single line should be handled
-prop_parse_long_line :: Positive Int -> Property
+ied Data.Text as T
+import Data.Char 
 prop_parse_long_line (Positive len) =
   let longLine = replicate len 'a'
-      result = parseTypus longLine
+                                    result = parseTypus longLine
   in case result of
     Left _ -> property True  -- Parse error is acceptable
     Right _ -> property True  -- Success is also acceptable
@@ -51,34 +36,34 @@ prop_parse_long_line (Positive len) =
 prop_parse_many_short_lines :: Positive Int -> Property
 prop_parse_many_short_lines (Positive count) =
   let shortLines = unlines $ replicate count "a"
-      result = parseTypus shortLines
+                                    result = parseTypus shortLines
   in case result of
     Left _ -> property True
     Right _ -> property True
 
 -- | Mixed whitespace should be normalized
 prop_parse_mixed_whitespace :: String -> Property
-prop_parse_mixed_whitespace s =
+prop_parse_mixed_whitespace                               s =
   let mixedWs = "   \t\n  " ++ s ++ "  \t\n   "
-      result = parseTypus mixedWs
+                                    result = parseTypus mixedWs
   in case result of
     Left _ -> property True
     Right _ -> property True
 
 -- | Unicode characters should be handled
 prop_parse_unicode :: String -> Property
-prop_parse_unicode s =
-  let unicodeInput = "测试" ++ s ++ "🚀"
-      result = parseTypus unicodeInput
+prop_parse_unicode                               s =
+  let unicodeInput = "" ++ s ++ ""
+                                    result = parseTypus unicodeInput
   in case result of
     Left _ -> property True
     Right _ -> property True
 
 -- | Special characters should not crash parser
 prop_parse_special_chars :: String -> Property
-prop_parse_special_chars s =
+prop_parse_special_chars                               s =
   let specialChars = "!@#$%^&*()[]{}|\\:;\"'<>?,./" ++ s
-      result = parseTypus specialChars
+                                    result = parseTypus specialChars
   in case result of
     Left _ -> property True
     Right _ -> property True
@@ -87,8 +72,8 @@ prop_parse_special_chars s =
 prop_parse_long_identifiers :: Positive Int -> Property
 prop_parse_long_identifiers (Positive len) =
   let longId = take len $ cycle "abcdefghijklmnopqrstuvwxyz"
-      input = "let " ++ longId ++ " = 42"
-      result = parseTypus input
+                                    input = "let " ++ longId ++ " = 42"
+                                    result = parseTypus input
   in case result of
     Left _ -> property True
     Right _ -> property True
@@ -97,18 +82,18 @@ prop_parse_long_identifiers (Positive len) =
 prop_parse_nested_blocks :: Positive Int -> Property
 prop_parse_nested_blocks (Positive depth) =
   let indent = replicate depth "  "
-      input = indent ++ "block {\n" ++ indent ++ "  x = 1\n" ++ indent ++ "}\n"
-      result = parseTypus input
+                                    input = indent ++ "block {\n" ++ indent ++ "                                x = 1\n" ++ indent ++ "}\n"
+                                    result = parseTypus input
   in case result of
     Left _ -> property True
     Right _ -> property True
 
 -- | Comments should be handled gracefully
 prop_parse_comments :: String -> Property
-prop_parse_comments s =
+prop_parse_comments                               s =
   let withComments = "// This is a comment\n" ++ s ++ "\n// Another comment"
-      result = parseTypus withComments
-  in case result of
+                                    result =  parseTypus withComments
+  in property $ case result of
     Left _ -> property True
     Right _ -> property True
 
@@ -118,14 +103,14 @@ prop_parse_comments s =
 
 testSuite :: TestTree
 testSuite = testGroup "Parser Boundary QuickCheck Tests"
-  [ testProperty "Empty input parsing" prop_parse_empty_input
-  , testProperty "Whitespace-only input parsing" prop_parse_whitespace_only
-  , testProperty "Long line parsing" prop_parse_long_line
-  , testProperty "Many short lines parsing" prop_parse_many_short_lines
-  , testProperty "Mixed whitespace parsing" prop_parse_mixed_whitespace
-  , testProperty "Unicode character parsing" prop_parse_unicode
-  , testProperty "Special characters parsing" prop_parse_special_chars
-  , testProperty "Long identifiers parsing" prop_parse_long_identifiers
-  , testProperty "Nested blocks parsing" prop_parse_nested_blocks
-  , testProperty "Comments parsing" prop_parse_comments
+  [             testProperty "Empty input parsing" prop_parse_empty_input
+  ,             testProperty "Whitespace-only input parsing" prop_parse_whitespace_only
+  ,             testProperty "Long line parsing" prop_parse_long_line
+  ,             testProperty "Many short lines parsing" prop_parse_many_short_lines
+  ,             testProperty "Mixed whitespace parsing" prop_parse_mixed_whitespace
+  ,             testProperty "Unicode character parsing" prop_parse_unicode
+  ,             testProperty "Special characters parsing" prop_parse_special_chars
+  ,             testProperty "Long identifiers parsing" prop_parse_long_identifiers
+  ,             testProperty "Nested blocks parsing" prop_parse_nested_blocks
+  ,             testProperty "Comments parsing" prop_parse_comments
   ]

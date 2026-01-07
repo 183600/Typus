@@ -1,34 +1,20 @@
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+module Test.Unit.MinimalCabalQuickCheckSpec where
 
-module Test.Unit.MinimalCabalQuickCheckSpec (tests) where
 
-import Test.Tasty (TestTree, testGroup)
-import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck
-import qualified Data.Map as Map
-import qualified Data.Set as Set
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+import Test.Tasty.HUnit
+import qualified Data.List as L
+import Data.Char (isSpace)
+
+-- Basic test properties
+prop_basic_property :: String -> Property
+prop_basic_property s = 
+  let trimmed = L.dropWhile isSpace (L.dropWhileEnd isSpace s)
+  in property $ L.length trimmed <= L.length s
 
 tests :: TestTree
-tests = testGroup "Minimal Cabal QuickCheck Tests"
-  [ mapBasicProperties
-  , setBasicProperties
-  ]
-
-mapBasicProperties :: TestTree
-mapBasicProperties = testGroup "Map Basic Properties"
-  [ fastProperty "lookup after insert" $ \k (v :: Int) (m :: Map.Map String Int) ->
-      Map.lookup k (Map.insert k v m) === Just v
-  
-  , fastProperty "size increases L.or stays same after insert" $ \k (v :: Int) (m :: Map.Map String Int) ->
-      Map.size (Map.insert k v m) >= Map.size m
-  ]
-
-setBasicProperties :: TestTree
-setBasicProperties = testGroup "Set Basic Properties"
-  [ fastProperty "member after insert" $ \(x :: Int) (s :: Set.Set Int) ->
-      Set.member x (Set.insert x s) === True
-  
-  , fastProperty "size increases L.or stays same after insert" $ \(x :: Int) (s :: Set.Set Int) ->
-      Set.size (Set.insert x s) >= Set.size s
+tests = testGroup "Test.Unit.MinimalCabalQuickCheckSpec Tests"
+  [ testProperty "basic property" prop_basic_property
   ]

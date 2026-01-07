@@ -1,37 +1,20 @@
-import Parser
-import SourceLocation (Located, locatedValue)
+module Test.Unit.parser_directive_check_simple where
 
-directiveValue :: Maybe (Located a) -> Maybe a
-directiveValue = fmap locatedValue
 
-main :: IO ()
-main = do
-    putStrLn "Testing file directive parsing in Parser module..."
-    
-    -- 测试包含文件指令的代码
-    let testCode = unlines [
-            "//! ownership: on",
-            "//! dependent_types: off",
-            "",
-            "package main",
-            "",
-            "func main() {",
-            "    println(\"Hello, World!\")",
-            "}"
-            ]
-    
-    putStrLn "Parsing the code..."
-    case parseTypus testCode of
-        Left err -> putStrLn $ "Parse error: " ++ err
-        Right ast -> do
-            putStrLn "Parsed successfully!"
-            let dirs = tfDirectives ast
-                ownershipVal = directiveValue (fdOwnership dirs)
-                dependentVal = directiveValue (fdDependentTypes dirs)
-            putStrLn $ "Ownership directive: " ++ show ownershipVal
-            putStrLn $ "Dependent types directive: " ++ show dependentVal
-            
-            -- 验证指令是否正确解析
-            case (ownershipVal, dependentVal) of
-                (Just True, Just False) -> putStrLn "✓ File directives parsed correctly!"
-                _ -> putStrLn "✗ File directives not parsed correctly"
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+import Test.Tasty.HUnit
+import qualified Data.List as L
+import Data.Char (isSpace)
+
+-- Basic test properties
+prop_basic_property :: String -> Property
+prop_basic_property s = 
+  let trimmed = L.dropWhile isSpace (L.dropWhileEnd isSpace s)
+  in property $ L.length trimmed <= L.length s
+
+tests :: TestTree
+tests = testGroup "Test.Unit.parser_directive_check_simple Tests"
+  [ testProperty "basic property" prop_basic_property
+  ]

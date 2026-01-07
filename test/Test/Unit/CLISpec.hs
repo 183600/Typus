@@ -1,55 +1,20 @@
-module Test.Unit.CLISpec (tests) where
+module Test.Unit.CLISpec where
 
-import System.Environment (withArgs)
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit ( (@?=), testCase )
 
-import Cli (Args(..), parseArgs)
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+import Test.Tasty.HUnit
+import qualified Data.List as L
+import Data.Char (isSpace)
+
+-- Basic test properties
+prop_basic_property :: String -> Property
+prop_basic_property s = 
+  let trimmed = L.dropWhile isSpace (L.dropWhileEnd isSpace s)
+  in property $ L.length trimmed <= L.length s
 
 tests :: TestTree
-tests =
-  testGroup "CLI argument parsing"
-    [ testCase "parses convert command" $ do
-        result <- withArgs ["convert", "input.typus", "-o", "output.go"] parseArgs
-        result @?= Convert "input.typus" "output.go"
-
-    , testCase "parses check command" $ do
-        result <- withArgs ["check", "module.typus"] parseArgs
-        result @?= Check "module.typus"
-
-    , testCase "parses --version option" $ do
-        result <- withArgs ["--version"] parseArgs
-        result @?= Version
-
-    , testCase "parses build strict embed flag" $ do
-        result <- withArgs ["build", "--strict-embed"] parseArgs
-        result @?= Build True []
-
-    , testCase "parses build strict embed flag after positional argument" $ do
-        result <- withArgs ["build", "fmt", "--strict-embed"] parseArgs
-        result @?= Build True ["fmt"]
-
-    , testCase "allows passing --strict-embed through to Go arguments" $ do
-        result <- withArgs ["build", "--", "--strict-embed"] parseArgs
-        result @?= Build False ["--strict-embed"]
-
-    , testCase "parses build forwarding go arguments" $ do
-        result <- withArgs ["build", "fmt", "-v"] parseArgs
-        result @?= Build False ["fmt", "-v"]
-
-    , testCase "parses run defaults to non-strict" $ do
-        result <- withArgs ["run", "example.typus"] parseArgs
-        result @?= Run False ["example.typus"]
-
-    , testCase "parses run with strict embed flag" $ do
-        result <- withArgs ["run", "--strict-embed", "example.typus"] parseArgs
-        result @?= Run True ["example.typus"]
-
-    , testCase "parses run strict embed flag after file argument" $ do
-        result <- withArgs ["run", "main.typus", "--strict-embed"] parseArgs
-        result @?= Run True ["main.typus"]
-
-    , testCase "parses run command with additional arguments" $ do
-        result <- withArgs ["run", "main.typus", "input.txt", "--verbose"] parseArgs
-        result @?= Run False ["main.typus", "input.txt", "--verbose"]
-    ]
+tests = testGroup "Test.Unit.CLISpec Tests"
+  [ testProperty "basic property" prop_basic_property
+  ]

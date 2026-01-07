@@ -1,93 +1,97 @@
-module Test.Unit.ParserAdvancedQuickCheckSpec (tests) where
-
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=), assertBool)
+module Test.Unit.NewParserComprehensiveQuickCheckSpec where
+import Test.Tasty 
+import Test.Tasty.HUnit (testCase, assertFailure, assertBool, (@?=)), assertBool
 import Test.Tasty.QuickCheck (testProperty, Property, (===), forAll, Gen, choose, arbitrary, listOf, elements, oneof, suchThat)
-import TestSupport.QuickCheck (fastProperty)
-
-import Parser (parseTypus, FileDirectives(..), BlockDirectives(..), CodeBlock(..), TypusFile(..), 
+import TestSupport.QuickCheck 
+import Parser (parseTypus, FileDirectives(..), BlockDirectives(..), CodeBlock(..), TypusFile(..), )
               defaultFileDirectives, defaultBlockDirectives)
-import SourceLocation (SourcePos(..), SourceSpan(..))
-import qualified Data.Text as T
-import qualified Data.List as L
-import Data.List (isPrefixOf, isInfixOf)
-import Utils (trim)
-
--- ============================================================================
--- Generators
--- ============================================================================
-
+import SourceLocation (SourcePos(..), SourceSpan)
 -- Generate valid identifiers (alphanumeric + underscore + dash)
 genIdentifier :: Gen String
-genIdentifier = do
-  first <- elements ['a'..'z'] ++ ['A'..'Z'] ++ "_"
+                              genIdentifier = do
+              first <- elements ['a'..'z'] ++ ['A'..'Z'] ++ "_"
   rest <- listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_-"
   return $ first : rest
+-- Arbitrary instance for SourcePos
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- choose (1, 100)
+    column <- choose (1, 100)
+    offset <- choose (0, 1000)
+    return $ SourcePos line column offset
+
+-- Arbitrary instance for SourceSpan
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    return $ SourceSpan start end
+
 
 -- Generate directive key-value pairs
 genDirectivePair :: Gen (String, String)
-genDirectivePair = do
-  key <- genIdentifier
+                              genDirectivePair = do
+              key <- genIdentifier
   value <- genIdentifier
   return (key, value)
 
 -- Generate file directive content
 genFileDirective :: Gen String
-genFileDirective = do
-  pairs <- listOf genDirectivePair
+                              genFileDirective = do
+              pairs <- listOf genDirectivePair
   return $ "//! " ++ unlines (L.map (\(k, v) -> k ++ ": " ++ v) pairs)
 
 -- Generate block directive content
 genBlockDirective :: Gen String
-genBlockDirective = do
-  pairs <- listOf genDirectivePair
+                              genBlockDirective = do
+              pairs <- listOf genDirectivePair
   return $ "{//! " ++ unwords (L.map (\(k, v) -> k ++ ":" ++ v) pairs) ++ "}"
 
 -- Generate simple code content
 genCodeContent :: Gen String
-genCodeContent = do
-  lines' <- listOf $ oneof
+                              genCodeContent = do
+              lines' <- listOf $ oneof
     [ return "    x := 1"
-    , return "    y := x + 2"
-    , return "    if x > 0 {"
-    , return "        return x"
-    , return "    }"
-    , return "    func test() {"
-    , return "        return 42"
-    , return "    }"
-    , return ""
+                  , return "    y := x + 2"
+                  , return "    if x > 0 {"
+                  , return "        return x"
+                  , return "    }"
+                  , return "    func test() {"
+                  , return "        return 42"
+                  , return "    }"
+                    , return ""
     ]
   return $ unlines lines'
 
 -- Generate complete code blocks
 genCodeBlock :: Gen String
-genCodeBlock = do
-  directive <- oneof [return "", genBlockDirective]
+                              genCodeBlock = do
+              directive <- oneof [return "", genBlockDirective]
   content <- genCodeContent
   return $ directive ++ "\n" ++ content
 
 -- Generate complete Typus file content
 genTypusFileContent :: Gen String
-genTypusFileContent = do
-  fileDirective <- oneof [return "", genFileDirective]
+                              genTypusFileContent = do
+              fileDirective <- oneof [return "", genFileDirective]
   buildTags <- listOf $ do
-    tag <- genIdentifier
+              tag <- genIdentifier
     return $ "// +build " ++ tag
   blocks <- listOf genCodeBlock
   return $ unlines $ fileDirective : buildTags ++ blocks
 
 -- Generate strings that should parse successfully
 genValidTypusContent :: Gen String
-genValidTypusContent = genTypusFileContent
+                              genValidTypusContent = genTypusFileContent
 
 -- Generate strings that might fail parsing
 genInvalidTypusContent :: Gen String
-genInvalidTypusContent = oneof
+                              genInvalidTypusContent = oneof
   [ return "if x > 0\n    return x\n"  -- Missing opening brace
-  , return "{//! invalid:syntax content"  -- Unclosed block directive
-  , return "//! malformed directive without colon"
-  , do
-      lines' <- listOf $ elements ["    x := 1", "    y := 2", "    if condition {"]
+                , return "{//! invalid:syntax content"  -- Unclosed block directive
+                , return "//! malformed directive without colon"
+                , do
+                  lines' <- listOf $ elements ["    x := 1", "    y := 2", "    if condition {"]
       return $ unlines lines'  -- Missing closing brace
   ]
 
@@ -97,14 +101,14 @@ genInvalidTypusContent = oneof
 
 -- Property: Parsing empty content returns a file with no blocks
 prop_parseEmptyContent :: Bool
-prop_parseEmptyContent =
+                              prop_parseEmptyContent =
   case parseTypus "" of
     Left _ -> False
-    Right file -> L.null (tfBlocks file) && tfDirectives file == defaultFileDirectives
+    Right file -> L.null (tfBlocks file (SourceSpan (SourcePos 1 1 0) (SourcePos 1 1 0) && tfDirectives                               file == defaultFileDirectives
 
 -- Property: Parsing content with only file directives preserves directives
 prop_parseFileDirectives :: [(String, String)] -> Property
-prop_parseFileDirectives pairs =
+prop_parseFileDirectives                               pairs =
   not (null pairs) ==>
   let directiveStr = "//! " ++ unlines (L.map (\(k, v) -> k ++ ": " ++ v) pairs)
   in case parseTypus directiveStr of
@@ -113,38 +117,38 @@ prop_parseFileDirectives pairs =
 
 -- Property: Parsing content with build tags preserves build tags
 prop_parseBuildTags :: [String] -> Property
-prop_parseBuildTags tags =
+prop_parseBuildTags                               tags =
   not (null tags) ==>
   let tagLines = L.map (\t -> "// +build " ++ t) tags
-      content = unlines tagLines
+                                    content = unlines tagLines
   in case parseTypus content of
        Left _ -> False
-       Right file -> not (L.null (tfBuildTags file))
+       Right file -> not (L.null (tfBuildTags file)
 
 -- Property: Round-trip property: if parsing succeeds, basic structure is preserved
 prop_parseRoundTrip :: String -> Property
-prop_parseRoundTrip content =
+prop_parseRoundTrip                               content =
   case parseTypus content of
     Left _ -> property True  -- Invalid input is allowed to fail
     Right file -> 
       let reconstructed = reconstructTypusFile file
       in case parseTypus reconstructed of
            Left _ -> False  -- Should be able to parse our own output
-           Right parsedAgain -> tfBlocks parsedAgain == tfBlocks file
+           Right parsedAgain -> tfBlocks                               parsedAgain == tfBlocks file
 
 -- Property: Parsing preserves line count in blocks
 prop_parsePreservesLineCount :: String -> Property
-prop_parsePreservesLineCount content =
+prop_parsePreservesLineCount                               content =
   case parseTypus content of
     Left _ -> property True
     Right file ->
       let originalLines = L.length $ L.filter (not . null) $ lines content
-          blockLines = L.sum $ L.map (L.length . lines . cbContent) (tfBlocks file)
+                                        blockLines = L.sum $ L.map (L.length . lines . cbContent) (tfBlocks file)
       in blockLines <= originalLines  -- Blocks should not have more lines than original
 
 -- Property: File directives are parsed correctly
 prop_fileDirectiveParsing :: String -> String -> Property
-prop_fileDirectiveParsing key value =
+prop_fileDirectiveParsing key                               value =
   not (null key) && not (null value) && L.all isIdentifierChar (key ++ value) ==>
   let content = "//! " ++ key ++ ": " ++ value ++ "\n"
   in case parseTypus content of
@@ -153,7 +157,7 @@ prop_fileDirectiveParsing key value =
 
 -- Property: Block directives are parsed correctly
 prop_blockDirectiveParsing :: String -> String -> Property
-prop_blockDirectiveParsing key value =
+prop_blockDirectiveParsing key                               value =
   not (null key) && not (null value) && L.all isIdentifierChar (key ++ value) ==>
   let content = "{//! " ++ key ++ ": " ++ value ++ "}\n    x := 1\n"
   in case parseTypus content of
@@ -165,7 +169,7 @@ prop_blockDirectiveParsing key value =
 
 -- Property: Invalid if statements are detected
 prop_invalidIfStatements :: String -> Property
-prop_invalidIfStatements condition =
+prop_invalidIfStatements                               condition =
   "if " `L.isPrefixOf` condition && not ("{" `L.isInfixOf` condition) ==>
   let content = condition ++ "\n    x := 1\n"
   in case parseTypus content of
@@ -174,9 +178,9 @@ prop_invalidIfStatements condition =
 
 -- Property: Multiple blocks are parsed correctly
 prop_multipleBlocksParsing :: [String] -> Property
-prop_multipleBlocksParsing blockContents =
-  not (null blockContents) && L.length blockContents <= 5 ==>  -- Limit size
-  let content = unlines $ concatMap (\b -> ["", "    " ++ b, ""]) blockContents
+prop_multipleBlocksParsing                               blockContents =
+  not (null blockContents) && L.length blockContents <=                               5 ==>  -- Limit size
+  let content = unlines $ concatMap (\b -> ["", "    " ++ b, ""] [] blockContents
   in case parseTypus content of
        Left _ -> property True  -- May fail due to syntax issues
        Right file -> L.length (tfBlocks file) >= 1
@@ -187,18 +191,18 @@ prop_multipleBlocksParsing blockContents =
 
 -- Check if character is valid identifier character
 isIdentifierChar :: Char -> Bool
-isIdentifierChar c = L.elem c (['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_-")
+isIdentifierChar                               c = L.elem c (['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_-")
 
 -- Reconstruct a TypusFile back to string format (simplified)
 reconstructTypusFile :: TypusFile -> String
-reconstructTypusFile file = unlines $ 
+reconstructTypusFile                               file = unlines $ 
   (if tfDirectives file /= defaultFileDirectives then ["//! directives present"] else []) ++
   L.map (("// +build " ++) . locValue) (tfBuildTags file) ++
   concatMap reconstructCodeBlock (tfBlocks file)
 
 -- Reconstruct a CodeBlock to string format
 reconstructCodeBlock :: CodeBlock -> [String]
-reconstructCodeBlock block = 
+reconstructCodeBlock                               block = 
   ["", "    " ++ cbContent block, ""]
 
 -- ============================================================================
@@ -206,77 +210,77 @@ reconstructCodeBlock block =
 -- ============================================================================
 
 tests :: TestTree
-tests = testGroup "Parser Advanced QuickCheck Tests"
+tests =   testGroup "Parser Advanced QuickCheck Tests"
   [ testGroup "Basic Parsing Properties"
-    [ testProperty "Parsing empty content returns a file with no blocks" prop_parseEmptyContent
-    , testProperty "Parsing content with file directives preserves directives" prop_parseFileDirectives
-    , testProperty "Parsing content with build tags preserves build tags" prop_parseBuildTags
+    [             testProperty "Parsing empty content returns a file with no blocks" prop_parseEmptyContent
+    ,             testProperty "Parsing content with file directives preserves directives" prop_parseFileDirectives
+    ,             testProperty "Parsing content with build tags preserves build tags" prop_parseBuildTags
     ]
 
   , testGroup "Round-trip L.and Structure Properties"
-    [ testProperty "Round-trip property: if parsing succeeds, basic structure is preserved" prop_parseRoundTrip
-    , testProperty "Parsing preserves line count in blocks" prop_parsePreservesLineCount
+    [             testProperty "Round-trip property: if parsing succeeds, basic structure is preserved" prop_parseRoundTrip
+    ,             testProperty "Parsing preserves line count in blocks" prop_parsePreservesLineCount
     ]
 
   , testGroup "Directive Parsing Properties"
-    [ testProperty "File directives are parsed correctly" prop_fileDirectiveParsing
-    , testProperty "Block directives are parsed correctly" prop_blockDirectiveParsing
+    [             testProperty "File directives are parsed correctly" prop_fileDirectiveParsing
+    ,             testProperty "Block directives are parsed correctly" prop_blockDirectiveParsing
     ]
 
   , testGroup "Error Detection Properties"
-    [ testProperty "Invalid if statements are detected" prop_invalidIfStatements
+    [             testProperty "Invalid if statements are detected" prop_invalidIfStatements
     ]
 
   , testGroup "Complex Parsing Properties"
-    [ testProperty "Multiple blocks are parsed correctly" prop_multipleBlocksParsing
+    [             testProperty "Multiple blocks are parsed correctly" prop_multipleBlocksParsing
     ]
 
   , testGroup "Unit Tests"
-    [ testCase "Parse empty file" $ do
-        let result = parseTypus ""
+    [             testCase "Parse empty file" $ do
+                    let result = parseTypus ""
         case result of
           Left err -> assertBool $ "Should parse empty file: " ++ err
           Right file -> do
-            tfBlocks file @?= []
+                        tfBlocks file @?= []
             tfDirectives file @?= defaultFileDirectives
             tfBuildTags file @?= []
 
-    , testCase "Parse simple file directive" $ do
-        let content = "//! ownership: true\n"
+      ,             testCase "Parse simple file directive" $ do
+                    let content = "//! ownership: true\n"
         case parseTypus content of
           Left err -> assertBool $ "Should parse file directive: " ++ err
           Right file -> do
-            assertBool "File directives should be set" $ tfDirectives file /= defaultFileDirectives
+                        assertBool "File directives should be set" $ tfDirectives file /= defaultFileDirectives
 
-    , testCase "Parse build tags" $ do
-        let content = "// +build linux\n// +build amd64\n"
+      ,             testCase "Parse build tags" $ do
+                    let content = "// +build linux\n// +build amd64\n"
         case parseTypus content of
           Left err -> assertBool $ "Should parse build tags: " ++ err
-          Right file -> do
-            L.length (tfBuildTags file) @?= 2
-            locValue (L.head (tfBuildTags file)) @?= "linux"
+Right file -> do
+                        L.length (tfBuildTags file (SourceSpan (SourcePos 1 1 0 [] (SourcePos 1 1 0) @?= 2
+            locValue (L.head (tfBuildTags file) @?= "linux"
 
-    , testCase "Parse simple code block" $ do
-        let content = "    x := 1\n    return x\n"
+      ,             testCase "Parse simple code block" $ do
+                    let content = "    x := 1\n    return x\n"
         case parseTypus content of
           Left err -> assertBool $ "Should parse simple code block: " ++ err
           Right file -> do
-            assertBool "Should have at least one block" $ not (L.null (tfBlocks file))
+                        assertBool "Should have at least one block" $ not (L.null (tfBlocks file)
             let firstBlock = L.head (tfBlocks file)
-            assertBool "Block should contain content" $ not (L.null (cbContent firstBlock))
+            assertBool "Block should contain content" $ not (L.null (cbContent firstBlock)
 
-    , testCase "Parse block directive" $ do
-        let content = "{//! ownership: false}\n    x := 1\n"
+      ,             testCase "Parse block directive" $ do
+                    let content = "{//! ownership: false}\n    x := 1\n"
         case parseTypus content of
           Left err -> assertBool $ "Should parse block directive: " ++ err
           Right file -> do
-            case tfBlocks file of
+                        case tfBlocks file of
               [] -> assertBool "Should have at least one block" False
               (block:_) -> do
-                assertBool "Block directives should be set" $ cbDirectives block /= defaultBlockDirectives
+                            assertBool "Block directives should be set" $ cbDirectives block /= defaultBlockDirectives
 
-    , testCase "Detect invalid if statement" $ do
-        let content = "if x > 0\n    return x\n"
+      ,             testCase "Detect invalid if statement" $ do
+                    let content = "if x > 0\n    return x\n"
         case parseTypus content of
           Left errMsg -> 
             assertBool "Should detect missing opening brace" $ 
@@ -284,8 +288,8 @@ tests = testGroup "Parser Advanced QuickCheck Tests"
           Right _ -> 
             assertBool "Should fail to parse invalid if statement" False
 
-    , testCase "Parse complete file with L.all elements" $ do
-        let content = unlines
+      ,             testCase "Parse complete file with L.all elements" $ do
+                    let content = unlines
               [ "//! ownership: true"
               , "// +build linux"
               , ""
@@ -298,8 +302,8 @@ tests = testGroup "Parser Advanced QuickCheck Tests"
         case parseTypus content of
           Left err -> assertBool $ "Should parse complete file: " ++ err
           Right file -> do
-            assertBool "File directives should be set" $ tfDirectives file /= defaultFileDirectives
+                        assertBool "File directives should be set" $ tfDirectives file /= defaultFileDirectives
             L.length (tfBuildTags file) @?= 1
-            assertBool "Should have at least one block" $ not (L.null (tfBlocks file))
+            assertBool "Should have at least one block" $ not (L.null (tfBlocks file)
     ]
-  ]
+  ]))

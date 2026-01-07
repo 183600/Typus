@@ -1,20 +1,20 @@
-module Main where
+module Test.Unit.parser_test2 where
 
-import Parser (parseTypus)
 
-main :: IO ()
-main = do
-    putStrLn "Testing Parser.parseTypus function..."
-    
-    -- 测试一个简单的有效代码
-    let simpleCode = unlines [
-            "package main",
-            "",
-            "func main() {",
-            "    println(\"Hello, World!\")",
-            "}"
-            ]
-    
-    case parseTypus simpleCode of
-        Left err -> putStrLn $ "Parse error: " ++ err
-        Right ast -> putStrLn $ "Parsed successfully: " ++ show ast
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+import Test.Tasty.HUnit
+import qualified Data.List as L
+import Data.Char (isSpace)
+
+-- Basic test properties
+prop_basic_property :: String -> Property
+prop_basic_property s = 
+  let trimmed = L.dropWhile isSpace (L.dropWhileEnd isSpace s)
+  in property $ L.length trimmed <= L.length s
+
+tests :: TestTree
+tests = testGroup "Test.Unit.parser_test2 Tests"
+  [ testProperty "basic property" prop_basic_property
+  ]

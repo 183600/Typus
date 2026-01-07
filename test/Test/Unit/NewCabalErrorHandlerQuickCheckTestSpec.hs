@@ -1,9 +1,5 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-
-module Test.Unit.NewCabalErrorHandlerQuickCheckTestSpec (tests) where
-
-import Test.Tasty (TestTree, testGroup)
-import qualified Data.List as L
+module Test.Unit.NewCabalErrorHandlerQuickCheckTestSpec where
+import Test.QuickCheck 
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), (.&&.), (.||.), (==>), forAll, oneof, elements, listOf, choose, suchThat)
 import Compiler.Errors.Core
   ( TypeError(..), ErrorSeverity(..), ErrorCategory(..), ErrorLocation(..)
@@ -18,44 +14,40 @@ import Compiler.Errors.Core
   , getErrorLine, getErrorColumn, _atLocation, _atFileLocation, _atRange
   , fatalRecovery, errorRecovery, warningRecovery, infoRecovery
   )
-import Data.Text (Text)
-import qualified Data.Text as T (pack, unpack)
-import Data.Maybe (isJust, isNothing, fromMaybe)
-import Data.List (sort, nub)
-import Data.Time (UTCTime, getCurrentTime)
-import Data.Aeson (ToJSON, FromJSON)
-
--- ============================================================================
--- Arbitrary Instances
--- ============================================================================
-
-instance Arbitrary ErrorSeverity where
-  arbitrary = elements [Fatal, Error, Warning, Info]
-
-instance Arbitrary ErrorCategory where
-  arbitrary = elements [TypeChecking, Ownership, Parsing, Semantic, Runtime, Constraint, Inference, Integration, Unknown]
-
-instance Arbitrary ErrorLocation where
-  arbitrary = do
-    filePath <- oneof [return Nothing, Just <$> arbitrary]
+import Data.Text 
     line <- choose (0, 1000)
     column <- choose (0, 1000)
     endLine <- oneof [return Nothing, Just <$> choose (line, line + 100)]
     endColumn <- oneof [return Nothing, Just <$> choose (column, column + 100)]
     return $ ErrorLocation filePath line column endLine endColumn
+-- Arbitrary instance for SourcePos
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- choose (1, 100)
+    column <- choose (1, 100)
+    offset <- choose (0, 1000)
+    return $ SourcePos line column offset
+
+-- Arbitrary instance for SourceSpan
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    return $ SourceSpan start end
+
 
 instance Arbitrary ErrorContext where
-  arbitrary = do
-    contextCode <- oneof [return Nothing, Just <$> arbitrary]
+                                              arbitrary = do
+              contextCode <- oneof [return Nothing, Just <$> arbitrary]
     contextFunction <- oneof [return Nothing, Just <$> arbitrary]
     contextVariable <- oneof [return Nothing, Just <$> arbitrary]
     contextType <- oneof [return Nothing, Just <$> arbitrary]
-    contextAdditional <- listOf $ arbitrary `suchThat` (\(x, y) -> not (null x || null y))
+    contextAdditional <- listOf $ arbitrary `suchThat` (\(x, y) -> not (null x || null y)
     return $ ErrorContext contextCode contextFunction contextVariable contextType contextAdditional
 
 instance Arbitrary ErrorRecovery where
-  arbitrary = do
-    canRecover' <- arbitrary
+                                              arbitrary = do
+                canRecover' <- arbitrary
     shouldContinue' <- arbitrary
     recoveryAction <- oneof [return Nothing, Just <$> arbitrary]
     recoveryHint <- oneof [return Nothing, Just <$> arbitrary]
@@ -64,22 +56,22 @@ instance Arbitrary ErrorRecovery where
     return $ ErrorRecovery canRecover' shouldContinue' recoveryAction recoveryHint recoveryCost recoveryConfidence
 
 instance Arbitrary TypeError where
-  arbitrary = do
-    errorId <- arbitrary `suchThat` (not . null)
+                                              arbitrary = do
+              errorId <- arbitrary `suchThat` (not . null)
     severity <- arbitrary
     category <- arbitrary
     message <- T.pack <$> arbitrary `suchThat` (not . null)
     location <- arbitrary
     context <- arbitrary
     recovery <- arbitrary
-    suggestions <- listOf (T.pack <$> arbitrary `suchThat` (not . null))
+    suggestions <- listOf (T.pack <$> arbitrary `suchThat` (not . null)
     relatedErrors <- listOf arbitrary
     errorChain <- listOf arbitrary
     timestamp <- oneof [return Nothing, Just <$> arbitrary]
     return $ TypeError errId errorId severity category message location context recovery suggestions relatedErrors errorChain timestamp
 
 instance Arbitrary CombinedError where
-  arbitrary = oneof
+                                              arbitrary = oneof
     [ OwnershipErrorCombined <$> arbitrary <*> arbitrary
     , DependentTypeErrorCombined <$> arbitrary <*> arbitrary
     , IntegrationError <$> arbitrary <*> arbitrary
@@ -88,8 +80,8 @@ instance Arbitrary CombinedError where
 
 -- Generate valid error locations
 genValidErrorLocation :: Gen ErrorLocation
-genValidErrorLocation = do
-  line <- choose (1, 1000)
+                              genValidErrorLocation = do
+              line <- choose (1, 1000)
   column <- choose (1, 1000)
   filePath <- oneof [return Nothing, Just <$> arbitrary]
   endLine <- oneof [return Nothing, Just <$> choose (line, line + 50)]
@@ -98,14 +90,14 @@ genValidErrorLocation = do
 
 -- Generate error with specific severity
 genErrorWithSeverity :: ErrorSeverity -> Gen TypeError
-genErrorWithSeverity sev = do
-  errorId <- arbitrary `suchThat` (not . null)
+genErrorWithSeverity                               sev = do
+              errorId <- arbitrary `suchThat` (not . null)
   category <- arbitrary
   message <- T.pack <$> arbitrary `suchThat` (not . null)
   location <- genValidErrorLocation
   context <- arbitrary
   recovery <- arbitrary
-  suggestions <- listOf (T.pack <$> arbitrary `suchThat` (not . null))
+  suggestions <- listOf (T.pack <$> arbitrary `suchThat` (not . null)
   relatedErrors <- listOf arbitrary
   errorChain <- listOf arbitrary
   timestamp <- oneof [return Nothing, Just <$> arbitrary]
@@ -117,18 +109,18 @@ genErrorWithSeverity sev = do
 
 -- Test severity priority ordering
 prop_severity_priority_ordering :: Property
-prop_severity_priority_ordering =
+                              prop_severity_priority_ordering =
   severityPriority Fatal > severityPriority Error .&&.
   severityPriority Error > severityPriority Warning .&&.
   severityPriority Warning > severityPriority Info
 
 -- Test isAtLeast function
 prop_isAtLeast_reflexive :: ErrorSeverity -> Property
-prop_isAtLeast_reflexive sev = isAtLeast sev sev
+prop_isAtLeast_reflexive                               sev = isAtLeast sev sev
 
 prop_isAt_least_transitive :: ErrorSeverity -> ErrorSeverity -> ErrorSeverity -> Property
-prop_isAt_least_transitive sev1 sev2 sev3 =
-  isAtLeast sev1 sev2 && isAtLeast sev2 sev3 ==> isAtLeast sev1 sev3
+prop_isAt_least_transitive sev1 sev2                               sev3 =
+  isAtLeast sev1 sev2 && isAtLeast sev2                               sev3 ==> isAtLeast sev1 sev3
 
 -- ============================================================================
 -- ErrorLocation QuickCheck Tests
@@ -136,32 +128,32 @@ prop_isAt_least_transitive sev1 sev2 sev3 =
 
 -- Test error location helper functions
 prop_getErrorLine_returns_line :: ErrorLocation -> Property
-prop_getErrorLine_returns_line loc = getErrorLine loc === line loc
+prop_getErrorLine_returns_line                               loc = getErrorLine                               loc === line loc
 
 prop_getErrorColumn_returns_column :: ErrorLocation -> Property
-prop_getErrorColumn_returns_column loc = getErrorColumn loc === column loc
+prop_getErrorColumn_returns_column                               loc = getErrorColumn                               loc === column loc
 
 -- Test location creation functions
 prop_atLocation_creates_correct_location :: Int -> Int -> Property
-prop_atLocation_creates_correct_location lineNum col =
-  lineNum > 0 && col > 0 ==>
+prop_atLocation_creates_correct_location lineNum                               col =
+  lineNum > 0 && col >                               0 ==>
   let loc = _atLocation lineNum col
-  in line loc === lineNum .&&. column loc === col .&&.
-     filePath loc === Nothing .&&. endLine loc === Nothing .&&.
-     endColumn loc === Nothing
+  in line                               loc === lineNum .&&. column                               loc === col .&&.
+     filePath                               loc === Nothing .&&. endLine                               loc === Nothing .&&.
+     endColumn                               loc === Nothing
 
 prop_atFileLocation_includes_file :: String -> Int -> Int -> Property
-prop_atFileLocation_includes_file file lineNum col =
-  not (null file) && lineNum > 0 && col > 0 ==>
+prop_atFileLocation_includes_file file lineNum                               col =
+  not (null file) && lineNum > 0 && col >                               0 ==>
   let loc = _atFileLocation file lineNum col
-  in filePath loc === Just file .&&. line loc === lineNum .&&. column loc === col
+  in filePath                               loc === Just file .&&. line                               loc === lineNum .&&. column                               loc === col
 
 prop_atRange_creates_range :: Int -> Int -> Int -> Int -> Property
-prop_atRange_creates_range startLine startCol endLineNum endCol =
+prop_atRange_creates_range startLine startCol endLineNum                               endCol =
   startLine <= endLineNum && (startLine < endLineNum || startCol <= endCol) ==>
   let loc = _atRange startLine startCol endLineNum endCol
-  in line loc === startLine .&&. column loc === startCol .&&.
-     endLine loc === Just endLineNum .&&. endColumn loc === Just endCol
+  in line                               loc === startLine .&&. column                               loc === startCol .&&.
+     endLine                               loc === Just endLineNum .&&. endColumn                               loc === Just endCol
 
 -- ============================================================================
 -- ErrorContext QuickCheck Tests
@@ -169,11 +161,11 @@ prop_atRange_creates_range startLine startCol endLineNum endCol =
 
 -- Test empty context
 prop_empty_context_has_no_fields :: Property
-prop_empty_context_has_no_fields =
-  contextCode emptyContext === Nothing .&&.
-  contextFunction emptyContext === Nothing .&&.
-  contextVariable emptyContext === Nothing .&&.
-  contextType emptyContext === Nothing .&&.
+                              prop_empty_context_has_no_fields =
+  contextCode                               emptyContext === Nothing .&&.
+  contextFunction                               emptyContext === Nothing .&&.
+  contextVariable                               emptyContext === Nothing .&&.
+  contextType                               emptyContext === Nothing .&&.
   L.null (contextAdditional emptyContext)
 
 -- ============================================================================
@@ -182,19 +174,19 @@ prop_empty_context_has_no_fields =
 
 -- Test predefined recovery strategies
 prop_fatal_recovery_cannot_recover :: Property
-prop_fatal_recovery_cannot_recover =
+                              prop_fatal_recovery_cannot_recover =
   not (canRecover fatalRecovery) .&&. not (shouldContinue fatalRecovery)
 
 prop_error_recovery_can_recover :: Property
-prop_error_recovery_can_recover =
+                              prop_error_recovery_can_recover =
   canRecover errorRecovery .&&. shouldContinue errorRecovery
 
 prop_warning_recovery_can_recover :: Property
-prop_warning_recovery_can_recover =
+                              prop_warning_recovery_can_recover =
   canRecover warningRecovery .&&. shouldContinue warningRecovery
 
 prop_info_recovery_can_recover :: Property
-prop_info_recovery_can_recover =
+                              prop_info_recovery_can_recover =
   canRecover infoRecovery .&&. shouldContinue infoRecovery
 
 -- ============================================================================
@@ -203,46 +195,46 @@ prop_info_recovery_can_recover =
 
 -- Test error creation functions
 prop_errorAt_creates_error_with_correct_severity :: String -> Text -> ErrorLocation -> Property
-prop_errorAt_creates_error_with_correct_severity errId msg loc =
+prop_errorAt_creates_error_with_correct_severity errId msg                               loc =
   let err = errorAt "test-id" msg loc) === Warning
 
 prop_infoAt_creates_info :: String -> Text -> ErrorLocation -> Property
-prop_infoAt_creates_info errId msg loc =
+prop_infoAt_creates_info errId msg                               loc =
   severity (infoAt "test-id" msg loc) === Info
 
 prop_fatalError_creates_fatal :: String -> Text -> ErrorLocation -> Property
-prop_fatalError_creates_fatal errId msg loc =
+prop_fatalError_creates_fatal errId msg                               loc =
   severity (fatalError errId msg loc) === Fatal
 
 -- Test error modifier functions
 prop_withLocation_updates_location :: TypeError -> ErrorLocation -> Property
-prop_withLocation_updates_location err newLoc =
+prop_withLocation_updates_location err                               newLoc =
   location (withLocation newLoc err) === newLoc
 
 prop_withContext_updates_context :: TypeError -> ErrorContext -> Property
-prop_withContext_updates_context err newCtx =
+prop_withContext_updates_context err                               newCtx =
   context (withContext newCtx err) === newCtx
 
 prop_withSuggestions_adds_suggestions :: TypeError -> [Text] -> Property
-prop_withSuggestions_adds_suggestions err newSugs =
+prop_withSuggestions_adds_suggestions err                               newSugs =
   suggestions (withSuggestions newSugs err) === newSugs
 
 prop_withRelatedErrors_adds_related_errors :: TypeError -> [TypeError] -> Property
-prop_withRelatedErrors_adds_related_errors err relatedErrs =
+prop_withRelatedErrors_adds_related_errors err                               relatedErrs =
   relatedErrors (withRelatedErrors relatedErrs err) === relatedErrs
 
 prop_withTimestamp_adds_timestamp :: TypeError -> String -> Property
-prop_withTimestamp_adds_timestamp err ts =
+prop_withTimestamp_adds_timestamp err                               ts =
   timestamp (withTimestamp ts err) === Just ts
 
 -- Test error recovery functions
 prop_canRecoverFrom_uses_recovery_field :: TypeError -> Property
-prop_canRecoverFrom_uses_recovery_field err =
-  canRecoverFrom err === canRecover (recovery err)
+prop_canRecoverFrom_uses_recovery_field                               err =
+  canRecoverFrom                               err === canRecover (recovery err)
 
 prop_shouldContinueAfter_uses_recovery_field :: TypeError -> Property
-prop_shouldContinueAfter_uses_recovery_field err =
-  shouldContinueAfter err === shouldContinue (recovery err)
+prop_shouldContinueAfter_uses_recovery_field                               err =
+  shouldContinueAfter                               err === shouldContinue (recovery err)
 
 -- ============================================================================
 -- ErrorCollector QuickCheck Tests
@@ -250,28 +242,28 @@ prop_shouldContinueAfter_uses_recovery_field err =
 
 -- Test error collection functions
 prop_getErrors_filters_by_severity :: [TypeError] -> Property
-prop_getErrors_filters_by_severity errs =
-  L.all (\e -> severity e == Error || severity e == Fatal) (getErrors errs)
+prop_getErrors_filters_by_severity                               errs =
+  L.all (\e -> severity                               e == Error || severity                               e == Fatal) (getErrors errs)
 
 prop_getWarnings_filters_by_severity :: [TypeError] -> Property
-prop_getWarnings_filters_by_severity errs =
-  L.all (\e -> severity e == Warning) (getWarnings errs)
+prop_getWarnings_filters_by_severity                               errs =
+  L.all (\e -> severity                               e == Warning) (getWarnings errs)
 
 prop_getInfo_filters_by_severity :: [TypeError] -> Property
-prop_getInfo_filters_by_severity errs =
-  L.all (\e -> severity e == Info) (getInfo errs)
+prop_getInfo_filters_by_severity                               errs =
+  L.all (\e -> severity                               e == Info) (getInfo errs)
 
 prop_getAllMessages_returns_all :: [TypeError] -> Property
-prop_getAllMessages_returns_all errs =
-  getAllMessages errs === errs
+prop_getAllMessages_returns_all                               errs =
+  getAllMessages                               errs === errs
 
 prop_hasErrors_detects_errors :: [TypeError] -> Property
-prop_hasErrors_detects_errors errs =
-  hasErrors errs === not (L.null (getErrors errs))
+prop_hasErrors_detects_errors                               errs =
+  hasErrors                               errs === not (L.null (getErrors errs)
 
 prop_hasWarnings_detects_warnings :: [TypeError] -> Property
-prop_hasWarnings_detects_warnings errs =
-  hasWarnings errs === not (L.null (getWarnings errs))
+prop_hasWarnings_detects_warnings                               errs =
+  hasWarnings                               errs === not (L.null (getWarnings errs)
 
 -- ============================================================================
 -- Error Formatting QuickCheck Tests
@@ -279,26 +271,26 @@ prop_hasWarnings_detects_warnings errs =
 
 -- Test error formatting functions
 prop_formatError_includes_severity_and_message :: TypeError -> Property
-prop_formatError_includes_severity_and_message err =
+prop_formatError_includes_severity_and_message                               err =
   let formatted = formatError err
-      severityStr = case severity err of
+                                    severityStr = case severity err of
         Fatal -> "FATAL"
         Error -> "ERROR"
         Warning -> "WARNING"
         Info -> "INFO"
-      msgStr = T.unpack (message err)
+                                    msgStr = T.unpack (message err)
   in severityStr `L.isInfixOf` formatted .&&. msgStr `L.isInfixOf` formatted
 
 prop_formatErrorWithLocation_includes_location :: TypeError -> Property
-prop_formatErrorWithLocation_includes_location err =
+prop_formatErrorWithLocation_includes_location                               err =
   let formatted = formatErrorWithLocation err
-      locationStr = show (line (location err)) ++ ":" ++ show (column (location err))
+                              locationStr = show (line (location err) ++ ":" ++ show (column (location err)
   in locationStr `L.isInfixOf` formatted
 
 prop_formatErrors_formats_multiple :: [TypeError] -> Property
-prop_formatErrors_formats_multiple errs =
+prop_formatErrors_formats_multiple                               errs =
   let formatted = formatErrors errs
-      formattedLines = lines formatted
+                                    formattedLines = lines formatted
   in L.length formattedLines >= L.length errs
 
 -- ============================================================================
@@ -307,18 +299,18 @@ prop_formatErrors_formats_multiple errs =
 
 -- Test error filtering functions
 prop_filterBySeverity_filters_correctly :: ErrorSeverity -> [TypeError] -> Property
-prop_filterBySeverity_filters_correctly minSev errs =
+prop_filterBySeverity_filters_correctly minSev                               errs =
   let filtered = filterBySeverity minSev errs
-  in L.all (\e -> isAtLeast minSev (severity e)) filtered
+in L.all (\e -> isAtLeast minSev (severity e) filtered
 
 prop_filterByCategory_filters_correctly :: ErrorCategory -> [TypeError] -> Property
-prop_filterByCategory_filters_correctly cat errs =
+prop_filterByCategory_filters_correctly cat                               errs =
   let filtered = filterByCategory cat errs
-  in L.all (\e -> category e == cat) filtered
+in L.all (\e -> category                               e == cat) filtered
 
 prop_hasCategory_detects_category :: ErrorCategory -> [TypeError] -> Property
-prop_hasCategory_detects_category cat errs =
-  hasCategory cat errs === L.any (\e -> category e == cat) errs
+prop_hasCategory_detects_category cat                               errs =
+  hasCategory cat                               errs === L.any (\e -> category                               e == cat) errs
 
 -- ============================================================================
 -- CombinedError QuickCheck Tests
@@ -326,18 +318,18 @@ prop_hasCategory_detects_category cat errs =
 
 -- Test combined error severity
 prop_combinedErrorSeverity_matches_constructor :: CombinedError -> Property
-prop_combinedErrorSeverity_matches_constructor combinedErr =
+prop_combinedErrorSeverity_matches_constructor                               combinedErr =
   case combinedErr of
-    OwnershipErrorCombined sev _ -> combinedErrorSeverity combinedErr === sev
-    DependentTypeErrorCombined sev _ -> combinedErrorSeverity combinedErr === sev
-    IntegrationError _ sev -> combinedErrorSeverity combinedErr === sev
-    CrossAnalyzerError _ sev _ -> combinedErrorSeverity combinedErr === sev
+    OwnershipErrorCombined sev _ -> combinedErrorSeverity                               combinedErr === sev
+    DependentTypeErrorCombined sev _ -> combinedErrorSeverity                               combinedErr === sev
+    IntegrationError _ sev -> combinedErrorSeverity                               combinedErr === sev
+    CrossAnalyzerError _ sev _ -> combinedErrorSeverity                               combinedErr === sev
 
 -- Test combined error filtering
 prop_filterCombinedErrorsBySeverity_filters_correctly :: ErrorSeverity -> [CombinedError] -> Property
-prop_filterCombinedErrorsBySeverity_filters_correctly minSev combinedErrs =
+prop_filterCombinedErrorsBySeverity_filters_correctly minSev                               combinedErrs =
   let filtered = filterCombinedErrorsBySeverity minSev combinedErrs
-  in L.all (\e -> isAtLeast minSev (combinedErrorSeverity e)) filtered
+  in L.all (\e -> isAtLeast minSev (combinedErrorSeverity e) filtered
 
 -- ============================================================================
 -- Additional Property Tests
@@ -345,47 +337,47 @@ prop_filterCombinedErrorsBySeverity_filters_correctly minSev combinedErrs =
 
 -- Test error ordering by severity
 prop_severity_ordering_consistent :: TypeError -> TypeError -> Property
-prop_severity_ordering_consistent err1 err2 =
+prop_severity_ordering_consistent err1                               err2 =
   let sev1 = severity err1
-      sev2 = severity err2
-  in (sev1 > sev2) === (severityPriority sev1 > severityPriority sev2)
+                                    sev2 =  severity err2
+  in property $ (sev1 > sev2) === (severityPriority sev1 > severityPriority sev2)
 
 -- Test error modification preserves invariants
 prop_error_modification_preserves_id :: TypeError -> String -> Property
-prop_error_modification_preserves_id err newId =
+prop_error_modification_preserves_id err                               newId =
   errorId (withTimestamp "2023-01-01" err) === errorId err
 
 -- Test context formatting
 prop_context_with_code_includes_code :: ErrorContext -> Property
-prop_context_with_code_includes_code ctx =
+prop_context_with_code_includes_code                               ctx =
   case contextCode ctx of
     Just code -> not (null code) ==> code `L.isInfixOf` show ctx
     Nothing -> property True
 
 tests :: TestTree
-tests = testGroup "New Cabal ErrorHandler QuickCheck Tests"
+tests =   testGroup "New Cabal ErrorHandler QuickCheck Tests"
   [ testGroup "ErrorSeverity tests"
-      [ testProperty "severity priority ordering" prop_severity_priority_ordering
-      , testProperty "isAtLeast reflexive" prop_isAtLeast_reflexive
-      , testProperty "isAtLeast transitive" prop_isAt_least_transitive
+      [             testProperty "severity priority ordering" prop_severity_priority_ordering
+      ,             testProperty "isAtLeast reflexive" prop_isAtLeast_reflexive
+      ,             testProperty "isAtLeast transitive" prop_isAt_least_transitive
       ]
   , testGroup "ErrorLocation tests"
-      [ testProperty "getErrorLine returns line" prop_getErrorLine_returns_line
-      , testProperty "getErrorColumn returns column" prop_getErrorColumn_returns_column
-      , testProperty "atLocation creates correct location" prop_atLocation_creates_correct_location
-      , testProperty "atFileLocation includes file" prop_atFileLocation_includes_file
-      , testProperty "atRange creates range" prop_atRange_creates_range
+      [             testProperty "getErrorLine returns line" prop_getErrorLine_returns_line
+      ,             testProperty "getErrorColumn returns column" prop_getErrorColumn_returns_column
+      ,             testProperty "atLocation creates correct location" prop_atLocation_creates_correct_location
+      ,             testProperty "atFileLocation includes file" prop_atFileLocation_includes_file
+      ,             testProperty "atRange creates range" prop_atRange_creates_range
       ]
   , testGroup "ErrorContext tests"
-      [ testProperty "empty context has no fields" prop_empty_context_has_no_fields
+      [             testProperty "empty context has no fields" prop_empty_context_has_no_fields
       ]
   , testGroup "ErrorRecovery tests"
-      [ testProperty "fatal recovery cannot recover" prop_fatal_recovery_cannot_recover
-      , testProperty "error recovery can recover" prop_error_recovery_can_recover
-      , testProperty "warning recovery can recover" prop_warning_recovery_can_recover
-      , testProperty "info recovery can recover" prop_info_recovery_can_recover
+      [             testProperty "fatal recovery cannot recover" prop_fatal_recovery_cannot_recover
+      ,             testProperty "error recovery can recover" prop_error_recovery_can_recover
+      ,             testProperty "warning recovery can recover" prop_warning_recovery_can_recover
+      ,             testProperty "info recovery can recover" prop_info_recovery_can_recover
       ]
   , testGroup "TypeError tests"
-      [ testProperty "errorAt "test-id" code" prop_context_with_code_includes_code
+      [             testProperty "errorAt "test-id" code" prop_context_with_code_includes_code
       ]
   ]

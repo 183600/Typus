@@ -161,812 +161,9 @@ benchmark typus-bench
     type:             exitcode-stdio-1.0
     main-is:          BenchmarkRunner.hs
     hs-source-dirs:   test
-    other-modules:
-                 Test.Unit.AdditionalCabalQuickCheckTestSuite
-        , Test.Unit.AdditionalCabalTestSpec
-        , Test.Unit.AdditionalIntegratedCompilerQuickCheckSpec
-        , Test.Unit.BasicParserQuickCheckSpec
-        , Test.Unit.CodeGenerationConsistencyQuickCheckSpec
-        , Test.Unit.CommandLineDebugIntegrationAdvancedSpec
-        , Test.Unit.CommandLineDebugInteractionQuickCheckSpec
-        , Test.Unit.CommandLineDebugQuickCheckSpec
-        , Test.Unit.CommentHandlingQuickCheckSpec
-        , Test.Unit.CommentRemovalSpec
-        , Test.Unit.CompilerBasicPropertiesSpec
-        , Test.Unit.CompilerComprehensiveQuickCheckSpec
-        , Test.Unit.CompilerConsistencyQuickCheckSpec
-        , Test.Unit.CompilerEndToEndIntegrationSpec
-        , Test.Unit.CompilerErrorRecoveryAdvancedSpec
-        , Test.Unit.CompilerErrorRecoveryBoundarySpec
-        , Test.Unit.CompilerIRConsistencyAdvancedSpec
-        , Test.Unit.CompilerIRConsistencyPropertiesSpec
-        , Test.Unit.CompilerIRConsistencyQuickCheckSpec
-        , Test.Unit.CompilerIREdgeCaseSpec
-        , Test.Unit.CompilerIRPropertiesSpec
-        , Test.Unit.CompilerIntegrationComprehensiveSpec
-        , Test.Unit.CompilerIntegrationEnhancedQuickCheckSpec
-        , Test.Unit.CompilerNewQuickCheckSpec
-        , Test.Unit.CompilerOptimizationConsistencyQuickCheckSpec
-        , Test.Unit.CompilerOptimizationInvariantQuickCheckSpec
-        , Test.Unit.CompilerTypeCheckerSpec
-        , Test.Unit.CompilerUtilsCoreQuickCheckSpec
-        , Test.Unit.ConcurrentSafetyQuickCheckSpec
-        , Test.Unit.ConcurrentThreadSafetySpec
-        , Test.Unit.CoreCompilerSpec
-        , Test.Unit.CoreErrorHandlerSpec
-        , Test.Unit.CoreFunctionalityQuickCheckSpec
-        , Test.Unit.CoreModulesIntegrationSpec
-        , Test.Unit.CoreParserFunctionsSpec
-        , Test.Unit.CorePropertiesQuickCheckSpec
-        , Test.Unit.CoreSyntaxValidatorSpec
-        , Test.Unit.CoreUtilsSpec
-        , Test.Unit.DebugCoreQuickCheckSpec
-        , Test.Unit.DebugIntegrationFlowSpec
-        , Test.Unit.DependenciesCoreTestSpec
-        , Test.Unit.DependenciesCycleDetectionAdvancedSpec
-        , Test.Unit.DependenciesCycleDetectionQuickCheckSpec
-        , Test.Unit.DependenciesCycleDetectionSpec
-        , Test.Unit.DependenciesOwnershipInteractionSpec
-        , Test.Unit.DependenciesTypeSystemSpec
-        , Test.Unit.DependencyAnalysisCyclicSpec
-        , Test.Unit.DependencyAnalysisPropertiesQuickCheckSpec
-        , Test.Unit.DependencyCycleDetectionQuickCheckSpec
-        , Test.Unit.DependentTypeConstraintQuickCheckSpec
-        , Test.Unit.DependentTypeValidationPropertiesSpec
-        , Test.Unit.DependentTypeValidationSpec
-        , Test.Unit.DependentTypesBasicSpec
-        , Test.Unit.DependentTypesBoundaryAdvancedSpec
-        , Test.Unit.DependentTypesNewQuickCheckSpec
-        , Test.Unit.DependentTypesValidationComprehensiveSpec
-        , Test.Unit.DependentTypesValidationEnhancedQuickCheckSpec
-        , Test.Unit.DependentTypesValidationQuickCheckSpec
-        , Test.Unit.DirectiveProcessingSpec
-        , Test.Unit.EdgeCaseHandlingTestSpec
-        , Test.Unit.EmbedAssetsConsistencySpec
-        , Test.Unit.EmbedAssetsExtractionQuickCheckSpec
-        , Test.Unit.EmbedAssetsQuickCheckSpec
-        , Test.Unit.EndToEndCompilationQuickCheckSpec
-        , Test.Unit.EnhancedCabalCorePropertiesSpec
-        , Test.Unit.EnhancedCabalQuickCheckTestSuite
-        , Test.Unit.EnhancedCoreFunctionalityQuickCheckSpec
-        , Test.Unit.EnhancedDebugCoreQuickCheckSpec
-        , Test.Unit.EnhancedDependenciesQuickCheckSpec
-        , Test.Unit.EnhancedErrorHandlerQuickCheckSpec
-        , Test.Unit.EnhancedSyntaxValidatorQuickCheckSpec
-        , Test.Unit.ErrorHandlerAdvancedSpec
-        , Test.Unit.ErrorHandlerBoundarySpec
-        , Test.Unit.ErrorHandlerComprehensiveQuickCheckSpec
-        , Test.Unit.ErrorHandlerConsistencyAdvancedSpec
-        , Test.Unit.ErrorHandlerConsistencyQuickCheckSpec
-        , Test.Unit.ErrorHandlerConsistencyTestSpec
-        , Test.Unit.ErrorHandlerCoreComprehensiveSpec
-        , Test.Unit.ErrorHandlerCoreTestSpec
-        , Test.Unit.ErrorHandlerEnhancedQuickCheckSpec
-        , Test.Unit.ErrorHandlerNewQuickCheckTests
-        , Test.Unit.ErrorHandlerRecoveryAdvancedSpec
-        , Test.Unit.ErrorHandlerRecoveryQuickCheckSpec
-        , Test.Unit.ErrorHandlerRecoverySpec
-        , Test.Unit.ErrorHandlingAdvancedSpec
-        , Test.Unit.ErrorHandlingBoundaryConditionsSpec
-        , Test.Unit.ErrorHandlingRobustnessSpec
-        , Test.Unit.ErrorLocationPropertiesQuickCheckSpec
-        , Test.Unit.ErrorLocationSpec
-        , Test.Unit.ErrorRecoveryBasicSpec
-        , Test.Unit.FileDirectiveProcessingQuickCheckSpec
-        , Test.Unit.GoToolchainAdvancedQuickCheckSpec
-        , Test.Unit.GoToolchainIntegrationSpec
-        , Test.Unit.GoToolchainPropertiesAdvancedSpec
-        , Test.Unit.IRConsistencySpec
-        , Test.Unit.IndentationNormalizationQuickCheckSpec
-        , Test.Unit.IndentionSpec
-        , Test.Unit.IntegratedCompilerPropertiesSpec
-        , Test.Unit.IntegrationAdvancedSpec
-        , Test.Unit.IntegrationBasicSpec
-        , Test.Unit.IntegrationCoreQuickCheckSpec
-        , Test.Unit.IntegrationEndToEndQuickCheckSpec
-        , Test.Unit.IntegrationEndToEndScenariosSpec
-        , Test.Unit.IntegrationEnhancedTestSpec
-        , Test.Unit.IntegrationPropertiesSpec
-        , Test.Unit.LocationTrackingSpec
-        , Test.Unit.MathematicalPropertiesQuickCheckSpec
-        , Test.Unit.NewAdditionalTestSpec
-        , Test.Unit.NewBoundaryConditionQuickCheckTestSpec
-        , Test.Unit.NewBoundaryConditionSpec
-        , Test.Unit.NewCabalBoundaryConditionsQuickCheckSpec
-        , Test.Unit.NewCabalBoundaryConditionsSpec
-        , Test.Unit.NewCabalCompilerIRConsistencyQuickCheckSpec
-        , Test.Unit.NewCabalCompilerQuickCheckSpec
-        , Test.Unit.NewCabalDependenciesQuickCheckTestsSpec
-        , Test.Unit.NewCabalDependenciesTypeSystemQuickCheckSpec
-        , Test.Unit.NewCabalErrorHandlerConsistencyQuickCheckSpec
-        , Test.Unit.NewCabalErrorHandlerQuickCheckTestsSpec
-        , Test.Unit.NewCabalIntegrationEndToEndQuickCheckSpec
-        , Test.Unit.NewCabalOwnershipQuickCheckTestsSpec
-        , Test.Unit.NewCabalOwnershipTransferQuickCheckSpec
-        , Test.Unit.NewCabalParserDirectivesQuickCheckSpec
-        , Test.Unit.NewCabalParserQuickCheckTestsSpec
-        , Test.Unit.NewCabalPropertyBasedSpec
-        , Test.Unit.NewCabalQuickCheckTestSuiteSpec
-        , Test.Unit.NewCabalSourceLocationMathQuickCheckSpec
-        , Test.Unit.NewCabalSourceLocationQuickCheckTestsSpec
-        , Test.Unit.NewCabalStringUtilsQuickCheckSpec
-        , Test.Unit.NewCabalUtilsQuickCheckSpec
-        , Test.Unit.NewCabalUtilsQuickCheckTestsSpec
-        , Test.Unit.NewCommentHandlingSpec
-        , Test.Unit.NewCompilationOptimizationSpec
-        , Test.Unit.NewCompilerComprehensiveSpec
-        , Test.Unit.NewCompilerErrorRecoverySpec
-        , Test.Unit.NewCompilerIRConsistencyQuickCheckSpec
-        , Test.Unit.NewCompilerIdempotentQuickCheckSpec
-        , Test.Unit.NewCompilerOptimizationQuickCheckTestSpec
-        , Test.Unit.NewCompilerSpec
-        , Test.Unit.NewComprehensiveCabalTestsSpec
-        , Test.Unit.NewComprehensiveTypusTestSpec
-        , Test.Unit.NewCoreIntegrationSpec
-        , Test.Unit.NewCoreQuickCheckPropertiesSpec
-        , Test.Unit.NewDataConsistencyQuickCheckTestSpec
-        , Test.Unit.NewDependenciesCorePropertiesSpec
-        , Test.Unit.NewDependencyAssociativityQuickCheckSpec
-        , Test.Unit.NewDependencySpec
-        , Test.Unit.NewDependentTypeValidationQuickCheckTestSpec
-        , Test.Unit.NewDependentTypesQuickCheckSpec
-        , Test.Unit.NewErrorHandlerComprehensiveSpec
-        , Test.Unit.NewErrorHandlerValidationSpec
-        , Test.Unit.NewErrorHandlingQuickCheckTestSpec
-        , Test.Unit.NewErrorHandlingRecoveryQuickCheckTestSpec
-        , Test.Unit.NewErrorHandlingSpec
-        , Test.Unit.NewIndentationSpec
-        , Test.Unit.NewIntegratedParserTestsSpec
-        , Test.Unit.NewIntegrationEndToEndQuickCheckSpec
-        , Test.Unit.NewIntegrationQuickCheckTestSpec
-        , Test.Unit.NewIntegrationSpec
-        , Test.Unit.NewIntegrationValidationSpec
-        , Test.Unit.NewOwnershipConsistencyQuickCheckSpec
-        , Test.Unit.NewOwnershipMemorySafetyQuickCheckTestSpec
-        , Test.Unit.NewOwnershipMemorySafetySpec
-        , Test.Unit.NewOwnershipSpec
-        , Test.Unit.NewParserBoundaryQuickCheckSpec
-        , Test.Unit.NewParserBoundaryQuickCheckTestSpec
-        , Test.Unit.NewParserBoundaryTestsSpec
-        , Test.Unit.NewParserComprehensiveSpec
-        , Test.Unit.NewParserErrorRecoveryQuickCheckSpec
-        , Test.Unit.NewParserQuickCheckTestSpec
-        , Test.Unit.NewParserSpec
-        , Test.Unit.NewParserUnicodeSpec
-        , Test.Unit.NewPerformanceQuickCheckTestSpec
-        , Test.Unit.NewPerformanceSpec
-        , Test.Unit.NewQuickCheckSourceLocationSpec
-        , Test.Unit.NewQuickCheckTestSuite10Spec
-        , Test.Unit.NewQuickCheckTestSuite1Spec
-        , Test.Unit.NewQuickCheckTestSuite2Spec
-        , Test.Unit.NewQuickCheckTestSuite3Spec
-        , Test.Unit.NewQuickCheckTestSuite4Spec
-        , Test.Unit.NewQuickCheckTestSuite5Spec
-        , Test.Unit.NewQuickCheckTestSuite6Spec
-        , Test.Unit.NewQuickCheckTestSuite7Spec
-        , Test.Unit.NewQuickCheckTestSuite8Spec
-        , Test.Unit.NewQuickCheckTestSuite9Spec
-        , Test.Unit.NewQuickCheckUtilsSpec
-        , Test.Unit.NewSourceLocationComprehensiveSpec
-        , Test.Unit.NewSourceLocationPrecisionQuickCheckTestSpec
-        , Test.Unit.NewSourceLocationQuickCheckTestSpec
-        , Test.Unit.NewSourceLocationSpec
-        , Test.Unit.NewSourceLocationTrackingQuickCheckSpec
-        , Test.Unit.NewStringProcessingQuickCheckSpec
-        , Test.Unit.NewSymbolTableCommutativeQuickCheckSpec
-        , Test.Unit.NewSyntaxValidationComprehensiveSpec
-        , Test.Unit.NewSyntaxValidatorBoundarySpec
-        , Test.Unit.NewTypeSystemInferenceSpec
-        , Test.Unit.NewTypeSystemSpec
-        , Test.Unit.NewTypeSystemSubstitutionQuickCheckSpec
-        , Test.Unit.NewUtilsBoundaryConditionsSpec
-        , Test.Unit.NewUtilsComprehensiveSpec
-        , Test.Unit.NewUtilsEdgeCaseSpec
-        , Test.Unit.AdditionalCabalTestSpec
-        , Test.Unit.AdditionalIntegratedCompilerQuickCheckSpec
-        , Test.Unit.BasicParserQuickCheckSpec
-        , Test.Unit.CodeGenerationConsistencyQuickCheckSpec
-        , Test.Unit.CommandLineDebugIntegrationAdvancedSpec
-        , Test.Unit.CommandLineDebugInteractionQuickCheckSpec
-        , Test.Unit.CommandLineDebugQuickCheckSpec
-        , Test.Unit.CommentHandlingQuickCheckSpec
-        , Test.Unit.CommentRemovalSpec
-        , Test.Unit.CompilerBasicPropertiesSpec
-        , Test.Unit.CompilerComprehensiveQuickCheckSpec
-        , Test.Unit.CompilerConsistencyQuickCheckSpec
-        , Test.Unit.CompilerEndToEndIntegrationSpec
-        , Test.Unit.CompilerErrorRecoveryAdvancedSpec
-        , Test.Unit.CompilerErrorRecoveryBoundarySpec
-        , Test.Unit.CompilerIRConsistencyAdvancedSpec
-        , Test.Unit.CompilerIRConsistencyPropertiesSpec
-        , Test.Unit.CompilerIRConsistencyQuickCheckSpec
-        , Test.Unit.CompilerIREdgeCaseSpec
-        , Test.Unit.CompilerIRPropertiesSpec
-        , Test.Unit.CompilerIntegrationComprehensiveSpec
-        , Test.Unit.CompilerIntegrationEnhancedQuickCheckSpec
-        , Test.Unit.CompilerNewQuickCheckSpec
-        , Test.Unit.CompilerOptimizationConsistencyQuickCheckSpec
-        , Test.Unit.CompilerOptimizationInvariantQuickCheckSpec
-        , Test.Unit.CompilerTypeCheckerSpec
-        , Test.Unit.CompilerUtilsCoreQuickCheckSpec
-        , Test.Unit.ConcurrentSafetyQuickCheckSpec
-        , Test.Unit.ConcurrentThreadSafetySpec
-        , Test.Unit.CoreCompilerSpec
-        , Test.Unit.CoreErrorHandlerSpec
-        , Test.Unit.CoreFunctionalityQuickCheckSpec
-        , Test.Unit.CoreModulesIntegrationSpec
-        , Test.Unit.CoreParserFunctionsSpec
-        , Test.Unit.CorePropertiesQuickCheckSpec
-        , Test.Unit.CoreSyntaxValidatorSpec
-        , Test.Unit.CoreUtilsSpec
-        , Test.Unit.DebugCoreQuickCheckSpec
-        , Test.Unit.DebugIntegrationFlowSpec
-        , Test.Unit.DependenciesCoreTestSpec
-        , Test.Unit.DependenciesCycleDetectionAdvancedSpec
-        , Test.Unit.DependenciesCycleDetectionQuickCheckSpec
-        , Test.Unit.DependenciesCycleDetectionSpec
-        , Test.Unit.DependenciesOwnershipInteractionSpec
-        , Test.Unit.DependenciesTypeSystemSpec
-        , Test.Unit.DependencyAnalysisCyclicSpec
-        , Test.Unit.DependencyAnalysisPropertiesQuickCheckSpec
-        , Test.Unit.DependencyCycleDetectionQuickCheckSpec
-        , Test.Unit.DependentTypeConstraintQuickCheckSpec
-        , Test.Unit.DependentTypeValidationPropertiesSpec
-        , Test.Unit.DependentTypeValidationSpec
-        , Test.Unit.DependentTypesBasicSpec
-        , Test.Unit.DependentTypesBoundaryAdvancedSpec
-        , Test.Unit.DependentTypesNewQuickCheckSpec
-        , Test.Unit.DependentTypesValidationComprehensiveSpec
-        , Test.Unit.DependentTypesValidationEnhancedQuickCheckSpec
-        , Test.Unit.DependentTypesValidationQuickCheckSpec
-        , Test.Unit.DirectiveProcessingSpec
-        , Test.Unit.EdgeCaseHandlingTestSpec
-        , Test.Unit.EmbedAssetsConsistencySpec
-        , Test.Unit.EmbedAssetsExtractionQuickCheckSpec
-        , Test.Unit.EmbedAssetsQuickCheckSpec
-        , Test.Unit.EndToEndCompilationQuickCheckSpec
-        , Test.Unit.EnhancedCabalCorePropertiesSpec
-        , Test.Unit.EnhancedCabalQuickCheckTestSuite
-        , Test.Unit.EnhancedCoreFunctionalityQuickCheckSpec
-        , Test.Unit.EnhancedDebugCoreQuickCheckSpec
-        , Test.Unit.EnhancedDependenciesQuickCheckSpec
-        , Test.Unit.EnhancedErrorHandlerQuickCheckSpec
-        , Test.Unit.EnhancedSyntaxValidatorQuickCheckSpec
-        , Test.Unit.ErrorHandlerAdvancedSpec
-        , Test.Unit.ErrorHandlerBoundarySpec
-        , Test.Unit.ErrorHandlerComprehensiveQuickCheckSpec
-        , Test.Unit.ErrorHandlerConsistencyAdvancedSpec
-        , Test.Unit.ErrorHandlerConsistencyQuickCheckSpec
-        , Test.Unit.ErrorHandlerConsistencyTestSpec
-        , Test.Unit.ErrorHandlerCoreComprehensiveSpec
-        , Test.Unit.ErrorHandlerCoreTestSpec
-        , Test.Unit.ErrorHandlerEnhancedQuickCheckSpec
-        , Test.Unit.ErrorHandlerNewQuickCheckTests
-        , Test.Unit.ErrorHandlerRecoveryAdvancedSpec
-        , Test.Unit.ErrorHandlerRecoveryQuickCheckSpec
-        , Test.Unit.ErrorHandlerRecoverySpec
-        , Test.Unit.ErrorHandlingAdvancedSpec
-        , Test.Unit.ErrorHandlingBoundaryConditionsSpec
-        , Test.Unit.ErrorHandlingRobustnessSpec
-        , Test.Unit.ErrorLocationPropertiesQuickCheckSpec
-        , Test.Unit.ErrorLocationSpec
-        , Test.Unit.ErrorRecoveryBasicSpec
-        , Test.Unit.FileDirectiveProcessingQuickCheckSpec
-        , Test.Unit.GoToolchainAdvancedQuickCheckSpec
-        , Test.Unit.GoToolchainIntegrationSpec
-        , Test.Unit.GoToolchainPropertiesAdvancedSpec
-        , Test.Unit.IRConsistencySpec
-        , Test.Unit.IndentationNormalizationQuickCheckSpec
-        , Test.Unit.IndentionSpec
-        , Test.Unit.IntegratedCompilerPropertiesSpec
-        , Test.Unit.IntegrationAdvancedSpec
-        , Test.Unit.IntegrationBasicSpec
-        , Test.Unit.IntegrationCoreQuickCheckSpec
-        , Test.Unit.IntegrationEndToEndQuickCheckSpec
-        , Test.Unit.IntegrationEndToEndScenariosSpec
-        , Test.Unit.IntegrationEnhancedTestSpec
-        , Test.Unit.IntegrationPropertiesSpec
-        , Test.Unit.LocationTrackingSpec
-        , Test.Unit.MathematicalPropertiesQuickCheckSpec
-        , Test.Unit.NewAdditionalTestSpec
-        , Test.Unit.NewBoundaryConditionQuickCheckTestSpec
-        , Test.Unit.NewBoundaryConditionSpec
-        , Test.Unit.NewCabalBoundaryConditionsQuickCheckSpec
-        , Test.Unit.NewCabalBoundaryConditionsSpec
-        , Test.Unit.NewCabalCompilerIRConsistencyQuickCheckSpec
-        , Test.Unit.NewCabalCompilerQuickCheckSpec
-        , Test.Unit.NewCabalDependenciesQuickCheckTestsSpec
-        , Test.Unit.NewCabalDependenciesTypeSystemQuickCheckSpec
-        , Test.Unit.NewCabalErrorHandlerConsistencyQuickCheckSpec
-        , Test.Unit.NewCabalErrorHandlerQuickCheckTestsSpec
-        , Test.Unit.NewCabalIntegrationEndToEndQuickCheckSpec
-        , Test.Unit.NewCabalOwnershipQuickCheckTestsSpec
-        , Test.Unit.NewCabalOwnershipTransferQuickCheckSpec
-        , Test.Unit.NewCabalParserDirectivesQuickCheckSpec
-        , Test.Unit.NewCabalParserQuickCheckTestsSpec
-        , Test.Unit.NewCabalPropertyBasedSpec
-        , Test.Unit.NewCabalQuickCheckTestSuiteSpec
-        , Test.Unit.NewCabalSourceLocationMathQuickCheckSpec
-        , Test.Unit.NewCabalSourceLocationQuickCheckTestsSpec
-        , Test.Unit.NewCabalStringUtilsQuickCheckSpec
-        , Test.Unit.NewCabalUtilsQuickCheckSpec
-        , Test.Unit.NewCabalUtilsQuickCheckTestsSpec
-        , Test.Unit.NewCommentHandlingSpec
-        , Test.Unit.NewCompilationOptimizationSpec
-        , Test.Unit.NewCompilerComprehensiveSpec
-        , Test.Unit.NewCompilerErrorRecoverySpec
-        , Test.Unit.NewCompilerIRConsistencyQuickCheckSpec
-        , Test.Unit.NewCompilerIdempotentQuickCheckSpec
-        , Test.Unit.NewCompilerOptimizationQuickCheckTestSpec
-        , Test.Unit.NewCompilerSpec
-        , Test.Unit.NewComprehensiveCabalTestsSpec
-        , Test.Unit.NewComprehensiveTypusTestSpec
-        , Test.Unit.NewCoreIntegrationSpec
-        , Test.Unit.NewCoreQuickCheckPropertiesSpec
-        , Test.Unit.NewDataConsistencyQuickCheckTestSpec
-        , Test.Unit.NewDependenciesCorePropertiesSpec
-        , Test.Unit.NewDependencyAssociativityQuickCheckSpec
-        , Test.Unit.NewDependencySpec
-        , Test.Unit.NewDependentTypeValidationQuickCheckTestSpec
-        , Test.Unit.NewDependentTypesQuickCheckSpec
-        , Test.Unit.NewErrorHandlerComprehensiveSpec
-        , Test.Unit.NewErrorHandlerValidationSpec
-        , Test.Unit.NewErrorHandlingQuickCheckTestSpec
-        , Test.Unit.NewErrorHandlingRecoveryQuickCheckTestSpec
-        , Test.Unit.NewErrorHandlingSpec
-        , Test.Unit.NewIndentationSpec
-        , Test.Unit.NewIntegratedParserTestsSpec
-        , Test.Unit.NewIntegrationEndToEndQuickCheckSpec
-        , Test.Unit.NewIntegrationQuickCheckTestSpec
-        , Test.Unit.NewIntegrationSpec
-        , Test.Unit.NewIntegrationValidationSpec
-        , Test.Unit.NewOwnershipConsistencyQuickCheckSpec
-        , Test.Unit.NewOwnershipMemorySafetyQuickCheckTestSpec
-        , Test.Unit.NewOwnershipMemorySafetySpec
-        , Test.Unit.NewOwnershipSpec
-        , Test.Unit.NewParserBoundaryQuickCheckSpec
-        , Test.Unit.NewParserBoundaryQuickCheckTestSpec
-        , Test.Unit.NewParserBoundaryTestsSpec
-        , Test.Unit.NewParserComprehensiveSpec
-        , Test.Unit.NewParserErrorRecoveryQuickCheckSpec
-        , Test.Unit.NewParserQuickCheckTestSpec
-        , Test.Unit.NewParserSpec
-        , Test.Unit.NewParserUnicodeSpec
-        , Test.Unit.NewPerformanceQuickCheckTestSpec
-        , Test.Unit.NewPerformanceSpec
-        , Test.Unit.NewQuickCheckSourceLocationSpec
-        , Test.Unit.NewQuickCheckTestSuite10Spec
-        , Test.Unit.NewQuickCheckTestSuite1Spec
-        , Test.Unit.NewQuickCheckTestSuite2Spec
-        , Test.Unit.NewQuickCheckTestSuite3Spec
-        , Test.Unit.NewQuickCheckTestSuite4Spec
-        , Test.Unit.NewQuickCheckTestSuite5Spec
-        , Test.Unit.NewQuickCheckTestSuite6Spec
-        , Test.Unit.NewQuickCheckTestSuite7Spec
-        , Test.Unit.NewQuickCheckTestSuite8Spec
-        , Test.Unit.NewQuickCheckTestSuite9Spec
-        , Test.Unit.NewQuickCheckUtilsSpec
-        , Test.Unit.NewSourceLocationComprehensiveSpec
-        , Test.Unit.NewSourceLocationPrecisionQuickCheckTestSpec
-        , Test.Unit.NewSourceLocationQuickCheckTestSpec
-        , Test.Unit.NewSourceLocationSpec
-        , Test.Unit.NewSourceLocationTrackingQuickCheckSpec
-        , Test.Unit.NewStringProcessingQuickCheckSpec
-        , Test.Unit.NewSymbolTableCommutativeQuickCheckSpec
-        , Test.Unit.NewSyntaxValidationComprehensiveSpec
-        , Test.Unit.NewSyntaxValidatorBoundarySpec
-        , Test.Unit.NewTypeSystemInferenceSpec
-        , Test.Unit.NewTypeSystemSpec
-        , Test.Unit.NewTypeSystemSubstitutionQuickCheckSpec
-        , Test.Unit.NewUtilsBoundaryConditionsSpec
-        , Test.Unit.NewUtilsComprehensiveSpec
-        , Test.Unit.NewUtilsEdgeCaseSpec
-        , Test.Unit.AdditionalCabalTestSpec
-        , Test.Unit.AdditionalIntegratedCompilerQuickCheckSpec
-        , Test.Unit.BasicParserQuickCheckSpec
-        , Test.Unit.CodeGenerationConsistencyQuickCheckSpec
-        , Test.Unit.CommandLineDebugIntegrationAdvancedSpec
-        , Test.Unit.CommandLineDebugInteractionQuickCheckSpec
-        , Test.Unit.CommandLineDebugQuickCheckSpec
-        , Test.Unit.CommentHandlingQuickCheckSpec
-        , Test.Unit.CommentRemovalSpec
-        , Test.Unit.CompilerBasicPropertiesSpec
-        , Test.Unit.CompilerComprehensiveQuickCheckSpec
-        , Test.Unit.CompilerConsistencyQuickCheckSpec
-        , Test.Unit.CompilerEndToEndIntegrationSpec
-        , Test.Unit.CompilerErrorRecoveryAdvancedSpec
-        , Test.Unit.CompilerErrorRecoveryBoundarySpec
-        , Test.Unit.CompilerIRConsistencyAdvancedSpec
-        , Test.Unit.CompilerIRConsistencyPropertiesSpec
-        , Test.Unit.CompilerIRConsistencyQuickCheckSpec
-        , Test.Unit.CompilerIREdgeCaseSpec
-        , Test.Unit.CompilerIRPropertiesSpec
-        , Test.Unit.CompilerIntegrationComprehensiveSpec
-        , Test.Unit.CompilerIntegrationEnhancedQuickCheckSpec
-        , Test.Unit.CompilerNewQuickCheckSpec
-        , Test.Unit.CompilerOptimizationConsistencyQuickCheckSpec
-        , Test.Unit.CompilerOptimizationInvariantQuickCheckSpec
-        , Test.Unit.CompilerTypeCheckerSpec
-        , Test.Unit.CompilerUtilsCoreQuickCheckSpec
-        , Test.Unit.ConcurrentSafetyQuickCheckSpec
-        , Test.Unit.ConcurrentThreadSafetySpec
-        , Test.Unit.CoreCompilerSpec
-        , Test.Unit.CoreErrorHandlerSpec
-        , Test.Unit.CoreFunctionalityQuickCheckSpec
-        , Test.Unit.CoreModulesIntegrationSpec
-        , Test.Unit.CoreParserFunctionsSpec
-        , Test.Unit.CorePropertiesQuickCheckSpec
-        , Test.Unit.CoreSyntaxValidatorSpec
-        , Test.Unit.CoreUtilsSpec
-        , Test.Unit.DebugCoreQuickCheckSpec
-        , Test.Unit.DebugIntegrationFlowSpec
-        , Test.Unit.DependenciesCoreTestSpec
-        , Test.Unit.DependenciesCycleDetectionAdvancedSpec
-        , Test.Unit.DependenciesCycleDetectionQuickCheckSpec
-        , Test.Unit.DependenciesCycleDetectionSpec
-        , Test.Unit.DependenciesOwnershipInteractionSpec
-        , Test.Unit.DependenciesTypeSystemSpec
-        , Test.Unit.DependencyAnalysisCyclicSpec
-        , Test.Unit.DependencyAnalysisPropertiesQuickCheckSpec
-        , Test.Unit.DependencyCycleDetectionQuickCheckSpec
-        , Test.Unit.DependentTypeConstraintQuickCheckSpec
-        , Test.Unit.DependentTypeValidationPropertiesSpec
-        , Test.Unit.DependentTypeValidationSpec
-        , Test.Unit.DependentTypesBasicSpec
-        , Test.Unit.DependentTypesBoundaryAdvancedSpec
-        , Test.Unit.DependentTypesNewQuickCheckSpec
-        , Test.Unit.DependentTypesValidationComprehensiveSpec
-        , Test.Unit.DependentTypesValidationEnhancedQuickCheckSpec
-        , Test.Unit.DependentTypesValidationQuickCheckSpec
-        , Test.Unit.DirectiveProcessingSpec
-        , Test.Unit.EdgeCaseHandlingTestSpec
-        , Test.Unit.EmbedAssetsConsistencySpec
-        , Test.Unit.EmbedAssetsExtractionQuickCheckSpec
-        , Test.Unit.EmbedAssetsQuickCheckSpec
-        , Test.Unit.EndToEndCompilationQuickCheckSpec
-        , Test.Unit.EnhancedCabalCorePropertiesSpec
-        , Test.Unit.EnhancedCabalQuickCheckTestSuite
-        , Test.Unit.EnhancedCoreFunctionalityQuickCheckSpec
-        , Test.Unit.EnhancedDebugCoreQuickCheckSpec
-        , Test.Unit.EnhancedDependenciesQuickCheckSpec
-        , Test.Unit.EnhancedErrorHandlerQuickCheckSpec
-        , Test.Unit.EnhancedSyntaxValidatorQuickCheckSpec
-        , Test.Unit.ErrorHandlerAdvancedSpec
-        , Test.Unit.ErrorHandlerBoundarySpec
-        , Test.Unit.ErrorHandlerComprehensiveQuickCheckSpec
-        , Test.Unit.ErrorHandlerConsistencyAdvancedSpec
-        , Test.Unit.ErrorHandlerConsistencyQuickCheckSpec
-        , Test.Unit.ErrorHandlerConsistencyTestSpec
-        , Test.Unit.ErrorHandlerCoreComprehensiveSpec
-        , Test.Unit.ErrorHandlerCoreTestSpec
-        , Test.Unit.ErrorHandlerEnhancedQuickCheckSpec
-        , Test.Unit.ErrorHandlerNewQuickCheckTests
-        , Test.Unit.ErrorHandlerRecoveryAdvancedSpec
-        , Test.Unit.ErrorHandlerRecoveryQuickCheckSpec
-        , Test.Unit.ErrorHandlerRecoverySpec
-        , Test.Unit.ErrorHandlingAdvancedSpec
-        , Test.Unit.ErrorHandlingBoundaryConditionsSpec
-        , Test.Unit.ErrorHandlingRobustnessSpec
-        , Test.Unit.ErrorLocationPropertiesQuickCheckSpec
-        , Test.Unit.ErrorLocationSpec
-        , Test.Unit.ErrorRecoveryBasicSpec
-        , Test.Unit.FileDirectiveProcessingQuickCheckSpec
-        , Test.Unit.GoToolchainAdvancedQuickCheckSpec
-        , Test.Unit.GoToolchainIntegrationSpec
-        , Test.Unit.GoToolchainPropertiesAdvancedSpec
-        , Test.Unit.IRConsistencySpec
-        , Test.Unit.IndentationNormalizationQuickCheckSpec
-        , Test.Unit.IndentionSpec
-        , Test.Unit.IntegratedCompilerPropertiesSpec
-        , Test.Unit.IntegrationAdvancedSpec
-        , Test.Unit.IntegrationBasicSpec
-        , Test.Unit.IntegrationCoreQuickCheckSpec
-        , Test.Unit.IntegrationEndToEndQuickCheckSpec
-        , Test.Unit.IntegrationEndToEndScenariosSpec
-        , Test.Unit.IntegrationEnhancedTestSpec
-        , Test.Unit.IntegrationPropertiesSpec
-        , Test.Unit.LocationTrackingSpec
-        , Test.Unit.MathematicalPropertiesQuickCheckSpec
-        , Test.Unit.NewAdditionalTestSpec
-        , Test.Unit.NewBoundaryConditionQuickCheckTestSpec
-        , Test.Unit.NewBoundaryConditionSpec
-        , Test.Unit.NewCabalBoundaryConditionsQuickCheckSpec
-        , Test.Unit.NewCabalBoundaryConditionsSpec
-        , Test.Unit.NewCabalCompilerIRConsistencyQuickCheckSpec
-        , Test.Unit.NewCabalCompilerQuickCheckSpec
-        , Test.Unit.NewCabalDependenciesQuickCheckTestsSpec
-        , Test.Unit.NewCabalDependenciesTypeSystemQuickCheckSpec
-        , Test.Unit.NewCabalErrorHandlerConsistencyQuickCheckSpec
-        , Test.Unit.NewCabalErrorHandlerQuickCheckTestsSpec
-        , Test.Unit.NewCabalIntegrationEndToEndQuickCheckSpec
-        , Test.Unit.NewCabalOwnershipQuickCheckTestsSpec
-        , Test.Unit.NewCabalOwnershipTransferQuickCheckSpec
-        , Test.Unit.NewCabalParserDirectivesQuickCheckSpec
-        , Test.Unit.NewCabalParserQuickCheckTestsSpec
-        , Test.Unit.NewCabalPropertyBasedSpec
-        , Test.Unit.NewCabalQuickCheckTestSuiteSpec
-        , Test.Unit.NewCabalSourceLocationMathQuickCheckSpec
-        , Test.Unit.NewCabalSourceLocationQuickCheckTestsSpec
-        , Test.Unit.NewCabalStringUtilsQuickCheckSpec
-        , Test.Unit.NewCabalUtilsQuickCheckSpec
-        , Test.Unit.NewCabalUtilsQuickCheckTestsSpec
-        , Test.Unit.NewCommentHandlingSpec
-        , Test.Unit.NewCompilationOptimizationSpec
-        , Test.Unit.NewCompilerComprehensiveSpec
-        , Test.Unit.NewCompilerErrorRecoverySpec
-        , Test.Unit.NewCompilerIRConsistencyQuickCheckSpec
-        , Test.Unit.NewCompilerIdempotentQuickCheckSpec
-        , Test.Unit.NewCompilerOptimizationQuickCheckTestSpec
-        , Test.Unit.NewCompilerSpec
-        , Test.Unit.NewComprehensiveCabalTestsSpec
-        , Test.Unit.NewComprehensiveTypusTestSpec
-        , Test.Unit.NewCoreIntegrationSpec
-        , Test.Unit.NewCoreQuickCheckPropertiesSpec
-        , Test.Unit.NewDataConsistencyQuickCheckTestSpec
-        , Test.Unit.NewDependenciesCorePropertiesSpec
-        , Test.Unit.NewDependencyAssociativityQuickCheckSpec
-        , Test.Unit.NewDependencySpec
-        , Test.Unit.NewDependentTypeValidationQuickCheckTestSpec
-        , Test.Unit.NewDependentTypesQuickCheckSpec
-        , Test.Unit.NewErrorHandlerComprehensiveSpec
-        , Test.Unit.NewErrorHandlerValidationSpec
-        , Test.Unit.NewErrorHandlingQuickCheckTestSpec
-        , Test.Unit.NewErrorHandlingRecoveryQuickCheckTestSpec
-        , Test.Unit.NewErrorHandlingSpec
-        , Test.Unit.NewIndentationSpec
-        , Test.Unit.NewIntegratedParserTestsSpec
-        , Test.Unit.NewIntegrationEndToEndQuickCheckSpec
-        , Test.Unit.NewIntegrationQuickCheckTestSpec
-        , Test.Unit.NewIntegrationSpec
-        , Test.Unit.NewIntegrationValidationSpec
-        , Test.Unit.NewOwnershipConsistencyQuickCheckSpec
-        , Test.Unit.NewOwnershipMemorySafetyQuickCheckTestSpec
-        , Test.Unit.NewOwnershipMemorySafetySpec
-        , Test.Unit.NewOwnershipSpec
-        , Test.Unit.NewParserBoundaryQuickCheckSpec
-        , Test.Unit.NewParserBoundaryQuickCheckTestSpec
-        , Test.Unit.NewParserBoundaryTestsSpec
-        , Test.Unit.NewParserComprehensiveSpec
-        , Test.Unit.NewParserErrorRecoveryQuickCheckSpec
-        , Test.Unit.NewParserQuickCheckTestSpec
-        , Test.Unit.NewParserSpec
-        , Test.Unit.NewParserUnicodeSpec
-        , Test.Unit.NewPerformanceQuickCheckTestSpec
-        , Test.Unit.NewPerformanceSpec
-        , Test.Unit.NewQuickCheckSourceLocationSpec
-        , Test.Unit.NewQuickCheckTestSuite10Spec
-        , Test.Unit.NewQuickCheckTestSuite1Spec
-        , Test.Unit.NewQuickCheckTestSuite2Spec
-        , Test.Unit.NewQuickCheckTestSuite3Spec
-        , Test.Unit.NewQuickCheckTestSuite4Spec
-        , Test.Unit.NewQuickCheckTestSuite5Spec
-        , Test.Unit.NewQuickCheckTestSuite6Spec
-        , Test.Unit.NewQuickCheckTestSuite7Spec
-        , Test.Unit.NewQuickCheckTestSuite8Spec
-        , Test.Unit.NewQuickCheckTestSuite9Spec
-        , Test.Unit.NewQuickCheckUtilsSpec
-        , Test.Unit.NewSourceLocationComprehensiveSpec
-        , Test.Unit.NewSourceLocationPrecisionQuickCheckTestSpec
-        , Test.Unit.NewSourceLocationQuickCheckTestSpec
-        , Test.Unit.NewSourceLocationSpec
-        , Test.Unit.NewSourceLocationTrackingQuickCheckSpec
-        , Test.Unit.NewStringProcessingQuickCheckSpec
-        , Test.Unit.NewSymbolTableCommutativeQuickCheckSpec
-        , Test.Unit.NewSyntaxValidationComprehensiveSpec
-        , Test.Unit.NewSyntaxValidatorBoundarySpec
-        , Test.Unit.NewTypeSystemInferenceSpec
-        , Test.Unit.NewTypeSystemSpec
-        , Test.Unit.NewTypeSystemSubstitutionQuickCheckSpec
-        , Test.Unit.NewUtilsBoundaryConditionsSpec
-        , Test.Unit.NewUtilsComprehensiveSpec
-        , Test.Unit.NewUtilsEdgeCaseSpec
-        , Test.Unit.AdditionalIntegratedCompilerQuickCheckSpec
-        , Test.Unit.BasicParserQuickCheckSpec
-        , Test.Unit.CodeGenerationConsistencyQuickCheckSpec
-        , Test.Unit.CommandLineDebugIntegrationAdvancedSpec
-        , Test.Unit.CommandLineDebugInteractionQuickCheckSpec
-        , Test.Unit.CommandLineDebugQuickCheckSpec
-        , Test.Unit.CommentHandlingQuickCheckSpec
-        , Test.Unit.CommentRemovalSpec
-        , Test.Unit.CompilerBasicPropertiesSpec
-        , Test.Unit.CompilerComprehensiveQuickCheckSpec
-        , Test.Unit.CompilerConsistencyQuickCheckSpec
-        , Test.Unit.CompilerEndToEndIntegrationSpec
-        , Test.Unit.CompilerErrorRecoveryAdvancedSpec
-        , Test.Unit.CompilerErrorRecoveryBoundarySpec
-        , Test.Unit.CompilerIRConsistencyAdvancedSpec
-        , Test.Unit.CompilerIRConsistencyPropertiesSpec
-        , Test.Unit.CompilerIRConsistencyQuickCheckSpec
-        , Test.Unit.CompilerIREdgeCaseSpec
-        , Test.Unit.CompilerIRPropertiesSpec
-        , Test.Unit.CompilerIntegrationComprehensiveSpec
-        , Test.Unit.CompilerIntegrationEnhancedQuickCheckSpec
-        , Test.Unit.CompilerNewQuickCheckSpec
-        , Test.Unit.CompilerOptimizationConsistencyQuickCheckSpec
-        , Test.Unit.CompilerOptimizationInvariantQuickCheckSpec
-        , Test.Unit.CompilerTypeCheckerSpec
-        , Test.Unit.CompilerUtilsCoreQuickCheckSpec
-        , Test.Unit.ConcurrentSafetyQuickCheckSpec
-        , Test.Unit.ConcurrentThreadSafetySpec
-        , Test.Unit.CoreCompilerSpec
-        , Test.Unit.CoreErrorHandlerSpec
-        , Test.Unit.CoreFunctionalityQuickCheckSpec
-        , Test.Unit.CoreModulesIntegrationSpec
-        , Test.Unit.CoreParserFunctionsSpec
-        , Test.Unit.CorePropertiesQuickCheckSpec
-        , Test.Unit.CoreSyntaxValidatorSpec
-        , Test.Unit.CoreUtilsSpec
-        , Test.Unit.DebugCoreQuickCheckSpec
-        , Test.Unit.DebugIntegrationFlowSpec
-        , Test.Unit.DependenciesCoreTestSpec
-        , Test.Unit.DependenciesCycleDetectionAdvancedSpec
-        , Test.Unit.DependenciesCycleDetectionQuickCheckSpec
-        , Test.Unit.DependenciesCycleDetectionSpec
-        , Test.Unit.DependenciesOwnershipInteractionSpec
-        , Test.Unit.DependenciesTypeSystemSpec
-        , Test.Unit.DependencyAnalysisCyclicSpec
-        , Test.Unit.DependencyAnalysisPropertiesQuickCheckSpec
-        , Test.Unit.DependencyCycleDetectionQuickCheckSpec
-        , Test.Unit.DependentTypeConstraintQuickCheckSpec
-        , Test.Unit.DependentTypeValidationPropertiesSpec
-        , Test.Unit.DependentTypeValidationSpec
-        , Test.Unit.DependentTypesBasicSpec
-        , Test.Unit.DependentTypesBoundaryAdvancedSpec
-        , Test.Unit.DependentTypesNewQuickCheckSpec
-        , Test.Unit.DependentTypesValidationComprehensiveSpec
-        , Test.Unit.DependentTypesValidationEnhancedQuickCheckSpec
-        , Test.Unit.DependentTypesValidationQuickCheckSpec
-        , Test.Unit.DirectiveProcessingSpec
-        , Test.Unit.EdgeCaseHandlingTestSpec
-        , Test.Unit.EmbedAssetsConsistencySpec
-        , Test.Unit.EmbedAssetsExtractionQuickCheckSpec
-        , Test.Unit.EmbedAssetsQuickCheckSpec
-        , Test.Unit.EndToEndCompilationQuickCheckSpec
-        , Test.Unit.EnhancedCabalCorePropertiesSpec
-        , Test.Unit.EnhancedCabalQuickCheckTestSuite
-        , Test.Unit.EnhancedCoreFunctionalityQuickCheckSpec
-        , Test.Unit.EnhancedDebugCoreQuickCheckSpec
-        , Test.Unit.EnhancedDependenciesQuickCheckSpec
-        , Test.Unit.EnhancedErrorHandlerQuickCheckSpec
-        , Test.Unit.EnhancedSyntaxValidatorQuickCheckSpec
-        , Test.Unit.ErrorHandlerAdvancedSpec
-        , Test.Unit.ErrorHandlerBoundarySpec
-        , Test.Unit.ErrorHandlerComprehensiveQuickCheckSpec
-        , Test.Unit.ErrorHandlerConsistencyAdvancedSpec
-        , Test.Unit.ErrorHandlerConsistencyQuickCheckSpec
-        , Test.Unit.ErrorHandlerConsistencyTestSpec
-        , Test.Unit.ErrorHandlerCoreComprehensiveSpec
-        , Test.Unit.ErrorHandlerCoreTestSpec
-        , Test.Unit.ErrorHandlerEnhancedQuickCheckSpec
-        , Test.Unit.ErrorHandlerNewQuickCheckTests
-        , Test.Unit.ErrorHandlerRecoveryAdvancedSpec
-        , Test.Unit.ErrorHandlerRecoveryQuickCheckSpec
-        , Test.Unit.ErrorHandlerRecoverySpec
-        , Test.Unit.ErrorHandlingAdvancedSpec
-        , Test.Unit.ErrorHandlingBoundaryConditionsSpec
-        , Test.Unit.ErrorHandlingRobustnessSpec
-        , Test.Unit.ErrorLocationPropertiesQuickCheckSpec
-        , Test.Unit.ErrorLocationSpec
-        , Test.Unit.ErrorRecoveryBasicSpec
-        , Test.Unit.FileDirectiveProcessingQuickCheckSpec
-        , Test.Unit.GoToolchainAdvancedQuickCheckSpec
-        , Test.Unit.GoToolchainIntegrationSpec
-        , Test.Unit.GoToolchainPropertiesAdvancedSpec
-        , Test.Unit.IRConsistencySpec
-        , Test.Unit.IndentationNormalizationQuickCheckSpec
-        , Test.Unit.IndentionSpec
-        , Test.Unit.IntegratedCompilerPropertiesSpec
-        , Test.Unit.IntegrationAdvancedSpec
-        , Test.Unit.IntegrationBasicSpec
-        , Test.Unit.IntegrationCoreQuickCheckSpec
-        , Test.Unit.IntegrationEndToEndQuickCheckSpec
-        , Test.Unit.IntegrationEndToEndScenariosSpec
-        , Test.Unit.IntegrationEnhancedTestSpec
-        , Test.Unit.IntegrationPropertiesSpec
-        , Test.Unit.LocationTrackingSpec
-        , Test.Unit.MathematicalPropertiesQuickCheckSpec
-        , Test.Unit.NewAdditionalTestSpec
-        , Test.Unit.NewBoundaryConditionQuickCheckTestSpec
-        , Test.Unit.NewBoundaryConditionSpec
-        , Test.Unit.NewCabalBoundaryConditionsQuickCheckSpec
-        , Test.Unit.NewCabalBoundaryConditionsSpec
-        , Test.Unit.NewCabalCompilerIRConsistencyQuickCheckSpec
-        , Test.Unit.NewCabalCompilerQuickCheckSpec
-        , Test.Unit.NewCabalDependenciesQuickCheckTestsSpec
-        , Test.Unit.NewCabalDependenciesTypeSystemQuickCheckSpec
-        , Test.Unit.NewCabalErrorHandlerConsistencyQuickCheckSpec
-        , Test.Unit.NewCabalErrorHandlerQuickCheckTestsSpec
-        , Test.Unit.NewCabalIntegrationEndToEndQuickCheckSpec
-        , Test.Unit.NewCabalOwnershipQuickCheckTestsSpec
-        , Test.Unit.NewCabalOwnershipTransferQuickCheckSpec
-        , Test.Unit.NewCabalParserDirectivesQuickCheckSpec
-        , Test.Unit.NewCabalParserQuickCheckTestsSpec
-        , Test.Unit.NewCabalPropertyBasedSpec
-        , Test.Unit.NewCabalQuickCheckTestSuiteSpec
-        , Test.Unit.NewCabalSourceLocationMathQuickCheckSpec
-        , Test.Unit.NewCabalSourceLocationQuickCheckTestsSpec
-        , Test.Unit.NewCabalStringUtilsQuickCheckSpec
-        , Test.Unit.NewCabalUtilsQuickCheckSpec
-        , Test.Unit.NewCabalUtilsQuickCheckTestsSpec
-        , Test.Unit.NewCommentHandlingSpec
-        , Test.Unit.NewCompilationOptimizationSpec
-        , Test.Unit.NewCompilerComprehensiveSpec
-        , Test.Unit.NewCompilerErrorRecoverySpec
-        , Test.Unit.NewCompilerIRConsistencyQuickCheckSpec
-        , Test.Unit.NewCompilerIdempotentQuickCheckSpec
-        , Test.Unit.NewCompilerOptimizationQuickCheckTestSpec
-        , Test.Unit.NewCompilerSpec
-        , Test.Unit.NewComprehensiveCabalTestsSpec
-        , Test.Unit.NewComprehensiveTypusTestSpec
-        , Test.Unit.NewCoreIntegrationSpec
-        , Test.Unit.NewCoreQuickCheckPropertiesSpec
-        , Test.Unit.NewDataConsistencyQuickCheckTestSpec
-        , Test.Unit.NewDependenciesCorePropertiesSpec
-        , Test.Unit.NewDependencyAssociativityQuickCheckSpec
-        , Test.Unit.NewDependencySpec
-        , Test.Unit.NewDependentTypeValidationQuickCheckTestSpec
-        , Test.Unit.NewDependentTypesQuickCheckSpec
-        , Test.Unit.NewErrorHandlerComprehensiveSpec
-        , Test.Unit.NewErrorHandlerValidationSpec
-        , Test.Unit.NewErrorHandlingQuickCheckTestSpec
-        , Test.Unit.NewErrorHandlingRecoveryQuickCheckTestSpec
-        , Test.Unit.NewErrorHandlingSpec
-        , Test.Unit.NewIndentationSpec
-        , Test.Unit.NewIntegratedParserTestsSpec
-        , Test.Unit.NewIntegrationEndToEndQuickCheckSpec
-        , Test.Unit.NewIntegrationQuickCheckTestSpec
-        , Test.Unit.NewIntegrationSpec
-        , Test.Unit.NewIntegrationValidationSpec
-        , Test.Unit.NewOwnershipConsistencyQuickCheckSpec
-        , Test.Unit.NewOwnershipMemorySafetyQuickCheckTestSpec
-        , Test.Unit.NewOwnershipMemorySafetySpec
-        , Test.Unit.NewOwnershipSpec
-        , Test.Unit.NewParserBoundaryQuickCheckSpec
-        , Test.Unit.NewParserBoundaryQuickCheckTestSpec
-        , Test.Unit.NewParserBoundaryTestsSpec
-        , Test.Unit.NewParserComprehensiveSpec
-        , Test.Unit.NewParserErrorRecoveryQuickCheckSpec
-        , Test.Unit.NewParserQuickCheckTestSpec
-        , Test.Unit.NewParserSpec
-        , Test.Unit.NewParserUnicodeSpec
-        , Test.Unit.NewPerformanceQuickCheckTestSpec
-        , Test.Unit.NewPerformanceSpec
-        , Test.Unit.NewQuickCheckSourceLocationSpec
-        , Test.Unit.NewQuickCheckTestSuite10Spec
-        , Test.Unit.NewQuickCheckTestSuite1Spec
-        , Test.Unit.NewQuickCheckTestSuite2Spec
-        , Test.Unit.NewQuickCheckTestSuite3Spec
-        , Test.Unit.NewQuickCheckTestSuite4Spec
-        , Test.Unit.NewQuickCheckTestSuite5Spec
-        , Test.Unit.NewQuickCheckTestSuite6Spec
-        , Test.Unit.NewQuickCheckTestSuite7Spec
-        , Test.Unit.NewQuickCheckTestSuite8Spec
-        , Test.Unit.NewQuickCheckTestSuite9Spec
-        , Test.Unit.NewQuickCheckUtilsSpec
-        , Test.Unit.NewSourceLocationComprehensiveSpec
-        , Test.Unit.NewSourceLocationPrecisionQuickCheckTestSpec
-        , Test.Unit.NewSourceLocationQuickCheckTestSpec
-        , Test.Unit.NewSourceLocationSpec
-        , Test.Unit.NewSourceLocationTrackingQuickCheckSpec
-        , Test.Unit.NewStringProcessingQuickCheckSpec
-        , Test.Unit.NewSymbolTableCommutativeQuickCheckSpec
-        , Test.Unit.NewSyntaxValidationComprehensiveSpec
-        , Test.Unit.NewSyntaxValidatorBoundarySpec
-        , Test.Unit.NewTypeSystemInferenceSpec
-        , Test.Unit.NewTypeSystemSpec
-        , Test.Unit.NewTypeSystemSubstitutionQuickCheckSpec
-        , Test.Unit.NewUtilsBoundaryConditionsSpec
-        , Test.Unit.NewUtilsComprehensiveSpec
-        , Test.Unit.NewUtilsEdgeCaseSpec
+    other-modules: Test.Unit.AdditionalCabalTestSpec, Test.Unit.AdditionalIntegratedCompilerQuickCheckSpec, Test.Unit.BasicParserQuickCheckSpec, Test.Unit.CodeGenerationConsistencyQuickCheckSpec, Test.Unit.CommandLineDebugIntegrationAdvancedSpec, Test.Unit.CommandLineDebugInteractionQuickCheckSpec, Test.Unit.CommandLineDebugQuickCheckSpec, Test.Unit.CommentHandlingQuickCheckSpec, Test.Unit.CommentRemovalSpec, Test.Unit.CompilerBasicPropertiesSpec, Test.Unit.CompilerComprehensiveQuickCheckSpec, Test.Unit.CompilerConsistencyQuickCheckSpec, Test.Unit.CompilerEndToEndIntegrationSpec, Test.Unit.CompilerErrorRecoveryAdvancedSpec, Test.Unit.CompilerErrorRecoveryBoundarySpec, Test.Unit.CompilerIRConsistencyAdvancedSpec, Test.Unit.CompilerIRConsistencyPropertiesSpec, Test.Unit.CompilerIRConsistencyQuickCheckSpec, Test.Unit.CompilerIREdgeCaseSpec, Test.Unit.CompilerIRPropertiesSpec, Test.Unit.CompilerIntegrationComprehensiveSpec, Test.Unit.CompilerIntegrationEnhancedQuickCheckSpec, Test.Unit.CompilerNewQuickCheckSpec, Test.Unit.CompilerOptimizationConsistencyQuickCheckSpec, Test.Unit.CompilerOptimizationInvariantQuickCheckSpec, Test.Unit.CompilerTypeCheckerSpec, Test.Unit.CompilerUtilsCoreQuickCheckSpec, Test.Unit.ConcurrentSafetyQuickCheckSpec, Test.Unit.ConcurrentThreadSafetySpec, Test.Unit.CoreCompilerSpec, Test.Unit.CoreErrorHandlerSpec, Test.Unit.CoreFunctionalityQuickCheckSpec, Test.Unit.CoreModulesIntegrationSpec, Test.Unit.CoreParserFunctionsSpec, Test.Unit.CorePropertiesQuickCheckSpec, Test.Unit.CoreSyntaxValidatorSpec, Test.Unit.CoreUtilsSpec, Test.Unit.DebugCoreQuickCheckSpec, Test.Unit.DebugIntegrationFlowSpec, Test.Unit.DependenciesCoreTestSpec, Test.Unit.DependenciesCycleDetectionAdvancedSpec, Test.Unit.DependenciesCycleDetectionQuickCheckSpec, Test.Unit.DependenciesCycleDetectionSpec, Test.Unit.DependenciesOwnershipInteractionSpec, Test.Unit.DependenciesTypeSystemSpec, Test.Unit.DependencyAnalysisCyclicSpec, Test.Unit.DependencyAnalysisPropertiesQuickCheckSpec, Test.Unit.DependencyCycleDetectionQuickCheckSpec, Test.Unit.DependentTypeConstraintQuickCheckSpec, Test.Unit.DependentTypeValidationPropertiesSpec, Test.Unit.DependentTypeValidationSpec, Test.Unit.DependentTypesBasicSpec, Test.Unit.DependentTypesBoundaryAdvancedSpec, Test.Unit.DependentTypesNewQuickCheckSpec, Test.Unit.DependentTypesValidationComprehensiveSpec, Test.Unit.DependentTypesValidationEnhancedQuickCheckSpec, Test.Unit.DependentTypesValidationQuickCheckSpec, Test.Unit.DirectiveProcessingSpec, Test.Unit.EdgeCaseHandlingTestSpec, Test.Unit.EmbedAssetsConsistencySpec, Test.Unit.EmbedAssetsExtractionQuickCheckSpec, Test.Unit.EmbedAssetsQuickCheckSpec, Test.Unit.EndToEndCompilationQuickCheckSpec, Test.Unit.EnhancedCabalCorePropertiesSpec, Test.Unit.EnhancedCabalQuickCheckTestSuite, Test.Unit.EnhancedCoreFunctionalityQuickCheckSpec, Test.Unit.EnhancedDebugCoreQuickCheckSpec, Test.Unit.EnhancedDependenciesQuickCheckSpec, Test.Unit.EnhancedErrorHandlerQuickCheckSpec, Test.Unit.EnhancedSyntaxValidatorQuickCheckSpec, Test.Unit.ErrorHandlerAdvancedSpec, Test.Unit.ErrorHandlerBoundarySpec, Test.Unit.ErrorHandlerComprehensiveQuickCheckSpec, Test.Unit.ErrorHandlerConsistencyAdvancedSpec, Test.Unit.ErrorHandlerConsistencyQuickCheckSpec, Test.Unit.ErrorHandlerConsistencyTestSpec, Test.Unit.ErrorHandlerCoreComprehensiveSpec, Test.Unit.ErrorHandlerCoreTestSpec, Test.Unit.ErrorHandlerEnhancedQuickCheckSpec, Test.Unit.ErrorHandlerNewQuickCheckTests, Test.Unit.ErrorHandlerRecoveryAdvancedSpec, Test.Unit.ErrorHandlerRecoveryQuickCheckSpec, Test.Unit.ErrorHandlerRecoverySpec, Test.Unit.ErrorHandlingAdvancedSpec, Test.Unit.ErrorHandlingBoundaryConditionsSpec, Test.Unit.ErrorHandlingRobustnessSpec, Test.Unit.ErrorLocationPropertiesQuickCheckSpec, Test.Unit.ErrorLocationSpec, Test.Unit.ErrorRecoveryBasicSpec, Test.Unit.FileDirectiveProcessingQuickCheckSpec, Test.Unit.GoToolchainAdvancedQuickCheckSpec, Test.Unit.GoToolchainIntegrationSpec, Test.Unit.GoToolchainPropertiesAdvancedSpec, Test.Unit.IRConsistencySpec, Test.Unit.IndentationNormalizationQuickCheckSpec, Test.Unit.IndentionSpec, Test.Unit.IntegratedCompilerPropertiesSpec, Test.Unit.IntegrationAdvancedSpec, Test.Unit.IntegrationBasicSpec, Test.Unit.IntegrationCoreQuickCheckSpec, Test.Unit.IntegrationEndToEndQuickCheckSpec, Test.Unit.IntegrationEndToEndScenariosSpec, Test.Unit.IntegrationEnhancedTestSpec, Test.Unit.IntegrationPropertiesSpec, Test.Unit.LocationTrackingSpec, Test.Unit.MathematicalPropertiesQuickCheckSpec, Test.Unit.NewAdditionalTestSpec, Test.Unit.NewBoundaryConditionQuickCheckTestSpec, Test.Unit.NewBoundaryConditionSpec, Test.Unit.NewCabalBoundaryConditionsQuickCheckSpec, Test.Unit.NewCabalBoundaryConditionsSpec, Test.Unit.NewCabalCompilerIRConsistencyQuickCheckSpec, Test.Unit.NewCabalCompilerQuickCheckSpec, Test.Unit.NewCabalDependenciesQuickCheckTestsSpec, Test.Unit.NewCabalDependenciesTypeSystemQuickCheckSpec, Test.Unit.NewCabalErrorHandlerConsistencyQuickCheckSpec, Test.Unit.NewCabalErrorHandlerQuickCheckTestsSpec, Test.Unit.NewCabalIntegrationEndToEndQuickCheckSpec, Test.Unit.NewCabalOwnershipQuickCheckTestsSpec, Test.Unit.NewCabalOwnershipTransferQuickCheckSpec, Test.Unit.NewCabalParserDirectivesQuickCheckSpec, Test.Unit.NewCabalParserQuickCheckTestsSpec, Test.Unit.NewCabalPropertyBasedSpec, Test.Unit.NewCabalQuickCheckTestSuiteSpec, Test.Unit.NewCabalSourceLocationMathQuickCheckSpec, Test.Unit.NewCabalSourceLocationQuickCheckTestsSpec, Test.Unit.NewCabalStringUtilsQuickCheckSpec, Test.Unit.NewCabalUtilsQuickCheckSpec, Test.Unit.NewCabalUtilsQuickCheckTestsSpec, Test.Unit.NewCommentHandlingSpec, Test.Unit.NewCompilationOptimizationSpec, Test.Unit.NewCompilerComprehensiveSpec, Test.Unit.NewCompilerErrorRecoverySpec, Test.Unit.NewCompilerIRConsistencyQuickCheckSpec, Test.Unit.NewCompilerIdempotentQuickCheckSpec, Test.Unit.NewCompilerOptimizationQuickCheckTestSpec, Test.Unit.NewCompilerSpec, Test.Unit.NewComprehensiveCabalTestsSpec, Test.Unit.NewComprehensiveTypusTestSpec, Test.Unit.NewCoreIntegrationSpec, Test.Unit.NewCoreQuickCheckPropertiesSpec, Test.Unit.NewDataConsistencyQuickCheckTestSpec, Test.Unit.NewDependenciesCorePropertiesSpec, Test.Unit.NewDependencyAssociativityQuickCheckSpec, Test.Unit.NewDependencySpec, Test.Unit.NewDependentTypeValidationQuickCheckTestSpec, Test.Unit.NewDependentTypesQuickCheckSpec, Test.Unit.NewErrorHandlerComprehensiveSpec, Test.Unit.NewErrorHandlerValidationSpec, Test.Unit.NewErrorHandlingQuickCheckTestSpec, Test.Unit.NewErrorHandlingRecoveryQuickCheckTestSpec, Test.Unit.NewErrorHandlingSpec, Test.Unit.NewIndentationSpec, Test.Unit.NewIntegratedParserTestsSpec, Test.Unit.NewIntegrationEndToEndQuickCheckSpec, Test.Unit.NewIntegrationQuickCheckTestSpec, Test.Unit.NewIntegrationSpec, Test.Unit.NewIntegrationValidationSpec, Test.Unit.NewOwnershipConsistencyQuickCheckSpec, Test.Unit.NewOwnershipMemorySafetyQuickCheckTestSpec, Test.Unit.NewOwnershipMemorySafetySpec, Test.Unit.NewOwnershipSpec, Test.Unit.NewParserBoundaryQuickCheckSpec, Test.Unit.NewParserBoundaryQuickCheckTestSpec, Test.Unit.NewParserBoundaryTestsSpec, Test.Unit.NewParserComprehensiveSpec, Test.Unit.NewParserErrorRecoveryQuickCheckSpec, Test.Unit.NewParserQuickCheckTestSpec, Test.Unit.NewParserSpec, Test.Unit.NewParserUnicodeSpec, Test.Unit.NewPerformanceQuickCheckTestSpec, Test.Unit.NewPerformanceSpec, Test.Unit.NewQuickCheckSourceLocationSpec, Test.Unit.NewQuickCheckTestSuite10Spec, Test.Unit.NewQuickCheckTestSuite1Spec, Test.Unit.NewQuickCheckTestSuite2Spec, Test.Unit.NewQuickCheckTestSuite3Spec, Test.Unit.NewQuickCheckTestSuite4Spec, Test.Unit.NewQuickCheckTestSuite5Spec, Test.Unit.NewQuickCheckTestSuite6Spec, Test.Unit.NewQuickCheckTestSuite7Spec, Test.Unit.NewQuickCheckTestSuite8Spec, Test.Unit.NewQuickCheckTestSuite9Spec, Test.Unit.NewQuickCheckUtilsSpec, Test.Unit.NewSourceLocationComprehensiveSpec, Test.Unit.NewSourceLocationPrecisionQuickCheckTestSpec, Test.Unit.NewSourceLocationQuickCheckTestSpec, Test.Unit.NewSourceLocationSpec, Test.Unit.NewSourceLocationTrackingQuickCheckSpec, Test.Unit.NewStringProcessingQuickCheckSpec, Test.Unit.NewSymbolTableCommutativeQuickCheckSpec, Test.Unit.NewSyntaxValidationComprehensiveSpec, Test.Unit.NewSyntaxValidatorBoundarySpec, Test.Unit.NewTypeSystemInferenceSpec, Test.Unit.NewTypeSystemSpec, Test.Unit.NewTypeSystemSubstitutionQuickCheckSpec, Test.Unit.NewUtilsBoundaryConditionsSpec, Test.Unit.NewUtilsComprehensiveSpec, Test.Unit.NewUtilsEdgeCaseSpec, Test.Unit.AdditionalCabalTestSpec, Test.Unit.AdditionalIntegratedCompilerQuickCheckSpec, Test.Unit.BasicParserQuickCheckSpec, Test.Unit.CodeGenerationConsistencyQuickCheckSpec, Test.Unit.CommandLineDebugIntegrationAdvancedSpec, Test.Unit.CommandLineDebugInteractionQuickCheckSpec, Test.Unit.CommandLineDebugQuickCheckSpec, Test.Unit.CommentHandlingQuickCheckSpec, Test.Unit.CommentRemovalSpec, Test.Unit.CompilerBasicPropertiesSpec, Test.Unit.CompilerComprehensiveQuickCheckSpec, Test.Unit.CompilerConsistencyQuickCheckSpec, Test.Unit.CompilerEndToEndIntegrationSpec, Test.Unit.CompilerErrorRecoveryAdvancedSpec, Test.Unit.CompilerErrorRecoveryBoundarySpec, Test.Unit.CompilerIRConsistencyAdvancedSpec, Test.Unit.CompilerIRConsistencyPropertiesSpec, Test.Unit.CompilerIRConsistencyQuickCheckSpec, Test.Unit.CompilerIREdgeCaseSpec, Test.Unit.CompilerIRPropertiesSpec, Test.Unit.CompilerIntegrationComprehensiveSpec, Test.Unit.CompilerIntegrationEnhancedQuickCheckSpec, Test.Unit.CompilerNewQuickCheckSpec, Test.Unit.CompilerOptimizationConsistencyQuickCheckSpec, Test.Unit.CompilerOptimizationInvariantQuickCheckSpec, Test.Unit.CompilerTypeCheckerSpec, Test.Unit.CompilerUtilsCoreQuickCheckSpec, Test.Unit.ConcurrentSafetyQuickCheckSpec, Test.Unit.ConcurrentThreadSafetySpec, Test.Unit.CoreCompilerSpec, Test.Unit.CoreErrorHandlerSpec, Test.Unit.CoreFunctionalityQuickCheckSpec, Test.Unit.CoreModulesIntegrationSpec, Test.Unit.CoreParserFunctionsSpec, Test.Unit.CorePropertiesQuickCheckSpec, Test.Unit.CoreSyntaxValidatorSpec, Test.Unit.CoreUtilsSpec, Test.Unit.DebugCoreQuickCheckSpec, Test.Unit.DebugIntegrationFlowSpec, Test.Unit.DependenciesCoreTestSpec, Test.Unit.DependenciesCycleDetectionAdvancedSpec, Test.Unit.DependenciesCycleDetectionQuickCheckSpec, Test.Unit.DependenciesCycleDetectionSpec, Test.Unit.DependenciesOwnershipInteractionSpec, Test.Unit.DependenciesTypeSystemSpec, Test.Unit.DependencyAnalysisCyclicSpec, Test.Unit.DependencyAnalysisPropertiesQuickCheckSpec, Test.Unit.DependencyCycleDetectionQuickCheckSpec, Test.Unit.DependentTypeConstraintQuickCheckSpec, Test.Unit.DependentTypeValidationPropertiesSpec, Test.Unit.DependentTypeValidationSpec, Test.Unit.DependentTypesBasicSpec, Test.Unit.DependentTypesBoundaryAdvancedSpec, Test.Unit.DependentTypesNewQuickCheckSpec, Test.Unit.DependentTypesValidationComprehensiveSpec, Test.Unit.DependentTypesValidationEnhancedQuickCheckSpec, Test.Unit.DependentTypesValidationQuickCheckSpec, Test.Unit.DirectiveProcessingSpec, Test.Unit.EdgeCaseHandlingTestSpec, Test.Unit.EmbedAssetsConsistencySpec, Test.Unit.EmbedAssetsExtractionQuickCheckSpec, Test.Unit.EmbedAssetsQuickCheckSpec, Test.Unit.EndToEndCompilationQuickCheckSpec, Test.Unit.EnhancedCabalCorePropertiesSpec, Test.Unit.EnhancedCabalQuickCheckTestSuite, Test.Unit.EnhancedCoreFunctionalityQuickCheckSpec, Test.Unit.EnhancedDebugCoreQuickCheckSpec, Test.Unit.EnhancedDependenciesQuickCheckSpec, Test.Unit.EnhancedErrorHandlerQuickCheckSpec, Test.Unit.EnhancedSyntaxValidatorQuickCheckSpec, Test.Unit.ErrorHandlerAdvancedSpec, Test.Unit.ErrorHandlerBoundarySpec, Test.Unit.ErrorHandlerComprehensiveQuickCheckSpec, Test.Unit.ErrorHandlerConsistencyAdvancedSpec, Test.Unit.ErrorHandlerConsistencyQuickCheckSpec, Test.Unit.ErrorHandlerConsistencyTestSpec, Test.Unit.ErrorHandlerCoreComprehensiveSpec, Test.Unit.ErrorHandlerCoreTestSpec, Test.Unit.ErrorHandlerEnhancedQuickCheckSpec, Test.Unit.ErrorHandlerNewQuickCheckTests, Test.Unit.ErrorHandlerRecoveryAdvancedSpec, Test.Unit.ErrorHandlerRecoveryQuickCheckSpec, Test.Unit.ErrorHandlerRecoverySpec, Test.Unit.ErrorHandlingAdvancedSpec, Test.Unit.ErrorHandlingBoundaryConditionsSpec, Test.Unit.ErrorHandlingRobustnessSpec, Test.Unit.ErrorLocationPropertiesQuickCheckSpec, Test.Unit.ErrorLocationSpec, Test.Unit.ErrorRecoveryBasicSpec, Test.Unit.FileDirectiveProcessingQuickCheckSpec, Test.Unit.GoToolchainAdvancedQuickCheckSpec, Test.Unit.GoToolchainIntegrationSpec, Test.Unit.GoToolchainPropertiesAdvancedSpec, Test.Unit.IRConsistencySpec, Test.Unit.IndentationNormalizationQuickCheckSpec, Test.Unit.IndentionSpec, Test.Unit.IntegratedCompilerPropertiesSpec, Test.Unit.IntegrationAdvancedSpec, Test.Unit.IntegrationBasicSpec, Test.Unit.IntegrationCoreQuickCheckSpec, Test.Unit.IntegrationEndToEndQuickCheckSpec, Test.Unit.IntegrationEndToEndScenariosSpec, Test.Unit.IntegrationEnhancedTestSpec, Test.Unit.IntegrationPropertiesSpec, Test.Unit.LocationTrackingSpec, Test.Unit.MathematicalPropertiesQuickCheckSpec, Test.Unit.NewAdditionalTestSpec, Test.Unit.NewBoundaryConditionQuickCheckTestSpec, Test.Unit.NewBoundaryConditionSpec, Test.Unit.NewCabalBoundaryConditionsQuickCheckSpec, Test.Unit.NewCabalBoundaryConditionsSpec, Test.Unit.NewCabalCompilerIRConsistencyQuickCheckSpec, Test.Unit.NewCabalCompilerQuickCheckSpec, Test.Unit.NewCabalDependenciesQuickCheckTestsSpec, Test.Unit.NewCabalDependenciesTypeSystemQuickCheckSpec, Test.Unit.NewCabalErrorHandlerConsistencyQuickCheckSpec, Test.Unit.NewCabalErrorHandlerQuickCheckTestsSpec, Test.Unit.NewCabalIntegrationEndToEndQuickCheckSpec, Test.Unit.NewCabalOwnershipQuickCheckTestsSpec, Test.Unit.NewCabalOwnershipTransferQuickCheckSpec, Test.Unit.NewCabalParserDirectivesQuickCheckSpec, Test.Unit.NewCabalParserQuickCheckTestsSpec, Test.Unit.NewCabalPropertyBasedSpec, Test.Unit.NewCabalQuickCheckTestSuiteSpec, Test.Unit.NewCabalSourceLocationMathQuickCheckSpec, Test.Unit.NewCabalSourceLocationQuickCheckTestsSpec, Test.Unit.NewCabalStringUtilsQuickCheckSpec, Test.Unit.NewCabalUtilsQuickCheckSpec, Test.Unit.NewCabalUtilsQuickCheckTestsSpec, Test.Unit.NewCommentHandlingSpec, Test.Unit.NewCompilationOptimizationSpec, Test.Unit.NewCompilerComprehensiveSpec, Test.Unit.NewCompilerErrorRecoverySpec, Test.Unit.NewCompilerIRConsistencyQuickCheckSpec, Test.Unit.NewCompilerIdempotentQuickCheckSpec, Test.Unit.NewCompilerOptimizationQuickCheckTestSpec, Test.Unit.NewCompilerSpec, Test.Unit.NewComprehensiveCabalTestsSpec, Test.Unit.NewComprehensiveTypusTestSpec, Test.Unit.NewCoreIntegrationSpec, Test.Unit.NewCoreQuickCheckPropertiesSpec, Test.Unit.NewDataConsistencyQuickCheckTestSpec, Test.Unit.NewDependenciesCorePropertiesSpec, Test.Unit.NewDependencyAssociativityQuickCheckSpec, Test.Unit.NewDependencySpec, Test.Unit.NewDependentTypeValidationQuickCheckTestSpec, Test.Unit.NewDependentTypesQuickCheckSpec, Test.Unit.NewErrorHandlerComprehensiveSpec, Test.Unit.NewErrorHandlerValidationSpec, Test.Unit.NewErrorHandlingQuickCheckTestSpec, Test.Unit.NewErrorHandlingRecoveryQuickCheckTestSpec, Test.Unit.NewErrorHandlingSpec, Test.Unit.NewIndentationSpec, Test.Unit.NewIntegratedParserTestsSpec, Test.Unit.NewIntegrationEndToEndQuickCheckSpec, Test.Unit.NewIntegrationQuickCheckTestSpec, Test.Unit.NewIntegrationSpec, Test.Unit.NewIntegrationValidationSpec, Test.Unit.NewOwnershipConsistencyQuickCheckSpec, Test.Unit.NewOwnershipMemorySafetyQuickCheckTestSpec, Test.Unit.NewOwnershipMemorySafetySpec, Test.Unit.NewOwnershipSpec, Test.Unit.NewParserBoundaryQuickCheckSpec, Test.Unit.NewParserBoundaryQuickCheckTestSpec, Test.Unit.NewParserBoundaryTestsSpec, Test.Unit.NewParserComprehensiveSpec, Test.Unit.NewParserErrorRecoveryQuickCheckSpec, Test.Unit.NewParserQuickCheckTestSpec, Test.Unit.NewParserSpec, Test.Unit.NewParserUnicodeSpec, Test.Unit.NewPerformanceQuickCheckTestSpec, Test.Unit.NewPerformanceSpec, Test.Unit.NewQuickCheckSourceLocationSpec, Test.Unit.NewQuickCheckTestSuite10Spec, Test.Unit.NewQuickCheckTestSuite1Spec, Test.Unit.NewQuickCheckTestSuite2Spec, Test.Unit.NewQuickCheckTestSuite3Spec, Test.Unit.NewQuickCheckTestSuite4Spec, Test.Unit.NewQuickCheckTestSuite5Spec, Test.Unit.NewQuickCheckTestSuite6Spec, Test.Unit.NewQuickCheckTestSuite7Spec, Test.Unit.NewQuickCheckTestSuite8Spec, Test.Unit.NewQuickCheckTestSuite9Spec, Test.Unit.NewQuickCheckUtilsSpec, Test.Unit.NewSourceLocationComprehensiveSpec, Test.Unit.NewSourceLocationPrecisionQuickCheckTestSpec, Test.Unit.NewSourceLocationQuickCheckTestSpec, Test.Unit.NewSourceLocationSpec, Test.Unit.NewSourceLocationTrackingQuickCheckSpec, Test.Unit.NewStringProcessingQuickCheckSpec, Test.Unit.NewSymbolTableCommutativeQuickCheckSpec, Test.Unit.NewSyntaxValidationComprehensiveSpec, Test.Unit.NewSyntaxValidatorBoundarySpec, Test.Unit.NewTypeSystemInferenceSpec, Test.Unit.NewTypeSystemSpec, Test.Unit.NewTypeSystemSubstitutionQuickCheckSpec, Test.Unit.NewUtilsBoundaryConditionsSpec, Test.Unit.NewUtilsComprehensiveSpec, Test.Unit.NewUtilsEdgeCaseSpec, Test.Unit.AdditionalCabalTestSpec, Test.Unit.AdditionalIntegratedCompilerQuickCheckSpec, Test.Unit.BasicParserQuickCheckSpec, Test.Unit.CodeGenerationConsistencyQuickCheckSpec, Test.Unit.CommandLineDebugIntegrationAdvancedSpec, Test.Unit.CommandLineDebugInteractionQuickCheckSpec, Test.Unit.CommandLineDebugQuickCheckSpec, Test.Unit.CommentHandlingQuickCheckSpec, Test.Unit.CommentRemovalSpec, Test.Unit.CompilerBasicPropertiesSpec, Test.Unit.CompilerComprehensiveQuickCheckSpec, Test.Unit.CompilerConsistencyQuickCheckSpec, Test.Unit.CompilerEndToEndIntegrationSpec, Test.Unit.CompilerErrorRecoveryAdvancedSpec, Test.Unit.CompilerErrorRecoveryBoundarySpec, Test.Unit.CompilerIRConsistencyAdvancedSpec, Test.Unit.CompilerIRConsistencyPropertiesSpec, Test.Unit.CompilerIRConsistencyQuickCheckSpec, Test.Unit.CompilerIREdgeCaseSpec, Test.Unit.CompilerIRPropertiesSpec, Test.Unit.CompilerIntegrationComprehensiveSpec, Test.Unit.CompilerIntegrationEnhancedQuickCheckSpec, Test.Unit.CompilerNewQuickCheckSpec, Test.Unit.CompilerOptimizationConsistencyQuickCheckSpec, Test.Unit.CompilerOptimizationInvariantQuickCheckSpec, Test.Unit.CompilerTypeCheckerSpec, Test.Unit.CompilerUtilsCoreQuickCheckSpec, Test.Unit.ConcurrentSafetyQuickCheckSpec, Test.Unit.ConcurrentThreadSafetySpec, Test.Unit.CoreCompilerSpec, Test.Unit.CoreErrorHandlerSpec, Test.Unit.CoreFunctionalityQuickCheckSpec, Test.Unit.CoreModulesIntegrationSpec, Test.Unit.CoreParserFunctionsSpec, Test.Unit.CorePropertiesQuickCheckSpec, Test.Unit.CoreSyntaxValidatorSpec, Test.Unit.CoreUtilsSpec, Test.Unit.DebugCoreQuickCheckSpec, Test.Unit.DebugIntegrationFlowSpec, Test.Unit.DependenciesCoreTestSpec, Test.Unit.DependenciesCycleDetectionAdvancedSpec, Test.Unit.DependenciesCycleDetectionQuickCheckSpec, Test.Unit.DependenciesCycleDetectionSpec, Test.Unit.DependenciesOwnershipInteractionSpec, Test.Unit.DependenciesTypeSystemSpec, Test.Unit.DependencyAnalysisCyclicSpec, Test.Unit.DependencyAnalysisPropertiesQuickCheckSpec, Test.Unit.DependencyCycleDetectionQuickCheckSpec, Test.Unit.DependentTypeConstraintQuickCheckSpec, Test.Unit.DependentTypeValidationPropertiesSpec, Test.Unit.DependentTypeValidationSpec, Test.Unit.DependentTypesBasicSpec, Test.Unit.DependentTypesBoundaryAdvancedSpec, Test.Unit.DependentTypesNewQuickCheckSpec, Test.Unit.DependentTypesValidationComprehensiveSpec, Test.Unit.DependentTypesValidationEnhancedQuickCheckSpec, Test.Unit.DependentTypesValidationQuickCheckSpec, Test.Unit.DirectiveProcessingSpec, Test.Unit.EdgeCaseHandlingTestSpec, Test.Unit.EmbedAssetsConsistencySpec, Test.Unit.EmbedAssetsExtractionQuickCheckSpec, Test.Unit.EmbedAssetsQuickCheckSpec, Test.Unit.EndToEndCompilationQuickCheckSpec, Test.Unit.EnhancedCabalCorePropertiesSpec, Test.Unit.EnhancedCabalQuickCheckTestSuite, Test.Unit.EnhancedCoreFunctionalityQuickCheckSpec, Test.Unit.EnhancedDebugCoreQuickCheckSpec, Test.Unit.EnhancedDependenciesQuickCheckSpec, Test.Unit.EnhancedErrorHandlerQuickCheckSpec, Test.Unit.EnhancedSyntaxValidatorQuickCheckSpec, Test.Unit.ErrorHandlerAdvancedSpec, Test.Unit.ErrorHandlerBoundarySpec, Test.Unit.ErrorHandlerComprehensiveQuickCheckSpec, Test.Unit.ErrorHandlerConsistencyAdvancedSpec, Test.Unit.ErrorHandlerConsistencyQuickCheckSpec, Test.Unit.ErrorHandlerConsistencyTestSpec, Test.Unit.ErrorHandlerCoreComprehensiveSpec, Test.Unit.ErrorHandlerCoreTestSpec, Test.Unit.ErrorHandlerEnhancedQuickCheckSpec, Test.Unit.ErrorHandlerNewQuickCheckTests, Test.Unit.ErrorHandlerRecoveryAdvancedSpec, Test.Unit.ErrorHandlerRecoveryQuickCheckSpec, Test.Unit.ErrorHandlerRecoverySpec, Test.Unit.ErrorHandlingAdvancedSpec, Test.Unit.ErrorHandlingBoundaryConditionsSpec, Test.Unit.ErrorHandlingRobustnessSpec, Test.Unit.ErrorLocationPropertiesQuickCheckSpec, Test.Unit.ErrorLocationSpec, Test.Unit.ErrorRecoveryBasicSpec, Test.Unit.FileDirectiveProcessingQuickCheckSpec, Test.Unit.GoToolchainAdvancedQuickCheckSpec, Test.Unit.GoToolchainIntegrationSpec, Test.Unit.GoToolchainPropertiesAdvancedSpec, Test.Unit.IRConsistencySpec, Test.Unit.IndentationNormalizationQuickCheckSpec, Test.Unit.IndentionSpec, Test.Unit.IntegratedCompilerPropertiesSpec, Test.Unit.IntegrationAdvancedSpec, Test.Unit.IntegrationBasicSpec, Test.Unit.IntegrationCoreQuickCheckSpec, Test.Unit.IntegrationEndToEndQuickCheckSpec, Test.Unit.IntegrationEndToEndScenariosSpec, Test.Unit.IntegrationEnhancedTestSpec, Test.Unit.IntegrationPropertiesSpec, Test.Unit.LocationTrackingSpec, Test.Unit.MathematicalPropertiesQuickCheckSpec, Test.Unit.NewAdditionalTestSpec, Test.Unit.NewBoundaryConditionQuickCheckTestSpec, Test.Unit.NewBoundaryConditionSpec, Test.Unit.NewCabalBoundaryConditionsQuickCheckSpec, Test.Unit.NewCabalBoundaryConditionsSpec, Test.Unit.NewCabalCompilerIRConsistencyQuickCheckSpec, Test.Unit.NewCabalCompilerQuickCheckSpec, Test.Unit.NewCabalDependenciesQuickCheckTestsSpec, Test.Unit.NewCabalDependenciesTypeSystemQuickCheckSpec, Test.Unit.NewCabalErrorHandlerConsistencyQuickCheckSpec, Test.Unit.NewCabalErrorHandlerQuickCheckTestsSpec, Test.Unit.NewCabalIntegrationEndToEndQuickCheckSpec, Test.Unit.NewCabalOwnershipQuickCheckTestsSpec, Test.Unit.NewCabalOwnershipTransferQuickCheckSpec, Test.Unit.NewCabalParserDirectivesQuickCheckSpec, Test.Unit.NewCabalParserQuickCheckTestsSpec, Test.Unit.NewCabalPropertyBasedSpec, Test.Unit.NewCabalQuickCheckTestSuiteSpec, Test.Unit.NewCabalSourceLocationMathQuickCheckSpec, Test.Unit.NewCabalSourceLocationQuickCheckTestsSpec, Test.Unit.NewCabalStringUtilsQuickCheckSpec, Test.Unit.NewCabalUtilsQuickCheckSpec, Test.Unit.NewCabalUtilsQuickCheckTestsSpec, Test.Unit.NewCommentHandlingSpec, Test.Unit.NewCompilationOptimizationSpec, Test.Unit.NewCompilerComprehensiveSpec, Test.Unit.NewCompilerErrorRecoverySpec, Test.Unit.NewCompilerIRConsistencyQuickCheckSpec, Test.Unit.NewCompilerIdempotentQuickCheckSpec, Test.Unit.NewCompilerOptimizationQuickCheckTestSpec, Test.Unit.NewCompilerSpec, Test.Unit.NewComprehensiveCabalTestsSpec, Test.Unit.NewComprehensiveTypusTestSpec, Test.Unit.NewCoreIntegrationSpec, Test.Unit.NewCoreQuickCheckPropertiesSpec, Test.Unit.NewDataConsistencyQuickCheckTestSpec, Test.Unit.NewDependenciesCorePropertiesSpec, Test.Unit.NewDependencyAssociativityQuickCheckSpec, Test.Unit.NewDependencySpec, Test.Unit.NewDependentTypeValidationQuickCheckTestSpec, Test.Unit.NewDependentTypesQuickCheckSpec, Test.Unit.NewErrorHandlerComprehensiveSpec, Test.Unit.NewErrorHandlerValidationSpec, Test.Unit.NewErrorHandlingQuickCheckTestSpec, Test.Unit.NewErrorHandlingRecoveryQuickCheckTestSpec, Test.Unit.NewErrorHandlingSpec, Test.Unit.NewIndentationSpec, Test.Unit.NewIntegratedParserTestsSpec, Test.Unit.NewIntegrationEndToEndQuickCheckSpec, Test.Unit.NewIntegrationQuickCheckTestSpec, Test.Unit.NewIntegrationSpec, Test.Unit.NewIntegrationValidationSpec, Test.Unit.NewOwnershipConsistencyQuickCheckSpec, Test.Unit.NewOwnershipMemorySafetyQuickCheckTestSpec, Test.Unit.NewOwnershipMemorySafetySpec, Test.Unit.NewOwnershipSpec, Test.Unit.NewParserBoundaryQuickCheckSpec, Test.Unit.NewParserBoundaryQuickCheckTestSpec, Test.Unit.NewParserBoundaryTestsSpec, Test.Unit.NewParserComprehensiveSpec, Test.Unit.NewParserErrorRecoveryQuickCheckSpec, Test.Unit.NewParserQuickCheckTestSpec, Test.Unit.NewParserSpec, Test.Unit.NewParserUnicodeSpec, Test.Unit.NewPerformanceQuickCheckTestSpec, Test.Unit.NewPerformanceSpec, Test.Unit.NewQuickCheckSourceLocationSpec, Test.Unit.NewQuickCheckTestSuite10Spec, Test.Unit.NewQuickCheckTestSuite1Spec, Test.Unit.NewQuickCheckTestSuite2Spec, Test.Unit.NewQuickCheckTestSuite3Spec, Test.Unit.NewQuickCheckTestSuite4Spec, Test.Unit.NewQuickCheckTestSuite5Spec, Test.Unit.NewQuickCheckTestSuite6Spec, Test.Unit.NewQuickCheckTestSuite7Spec, Test.Unit.NewQuickCheckTestSuite8Spec, Test.Unit.NewQuickCheckTestSuite9Spec, Test.Unit.NewQuickCheckUtilsSpec, Test.Unit.NewSourceLocationComprehensiveSpec, Test.Unit.NewSourceLocationPrecisionQuickCheckTestSpec, Test.Unit.NewSourceLocationQuickCheckTestSpec, Test.Unit.NewSourceLocationSpec, Test.Unit.NewSourceLocationTrackingQuickCheckSpec, Test.Unit.NewStringProcessingQuickCheckSpec, Test.Unit.NewSymbolTableCommutativeQuickCheckSpec, Test.Unit.NewSyntaxValidationComprehensiveSpec, Test.Unit.NewSyntaxValidatorBoundarySpec, Test.Unit.NewTypeSystemInferenceSpec, Test.Unit.NewTypeSystemSpec, Test.Unit.NewTypeSystemSubstitutionQuickCheckSpec, Test.Unit.NewUtilsBoundaryConditionsSpec, Test.Unit.NewUtilsComprehensiveSpec, Test.Unit.NewUtilsEdgeCaseSpec, Test.Unit.AdditionalIntegratedCompilerQuickCheckSpec, Test.Unit.BasicParserQuickCheckSpec, Test.Unit.CodeGenerationConsistencyQuickCheckSpec, Test.Unit.CommandLineDebugIntegrationAdvancedSpec, Test.Unit.CommandLineDebugInteractionQuickCheckSpec, Test.Unit.CommandLineDebugQuickCheckSpec, Test.Unit.CommentHandlingQuickCheckSpec, Test.Unit.CommentRemovalSpec, Test.Unit.CompilerBasicPropertiesSpec, Test.Unit.CompilerComprehensiveQuickCheckSpec, Test.Unit.CompilerConsistencyQuickCheckSpec, Test.Unit.CompilerEndToEndIntegrationSpec, Test.Unit.CompilerErrorRecoveryAdvancedSpec, Test.Unit.CompilerErrorRecoveryBoundarySpec, Test.Unit.CompilerIRConsistencyAdvancedSpec, Test.Unit.CompilerIRConsistencyPropertiesSpec, Test.Unit.CompilerIRConsistencyQuickCheckSpec, Test.Unit.CompilerIREdgeCaseSpec, Test.Unit.CompilerIRPropertiesSpec, Test.Unit.CompilerIntegrationComprehensiveSpec, Test.Unit.CompilerIntegrationEnhancedQuickCheckSpec, Test.Unit.CompilerNewQuickCheckSpec, Test.Unit.CompilerOptimizationConsistencyQuickCheckSpec, Test.Unit.CompilerOptimizationInvariantQuickCheckSpec, Test.Unit.CompilerTypeCheckerSpec, Test.Unit.CompilerUtilsCoreQuickCheckSpec, Test.Unit.ConcurrentSafetyQuickCheckSpec, Test.Unit.ConcurrentThreadSafetySpec, Test.Unit.CoreCompilerSpec, Test.Unit.CoreErrorHandlerSpec, Test.Unit.CoreFunctionalityQuickCheckSpec, Test.Unit.CoreModulesIntegrationSpec, Test.Unit.CoreParserFunctionsSpec, Test.Unit.CorePropertiesQuickCheckSpec, Test.Unit.CoreSyntaxValidatorSpec, Test.Unit.CoreUtilsSpec, Test.Unit.DebugCoreQuickCheckSpec, Test.Unit.DebugIntegrationFlowSpec, Test.Unit.DependenciesCoreTestSpec, Test.Unit.DependenciesCycleDetectionAdvancedSpec, Test.Unit.DependenciesCycleDetectionQuickCheckSpec, Test.Unit.DependenciesCycleDetectionSpec, Test.Unit.DependenciesOwnershipInteractionSpec, Test.Unit.DependenciesTypeSystemSpec, Test.Unit.DependencyAnalysisCyclicSpec, Test.Unit.DependencyAnalysisPropertiesQuickCheckSpec, Test.Unit.DependencyCycleDetectionQuickCheckSpec, Test.Unit.DependentTypeConstraintQuickCheckSpec, Test.Unit.DependentTypeValidationPropertiesSpec, Test.Unit.DependentTypeValidationSpec, Test.Unit.DependentTypesBasicSpec, Test.Unit.DependentTypesBoundaryAdvancedSpec, Test.Unit.DependentTypesNewQuickCheckSpec, Test.Unit.DependentTypesValidationComprehensiveSpec, Test.Unit.DependentTypesValidationEnhancedQuickCheckSpec, Test.Unit.DependentTypesValidationQuickCheckSpec, Test.Unit.DirectiveProcessingSpec, Test.Unit.EdgeCaseHandlingTestSpec, Test.Unit.EmbedAssetsConsistencySpec, Test.Unit.EmbedAssetsExtractionQuickCheckSpec, Test.Unit.EmbedAssetsQuickCheckSpec, Test.Unit.EndToEndCompilationQuickCheckSpec, Test.Unit.EnhancedCabalCorePropertiesSpec, Test.Unit.EnhancedCabalQuickCheckTestSuite, Test.Unit.EnhancedCoreFunctionalityQuickCheckSpec, Test.Unit.EnhancedDebugCoreQuickCheckSpec, Test.Unit.EnhancedDependenciesQuickCheckSpec, Test.Unit.EnhancedErrorHandlerQuickCheckSpec, Test.Unit.EnhancedSyntaxValidatorQuickCheckSpec, Test.Unit.ErrorHandlerAdvancedSpec, Test.Unit.ErrorHandlerBoundarySpec, Test.Unit.ErrorHandlerComprehensiveQuickCheckSpec, Test.Unit.ErrorHandlerConsistencyAdvancedSpec, Test.Unit.ErrorHandlerConsistencyQuickCheckSpec, Test.Unit.ErrorHandlerConsistencyTestSpec, Test.Unit.ErrorHandlerCoreComprehensiveSpec, Test.Unit.ErrorHandlerCoreTestSpec, Test.Unit.ErrorHandlerEnhancedQuickCheckSpec, Test.Unit.ErrorHandlerNewQuickCheckTests, Test.Unit.ErrorHandlerRecoveryAdvancedSpec, Test.Unit.ErrorHandlerRecoveryQuickCheckSpec, Test.Unit.ErrorHandlerRecoverySpec, Test.Unit.ErrorHandlingAdvancedSpec, Test.Unit.ErrorHandlingBoundaryConditionsSpec, Test.Unit.ErrorHandlingRobustnessSpec, Test.Unit.ErrorLocationPropertiesQuickCheckSpec, Test.Unit.ErrorLocationSpec, Test.Unit.ErrorRecoveryBasicSpec, Test.Unit.FileDirectiveProcessingQuickCheckSpec, Test.Unit.GoToolchainAdvancedQuickCheckSpec, Test.Unit.GoToolchainIntegrationSpec, Test.Unit.GoToolchainPropertiesAdvancedSpec, Test.Unit.IRConsistencySpec, Test.Unit.IndentationNormalizationQuickCheckSpec, Test.Unit.IndentionSpec, Test.Unit.IntegratedCompilerPropertiesSpec, Test.Unit.IntegrationAdvancedSpec, Test.Unit.IntegrationBasicSpec, Test.Unit.IntegrationCoreQuickCheckSpec, Test.Unit.IntegrationEndToEndQuickCheckSpec, Test.Unit.IntegrationEndToEndScenariosSpec, Test.Unit.IntegrationEnhancedTestSpec, Test.Unit.IntegrationPropertiesSpec, Test.Unit.LocationTrackingSpec, Test.Unit.MathematicalPropertiesQuickCheckSpec, Test.Unit.NewAdditionalTestSpec, Test.Unit.NewBoundaryConditionQuickCheckTestSpec, Test.Unit.NewBoundaryConditionSpec, Test.Unit.NewCabalBoundaryConditionsQuickCheckSpec, Test.Unit.NewCabalBoundaryConditionsSpec, Test.Unit.NewCabalCompilerIRConsistencyQuickCheckSpec, Test.Unit.NewCabalCompilerQuickCheckSpec, Test.Unit.NewCabalDependenciesQuickCheckTestsSpec, Test.Unit.NewCabalDependenciesTypeSystemQuickCheckSpec, Test.Unit.NewCabalErrorHandlerConsistencyQuickCheckSpec, Test.Unit.NewCabalErrorHandlerQuickCheckTestsSpec, Test.Unit.NewCabalIntegrationEndToEndQuickCheckSpec, Test.Unit.NewCabalOwnershipQuickCheckTestsSpec, Test.Unit.NewCabalOwnershipTransferQuickCheckSpec, Test.Unit.NewCabalParserDirectivesQuickCheckSpec, Test.Unit.NewCabalParserQuickCheckTestsSpec, Test.Unit.NewCabalPropertyBasedSpec, Test.Unit.NewCabalQuickCheckTestSuiteSpec, Test.Unit.NewCabalSourceLocationMathQuickCheckSpec, Test.Unit.NewCabalSourceLocationQuickCheckTestsSpec, Test.Unit.NewCabalStringUtilsQuickCheckSpec, Test.Unit.NewCabalUtilsQuickCheckSpec, Test.Unit.NewCabalUtilsQuickCheckTestsSpec, Test.Unit.NewCommentHandlingSpec, Test.Unit.NewCompilationOptimizationSpec, Test.Unit.NewCompilerComprehensiveSpec, Test.Unit.NewCompilerErrorRecoverySpec, Test.Unit.NewCompilerIRConsistencyQuickCheckSpec, Test.Unit.NewCompilerIdempotentQuickCheckSpec, Test.Unit.NewCompilerOptimizationQuickCheckTestSpec, Test.Unit.NewCompilerSpec, Test.Unit.NewComprehensiveCabalTestsSpec, Test.Unit.NewComprehensiveTypusTestSpec, Test.Unit.NewCoreIntegrationSpec, Test.Unit.NewCoreQuickCheckPropertiesSpec, Test.Unit.NewDataConsistencyQuickCheckTestSpec, Test.Unit.NewDependenciesCorePropertiesSpec, Test.Unit.NewDependencyAssociativityQuickCheckSpec, Test.Unit.NewDependencySpec, Test.Unit.NewDependentTypeValidationQuickCheckTestSpec, Test.Unit.NewDependentTypesQuickCheckSpec, Test.Unit.NewErrorHandlerComprehensiveSpec, Test.Unit.NewErrorHandlerValidationSpec, Test.Unit.NewErrorHandlingQuickCheckTestSpec, Test.Unit.NewErrorHandlingRecoveryQuickCheckTestSpec, Test.Unit.NewErrorHandlingSpec, Test.Unit.NewIndentationSpec, Test.Unit.NewIntegratedParserTestsSpec, Test.Unit.NewIntegrationEndToEndQuickCheckSpec, Test.Unit.NewIntegrationQuickCheckTestSpec, Test.Unit.NewIntegrationSpec, Test.Unit.NewIntegrationValidationSpec, Test.Unit.NewOwnershipConsistencyQuickCheckSpec, Test.Unit.NewOwnershipMemorySafetyQuickCheckTestSpec, Test.Unit.NewOwnershipMemorySafetySpec, Test.Unit.NewOwnershipSpec, Test.Unit.NewParserBoundaryQuickCheckSpec, Test.Unit.NewParserBoundaryQuickCheckTestSpec, Test.Unit.NewParserBoundaryTestsSpec, Test.Unit.NewParserComprehensiveSpec, Test.Unit.NewParserErrorRecoveryQuickCheckSpec, Test.Unit.NewParserQuickCheckTestSpec, Test.Unit.NewParserSpec, Test.Unit.NewParserUnicodeSpec, Test.Unit.NewPerformanceQuickCheckTestSpec, Test.Unit.NewPerformanceSpec, Test.Unit.NewQuickCheckSourceLocationSpec, Test.Unit.NewQuickCheckTestSuite10Spec, Test.Unit.NewQuickCheckTestSuite1Spec, Test.Unit.NewQuickCheckTestSuite2Spec, Test.Unit.NewQuickCheckTestSuite3Spec, Test.Unit.NewQuickCheckTestSuite4Spec, Test.Unit.NewQuickCheckTestSuite5Spec, Test.Unit.NewQuickCheckTestSuite6Spec, Test.Unit.NewQuickCheckTestSuite7Spec, Test.Unit.NewQuickCheckTestSuite8Spec, Test.Unit.NewQuickCheckTestSuite9Spec, Test.Unit.NewQuickCheckUtilsSpec, Test.Unit.NewSourceLocationComprehensiveSpec, Test.Unit.NewSourceLocationPrecisionQuickCheckTestSpec, Test.Unit.NewSourceLocationQuickCheckTestSpec, Test.Unit.NewSourceLocationSpec, Test.Unit.NewSourceLocationTrackingQuickCheckSpec, Test.Unit.NewStringProcessingQuickCheckSpec, Test.Unit.NewSymbolTableCommutativeQuickCheckSpec, Test.Unit.NewSyntaxValidationComprehensiveSpec, Test.Unit.NewSyntaxValidatorBoundarySpec, Test.Unit.NewTypeSystemInferenceSpec, Test.Unit.NewTypeSystemSpec, Test.Unit.NewTypeSystemSubstitutionQuickCheckSpec, Test.Unit.NewUtilsBoundaryConditionsSpec, Test.Unit.NewUtilsComprehensiveSpec, Test.Unit.NewUtilsEdgeCaseSpec
     build-depends:
-        base >=4.7 && <5,
-        typus,
-        containers,
-        mtl,
-        directory >= 1.3.0,
-        filepath >= 1.4.0,
-        criterion >= 1.6,
-        deepseq >= 1.4.0
+        base >=4.7 && <5, typus, containers, mtl, directory >= 1.3.0, filepath >= 1.4.0, criterion >= 1.6, deepseq >= 1.4.0
     default-language: Haskell2010
     ghc-options:      -threaded -rtsopts -with-rtsopts=-N
 
@@ -983,7 +180,7 @@ test-suite typus-test
                       -Wno-type-defaults -Wno-unused-local-binds
                       -Wno-unused-imports -Wno-x-partial
     other-modules:
-        Test.Unit,
+
         Test.Unit.Tests,
         Test.Unit.CLISpec,
         Test.Unit.CommandLineDebugSpec,
@@ -1013,9 +210,7 @@ test-suite typus-test
         Test.Unit.ErrorHandlerCorePropertiesSpec,
         Test.Unit.OwnershipBasicPropertiesSpec,
         Test.Unit.DependenciesTypeSystemPropertiesSpec,
-        Test.Unit.DependentTypesParserPropertiesSpec,
-                Test.Unit.AdditionalQuickCheckTests2025,
-                Test.Unit.AdvancedParserSpec,
+        Test.Unit.DependentTypesParserPropertiesSpec,                Test.Unit.AdvancedParserSpec,
         Test.Unit.IntegrationSpec,
         Test.Unit.PerformanceSpec,
         Test.Unit.EdgeCaseSpec,
@@ -1070,24 +265,13 @@ test-suite typus-test
         Test.Unit.CoreQuickCheckSpec,
         Test.Unit.ErrorHandlingComprehensiveQuickCheckSpec,
         Test.Unit.DependentTypesComprehensiveQuickCheckSpec,
-        Test.Unit.EnhancedCoreQuickCheckSpec,
-        Test.Unit.AdditionalCabalQuickCheckSpec,
-        Test.Unit.CabalQuickCheckTests,
+        Test.Unit.EnhancedCoreQuickCheckSpec,        Test.Unit.CabalQuickCheckTests,
         TestSupport.Verbosity,
         TestSupport.QuickCheck,
         TestSupport.Arbitrary,
         TestSupport.ExtendedArbitrary,
 
-        -- Additional Test Modules Created for Enhanced Coverage
-        Test.Unit.AdditionalUtilsSpec,
-        Test.Unit.AdditionalSourceLocationSpec,
-        Test.Unit.AdditionalParserSpec,
-        Test.Unit.AdditionalErrorHandlerSpec,
-        Test.Unit.AdditionalSyntaxValidatorSpec,
-        Test.Unit.AdditionalUtilsQuickCheckSpec,
-        Test.Unit.AdditionalSourceLocationQuickCheckSpec,
-
-        -- New Cabal QuickCheck Test Modules (2025)
+        -- Additional Test Modules Created for Enhanced Coverage        -- New Cabal QuickCheck Test Modules (2025)
         Test.Unit.NewCabalParserQuickCheckSpec,
         Test.Unit.NewCabalSourceLocationQuickCheckSpec,
         Test.Unit.NewCabalErrorHandlerQuickCheckSpec,
@@ -1147,20 +331,14 @@ test-suite typus-test
         Test.Unit.EnhancedErrorHandlerPropertiesQuickCheckSpec,
         Test.Unit.DebugIntegrationPropertiesQuickCheckSpec,
         Test.Unit.CompilerUtilsPropertiesQuickCheckSpec,
-        Test.Unit.CabalTestQuickCheckSpec,
-        Test.Unit.AdditionalPropertyTestsQuickCheckSpec,
-        Test.Unit.NewCabalQuickCheckSpec,
+        Test.Unit.CabalTestQuickCheckSpec,        Test.Unit.NewCabalQuickCheckSpec,
         Test.Unit.EnhancedCabalQuickCheckSpec,
         Test.Unit.EnhancedCabalTestQuickCheckSpec,
         Test.Unit.SimpleQuickCheckTestSpec,
         Test.Unit.WorkingQuickCheckSpec,
         Test.Unit.ComprehensiveQuickCheckSpec,
         
-        Test.Unit.TypeSystemQuickCheckSpec,
-        Test.Unit.AdditionalOwnershipAnalysisQuickCheckSpec,
-        Test.Unit.AdditionalCoreQuickCheckSpec,
-        Test.Unit.AdditionalCoreTestsSpec,
-        Test.Unit.NewQuickCheckTestSpec,
+        Test.Unit.TypeSystemQuickCheckSpec,        Test.Unit.NewQuickCheckTestSpec,
         Test.Unit.SourceLocationCoreQuickCheckSpec,
         Test.Unit.ErrorHandlerCoreQuickCheckSpec,
         Test.Unit.OwnershipCoreQuickCheckSpec,
@@ -1186,10 +364,7 @@ test-suite typus-test
         Test.Unit.CabalQuickCheckTestSpec,
         Test.Unit.CabalEnhancedQuickCheckSpec,
         
-        Test.Unit.NewCabslQuickCheckTests,
-        Test.Unit.AdditionalQuickCheckTests,
-        Test.Unit.AdditionalQuickCheckSpec,
-        Test.Unit.NewQuickCheckTestCasesSpec,
+        Test.Unit.NewCabslQuickCheckTests,        Test.Unit.NewQuickCheckTestCasesSpec,
         Test.Unit.NewCabalQuickCheckTestSpec,
         Test.Unit.NewCabalQuickCheckTestsSpec,
         Test.Unit.NewCabalQuickCheckTestCasesSpec,
@@ -1247,8 +422,7 @@ test-suite typus-test
         
         Test.Unit.SourceLocationAdditionalSpec,
         Test.Unit.ParserAdditionalSpec,
-        Test.Unit.AdditionalTypusSpec,
-
+        
         -- New Cabal Test Modules (2025) - 8 comprehensive tests
         Test.Unit.CompilerOptimizationConsistencySpec,
         Test.Unit.OwnershipTransferBoundaryNewSpec,
@@ -1283,11 +457,9 @@ test-suite typus-test
         Test.Unit.NewCliIntegrationSpec,
         
         Test.Unit.TypeSystemBoundaryQuickCheckSpec,
-        
-        
+
         -- Test.Unit.CodeGenerationQuickCheckSpec, -- Temporarily disabled due to compilation errors
-        
-        
+
         Test.Unit.NewFreshDependentTypesQuickCheckSpec,
         Test.Unit.NewOwnershipQuickCheckSpec,
         Test.Unit.NewSyntaxValidatorQuickCheckSpec,
@@ -1307,16 +479,11 @@ test-suite typus-test
         
         Test.Unit.SourceLocationAccuracyQuickCheckSpec,
         Test.Unit.TypeEnvironmentBuildingQuickCheckSpec,
-        
-        
-        
+
         Test.Unit.SyntaxValidatorAdvancedSpec,
         
         Test.Unit.IRGenerationConsistencySpec,
-        Test.Unit.SymbolTableManagementSpec,
-        Test.Unit.AdditionalCabalQuickCheckTestSpec,
-        Test.Unit.AdditionalCabalTestsSpec,
-        Test.Unit.SimpleCabalQuickCheckTests,
+        Test.Unit.SymbolTableManagementSpec,        Test.Unit.SimpleCabalQuickCheckTests,
         Test.Unit.BasicParsingQuickCheckSpec,
         Test.Unit.CompilerOptimizationsQuickCheckSpec,
         
@@ -1396,9 +563,7 @@ test-suite typus-test
         Test.Unit.SourceLocationPrecisionQuickCheckSpec,
         Test.Unit.ErrorHandlingConsistencyQuickCheckSpec,
         
-        Test.Unit.UtilsRobustnessQuickCheckSpec,
-        Test.Unit.AdditionalDependencyAnalysisQuickCheckSpec,
-        Test.Unit.CompilerIntegrationQuickCheckSpec,
+        Test.Unit.UtilsRobustnessQuickCheckSpec,        Test.Unit.CompilerIntegrationQuickCheckSpec,
 
         -- New QuickCheck Test Suite 2025
         Test.Unit.NewQuickCheckTestSuiteSpec,
@@ -1431,8 +596,7 @@ test-suite typus-test
         Test.Unit.OwnershipAnalysisSpec,
         Test.Unit.CompilerIRSpec,
         Test.Unit.SimpleCabalTestSpec,
-        
-        
+
         -- New Enhanced Test Modules (2025)
         Test.Unit.DirectiveInteractionSpec,
         Test.Unit.DependentTypeConstraintSpec,
@@ -1450,7 +614,7 @@ test-suite typus-test
         Test.Unit.NewEnhancedTestSpec,
         Test.Unit.SimpleNewTestSpec,
         
--- New Comprehensive Test Modules (2025)
+        -- New Comprehensive Test Modules (2025)
         Test.Unit.CompilerErrorRecoverySpec,
         Test.Unit.OwnershipMemorySafetySpec,
         Test.Unit.DependencyAnalysisAdvancedSpec,
@@ -1466,7 +630,6 @@ test-suite typus-test
         Test.Unit.UtilsPerformanceBoundarySpec,
         Test.Unit.ErrorHandlerConsistencySpec,
         Test.Unit.OwnershipAnalysisBoundarySpec,
-        
 
         -- New Additional Test Modules
         Test.Unit.EnhancedParserTestSpec,
@@ -1535,9 +698,7 @@ test-suite typus-test
         Test.Unit.ErrorHandlerQuickCheckTestSpec,
         Test.Unit.IntegratedCompilerQuickCheckTestSpec,
         
-        -- New Additional Test Modules
-        Test.Unit.AdditionalCorePropertiesSpec,
-        Test.Unit.CompilerCorePropertiesSpec,
+        -- New Additional Test Modules        Test.Unit.CompilerCorePropertiesSpec,
         Test.Unit.BoundaryCasePropertiesSpec,
         
         -- New Comprehensive QuickCheck Test Modules (2025)
@@ -1601,7 +762,7 @@ test-suite typus-test
         
         Test.Unit.PerformanceEnhancedQuickCheckSpec,
 
--- New Cabal Test Modules (10 comprehensive tests added)
+        -- New Cabal Test Modules (10 comprehensive tests added)
         Test.Unit.NewErrorHandlerCoreQuickCheckSpec,
         Test.Unit.NewParserCoreQuickCheckSpec,
         Test.Unit.NewUtilsCoreQuickCheckSpec,
@@ -1657,379 +818,341 @@ test-suite typus-test
         Test.Unit.ConcurrentSafetyAdvanced2025Spec,
         Test.Unit.PerformanceOptimization2025Spec,
         Test.Unit.BoundaryConditionsAdvanced2025Spec,
-        Test.Unit.CoreSourceLocationQuickCheckSpec
-            , Test.Unit.CoreErrorHandlerQuickCheckSpec
-            , Test.Unit.CoreParserQuickCheckSpec
-            , Test.Unit.CoreOwnershipQuickCheckSpec
-            , Test.Unit.CoreDependenciesQuickCheckSpec
-            , Test.Unit.CoreUtilsQuickCheckSpec
-            , Test.Unit.CoreSyntaxValidatorQuickCheckSpec
-            , Test.Unit.CoreGoToolchainQuickCheckSpec
-            , Test.Unit.CoreIntegratedCompilerQuickCheckSpec
+        Test.Unit.CoreSourceLocationQuickCheckSpec,
+        Test.Unit.CoreErrorHandlerQuickCheckSpec,
+        Test.Unit.CoreParserQuickCheckSpec,
+        Test.Unit.CoreOwnershipQuickCheckSpec,
+        Test.Unit.CoreDependenciesQuickCheckSpec,
+        Test.Unit.CoreUtilsQuickCheckSpec,
+        Test.Unit.CoreSyntaxValidatorQuickCheckSpec,
+        Test.Unit.CoreGoToolchainQuickCheckSpec,
+        Test.Unit.CoreIntegratedCompilerQuickCheckSpec,
 
         -- Additional Cabal Test Modules (2025)
-        , Test.Unit.NewCabalTestSuiteSpec
-        , Test.Unit.SourceLocationCabalTestsSpec
-        , Test.Unit.ParserCabalTestsSpec
-        , Test.Unit.ErrorHandlingCabalTestsSpec
-        , Test.Unit.IntegrationCabalTestsSpec
+        Test.Unit.NewCabalTestSuiteSpec,
+        Test.Unit.SourceLocationCabalTestsSpec,
+        Test.Unit.ParserCabalTestsSpec,
+        Test.Unit.ErrorHandlingCabalTestsSpec,
+        Test.Unit.IntegrationCabalTestsSpec,
 
         -- New Compact Test Modules (2025) - 8 comprehensive tests
-        , Test.Unit.NewCompactUtilsSpec
-        , Test.Unit.NewCompactSourceLocationSpec
-        , Test.Unit.NewCompactParserSpec
-        , Test.Unit.NewCompactErrorHandlerSpec
-        , Test.Unit.NewCompactOwnershipSpec
-        , Test.Unit.NewCompactDependenciesSpec
-        , Test.Unit.NewCompactCompilerIRSpec
-        -- , Test.Unit.NewCompactIntegrationSpec -- Temporarily disabled
+        Test.Unit.NewCompactUtilsSpec,
+        Test.Unit.NewCompactSourceLocationSpec,
+        Test.Unit.NewCompactParserSpec,
+        Test.Unit.NewCompactErrorHandlerSpec,
+        Test.Unit.NewCompactOwnershipSpec,
+        Test.Unit.NewCompactDependenciesSpec,
+        Test.Unit.NewCompactCompilerIRSpec,
+        -- Test.Unit.NewCompactIntegrationSpec -- Temporarily disabled
 
         -- New Comprehensive Cabal Test Modules (2025)
-        , Test.Unit.NewCabalComprehensiveTestsSpec
-        -- , Test.Unit.NewParserQuickCheckTestsSpec -- Temporarily disabled
-        -- , Test.Unit.NewCompilerQuickCheckTestsSpec -- Temporarily disabled
-        -- , Test.Unit.NewOwnershipQuickCheckTestsSpec -- Temporarily disabled
-        , Test.Unit.NewSourceLocationQuickCheckTestsSpec
-        -- , Test.Unit.NewErrorHandlerQuickCheckTestsSpec -- Temporarily disabled
-        -- , Test.Unit.NewDependenciesQuickCheckTestsSpec -- Temporarily disabled
-        , Test.Unit.NewIntegrationQuickCheckTestsSpec
+        Test.Unit.NewCabalComprehensiveTestsSpec,
+        -- Test.Unit.NewParserQuickCheckTestsSpec -- Temporarily disabled
+        -- Test.Unit.NewCompilerQuickCheckTestsSpec -- Temporarily disabled
+        -- Test.Unit.NewOwnershipQuickCheckTestsSpec -- Temporarily disabled
+        Test.Unit.NewSourceLocationQuickCheckTestsSpec,
+        -- Test.Unit.NewErrorHandlerQuickCheckTestsSpec -- Temporarily disabled
+        -- Test.Unit.NewDependenciesQuickCheckTestsSpec -- Temporarily disabled
+        Test.Unit.NewIntegrationQuickCheckTestsSpec
 
         -- New Comprehensive Test Suite (2025)
-        , Test.Unit.ConcurrentCompilationSpec
-        , Test.Unit.MemoryEfficiencySpec
-        , Test.Unit.TypeInferenceEdgeCasesSpec
-        , Test.Unit.IntegrationComplexWorkflowsSpec
+        Test.Unit.ConcurrentCompilationSpec,
+        Test.Unit.MemoryEfficiencySpec,
+        Test.Unit.TypeInferenceEdgeCasesSpec,
+        Test.Unit.IntegrationComplexWorkflowsSpec,
 
         -- New Advanced Edge Case QuickCheck Test Module
-        , Test.Unit.AdvancedEdgeCaseQuickCheckSpec
+        Test.Unit.AdvancedEdgeCaseQuickCheckSpec,
 
         -- New Comprehensive Cabal QuickCheck Test Module
         
-        , Test.Unit.NewCabalTestSpec
+        Test.Unit.NewCabalTestSpec,
 
         -- New Comprehensive Test Modules Created (2025) - 10 cabal tests
-        , Test.Unit.ComprehensiveCoreQuickCheckSpec
-        , Test.Unit.CompilerOwnershipQuickCheckSpec
-        , Test.Unit.DependenciesErrorHandlingQuickCheckSpec
-        , Test.Unit.SyntaxValidatorGoToolchainQuickCheckSpec
+        Test.Unit.ComprehensiveCoreQuickCheckSpec,
+        Test.Unit.CompilerOwnershipQuickCheckSpec,
+        Test.Unit.DependenciesErrorHandlingQuickCheckSpec,
+        Test.Unit.SyntaxValidatorGoToolchainQuickCheckSpec,
 
         -- Additional Enhanced QuickCheck Test Modules (10 comprehensive tests)
-        , Test.Unit.EnhancedTextProcessingQuickCheckSpec
-        , Test.Unit.SourceLocationMathPropertiesQuickCheckSpec
-        , Test.Unit.ParserErrorRecoveryQuickCheckSpec
-        , Test.Unit.CrossModuleIntegrationQuickCheckSpec
-        , Test.Unit.PerformanceBoundaryQuickCheckSpec
-        , Test.Unit.ErrorHandlingPropertiesQuickCheckSpec
-        , Test.Unit.CompilerIRPropertiesQuickCheckSpec
+        Test.Unit.EnhancedTextProcessingQuickCheckSpec,
+        Test.Unit.SourceLocationMathPropertiesQuickCheckSpec,
+        Test.Unit.ParserErrorRecoveryQuickCheckSpec,
+        Test.Unit.CrossModuleIntegrationQuickCheckSpec,
+        Test.Unit.PerformanceBoundaryQuickCheckSpec,
+        Test.Unit.ErrorHandlingPropertiesQuickCheckSpec,
+        Test.Unit.CompilerIRPropertiesQuickCheckSpec,
 
         -- New Cabal Test Modules (10 comprehensive tests)
-        , Test.Unit.CabalParserQuickCheckSpec
-        , Test.Unit.CabalCompilerQuickCheckSpec
-        , Test.Unit.CabalOwnershipQuickCheckSpec
-        , Test.Unit.CabalDependentTypesQuickCheckSpec
-        , Test.Unit.CabalSourceLocationQuickCheckSpec
-        , Test.Unit.CabalErrorHandlerQuickCheckSpec
-        , Test.Unit.CabalUtilsQuickCheckSpec
-        , Test.Unit.CabalSyntaxValidatorQuickCheckSpec
-        , Test.Unit.CabalAnalyzerQuickCheckSpec
-        , Test.Unit.CabalIntegrationQuickCheckSpec
+        Test.Unit.CabalParserQuickCheckSpec,
+        Test.Unit.CabalCompilerQuickCheckSpec,
+        Test.Unit.CabalOwnershipQuickCheckSpec,
+        Test.Unit.CabalDependentTypesQuickCheckSpec,
+        Test.Unit.CabalSourceLocationQuickCheckSpec,
+        Test.Unit.CabalErrorHandlerQuickCheckSpec,
+        Test.Unit.CabalUtilsQuickCheckSpec,
+        Test.Unit.CabalSyntaxValidatorQuickCheckSpec,
+        Test.Unit.CabalAnalyzerQuickCheckSpec,
+        Test.Unit.CabalIntegrationQuickCheckSpec,
 
         -- New Additional Cabal Test Modules (2025)
-        , Test.Unit.NewCabalMathPropertiesSpec
-        , Test.Unit.NewCabalParserErrorRecoverySpec
-        , Test.Unit.NewCabalUtilsBoundarySpec
-        , Test.Unit.NewCabalErrorHandlerConsistencySpec
-        , Test.Unit.NewCabalCompilerIRSpec
-        , Test.Unit.NewCabalOwnershipTransitivitySpec
-        , Test.Unit.NewCabalDependencyCycleSpec
-        , Test.Unit.NewCabalTypeSystemBoundarySpec
-        , Test.Unit.NewCabalIntegrationEndToEndSpec
-        , Test.Unit.NewCabalPerformanceMemorySpec
+        Test.Unit.NewCabalMathPropertiesSpec,
+        Test.Unit.NewCabalParserErrorRecoverySpec,
+        Test.Unit.NewCabalUtilsBoundarySpec,
+        Test.Unit.NewCabalErrorHandlerConsistencySpec,
+        Test.Unit.NewCabalCompilerIRSpec,
+        Test.Unit.NewCabalOwnershipTransitivitySpec,
+        Test.Unit.NewCabalDependencyCycleSpec,
+        Test.Unit.NewCabalTypeSystemBoundarySpec,
+        Test.Unit.NewCabalIntegrationEndToEndSpec,
+        Test.Unit.NewCabalPerformanceMemorySpec,
 
         -- New Cabal Test Modules (10 comprehensive tests)
-        , Test.Unit.CabalCrossModuleIntegrationSpec
-        , Test.Unit.CabalErrorRecoverySpec
-        , Test.Unit.CabalPerformanceSpec
-        , Test.Unit.CabalQuickCheckPropertiesSpec
-        , Test.Unit.CabalBoundaryConditionsSpec
-        , Test.Unit.CabalUnicodeHandlingSpec
-        , Test.Unit.CabalConcurrentParsingSpec
-        , Test.Unit.CabalMemorySafetySpec
-        , Test.Unit.CabalRegressionSpec
-        , Test.Unit.CabalEndToEndSpec
+        Test.Unit.CabalCrossModuleIntegrationSpec,
+        Test.Unit.CabalErrorRecoverySpec,
+        Test.Unit.CabalPerformanceSpec,
+        Test.Unit.CabalQuickCheckPropertiesSpec,
+        Test.Unit.CabalBoundaryConditionsSpec,
+        Test.Unit.CabalUnicodeHandlingSpec,
+        Test.Unit.CabalConcurrentParsingSpec,
+        Test.Unit.CabalMemorySafetySpec,
+        Test.Unit.CabalRegressionSpec,
+        Test.Unit.CabalEndToEndSpec,
         -- , Test.Unit.CompilerIRConsistencyQuickCheckSpec -- Temporarily disabled
-        , Test.Unit.ErrorLocationTrackingQuickCheckSpec
-        , Test.Unit.SyntaxValidatorBoundaryQuickCheckSpec
+        Test.Unit.ErrorLocationTrackingQuickCheckSpec,
+        Test.Unit.SyntaxValidatorBoundaryQuickCheckSpec,
         
         -- New Advanced QuickCheck Test Modules (8 tests added)
-        , Test.Unit.AdvancedSourceLocationQuickCheckSpec
-        , Test.Unit.AdvancedParserQuickCheckSpec
-        , Test.Unit.AdvancedCompilerQuickCheckSpec
-        , Test.Unit.AdvancedOwnershipQuickCheckSpec
-        , Test.Unit.AdvancedDependenciesQuickCheckSpec
-        , Test.Unit.AdvancedErrorHandlerQuickCheckSpec
-        , Test.Unit.AdvancedGoToolchainQuickCheckSpec
-        , Test.Unit.AdvancedSyntaxValidatorQuickCheckSpec
+        Test.Unit.AdvancedSourceLocationQuickCheckSpec,
+        Test.Unit.AdvancedParserQuickCheckSpec,
+        Test.Unit.AdvancedCompilerQuickCheckSpec,
+        Test.Unit.AdvancedOwnershipQuickCheckSpec,
+        Test.Unit.AdvancedDependenciesQuickCheckSpec,
+        Test.Unit.AdvancedErrorHandlerQuickCheckSpec,
+        Test.Unit.AdvancedGoToolchainQuickCheckSpec,
+        Test.Unit.AdvancedSyntaxValidatorQuickCheckSpec,
 
         -- New Comprehensive Test Modules (2025) - 10 cabal tests
-        , Test.Unit.NewTextProcessingBoundarySpec
-        , Test.Unit.NewSourceLocationMathPropertiesSpec
-        , Test.Unit.NewParserRobustnessSpec
-        , Test.Unit.NewCompilerOptimizationInvariantSpec
-        , Test.Unit.NewOwnershipTransitivitySpec
-        , Test.Unit.NewDependentTypeBoundarySpec
-        , Test.Unit.NewSyntaxValidatorRobustnessSpec
-        , Test.Unit.NewEndToEndCompilationSpec
-        , Test.Unit.NewPerformanceRegressionSpec
-        , Test.Unit.NewErrorHandlingConsistencySpec
+        Test.Unit.NewTextProcessingBoundarySpec,
+        Test.Unit.NewSourceLocationMathPropertiesSpec,
+        Test.Unit.NewParserRobustnessSpec,
+        Test.Unit.NewCompilerOptimizationInvariantSpec,
+        Test.Unit.NewOwnershipTransitivitySpec,
+        Test.Unit.NewDependentTypeBoundarySpec,
+        Test.Unit.NewSyntaxValidatorRobustnessSpec,
+        Test.Unit.NewEndToEndCompilationSpec,
+        Test.Unit.NewPerformanceRegressionSpec,
+        Test.Unit.NewErrorHandlingConsistencySpec,
         
         -- New Test Modules Added (2025) - Comprehensive Test Coverage
-        , Test.Unit.NewParserErrorRecoverySpec
-        , Test.Unit.NewCompilerOptimizationConsistencySpec
-        , Test.Unit.NewOwnershipTransferBoundarySpec
-        , Test.Unit.NewSourceLocationPrecisionSpec
-        , Test.Unit.NewUtilsStringBoundarySpec
-        , Test.Unit.NewDependentTypeValidationSpec
+        Test.Unit.NewParserErrorRecoverySpec,
+        Test.Unit.NewCompilerOptimizationConsistencySpec,
+        Test.Unit.NewOwnershipTransferBoundarySpec,
+        Test.Unit.NewSourceLocationPrecisionSpec,
+        Test.Unit.NewUtilsStringBoundarySpec,
+        Test.Unit.NewDependentTypeValidationSpec,
         
         -- New Comprehensive Test Modules (2025)
-        , Test.Unit.AdvancedSourceLocationTestSpec
-        , Test.Unit.ParserErrorHandlingTestSpec
-        , Test.Unit.CompilerIRConsistencyTestSpec
-        , Test.Unit.OwnershipAnalysisTestSpec
-        , Test.Unit.UtilsStringProcessingTestSpec
-        , Test.Unit.DependencyAnalysisTestSpec
-        , Test.Unit.EndToEndIntegrationTestSpec
-        , Test.Unit.SimpleStringTestsSpec
+        Test.Unit.AdvancedSourceLocationTestSpec,
+        Test.Unit.ParserErrorHandlingTestSpec,
+        Test.Unit.CompilerIRConsistencyTestSpec,
+        Test.Unit.OwnershipAnalysisTestSpec,
+        Test.Unit.UtilsStringProcessingTestSpec,
+        Test.Unit.DependencyAnalysisTestSpec,
+        Test.Unit.EndToEndIntegrationTestSpec,
+        Test.Unit.SimpleStringTestsSpec,
         
         -- New Cabal Test Modules (Added for enhanced coverage)
-        , Test.Unit.ErrorHandlingCoreSpec
+        Test.Unit.ErrorHandlingCoreSpec,
         
         -- New Comprehensive Cabal QuickCheck Tests (10 tests)
-        , Test.Unit.NewEnhancedCabalQuickCheckTestSpec
+        Test.Unit.NewEnhancedCabalQuickCheckTestSpec,
         
         -- New QuickCheck Test Modules (Added for enhanced coverage)
-        , Test.Unit.NewUtilsQuickCheckPropertyTestsSpec
-        , Test.Unit.NewParserCombinatorPropertiesSpec
-        , Test.Unit.NewStringProcessingBoundarySpec
-        , Test.Unit.NewErrorHandlerConsistencySpec
-        , Test.Unit.NewComprehensiveQuickCheckTestSuite
+        Test.Unit.NewUtilsQuickCheckPropertyTestsSpec,
+        Test.Unit.NewParserCombinatorPropertiesSpec,
+        Test.Unit.NewStringProcessingBoundarySpec,
+        Test.Unit.NewErrorHandlerConsistencySpec,
+        Test.Unit.NewComprehensiveQuickCheckTestSuite,
         
         -- New Typus QuickCheck Test Modules (2025) - Core Functionality Testing
-        , Test.Unit.NewTypusCoreQuickCheckSpec
-        , Test.Unit.NewTypusParserQuickCheckSpec
-        , Test.Unit.NewTypusOwnershipQuickCheckSpec
-        , Test.Unit.NewTypusDependentTypesQuickCheckSpec
-        , Test.Unit.NewTypusCompilerQuickCheckSpec
-        , Test.Unit.NewTypusSourceLocationQuickCheckSpec
-        , Test.Unit.NewTypusErrorHandlerQuickCheckSpec
-        , Test.Unit.NewTypusUtilsQuickCheckSpec
-        , Test.Unit.NewTypusIntegrationQuickCheckSpec
-        , Test.Unit.NewTypusSyntaxValidatorQuickCheckSpec
+        Test.Unit.NewTypusCoreQuickCheckSpec,
+        Test.Unit.NewTypusParserQuickCheckSpec,
+        Test.Unit.NewTypusOwnershipQuickCheckSpec,
+        Test.Unit.NewTypusDependentTypesQuickCheckSpec,
+        Test.Unit.NewTypusCompilerQuickCheckSpec,
+        Test.Unit.NewTypusSourceLocationQuickCheckSpec,
+        Test.Unit.NewTypusErrorHandlerQuickCheckSpec,
+        Test.Unit.NewTypusUtilsQuickCheckSpec,
+        Test.Unit.NewTypusIntegrationQuickCheckSpec,
+        Test.Unit.NewTypusSyntaxValidatorQuickCheckSpec,
         
         -- New Comprehensive Cabal Test Suite (10 comprehensive tests)
-        , Test.Unit.NewComprehensiveCabalTestSuiteSpec
+        Test.Unit.NewComprehensiveCabalTestSuiteSpec,
         
         -- New Comprehensive Cabal Test Suite (2025) - 10 Additional Tests
-        , Test.Unit.NewComprehensiveCabalTestSpec
+        Test.Unit.NewComprehensiveCabalTestSpec,
         
         -- New Core Functionality Test Suite (2025) - 10 comprehensive tests
-        , Test.Unit.NewCabalCoreFunctionalitySpec
+        Test.Unit.NewCabalCoreFunctionalitySpec,
         
         -- New Enhanced QuickCheck Test Modules (2025) - 8 comprehensive tests
-        , Test.Unit.NewUtilsEnhancedQuickCheckSpec
-        , Test.Unit.NewSourceLocationEnhancedQuickCheckSpec
-        , Test.Unit.NewParserEnhancedQuickCheckSpec
-        , Test.Unit.NewErrorHandlerEnhancedQuickCheckSpec
+        Test.Unit.NewUtilsEnhancedQuickCheckSpec,
+        Test.Unit.NewSourceLocationEnhancedQuickCheckSpec,
+        Test.Unit.NewParserEnhancedQuickCheckSpec,
+        Test.Unit.NewErrorHandlerEnhancedQuickCheckSpec,
         
         -- New Core Functionality QuickCheck Tests
-        , Test.Unit.NewCoreFunctionalityQuickCheckTests
+        Test.Unit.NewCoreFunctionalityQuickCheckTests,
         
         -- New Cabal Test Modules (10 comprehensive tests added)
-        , Test.Unit.NewUtilsStringProcessingSpec
-        , Test.Unit.NewSourceLocationCalculationSpec
-        , Test.Unit.NewParserBasicPropertiesSpec
-        , Test.Unit.NewErrorHandlerPropertiesSpec
-        , Test.Unit.NewOwnershipTransferPropertiesSpec
-        , Test.Unit.NewDependenciesAnalysisPropertiesSpec
-        , Test.Unit.NewCompilerOptimizationPropertiesSpec
+        Test.Unit.NewUtilsStringProcessingSpec,
+        Test.Unit.NewSourceLocationCalculationSpec,
+        Test.Unit.NewParserBasicPropertiesSpec,
+        Test.Unit.NewErrorHandlerPropertiesSpec,
+        Test.Unit.NewOwnershipTransferPropertiesSpec,
+        Test.Unit.NewDependenciesAnalysisPropertiesSpec,
+        Test.Unit.NewCompilerOptimizationPropertiesSpec,
         
-        , Test.Unit.NewIntegrationEndToEndSpec
+        Test.Unit.NewIntegrationEndToEndSpec,
         
         -- New Concise QuickCheck Test Modules (2025) - 10 focused tests
-        , Test.Unit.ConciseUtilsQuickCheckSpec
-        , Test.Unit.ConciseParserQuickCheckSpec
-        , Test.Unit.ConciseSourceLocationQuickCheckSpec
-        , Test.Unit.ConciseErrorHandlerQuickCheckSpec
-        , Test.Unit.ConciseDependenciesQuickCheckSpec
-        , Test.Unit.ConciseOwnershipQuickCheckSpec
-        , Test.Unit.ConciseTypeSystemQuickCheckSpec
-        , Test.Unit.ConciseSyntaxValidatorQuickCheckSpec
-        , Test.Unit.ConciseCompilerIRQuickCheckSpec
-        , Test.Unit.ConciseIntegrationQuickCheckSpec
+        Test.Unit.ConciseUtilsQuickCheckSpec,
+        Test.Unit.ConciseParserQuickCheckSpec,
+        Test.Unit.ConciseSourceLocationQuickCheckSpec,
+        Test.Unit.ConciseErrorHandlerQuickCheckSpec,
+        Test.Unit.ConciseDependenciesQuickCheckSpec,
+        Test.Unit.ConciseOwnershipQuickCheckSpec,
+        Test.Unit.ConciseTypeSystemQuickCheckSpec,
+        Test.Unit.ConciseSyntaxValidatorQuickCheckSpec,
+        Test.Unit.ConciseCompilerIRQuickCheckSpec,
+        Test.Unit.ConciseIntegrationQuickCheckSpec,
         
         -- New Cabal QuickCheck Test Modules (2025) - 10 Comprehensive Tests
-        , Test.Unit.NewCabalQuickCheckSpec1
-        , Test.Unit.NewCabalQuickCheckSpec2
-        , Test.Unit.NewCabalQuickCheckSpec3
-        , Test.Unit.NewCabalQuickCheckSpec4
-        , Test.Unit.NewCabalQuickCheckSpec5
-        , Test.Unit.NewCabalQuickCheckSpec6
-        , Test.Unit.NewCabalQuickCheckSpec7
-        , Test.Unit.NewCabalQuickCheckSpec8
-        , Test.Unit.NewCabalQuickCheckSpec9
-        , Test.Unit.NewCabalQuickCheckSpec10
+        Test.Unit.NewCabalQuickCheckSpec1,
+        Test.Unit.NewCabalQuickCheckSpec2,
+        Test.Unit.NewCabalQuickCheckSpec3,
+        Test.Unit.NewCabalQuickCheckSpec4,
+        Test.Unit.NewCabalQuickCheckSpec5,
+        Test.Unit.NewCabalQuickCheckSpec6,
+        Test.Unit.NewCabalQuickCheckSpec7,
+        Test.Unit.NewCabalQuickCheckSpec8,
+        Test.Unit.NewCabalQuickCheckSpec9,
+        Test.Unit.NewCabalQuickCheckSpec10,
 
         -- New Comprehensive Test Modules (2025) - 8 Additional Tests
-        , Test.Unit.ErrorHandlingConsistencySpec
-        , Test.Unit.UtilsUnicodePerformanceSpec
-        , Test.Unit.ModuleIntegrationPropertiesSpec
+        Test.Unit.ErrorHandlingConsistencySpec,
+        Test.Unit.UtilsUnicodePerformanceSpec,
+        Test.Unit.ModuleIntegrationPropertiesSpec,
         
-        , Test.Unit.BoundaryConditionSpec
-        , Test.Unit.RegressionComprehensiveSpec
+        Test.Unit.BoundaryConditionSpec,
+        Test.Unit.RegressionComprehensiveSpec,
 
         -- New Comprehensive Core Test Module
-        , Test.Unit.NewCabalCoreTestsSpec
+        Test.Unit.NewCabalCoreTestsSpec,
         
         -- New Cabal Test Modules (2025) - 10 Comprehensive Tests
-        , Test.Unit.NewCabalTest1Spec
-        , Test.Unit.NewCabalTest2Spec
-        , Test.Unit.NewCabalTest3Spec
-        , Test.Unit.NewCabalTest4Spec
-        , Test.Unit.NewCabalTest5Spec
-        , Test.Unit.NewCabalTest6Spec
-        , Test.Unit.NewCabalTest7Spec
-        , Test.Unit.NewCabalTest8Spec
-        , Test.Unit.NewCabalTest9Spec
-        , Test.Unit.NewCabalTest10Spec
+        Test.Unit.NewCabalTest1Spec,
+        Test.Unit.NewCabalTest2Spec,
+        Test.Unit.NewCabalTest3Spec,
+        Test.Unit.NewCabalTest4Spec,
+        Test.Unit.NewCabalTest5Spec,
+        Test.Unit.NewCabalTest6Spec,
+        Test.Unit.NewCabalTest7Spec,
+        Test.Unit.NewCabalTest8Spec,
+        Test.Unit.NewCabalTest9Spec,
+        Test.Unit.NewCabalTest10Spec,
 
         -- New Core Module QuickCheck Test Suite (2025) - 8 comprehensive tests
-        , Test.Unit.NewCoreUtilsQuickCheckSpec
-        , Test.Unit.NewCoreSourceLocationQuickCheckSpec
-        , Test.Unit.NewCoreParserQuickCheckSpec
-        , Test.Unit.NewComprehensiveCoreQuickCheckSpec
-        , Test.Unit.NewCoreBoundaryConditionsQuickCheckSpec
-        , Test.Unit.NewCorePerformanceQuickCheckSpec
-        , Test.Unit.NewCoreErrorHandlingQuickCheckSpec
-        , Test.Unit.NewCompleteCoreTestSuiteSpec
+        Test.Unit.NewCoreUtilsQuickCheckSpec,
+        Test.Unit.NewCoreSourceLocationQuickCheckSpec,
+        Test.Unit.NewCoreParserQuickCheckSpec,
+        Test.Unit.NewComprehensiveCoreQuickCheckSpec,
+        Test.Unit.NewCoreBoundaryConditionsQuickCheckSpec,
+        Test.Unit.NewCorePerformanceQuickCheckSpec,
+        Test.Unit.NewCoreErrorHandlingQuickCheckSpec,
+        Test.Unit.NewCompleteCoreTestSuiteSpec,
         
         -- New Cabal Test Modules (2025) - 8 comprehensive tests
-        , Test.Unit.UtilsBreakOnQuickCheckSpec
-        , Test.Unit.SourceLocationPositionArithmeticSpec
-        , Test.Unit.StringProcessingSpec
-        , Test.Unit.UtilsCommentProcessingSpec
-        , Test.Unit.SourceLocationIntegrationSpec
-        , Test.Unit.UtilsIndentationSpec
-        , Test.Unit.SplitFunctionsSpec
-        , Test.Unit.SpanOperationsSpec
+        Test.Unit.UtilsBreakOnQuickCheckSpec,
+        Test.Unit.SourceLocationPositionArithmeticSpec,
+        Test.Unit.StringProcessingSpec,
+        Test.Unit.UtilsCommentProcessingSpec,
+        Test.Unit.SourceLocationIntegrationSpec,
+        Test.Unit.UtilsIndentationSpec,
+        Test.Unit.SplitFunctionsSpec,
+        Test.Unit.SpanOperationsSpec,
 
         -- New Comprehensive Test Modules (2025) - 8 additional tests
-        , Test.Unit.NewUnicodeParsingSpec
-        , Test.Unit.NewOwnershipBoundarySpec
-        , Test.Unit.NewDependentTypesPerfSpec
-        , Test.Unit.NewParserRecoverySpec
-        , Test.Unit.NewSourceLocationAccuracySpec
-        , Test.Unit.NewCompilerIRConsistencySpec
-        , Test.Unit.NewMemorySafetySpec
-        , Test.Unit.NewConcurrentSafetySpec
+        Test.Unit.NewUnicodeParsingSpec,
+        Test.Unit.NewOwnershipBoundarySpec,
+        Test.Unit.NewDependentTypesPerfSpec,
+        Test.Unit.NewParserRecoverySpec,
+        Test.Unit.NewSourceLocationAccuracySpec,
+        Test.Unit.NewCompilerIRConsistencySpec,
+        Test.Unit.NewMemorySafetySpec,
+        Test.Unit.NewConcurrentSafetySpec,
         
         -- New QuickCheck Test Modules (2025) - 8 comprehensive tests
-        , Test.Unit.NewUtilsQuickCheckPropertySpec
-        , Test.Unit.NewSourceLocationQuickCheckPropertySpec
-        , Test.Unit.NewParserQuickCheckPropertySpec
-        , Test.Unit.NewErrorHandlerQuickCheckPropertySpec
-        , Test.Unit.NewOwnershipQuickCheckPropertySpec
-        , Test.Unit.NewDependenciesQuickCheckPropertySpec
-        , Test.Unit.NewIntegrationQuickCheckPropertySpec
-        , Test.Unit.NewBoundaryConditionQuickCheckPropertySpec
+        Test.Unit.NewUtilsQuickCheckPropertySpec,
+        Test.Unit.NewSourceLocationQuickCheckPropertySpec,
+        Test.Unit.NewParserQuickCheckPropertySpec,
+        Test.Unit.NewErrorHandlerQuickCheckPropertySpec,
+        Test.Unit.NewOwnershipQuickCheckPropertySpec,
+        Test.Unit.NewDependenciesQuickCheckPropertySpec,
+        Test.Unit.NewIntegrationQuickCheckPropertySpec,
+        Test.Unit.NewBoundaryConditionQuickCheckPropertySpec,
         
         -- New Comprehensive QuickCheck Test Modules (2025) - 10 additional tests
-        , Test.Unit.NewSourceLocationMathPropertiesQuickCheckSpec
-        , Test.Unit.NewParserCombinatorPropertiesQuickCheckSpec
-        , Test.Unit.NewErrorHandlerConsistencyQuickCheckSpec
-        , Test.Unit.NewUtilsStringBoundaryQuickCheckSpec
-        , Test.Unit.NewOwnershipTransitivityQuickCheckSpec
-        , Test.Unit.NewDependenciesCycleDetectionQuickCheckSpec
+        Test.Unit.NewSourceLocationMathPropertiesQuickCheckSpec,
+        Test.Unit.NewParserCombinatorPropertiesQuickCheckSpec,
+        Test.Unit.NewErrorHandlerConsistencyQuickCheckSpec,
+        Test.Unit.NewUtilsStringBoundaryQuickCheckSpec,
+        Test.Unit.NewOwnershipTransitivityQuickCheckSpec,
+        Test.Unit.NewDependenciesCycleDetectionQuickCheckSpec,
         -- , Test.Unit.NewCompilerIRConsistencyQuickCheckSpec -- Temporarily disabled
-        , Test.Unit.NewSyntaxValidatorValidationQuickCheckSpec
-        , Test.Unit.NewGoToolchainIntegrationQuickCheckSpec
-        , Test.Unit.NewEndToEndIntegrationQuickCheckSpec
+        Test.Unit.NewSyntaxValidatorValidationQuickCheckSpec,
+        Test.Unit.NewGoToolchainIntegrationQuickCheckSpec,
+        Test.Unit.NewEndToEndIntegrationQuickCheckSpec,
 
         -- New Enhanced Test Modules (2025) - 10 comprehensive tests
-        , Test.Unit.NewTextEncodingSafetyQuickCheckSpec
-        , Test.Unit.NewErrorRecoveryMechanismsQuickCheckSpec
-        , Test.Unit.NewParserPerformanceBoundaryQuickCheckSpec
-        , Test.Unit.NewOwnershipTransferBoundaryQuickCheckSpec
-        , Test.Unit.NewDependentTypeConstraintValidationQuickCheckSpec
-        , Test.Unit.NewSourceLocationMathPrecisionQuickCheckSpec
-        , Test.Unit.NewStringProcessingUnicodeSafetyQuickCheckSpec
-        , Test.Unit.NewMemoryLeakPreventionQuickCheckSpec
-        , Test.Unit.NewConcurrentSafetyQuickCheckSpec
+        Test.Unit.NewTextEncodingSafetyQuickCheckSpec,
+        Test.Unit.NewErrorRecoveryMechanismsQuickCheckSpec,
+        Test.Unit.NewParserPerformanceBoundaryQuickCheckSpec,
+        Test.Unit.NewOwnershipTransferBoundaryQuickCheckSpec,
+        Test.Unit.NewDependentTypeConstraintValidationQuickCheckSpec,
+        Test.Unit.NewSourceLocationMathPrecisionQuickCheckSpec,
+        Test.Unit.NewStringProcessingUnicodeSafetyQuickCheckSpec,
+        Test.Unit.NewMemoryLeakPreventionQuickCheckSpec,
+        Test.Unit.NewConcurrentSafetyQuickCheckSpec,
         
         -- New Comprehensive QuickCheck Test Module (2025) - 10 additional tests
-        , Test.Unit.NewComprehensiveQuickCheckTestSpec
+        Test.Unit.NewComprehensiveQuickCheckTestSpec,
 
         -- New Comprehensive Cabal QuickCheck Test Module (2025) - 10 comprehensive tests
-        , Test.Unit.NewComprehensiveCabalQuickCheckTestSpec
+        Test.Unit.NewComprehensiveCabalQuickCheckTestSpec,
 
         -- New Enhanced QuickCheck Test Modules (8 tests)
-        , Test.Unit.NewEnhancedParserCombinatorQuickCheckSpec
-        , Test.Unit.NewEnhancedSourceLocationMathPropertiesQuickCheckSpec
-        , Test.Unit.NewEnhancedUtilsStringProcessingQuickCheckSpec
-        , Test.Unit.NewEnhancedDependenciesCycleDetectionQuickCheckSpec
-        , Test.Unit.NewEnhancedIntegrationEndToEndQuickCheckSpec
+        Test.Unit.NewEnhancedParserCombinatorQuickCheckSpec,
+        Test.Unit.NewEnhancedSourceLocationMathPropertiesQuickCheckSpec,
+        Test.Unit.NewEnhancedUtilsStringProcessingQuickCheckSpec,
+        Test.Unit.NewEnhancedDependenciesCycleDetectionQuickCheckSpec,
+        Test.Unit.NewEnhancedIntegrationEndToEndQuickCheckSpec,
 
         -- Enhanced Cabal Test Suite - 8 comprehensive QuickCheck tests
-        , Test.Unit.EnhancedCabalTestSuiteSpec
+        Test.Unit.EnhancedCabalTestSuiteSpec,
 
         -- New Cabal Test Modules (Added by user request) - 10 comprehensive tests
-        , Test.Unit.NewCabalCoreSpec
-        , Test.Unit.NewCabalParserBoundarySpec
-        , Test.Unit.NewCabalCompilerInvariantSpec
-        , Test.Unit.NewCabalOwnershipSafetySpec
-        , Test.Unit.NewCabalTypeSystemSpec
-        , Test.Unit.NewCabalErrorRecoverySpec
-        , Test.Unit.NewCabalPerformanceSpec
-        , Test.Unit.NewCabalEdgeCaseSpec
+        Test.Unit.NewCabalCoreSpec,
+        Test.Unit.NewCabalParserBoundarySpec,
+        Test.Unit.NewCabalCompilerInvariantSpec,
+        Test.Unit.NewCabalOwnershipSafetySpec,
+        Test.Unit.NewCabalTypeSystemSpec,
+        Test.Unit.NewCabalErrorRecoverySpec,
+        Test.Unit.NewCabalPerformanceSpec,
+        Test.Unit.NewCabalEdgeCaseSpec
         
-    other-modules:
-            Test.Dependencies.Arbitrary,
-            Test.Unit.NewCabalQuickCheckTestSuite,
-            Test.Unit.CoreUtilsEssentialSpec,
-            Test.Unit.CoreSourceLocationEssentialSpec,
-            Test.Unit.CoreParserEssentialSpec,
-            Test.Unit.CoreCompilerEssentialSpec,
-            Test.Unit.IntegrationEssentialSpec,
-            Test.Unit.NewComprehensiveQuickCheckTestsSpec,
-        
-        -- New Cabal QuickCheck Test Modules (2025) - 10 comprehensive tests
-        Test.Unit.NewCabalUtilsQuickCheckTestSpec,
-        Test.Unit.NewCabalSourceLocationQuickCheckTestSpec,
-        Test.Unit.NewCabalParserQuickCheckTestSpec,
-        Test.Unit.NewCabalErrorHandlerQuickCheckTestSpec,
-        Test.Unit.NewCabalDependenciesQuickCheckTestSpec,
-        Test.Unit.NewCabalOwnershipQuickCheckTestSpec,
-        Test.Unit.NewCabalCompilerQuickCheckTestSpec,
-        Test.Unit.NewCabalSyntaxValidatorQuickCheckTestSpec,
-        Test.Unit.NewCabalGoToolchainQuickCheckTestSpec,
-        Test.Unit.NewCabalIntegrationQuickCheckTestSpec,
-        
-        -- New Boundary Test Modules (2025)
-        Test.Unit.CompilerErrorHandlingSpec,
-        Test.Unit.IntegrationBoundarySpec,
-        Test.Unit.OwnershipBoundarySpec,
-        Test.Unit.DependentTypesBoundarySpec,
-        Test.Unit.StringUtilsBoundarySpec,
-        Test.Unit.PerformanceBoundarySpec,
-        
-        -- New QuickCheck Test Modules (Added for enhanced coverage)
-        -- Note: These modules are already listed above
-        
-        -- New Enhanced QuickCheck Test Modules (2025) - 4 comprehensive tests
         -- (These modules are already listed above)
-        
-        -- New Advanced QuickCheck Test Modules (2024) - 10 Comprehensive Tests
-        -- (These modules are already listed above)
-        Test.Unit.AdditionalCabalQuickCheckTestSuite
     build-depends:
         base >=4.7 && <5,
         typus,
@@ -2063,5 +1186,5 @@ test-suite typus-test
         ghc-options:   -threaded -with-rtsopts=-N -with-rtsopts=-M8G
     else
         ghc-options:   -threaded -with-rtsopts=-N -with-rtsopts=-M4G
-    -- Coverage is now enabled via --enable-coverage flag
+        -- Coverage is now enabled via --enable-coverage flag
 

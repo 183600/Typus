@@ -1,43 +1,16 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Test.Unit.NewErrorHandlerEnhancedQuickCheckSpec where
+
 
 import Test.Tasty
 import qualified Data.List as L
-import Test.Tasty.QuickCheck (property)
-import Test.Tasty.HUnit
-import Compiler.Errors.Core
-import qualified Data.Map.Strict as Map
-import Data.List (sort, sortBy)
-import Data.Ord (comparing)
-import Data.Time (UTCTime, getCurrentTime)
-import Data.Maybe (isJust, isNothing, fromMaybe)
-import qualified Data.Text as T (pack, unpack)
-
--- | Test error handler functions with QuickCheck properties
-test_ErrorHandlerEnhancedQuickCheck :: TestTree
-test_ErrorHandlerEnhancedQuickCheck = testGroup "ErrorHandler Enhanced QuickCheck Tests"
-  [ errorSeverityProperties
-  , errorLocationProperties
-  , errorContextProperties
-  , errorRecoveryProperties
-  , typeErrorProperties
-  , errorCollectorProperties
-  , errorFormattingProperties
-  , combinedErrorProperties
-  ]
-
--- | Error severity properties
-errorSeverityProperties :: TestTree
-errorSeverityProperties = testGroup "Error Severity Properties"
-  [ QC.testProperty "severityPriority ordering: Fatal > Error > Warning > Info" $
-      \sev1 sev2 -> compareSeverity sev1 sev2 === compare (severityPriority sev1) (severityPriority sev2)
+import Test.Tasty.QuickCheck 
+      \sev1 sev2 -> compareSeverity sev1                               sev2 === compare (severityPriority sev1) (severityPriority sev2)
 
   , QC.testProperty "isAtLeast reflexivity" $
       \sev -> isAtLeast sev sev
 
   , QC.testProperty "isAtLeast transitivity" $
-      \sev1 sev2 sev3 -> isAtLeast sev1 sev2 && isAtLeast sev2 sev3 ==> isAtLeast sev1 sev3
+      \sev1 sev2 sev3 -> isAtLeast sev1 sev2 && isAtLeast sev2                               sev3 ==> isAtLeast sev1 sev3
 
   , QC.testProperty "isAtLeast L.minimum" $
       \sev -> isAtLeast Info sev
@@ -51,71 +24,71 @@ errorSeverityProperties = testGroup "Error Severity Properties"
 
   , QC.testProperty "custom detailed severity preserves base severity" $
       \sev sub custom -> let detailed = _customDetailedSeverity sev sub custom
-                        in baseSeverity detailed === sev
+                        in baseSeverity                               detailed === sev
 
   , QC.testProperty "_isRecoverable: Fatal is not recoverable" $
       not (_isRecoverable Fatal)
 
   , QC.testProperty "_isRecoverable: non-Fatal are recoverable" $
-      \sev -> sev /= Fatal ==> _isRecoverable sev
+      \sev -> sev /=                               Fatal ==> _isRecoverable sev
 
   , QC.testProperty "_isUserActionRequired: Fatal L.and Error require action" $
       \sev -> sev `elem` [Fatal, Error] ==> _isUserActionRequired sev
   ]
   where
-    _customDetailedSeverity base sub customName = DetailedSeverity base sub (Just customName)
+      _customDetailedSeverity base sub                               customName = DetailedSeverity base sub (Just customName)
 
 -- | Error location properties
 errorLocationProperties :: TestTree
 errorLocationProperties = testGroup "Error Location Properties"
   [ QC.testProperty "_atLocation creates location with correct line L.and column" $
       \line col -> let loc = _atLocation line col
-                   in getErrorLine loc === line && getErrorColumn loc === col
+                   in getErrorLine                               loc === line && getErrorColumn                               loc === col
 
   , QC.testProperty "_atFileLocation creates location with file path" $
       \file line col -> let loc = _atFileLocation file line col
-                       in filePath loc === Just file &&
-                          getErrorLine loc === line &&
-                          getErrorColumn loc === col
+                       in filePath                               loc === Just file &&
+                          getErrorLine                               loc === line &&
+                          getErrorColumn                               loc === col
 
   , QC.testProperty "_atRange creates location with range" $
       \startLine startCol endLine endCol -> 
         let loc = _atRange startLine startCol endLine endCol
-        in line loc === startLine &&
-           column loc === startCol &&
-           endLine loc === Just endLine &&
-           endColumn loc === Just endCol
+        in line                               loc === startLine &&
+           column                               loc === startCol &&
+           endLine                               loc === Just endLine &&
+           endColumn                               loc === Just endCol
 
   , QC.testProperty "_unknownLocation has unknown values" $
       \loc -> let unknown = _unknownLocation
-               in filePath unknown === Nothing &&
-                  getErrorLine unknown === 0 &&
-                  getErrorColumn unknown === 0 &&
-                  endLine unknown === Nothing &&
-                  endColumn unknown === Nothing
+               in filePath                               unknown === Nothing &&
+                  getErrorLine                               unknown === 0 &&
+                  getErrorColumn                               unknown === 0 &&
+                  endLine                               unknown === Nothing &&
+                  endColumn                               unknown === Nothing
   ]
 
 -- | Error context properties
 errorContextProperties :: TestTree
 errorContextProperties = testGroup "Error Context Properties"
   [ QC.testProperty "emptyContext has L.all Nothing values" $
-      \ctx -> contextCode emptyContext === Nothing &&
-              contextFunction emptyContext === Nothing &&
-              contextVariable emptyContext === Nothing &&
-              contextType emptyContext === Nothing &&
+      \ctx -> contextCode                               emptyContext === Nothing &&
+              contextFunction                               emptyContext === Nothing &&
+              contextVariable                               emptyContext === Nothing &&
+              contextType                               emptyContext === Nothing &&
               L.null (contextAdditional emptyContext)
 
   , QC.testProperty "contextAdditional preserves order" $
-      \pairs -> let ctx = emptyContext { contextAdditional = pairs }
-                 in contextAdditional ctx === pairs
+      \pairs -> let ctx = emptyContext {                               contextAdditional = pairs }
+                 in contextAdditional                               ctx === pairs
 
   , QC.testProperty "context fields are independent" $
       \code func var typ -> 
         let ctx = ErrorContext code func var typ []
-        in contextCode ctx === code &&
-           contextFunction ctx === func &&
-           contextVariable ctx === var &&
-           contextType ctx === typ
+        in contextCode                               ctx === code &&
+           contextFunction                               ctx === func &&
+           contextVariable                               ctx === var &&
+           contextType                               ctx === typ
   ]
 
 -- | Error recovery properties
@@ -136,38 +109,38 @@ errorRecoveryProperties = testGroup "Error Recovery Properties"
   , QC.testProperty "customRecovery preserves L.all fields" $
       \canRec shouldCont action hint cost conf ->
         let recovery = customRecovery canRec shouldCont action hint cost conf
-        in canRecover recovery === canRec &&
-           shouldContinue recovery === shouldCont &&
-           recoveryAction recovery === action &&
-           recoveryHint recovery === hint &&
-           recoveryCost recovery === cost &&
-           recoveryConfidence recovery === conf
+        in canRecover                               recovery === canRec &&
+           shouldContinue                               recovery === shouldCont &&
+           recoveryAction                               recovery === action &&
+           recoveryHint                               recovery === hint &&
+           recoveryCost                               recovery === cost &&
+           recoveryConfidence                               recovery === conf
 
   , QC.testProperty "_sequenceRecovery combines costs additively" $
       \r1 r2 -> let combined = _sequenceRecovery r1 r2
-                in recoveryCost combined === recoveryCost r1 + recoveryCost r2
+                in recoveryCost                               combined === recoveryCost r1 + recoveryCost r2
 
   , QC.testProperty "_sequenceRecovery averages confidence" $
       \r1 r2 -> let combined = _sequenceRecovery r1 r2
-                    expected = (recoveryConfidence r1 + recoveryConfidence r2) / 2
+                                                  expected = (recoveryConfidence r1 + recoveryConfidence r2) / 2
                 in abs (recoveryConfidence combined - expected) < 0.001
 
   , QC.testProperty "_chooseBestRecovery selects highest confidence" $
-      \r1 r2 -> canRecover r1 && canRecover r2 ==>
+      \r1 r2 -> canRecover r1 && canRecover                               r2 ==>
                 let best = _chooseBestRecovery [r1, r2]
-                    expected = if recoveryConfidence r1 >= recoveryConfidence r2 then r1 else r2
-                in recoveryConfidence best === recoveryConfidence expected
+                                                  expected = if recoveryConfidence r1 >= recoveryConfidence r2 then r1 else r2
+                in recoveryConfidence                               best === recoveryConfidence expected
 
   , QC.testProperty "_retryRecovery scales cost with attempts" $
       \attempts -> let recovery = _retryRecovery attempts
-                    in recoveryCost recovery === 20 * attempts
+                    in recoveryCost                               recovery === 20 * attempts
 
   , QC.testProperty "_initialRecoveryContext has zero attempts" $
       \maxAttempts -> let ctx = _initialRecoveryContext maxAttempts
-                      in recoveryAttempts ctx === 0 &&
-                         maxRecoveryAttempts ctx === maxAttempts &&
+                      in recoveryAttempts                               ctx === 0 &&
+                         maxRecoveryAttempts                               ctx === maxAttempts &&
                          L.null (recoveryHistory ctx) &&
-                         currentStrategy ctx === Nothing
+                         currentStrategy                               ctx === Nothing
   ]
 
 -- | TypeError properties
@@ -177,17 +150,17 @@ typeErrorProperties = testGroup "TypeError Properties"
 
   , QC.testProperty "getWarnings filters by Warning severity" $
       \errs -> let filtered = getWarnings errs
-                in L.all (\e -> severity e == Warning) filtered
+                in L.all (\e -> severity                               e == Warning) filtered
 
   , QC.testProperty "getInfo filters by Info severity" $
       \errs -> let filtered = getInfo errs
-                in L.all (\e -> severity e == Info) filtered
+                in L.all (\e -> severity                               e == Info) filtered
 
   , QC.testProperty "hasErrors detects Error L.or Fatal severity" $
-      \errs -> hasErrors errs === L.any (\e -> severity e `elem` [Error, Fatal]) errs
+      \errs -> hasErrors                               errs === L.any (\e -> severity e `elem` [Error, Fatal]) errs
 
   , QC.testProperty "hasWarnings detects Warning severity" $
-      \errs -> hasWarnings errs === L.any (\e -> severity e == Warning) errs
+      \errs -> hasWarnings                               errs === L.any (\e -> severity                               e == Warning) errs
   ]
 
 -- | Error formatting properties
@@ -195,7 +168,7 @@ errorFormattingProperties :: TestTree
 errorFormattingProperties = testGroup "Error Formatting Properties"
   [ QC.testProperty "formatError includes severity string" $
       \err -> let formatted = formatError err
-                   severityStr = case severity err of
+                                                 severityStr = case severity err of
                      Fatal -> "FATAL"
                      Error -> "ERROR"
                      Warning -> "WARNING"
@@ -232,5 +205,5 @@ combinedErrorProperties = testGroup "Combined Error Properties"
   , QC.testProperty "filterCombinedErrorsBySeverity filters correctly" $
       \minSeverity errs -> 
         let filtered = filterCombinedErrorsBySeverity minSeverity errs
-        in L.all (\err -> isAtLeast minSeverity (combinedErrorSeverity err)) filtered
+        in L.all (\err -> isAtLeast minSeverity (combinedErrorSeverity err) filtered
   ]

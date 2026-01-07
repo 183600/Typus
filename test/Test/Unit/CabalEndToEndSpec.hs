@@ -1,28 +1,8 @@
-module Test.Unit.CabalEndToEndSpec (tests) where
-
-import Test.Tasty (TestTree, testGroup)
-import qualified Data.List as L
-import Test.Tasty.HUnit (testCase, (@?=), assertFailure)
-import Test.Tasty.QuickCheck (testProperty)
-
-import TestSupport.QuickCheck (fastProperty)
-
-import qualified Parser (parseTypus, TypusFile(..), FileDirectives(..), CodeBlock(..))
-import qualified Utils (trim, splitBy, removeComments, normalizeIndentation)
-import qualified SourceLocation
-import qualified SyntaxValidator
-import qualified Compiler
-import qualified ErrorHandler
-
--- | End-to-end integration tests
-tests :: TestTree
-tests =
-  testGroup "Cabal End-to-End Tests"
-    [ testGroup "Complete Compilation Pipeline"
-        [ testCase "Full pipeline: Parse -> Validate -> Compile" $ do
-            let input = unlines
-                  [ "// @ownership: true"
-                  , "// @dependent-types: false"
+module Test.Unit.CabalEndToEndSpec where
+import Test.Tasty 
+import Test.Tasty.HUnit (testCase, assertFailure, assertBool, (@?=)), assertFailure
+import Test.Tasty.QuickCheck 
+import qualified Parser (parseTypus, TypusFile(..), FileDirectives(..), CodeBlock)
                   , "func main() {"
                   , "  let x := 42;"
                   , "  if (x > 0) {"
@@ -33,7 +13,7 @@ tests =
                   , "}"
                   ]
                 -- Step 1: Parse
-                parseResult = Parser.parseTypus input
+                                              parseResult = Parser.parseTypus input
             case parseResult of
               Left err -> (show err) @?= "Parse failed"
               Right parsed -> do
@@ -50,16 +30,31 @@ tests =
                         compiled `seq` True @?= True
                   else
                     (show validationErrors) @?= "Validation failed"
+-- Arbitrary instance for SourcePos
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- choose (1, 100)
+    column <- choose (1, 100)
+    offset <- choose (0, 1000)
+    return $ SourcePos line column offset
 
-        , testCase "Pipeline with error handling at each stage" $ do
-            let invalidInput = unlines
+-- Arbitrary instance for SourceSpan
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    return $ SourceSpan start end
+
+
+          ,             testCase "Pipeline with error handling at each stage" $ do
+                        let invalidInput = unlines
                   [ "// @ownership: true"
                   , "func broken() {"
                   , "  let x :="
                   , "  return x;"
                   , "}"
                   ]
-                parseResult = Parser.parseTypus invalidInput
+                                              parseResult = Parser.parseTypus invalidInput
             case parseResult of
               Left parseErr -> do
                 -- Should provide formatted error
@@ -74,15 +69,15 @@ tests =
                     let compileResult = Compiler.compile parsed
                     case compileResult of
                       Left compileErr -> do
-                        let formatted = show compileErr
+                                    let formatted = show compileErr
                         L.length formatted > 0 @?= True
                       Right compiled -> compiled `seq` True @?= True
                   else do
-                    let formatted = show validationErrors
+                                let formatted = show validationErrors
                     L.length formatted > 0 @?= True
 
-        , testCase "Complex multi-function pipeline" $ do
-            let complexInput = unlines
+          ,             testCase "Complex multi-function pipeline" $ do
+                        let complexInput = unlines
                   [ "// @ownership: true"
                   , "// @dependent-types: true"
                   , ""
@@ -99,14 +94,14 @@ tests =
                   , "  return result;"
                   , "}"
                   ]
-                parseResult = Parser.parseTypus complexInput
+                                              parseResult = Parser.parseTypus complexInput
             case parseResult of
               Left err -> assertFailure $ "Complex parse failed: " ++ show err
               Right parsed -> do
-                let validationErrors = SyntaxValidator.validateSyntax (show parsed)
+                            let validationErrors = SyntaxValidator.validateSyntax (show parsed)
                 if null validationErrors
                   then do
-                    let compileResult = Compiler.compile parsed
+                                let compileResult = Compiler.compile parsed
                     case compileResult of
                       Left compileErr -> assertFailure $ "Complex compilation failed: " ++ show compileErr
                       Right compiled -> compiled `seq` True @?= True
@@ -114,8 +109,8 @@ tests =
         ]
 
     , testGroup "Real-world Scenario Tests"
-        [ testCase "Typical application structure" $ do
-            let appInput = unlines
+        [             testCase "Typical application structure" $ do
+                        let appInput = unlines
                   [ "// @ownership: true"
                   , "// @dependent-types: false"
                   , ""
@@ -147,15 +142,15 @@ tests =
                   , "  return distance(p1, p2);"
                   , "}"
                   ]
-                parseResult = Parser.parseTypus appInput
+                                              parseResult = Parser.parseTypus appInput
             case parseResult of
               Left err -> assertFailure $ "Application parse failed: " ++ show err
               Right parsed -> do
                 -- Should have multiple code blocks
                 L.length (Parser.tfBlocks parsed) >= 3 @?= True
 
-        , testCase "Error handling in realistic scenarios" $ do
-            let realisticError = unlines
+          ,             testCase "Error handling in realistic scenarios" $ do
+                        let realisticError = unlines
                   [ "// @ownership: true"
                   , "func processData(data: List<int>) : int {"
                   , "  if (data == null) {"
@@ -168,14 +163,14 @@ tests =
                   , "  return total / L.length(data);"
                   , "}"
                   ]
-                parseResult = Parser.parseTypus realisticError
+                                              parseResult = Parser.parseTypus realisticError
             case parseResult of
               Left err -> do
                 "parse" `L.isInfixOf` err @?= True
               Right parsed -> parsed `seq` True @?= True
 
-        , testCase "Performance-critical scenario" $ do
-            let performanceInput = unlines
+          ,             testCase "Performance-critical scenario" $ do
+                        let performanceInput = unlines
                   [ "// @ownership: true"
                   , "// @dependent-types: true"
                   , "func fibonacci(n: int) : int {"
@@ -189,7 +184,7 @@ tests =
                   , "  return fibonacci(10);"
                   , "}"
                   ]
-                parseResult = Parser.parseTypus performanceInput
+                                              parseResult = Parser.parseTypus performanceInput
             case parseResult of
               Left err -> assertFailure $ "Performance parse failed: " ++ show err
               Right parsed -> do
@@ -198,8 +193,8 @@ tests =
         ]
 
     , testGroup "Integration with File System"
-        [ testCase "Multi-file scenario simulation" $ do
-            let mainFile = unlines
+        [             testCase "Multi-file scenario simulation" $ do
+                        let mainFile = unlines
                   [ "// @ownership: true"
                   , "import \"utils.typus\";"
                   , "import \"data.typus\";"
@@ -209,13 +204,13 @@ tests =
                   , "  return processWithUtils(data);"
                   , "}"
                   ]
-                utilsFile = unlines
+                                              utilsFile = unlines
                   [ "// @ownership: false"
                   , "func processWithUtils(data: Data) : int {"
                   , "  return L.length(data.items);"
                   , "}"
                   ]
-                dataFile = unlines
+                                              dataFile = unlines
                   [ "// @dependent-types: true"
                   , "struct Data {"
                   , "  items: List<string>;"
@@ -225,51 +220,51 @@ tests =
                   , "  return Data{items: [\"a\", \"b\", \"c\"]};"
                   , "}"
                   ]
-                mainResult = Parser.parseTypus mainFile
-                utilsResult = Parser.parseTypus utilsFile
-                dataResult = Parser.parseTypus dataFile
+                                              mainResult = Parser.parseTypus mainFile
+                                              utilsResult = Parser.parseTypus utilsFile
+                                              dataResult = Parser.parseTypus dataFile
             L.all isSuccess [mainResult, utilsResult, dataResult] @?= True
 
-        , testCase "File directive consistency across files" $ do
-            let file1 = "// @ownership: true\nfunc test1() {}"
-                file2 = "// @ownership: false\nfunc test2() {}"
-                file3 = "// @dependent-types: true\nfunc test3() {}"
-                results = L.map Parser.parseTypus [file1, file2, file3]
+          ,             testCase "File directive consistency across files" $ do
+                        let file1 = "// @ownership: true\nfunc test1() {}"
+                                              file2 = "// @ownership: false\nfunc test2() {}"
+                                              file3 = "// @dependent-types: true\nfunc test3() {}"
+                                              results = L.map Parser.parseTypus [file1, file2, file3]
             L.all isSuccess results @?= True
         ]
 
     , testGroup "Toolchain Integration"
-        [ testCase "Integration with external tools simulation" $ do
-            let toolchainInput = unlines
+        [             testCase "Integration with external tools simulation" $ do
+                        let toolchainInput = unlines
                   [ "// @ownership: true"
                   , "// @toolchain: go"
                   , "func generateGoCode() : string {"
                   , "  return \"func main() { println(\\\"Hello\\\") }\";"
                   , "}"
                   ]
-                parseResult = Parser.parseTypus toolchainInput
+                                              parseResult = Parser.parseTypus toolchainInput
             case parseResult of
               Left err -> assertFailure $ "Toolchain parse failed: " ++ show err
               Right parsed -> 
                 -- Should handle toolchain directives
                 Parser.tfDirectives parsed `seq` True @?= True
 
-        , testCase "Build system integration simulation" $ do
-            let buildInput = unlines
+          ,             testCase "Build system integration simulation" $ do
+                        let buildInput = unlines
                   [ "// @build: release"
                   , "// @target: wasm"
                   , "func optimized() : int {"
                   , "  return 42 * 2;"  -- Should be optimized to 84
                   , "}"
                   ]
-                parseResult = Parser.parseTypus buildInput
+                                              parseResult = Parser.parseTypus buildInput
             case parseResult of
               Left err -> assertFailure $ "Build parse failed: " ++ show err
               Right parsed -> parsed `seq` True @?= True
         ]
 
     , testGroup "Property-based End-to-End Tests"
-        [ testProperty "Round-trip property: Parse -> String -> Parse" $ do
+        [             testProperty "Round-trip property: Parse -> String -> Parse" $ do
             \input -> 
                 let parseResult = Parser.parseTypus input
                 in case parseResult of
@@ -278,14 +273,14 @@ tests =
                        -- Should be able to re-parse the same structure
                        True  -- Simplified for this example
 
-        , testProperty "Error preservation property" $ do
+        ,             testProperty "Error preservation property" $ do
             \input -> 
                 let result = Parser.parseTypus input
                 in case result of
                      Left err -> L.length (show err) > 0  -- Errors should have messages
                      Right _ -> True  -- Valid inputs should succeed
 
-        , testProperty "Source location consistency" $ do
+        ,             testProperty "Source location consistency" $ do
             \input -> 
                 let result = Parser.parseTypus input
                 in case result of
@@ -297,14 +292,14 @@ tests =
         ]
 
     , testGroup "Robustness L.and Recovery"
-        [ testCase "Graceful degradation on partial failures" $ do
-            let partialInput = unlines
+        [             testCase "Graceful degradation on partial failures" $ do
+                        let partialInput = unlines
                   [ "// @ownership: true"
                   , "func working() { return 1; }"
                   , "func broken() { return }"  -- Missing semicolon
                   , "func alsoWorking() { return 3; }"
                   ]
-                parseResult = Parser.parseTypus partialInput
+                                              parseResult = Parser.parseTypus partialInput
             case parseResult of
               Left err -> do
                 -- Should report error but not crash
@@ -313,13 +308,13 @@ tests =
                 -- Should parse what it can
                 L.length (Parser.tfBlocks parsed) >= 1 @?= True
 
-        , testCase "Recovery from syntax errors" $ do
-            let recoverableInput = unlines
+          ,             testCase "Recovery from syntax errors" $ do
+                        let recoverableInput = unlines
                   [ "func test1() { return 1; }"
                   , "func test2() { return }"  -- Error here
                   , "func test3() { return 3; }"
                   ]
-                parseResult = Parser.parseTypus recoverableInput
+                                              parseResult = Parser.parseTypus recoverableInput
             case parseResult of
               Left err -> 
                 -- Should provide meaningful error information
@@ -333,10 +328,10 @@ isSuccess :: Either a b -> Bool
 isSuccess (Right _) = True
 isSuccess (Left _) = False
 
-isInfixOf :: Eq a => [a] -> [a] -> Bool
-isInfixOf needle haystack = needle `isPrefixOf` haystack || 
-                            (not (null haystack) && isInfixOf needle (tail haystack))
+isInfixOf :: Eq                               a => [a] -> [a] -> Bool
+isInfixOf needle                               haystack = needle `isPrefixOf` haystack || 
+                            (not (null haystack) && isInfixOf needle (tail haystack)
   where
-    isPrefixOf [] _ = True
+      isPrefixOf []                               _ = True
     isPrefixOf _ [] = False
-    isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
+    isPrefixOf (x:xs) (y:ys) =                               x == y && isPrefixOf xs ys

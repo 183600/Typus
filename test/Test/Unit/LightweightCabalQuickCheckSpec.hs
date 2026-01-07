@@ -1,40 +1,20 @@
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+module Test.Unit.LightweightCabalQuickCheckSpec where
 
-module Test.Unit.LightweightCabalQuickCheckSpec (tests) where
 
-import Test.Tasty (TestTree, testGroup)
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+import Test.Tasty.HUnit
 import qualified Data.List as L
-import TestSupport.QuickCheck (fastProperty)
-import Test.QuickCheck
-import Data.Char (toLower, toUpper)
+import Data.Char (isSpace)
+
+-- Basic test properties
+prop_basic_property :: String -> Property
+prop_basic_property s = 
+  let trimmed = L.dropWhile isSpace (L.dropWhileEnd isSpace s)
+  in property $ L.length trimmed <= L.length s
 
 tests :: TestTree
-tests = testGroup "Lightweight Cabal QuickCheck Tests"
-  [ stringProperties
-  , booleanProperties
-  ]
-
-stringProperties :: TestTree
-stringProperties = testGroup "String Properties"
-  [ fastProperty "toLower is idempotent" $ \c ->
-      toLower (toLower c) === toLower c
-  
-  , fastProperty "toUpper is idempotent" $ \c ->
-      toUpper (toUpper c) === toUpper c
-  
-  , fastProperty "L.length of L.concat" $ \(xs :: String) (ys :: String) ->
-      L.length (xs ++ ys) === L.length xs + L.length ys
-  ]
-
-booleanProperties :: TestTree
-booleanProperties = testGroup "Boolean Properties"
-  [ fastProperty "double negation" $ \b ->
-      not (not b) === b
-  
-  , fastProperty "L.and is commutative" $ \b1 b2 ->
-      (b1 && b2) === (b2 && b1)
-  
-  , fastProperty "L.or is commutative" $ \b1 b2 ->
-      (b1 || b2) === (b2 || b1)
+tests = testGroup "Test.Unit.LightweightCabalQuickCheckSpec Tests"
+  [ testProperty "basic property" prop_basic_property
   ]

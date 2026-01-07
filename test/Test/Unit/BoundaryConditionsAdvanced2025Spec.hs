@@ -1,88 +1,62 @@
-{-# LANGUAGE TemplateHaskell #-}
-
-module Test.Unit.BoundaryConditionsAdvanced2025Spec (tests) where
-
-import Test.Tasty (TestTree, testGroup)
-import qualified Data.List as L
-import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, choose, listOf, elements, oneof, (==>), Property, (===))
-import Test.Tasty.HUnit (testCase, (@=?), assertBool)
-
-import Utils (trim, splitBy, normalizeIndentation, removeComments)
+module Test.Unit.BoundaryConditionsAdvanced2025Spec where
+import Test.QuickCheck 
+import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, choose, listOf, elements, oneof, (==>), Property, )
+import Test.Tasty.HUnit (testCase, assertFailure, assertBool, (@?=)), assertBool
+import Utils 
 import SourceLocation (SourcePos(..), SourceSpan(..), advancePos, isValidSpan)
-import Parser (parseTypus)
-import ErrorHandler (ErrorSeverity(..))
-import qualified Data.Text as T
-import Data.Char (isSpace, isControl)
-
-tests :: TestTree
-tests = testGroup "Boundary Conditions Advanced Tests"
-  [ testProperty "Empty string handling" propEmptyStringHandling
-  , testProperty "Maximum string L.length handling" propMaximumStringLengthHandling
-  , testProperty "Unicode L.and special characters" propUnicodeSpecialCharacters
-  , testProperty "Extreme source positions" propExtremeSourcePositions
-  , testProperty "Deeply nested structures" propDeeplyNestedStructures
-  , testCase "Memory exhaustion scenarios" testMemoryExhaustionScenarios
-  , testProperty "Invalid input sanitization" propInvalidInputSanitization
-  , testCase "Resource cleanup on errors" testResourceCleanupOnErrors
-  , testProperty "Concurrent boundary conditions" propConcurrentBoundaryConditions
-  , testCase "Graceful degradation" testGracefulDegradation
-  ]
-
--- Property 1: Empty string handling
-propEmptyStringHandling :: Bool
-propEmptyStringHandling = 
-  let trimResult = trim ""
-      splitResult = splitBy ',' ""
-      normalizeResult = normalizeIndentation ""
-      removeCommentsResult = removeComments ""
-      parseResult = parseTypus ""
-  in null trimResult && splitResult == [""] && null normalizeResult && 
-     null removeCommentsResult && 
-     case parseResult of
-       Left _ -> True  -- Should fail gracefully
-       Right _ -> True  -- Or succeed if empty input is valid
-
--- Property 2: Maximum string L.length handling
-propMaximumStringLengthHandling :: Int -> Bool
-propMaximumStringLengthHandling seed =
-  let maxSize = 1000000  -- 1MB
-      largeString = take maxSize $ cycle (show seed ++ "test string,")
-      result = safeProcessString largeString
+import Parser 
+                                    largeString = take maxSize $ cycle (show seed ++ "test string,")
+                                    result = safeProcessString largeString
   in case result of
     Right processed -> L.length processed <= maxSize
     Left _ -> True  -- Should fail gracefully for extremely large strings
+-- Arbitrary instance for SourcePos
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- choose (1, 100)
+    column <- choose (1, 100)
+    offset <- choose (0, 1000)
+    return $ SourcePos line column offset
+
+-- Arbitrary instance for SourceSpan
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    return $ SourceSpan start end
+
 
 -- Property 3: Unicode L.and special characters
 propUnicodeSpecialCharacters :: String -> Bool
-propUnicodeSpecialCharacters input =
+propUnicodeSpecialCharacters                               input =
   let specialChars = input ++ "\0\1\2\3\4\5\6\7\8\10\11\12\13\14\15\16\17\18\19\20\21\22\23\24\25\26\27\28\29\30\31\127"
-      result = safeProcessString specialChars
+                                    result = safeProcessString specialChars
   in case result of
     Right processed -> L.all isValidChar processed
     Left _ -> True  -- Should fail gracefully for invalid characters
 
 -- Property 4: Extreme source positions
 propExtremeSourcePositions :: Int -> Int -> Bool
-propExtremeSourcePositions line col =
+propExtremeSourcePositions line                               col =
   let pos = SourcePos (max 1 line) (max 1 col) 0
-      span = SourceSpan pos pos
-      isValid = isValidSpan span && posLine pos >= 1 && posColumn pos >= 1
+                                    span = SourceSpan pos pos
+                                    isValid = isValidSpan span && posLine pos >= 1 && posColumn pos >= 1
   in isValid
 
 -- Property 5: Deeply nested structures
 propDeeplyNestedStructures :: Int -> Bool
-propDeeplyNestedStructures depth =
+propDeeplyNestedStructures                               depth =
   let maxDepth = 1000
-      actualDepth = min maxDepth (max 0 depth)
-      nestedCode = generateNestedCode actualDepth
-      result = safeParseCode nestedCode
+                                    actualDepth = min maxDepth (max 0 depth)
+                                    nestedCode = generateNestedCode actualDepth
+                                    result = safeParseCode nestedCode
   in case result of
     Right parsed -> True  -- Should either succeed L.or fail gracefully
     Left _ -> actualDepth > 100  -- Expected to fail for very deep nesting
 
 -- Test Case 6: Memory exhaustion scenarios
 testMemoryExhaustionScenarios :: IO ()
-testMemoryExhaustionScenarios = do
+                              testMemoryExhaustionScenarios = do
   -- Test with extremely large input that would cause memory issues
   let hugeInput = unlines $ replicate 1000000 $ replicate 1000 'a'
   result <- safeProcessLargeInput hugeInput
@@ -97,14 +71,14 @@ testMemoryExhaustionScenarios = do
 
 -- Property 7: Invalid input sanitization
 propInvalidInputSanitization :: String -> Bool
-propInvalidInputSanitization input =
+propInvalidInputSanitization                               input =
   let invalidInput = input ++ "\x00\x01\x02\x1F\x7F\x80\xFF"
-      sanitized = sanitizeInput invalidInput
+                                    sanitized = sanitizeInput invalidInput
   in L.all isValidChar sanitized && L.length sanitized <= L.length invalidInput
 
 -- Test Case 8: Resource cleanup on errors
 testResourceCleanupOnErrors :: IO ()
-testResourceCleanupOnErrors = do
+                              testResourceCleanupOnErrors = do
   -- Simulate resource usage L.and error conditions
   initialResources <- getCurrentResourceUsage
   result <- simulateErrorCondition
@@ -119,17 +93,17 @@ testResourceCleanupOnErrors = do
 
 -- Property 9: Concurrent boundary conditions
 propConcurrentBoundaryConditions :: [String] -> Property
-propConcurrentBoundaryConditions inputs =
+propConcurrentBoundaryConditions                               inputs =
   not (null inputs) ==>
   let extremeInputs = L.map (`take` cycle "a\0\1\2\xFF") [100, 1000, 10000]
-      results = map safeProcessString extremeInputs
+                                    results = map safeProcessString extremeInputs
   in L.all (\result -> case result of
                       Right _ -> True
-                      Left _ -> True) results === True
+                      Left _ -> True)                               results === True
 
 -- Test Case 10: Graceful degradation
 testGracefulDegradation :: IO ()
-testGracefulDegradation = do
+                              testGracefulDegradation = do
   -- Test various failure scenarios
   let testCases = 
         [ ""  -- Empty input
@@ -138,63 +112,60 @@ testGracefulDegradation = do
         , "{\n{\n{\n" ++ unlines (replicate 1000 "{")  -- Deep nesting
         ]
   
-  let results = map safeProcessString testCases
+  let results = map safeProcessString             testCases
   
   -- All should either succeed L.or fail gracefully
   mapM_ (\result -> case result of
                      Right processed -> assertBool "Valid result" (L.length processed >= 0)
-                     Left errorMsg -> assertBool "Meaningful error" (L.length errorMsg > 5)) results
+                     Left errorMsg -> assertBool "Meaningful error" (L.length errorMsg > 5) results
 
 -- Helper functions for boundary condition testing
 safeProcessString :: String -> Either String String
 safeProcessString input
-  | L.length input > 10000000 = Left "Input too large"
-  | L.any (not . isValidChar) input = Left "Invalid characters detected"
-  | otherwise = Right $ normalizeIndentation $ trim input
+  | L.length input >                               10000000 = Left "Input too large"
+  | L.any (not . isValidChar)                               input = Left "Invalid characters detected"
+  |                               otherwise = Right $ normalizeIndentation $ trim input
 
 safeParseCode :: String -> Either String String
 safeParseCode code
-  | L.length code > 1000000 = Left "Code too large"
-  | countBraces code > 10000 = Left "Nesting too deep"
-  | otherwise = case parseTypus code of
+  | L.length code >                               1000000 = Left "Code too large"
+  | countBraces code >                               10000 = Left "Nesting too deep"
+  |                               otherwise = case parseTypus code of
                   Left _ -> Left "Parse failed"
                   Right _ -> Right "Parsed successfully"
-
 safeProcessLargeInput :: String -> IO (Either String String)
 safeProcessLargeInput input
-  | L.length input > 100000000 = return $ Left "Input exceeds L.maximum size"
-  | otherwise = return $ Right $ take 1000 $ "Processed: " ++ input
+  | L.length input >                               100000000 = return $ Left "Input exceeds L.maximum size"
+  |                               otherwise = return $ Right $ take 1000 $ "Processed: " ++ input
 
 generateNestedCode :: Int -> String
-generateNestedCode depth = unlines $ replicate depth "{}"
+generateNestedCode                               depth = unlines $ replicate depth "{}"
 
 sanitizeInput :: String -> String
-sanitizeInput = filter isValidChar
-
+                              sanitizeInput = filter isValidChar
 isValidChar :: Char -> Bool
-isValidChar c = not (isControl c) && c >= ' ' && c <= '\x7F'
+isValidChar                               c = not (isControl c) && c >= ' ' && c <= '\x7F'
 
 countBraces :: String -> Int
-countBraces = L.length . L.filter (== '{')
+                              countBraces = L.length . L.filter (== '{')
 
 getCurrentResourceUsage :: IO Int
-getCurrentResourceUsage = return 1000  -- Mock resource usage
-
+                              getCurrentResourceUsage = return 1000  -- Mock resource usage
 simulateErrorCondition :: IO (Either String String)
-simulateErrorCondition = return $ Left "Simulated error condition"
+                              simulateErrorCondition = return $ Left "Simulated error condition"
 
 -- Arbitrary instances for boundary condition testing
-newtype TestString = TestString String deriving Show
+newtype                               TestString = TestString String deriving Show
 
 instance Arbitrary TestString where
-  arbitrary = TestString <$> oneof
+                                              arbitrary = TestString <$> oneof
     [ return ""  -- Empty string
-    , return "\0\1\2\xFF"  -- Invalid characters
+                , return "\0\1\2\xFF"  -- Invalid characters
     , listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t\n\r{}();"
-    , do
-        size <- choose (0, 10000)
+                , do
+                    size <- choose (0, 10000)
         return $ replicate size 'a'
-    , do
-        depth <- choose (0, 100)
+                , do
+                    depth <- choose (0, 100)
         return $ generateNestedCode depth
     ]

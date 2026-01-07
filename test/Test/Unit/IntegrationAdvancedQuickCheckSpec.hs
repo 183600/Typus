@@ -1,97 +1,93 @@
-module Test.Unit.IntegrationAdvancedQuickCheckSpec (tests) where
-
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=), assertBool)
+module Test.Unit.IntegrationAdvancedQuickCheckSpec where
+import Test.Tasty 
+import Test.Tasty.HUnit (testCase, assertFailure, assertBool, (@?=)), assertBool
 import Test.Tasty.QuickCheck (testProperty, Property, (===), forAll, Gen, choose, arbitrary, listOf, elements, oneof, suchThat)
-import TestSupport.QuickCheck (fastProperty)
-
-import Parser (parseTypus, TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..))
-import Compiler (compile, CompilerResult, CompilerError(..))
-import ErrorHandler (TypeError(..), ErrorSeverity(..), ErrorCategory(..))
+import TestSupport.QuickCheck 
+import Parser (parseTypus, TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives)
+import ErrorHandler (TypeError(..), ErrorSeverity(..), ErrorCategory)
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos)
-import SyntaxValidator (validateSyntax, SyntaxError(..))
-import Utils (trim, splitBy, removeComments, normalizeIndentation)
-import qualified Data.Text as T
-import qualified Data.List as L
-import Data.List (isInfixOf, isPrefixOf)
-import Data.Either (isLeft, isRight)
-
--- ============================================================================
--- Generators
--- ============================================================================
-
--- Generate simple Typus code snippets
-genSimpleTypusCode :: Gen String
-genSimpleTypusCode = oneof
-  [ return "x := 1"
-  , return "y := x + 2"
-  , return "if x > 0 { return x }"
-  , return "func test() { return 42 }"
-  , return "var s string = \"hello\""
-  , return "const pi = 3.14159"
+import SyntaxValidator 
+                , return "func test() { return 42 }"
+                , return "var s                               string = \"hello\""
+                  , return "const                               pi = 3.14159"
   ]
+-- Arbitrary instance for SourcePos
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- choose (1, 100)
+    column <- choose (1, 100)
+    offset <- choose (0, 1000)
+    return $ SourcePos line column offset
+
+-- Arbitrary instance for SourceSpan
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    return $ SourceSpan start end
+
 
 -- Generate Typus file directives
 genFileDirective :: Gen String
-genFileDirective = oneof
+                              genFileDirective = oneof
   [ return "//! ownership: true"
-  , return "//! dependent-types: true"
-  , return "//! constraints: enabled"
-  , return "//! ownership: true\n//! dependent-types: true"
+                , return "//! dependent-types: true"
+                , return "//! constraints: enabled"
+                  , return "//! ownership: true\n//! dependent-types: true"
   ]
 
 -- Generate block directives
 genBlockDirective :: Gen String
-genBlockDirective = oneof
+                              genBlockDirective = oneof
   [ return "{//! ownership: true}"
-  , return "{//! dependent-types: true}"
-  , return "{//! constraints: enabled}"
-  , return "{//! ownership: false}"
+                , return "{//! dependent-types: true}"
+                , return "{//! constraints: enabled}"
+                  , return "{//! ownership: false}"
   ]
 
 -- Generate build tags
 genBuildTag :: Gen String
-genBuildTag = oneof
+                              genBuildTag = oneof
   [ return "// +build linux"
-  , return "// +build amd64"
-  , return "// +build debug"
-  , return "// +build test"
+                , return "// +build amd64"
+                , return "// +build debug"
+                  , return "// +build test"
   ]
 
 -- Generate complete Typus file content
 genTypusFileContent :: Gen String
-genTypusFileContent = do
-  fileDirective <- oneof [return "", genFileDirective]
+                              genTypusFileContent = do
+              fileDirective <- oneof [return "", genFileDirective]
   buildTags <- listOf genBuildTag
   blocks <- listOf $ do
-    blockDirective <- oneof [return "", genBlockDirective]
+              blockDirective <- oneof [return "", genBlockDirective]
     code <- genSimpleTypusCode
     return $ unlines $ L.filter (not . null) [blockDirective, code]
   return $ unlines $ L.filter (not . null) $ [fileDirective] ++ buildTags ++ blocks
 
 -- Generate invalid Typus code
 genInvalidTypusCode :: Gen String
-genInvalidTypusCode = oneof
+                              genInvalidTypusCode = oneof
   [ return "if x > 0\n    return x"  -- Missing opening brace
-  , return "func test("            -- Missing closing parenthesis
-  , return "var x int ="           -- Incomplete assignment
-  , return "{//! invalid syntax"   -- Unclosed block directive
-  , return "\"unclosed string"     -- Unclosed string
-  , return "/* unclosed comment"  -- Unclosed comment
+                , return "func test("            -- Missing closing parenthesis
+                , return "var x                               int ="           -- Incomplete assignment
+                , return "{//! invalid syntax"   -- Unclosed block directive
+                , return "\"unclosed string"     -- Unclosed string
+                  , return "/* unclosed comment"  -- Unclosed comment
   ]
 
 -- Generate mixed valid/invalid content
 genMixedTypusContent :: Gen String
-genMixedTypusContent = do
-  validParts <- listOf genSimpleTypusCode
+                              genMixedTypusContent = do
+              validParts <- listOf genSimpleTypusCode
   invalidParts <- listOf genInvalidTypusCode
   parts <- listOf $ elements $ validParts ++ invalidParts
   return $ unlines parts
 
 -- Generate content with specific integration scenarios
 genOwnershipScenario :: Gen String
-genOwnershipScenario = do
-  lines' <- listOf $ elements
+                              genOwnershipScenario = do
+              lines' <- listOf $ elements
     [ "//! ownership: true"
     , "func transferOwnership() {"
     , "    data := Data{}"
@@ -102,8 +98,8 @@ genOwnershipScenario = do
   return $ unlines lines'
 
 genDependentTypesScenario :: Gen String
-genDependentTypesScenario = do
-  lines' <- listOf $ elements
+                              genDependentTypesScenario = do
+              lines' <- listOf $ elements
     [ "//! dependent-types: true"
     , "func dependentFunction() {"
     , "    vec: Vector<n> where n > 0"
@@ -113,8 +109,8 @@ genDependentTypesScenario = do
   return $ unlines lines'
 
 genErrorRecoveryScenario :: Gen String
-genErrorRecoveryScenario = do
-  lines' <- listOf $ elements
+                              genErrorRecoveryScenario = do
+              lines' <- listOf $ elements
     [ "func errorRecovery() {"
     , "    if condition {"
     , "        handleSuccess()"
@@ -131,7 +127,7 @@ genErrorRecoveryScenario = do
 
 -- Property: Parse-compile pipeline preserves structure
 prop_parseCompilePipeline :: String -> Property
-prop_parseCompilePipeline content =
+prop_parseCompilePipeline                               content =
   let parseResult = parseTypus content
   in case parseResult of
        Left _ -> property True  -- Invalid input may fail parsing
@@ -143,27 +139,27 @@ prop_parseCompilePipeline content =
 
 -- Property: Syntax validation L.and parsing are consistent
 prop_syntaxValidationParsingConsistent :: String -> Bool
-prop_syntaxValidationParsingConsistent content =
+prop_syntaxValidationParsingConsistent                               content =
   let syntaxErrors = validateSyntax content
-      parseResult = parseTypus content
+                                    parseResult = parseTypus content
   in case (syntaxErrors, parseResult) of
        ([], Right _) -> True  -- No syntax errors, should parse successfully
        (_, _) -> True  -- May have syntax errors L.and still parse (parser is tolerant)
 
 -- Property: Utils operations preserve content integrity
 prop_utilsPreserveIntegrity :: String -> Bool
-prop_utilsPreserveIntegrity content =
+prop_utilsPreserveIntegrity                               content =
   let trimmed = trim content
-      split = splitBy '\n' content
-      commentsRemoved = removeComments content
-      normalized = normalizeIndentation content
+                                    split = splitBy '\n' content
+                                    commentsRemoved = removeComments content
+                                    normalized = normalizeIndentation content
   in L.length trimmed <= L.length content &&
      L.length split >= 1 &&
      L.length commentsRemoved <= L.length content
 
 -- Property: Error handling preserves context
 prop_errorHandlingPreservesContext :: String -> Property
-prop_errorHandlingPreservesContext content =
+prop_errorHandlingPreservesContext                               content =
   let parseResult = parseTypus content
   in case parseResult of
        Left parseError -> not (null parseError)
@@ -175,8 +171,8 @@ prop_errorHandlingPreservesContext content =
 
 -- Property: File directives are preserved through pipeline
 prop_fileDirectivesPreserved :: String -> Property
-prop_fileDirectivesPreserved content =
-  "//!" `L.isInfixOf` content ==>
+prop_fileDirectivesPreserved                               content =
+  "//!" `L.isInfixOf`                               content ==>
   let parseResult = parseTypus content
   in case parseResult of
        Left _ -> property True
@@ -186,8 +182,8 @@ prop_fileDirectivesPreserved content =
 
 -- Property: Build tags are preserved through pipeline
 prop_buildTagsPreserved :: String -> Property
-prop_buildTagsPreserved content =
-  "// +build" `L.isInfixOf` content ==>
+prop_buildTagsPreserved                               content =
+  "// +build" `L.isInfixOf`                               content ==>
   let parseResult = parseTypus content
   in case parseResult of
        Left _ -> property True
@@ -197,8 +193,8 @@ prop_buildTagsPreserved content =
 
 -- Property: Code blocks are preserved through pipeline
 prop_codeBlocksPreserved :: String -> Property
-prop_codeBlocksPreserved content =
-  not (L.null (trim content)) ==>
+prop_codeBlocksPreserved                               content =
+  not (L.null (trim content) ==>
   let parseResult = parseTypus content
   in case parseResult of
        Left _ -> property True
@@ -208,8 +204,8 @@ prop_codeBlocksPreserved content =
 
 -- Property: Ownership scenarios are handled correctly
 prop_ownershipScenariosHandled :: String -> Property
-prop_ownershipScenariosHandled content =
-  "ownership" `L.isInfixOf` content ==>
+prop_ownershipScenariosHandled                               content =
+  "ownership" `L.isInfixOf`                               content ==>
   let parseResult = parseTypus content
   in case parseResult of
        Left _ -> property True
@@ -221,8 +217,8 @@ prop_ownershipScenariosHandled content =
 
 -- Property: Dependent types scenarios are handled correctly
 prop_dependentTypesScenariosHandled :: String -> Property
-prop_dependentTypesScenariosHandled content =
-  "dependent-types" `L.isInfixOf` content ==>
+prop_dependentTypesScenariosHandled                               content =
+  "dependent-types" `L.isInfixOf`                               content ==>
   let parseResult = parseTypus content
   in case parseResult of
        Left _ -> property True
@@ -234,8 +230,8 @@ prop_dependentTypesScenariosHandled content =
 
 -- Property: Error recovery scenarios are handled correctly
 prop_errorRecoveryScenariosHandled :: String -> Property
-prop_errorRecoveryScenariosHandled content =
-  "errorRecovery" `L.isInfixOf` content ==>
+prop_errorRecoveryScenariosHandled                               content =
+  "errorRecovery" `L.isInfixOf`                               content ==>
   let parseResult = parseTypus content
   in case parseResult of
        Left _ -> property True
@@ -247,15 +243,15 @@ prop_errorRecoveryScenariosHandled content =
 
 -- Property: End-to-end integration preserves functionality
 prop_endToEndIntegration :: String -> Bool
-prop_endToEndIntegration content =
+prop_endToEndIntegration                               content =
   let syntaxErrors = validateSyntax content
-      parseResult = parseTypus content
-      compileResult = case parseResult of
+                                    parseResult = parseTypus content
+                                    compileResult =  case parseResult of
                        Left _ -> Left ["Parse failed"]
                        Right typusFile -> case compile typusFile of
                                            Left errors -> Left $ map show errors
                                            Right goCode -> Right goCode
-  in case compileResult of
+  in property $ case compileResult of
        Left _ -> True  -- May fail at L.any stage
        Right goCode -> not (null goCode)  -- Success should produce output
 
@@ -264,33 +260,33 @@ prop_endToEndIntegration content =
 -- ============================================================================
 
 tests :: TestTree
-tests = testGroup "Integration Advanced QuickCheck Tests"
+tests =   testGroup "Integration Advanced QuickCheck Tests"
   [ testGroup "Pipeline Properties"
-    [ testProperty "Parse-compile pipeline preserves structure" prop_parseCompilePipeline
-    , testProperty "Syntax validation L.and parsing are consistent" prop_syntaxValidationParsingConsistent
-    , testProperty "Utils operations preserve content integrity" prop_utilsPreserveIntegrity
-    , testProperty "Error handling preserves context" prop_errorHandlingPreservesContext
+    [             testProperty "Parse-compile pipeline preserves structure" prop_parseCompilePipeline
+    ,             testProperty "Syntax validation L.and parsing are consistent" prop_syntaxValidationParsingConsistent
+    ,             testProperty "Utils operations preserve content integrity" prop_utilsPreserveIntegrity
+    ,             testProperty "Error handling preserves context" prop_errorHandlingPreservesContext
     ]
 
   , testGroup "Directive Properties"
-    [ testProperty "File directives are preserved through pipeline" prop_fileDirectivesPreserved
-    , testProperty "Build tags are preserved through pipeline" prop_buildTagsPreserved
-    , testProperty "Code blocks are preserved through pipeline" prop_codeBlocksPreserved
+    [             testProperty "File directives are preserved through pipeline" prop_fileDirectivesPreserved
+    ,             testProperty "Build tags are preserved through pipeline" prop_buildTagsPreserved
+    ,             testProperty "Code blocks are preserved through pipeline" prop_codeBlocksPreserved
     ]
 
   , testGroup "Scenario Properties"
-    [ testProperty "Ownership scenarios are handled correctly" prop_ownershipScenariosHandled
-    , testProperty "Dependent types scenarios are handled correctly" prop_dependentTypesScenariosHandled
-    , testProperty "Error recovery scenarios are handled correctly" prop_errorRecoveryScenariosHandled
+    [             testProperty "Ownership scenarios are handled correctly" prop_ownershipScenariosHandled
+    ,             testProperty "Dependent types scenarios are handled correctly" prop_dependentTypesScenariosHandled
+    ,             testProperty "Error recovery scenarios are handled correctly" prop_errorRecoveryScenariosHandled
     ]
 
   , testGroup "End-to-End Properties"
-    [ testProperty "End-to-end integration preserves functionality" prop_endToEndIntegration
+    [             testProperty "End-to-end integration preserves functionality" prop_endToEndIntegration
     ]
 
   , testGroup "Unit Tests"
-    [ testCase "Complete pipeline with valid code" $ do
-        let validCode = unlines
+    [             testCase "Complete pipeline with valid code" $ do
+                    let validCode = unlines
               [ "//! ownership: true"
               , "// +build linux"
               , ""
@@ -303,13 +299,13 @@ tests = testGroup "Integration Advanced QuickCheck Tests"
         case parseResult of
           Left parseError -> assertBool "Should parse valid code" False
           Right typusFile -> do
-            let compileResult = compile typusFile
+                        let compileResult = compile typusFile
             case compileResult of
               Left compileErrors -> assertBool "Should compile valid code" False
               Right goCode -> assertBool "Should generate Go code" $ not (null goCode)
 
-    , testCase "Pipeline with syntax errors" $ do
-        let invalidCode = "if x > 0\n    return x\n"
+      ,             testCase "Pipeline with syntax errors" $ do
+                    let invalidCode = "if x > 0\n    return x\n"
         let syntaxErrors = validateSyntax invalidCode
         let parseResult = parseTypus invalidCode
         assertBool "Should detect syntax errors" $ not (null syntaxErrors)
@@ -317,8 +313,8 @@ tests = testGroup "Integration Advanced QuickCheck Tests"
           Left _ -> return ()  -- Expected to fail
           Right _ -> return ()  -- May still parse despite errors
 
-    , testCase "Pipeline with ownership directives" $ do
-        let ownershipCode = unlines
+      ,             testCase "Pipeline with ownership directives" $ do
+                    let ownershipCode = unlines
               [ "//! ownership: true"
               , "func transfer() {"
               , "    data := Data{}"
@@ -330,15 +326,15 @@ tests = testGroup "Integration Advanced QuickCheck Tests"
         case parseResult of
           Left _ -> assertBool "Should parse ownership code" False
           Right typusFile -> do
-            let directives = tfDirectives typusFile
+                        let directives = tfDirectives typusFile
             assertBool "Should preserve ownership directive" $ directives /= defaultFileDirectives
             let compileResult = compile typusFile
             case compileResult of
               Left _ -> return ()  -- May fail with ownership errors
               Right _ -> return ()  -- May succeed
 
-    , testCase "Pipeline with dependent types" $ do
-        let dependentTypesCode = unlines
+      ,             testCase "Pipeline with dependent types" $ do
+                    let dependentTypesCode = unlines
               [ "//! dependent-types: true"
               , "func vectorOps() {"
               , "    vec: Vector<n> where n > 0"
@@ -349,15 +345,15 @@ tests = testGroup "Integration Advanced QuickCheck Tests"
         case parseResult of
           Left _ -> assertBool "Should parse dependent types code" False
           Right typusFile -> do
-            let directives = tfDirectives typusFile
+                        let directives = tfDirectives typusFile
             assertBool "Should preserve dependent types directive" $ directives /= defaultFileDirectives
             let compileResult = compile typusFile
             case compileResult of
               Left _ -> return ()  -- May fail with type errors
               Right _ -> return ()  -- May succeed
 
-    , testCase "Utils integration" $ do
-        let content = unlines
+      ,             testCase "Utils integration" $ do
+                    let content = unlines
               [ "    func test() {"
               , "        // comment"
               , "        return 42"
@@ -371,8 +367,8 @@ tests = testGroup "Integration Advanced QuickCheck Tests"
         assertBool "Normalize should preserve structure" $ not (null normalized)
         assertBool "Remove comments should work" $ not (null commentsRemoved)
 
-    , testCase "Error propagation through pipeline" $ do
-        let errorProneCode = unlines
+      ,             testCase "Error propagation through pipeline" $ do
+                    let errorProneCode = unlines
               [ "func errorTest() {"
               , "    if x > 0 {"  -- Missing closing brace
               , "        return x"
@@ -384,13 +380,13 @@ tests = testGroup "Integration Advanced QuickCheck Tests"
         case parseResult of
           Left _ -> return ()  -- Expected to fail
           Right typusFile -> do
-            let compileResult = compile typusFile
+                        let compileResult = compile typusFile
             case compileResult of
               Left errors -> assertBool "Should propagate errors" $ not (null errors)
               Right _ -> return ()  -- May succeed despite errors
 
-    , testCase "Complex integration scenario" $ do
-        let complexCode = unlines
+      ,             testCase "Complex integration scenario" $ do
+                    let complexCode = unlines
               [ "//! ownership: true"
               , "//! dependent-types: true"
               , "// +build linux"
@@ -409,7 +405,7 @@ tests = testGroup "Integration Advanced QuickCheck Tests"
         case parseResult of
           Left _ -> assertBool "Should parse complex code" False
           Right typusFile -> do
-            let directives = tfDirectives typusFile
+                        let directives = tfDirectives typusFile
             let buildTags = tfBuildTags typusFile
             assertBool "Should preserve ownership directive" $ directives /= defaultFileDirectives
             assertBool "Should preserve build tags" $ not (null buildTags)
@@ -418,17 +414,17 @@ tests = testGroup "Integration Advanced QuickCheck Tests"
               Left _ -> return ()  -- May fail with complex errors
               Right goCode -> assertBool "Should generate Go code" $ not (null goCode)
 
-    , testCase "Integration with empty content" $ do
-        let emptyContent = ""
+      ,             testCase "Integration with empty content" $ do
+                    let emptyContent = ""
         let syntaxErrors = validateSyntax emptyContent
         let parseResult = parseTypus emptyContent
         L.length syntaxErrors @?= 0
         case parseResult of
           Left _ -> assertBool "Should parse empty content" False
           Right typusFile -> do
-            let compileResult = compile typusFile
+                        let compileResult = compile typusFile
             case compileResult of
               Left _ -> assertBool "Should compile empty file" False
               Right goCode -> assertBool "Should generate some Go code" $ not (null goCode)
     ]
-  ]
+  ])

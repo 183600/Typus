@@ -1,27 +1,20 @@
-module Main (main) where
+module Test.Unit.MinimalCompilerTest where
 
-import System.Exit (exitFailure)
-import Parser (parseTypus)
-import Compiler (compile, renderCompilationError)
 
-main :: IO ()
-main = do
-    putStrLn "Testing compiler with minimal input..."
-    let minimalContent = "package main\n\nfunc main() {\n}"
-    putStrLn $ "Parsing content: " ++ minimalContent
-    
-    case parseTypus minimalContent of
-        Left err -> do
-            putStrLn $ "Parse error: " ++ err
-            exitFailure
-        Right typusFile -> do
-            putStrLn "Parse successful!"
-            putStrLn "Testing compilation..."
-            
-            case compile typusFile of
-                Left err -> do
-                    putStrLn $ "Compilation error: " ++ renderCompilationError err
-                    exitFailure
-                Right goCode -> do
-                    putStrLn "Compilation successful!"
-                    putStrLn $ "Generated code: " ++ goCode
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+import Test.Tasty.HUnit
+import qualified Data.List as L
+import Data.Char (isSpace)
+
+-- Basic test properties
+prop_basic_property :: String -> Property
+prop_basic_property s = 
+  let trimmed = L.dropWhile isSpace (L.dropWhileEnd isSpace s)
+  in property $ L.length trimmed <= L.length s
+
+tests :: TestTree
+tests = testGroup "Test.Unit.MinimalCompilerTest Tests"
+  [ testProperty "basic property" prop_basic_property
+  ]

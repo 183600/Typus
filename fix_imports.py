@@ -1,64 +1,61 @@
 #!/usr/bin/env python3
 import os
 import re
-import sys
 
 def fix_imports(file_path):
-    """Fix QuickCheck imports in a Haskell file"""
+    """Fix import statements in Haskell files"""
     try:
-        with open(file_path, 'r') as f:
+        with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
         
-        # Check if file uses (==>)
-        if '(==>)' not in content:
-            return False
+        # Fix truncated import statements
+        # Pattern to match incomplete imports
+        content = re.sub(r'^(import\s+.*?)\.\.\.$', r'\1', content, flags=re.MULTILINE)
         
-        # Check if (==>) is already imported
-        if re.search(r'import.*Test\.QuickCheck.*\(==>\)', content):
-            return False
+        # Fix incomplete parentheses in imports
+        content = re.sub(r'^(import\s+.*?)\([^)]*$', r'\1', content, flags=re.MULTILINE)
         
-        # Find the Test.QuickCheck import line
-        quickcheck_import_pattern = r'(import\s+Test\.Tasty\.QuickCheck\s*\([^)]*)\)'
-        match = re.search(quickcheck_import_pattern, content)
+        # Fix incomplete module declarations
+        content = re.sub(r'^(module\s+.*?)\.\.$', r'\1', content, flags=re.MULTILINE)
         
-        if match:
-            # Add (==>) to the existing import
-            old_import = match.group(0)
-            new_import = old_import.replace(')', ', (==>))')
-            content = content.replace(old_import, new_import)
-            
-            with open(file_path, 'w') as f:
-                f.write(content)
-            print(f"Fixed {file_path}")
-            return True
-        else:
-            # Check if there's a Test.Tasty.QuickCheck import without parentheses
-            simple_import_pattern = r'import\s+Test\.Tasty\.QuickCheck'
-            if re.search(simple_import_pattern, content):
-                # Replace simple import with one that includes (==>)
-                old_import = 'import Test.Tasty.QuickCheck'
-                new_import = 'import Test.Tasty.QuickCheck ((==>))'
-                content = content.replace(old_import, new_import)
-                
-                with open(file_path, 'w') as f:
-                    f.write(content)
-                print(f"Fixed {file_path}")
-                return True
+        # Fix LANGUAGE pragmas
+        content = re.sub(r'^{-# LANGUAGE (.*?)\.\.$', r'{-# LANGUAGE \1 #-}', content, flags=re.MULTILINE)
         
-        return False
+        # Fix OPTIONS_GHC pragmas
+        content = re.sub(r'^{-# OPTIONS_GHC (.*?)\.\.$', r'{-# OPTIONS_GHC \1 #-}', content, flags=re.MULTILINE)
+        
+        # Fix incomplete import lists
+        content = re.sub(r'^(import\s+.*?)\([^)]*$', r'\1)', content, flags=re.MULTILINE)
+        
+        # Fix incomplete qualified imports
+        content = re.sub(r'^(import\s+qualified\s+.*?)\.\.$', r'\1', content, flags=re.MULTILINE)
+        
+        # Write back if changed
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        
+        print(f"Fixed imports in {file_path}")
+        return True
     except Exception as e:
         print(f"Error processing {file_path}: {e}")
         return False
 
 def main():
-    test_dir = "test/Test/Unit"
-    fixed_count = 0
+    test_dir = "/home/runner/work/Typus/Typus/test/Test/Unit"
     
-    for filename in os.listdir(test_dir):
-        if filename.endswith(".hs"):
-            file_path = os.path.join(test_dir, filename)
-            if fix_imports(file_path):
-                fixed_count += 1
+    # Find all Haskell test files
+    haskell_files = []
+    for root, dirs, files in os.walk(test_dir):
+        for file in files:
+            if file.endswith('.hs'):
+                haskell_files.append(os.path.join(root, file))
+    
+    print(f"Found {len(haskell_files)} Haskell test files")
+    
+    fixed_count = 0
+    for file_path in haskell_files:
+        if fix_imports(file_path):
+            fixed_count += 1
     
     print(f"Fixed {fixed_count} files")
 

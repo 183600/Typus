@@ -1,33 +1,10 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE OverloadedStrings #-}
-
 module Test.Unit.CompilerIntegrationQuickCheckSpec where
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import Test.Tasty.QuickCheck (ioProperty, Gen)
-
-import qualified Data.Text as T
-import qualified Data.Map.Strict as Map
-import qualified Data.List as L
-import Data.List (isInfixOf)
-import Data.List (sort)
-import Data.Maybe (isJust, isNothing, fromMaybe)
-import Data.Either (isLeft, isRight)
-
-import Compiler
-import IntegratedCompiler
-import Parser
-import ErrorHandler
-import SourceLocation
-import qualified Ownership
-import qualified Dependencies
-import qualified DependentTypesParser
-
--- | Test end-to-end compilation pipeline
-testEndToEndCompilationPipeline :: Property
-testEndToEndCompilationPipeline =
+import Test.Tasty.QuickCheck 
   forAll (arbitrary :: Gen String) $ \sourceCode ->
     let parsed = parseTypus sourceCode
     -- Pipeline should complete without crashing
@@ -35,7 +12,7 @@ testEndToEndCompilationPipeline =
 
 -- | Test compiler phase consistency
 testCompilerPhaseConsistency :: Property
-testCompilerPhaseConsistency =
+                              testCompilerPhaseConsistency =
   forAll (arbitrary :: Gen String) $ \sourceCode ->
     let parsed = parseTypus sourceCode
     -- Error counts should be non-negative
@@ -43,7 +20,7 @@ testCompilerPhaseConsistency =
 
 -- | Test compiler error propagation
 testCompilerErrorPropagation :: Property
-testCompilerErrorPropagation =
+                              testCompilerErrorPropagation =
   forAll (arbitrary :: Gen String) $ \sourceCode ->
     let parsed = parseTypus sourceCode
     -- Pipeline should complete without crashing
@@ -51,7 +28,7 @@ testCompilerErrorPropagation =
 
 -- | Test compiler warning consistency
 testCompilerWarningConsistency :: Property
-testCompilerWarningConsistency =
+                              testCompilerWarningConsistency =
   forAll (arbitrary :: Gen String) $ \sourceCode ->
     let parsed = parseTypus sourceCode
     -- Pipeline should complete without crashing
@@ -59,7 +36,7 @@ testCompilerWarningConsistency =
 
 -- | Test compiler optimization invariants
 testCompilerOptimizationInvariants :: Property
-testCompilerOptimizationInvariants =
+                              testCompilerOptimizationInvariants =
   forAll (arbitrary :: Gen String) $ \sourceCode ->
     -- Pipeline should complete without crashing
     let result = L.length sourceCode >= 0
@@ -67,7 +44,7 @@ testCompilerOptimizationInvariants =
 
 -- | Test compiler resource management
 testCompilerResourceManagement :: Property
-testCompilerResourceManagement =
+                              testCompilerResourceManagement =
   forAll (arbitrary :: Gen String) $ \sourceCode ->
     -- Pipeline should complete without crashing
     let result = L.length sourceCode >= 0
@@ -75,7 +52,7 @@ testCompilerResourceManagement =
 
 -- | Test compiler parallel processing (simplified)
 testCompilerParallelProcessing :: Property
-testCompilerParallelProcessing =
+                              testCompilerParallelProcessing =
   forAll (arbitrary :: Gen [String]) $ \sourceFiles ->
     -- Pipeline should complete without crashing
     let result = L.length sourceFiles >= 0
@@ -83,7 +60,7 @@ testCompilerParallelProcessing =
 
 -- | Test compiler incremental compilation (simplified)
 testCompilerIncrementalCompilation :: Property
-testCompilerIncrementalCompilation =
+                              testCompilerIncrementalCompilation =
   forAll (arbitrary :: Gen String) $ \sourceCode ->
     -- Test that we can compile source code
     let result = L.length sourceCode >= 0
@@ -91,7 +68,7 @@ testCompilerIncrementalCompilation =
 
 -- | Test compiler dependency resolution (simplified)
 testCompilerDependencyResolution :: Property
-testCompilerDependencyResolution =
+                              testCompilerDependencyResolution =
   forAll (arbitrary :: Gen String) $ \sourceCode ->
     -- Test that we can analyze source code
     let result = L.length sourceCode >= 0
@@ -99,11 +76,11 @@ testCompilerDependencyResolution =
 
 -- | Test compiler type checking integration
 testCompilerTypeCheckingIntegration :: Property
-testCompilerTypeCheckingIntegration =
+                              testCompilerTypeCheckingIntegration =
   forAll arbitrary $ \sourceCode ->
     -- Use IntegratedCompiler.analyze to test type checking
     ioProperty $ do
-      analysisResult <- IntegratedCompiler.analyze sourceCode
+              analysisResult <- IntegratedCompiler.analyze sourceCode
       case analysisResult of
         Left _ -> return True -- Analysis failed, which is acceptable for arbitrary input
         Right analysis -> 
@@ -112,11 +89,11 @@ testCompilerTypeCheckingIntegration =
 
 -- | Test compiler ownership analysis integration
 testCompilerOwnershipAnalysisIntegration :: Property
-testCompilerOwnershipAnalysisIntegration =
+                              testCompilerOwnershipAnalysisIntegration =
   forAll arbitrary $ \sourceCode ->
     -- Use IntegratedCompiler.analyze to test ownership analysis
     ioProperty $ do
-      analysisResult <- IntegratedCompiler.analyze sourceCode
+              analysisResult <- IntegratedCompiler.analyze sourceCode
       case analysisResult of
         Left _ -> return True -- Analysis failed, which is acceptable for arbitrary input
         Right analysis -> 
@@ -125,22 +102,22 @@ testCompilerOwnershipAnalysisIntegration =
 
 -- | Test compiler code generation consistency
 testCompilerCodeGenerationConsistency :: Property
-testCompilerCodeGenerationConsistency =
+                              testCompilerCodeGenerationConsistency =
   forAll arbitrary $ \sourceCode ->
     -- Use IntegratedCompiler.compileSource to test code generation
     ioProperty $ do
-      compilationResult <- IntegratedCompiler.compileSource sourceCode
+              compilationResult <- IntegratedCompiler.compileSource sourceCode
       case compilationResult of
         Left _ -> return True -- Compilation failed, which is acceptable for arbitrary input
         Right code -> return $ L.length code >= 0
 
 -- | Test compiler error recovery
 testCompilerErrorRecovery :: Property
-testCompilerErrorRecovery =
+                              testCompilerErrorRecovery =
   forAll arbitrary $ \malformedCode ->
     -- Test that compiler can handle malformed code gracefully
     ioProperty $ do
-      analysisResult <- IntegratedCompiler.analyze malformedCode
+              analysisResult <- IntegratedCompiler.analyze malformedCode
       case analysisResult of
         Left _ -> return True -- Analysis failed, which is expected for malformed code
         Right analysis -> 
@@ -149,22 +126,22 @@ testCompilerErrorRecovery =
 
 -- | Test compiler configuration validation
 testCompilerConfigurationValidation :: Property
-testCompilerConfigurationValidation =
+                              testCompilerConfigurationValidation =
   forAll arbitrary $ \sourceCode ->
     -- Test that we can compile with default configuration
     ioProperty $ do
-      compilationResult <- IntegratedCompiler.compileSource sourceCode
+              compilationResult <- IntegratedCompiler.compileSource sourceCode
       case compilationResult of
         Left _ -> return True -- Compilation failed, which is acceptable for arbitrary input
         Right code -> return $ L.length code >= 0
 
 -- | Test compiler performance characteristics
 testCompilerPerformanceCharacteristics :: Property
-testCompilerPerformanceCharacteristics =
+                              testCompilerPerformanceCharacteristics =
   forAll arbitrary $ \sourceCode ->
     -- Test that compilation completes in reasonable time
     ioProperty $ do
-      analysisResult <- IntegratedCompiler.analyze sourceCode
+              analysisResult <- IntegratedCompiler.analyze sourceCode
       case analysisResult of
         Left _ -> return True -- Analysis failed, which is acceptable for arbitrary input
         Right analysis -> 
@@ -172,20 +149,20 @@ testCompilerPerformanceCharacteristics =
           in return $ L.length errors >= 0
 
 tests :: TestTree
-tests = testGroup "Compiler Integration QuickCheck Tests"
-  [ testProperty "End-to-end pipeline" testEndToEndCompilationPipeline
-  , testProperty "Phase consistency" testCompilerPhaseConsistency
-  , testProperty "Error propagation" testCompilerErrorPropagation
-  , testProperty "Warning consistency" testCompilerWarningConsistency
-  , testProperty "Optimization invariants" testCompilerOptimizationInvariants
-  , testProperty "Resource management" testCompilerResourceManagement
-  , testProperty "Parallel processing" testCompilerParallelProcessing
-  , testProperty "Incremental compilation" testCompilerIncrementalCompilation
-  , testProperty "Dependency resolution" testCompilerDependencyResolution
-  , testProperty "Type checking integration" testCompilerTypeCheckingIntegration
-  , testProperty "Ownership analysis integration" testCompilerOwnershipAnalysisIntegration
-  , testProperty "Code generation consistency" testCompilerCodeGenerationConsistency
-  , testProperty "Error recovery" testCompilerErrorRecovery
-  , testProperty "Configuration validation" testCompilerConfigurationValidation
-  , testProperty "Performance characteristics" testCompilerPerformanceCharacteristics
+tests =   testGroup "Compiler Integration QuickCheck Tests"
+  [             testProperty "End-to-end pipeline" testEndToEndCompilationPipeline
+  ,             testProperty "Phase consistency" testCompilerPhaseConsistency
+  ,             testProperty "Error propagation" testCompilerErrorPropagation
+  ,             testProperty "Warning consistency" testCompilerWarningConsistency
+  ,             testProperty "Optimization invariants" testCompilerOptimizationInvariants
+  ,             testProperty "Resource management" testCompilerResourceManagement
+  ,             testProperty "Parallel processing" testCompilerParallelProcessing
+  ,             testProperty "Incremental compilation" testCompilerIncrementalCompilation
+  ,             testProperty "Dependency resolution" testCompilerDependencyResolution
+  ,             testProperty "Type checking integration" testCompilerTypeCheckingIntegration
+  ,             testProperty "Ownership analysis integration" testCompilerOwnershipAnalysisIntegration
+  ,             testProperty "Code generation consistency" testCompilerCodeGenerationConsistency
+  ,             testProperty "Error recovery" testCompilerErrorRecovery
+  ,             testProperty "Configuration validation" testCompilerConfigurationValidation
+  ,             testProperty "Performance characteristics" testCompilerPerformanceCharacteristics
   ]

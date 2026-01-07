@@ -1,73 +1,34 @@
-module Test.Unit.NewIntegrationEndToEndQuickCheckSpec (tests) where
-
-import Test.Tasty (TestTree, testGroup)
-import qualified Data.List as L
-import Test.Tasty.HUnit (testCase, (@?=))
+module Test.Unit.NewIntegrationEndToEndQuickCheckSpec where
+import Test.QuickCheck 
+import Test.Tasty.HUnit (testCase, assertFailure, assertBool, (@?=))
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, Property, (===), counterexample, forAll, oneof, elements, listOf, suchThat)
+import Parser ()
+                                   result1 === result2
+-- Arbitrary instance for SourcePos
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- choose (1, 100)
+    column <- choose (1, 100)
+    offset <- choose (0, 1000)
+    return $ SourcePos line column offset
 
-import Parser (parseTypus, TypusFile(..))
-import Compiler (compile, generateGoCode)
-import TestSupport.QuickCheck (fastProperty)
+-- Arbitrary instance for SourceSpan
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    return $ SourceSpan start end
 
--- ============================================================================
--- New QuickCheck Tests for Integration End-to-End
--- ============================================================================
-
-tests :: TestTree
-tests =
-  testGroup "New Integration End-to-End QuickCheck Tests"
-    [ testGroup "Pipeline Integration Properties"
-        [ fastProperty "parse-compile-generate pipeline is deterministic" prop_pipelineDeterministic
-        , fastProperty "pipeline preserves semantic meaning" prop_pipelinePreservesSemantics
-        , fastProperty "pipeline handles errors gracefully" prop_pipelineHandlesErrors
-        , fastProperty "pipeline maintains consistency across phases" prop_pipelineMaintainsConsistency
-        , fastProperty "pipeline handles edge cases" prop_pipelineHandlesEdgeCases
-        ]
-
-    , testGroup "Cross-Component Properties"
-        [ fastProperty "parser errors propagate correctly" prop_parserErrorsPropagate
-        , fastProperty "compiler errors include source locations" prop_compilerErrorsIncludeLocations
-        , fastProperty "generated code matches parsed structure" prop_generatedCodeMatchesStructure
-        , fastProperty "ownership analysis integrates with type checking" prop_ownershipIntegratesWithTypeChecking
-        , fastProperty "dependency analysis affects compilation" prop_dependencyAnalysisAffectsCompilation
-        ]
-
-    , testGroup "Performance Integration Properties"
-        [ fastProperty "end-to-end processing time is reasonable" prop_endToEndTimeReasonable
-        , fastProperty "memory usage doesn't grow excessively" prop_memoryUsageReasonable
-        , fastProperty "large inputs are handled efficiently" prop_largeInputsHandledEfficiently
-        , fastProperty "concurrent processing maintains correctness" prop_concurrentProcessingCorrect
-        ]
-
-    , testGroup "Robustness Properties"
-        [ fastProperty "system recovers from partial failures" prop_systemRecoversFromPartialFailures
-        , fastProperty "invalid input doesn't crash system" prop_invalidInputDoesntCrash
-        , fastProperty "resource cleanup works correctly" prop_resourceCleanupWorks
-        , fastProperty "system maintains invariants under stress" prop_systemMaintainsInvariants
-        ]
-    ]
-
--- ============================================================================
--- Pipeline Integration Property Tests
--- ============================================================================
-
--- | Parse-compile-generate pipeline should be deterministic
-prop_pipelineDeterministic :: String -> Property
-prop_pipelineDeterministic input =
-  let result1 = runFullPipeline input
-      result2 = runFullPipeline input
-  in counterexample ("input=" ++ take 50 input ++ "...") $
-     result1 === result2
 
 -- | Pipeline should preserve semantic meaning
 prop_pipelinePreservesSemantics :: String -> Property
-prop_pipelinePreservesSemantics input =
+prop_pipelinePreservesSemantics                               input =
   let parsed = parseTypus input
   in case parsed of
        Left _ -> property True  -- Skip if parsing fails
        Right typusFile ->
          let compiled = compile typusFile
-             goCode = generateGoCode typusFile
+                                           goCode = generateGoCode typusFile
          in counterexample ("input=" ++ take 30 input ++ "...") $
             case compiled of
               Right _ -> not (null goCode)  -- Should generate some code
@@ -75,9 +36,9 @@ prop_pipelinePreservesSemantics input =
 
 -- | Pipeline should handle errors gracefully
 prop_pipelineHandlesErrors :: String -> Property
-prop_pipelineHandlesErrors input =
+prop_pipelineHandlesErrors                               input =
   let result = runFullPipeline input
-  in counterexample ("input L.length=" ++ show (L.length input)) $
+  in counterexample ("input L.length=" ++ show (L.length input) $
      case result of
        PipelineSuccess _ -> property True
        PipelineError _ -> property True  -- Errors should be handled gracefully
@@ -85,13 +46,13 @@ prop_pipelineHandlesErrors input =
 
 -- | Pipeline should maintain consistency across phases
 prop_pipelineMaintainsConsistency :: String -> Property
-prop_pipelineMaintainsConsistency input =
+prop_pipelineMaintainsConsistency                               input =
   let parsed = parseTypus input
   in case parsed of
        Left _ -> property True  -- Skip if parsing fails
        Right typusFile ->
          let compiled = compile typusFile
-             goCode = generateGoCode typusFile
+                                           goCode = generateGoCode typusFile
          in counterexample ("phases consistency") $
             -- Basic consistency check
             case compiled of
@@ -100,9 +61,9 @@ prop_pipelineMaintainsConsistency input =
 
 -- | Pipeline should handle edge cases
 prop_pipelineHandlesEdgeCases :: String -> Property
-prop_pipelineHandlesEdgeCases input =
+prop_pipelineHandlesEdgeCases                               input =
   let isEdgeCase = isNullOrEmpty input || hasSpecialCharacters input
-      result = runFullPipeline input
+                                    result = runFullPipeline input
   in if isEdgeCase
      then counterexample ("edge case input") $
           case result of
@@ -117,7 +78,7 @@ prop_pipelineHandlesEdgeCases input =
 
 -- | Parser errors should propagate correctly
 prop_parserErrorsPropagate :: String -> Property
-prop_parserErrorsPropagate input =
+prop_parserErrorsPropagate                               input =
   let parsed = parseTypus input
   in case parsed of
        Left parseError ->
@@ -130,7 +91,7 @@ prop_parserErrorsPropagate input =
 
 -- | Compiler errors should include source locations
 prop_compilerErrorsIncludeLocations :: String -> Property
-prop_compilerErrorsIncludeLocations input =
+prop_compilerErrorsIncludeLocations                               input =
   let parsed = parseTypus input
   in case parsed of
        Right typusFile ->
@@ -144,24 +105,24 @@ prop_compilerErrorsIncludeLocations input =
 
 -- | Generated code should match parsed structure
 prop_generatedCodeMatchesStructure :: String -> Property
-prop_generatedCodeMatchesStructure input =
+prop_generatedCodeMatchesStructure                               input =
   let parsed = parseTypus input
   in case parsed of
        Right typusFile ->
          let goCode = generateGoCode typusFile
-             structureMatch = codeStructureMatches typusFile goCode
+                                           structureMatch = codeStructureMatches typusFile goCode
          in counterexample ("structure match") $
             structureMatch
        Left _ -> property True  -- Skip if parsing fails
 
 -- | Ownership analysis should integrate with type checking
 prop_ownershipIntegratesWithTypeChecking :: String -> Property
-prop_ownershipIntegratesWithTypeChecking input =
+prop_ownershipIntegratesWithTypeChecking                               input =
   let parsed = parseTypus input
   in case parsed of
        Right typusFile ->
          let hasOwnership = hasOwnershipDirectives typusFile
-             compiled = compile typusFile
+                                           compiled = compile typusFile
          in if hasOwnership
             then counterexample ("ownership integration") $
                  case compiled of
@@ -172,12 +133,12 @@ prop_ownershipIntegratesWithTypeChecking input =
 
 -- | Dependency analysis should affect compilation
 prop_dependencyAnalysisAffectsCompilation :: String -> Property
-prop_dependencyAnalysisAffectsCompilation input =
+prop_dependencyAnalysisAffectsCompilation                               input =
   let parsed = parseTypus input
   in case parsed of
        Right typusFile ->
          let hasDependencies = hasDependencyBlocks typusFile
-             compiled = compile typusFile
+                                           compiled = compile typusFile
          in if hasDependencies
             then counterexample ("dependency analysis") $
                  case compiled of
@@ -192,9 +153,9 @@ prop_dependencyAnalysisAffectsCompilation input =
 
 -- | End-to-end processing time should be reasonable
 prop_endToEndTimeReasonable :: String -> Property
-prop_endToEndTimeReasonable input =
+prop_endToEndTimeReasonable                               input =
   let result = runFullPipeline input
-  in counterexample ("processing time for input L.length=" ++ show (L.length input)) $
+  in counterexample ("processing time for input L.length=" ++ show (L.length input) $
      -- Basic sanity check: if it completes, time is reasonable
      case result of
        PipelineSuccess _ -> property True
@@ -203,24 +164,24 @@ prop_endToEndTimeReasonable input =
 
 -- | Memory usage should be reasonable
 prop_memoryUsageReasonable :: String -> Property
-prop_memoryUsageReasonable input =
+prop_memoryUsageReasonable                               input =
   let parsed = parseTypus input
   in case parsed of
        Right typusFile ->
          let goCode = generateGoCode typusFile
-             inputSize = L.length input
-             outputSize = L.length goCode
-         in counterexample ("memory usage: input=" ++ show inputSize ++ ", output=" ++ show outputSize) $
+                                           inputSize = L.length input
+                                           outputSize = L.length goCode
+         in counterexample ("memory usage:                               input =" ++ show inputSize ++ ",                               output =" ++ show outputSize) $
             outputSize <= max 10000 (inputSize * 10)  -- Reasonable upper bound
        Left _ -> property True
 
 -- | Large inputs should be handled efficiently
 prop_largeInputsHandledEfficiently :: Int -> Property
-prop_largeInputsHandledEfficiently n =
+prop_largeInputsHandledEfficiently                               n =
   let size = min n 1000  -- Limit for practical testing
-      input = generateLargeInput size
-      result = runFullPipeline input
-  in counterexample ("large input size=" ++ show size) $
+                                    input = generateLargeInput size
+                                    result = runFullPipeline input
+  in counterexample ("large input                               size =" ++ show size) $
      case result of
        PipelineSuccess _ -> property True
        PipelineError _ -> property True
@@ -228,11 +189,11 @@ prop_largeInputsHandledEfficiently n =
 
 -- | Concurrent processing should maintain correctness
 prop_concurrentProcessingCorrect :: String -> Property
-prop_concurrentProcessingCorrect input =
+prop_concurrentProcessingCorrect                               input =
   let result1 = runFullPipeline input
-      result2 = runFullPipeline input
+                                    result2 = runFullPipeline input
   in counterexample ("concurrent processing") $
-     result1 === result2  -- Should be deterministic
+                                   result1 === result2  -- Should be deterministic
 
 -- ============================================================================
 -- Robustness Property Tests
@@ -240,9 +201,9 @@ prop_concurrentProcessingCorrect input =
 
 -- | System should recover from partial failures
 prop_systemRecoversFromPartialFailures :: String -> String -> Property
-prop_systemRecoversFromPartialFailures validPart errorPart =
+prop_systemRecoversFromPartialFailures validPart                               errorPart =
   let input = validPart ++ "\n" ++ errorPart
-      result = runFullPipeline input
+                                    result = runFullPipeline input
   in counterexample ("partial failure recovery") $
      case result of
        PipelinePartial successPart errors -> 
@@ -251,7 +212,7 @@ prop_systemRecoversFromPartialFailures validPart errorPart =
 
 -- | Invalid input shouldn't crash system
 prop_invalidInputDoesntCrash :: String -> Property
-prop_invalidInputDoesntCrash input =
+prop_invalidInputDoesntCrash                               input =
   let result = runFullPipeline input
   in counterexample ("invalid input handling") $
      case result of
@@ -261,9 +222,9 @@ prop_invalidInputDoesntCrash input =
 
 -- | Resource cleanup should work correctly
 prop_resourceCleanupWorks :: String -> Property
-prop_resourceCleanupWorks input =
+prop_resourceCleanupWorks                               input =
   let result1 = runFullPipeline input
-      result2 = runFullPipeline input
+                                    result2 = runFullPipeline input
   in counterexample ("resource cleanup") $
      -- Multiple runs should work without resource leaks
      case (result1, result2) of
@@ -272,9 +233,9 @@ prop_resourceCleanupWorks input =
 
 -- | System should maintain invariants under stress
 prop_systemMaintainsInvariants :: [String] -> Property
-prop_systemMaintainsInvariants inputs =
+prop_systemMaintainsInvariants                               inputs =
   let results = map runFullPipeline inputs
-      successCount = L.length [r | r <- results, isSuccess r]
+                                    successCount = L.length [r | r <- results, isSuccess r]
   in counterexample ("stress test: " ++ show (L.length inputs) ++ " inputs") $
      successCount >= 0  -- Basic invariant: count is non-negative
 
@@ -283,14 +244,14 @@ prop_systemMaintainsInvariants inputs =
 -- ============================================================================
 
 -- | Pipeline result type
-data PipelineResult = 
+data                               PipelineResult = 
     PipelineSuccess String
   | PipelineError PipelineErrorType
   | PipelinePartial String [PipelineErrorType]
   deriving (Show, Eq)
 
 -- | Pipeline error type
-data PipelineErrorType = 
+data                               PipelineErrorType = 
     ParserError String
   | CompilerError [String]
   | GenerationError String
@@ -298,7 +259,7 @@ data PipelineErrorType =
 
 -- | Run full pipeline (simplified)
 runFullPipeline :: String -> PipelineResult
-runFullPipeline input =
+runFullPipeline                               input =
   case parseTypus input of
     Left parseError -> PipelineError (ParserError parseError)
     Right typusFile ->
@@ -312,24 +273,24 @@ runFullPipeline input =
 
 -- | Check if string is null L.or empty
 isNullOrEmpty :: String -> Bool
-isNullOrEmpty = null
+                              isNullOrEmpty = null
 
 -- | Check if string has special characters
 hasSpecialCharacters :: String -> Bool
-hasSpecialCharacters = L.any (`elem` "\0\1\2\3\4\5\6\7\8\10\11\12\13\14\15\16\17\18\19\20\21\22\23\24\25\26\27\28\29\30\31\127")
+                              hasSpecialCharacters = L.any (`elem` "\0\1\2\3\4\5\6\7\8\10\11\12\13\14\15\16\17\18\19\20\21\22\23\24\25\26\27\28\29\30\31\127")
 
 -- | Check if error has source location
 hasSourceLocation :: PipelineErrorType -> Bool
 hasSourceLocation (CompilerError _) = True  -- Simplified
-hasSourceLocation _ = False
+hasSourceLocation                               _ = False
 
 -- | Check if code structure matches
 codeStructureMatches :: TypusFile -> String -> Bool
-codeStructureMatches _ goCode = not (null goCode)  -- Simplified
+codeStructureMatches _                               goCode = not (null goCode)  -- Simplified
 
 -- | Check if file has ownership directives
 hasOwnershipDirectives :: TypusFile -> Bool
-hasOwnershipDirectives typusFile = 
+hasOwnershipDirectives                               typusFile = 
   -- Simplified check
   "ownership" `L.isInfixOf` show typusFile
 
@@ -337,30 +298,30 @@ hasOwnershipDirectives typusFile =
 areOwnershipRelated :: PipelineErrorType -> Bool
 areOwnershipRelated (CompilerError errors) = 
   L.any ("ownership" `L.isInfixOf`) errors
-areOwnershipRelated _ = False
+areOwnershipRelated                               _ = False
 
 -- | Check if file has dependency blocks
 hasDependencyBlocks :: TypusFile -> Bool
-hasDependencyBlocks typusFile = 
+hasDependencyBlocks                               typusFile = 
   -- Simplified check
   "dependency" `L.isInfixOf` show typusFile
 
 -- | Generate large input for testing
 generateLargeInput :: Int -> String
-generateLargeInput n = unlines [ "func test" ++ show i ++ "() {}" | i <- [1..n] ]
+generateLargeInput                               n = unlines [ "func test" ++ show i ++ "() {}" | i <- [1..n] ]
 
 -- | Check if pipeline result is success
 isSuccess :: PipelineResult -> Bool
 isSuccess (PipelineSuccess _) = True
-isSuccess _ = False
+isSuccess                               _ =  False
 
--- | Check if substring is in string
+-- | Check if substring is in property $ string
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` (tails haystack >>= inits)
+isInfixOf needle                               haystack = needle `elem` (tails haystack >>= inits)
   where
-    tails [] = [[]]
+      tails [] = [[]]
     tails xs@(x:xs') = xs : tails xs'
     inits [] = [[]]
-    inits xs = inits' xs []
-    inits' [] acc = [L.reverse acc]
-    inits' (x:xs') acc = L.reverse acc : inits' xs' (x:acc)
+    inits                               xs = inits' xs []
+    inits' []                               acc = [L.reverse acc]
+    inits' (x:xs')                               acc = L.reverse acc : inits' xs' (x:acc [])

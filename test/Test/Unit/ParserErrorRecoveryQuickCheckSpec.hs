@@ -1,105 +1,48 @@
-{-# LANGUAGE FlexibleInstances #-}
-module Test.Unit.ParserErrorRecoveryQuickCheckSpec (tests) where
-
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=))
+module Test.Unit.ParserErrorRecoveryQuickCheckSpec where
+import Test.QuickCheck 
+import Test.Tasty.HUnit (testCase, assertFailure, assertBool, (@?=))
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, listOf, elements, choose, suchThat)
-import Data.Char (isAlphaNum, isSpace)
-import qualified Data.List as L
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
-import Data.List (sort)
-import qualified Data.Set as Set
-
-import Parser (parseTypus, TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..))
+import Data.Char 
+import Parser (parseTypus, TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives)
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos)
-import Utils (trim)
-
--- | QuickCheck tests for Parser error recovery capabilities
-tests :: TestTree
-tests =
-  testGroup "ParserErrorRecoveryQuickCheckSpec - Parser Error Recovery Tests"
-    [ testProperty "Parser recovers from mismatched braces" prop_mismatchedBraceRecovery
-    , testProperty "Parser handles unterminated strings gracefully" prop_unterminatedStringRecovery
-    , testProperty "Parser recovers from invalid directive syntax" prop_invalidDirectiveRecovery
-    , testProperty "Parser maintains structure despite syntax errors" prop_structurePreservationWithErrors
-    , testProperty "Parser error positions are accurate" prop_errorPositionAccuracy
-    , testProperty "Parser handles multiple cascading errors" prop_cascadingErrorHandling
-    , testProperty "Parser recovers from malformed block directives" prop_blockDirectiveRecovery
-    , testProperty "Parser maintains valid AST invariants on error" prop_astInvariantPreservation
-    ]
-
--- ============================================================================
--- Parser Error Recovery Properties
--- ============================================================================
-
--- Property: Parser recovers from mismatched braces L.and continues parsing
-prop_mismatchedBraceRecovery :: String -> Bool
-prop_mismatchedBraceRecovery input =
-  let malformedInput = input ++ createMismatchedBraces
-      parseResult = parseTypus malformedInput
-  in case parseResult of
-    Left _ -> True  -- Error is expected
-    Right typusFile -> 
-      -- Should recover L.and still parse some content
-      let blocks = tfBlocks typusFile
-      in L.length blocks >= 0  -- Should not crash L.and may recover some blocks
-
--- Property: Parser handles unterminated strings gracefully
-prop_unterminatedStringRecovery :: String -> Bool
-prop_unterminatedStringRecovery input =
-  let malformedInput = input ++ createUnterminatedString
-      parseResult = parseTypus malformedInput
-  in case parseResult of
-    Left _ -> True  -- Error is expected
-    Right typusFile -> 
-      -- Should recover L.and continue parsing after string
-      let hasValidStructure = validateBasicStructure typusFile
-      in hasValidStructure
-
--- Property: Parser recovers from invalid directive syntax
-prop_invalidDirectiveRecovery :: String -> Bool
-prop_invalidDirectiveRecovery input =
-  let malformedInput = input ++ createInvalidDirectives
-      parseResult = parseTypus malformedInput
-  in case parseResult of
-    Left _ -> True  -- Error is expected
-    Right typusFile -> 
-      -- Should recover L.and parse remaining content
-      let directives = tfDirectives typusFile
-      in directives == defaultFileDirectives || directives /= defaultFileDirectives
-
--- Property: Parser maintains structure despite syntax errors
-prop_structurePreservationWithErrors :: String -> Bool
-prop_structurePreservationWithErrors input =
-  let malformedInput = input ++ createMixedSyntaxErrors
-      parseResult = parseTypus malformedInput
-  in case parseResult of
-    Left _ -> True  -- Error is expected
-    Right typusFile -> 
-      -- Should maintain basic TypusFile structure
-      let hasValidFields = 
-            not (L.null (show (tfDirectives typusFile))) &&
+import Utils 
+            not (L.null (show (tfDirectives typusFile)) &&
             L.length (tfBuildTags typusFile) >= 0 &&
             L.length (tfBlocks typusFile) >= 0
       in hasValidFields
+-- Arbitrary instance for SourcePos
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- choose (1, 100)
+    column <- choose (1, 100)
+    offset <- choose (0, 1000)
+    return $ SourcePos line column offset
+
+-- Arbitrary instance for SourceSpan
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    return $ SourceSpan start end
+
 
 -- Property: Parser error positions are accurate within input bounds
 prop_errorPositionAccuracy :: String -> Bool
-prop_errorPositionAccuracy input =
+prop_errorPositionAccuracy                               input =
   let malformedInput = input ++ createPositionTestErrors
-      parseResult = parseTypus malformedInput
+                                    parseResult = parseTypus malformedInput
   in case parseResult of
     Left parseError -> 
       -- Error message should contain valid position information
-      hasValidPositionInfo = containsValidPosition parseError
+                                    hasValidPositionInfo = containsValidPosition parseError
       hasValidPositionInfo
     Right _ -> True  -- No error is also acceptable
 
 -- Property: Parser handles multiple cascading errors gracefully
 prop_cascadingErrorHandling :: String -> Bool
-prop_cascadingErrorHandling input =
+prop_cascadingErrorHandling                               input =
   let malformedInput = input ++ createCascadingErrors
-      parseResult = parseTypus malformedInput
+                                    parseResult = parseTypus malformedInput
   in case parseResult of
     Left _ -> True  -- Should handle cascading errors without crashing
     Right typusFile -> 
@@ -109,22 +52,22 @@ prop_cascadingErrorHandling input =
 
 -- Property: Parser recovers from malformed block directives
 prop_blockDirectiveRecovery :: String -> Bool
-prop_blockDirectiveRecovery input =
+prop_blockDirectiveRecovery                               input =
   let malformedInput = input ++ createMalformedBlockDirectives
-      parseResult = parseTypus malformedInput
+                                    parseResult = parseTypus malformedInput
   in case parseResult of
     Left _ -> True  -- Error is expected
     Right typusFile -> 
       -- Should recover L.and parse surrounding content
       let blocks = tfBlocks typusFile
-          hasValidBlocks = L.all validateBlock blocks
+                                        hasValidBlocks = L.all validateBlock blocks
       in hasValidBlocks
 
 -- Property: Parser maintains valid AST invariants even on error
 prop_astInvariantPreservation :: String -> Bool
-prop_astInvariantPreservation input =
+prop_astInvariantPreservation                               input =
   let malformedInput = input ++ createInvariantBreakingErrors
-      parseResult = parseTypus malformedInput
+                                    parseResult = parseTypus malformedInput
   in case parseResult of
     Left _ -> True  -- Error is expected
     Right typusFile -> 
@@ -138,56 +81,54 @@ prop_astInvariantPreservation input =
 
 -- Create various malformed inputs for testing
 createMismatchedBraces :: String
-createMismatchedBraces = "\nfunc test() {\n  if true {\n    return true\n  // missing closing brace\n}\n"
+                              createMismatchedBraces = "\nfunc test() {\n  if true {\n    return true\n  // missing closing brace\n}\n"
 
 createUnterminatedString :: String
-createUnterminatedString = "\nlet str = \"unterminated string\nfunc test() {\n  return true\n}\n"
+                              createUnterminatedString = "\nlet str = \"unterminated string\nfunc test() {\n  return true\n}\n"
 
 createInvalidDirectives :: String
-createInvalidDirectives = "\n//!invalid::directive syntax\n//!ownership: maybe\nfunc test() {\n  return true\n}\n"
+                              createInvalidDirectives = "\n//!invalid::directive syntax\n//!ownership: maybe\nfunc test() {\n  return true\n}\n"
 
 createMixedSyntaxErrors :: String
-createMixedSyntaxErrors = "\nfunc test( {\n  let x = ;\n  if {\n  return x\n}\n"
-
+                              createMixedSyntaxErrors = "\nfunc test( {\n  let x = ;\n  if {\n  return x\n}\n"
 createPositionTestErrors :: String
-createPositionTestErrors = "\nfunc test() {\n  return\n}\n// Error should be at correct position\n"
+                              createPositionTestErrors = "\nfunc test() {\n  return\n}\n// Error should be at correct position\n"
 
 createCascadingErrors :: String
-createCascadingErrors = "\nfunc test() {\n  let x = \n  let y = ;\n  if {\n    return\n  }\n}\n"
+                              createCascadingErrors = "\nfunc test() {\n  let x = \n  let y = ;\n  if {\n    return\n  }\n}\n"
 
 createMalformedBlockDirectives :: String
-createMalformedBlockDirectives = "\n{//!invalid syntax\n  func test() {\n    return true\n  }\n// missing closing\n"
+                              createMalformedBlockDirectives = "\n{//!invalid syntax\n  func test() {\n    return true\n  }\n// missing closing\n"
 
 createInvariantBreakingErrors :: String
-createInvariantBreakingErrors = "\nfunc {\n  return\n}\nlet = value\n"
+                              createInvariantBreakingErrors = "\nfunc {\n  return\n}\nlet = value\n"
 
 -- Validation functions
 validateBasicStructure :: TypusFile -> Bool
-validateBasicStructure typusFile = 
+validateBasicStructure                               typusFile = 
   let directives = tfDirectives typusFile
-      buildTags = tfBuildTags typusFile
-      blocks = tfBlocks typusFile
+                                    buildTags = tfBuildTags typusFile
+                                    blocks = tfBlocks typusFile
   in L.length buildTags >= 0 && L.length blocks >= 0
 
 validateBlock :: CodeBlock -> Bool
-validateBlock block = 
+validateBlock                               block = 
   let directives = cbDirectives block
-      content = cbContent block
+                                    content = cbContent block
   in L.length content >= 0
-
 containsValidPosition :: String -> Bool
-containsValidPosition errorMsg = 
+containsValidPosition                               errorMsg = 
   L.any (`L.isInfixOf` errorMsg) ["line", "position", "at"]
 
 checkASTInvariants :: TypusFile -> Bool
-checkASTInvariants typusFile = 
+checkASTInvariants                               typusFile = 
   let blocks = tfBlocks typusFile
-      allBlocksValid = L.all validateBlock blocks
-  in allBlocksValid
+                                    allBlocksValid = L.all validateBlock blocks
+      in allBlocksValid
 
 -- Mock defaultFileDirectives if not available
 defaultFileDirectives :: FileDirectives
-defaultFileDirectives = FileDirectives Nothing Nothing Nothing
+                              defaultFileDirectives = FileDirectives Nothing Nothing Nothing
 
 -- ============================================================================
 -- Arbitrary Instances
@@ -195,26 +136,26 @@ defaultFileDirectives = FileDirectives Nothing Nothing Nothing
 
 -- Generate strings that may contain parser error patterns
 arbitraryMalformedCode :: Gen String
-arbitraryMalformedCode = listOf $ oneof
+                              arbitraryMalformedCode = listOf $ oneof
   [ elements ['a'..'z']
   , elements ['A'..'Z']
   , elements ['0'..'9']
   , elements " \t\n\r"
-  , elements "{}[]();,.!@#$%^&*"
+  , elements "{}[]( (SourceSpan (SourcePos 1 1 0 [] (SourcePos 1 1 0);,.!@#$%^&*"
   , elements "func let return if else"
   ]
 
 arbitraryErrorPattern :: Gen String
-arbitraryErrorPattern = oneof
+                              arbitraryErrorPattern = oneof
   [ pure "func test() {\n  return\n}"  -- Missing return value
-  , pure "let x = ;"  -- Invalid assignment
-  , pure "if {\n  return true\n}"  -- Invalid if condition
-  , pure "{//!invalid\n  code\n}"  -- Invalid directive
-  , pure "\"unterminated string\n"  -- Unterminated string
+    , pure "let x = ;"  -- Invalid assignment
+    , pure "if {\n  return true\n}"  -- Invalid if condition
+    , pure "{//!invalid\n  code\n}"  -- Invalid directive
+    , pure "\"unterminated string\n"  -- Unterminated string
   ]
 
 instance Arbitrary String where
-  arbitrary = oneof
+                                              arbitrary = oneof
     [ arbitraryMalformedCode
     , arbitraryErrorPattern
-    ]
+    ]))

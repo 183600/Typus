@@ -1,5 +1,5 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-module Test.Unit.NewCompilerIdempotentQuickCheckSpec (tests) where
+module Test.Unit.NewCompilerIdempotentQuickCheckSpec where
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
@@ -15,15 +15,8 @@ import Compiler.IR
   ( SourceIR(..), SemanticIR(..), GoIR(..), buildSourceIR, buildSemanticIR
   , emitGo, rawSourceFromTypus, moduleFromTypus
   )
-import Compiler.GoAst (GoModule(..))
-import qualified Data.List as L
-import Data.List (isInfixOf, isPrefixOf)
-import Data.Char (isSpace)
-
--- | Test compilation idempotence
-prop_compile_idempotent :: String -> Property
-prop_compile_idempotent code =
-    L.length code > 0 && not ("var x int = \"string\"" `L.isInfixOf` code) ==>
+import Compiler.GoAst 
+    L.length code > 0 && not ("var x                               int = \"string\"" `L.isInfixOf` code) ==>
     case parseTypus code of
       Left _ -> property True  -- Parse errors are expected for invalid code
       Right typusFile ->
@@ -32,34 +25,49 @@ prop_compile_idempotent code =
           Right result1 ->
             case compile typusFile of
               Left _ -> property False  -- Should not fail on second try
-              Right result2 -> result1 == result2
+              Right result2 ->                               result1 == result2
+-- Arbitrary instance for SourcePos
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- choose (1, 100)
+    column <- choose (1, 100)
+    offset <- choose (0, 1000)
+    return $ SourcePos line column offset
+
+-- Arbitrary instance for SourceSpan
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    return $ SourceSpan start end
+
 
 -- | Test Go code generation idempotence
 prop_go_generation_idempotent :: String -> Property
-prop_go_generation_idempotent code =
-    L.length code > 0 ==>
+prop_go_generation_idempotent                               code =
+    L.length code >                               0 ==>
     case parseTypus code of
       Left _ -> property True
       Right typusFile ->
         let goCode1 = generateGoCode typusFile
-            goCode2 = generateGoCode typusFile
-        in goCode1 == goCode2
+                                          goCode2 = generateGoCode typusFile
+        in                               goCode1 == goCode2
 
 -- | Test SourceIR building idempotence
 prop_source_ir_idempotent :: String -> Property
-prop_source_ir_idempotent code =
-    L.length code > 0 ==>
+prop_source_ir_idempotent                               code =
+    L.length code >                               0 ==>
     case parseTypus code of
       Left _ -> property True
       Right typusFile ->
         let sourceIR1 = buildSourceIR typusFile
-            sourceIR2 = buildSourceIR typusFile
-        in sourceIR1 == sourceIR2
+                                          sourceIR2 = buildSourceIR typusFile
+        in                               sourceIR1 == sourceIR2
 
 -- | Test SemanticIR building idempotence
 prop_semantic_ir_idempotent :: String -> Property
-prop_semantic_ir_idempotent code =
-    L.length code > 0 && not ("var x int = \"string\"" `L.isInfixOf` code) ==>
+prop_semantic_ir_idempotent                               code =
+    L.length code > 0 && not ("var x                               int = \"string\"" `L.isInfixOf` code) ==>
     case parseTypus code of
       Left _ -> property True
       Right typusFile ->
@@ -69,12 +77,12 @@ prop_semantic_ir_idempotent code =
           Right semanticIR1 ->
             case buildSemanticIR sourceIR of
               Left _ -> property False
-              Right semanticIR2 -> semanticIR1 == semanticIR2
+              Right semanticIR2 ->                               semanticIR1 == semanticIR2
 
 -- | Test GoIR emission idempotence
 prop_go_ir_emission_idempotent :: String -> Property
-prop_go_ir_emission_idempotent code =
-    L.length code > 0 && not ("var x int = \"string\"" `L.isInfixOf` code) ==>
+prop_go_ir_emission_idempotent                               code =
+    L.length code > 0 && not ("var x                               int = \"string\"" `L.isInfixOf` code) ==>
     case parseTypus code of
       Left _ -> property True
       Right typusFile ->
@@ -83,24 +91,24 @@ prop_go_ir_emission_idempotent code =
           Left _ -> property True
           Right semanticIR ->
             let goIR1 = emitGo semanticIR
-                goIR2 = emitGo semanticIR
-            in goIR1 == goIR2
+                                              goIR2 = emitGo semanticIR
+            in                               goIR1 == goIR2
 
 -- | Test raw source extraction consistency
 prop_raw_source_consistency :: String -> Property
-prop_raw_source_consistency code =
-    L.length code > 0 ==>
+prop_raw_source_consistency                               code =
+    L.length code >                               0 ==>
     case parseTypus code of
       Left _ -> property True
       Right typusFile ->
         let rawSource1 = rawSourceFromTypus typusFile
-            rawSource2 = rawSourceFromTypus typusFile
-        in rawSource1 == rawSource2
+                                          rawSource2 = rawSourceFromTypus typusFile
+        in                               rawSource1 == rawSource2
 
--- | Test module parsing idempotence
+-- | Test module Test.Unit.NewCompilerIdempotentQuickCheckSpec idempotence
 prop_module_parsing_idempotent :: String -> Property
-prop_module_parsing_idempotent code =
-    L.length code > 0 ==>
+prop_module_parsing_idempotent                               code =
+    L.length code >                               0 ==>
     case parseTypus code of
       Left _ -> property True
       Right typusFile ->
@@ -109,23 +117,23 @@ prop_module_parsing_idempotent code =
           Right goModule1 ->
             case moduleFromTypus typusFile of
               Left _ -> property False
-              Right goModule2 -> goModule1 == goModule2
+              Right goModule2 ->                               goModule1 == goModule2
 
 -- | Test compilation pipeline idempotence
 prop_compilation_pipeline_idempotent :: String -> Property
-prop_compilation_pipeline_idempotent code =
-    L.length code > 0 && not ("var x int = \"string\"" `L.isInfixOf` code) ==>
+prop_compilation_pipeline_idempotent                               code =
+    L.length code > 0 && not ("var x                               int = \"string\"" `L.isInfixOf` code) ==>
     case parseTypus code of
       Left _ -> property True
       Right typusFile ->
         let pipeline1 = executeCompilationPipeline typusFile
-            pipeline2 = executeCompilationPipeline typusFile
-        in pipeline1 == pipeline2
+                                          pipeline2 = executeCompilationPipeline typusFile
+        in                               pipeline1 == pipeline2
 
 -- | Test error reporting consistency
 prop_error_reporting_consistency :: String -> Property
-prop_error_reporting_consistency code =
-    L.length code > 0 ==>
+prop_error_reporting_consistency                               code =
+    L.length code >                               0 ==>
     case parseTypus code of
       Left _ -> property True
       Right typusFile ->
@@ -134,53 +142,53 @@ prop_error_reporting_consistency code =
           Left errors1 ->
             case compile typusFile of
               Right _ -> property False
-              Left errors2 -> L.length errors1 == L.length errors2
+              Left errors2 -> L.length                               errors1 == L.length errors2
 
 -- | Test type checking idempotence
 prop_type_checking_idempotent :: String -> Property
-prop_type_checking_idempotent code =
-    L.length code > 0 ==>
+prop_type_checking_idempotent                               code =
+    L.length code >                               0 ==>
     case parseTypus code of
       Left _ -> property True
       Right typusFile ->
         let typeErrors1 = hasTypeErrors typusFile
-            typeErrors2 = hasTypeErrors typusFile
-        in typeErrors1 == typeErrors2
+                                          typeErrors2 = hasTypeErrors typusFile
+        in                               typeErrors1 == typeErrors2
 
 -- | Test dependent type checking idempotence
 prop_dependent_type_checking_idempotent :: String -> Property
-prop_dependent_type_checking_idempotent code =
-    L.length code > 0 ==>
+prop_dependent_type_checking_idempotent                               code =
+    L.length code >                               0 ==>
     case parseTypus code of
       Left _ -> property True
       Right typusFile ->
         let check1 = checkDependentTypes typusFile
-            check2 = checkDependentTypes typusFile
+                                          check2 = checkDependentTypes typusFile
         in case (check1, check2) of
-          (Right (), Right ()) -> True
+          (Right (), Right () -> True
           (Left _, Left _) -> True
           _ -> False
 
 -- | Test ownership checking idempotence
 prop_ownership_checking_idempotent :: String -> Property
-prop_ownership_checking_idempotent code =
-    L.length code > 0 ==>
+prop_ownership_checking_idempotent                               code =
+    L.length code >                               0 ==>
     case parseTypus code of
       Left _ -> property True
       Right typusFile ->
         let check1 = checkOwnership typusFile
-            check2 = checkOwnership typusFile
+                                          check2 = checkOwnership typusFile
         in case (check1, check2) of
-          (Right (), Right ()) -> True
+          (Right (), Right () -> True
           (Left _, Left _) -> True
           _ -> False
 
 -- | Test compilation with whitespace variations
 prop_whitespace_variations :: String -> Property
-prop_whitespace_variations code =
-    L.length code > 0 && not ("var x int = \"string\"" `L.isInfixOf` code) ==>
+prop_whitespace_variations                               code =
+    L.length code > 0 && not ("var x                               int = \"string\"" `L.isInfixOf` code) ==>
     let withExtraSpaces = unlines $ L.map (++ "  ") (lines code)
-        withTabs = unlines $ L.map ("\t" ++) (lines code)
+                                      withTabs = unlines $ L.map ("\t" ++) (lines code)
     in case parseTypus code of
       Left _ -> property True
       Right typusFile ->
@@ -191,8 +199,8 @@ prop_whitespace_variations code =
               Left _ -> property True
               Right typusFileTabs ->
                 let result1 = compile typusFile
-                    result2 = compile typusFileSpaces
-                    result3 = compile typusFileTabs
+                                                  result2 = compile typusFileSpaces
+                                                  result3 = compile typusFileTabs
                 in case (result1, result2, result3) of
                   (Right r1, Right r2, Right r3) -> 
                     -- Results should be functionally equivalent (ignoring whitespace)
@@ -202,7 +210,7 @@ prop_whitespace_variations code =
 
 -- | Test empty file compilation
 prop_empty_file_compilation :: Bool
-prop_empty_file_compilation =
+                              prop_empty_file_compilation =
     case parseTypus "" of
       Left _ -> property False
       Right typusFile ->
@@ -212,7 +220,7 @@ prop_empty_file_compilation =
 
 -- | Test comment handling consistency
 prop_comment_handling_consistency :: String -> Property
-prop_comment_handling_consistency code =
+prop_comment_handling_consistency                               code =
     L.length code > 0 && not ("//" `L.isInfixOf` code) ==>
     let withComment = code ++ "\n// This is a comment"
     in case parseTypus code of
@@ -222,46 +230,46 @@ prop_comment_handling_consistency code =
           Left _ -> property True
           Right typusFileWithComment ->
             let result1 = compile typusFile
-                result2 = compile typusFileWithComment
+                                              result2 = compile typusFileWithComment
             in case (result1, result2) of
               (Right r1, Right r2) -> L.length (lines r1) <= L.length (lines r2)
               _ -> True
 
 -- Helper function to execute the full compilation pipeline
 executeCompilationPipeline :: TypusFile -> Either [CompilerError] String
-executeCompilationPipeline typusFile =
+executeCompilationPipeline                               typusFile =
   case compile typusFile of
     Left errors -> Left errors
     Right result -> Right result
 
 -- Helper function to trim whitespace
 trim :: String -> String
-trim = dropWhile isSpace . L.reverse . dropWhile isSpace . L.reverse
+                              trim = dropWhile isSpace . L.reverse . dropWhile isSpace . L.reverse
 
 -- Helper function to split by comma
 splitByComma :: String -> [String]
 splitByComma [] = [""]
-splitByComma s = 
-    let (part, rest) = break (== ',') s
-    in part : case rest of
+splitByComma                               s = 
+    let (part, rest [] = break (== ',') s
+    in property $ part : case rest of
                 [] -> []
                 _:xs -> splitByComma xs
 
 tests :: TestTree
-tests = testGroup "Compiler Idempotent QuickCheck Tests"
-  [ testProperty "compile idempotent" prop_compile_idempotent
-  , testProperty "go generation idempotent" prop_go_generation_idempotent
-  , testProperty "source ir idempotent" prop_source_ir_idempotent
-  , testProperty "semantic ir idempotent" prop_semantic_ir_idempotent
-  , testProperty "go ir emission idempotent" prop_go_ir_emission_idempotent
-  , testProperty "raw source consistency" prop_raw_source_consistency
-  , testProperty "module parsing idempotent" prop_module_parsing_idempotent
-  , testProperty "compilation pipeline idempotent" prop_compilation_pipeline_idempotent
-  , testProperty "error reporting consistency" prop_error_reporting_consistency
-  , testProperty "type checking idempotent" prop_type_checking_idempotent
-  , testProperty "dependent type checking idempotent" prop_dependent_type_checking_idempotent
-  , testProperty "ownership checking idempotent" prop_ownership_checking_idempotent
-  , testProperty "whitespace variations" prop_whitespace_variations
-  , testProperty "empty file compilation" prop_empty_file_compilation
-  , testProperty "comment handling consistency" prop_comment_handling_consistency
-  ]
+tests =   testGroup "Compiler Idempotent QuickCheck Tests"
+  [             testProperty "compile idempotent" prop_compile_idempotent
+  ,             testProperty "go generation idempotent" prop_go_generation_idempotent
+  ,             testProperty "source ir idempotent" prop_source_ir_idempotent
+  ,             testProperty "semantic ir idempotent" prop_semantic_ir_idempotent
+  ,             testProperty "go ir emission idempotent" prop_go_ir_emission_idempotent
+  ,             testProperty "raw source consistency" prop_raw_source_consistency
+  ,             testProperty "module Test.Unit.NewCompilerIdempotentQuickCheckSpec idempotent" prop_module_parsing_idempotent
+  ,             testProperty "compilation pipeline idempotent" prop_compilation_pipeline_idempotent
+  ,             testProperty "error reporting consistency" prop_error_reporting_consistency
+  ,             testProperty "type checking idempotent" prop_type_checking_idempotent
+  ,             testProperty "dependent type checking idempotent" prop_dependent_type_checking_idempotent
+  ,             testProperty "ownership checking idempotent" prop_ownership_checking_idempotent
+  ,             testProperty "whitespace variations" prop_whitespace_variations
+  ,             testProperty "empty file compilation" prop_empty_file_compilation
+  ,             testProperty "comment handling consistency" prop_comment_handling_consistency
+  ])

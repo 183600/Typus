@@ -1,13 +1,8 @@
-module Test.Unit.UserAddedCompilerErrorSpec (tests) where
-
-import Test.Tasty (TestTree, testGroup)
-import qualified Data.List as L
-import Test.Tasty.HUnit (testCase, (@?=), assertBool)
+module Test.Unit.UserAddedCompilerErrorSpec where
+import Test.QuickCheck 
+import Test.Tasty.HUnit (testCase, assertFailure, assertBool, (@?=)), assertBool
 import Test.Tasty.QuickCheck (testProperty, Property, Arbitrary(..), Gen, choose, oneof, listOf, elements)
-import TestSupport.QuickCheck (fastProperty)
-
-import Compiler
-  ( compile
+import TestSupport.QuickCheck 
   , CompilerError(..)
   , CompilationPhase(..)
   , ErrorCategory(..)
@@ -15,27 +10,42 @@ import Compiler
   , renderCompilationError
   , formatCompilerErrors
   )
-import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..))
+import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives)
 import SourceLocation (SourceSpan(..), SourcePos(..), defaultSpan)
 import qualified Data.Text as T
+-- Arbitrary instance for SourcePos
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- choose (1, 100)
+    column <- choose (1, 100)
+    offset <- choose (0, 1000)
+    return $ SourcePos line column offset
+
+-- Arbitrary instance for SourceSpan
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    return $ SourceSpan start end
+
 
 -- | Tests for compiler error handling L.and recovery mechanisms
 tests :: TestTree
 tests =
-  testGroup "UserAdded Compiler Error Handling"
+    testGroup "UserAdded Compiler Error Handling"
     [ testGroup "Type error detection"
-        [ testCase "detects simple type mismatch" $ do
-            let typusFile = TypusFile 
+        [             testCase "detects simple type mismatch" $ do
+                        let typusFile = TypusFile 
                     (FileDirectives Nothing Nothing Nothing)
                     []
                     [CodeBlock (BlockDirectives Nothing Nothing Nothing) 
-                        "var x int = \"string\"" 
+                        "var x                               int = \"string\"" 
                         defaultSpan]
                     []
-                result = compile typusFile
+                                              result = compile typusFile
             case result of
                 Left errs -> do
-                    L.length errs @?= 2  -- typeCheckFailure + specific type error
+                                L.length errs @?= 2  -- typeCheckFailure + specific type error
                     let typeError = L.head errs
                     errorCode typeError @?= "CP0003"
                     errorPhase typeError @?= TypeCheckingPhase
@@ -43,41 +53,41 @@ tests =
                     errorSeverity typeError @?= Error
                 Right _ -> assertBool "Should have failed with type error" False
 
-        , testCase "detects function parameter type mismatch" $ do
-            let typusFile = TypusFile 
-                    (FileDirectives Nothing Nothing Nothing)
+          ,             testCase "detects function parameter type mismatch" $ do
+                        let typusFile = TypusFile 
+                    (FileDirectives Nothing Nothing Nothing (SourceSpan (SourcePos 1 1 0 [] (SourcePos 1 1 0)
                     []
                     [CodeBlock (BlockDirectives Nothing Nothing Nothing) 
-                        "func add(x int, y string) int { return x + y }" 
+                        "func add(x int, y string (SourceSpan (SourcePos 1 1 0) (SourcePos 1 1 0) int { return x + y }" 
                         defaultSpan]
                     []
-                result = compile typusFile
+                                              result = compile typusFile
             case result of
                 Left _ -> assertBool "Should fail with type error" True
                 Right _ -> assertBool "Should have failed with type error" False
         ]
 
     , testGroup "Syntax error handling"
-        [ testCase "handles missing closing brace" $ do
-            let typusFile = TypusFile 
+        [             testCase "handles missing closing brace" $ do
+                        let typusFile = TypusFile 
                     (FileDirectives Nothing Nothing Nothing)
                     []
                     [CodeBlock (BlockDirectives Nothing Nothing Nothing) 
                         "func main() {\n  fmt.Println(\"hello\")" 
                         defaultSpan]
                     []
-                result = compile typusFile
+                                              result = compile typusFile
             case result of
                 Left errs -> do
-                    assertBool "Should detect syntax error" $ L.any (\e -> errorPhase e == ParsingPhase) errs
+                                assertBool "Should detect syntax error" $ L.any (\e -> errorPhase                               e == ParsingPhase) errs
                 Right _ -> assertBool "Should have failed with syntax error" False
         ]
 
     , testGroup "Error reporting L.and formatting"
-        [ testCase "formats error messages correctly" $ do
-            let error = CompilerError 
+        [             testCase "formats error messages correctly" $ do
+                        let error = CompilerError 
                     "TEST001"
-                    (T.pack "Test error message")
+                    (T.pack "Test error message" (SourceSpan (SourcePos 1 1 0 [] (SourcePos 1 1 0)
                     TypeCheckingPhase
                     TypeChecking
                     Error
@@ -86,13 +96,13 @@ tests =
                     [T.pack "Suggestion 1", T.pack "Suggestion 2"]
                     []
                     Nothing
-                formatted = formatCompilerErrors [error]
+                                              formatted = formatCompilerErrors [error]
             assertBool "Should include error code" $ "TEST001" `L.isInfixOf` formatted
             assertBool "Should include error message" $ "Test error message" `L.isInfixOf` formatted
             assertBool "Should include suggestions" $ "Suggestion 1" `L.isInfixOf` formatted
 
-        , testCase "generates detailed error report" $ do
-            let errors = [CompilerError 
+          ,             testCase "generates detailed error report" $ do
+                        let errors = [CompilerError 
                     "ERR001"
                     (T.pack "First error")
                     ParsingPhase
@@ -114,7 +124,7 @@ tests =
                     [T.pack "Consider this approach"]
                     []
                     Nothing]
-                report = formatCompilerErrors errors
+                                              report = formatCompilerErrors errors
             assertBool "Should include error summary" $ "ERR001" `L.isInfixOf` report
             assertBool "Should categorize errors by phase" $ "Parsing" `L.isInfixOf` report
             assertBool "Should categorize errors by severity" $ "Error" `L.isInfixOf` report
@@ -127,16 +137,16 @@ tests =
         ]
 
     , testGroup "Edge cases L.and stress tests"
-        [ testCase "handles very large input files" $ do
-            let largeContent = unlines $ replicate 1000 "var x int = 42"
-                typusFile = TypusFile 
+        [             testCase "handles very large input files" $ do
+                        let largeContent = unlines $ replicate 1000 "var x                               int = 42"
+                                              typusFile = TypusFile 
                     (FileDirectives Nothing Nothing Nothing)
                     []
                     [CodeBlock (BlockDirectives Nothing Nothing Nothing) 
                         largeContent 
                         defaultSpan]
                     []
-                result = compile typusFile
+                                              result = compile typusFile
             case result of
                 Left errs -> assertBool "Should handle large input gracefully" $ L.length errs < 100
                 Right _ -> assertBool "May succeed for valid large input" True
@@ -145,17 +155,17 @@ tests =
 
 -- Helper function to check substring inclusion
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` [take (L.length needle) $ drop i haystack | i <- [0..L.length haystack - L.length needle]]
+isInfixOf needle                               haystack = needle `elem` [take (L.length needle) $ drop i haystack | i <- [0..L.length haystack - L.length needle]]
 
 -- | Property: error messages contain error codes
 prop_errorCodesPresent :: CompilerError -> Bool
-prop_errorCodesPresent error = not (L.null $ errorCode error)
+prop_errorCodesPresent                               error = not (L.null $ errorCode error (SourceSpan (SourcePos 1 1 0) (SourcePos 1 1 0 [])
 
 -- | Property: error phases are valid
 prop_errorPhasesValid :: CompilerError -> Bool
-prop_errorPhasesValid error = errorPhase error `elem` 
+prop_errorPhasesValid                               error = errorPhase error `elem` 
     [ParsingPhase, TypeCheckingPhase, OwnershipAnalysisPhase, DependencyAnalysisPhase, CodeGenerationPhase]
 
 -- | Property: error severities are categorized
 prop_errorSeveritiesCategorized :: CompilerError -> Bool
-prop_errorSeveritiesCategorized error = errorSeverity error `elem` [Error, Warning, Info]
+prop_errorSeveritiesCategorized                               error = errorSeverity error `elem` [Error, Warning, Info]))))

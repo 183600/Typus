@@ -1,39 +1,39 @@
-module Test.Unit.ParserRobustnessQuickCheckSpec (tests) where
-
-import Test.Tasty (TestTree, testGroup)
-import qualified Data.List as L
-import Test.Tasty.HUnit (testCase, (@?=), assertBool)
+module Test.Unit.ParserRobustnessQuickCheckSpec where
+import Test.QuickCheck 
+import Test.Tasty.HUnit (testCase, assertFailure, assertBool, (@?=)), assertBool
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, elements, listOf, chooseInt, vectorOf, suchThat)
-import TestSupport.QuickCheck (fastProperty)
-
-import Parser (parseTypus, FileDirectives(..), BlockDirectives(..), CodeBlock(..), TypusFile(..), 
+import TestSupport.QuickCheck 
+import Parser (parseTypus, FileDirectives(..), BlockDirectives(..), CodeBlock(..), TypusFile(..), )
               defaultFileDirectives, defaultBlockDirectives)
-import SourceLocation (SourcePos(..), SourceSpan(..))
-import qualified Data.Text as T (pack, unpack)
-
--- ============================================================================
--- Arbitrary instances for Parser types
--- ============================================================================
-
-instance Arbitrary FileDirectives where
-    arbitrary = FileDirectives <$> maybeLocatedBool <*> maybeLocatedBool <*> maybeLocatedBool
-      where
-        maybeLocatedBool = oneof [return Nothing, Just <$> locatedBool]
-        locatedBool = do
-            pos <- arbitrary
+import SourceLocation (SourcePos(..), SourceSpan)
             return $ (if T.unpack "true" `elem` ["true", "false"] then True else False) `seq` undefined
+-- Arbitrary instance for SourcePos
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- choose (1, 100)
+    column <- choose (1, 100)
+    offset <- choose (0, 1000)
+    return $ SourcePos line column offset
+
+-- Arbitrary instance for SourceSpan
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    return $ SourceSpan start end
+
 
 instance Arbitrary BlockDirectives where
-    arbitrary = BlockDirectives <$> maybeLocatedBool <*> maybeLocatedBool <*> maybeLocatedBool
+                                                arbitrary = BlockDirectives <$> maybeLocatedBool <*> maybeLocatedBool <*> maybeLocatedBool
       where
-        maybeLocatedBool = oneof [return Nothing, Just <$> locatedBool]
-        locatedBool = do
-            pos <- arbitrary
+                                        maybeLocatedBool = oneof [return Nothing, Just <$> locatedBool]
+                                      locatedBool = do
+              pos <- arbitrary
             return $ (if T.unpack "true" `elem` ["true", "false"] then True else False) `seq` undefined
 
 -- Generate valid Typus code snippets
 genValidTypusCode :: Gen String
-genValidTypusCode = oneof
+                              genValidTypusCode = oneof
     [ genSimpleFunction
     , genVariableDeclaration
     , genCommentOnly
@@ -41,49 +41,49 @@ genValidTypusCode = oneof
     ]
 
 genSimpleFunction :: Gen String
-genSimpleFunction = do
-    name <- elements ["func", "test", "calculate", "process"]
-    return $ "func " ++ name ++ "() {\n    return 42\n}\n"
+                              genSimpleFunction = do
+              name <- elements ["func", "test", "calculate", "process"]
+return $ "func " ++ name ++ "() {\n    return 42\n}\n"
 
 genVariableDeclaration :: Gen String
-genVariableDeclaration = do
-    name <- elements ["x", "y", "value", "result"]
+                              genVariableDeclaration = do
+              name <- elements ["x", "y", "value", "result"]
     value <- elements ["0", "1", "42", "\"hello\""]
     return $ name ++ " := " ++ value ++ "\n"
 
 genCommentOnly :: Gen String
-genCommentOnly = do
-    comment <- elements ["// This is a comment", "// TODO: implement", "// FIXME: bug"]
+                              genCommentOnly = do
+              comment <- elements ["// This is a comment", "// TODO: implement", "// FIXME: bug"]
     return comment ++ "\n"
 
 genEmptyBlock :: Gen String
-genEmptyBlock = return "// Empty block\n\n"
+                              genEmptyBlock = return "// Empty block\n\n"
 
 -- Generate directives
 genFileDirective :: Gen String
-genFileDirective = oneof
+                              genFileDirective = oneof
     [ return "// @ownership: true"
-    , return "// @ownership: false"
-    , return "// @dependent-types: true"
-    , return "// @dependent-types: false"
-    , return "// @constraints: true"
-    , return "// @constraints: false"
+                  , return "// @ownership: false"
+                  , return "// @dependent-types: true"
+                  , return "// @dependent-types: false"
+                  , return "// @constraints: true"
+                    , return "// @constraints: false"
     ]
 
 genBlockDirective :: Gen String
-genBlockDirective = oneof
+                              genBlockDirective = oneof
     [ return "// @block-ownership: true"
-    , return "// @block-ownership: false"
-    , return "// @block-dependent-types: true"
-    , return "// @block-dependent-types: false"
-    , return "// @block-constraints: true"
-    , return "// @block-constraints: false"
+                  , return "// @block-ownership: false"
+                  , return "// @block-dependent-types: true"
+                  , return "// @block-dependent-types: false"
+                  , return "// @block-constraints: true"
+                    , return "// @block-constraints: false"
     ]
 
 -- Generate build tags
 genBuildTag :: Gen String
-genBuildTag = do
-    tag <- elements ["linux", "windows", "darwin", "test", "debug", "release"]
+                              genBuildTag = do
+              tag <- elements ["linux", "windows", "darwin", "test", "debug", "release"]
     return $ "// +build " ++ tag
 
 -- ============================================================================
@@ -91,59 +91,59 @@ genBuildTag = do
 -- ============================================================================
 
 tests :: TestTree
-tests = testGroup "Parser Robustness QuickCheck Tests"
+tests =   testGroup "Parser Robustness QuickCheck Tests"
     [ testGroup "Basic Parsing Properties"
-        [ testProperty "parseTypus handles empty input gracefully" $
+        [             testProperty "parseTypus handles empty input gracefully" $
             fastProperty prop_parseEmptyInput
         
-        , testProperty "parseTypus handles whitespace-only input" $
+        ,             testProperty "parseTypus handles whitespace-only input" $
             fastProperty prop_parseWhitespaceOnly
         
-        , testProperty "parseTypus handles simple comments" $
+        ,             testProperty "parseTypus handles simple comments" $
             fastProperty prop_parseSimpleComments
         ]
 
     , testGroup "Directive Parsing Properties"
-        [ testProperty "parseTypus handles file directives correctly" $
+        [             testProperty "parseTypus handles file directives correctly" $
             fastProperty prop_parseFileDirectives
         
-        , testProperty "parseTypus handles block directives correctly" $
+        ,             testProperty "parseTypus handles block directives correctly" $
             fastProperty prop_parseBlockDirectives
         
-        , testProperty "parseTypus handles mixed directives" $
+        ,             testProperty "parseTypus handles mixed directives" $
             fastProperty prop_parseMixedDirectives
         ]
 
     , testGroup "Code Block Properties"
-        [ testProperty "parseTypus preserves code block content" $
+        [             testProperty "parseTypus preserves code block content" $
             fastProperty prop_preserveCodeBlockContent
         
-        , testProperty "parseTypus handles multiple blocks" $
+        ,             testProperty "parseTypus handles multiple blocks" $
             fastProperty prop_handleMultipleBlocks
         
-        , testProperty "parseTypus maintains block order" $
+        ,             testProperty "parseTypus maintains block order" $
             fastProperty prop_maintainBlockOrder
         ]
 
     , testGroup "Error Recovery Properties"
-        [ testProperty "parseTypus recovers from syntax errors" $
+        [             testProperty "parseTypus recovers from syntax errors" $
             fastProperty prop_errorRecovery
         
-        , testProperty "parseTypus handles malformed directives" $
+        ,             testProperty "parseTypus handles malformed directives" $
             fastProperty prop_handleMalformedDirectives
         
-        , testProperty "parseTypus handles incomplete blocks" $
+        ,             testProperty "parseTypus handles incomplete blocks" $
             fastProperty prop_handleIncompleteBlocks
         ]
 
     , testGroup "Robustness Properties"
-        [ testProperty "parseTypus handles very long lines" $
+        [             testProperty "parseTypus handles very long lines" $
             fastProperty prop_handleLongLines
         
-        , testProperty "parseTypus handles unicode content" $
+        ,             testProperty "parseTypus handles unicode content" $
             fastProperty prop_handleUnicodeContent
         
-        , testProperty "parseTypus handles nested structures" $
+        ,             testProperty "parseTypus handles nested structures" $
             fastProperty prop_handleNestedStructures
         ]
     ]
@@ -155,52 +155,52 @@ tests = testGroup "Parser Robustness QuickCheck Tests"
 -- Basic Parsing Properties
 
 prop_parseEmptyInput :: Bool
-prop_parseEmptyInput =
+                              prop_parseEmptyInput =
     let result = parseTypus "" ""
     in case result of
         Left _ -> False
-        Right file -> L.null (tfBlocks file)
+Right file -> L.null (tfBlocks file)
 
 prop_parseWhitespaceOnly :: String -> Bool
-prop_parseWhitespaceOnly ws =
+prop_parseWhitespaceOnly                               ws =
     let whitespaceOnly = filter isSpace ws
-        result = parseTypus "" whitespaceOnly
+                                      result = parseTypus "" whitespaceOnly
     in case result of
         Left _ -> False
-        Right file -> L.null (tfBlocks file)
+Right file -> L.null (tfBlocks file)
   where
-    isSpace c = c `elem` " \t\n\r"
+      isSpace                               c = c `elem` " \t\n\r"
 
 prop_parseSimpleComments :: String -> Bool
-prop_parseSimpleComments comment =
+prop_parseSimpleComments                               comment =
     let input = "// " ++ comment ++ "\n"
-        result = parseTypus "" input
+                                      result = parseTypus "" input
     in case result of
         Left _ -> False
-        Right file -> not (L.null (tfBlocks file))
+Right file -> not (L.null (tfBlocks file)
 
 -- Directive Parsing Properties
 
 prop_parseFileDirectives :: [String] -> Bool
-prop_parseFileDirectives directives =
+prop_parseFileDirectives                               directives =
     let input = unlines directives
-        result = parseTypus "" input
+                                      result = parseTypus "" input
     in case result of
         Left _ -> False
         Right file -> True  -- If parsing succeeds, directives are handled
 
 prop_parseBlockDirectives :: [String] -> [String] -> Bool
-prop_parseBlockDirectives directives codes =
+prop_parseBlockDirectives directives                               codes =
     let input = unlines $ directives ++ [""] ++ codes
-        result = parseTypus "" input
+                                      result = parseTypus "" input
     in case result of
         Left _ -> False
         Right file -> True  -- If parsing succeeds, block directives are handled
 
 prop_parseMixedDirectives :: [String] -> [String] -> [String] -> Bool
-prop_parseMixedDirectives fileDirs blockDirs codes =
+prop_parseMixedDirectives fileDirs blockDirs                               codes =
     let input = unlines $ fileDirs ++ [""] ++ blockDirs ++ [""] ++ codes
-        result = parseTypus "" input
+                                      result = parseTypus "" input
     in case result of
         Left _ -> False
         Right file -> True
@@ -208,29 +208,29 @@ prop_parseMixedDirectives fileDirs blockDirs codes =
 -- Code Block Properties
 
 prop_preserveCodeBlockContent :: String -> Bool
-prop_preserveCodeBlockContent content =
+prop_preserveCodeBlockContent                               content =
     let input = content ++ "\n"
-        result = parseTypus "" input
+                                      result = parseTypus "" input
     in case result of
         Left _ -> False
         Right file -> 
-            case tfBlocks file of
+case tfBlocks file of
                 [] -> True
                 (block:_) -> content `L.isInfixOf` cbContent block
 
 prop_handleMultipleBlocks :: [String] -> Bool
-prop_handleMultipleBlocks contents =
-    let input = unlines $ concatMap (\c -> [c, ""]) contents
-        result = parseTypus "" input
+prop_handleMultipleBlocks                               contents =
+  let input = unlines $ concatMap (\c -> [c, ""]) contents
+                                      result = parseTypus "" input
     in case result of
         Left _ -> False
         Right file -> L.length (tfBlocks file) >= L.length (L.filter (not . null) contents)
 
 prop_maintainBlockOrder :: [String] -> Bool
-prop_maintainBlockOrder contents =
-    let nonEmptyContents = L.filter (not . null) contents
-        input = unlines $ concatMap (\c -> [c, ""]) nonEmptyContents
-        result = parseTypus "" input
+prop_maintainBlockOrder                               contents =
+  let nonEmptyContents = L.filter (not . null) contents
+                                      input = unlines $ concatMap (\c -> [c, ""]) nonEmptyContents
+                                      result = parseTypus "" input
     in case result of
         Left _ -> False
         Right file -> 
@@ -241,25 +241,25 @@ prop_maintainBlockOrder contents =
 -- Error Recovery Properties
 
 prop_errorRecovery :: String -> String -> Bool
-prop_errorRecovery good bad =
+prop_errorRecovery good                               bad =
     let input = good ++ "\n" ++ bad ++ "\n" ++ good ++ "\n"
-        result = parseTypus "" input
+                                      result = parseTypus "" input
     in case result of
         Left _ -> False
         Right file -> True  -- Parser should recover L.and produce some result
 
 prop_handleMalformedDirectives :: [String] -> Bool
-prop_handleMalformedDirectives malformed =
+prop_handleMalformedDirectives                               malformed =
     let input = unlines malformed
-        result = parseTypus "" input
+                                      result = parseTypus "" input
     in case result of
         Left _ -> True  -- It's OK to fail on malformed directives
         Right file -> True  -- Or succeed with error recovery
 
 prop_handleIncompleteBlocks :: [String] -> Bool
-prop_handleIncompleteBlocks incomplete =
+prop_handleIncompleteBlocks                               incomplete =
     let input = unlines incomplete
-        result = parseTypus "" input
+                                      result = parseTypus "" input
     in case result of
         Left _ -> True  -- It's OK to fail on incomplete blocks
         Right file -> True  -- Or succeed with partial parsing
@@ -267,32 +267,32 @@ prop_handleIncompleteBlocks incomplete =
 -- Robustness Properties
 
 prop_handleLongLines :: Int -> String -> Bool
-prop_handleLongLines n base =
-    let longLine = take (abs n `mod` 1000 + 10) (cycle base)
-        input = longLine ++ "\n"
-        result = parseTypus "" input
+prop_handleLongLines n                               base =
+  let longLine = take (abs n `mod` 1000 + 10) (cycle base)
+                                      input = longLine ++ "\n"
+                                      result = parseTypus "" input
     in case result of
         Left _ -> True  -- Should handle gracefully
         Right file -> True
 
 prop_handleUnicodeContent :: String -> Bool
-prop_handleUnicodeContent content =
-    let unicodeContent = content ++ " αβγδε 中文 тест "
-        input = unicodeContent ++ "\n"
-        result = parseTypus "" input
+prop_handleUnicodeContent                               content =
+    let unicodeContent = content ++ "    "
+                                      input = unicodeContent ++ "\n"
+                                      result = parseTypus "" input
     in case result of
         Left _ -> True  -- Should handle gracefully
         Right file -> True
 
 prop_handleNestedStructures :: Int -> Bool
-prop_handleNestedStructures depth =
-    let nested = replicate (abs depth `mod` 10 + 1) "    "
-        input = L.concat nested ++ "nested {\n" ++ L.concat nested ++ "    value := 42\n" ++ L.concat nested ++ "}\n"
-        result = parseTypus "" input
+prop_handleNestedStructures                               depth =
+  let nested = replicate (abs depth `mod` 10 + 1) "    "
+                                      input = L.concat nested ++ "nested {\n" ++ L.concat nested ++ "    value := 42\n" ++ L.concat nested ++ "}\n"
+                                      result = parseTypus "" input
     in case result of
         Left _ -> True  -- Should handle gracefully
         Right file -> True
 
 -- Helper functions
 isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` [take (L.length haystack - L.length needle + 1) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
+isInfixOf needle                               haystack = needle `elem` [take (L.length haystack - L.length needle + 1) (drop i haystack) | i <- [0..L.length haystack - L.length needle]]
