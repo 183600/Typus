@@ -12,6 +12,18 @@ WORK_BRANCH="${WORK_BRANCH:-master}"
 GIT_DIR_REAL="$(git rev-parse --git-dir 2>/dev/null || echo ".git")"
 RELEASE_MARKER_FILE="${RELEASE_MARKER_FILE:-${GIT_DIR_REAL%/}/typus_release_tag}"
 
+guard_bad_paths() {
+  local mode ascii
+  mode="${IFLOW_GUARD_MODE:-clean}"      # clean 或 fail
+  ascii="${IFLOW_GUARD_ASCII_ONLY:-}"    # 设为非空即开启 --ascii-only
+
+  if [[ -n "${ascii}" ]]; then
+    python3 scripts/guard_bad_paths.py --mode "${mode}" --ascii-only || return $?
+  else
+    python3 scripts/guard_bad_paths.py --mode "${mode}" || return $?
+  fi
+}
+
 extract_cabal_version() {
   local f ver
 
@@ -57,18 +69,18 @@ latest_release_age_ok() {
 
 attempt_bump_and_tag() {
   if [[ "${GITHUB_ACTIONS:-}" != "true" ]]; then
-    echo "ℹ️ 非 GitHub Actions 环境，跳过自动发布准备。"
+    echo "非 GitHub Actions 环境，跳过自动发布准备。"
     return 0
   fi
 
   # 本轮只准备一次 release
   if [[ -f "$RELEASE_MARKER_FILE" ]]; then
-    echo "ℹ️ 已存在 release marker（$(cat "$RELEASE_MARKER_FILE" 2>/dev/null || true)），跳过。"
+    echo "已存在 release marker（$(cat "$RELEASE_MARKER_FILE" 2>/dev/null || true)），跳过。"
     return 0
   fi
 
   if ! latest_release_age_ok; then
-    echo "ℹ️ 最近 7 天内已有 release（或无法判断），跳过自动发布准备。"
+    echo "最近 7 天内已有 release（或无法判断），跳过自动发布准备。"
     return 0
   fi
 
@@ -77,32 +89,35 @@ attempt_bump_and_tag() {
 
   local old_ver new_ver tag
   old_ver="$(extract_cabal_version || true)"
-  echo "ℹ️ 当前版本：${old_ver:-<unknown>}"
+  echo "当前版本：${old_ver:-<unknown>}"
 
   echo "满足发布条件：开始 bump 版本号（iFlow）..."
   iflow '增加版本号(例如0.9.1变成0.9.2) think:high' --yolo || {
-    echo "⚠️ bump 版本号失败，跳过本次发布准备。"
+    echo "bump 版本号失败，跳过本次发布准备。"
     return 0
   }
+
+  # 门禁：防止 iflow 生成乱码路径被提交
+  guard_bad_paths || return $?
 
   git add -A
 
   new_ver="$(extract_cabal_version || true)"
-  echo "ℹ️ bump 后版本：${new_ver:-<unknown>}"
-  [[ -n "${new_ver:-}" ]] || { echo "⚠️ 无法提取版本号，跳过。"; return 0; }
+  echo "bump 后版本：${new_ver:-<unknown>}"
+  [[ -n "${new_ver:-}" ]] || { echo "无法提取版本号，跳过。"; return 0; }
 
   if [[ -n "${old_ver:-}" && "${new_ver}" == "${old_ver}" ]]; then
-    echo "⚠️ 版本号未变化（${old_ver} -> ${new_ver}），跳过。"
+    echo "版本号未变化（${old_ver} -> ${new_ver}），跳过。"
     return 0
   fi
 
   if git diff --cached --quiet; then
-    echo "⚠️ bump 后没有 staged 变更，跳过。"
+    echo "bump 后没有 staged 变更，跳过。"
     return 0
   fi
 
   git commit -m "chore(release): v${new_ver}" || {
-    echo "⚠️ 提交 bump commit 失败，跳过。"
+    echo "提交 bump commit 失败，跳过。"
     return 0
   }
 
@@ -110,17 +125,17 @@ attempt_bump_and_tag() {
 
   # 必须用 annotated tag，这样 workflow 里的 --follow-tags 才会自动 push
   if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
-    echo "ℹ️ 本地 tag ${tag} 已存在，跳过打 tag。"
+    echo "本地 tag ${tag} 已存在，跳过打 tag。"
   else
     git tag -a "${tag}" -m "${tag}" || {
-      echo "⚠️ 打 tag 失败，跳过。"
+      echo "打 tag 失败，跳过。"
       return 0
     }
   fi
 
   mkdir -p "$(dirname -- "$RELEASE_MARKER_FILE")"
   printf '%s\n' "${tag}" > "$RELEASE_MARKER_FILE"
-  echo "✅ 已准备发布：${tag}（等待 workflow push tag 触发发布工作流）"
+  echo "已准备发布：${tag}"
 }
 
 trap 'echo; echo "已终止."; exit 0' INT TERM
@@ -148,9 +163,12 @@ while true; do
   if [[ "$CABAL_STATUS" -eq 0 ]]; then
     iflow "给这个项目增加一些cabal test测试用例，不要超过27个，如果需要使用QuickCheck就使用QuickCheck think:high" --yolo || true
 
+    # 门禁：防止 iflow 生成乱码路径被提交
+    guard_bad_paths || exit $?
+
     git add -A
     if git diff --cached --quiet; then
-      echo "ℹ️ 没有文件变化可提交"
+      echo "没有文件变化可提交"
     else
       git commit -m "测试通过" || true
     fi
@@ -158,7 +176,7 @@ while true; do
     if [[ "$HAS_ERROR" -eq 0 ]]; then
       attempt_bump_and_tag || true
     else
-      echo "ℹ️ cabal 退出码为 0，但日志检测到 error 关键词，跳过发布准备。"
+      echo "cabal 退出码为 0，但日志检测到 error 关键词，跳过发布准备。"
     fi
   else
     echo "调用 iflow 修复..."
@@ -167,8 +185,11 @@ while true; do
   --ghc-options="-O0 -rtsopts" \
   --test-options="+RTS -M1024m -A16m -RTS" \
   --test-show-details=direct显示的所有问题（除了warning），除非测试用例本身有编译错误，否则只修改测试用例以外的代码，debug时可通过加日志和打断点，一定不要消耗大量CPU/内存资源 think:high' --yolo || true
+
+    # 门禁：即使修复失败也清理掉工作区可能出现的乱码路径，避免下轮被 add
+    guard_bad_paths || exit $?
   fi
 
-  echo "🔁 回到第 1 步..."
+  echo "回到第 1 步..."
   sleep 1
 done

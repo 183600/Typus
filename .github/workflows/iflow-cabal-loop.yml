@@ -31,10 +31,16 @@ jobs:
       CABAL_MIRROR_URL: ""
       CABAL_TRANSPORT: "curl"
 
+      # 门禁开关：
+      # clean：自动清理坏路径后继续；fail：发现坏路径直接失败退出
+      IFLOW_GUARD_MODE: clean
+      # 非空即开启 ASCII-only（会禁止中文等非 ASCII 文件名）
+      IFLOW_GUARD_ASCII_ONLY: ""
+
     steps:
       - name: Increase Swap space (防止内存溢出断连)
         run: |
-          sudo fallocate -l 2G /swapfile # 分配 Swap
+          sudo fallocate -l 2G /swapfile
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
           sudo swapon /swapfile
@@ -83,7 +89,6 @@ jobs:
       - name: Setup Haskell (GHC + Cabal)
         uses: haskell-actions/setup@v2
         with:
-          # 修改建议：不要使用 latest，指定具体版本以避免解析错误
           ghc-version: '9.6.3'
           cabal-version: '3.10.2.0'
           cabal-update: false
@@ -116,14 +121,12 @@ jobs:
             cabal user-config init
           fi
 
-          # 使用 curl 作为 http 传输
           if [ "${CABAL_TRANSPORT:-}" = "curl" ]; then
             if ! grep -qE '^[[:space:]]*http-transport:[[:space:]]*curl[[:space:]]*$' ~/.cabal/config; then
               printf '\nhttp-transport: curl\n' >> ~/.cabal/config
             fi
           fi
 
-          # 可选：切换到镜像
           if [ -n "${CABAL_MIRROR_URL:-}" ]; then
             sed -i -E "s#^([[:space:]]*url:[[:space:]]*).*(hackage\\.haskell\\.org).*#\\1${CABAL_MIRROR_URL}#g" ~/.cabal/config || true
           fi
@@ -142,11 +145,12 @@ jobs:
           echo "cabal update failed after retries" >&2
           exit 1
 
-      - name: Make loop script executable
+      - name: Make scripts executable
         shell: bash
         run: |
           set -euo pipefail
           chmod +x scripts/typus_cabal_loop.sh
+          chmod +x scripts/guard_bad_paths.py
 
       - name: Run for ${{ env.RUN_HOURS }} hours
         shell: bash
@@ -154,7 +158,18 @@ jobs:
           set -euo pipefail
           timeout --signal=TERM $(( RUN_HOURS * 3600 )) bash scripts/typus_cabal_loop.sh || true
 
-      - name: 'Commit & push once (GitHub + Gitee)'
+      - name: Guard bad/garbled paths (final gate)
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -n "${IFLOW_GUARD_ASCII_ONLY:-}" ]]; then
+            python3 scripts/guard_bad_paths.py --mode "${IFLOW_GUARD_MODE:-clean}" --ascii-only
+          else
+            python3 scripts/guard_bad_paths.py --mode "${IFLOW_GUARD_MODE:-clean}"
+          fi
+
+      - name: Commit & push once (GitHub + Gitee)
         if: always()
         shell: bash
         run: |
