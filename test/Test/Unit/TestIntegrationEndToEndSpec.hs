@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE LambdaCase #-}
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 module Test.Unit.TestIntegrationEndToEndSpec where
 

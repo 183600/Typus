@@ -11,6 +11,7 @@ import ErrorHandler
 import qualified Data.Text as T
 import TestSupport.Arbitrary ()
 import Data.Char (isAscii, isControl)
+import Prelude hiding (last)
 
 -- | Test suite for String Processing
 testStringProcessing :: TestTree
@@ -145,10 +146,10 @@ testStringProcessing = testGroup "String Processing Tests"
         Left "Empty string after processing" -> return ()
         _ -> assertFailure "Expected empty string error"
         
-  , testCase "Utils: isValidChar works correctly" $
-      isValidChar 'a' @?= True &&
-      isValidChar '\n' @?= True &&
-      isValidChar '\t' @?= True &&
+  , testCase "Utils: isValidChar works correctly" $ do
+      isValidChar 'a' @?= True
+      isValidChar '\n' @?= True
+      isValidChar '\t' @?= True
       isValidChar '\x01' @?= False
       
   , testProperty "Utils: trim(trim(x)) == trim(x)" $
@@ -213,10 +214,10 @@ testStringProcessing = testGroup "String Processing Tests"
         
   , testProperty "Utils: normalizeIndentation preserves relative indentation" $
       \s -> 
-        let lines = filter (not . all isSpace) $ lines s
+        let inputLines = filter (not . all isSpace) $ Prelude.lines s
             normalized = normalizeIndentation s
-            normLines = filter (not . all isSpace) $ lines normalized
-        in length lines == length normLines
+            normLines = filter (not . all isSpace) $ Prelude.lines normalized
+        in length inputLines == length normLines
   ]
 
 -- Helper functions

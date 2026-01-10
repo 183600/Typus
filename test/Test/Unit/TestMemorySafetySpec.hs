@@ -24,59 +24,59 @@ import System.Mem (performGC)
 -- | Test suite for memory safety
 testMemorySafety :: TestTree
 testMemorySafety = testGroup "Memory Safety Tests"
-  [ testCase "Utils: trim doesn't cause memory leaks with large strings" $
+  [ testCase "Utils: Utils.trim doesn't cause memory leaks with large strings" $
       let largeString = concat (replicate 100000 "   hello world   ")
-          result = trim largeString
+          result = Utils.trim largeString
       in force result `seq` return ()
       
-  , testCase "Utils: removeComments doesn't cause memory leaks with large comment blocks" $
+  , testCase "Utils: Utils.removeComments doesn't cause memory leaks with large comment blocks" $
       let largeString = concat (replicate 10000 "/* " ++ replicate 10000 " comment */ " ++ "code ")
-          result = removeComments largeString
+          result = Utils.removeComments largeString
       in force result `seq` return ()
       
-  , testCase "Utils: normalizeIndentation doesn't cause memory leaks with deeply indented strings" $
+  , testCase "Utils: Utils.normalizeIndentation doesn't cause memory leaks with deeply indented strings" $
       let largeString = concat (replicate 10000 (concat (replicate 100 "    ") ++ "line\n"))
-          result = normalizeIndentation largeString
+          result = Utils.normalizeIndentation largeString
       in force result `seq` return ()
       
-  , testCase "Utils: safeProcessString doesn't cause memory leaks with control characters" $
+  , testCase "Utils: Utils.safeProcessString doesn't cause memory leaks with control characters" $
       let controlString = concat (replicate 10000 [chr 0, chr 1, chr 2])
-      in case safeProcessString controlString of
+      in case Utils.safeProcessString controlString of
            Left _ -> return ()
            Right result -> force result `seq` return ()
            
   , testCase "SourceLocation: creating many positions doesn't cause memory leaks" $
-      let positions = [posAt i 1 | i <- [1..10000]]
+      let positions = [SourceLocation.posAt i 1 | i <- [1..10000]]
       in force positions `seq` return ()
       
   , testCase "SourceLocation: creating many spans doesn't cause memory leaks" $
-      let spans = [spanBetween (posAt i 1) (posAt i 100) | i <- [1..10000]]
+      let spans = [SourceLocation.spanBetween (SourceLocation.posAt i 1) (SourceLocation.posAt i 100) | i <- [1..10000]]
       in force spans `seq` return ()
       
   , testCase "SourceLocation: merging many spans doesn't cause memory leaks" $
-      let spans = [spanBetween (posAt i 1) (posAt i 100) | i <- [1..1000]]
-          merged = foldl mergeSpans (head spans) (tail spans)
+      let spans = [SourceLocation.spanBetween (SourceLocation.posAt i 1) (SourceLocation.posAt i 100) | i <- [1..1000]]
+          merged = foldl SourceLocation.mergeSpans (head spans) (tail spans)
       in force merged `seq` return ()
       
   , testCase "ErrorHandler: creating many errors doesn't cause memory leaks" $
-      let errors = [errorAt (posAt i 1) ("Error " ++ show i) | i <- [1..10000]]
+      let errors = [ErrorHandler.errorAt (SourceLocation.posAt i 1) ("Error " ++ show i) | i <- [1..10000]]
       in force errors `seq` return ()
       
   , testCase "ErrorHandler: formatting many errors doesn't cause memory leaks" $
-      let errors = [errorAt (posAt i 1) ("Error " ++ show i) | i <- [1..1000]]
-          formatted = map formatError errors
+      let errors = [ErrorHandler.errorAt (SourceLocation.posAt i 1) ("Error " ++ show i) | i <- [1..1000]]
+          formatted = map ErrorHandler.formatError errors
       in force formatted `seq` return ()
       
   , testCase "Parser: parsing large files doesn't cause memory leaks" $
       let largeInput = concat (replicate 1000 "//! ownership=true\n```go\nfmt.Println(\"hello\")\n```\n")
-          result = parseTypus largeInput "large.typus"
+          result = Parser.parseTypus largeInput "large.typus"
       in case result of
            Left err -> assertFailure $ "Parse failed: " ++ show err
            Right typusFile -> force typusFile `seq` return ()
            
   , testCase "Parser: parsing files with many small blocks doesn't cause memory leaks" $
       let largeInput = concat (replicate 1000 "```\nfmt.Println(\"hello\")\n```\n")
-          result = parseTypus largeInput "many_blocks.typus"
+          result = Parser.parseTypus largeInput "many_blocks.typus"
       in case result of
            Left err -> assertFailure $ "Parse failed: " ++ show err
            Right typusFile -> force typusFile `seq` return ()
@@ -87,13 +87,13 @@ testMemorySafety = testGroup "Memory Safety Tests"
       
   , testCase "Dependencies: adding many types doesn't cause memory leaks" $
       let checker = newDependentTypeChecker ()
-          types = [("type" ++ show i, TypeVar ("Type" ++ show i)) | i <- [1..1000]]
+          types = [("type" ++ show i, Dependencies.TypeVar ("Type" ++ show i)) | i <- [1..1000]]
           checker' = foldl (\c (name, t) -> addType name t c) checker types
       in force checker' `seq` return ()
       
   , testCase "Dependencies: solving many constraints doesn't cause memory leaks" $
       let checker = newDependentTypeChecker ()
-          constraints = [EqualityConstraint (TypeVar ("a" ++ show i)) (TypeVar ("b" ++ show i)) | i <- [1..1000]]
+          constraints = [Dependencies.EqualityConstraint (Dependencies.TypeVar ("a" ++ show i)) (Dependencies.TypeVar ("b" ++ show i)) | i <- [1..1000]]
           checker' = foldl addConstraint checker constraints
       in case solveConstraints checker' of
            Left err -> assertFailure $ "Constraint solving failed: " ++ show err
@@ -101,7 +101,7 @@ testMemorySafety = testGroup "Memory Safety Tests"
            
   , testCase "Ownership: analyzing large code doesn't cause memory leaks" $
       let largeInput = concat (replicate 1000 "package main\n\nfunc main() {\n    data := make([]byte, 100)\n    processData(data)\n}\n\nfunc processData(d []byte) {\n    // Process data\n}\n")
-          result = analyzeOwnership largeInput
+          result = Ownership.analyzeOwnership largeInput
       in case result of
            Left err -> assertFailure $ "Ownership analysis failed: " ++ show err
            Right (analyzer, transfers) -> force (analyzer, transfers) `seq` return ()
@@ -114,7 +114,7 @@ testMemorySafety = testGroup "Memory Safety Tests"
             , irFuncParams = params
             , irFuncReturnType = IRInt
             , irFuncBody = body
-            , irFuncSpan = locatedWithSpan (spanBetween (SourcePos 1 1 0) (SourcePos 1000 1 0)) "large_function"
+            , irFuncSpan = SourceLocation.locatedWithSpan (SourceLocation.spanBetween (SourceLocation.SourcePos 1 1 0) (SourceLocation.SourcePos 1000 1 0)) "large_function"
             }
       in force func `seq` return ()
       
@@ -152,9 +152,9 @@ testMemorySafety = testGroup "Memory Safety Tests"
       
   , testCase "Memory usage: large string operations don't cause memory fragmentation" $
       let operations = [
-            trim (concat (replicate 10000 "   hello world   ")),
-            removeComments (concat (replicate 1000 "// comment\n/* block comment */\ncode")),
-            normalizeIndentation (concat (replicate 1000 "    deeply indented line\n"))
+            Utils.trim (concat (replicate 10000 "   hello world   ")),
+            Utils.removeComments (concat (replicate 1000 "// comment\n/* block comment */\ncode")),
+            Utils.normalizeIndentation (concat (replicate 1000 "    deeply indented line\n"))
             ]
       in force operations `seq` return ()
       
@@ -165,22 +165,22 @@ testMemorySafety = testGroup "Memory Safety Tests"
   ]
 
 -- Simplified Dependencies types for testing
-data TypeExpr = TypeVar String | TypeConstructor String [TypeExpr] deriving (Eq, Show, NFData)
+data Dependencies.TypeExpr = Dependencies.TypeVar String | Dependencies.TypeConstructor String [Dependencies.TypeExpr] deriving (Eq, Show, NFData)
 
-data TypeConstraint = EqualityConstraint TypeExpr TypeExpr deriving (Eq, Show, NFData)
+data TypeConstraint = Dependencies.EqualityConstraint Dependencies.TypeExpr Dependencies.TypeExpr deriving (Eq, Show, NFData)
 
 data DependentTypeChecker = DependentTypeChecker 
   { typeEnv :: TypeEnvironment 
   } deriving (Eq, Show, NFData)
 
 data TypeEnvironment = TypeEnvironment
-  { typeEnvTypes :: [(String, TypeExpr)]
+  { typeEnvTypes :: [(String, Dependencies.TypeExpr)]
   } deriving (Eq, Show, NFData)
 
 newDependentTypeChecker :: () -> DependentTypeChecker
 newDependentTypeChecker () = DependentTypeChecker (TypeEnvironment [])
 
-addType :: String -> TypeExpr -> DependentTypeChecker -> DependentTypeChecker
+addType :: String -> Dependencies.TypeExpr -> DependentTypeChecker -> DependentTypeChecker
 addType name t checker = 
   let env = typeEnv checker
       newTypes = (name, t) : typeEnvTypes env
@@ -222,30 +222,18 @@ data Located a = Located
   } deriving (Eq, Show, Functor, NFData)
 
 -- Simplified SourceLocation types for testing
-data SourcePos = SourcePos 
+data SourceLocation.SourcePos = SourceLocation.SourcePos 
   { posLine :: Int
   , posColumn :: Int
   } deriving (Eq, Show, NFData)
 
 data SourceSpan = SourceSpan 
-  { spanStart :: SourcePos
-  , spanEnd :: SourcePos
+  { spanStart :: SourceLocation.SourcePos
+  , spanEnd :: SourceLocation.SourcePos
   } deriving (Eq, Show, NFData)
 
-posAt :: Int -> Int -> SourcePos
-posAt line column = SourcePos line column
-
-spanBetween :: SourcePos -> SourcePos -> SourceSpan
-spanBetween start end = SourceSpan start end
-
-mergeSpans :: SourceSpan -> SourceSpan -> SourceSpan
-mergeSpans span1 span2 = SourceSpan 
-  { spanStart = min (spanStart span1) (spanStart span2)
-  , spanEnd = max (spanEnd span1) (spanEnd span2)
-  }
-
-locatedWithSpan :: SourceSpan -> String -> Located String
-locatedWithSpan span value = Located value span
+SourceLocation.locatedWithSpan :: SourceSpan -> String -> Located String
+SourceLocation.locatedWithSpan span value = Located value span
 
 -- Simplified ErrorHandler types for testing
 data ErrorLocation = ErrorLocation 
@@ -258,16 +246,16 @@ data TypeError = TypeError
   , errorLocation :: ErrorLocation
   } deriving (Eq, Show, NFData)
 
-errorAt :: SourcePos -> String -> TypeError
-errorAt pos message = TypeError message (ErrorLocation (posLine pos) (posColumn pos))
+ErrorHandler.errorAt :: SourceLocation.SourcePos -> String -> TypeError
+ErrorHandler.errorAt pos message = TypeError message (ErrorLocation (posLine pos) (posColumn pos))
 
-formatError :: TypeError -> String
-formatError err = "Error at " ++ show (line (errorLocation err)) ++ ":" ++ 
+ErrorHandler.formatError :: TypeError -> String
+ErrorHandler.formatError err = "Error at " ++ show (line (errorLocation err)) ++ ":" ++ 
                   show (column (errorLocation err)) ++ ": " ++ errorMessage err
 
 -- Simplified Ownership types for testing
-analyzeOwnership :: String -> Either String ((), [()])
-analyzeOwnership _ = Right ((), [()])
+Ownership.analyzeOwnership :: String -> Either String ((), [()])
+Ownership.analyzeOwnership _ = Right ((), [()])
 
 -- Simplified Parser types for testing
 data FileDirectives = FileDirectives deriving (Eq, Show, NFData)
@@ -284,20 +272,20 @@ data TypusFile = TypusFile
 defaultFileDirectives :: FileDirectives
 defaultFileDirectives = FileDirectives
 
-parseTypus :: String -> String -> Either String TypusFile
-parseTypus _ _ = Right (TypusFile FileDirectives [CodeBlock ""])
+Parser.parseTypus :: String -> String -> Either String TypusFile
+Parser.parseTypus _ _ = Right (TypusFile FileDirectives [CodeBlock ""])
 
 -- Simplified Utils functions for testing
-trim :: String -> String
-trim = reverse . dropWhile isSpace . dropWhile isSpace . reverse
+Utils.trim :: String -> String
+Utils.trim = reverse . dropWhile isSpace . dropWhile isSpace . reverse
   where
     isSpace c = c `elem` " \t\n\r"
 
-removeComments :: String -> String
-removeComments = id  -- Simplified
+Utils.removeComments :: String -> String
+Utils.removeComments = id  -- Simplified
 
-normalizeIndentation :: String -> String
-normalizeIndentation = id  -- Simplified
+Utils.normalizeIndentation :: String -> String
+Utils.normalizeIndentation = id  -- Simplified
 
-safeProcessString :: String -> Either String String
-safeProcessString s = Right s  -- Simplified
+Utils.safeProcessString :: String -> Either String String
+Utils.safeProcessString s = Right s  -- Simplified

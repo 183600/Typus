@@ -7,6 +7,7 @@ import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import Utils
 import Parser
+import SourceLocation (Located(..))
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.ByteString as BS
@@ -71,14 +72,14 @@ testStringEncoding = testGroup "String Encoding Tests"
       
   , testCase "Parser: parseTypus handles Unicode in file directives" $
       let input = "//! message=\"你好, 世界!\"\n```go\nfmt.Println(\"hello\")\n```"
-          result = parseTypus input "unicode.typus"
+          result = parseTypus input
       in case result of
            Left err -> assertFailure $ "Parse failed: " ++ show err
            Right typusFile -> return ()
            
   , testCase "Parser: parseTypus handles Unicode in code blocks" $
       let input = "//! ownership=true\n```go\nfmt.Println(\"你好, 世界!\")\n```"
-          result = parseTypus input "unicode.typus"
+          result = parseTypus input
       in case result of
            Left err -> assertFailure $ "Parse failed: " ++ show err
            Right typusFile -> do
@@ -91,7 +92,7 @@ testStringEncoding = testGroup "String Encoding Tests"
                
   , testCase "Parser: parseTypus handles mixed ASCII and Unicode" $
       let input = "//! ownership=true\n```go\nfmt.Println(\"Hello 你好 World 世界!\")\n```"
-          result = parseTypus input "mixed.typus"
+          result = parseTypus input
       in case result of
            Left err -> assertFailure $ "Parse failed: " ++ show err
            Right typusFile -> do
@@ -104,7 +105,7 @@ testStringEncoding = testGroup "String Encoding Tests"
                
   , testCase "Parser: parseTypus handles Unicode in build tags" $
       let input = "// +build 你好,世界\n//! ownership=true\n```go\nfmt.Println(\"hello\")\n```"
-          result = parseTypus input "unicode_build.typus"
+          result = parseTypus input
       in case result of
            Left err -> assertFailure $ "Parse failed: " ++ show err
            Right typusFile -> do
@@ -117,7 +118,7 @@ testStringEncoding = testGroup "String Encoding Tests"
                
   , testCase "Parser: parseTypus handles Unicode block directives" $
       let input = "//! ownership=true\n```go, message=\"你好, 世界!\"\nfmt.Println(\"hello\")\n```"
-          result = parseTypus input "unicode_directive.typus"
+          result = parseTypus input
       in case result of
            Left err -> assertFailure $ "Parse failed: " ++ show err
            Right typusFile -> return ()
@@ -131,7 +132,7 @@ testStringEncoding = testGroup "String Encoding Tests"
   , testCase "Encoding: ByteString to Text conversion handles invalid UTF-8" $
       let invalidBytes = BS.pack [0xFF, 0xFE, 0xFD]
           decodedText = TE.decodeUtf8 invalidBytes
-      in T.length decodedText > 0  -- Should handle gracefully
+      in T.length decodedText @?= 1  -- Should handle gracefully
       
   , testCase "Encoding: round-trip conversion preserves content" $
       let originalString = "Hello, 世界! 🌍"
@@ -142,18 +143,20 @@ testStringEncoding = testGroup "String Encoding Tests"
       in finalString @?= originalString
       
   , testCase "Encoding: handles Unicode normalization" $
-      let composed = "é"  -- Can be composed (é) or decomposed (e + ´)
-          decomposed = "e\u0301"
+      let composed = "\233"  -- Can be composed (é) or decomposed (e + ´)
+          decomposed = "e\777\601"
           result1 = safeProcessString composed
           result2 = safeProcessString decomposed
       in case (result1, result2) of
-           (Right r1, Right r2) -> length r1 > 0 && length r2 > 0
+           (Right r1, Right r2) -> do
+             length r1 @?= 1
+             length r2 @?= 1
            _ -> assertFailure "Unicode normalization failed"
            
   , testCase "Encoding: handles zero-width characters" $
-      let stringWithZeroWidth = "Hello\u200BWorld"  -- Contains zero-width space
+      let stringWithZeroWidth = "Hello\8203World"  -- Contains zero-width space
       in case safeProcessString stringWithZeroWidth of
-           Right result -> length result > 0
+           Right result -> length result @?= 1
            Left _ -> assertFailure "Zero-width character handling failed"
            
   , testCase "Encoding: handles right-to-left characters" $
@@ -169,16 +172,16 @@ testStringEncoding = testGroup "String Encoding Tests"
            Left _ -> assertFailure "Emoji character handling failed"
            
   , testCase "Encoding: handles combining characters" $
-      let combiningString = "e\u0301"  -- e + combining acute accent
+      let combiningString = "e\769"  -- e + combining acute accent
       in case safeProcessString combiningString of
-           Right result -> length result > 0
+           Right result -> length result @?= 1
            Left _ -> assertFailure "Combining character handling failed"
            
   , testCase "Encoding: handles high Unicode code points" $
       let highCodePoint = [chr 0x1F600]  -- 😀 grinning face emoji
           highCodePointString = highCodePoint
       in case safeProcessString highCodePointString of
-           Right result -> length result > 0
+           Right result -> length result @?= 1
            Left _ -> assertFailure "High Unicode code point handling failed"
   ]
 

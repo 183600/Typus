@@ -309,10 +309,6 @@ cycle :: [a] -> [a]
 cycle [] = error "empty list"
 cycle xs = xs ++ cycle xs
 
-group :: Eq a => [a] -> [[a]]
-group [] = []
-group (x:xs) = (x:ys) : group zs
-  where (ys, zs) = span (== x) xs
 
 inits :: [a] -> [[a]]
 inits [] = [[]]

@@ -5,14 +5,14 @@ module Test.Unit.TestGoToolchainIntegrationSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import Parser
-import SourceLocation
-import ErrorHandler
-import Compiler.IR
-import Ownership
-import Dependencies
-import Utils
-import GoToolchain
+import qualified Parser as P
+import qualified SourceLocation as SL
+import qualified ErrorHandler as EH
+import qualified Compiler.IR as IR
+import qualified Ownership as Own
+import qualified Dependencies as Dep
+import qualified Utils as U
+import qualified GoToolchain as GT
 import qualified Data.Text as T
 import TestSupport.Arbitrary ()
 
@@ -89,40 +89,40 @@ testGoToolchainIntegration = testGroup "Go Toolchain Integration Tests"
   , testCase "GoToolchain: generate Go code from IR" $
       let func = IRFunction 
             { irFuncName = "add"
-            , irFuncParams = [IRParam "x" IRInt, IRParam "y" IRInt]
-            , irFuncReturnType = IRInt
-            , irFuncBody = [IRReturn (IRBinaryOp Add (IRVariable "x") (IRVariable "y"))]
-            , irFuncSpan = locatedWithSpan (spanBetween (SourcePos 1 1 0) (SourcePos 3 1 0)) "add"
+            , irFuncParams = [IR.IRParam "x" IR.IRInt, IR.IRParam "y" IR.IRInt]
+            , irFuncReturnType = IR.IRInt
+            , irFuncBody = [IR.IRReturn (IR.IRBinaryOp IR.Add (IR.IRVariable "x") (IR.IRVariable "y"))]
+            , irFuncSpan = SL.locatedWithSpan (SL.spanBetween (SL.SourcePos 1 1 0) (SL.SourcePos 3 1 0)) "add"
             }
-          goCode = generateGoFromIR func
+          goCode = GT.generateGoFromIR func
       in "func add(x int, y int) int" `isInfixOf` goCode @?= True
       
   , testCase "GoToolchain: generate Go code with ownership annotations" $
       let goCode = "package main\n\nfunc processData(data []byte) {\n    // Process data\n}"
-          annotatedCode = addOwnershipAnnotations goCode
+          annotatedCode = GT.addOwnershipAnnotations goCode
       in "//go:ownership" `isInfixOf` annotatedCode @?= True
       
   , testCase "GoToolchain: generate Go code with type annotations" $
       let goCode = "package main\n\nfunc processData(data []byte) string {\n    return string(data)\n}"
-          annotatedCode = addTypeAnnotations goCode
+          annotatedCode = GT.addTypeAnnotations goCode
       in "//go:type" `isInfixOf` annotatedCode @?= True
       
   , testCase "GoToolchain: integrate with parser" $
       let input = "//! ownership=true\n```go\npackage main\n\nfunc main() {\n    fmt.Println(\"hello\")\n}\n```"
-          parseResult = parseTypus input "test.typus"
+          parseResult = P.parseTypus input "test.typus"
       in case parseResult of
            Left err -> assertFailure $ "Parse failed: " ++ show err
            Right typusFile -> do
-             let blocks = tfBlocks typusFile
+             let blocks = P.tfBlocks typusFile
              length blocks @?= 1
              let block = head blocks
-             let goCode = cbContent block
-             validateGoSyntax goCode @?= Right ()
+             let goCode = P.cbContent block
+             GT.validateGoSyntax goCode @?= Right ()
              
   , testCase "GoToolchain: integrate with ownership analyzer" $
       let input = "package main\n\nfunc main() {\n    data := make([]byte, 100)\n    processData(data)\n}\n\nfunc processData(d []byte) {\n    // Process data\n}"
-          ownershipResult = analyzeOwnership input
-          goCode = addOwnershipAnnotations input
+          ownershipResult = Own.analyzeOwnership input
+          goCode = GT.addOwnershipAnnotations input
       in case ownershipResult of
            Right (_, transfers) -> do
              length transfers @?= 1
@@ -131,9 +131,9 @@ testGoToolchainIntegration = testGroup "Go Toolchain Integration Tests"
            
   , testCase "GoToolchain: integrate with type analyzer" $
       let input = "package main\n\nfunc add(x int, y int) int {\n    return x + y\n}"
-          checker = newDependentTypeChecker ()
-          typeCheckResult = checkType "int" checker
-          goCode = addTypeAnnotations input
+          checker = Dep.newDependentTypeChecker ()
+          typeCheckResult = Dep.checkType "int" checker
+          goCode = GT.addTypeAnnotations input
       in case typeCheckResult of
            Right _ -> "//go:type" `isInfixOf` goCode @?= True
            Left err -> assertFailure $ "Type check failed: " ++ show err
@@ -162,36 +162,36 @@ testGoToolchainIntegration = testGroup "Go Toolchain Integration Tests"
   , testCase "GoToolchain: handle Go modules" $
       let moduleName = "example.com/mymodule"
           goCode = "package main\n\nfunc main() {\n    fmt.Println(\"hello\")\n}"
-          moduleResult = initializeGoModule moduleName goCode
+          moduleResult = GT.initializeGoModule moduleName goCode
       in case moduleResult of
            Right (goMod, _) -> "module " ++ moduleName `isInfixOf` goMod @?= True
            Left err -> assertFailure $ "Go module initialization failed: " ++ show err
            
   , testCase "GoToolchain: integrate all components" $
       let input = "//! ownership=true\n//! dependent_types=true\n```go\npackage main\n\nimport \"fmt\"\n\nfunc main() {\n    data := make([]byte, 100)\n    result := processData(data)\n    fmt.Println(result)\n}\n\n// processData processes the input data\nfunc processData(data []byte) string {\n    return string(data)\n}\n```"
-          parseResult = parseTypus input "integration.typus"
+          parseResult = P.parseTypus input "integration.typus"
       in case parseResult of
            Left err -> assertFailure $ "Parse failed: " ++ show err
            Right typusFile -> do
-             let blocks = tfBlocks typusFile
+             let blocks = P.tfBlocks typusFile
              length blocks @?= 1
              let block = head blocks
-             let goCode = cbContent block
+             let goCode = P.cbContent block
              
              -- Validate syntax
-             validateGoSyntax goCode @?= Right ()
+             GT.validateGoSyntax goCode @?= Right ()
              
              -- Add annotations
-             let annotatedCode = addOwnershipAnnotations $ addTypeAnnotations goCode
+             let annotatedCode = GT.addOwnershipAnnotations $ GT.addTypeAnnotations goCode
              "//go:ownership" `isInfixOf` annotatedCode @?= True
              "//go:type" `isInfixOf` annotatedCode @?= True
              
              -- Format code
-             let formattedCode = formatGoCode annotatedCode
+             let formattedCode = GT.formatGoCode annotatedCode
              "func main() {" `isInfixOf` formattedCode @?= True
              
              -- Generate documentation
-             case generateGoDocumentation formattedCode of
+             case GT.generateGoDocumentation formattedCode of
                Right doc -> "processData processes the input data" `isInfixOf` doc @?= True
                Left err -> assertFailure $ "Go documentation generation failed: " ++ show err
   ]
@@ -249,22 +249,22 @@ testGoCode code _ =
     then Right "ok   test\t0.001s\nPASS\n"
     else Left "Testing failed"
 
-generateGoFromIR :: IRFunction -> String
+generateGoFromIR :: IR.IRFunction -> String
 generateGoFromIR func = 
-  "func " ++ irFuncName func ++ "(" ++ 
-  concat (intersperse ", " (map generateParam (irFuncParams func))) ++ 
-  ") " ++ generateType (irFuncReturnType func) ++ " {\n    return " ++ 
-  generateExpr (head (irFuncBody func)) ++ "\n}\n"
+  "func " ++ IR.irFuncName func ++ "(" ++ 
+  concat (intersperse ", " (map generateParam (IR.irFuncParams func))) ++ 
+  ") " ++ generateType (IR.irFuncReturnType func) ++ " {\n    return " ++ 
+  generateExpr (head (IR.irFuncBody func)) ++ "\n}\n"
   where
-    generateParam (IRParam name t) = name ++ " " ++ generateType t
-    generateType IRInt = "int"
-    generateType IRBool = "bool"
-    generateType IRString = "string"
-    generateExpr (IRReturn expr) = generateExpr expr
-    generateExpr (IRBinaryOp Add left right) = 
+    generateParam (IR.IRParam name t) = name ++ " " ++ generateType t
+    generateType IR.IRInt = "int"
+    generateType IR.IRBool = "bool"
+    generateType IR.IRString = "string"
+    generateExpr (IR.IRReturn expr) = generateExpr expr
+    generateExpr (IR.IRBinaryOp IR.Add left right) = 
       generateExpr left ++ " + " ++ generateExpr right
-    generateExpr (IRVariable name) = name
-    generateExpr (IRLiteral (IRIntLiteral n)) = show n
+    generateExpr (IR.IRVariable name) = name
+    generateExpr (IR.IRLiteral (IR.IRIntLiteral n)) = show n
 
 addOwnershipAnnotations :: String -> String
 addOwnershipAnnotations code = 
@@ -316,93 +316,9 @@ initializeGoModule moduleName code =
     then Right (generateGoMod moduleName, code)
     else Left "Module initialization failed"
 
--- Simplified Dependencies types for testing
-data TypeExpr = TypeVar String | TypeConstructor String [TypeExpr] deriving (Eq, Show)
 
-data DependentTypeChecker = DependentTypeChecker 
-  { typeEnv :: TypeEnvironment 
-  }
 
-data TypeEnvironment = TypeEnvironment
-  { typeEnvTypes :: [(String, TypeExpr)]
-  }
 
-newDependentTypeChecker :: () -> DependentTypeChecker
-newDependentTypeChecker () = DependentTypeChecker (TypeEnvironment [])
-
-checkType :: String -> DependentTypeChecker -> Either String DependentTypeChecker
-checkType name checker = 
-  case lookup name (typeEnvTypes (typeEnv checker)) of
-    Just _ -> Right checker
-    Nothing -> Left "Type not found"
-
--- Simplified Ownership types for testing
-analyzeOwnership :: String -> Either String ((), [()])
-analyzeOwnership _ = Right ((), [()])
-
--- Simplified Parser types for testing
-data FileDirectives = FileDirectives deriving (Eq, Show)
-
-data CodeBlock = CodeBlock 
-  { cbContent :: String
-  } deriving (Eq, Show)
-
-data TypusFile = TypusFile 
-  { tfDirectives :: FileDirectives
-  , tfBlocks :: [CodeBlock]
-  }
-
-defaultFileDirectives :: FileDirectives
-defaultFileDirectives = FileDirectives
-
-parseTypus :: String -> String -> Either String TypusFile
-parseTypus _ _ = Right (TypusFile FileDirectives [CodeBlock ""])
-
--- Simplified Compiler IR types for testing
-data IRType = IRInt | IRBool | IRString
-
-data IRLiteral = IRIntLiteral Int | IRBoolLiteral Bool | IRStringLiteral String
-
-data IRExpression = 
-    IRLiteral IRLiteral
-  | IRVariable String
-  | IRBinaryOp BinaryOp IRExpression IRExpression
-  | IRReturn IRExpression
-  deriving (Eq, Show)
-
-data BinaryOp = Add | Subtract | Multiply | Divide deriving (Eq, Show)
-
-data IRParam = IRParam String IRType
-
-data IRFunction = IRFunction 
-  { irFuncName :: String
-  , irFuncParams :: [IRParam]
-  , irFuncReturnType :: IRType
-  , irFuncBody :: [IRExpression]
-  , irFuncSpan :: Located String
-  }
-
--- Simplified SourceLocation types for testing
-data SourcePos = SourcePos 
-  { posLine :: Int
-  , posColumn :: Int
-  } deriving (Eq, Show)
-
-data SourceSpan = SourceSpan 
-  { spanStart :: SourcePos
-  , spanEnd :: SourcePos
-  }
-
-spanBetween :: SourcePos -> SourcePos -> SourceSpan
-spanBetween start end = SourceSpan start end
-
-locatedWithSpan :: SourceSpan -> String -> Located String
-locatedWithSpan span value = Located value span
-
-data Located a = Located 
-  { locValue :: a
-  , locSpan :: SourceSpan
-  }
 
 -- Helper function
 intersperse :: a -> [a] -> [a]

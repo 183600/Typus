@@ -25,14 +25,6 @@ testPerformanceRegression = testGroup "Performance Regression Tests"
   [ testCase "Utils: trim performance on large strings" $ do
       let largeString = concat (replicate 10000 "   hello world   ")
       startTime <- getCPUTime
-          result <- return $ analyzeOwnership largeInput
-          endTime <- getCPUTime
-          let timeDiff = fromIntegral (endTime - startTime) / (10^12)
-      in case result of
-           Left err -> assertFailure $ "Ownership analysis failed: " ++ show err
-           Right (analyzer, transfers) -> do
-             length transfers @?= 1000
-             timeDiff < 1.0 @? ("analyzeOwnership took too long: " ++ show timeDiff ++ " seconds")
       let result = trim largeString
       endTime <- getCPUTime
       let timeDiff = fromIntegral (endTime - startTime) / (10^12)
@@ -41,14 +33,6 @@ testPerformanceRegression = testGroup "Performance Regression Tests"
   , testCase "Utils: removeComments performance on large strings with many comments" $ do
       let largeString = concat (replicate 1000 "// comment\n/* block comment */\ncode\n")
       startTime <- getCPUTime
-          result <- return $ analyzeOwnership largeInput
-          endTime <- getCPUTime
-          let timeDiff = fromIntegral (endTime - startTime) / (10^12)
-      in case result of
-           Left err -> assertFailure $ "Ownership analysis failed: " ++ show err
-           Right (analyzer, transfers) -> do
-             length transfers @?= 1000
-             timeDiff < 1.0 @? ("analyzeOwnership took too long: " ++ show timeDiff ++ " seconds")
       let result = removeComments largeString
       endTime <- getCPUTime
       let timeDiff = fromIntegral (endTime - startTime) / (10^12)
@@ -57,14 +41,6 @@ testPerformanceRegression = testGroup "Performance Regression Tests"
   , testCase "Utils: normalizeIndentation performance on large indented strings" $ do
       let largeString = concat (replicate 1000 "    deeply indented line\n        even more indented\n")
       startTime <- getCPUTime
-          result <- return $ analyzeOwnership largeInput
-          endTime <- getCPUTime
-          let timeDiff = fromIntegral (endTime - startTime) / (10^12)
-      in case result of
-           Left err -> assertFailure $ "Ownership analysis failed: " ++ show err
-           Right (analyzer, transfers) -> do
-             length transfers @?= 1000
-             timeDiff < 1.0 @? ("analyzeOwnership took too long: " ++ show timeDiff ++ " seconds")
       let result = normalizeIndentation largeString
       endTime <- getCPUTime
       let timeDiff = fromIntegral (endTime - startTime) / (10^12)
@@ -74,14 +50,6 @@ testPerformanceRegression = testGroup "Performance Regression Tests"
       let largeString = concat (replicate 10000 "a")
           pos = posAt 1 1
       startTime <- getCPUTime
-          result <- return $ analyzeOwnership largeInput
-          endTime <- getCPUTime
-          let timeDiff = fromIntegral (endTime - startTime) / (10^12)
-      in case result of
-           Left err -> assertFailure $ "Ownership analysis failed: " ++ show err
-           Right (analyzer, transfers) -> do
-             length transfers @?= 1000
-             timeDiff < 1.0 @? ("analyzeOwnership took too long: " ++ show timeDiff ++ " seconds")
       let result = advancePosBy largeString pos
       endTime <- getCPUTime
       let timeDiff = fromIntegral (endTime - startTime) / (10^12)
@@ -98,14 +66,6 @@ testPerformanceRegression = testGroup "Performance Regression Tests"
   , testCase "Parser: parseTypus performance on large files" $ do
       let largeInput = concat (replicate 1000 "//! ownership=true\n```go\nfmt.Println(\"hello\")\n```\n")
       startTime <- getCPUTime
-          result <- return $ analyzeOwnership largeInput
-          endTime <- getCPUTime
-          let timeDiff = fromIntegral (endTime - startTime) / (10^12)
-      in case result of
-           Left err -> assertFailure $ "Ownership analysis failed: " ++ show err
-           Right (analyzer, transfers) -> do
-             length transfers @?= 1000
-             timeDiff < 1.0 @? ("analyzeOwnership took too long: " ++ show timeDiff ++ " seconds")
       result <- return $ parseTypus largeInput
       endTime <- getCPUTime
       let timeDiff = fromIntegral (endTime - startTime) / (10^12)
@@ -116,14 +76,6 @@ testPerformanceRegression = testGroup "Performance Regression Tests"
   , testCase "Parser: parseTypus performance on files with many small blocks" $ do
       let largeInput = concat (replicate 1000 "```\nfmt.Println(\"hello\")\n```\n")
       startTime <- getCPUTime
-          result <- return $ analyzeOwnership largeInput
-          endTime <- getCPUTime
-          let timeDiff = fromIntegral (endTime - startTime) / (10^12)
-      in case result of
-           Left err -> assertFailure $ "Ownership analysis failed: " ++ show err
-           Right (analyzer, transfers) -> do
-             length transfers @?= 1000
-             timeDiff < 1.0 @? ("analyzeOwnership took too long: " ++ show timeDiff ++ " seconds")
       let result = parseTypus largeInput "many_blocks.typus"
       endTime <- getCPUTime
       let timeDiff = fromIntegral (endTime - startTime) / (10^12)
@@ -136,14 +88,6 @@ testPerformanceRegression = testGroup "Performance Regression Tests"
   , testCase "ErrorHandler: formatError performance on many errors" $ do
       let errors = [errorAt (posAt i 1) ("Error " ++ show i) | i <- [1..1000]]
       startTime <- getCPUTime
-          result <- return $ analyzeOwnership largeInput
-          endTime <- getCPUTime
-          let timeDiff = fromIntegral (endTime - startTime) / (10^12)
-      in case result of
-           Left err -> assertFailure $ "Ownership analysis failed: " ++ show err
-           Right (analyzer, transfers) -> do
-             length transfers @?= 1000
-             timeDiff < 1.0 @? ("analyzeOwnership took too long: " ++ show timeDiff ++ " seconds")
       let results = map formatError errors
       endTime <- getCPUTime
       let timeDiff = fromIntegral (endTime - startTime) / (10^12)
@@ -152,14 +96,6 @@ testPerformanceRegression = testGroup "Performance Regression Tests"
   , testCase "ErrorHandler: formatErrors performance on large error list" $ do
       let errors = [errorAt (posAt i 1) ("Error " ++ show i) | i <- [1..1000]]
       startTime <- getCPUTime
-          result <- return $ analyzeOwnership largeInput
-          endTime <- getCPUTime
-          let timeDiff = fromIntegral (endTime - startTime) / (10^12)
-      in case result of
-           Left err -> assertFailure $ "Ownership analysis failed: " ++ show err
-           Right (analyzer, transfers) -> do
-             length transfers @?= 1000
-             timeDiff < 1.0 @? ("analyzeOwnership took too long: " ++ show timeDiff ++ " seconds")
       let result = formatErrors errors
       endTime <- getCPUTime
       let timeDiff = fromIntegral (endTime - startTime) / (10^12)
@@ -169,14 +105,6 @@ testPerformanceRegression = testGroup "Performance Regression Tests"
       let params = [IRParam ("x" ++ show i) IRInt | i <- [1..100]]
           body = [IRBinaryOp Add (IRVariable ("x" ++ show i)) (IRVariable ("x" ++ show (i+1))) | i <- [1..99]]
       startTime <- getCPUTime
-          result <- return $ analyzeOwnership largeInput
-          endTime <- getCPUTime
-          let timeDiff = fromIntegral (endTime - startTime) / (10^12)
-      in case result of
-           Left err -> assertFailure $ "Ownership analysis failed: " ++ show err
-           Right (analyzer, transfers) -> do
-             length transfers @?= 1000
-             timeDiff < 1.0 @? ("analyzeOwnership took too long: " ++ show timeDiff ++ " seconds")
       let func = IRFunction 
             { irFuncName = "large_function"
             , irFuncParams = params
@@ -189,32 +117,8 @@ testPerformanceRegression = testGroup "Performance Regression Tests"
       timeDiff < 0.1 @? ("IRFunction creation took too long: " ++ show timeDiff ++ " seconds")
       
   , testCase "Ownership: analyzeOwnership performance on large code with many transfers" $
-      startTime <- getCPUTime
-          result <- return $ analyzeOwnership largeInput
-          endTime <- getCPUTime
-          let timeDiff = fromIntegral (endTime - startTime) / (10^12)
-      in case result of
-           Left err -> assertFailure $ "Ownership analysis failed: " ++ show err
-           Right (analyzer, transfers) -> do
-             length transfers @?= 1000
-             timeDiff < 1.0 @? ("analyzeOwnership took too long: " ++ show timeDiff ++ " seconds")
-          result <- return $ analyzeOwnership largeInput
-          endTime <- getCPUTime
-          let timeDiff = fromIntegral (endTime - startTime) / (10^12)
-      in case result of
-           Left err -> assertFailure $ "Ownership analysis failed: " ++ show err
-           Right (analyzer, transfers) -> do
-             length transfers @?= 1000
-             timeDiff < 1.0 @? ("analyzeOwnership took too long: " ++ show timeDiff ++ " seconds")\n\nfunc main() {\n    data := make([]byte, 100)\n    processData(data)\n}\n\nfunc processData(d []byte) {\n    // Process data\n}\n")
+      let largeInput = concat (replicate 1000 "package main\n\nfunc main() {\n    data := make([]byte, 100)\n    processData(data)\n}\n\nfunc processData(d []byte) {\n    // Process data\n}\n")
           startTime <- getCPUTime
-          result <- return $ analyzeOwnership largeInput
-          endTime <- getCPUTime
-          let timeDiff = fromIntegral (endTime - startTime) / (10^12)
-      in case result of
-           Left err -> assertFailure $ "Ownership analysis failed: " ++ show err
-           Right (analyzer, transfers) -> do
-             length transfers @?= 1000
-             timeDiff < 1.0 @? ("analyzeOwnership took too long: " ++ show timeDiff ++ " seconds")
           result <- return $ analyzeOwnership largeInput
           endTime <- getCPUTime
           timeDiff = fromIntegral (endTime - startTime) / (10^12)
@@ -229,14 +133,6 @@ testPerformanceRegression = testGroup "Performance Regression Tests"
           constraints = [EqualityConstraint (TypeVar ("a" ++ show i)) (TypeVar ("b" ++ show i)) | i <- [1..100]]
           checker' = foldl addConstraint checker constraints
           startTime <- getCPUTime
-          result <- return $ analyzeOwnership largeInput
-          endTime <- getCPUTime
-          let timeDiff = fromIntegral (endTime - startTime) / (10^12)
-      in case result of
-           Left err -> assertFailure $ "Ownership analysis failed: " ++ show err
-           Right (analyzer, transfers) -> do
-             length transfers @?= 1000
-             timeDiff < 1.0 @? ("analyzeOwnership took too long: " ++ show timeDiff ++ " seconds")
           result <- return $ solveConstraints checker'
           endTime <- getCPUTime
           timeDiff = fromIntegral (endTime - startTime) / (10^12)
@@ -250,14 +146,6 @@ testPerformanceRegression = testGroup "Performance Regression Tests"
           nestedExpr = foldl (\acc i -> BinaryOpExpr Add acc (VarExpr ("x" ++ show i))) 
                            (VarExpr "x1") [2..100]
           startTime <- getCPUTime
-          result <- return $ analyzeOwnership largeInput
-          endTime <- getCPUTime
-          let timeDiff = fromIntegral (endTime - startTime) / (10^12)
-      in case result of
-           Left err -> assertFailure $ "Ownership analysis failed: " ++ show err
-           Right (analyzer, transfers) -> do
-             length transfers @?= 1000
-             timeDiff < 1.0 @? ("analyzeOwnership took too long: " ++ show timeDiff ++ " seconds")
           result <- return $ inferType nestedExpr checker
           endTime <- getCPUTime
           timeDiff = fromIntegral (endTime - startTime) / (10^12)
@@ -294,14 +182,6 @@ testPerformanceRegression = testGroup "Performance Regression Tests"
 measureCPUTime :: IO a -> IO (a, Double)
 measureCPUTime action = do
   startTime <- getCPUTime
-          result <- return $ analyzeOwnership largeInput
-          endTime <- getCPUTime
-          let timeDiff = fromIntegral (endTime - startTime) / (10^12)
-      in case result of
-           Left err -> assertFailure $ "Ownership analysis failed: " ++ show err
-           Right (analyzer, transfers) -> do
-             length transfers @?= 1000
-             timeDiff < 1.0 @? ("analyzeOwnership took too long: " ++ show timeDiff ++ " seconds")
   result <- action
   endTime <- getCPUTime
   let timeDiff = fromIntegral (endTime - startTime) / (10^12)
