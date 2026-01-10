@@ -209,6 +209,10 @@ test-suite typus-test
         Test.Unit.NewUtilsPropertiesSpec2,
         Test.Unit.NewSourceLocationMathPropertiesSpec2,
         Test.Unit.ErrorHandlerCorePropertiesSpec,
+        Test.Unit.SourceLocationCorePropertiesSpec,
+        Test.Unit.UtilsCorePropertiesSpec,
+        Test.Unit.ParserCorePropertiesSpec,
+        Test.Unit.CompilerCorePropertiesSpec,
         Test.Unit.OwnershipBasicPropertiesSpec,
         Test.Unit.DependenciesTypeSystemPropertiesSpec,
         Test.Unit.DependentTypesParserPropertiesSpec,                Test.Unit.AdvancedParserSpec,
@@ -605,7 +609,7 @@ test-suite typus-test
         -- New Core Functionality Test Modules
         Test.Unit.CoreParserSpec,
         Test.Unit.CoreSourceLocationSpec,
-        Test.Unit.UtilsStringProcessingSpec,
+        -- UtilsStringProcessingSpec is already listed above,
 
         -- New QuickCheck Property Test Modules
         Test.Unit.CoreQuickCheckPropertiesSpec,
@@ -760,12 +764,9 @@ test-suite typus-test
         Test.Unit.NewEnhancedOwnershipMemorySafetyQuickCheckSpec,
 
         -- New Basic Test Modules with QuickCheck properties
-        Test.Unit.ParserBasicFunctionsSpec,
-        Test.Unit.CompilerBasicSpec,
-        Test.Unit.DependenciesInferenceSpec,
-        Test.Unit.ErrorHandlerPropertiesSpec,
-        Test.Unit.SourceLocationMathSpec,
-        Test.Unit.UtilsStringProcessingSpec,
+        -- (ParserBasicFunctionsSpec, CompilerBasicSpec, DependenciesInferenceSpec, 
+        --  ErrorHandlerPropertiesSpec, SourceLocationMathSpec, UtilsStringProcessingSpec
+        --  are already listed above)
         Test.Unit.DependentTypeValidationQuickCheckSpec,
         Test.Unit.TypeInferenceBoundaryQuickCheckSpec,
         
@@ -1162,7 +1163,7 @@ test-suite typus-test
         Test.Unit.NewCabalEdgeCaseSpec,
         
         -- New Test Modules Added (2025) - 27 comprehensive tests
-        Test.Unit.SourceLocationMathSpec,
+        -- SourceLocationMathSpec is already listed above,
         Test.Unit.ParserDirectiveSpec,
         Test.Unit.CompilerErrorHandlingSpec,
         Test.Unit.OwnershipTransferSpec,
@@ -1184,14 +1185,9 @@ test-suite typus-test
         Test.Unit.CliIntegrationSpec,
         Test.Unit.CliRunnerSpec,
         Test.Unit.CliDebugRunnerSpec,
-        Test.Unit.CompilerUtilsPropertiesSpec,
+        Test.Unit.CompilerUtilsPropertiesSpec
         
         -- New Test Modules Created (2025) - 4 comprehensive tests
-        Test.Unit.ParserBasicFunctionsSpec,
-        Test.Unit.ErrorHandlerPropertiesSpec,
-        Test.Unit.CompilerBasicSpec,
-        Test.Unit.DependenciesInferenceSpec
-        
         -- (These modules are already listed above)
     build-depends:
         base >=4.7 && <5,
