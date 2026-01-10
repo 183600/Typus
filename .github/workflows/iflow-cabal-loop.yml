@@ -35,7 +35,7 @@ jobs:
       # clean：自动清理坏路径后继续；fail：发现坏路径直接失败退出
       IFLOW_GUARD_MODE: clean
       # 非空即开启 ASCII-only（会禁止中文等非 ASCII 文件名）
-      IFLOW_GUARD_ASCII_ONLY: ""
+      IFLOW_GUARD_ASCII_ONLY: "1"
 
     steps:
       - name: Increase Swap space (防止内存溢出断连)
