@@ -18,10 +18,55 @@ import SourceLocation (SourceSpan(..), SourcePos(..), startPos)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.List (isInfixOf)
+import SourceLocation (Located(..))
+import qualified SyntaxValidator
 
 -- ============================================================================
 -- Arbitrary Instances
 -- ============================================================================
+
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- arbitrary
+    column <- arbitrary
+    offset <- arbitrary
+    return $ SourcePos line column offset
+
+instance Arbitrary a => Arbitrary (Located a) where
+  arbitrary = do
+    value <- arbitrary
+    pos <- arbitrary
+    span <- arbitrary
+    return $ Located value pos span
+
+instance Arbitrary SyntaxValidator.SyntaxError where
+  arbitrary = do
+    errorType <- elements 
+      [ SyntaxValidator.MissingBrace
+      , SyntaxValidator.MissingParenthesis
+      , SyntaxValidator.MissingBracket
+      , SyntaxValidator.UnclosedString
+      , SyntaxValidator.UnclosedComment
+      , SyntaxValidator.InvalidIdentifier
+      , SyntaxValidator.InvalidTypeDeclaration
+      , SyntaxValidator.InvalidFunctionDeclaration
+      , SyntaxValidator.InvalidImport
+      , SyntaxValidator.InvalidStatement
+      , SyntaxValidator.UnterminatedBlock
+      , SyntaxValidator.InvalidOperator
+      , SyntaxValidator.MissingSemicolon
+      , SyntaxValidator.UnexpectedToken
+      , SyntaxValidator.MissingPackageDeclaration
+      , SyntaxValidator.DuplicateDeclaration
+      , SyntaxValidator.InvalidBlockStructure
+      , SyntaxValidator.UndeclaredVariable
+      , SyntaxValidator.SyntaxWarning
+      ]
+    errorMessage <- arbitrary
+    lineNumber <- arbitrary
+    columnNumber <- arbitrary
+    lineContent <- arbitrary
+    return $ SyntaxValidator.SyntaxError errorType errorMessage lineNumber columnNumber lineContent
 
 instance Arbitrary FileDirectives where
   arbitrary = do
@@ -115,7 +160,7 @@ prop_parse_preserves_content =
     Right file -> 
       case tfBlocks file of
         [] -> property False
-        (block:_) -> cbContent block `contains` "let x = 42"
+        (block:_) -> property (cbContent block `contains` "let x = 42")
 
 -- Property: Parsing with block directives preserves directives
 prop_parse_block_directives :: Property
@@ -139,7 +184,7 @@ prop_parse_malformed_errors =
       result = parseTypus input
   in case result of
     Left _ -> property True  -- Parser should fail
-    Right file -> not (null (tfSyntaxErrors file))
+    Right file -> property (not (null (tfSyntaxErrors file)))
 
 -- Property: Parsing with file directives sets file directives
 prop_parse_file_directives :: Property
@@ -160,7 +205,7 @@ prop_parse_build_tags =
       result = parseTypus input
   in case result of
     Left _ -> property False
-    Right file -> not (null (tfBuildTags file))
+    Right file -> property (not (null (tfBuildTags file)))
 
 -- Property: Parsing nested blocks handles correctly
 prop_parse_nested_blocks :: Property
@@ -169,7 +214,7 @@ prop_parse_nested_blocks =
       result = parseTypus input
   in case result of
     Left _ -> property True  -- Should likely fail or handle specially
-    Right file -> length (tfBlocks file) >= 1
+    Right file -> property (length (tfBlocks file) >= 1)
 
 -- Property: Parsing with comments preserves non-comment content
 prop_parse_with_comments :: Property
@@ -181,18 +226,18 @@ prop_parse_with_comments =
     Right file -> 
       case tfBlocks file of
         [] -> property False
-        (block:_) -> cbContent block `contains` "let x = 42" .&&. 
-                     cbContent block `contains` "let y = 24"
+        (block:_) -> property (cbContent block `contains` "let x = 42") .&&. 
+                     property (cbContent block `contains` "let y = 24")
 
 -- Property: Parsing large input doesn't crash
 prop_parse_large_input :: Property
 prop_parse_large_input = 
-  let largeContent = unlines $ replicate 1000 "let x" ++ show (42 :: Int)
+  let largeContent = unlines $ replicate 1000 "let x" ++ [show (42 :: Int)]
       input = "```typus\n" ++ largeContent ++ "\n```"
       result = parseTypus input
   in case result of
     Left _ -> property True  -- Failing is OK, just shouldn't crash
-    Right file -> length (tfBlocks file) >= 1
+    Right file -> property (length (tfBlocks file) >= 1)
 
 -- Property: Parsing with unicode content preserves unicode
 prop_parse_unicode_content :: Property
@@ -204,7 +249,7 @@ prop_parse_unicode_content =
     Right file -> 
       case tfBlocks file of
         [] -> property False
-        (block:_) -> cbContent block `contains` "你好世界"
+        (block:_) -> property (cbContent block `contains` "你好世界")
 
 -- Property: Parsing empty blocks returns empty block content
 prop_parse_empty_blocks :: Property
@@ -216,7 +261,7 @@ prop_parse_empty_blocks =
     Right file -> 
       case tfBlocks file of
         [] -> property False
-        (block:_) -> null (cbContent block)
+        (block:_) -> property (null (cbContent block))
 
 -- Property: Parsing with mixed newlines works correctly
 prop_parse_mixed_newlines :: Property

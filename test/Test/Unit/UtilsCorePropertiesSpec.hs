@@ -33,7 +33,7 @@ prop_trim_removes_whitespace s =
       hasLeadingSpace = not (null s) && isSpace (head s)
       hasTrailingSpace = not (null s) && isSpace (last s)
   in if hasLeadingSpace || hasTrailingSpace
-     then length trimmed < length s
+     then property (length trimmed < length s)
      else trimmed === s
 
 -- Property: trim idempotent (trimming twice gives same result)
@@ -64,7 +64,7 @@ prop_splitBy_preserves_empty delim s =
 prop_splitByCollapsed_removes_empty :: Char -> String -> Property
 prop_splitByCollapsed_removes_empty delim s = 
   let parts = splitByCollapsed delim s
-  in all (not . null) parts
+  in property (all (not . null) parts)
 
 -- Property: splitByComma is equivalent to splitBy ','
 prop_splitByComma_equivalent :: String -> Property
@@ -130,7 +130,7 @@ prop_normalizeIndentation_preserves_relative =
       lines' = lines result
   in length lines' === 3 .&&.
      not (null (head lines')) .&&.
-     head (lines' !! 1) === '  ' .&&.
+     property (head (lines' !! 1) == ' ') .&&.
      not (isSpace (head (lines' !! 2)))
 
 -- Property: normalizeIndentation of empty string returns empty string
@@ -199,7 +199,7 @@ prop_safeProcessString_valid =
   forAll (listOf (elements ([' '..'~'] ++ "\n\r\t"))) $ \s ->
   case safeProcessString s of
     Left _ -> property False
-    Right filtered -> all isValidChar filtered
+    Right filtered -> property (all isValidChar filtered)
 
 -- Property: safeProcessString filters control chars
 prop_safeProcessString_filters :: Property
@@ -207,7 +207,7 @@ prop_safeProcessString_filters =
   forAll (listOf (elements ([' '..'~'] ++ "\n\r\t" ++ ['\0'..'\8']))) $ \s ->
   case safeProcessString s of
     Left _ -> property False
-    Right filtered -> all isValidChar filtered
+    Right filtered -> property (all isValidChar filtered)
 
 -- ============================================================================
 -- Helper Functions

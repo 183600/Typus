@@ -1185,7 +1185,36 @@ test-suite typus-test
         Test.Unit.CliIntegrationSpec,
         Test.Unit.CliRunnerSpec,
         Test.Unit.CliDebugRunnerSpec,
-        Test.Unit.CompilerUtilsPropertiesSpec
+        Test.Unit.CompilerUtilsPropertiesSpec,
+        
+        -- New Test Modules Created (2025) - 27 comprehensive tests
+        Test.Unit.TestUtilsCorePropertiesSpec,
+        Test.Unit.TestSourceLocationMathPropertiesSpec,
+        Test.Unit.TestParserErrorRecoverySpec,
+        Test.Unit.TestErrorHandlerConsistencySpec,
+        Test.Unit.TestOwnershipTransitivitySpec,
+        Test.Unit.TestDependencyTypeConstraintsSpec,
+        Test.Unit.TestCompilerIRConsistencySpec,
+        Test.Unit.TestCrossModuleIntegrationSpec,
+        Test.Unit.TestBoundaryConditionsSpec,
+        Test.Unit.TestPerformanceRegressionSpec,
+        Test.Unit.TestStringEncodingSpec,
+        Test.Unit.TestConcurrentSafetySpec,
+        Test.Unit.TestMemorySafetySpec,
+        Test.Unit.TestTypeSystemInferenceSpec,
+        Test.Unit.TestErrorRecoverySpec,
+        Test.Unit.TestIntegrationEndToEndSpec,
+        Test.Unit.TestSymbolTableOperationsSpec,
+        Test.Unit.TestAnalyzerIntegrationSpec,
+        Test.Unit.TestCliIntegrationSpec,
+        Test.Unit.TestGoToolchainIntegrationSpec,
+        Test.Unit.TestDebugIntegrationSpec,
+        Test.Unit.TestEnhancedErrorHandlerSpec,
+        Test.Unit.TestQuickCheckPropertiesSpec,
+        Test.Unit.TestArithmeticPropertiesSpec,
+        Test.Unit.TestStringProcessingSpec,
+        Test.Unit.TestParserDirectivesSpec,
+        Test.Unit.TestListPropertiesSpec
         
         -- New Test Modules Created (2025) - 4 comprehensive tests
         -- (These modules are already listed above)
