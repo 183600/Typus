@@ -26,14 +26,14 @@ prop_analyzerstate_add_symbol name symbolType =
   let state = testEmptyAnalyzerState
       state' = testAddSymbol name symbolType state
   in property $ Map.member name (testAnalyzerSymbols state') &&
-     fromMaybe "" (Map.lookup name (testAnalyzerSymbols state')) === symbolType
+     fromMaybe "" (Map.lookup name (testAnalyzerSymbols state')) == symbolType
 
 prop_analyzerstate_add_type :: String -> String -> Property
 prop_analyzerstate_add_type name typeDef = 
   let state = testEmptyAnalyzerState
       state' = testAddType name typeDef state
   in property $ Map.member name (testAnalyzerTypes state') &&
-     fromMaybe "" (Map.lookup name (testAnalyzerTypes state')) === typeDef
+     fromMaybe "" (Map.lookup name (testAnalyzerTypes state')) == typeDef
 
 prop_analyzerstate_add_constraint :: String -> String -> Property
 prop_analyzerstate_add_constraint name constraint = 
@@ -61,14 +61,14 @@ prop_symboltable_add_symbol name symbolType =
   let table = testEmptySymbolTable
       table' = testAddSymbolToTable name symbolType table
   in property $ testHasSymbol name table' &&
-     testGetSymbolType name table' === Just symbolType
+     testGetSymbolType name table' == Just symbolType
 
 prop_symboltable_add_type :: String -> String -> Property
 prop_symboltable_add_type name typeDef = 
   let table = testEmptySymbolTable
       table' = testAddTypeToTable name typeDef table
   in property $ testHasType name table' &&
-     testGetTypeDefinition name table' === Just typeDef
+     testGetTypeDefinition name table' == Just typeDef
 
 prop_symboltable_scope_management :: String -> Property
 prop_symboltable_scope_management scopeName = 
@@ -76,8 +76,8 @@ prop_symboltable_scope_management scopeName =
       table' = testEnterScope scopeName table
       table'' = testAddSymbolToTable "test" "String" table'
       table''' = testExitScope table'
-  in property $ testCurrentScope table' === Just scopeName &&
-     testCurrentScope table''' === Nothing
+  in property $ testCurrentScope table' == Just scopeName &&
+     testCurrentScope table''' == Nothing
 
 -- 测试AnalyzerTypes的属性
 prop_analysistypes_consistency :: String -> Property
@@ -88,14 +88,14 @@ prop_analysistypes_consistency typeName =
 prop_analysistypes_function_type :: String -> String -> Property
 prop_analysistypes_function_type inputType outputType = 
   let funcType = TestFunctionType inputType outputType
-  in property $ testFunctionInput funcType === inputType &&
-     testFunctionOutput funcType === outputType
+  in property $ testFunctionInput funcType == inputType &&
+     testFunctionOutput funcType == outputType
 
 prop_analysistypes_dependent_type :: String -> String -> Property
 prop_analysistypes_dependent_type baseType constraint = 
   let depType = TestDependentType baseType constraint
-  in property $ testDependentBase depType === baseType &&
-     testDependentConstraint depType === constraint
+  in property $ testDependentBase depType == baseType &&
+     testDependentConstraint depType == constraint
 
 -- 测试类型推断的属性
 prop_typeinfer_basic :: String -> Property
@@ -129,7 +129,7 @@ prop_constraintcheck_invalid :: String -> String -> Property
 prop_constraintcheck_invalid typeName constraint = 
   let state = testEmptyAnalyzerState
       result = testCheckConstraint typeName constraint state
-  in property $ result === False
+  in property $ result == False
 
 -- 测试依赖分析的属性
 prop_dependencyanalysis_transitive :: String -> String -> String -> Property
@@ -145,7 +145,7 @@ prop_dependencyanalysis_cycle_detection name =
   let state = testEmptyAnalyzerState
       state' = testAddDependency name name state
       hasCycle = testDetectCycle name state'
-  in property $ hasCycle === True
+  in property $ hasCycle == True
 
 -- 测试所有权分析的属性
 prop_ownershiptransfer_valid :: String -> String -> Property
@@ -171,13 +171,13 @@ prop_symbolresolution_existing name symbolType =
   let state = testEmptyAnalyzerState
       state' = testAddSymbol name symbolType state
       result = testResolveSymbol name state'
-  in property $ result === Just symbolType
+  in property $ result == Just symbolType
 
 prop_symbolresolution_nonexistent :: String -> Property
 prop_symbolresolution_nonexistent name = 
   let state = testEmptyAnalyzerState
       result = testResolveSymbol name state
-  in property $ result === Nothing
+  in property $ result == Nothing
 
 -- 测试类型检查的属性
 prop_typecheck_valid :: String -> String -> Property
@@ -221,7 +221,7 @@ prop_staterollback_consistency name symbolType =
       checkpoint = testCreateCheckpoint state'
       state'' = testAddSymbol "other" "OtherType" state'
       rolledBack = testRollbackToCheckpoint checkpoint
-  in property $ Map.size (testAnalyzerSymbols rolledBack) === Map.size (testAnalyzerSymbols state')
+  in property $ Map.size (testAnalyzerSymbols rolledBack) == Map.size (testAnalyzerSymbols state')
 
 tests :: TestTree
 tests = testGroup "Analyzer State Tests"

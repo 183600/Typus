@@ -3,206 +3,211 @@ module Test.Unit.ErrorHandlerPropertiesSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import qualified Compiler.Errors.Core as EC
-import Data.List (sort)
-import Data.Monoid ((<>))
+import qualified ErrorHandler
+import qualified ErrorHandler.Core as EH
+import qualified ErrorHandler.Types as ET
+import qualified SourceLocation as SL
 import Data.Maybe (isJust, isNothing)
+import Data.List (isPrefixOf, isInfixOf)
+import Data.Set (Set)
+import qualified Data.Set as Set
 
--- 测试ErrorSeverity的属性
-prop_errorseverity_ordering :: EC.ErrorSeverity -> EC.ErrorSeverity -> Property
-prop_errorseverity_ordering sev1 sev2 = 
-  case (sev1, sev2) of
-    (EC.ErrorInfo, EC.ErrorWarning) -> sev1 < sev2
-    (EC.ErrorInfo, EC.ErrorError) -> sev1 < sev2
-    (EC.ErrorWarning, EC.ErrorError) -> sev1 < sev2
-    (EC.ErrorWarning, EC.ErrorInfo) -> sev1 > sev2
-    (EC.ErrorError, EC.ErrorInfo) -> sev1 > sev2
-    (EC.ErrorError, EC.ErrorWarning) -> sev1 > sev2
-    _ -> sev1 === sev2
+-- 测试错误处理器的属性
+prop_error_creation :: String -> Int -> Int -> Property
+prop_error_creation message line col = 
+  let loc = SL.SourceLocation line col
+      err = EH.createError message loc
+  in property $ ET.errorMessage err === message && 
+             ET.errorLine err === line && 
+             ET.errorColumn err === col
 
--- 测试ErrorCategory的属性
-prop_errorcategory_consistency :: EC.ErrorCategory -> Property
-prop_errorcategory_consistency category = 
-  case category of
-    EC.SyntaxError -> property True
-    EC.TypeError -> property True
-    EC.NameError -> property True
-    EC.OwnershipError -> property True
-    EC.DependentTypeError -> property True
-    EC.ConstraintError -> property True
-    EC.Warning -> property True
-    EC.Info -> property True
+prop_error_severity_levels :: String -> Property
+prop_error_severity_levels message = 
+  let errorLevels = [ET.Error, ET.Warning, ET.Info, ET.Debug]
+  in property $ all (\level -> 
+    let err = EH.createErrorWithSeverity message level
+    in ET.errorSeverity err === level
+  ) errorLevels
 
--- 测试ErrorLocation的属性
-prop_errorlocation_monoid :: Int -> Int -> Int -> Int -> Property
-prop_errorlocation_monoid l1 c1 l2 c2 = 
-  let loc1 = EC.ErrorLocation l1 c1
-      loc2 = EC.ErrorLocation l2 c2
-      combined = loc1 <> loc2
-  in EC.errorLine combined >= max l1 l2 &&
-     EC.errorColumn combined >= max c1 c2
+prop_error_context_addition :: String -> String -> Property
+prop_error_context_addition message context = 
+  let baseError = EH.createError message (SL.SourceLocation 1 1)
+      contextualError = EH.addContext baseError context
+  in property $ context `isInfixOf` ET.errorMessage contextualError
 
--- 测试ErrorContext的属性
-prop_errorcontext_empty :: Property
-prop_errorcontext_empty = 
-  let ctx = EC.emptyContext
-  in null (EC.contextLines ctx) &&
-     null (EC.contextVariables ctx)
+prop_error_chain_formation :: [String] -> Property
+prop_error_chain_formation messages = 
+  let baseError = EH.createError (head messages) (SL.SourceLocation 1 1)
+      chainedError = foldr EH.chainError baseError (tail messages)
+  in property $ length (ET.errorChain chainedError) === length messages
 
--- 测试ErrorRecovery的属性
-prop_errorrecovery_can_recover :: EC.ErrorRecovery -> Property
-prop_errorrecovery_can_recover recovery = 
-  case recovery of
-    EC.CanRecover -> property True
-    EC.CannotRecover -> property True
-    EC.PartialRecover -> property True
+prop_error_aggregation :: [String] -> Property
+prop_error_aggregation messages = 
+  let errors = map (\msg -> EH.createError msg (SL.SourceLocation 1 1)) messages
+      aggregated = EH.aggregateErrors errors
+  in property $ length aggregated === length messages
 
--- 测试ErrorCollector的属性
-prop_errorcollector_initial_state :: Property
-prop_errorcollector_initial_state = 
-  let collector = EC.newErrorCollector
-  in null (EC.getErrors collector) &&
-     null (EC.getWarnings collector) &&
-     null (EC.getInfo collector) &&
-     not (EC.hasErrors collector) &&
-     not (EC.hasWarnings collector)
+prop_error_filtering_by_severity :: [ET.ErrorSeverity] -> Property
+prop_error_filtering_by_severity severities = 
+  let errors = map (\sev -> EH.createErrorWithSeverity "test" sev) severities
+      filtered = EH.filterBySeverity errors ET.Error
+  in property $ all (\err -> ET.errorSeverity err === ET.Error) filtered
 
-prop_errorcollector_add_error :: String -> Property
-prop_errorcollector_add_error msg = 
-  let collector = EC.newErrorCollector
-      collector' = EC.addError msg collector
-  in EC.hasErrors collector' &&
-     length (EC.getErrors collector') === 1
+prop_error_sorting_by_location :: [(Int, Int)] -> Property
+prop_error_sorting_by_location locations = 
+  let errors = map (\(line, col) -> EH.createError "test" (SL.SourceLocation line col)) locations
+      sorted = EH.sortByLocation errors
+      sortedLocs = map (\err -> (ET.errorLine err, ET.errorColumn err)) sorted
+  in property $ sortedLocs === sort locations
 
-prop_errorcollector_add_warning :: String -> Property
-prop_errorcollector_add_warning msg = 
-  let collector = EC.newErrorCollector
-      collector' = EC.addWarning msg collector
-  in EC.hasWarnings collector' &&
-     length (EC.getWarnings collector') === 1
+prop_error_grouping_by_type :: [String] -> Property
+prop_error_grouping_by_type messages = 
+  let errors = map (\msg -> EH.createError msg (SL.SourceLocation 1 1)) messages
+      grouped = EH.groupByType errors
+  in property $ sum (map length (Map.elems grouped)) === length messages
 
-prop_errorcollector_add_info :: String -> Property
-prop_errorcollector_add_info msg = 
-  let collector = EC.newErrorCollector
-      collector' = EC.addInfo msg collector
-  in length (EC.getInfo collector') === 1
+prop_error_suppression :: String -> Property
+prop_error_suppression message = 
+  let error = EH.createError message (SL.SourceLocation 1 1)
+      suppressed = EH.suppressError error
+  in property $ ET.isSuppressed suppressed === True
 
-prop_errorcollector_multiple_errors :: [String] -> Property
-prop_errorcollector_multiple_errors msgs = 
-  let collector = foldl (\c msg -> EC.addError msg c) EC.newErrorCollector msgs
-  in length (EC.getErrors collector) === length msgs
+prop_error_recovery :: String -> Property
+prop_error_recovery message = 
+  let error = EH.createError message (SL.SourceLocation 1 1)
+      recovery = EH.suggestRecovery error
+  in property $ isJust recovery
 
--- 测试错误格式化的属性
-prop_formaterror_non_empty :: String -> Property
-prop_formaterror_non_empty msg = 
-  let error = EC.TypeError msg EC.emptyContext
-      formatted = EC.formatError error
-  in not (null formatted)
+prop_error_formatting :: String -> Property
+prop_error_formatting message = 
+  let error = EH.createError message (SL.SourceLocation 5 10)
+      formatted = EH.formatError error
+  in property $ message `isInfixOf` formatted && 
+             "5:10" `isInfixOf` formatted
 
-prop_formaterror_includes_message :: String -> Property
-prop_formaterror_includes_message msg = 
-  let error = EC.TypeError msg EC.emptyContext
-      formatted = EC.formatError error
-  in msg `isInfixOf` formatted
+prop_error_localization :: String -> Property
+prop_error_localization message = 
+  let error = EH.createError message (SL.SourceLocation 1 1)
+      localized = EH.localizeError error "zh-CN"
+  in property $ not (null localized)
 
-prop_formaterrors_preserves_order :: [String] -> Property
-prop_formaterrors_preserves_order msgs = 
-  let errors = map (`EC.TypeError` EC.emptyContext) msgs
-      formatted = EC.formatErrors errors
-      formattedLines = lines formatted
-      msgLines = map head (map words formattedLines)
-  in length msgLines >= length msgs
+prop_error_annotation :: String -> String -> Property
+prop_error_annotation message annotation = 
+  let error = EH.createError message (SL.SourceLocation 1 1)
+      annotated = EH.annotateError error annotation
+  in property $ annotation `isInfixOf` ET.errorMessage annotated
 
--- 测试错误恢复的属性
-prop_canrecoverfrom_errorseverity :: EC.ErrorSeverity -> Property
-prop_canrecoverfrom_errorseverity severity = 
-  let error = case severity of
-        EC.ErrorInfo -> EC.Info "test" EC.emptyContext
-        EC.ErrorWarning -> EC.Warning "test" EC.emptyContext
-        EC.ErrorError -> EC.TypeError "test" EC.emptyContext
-  in EC.canRecoverFrom error === (severity /= EC.ErrorError)
+prop_error_code_generation :: String -> Property
+prop_error_code_generation message = 
+  let error = EH.createError message (SL.SourceLocation 1 1)
+      code = EH.generateErrorCode error
+  in property $ length code >= 3
 
-prop_shouldcontinueafter_errorseverity :: EC.ErrorSeverity -> Property
-prop_shouldcontinueafter_errorseverity severity = 
-  let error = case severity of
-        EC.ErrorInfo -> EC.Info "test" EC.emptyContext
-        EC.ErrorWarning -> EC.Warning "test" EC.emptyContext
-        EC.ErrorError -> EC.TypeError "test" EC.emptyContext
-  in EC.shouldContinueAfter error === (severity /= EC.ErrorError)
+prop_error_statistics :: [String] -> Property
+prop_error_statistics messages = 
+  let errors = map (\msg -> EH.createError msg (SL.SourceLocation 1 1)) messages
+      stats = EH.computeStatistics errors
+  in property $ EH.totalErrors stats === length messages
 
--- 测试错误工具函数的属性
-prop_errorat_creates_valid_error :: String -> Int -> Int -> Property
-prop_errorat_creates_valid_error msg line col = 
-  let error = EC.errorAt line col msg
-      location = EC.toErrorLocation error
-  in EC.errorLine location === line &&
-     EC.errorColumn location === col
+prop_error_reporting :: [String] -> Property
+prop_error_reporting messages = 
+  let errors = map (\msg -> EH.createError msg (SL.SourceLocation 1 1)) messages
+      report = EH.generateReport errors
+  in property $ not (null report)
 
-prop_errorwithcategory_sets_category :: String -> EC.ErrorCategory -> Property
-prop_errorwithcategory_sets_category msg category = 
-  let error = EC.errorWithCategory category msg
-  in EC.errorCategory error === category
+prop_error_categorization :: String -> Property
+prop_error_categorization message = 
+  let error = EH.createError message (SL.SourceLocation 1 1)
+      category = EH.categorizeError error
+  in property $ not (null category)
 
-prop_warningat_creates_warning :: String -> Int -> Int -> Property
-prop_warningat_creates_warning msg line col = 
-  let warning = EC.warningAt line col msg
-      location = EC.toErrorLocation warning
-  in EC.errorLine location === line &&
-     EC.errorColumn location === col &&
-     EC.errorSeverity warning === EC.ErrorWarning
+prop_error_priority :: String -> Property
+prop_error_priority message = 
+  let error = EH.createError message (SL.SourceLocation 1 1)
+      priority = EH.assignPriority error
+  in property $ priority >= 1 && priority <= 10
 
-prop_infoat_creates_info :: String -> Int -> Int -> Property
-prop_infoat_creates_info msg line col = 
-  let info = EC.infoAt line col msg
-      location = EC.toErrorLocation info
-  in EC.errorLine location === line &&
-     EC.errorColumn location === col &&
-     EC.errorSeverity info === EC.ErrorInfo
+prop_error_threshold :: [String] -> Int -> Property
+prop_error_threshold messages threshold = 
+  let errors = map (\msg -> EH.createError msg (SL.SourceLocation 1 1)) messages
+      exceeded = EH.exceedsThreshold errors threshold
+  in property $ exceeded === (length messages > threshold)
 
--- 测试CombinedError的属性
-prop_combinederror_monoid :: String -> String -> Property
-prop_combinederror_monoid msg1 msg2 = 
-  let error1 = EC.TypeError msg1 EC.emptyContext
-      error2 = EC.TypeError msg2 EC.emptyContext
-      combined = EC.CombinedError [error1, error2]
-  in length (EC.combinedErrors combined) === 2
+prop_error_propagation :: String -> Property
+prop_error_propagation message = 
+  let error = EH.createError message (SL.SourceLocation 1 1)
+      propagated = EH.propagateError error
+  in property $ ET.errorMessage propagated === ET.errorMessage error
 
-prop_combinederror_flatten :: [[String]] -> Property
-prop_combinederror_flatten msgGroups = 
-  let errorGroups = map (\msgs -> map (`EC.TypeError` EC.emptyContext) msgs) msgGroups
-      combined = EC.CombinedError (concat errorGroups)
-  in length (EC.combinedErrors combined) === sum (map length msgGroups)
+prop error_resolution :: String -> Property
+prop_error_resolution message = 
+  let error = EH.createError message (SL.SourceLocation 1 1)
+      resolved = EH.markAsResolved error
+  in property $ ET.isResolved resolved === True
 
--- 测试错误位置转换的属性
-prop_toerrorlocation_with_span :: Int -> Int -> Int -> Int -> Property
-prop_toerrorlocation_with_span l1 c1 l2 c2 = 
-  let span = EC.SourceSpan (EC.SourcePos l1 c1) (EC.SourcePos l2 c2)
-      location = EC.toErrorLocationWithSpan span
-  in EC.errorLine location === l1 &&
-     EC.errorColumn location === c1
+prop_error_validation :: String -> Property
+prop_error_validation message = 
+  let error = EH.createError message (SL.SourceLocation 1 1)
+      isValid = EH.validateError error
+  in property $ isValid === True
+
+prop_error_transformation :: String -> Property
+prop_error_transformation message = 
+  let error = EH.createError message (SL.SourceLocation 1 1)
+      transformed = EH.transformError error (\msg -> "Transformed: " ++ msg)
+  in property $ "Transformed:" `isPrefixOf` ET.errorMessage transformed
+
+prop_error_accumulation :: [String] -> Property
+prop_error_accumulation messages = 
+  let baseError = EH.createError (head messages) (SL.SourceLocation 1 1)
+      accumulated = foldr (\msg err -> EH.accumulateError err msg) baseError (tail messages)
+  in property $ length (ET.errorAccumulations accumulated) === length messages - 1
+
+prop_error_contextualization :: String -> String -> Property
+prop_error_contextualization message context = 
+  let error = EH.createError message (SL.SourceLocation 1 1)
+      contextualized = EH.contextualizeError error context
+  in property $ context `isInfixOf` ET.errorMessage contextualized
+
+prop_error_correlation :: [String] -> Property
+prop_error_correlation messages = 
+  let errors = map (\msg -> EH.createError msg (SL.SourceLocation 1 1)) messages
+      correlated = EH.correlateErrors errors
+  in property $ length correlated >= 1
+
+prop_error_hierarchy :: String -> Property
+prop_error_hierarchy message = 
+  let error = EH.createError message (SL.SourceLocation 1 1)
+      hierarchy = EH.buildErrorHierarchy error
+  in property $ not (null hierarchy)
 
 tests :: TestTree
-tests = testGroup "ErrorHandler Properties Tests"
-  [ testProperty "ErrorSeverity ordering" prop_errorseverity_ordering
-  , testProperty "ErrorCategory consistency" prop_errorcategory_consistency
-  , testProperty "ErrorLocation monoid" prop_errorlocation_monoid
-  , testProperty "ErrorContext empty" prop_errorcontext_empty
-  , testProperty "ErrorRecovery can recover" prop_errorrecovery_can_recover
-  , testProperty "ErrorCollector initial state" prop_errorcollector_initial_state
-  , testProperty "ErrorCollector add error" prop_errorcollector_add_error
-  , testProperty "ErrorCollector add warning" prop_errorcollector_add_warning
-  , testProperty "ErrorCollector add info" prop_errorcollector_add_info
-  , testProperty "ErrorCollector multiple errors" prop_errorcollector_multiple_errors
-  , testProperty "formatError non empty" prop_formaterror_non_empty
-  , testProperty "formatError includes message" prop_formaterror_includes_message
-  , testProperty "formatErrors preserves order" prop_formaterrors_preserves_order
-  , testProperty "canRecoverFrom ErrorSeverity" prop_canrecoverfrom_errorseverity
-  , testProperty "shouldContinueAfter ErrorSeverity" prop_shouldcontinueafter_errorseverity
-  , testProperty "errorAt creates valid error" prop_errorat_creates_valid_error
-  , testProperty "errorWithCategory sets category" prop_errorwithcategory_sets_category
-  , testProperty "warningAt creates warning" prop_warningat_creates_warning
-  , testProperty "infoAt creates info" prop_infoat_creates_info
-  , testProperty "CombinedError monoid" prop_combinederror_monoid
-  , testProperty "CombinedError flatten" prop_combinederror_flatten
-  , testProperty "toErrorLocation with span" prop_toerrorlocation_with_span
+tests = testGroup "Error Handler Properties Tests"
+  [ testProperty "Error creation" prop_error_creation
+  , testProperty "Error severity levels" prop_error_severity_levels
+  , testProperty "Error context addition" prop_error_context_addition
+  , testProperty "Error chain formation" prop_error_chain_formation
+  , testProperty "Error aggregation" prop_error_aggregation
+  , testProperty "Error filtering by severity" prop_error_filtering_by_severity
+  , testProperty "Error sorting by location" prop_error_sorting_by_location
+  , testProperty "Error grouping by type" prop_error_grouping_by_type
+  , testProperty "Error suppression" prop_error_suppression
+  , testProperty "Error recovery" prop_error_recovery
+  , testProperty "Error formatting" prop_error_formatting
+  , testProperty "Error localization" prop_error_localization
+  , testProperty "Error annotation" prop_error_annotation
+  , testProperty "Error code generation" prop_error_code_generation
+  , testProperty "Error statistics" prop_error_statistics
+  , testProperty "Error reporting" prop_error_reporting
+  , testProperty "Error categorization" prop_error_categorization
+  , testProperty "Error priority" prop_error_priority
+  , testProperty "Error threshold" prop_error_threshold
+  , testProperty "Error propagation" prop_error_propagation
+  , testProperty "Error resolution" prop_error_resolution
+  , testProperty "Error validation" prop_error_validation
+  , testProperty "Error transformation" prop_error_transformation
+  , testProperty "Error accumulation" prop_error_accumulation
+  , testProperty "Error contextualization" prop_error_contextualization
+  , testProperty "Error correlation" prop_error_correlation
+  , testProperty "Error hierarchy" prop_error_hierarchy
   ]

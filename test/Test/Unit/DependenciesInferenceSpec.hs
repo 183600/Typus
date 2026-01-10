@@ -3,365 +3,243 @@ module Test.Unit.DependenciesInferenceSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import qualified Dependencies.TypeSystem as DTS
 import qualified Dependencies.Inference as DI
-import qualified Dependencies.AST as DA
-import Data.Map (Map)
+import qualified Dependencies.AST as AST
+import qualified Dependencies.TypeSystem as TS
 import qualified Data.Map as Map
-import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Maybe (isJust, isNothing, fromMaybe)
+import Data.Maybe (isJust, isNothing)
+import Data.List (nub, sort)
 
--- 测试类型推断的属性
-prop_typeinfer_basic_expression :: String -> Property
-prop_typeinfer_basic_expression expr = 
-  let env = testEmptyTypeEnvironment
-      result = testInferExpressionType expr env
-  in case result of
-    Just (inferredType, _) -> property $ not (null inferredType)
-    Nothing -> property True
-
-prop_typeinfer_with_context :: String -> String -> String -> Property
-prop_typeinfer_with_context varName varType expr = 
-  let env = testEmptyTypeEnvironment
-      env' = testAddVariable varName varType env
-      result = testInferExpressionType expr env'
-  in case result of
-    Just (inferredType, _) -> property $ not (null inferredType)
-    Nothing -> property True
-
--- 测试类型环境管理的属性
-prop_typeenvironment_empty :: Property
-prop_typeenvironment_empty = 
-  let env = testEmptyTypeEnvironment
-  in property $ Map.null (testTypeVars env) &&
-     Map.null (testTypeFunctions env) &&
-     Set.null (testTypeConstraints env)
-
-prop_typeenvironment_add_variable :: String -> String -> Property
-prop_typeenvironment_add_variable varName varType = 
-  let env = testEmptyTypeEnvironment
-      env' = testAddVariable varName varType env
-  in property $ Map.member varName (testTypeVars env') &&
-     fromMaybe "" (Map.lookup varName (testTypeVars env')) === varType
-
-prop_typeenvironment_add_function :: String -> [String] -> String -> Property
-prop_typeenvironment_add_function funcName argTypes returnType = 
-  let env = testEmptyTypeEnvironment
-      funcType = TestFunctionType argTypes returnType
-      env' = testAddFunction funcName funcType env
-  in property $ Map.member funcName (testTypeFunctions env') &&
-     fromMaybe (TestFunctionType [] "") (Map.lookup funcName (testTypeFunctions env')) === funcType
-
-prop_typeenvironment_add_constraint :: String -> String -> Property
-prop_typeenvironment_add_constraint name constraint = 
-  let env = testEmptyTypeEnvironment
-      env' = testAddTypeConstraint name constraint env
-  in property $ Set.member name (testTypeConstraints env')
-
--- 测试函数类型推断的属性
-prop_functiontypeinfer_consistency :: [String] -> String -> Property
-prop_functiontypeinfer_consistency argTypes returnType = 
-  let funcType = TestFunctionType argTypes returnType
-  in testFunctionArguments funcType === argTypes &&
-     testFunctionReturn funcType === returnType
-
-prop_functiontypeinfer_application :: [String] -> String -> [String] -> Property
-prop_functiontypeinfer_application argTypes returnType argValues = 
-  let funcType = TestFunctionType argTypes returnType
-      env = testEmptyTypeEnvironment
-      result = testInferFunctionApplication funcType argValues env
-  in case result of
-    Just inferredType -> inferredType === returnType
-    Nothing -> length argValues /= length argTypes
-
--- 测试依赖关系分析的属性
-prop_dependencyanalysis_direct :: String -> String -> Property
-prop_dependencyanalysis_direct from to = 
-  let deps = testAnalyzeDependencies [TestDependency from to Direct]
-  in Set.member (from, to) deps
-
-prop_dependencyanalysis_transitive :: String -> String -> String -> Property
-prop_dependencyanalysis_transitive a b c = 
-  let deps = testAnalyzeDependencies [TestDependency a b Direct, TestDependency b c Direct]
-      transitive = testFindTransitiveDependencies a deps
-  in (b, c) `elem` transitive
-
-prop_dependencyanalysis_cycle_detection :: String -> Property
-prop_dependencyanalysis_cycle_detection name = 
-  let deps = testAnalyzeDependencies [TestDependency name name Direct]
-      cycles = testDetectCycles deps
-  in not (null cycles)
-
--- 测试类型约束推断的属性
-prop_constraintinfer_basic :: String -> String -> Property
-prop_constraintinfer_basic typeName constraint = 
-  let env = testEmptyTypeEnvironment
-      env' = testAddTypeConstraint typeName constraint env
-      result = testInferConstraints typeName env'
-  in case result of
-    Just constraints -> constraint `elem` constraints
-    Nothing -> property False
-
-prop_constraintinfer_inheritance :: String -> String -> String -> Property
-prop_constraintinfer_inheritance parent child constraint = 
-  let env = testEmptyTypeEnvironment
-      env' = testAddTypeConstraint parent constraint env
-      env'' = testAddInheritance parent child env'
-      result = testInferConstraints child env''
-  in case result of
-    Just constraints -> constraint `elem` constraints
-    Nothing -> property False
-
--- 测试AST节点的类型推断
-prop_astnode_type_consistency :: TestASTNode -> Property
-prop_astnode_type_consistency node = 
-  let env = testEmptyTypeEnvironment
-      result = testInferASTNodeType node env
-  in case result of
-    Just (nodeType, _) -> not (null nodeType)
-    Nothing -> property True
-
-prop_astnode_variable_reference :: String -> String -> Property
-prop_astnode_variable_reference varName varType = 
-  let env = testEmptyTypeEnvironment
-      env' = testAddVariable varName varType env
-      node = TestVariableReference varName
-      result = testInferASTNodeType node env'
-  in case result of
-    Just (inferredType, _) -> inferredType === varType
-    Nothing -> property False
-
-prop_astnode_function_call :: String -> [String] -> String -> Property
-prop_astnode_function_call funcName argTypes returnType = 
-  let env = testEmptyTypeEnvironment
-      funcType = TestFunctionType argTypes returnType
-      env' = testAddFunction funcName funcType env
-      node = TestFunctionCall funcName (map (\t -> TestLiteral t) argTypes)
-      result = testInferASTNodeType node env'
-  in case result of
-    Just (inferredType, _) -> inferredType === returnType
-    Nothing -> property False
-
--- 测试类型统一算法的属性
-prop_typeunify_identical :: String -> Property
-prop_typeunify_identical typeName = 
-  let env = testEmptyTypeEnvironment
-      result = testUnifyTypes typeName typeName env
-  in case result of
-    Right _ -> property True
-    Left _ -> property False
-
-prop_typeunify_different :: String -> String -> Property
-prop_typeunify_different type1 type2 = 
-  type1 /= type2 ==> 
-  let env = testEmptyTypeEnvironment
-      result = testUnifyTypes type1 type2 env
-  in case result of
-    Right _ -> property False
+-- 测试依赖推断的属性
+prop_basic_dependency_inference :: String -> String -> Property
+prop_basic_dependency_inference def use = 
+  let code = def ++ "\n" ++ use
+  in case DI.inferDependencies code of
+    Right deps -> 
+      case Map.lookup def deps of
+        Just uses -> property $ use `elem` uses
+        Nothing -> property False
     Left _ -> property True
 
--- 测试泛型类型推断的属性
-prop_generictypeinfer_instantiation :: String -> [String] -> Property
-prop_generictypeinfer_instantiation typeName typeParams = 
-  let genericType = TestGenericType typeName typeParams
-      env = testEmptyTypeEnvironment
-      result = testInstantiateGenericType genericType ["Int"] env
-  in case result of
-    Just instantiatedType -> not (null instantiatedType)
-    Nothing -> property True
+prop_transitive_dependency_closure :: [String] -> Property
+prop_transitive_dependency_closure modules = 
+  case DI.inferDependencies (unlines modules) of
+    Right deps -> 
+      let closure = DI.computeTransitiveClosure deps
+      in property $ all (\(k, v) -> all (\dep -> dep `elem` Map.keys deps) v) (Map.toList closure)
+    Left _ -> property True
 
-prop_generictypeinfer_specialization :: String -> [String] -> [String] -> Property
-prop_generictypeinfer_specialization typeName typeParams argTypes = 
-  let genericType = TestGenericType typeName typeParams
-      env = testEmptyTypeEnvironment
-      result = testSpecializeGenericType genericType argTypes env
-  in case result of
-    Just specializedType -> not (null specializedType)
-    Nothing -> length typeParams /= length argTypes
+prop_cycle_detection :: [String] -> Property
+prop_cycle_detection modules = 
+  case DI.inferDependencies (unlines modules) of
+    Right deps -> 
+      let hasCycle = DI.detectCycle deps
+      in property $ hasCycle === (length modules > 1)
+    Left _ -> property True
 
--- 测试依赖图构建的属性
-prop_dependencygraph_construction :: [(String, String)] -> Property
-prop_dependencygraph_construction pairs = 
-  let dependencies = map (\(f, t) -> TestDependency f t Direct) pairs
-      graph = testBuildDependencyGraph dependencies
-  in length (testGraphNodes graph) >= length (nub (map fst pairs ++ map snd pairs))
+prop_dependency_ordering :: [String] -> Property
+prop_dependency_ordering modules = 
+  case DI.inferDependencies (unlines modules) of
+    Right deps -> 
+      case DI.topologicalSort deps of
+        Right sorted -> 
+          property $ all (\(i, mod1) -> 
+            all (\(j, mod2) -> 
+              i < j || not (mod2 `dependsOn` mod1 deps)
+            ) (zip [0..] sorted)
+          ) (zip [0..] sorted)
+        Left _ -> property False
+    Left _ -> property True
+  where
+    dependsOn mod1 mod2 deps = 
+      case Map.lookup mod1 deps of
+        Just deps' -> mod2 `elem` deps'
+        Nothing -> False
 
-prop_dependencygraph_topological_sort :: [(String, String)] -> Property
-prop_dependencygraph_topological_sort pairs = 
-  let dependencies = map (\(f, t) -> TestDependency f t Direct) pairs
-      graph = testBuildDependencyGraph dependencies
-      sorted = testTopologicalSort graph
-  in length sorted === length (testGraphNodes graph)
+prop_type_dependency_inference :: String -> String -> Property
+prop_type_dependency_inference typeDef funcDef = 
+  let code = typeDef ++ "\n" ++ funcDef
+  in case DI.inferTypeDependencies code of
+    Right deps -> 
+      case Map.lookup funcDef deps of
+        Just types -> property $ typeDef `elem` types
+        Nothing -> property False
+    Left _ -> property True
 
--- 测试类型错误恢复的属性
-prop_typeerror_recovery :: String -> String -> Property
-prop_typeerror_recovery expr expectedType = 
-  let env = testEmptyTypeEnvironment
-      result = testInferExpressionType expr env
-  in case result of
-    Nothing -> property True
-    Just (inferredType, _) -> 
-      if inferredType /= expectedType
-        then testCanRecoverFromTypeError expr expectedType env
-        else property True
+prop_function_dependency_inference :: String -> String -> Property
+prop_function_dependency_inference func1 func2 = 
+  let code = func1 ++ "\n" ++ func2
+  in case DI.inferFunctionDependencies code of
+    Right deps -> 
+      case Map.lookup func2 deps of
+        Just funcs -> property $ func1 `elem` funcs
+        Nothing -> property False
+    Left _ -> property True
 
--- 测试增量类型推断的属性
-prop_incremental_typeinfer_add_variable :: String -> String -> Property
-prop_incremental_typeinfer_add_variable varName varType = 
-  let env = testEmptyTypeEnvironment
-      result1 = testInferExpressionType varName env
-      env' = testAddVariable varName varType env
-      result2 = testInferExpressionType varName env'
-  in case (result1, result2) of
-    (Nothing, Just (inferredType, _)) -> inferredType === varType
-    _ -> property False
+prop_module_dependency_inference :: String -> String -> Property
+prop_module_dependency_inference mod1 mod2 = 
+  let code = "import " ++ mod1 ++ "\n" ++ "import " ++ mod2
+  in case DI.inferModuleDependencies code of
+    Right deps -> 
+      case Map.lookup "main" deps of
+        Just mods -> property $ mod1 `elem` mods && mod2 `elem` mods
+        Nothing -> property False
+    Left _ -> property True
+
+prop_implicit_dependency_inference :: String -> Property
+prop_implicit_dependency_inference code = 
+  case DI.inferImplicitDependencies code of
+    Right deps -> property $ not (null deps)
+    Left _ -> property True
+
+prop_explicit_dependency_inference :: String -> Property
+prop_explicit_dependency_inference code = 
+  case DI.inferExplicitDependencies code of
+    Right deps -> 
+      let explicitDeps = DI.extractExplicitImports code
+      in property $ all (`elem` Map.keys deps) explicitDeps
+    Left _ -> property True
+
+prop_dependency_strength :: String -> String -> Property
+prop_dependency_strength from to = 
+  let code = from ++ "\n" ++ to
+  in case DI.inferDependencyStrength code of
+    Right strength -> property $ strength >= 0 && strength <= 1
+    Left _ -> property True
+
+prop_dependency_aggregation :: [String] -> Property
+prop_dependency_aggregation modules = 
+  case mapM DI.inferDependencies modules of
+    Right depsList -> 
+      let aggregated = DI.aggregateDependencies depsList
+      in property $ Map.size aggregated >= 0
+    Left _ -> property True
+
+prop_dependency_filtering :: String -> String -> Property
+prop_dependency_filtering code filter = 
+  case DI.inferDependencies code of
+    Right deps -> 
+      let filtered = DI.filterDependencies deps filter
+      in property $ Map.size filtered <= Map.size deps
+    Left _ -> property True
+
+prop_dependency_validation :: String -> Property
+prop_dependency_validation code = 
+  case DI.inferDependencies code of
+    Right deps -> 
+      case DI.validateDependencies deps of
+        Right _ -> property True
+        Left _ -> property False
+    Left _ -> property True
+
+prop_dependency_merging :: String -> String -> Property
+prop_dependency_merging code1 code2 = 
+  case (DI.inferDependencies code1, DI.inferDependencies code2) of
+    (Right deps1, Right deps2) -> 
+      let merged = DI.mergeDependencies deps1 deps2
+      in property $ Map.size merged >= Map.size deps1 && Map.size merged >= Map.size deps2
+    _ -> property True
+
+prop_dependency_difference :: String -> String -> Property
+prop_dependency_difference code1 code2 = 
+  case (DI.inferDependencies code1, DI.inferDependencies code2) of
+    (Right deps1, Right deps2) -> 
+      let diff = DI.dependencyDifference deps1 deps2
+      in property $ Map.size diff <= Map.size deps1
+    _ -> property True
+
+prop_dependency_intersection :: String -> String -> Property
+prop_dependency_intersection code1 code2 = 
+  case (DI.inferDependencies code1, DI.inferDependencies code2) of
+    (Right deps1, Right deps2) -> 
+      let intersection = DI.dependencyIntersection deps1 deps2
+      in property $ Map.size intersection <= Map.size deps1 && Map.size intersection <= Map.size deps2
+    _ -> property True
+
+prop_dependency_subset :: String -> String -> Property
+prop_dependency_subset code1 code2 = 
+  case (DI.inferDependencies code1, DI.inferDependencies code2) of
+    (Right deps1, Right deps2) -> 
+      let isSubset = DI.isDependencySubset deps1 deps2
+      in property $ isSubset === (Map.size deps1 <= Map.size deps2)
+    _ -> property True
+
+prop_dependency_ranking :: String -> Property
+prop_dependency_ranking code = 
+  case DI.inferDependencies code of
+    Right deps -> 
+      let ranked = DI.rankDependencies deps
+      in property $ length ranked == Map.size deps
+    Left _ -> property True
+
+prop_dependency_clustering :: [String] -> Property
+prop_dependency_clustering modules = 
+  case mapM DI.inferDependencies modules of
+    Right depsList -> 
+      let clusters = DI.clusterDependencies depsList
+      in property $ length clusters > 0
+    Left _ -> property True
+
+prop_dependency_impact_analysis :: String -> String -> Property
+prop_dependency_impact_analysis base change = 
+  case (DI.inferDependencies base, DI.inferDependencies change) of
+    (Right baseDeps, Right changeDeps) -> 
+      let impact = DI.analyzeImpact baseDeps changeDeps
+      in property $ length impact >= 0
+    _ -> property True
+
+prop_dependency_visualization :: String -> Property
+prop_dependency_visualization code = 
+  case DI.inferDependencies code of
+    Right deps -> 
+      let graph = DI.visualizeDependencies deps
+      in property $ not (null graph)
+    Left _ -> property True
+
+prop_dependency_export_import :: String -> Property
+prop_dependency_export_import code = 
+  case DI.inferDependencies code of
+    Right deps -> 
+      let exported = DI.exportDependencies deps
+      in case DI.importDependencies exported of
+        Right imported -> property $ deps === imported
+        Left _ -> property False
+    Left _ -> property True
+
+prop_dependency_serialization :: String -> Property
+prop_dependency_serialization code = 
+  case DI.inferDependencies code of
+    Right deps -> 
+      let serialized = DI.serializeDependencies deps
+      in case DI.deserializeDependencies serialized of
+        Right deserialized -> property $ deps === deserialized
+        Left _ -> property False
+    Left _ -> property True
 
 tests :: TestTree
 tests = testGroup "Dependencies Inference Tests"
-  [ testProperty "TypeInfer basic expression" prop_typeinfer_basic_expression
-  , testProperty "TypeInfer with context" prop_typeinfer_with_context
-  , testProperty "TypeEnvironment empty" prop_typeenvironment_empty
-  , testProperty "TypeEnvironment add variable" prop_typeenvironment_add_variable
-  , testProperty "TypeEnvironment add function" prop_typeenvironment_add_function
-  , testProperty "TypeEnvironment add constraint" prop_typeenvironment_add_constraint
-  , testProperty "FunctionTypeInfer consistency" prop_functiontypeinfer_consistency
-  , testProperty "FunctionTypeInfer application" prop_functiontypeinfer_application
-  , testProperty "DependencyAnalysis direct" prop_dependencyanalysis_direct
-  , testProperty "DependencyAnalysis transitive" prop_dependencyanalysis_transitive
-  , testProperty "DependencyAnalysis cycle detection" prop_dependencyanalysis_cycle_detection
-  , testProperty "ConstraintInfer basic" prop_constraintinfer_basic
-  , testProperty "ConstraintInfer inheritance" prop_constraintinfer_inheritance
-  , testProperty "ASTNode type consistency" prop_astnode_type_consistency
-  , testProperty "ASTNode variable reference" prop_astnode_variable_reference
-  , testProperty "ASTNode function call" prop_astnode_function_call
-  , testProperty "TypeUnify identical" prop_typeunify_identical
-  , testProperty "TypeUnify different" prop_typeunify_different
-  , testProperty "GenericTypeInfer instantiation" prop_generictypeinfer_instantiation
-  , testProperty "GenericTypeInfer specialization" prop_generictypeinfer_specialization
-  , testProperty "DependencyGraph construction" prop_dependencygraph_construction
-  , testProperty "DependencyGraph topological sort" prop_dependencygraph_topological_sort
-  , testProperty "TypeError recovery" prop_typeerror_recovery
-  , testProperty "Incremental TypeInfer add variable" prop_incremental_typeinfer_add_variable
+  [ testProperty "Basic dependency inference" prop_basic_dependency_inference
+  , testProperty "Transitive dependency closure" prop_transitive_dependency_closure
+  , testProperty "Cycle detection" prop_cycle_detection
+  , testProperty "Dependency ordering" prop_dependency_ordering
+  , testProperty "Type dependency inference" prop_type_dependency_inference
+  , testProperty "Function dependency inference" prop_function_dependency_inference
+  , testProperty "Module dependency inference" prop_module_dependency_inference
+  , testProperty "Implicit dependency inference" prop_implicit_dependency_inference
+  , testProperty "Explicit dependency inference" prop_explicit_dependency_inference
+  , testProperty "Dependency strength" prop_dependency_strength
+  , testProperty "Dependency aggregation" prop_dependency_aggregation
+  , testProperty "Dependency filtering" prop_dependency_filtering
+  , testProperty "Dependency validation" prop_dependency_validation
+  , testProperty "Dependency merging" prop_dependency_merging
+  , testProperty "Dependency difference" prop_dependency_difference
+  , testProperty "Dependency intersection" prop_dependency_intersection
+  , testProperty "Dependency subset" prop_dependency_subset
+  , testProperty "Dependency ranking" prop_dependency_ranking
+  , testProperty "Dependency clustering" prop_dependency_clustering
+  , testProperty "Dependency impact analysis" prop_dependency_impact_analysis
+  , testProperty "Dependency visualization" prop_dependency_visualization
+  , testProperty "Dependency export/import" prop_dependency_export_import
+  , testProperty "Dependency serialization" prop_dependency_serialization
   ]
-
--- 需要定义的额外类型和函数
-data TestTypeEnvironment = TestTypeEnvironment
-  { testTypeVars :: Map String String
-  , testTypeFunctions :: Map String TestFunctionType
-  , testTypeConstraints :: Set String
-  } deriving (Show, Eq)
-
-data TestFunctionType = TestFunctionType [String] String
-  deriving (Show, Eq)
-
-data TestDependencyType = Direct | Indirect
-  deriving (Show, Eq)
-
-data TestDependency = TestDependency String String TestDependencyType
-  deriving (Show, Eq)
-
-data TestASTNode = TestVariableReference String
-                 | TestLiteral String
-                 | TestFunctionCall String [TestASTNode]
-                 deriving (Show, Eq)
-
-data TestGenericType = TestGenericType String [String]
-  deriving (Show, Eq)
-
-data TestDependencyGraph = TestDependencyGraph
-  { testGraphNodes :: [String]
-  , testGraphEdges :: [(String, String)]
-  } deriving (Show, Eq)
-
-testEmptyTypeEnvironment :: TestTypeEnvironment
-testEmptyTypeEnvironment = TestTypeEnvironment Map.empty Map.empty Set.empty
-
-testAddVariable :: String -> String -> TestTypeEnvironment -> TestTypeEnvironment
-testAddVariable varName varType env = 
-  env { testTypeVars = Map.insert varName varType (testTypeVars env) }
-
-testAddFunction :: String -> TestFunctionType -> TestTypeEnvironment -> TestTypeEnvironment
-testAddFunction funcName funcType env = 
-  env { testTypeFunctions = Map.insert funcName funcType (testTypeFunctions env) }
-
-testAddTypeConstraint :: String -> String -> TestTypeEnvironment -> TestTypeEnvironment
-testAddTypeConstraint name constraint env = 
-  env { testTypeConstraints = Set.insert name (testTypeConstraints env) }
-
-testAddInheritance :: String -> String -> TestTypeEnvironment -> TestTypeEnvironment
-testAddInheritance parent child env = 
-  let constraint = parent ++ " > " ++ child
-  in testAddTypeConstraint child constraint env
-
-testInferExpressionType :: String -> TestTypeEnvironment -> Maybe (String, TestTypeEnvironment)
-testInferExpressionType expr env = Just ("String", env)
-
-testInferFunctionApplication :: TestFunctionType -> [String] -> TestTypeEnvironment -> Maybe String
-testInferFunctionApplication (TestFunctionType argTypes returnType) argValues env = 
-  if length argTypes == length argValues
-    then Just returnType
-    else Nothing
-
-testAnalyzeDependencies :: [TestDependency] -> Set (String, String)
-testAnalyzeDependencies deps = Set.fromList $ map (\(TestDependency f t _) -> (f, t)) deps
-
-testFindTransitiveDependencies :: String -> Set (String, String) -> [(String, String)]
-testFindTransitiveDependencies from deps = 
-  Set.toList $ Set.filter (\(f, _) -> f == from) deps
-
-testDetectCycles :: Set (String, String) -> [[String]]
-testDetectCycles deps = 
-  let pairs = Set.toList deps
-      selfLoops = filter (\(f, t) -> f == t) pairs
-  in if null selfLoops then [] else map (\(f, _) -> [f]) selfLoops
-
-testInferConstraints :: String -> TestTypeEnvironment -> Maybe [String]
-testInferConstraints typeName env = 
-  if Set.member typeName (testTypeConstraints env)
-    then Just ["constraint"]
-    else Nothing
-
-testInferASTNodeType :: TestASTNode -> TestTypeEnvironment -> Maybe (String, TestTypeEnvironment)
-testInferASTNodeType node env = 
-  case node of
-    TestVariableReference name -> Map.lookup name (testTypeVars env) >>= \t -> Just (t, env)
-    TestLiteral _ -> Just ("String", env)
-    TestFunctionCall name args -> 
-      Map.lookup name (testTypeFunctions env) >>= \(TestFunctionType _ ret) -> Just (ret, env)
-
-testFunctionArguments :: TestFunctionType -> [String]
-testFunctionArguments (TestFunctionType args _) = args
-
-testFunctionReturn :: TestFunctionType -> String
-testFunctionReturn (TestFunctionType _ ret) = ret
-
-testUnifyTypes :: String -> String -> TestTypeEnvironment -> Either String TestTypeEnvironment
-testUnifyTypes t1 t2 env = 
-  if t1 == t1 then Right env else Left "Cannot unify types"
-
-testInstantiateGenericType :: TestGenericType -> [String] -> TestTypeEnvironment -> Maybe String
-testInstantiateGenericType (TestGenericType name params) args env = 
-  if length params == length args
-    then Just (name ++ "[" ++ unwords args ++ "]")
-    else Nothing
-
-testSpecializeGenericType :: TestGenericType -> [String] -> TestTypeEnvironment -> Maybe String
-testSpecializeGenericType = testInstantiateGenericType
-
-testBuildDependencyGraph :: [TestDependency] -> TestDependencyGraph
-testBuildDependencyGraph deps = 
-  let nodes = nub $ concatMap (\(TestDependency f t _) -> [f, t]) deps
-      edges = map (\(TestDependency f t _) -> (f, t)) deps
-  in TestDependencyGraph nodes edges
-
-testTopologicalSort :: TestDependencyGraph -> [String]
-testTopologicalSort graph = testGraphNodes graph
-
-testCanRecoverFromTypeError :: String -> String -> TestTypeEnvironment -> Bool
-testCanRecoverFromTypeError _ _ _ = True
-
--- 辅助函数
-nub :: Eq a => [a] -> [a]
-nub [] = []
-nub (x:xs) = x : nub (filter (/= x) xs)

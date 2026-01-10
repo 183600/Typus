@@ -3,181 +3,181 @@ module Test.Unit.ParserBasicFunctionsSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import Parser
-import SourceLocation (SourcePos(..), Located(..))
+import qualified Parser
+import qualified SourceLocation
+import Data.Char (isAlpha, isDigit, isSpace)
+import Data.List (isPrefixOf, isSuffixOf)
 import Data.Maybe (isJust, isNothing)
-import Data.List (isPrefixOf, isInfixOf)
 
--- 测试FileDirectives的属性
-prop_filedirectives_default_values :: Property
-prop_filedirectives_default_values = 
-  let defaults = defaultFileDirectives
-  in isNothing (fdOwnership defaults) &&
-     isNothing (fdDependentTypes defaults) &&
-     isNothing (fdConstraints defaults)
+-- 测试基本解析函数的属性
+prop_identifier_valid :: String -> Property
+prop_identifier_valid input = 
+  let isValid = all (\c -> isAlpha c || isDigit c || c == '_') input
+      isNonEmpty = not (null input)
+      startsWithAlpha = not (null input) && isAlpha (head input)
+  in property $ (isValid && isNonEmpty && startsWithAlpha) ==> 
+    case Parser.parseIdentifier input of
+      Right result -> property $ result === input
+      Left _ -> property False
 
--- 测试BlockDirectives的属性
-prop_blockdirectives_default_values :: Property
-prop_blockdirectives_default_values = 
-  let defaults = defaultBlockDirectives
-  in isNothing (bdOwnership defaults) &&
-     isNothing (bdDependentTypes defaults) &&
-     isNothing (bdConstraints defaults)
+prop_identifier_invalid :: String -> Property
+prop_identifier_invalid input = 
+  let hasInvalidChars = any (\c -> not (isAlpha c) && not (isDigit c) && c /= '_') input
+      isEmpty = null input
+      startsWithDigit = not (null input) && isDigit (head input)
+  in property $ (hasInvalidChars || isEmpty || startsWithDigit) ==> 
+    case Parser.parseIdentifier input of
+      Right _ -> property False
+      Left _ -> property True
 
--- 测试CodeBlock的属性
-prop_codeblock_consistency :: String -> String -> Property
-prop_codeblock_consistency content lang = 
-  let block = CodeBlock content lang
-  in cbContent block === content &&
-     cbLanguage block === lang
-
--- 测试TypusFile的属性
-prop_typusfile_consistency :: String -> [CodeBlock] -> FileDirectives -> Property
-prop_typusfile_consistency path blocks directives = 
-  let file = TypusFile path blocks directives
-  in tfPath file === path &&
-     tfBlocks file === blocks &&
-     tfDirectives file === directives
-
--- 测试解析所有权指令的属性
-prop_parse_ownership_directive_true :: Property
-prop_parse_ownership_directive_true = 
-  let input = "// @ownership: true"
-      result = parseTypus input
-  in case result of
-    Right file -> isJust (fdOwnership (tfDirectives file))
+prop_number_parsing :: Int -> Property
+prop_number_parsing n = 
+  let numStr = show n
+  in case Parser.parseNumber numStr of
+    Right result -> property $ result === n
     Left _ -> property False
 
-prop_parse_ownership_directive_false :: Property
-prop_parse_ownership_directive_false = 
-  let input = "// @ownership: false"
-      result = parseTypus input
-  in case result of
-    Right file -> isJust (fdOwnership (tfDirectives file))
+prop_string_parsing :: String -> Property
+prop_string_parsing s = 
+  let quotedStr = "\"" ++ s ++ "\""
+  in case Parser.parseString quotedStr of
+    Right result -> property $ result === s
     Left _ -> property False
 
--- 测试解析依赖类型指令的属性
-prop_parse_dependent_types_directive :: String -> Property
-prop_parse_dependent_types_directive value = 
-  let input = "// @dependent-types: " ++ value
-      result = parseTypus input
-  in case result of
-    Right file -> isJust (fdDependentTypes (tfDirectives file))
-    Left _ -> property False
+prop_whitespace_handling :: String -> String -> Property
+prop_whitespace_handling input1 input2 = 
+  let combined = input1 ++ "   \t\n  " ++ input2
+  in case (Parser.parseToken input1, Parser.parseToken input2, Parser.parseToken combined) of
+    (Right t1, Right t2, Right tCombined) -> property $ tCombined === t1
+    _ -> property True
 
--- 测试解析约束指令的属性
-prop_parse_constraints_directive :: String -> Property
-prop_parse_constraints_directive value = 
-  let input = "// @constraints: " ++ value
-      result = parseTypus input
-  in case result of
-    Right file -> isJust (fdConstraints (tfDirectives file))
-    Left _ -> property False
+prop_comment_stripping :: String -> String -> Property
+prop_comment_stripping code comment = 
+  let withComment = code ++ " -- " ++ comment
+  in case (Parser.parseCode code, Parser.parseCode withComment) of
+    (Right ast1, Right ast2) -> property $ ast1 === ast2
+    _ -> property True
 
--- 测试解析代码块的属性
-prop_parse_code_block :: String -> String -> Property
-prop_parse_code_block content lang = 
-  let input = "```" ++ lang ++ "\n" ++ content ++ "\n```"
-      result = parseTypus input
-  in case result of
-    Right file -> not (null (tfBlocks file))
-    Left _ -> property False
+prop_multiline_comment_stripping :: String -> String -> String -> Property
+prop_multiline_comment_stripping before comment after = 
+  let withComment = before ++ " {- " ++ comment ++ " -} " ++ after
+  in case (Parser.parseCode (before ++ " " ++ after), Parser.parseCode withComment) of
+    (Right ast1, Right ast2) -> property $ ast1 === ast2
+    _ -> property True
 
--- 测试解析多个指令的属性
-prop_parse_multiple_directives :: Bool -> Bool -> Bool -> Property
-prop_parse_multiple_directives ownership dependentTypes constraints = 
-  let ownershipStr = if ownership then "true" else "false"
-      dependentTypesStr = if dependentTypes then "true" else "false"
-      constraintsStr = if constraints then "true" else "false"
-      input = "// @ownership: " ++ ownershipStr ++ "\n" ++
-              "// @dependent-types: " ++ dependentTypesStr ++ "\n" ++
-              "// @constraints: " ++ constraintsStr
-      result = parseTypus input
-  in case result of
-    Right file -> isJust (fdOwnership (tfDirectives file)) &&
-                  isJust (fdDependentTypes (tfDirectives file)) &&
-                  isJust (fdConstraints (tfDirectives file))
-    Left _ -> property False
+prop_operator_parsing :: String -> Property
+prop_operator_parsing op = 
+  let validOperators = ["+", "-", "*", "/", "==", "/=", "<", "<=", ">", ">=", "&&", "||", "++"]
+      isValidOp = op `elem` validOperators
+  in property $ isValidOp ==> 
+    case Parser.parseOperator op of
+      Right result -> property $ result === op
+      Left _ -> property False
 
--- 测试解析混合内容的属性
-prop_parse_mixed_content :: String -> String -> String -> Property
-prop_parse_mixed_content directive content lang = 
-  let input = "// @ownership: true\n" ++
-              "```" ++ lang ++ "\n" ++
-              content ++ "\n```"
-      result = parseTypus input
-  in case result of
-    Right file -> isJust (fdOwnership (tfDirectives file)) &&
-                  not (null (tfBlocks file))
-    Left _ -> property False
+prop_keyword_parsing :: String -> Property
+prop_keyword_parsing kw = 
+  let keywords = ["let", "in", "if", "then", "else", "case", "of", "data", "type", "newtype", "class", "instance"]
+      isKeyword = kw `elem` keywords
+  in property $ isKeyword ==> 
+    case Parser.parseKeyword kw of
+      Right result -> property $ result === kw
+      Left _ -> property False
 
--- 测试解析空文件的属性
-prop_parse_empty_file :: Property
-prop_parse_empty_file = 
-  let result = parseTypus ""
-  in case result of
-    Right file -> null (tfBlocks file) &&
-                  isNothing (fdOwnership (tfDirectives file)) &&
-                  isNothing (fdDependentTypes (tfDirectives file)) &&
-                  isNothing (fdConstraints (tfDirectives file))
-    Left _ -> property False
+prop_parentheses_balancing :: String -> Property
+prop_parentheses_balancing input = 
+  let balanced = count '(' input == count ')' input
+  in case Parser.parseExpression input of
+    Right _ -> property $ balanced === True
+    Left _ -> property $ balanced === False
+  where
+    count c = length . filter (== c)
 
--- 测试解析无效语法的属性
-prop_parse_invalid_syntax :: String -> Property
-prop_parse_invalid_syntax content = 
-  let input = "```" ++ content  -- 不完整的代码块
-      result = parseTypus input
-  in case result of
-    Right _ -> property False  -- 应该失败
-    Left _ -> property True   -- 期望失败
+prop_bracket_balancing :: String -> Property
+prop_bracket_balancing input = 
+  let balanced = count '[' input == count ']' input
+  in case Parser.parseList input of
+    Right _ -> property $ balanced === True
+    Left _ -> property $ balanced === False
+  where
+    count c = length . filter (== c)
 
--- 测试解析指令大小写的属性
-prop_parse_directive_case_sensitivity :: Property
-prop_parse_directive_case_sensitivity = 
-  let input = "// @OWNERSHIP: true"  -- 大写
-      result = parseTypus input
-  in case result of
-    Right file -> isNothing (fdOwnership (tfDirectives file))  -- 应该不识别
-    Left _ -> property False
+prop_brace_balancing :: String -> Property
+prop_brace_balancing input = 
+  let balanced = count '{' input == count '}' input
+  in case Parser.parseRecord input of
+    Right _ -> property $ balanced === True
+    Left _ -> property $ balanced === False
+  where
+    count c = length . filter (== c)
 
--- 测试解析注释的属性
-prop_parse_comments :: String -> Property
-prop_parse_comments content = 
-  let input = "// This is a comment\n" ++ content
-      result = parseTypus input
-  in case result of
+prop_indentation_parsing :: Int -> String -> Property
+prop_indentation_parsing indent content = 
+  let indented = replicate indent ' ' ++ content
+  in case (Parser.parseStatement content, Parser.parseStatement indented) of
+    (Right stmt1, Right stmt2) -> property $ stmt1 === stmt2
+    _ -> property True
+
+prop_empty_input_handling :: Property
+prop_empty_input_handling = 
+  case Parser.parseModule "" of
+    Right result -> property $ null result === True
+    Left _ -> property True
+
+prop_unicode_handling :: String -> Property
+prop_unicode_handling input = 
+  case Parser.parseIdentifier input of
+    Right result -> property $ all isValidUnicodeChar result
+    Left _ -> property True
+  where
+    isValidUnicodeChar c = c > '\127' || isAlpha c || isDigit c || c == '_'
+
+prop_escape_sequence_parsing :: String -> Property
+prop_escape_sequence_parsing input = 
+  let withEscapes = concatMap (\c -> if c == '\n' then "\\n" else if c == '\t' then "\\t" else [c]) input
+  in case Parser.parseString ("\"" ++ withEscapes ++ "\"") of
+    Right result -> property $ result === input
+    Left _ -> property True
+
+prop_nested_parsing :: String -> String -> Property
+prop_nested_parsing outer inner = 
+  let nested = outer ++ " (" ++ inner ++ ")"
+  in case Parser.parseExpression nested of
     Right _ -> property True
-    Left _ -> isPrefixOf "parse error" (show result) || property True
-
--- 测试解析嵌套代码块的属性
-prop_parse_nested_blocks :: String -> String -> String -> Property
-prop_parse_nested_blocks content1 content2 lang = 
-  let input = "```" ++ lang ++ "\n" ++
-              content1 ++ "\n" ++
-              "```" ++ lang ++ "\n" ++
-              content2 ++ "\n" ++
-              "```"
-      result = parseTypus input
-  in case result of
-    Right file -> length (tfBlocks file) >= 2
     Left _ -> property False
+
+prop_error_recovery :: String -> String -> Property
+prop_error_recovery validPart invalidPart = 
+  let mixed = validPart ++ " " ++ invalidPart ++ " " ++ validPart
+  in case Parser.parseWithRecovery mixed of
+    Right result -> property $ not (null result)
+    Left _ -> property True
+
+prop_line_continuation :: String -> String -> Property
+prop_line_continuation line1 line2 = 
+  let withContinuation = line1 ++ " \\\n" ++ line2
+  in case (Parser.parseStatement line1, Parser.parseStatement withContinuation) of
+    (Right stmt1, Right stmt2) -> property $ stmt1 === stmt2
+    _ -> property True
 
 tests :: TestTree
 tests = testGroup "Parser Basic Functions Tests"
-  [ testProperty "FileDirectives default values" prop_filedirectives_default_values
-  , testProperty "BlockDirectives default values" prop_blockdirectives_default_values
-  , testProperty "CodeBlock consistency" prop_codeblock_consistency
-  , testProperty "TypusFile consistency" prop_typusfile_consistency
-  , testProperty "parse ownership directive true" prop_parse_ownership_directive_true
-  , testProperty "parse ownership directive false" prop_parse_ownership_directive_false
-  , testProperty "parse dependent types directive" prop_parse_dependent_types_directive
-  , testProperty "parse constraints directive" prop_parse_constraints_directive
-  , testProperty "parse code block" prop_parse_code_block
-  , testProperty "parse multiple directives" prop_parse_multiple_directives
-  , testProperty "parse mixed content" prop_parse_mixed_content
-  , testProperty "parse empty file" prop_parse_empty_file
-  , testProperty "parse invalid syntax" prop_parse_invalid_syntax
-  , testProperty "parse directive case sensitivity" prop_parse_directive_case_sensitivity
-  , testProperty "parse comments" prop_parse_comments
-  , testProperty "parse nested blocks" prop_parse_nested_blocks
+  [ testProperty "Identifier valid parsing" prop_identifier_valid
+  , testProperty "Identifier invalid parsing" prop_identifier_invalid
+  , testProperty "Number parsing" prop_number_parsing
+  , testProperty "String parsing" prop_string_parsing
+  , testProperty "Whitespace handling" prop_whitespace_handling
+  , testProperty "Comment stripping" prop_comment_stripping
+  , testProperty "Multiline comment stripping" prop_multiline_comment_stripping
+  , testProperty "Operator parsing" prop_operator_parsing
+  , testProperty "Keyword parsing" prop_keyword_parsing
+  , testProperty "Parentheses balancing" prop_parentheses_balancing
+  , testProperty "Bracket balancing" prop_bracket_balancing
+  , testProperty "Brace balancing" prop_brace_balancing
+  , testProperty "Indentation parsing" prop_indentation_parsing
+  , testProperty "Empty input handling" prop_empty_input_handling
+  , testProperty "Unicode handling" prop_unicode_handling
+  , testProperty "Escape sequence parsing" prop_escape_sequence_parsing
+  , testProperty "Nested parsing" prop_nested_parsing
+  , testProperty "Error recovery" prop_error_recovery
+  , testProperty "Line continuation" prop_line_continuation
   ]

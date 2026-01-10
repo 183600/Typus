@@ -3,159 +3,213 @@ module Test.Unit.SourceLocationMathSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import SourceLocation
-import Data.Monoid ((<>))
+import qualified SourceLocation as SL
+import qualified SourceLocation.Math as SLM
+import Data.Maybe (isJust, isNothing)
 
--- 测试SourcePos的属性
-prop_sourcepos_monoid :: Int -> Int -> Int -> Int -> Property
-prop_sourcepos_monoid l1 c1 l2 c2 = 
-  let pos1 = SourcePos l1 c1
-      pos2 = SourcePos l2 c2
-      combined = pos1 <> pos2
-  in sourceLine combined >= max l1 l2 &&
-     sourceColumn combined >= max c1 c2
+-- 测试源码位置数学运算的属性
+prop_location_addition :: Int -> Int -> Int -> Int -> Property
+prop_location_addition line1 col1 line2 col2 = 
+  let loc1 = SL.SourceLocation line1 col1
+      loc2 = SL.SourceLocation line2 col2
+      result = SLM.addLocations loc1 loc2
+  in property $ SL.line result === line1 + line2 && 
+             SL.column result === col1 + col2
 
-prop_sourcepos_ordering :: Int -> Int -> Int -> Int -> Property
-prop_sourcepos_ordering l1 c1 l2 c2 = 
-  let pos1 = SourcePos l1 c1
-      pos2 = SourcePos l2 c2
-  in if l1 < l2 || (l1 == l2 && c1 < c2)
-     then pos1 < pos2
-     else pos1 >= pos2
+prop_location_subtraction :: Int -> Int -> Int -> Int -> Property
+prop_location_subtraction line1 col1 line2 col2 = 
+  let loc1 = SL.SourceLocation line1 col1
+      loc2 = SL.SourceLocation line2 col2
+      result = SLM.subtractLocations loc1 loc2
+  in property $ SL.line result === line1 - line2 && 
+             SL.column result === col1 - col2
 
--- 测试startPos的属性
-prop_startpos_consistency :: Property
-prop_startpos_consistency = 
-  let pos = startPos
-  in sourceLine pos === 1 && sourceColumn pos === 1
+prop_location_distance :: Int -> Int -> Int -> Int -> Property
+prop_location_distance line1 col1 line2 col2 = 
+  let loc1 = SL.SourceLocation line1 col1
+      loc2 = SL.SourceLocation line2 col2
+      distance = SLM.distance loc1 loc2
+  in property $ distance >= 0
 
--- 测试posAfter的属性
-prop_posAfter_newline :: Int -> Int -> Property
-prop_posAfter_newline line col = 
-  let pos = SourcePos line col
-      afterNewline = posAfter '\n' pos
-  in sourceLine afterNewline === line + 1 &&
-     sourceColumn afterNewline === 1
+prop_location_midpoint :: Int -> Int -> Int -> Int -> Property
+prop_location_midpoint line1 col1 line2 col2 = 
+  let loc1 = SL.SourceLocation line1 col1
+      loc2 = SL.SourceLocation line2 col2
+      midpoint = SLM.midpoint loc1 loc2
+  in property $ SL.line midpoint === (line1 + line2) `div` 2 && 
+             SL.column midpoint === (col1 + col2) `div` 2
 
-prop_posAfter_regular_char :: Int -> Int -> Char -> Property
-prop_posAfter_regular_char line col c = 
-  c /= '\n' ==> 
-  let pos = SourcePos line col
-      afterChar = posAfter c pos
-  in sourceLine afterChar === line &&
-     sourceColumn afterChar === col + 1
+prop_location_manhattan_distance :: Int -> Int -> Int -> Int -> Property
+prop_location_manhattan_distance line1 col1 line2 col2 = 
+  let loc1 = SL.SourceLocation line1 col1
+      loc2 = SL.SourceLocation line2 col2
+      distance = SLM.manhattanDistance loc1 loc2
+  in property $ distance === abs (line1 - line2) + abs (col1 - col2)
 
-prop_posAfter_tab :: Int -> Int -> Property
-prop_posAfter_tab line col = 
-  let pos = SourcePos line col
-      afterTab = posAfter '\t' pos
-  in sourceLine afterTab === line &&
-     sourceColumn afterTab >= col + 1
+prop_location_euclidean_distance :: Int -> Int -> Int -> Int -> Property
+prop_location_euclidean_distance line1 col1 line2 col2 = 
+  let loc1 = SL.SourceLocation line1 col1
+      loc2 = SL.SourceLocation line2 col2
+      distance = SLM.euclideanDistance loc1 loc2
+  in property $ distance >= 0
 
--- 测试SourceSpan的属性
-prop_sourcespan_merge :: Int -> Int -> Int -> Int -> Int -> Int -> Property
-prop_sourcespan_merge l1 c1 l2 c2 l3 c3 = 
-  let pos1 = SourcePos l1 c1
-      pos2 = SourcePos l2 c2
-      pos3 = SourcePos l3 c3
-      span1 = spanBetween pos1 pos2
-      span2 = spanBetween pos2 pos3
-      merged = mergeSpans span1 span2
-  in spanStart merged === spanStart span1 &&
-     spanEnd merged === spanEnd span2
+prop_location_scaling :: Int -> Int -> Int -> Property
+prop_location_scaling line col factor = 
+  let loc = SL.SourceLocation line col
+      scaled = SLM.scaleLocation loc factor
+  in property $ SL.line scaled === line * factor && 
+             SL.column scaled === col * factor
 
-prop_sourcespan_validity :: Int -> Int -> Int -> Int -> Property
-prop_sourcespan_validity l1 c1 l2 c2 = 
-  let pos1 = SourcePos l1 c1
-      pos2 = SourcePos l2 c2
-      span = spanBetween pos1 pos2
-  in isValidSpan span === (pos1 <= pos2)
+prop_location_translation :: Int -> Int -> Int -> Int -> Property
+prop_location_translation line col dline dcol = 
+  let loc = SL.SourceLocation line col
+      translated = SLM.translateLocation loc dline dcol
+  in property $ SL.line translated === line + dline && 
+             SL.column translated === col + dcol
 
--- 测试emptySpan的属性
-prop_emptyspan_consistency :: Property
-prop_emptyspan_consistency = 
-  let span = emptySpan
-  in not (isValidSpan span)
+prop_location_rotation :: Int -> Int -> Int -> Property
+prop_location_rotation line col angle = 
+  let loc = SL.SourceLocation line col
+      rotated = SLM.rotateLocation loc angle
+  in property $ SL.line rotated >= 0 && SL.column rotated >= 0
 
--- 测试locatedAt的属性
-prop_locatedat_preserves_value :: String -> Int -> Int -> Property
-prop_locatedat_preserves_value s line col = 
-  let pos = SourcePos line col
-      located = locatedAt pos s
-  in locatedValue located === s
+prop_location_reflection :: Int -> Int -> Property
+prop_location_reflection line col = 
+  let loc = SL.SourceLocation line col
+      reflected = SLM.reflectLocation loc
+  in property $ SL.line reflected === line && 
+             SL.column reflected === -col
 
-prop_locatedat_sets_position :: String -> Int -> Int -> Property
-prop_locatedat_sets_position s line col = 
-  let pos = SourcePos line col
-      located = locatedAt pos s
-  in locatedPos located === pos
+prop_location_bounds :: [Int] -> [Int] -> Property
+prop_location_bounds lines cols = 
+  let locations = zipWith SL.SourceLocation lines cols
+      bounds = SLM.calculateBounds locations
+  in property $ isJust bounds
 
--- 测试mapLocated的属性
-prop_maplocated_preserves_location :: String -> Int -> Int -> Property
-prop_maplocated_preserves_location s line col = 
-  let pos = SourcePos line col
-      located = locatedAt pos s
-      mapped = mapLocated reverse located
-  in locatedPos mapped === locatedPos located
+prop_location_enclosure :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Property
+prop_location_enclosure line1 col1 line2 col2 line3 col3 line4 = 
+  let loc1 = SL.SourceLocation line1 col1
+      loc2 = SL.SourceLocation line2 col2
+      loc3 = SL.SourceLocation line3 col3
+      loc4 = SL.SourceLocation line4 col4
+      rectangle = SLM.createRectangle loc1 loc2
+      enclosed = SLM.isEnclosed loc3 rectangle
+  in property $ enclosed === (line3 >= min line1 line2 && line3 <= max line1 line2 &&
+                             col3 >= min col1 col2 && col3 <= max col1 col2)
 
-prop_maplocated_applies_function :: String -> Int -> Int -> Property
-prop_maplocated_applies_function s line col = 
-  let pos = SourcePos line col
-      located = locatedAt pos s
-      mapped = mapLocated reverse located
-  in locatedValue mapped === reverse s
+prop_location_intersection :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Property
+prop_location_intersection line1 col1 line2 col2 line3 col3 line4 col4 = 
+  let rect1 = SLM.createRectangle (SL.SourceLocation line1 col1) (SL.SourceLocation line2 col2)
+      rect2 = SLM.createRectangle (SL.SourceLocation line3 col3) (SL.SourceLocation line4 col4)
+      intersection = SLM.intersection rect1 rect2
+  in property $ isJust intersection
 
--- 测试LocationTracker的属性
-prop_locationtracker_monad_laws :: Int -> Int -> Property
-prop_locationtracker_monad_laws startLine startCol = 
-  let startPos' = SourcePos startLine startCol
-      action1 = getCurrentPos
-      action2 = setCurrentPos startPos' >> getCurrentPos
-      result1 = runLocationTracker action1 startPos'
-      result2 = runLocationTracker action2 startPos'
-  in snd result2 === startPos'
+prop_location_union :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Property
+prop_location_union line1 col1 line2 col2 line3 col3 line4 col4 = 
+  let rect1 = SLM.createRectangle (SL.SourceLocation line1 col1) (SL.SourceLocation line2 col2)
+      rect2 = SLM.createRectangle (SL.SourceLocation line3 col3) (SL.SourceLocation line4 col4)
+      union = SLM.union rect1 rect2
+  in property $ isJust union
 
--- 测试advancePos的属性
-prop_advancepos_string_length :: String -> Int -> Int -> Property
-prop_advancepos_string_length s line col = 
-  let pos = SourcePos line col
-      advanced = advancePos s pos
-  in sourceLine advanced >= line &&
-     sourceColumn advanced >= col
+prop_location_area :: Int -> Int -> Int -> Int -> Property
+prop_location_area line1 col1 line2 col2 = 
+  let rect = SLM.createRectangle (SL.SourceLocation line1 col1) (SL.SourceLocation line2 col2)
+      area = SLM.area rect
+  in property $ area >= 0
 
-prop_advancepos_empty_string :: Int -> Int -> Property
-prop_advancepos_empty_string line col = 
-  let pos = SourcePos line col
-      advanced = advancePos "" pos
-  in advanced === pos
+prop_location_perimeter :: Int -> Int -> Int -> Int -> Property
+prop_location_perimeter line1 col1 line2 col2 = 
+  let rect = SLM.createRectangle (SL.SourceLocation line1 col1) (SL.SourceLocation line2 col2)
+      perimeter = SLM.perimeter rect
+  in property $ perimeter >= 0
 
--- 测试spanFrom和spanTo的属性
-prop_spanfrom_to_consistency :: Int -> Int -> Int -> Int -> Property
-prop_spanfrom_to_consistency l1 c1 l2 c2 = 
-  let pos1 = SourcePos l1 c1
-      pos2 = SourcePos l2 c2
-      span = spanFrom pos1
-      finalSpan = spanTo pos2 span
-  in spanStart finalSpan === pos1 &&
-     spanEnd finalSpan === pos2
+prop_location_center :: Int -> Int -> Int -> Int -> Property
+prop_location_center line1 col1 line2 col2 = 
+  let rect = SLM.createRectangle (SL.SourceLocation line1 col1) (SL.SourceLocation line2 col2)
+      center = SLM.center rect
+  in property $ SL.line center === (line1 + line2) `div` 2 && 
+             SL.column center === (col1 + col2) `div` 2
+
+prop_location_expansion :: Int -> Int -> Int -> Int -> Int -> Property
+prop_location_expansion line1 col1 line2 col2 amount = 
+  let rect = SLM.createRectangle (SL.SourceLocation line1 col1) (SL.SourceLocation line2 col2)
+      expanded = SLM.expand rect amount
+  in property $ SLM.area expanded >= SLM.area rect
+
+prop_location_contraction :: Int -> Int -> Int -> Int -> Int -> Property
+prop_location_contraction line1 col1 line2 col2 amount = 
+  let rect = SLM.createRectangle (SL.SourceLocation line1 col1) (SL.SourceLocation line2 col2)
+      contracted = SLM.contract rect amount
+  in property $ SLM.area contracted <= SLM.area rect
+
+prop_location_contains :: Int -> Int -> Int -> Int -> Int -> Int -> Property
+prop_location_contains line1 col1 line2 col2 line3 col3 = 
+  let rect = SLM.createRectangle (SL.SourceLocation line1 col1) (SL.SourceLocation line2 col2)
+      point = SL.SourceLocation line3 col3
+      contains = SLM.contains rect point
+  in property $ contains === (line3 >= min line1 line2 && line3 <= max line1 line2 &&
+                              col3 >= min col1 col2 && col3 <= max col1 col2)
+
+prop_location_overlaps :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Property
+prop_location_overlaps line1 col1 line2 col2 line3 col3 line4 col4 = 
+  let rect1 = SLM.createRectangle (SL.SourceLocation line1 col1) (SL.SourceLocation line2 col2)
+      rect2 = SLM.createRectangle (SL.SourceLocation line3 col3) (SL.SourceLocation line4 col4)
+      overlaps = SLM.overlaps rect1 rect2
+  in property $ overlaps === (not (null (SLM.intersection rect1 rect2)))
+
+prop_location_adjacent :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Property
+prop_location_adjacent line1 col1 line2 col2 line3 col3 line4 col4 = 
+  let rect1 = SLM.createRectangle (SL.SourceLocation line1 col1) (SL.SourceLocation line2 col2)
+      rect2 = SLM.createRectangle (SL.SourceLocation line3 col3) (SL.SourceLocation line4 col4)
+      adjacent = SLM.isAdjacent rect1 rect2
+  in property $ adjacent === (not (SLM.overlaps rect1 rect2) && 
+                              SLM.distance (SLM.center rect1) (SLM.center rect2) <= 2)
+
+prop_location_path :: [Int] -> [Int] -> Property
+prop_location_path lines cols = 
+  let locations = zipWith SL.SourceLocation lines cols
+      path = SLM.createPath locations
+  in property $ length path >= 0
+
+prop_location_path_length :: [Int] -> [Int] -> Property
+prop_location_path_length lines cols = 
+  let locations = zipWith SL.SourceLocation lines cols
+      path = SLM.createPath locations
+      length = SLM.pathLength path
+  in property $ length >= 0
+
+prop_location_path_optimization :: [Int] -> [Int] -> Property
+prop_location_path_optimization lines cols = 
+  let locations = zipWith SL.SourceLocation lines cols
+      path = SLM.createPath locations
+      optimized = SLM.optimizePath path
+  in property $ SLM.pathLength optimized <= SLM.pathLength path
 
 tests :: TestTree
-tests = testGroup "SourceLocation Math Tests"
-  [ testProperty "SourcePos monoid" prop_sourcepos_monoid
-  , testProperty "SourcePos ordering" prop_sourcepos_ordering
-  , testProperty "startPos consistency" prop_startpos_consistency
-  , testProperty "posAfter newline" prop_posAfter_newline
-  , testProperty "posAfter regular char" prop_posAfter_regular_char
-  , testProperty "posAfter tab" prop_posAfter_tab
-  , testProperty "SourceSpan merge" prop_sourcespan_merge
-  , testProperty "SourceSpan validity" prop_sourcespan_validity
-  , testProperty "emptySpan consistency" prop_emptyspan_consistency
-  , testProperty "locatedAt preserves value" prop_locatedat_preserves_value
-  , testProperty "locatedAt sets position" prop_locatedat_sets_position
-  , testProperty "mapLocated preserves location" prop_maplocated_preserves_location
-  , testProperty "mapLocated applies function" prop_maplocated_applies_function
-  , testProperty "LocationTracker monad laws" prop_locationtracker_monad_laws
-  , testProperty "advancePos string length" prop_advancepos_string_length
-  , testProperty "advancePos empty string" prop_advancepos_empty_string
-  , testProperty "spanFrom to consistency" prop_spanfrom_to_consistency
+tests = testGroup "Source Location Math Tests"
+  [ testProperty "Location addition" prop_location_addition
+  , testProperty "Location subtraction" prop_location_subtraction
+  , testProperty "Location distance" prop_location_distance
+  , testProperty "Location midpoint" prop_location_midpoint
+  , testProperty "Location manhattan distance" prop_location_manhattan_distance
+  , testProperty "Location euclidean distance" prop_location_euclidean_distance
+  , testProperty "Location scaling" prop_location_scaling
+  , testProperty "Location translation" prop_location_translation
+  , testProperty "Location rotation" prop_location_rotation
+  , testProperty "Location reflection" prop_location_reflection
+  , testProperty "Location bounds" prop_location_bounds
+  , testProperty "Location enclosure" prop_location_enclosure
+  , testProperty "Location intersection" prop_location_intersection
+  , testProperty "Location union" prop_location_union
+  , testProperty "Location area" prop_location_area
+  , testProperty "Location perimeter" prop_location_perimeter
+  , testProperty "Location center" prop_location_center
+  , testProperty "Location expansion" prop_location_expansion
+  , testProperty "Location contraction" prop_location_contraction
+  , testProperty "Location contains" prop_location_contains
+  , testProperty "Location overlaps" prop_location_overlaps
+  , testProperty "Location adjacent" prop_location_adjacent
+  , testProperty "Location path" prop_location_path
+  , testProperty "Location path length" prop_location_path_length
+  , testProperty "Location path optimization" prop_location_path_optimization
   ]

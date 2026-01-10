@@ -758,6 +758,14 @@ test-suite typus-test
         Test.Unit.ErrorRecoveryEnhancedQuickCheckSpec,
         Test.Unit.NewEnhancedCompilerOptimizationQuickCheckSpec,
         Test.Unit.NewEnhancedOwnershipMemorySafetyQuickCheckSpec,
+
+        -- New Basic Test Modules with QuickCheck properties
+        Test.Unit.ParserBasicFunctionsSpec,
+        Test.Unit.CompilerBasicSpec,
+        Test.Unit.DependenciesInferenceSpec,
+        Test.Unit.ErrorHandlerPropertiesSpec,
+        Test.Unit.SourceLocationMathSpec,
+        Test.Unit.UtilsStringProcessingSpec,
         Test.Unit.DependentTypeValidationQuickCheckSpec,
         Test.Unit.TypeInferenceBoundaryQuickCheckSpec,
         

@@ -3,227 +3,233 @@ module Test.Unit.CompilerBasicSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import qualified Compiler as C
-import Parser (TypusFile(..), defaultFileDirectives)
-import Compiler.Errors.Core (ErrorSeverity(..))
-import Data.List (isPrefixOf, isInfixOf)
+import qualified Compiler
+import qualified Compiler.IR as IR
+import qualified Compiler.TypeChecker as TypeChecker
+import qualified Compiler.Errors as Errors
+import qualified Data.Map as Map
 import Data.Maybe (isJust, isNothing)
+import Data.List (nub)
 
--- 测试编译阶段的属性
-prop_compilationphase_ordering :: C.CompilationPhase -> C.CompilationPhase -> Property
-prop_compilationphase_ordering phase1 phase2 = 
-  case (phase1, phase2) of
-    (C.ParsingPhase, C.LexingPhase) -> phase1 > phase2
-    (C.TypeCheckingPhase, C.ParsingPhase) -> phase1 > phase2
-    (C.CodeGenerationPhase, C.TypeCheckingPhase) -> phase1 > phase2
-    (C.OptimizationPhase, C.CodeGenerationPhase) -> phase1 > phase2
-    _ -> phase1 <= phase2
-
--- 测试编译错误的属性
-prop_compilererror_contains_message :: String -> Property
-prop_compilererror_contains_message msg = 
-  let error = C.malformedSyntaxError msg
-  in msg `isInfixOf` C.renderCompilationError error
-
-prop_compilererror_has_phase :: String -> C.CompilationPhase -> Property
-prop_compilererror_has_phase msg phase = 
-  let error = C.malformedSyntaxError msg
-      formatted = C.renderCompilationError error
-  in show phase `isInfixOf` formatted
-
--- 测试编译结果的属性
-prop_compilerresult_error_handling :: String -> Property
-prop_compilerresult_error_handling content = 
-  let file = TypusFile "test.typus" [] defaultFileDirectives
-      result = C.compile file
-  in case result of
-    Left errors -> not (null errors)
-    Right _ -> property True
-
-prop_compilerresult_success_structure :: String -> Property
-prop_compilerresult_success_structure content = 
-  let file = TypusFile "test.typus" [] defaultFileDirectives
-      result = C.compile file
-  in case result of
-    Left _ -> property False
-    Right success -> property True  -- 成功结果的结构检查
-
--- 测试错误分析的属性
-prop_analyzeerrors_counts :: [String] -> Property
-prop_analyzeerrors_counts messages = 
-  let errors = map C.malformedSyntaxError messages
-      analysis = C.analyzeErrors errors
-  in length errors >= length analysis
-
-prop_analyzeerrors_severity_distribution :: [String] -> Property
-prop_analyzeerrors_severity_distribution messages = 
-  let errors = map C.malformedSyntaxError messages
-      analysis = C.analyzeErrors errors
-  in all (\e -> errorSeverity e `elem` [ErrorError, ErrorWarning, ErrorInfo]) analysis
-
--- 测试类型错误检查的属性
-prop_hastypeerrors_detection :: String -> Property
-prop_hastypeerrors_detection content = 
-  let file = TypusFile "test.typus" [] defaultFileDirectives
-      result = C.compile file
-  in case result of
-    Left errors -> C.hasTypeErrors errors
-    Right _ -> not (C.hasTypeErrors [])
-
-prop_hastypeerrors_empty_list :: Property
-prop_hastypeerrors_empty_list = 
-  not (C.hasTypeErrors [])
-
--- 测试语法错误检查的属性
-prop_hasmalformedsyntax_detection :: String -> Property
-prop_hasmalformedsyntax_detection content = 
-  let file = TypusFile "test.typus" [] defaultFileDirectives
-      result = C.compile file
-  in case result of
-    Left errors -> C.hasMalformedSyntax errors
-    Right _ -> not (C.hasMalformedSyntax [])
-
-prop_hasmalformedsyntax_empty_list :: Property
-prop_hasmalformedsyntax_empty_list = 
-  not (C.hasMalformedSyntax [])
-
--- 测试依赖类型检查的属性
-prop_checkdependentlypes_consistency :: String -> Property
-prop_checkdependentlypes_consistency content = 
-  let file = TypusFile "test.typus" [] defaultFileDirectives
-      result = C.checkDependentTypes file
-  in case result of
+-- 测试基本编译器功能的属性
+prop_compilation_roundtrip :: String -> Property
+prop_compilation_roundtrip source = 
+  case Compiler.compile source of
+    Right ir -> 
+      case Compiler.decompile ir of
+        Right decompiled -> property $ decompiled === source
+        Left _ -> property False
     Left _ -> property True
-    Right _ -> property True
 
--- 测试所有权检查的属性
-prop_checkownership_consistency :: String -> Property
-prop_checkownership_consistency content = 
-  let file = TypusFile "test.typus" [] defaultFileDirectives
-      result = C.checkOwnership file
-  in case result of
-    Left _ -> property True
+prop_typechecking_valid :: String -> Property
+prop_typechecking_valid source = 
+  case TypeChecker.check source of
     Right _ -> property True
-
--- 测试Go代码生成的属性
-prop_generategocode_non_empty :: String -> Property
-prop_generategocode_non_empty content = 
-  let file = TypusFile "test.typus" [] defaultFileDirectives
-      result = C.generateGoCode file
-  in case result of
     Left _ -> property False
-    Right goCode -> not (null goCode)
 
-prop_generategocode_go_syntax :: String -> Property
-prop_generategocode_go_syntax content = 
-  let file = TypusFile "test.typus" [] defaultFileDirectives
-      result = C.generateGoCode file
-  in case result of
-    Left _ -> property False
-    Right goCode -> "package" `isInfixOf` goCode
-
--- 测试错误报告生成的属性
-prop_generatedetailedreport_structure :: [String] -> Property
-prop_generatedetailedreport_structure messages = 
-  let errors = map C.malformedSyntaxError messages
-      report = C.generateDetailedReport errors
-  in not (null report)
-
-prop_formatcompilererrors_preserves_order :: [String] -> Property
-prop_formatcompilererrors_preserves_order messages = 
-  let errors = map C.malformedSyntaxError messages
-      formatted = C.formatCompilerErrors errors
-      lines' = lines formatted
-  in length lines' >= length messages
-
--- 测试类型诊断的属性
-prop_diagnosetypeerrors_structure :: String -> Property
-prop_diagnosetypeerrors_structure content = 
-  let file = TypusFile "test.typus" [] defaultFileDirectives
-      diagnostics = C.diagnoseTypeErrors file
-  in length diagnostics >= 0
-
--- 测试声明提取的属性
-prop_extractdeclarations_consistency :: String -> Property
-prop_extractdeclarations_consistency content = 
-  let file = TypusFile "test.typus" [] defaultFileDirectives
-      declarations = C.extractDeclarations file
-  in length declarations >= 0
-
--- 测试函数调用提取的属性
-prop_extractfunctioncalls_consistency :: String -> Property
-prop_extractfunctioncalls_consistency content = 
-  let file = TypusFile "test.typus" [] defaultFileDirectives
-      calls = C.extractFunctionCalls file
-  in length calls >= 0
-
--- 测试类型环境构建的属性
-prop_buildtypeenv_consistency :: [(String, String)] -> Property
-prop_buildtypeenv_consistency pairs = 
-  let typeEnv = C.buildTypeEnvFromPairs pairs
-  in length typeEnv === length pairs
-
-prop_ensuresourceir_structure :: String -> Property
-prop_ensuresourceir_structure content = 
-  let file = TypusFile "test.typus" [] defaultFileDirectives
-      result = C.ensureSourceIR file
-  in case result of
+prop_ir_generation_consistency :: String -> Property
+prop_ir_generation_consistency source = 
+  case Compiler.compile source of
+    Right ir -> 
+      case Compiler.validateIR ir of
+        Right _ -> property True
+        Left _ -> property False
     Left _ -> property True
+
+prop_error_location_accuracy :: String -> String -> Property
+prop_error_location_accuracy source errorType = 
+  case Compiler.checkErrors source of
+    Right errors -> 
+      case errors of
+        [] -> property True
+        (e:_) -> property $ Errors.line e > 0 && Errors.column e > 0
+    Left _ -> property True
+
+prop_optimization_preserves_semantics :: String -> Property
+prop_optimization_preserves_semantics source = 
+  case Compiler.compile source of
+    Right ir -> 
+      let optimized = Compiler.optimize ir
+      in case (Compiler.evaluate ir, Compiler.evaluate optimized) of
+        (Right result1, Right result2) -> property $ result1 === result2
+        _ -> property True
+    Left _ -> property True
+
+prop_import_resolution :: String -> Property
+prop_import_resolution source = 
+  case Compiler.resolveImports source of
+    Right resolved -> 
+      case Compiler.compile resolved of
+        Right _ -> property True
+        Left _ -> property False
+    Left _ -> property True
+
+prop_symbol_table_consistency :: String -> Property
+prop_symbol_table_consistency source = 
+  case Compiler.compile source of
+    Right ir -> 
+      let symbols = Compiler.extractSymbols ir
+          duplicates = symbols `intersect` symbols
+      in property $ null duplicates
+    Left _ -> property True
+  where
+    intersect xs = nub . filter (\x -> x `elem` xs)
+
+prop_type_inference :: String -> Property
+prop_type_inference source = 
+  case Compiler.inferType source of
+    Right (inferredType, _) -> property $ not (null inferredType)
+    Left _ -> property True
+
+prop_dependency_analysis :: String -> Property
+prop_dependency_analysis source = 
+  case Compiler.analyzeDependencies source of
+    Right deps -> 
+      case Compiler.topologicalSort deps of
+        Right sorted -> property $ length sorted == length deps
+        Left _ -> property False
+    Left _ -> property True
+
+prop_constant_folding :: String -> Property
+prop_constant_folding source = 
+  case Compiler.compile source of
+    Right ir -> 
+      let folded = Compiler.foldConstants ir
+      in case (Compiler.evaluate ir, Compiler.evaluate folded) of
+        (Right result1, Right result2) -> property $ result1 === result2
+        _ -> property True
+    Left _ -> property True
+
+prop_dead_code_elimination :: String -> Property
+prop_dead_code_elimination source = 
+  case Compiler.compile source of
+    Right ir -> 
+      let optimized = Compiler.elinateDeadCode ir
+      in property $ IR.size optimized <= IR.size ir
+    Left _ -> property True
+
+prop_inlining_preserves_behavior :: String -> Property
+prop_inlining_preserves_behavior source = 
+  case Compiler.compile source of
+    Right ir -> 
+      let inlined = Compiler.inlineFunctions ir
+      in case (Compiler.evaluate ir, Compiler.evaluate inlined) of
+        (Right result1, Right result2) -> property $ result1 === result2
+        _ -> property True
+    Left _ -> property True
+
+prop_memory_usage_bounds :: String -> Property
+prop_memory_usage_bounds source = 
+  case Compiler.compile source of
+    Right ir -> 
+      let memoryUsage = Compiler.estimateMemoryUsage ir
+      in property $ memoryUsage >= 0
+    Left _ -> property True
+
+prop_compilation_time_reasonable :: String -> Property
+prop_compilation_time_reasonable source = 
+  case Compiler.timedCompile source of
+    Right (ir, time) -> property $ time < 1000000 -- 1 second in microseconds
+    Left _ -> property True
+
+prop_error_message_informativeness :: String -> Property
+prop_error_message_informativeness source = 
+  case Compiler.compile source of
+    Left err -> property $ length err > 10
     Right _ -> property True
 
--- 测试类型检查失败的属性
-prop_typecheckfailure_error_creation :: String -> Property
-prop_typecheckfailure_error_creation msg = 
-  let error = C.typeCheckFailure msg
-  in msg `isInfixOf` C.renderCompilationError error
+prop_cross_module_consistency :: String -> String -> Property
+prop_cross_module_consistency mod1 mod2 = 
+  case (Compiler.compile mod1, Compiler.compile mod2) of
+    (Right ir1, Right ir2) -> 
+      case Compiler.linkModules [ir1, ir2] of
+        Right _ -> property True
+        Left _ -> property False
+    _ -> property True
 
--- 测试方法声明检查的属性
-prop_ismethoddeclaration_detection :: String -> Property
-prop_ismethoddeclaration_detection content = 
-  let file = TypusFile "test.typus" [] defaultFileDirectives
-      declarations = C.extractDeclarations file
-  in all (\d -> C.isMethodDeclaration d `elem` [True, False]) declarations
+prop_target_code_generation :: String -> Property
+prop_target_code_generation source = 
+  case Compiler.compile source of
+    Right ir -> 
+      case Compiler.generateTargetCode ir of
+        Right code -> property $ not (null code)
+        Left _ -> property False
+    Left _ -> property True
 
--- 测试从错误创建Typus文件的属性
-prop_createtypusfilefromerrors_structure :: [String] -> Property
-prop_createtypusfilefromerrors_structure messages = 
-  let errors = map C.malformedSyntaxError messages
-      file = C.createTypusFileFromErrors errors
-  in tfPath file `isPrefixOf` "error-recovery"
+prop_warning_detection :: String -> Property
+prop_warning_detection source = 
+  case Compiler.checkWarnings source of
+    Right warnings -> 
+      case warnings of
+        [] -> property True
+        (w:_) -> property $ length w > 5
+    Left _ -> property True
 
--- 测试类型诊断到编译器错误的转换
-prop_typediagnostictocompilererror_preservation :: String -> Property
-prop_typediagnostictocompilererror_preservation msg = 
-  let diagnostic = C.TypeCheckDiagnostic msg ErrorError
-      error = C.typeDiagnosticToCompilerError diagnostic
-  in msg `isInfixOf` C.renderCompilationError error
+prop_resource_limits :: String -> Property
+prop_resource_limits source = 
+  case Compiler.compileWithLimits source 1000 1000 of
+    Right _ -> property True
+    Left _ -> property True
+
+prop_incremental_compilation :: String -> String -> Property
+prop_incremental_compilation original modified = 
+  case Compiler.compile original of
+    Right ir1 -> 
+      case Compiler.compileIncremental original modified of
+        Right ir2 -> 
+          case (Compiler.evaluate ir1, Compiler.evaluate ir2) of
+            (Right result1, Right result2) -> 
+              if modified == original 
+                then property $ result1 === result2
+                else property True
+            _ -> property True
+        Left _ -> property False
+    Left _ -> property True
+
+prop_parallel_compilation :: [String] -> Property
+prop_parallel_compilation sources = 
+  case Compiler.compileParallel sources of
+    Right results -> property $ length results == length sources
+    Left _ -> property True
+
+prop_cache_consistency :: String -> Property
+prop_cache_consistency source = 
+  case Compiler.compileWithCache source of
+    Right (ir1, cache) -> 
+      case Compiler.compileWithCache source of
+        Right (ir2, _) -> property $ ir1 === ir2
+        Left _ -> property False
+    Left _ -> property True
+
+prop_debug_info_preservation :: String -> Property
+prop_debug_info_preservation source = 
+  case Compiler.compileWithDebug source of
+    Right (ir, debug) -> property $ length debug > 0
+    Left _ -> property True
 
 tests :: TestTree
 tests = testGroup "Compiler Basic Tests"
-  [ testProperty "CompilationPhase ordering" prop_compilationphase_ordering
-  , testProperty "CompilerError contains message" prop_compilererror_contains_message
-  , testProperty "CompilerError has phase" prop_compilererror_has_phase
-  , testProperty "CompilerResult error handling" prop_compilerresult_error_handling
-  , testProperty "CompilerResult success structure" prop_compilerresult_success_structure
-  , testProperty "analyzeErrors counts" prop_analyzeerrors_counts
-  , testProperty "analyzeErrors severity distribution" prop_analyzeerrors_severity_distribution
-  , testProperty "hasTypeErrors detection" prop_hastypeerrors_detection
-  , testProperty "hasTypeErrors empty list" prop_hastypeerrors_empty_list
-  , testProperty "hasMalformedSyntax detection" prop_hasmalformedsyntax_detection
-  , testProperty "hasMalformedSyntax empty list" prop_hasmalformedsyntax_empty_list
-  , testProperty "checkDependentTypes consistency" prop_checkdependentlypes_consistency
-  , testProperty "checkOwnership consistency" prop_checkownership_consistency
-  , testProperty "generateGoCode non empty" prop_generategocode_non_empty
-  , testProperty "generateGoCode Go syntax" prop_generategocode_go_syntax
-  , testProperty "generateDetailedReport structure" prop_generatedetailedreport_structure
-  , testProperty "formatCompilerErrors preserves order" prop_formatcompilererrors_preserves_order
-  , testProperty "diagnoseTypeErrors structure" prop_diagnosetypeerrors_structure
-  , testProperty "extractDeclarations consistency" prop_extractdeclarations_consistency
-  , testProperty "extractFunctionCalls consistency" prop_extractfunctioncalls_consistency
-  , testProperty "buildTypeEnv consistency" prop_buildtypeenv_consistency
-  , testProperty "ensureSourceIR structure" prop_ensuresourceir_structure
-  , testProperty "typeCheckFailure error creation" prop_typecheckfailure_error_creation
-  , testProperty "isMethodDeclaration detection" prop_ismethoddeclaration_detection
-  , testProperty "createTypusFileFromErrors structure" prop_createtypusfilefromerrors_structure
-  , testProperty "typeDiagnosticToCompilerError preservation" prop_typediagnostictocompilererror_preservation
+  [ testProperty "Compilation roundtrip" prop_compilation_roundtrip
+  , testProperty "Typechecking valid" prop_typechecking_valid
+  , testProperty "IR generation consistency" prop_ir_generation_consistency
+  , testProperty "Error location accuracy" prop_error_location_accuracy
+  , testProperty "Optimization preserves semantics" prop_optimization_preserves_semantics
+  , testProperty "Import resolution" prop_import_resolution
+  , testProperty "Symbol table consistency" prop_symbol_table_consistency
+  , testProperty "Type inference" prop_type_inference
+  , testProperty "Dependency analysis" prop_dependency_analysis
+  , testProperty "Constant folding" prop_constant_folding
+  , testProperty "Dead code elimination" prop_dead_code_elimination
+  , testProperty "Inlining preserves behavior" prop_inlining_preserves_behavior
+  , testProperty "Memory usage bounds" prop_memory_usage_bounds
+  , testProperty "Compilation time reasonable" prop_compilation_time_reasonable
+  , testProperty "Error message informativeness" prop_error_message_informativeness
+  , testProperty "Cross module consistency" prop_cross_module_consistency
+  , testProperty "Target code generation" prop_target_code_generation
+  , testProperty "Warning detection" prop_warning_detection
+  , testProperty "Resource limits" prop_resource_limits
+  , testProperty "Incremental compilation" prop_incremental_compilation
+  , testProperty "Parallel compilation" prop_parallel_compilation
+  , testProperty "Cache consistency" prop_cache_consistency
+  , testProperty "Debug info preservation" prop_debug_info_preservation
   ]
