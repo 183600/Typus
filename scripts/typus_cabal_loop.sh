@@ -161,7 +161,7 @@ while true; do
   fi
 
   if [[ "$CABAL_STATUS" -eq 0 ]]; then
-    iflow "给这个项目增加一些cabal test测试用例，不要超过27个，如果需要使用QuickCheck就使用QuickCheck think:high" --yolo || true
+    iflow "给这个项目增加一些cabal test测试用例，不要超过60个，如果需要使用QuickCheck就使用QuickCheck think:high" --yolo || true
 
     # 门禁：防止 iflow 生成乱码路径被提交
     guard_bad_paths || exit $?
@@ -180,11 +180,16 @@ while true; do
     fi
   else
     echo "调用 iflow 修复..."
-    iflow '解决GHCRTS="-M2G -A16m" cabal test -j1 \
+    # iflow '解决GHCRTS="-M2G -A16m" cabal test -j1 \
   --flags="fast -production" \
   --ghc-options="-O0 -rtsopts" \
   --test-options="+RTS -M1024m -A16m -RTS" \
   --test-show-details=direct显示的所有问题（除了warning），除非测试用例本身有编译错误，否则只修改测试用例以外的代码，debug时可通过加日志和打断点，一定不要消耗大量CPU/内存资源 think:high' --yolo || true
+iflow '解决GHCRTS="-M2G -A16m" cabal test -j1 \
+  --flags="fast -production" \
+  --ghc-options="-O0 -rtsopts" \
+  --test-options="+RTS -M1024m -A16m -RTS" \
+  --test-show-details=direct显示的所有问题（除了warning），除非测试用例本身有编译错误，否则只修改测试用例以外的代码，debug时可通过加日志和打断点 think:high' --yolo || true
 
     # 门禁：即使修复失败也清理掉工作区可能出现的乱码路径，避免下轮被 add
     guard_bad_paths || exit $?
