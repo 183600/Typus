@@ -180,11 +180,6 @@ while true; do
     fi
   else
     echo "调用 iflow 修复..."
-    # iflow '解决GHCRTS="-M2G -A16m" cabal test -j1 \
-  --flags="fast -production" \
-  --ghc-options="-O0 -rtsopts" \
-  --test-options="+RTS -M1024m -A16m -RTS" \
-  --test-show-details=direct显示的所有问题（除了warning），除非测试用例本身有编译错误，否则只修改测试用例以外的代码，debug时可通过加日志和打断点，一定不要消耗大量CPU/内存资源 think:high' --yolo || true
 iflow '解决GHCRTS="-M2G -A16m" cabal test -j1 \
   --flags="fast -production" \
   --ghc-options="-O0 -rtsopts" \
