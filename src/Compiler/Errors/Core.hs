@@ -173,7 +173,7 @@ _isInfo Info = True
 _isInfo _ = False
 
 isAtLeast :: ErrorSeverity -> ErrorSeverity -> Bool
-isAtLeast minSeverity sev = compareSeverity sev minSeverity /= LT
+isAtLeast severity minSeverity = compareSeverity severity minSeverity /= LT
 
 -- Severity level predicates for detailed severity
 _isCritical :: DetailedSeverity -> Bool

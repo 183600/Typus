@@ -1222,7 +1222,12 @@ test-suite typus-test
         Test.Unit.SourceLocationMathSpec,
         Test.Unit.DependenciesCycleDetectionSpec,
         Test.Unit.CompilerIROptimizationSpec,
-        Test.Unit.CoreMathematicalPropertiesSpec
+        Test.Unit.CoreMathematicalPropertiesSpec,
+        
+        -- New QuickCheck Test Modules Added (2025)
+        Test.Unit.NewStringProcessingQuickCheckSpec,
+        Test.Unit.NewParserCombinatorsQuickCheckSpec,
+        Test.Unit.NewErrorHandlingQuickCheckSpec
         
         -- New Test Modules Created (2025) - 4 comprehensive tests
         -- (These modules are already listed above)

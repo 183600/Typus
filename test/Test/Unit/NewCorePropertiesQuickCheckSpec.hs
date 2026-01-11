@@ -8,7 +8,7 @@ module Test.Unit.NewCorePropertiesQuickCheckSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import Test.QuickCheck ((==>))
+import Test.QuickCheck ((==>), conjoin, counterexample)
 import Utils
 import SourceLocation
 import Parser
@@ -129,7 +129,7 @@ prop_spanBetween_correct line1 col1 offset1 line2 col2 offset2 =
      posColumn (spanEnd span) == posColumn pos2
 
 -- | Test mergeSpans: merging spans
-prop_mergeSpans_correct :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Bool
+prop_mergeSpans_correct :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Property
 prop_mergeSpans_correct line1 col1 offset1 line2 col2 offset2 line3 col3 offset3 line4 col4 offset4 = 
   let pos1 = SourcePos line1 col1 offset1
       pos2 = SourcePos line2 col2 offset2
@@ -138,10 +138,34 @@ prop_mergeSpans_correct line1 col1 offset1 line2 col2 offset2 line3 col3 offset3
       span1 = spanBetween pos1 pos2
       span2 = spanBetween pos3 pos4
       merged = mergeSpans span1 span2
-  in posLine (spanStart merged) == min (posLine (spanStart span1)) (posLine (spanStart span2)) &&
-     posColumn (spanStart merged) == min (posColumn (spanStart span1)) (posColumn (spanStart span2)) &&
-     posLine (spanEnd merged) == max (posLine (spanEnd span1)) (posLine (spanEnd span2)) &&
-     posColumn (spanEnd merged) == max (posColumn (spanEnd span1)) (posColumn (spanEnd span2))
+      
+      -- Expected values
+      expectedStartLine = min (posLine (spanStart span1)) (posLine (spanStart span2))
+      expectedStartCol = min (posColumn (spanStart span1)) (posColumn (spanStart span2))
+      expectedStartOffset = min (posOffset (spanStart span1)) (posOffset (spanStart span2))
+      expectedEndLine = max (posLine (spanEnd span1)) (posLine (spanEnd span2))
+      expectedEndCol = max (posColumn (spanEnd span1)) (posColumn (spanEnd span2))
+      expectedEndOffset = max (posOffset (spanEnd span1)) (posOffset (spanEnd span2))
+      
+      -- Actual values
+      actualStartLine = posLine (spanStart merged)
+      actualStartCol = posColumn (spanStart merged)
+      actualStartOffset = posOffset (spanStart merged)
+      actualEndLine = posLine (spanEnd merged)
+      actualEndCol = posColumn (spanEnd merged)
+      actualEndOffset = posOffset (spanEnd merged)
+      
+      -- Helper to show comparison
+      checkEq desc actual expected = 
+        counterexample (desc ++ ": expected " ++ show expected ++ ", got " ++ show actual) (actual == expected)
+  in conjoin 
+     [ checkEq "start line" actualStartLine expectedStartLine
+     , checkEq "start column" actualStartCol expectedStartCol
+     , checkEq "start offset" actualStartOffset expectedStartOffset
+     , checkEq "end line" actualEndLine expectedEndLine
+     , checkEq "end column" actualEndCol expectedEndCol
+     , checkEq "end offset" actualEndOffset expectedEndOffset
+     ]
 
 -- | Test isValidSpan: valid span has start <= end
 prop_isValidSpan_correct :: Int -> Int -> Int -> Int -> Int -> Int -> Bool
@@ -236,9 +260,8 @@ prop_infoAt_correct line col offset message =
 -- | Test fatalError: creating fatal error
 prop_fatalError_correct :: String -> Bool
 prop_fatalError_correct message = 
-  let baseError = errorAt "fatal-id" (T.pack message) (ErrorLocation Nothing 0 0 Nothing Nothing)
-      error = baseError { recovery = fatalRecovery }
-  in severity error == Fatal
+  let error = fatalError "fatal-id" (T.pack message) (ErrorLocation Nothing 0 0 Nothing Nothing)
+  in severity error == Fatal && recovery error == fatalRecovery
 
 -- | Test isAtLeast: reflexive
 prop_isAtLeast_reflexive :: Int -> Bool

@@ -128,8 +128,16 @@ spanBetween start end = SourceSpan start end
 -- Merge two spans
 mergeSpans :: SourceSpan -> SourceSpan -> SourceSpan
 mergeSpans span1 span2 = SourceSpan
-    { spanStart = min (spanStart span1) (spanStart span2)
-    , spanEnd = max (spanEnd span1) (spanEnd span2)
+    { spanStart = SourcePos
+        { posLine = min (posLine (spanStart span1)) (posLine (spanStart span2))
+        , posColumn = min (posColumn (spanStart span1)) (posColumn (spanStart span2))
+        , posOffset = min (posOffset (spanStart span1)) (posOffset (spanStart span2))
+        }
+    , spanEnd = SourcePos
+        { posLine = max (posLine (spanEnd span1)) (posLine (spanEnd span2))
+        , posColumn = max (posColumn (spanEnd span1)) (posColumn (spanEnd span2))
+        , posOffset = max (posOffset (spanEnd span1)) (posOffset (spanEnd span2))
+        }
     }
 
 -- Check if span is valid (start <= end)
