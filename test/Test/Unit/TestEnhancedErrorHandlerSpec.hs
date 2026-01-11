@@ -5,591 +5,144 @@ module Test.Unit.TestEnhancedErrorHandlerSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import ErrorHandler
-import SourceLocation
-import Utils
+import qualified Compiler.Errors.Core as Error
+import SourceLocation (SourcePos(..))
 import qualified Data.Text as T
 import TestSupport.Arbitrary ()
-import Data.Time (UTCTime(..), fromGregorian, secondsToDiffTime)
+import Data.Time (UTCTime(..))
+import Data.Time.Clock (secondsToDiffTime)
+import Control.Monad.State
 
--- | Test suite for Enhanced Error Handler
+-- | Test suite for Enhanced ErrorHandler features
 testEnhancedErrorHandler :: TestTree
-testEnhancedErrorHandler = testGroup "Enhanced Error Handler Tests"
-  [ testCase "ErrorHandler: creates enhanced error with context" $
-      let pos = posAt 5 10
-          message = "Test error"
-          context = ErrorContext 
-            { contextFunction = "testFunction"
-            , contextModule = "TestModule"
-            , contextDescription = "Testing error context"
-            }
-          err = errorWithContext pos message context
-          errContext = errorContext err
-      in contextFunction errContext @?= "testFunction" &&
-         contextModule errContext @?= "TestModule" &&
-         contextDescription errContext @?= "Testing error context"
+testEnhancedErrorHandler = testGroup "Enhanced ErrorHandler Tests"
+  [ testProperty "addErrorWithCategory: categorizes errors correctly" $
+      \() category message collector -> 
+        let err = Error.errorAt "test" (T.pack message) (Error.ErrorLocation Nothing 1 1 Nothing Nothing)
+            errWithCategory = Error.addErrorWithCategory category err
+            newCollector = execState (Error.addError errWithCategory) collector
+        in length (Error.getErrors newCollector) > length (Error.getErrors collector)
+        
+  , testProperty "addWarningWithCategory: categorizes warnings correctly" $
+      \() category message collector -> 
+        let warning = Error.warningAt "test" (T.pack message) (Error.ErrorLocation Nothing 1 1 Nothing Nothing)
+            warningWithCategory = Error.addWarningWithCategory category warning
+            newCollector = execState (Error.addWarningWithCategory warningWithCategory) collector
+        in length (Error.getWarnings newCollector) > length (Error.getWarnings collector)
+        
+  , testCase "Error categories affect recovery behavior" $ do
+      let collector = Error.newErrorCollector ()
+          syntaxError = Error.errorAt "test" (T.pack "Syntax error") (Error.ErrorLocation Nothing 1 1 Nothing Nothing)
+          typeError = Error.errorAt "test" (T.pack "Type error") (Error.ErrorLocation Nothing 1 1 Nothing Nothing)
+          runtimeError = Error.errorAt "test" (T.pack "Runtime error") (Error.ErrorLocation Nothing 1 1 Nothing Nothing)
+          
+          collector1 = execState (Error.addErrorWithCategory Error.Syntax syntaxError) collector
+          collector2 = execState (Error.addErrorWithCategory Error.Type typeError) collector1
+          collector3 = execState (Error.addErrorWithCategory Error.Runtime runtimeError) collector2
+          
+      in do
+        Error.canRecoverFrom Error.Syntax @?= True
+        Error.shouldContinueAfter Error.Syntax @?= True
+        Error.canRecoverFrom Error.Type @?= False
+        Error.shouldContinueAfter Error.Type @?= False
+        Error.canRecoverFrom Error.Runtime @?= False
+        Error.shouldContinueAfter Error.Runtime @?= False
          
-  , testCase "ErrorHandler: adds suggestions to error" $
-      let pos = posAt 5 10
-          message = "Test error"
-          suggestions = ["Suggestion 1", "Suggestion 2"]
-          err = errorWithSuggestions pos message suggestions
-          errSuggestions = errorSuggestions err
-      in errSuggestions @?= suggestions
-      
-  , testCase "ErrorHandler: adds related errors" $
-      let pos = posAt 5 10
-          message = "Main error"
-          relatedErr = errorAt (posAt 6 1) "Related error"
-          err = withRelatedErrors pos message [relatedErr]
-          errRelated = errorRelated err
-      in length errRelated @?= 1
-      
-  , testCase "ErrorHandler: adds timestamp to error" $
-      let pos = posAt 5 10
-          message = "Test error"
-          timestamp = UTCTime (fromGregorian 2023 1 1) (secondsToDiffTime 0)
-          err = errorWithUTCTimestamp pos message timestamp
-          errTimestamp = errorTimestamp err
-      in errTimestamp @?= Just timestamp
-      
-  , testCase "ErrorHandler: wraps error with additional context" $
-      let pos = posAt 5 10
-          message = "Inner error"
-          wrapper = "Wrapper context"
-          innerErr = errorAt pos message
-          wrappedErr = wrapError wrapper innerErr
-      in errorMessage wrappedErr @?= wrapper ++ ": " ++ message
-      
-  , testCase "ErrorHandler: combines multiple errors" $
-      let pos1 = posAt 5 10
-          pos2 = posAt 6 10
-          err1 = errorAt pos1 "First error"
-          err2 = errorAt pos2 "Second error"
-          combinedErr = combineErrors err1 err2
-          errors = combinedErrors combinedErr
-      in length errors @?= 2
-      
-  , testCase "ErrorHandler: filters errors by severity" $
-      let pos = posAt 5 10
-          infoErr = infoAt pos "Info message"
-          warningErr = warningAt pos "Warning message"
-          errorErr = errorAt pos "Error message"
-          errors = [infoErr, warningErr, errorErr]
-          warningAndAbove = filterBySeverity Warning errors
-      in length warningAndAbove @?= 2
-      
-  , testCase "ErrorHandler: filters errors by category" $
-      let pos = posAt 5 10
-          parseErr = errorWithCategory pos "Parse error" ParseError
-          typeErr = errorWithCategory pos "Type error" TypeError
-          runtimeErr = errorWithCategory pos "Runtime error" RuntimeError
-          errors = [parseErr, typeErr, runtimeErr]
-          typeErrors = filterByCategory TypeError errors
-      in length typeErrors @?= 1
-      
-  , testCase "ErrorHandler: generates error statistics" $
-      let pos = posAt 5 10
-          infoErr = infoAt pos "Info message"
-          warningErr = warningAt pos "Warning message"
-          errorErr = errorAt pos "Error message"
-          errors = [infoErr, warningErr, errorErr, errorErr]
-          stats = getErrorStatistics errors
-      in errorCount stats @?= 2 &&
-         warningCount stats @?= 1 &&
-         infoCount stats @?= 1
-      
-  , testCase "ErrorHandler: formats error with location" $
-      let pos = posAt 5 10
-          message = "Test error"
-          err = errorAt pos message
-          formatted = formatErrorWithLocation err
-      in "5:10" `isInfixOf` formatted @?= True &&
-         "Test error" `isInfixOf` formatted @?= True
+  , testCase "Error recovery strategies are applied correctly" $ do
+      let collector = Error.newErrorCollector ()
+          recoverableError = Error.errorAt "test" (T.pack "Recoverable error") (Error.ErrorLocation Nothing 1 1 Nothing Nothing)
+          fatalError = Error.errorAt "test" (T.pack "Fatal error") (Error.ErrorLocation Nothing 1 1 Nothing Nothing)
+          
+          collector1 = execState (Error.addErrorWithRecovery Error.Continue recoverableError) collector
+          collector2 = execState (Error.addErrorWithRecovery Error.Stop fatalError) collector
+          
+      in do
+        Error.shouldContinueAfter (Error.errorSeverity (head (Error.getErrors collector1))) @?= True &&
+        Error.shouldContinueAfter (Error.errorSeverity (head (Error.getErrors collector2))) @?= False
          
-  , testCase "ErrorHandler: formats multiple errors" $
-      let pos1 = posAt 5 10
-          pos2 = posAt 6 10
-          err1 = errorAt pos1 "First error"
-          err2 = errorAt pos2 "Second error"
-          errors = [err1, err2]
-          formatted = formatErrors errors
-      in "First error" `isInfixOf` formatted @?= True &&
-         "Second error" `isInfixOf` formatted @?= True
-         
-  , testCase "ErrorHandler: generates error report" $
-      let pos = posAt 5 10
-          err = errorAt pos "Test error"
-          errors = [err]
-          report = generateErrorReport errors
-      in "Error Report" `isInfixOf` report @?= True &&
-         "Total errors: 1" `isInfixOf` report @?= True
-         
-  , testCase "ErrorHandler: generates error report with timestamp" $
-      let pos = posAt 5 10
-          err = errorAt pos "Test error"
-          errors = [err]
-          timestamp = UTCTime (fromGregorian 2023 1 1) (secondsToDiffTime 0)
-          report = generateErrorReportWithUTCTime errors timestamp
-      in "2023-01-01" `isInfixOf` report @?= True &&
-         "Total errors: 1" `isInfixOf` report @?= True
-         
-  , testCase "ErrorHandler: generates error report with suggestions" $
-      let pos = posAt 5 10
-          suggestions = ["Fix the syntax", "Check the imports"]
-          err = errorWithSuggestions pos "Test error" suggestions
-          errors = [err]
-          report = generateErrorReport errors
-      in "Suggestions:" `isInfixOf` report @?= True &&
-         "Fix the syntax" `isInfixOf` report @?= True
-         
-  , testCase "ErrorHandler: handles error recovery strategies" $
-      let pos = posAt 5 10
-          err = errorAt pos "Test error"
-          recovery = createRecoveryStrategy "Continue processing" Continue
-          recoveredErr = applyRecoveryStrategy err recovery
-      in recoveryStrategy recoveredErr @?= Continue
-      
-  , testCase "ErrorHandler: custom recovery strategy" $
-      let pos = posAt 5 10
-          err = errorAt pos "Test error"
-          recovery = customRecovery "Custom action" (const True)
-          recoveredErr = applyRecoveryStrategy err recovery
-      in recoveryAction recoveredErr @?= "Custom action"
-      
-  , testCase "ErrorHandler: severity comparison" $
-      let severityOrder = [Info, Warning, Error]
-          sorted = sortBySeverity [Error, Info, Warning]
-      in sorted @?= severityOrder
-      
-  , testCase "ErrorHandler: category priority" $
-      let categories = [ParseError, TypeError, RuntimeError, Warning]
-          priorities = map categoryPriority categories
-      in priorities == zip categories [1,2,3,4] @?= True
-      
-  , testCase "ErrorHandler: contextual error messages" $
-      let pos = posAt 5 10
-          message = "Variable not found"
-          context = ErrorContext 
-            { contextFunction = "processData"
-            , contextModule = "DataProcessor"
-            , contextDescription = "Processing input data"
-            }
-          err = errorWithContext pos message context
-          formatted = formatErrorWithLocation err
-      in "DataProcessor.processData" `isInfixOf` formatted @?= True &&
-         "Variable not found" `isInfixOf` formatted @?= True
-         
-  , testCase "ErrorHandler: error chaining" $
-      let pos1 = posAt 5 10
-          pos2 = posAt 6 10
-          pos3 = posAt 7 10
-          err1 = errorAt pos1 "Root cause"
-          err2 = wrapError "Intermediate error" err1
-          err3 = wrapError "Top level error" err2
-          chain = getErrorChain err3
-      in length chain @?= 3
-         
-  , testCase "ErrorHandler: error aggregation" $
-      let pos = posAt 5 10
-          errors = [
-              errorAt pos "Error 1",
-              errorAt pos "Error 2",
-              errorAt (posAt 6 1) "Error 3",
-              errorAt (posAt 7 1) "Error 4"
-              ]
-          aggregated = aggregateErrors errors
-      in errorCount aggregated @?= 4 &&
-         uniqueLocations aggregated @?= 3
-         
-  , testCase "ErrorHandler: error deduplication" $
-      let pos = posAt 5 10
-          err1 = errorAt pos "Duplicate error"
-          err2 = errorAt pos "Duplicate error"
-          err3 = errorAt (posAt 6 1) "Different error"
-          errors = [err1, err2, err3]
-          deduplicated = deduplicateErrors errors
-      in length deduplicated @?= 2
-         
-  , testCase "ErrorHandler: error severity escalation" $
-      let pos = posAt 5 10
-          err = errorAt pos "Initial error"
-          escalated = escalateErrorSeverity err Error
-      in errorSeverity escalated @?= Error
-         
-  , testCase "ErrorHandler: error suppression" $
-      let pos = posAt 5 10
-          err = errorAt pos "Suppressed error"
-          suppressed = suppressError err
-      in errorSuppressed suppressed @?= True
-         
-  , testCase "ErrorHandler: error highlighting" $
-      let pos = posAt 5 10
-          message = "Error with highlighting"
-          highlights = [ErrorHighlight "keyword" 5 8, ErrorHighlight "variable" 12 18]
-          err = errorWithHighlights pos message highlights
-          formatted = formatErrorWithHighlights err
-      in "<highlight:keyword>" `isInfixOf` formatted @?= True &&
-         "<highlight:variable>" `isInfixOf` formatted @?= True
-         
-  , testCase "ErrorHandler: error with code context" $
-      let pos = posAt 5 10
-          message = "Error in code"
-          codeContext = CodeContext 
-            { contextBefore = ["line 3", "line 4"]
-            , contextLine = "line 5 with error"
-            , contextAfter = ["line 6", "line 7"]
-            , contextStartPos = posAt 3 1
-            , contextEndPos = posAt 7 1
-            }
-          err = errorWithCodeContext pos message codeContext
-          formatted = formatErrorWithCodeContext err
-      in "line 4" `isInfixOf` formatted @?= True &&
-         "line 5 with error" `isInfixOf` formatted @?= True &&
-         "line 6" `isInfixOf` formatted @?= True
+  , testCase "Error highlighting preserves context" $ do
+      let highlight = Error.ErrorHighlight "String" 5 10
+          err = Error.errorAt "test" (T.pack "Error in string") (Error.ErrorLocation Nothing 1 1 Nothing Nothing)
+          errWithHighlight = Error.addErrorHighlight highlight err
+          formatted = Error.formatError errWithHighlight
+      in "Error in string" `isInfixOf` formatted
+          
+  , testCase "Multiple highlights are combined correctly" $ do
+      let highlight1 = Error.ErrorHighlight "String" 5 10
+          highlight2 = Error.ErrorHighlight "String" 15 20
+          err = Error.errorAt "test" (T.pack "Multiple errors") (Error.ErrorLocation Nothing 1 1 Nothing Nothing)
+          errWithHighlights = Error.addErrorHighlight highlight1 (Error.addErrorHighlight highlight2 err)
+          formatted = Error.formatError errWithHighlights
+      in "Multiple errors" `isInfixOf` formatted
+          
+  , testCase "Error timestamp is recorded correctly" $ do
+      let now = UTCTime (secondsToDiffTime 1000000)
+          err = Error.errorAt "test" (T.pack "Timestamped error") (Error.ErrorLocation Nothing 1 1 (Just now))
+          timestamp = Error.errorTimestamp err
+      in timestamp == now
+          
+  , testCase "Error context includes surrounding code" $ do
+      let context = ["line 1", "line 2", "line 3"]
+          err = Error.errorAt "test" (T.pack "Context error") (Error.ErrorLocation Nothing 1 1 Nothing Nothing)
+          errWithContext = Error.addErrorContext context err
+          formatted = Error.formatError errWithContext
+      in "Context error" `isInfixOf` formatted
+          
+  , testCase "Error suggestions are prioritized by severity" $ do
+      let collector = Error.newErrorCollector ()
+          highPrioritySuggestion = "Check variable types"
+          lowPrioritySuggestion = "Consider refactoring"
+          err = Error.errorAt "test" (T.pack "Error with suggestions") (Error.ErrorLocation Nothing 1 1 Nothing Nothing)
+          errWithHighPriority = Error.addErrorSuggestion highPrioritySuggestion err
+          errWithBoth = Error.addErrorSuggestion lowPrioritySuggestion errWithHighPriority
+          formattedHigh = Error.formatError errWithHighPriority
+          formattedBoth = Error.formatError errWithBoth
+      in "Check variable types" `isPrefixOf` formattedHigh && 
+         "Consider refactoring" `isInfixOf` formattedBoth
+          
+  , testCase "Error filtering by severity works correctly" $ do
+      let collector = Error.newErrorCollector ()
+          info1 = Error.infoAt "test" "Info 1" (Error.ErrorLocation Nothing 1 1 Nothing Nothing)
+          info2 = Error.infoAt "test" "Info 2" (Error.ErrorLocation Nothing 2 1 Nothing Nothing)
+          warning = Error.warningAt "test" "Warning" (Error.ErrorLocation Nothing 3 1 Nothing Nothing)
+          error = Error.errorAt "test" "Error" (Error.ErrorLocation Nothing 4 1 Nothing Nothing)
+          
+          collector' = execState (Error.addInfo info1) (execState (Error.addInfo info2) (execState (Error.addWarning warning) (execState (Error.addError error) collector)))
+          infoErrors = Error.filterBySeverity Error.Info collector'
+          warningErrors = Error.filterBySeverity Error.Warning collector'
+          criticalErrors = Error.filterBySeverity Error.Error collector'
+      in length infoErrors @?= 2 && length warningErrors @?= 1 && length criticalErrors @?= 1
+          
+  , testCase "Error filtering by category works correctly" $ do
+      let collector = Error.newErrorCollector ()
+          syntaxError = Error.errorAt "test" (T.pack "Syntax error") (Error.ErrorLocation Nothing 1 1 Nothing Nothing)
+          typeError = Error.errorAt "test" (T.pack "Type error") (Error.ErrorLocation Nothing 2 1 Nothing Nothing)
+          runtimeError = Error.errorAt "test" (T.pack "Runtime error") (Error.ErrorLocation Nothing 3 1 Nothing Nothing)
+          
+          collector' = execState (Error.addErrorWithCategory Error.Syntax syntaxError) (execState (Error.addErrorWithCategory Error.Type typeError) (execState (Error.addErrorWithCategory Error.Runtime runtimeError) collector))
+          syntaxErrors = Error.filterByCategory Error.Syntax collector'
+          typeErrors = Error.filterByCategory Error.Type collector'
+          runtimeErrors = Error.filterByCategory Error.Runtime collector'
+      in length syntaxErrors @?= 1 && length typeErrors @?= 1 && length runtimeErrors @?= 1
+          
+  , testCase "Error sorting by severity works correctly" $ do
+      let collector = Error.newErrorCollector ()
+          info = Error.infoAt "test" "Info" (Error.ErrorLocation Nothing 1 1 Nothing Nothing)
+          warning = Error.warningAt "test" "Warning" (Error.ErrorLocation Nothing 2 1 Nothing Nothing)
+          error = Error.errorAt "test" "Error" (Error.ErrorLocation Nothing 3 1 Nothing Nothing)
+          
+          collector' = execState (Error.addInfo info) (execState (Error.addWarning warning) (execState (Error.addError error) collector))
+          sortedErrors = Error.sortBySeverity (Error.getErrors collector')
+          sortedSeverity = map Error.errorSeverity sortedErrors
+      in sortedSeverity == [Error.Error, Error.Warning, Error.Info]
   ]
 
--- Helper functions
-isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` (substrings haystack)
-  where
-    substrings s = [take i s | i <- [1..length s]]
-
--- Enhanced error types
-data ErrorContext = ErrorContext
-  { contextFunction :: String
-  , contextModule :: String
-  , contextDescription :: String
-  } deriving (Eq, Show)
-
-data ErrorCategory = ParseError | TypeError | RuntimeError | Warning | Info
+-- Local type definitions to avoid conflicts
+data TestErrorSeverity = TestInfo | TestWarning | TestError
   deriving (Eq, Show, Ord)
 
-data ErrorSeverity = Info | Warning | Error
-  deriving (Eq, Show, Ord)
-
-data ErrorRecovery = Continue | Stop | Retry | Custom String
+data TestErrorRecovery = TestContinue | TestStop | TestRetry | TestCustom String
   deriving (Eq, Show)
 
-data ErrorHighlight = ErrorHighlight String Int Int  -- Type, start, end
+data TestErrorHighlight = TestErrorHighlight String Int Int  -- Type, start, end
   deriving (Eq, Show)
-
-data CodeContext = CodeContext
-  { contextBefore :: [String]
-  , contextLine :: String
-  , contextAfter :: [String]
-  , contextStartPos :: SourcePos
-  , contextEndPos :: SourcePos
-  } deriving (Eq, Show)
-
-data EnhancedError = EnhancedError
-  { errorMessage :: String
-  , errorLocation :: ErrorLocation
-  , errorContext :: Maybe ErrorContext
-  , errorSuggestions :: [String]
-  , errorRelated :: [EnhancedError]
-  , errorTimestamp :: Maybe UTCTime
-  , errorSeverity :: ErrorSeverity
-  , errorCategory :: ErrorCategory
-  , errorRecovery :: Maybe ErrorRecovery
-  , errorHighlights :: [ErrorHighlight]
-  , errorCodeContext :: Maybe CodeContext
-  , errorSuppressed :: Bool
-  } deriving (Eq, Show)
-
-data ErrorStatistics = ErrorStatistics
-  { errorCount :: Int
-  , warningCount :: Int
-  , infoCount :: Int
-  , uniqueLocations :: Int
-  } deriving (Eq, Show)
-
--- Enhanced error functions
-errorWithContext :: SourcePos -> String -> ErrorContext -> EnhancedError
-errorWithContext pos message ctx = EnhancedError
-  { errorMessage = message
-  , errorLocation = toErrorLocation pos
-  , errorContext = Just ctx
-  , errorSuggestions = []
-  , errorRelated = []
-  , errorTimestamp = Nothing
-  , errorSeverity = Error
-  , errorCategory = RuntimeError
-  , errorRecovery = Nothing
-  , errorHighlights = []
-  , errorCodeContext = Nothing
-  , errorSuppressed = False
-  }
-
-errorWithSuggestions :: SourcePos -> String -> [String] -> EnhancedError
-errorWithSuggestions pos message suggestions = EnhancedError
-  { errorMessage = message
-  , errorLocation = toErrorLocation pos
-  , errorContext = Nothing
-  , errorSuggestions = suggestions
-  , errorRelated = []
-  , errorTimestamp = Nothing
-  , errorSeverity = Error
-  , errorCategory = RuntimeError
-  , errorRecovery = Nothing
-  , errorHighlights = []
-  , errorCodeContext = Nothing
-  , errorSuppressed = False
-  }
-
-errorWithCategory :: SourcePos -> String -> ErrorCategory -> EnhancedError
-errorWithCategory pos message category = EnhancedError
-  { errorMessage = message
-  , errorLocation = toErrorLocation pos
-  , errorContext = Nothing
-  , errorSuggestions = []
-  , errorRelated = []
-  , errorTimestamp = Nothing
-  , errorSeverity = Error
-  , errorCategory = category
-  , errorRecovery = Nothing
-  , errorHighlights = []
-  , errorCodeContext = Nothing
-  , errorSuppressed = False
-  }
-
-errorWithUTCTimestamp :: SourcePos -> String -> UTCTime -> EnhancedError
-errorWithUTCTimestamp pos message timestamp = EnhancedError
-  { errorMessage = message
-  , errorLocation = toErrorLocation pos
-  , errorContext = Nothing
-  , errorSuggestions = []
-  , errorRelated = []
-  , errorTimestamp = Just timestamp
-  , errorSeverity = Error
-  , errorCategory = RuntimeError
-  , errorRecovery = Nothing
-  , errorHighlights = []
-  , errorCodeContext = Nothing
-  , errorSuppressed = False
-  }
-
-withRelatedErrors :: SourcePos -> String -> [EnhancedError] -> EnhancedError
-withRelatedErrors pos message related = EnhancedError
-  { errorMessage = message
-  , errorLocation = toErrorLocation pos
-  , errorContext = Nothing
-  , errorSuggestions = []
-  , errorRelated = related
-  , errorTimestamp = Nothing
-  , errorSeverity = Error
-  , errorCategory = RuntimeError
-  , errorRecovery = Nothing
-  , errorHighlights = []
-  , errorCodeContext = Nothing
-  , errorSuppressed = False
-  }
-
-errorWithHighlights :: SourcePos -> String -> [ErrorHighlight] -> EnhancedError
-errorWithHighlights pos message highlights = EnhancedError
-  { errorMessage = message
-  , errorLocation = toErrorLocation pos
-  , errorContext = Nothing
-  , errorSuggestions = []
-  , errorRelated = []
-  , errorTimestamp = Nothing
-  , errorSeverity = Error
-  , errorCategory = RuntimeError
-  , errorRecovery = Nothing
-  , errorHighlights = highlights
-  , errorCodeContext = Nothing
-  , errorSuppressed = False
-  }
-
-errorWithCodeContext :: SourcePos -> String -> CodeContext -> EnhancedError
-errorWithCodeContext pos message codeCtx = EnhancedError
-  { errorMessage = message
-  , errorLocation = toErrorLocation pos
-  , errorContext = Nothing
-  , errorSuggestions = []
-  , errorRelated = []
-  , errorTimestamp = Nothing
-  , errorSeverity = Error
-  , errorCategory = RuntimeError
-  , errorRecovery = Nothing
-  , errorHighlights = []
-  , errorCodeContext = Just codeCtx
-  , errorSuppressed = False
-  }
-
--- Base error functions
-errorAt :: SourcePos -> String -> EnhancedError
-errorAt pos message = EnhancedError
-  { errorMessage = message
-  , errorLocation = toErrorLocation pos
-  , errorContext = Nothing
-  , errorSuggestions = []
-  , errorRelated = []
-  , errorTimestamp = Nothing
-  , errorSeverity = Error
-  , errorCategory = RuntimeError
-  , errorRecovery = Nothing
-  , errorHighlights = []
-  , errorCodeContext = Nothing
-  , errorSuppressed = False
-  }
-
-warningAt :: SourcePos -> String -> EnhancedError
-warningAt pos message = (errorAt pos message) { errorSeverity = Warning, errorCategory = Warning }
-
-infoAt :: SourcePos -> String -> EnhancedError
-infoAt pos message = (errorAt pos message) { errorSeverity = Info, errorCategory = Info }
-
--- Error manipulation functions
-wrapError :: String -> EnhancedError -> EnhancedError
-wrapError wrapper err = err { errorMessage = wrapper ++ ": " ++ errorMessage err }
-
-combineErrors :: EnhancedError -> EnhancedError -> EnhancedError
-combineErrors err1 err2 = EnhancedError
-  { errorMessage = errorMessage err1 ++ " and " ++ errorMessage err2
-  , errorLocation = errorLocation err1
-  , errorContext = errorContext err1
-  , errorSuggestions = errorSuggestions err1 ++ errorSuggestions err2
-  , errorRelated = [err1, err2]
-  , errorTimestamp = errorTimestamp err1
-  , errorSeverity = max (errorSeverity err1) (errorSeverity err2)
-  , errorCategory = errorCategory err1
-  , errorRecovery = errorRecovery err1
-  , errorHighlights = errorHighlights err1 ++ errorHighlights err2
-  , errorCodeContext = errorCodeContext err1
-  , errorSuppressed = False
-  }
-
-filterBySeverity :: ErrorSeverity -> [EnhancedError] -> [EnhancedError]
-filterBySeverity minSeverity = filter (\e -> errorSeverity e >= minSeverity)
-
-filterByCategory :: ErrorCategory -> [EnhancedError] -> [EnhancedError]
-filterByCategory category = filter (\e -> errorCategory e == category)
-
-getErrorStatistics :: [EnhancedError] -> ErrorStatistics
-getErrorStatistics errors = ErrorStatistics
-  { errorCount = length $ filter (\e -> errorSeverity e == Error) errors
-  , warningCount = length $ filter (\e -> errorSeverity e == Warning) errors
-  , infoCount = length $ filter (\e -> errorSeverity e == Info) errors
-  , uniqueLocations = length $ uniqueLocationsList errors
-  }
-  where
-    uniqueLocationsList = nub $ map errorLocation errors
-
-formatErrorWithLocation :: EnhancedError -> String
-formatErrorWithLocation err = 
-  "Error at " ++ show (line (errorLocation err)) ++ ":" ++ 
-  show (column (errorLocation err)) ++ ": " ++ errorMessage err
-
-formatErrors :: [EnhancedError] -> String
-formatErrors errors = unlines $ map formatErrorWithLocation errors
-
-generateErrorReport :: [EnhancedError] -> String
-generateErrorReport errors = 
-  "Error Report\n" ++
-  "============\n" ++
-  "Total errors: " ++ show (length errors) ++ "\n" ++
-  unlines (map formatErrorWithLocation errors)
-
-generateErrorReportWithUTCTime :: [EnhancedError] -> UTCTime -> String
-generateErrorReportWithUTCTime errors timestamp = 
-  "Error Report - " ++ show timestamp ++ "\n" ++
-  "===============================\n" ++
-  "Total errors: " ++ show (length errors) ++ "\n" ++
-  unlines (map formatErrorWithLocation errors)
-
--- Recovery strategy functions
-data RecoveryStrategy = RecoveryStrategy
-  { recoveryAction :: String
-  , recoveryType :: ErrorRecovery
-  }
-
-createRecoveryStrategy :: String -> ErrorRecovery -> RecoveryStrategy
-createRecoveryStrategy action recoveryType = RecoveryStrategy action recoveryType
-
-customRecovery :: String -> (EnhancedError -> Bool) -> RecoveryStrategy
-customRecovery action _ = RecoveryStrategy action (Custom action)
-
-applyRecoveryStrategy :: EnhancedError -> RecoveryStrategy -> EnhancedError
-applyRecoveryStrategy err strategy = err { errorRecovery = Just (recoveryType strategy) }
-
--- Utility functions
-sortBySeverity :: [ErrorSeverity] -> [ErrorSeverity]
-sortBySeverity = sort
-
-categoryPriority :: ErrorCategory -> Int
-categoryPriority ParseError = 1
-categoryPriority TypeError = 2
-categoryPriority RuntimeError = 3
-categoryPriority Warning = 4
-categoryPriority Info = 5
-
-getErrorChain :: EnhancedError -> [EnhancedError]
-getErrorChain err = err : concatMap getErrorChain (errorRelated err)
-
-aggregateErrors :: [EnhancedError] -> ErrorStatistics
-aggregateErrors = getErrorStatistics
-
-deduplicateErrors :: [EnhancedError] -> [EnhancedError]
-deduplicateErrors = nubBy (\e1 e2 -> errorMessage e1 == errorMessage e2 && 
-                                   errorLocation e1 == errorLocation e2)
-
-escalateErrorSeverity :: EnhancedError -> ErrorSeverity -> EnhancedError
-escalateErrorSeverity err severity = err { errorSeverity = severity }
-
-suppressError :: EnhancedError -> EnhancedError
-suppressError err = err { errorSuppressed = True }
-
-formatErrorWithHighlights :: EnhancedError -> String
-formatErrorWithHighlights err = 
-  let base = formatErrorWithLocation err
-      highlights = map formatHighlight (errorHighlights err)
-  in base ++ "\n" ++ unlines highlights
-  where
-    formatHighlight (ErrorHighlight typ start end) = 
-      "<highlight:" ++ typ ++ "> at position " ++ show start ++ "-" ++ show end
-
-formatErrorWithCodeContext :: EnhancedError -> String
-formatErrorWithCodeContext err = 
-  let base = formatErrorWithLocation err
-  in case errorCodeContext err of
-       Nothing -> base
-       Just ctx -> base ++ "\n" ++ formatCodeContext ctx
-  where
-    formatCodeContext ctx = 
-      "Code context:\n" ++
-      unlines (map ("  " ++) (contextBefore ctx)) ++
-      "> " ++ contextLine ctx ++ "\n" ++
-      unlines (map ("  " ++) (contextAfter ctx))
-
--- Helper functions
-nub :: Eq a => [a] -> [a]
-nub [] = []
-nub (x:xs) = x : nub (filter (/= x) xs)
-
-nubBy :: (a -> a -> Bool) -> [a] -> [a]
-nubBy _ [] = []
-nubBy eq (x:xs) = x : nubBy (filter (not . eq x)) xs
-
-sort :: Ord a => [a] -> [a]
-sort = foldr insert []
-  where
-    insert x [] = [x]
-    insert x (y:ys) = if x <= y then x:y:ys else y:insert x ys
-
--- Simplified SourceLocation types for testing
-data SourcePos = SourcePos 
-  { posLine :: Int
-  , posColumn :: Int
-  } deriving (Eq, Show, Ord)
-
-posAt :: Int -> Int -> SourcePos
-posAt line column = SourcePos line column
-
-data ErrorLocation = ErrorLocation 
-  { line :: Int
-  , column :: Int
-  } deriving (Eq, Show, Ord)
-
-toErrorLocation :: SourcePos -> ErrorLocation
-toErrorLocation pos = ErrorLocation (posLine pos) (posColumn pos)

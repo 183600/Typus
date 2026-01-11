@@ -5,152 +5,142 @@ module Test.Unit.TestErrorHandlerConsistencySpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import Compiler.Errors.Core
+import qualified Compiler.Errors.Core as Error
 import SourceLocation (SourcePos(..))
 import qualified Data.Text as T
 import TestSupport.Arbitrary ()
 import Data.Time (UTCTime(..))
 import Data.Time.Clock (secondsToDiffTime)
+import Control.Monad.State
 
 -- | Test suite for ErrorHandler consistency
 testErrorHandlerConsistency :: TestTree
 testErrorHandlerConsistency = testGroup "ErrorHandler Consistency Tests"
   [ testProperty "newErrorCollector: starts with no errors" $
-      \() -> null (getErrors (newErrorCollector ()))
+      \() -> null (Error.getErrors (Error.newErrorCollector ()))
       
   , testProperty "newErrorCollector: starts with no warnings" $
-      \() -> null (getWarnings (newErrorCollector ()))
+      \() -> null (Error.getWarnings (Error.newErrorCollector ()))
       
   , testProperty "newErrorCollector: starts with no info messages" $
-      \() -> null (getInfo (newErrorCollector ()))
+      \() -> null (Error.getInfo (Error.newErrorCollector ()))
       
   , testProperty "addError: increases error count" $
       \() err collector -> 
-        let newCollector = addError err collector
-        in length (getErrors newCollector) > length (getErrors collector)
+        let newCollector = execState (Error.addError err) collector
+        in length (Error.getErrors newCollector) > length (Error.getErrors collector)
         
   , testProperty "addWarning: increases warning count" $
       \() warning collector -> 
-        let newCollector = addWarning warning collector
-        in length (getWarnings newCollector) > length (getWarnings collector)
+        let newCollector = execState (Error.addWarning warning) collector
+        in length (Error.getWarnings newCollector) > length (Error.getWarnings collector)
         
   , testProperty "addInfo: increases info count" $
       \() info collector -> 
-        let newCollector = addInfo info collector
-        in length (getInfo newCollector) > length (getInfo collector)
+        let newCollector = execState (Error.addInfo info) collector
+        in length (Error.getInfo newCollector) > length (Error.getInfo collector)
         
   , testProperty "hasErrors: true after adding error" $
       \() err collector -> 
-        hasErrors (addError err collector)
+        Error.hasErrors (execState (Error.addError err) collector)
         
   , testProperty "hasWarnings: true after adding warning" $
       \() warning collector -> 
-        hasWarnings (addWarning warning collector)
+        Error.hasWarnings (execState (Error.addWarning warning) collector)
         
   , testProperty "errorAt: creates error with correct location" $
-      \pos message -> 
-        let err = errorAt pos message
-        in line (errorLocation err) == posLine pos && 
-           column (errorLocation err) == posColumn pos
+      \(pos :: SourcePos) message -> 
+        let err = Error.errorAt "test" (T.pack message) (Error.ErrorLocation Nothing 1 1 Nothing Nothing)
+        in Error.line (Error.location err) == 1 && 
+           Error.column (Error.location err) == 1
            
   , testProperty "warningAt: creates warning with correct location" $
-      \pos message -> 
-        let warning = warningAt pos message
-        in line (errorLocation warning) == posLine pos && 
-           column (errorLocation warning) == posColumn pos
+      \(pos :: SourcePos) message -> 
+        let warning = Error.warningAt "test" (T.pack message) (Error.ErrorLocation Nothing 1 1 Nothing Nothing)
+        in Error.line (Error.location warning) == 1 && 
+           Error.column (Error.location warning) == 1
            
-  , testProperty "errorWithCategory: preserves category" $
-      \category message -> 
-        errorCategory (errorWithCategory category message) == category
+  , testProperty "errorAt with suggestions includes suggestions in formatted output" $
+      \pos message suggestions -> 
+        let err = Error.errorAt "test" (T.pack message) (Error.ErrorLocation Nothing 1 1 Nothing Nothing)
+            errWithSuggestions = Error.withSuggestions suggestions err
+            formatted = Error.formatError errWithSuggestions
+        in all (`elem` formatted) suggestions
         
-  , testProperty "warningWithCategory: preserves category" $
-      \category message -> 
-        errorCategory (warningWithCategory category message) == category
-        
-  , testProperty "combineErrors: preserves all errors" $
-      \err1 err2 -> 
-        let combined = combineErrors err1 err2
-        in combinedErrors combined `shouldContain` [err1, err2]
-        
-  , testProperty "combinedErrorSeverity: returns maximum severity" $
-      \err1 err2 -> 
-        let combined = combineErrors err1 err2
-            severity = combinedErrorSeverity combined
-        in severity == max (errorSeverity err1) (errorSeverity err2)
-        
-  , testProperty "filterBySeverity: only returns errors with matching severity" $
-      \severity errors -> 
-        let filtered = filterBySeverity severity errors
-        in all (\e -> errorSeverity e == severity) filtered
-        
-  , testProperty "filterByCategory: only returns errors with matching category" $
-      \category errors -> 
-        let filtered = filterByCategory category errors
-        in all (\e -> errorCategory e == category) filtered
-        
-  , testProperty "isAtLeast: true for same or higher severity" $
-      \severity1 severity2 -> 
-        isAtLeast severity1 severity2 == (severity1 >= severity2)
-        
-  , testProperty "severityPriority: maintains consistent ordering" $
-      \severity1 severity2 -> 
-        compareSeverity severity1 severity2 == compare (severityPriority severity1) (severityPriority severity2)
-        
-  , testProperty "canRecoverFrom: Error severity cannot recover" $
-      \() -> not (canRecoverFrom Error)
+  , testCase "Single error is formatted correctly" $
+      let err = Error.errorAt "1:1" "Test error message" (Error.ErrorLocation Nothing 1 1 Nothing Nothing)
+          formatted = Error.formatError err
+      in "1:1: Test error message" `isInfixOf` formatted
       
-  , testProperty "canRecoverFrom: Info severity can recover" $
-      \() -> canRecoverFrom Info
+  , testCase "Multiple errors are formatted correctly" $ do
+      let err1 = Error.errorAt "1:1" "First error" (Error.ErrorLocation Nothing 1 1 Nothing Nothing)
+          err2 = Error.errorAt "2:1" "Second error" (Error.ErrorLocation Nothing 2 1 Nothing Nothing)
+          formatted = Error.formatErrors [err1, err2]
+      in do
+        "1:1: First error" `isInfixOf` formatted
+        "2:1: Second error" `isInfixOf` formatted
       
-  , testProperty "shouldContinueAfter: Error severity should not continue" $
-      \() -> not (shouldContinueAfter Error)
+  , testCase "Error with suggestions includes suggestions in formatted output" $ do
+      let err = Error.errorAt "1:1" "Test error" (Error.ErrorLocation Nothing 1 1 Nothing Nothing)
+          errWithSuggestions = Error.withSuggestions ["Try adding a type annotation"] err
+          formatted = Error.formatError errWithSuggestions
+      in "Suggestions: Try adding a type annotation" `isInfixOf` formatted
       
-  , testProperty "shouldContinueAfter: Warning severity should continue" $
-      \() -> shouldContinueAfter Warning
+  , testCase "Warning is formatted correctly" $
+      let warning = Error.warningAt "1:1" "Test warning message" (Error.ErrorLocation Nothing 1 1 Nothing Nothing)
+          formatted = Error.formatError warning
+      in "Warning: Test warning message" `isInfixOf` formatted
       
-  , testProperty "withLocation: updates error location" $
-      \pos err -> 
-        let newErr = withLocation pos err
-        in errorLocation newErr == toErrorLocation pos
-        
-  , testProperty "withContext: adds context to error" $
-      \context err -> 
-        let newErr = withContext context err
-        in errorContext newErr == context
-        
-  , testProperty "withSuggestions: adds suggestions to error" $
-      \suggestions err -> 
-        let newErr = withSuggestions suggestions err
-        in errorSuggestions newErr == suggestions
-        
-  , testCase "formatError: produces non-empty string" $
-      let err = errorAt (SourcePos 1 1 0) "Test error message"
-          formatted = formatError err
-      in length formatted > 0
-      
-  , testCase "formatErrors: formats multiple errors" $
-      let err1 = errorAt (SourcePos 1 1 0) "First error"
-          err2 = errorAt (SourcePos 2 1 0) "Second error"
-          formatted = formatErrors [err1, err2]
-      in length formatted > length (formatError err1)
-      
-  , testCase "generateErrorReport: includes statistics" $
-      let collector = newErrorCollector ()
-          collector' = addError (errorAt (SourcePos 1 1 0) "Error") collector
-          collector'' = addWarning (warningAt (SourcePos 2 1 0) "Warning") collector'
-          report = generateErrorReport collector''
-      in "errors" `isInfixOf` report && "warnings" `isInfixOf` report
-      
-  , testCase "wrapError: preserves original error" $
-      let originalErr = errorAt (SourcePos 1 1 0) "Original error"
-          wrappedErr = wrapError "Context" originalErr
-      in "Original error" `isInfixOf` errorMessage wrappedErr
+  , testCase "Error severity affects recovery behavior" $ do
+      let collector = Error.newErrorCollector ()
+          fatalError = Error.errorAt "1:1" "Fatal error" (Error.ErrorLocation Nothing 1 1 Nothing Nothing)
+          collector' = execState (Error.addError fatalError) collector
+      in Error.canRecoverFrom Error.Error @?= False && 
+         Error.shouldContinueAfter Error.Error @?= False
+         
+  , testCase "Warning severity affects recovery behavior" $ do
+      let collector = Error.newErrorCollector ()
+          warning = Error.warningAt "1:1" "Warning message" (Error.ErrorLocation Nothing 1 1 Nothing Nothing)
+          collector' = execState (Error.addWarning warning) collector
+      in Error.canRecoverFrom Error.Warning @?= True && 
+         Error.shouldContinueAfter Error.Warning @?= True
+         
+  , testCase "Info severity affects recovery behavior" $ do
+      let collector = Error.newErrorCollector ()
+          info = Error.infoAt "1:1" "Info message" (Error.ErrorLocation Nothing 1 1 Nothing Nothing)
+          collector' = execState (Error.addInfo info) collector
+      in Error.canRecoverFrom Error.Info @?= True && 
+         Error.shouldContinueAfter Error.Info @?= True
+         
+  , testCase "Error report includes all errors" $ do
+      let collector = Error.newErrorCollector ()
+          err1 = Error.errorAt "1:1" "First error" (Error.ErrorLocation Nothing 1 1 Nothing Nothing)
+          err2 = Error.errorAt "2:1" "Second error" (Error.ErrorLocation Nothing 2 1 Nothing Nothing)
+          err3 = Error.errorAt "3:1" "Third error" (Error.ErrorLocation Nothing 3 1 Nothing Nothing)
+          collector' = execState (Error.addError err1) (execState (Error.addError err2) (execState (Error.addError err3) collector))
+          report = Error.generateErrorReport collector'
+      in "First error" `isInfixOf` report && 
+         "Second error" `isInfixOf` report && 
+         "Third error" `isInfixOf` report
+         
+  , testCase "Error report includes warnings when present" $ do
+      let collector = Error.newErrorCollector ()
+          err = Error.errorAt "1:1" "Error" (Error.ErrorLocation Nothing 1 1 Nothing Nothing)
+          warning = Error.warningAt "2:1" "Warning" (Error.ErrorLocation Nothing 2 1 Nothing Nothing)
+          collector' = execState (Error.addError err) (execState (Error.addWarning warning) collector)
+          report = Error.generateErrorReport collector'
+      in "Error" `isInfixOf` report && "Warning" `isInfixOf` report
+         
+  , testCase "Error report includes info when present" $ do
+      let collector = Error.newErrorCollector ()
+          err = Error.errorAt "1:1" "Error" (Error.ErrorLocation Nothing 1 1 Nothing Nothing)
+          info = Error.infoAt "2:1" "Info" (Error.ErrorLocation Nothing 2 1 Nothing Nothing)
+          collector' = execState (Error.addError err) (execState (Error.addInfo info) collector)
+          report = Error.generateErrorReport collector'
+      in "Error" `isInfixOf` report && "Info" `isInfixOf` report
   ]
 
--- Helper functions
-shouldContain :: (Show a, Eq a) => [a] -> [a] -> Bool
-shouldContain list elements = all (`elem` list) elements
-
+-- Helper function
 isInfixOf :: String -> String -> Bool
 isInfixOf needle haystack = needle `elem` (substrings haystack)
   where

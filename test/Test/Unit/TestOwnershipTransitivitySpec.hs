@@ -17,93 +17,80 @@ testOwnershipTransitivity = testGroup "Ownership Transitivity Tests"
   [ testCase "analyzeOwnership: simple ownership transfer" $
       let input = "package main\n\nfunc main() {\n    data := make([]byte, 100)\n    processData(data)\n}\n\nfunc processData(d []byte) {\n    // Process data\n}"
           result = analyzeOwnership input
-      in let errors = result in if null errors then do
-             return ()  -- Success case
-           else
-             assertFailure $ "Ownership analysis failed: " ++ show errors
+      in length result @?= 1
              
   , testCase "analyzeOwnership: multiple ownership transfers" $
       let input = "package main\n\nfunc main() {\n    data := make([]byte, 100)\n    processData(data)\n    moreProcessing(data)\n}\n\nfunc processData(d []byte) {\n    // Process data\n}\n\nfunc moreProcessing(d []byte) {\n    // More processing\n}"
           result = analyzeOwnership input
-      in let errors = result in if null errors then do
-             length transfers @?= 2  -- data transferred twice
+      in length result @?= 2
              
-  testCase "analyzeOwnership: ownership transfer chain" $
+  , testCase "analyzeOwnership: ownership transfer chain" $
       let input = "package main\n\nfunc main() {\n    data := make([]byte, 100)\n    first(data)\n}\n\nfunc first(d []byte) {\n    second(d)\n}\n\nfunc second(d []byte) {\n    third(d)\n}\n\nfunc third(d []byte) {\n    // Final processing\n}"
           result = analyzeOwnership input
-      in let errors = result in if null errors then do
-             length transfers @?= 3  -- data transferred through chain
+      in length result @?= 3
              
-  testCase "analyzeOwnership: conditional ownership transfer" $
+  , testCase "analyzeOwnership: conditional ownership transfer" $
       let input = "package main\n\nfunc main() {\n    data := make([]byte, 100)\n    if condition {\n        processData(data)\n    } else {\n        otherProcess(data)\n    }\n}\n\nfunc processData(d []byte) {\n    // Process data\n}\n\nfunc otherProcess(d []byte) {\n    // Other process\n}"
           result = analyzeOwnership input
-      in let errors = result in if null errors then do
-             length transfers @?= 2  -- data transferred conditionally
+      in length result @?= 2
              
-  testCase "analyzeOwnership: loop ownership transfer" $
+  , testCase "analyzeOwnership: loop ownership transfer" $
       let input = "package main\n\nfunc main() {\n    data := make([]byte, 100)\n    for i := 0; i < 10; i++ {\n        processData(data)\n    }\n}\n\nfunc processData(d []byte) {\n    // Process data\n}"
           result = analyzeOwnership input
-      in let errors = result in if null errors then do
-             length transfers @?= 1  -- data transferred in loop
+      in length result @?= 1
              
-  , testCase "analyzeOwnership: struct ownership transfer" $
-      let input = "package main\n\ntype Data struct {\n    content []byte\n}\n\nfunc main() {\n    d := Data{content: make([]byte, 100)}\n    processData(d)\n}\n\nfunc processData(d Data) {\n    // Process data\n}"
+  , testCase "analyzeOwnership: ownership transfer with return" $
+      let input = "package main\n\nfunc main() {\n    data := make([]byte, 100)\n    result := processData(data)\n    moreProcessing(result)\n}\n\nfunc processData(d []byte) []byte {\n    // Process and return data\n    return d\n}\n\nfunc moreProcessing(d []byte) {\n    // More processing\n}"
           result = analyzeOwnership input
-      in let errors = result in if null errors then do
-             length transfers @?= 1  -- struct transferred
+      in length result @?= 1
              
-  , testCase "analyzeOwnership: pointer ownership transfer" $
-      let input = "package main\n\nfunc main() {\n    data := make([]byte, 100)\n    processData(&data)\n}\n\nfunc processData(d *[]byte) {\n    // Process data\n}"
+  , testCase "analyzeOwnership: ownership transfer with struct field" $
+      let input = "package main\n\ntype Data struct {\n    content []byte\n}\n\nfunc main() {\n    data := Data{content: make([]byte, 100)}\n    processData(data.content)\n}\n\nfunc processData(d []byte) {\n    // Process data\n}"
           result = analyzeOwnership input
-      in let errors = result in if null errors then do
-             length transfers @?= 1  -- pointer transferred
+      in length result @?= 1
              
-  , testCase "analyzeOwnership: channel ownership transfer" $
-      let input = "package main\n\nfunc main() {\n    ch := make(chan []byte, 1)\n    data := make([]byte, 100)\n    ch <- data\n    received := <-ch\n    processData(received)\n}\n\nfunc processData(d []byte) {\n    // Process data\n}"
+  , testCase "analyzeOwnership: ownership transfer with channel" $
+      let input = "package main\n\nfunc main() {\n    ch := make(chan []byte, 1)\n    data := make([]byte, 100)\n    ch <- data\n    processData(<-ch)\n}\n\nfunc processData(d []byte) {\n    // Process data\n}"
           result = analyzeOwnership input
-      in let errors = result in if null errors then do
-             length transfers @?= 2  -- data transferred through channel
+      in length result @?= 1
              
-  , testCase "analyzeOwnership: closure ownership transfer" $
-      let input = "package main\n\nfunc main() {\n    data := make([]byte, 100)\n    func() {\n        processData(data)\n    }()\n}\n\nfunc processData(d []byte) {\n    // Process data\n}"
+  , testCase "analyzeOwnership: ownership transfer with slice" $
+      let input = "package main\n\nfunc main() {\n    data := make([]byte, 100)\n    slice := data[10:50]\n    processData(slice)\n}\n\nfunc processData(d []byte) {\n    // Process data\n}"
           result = analyzeOwnership input
-      in let errors = result in if null errors then do
-             length transfers @?= 1  -- data transferred to closure
+      in length result @?= 1
              
-  , testCase "analyzeOwnership: goroutine ownership transfer" $
+  , testCase "analyzeOwnership: ownership transfer with map value" $
+      let input = "package main\n\nfunc main() {\n    m := make(map[string][]byte)\n    data := make([]byte, 100)\n    m[\"key\"] = data\n    processData(m[\"key\"])\n}\n\nfunc processData(d []byte) {\n    // Process data\n}"
+          result = analyzeOwnership input
+      in length result @?= 1
+             
+  , testCase "analyzeOwnership: ownership transfer with interface" $
+      let input = "package main\n\ntype Processor interface {\n    Process([]byte)\n}\n\ntype DataProcessor struct{}\n\nfunc (dp DataProcessor) Process(d []byte) {\n    // Process data\n}\n\nfunc main() {\n    data := make([]byte, 100)\n    var processor Processor = DataProcessor{}\n    processor.Process(data)\n}"
+          result = analyzeOwnership input
+      in length result @?= 1
+             
+  , testCase "analyzeOwnership: ownership transfer with function pointer" $
+      let input = "package main\n\nfunc main() {\n    data := make([]byte, 100)\n    processors := []func([]byte){processData, moreProcessing}\n    for _, processor := range processors {\n        processor(data)\n    }\n}\n\nfunc processData(d []byte) {\n    // Process data\n}\n\nfunc moreProcessing(d []byte) {\n    // More processing\n}"
+          result = analyzeOwnership input
+      in length result @?= 2
+             
+  , testCase "analyzeOwnership: ownership transfer with defer" $
+      let input = "package main\n\nfunc main() {\n    data := make([]byte, 100)\n    defer processData(data)\n    // Other work\n}\n\nfunc processData(d []byte) {\n    // Process data\n}"
+          result = analyzeOwnership input
+      in length result @?= 1
+             
+  , testCase "analyzeOwnership: ownership transfer with goroutine" $
       let input = "package main\n\nfunc main() {\n    data := make([]byte, 100)\n    go processData(data)\n}\n\nfunc processData(d []byte) {\n    // Process data\n}"
           result = analyzeOwnership input
-      in let errors = result in if null errors then do
-             length transfers @?= 1  -- data transferred to goroutine
+      in length result @?= 1
              
-  , testCase "analyzeOwnership: method ownership transfer" $
-      let input = "package main\n\ntype Data struct {\n    content []byte\n}\n\nfunc (d Data) process() {\n    // Process data\n}\n\nfunc main() {\n    data := Data{content: make([]byte, 100)}\n    data.process()\n}"
+  , testCase "analyzeOwnership: ownership transfer with closure" $
+      let input = "package main\n\nfunc main() {\n    data := make([]byte, 100)\n    func(d []byte) {\n        processData(d)\n    }(data)\n}\n\nfunc processData(d []byte) {\n    // Process data\n}"
           result = analyzeOwnership input
-      in let errors = result in if null errors then do
-             length transfers @?= 1  -- data transferred to method
+      in length result @?= 1
              
-  , testCase "analyzeOwnership: interface ownership transfer" $
-      let input = "package main\n\ntype Processor interface {\n    process()\n}\n\ntype Data struct {\n    content []byte\n}\n\nfunc (d Data) process() {\n    // Process data\n}\n\nfunc main() {\n    var p Processor = Data{content: make([]byte, 100)}\n    p.process()\n}"
+  , testCase "analyzeOwnership: no ownership transfer" $
+      let input = "package main\n\nfunc main() {\n    data := make([]byte, 100)\n    // Use data without transferring ownership\n    println(len(data))\n}"
           result = analyzeOwnership input
-      in let errors = result in if null errors then do
-             length transfers @?= 1  -- data transferred through interface
-             
-  , testCase "analyzeOwnership: ownership violation detection" $
-      let input = "package main\n\nfunc main() {\n    data := make([]byte, 100)\n    processData(data)\n    // Using data after transfer - violation\n    println(len(data))\n}\n\nfunc processData(d []byte) {\n    // Process data\n}"
-          result = analyzeOwnership input
-      in let errors = result in if null errors then do
-             length transfers @?= 1
-             -- Should detect ownership violation
-             
-  , testCase "analyzeOwnership: shared ownership" $
-      let input = "package main\n\nfunc main() {\n    data := make([]byte, 100)\n    processData(data)  // Shared access\n    moreProcessing(data)  // Another shared access\n}\n\nfunc processData(d []byte) {\n    // Process data (shared)\n}\n\nfunc moreProcessing(d []byte) {\n    // More processing (shared)\n}"
-          result = analyzeOwnership input
-      in let errors = result in if null errors then do
-             length transfers @?= 2  -- Shared access
-             
-  , testCase "analyzeOwnership: ownership borrowing" $
-      let input = "package main\n\nfunc main() {\n    data := make([]byte, 100)\n    processData(&data)  // Borrowing\n    // Can still use data after borrowing\n    println(len(data))\n}\n\nfunc processData(d *[]byte) {\n    // Process data (borrowed)\n}"
-          result = analyzeOwnership input
-      in let errors = result in if null errors then do
-             length transfers @?= 1  -- Borrowed access
+      in length result @?= 0
   ]

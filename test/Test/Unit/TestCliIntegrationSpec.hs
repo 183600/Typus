@@ -5,7 +5,7 @@ module Test.Unit.TestCliIntegrationSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import Parser
+import qualified Parser as P
 import SourceLocation
 import ErrorHandler
 import Compiler.IR
@@ -104,10 +104,10 @@ testCliIntegration = testGroup "CLI Integration Tests"
           input = "//! ownership=true\n```go\nfmt.Println(\"hello\")\n```"
       in case options of
            Right opts -> do
-             let result = parseTypus input (inputFile opts)
+             let result = P.parseTypus input (inputFile opts)
              case result of
                Left err -> assertFailure $ "Parse failed: " ++ show err
-               Right typusFile -> length (tfBlocks typusFile) @?= 1
+               Right typusFile -> length (P.tfBlocks typusFile) @?= 1
            Left err -> assertFailure $ "Command line parsing failed: " ++ show err
            
   , testCase "CLI: integrate with ownership analyzer" $
@@ -116,7 +116,7 @@ testCliIntegration = testGroup "CLI Integration Tests"
           input = "package main\n\nfunc main() {\n    data := make([]byte, 100)\n    processData(data)\n}\n\nfunc processData(d []byte) {\n    // Process data\n}"
       in case options of
            Right opts -> do
-             let result = analyzeOwnership input
+             let result = Ownership.analyzeOwnership input
              case result of
                Left err -> assertFailure $ "Ownership analysis failed: " ++ show err
                Right (_, transfers) -> length transfers @?= 1
@@ -125,10 +125,10 @@ testCliIntegration = testGroup "CLI Integration Tests"
   , testCase "CLI: integrate with type analyzer" $
       let args = ["--dependent-types", "test.typus"]
           options = parseCommandLineArgs args
-          checker = newDependentTypeChecker ()
+          checker = Dependencies.newDependentTypeChecker ()
       in case options of
            Right opts -> do
-             let result = checkType "int" checker
+             let result = Dependencies.checkType "int" checker
              case result of
                Left err -> assertFailure $ "Type check failed: " ++ show err
                Right _ -> return ()
@@ -209,19 +209,19 @@ testCliIntegration = testGroup "CLI Integration Tests"
              dependentTypesFlag opts @?= True
              verboseFlag opts @?= True
              
-             let parseResult = parseTypus input (inputFile opts)
+             let parseResult = P.parseTypus input (inputFile opts)
              case parseResult of
                Left err -> assertFailure $ "Parse failed: " ++ show err
                Right typusFile -> do
-                 length (tfBlocks typusFile) @?= 1
+                 length (P.tfBlocks typusFile) @?= 1
                  
-                 let ownershipResult = analyzeOwnership input
+                 let ownershipResult = Ownership.analyzeOwnership input
                  case ownershipResult of
                    Left err -> assertFailure $ "Ownership analysis failed: " ++ show err
                    Right (_, transfers) -> length transfers @?= 1
                    
-                 let checker = newDependentTypeChecker ()
-                     typeCheckResult = checkType "[]byte" checker
+                 let checker = Dependencies.newDependentTypeChecker ()
+                     typeCheckResult = Dependencies.checkType "[]byte" checker
                  case typeCheckResult of
                    Left err -> assertFailure $ "Type check failed: " ++ show err
                    Right _ -> return ()
@@ -284,52 +284,52 @@ parseCommandLineArgs args =
         else parseArgs rest (opts { inputFiles = file : inputFiles opts })
     parseArgs _ _ = defaultOptions  -- Simplified error handling
     
-    splitTags tags = splitBy ',' tags
+    splitTags tags = Utils.splitBy ',' tags
 
 -- Simplified Dependencies types for testing
-data TypeExpr = TypeVar String | TypeConstructor String [TypeExpr] deriving (Eq, Show)
+data TestTypeExpr = TestTypeVar String | TestTypeConstructor String [TestTypeExpr] deriving (Eq, Show)
 
-data DependentTypeChecker = DependentTypeChecker 
-  { typeEnv :: TypeEnvironment 
+data TestDependentTypeChecker = TestDependentTypeChecker 
+  { testTypeEnv :: TestTypeEnvironment 
   }
 
-data TypeEnvironment = TypeEnvironment
-  { typeEnvTypes :: [(String, TypeExpr)]
+data TestTypeEnvironment = TestTypeEnvironment
+  { testTypeEnvTypes :: [(String, TestTypeExpr)]
   }
 
-newDependentTypeChecker :: () -> DependentTypeChecker
-newDependentTypeChecker () = DependentTypeChecker (TypeEnvironment [])
+testNewDependentTypeChecker :: () -> TestDependentTypeChecker
+testNewDependentTypeChecker () = TestDependentTypeChecker (TestTypeEnvironment [])
 
-checkType :: String -> DependentTypeChecker -> Either String DependentTypeChecker
-checkType name checker = 
-  case lookup name (typeEnvTypes (typeEnv checker)) of
+testCheckType :: String -> TestDependentTypeChecker -> Either String TestDependentTypeChecker
+testCheckType name checker = 
+  case lookup name (testTypeEnvTypes (testTypeEnv checker)) of
     Just _ -> Right checker
     Nothing -> Left "Type not found"
 
 -- Simplified Ownership types for testing
-analyzeOwnership :: String -> Either String ((), [()])
-analyzeOwnership _ = Right ((), [()])
+testAnalyzeOwnership :: String -> Either String ((), [()])
+testAnalyzeOwnership _ = Right ((), [()])
 
 -- Simplified Parser types for testing
-data FileDirectives = FileDirectives deriving (Eq, Show)
+data TestFileDirectives = TestFileDirectives deriving (Eq, Show)
 
-data CodeBlock = CodeBlock 
-  { cbContent :: String
+data TestCodeBlock = TestCodeBlock 
+  { testCbContent :: String
   } deriving (Eq, Show)
 
-data TypusFile = TypusFile 
-  { tfDirectives :: FileDirectives
-  , tfBlocks :: [CodeBlock]
+data TestTypusFile = TestTypusFile 
+  { testTfDirectives :: TestFileDirectives
+  , testTfBlocks :: [TestCodeBlock]
   }
 
-defaultFileDirectives :: FileDirectives
-defaultFileDirectives = FileDirectives
+testDefaultFileDirectives :: TestFileDirectives
+testDefaultFileDirectives = TestFileDirectives
 
-parseTypus :: String -> String -> Either String TypusFile
-parseTypus _ _ = Right (TypusFile FileDirectives [CodeBlock ""])
+testParseTypus :: String -> String -> Either String TestTypusFile
+testParseTypus _ _ = Right (TestTypusFile TestFileDirectives [TestCodeBlock ""])
 
 -- Simplified Utils functions for testing
-splitBy :: Char -> String -> [String]
-splitBy delim s = case break (== delim) s of
+testSplitBy :: Char -> String -> [String]
+testSplitBy delim s = case break (== delim) s of
   (a, []) -> [a]
-  (a, _:b) -> a : splitBy delim b
+  (a, _:b) -> a : testSplitBy delim b

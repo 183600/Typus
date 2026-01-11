@@ -158,7 +158,7 @@ testDebugIntegration = testGroup "Debug Integration Tests"
       in case operationResult of
            Right newState -> 
              any ("Step" `isInfixOf`) (getLogMessages newState) @?= True
-           Left _ -> assertFailure "Step-by-step execution should succeed
+           Left _ -> assertFailure "Step-by-step execution should succeed"
            
   , testCase "Debug: handle breakpoints" $
       let debugState = enableDebugMode
@@ -167,7 +167,7 @@ testDebugIntegration = testGroup "Debug Integration Tests"
       in case operationResult of
            Right newState -> 
              any ("Breakpoint" `isInfixOf`) (getLogMessages newState) @?= True
-           Left _ -> assertFailure "Execution with breakpoints should succeed
+           Left _ -> assertFailure "Execution with breakpoints should succeed"
            
   , testCase "Debug: handle variable inspection" $
       let debugState = enableDebugMode

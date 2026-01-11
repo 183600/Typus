@@ -7,7 +7,7 @@ import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import Parser
 import SourceLocation
-import ErrorHandler
+import qualified ErrorHandler
 import Compiler.IR
 import Ownership
 import Dependencies
@@ -44,7 +44,9 @@ testCrossModuleIntegration = testGroup "Cross-Module Integration Tests"
       let pos = posAt 5 10
           err = errorAt pos "Test error"
           errLoc = errorLocation err
-      in line errLoc @?= 5 && column errLoc @?= 10
+      in do
+        line errLoc @?= 5
+        column errLoc @?= 10
       
   , testCase "Utils to Parser integration: comment removal doesn't affect parsing" $
       let inputWithComments = "// This is a comment\n//! ownership=true\n/* Block comment */\n```go\nfmt.Println(\"hello\")\n```"
@@ -77,14 +79,14 @@ testCrossModuleIntegration = testGroup "Cross-Module Integration Tests"
            Left err -> length (show err) > 0
            
   , testCase "Compiler IR to SourceLocation integration: IR nodes have proper spans" $
-      let func = IRFunction 
-            { irFuncName = "test"
-            , irFuncParams = [IRParam "x" IRInt]
-            , irFuncReturnType = IRBool
-            , irFuncBody = [IRReturn (IRLiteral (IRBoolLiteral True))]
-            , irFuncSpan = locatedWithSpan (spanBetween (SourcePos 1 1 0) (SourcePos 3 1 0)) "test"
+      let func = TestIRFunction 
+            { testIRFuncName = "test"
+            , testIRFuncParams = [TestIRParam "x" TestIRInt]
+            , testIRFuncReturnType = TestIRBool
+            , testIRFuncBody = [TestIRLiteral (TestIRBoolLiteral True)]
+            , testIRFuncSpan = testLocatedWithSpan (testSpanBetween (TestSourcePos 1 1) (TestSourcePos 3 1)) "test"
             }
-      in isValidSpan (locSpan (irFuncSpan func)) @?= True
+      in testIsValidSpan (testLocSpan (testIRFuncSpan func)) @?= True
       
   , testCase "Parser to Dependencies integration: parsed code can be type-checked" $
       let input = "//! dependent_types=true\n```go\nfunc add(x int, y int) int {\n    return x + y\n}\n```"
@@ -179,3 +181,46 @@ isInfixOf :: String -> String -> Bool
 isInfixOf needle haystack = needle `elem` (substrings haystack)
   where
     substrings s = [take i s | i <- [1..length s]]
+
+-- Local types to avoid conflicts
+data TestSourcePos = TestSourcePos 
+  { testPosLine :: Int
+  , testPosColumn :: Int
+  }
+
+data TestSourceSpan = TestSourceSpan 
+  { testSpanStart :: TestSourcePos
+  , testSpanEnd :: TestSourcePos
+  }
+
+data TestLocated a = TestLocated 
+  { testLocValue :: a
+  , testLocSpan :: TestSourceSpan
+  }
+
+data TestIRType = TestIRInt | TestIRBool | TestIRString
+
+data TestIRLiteral = TestIRIntLiteral Int | TestIRBoolLiteral Bool | TestIRStringLiteral String
+
+data TestIRParam = TestIRParam String TestIRType
+
+data TestIRFunction = TestIRFunction 
+  { testIRFuncName :: String
+  , testIRFuncParams :: [TestIRParam]
+  , testIRFuncReturnType :: TestIRType
+  , testIRFuncBody :: [TestIRLiteral]
+  , testIRFuncSpan :: TestLocated String
+  }
+
+-- Local functions
+testLocatedWithSpan :: TestSourceSpan -> String -> TestLocated String
+testLocatedWithSpan span value = TestLocated value span
+
+testSpanBetween :: TestSourcePos -> TestSourcePos -> TestSourceSpan
+testSpanBetween start end = TestSourceSpan start end
+
+testIsValidSpan :: TestSourceSpan -> Bool
+testIsValidSpan span = testPosLine (testSpanStart span) > 0 && testPosLine (testSpanEnd span) > 0
+
+testLocSpan :: TestLocated a -> TestSourceSpan
+testLocSpan (TestLocated _ span) = span

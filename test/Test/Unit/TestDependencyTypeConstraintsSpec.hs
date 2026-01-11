@@ -8,6 +8,8 @@ import Test.Tasty.HUnit
 import Dependencies
 import Dependencies.AST
 import Dependencies.TypeSystem
+import Dependencies.Inference (TypeScheme(..))
+import qualified Dependencies.TypeSystem as DT (TypeVar(..))
 import SourceLocation (SourcePos(..))
 import qualified Data.Text as T
 import TestSupport.Arbitrary ()
@@ -21,14 +23,14 @@ testDependencyTypeConstraints = testGroup "Dependencies Type Constraints Tests"
       in typeEnvTypes env @?= []
       
   , testCase "newDependentTypeCheckerWithTypes: creates checker with predefined types" $
-      let types = [("int", TypeVar "Int"), ("string", TypeVar "String")]
+      let types = [("int", DT.TypeVar "Int"), ("string", DT.TypeVar "String")]
           checker = newDependentTypeCheckerWithTypes types
           env = initialTypeEnvironment
       in length (typeEnvTypes env) >= 2  -- At least our types
       
   , testCase "addType: adds type to environment" $
       let checker = newDependentTypeChecker ()
-          newType = TypeVar "NewType"
+          newType = DT.TypeVar "NewType"
           checker' = addType "NewType" newType checker
       in case lookupType "NewType" checker' of
            Just t -> t @?= newType
@@ -36,15 +38,15 @@ testDependencyTypeConstraints = testGroup "Dependencies Type Constraints Tests"
            
   , testCase "addConstraint: adds constraint to checker" $
       let checker = newDependentTypeChecker ()
-          type1 = TypeVar "Type1"
-          type2 = TypeVar "Type2"
+          type1 = DT.TypeVar "Type1"
+          type2 = DT.TypeVar "Type2"
           constraint = EqualityConstraint type1 type2
           checker' = addConstraint constraint checker
       in length (getConstraints checker') > length (getConstraints checker)
       
   , testCase "checkType: validates type in environment" $
       let checker = newDependentTypeChecker ()
-          type1 = TypeVar "Int"
+          type1 = DT.TypeVar "Int"
           checker' = addType "Int" type1 checker
       in case checkType "Int" checker' of
            Right _ -> return ()
@@ -58,8 +60,8 @@ testDependencyTypeConstraints = testGroup "Dependencies Type Constraints Tests"
            
   , testCase "checkTypeInstantiation: validates type instantiation" $
       let checker = newDependentTypeChecker ()
-          baseType = TypeVar "List"
-          paramType = TypeVar "Int"
+          baseType = DT.TypeVar "List"
+          paramType = DT.TypeVar "Int"
           instantiated = TypeConstructor "List" [paramType]
           checker' = addType "List" baseType checker
       in case checkTypeInstantiation instantiated checker' of
@@ -68,8 +70,8 @@ testDependencyTypeConstraints = testGroup "Dependencies Type Constraints Tests"
            
   , testCase "solveConstraints: solves simple equality constraints" $
       let checker = newDependentTypeChecker ()
-          type1 = TypeVar "a"
-          type2 = TypeVar "Int"
+          type1 = DT.TypeVar "a"
+          type2 = DT.TypeVar "Int"
           constraint = EqualityConstraint type1 type2
           checker' = addConstraint constraint checker
       in case solveConstraints checker' of
@@ -78,9 +80,9 @@ testDependencyTypeConstraints = testGroup "Dependencies Type Constraints Tests"
            
   , testCase "solveConstraints: handles multiple constraints" $
       let checker = newDependentTypeChecker ()
-          type1 = TypeVar "a"
-          type2 = TypeVar "b"
-          type3 = TypeVar "Int"
+          type1 = DT.TypeVar "a"
+          type2 = DT.TypeVar "b"
+          type3 = DT.TypeVar "Int"
           constraint1 = EqualityConstraint type1 type2
           constraint2 = EqualityConstraint type2 type3
           checker' = addConstraint constraint1 $ addConstraint constraint2 checker
@@ -91,7 +93,7 @@ testDependencyTypeConstraints = testGroup "Dependencies Type Constraints Tests"
   , testCase "inferType: infers type for simple expression" $
       let checker = newDependentTypeChecker ()
           expr = VarExpr "x"
-          typeAssumption = TypeVar "Int"
+          typeAssumption = DT.TypeVar "Int"
           checker' = addType "x" typeAssumption checker
       in case inferType expr checker' of
            Right inferred -> inferred @?= typeAssumption
@@ -99,25 +101,25 @@ testDependencyTypeConstraints = testGroup "Dependencies Type Constraints Tests"
            
   , testCase "inferType: infers type for function application" $
       let checker = newDependentTypeChecker ()
-          funcType = TypeArrow (TypeVar "Int") (TypeVar "Bool")
-          argType = TypeVar "Int"
+          funcType = TypeArrow (DT.TypeVar "Int") (DT.TypeVar "Bool")
+          argType = DT.TypeVar "Int"
           expr = ApplyExpr (VarExpr "func") (VarExpr "arg")
           checker' = addType "func" funcType $ addType "arg" argType checker
       in case inferType expr checker' of
-           Right inferred -> inferred @?= TypeVar "Bool"
+           Right inferred -> inferred @?= DT.TypeVar "Bool"
            Left err -> assertFailure $ "Function application type inference failed: " ++ show err
            
   , testCase "inferStatement: infers type for variable declaration" $
       let checker = newDependentTypeChecker ()
-          stmt = VarDeclStmt "x" (Just (TypeVar "Int")) (LiteralExpr (IntLiteral 42))
+          stmt = VarDeclStmt "x" (Just (DT.TypeVar "Int")) (LiteralExpr (IntLiteral 42))
       in case inferStatement stmt checker of
-           Right (checker', inferred) -> inferred @?= TypeVar "Int"
+           Right (checker', inferred) -> inferred @?= DT.TypeVar "Int"
            Left err -> assertFailure $ "Variable declaration type inference failed: " ++ show err
            
   , testCase "inferProgram: infers types for sequence of statements" $
       let checker = newDependentTypeChecker ()
-          stmt1 = VarDeclStmt "x" (Just (TypeVar "Int")) (LiteralExpr (IntLiteral 42))
-          stmt2 = VarDeclStmt "y" (Just (TypeVar "Int")) (VarExpr "x")
+          stmt1 = VarDeclStmt "x" (Just (DT.TypeVar "Int")) (LiteralExpr (IntLiteral 42))
+          stmt2 = VarDeclStmt "y" (Just (DT.TypeVar "Int")) (VarExpr "x")
           program = [stmt1, stmt2]
       in case inferProgram program checker of
            Right (checker', types) -> length types @?= 2
@@ -125,7 +127,7 @@ testDependencyTypeConstraints = testGroup "Dependencies Type Constraints Tests"
            
   , testCase "generalize: creates polymorphic type scheme" $
       let checker = newDependentTypeChecker ()
-          typeVar = TypeVar "a"
+          typeVar = DT.TypeVar "a"
           scheme = generalize typeVar checker
       in case scheme of
            TypeScheme vars _ -> length vars >= 1
@@ -133,34 +135,34 @@ testDependencyTypeConstraints = testGroup "Dependencies Type Constraints Tests"
            
   , testCase "instantiate: creates fresh instance of type scheme" $
       let checker = newDependentTypeChecker ()
-          typeVar = TypeVar "a"
+          typeVar = DT.TypeVar "a"
           scheme = generalize typeVar checker
       in case instantiate scheme checker of
            Right instanceType -> case instanceType of
-              TypeVar _ -> return ()
+              DT.TypeVar _ -> return ()
               _ -> assertFailure "Instantiation should create fresh type variable"
            Left err -> assertFailure $ "Type instantiation failed: " ++ show err
            
   , testCase "unifyTypes: unifies compatible types" $
       let checker = newDependentTypeChecker ()
-          type1 = TypeVar "a"
-          type2 = TypeVar "Int"
+          type1 = DT.TypeVar "a"
+          type2 = DT.TypeVar "Int"
       in case unifyTypes type1 type2 checker of
            Right (checker', substitution) -> length substitution > 0
            Left err -> assertFailure $ "Type unification failed: " ++ show err
            
   , testCase "unifyTypes: fails for incompatible types" $
       let checker = newDependentTypeChecker ()
-          type1 = TypeVar "Int"
-          type2 = TypeVar "String"
+          type1 = DT.TypeVar "Int"
+          type2 = DT.TypeVar "String"
       in case unifyTypes type1 type2 checker of
            Right _ -> assertFailure "Type unification should have failed"
            Left _ -> return ()
            
   , testCase "applyTypeSubstitution: applies substitution to type" $
       let checker = newDependentTypeChecker ()
-          typeVar = TypeVar "a"
-          replacement = TypeVar "Int"
+          typeVar = DT.TypeVar "a"
+          replacement = DT.TypeVar "Int"
           substitution = [("a", replacement)]
       in applyTypeSubstitution substitution typeVar @?= replacement
            
@@ -177,7 +179,7 @@ testDependencyTypeConstraints = testGroup "Dependencies Type Constraints Tests"
       
   , testCase "inNewScope: executes action in temporary scope" $
       let checker = newDependentTypeChecker ()
-          action = \c -> addType "temp" (TypeVar "Temp") c
+          action = \c -> addType "temp" (DT.TypeVar "Temp") c
       in depth (typeEnv (inNewScope action checker)) == depth (typeEnv checker)
   ]
 
