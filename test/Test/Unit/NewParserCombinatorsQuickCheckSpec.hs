@@ -167,7 +167,7 @@ prop_parseNumber_valid n =
     Right num -> num == n
 
 -- | Test parseNumber: invalid numbers
-prop_parseNumber_invalid :: String -> Bool
+prop_parseNumber_invalid :: String -> Property
 prop_parseNumber_invalid s = 
   not (all isDigit s) && not (null s) ==>
   case parseNumber s of
@@ -192,7 +192,7 @@ prop_parseStringLiteral_valid s =
     Right content -> content == s
 
 -- | Test parseStringLiteral: invalid string literals
-prop_parseStringLiteral_invalid :: String -> Bool
+prop_parseStringLiteral_invalid :: String -> Property
 prop_parseStringLiteral_invalid s = 
   not (isPrefixOf "\"" s) || not (isSuffixOf "\"" s) ==>
   case parseStringLiteral s of
@@ -223,7 +223,7 @@ prop_parseComment_block s =
     Right content -> content == s
 
 -- | Test parseComment: invalid comments
-prop_parseComment_invalid :: String -> Bool
+prop_parseComment_invalid :: String -> Property
 prop_parseComment_invalid s = 
   not ("//" `isPrefixOf` s) && not ("/*" `isPrefixOf` s) ==>
   case parseComment s of
@@ -270,7 +270,7 @@ prop_optional_parsing s =
     (Left _, Left _) -> True -- Both failed
 
 -- | Test parser composition: repeated parsing
-prop_repeated_parsing :: String -> Int -> Bool
+prop_repeated_parsing :: String -> Int -> Property
 prop_repeated_parsing s n = 
   n > 0 ==>
   let repeated = concat (replicate n (s ++ " "))
@@ -282,7 +282,7 @@ prop_repeated_parsing s n =
 prop_conditional_parsing :: String -> Bool
 prop_conditional_parsing s = 
   let isIdent = isValidIdentifier s
-      result = if isIdent then parseIdentifier s else Right 0 -- Use a default number
+      result = if isIdent then parseIdentifier s else Right "0" -- Use a default number as string
   in case result of
     Left _ -> not isIdent
     Right _ -> True
@@ -292,7 +292,7 @@ prop_conditional_parsing s =
 -- ============================================================================
 
 -- | Test parser error handling: error messages
-prop_error_messages :: String -> Bool
+prop_error_messages :: String -> Property
 prop_error_messages s = 
   not (isValidIdentifier s) && not (null s) ==>
   case parseIdentifier s of
@@ -308,7 +308,7 @@ prop_error_recovery s1 s2 =
     Right words -> length words >= 1
 
 -- | Test parser error handling: partial success
-prop_partial_success :: String -> String -> Bool
+prop_partial_success :: String -> String -> Property
 prop_partial_success s1 s2 = 
   not (isValidIdentifier s1) && isValidIdentifier s2 ==>
   let ident1 = parseIdentifier s1
@@ -318,7 +318,7 @@ prop_partial_success s1 s2 =
     _ -> True
 
 -- | Test parser error handling: cascading errors
-prop_cascading_errors :: String -> String -> Bool
+prop_cascading_errors :: String -> String -> Property
 prop_cascading_errors s1 s2 = 
   not (isValidIdentifier s1) && not (isValidIdentifier s2) ==>
   let ident1 = parseIdentifier s1
@@ -332,7 +332,7 @@ prop_cascading_errors s1 s2 =
 -- ============================================================================
 
 -- | Test parser performance: large input
-prop_large_input :: String -> Int -> Bool
+prop_large_input :: String -> Int -> Property
 prop_large_input s n = 
   n > 0 && n < 1000 ==>
   let large = concat (replicate n (s ++ " "))
@@ -341,7 +341,7 @@ prop_large_input s n =
     Right words -> length words == n
 
 -- | Test parser performance: deep nesting
-prop_deep_nesting :: String -> Int -> Bool
+prop_deep_nesting :: String -> Int -> Property
 prop_deep_nesting s n = 
   n > 0 && n < 100 ==>
   let nested = concat (replicate n ("(" ++ s ++ ")"))
@@ -378,8 +378,8 @@ prop_single_character c =
     Left _ -> False
     Right words -> length words == 1 && head words == s
 
--- | Test parser edge cases: whitespace only
-prop_whitespace_only :: String -> Bool
+-- | Test parser performance: whitespace only
+prop_whitespace_only :: String -> Property
 prop_whitespace_only s = 
   all isSpace s ==>
   case parseSimple s of
@@ -387,13 +387,23 @@ prop_whitespace_only s =
     Right words -> null words
 
 -- | Test parser edge cases: special characters
-prop_special_characters :: String -> Bool
+
+prop_special_characters :: String -> Property
+
 prop_special_characters s = 
-  let special = "!@#$%^&*()_+-=[]{}|;':\",./<>?"
-      hasSpecial = any (`elem` special) s
+
+  let
+
+    special = "!@#$%^&*()_+-=[]{}|;':\",./<>?"
+
+    hasSpecial = any (`elem` special) s
+
   in hasSpecial ==>
+
   case parseSimple s of
+
     Left _ -> False
+
     Right words -> length words >= 1
 
 -- | Test parser edge cases: unicode characters
@@ -406,7 +416,7 @@ prop_unicode_characters s =
     Right words -> length words >= 1
 
 -- | Test parser edge cases: very long identifiers
-prop_very_long_identifiers :: Int -> Bool
+prop_very_long_identifiers :: Int -> Property
 prop_very_long_identifiers n = 
   n > 0 && n < 1000 ==>
   let longIdent = replicate n 'a'
@@ -415,7 +425,7 @@ prop_very_long_identifiers n =
     Right ident -> length ident == n
 
 -- | Test parser edge cases: nested structures
-prop_nested_structures :: Int -> Bool
+prop_nested_structures :: Int -> Property
 prop_nested_structures n = 
   n > 0 && n < 100 ==>
   let nested = concat (replicate n "[()]")

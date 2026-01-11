@@ -1,5 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 -- | Symbol table QuickCheck tests for the Typus compiler
 -- This module contains property-based tests for symbol table utilities
@@ -45,8 +47,16 @@ import qualified Data.Set as Set
 -- | Simple symbol type for testing
 data SymbolType = Variable | Function | Type | Constant | Module deriving (Show, Eq, Ord)
 
+-- | Arbitrary instance for SymbolType
+instance Arbitrary SymbolType where
+  arbitrary = elements [Variable, Function, Type, Constant, Module]
+
 -- | Simple symbol scope for testing
 data SymbolScope = Local | Global | Parameter deriving (Show, Eq, Ord)
+
+-- | Arbitrary instance for SymbolScope
+instance Arbitrary SymbolScope where
+  arbitrary = elements [Local, Global, Parameter]
 
 -- | Simple symbol info for testing
 data SymbolInfo = SymbolInfo
@@ -55,6 +65,23 @@ data SymbolInfo = SymbolInfo
   , symbolScope :: SymbolScope
   , symbolValue :: Maybe String
   } deriving (Show, Eq)
+
+-- | Arbitrary instance for SymbolInfo
+instance Arbitrary SymbolInfo where
+  arbitrary = do
+    name <- elements ["x", "y", "z", "foo", "bar", "baz"]
+    typ <- arbitrary
+    scope <- arbitrary
+    value <- arbitrary
+    return $ SymbolInfo name typ scope value
+
+-- | Arbitrary instance for SymbolTable
+{-# LANGUAGE TypeSynonymInstances #-}
+instance Arbitrary SymbolTable where
+  arbitrary = do
+    size <- choose (0, 5)
+    symbols <- vectorOf size arbitrary
+    let table = foldr (\info acc -> Map.insert (symbolName info) info acc) Map.empty symbols
 
 -- | Simple symbol table for testing
 type SymbolTable = Map.Map String SymbolInfo
@@ -173,12 +200,10 @@ prop_remove_symbol name typ scope table =
 -- | Test remove symbol missing
 prop_remove_symbol_missing :: String -> SymbolTable -> Bool
 prop_remove_symbol_missing name table = 
-  not (symbolExists name table) ==>
-  let table2 = removeSymbol name table
-  in table2 == table
-
--- ============================================================================
--- Symbol Lookup Tests
+  not (symbolExists name table) ==> property $ not (symbolExists name table)
+  not (symbolExists name table) ==> property $
+    let table2 = removeSymbol name table
+    in table2 == table
 -- ============================================================================
 
 -- | Test lookup symbol
@@ -191,8 +216,8 @@ prop_lookup_symbol name typ scope table =
 -- | Test lookup symbol missing
 prop_lookup_symbol_missing :: String -> SymbolTable -> Bool
 prop_lookup_symbol_missing name table = 
-  not (symbolExists name table) ==> 
-  lookupSymbol name table == Nothing
+  not (symbolExists name table) ==> property $ not (symbolExists name table)
+    lookupSymbol name table == Nothing
 
 -- | Test symbol exists
 prop_symbol_exists :: String -> SymbolType -> SymbolScope -> SymbolTable -> Bool
@@ -204,7 +229,8 @@ prop_symbol_exists name typ scope table =
 -- | Test symbol exists missing
 prop_symbol_exists_missing :: String -> SymbolTable -> Bool
 prop_symbol_exists_missing name table = 
-  not (symbolExists name table) ==> not (symbolExists name table)
+  not (symbolExists name table) ==> property $ not (symbolExists name table)
+    not (symbolExists name table)
 
 -- | Test symbol in scope
 prop_symbol_in_scope :: String -> SymbolType -> SymbolScope -> SymbolTable -> Bool
@@ -216,10 +242,10 @@ prop_symbol_in_scope name typ scope table =
 -- | Test symbol not in scope
 prop_symbol_not_in_scope :: String -> SymbolType -> SymbolScope -> SymbolScope -> SymbolTable -> Bool
 prop_symbol_not_in_scope name typ scope1 scope2 table = 
-  scope1 /= scope2 ==>
-  let info = SymbolInfo name typ scope1 Nothing
-      table1 = addSymbol name info table
-  in not (symbolInScope scope2 name table1)
+  scope1 /= scope2 ==> property $
+    let info = SymbolInfo name typ scope1 Nothing
+        table1 = addSymbol name info table
+    in not (symbolInScope scope2 name table1)
 
 -- ============================================================================
 -- Symbol Table Query Tests

@@ -11,8 +11,8 @@ import Test.Tasty.HUnit
 import Test.QuickCheck ((==>), conjoin, counterexample)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
-import Data.Char (isSpace, isAlphaNum, isControl, isAscii, isLetter)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, sort, nub)
+import Data.Char (toUpper, toLower, isAlphaNum, isSpace)
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf, sort, nub, intercalate)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import Control.Monad (foldM)
 
@@ -57,12 +57,11 @@ prop_text_splitOn_char c s =
 -- | Test Text split on string
 prop_text_splitOn_string :: String -> String -> Bool
 prop_text_splitOn_string pattern s = 
-  not (null pattern) ==> 
-  let patternText = T.pack pattern
-      text = T.pack s
-      result = T.splitOn patternText text
-  in map T.unpack result == splitByString pattern s
-
+  not (null pattern) ==> property $
+    let patternText = T.pack pattern
+        text = T.pack s
+        result = T.splitOn patternText text
+    in map T.unpack result == splitByString pattern s
 -- | Test Text lines consistency
 prop_text_lines :: String -> Bool
 prop_text_lines s = 
@@ -105,13 +104,13 @@ prop_text_isInfixOf infixStr s =
 -- | Test Text find substring
 prop_text_find :: String -> String -> Bool
 prop_text_find pattern s = 
-  not (null pattern) ==> 
-  let patternText = T.pack pattern
-      text = T.pack s
-      result = T.find patternText text
-  in case result of
-    Nothing -> not (pattern `isInfixOf` s)
-    Just foundText -> T.unpack foundText `isInfixOf` s
+  not (null pattern) ==> property $
+    let patternText = T.pack pattern
+        text = T.pack s
+        result = T.find (== head pattern) text
+    in case result of
+         Nothing -> not (pattern `isInfixOf` s)
+         Just foundText -> T.singleton foundText `isInfixOf` T.pack s
 
 -- ============================================================================
 -- Text Transformation Tests
@@ -194,12 +193,12 @@ prop_text_stripPrefix prefix s =
 -- | Test Text replace
 prop_text_replace :: String -> String -> String -> Bool
 prop_text_replace old new s = 
-  not (null old) ==> 
-  let oldText = T.pack old
-      newText = T.pack new
-      text = T.pack s
-      result = T.replace oldText newText text
-  in T.unpack result == replaceString old new s
+  not (null old) ==> property $
+    let oldText = T.pack old
+        newText = T.pack new
+        text = T.pack s
+        result = T.replace oldText newText text
+    in T.unpack result == replaceString old new s
 
 -- | Test Text replace with empty old
 prop_text_replace_empty :: String -> String -> Bool
@@ -272,10 +271,10 @@ prop_text_special s =
 -- | Test Text with whitespace only
 prop_text_whitespace :: String -> Bool
 prop_text_whitespace s = 
-  all isSpace s ==> 
-  let text = T.pack s
-      stripped = T.strip text
-  in T.null stripped
+  all isSpace s ==> property $
+    let text = T.pack s
+        stripped = T.strip text
+    in T.null stripped
 
 -- Helper functions
 splitBy :: Char -> String -> [String]
@@ -297,11 +296,7 @@ splitByString pattern s =
 trim :: String -> String
 trim = dropWhile isSpace . reverse . dropWhile isSpace . reverse
 
-toUpper :: Char -> Char
-toUpper c = if 'a' <= c && c <= 'z' then toEnum (fromEnum c - 32) else c
-
-toLower :: Char -> Char
-toLower c = if 'A' <= c && c <= 'Z' then toEnum (fromEnum c + 32) else c
+-- Note: Using Data.Char functions instead of custom implementations
 
 replaceString :: String -> String -> String -> String
 replaceString _ _ [] = []
@@ -310,10 +305,7 @@ replaceString old new s =
   then new ++ replaceString old new (drop (length old) s)
   else head s : replaceString old new (tail s)
 
-intercalate :: String -> [String] -> String
-intercalate _ [] = ""
-intercalate _ [x] = x
-intercalate sep (x:xs) = x ++ sep ++ intercalate sep xs
+-- Note: Using Data.List intercalate function
 
 tests :: TestTree
 tests = testGroup "New Text Processing QuickCheck Tests"

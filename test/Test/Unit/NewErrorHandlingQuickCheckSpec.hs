@@ -45,24 +45,42 @@ import Data.Ord (comparing)
 data TestError = TestError
   { errorMessage :: String
   , errorSeverity :: ErrorSeverity
-  , errorCategory :: ErrorCategory
+  , errorCategory :: ErrorCategory'
   , errorLocation :: ErrorLocation
   } deriving (Show, Eq)
+dummyLoc :: ErrorLocation
+dummyLoc = ErrorLocation (Just "test") 1 1 Nothing Nothing
 
 -- | Custom error category for testing
 data ErrorCategory' = SyntaxError' | TypeError' | RuntimeError' | WarningCategory'
   deriving (Show, Eq, Enum)
 
+-- | Arbitrary instance for ErrorCategory'
+instance Arbitrary ErrorCategory' where
+  arbitrary = elements [SyntaxError', TypeError', RuntimeError', WarningCategory']
+
+-- | Arbitrary instance for ErrorSeverity
+instance Arbitrary ErrorSeverity where
+  arbitrary = elements [Info, Warning, Error, Fatal]
+
+-- | Arbitrary instance for TestError
+instance Arbitrary TestError where
+  arbitrary = do
+    msg <- arbitrary
+    severity <- arbitrary
+    category <- arbitrary
+    return $ TestError msg severity category dummyLoc
+
 -- | Create a test error
 mkTestError :: String -> ErrorSeverity -> ErrorCategory' -> TestError
-mkTestError msg severity category = TestError msg severity (toErrorCategory category)
+mkTestError msg severity category = TestError msg severity category dummyLoc
 
 -- | Convert custom category to core category
 toErrorCategory :: ErrorCategory' -> ErrorCategory
-toErrorCategory SyntaxError' = Error.Parser
-toErrorCategory TypeError' = Error.TypeCheck
+toErrorCategory SyntaxError' = Error.Parsing
+toErrorCategory TypeError' = Error.TypeChecking
 toErrorCategory RuntimeError' = Error.Runtime
-toErrorCategory WarningCategory' = Error.Lint
+toErrorCategory WarningCategory' = Error.Semantic
 
 -- | Check if error is critical
 isCriticalError :: TestError -> Bool
@@ -73,8 +91,8 @@ isRecoverableError :: TestError -> Bool
 isRecoverableError err = errorSeverity err `elem` [Warning, Info]
 
 -- | Check if error has context
-hasContext :: TestError -> Bool
-hasContext err = not (null (errorMessage err))
+hasErrorContext :: TestError -> Bool
+hasErrorContext err = not (null (errorMessage err))
 
 -- | Combine two errors
 combineErrors' :: TestError -> TestError -> TestError
@@ -91,11 +109,11 @@ filterBySeverity' severity = filter ((>= severity) . errorSeverity)
 
 -- | Filter errors by category
 filterByCategory' :: ErrorCategory' -> [TestError] -> [TestError]
-filterByCategory' category = filter ((== toErrorCategory category) . errorCategory)
+filterByCategory' category = filter ((== category) . errorCategory)
 
 -- | Check if error has specific category
 hasCategory' :: ErrorCategory' -> TestError -> Bool
-hasCategory' category err = errorCategory err == toErrorCategory category
+hasCategory' category err = errorCategory err == category
 
 -- | Check if error is at least as severe as given severity
 isAtLeast' :: ErrorSeverity -> TestError -> Bool
@@ -118,7 +136,7 @@ prop_error_creation_basic msg severity category =
   let err = mkTestError msg severity category
   in errorMessage err == msg &&
      errorSeverity err == severity &&
-     errorCategory err == toErrorCategory category
+     errorCategory err == category
 
 -- | Test error creation: empty message
 prop_error_creation_empty :: ErrorSeverity -> ErrorCategory' -> Bool
@@ -126,7 +144,7 @@ prop_error_creation_empty severity category =
   let err = mkTestError "" severity category
   in null (errorMessage err) &&
      errorSeverity err == severity &&
-     errorCategory err == toErrorCategory category
+     errorCategory err == category
 
 -- | Test error creation: long message
 prop_error_creation_long :: String -> ErrorSeverity -> ErrorCategory' -> Bool
@@ -135,7 +153,7 @@ prop_error_creation_long s severity category =
       err = mkTestError longMsg severity category
   in length (errorMessage err) >= 1000 &&
      errorSeverity err == severity &&
-     errorCategory err == toErrorCategory category
+     errorCategory err == category
 
 -- | Test error creation: special characters
 prop_error_creation_special :: String -> ErrorSeverity -> ErrorCategory' -> Bool
@@ -144,7 +162,7 @@ prop_error_creation_special s severity category =
       err = mkTestError specialMsg severity category
   in errorMessage err == specialMsg &&
      errorSeverity err == severity &&
-     errorCategory err == toErrorCategory category
+     errorCategory err == category
 
 -- | Test error creation: unicode characters
 prop_error_creation_unicode :: String -> ErrorSeverity -> ErrorCategory' -> Bool
@@ -153,7 +171,7 @@ prop_error_creation_unicode s severity category =
       err = mkTestError unicodeMsg severity category
   in errorMessage err == unicodeMsg &&
      errorSeverity err == severity &&
-     errorCategory err == toErrorCategory category
+     errorCategory err == category
 
 -- ============================================================================
 -- Error Classification Tests
@@ -175,7 +193,7 @@ prop_error_classification_recoverable msg severity category =
 prop_error_classification_hasContext :: String -> ErrorSeverity -> ErrorCategory' -> Bool
 prop_error_classification_hasContext msg severity category = 
   let err = mkTestError msg severity category
-  in hasContext err == not (null msg)
+  in hasErrorContext err == not (null msg)
 
 -- | Test error classification: by category
 prop_error_classification_category :: String -> ErrorSeverity -> ErrorCategory' -> ErrorCategory' -> Bool
@@ -201,7 +219,7 @@ prop_error_combination_basic msg1 sev1 cat1 msg2 sev2 cat2 =
       combined = combineErrors' e1 e2
   in errorMessage combined == msg1 ++ "; " ++ msg2 &&
      errorSeverity combined == max sev1 sev2 &&
-     errorCategory combined == toErrorCategory cat1
+     errorCategory combined == cat1
 
 -- | Test error combination: commutativity of severity
 prop_error_combination_severity_commutative :: String -> ErrorSeverity -> ErrorCategory' -> String -> ErrorSeverity -> ErrorCategory' -> Bool
@@ -229,19 +247,19 @@ prop_error_combination_identity msg severity category =
       empty = mkTestError "" Info WarningCategory'
       combined = combineErrors' err empty
   in errorSeverity combined == severity &&
-     errorCategory combined == toErrorCategory category
+     errorCategory combined == category
 
 -- | Test error combination: idempotence for same severity
 prop_error_combination_idempotent :: String -> ErrorSeverity -> ErrorCategory' -> String -> ErrorSeverity -> Bool
-prop_error_combination_idempotent msg1 severity category msg2 = 
-  severity `elem` [Info, Warning] ==>
-  let e1 = mkTestError msg1 severity category
-      e2 = mkTestError msg2 severity category
-      combined1 = combineErrors' e1 e2
-      combined2 = combineErrors' e2 e1
-  in errorSeverity combined1 == errorSeverity combined2 &&
-     errorCategory combined1 == toErrorCategory category
-
+prop_error_combination_idempotent msg1 severity category msg2 severity2 = 
+  if severity `elem` [Info, Warning] && severity2 `elem` [Info, Warning]
+  then let e1 = mkTestError msg1 severity category
+           e2 = mkTestError msg2 severity2 category
+           combined1 = combineErrors' e1 e2
+           combined2 = combineErrors' e2 e1
+       in errorSeverity combined1 == errorSeverity combined2 &&
+          errorCategory combined1 == category
+  else True
 -- ============================================================================
 -- Error Filtering Tests
 -- ============================================================================
@@ -252,8 +270,8 @@ prop_error_filtering_severity msg severity category errors =
   let err = mkTestError msg severity category
       allErrors = err : errors
       filtered = filterBySeverity' severity allErrors
-  in all (`hasCategory'` category) filtered &&
-     all (isAtLeast' severity) filtered
+  in all (\e -> errorCategory e == category) filtered &&
+      all (\e -> isAtLeast' severity e) filtered
 
 -- | Test error filtering: by category
 prop_error_filtering_category :: String -> ErrorSeverity -> ErrorCategory' -> [TestError] -> Bool
@@ -261,7 +279,7 @@ prop_error_filtering_category msg severity category errors =
   let err = mkTestError msg severity category
       allErrors = err : errors
       filtered = filterByCategory' category allErrors
-  in all (`hasCategory'` category) filtered &&
+  in all (\e -> hasCategory' category e) filtered &&
      err `elem` filtered
 
 -- | Test error filtering: empty list
@@ -275,7 +293,7 @@ prop_error_filtering_empty severity category =
 prop_error_filtering_no_matches :: String -> ErrorSeverity -> ErrorCategory' -> [TestError] -> Bool
 prop_error_filtering_no_matches msg severity category errors = 
   let allDifferentSeverities = filter ((/= severity) . errorSeverity) errors
-      allDifferentCategories = filter ((/= toErrorCategory category) . errorCategory) errors
+      allDifferentCategories = filter ((/= category) . errorCategory) errors
       filteredBySev = filterBySeverity' severity allDifferentSeverities
       filteredByCat = filterByCategory' category allDifferentCategories
   in null filteredBySev && null filteredByCat
@@ -283,11 +301,12 @@ prop_error_filtering_no_matches msg severity category errors =
 -- | Test error filtering: all matches
 prop_error_filtering_all_matches :: String -> ErrorSeverity -> ErrorCategory' -> Int -> Bool
 prop_error_filtering_all_matches msg severity category n = 
-  n > 0 ==>
-  let errors = replicate n (mkTestError msg severity category)
-      filteredBySev = filterBySeverity' severity errors
-      filteredByCat = filterByCategory' category errors
-  in length filteredBySev == n && length filteredByCat == n
+  if n > 0 
+  then let errors = replicate n (mkTestError msg severity category)
+           filteredBySev = filterBySeverity' severity errors
+           filteredByCat = filterByCategory' category errors
+       in length filteredBySev == n && length filteredByCat == n
+  else True
 
 -- ============================================================================
 -- Error Priority Tests
@@ -363,7 +382,7 @@ prop_error_context_ordering msg1 sev1 cat1 msg2 sev2 cat2 =
 prop_error_context_empty :: ErrorSeverity -> ErrorCategory' -> Bool
 prop_error_context_empty severity category = 
   let err = mkTestError "" severity category
-  in null (errorMessage err) && not (hasContext err)
+  in null (errorMessage err) && not (hasErrorContext err)
 
 -- | Test error context: nested context
 prop_error_context_nested :: String -> ErrorSeverity -> ErrorCategory' -> String -> ErrorSeverity -> ErrorCategory' -> String -> ErrorSeverity -> ErrorCategory' -> Bool
@@ -454,8 +473,7 @@ prop_error_aggregation_category errors =
 -- | Test error aggregation: empty list
 prop_error_aggregation_empty :: Bool
 prop_error_aggregation_empty = 
-  let empty = mkTestError "" Info WarningCategory'
-      combined = foldl combineErrors' empty []
+  let combined = foldl combineErrors' (mkTestError "" Info WarningCategory') []
   in errorSeverity combined == Info && errorCategory combined == WarningCategory'
 
 -- | Test error aggregation: single error

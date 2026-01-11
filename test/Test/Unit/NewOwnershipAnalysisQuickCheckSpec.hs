@@ -46,12 +46,25 @@ import qualified Data.Map as Map
 -- | Simple ownership type for testing
 data OwnershipType = Owned | Borrowed | Shared | Unique deriving (Show, Eq, Ord)
 
+-- | Arbitrary instance for OwnershipType
+instance Arbitrary OwnershipType where
+  arbitrary = elements [Owned, Borrowed, Shared, Unique]
+
 -- | Simple ownership state for testing
 data OwnershipState = OwnershipState
   { ownerMap :: Map.Map String OwnershipType
   , borrowMap :: Map.Map String String
   , ownershipConstraints :: Set.Set (String, String)
   } deriving (Show, Eq)
+
+-- | Arbitrary instance for OwnershipState
+instance Arbitrary OwnershipState where
+  arbitrary = do
+    size <- choose (0, 5)
+    names <- vectorOf size $ elements ["x", "y", "z", "a", "b", "c"]
+    types <- vectorOf size arbitrary
+    let ownerMap' = Map.fromList $ zip names types
+    return $ OwnershipState ownerMap' Map.empty Set.empty
 
 -- | Create an empty ownership state
 emptyOwnershipState :: OwnershipState
@@ -397,8 +410,7 @@ prop_ownership_analysis_propagation owner target typ state =
 
 tests :: TestTree
 tests = testGroup "Ownership Analysis QuickCheck Tests"
-  [ -- Ownership State Tests
-    testProperty "empty ownership state" prop_empty_ownership_state
+  [ testProperty "empty ownership state" prop_empty_ownership_state
   , testProperty "add ownership" prop_add_ownership
   , testProperty "add ownership override" prop_add_ownership_override
   , testProperty "check ownership" prop_check_ownership
