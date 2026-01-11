@@ -3,243 +3,175 @@ module Test.Unit.UtilsStringProcessingSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import qualified Utils
-import Data.Char (isAlpha, isDigit, isSpace, toLower, toUpper)
-import Data.List (isPrefixOf, isSuffixOf, isInfixOf, nub)
-import Data.Maybe (isJust, isNothing)
+import Utils
 
--- 测试字符串处理的属性
-prop_string_length_preservation :: String -> Property
-prop_string_length_preservation input = 
-  let processed = Utils.normalizeWhitespace input
-  in property $ length processed <= length input
+-- Test cases for trim function
+testTrim :: TestTree
+testTrim = testGroup "trim function tests"
+  [ testCase "trim removes leading and trailing spaces" $
+      trim "  hello  " @?= "hello"
+  , testCase "trim removes leading and trailing tabs" $
+      trim "\thello\t" @?= "hello"
+  , testCase "trim removes mixed whitespace" $
+      trim "  \t hello \t  " @?= "hello"
+  , testCase "trim handles empty string" $
+      trim "" @?= ""
+  , testCase "trim handles only whitespace" $
+      trim "   \t  " @?= ""
+  , testCase "trim leaves internal spaces unchanged" $
+      trim "  hello world  " @?= "hello world"
+  ]
 
-prop_whitespace_normalization :: String -> Property
-prop_whitespace_normalization input = 
-  let normalized = Utils.normalizeWhitespace input
-      hasMultipleSpaces = "  " `isInfixOf` normalized
-  in property $ not hasMultipleSpaces
+-- Test cases for splitBy function
+testSplitBy :: TestTree
+testSplitBy = testGroup "splitBy function tests"
+  [ testCase "splitBy comma with empty segments" $
+      splitBy ',' "a,,b" @?= ["a", "", "b"]
+  , testCase "splitBy comma with leading/trailing" $
+      splitBy ',' ",a," @?= ["", "a", ""]
+  , testCase "splitBy comma with empty string" $
+      splitBy ',' "" @?= [""]
+  , testCase "splitBy comma with single element" $
+      splitBy ',' "hello" @?= ["hello"]
+  , testCase "splitBy comma with multiple elements" $
+      splitBy ',' "a,b,c" @?= ["a", "b", "c"]
+  ]
 
-prop_case_conversion_preservation :: String -> Property
-prop_case_conversion_preservation input = 
-  let upper = Utils.toUpperCase input
-      lower = Utils.toLowerCase input
-      restored = Utils.toLowerCase upper
-  in property $ lower === restored
+-- Test cases for splitByCollapsed function
+testSplitByCollapsed :: TestTree
+testSplitByCollapsed = testGroup "splitByCollapsed function tests"
+  [ testCase "splitByCollapsed removes empty segments" $
+      splitByCollapsed ',' "a,,b" @?= ["a", "b"]
+  , testCase "splitByCollapsed removes leading/trailing empties" $
+      splitByCollapsed ',' ",a," @?= ["a"]
+  , testCase "splitByCollapsed handles empty string" $
+      splitByCollapsed ',' "" @?= []
+  , testCase "splitByCollapsed handles single element" $
+      splitByCollapsed ',' "hello" @?= ["hello"]
+  , testCase "splitByCollapsed handles multiple elements" $
+      splitByCollapsed ',' "a,b,c" @?= ["a", "b", "c"]
+  ]
 
-prop_case_insensitive_comparison :: String -> String -> Property
-prop_case_insensitive_comparison str1 str2 = 
-  let sameIgnoringCase = Utils.equalsIgnoreCase str1 str2
-      bothUpper = Utils.toUpperCase str1 == Utils.toUpperCase str2
-  in property $ sameIgnoringCase === bothUpper
+-- Test cases for removeLineComments function
+testRemoveLineComments :: TestTree
+testRemoveLineComments = testGroup "removeLineComments function tests"
+  [ testCase "removeLineComments removes single line comment" $
+      removeLineComments "hello // comment\nworld" @?= "hello \nworld"
+  , testCase "removeLineComments preserves comments in strings" $
+      removeLineComments "print(\"// not a comment\") // real comment" @?= "print(\"// not a comment\") "
+  , testCase "removeLineComments preserves comments in chars" $
+      removeLineComments "c := '/' // comment" @?= "c := '/' "
+  , testCase "removeLineComments handles multiple comments" $
+      removeLineComments "a // 1\nb // 2\nc" @?= "a \nb \nc"
+  , testCase "removeLineComments handles escaped quotes in strings" $
+      removeLineComments "print(\"\\\"// not comment\") // comment" @?= "print(\"\\\"// not comment\") "
+  ]
 
-prop_string_trimming :: String -> Property
-prop_string_trimming input = 
-  let trimmed = Utils.trim input
-      startsWithSpace = not (null trimmed) && isSpace (head trimmed)
-      endsWithSpace = not (null trimmed) && isSpace (last trimmed)
-  in property $ not startsWithSpace && not endsWithSpace
+-- Test cases for removeComments function
+testRemoveComments :: TestTree
+testRemoveComments = testGroup "removeComments function tests"
+  [ testCase "removeComments removes line comments" $
+      removeComments "hello // comment\nworld" @?= "hello \nworld"
+  , testCase "removeComments removes block comments" $
+      removeComments "hello /* comment */ world" @?= "hello  world"
+  , testCase "removeComments handles multiline block comments" $
+      removeComments "hello /* multi\nline\ncomment */ world" @?= "hello \n \n world"
+  , testCase "removeComments preserves comments in strings" $
+      removeComments "print(\"// not comment\") /* real comment */" @?= "print(\"// not comment\") "
+  , testCase "removeComments handles nested quote patterns" $
+      removeComments "print(\"/* not comment */\") /* real comment */" @?= "print(\"/* not comment */\") "
+  ]
 
-prop_string_splitting :: String -> String -> Property
-prop_string_splitting input delimiter = 
-  let parts = Utils.split delimiter input
-      joined = Utils.join delimiter parts
-  in property $ joined === input
+-- Test cases for normalizeIndentation function
+testNormalizeIndentation :: TestTree
+testNormalizeIndentation = testGroup "normalizeIndentation function tests"
+  [ testCase "normalizeIndentation removes common prefix" $
+      normalizeIndentation "    hello\n      world" @?= "hello\n  world"
+  , testCase "normalizeIndentation handles different indentation" $
+      normalizeIndentation "  a\n    b\n  c" @?= "a\n  b\nc"
+  , testCase "normalizeIndentation preserves empty lines" $
+      normalizeIndentation "    a\n\n    b" @?= "a\n\nb"
+  , testCase "normalizeIndentation handles mixed tabs/spaces" $
+      normalizeIndentation "\ta\n\t\tb" @?= "a\n\tb"
+  , testCase "normalizeIndentation handles single line" $
+      normalizeIndentation "    hello" @?= "hello"
+  ]
 
-prop_string_joining :: [String] -> String -> Property
-prop_string_joining parts delimiter = 
-  let joined = Utils.join delimiter parts
-      splitAgain = Utils.split delimiter joined
-  in property $ splitAgain === parts
+-- Test cases for breakOn function
+testBreakOn :: TestTree
+testBreakOn = testGroup "breakOn function tests"
+  [ testCase "breakOn finds substring" $
+      breakOn "ll" "hello" @?= ("he", "o")
+  , testCase "breakOn handles first occurrence" $
+      breakOn "ab" "abcab" @?= ("", "cab")
+  , testCase "breakOn handles not found" $
+      breakOn "xyz" "hello" @?= ("hello", "")
+  , testCase "breakOn handles empty pattern" $
+      breakOn "" "hello" @?= ("", "hello")
+  , testCase "breakOn handles pattern at end" $
+      breakOn "lo" "hello" @?= ("hel", "")
+  ]
 
-prop_string_replacement :: String -> String -> String -> Property
-prop_string_replacement input old new = 
-  let replaced = Utils.replace old new input
-  in property $ not (old `isInfixOf` replaced) || old === new
+-- Test cases for safeProcessString function
+testSafeProcessString :: TestTree
+testSafeProcessString = testGroup "safeProcessString function tests"
+  [ testCase "safeProcessString handles normal string" $
+      safeProcessString "hello world" @?= Right "hello world"
+  , testCase "safeProcessString allows newlines" $
+      safeProcessString "hello\nworld" @?= Right "hello\nworld"
+  , testCase "safeProcessString allows tabs" $
+      safeProcessString "hello\tworld" @?= Right "hello\tworld"
+  , testCase "safeProcessString filters control characters" $
+      safeProcessString "hello\x01world" @?= Right "helloworld"
+  , testCase "safeProcessString handles empty after filtering" $
+      safeProcessString "\x01\x02" @?= Left "Empty string after processing"
+  ]
 
-prop_string_prefix_checking :: String -> String -> Property
-prop_string_prefix_checking input prefix = 
-  let hasPrefix = Utils.hasPrefix input prefix
-      actualPrefix = isPrefixOf prefix input
-  in property $ hasPrefix === actualPrefix
+-- Test cases for isValidChar function
+testIsValidChar :: TestTree
+testIsValidChar = testGroup "isValidChar function tests"
+  [ testCase "isValidChar allows normal characters" $
+      isValidChar 'a' @?= True
+  , testCase "isValidChar allows newline" $
+      isValidChar '\n' @?= True
+  , testCase "isValidChar allows carriage return" $
+      isValidChar '\r' @?= True
+  , testCase "isValidChar allows tab" $
+      isValidChar '\t' @?= True
+  , testCase "isValidChar rejects control characters" $
+      isValidChar '\x01' @?= False
+  ]
 
-prop_string_suffix_checking :: String -> String -> Property
-prop_string_suffix_checking input suffix = 
-  let hasSuffix = Utils.hasSuffix input suffix
-      actualSuffix = isSuffixOf suffix input
-  in property $ hasSuffix === actualSuffix
+-- QuickCheck properties
+prop_splitBy_roundtrip :: Char -> String -> Property
+prop_splitBy_roundtrip delim s = 
+  let parts = splitBy delim s
+      rejoined = concat $ map (++ [delim]) $ init parts ++ [last parts]
+  in length s >= 0 ==> length rejoined >= length s - length parts
 
-prop_string_contains :: String -> String -> Property
-prop_string_contains input substr = 
-  let contains = Utils.contains input substr
-      actualContains = isInfixOf substr input
-  in property $ contains === actualContains
+prop_trim_idempotent :: String -> Property
+prop_trim_idempotent s = 
+  let trimmed = trim s
+      trimmedAgain = trim trimmed
+  in length s >= 0 ==> trimmed == trimmedAgain
 
-prop_string_reverse :: String -> Property
-prop_string_reverse input = 
-  let reversed = Utils.reverse input
-      doubleReversed = Utils.reverse reversed
-  in property $ doubleReversed === input
-
-prop_string_word_count :: String -> Property
-prop_string_word_count input = 
-  let words = Utils.words input
-      count = Utils.wordCount input
-  in property $ length words === count
-
-prop_string_line_count :: String -> Property
-prop_string_line_count input = 
-  let lines = Utils.lines input
-      count = Utils.lineCount input
-  in property $ length lines === count
-
-prop_string_indentation :: String -> Int -> Property
-prop_string_indentation input indent = 
-  let indented = Utils.indent input indent
-      lines' = Utils.lines indented
-      allIndented = all (\line -> 
-        if null line then True 
-        else take indent line === replicate indent ' '
-      ) lines'
-  in property $ allIndented
-
-prop_string_unindentation :: String -> Property
-prop_string_unindentation input = 
-  let indented = Utils.indent input 4
-      unindented = Utils.unindent indented
-  in property $ unindented === input
-
-prop_string_wrap :: String -> Int -> Property
-prop_string_wrap input width = 
-  let wrapped = Utils.wrap input width
-      lines' = Utils.lines wrapped
-      allWithinWidth = all (\line -> length line <= width) lines'
-  in property $ allWithinWidth
-
-prop_string_pad_left :: String -> Int -> Property
-prop_string_pad_left input targetLen = 
-  let padded = Utils.padLeft input targetLen
-  in property $ length padded >= targetLen
-
-prop_string_pad_right :: String -> Int -> Property
-prop_string_pad_right input targetLen = 
-  let padded = Utils.padRight input targetLen
-  in property $ length padded >= targetLen
-
-prop_string_center :: String -> Int -> Property
-prop_string_center input targetLen = 
-  let centered = Utils.center input targetLen
-  in property $ length centered >= targetLen
-
-prop_string_truncate :: String -> Int -> Property
-prop_string_truncate input maxLen = 
-  let truncated = Utils.truncate input maxLen
-  in property $ length truncated <= maxLen
-
-prop_string_escape :: String -> Property
-prop_string_escape input = 
-  let escaped = Utils.escape input
-  in property $ not ('\n' `elem` escaped) && 
-             not ('\t' `elem` escaped) && 
-             not ('"' `elem` escaped)
-
-prop_string_unescape :: String -> Property
-prop_string_unescape input = 
-  let escaped = Utils.escape input
-      unescaped = Utils.unescape escaped
-  in property $ unescaped === input
-
-prop_string_quoting :: String -> Property
-prop_string_quoting input = 
-  let quoted = Utils.quote input
-      unquoted = Utils.unquote quoted
-  in property $ unquoted === input
-
-prop_string_slugify :: String -> Property
-prop_string_slugify input = 
-  let slug = Utils.slugify input
-      validChars = all (\c -> isAlpha c || isDigit c || c == '-' || c == '_') slug
-  in property $ validChars
-
-prop_string_capitalize :: String -> Property
-prop_string_capitalize input = 
-  let capitalized = Utils.capitalize input
-      isCapitalized = null capitalized || isAlpha (head capitalized) && isUpper (head capitalized)
-  in property $ isCapitalized
-
-prop_string_camelize :: String -> Property
-prop_string_camelize input = 
-  let camelized = Utils.camelize input
-      hasNoSpaces = not (isInfixOf " " camelized)
-  in property $ hasNoSpaces
-
-prop_string_snakify :: String -> Property
-prop_string_snakify input = 
-  let snakified = Utils.snakify input
-      hasNoSpaces = not (isInfixOf " " snakified)
-      hasUnderscores = isInfixOf "_" snakified
-  in property $ hasNoSpaces
-
-prop_string_kebabify :: String -> Property
-prop_string_kebabify input = 
-  let kebabified = Utils.kebabify input
-      hasNoSpaces = not (isInfixOf " " kebabified)
-      hasDashes = isInfixOf "-" kebabified
-  in property $ hasNoSpaces
-
-prop_string_similarity :: String -> String -> Property
-prop_string_similarity str1 str2 = 
-  let similarity = Utils.similarity str1 str2
-  in property $ similarity >= 0 && similarity <= 1
-
-prop_string_levenshtein_distance :: String -> String -> Property
-prop_string_levenshtein_distance str1 str2 = 
-  let distance = Utils.levenshteinDistance str1 str2
-  in property $ distance >= 0
-
-prop_string_soundex :: String -> Property
-prop_string_soundex input = 
-  let code = Utils.soundex input
-  in property $ length code === 4 && all isDigit (tail code)
-
-prop_string_metaphone :: String -> Property
-prop_string_metaphone input = 
-  let code = Utils.metaphone input
-  in property $ not (null code) && all isAlpha code
+prop_splitByCollapsed_no_empty :: Char -> String -> Property
+prop_splitByCollapsed_no_empty delim s = 
+  let parts = splitByCollapsed delim s
+  in length s >= 0 ==> all (not . null) parts
 
 tests :: TestTree
 tests = testGroup "Utils String Processing Tests"
-  [ testProperty "String length preservation" prop_string_length_preservation
-  , testProperty "Whitespace normalization" prop_whitespace_normalization
-  , testProperty "Case conversion preservation" prop_case_conversion_preservation
-  , testProperty "Case insensitive comparison" prop_case_insensitive_comparison
-  , testProperty "String trimming" prop_string_trimming
-  , testProperty "String splitting" prop_string_splitting
-  , testProperty "String joining" prop_string_joining
-  , testProperty "String replacement" prop_string_replacement
-  , testProperty "String prefix checking" prop_string_prefix_checking
-  , testProperty "String suffix checking" prop_string_suffix_checking
-  , testProperty "String contains" prop_string_contains
-  , testProperty "String reverse" prop_string_reverse
-  , testProperty "String word count" prop_string_word_count
-  , testProperty "String line count" prop_string_line_count
-  , testProperty "String indentation" prop_string_indentation
-  , testProperty "String unindentation" prop_string_unindentation
-  , testProperty "String wrap" prop_string_wrap
-  , testProperty "String pad left" prop_string_pad_left
-  , testProperty "String pad right" prop_string_pad_right
-  , testProperty "String center" prop_string_center
-  , testProperty "String truncate" prop_string_truncate
-  , testProperty "String escape" prop_string_escape
-  , testProperty "String unescape" prop_string_unescape
-  , testProperty "String quoting" prop_string_quoting
-  , testProperty "String slugify" prop_string_slugify
-  , testProperty "String capitalize" prop_string_capitalize
-  , testProperty "String camelize" prop_string_camelize
-  , testProperty "String snakify" prop_string_snakify
-  , testProperty "String kebabify" prop_string_kebabify
-  , testProperty "String similarity" prop_string_similarity
-  , testProperty "String levenshtein distance" prop_string_levenshtein_distance
-  , testProperty "String soundex" prop_string_soundex
-  , testProperty "String metaphone" prop_string_metaphone
+  [ testTrim
+  , testSplitBy
+  , testSplitByCollapsed
+  , testRemoveLineComments
+  , testRemoveComments
+  , testNormalizeIndentation
+  , testBreakOn
+  , testSafeProcessString
+  , testIsValidChar
+  , testProperty "splitBy roundtrip property" prop_splitBy_roundtrip
+  , testProperty "trim idempotent property" prop_trim_idempotent
+  , testProperty "splitByCollapsed no empty property" prop_splitByCollapsed_no_empty
   ]

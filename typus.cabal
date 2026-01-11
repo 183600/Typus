@@ -1214,7 +1214,14 @@ test-suite typus-test
         Test.Unit.TestArithmeticPropertiesSpec,
         Test.Unit.TestStringProcessingSpec,
         Test.Unit.TestParserDirectivesSpec,
-        Test.Unit.TestListPropertiesSpec
+        Test.Unit.TestListPropertiesSpec,
+        
+        -- New Test Modules Created (2025) - Enhanced Core Functionality Tests
+        Test.Unit.UtilsStringProcessingSpec,
+        Test.Unit.SourceLocationMathSpec,
+        Test.Unit.DependenciesCycleDetectionSpec,
+        Test.Unit.CompilerIROptimizationSpec,
+        Test.Unit.CoreMathematicalPropertiesSpec
         
         -- New Test Modules Created (2025) - 4 comprehensive tests
         -- (These modules are already listed above)
