@@ -55,7 +55,7 @@ prop_text_splitOn_char c s =
   in map T.unpack result == splitBy c s
 
 -- | Test Text split on string
-prop_text_splitOn_string :: String -> String -> Bool
+prop_text_splitOn_string :: String -> String -> Property
 prop_text_splitOn_string pattern s = 
   not (null pattern) ==> property $
     let patternText = T.pack pattern
@@ -102,7 +102,7 @@ prop_text_isInfixOf infixStr s =
   in T.isInfixOf infixText text == isInfixOf infixStr s
 
 -- | Test Text find substring
-prop_text_find :: String -> String -> Bool
+prop_text_find :: String -> String -> Property
 prop_text_find pattern s = 
   not (null pattern) ==> property $
     let patternText = T.pack pattern
@@ -110,7 +110,7 @@ prop_text_find pattern s =
         result = T.find (== head pattern) text
     in case result of
          Nothing -> not (pattern `isInfixOf` s)
-         Just foundText -> T.singleton foundText `isInfixOf` T.pack s
+         Just foundText -> T.singleton foundText `T.isInfixOf` T.pack s
 
 -- ============================================================================
 -- Text Transformation Tests
@@ -191,7 +191,7 @@ prop_text_stripPrefix prefix s =
 -- ============================================================================
 
 -- | Test Text replace
-prop_text_replace :: String -> String -> String -> Bool
+prop_text_replace :: String -> String -> String -> Property
 prop_text_replace old new s = 
   not (null old) ==> property $
     let oldText = T.pack old
@@ -269,7 +269,7 @@ prop_text_special s =
   in T.unpack text == s
 
 -- | Test Text with whitespace only
-prop_text_whitespace :: String -> Bool
+prop_text_whitespace :: String -> Property
 prop_text_whitespace s = 
   all isSpace s ==> property $
     let text = T.pack s

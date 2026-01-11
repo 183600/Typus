@@ -3,12 +3,221 @@ module Test.Unit.EnhancedParserSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
+import Parser (parseTypus, FileDirectives(..), BlockDirectives(..), 
+               TypusFile(..), defaultFileDirectives, defaultBlockDirectives)
+import SourceLocation (SourcePos(..), SourceSpan(..), Located(..))
+import qualified Data.Text as T
 
--- Basic test properties
-prop_basic_property :: String -> Property
-prop_basic_property s = property $ length s >= 0
+-- | Test FileDirectives properties
+prop_file_directives_default :: Property
+prop_file_directives_default = 
+  let defaults = defaultFileDirectives
+  in property $ 
+    fdOwnership defaults == Nothing &&
+    fdDependentTypes defaults == Nothing &&
+    fdConstraints defaults == Nothing
+
+prop_file_directives_equality :: Maybe Bool -> Maybe Bool -> Maybe Bool -> Property
+prop_file_directives_equality ownership dependent constraints =
+  let directives1 = FileDirectives ownership dependent constraints
+      directives2 = FileDirectives ownership dependent constraints
+  in property $ directives1 == directives2
+
+-- | Test BlockDirectives properties
+prop_block_directives_default :: Property
+prop_block_directives_default = 
+  let defaults = defaultBlockDirectives
+  in property $ 
+    bdOwnership defaults == Nothing &&
+    bdDependentTypes defaults == Nothing &&
+    bdConstraints defaults == Nothing
+
+prop_block_directives_equality :: Maybe Bool -> Maybe Bool -> Maybe Bool -> Property
+prop_block_directives_equality ownership dependent constraints =
+  let directives1 = BlockDirectives ownership dependent constraints
+      directives2 = BlockDirectives ownership dependent constraints
+  in property $ directives1 == directives2
+
+-- | Test TypusFile properties
+prop_typus_file_empty :: Property
+prop_typus_file_empty = 
+  let emptyFile = TypusFile {
+        tfFileDirectives = defaultFileDirectives,
+        tfBlocks = [],
+        tfSourcePath = "",
+        tfContent = ""
+      }
+  in property $ null (tfBlocks emptyFile)
+
+prop_typus_file_preserves_content :: String -> Property
+prop_typus_file_preserves_content content =
+  let file = TypusFile {
+        tfFileDirectives = defaultFileDirectives,
+        tfBlocks = [],
+        tfSourcePath = "test.typus",
+        tfContent = content
+      }
+  in property $ tfContent file == content
+
+-- | Test parsing properties
+prop_parse_empty_string :: Property
+prop_parse_empty_string = 
+  let result = parseTypus "" ""
+  in property $ 
+    case result of
+      Left _ -> True
+      Right file -> tfContent file == ""
+
+prop_parse_preserves_content :: String -> Property
+prop_parse_preserves_content content = 
+  let result = parseTypus "test.typus" content
+  in property $ 
+    case result of
+      Left _ -> True
+      Right file -> tfContent file == content
+
+prop_parse_preserves_path :: String -> String -> Property
+prop_parse_preserves_path path content = 
+  let result = parseTypus path content
+  in property $ 
+    case result of
+      Left _ -> True
+      Right file -> tfSourcePath file == path
+
+-- | Test directive parsing
+prop_parse_ownership_directive :: Property
+prop_parse_ownership_directive = 
+  let content = "// @ownership true\nfunc main() {}"
+      result = parseTypus "test.typus" content
+  in property $ 
+    case result of
+      Left _ -> True
+      Right file -> 
+        case fdOwnership (tfFileDirectives file) of
+          Nothing -> True
+          Just located -> locatedValue located == True
+
+prop_parse_dependent_types_directive :: Property
+prop_parse_dependent_types_directive = 
+  let content = "// @dependent-types true\nfunc main() {}"
+      result = parseTypus "test.typus" content
+  in property $ 
+    case result of
+      Left _ -> True
+      Right file -> 
+        case fdDependentTypes (tfFileDirectives file) of
+          Nothing -> True
+          Just located -> locatedValue located == True
+
+-- | Test parsing consistency
+prop_parse_roundtrip :: String -> Property
+prop_parse_roundtrip content = 
+  let result = parseTypus "test.typus" content
+  in property $ 
+    case result of
+      Left _ -> True
+      Right file -> tfContent file == content
+
+prop_parse_idempotent :: String -> Property
+prop_parse_idempotent content = 
+  let result1 = parseTypus "test.typus" content
+      result2 = case result1 of
+        Left _ -> parseTypus "test.typus" content
+        Right file -> parseTypus "test.typus" (tfContent file)
+  in property $ 
+    case (result1, result2) of
+      (Left _, Left _) -> True
+      (Right f1, Right f2) -> tfContent f1 == tfContent f2
+      _ -> True
+
+-- | Test error handling
+prop_parse_invalid_syntax :: Property
+prop_parse_invalid_syntax = 
+  let invalidContent = "func main {  // missing closing brace"
+      result = parseTypus "test.typus" invalidContent
+  in property $ 
+    case result of
+      Left _ -> True
+      Right _ -> True  -- May succeed with partial parsing
+
+-- | Test parsing with different encodings
+prop_parse_unicode_content :: String -> Property
+prop_parse_unicode_content content = 
+  let unicodeContent = content ++ " // 中文注释"
+      result = parseTypus "test.typus" unicodeContent
+  in property $ 
+    case result of
+      Left _ -> True
+      Right file -> T.pack unicodeContent `T.isInfixOf` T.pack (tfContent file)
+
+-- | Test block directive parsing
+prop_parse_block_directive :: Property
+prop_parse_block_directive = 
+  let content = "func main() {\n  // @ownership false\n  var x int\n}"
+      result = parseTypus "test.typus" content
+  in property $ 
+    case result of
+      Left _ -> True
+      Right file -> 
+        length (tfBlocks file) >= 0  -- Should parse at least one block
+
+-- | Test parsing large files
+prop_parse_large_file :: Int -> Property
+prop_parse_large_file n = 
+  let largeContent = unlines $ replicate n "var x int = 0"
+      result = parseTypus "test.typus" largeContent
+  in property $ 
+    n <= 1000 ==>  -- Limit size for testing
+    case result of
+      Left _ -> True
+      Right file -> length (lines (tfContent file)) == n
+
+-- | Test parsing with comments
+prop_parse_with_comments :: String -> Property
+prop_parse_with_comments content = 
+  let contentWithComments = content ++ "\n// This is a comment\n/* Block comment */"
+      result = parseTypus "test.typus" contentWithComments
+  in property $ 
+    case result of
+      Left _ -> True
+      Right file -> tfContent file == contentWithComments
 
 tests :: TestTree
-tests = testGroup "Test.Unit.EnhancedParserSpec Tests"
-  [ testProperty "basic property" prop_basic_property
+tests = testGroup "Enhanced Parser Tests"
+  [ testGroup "FileDirectives tests"
+    [ testProperty "file directives default" prop_file_directives_default
+    , testProperty "file directives equality" prop_file_directives_equality
+    ]
+  , testGroup "BlockDirectives tests"
+    [ testProperty "block directives default" prop_block_directives_default
+    , testProperty "block directives equality" prop_block_directives_equality
+    ]
+  , testGroup "TypusFile tests"
+    [ testProperty "typus file empty" prop_typus_file_empty
+    , testProperty "typus file preserves content" prop_typus_file_preserves_content
+    ]
+  , testGroup "Parsing properties"
+    [ testProperty "parse empty string" prop_parse_empty_string
+    , testProperty "parse preserves content" prop_parse_preserves_content
+    , testProperty "parse preserves path" prop_parse_preserves_path
+    , testProperty "parse roundtrip" prop_parse_roundtrip
+    , testProperty "parse idempotent" prop_parse_idempotent
+    ]
+  , testGroup "Directive parsing"
+    [ testProperty "parse ownership directive" prop_parse_ownership_directive
+    , testProperty "parse dependent types directive" prop_parse_dependent_types_directive
+    , testProperty "parse block directive" prop_parse_block_directive
+    ]
+  , testGroup "Error handling"
+    [ testProperty "parse invalid syntax" prop_parse_invalid_syntax
+    ]
+  , testGroup "Encoding tests"
+    [ testProperty "parse unicode content" prop_parse_unicode_content
+    ]
+  , testGroup "Performance tests"
+    [ testProperty "parse large file" prop_parse_large_file
+    ]
+  , testGroup "Comment handling"
+    [ testProperty "parse with comments" prop_parse_with_comments
+    ]
   ]

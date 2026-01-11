@@ -75,13 +75,7 @@ instance Arbitrary SymbolInfo where
     value <- arbitrary
     return $ SymbolInfo name typ scope value
 
--- | Arbitrary instance for SymbolTable
-{-# LANGUAGE TypeSynonymInstances #-}
-instance Arbitrary SymbolTable where
-  arbitrary = do
-    size <- choose (0, 5)
-    symbols <- vectorOf size arbitrary
-    let table = foldr (\info acc -> Map.insert (symbolName info) info acc) Map.empty symbols
+-- SymbolTable uses the default Arbitrary instance for Map
 
 -- | Simple symbol table for testing
 type SymbolTable = Map.Map String SymbolInfo
@@ -198,9 +192,8 @@ prop_remove_symbol name typ scope table =
   in not (symbolExists name table2)
 
 -- | Test remove symbol missing
-prop_remove_symbol_missing :: String -> SymbolTable -> Bool
+prop_remove_symbol_missing :: String -> SymbolTable -> Property
 prop_remove_symbol_missing name table = 
-  not (symbolExists name table) ==> property $ not (symbolExists name table)
   not (symbolExists name table) ==> property $
     let table2 = removeSymbol name table
     in table2 == table
@@ -214,9 +207,9 @@ prop_lookup_symbol name typ scope table =
   in lookupSymbol name table1 == Just info
 
 -- | Test lookup symbol missing
-prop_lookup_symbol_missing :: String -> SymbolTable -> Bool
+prop_lookup_symbol_missing :: String -> SymbolTable -> Property
 prop_lookup_symbol_missing name table = 
-  not (symbolExists name table) ==> property $ not (symbolExists name table)
+  not (symbolExists name table) ==> property $
     lookupSymbol name table == Nothing
 
 -- | Test symbol exists
@@ -227,9 +220,9 @@ prop_symbol_exists name typ scope table =
   in symbolExists name table1
 
 -- | Test symbol exists missing
-prop_symbol_exists_missing :: String -> SymbolTable -> Bool
+prop_symbol_exists_missing :: String -> SymbolTable -> Property
 prop_symbol_exists_missing name table = 
-  not (symbolExists name table) ==> property $ not (symbolExists name table)
+  not (symbolExists name table) ==> property $
     not (symbolExists name table)
 
 -- | Test symbol in scope
@@ -240,7 +233,7 @@ prop_symbol_in_scope name typ scope table =
   in symbolInScope scope name table1
 
 -- | Test symbol not in scope
-prop_symbol_not_in_scope :: String -> SymbolType -> SymbolScope -> SymbolScope -> SymbolTable -> Bool
+prop_symbol_not_in_scope :: String -> SymbolType -> SymbolScope -> SymbolScope -> SymbolTable -> Property
 prop_symbol_not_in_scope name typ scope1 scope2 table = 
   scope1 /= scope2 ==> property $
     let info = SymbolInfo name typ scope1 Nothing

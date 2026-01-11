@@ -1227,7 +1227,16 @@ test-suite typus-test
         -- New QuickCheck Test Modules Added (2025)
         Test.Unit.NewStringProcessingQuickCheckSpec,
         Test.Unit.NewParserCombinatorsQuickCheckSpec,
-        Test.Unit.NewErrorHandlingQuickCheckSpec
+        Test.Unit.NewErrorHandlingQuickCheckSpec,
+        
+        -- New Enhanced Test Modules (2025) - 6 comprehensive tests
+        Test.Unit.EnhancedUtilsSpec,
+        Test.Unit.EnhancedSourceLocationSpec,
+        Test.Unit.EnhancedParserSpec,
+        Test.Unit.EnhancedCompilerSpec,
+        Test.Unit.EnhancedOwnershipSpec,
+        Test.Unit.EnhancedDependenciesSpec,
+        Test.Unit.EnhancedDependentTypesSpec
         
         -- New Test Modules Created (2025) - 4 comprehensive tests
         -- (These modules are already listed above)
