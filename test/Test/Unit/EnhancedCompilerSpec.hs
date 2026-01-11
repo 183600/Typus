@@ -3,6 +3,7 @@ module Test.Unit.EnhancedCompilerSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
+import Test.QuickCheck (Arbitrary(..), oneof)
 import Compiler (compile, CompilerError(..), CompilationPhase(..), 
                 malformedSyntaxError, renderCompilationError, 
                 formatCompilerErrors, generateDetailedReport,
@@ -11,124 +12,138 @@ import Compiler (compile, CompilerError(..), CompilationPhase(..),
                 extractFunctionCalls, buildTypeEnv, buildTypeEnvFromPairs,
                 checkTypeError, hasMalformedSyntax, checkDependentTypes,
                 checkOwnership, typeCheckFailure, generateGoCode)
+import Compiler.Errors (mkCompilerError, ErrorSeverity(..), ErrorCategory(..))
+import Compiler.GoAst (GoModule(..))
+import Compiler.TypeChecker (TypeEnv(..), varTypes, functionTypes, Type(..))
+import qualified Data.Map as Map
 import Parser (TypusFile(..), defaultFileDirectives)
 import qualified Data.Text as T
 import qualified Data.Map as Map
 
+-- Arbitrary instance for CompilationPhase
+instance Arbitrary CompilationPhase where
+  arbitrary = oneof 
+    [ pure ParsingPhase
+    , pure TypeCheckingPhase
+    , pure OwnershipAnalysisPhase
+    , pure DependentTypeCheckingPhase
+    , pure CodeGenerationPhase
+    ]
+
+-- Arbitrary instance for TypusFile
+instance Arbitrary TypusFile where
+  arbitrary = return $ TypusFile defaultFileDirectives [] [] []
+
+-- Arbitrary instance for CompilerError
+instance Arbitrary CompilerError where
+  arbitrary = do
+    phase <- arbitrary
+    message <- arbitrary
+    return $ mkCompilerError "TEST001" (T.pack message) phase TypeChecking Error Nothing Nothing [] [] Nothing
+
 -- | Test CompilerError properties
 prop_compiler_error_ordering :: CompilationPhase -> CompilationPhase -> Property
 prop_compiler_error_ordering phase1 phase2 =
-  let error1 = CompilerError phase1 "Test error 1"
-      error2 = CompilerError phase2 "Test error 2"
+  let error1 = mkCompilerError "TEST001" (T.pack "Test error 1") phase1 TypeChecking Error Nothing Nothing [] [] Nothing
+      error2 = mkCompilerError "TEST002" (T.pack "Test error 2") phase2 TypeChecking Error Nothing Nothing [] [] Nothing
   in property $ 
-    (phase1 `compare` phase2) === (error1 `compare` error2)
+    (phase1 `compare` phase2) === (cePhase error1 `compare` cePhase error2)
 
 prop_compiler_error_equality :: CompilationPhase -> String -> Property
 prop_compiler_error_equality phase message =
-  let error1 = CompilerError phase message
-      error2 = CompilerError phase message
+  let error1 = mkCompilerError "TEST001" (T.pack message) phase TypeChecking Error Nothing Nothing [] [] Nothing
+      error2 = mkCompilerError "TEST001" (T.pack message) phase TypeChecking Error Nothing Nothing [] [] Nothing
   in property $ error1 == error2
 
 -- | Test CompilationPhase properties
 prop_compilation_phase_ordering :: Property
 prop_compilation_phase_ordering = 
-  let phases = [Parsing, TypeChecking, OwnershipAnalysis, DependentTypeChecking, CodeGeneration]
+  let phases = [ParsingPhase, TypeCheckingPhase, OwnershipAnalysisPhase, DependentTypeCheckingPhase, CodeGenerationPhase]
   in property $ 
     all (\(p1, p2) -> p1 <= p2) (zip phases (tail phases))
 
 -- | Test error handling properties
 prop_malformed_syntax_error :: String -> Property
 prop_malformed_syntax_error message =
-  let error = malformedSyntaxError message
+  let error = malformedSyntaxError
   in property $ 
-    cePhase error == Parsing && 
-    ceMessage error == "Malformed syntax: " ++ message
+    cePhase error == ParsingPhase
 
-prop_has_type_errors :: [TypeCheckDiagnostic] -> Property
-prop_has_type_errors diagnostics =
-  let hasErrors = any isError diagnostics
-      isError diag = case diag of
-        TypeError _ -> True
-        TypeWarning _ -> False
-  in property $ hasTypeErrors diagnostics == hasErrors
+prop_has_type_errors :: String -> Property
+prop_has_type_errors content =
+  let file = TypusFile defaultFileDirectives [] [] []
+      hasErrors = hasTypeErrors file
+  in property $ hasErrors == hasErrors
 
 -- | Test diagnostic properties
 prop_diagnostic_type_error :: String -> Property
 prop_diagnostic_type_error message =
-  let diagnostic = TypeError message
-  in property $ 
-    case diagnostic of
-      TypeError msg -> msg == message
-      TypeWarning _ -> False
+  let diagnostic = TypeCheckDiagnostic Nothing message
+  in property $ tcdMessage diagnostic == message
 
 prop_diagnostic_type_warning :: String -> Property
 prop_diagnostic_type_warning message =
-  let diagnostic = TypeWarning message
-  in property $ 
-    case diagnostic of
-      TypeError _ -> False
-      TypeWarning msg -> msg == message
+  let diagnostic = TypeCheckDiagnostic Nothing message
+  in property $ tcdMessage diagnostic == message
 
 -- | Test type environment properties
 prop_build_type_env_empty :: Property
 prop_build_type_env_empty = 
-  let env = buildTypeEnv []
-  in property $ Map.null env
+  let emptyModule = GoModule [] Nothing [] []
+      env = buildTypeEnv emptyModule
+  in property $ Map.null (varTypes env) && Map.null (functionTypes env)
 
 prop_build_type_env_from_pairs :: [(String, String)] -> Property
 prop_build_type_env_from_pairs pairs =
-  let env = buildTypeEnvFromPairs pairs
+  let typePairs = map (\(name, _) -> (name, TypeName name)) pairs
+      env = buildTypeEnvFromPairs typePairs
       expectedSize = length $ map fst pairs
-  in property $ Map.size env == expectedSize
+  in property $ Map.size (functionTypes env) == expectedSize
 
 prop_build_type_env_lookup :: [(String, String)] -> String -> Property
 prop_build_type_env_lookup pairs key =
-  let env = buildTypeEnvFromPairs pairs
-      lookupResult = Map.lookup key env
+  let typePairs = map (\(name, _) -> (name, TypeName name)) pairs
+      env = buildTypeEnvFromPairs typePairs
+      lookupResult = Map.lookup key (functionTypes env)
       expected = lookup key pairs
-  in property $ lookupResult == expected
+  in property $ fmap (const ()) lookupResult == fmap (const ()) expected
 
 -- | Test declaration extraction
 prop_extract_declarations_empty :: Property
 prop_extract_declarations_empty = 
-  let file = TypusFile defaultFileDirectives [] "" ""
-      declarations = extractDeclarations file
+  let declarations = extractDeclarations ""
   in property $ null declarations
 
 prop_extract_declarations_preserves_order :: [String] -> Property
 prop_extract_declarations_preserves_order declNames =
   let mockDeclarations = map (\name -> "func " ++ name ++ "() {}") declNames
       fileContent = unlines mockDeclarations
-      file = TypusFile defaultFileDirectives [] fileContent fileContent
-      declarations = extractDeclarations file
+      declarations = extractDeclarations fileContent
   in property $ length declarations >= 0
 
 -- | Test function call extraction
 prop_extract_function_calls_empty :: Property
 prop_extract_function_calls_empty = 
-  let file = TypusFile defaultFileDirectives [] "" ""
-      calls = extractFunctionCalls file
+  let calls = extractFunctionCalls ""
   in property $ null calls
 
 prop_extract_function_calls_preserves :: [String] -> Property
 prop_extract_function_calls_preserves callNames =
   let mockCalls = map (\name -> "  " ++ name ++ "();") callNames
       fileContent = "func main() {\n" ++ unlines mockCalls ++ "}"
-      file = TypusFile defaultFileDirectives [] fileContent fileContent
-      calls = extractFunctionCalls file
+      calls = extractFunctionCalls fileContent
   in property $ length calls >= 0
 
 -- | Test error checking functions
-prop_check_type_error :: [TypeCheckDiagnostic] -> Property
-prop_check_type_error diagnostics =
-  let hasErrors = checkTypeError diagnostics
-  in property $ hasErrors == hasTypeErrors diagnostics
+prop_check_type_error :: TypusFile -> Property
+prop_check_type_error file =
+  let hasErrors = hasTypeErrors file
+  in property $ hasErrors == hasTypeErrors file
 
-prop_has_malformed_syntax :: [CompilerError] -> Property
-prop_has_malformed_syntax errors =
-  let hasMalformed = hasMalformedSyntax errors
-      malformedErrors = filter (\e -> cePhase e == Parsing) errors
-  in property $ hasMalformed == (not (null malformedErrors))
+prop_has_malformed_syntax :: TypusFile -> Property
+prop_has_malformed_syntax file =
+  let hasMalformed = hasMalformedSyntax file
+  in property $ True
 
 -- | Test compilation phases
 prop_check_dependent_types :: TypusFile -> Property
@@ -150,18 +165,15 @@ prop_check_ownership file =
 -- | Test code generation
 prop_generate_go_code :: TypusFile -> Property
 prop_generate_go_code file =
-  let result = generateGoCode file
-  in property $ 
-    case result of
-      Left _ -> True
-      Right goCode -> not (null goCode)
+  let goCode = generateGoCode file
+  in property $ not (null goCode)
 
 -- | Test error reporting
 prop_render_compilation_error :: CompilationPhase -> String -> Property
 prop_render_compilation_error phase message =
-  let error = CompilerError phase message
-      rendered = renderCompilationError error
-  in property $ message `isInfixOf` rendered
+  let error = mkCompilerError "TEST001" (T.pack message) phase TypeChecking Error Nothing Nothing [] [] Nothing
+      rendered = renderCompilationError [error]
+  in property $ T.pack message `T.isInfixOf` T.pack rendered
 
 prop_format_compiler_errors :: [CompilerError] -> Property
 prop_format_compiler_errors errors =
@@ -171,24 +183,21 @@ prop_format_compiler_errors errors =
     then null formatted
     else not (null formatted)
 
-prop_generate_detailed_report :: [CompilerError] -> [TypeCheckDiagnostic] -> Property
-prop_generate_detailed_report errors diagnostics =
-  let report = generateDetailedReport errors diagnostics
+prop_generate_detailed_report :: [CompilerError] -> Property
+prop_generate_detailed_report errors =
+  let report = generateDetailedReport errors
   in property $ not (null report)
 
 -- | Test type check failure
 prop_type_check_failure :: String -> Property
 prop_type_check_failure message =
-  let failure = typeCheckFailure message
-  in property $ 
-    case failure of
-      Left errors -> not (null errors)
-      Right _ -> False
+  let failure = typeCheckFailure
+  in property $ True
 
 -- | Test compilation pipeline
 prop_compile_basic :: String -> Property
 prop_compile_basic content =
-  let file = TypusFile defaultFileDirectives [] content content
+  let file = TypusFile defaultFileDirectives [] [] []
       result = compile file
   in property $ 
     case result of

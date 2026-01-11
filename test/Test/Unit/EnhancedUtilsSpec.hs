@@ -3,6 +3,8 @@ module Test.Unit.EnhancedUtilsSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
+import Data.Char (isSpace)
+import Data.List (isInfixOf)
 import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed, 
              removeLineComments, removeComments, normalizeIndentation, 
              breakOn, safeProcessString, isValidChar)
@@ -72,7 +74,7 @@ prop_remove_comments_line_and_block :: String -> String -> Property
 prop_remove_comments_line_and_block s1 s2 = 
   let input = s1 ++ " // line comment\n" ++ s2 ++ " /* block comment */"
       result = removeComments input
-  in property $ "//" `notElem` result && "/*" `notElem` result
+  in property $ not ("//" `isInfixOf` result) && not ("/*" `isInfixOf` result)
 
 -- | Test breakOn function
 prop_break_on_found :: String -> String -> Property

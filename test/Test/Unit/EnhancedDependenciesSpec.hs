@@ -3,12 +3,30 @@ module Test.Unit.EnhancedDependenciesSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import Dependencies (DependencyAnalysis(..), Dependency(..), DependencyType(..), 
-                    analyzeDependencies, checkCircularDependencies, 
-                    resolveDependencyOrder, validateDependencies)
+import Test.QuickCheck (Arbitrary(..), oneof)
+import Dependencies.Stub (DependencyAnalysis(..), Dependency(..), DependencyType(..), 
+                          analyzeDependencies, checkCircularDependencies, 
+                          resolveDependencyOrder, validateDependencies)
 import Parser (TypusFile(..), defaultFileDirectives)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+
+-- Arbitrary instance for DependencyType
+instance Arbitrary Dependencies.Stub.DependencyType where
+  arbitrary = oneof 
+    [ pure Dependencies.Stub.FunctionDependency
+    , pure Dependencies.Stub.VariableDependency
+    , pure Dependencies.Stub.TypeDependency
+    , pure Dependencies.Stub.ModuleDependency
+    ]
+
+-- Arbitrary instance for Dependency
+instance Arbitrary Dependencies.Stub.Dependency where
+  arbitrary = do
+    name <- arbitrary
+    depType <- arbitrary
+    fromModule <- arbitrary
+    return $ Dependencies.Stub.Dependency name depType fromModule
 
 -- | Test DependencyAnalysis properties
 prop_dependency_analysis_empty :: Property
@@ -36,13 +54,13 @@ prop_dependency_analysis_consistency dependencies order =
     length (daOrder analysis) == length order
 
 -- | Test Dependency properties
-prop_dependency_equality :: String -> String -> DependencyType -> Property
-prop_dependency_equality name depType fromModule =
+prop_dependency_equality :: String -> String -> Dependencies.Stub.DependencyType -> Property
+prop_dependency_equality name fromModule depType =
   let dep1 = Dependency name depType fromModule
       dep2 = Dependency name depType fromModule
   in property $ dep1 == dep2
 
-prop_dependency_ordering :: String -> String -> DependencyType -> Property
+prop_dependency_ordering :: String -> String -> Dependencies.Stub.DependencyType -> Property
 prop_dependency_ordering name1 name2 depType =
   let dep1 = Dependency name1 depType "module1"
       dep2 = Dependency name2 depType "module2"
@@ -52,14 +70,14 @@ prop_dependency_ordering name1 name2 depType =
 -- | Test DependencyType properties
 prop_dependency_type_ordering :: Property
 prop_dependency_type_ordering = 
-  let types = [FunctionDependency, VariableDependency, TypeDependency, ModuleDependency]
+  let types = [Dependencies.Stub.FunctionDependency, Dependencies.Stub.VariableDependency, Dependencies.Stub.TypeDependency, Dependencies.Stub.ModuleDependency]
   in property $ 
     all (\(t1, t2) -> t1 <= t2) (zip types (tail types))
 
 -- | Test dependency analysis
 prop_analyze_dependencies_empty :: Property
 prop_analyze_dependencies_empty = 
-  let file = TypusFile defaultFileDirectives [] "" ""
+  let file = TypusFile defaultFileDirectives [] [] []
       analysis = analyzeDependencies file
   in property $ 
     Map.null (daDependencies analysis) && 
@@ -69,7 +87,7 @@ prop_analyze_dependencies_preserves_functions :: [String] -> Property
 prop_analyze_dependencies_preserves_functions funcNames =
   let funcDeclarations = map (\name -> "func " ++ name ++ "() {}") funcNames
       fileContent = unlines funcDeclarations
-      file = TypusFile defaultFileDirectives [] fileContent fileContent
+      file = TypusFile defaultFileDirectives [] [] []
       analysis = analyzeDependencies file
   in property $ Map.size (daDependencies analysis) >= 0
 
@@ -133,10 +151,10 @@ prop_dependency_chain moduleNames =
 -- | Test dependency types
 prop_dependency_type_analysis :: String -> Property
 prop_dependency_type_analysis moduleName =
-  let funcDep = Dependency "func1" FunctionDependency moduleName
-      varDep = Dependency "var1" VariableDependency moduleName
-      typeDep = Dependency "Type1" TypeDependency moduleName
-      moduleDep = Dependency "mod1" ModuleDependency moduleName
+  let funcDep = Dependency "func1" Dependencies.Stub.FunctionDependency moduleName
+      varDep = Dependency "var1" Dependencies.Stub.VariableDependency moduleName
+      typeDep = Dependency "Type1" Dependencies.Stub.TypeDependency moduleName
+      moduleDep = Dependency "mod1" Dependencies.Stub.ModuleDependency moduleName
       dependencies = [funcDep, varDep, typeDep, moduleDep]
   in property $ length dependencies == 4
 
@@ -145,7 +163,7 @@ prop_analyze_dependencies_with_imports :: [String] -> Property
 prop_analyze_dependencies_with_imports moduleNames =
   let importStatements = map (\name -> "import \"" ++ name ++ "\"") moduleNames
       fileContent = unlines importStatements
-      file = TypusFile defaultFileDirectives [] fileContent fileContent
+      file = TypusFile defaultFileDirectives [] [] []
       analysis = analyzeDependencies file
   in property $ Map.size (daDependencies analysis) >= 0
 

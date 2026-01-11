@@ -59,8 +59,10 @@ library
         Dependencies.Analyzer,
         Dependencies.Inference,
         Dependencies.Parser,
+        Dependencies.Stub,
         Dependencies.TypeSystem,
         DependentTypesParser,
+        DependentTypesParser.Stub,
         EmbedAssets,
         EnhancedDebug,
         ErrorHandler,
@@ -69,6 +71,7 @@ library
         IntegratedCompiler,
         Ownership,
         Ownership.Common.Types,
+        Ownership.Stub,
         Parser,
         SimpleSyntaxValidator,
         SourceLocation,
@@ -1236,7 +1239,17 @@ test-suite typus-test
         Test.Unit.EnhancedCompilerSpec,
         Test.Unit.EnhancedOwnershipSpec,
         Test.Unit.EnhancedDependenciesSpec,
-        Test.Unit.EnhancedDependentTypesSpec
+        Test.Unit.EnhancedDependentTypesSpec,
+        
+        -- New Enhanced Test Modules (2025) - 10 comprehensive tests
+        Test.Unit.EnhancedUtilsStringProcessingSpec,
+        Test.Unit.EnhancedSourceLocationMathSpec,
+        Test.Unit.EnhancedParserBasicSpec,
+        Test.Unit.EnhancedCompilerBasicSpec,
+        Test.Unit.EnhancedErrorHandlingSpec,
+        Test.Unit.EnhancedIntegrationSpec,
+        Test.Unit.EnhancedPerformanceSpec,
+        Test.Unit.EnhancedBoundaryConditionsSpec,
         
         -- New Test Modules Created (2025) - 4 comprehensive tests
         -- (These modules are already listed above)
