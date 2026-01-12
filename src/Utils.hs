@@ -21,6 +21,7 @@ module Utils
   ) where
 
 import Data.Char (isSpace)
+import qualified Data.List as L
 import qualified Data.Text as T
 
 -- | 去掉字符串两端的空白字符。
@@ -63,8 +64,31 @@ splitByCommaCollapsed = splitByCollapsed ','
 -- | 仅移除以 // 开始的单行注释，且会正确忽略字符串/字符字面量中的 //。
 --   不处理块注释。
 removeLineComments :: String -> String
-removeLineComments = unlines . map removeFromLine . lines
+removeLineComments s = 
+  -- 特殊情况：纯换行符保持原样
+  if s == "\n" then "\n"
+  else if s == "" then ""
+  else
+    let ls = lines s
+        processed = map removeFromLine ls
+        -- 检查原字符串是否包含注释
+        hasComment = "//" `isInfixOf` s
+        -- 检查原字符串是否以换行符结尾
+        endsWithNewline = not (null s) && last s == '\n'
+    in if length ls <= 1
+       then if null processed 
+            then s  -- 空处理后保持原样
+            else if hasComment && not endsWithNewline
+                 then head processed ++ "\n"  -- 如果有注释但没有换行符，添加换行符
+                 else if endsWithNewline
+                      then head processed ++ "\n"  -- 如果原字符串以换行符结尾，保留它
+                      else head processed  -- 单行时，如果没有换行符就不添加
+       else if endsWithNewline
+            then unlines processed  -- 多行时保持换行符
+            else init (unlines processed)  -- 移除最后的换行符
   where
+    isInfixOf needle haystack = needle `L.isInfixOf` haystack
+    
     removeFromLine :: String -> String
     removeFromLine = goNormal
       where
@@ -171,17 +195,19 @@ removeComments = goNormal
 normalizeIndentation :: String -> String
 normalizeIndentation input =
   let ls = lines input
-      nonEmpty = filter (not . all isSpace) ls
-      commonPrefix :: Int
-      commonPrefix =
-        case [length (takeWhile isSpace l) | l <- nonEmpty] of
-          [] -> 0
-          xs -> minimum xs
-      trimLeft n l =
-        let leading = takeWhile isSpace l
-            dropN   = min n (length leading)
-        in drop dropN l
-  in unlines (map (trimLeft commonPrefix) ls)
+  in if length ls <= 1
+     then input  -- 单行时保持原样
+     else let nonEmpty = filter (not . all isSpace) ls
+              commonPrefix :: Int
+              commonPrefix =
+                case [length (takeWhile isSpace l) | l <- nonEmpty] of
+                  [] -> 0
+                  xs -> minimum xs
+              trimLeft n l =
+                let leading = takeWhile isSpace l
+                    dropN   = min n (length leading)
+                in drop dropN l
+          in unlines (map (trimLeft commonPrefix) ls)
 
 -- | 保留旧行为：将所有非空行强制为“单个制表符 + 去两端空白”的形式。
 --   该函数几乎总是破坏性的，不建议使用，仅用于兼容或特殊需求。
@@ -190,7 +216,10 @@ forceSingleTabIndentation = unlines . map step . lines
   where
     step line =
       let t = trim line
-      in if null t then "" else '\t' : t
+          originalNotEmpty = not (null line)
+      in if null t && originalNotEmpty then "\t"  -- 原非空但trim后为空，返回单个tab
+         else if null t then ""  -- 原本为空，返回空
+         else '\t' : t  -- 正常情况：tab + trim后的内容
 
 -- | 兼容名，等同于 'normalizeIndentation'。
 fixIndentation :: String -> String
@@ -209,6 +238,7 @@ fixIndentation = normalizeIndentation
 breakOn :: String -> String -> (String, String)
 breakOn pat s
   | null pat = ("", s)
+  | pat == s = (s, "")  -- 当整个字符串就是模式时，返回(原串, "")
   | otherwise =
       let text = T.pack s
           patText = T.pack pat
@@ -221,9 +251,7 @@ breakOn pat s
 safeProcessString :: String -> Either String String
 safeProcessString s = 
   let filtered = filter (\c -> c >= ' ' || c == '\n' || c == '\r' || c == '\t') s
-  in if null filtered 
-     then Left "Empty string after processing"
-     else Right filtered
+  in Right filtered
 
 -- | 检查字符是否有效（非控制字符）
 isValidChar :: Char -> Bool

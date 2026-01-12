@@ -113,10 +113,10 @@ prop_break_on_not_found c s =
 
 prop_break_on_first_occurrence :: Char -> String -> Property
 prop_break_on_first_occurrence c s = 
-  property $ c `elem` s ==> 
-    let (before, after) = breakOn [c] s
-        fullString = before ++ [c] ++ after
-    in fullString === s
+  let (before, after) = breakOn [c] s
+  in if c `elem` s
+     then property $ before ++ [c] ++ after === s
+     else before === s .&&. after === ""
 
 -- Test string processing with edge cases
 prop_safe_process_string_empty :: Property
@@ -236,15 +236,15 @@ prop_to_lower_to_upper_roundtrip :: String -> Property
 prop_to_lower_to_upper_roundtrip s = 
   let lowered = map toLower s
       uppered = map toUpper lowered
-  in property $ all isAlpha s ==> 
-    map toUpper s === uppered
+      expectedUpper = map toUpper s
+  in property $ uppered === expectedUpper
 
 prop_to_upper_to_lower_roundtrip :: String -> Property
 prop_to_upper_to_lower_roundtrip s = 
   let uppered = map toUpper s
       lowered = map toLower uppered
-  in property $ all isAlpha s ==> 
-    map toLower s === lowered
+      expectedLower = map toLower s
+  in property $ lowered === expectedLower
 
 -- Test string splitting and joining
 prop_split_join_roundtrip :: Char -> String -> Property
@@ -257,8 +257,8 @@ prop_split_collapsed_join_roundtrip :: Char -> String -> Property
 prop_split_collapsed_join_roundtrip c s = 
   let parts = splitByCollapsed c s
       rejoined = L.intercalate [c] parts
-  in property $ not (null parts) ==> 
-    not (elem c rejoined)
+      expectedParts = filter (not . null) (splitBy c s)
+  in property $ parts === expectedParts
 
 -- Test string filtering
 prop_filter_is_alpha_num :: String -> Property

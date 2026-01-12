@@ -236,11 +236,11 @@ _showFullDebugState config = do
     
     -- Show watch variables
     putStrLn "\nWatch Variables:"
-    listWatchVariables config
+    _ <- listWatchVariables config
     
     -- Show breakpoints
     putStrLn "\nBreakpoints:"
-    listBreakpoints config
+    _ <- listBreakpoints config
     
     putStrLn "==================\n"
 

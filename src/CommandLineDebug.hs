@@ -132,8 +132,8 @@ data DebugCommandResult
 processDebugCommand :: CommandLineDebugConfig -> String -> IO DebugCommandResult
 processDebugCommand config commandStr = processDebugCommandWithOutput True config "" (words commandStr)
 
-processDebugCommandWithArgs :: CommandLineDebugConfig -> String -> [String] -> IO DebugCommandResult
-processDebugCommandWithArgs = processDebugCommandWithOutput True
+_processDebugCommandWithArgs :: CommandLineDebugConfig -> String -> [String] -> IO DebugCommandResult
+_processDebugCommandWithArgs = processDebugCommandWithOutput True
 
 -- Internal version with output control
 processDebugCommandWithOutput :: Bool -> CommandLineDebugConfig -> String -> [String] -> IO DebugCommandResult
@@ -345,8 +345,8 @@ listWatchVariables config = do
     return (Map.toList watchVars)
 
 -- Print watch variables
-printWatchVariables :: CommandLineDebugConfig -> IO ()
-printWatchVariables config = do
+_printWatchVariables :: CommandLineDebugConfig -> IO ()
+_printWatchVariables config = do
     watchVars <- listWatchVariables config
     if null watchVars
         then putStrLn "No watch variables set"

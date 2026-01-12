@@ -87,7 +87,7 @@ debugLoop cliConfig enhancedConfig = do
                     createBreakpoint enhancedConfig location
                     debugLoop cliConfig enhancedConfig
                 ListBreakpoints -> do
-                    listBreakpoints cliConfig
+                    _ <- listBreakpoints cliConfig
                     debugLoop cliConfig enhancedConfig
                 ClearBreakpoints -> do
                     clearBreakpoints cliConfig

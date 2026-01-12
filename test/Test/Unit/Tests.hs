@@ -7,6 +7,7 @@ import qualified Test.Unit.NewCorePropertiesQuickCheckSpec as NewCoreProperties
 import qualified Test.Unit.ComprehensiveCoreModulesQuickCheckSpec as ComprehensiveCoreModules
 import qualified Test.Unit.NewQuickCheckTestSuiteSpec as NewQuickCheckTestSuite
 import qualified Test.Unit.AdditionalQuickCheckTestSuiteSpec as AdditionalQuickCheckTestSuite
+import qualified Test.Unit.NewComprehensiveQuickCheckSpec as NewComprehensiveQuickCheck
 
 -- Basic test properties
 prop_basic_property :: String -> Property
@@ -18,5 +19,6 @@ tests = testGroup "Test.Unit.Tests Tests"
     NewCoreProperties.tests,
     ComprehensiveCoreModules.tests,
     NewQuickCheckTestSuite.tests,
-    AdditionalQuickCheckTestSuite.tests
+    AdditionalQuickCheckTestSuite.tests,
+    NewComprehensiveQuickCheck.tests
   ]

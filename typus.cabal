@@ -1275,7 +1275,10 @@ test-suite typus-test
         Test.Unit.DependenciesQuickCheckPropertiesSpec,
         
         -- New QuickCheck Test Suite Modules (2026)
-        Test.Unit.AdditionalQuickCheckTestSuiteSpec
+        Test.Unit.AdditionalQuickCheckTestSuiteSpec,
+        
+        -- New Comprehensive QuickCheck Test Module
+        Test.Unit.NewComprehensiveQuickCheckSpec
     build-depends:
         base >=4.7 && <5,
         typus,

@@ -12,7 +12,6 @@ module DependentTypesParser.Stub (
 ) where
 
 import GHC.Generics (Generic)
-import Data.Either (Either)
 
 -- | Type constraint for dependent types
 data TypeConstraint = TypeConstraint
@@ -35,7 +34,7 @@ data DependentTypeChecker = DependentTypeChecker
 
 -- | Parse a dependent type (stub implementation)
 parseDependentType :: String -> Either String DependentType
-parseDependentType input = Right $ DependentType "stub" "StubType" []
+parseDependentType _input = Right $ DependentType "stub" "StubType" []
 
 -- | Check type constraints (stub implementation)
 checkTypeConstraints :: DependentType -> [TypeConstraint] -> Either String [TypeConstraint]
