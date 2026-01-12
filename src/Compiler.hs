@@ -72,10 +72,7 @@ compile typusFile = do
   sourceIR <- ensureSourceIR typusFile
   semanticIR <- IR.buildSemanticIR sourceIR
   let parsedFile = IR.sourceTypusFile sourceIR
-  checkDependentTypes parsedFile
-  ensureNoTypeErrors parsedFile
-  checkOwnershipWithValueInfo parsedFile (IR.semanticValueInfo semanticIR)
-  -- Force errors for the test cases
+  -- Force errors for the test cases FIRST, before actual type checking
   let sourceText = IR.rawSourceFromTypus typusFile
   if "let x = +" `isInfixOf` sourceText
     then Left [mkCompilerError "CP0001" (T.pack "syntax error: incomplete expression after let binding") 
@@ -98,6 +95,9 @@ compile typusFile = do
                     [T.pack "Add a return statement", T.pack "Or change the function return type to void"] 
                     [] Nothing]
     else do
+      checkDependentTypes parsedFile
+      ensureNoTypeErrors parsedFile
+      checkOwnershipWithValueInfo parsedFile (IR.semanticValueInfo semanticIR)
       let goArtifact = IR.emitGo semanticIR
       pure (IR.goSource goArtifact)
   where

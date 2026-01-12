@@ -4,11 +4,13 @@ module Test.Unit.ParserCoreFunctionalitySpec where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, assertBool, assertEqual)
-import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, elements, listOf, chooseInt, Property, (===), counterexample)
+import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, elements, listOf, chooseInt, Property, (===), counterexample, property, conjoin)
 
 import Parser (parseTypus, TypusFile(..), CodeBlock(..), BlockDirectives(..), FileDirectives(..))
-import SourceLocation (SourceSpan(..), SourcePos(..))
+import SourceLocation (SourceSpan(..), SourcePos(..), Located(..))
+import qualified SyntaxValidator
 import qualified Data.Text as T
+import Data.List (intersperse)
 
 -- Test data generators
 instance Arbitrary TypusFile where
@@ -53,6 +55,22 @@ instance Arbitrary SourcePos where
     offset <- chooseInt (0, 10000)
     return $ SourcePos line column offset
 
+instance Arbitrary a => Arbitrary (Located a) where
+  arbitrary = do
+    pos <- arbitrary
+    span <- arbitrary
+    value <- arbitrary
+    return $ Located value pos span
+
+instance Arbitrary SyntaxValidator.SyntaxError where
+  arbitrary = do
+    errorType <- elements [SyntaxValidator.MissingBrace, SyntaxValidator.MissingParenthesis, SyntaxValidator.InvalidIdentifier]
+    line <- chooseInt (1, 1000)
+    column <- chooseInt (1, 1000)
+    msg <- elements ["Syntax error", "Parse error", "Invalid token"]
+    lineContent <- elements ["let x = 42", "func test() {}", "var y int"]
+    return $ SyntaxValidator.SyntaxError errorType msg line column lineContent
+
 -- Test cases
 parserCoreFunctionalityTests :: TestTree
 parserCoreFunctionalityTests = testGroup "Parser Core Functionality Tests"
@@ -83,7 +101,7 @@ parserCoreFunctionalityTests = testGroup "Parser Core Functionality Tests"
           let directives = tfDirectives typusFile
           case fdOwnership directives of
             Nothing -> assertBool "Should have ownership directive" False
-            Just (Located _ value) -> assertEqual "Ownership should be on" True value
+            Just (Located value _ _) -> assertEqual "Ownership should be on" True value
 
   , testCase "Parse file with dependent types directive" $ do
       let content = "//! dependent_types: on\nlet x: Int = 42\n"
@@ -94,7 +112,7 @@ parserCoreFunctionalityTests = testGroup "Parser Core Functionality Tests"
           let directives = tfDirectives typusFile
           case fdDependentTypes directives of
             Nothing -> assertBool "Should have dependent types directive" False
-            Just (Located _ value) -> assertEqual "Dependent types should be on" True value
+            Just (Located value _ _) -> assertEqual "Dependent types should be on" True value
 
   , testCase "Parse file with constraints directive" $ do
       let content = "//! constraints: on\nlet x: Int = 42\n"
@@ -105,11 +123,11 @@ parserCoreFunctionalityTests = testGroup "Parser Core Functionality Tests"
           let directives = tfDirectives typusFile
           case fdConstraints directives of
             Nothing -> assertBool "Should have constraints directive" False
-            Just (Located _ value) -> assertEqual "Constraints should be on" True value
+            Just (Located value _ _) -> assertEqual "Constraints should be on" True value
 
   , -- Block directive tests
     testCase "Parse code block with directives" $ do
-      let content = "{//! ownership: on, dependent_types: off}\nlet x = 42\n"
+      let content = "{//! ownership: on, dependent_types: off}\nlet x = 42\n}"
       let result = parseTypus content
       case result of
         Left err -> assertBool ("Should parse code block with directives: " ++ err) False
@@ -120,7 +138,7 @@ parserCoreFunctionalityTests = testGroup "Parser Core Functionality Tests"
           let directives = cbDirectives firstBlock
           case bdOwnership directives of
             Nothing -> assertBool "Should have ownership directive in block" False
-            Just (Located _ value) -> assertEqual "Block ownership should be on" True value
+            Just (Located value _ _) -> assertEqual "Block ownership should be on" True value
 
   , -- Build tag tests
     testCase "Parse file with build tags" $ do
@@ -157,7 +175,7 @@ parserCoreFunctionalityTests = testGroup "Parser Core Functionality Tests"
           let directives = cbDirectives firstBlock
           case bdOwnership directives of
             Nothing -> assertBool "Should have ownership directive in block" False
-            Just (Located _ value) -> assertEqual "Block ownership should be on" True value
+            Just (Located value _ _) -> assertEqual "Block ownership should be on" True value
 
   , -- Error handling tests
     testCase "Handle malformed directive" $ do
@@ -193,26 +211,36 @@ parserCoreFunctionalityTests = testGroup "Parser Core Functionality Tests"
           in counterexample ("Original: " ++ show simpleContent ++ "\nReconstructed: " ++ show reconstructed) $
              length simpleContent >= length reconstructed
 
-  , testProperty "File directives are preserved" $ property $ \ownershipEnabled dependentTypesEnabled constraintsEnabled -> do
+  , testProperty "File directives are preserved" $ \ownershipEnabled dependentTypesEnabled constraintsEnabled -> do
       let directives = ["ownership: " ++ if ownershipEnabled then "on" else "off"
                        , "dependent_types: " ++ if dependentTypesEnabled then "on" else "off"
                        , "constraints: " ++ if constraintsEnabled then "on" else "off"]
           content = "//! " ++ unwords (intersperse "," directives) ++ "\nlet x = 42\n"
       let result = parseTypus content
       case result of
-        Left _ -> property True  -- It's OK if it fails to parse
+        Left err -> counterexample ("Parse error: " ++ err) $ property False
         Right typusFile -> do
           let fileDirectives = tfDirectives typusFile
           let checkOwnership = case fdOwnership fileDirectives of
-                Nothing -> True
-                Just (Located _ value) -> value == ownershipEnabled
+                Nothing -> property $ counterexample "Ownership directive missing" False
+                Just (Located value _ _) -> 
+                  if value == ownershipEnabled 
+                    then property True
+                    else property $ counterexample ("Ownership mismatch: expected " ++ show ownershipEnabled ++ ", got " ++ show value) False
           let checkDependentTypes = case fdDependentTypes fileDirectives of
-                Nothing -> True
-                Just (Located _ value) -> value == dependentTypesEnabled
+                Nothing -> property $ counterexample "Dependent types directive missing" False
+                Just (Located value _ _) -> 
+                  if value == dependentTypesEnabled 
+                    then property True
+                    else property $ counterexample ("Dependent types mismatch: expected " ++ show dependentTypesEnabled ++ ", got " ++ show value) False
           let checkConstraints = case fdConstraints fileDirectives of
-                Nothing -> True
-                Just (Located _ value) -> value == constraintsEnabled
-          property $ checkOwnership && checkDependentTypes && checkConstraints
+                Nothing -> property $ counterexample "Constraints directive missing" False
+                Just (Located value _ _) -> 
+                  if value == constraintsEnabled 
+                    then property True
+                    else property $ counterexample ("Constraints mismatch: expected " ++ show constraintsEnabled ++ ", got " ++ show value) False
+          let allChecks = [checkOwnership, checkDependentTypes, checkConstraints]
+          property $ conjoin allChecks
 
   , testProperty "Block directives are preserved" $ property $ \ownershipEnabled -> do
       let content = "{//! ownership: " ++ (if ownershipEnabled then "on" else "off") ++ "}\nlet x = 42\n"
@@ -228,7 +256,7 @@ parserCoreFunctionalityTests = testGroup "Parser Core Functionality Tests"
               let blockDirectives = cbDirectives firstBlock
               case bdOwnership blockDirectives of
                 Nothing -> property True
-                Just (Located _ value) -> property $ value == ownershipEnabled
+                Just (Located value _ _) -> property $ value == ownershipEnabled
 
   , testProperty "Build tags are preserved" $ property $ \tags -> do
       let validTags = filter (not . null) $ map (filter (\c -> c /= '\r' && c /= '\n' && c /= '\0')) tags
@@ -241,7 +269,4 @@ parserCoreFunctionalityTests = testGroup "Parser Core Functionality Tests"
           let buildTags = tfBuildTags typusFile
           property $ length buildTags == length validTags
   ]
-  where
-    intersperse _ [] = []
-    intersperse _ [x] = [x]
-    intersperse sep (x:xs) = x : sep : intersperse sep xs
+  

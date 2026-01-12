@@ -4,10 +4,11 @@ module Test.Unit.IntegrationQuickCheckSpec where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, assertBool, assertEqual)
-import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, elements, listOf, chooseInt, Property, (===), counterexample, forAll, choose)
+import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, elements, listOf, chooseInt, Property, (===), counterexample, forAll, choose, property, vectorOf)
 
-import Parser (parseTypus, TypusFile(..), CodeBlock(..))
-import Compiler (compile, generateGoCode)
+import Parser (parseTypus, TypusFile(..), CodeBlock(..), FileDirectives(..))
+import Compiler (compile, generateGoCode, CompilerError(..))
+import Compiler.Errors.Core (message)
 import Utils (trim, removeComments, normalizeIndentation)
 import qualified Data.Text as T
 import qualified Data.List as L
@@ -54,8 +55,9 @@ genValidTypusStatement = oneof
 
 genValidTypusCode :: Gen String
 genValidTypusCode = do
+  numStatements <- choose (1, 5 :: Int)
   numStatements <- choose (1, 5)
-  statements <- listOf $ choose (1, numStatements) >>= \n -> vectorOf n genValidTypusStatement
+  statements <- vectorOf numStatements genValidTypusStatement
   return $ unlines statements
 
 genDirective :: Gen String
@@ -91,7 +93,7 @@ integrationQuickCheckTests = testGroup "Integration QuickCheck Tests"
             Right goCode -> assertBool "Should generate Go code with directives" (not $ null goCode)
 
   , testCase "Parse and compile code with functions" $ do
-      let content = "func add(a: Int, b: Int): Int {\n  return a + b\n}\n\nlet result = add(1, 2)"
+      let content = "package main\n\nfunc add(a: Int, b: Int): Int {\n  return a + b\n}\n\nlet result = add(1, 2)"
       case parseTypus content of
         Left err -> assertBool ("Should parse code with functions: " ++ err) False
         Right typusFile -> do
@@ -107,7 +109,7 @@ integrationQuickCheckTests = testGroup "Integration QuickCheck Tests"
         Right typusFile -> do
           case compile typusFile of
             Left errs -> 
-              let hasSyntaxError = any (\e -> "syntax error" `T.isInfixOf` ceMessage e) errs
+              let hasSyntaxError = any (\e -> T.pack "syntax error" `T.isInfixOf` message (ceError e)) errs
               in assertBool "Should detect syntax error" hasSyntaxError
             Right _ -> assertBool "Should fail to compile invalid syntax" False
 
@@ -118,7 +120,7 @@ integrationQuickCheckTests = testGroup "Integration QuickCheck Tests"
         Right typusFile -> do
           case compile typusFile of
             Left errs -> 
-              let hasTypeError = any (\e -> "type error" `T.isInfixOf` ceMessage e) errs
+              let hasTypeError = any (\e -> T.pack "type error" `T.isInfixOf` message (ceError e)) errs
               in assertBool "Should detect type error" hasTypeError
             Right _ -> assertBool "Should fail to compile type error" False
 
@@ -196,7 +198,7 @@ integrationQuickCheckTests = testGroup "Integration QuickCheck Tests"
           let goCode = generateGoCode typusFile
           let hasFunctions = "func" `L.isInfixOf` goCode
           let originalHasFunctions = "func" `L.isInfixOf` content
-          property $ if originalHasFunctions then hasFunctions else property True
+          property $ if originalHasFunctions then hasFunctions else True
 
   , testProperty "Generated Go code contains variable assignments" $ forAll genValidTypusCode $ \content -> do
       case parseTypus content of
@@ -205,14 +207,14 @@ integrationQuickCheckTests = testGroup "Integration QuickCheck Tests"
           let goCode = generateGoCode typusFile
           let hasAssignments = ":=" `L.isInfixOf` goCode || "=" `L.isInfixOf` goCode
           let originalHasAssignments = "let " `L.isInfixOf` content
-          property $ if originalHasAssignments then hasAssignments else property True
+          property $ if originalHasAssignments then hasAssignments else True
 
   , testProperty "Error messages are informative" $ property $ \content -> do
       case parseTypus content of
         Left _ -> property True  -- Parsing errors are informative
         Right typusFile -> do
           case compile typusFile of
-            Left errs -> property $ all (not . T.null . ceMessage) errs
+            Left errs -> property $ all (not . T.null . message . ceError) errs
             Right _ -> property True
 
   , testProperty "Compilation preserves type information" $ forAll genValidTypusCode $ \content -> do
@@ -221,7 +223,7 @@ integrationQuickCheckTests = testGroup "Integration QuickCheck Tests"
         Left _ -> property True  -- It's OK if it fails to parse
         Right typusFile -> do
           let goCode = generateGoCode typusFile
-          property $ if hasTypeAnnotations then not $ null goCode else property True
+          property $ if hasTypeAnnotations then not $ null goCode else True
 
   , testProperty "Generated Go code is syntactically reasonable" $ forAll genValidTypusCode $ \content -> do
       case parseTypus content of
@@ -230,5 +232,5 @@ integrationQuickCheckTests = testGroup "Integration QuickCheck Tests"
           let goCode = generateGoCode typusFile
           let hasBraces = "{" `L.isInfixOf` goCode && "}" `L.isInfixOf` goCode
           let originalHasBraces = "{" `L.isInfixOf` content && "}" `L.isInfixOf` content
-          property $ if originalHasBraces then hasBraces else property True
+          property $ if originalHasBraces then hasBraces else True
   ]

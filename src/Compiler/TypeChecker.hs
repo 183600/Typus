@@ -386,7 +386,7 @@ isMethodDeclaration line =
                  [] -> False
                  (c:cs) | isAlphaNum c || c == '_' -> 
                      -- Extract the function name
-                     let name = takeWhile (\ch -> isAlphaNum ch || ch == '_') (c:cs)
+                     let _name = takeWhile (\ch -> isAlphaNum ch || ch == '_') (c:cs)
                          afterName = dropWhile (\ch -> isAlphaNum ch || ch == '_') (c:cs)
                          trimmedAfterName = dropWhile isSpace afterName
                      in case trimmedAfterName of
@@ -835,20 +835,30 @@ typeFromString s =
     in if null normal then UnknownType else TypeName normal
 
 normalizeTypeName :: String -> String
-normalizeTypeName = collapseSpaces . trim
+normalizeTypeName = normalizeType . collapseSpaces . trim
   where
     collapseSpaces [] = []
     collapseSpaces (c:cs)
         | isSpace c = ' ' : collapseSpaces (dropWhile isSpace cs)
         | otherwise = c : collapseSpaces cs
+        
+    -- Normalize common type names
+    normalizeType "int" = "Int"
+    normalizeType "bool" = "Bool"
+    normalizeType "string" = "String"
+    normalizeType "float" = "Float"
+    normalizeType "double" = "Double"
+    normalizeType "char" = "Char"
+    normalizeType other = other
 
 
 stripVariadic :: String -> (Bool, String)
 stripVariadic raw =
     let t = trim raw
-    in if "..." `isPrefixOf` t
-        then (True, trim (drop 3 t))
-        else (False, t)
+        t' = if ":" `isPrefixOf` t then trim (tail t) else t
+    in if "..." `isPrefixOf` t'
+        then (True, trim (drop 3 t'))
+        else (False, t')
 
 
 
@@ -1032,17 +1042,6 @@ extractCallExpressions input = go 0 NoStringState' 0 []
                 BacktickState' ->
                     let nextState = if ch == '`' then NoStringState' else BacktickState'
                     in collectArgs (idx + 1) depth nextState (ch:acc)
-
-collectModuleCalls :: GoModule -> [CallExpr]
-collectModuleCalls GoModule{..} =
-    concatMap gather gmDecls
-  where
-    gather (GoFunc decl) =
-        case parseFunctionInfo decl of
-            Nothing -> []
-            Just FunctionInfo{..} -> extractCallExpressions fiBody
-    gather (GoStatement (StatementBlock ls)) = extractCallExpressions (unlines ls)
-    gather _ = []
 
 --------------------------------------------------------------------------------
 -- Type inference helpers

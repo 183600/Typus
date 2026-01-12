@@ -1,12 +1,14 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Unit.CompilerCoreFunctionalitySpec where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, assertBool, assertEqual)
-import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, elements, listOf, chooseInt, Property, (===), counterexample)
+import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, elements, listOf, chooseInt, Property, (===), counterexample, property)
 
 import Compiler (compile, CompilerError(..), CompilationPhase(..), generateGoCode)
+import Compiler.Errors.Core (ErrorSeverity(..), errorWithCategory, ErrorCategory(..), ErrorLocation(..), message)
 import Parser (parseTypus)
 import qualified Data.Text as T
 import qualified Data.List as L
@@ -23,7 +25,9 @@ instance Arbitrary CompilerError where
   arbitrary = do
     phase <- arbitrary
     -- Generate a minimal CompilerError for testing
-    return $ CompilerError "TEST001" (T.pack "Test error") phase Parsing Error Nothing Nothing [] []
+    let defaultLoc = ErrorLocation Nothing 0 0 Nothing Nothing
+    let typeError = errorWithCategory "TEST001" Parsing (T.pack "Test error") defaultLoc
+    return $ CompilerError typeError Nothing [] phase
 
 -- Test cases
 compilerCoreFunctionalityTests :: TestTree
@@ -48,7 +52,7 @@ compilerCoreFunctionalityTests = testGroup "Compiler Core Functionality Tests"
             Right goCode -> assertBool "Should generate Go code" (not $ null goCode)
 
   , testCase "Compile code with function definition" $ do
-      let content = "func add(a: Int, b: Int): Int {\n  return a + b\n}"
+      let content = "package main\n\nfunc add(a: Int, b: Int): Int {\n  return a + b\n}"
       case parseTypus content of
         Left err -> assertBool ("Should parse function definition: " ++ err) False
         Right typusFile -> do
@@ -64,7 +68,7 @@ compilerCoreFunctionalityTests = testGroup "Compiler Core Functionality Tests"
         Right typusFile -> do
           case compile typusFile of
             Left errs -> 
-              let hasSyntaxError = any (\e -> "syntax error: incomplete expression" `T.isInfixOf` ceMessage e) errs
+              let hasSyntaxError = any (\e -> T.pack "syntax error: incomplete expression" `T.isInfixOf` message (ceError e)) errs
               in assertBool "Should detect syntax error in incomplete expression" hasSyntaxError
             Right _ -> assertBool "Should fail to compile incomplete expression" False
 
@@ -75,7 +79,7 @@ compilerCoreFunctionalityTests = testGroup "Compiler Core Functionality Tests"
         Right typusFile -> do
           case compile typusFile of
             Left errs -> 
-              let hasTypeError = any (\e -> "type error: cannot use string as int value" `T.isInfixOf` ceMessage e) errs
+              let hasTypeError = any (\e -> T.pack "type error: cannot use string as int value" `T.isInfixOf` message (ceError e)) errs
               in assertBool "Should detect type error in variable declaration" hasTypeError
             Right _ -> assertBool "Should fail to compile type error" False
 
@@ -86,18 +90,18 @@ compilerCoreFunctionalityTests = testGroup "Compiler Core Functionality Tests"
         Right typusFile -> do
           case compile typusFile of
             Left errs -> 
-              let hasTypeError = any (\e -> "type error: cannot use string as Int value" `T.isInfixOf` ceMessage e) errs
+              let hasTypeError = any (\e -> T.pack "type error: cannot use string as Int value" `T.isInfixOf` message (ceError e)) errs
               in assertBool "Should detect type error in type annotation" hasTypeError
             Right _ -> assertBool "Should fail to compile type annotation error" False
 
   , testCase "Detect missing return statement" $ do
-      let content = "func missingReturn() int {\n  let x = 42\n}"
+      let content = "package main\n\nfunc missingReturn() int {\n  let x = 42\n}"
       case parseTypus content of
         Left err -> assertBool ("Should parse function with missing return: " ++ err) False
         Right typusFile -> do
           case compile typusFile of
             Left errs -> 
-              let hasMissingReturnError = any (\e -> "syntax error: missing return statement" `T.isInfixOf` ceMessage e) errs
+              let hasMissingReturnError = any (\e -> T.pack "syntax error: missing return statement" `T.isInfixOf` message (ceError e)) errs
               in assertBool "Should detect missing return statement" hasMissingReturnError
             Right _ -> assertBool "Should fail to compile function with missing return" False
 
@@ -111,7 +115,7 @@ compilerCoreFunctionalityTests = testGroup "Compiler Core Functionality Tests"
           assertBool "Should generate Go code" (not $ null goCode)
 
   , testCase "Generate Go code from complex Typus code" $ do
-      let content = "//! ownership: on\n\nfunc add(a: Int, b: Int): Int {\n  return a + b\n}\n\nlet result = add(1, 2)"
+      let content = "package main\n\n//! ownership: on\n\nfunc add(a: Int, b: Int): Int {\n  return a + b\n}\n\nlet result = add(1, 2)"
       case parseTypus content of
         Left err -> assertBool ("Should parse complex code: " ++ err) False
         Right typusFile -> do
@@ -159,14 +163,14 @@ compilerCoreFunctionalityTests = testGroup "Compiler Core Functionality Tests"
 
   , testProperty "Compilation preserves function names" $ property $ \funcName -> do
       let validFuncName = take 10 $ filter (\c -> c /= '\0' && c /= '\n' && c /= '\r' && c /= ' ') funcName
-          content = "func " ++ validFuncName + "() {\n  return 42\n}"
+          content = "func " ++ validFuncName ++ "() {\n  return 42\n}"
       case parseTypus content of
         Left _ -> property True  -- It's OK if it fails to parse
         Right typusFile -> do
           let goCode = generateGoCode typusFile
           property $ validFuncName `L.isInfixOf` goCode
 
-  , testProperty "Compilation handles multiple statements" $ property $ \stmtCount -> do
+  , testProperty "Compilation handles multiple statements" $ property $ \(stmtCount :: Int) -> do
       let validCount = max 1 (min 10 (abs stmtCount))
           statements = map (\i -> "let x" ++ show i ++ " = " ++ show i) [1..validCount]
           content = unlines statements
@@ -185,6 +189,8 @@ compilerCoreFunctionalityTests = testGroup "Compiler Core Functionality Tests"
           property $ not $ null goCode
 
   , testProperty "Error messages contain expected phases" $ property $ \phase -> do
-      let error = CompilerError "TEST001" (T.pack "Test error") phase Parsing Error Nothing Nothing [] []
+      let defaultLoc = ErrorLocation Nothing 0 0 Nothing Nothing
+      let typeError = errorWithCategory "TEST001" Parsing (T.pack "Test error") defaultLoc
+      let error = CompilerError typeError Nothing [] phase
       property $ cePhase error === phase
   ]

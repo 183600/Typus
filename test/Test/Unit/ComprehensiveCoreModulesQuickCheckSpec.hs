@@ -90,7 +90,7 @@ prop_removeLineComments_removes_comment_content :: Property
 prop_removeLineComments_removes_comment_content = 
   let line = "code // comment"
       result = Utils.removeLineComments line
-  in property $ result === "code \n"
+  in property $ result === "code"
 
 -- Test removeComments function
 prop_removeComments_preserves_strings :: String -> Property

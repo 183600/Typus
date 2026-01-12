@@ -233,7 +233,7 @@ validateCodeBlocks blocks =
 
     case findIncompleteExpression blocks of
 
-      Just (block, expr) -> Left $ "Incomplete expression in code block: " ++ expr
+      Just (_block, expr) -> Left $ "Incomplete expression in code block: " ++ expr
 
       Nothing -> Right ()
 
@@ -262,7 +262,10 @@ validateCodeBlocks blocks =
       let trimmed = trim line
 
           -- Check for common incomplete patterns
-
+          
+          -- Don't consider function declarations as incomplete
+          isFuncDecl = "func " `isPrefixOf` trimmed
+          
           incompletePatterns = 
 
             [ "let " `isSuffixOf` trimmed
@@ -297,7 +300,7 @@ validateCodeBlocks blocks =
 
             ]
 
-      in any (== True) incompletePatterns && not (null trimmed)
+      in not isFuncDecl && any (== True) incompletePatterns && not (null trimmed)
 
 -- Check for multiple package declarations
 checkMultiplePackageDeclarations :: [ParsedLine] -> Either String ()
@@ -327,10 +330,12 @@ parseFileDirectivesFromParsedLines = go defaultFileDirectives []
     go acc buildTagsRev (line:rest) =
       let text = plText line
           trimmed = trim text
+          -- 检查是否是构建标签行
+          isBuildTagLine' t = isPrefixOf "//go:build" t || isPrefixOf "// +build" t
           -- 检查是否是指令行，允许 // @ 或 //  @（带额外空格）
           isDirectiveLine = isPrefixOf "//!" trimmed || 
                            isPrefixOf "// @" trimmed || 
-                           (isPrefixOf "//" trimmed && "@" `isInfixOf` trimmed)
+                           (isPrefixOf "//" trimmed && "@" `isInfixOf` trimmed && not (isBuildTagLine' trimmed))
       in if trimmed == ""
            then go acc buildTagsRev rest
            else if isDirectiveLine
@@ -338,13 +343,10 @@ parseFileDirectivesFromParsedLines = go defaultFileDirectives []
                directives <- parseFileDirectiveLine line
                acc' <- foldM (\fd (key, val) -> updateFileDirective fd key val) acc directives
                go acc' buildTagsRev rest
-           else if isBuildTagLine trimmed
+           else if isBuildTagLine' trimmed
              then let tag = locatedWithSpan (plSpan line) (plText line)
                   in go acc (tag : buildTagsRev) rest
              else Right (acc, reverse buildTagsRev, line:rest)
-
-    isBuildTagLine t =
-      isPrefixOf "//go:build" t || isPrefixOf "// +build" t
 
 parseFileDirectiveLine :: ParsedLine -> Either String [(String, Located Bool)]
 parseFileDirectiveLine ParsedLine{..} = do
@@ -383,8 +385,7 @@ updateFileDirective fd key value = case key of
     "ownership" -> Right fd { fdOwnership = Just value }
     "dependent_types" -> Right fd { fdDependentTypes = Just value }
     "dependent-types" -> Right fd { fdDependentTypes = Just value }
-    "constraints" -> Right fd { fdConstraints = Just value
-                                , fdDependentTypes = Just value }
+    "constraints" -> Right fd { fdConstraints = Just value }
     _ -> Left $ "Unknown file directive: " ++ key
 
 -- ============================================================================
@@ -437,8 +438,8 @@ parseBlocksFromParsedLines = go [] []
     -- Parse directives from lines
     parseDirectivesFromLines :: [ParsedLine] -> Either String BlockDirectives
     parseDirectivesFromLines [] = Right defaultBlockDirectives
-    parseDirectivesFromLines lines = do
-      directivePairsList <- mapM parseBlockDirectiveLine' lines
+    parseDirectivesFromLines lines' = do
+      directivePairsList <- mapM parseBlockDirectiveLine' lines'
       let directivePairs = concat directivePairsList
       parseBlockDirectives directivePairs
 
@@ -512,17 +513,6 @@ singleDirectiveParser = do
   pure (key, value)
 
 -- Parser for block directives without braces
-blockDirectiveParser' :: DirectiveParser [(T.Text, T.Text)]
-blockDirectiveParser' = do
-  pairs <- MP.sepBy directive (symbol ",")
-  pure pairs
-  where
-    directive = do
-      key <- identifier
-      _ <- symbol ":"
-      value <- identifier
-      pure (key, value)
-
 parseBlockDirectiveLine :: ParsedLine -> Either String [(String, Located Bool)]
 parseBlockDirectiveLine ParsedLine{..} = do
     let stripped = T.stripStart (T.pack plText)
@@ -612,26 +602,6 @@ captureMarkdownBlock startLine = go (1 :: Int) []  -- Start with depth 1 for ope
                      in Right (blockLines, blockSpan, rest)
                    else go (depth - 1) (line:accRev) rest  -- Nested closing, decrease depth
          else go depth (line:accRev) rest
-
--- Capture markdown code block lines until closing ``` and process // @ directives
-captureMarkdownBlockWithDirectives :: ParsedLine -> [ParsedLine] -> Either String ([ParsedLine], BlockDirectives, SourceSpan, [ParsedLine])
-captureMarkdownBlockWithDirectives startLine = go (0 :: Int) [] [] defaultBlockDirectives
-  where
-    go _ _ _ _ [] = Left "Unclosed markdown code block: missing closing ```"
-    go depth accRev directiveAccRev directives (line:rest) =
-      let trimmed = trim (plText line)
-      in if "```" `isPrefixOf` trimmed && not ("```typus" `isPrefixOf` trimmed)
-         then
-           let blockLines = reverse accRev
-               blockSpan = computeMarkdownBlockSpan (plSpan startLine) (plSpan line) (reverse directiveAccRev ++ blockLines)
-           in Right (blockLines, directives, blockSpan, rest)
-         else if isPrefixOf "// @" trimmed
-              then case parseBlockDirectiveLine' line of
-                     Left err -> Left err
-                     Right directivePairs -> do
-                       newDirectives <- parseBlockDirectives directivePairs
-                       go (depth + 1) accRev (line:directiveAccRev) newDirectives rest
-              else go (depth + 1) (line:accRev) directiveAccRev directives rest
 
 computeMarkdownBlockSpan :: SourceSpan -> SourceSpan -> [ParsedLine] -> SourceSpan
 computeMarkdownBlockSpan startSpan endSpan blockLines =
