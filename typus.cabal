@@ -1272,7 +1272,10 @@ test-suite typus-test
         Test.Unit.SourceLocationQuickCheckPropertiesSpec,
         Test.Unit.ParserQuickCheckPropertiesSpec,
         Test.Unit.ErrorHandlerQuickCheckPropertiesSpec,
-        Test.Unit.DependenciesQuickCheckPropertiesSpec
+        Test.Unit.DependenciesQuickCheckPropertiesSpec,
+        
+        -- New QuickCheck Test Suite Modules (2026)
+        Test.Unit.AdditionalQuickCheckTestSuiteSpec
     build-depends:
         base >=4.7 && <5,
         typus,

@@ -5,6 +5,8 @@ import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import qualified Test.Unit.NewCorePropertiesQuickCheckSpec as NewCoreProperties
 import qualified Test.Unit.ComprehensiveCoreModulesQuickCheckSpec as ComprehensiveCoreModules
+import qualified Test.Unit.NewQuickCheckTestSuiteSpec as NewQuickCheckTestSuite
+import qualified Test.Unit.AdditionalQuickCheckTestSuiteSpec as AdditionalQuickCheckTestSuite
 
 -- Basic test properties
 prop_basic_property :: String -> Property
@@ -14,5 +16,7 @@ tests :: TestTree
 tests = testGroup "Test.Unit.Tests Tests"
   [ testProperty "basic property" prop_basic_property,
     NewCoreProperties.tests,
-    ComprehensiveCoreModules.tests
+    ComprehensiveCoreModules.tests,
+    NewQuickCheckTestSuite.tests,
+    AdditionalQuickCheckTestSuite.tests
   ]
