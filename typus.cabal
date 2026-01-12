@@ -47,6 +47,7 @@ library
         Compiler.GoLexer,
         Compiler.GoParsing,
         Compiler.IR,
+        Compiler.OwnershipChecker,
         Compiler.TypeChecker,
         Compiler.ValueAnalysis,
         Ownership.Common.Lexer,
@@ -81,7 +82,6 @@ library
     other-modules:
         Compiler.Error,
         Compiler.GoVarSpec,
-        Compiler.OwnershipChecker,
         Compiler.Errors.Compiler,
         Ownership.Lexer,
         Ownership.Analyzer,
@@ -1249,7 +1249,7 @@ test-suite typus-test
         Test.Unit.EnhancedErrorHandlingSpec,
         Test.Unit.EnhancedIntegrationSpec,
         Test.Unit.EnhancedPerformanceSpec,
-        Test.Unit.EnhancedBoundaryConditionsSpec,
+        Test.Unit.EnhancedBoundaryConditionsSpec
         
         -- New Test Modules Created (2025) - 4 comprehensive tests
         -- (These modules are already listed above)

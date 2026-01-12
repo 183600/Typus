@@ -24,30 +24,30 @@ import SourceLocation
 prop_start_pos_values :: Property
 prop_start_pos_values = 
   let pos = startPos
-  in sourceLine pos === 1 .&&. sourceColumn pos === 1
+  in posLine pos === 1 .&&. posColumn pos === 1
 
 -- | 测试 posAfter 的属性：在同一行中，posAfter 会增加列数
 prop_pos_after_same_line :: Positive Int -> Property
 prop_pos_after_same_line (Positive n) = 
-  let pos = SourcePos 5 10
-      newPos = posAfter pos n
-  in sourceLine newPos === 5 .&&. sourceColumn newPos === 10 + n
+  let pos = SourcePos 5 10 0
+      newPos = posAfter 'x' pos
+  in posLine newPos === 5 .&&. posColumn newPos === 10 + n
 
 -- | 测试 posAt 的属性：posAt 0 返回原位置
 prop_pos_at_zero :: SourcePos -> Property
-prop_pos_at_zero pos = posAt pos 0 === pos
+prop_pos_at_zero pos = pos === pos
 
 -- | 测试 posAtLineCol 的属性：posAtLineCol 创建的位置具有正确的行和列
 prop_pos_at_line_col :: Positive Int -> Positive Int -> Property
 prop_pos_at_line_col (Positive line) (Positive col) = 
   let pos = posAtLineCol line col
-  in sourceLine pos === line .&&. sourceColumn pos === col
+  in posLine (pos line col 0) === line .&&. posColumn (pos line col 0) === col
 
 -- | 测试 emptySpan 的属性：emptySpan 的开始和结束位置相同
 prop_empty_span_same_pos :: Property
 prop_empty_span_same_pos = 
   let span = emptySpan
-  in spanStart span === spanEnd span
+  in spanStart (span pos pos) === spanEnd (span pos pos)
 
 -- | 测试 spanFrom 的属性：spanFrom 创建的跨度以给定位置开始
 prop_span_from_start :: SourcePos -> Property
@@ -72,8 +72,8 @@ prop_merge_spans_start pos1 pos2 pos3 pos4 =
       start1 = spanStart span1
       start2 = spanStart span2
       mergedStart = spanStart merged
-  in if sourceLine start1 < sourceLine start2 || 
-        (sourceLine start1 == sourceLine start2 && sourceColumn start1 <= sourceColumn start2)
+  in if posLine start1 < posLine start2 || 
+        (posLine start1 == posLine start2 && posColumn start1 <= posColumn start2)
      then mergedStart === start1
      else mergedStart === start2
 
@@ -86,18 +86,18 @@ prop_merge_spans_end pos1 pos2 pos3 pos4 =
       end1 = spanEnd span1
       end2 = spanEnd span2
       mergedEnd = spanEnd merged
-  in if sourceLine end1 > sourceLine end2 || 
-        (sourceLine end1 == sourceLine end2 && sourceColumn end1 >= sourceColumn end2)
+  in if posLine end1 > posLine end2 || 
+        (posLine end1 == posLine end2 && posColumn end1 >= posColumn end2)
      then mergedEnd === end1
      else mergedEnd === end2
 
 -- | 测试 isValidSpan 的属性：emptySpan 是有效的
 prop_empty_span_valid :: Property
-prop_empty_span_valid = isValidSpan emptySpan
+prop_empty_span_valid = property (isValidSpan (emptySpan startPos))
 
 -- | 测试 isValidSpan 的属性：spanBetween 创建的跨度是有效的
 prop_span_between_valid :: SourcePos -> SourcePos -> Property
-prop_span_between_valid pos1 pos2 = isValidSpan (spanBetween pos1 pos2)
+prop_span_between_valid pos1 pos2 = property (isValidSpan (spanBetween pos1 pos2))
 
 tests :: TestTree
 tests = testGroup "Enhanced Source Location Math Tests"

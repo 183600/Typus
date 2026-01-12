@@ -13,7 +13,7 @@ prop_trim_idempotent s = trim (trim s) === trim s
 
 -- | 测试trim函数的属性：trim(s)的长度不大于s的长度
 prop_trim_length :: String -> Property
-prop_trim_length s = length (trim s) <= length s
+prop_trim_length s = property (length (trim s) <= length s)
 
 -- | 测试splitBy函数的属性：splitBy delim "" == [""]
 prop_splitBy_empty :: Property
@@ -48,7 +48,7 @@ prop_normalize_indentation_lines :: String -> Property
 prop_normalize_indentation_lines s = 
   let originalLines = length (lines s)
       normalizedLines = length (lines (normalizeIndentation s))
-  in normalizedLines <= originalLines
+  in property (normalizedLines <= originalLines)
 
 -- | 测试normalizeIndentation函数的属性：normalizeIndentation不会改变非缩进字符
 prop_normalize_indentation_content :: String -> Property

@@ -9,6 +9,7 @@ import Compiler.DependentTypeChecker (checkDependentTypes)
 import Compiler.OwnershipChecker (checkOwnership)
 import Data.Time.Clock (getCurrentTime, diffUTCTime)
 import Control.DeepSeq (NFData, force)
+import Control.Exception (evaluate)
 import Data.List (foldl')
 import qualified Data.Text as T
 
@@ -16,11 +17,12 @@ import qualified Data.Text as T
 prop_parse_performance_linear :: Positive Int -> Property
 prop_parse_performance_linear (Positive n) = 
   let input = replicate n "let x = 42\n"
+  in ioProperty $ do
       startTime <- getCurrentTime
-      _ <- parseTypus (concat input)
+      _ <- evaluate $ parseTypus (concat input)
       endTime <- getCurrentTime
-      duration = diffUTCTime endTime startTime
-  in duration `seq` property True -- 这个测试主要检查是否能在合理时间内完成
+      let duration = diffUTCTime endTime startTime
+      return $ duration `seq` property True -- 这个测试主要检查是否能在合理时间内完成
 
 -- | 测试编译性能：编译时间应该与输入大小成合理关系
 prop_compile_performance_reasonable :: Positive Int -> Property

@@ -3,6 +3,8 @@ module Compiler
   , CompilerError(..)
   , CompilerResult
   , CompilationPhase(..)
+  , SyntaxError(..)
+  , TypeError(..)
   , malformedSyntaxError
   , renderCompilationError
   , formatCompilerErrors
@@ -36,7 +38,8 @@ import qualified Compiler.IR as IR
 import Compiler.DependentTypeChecker (checkDependentTypes)
 import Compiler.OwnershipChecker (checkOwnership, checkOwnershipWithValueInfo)
 import Compiler.TypeChecker
-  ( hasTypeErrors
+  ( TypeError(..)
+  , hasTypeErrors
   , TypeCheckDiagnostic(..)
   , diagnoseTypeErrors
   , extractDeclarations
@@ -48,6 +51,7 @@ import Compiler.TypeChecker
   , checkTypeError
   , hasMalformedSyntax
   )
+import SyntaxValidator (SyntaxError(..))
 import Compiler.Errors
   ( CompilerError(..)
   , CompilerResult

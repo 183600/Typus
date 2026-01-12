@@ -4,9 +4,11 @@ import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import ErrorHandler
+import SourceLocation (Located(..))
 import Compiler (CompilerError(..))
 import qualified Data.Text as T
 import Data.Maybe (isJust, isNothing)
+import Data.List (nub)
 
 -- | 测试错误恢复机制
 prop_error_recovery_mechanism :: String -> Property
@@ -24,38 +26,38 @@ prop_error_location_tracking input =
     Left errors -> all hasLocation errors
     Right _ -> property True
   where
-    hasLocation (Located _ _) = True
+    hasLocation (Located _ _ _) = True
     hasLocation _ = False
 
 -- | 测试错误消息格式化
 prop_error_message_formatting :: CompilerError -> Property
 prop_error_message_formatting error = 
   let formatted = formatErrorMessage error
-  in not (T.null formatted)
+  in property (not (null formatted))
 
 -- | 测试错误分类
 prop_error_classification :: CompilerError -> Property
 prop_error_classification error = 
   let category = classifyError error
-  in isJust category
+  in property (isJust category)
 
 -- | 测试错误严重性级别
 prop_error_severity_level :: CompilerError -> Property
 prop_error_severity_level error = 
   let severity = getErrorSeverity error
-  in severity >= 0 && severity <= 3
+  in property (severity >= 0 && severity <= 3)
 
 -- | 测试错误聚合
 prop_error_aggregation :: [CompilerError] -> Property
 prop_error_aggregation errors = 
   let aggregated = aggregateErrors errors
-  in length aggregated <= length errors
+  in property (length aggregated <= length errors)
 
 -- | 测试错误去重
 prop_error_deduplication :: [CompilerError] -> Property
 prop_error_deduplication errors = 
   let deduplicated = deduplicateErrors errors
-  in all isUnique (zip deduplicated (tail deduplicated))
+  in property (all isUnique (zip deduplicated (tail deduplicated)))
   where
     isUnique (e1, e2) = e1 /= e2
 
@@ -65,43 +67,43 @@ prop_error_context_collection input =
   let result = collectErrorContext input
   in case result of
     Left _ -> property True
-    Right context -> not (null context)
+    Right context -> property (not (null context))
 
 -- | 测试错误建议生成
 prop_error_suggestion_generation :: CompilerError -> Property
 prop_error_suggestion_generation error = 
   let suggestions = generateErrorSuggestions error
-  in not (null suggestions)
+  in property (not (null suggestions))
 
 -- | 测试错误恢复策略
 prop_error_recovery_strategy :: CompilerError -> Property
 prop_error_recovery_strategy error = 
   let strategy = selectRecoveryStrategy error
-  in isJust strategy
+  in property (isJust strategy)
 
 -- | 测试错误报告生成
-prop_error_report_generation :: [CompilerError] -> Property
+prop_error_report_generation :: [TypeError] -> Property
 prop_error_report_generation errors = 
-  let report = generateErrorReport errors
-  in not (T.null report)
+  let report = ErrorHandler.generateErrorReport errors
+  in property (not (null report))
 
 -- | 测试错误统计
-prop_error_statistics :: [CompilerError] -> Property
+prop_error_statistics :: [TypeError] -> Property
 prop_error_statistics errors = 
   let stats = calculateErrorStatistics errors
-  in getTotalErrors stats == length errors
+  in property (getTotalErrors stats == length errors)
 
 -- | 测试错误过滤
-prop_error_filtering :: [CompilerError] -> Property
+prop_error_filtering :: [TypeError] -> Property
 prop_error_filtering errors = 
   let filtered = filterErrorsBySeverity errors 2
-  in all (\e -> getErrorSeverity e >= 2) filtered
+  in property (all (\e -> getErrorSeverity e >= 2) filtered)
 
 -- | 测试错误排序
-prop_error_sorting :: [CompilerError] -> Property
+prop_error_sorting :: [TypeError] -> Property
 prop_error_sorting errors = 
   let sorted = sortErrorsByLocation errors
-  in isSorted sorted
+  in property (isSorted sorted)
   where
     isSorted [] = True
     isSorted [_] = True
@@ -113,22 +115,22 @@ prop_error_sorting errors =
       in compare loc1 loc2
 
 -- | 测试错误高亮
-prop_error_highlighting :: String -> CompilerError -> Property
+prop_error_highlighting :: String -> TypeError -> Property
 prop_error_highlighting source error = 
   let highlighted = highlightErrorInSource source error
-  in not (T.null highlighted)
+  in property (not (null highlighted))
 
 -- | 测试错误修复建议
-prop_error_fix_suggestion :: CompilerError -> Property
+prop_error_fix_suggestion :: TypeError -> Property
 prop_error_fix_suggestion error = 
   let fixes = suggestErrorFixes error
-  in not (null fixes)
+  in property (not (null fixes))
 
 -- | 测试错误代码生成
-prop_error_code_generation :: CompilerError -> Property
+prop_error_code_generation :: TypeError -> Property
 prop_error_code_generation error = 
   let code = generateErrorCode error
-  in not (T.null code)
+  in property (not (null code))
 
 -- 辅助函数（假设这些函数在ErrorHandler模块中定义）
 recoverFromErrors :: String -> Either [CompilerError] String
@@ -190,8 +192,7 @@ highlightErrorInSource _ _ = T.pack ""
 suggestErrorFixes _ = [""]
 generateErrorCode _ = T.pack ""
 
--- 导入nub函数
-import Data.List (nub)
+
 
 tests :: TestTree
 tests = testGroup "Enhanced Error Handling Tests"

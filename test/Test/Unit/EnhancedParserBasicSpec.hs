@@ -21,7 +21,7 @@ prop_parse_empty_string =
   let result = parseTypus ""
   in case result of
     Left _ -> property True
-    Right file -> property (null (tfCodeBlocks file))
+    Right file -> property (null (tfBlocks file))
 
 -- | 测试默认文件指令的属性
 prop_default_file_directives :: Property
@@ -64,7 +64,7 @@ prop_parse_simple_code_block =
       result = parseTypus code
   in case result of
     Left _ -> property True
-    Right file -> property (not (null (tfCodeBlocks file)))
+    Right file -> property (not (null (tfBlocks file)))
 
 -- | 测试解析带有所有权指令的代码
 prop_parse_ownership_directive :: Property
@@ -73,7 +73,7 @@ prop_parse_ownership_directive =
       result = parseTypus code
   in case result of
     Left _ -> property True
-    Right file -> property (isJust (fdOwnership (tfFileDirectives file)))
+    Right file -> property (isJust (fdOwnership (tfDirectives file)))
 
 -- | 测试解析带有依赖类型指令的代码
 prop_parse_dependent_types_directive :: Property
@@ -82,7 +82,7 @@ prop_parse_dependent_types_directive =
       result = parseTypus code
   in case result of
     Left _ -> property True
-    Right file -> property (isJust (fdDependentTypes (tfFileDirectives file)))
+    Right file -> property (isJust (fdDependentTypes (tfDirectives file)))
 
 -- | 测试解析带有约束指令的代码
 prop_parse_constraints_directive :: Property
@@ -91,7 +91,7 @@ prop_parse_constraints_directive =
       result = parseTypus code
   in case result of
     Left _ -> property True
-    Right file -> property (isJust (fdConstraints (tfFileDirectives file)))
+    Right file -> property (isJust (fdConstraints (tfDirectives file)))
 
 -- | 测试解析多个代码块
 prop_parse_multiple_code_blocks :: Property
@@ -100,7 +100,7 @@ prop_parse_multiple_code_blocks =
       result = parseTypus code
   in case result of
     Left _ -> property True
-    Right file -> property (length (tfCodeBlocks file) >= 2)
+    Right file -> property (length (tfBlocks file) >= 2)
 
 -- | 测试解析带有块指令的代码
 prop_parse_block_directive :: Property
@@ -110,9 +110,9 @@ prop_parse_block_directive =
   in case result of
     Left _ -> property True
     Right file -> 
-      case tfCodeBlocks file of
+      case tfBlocks file of
         [] -> property False
-        (block:_) -> property (isJust (bdOwnership (cbBlockDirectives block)))
+        (block:_) -> property (isJust (bdOwnership (cbDirectives block)))
 
 -- | 测试解析一致性：解析结果不依赖于输入的空白字符
 prop_parse_whitespace_independence :: String -> Property
@@ -121,7 +121,7 @@ prop_parse_whitespace_independence s =
       result2 = parseTypus (unlines (map (filter (not . (`elem` " \t"))) (lines s)))
   in case (result1, result2) of
     (Left _, Left _) -> property True
-    (Right f1, Right f2) -> property (length (tfCodeBlocks f1) == length (tfCodeBlocks f2))
+    (Right f1, Right f2) -> property (length (tfBlocks f1) == length (tfBlocks f2))
     _ -> property False
 
 tests :: TestTree

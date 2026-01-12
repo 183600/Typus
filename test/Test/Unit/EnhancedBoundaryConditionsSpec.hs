@@ -136,7 +136,7 @@ prop_parse_very_large_param_list (Positive n) =
 -- | 测试极大结构体字段列表
 prop_parse_very_large_struct_fields :: Positive Int -> Property
 prop_parse_very_large_struct_fields (Positive n) = 
-  let fields = concat (replicate (min n 100) "field" ++ show n ++ ": Nat,") ++ "last: Nat"
+  let fields = concat (replicate (min n 100) ("field" ++ show n ++ ": Nat,")) ++ "last: Nat"
       input = "```typus\nstruct BigStruct { " ++ fields ++ " }\n```"
       result = parseTypus input
   in case result of
@@ -197,7 +197,7 @@ prop_parse_very_deep_recursion (Positive n) =
 -- | 测试极大模块导入
 prop_parse_very_large_imports :: Positive Int -> Property
 prop_parse_very_large_imports (Positive n) = 
-  let imports = concat (replicate (min n 100) "import module" ++ show n ++ ";\n")
+  let imports = concat (replicate (min n 100) ("import module" ++ show n ++ ";\n"))
       input = imports ++ "```typus\nlet x = 42\n```"
       result = parseTypus input
   in case result of

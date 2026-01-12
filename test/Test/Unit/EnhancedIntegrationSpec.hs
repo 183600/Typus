@@ -7,7 +7,7 @@ import Compiler (compile)
 import Parser (parseTypus)
 import Compiler.DependentTypeChecker (checkDependentTypes)
 import Compiler.OwnershipChecker (checkOwnership)
-import ErrorHandler (formatErrorMessage)
+import Compiler (formatCompilerErrors)
 import qualified Data.Text as T
 import Data.Maybe (isJust, isNothing)
 
@@ -15,7 +15,9 @@ import Data.Maybe (isJust, isNothing)
 prop_parse_compile_pipeline :: String -> Property
 prop_parse_compile_pipeline input = 
   let parseResult = parseTypus input
-      compileResult = compile input
+      compileResult = case parseTypus input of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> compile typusFile
   in case (parseResult, compileResult) of
     (Left _, Left _) -> property True
     (Right _, Right _) -> property True
@@ -26,7 +28,9 @@ prop_parse_compile_pipeline input =
 prop_dependent_types_integration :: String -> Property
 prop_dependent_types_integration input = 
   let parseResult = parseTypus input
-      dependentTypesResult = checkDependentTypes input
+      dependentTypesResult = case parseTypus input of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> checkDependentTypes typusFile
   in case (parseResult, dependentTypesResult) of
     (Left _, Left _) -> property True
     (Right _, Right _) -> property True
@@ -37,7 +41,9 @@ prop_dependent_types_integration input =
 prop_ownership_integration :: String -> Property
 prop_ownership_integration input = 
   let parseResult = parseTypus input
-      ownershipResult = checkOwnership input
+      ownershipResult = case parseTypus input of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> checkOwnership typusFile
   in case (parseResult, ownershipResult) of
     (Left _, Left _) -> property True
     (Right _, Right _) -> property True
@@ -48,12 +54,14 @@ prop_ownership_integration input =
 prop_error_handling_integration :: String -> Property
 prop_error_handling_integration input = 
   let parseResult = parseTypus input
-      compileResult = compile input
+      compileResult = case parseTypus input of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> compile typusFile
   in case (parseResult, compileResult) of
     (Left parseErr, Left compileErr) -> 
-      let parseMsg = formatErrorMessage parseErr
-          compileMsg = formatErrorMessage compileErr
-      in not (T.null parseMsg) && not (T.null compileMsg)
+      let parseMsg = T.pack $ formatCompilerErrors [parseErr]
+          compileMsg = T.pack $ formatCompilerErrors compileErr
+      in property (not (T.null parseMsg) && not (T.null compileMsg))
     (Right _, Right _) -> property True
     _ -> property True
 
@@ -61,7 +69,9 @@ prop_error_handling_integration input =
 prop_multi_module_integration :: [String] -> Property
 prop_multi_module_integration inputs = 
   let parseResults = map parseTypus inputs
-      compileResults = map compile inputs
+      compileResults = map (\input -> case parseTypus input of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> compile typusFile) inputs
       allParseSuccess = all isRight parseResults
       allCompileSuccess = all isRight compileResults
   in if allParseSuccess then 
@@ -75,8 +85,12 @@ prop_multi_module_integration inputs =
 -- | 测试依赖类型和所有权集成
 prop_dependent_types_ownership_integration :: String -> Property
 prop_dependent_types_ownership_integration input = 
-  let dependentTypesResult = checkDependentTypes input
-      ownershipResult = checkOwnership input
+  let dependentTypesResult = case parseTypus input of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> checkDependentTypes typusFile
+      ownershipResult = case parseTypus input of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> checkOwnership typusFile
   in case (dependentTypesResult, ownershipResult) of
     (Left _, Left _) -> property True
     (Right _, Right _) -> property True
@@ -87,7 +101,9 @@ prop_dependent_types_ownership_integration input =
 prop_full_compilation_pipeline :: String -> Property
 prop_full_compilation_pipeline input = 
   let parseResult = parseTypus input
-      compileResult = compile input
+      compileResult = case parseTypus input of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> compile typusFile
   in case (parseResult, compileResult) of
     (Right parseFile, Right compileResult) -> 
       property True -- 成功完成整个流水线
@@ -98,8 +114,12 @@ prop_full_compilation_pipeline input =
 -- | 测试增量编译集成
 prop_incremental_compilation_integration :: String -> String -> Property
 prop_incremental_compilation_integration original modified = 
-  let originalResult = compile original
-      modifiedResult = compile modified
+  let originalResult = case parseTypus original of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> compile typusFile
+      modifiedResult = case parseTypus modified of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> compile typusFile
   in case (originalResult, modifiedResult) of
     (Right _, Right _) -> property True
     (Left _, Left _) -> property True
@@ -109,16 +129,22 @@ prop_incremental_compilation_integration original modified =
 -- | 测试错误恢复集成
 prop_error_recovery_integration :: String -> Property
 prop_error_recovery_integration input = 
-  let compileResult = compile input
+  let compileResult = case parseTypus input of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> compile typusFile
   in case compileResult of
-    Left errors -> length errors > 0 -- 应该有错误信息
+    Left errors -> property (length errors > 0) -- 应该有错误信息
     Right _ -> property True -- 编译成功
 
 -- | 测试优化集成
 prop_optimization_integration :: String -> Property
 prop_optimization_integration input = 
-  let compileResult = compile input
-      optimizedResult = compile ("-O " ++ input)
+  let compileResult = case parseTypus input of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> compile typusFile
+      optimizedResult = case parseTypus ("-O " ++ input) of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> compile typusFile
   in case (compileResult, optimizedResult) of
     (Right _, Right _) -> property True
     (Left _, Left _) -> property True
@@ -128,15 +154,19 @@ prop_optimization_integration input =
 -- | 测试代码生成集成
 prop_code_generation_integration :: String -> Property
 prop_code_generation_integration input = 
-  let compileResult = compile input
+  let compileResult = case parseTypus input of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> compile typusFile
   in case compileResult of
-    Right result -> not (T.null result) -- 生成的代码应该非空
+    Right result -> property (not (T.null (T.pack result))) -- 生成的代码应该非空
     Left _ -> property True -- 编译失败时跳过
 
 -- | 测试类型推断集成
 prop_type_inference_integration :: String -> Property
 prop_type_inference_integration input = 
-  let compileResult = compile input
+  let compileResult = case parseTypus input of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> compile typusFile
   in case compileResult of
     Right result -> property True -- 类型推断成功
     Left _ -> property True -- 类型推断可能失败
@@ -145,7 +175,9 @@ prop_type_inference_integration input =
 prop_symbol_table_integration :: String -> Property
 prop_symbol_table_integration input = 
   let parseResult = parseTypus input
-      compileResult = compile input
+      compileResult = case parseTypus input of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> compile typusFile
   in case (parseResult, compileResult) of
     (Right parseFile, Right compileResult) -> 
       property True -- 符号表构建成功
@@ -156,8 +188,12 @@ prop_cross_module_reference_integration :: String -> String -> Property
 prop_cross_module_reference_integration module1 module2 = 
   let parseResult1 = parseTypus module1
       parseResult2 = parseTypus module2
-      compileResult1 = compile module1
-      compileResult2 = compile module2
+      compileResult1 = case parseTypus module1 of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> compile typusFile
+      compileResult2 = case parseTypus module2 of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> compile typusFile
   in case (parseResult1, parseResult2) of
     (Right _, Right _) -> 
       case (compileResult1, compileResult2) of
@@ -169,7 +205,9 @@ prop_cross_module_reference_integration module1 module2 =
 prop_circular_dependency_integration :: [String] -> Property
 prop_circular_dependency_integration modules = 
   let parseResults = map parseTypus modules
-      compileResults = map compile modules
+      compileResults = map (\m -> case parseTypus m of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> compile typusFile) modules
   in case (all isRight parseResults, all isRight compileResults) of
     (True, True) -> property True
     (True, False) -> property True -- 可能检测到循环依赖
@@ -181,7 +219,9 @@ prop_circular_dependency_integration modules =
 -- | 测试资源管理集成
 prop_resource_management_integration :: String -> Property
 prop_resource_management_integration input = 
-  let compileResult = compile input
+  let compileResult = case parseTypus input of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> compile typusFile
   in case compileResult of
     Right result -> property True -- 资源管理成功
     Left _ -> property True -- 资源管理可能失败

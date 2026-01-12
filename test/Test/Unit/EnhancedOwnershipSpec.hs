@@ -4,7 +4,7 @@ import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import Compiler.OwnershipChecker
-import Parser (TypusFile(..))
+import Parser (TypusFile(..), parseTypus)
 import qualified Data.Text as T
 import Data.Maybe (isJust, isNothing)
 
@@ -12,7 +12,9 @@ import Data.Maybe (isJust, isNothing)
 prop_check_simple_ownership_transfer :: Property
 prop_check_simple_ownership_transfer = 
   let code = "```typus\nlet x = Box(42)\nlet y = move(x)\n```"
-      result = checkOwnership code
+      result = case parseTypus code of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> checkOwnership typusFile
   in case result of
     Left _ -> property True
     Right _ -> property True
@@ -21,7 +23,9 @@ prop_check_simple_ownership_transfer =
 prop_check_ownership_borrow :: Property
 prop_check_ownership_borrow = 
   let code = "```typus\nlet x = Box(42)\nlet y = borrow(x)\nlet z = x  // x仍然可用\n```"
-      result = checkOwnership code
+      result = case parseTypus code of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> checkOwnership typusFile
   in case result of
     Left _ -> property True
     Right _ -> property True
@@ -30,7 +34,9 @@ prop_check_ownership_borrow =
 prop_check_ownership_mutable_borrow :: Property
 prop_check_ownership_mutable_borrow = 
   let code = "```typus\nlet x = Box(42)\nlet y = borrow_mut(x)\n*y = 24\n```"
-      result = checkOwnership code
+      result = case parseTypus code of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> checkOwnership typusFile
   in case result of
     Left _ -> property True
     Right _ -> property True
@@ -39,7 +45,9 @@ prop_check_ownership_mutable_borrow =
 prop_check_ownership_lifetime :: Property
 prop_check_ownership_lifetime = 
   let code = "```typus\nfn foo<'a>(x: &'a Box(Nat)) -> Nat { *x }\nlet b = Box(42)\nlet result = foo(&b)\n```"
-      result = checkOwnership code
+      result = case parseTypus code of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> checkOwnership typusFile
   in case result of
     Left _ -> property True
     Right _ -> property True
@@ -48,7 +56,9 @@ prop_check_ownership_lifetime =
 prop_check_ownership_struct_field :: Property
 prop_check_ownership_struct_field = 
   let code = "```typus\nstruct Point { x: Nat, y: Nat }\nlet p = Point { x: 1, y: 2 }\nlet px = p.x\n```"
-      result = checkOwnership code
+      result = case parseTypus code of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> checkOwnership typusFile
   in case result of
     Left _ -> property True
     Right _ -> property True
@@ -57,7 +67,9 @@ prop_check_ownership_struct_field =
 prop_check_ownership_copy_semantics :: Property
 prop_check_ownership_copy_semantics = 
   let code = "```typus\nlet x = 42  // Nat实现Copy\nlet y = x   // 复制而不是移动\nlet z = x   // x仍然可用\n```"
-      result = checkOwnership code
+      result = case parseTypus code of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> checkOwnership typusFile
   in case result of
     Left _ -> property True
     Right _ -> property True
@@ -66,7 +78,9 @@ prop_check_ownership_copy_semantics =
 prop_check_ownership_clone_semantics :: Property
 prop_check_ownership_clone_semantics = 
   let code = "```typus\nlet x = Box(42)\nlet y = clone(x)  // 显式克隆\nlet z = x        // x仍然可用\n```"
-      result = checkOwnership code
+      result = case parseTypus code of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> checkOwnership typusFile
   in case result of
     Left _ -> property True
     Right _ -> property True
@@ -75,7 +89,9 @@ prop_check_ownership_clone_semantics =
 prop_check_ownership_function_param :: Property
 prop_check_ownership_function_param = 
   let code = "```typus\nfn consume(x: Box(Nat)) -> Nat { *x }\nlet b = Box(42)\nlet result = consume(b)\n```"
-      result = checkOwnership code
+      result = case parseTypus code of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> checkOwnership typusFile
   in case result of
     Left _ -> property True
     Right _ -> property True
@@ -84,7 +100,9 @@ prop_check_ownership_function_param =
 prop_check_ownership_return_value :: Property
 prop_check_ownership_return_value = 
   let code = "```typus\nfn create_box() -> Box(Nat) { Box(42) }\nlet b = create_box()\n```"
-      result = checkOwnership code
+      result = case parseTypus code of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> checkOwnership typusFile
   in case result of
     Left _ -> property True
     Right _ -> property True
@@ -93,7 +111,9 @@ prop_check_ownership_return_value =
 prop_check_ownership_partial_move :: Property
 prop_check_ownership_partial_move = 
   let code = "```typus\nstruct Pair { first: Nat, second: Nat }\nlet p = Pair { first: 1, second: 2 }\nlet f = p.first\nlet s = p.second  // 错误：p已经被部分移动\n```"
-      result = checkOwnership code
+      result = case parseTypus code of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> checkOwnership typusFile
   in case result of
     Left _ -> property True
     Right _ -> property True
@@ -102,7 +122,9 @@ prop_check_ownership_partial_move =
 prop_check_ownership_closure_capture :: Property
 prop_check_ownership_closure_capture = 
   let code = "```typus\nlet x = 42\nlet f = || { x }  // 按值捕获\n```"
-      result = checkOwnership code
+      result = case parseTypus code of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> checkOwnership typusFile
   in case result of
     Left _ -> property True
     Right _ -> property True
@@ -111,7 +133,9 @@ prop_check_ownership_closure_capture =
 prop_check_ownership_reference_count :: Property
 prop_check_ownership_reference_count = 
   let code = "```typus\nlet x = Rc(Box(42))\nlet y = clone(x)\nlet z = clone(x)\n```"
-      result = checkOwnership code
+      result = case parseTypus code of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> checkOwnership typusFile
   in case result of
     Left _ -> property True
     Right _ -> property True
@@ -120,7 +144,9 @@ prop_check_ownership_reference_count =
 prop_check_ownership_shared_ref :: Property
 prop_check_ownership_shared_ref = 
   let code = "```typus\nlet x = Arc(Box(42))\nlet y = clone(x)\nlet z = clone(x)\n```"
-      result = checkOwnership code
+      result = case parseTypus code of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> checkOwnership typusFile
   in case result of
     Left _ -> property True
     Right _ -> property True
@@ -129,7 +155,9 @@ prop_check_ownership_shared_ref =
 prop_check_ownership_raw_pointer :: Property
 prop_check_ownership_raw_pointer = 
   let code = "```typus\nlet x = Box(42)\nlet p = raw_ptr(x)\nlet value = *p\n```"
-      result = checkOwnership code
+      result = case parseTypus code of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> checkOwnership typusFile
   in case result of
     Left _ -> property True
     Right _ -> property True
@@ -138,7 +166,9 @@ prop_check_ownership_raw_pointer =
 prop_check_ownership_typestate :: Property
 prop_check_ownership_typestate = 
   let code = "```typus\ntype File = Closed | Opened\nlet f = Closed\nlet f2 = open(f)  // 状态转换\n```"
-      result = checkOwnership code
+      result = case parseTypus code of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> checkOwnership typusFile
   in case result of
     Left _ -> property True
     Right _ -> property True
@@ -147,7 +177,9 @@ prop_check_ownership_typestate =
 prop_check_ownership_linear_type :: Property
 prop_check_ownership_linear_type = 
   let code = "```typus\nlinear Token\nlet t = new_token()\nlet t2 = t  // 错误：线性类型不能复制\n```"
-      result = checkOwnership code
+      result = case parseTypus code of
+        Left _ -> Left []  -- 解析失败
+        Right typusFile -> checkOwnership typusFile
   in case result of
     Left _ -> property True
     Right _ -> property True
