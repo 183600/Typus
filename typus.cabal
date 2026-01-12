@@ -1264,7 +1264,14 @@ test-suite typus-test
         Test.Unit.CompilerIRQuickCheckSpec,
         Test.Unit.OwnershipTransferQuickCheckSpec,
         Test.Unit.ErrorRecoveryPropertiesQuickCheckSpec,
-        Test.Unit.DependencyAnalysisQuickCheckSpec
+        Test.Unit.DependencyAnalysisQuickCheckSpec,
+
+        -- New Enhanced QuickCheck Test Modules (2025) - Core Functionality Tests
+        Test.Unit.UtilsQuickCheckPropertiesSpec,
+        Test.Unit.SourceLocationQuickCheckPropertiesSpec,
+        Test.Unit.ParserQuickCheckPropertiesSpec,
+        Test.Unit.ErrorHandlerQuickCheckPropertiesSpec,
+        Test.Unit.DependenciesQuickCheckPropertiesSpec
     build-depends:
         base >=4.7 && <5,
         typus,

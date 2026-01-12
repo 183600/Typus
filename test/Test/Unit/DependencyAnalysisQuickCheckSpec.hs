@@ -204,7 +204,8 @@ topologicalSort graph =
     in sorted
 
 kahnAlgorithm :: DependencyGraph -> Set.Set String -> [String] -> [String]
-kahnAlgorithm _ [] result = reverse result
+kahnAlgorithm _ remaining result 
+  | Set.null remaining = reverse result
 kahnAlgorithm graph remaining result = 
   let noIncoming = Set.filter (\node -> Set.null (incomingEdges graph node)) remaining
   in if Set.null noIncoming
@@ -255,7 +256,7 @@ hasPathFrom graph visited from to =
          let newVisited = Set.insert from visited
              outgoing = Set.filter (\d -> fromNode d == from) (edges graph)
              targets = map toNode (Set.toList outgoing)
-         in any (hasPathFrom graph newVisited) targets
+         in any (\target -> hasPathFrom graph newVisited target to) targets
 
 transitiveClosure :: DependencyGraph -> String -> Set.Set String
 transitiveClosure graph start = 
@@ -271,7 +272,7 @@ dfs graph visited node =
     let newVisited = Set.insert node visited
         outgoing = Set.filter (\d -> fromNode d == node) (edges graph)
         targets = map toNode (Set.toList outgoing)
-        allReachable = Set.union newVisited (Set.unions (map (dfs graph newVisited) targets))
+        allReachable = Set.union newVisited (Set.unions (map (\target -> dfs graph newVisited target) targets))
     in allReachable
 
 reverseGraph :: DependencyGraph -> DependencyGraph
@@ -292,6 +293,13 @@ findSCC node (scc:sccs) =
   if node `Set.member` scc
   then scc
   else findSCC node sccs
+
+isTopologicallyValid :: DependencyGraph -> [String] -> Bool
+isTopologicallyValid graph sorted = 
+  let sortedSet = Set.fromList sorted
+      graphNodes = nodes graph
+  in sortedSet == graphNodes && 
+     all (dependencyPreserved sorted) (Set.toList (edges graph))
 
 tests :: TestTree
 tests = testGroup "Test.Unit.DependencyAnalysisQuickCheckSpec Tests"

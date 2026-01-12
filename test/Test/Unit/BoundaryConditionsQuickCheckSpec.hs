@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module Test.Unit.BoundaryConditionsQuickCheckSpec where
 
 import Test.Tasty
@@ -6,6 +7,8 @@ import Test.Tasty.HUnit
 import TestSupport.QuickCheck (fastProperty)
 import Data.Char (isDigit, isLetter, isSpace)
 import Data.List (null, head, tail, init, last)
+import Data.Maybe (isNothing, isJust, fromMaybe)
+import Data.Either (fromLeft, fromRight)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 
@@ -51,10 +54,10 @@ prop_mult_zero x = x * 0 == 0
 prop_mult_one :: Int -> Bool
 prop_mult_one x = x * 1 == x
 
-prop_div_one :: Property
+prop_div_one :: Int -> Property
 prop_div_one x = x /= 0 ==> div x 1 == x
 
-prop_mod_one :: Property
+prop_mod_one :: Int -> Property
 prop_mod_one x = x /= 0 ==> mod x 1 == 0
 
 -- Properties for string boundaries
@@ -87,14 +90,14 @@ prop_list_init_last :: [Int] -> Property
 prop_list_init_last xs = not (null xs) ==> init xs ++ [last xs] == xs
 
 -- Properties for character boundaries
-prop_isdigit_digit :: Property
+prop_isdigit_digit :: Char -> Property
 prop_isdigit_digit d = isDigit d ==> d `elem` ['0'..'9']
 
-prop_isletter_letter :: Property
+prop_isletter_letter :: Char -> Property
 prop_isletter_letter l = isLetter l ==> 
   l `elem` ['a'..'z'] || l `elem` ['A'..'Z']
 
-prop_isspace_space :: Property
+prop_isspace_space :: Char -> Property
 prop_isspace_space s = isSpace s ==> s `elem` " \t\n\r\f\v"
 
 -- Properties for map boundaries
@@ -179,11 +182,11 @@ prop_right_fromRight x y = fromRight y (Right y) == y
 
 tests :: TestTree
 tests = testGroup "Test.Unit.BoundaryConditionsQuickCheckSpec Tests"
-  [ fastProperty "empty list length" (const prop_empty_list_length)
-  , fastProperty "empty list null" (const prop_empty_list_null)
-  , fastProperty "empty string length" (const prop_empty_string_length)
-  , fastProperty "empty map size" (const prop_empty_map_size)
-  , fastProperty "empty set size" (const prop_empty_set_size)
+  [ fastProperty "empty list length" (\(_ :: ()) -> prop_empty_list_length)
+  , fastProperty "empty list null" (\(_ :: ()) -> prop_empty_list_null)
+  , fastProperty "empty string length" (\(_ :: ()) -> prop_empty_string_length)
+  , fastProperty "empty map size" (\(_ :: ()) -> prop_empty_map_size)
+  , fastProperty "empty set size" (\(_ :: ()) -> prop_empty_set_size)
   , fastProperty "singleton list length" prop_singleton_list_length
   , fastProperty "singleton list head" prop_singleton_list_head
   , fastProperty "singleton list last" prop_singleton_list_last
@@ -194,11 +197,11 @@ tests = testGroup "Test.Unit.BoundaryConditionsQuickCheckSpec Tests"
   , fastProperty "mult one" prop_mult_one
   , fastProperty "div one" prop_div_one
   , fastProperty "mod one" prop_mod_one
-  , fastProperty "empty string reverse" (const prop_empty_string_reverse)
+  , fastProperty "empty string reverse" (\(_ :: ()) -> prop_empty_string_reverse)
   , fastProperty "empty string concat" prop_empty_string_concat
   , fastProperty "single char string length" prop_single_char_string_length
   , fastProperty "single char string reverse" prop_single_char_string_reverse
-  , fastProperty "empty list reverse" (const prop_empty_list_reverse)
+  , fastProperty "empty list reverse" (\(_ :: Int) -> prop_empty_list_reverse)
   , fastProperty "empty list concat" prop_empty_list_concat
   , fastProperty "single element list reverse" prop_single_element_list_reverse
   , fastProperty "list head tail" prop_list_head_tail
@@ -216,15 +219,15 @@ tests = testGroup "Test.Unit.BoundaryConditionsQuickCheckSpec Tests"
   , fastProperty "singleton set delete" prop_singleton_set_delete
   , fastProperty "maximum singleton" prop_maximum_singleton
   , fastProperty "minimum singleton" prop_minimum_singleton
-  , fastProperty "sum empty" (const prop_sum_empty)
+  , fastProperty "sum empty" (\(_ :: ()) -> prop_sum_empty)
   , fastProperty "sum singleton" prop_sum_singleton
-  , fastProperty "product empty" (const prop_product_empty)
+  , fastProperty "product empty" (\(_ :: ()) -> prop_product_empty)
   , fastProperty "product singleton" prop_product_singleton
   , fastProperty "bool and false" prop_bool_and_false
   , fastProperty "bool or true" prop_bool_or_true
   , fastProperty "bool and true" prop_bool_and_true
   , fastProperty "bool or false" prop_bool_or_false
-  , fastProperty "nothing isNothing" (const prop_nothing_isNothing)
+  , fastProperty "nothing isNothing" (\(_ :: Int) -> prop_nothing_isNothing)
   , fastProperty "just isJust" prop_just_isJust
   , fastProperty "nothing fromMaybe" prop_nothing_fromMaybe
   , fastProperty "just fromMaybe" prop_just_fromMaybe

@@ -45,8 +45,8 @@ prop_string_literal_escaped s = isStringLiteral ("\"" ++ escapeString s ++ "\"")
     isStringLiteral [] = False
     isStringLiteral cs = length cs >= 2 && head cs == '"' && last cs == '"'
     escapeString [] = []
-    escapeString ('"':cs) = '\':'"':escapeString cs
-    escapeString ('\\':cs) = '\':'\\':escapeString cs
+    escapeString ('"':cs) = '\\':'"':escapeString cs
+    escapeString ('\\':cs) = '\\':'\\':escapeString cs
     escapeString (c:cs) = c:escapeString cs
 
 -- Properties for comment recognition

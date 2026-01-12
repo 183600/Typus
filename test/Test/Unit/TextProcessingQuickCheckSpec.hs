@@ -50,7 +50,7 @@ prop_infix_of_self s = isInfixOf s s
 
 -- Properties for whitespace
 prop_space_is_space :: Char -> Property
-prop_space_is_space c = property (isSpace c) ==> (isSpace c)
+prop_space_is_space c = isSpace c ==> (isSpace c)
 
 -- Properties for text operations
 prop_text_length_preserved :: String -> Bool

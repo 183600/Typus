@@ -6,6 +6,20 @@ import Test.Tasty.HUnit
 import TestSupport.QuickCheck (fastProperty)
 import SourceLocation (SourcePos(..), SourceSpan(..))
 
+-- Arbitrary instances for testing
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- choose (1, 100)
+    column <- choose (1, 100)
+    offset <- choose (0, 1000)
+    return $ SourcePos line column offset
+
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    return $ SourceSpan start end
+
 -- Properties for SourcePos arithmetic
 prop_pos_line_non_negative :: SourcePos -> Bool
 prop_pos_line_non_negative (SourcePos line _ _) = line >= 1
@@ -81,11 +95,11 @@ prop_pos_reflexive pos = pos <= pos
 
 prop_pos_antisymmetric :: SourcePos -> SourcePos -> Property
 prop_pos_antisymmetric pos1 pos2 = 
-  property (pos1 <= pos2 && pos2 <= pos1) ==> pos1 == pos2
+  (pos1 <= pos2 && pos2 <= pos1) ==> pos1 == pos2
 
 prop_pos_transitive :: SourcePos -> SourcePos -> SourcePos -> Property
 prop_pos_transitive pos1 pos2 pos3 = 
-  property (pos1 <= pos2 && pos2 <= pos3) ==> pos1 <= pos3
+  (pos1 <= pos2 && pos2 <= pos3) ==> pos1 <= pos3
 
 -- Properties for span construction
 prop_span_single_line :: SourcePos -> Int -> Property
@@ -94,7 +108,7 @@ prop_span_single_line (SourcePos line col offset) n =
   let endCol = col + n
       endPos = SourcePos line endCol (offset + n)
       span = SourceSpan (SourcePos line col offset) endPos
-  in sourceLine (spanStart span) == sourceLine (spanEnd span)
+  in sourceLine (getSpanStart span) == sourceLine (getSpanEnd span)
 
 prop_span_multi_line :: SourcePos -> Int -> Property
 prop_span_multi_line (SourcePos line col offset) n = 
@@ -102,7 +116,7 @@ prop_span_multi_line (SourcePos line col offset) n =
   let endLine = line + n
       endPos = SourcePos endLine col offset
       span = SourceSpan (SourcePos line col offset) endPos
-  in sourceLine (spanEnd span) > sourceLine (spanStart span)
+  in sourceLine (getSpanEnd span) > sourceLine (getSpanStart span)
 
 -- Properties for span merging
 prop_span_merge_adjacent :: SourcePos -> Int -> Property
@@ -113,7 +127,7 @@ prop_span_merge_adjacent (SourcePos line col offset) n =
       span1 = SourceSpan (SourcePos line col offset) midPos
       span2 = SourceSpan midPos endPos
       merged = mergeSpans span1 span2
-  in spanStart merged == spanStart span1 && spanEnd merged == spanEnd span2
+  in getSpanStart merged == getSpanStart span1 && getSpanEnd merged == getSpanEnd span2
   where
     mergeSpans (SourceSpan s1 _) (SourceSpan _ e2) = SourceSpan s1 e2
 
@@ -131,11 +145,21 @@ prop_span_intersect_overlap (SourcePos line col offset) n =
       not (e1 < s2 || e2 < s1)
 
 -- Helper functions
-spanStart :: SourceSpan -> SourcePos
-spanStart (SourceSpan start _) = start
+getSpanStart :: SourceSpan -> SourcePos
+getSpanStart (SourceSpan start _) = start
 
-spanEnd :: SourceSpan -> SourcePos
-spanEnd (SourceSpan _ end) = end
+getSpanEnd :: SourceSpan -> SourcePos
+getSpanEnd (SourceSpan _ end) = end
+
+-- Accessor functions for SourcePos
+sourceLine :: SourcePos -> Int
+sourceLine = posLine
+
+sourceColumn :: SourcePos -> Int
+sourceColumn = posColumn
+
+sourceOffset :: SourcePos -> Int
+sourceOffset = posOffset
 
 tests :: TestTree
 tests = testGroup "Test.Unit.SourceLocationArithmeticQuickCheckSpec Tests"

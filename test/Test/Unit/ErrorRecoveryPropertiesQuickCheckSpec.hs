@@ -7,6 +7,7 @@ import TestSupport.QuickCheck (fastProperty)
 import Compiler.Errors.Core (ErrorSeverity(..), ErrorLocation(..), ErrorContext(..), ErrorRecovery(..))
 import Compiler.Errors (CompilationPhase(..))
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import qualified Data.Map as Map
 import qualified Data.Text as T
 import Text.Read (readMaybe)
 
@@ -42,16 +43,26 @@ instance Arbitrary CompilationPhase where
     , OptimizationPhase
     ]
 
+instance Arbitrary ErrorRecovery where
+  arbitrary = do
+    canRec <- arbitrary
+    shouldCont <- arbitrary
+    recAction <- arbitrary
+    recHint <- arbitrary
+    cost <- choose (0, 100)
+    confidence <- choose (0.0, 1.0)
+    return $ RecoveryStrategy canRec shouldCont recAction recHint cost confidence
+
 instance Arbitrary ErrorLocation where
   arbitrary = do
     line <- choose (1, 100)
     column <- choose (1, 100)
-    return $ ErrorLocation line column (Just "test.typus")
+    return $ ErrorLocation (Just "test.typus") line column Nothing Nothing
 
 -- Properties for error severity ordering
 prop_severity_ordering :: TestError -> TestError -> Property
 prop_severity_ordering err1 err2 = 
-  property (errorSeverity err1 == Error && errorSeverity err2 == Warning) ==> 
+  (errorSeverity err1 == Error && errorSeverity err2 == Warning) ==> 
   isMoreSevere (errorSeverity err1) (errorSeverity err2)
 
 prop_severity_reflexive :: ErrorSeverity -> Bool
@@ -59,7 +70,7 @@ prop_severity_reflexive severity = not (isMoreSevere severity severity)
 
 prop_severity_transitive :: ErrorSeverity -> ErrorSeverity -> ErrorSeverity -> Property
 prop_severity_transitive s1 s2 s3 = 
-  property (isMoreSevere s1 s2 && isMoreSevere s2 s3) ==> 
+  (isMoreSevere s1 s2 && isMoreSevere s2 s3) ==> 
   isMoreSevere s1 s3
 
 -- Properties for error messages
@@ -79,17 +90,17 @@ prop_error_message_format err =
 -- Properties for error location
 prop_location_line_positive :: TestError -> Bool
 prop_location_line_positive err = 
-  let ErrorLocation line _ _ = errorLocation err
+  let ErrorLocation _ line _ _ _ = errorLocation err
   in line >= 1
 
 prop_location_column_positive :: TestError -> Bool
 prop_location_column_positive err = 
-  let ErrorLocation _ column _ = errorLocation err
+  let ErrorLocation _ _ column _ _ = errorLocation err
   in column >= 1
 
 prop_location_valid_source :: TestError -> Bool
 prop_location_valid_source err = 
-  let ErrorLocation _ _ source = errorLocation err
+  let ErrorLocation source _ _ _ _ = errorLocation err
   in case source of
        Just src -> not (null src)
        Nothing -> True
@@ -101,7 +112,7 @@ prop_recovery_preserves_context err recovery =
       recoveredContext = applyRecovery originalContext recovery
   in contextPreserved originalContext recoveredContext
   where
-    errorContext _ = ErrorContext Map.empty []  -- Simplified
+    errorContext _ = ErrorContext Nothing Nothing Nothing Nothing []  -- Simplified
     applyRecovery ctx _ = ctx  -- Simplified
     contextPreserved _ _ = True  -- Simplified
 

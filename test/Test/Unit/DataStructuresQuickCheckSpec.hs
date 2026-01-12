@@ -7,8 +7,8 @@ import TestSupport.QuickCheck (fastProperty)
 import qualified Data.List as L
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Data.Maybe (isJust, isNothing)
-import Data.Either (isLeft, isRight)
+import Data.Maybe (isJust, isNothing, fromMaybe)
+import Data.Either (isLeft, isRight, fromLeft, fromRight)
 
 -- Properties for lists
 prop_list_reverse_reverse :: [Int] -> Bool
