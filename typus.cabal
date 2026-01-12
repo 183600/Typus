@@ -346,6 +346,7 @@ test-suite typus-test
         Test.Unit.SimpleQuickCheckTestSpec,
         Test.Unit.WorkingQuickCheckSpec,
         Test.Unit.ComprehensiveQuickCheckSpec,
+        Test.Unit.ComprehensiveCoreModulesQuickCheckSpec,
         
         Test.Unit.TypeSystemQuickCheckSpec,        Test.Unit.NewQuickCheckTestSpec,
         Test.Unit.SourceLocationCoreQuickCheckSpec,

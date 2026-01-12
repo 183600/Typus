@@ -3,9 +3,41 @@ module Test.Unit.ParserQuickCheckPropertiesSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import Parser
-import SourceLocation (SourceSpan(..), SourcePos(..))
+import Parser (parseTypus, FileDirectives(..), BlockDirectives(..), CodeBlock(..), TypusFile(..), defaultFileDirectives, defaultBlockDirectives)
+import SourceLocation (SourceSpan(..), SourcePos(..), locValue)
 import Data.Char (isSpace)
+
+-- Local definitions for functions not exported by Parser module
+parseBool :: String -> Either String Bool
+parseBool s = case trim s of
+  "on" -> Right True
+  "off" -> Right False
+  "true" -> Right True
+  "false" -> Right False
+  _ -> Left $ "Invalid boolean value: " ++ s
+
+trimRight :: String -> String
+trimRight = reverse . dropWhile (`elem` ['\r', '\n', ' ', '\t']) . reverse
+
+leadingIndentation :: String -> Int
+leadingIndentation = length . takeWhile isIndentChar
+  where
+    isIndentChar c = c == ' ' || c == '\t'
+
+curlyDelta :: String -> Int
+curlyDelta = go False False 0
+  where
+    go _ _ acc [] = acc
+    go inString inComment acc (c:cs)
+      | inComment = go inString (not (c == '\n')) acc cs
+      | c == '"' = go (not inString) False acc cs
+      | c == '/' && not (null cs) && head cs == '/' = go inString True acc cs
+      | not inString && not inComment && c == '{' = go inString inComment (acc + 1) cs
+      | not inString && not inComment && c == '}' = go inString inComment (acc - 1) cs
+      | otherwise = go inString inComment acc cs
+
+trim :: String -> String
+trim = reverse . dropWhile isSpace . reverse . dropWhile isSpace
 
 -- ============================================================================
 -- Directive Parsing Properties
@@ -29,7 +61,7 @@ prop_parse_bool_alternatives b =
 prop_parse_bool_invalid :: String -> Property
 prop_parse_bool_invalid s = 
   let validValues = ["on", "off", "true", "false"]
-      normalized = map toLower (filter (not . isSpace) s)
+      normalized = map toLower' (filter (not . isSpace) s)
   in property $ 
     if normalized `elem` validValues
     then case parseBool normalized of
@@ -39,8 +71,7 @@ prop_parse_bool_invalid s =
            Right _ -> property False  -- Should not succeed for invalid values
            Left _ -> property True
   where
-    toLower [] = []
-    toLower (c:cs) = if c >= 'A' && c <= 'Z' then toEnum (fromEnum c + 32) : toLower cs else c : toLower cs
+    toLower' c = if c >= 'A' && c <= 'Z' then toEnum (fromEnum c + 32) else c
 
 -- ============================================================================
 -- String Processing Properties
@@ -48,7 +79,7 @@ prop_parse_bool_invalid s =
 
 -- Property: trimRight should not add characters
 prop_trim_right_no_addition :: String -> Property
-prop_trim_right_no_addition s = length (trimRight s) <= length s
+prop_trim_right_no_addition s = property $ length (trimRight s) <= length s
 
 -- Property: trimRight should remove trailing whitespace
 prop_trim_right_removes_trailing :: String -> Property
@@ -83,7 +114,7 @@ prop_leading_indentation_ignores_non_indent s c =
 -- Property: curlyDelta should count opening braces
 prop_curly_delta_opening :: String -> Property
 prop_curly_delta_opening s = 
-  let openBraces = "{"}
+  let openBraces = "{"
       result = curlyDelta openBraces
   in property $ result == 1
 
@@ -146,7 +177,7 @@ prop_simple_file_directive b =
       Right typusFile -> 
         case fdOwnership (tfDirectives typusFile) of
           Nothing -> property False
-          Just locatedValue -> locValue locatedValue == b
+          Just locatedValue -> property $ locValue locatedValue == b
 
 -- Property: Simple block directives should parse correctly
 prop_simple_block_directive :: Bool -> Property
@@ -161,9 +192,8 @@ prop_simple_block_directive b =
           [] -> property False
           (block:_) -> 
             case bdOwnership (cbDirectives block) of
-              Nothing -> property False
-              Just locatedValue -> locValue locatedValue == b
-
+                        Nothing -> property False
+                        Just locatedValue -> property $ locValue locatedValue == b
 -- Property: Empty content should parse to file with no blocks
 prop_empty_content :: Property
 prop_empty_content = 
@@ -171,9 +201,8 @@ prop_empty_content =
       result = parseTypus input
   in property $ 
     case result of
-      Left _ -> property False
-      Right typusFile -> null (tfBlocks typusFile)
-
+            Left _ -> property False
+            Right typusFile -> property $ null (tfBlocks typusFile)
 -- Property: Content without directives should parse to blocks with default directives
 prop_content_without_directives :: String -> Property
 prop_content_without_directives s = 
@@ -185,7 +214,7 @@ prop_content_without_directives s =
       Right typusFile -> 
         case tfBlocks typusFile of
           [] -> property False
-          (block:_) -> cbDirectives block == defaultBlockDirectives
+          (block:_) -> property $ cbDirectives block == defaultBlockDirectives
 
 -- ============================================================================
 -- Error Handling Properties
@@ -205,7 +234,7 @@ prop_unclosed_block_error s =
 prop_invalid_boolean_error :: String -> Property
 prop_invalid_boolean_error s = 
   let validValues = ["on", "off", "true", "false"]
-      normalized = map toLower (filter (not . isSpace) s)
+      normalized = map toLower' (filter (not . isSpace) s)
   in property $ 
     if normalized `elem` validValues
     then property True  -- Skip valid values
@@ -213,8 +242,7 @@ prop_invalid_boolean_error s =
            Left _ -> property True  -- Expected error
            Right _ -> property False  -- Should not succeed
   where
-    toLower [] = []
-    toLower (c:cs) = if c >= 'A' && c <= 'Z' then toEnum (fromEnum c + 32) : toLower cs else c : toLower cs
+    toLower' c = if c >= 'A' && c <= 'Z' then toEnum (fromEnum c + 32) else c
 
 tests :: TestTree
 tests = testGroup "Parser QuickCheck Properties Tests"

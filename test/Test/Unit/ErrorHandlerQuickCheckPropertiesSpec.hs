@@ -9,6 +9,30 @@ import Data.Time (UTCTime, getCurrentTime)
 import Data.Text (Text)
 import qualified Data.Text as T
 
+-- Arbitrary instance for Text
+instance Arbitrary Text where
+  arbitrary = T.pack <$> arbitrary
+
+-- ============================================================================
+-- Arbitrary Instances
+-- ============================================================================
+
+instance Arbitrary ErrorSeverity where
+  arbitrary = elements [Info, Warning, Error, Fatal]
+
+instance Arbitrary ErrorCategory where
+  arbitrary = elements 
+    [ TypeChecking
+    , Ownership
+    , Parsing
+    , Semantic
+    , Runtime
+    , Constraint
+    , Inference
+    , Integration
+    , Unknown
+    ]
+
 -- ============================================================================
 -- Error Severity Properties
 -- ============================================================================
@@ -77,11 +101,12 @@ prop_get_error_column line col =
 -- Property: emptyContext should have all Nothing fields
 prop_empty_context_properties :: Property
 prop_empty_context_properties = 
-  let ErrorContext code function varType additional = emptyContext
+  let ErrorContext code function varType varType' additional = emptyContext
   in property $ 
-    code == Nothing && 
-    function == Nothing && 
-    varType == Nothing && 
+    code == (Nothing :: Maybe String) && 
+    function == (Nothing :: Maybe String) && 
+    varType == (Nothing :: Maybe String) && 
+    varType' == (Nothing :: Maybe String) && 
     null additional
 
 -- ============================================================================

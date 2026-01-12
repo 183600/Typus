@@ -13,7 +13,7 @@ import qualified Data.Text as T
 
 -- Property: trim should not add characters
 prop_trim_no_addition :: String -> Property
-prop_trim_no_addition s = length (trim s) <= length s
+prop_trim_no_addition s = property $ length (trim s) <= length s
 
 -- Property: trim should remove leading and trailing spaces
 prop_trim_removes_spaces :: String -> Property

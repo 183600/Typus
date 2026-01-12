@@ -8,6 +8,46 @@ import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import qualified Data.Text as T
 
+-- Arbitrary instance for Text
+instance Arbitrary Text where
+  arbitrary = T.pack <$> arbitrary
+
+-- ============================================================================
+-- Arbitrary Instances
+-- ============================================================================
+
+instance Arbitrary Statement where
+  arbitrary = oneof
+    [ STypeDef <$> arbitrary <*> arbitrary <*> arbitrary
+    , STypeAlias <$> arbitrary <*> arbitrary <*> arbitrary
+    , SVarDecl <$> arbitrary <*> arbitrary
+    , SFuncDecl <$> arbitrary <*> arbitrary <*> arbitrary
+    , SConstraintDef <$> arbitrary <*> arbitrary
+    , SExistsDecl <$> arbitrary <*> arbitrary
+    ]
+
+instance Arbitrary TypeExpr where
+  arbitrary = oneof
+    [ SimpleT <$> arbitrary
+    , GenericT <$> arbitrary <*> arbitrary
+    , FuncT <$> arbitrary <*> arbitrary
+    , RefineT <$> arbitrary <*> arbitrary
+    ]
+
+instance Arbitrary Constraint where
+  arbitrary = oneof
+    [ SizeGT <$> arbitrary <*> arbitrary
+    , SizeGE <$> arbitrary <*> arbitrary
+    , RangeC <$> arbitrary <*> arbitrary <*> arbitrary
+    , PredC <$> arbitrary <*> arbitrary
+    ]
+
+instance Arbitrary DependencyNode where
+  arbitrary = DependencyNode <$> arbitrary <*> arbitrary
+
+instance Arbitrary DependencyGraph where
+  arbitrary = DependencyGraph . Map.fromList <$> arbitrary
+
 -- ============================================================================
 -- AST Properties
 -- ============================================================================
@@ -40,7 +80,7 @@ prop_type_def_preserves_components name params constraints =
   in property $ 
     case stmt of
       STypeDef n p c -> n == name && p == params && c == constraints
-      _ -> property False
+      _ -> False
 
 -- Property: STypeAlias should preserve its components
 prop_type_alias_preserves_components :: Text -> TypeExpr -> [Constraint] -> Property
@@ -49,7 +89,7 @@ prop_type_alias_preserves_components name typ constraints =
   in property $ 
     case stmt of
       STypeAlias n t c -> n == name && t == typ && c == constraints
-      _ -> property False
+      _ -> False
 
 -- Property: SVarDecl should preserve its components
 prop_var_decl_preserves_components :: Text -> TypeExpr -> Property
@@ -58,7 +98,7 @@ prop_var_decl_preserves_components name typ =
   in property $ 
     case stmt of
       SVarDecl n t -> n == name && t == typ
-      _ -> property False
+      _ -> False
 
 -- Property: SFuncDecl should preserve its components
 prop_func_decl_preserves_components :: Text -> [(Text, TypeExpr)] -> Maybe TypeExpr -> Property
@@ -67,7 +107,7 @@ prop_func_decl_preserves_components name params retType =
   in property $ 
     case stmt of
       SFuncDecl n p r -> n == name && p == params && r == retType
-      _ -> property False
+      _ -> False
 
 -- Property: SConstraintDef should preserve its components
 prop_constraint_def_preserves_components :: Text -> Constraint -> Property
@@ -76,7 +116,7 @@ prop_constraint_def_preserves_components name constraint =
   in property $ 
     case stmt of
       SConstraintDef n c -> n == name && c == constraint
-      _ -> property False
+      _ -> False
 
 -- Property: SExistsDecl should preserve its components
 prop_exists_decl_preserves_components :: [Text] -> Statement -> Property
@@ -85,7 +125,7 @@ prop_exists_decl_preserves_components vars stmt =
   in property $ 
     case existsStmt of
       SExistsDecl v s -> v == vars && s == stmt
-      _ -> property False
+      _ -> False
 
 -- ============================================================================
 -- TypeExpr Properties
@@ -98,7 +138,7 @@ prop_simple_t_preserves_name name =
   in property $ 
     case typ of
       SimpleT n -> n == name
-      _ -> property False
+      _ -> False
 
 -- Property: GenericT should preserve its name and parameters
 prop_generic_t_preserves_components :: Text -> [TypeExpr] -> Property
@@ -107,7 +147,7 @@ prop_generic_t_preserves_components name params =
   in property $ 
     case typ of
       GenericT n p -> n == name && p == params
-      _ -> property False
+      _ -> False
 
 -- Property: FuncT should preserve its parameters and return type
 prop_func_t_preserves_components :: [(Text, TypeExpr)] -> TypeExpr -> Property
@@ -116,7 +156,7 @@ prop_func_t_preserves_components params retType =
   in property $ 
     case typ of
       FuncT p r -> p == params && r == retType
-      _ -> property False
+      _ -> False
 
 -- Property: RefineT should preserve its type and constraints
 prop_refine_t_preserves_components :: TypeExpr -> [Constraint] -> Property
@@ -125,7 +165,7 @@ prop_refine_t_preserves_components typ constraints =
   in property $ 
     case refined of
       RefineT t c -> t == typ && c == constraints
-      _ -> property False
+      _ -> False
 
 -- ============================================================================
 -- Constraint Properties
@@ -138,7 +178,7 @@ prop_size_gt_preserves_components var size =
   in property $ 
     case constraint of
       SizeGT v s -> v == var && s == size
-      _ -> property False
+      _ -> False
 
 -- Property: SizeGE should preserve its components
 prop_size_ge_preserves_components :: Text -> Int -> Property
@@ -147,7 +187,7 @@ prop_size_ge_preserves_components var size =
   in property $ 
     case constraint of
       SizeGE v s -> v == var && s == size
-      _ -> property False
+      _ -> False
 
 -- Property: RangeC should preserve its components
 prop_range_c_preserves_components :: Text -> Int -> Int -> Property
@@ -156,7 +196,7 @@ prop_range_c_preserves_components var min max =
   in property $ 
     case constraint of
       RangeC v mn mx -> v == var && mn == min && mx == max
-      _ -> property False
+      _ -> False
 
 -- Property: PredC should preserve its components
 prop_pred_c_preserves_components :: Text -> [TypeExpr] -> Property
@@ -165,7 +205,7 @@ prop_pred_c_preserves_components name args =
   in property $ 
     case constraint of
       PredC n a -> n == name && a == args
-      _ -> property False
+      _ -> False
 
 -- ============================================================================
 -- Dependency Node Properties
@@ -222,16 +262,16 @@ prop_dependency_graph_add_node graph name deps =
 -- Property: Nested statements should preserve structure
 prop_nested_statements_preserve_structure :: Text -> TypeExpr -> [Constraint] -> Property
 prop_nested_statements_preserve_structure name typ constraints = 
-  let typeDef = STypeDef name ["T"] constraints
+  let typeDef = STypeDef name [T.pack "T"] constraints
       varDecl = SVarDecl name typ
-      existsDecl = SExistsDecl ["T"] varDecl
+      existsDecl = SExistsDecl [T.pack "T"] varDecl
       program = Program [typeDef, existsDecl]
   in property $ 
     case program of
       Program [STypeDef n p c, SExistsDecl v (SVarDecl vn t)] -> 
-        n == name && p == ["T"] && c == constraints && 
-        v == ["T"] && vn == name && t == typ
-      _ -> property False
+        n == name && p == [T.pack "T"] && c == constraints && 
+        v == [T.pack "T"] && vn == name && t == typ
+      _ -> False
 
 -- Property: Complex type expressions should preserve structure
 prop_complex_type_expressions_preserve_structure :: Text -> [Text] -> [TypeExpr] -> Property
@@ -245,7 +285,7 @@ prop_complex_type_expressions_preserve_structure name params typeArgs =
       RefineT (FuncT [(n, SimpleT sn)] (GenericT gn args)) [SizeGT v s] -> 
         n == name && sn == name && gn == name && args == typeArgs && 
         v == name && s == 0
-      _ -> property False
+      _ -> False
 
 -- Property: Complex constraints should preserve structure
 prop_complex_constraints_preserve_structure :: Text -> [TypeExpr] -> Int -> Int -> Property
@@ -263,7 +303,7 @@ prop_complex_constraints_preserve_structure name args min max =
         v2 == name && s2 == max &&
         v3 == name && mn == min && mx == max &&
         v4 == name && a == args
-      _ -> property False
+      _ -> False
 
 tests :: TestTree
 tests = testGroup "Dependencies QuickCheck Properties Tests"
