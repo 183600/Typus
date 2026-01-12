@@ -37,8 +37,9 @@ import Compiler.Errors.Core
   , ErrorCategory(..)
   , ErrorLocation(..)
   , ErrorContext(..)
+  , emptyContext
   , ErrorRecovery(..)
-  , RecoveryStrategy(..)
+  , TypeError(..)
   )
 import Parser (TypusFile(..), parseTypus, defaultFileDirectives)
 import qualified Data.Text as T
@@ -71,13 +72,13 @@ prop_compile_simple_comment =
 prop_malformed_syntax_error :: Property
 prop_malformed_syntax_error = 
   let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
-      typeError = TypeError 
+      typeError = Compiler.Errors.Core.TypeError 
         { errorId = "syntax-001"
         , severity = Error
-        , category = SyntaxError
-        , message = "Malformed syntax"
-        , location = ErrorLocation 0 0 "" 0 0
-        , context = ErrorContext Nothing Nothing
+        , category = Parsing
+        , message = T.pack "Malformed syntax"
+        , location = ErrorLocation Nothing 0 0 Nothing Nothing
+        , context = emptyContext
         , recovery = recovery
         , suggestions = []
         , relatedErrors = []
@@ -103,12 +104,12 @@ prop_format_compilation_errors_empty =
 -- | 测试 formatCompilerErrors 的属性：非空错误列表产生非空格式化结果
 prop_format_compilation_errors_nonempty :: Property
 prop_format_compilation_errors_nonempty = 
-  let formatted = concatMap show [error "test"]
+  let formatted = concatMap (show :: String -> String) ["test"]
   in property (not (null formatted))
 
 -- | 测试 hasTypeErrors 的属性：空错误列表没有类型错误
 prop_has_type_errors_empty :: Property
-prop_has_type_errors_empty = not (False)
+prop_has_type_errors_empty = property (not (False))
   where
     emptyTypusFile = TypusFile defaultFileDirectives [] [] []
 
@@ -136,7 +137,7 @@ prop_build_type_env_from_pairs_contains_all :: [(String, String)] -> Property
 prop_build_type_env_from_pairs_contains_all pairs = 
   let env = pairs
       allContained = all (\(k, v) -> lookup k env == Just v) pairs
-  in allContained
+  in property allContained
 
 -- | 测试 isMethodDeclaration 的属性：包含括号的标识符可能是方法声明
 prop_is_method_declaration_with_parens :: Property
@@ -149,7 +150,7 @@ prop_check_type_error_empty = property True
 
 -- | 测试 hasMalformedSyntax 的属性：空错误列表没有语法错误
 prop_has_malformed_syntax_empty :: Property
-prop_has_malformed_syntax_empty = not (False)
+prop_has_malformed_syntax_empty = property (not (False))
   where
     emptyTypusFile = TypusFile defaultFileDirectives [] [] []
 
@@ -171,7 +172,7 @@ prop_type_check_failure =
 prop_type_diagnostic_to_compiler_error :: Property
 prop_type_diagnostic_to_compiler_error = 
   let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
-      typeError = TypeError "type-001" Error SyntaxError "typeDiagnosticToCompilerError" (ErrorLocation 0 0 "" 0 0) (ErrorContext Nothing Nothing) recovery [] [] [] Nothing
+      typeError = Compiler.Errors.Core.TypeError "type-001" Error Parsing (T.pack "typeDiagnosticToCompilerError") (ErrorLocation Nothing 0 0 Nothing Nothing) emptyContext recovery [] [] [] Nothing
       error = CompilerError typeError Nothing [] TypeCheckingPhase
   in case error of
     CompilerError _ _ _ _ -> property True

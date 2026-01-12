@@ -1249,10 +1249,22 @@ test-suite typus-test
         Test.Unit.EnhancedErrorHandlingSpec,
         Test.Unit.EnhancedIntegrationSpec,
         Test.Unit.EnhancedPerformanceSpec,
-        Test.Unit.EnhancedBoundaryConditionsSpec
+        Test.Unit.EnhancedBoundaryConditionsSpec,
         
         -- New Test Modules Created (2025) - 4 comprehensive tests
         -- (These modules are already listed above)
+        
+        -- New QuickCheck Test Modules (2025) - 10 comprehensive tests
+        Test.Unit.TextProcessingQuickCheckSpec,
+        Test.Unit.MathOperationsQuickCheckSpec,
+        Test.Unit.DataStructuresQuickCheckSpec,
+        Test.Unit.BoundaryConditionsQuickCheckSpec,
+        Test.Unit.SourceLocationArithmeticQuickCheckSpec,
+        Test.Unit.ParserPropertiesQuickCheckSpec,
+        Test.Unit.CompilerIRQuickCheckSpec,
+        Test.Unit.OwnershipTransferQuickCheckSpec,
+        Test.Unit.ErrorRecoveryPropertiesQuickCheckSpec,
+        Test.Unit.DependencyAnalysisQuickCheckSpec
     build-depends:
         base >=4.7 && <5,
         typus,

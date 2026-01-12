@@ -247,15 +247,15 @@ data ErrorLocation = ErrorLocation
   , column :: Int
   } deriving (Eq, Show, Generic, NFData)
 
-data Compiler.Errors.Core.TypeError = Compiler.Errors.Core.TypeError 
+data TypeError = TypeError 
   { errorMessage :: String
   , errorLocation :: ErrorLocation
   } deriving (Eq, Show, Generic, NFData)
 
-errorAt :: SourcePos -> String -> Compiler.Errors.Core.TypeError
-errorAt (SourcePos line column) message = Compiler.Errors.Core.TypeError message (ErrorLocation line column)
+errorAt :: SourcePos -> String -> TypeError
+errorAt (SourcePos line column) message = TypeError message (ErrorLocation line column)
 
-formatError :: Compiler.Errors.Core.TypeError -> String
+formatError :: TypeError -> String
 formatError (TypeError message (ErrorLocation line column)) = "Error at " ++ show line ++ ":" ++ 
                   show column ++ ": " ++ message
 

@@ -30,7 +30,7 @@ prop_text_length s = T.length (T.pack s) == length s
 
 -- | Test Text null consistency
 prop_text_null :: String -> Bool
-prop_text_null s = null (T.pack s) == null s
+prop_text_null s = T.null (T.pack s) == null s
 
 -- | Test Text append consistency
 prop_text_append :: String -> String -> Bool
@@ -248,7 +248,7 @@ prop_text_caseInsensitive s1 s2 =
 prop_text_empty :: Bool
 prop_text_empty = 
   let text = T.pack ""
-  in null text && T.length text == 0 && T.unpack text == ""
+  in T.null text && T.length text == 0 && T.unpack text == ""
 
 -- | Test Text with single character
 prop_text_single :: Char -> Bool
@@ -274,7 +274,7 @@ prop_text_whitespace s =
   all isSpace s ==> property $
     let text = T.pack s
         stripped = T.strip text
-    in null stripped
+    in T.null stripped
 
 -- Helper functions
 splitBy :: Char -> String -> [String]

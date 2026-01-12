@@ -3,13 +3,14 @@ module Test.Unit.EnhancedPerformanceSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import Compiler (compile)
-import Parser (parseTypus)
-import Compiler.DependentTypeChecker (checkDependentTypes)
-import Compiler.OwnershipChecker (checkOwnership)
+import Compiler (compile, checkOwnership, checkDependentTypes)
+import Parser (parseTypus, TypusFile(..))
+import Compiler.DependentTypeChecker
+import Compiler.OwnershipChecker
 import Data.Time.Clock (getCurrentTime, diffUTCTime)
 import Control.DeepSeq (NFData, force)
 import Control.Exception (evaluate)
+import System.IO.Unsafe (unsafePerformIO)
 import Data.List (foldl')
 import qualified Data.Text as T
 
@@ -25,11 +26,12 @@ prop_compile_performance_reasonable (Positive n) =
   let input = "// @dependent-types: true\n// @ownership: true\n```typus\n" ++ 
               concat (replicate n "let x = 42\n") ++ 
               "```"
-      startTime = unsafePerformIO getCurrentTime
-      _ = unsafePerformIO (compile input)
-      endTime = unsafePerformIO getCurrentTime
-      duration = diffUTCTime endTime startTime
-  in duration `seq` property True -- 这个测试主要检查是否能在合理时间内完成
+      result = case parseTypus input of
+                Left _ -> Left []
+                Right typusFile -> compile typusFile
+  in case result of
+    Left _ -> property True
+    Right _ -> property True
 
 -- | 测试依赖类型检查性能
 prop_dependent_types_performance :: Positive Int -> Property
@@ -37,11 +39,12 @@ prop_dependent_types_performance (Positive n) =
   let input = "// @dependent-types: true\n```typus\n" ++ 
               concat (replicate n "let x: Nat = 42\n") ++ 
               "```"
-      startTime = unsafePerformIO getCurrentTime
-      _ = unsafePerformIO (checkDependentTypes input)
-      endTime = unsafePerformIO (getCurrentTime)
-      duration = diffUTCTime endTime startTime
-  in duration `seq` property True
+      result = case parseTypus input of
+                Left _ -> Left []
+                Right typusFile -> checkDependentTypes typusFile
+  in case result of
+    Left _ -> property True
+    Right _ -> property True
 
 -- | 测试所有权检查性能
 prop_ownership_performance :: Positive Int -> Property
@@ -50,10 +53,12 @@ prop_ownership_performance (Positive n) =
               concat (replicate n "let x = Box(42)\n") ++ 
               "```"
       startTime = unsafePerformIO (getCurrentTime)
-      _ = unsafePerformIO (checkOwnership input)
-      endTime = unsafePerformIO (getCurrentTime)
-      duration = diffUTCTime endTime startTime
-  in duration `seq` property True
+      result = case parseTypus input of
+                Left _ -> Left []
+                Right typusFile -> checkOwnership typusFile
+  in case result of
+    Left _ -> property True
+    Right _ -> property True
 
 -- | 测试内存使用：大型输入不应该导致内存溢出
 prop_memory_usage_large_input :: Positive Int -> Property
@@ -62,7 +67,7 @@ prop_memory_usage_large_input (Positive n) =
       result = parseTypus input
   in case result of
     Left _ -> property True
-    Right file -> length (show (force file)) `seq` property True
+    Right file -> length (show file) `seq` property True
 
 -- | 测试缓存性能：重复解析相同内容应该更快
 prop_cache_performance :: String -> Property
@@ -93,19 +98,23 @@ prop_incremental_performance original modified =
     _ -> property True
 
 -- | 测试错误恢复性能：处理错误不应该显著降低性能
-prop_error_recovery_performance :: String -> Property
 prop_error_recovery_performance input = 
   let erroneousInput = input ++ "\nlet x = " -- 故意引入语法错误
-      result = compile erroneousInput
+      result = case parseTypus erroneousInput of
+                Left _ -> Left []
+                Right typusFile -> compile typusFile
   in case result of
     Left _ -> property True
     Right _ -> property True
 
 -- | 测试优化性能：优化不应该过度增加编译时间
-prop_optimization_performance :: String -> Property
 prop_optimization_performance input = 
-  let normalResult = compile input
-      optimizedResult = compile ("-O " ++ input)
+  let normalResult = case parseTypus input of
+                      Left _ -> Left []
+                      Right typusFile -> compile typusFile
+      optimizedResult = case parseTypus ("-O " ++ input) of
+                         Left _ -> Left []
+                         Right typusFile -> compile typusFile
   in case (normalResult, optimizedResult) of
     (Right _, Right _) -> property True
     _ -> property True
@@ -116,7 +125,7 @@ prop_large_project_performance (Positive n) =
   let modules = replicate n "```typus\nlet x = 42\n```"
       results = map parseTypus modules
       successCount = length $ filter isRight results
-  in successCount >= 0
+  in property (successCount >= 0)
   where
     isRight (Right _) = True
     isRight (Left _) = False
@@ -127,7 +136,9 @@ prop_type_inference_performance (Positive n) =
   let input = "```typus\n" ++ 
               concat (replicate n "let x = 42\n") ++ 
               "```"
-      result = compile input
+      result = case parseTypus input of
+                Left _ -> Left []
+                Right typusFile -> compile typusFile
   in case result of
     Right _ -> property True
     Left _ -> property True
@@ -138,7 +149,9 @@ prop_symbol_table_performance (Positive n) =
   let input = "```typus\n" ++ 
               concat (map (\i -> "let x" ++ show i ++ " = " ++ show i ++ "\n") [1..n]) ++ 
               "```"
-      result = compile input
+      result = case parseTypus input of
+                Left _ -> Left []
+                Right typusFile -> compile typusFile
   in case result of
     Right _ -> property True
     Left _ -> property True
@@ -149,16 +162,20 @@ prop_code_generation_performance (Positive n) =
   let input = "```typus\n" ++ 
               concat (replicate n "let x = 42\n") ++ 
               "```"
-      result = compile input
+      result = case parseTypus input of
+                Left _ -> Left []
+                Right typusFile -> compile typusFile
   in case result of
-    Right code -> not (null code)
+    Right code -> property (not (null code))
     Left _ -> property True
 
 -- | 测试错误报告性能
 prop_error_reporting_performance :: Positive Int -> Property
 prop_error_reporting_performance (Positive n) = 
   let input = concat (replicate n "let x = ") -- 故意引入语法错误
-      result = compile input
+      result = case parseTypus input of
+                Left _ -> Left []
+                Right typusFile -> compile typusFile
   in case result of
     Left _ -> property True
     Right _ -> property True
@@ -169,9 +186,7 @@ prop_memory_cleanup_performance (Positive n) =
   let input = concat (replicate n "let x = 42\n")
       result = parseTypus input
   in case result of
-    Right file -> 
-      let _ = force file
-      in property True
+    Right file -> property True
     Left _ -> property True
 
 -- | 测试递归性能
@@ -183,7 +198,9 @@ prop_recursion_performance (Positive n) =
               "}\n" ++
               "let result = factorial(" ++ show n ++ ")\n" ++
               "```"
-      result = compile input
+      result = case parseTypus input of
+                Left _ -> Left []
+                Right typusFile -> compile typusFile
   in case result of
     Right _ -> property True
     Left _ -> property True

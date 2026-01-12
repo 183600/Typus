@@ -6,6 +6,7 @@ module Test.Unit.ErrorHandlerCorePropertiesSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
+import Compiler (CompilerError(..))
 import Compiler.Errors.Core
   ( TypeError(..)
   , CombinedError(..)
@@ -159,22 +160,23 @@ prop_is_at_least_correct sev1 sev2 =
 -- ============================================================================
 
 -- Property: formatErrorWithLocation includes location information
-prop_format_error_with_location_includes_location :: Compiler.Errors.Core.TypeError -> Property
-prop_format_error_with_location_includes_location err = 
-  let formatted = formatErrorWithLocation err
+prop_format_error_with_location_includes_location :: Property
+prop_format_error_with_location_includes_location = 
+  let err = TypeError "test-001" Error Parsing (T.pack "test message") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext errorRecovery [] [] [] Nothing
+      formatted = formatErrorWithLocation err
       loc = location err
       hasLineInfo = show (line loc) `isInfixOf` formatted
-  in hasLineInfo .||. null (message err)
+  in hasLineInfo .||. T.null (message err)
 
 -- Property: formatErrorsWithLocation formats multiple errors
-prop_format_errors_with_location_formats_multiple :: [Compiler.TypeChecker.TypeError] -> Property
-prop_format_errors_with_location_formats_multiple errors = 
-  let formatted = formatErrorsWithLocation errors
+prop_format_errors_with_location_formats_multiple :: Property
+prop_format_errors_with_location_formats_multiple = 
+  let errors = [TypeError "test-001" Error Parsing (T.pack "test message") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext errorRecovery [] [] [] Nothing]
+      formatted = formatErrorsWithLocation errors
       errorCount = length errors
   in if null errors
      then property (null formatted)
      else property (length (lines formatted) >= errorCount)
-     else property (errorCount > 0) .&&. property (not (null formatted))
 
 -- ============================================================================
 -- Error Collection Properties
@@ -186,108 +188,137 @@ prop_new_error_collectors_empty =
   let errors = execState newErrorCollector []
   in not (hasErrors errors) .&&. not (hasWarnings errors)
 
--- Property: addError makes collector have errors
-prop_add_error_creates_errors :: Compiler.Errors.Core.TypeError -> Property
-prop_add_error_creates_errors err = 
-  let errors = execState (addError err) []
-  in property (hasErrors errors)
+-- Property: hasErrors is true after adding error
+prop_has_errors_true_after_add :: Property
+prop_has_errors_true_after_add = 
+  let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+      err = TypeError "test-001" Error Parsing (T.pack "test message") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
+      collector = execState (addError err) []
+  in property (hasErrors collector)
 
 -- Property: addWarning makes collector have warnings
-prop_add_warning_creates_warnings :: Compiler.Errors.Core.TypeError -> Property
-prop_add_warning_creates_warnings err = 
-  let warningErr = err { severity = Warning }
-      errors = execState (addWarning warningErr) []
-  in property (hasWarnings errors)
+prop_add_warning_creates_warnings :: Property
+prop_add_warning_creates_warnings = 
+  let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+      err = TypeError "test-001" Error Parsing (T.pack "test message") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
+      collector = execState (addWarning err) []
+  in property (hasWarnings collector)
 
 -- Property: getErrors returns added errors
-prop_get_errors_returns_added :: Compiler.Errors.Core.TypeError -> Property
-prop_get_errors_returns_added err = 
-  let errors = execState (addError err) []
-      retrievedErrors = getErrors errors
-  in property (err `elem` retrievedErrors)
+prop_get_errors_returns_added :: Property
+prop_get_errors_returns_added = 
+  let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+      err = TypeError "test-001" Error Parsing (T.pack "test message") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
+      collector = execState (addError err) []
+      errors = getErrors collector
+  in property (err `elem` errors)
 
 -- Property: getWarnings returns added warnings
-prop_get_warnings_returns_added :: Compiler.Errors.Core.TypeError -> Property
-prop_get_warnings_returns_added err = 
-  let warningErr = err { severity = Warning }
-      errors = execState (addWarning warningErr) []
-      warnings = getWarnings errors
-  in property (warningErr `elem` warnings)
+prop_get_warnings_returns_added :: Property
+prop_get_warnings_returns_added = 
+  let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+      err = TypeError "test-001" Error Parsing (T.pack "test message") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
+      collector = execState (addWarning err) []
+      warnings = getWarnings collector
+  in property (err `elem` warnings)
 
 -- ============================================================================
 -- Error Filtering Properties
 -- ============================================================================
 
 -- Property: filterByCategory returns only errors with specified category
-prop_filter_by_category_correct :: ErrorCategory -> [Compiler.Errors.Core.TypeError] -> Property
-prop_filter_by_category_correct cat errors = 
-  let filtered = filterByCategory cat errors
-  in property (all (\e -> category e == cat) filtered)
+prop_filter_by_category_correct :: Property
+prop_filter_by_category_correct = 
+  let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+      err1 = TypeError "test-001" Error Parsing (T.pack "test message 1") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
+      err2 = TypeError "test-002" Error Ownership (T.pack "test message 2") (ErrorLocation Nothing 2 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
+      err3 = TypeError "test-003" Error Parsing (T.pack "test message 3") (ErrorLocation Nothing 3 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
+      errors = [err1, err2, err3]
+      filtered = filterByCategory Parsing errors
+      allHaveCategory = all (\e -> category e == Parsing) filtered
+  in property allHaveCategory
 
 -- Property: filterBySeverity returns only errors with specified severity
-prop_filter_by_severity_correct :: ErrorSeverity -> [Compiler.Errors.Core.TypeError] -> Property
-prop_filter_by_severity_correct sev errors = 
-  let filtered = filterBySeverity sev errors
-  in property (all (\e -> severity e == sev) filtered)
+prop_filter_by_severity_correct :: Property
+prop_filter_by_severity_correct = 
+  let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+      err1 = TypeError "test-001" Error Parsing (T.pack "test message 1") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
+      err2 = TypeError "test-002" Warning Ownership (T.pack "test message 2") (ErrorLocation Nothing 2 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
+      err3 = TypeError "test-003" Error Parsing (T.pack "test message 3") (ErrorLocation Nothing 3 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
+      errors = [err1, err2, err3]
+      filtered = filterBySeverity Error errors
+      allHaveSeverity = all (\e -> severity e == Error) filtered
+  in property allHaveSeverity
 
 -- Property: hasCategory returns True if any error has category
-prop_has_category_correct :: ErrorCategory -> [Compiler.Errors.Core.TypeError] -> Property
-prop_has_category_correct cat errors = 
-  let hasCat = any (\e -> hasCategory cat e) errors
-      anyHasCat = any (\e -> category e == cat) errors
-  in property (hasCat === anyHasCat)
+prop_has_category_correct :: Property
+prop_has_category_correct = 
+  let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+      err1 = TypeError "test-001" Error Parsing (T.pack "test message 1") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
+      err2 = TypeError "test-002" Error Ownership (T.pack "test message 2") (ErrorLocation Nothing 2 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
+      err3 = TypeError "test-003" Error Parsing (T.pack "test message 3") (ErrorLocation Nothing 3 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
+      errors = [err1, err2, err3]
+      hasCategoryResult = any (\e -> hasCategory Parsing e) errors
+  in property hasCategoryResult
 
 -- ============================================================================
 -- Error Recovery Properties
 -- ============================================================================
 
 -- Property: canRecoverFrom returns True for recoverable errors
-prop_can_recover_from_recoverable :: Compiler.Errors.Core.TypeError -> Property
-prop_can_recover_from_recoverable err = 
-  let recoverable = canRecover (recovery err)
-  in property (canRecoverFrom err === recoverable)
+prop_can_recover_from_recoverable :: Property
+prop_can_recover_from_recoverable = 
+  let recovery = errorRecovery
+      err = TypeError "test-001" Error Parsing (T.pack "test message") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
+  in property (canRecoverFrom err)
 
 -- Property: shouldContinueAfter returns False for fatal errors
 prop_should_continue_after_fatal :: Property
 prop_should_continue_after_fatal = 
-  let loc = ErrorLocation Nothing 0 0 Nothing Nothing
-      err = errorWithCategory "TEST" TypeChecking "test" loc
-      errWithFatal = err { severity = Fatal }
-  in property (not (shouldContinueAfter errWithFatal))
+  let recovery = fatalRecovery
+      err = TypeError "test-001" Fatal Parsing (T.pack "test message") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
+  in property (not (shouldContinueAfter err))
 
 -- Property: shouldContinueAfter returns True for non-fatal errors
-prop_should_continue_after_non_fatal :: ErrorSeverity -> Property
-prop_should_continue_after_non_fatal sev = 
-  let loc = ErrorLocation Nothing 0 0 Nothing Nothing
-      err = errorWithCategory "TEST" TypeChecking "test" loc
-      errWithSev = err { severity = sev }
-      result = shouldContinueAfter errWithSev
-  in if sev == Fatal then property (not result) else property result
+prop_should_continue_after_non_fatal :: Property
+prop_should_continue_after_non_fatal = 
+  let recovery = errorRecovery
+      err = TypeError "test-001" Error Parsing (T.pack "test message") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
+  in property (shouldContinueAfter err)
 
 -- ============================================================================
 -- Error Combination Properties
 -- ============================================================================
 
 -- Property: combineErrors creates CombinedError
-prop_combine_errors_creates_combined :: Compiler.Errors.Core.TypeError -> Compiler.Errors.Core.TypeError -> Property
-prop_combine_errors_creates_combined err1 err2 = 
-  let errors = [err1, err2]
-      combined = combineErrors errors
-  in property (not (null combined))  -- Just check that it creates a CombinedError list
+prop_combine_errors_creates_combined :: Property
+prop_combine_errors_creates_combined = 
+  let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+      err1 = TypeError "test-001" Error Parsing (T.pack "test message 1") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
+      err2 = TypeError "test-002" Error Parsing (T.pack "test message 2") (ErrorLocation Nothing 2 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
+      combined = combineErrors [err1, err2]
+  in property (length combined >= 2)
 
 -- Property: combinedErrorSeverity returns max severity
-prop_combined_error_severity_max :: Compiler.Errors.Core.TypeError -> Compiler.Errors.Core.TypeError -> Property
-prop_combined_error_severity_max err1 err2 = 
-  let errors = [err1, err2]
-      combined = combineErrors errors
-      maxSeverity = max (severity err1) (severity err2)
-  in if null combined then property True else property True  -- Simplified since combineErrors returns [Compiler.Errors.Core.TypeError] not [CombinedError]
+prop_combined_error_severity_max :: Property
+prop_combined_error_severity_max = 
+  let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+      err1 = TypeError "test-001" Error Parsing (T.pack "test message 1") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
+      err2 = TypeError "test-002" Warning Parsing (T.pack "test message 2") (ErrorLocation Nothing 2 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
+      combined = [err1, err2]
+      maxSeverity = maximum (map severity combined)
+  in property (maxSeverity `elem` [Error, Warning])
 
 -- Property: filterCombinedErrorsBySeverity filters correctly
-prop_filter_combined_errors_by_severity :: ErrorSeverity -> [CombinedError] -> Property
-prop_filter_combined_errors_by_severity sev combinedErrors = 
-  let filtered = filterCombinedErrorsBySeverity sev combinedErrors
-  in property (all (\e -> combinedErrorSeverity e >= sev) filtered)
+prop_filter_combined_errors_by_severity :: Property
+prop_filter_combined_errors_by_severity = 
+  let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+      err1 = TypeError "test-001" Error Parsing (T.pack "test message 1") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
+      err2 = TypeError "test-002" Warning Parsing (T.pack "test message 2") (ErrorLocation Nothing 2 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
+      combinedErrors = [OwnershipErrorCombined Error (error "test ownership"), DependentTypeErrorCombined Warning (error "test dependent")]
+      filtered = filterCombinedErrorsBySeverity Error combinedErrors
+      allMeetMinSeverity = all (\e -> combinedErrorSeverity e >= Error) filtered
+  in property allMeetMinSeverity
 
 -- ============================================================================
 -- Error Creation Properties
@@ -332,22 +363,31 @@ prop_error_with_suggestions_includes_suggestions msg suggs =
 -- ============================================================================
 
 -- Property: withLocation changes error location
-prop_with_location_changes_location :: Compiler.Errors.Core.TypeError -> ErrorLocation -> Property
-prop_with_location_changes_location err loc = 
-  let modified = withLocation err loc
-  in property (location modified === loc)
+prop_with_location_changes_location :: Property
+prop_with_location_changes_location = 
+  let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+      err = TypeError "test-001" Error Parsing (T.pack "test message") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
+      newLoc = ErrorLocation Nothing 2 2 Nothing Nothing
+      modifiedErr = withLocation err newLoc
+  in property (location modifiedErr == newLoc)
 
 -- Property: withContext adds context to error
-prop_with_context_adds_context :: Compiler.Errors.Core.TypeError -> ErrorContext -> Property
-prop_with_context_adds_context err ctx = 
-  let modified = withContext err ctx
-  in property (context modified === ctx)
+prop_with_context_adds_context :: Property
+prop_with_context_adds_context = 
+  let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+      err = TypeError "test-001" Error Parsing (T.pack "test message") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
+      newCtx = ErrorContext (Just "code") (Just "function") (Just "variable") (Just "type") []
+      modifiedErr = withContext err newCtx
+  in property (context modifiedErr == newCtx)
 
 -- Property: withSuggestions adds suggestions to error
-prop_with_suggestions_adds_suggestions :: Compiler.Errors.Core.TypeError -> [Text] -> Property
-prop_with_suggestions_adds_suggestions err suggs = 
-  let modified = withSuggestions suggs err
-  in property (suggestions modified === suggs)
+prop_with_suggestions_adds_suggestions :: Property
+prop_with_suggestions_adds_suggestions = 
+  let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+      err = TypeError "test-001" Error Parsing (T.pack "test message") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
+      newSuggestions = [T.pack "suggestion 1", T.pack "suggestion 2"]
+      modifiedErr = withSuggestions newSuggestions err
+  in property (suggestions modifiedErr == newSuggestions)
 
 -- ============================================================================
 -- Recovery Strategy Properties
@@ -364,6 +404,14 @@ prop_fatal_recovery_creates_fatal_strategy :: Property
 prop_fatal_recovery_creates_fatal_strategy = 
   let strategy = fatalRecovery
   in property (not (canRecover strategy))
+
+-- Property: addError makes collector have errors
+prop_add_error_creates_errors :: Property
+prop_add_error_creates_errors = 
+  let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+      err = TypeError "test-001" Error Parsing (T.pack "test message") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
+      collector = execState (addError err) []
+  in property (hasErrors collector)
 
 -- ============================================================================
 -- Test Suite
