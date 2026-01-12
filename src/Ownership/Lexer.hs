@@ -71,4 +71,6 @@ ownershipLexerSpec = LexerSpec
   }
 
 lexAll :: String -> [OwnershipToken]
-lexAll = lexWithSpec ownershipLexerSpec
+lexAll input
+  | null input = []  -- 空输入返回空列表
+  | otherwise = lexWithSpec ownershipLexerSpec input

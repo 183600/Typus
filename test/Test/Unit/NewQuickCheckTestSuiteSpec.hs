@@ -41,7 +41,10 @@ prop_trim_no_leading_trailing_spaces s =
 
 -- Test splitBy function
 prop_split_by_length :: Char -> String -> Property
-prop_split_by_length c s = property $ length (splitBy c s) >= 1
+prop_split_by_length c s = property $ 
+  if null s 
+  then length (splitBy c s) == 0
+  else length (splitBy c s) >= 1
 
 prop_split_by_concat :: Char -> String -> Property
 prop_split_by_concat c s = L.intercalate [c] (splitBy c s) === s

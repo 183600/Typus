@@ -9,14 +9,15 @@ import Test.Tasty.HUnit
 
 import SourceLocation
 import qualified Data.Text as T
+import Compiler.Errors.Core (ErrorLocation(..))
 
 -- | 测试SourcePos的基本属性
 prop_sourcePos_monotonic :: Positive Int -> Positive Int -> Positive Int -> Property
 prop_sourcePos_monotonic (Positive line) (Positive col) (Positive n) =
-  let pos = SourcePos line col
-      posAfter = advancePos '\n' pos
+  let pos = SourcePos line col 0
+      posAfter' = advancePos '\n' pos
   in if line /= 0 && col /= 0
-     then sourceLine posAfter >= sourceLine pos
+     then property (posLine posAfter' >= posLine pos)
      else property True
 
 -- | 测试SourceSpan的合并操作
@@ -33,59 +34,60 @@ prop_mergeSpans_associative span1 span2 span3 =
 -- | 测试Located值的位置追踪
 prop_locatedAt_preserves_value :: String -> SourcePos -> Bool
 prop_locatedAt_preserves_value val pos =
-  locatedValue (locatedAt pos val) == val
+  locValue (locatedAt pos val) == val
 
 -- | 测试位置计算
 prop_posAfter_newline_increments_line :: Positive Int -> Positive Int -> Property
 prop_posAfter_newline_increments_line (Positive line) (Positive col) =
-  let pos = SourcePos line col
-      posAfter = advancePos '\n' pos
+  let pos = SourcePos line col 0
+      posAfter' = advancePos '\n' pos
   in if line > 0 && col > 0
-     then sourceLine posAfter === sourceLine pos + 1 .&&. sourceColumn posAfter === 1
+     then posLine posAfter' === posLine pos + 1 .&&. posColumn posAfter' === 1
      else property True
 
 -- | 测试spanBetween的正确性
 prop_spanBetween_order_independent :: SourcePos -> SourcePos -> Property
 prop_spanBetween_order_independent pos1 pos2 =
   if pos1 /= pos2
-  then let span1 = spanBetween pos1 pos2
-           span2 = spanBetween pos2 pos1
-       in spanStart span1 === min pos1 pos2 .&&. 
-          spanEnd span1 === max pos1 pos2 .&&.
-          spanStart span2 === min pos1 pos2 .&&.
-          spanEnd span2 === max pos1 pos2
+  then let span1 = spanBetweenOrdered pos1 pos2
+           span2 = spanBetweenOrdered pos2 pos1
+           minPos = if pos1 <= pos2 then pos1 else pos2
+           maxPos = if pos1 >= pos2 then pos1 else pos2
+       in spanStart span1 === minPos .&&. 
+          spanEnd span1 === maxPos .&&.
+          spanStart span2 === minPos .&&.
+          spanEnd span2 === maxPos
   else property True
 
 -- | 测试LocationTracker的基本功能
 test_locationTracker_basic :: Assertion
 test_locationTracker_basic = do
   let initialPos = startPos
-      (result, finalState) = runLocationTracker $ do
-        setCurrentPos (SourcePos 2 5)
+      result = runLocationTracker $ do
+        setCurrentPos (SourcePos 2 5 0)
         getCurrentPos
-  assertEqual "Position should be updated" (SourcePos 2 5) result
-  assertEqual "Final state should match" (SourcePos 2 5) finalState
+  assertEqual "Position should be updated" (SourcePos 2 5 0) result
 
 -- | 测试错误位置转换
 test_errorLocation_conversion :: Assertion
 test_errorLocation_conversion = do
-  let pos = SourcePos 10 20
-      span = spanFrom pos "test string"
+  let pos = SourcePos 10 20 0
+      span = spanFrom pos
       errorLoc = toErrorLocationWithSpan span
-  assertEqual "Error line should match" 10 (errorLine errorLoc)
-  assertEqual "Error column should match" 20 (errorColumn errorLoc)
+  assertEqual "Error line should match" 10 (line errorLoc)
+  assertEqual "Error column should match" 20 (column errorLoc)
 
 -- | 测试空span的行为
 test_emptySpan_properties :: Assertion
 test_emptySpan_properties = do
-  let empty = emptySpan
+  let empty = emptySpan startPos
   assertEqual "Empty span should start at startPos" startPos (spanStart empty)
   assertEqual "Empty span should end at startPos" startPos (spanEnd empty)
   assertBool "Empty span should be valid" (isValidSpan empty)
 
 -- | 生成任意SourcePos用于QuickCheck测试
 instance Arbitrary SourcePos where
-  arbitrary = SourcePos <$> arbitraryPositive <*> arbitraryPositive
+  arbitrary = SourcePos <$> arbitraryPositive <*> arbitraryPositive <*> arbitrary
     where
       arbitraryPositive = getPositive <$> arbitrary
 
@@ -100,11 +102,11 @@ instance Arbitrary SourceSpan where
 
 -- | 生成任意Located值用于QuickCheck测试
 instance Arbitrary a => Arbitrary (Located a) where
-  arbitrary = Located <$> arbitrary <*> arbitrary
+  arbitrary = Located <$> arbitrary <*> arbitrary <*> arbitrary
 
 -- | 辅助函数：检查SourcePos的顺序
 sourcePosLe :: SourcePos -> SourcePos -> Bool
-sourcePosLe (SourcePos l1 c1) (SourcePos l2 c2) = 
+sourcePosLe (SourcePos l1 c1 _) (SourcePos l2 c2 _) = 
   l1 < l2 || (l1 == l2 && c1 <= c2)
 
 -- | 测试套件

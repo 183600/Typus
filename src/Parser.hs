@@ -14,7 +14,7 @@ import Control.Applicative (empty)
 import Control.DeepSeq (NFData(..), deepseq)
 import Control.Monad (foldM)
 import Data.Char (isAlphaNum, isSpace)
-import Data.List (isPrefixOf, isInfixOf)
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf, partition)
 import Data.Maybe (fromMaybe)
 import Data.Void (Void)
 import qualified Data.Text as T
@@ -94,7 +94,6 @@ isIdentifierChar c = isAlphaNum c || c == '_' || c == '-'
 
 fileDirectiveParser :: DirectiveParser [(T.Text, T.Text)]
 fileDirectiveParser = do
-  _ <- symbol "//!"
   pairs <- MP.sepBy directive (symbol ",")
   pure pairs
   where
@@ -177,30 +176,128 @@ buildTypusFile lines0 = do
     -- Check for syntax errors
     let content = unlines (map plText lines0)
         syntaxErrors = SyntaxValidator.validateSyntax content
-    -- Always try to parse, even with syntax errors
-    (fileDirs, buildTags, rest) <- parseFileDirectivesFromParsedLines lines0
-    blocks <- parseBlocksFromParsedLines rest
-    pure TypusFile
-      { tfDirectives = fileDirs
-      , tfBuildTags = buildTags
-      , tfBlocks = blocks
-      , tfSyntaxErrors = syntaxErrors
-      }
+        -- 检查是否有语法错误
+        hasSyntaxErrors = not (null syntaxErrors)
+    if hasSyntaxErrors
+      then Left $ "Syntax errors found: " ++ unlines (map SyntaxValidator.formatSyntaxError syntaxErrors)
+      else do
+        -- Try to parse only if no syntax errors
+        (fileDirs, buildTags, rest) <- parseFileDirectivesFromParsedLines lines0
+        blocks <- parseBlocksFromParsedLines rest
+        -- Validate code blocks for incomplete expressions
+        validateCodeBlocks blocks
+        pure TypusFile
+          { tfDirectives = fileDirs
+          , tfBuildTags = buildTags
+          , tfBlocks = blocks
+          , tfSyntaxErrors = syntaxErrors
+          }
 
 -- Check for if statements without opening brace
+
 checkIfStatementsWithBraces :: [ParsedLine] -> Either String ()
+
 checkIfStatementsWithBraces lines' = 
+
     case findIfWithoutBrace lines' of
+
       Just (lineNum, _) -> Left $ "syntax error at line " ++ show lineNum ++ ": missing opening brace after if statement"
+
       Nothing -> Right ()
+
   where
+
+
+
     findIfWithoutBrace [] = Nothing
+
     findIfWithoutBrace (line:rest) =
+
       let text = plText line
+
           trimmed = trim text
+
       in if "if " `isPrefixOf` trimmed && not ("{" `isInfixOf` text)
+
          then Just (plSpan line, text)
+
          else findIfWithoutBrace rest
+
+
+
+-- Validate code blocks for incomplete expressions
+
+validateCodeBlocks :: [CodeBlock] -> Either String ()
+
+validateCodeBlocks blocks = 
+
+    case findIncompleteExpression blocks of
+
+      Just (block, expr) -> Left $ "Incomplete expression in code block: " ++ expr
+
+      Nothing -> Right ()
+
+  where
+
+    findIncompleteExpression [] = Nothing
+
+    findIncompleteExpression (block:rest) =
+
+      let content = cbContent block
+
+          contentLines = lines content
+
+          incompleteLines = filter isIncompleteExpression contentLines
+
+      in if not (null incompleteLines)
+
+         then Just (block, head incompleteLines)
+
+         else findIncompleteExpression rest
+
+    
+
+    isIncompleteExpression line =
+
+      let trimmed = trim line
+
+          -- Check for common incomplete patterns
+
+          incompletePatterns = 
+
+            [ "let " `isSuffixOf` trimmed
+
+            , "function " `isSuffixOf` trimmed
+
+            , "if " `isSuffixOf` trimmed
+
+            , "for " `isSuffixOf` trimmed
+
+            , "while " `isSuffixOf` trimmed
+
+            , "=" `isSuffixOf` trimmed
+
+            , "+" `isSuffixOf` trimmed
+
+            , "-" `isSuffixOf` trimmed
+
+            , "*" `isSuffixOf` trimmed
+
+            , "/" `isSuffixOf` trimmed
+
+            , "&& " `isSuffixOf` trimmed
+
+            , "|| " `isSuffixOf` trimmed
+
+            , "(" `isSuffixOf` trimmed
+
+            , "[" `isSuffixOf` trimmed
+
+            , "{" `isSuffixOf` trimmed
+
+            ]
+
+      in any (== True) incompletePatterns && not (null trimmed)
 
 -- Check for multiple package declarations
 checkMultiplePackageDeclarations :: [ParsedLine] -> Either String ()
@@ -228,10 +325,15 @@ parseFileDirectivesFromParsedLines = go defaultFileDirectives []
   where
     go acc buildTagsRev [] = Right (acc, reverse buildTagsRev, [])
     go acc buildTagsRev (line:rest) =
-      let trimmed = trim (plText line)
+      let text = plText line
+          trimmed = trim text
+          -- 检查是否是指令行，允许 // @ 或 //  @（带额外空格）
+          isDirectiveLine = isPrefixOf "//!" trimmed || 
+                           isPrefixOf "// @" trimmed || 
+                           (isPrefixOf "//" trimmed && "@" `isInfixOf` trimmed)
       in if trimmed == ""
            then go acc buildTagsRev rest
-           else if isPrefixOf "//!" trimmed
+           else if isDirectiveLine
              then do
                directives <- parseFileDirectiveLine line
                acc' <- foldM (\fd (key, val) -> updateFileDirective fd key val) acc directives
@@ -247,24 +349,40 @@ parseFileDirectivesFromParsedLines = go defaultFileDirectives []
 parseFileDirectiveLine :: ParsedLine -> Either String [(String, Located Bool)]
 parseFileDirectiveLine ParsedLine{..} = do
     let stripped = T.stripStart (T.pack plText)
-        filePrefix = T.pack "//!"
-    if not (filePrefix `T.isPrefixOf` stripped)
+        filePrefix1 = T.pack "//!"
+        filePrefix2 = T.pack "// @"
+        -- 检查是否有指令前缀，允许额外的空格
+        hasPrefix1 = filePrefix1 `T.isPrefixOf` stripped
+        hasPrefix2 = filePrefix2 `T.isPrefixOf` stripped ||
+                     (T.pack "//" `T.isPrefixOf` stripped && 
+                      T.pack "@" `T.isInfixOf` T.drop 2 stripped)
+    if not (hasPrefix1 || hasPrefix2)
       then Left $ "Invalid file directive format: " ++ plText
       else
-        case MP.runParser (fileDirectiveParser <* MP.eof) "<file directive>" stripped of
-          Left _ -> Left $ "Invalid file directive format: " ++ plText
-          Right pairs -> do
-            let boolPairs = map (\(keyText, valueText) ->
-                  case parseBool (T.unpack valueText) of
-                    Left err -> Left err
-                    Right boolVal -> Right (T.unpack keyText, locatedWithSpan plSpan boolVal)
-                  ) pairs
-            sequence boolPairs
+        -- 找到指令开始的位置
+        let withoutPrefix = if hasPrefix1
+                           then T.drop (T.length filePrefix1) stripped
+                           else let afterDoubleSlash = T.drop 2 stripped
+                                    afterAt = T.dropWhile (/= '@') afterDoubleSlash
+                                in T.drop 1 afterAt  -- 跳过 @
+            withoutPrefixStripped = T.stripStart withoutPrefix
+            -- Normalize multiple spaces to single spaces
+            normalized = T.unwords $ T.words withoutPrefixStripped
+        in case MP.runParser (fileDirectiveParser <* MP.eof) "<file directive>" normalized of
+             Left _ -> Left $ "Invalid file directive format: " ++ plText
+             Right pairs -> do
+               let boolPairs = map (\(keyText, valueText) ->
+                     case parseBool (T.unpack valueText) of
+                       Left err -> Left err
+                       Right boolVal -> Right (T.unpack keyText, locatedWithSpan plSpan boolVal)
+                     ) pairs
+               sequence boolPairs
 
 updateFileDirective :: FileDirectives -> String -> Located Bool -> Either String FileDirectives
 updateFileDirective fd key value = case key of
     "ownership" -> Right fd { fdOwnership = Just value }
     "dependent_types" -> Right fd { fdDependentTypes = Just value }
+    "dependent-types" -> Right fd { fdDependentTypes = Just value }
     "constraints" -> Right fd { fdConstraints = Just value
                                 , fdDependentTypes = Just value }
     _ -> Left $ "Unknown file directive: " ++ key
@@ -294,7 +412,35 @@ parseBlocksFromParsedLines = go [] []
                    , cbSpan = blockSpan
                    }
              go (block : accWithCode) [] remaining
-           else go accRev (line : codeBufRev) rest
+           else if startsWithMarkdownBlock trimmed
+                then do
+                  -- 如果codeBufRev不为空，先将其刷新到accRev
+                  let accWithCode = if null codeBufRev then accRev else flushCodeBufToAcc accRev codeBufRev
+                  (blockLines, blockSpan, remaining) <- captureMarkdownBlock line rest
+                  -- Parse directives from block lines
+                  let (directiveLines, contentLines) = partitionLines blockLines
+                  directives <- parseDirectivesFromLines directiveLines
+                  let content = buildBlockContent contentLines
+                      block = CodeBlock
+                        { cbDirectives = directives
+                        , cbContent = content
+                        , cbSpan = blockSpan
+                       }
+                  -- 继续处理剩余的行，包括可能的下一个代码块
+                  go (block : accWithCode) [] remaining
+                else go accRev (line : codeBufRev) rest
+
+    -- Partition lines into directive lines and content lines
+    partitionLines :: [ParsedLine] -> ([ParsedLine], [ParsedLine])
+    partitionLines = partition (isPrefixOf "// @" . trim . plText)
+
+    -- Parse directives from lines
+    parseDirectivesFromLines :: [ParsedLine] -> Either String BlockDirectives
+    parseDirectivesFromLines [] = Right defaultBlockDirectives
+    parseDirectivesFromLines lines = do
+      directivePairsList <- mapM parseBlockDirectiveLine' lines
+      let directivePairs = concat directivePairsList
+      parseBlockDirectives directivePairs
 
     flushCodeBufToAcc accRev codeBufRev =
       case flushCodeBuf codeBufRev of
@@ -332,6 +478,51 @@ lineTextWithEnding ParsedLine{..} = plText ++ plEnding
 startsWithBlockDirective :: String -> Bool
 startsWithBlockDirective = T.isPrefixOf (T.pack "{//!") . T.stripStart . T.pack
 
+-- Check if line starts with markdown code block
+startsWithMarkdownBlock :: String -> Bool
+startsWithMarkdownBlock = T.isPrefixOf (T.pack "```typus") . T.stripStart . T.pack
+
+-- Parse block directive line in markdown format (// @)
+parseBlockDirectiveLine' :: ParsedLine -> Either String [(String, Located Bool)]
+parseBlockDirectiveLine' ParsedLine{..} = do
+    let stripped = T.stripStart (T.pack plText)
+        prefix = T.pack "// @"
+    if not (prefix `T.isPrefixOf` stripped)
+      then Left $ "Invalid block directive format: " ++ plText
+      else
+        let withoutPrefix = T.stripStart (T.drop (T.length prefix) stripped)
+            -- 进一步去除前后空格
+            normalized = T.strip withoutPrefix
+            -- Normalize multiple spaces to single spaces
+            normalized' = T.unwords $ T.words normalized
+        in case MP.runParser (singleDirectiveParser <* MP.eof) "<block directive>" normalized' of
+             Left _ -> Left $ "Invalid block directive format: " ++ plText
+             Right pair -> do
+               let (keyText, valueText) = pair
+               case parseBool (T.unpack valueText) of
+                 Left err      -> Left err
+                 Right boolVal -> Right [(T.unpack keyText, locatedWithSpan plSpan boolVal)]
+
+-- Parser for a single directive (key: value)
+singleDirectiveParser :: DirectiveParser (T.Text, T.Text)
+singleDirectiveParser = do
+  key <- identifier
+  _ <- symbol ":"
+  value <- identifier
+  pure (key, value)
+
+-- Parser for block directives without braces
+blockDirectiveParser' :: DirectiveParser [(T.Text, T.Text)]
+blockDirectiveParser' = do
+  pairs <- MP.sepBy directive (symbol ",")
+  pure pairs
+  where
+    directive = do
+      key <- identifier
+      _ <- symbol ":"
+      value <- identifier
+      pure (key, value)
+
 parseBlockDirectiveLine :: ParsedLine -> Either String [(String, Located Bool)]
 parseBlockDirectiveLine ParsedLine{..} = do
     let stripped = T.stripStart (T.pack plText)
@@ -361,6 +552,7 @@ parseBlockDirectives pairs = foldM updateDirective defaultBlockDirectives pairs
     updateDirective bd (key, value) = case key of
       "ownership" -> Right bd { bdOwnership = Just value }
       "dependent_types" -> Right bd { bdDependentTypes = Just value }
+      "dependent-types" -> Right bd { bdDependentTypes = Just value }
       "constraints" -> Right bd { bdConstraints = Just value
                                   , bdDependentTypes = Just value }
       _ -> Left $ "Unknown block directive: " ++ key
@@ -401,10 +593,65 @@ computeBlockSpan directiveSpan closingSpan blockLines =
     foldLastLine current [] = current
     foldLastLine _ (x:xs) = foldLastLine x xs
 
+-- Capture markdown code block lines until closing ```
+captureMarkdownBlock :: ParsedLine -> [ParsedLine] -> Either String ([ParsedLine], SourceSpan, [ParsedLine])
+captureMarkdownBlock startLine = go (1 :: Int) []  -- Start with depth 1 for opening ```
+  where
+    go _ _ [] = Left "Unclosed markdown code block: missing closing ```"
+    go depth accRev (line:rest) =
+      let trimmed = trim (plText line)
+          isCommentLine = "//" `isPrefixOf` trimmed
+          hasBackticks = "```" `isPrefixOf` trimmed
+      in if hasBackticks && not isCommentLine  -- 只处理非注释行的 ```
+         then if "```typus" `isPrefixOf` trimmed
+              then go (depth + 1) (line:accRev) rest  -- Nested opening, increase depth
+              else if depth == 1
+                   then
+                     let blockLines = reverse accRev
+                         blockSpan = computeMarkdownBlockSpan (plSpan startLine) (plSpan line) blockLines
+                     in Right (blockLines, blockSpan, rest)
+                   else go (depth - 1) (line:accRev) rest  -- Nested closing, decrease depth
+         else go depth (line:accRev) rest
+
+-- Capture markdown code block lines until closing ``` and process // @ directives
+captureMarkdownBlockWithDirectives :: ParsedLine -> [ParsedLine] -> Either String ([ParsedLine], BlockDirectives, SourceSpan, [ParsedLine])
+captureMarkdownBlockWithDirectives startLine = go (0 :: Int) [] [] defaultBlockDirectives
+  where
+    go _ _ _ _ [] = Left "Unclosed markdown code block: missing closing ```"
+    go depth accRev directiveAccRev directives (line:rest) =
+      let trimmed = trim (plText line)
+      in if "```" `isPrefixOf` trimmed && not ("```typus" `isPrefixOf` trimmed)
+         then
+           let blockLines = reverse accRev
+               blockSpan = computeMarkdownBlockSpan (plSpan startLine) (plSpan line) (reverse directiveAccRev ++ blockLines)
+           in Right (blockLines, directives, blockSpan, rest)
+         else if isPrefixOf "// @" trimmed
+              then case parseBlockDirectiveLine' line of
+                     Left err -> Left err
+                     Right directivePairs -> do
+                       newDirectives <- parseBlockDirectives directivePairs
+                       go (depth + 1) accRev (line:directiveAccRev) newDirectives rest
+              else go (depth + 1) (line:accRev) directiveAccRev directives rest
+
+computeMarkdownBlockSpan :: SourceSpan -> SourceSpan -> [ParsedLine] -> SourceSpan
+computeMarkdownBlockSpan startSpan endSpan blockLines =
+    case blockLines of
+      [] -> SourceSpan (spanEnd startSpan) (spanStart endSpan)
+      (firstLine:restLines) ->
+        let lastLine = foldLastLine firstLine restLines
+        in SourceSpan (spanStart (plSpan firstLine))
+                      (spanEnd (plSpan lastLine))
+  where
+    foldLastLine :: a -> [a] -> a
+    foldLastLine current [] = current
+    foldLastLine _ (x:xs) = foldLastLine x xs
+
 buildBlockContent :: [ParsedLine] -> String
 buildBlockContent blockLines =
-    let texts = map plText blockLines
-    in unlines texts
+    let texts = map lineTextWithEnding blockLines
+        -- 过滤掉 // @ 指令行
+        contentTexts = filter (not . isPrefixOf "// @") texts
+    in if null contentTexts then "" else concat contentTexts
 
 -- ============================================================================
 -- Directive helpers

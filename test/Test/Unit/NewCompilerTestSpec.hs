@@ -12,6 +12,7 @@ import Compiler.TypeChecker (TypeEnv(..))
 import Dependencies.Inference (initialTypeEnvironment)
 import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..), defaultFileDirectives, defaultBlockDirectives)
 import SourceLocation (SourcePos(..), Located(..), locatedAt, emptySpan, startPos)
+import SyntaxValidator (SyntaxError(..), ErrorType(..))
 import qualified Data.Text as T
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import Data.List (null, isInfixOf)
@@ -73,9 +74,10 @@ test_error_formatting = do
 -- | 测试错误分析
 test_error_analysis :: Assertion
 test_error_analysis = do
-  let syntaxError = malformedSyntaxError
+  let syntaxError = SyntaxError UnexpectedToken "Unexpected token: Malformed syntax" 1 1 ""
       span = emptySpan startPos
-      typusFile1 = TypusFile defaultFileDirectives [] [CodeBlock defaultBlockDirectives "" span] []
+      typusFile1 = TypusFile defaultFileDirectives [] [CodeBlock defaultBlockDirectives "" span] [syntaxError]
+      -- 使用一个真正会导致类型错误的例子：类型不匹配
       typusFile2 = TypusFile defaultFileDirectives [] [CodeBlock defaultBlockDirectives "let x: Int = \"hello\"" span] []
       syntaxCheck = hasMalformedSyntax typusFile1
       typeCheck = hasTypeErrors typusFile2

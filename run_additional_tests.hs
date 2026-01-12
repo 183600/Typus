@@ -32,7 +32,7 @@ testUtilsSplitBy = testCase "Utils.splitBy function" $ do
     assertEqual "split by comma start empty" ["", "a", "b"] (splitBy ',' ",a,b")
     assertEqual "split by comma end empty" ["a", "b", ""] (splitBy ',' "a,b,")
     assertEqual "split by comma only" ["", ""] (splitBy ',' ",")
-    assertEqual "split empty string" [""] (splitBy ',' "")
+    assertEqual "split empty string" [] (splitBy ',' "")
 
 testUtilsSplitByCollapsed :: TestTree
 testUtilsSplitByCollapsed = testCase "Utils.splitByCollapsed function" $ do

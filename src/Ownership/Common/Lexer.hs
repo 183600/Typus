@@ -60,9 +60,15 @@ lexWithSpec spec = go (Pos 1 1)
         -- Newline
         | c == '\n' =
             Token (TSym newlineSym) pos : go (Pos (pLine pos + 1) 1) cs
-        -- Whitespace
+        -- Whitespace (except newline)
         | isSpace c && c /= '\n' =
-            go (bump pos 1) cs
+            let ws = takeWhile (\x -> isSpace x && x /= '\n') s
+                wsLen = length ws
+                wsPos = bump pos wsLen
+                rest = drop wsLen s
+            in if null ws
+               then go (bump pos 1) cs
+               else Token (TId ws) pos : go wsPos rest
         -- Line comment
         | "//" `isPrefixOf` s =
             let (comment, rest, consumedNL, newPos) = readLineComment pos s
@@ -100,8 +106,8 @@ lexWithSpec spec = go (Pos 1 1)
                 tk :: TokenKind kw sym
                 tk = maybe (TId ident) TKw (specKeywords spec ident)
             in Token tk pos : go newPos rest
-        -- Fallback: skip unrecognised character
-        | otherwise = go (bump pos 1) cs
+        -- Fallback: generate token for unrecognised character
+        | otherwise = Token (TId [c]) pos : go (bump pos 1) cs
 
     bump :: Pos -> Int -> Pos
     bump (Pos l c) n = Pos l (c + n)

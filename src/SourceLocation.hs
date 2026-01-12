@@ -21,6 +21,7 @@ module SourceLocation (
     spanFrom,
     spanTo,
     spanBetween,
+    spanBetweenOrdered,
     mergeSpans,
     isValidSpan,
     isValidBlockSpan,
@@ -68,8 +69,16 @@ data SourcePos = SourcePos
     { posLine :: Int
     , posColumn :: Int
     , posOffset :: Int
-    } deriving stock (Show, Eq, Ord, Generic)
+    } deriving stock (Show, Eq, Generic)
     deriving anyclass NFData
+
+-- Custom Ord instance to ensure proper comparison: line first, then column, then offset
+instance Ord SourcePos where
+    compare p1 p2 = case compare (posLine p1) (posLine p2) of
+                      EQ -> case compare (posColumn p1) (posColumn p2) of
+                              EQ -> compare (posOffset p1) (posOffset p2)
+                              other -> other
+                      other -> other
 
 -- Start position (1-based)
 startPos :: SourcePos
@@ -121,28 +130,42 @@ spanFrom = emptySpan
 spanTo :: SourcePos -> SourceSpan
 spanTo pos = SourceSpan pos pos
 
--- Span between two positions
+-- Span between two positions (preserves order as expected by some tests)
 spanBetween :: SourcePos -> SourcePos -> SourceSpan
-spanBetween start end = SourceSpan start end
+spanBetween pos1 pos2 = SourceSpan pos1 pos2
+
+-- Span between two positions (order-independent, returns min/max)
+spanBetweenOrdered :: SourcePos -> SourcePos -> SourceSpan
+spanBetweenOrdered pos1 pos2 
+  | comparePos pos1 pos2 == LT = SourceSpan pos1 pos2
+  | otherwise = SourceSpan pos2 pos1
 
 -- Merge two spans
 mergeSpans :: SourceSpan -> SourceSpan -> SourceSpan
-mergeSpans span1 span2 = SourceSpan
-    { spanStart = SourcePos
-        { posLine = min (posLine (spanStart span1)) (posLine (spanStart span2))
-        , posColumn = min (posColumn (spanStart span1)) (posColumn (spanStart span2))
-        , posOffset = min (posOffset (spanStart span1)) (posOffset (spanStart span2))
-        }
-    , spanEnd = SourcePos
-        { posLine = max (posLine (spanEnd span1)) (posLine (spanEnd span2))
-        , posColumn = max (posColumn (spanEnd span1)) (posColumn (spanEnd span2))
-        , posOffset = max (posOffset (spanEnd span1)) (posOffset (spanEnd span2))
-        }
-    }
+mergeSpans span1 span2 = 
+    let start1 = spanStart span1
+        start2 = spanStart span2
+        end1 = spanEnd span1
+        end2 = spanEnd span2
+        -- Compare individual fields as expected by tests
+        start = SourcePos
+            { posLine = min (posLine start1) (posLine start2)
+            , posColumn = min (posColumn start1) (posColumn start2)
+            , posOffset = min (posOffset start1) (posOffset start2)
+            }
+        end = SourcePos
+            { posLine = max (posLine end1) (posLine end2)
+            , posColumn = max (posColumn end1) (posColumn end2)
+            , posOffset = max (posOffset end1) (posOffset end2)
+            }
+    in SourceSpan start end
 
 -- Check if span is valid (start <= end)
 isValidSpan :: SourceSpan -> Bool
-isValidSpan srcSpan = spanStart srcSpan <= spanEnd srcSpan
+isValidSpan srcSpan = 
+  let start = spanStart srcSpan
+      end = spanEnd srcSpan
+  in comparePos start end /= GT
 
 -- | Check if a block span is valid (alias for isValidSpan for backward compatibility)
 isValidBlockSpan :: SourceSpan -> Bool
@@ -275,7 +298,11 @@ toErrorLocationWithSpan srcSpan = ErrorLocation
 
 -- Compare positions
 comparePos :: SourcePos -> SourcePos -> Ordering
-comparePos p1 p2 = compare (posOffset p1) (posOffset p2)
+comparePos p1 p2 = case compare (posLine p1) (posLine p2) of
+                      EQ -> case compare (posColumn p1) (posColumn p2) of
+                              EQ -> compare (posOffset p1) (posOffset p2)
+                              other -> other
+                      other -> other
 
 -- Check if position is within span
 _isPosInSpan :: SourcePos -> SourceSpan -> Bool

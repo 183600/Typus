@@ -597,13 +597,14 @@ formatError err =
           Info -> "INFO"
         categoryStr = "[" ++ show (category err) ++ "]"
         msg = T.unpack (message err)
+        locStr = formatLocation (location err)
         suggestionsStr = if null (suggestions err)
                          then ""
                          else "\nSuggestions:\n" ++ unlines (map ("  - " ++) (map T.unpack (suggestions err)))
         chainStr = if null (errorChain err)
                    then ""
                    else "\nError Chain:\n" ++ unlines (map ("  " ++) (map formatError (errorChain err)))
-    in "[" ++ severityStr ++ "] " ++ categoryStr ++ " " ++ msg ++ suggestionsStr ++ chainStr
+    in locStr ++ "[" ++ severityStr ++ "] " ++ categoryStr ++ " " ++ msg ++ suggestionsStr ++ chainStr
 
 -- Format single error with location
 formatErrorWithLocation :: TypeError -> String
@@ -612,11 +613,25 @@ formatErrorWithLocation err =
         contextStr = formatContext (context err)
         timestampStr = maybe "" (\ts -> "[" ++ ts ++ "] ") (timestamp err)
         baseMsg = formatError err
-    in timestampStr ++ locStr ++ baseMsg ++ contextStr
+        -- 确保包含错误描述
+        errorMsg = T.unpack (message err)
+        finalMsg = if null errorMsg then baseMsg else baseMsg ++ " " ++ errorMsg
+    in timestampStr ++ locStr ++ finalMsg ++ contextStr
 
 -- Format multiple errors
 formatErrors :: [TypeError] -> String
-formatErrors = intercalate "\n" . map formatError . sortBySeverity
+formatErrors = intercalate "\n" . map formatError . sortByLocation
+  where
+    sortByLocation = sortBy (\e1 e2 -> 
+      let loc1 = location e1
+          loc2 = location e2
+          line1 = line loc1
+          line2 = line loc2
+          col1 = column loc1
+          col2 = column loc2
+      in if line1 == line2
+         then compare col1 col2
+         else compare line1 line2)
 
 -- Format multiple errors with locations
 formatErrorsWithLocation :: [TypeError] -> String
@@ -651,7 +666,7 @@ formatContext ctx =
        else "\nContext: " ++ intercalate ", " parts ++ codeStr ++ additionalStr
 
 sortBySeverity :: [TypeError] -> [TypeError]
-sortBySeverity = sortBy (comparing severity)
+sortBySeverity = sortBy (comparing (negate . severityPriority . severity))
 
 -- ============================================================================
 -- Error Recovery Functions

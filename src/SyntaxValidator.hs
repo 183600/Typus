@@ -344,6 +344,7 @@ validateToken validator (current, next) =
         TKeyword "import" l c -> validateImportDecl validator current next l c
         TKeyword "package" _ _ ->
             validator { hasPackageDecl = True }
+        TIdentifier "let" l c -> validateLetDecl validator current next l c
         TIdentifier "main" _ _ ->
             case next of
                 TDelimiter '(' _ _ -> validator { hasMainFunc = True }
@@ -393,6 +394,18 @@ validateImportDecl validator _ next line col =
         TDelimiter '(' _ _ -> validator
         _ -> addError validator InvalidImport 
                      "Expected string or '(' after 'import'" line col ""
+
+validateLetDecl :: SyntaxValidator -> Token -> Token -> Int -> Int -> SyntaxValidator
+validateLetDecl validator _ next line col =
+    case next of
+        TIdentifier name _ _ -> 
+            if name `Set.member` scopeVariables (currentScope validator)
+            then addError validator DuplicateDeclaration 
+                         ("Duplicate variable declaration: " ++ name) line col ""
+            else validator { currentScope = (currentScope validator) 
+                           { scopeVariables = Set.insert name (scopeVariables $ currentScope validator) }}
+        _ -> addError validator InvalidStatement 
+                     "Expected variable name after 'let'" line col ""
 
 validateBraceMatching :: SyntaxValidator -> [Token] -> SyntaxValidator
 validateBraceMatching validator tokens =
@@ -479,11 +492,45 @@ validateGoSpecific validator tokens =
 
 validateTypusSpecific :: SyntaxValidator -> [Token] -> SyntaxValidator
 validateTypusSpecific validator tokens =
-    foldl checkTypusDirective validator (filterComments tokens)
+    let validator1 = foldl checkTypusDirective validator (filterComments tokens)
+        validator2 = checkLetDeclarations validator1 tokens
+    in validator2
   where
     filterComments = filter isComment
     isComment (TComment _ _ _) = True
     isComment _ = False
+    
+    -- Check for incomplete let declarations
+    checkLetDeclarations :: SyntaxValidator -> [Token] -> SyntaxValidator
+    checkLetDeclarations val toks = checkLetSequence val toks
+    
+    checkLetSequence :: SyntaxValidator -> [Token] -> SyntaxValidator
+    checkLetSequence val [] = val
+    checkLetSequence val (TIdentifier "let" line col : rest) =
+      case rest of
+        (TIdentifier name _ _ : TWhitespace _ _ : TOperator "=" _ _ : afterEquals) ->
+          -- Check if there's an expression after =
+          case findExpression afterEquals of
+            Just _ -> checkLetSequence val (drop 1 rest)
+            Nothing -> addError val InvalidStatement 
+                          ("Incomplete let declaration: missing expression after '" ++ name ++ " ='") line col ""
+        (TIdentifier name _ _ : TOperator "=" _ _ : afterEquals) ->
+          -- Check if there's an expression after = (no whitespace)
+          case findExpression afterEquals of
+            Just _ -> checkLetSequence val (drop 1 rest)
+            Nothing -> addError val InvalidStatement 
+                          ("Incomplete let declaration: missing expression after '" ++ name ++ " ='") line col ""
+        _ -> addError val InvalidStatement 
+                      "Expected variable name after 'let'" line col ""
+    checkLetSequence val (_:rest) = checkLetSequence val rest
+    
+    findExpression :: [Token] -> Maybe Token
+    findExpression [] = Nothing
+    findExpression (t:rest) =
+      case t of
+        TNewline _ -> Nothing  -- Stop at newline, no expression found
+        TWhitespace _ _ -> findExpression rest  -- Skip whitespace
+        _ -> Just t  -- Found the start of an expression
 
 checkTypusDirective :: SyntaxValidator -> Token -> SyntaxValidator
 checkTypusDirective validator (TComment comment line col)

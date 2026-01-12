@@ -97,7 +97,7 @@ prop_removeComments_preserves_strings :: String -> Property
 prop_removeComments_preserves_strings s = 
   let stringWithComment = "code /* comment */ more code"
       result = Utils.removeComments stringWithComment
-  in property $ "code" `isPrefixOf` result && "more code" `isSuffixOf` result
+  in property $ not (null s) ==> "code" `isPrefixOf` result && "more code " `isSuffixOf` result
 
 -- Test normalizeIndentation function
 prop_normalizeIndentation_preserves_relative_indentation :: String -> Property

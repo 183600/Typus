@@ -11,18 +11,24 @@ import Compiler.Errors.Core
 import SourceLocation (SourcePos(..), Located(..), locatedAt)
 import qualified Data.Text as T
 import Data.Maybe (isJust, isNothing, fromMaybe)
-import Data.List (null, isInfixOf, isPrefixOf, find, zip)
-import Data.Time (UTCTime, getCurrentTime)
-import Control.Monad.State (evalState)
+import Data.List (null, isInfixOf, isPrefixOf, find, zip, tails)
+import Data.Time (UTCTime, getCurrentTime, formatTime, defaultTimeLocale)
+import Control.Monad.State (evalState, execState)
+
+-- Helper function to format UTCTime
+formatTimestampHelper :: UTCTime -> String
+formatTimestampHelper = formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S.%3q"
 
 -- | 测试错误收集器的基本功能
 test_error_collector_basic :: Assertion
 test_error_collector_basic = do
   let location = ErrorLocation Nothing 1 10 Nothing Nothing
       error = errorAt "Test" "Test error" location
-      errors = evalState (addError error) []
+      errors = execState (addError error) []
   assertEqual "Should have one error" 1 (length errors)
-  let error' = head errors
+  let error' = case errors of
+        (e:_) -> e
+        [] -> Prelude.error "No errors found"
   assertEqual "Error message should match" "Test error" (T.unpack $ message error')
 
 -- | 测试警告收集
@@ -30,9 +36,11 @@ test_warning_collection :: Assertion
 test_warning_collection = do
   let location = ErrorLocation Nothing 2 20 Nothing Nothing
       warning = warningAt "Test" "Test warning" location
-      warnings = evalState (addWarning warning) []
+      warnings = execState (addWarning warning) []
   assertEqual "Should have one warning" 1 (length warnings)
-  let warning' = head warnings
+  let warning' = case warnings of
+        (w:_) -> w
+        [] -> Prelude.error "No warnings found"
   assertEqual "Warning message should match" "Test warning" (T.unpack $ message warning')
 
 -- | 测试信息收集
@@ -40,9 +48,11 @@ test_info_collection :: Assertion
 test_info_collection = do
   let location = ErrorLocation Nothing 3 30 Nothing Nothing
       info = infoAt "Test" "Test info" location
-      infos = evalState (addInfo info) []
+      infos = execState (addInfo info) []
   assertEqual "Should have one info message" 1 (length infos)
-  let info' = head infos
+  let info' = case infos of
+        (i:_) -> i
+        [] -> Prelude.error "No info messages found"
   assertEqual "Info message should match" "Test info" (T.unpack $ message info')
 
 -- | 测试错误检测
@@ -50,7 +60,7 @@ test_error_detection :: Assertion
 test_error_detection = do
   let location = ErrorLocation Nothing 1 10 Nothing Nothing
       error = errorAt "Test" "Test error" location
-      errors = evalState (addError error) []
+      errors = execState (addError error) []
   assertBool "Should detect errors" (hasErrors errors)
   assertBool "Should not detect warnings" (not $ hasWarnings errors)
 
@@ -59,7 +69,7 @@ test_warning_detection :: Assertion
 test_warning_detection = do
   let location = ErrorLocation Nothing 2 20 Nothing Nothing
       warning = warningAt "Test" "Test warning" location
-      warnings = evalState (addWarning warning) []
+      warnings = execState (addWarning warning) []
   assertBool "Should detect warnings" (hasWarnings warnings)
   assertBool "Should not detect errors" (not $ hasErrors warnings)
 
@@ -91,7 +101,7 @@ test_multiple_errors_formatting = do
       error1 = errorAt "Test" "First error" location1
       error2 = errorAt "Test" "Second error" location2
       warning = warningAt "Test" "A warning" location3
-      errors = evalState (addError error1 >> addError error2 >> addWarning warning) []
+      errors = execState (addError error1 >> addError error2 >> addWarning warning) []
       formatted = formatErrors errors
   assertBool "Formatted errors should contain first error" ("First error" `isInfixOf` formatted)
   assertBool "Formatted errors should contain second error" ("Second error" `isInfixOf` formatted)
@@ -139,7 +149,7 @@ test_error_context = do
   let context = emptyContext
       location = ErrorLocation Nothing 1 10 Nothing Nothing
       error = errorAt "Test" "Context test error" location
-  assertEqual "Error context should be empty" context (errorContext error)
+  assertEqual "Error context should be empty" context (Compiler.Errors.Core.context error)
 
 -- | 测试时间戳错误
 test_timestamped_errors :: Assertion
@@ -147,14 +157,14 @@ test_timestamped_errors = do
   currentTime <- getCurrentTime
   let location = ErrorLocation Nothing 1 10 Nothing Nothing
       timestampedError = errorAtWithUTCTime currentTime "Test" "Timestamped error" location
-      errorTime = errorTimestamp timestampedError
-  assertEqual "Error should have correct timestamp" currentTime errorTime
+      errorTime = timestamp timestampedError
+  assertEqual "Error should have correct timestamp" (Just (formatTimestampHelper currentTime)) errorTime
 
 -- | QuickCheck属性：错误收集器应该正确计数错误
 prop_error_collector_counts :: [String] -> Property
 prop_error_collector_counts messages =
   let location = ErrorLocation Nothing 1 1 Nothing Nothing
-      errors = evalState (mapM_ (\msg -> addError (errorAt "Test" (T.pack msg) location)) messages) []
+      errors = execState (mapM_ (\msg -> addError (errorAt "Test" (T.pack msg) location)) messages) []
   in length errors === length messages
 
 -- | QuickCheck属性：错误格式化应该包含所有必要信息

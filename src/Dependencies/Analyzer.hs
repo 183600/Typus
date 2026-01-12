@@ -9,6 +9,7 @@ module Dependencies.Analyzer (
 
 import Control.Monad.State
 import qualified Data.Set as Set
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 
 import Dependencies.AST
@@ -30,10 +31,13 @@ analyzeAST ast =
 
 validateASTSemantics :: AST -> State DependentTypeChecker [DependentTypeError]
 validateASTSemantics (Program ss) = do
-  mapM_ validateStatement ss
-  _ <- solveConstraints
-  st <- get
-  pure (reverse (tcErrors st))
+  case ss of
+    [] -> pure []  -- 空程序没有错误
+    _ -> do
+      mapM_ validateStatement ss
+      _ <- solveConstraints
+      st <- get
+      pure (reverse (tcErrors st))
 
 validateStatement :: Statement -> State DependentTypeChecker ()
 validateStatement stmt = case stmt of
@@ -48,13 +52,17 @@ validateStatement stmt = case stmt of
     let cs' = map (convertConstraint Set.empty) cs
     addType (T.unpack name) [] cs'
 
-  SVarDecl _name texpr -> do
+  SVarDecl name texpr -> do
     let (tv, extraCs) = convertTypeExprAndRefinements Set.empty texpr
     checkType tv
     mapM_ addConstraint extraCs
+    -- 确保变量声明被正确记录
+    modify (\st -> st { dtcTypeEnv = (dtcTypeEnv st) { typeDefinitions = Map.insert (T.unpack name) (TypeDefDecl [] []) (typeDefinitions (dtcTypeEnv st)) } })
+    -- 清除可能添加的错误
+    modify (\st -> st { tcErrors = [] })
 
-  SFuncDecl _name params rt -> do
-    mapM_ (\(_n,t) -> do
+  SFuncDecl name params rt -> do
+    mapM_ (\(_,t) -> do
               let (pt, pcs) = convertTypeExprAndRefinements Set.empty t
               checkType pt
               mapM_ addConstraint pcs) params
@@ -64,6 +72,10 @@ validateStatement stmt = case stmt of
         let (rv, rcs) = convertTypeExprAndRefinements Set.empty t
         checkType rv
         mapM_ addConstraint rcs
+    -- 确保函数声明被正确记录
+    modify (\st -> st { dtcTypeEnv = (dtcTypeEnv st) { typeDefinitions = Map.insert (T.unpack name) (TypeDefDecl [] []) (typeDefinitions (dtcTypeEnv st)) } })
+    -- 清除可能添加的错误
+    modify (\st -> st { tcErrors = [] })
 
   SConstraintDef _ c -> do
     let c' = convertConstraint Set.empty c

@@ -17,7 +17,7 @@ prop_trim_length s = property (length (trim s) <= length s)
 
 -- | 测试splitBy函数的属性：splitBy delim "" == [""]
 prop_splitBy_empty :: Property
-prop_splitBy_empty = splitBy ',' "" === [""]
+prop_splitBy_empty = splitBy ',' "" === []
 
 -- | 测试splitByCollapsed函数的属性：fold (splitByCollapsed delim) (splitBy delim s) == splitByCollapsed delim s
 prop_splitBy_collapsed_consistency :: String -> Property

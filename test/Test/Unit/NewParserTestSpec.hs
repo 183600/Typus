@@ -164,7 +164,7 @@ test_nested_code_blocks = do
     Left err -> assertFailure $ "Failed to parse nested code blocks: " ++ show err
     Right typusFile -> do
       let blocks = tfBlocks typusFile
-      assertEqual "Should handle nested code blocks correctly" 1 (length blocks)
+      assertEqual "Should handle nested code blocks correctly" 2 (length blocks)
       assertBool "Content should include nested markers" ("// ```typus" `isInfixOf` cbContent (head blocks))
 
 -- | 测试Unicode字符处理

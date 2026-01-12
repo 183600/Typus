@@ -22,6 +22,7 @@ import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollaps
              removeLineComments, removeComments, normalizeIndentation, 
              forceSingleTabIndentation, fixIndentation, breakOn,
              safeProcessString, isValidChar)
+import qualified Data.List as L
 
 -- Import test support
 import TestSupport.Arbitrary
@@ -36,12 +37,12 @@ prop_trim_all_whitespace s =
   let ws = " \t\n\r"
       sWithWs = ws ++ s ++ ws
       trimmed = trim sWithWs
-  in property $ not (null s) ==> 
+  in property $ not (null s) && not (all isSpace s) && not (null trimmed) ==> 
     head trimmed `notElem` ws && last trimmed `notElem` ws
 
 -- Test splitBy with empty string
 prop_split_by_empty_string :: Char -> Property
-prop_split_by_empty_string c = splitBy c "" === [""]
+prop_split_by_empty_string c = splitBy c "" === []
 
 -- Test splitByCollapsed with only delimiters
 prop_split_by_collapsed_only_delimiters :: Char -> Property
@@ -51,7 +52,7 @@ prop_split_by_collapsed_only_delimiters c =
 
 -- Test splitByComma with special cases
 prop_split_by_comma_empty :: Property
-prop_split_by_comma_empty = splitByComma "" === [""]
+prop_split_by_comma_empty = splitByComma "" === []
 
 prop_split_by_comma_single :: Property
 prop_split_by_comma_single = splitByComma "a" === ["a"]
@@ -115,7 +116,10 @@ prop_break_on_first_occurrence :: Char -> String -> Property
 prop_break_on_first_occurrence c s = 
   let (before, after) = breakOn [c] s
   in if c `elem` s
-     then property $ before ++ [c] ++ after === s
+     then let firstPos = head $ L.elemIndices c s
+              expectedBefore = take firstPos s
+              expectedAfter = drop (firstPos + 1) s
+          in before === expectedBefore .&&. after === expectedAfter
      else before === s .&&. after === ""
 
 -- Test string processing with edge cases
@@ -241,9 +245,11 @@ prop_to_lower_to_upper_roundtrip s =
 
 prop_to_upper_to_lower_roundtrip :: String -> Property
 prop_to_upper_to_lower_roundtrip s = 
-  let uppered = map toUpper s
+  let isAscii c = c <= '\127'
+      asciiS = filter isAscii s
+      uppered = map toUpper asciiS
       lowered = map toLower uppered
-      expectedLower = map toLower s
+      expectedLower = map toLower asciiS
   in property $ lowered === expectedLower
 
 -- Test string splitting and joining

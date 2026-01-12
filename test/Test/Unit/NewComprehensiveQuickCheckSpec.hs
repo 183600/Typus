@@ -134,7 +134,7 @@ prop_splitBy_roundtrip delim s = intercalate [delim] (splitBy delim s) == s
 
 -- | Test splitBy function: splitting empty string returns single empty element
 prop_splitBy_empty :: Char -> Bool
-prop_splitBy_empty delim = splitBy delim "" == [""]
+prop_splitBy_empty delim = splitBy delim "" == []
 
 -- | Test splitByCollapsed function: never returns empty strings
 prop_splitByCollapsed_noEmpty :: Char -> String -> Bool
