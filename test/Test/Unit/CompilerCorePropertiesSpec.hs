@@ -95,6 +95,15 @@ instance Arbitrary Compiler.Errors.Core.TypeError where
       , Compiler.Errors.Core.timestamp = timestamp
       }
 
+instance Arbitrary Compiler.TypeChecker.TypeError where
+  arbitrary = do
+    context <- arbitrary
+    message <- arbitrary
+    return $ Compiler.TypeChecker.TypeError
+      { Compiler.TypeChecker.teContext = context
+      , Compiler.TypeChecker.teMessage = message
+      }
+
 instance Arbitrary TypeCheckDiagnostic where
   arbitrary = do
     context <- arbitrary
@@ -162,12 +171,7 @@ instance Arbitrary CodeBlock where
     span <- arbitrary
     return $ CodeBlock directives content span
 
-instance Arbitrary Compiler.TypeChecker.TypeError where
-  arbitrary = do
-    context <- arbitrary
-    message <- arbitrary
-    return $ Compiler.TypeChecker.TypeError context message
-
+-- Removed duplicate Arbitrary instance
 instance Arbitrary BlockDirectives where
   arbitrary = do
     ownership <- arbitrary
@@ -322,7 +326,7 @@ prop_has_type_errors file =
 prop_type_diagnostic_to_compiler_error :: TypeCheckDiagnostic -> Property
 prop_type_diagnostic_to_compiler_error diagnostic = 
   let error = typeDiagnosticToCompilerError diagnostic
-  in property (not (T.null (message (ceError error))))
+  in property (not (null (T.unpack (message (ceError error)))))
 
 -- Property: createTypusFileFromErrors creates file with syntax errors
 prop_create_typus_file_from_errors :: [Compiler.TypeChecker.TypeError] -> Property

@@ -1,87 +1,108 @@
 #!/usr/bin/env python3
-import re
+"""
+修复测试文件中的所有错误
+"""
+
 import os
-import sys
+import re
+import glob
 
 def fix_all_test_errors():
-    """修复所有测试文件中的错误"""
-    test_dir = "/home/runner/work/Typus/Typus/test/Test/Unit"
+    """修复测试文件中的所有错误"""
     
-    # 遍历所有测试文件
-    for root, dirs, files in os.walk(test_dir):
-        for file_name in files:
-            if file_name.endswith(".hs"):
-                file_path = os.path.join(root, file_name)
-                try:
-                    with open(file_path, 'r') as f:
-                        content = f.read()
-                    
-                    modified = False
-                    
-                    # 1. 修复布尔表达式到属性的转换
-                    if "Property" in content and "True" in content:
-                        # 修复各种情况下的 True -> property True
-                        patterns = [
-                            (r'(\s+)Left _ -> True\s*$', r'\1Left _ -> property True'),
-                            (r'(\s+)Right _ -> True\s*$', r'\1Right _ -> property True'),
-                            (r'(\s+)else True\s*$', r'\1else property True'),
-                            (r'(\s+)then True\s*$', r'\1then property True'),
-                            (r'(\s+)if (.+) then True else True\s*$', r'\1if \2 then property True else property True'),
-                            (r'(\s+)in (.+?) && (.+?)$', r'\1in property $ \2 && \3'),
-                            (r'(\s+)in (.+?) >= (.+?)$', r'\1in property $ \2 >= \3'),
-                            (r'(\s+)in (.+?) <= (.+?)$', r'\1in property $ \2 <= \3'),
-                        ]
-                        
-                        for pattern, replacement in patterns:
-                            if re.search(pattern, content):
-                                content = re.sub(pattern, replacement, content)
-                                modified = True
-                    
-                    # 2. 修复比较运算符
-                    if "===" in content:
-                        # 在条件语句中修复 ===
-                        content = re.sub(r'(\s+)(then|else|if) (.+?) === (.+?)\s*$', r'\1\2 \3 == \4', content)
-                        modified = True
-                    
-                    # 3. 修复CodeBlock构造函数
-                    if "CodeBlock" in content:
-                        # 修复只有两个参数的CodeBlock调用
-                        content = re.sub(r'CodeBlock ([^,]+) ([^)]+)\)', r'CodeBlock \1 \2 (SourceSpan (SourcePos 1 1 0) (SourcePos 1 1 0))', content)
-                        modified = True
-                    
-                    # 4. 修复TypusFile构造函数
-                    if "TypusFile" in content:
-                        # 修复只有三个参数的TypusFile调用
-                        content = re.sub(r'TypusFile ([^,]+) ([^,]+) ([^)]+)\)', r'TypusFile \1 \2 \3 []', content)
-                        modified = True
-                    
-                    # 5. 修复语法错误
-                    if ",," in content:
-                        # 修复多余的逗号
-                        content = re.sub(r',,\)', r')', content)
-                        content = re.sub(r',,\s*\)', r')', content)
-                        modified = True
-                    
-                    # 6. 修复where子句的缩进
-                    if "where" in content:
-                        # 修复where子句的缩进
-                        content = re.sub(r'(\s+)where\s*\n(\s+)(\S)', r'\1where\n\2  \3', content)
-                        modified = True
-                    
-                    # 7. 添加必要的导入
-                    if "Property" in content and "property" not in content:
-                        # 添加property函数的导入
-                        if "import Test.Tasty.QuickCheck" in content:
-                            content = re.sub(r'(import Test.Tasty.QuickCheck \([^(]+\))', r'\1, property)', content)
-                            modified = True
-                    
-                    if modified:
-                        with open(file_path, 'w') as f:
-                            f.write(content)
-                        print(f"Fixed errors in {file_path}")
+    # 查找所有测试文件
+    test_files = []
+    for root, dirs, files in os.walk('.'):
+        for file in files:
+            if file.endswith('.hs') and 'Test' in root:
+                test_files.append(os.path.join(root, file))
+    
+    # 错误1: TypusFile defaultFileDirectives [] [] [] 后面有多余的 ]
+    pattern1 = r'TypusFile defaultFileDirectives \[\] \[\] \[\]\]'
+    replacement1 = 'TypusFile defaultFileDirectives [] [] []'
+    
+    # 错误2: parseTypus 函数可能不存在或名称不正确
+    # 需要先检查这个函数是否存在
+    
+    # 错误3: all hasLocation errors 中 hasLocation 函数可能不适用于 CompilerError
+    # 需要包装成 property
+    pattern3 = r'Left errors -> all hasLocation errors'
+    replacement3 = 'Left errors -> property (all (hasLocation . unLoc) errors)'
+    
+    # 错误4: null formatted 中 formatted 可能是 T.Text 类型
+    pattern4 = r'null formatted'
+    replacement4 = 'T.null formatted'
+    
+    # 错误5: TypeError 与 CompilerError 类型不匹配
+    # 需要将 TypeError 转换为 CompilerError
+    pattern5 = r'calculateErrorStatistics errors'
+    replacement5 = 'calculateErrorStatistics (map TypeError errors)'
+    
+    pattern6 = r'filterErrorsBySeverity errors (\d+)'
+    replacement6 = r'filterErrorsBySeverity (map TypeError errors) \1'
+    
+    pattern7 = r'sortErrorsByLocation errors'
+    replacement7 = r'sortErrorsByLocation (map TypeError errors)'
+    
+    pattern8 = r'highlightErrorInSource source error'
+    replacement8 = r'highlightErrorInSource source (TypeError error)'
+    
+    # 修复所有文件
+    for file_path in test_files:
+        print(f"处理文件: {file_path}")
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # 修复错误1
+            old_content = content
+            content = re.sub(pattern1, replacement1, content)
+            if content != old_content:
+                print(f"  修复了 TypusFile 构造函数错误")
+            
+            # 修复错误3
+            old_content = content
+            content = re.sub(pattern3, replacement3, content)
+            if content != old_content:
+                print(f"  修复了 hasLocation 类型错误")
+            
+            # 修复错误4
+            old_content = content
+            content = re.sub(pattern4, replacement4, content)
+            if content != old_content:
+                print(f"  修复了 null 函数类型错误")
+            
+            # 修复错误5
+            old_content = content
+            content = re.sub(pattern5, replacement5, content)
+            if content != old_content:
+                print(f"  修复了 calculateErrorStatistics 类型错误")
+            
+            # 修复错误6
+            old_content = content
+            content = re.sub(pattern6, replacement6, content)
+            if content != old_content:
+                print(f"  修复了 filterErrorsBySeverity 类型错误")
+            
+            # 修复错误7
+            old_content = content
+            content = re.sub(pattern7, replacement7, content)
+            if content != old_content:
+                print(f"  修复了 sortErrorsByLocation 类型错误")
+            
+            # 修复错误8
+            old_content = content
+            content = re.sub(pattern8, replacement8, content)
+            if content != old_content:
+                print(f"  修复了 highlightErrorInSource 类型错误")
+            
+            # 写回文件
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(content)
                 
-                except Exception as e:
-                    print(f"Error processing {file_path}: {e}")
+        except Exception as e:
+            print(f"  错误: {e}")
 
 if __name__ == "__main__":
     fix_all_test_errors()
+    print("修复完成!")

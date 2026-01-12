@@ -125,21 +125,7 @@ instance Arbitrary ErrorRecovery where
     recConfidence <- arbitrary
     return $ RecoveryStrategy canRec shouldCont recAction recHint recCost recConfidence
 
-instance Arbitrary TypeError where
-  arbitrary = do
-    errorId <- arbitrary
-    severity <- arbitrary
-    category <- arbitrary
-    message <- arbitrary
-    location <- arbitrary
-    context <- arbitrary
-    recovery <- arbitrary
-    suggestions <- arbitrary
-    relatedErrors <- arbitrary
-    errorChain <- arbitrary
-    timestamp <- arbitrary
-    return $ TypeError errorId severity category message location context recovery suggestions relatedErrors errorChain timestamp
-
+-- Removed duplicate Arbitrary instance
 instance Arbitrary CombinedError where
   arbitrary = do
     msg <- arbitrary
@@ -173,20 +159,21 @@ prop_is_at_least_correct sev1 sev2 =
 -- ============================================================================
 
 -- Property: formatErrorWithLocation includes location information
-prop_format_error_with_location_includes_location :: TypeError -> Property
+prop_format_error_with_location_includes_location :: Compiler.Errors.Core.TypeError -> Property
 prop_format_error_with_location_includes_location err = 
   let formatted = formatErrorWithLocation err
       loc = location err
       hasLineInfo = show (line loc) `isInfixOf` formatted
-  in hasLineInfo .||. T.null (message err)
+  in hasLineInfo .||. null (message err)
 
 -- Property: formatErrorsWithLocation formats multiple errors
-prop_format_errors_with_location_formats_multiple :: [TypeError] -> Property
+prop_format_errors_with_location_formats_multiple :: [Compiler.TypeChecker.TypeError] -> Property
 prop_format_errors_with_location_formats_multiple errors = 
   let formatted = formatErrorsWithLocation errors
       errorCount = length errors
   in if null errors
      then property (null formatted)
+     else property (length (lines formatted) >= errorCount)
      else property (errorCount > 0) .&&. property (not (null formatted))
 
 -- ============================================================================
@@ -200,27 +187,27 @@ prop_new_error_collectors_empty =
   in not (hasErrors errors) .&&. not (hasWarnings errors)
 
 -- Property: addError makes collector have errors
-prop_add_error_creates_errors :: TypeError -> Property
+prop_add_error_creates_errors :: Compiler.Errors.Core.TypeError -> Property
 prop_add_error_creates_errors err = 
   let errors = execState (addError err) []
   in property (hasErrors errors)
 
 -- Property: addWarning makes collector have warnings
-prop_add_warning_creates_warnings :: TypeError -> Property
+prop_add_warning_creates_warnings :: Compiler.Errors.Core.TypeError -> Property
 prop_add_warning_creates_warnings err = 
   let warningErr = err { severity = Warning }
       errors = execState (addWarning warningErr) []
   in property (hasWarnings errors)
 
 -- Property: getErrors returns added errors
-prop_get_errors_returns_added :: TypeError -> Property
+prop_get_errors_returns_added :: Compiler.Errors.Core.TypeError -> Property
 prop_get_errors_returns_added err = 
   let errors = execState (addError err) []
       retrievedErrors = getErrors errors
   in property (err `elem` retrievedErrors)
 
 -- Property: getWarnings returns added warnings
-prop_get_warnings_returns_added :: TypeError -> Property
+prop_get_warnings_returns_added :: Compiler.Errors.Core.TypeError -> Property
 prop_get_warnings_returns_added err = 
   let warningErr = err { severity = Warning }
       errors = execState (addWarning warningErr) []
@@ -232,19 +219,19 @@ prop_get_warnings_returns_added err =
 -- ============================================================================
 
 -- Property: filterByCategory returns only errors with specified category
-prop_filter_by_category_correct :: ErrorCategory -> [TypeError] -> Property
+prop_filter_by_category_correct :: ErrorCategory -> [Compiler.Errors.Core.TypeError] -> Property
 prop_filter_by_category_correct cat errors = 
   let filtered = filterByCategory cat errors
   in property (all (\e -> category e == cat) filtered)
 
 -- Property: filterBySeverity returns only errors with specified severity
-prop_filter_by_severity_correct :: ErrorSeverity -> [TypeError] -> Property
+prop_filter_by_severity_correct :: ErrorSeverity -> [Compiler.Errors.Core.TypeError] -> Property
 prop_filter_by_severity_correct sev errors = 
   let filtered = filterBySeverity sev errors
   in property (all (\e -> severity e == sev) filtered)
 
 -- Property: hasCategory returns True if any error has category
-prop_has_category_correct :: ErrorCategory -> [TypeError] -> Property
+prop_has_category_correct :: ErrorCategory -> [Compiler.Errors.Core.TypeError] -> Property
 prop_has_category_correct cat errors = 
   let hasCat = any (\e -> hasCategory cat e) errors
       anyHasCat = any (\e -> category e == cat) errors
@@ -255,7 +242,7 @@ prop_has_category_correct cat errors =
 -- ============================================================================
 
 -- Property: canRecoverFrom returns True for recoverable errors
-prop_can_recover_from_recoverable :: TypeError -> Property
+prop_can_recover_from_recoverable :: Compiler.Errors.Core.TypeError -> Property
 prop_can_recover_from_recoverable err = 
   let recoverable = canRecover (recovery err)
   in property (canRecoverFrom err === recoverable)
@@ -282,19 +269,19 @@ prop_should_continue_after_non_fatal sev =
 -- ============================================================================
 
 -- Property: combineErrors creates CombinedError
-prop_combine_errors_creates_combined :: TypeError -> TypeError -> Property
+prop_combine_errors_creates_combined :: Compiler.Errors.Core.TypeError -> Compiler.Errors.Core.TypeError -> Property
 prop_combine_errors_creates_combined err1 err2 = 
   let errors = [err1, err2]
       combined = combineErrors errors
   in property (not (null combined))  -- Just check that it creates a CombinedError list
 
 -- Property: combinedErrorSeverity returns max severity
-prop_combined_error_severity_max :: TypeError -> TypeError -> Property
+prop_combined_error_severity_max :: Compiler.Errors.Core.TypeError -> Compiler.Errors.Core.TypeError -> Property
 prop_combined_error_severity_max err1 err2 = 
   let errors = [err1, err2]
       combined = combineErrors errors
       maxSeverity = max (severity err1) (severity err2)
-  in if null combined then property True else property True  -- Simplified since combineErrors returns [TypeError] not [CombinedError]
+  in if null combined then property True else property True  -- Simplified since combineErrors returns [Compiler.Errors.Core.TypeError] not [CombinedError]
 
 -- Property: filterCombinedErrorsBySeverity filters correctly
 prop_filter_combined_errors_by_severity :: ErrorSeverity -> [CombinedError] -> Property
@@ -345,19 +332,19 @@ prop_error_with_suggestions_includes_suggestions msg suggs =
 -- ============================================================================
 
 -- Property: withLocation changes error location
-prop_with_location_changes_location :: TypeError -> ErrorLocation -> Property
+prop_with_location_changes_location :: Compiler.Errors.Core.TypeError -> ErrorLocation -> Property
 prop_with_location_changes_location err loc = 
   let modified = withLocation err loc
   in property (location modified === loc)
 
 -- Property: withContext adds context to error
-prop_with_context_adds_context :: TypeError -> ErrorContext -> Property
+prop_with_context_adds_context :: Compiler.Errors.Core.TypeError -> ErrorContext -> Property
 prop_with_context_adds_context err ctx = 
   let modified = withContext err ctx
   in property (context modified === ctx)
 
 -- Property: withSuggestions adds suggestions to error
-prop_with_suggestions_adds_suggestions :: TypeError -> [Text] -> Property
+prop_with_suggestions_adds_suggestions :: Compiler.Errors.Core.TypeError -> [Text] -> Property
 prop_with_suggestions_adds_suggestions err suggs = 
   let modified = withSuggestions suggs err
   in property (suggestions modified === suggs)

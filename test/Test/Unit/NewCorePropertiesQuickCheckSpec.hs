@@ -374,14 +374,14 @@ prop_severityOrdering s1 s2 =
   (s1 `isAtLeast` s2 && s2 `isAtLeast` s1) == (s1 == s2)
 
 -- | Test filterByCategory preserves order
-prop_filterByCategory_preservesOrder :: ErrorCategory -> [TypeError] -> Bool
+prop_filterByCategory_preservesOrder :: ErrorCategory -> [Compiler.Errors.Core.TypeError] -> Bool
 prop_filterByCategory_preservesOrder cat errors = 
   let filtered = filterByCategory cat errors
       expected = filter (\e -> category e == cat) errors
   in filtered == expected
 
 -- | Test filterBySeverity preserves order
-prop_filterBySeverity_preservesOrder :: ErrorSeverity -> [TypeError] -> Bool
+prop_filterBySeverity_preservesOrder :: ErrorSeverity -> [Compiler.Errors.Core.TypeError] -> Bool
 prop_filterBySeverity_preservesOrder sev errors = 
   let filtered = filterBySeverity sev errors
       expected = filter (\e -> severity e == sev) errors

@@ -59,9 +59,9 @@ prop_error_handling_integration input =
         Right typusFile -> compile typusFile
   in case (parseResult, compileResult) of
     (Left parseErr, Left compileErr) -> 
-      let parseMsg = T.pack $ formatCompilerErrors [parseErr]
+      let parseMsg = T.pack $ "Parse error: " ++ parseErr
           compileMsg = T.pack $ formatCompilerErrors compileErr
-      in property (not (T.null parseMsg) && not (T.null compileMsg))
+      in property (not (not (T.null parseMsg)) && not (not (T.null compileMsg)))
     (Right _, Right _) -> property True
     _ -> property True
 
