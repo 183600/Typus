@@ -1285,7 +1285,13 @@ test-suite typus-test
         Test.Unit.AdditionalQuickCheckTestSuiteSpec,
         
         -- New Comprehensive QuickCheck Test Module
-        Test.Unit.NewComprehensiveQuickCheckSpec
+        Test.Unit.NewComprehensiveQuickCheckSpec,
+        
+        -- Core Functionality Test Modules
+        Test.Unit.ParserCoreFunctionalitySpec,
+        Test.Unit.CompilerCoreFunctionalitySpec,
+        Test.Unit.UtilsCoreFunctionalitySpec,
+        Test.Unit.IntegrationQuickCheckSpec
     build-depends:
         base >=4.7 && <5,
         typus,

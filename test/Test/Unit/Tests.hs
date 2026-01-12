@@ -18,6 +18,12 @@ import qualified Test.Unit.NewUtilsTestSpec as NewUtilsTest
 import qualified Test.Unit.NewOwnershipTestSpec as NewOwnershipTest
 import qualified Test.Unit.NewDependenciesTestSpec as NewDependenciesTest
 
+-- Import core functionality test modules
+import qualified Test.Unit.ParserCoreFunctionalitySpec as ParserCoreFunctionality
+import qualified Test.Unit.CompilerCoreFunctionalitySpec as CompilerCoreFunctionality
+import qualified Test.Unit.UtilsCoreFunctionalitySpec as UtilsCoreFunctionality
+import qualified Test.Unit.IntegrationQuickCheckSpec as IntegrationQuickCheck
+
 -- Basic test properties
 prop_basic_property :: String -> Property
 prop_basic_property s = property $ length s >= 0
@@ -38,5 +44,11 @@ tests = testGroup "Test.Unit.Tests Tests"
     NewErrorHandlerTest.tests,
     NewUtilsTest.tests,
     NewOwnershipTest.tests,
-    NewDependenciesTest.tests
+    NewDependenciesTest.tests,
+    
+    -- Core functionality test modules
+    ParserCoreFunctionality.parserCoreFunctionalityTests,
+    CompilerCoreFunctionality.compilerCoreFunctionalityTests,
+    UtilsCoreFunctionality.utilsCoreFunctionalityTests,
+    IntegrationQuickCheck.integrationQuickCheckTests
   ]
