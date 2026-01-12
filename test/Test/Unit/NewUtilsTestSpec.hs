@@ -95,10 +95,10 @@ test_break_on = do
 -- | 测试safeProcessString函数
 test_safe_process_string :: Assertion
 test_safe_process_string = do
-  assertEqual "Process normal string" "hello world" (safeProcessString "hello world")
-  assertEqual "Process string with special chars" "hello & world" (safeProcessString "hello & world")
-  assertEqual "Process empty string" "" (safeProcessString "")
-  assertEqual "Process string with Unicode" "你好世界" (safeProcessString "你好世界")
+  assertEqual "Process normal string" (Right "hello world") (safeProcessString "hello world")
+  assertEqual "Process string with special chars" (Right "hello & world") (safeProcessString "hello & world")
+  assertEqual "Process empty string" (Right "") (safeProcessString "")
+  assertEqual "Process string with Unicode" (Right "你好世界") (safeProcessString "你好世界")
 
 -- | 测试isValidChar函数
 test_is_valid_char :: Assertion

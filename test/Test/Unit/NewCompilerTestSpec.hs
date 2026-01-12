@@ -9,12 +9,14 @@ import Test.Tasty.HUnit
 
 import Compiler
 import Compiler.TypeChecker (TypeEnv(..))
+import Dependencies.Inference (initialTypeEnvironment)
 import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..), defaultFileDirectives, defaultBlockDirectives)
 import SourceLocation (SourcePos(..), Located(..), locatedAt, emptySpan, startPos)
 import qualified Data.Text as T
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import Data.List (null, isInfixOf)
 import qualified Data.Map.Strict as Map
+import Control.Monad.IO.Class (liftIO)
 
 -- | 测试编译简单的有效代码
 test_compile_valid_code :: Assertion
@@ -111,7 +113,7 @@ test_function_call_extraction = do
 -- | 测试类型环境构建
 test_type_environment_building :: Assertion
 test_type_environment_building = do
-  let typeEnv = initialTypeEnvironment
+  typeEnv <- initialTypeEnvironment
   assertBool "Type environment should be created" (True)  -- 简化测试
 
 -- | 测试方法声明检测

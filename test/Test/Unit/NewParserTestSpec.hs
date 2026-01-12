@@ -11,6 +11,7 @@ import Parser
 import SourceLocation
 import qualified Data.Text as T
 import Data.Maybe (isJust, isNothing)
+import Data.List (isInfixOf)
 
 -- | 测试基本解析功能
 test_parse_empty_file :: Assertion
@@ -20,8 +21,8 @@ test_parse_empty_file = do
   case result of
     Left err -> assertFailure $ "Failed to parse empty file: " ++ show err
     Right typusFile -> do
-      assertEqual "Should have no code blocks" [] (tfCodeBlocks typusFile)
-      assertEqual "Should have default file directives" defaultFileDirectives (tfFileDirectives typusFile)
+      assertEqual "Should have no code blocks" [] (tfBlocks typusFile)
+      assertEqual "Should have default file directives" defaultFileDirectives (tfDirectives typusFile)
 
 -- | 测试解析简单代码块
 test_parse_simple_code_block :: Assertion
@@ -31,7 +32,7 @@ test_parse_simple_code_block = do
   case result of
     Left err -> assertFailure $ "Failed to parse simple code block: " ++ show err
     Right typusFile -> do
-      let blocks = tfCodeBlocks typusFile
+      let blocks = tfBlocks typusFile
       assertEqual "Should have one code block" 1 (length blocks)
       let block = head blocks
       assertEqual "Block content should match" "let x = 42\n" (cbContent block)
@@ -44,7 +45,7 @@ test_parse_file_directives = do
   case result of
     Left err -> assertFailure $ "Failed to parse file directives: " ++ show err
     Right typusFile -> do
-      let directives = tfFileDirectives typusFile
+      let directives = tfDirectives typusFile
           ownership = fdOwnership directives
           dependentTypes = fdDependentTypes directives
       assertBool "Should have ownership directive" (isJust ownership)
@@ -60,9 +61,9 @@ test_parse_block_directives = do
   case result of
     Left err -> assertFailure $ "Failed to parse block directives: " ++ show err
     Right typusFile -> do
-      let blocks = tfCodeBlocks typusFile
+      let blocks = tfBlocks typusFile
           block = head blocks
-          directives = cbBlockDirectives block
+          directives = cbDirectives block
           ownership = bdOwnership directives
           constraints = bdConstraints directives
       assertBool "Should have ownership directive" (isJust ownership)
@@ -78,7 +79,7 @@ test_parse_multiple_code_blocks = do
   case result of
     Left err -> assertFailure $ "Failed to parse multiple code blocks: " ++ show err
     Right typusFile -> do
-      let blocks = tfCodeBlocks typusFile
+      let blocks = tfBlocks typusFile
       assertEqual "Should have two code blocks" 2 (length blocks)
       assertEqual "First block content" "let x = 42\n" (cbContent (blocks !! 0))
       assertEqual "Second block content" "let y = 24\n" (cbContent (blocks !! 1))
@@ -107,7 +108,7 @@ prop_parse_roundtrip_structure content =
   in case result of
        Left _ -> property True  -- 如果解析失败，则跳过此测试
        Right typusFile -> 
-         let blocks = tfCodeBlocks typusFile
+         let blocks = tfBlocks typusFile
              blockCount = length blocks
          in blockCount >= 0 .&&. blockCount <= 100  -- 合理的块数量范围
 
@@ -118,7 +119,7 @@ prop_file_directives_parsing_consistent content =
   in case result of
        Left _ -> property True
        Right typusFile ->
-         let directives = tfFileDirectives typusFile
+         let directives = tfDirectives typusFile
              ownership = fdOwnership directives
              dependentTypes = fdDependentTypes directives
          in isJust ownership .&&. isJust dependentTypes .&&.
@@ -133,7 +134,7 @@ prop_code_block_content_preserved content =
   in case result of
        Left _ -> property True
        Right typusFile ->
-         let blocks = tfCodeBlocks typusFile
+         let blocks = tfBlocks typusFile
          in if null blocks
             then property True
             else let block = head blocks
@@ -149,7 +150,7 @@ test_directive_edge_cases = do
   case result of
     Left err -> assertFailure $ "Failed to parse spaced directives: " ++ show err
     Right typusFile -> do
-      let directives = tfFileDirectives typusFile
+      let directives = tfDirectives typusFile
           ownership = fdOwnership directives
       assertBool "Should parse directives with extra spaces" (isJust ownership)
       assertEqual "Ownership should be true" (Just True) (locatedValue <$> ownership)
@@ -162,7 +163,7 @@ test_nested_code_blocks = do
   case result of
     Left err -> assertFailure $ "Failed to parse nested code blocks: " ++ show err
     Right typusFile -> do
-      let blocks = tfCodeBlocks typusFile
+      let blocks = tfBlocks typusFile
       assertEqual "Should handle nested code blocks correctly" 1 (length blocks)
       assertBool "Content should include nested markers" ("// ```typus" `isInfixOf` cbContent (head blocks))
 
@@ -174,7 +175,7 @@ test_unicode_handling = do
   case result of
     Left err -> assertFailure $ "Failed to parse Unicode content: " ++ show err
     Right typusFile -> do
-      let blocks = tfCodeBlocks typusFile
+      let blocks = tfBlocks typusFile
           block = head blocks
       assertBool "Should preserve Unicode characters" ("测试" `isInfixOf` cbContent block)
       assertBool "Should preserve Chinese characters" ("你好世界" `isInfixOf` cbContent block)

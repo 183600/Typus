@@ -94,7 +94,7 @@ instance Arbitrary SourceSpan where
   arbitrary = do
     start <- arbitrary
     end <- arbitrary
-    if start <= end
+    if sourcePosLe start end
       then return $ SourceSpan start end
       else return $ SourceSpan end start
 
@@ -103,8 +103,8 @@ instance Arbitrary a => Arbitrary (Located a) where
   arbitrary = Located <$> arbitrary <*> arbitrary
 
 -- | 辅助函数：检查SourcePos的顺序
-(<=) :: SourcePos -> SourcePos -> Bool
-(SourcePos l1 c1) <= (SourcePos l2 c2) = 
+sourcePosLe :: SourcePos -> SourcePos -> Bool
+sourcePosLe (SourcePos l1 c1) (SourcePos l2 c2) = 
   l1 < l2 || (l1 == l2 && c1 <= c2)
 
 -- | 测试套件
