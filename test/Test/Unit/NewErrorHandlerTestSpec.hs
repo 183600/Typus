@@ -1,0 +1,252 @@
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
+module Test.Unit.NewErrorHandlerTestSpec where
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+import Test.Tasty.HUnit
+
+import Compiler.Errors.Core
+import SourceLocation (SourcePos(..), Located(..), locatedAt)
+import qualified Data.Text as T
+import Data.Maybe (isJust, isNothing, fromMaybe)
+import Data.List (null)
+import Data.Time (UTCTime, getCurrentTime)
+
+-- | 测试错误收集器的基本功能
+test_error_collector_basic :: Assertion
+test_error_collector_basic = do
+  let collector = newErrorCollector
+      location = ErrorLocation Nothing 1 10 Nothing Nothing
+      error = errorAt "Test" "Test error" location
+      errors = getErrors collector
+  assertEqual "Should have one error" 1 (length errors)
+  let error' = head errors
+  assertEqual "Error message should match" "Test error" (message error')
+
+-- | 测试警告收集
+test_warning_collection :: Assertion
+test_warning_collection = do
+  let collector = newErrorCollector
+      location = ErrorLocation Nothing 2 20 Nothing Nothing
+      warning = warningAt "Test" "Test warning" location
+      warnings = getWarnings collector
+  assertEqual "Should have one warning" 1 (length warnings)
+  let warning' = head warnings
+  assertEqual "Warning message should match" "Test warning" (message warning')
+
+-- | 测试信息收集
+test_info_collection :: Assertion
+test_info_collection = do
+  let collector = newErrorCollector
+      location = ErrorLocation Nothing 3 30 Nothing Nothing
+      collectorWithInfo = addInfo (infoAt "Test" "Test info" location) collector
+      infos = getInfo collectorWithInfo
+  assertEqual "Should have one info message" 1 (length infos)
+  let info = head infos
+  assertEqual "Info message should match" "Test info" (errorMessage info)
+
+-- | 测试错误检测
+test_error_detection :: Assertion
+test_error_detection = do
+  let collector = newErrorCollector
+      collectorWithErrors = addError (errorAt (SourcePos 1 10) "Test error") collector
+  assertBool "Should detect errors" (hasErrors collectorWithErrors)
+  assertBool "Should not detect warnings" (not $ hasWarnings collectorWithErrors)
+
+-- | 测试警告检测
+test_warning_detection :: Assertion
+test_warning_detection = do
+  let collector = newErrorCollector
+      collectorWithWarnings = addWarning (warningAt (SourcePos 2 20) "Test warning") collector
+  assertBool "Should detect warnings" (hasWarnings collectorWithWarnings)
+  assertBool "Should not detect errors" (not $ hasErrors collectorWithWarnings)
+
+-- | 测试错误格式化
+test_error_formatting :: Assertion
+test_error_formatting = do
+  let location = ErrorLocation Nothing 5 15 Nothing Nothing
+      error = errorAt "Test" "Test error message" location
+      formatted = formatError error
+  assertBool "Formatted error should contain line number" ("5:" `isInfixOf` formatted)
+  assertBool "Formatted error should contain column number" (":15" `isInfixOf` formatted)
+  assertBool "Formatted error should contain error message" ("Test error message" `isInfixOf` formatted)
+
+-- | 测试带位置的错误格式化
+test_error_formatting_with_location :: Assertion
+test_error_formatting_with_location = do
+  let location = ErrorLocation Nothing 10 25 Nothing Nothing
+      error = errorAt "Test" "Location test error" location
+      formatted = formatErrorWithLocation error
+  assertBool "Formatted error should contain location info" ("10:25" `isInfixOf` formatted)
+  assertBool "Formatted error should contain error message" ("Location test error" `isInfixOf` formatted)
+
+-- | 测试多个错误的格式化
+test_multiple_errors_formatting :: Assertion
+test_multiple_errors_formatting = do
+  let collector = newErrorCollector
+      location1 = ErrorLocation Nothing 1 10 Nothing Nothing
+      location2 = ErrorLocation Nothing 2 20 Nothing Nothing
+      location3 = ErrorLocation Nothing 3 30 Nothing Nothing
+      collector1 = addError (errorAt "Test" "First error" location1) collector
+      collector2 = addError (errorAt "Test" "Second error" location2) collector1
+      collector3 = addWarning (warningAt "Test" "A warning" location3) collector2
+      errors = getAllMessages collector3
+      formatted = formatErrors errors
+  assertBool "Formatted errors should contain first error" ("First error" `isInfixOf` formatted)
+  assertBool "Formatted errors should contain second error" ("Second error" `isInfixOf` formatted)
+  assertBool "Formatted errors should contain warning" ("A warning" `isInfixOf` formatted)
+
+-- | 测试错误恢复
+test_error_recovery :: Assertion
+test_error_recovery = do
+  let location1 = ErrorLocation Nothing 1 10 Nothing Nothing
+      location2 = ErrorLocation Nothing 2 20 Nothing Nothing
+      recoverableError = errorAt "Test" "Recoverable error" location1
+      nonRecoverableError = errorAt "Test" "Non-recoverable error" location2
+  assertBool "Should be able to recover from recoverable error" (canRecoverFrom recoverableError)
+  assertBool "Should continue after recoverable error" (shouldContinueAfter recoverableError)
+
+-- | 测试错误分类
+test_error_categorization :: Assertion
+test_error_categorization = do
+  let location1 = ErrorLocation Nothing 1 10 Nothing Nothing
+      location2 = ErrorLocation Nothing 2 20 Nothing Nothing
+      location3 = ErrorLocation Nothing 3 30 Nothing Nothing
+      syntaxError = errorWithCategory SyntaxError "Test" "Syntax error" location1
+      typeError = errorWithCategory TypeError "Test" "Type error" location2
+      warning = warningWithCategory SyntaxWarning "Test" "Syntax warning" location3
+  assertEqual "Syntax error should have correct category" SyntaxError (errorCategory syntaxError)
+  assertEqual "Type error should have correct category" TypeError (errorCategory typeError)
+  assertEqual "Syntax warning should have correct category" SyntaxWarning (errorCategory warning)
+
+-- | 测试错误严重性
+test_error_severity :: Assertion
+test_error_severity = do
+  let location1 = ErrorLocation Nothing 1 10 Nothing Nothing
+      location2 = ErrorLocation Nothing 2 20 Nothing Nothing
+      location3 = ErrorLocation Nothing 3 30 Nothing Nothing
+      error = errorAt "Test" "Error" location1
+      warning = warningAt "Test" "Warning" location2
+      info = infoAt "Test" "Info" location3
+  assertEqual "Error should have Error severity" ErrorSeverity (errorSeverity error)
+  assertEqual "Warning should have Warning severity" WarningSeverity (errorSeverity warning)
+  assertEqual "Info should have Info severity" InfoSeverity (errorSeverity info)
+
+-- | 测试错误上下文
+test_error_context :: Assertion
+test_error_context = do
+  let context = emptyContext
+      location = ErrorLocation Nothing 1 10 Nothing Nothing
+      error = errorAt "Test" "Context test error" location
+  assertEqual "Error context should be empty" context (context error)
+
+-- | 测试时间戳错误
+test_timestamped_errors :: Assertion
+test_timestamped_errors = do
+  currentTime <- getCurrentTime
+  let location = ErrorLocation Nothing 1 10 Nothing Nothing
+      timestampedError = errorAtWithUTCTime currentTime "Test" "Timestamped error" location
+      errorTime = errorTimestamp timestampedError
+  assertEqual "Error should have correct timestamp" currentTime errorTime
+
+-- | QuickCheck属性：错误收集器应该正确计数错误
+prop_error_collector_counts :: [String] -> Property
+prop_error_collector_counts messages =
+  let collector = newErrorCollector
+      location = ErrorLocation Nothing 1 1 Nothing Nothing
+      collectorWithErrors = foldr (\msg acc -> addError (errorAt "Test" msg location) acc) collector messages
+      errors = getErrors collectorWithErrors
+  in length errors === length messages
+
+-- | QuickCheck属性：错误格式化应该包含所有必要信息
+prop_error_formatting_contains_info :: String -> Positive Int -> Positive Int -> Property
+prop_error_formatting_contains_info msg (Positive line) (Positive col) =
+  let location = ErrorLocation Nothing line col Nothing Nothing
+      error = errorAt "Test" msg location
+      formatted = formatError error
+  in if line > 0 && col > 0 && not (null msg)
+     then (show line `isInfixOf` formatted) .&&. 
+          (show col `isInfixOf` formatted) .&&.
+          (msg `isInfixOf` formatted)
+     else property True
+
+-- | QuickCheck属性：错误恢复应该一致
+prop_error_recovery_consistent :: String -> Property
+prop_error_recovery_consistent msg =
+  let location = ErrorLocation Nothing 1 1 Nothing Nothing
+      error = errorAt "Test" msg location
+      canRecover = canRecoverFrom error
+      shouldContinue = shouldContinueAfter error
+  in property (canRecover == shouldContinue)  -- 简化假设：可恢复性应该与继续性一致
+
+-- | 测试错误位置提取
+test_error_location_extraction :: Assertion
+test_error_location_extraction = do
+  let location = ErrorLocation Nothing 10 25 Nothing Nothing
+      error = errorAt "Test" "Location test" location
+      line = getErrorLine error
+      column = getErrorColumn error
+  assertEqual "Should extract correct line" 10 line
+  assertEqual "Should extract correct column" 25 column
+
+-- | 测试组合错误
+test_combined_errors :: Assertion
+test_combined_errors = do
+  let error1 = errorAt (SourcePos 1 10) "First error"
+      error2 = errorAt (SourcePos 2 20) "Second error"
+      combined = CombinedError [error1, error2]
+  assertEqual "Combined error should contain both errors" 2 (length (combinedErrors combined))
+
+-- | 测试错误排序
+test_error_sorting :: Assertion
+test_error_sorting = do
+  let location1 = ErrorLocation Nothing 2 20 Nothing Nothing
+      location2 = ErrorLocation Nothing 1 10 Nothing Nothing
+      error1 = errorAt "Test" "Later error" location1
+      error2 = errorAt "Test" "Earlier error" location2
+      errors = [error1, error2]
+      sortedErrors = formatErrors errors
+  assertBool "Earlier error should appear before later error" 
+    (indexOf "Earlier error" sortedErrors < indexOf "Later error" sortedErrors)
+  where
+    indexOf sub str = fromMaybe (-1) $ fmap fst $ find ((sub `isPrefixOf`) . snd) $ zip [0..] (tails str)
+    find _ [] = Nothing
+    find p (x:xs) = if p x then Just x else find p xs
+    isPrefixOf [] _ = True
+    isPrefixOf _ [] = False
+    isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
+
+-- | 测试错误消息的国际化支持
+test_error_message_internationalization :: Assertion
+test_error_message_internationalization = do
+  let location = ErrorLocation Nothing 1 10 Nothing Nothing
+      chineseError = errorAt "Test" "这是一个错误" location
+      formatted = formatError chineseError
+  assertBool "Should handle Chinese error messages" ("这是一个错误" `isInfixOf` formatted)
+
+-- | 测试套件
+tests :: TestTree
+tests = testGroup "New ErrorHandler Tests"
+  [ testCase "Error collector basic functionality" test_error_collector_basic
+  , testCase "Warning collection" test_warning_collection
+  , testCase "Info collection" test_info_collection
+  , testCase "Error detection" test_error_detection
+  , testCase "Warning detection" test_warning_detection
+  , testCase "Error formatting" test_error_formatting
+  , testCase "Error formatting with location" test_error_formatting_with_location
+  , testCase "Multiple errors formatting" test_multiple_errors_formatting
+  , testCase "Error recovery" test_error_recovery
+  , testCase "Error categorization" test_error_categorization
+  , testCase "Error severity" test_error_severity
+  , testCase "Error context" test_error_context
+  , testCase "Timestamped errors" test_timestamped_errors
+  , testCase "Error location extraction" test_error_location_extraction
+  , testCase "Combined errors" test_combined_errors
+  , testCase "Error sorting" test_error_sorting
+  , testCase "Error message internationalization" test_error_message_internationalization
+  , testProperty "Error collector counts" prop_error_collector_counts
+  , testProperty "Error formatting contains info" prop_error_formatting_contains_info
+  , testProperty "Error recovery consistent" prop_error_recovery_consistent
+  ]

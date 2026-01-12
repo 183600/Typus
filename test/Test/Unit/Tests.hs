@@ -9,6 +9,15 @@ import qualified Test.Unit.NewQuickCheckTestSuiteSpec as NewQuickCheckTestSuite
 import qualified Test.Unit.AdditionalQuickCheckTestSuiteSpec as AdditionalQuickCheckTestSuite
 import qualified Test.Unit.NewComprehensiveQuickCheckSpec as NewComprehensiveQuickCheck
 
+-- Import new test modules
+import qualified Test.Unit.NewSourceLocationTestSpec as NewSourceLocationTest
+import qualified Test.Unit.NewParserTestSpec as NewParserTest
+import qualified Test.Unit.NewCompilerTestSpec as NewCompilerTest
+import qualified Test.Unit.NewErrorHandlerTestSpec as NewErrorHandlerTest
+import qualified Test.Unit.NewUtilsTestSpec as NewUtilsTest
+import qualified Test.Unit.NewOwnershipTestSpec as NewOwnershipTest
+import qualified Test.Unit.NewDependenciesTestSpec as NewDependenciesTest
+
 -- Basic test properties
 prop_basic_property :: String -> Property
 prop_basic_property s = property $ length s >= 0
@@ -20,5 +29,14 @@ tests = testGroup "Test.Unit.Tests Tests"
     ComprehensiveCoreModules.tests,
     NewQuickCheckTestSuite.tests,
     AdditionalQuickCheckTestSuite.tests,
-    NewComprehensiveQuickCheck.tests
+    NewComprehensiveQuickCheck.tests,
+    
+    -- New comprehensive test modules
+    NewSourceLocationTest.tests,
+    NewParserTest.tests,
+    NewCompilerTest.tests,
+    NewErrorHandlerTest.tests,
+    NewUtilsTest.tests,
+    NewOwnershipTest.tests,
+    NewDependenciesTest.tests
   ]
