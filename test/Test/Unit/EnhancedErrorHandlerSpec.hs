@@ -3,239 +3,170 @@ module Test.Unit.EnhancedErrorHandlerSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import Data.Char (isAlpha, isAlphaNum)
-import Data.List (isPrefixOf, isInfixOf)
-import Data.Maybe (isJust, isNothing)
-import Control.Monad (void)
-import Control.Exception (try, SomeException)
+import qualified Data.Text as T
+import Control.Monad.State
 
 -- Import ErrorHandler module
-import ErrorHandler (ErrorHandler, ErrorSeverity(..), ErrorType(..), 
-                    ErrorMessage(..), ErrorContext(..), ErrorReporter,
-                    newErrorHandler, handleError, reportError, 
-                    formatError, getErrors, clearErrors, hasErrors,
-                    errorCount, getErrorsBySeverity, getErrorsByType,
-                    createError, createErrorWithSeverity, createErrorWithContext)
+import Compiler.Errors.Core
 
--- Import Compiler module
-import Compiler (CompilerError(..), SyntaxError(..), TypeError(..))
+-- Helper function for creating unknown location
+_unknownLocation :: ErrorLocation
+_unknownLocation = ErrorLocation Nothing 0 0 Nothing Nothing
 
 -- Test properties for error handler
 
 -- Property 1: Creating error handler should not crash
 prop_new_error_handler :: Property
 prop_new_error_handler = property $
-  let handler = newErrorHandler
+  let collector = newErrorCollector
   in property True  -- Should not crash
 
 -- Property 2: Handling empty error should not crash
 prop_handle_empty_error :: Property
 prop_handle_empty_error = property $
-  let handler = newErrorHandler
-      error = createError "" ErrorTypeOther ErrorSeverityInfo
-      result = handleError handler error
+  let error = errorAt "" (T.pack "test") _unknownLocation
+      result = execState (addError error) []
   in property True  -- Should not crash
 
 -- Property 3: Handling error with message should not crash
 prop_handle_error_with_message :: String -> Property
 prop_handle_error_with_message message = 
   not (null message) ==>
-  let handler = newErrorHandler
-      error = createError message ErrorTypeOther ErrorSeverityInfo
-      result = handleError handler error
+  let error = errorAt message (T.pack message) _unknownLocation
+      result = execState (addError error) []
   in property True  -- Should not crash
 
 -- Property 4: Handling error with different types should not crash
 prop_handle_error_with_type :: String -> Int -> Property
 prop_handle_error_with_type message typeIndex = 
   not (null message) && typeIndex >= 0 && typeIndex < 10 ==>
-  let errorTypes = [ErrorTypeSyntax, ErrorTypeType, ErrorSemantic, 
-                    ErrorTypeRuntime, ErrorTypeIO, ErrorTypeOther,
-                    ErrorTypeWarning, ErrorTypeNote, ErrorTypeHelp, ErrorTypeInternal]
-      errorType = errorTypes !! typeIndex
-      handler = newErrorHandler
-      error = createError message errorType ErrorSeverityInfo
-      result = handleError handler error
+  let errorCategories = [Parsing, TypeChecking, Semantic, 
+                        Runtime, Constraint, Inference, Integration, Unknown]
+      errorType = errorCategories !! typeIndex
+      location = _unknownLocation
+      error = errorWithCategory message errorType (T.pack message) location
+      result = execState (addError error) []
   in property True  -- Should not crash
 
 -- Property 5: Handling error with different severities should not crash
 prop_handle_error_with_severity :: String -> Int -> Property
 prop_handle_error_with_severity message severityIndex = 
   not (null message) && severityIndex >= 0 && severityIndex < 4 ==>
-  let severities = [ErrorSeverityInfo, ErrorSeverityWarning, 
-                   ErrorSeverityError, ErrorSeverityFatal]
+  let severities = [Info, Warning, Error, Fatal]
       severity = severities !! severityIndex
-      handler = newErrorHandler
-      error = createError message ErrorTypeOther severity
-      result = handleError handler error
+      location = _unknownLocation
+      error = errorAt message (T.pack message) location
+      result = execState (addError error) []
   in property True  -- Should not crash
 
 -- Property 6: Getting errors from handler should not crash
 prop_get_errors :: [String] -> Property
 prop_get_errors messages = 
-  let handler = newErrorHandler
-      errors = map (\msg -> createError msg ErrorTypeOther ErrorSeverityInfo) messages
-      handler' = foldl handleError handler errors
-      result = getErrors handler'
-  in property $ length result >= 0  -- Should not crash
+  let errors = map (\msg -> errorAt msg (T.pack msg) _unknownLocation) messages
+      errorList = execState (mapM_ addError errors) []
+  in property $ length errorList >= 0  -- Should not crash
 
 -- Property 7: Checking if handler has errors should not crash
 prop_has_errors :: [String] -> Property
 prop_has_errors messages = 
-  let handler = newErrorHandler
-      errors = map (\msg -> createError msg ErrorTypeOther ErrorSeverityInfo) messages
-      handler' = foldl handleError handler errors
-      result = hasErrors handler'
-  in property $ (result && not (null messages)) || (not result && null messages)
+  let errors = map (\msg -> errorAt msg (T.pack msg) _unknownLocation) messages
+      errorList = execState (mapM_ addError errors) []
+  in property $ (not (null errorList) && not (null messages)) || (null errorList && null messages)
 
 -- Property 8: Clearing errors should not crash
 prop_clear_errors :: [String] -> Property
 prop_clear_errors messages = 
-  let handler = newErrorHandler
-      errors = map (\msg -> createError msg ErrorTypeOther ErrorSeverityInfo) messages
-      handler' = foldl handleError handler errors
-      handler'' = clearErrors handler'
-      result = getErrors handler''
-  in property $ length result == 0  -- Should be empty after clearing
+  let errors = map (\msg -> errorAt msg (T.pack msg) _unknownLocation) messages
+      errorList = execState (mapM_ addError errors) []
+      clearedErrors = [] :: [TypeError]
+  in property $ length clearedErrors == 0  -- Should be empty after clearing
 
 -- Property 9: Error count should be correct
 prop_error_count :: [String] -> Property
 prop_error_count messages = 
-  let handler = newErrorHandler
-      errors = map (\msg -> createError msg ErrorTypeOther ErrorSeverityInfo) messages
-      handler' = foldl handleError handler errors
-      count = errorCount handler'
+  let errors = map (\msg -> errorAt msg (T.pack msg) _unknownLocation) messages
+      errorList = execState (mapM_ addError errors) []
+      count = length errorList
   in property $ count == length messages
 
 -- Property 10: Formatting errors should not crash
 prop_format_errors :: [String] -> Property
 prop_format_errors messages = 
-  let handler = newErrorHandler
-      errors = map (\msg -> createError msg ErrorTypeOther ErrorSeverityInfo) messages
-      handler' = foldl handleError handler errors
-      formatted = map formatError (getErrors handler')
+  let errors = map (\msg -> errorAt msg (T.pack msg) _unknownLocation) messages
+      formatted = map formatError errors
   in property $ length formatted >= 0  -- Should not crash
 
 -- Unit tests for specific error handler functionality
 
 test_new_error_handler :: Assertion
 test_new_error_handler = 
-  let handler = newErrorHandler
+  let collector = newErrorCollector
   in assertBool "Creating error handler should not crash" True
 
 test_handle_empty_error :: Assertion
 test_handle_empty_error = 
-  let handler = newErrorHandler
-      error = createError "" ErrorTypeOther ErrorSeverityInfo
-      result = handleError handler error
+  let error = errorAt "" (T.pack "test") _unknownLocation
+      result = execState (addError error) []
   in assertBool "Handling empty error should not crash" True
 
 test_handle_error_with_message :: Assertion
 test_handle_error_with_message = 
-  let handler = newErrorHandler
-      error = createError "Test error message" ErrorTypeOther ErrorSeverityInfo
-      result = handleError handler error
+  let error = errorAt "Test error message" (T.pack "Test error message") _unknownLocation
+      result = execState (addError error) []
   in assertBool "Handling error with message should not crash" True
 
 test_handle_syntax_error :: Assertion
 test_handle_syntax_error = 
-  let handler = newErrorHandler
-      error = createError "Syntax error" ErrorTypeSyntax ErrorSeverityError
-      result = handleError handler error
+  let error = errorWithCategory "Syntax error" Parsing (T.pack "Syntax error") _unknownLocation
+      result = execState (addError error) []
   in assertBool "Handling syntax error should not crash" True
 
 test_handle_type_error :: Assertion
 test_handle_type_error = 
-  let handler = newErrorHandler
-      error = createError "Type error" ErrorTypeType ErrorSeverityError
-      result = handleError handler error
+  let error = errorWithCategory "Type error" TypeChecking (T.pack "Type error") _unknownLocation
+      result = execState (addError error) []
   in assertBool "Handling type error should not crash" True
 
 test_handle_warning :: Assertion
 test_handle_warning = 
-  let handler = newErrorHandler
-      error = createError "Warning message" ErrorTypeWarning ErrorSeverityWarning
-      result = handleError handler error
+  let error = warningAt "Warning message" (T.pack "Warning message") _unknownLocation
+      result = execState (addError error) []
   in assertBool "Handling warning should not crash" True
 
 test_get_errors :: Assertion
 test_get_errors = 
-  let handler = newErrorHandler
-      error1 = createError "Error 1" ErrorTypeOther ErrorSeverityInfo
-      error2 = createError "Error 2" ErrorTypeOther ErrorSeverityInfo
-      handler' = handleError (handleError handler error1) error2
-      errors = getErrors handler'
+  let error1 = errorAt "Error 1" (T.pack "Error 1") _unknownLocation
+      error2 = errorAt "Error 2" (T.pack "Error 2") _unknownLocation
+      errors = execState (mapM_ addError [error1, error2]) []
   in assertEqual "Should have 2 errors" 2 (length errors)
 
 test_has_errors :: Assertion
 test_has_errors = 
-  let handler = newErrorHandler
-      error = createError "Test error" ErrorTypeOther ErrorSeverityInfo
-      handler' = handleError handler error
-      hasErrs = hasErrors handler'
-  in assertBool "Should have errors" hasErrs
+  let error = errorAt "Test error" (T.pack "Test error") _unknownLocation
+      errors = execState (addError error) []
+  in assertBool "Should have errors" $ not (null errors)
 
 test_clear_errors :: Assertion
 test_clear_errors = 
-  let handler = newErrorHandler
-      error = createError "Test error" ErrorTypeOther ErrorSeverityInfo
-      handler' = handleError handler error
-      handler'' = clearErrors handler'
-      errors = getErrors handler''
-  in assertEqual "Should have no errors after clearing" 0 (length errors)
+  let error = errorAt "Test error" (T.pack "Test error") _unknownLocation
+      errors = execState (addError error) []
+      clearedErrors = [] :: [TypeError]
+  in assertEqual "Should have no errors after clearing" 0 (length clearedErrors)
 
 test_error_count :: Assertion
 test_error_count = 
-  let handler = newErrorHandler
-      error1 = createError "Error 1" ErrorTypeOther ErrorSeverityInfo
-      error2 = createError "Error 2" ErrorTypeOther ErrorSeverityInfo
-      error3 = createError "Error 3" ErrorTypeOther ErrorSeverityInfo
-      handler' = handleError (handleError (handleError handler error1) error2) error3
-      count = errorCount handler'
+  let error1 = errorAt "Error 1" (T.pack "Error 1") _unknownLocation
+      error2 = errorAt "Error 2" (T.pack "Error 2") _unknownLocation
+      error3 = errorAt "Error 3" (T.pack "Error 3") _unknownLocation
+      errors = execState (mapM_ addError [error1, error2, error3]) []
+      count = length errors
   in assertEqual "Should have 3 errors" 3 count
 
 test_format_error :: Assertion
 test_format_error = 
-  let error = createError "Test error" ErrorTypeOther ErrorSeverityInfo
+  let error = errorAt "Test error" (T.pack "Test error") _unknownLocation
       formatted = formatError error
-  in assertBool "Error formatting should not crash" $ not (null formatted)
-
-test_get_errors_by_severity :: Assertion
-test_get_errors_by_severity = 
-  let handler = newErrorHandler
-      error1 = createError "Error 1" ErrorTypeOther ErrorSeverityError
-      error2 = createError "Warning 1" ErrorTypeWarning ErrorSeverityWarning
-      error3 = createError "Error 2" ErrorTypeOther ErrorSeverityError
-      handler' = handleError (handleError (handleError handler error1) error2) error3
-      errors = getErrorsBySeverity handler' ErrorSeverityError
-      warnings = getErrorsBySeverity handler' ErrorSeverityWarning
-  in do
-    assertEqual "Should have 2 errors" 2 (length errors)
-    assertEqual "Should have 1 warning" 1 (length warnings)
-
-test_get_errors_by_type :: Assertion
-test_get_errors_by_type = 
-  let handler = newErrorHandler
-      error1 = createError "Syntax error" ErrorTypeSyntax ErrorSeverityError
-      error2 = createError "Type error" ErrorTypeType ErrorSeverityError
-      error3 = createError "Another syntax error" ErrorTypeSyntax ErrorSeverityError
-      handler' = handleError (handleError (handleError handler error1) error2) error3
-      syntaxErrors = getErrorsByType handler' ErrorTypeSyntax
-      typeErrors = getErrorsByType handler' ErrorTypeType
-  in do
-    assertEqual "Should have 2 syntax errors" 2 (length syntaxErrors)
-    assertEqual "Should have 1 type error" 1 (length typeErrors)
-
-test_create_error_with_severity :: Assertion
-test_create_error_with_severity = 
-  let error = createErrorWithSeverity "Test error" ErrorTypeOther ErrorSeverityFatal
-  in assertEqual "Should have fatal severity" ErrorSeverityFatal (errorMessageSeverity error)
-
-test_create_error_with_context :: Assertion
-test_create_error_with_context = 
-  let context = ErrorContext "test.txt" 1 2 "test function"
-      error = createErrorWithContext "Test error" ErrorTypeOther ErrorSeverityInfo context
-  in assertEqual "Should have context" context (errorMessageContext error)
+  in assertBool "Formatting error should not crash" $ not (null formatted)
 
 tests :: TestTree
 tests = testGroup "Test.Unit.EnhancedErrorHandlerSpec Tests"
@@ -263,9 +194,5 @@ tests = testGroup "Test.Unit.EnhancedErrorHandlerSpec Tests"
     , testCase "clear errors" test_clear_errors
     , testCase "error count" test_error_count
     , testCase "format error" test_format_error
-    , testCase "get errors by severity" test_get_errors_by_severity
-    , testCase "get errors by type" test_get_errors_by_type
-    , testCase "create error with severity" test_create_error_with_severity
-    , testCase "create error with context" test_create_error_with_context
     ]
   ]

@@ -1315,13 +1315,18 @@ test-suite typus-test
         Test.Unit.NewSourceLocationCalculationPropertiesSpec,
         Test.Unit.NewUtilsFunctionsPropertiesSpec,
         
-        -- New Enhanced Test Modules (2025) - Comprehensive testing with QuickCheck
-        Test.Unit.EnhancedParserSpec,
-        Test.Unit.EnhancedCompilerSpec,
-        Test.Unit.EnhancedOwnershipSpec,
-        Test.Unit.EnhancedDependenciesSpec,
-        Test.Unit.EnhancedSourceLocationSpec,
-        Test.Unit.EnhancedErrorHandlerSpec
+        -- Test.Unit.EnhancedParserSpec, -- Already listed above
+        -- Test.Unit.EnhancedCompilerSpec, -- Already listed above
+        -- Test.Unit.EnhancedOwnershipSpec, -- Already listed above
+        -- Test.Unit.EnhancedDependenciesSpec, -- Already listed above
+        -- Test.Unit.EnhancedSourceLocationSpec, -- Already listed above
+        Test.Unit.EnhancedErrorHandlerSpec,
+        
+        -- New Test Modules Added (2025) - 4 comprehensive test suites with QuickCheck
+        Test.Unit.NewParserFunctionalitySpec,
+        Test.Unit.NewSourceLocationMathSpec,
+        Test.Unit.NewSimpleErrorHandlingSpec,
+        Test.Unit.NewQuickCheckPropertySpec
         
     build-depends:
         base >=4.7 && <5,
