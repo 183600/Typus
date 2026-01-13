@@ -740,7 +740,6 @@ test-suite typus-test
         Test.Unit.OwnershipMemorySafetyCabalsSpec,
         
         -- New QuickCheck Test Modules (Added for enhanced coverage)
-        Test.Unit.SourceLocationMathQuickCheckSpec,
         Test.Unit.ParserConsistencyQuickCheckSpec,
         Test.Unit.ErrorHandlingRecoveryQuickCheckSpec,
         Test.Unit.DependencyCycleQuickCheckSpec,
@@ -902,7 +901,6 @@ test-suite typus-test
         Test.Unit.ParserErrorRecoveryQuickCheckSpec,
         Test.Unit.CrossModuleIntegrationQuickCheckSpec,
         Test.Unit.PerformanceBoundaryQuickCheckSpec,
-        Test.Unit.ErrorHandlingPropertiesQuickCheckSpec,
         Test.Unit.CompilerIRPropertiesQuickCheckSpec,
 
         -- New Cabal Test Modules (10 comprehensive tests)
@@ -1266,9 +1264,8 @@ test-suite typus-test
         Test.Unit.TextProcessingQuickCheckSpec,
         Test.Unit.MathOperationsQuickCheckSpec,
         Test.Unit.DataStructuresQuickCheckSpec,
-        Test.Unit.BoundaryConditionsQuickCheckSpec,
+        
         Test.Unit.SourceLocationArithmeticQuickCheckSpec,
-        Test.Unit.ParserPropertiesQuickCheckSpec,
         Test.Unit.CompilerIRQuickCheckSpec,
         Test.Unit.OwnershipTransferQuickCheckSpec,
         Test.Unit.ErrorRecoveryPropertiesQuickCheckSpec,
@@ -1295,7 +1292,20 @@ test-suite typus-test
         
         -- New Comprehensive Test Suite Modules (2026)
         Test.Unit.ComprehensiveCabalTestSuite,
-        Test.Unit.AdditionalCabalQuickCheckTests
+        Test.Unit.AdditionalCabalQuickCheckTests,
+        
+        -- Newly Created QuickCheck Test Modules (2026)
+        Test.Unit.NewUtilsPropertiesQuickCheckSpec,
+        Test.Unit.NewParserPropertiesQuickCheckSpec,
+        Test.Unit.NewSourceLocationMathQuickCheckSpec2,
+        Test.Unit.NewErrorHandlingPropertiesQuickCheckSpec,
+        Test.Unit.NewCompilerPropertiesQuickCheckSpec,
+        Test.Unit.NewOwnershipPropertiesQuickCheckSpec,
+        Test.Unit.NewDependenciesPropertiesQuickCheckSpec,
+        Test.Unit.NewDependentTypesPropertiesQuickCheckSpec,
+        Test.Unit.NewIntegrationPropertiesQuickCheckSpec,
+        Test.Unit.NewBoundaryConditionsQuickCheckSpec
+        
     build-depends:
         base >=4.7 && <5,
         typus,

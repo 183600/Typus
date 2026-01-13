@@ -28,6 +28,18 @@ import qualified Test.Unit.IntegrationQuickCheckSpec as IntegrationQuickCheck
 import qualified Test.Unit.ComprehensiveCabalTestSuite as ComprehensiveCabalTestSuite
 import qualified Test.Unit.AdditionalCabalQuickCheckTests as AdditionalCabalQuickCheckTests
 
+-- Import newly created QuickCheck test modules
+import qualified Test.Unit.NewUtilsPropertiesQuickCheckSpec as UtilsProperties
+import qualified Test.Unit.NewParserPropertiesQuickCheckSpec as ParserProperties
+import qualified Test.Unit.NewSourceLocationMathQuickCheckSpec2 as SourceLocationMath
+import qualified Test.Unit.NewErrorHandlingPropertiesQuickCheckSpec as ErrorHandlingProperties
+import qualified Test.Unit.NewCompilerPropertiesQuickCheckSpec as CompilerProperties
+import qualified Test.Unit.NewOwnershipPropertiesQuickCheckSpec as OwnershipProperties
+import qualified Test.Unit.NewDependenciesPropertiesQuickCheckSpec as DependenciesProperties
+import qualified Test.Unit.NewDependentTypesPropertiesQuickCheckSpec as DependentTypesProperties
+import qualified Test.Unit.NewIntegrationPropertiesQuickCheckSpec as IntegrationProperties
+import qualified Test.Unit.NewBoundaryConditionsQuickCheckSpec as BoundaryConditions
+
 -- Basic test properties
 prop_basic_property :: String -> Property
 prop_basic_property s = property $ length s >= 0
@@ -58,5 +70,17 @@ tests = testGroup "Test.Unit.Tests Tests"
     
     -- New comprehensive test modules
     ComprehensiveCabalTestSuite.tests,
-    AdditionalCabalQuickCheckTests.tests
+    AdditionalCabalQuickCheckTests.tests,
+    
+    -- Newly created QuickCheck test modules
+    UtilsProperties.tests,
+    ParserProperties.tests,
+    SourceLocationMath.tests,
+    ErrorHandlingProperties.tests,
+    CompilerProperties.tests,
+    OwnershipProperties.tests,
+    DependenciesProperties.tests,
+    DependentTypesProperties.tests,
+    IntegrationProperties.tests,
+    BoundaryConditions.tests
   ]
