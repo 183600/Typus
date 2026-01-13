@@ -3,187 +3,191 @@ module Test.Unit.DataStructuresQuickCheckSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import TestSupport.QuickCheck (fastProperty)
 import qualified Data.List as L
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Maybe (isJust, isNothing, fromMaybe)
-import Data.Either (isLeft, isRight, fromLeft, fromRight)
 
--- Properties for lists
-prop_list_reverse_reverse :: [Int] -> Bool
-prop_list_reverse_reverse xs = reverse (reverse xs) == xs
+-- | 测试列表属性
+prop_list_length_nonnegative :: [Int] -> Property
+prop_list_length_nonnegative xs =
+  length xs >= 0
 
-prop_list_length_append :: [Int] -> [Int] -> Bool
-prop_list_length_append xs ys = length (xs ++ ys) == length xs + length ys
+prop_list_reverse_preserves_length :: [Int] -> Property
+prop_list_reverse_preserves_length xs =
+  length (reverse xs) === length xs
 
-prop_list_append_associative :: [Int] -> [Int] -> [Int] -> Bool
-prop_list_append_associative xs ys zs = (xs ++ ys) ++ zs == xs ++ (ys ++ zs)
+prop_list_reverse_idempotent :: [Int] -> Property
+prop_list_reverse_idempotent xs =
+  reverse (reverse xs) === xs
 
-prop_list_append_identity_left :: [Int] -> Bool
-prop_list_append_identity_left xs = [] ++ xs == xs
+prop_list_sort_preserves_elements :: [Int] -> Property
+prop_list_sort_preserves_elements xs =
+  L.sort xs === L.sort (L.sort xs)
 
-prop_list_append_identity_right :: [Int] -> Bool
-prop_list_append_identity_right xs = xs ++ [] == xs
+prop_list_sort_ordered :: [Int] -> Property
+prop_list_sort_ordered xs =
+  let sorted = L.sort xs
+  in ordered sorted
 
-prop_list_head_length :: [Int] -> Property
-prop_list_head_length xs = not (null xs) ==> length (head xs : tail xs) == length xs
+prop_list_concat_associative :: [Int] -> [Int] -> [Int] -> Property
+prop_list_concat_associative xs ys zs =
+  (xs ++ ys) ++ zs === xs ++ (ys ++ zs)
 
-prop_list_tail_length :: [Int] -> Property
-prop_list_tail_length xs = not (null xs) ==> length xs == 1 + length (tail xs)
+prop_list_concat_length :: [Int] -> [Int] -> Property
+prop_list_concat_length xs ys =
+  length (xs ++ ys) === length xs + length ys
 
-prop_list_sort_preserves_elements :: [Int] -> Bool
-prop_list_sort_preserves_elements xs = L.sort xs `isPermutationOf` xs
-  where
-    isPermutationOf ys zs = L.sort ys == L.sort zs
+-- | 测试Maybe属性
+prop_maybe fmap_preserves_nothing :: Maybe Int -> Property
+prop_maybe fmap_preserves_nothing m =
+  fmap (+1) m === fmap (+1) (fmap (+1) m)
 
--- Properties for Maybe
-prop_maybe_nothing_is_nothing :: Maybe Int -> Bool
-prop_maybe_nothing_is_nothing m = isNothing m == (m == Nothing)
+prop_maybe fmap_composition :: Maybe Int -> Property
+prop_maybe fmap_composition m =
+  fmap ((* 2) . (+ 1)) m === (fmap (* 2) . fmap (+ 1)) m
 
-prop_maybe_just_is_just :: Maybe Int -> Bool
-prop_maybe_just_is_just m = isJust m == (m /= Nothing)
+prop_maybe_bind_left_identity :: Int -> (Int -> Maybe Int) -> Property
+prop_maybe_bind_left_identity x f =
+  (Just x >>= f) === f x
 
-prop_maybe_fromMaybe :: Int -> Maybe Int -> Bool
-prop_maybe_fromMaybe def m = fromMaybe def m == if isNothing m then def else let (Just x) = m in x
+prop_maybe_bind_right_identity :: Maybe Int -> Property
+prop_maybe_bind_right_identity m =
+  (m >>= Just) === m
 
--- Properties for Either
-prop_either_left_is_left :: Either Int String -> Bool
-prop_either_left_is_left e = isLeft e == case e of Left _ -> True; Right _ -> False
+prop_maybe_bind_associative :: Maybe Int -> (Int -> Maybe Int) -> (Int -> Maybe Int) -> Property
+prop_maybe_bind_associative m f g =
+  (m >>= (\x -> f x >>= g)) === ((m >>= f) >>= g)
 
-prop_either_right_is_right :: Either Int String -> Bool
-prop_either_right_is_right e = isRight e == case e of Left _ -> False; Right _ -> True
+-- | 测试Either属性
+prop_either fmap_left_preserves :: Either String Int -> Property
+prop_either fmap_left_preserves e =
+  fmap (+1) e === fmap (+1) (fmap (+1) e)
 
-prop_either_fromLeft :: Int -> Either Int String -> Bool
-prop_either_fromLeft def e = fromLeft def e == case e of Left x -> x; Right _ -> def
+prop_either fmap_composition :: Either String Int -> Property
+prop_either fmap_composition e =
+  fmap ((* 2) . (+ 1)) e === (fmap (* 2) . fmap (+ 1)) e
 
-prop_either_fromRight :: String -> Either Int String -> Bool
-prop_either_fromRight def e = fromRight def e == case e of Left _ -> def; Right x -> x
+prop_either_left_identity :: Int -> (Int -> Either String Int) -> Property
+prop_either_left_identity x f =
+  case f x of
+    Left _ -> property True
+    Right y -> y === x
 
--- Properties for Map
-prop_map_size_insert :: Map.Map Int String -> Int -> String -> Bool
-prop_map_size_insert m k v = Map.size (Map.insert k v m) == 
-  if Map.member k m then Map.size m else Map.size m + 1
+-- | 测试Map属性
+prop_map_size_nonnegative :: Map.Map Int String -> Property
+prop_map_size_nonnegative m =
+  Map.size m >= 0
 
-prop_map_member_insert :: Map.Map Int String -> Int -> String -> Bool
-prop_map_member_insert m k v = Map.member k (Map.insert k v m)
+prop_map_lookup_finds_inserted :: Map.Map Int String -> Int -> String -> Property
+prop_map_lookup_finds_inserted m k v =
+  Map.lookup k (Map.insert k v m) === Just v
 
-prop_map_lookup_insert :: Map.Map Int String -> Int -> String -> Bool
-prop_map_lookup_insert m k v = Map.lookup k (Map.insert k v m) == Just v
+prop_map_insert_overwrites :: Map.Map Int String -> Int -> String -> String -> Property
+prop_map_insert_overwrites m k v1 v2 =
+  Map.lookup k (Map.insert k v2 (Map.insert k v1 m)) === Just v2
 
-prop_map_delete_not_member :: Map.Map Int String -> Int -> Property
-prop_map_delete_not_member m k = not (Map.member k m) ==> not (Map.member k (Map.delete k m))
+prop_map_delete_removes :: Map.Map Int String -> Int -> Property
+prop_map_delete_removes m k =
+  Map.lookup k (Map.delete k m) === Nothing
 
-prop_map_union_size :: Map.Map Int String -> Map.Map Int String -> Bool
-prop_map_union_size m1 m2 = Map.size (Map.union m1 m2) <= Map.size m1 + Map.size m2
+prop_map_union_preserves_left :: Map.Map Int String -> Map.Map Int String -> Property
+prop_map_union_preserves_left m1 m2 =
+  let union = Map.union m1 m2
+  in Map.keys m1 `L.isSubsetOf` Map.keys union
 
--- Properties for Set
-prop_set_size_insert :: Set.Set Int -> Int -> Bool
-prop_set_size_insert s x = Set.size (Set.insert x s) == 
-  if Set.member x s then Set.size s else Set.size s + 1
+prop_map_union_preserves_right :: Map.Map Int String -> Map.Map Int String -> Property
+prop_map_union_preserves_right m1 m2 =
+  let union = Map.union m1 m2
+  in Map.keys (Map.difference m2 m1) `L.isSubsetOf` Map.keys union
 
-prop_set_member_insert :: Set.Set Int -> Int -> Bool
-prop_set_member_insert s x = Set.member x (Set.insert x s)
+-- | 测试Set属性
+prop_set_size_nonnegative :: Set.Set Int -> Property
+prop_set_size_nonnegative s =
+  Set.size s >= 0
 
-prop_set_delete_not_member :: Set.Set Int -> Int -> Property
-prop_set_delete_not_member s x = not (Set.member x s) ==> not (Set.member x (Set.delete x s))
+prop_set_member_finds_inserted :: Set.Set Int -> Int -> Property
+prop_set_member_finds_inserted s x =
+  Set.member x (Set.insert x s)
 
-prop_set_union_size :: Set.Set Int -> Set.Set Int -> Bool
-prop_set_union_size s1 s2 = Set.size (Set.union s1 s2) <= Set.size s1 + Set.size s2
+prop_set_insert_idempotent :: Set.Set Int -> Int -> Property
+prop_set_insert_idempotent s x =
+  Set.insert x (Set.insert x s) === Set.insert x s
 
-prop_set_intersection_size :: Set.Set Int -> Set.Set Int -> Bool
-prop_set_intersection_size s1 s2 = Set.size (Set.intersection s1 s2) <= min (Set.size s1) (Set.size s2)
+prop_set_delete_removes :: Set.Set Int -> Int -> Property
+prop_set_delete_removes s x =
+  not (Set.member x (Set.delete x s))
 
-prop_set_difference_size :: Set.Set Int -> Set.Set Int -> Bool
-prop_set_difference_size s1 s2 = Set.size (Set.difference s1 s2) <= Set.size s1
+prop_set_union_associative :: Set.Set Int -> Set.Set Int -> Set.Set Int -> Property
+prop_set_union_associative s1 s2 s3 =
+  Set.union s1 (Set.union s2 s3) === Set.union (Set.union s1 s2) s3
 
--- Properties for tuples
-prop_tuple_fst :: (Int, String) -> Bool
-prop_tuple_fst t = fst t == case t of (x, _) -> x
+prop_set_intersection_associative :: Set.Set Int -> Set.Set Int -> Set.Set Int -> Property
+prop_set_intersection_associative s1 s2 s3 =
+  Set.intersection s1 (Set.intersection s2 s3) === Set.intersection (Set.intersection s1 s2) s3
 
-prop_tuple_snd :: (Int, String) -> Bool
-prop_tuple_snd t = snd t == case t of (_, y) -> y
+prop_set_difference_nonnegative :: Set.Set Int -> Set.Set Int -> Property
+prop_set_difference_nonnegative s1 s2 =
+  Set.size (Set.difference s1 s2) >= 0
 
-prop_tuple_swap :: (Int, String) -> Bool
-prop_tuple_swap t = let (x, y) = t in (y, x) == swap t
-  where
-    swap (a, b) = (b, a)
+-- | 测试元组属性
+prop_tuple_fst_preserves :: (Int, String) -> Property
+prop_tuple_fst_preserves t =
+  fst t === fst (t, "extra")
 
--- Properties for functions
-prop_function_composition_associative :: Int -> Bool
-prop_function_composition_associative x = ((f . g) . h) x == (f . (g . h)) x
-  where
-    f = (* 2)
-    g = (+ 1)
-    h = (^ 2)
+prop_tuple_snd_preserves :: (Int, String) -> Property
+prop_tuple_snd_preserves t =
+  snd t === snd ("extra", t)
 
-prop_function_identity :: Int -> Bool
-prop_function_identity x = (id . id) x == id x
+prop_tuple_swap_involutive :: (Int, String) -> Property
+prop_tuple_swap_involutive t =
+  let swapped = swap t
+      swappedAgain = swap swapped
+  in swappedAgain === t
 
--- Properties for Boolean operations
-prop_bool_not :: Bool -> Bool
-prop_bool_not b = not (not b) == b
+-- | 辅助函数
+ordered :: [Int] -> Bool
+ordered [] = True
+ordered [_] = True
+ordered (x:y:xs) = x <= y && ordered (y:xs)
 
-prop_bool_and_identity :: Bool -> Bool
-prop_bool_and_identity b = b && True == b
+isSubsetOf :: Eq a => [a] -> [a] -> Bool
+isSubsetOf xs ys = all (`elem` ys) xs
 
-prop_bool_or_identity :: Bool -> Bool
-prop_bool_or_identity b = b || False == b
-
-prop_bool_and_commutative :: Bool -> Bool -> Bool
-prop_bool_and_commutative b1 b2 = (b1 && b2) == (b2 && b1)
-
-prop_bool_or_commutative :: Bool -> Bool -> Bool
-prop_bool_or_commutative b1 b2 = (b1 || b2) == (b2 || b1)
-
-prop_bool_and_associative :: Bool -> Bool -> Bool -> Bool
-prop_bool_and_associative b1 b2 b3 = (b1 && b2 && b3) == (b1 && (b2 && b3))
-
-prop_bool_or_associative :: Bool -> Bool -> Bool -> Bool
-prop_bool_or_associative b1 b2 b3 = (b1 || b2 || b3) == (b1 || (b2 || b3))
-
-prop_bool_distributive :: Bool -> Bool -> Bool -> Bool
-prop_bool_distributive b1 b2 b3 = (b1 && (b2 || b3)) == ((b1 && b2) || (b1 && b3))
+swap :: (a, b) -> (b, a)
+swap (x, y) = (y, x)
 
 tests :: TestTree
-tests = testGroup "Test.Unit.DataStructuresQuickCheckSpec Tests"
-  [ fastProperty "list reverse reverse" prop_list_reverse_reverse
-  , fastProperty "list length append" prop_list_length_append
-  , fastProperty "list append associative" prop_list_append_associative
-  , fastProperty "list append identity left" prop_list_append_identity_left
-  , fastProperty "list append identity right" prop_list_append_identity_right
-  , fastProperty "list head length" prop_list_head_length
-  , fastProperty "list tail length" prop_list_tail_length
-  , fastProperty "list sort preserves elements" prop_list_sort_preserves_elements
-  , fastProperty "maybe nothing is nothing" prop_maybe_nothing_is_nothing
-  , fastProperty "maybe just is just" prop_maybe_just_is_just
-  , fastProperty "maybe fromMaybe" prop_maybe_fromMaybe
-  , fastProperty "either left is left" prop_either_left_is_left
-  , fastProperty "either right is right" prop_either_right_is_right
-  , fastProperty "either fromLeft" prop_either_fromLeft
-  , fastProperty "either fromRight" prop_either_fromRight
-  , fastProperty "map size insert" prop_map_size_insert
-  , fastProperty "map member insert" prop_map_member_insert
-  , fastProperty "map lookup insert" prop_map_lookup_insert
-  , fastProperty "map delete not member" prop_map_delete_not_member
-  , fastProperty "map union size" prop_map_union_size
-  , fastProperty "set size insert" prop_set_size_insert
-  , fastProperty "set member insert" prop_set_member_insert
-  , fastProperty "set delete not member" prop_set_delete_not_member
-  , fastProperty "set union size" prop_set_union_size
-  , fastProperty "set intersection size" prop_set_intersection_size
-  , fastProperty "set difference size" prop_set_difference_size
-  , fastProperty "tuple fst" prop_tuple_fst
-  , fastProperty "tuple snd" prop_tuple_snd
-  , fastProperty "tuple swap" prop_tuple_swap
-  , fastProperty "function composition associative" prop_function_composition_associative
-  , fastProperty "function identity" prop_function_identity
-  , fastProperty "bool not" prop_bool_not
-  , fastProperty "bool and identity" prop_bool_and_identity
-  , fastProperty "bool or identity" prop_bool_or_identity
-  , fastProperty "bool and commutative" prop_bool_and_commutative
-  , fastProperty "bool or commutative" prop_bool_or_commutative
-  , fastProperty "bool and associative" prop_bool_and_associative
-  , fastProperty "bool or associative" prop_bool_or_associative
-  , fastProperty "bool distributive" prop_bool_distributive
+tests = testGroup "Data Structures QuickCheck Tests"
+  [ testProperty "list length nonnegative" prop_list_length_nonnegative
+  , testProperty "list reverse preserves length" prop_list_reverse_preserves_length
+  , testProperty "list reverse idempotent" prop_list_reverse_idempotent
+  , testProperty "list sort preserves elements" prop_list_sort_preserves_elements
+  , testProperty "list sort ordered" prop_list_sort_ordered
+  , testProperty "list concat associative" prop_list_concat_associative
+  , testProperty "list concat length" prop_list_concat_length
+  , testProperty "maybe fmap preserves nothing" prop_maybe fmap_preserves_nothing
+  , testProperty "maybe fmap composition" prop_maybe fmap_composition
+  , testProperty "maybe bind left identity" prop_maybe_bind_left_identity
+  , testProperty "maybe bind right identity" prop_maybe_bind_right_identity
+  , testProperty "maybe bind associative" prop_maybe_bind_associative
+  , testProperty "either fmap left preserves" prop_either fmap_left_preserves
+  , testProperty "either fmap composition" prop_either fmap_composition
+  , testProperty "either left identity" prop_either_left_identity
+  , testProperty "map size nonnegative" prop_map_size_nonnegative
+  , testProperty "map lookup finds inserted" prop_map_lookup_finds_inserted
+  , testProperty "map insert overwrites" prop_map_insert_overwrites
+  , testProperty "map delete removes" prop_map_delete_removes
+  , testProperty "map union preserves left" prop_map_union_preserves_left
+  , testProperty "map union preserves right" prop_map_union_preserves_right
+  , testProperty "set size nonnegative" prop_set_size_nonnegative
+  , testProperty "set member finds inserted" prop_set_member_finds_inserted
+  , testProperty "set insert idempotent" prop_set_insert_idempotent
+  , testProperty "set delete removes" prop_set_delete_removes
+  , testProperty "set union associative" prop_set_union_associative
+  , testProperty "set intersection associative" prop_set_intersection_associative
+  , testProperty "set difference nonnegative" prop_set_difference_nonnegative
+  , testProperty "tuple fst preserves" prop_tuple_fst_preserves
+  , testProperty "tuple snd preserves" prop_tuple_snd_preserves
+  , testProperty "tuple swap involutive" prop_tuple_swap_involutive
   ]

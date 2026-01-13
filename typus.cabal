@@ -2195,7 +2195,39 @@ test-suite typus-test
         Test.Unit.NewAdditionalSourceLocationQuickCheckTestSpec,
         Test.Unit.NewAdditionalParserQuickCheckTestSpec,
         Test.Unit.NewAdditionalErrorHandlerQuickCheckTestSpec,
-        Test.Unit.NewAdditionalDependenciesQuickCheckTestSpec
+        Test.Unit.NewAdditionalDependenciesQuickCheckTestSpec,
+        
+        -- Additional Test Modules Added (2026) - Comprehensive Test Suite
+        Test.Unit.UtilsStringPropertiesQuickCheckSpec,
+        Test.Unit.SourceLocationPositionQuickCheckSpec,
+        Test.Unit.SourceLocationSpanQuickCheckSpec,
+        Test.Unit.ParserErrorRecoveryQuickCheckSpec,
+        Test.Unit.CompilerIRConsistencyQuickCheckSpec,
+        Test.Unit.OwnershipTransitivityQuickCheckSpec,
+        Test.Unit.DependenciesCycleDetectionQuickCheckSpec,
+        Test.Unit.ErrorHandlerConsistencyQuickCheckSpec,
+        Test.Unit.IntegrationEndToEndQuickCheckSpec,
+        Test.Unit.StringProcessingQuickCheckSpec,
+        Test.Unit.MathematicalPropertiesQuickCheckSpec,
+        Test.Unit.DataStructuresQuickCheckSpec,
+        Test.Unit.PerformanceBoundaryQuickCheckSpec,
+        Test.Unit.ConcurrentSafetyQuickCheckSpec,
+        Test.Unit.MemorySafetyQuickCheckSpec,
+        
+        -- Additional Unit Test Modules (2026) - Comprehensive Test Suite
+        Test.Unit.UtilsStringFunctionsSpec,
+        Test.Unit.SourceLocationBasicSpec,
+        Test.Unit.ParserBasicFunctionsSpec,
+        Test.Unit.CompilerBasicFunctionsSpec,
+        Test.Unit.OwnershipBasicFunctionsSpec,
+        Test.Unit.DependenciesBasicFunctionsSpec,
+        Test.Unit.ErrorHandlerBasicFunctionsSpec,
+        Test.Unit.IntegrationBasicSpec,
+        Test.Unit.CliBasicFunctionsSpec,
+        Test.Unit.DebugBasicFunctionsSpec,
+        Test.Unit.GoToolchainBasicSpec,
+        Test.Unit.EmbedAssetsBasicSpec,
+        Test.Unit.SyntaxValidatorBasicSpec
         
     build-depends:
         base >=4.7 && <5,
