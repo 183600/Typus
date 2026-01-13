@@ -16,7 +16,7 @@ import Parser
   , defaultFileDirectives
   , defaultBlockDirectives
   )
-import SourceLocation (SourcePos(..), SourceSpan(..), spanTo)
+import SourceLocation (SourcePos(..), SourceSpan(..), spanTo, posAt)
 import Data.Either (isLeft, isRight)
 import Data.List (isInfixOf)
 
@@ -41,38 +41,38 @@ prop_defaultBlockDirectives_nothing =
 -- | parseTypus should handle empty input
 prop_parseTypus_empty :: Property
 prop_parseTypus_empty = 
-  let result = parseTypus "" ""
+  let result = parseTypus ""
   in property $ isRight result
 
 -- | parseTypus should handle simple valid input
 prop_parseTypus_simple_valid :: String -> Property
 prop_parseTypus_simple_valid s = 
   let simpleInput = "function test() {\n  return 42;\n}"
-      result = parseTypus simpleInput s
+      result = parseTypus simpleInput
   in property $ isRight result
 
 -- | parseTypus should reject input with unmatched braces
 prop_parseTypus_unmatched_braces :: String -> Property
 prop_parseTypus_unmatched_braces s = 
   let invalidInput = "function test() {\n  return 42;\n"  -- Missing closing brace
-      result = parseTypus invalidInput s
+      result = parseTypus invalidInput
   in property $ isLeft result
 
 -- | parseTypus should handle directives correctly
 prop_parseTypus_directives :: Property
 prop_parseTypus_directives = 
   let inputWithDirectives = "// @ownership: true\n// @dependent-types: false\nfunction test() {\n  return 42;\n}"
-      result = parseTypus inputWithDirectives "test.typus"
+      result = parseTypus inputWithDirectives
   in property $ isRight result
 
 -- | parseTypus should preserve line numbers in error messages
 prop_parseTypus_error_positions :: Positive Int -> Property
 prop_parseTypus_error_positions (Positive n) = 
   let inputWithLines = unlines $ replicate n "valid line" ++ ["invalid line {"]
-      result = parseTypus inputWithLines "test.typus"
+      result = parseTypus inputWithLines
   in property $ case result of
     Left err -> show n `isInfixOf` show err
-    Right _ -> property False  -- Should have failed
+    Right _ -> property $ property False  -- Should have failed
 
 -- Unit tests
 test_defaultFileDirectives :: Assertion
@@ -91,76 +91,76 @@ test_defaultBlockDirectives = do
 
 test_parseTypus_empty :: Assertion
 test_parseTypus_empty = do
-  let result = parseTypus "" ""
+  let result = parseTypus ""
   assertBool "parseTypus empty should succeed" (isRight result)
 
 test_parseTypus_simple_function :: Assertion
 test_parseTypus_simple_function = do
   let input = "function test() {\n  return 42;\n}"
-  let result = parseTypus input "test.typus"
+  let result = parseTypus input
   assertBool "parseTypus simple function should succeed" (isRight result)
 
 test_parseTypus_with_directives :: Assertion
 test_parseTypus_with_directives = do
   let input = "// @ownership: true\n// @dependent-types: false\nfunction test() {\n  return 42;\n}"
-  let result = parseTypus input "test.typus"
+  let result = parseTypus input
   assertBool "parseTypus with directives should succeed" (isRight result)
 
 test_parseTypus_multiple_functions :: Assertion
 test_parseTypus_multiple_functions = do
   let input = "function test1() {\n  return 1;\n}\n\nfunction test2() {\n  return 2;\n}"
-  let result = parseTypus input "test.typus"
+  let result = parseTypus input
   assertBool "parseTypus multiple functions should succeed" (isRight result)
 
 test_parseTypus_with_comments :: Assertion
 test_parseTypus_with_comments = do
   let input = "// This is a comment\nfunction test() {\n  // Another comment\n  return 42;\n}\n/* Block comment */"
-  let result = parseTypus input "test.typus"
+  let result = parseTypus input
   assertBool "parseTypus with comments should succeed" (isRight result)
 
 test_parseTypus_unmatched_brace :: Assertion
 test_parseTypus_unmatched_brace = do
   let input = "function test() {\n  return 42;\n"  -- Missing closing brace
-  let result = parseTypus input "test.typus"
+  let result = parseTypus input
   assertBool "parseTypus unmatched brace should fail" (isLeft result)
 
 test_parseTypus_invalid_syntax :: Assertion
 test_parseTypus_invalid_syntax = do
   let input = "function test() {\n  return 42\n}"  -- Missing semicolon
-  let result = parseTypus input "test.typus"
+  let result = parseTypus input
   assertBool "parseTypus invalid syntax should fail" (isLeft result)
 
 test_parseTypus_nested_functions :: Assertion
 test_parseTypus_nested_functions = do
   let input = "function outer() {\n  function inner() {\n    return 42;\n  }\n  return inner();\n}"
-  let result = parseTypus input "test.typus"
+  let result = parseTypus input
   assertBool "parseTypus nested functions should succeed" (isRight result)
 
 test_parseTypus_with_strings :: Assertion
 test_parseTypus_with_strings = do
   let input = "function test() {\n  return \"Hello, world!\";\n}"
-  let result = parseTypus input "test.typus"
+  let result = parseTypus input
   assertBool "parseTypus with strings should succeed" (isRight result)
 
 test_parseTypus_with_numbers :: Assertion
 test_parseTypus_with_numbers = do
   let input = "function test() {\n  return 42.5;\n}"
-  let result = parseTypus input "test.typus"
+  let result = parseTypus input
   assertBool "parseTypus with numbers should succeed" (isRight result)
 
 test_parseTypus_with_variables :: Assertion
 test_parseTypus_with_variables = do
   let input = "function test() {\n  let x = 10;\n  let y = 20;\n  return x + y;\n}"
-  let result = parseTypus input "test.typus"
+  let result = parseTypus input
   assertBool "parseTypus with variables should succeed" (isRight result)
 
 -- Test suite
 tests :: TestTree
 tests = testGroup "Core Parser Tests"
   [ testProperties "QuickCheck Properties"
-    [ prop_parseTypus_empty
-    , prop_parseTypus_simple_valid
-    , prop_parseTypus_unmatched_braces
+    [ prop_parseTypus_empty ""
+    , prop_parseTypus_simple_valid "function test() { return 42; }"
+    , prop_parseTypus_unmatched_braces "function test() { return 42;"
     ]
   , testCase "parseTypus empty" test_parseTypus_empty
   , testCase "parseTypus simple function" test_parseTypus_simple_function

@@ -7,7 +7,7 @@ import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import Utils (trim, splitBy, removeLineComments)
-import SourceLocation (SourcePos(..), SourceSpan(..), spanTo, startPos, posAfter, mergeSpans)
+import SourceLocation (SourcePos(..), SourceSpan(..), spanTo, startPos, posAfter, mergeSpans, posAt)
 import Data.Char (isSpace, isAlphaNum)
 import Data.List (sort, intercalate, isInfixOf, nub)
 import qualified Data.Map as Map (Map, empty, insert, toList, keys)
@@ -92,7 +92,7 @@ prop_map_insertion_idempotent k v m =
   in property $ m1 == m2
 
 -- | Map keys should be unique
-prop_map_keys_unique :: Ord k => Map k v -> Property
+prop_map_keys_unique :: Ord k => Map.Map k v -> Property
 prop_map_keys_unique m = 
   let ks = keys m
   in property $ length ks == length (nub ks)
@@ -207,19 +207,19 @@ test_splitBy_examples = do
 
 test_sourcePos_examples :: Assertion
 test_sourcePos_examples = do
-  let pos1 = SourcePos 1 1
+  let pos1 = posAt 1 1
   let pos2 = posAfter pos1 'a'
-  assertEqual "posAfter char" (SourcePos 1 2) pos2
+  assertEqual "posAfter char" (posAt 1 2) pos2
   let pos3 = posAfter pos2 '\n'
-  assertEqual "posAfter newline" (SourcePos 2 1) pos3
+  assertEqual "posAfter newline" (posAt 2 1) pos3
 
 test_mergeSpans_examples :: Assertion
 test_mergeSpans_examples = do
-  let span1 = spanTo (SourcePos 1 1) (SourcePos 1 5)
-  let span2 = spanTo (SourcePos 1 3) (SourcePos 1 8)
+  let span1 = spanTo (posAt 1 1) (posAt 1 5)
+  let span2 = spanTo (posAt 1 3) (posAt 1 8)
   let merged = mergeSpans span1 span2
-  assertEqual "mergeSpans start" (SourcePos 1 1) (spanStart merged)
-  assertEqual "mergeSpans end" (SourcePos 1 8) (spanEnd merged)
+  assertEqual "mergeSpans start" (posAt 1 1) (spanStart merged)
+  assertEqual "mergeSpans end" (posAt 1 8) (spanEnd merged)
 
 -- Test suite
 tests :: TestTree

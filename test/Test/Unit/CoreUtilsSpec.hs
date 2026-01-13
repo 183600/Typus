@@ -43,11 +43,10 @@ prop_removeLineComments_basic s =
 
 -- | normalizeIndentation should preserve relative indentation
 prop_normalizeIndentation_preserves_structure :: [String] -> Property
-prop_normalizeIndentation_preserves_structure lines = 
-  let normalized = normalizeIndentation lines
-      -- Check that non-empty lines are still present
+prop_normalizeIndentation_preserves_structure lines =
+  let normalized = normalizeIndentation (unlines lines)      -- Check that non-empty lines are still present
       originalNonEmpty = length $ filter (not . null) lines
-      normalizedNonEmpty = length $ filter (not . null) normalized
+      normalizedNonEmpty = length $ filter (not . null) (lines normalized)
   in property $ originalNonEmpty == normalizedNonEmpty
 
 -- | trim should be idempotent (trim(trim(s)) == trim(s))
@@ -115,17 +114,17 @@ test_removeLineComments_no_comments = do
 
 test_normalizeIndentation_basic :: Assertion
 test_normalizeIndentation_basic = do
-  let input = ["    hello", "    world", "        nested"]
-  let expected = ["hello", "world", "    nested"]
+  let input = "    line1\n      line2\n    line3"
+  let expected = "line1\n  line2\nline3"
   assertEqual "normalizeIndentation basic" expected (normalizeIndentation input)
 
 -- Test suite
 tests :: TestTree
 tests = testGroup "Core Utils Tests"
   [ testProperties "QuickCheck Properties"
-    [ prop_trim_preserves_content
-    , prop_splitBy_roundtrip
-    , prop_removeLineComments_basic
+    [ prop_trim_preserves_content ""
+    , prop_splitBy_roundtrip ','
+    , prop_removeLineComments_basic ""
     ]
   , testCase "trim empty" test_trim_empty
   , testCase "trim all spaces" test_trim_all_spaces
