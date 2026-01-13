@@ -6,7 +6,15 @@ import Test.Tasty.HUnit
 import Compiler.IR
 import Compiler.TypeChecker
 import SourceLocation (SourcePos(..), startPos, SourceSpan(..))
-import Data.List (nub)
+import Data.List (nub, sortBy, sort)
+
+-- | SourcePos 的 Arbitrary 实例
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- choose (1, 1000)
+    column <- choose (1, 1000)
+    offset <- choose (0, 100000)
+    return $ SourcePos line column offset
 
 -- | 简化的IR节点定义用于测试
 data IRNode = IRNode
@@ -36,7 +44,7 @@ prop_ir_node_types_valid :: IRNode -> Property
 prop_ir_node_types_valid node =
   let validTypes = ["Variable", "Function", "Literal", "Operation", "Block", "Conditional"]
       nodeTypeStr = nodeType node
-  in nodeTypeStr `elem` validTypes
+  in property (nodeTypeStr `elem` validTypes)
 
 -- | 测试IR节点的源位置有效性
 prop_ir_node_spans_valid :: IRNode -> Property
@@ -53,7 +61,7 @@ prop_ir_node_span_consistency node =
   let span = nodeSpan node
       start = spanStart span
       end = spanEnd span
-  in start <= end
+  in property (start <= end)
 
 -- | 测试IR节点的类型一致性
 prop_ir_type_consistency :: IRNode -> Property
@@ -93,14 +101,14 @@ prop_ir_type_checking_consistency node =
                        "Function" -> "Callable"
                        "Operation" -> "Expression"
                        _ -> "Unknown"
-  in expectedType /= "Unknown"
+  in property (expectedType /= "Unknown")
 
 -- | 测试IR节点的代码生成一致性
 prop_ir_code_generation_consistency :: IRNode -> Property
 prop_ir_code_generation_consistency node =
   let nodeTypeStr = nodeType node
       generatesCode = nodeTypeStr `elem` ["Variable", "Function", "Operation"]
-  in whenFail ("Node type: " ++ nodeTypeStr) $
+  in whenFail (print ("Node type: " ++ nodeTypeStr)) $
      if generatesCode 
      then property True  -- 简化测试，实际应该检查代码生成
      else property True

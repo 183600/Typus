@@ -10,9 +10,8 @@ import Data.Maybe (isJust, isNothing, fromMaybe)
 
 -- | 测试列表属性
 prop_list_length_nonnegative :: [Int] -> Property
-prop_list_length_nonnegative xs =
-  length xs >= 0
-
+prop_list_length_nonnegative xs = 
+  property $ length xs >= 0
 prop_list_reverse_preserves_length :: [Int] -> Property
 prop_list_reverse_preserves_length xs =
   length (reverse xs) === length xs
@@ -28,7 +27,7 @@ prop_list_sort_preserves_elements xs =
 prop_list_sort_ordered :: [Int] -> Property
 prop_list_sort_ordered xs =
   let sorted = L.sort xs
-  in ordered sorted
+  in property $ ordered sorted
 
 prop_list_concat_associative :: [Int] -> [Int] -> [Int] -> Property
 prop_list_concat_associative xs ys zs =
@@ -39,12 +38,12 @@ prop_list_concat_length xs ys =
   length (xs ++ ys) === length xs + length ys
 
 -- | 测试Maybe属性
-prop_maybe fmap_preserves_nothing :: Maybe Int -> Property
-prop_maybe fmap_preserves_nothing m =
+prop_maybe_fmap_preserves_nothing :: Maybe Int -> Property
+prop_maybe_fmap_preserves_nothing m =
   fmap (+1) m === fmap (+1) (fmap (+1) m)
 
-prop_maybe fmap_composition :: Maybe Int -> Property
-prop_maybe fmap_composition m =
+prop_maybe_fmap_composition :: Maybe Int -> Property
+prop_maybe_fmap_composition m =
   fmap ((* 2) . (+ 1)) m === (fmap (* 2) . fmap (+ 1)) m
 
 prop_maybe_bind_left_identity :: Int -> (Int -> Maybe Int) -> Property
@@ -60,12 +59,12 @@ prop_maybe_bind_associative m f g =
   (m >>= (\x -> f x >>= g)) === ((m >>= f) >>= g)
 
 -- | 测试Either属性
-prop_either fmap_left_preserves :: Either String Int -> Property
-prop_either fmap_left_preserves e =
+prop_either_fmap_left_preserves :: Either String Int -> Property
+prop_either_fmap_left_preserves e =
   fmap (+1) e === fmap (+1) (fmap (+1) e)
 
-prop_either fmap_composition :: Either String Int -> Property
-prop_either fmap_composition e =
+prop_either_fmap_composition :: Either String Int -> Property
+prop_either_fmap_composition e =
   fmap ((* 2) . (+ 1)) e === (fmap (* 2) . fmap (+ 1)) e
 
 prop_either_left_identity :: Int -> (Int -> Either String Int) -> Property
@@ -76,9 +75,8 @@ prop_either_left_identity x f =
 
 -- | 测试Map属性
 prop_map_size_nonnegative :: Map.Map Int String -> Property
-prop_map_size_nonnegative m =
-  Map.size m >= 0
-
+prop_map_size_nonnegative m = 
+  property $ Map.size m >= 0
 prop_map_lookup_finds_inserted :: Map.Map Int String -> Int -> String -> Property
 prop_map_lookup_finds_inserted m k v =
   Map.lookup k (Map.insert k v m) === Just v
@@ -94,21 +92,20 @@ prop_map_delete_removes m k =
 prop_map_union_preserves_left :: Map.Map Int String -> Map.Map Int String -> Property
 prop_map_union_preserves_left m1 m2 =
   let union = Map.union m1 m2
-  in Map.keys m1 `L.isSubsetOf` Map.keys union
+  in property $ Set.fromList (Map.keys m1) `Set.isSubsetOf` Set.fromList (Map.keys union)
 
 prop_map_union_preserves_right :: Map.Map Int String -> Map.Map Int String -> Property
 prop_map_union_preserves_right m1 m2 =
   let union = Map.union m1 m2
-  in Map.keys (Map.difference m2 m1) `L.isSubsetOf` Map.keys union
+  in property $ Set.fromList (Map.keys (Map.difference m2 m1)) `Set.isSubsetOf` Set.fromList (Map.keys union)
 
 -- | 测试Set属性
 prop_set_size_nonnegative :: Set.Set Int -> Property
-prop_set_size_nonnegative s =
-  Set.size s >= 0
-
+prop_set_size_nonnegative s = 
+  property $ Set.size s >= 0
 prop_set_member_finds_inserted :: Set.Set Int -> Int -> Property
 prop_set_member_finds_inserted s x =
-  Set.member x (Set.insert x s)
+  property $ Set.member x (Set.insert x s)
 
 prop_set_insert_idempotent :: Set.Set Int -> Int -> Property
 prop_set_insert_idempotent s x =
@@ -166,13 +163,13 @@ tests = testGroup "Data Structures QuickCheck Tests"
   , testProperty "list sort ordered" prop_list_sort_ordered
   , testProperty "list concat associative" prop_list_concat_associative
   , testProperty "list concat length" prop_list_concat_length
-  , testProperty "maybe fmap preserves nothing" prop_maybe fmap_preserves_nothing
-  , testProperty "maybe fmap composition" prop_maybe fmap_composition
+  , testProperty "maybe fmap preserves nothing" prop_maybe_fmap_preserves_nothing
+  , testProperty "maybe fmap composition" prop_maybe_fmap_composition
   , testProperty "maybe bind left identity" prop_maybe_bind_left_identity
   , testProperty "maybe bind right identity" prop_maybe_bind_right_identity
   , testProperty "maybe bind associative" prop_maybe_bind_associative
-  , testProperty "either fmap left preserves" prop_either fmap_left_preserves
-  , testProperty "either fmap composition" prop_either fmap_composition
+  , testProperty "either fmap left preserves" prop_either_fmap_left_preserves
+  , testProperty "either fmap composition" prop_either_fmap_composition
   , testProperty "either left identity" prop_either_left_identity
   , testProperty "map size nonnegative" prop_map_size_nonnegative
   , testProperty "map lookup finds inserted" prop_map_lookup_finds_inserted

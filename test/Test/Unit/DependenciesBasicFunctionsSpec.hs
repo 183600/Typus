@@ -3,7 +3,7 @@ module Test.Unit.DependenciesBasicFunctionsSpec where
 import Test.Tasty
 import Test.Tasty.HUnit
 import Dependencies
-import Dependencies.Types
+import Dependencies.AST
 import Compiler.Errors.Core (ErrorLocation(..))
 import SourceLocation (SourcePos(..), startPos, SourceSpan(..))
 

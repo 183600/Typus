@@ -6,7 +6,19 @@
 def fix_duplicate_modules():
     # 读取文件内容
     with open('/home/runner/work/Typus/Typus/typus.cabal', 'r') as f:
-        lines = f.readlines()
+        content = f.read()
+    
+    # 定义需要去重的模块列表
+    modules_to_dedup = [
+        'Test.Unit.DataStructuresQuickCheckSpec',
+        'Test.Unit.MemorySafetyQuickCheckSpec',
+        'Test.Unit.ParserErrorRecoveryQuickCheckSpec',
+        'Test.Unit.PerformanceBoundaryQuickCheckSpec',
+        'Test.Unit.StringProcessingQuickCheckSpec'
+    ]
+    
+    # 将内容按行分割
+    lines = content.split('\n')
     
     # 找出typus-test测试套件的other-modules部分
     in_typus_test = False
@@ -20,7 +32,7 @@ def fix_duplicate_modules():
         elif in_typus_test and 'other-modules:' in line:
             in_other_modules = True
             other_modules_start = i + 1
-        elif in_other_modules and line.strip().startswith('build-depends:'):
+        elif in_other_modules and 'build-depends:' in line:
             other_modules_end = i
             break
     
@@ -31,28 +43,25 @@ def fix_duplicate_modules():
     # 提取other-modules部分
     other_modules_lines = lines[other_modules_start:other_modules_end]
     
-    # 定义需要去重的模块列表
-    modules_to_dedup = [
-        'Test.Unit.DataStructuresQuickCheckSpec',
-        'Test.Unit.MemorySafetyQuickCheckSpec',
-        'Test.Unit.ParserErrorRecoveryQuickCheckSpec',
-        'Test.Unit.PerformanceBoundaryQuickCheckSpec',
-        'Test.Unit.StringProcessingQuickCheckSpec'
-    ]
-    
     # 记录每个模块是否已经出现过
     seen_modules = set()
     fixed_lines = []
     
     for line in other_modules_lines:
-        module_name = line.strip().rstrip(',')
-        if module_name in modules_to_dedup:
-            if module_name not in seen_modules:
-                fixed_lines.append(line)
-                seen_modules.add(module_name)
-            else:
-                print(f"删除重复模块: {module_name}")
-        else:
+        # 检查行中是否包含需要去重的模块
+        module_found = False
+        for module in modules_to_dedup:
+            if module in line:
+                module_found = True
+                if module not in seen_modules:
+                    fixed_lines.append(line)
+                    seen_modules.add(module)
+                    print(f"保留模块: {module}")
+                else:
+                    print(f"删除重复模块: {module}")
+                break
+        
+        if not module_found:
             fixed_lines.append(line)
     
     # 替换原文件中的other-modules部分
@@ -60,7 +69,7 @@ def fix_duplicate_modules():
     
     # 写回文件
     with open('/home/runner/work/Typus/Typus/typus.cabal', 'w') as f:
-        f.writelines(new_lines)
+        f.write('\n'.join(new_lines))
     
     print("修复完成！")
 

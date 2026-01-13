@@ -2201,18 +2201,13 @@ test-suite typus-test
         Test.Unit.UtilsStringPropertiesQuickCheckSpec,
         Test.Unit.SourceLocationPositionQuickCheckSpec,
         Test.Unit.SourceLocationSpanQuickCheckSpec,
-        Test.Unit.ParserErrorRecoveryQuickCheckSpec,
         Test.Unit.CompilerIRConsistencyQuickCheckSpec,
         Test.Unit.OwnershipTransitivityQuickCheckSpec,
         Test.Unit.DependenciesCycleDetectionQuickCheckSpec,
         Test.Unit.ErrorHandlerConsistencyQuickCheckSpec,
         Test.Unit.IntegrationEndToEndQuickCheckSpec,
-        Test.Unit.StringProcessingQuickCheckSpec,
         Test.Unit.MathematicalPropertiesQuickCheckSpec,
-        Test.Unit.DataStructuresQuickCheckSpec,
-        Test.Unit.PerformanceBoundaryQuickCheckSpec,
         Test.Unit.ConcurrentSafetyQuickCheckSpec,
-        Test.Unit.MemorySafetyQuickCheckSpec,
         
         -- Additional Unit Test Modules (2026) - Comprehensive Test Suite
         Test.Unit.UtilsStringFunctionsSpec,

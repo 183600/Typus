@@ -2,14 +2,14 @@ module Test.Unit.CliBasicFunctionsSpec where
 
 import Test.Tasty
 import Test.Tasty.HUnit
-import Cli
+import qualified Cli as C
 import System.Exit (ExitCode(..))
 
 tests :: TestTree
 tests = testGroup "CLI Basic Functions Tests"
   [ testCase "parse command line arguments" $ do
       let args = ["compile", "input.typus", "--output", "output.go"]
-      let result = parseArgs args  -- 简化函数调用
+      let result = parseArgsTest args  -- 简化函数调用
       case result of
         Left err -> assertBool "Argument parsing should succeed" False
         Right config -> do
@@ -19,7 +19,7 @@ tests = testGroup "CLI Basic Functions Tests"
           
   , testCase "parse command line arguments with flags" $ do
       let args = ["compile", "input.typus", "--optimize", "--debug"]
-      let result = parseArgs args  -- 简化函数调用
+      let result = parseArgsTest args  -- 简化函数调用
       case result of
         Left err -> assertBool "Argument parsing should succeed" False
         Right config -> do
@@ -28,21 +28,21 @@ tests = testGroup "CLI Basic Functions Tests"
           
   , testCase "parse help command" $ do
       let args = ["--help"]
-      let result = parseArgs args  -- 简化函数调用
+      let result = parseArgsTest args  -- 简化函数调用
       case result of
         Left err -> assertBool "Argument parsing should succeed" False
         Right config -> showHelp config @?= True
         
   , testCase "parse version command" $ do
       let args = ["--version"]
-      let result = parseArgs args  -- 简化函数调用
+      let result = parseArgsTest args  -- 简化函数调用
       case result of
         Left err -> assertBool "Argument parsing should succeed" False
         Right config -> showVersion config @?= True
         
   , testCase "parse invalid arguments" $ do
       let args = ["invalid", "arguments"]
-      let result = parseArgs args  -- 简化函数调用
+      let result = parseArgsTest args  -- 简化函数调用
       case result of
         Left err -> assertBool "Invalid arguments should error" True
         Right config -> assertBool "Should not parse invalid arguments" False
@@ -141,7 +141,7 @@ tests = testGroup "CLI Basic Functions Tests"
       let config = CliConfig {
           command = "compile",
           inputFile = "input.typus",
-          outputFile = Just "nonexistent/output.go"),
+          outputFile = Just "nonexistent/output.go",
           optimize = False,
           debug = False,
           showHelp = False,
@@ -154,7 +154,7 @@ tests = testGroup "CLI Basic Functions Tests"
         
   , testCase "handle verbose output" $ do
       let args = ["compile", "input.typus", "--verbose"]
-      let result = parseArgs args  -- 简化函数调用
+      let result = parseArgsTest args  -- 简化函数调用
       case result of
         Left err -> assertBool "Verbose argument parsing should succeed" False
         Right config -> do
@@ -166,7 +166,7 @@ tests = testGroup "CLI Basic Functions Tests"
             
   , testCase "handle multiple input files" $ do
       let args = ["compile", "input1.typus", "input2.typus", "--output", "output.go"]
-      let result = parseArgs args  -- 简化函数调用
+      let result = parseArgsTest args  -- 简化函数调用
       case result of
         Left err -> assertBool "Multiple input files parsing should succeed" False
         Right config -> do
@@ -178,7 +178,7 @@ tests = testGroup "CLI Basic Functions Tests"
             
   , testCase "handle configuration file" $ do
       let args = ["compile", "--config", "config.toml"]
-      let result = parseArgs args  -- 简化函数调用
+      let result = parseArgsTest args  -- 简化函数调用
       case result of
         Left err -> assertBool "Config file parsing should succeed" False
         Right config -> do
@@ -203,8 +203,8 @@ data CliConfig = CliConfig {
   configFile :: Maybe String
 } deriving (Show, Eq)
 
-parseArgs :: [String] -> Either String CliConfig
-parseArgs args = 
+parseArgsTest :: [String] -> Either String CliConfig
+parseArgsTest args = 
   if "--help" `elem` args
   then Right $ CliConfig "" "" [] Nothing False False False True False Nothing
   else if "--version" `elem` args

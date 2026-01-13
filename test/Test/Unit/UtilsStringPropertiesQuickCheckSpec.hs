@@ -24,10 +24,11 @@ prop_trim_preserves_internal_whitespace s =
       hasInternal = not (null s) && 
                     not (all isSpace s) &&
                     (isSpace (head s) || isSpace (last s))
-  in whenFail (show s) $ 
-     if hasInternal 
-     then not (null trimmed) && not (all isSpace trimmed)
-     else property True
+  in whenFail (print (show s)) $ 
+     if hasInternal then
+                     property (not (null trimmed) && not (all isSpace trimmed))
+                 else
+                     property True
 
 prop_trim_idempotent :: String -> Property
 prop_trim_idempotent s = 
@@ -57,7 +58,7 @@ prop_split_by_comma_consistency s =
 
 prop_split_by_comma_collapsed_no_empty :: String -> Property
 prop_split_by_comma_collapsed_no_empty s =
-  all (not . null) (splitByCommaCollapsed s)
+  property (all (not . null) (splitByCommaCollapsed s))
 
 -- | 测试字符串组合属性
 prop_split_and_join :: Char -> String -> Property
