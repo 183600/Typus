@@ -2,11 +2,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
 
-module OwnershipAnalysisTestSpec where
+module Test.Unit.OwnershipAnalysisTestSpec where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
-import Test.QuickCheck (Gen)
+import Test.QuickCheck (Gen, Property, (==>))
 import qualified Data.Set as Set
 import Data.List (nub, (\\))
 import Data.Set (Set)
@@ -66,25 +66,25 @@ instance Arbitrary Own.OwnershipTransfer where
 -- Test properties for ownership analysis
 
 -- Property 1: Ownership types have consistent ordering
-prop_ownershipTypeOrdering :: Own.OwnershipType -> Own.OwnershipType -> Bool
-prop_ownershipTypeOrdering ot1 ot2 =
+prop_ownershipTypeOrdering :: Own.OwnershipType -> Own.OwnershipType -> Property
+prop_ownershipTypeOrdering ot1 ot2 = property $
   let comparison = compare ot1 ot2
       reverseComparison = compare ot2 ot1
   in if comparison == EQ 
      then reverseComparison == EQ
-     else comparison * reverseComparison < 0  -- Opposite signs for different elements
+     else comparison /= reverseComparison  -- Different elements should have different orderings
 
 -- Property 2: Owned types are greater than borrowed types
-prop_ownedGreaterThanBorrowed :: String -> Bool
-prop_ownedGreaterThanBorrowed name =
+prop_ownedGreaterThanBorrowed :: String -> Property
+prop_ownedGreaterThanBorrowed name = property $
   let owned = Own.Owned name
       borrowed = Own.Borrowed name
       mutBorrowed = Own.MutBorrowed name
   in owned > borrowed && owned > mutBorrowed
 
 -- Property 3: Borrowed types are greater than mutably borrowed types
-prop_borrowedGreaterThanMutBorrowed :: String -> Bool
-prop_borrowedGreaterThanMutBorrowed name =
+prop_borrowedGreaterThanMutBorrowed :: String -> Property
+prop_borrowedGreaterThanMutBorrowed name = property $
   let borrowed = Own.Borrowed name
       mutBorrowed = Own.MutBorrowed name
   in borrowed > mutBorrowed
@@ -96,13 +96,13 @@ prop_ownershipErrorOrdering err1 err2 =
       reverseComparison = compare err2 err1
   in if comparison == EQ 
      then reverseComparison == EQ
-     else comparison * reverseComparison < 0
+     else comparison /= reverseComparison  -- Different elements should have different orderings
 
 -- Property 5: Ownership transfers preserve source and destination
 prop_ownershipTransferPreservation :: String -> String -> Bool
 prop_ownershipTransferPreservation from to =
   let transfer = Own.OwnershipTransfer from to
-  in transferFrom transfer == from && transferTo transfer == to
+  in Own.transferFrom transfer == from && Own.transferTo transfer == to
 
 -- Property 6: Ownership analyzer creation is consistent
 prop_ownershipAnalyzerCreation :: Bool
@@ -130,19 +130,19 @@ prop_ownershipErrorDifferentMessages msg1 msg2 =
 ownershipAnalysisTests :: TestTree
 ownershipAnalysisTests = testGroup "Ownership Analysis Tests"
   [ testProperties "Ownership Type Properties"
-    [ ("Ownership types have consistent ordering", prop_ownershipTypeOrdering)
-    , ("Owned types are greater than borrowed types", prop_ownedGreaterThanBorrowed)
-    , ("Borrowed types are greater than mutably borrowed types", prop_borrowedGreaterThanMutBorrowed)
-    , ("Ownership types with different names are different", prop_ownershipTypeDifferentNames)
+    [ ("Ownership types have consistent ordering", property prop_ownershipTypeOrdering)
+    , ("Owned types are greater than borrowed types", property prop_ownedGreaterThanBorrowed)
+    , ("Borrowed types are greater than mutably borrowed types", property prop_borrowedGreaterThanMutBorrowed)
+    , ("Ownership types with different names are different", property prop_ownershipTypeDifferentNames)
     ]
   , testProperties "Ownership Error Properties"
-    [ ("Ownership errors have consistent ordering", prop_ownershipErrorOrdering)
-    , ("Ownership errors with different messages are different", prop_ownershipErrorDifferentMessages)
+    [ ("Ownership errors have consistent ordering", property prop_ownershipErrorOrdering)
+    , ("Ownership errors with different messages are different", property prop_ownershipErrorDifferentMessages)
     ]
   , testProperties "Ownership Transfer Properties"
-    [ ("Ownership transfers preserve source and destination", prop_ownershipTransferPreservation)
+    [ ("Ownership transfers preserve source and destination", property prop_ownershipTransferPreservation)
     ]
   , testProperties "Ownership Analyzer Properties"
-    [ ("Ownership analyzer creation is consistent", prop_ownershipAnalyzerCreation)
+    [ ("Ownership analyzer creation is consistent", property prop_ownershipAnalyzerCreation)
     ]
   ]

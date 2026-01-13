@@ -2,11 +2,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
 
-module CompilerCoreFunctionalityTestSpec where
+module Test.Unit.CompilerCoreFunctionalityTestSpec where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll)
-import Test.QuickCheck (Gen)
+import Test.QuickCheck (Gen, Property, (==>))
 import qualified Data.Text as T
 import qualified Data.Map as Map
 import Data.List (nub)
@@ -69,7 +69,10 @@ instance Arbitrary Type where
 
 genFunctionParam :: Gen FunctionParam
 genFunctionParam = do
-  name <- elements [Nothing, Just <$> genVarName]
+  useName <- arbitrary
+  name <- if useName 
+           then Just <$> genVarName
+           else return Nothing
   paramType <- arbitrary
   variadic <- elements [False, True]
   return $ FunctionParam name paramType variadic
@@ -91,35 +94,35 @@ instance Arbitrary FunctionSignature where
 -- Test properties for compiler core functionality
 
 -- Property 1: Type equality is reflexive
-prop_typeEqualityReflexive :: Type -> Bool
-prop_typeEqualityReflexive t = t == t
+prop_typeEqualityReflexive :: Type -> Property
+prop_typeEqualityReflexive t = property $ t == t
 
 -- Property 2: Function signature equality is reflexive
-prop_functionSignatureEqualityReflexive :: FunctionSignature -> Bool
-prop_functionSignatureEqualityReflexive fs = fs == fs
+prop_functionSignatureEqualityReflexive :: FunctionSignature -> Property
+prop_functionSignatureEqualityReflexive fs = property $ fs == fs
 
 -- Property 3: Type names are preserved in TypeName constructor
-prop_typeNamePreservation :: String -> Bool
+prop_typeNamePreservation :: String -> Property
 prop_typeNamePreservation name = 
   let t = TypeName name
-  in case t of
+  in property $ case t of
     TypeName n -> n == name
     _ -> False
 
 -- Property 4: Function types have correct parameter count
-prop_functionTypeParamCount :: [Type] -> Type -> Bool
+prop_functionTypeParamCount :: [Type] -> Type -> Property
 prop_functionTypeParamCount params returnType =
   let funcType = TypeFunction params returnType
-  in case funcType of
+  in property $ case funcType of
     TypeFunction ps rt -> length ps == length params && rt == returnType
     _ -> False
 
 -- Property 5: Record types preserve field names
-prop_recordTypeFieldNames :: [(String, Type)] -> Bool
+prop_recordTypeFieldNames :: [(String, Type)] -> Property
 prop_recordTypeFieldNames fields =
   let recordType = TypeRecord fields
       fieldNames = map fst fields
-  in case recordType of
+  in property $ case recordType of
     TypeRecord fs -> map fst fs == fieldNames
     _ -> False
 
@@ -133,30 +136,30 @@ prop_unionTypeContainsAllTypes types =
       _ -> False
 
 -- Property 7: Function parameters preserve their names
-prop_functionParamPreservesName :: Maybe String -> Type -> Bool
+prop_functionParamPreservesName :: Maybe String -> Type -> Property
 prop_functionParamPreservesName name paramType =
   let param = FunctionParam name paramType False
-  in fpName param == name
+  in property $ fpName param == name
 
 -- Property 8: Function signatures preserve parameter and return type counts
-prop_functionSignaturePreservesCounts :: [FunctionParam] -> [Type] -> Bool
+prop_functionSignaturePreservesCounts :: [FunctionParam] -> [Type] -> Property
 prop_functionSignaturePreservesCounts params returnTypes =
   let sig = FunctionSignature params returnTypes
-  in length (fsParams sig) == length params && 
-     length (fsReturns sig) == length returnTypes
+  in property $ length (fsParams sig) == length params && 
+              length (fsReturns sig) == length returnTypes
 
 compilerCoreFunctionalityTests :: TestTree
 compilerCoreFunctionalityTests = testGroup "Compiler Core Functionality Tests"
   [ testProperties "Type Properties"
-    [ ("Type equality is reflexive", prop_typeEqualityReflexive)
-    , ("Type names are preserved", prop_typeNamePreservation)
-    , ("Function types have correct parameter count", prop_functionTypeParamCount)
-    , ("Record types preserve field names", prop_recordTypeFieldNames)
-    , ("Union types contain all variant types", prop_unionTypeContainsAllTypes)
+    [ ("Type equality is reflexive", property prop_typeEqualityReflexive)
+    , ("Type names are preserved", property prop_typeNamePreservation)
+    , ("Function types have correct parameter count", property prop_functionTypeParamCount)
+    , ("Record types preserve field names", property prop_recordTypeFieldNames)
+    , ("Union types contain all variant types", property prop_unionTypeContainsAllTypes)
     ]
   , testProperties "Function Signature Properties"
-    [ ("Function signature equality is reflexive", prop_functionSignatureEqualityReflexive)
-    , ("Function parameters preserve their names", prop_functionParamPreservesName)
-    , ("Function signatures preserve parameter and return type counts", prop_functionSignaturePreservesCounts)
+    [ ("Function signature equality is reflexive", property prop_functionSignatureEqualityReflexive)
+    , ("Function parameters preserve their names", property prop_functionParamPreservesName)
+    , ("Function signatures preserve parameter and return type counts", property prop_functionSignaturePreservesCounts)
     ]
   ]

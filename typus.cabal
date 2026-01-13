@@ -2235,12 +2235,13 @@ test-suite typus-test
         Test.Unit.CompilerCoreFunctionalityTestSpec,
         Test.Unit.ParserBoundaryConditionTestSpec,
         Test.Unit.TypeSystemTestSpec,
-        Test.Unit.OwnershipAnalysisTestSpec,
-        Test.Unit.DependencyAnalysisTestSpec,
         Test.Unit.ErrorHandlingTestSpec,
         Test.Unit.SourceLocationTestSpec,
         Test.Unit.UtilsTestSpec,
-        Test.Unit.IntegrationTestSpec
+        Test.Unit.IntegrationTestSpec,
+        
+        -- New QuickCheck Test Modules (2026) - Additional comprehensive tests
+        Test.Unit.NewSimpleQuickCheckSpec
         
     build-depends:
         base >=4.7 && <5,

@@ -2,17 +2,33 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
 
-module UtilsTestSpec where
+module Test.Unit.UtilsTestSpec where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
-import Test.QuickCheck (Gen)
+import Test.QuickCheck (Gen, Property, (==>))
 import qualified Data.Text as T
 import Data.Char (isSpace, isAlpha, isAlphaNum, toLower, toUpper)
 import Data.List (sort, nub, group, isInfixOf, isPrefixOf, isSuffixOf)
 import Data.String (IsString)
 
 import Utils
+
+-- Helper functions for tests
+splitOn :: String -> String -> [String]
+splitOn _ [] = [""]
+splitOn [] s = [s]
+splitOn sep str = splitOn' sep str []
+  where
+    splitOn' _ [] acc = [reverse acc]
+    splitOn' sep str acc
+      | sep `isPrefixOf` str = reverse acc : splitOn' sep (drop (length sep) str) []
+      | otherwise = splitOn' sep (tail str) (head str : acc)
+
+joinWith :: String -> [String] -> String
+joinWith _ [] = ""
+joinWith _ [x] = x
+joinWith sep (x:xs) = x ++ sep ++ joinWith sep xs
 
 -- Helper generators for utils tests
 genAlphaString :: Gen String
@@ -33,7 +49,8 @@ genWhitespaceString = do
 genMixedString :: Gen String
 genMixedString = do
   alphaPart <- genAlphaString
-  numPart <- vectorOf (choose (0, 5)) $ elements ['0'..'9']
+  numLen <- choose (0, 5)
+  numPart <- vectorOf numLen $ elements ['0'..'9']
   spacePart <- genWhitespaceString
   return $ alphaPart ++ numPart ++ spacePart
 
@@ -86,15 +103,15 @@ prop_splitOnPreservesDelimiters prefix delimiter suffix =
 -- Property 6: splitOn with non-existent delimiter returns single-element list
 prop_splitOnNonExistentDelimiter :: String -> String -> Property
 prop_splitOnNonExistentDelimiter s delimiter =
-  not (null delimiter) && delimiter `notElem` s ==> 
+  not (null delimiter) && not (delimiter `isInfixOf` s) ==> 
     splitOn delimiter s == [s]
 
 -- Property 7: splitOn empty delimiter splits into characters
 prop_splitOnEmptyDelimiter :: String -> Property
-prop_splitOnEmptyDelimiter s = splitOn "" s == map (:[]) s
+prop_splitOnEmptyDelimiter s = property $ splitOn "" s == map (:[]) s
 
 -- Property 8: joinWith is inverse of splitOn for non-empty delimiter
-prop_joinWithSplitOnInverse :: String -> String -> [String] -> Property
+prop_joinWithSplitOnInverse :: String -> [String] -> Property
 prop_joinWithSplitOnInverse delimiter parts =
   not (null delimiter) && not (null parts) ==> 
     let joined = joinWith delimiter parts
@@ -104,15 +121,15 @@ prop_joinWithSplitOnInverse delimiter parts =
 utilsTests :: TestTree
 utilsTests = testGroup "Utils Tests"
   [ testProperties "Trim Properties"
-    [ ("trim removes leading and trailing whitespace", prop_trimRemovesWhitespace)
-    , ("trim preserves non-whitespace content", prop_trimPreservesContent)
-    , ("trim of all whitespace returns empty string", prop_trimAllWhitespace)
-    , ("trim of empty string returns empty string", prop_trimEmptyString)
+    [ ("trim removes leading and trailing whitespace", property prop_trimRemovesWhitespace)
+    , ("trim preserves non-whitespace content", property prop_trimPreservesContent)
+    , ("trim of all whitespace returns empty string", property prop_trimAllWhitespace)
+    , ("trim of empty string returns empty string", property prop_trimEmptyString)
     ]
   , testProperties "Split/Join Properties"
-    [ ("splitOn preserves delimiter occurrences", prop_splitOnPreservesDelimiters)
-    , ("splitOn with non-existent delimiter returns single-element list", prop_splitOnNonExistentDelimiter)
-    , ("splitOn empty delimiter splits into characters", prop_splitOnEmptyDelimiter)
-    , ("joinWith is inverse of splitOn for non-empty delimiter", prop_joinWithSplitOnInverse)
+    [ ("splitOn preserves delimiter occurrences", property prop_splitOnPreservesDelimiters)
+    , ("splitOn with non-existent delimiter returns single-element list", property prop_splitOnNonExistentDelimiter)
+    , ("splitOn empty delimiter splits into characters", property prop_splitOnEmptyDelimiter)
+    , ("joinWith is inverse of splitOn for non-empty delimiter", property prop_joinWithSplitOnInverse)
     ]
   ]

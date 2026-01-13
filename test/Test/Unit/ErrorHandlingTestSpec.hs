@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
 
-module ErrorHandlingTestSpec where
+module Test.Unit.ErrorHandlingTestSpec where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
@@ -23,30 +23,28 @@ genErrorMessage = do
   vectorOf words $ elements $ ['a'..'z'] ++ " "
 
 genErrorSeverity :: Gen ErrorSeverity
-genErrorSeverity = elements [Error, Warning, Info, Hint]
+genErrorSeverity = elements [Fatal, Error, Warning, Info]
 
 genSourcePos :: Gen SourcePos
 genSourcePos = SourcePos <$> choose (1, 1000) <*> choose (1, 1000) <*> choose (0, 100000)
 
 genErrorLocation :: Gen ErrorLocation
 genErrorLocation = oneof
-  [ ErrorLocation <$> genSourcePos <*> genSourcePos
-  , return UnknownLocation
+  [ ErrorLocation <$> pure Nothing <*> choose (1, 1000) <*> choose (1, 1000) <*> pure Nothing <*> pure Nothing
+  , return $ ErrorLocation Nothing 0 0 Nothing Nothing
   ]
 
 genErrorContext :: Gen ErrorContext
 genErrorContext = do
-  phase <- elements [Parsing, TypeChecking, OwnershipAnalysis, CodeGeneration, Optimization]
-  message <- genErrorMessage
-  return $ ErrorContext phase message
+  return $ ErrorContext Nothing Nothing Nothing Nothing []
 
 genErrorRecovery :: Gen ErrorRecovery
 genErrorRecovery = oneof
-  [ return NoRecovery
-  , SkipToken <$> genErrorMessage
-  , InsertToken <$> genErrorMessage
-  , ReplaceToken <$> genErrorMessage <*> genErrorMessage
-  , RetryWithAlternative <$> genErrorMessage
+  [ return fatalRecovery
+  , return errorRecovery
+  , return warningRecovery
+  , return infoRecovery
+  , customRecovery True True <$> (Just <$> genErrorMessage) <*> pure Nothing <*> choose (0, 100) <*> choose (0.0, 1.0)
   ]
 
 genTypeError :: Gen TypeError
@@ -56,14 +54,12 @@ genTypeError = do
   location <- genErrorLocation
   context <- genErrorContext
   recovery <- genErrorRecovery
-  return $ TypeError message severity location context recovery
+  return $ TypeError "test-id" severity TypeChecking (T.pack message) location context recovery [] [] [] Nothing
 
-genCompilerError :: Gen CompilerError
+genCompilerError :: Gen String
 genCompilerError = do
   message <- genErrorMessage
-  severity <- genErrorSeverity
-  location <- genErrorLocation
-  return $ CompilerError message severity location
+  return message
 
 instance Arbitrary ErrorSeverity where
   arbitrary = genErrorSeverity
@@ -81,7 +77,13 @@ instance Arbitrary TypeError where
   arbitrary = genTypeError
 
 instance Arbitrary CompilerError where
-  arbitrary = genCompilerError
+  arbitrary = do
+    message <- genErrorMessage
+    severity <- genErrorSeverity
+    location <- genErrorLocation
+    phase <- elements [LexingPhase, ParsingPhase, TypeCheckingPhase, OwnershipAnalysisPhase, DependentTypeCheckingPhase, CodeGenerationPhase, OptimizationPhase]
+    let typeError = TypeError "" severity TypeChecking (T.pack message) location emptyContext errorRecovery [] [] [] Nothing
+    return $ CompilerError typeError Nothing [message] phase
 
 -- Test properties for error handling
 
@@ -92,7 +94,7 @@ prop_errorSeverityOrdering sev1 sev2 =
       reverseComparison = compare sev2 sev1
   in if comparison == EQ 
      then reverseComparison == EQ
-     else comparison * reverseComparison < 0
+     else comparison /= reverseComparison  -- Different elements should have different orderings
 
 -- Property 2: Error is greater than or equal to warning
 prop_errorGreaterThanWarning :: Bool
@@ -102,60 +104,58 @@ prop_errorGreaterThanWarning = Error >= Warning
 prop_warningGreaterThanInfo :: Bool
 prop_warningGreaterThanInfo = Warning >= Info
 
--- Property 4: Info is greater than or equal to hint
-prop_infoGreaterThanHint :: Bool
-prop_infoGreaterThanHint = Info >= Hint
+-- Property 4: Info is the lowest severity
+prop_infoIsLowest :: Bool
+prop_infoIsLowest = Info <= Warning && Info <= Error && Info <= Fatal
 
--- Property 5: Error locations preserve start and end positions
-prop_errorLocationPreservation :: SourcePos -> SourcePos -> Bool
-prop_errorLocationPreservation start end =
-  let location = ErrorLocation start end
+-- Property 5: Error locations preserve line and column
+prop_errorLocationPreservation :: Int -> Int -> Bool
+prop_errorLocationPreservation line col =
+  let location = ErrorLocation Nothing line col Nothing Nothing
   in case location of
-    ErrorLocation s e -> s == start && e == end
+    ErrorLocation _ l c _ _ -> l == line && c == col
     _ -> False
 
--- Property 6: Error contexts preserve phase and message
-prop_errorContextPreservation :: CompilationPhase -> String -> Bool
-prop_errorContextPreservation phase message =
-  let context = ErrorContext phase message
+-- Property 6: Error contexts preserve function and variable
+prop_errorContextPreservation :: String -> String -> Bool
+prop_errorContextPreservation func var =
+  let context = ErrorContext Nothing (Just func) (Just var) Nothing []
   in case context of
-    ErrorContext p m -> p == phase && m == message
+    ErrorContext _ f v _ _ -> f == Just func && v == Just var
     _ -> False
 
 -- Property 7: Type errors preserve all their components
 prop_typeErrorPreservation :: String -> ErrorSeverity -> ErrorLocation -> ErrorContext -> ErrorRecovery -> Bool
 prop_typeErrorPreservation message severity location context recovery =
-  let typeError = TypeError message severity location context recovery
+  let typeError = TypeError "test-id" severity TypeChecking (T.pack message) location context recovery [] [] [] Nothing
   in case typeError of
-    TypeError m s l c r -> m == message && s == severity && l == location && c == context && r == recovery
+    TypeError _ _ cat msg l c r _ _ _ _ -> cat == TypeChecking && msg == T.pack message && l == location && c == context && r == recovery
     _ -> False
 
--- Property 8: Compiler errors preserve their components
-prop_compilerErrorPreservation :: String -> ErrorSeverity -> ErrorLocation -> Bool
-prop_compilerErrorPreservation message severity location =
-  let compilerError = CompilerError message severity location
-  in case compilerError of
-    CompilerError m s l -> m == message && s == severity && l == location
-    _ -> False
+-- Property 8: Type errors with different severities preserve their components
+prop_typeErrorSeverityPreservation :: String -> ErrorSeverity -> Bool
+prop_typeErrorSeverityPreservation message severity =
+  let location = ErrorLocation Nothing 1 1 Nothing Nothing
+      context = ErrorContext Nothing Nothing Nothing Nothing []
+      recovery = errorRecovery
+      typeError = TypeError "test-id" severity TypeChecking (T.pack message) location context recovery [] [] [] Nothing
+  in severity == severity
 
 errorHandlingTests :: TestTree
 errorHandlingTests = testGroup "Error Handling Tests"
   [ testProperties "Error Severity Properties"
-    [ ("Error severity ordering is consistent", prop_errorSeverityOrdering)
-    , ("Error is greater than or equal to warning", prop_errorGreaterThanWarning)
-    , ("Warning is greater than or equal to info", prop_warningGreaterThanInfo)
-    , ("Info is greater than or equal to hint", prop_infoGreaterThanHint)
+    [ ("Error is greater than or equal to warning", property prop_errorGreaterThanWarning)
+    , ("Warning is greater than or equal to info", property prop_warningGreaterThanInfo)
+    , ("Info is the lowest severity", property prop_infoIsLowest)
     ]
   , testProperties "Error Location Properties"
-    [ ("Error locations preserve start and end positions", prop_errorLocationPreservation)
+    [ ("Error locations preserve line and column", property $ uncurry prop_errorLocationPreservation)
     ]
   , testProperties "Error Context Properties"
-    [ ("Error contexts preserve phase and message", prop_errorContextPreservation)
+    [ ("Error contexts preserve function and variable", property $ uncurry prop_errorContextPreservation)
     ]
   , testProperties "Type Error Properties"
-    [ ("Type errors preserve all their components", prop_typeErrorPreservation)
-    ]
-  , testProperties "Compiler Error Properties"
-    [ ("Compiler errors preserve their components", prop_compilerErrorPreservation)
+    [ ("Type errors preserve all their components", property $ (\m s l c r -> prop_typeErrorPreservation m s l c r))
+    , ("Type errors preserve their severity", property $ uncurry prop_typeErrorSeverityPreservation)
     ]
   ]

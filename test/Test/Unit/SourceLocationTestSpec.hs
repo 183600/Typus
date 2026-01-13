@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
 
-module SourceLocationTestSpec where
+module Test.Unit.SourceLocationTestSpec where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
@@ -48,6 +48,12 @@ genEmptySourceSpan = do
   let pos = SourcePos line col offset
   return $ SourceSpan pos pos
 
+instance Arbitrary SourcePos where
+  arbitrary = genSourcePos
+
+instance Arbitrary SourceSpan where
+  arbitrary = oneof [genValidSourceSpan, genEmptySourceSpan]
+
 -- Test properties for source location
 
 -- Property 1: Source position components are preserved
@@ -73,7 +79,7 @@ prop_sourcePosOrdering pos1 pos2 =
       reverseComparison = compare pos2 pos1
   in if comparison == EQ 
      then reverseComparison == EQ
-     else comparison * reverseComparison < 0
+     else comparison /= reverseComparison  -- Different elements should have different orderings
 
 -- Property 4: Source span ordering is consistent
 prop_sourceSpanOrdering :: SourceSpan -> SourceSpan -> Bool
@@ -82,7 +88,7 @@ prop_sourceSpanOrdering span1 span2 =
       reverseComparison = compare span2 span1
   in if comparison == EQ 
      then reverseComparison == EQ
-     else comparison * reverseComparison < 0
+     else comparison /= reverseComparison  -- Different elements should have different orderings
 
 -- Property 5: Empty spans have equal start and end positions
 prop_emptySpanEquality :: Int -> Int -> Int -> Bool
@@ -99,6 +105,10 @@ prop_spanStartLessThanEnd span =
   case span of
     SourceSpan start end -> start <= end
     _ -> False
+
+-- Helper function to check if span contains position
+contains :: SourceSpan -> SourcePos -> Bool
+contains srcSpan pos = pos >= spanStart srcSpan && pos <= spanEnd srcSpan
 
 -- Property 7: Span contains its start position
 prop_spanContainsStart :: SourceSpan -> Bool
@@ -117,15 +127,15 @@ prop_spanContainsEnd span =
 sourceLocationTests :: TestTree
 sourceLocationTests = testGroup "Source Location Tests"
   [ testProperties "Source Position Properties"
-    [ ("Source position components are preserved", prop_sourcePosPreservation)
-    , ("Source position ordering is consistent", prop_sourcePosOrdering)
+    [ ("Source position components are preserved", property prop_sourcePosPreservation)
+    , ("Source position ordering is consistent", property prop_sourcePosOrdering)
     ]
   , testProperties "Source Span Properties"
-    [ ("Source span preserves start and end positions", prop_sourceSpanPreservation)
-    , ("Source span ordering is consistent", prop_sourceSpanOrdering)
-    , ("Empty spans have equal start and end positions", prop_emptySpanEquality)
-    , ("Span start is less than or equal to span end", prop_spanStartLessThanEnd)
-    , ("Span contains its start position", prop_spanContainsStart)
-    , ("Span contains its end position", prop_spanContainsEnd)
+    [ ("Source span preserves start and end positions", property prop_sourceSpanPreservation)
+    , ("Source span ordering is consistent", property prop_sourceSpanOrdering)
+    , ("Empty spans have equal start and end positions", property prop_emptySpanEquality)
+    , ("Span start is less than or equal to span end", property prop_spanStartLessThanEnd)
+    , ("Span contains its start position", property prop_spanContainsStart)
+    , ("Span contains its end position", property prop_spanContainsEnd)
     ]
   ]

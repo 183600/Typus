@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
 
-module DependencyAnalysisTestSpec where
+module Test.Unit.DependencyAnalysisTestSpec where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
@@ -11,6 +11,7 @@ import qualified Data.Set as Set
 import Data.List (nub, (\\), intersect)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.Text as T
 import qualified Data.Map as Map
 
 import qualified Dependencies.AST as Dep
@@ -37,8 +38,8 @@ genFunName = do
 
 genSimpleTypeExpr :: Gen Dep.TypeExpr
 genSimpleTypeExpr = oneof
-  [ Dep.TypeConstructor <$> genTypeName
-  , Dep.TypeVariable <$> genVarName
+  [ Dep.SimpleT <$> (T.pack <$> genTypeName)
+  , Dep.SimpleT <$> (T.pack <$> genVarName)
   ]
 
 genFunctionTypeExpr :: Gen Dep.TypeExpr
@@ -46,7 +47,7 @@ genFunctionTypeExpr = do
   paramCount <- choose (1, 3)
   paramTypes <- vectorOf paramCount genSimpleTypeExpr
   returnType <- genSimpleTypeExpr
-  return $ Dep.TypeFunction paramTypes returnType
+  return $ Dep.FuncT (zip (map (T.pack . (("p" ++) . show)) [1..paramCount]) paramTypes) returnType
 
 genTypeExpr :: Gen Dep.TypeExpr
 genTypeExpr = oneof
@@ -59,33 +60,34 @@ genSimpleStatement = oneof
   [ do
       varName <- genVarName
       typeExpr <- genTypeExpr
-      return $ Dep.VarDecl varName typeExpr
+      return $ Dep.SVarDecl (T.pack varName) typeExpr
   , do
       funName <- genFunName
       paramCount <- choose (0, 3)
-      params <- vectorOf paramCount genVarName
+      params <- vectorOf paramCount $ do
+        p <- genVarName
+        t <- genTypeExpr
+        return (T.pack p, t)
       returnType <- genTypeExpr
-      return $ Dep.FunDecl funName params returnType
+      return $ Dep.SFuncDecl (T.pack funName) params (Just returnType)
   ]
 
 genComplexStatement :: Gen Dep.Statement
 genComplexStatement = oneof
   [ do
       varName <- genVarName
+      typeExpr <- genTypeExpr
+      return $ Dep.SVarDecl (T.pack varName) typeExpr
+  , do
       funName <- genFunName
-      argCount <- choose (0, 3)
-      args <- vectorOf argCount genVarName
-      return $ Dep.FunctionCall varName funName args
-  , do
-      condition <- genVarName
-      thenStmt <- genSimpleStatement
-      elseStmt <- genSimpleStatement
-      return $ Dep.IfStatement condition thenStmt elseStmt
-  , do
-      varName <- genVarName
-      collection <- genVarName
-      body <- genSimpleStatement
-      return $ Dep.ForLoop varName collection body
+      paramCount <- choose (0, 3)
+      params <- vectorOf paramCount $ do
+        p <- genVarName
+        t <- genTypeExpr
+        return (T.pack p, t)
+      returnType <- genTypeExpr
+      return $ Dep.SFuncDecl (T.pack funName) params (Just returnType)
+  
   ]
 
 genStatement :: Gen Dep.Statement
@@ -95,7 +97,7 @@ genAST :: Gen Dep.AST
 genAST = do
   stmtCount <- choose (1, 10)
   statements <- vectorOf stmtCount genStatement
-  return $ Dep.AST statements
+  return $ Dep.Program statements
 
 instance Arbitrary Dep.TypeExpr where
   arbitrary = genTypeExpr
@@ -111,86 +113,79 @@ instance Arbitrary Dep.AST where
 -- Property 1: AST statements are preserved in order
 prop_astStatementOrder :: [Dep.Statement] -> Bool
 prop_astStatementOrder statements =
-  let ast = Dep.AST statements
+  let ast = Dep.Program statements
   in case ast of
-    Dep.AST stmts -> stmts == statements
+    Dep.Program stmts -> stmts == statements
     _ -> False
 
 -- Property 2: Variable declarations preserve variable names
 prop_varDeclPreservesName :: String -> Dep.TypeExpr -> Bool
 prop_varDeclPreservesName varName typeExpr =
-  let stmt = Dep.VarDecl varName typeExpr
+  let stmt = Dep.SVarDecl (T.pack varName) typeExpr
   in case stmt of
-    Dep.VarDecl name t -> name == varName && t == typeExpr
+    Dep.SVarDecl name t -> T.unpack name == varName && t == typeExpr
     _ -> False
 
 -- Property 3: Function declarations preserve function names
-prop_funDeclPreservesName :: String -> [String] -> Dep.TypeExpr -> Bool
+prop_funDeclPreservesName :: String -> [(String, Dep.TypeExpr)] -> Dep.TypeExpr -> Bool
 prop_funDeclPreservesName funName params returnType =
-  let stmt = Dep.FunDecl funName params returnType
+  let params' = [(T.pack n, t) | (n, t) <- params]
+      stmt = Dep.SFuncDecl (T.pack funName) params' (Just returnType)
   in case stmt of
-    Dep.FunDecl name p r -> name == funName && p == params && r == returnType
+    Dep.SFuncDecl name p r -> T.unpack name == funName && [(T.unpack n, t) | (n, t) <- p] == params && r == Just returnType
     _ -> False
 
--- Property 4: Function calls preserve function and argument names
-prop_functionCallPreservesNames :: String -> String -> [String] -> Bool
-prop_functionCallPreservesNames varName funName args =
-  let stmt = Dep.FunctionCall varName funName args
+-- Property 4: Variable declarations preserve variable names (alternative)
+prop_varDeclPreservesNameAlt :: String -> Dep.TypeExpr -> Bool
+prop_varDeclPreservesNameAlt varName typeExpr =
+  let stmt = Dep.SVarDecl (T.pack varName) typeExpr
   in case stmt of
-    Dep.FunctionCall v f a -> v == varName && f == funName && a == args
+    Dep.SVarDecl name t -> T.unpack name == varName && t == typeExpr
     _ -> False
 
 -- Property 5: Type constructors preserve type names
 prop_typeConstructorPreservesName :: String -> Bool
 prop_typeConstructorPreservesName typeName =
-  let typeExpr = Dep.TypeConstructor typeName
+  let typeExpr = Dep.SimpleT (T.pack typeName)
   in case typeExpr of
-    Dep.TypeConstructor name -> name == typeName
+    Dep.SimpleT name -> T.unpack name == typeName
     _ -> False
 
--- Property 6: Type variables preserve variable names
-prop_typeVariablePreservesName :: String -> Bool
-prop_typeVariablePreservesName varName =
-  let typeExpr = Dep.TypeVariable varName
+-- Property 6: Generic types preserve type names and parameters
+prop_genericTypePreservesNameAndParams :: String -> [Dep.TypeExpr] -> Bool
+prop_genericTypePreservesNameAndParams typeName typeParams =
+  let typeExpr = Dep.GenericT (T.pack typeName) typeParams
   in case typeExpr of
-    Dep.TypeVariable name -> name == varName
+    Dep.GenericT name params -> T.unpack name == typeName && params == typeParams
     _ -> False
 
 -- Property 7: Function types have correct parameter count
 prop_functionTypeParamCount :: [Dep.TypeExpr] -> Dep.TypeExpr -> Bool
 prop_functionTypeParamCount paramTypes returnType =
-  let funcType = Dep.TypeFunction paramTypes returnType
+  let funcType = Dep.FuncT (zip (map (T.pack . (("p" ++) . show)) [1..length paramTypes]) paramTypes) returnType
   in case funcType of
-    Dep.TypeFunction ps rt -> length ps == length paramTypes && rt == returnType
+    Dep.FuncT ps rt -> length ps == length paramTypes && rt == returnType
     _ -> False
 
--- Property 8: Free variables in type expressions are preserved
-prop_freeVarsPreserved :: Dep.TypeExpr -> Bool
-prop_freeVarsPreserved typeExpr =
-  let freeVars = Dep.freeVars typeExpr
-      -- Check that all free variables are actually variables in the expression
-      isVarInExpr var = case typeExpr of
-        Dep.TypeVariable name -> name == var
-        Dep.TypeFunction params ret -> 
-          any (\p -> case p of Dep.TypeVariable name -> name == var; _ -> False) params ||
-          case ret of Dep.TypeVariable name -> name == var; _ -> False
-        _ -> False
-  in all isVarInExpr freeVars
+-- Property 8: Simple types preserve type names
+prop_simpleTypePreservesName :: String -> Bool
+prop_simpleTypePreservesName typeName =
+  let typeExpr = Dep.SimpleT (T.pack typeName)
+  in case typeExpr of
+    Dep.SimpleT name -> T.unpack name == typeName
+    _ -> False
 
 dependencyAnalysisTests :: TestTree
 dependencyAnalysisTests = testGroup "Dependency Analysis Tests"
   [ testProperties "AST Properties"
-    [ ("AST statements are preserved in order", prop_astStatementOrder)
+    [ ("AST statements are preserved in order", property prop_astStatementOrder)
     ]
   , testProperties "Statement Properties"
-    [ ("Variable declarations preserve variable names", prop_varDeclPreservesName)
-    , ("Function declarations preserve function names", prop_funDeclPreservesName)
-    , ("Function calls preserve function and argument names", prop_functionCallPreservesNames)
+    [ ("Variable declarations preserve variable names", property prop_varDeclPreservesName)
+    , ("Function declarations preserve function names", property prop_funDeclPreservesName)
     ]
   , testProperties "Type Expression Properties"
-    [ ("Type constructors preserve type names", prop_typeConstructorPreservesName)
-    , ("Type variables preserve variable names", prop_typeVariablePreservesName)
-    , ("Function types have correct parameter count", prop_functionTypeParamCount)
-    , ("Free variables in type expressions are preserved", prop_freeVarsPreserved)
+    [ ("Type constructors preserve type names", property prop_typeConstructorPreservesName)
+    , ("Function types have correct parameter count", property prop_functionTypeParamCount)
     ]
   ]

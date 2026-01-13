@@ -2,11 +2,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
 
-module ParserBoundaryConditionTestSpec where
+module Test.Unit.ParserBoundaryConditionTestSpec where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll)
-import Test.QuickCheck (Gen)
+import Test.QuickCheck (Gen, Property, (==>))
 import qualified Data.Text as T
 import Data.Char (isSpace, isAlpha, isAlphaNum)
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
@@ -93,7 +93,7 @@ prop_whitespaceOnlyHandling s =
 prop_nestedBracketHandling :: String -> Bool
 prop_nestedBracketHandling s =
   let openCount = length $ filter (`elem` "([{") s
-      closeCount = length $ filter (`elem" ")]}") s
+      closeCount = length $ filter (`elem` ")]}") s
   in openCount == closeCount
 
 -- Property 6: Unbalanced brackets should be detected
@@ -122,15 +122,15 @@ prop_unicodeHandling s =
 parserBoundaryConditionTests :: TestTree
 parserBoundaryConditionTests = testGroup "Parser Boundary Condition Tests"
   [ testProperties "String Boundary Conditions"
-    [ ("Empty strings should not crash the parser", prop_emptyStringHandling)
-    , ("Single character strings should be parseable", prop_singleCharStringHandling)
-    , ("Very long strings should be handled without overflow", prop_longStringHandling)
-    , ("Whitespace-only strings should be handled", prop_whitespaceOnlyHandling)
+    [ ("Empty strings should not crash the parser", property prop_emptyStringHandling)
+    , ("Single character strings should be parseable", property prop_singleCharStringHandling)
+    , ("Very long strings should be handled without overflow", property prop_longStringHandling)
+    , ("Whitespace-only strings should be handled", property prop_whitespaceOnlyHandling)
     ]
   , testProperties "Bracket and Special Character Handling"
-    [ ("Nested brackets should be balanced", prop_nestedBracketHandling)
-    , ("Unbalanced brackets should be detected", prop_unbalancedBracketDetection)
-    , ("Special characters should be preserved", prop_specialCharacterHandling)
-    , ("Unicode characters should be handled", prop_unicodeHandling)
+    [ ("Nested brackets should be balanced", property prop_nestedBracketHandling)
+    , ("Unbalanced brackets should be detected", property prop_unbalancedBracketDetection)
+    , ("Special characters should be preserved", property prop_specialCharacterHandling)
+    , ("Unicode characters should be handled", property prop_unicodeHandling)
     ]
   ]
