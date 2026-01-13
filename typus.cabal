@@ -2003,18 +2003,14 @@ test-suite typus-test
         Test.Unit.TestSourceLocationMathPropertiesSpec,
         Test.Unit.TestParserErrorRecoverySpec,
         Test.Unit.TestErrorHandlerConsistencySpec,
-        Test.Unit.TestOwnershipTransitivitySpec,
         Test.Unit.TestDependencyTypeConstraintsSpec,
-        Test.Unit.TestCompilerIRConsistencySpec,
         Test.Unit.TestCrossModuleIntegrationSpec,
         Test.Unit.TestBoundaryConditionsSpec,
-        Test.Unit.TestPerformanceRegressionSpec,
         Test.Unit.TestStringEncodingSpec,
         Test.Unit.TestConcurrentSafetySpec,
         Test.Unit.TestMemorySafetySpec,
         Test.Unit.TestTypeSystemInferenceSpec,
         Test.Unit.TestErrorRecoverySpec,
-        Test.Unit.TestIntegrationEndToEndSpec,
         Test.Unit.TestSymbolTableOperationsSpec,
         Test.Unit.TestAnalyzerIntegrationSpec,
         Test.Unit.TestCliIntegrationSpec,
@@ -2158,7 +2154,19 @@ test-suite typus-test
         Test.Unit.UnicodeHandlingAdvancedSpec,
 
         -- New QuickCheck Test Modules Added (2026)
-        Test.Unit.BasicQuickCheckTestsSpec
+        Test.Unit.BasicQuickCheckTestsSpec,
+
+        -- New Comprehensive Test Modules (2026) - 60 test cases
+        Test.Unit.TestUtilsStringProcessingSpec,
+        Test.Unit.TestSourceLocationMathSpec,
+        Test.Unit.TestParserBasicFunctionsSpec,
+        Test.Unit.NewEnhancedCompilerIRConsistencySpec,
+        Test.Unit.TestErrorHandlerPropertiesSpec,
+        Test.Unit.NewEnhancedOwnershipTransitivitySpec,
+        Test.Unit.TestDependenciesCycleDetectionSpec,
+        Test.Unit.TestDependentTypesValidationSpec,
+        Test.Unit.NewEnhancedIntegrationEndToEndSpec,
+        Test.Unit.NewEnhancedPerformanceRegressionSpec
         
     build-depends:
         base >=4.7 && <5,
