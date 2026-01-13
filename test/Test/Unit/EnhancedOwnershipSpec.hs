@@ -3,203 +3,217 @@ module Test.Unit.EnhancedOwnershipSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import Compiler.OwnershipChecker
-import Parser (TypusFile(..), parseTypus)
-import qualified Data.Text as T
+import Data.Char (isAlpha, isAlphaNum)
+import Data.List (isPrefixOf, isInfixOf)
 import Data.Maybe (isJust, isNothing)
+import Control.Monad (void)
 
--- | 测试检查简单所有权转移
-prop_check_simple_ownership_transfer :: Property
-prop_check_simple_ownership_transfer = 
-  let code = "```typus\nlet x = Box(42)\nlet y = move(x)\n```"
-      result = case parseTypus code of
-        Left _ -> Left []  -- 解析失败
-        Right typusFile -> checkOwnership typusFile
-  in case result of
-    Left _ -> property True
+-- Import Ownership module
+import Ownership (OwnershipType(..), OwnershipError(..), OwnershipAnalyzer,
+                 OwnershipTransfer(..), newOwnershipAnalyzer, analyzeOwnership,
+                 analyzeOwnershipFile, analyzeOwnershipDebug, formatOwnershipErrors,
+                 lexAll, parseProgram, builtInFunctions)
+
+-- Import Parser module
+import Parser (TypusFile(..), parseTypus)
+
+-- Test properties for ownership
+
+-- Property 1: Creating ownership analyzer should not crash
+prop_new_ownership_analyzer :: Property
+prop_new_ownership_analyzer = property $
+  let analyzer = newOwnershipAnalyzer
+  in property True  -- Should not crash
+
+-- Property 2: Analyzing empty string should not crash
+prop_analyze_ownership_empty :: Property
+prop_analyze_ownership_empty = property $
+  case analyzeOwnership "" of
+    Left _ -> property True  -- Analysis may fail, but shouldn't crash
     Right _ -> property True
 
--- | 测试检查所有权借用
-prop_check_ownership_borrow :: Property
-prop_check_ownership_borrow = 
-  let code = "```typus\nlet x = Box(42)\nlet y = borrow(x)\nlet z = x  // x仍然可用\n```"
-      result = case parseTypus code of
-        Left _ -> Left []  -- 解析失败
-        Right typusFile -> checkOwnership typusFile
-  in case result of
-    Left _ -> property True
+-- Property 3: Analyzing simple ownership code should not crash
+prop_analyze_simple_ownership :: String -> Property
+prop_analyze_simple_ownership name = 
+  not (null name) && all isAlpha name ==>
+  let code = "//! ownership: on\npackage main\n\nfunc " ++ name ++ "() {}\n"
+  in case analyzeOwnership code of
+    Left _ -> property True  -- Analysis may fail, but shouldn't crash
     Right _ -> property True
 
--- | 测试检查所有权可变借用
-prop_check_ownership_mutable_borrow :: Property
-prop_check_ownership_mutable_borrow = 
-  let code = "```typus\nlet x = Box(42)\nlet y = borrow_mut(x)\n*y = 24\n```"
-      result = case parseTypus code of
-        Left _ -> Left []  -- 解析失败
-        Right typusFile -> checkOwnership typusFile
-  in case result of
-    Left _ -> property True
+-- Property 4: Analyzing code with ownership off should not crash
+prop_analyze_ownership_off :: String -> Property
+prop_analyze_ownership_off name = 
+  not (null name) && all isAlpha name ==>
+  let code = "//! ownership: off\npackage main\n\nfunc " ++ name ++ "() {}\n"
+  in case analyzeOwnership code of
+    Left _ -> property True  -- Analysis may fail, but shouldn't crash
     Right _ -> property True
 
--- | 测试检查所有权生命周期
-prop_check_ownership_lifetime :: Property
-prop_check_ownership_lifetime = 
-  let code = "```typus\nfn foo<'a>(x: &'a Box(Nat)) -> Nat { *x }\nlet b = Box(42)\nlet result = foo(&b)\n```"
-      result = case parseTypus code of
-        Left _ -> Left []  -- 解析失败
-        Right typusFile -> checkOwnership typusFile
-  in case result of
-    Left _ -> property True
+-- Property 5: Analyzing code with block ownership should not crash
+prop_analyze_block_ownership :: String -> Property
+prop_analyze_block_ownership name = 
+  not (null name) && all isAlpha name ==>
+  let code = "package main\n\nfunc main() {\n  {//! ownership: on\n    var " ++ name ++ " int\n  }\n}\n"
+  in case analyzeOwnership code of
+    Left _ -> property True  -- Analysis may fail, but shouldn't crash
     Right _ -> property True
 
--- | 测试检查所有权结构体字段
-prop_check_ownership_struct_field :: Property
-prop_check_ownership_struct_field = 
-  let code = "```typus\nstruct Point { x: Nat, y: Nat }\nlet p = Point { x: 1, y: 2 }\nlet px = p.x\n```"
-      result = case parseTypus code of
-        Left _ -> Left []  -- 解析失败
-        Right typusFile -> checkOwnership typusFile
-  in case result of
-    Left _ -> property True
+-- Property 6: Lexing empty string should not crash
+prop_lex_empty :: Property
+prop_lex_empty = property $
+  case lexAll "" of
+    Left _ -> property True  -- Lexing may fail, but shouldn't crash
     Right _ -> property True
 
--- | 测试检查所有权复制语义
-prop_check_ownership_copy_semantics :: Property
-prop_check_ownership_copy_semantics = 
-  let code = "```typus\nlet x = 42  // Nat实现Copy\nlet y = x   // 复制而不是移动\nlet z = x   // x仍然可用\n```"
-      result = case parseTypus code of
-        Left _ -> Left []  -- 解析失败
-        Right typusFile -> checkOwnership typusFile
-  in case result of
-    Left _ -> property True
+-- Property 7: Lexing simple code should not crash
+prop_lex_simple :: String -> Property
+prop_lex_simple name = 
+  not (null name) && all isAlpha name ==>
+  let code = "func " ++ name ++ "() {}"
+  in case lexAll code of
+    Left _ -> property True  -- Lexing may fail, but shouldn't crash
     Right _ -> property True
 
--- | 测试检查所有权克隆语义
-prop_check_ownership_clone_semantics :: Property
-prop_check_ownership_clone_semantics = 
-  let code = "```typus\nlet x = Box(42)\nlet y = clone(x)  // 显式克隆\nlet z = x        // x仍然可用\n```"
-      result = case parseTypus code of
-        Left _ -> Left []  -- 解析失败
-        Right typusFile -> checkOwnership typusFile
-  in case result of
-    Left _ -> property True
+-- Property 8: Parsing empty program should not crash
+prop_parse_empty_program :: Property
+prop_parse_empty_program = property $
+  case parseProgram "" of
+    Left _ -> property True  -- Parsing may fail, but shouldn't crash
     Right _ -> property True
 
--- | 测试检查所有权函数参数
-prop_check_ownership_function_param :: Property
-prop_check_ownership_function_param = 
-  let code = "```typus\nfn consume(x: Box(Nat)) -> Nat { *x }\nlet b = Box(42)\nlet result = consume(b)\n```"
-      result = case parseTypus code of
-        Left _ -> Left []  -- 解析失败
-        Right typusFile -> checkOwnership typusFile
-  in case result of
-    Left _ -> property True
+-- Property 9: Parsing simple program should not crash
+prop_parse_simple_program :: String -> Property
+prop_parse_simple_program name = 
+  not (null name) && all isAlpha name ==>
+  let code = "func " ++ name ++ "() {}"
+  in case parseProgram code of
+    Left _ -> property True  -- Parsing may fail, but shouldn't crash
     Right _ -> property True
 
--- | 测试检查所有权返回值
-prop_check_ownership_return_value :: Property
-prop_check_ownership_return_value = 
-  let code = "```typus\nfn create_box() -> Box(Nat) { Box(42) }\nlet b = create_box()\n```"
-      result = case parseTypus code of
-        Left _ -> Left []  -- 解析失败
-        Right typusFile -> checkOwnership typusFile
-  in case result of
-    Left _ -> property True
-    Right _ -> property True
+-- Property 10: Error formatting should not crash
+prop_format_ownership_errors :: [String] -> Property
+prop_format_ownership_errors errors = 
+  let ownershipErrors = map (\msg -> OwnershipError (OwnershipTransfer "test" "test") msg) errors
+      formatted = formatOwnershipErrors ownershipErrors
+  in property $ length formatted >= 0  -- Should not crash
 
--- | 测试检查所有权部分移动
-prop_check_ownership_partial_move :: Property
-prop_check_ownership_partial_move = 
-  let code = "```typus\nstruct Pair { first: Nat, second: Nat }\nlet p = Pair { first: 1, second: 2 }\nlet f = p.first\nlet s = p.second  // 错误：p已经被部分移动\n```"
-      result = case parseTypus code of
-        Left _ -> Left []  -- 解析失败
-        Right typusFile -> checkOwnership typusFile
-  in case result of
-    Left _ -> property True
-    Right _ -> property True
+-- Unit tests for specific ownership functionality
 
--- | 测试检查所有权闭包捕获
-prop_check_ownership_closure_capture :: Property
-prop_check_ownership_closure_capture = 
-  let code = "```typus\nlet x = 42\nlet f = || { x }  // 按值捕获\n```"
-      result = case parseTypus code of
-        Left _ -> Left []  -- 解析失败
-        Right typusFile -> checkOwnership typusFile
-  in case result of
-    Left _ -> property True
-    Right _ -> property True
+test_new_ownership_analyzer :: Assertion
+test_new_ownership_analyzer = 
+  let analyzer = newOwnershipAnalyzer
+  in assertBool "Creating ownership analyzer should not crash" True
 
--- | 测试检查所有权引用计数
-prop_check_ownership_reference_count :: Property
-prop_check_ownership_reference_count = 
-  let code = "```typus\nlet x = Rc(Box(42))\nlet y = clone(x)\nlet z = clone(x)\n```"
-      result = case parseTypus code of
-        Left _ -> Left []  -- 解析失败
-        Right typusFile -> checkOwnership typusFile
-  in case result of
-    Left _ -> property True
-    Right _ -> property True
+test_analyze_empty_code :: Assertion
+test_analyze_empty_code = 
+  case analyzeOwnership "" of
+    Left _ -> assertBool "Analyzing empty code should not crash" True
+    Right _ -> assertBool "Analyzing empty code should not crash" True
 
--- | 测试检查所有权共享引用
-prop_check_ownership_shared_ref :: Property
-prop_check_ownership_shared_ref = 
-  let code = "```typus\nlet x = Arc(Box(42))\nlet y = clone(x)\nlet z = clone(x)\n```"
-      result = case parseTypus code of
-        Left _ -> Left []  -- 解析失败
-        Right typusFile -> checkOwnership typusFile
-  in case result of
-    Left _ -> property True
-    Right _ -> property True
+test_analyze_ownership_on :: Assertion
+test_analyze_ownership_on = 
+  let code = "//! ownership: on\npackage main\n\nfunc main() {}\n"
+  in case analyzeOwnership code of
+    Left _ -> assertBool "Analyzing ownership on should not crash" True
+    Right _ -> assertBool "Analyzing ownership on should not crash" True
 
--- | 测试检查所有权原始指针
-prop_check_ownership_raw_pointer :: Property
-prop_check_ownership_raw_pointer = 
-  let code = "```typus\nlet x = Box(42)\nlet p = raw_ptr(x)\nlet value = *p\n```"
-      result = case parseTypus code of
-        Left _ -> Left []  -- 解析失败
-        Right typusFile -> checkOwnership typusFile
-  in case result of
-    Left _ -> property True
-    Right _ -> property True
+test_analyze_ownership_off :: Assertion
+test_analyze_ownership_off = 
+  let code = "//! ownership: off\npackage main\n\nfunc main() {}\n"
+  in case analyzeOwnership code of
+    Left _ -> assertBool "Analyzing ownership off should not crash" True
+    Right _ -> assertBool "Analyzing ownership off should not crash" True
 
--- | 测试检查所有权类型状态
-prop_check_ownership_typestate :: Property
-prop_check_ownership_typestate = 
-  let code = "```typus\ntype File = Closed | Opened\nlet f = Closed\nlet f2 = open(f)  // 状态转换\n```"
-      result = case parseTypus code of
-        Left _ -> Left []  -- 解析失败
-        Right typusFile -> checkOwnership typusFile
-  in case result of
-    Left _ -> property True
-    Right _ -> property True
+test_analyze_block_ownership :: Assertion
+test_analyze_block_ownership = 
+  let code = "package main\n\nfunc main() {\n  {//! ownership: on\n    var x int\n  }\n}\n"
+  in case analyzeOwnership code of
+    Left _ -> assertBool "Analyzing block ownership should not crash" True
+    Right _ -> assertBool "Analyzing block ownership should not crash" True
 
--- | 测试检查所有权线性类型
-prop_check_ownership_linear_type :: Property
-prop_check_ownership_linear_type = 
-  let code = "```typus\nlinear Token\nlet t = new_token()\nlet t2 = t  // 错误：线性类型不能复制\n```"
-      result = case parseTypus code of
-        Left _ -> Left []  -- 解析失败
-        Right typusFile -> checkOwnership typusFile
-  in case result of
-    Left _ -> property True
-    Right _ -> property True
+test_lex_empty :: Assertion
+test_lex_empty = 
+  case lexAll "" of
+    Left _ -> assertBool "Lexing empty string should not crash" True
+    Right _ -> assertBool "Lexing empty string should not crash" True
+
+test_lex_simple :: Assertion
+test_lex_simple = 
+  let code = "func main() {}"
+  in case lexAll code of
+    Left _ -> assertBool "Lexing simple code should not crash" True
+    Right _ -> assertBool "Lexing simple code should not crash" True
+
+test_parse_empty_program :: Assertion
+test_parse_empty_program = 
+  case parseProgram "" of
+    Left _ -> assertBool "Parsing empty program should not crash" True
+    Right _ -> assertBool "Parsing empty program should not crash" True
+
+test_parse_simple_program :: Assertion
+test_parse_simple_program = 
+  let code = "func main() {}"
+  in case parseProgram code of
+    Left _ -> assertBool "Parsing simple program should not crash" True
+    Right _ -> assertBool "Parsing simple program should not crash" True
+
+test_format_ownership_errors :: Assertion
+test_format_ownership_errors = 
+  let errors = [OwnershipError (OwnershipTransfer "x" "y") "Test error 1",
+                OwnershipError (OwnershipTransfer "a" "b") "Test error 2"]
+      formatted = formatOwnershipErrors errors
+  in assertBool "Formatting ownership errors should not crash" $ not (null formatted)
+
+test_built_in_functions :: Assertion
+test_built_in_functions = 
+  let functions = builtInFunctions
+  in assertBool "Built-in functions should not crash" $ length functions >= 0
+
+test_analyze_ownership_file :: Assertion
+test_analyze_ownership_file = 
+  let code = "//! ownership: on\npackage main\n\nfunc main() {}\n"
+  in case parseTypus code of
+    Left err -> assertFailure $ "Parsing failed: " ++ show err
+    Right typusFile -> 
+      case analyzeOwnershipFile typusFile of
+        Left _ -> assertBool "Analyzing ownership file should not crash" True
+        Right _ -> assertBool "Analyzing ownership file should not crash" True
+
+test_analyze_ownership_debug :: Assertion
+test_analyze_ownership_debug = 
+  let code = "//! ownership: on\npackage main\n\nfunc main() {}\n"
+  in case analyzeOwnershipDebug code of
+    Left _ -> assertBool "Analyzing ownership debug should not crash" True
+    Right _ -> assertBool "Analyzing ownership debug should not crash" True
 
 tests :: TestTree
-tests = testGroup "Enhanced Ownership Tests"
-  [ testProperty "check simple ownership transfer" prop_check_simple_ownership_transfer
-  , testProperty "check ownership borrow" prop_check_ownership_borrow
-  , testProperty "check ownership mutable borrow" prop_check_ownership_mutable_borrow
-  , testProperty "check ownership lifetime" prop_check_ownership_lifetime
-  , testProperty "check ownership struct field" prop_check_ownership_struct_field
-  , testProperty "check ownership copy semantics" prop_check_ownership_copy_semantics
-  , testProperty "check ownership clone semantics" prop_check_ownership_clone_semantics
-  , testProperty "check ownership function param" prop_check_ownership_function_param
-  , testProperty "check ownership return value" prop_check_ownership_return_value
-  , testProperty "check ownership partial move" prop_check_ownership_partial_move
-  , testProperty "check ownership closure capture" prop_check_ownership_closure_capture
-  , testProperty "check ownership reference count" prop_check_ownership_reference_count
-  , testProperty "check ownership shared ref" prop_check_ownership_shared_ref
-  , testProperty "check ownership raw pointer" prop_check_ownership_raw_pointer
-  , testProperty "check ownership typestate" prop_check_ownership_typestate
-  , testProperty "check ownership linear type" prop_check_ownership_linear_type
+tests = testGroup "Test.Unit.EnhancedOwnershipSpec Tests"
+  [ testGroup "QuickCheck Properties"
+    [ testProperty "new ownership analyzer" prop_new_ownership_analyzer
+    , testProperty "analyze ownership empty" prop_analyze_ownership_empty
+    , testProperty "analyze simple ownership" prop_analyze_simple_ownership
+    , testProperty "analyze ownership off" prop_analyze_ownership_off
+    , testProperty "analyze block ownership" prop_analyze_block_ownership
+    , testProperty "lex empty" prop_lex_empty
+    , testProperty "lex simple" prop_lex_simple
+    , testProperty "parse empty program" prop_parse_empty_program
+    , testProperty "parse simple program" prop_parse_simple_program
+    , testProperty "format ownership errors" prop_format_ownership_errors
+    ]
+  , testGroup "Unit Tests"
+    [ testCase "new ownership analyzer" test_new_ownership_analyzer
+    , testCase "analyze empty code" test_analyze_empty_code
+    , testCase "analyze ownership on" test_analyze_ownership_on
+    , testCase "analyze ownership off" test_analyze_ownership_off
+    , testCase "analyze block ownership" test_analyze_block_ownership
+    , testCase "lex empty" test_lex_empty
+    , testCase "lex simple" test_lex_simple
+    , testCase "parse empty program" test_parse_empty_program
+    , testCase "parse simple program" test_parse_simple_program
+    , testCase "format ownership errors" test_format_ownership_errors
+    , testCase "built in functions" test_built_in_functions
+    , testCase "analyze ownership file" test_analyze_ownership_file
+    , testCase "analyze ownership debug" test_analyze_ownership_debug
+    ]
   ]

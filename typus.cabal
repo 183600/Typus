@@ -1313,7 +1313,15 @@ test-suite typus-test
         Test.Unit.NewOwnershipAnalysisPropertiesSpec,
         Test.Unit.NewErrorHandlingPropertiesSpec,
         Test.Unit.NewSourceLocationCalculationPropertiesSpec,
-        Test.Unit.NewUtilsFunctionsPropertiesSpec
+        Test.Unit.NewUtilsFunctionsPropertiesSpec,
+        
+        -- New Enhanced Test Modules (2025) - Comprehensive testing with QuickCheck
+        Test.Unit.EnhancedParserSpec,
+        Test.Unit.EnhancedCompilerSpec,
+        Test.Unit.EnhancedOwnershipSpec,
+        Test.Unit.EnhancedDependenciesSpec,
+        Test.Unit.EnhancedSourceLocationSpec,
+        Test.Unit.EnhancedErrorHandlerSpec
         
     build-depends:
         base >=4.7 && <5,

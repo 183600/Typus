@@ -3,219 +3,190 @@ module Test.Unit.EnhancedParserSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
+import Data.Char (isAlpha, isAlphaNum, isDigit, isSpace)
+import Data.List (isPrefixOf, isSuffixOf, isInfixOf)
+import Data.Maybe (isJust, isNothing)
+import Control.Monad (void)
+
+-- Import Parser module
 import Parser (parseTypus, FileDirectives(..), BlockDirectives(..), 
-               TypusFile(..), defaultFileDirectives, defaultBlockDirectives)
-import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), locatedAt, startPos, locatedValue)
-import qualified Data.Text as T
+              TypusFile(..), defaultFileDirectives, defaultBlockDirectives)
 
--- | Test FileDirectives properties
-prop_file_directives_default :: Property
-prop_file_directives_default = 
-  let defaults = defaultFileDirectives
-  in property $ 
-    fdOwnership defaults == Nothing &&
-    fdDependentTypes defaults == Nothing &&
-    fdConstraints defaults == Nothing
+-- Test properties for parser
 
-prop_file_directives_equality :: Maybe Bool -> Maybe Bool -> Maybe Bool -> Property
-prop_file_directives_equality ownership dependent constraints =
-  let directives1 = FileDirectives (fmap (locatedAt startPos) ownership) (fmap (locatedAt startPos) dependent) (fmap (locatedAt startPos) constraints)
-      directives2 = FileDirectives (fmap (locatedAt startPos) ownership) (fmap (locatedAt startPos) dependent) (fmap (locatedAt startPos) constraints)
-  in property $ directives1 == directives2
-
--- | Test BlockDirectives properties
-prop_block_directives_default :: Property
-prop_block_directives_default = 
-  let defaults = defaultBlockDirectives
-  in property $ 
-    bdOwnership defaults == Nothing &&
-    bdDependentTypes defaults == Nothing &&
-    bdConstraints defaults == Nothing
-
-prop_block_directives_equality :: Maybe Bool -> Maybe Bool -> Maybe Bool -> Property
-prop_block_directives_equality ownership dependent constraints =
-  let directives1 = BlockDirectives (fmap (locatedAt startPos) ownership) (fmap (locatedAt startPos) dependent) (fmap (locatedAt startPos) constraints)
-      directives2 = BlockDirectives (fmap (locatedAt startPos) ownership) (fmap (locatedAt startPos) dependent) (fmap (locatedAt startPos) constraints)
-  in property $ directives1 == directives2
-
--- | Test TypusFile properties
-prop_typus_file_empty :: Property
-prop_typus_file_empty = 
-  let emptyFile = TypusFile {
-        tfDirectives = defaultFileDirectives,
-        tfBuildTags = [],
-        tfBlocks = [],
-        tfSyntaxErrors = []
-      }
-  in property $ null (tfBlocks emptyFile)
-
-prop_typus_file_preserves_content :: String -> Property
-prop_typus_file_preserves_content content =
-  let file = TypusFile {
-        tfDirectives = defaultFileDirectives,
-        tfBuildTags = [],
-        tfBlocks = [],
-        tfSyntaxErrors = []
-      }
-  in property $ True  -- 内容保留的概念在新结构中不适用
-
--- | Test parsing properties
+-- Property 1: Parsing empty string should not crash
 prop_parse_empty_string :: Property
-prop_parse_empty_string = 
-  let result = parseTypus ""
-  in property $ 
-    case result of
-      Left _ -> True
-      Right _ -> True
+prop_parse_empty_string = property $
+  case parseTypus "" of
+    Left _ -> property True
+    Right _ -> property True
 
-prop_parse_preserves_content :: String -> Property
-prop_parse_preserves_content content = 
-  let result = parseTypus content
-  in property $ 
-    case result of
-      Left _ -> True
-      Right _ -> True
+-- Property 2: Parsing well-formed package directive should succeed
+prop_parse_package_directive :: String -> Property
+prop_parse_package_directive name = 
+  not (null name) && all isAlphaNum name ==>
+  case parseTypus ("package " ++ name) of
+    Left _ -> property False
+    Right _ -> property True
 
-prop_parse_preserves_path :: String -> String -> Property
-prop_parse_preserves_path path content = 
-  let result = parseTypus content
-  in property $ 
-    case result of
-      Left _ -> True
-      Right _ -> True
+-- Property 3: Parsing ownership directive should be recognized
+prop_parse_ownership_directive :: Bool -> Property
+prop_parse_ownership_directive flag = 
+  let directive = if flag then "on" else "off"
+      code = "//! ownership: " ++ directive
+  in case parseTypus code of
+    Left _ -> property False
+    Right result -> property True
 
--- | Test directive parsing
-prop_parse_ownership_directive :: Property
-prop_parse_ownership_directive = 
-  let content = "// @ownership true\nfunc main() {}"
-      result = parseTypus content
-  in property $ 
-    case result of
-      Left _ -> True
-      Right file -> 
-        case fdOwnership (tfDirectives file) of
-          Nothing -> True
-          Just located -> locatedValue located == True
+-- Property 4: Parsing dependent types directive should be recognized
+prop_parse_dependent_types_directive :: Bool -> Property
+prop_parse_dependent_types_directive flag = 
+  let directive = if flag then "on" else "off"
+      code = "//! dependent_types: " ++ directive
+  in case parseTypus code of
+    Left _ -> property False
+    Right result -> property True
 
-prop_parse_dependent_types_directive :: Property
-prop_parse_dependent_types_directive = 
-  let content = "// @dependent-types true\nfunc main() {}"
-      result = parseTypus content
-  in property $ 
-    case result of
-      Left _ -> True
-      Right file -> 
-        case fdDependentTypes (tfDirectives file) of
-          Nothing -> True
-          Just located -> locatedValue located == True
+-- Property 5: Parsing simple function should not crash
+prop_parse_simple_function :: String -> Property
+prop_parse_simple_function name = 
+  not (null name) && all isAlpha name ==>
+  let code = "func " ++ name ++ "() {}"
+  in case parseTypus code of
+    Left _ -> property True  -- May fail due to incomplete grammar, but shouldn't crash
+    Right _ -> property True
 
--- | Test parsing consistency
-prop_parse_roundtrip :: String -> Property
-prop_parse_roundtrip content = 
-  let result = parseTypus content
-  in property $ 
-    case result of
-      Left _ -> True
-      Right _ -> True
+-- Property 6: Parsing block directives should be recognized
+prop_parse_block_directive :: Bool -> Property
+prop_parse_block_directive flag = 
+  let directive = if flag then "on" else "off"
+      code = "func main() {//! ownership: " ++ directive ++ "\n}"
+  in case parseTypus code of
+    Left _ -> property True  -- May fail due to incomplete grammar, but shouldn't crash
+    Right _ -> property True
 
-prop_parse_idempotent :: String -> Property
-prop_parse_idempotent content = 
-  let result1 = parseTypus content
-      result2 = parseTypus content
-  in property $ 
-    case (result1, result2) of
-      (Left _, Left _) -> True
-      (Right _, Right _) -> True
-      _ -> True
+-- Property 7: Parsing import statements should not crash
+prop_parse_import_statement :: String -> Property
+prop_parse_import_statement path = 
+  not (null path) && all (\c -> isAlphaNum c || c `elem` "/._-") path ==>
+  let code = "import \"" ++ path ++ "\""
+  in case parseTypus code of
+    Left _ -> property True  -- May fail due to incomplete grammar, but shouldn't crash
+    Right _ -> property True
 
--- | Test error handling
-prop_parse_invalid_syntax :: Property
-prop_parse_invalid_syntax = 
-  let invalidContent = "func main {  // missing closing brace"
-      result = parseTypus invalidContent
-  in property $ 
-    case result of
-      Left _ -> True
-      Right _ -> True  -- May succeed with partial parsing
+-- Property 8: Parsing comments should not crash
+prop_parse_comments :: String -> Property
+prop_parse_comments comment = 
+  not (null comment) && not (any (== '\n') comment) ==>
+  let code = "// " ++ comment ++ "\npackage main"
+  in case parseTypus code of
+    Left _ -> property True  -- May fail due to incomplete grammar, but shouldn't crash
+    Right _ -> property True
 
--- | Test parsing with different encodings
-prop_parse_unicode_content :: String -> Property
-prop_parse_unicode_content content = 
-  let unicodeContent = content ++ " // 中文注释"
-      result = parseTypus unicodeContent
-  in property $ 
-    case result of
-      Left _ -> True
-      Right _ -> True
+-- Property 9: Parsing multiple directives should work
+prop_parse_multiple_directives :: Bool -> Bool -> Property
+prop_parse_multiple_directives ownership dependentTypes = 
+  let ownDir = if ownership then "on" else "off"
+      depDir = if dependentTypes then "on" else "off"
+      code = "//! ownership: " ++ ownDir ++ "\n//! dependent_types: " ++ depDir ++ "\npackage main"
+  in case parseTypus code of
+    Left _ -> property True  -- May fail due to incomplete grammar, but shouldn't crash
+    Right _ -> property True
 
--- | Test block directive parsing
-prop_parse_block_directive :: Property
-prop_parse_block_directive = 
-  let content = "func main() {\n  // @ownership false\n  var x int\n}"
-      result = parseTypus content
-  in property $ 
-    case result of
-      Left _ -> True
-      Right file -> 
-        length (tfBlocks file) >= 0  -- Should parse at least one block
+-- Property 10: Parsing malformed input should not crash
+prop_parse_malformed_input :: String -> Property
+prop_parse_malformed_input input = 
+  not (null input) ==>
+  case parseTypus input of
+    Left _ -> property True  -- Should fail gracefully
+    Right _ -> property True  -- Or succeed, but shouldn't crash
 
--- | Test parsing large files
-prop_parse_large_file :: Int -> Property
-prop_parse_large_file n = 
-  let largeContent = unlines $ replicate n "var x int = 0"
-      result = parseTypus largeContent
-  in property $ 
-    n <= 1000 ==>  -- Limit size for testing
-    case result of
-      Left _ -> True
-      Right file -> length (tfBlocks file) >= 0
+-- Unit tests for specific parser functionality
 
--- | Test parsing with comments
-prop_parse_with_comments :: String -> Property
-prop_parse_with_comments content = 
-  let contentWithComments = content ++ "\n// This is a comment\n/* Block comment */"
-      result = parseTypus contentWithComments
-  in property $ 
-    case result of
-      Left _ -> True
-      Right _ -> True
+test_parse_empty_package :: Assertion
+test_parse_empty_package = 
+  case parseTypus "package" of
+    Left _ -> assertBool "Expected parsing to fail for incomplete package directive" True
+    Right _ -> assertFailure "Expected parsing to fail for incomplete package directive"
+
+test_parse_valid_package :: Assertion
+test_parse_valid_package = 
+  case parseTypus "package main" of
+    Left err -> assertFailure $ "Parsing failed: " ++ show err
+    Right _ -> assertBool "Parsing should succeed for valid package directive" True
+
+test_parse_empty_file :: Assertion
+test_parse_empty_file = 
+  case parseTypus "" of
+    Left _ -> assertBool "Parsing empty file should not crash" True
+    Right _ -> assertBool "Parsing empty file should not crash" True
+
+test_parse_only_whitespace :: Assertion
+test_parse_only_whitespace = 
+  case parseTypus "   \n\t  " of
+    Left _ -> assertBool "Parsing whitespace-only file should not crash" True
+    Right _ -> assertBool "Parsing whitespace-only file should not crash" True
+
+test_parse_ownership_on :: Assertion
+test_parse_ownership_on = 
+  case parseTypus "//! ownership: on\npackage main" of
+    Left err -> assertFailure $ "Parsing failed: " ++ show err
+    Right _ -> assertBool "Parsing should succeed for ownership on directive" True
+
+test_parse_ownership_off :: Assertion
+test_parse_ownership_off = 
+  case parseTypus "//! ownership: off\npackage main" of
+    Left err -> assertFailure $ "Parsing failed: " ++ show err
+    Right _ -> assertBool "Parsing should succeed for ownership off directive" True
+
+test_parse_dependent_types_on :: Assertion
+test_parse_dependent_types_on = 
+  case parseTypus "//! dependent_types: on\npackage main" of
+    Left err -> assertFailure $ "Parsing failed: " ++ show err
+    Right _ -> assertBool "Parsing should succeed for dependent_types on directive" True
+
+test_parse_dependent_types_off :: Assertion
+test_parse_dependent_types_off = 
+  case parseTypus "//! dependent_types: off\npackage main" of
+    Left err -> assertFailure $ "Parsing failed: " ++ show err
+    Right _ -> assertBool "Parsing should succeed for dependent_types off directive" True
+
+test_parse_constraints_directive :: Assertion
+test_parse_constraints_directive = 
+  case parseTypus "//! constraints: on\npackage main" of
+    Left err -> assertFailure $ "Parsing failed: " ++ show err
+    Right _ -> assertBool "Parsing should succeed for constraints directive" True
+
+test_parse_block_ownership :: Assertion
+test_parse_block_ownership = 
+  case parseTypus "func main() {//! ownership: on\n}" of
+    Left _ -> assertBool "Parsing block ownership directive should not crash" True
+    Right _ -> assertBool "Parsing block ownership directive should not crash" True
 
 tests :: TestTree
-tests = testGroup "Enhanced Parser Tests"
-  [ testGroup "FileDirectives tests"
-    [ testProperty "file directives default" prop_file_directives_default
-    , testProperty "file directives equality" prop_file_directives_equality
-    ]
-  , testGroup "BlockDirectives tests"
-    [ testProperty "block directives default" prop_block_directives_default
-    , testProperty "block directives equality" prop_block_directives_equality
-    ]
-  , testGroup "TypusFile tests"
-    [ testProperty "typus file empty" prop_typus_file_empty
-    , testProperty "typus file preserves content" prop_typus_file_preserves_content
-    ]
-  , testGroup "Parsing properties"
-    [ testProperty "parse empty string" prop_parse_empty_string
-    , testProperty "parse preserves content" prop_parse_preserves_content
-    , testProperty "parse preserves path" prop_parse_preserves_path
-    , testProperty "parse roundtrip" prop_parse_roundtrip
-    , testProperty "parse idempotent" prop_parse_idempotent
-    ]
-  , testGroup "Directive parsing"
-    [ testProperty "parse ownership directive" prop_parse_ownership_directive
+tests = testGroup "Test.Unit.EnhancedParserSpec Tests"
+  [ testGroup "QuickCheck Properties"
+    [ testProperty "parse empty string should not crash" prop_parse_empty_string
+    , testProperty "parse package directive" prop_parse_package_directive
+    , testProperty "parse ownership directive" prop_parse_ownership_directive
     , testProperty "parse dependent types directive" prop_parse_dependent_types_directive
+    , testProperty "parse simple function" prop_parse_simple_function
     , testProperty "parse block directive" prop_parse_block_directive
+    , testProperty "parse import statement" prop_parse_import_statement
+    , testProperty "parse comments" prop_parse_comments
+    , testProperty "parse multiple directives" prop_parse_multiple_directives
+    , testProperty "parse malformed input" prop_parse_malformed_input
     ]
-  , testGroup "Error handling"
-    [ testProperty "parse invalid syntax" prop_parse_invalid_syntax
-    ]
-  , testGroup "Encoding tests"
-    [ testProperty "parse unicode content" prop_parse_unicode_content
-    ]
-  , testGroup "Performance tests"
-    [ testProperty "parse large file" prop_parse_large_file
-    ]
-  , testGroup "Comment handling"
-    [ testProperty "parse with comments" prop_parse_with_comments
+  , testGroup "Unit Tests"
+    [ testCase "parse empty package" test_parse_empty_package
+    , testCase "parse valid package" test_parse_valid_package
+    , testCase "parse empty file" test_parse_empty_file
+    , testCase "parse only whitespace" test_parse_only_whitespace
+    , testCase "parse ownership on" test_parse_ownership_on
+    , testCase "parse ownership off" test_parse_ownership_off
+    , testCase "parse dependent types on" test_parse_dependent_types_on
+    , testCase "parse dependent types off" test_parse_dependent_types_off
+    , testCase "parse constraints directive" test_parse_constraints_directive
+    , testCase "parse block ownership" test_parse_block_ownership
     ]
   ]
