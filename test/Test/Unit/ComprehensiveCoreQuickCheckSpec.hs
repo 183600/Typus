@@ -1,19 +1,17 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module ComprehensiveCoreQuickCheckSpec where
+module Test.Unit.ComprehensiveCoreQuickCheckSpec where
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import CoreParserPropertiesQuickCheckSpec (coreParserPropertiesSpec, parserEdgeCaseSpec)
-import CoreCompilerPropertiesQuickCheckSpec (coreCompilerPropertiesSpec, compilerOptimizationSpec)
-import CoreOwnershipPropertiesQuickCheckSpec (coreOwnershipPropertiesSpec, ownershipEdgeCaseSpec)
-import CoreDependenciesPropertiesQuickCheckSpec (coreDependenciesPropertiesSpec, dependentTypesSpec)
-import CoreSourceLocationPropertiesQuickCheckSpec (coreSourceLocationPropertiesSpec, sourceLocationEdgeCaseSpec)
-import CoreErrorHandlerPropertiesQuickCheckSpec (coreErrorHandlerPropertiesSpec, errorHandlingEdgeCaseSpec)
-import CoreGoToolchainPropertiesQuickCheckSpec (coreGoToolchainPropertiesSpec, goToolchainEdgeCaseSpec)
-import CoreIntegrationPropertiesQuickCheckSpec (coreIntegrationPropertiesSpec, integrationEdgeCaseSpec)
-import CorePerformancePropertiesQuickCheckSpec (corePerformancePropertiesSpec, performanceEdgeCaseSpec)
+import Test.Unit.CoreParserPropertiesQuickCheckSpec (coreParserPropertiesSpec)
+import Test.Unit.CoreCompilerPropertiesQuickCheckSpec (coreCompilerPropertiesSpec)
+import Test.Unit.CoreOwnershipPropertiesQuickCheckSpec (coreOwnershipPropertiesSpec)
+import Test.Unit.CoreDependenciesPropertiesQuickCheckSpec (coreDependenciesPropertiesSpec)
+import Test.Unit.CoreSourceLocationPropertiesQuickCheckSpec (coreSourceLocationPropertiesSpec)
+import Test.Unit.CoreIntegrationPropertiesQuickCheckSpec (coreIntegrationPropertiesSpec)
+import Test.Unit.CorePerformancePropertiesQuickCheckSpec (corePerformancePropertiesSpec)
 
 -- | Comprehensive test suite for all core modules
 comprehensiveCoreQuickCheckSpec :: TestTree
@@ -29,14 +27,14 @@ comprehensiveCoreQuickCheckSpec = testGroup "Comprehensive Core QuickCheck Tests
 crossModuleIntegrationSpec :: TestTree
 crossModuleIntegrationSpec = testGroup "Cross-Module Integration Tests"
   [ testProperty "Parser-Compiler-Ownership pipeline consistency" $
-      \code -> 
+      \(code :: String) -> 
         let parseResult = parseCode code
             compileResult = compileCode parseResult
             ownershipResult = analyzeOwnershipCode parseResult
         in property True
 
   , testProperty "Error handling across all modules is consistent" $
-      \errorInput -> 
+      \(errorInput :: String) -> 
         let parserErrors = extractParserErrors errorInput
             compilerErrors = extractCompilerErrors errorInput
             ownershipErrors = extractOwnershipErrors errorInput

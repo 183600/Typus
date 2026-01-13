@@ -1,20 +1,29 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module CoreDependenciesPropertiesQuickCheckSpec where
+module Test.Unit.CoreDependenciesPropertiesQuickCheckSpec where
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import Dependencies (TypeVar(..), TypeConstraint(..), Substitution, TypeScheme(..))
+import Dependencies.TypeSystem (TypeVar(..), TypeConstraint(..), Substitution)
 import qualified Data.Text as T
 import Data.List (nub)
+import Test.QuickCheck (Arbitrary(..), oneof)
+
+-- Add Arbitrary instance for T.Text
+instance Arbitrary T.Text where
+  arbitrary = T.pack <$> arbitrary
+
+-- Add Arbitrary instance for TypeVar
+instance Arbitrary TypeVar where
+  arbitrary = oneof [TVVar <$> arbitrary, TVCon <$> arbitrary]
 
 -- | Test dependency properties with QuickCheck
 coreDependenciesPropertiesSpec :: TestTree
 coreDependenciesPropertiesSpec = testGroup "Core Dependencies Properties"
   [ testProperty "Type variables are unique" $
       \varName -> 
-        let typeVar = TypeVar varName
+        let typeVar = TVVar (T.unpack varName)
         in not (T.null varName) ==> property True
 
   , testCase "Type inference handles simple expressions" $ do
@@ -26,7 +35,7 @@ coreDependenciesPropertiesSpec = testGroup "Core Dependencies Properties"
     assertBool "Type inference works for functions" True
 
   , testProperty "Type unification is symmetric" $
-      \type1 type2 -> 
+      \(type1 :: TypeVar) (type2 :: TypeVar) -> 
         let unify1 = unifyTypes type1 type2
             unify2 = unifyTypes type2 type1
         in unify1 == unify2

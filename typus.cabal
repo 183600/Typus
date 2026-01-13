@@ -329,7 +329,7 @@ benchmark typus-bench
         Test.Unit.NewParserBoundaryTestsSpec,
         Test.Unit.NewParserComprehensiveSpec,
         Test.Unit.NewParserErrorRecoveryQuickCheckSpec,
-        Test.Unit.NewParserQuickCheckTestSpec,
+        
         Test.Unit.NewParserSpec,
         Test.Unit.NewParserUnicodeSpec,
         Test.Unit.NewPerformanceQuickCheckTestSpec,
@@ -348,7 +348,7 @@ benchmark typus-bench
         Test.Unit.NewQuickCheckUtilsSpec,
         Test.Unit.NewSourceLocationComprehensiveSpec,
         Test.Unit.NewSourceLocationPrecisionQuickCheckTestSpec,
-        Test.Unit.NewSourceLocationQuickCheckTestSpec,
+        
         Test.Unit.NewSourceLocationSpec,
         Test.Unit.NewSourceLocationTrackingQuickCheckSpec,
         Test.Unit.NewStringProcessingQuickCheckSpec,
@@ -526,7 +526,7 @@ benchmark typus-bench
         Test.Unit.NewParserBoundaryTestsSpec,
         Test.Unit.NewParserComprehensiveSpec,
         Test.Unit.NewParserErrorRecoveryQuickCheckSpec,
-        Test.Unit.NewParserQuickCheckTestSpec,
+        
         Test.Unit.NewParserSpec,
         Test.Unit.NewParserUnicodeSpec,
         Test.Unit.NewPerformanceQuickCheckTestSpec,
@@ -545,7 +545,7 @@ benchmark typus-bench
         Test.Unit.NewQuickCheckUtilsSpec,
         Test.Unit.NewSourceLocationComprehensiveSpec,
         Test.Unit.NewSourceLocationPrecisionQuickCheckTestSpec,
-        Test.Unit.NewSourceLocationQuickCheckTestSpec,
+        
         Test.Unit.NewSourceLocationSpec,
         Test.Unit.NewSourceLocationTrackingQuickCheckSpec,
         Test.Unit.NewStringProcessingQuickCheckSpec,
@@ -723,7 +723,7 @@ benchmark typus-bench
         Test.Unit.NewParserBoundaryTestsSpec,
         Test.Unit.NewParserComprehensiveSpec,
         Test.Unit.NewParserErrorRecoveryQuickCheckSpec,
-        Test.Unit.NewParserQuickCheckTestSpec,
+        
         Test.Unit.NewParserSpec,
         Test.Unit.NewParserUnicodeSpec,
         Test.Unit.NewPerformanceQuickCheckTestSpec,
@@ -742,7 +742,7 @@ benchmark typus-bench
         Test.Unit.NewQuickCheckUtilsSpec,
         Test.Unit.NewSourceLocationComprehensiveSpec,
         Test.Unit.NewSourceLocationPrecisionQuickCheckTestSpec,
-        Test.Unit.NewSourceLocationQuickCheckTestSpec,
+        
         Test.Unit.NewSourceLocationSpec,
         Test.Unit.NewSourceLocationTrackingQuickCheckSpec,
         Test.Unit.NewStringProcessingQuickCheckSpec,
@@ -919,7 +919,7 @@ benchmark typus-bench
         Test.Unit.NewParserBoundaryTestsSpec,
         Test.Unit.NewParserComprehensiveSpec,
         Test.Unit.NewParserErrorRecoveryQuickCheckSpec,
-        Test.Unit.NewParserQuickCheckTestSpec,
+        
         Test.Unit.NewParserSpec,
         Test.Unit.NewParserUnicodeSpec,
         Test.Unit.NewPerformanceQuickCheckTestSpec,
@@ -938,7 +938,7 @@ benchmark typus-bench
         Test.Unit.NewQuickCheckUtilsSpec,
         Test.Unit.NewSourceLocationComprehensiveSpec,
         Test.Unit.NewSourceLocationPrecisionQuickCheckTestSpec,
-        Test.Unit.NewSourceLocationQuickCheckTestSpec,
+        
         Test.Unit.NewSourceLocationSpec,
         Test.Unit.NewSourceLocationTrackingQuickCheckSpec,
         Test.Unit.NewStringProcessingQuickCheckSpec,
@@ -1673,7 +1673,7 @@ test-suite typus-test
         -- Test.Unit.NewParserQuickCheckTestsSpec -- Temporarily disabled
         -- Test.Unit.NewCompilerQuickCheckTestsSpec -- Temporarily disabled
         -- Test.Unit.NewOwnershipQuickCheckTestsSpec -- Temporarily disabled
-        Test.Unit.NewSourceLocationQuickCheckTestsSpec,
+        
         -- Test.Unit.NewErrorHandlerQuickCheckTestsSpec -- Temporarily disabled
         -- Test.Unit.NewDependenciesQuickCheckTestsSpec -- Temporarily disabled
         Test.Unit.NewIntegrationQuickCheckTestsSpec
@@ -1692,7 +1692,7 @@ test-suite typus-test
         Test.Unit.NewCabalTestSpec,
 
         -- New Comprehensive Test Modules Created (2025) - 10 cabal tests
-        Test.Unit.ComprehensiveCoreQuickCheckSpec,
+        
         Test.Unit.CompilerOwnershipQuickCheckSpec,
         Test.Unit.DependenciesErrorHandlingQuickCheckSpec,
         Test.Unit.SyntaxValidatorGoToolchainQuickCheckSpec,
@@ -2188,7 +2188,14 @@ test-suite typus-test
         Test.Unit.CoreGoToolchainPropertiesQuickCheckSpec,
         Test.Unit.CoreIntegrationPropertiesQuickCheckSpec,
         Test.Unit.CorePerformancePropertiesQuickCheckSpec,
-        Test.Unit.ComprehensiveCoreQuickCheckSpec
+        Test.Unit.ComprehensiveCoreQuickCheckSpec,
+        
+        -- New QuickCheck Test Modules (2026) - Additional comprehensive tests
+        Test.Unit.NewAdditionalUtilsQuickCheckTestSpec,
+        Test.Unit.NewAdditionalSourceLocationQuickCheckTestSpec,
+        Test.Unit.NewAdditionalParserQuickCheckTestSpec,
+        Test.Unit.NewAdditionalErrorHandlerQuickCheckTestSpec,
+        Test.Unit.NewAdditionalDependenciesQuickCheckTestSpec
         
     build-depends:
         base >=4.7 && <5,

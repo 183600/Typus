@@ -99,14 +99,20 @@ def fix_all_files():
     
     # Fix string literals
     content = re.sub(
-        r"generateGoCode = \"package main\\n\\nfunc main\(\) \\{\\n\\tfmt\.Println\\(\"Hello, World!\"\\)\\n\"",
-        "generateGoCode = T.pack \"package main\\n\\nfunc main() {\\n\\tfmt.Println(\\\"Hello, World!\\\")\\n}\"",
+        r"generateGoCode = \"package main",
+        "generateGoCode = T.pack \"package main",
         content
     )
     
     content = re.sub(
-        r"formatGoImports imports = T\.unlines \$ map \\imp -> \"import \\\"\" <> imp <> \"\\\"\"\"\" imports",
-        "formatGoImports imports = T.unlines $ map (\\imp -> T.pack \"import \\\"\" <> T.pack imp <> T.pack \"\\\"\") imports",
+        r"formatGoImports imports = T\.unlines \$ map",
+        "formatGoImports imports = T.unlines $ map",
+        content
+    )
+    
+    content = re.sub(
+        r"\\imp -> \"import \\\"" <> imp <> "\\\"\""",
+        "\\imp -> T.pack \"import \\\"" <> T.pack imp <> T.pack "\\\"\"",
         content
     )
     
@@ -117,14 +123,20 @@ def fix_all_files():
     )
     
     content = re.sub(
-        r"generateComplexType _ = \"type Complex struct \\{\\n\\tField int\\n\"",
-        "generateComplexType _ = T.pack \"type Complex struct {\\n\\tField int\\n}\"",
+        r"generateComplexType _ = \"type Complex struct",
+        "generateComplexType _ = T.pack \"type Complex struct",
         content
     )
     
     content = re.sub(
-        r"createNestedStructure depth = \"struct \\{\\n\" <> T\.replicate depth \"\\tNested struct \\{\\}\\n\" <> \"\"}"",
-        "createNestedStructure depth = T.pack \"struct {\\n\" <> T.replicate depth (T.pack \"\\tNested struct {}\\n\") <> T.pack \"}\"",
+        r"createNestedStructure depth = \"struct",
+        "createNestedStructure depth = T.pack \"struct",
+        content
+    )
+    
+    content = re.sub(
+        r"T\.replicate depth \"\\tNested",
+        "T.replicate depth (T.pack \"\\tNested",
         content
     )
     

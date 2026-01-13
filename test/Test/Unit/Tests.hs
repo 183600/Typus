@@ -52,6 +52,13 @@ import qualified Test.Unit.CoreIntegrationSpec as CoreIntegration
 -- Import additional QuickCheck test module
 import qualified Test.Unit.AdditionalQuickCheckTestsSpec as AdditionalQuickCheckTests
 
+-- Import new QuickCheck test modules (2026)
+import qualified Test.Unit.NewAdditionalUtilsQuickCheckTestSpec as NewAdditionalUtilsQuickCheckTest
+import qualified Test.Unit.NewAdditionalSourceLocationQuickCheckTestSpec as NewAdditionalSourceLocationQuickCheckTest
+import qualified Test.Unit.NewAdditionalParserQuickCheckTestSpec as NewAdditionalParserQuickCheckTest
+import qualified Test.Unit.NewAdditionalErrorHandlerQuickCheckTestSpec as NewAdditionalErrorHandlerQuickCheckTest
+import qualified Test.Unit.NewAdditionalDependenciesQuickCheckTestSpec as NewAdditionalDependenciesQuickCheckTest
+
 -- Import newly created comprehensive QuickCheck test modules (2025)
 import qualified Test.Unit.NewBasicTypesAndStringPropertiesSpec as BasicTypesAndStringProperties
 import qualified Test.Unit.NewParserAdvancedPropertiesSpec as ParserAdvancedProperties
@@ -124,5 +131,12 @@ tests = testGroup "Test.Unit.Tests Tests"
     CoreIntegration.tests,
     
     -- Additional QuickCheck tests
-    AdditionalQuickCheckTests.tests
+    AdditionalQuickCheckTests.tests,
+    
+    -- New QuickCheck test modules (2026)
+    NewAdditionalUtilsQuickCheckTest.newAdditionalUtilsQuickCheckTestSpec,
+    NewAdditionalSourceLocationQuickCheckTest.newAdditionalSourceLocationQuickCheckTestSpec,
+    NewAdditionalParserQuickCheckTest.newAdditionalParserQuickCheckTestSpec,
+    NewAdditionalErrorHandlerQuickCheckTest.newAdditionalErrorHandlerQuickCheckTestSpec,
+    NewAdditionalDependenciesQuickCheckTest.newAdditionalDependenciesQuickCheckTestSpec
   ]

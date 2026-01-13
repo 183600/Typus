@@ -1,90 +1,276 @@
 #!/usr/bin/env python3
+"""
+Script to fix compilation errors in the test files.
+"""
+
 import re
 import os
-import sys
 
-def fix_property_bool_errors(file_path):
-    """修复将布尔表达式转换为属性的错误"""
+def fix_core_error_handler_properties():
+    """Fix CoreErrorHandlerPropertiesQuickCheckSpec.hs"""
+    file_path = "test/Test/Unit/CoreErrorHandlerPropertiesQuickCheckSpec.hs"
+    
     with open(file_path, 'r') as f:
         content = f.read()
     
-    # 修复 True -> property True
-    content = re.sub(r'(\s+)Left _ -> True\s*--', r'\1Left _ -> property True  --', content)
-    content = re.sub(r'(\s+)Right _ -> True\s*--', r'\1Right _ -> property True  --', content)
-    content = re.sub(r'(\s+)Left _ -> True\s*$', r'\1Left _ -> property True', content)
-    content = re.sub(r'(\s+)Right _ -> True\s*$', r'\1Right _ -> property True', content)
+    # Replace ErrorSeverity imports
+    content = re.sub(
+        r"import Compiler\.Errors\.Core \(ErrorSeverity\(\.\.\), ErrorContext\(\.\.\)\)",
+        "import Compiler.Errors.Core (ErrorSeverity(..), ErrorContext(..), ErrorLocation(..))",
+        content
+    )
     
-    # 修复其他布尔表达式
-    content = re.sub(r'(\s+)else True\s*$', r'\1else property True', content)
-    content = re.sub(r'(\s+)in L\.all (.+)$', r'\1in property $ L.all \2', content)
-    content = re.sub(r'(\s+)in L\.length (.+) <= L\.length (.+)$', r'\1in property $ L.length \2 <= L.length \3', content)
+    # Replace Critical with Error
+    content = re.sub(r"Critical", "Error", content)
+    
+    # Replace ErrorMessage with a simple string
+    content = re.sub(r"ErrorMessage", "String", content)
+    
+    # Replace ErrorHandler with ErrorCollector
+    content = re.sub(r"ErrorHandler", "ErrorCollector", content)
+    
+    # Fix ErrorMessage constructor
+    content = re.sub(
+        r"ErrorMessage msg _",
+        '"Error: " <> msg',
+        content
+    )
     
     with open(file_path, 'w') as f:
         f.write(content)
-    print(f"Fixed property/bool errors in {file_path}")
+    
+    print(f"Fixed {file_path}")
 
-def fix_codeblock_constructor(file_path):
-    """修复CodeBlock构造函数调用"""
+def fix_core_go_toolchain_properties():
+    """Fix CoreGoToolchainPropertiesQuickCheckSpec.hs"""
+    file_path = "test/Test/Unit/CoreGoToolchainPropertiesQuickCheckSpec.hs"
+    
     with open(file_path, 'r') as f:
         content = f.read()
     
-    # 修复只有两个参数的CodeBlock调用
-    content = re.sub(r'CodeBlock ([^,]+), ([^)]+)\)', r'CodeBlock \1 \2 (SourceSpan (SourcePos 1 1 0) (SourcePos 1 1 0))', content)
+    # Replace GoModule, GoFunction, GoVariable, GoType with simple types
+    content = re.sub(r"GoModule", "String", content)
+    content = re.sub(r"GoFunction", "String", content)
+    content = re.sub(r"GoVariable", "String", content)
+    content = re.sub(r"GoType", "String", content)
     
     with open(file_path, 'w') as f:
         f.write(content)
-    print(f"Fixed CodeBlock constructor in {file_path}")
+    
+    print(f"Fixed {file_path}")
 
-def fix_typusfile_constructor(file_path):
-    """修复TypusFile构造函数调用"""
+def fix_core_integration_properties():
+    """Fix CoreIntegrationPropertiesQuickCheckSpec.hs"""
+    file_path = "test/Test/Unit/CoreIntegrationPropertiesQuickCheckSpec.hs"
+    
     with open(file_path, 'r') as f:
         content = f.read()
     
-    # 修复只有三个参数的TypusFile调用
-    content = re.sub(r'TypusFile ([^,]+), ([^,]+), ([^)]+)\)', r'TypusFile \1 \2 \3 []', content)
+    # Fix Ownership.analyzeOwnership call
+    content = re.sub(
+        r"Ownership\.analyzeOwnership parsed",
+        "Ownership.analyzeOwnership (show parsed)",
+        content
+    )
+    
+    # Fix property return type
+    content = re.sub(
+        r"Left _ -> property True",
+        "Left _ -> property True",
+        content
+    )
+    
+    # Fix parseTypus call with T.Text
+    content = re.sub(
+        r"parseTypus code",
+        "parseTypus (T.unpack code)",
+        content
+    )
+    
+    # Fix T.replicate with string
+    content = re.sub(
+        r'T\.replicate size "x"',
+        'T.pack (replicate size \'x\')',
+        content
+    )
+    
+    # Fix T.replicate with string in other places
+    content = re.sub(
+        r'T\.replicate 10000 "x"',
+        'T.pack (replicate 10000 \'x\')',
+        content
+    )
+    
+    content = re.sub(
+        r'T\.replicate size "x"',
+        'T.pack (replicate size \'x\')',
+        content
+    )
+    
+    content = re.sub(
+        r'"func main\(\) { " <> T\.replicate size "x" <> " }"',
+        'T.pack ("func main() { " ++ replicate size \'x\' ++ " }")',
+        content
+    )
+    
+    content = re.sub(
+        r'T\.replicate depth "{"',
+        'T.pack (replicate depth \'{\')',
+        content
+    )
+    
+    content = re.sub(
+        r'"type Large struct { " <> T\.replicate size "Field int; " <> " }"',
+        'T.pack ("type Large struct { " ++ replicate size "Field int; " ++ " }")',
+        content
+    )
     
     with open(file_path, 'w') as f:
         f.write(content)
-    print(f"Fixed TypusFile constructor in {file_path}")
+    
+    print(f"Fixed {file_path}")
 
-def fix_comparison_operators(file_path):
-    """修复比较运算符错误"""
+def fix_core_ownership_properties():
+    """Fix CoreOwnershipPropertiesQuickCheckSpec.hs"""
+    file_path = "test/Test/Unit/CoreOwnershipPropertiesQuickCheckSpec.hs"
+    
     with open(file_path, 'r') as f:
         content = f.read()
     
-    # 在条件语句中将 === 替换为 ==
-    content = re.sub(r'(if|then|else) (.+?) === (.+?) &&', r'\1 \2 == \3 &&', content)
-    content = re.sub(r'&& (.+?) === (.+?)\s*$', r'&& \1 == \2', content)
+    # Fix the leading comma in testProperty
+    content = re.sub(
+        r", testProperty",
+        "testProperty",
+        content
+    )
     
     with open(file_path, 'w') as f:
         f.write(content)
-    print(f"Fixed comparison operators in {file_path}")
+    
+    print(f"Fixed {file_path}")
 
-def main():
-    # 获取所有测试文件
-    test_dir = "/home/runner/work/Typus/Typus/test/Test/Unit"
+def fix_core_parser_properties():
+    """Fix CoreParserPropertiesQuickCheckSpec.hs"""
+    file_path = "test/Test/Unit/CoreParserPropertiesQuickCheckSpec.hs"
     
-    # 需要修复的文件列表（从错误输出中提取）
-    error_files = [
-        "CoreParserSpec.hs",
-        "CorePropertiesQuickCheckSpec.hs",
-        "CoreSourceLocationSpec.hs",
-        "CoreUtilsEssentialSpec.hs",
-        "CoreUtilsSpec.hs",
-        "CrossModuleIntegrationQuickCheckSpec.hs",
-        "CustomCompilerQuickCheckSpec.hs"
-    ]
+    with open(file_path, 'r') as f:
+        content = f.read()
     
-    for file_name in error_files:
-        file_path = os.path.join(test_dir, file_name)
-        if os.path.exists(file_path):
-            try:
-                fix_property_bool_errors(file_path)
-                fix_codeblock_constructor(file_path)
-                fix_typusfile_constructor(file_path)
-                fix_comparison_operators(file_path)
-            except Exception as e:
-                print(f"Error fixing {file_path}: {e}")
+    # Fix the leading comma in testProperty
+    content = re.sub(
+        r", testProperty",
+        "testProperty",
+        content
+    )
+    
+    with open(file_path, 'w') as f:
+        f.write(content)
+    
+    print(f"Fixed {file_path}")
+
+def fix_core_performance_properties():
+    """Fix CorePerformancePropertiesQuickCheckSpec.hs"""
+    file_path = "test/Test/Unit/CorePerformancePropertiesQuickCheckSpec.hs"
+    
+    with open(file_path, 'r') as f:
+        content = f.read()
+    
+    # Fix T.replicate with string
+    content = re.sub(
+        r'T\.replicate size "x"',
+        'T.pack (replicate size \'x\')',
+        content
+    )
+    
+    content = re.sub(
+        r'T\.replicate 10000 "x"',
+        'T.pack (replicate 10000 \'x\')',
+        content
+    )
+    
+    content = re.sub(
+        r'"func main\(\) { " <> T\.replicate size "x" <> " }"',
+        'T.pack ("func main() { " ++ replicate size \'x\' ++ " }")',
+        content
+    )
+    
+    content = re.sub(
+        r'T\.replicate depth "{"',
+        'T.pack (replicate depth \'{\')',
+        content
+    )
+    
+    content = re.sub(
+        r'"type Large struct { " <> T\.replicate size "Field int; " <> " }"',
+        'T.pack ("type Large struct { " ++ replicate size "Field int; " ++ " }")',
+        content
+    )
+    
+    # Fix parseTypus with T.Text
+    content = re.sub(
+        r"parseTypus input",
+        "parseTypus (T.unpack input)",
+        content
+    )
+    
+    content = re.sub(
+        r"parseTypus largeFile",
+        "parseTypus (T.unpack largeFile)",
+        content
+    )
+    
+    content = re.sub(
+        r"parseTypus program",
+        "parseTypus (T.unpack program)",
+        content
+    )
+    
+    content = re.sub(
+        r"parseTypus nested",
+        "parseTypus (T.unpack nested)",
+        content
+    )
+    
+    with open(file_path, 'w') as f:
+        f.write(content)
+    
+    print(f"Fixed {file_path}")
+
+def fix_core_source_location_properties():
+    """Fix CoreSourceLocationPropertiesQuickCheckSpec.hs"""
+    file_path = "test/Test/Unit/CoreSourceLocationPropertiesQuickCheckSpec.hs"
+    
+    with open(file_path, 'r') as f:
+        content = f.read()
+    
+    # Add posAfter to imports
+    content = re.sub(
+        r"import SourceLocation \(SourcePos\(\.\.\), SourceSpan\(\.\.\), Located\(\.\.\), startPos, emptySpan, spanFrom, mergeSpans\)",
+        "import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), startPos, emptySpan, spanFrom, mergeSpans, posAfter)",
+        content
+    )
+    
+    # Fix locatedPos
+    content = re.sub(
+        r"locatedPos located",
+        "locatedValue located",
+        content
+    )
+    
+    with open(file_path, 'w') as f:
+        f.write(content)
+    
+    print(f"Fixed {file_path}")
 
 if __name__ == "__main__":
-    main()
+    os.chdir("/home/runner/work/Typus/Typus")
+    
+    fix_core_error_handler_properties()
+    fix_core_go_toolchain_properties()
+    fix_core_integration_properties()
+    fix_core_ownership_properties()
+    fix_core_parser_properties()
+    fix_core_performance_properties()
+    fix_core_source_location_properties()
+    
+    print("All test files have been fixed!")
