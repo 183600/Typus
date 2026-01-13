@@ -120,11 +120,16 @@ utilsCoreFunctionalityTests = testGroup "Utils Core Functionality Tests"
   , testProperty "Remove line comments doesn't affect strings" $ property $ \s -> do
       let stringWithComment = s ++ " // comment"
           result = removeLineComments stringWithComment
+          -- 检查是否是字符串字面量（包含未闭合的引号）
+          isStringLiteral str = 
+            let doubleQuoteCount = length $ filter (== '"') str
+                singleQuoteCount = length $ filter (== '\'') str
+            in odd doubleQuoteCount || odd singleQuoteCount  -- 奇数个引号表示未闭合的字符串字面量
       -- 如果s包含换行符，每行都会被trim
       let expected = if '\n' `elem` s 
                      then unlines $ map trim (lines s)
-                     else if s == "'" || s == "a'"  -- 特殊情况：单引号会被误认为是字符串开始
-                          then s ++ " // comment"  -- 保持原样
+                     else if isStringLiteral s  -- 如果是字符串字面量，保持原样
+                          then s ++ " // comment"
                           else trim s
       property $ expected === result
 

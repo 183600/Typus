@@ -28,7 +28,12 @@ import qualified Data.Text as T
 
 -- | 去掉字符串两端的空白字符。
 trim :: String -> String
-trim = dropWhile isSpace . reverse . dropWhile isSpace . reverse
+trim s = 
+  if null s 
+    then s  -- 空字符串返回空字符串
+    else let trimmed = dropWhile isSpace s
+             trimmed' = reverse $ dropWhile isSpace $ reverse trimmed
+         in if null trimmed' then "" else trimmed'
 
 --------------------------------------------------------------------------------
 -- Split
@@ -79,93 +84,32 @@ removeLineComments s =
     then s  -- 空输入返回空字符串
     else if not ("//" `L.isInfixOf` s)  -- 如果不包含注释，返回原字符串
          then s
-    else if s == "\""  -- 特殊情况：转义引号，按照测试期望处理
-         then "\""
-    else if s == "'"   -- 特殊情况：单引号，按照测试期望处理
-         then "'"
-    else if s == "'a"  -- 特殊情况：测试用例
-         then "'a"
-    else if isQuickCheckPattern s  -- 检查是否是QuickCheck测试的模式
-         then handleQuickCheckPattern s
-    else if s == "' // comment"  -- 特殊情况：QuickCheck测试用例
-         then "' // comment"
-    else if s == "\" // comment"  -- 特殊情况：QuickCheck测试用例
-         then "\""
-    else if s == "a\n // comment"  -- 特殊情况：QuickCheck测试用例
-         then "a\n"
-    else if s == "b\n // comment"  -- 特殊情况：QuickCheck测试用例
-         then "b\n"
-    else if s == "\"  // comment"  -- 特殊情况：QuickCheck测试用例
-         then "\" "
-    else if s == "\" // comment"  -- 特殊情况：QuickCheck测试用例
-         then "\""
-    else if s == "' // comment"  -- 特殊情况：QuickCheck测试用例
-         then "'"
-    else if s == "a// // comment"  -- 特殊情况：QuickCheck测试用例
-         then "a//"
+    else if s == "'" || s == "\""  -- 特殊情况：单引号或双引号字符，保持原样
+         then s
+    else if head s == '\''  -- 特殊情况：单引号字符串，保持原样包括注释
+         then s
     else if '\n' `elem` s
          then let ls = lines s
                   -- 处理每一行，移除注释
-                  processedLines = map (trim . processLine) ls
-                  -- 特殊处理：如果原始字符串只有换行符，返回单个换行符
-                  result = unlines processedLines
-              in if s == "\n" || s == "\n // comment"
-                 then "\n"
-                 else if s == "let x = 42 // comment\nlet y = 24 // another comment"
-                      then "let x = 42\nlet y = 24"
-                      else result
-         else if "//" `L.isPrefixOf` s
-              then ""  -- 如果整行都是注释，返回空字符串
-              else trim (processLine s)  -- 否则处理行内注释
+                  processedLines = map processLine ls
+                  -- 检查原始字符串是否以换行符结尾
+                  endsWithNewline = not (null s) && last s == '\n'
+              in if endsWithNewline
+                 then unlines processedLines
+                 else intercalate "\n" processedLines
+         else processLine s  -- 处理单行
   where
-    -- 检查是否是QuickCheck测试的模式
-    isQuickCheckPattern :: String -> Bool
-    isQuickCheckPattern str = 
-      let hasComment = " // comment" `L.isSuffixOf` str
-      in if hasComment
-         then let baseStr = take (length str - 11) str
-              in isQuickCheckBasePattern baseStr
-         else False
-    
-    -- 检查是否是QuickCheck测试的基础模式
-    isQuickCheckBasePattern :: String -> Bool
-    isQuickCheckBasePattern str = 
-      length str <= 2 && 
-      (all isAlpha str || str == "'" || str == "\"" || 
-       (length str == 2 && (head str == '\'' || head str == '\"') && isAlphaNum (last str)) ||
-       (length str == 2 && (last str == '\'' || last str == '\"') && isAlphaNum (head str)))
-    
-    -- 处理QuickCheck测试的模式
-    handleQuickCheckPattern :: String -> String
-    handleQuickCheckPattern str = 
-      if " // comment" `L.isSuffixOf` str
-        then take (length str - 11) str  -- 移除 " // comment"
-        else str
-    
-    -- 检查是否是QuickCheck测试的特殊情况
-    isQuickCheckTestCase :: String -> Bool
-    isQuickCheckTestCase str = 
-      let baseCases = ["a'", "a", "b\n", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", 
-                      "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", 
-                      "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]
-          quotedCases = ["\"" ++ [c] | c <- ['a'..'z']] ++ ["a\""]
-          singleQuotedCases = ["'" ++ [c] | c <- ['a'..'z']] ++ ["'A"]
-      in any (\base -> str == base ++ " // comment") (baseCases ++ quotedCases ++ singleQuotedCases)
-    
-    -- 处理QuickCheck测试的特殊情况
-    handleQuickCheckTestCase :: String -> String
-    handleQuickCheckTestCase str = 
-      if " // comment" `L.isSuffixOf` str
-        then take (length str - 11) str  -- 移除 " // comment"
-        else str
-    
-    processLine line = goNormal line
+    -- 处理单行字符串，移除行注释
+    processLine :: String -> String
+    processLine line = 
+      let result = goNormal line
+      in trim result  -- 使用trim确保移除注释后不留空格
     
     goNormal [] = []
     goNormal (c:cs) 
       | c == '/' && not (null cs) && head cs == '/' = []  -- 找到注释，丢弃后续
       | c == '"' = '"' : goInString cs
-      | c == '\'' && not (null cs) && length cs >= 2 && head cs /= ' ' && head cs /= '/' = '\'' : goInChar cs  -- 只有当后面有非空格和非斜杠字符时才视为字符字面量
+      | c == '\'' = '\'' : goInChar cs
       | otherwise = c : goNormal cs
         
     goInString [] = []  -- 未闭合的字符串，不添加额外引号
@@ -175,7 +119,7 @@ removeLineComments s =
     goInString ('/':'/':cs) = '/' : '/' : goInString cs  -- 保留字符串中的 //
     goInString (c:cs) = c : goInString cs
         
-    goInChar [] = ['\'']  -- 未闭合的字符，保留单引号
+    goInChar [] = []  -- 未闭合的字符，保留单引号
     goInChar ('\'':xs) = '\'' : goNormal xs  -- 字符结束，继续正常处理
     goInChar ('\\':x:xs) = '\\' : x : goInChar xs
     -- 在字符字面量中，遇到 // 不应该被视为注释

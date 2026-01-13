@@ -1291,7 +1291,11 @@ test-suite typus-test
         Test.Unit.ParserCoreFunctionalitySpec,
         Test.Unit.CompilerCoreFunctionalitySpec,
         Test.Unit.UtilsCoreFunctionalitySpec,
-        Test.Unit.IntegrationQuickCheckSpec
+        Test.Unit.IntegrationQuickCheckSpec,
+        
+        -- New Comprehensive Test Suite Modules (2026)
+        Test.Unit.ComprehensiveCabalTestSuite,
+        Test.Unit.AdditionalCabalQuickCheckTests
     build-depends:
         base >=4.7 && <5,
         typus,

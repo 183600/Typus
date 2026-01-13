@@ -24,6 +24,10 @@ import qualified Test.Unit.CompilerCoreFunctionalitySpec as CompilerCoreFunction
 import qualified Test.Unit.UtilsCoreFunctionalitySpec as UtilsCoreFunctionality
 import qualified Test.Unit.IntegrationQuickCheckSpec as IntegrationQuickCheck
 
+-- Import new comprehensive test modules
+import qualified Test.Unit.ComprehensiveCabalTestSuite as ComprehensiveCabalTestSuite
+import qualified Test.Unit.AdditionalCabalQuickCheckTests as AdditionalCabalQuickCheckTests
+
 -- Basic test properties
 prop_basic_property :: String -> Property
 prop_basic_property s = property $ length s >= 0
@@ -50,5 +54,9 @@ tests = testGroup "Test.Unit.Tests Tests"
     ParserCoreFunctionality.parserCoreFunctionalityTests,
     CompilerCoreFunctionality.compilerCoreFunctionalityTests,
     UtilsCoreFunctionality.utilsCoreFunctionalityTests,
-    IntegrationQuickCheck.integrationQuickCheckTests
+    IntegrationQuickCheck.integrationQuickCheckTests,
+    
+    -- New comprehensive test modules
+    ComprehensiveCabalTestSuite.tests,
+    AdditionalCabalQuickCheckTests.tests
   ]

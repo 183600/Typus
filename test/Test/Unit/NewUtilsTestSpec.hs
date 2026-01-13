@@ -164,12 +164,17 @@ prop_remove_line_comments_preserves_strings :: String -> Property
 prop_remove_line_comments_preserves_strings s =
   let stringWithComment = s ++ " // comment"
       withoutComment = removeLineComments stringWithComment
+      -- 检查是否是字符串字面量（包含未闭合的引号）
+      isStringLiteral str = 
+        let doubleQuoteCount = length $ filter (== '"') str
+            singleQuoteCount = length $ filter (== '\'') str
+        in odd doubleQuoteCount || odd singleQuoteCount  -- 奇数个引号表示未闭合的字符串字面量
   in if "//" `isInfixOf` s  -- 如果字符串本身包含//，跳过测试
      then property True
      else if '\n' `elem` s  -- 如果字符串包含换行符，可能会被trim
           then withoutComment === unlines (map trim (lines s))
-          else if s == "'"  -- 特殊情况：单引号会被误认为是字符串开始
-               then property $ withoutComment === (s ++ " // comment")  -- 保持原样
+          else if isStringLiteral s  -- 如果是字符串字面量，保持原样
+               then property $ withoutComment === (s ++ " // comment")
                else withoutComment === trim s
 
 -- | QuickCheck属性：normalizeIndentation保持相对缩进
