@@ -1,60 +1,45 @@
 #!/usr/bin/env python3
 
+import re
+
 # Read the cabal file
-with open('/home/runner/work/Typus/Typus/typus.cabal', 'r') as f:
+with open('typus.cabal', 'r') as f:
     content = f.read()
 
-# Find the test-suite section and replace it
-lines = content.split('\n')
-new_lines = []
-in_test_suite = False
-found_other_modules = False
-modules_to_keep = [
-    'Test.Unit.UtilsSpec',
-    'Test.Unit.ParserSpec',
-    'Test.Unit.CompilerSpec',
-    'Test.Unit.ErrorHandlerCoreSpec',
-    'Test.Unit.DependenciesCoreSpec',
-    'Test.Unit.OwnershipSpec',
-    'Test.Unit.SourceLocationSpec',
-    'Test.Unit.SyntaxValidatorSpec',
-    'Test.Unit.TypeSystemSpec',
-    'Test.Unit.SymbolTableSpec',
-    'Test.Unit.ValueAnalysisSpec',
-    'Test.Unit.GoToolchainSpec',
-    'Test.Unit.VerbositySpec',
-    'TestSupport.Verbosity',
-    'TestSupport.QuickCheck',
-    'TestSupport.Arbitrary',
-    'TestSupport.ExtendedArbitrary'
+# Define our modules to remove from benchmark
+our_modules = [
+    'Test.Unit.CoreUtilsSpec',
+    'Test.Unit.CoreSourceLocationSpec',
+    'Test.Unit.CoreParserSpec',
+    'Test.Unit.CoreErrorHandlerSpec',
+    'Test.Unit.CoreOwnershipSpec',
+    'Test.Unit.CoreQuickCheckPropertiesSpec',
+    'Test.Unit.CoreIntegrationSpec'
 ]
 
-for line in lines:
-    if line.startswith('test-suite typus-test'):
-        in_test_suite = True
-        new_lines.append(line)
-    elif in_test_suite and line.strip() == '':
-        # End of test-suite section
-        in_test_suite = False
-        new_lines.append(line)
-    elif in_test_suite:
-        if line.startswith('    other-modules:'):
-            found_other_modules = True
-            new_lines.append(line)
-            for module in modules_to_keep:
-                new_lines.append(f'        {module},')
-        elif found_other_modules and line.startswith('        Test.Unit.'):
-            # Skip all the old modules
-            continue
-        elif not found_other_modules:
-            new_lines.append(line)
-        else:
-            new_lines.append(line)
-    else:
-        new_lines.append(line)
+# Find the benchmark section and remove our modules
+# Pattern to match benchmark section
+benchmark_pattern = r'(benchmark typus-bench.*?other-modules:.*?)(.*?)(\n    build-depends:)'
 
-# Write the modified cabal file
-with open('/home/runner/work/Typus/Typus/typus.cabal', 'w') as f:
-    f.write('\n'.join(new_lines))
+def remove_our_modules_from_benchmark(match):
+    before = match.group(1)
+    modules_list = match.group(2)
+    after = match.group(3)
+    
+    # Split modules by comma and filter out our modules
+    modules = [m.strip() for m in modules_list.split(',')]
+    filtered_modules = [m for m in modules if m not in our_modules]
+    
+    # Reconstruct the modules list
+    new_modules_list = ',\n        '.join(filtered_modules) + '\n        '
+    
+    return before + new_modules_list + after
 
-print("Cabal file modified successfully")
+# Apply the replacement
+new_content = re.sub(benchmark_pattern, remove_our_modules_from_benchmark, content, flags=re.DOTALL)
+
+# Write back to file
+with open('typus.cabal', 'w') as f:
+    f.write(new_content)
+
+print("Removed our modules from benchmark section")

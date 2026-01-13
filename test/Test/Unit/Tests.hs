@@ -40,6 +40,15 @@ import qualified Test.Unit.NewDependentTypesPropertiesQuickCheckSpec as Dependen
 import qualified Test.Unit.NewIntegrationPropertiesQuickCheckSpec as IntegrationProperties
 import qualified Test.Unit.NewBoundaryConditionsQuickCheckSpec as BoundaryConditions
 
+-- Import new core test modules
+import qualified Test.Unit.CoreUtilsSpec as CoreUtils
+import qualified Test.Unit.CoreSourceLocationSpec as CoreSourceLocation
+import qualified Test.Unit.CoreParserSpec as CoreParser
+import qualified Test.Unit.CoreErrorHandlerSpec as CoreErrorHandler
+import qualified Test.Unit.CoreOwnershipSpec as CoreOwnership
+import qualified Test.Unit.CoreQuickCheckPropertiesSpec as CoreQuickCheckProperties
+import qualified Test.Unit.CoreIntegrationSpec as CoreIntegration
+
 -- Import newly created comprehensive QuickCheck test modules (2025)
 import qualified Test.Unit.NewBasicTypesAndStringPropertiesSpec as BasicTypesAndStringProperties
 import qualified Test.Unit.NewParserAdvancedPropertiesSpec as ParserAdvancedProperties
@@ -94,11 +103,39 @@ tests = testGroup "Test.Unit.Tests Tests"
     BoundaryConditions.tests,
     
     -- Newly created comprehensive QuickCheck test modules (2025)
-    BasicTypesAndStringProperties.tests,
-    ParserAdvancedProperties.tests,
-    CompilerIRProperties.tests,
-    OwnershipAnalysisProperties.tests,
-    ErrorHandlingPropertiesNew.tests,
-    SourceLocationCalculationProperties.tests,
-    UtilsFunctionsProperties.tests
-  ]
+    
+        BasicTypesAndStringProperties.tests,
+    
+        ParserAdvancedProperties.tests,
+    
+        CompilerIRProperties.tests,
+    
+        OwnershipAnalysisProperties.tests,
+    
+    
+    
+        ErrorHandlingPropertiesNew.tests,
+    
+        SourceLocationCalculationProperties.tests,
+    
+        UtilsFunctionsProperties.tests,
+    
+        
+    
+        -- New core test modules
+    
+        CoreUtils.tests,
+    
+        CoreSourceLocation.tests,
+    
+        CoreParser.tests,
+    
+        CoreErrorHandler.tests,
+    
+        CoreOwnership.tests,
+    
+        CoreQuickCheckProperties.tests,
+    
+        CoreIntegration.tests
+    
+      ]
