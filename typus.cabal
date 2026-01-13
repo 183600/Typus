@@ -998,6 +998,7 @@ test-suite typus-test
         Test.Unit.NewUtilsTestSpec,
         Test.Unit.NewOwnershipTestSpec,
         Test.Unit.NewDependenciesTestSpec,
+        Test.Unit.AdditionalQuickCheckTestsSpec,
         
         -- New enhanced test modules (moved to TestSuite namespace)
         -- Test.Unit.EnhancedSourceLocationSpec,

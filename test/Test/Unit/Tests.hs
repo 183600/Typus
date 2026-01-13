@@ -49,6 +49,9 @@ import qualified Test.Unit.CoreOwnershipSpec as CoreOwnership
 import qualified Test.Unit.CoreQuickCheckPropertiesSpec as CoreQuickCheckProperties
 import qualified Test.Unit.CoreIntegrationSpec as CoreIntegration
 
+-- Import additional QuickCheck test module
+import qualified Test.Unit.AdditionalQuickCheckTestsSpec as AdditionalQuickCheckTests
+
 -- Import newly created comprehensive QuickCheck test modules (2025)
 import qualified Test.Unit.NewBasicTypesAndStringPropertiesSpec as BasicTypesAndStringProperties
 import qualified Test.Unit.NewParserAdvancedPropertiesSpec as ParserAdvancedProperties
@@ -57,10 +60,6 @@ import qualified Test.Unit.NewOwnershipAnalysisPropertiesSpec as OwnershipAnalys
 import qualified Test.Unit.NewErrorHandlingPropertiesSpec as ErrorHandlingPropertiesNew
 import qualified Test.Unit.NewSourceLocationCalculationPropertiesSpec as SourceLocationCalculationProperties
 import qualified Test.Unit.NewUtilsFunctionsPropertiesSpec as UtilsFunctionsProperties
-
--- Import new enhanced test modules (moved to TestSuite namespace)
--- import qualified TestSuite.EnhancedSourceLocation as EnhancedSourceLocation
--- import qualified TestSuite.ParserBoundary as ParserBoundary
 
 -- Basic test properties
 prop_basic_property :: String -> Property
@@ -107,83 +106,23 @@ tests = testGroup "Test.Unit.Tests Tests"
     BoundaryConditions.tests,
     
     -- Newly created comprehensive QuickCheck test modules (2025)
+    BasicTypesAndStringProperties.tests,
+    ParserAdvancedProperties.tests,
+    CompilerIRProperties.tests,
+    OwnershipAnalysisProperties.tests,
+    ErrorHandlingPropertiesNew.tests,
+    SourceLocationCalculationProperties.tests,
+    UtilsFunctionsProperties.tests,
     
-        BasicTypesAndStringProperties.tests,
+    -- New core test modules
+    CoreUtils.tests,
+    CoreSourceLocation.tests,
+    CoreParser.tests,
+    CoreErrorHandler.tests,
+    CoreOwnership.tests,
+    CoreQuickCheckProperties.tests,
+    CoreIntegration.tests,
     
-        ParserAdvancedProperties.tests,
-    
-        CompilerIRProperties.tests,
-    
-        OwnershipAnalysisProperties.tests,
-    
-    
-    
-        ErrorHandlingPropertiesNew.tests,
-    
-        SourceLocationCalculationProperties.tests,
-    
-        UtilsFunctionsProperties.tests,
-    
-        
-    
-        -- New core test modules
-    
-        
-    
-                CoreUtils.tests,
-    
-        
-    
-                CoreSourceLocation.tests,
-    
-        
-    
-                CoreParser.tests,
-    
-        
-    
-                CoreErrorHandler.tests,
-    
-        
-    
-                CoreOwnership.tests,
-    
-        
-    
-                CoreQuickCheckProperties.tests,
-    
-        
-    
-                CoreIntegration.tests,
-    
-        
-    
-            
-    
-        
-    
-            -- New enhanced test modules (moved to separate test suite)
-    
-        
-    
-            
-    
-        
-    
-                    -- EnhancedSourceLocation.tests,
-    
-        
-    
-            
-    
-        
-    
-                    -- ParserBoundary.tests
-    
-        
-    
-            
-    
-        
-    
-                ]
+    -- Additional QuickCheck tests
+    AdditionalQuickCheckTests.tests
+  ]
