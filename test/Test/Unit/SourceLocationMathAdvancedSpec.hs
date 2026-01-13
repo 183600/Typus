@@ -94,7 +94,7 @@ prop_sourcelocation_position_normalization line col =
       normalizedLine = max 0 line
       normalizedCol = max 0 col
       normalizedPos = SourcePos normalizedLine normalizedCol 0
-  in posLine normalizedPos >= 0 && posColumn normalizedPos >= 0
+  in property $ posLine normalizedPos >= 0 && posColumn normalizedPos >= 0
 
 -- | Test source span length calculation
 prop_sourcelocation_span_length :: Int -> Int -> Int -> Int -> Property
@@ -138,7 +138,7 @@ prop_sourcelocation_negative_arithmetic line col =
       normalizedLine = max 0 adjustedLine
       normalizedCol = max 0 adjustedCol
       adjustedPos = SourcePos normalizedLine normalizedCol 0
-  in posLine adjustedPos >= 0 && posColumn adjustedPos >= 0
+  in property $ posLine adjustedPos >= 0 && posColumn adjustedPos >= 0
 
 -- | Test source span expansion
 prop_sourcelocation_span_expansion :: Int -> Int -> Int -> Int -> Property
@@ -191,7 +191,7 @@ prop_sourcelocation_empty_span :: Property
 prop_sourcelocation_empty_span =
   let pos = SourcePos 0 0 0
       emptySpan = spanBetween pos pos
-  in posLine pos == 0 && posColumn pos == 0
+  in property $ posLine pos == 0 && posColumn pos == 0
 
 -- | Test source position with large line numbers
 prop_sourcelocation_large_line_numbers :: Int -> Property
@@ -215,7 +215,7 @@ prop_sourcelocation_overflow_protection base increment =
   let pos = SourcePos base base 0
       maxPos = maxBound `div` 2  -- Use half of max to avoid overflow
       adjustedPos = SourcePos (min maxPos (base + increment)) (min maxPos (base + increment)) 0
-  in posLine adjustedPos <= maxPos && posColumn adjustedPos <= maxPos
+  in property $ posLine adjustedPos <= maxPos && posColumn adjustedPos <= maxPos
 
 -- | Test source span with extreme values
 prop_sourcelocation_extreme_values :: Property
@@ -223,7 +223,7 @@ prop_sourcelocation_extreme_values =
   let minPos = SourcePos 0 0 0
       maxPos = SourcePos maxBound maxBound 0
       extremeSpan = spanBetween minPos maxPos
-  in posLine minPos == 0 && posColumn minPos == 0 &&
+  in property $ posLine minPos == 0 && posColumn minPos == 0 &&
      posLine maxPos == maxBound && posColumn maxPos == maxBound
 
 -- | Tasty test suite

@@ -11,7 +11,8 @@ import Parser (TypusFile(..), parseTypus, defaultFileDirectives,
               fdOwnership, fdDependentTypes, fdConstraints)
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), startPos, spanBetween)
 import Compiler (compile, CompilerError(..))
-import DependentTypes (TypeInference(..), TypeConstraint(..), InferenceResult(..))
+import Dependencies (TypeInferenceState(..), TypeInferenceError(..))
+import Dependencies.TypeSystem (TypeConstraint(..))
 import qualified Data.Text as T
 import Data.Char (isSpace, isAlphaNum, isControl, isPunctuation, isDigit)
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf, nub, partition, sort, (\\), intersect)

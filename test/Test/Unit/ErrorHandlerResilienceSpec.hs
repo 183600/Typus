@@ -11,7 +11,7 @@ import Parser (TypusFile(..), parseTypus, defaultFileDirectives,
               fdOwnership, fdDependentTypes, fdConstraints)
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), startPos, spanBetween)
 import Compiler (compile, CompilerError(..))
-import ErrorHandler (handleError, ErrorSeverity(..), ErrorContext(..))
+import Compiler.Errors.Core (ErrorSeverity(..), ErrorContext(..))
 import qualified Data.Text as T
 import Data.Char (isSpace, isAlphaNum, isControl, isPunctuation, isDigit)
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf, nub, partition, sort)
@@ -284,7 +284,7 @@ generateNestedErrors 0 = "base error"
 generateNestedErrors n = "error {\n" ++ generateNestedErrors (n - 1) ++ "\n}"
 
 generateResourceHeavyInput :: Int -> String
-generateResourceHeavyInput n = concat $ replicate n "let x" ++ show n ++ " = " ++ show n ++ "\n"
+generateResourceHeavyInput n = concat $ replicate n ("let x" ++ show n ++ " = " ++ show n ++ "\n")
 
 generateMemoryIntensiveInput :: Int -> String
 generateMemoryIntensiveInput n = concat $ replicate n ("let x" ++ show n ++ " = \"" ++ replicate n 'a' ++ "\"\n")

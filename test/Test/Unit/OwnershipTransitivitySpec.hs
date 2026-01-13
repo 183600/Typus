@@ -11,7 +11,7 @@ import Parser (TypusFile(..), parseTypus, defaultFileDirectives,
               fdOwnership, fdDependentTypes, fdConstraints)
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), startPos, spanBetween)
 import Compiler (compile, CompilerError(..))
-import Ownership (OwnershipAnalysis(..), OwnershipRelation(..), transferOwnership)
+import Ownership (OwnershipType(..), OwnershipError(..), OwnershipAnalyzer(..), OwnershipTransfer(..))
 import qualified Data.Text as T
 import Data.Char (isSpace, isAlphaNum, isControl, isPunctuation, isDigit)
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf, nub, partition, sort, (\\))

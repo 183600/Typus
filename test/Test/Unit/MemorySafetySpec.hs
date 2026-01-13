@@ -334,7 +334,7 @@ prop_memory_limits limitMB =
 isPowerOfTwo :: Int -> Bool
 isPowerOfTwo 0 = False
 isPowerOfTwo n = n .&. (n - 1) == 0
-  where (.&.) = ((`mod`) . (*2))
+  where (.&.) = \x y -> x `mod` y * 2
 
 -- | Tasty test suite
 testSuite :: TestTree

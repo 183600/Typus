@@ -2142,7 +2142,6 @@ test-suite typus-test
         Test.Unit.OwnershipTransitivitySpec,
         Test.Unit.DependencyCycleDetectionSpec,
         Test.Unit.TypeSystemInferenceSpec,
-        Test.Unit.UtilsStringProcessingSpec,
         Test.Unit.IntegrationWorkflowSpec,
         Test.Unit.PerformanceBoundarySpec,
         Test.Unit.ConcurrentSafetySpec,

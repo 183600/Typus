@@ -95,7 +95,7 @@ prop_sourcelocation_negative_positions :: Int -> Int -> Property
 prop_sourcelocation_negative_positions line col =
   let pos = SourcePos line col 0
       normalizedPos = SourcePos (max 0 line) (max 0 col) 0
-  in posLine normalizedPos >= 0 && posColumn normalizedPos >= 0
+  in property $ posLine normalizedPos >= 0 && posColumn normalizedPos >= 0
 
 -- | Test utils with empty strings
 prop_utils_empty_strings :: Property

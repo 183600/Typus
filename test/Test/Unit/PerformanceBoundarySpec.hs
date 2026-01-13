@@ -29,13 +29,14 @@ prop_performance_parser_large_input :: Int -> String -> Property
 prop_performance_parser_large_input n baseStr =
   n >= 0 && n <= 1000 ==>
     let largeInput = concat $ replicate n baseStr
-        startTime = getCPUTime
-        parseResult = parseTypus largeInput
-        endTime = getCPUTime
-        executionTime = fromIntegral (endTime - startTime) / (10^12)
-    in case parseResult of
-         Left _ -> property $ executionTime < 10.0  -- 10 seconds max
-         Right _ -> property $ executionTime < 10.0
+    in ioProperty $ do
+         startTime <- getCPUTime
+         let parseResult = parseTypus largeInput
+         endTime <- getCPUTime
+         let executionTime = fromIntegral (endTime - startTime) / (10^12)
+         case parseResult of
+           Left _ -> return $ executionTime < 10.0  -- 10 seconds max
+           Right _ -> return $ executionTime < 10.0
 
 -- | Test compiler performance with complex code
 prop_performance_compiler_complex :: Int -> Property
@@ -46,13 +47,14 @@ prop_performance_compiler_complex complexity =
     in case parseResult of
          Left _ -> property True
          Right typusFile -> 
-           let startTime = getCPUTime
-               compileResult = compile typusFile
-               endTime = getCPUTime
-               executionTime = fromIntegral (endTime - startTime) / (10^12)
-           in case compileResult of
-                Left _ -> property $ executionTime < 10.0
-                Right _ -> property $ executionTime < 10.0
+           ioProperty $ do
+             startTime <- getCPUTime
+             let compileResult = compile typusFile
+             endTime <- getCPUTime
+             let executionTime = fromIntegral (endTime - startTime) / (10^12)
+             case compileResult of
+               Left _ -> return $ executionTime < 10.0
+               Right _ -> return $ executionTime < 10.0
 
 -- | Test memory usage with deep nesting
 prop_performance_memory_nesting :: Int -> Property

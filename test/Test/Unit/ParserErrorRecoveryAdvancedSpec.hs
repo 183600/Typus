@@ -157,7 +157,7 @@ prop_parser_function_definition_errors funcName body =
         parseResult = parseTypus malformedFunc
     in case parseResult of
          Left _ -> property True
-       Right typusFile -> property $ True
+         Right typusFile -> property $ True
 
 -- | Test parser recovery from multiple consecutive errors
 prop_parser_multiple_consecutive_errors :: String -> Property

@@ -83,7 +83,7 @@ prop_unicode_rtl_scripts input =
 prop_unicode_combining_characters :: String -> Property
 prop_unicode_combining_characters input =
   not (null input) && length input <= 30 ==>
-    let combiningInput = input ++ "e\u0301a\u0300o\u0302"
+    let combiningInput = input ++ "e\301a\300o\302"
         parseResult = parseTypus combiningInput
     in case parseResult of
          Left _ -> property True
@@ -97,7 +97,7 @@ prop_unicode_combining_characters input =
 prop_unicode_zero_width_characters :: String -> Property
 prop_unicode_zero_width_characters input =
   not (null input) && length input <= 30 ==>
-    let zeroWidthInput = input ++ "\u200B\u200C\u200D"
+    let zeroWidthInput = input ++ "\8203\8204\8205"
         parseResult = parseTypus zeroWidthInput
     in case parseResult of
          Left _ -> property True
@@ -111,7 +111,7 @@ prop_unicode_zero_width_characters input =
 prop_unicode_whitespace :: String -> Property
 prop_unicode_whitespace input =
   not (null input) && length input <= 30 ==>
-    let whitespaceInput = input ++ "\u00A0\u2000\u2001\u2002"
+    let whitespaceInput = input ++ "\160\8192\8193\8194"
         parseResult = parseTypus whitespaceInput
     in case parseResult of
          Left _ -> property True
@@ -125,7 +125,7 @@ prop_unicode_whitespace input =
 prop_unicode_line_separators :: String -> Property
 prop_unicode_line_separators input =
   not (null input) && length input <= 30 ==>
-    let separatorInput = input ++ "\u2028\u2029"
+    let separatorInput = input ++ "\8232\8233"
         parseResult = parseTypus separatorInput
     in case parseResult of
          Left _ -> property True
@@ -139,7 +139,7 @@ prop_unicode_line_separators input =
 prop_unicode_quotes :: String -> Property
 prop_unicode_quotes input =
   not (null input) && length input <= 30 ==>
-    let quotesInput = input ++ "\u201C\u201D\u2018\u2019"
+    let quotesInput = input ++ "\8220\8221\8216\8217"
         parseResult = parseTypus quotesInput
     in case parseResult of
          Left _ -> property True
@@ -153,7 +153,7 @@ prop_unicode_quotes input =
 prop_unicode_dashes :: String -> Property
 prop_unicode_dashes input =
   not (null input) && length input <= 30 ==>
-    let dashesInput = input ++ "\u2013\u2014\u2010"
+    let dashesInput = input ++ "\8211\8212\8208"
         parseResult = parseTypus dashesInput
     in case parseResult of
          Left _ -> property True
