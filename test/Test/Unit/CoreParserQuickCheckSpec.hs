@@ -7,7 +7,7 @@ module Test.Unit.CoreParserQuickCheckSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import TestSupport.Arbitrary ()
+import TestSupport.Arbitrary
 import TestSupport.QuickCheck
 import qualified Data.Text as T
 import Data.List (isPrefixOf, isSuffixOf, isInfixOf)
@@ -27,7 +27,7 @@ prop_parseEmptyString =
   let result = parseTypus ""
   in case result of
     Left _ -> property False
-    Right file -> property $ null (tfCodeBlocks file)
+    Right file -> property $ null (tfBlocks file)
 
 -- | Test that parsing a string with only whitespace returns empty file
 prop_parseWhitespaceOnly :: Property
@@ -36,7 +36,7 @@ prop_parseWhitespaceOnly =
     let result = parseTypus ws
     in case result of
       Left _ -> property False
-      Right file -> property $ null (tfCodeBlocks file)
+      Right file -> property $ null (tfBlocks file)
 
 -- | Test that parsing a simple code block preserves content
 prop_parseSimpleBlock :: Property
@@ -47,14 +47,14 @@ prop_parseSimpleBlock =
           result = parseTypus input
       in case result of
         Left _ -> property False
-        Right file -> not (null (tfCodeBlocks file))
+        Right file -> property $ not (null (tfBlocks file))
 
 -- | Test that file directives are parsed correctly
 prop_parseFileDirectives :: Property
 prop_parseFileDirectives =
-  forAll arbitraryBool $ \ownership ->
-    forAll arbitraryBool $ \dependentTypes ->
-      forAll arbitraryBool $ \constraints ->
+  forAll arbitrary $ \ownership ->
+    forAll arbitrary $ \dependentTypes ->
+      forAll arbitrary $ \constraints ->
         let directives = []
             input = buildFileDirectiveInput directives ownership dependentTypes constraints
             result = parseTypus input
@@ -65,9 +65,9 @@ prop_parseFileDirectives =
 -- | Test that block directives are parsed correctly
 prop_parseBlockDirectives :: Property
 prop_parseBlockDirectives =
-  forAll arbitraryBool $ \ownership ->
-    forAll arbitraryBool $ \dependentTypes ->
-      forAll arbitraryBool $ \constraints ->
+  forAll arbitrary $ \ownership ->
+    forAll arbitrary $ \dependentTypes ->
+      forAll arbitrary $ \constraints ->
         let directives = []
             input = buildBlockDirectiveInput directives ownership dependentTypes constraints
             result = parseTypus input

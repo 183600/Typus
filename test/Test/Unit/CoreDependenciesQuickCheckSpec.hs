@@ -7,15 +7,29 @@ module Test.Unit.CoreDependenciesQuickCheckSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import TestSupport.Arbitrary ()
+import TestSupport.Arbitrary
 import TestSupport.QuickCheck
 import qualified Data.Text as T
 import Data.List (isPrefixOf, isSuffixOf, isInfixOf, intercalate)
 import Data.Maybe (isJust, isNothing)
 import Control.Monad (when)
+import Control.Monad.State (evalState)
 import Data.Char (isSpace, isAlpha, isAlphaNum)
 
 import Dependencies
+import Dependencies.Inference
+import Dependencies.AST (AST(..))
+import Dependencies.TypeSystem (Substitution)
+import Control.Monad.State.Lazy (evalStateT)
+import Control.Monad.Trans.Except (runExceptT)
+import qualified Data.Map as Map
+
+-- | Run a TypeInference computation
+runTypeInference :: TypeInference a -> IO (Either TypeInferenceError a)
+runTypeInference comp = do
+  env <- initialTypeEnvironment
+  let state = TypeInferenceState { typeEnv = env, currentSubst = Map.empty, inferenceErrors = [] }
+  runExceptT $ evalStateT comp state
 
 -- ============================================================================
 -- Dependencies QuickCheck Tests
@@ -30,87 +44,79 @@ prop_newDependentTypeCheckerValid =
 -- | Test that newDependentTypeCheckerWithTypes creates a valid checker
 prop_newDependentTypeCheckerWithTypesValid :: Property
 prop_newDependentTypeCheckerWithTypesValid =
-  forAll (listOf arbitraryTypeExpr) $ \types ->
-    let checker = newDependentTypeCheckerWithTypes types
+  forAll (listOf arbitraryIdentifier) $ \typeNames ->
+    let types = map (\name -> (name, [], [])) typeNames
+        checker = newDependentTypeCheckerWithTypes types
     in property $ True  -- Basic sanity check
 
 -- | Test that analyzeDependentTypes processes basic code
 prop_analyzeDependentTypesBasic :: Property
 prop_analyzeDependentTypesBasic =
   forAll arbitraryShortString $ \code ->
-    let checker = newDependentTypeChecker
-        result = analyzeDependentTypes checker code
+    let result = analyzeDependentTypes code
     in property $ True  -- Basic sanity check
 
 -- | Test that analyzeAST processes basic AST
 prop_analyzeASTBasic :: Property
 prop_analyzeASTBasic =
   forAll arbitraryAST $ \ast ->
-    let checker = newDependentTypeChecker
-        result = analyzeAST checker ast
+    let result = analyzeAST ast
     in property $ True  -- Basic sanity check
 
 -- | Test that validateASTSemantics validates AST
 prop_validateASTSemantics :: Property
 prop_validateASTSemantics =
   forAll arbitraryAST $ \ast ->
-    let checker = newDependentTypeChecker
-        result = validateASTSemantics checker ast
+    let result = evalState (validateASTSemantics ast) newDependentTypeChecker
     in property $ True  -- Basic sanity check
 
 -- | Test that validateStatement validates statement
 prop_validateStatement :: Property
 prop_validateStatement =
   forAll arbitraryStatement $ \stmt ->
-    let checker = newDependentTypeChecker
-        result = validateStatement checker stmt
+    let result = evalState (validateStatement stmt) newDependentTypeChecker
     in property $ True  -- Basic sanity check
 
 -- | Test that checkType checks types
 prop_checkType :: Property
 prop_checkType =
-  forAll arbitraryTypeExpr $ \typeExpr ->
-    forAll arbitraryTypeEnvironment $ \env ->
-      let checker = newDependentTypeChecker
-          result = checkType checker env typeExpr
-      in property $ True  -- Basic sanity check
+  forAll arbitraryTypeVar $ \typeExpr ->
+    let checker = newDependentTypeChecker
+        result = evalState (checkType typeExpr) checker
+    in property $ True  -- Basic sanity check
 
 -- | Test that addType adds types
 prop_addType :: Property
 prop_addType =
   forAll arbitraryIdentifier $ \typeName ->
     forAll arbitraryTypeExpr $ \typeExpr ->
-      forAll arbitraryTypeEnvironment $ \env ->
-        let checker = newDependentTypeChecker
-            result = addType checker env typeName typeExpr
-        in property $ True  -- Basic sanity check
+      let checker = newDependentTypeChecker
+          result = evalState (addType typeName [] []) checker
+      in property $ True  -- Basic sanity check
 
 -- | Test that addConstraint adds constraints
 prop_addConstraint :: Property
 prop_addConstraint =
   forAll arbitraryTypeConstraint $ \constraint ->
-    forAll arbitraryTypeEnvironment $ \env ->
-      let checker = newDependentTypeChecker
-          result = addConstraint checker env constraint
-      in property $ True  -- Basic sanity check
+    let checker = newDependentTypeChecker
+        result = evalState (addConstraint constraint) checker
+    in property $ True  -- Basic sanity check
 
 -- | Test that checkTypeInstantiation checks instantiation
 prop_checkTypeInstantiation :: Property
 prop_checkTypeInstantiation =
-  forAll arbitraryTypeExpr $ \typeExpr ->
-    forAll arbitraryTypeEnvironment $ \env ->
+  forAll arbitraryIdentifier $ \typeName ->
+    forAll arbitraryTypeExpr $ \typeExpr ->
       let checker = newDependentTypeChecker
-          result = checkTypeInstantiation checker env typeExpr
+          result = evalState (checkTypeInstantiation typeName []) checker
       in property $ True  -- Basic sanity check
 
 -- | Test that solveConstraints solves constraints
 prop_solveConstraints :: Property
 prop_solveConstraints =
-  forAll (listOf arbitraryTypeConstraint) $ \constraints ->
-    forAll arbitraryTypeEnvironment $ \env ->
-      let checker = newDependentTypeChecker
-          result = solveConstraints checker env constraints
-      in property $ True  -- Basic sanity check
+  let checker = newDependentTypeChecker
+      result = evalState solveConstraints checker
+  in property $ True  -- Basic sanity check
 
 -- | Test that getDependentTypeErrors gets errors
 prop_getDependentTypeErrors :: Property
@@ -122,96 +128,79 @@ prop_getDependentTypeErrors =
 -- | Test that unify unifies types
 prop_unify :: Property
 prop_unify =
-  forAll arbitraryTypeExpr $ \type1 ->
-    forAll arbitraryTypeExpr $ \type2 ->
-      forAll arbitraryTypeEnvironment $ \env ->
-        let checker = newDependentTypeChecker
-            result = unify checker env type1 type2
-        in property $ True  -- Basic sanity check
+  forAll arbitraryTypeVar $ \type1 ->
+    forAll arbitraryTypeVar $ \type2 ->
+      let result = unify [(type1, type2)]
+      in property $ True  -- Basic sanity check
 
 -- | Test that inferType infers types
 prop_inferType :: Property
 prop_inferType =
   forAll arbitraryTypeExpr $ \typeExpr ->
-    forAll arbitraryTypeEnvironment $ \env ->
-      let checker = newDependentTypeChecker
-          result = inferType checker env typeExpr
-      in property $ True  -- Basic sanity check
+    let result = runTypeInference (inferType typeExpr)
+    in property $ True  -- Basic sanity check
 
 -- | Test that inferStatement infers statement types
 prop_inferStatement :: Property
 prop_inferStatement =
   forAll arbitraryStatement $ \stmt ->
-    forAll arbitraryTypeEnvironment $ \env ->
-      let checker = newDependentTypeChecker
-          result = inferStatement checker env stmt
-      in property $ True  -- Basic sanity check
+    let result = runTypeInference (inferStatement stmt)
+    in property $ True  -- Basic sanity check
 
 -- | Test that inferProgram infers program types
 prop_inferProgram :: Property
 prop_inferProgram =
   forAll (listOf arbitraryStatement) $ \stmts ->
-    forAll arbitraryTypeEnvironment $ \env ->
-      let checker = newDependentTypeChecker
-          result = inferProgram checker env stmts
-      in property $ True  -- Basic sanity check
+    let program = Program stmts
+        result = runTypeInference (inferProgram program)
+    in property $ True  -- Basic sanity check
 
 -- | Test that generalize creates type schemes
 prop_generalize :: Property
 prop_generalize =
-  forAll arbitraryTypeExpr $ \typeExpr ->
-    forAll arbitraryTypeEnvironment $ \env ->
-      let checker = newDependentTypeChecker
-          result = generalize checker env typeExpr
-      in property $ True  -- Basic sanity check
+  forAll arbitraryTypeVar $ \typeExpr ->
+    let result = runTypeInference (generalize 0 typeExpr)
+    in property $ True  -- Basic sanity check
 
 -- | Test that instantiate instantiates type schemes
 prop_instantiate :: Property
 prop_instantiate =
   forAll arbitraryTypeScheme $ \scheme ->
-    forAll arbitraryTypeEnvironment $ \env ->
-      let checker = newDependentTypeChecker
-          result = instantiate checker env scheme
-      in property $ True  -- Basic sanity check
+    let result = runTypeInference (instantiate scheme)
+    in property $ True  -- Basic sanity check
 
 -- | Test that unifyTypes unifies types
 prop_unifyTypes :: Property
 prop_unifyTypes =
-  forAll arbitraryTypeExpr $ \type1 ->
-    forAll arbitraryTypeExpr $ \type2 ->
-      forAll arbitraryTypeEnvironment $ \env ->
-        let checker = newDependentTypeChecker
-            result = unifyTypes checker env type1 type2
-        in property $ True  -- Basic sanity check
+  forAll arbitraryTypeVar $ \type1 ->
+    forAll arbitraryTypeVar $ \type2 ->
+      let result = runTypeInference (unifyTypes type1 type2)
+      in property $ True  -- Basic sanity check
 
 -- | Test that applyTypeSubstitution applies substitutions
 prop_applyTypeSubstitution :: Property
 prop_applyTypeSubstitution =
-  forAll arbitraryTypeExpr $ \typeExpr ->
+  forAll arbitraryTypeVar $ \typeExpr ->
     forAll arbitrarySubstitution $ \substitution ->
-      let checker = newDependentTypeChecker
-          result = applyTypeSubstitution checker substitution typeExpr
+      let result = applyTypeSubstitution substitution typeExpr
       in property $ True  -- Basic sanity check
 
 -- | Test that newTypeVariable creates new type variables
 prop_newTypeVariable :: Property
 prop_newTypeVariable =
-  let checker = newDependentTypeChecker
-      result = newTypeVariable checker
+  let result = runTypeInference newTypeVariable
   in property $ True  -- Basic sanity check
 
 -- | Test that getFreshTypeVar creates fresh type variables
 prop_getFreshTypeVar :: Property
 prop_getFreshTypeVar =
-  let checker = newDependentTypeChecker
-      result = getFreshTypeVar checker
+  let result = runTypeInference getFreshTypeVar
   in property $ True  -- Basic sanity check
 
 -- | Test that initialTypeEnvironment creates initial environment
 prop_initialTypeEnvironment :: Property
 prop_initialTypeEnvironment =
-  let checker = newDependentTypeChecker
-      result = initialTypeEnvironment checker
+  let result = initialTypeEnvironment
   in property $ True  -- Basic sanity check
 
 -- | Test that type expressions are valid

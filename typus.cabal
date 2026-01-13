@@ -2121,14 +2121,12 @@ test-suite typus-test
         Test.Unit.NewSimpleErrorHandlingSpec,
         Test.Unit.NewQuickCheckPropertySpec,
         
-        -- New Core QuickCheck Test Modules Added for Enhanced Coverage (2025)
-        Test.Unit.CoreParserQuickCheckSpec,
-        Test.UnitCoreCompilerQuickCheckSpec,
-        Test.Unit.CoreSourceLocationQuickCheckSpec,
-        Test.Unit.CoreUtilsQuickCheckSpec,
-        Test.Unit.CoreErrorHandlerQuickCheckSpec,
-        Test.Unit.CoreOwnershipQuickCheckSpec,
-        Test.Unit.CoreDependenciesQuickCheckSpec
+        -- New Enhanced QuickCheck Test Modules (2026) - Added for comprehensive testing
+        Test.Unit.UtilsEnhancedQuickCheckSpec,
+        Test.Unit.SourceLocationEnhancedQuickCheckSpec,
+        Test.Unit.ParserEnhancedQuickCheckSpec,
+        Test.Unit.IntegrationEnhancedQuickCheckSpec,
+        Test.Unit.BoundaryConditionsEnhancedQuickCheckSpec
         
     build-depends:
         base >=4.7 && <5,

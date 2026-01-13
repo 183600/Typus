@@ -7,7 +7,7 @@ module Test.Unit.CoreUtilsQuickCheckSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import TestSupport.Arbitrary ()
+import TestSupport.Arbitrary
 import TestSupport.QuickCheck
 import qualified Data.Text as T
 import Data.List (isPrefixOf, isSuffixOf, isInfixOf, intercalate)
@@ -68,7 +68,7 @@ prop_splitByEmpty =
 prop_splitBySingleChar :: Property
 prop_splitBySingleChar =
   forAll arbitraryChar $ \delim ->
-    forAll arbitraryChar `suchThat` (/= delim) $ \c ->
+    forAll (arbitraryChar `suchThat` (/= delim)) $ \c ->
       let parts = splitBy delim [c]
       in property $ parts == [[c]]
 
@@ -108,7 +108,7 @@ prop_removeLineComments =
 -- | Test that removeLineComments doesn't affect strings with // inside
 prop_removeLineCommentsPreservesStrings :: Property
 prop_removeLineCommentsPreservesStrings =
-  forAll arbitraryString `suchThat` (not . null) $ \str ->
+  forAll (arbitraryString `suchThat` (not . null)) $ \str ->
     let input = "\"// " ++ str ++ "\""
         result = removeLineComments input
     in property $ "//" `isInfixOf` result
@@ -128,17 +128,17 @@ prop_removeComments =
 -- | Test that normalizeIndentation preserves relative indentation
 prop_normalizeIndentationPreservesRelative :: Property
 prop_normalizeIndentationPreservesRelative =
-  forAll (listOf1 (arbitraryString `suchThat` (not . null))) $ \lines ->
-    let input = unlines lines
+  forAll (listOf1 (arbitraryString `suchThat` (not . null))) $ \inputLines ->
+    let input = unlines inputLines
         result = normalizeIndentation input
         resultLines = lines result
-    in property $ length resultLines == length lines
+    in property $ length resultLines == length inputLines
 
 -- | Test that normalizeIndentation removes common prefix
 prop_normalizeIndentationRemovesCommonPrefix :: Property
 prop_normalizeIndentationRemovesCommonPrefix =
-  forAll (listOf1 (arbitraryString `suchThat` (not . null))) $ \lines ->
-    let input = unlines $ map ("  " ++) lines  -- Add common prefix
+  forAll (listOf1 (arbitraryString `suchThat` (not . null))) $ \inputLines ->
+    let input = unlines $ map ("  " ++) inputLines  -- Add common prefix
         result = normalizeIndentation input
         resultLines = lines result
     in property $ all (\line -> null line || not (isPrefixOf "  " line)) resultLines
@@ -147,18 +147,18 @@ prop_normalizeIndentationRemovesCommonPrefix =
 prop_breakOnFindsFirst :: Property
 prop_breakOnFindsFirst =
   forAll arbitraryString $ \s ->
-    forAll arbitraryChar `suchThat` (`notElem` s) $ \c ->
-      let result = breakOn c s
-      in property $ result == s
+    forAll (arbitraryChar `suchThat` (`notElem` s)) $ \c ->
+      let result = breakOn [c] s
+      in property $ result == (s, "")
 
 -- | Test that breakOn works when character is present
 prop_breakOnWhenPresent :: Property
 prop_breakOnWhenPresent =
   forAll arbitraryString $ \s ->
-    forAll arbitraryChar `suchThat` (`elem` s) $ \c ->
-      let result = breakOn c s
+    forAll (arbitraryChar `suchThat` (`elem` s)) $ \c ->
+      let result = breakOn [c] s
           (before, after) = span (/= c) s
-      in property $ result == before
+      in property $ result == (before, [c] ++ after)
 
 -- | Test that safeProcessString handles special characters
 prop_safeProcessString :: Property
@@ -182,7 +182,7 @@ prop_splitByCollapsed =
   forAll arbitraryChar $ \delim ->
     forAll arbitraryString $ \s ->
       let parts = splitByCollapsed delim s
-          hasConsecutive = delim : [delim] `isInfixOf` s
+          hasConsecutive = [delim, delim] `isInfixOf` s
       in if hasConsecutive
          then property $ not (any (isPrefixOf [delim, delim]) parts)
          else property $ True

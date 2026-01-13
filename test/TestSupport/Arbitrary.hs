@@ -5,7 +5,9 @@
 
 module TestSupport.Arbitrary where
 
-import Test.QuickCheck (Arbitrary(..), Gen, oneof, elements, listOf, frequency, choose)
+import Test.QuickCheck (Arbitrary(..), Gen, oneof, elements, listOf, frequency, choose, getPositive, arbitraryUnicodeChar, vectorOf)
+import qualified Data.Text as T
+import qualified Data.Map as Map
 
 import Parser
   ( FileDirectives(..)
@@ -40,8 +42,11 @@ import Analyzer.Types
   , AnalysisContext(..)
   , AnalyzerState(..)
   )
-import qualified Ownership.Common.Types as Own (OwnershipType(..), OwnershipError(..), OwnershipAnalyzer(..), newOwnershipAnalyzer)
+import qualified Ownership.Common.Types as Own (OwnershipType(..), OwnershipError(..), OwnershipAnalyzer(..), OwnershipTransfer(..), newOwnershipAnalyzer)
 import qualified Dependencies.TypeSystem as Dep
+import qualified Dependencies.AST as Dep (AST(..), Statement(..), TypeExpr(..), Constraint(..))
+import qualified Dependencies.TypeSystem as Dep (TypeConstraint(..))
+import qualified Dependencies.Inference as Dep (TypeScheme(..))
 import qualified Compiler.TypeChecker as TC
   ( Type(..)
   , TypeEnv(..)
@@ -368,3 +373,223 @@ genWellFormedGoModule = GoModule
   <*> frequency [(1, pure Nothing), (2, Just <$> (PackageDecl <$> genIdentifier))]
   <*> listOf genWellFormedImportDecl
   <*> listOf arbitrary
+
+-- | Generator for arbitrary strings
+arbitraryString :: Gen String
+arbitraryString = listOf arbitrary
+
+-- | Generator for arbitrary characters
+arbitraryChar :: Gen Char
+arbitraryChar = arbitrary
+
+-- | Generator for arbitrary positive integers
+arbitraryPositiveInt :: Gen Int
+arbitraryPositiveInt = getPositive <$> arbitrary
+
+-- | Generator for arbitrary SourcePos
+arbitrarySourcePos :: Gen SourcePos
+arbitrarySourcePos = SourcePos <$> arbitraryPositiveInt <*> arbitraryPositiveInt <*> arbitrary
+
+-- | Generator for arbitrary SourceSpan
+arbitrarySourceSpan :: Gen SourceSpan
+arbitrarySourceSpan = SourceSpan <$> arbitrarySourcePos <*> arbitrarySourcePos
+
+-- | Accessor functions for SourcePos
+spLine :: SourcePos -> Int
+spLine = posLine
+
+spColumn :: SourcePos -> Int
+spColumn = posColumn
+
+-- | Accessor functions for SourceSpan
+ssStart :: SourceSpan -> SourcePos
+ssStart = SourceLocation.spanStart
+
+ssEnd :: SourceSpan -> SourcePos
+ssEnd = SourceLocation.spanEnd
+
+arbitraryInt :: Gen Int
+arbitraryInt = arbitrary
+
+-- | Generator for arbitrary identifiers
+arbitraryIdentifier :: Gen String
+arbitraryIdentifier = do
+  firstChar <- elements ['a'..'z']
+  restChars <- listOf $ elements $ ['a'..'z'] ++ ['0'..'9'] ++ ['_']
+  return $ firstChar : restChars
+
+-- | Generator for arbitrary unicode strings
+arbitraryUnicodeString :: Gen String
+arbitraryUnicodeString = listOf arbitraryUnicodeChar
+
+-- | Generator for arbitrary whitespace strings
+arbitraryWhitespace :: Gen String
+arbitraryWhitespace = listOf $ elements " \t\n\r"
+
+-- | Generator for arbitrary short strings
+arbitraryShortString :: Gen String
+arbitraryShortString = genNonEmptyString
+
+-- | Generator for valid Typus code
+validTypusCode :: Gen String
+validTypusCode = oneof
+  [ pure ""
+  , pure "test {}"
+  , do
+      ident <- genIdentifier
+      content <- genNonEmptyString
+      return $ ident ++ " {\n" ++ content ++ "\n}"
+  , do
+      ident1 <- genIdentifier
+      ident2 <- genIdentifier
+      content1 <- genNonEmptyString
+      content2 <- genNonEmptyString
+      return $ ident1 ++ " {\n" ++ content1 ++ "\n" ++ ident2 ++ " {\n" ++ content2 ++ "\n}\n}"
+  ]
+
+-- | Generator for arbitrary escape strings
+arbitraryEscapeString :: Gen String
+arbitraryEscapeString = oneof
+  [ pure "\\n"
+  , pure "\\t"
+  , pure "\\r"
+  , pure "\\\\"
+  , pure "\\\""
+  , pure "\\'"
+  , do
+      base <- genNonEmptyString
+      return $ "\\" ++ base
+  ]
+
+-- | Generator for arbitrary string literals
+arbitraryStringLiteral :: Gen String
+arbitraryStringLiteral = oneof
+  [ do
+      content <- genNonEmptyString
+      return $ "\"" ++ content ++ "\""
+  , do
+      content <- arbitraryEscapeString
+      return $ "\"" ++ content ++ "\""
+  , pure "\"\""
+  ]
+
+-- | Generator for arbitrary numeric literals
+arbitraryNumericLiteral :: Gen String
+arbitraryNumericLiteral = oneof
+  [ do
+      num <- choose (0 :: Int, 1000)
+      return $ show (num :: Int)
+  , do
+      num <- choose (0.0 :: Double, 1000.0)
+      return $ show (num :: Double)
+  , pure "0"
+  , pure "1"
+  , pure "42"
+  , pure "3.14"
+  ]
+
+-- | Generator for arbitrary operators
+arbitraryOperator :: Gen String
+arbitraryOperator = elements
+  [ "+", "-", "*", "/", "%", "++", "--"
+  , "==", "!=", "<", ">", "<=", ">="
+  , "&&", "||", "!", "&", "|", "^", "~"
+  , "<<", ">>", "&&=", "||=", "&=", "|=", "^="
+  , "+=", "-=", "*=", "/=", "%="
+  , "=", "+=", "-=", "*=", "/=", "%="
+  , "->", "<-", "::", "..", "..."
+  ]
+
+-- | Generator for arbitrary ownership errors
+arbitraryOwnershipError :: Gen Own.OwnershipError
+arbitraryOwnershipError = oneof
+  [ Own.UseAfterMove <$> genIdentifier
+  , Own.DoubleMove <$> genIdentifier <*> genIdentifier
+  , Own.BorrowWhileMoved <$> genIdentifier
+  , Own.MutBorrowWhileBorrowed <$> genIdentifier
+  , Own.BorrowWhileMutBorrowed <$> genIdentifier
+  , Own.MultipleMutBorrows <$> genIdentifier
+  , Own.UseWhileMutBorrowed <$> genIdentifier
+  , Own.OutOfScope <$> genIdentifier
+  , Own.BorrowError <$> genNonEmptyString
+  , Own.ParseError <$> genNonEmptyString
+  , Own.CrossFunctionMove <$> genIdentifier <*> genIdentifier
+  , Own.ParameterMoveMismatch <$> genIdentifier
+  , Own.ControlFlowError <$> genNonEmptyString
+  , Own.PathSensitiveError <$> genNonEmptyString
+  , Own.LoopOwnershipError <$> genNonEmptyString
+  ]
+
+-- | Generator for arbitrary ownership types
+arbitraryOwnershipType :: Gen Own.OwnershipType
+arbitraryOwnershipType = arbitrary
+
+-- | Generator for arbitrary ownership transfers
+arbitraryOwnershipTransfer :: Gen Own.OwnershipTransfer
+arbitraryOwnershipTransfer = Own.OwnershipTransfer <$> genIdentifier <*> genIdentifier
+
+-- | Generator for arbitrary type variables
+arbitraryTypeVar :: Gen Dep.TypeVar
+arbitraryTypeVar = oneof
+  [ Dep.TVCon <$> genIdentifier
+  , Dep.TVVar <$> genIdentifier
+  , Dep.TVApp <$> genIdentifier <*> listOf arbitraryTypeVar
+  , Dep.TVFun <$> listOf arbitraryTypeVar <*> arbitraryTypeVar
+  , Dep.TVTuple <$> listOf arbitraryTypeVar
+  ]
+
+-- | Generator for arbitrary constraints
+arbitraryConstraint :: Gen Dep.Constraint
+arbitraryConstraint = Dep.SizeGT <$> (T.pack <$> genIdentifier) <*> arbitrary
+
+-- | Generator for arbitrary type expressions
+arbitraryTypeExpr :: Gen Dep.TypeExpr
+arbitraryTypeExpr = oneof
+  [ Dep.SimpleT <$> (T.pack <$> genIdentifier)
+  , Dep.GenericT <$> (T.pack <$> genIdentifier) <*> listOf arbitraryTypeExpr
+  , Dep.FuncT <$> (listOf ((,) <$> (T.pack <$> genIdentifier) <*> arbitraryTypeExpr)) <*> arbitraryTypeExpr
+  , Dep.RefineT <$> arbitraryTypeExpr <*> (listOf arbitraryConstraint)
+  ]
+
+-- | Generator for arbitrary AST
+arbitraryAST :: Gen Dep.AST
+arbitraryAST = do
+  statements <- listOf arbitraryStatement
+  return $ Dep.Program statements
+
+-- | Generator for arbitrary statements
+arbitraryStatement :: Gen Dep.Statement
+arbitraryStatement = oneof
+  [ Dep.STypeDef <$> (T.pack <$> genIdentifier) <*> (map T.pack <$> listOf genIdentifier) <*> pure []
+  , Dep.STypeAlias <$> (T.pack <$> genIdentifier) <*> (Dep.SimpleT <$> (T.pack <$> genIdentifier)) <*> pure []
+  ]
+
+-- | Generator for arbitrary type environment
+arbitraryTypeEnvironment :: Gen [String]
+arbitraryTypeEnvironment = listOf genIdentifier
+
+-- | Generator for arbitrary type constraints
+arbitraryTypeConstraint :: Gen Dep.TypeConstraint
+arbitraryTypeConstraint = oneof
+  [ Dep.Equal <$> arbitraryTypeVar <*> arbitraryTypeVar
+  , Dep.Subtype <$> arbitraryTypeVar <*> arbitraryTypeVar
+  , Dep.Predicate <$> genIdentifier <*> listOf arbitraryTypeVar
+  , Dep.TypeSizeGE <$> arbitraryTypeVar <*> arbitrary
+  , Dep.TypeSizeGT <$> arbitraryTypeVar <*> arbitrary
+  , Dep.TypeRange <$> arbitraryTypeVar <*> arbitrary <*> arbitrary
+  ]
+
+-- | Generator for arbitrary type schemes
+arbitraryTypeScheme :: Gen Dep.TypeScheme
+arbitraryTypeScheme = do
+  vars <- listOf genIdentifier
+  typ <- arbitraryTypeVar
+  return $ Dep.Forall vars typ
+
+-- | Generator for arbitrary substitutions
+arbitrarySubstitution :: Gen Dep.Substitution
+arbitrarySubstitution = do
+  size <- choose (0, 10)
+  keys <- vectorOf size genIdentifier
+  values <- vectorOf size arbitraryTypeVar
+  return $ Map.fromList (zip keys values)

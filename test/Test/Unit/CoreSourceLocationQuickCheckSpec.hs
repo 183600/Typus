@@ -7,7 +7,7 @@ module Test.Unit.CoreSourceLocationQuickCheckSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import TestSupport.Arbitrary ()
+import TestSupport.Arbitrary
 import TestSupport.QuickCheck
 import qualified Data.Text as T
 import Data.List (isPrefixOf, isSuffixOf, isInfixOf, intercalate)
@@ -31,14 +31,14 @@ prop_startPosValid =
 prop_posAfterIncrementsColumn :: Property
 prop_posAfterIncrementsColumn =
   forAll arbitrarySourcePos $ \pos ->
-    let newPos = posAfter pos 'a'
+    let newPos = posAfter 'a' pos
     in property $ spColumn newPos == spColumn pos + 1
 
 -- | Test that posAfter increments line for newline
 prop_posAfterIncrementsLineForNewline :: Property
 prop_posAfterIncrementsLineForNewline =
   forAll arbitrarySourcePos $ \pos ->
-    let newPos = posAfter pos '\n'
+    let newPos = posAfter '\n' pos
     in property $ spLine newPos == spLine pos + 1 && spColumn newPos == 1
 
 -- | Test that posAt creates position at specific line and column
@@ -54,13 +54,13 @@ prop_posAtLineColSpecific :: Property
 prop_posAtLineColSpecific =
   forAll arbitraryPositiveInt $ \line ->
     forAll arbitraryPositiveInt $ \col ->
-      let pos = posAtLineCol line col
+      let pos = posAtLineCol line col 0
       in property $ spLine pos == line && spColumn pos == col
 
 -- | Test that emptySpan creates a valid empty span
 prop_emptySpanValid :: Property
 prop_emptySpanValid =
-  let span = emptySpan
+  let span = emptySpan startPos
   in property $ ssStart span == ssEnd span
 
 -- | Test that spanFrom creates span from position
@@ -75,7 +75,7 @@ prop_spanToValid :: Property
 prop_spanToValid =
   forAll arbitrarySourcePos $ \start ->
     forAll arbitrarySourcePos $ \end ->
-      let span = spanTo start end
+      let span = spanBetween start end
       in property $ ssStart span == start && ssEnd span == end
 
 -- | Test that spanBetween creates span between positions
@@ -135,7 +135,7 @@ prop_locatedAtValid :: Property
 prop_locatedAtValid =
   forAll arbitraryInt $ \value ->
     forAll arbitrarySourcePos $ \pos ->
-      let located = locatedAt value pos
+      let located = locatedAt pos value
       in property $ locatedValue located == value && locatedPos located == pos
 
 -- | Test that locatedWithSpan creates a located value with span
@@ -143,7 +143,7 @@ prop_locatedWithSpanValid :: Property
 prop_locatedWithSpanValid =
   forAll arbitraryInt $ \value ->
     forAll arbitrarySourceSpan $ \span ->
-      let located = locatedWithSpan value span
+      let located = locatedWithSpan span value
       in property $ locatedValue located == value && locatedSpan located == span
 
 -- | Test that mapLocated applies function to value
@@ -151,7 +151,7 @@ prop_mapLocatedValid :: Property
 prop_mapLocatedValid =
   forAll arbitraryInt $ \value ->
     forAll arbitrarySourceSpan $ \span ->
-      let located = locatedWithSpan value span
+      let located = locatedWithSpan span value
           doubled = mapLocated (*2) located
       in property $ locatedValue doubled == value * 2 && locatedSpan doubled == span
 
@@ -172,7 +172,7 @@ prop_locatedValueValid :: Property
 prop_locatedValueValid =
   forAll arbitraryInt $ \value ->
     forAll arbitrarySourceSpan $ \span ->
-      let located = locatedWithSpan value span
+      let located = locatedWithSpan span value
       in property $ locatedValue located == value
 
 -- | Test that locatedSpan extracts span
@@ -180,7 +180,7 @@ prop_locatedSpanValid :: Property
 prop_locatedSpanValid =
   forAll arbitraryInt $ \value ->
     forAll arbitrarySourceSpan $ \span ->
-      let located = locatedWithSpan value span
+      let located = locatedWithSpan span value
       in property $ locatedSpan located == span
 
 -- | Test that locatedPos extracts position from span
@@ -188,14 +188,14 @@ prop_locatedPosValid :: Property
 prop_locatedPosValid =
   forAll arbitraryInt $ \value ->
     forAll arbitrarySourcePos $ \pos ->
-      let located = locatedAt value pos
+      let located = locatedAt pos value
       in property $ locatedPos located == pos
 
 -- | Test that toErrorLocation converts span to error location
 prop_toErrorLocationValid :: Property
 prop_toErrorLocationValid =
   forAll arbitrarySourceSpan $ \span ->
-    let errLoc = toErrorLocation span
+    let errLoc = toErrorLocationWithSpan span
     in property $ True  -- Basic sanity check
 
 -- | Test that toErrorLocationWithSpan converts span to error location with span
