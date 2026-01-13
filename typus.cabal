@@ -1744,6 +1744,15 @@ test-suite typus-test
         Test.Unit.AdvancedGoToolchainQuickCheckSpec,
         Test.Unit.AdvancedSyntaxValidatorQuickCheckSpec,
 
+        -- New Comprehensive QuickCheck Test Modules
+        Test.Unit.UtilsComprehensiveQuickCheckSpec,
+        Test.Unit.SourceLocationComprehensiveQuickCheckSpec,
+        Test.Unit.ParserComprehensiveQuickCheckSpec,
+        Test.Unit.ErrorHandlerComprehensiveQuickCheckSpec,
+        Test.Unit.CompilerComprehensiveQuickCheckSpec,
+
+        -- Additional QuickCheck Test Modules
+
         -- New Comprehensive Test Modules (2025) - 10 cabal tests
         Test.Unit.NewTextProcessingBoundarySpec,
         Test.Unit.NewSourceLocationMathPropertiesSpec,
