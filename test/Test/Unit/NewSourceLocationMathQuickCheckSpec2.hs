@@ -48,7 +48,7 @@ prop_pos_at_properties (Positive line) (Positive col) =
 prop_pos_at_line_col_consistent :: Positive Int -> Positive Int -> Property
 prop_pos_at_line_col_consistent (Positive line) (Positive col) =
   let pos1 = posAt line col
-      pos2 = posAtLineCol line col
+      pos2 = posAtLineCol line col 0
   in property $ pos1 == pos2
 
 -- | 测试emptySpan函数的基本属性
@@ -157,9 +157,9 @@ prop_location_tracker_span_marking (Positive line1) (Positive col1) (Positive li
       pos2 = SourcePos line2 col2 0
       result = runLocationTracker $ do
         setCurrentPos pos1
-        markSpanStart
+        start <- markSpanStart
         setCurrentPos pos2
-        markSpanEnd
+        markSpanEnd start
   in property $ True  -- 只要能执行就行
 
 tests :: TestTree

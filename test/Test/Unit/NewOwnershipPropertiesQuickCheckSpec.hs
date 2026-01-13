@@ -9,9 +9,17 @@ import Test.Tasty.HUnit
 import qualified Data.Text as T
 import Ownership
 import Ownership.Common.Types
+import Parser
+import Compiler
 import SourceLocation
-import Test.QuickCheck (Positive(..))
+import Test.QuickCheck (Positive(..), Arbitrary(..), oneof)
 import Data.List (isInfixOf)
+
+-- 为 OwnershipType 添加 Arbitrary 实例
+instance Arbitrary OwnershipType where
+  arbitrary = do
+    name <- arbitrary
+    oneof [return (Owned name), return (Borrowed name), return (MutBorrowed name)]
 
 -- | 测试OwnershipType的基本属性
 prop_ownership_type_equality :: OwnershipType -> OwnershipType -> Property
@@ -29,14 +37,14 @@ prop_ownership_type_show ownType =
 prop_ownership_error_components :: String -> Positive Int -> Positive Int -> Property
 prop_ownership_error_components msg (Positive line) (Positive col) =
   let pos = SourcePos line col 0
-      error = LoopOwnershipError msg pos  -- 使用正确的构造函数
+      error = LoopOwnershipError (msg ++ " at " ++ show line ++ ":" ++ show col)  -- 使用正确的构造函数
   in property $ True  -- 简化测试，只要能创建错误就算通过
 
 -- | 测试OwnershipError的显示
 prop_ownership_error_show :: String -> Positive Int -> Positive Int -> Property
 prop_ownership_error_show msg (Positive line) (Positive col) =
   let pos = SourcePos line col 0
-      error = LoopOwnershipError msg pos  -- 使用正确的构造函数
+      error = LoopOwnershipError (msg ++ " at " ++ show line ++ ":" ++ show col)  -- 使用正确的构造函数
       shown = show error
   in property $ msg `isInfixOf` shown && show line `isInfixOf` shown
 

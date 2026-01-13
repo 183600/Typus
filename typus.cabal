@@ -1304,7 +1304,16 @@ test-suite typus-test
         Test.Unit.NewDependenciesPropertiesQuickCheckSpec,
         Test.Unit.NewDependentTypesPropertiesQuickCheckSpec,
         Test.Unit.NewIntegrationPropertiesQuickCheckSpec,
-        Test.Unit.NewBoundaryConditionsQuickCheckSpec
+        Test.Unit.NewBoundaryConditionsQuickCheckSpec,
+        
+        -- New Comprehensive QuickCheck Test Modules (2025) - Added for enhanced testing
+        Test.Unit.NewBasicTypesAndStringPropertiesSpec,
+        Test.Unit.NewParserAdvancedPropertiesSpec,
+        Test.Unit.NewCompilerIRPropertiesSpec,
+        Test.Unit.NewOwnershipAnalysisPropertiesSpec,
+        Test.Unit.NewErrorHandlingPropertiesSpec,
+        Test.Unit.NewSourceLocationCalculationPropertiesSpec,
+        Test.Unit.NewUtilsFunctionsPropertiesSpec
         
     build-depends:
         base >=4.7 && <5,

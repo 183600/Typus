@@ -20,7 +20,7 @@ prop_parse_compile_pipeline code =
   case parseTypus code of
     Left parseError -> property True  -- 解析失败也算预期行为
     Right typusFile ->
-      case compile code of
+      case compile typusFile of
         Left compileError -> property True  -- 编译失败也算预期行为
         Right result -> property True  -- 成功编译
 
@@ -28,7 +28,11 @@ prop_parse_compile_pipeline code =
 prop_error_handling_consistency :: String -> Property
 prop_error_handling_consistency code =
   let parseResult = parseTypus code
-      compileResult = compile code
+      compileResult = case parseResult of
+        Left _ -> Left ["Parse error"]
+        Right typusFile -> case compile typusFile of
+          Left errors -> Left (map show errors)
+          Right result -> Right result
   in case (parseResult, compileResult) of
        (Left _, Left _) -> property True  -- 两者都失败
        (Right _, Left _) -> property True  -- 解析成功但编译失败
@@ -55,17 +59,24 @@ prop_string_processing_pipeline rawCode =
 -- | 测试编译器错误报告的一致性
 prop_compiler_error_reporting :: String -> Property
 prop_compiler_error_reporting code =
-  case compile code of
-    Left errors ->
-      let formatted = map formatCompilerError errors
-      in property $ all (not . null) formatted
-    Right result -> property True
+  case parseTypus code of
+    Left _ -> property True
+    Right typusFile ->
+      case compile typusFile of
+        Left errors ->
+          let formatted = map show errors
+          in property $ all (not . null) formatted
+        Right result -> property True
 
 -- | 测试类型检查与所有权分析的交互
 prop_type_ownership_interaction :: String -> Property
 prop_type_ownership_interaction code =
   let typeResult = checkTypes code
-      ownershipResult = checkOwnership code
+      ownershipResult = case parseTypus code of
+        Left _ -> Left ["Parse error"]
+        Right typusFile -> case Compiler.checkOwnership typusFile of
+          Left errors -> Left (map show errors)
+          Right result -> Right result
   in case (typeResult, ownershipResult) of
        (Left _, Left _) -> property True  -- 两者都失败
        (Right _, Left _) -> property True  -- 类型检查成功但所有权分析失败
@@ -89,10 +100,10 @@ prop_full_compilation_pipeline code =
   case parseTypus code of
     Left parseError -> property True
     Right typusFile ->
-      case compile code of
+      case compile typusFile of
         Left compileError -> property True
         Right compileResult ->
-          let goCode = generateGoCode compileResult
+          let goCode = Compiler.generateGoCode typusFile
           in property $ not (null goCode)
 
 

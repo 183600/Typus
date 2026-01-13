@@ -40,6 +40,15 @@ import qualified Test.Unit.NewDependentTypesPropertiesQuickCheckSpec as Dependen
 import qualified Test.Unit.NewIntegrationPropertiesQuickCheckSpec as IntegrationProperties
 import qualified Test.Unit.NewBoundaryConditionsQuickCheckSpec as BoundaryConditions
 
+-- Import newly created comprehensive QuickCheck test modules (2025)
+import qualified Test.Unit.NewBasicTypesAndStringPropertiesSpec as BasicTypesAndStringProperties
+import qualified Test.Unit.NewParserAdvancedPropertiesSpec as ParserAdvancedProperties
+import qualified Test.Unit.NewCompilerIRPropertiesSpec as CompilerIRProperties
+import qualified Test.Unit.NewOwnershipAnalysisPropertiesSpec as OwnershipAnalysisProperties
+import qualified Test.Unit.NewErrorHandlingPropertiesSpec as ErrorHandlingPropertiesNew
+import qualified Test.Unit.NewSourceLocationCalculationPropertiesSpec as SourceLocationCalculationProperties
+import qualified Test.Unit.NewUtilsFunctionsPropertiesSpec as UtilsFunctionsProperties
+
 -- Basic test properties
 prop_basic_property :: String -> Property
 prop_basic_property s = property $ length s >= 0
@@ -82,5 +91,14 @@ tests = testGroup "Test.Unit.Tests Tests"
     DependenciesProperties.tests,
     DependentTypesProperties.tests,
     IntegrationProperties.tests,
-    BoundaryConditions.tests
+    BoundaryConditions.tests,
+    
+    -- Newly created comprehensive QuickCheck test modules (2025)
+    BasicTypesAndStringProperties.tests,
+    ParserAdvancedProperties.tests,
+    CompilerIRProperties.tests,
+    OwnershipAnalysisProperties.tests,
+    ErrorHandlingPropertiesNew.tests,
+    SourceLocationCalculationProperties.tests,
+    UtilsFunctionsProperties.tests
   ]

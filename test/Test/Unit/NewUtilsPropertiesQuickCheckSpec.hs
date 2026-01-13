@@ -72,7 +72,9 @@ prop_breakOn_correctness needle haystack =
 prop_safe_process_string_returns_valid :: String -> Property
 prop_safe_process_string_returns_valid s = 
   let processed = safeProcessString s
-  in property $ all isValidChar processed
+  in case processed of
+       Left _ -> property True  -- 处理失败也算通过
+       Right str -> property $ all isValidChar (str :: String)
 
 -- | 测试isValidChar函数的基本属性
 prop_is_valid_char_ascii :: Char -> Property
@@ -97,10 +99,10 @@ prop_splitBy_empty_delim s =
 
 -- | 测试removeLineComments与多行字符串
 prop_remove_line_comments_multiline :: [String] -> Property
-prop_remove_line_comments_multiline lines = 
-  let input = unlines lines
+prop_remove_line_comments_multiline inputLines = 
+  let input = unlines inputLines
       output = removeLineComments input
-  in property $ length (lines output) <= length lines
+  in property $ length (lines output) <= length inputLines
 
 -- | 测试normalizeIndentation与空行
 prop_normalize_indentation_preserves_empty_lines :: String -> Property

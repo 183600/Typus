@@ -30,14 +30,15 @@ prop_default_block_directives_consistent =
 -- | 测试TypusFile的基本属性
 prop_typus_file_empty :: Property
 prop_typus_file_empty = 
-  let emptyFile = TypusFile defaultFileDirectives []
+  let emptyFile = TypusFile defaultFileDirectives [] [] []
   in property $ null (tfBlocks emptyFile)
 
 -- | 测试CodeBlock的基本属性
 prop_code_block_empty :: Property
 prop_code_block_empty = 
-  let emptyBlock = CodeBlock defaultBlockDirectives "" []
-  in property $ null (cbContent emptyBlock) && null (cbLines emptyBlock)
+  let emptySpan = SourceSpan (SourcePos 1 1 0) (SourcePos 1 1 0)
+      emptyBlock = CodeBlock defaultBlockDirectives "" emptySpan
+  in property $ null (cbContent emptyBlock)
 
 -- | 测试解析空字符串
 prop_parse_empty_string :: Property

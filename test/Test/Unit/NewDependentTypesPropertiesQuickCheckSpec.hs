@@ -9,6 +9,7 @@ import Test.Tasty.HUnit
 import qualified Data.Text as T
 import DependentTypesParser
 import Compiler.DependentTypeChecker
+import Parser
 import SourceLocation
 import Data.List (isInfixOf)
 
