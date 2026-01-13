@@ -134,6 +134,11 @@ ownershipErrorToCompilerError err = case err of
         [ "Avoid moving loop variables inside the loop body"
         , "Borrow values when they need to be reused on each iteration"
         ]
+    OwnershipError msg -> mk "OWN0016"
+        ("Ownership error: " ++ msg)
+        [ "Check ownership rules"
+        , "Ensure proper borrowing and moving"
+        ]
   where
     mk errId message suggestions =
         mkCompilerError

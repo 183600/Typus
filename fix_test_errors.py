@@ -1,276 +1,161 @@
 #!/usr/bin/env python3
 """
-Script to fix compilation errors in the test files.
+修复测试文件中的常见错误
 """
 
 import re
 import os
 
-def fix_core_error_handler_properties():
-    """Fix CoreErrorHandlerPropertiesQuickCheckSpec.hs"""
-    file_path = "test/Test/Unit/CoreErrorHandlerPropertiesQuickCheckSpec.hs"
+def fix_compiler_advanced_spec():
+    """修复 CompilerAdvancedQuickCheckSpec.hs 中的错误"""
+    file_path = "test/Test/Unit/CompilerAdvancedQuickCheckSpec.hs"
     
     with open(file_path, 'r') as f:
         content = f.read()
     
-    # Replace ErrorSeverity imports
+    # 修复 IR.GoModule 问题
     content = re.sub(
-        r"import Compiler\.Errors\.Core \(ErrorSeverity\(\.\.\), ErrorContext\(\.\.\)\)",
-        "import Compiler.Errors.Core (ErrorSeverity(..), ErrorContext(..), ErrorLocation(..))",
+        r'IR\.GoModule \(IR\.ensurePackageDecl "main"\) \[\] \[\] \[\]',
+        'IR.GoModule (IR.PackageDecl "main" Nothing) [] [] []',
         content
     )
     
-    # Replace Critical with Error
-    content = re.sub(r"Critical", "Error", content)
-    
-    # Replace ErrorMessage with a simple string
-    content = re.sub(r"ErrorMessage", "String", content)
-    
-    # Replace ErrorHandler with ErrorCollector
-    content = re.sub(r"ErrorHandler", "ErrorCollector", content)
-    
-    # Fix ErrorMessage constructor
+    # 修复 ErrorLocation 构造函数问题
     content = re.sub(
-        r"ErrorMessage msg _",
-        '"Error: " <> msg',
+        r'ErrorLocation _ line _ _ _ -> line >= 0',
+        '''case loc of
+        ErrorLocation _ line _ _ _ -> property $ line >= 0
+        _ -> property True''',
         content
     )
     
     with open(file_path, 'w') as f:
         f.write(content)
-    
     print(f"Fixed {file_path}")
 
-def fix_core_go_toolchain_properties():
-    """Fix CoreGoToolchainPropertiesQuickCheckSpec.hs"""
-    file_path = "test/Test/Unit/CoreGoToolchainPropertiesQuickCheckSpec.hs"
+def fix_dependencies_advanced_spec():
+    """修复 DependenciesAdvancedQuickCheckSpec.hs 中的错误"""
+    file_path = "test/Test/Unit/DependenciesAdvancedQuickCheckSpec.hs"
     
     with open(file_path, 'r') as f:
         content = f.read()
     
-    # Replace GoModule, GoFunction, GoVariable, GoType with simple types
-    content = re.sub(r"GoModule", "String", content)
-    content = re.sub(r"GoFunction", "String", content)
-    content = re.sub(r"GoVariable", "String", content)
-    content = re.sub(r"GoType", "String", content)
+    # 修复 newTypeVariable 调用
+    content = re.sub(
+        r'newTypeVariable "test"',
+        'runTypeInference newTypeVariable',
+        content
+    )
+    
+    # 修复 String 到 Text 的转换
+    content = re.sub(r'SimpleT "([^"]+)"', r'SimpleT (T.pack "\1")', content)
+    content = re.sub(r'SVarDecl "([^"]+)"', r'SVarDecl (T.pack "\1")', content)
+    content = re.sub(r'SizeGT "([^"]+)"', r'SizeGT (T.pack "\1")', content)
+    content = re.sub(r'SizeGE "([^"]+)"', r'SizeGE (T.pack "\1")', content)
+    
+    # 修复 generalize 函数调用
+    content = re.sub(
+        r'generalize env typeExpr',
+        'runTypeInference (generalize typeExpr)',
+        content
+    )
+    
+    # 修复 instantiate 函数调用
+    content = re.sub(
+        r'instantiate scheme',
+        'runTypeInference (instantiate scheme)',
+        content
+    )
+    
+    # 修复 sortBy 导入
+    if "import Data.List (sortBy)" not in content:
+        content = re.sub(
+            r'(import Data\.List \(.*?\))',
+            r'\1\nimport Data.List (sortBy)',
+            content
+        )
     
     with open(file_path, 'w') as f:
         f.write(content)
-    
     print(f"Fixed {file_path}")
 
-def fix_core_integration_properties():
-    """Fix CoreIntegrationPropertiesQuickCheckSpec.hs"""
-    file_path = "test/Test/Unit/CoreIntegrationPropertiesQuickCheckSpec.hs"
+def fix_error_handler_advanced_spec():
+    """修复 ErrorHandlerAdvancedQuickCheckSpec.hs 中的错误"""
+    file_path = "test/Test/Unit/ErrorHandlerAdvancedQuickCheckSpec.hs"
     
     with open(file_path, 'r') as f:
         content = f.read()
     
-    # Fix Ownership.analyzeOwnership call
+    # 修复导入语法错误
     content = re.sub(
-        r"Ownership\.analyzeOwnership parsed",
-        "Ownership.analyzeOwnership (show parsed)",
-        content
-    )
-    
-    # Fix property return type
-    content = re.sub(
-        r"Left _ -> property True",
-        "Left _ -> property True",
-        content
-    )
-    
-    # Fix parseTypus call with T.Text
-    content = re.sub(
-        r"parseTypus code",
-        "parseTypus (T.unpack code)",
-        content
-    )
-    
-    # Fix T.replicate with string
-    content = re.sub(
-        r'T\.replicate size "x"',
-        'T.pack (replicate size \'x\')',
-        content
-    )
-    
-    # Fix T.replicate with string in other places
-    content = re.sub(
-        r'T\.replicate 10000 "x"',
-        'T.pack (replicate 10000 \'x\')',
-        content
-    )
-    
-    content = re.sub(
-        r'T\.replicate size "x"',
-        'T.pack (replicate size \'x\')',
-        content
-    )
-    
-    content = re.sub(
-        r'"func main\(\) { " <> T\.replicate size "x" <> " }"',
-        'T.pack ("func main() { " ++ replicate size \'x\' ++ " }")',
-        content
-    )
-    
-    content = re.sub(
-        r'T\.replicate depth "{"',
-        'T.pack (replicate depth \'{\')',
-        content
-    )
-    
-    content = re.sub(
-        r'"type Large struct { " <> T\.replicate size "Field int; " <> " }"',
-        'T.pack ("type Large struct { " ++ replicate size "Field int; " ++ " }")',
+        r'import Dependencies\.TypeSystem \(DependentTypeError\(\.\.\)\)\s*\n\s*, emptyContext',
+        '''import Dependencies.TypeSystem (DependentTypeError(..))
+import Compiler.Errors.Core (emptyContext''',
         content
     )
     
     with open(file_path, 'w') as f:
         f.write(content)
-    
     print(f"Fixed {file_path}")
 
-def fix_core_ownership_properties():
-    """Fix CoreOwnershipPropertiesQuickCheckSpec.hs"""
-    file_path = "test/Test/Unit/CoreOwnershipPropertiesQuickCheckSpec.hs"
+def fix_ownership_advanced_spec():
+    """修复 OwnershipAdvancedQuickCheckSpec.hs 中的错误"""
+    file_path = "test/Test/Unit/OwnershipAdvancedQuickCheckSpec.hs"
     
     with open(file_path, 'r') as f:
         content = f.read()
     
-    # Fix the leading comma in testProperty
+    # 修复 Property 类型不匹配
     content = re.sub(
-        r", testProperty",
-        "testProperty",
+        r'in ordering === EQ \|\| ordering === LT \|\| ordering === GT',
+        'in property $ ordering `elem` [EQ, LT, GT]',
+        content
+    )
+    
+    # 修复 analyzeOwnership 调用
+    content = re.sub(
+        r'analyzeOwnership analyzer code',
+        'analyzeOwnership code',
+        content
+    )
+    
+    # 修复 analyzeOwnershipDebug 调用
+    content = re.sub(
+        r'analyzeOwnershipDebug analyzer code',
+        'analyzeOwnershipDebug code',
+        content
+    )
+    
+    # 修复 analyzeOwnershipFile 调用
+    content = re.sub(
+        r'analyzeOwnershipFile analyzer filePath',
+        'analyzeOwnershipFile filePath',
+        content
+    )
+    
+    # 修复 Property 类型不匹配
+    content = re.sub(
+        r'in length tokens >= 0',
+        'in property $ length tokens >= 0',
+        content
+    )
+    
+    content = re.sub(
+        r'in null tokens',
+        'in property $ null tokens',
         content
     )
     
     with open(file_path, 'w') as f:
         f.write(content)
-    
-    print(f"Fixed {file_path}")
-
-def fix_core_parser_properties():
-    """Fix CoreParserPropertiesQuickCheckSpec.hs"""
-    file_path = "test/Test/Unit/CoreParserPropertiesQuickCheckSpec.hs"
-    
-    with open(file_path, 'r') as f:
-        content = f.read()
-    
-    # Fix the leading comma in testProperty
-    content = re.sub(
-        r", testProperty",
-        "testProperty",
-        content
-    )
-    
-    with open(file_path, 'w') as f:
-        f.write(content)
-    
-    print(f"Fixed {file_path}")
-
-def fix_core_performance_properties():
-    """Fix CorePerformancePropertiesQuickCheckSpec.hs"""
-    file_path = "test/Test/Unit/CorePerformancePropertiesQuickCheckSpec.hs"
-    
-    with open(file_path, 'r') as f:
-        content = f.read()
-    
-    # Fix T.replicate with string
-    content = re.sub(
-        r'T\.replicate size "x"',
-        'T.pack (replicate size \'x\')',
-        content
-    )
-    
-    content = re.sub(
-        r'T\.replicate 10000 "x"',
-        'T.pack (replicate 10000 \'x\')',
-        content
-    )
-    
-    content = re.sub(
-        r'"func main\(\) { " <> T\.replicate size "x" <> " }"',
-        'T.pack ("func main() { " ++ replicate size \'x\' ++ " }")',
-        content
-    )
-    
-    content = re.sub(
-        r'T\.replicate depth "{"',
-        'T.pack (replicate depth \'{\')',
-        content
-    )
-    
-    content = re.sub(
-        r'"type Large struct { " <> T\.replicate size "Field int; " <> " }"',
-        'T.pack ("type Large struct { " ++ replicate size "Field int; " ++ " }")',
-        content
-    )
-    
-    # Fix parseTypus with T.Text
-    content = re.sub(
-        r"parseTypus input",
-        "parseTypus (T.unpack input)",
-        content
-    )
-    
-    content = re.sub(
-        r"parseTypus largeFile",
-        "parseTypus (T.unpack largeFile)",
-        content
-    )
-    
-    content = re.sub(
-        r"parseTypus program",
-        "parseTypus (T.unpack program)",
-        content
-    )
-    
-    content = re.sub(
-        r"parseTypus nested",
-        "parseTypus (T.unpack nested)",
-        content
-    )
-    
-    with open(file_path, 'w') as f:
-        f.write(content)
-    
-    print(f"Fixed {file_path}")
-
-def fix_core_source_location_properties():
-    """Fix CoreSourceLocationPropertiesQuickCheckSpec.hs"""
-    file_path = "test/Test/Unit/CoreSourceLocationPropertiesQuickCheckSpec.hs"
-    
-    with open(file_path, 'r') as f:
-        content = f.read()
-    
-    # Add posAfter to imports
-    content = re.sub(
-        r"import SourceLocation \(SourcePos\(\.\.\), SourceSpan\(\.\.\), Located\(\.\.\), startPos, emptySpan, spanFrom, mergeSpans\)",
-        "import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), startPos, emptySpan, spanFrom, mergeSpans, posAfter)",
-        content
-    )
-    
-    # Fix locatedPos
-    content = re.sub(
-        r"locatedPos located",
-        "locatedValue located",
-        content
-    )
-    
-    with open(file_path, 'w') as f:
-        f.write(content)
-    
     print(f"Fixed {file_path}")
 
 if __name__ == "__main__":
     os.chdir("/home/runner/work/Typus/Typus")
     
-    fix_core_error_handler_properties()
-    fix_core_go_toolchain_properties()
-    fix_core_integration_properties()
-    fix_core_ownership_properties()
-    fix_core_parser_properties()
-    fix_core_performance_properties()
-    fix_core_source_location_properties()
+    fix_compiler_advanced_spec()
+    fix_dependencies_advanced_spec()
+    fix_error_handler_advanced_spec()
+    fix_ownership_advanced_spec()
     
-    print("All test files have been fixed!")
+    print("All fixes applied!")

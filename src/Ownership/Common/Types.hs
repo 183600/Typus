@@ -50,6 +50,7 @@ data OwnershipError
     | ControlFlowError String
     | PathSensitiveError String
     | LoopOwnershipError String
+    | OwnershipError String
     deriving (Eq)
 
 instance Show OwnershipError where
@@ -68,6 +69,7 @@ instance Show OwnershipError where
     show (ControlFlowError msg) = "ControlFlowError " ++ msg
     show (PathSensitiveError msg) = "PathSensitiveError " ++ msg
     show (LoopOwnershipError msg) = "LoopOwnershipError " ++ msg
+    show (OwnershipError msg) = "OwnershipError " ++ msg
 
 instance Ord OwnershipError where
     compare err1 err2 = compare (show err1) (show err2)

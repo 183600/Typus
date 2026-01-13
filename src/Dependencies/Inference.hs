@@ -1,10 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Dependencies.Inference (
-  TypeScheme(..),
-  TypeEnvironment(..),
-  TypeInferenceState(..),
-  TypeInferenceError(..),
   TypeInference,
   newTypeVariable,
   getFreshTypeVar,
@@ -40,35 +36,7 @@ import qualified Data.Set as Set
 import qualified Data.Text as T
 
 import Dependencies.AST
-import Dependencies.TypeSystem
-
--- Hindley-Milner style type inference -----------------------------------------
-
-data TypeScheme = Forall [String] TypeVar
-  deriving (Show, Eq)
-
-data TypeEnvironment = TypeEnvironment
-  { teTypes         :: Map.Map String TypeDef
-  , teSchemes       :: Map.Map String TypeScheme
-  , teCurrentLevel  :: Int
-  , teNextTypeVarId :: IORef Int
-  }
-
-data TypeInferenceState = TypeInferenceState
-  { typeEnv         :: TypeEnvironment
-  , currentSubst    :: Substitution
-  , inferenceErrors :: [TypeInferenceError]
-  }
-
-data TypeInferenceError
-  = UnificationFailure TypeVar TypeVar
-  | InfiniteType String TypeVar
-  | UnboundVariable String
-  | TypeMismatchError TypeVar TypeVar
-  | ConstraintNotSatisfied TypeConstraint
-  | OccursCheckFailed String TypeVar
-  | GenericEscape String TypeVar
-  deriving (Show, Eq)
+import Dependencies.TypeSystem (TypeVar(..), TypeDef(..), TypeConstraint(..), TypeEnvironment(..), TypeInferenceState(..), TypeInferenceError(..), Substitution, TypeScheme(..), preludeTypeDefs, convertConstraint, unify, validateConstraint)
 
 type TypeInference = StateT TypeInferenceState (ExceptT TypeInferenceError IO)
 

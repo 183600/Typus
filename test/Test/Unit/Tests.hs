@@ -59,6 +59,17 @@ import qualified Test.Unit.NewAdditionalParserQuickCheckTestSpec as NewAdditiona
 import qualified Test.Unit.NewAdditionalErrorHandlerQuickCheckTestSpec as NewAdditionalErrorHandlerQuickCheckTest
 import qualified Test.Unit.NewAdditionalDependenciesQuickCheckTestSpec as NewAdditionalDependenciesQuickCheckTest
 
+-- Import new comprehensive test modules (2026)
+import qualified Test.Unit.CompilerCoreFunctionalityTestSpec as CompilerCoreFunctionalityTest
+import qualified Test.Unit.ParserBoundaryConditionTestSpec as ParserBoundaryConditionTest
+import qualified Test.Unit.TypeSystemTestSpec as TypeSystemTest
+import qualified Test.Unit.OwnershipAnalysisTestSpec as OwnershipAnalysisTest
+import qualified Test.Unit.DependencyAnalysisTestSpec as DependencyAnalysisTest
+import qualified Test.Unit.ErrorHandlingTestSpec as ErrorHandlingTest
+import qualified Test.Unit.SourceLocationTestSpec as SourceLocationTest
+import qualified Test.Unit.UtilsTestSpec as UtilsTest
+import qualified Test.Unit.IntegrationTestSpec as IntegrationTest
+
 -- Import newly created comprehensive QuickCheck test modules (2025)
 import qualified Test.Unit.NewBasicTypesAndStringPropertiesSpec as BasicTypesAndStringProperties
 import qualified Test.Unit.NewParserAdvancedPropertiesSpec as ParserAdvancedProperties
@@ -138,5 +149,16 @@ tests = testGroup "Test.Unit.Tests Tests"
     NewAdditionalSourceLocationQuickCheckTest.newAdditionalSourceLocationQuickCheckTestSpec,
     NewAdditionalParserQuickCheckTest.newAdditionalParserQuickCheckTestSpec,
     NewAdditionalErrorHandlerQuickCheckTest.newAdditionalErrorHandlerQuickCheckTestSpec,
-    NewAdditionalDependenciesQuickCheckTest.newAdditionalDependenciesQuickCheckTestSpec
+    NewAdditionalDependenciesQuickCheckTest.newAdditionalDependenciesQuickCheckTestSpec,
+    
+    -- New comprehensive test modules (2026)
+    CompilerCoreFunctionalityTest.compilerCoreFunctionalityTests,
+    ParserBoundaryConditionTest.parserBoundaryConditionTests,
+    TypeSystemTest.typeSystemTests,
+    OwnershipAnalysisTest.ownershipAnalysisTests,
+    DependencyAnalysisTest.dependencyAnalysisTests,
+    ErrorHandlingTest.errorHandlingTests,
+    SourceLocationTest.sourceLocationTests,
+    UtilsTest.utilsTests,
+    IntegrationTest.integrationTests
   ]

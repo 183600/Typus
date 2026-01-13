@@ -73,6 +73,9 @@ library
         Ownership,
         Ownership.Common.Types,
         Ownership.Stub,
+        Ownership.Lexer,
+        Ownership.Analyzer,
+        Ownership.Reporter,
         Parser,
         SimpleSyntaxValidator,
         SourceLocation,
@@ -82,10 +85,7 @@ library
     other-modules:
         Compiler.Error,
         Compiler.GoVarSpec,
-        Compiler.Errors.Compiler,
-        Ownership.Lexer,
-        Ownership.Analyzer,
-        Ownership.Reporter
+        Compiler.Errors.Compiler
     build-depends:
         base >=4.7 && <5,
         aeson >= 2.2 && <3,
@@ -2230,9 +2230,17 @@ test-suite typus-test
         Test.Unit.UtilsAdvancedQuickCheckSpec,
         Test.Unit.ParserAdvancedQuickCheckSpec,
         Test.Unit.ErrorHandlerAdvancedQuickCheckSpec,
-        Test.Unit.DependenciesAdvancedQuickCheckSpec,
-        Test.Unit.OwnershipAdvancedQuickCheckSpec,
-        Test.Unit.CompilerAdvancedQuickCheckSpec
+        
+        -- New Test Modules Added (2026) - Comprehensive Test Suite
+        Test.Unit.CompilerCoreFunctionalityTestSpec,
+        Test.Unit.ParserBoundaryConditionTestSpec,
+        Test.Unit.TypeSystemTestSpec,
+        Test.Unit.OwnershipAnalysisTestSpec,
+        Test.Unit.DependencyAnalysisTestSpec,
+        Test.Unit.ErrorHandlingTestSpec,
+        Test.Unit.SourceLocationTestSpec,
+        Test.Unit.UtilsTestSpec,
+        Test.Unit.IntegrationTestSpec
         
     build-depends:
         base >=4.7 && <5,

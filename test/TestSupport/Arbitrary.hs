@@ -46,7 +46,7 @@ import qualified Ownership.Common.Types as Own (OwnershipType(..), OwnershipErro
 import qualified Dependencies.TypeSystem as Dep
 import qualified Dependencies.AST as Dep (AST(..), Statement(..), TypeExpr(..), Constraint(..))
 import qualified Dependencies.TypeSystem as Dep (TypeConstraint(..))
-import qualified Dependencies.Inference as Dep (TypeScheme(..))
+import qualified Dependencies.TypeSystem as Dep (TypeScheme(..))
 import qualified Compiler.TypeChecker as TC
   ( Type(..)
   , TypeEnv(..)

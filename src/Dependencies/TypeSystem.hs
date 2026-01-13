@@ -9,6 +9,12 @@ module Dependencies.TypeSystem (
   TypeEnv(..),
   DependentTypeChecker(..),
   Substitution,
+  
+  -- Re-export from Inference module
+  TypeScheme(..),
+  TypeEnvironment(..),
+  TypeInferenceState(..),
+  TypeInferenceError(..),
 
   -- Environments
   preludeTypeDefs,
@@ -44,8 +50,46 @@ import Data.Text (Text)
 import qualified Data.Text as T
 
 import Dependencies.AST (TypeExpr(SimpleT, GenericT, RefineT, FuncT), Constraint(RangeC, PredC, SizeGE, SizeGT))
+import Control.Monad (unless)
+import Control.Monad.Except (ExceptT)
+import Control.Monad.IO.Class (liftIO)
+import Control.Monad.State (StateT, gets, modify)
+import Data.IORef
+import Data.List (nub)
+import qualified Data.Map.Strict as Map
+import Data.Maybe (catMaybes)
+import qualified Data.Set as Set
+import qualified Data.Text as T
 
--- Core type representations ----------------------------------------------------
+-- Hindley-Milner style type inference -----------------------------------------
+
+data TypeScheme = Forall [String] TypeVar
+  deriving (Show, Eq)
+
+data TypeEnvironment = TypeEnvironment
+  { teTypes         :: Map.Map String TypeDef
+  , teSchemes       :: Map.Map String TypeScheme
+  , teCurrentLevel  :: Int
+  , teNextTypeVarId :: IORef Int
+  }
+
+data TypeInferenceState = TypeInferenceState
+  { typeEnv         :: TypeEnvironment
+  , currentSubst    :: Substitution
+  , inferenceErrors :: [TypeInferenceError]
+  }
+
+data TypeInferenceError
+  = UnificationFailure TypeVar TypeVar
+  | InfiniteType String TypeVar
+  | UnboundVariable String
+  | TypeMismatchError TypeVar TypeVar
+  | ConstraintNotSatisfied TypeConstraint
+  | OccursCheckFailed String TypeVar
+  | GenericEscape String TypeVar
+  deriving (Show, Eq)
+
+type TypeInference = StateT TypeInferenceState (ExceptT TypeInferenceError IO)
 
 data TypeVar
   = TVCon String
@@ -74,6 +118,7 @@ data DependentTypeError
   | AmbiguousType String
   | ParseError String
   | SemanticError String
+  | DependentTypeError String
   deriving (Show, Eq)
 
 data TypeDef = TypeDefDecl

@@ -1,108 +1,128 @@
 #!/usr/bin/env python3
 """
-修复测试文件中的所有错误
+修复所有测试文件中的编译错误
 """
 
 import os
 import re
-import glob
 
-def fix_all_test_errors():
-    """修复测试文件中的所有错误"""
+def fix_compiler_advanced_spec():
+    """修复CompilerAdvancedQuickCheckSpec.hs中的错误"""
+    file_path = "/home/runner/work/Typus/Typus/test/Test/Unit/CompilerAdvancedQuickCheckSpec.hs"
     
-    # 查找所有测试文件
-    test_files = []
-    for root, dirs, files in os.walk('.'):
-        for file in files:
-            if file.endswith('.hs') and 'Test' in root:
-                test_files.append(os.path.join(root, file))
+    with open(file_path, 'r') as f:
+        content = f.read()
     
-    # 错误1: TypusFile defaultFileDirectives [] [] [] 后面有多余的 ]
-    pattern1 = r'TypusFile defaultFileDirectives \[\] \[\] \[\]\]'
-    replacement1 = 'TypusFile defaultFileDirectives [] [] []'
+    # 修复TypeCheckDiagnostic的Arbitrary实例
+    old_arbitrary = """instance Arbitrary TypeCheckDiagnostic where
+  arbitrary = do
+    hasContext <- arbitrary
+    context <- if hasContext then Just "testContext" else Nothing
+    detail <- elements ["type mismatch", "undefined variable", "invalid operation"]
+    return $ TypeCheckDiagnostic context detail"""
     
-    # 错误2: parseTypus 函数可能不存在或名称不正确
-    # 需要先检查这个函数是否存在
+    new_arbitrary = """instance Arbitrary TypeCheckDiagnostic where
+  arbitrary = do
+    hasContext <- arbitrary
+    context <- if hasContext then return "testContext" else return ""
+    detail <- elements ["type mismatch", "undefined variable", "invalid operation"]
+    return $ TypeCheckDiagnostic (if hasContext then Just context else Nothing) detail"""
     
-    # 错误3: all hasLocation errors 中 hasLocation 函数可能不适用于 CompilerError
-    # 需要包装成 property
-    pattern3 = r'Left errors -> all hasLocation errors'
-    replacement3 = 'Left errors -> property (all (hasLocation . unLoc) errors)'
+    content = content.replace(old_arbitrary, new_arbitrary)
     
-    # 错误4: null formatted 中 formatted 可能是 T.Text 类型
-    pattern4 = r'null formatted'
-    replacement4 = 'T.null formatted'
+    # 修复缺失的函数调用
+    content = re.sub(r'\berrorId\b', 'getErrorId', content)
+    content = re.sub(r'\bseverity\b', 'getErrorSeverity', content)
+    content = re.sub(r'\bphase\b', 'getErrorPhase', content)
+    content = re.sub(r'\bmessage\b', 'getErrorMessage', content)
+    content = re.sub(r'\berrorPosition\b', 'getErrorPosition', content)
+    content = re.sub(r'\btypeErrorMessage\b', 'getTypeErrorMessage', content)
+    content = re.sub(r'\btypeErrorPosition\b', 'getTypeErrorPosition', content)
     
-    # 错误5: TypeError 与 CompilerError 类型不匹配
-    # 需要将 TypeError 转换为 CompilerError
-    pattern5 = r'calculateErrorStatistics errors'
-    replacement5 = 'calculateErrorStatistics (map TypeError errors)'
+    # 修复Error数据构造器
+    content = content.replace('Error ===', 'getErrorSeverity err === ErrorSeverity')
+    content = content.replace('Fatal, Error, Warning, Info', 'FatalSeverity, ErrorSeverity, WarningSeverity, InfoSeverity')
+    content = content.replace('ParsingPhase', 'errorPhase ParsingPhase')
+    content = content.replace('TypeCheckingPhase', 'errorPhase TypeCheckingPhase')
+    content = content.replace('OptimizationPhase', 'errorPhase OptimizationPhase')
+    content = content.replace('CodeGenPhase', 'errorPhase CodeGenPhase')
     
-    pattern6 = r'filterErrorsBySeverity errors (\d+)'
-    replacement6 = r'filterErrorsBySeverity (map TypeError errors) \1'
+    # 修复函数参数类型错误
+    content = content.replace('hasTypeErrors typeErrors', 'hasTypeErrors (TypusFile "" typeErrors [] defaultFileDirectives)')
+    content = content.replace('extractDeclarations typusFile', 'extractDeclarations (getSimpleTypusCode code)')
+    content = content.replace('extractFunctionCalls typusFile', 'extractFunctionCalls (getSimpleTypusCode code)')
+    content = content.replace('buildTypeEnv typusFile', 'buildTypeEnv (Compiler.GoAst.GoModule [] [] [] [])')
+    content = content.replace('buildTypeEnvFromPairs pairs', 'buildTypeEnvFromPairs [(name, Compiler.TypeChecker.BasicType name) | (name, _) <- pairs]')
+    content = content.replace('checkTypeError code', 'checkTypeError (getSimpleTypusCode code)')
     
-    pattern7 = r'sortErrorsByLocation errors'
-    replacement7 = r'sortErrorsByLocation (map TypeError errors)'
+    with open(file_path, 'w') as f:
+        f.write(content)
     
-    pattern8 = r'highlightErrorInSource source error'
-    replacement8 = r'highlightErrorInSource source (TypeError error)'
+    print(f"修复了 {file_path}")
+
+def fix_dependencies_advanced_spec():
+    """修复DependenciesAdvancedQuickCheckSpec.hs中的错误"""
+    file_path = "/home/runner/work/Typus/Typus/test/Test/Unit/DependenciesAdvancedQuickCheckSpec.hs"
     
-    # 修复所有文件
-    for file_path in test_files:
-        print(f"处理文件: {file_path}")
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-            
-            # 修复错误1
-            old_content = content
-            content = re.sub(pattern1, replacement1, content)
-            if content != old_content:
-                print(f"  修复了 TypusFile 构造函数错误")
-            
-            # 修复错误3
-            old_content = content
-            content = re.sub(pattern3, replacement3, content)
-            if content != old_content:
-                print(f"  修复了 hasLocation 类型错误")
-            
-            # 修复错误4
-            old_content = content
-            content = re.sub(pattern4, replacement4, content)
-            if content != old_content:
-                print(f"  修复了 null 函数类型错误")
-            
-            # 修复错误5
-            old_content = content
-            content = re.sub(pattern5, replacement5, content)
-            if content != old_content:
-                print(f"  修复了 calculateErrorStatistics 类型错误")
-            
-            # 修复错误6
-            old_content = content
-            content = re.sub(pattern6, replacement6, content)
-            if content != old_content:
-                print(f"  修复了 filterErrorsBySeverity 类型错误")
-            
-            # 修复错误7
-            old_content = content
-            content = re.sub(pattern7, replacement7, content)
-            if content != old_content:
-                print(f"  修复了 sortErrorsByLocation 类型错误")
-            
-            # 修复错误8
-            old_content = content
-            content = re.sub(pattern8, replacement8, content)
-            if content != old_content:
-                print(f"  修复了 highlightErrorInSource 类型错误")
-            
-            # 写回文件
-            with open(file_path, 'w', encoding='utf-8') as f:
-                f.write(content)
-                
-        except Exception as e:
-            print(f"  错误: {e}")
+    with open(file_path, 'r') as f:
+        content = f.read()
+    
+    # 修复反引号错误
+    content = content.replace('\\`Map.member\\`', '`Map.member`')
+    
+    with open(file_path, 'w') as f:
+        f.write(content)
+    
+    print(f"修复了 {file_path}")
+
+def fix_error_handler_advanced_spec():
+    """修复ErrorHandlerAdvancedQuickCheckSpec.hs中的错误"""
+    file_path = "/home/runner/work/Typus/Typus/test/Test/Unit/ErrorHandlerAdvancedQuickCheckSpec.hs"
+    
+    with open(file_path, 'r') as f:
+        content = f.read()
+    
+    # 修复Maybe/Gen类型错误
+    content = content.replace('code <- if hasCode then Just "let x = 42" else Nothing', 
+                             'code <- if hasCode then return "let x = 42" else return ""')
+    content = content.replace('function <- if hasFunction then Just "testFunction" else Nothing', 
+                             'function <- if hasFunction then return "testFunction" else return ""')
+    content = content.replace('variable <- if hasVariable then Just "x" else Nothing', 
+                             'variable <- if hasVariable then return "x" else return ""')
+    content = content.replace('typ <- if hasType then Just "Int" else Nothing', 
+                             'typ <- if hasType then return "Int" else return ""')
+    
+    content = content.replace('action <- if hasAction then Just "retry operation" else Nothing', 
+                             'action <- if hasAction then return "retry operation" else return ""')
+    content = content.replace('hint <- if hasHint then Just "check input" else Nothing', 
+                             'hint <- if hasHint then return "check input" else return ""')
+    
+    content = content.replace('timestamp <- if hasTimestamp then Just "2023-01-01 12:00:00" else Nothing', 
+                             'timestamp <- if hasTimestamp then return "2023-01-01 12:00:00" else return ""')
+    
+    # 修复ErrorContext构造
+    content = content.replace('ErrorContext code function variable typ additional', 
+                             'ErrorContext (if hasCode then Just code else Nothing) (if hasFunction then Just function else Nothing) (if hasVariable then Just variable else Nothing) (if hasType then Just typ else Nothing) additional')
+    
+    # 修复RecoveryStrategy构造
+    content = content.replace('RecoveryStrategy canRec shouldCont action hint cost confidence', 
+                             'RecoveryStrategy canRec shouldCont (if hasAction then Just action else Nothing) (if hasHint then Just hint else Nothing) cost confidence')
+    
+    # 修复TypeError构造
+    content = content.replace('timestamp = timestamp', 
+                             'timestamp = if hasTimestamp then Just timestamp else Nothing')
+    
+    # 修复OwnershipErrorCombined
+    content = content.replace('OwnershipErrorCombined errId errMsg', 
+                             'OwnershipErrorCombined errId (Ownership.Common.Types.OwnershipError errMsg)')
+    
+    with open(file_path, 'w') as f:
+        f.write(content)
+    
+    print(f"修复了 {file_path}")
 
 if __name__ == "__main__":
-    fix_all_test_errors()
-    print("修复完成!")
+    fix_compiler_advanced_spec()
+    fix_dependencies_advanced_spec()
+    fix_error_handler_advanced_spec()
+    print("所有修复完成!")

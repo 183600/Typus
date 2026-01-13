@@ -1,6 +1,7 @@
 {-# LANGUAGE RecordWildCards #-}
 module Compiler.TypeChecker (
     Type(..),
+    BasicType(..),
     TypeEnv(..),
     TypeCheckDiagnostic(..),
     FunctionInfo(..),
@@ -77,6 +78,10 @@ data Type
     | TypeRecord [(String, Type)]
     | TypeUnion [Type]
     | UnknownType
+    deriving (Eq, Ord, Show)
+
+-- | Basic type representation for simple type checking
+data BasicType = BasicType String
     deriving (Eq, Ord, Show)
 
 -- | Function parameter metadata.
