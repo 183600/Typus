@@ -41,6 +41,10 @@ genAlphaString = do
 genText :: Gen T.Text
 genText = T.pack <$> genString
 
+-- Arbitrary instances
+instance Arbitrary T.Text where
+  arbitrary = genText
+
 -- Test properties for simple functionality
 
 -- Property 1: Addition is commutative
@@ -394,7 +398,7 @@ prop_textAnyAllConsistent t =
 -- Property 57: Text findIndex is consistent
 prop_textFindIndexConsistent :: T.Text -> Char -> Property
 prop_textFindIndexConsistent t c =
-  case T.findIndex (== c) t of
+  property $ case T.findIndex (== c) t of
     Just i -> i >= 0 && i < T.length t
     Nothing -> not (T.any (== c) t)
 

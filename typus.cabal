@@ -998,6 +998,11 @@ test-suite typus-test
         Test.Unit.NewErrorHandlerTestSpec,
         Test.Unit.NewUtilsTestSpec,
         Test.Unit.NewOwnershipTestSpec,
+        Test.Unit.UtilsQuickCheckSpec,
+        Test.Unit.SourceLocationQuickCheckSpec,
+        Test.Unit.ParserBasicSpec,
+        Test.Unit.CompilerCoreSpec,
+        Test.Unit.ErrorHandlerSpec,
         Test.Unit.NewDependenciesTestSpec,
         Test.Unit.AdditionalQuickCheckTestsSpec,
         
