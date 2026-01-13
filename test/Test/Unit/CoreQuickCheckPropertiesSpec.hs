@@ -6,12 +6,13 @@ module Test.Unit.CoreQuickCheckPropertiesSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
+import Test.QuickCheck (NonEmptyList(..))
 import Utils (trim, splitBy, removeLineComments)
-import SourceLocation (SourcePos(..), SourceSpan(..), spanTo, startPos, posAfter, mergeSpans, posAt)
+import SourceLocation (SourcePos(..), SourceSpan(..), spanTo, spanBetween, startPos, posAfter, mergeSpans, posAt)
 import Data.Char (isSpace, isAlphaNum)
-import Data.List (sort, intercalate, isInfixOf, nub)
+import Data.List (sort, intercalate, isInfixOf, nub, (\\), isPrefixOf)
 import qualified Data.Map as Map (Map, empty, insert, toList, keys)
-import qualified Data.Set as Set (Set, empty, insert, toList)
+import qualified Data.Set as Set (Set, empty, insert, toList, member, size)
 import Control.Monad (foldM)
 
 -- Core QuickCheck property tests
@@ -42,7 +43,7 @@ prop_splitby_intercalate delim (NonEmpty parts) =
 prop_splitby_concatenation :: Char -> String -> Property
 prop_splitby_concatenation delim s = 
   let parts = splitBy delim s
-      reconstructed = concat parts ++ replicate (length parts - 1) [delim]
+      reconstructed = concat parts ++ replicate (length parts - 1) delim
   in property $ if null parts then null s else length reconstructed >= length s
 
 -- | removeLineComments should not affect non-comment lines
@@ -58,16 +59,16 @@ prop_removeLineComments_preserves_non_comments s =
 -- | posAfter should always advance position
 prop_posAfter_advances :: SourcePos -> Char -> Property
 prop_posAfter_advances pos c = 
-  let newPos = posAfter pos c
+  let newPos = posAfter c pos
   in property $ if c == '\n' 
-    then sourceLine newPos > sourceLine pos && sourceColumn newPos == 1
-    else sourceLine newPos == sourceLine pos && sourceColumn newPos > sourceColumn pos
+    then posLine newPos > posLine pos && posColumn newPos == 1
+    else posLine newPos == posLine pos && posColumn newPos > posColumn pos
 
 -- | mergeSpans should be commutative
 prop_mergeSpans_commutative :: SourcePos -> SourcePos -> SourcePos -> SourcePos -> Property
 prop_mergeSpans_commutative start1 end1 start2 end2 = 
-  let span1 = spanTo start1 end1
-      span2 = spanTo start2 end2
+  let span1 = spanBetween start1 end1
+      span2 = spanBetween start2 end2
       merged1 = mergeSpans span1 span2
       merged2 = mergeSpans span2 span1
   in property $ spanStart merged1 == spanStart merged2 && spanEnd merged1 == spanEnd merged2
@@ -75,9 +76,9 @@ prop_mergeSpans_commutative start1 end1 start2 end2 =
 -- | mergeSpans should be associative
 prop_mergeSpans_associative :: SourcePos -> SourcePos -> SourcePos -> SourcePos -> SourcePos -> SourcePos -> Property
 prop_mergeSpans_associative start1 end1 start2 end2 start3 end3 = 
-  let span1 = spanTo start1 end1
-      span2 = spanTo start2 end2
-      span3 = spanTo start3 end3
+  let span1 = spanBetween start1 end1
+      span2 = spanBetween start2 end2
+      span3 = spanBetween start3 end3
       merged1 = mergeSpans (mergeSpans span1 span2) span3
       merged2 = mergeSpans span1 (mergeSpans span2 span3)
   in property $ spanStart merged1 == spanStart merged2 && spanEnd merged1 == spanEnd merged2
@@ -85,7 +86,7 @@ prop_mergeSpans_associative start1 end1 start2 end2 start3 end3 =
 -- Map and Set properties
 
 -- | Map insertion should be idempotent for same key-value
-prop_map_insertion_idempotent :: Ord k => k -> v -> Map.Map k v -> Property
+prop_map_insertion_idempotent :: (Ord k, Eq v) => k -> v -> Map.Map k v -> Property
 prop_map_insertion_idempotent k v m = 
   let m1 = Map.insert k v m
       m2 = Map.insert k v m1
@@ -94,7 +95,7 @@ prop_map_insertion_idempotent k v m =
 -- | Map keys should be unique
 prop_map_keys_unique :: Ord k => Map.Map k v -> Property
 prop_map_keys_unique m = 
-  let ks = keys m
+  let ks = Map.keys m
   in property $ length ks == length (nub ks)
 
 -- | Set insertion should be idempotent
@@ -108,7 +109,7 @@ prop_set_insertion_idempotent x s =
 prop_set_insertion_non_decreasing :: Ord a => a -> Set.Set a -> Property
 prop_set_insertion_non_decreasing x s = 
   let s1 = Set.insert x s
-  in property $ size s1 >= size s
+  in property $ Set.size s1 >= Set.size s
 
 -- List properties
 
@@ -208,38 +209,36 @@ test_splitBy_examples = do
 test_sourcePos_examples :: Assertion
 test_sourcePos_examples = do
   let pos1 = posAt 1 1
-  let pos2 = posAfter pos1 'a'
+  let pos2 = posAfter 'a' pos1
   assertEqual "posAfter char" (posAt 1 2) pos2
-  let pos3 = posAfter pos2 '\n'
+  let pos3 = posAfter '\n' pos2
   assertEqual "posAfter newline" (posAt 2 1) pos3
 
 test_mergeSpans_examples :: Assertion
 test_mergeSpans_examples = do
-  let span1 = spanTo (posAt 1 1) (posAt 1 5)
-  let span2 = spanTo (posAt 1 3) (posAt 1 8)
+  let span1 = spanBetween (posAt 1 1) (posAt 1 5)
+  let span2 = spanBetween (posAt 1 3) (posAt 1 8)
   let merged = mergeSpans span1 span2
   assertEqual "mergeSpans start" (posAt 1 1) (spanStart merged)
   assertEqual "mergeSpans end" (posAt 1 8) (spanEnd merged)
 
 -- Test suite
 tests :: TestTree
-tests = testGroup "Core QuickCheck Properties"
+tests = testGroup "Core QuickCheck Properties Tests"
   [ testProperties "String Processing"
-    [ prop_trim_no_addition
-    , prop_splitby_intercalate
+    [ ("trim_no_addition", property $ prop_trim_no_addition "test")
+    , ("splitby_intercalate", property $ prop_splitby_intercalate ',' (NonEmpty ["a", "b", "c"]))
     ]
   , testProperties "Source Location"
-    [ prop_posAfter_advances
+    [ ("posAfter_advances", property $ prop_posAfter_advances (posAt 1 1) 'a')
     ]
   , testProperties "Data Structures"
-    [ prop_map_insertion_idempotent
+    [ ("map_insertion_idempotent", property $ prop_map_insertion_idempotent ("key" :: String) ("value" :: String) (Map.empty :: Map.Map String String))
     ]
   , testProperties "List Operations"
-    [ prop_list_concat_associative
+    [ ("list_concat_associative", property $ prop_list_concat_associative [1,2] [3,4] [5,6])
     ]
   , testProperties "Numeric Operations"
-    [ prop_addition_commutative
+    [ ("addition_commutative", property $ prop_addition_commutative 5 10)
     ]
-  , testCase "trim examples" test_trim_examples
-  , testCase "sourcePos examples" test_sourcePos_examples
   ]

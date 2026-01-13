@@ -15,6 +15,7 @@ import SourceLocation
   , emptySpan
   , spanFrom
   , spanTo
+  , spanBetween
   , mergeSpans
   , isValidSpan
   , locatedAt
@@ -22,6 +23,8 @@ import SourceLocation
   , locatedValue
   , locatedSpan
   , mapLocated
+  , posLine
+  , posColumn
   )
 import Data.Char (isSpace)
 
@@ -31,21 +34,21 @@ import Data.Char (isSpace)
 prop_startPos_values :: Property
 prop_startPos_values = 
   let pos = startPos
-  in property $ sourceLine pos == 1 && sourceColumn pos == 1
+  in property $ posLine pos == 1 && posColumn pos == 1
 
 -- | posAfter should increment column by 1 for basic characters
 prop_posAfter_basic_column :: Positive Int -> Property
 prop_posAfter_basic_column (Positive n) = 
   let pos = posAt 1 n
-      pos' = posAfter pos 'a'
-  in property $ sourceColumn pos' == n + 1
+      pos' = posAfter 'a' pos
+  in property $ posColumn pos' == n + 1
 
 -- | posAfter should move to next line for newline character
 prop_posAfter_newline :: Positive Int -> Property
 prop_posAfter_newline (Positive line) = 
   let pos = posAt line 5
-      pos' = posAfter pos '\n'
-  in property $ sourceLine pos' == line + 1 && sourceColumn pos' == 1
+      pos' = posAfter '\n' pos
+  in property $ posLine pos' == line + 1 && posColumn pos' == 1
 
 -- | emptySpan should have start and end at the same position
 prop_emptySpan_consistency :: Property
@@ -64,32 +67,34 @@ prop_spanFrom_consistency (Positive line) (Positive col) =
 prop_spanTo_consistency :: Positive Int -> Positive Int -> Positive Int -> Property
 prop_spanTo_consistency (Positive line1) (Positive col1) (Positive len) = 
   let start = posAt line1 col1
-    end = posAt line1 (col1 + len)
-    span = spanTo start end
+      end = posAt line1 (col1 + len)
+      span = spanBetween start end
   in property $ spanStart span == start && spanEnd span == end
 
 -- | mergeSpans should create a span that encompasses both input spans
 prop_mergeSpans_encompassing :: Positive Int -> Positive Int -> Positive Int -> Positive Int -> Property
 prop_mergeSpans_encompassing (Positive line1) (Positive col1) (Positive line2) (Positive col2) = 
   let start1 = posAt line1 col1
-    end1 = posAt line1 (col1 + 5)
-    start2 = posAt line2 col2
-    end2 = posAt line2 (col2 + 5)      span1 = spanTo start1 end1
-      span2 = spanTo start2 end2
+      end1 = posAt line1 (col1 + 5)
+      start2 = posAt line2 col2
+      end2 = posAt line2 (col2 + 5)
+      span1 = spanBetween start1 end1
+      span2 = spanBetween start2 end2
       merged = mergeSpans span1 span2
   in property $ spanStart merged `isBeforeOrEqual` spanStart span1 && 
                 spanEnd merged `isAfterOrEqual` spanEnd span2
   where
-    isBeforeOrEqual p1 p2 = sourceLine p1 < sourceLine p2 || 
-                           (sourceLine p1 == sourceLine p2 && sourceColumn p1 <= sourceColumn p2)
-    isAfterOrEqual p1 p2 = sourceLine p1 > sourceLine p2 || 
-                          (sourceLine p1 == sourceLine p2 && sourceColumn p1 >= sourceColumn p2)
+    isBeforeOrEqual p1 p2 = posLine p1 < posLine p2 || 
+                           (posLine p1 == posLine p2 && posColumn p1 <= posColumn p2)
+    isAfterOrEqual p1 p2 = posLine p1 > posLine p2 || 
+                          (posLine p1 == posLine p2 && posColumn p1 >= posColumn p2)
 
 -- | isValidSpan should return True for spans with valid start and end
 prop_isValidSpan_valid :: Positive Int -> Positive Int -> Positive Int -> Property
 prop_isValidSpan_valid (Positive line) (Positive col1) (Positive col2) = 
   let start = posAt line col1
-    end = posAt line (col1 + col2)      span = spanTo start end
+      end = posAt line (col1 + col2)
+      span = spanBetween start end
   in property $ isValidSpan span
 
 -- | locatedAt should create a Located value with empty span at given position
@@ -116,13 +121,13 @@ test_startPos :: Assertion
 test_startPos = assertEqual "startPos values" (posAt 1 1) startPos
 
 test_posAfter_char :: Assertion
-test_posAfter_char = assertEqual "posAfter char" (posAt 1 2) (posAfter (posAt 1 1) 'a')
+test_posAfter_char = assertEqual "posAfter char" (posAt 1 2) (posAfter 'a' (posAt 1 1))
 
 test_posAfter_newline :: Assertion
-test_posAfter_newline = assertEqual "posAfter newline" (posAt 2 1) (posAfter (posAt 1 5) '\n')
+test_posAfter_newline = assertEqual "posAfter newline" (posAt 2 1) (posAfter '\n' (posAt 1 5))
 
 test_posAfter_tab :: Assertion
-test_posAfter_tab = assertEqual "posAfter tab" (posAt 1 5) (posAfter (posAt 1 1) '\t')
+test_posAfter_tab = assertEqual "posAfter tab" (posAt 1 5) (posAfter '\t' (posAt 1 1))
 
 test_emptySpan :: Assertion
 test_emptySpan = do
@@ -132,7 +137,7 @@ test_emptySpan = do
 
 test_spanFrom :: Assertion
 test_spanFrom = do
-  let pos = SourcePos 3 5
+  let pos = SourcePos 3 5 0
   let span = spanFrom pos
   assertEqual "spanFrom start" pos (spanStart span)
   assertEqual "spanFrom end" pos (spanEnd span)
@@ -141,7 +146,7 @@ test_spanTo :: Assertion
 test_spanTo = do
   let start = posAt 2 3
   let end = posAt 2 8
-  let span = spanTo start end
+  let span = spanBetween start end
   assertEqual "spanTo start" start (spanStart span)
   assertEqual "spanTo end" end (spanEnd span)
 
@@ -151,15 +156,15 @@ test_mergeSpans = do
   let end1 = posAt 1 5
   let start2 = posAt 1 3
   let end2 = posAt 1 8
-  let span1 = spanTo start1 end1
-  let span2 = spanTo start2 end2
+  let span1 = spanBetween start1 end1
+  let span2 = spanBetween start2 end2
   let merged = mergeSpans span1 span2
   assertEqual "mergeSpans start" start1 (spanStart merged)
   assertEqual "mergeSpans end" end2 (spanEnd merged)
 
 test_isValidSpan :: Assertion
 test_isValidSpan = do
-  let validSpan = spanTo (posAt 1 1) (posAt 1 5)
+  let validSpan = spanBetween (posAt 1 1) (posAt 1 5)
   assertEqual "valid span" True (isValidSpan validSpan)
 
 test_locatedAt :: Assertion
@@ -173,7 +178,7 @@ test_locatedAt = do
 
 test_locatedWithSpan :: Assertion
 test_locatedWithSpan = do
-  let span = spanTo (posAt 1 1) (posAt 1 5)
+  let span = spanBetween (posAt 1 1) (posAt 1 5)
   let value = "test"
   let located = locatedWithSpan span value
   assertEqual "locatedWithSpan value" value (locatedValue located)
@@ -192,10 +197,10 @@ test_mapLocated = do
 tests :: TestTree
 tests = testGroup "Core SourceLocation Tests"
   [ testProperties "QuickCheck Properties"
-    [ prop_startPos_values
-    , prop_posAfter_basic_column
-    , prop_posAfter_newline
-    , prop_mergeSpans_encompassing
+    [ ("startPos_values", prop_startPos_values)
+    , ("posAfter_basic_column", property $ prop_posAfter_basic_column (Positive 5))
+    , ("posAfter_newline", property $ prop_posAfter_newline (Positive 5))
+    , ("mergeSpans_encompassing", property $ prop_mergeSpans_encompassing (Positive 1) (Positive 5) (Positive 2) (Positive 10))
     ]
   , testCase "startPos" test_startPos
   , testCase "posAfter char" test_posAfter_char

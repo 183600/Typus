@@ -2119,7 +2119,16 @@ test-suite typus-test
         Test.Unit.NewParserFunctionalitySpec,
         Test.Unit.NewSourceLocationMathSpec,
         Test.Unit.NewSimpleErrorHandlingSpec,
-        Test.Unit.NewQuickCheckPropertySpec
+        Test.Unit.NewQuickCheckPropertySpec,
+        
+        -- New Core QuickCheck Test Modules Added for Enhanced Coverage (2025)
+        Test.Unit.CoreParserQuickCheckSpec,
+        Test.UnitCoreCompilerQuickCheckSpec,
+        Test.Unit.CoreSourceLocationQuickCheckSpec,
+        Test.Unit.CoreUtilsQuickCheckSpec,
+        Test.Unit.CoreErrorHandlerQuickCheckSpec,
+        Test.Unit.CoreOwnershipQuickCheckSpec,
+        Test.Unit.CoreDependenciesQuickCheckSpec
         
     build-depends:
         base >=4.7 && <5,

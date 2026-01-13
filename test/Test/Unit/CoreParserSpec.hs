@@ -52,8 +52,8 @@ prop_parseTypus_simple_valid s =
   in property $ isRight result
 
 -- | parseTypus should reject input with unmatched braces
-prop_parseTypus_unmatched_braces :: String -> Property
-prop_parseTypus_unmatched_braces s = 
+prop_parseTypus_unmatched_braces :: Int -> Property
+prop_parseTypus_unmatched_braces n = 
   let invalidInput = "function test() {\n  return 42;\n"  -- Missing closing brace
       result = parseTypus invalidInput
   in property $ isLeft result
@@ -72,7 +72,7 @@ prop_parseTypus_error_positions (Positive n) =
       result = parseTypus inputWithLines
   in property $ case result of
     Left err -> show n `isInfixOf` show err
-    Right _ -> property $ property False  -- Should have failed
+    Right _ -> False  -- Should have failed
 
 -- Unit tests
 test_defaultFileDirectives :: Assertion
@@ -158,9 +158,9 @@ test_parseTypus_with_variables = do
 tests :: TestTree
 tests = testGroup "Core Parser Tests"
   [ testProperties "QuickCheck Properties"
-    [ prop_parseTypus_empty ""
-    , prop_parseTypus_simple_valid "function test() { return 42; }"
-    , prop_parseTypus_unmatched_braces "function test() { return 42;"
+    [ ("parseTypus_empty", prop_parseTypus_empty)
+    , ("parseTypus_simple_valid", property $ prop_parseTypus_simple_valid "function test() { return 42; }")
+    , ("parseTypus_unmatched_braces", property $ prop_parseTypus_unmatched_braces 5)
     ]
   , testCase "parseTypus empty" test_parseTypus_empty
   , testCase "parseTypus simple function" test_parseTypus_simple_function

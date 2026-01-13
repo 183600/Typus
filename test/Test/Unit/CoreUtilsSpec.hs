@@ -5,6 +5,7 @@ module Test.Unit.CoreUtilsSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
+import Test.QuickCheck (NonEmptyList(..))
 import Utils (trim, splitBy, splitByComma, removeLineComments, normalizeIndentation)
 import Data.Char (isSpace)
 import Data.List (isPrefixOf)
@@ -43,9 +44,9 @@ prop_removeLineComments_basic s =
 
 -- | normalizeIndentation should preserve relative indentation
 prop_normalizeIndentation_preserves_structure :: [String] -> Property
-prop_normalizeIndentation_preserves_structure lines =
-  let normalized = normalizeIndentation (unlines lines)      -- Check that non-empty lines are still present
-      originalNonEmpty = length $ filter (not . null) lines
+prop_normalizeIndentation_preserves_structure inputLines =
+  let normalized = normalizeIndentation (unlines inputLines)      -- Check that non-empty lines are still present
+      originalNonEmpty = length $ filter (not . null) inputLines
       normalizedNonEmpty = length $ filter (not . null) (lines normalized)
   in property $ originalNonEmpty == normalizedNonEmpty
 
@@ -122,9 +123,9 @@ test_normalizeIndentation_basic = do
 tests :: TestTree
 tests = testGroup "Core Utils Tests"
   [ testProperties "QuickCheck Properties"
-    [ prop_trim_preserves_content ""
-    , prop_splitBy_roundtrip ','
-    , prop_removeLineComments_basic ""
+    [ ("trim_preserves_content", property $ prop_trim_preserves_content "test")
+    , ("splitBy_roundtrip", property $ prop_splitBy_roundtrip ',' "a,b,c")
+    , ("removeLineComments_basic", property $ prop_removeLineComments_basic "test")
     ]
   , testCase "trim empty" test_trim_empty
   , testCase "trim all spaces" test_trim_all_spaces
