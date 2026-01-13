@@ -2176,7 +2176,19 @@ test-suite typus-test
         Test.Unit.TestDependenciesCycleDetectionSpec,
         Test.Unit.TestDependentTypesValidationSpec,
         Test.Unit.NewEnhancedIntegrationEndToEndSpec,
-        Test.Unit.NewEnhancedPerformanceRegressionSpec
+        Test.Unit.NewEnhancedPerformanceRegressionSpec,
+        
+        -- New Core Module QuickCheck Tests (2026) - 10 comprehensive test files
+        Test.Unit.CoreParserPropertiesQuickCheckSpec,
+        Test.Unit.CoreCompilerPropertiesQuickCheckSpec,
+        Test.Unit.CoreOwnershipPropertiesQuickCheckSpec,
+        Test.Unit.CoreDependenciesPropertiesQuickCheckSpec,
+        Test.Unit.CoreSourceLocationPropertiesQuickCheckSpec,
+        Test.Unit.CoreErrorHandlerPropertiesQuickCheckSpec,
+        Test.Unit.CoreGoToolchainPropertiesQuickCheckSpec,
+        Test.Unit.CoreIntegrationPropertiesQuickCheckSpec,
+        Test.Unit.CorePerformancePropertiesQuickCheckSpec,
+        Test.Unit.ComprehensiveCoreQuickCheckSpec
         
     build-depends:
         base >=4.7 && <5,
