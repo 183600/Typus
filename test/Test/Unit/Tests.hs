@@ -58,6 +58,10 @@ import qualified Test.Unit.NewErrorHandlingPropertiesSpec as ErrorHandlingProper
 import qualified Test.Unit.NewSourceLocationCalculationPropertiesSpec as SourceLocationCalculationProperties
 import qualified Test.Unit.NewUtilsFunctionsPropertiesSpec as UtilsFunctionsProperties
 
+-- Import new enhanced test modules (moved to TestSuite namespace)
+-- import qualified TestSuite.EnhancedSourceLocation as EnhancedSourceLocation
+-- import qualified TestSuite.ParserBoundary as ParserBoundary
+
 -- Basic test properties
 prop_basic_property :: String -> Property
 prop_basic_property s = property $ length s >= 0
@@ -124,18 +128,62 @@ tests = testGroup "Test.Unit.Tests Tests"
     
         -- New core test modules
     
-        CoreUtils.tests,
+        
     
-        CoreSourceLocation.tests,
+                CoreUtils.tests,
     
-        CoreParser.tests,
+        
     
-        CoreErrorHandler.tests,
+                CoreSourceLocation.tests,
     
-        CoreOwnership.tests,
+        
     
-        CoreQuickCheckProperties.tests,
+                CoreParser.tests,
     
-        CoreIntegration.tests
+        
     
-      ]
+                CoreErrorHandler.tests,
+    
+        
+    
+                CoreOwnership.tests,
+    
+        
+    
+                CoreQuickCheckProperties.tests,
+    
+        
+    
+                CoreIntegration.tests,
+    
+        
+    
+            
+    
+        
+    
+            -- New enhanced test modules (moved to separate test suite)
+    
+        
+    
+            
+    
+        
+    
+                    -- EnhancedSourceLocation.tests,
+    
+        
+    
+            
+    
+        
+    
+                    -- ParserBoundary.tests
+    
+        
+    
+            
+    
+        
+    
+                ]

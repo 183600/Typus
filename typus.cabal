@@ -998,6 +998,15 @@ test-suite typus-test
         Test.Unit.NewUtilsTestSpec,
         Test.Unit.NewOwnershipTestSpec,
         Test.Unit.NewDependenciesTestSpec,
+        
+        -- New enhanced test modules (moved to TestSuite namespace)
+        -- Test.Unit.EnhancedSourceLocationSpec,
+        -- Test.Unit.ParserBoundarySpec,
+        -- Test.Unit.ErrorHandlerRecoverySpec,
+        -- Test.Unit.CompilerIRConsistencySpec,
+        -- Test.Unit.OwnershipTransitivitySpec,
+        -- Test.Unit.DependencyCycleDetectionSpec,
+        
         Test.Unit.SyntaxValidatorSpec,
         Test.Unit.ValueAnalysisSpec,
         Test.Unit.GoToolchainSpec,
@@ -1521,7 +1530,7 @@ test-suite typus-test
         Test.Unit.IntegrationEndToEndTestSpec,
         Test.Unit.PerformanceRegressionTestSpec,
         Test.Unit.SecurityValidationTestSpec,
-        Test.Unit.ParserBoundarySpec,
+        -- Test.Unit.ParserBoundarySpec, -- Already listed above
         Test.Unit.CompilerErrorBoundarySpec,
         Test.Unit.NewQuickCheckPropertiesSpec,
         Test.Unit.NewComprehensiveCabalQuickCheckTestSuite,
@@ -2037,7 +2046,7 @@ test-suite typus-test
         
         -- New Enhanced Test Modules (2025) - 6 comprehensive tests
         Test.Unit.EnhancedUtilsSpec,
-        Test.Unit.EnhancedSourceLocationSpec,
+        -- Test.Unit.EnhancedSourceLocationSpec, -- Already listed above
         Test.Unit.EnhancedParserSpec,
         Test.Unit.EnhancedCompilerSpec,
         Test.Unit.EnhancedOwnershipSpec,
@@ -2144,8 +2153,8 @@ test-suite typus-test
         Test.Unit.CompilerOptimizationInvariantSpec,
         Test.Unit.SourceLocationMathAdvancedSpec,
         Test.Unit.ErrorHandlerResilienceSpec,
-        Test.Unit.OwnershipTransitivitySpec,
-        Test.Unit.DependencyCycleDetectionSpec,
+        -- Test.Unit.OwnershipTransitivitySpec, -- Already listed above
+        -- Test.Unit.DependencyCycleDetectionSpec, -- Already listed above
         Test.Unit.TypeSystemInferenceSpec,
         Test.Unit.IntegrationWorkflowSpec,
         Test.Unit.PerformanceBoundarySpec,
@@ -2202,4 +2211,29 @@ test-suite typus-test
     else
         ghc-options:   -threaded -with-rtsopts=-N -with-rtsopts=-M4G
         -- Coverage is now enabled via --enable-coverage flag
+
+-- New Enhanced Test Suite
+test-suite typus-enhanced-test
+    type:             exitcode-stdio-1.0
+    main-is:          SimpleEnhancedTestSuite.hs
+    hs-source-dirs:   test
+    ghc-options:      -Wall -Wcompat
+                      -Wno-unused-top-binds -Wno-unused-matches 
+                      -Wno-orphans -Wno-name-shadowing
+                      -Wno-type-defaults -Wno-unused-local-binds
+                      -Wno-unused-imports
+    build-depends:
+        base >=4.7 && <5,
+        typus,
+        tasty >= 1.2 && <2,
+        tasty-quickcheck >= 0.10 && <1,
+        tasty-hunit >= 0.10 && <1,
+        QuickCheck >= 2.14 && <3,
+        text >= 1.2.0 && <3,
+        containers >= 0.6 && <1,
+        megaparsec >= 9.0.0 && <10
+    other-modules:
+        TestSuite.EnhancedSourceLocation,
+        TestSuite.ParserBoundary
+    default-language: Haskell2010
 
