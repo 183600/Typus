@@ -19,10 +19,54 @@ import SourceLocation
   , SourceSpan(..)
   , Located(..)
   , startPos
+  , spanStart
+  , spanBetween
   )
 import qualified Data.Text as T
 import Data.Char (isAlphaNum, isSpace)
 import Data.List (isPrefixOf, isInfixOf)
+
+-- Arbitrary instances for testing
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- arbitrary `suchThat` (> 0)
+    column <- arbitrary `suchThat` (> 0)
+    offset <- arbitrary `suchThat` (>= 0)
+    return $ SourcePos line column offset
+
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    return $ spanBetween start end
+
+instance Arbitrary a => Arbitrary (Located a) where
+  arbitrary = do
+    value <- arbitrary
+    span <- arbitrary
+    let start = spanStart span
+    return $ Located value start span
+
+instance Arbitrary BlockDirectives where
+  arbitrary = do
+    ownership <- arbitrary
+    dependentTypes <- arbitrary
+    constraints <- arbitrary
+    return $ BlockDirectives ownership dependentTypes constraints
+
+instance Arbitrary FileDirectives where
+  arbitrary = do
+    ownership <- arbitrary
+    dependentTypes <- arbitrary
+    constraints <- arbitrary
+    return $ FileDirectives ownership dependentTypes constraints
+
+instance Arbitrary CodeBlock where
+  arbitrary = do
+    content <- arbitrary
+    span <- arbitrary
+    directives <- arbitrary
+    return $ CodeBlock content span directives
 
 -- ============================================================================
 -- Parser Module QuickCheck Tests
@@ -115,15 +159,14 @@ prop_typus_file_syntax_errors_extraction directives buildTags blocks =
 
 -- | Test parsing empty input
 prop_parse_empty_input :: Property
-prop_parse_empty_input = 
+prop_parse_empty_input =
   let result = parseTypus ""
   in case result of
        Left _ -> property True
        Right typusFile -> 
-         tfDirectives typusFile == defaultFileDirectives && 
-         tfBuildTags typusFile == [] && 
-         tfBlocks typusFile == []
-
+         property $ tfDirectives typusFile == defaultFileDirectives && 
+                    tfBuildTags typusFile == [] && 
+                    tfBlocks typusFile == []
 prop_parse_simple_content :: String -> Property
 prop_parse_simple_content content = 
   not (null content) && not (any isSpace content) ==>
@@ -309,7 +352,7 @@ prop_parse_unicode_characters content =
          in property $ not (null blocks) ==>
             let firstBlock = head blocks
                 blockContent = cbContent firstBlock
-     in unicodeChars `isInfixOf` blockContent
+            in unicodeChars `isInfixOf` blockContent
 
 -- | Test parsing edge cases
 prop_parse_empty_lines :: String -> Property
@@ -356,7 +399,7 @@ prop_parse_whitespace_only ws =
     let result = parseTypus ws
     in case result of
          Left _ -> property True
-         Right typusFile -> null (tfBlocks typusFile)
+         Right typusFile -> property (null (tfBlocks typusFile))
 
 -- | Test parsing with mixed content
 prop_parse_mixed_content :: String -> String -> String -> Property
@@ -399,7 +442,7 @@ testSuite = testGroup "Parser Module QuickCheck Properties"
     testProperty "typus file syntax errors extraction works" prop_typus_file_syntax_errors_extraction,
     
     -- Parsing tests
-    testProperty "parse empty string" prop_parse_empty_string,
+    testProperty "parse empty string" prop_parse_empty_input,
     testProperty "parse simple content" prop_parse_simple_content,
     testProperty "parse preserves content" prop_parse_preserves_content,
     testProperty "parse handles whitespace" prop_parse_handles_whitespace,

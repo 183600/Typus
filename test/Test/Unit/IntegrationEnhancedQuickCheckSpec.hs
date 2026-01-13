@@ -114,17 +114,20 @@ prop_sourcelocation_parser_span_tracking content =
             let firstBlock = head blocks
                 span = cbSpan firstBlock
             in isValidSpan span
-prop_sourcelocation_parser_position_extraction :: String -> Bool
+prop_sourcelocation_parser_position_extraction :: String -> Property
 prop_sourcelocation_parser_position_extraction content = 
   let result = parseTypus content
-      blocks = tfBlocks result
-  in not (null blocks) ==>
-     let firstBlock = head blocks
-         span = cbSpan firstBlock
-         start = spanStart span
-         end = spanEnd span
-     in posLine start >= 1 && posColumn start >= 1 && 
-        posLine end >= posLine start
+  in case result of
+       Left _ -> property True
+       Right typusFile ->
+         let blocks = tfBlocks typusFile
+         in property $ not (null blocks) ==>
+            let firstBlock = head blocks
+                span = cbSpan firstBlock
+                start = spanStart span
+                end = spanEnd span
+            in posLine start >= 1 && posColumn start >= 1 && 
+               posLine end >= posLine start
 
 -- | Test three-way integration
 prop_utils_sourcelocation_parser_complex_content :: String -> String -> String -> Property
@@ -244,7 +247,7 @@ prop_integration_comment_position_tracking content comment =
          in property $ not (null blocks) ==>
             let firstBlock = head blocks
                 blockContent = cbContent firstBlock
-     in content `isInfixOf` blockContent
+            in content `isInfixOf` blockContent
 
 -- | Test whitespace normalization with position tracking
 prop_integration_whitespace_position_tracking :: String -> Property
@@ -305,8 +308,7 @@ prop_integration_error_location_consistency content =
        Left _ -> property True
        Right typusFile ->
          let syntaxErrors = tfSyntaxErrors typusFile
-         in property $ null syntaxErrors || 
-            all (\err -> posLine (spanStart err) >= 1) syntaxErrors
+         in property $ null syntaxErrors  -- Just check that there are no syntax errors
 
 -- | Tasty test suite
 testSuite :: TestTree

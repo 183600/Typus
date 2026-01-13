@@ -37,6 +37,20 @@ import Data.Char (isSpace, isControl)
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import qualified Data.Text as T
 
+-- Arbitrary instances for testing
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- arbitrary `suchThat` (> 0)
+    column <- arbitrary `suchThat` (> 0)
+    offset <- arbitrary `suchThat` (>= 0)
+    return $ SourcePos line column offset
+
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    return $ spanBetween start end
+
 -- ============================================================================
 -- Boundary Conditions QuickCheck Tests
 -- ============================================================================
@@ -142,7 +156,7 @@ prop_parser_empty_input =
   let result = parseTypus ""
   in case result of
        Left _ -> property True
-       Right typusFile -> tfBlocks typusFile == []
+       Right typusFile -> property (tfBlocks typusFile == [])
 
 prop_parser_whitespace_only :: String -> Property
 prop_parser_whitespace_only s = 
@@ -150,7 +164,7 @@ prop_parser_whitespace_only s =
     let result = parseTypus s
     in case result of
          Left _ -> property True
-         Right typusFile -> tfBlocks typusFile == []
+         Right typusFile -> property (tfBlocks typusFile == [])
 
 prop_parser_very_long_line :: Int -> Property
 prop_parser_very_long_line n = 
@@ -175,7 +189,7 @@ prop_parser_many_directives n =
          Left _ -> property True
          Right typusFile -> 
            let buildTags = tfBuildTags typusFile
-           in length buildTags == n
+           in property (length buildTags == n)
 
 -- | Test special characters and edge cases
 prop_utils_special_characters_trim :: String -> Property
@@ -200,7 +214,7 @@ prop_utils_control_characters s =
       result = safeProcessString withControl
   in case result of
     Left _ -> property True
-    Right processed -> not (any (\c -> c < ' ' && c /= '\n' && c /= '\r' && c /= '\t') processed)
+    Right processed -> property (not (any (\c -> c < ' ' && c /= '\n' && c /= '\r' && c /= '\t') processed))
 
 prop_sourcelocation_tab_positions :: Int -> Property
 prop_sourcelocation_tab_positions n = 
@@ -232,7 +246,7 @@ prop_parser_malformed_directives directive =
        Right typusFile ->
          let blocks = tfBlocks typusFile
              buildTags = tfBuildTags typusFile
-         in not (null blocks) || null buildTags  -- Either has blocks or no build tags
+         in property (not (null blocks) || null buildTags)  -- Either has blocks or no build tags
 
 -- | Test performance boundary conditions
 prop_utils_large_string_processing :: Int -> Property

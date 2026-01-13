@@ -2126,7 +2126,13 @@ test-suite typus-test
         Test.Unit.SourceLocationEnhancedQuickCheckSpec,
         Test.Unit.ParserEnhancedQuickCheckSpec,
         Test.Unit.IntegrationEnhancedQuickCheckSpec,
-        Test.Unit.BoundaryConditionsEnhancedQuickCheckSpec
+        Test.Unit.BoundaryConditionsEnhancedQuickCheckSpec,
+        
+        -- New QuickCheck Test Modules (2026) - Additional comprehensive tests
+        Test.Unit.CombinedModulesQuickCheckSpec,
+        Test.Unit.ErrorRecoveryAdvancedQuickCheckSpec,
+        Test.Unit.PerformanceOptimizationQuickCheckSpec,
+        Test.Unit.UnicodeHandlingQuickCheckSpec
         
     build-depends:
         base >=4.7 && <5,

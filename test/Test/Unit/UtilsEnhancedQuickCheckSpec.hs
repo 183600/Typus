@@ -47,7 +47,7 @@ prop_splitBy_single_char delim c =
 
 prop_splitBy_preserves_order :: Char -> String -> Bool
 prop_splitBy_preserves_order delim s = 
-  let parts = splitBy delim
+  let parts = splitBy delim s
       original = filter (/= delim) s
       reconstructed = concat parts
   in reconstructed == original
@@ -71,45 +71,45 @@ prop_splitByCommaCollapsed_equivalence s =
   splitByCommaCollapsed s == splitByCollapsed ',' s
 
 -- | Test removeLineComments function properties
-prop_removeLineComments_no_comments :: String -> Bool
+prop_removeLineComments_no_comments :: String -> Property
 prop_removeLineComments_no_comments s = 
-  not ("//" `L.isInfixOf` s) ==> removeLineComments s == s
+  not ("//" `L.isInfixOf` s) ==> property (removeLineComments s == s)
 
-prop_removeLineComments_preserves_non_comment_parts :: String -> Property
+prop_removeLineComments_preserves_non_comment_parts :: Property
 prop_removeLineComments_preserves_non_comment_parts = 
   forAll (listOf $ elements $ ['a'..'z'] ++ " \t\n") $ \s ->
     let withoutComments = removeLineComments s
         linesWithoutComments = lines withoutComments
         originalLines = lines s
         nonCommentLines = filter (not . ("//" `L.isPrefixOf`)) originalLines
-    in length linesWithoutComments == length nonCommentLines
+    in property (length linesWithoutComments == length nonCommentLines)
 
-prop_removeLineComments_handles_strings :: String -> Property
+prop_removeLineComments_handles_strings :: Property
 prop_removeLineComments_handles_strings = 
   forAll (listOf $ elements $ ['a'..'z'] ++ "\"/ \t\n") $ \s ->
     let result = removeLineComments s
         hasString = "\"" `L.isInfixOf` s
-    in hasString ==> "//" `L.isInfixOf` result || not ("//" `L.isInfixOf` s)
+    in property $ hasString ==> "//" `L.isInfixOf` result || not ("//" `L.isInfixOf` s)
 
 -- | Test removeComments function properties
-prop_removeComments_no_comments :: String -> Bool
+prop_removeComments_no_comments :: String -> Property
 prop_removeComments_no_comments s = 
   not ("//" `L.isInfixOf` s) && not ("/*" `L.isInfixOf` s) ==> 
-  removeComments s == s
+  property (removeComments s == s)
 
-prop_removeComments_removes_line_comments :: String -> Property
+prop_removeComments_removes_line_comments :: Property
 prop_removeComments_removes_line_comments = 
   forAll (listOf $ elements $ ['a'..'z'] ++ "/ \n") $ \s ->
-    let hasLineComment = "//" `L.isInfixOf` s
-        result = removeComments s
-    in hasLineComment ==> not ("//" `L.isInfixOf` result)
+    let result = removeComments s
+        hasLineComment = "//" `L.isInfixOf` s
+    in property $ hasLineComment ==> not ("//" `L.isInfixOf` result)
 
-prop_removeComments_removes_block_comments :: String -> Property
+prop_removeComments_removes_block_comments :: Property
 prop_removeComments_removes_block_comments = 
   forAll (listOf $ elements $ ['a'..'z'] ++ "* \n") $ \s ->
     let hasBlockComment = "/*" `L.isInfixOf` s && "*/" `L.isInfixOf` s
         result = removeComments s
-    in hasBlockComment ==> not ("/*" `L.isInfixOf` result) && not ("*/" `L.isInfixOf` result)
+    in property $ hasBlockComment ==> not ("/*" `L.isInfixOf` result) && not ("*/" `L.isInfixOf` result)
 
 -- | Test normalizeIndentation function properties
 prop_normalizeIndentation_preserves_line_count :: String -> Bool
@@ -122,21 +122,21 @@ prop_normalizeIndentation_idempotent :: String -> Bool
 prop_normalizeIndentation_idempotent s = 
   normalizeIndentation (normalizeIndentation s) == normalizeIndentation s
 
-prop_normalizeIndentation_preserves_relative_indentation :: String -> Property
+prop_normalizeIndentation_preserves_relative_indentation :: Property
 prop_normalizeIndentation_preserves_relative_indentation = 
   forAll (listOf $ listOf $ elements $ ' ' : ['a'..'z']) $ \l ->
     let s = unlines l
-        result = normalizeIndentation s
-        resultLines = lines result
-    in length resultLines == length l
+        normalized = normalizeIndentation s
+        resultLines = lines normalized
+    in property (length resultLines == length l)
 
 -- | Test forceSingleTabIndentation function properties
-prop_forceSingleTabIndentation_adds_tab :: String -> Property
+prop_forceSingleTabIndentation_adds_tab :: Property
 prop_forceSingleTabIndentation_adds_tab = 
   forAll (listOf $ elements $ ['a'..'z'] ++ " \t\n") $ \s ->
     let result = forceSingleTabIndentation s
         resultLines = lines result
-    in all (\line -> null line || '\t' `elem` take 1 line) resultLines
+    in property (all (\line -> null line || '\t' `elem` take 1 line) resultLines)
 
 -- | Test fixIndentation function properties
 prop_fixIndentation_equivalence :: String -> Bool
@@ -163,19 +163,19 @@ prop_breakOn_preserves_total_content pat s =
   in before ++ pat ++ after == s
 
 -- | Test safeProcessString function properties
-prop_safeProcessString_removes_control_chars :: String -> Property
+prop_safeProcessString_removes_control_chars :: Property
 prop_safeProcessString_removes_control_chars = 
   forAll (listOf $ elements $ ['a'..'z'] ++ "\x00\x01\x02") $ \s ->
     case safeProcessString s of
       Left _ -> property True
-      Right result -> all (\c -> c >= ' ' || c == '\n' || c == '\r' || c == '\t') result
+      Right result -> property (all (\c -> c >= ' ' || c == '\n' || c == '\r' || c == '\t') result)
 
-prop_safeProcessString_preserves_valid_chars :: String -> Property
+prop_safeProcessString_preserves_valid_chars :: Property
 prop_safeProcessString_preserves_valid_chars = 
   forAll (listOf $ elements $ ['a'..'z'] ++ " \t\n\r") $ \s ->
     case safeProcessString s of
       Left _ -> property False
-      Right result -> result == s
+      Right result -> property (result == s)
 
 -- | Test isValidChar function properties
 prop_isValidChar_valid_chars :: Char -> Property
@@ -193,14 +193,16 @@ prop_trim_splitBy_interaction delim s =
       trimmedParts = map trim parts
   in concat trimmedParts == filter (/= delim) (map (\c -> if isSpace c then ' ' else c) s)
 
-prop_removeComments_normalizeIndentation_interaction :: String -> Property
+prop_removeComments_normalizeIndentation_interaction :: Property
 prop_removeComments_normalizeIndentation_interaction = 
   forAll (listOf $ elements $ ['a'..'z'] ++ " \t\n/*/") $ \s ->
     let withoutComments = removeComments s
-        normalized = normalizeIndentation withoutComments
-        normalizedOriginal = normalizeIndentation s
-        withoutCommentsNormalized = removeComments normalizedOriginal
-    in lines normalized == lines withoutCommentsNormalized
+        withoutCommentsNormalized = normalizeIndentation withoutComments
+        normalized = normalizeIndentation s
+        withCommentsRemoved = removeComments normalized
+        linesNormalized = lines normalized
+        linesWithoutCommentsNormalized = lines withoutCommentsNormalized
+    in property (linesNormalized == linesWithoutCommentsNormalized)
 
 -- | Tasty test suite
 testSuite :: TestTree

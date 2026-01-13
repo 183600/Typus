@@ -6,8 +6,23 @@ module Test.Unit.SourceLocationEnhancedQuickCheckSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import SourceLocation
+import Compiler.Errors.Core (ErrorLocation(..))
 import Data.List (sort)
 import Control.Monad.State (runState)
+
+-- Arbitrary instances for testing
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- arbitrary `suchThat` (> 0)
+    column <- arbitrary `suchThat` (> 0)
+    offset <- arbitrary `suchThat` (>= 0)
+    return $ SourcePos line column offset
+
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    return $ spanBetween start end
 
 -- ============================================================================
 -- SourceLocation Module QuickCheck Tests
@@ -159,7 +174,7 @@ prop_location_tracker_mark_span startPos text =
   let action = do
         setCurrentPos startPos
         start <- markSpanStart
-        _ <- mapM_ (\c -> setCurrentPos (posAfter c)) text
+        _ <- mapM_ (\c -> setCurrentPos (posAfter c startPos)) text
         end <- markSpanEnd start
         return end
       span = runLocationTracker action
