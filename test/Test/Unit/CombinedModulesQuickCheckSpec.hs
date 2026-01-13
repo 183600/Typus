@@ -6,7 +6,9 @@ module Test.Unit.CombinedModulesQuickCheckSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Utils
-import Parser (TypusFile(..), parseTypus, defaultFileDirectives)
+import Parser (TypusFile(..), parseTypus, defaultFileDirectives, 
+              FileDirectives(..), CodeBlock(..), cbSpan, cbContent, 
+              fdOwnership, fdDependentTypes, fdConstraints)
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), startPos, spanBetween)
 import Compiler (compile, CompilerError(..))
 import qualified Data.Text as T
@@ -39,7 +41,7 @@ prop_sourcelocation_parser_interaction content =
            let blocks = tfBlocks typusFile
            in property $ not (null blocks) ==> 
               let firstBlock = head blocks
-                  span = cbSpan firstBlock
+                  span = Parser.cbSpan firstBlock
               in isValidSpan span
 
 -- | Test Compiler and Parser interaction
@@ -78,8 +80,7 @@ prop_error_handling_consistency content =
          (Left _, Right _) -> property False  -- Should not compile if parse failed
          (Right _, Left _) -> property True   -- Parse success but compile failure is OK
   where
-    mockError = CompilerError "TEST001" (T.pack "Mock error") 
-                 "ParsingPhase" "Parsing" "Error" Nothing Nothing [] [] Nothing
+    mockError = error "Mock error for testing"
 
 -- | Test data consistency across modules
 prop_data_consistency :: String -> Property
@@ -107,7 +108,7 @@ prop_special_characters_handling content =
          let blocks = tfBlocks typusFile
          in property $ not (null blocks) ==> 
             let firstBlock = head blocks
-                blockContent = cbContent firstBlock
+                blockContent = Parser.cbContent firstBlock
             in specialChars `isInfixOf` blockContent
 
 -- | Test module interaction with Unicode
@@ -122,7 +123,7 @@ prop_unicode_handling content =
          let blocks = tfBlocks typusFile
          in property $ not (null blocks) ==> 
             let firstBlock = head blocks
-                blockContent = cbContent firstBlock
+                blockContent = Parser.cbContent firstBlock
             in unicodeChars `isInfixOf` blockContent
 
 -- | Test module interaction with large inputs
@@ -166,7 +167,7 @@ prop_directive_processing ownership deps constraints =
        Left _ -> property True
        Right typusFile -> 
          let directives = tfDirectives typusFile
-         in case (fdOwnership directives, fdDependentTypes directives, fdConstraints directives) of
+         in case (Parser.fdOwnership directives, Parser.fdDependentTypes directives, Parser.fdConstraints directives) of
               (Just o, Just d, Just c) -> 
                 property $ locValue o == ownership && locValue d == deps && locValue c == constraints
               _ -> property False

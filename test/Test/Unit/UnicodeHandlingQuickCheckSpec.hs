@@ -6,7 +6,7 @@ module Test.Unit.UnicodeHandlingQuickCheckSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Utils
-import Parser (TypusFile(..), parseTypus, defaultFileDirectives)
+import Parser (TypusFile(..), parseTypus, defaultFileDirectives, cbContent)
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), startPos, spanBetween)
 import Compiler (compile, CompilerError(..))
 import qualified Data.Text as T
@@ -30,7 +30,7 @@ prop_chinese_characters content =
          let blocks = tfBlocks typusFile
          in property $ not (null blocks) ==> 
             let firstBlock = head blocks
-                blockContent = cbContent firstBlock
+                blockContent = Parser.cbContent firstBlock
             in chineseChars `isInfixOf` blockContent
 
 -- | Test parsing with European accented characters
@@ -45,7 +45,7 @@ prop_accented_characters content =
          let blocks = tfBlocks typusFile
          in property $ not (null blocks) ==> 
             let firstBlock = head blocks
-                blockContent = cbContent firstBlock
+                blockContent = Parser.cbContent firstBlock
             in accentedChars `isInfixOf` blockContent
 
 -- | Test parsing with mathematical symbols
@@ -60,7 +60,7 @@ prop_mathematical_symbols content =
          let blocks = tfBlocks typusFile
          in property $ not (null blocks) ==> 
             let firstBlock = head blocks
-                blockContent = cbContent firstBlock
+                blockContent = Parser.cbContent firstBlock
             in mathSymbols `isInfixOf` blockContent
 
 -- | Test parsing with currency symbols

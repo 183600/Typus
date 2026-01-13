@@ -1295,7 +1295,6 @@ test-suite typus-test
         Test.Unit.ConcurrentParsingQuickCheckSpec,
         Test.Unit.SymbolTableOperationsQuickCheckSpec,
         
-        Test.Unit.PerformanceOptimizationQuickCheckSpec,
         Test.Unit.NewUtilsQuickCheckSpec,
         Test.Unit.NewSourceLocationQuickCheckSpec,
         Test.Unit.NewErrorHandlerQuickCheckSpec,
@@ -2132,7 +2131,23 @@ test-suite typus-test
         Test.Unit.CombinedModulesQuickCheckSpec,
         Test.Unit.ErrorRecoveryAdvancedQuickCheckSpec,
         Test.Unit.PerformanceOptimizationQuickCheckSpec,
-        Test.Unit.UnicodeHandlingQuickCheckSpec
+        Test.Unit.UnicodeHandlingQuickCheckSpec,
+        
+        -- New Comprehensive Test Modules (2026) - 15 additional test suites
+        Test.Unit.CoreFunctionalityBoundarySpec,
+        Test.Unit.ParserErrorRecoveryAdvancedSpec,
+        Test.Unit.CompilerOptimizationInvariantSpec,
+        Test.Unit.SourceLocationMathAdvancedSpec,
+        Test.Unit.ErrorHandlerResilienceSpec,
+        Test.Unit.OwnershipTransitivitySpec,
+        Test.Unit.DependencyCycleDetectionSpec,
+        Test.Unit.TypeSystemInferenceSpec,
+        Test.Unit.UtilsStringProcessingSpec,
+        Test.Unit.IntegrationWorkflowSpec,
+        Test.Unit.PerformanceBoundarySpec,
+        Test.Unit.ConcurrentSafetySpec,
+        Test.Unit.MemorySafetySpec,
+        Test.Unit.UnicodeHandlingAdvancedSpec
         
     build-depends:
         base >=4.7 && <5,
