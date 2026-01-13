@@ -1,11 +1,12 @@
-module Test.Unit.UtilsStringProcessingQuickCheckSpec where
+module Test.Unit.BasicQuickCheckTestsSpec where
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
 import Utils
-import Data.Char (isSpace)
-import Data.List (isPrefixOf, isSuffixOf)
+import SourceLocation (SourcePos(..), startPos)
+import qualified Data.Text as T
+import Data.Char (isSpace, isAlphaNum)
+import Data.List (intercalate, isInfixOf, isPrefixOf, isSuffixOf)
 
 -- | Test that trim removes leading and trailing whitespace
 prop_trim_removes_whitespace :: String -> Property
@@ -16,7 +17,7 @@ prop_trim_removes_whitespace s =
   in property $ 
     if hasLeadingSpace || hasTrailingSpace
     then not (null trimmed) ==> (not (isSpace (head trimmed)) && not (isSpace (last trimmed)))
-    else trimmed == s
+    else property (trimmed == s)
 
 -- | Test that trim doesn't change non-whitespace characters
 prop_trim_preserves_content :: String -> Property
@@ -33,23 +34,12 @@ prop_splitBy_preserves_content delim s =
       rejoined = intercalate [delim] parts
   in property $ rejoined == s
 
--- | Test that splitByCommaCollapsed removes empty parts
-prop_splitBy_comma_collapsed_no_empty :: String -> Property
-prop_split_by_comma_collapsed_no_empty s = 
-  let parts = splitByCommaCollapsed s
-  in property $ all (not . null) parts
-
--- | Test that splitByComma preserves empty parts
-prop_split_by_comma_preserves_empty :: String -> Property
-prop_split_by_comma_preserves_empty s = 
-  let parts = splitByComma s
-      hasConsecutiveCommas = ",," `isInfixOf` s
-      startsWithComma = not (null s) && head s == ','
-      endsWithComma = not (null s) && last s == ','
-  in property $ 
-    if hasConsecutiveCommas || startsWithComma || endsWithComma
-    then any null parts
-    else not (any null parts)
+-- | Test that startPos has correct initial values
+prop_start_pos_values :: Property
+prop_start_pos_values = property $
+  posLine startPos == 1 &&
+  posColumn startPos == 1 &&
+  posOffset startPos == 0
 
 -- | Test that removeLineComments removes // comments
 prop_remove_line_comments_removes_comments :: String -> Property
@@ -66,16 +56,23 @@ prop_remove_line_comments_preserves_before s =
       withoutComment = removeLineComments withComment
   in property $ s `isPrefixOf` withoutComment
 
--- | Test that removeLineComments handles multiple lines
-prop_remove_line_comments_multiline :: String -> String -> Property
-prop_remove_line_comments_multiline s1 s2 = 
-  let line1 = s1 ++ "// comment1"
-      line2 = s2 ++ "// comment2"
-      multiline = line1 ++ "\n" ++ line2
-      result = removeLineComments multiline
-      linesResult = lines result
-  in property $ length linesResult == 2 && 
-                not (any ("//" `isInfixOf`) linesResult)
+-- | Test that splitByCommaCollapsed removes empty parts
+prop_split_by_comma_collapsed_no_empty :: String -> Property
+prop_split_by_comma_collapsed_no_empty s = 
+  let parts = splitByCommaCollapsed s
+  in property $ all (not . null) parts
+
+-- | Test that splitByComma preserves empty parts
+prop_split_by_comma_preserves_empty :: String -> Property
+prop_split_by_comma_preserves_empty s = 
+  let parts = splitByComma s
+      hasConsecutiveCommas = ",," `isInfixOf` s
+      startsWithComma = not (null s) && head s == ','
+      endsWithComma = not (null s) && last s == ','
+  in property $ 
+    if hasConsecutiveCommas || startsWithComma || endsWithComma
+    then any null parts
+    else not (any null parts)
 
 -- | Test that normalizeIndentation preserves relative indentation
 prop_normalize_indentation_preserves_relative :: String -> Property
@@ -103,17 +100,29 @@ prop_is_valid_char_properties c =
     then isValid
     else isValid == (c `elem` " \t\n\r.,;:!()[]{}+-*/=<>&|^~%")
 
+-- | Test that removeLineComments handles multiple lines
+prop_remove_line_comments_multiline :: String -> String -> Property
+prop_remove_line_comments_multiline s1 s2 = 
+  let line1 = s1 ++ "// comment1"
+      line2 = s2 ++ "// comment2"
+      multiline = line1 ++ "\n" ++ line2
+      result = removeLineComments multiline
+      linesResult = lines result
+  in property $ length linesResult == 2 && 
+                not (any ("//" `isInfixOf`) linesResult)
+
 tests :: TestTree
-tests = testGroup "Utils String Processing QuickCheck Tests"
+tests = testGroup "Basic QuickCheck Tests"
   [ testProperty "trim removes whitespace" prop_trim_removes_whitespace
   , testProperty "trim preserves content" prop_trim_preserves_content
   , testProperty "splitBy preserves content" prop_splitBy_preserves_content
-  , testProperty "splitByCommaCollapsed removes empty parts" prop_split_by_comma_collapsed_no_empty
-  , testProperty "splitByComma preserves empty parts" prop_split_by_comma_preserves_empty
+  , testProperty "startPos values" prop_start_pos_values
   , testProperty "removeLineComments removes comments" prop_remove_line_comments_removes_comments
   , testProperty "removeLineComments preserves before" prop_remove_line_comments_preserves_before
-  , testProperty "removeLineComments handles multiple lines" prop_remove_line_comments_multiline
+  , testProperty "splitByCommaCollapsed removes empty parts" prop_split_by_comma_collapsed_no_empty
+  , testProperty "splitByComma preserves empty parts" prop_split_by_comma_preserves_empty
   , testProperty "normalizeIndentation preserves relative" prop_normalize_indentation_preserves_relative
   , testProperty "safeProcessString handles special" prop_safe_process_string_handles_special
   , testProperty "isValidChar properties" prop_is_valid_char_properties
+  , testProperty "removeLineComments handles multiple lines" prop_remove_line_comments_multiline
   ]

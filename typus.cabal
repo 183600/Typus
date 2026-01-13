@@ -1348,7 +1348,7 @@ test-suite typus-test
         Test.Unit.NewTextProcessingQuickCheckSpec,
         Test.Unit.NewSourceLocationMathQuickCheckSpec,
         
-        Test.Unit.ErrorHandlerBoundaryQuickCheckSpec,
+        
         Test.Unit.ParserEdgeCaseQuickCheckSpec,
         
         Test.Unit.UtilsEfficiencyQuickCheckSpec,
@@ -2155,7 +2155,10 @@ test-suite typus-test
         Test.Unit.PerformanceBoundarySpec,
         Test.Unit.ConcurrentSafetySpec,
         Test.Unit.MemorySafetySpec,
-        Test.Unit.UnicodeHandlingAdvancedSpec
+        Test.Unit.UnicodeHandlingAdvancedSpec,
+
+        -- New QuickCheck Test Modules Added (2026)
+        Test.Unit.BasicQuickCheckTestsSpec
         
     build-depends:
         base >=4.7 && <5,

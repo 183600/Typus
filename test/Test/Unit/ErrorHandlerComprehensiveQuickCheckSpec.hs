@@ -9,6 +9,13 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import Data.Time (UTCTime, getCurrentTime)
 
+-- Arbitrary instances for testing
+instance Arbitrary ErrorSeverity where
+  arbitrary = elements [Fatal, Error, Warning, Info]
+
+instance Arbitrary ErrorCategory where
+  arbitrary = elements [TypeChecking, Ownership, Parsing, Semantic, Runtime, Constraint, Inference, Integration, Unknown]
+
 -- | Test that severityPriority returns correct priority values
 prop_severity_priority_values :: Property
 prop_severity_priority_values = property $

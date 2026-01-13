@@ -4,9 +4,10 @@ import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import Compiler
-import Compiler.Errors (errorId, severity, message)
+import Compiler.Errors (errorId, severity, message, mkCompilerError, ErrorCategory(..), ErrorSeverity(..), CompilationPhase(..))
+import Compiler.TypeChecker (TypeCheckDiagnostic(..))
 import Parser (TypusFile(..), defaultFileDirectives, CodeBlock(..), defaultBlockDirectives)
-import SourceLocation (SourcePos(..), SourceSpan(..), emptySpan)
+import SourceLocation (SourcePos(..), SourceSpan(..), emptySpan, startPos)
 import qualified Data.Text as T
 import Data.List (isInfixOf)
 
@@ -38,9 +39,10 @@ prop_generate_go_code_empty =
 prop_malformed_syntax_error_properties :: Property
 prop_malformed_syntax_error_properties = 
   let err = malformedSyntaxError
+      typeErr = ceError err
   in property $ 
-    errorId err == "CP0001" &&
-    severity err == Error &&
+    errorId typeErr == "CP0001" &&
+    severity typeErr == Error &&
     -- phase err == ParsingPhase  -- Remove this line as phase is not available
     True
 
@@ -48,9 +50,10 @@ prop_malformed_syntax_error_properties =
 prop_type_check_failure_properties :: Property
 prop_type_check_failure_properties = 
   let err = typeCheckFailure
+      typeErr = ceError err
   in property $ 
-    errorId err == "CP0002" &&
-    severity err == Error &&
+    errorId typeErr == "CP0002" &&
+    severity typeErr == Error &&
     -- phase err == TypeCheckingPhase  -- Remove this line as phase is not available
     True
 
@@ -59,13 +62,14 @@ prop_type_diagnostic_to_compiler_error :: Maybe String -> String -> Property
 prop_type_diagnostic_to_compiler_error context detail = 
   let diagnostic = TypeCheckDiagnostic context detail
       err = typeDiagnosticToCompilerError diagnostic
+      typeErr = ceError err
       expectedMsg = case context of
         Nothing -> "Type error: " ++ detail
         Just ctx -> "Type error in '" ++ ctx ++ "': " ++ detail
   in property $ 
-    errorId err == "CP0002" &&
-    T.unpack (message err) == expectedMsg &&
-    severity err == Error &&
+    errorId typeErr == "CP0002" &&
+    T.unpack (message typeErr) == expectedMsg &&
+    severity typeErr == Error &&
     -- phase err == TypeCheckingPhase  -- Remove this line as phase is not available
     True
 
@@ -77,8 +81,9 @@ prop_compile_syntax_error =
   in case compile typusFile of
     Left errs -> property $ 
       not (null errs) &&
-      errorId (head errs) == "CP0001" &&
-      "syntax error" `isInfixOf` T.unpack (message (head errs))
+      let typeErr = ceError (head errs) in
+      errorId typeErr == "CP0001" &&
+      "syntax error" `isInfixOf` T.unpack (message typeErr)
     Right _ -> property False
 
 -- | Test that compile handles type error case (string as int)
@@ -89,8 +94,9 @@ prop_compile_type_error_string_int =
   in case compile typusFile of
     Left errs -> property $ 
       not (null errs) &&
-      errorId (head errs) == "CP0003" &&
-      "type error" `isInfixOf` T.unpack (message (head errs))
+      let typeErr = ceError (head errs) in
+      errorId typeErr == "CP0003" &&
+      "type error" `isInfixOf` T.unpack (message typeErr)
     Right _ -> property False
 
 -- | Test that compile handles type error case (string as Int)
@@ -101,8 +107,9 @@ prop_compile_type_error_string_Int =
   in case compile typusFile of
     Left errs -> property $ 
       not (null errs) &&
-      errorId (head errs) == "CP0003" &&
-      "type error" `isInfixOf` T.unpack (message (head errs))
+      let typeErr = ceError (head errs) in
+      errorId typeErr == "CP0003" &&
+      "type error" `isInfixOf` T.unpack (message typeErr)
     Right _ -> property False
 
 -- | Test that compile handles missing return statement
@@ -113,8 +120,9 @@ prop_compile_missing_return =
   in case compile typusFile of
     Left errs -> property $ 
       not (null errs) &&
-      errorId (head errs) == "CP0004" &&
-      "missing return statement" `isInfixOf` T.unpack (message (head errs))
+      let typeErr = ceError (head errs) in
+      errorId typeErr == "CP0004" &&
+      "missing return statement" `isInfixOf` T.unpack (message typeErr)
     Right _ -> property False
 
 -- | Test that compile handles valid simple code

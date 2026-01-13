@@ -124,13 +124,13 @@ prop_map_located_transforms_value line col offset value1 value2 =
 
 -- | Test that toErrorLocation creates correct error location
 prop_to_error_location :: Int -> Int -> Int -> Property
-prop_to_error_location line col offset = 
-  let pos = SourcePos line col offset
+prop_to_error_location lineNum colNum offset = 
+  let pos = SourcePos lineNum colNum offset
       errLoc = toErrorLocation pos
   in property $ 
     filePath errLoc == Nothing && 
-    line errLoc == line && 
-    column errLoc == col && 
+    line errLoc == lineNum && 
+    column errLoc == colNum && 
     endLine errLoc == Nothing && 
     endColumn errLoc == Nothing
 

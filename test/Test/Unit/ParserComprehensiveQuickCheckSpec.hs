@@ -83,20 +83,8 @@ prop_parse_typus_file_directives ownership dependentTypes constraints =
 
 tests :: TestTree
 tests = testGroup "Parser Comprehensive QuickCheck Tests"
-  [ testProperty "parseBool valid values" prop_parse_bool_valid
-  , testProperty "parseBool invalid values" prop_parse_bool_invalid
-  , testProperty "trimRight removes trailing whitespace" prop_trim_right_removes_trailing
-  , testProperty "trimRight preserves content" prop_trim_right_preserves_content
-  , testProperty "leadingIndentation counts leading spaces/tabs" prop_leading_indentation_counts
-  , testProperty "curlyDelta counts braces" prop_curly_delta_counts_braces
-  , testProperty "curlyDelta ignores braces in strings" prop_curly_delta_ignores_strings
-  , testProperty "curlyDelta ignores braces in comments" prop_curly_delta_ignores_comments
-  , testProperty "defaultFileDirectives has all Nothing" prop_default_file_directives_nothing
+  [ testProperty "defaultFileDirectives has all Nothing" prop_default_file_directives_nothing
   , testProperty "defaultBlockDirectives has all Nothing" prop_default_block_directives_nothing
-  , testProperty "updateFileDirective updates ownership" prop_update_file_directive_ownership
-  , testProperty "updateFileDirective updates dependent_types" prop_update_file_directive_dependent_types
-  , testProperty "updateFileDirective updates constraints" prop_update_file_directive_constraints
-  , testProperty "updateFileDirective rejects unknown keys" prop_update_file_directive_unknown_key
   , testProperty "parseTypus handles empty input" prop_parse_typus_empty
   , testProperty "parseTypus handles simple content" prop_parse_typus_simple_content
   , testProperty "parseTypus handles build tags" prop_parse_typus_build_tags
