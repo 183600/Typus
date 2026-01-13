@@ -101,7 +101,8 @@ library
         temporary >= 1.2 && <2,
         random >= 1.1 && <2,
         time >= 1.8 && <2,
-        deepseq >= 1.4 && <2
+        deepseq >= 1.4 && <2,
+        QuickCheck >= 2.14 && <3
     default-language: Haskell2010
 
 executable typus
@@ -2222,7 +2223,16 @@ test-suite typus-test
         Test.Unit.DebugBasicFunctionsSpec,
         Test.Unit.GoToolchainBasicSpec,
         Test.Unit.EmbedAssetsBasicSpec,
-        Test.Unit.SyntaxValidatorBasicSpec
+        Test.Unit.SyntaxValidatorBasicSpec,
+        
+        -- New Advanced QuickCheck Test Modules (2026)
+        Test.Unit.SourceLocationAdvancedQuickCheckSpec,
+        Test.Unit.UtilsAdvancedQuickCheckSpec,
+        Test.Unit.ParserAdvancedQuickCheckSpec,
+        Test.Unit.ErrorHandlerAdvancedQuickCheckSpec,
+        Test.Unit.DependenciesAdvancedQuickCheckSpec,
+        Test.Unit.OwnershipAdvancedQuickCheckSpec,
+        Test.Unit.CompilerAdvancedQuickCheckSpec
         
     build-depends:
         base >=4.7 && <5,

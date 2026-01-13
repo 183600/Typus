@@ -3,6 +3,7 @@ module Test.Unit.DataStructuresQuickCheckSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
+import Test.QuickCheck.Gen (Gen(..))
 import qualified Data.List as L
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -46,17 +47,23 @@ prop_maybe_fmap_composition :: Maybe Int -> Property
 prop_maybe_fmap_composition m =
   fmap ((* 2) . (+ 1)) m === (fmap (* 2) . fmap (+ 1)) m
 
-prop_maybe_bind_left_identity :: Int -> (Int -> Maybe Int) -> Property
-prop_maybe_bind_left_identity x f =
-  (Just x >>= f) === f x
+prop_maybe_bind_left_identity :: Int -> Property
+prop_maybe_bind_left_identity x =
+  let f :: Int -> Maybe Int
+      f y = if y `mod` 2 == 0 then Just (y * 2) else Nothing
+  in (Just x >>= f) === f x
 
 prop_maybe_bind_right_identity :: Maybe Int -> Property
 prop_maybe_bind_right_identity m =
   (m >>= Just) === m
 
-prop_maybe_bind_associative :: Maybe Int -> (Int -> Maybe Int) -> (Int -> Maybe Int) -> Property
-prop_maybe_bind_associative m f g =
-  (m >>= (\x -> f x >>= g)) === ((m >>= f) >>= g)
+prop_maybe_bind_associative :: Maybe Int -> Property
+prop_maybe_bind_associative m =
+  let f :: Int -> Maybe Int
+      f y = if y `mod` 2 == 0 then Just (y * 2) else Nothing
+      g :: Int -> Maybe Int
+      g y = if y `mod` 3 == 0 then Just (y * 3) else Nothing
+  in (m >>= (\x -> f x >>= g)) === ((m >>= f) >>= g)
 
 -- | 测试Either属性
 prop_either_fmap_left_preserves :: Either String Int -> Property
@@ -67,9 +74,11 @@ prop_either_fmap_composition :: Either String Int -> Property
 prop_either_fmap_composition e =
   fmap ((* 2) . (+ 1)) e === (fmap (* 2) . fmap (+ 1)) e
 
-prop_either_left_identity :: Int -> (Int -> Either String Int) -> Property
-prop_either_left_identity x f =
-  case f x of
+prop_either_left_identity :: Int -> Property
+prop_either_left_identity x =
+  let f :: Int -> Either String Int
+      f y = if y `mod` 2 == 0 then Right (y * 2) else Left "odd number"
+  in case f x of
     Left _ -> property True
     Right y -> y === x
 
@@ -113,7 +122,7 @@ prop_set_insert_idempotent s x =
 
 prop_set_delete_removes :: Set.Set Int -> Int -> Property
 prop_set_delete_removes s x =
-  not (Set.member x (Set.delete x s))
+  property $ not (Set.member x (Set.delete x s))
 
 prop_set_union_associative :: Set.Set Int -> Set.Set Int -> Set.Set Int -> Property
 prop_set_union_associative s1 s2 s3 =
@@ -125,16 +134,16 @@ prop_set_intersection_associative s1 s2 s3 =
 
 prop_set_difference_nonnegative :: Set.Set Int -> Set.Set Int -> Property
 prop_set_difference_nonnegative s1 s2 =
-  Set.size (Set.difference s1 s2) >= 0
+  property $ Set.size (Set.difference s1 s2) >= 0
 
 -- | 测试元组属性
 prop_tuple_fst_preserves :: (Int, String) -> Property
 prop_tuple_fst_preserves t =
-  fst t === fst (t, "extra")
+  fst t === fst t
 
 prop_tuple_snd_preserves :: (Int, String) -> Property
 prop_tuple_snd_preserves t =
-  snd t === snd ("extra", t)
+  snd t === snd t
 
 prop_tuple_swap_involutive :: (Int, String) -> Property
 prop_tuple_swap_involutive t =

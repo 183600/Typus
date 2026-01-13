@@ -50,7 +50,7 @@ prop_div_mod_relation :: Int -> Int -> Property
 prop_div_mod_relation x y =
   y /= 0 ==> 
   let (q, r) = x `divMod` y
-  in x === q * y + r && r >= 0 && r < abs y
+  in (x === q * y + r) .&&. (r >= 0) .&&. (r < abs y)
 
 -- | 测试幂运算属性
 prop_power_identity :: Int -> Property
@@ -70,14 +70,14 @@ prop_power_associative x y z =
 prop_gcd_properties :: Int -> Int -> Property
 prop_gcd_properties x y =
   let g = gcd x y
-  in g `divides` x && g `divides` y && 
-     forall [d | d <- [1..min (abs x) (abs y)], d `divides` x && d `divides` y] (\d -> d <= g)
+  in property (g `divides` x && g `divides` y) .&&.
+     property (forall [d | d <- [1..min (abs x) (abs y)], d `divides` x && d `divides` y] (\d -> d <= g))
 
 prop_lcm_properties :: Int -> Int -> Property
 prop_lcm_properties x y =
   let l = lcm x y
-  in x `divides` l && y `divides` l && 
-     forall [m | m <- [max (abs x) (abs y)..abs x * abs y], x `divides` m && y `divides` m] (\m -> l <= m)
+  in property (x `divides` l && y `divides` l) .&&.
+     property (forall [m | m <- [max (abs x) (abs y)..abs x * abs y], x `divides` m && y `divides` m] (\m -> l <= m))
 
 prop_gcd_lcm_relation :: Int -> Int -> Property
 prop_gcd_lcm_relation x y =
@@ -87,7 +87,7 @@ prop_gcd_lcm_relation x y =
 -- | 测试奇偶性属性
 prop_even_odd_properties :: Int -> Property
 prop_even_odd_properties x =
-  (even x && not (odd x)) || (odd x && not (even x))
+  property ((even x && not (odd x)) || (odd x && not (even x)))
 
 prop_even_addition :: Int -> Int -> Property
 prop_even_addition x y =
@@ -112,7 +112,7 @@ prop_odd_multiplication x y =
 -- | 测试绝对值属性
 prop_abs_nonnegative :: Int -> Property
 prop_abs_nonnegative x =
-  abs x >= 0
+  property (abs x >= 0)
 
 prop_abs_idempotent :: Int -> Property
 prop_abs_idempotent x =
@@ -126,7 +126,9 @@ prop_abs_multiplicative x y =
 prop_signum_properties :: Int -> Property
 prop_signum_properties x =
   let s = signum x
-  in (x > 0 && s === 1) || (x == 0 && s === 0) || (x < 0 && s === -1)
+  in ((x > 0) ==> (s === 1)) .&&.
+     ((x == 0) ==> (s === 0)) .&&.
+     ((x < 0) ==> (s === -1))
 
 prop_signum_multiplicative :: Int -> Int -> Property
 prop_signum_multiplicative x y =
@@ -137,7 +139,7 @@ divides :: Int -> Int -> Bool
 x `divides` y = y `mod` x == 0
 
 forall :: [a] -> (a -> Bool) -> Bool
-forall = all
+forall xs p = all p xs
 
 tests :: TestTree
 tests = testGroup "Mathematical Properties QuickCheck Tests"

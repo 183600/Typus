@@ -37,7 +37,7 @@ prop_dependency_validity :: TestDependencyNode -> [TestDependencyNode] -> Proper
 prop_dependency_validity (TestDependencyNode _ _ deps) nodes =
   let validIds = map nodeId nodes
       invalidDeps = filter (`notElem` validIds) deps
-  in null invalidDeps
+  in property $ null invalidDeps
 
 -- | 测试循环检测的正确性
 prop_cycle_detection_correctness :: [TestDependencyNode] -> Property

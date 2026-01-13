@@ -42,8 +42,7 @@ instance Arbitrary Constraint where
     , PredC <$> arbitrary <*> arbitrary
     ]
 
-instance Arbitrary DependencyNode where
-  arbitrary = DependencyNode <$> arbitrary <*> arbitrary
+-- DependencyNode instance is now defined in Dependencies.AST
 
 instance Arbitrary DependencyGraph where
   arbitrary = DependencyGraph . Map.fromList <$> arbitrary

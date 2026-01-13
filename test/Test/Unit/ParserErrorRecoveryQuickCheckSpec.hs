@@ -7,15 +7,15 @@ import Parser
 import Compiler.Errors.Core (ErrorLocation(..))
 import SourceLocation (SourcePos(..), startPos, SourceSpan(..))
 import Data.Char (isAlpha, isDigit, isSpace)
+import Data.List (isInfixOf)
 
 -- | 测试解析器错误恢复的基本属性
 prop_error_recovery_preserves_valid_tokens :: String -> Property
 prop_error_recovery_preserves_valid_tokens s =
   let hasValidTokens = any isAlpha s || any isDigit s
-  in whenFail ("Input: " ++ s) $ 
-     if hasValidTokens 
-     then property True  -- 简化测试，实际应该检查解析结果
-     else property True
+  in property (if hasValidTokens 
+              then True  -- 简化测试，实际应该检查解析结果
+              else True)
 
 -- | 测试解析器在遇到错误时的行为
 prop_parser_handles_empty_input :: Property
@@ -31,8 +31,7 @@ prop_parser_tracks_position_correctly :: String -> Property
 prop_parser_tracks_position_correctly s =
   let lineCount = length $ filter (== '\n') s
       expectedLine = lineCount + 1
-  in whenFail ("Input: " ++ s ++ ", Expected line: " ++ show expectedLine) $
-     property True  -- 简化测试，实际应该检查解析器的位置跟踪
+  in property True  -- 简化测试，实际应该检查解析器的位置跟踪
 
 -- | 测试解析器错误位置报告
 prop_error_location_within_input_bounds :: String -> Property
@@ -61,29 +60,26 @@ prop_parser_handles_nested_structures depth =
 prop_parser_handles_string_literals :: String -> Property
 prop_parser_handles_string_literals s =
   let hasQuotes = '"' `elem` s
-  in whenFail ("Input: " ++ s) $ 
-     if hasQuotes 
-     then property True  -- 简化测试，实际应该检查字符串解析
-     else property True
+  in property (if hasQuotes 
+              then True  -- 简化测试，实际应该检查字符串解析
+              else True)
 
 -- | 测试解析器处理注释
 prop_parser_handles_comments :: String -> Property
 prop_parser_handles_comments s =
   let hasLineComment = "//" `isInfixOf` s
       hasBlockComment = "/*" `isInfixOf` s && "*/" `isInfixOf` s
-  in whenFail ("Input: " ++ s) $ 
-     if hasLineComment || hasBlockComment 
-     then property True  -- 简化测试，实际应该检查注释处理
-     else property True
+  in property (if hasLineComment || hasBlockComment 
+              then True  -- 简化测试，实际应该检查注释处理
+              else True)
 
 -- | 测试解析器处理Unicode字符
 prop_parser_handles_unicode :: String -> Property
 prop_parser_handles_unicode s =
   let hasUnicode = any (> '\127') s
-  in whenFail ("Input: " ++ s) $ 
-     if hasUnicode 
-     then property True  -- 简化测试，实际应该检查Unicode处理
-     else property True
+  in property (if hasUnicode 
+              then True  -- 简化测试，实际应该检查Unicode处理
+              else True)
 
 -- | 测试解析器处理大文件
 prop_parser_handles_large_input :: Int -> Property

@@ -5,6 +5,8 @@ import Test.Tasty.HUnit
 import SyntaxValidator
 import Compiler.Errors.Core (ErrorLocation(..))
 import SourceLocation (SourcePos(..), startPos, SourceSpan(..))
+import qualified Data.List as L
+import Prelude hiding (all, elem, isPrefixOf, isSuffixOf)
 
 tests :: TestTree
 tests = testGroup "Syntax Validator Basic Tests"
@@ -161,7 +163,7 @@ validateIdentifier :: String -> Either String Bool
 validateIdentifier identifier = 
   if null identifier
   then Left "Empty identifier"
-  else if all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_") identifier
+  else if L.all (\c -> c `elem` (['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_")) identifier
        then if identifier `elem` ["if", "else", "while", "for", "fun", "let", "return", "import", "export"]
             then Left "Reserved keyword"
             else Right True
@@ -228,14 +230,13 @@ validateExportStatement exportStmt =
 isPrefixOf :: String -> String -> Bool
 isPrefixOf prefix str = take (length prefix) str == prefix
 
-isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `Data.List.isInfixOf` haystack
-
-isSuffixOf :: String -> String -> Bool
-isSuffixOf suffix str = drop (length str - length suffix) str == suffix
-
-all :: (a -> Bool) -> [a] -> Bool
-all p = and . map p
+isInfixOf needle haystack = needle `L.isInfixOf` haystack
 
 elem :: Eq a => a -> [a] -> Bool
-elem = Data.List.elem
+elem = L.elem
+
+all :: (a -> Bool) -> [a] -> Bool
+all = L.all
+
+isSuffixOf :: Eq a => [a] -> [a] -> Bool
+isSuffixOf = L.isSuffixOf

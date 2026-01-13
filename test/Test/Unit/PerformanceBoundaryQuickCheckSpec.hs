@@ -20,7 +20,7 @@ prop_string_sort_performance s =
 prop_string_nub_performance :: String -> Property
 prop_string_nub_performance s =
   let unique = nub s
-  in length unique <= length s
+  in property (length unique <= length s)
 
 -- | 测试列表操作性能边界
 prop_list_concat_performance :: [Int] -> [Int] -> Property
@@ -31,7 +31,7 @@ prop_list_concat_performance xs ys =
 prop_list_filter_performance :: [Int] -> Property
 prop_list_filter_performance xs =
   let filtered = filter even xs
-  in length filtered <= length xs
+  in property (length filtered <= length xs)
 
 prop_list_map_performance :: [Int] -> Property
 prop_list_map_performance xs =
@@ -82,14 +82,12 @@ prop_memory_deep_structure_boundary n =
 prop_search_linear_boundary :: [Int] -> Int -> Property
 prop_search_linear_boundary xs x =
   let found = elem x xs
-  in whenFail ("List length: " ++ show (length xs)) $
-     property True  -- 简化测试，实际应该检查搜索时间
+  in property True  -- 简化测试，实际应该检查搜索时间
 
 prop_sort_boundary :: [Int] -> Property
 prop_sort_boundary xs =
   let sorted = sort xs
-  in whenFail ("List length: " ++ show (length xs)) $
-     property True  -- 简化测试，实际应该检查排序时间
+  in property True  -- 简化测试，实际应该检查排序时间
 
 -- | 测试并发操作边界
 prop_concurrent_access_boundary :: [Int] -> Property
@@ -97,16 +95,13 @@ prop_concurrent_access_boundary xs =
   length xs >= 10 ==> 
   let chunkSize = length xs `div` 2
       chunks = [take chunkSize xs, drop chunkSize xs]
-  in whenFail ("Chunks: " ++ show (length chunks)) $
-     property True  -- 简化测试，实际应该检查并发访问
+  in property True  -- 简化测试，实际应该检查并发访问
 
 prop_concurrent_modification_boundary :: [Int] -> Property
 prop_concurrent_modification_boundary xs =
   length xs >= 10 ==> 
   let modified = map (*2) xs
-  in whenFail ("Original: " ++ show (length xs) ++ 
-               ", Modified: " ++ show (length modified)) $
-     property True  -- 简化测试，实际应该检查并发修改
+  in property True  -- 简化测试，实际应该检查并发修改
 
 -- | 测试边界条件
 prop_empty_input_boundary :: Property
@@ -135,15 +130,13 @@ prop_file_io_boundary :: Int -> Property
 prop_file_io_boundary n =
   n >= 0 && n <= 1000 ==> 
   let content = replicate n 'a'
-  in whenFail ("Content length: " ++ show (length content)) $
-     property True  -- 简化测试，实际应该检查文件IO
+  in property True  -- 简化测试，实际应该检查文件IO
 
 prop_network_io_boundary :: Int -> Property
 prop_network_io_boundary n =
   n >= 0 && n <= 100 ==> 
   let packets = replicate n "data"
-  in whenFail ("Packets: " ++ show (length packets)) $
-     property True  -- 简化测试，实际应该检查网络IO
+  in property True  -- 简化测试，实际应该检查网络IO
 
 -- | 辅助函数
 factorial :: Int -> Int

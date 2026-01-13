@@ -9,6 +9,7 @@ module Dependencies.AST (
 
 import Data.Text (Text)
 import qualified Data.Map.Strict as Map
+import Test.QuickCheck (Arbitrary(..), elements, vectorOf, choose)
 
 -- | Program AST used by the dependent type checker pipeline.
 data AST = Program [Statement]
@@ -44,7 +45,15 @@ data Constraint
 data DependencyNode = DependencyNode
   { nodeName :: String
   , nodeDependencies :: [String]
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Ord)
+
+-- | Arbitrary instance for QuickCheck testing
+instance Arbitrary DependencyNode where
+  arbitrary = do
+    nodeName <- elements ["module", "function", "type", "variable"]
+    numDeps <- choose (0, 5)
+    nodeDependencies <- vectorOf numDeps (elements ["module", "function", "type", "variable"])
+    return $ DependencyNode nodeName nodeDependencies
 
 -- | Dependency graph containing all nodes and their relationships
 newtype DependencyGraph = DependencyGraph

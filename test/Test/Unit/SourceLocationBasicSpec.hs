@@ -46,7 +46,7 @@ tests = testGroup "SourceLocation Basic Tests"
       posOffset newPos @?= 21
       
   , testCase "posAt creates correct position" $ do
-      let pos = posAt 10 20 100
+      let pos = posAt 10 20
       posLine pos @?= 10
       posColumn pos @?= 20
       posOffset pos @?= 100
@@ -58,48 +58,49 @@ tests = testGroup "SourceLocation Basic Tests"
       posOffset pos @?= 200
       
   , testCase "emptySpan properties" $ do
-      let span = emptySpan
+      let pos = posAt 0 0
+      let span = emptySpan pos
       -- emptySpan should have invalid positions
       posLine (spanStart span) @?= 0
       posColumn (spanStart span) @?= 0
       posOffset (spanStart span) @?= 0
       
   , testCase "spanFrom creates correct span" $ do
-      let pos = posAt 5 10 50
+      let pos = posAt 5 10
       let span = spanFrom pos
       spanStart span @?= pos
       spanEnd span @?= pos
       
   , testCase "spanTo creates correct span" $ do
-      let pos = posAt 8 15 80
+      let pos = posAt 8 15
       let span = spanTo pos
       spanStart span @?= pos
       spanEnd span @?= pos
       
   , testCase "spanBetween creates correct span" $ do
-      let start = posAt 3 5 25
-      let end = posAt 7 12 75
+      let start = posAt 3 5
+      let end = posAt 7 12
       let span = spanBetween start end
       spanStart span @?= start
       spanEnd span @?= end
       
   , testCase "spanBetween with same position" $ do
-      let pos = posAt 4 8 40
+      let pos = posAt 4 8
       let span = spanBetween pos pos
       spanStart span @?= pos
       spanEnd span @?= pos
       
   , testCase "spanBetween with different lines" $ do
-      let start = posAt 2 5 15
-      let end = posAt 5 3 50
+      let start = posAt 2 5
+      let end = posAt 5 3
       let span = spanBetween start end
       spanStart span @?= start
       spanEnd span @?= end
       
   , testCase "position comparison" $ do
-      let pos1 = posAt 1 1 0
-      let pos2 = posAt 1 2 1
-      let pos3 = posAt 2 1 10
+      let pos1 = posAt 1 1
+      let pos2 = posAt 1 2
+      let pos3 = posAt 2 1
       
       assertBool "pos1 < pos2" $ pos1 < pos2
       assertBool "pos2 < pos3" $ pos2 < pos3

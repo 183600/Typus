@@ -129,7 +129,7 @@ returnBorrowedResource :: String -> Either ErrorLocation String
 returnBorrowedResource borrowed = Right ("returned_" ++ borrowed)  -- 简化实现
 
 useResource :: String -> Either ErrorLocation String
-useResource resource = Left "use_after_free_error"  -- 简化实现
+useResource resource = Left (ErrorLocation Nothing 0 0 Nothing Nothing)  -- 简化实现
 
 freeResource :: String -> Either ErrorLocation String
 freeResource resource = Right ("freed_" ++ resource)  -- 简化实现

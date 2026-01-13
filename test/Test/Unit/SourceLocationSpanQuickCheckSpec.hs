@@ -27,7 +27,8 @@ instance Arbitrary SourceSpan where
 -- | 测试emptySpan的属性
 prop_empty_span_properties :: Property
 prop_empty_span_properties =
-  let span = emptySpan
+  let pos = SourcePos 0 0 0
+      span = emptySpan pos
   in isValidSpan span === False .&&.
      isValidBlockSpan span === False
 
@@ -60,9 +61,9 @@ prop_span_between_ordered_properties pos1 pos2 =
   let span = spanBetweenOrdered pos1 pos2
       start = spanStart span
       end = spanEnd span
-  in (start <= end) === True .&&.
-     (start === pos1 || start === pos2) === True .&&.
-     (end === pos1 || end === pos2) === True
+  in property (start <= end) .&&.
+     property (start == pos1 || start == pos2) .&&.
+     property (end == pos1 || end == pos2)
 
 -- | 测试mergeSpans的属性
 prop_merge_spans_commutative :: SourceSpan -> SourceSpan -> Property

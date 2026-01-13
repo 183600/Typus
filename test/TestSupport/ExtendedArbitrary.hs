@@ -520,12 +520,7 @@ instance Arbitrary DepT.DependentTypeChecker where
       <$> arbitrary
       <*> vectorOf len arbitrary
 
-instance Arbitrary DepAST.DependencyNode where
-  arbitrary = do
-    len <- choose (0, 3)
-    DepAST.DependencyNode
-      <$> genUniqueIdentifier
-      <*> vectorOf len genUniqueIdentifier
+-- instance Arbitrary DepAST.DependencyNode is already defined in Dependencies.AST
 
 instance Arbitrary DepAST.DependencyGraph where
   arbitrary = DepAST.DependencyGraph

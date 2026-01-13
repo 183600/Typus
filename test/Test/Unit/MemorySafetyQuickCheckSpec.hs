@@ -31,7 +31,7 @@ prop_string_bounds_checking :: String -> Property
 prop_string_bounds_checking s =
   let len = length s
       safeIndex = if len > 0 then s !! 0 else '\0'
-  in whenFail ("String length: " ++ show len) $
+  in whenFail (print ("String length: " ++ show len)) $
      property True  -- 简化测试，实际应该检查边界
 
 -- | 测试内存泄漏预防
@@ -46,14 +46,14 @@ prop_memory_leak_detection :: [Int] -> Property
 prop_memory_leak_detection xs =
   let processed = map (*2) xs
       unique = nub processed
-  in length unique <= length processed
+  in property (length unique <= length processed)
 
 -- | 测试指针安全
 prop_null_pointer_handling :: Maybe String -> Property
 prop_null_pointer_handling maybeStr =
   case maybeStr of
     Nothing -> property True
-    Just s -> length s >= 0
+    Just s -> property (length s >= 0)
 
 prop_dangling_pointer_prevention :: [Int] -> Property
 prop_dangling_pointer_prevention xs =
@@ -96,10 +96,16 @@ prop_heap_fragmentation n =
   in totalAllocated === n * 1024
 
 prop_garbage_collection :: [Int] -> Property
+
 prop_garbage_collection xs =
-  let processed = map (*2) xs
-      collected = filter (> 0) processed
-  in length collected <= length processed
+
+  let 
+
+    processed = map (* 2) xs
+
+    collected = filter (> 0) processed
+
+  in property (length collected <= length processed)
 
 -- | 测试内存映射
 prop_memory_mapping_bounds :: Int -> Property
@@ -121,13 +127,11 @@ prop_sequential_access xs =
   let accessed = map id xs
   in length accessed === length xs
 
-prop_random_access :: [Int] -> Property
-prop_random_access xs =
-  let indices = [0..length xs - 1]
-      safeIndices = filter (`inRange` xs) indices
-  in whenFail ("Length: " ++ show (length xs) ++ 
-               ", Safe indices: " ++ show (length safeIndices)) $
-     property True  -- 简化测试，实际应该检查随机访问
+prop_random_access :: [Int] -> [Int] -> Property
+prop_random_access xs indices =
+  let 
+    safeIndices = filter (\i -> i >= 0 && i < length xs) indices
+  in property (all (\i -> i >= 0 && i < length xs) safeIndices)
 
 -- | 测试内存使用优化
 prop_memory_pool_reuse :: Int -> Property

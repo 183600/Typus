@@ -7,6 +7,9 @@ import Parser
 import Compiler
 import ErrorHandler
 import SourceLocation (SourcePos(..), startPos, SourceSpan(..))
+import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..), 
+             defaultFileDirectives, defaultBlockDirectives)
+import Compiler.Errors.Core (ErrorLocation(..))
 
 tests :: TestTree
 tests = testGroup "Integration Basic Tests"
@@ -16,7 +19,8 @@ tests = testGroup "Integration Basic Tests"
       case parseResult of
         Left err -> assertBool "Parse should succeed" False
         Right ast -> do
-          let compileResult = compile ast  -- 简化函数调用
+          let typusFile = createTypusFile ast  -- 创建 TypusFile
+          let compileResult = compile typusFile  -- 简化函数调用
           case compileResult of
             Left err -> assertBool "Compile should succeed" False
             Right ir -> assertBool "IR should be generated" True  -- 简化测试
@@ -27,7 +31,8 @@ tests = testGroup "Integration Basic Tests"
       case parseResult of
         Left err -> assertBool "Parse should succeed" False
         Right ast -> do
-          let compileResult = compile ast  -- 简化函数调用
+          let typusFile = createTypusFile ast  -- 创建 TypusFile
+          let compileResult = compile typusFile  -- 简化函数调用
           case compileResult of
             Left err -> assertBool "Compile should succeed" False
             Right ir -> assertBool "IR should contain variable" True  -- 简化测试
@@ -38,7 +43,8 @@ tests = testGroup "Integration Basic Tests"
       case parseResult of
         Left err -> assertBool "Parse should succeed" False
         Right ast -> do
-          let compileResult = compile ast  -- 简化函数调用
+          let typusFile = createTypusFile ast  -- 创建 TypusFile
+          let compileResult = compile typusFile  -- 简化函数调用
           case compileResult of
             Left err -> assertBool "Compile should succeed" False
             Right ir -> assertBool "IR should contain function" True  -- 简化测试
@@ -77,7 +83,8 @@ tests = testGroup "Integration Basic Tests"
       case parseResult of
         Left err -> assertBool "Parse should succeed" False
         Right ast -> do
-          let typeCheckResult = typeCheck ast  -- 简化函数调用
+          let typusFile = createTypusFile ast  -- 创建 TypusFile
+          let typeCheckResult = typeCheck typusFile  -- 简化函数调用
           case typeCheckResult of
             Left err -> assertBool "Type check should detect error" True
             Right typed -> assertBool "Type check should not succeed with mismatched types" False
@@ -110,7 +117,8 @@ tests = testGroup "Integration Basic Tests"
       case parseResult of
         Left err -> assertBool "Parse with recovery should succeed" False
         Right ast -> do
-          let compileResult = compile ast  -- 简化函数调用
+          let typusFile = createTypusFile ast  -- 创建 TypusFile
+          let compileResult = compile typusFile  -- 简化函数调用
           case compileResult of
             Left err -> assertBool "Compile should succeed with recovered AST" False
             Right ir -> assertBool "IR should be generated from recovered AST" True  -- 简化测试
@@ -154,8 +162,7 @@ tests = testGroup "Integration Basic Tests"
 parse :: String -> Either ErrorLocation String
 parse s = Right "parsed_ast"  -- 简化实现
 
-compile :: String -> Either ErrorLocation String
-compile ast = Right "compiled_ir"  -- 简化实现
+
 
 optimize :: String -> Either ErrorLocation String
 optimize ir = Right "optimized_ir"  -- 简化实现
@@ -166,8 +173,18 @@ generateCode ir = Right "generated_code"  -- 简化实现
 compilePipeline :: String -> Either ErrorLocation String
 compilePipeline input = Right "pipeline_output"  -- 简化实现
 
-typeCheck :: String -> Either ErrorLocation String
-typeCheck ast = Left "type_error"  -- 简化实现
+-- | 创建一个简单的 TypusFile 用于测试
+createTypusFile :: String -> TypusFile
+createTypusFile input = 
+  let directives = defaultFileDirectives
+      buildTags = []
+      span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 1 0)
+      blocks = [CodeBlock defaultBlockDirectives input span]
+      syntaxErrors = []
+  in TypusFile directives buildTags blocks syntaxErrors
+
+typeCheck :: TypusFile -> Either ErrorLocation String
+typeCheck ast = Left (ErrorLocation Nothing 0 0 Nothing Nothing)  -- 简化实现
 
 analyzeDependencies :: String -> Either ErrorLocation String
 analyzeDependencies ast = Right "dependencies"  -- 简化实现
