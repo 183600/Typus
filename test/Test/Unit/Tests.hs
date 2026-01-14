@@ -70,6 +70,14 @@ import qualified Test.Unit.SourceLocationTestSpec as SourceLocationTest
 import qualified Test.Unit.UtilsTestSpec as UtilsTest
 import qualified Test.Unit.IntegrationTestSpec as IntegrationTest
 
+-- Import newly created comprehensive test modules
+import qualified Test.Unit.UtilsComprehensiveSpec as UtilsComprehensive
+import qualified Test.Unit.ParserComprehensiveSpec as ParserComprehensive
+import qualified Test.Unit.SourceLocationComprehensiveSpec as SourceLocationComprehensive
+import qualified Test.Unit.ErrorHandlerCoreComprehensiveSpec as ErrorHandlerCoreComprehensive
+import qualified Test.Unit.IntegrationComprehensiveSpec as IntegrationComprehensive
+import qualified Test.Unit.BoundaryConditionComprehensiveSpec as BoundaryConditionComprehensive
+
 -- Import newly created comprehensive QuickCheck test modules (2025)
 import qualified Test.Unit.NewBasicTypesAndStringPropertiesSpec as BasicTypesAndStringProperties
 import qualified Test.Unit.NewParserAdvancedPropertiesSpec as ParserAdvancedProperties
@@ -160,5 +168,13 @@ tests = testGroup "Test.Unit.Tests Tests"
     ErrorHandlingTest.errorHandlingTests,
     SourceLocationTest.sourceLocationTests,
     UtilsTest.utilsTests,
-    IntegrationTest.integrationTests
+    IntegrationTest.integrationTests,
+    
+    -- Newly created comprehensive test modules
+    UtilsComprehensive.utilsComprehensiveTests,
+    ParserComprehensive.parserComprehensiveTests,
+    SourceLocationComprehensive.sourceLocationComprehensiveTests,
+    ErrorHandlerCoreComprehensive.errorHandlerCoreComprehensiveTests,
+    IntegrationComprehensive.integrationComprehensiveTests,
+    BoundaryConditionComprehensive.boundaryConditionComprehensiveTests
   ]

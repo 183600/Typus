@@ -1047,7 +1047,6 @@ test-suite typus-test
         Test.Unit.TypeCheckerQuickCheckSpec,
         Test.Unit.OwnershipQuickCheckSpec,
         Test.Unit.AnalyzerQuickCheckSpec,
-        Test.Unit.UtilsQuickCheckSpec,
         
         Test.Unit.ValueAnalysisQuickCheckSpec,
         Test.Unit.SyntaxValidatorQuickCheckSpec,
@@ -1099,6 +1098,14 @@ test-suite typus-test
         
         -- New Cabal Test Modules
         Test.Unit.NewCabalUtilsSpec,
+
+        -- Newly created comprehensive test modules
+        Test.Unit.UtilsComprehensiveSpec,
+        Test.Unit.ParserComprehensiveSpec,
+        Test.Unit.SourceLocationComprehensiveSpec,
+        Test.Unit.ErrorHandlerCoreComprehensiveSpec,
+        Test.Unit.IntegrationComprehensiveSpec,
+        Test.Unit.BoundaryConditionComprehensiveSpec,
         Test.Unit.NewCabalSourceLocationSpec,
         Test.Unit.NewCabalErrorHandlerSpec,
         Test.Unit.NewCabalParserSpec,

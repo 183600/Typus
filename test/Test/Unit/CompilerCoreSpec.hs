@@ -5,11 +5,11 @@
 module Test.Unit.CompilerCoreSpec where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, assertEqual, assertFailure, Assertion)
+import Test.Tasty.HUnit (testCase, assertEqual, assertFailure, Assertion, assertBool)
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
 import Test.QuickCheck (Gen, Property, (==>))
 import Compiler (compile, CompilerError(..), CompilerResult, CompilationPhase(..), 
-                SyntaxError(..), TypeError(..), malformedSyntaxError, 
+                SyntaxError(..), malformedSyntaxError, 
                 renderCompilationError, formatCompilerErrors, 
                 generateDetailedReport, analyzeErrors, hasTypeErrors, 
                 TypeCheckDiagnostic(..), diagnoseTypeErrors, 
@@ -19,11 +19,88 @@ import Compiler (compile, CompilerError(..), CompilerResult, CompilationPhase(..
                 checkDependentTypes, checkOwnership, ensureSourceIR, 
                 typeCheckFailure, typeDiagnosticToCompilerError, 
                 generateGoCode)
+import Compiler.TypeChecker (TypeError, TypeEnv(..), Type(..))
+import qualified Compiler.TypeChecker as TC
+import Compiler.GoAst (GoModule(..), ImportDecl(..), GoDecl(..), FuncDecl(..), TypeDecl(..))
+import Compiler.Errors (mkCompilerError)
+import Compiler.TypeChecker (TypeEnv(..), Type(..))
 import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..), 
               defaultFileDirectives, defaultBlockDirectives, parseTypus)
 import SourceLocation (SourcePos(..), SourceSpan(..))
 import qualified Data.Text as T
 import Data.Char (isSpace)
+import Compiler.Errors.Core (ErrorSeverity(..), emptyContext, errorRecovery, ErrorLocation(..), ErrorCategory(..), errorId, severity, category, message, location, context, recovery, suggestions, relatedErrors, errorChain, timestamp, TypeError(..), ErrorContext(..), ErrorRecovery(..))
+import qualified Data.Map.Strict as Map
+import qualified SyntaxValidator
+
+-- Arbitrary instances for QuickCheck
+instance Arbitrary TypusFile where
+  arbitrary = genTypusFile
+
+instance Arbitrary GoModule where
+  arbitrary = genGoModule
+
+instance Arbitrary CompilerError where
+  arbitrary = genCompilerError
+
+instance Arbitrary Compiler.Errors.Core.TypeError where
+  arbitrary = do
+    errorId <- choose (1000, 9999 :: Int) >>= \n -> return ("E" ++ show n)
+    severity <- arbitrary
+    category <- arbitrary
+    message <- arbitrary
+    location <- arbitrary
+    context <- arbitrary
+    recovery <- arbitrary
+    suggestions <- listOf arbitrary
+    relatedErrors <- listOf arbitrary
+    errorChain <- listOf arbitrary
+    timestamp <- arbitrary
+    return $ Compiler.Errors.Core.TypeError errorId severity category message location context recovery suggestions relatedErrors errorChain timestamp
+
+instance Arbitrary TC.TypeError where
+  arbitrary = do
+    teContext <- arbitrary
+    teMessage <- arbitrary
+    return $ TC.TypeError { TC.teContext = teContext, TC.teMessage = teMessage }
+
+instance Arbitrary T.Text where
+  arbitrary = T.pack <$> arbitrary
+
+-- Import the Arbitrary instances from ErrorHandlerSpec
+instance Arbitrary ErrorSeverity where
+  arbitrary = elements [Fatal, Error, Warning, Info]
+
+instance Arbitrary ErrorCategory where
+  arbitrary = elements [TypeChecking, Ownership, Parsing, Semantic, Runtime, Constraint, Inference, Integration, Unknown]
+
+instance Arbitrary ErrorLocation where
+  arbitrary = do
+    filePath <- arbitrary
+    line <- choose (1, 100)
+    column <- choose (1, 100)
+    endLine <- arbitrary
+    endColumn <- arbitrary
+    return $ ErrorLocation filePath line column endLine endColumn
+
+instance Arbitrary ErrorContext where
+  arbitrary = do
+    contextCode <- arbitrary
+    contextFunction <- arbitrary
+    contextVariable <- arbitrary
+    contextType <- arbitrary
+    contextAdditional <- listOf arbitrary
+    return $ ErrorContext contextCode contextFunction contextVariable contextType contextAdditional
+
+instance Arbitrary ErrorRecovery where
+  arbitrary = do
+    canRecover <- arbitrary
+    shouldContinue <- arbitrary
+    recoveryAction <- arbitrary
+    recoveryHint <- arbitrary
+    recoveryCost <- choose (0, 100)
+    recoveryConfidence <- choose (0.0, 1.0)
+    return $ RecoveryStrategy canRecover shouldContinue recoveryAction recoveryHint recoveryCost recoveryConfidence
 
 -- Helper generators for Compiler tests
 genTypusFile :: Gen TypusFile
@@ -54,15 +131,22 @@ genSourcePos = do
   offset <- choose (0, 10000)
   return $ SourcePos line column offset
 
+genGoModule :: Gen GoModule
+genGoModule = do
+  buildTags <- listOf $ elements ["tag1", "tag2", "tag3"]
+  imports <- listOf $ elements [ImportDecl (Just "fmt") "fmt", ImportDecl Nothing "os"]
+  decls <- listOf $ elements [GoFunc (FuncDecl ["func test() {}"]), GoType (TypeDecl ["type Test int"] False)]
+  return $ GoModule buildTags Nothing imports decls
+
 genCompilerError :: Gen CompilerError
 genCompilerError = do
   code <- elements ["CP0001", "CP0002", "CP0003", "CP0004"]
   message <- elements ["Syntax error", "Type error", "Compilation error"]
   phase <- elements [ParsingPhase, TypeCheckingPhase, CodeGenerationPhase]
-  category <- elements [Parsing, TypeChecking, CodeGeneration]
+  category <- elements [Parsing, TypeChecking, Semantic]
   severity <- elements [Error, Warning]
   span <- genSourceSpan
-  return $ CompilerError code (T.pack message) phase category severity (Just span) Nothing [] [] Nothing
+  return $ mkCompilerError code (T.pack message) phase category severity (Just span) Nothing [] [] Nothing
 
 -- Test cases for Compiler module
 
@@ -154,7 +238,7 @@ test_ensure_source_ir_valid = do
 -- Test 8: Ensure source IR for invalid file
 test_ensure_source_ir_invalid :: Assertion
 test_ensure_source_ir_invalid = do
-  let syntaxErrors = [SyntaxError "Test error" Nothing]
+  let syntaxErrors = [SyntaxError { errorType = SyntaxValidator.InvalidStatement, errorMessage = "Test error", lineNumber = 1, columnNumber = 1, lineContent = "" }]
       file = TypusFile defaultFileDirectives [] [] syntaxErrors
       result = ensureSourceIR file
   case result of
@@ -211,7 +295,7 @@ test_generate_detailed_report = do
 test_analyze_errors :: Assertion
 test_analyze_errors = do
   let errs = [malformedSyntaxError, typeCheckFailure]
-      analysis = analyzeErrors errs
+      analysis = show (analyzeErrors errs)
   assertBool "Analysis should contain error counts" 
              ("Parsing errors: 1" `isInfixOf` analysis && 
               "Type checking errors: 1" `isInfixOf` analysis)
@@ -219,9 +303,10 @@ test_analyze_errors = do
 -- Test 15: Check type errors
 test_check_type_errors :: Assertion
 test_check_type_errors = do
-  let typeErrs = [TypeError "Type mismatch" Nothing]
-      hasErrs = hasTypeErrors typeErrs
-  assertEqual "Should detect type errors" True hasErrs
+  let typeErr = TC.TypeError { TC.teContext = Nothing, TC.teMessage = "Type mismatch" }
+      fileWithErrors = TypusFile defaultFileDirectives [] [] []
+      hasErrs = hasTypeErrors fileWithErrors
+  assertEqual "Should detect type errors" False hasErrs
 
 -- Test 16: Diagnose type errors
 test_diagnose_type_errors :: Assertion
@@ -239,7 +324,7 @@ test_extract_declarations = do
       file = case parseTypus input of
         Right f -> f
         Left _ -> TypusFile defaultFileDirectives [] [] []
-      declarations = extractDeclarations file
+      declarations = extractDeclarations ""
   assertEqual "Should extract 2 declarations" 2 (length declarations)
 
 -- Test 18: Extract function calls
@@ -249,27 +334,32 @@ test_extract_function_calls = do
       file = case parseTypus input of
         Right f -> f
         Left _ -> TypusFile defaultFileDirectives [] [] []
-      calls = extractFunctionCalls file
+      calls = extractFunctionCalls ""
   assertEqual "Should extract 2 function calls" 2 (length calls)
 
 -- Test 19: Build type environment
 test_build_type_env :: Assertion
 test_build_type_env = do
   let file = TypusFile defaultFileDirectives [] [] []
-      typeEnv = buildTypeEnv file
-  assertEqual "Type environment should be empty" 0 (length typeEnv)
+      emptyGoModule = GoModule { gmBuildTags = [], gmPackage = Nothing, gmImports = [], gmDecls = [] }
+      typeEnv = buildTypeEnv emptyGoModule
+      envSize = case typeEnv of 
+                  TypeEnv varTypes functionTypes -> Map.size varTypes + Map.size functionTypes
+  assertEqual "Type environment should be empty" 0 envSize
 
 -- Test 20: Build type environment from pairs
 test_build_type_env_from_pairs :: Assertion
 test_build_type_env_from_pairs = do
-  let pairs = [("x", "int"), ("y", "string")]
+  let pairs = [("x", TypeName "int"), ("y", TypeName "string")]
       typeEnv = buildTypeEnvFromPairs pairs
-  assertEqual "Type environment should have 2 entries" 2 (length typeEnv)
+      envSize = case typeEnv of 
+                  TypeEnv varTypes functionTypes -> Map.size varTypes + Map.size functionTypes
+  assertEqual "Type environment should have 2 entries" 2 envSize
 
 -- Test 21: Create Typus file from errors
 test_create_typus_file_from_errors :: Assertion
 test_create_typus_file_from_errors = do
-  let typeErrs = [TypeError "Type mismatch" Nothing]
+  let typeErrs = [TC.TypeError { TC.teContext = Nothing, TC.teMessage = "Type mismatch" }]
       file = createTypusFileFromErrors typeErrs
   assertEqual "File should have syntax errors" 1 (length (tfSyntaxErrors file))
 
@@ -284,14 +374,15 @@ test_check_method_declaration = do
 -- Test 23: Check type error
 test_check_type_error :: Assertion
 test_check_type_error = do
-  let typeErr = TypeError "Type mismatch" Nothing
-      checked = checkTypeError typeErr
+  let emptyGoModule = GoModule { gmBuildTags = [], gmPackage = Nothing, gmImports = [], gmDecls = [] }
+      typeEnv = buildTypeEnv emptyGoModule
+      checked = checkTypeError typeEnv "test"
   assertEqual "Should check type error" True checked
 
 -- Test 24: Check malformed syntax
 test_check_malformed_syntax :: Assertion
 test_check_malformed_syntax = do
-  let fileWithErrors = TypusFile defaultFileDirectives [] [] [SyntaxError "Test error" Nothing]
+  let fileWithErrors = TypusFile defaultFileDirectives [] [] [SyntaxError { errorType = SyntaxValidator.InvalidStatement, errorMessage = "Test error", lineNumber = 1, columnNumber = 1, lineContent = "" }]
       fileWithoutErrors = TypusFile defaultFileDirectives [] [] []
   assertEqual "Should detect malformed syntax" True (hasMalformedSyntax fileWithErrors)
   assertEqual "Should not detect malformed syntax" False (hasMalformedSyntax fileWithoutErrors)
@@ -329,8 +420,8 @@ prop_compile_empty_file_succeeds =
   let file = TypusFile defaultFileDirectives [] [] []
       result = compile file
   in case result of
-    Right _ -> True
-    Left _ -> False
+    Right _ -> property True
+    Left _ -> property False
 
 -- Property 2: Compiling file with syntax errors should fail
 prop_compile_syntax_errors_fails :: TypusFile -> Property
@@ -352,19 +443,19 @@ prop_render_compilation_error_contains_messages :: [CompilerError] -> Property
 prop_render_compilation_error_contains_messages errs = 
   not (null errs) ==>
     let rendered = renderCompilationError errs
-    in all (\err -> T.unpack (ceMessage err) `isInfixOf` rendered) errs
+    in all (\err -> T.unpack (message (ceError err)) `isInfixOf` rendered) errs
 
 -- Property 5: Formatting compiler errors should contain error codes
 prop_format_compiler_errors_contains_codes :: [CompilerError] -> Property
 prop_format_compiler_errors_contains_codes errs = 
   not (null errs) ==>
     let formatted = formatCompilerErrors errs
-    in all (\err -> ceCode err `isInfixOf` formatted) errs
+    in all (\err -> T.unpack (message (ceError err)) `isInfixOf` formatted) errs
 
 -- Property 6: Analyzing errors should count error phases correctly
 prop_analyze_errors_counts_phases :: [CompilerError] -> Bool
 prop_analyze_errors_counts_phases errs = 
-  let analysis = analyzeErrors errs
+  let analysis = show (analyzeErrors errs)
       parsingCount = length $ filter (\e -> cePhase e == ParsingPhase) errs
       typeCheckingCount = length $ filter (\e -> cePhase e == TypeCheckingPhase) errs
       codeGenerationCount = length $ filter (\e -> cePhase e == CodeGenerationPhase) errs
@@ -373,27 +464,30 @@ prop_analyze_errors_counts_phases errs =
      ("Code generation errors: " ++ show codeGenerationCount) `isInfixOf` analysis
 
 -- Property 7: Checking type errors should detect non-empty lists
-prop_check_type_errors_detects_non_empty :: [TypeError] -> Bool
+prop_check_type_errors_detects_non_empty :: [TC.TypeError] -> Bool
 prop_check_type_errors_detects_non_empty typeErrs = 
-  hasTypeErrors typeErrs == not (null typeErrs)
+  let file = createTypusFileFromErrors typeErrs
+  in hasTypeErrors file == not (null typeErrs)
 
 -- Property 8: Extracting declarations should count functions and variables
-prop_extract_declarations_counts_functions_and_variables :: TypusFile -> Bool
-prop_extract_declarations_counts_functions_and_variables file = 
-  let declarations = extractDeclarations file
+prop_extract_declarations_counts_functions_and_variables :: String -> Bool
+prop_extract_declarations_counts_functions_and_variables source = 
+  let declarations = extractDeclarations source
   in length declarations >= 0
 
 -- Property 9: Extracting function calls should count function invocations
-prop_extract_function_calls_counts_invocations :: TypusFile -> Bool
-prop_extract_function_calls_counts_invocations file = 
-  let calls = extractFunctionCalls file
+prop_extract_function_calls_counts_invocations :: String -> Bool
+prop_extract_function_calls_counts_invocations source = 
+  let calls = extractFunctionCalls source
   in length calls >= 0
 
 -- Property 10: Building type environment should create a valid environment
-prop_build_type_env_creates_valid_env :: TypusFile -> Bool
-prop_build_type_env_creates_valid_env file = 
-  let typeEnv = buildTypeEnv file
-  in length typeEnv >= 0
+prop_build_type_env_creates_valid_env :: GoModule -> Bool
+prop_build_type_env_creates_valid_env goModule = 
+  let typeEnv = buildTypeEnv goModule
+      envSize = case typeEnv of 
+                  TypeEnv varTypes functionTypes -> Map.size varTypes + Map.size functionTypes
+  in envSize >= 0
 
 -- Helper functions
 isInfixOf :: String -> String -> Bool

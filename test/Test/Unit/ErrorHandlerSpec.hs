@@ -9,8 +9,68 @@ import Test.Tasty.HUnit (testCase, assertEqual, assertFailure, assertBool, Asser
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
 import Test.QuickCheck (Gen, Property, (==>))
 import ErrorHandler
+import Compiler.Errors.Core (context, category, ErrorSeverity(..), ErrorCategory(..), ErrorLocation(..), ErrorContext(..), ErrorRecovery(..), CombinedError(..))
 import qualified Data.Text as T
 import Data.Char (isSpace)
+
+instance Arbitrary T.Text where
+  arbitrary = T.pack <$> arbitrary
+
+-- Arbitrary instances for QuickCheck
+instance Arbitrary ErrorSeverity where
+  arbitrary = elements [Fatal, Error, Warning, Info]
+
+instance Arbitrary ErrorCategory where
+  arbitrary = elements [TypeChecking, Ownership, Parsing, Semantic, Runtime, Constraint, Inference, Integration, Unknown]
+
+instance Arbitrary ErrorLocation where
+  arbitrary = do
+    filePath <- arbitrary
+    line <- choose (1, 100)
+    column <- choose (1, 100)
+    endLine <- arbitrary
+    endColumn <- arbitrary
+    return $ ErrorLocation filePath line column endLine endColumn
+
+instance Arbitrary ErrorContext where
+  arbitrary = do
+    contextCode <- arbitrary
+    contextFunction <- arbitrary
+    contextVariable <- arbitrary
+    contextType <- arbitrary
+    contextAdditional <- listOf arbitrary
+    return $ ErrorContext contextCode contextFunction contextVariable contextType contextAdditional
+
+instance Arbitrary ErrorRecovery where
+  arbitrary = do
+    canRecover <- arbitrary
+    shouldContinue <- arbitrary
+    recoveryAction <- arbitrary
+    recoveryHint <- arbitrary
+    recoveryCost <- choose (0, 100)
+    recoveryConfidence <- choose (0.0, 1.0)
+    return $ RecoveryStrategy canRecover shouldContinue recoveryAction recoveryHint recoveryCost recoveryConfidence
+
+instance Arbitrary CombinedError where
+  arbitrary = oneof
+    [ IntegrationError <$> arbitrary <*> arbitrary
+    , CrossAnalyzerError <$> arbitrary <*> arbitrary <*> listOf arbitrary
+    ]
+
+instance Arbitrary TypeError where
+  arbitrary = do
+    errorId <- choose (1000, 9999 :: Int) >>= \n -> return ("E" ++ show n)
+    severity <- arbitrary
+    category <- arbitrary
+    message <- arbitrary
+    location <- arbitrary
+    context <- arbitrary
+    recovery <- arbitrary
+    suggestions <- listOf arbitrary
+    relatedErrors <- listOf arbitrary
+    errorChain <- listOf arbitrary
+    timestamp <- arbitrary
+    return $ TypeError errorId severity category message location context recovery suggestions relatedErrors errorChain timestamp
 
 -- Helper generators for ErrorHandler tests
 genErrorSeverity :: Gen ErrorSeverity
@@ -24,8 +84,8 @@ genErrorLocation = do
   filePath <- elements [Nothing, Just "test.typus", Just "module.typus"]
   line <- choose (1, 100)
   column <- choose (1, 100)
-  endLine <- elements [Nothing, Just <$> choose (1, 100)]
-  endColumn <- elements [Nothing, Just <$> choose (1, 100)]
+  endLine <- elements [Nothing, Just 50]
+  endColumn <- elements [Nothing, Just 50]
   return $ ErrorLocation filePath line column endLine endColumn
 
 genErrorContext :: Gen ErrorContext
@@ -52,7 +112,7 @@ genErrorRecovery = do
 
 genTypeError :: Gen TypeError
 genTypeError = do
-  errorId <- choose (1000, 9999) >>= \n -> return ("E" ++ show n)
+  errorId <- choose (1000, 9999 :: Int) >>= \n -> return ("E" ++ show n)
   severity <- genErrorSeverity
   category <- genErrorCategory
   message <- elements ["Type mismatch", "Syntax error", "Ownership violation", "Missing import"]
@@ -69,8 +129,8 @@ genCombinedError :: Gen CombinedError
 genCombinedError = do
   severity <- genErrorSeverity
   oneof
-    [ return $ OwnershipErrorCombined severity undefined
-    , return $ DependentTypeErrorCombined severity undefined
+    [ return $ OwnershipErrorCombined severity (Prelude.undefined)
+    , return $ DependentTypeErrorCombined severity (Prelude.undefined)
     , IntegrationError <$> elements ["Cross-module error", "Integration failure"] <*> pure severity
     , CrossAnalyzerError <$> elements ["Cross-analysis error"] <*> pure severity <*> listOf genCombinedError
     ]
@@ -234,11 +294,11 @@ test_get_error_statistics = do
       errors = [error1, error2, error3, error4]
       stats = getErrorStatistics errors
   assertBool "Statistics should contain error count" 
-             ("Errors: 2" `isInfixOf` stats)
+             ("Errors: 2" `isInfixOf` show stats)
   assertBool "Statistics should contain warning count" 
-             ("Warnings: 1" `isInfixOf` stats)
+             ("Warnings: 1" `isInfixOf` show stats)
   assertBool "Statistics should contain info count" 
-             ("Info: 1" `isInfixOf` stats)
+             ("Info: 1" `isInfixOf` show stats)
 
 -- Test 14: Generate error report
 test_generate_error_report :: Assertion
@@ -256,11 +316,11 @@ test_generate_error_report = do
 -- Test 15: Create error with timestamp
 test_create_error_with_timestamp :: Assertion
 test_create_error_with_timestamp = do
-  let timestamp = Just "2023-01-01 12:00:00"
+  let timestampVal = Just "2023-01-01 12:00:00"
       error = TypeError "E1001" Error TypeChecking (T.pack "Type mismatch") 
                        (ErrorLocation Nothing 1 1 Nothing Nothing) 
-                       emptyContext errorRecovery [] [] [] timestamp
-  assertEqual "Should have timestamp" timestamp (timestamp error)
+                       emptyContext errorRecovery [] [] [] timestampVal
+  assertEqual "Should have timestamp" timestampVal (timestamp error)
 
 -- Test 16: Format multiple errors
 test_format_multiple_errors :: Assertion
@@ -310,18 +370,17 @@ test_filter_combined_errors_by_severity = do
 -- Test 20: Create error with suggestions
 test_error_with_suggestions :: Assertion
 test_error_with_suggestions = do
-  let suggestions = [T.pack "Check types", T.pack "Verify syntax"]
-      error = errorWithSuggestions "E1001" Error TypeChecking (T.pack "Type mismatch") 
-                                   (ErrorLocation Nothing 1 1 Nothing Nothing) 
-                                   emptyContext errorRecovery suggestions
-  assertEqual "Should have suggestions" suggestions (suggestions error)
+  let suggestionsList = [T.pack "Check types", T.pack "Verify syntax"]
+      error = errorWithSuggestions "E1001" (T.pack "Type mismatch") suggestionsList 
+                      (ErrorLocation Nothing 1 1 Nothing Nothing)
+  assertEqual "Should have suggestions" suggestionsList (suggestions error)
 
 -- Test 21: Create error with location
 test_error_with_location :: Assertion
 test_error_with_location = do
-  let location = ErrorLocation (Just "test.typus") 10 5 Nothing Nothing
-      error = errorAt "E1002" Error Parsing (T.pack "Syntax error") location
-  assertEqual "Should have location" location (location error)
+  let errorLocation = ErrorLocation (Just "test.typus") 10 5 Nothing Nothing
+      error = errorAt "E1002" (T.pack "Syntax error") errorLocation
+  assertEqual "Should have location" errorLocation (location error)
 
 -- Test 22: Create warning with category
 test_warning_with_category :: Assertion
@@ -334,15 +393,16 @@ test_warning_with_category = do
 -- Test 23: Create info with context
 test_info_with_context :: Assertion
 test_info_with_context = do
-  let context = ErrorContext (Just "let x = 42") Nothing Nothing Nothing []
-      info = infoWithContext "E1004" Parsing (T.pack "Parse info") 
-                             (ErrorLocation Nothing 1 1 Nothing Nothing) context
-  assertEqual "Should have context" context (context info)
+  let errorContext = ErrorContext (Just "let x = 42") Nothing Nothing Nothing []
+      info = infoWithCategory "E1004" Parsing (T.pack "Parse info") 
+                             (ErrorLocation Nothing 1 1 Nothing Nothing)
+      infoWithContext = withContext info errorContext
+  assertEqual "Should have context" errorContext (context infoWithContext)
 
 -- Test 24: Create fatal error
 test_fatal_error :: Assertion
 test_fatal_error = do
-  let fatal = fatalError "E1005" (T.pack "Fatal error")
+  let fatal = fatalError "E1005" (T.pack "Fatal error") (ErrorLocation Nothing 1 1 Nothing Nothing)
   assertEqual "Should have fatal severity" Fatal (severity fatal)
 
 -- Test 25: Wrap error with context
@@ -351,9 +411,9 @@ test_wrap_error_with_context = do
   let baseError = TypeError "E1001" Error TypeChecking (T.pack "Base error") 
                             (ErrorLocation Nothing 1 1 Nothing Nothing) 
                             emptyContext errorRecovery [] [] [] Nothing
-      context = ErrorContext Nothing (Just "main") Nothing Nothing []
-      wrapped = wrapError baseError context
-  assertEqual "Should have wrapped context" context (context wrapped)
+      errorContext = ErrorContext Nothing (Just "main") Nothing Nothing []
+      wrapped = withContext (wrapError (T.pack "Wrapped error") baseError) errorContext
+  assertEqual "Should have wrapped context" errorContext (context wrapped)
 
 -- Property tests for ErrorHandler module
 
@@ -376,24 +436,25 @@ prop_filter_by_severity_preserves_order errors minSeverity =
 
 -- Property 3: Filtering by category preserves order
 prop_filter_by_category_preserves_order :: [TypeError] -> ErrorCategory -> Property
-prop_filter_by_category_preserves_order errors category = 
+prop_filter_by_category_preserves_order errors cat = 
   not (null errors) ==>
-    let filtered = filterByCategory category errors
+    let filtered = filterByCategory cat errors
         originalOrder = map category errors
         filteredOrder = map category filtered
-    in all (== category) filteredOrder
+    in all (== cat) filteredOrder
 
 -- Property 4: Error statistics count is accurate
 prop_error_statistics_count_accurate :: [TypeError] -> Property
 prop_error_statistics_count_accurate errors = 
   not (null errors) ==>
     let stats = getErrorStatistics errors
+        statsStr = show stats
         errorCount = length $ filter (\e -> severity e == Error || severity e == Fatal) errors
         warningCount = length $ filter (\e -> severity e == Warning) errors
         infoCount = length $ filter (\e -> severity e == Info) errors
-    in ("Errors: " ++ show errorCount) `isInfixOf` stats &&
-       ("Warnings: " ++ show warningCount) `isInfixOf` stats &&
-       ("Info: " ++ show infoCount) `isInfixOf` stats
+    in ("Errors: " ++ show errorCount) `isInfixOf` statsStr &&
+       ("Warnings: " ++ show warningCount) `isInfixOf` statsStr &&
+       ("Info: " ++ show infoCount) `isInfixOf` statsStr
 
 -- Property 5: Combined error severity is consistent
 prop_combined_error_severity_consistent :: CombinedError -> Bool
@@ -405,18 +466,18 @@ prop_combined_error_severity_consistent combinedError =
 prop_error_formatting_contains_message :: TypeError -> Bool
 prop_error_formatting_contains_message error = 
   let formatted = formatError error
-      message = T.unpack (message error)
-  in message `isInfixOf` formatted
+      messageStr = T.unpack (message error)
+  in messageStr `isInfixOf` formatted
 
 -- Property 7: Error formatting with location contains location info
 prop_error_formatting_with_location_contains_location :: TypeError -> Property
 prop_error_formatting_with_location_contains_location error = 
-  let location = location error
-      hasLocation = line location > 0
+  let errorLocation = location error
+      hasLocation = line errorLocation > 0
   in hasLocation ==>
     let formatted = formatErrorWithLocation error
-        lineStr = show (line location)
-        columnStr = show (column location)
+        lineStr = show (line errorLocation)
+        columnStr = show (column errorLocation)
     in lineStr `isInfixOf` formatted && columnStr `isInfixOf` formatted
 
 -- Property 8: Recovery strategy confidence is within bounds

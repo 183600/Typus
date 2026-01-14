@@ -50,14 +50,14 @@ genDelimiter = elements $ ",;:|"
 -- Test properties for Utils module
 
 -- Property 1: trim removes leading and trailing spaces
-prop_trim_removes_leading_trailing_spaces :: String -> Bool
+prop_trim_removes_leading_trailing_spaces :: String -> Property
 prop_trim_removes_leading_trailing_spaces s = 
   let trimmed = trim s
       hasLeadingSpace = not (null s) && isSpace (head s)
       hasTrailingSpace = not (null s) && isSpace (last s)
   in if hasLeadingSpace || hasTrailingSpace
      then not (null trimmed) ==> (not (isSpace (head trimmed)) && not (isSpace (last trimmed)))
-     else trimmed == s
+     else property (trimmed == s)
 
 -- Property 2: trim preserves non-space characters
 prop_trim_preserves_non_space_characters :: String -> Bool
@@ -167,8 +167,8 @@ prop_normalizeIndentation_removes_common_prefix =
 prop_forceSingleTabIndentation_adds_tab :: String -> Bool
 prop_forceSingleTabIndentation_adds_tab s = 
   let lines' = lines s
-        tabbed = forceSingleTabIndentation s
-        tabbedLines = lines tabbed
+      tabbed = forceSingleTabIndentation s
+      tabbedLines = lines tabbed
     in all (\line -> null line || '\t' `elem` take 1 line) tabbedLines
 
 -- Property 18: fixIndentation is equivalent to normalizeIndentation
@@ -218,9 +218,9 @@ prop_isValidChar_printable c =
   (c >= ' ' && c <= '~') || c == '\n' || c == '\r' || c == '\t' ==> isValidChar c
 
 -- Property 25: isValidChar returns False for control characters
-prop_isValidChar_control :: Property
+prop_isValidChar_control :: Char -> Property
 prop_isValidChar_control c = 
-  c < ' ' && c `notElem` ['\n', '\r', '\t'] ==> not (isValidChar c)
+  (c < ' ' && c `notElem` ['\n', '\r', '\t']) ==> not (isValidChar c)
 
 -- Property 26: trim of already trimmed string is idempotent
 prop_trim_idempotent :: String -> Bool
@@ -248,9 +248,9 @@ prop_removeLineComments_preserves_newlines =
     in originalNewlines == cleanedNewlines
 
 -- Property 30: normalizeIndentation of single line is identity
-prop_normalizeIndentation_single_line :: String -> Bool
+prop_normalizeIndentation_single_line :: String -> Property
 prop_normalizeIndentation_single_line s = 
-  not ('\n' `elem` s) ==> normalizeIndentation s == s
+  not ('\n' `elem` s) ==> property (normalizeIndentation s == s)
 
 -- Property 31: breakOn is consistent with isInfixOf
 prop_breakOn_consistent_with_isInfixOf :: String -> String -> Property
@@ -318,8 +318,8 @@ prop_splitBy_preserves_order delim s =
 prop_forceSingleTabIndentation_trims_content :: String -> Bool
 prop_forceSingleTabIndentation_trims_content s = 
   let lines' = lines s
-        tabbed = forceSingleTabIndentation s
-        tabbedLines = lines tabbed
+      tabbed = forceSingleTabIndentation s
+      tabbedLines = lines tabbed
     in all (\line -> null line || 
                      (head line == '\t' && 
                       drop 1 line == trim (dropWhile isSpace line))) tabbedLines

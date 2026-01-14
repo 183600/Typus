@@ -13,6 +13,7 @@ import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), HasLocation(.
                       locatedAt, locatedWithSpan, locatedValue, locatedSpan, locatedPos,
                       mapLocated, advancePos, advancePosBy, advancePosByText,
                       comparePos, toErrorLocation, toErrorLocationWithSpan)
+import Compiler.Errors.Core (ErrorLocation(..))
 import qualified Data.Text as T
 import Data.Char (isSpace)
 
@@ -322,6 +323,13 @@ prop_mapLocated_preserves_position span value =
       mapped = mapLocated (*2) located
   in locatedPos mapped == locatedPos located
 
+-- Property: mapLocated preserves span
+prop_mapLocated_preserves_span :: SourceSpan -> Int -> Bool
+prop_mapLocated_preserves_span span value = 
+  let located = locatedWithSpan span value
+      mapped = mapLocated (*2) located
+  in locatedSpan mapped == locatedSpan located
+
 -- Property 39: advancePosBy is consistent with repeated posAfter
 prop_advancePosBy_consistent_with_posAfter :: SourcePos -> String -> Bool
 prop_advancePosBy_consistent_with_posAfter pos s = 
@@ -389,3 +397,13 @@ sourceLocationQuickCheckTests = testGroup "SourceLocation QuickCheck Tests"
     , ("toErrorLocationWithSpan converts span to error location", property prop_toErrorLocationWithSpan_converts_span)
     ]
   ]
+
+-- Arbitrary instances for SourceLocation types
+instance Arbitrary SourcePos where
+  arbitrary = genSourcePos
+
+instance Arbitrary SourceSpan where
+  arbitrary = genSourceSpan
+
+instance Arbitrary T.Text where
+  arbitrary = genText

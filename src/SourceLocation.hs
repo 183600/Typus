@@ -51,7 +51,10 @@ module SourceLocation (
     advancePos,
     advancePosBy,
     advancePosByText,
-    advancePosByLine
+    advancePosByLine,
+    
+    -- Position comparison
+    comparePos
 ) where
 
 import Data.Text (Text)

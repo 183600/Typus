@@ -5,12 +5,12 @@
 module Test.Unit.ParserBasicSpec where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, assertEqual, Assertion)
+import Test.Tasty.HUnit (testCase, assertEqual, Assertion, assertFailure)
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
 import Test.QuickCheck (Gen, Property, (==>))
 import Parser (parseTypus, FileDirectives(..), BlockDirectives(..), CodeBlock(..), TypusFile(..), 
               defaultFileDirectives, defaultBlockDirectives)
-import SourceLocation (SourcePos(..), SourceSpan(..))
+import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), locValue)
 import qualified Data.Text as T
 import Data.Char (isSpace)
 
@@ -77,7 +77,7 @@ test_parse_file_ownership_directive = do
     Right file -> do
       let directives = tfDirectives file
       case fdOwnership directives of
-        Just (Located True _) -> return ()
+        Just loc | locValue loc == True -> return ()
         _ -> assertFailure "Expected ownership directive to be on"
     Left err -> assertFailure $ "Failed to parse file with ownership directive: " ++ err
 
@@ -90,7 +90,7 @@ test_parse_file_dependent_types_directive = do
     Right file -> do
       let directives = tfDirectives file
       case fdDependentTypes directives of
-        Just (Located True _) -> return ()
+        Just loc | locValue loc == True -> return ()
         _ -> assertFailure "Expected dependent_types directive to be true"
     Left err -> assertFailure $ "Failed to parse file with dependent_types directive: " ++ err
 
@@ -103,7 +103,7 @@ test_parse_file_constraints_directive = do
     Right file -> do
       let directives = tfDirectives file
       case fdConstraints directives of
-        Just (Located False _) -> return ()
+        Just loc | locValue loc == False -> return ()
         _ -> assertFailure "Expected constraints directive to be off"
     Left err -> assertFailure $ "Failed to parse file with constraints directive: " ++ err
 
@@ -116,13 +116,13 @@ test_parse_file_multiple_directives = do
     Right file -> do
       let directives = tfDirectives file
       case fdOwnership directives of
-        Just (Located True _) -> return ()
+        Just loc | locValue loc == True -> return ()
         _ -> assertFailure "Expected ownership directive to be on"
       case fdDependentTypes directives of
-        Just (Located True _) -> return ()
+        Just loc | locValue loc == True -> return ()
         _ -> assertFailure "Expected dependent_types directive to be true"
       case fdConstraints directives of
-        Just (Located False _) -> return ()
+        Just loc | locValue loc == False -> return ()
         _ -> assertFailure "Expected constraints directive to be off"
     Left err -> assertFailure $ "Failed to parse file with multiple directives: " ++ err
 
@@ -151,10 +151,10 @@ test_parse_block_with_directives = do
       let firstBlock = head blocks
           directives = cbDirectives firstBlock
       case bdOwnership directives of
-        Just (Located True _) -> return ()
+        Just loc | locValue loc == True -> return ()
         _ -> assertFailure "Expected block ownership directive to be on"
       case bdDependentTypes directives of
-        Just (Located True _) -> return ()
+        Just loc | locValue loc == True -> return ()
         _ -> assertFailure "Expected block dependent_types directive to be true"
     Left err -> assertFailure $ "Failed to parse block with directives: " ++ err
 
@@ -170,10 +170,10 @@ test_parse_markdown_block_with_directives = do
       let firstBlock = head blocks
           directives = cbDirectives firstBlock
       case bdOwnership directives of
-        Just (Located True _) -> return ()
+        Just loc | locValue loc == True -> return ()
         _ -> assertFailure "Expected block ownership directive to be on"
       case bdDependentTypes directives of
-        Just (Located True _) -> return ()
+        Just loc | locValue loc == True -> return ()
         _ -> assertFailure "Expected block dependent_types directive to be true"
     Left err -> assertFailure $ "Failed to parse markdown block with directives: " ++ err
 
@@ -294,8 +294,8 @@ prop_parse_empty_input =
   let input = ""
       result = parseTypus input
   in case result of
-    Right file -> null (tfBlocks file)
-    Left _ -> False
+    Right file -> property (null (tfBlocks file))
+    Left _ -> property False
 
 -- Property 2: Parsing code without directives should result in default directives
 prop_parse_no_directives :: String -> Property
@@ -316,7 +316,7 @@ prop_parse_ownership_directive code =
     let result = parseTypus code
     in case result of
       Right file -> case fdOwnership (tfDirectives file) of
-        Just (Located True _) -> True
+        Just loc | locValue loc == True -> True
         _ -> False
       Left _ -> False
 
@@ -327,7 +327,7 @@ prop_parse_dependent_types_directive code =
     let result = parseTypus code
     in case result of
       Right file -> case fdDependentTypes (tfDirectives file) of
-        Just (Located True _) -> True
+        Just loc | locValue loc == True -> True
         _ -> False
       Left _ -> False
 
@@ -338,7 +338,7 @@ prop_parse_constraints_directive code =
     let result = parseTypus code
     in case result of
       Right file -> case fdConstraints (tfDirectives file) of
-        Just (Located False _) -> True
+        Just loc | locValue loc == False -> True
         _ -> False
       Left _ -> False
 
@@ -359,7 +359,7 @@ prop_parse_block_directives code =
     in case result of
       Right file -> case tfBlocks file of
         (block:_) -> case bdOwnership (cbDirectives block) of
-          Just (Located True _) -> True
+          Just loc | locValue loc == True -> True
           _ -> False
         [] -> False
       Left _ -> False
@@ -372,7 +372,7 @@ prop_parse_markdown_directives code =
     in case result of
       Right file -> case tfBlocks file of
         (block:_) -> case bdOwnership (cbDirectives block) of
-          Just (Located True _) -> True
+          Just loc | locValue loc == True -> True
           _ -> False
         [] -> False
       Left _ -> False
