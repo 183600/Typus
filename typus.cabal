@@ -2252,10 +2252,7 @@ test-suite typus-test
         Test.Unit.SyntaxValidatorBasicSpec,
         
         -- New Advanced QuickCheck Test Modules (2026)
-        Test.Unit.SourceLocationAdvancedQuickCheckSpec,
-        Test.Unit.UtilsAdvancedQuickCheckSpec,
-        Test.Unit.ParserAdvancedQuickCheckSpec,
-        Test.Unit.ErrorHandlerAdvancedQuickCheckSpec,
+        -- These modules are already listed above to avoid duplicates
         
         -- New Test Modules Added (2026) - Comprehensive Test Suite
         Test.Unit.CompilerCoreFunctionalityTestSpec,
@@ -2296,6 +2293,7 @@ test-suite typus-test
         -- Additional Test Modules Added for Enhanced Coverage (2026)
         Test.Unit.UtilsStringProcessingExtraSpec,
         Test.Unit.ParserBasicFunctionsExtraSpec
+        
         -- New Advanced QuickCheck Test Modules (2026)
         -- Note: These modules are already listed above to avoid duplicates
         -- Test.Unit.ParserAdvancedQuickCheckSpec,
@@ -2305,12 +2303,16 @@ test-suite typus-test
         -- Test.Unit.DependenciesAdvancedQuickCheckSpec,
         
         -- Newly created advanced test modules (2026)
-        Test.Unit.SourceLocationAdvancedQuickCheckSpec,
-        Test.Unit.UtilsAdvancedQuickCheckSpec,
-        Test.Unit.ParserAdvancedQuickCheckSpec,
-        Test.Unit.ErrorHandlerAdvancedQuickCheckSpec,
-        Test.Unit.IntegrationAdvancedQuickCheckSpec,
-        Test.Unit.BoundaryConditionAdvancedQuickCheckSpec,
+        Test.Unit.BoundaryConditionAdvancedQuickCheckSpec
+        
+        -- Simple QuickCheck Test Suite (2026)
+        Test.Unit.SimpleQuickCheckTestSuite
+        
+        -- Basic QuickCheck Test Suite (2026)
+        Test.Unit.BasicQuickCheckTestSuite
+        
+        -- Final QuickCheck Test Suite (2026)
+        Test.Unit.FinalQuickCheckTestSuite
         
     build-depends:
         base >=4.7 && <5,

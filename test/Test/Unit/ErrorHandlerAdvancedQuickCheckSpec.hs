@@ -21,10 +21,10 @@ prop_error_location_consistency :: Positive Int -> Positive Int -> Positive Int 
 prop_error_location_consistency (Positive line) (Positive col) (Positive offset) =
   let pos = SourcePos line col offset
       span = SourceSpan pos pos
-      errorLoc = ErrorLocation line col ""
+      errorLoc = ErrorLocation Nothing line col Nothing Nothing
   in line > 0 && col > 0 ==> 
-     line errorLoc === line .&&.
-     column errorLoc === col
+     getErrorLine errorLoc === line .&&.
+     getErrorColumn errorLoc === col
 
 -- | 测试错误严重程度的排序
 prop_error_severity_ordering :: ErrorSeverity -> ErrorSeverity -> Property
@@ -38,7 +38,7 @@ prop_error_severity_ordering sev1 sev2 =
 prop_error_message_formatting :: String -> String -> Property
 prop_error_message_formatting title message =
   not (null title) && not (null message) ==>
-  let formatted = formatError title message
+  let formatted = formatErrorMessage title message
   in title `isInfixOf` formatted .&&. message `isInfixOf` formatted
 
 -- | 测试错误处理的幂等性
@@ -97,7 +97,7 @@ prop_error_context_preservation error context =
 prop_error_severity_elevation :: ErrorSeverity -> Property
 prop_error_severity_elevation sev =
   let elevated = elevateErrorSeverity sev
-  in elevated >= sev
+  in property (elevated >= sev)
 
 -- | 测试错误统计的准确性
 prop_error_statistics_accuracy :: [ErrorSeverity] -> Property
@@ -111,7 +111,7 @@ prop_error_statistics_accuracy severities =
 prop_error_report_completeness :: [String] -> Property
 prop_error_report_completeness errors =
   length errors < 20 ==>
-  let report = generateErrorReport errors
+  let report = generateErrorReportMsg errors
       allIncluded = all (`isInfixOf` report) errors
   in allIncluded
 
@@ -143,7 +143,7 @@ test_error_message_formatting :: Assertion
 test_error_message_formatting = do
   let title = "Test Error"
       message = "This is a test error message"
-      formatted = formatError title message
+      formatted = formatErrorMessage title message
   assertBool "Formatted message should contain title" (title `isInfixOf` formatted)
   assertBool "Formatted message should contain message" (message `isInfixOf` formatted)
 
@@ -213,12 +213,12 @@ test_error_statistics_calculation = do
 test_error_report_generation :: Assertion
 test_error_report_generation = do
   let errors = ["error1", "error2", "error3"]
-      report = generateErrorReport errors
+      report = generateErrorReportMsg errors
   assertBool "Report should contain all errors" (all (`isInfixOf` report) errors)
 
 -- | 辅助函数：格式化错误消息
-formatError :: String -> String -> String
-formatError title message = title ++ ": " ++ message
+formatErrorMessage :: String -> String -> String
+formatErrorMessage title message = title ++ ": " ++ message
 
 -- | 辅助函数：处理错误
 handleError :: String -> String
@@ -263,13 +263,13 @@ calculateErrorStatistics severities =
   ]
 
 -- | 辅助函数：生成错误报告
-generateErrorReport :: [String] -> String
-generateErrorReport errors = unlines $ map ("Error: " ++) errors
+generateErrorReportMsg :: [String] -> String
+generateErrorReportMsg errors = unlines $ map ("Error: " ++) errors
 
 -- | 辅助函数：转换为错误位置
 toErrorLocationWithSpan :: SourceSpan -> ErrorLocation
 toErrorLocationWithSpan (SourceSpan start _) = 
-  ErrorLocation (posLine start) (posColumn start) ""
+  ErrorLocation Nothing (posLine start) (posColumn start) Nothing Nothing
 
 -- | 辅助函数：排序严重程度
 sort :: [ErrorSeverity] -> [ErrorSeverity]
@@ -310,3 +310,7 @@ tests = testGroup "ErrorHandler Advanced QuickCheck Tests"
   , testCase "Error statistics calculation" test_error_statistics_calculation
   , testCase "Error report generation" test_error_report_generation
   ]
+
+-- | 为ErrorSeverity添加Arbitrary实例
+instance Arbitrary ErrorSeverity where
+  arbitrary = elements [Warning, Error, Fatal]

@@ -31,7 +31,7 @@ prop_fileDirectiveParser_symmetry pairs =
 -- | 测试解析器对空输入的处理
 prop_parser_empty_input :: Property
 prop_parser_empty_input =
-  let result = parseTypus "" ""
+  let result = parseTypus ""
   in case result of
     Left _ -> property True
     Right file -> tfBlocks file === []
@@ -40,24 +40,24 @@ prop_parser_empty_input =
 prop_parser_single_line :: String -> Property
 prop_parser_single_line code =
   not ("\n" `isInfixOf` code) ==> 
-  case parseTypus "" code of
+  case parseTypus code of
     Left _ -> property True
-    Right file -> length (tfBlocks file) >= 0
+    Right file -> property (length (tfBlocks file) >= 0)
 
 -- | 测试解析器对多行代码的处理
 prop_parser_multiline :: Positive Int -> String -> Property
 prop_parser_multiline (Positive n) code =
   let multiLineCode = unlines $ replicate n code
   in n < 100 ==> 
-  case parseTypus "" multiLineCode of
+  case parseTypus multiLineCode of
     Left _ -> property True
-    Right file -> length (tfBlocks file) >= 0
+    Right file -> property (length (tfBlocks file) >= 0)
 
 -- | 测试解析器对注释的处理
 prop_parser_handles_comments :: String -> String -> Property
 prop_parser_handles_comments code comment =
   let codeWithComment = code ++ " // " ++ comment
-  in case parseTypus "" codeWithComment of
+  in case parseTypus codeWithComment of
     Left _ -> property True
     Right file -> tfBlocks file === tfBlocks file  -- 简单验证不崩溃
 
@@ -70,24 +70,24 @@ prop_parser_handles_directives ownership dependent constraints =
         , "// @constraints=" ++ show constraints
         ]
       code = directives ++ "some code"
-  in case parseTypus "" code of
+  in case parseTypus code of
     Left _ -> property True
     Right file -> tfDirectives file === tfDirectives file  -- 简单验证不崩溃
 
 -- | 测试解析器的位置跟踪
 prop_parser_tracks_positions :: String -> Property
 prop_parser_tracks_positions code =
-  case parseTypus "" code of
+  case parseTypus code of
     Left _ -> property True
-    Right file -> all isValidBlockSpan (map cbSpan (tfBlocks file))
+    Right file -> property (all isValidBlockSpan (map cbSpan (tfBlocks file)))
 
 -- | 测试解析器对块边界的识别
 prop_parser_identifies_blocks :: String -> String -> Property
 prop_parser_identifies_blocks block1 block2 =
   let code = block1 ++ "\n\n" ++ block2
-  in case parseTypus "" code of
+  in case parseTypus code of
     Left _ -> property True
-    Right file -> length (tfBlocks file) >= 1
+    Right file -> property (length (tfBlocks file) >= 1)
 
 -- | 测试解析器对指令格式的容错性
 prop_parser_tolerant_directive_format :: String -> String -> Property
@@ -95,7 +95,7 @@ prop_parser_tolerant_directive_format key value =
   let directive = "// @" ++ key ++ "=" ++ value
       code = directive ++ "\nsome code"
   in not (null key) && not (null value) ==> 
-  case parseTypus "" code of
+  case parseTypus code of
     Left _ -> property True
     Right file -> tfDirectives file === tfDirectives file  -- 简单验证不崩溃
 
@@ -105,7 +105,7 @@ prop_parser_handles_special_chars chars =
   let specialChars = filter (`notElem` ['\n', '\r']) chars
       code = specialChars ++ " code with special chars: !@#$%^&*()"
   in not (null specialChars) ==> 
-  case parseTypus "" code of
+  case parseTypus code of
     Left _ -> property True
     Right file -> tfBlocks file === tfBlocks file  -- 简单验证不崩溃
 
@@ -114,9 +114,9 @@ prop_parser_handles_large_input :: Positive Int -> Property
 prop_parser_handles_large_input (Positive n) =
   let largeCode = unlines $ replicate n "line of code"
   in n < 1000 ==> 
-  case parseTypus "" largeCode of
+  case parseTypus largeCode of
     Left _ -> property True
-    Right file -> length (tfBlocks file) >= 0
+    Right file -> property (length (tfBlocks file) >= 0)
 
 -- | 测试默认文件指令
 test_default_file_directives :: Assertion
@@ -135,7 +135,7 @@ test_default_block_directives = do
 -- | 测试解析器对空文件的处理
 test_parse_empty_file :: Assertion
 test_parse_empty_file = do
-  let result = parseTypus "" ""
+  let result = parseTypus ""
   case result of
     Left err -> assertFailure $ "Failed to parse empty file: " ++ show err
     Right file -> do
@@ -146,7 +146,7 @@ test_parse_empty_file = do
 test_parse_directives_only :: Assertion
 test_parse_directives_only = do
   let directives = "// @ownership=true\n// @dependentTypes=false\n"
-      result = parseTypus "" directives
+      result = parseTypus directives
   case result of
     Left err -> assertFailure $ "Failed to parse directives only: " ++ show err
     Right file -> do
@@ -156,7 +156,7 @@ test_parse_directives_only = do
 test_parse_code_only :: Assertion
 test_parse_code_only = do
   let code = "function test() { return 42; }"
-      result = parseTypus "" code
+      result = parseTypus code
   case result of
     Left err -> assertFailure $ "Failed to parse code only: " ++ show err
     Right file -> do
@@ -167,7 +167,7 @@ test_parse_code_only = do
 test_parse_mixed_content :: Assertion
 test_parse_mixed_content = do
   let content = "// @ownership=true\nfunction test() { return 42; }\n\n// @dependentTypes=false\nfunction test2() { return 24; }"
-      result = parseTypus "" content
+      result = parseTypus content
   case result of
     Left err -> assertFailure $ "Failed to parse mixed content: " ++ show err
     Right file -> do

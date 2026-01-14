@@ -1,5 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Test.Unit.UtilsAdvancedQuickCheckSpec where
 
@@ -8,7 +10,7 @@ import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 
 import Utils
-import Data.List (isPrefixOf, isSuffixOf, isInfixOf)
+import Data.List (intercalate, isPrefixOf, isSuffixOf, isInfixOf)
 import Data.Char (isSpace, isAlphaNum, isAlpha)
 import qualified Data.Text as T
 import Control.Monad (replicateM)
@@ -85,13 +87,15 @@ prop_breakOn_correctness needle haystack =
 prop_safeProcessString_safe :: String -> Property
 prop_safeProcessString_safe s =
   let processed = safeProcessString s
-  in all isValidChar processed
+  in case processed of
+    Left _ -> property True
+    Right str -> property (all isValidChar str)
 
 -- | 测试isValidChar的定义
 prop_isValidChar_properties :: Char -> Property
 prop_isValidChar_properties c =
   let valid = isValidChar c
-  in valid ==> (isAlphaNum c || isAlpha c || isSpace c || c `elem` ".,;:!()[]{}\"'")
+  in valid ==> (isAlphaNum c || isAlpha c || isSpace c || c `elem` (".,;:!()[]{}\"'" :: String))
 
 -- | 测试trim函数与边界条件
 test_trim_edge_cases :: Assertion
@@ -107,10 +111,10 @@ test_trim_edge_cases = do
 test_splitBy_edge_cases :: Assertion
 test_splitBy_edge_cases = do
   assertEqual "Empty string" [] (splitBy ',' "")
-  assertEqual "Single delimiter" ["", ""] (splitBy ',')
+  assertEqual "Single delimiter" ["", ""] (splitBy ',' ",")
   assertEqual "No delimiters" ["test"] (splitBy ',' "test")
-  assertEqual "Consecutive delimiters" ["", "", ""] (splitBy ',,,')
-  assertEqual "Leading and trailing" ["", "test", ""] (splitBy ',test,')
+  assertEqual "Consecutive delimiters" ["", "", ""] (splitBy ',' ",,,")
+  assertEqual "Leading and trailing" ["", "test", ""] (splitBy ',' ",test,")
 
 -- | 测试removeLineComments的边界条件
 test_removeLineComments_edge_cases :: Assertion
@@ -134,12 +138,15 @@ test_string_processing_safety :: Assertion
 test_string_processing_safety = do
   let unsafe = "\1\2\3\4\5"
       safe = safeProcessString unsafe
-  assertBool "All characters should be valid" (all isValidChar safe)
-  assertBool "Result should be different from input" (safe /= unsafe)
+  case safe of
+    Left _ -> assertFailure "safeProcessString should not fail"
+    Right str -> do
+      assertBool "All characters should be valid" (all isValidChar str)
+      assertBool "Result should be different from input" (str /= unsafe)
 
 -- | 生成任意非空字符串用于测试
-instance Arbitrary String where
-  arbitrary = arbitrary `suchThat` (/= "")
+nonEmptyString :: Gen String
+nonEmptyString = arbitrary `suchThat` (/= "")
 
 -- | 测试套件
 tests :: TestTree

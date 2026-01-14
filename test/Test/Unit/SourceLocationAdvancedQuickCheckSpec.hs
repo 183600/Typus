@@ -8,6 +8,7 @@ import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 
 import SourceLocation
+import Compiler.Errors.Core (ErrorLocation(..), ErrorSeverity(..), getErrorLine, getErrorColumn)
 import qualified Data.Text as T
 import Data.List (isPrefixOf, isSuffixOf)
 import Control.Monad (replicateM)
@@ -16,7 +17,7 @@ import Control.Monad (replicateM)
 prop_sourcePos_offset_consistent :: Positive Int -> Positive Int -> Property
 prop_sourcePos_offset_consistent (Positive line) (Positive col) =
   let pos = SourcePos line col 0
-      text = replicate (col - 1) ' ' ++ "x"
+      text = T.pack $ replicate (col - 1) ' ' ++ "x"
       pos' = advancePosByText text startPos
   in line > 0 && col > 0 ==> 
      posLine pos' === 1 .&&.
@@ -26,8 +27,8 @@ prop_sourcePos_offset_consistent (Positive line) (Positive col) =
 -- | 测试多行文本的位置追踪
 prop_multiline_position_tracking :: Positive Int -> Positive Int -> Property
 prop_multiline_position_tracking (Positive lines) (Positive cols) =
-  let lineContent = replicate cols 'x' ++ "\n"
-      multiLineText = concat $ replicate lines lineContent
+  let lineContent = T.pack $ replicate cols 'x' ++ "\n"
+      multiLineText = T.concat $ replicate lines lineContent
       finalPos = advancePosByText multiLineText startPos
   in lines > 0 && cols > 0 ==>
      posLine finalPos === lines + 1 .&&.
@@ -81,7 +82,7 @@ prop_empty_string_position =
 -- | 测试位置追踪的单步性
 prop_position_tracking_step_by_step :: String -> Property
 prop_position_tracking_step_by_step text =
-  let pos1 = advancePosByText text startPos
+  let pos1 = advancePosByText (T.pack text) startPos
       pos2 = foldl (flip advancePos) startPos text
   in pos1 === pos2
 
@@ -109,13 +110,13 @@ test_errorLocation_completeness = do
       end = SourcePos 10 15 60
       span = SourceSpan start end
       errorLoc = toErrorLocationWithSpan span
-  assertEqual "Error line should match span start" 10 (line errorLoc)
-  assertEqual "Error column should match span start" 5 (column errorLoc)
+  assertEqual "Error line should match span start" 10 (getErrorLine errorLoc)
+  assertEqual "Error column should match span start" 5 (getErrorColumn errorLoc)
 
 -- | 测试复杂文本的位置追踪
 test_complex_text_position_tracking :: Assertion
 test_complex_text_position_tracking = do
-  let text = "hello\nworld\t\n\ttest"
+  let text = T.pack "hello\nworld\t\n\ttest"
       finalPos = advancePosByText text startPos
       expectedPos = SourcePos 3 6 20  -- 计算预期位置
   assertEqual "Complex text position should be tracked correctly" expectedPos finalPos
@@ -153,3 +154,11 @@ tests = testGroup "SourceLocation Advanced QuickCheck Tests"
   , testCase "Error location completeness" test_errorLocation_completeness
   , testCase "Complex text position tracking" test_complex_text_position_tracking
   ]
+
+-- | 为SourcePos添加Arbitrary实例
+instance Arbitrary SourcePos where
+  arbitrary = SourcePos <$> arbitrary <*> arbitrary <*> arbitrary
+
+-- | 为SourceSpan添加Arbitrary实例
+instance Arbitrary SourceSpan where
+  arbitrary = SourceSpan <$> arbitrary <*> arbitrary

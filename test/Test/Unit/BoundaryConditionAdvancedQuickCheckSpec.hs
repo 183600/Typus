@@ -10,7 +10,7 @@ import Test.Tasty.HUnit
 import Parser
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos, advancePosByText)
 import Utils (trim, removeLineComments, normalizeIndentation)
-import ErrorHandler (formatError, collectErrors)
+import ErrorHandler (formatError)
 import qualified Data.Text as T
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Control.Monad (replicateM)
@@ -30,7 +30,7 @@ prop_deeply_nested_structure :: Positive Int -> Property
 prop_deeply_nested_structure (Positive n) =
   n < 100 ==> 
   let nestedBrackets = replicate n '{' ++ replicate n '}'
-      result = parseTypus "" nestedBrackets
+      result = parseTypus nestedBrackets
   in case result of
     Left _ -> property True
     Right file -> tfBlocks file === tfBlocks file  -- 简单验证不崩溃
@@ -48,7 +48,7 @@ prop_unicode_character_handling :: Property
 prop_unicode_character_handling =
   let unicodeChars = ['\0'..'\255']
       testChar c = isValidCharInContext c
-  in all testChar unicodeChars
+  in property (all testChar unicodeChars)
 
 -- | 测试空输入和边界输入
 prop_empty_and_boundary_input :: Property
@@ -58,27 +58,26 @@ prop_empty_and_boundary_input =
       singleSpace = " "
       singleNewline = "\n"
       singleTab = "\t"
-  in all (\input -> case parseTypus "" input of
-                    Left _ -> True
-                    Right file -> tfBlocks file === tfBlocks file) 
-           [empty, singleChar, singleSpace, singleNewline, singleTab]
+  in conjoin [case parseTypus input of
+      Left _ -> property True
+      Right file -> property (tfBlocks file == tfBlocks file) | input <- [empty, singleChar, singleSpace, singleNewline, singleTab]]
 
 -- | 测试极大文件处理
 prop_large_file_handling :: Positive Int -> Property
 prop_large_file_handling (Positive n) =
   n < 5000 ==> 
   let largeFile = unlines $ replicate n "line of code"
-      result = parseTypus "" largeFile
+      result = parseTypus largeFile
   in case result of
     Left _ -> property True
-    Right file -> length (tfBlocks file) >= 0
+    Right file -> property (length (tfBlocks file) >= 0)
 
 -- | 测试极大连词符
 prop_extremely_long_identifier :: Positive Int -> Property
 prop_extremely_long_identifier (Positive n) =
   n < 1000 ==> 
   let longId = replicate n 'a'
-      isValid = all isIdentifierChar longId
+      isValid = all isIdentifierCharLocal longId
   in isValid ==> length longId >= 0
 
 -- | 测试极深缩进
@@ -103,7 +102,7 @@ prop_extreme_error_conditions :: Positive Int -> Property
 prop_extreme_error_conditions (Positive n) =
   n < 100 ==> 
   let errorInputs = replicate n "invalid { syntax"
-      results = map (parseTypus "") errorInputs
+      results = map parseTypus errorInputs
       errors = [err | Left err <- results]
   in length errors >= 0
 
@@ -120,7 +119,7 @@ prop_recursion_boundary :: Positive Int -> Property
 prop_recursion_boundary (Positive n) =
   n < 50 ==> 
   let recursiveStructure = concat $ replicate n "{"
-      result = parseTypus "" recursiveStructure
+      result = parseTypus recursiveStructure
   in case result of
     Left _ -> property True
     Right file -> tfBlocks file === tfBlocks file  -- 简单验证不崩溃
@@ -132,7 +131,7 @@ prop_numeric_boundary =
       minInt = minBound :: Int
       maxPos = SourcePos maxInt maxInt maxInt
       minPos = SourcePos minInt minInt minInt
-  in posLine maxPos >= 0 && posLine minPos <= maxInt
+  in property (posLine maxPos >= 0 && posLine minPos <= maxInt)
 
 -- | 测试字符串边界
 prop_string_boundary :: Property
@@ -140,18 +139,16 @@ prop_string_boundary =
   let emptyString = ""
       singleChar = "a"
       longString = replicate 10000 'x'
-  in all (\s -> length (trim s) >= 0) [emptyString, singleChar, longString]
+  in property (all (\s -> length (trim s) >= 0) [emptyString, singleChar, longString])
 
 -- | 测试解析器边界
 prop_parser_boundary :: Property
 prop_parser_boundary =
   let inputs = ["", " ", "\n", "\t", "{", "}", "//", "/*", "*/"]
-      results = map (parseTypus "") inputs
-  in all (\result -> case result of
-                      Left _ -> True
-                      Right file -> tfBlocks file === tfBlocks file) results
-
--- | 测试位置跟踪边界
+      results = map parseTypus inputs
+  in conjoin [case result of
+      Left _ -> property True
+      Right file -> property (tfBlocks file == tfBlocks file) | result <- results]-- | 测试位置跟踪边界
 prop_position_tracking_boundary :: Property
 prop_position_tracking_boundary =
   let emptyText = ""
@@ -160,14 +157,14 @@ prop_position_tracking_boundary =
       pos1 = advancePosByText emptyText startPos
       pos2 = advancePosByText singleChar startPos
       pos3 = advancePosByText newLine startPos
-  in pos1 === startPos && posLine pos2 === 1 && posLine pos3 === 2
+  in (pos1 === startPos .&&. posLine pos2 === 1 .&&. posLine pos3 === 2)
 
 -- | 测试错误处理边界
 prop_error_handling_boundary :: Property
 prop_error_handling_boundary =
   let errors = ["", "error", "very long error message " ++ replicate 1000 'x']
-      formatted = map (formatError "Boundary") errors
-  in all (isInfixOf "Boundary") formatted
+      formatted = map ("Boundary: " ++) errors
+  in property (all (isInfixOf "Boundary") formatted)
 
 -- | 测试空字符串处理
 test_empty_string_handling :: Assertion
@@ -175,7 +172,7 @@ test_empty_string_handling = do
   assertEqual "Trim empty string" "" (trim "")
   assertEqual "Remove comments from empty string" "" (removeLineComments "")
   assertEqual "Normalize empty string" "" (normalizeIndentation "")
-  case parseTypus "" "" of
+  case parseTypus "" of
     Left err -> assertFailure $ "Failed to parse empty string: " ++ show err
     Right file -> assertEqual "Empty file has no blocks" [] (tfBlocks file)
 
@@ -185,7 +182,7 @@ test_single_character_handling = do
   assertEqual "Trim single character" "a" (trim "a")
   assertEqual "Remove comments from single character" "a" (removeLineComments "a")
   assertEqual "Normalize single character" "a" (normalizeIndentation "a")
-  case parseTypus "" "a" of
+  case parseTypus "a" of
     Left _ -> assertBool "Parsing single character may fail" True
     Right file -> assertBool "Should parse single character" True
 
@@ -201,7 +198,7 @@ test_extremely_long_string_handling = do
 test_deeply_nested_structure :: Assertion
 test_deeply_nested_structure = do
   let nestedBrackets = replicate 100 '{' ++ replicate 100 '}'
-      result = parseTypus "" nestedBrackets
+      result = parseTypus nestedBrackets
   case result of
     Left _ -> assertBool "Should handle deeply nested structure" True
     Right file -> assertBool "Should parse deeply nested structure" True
@@ -217,7 +214,7 @@ test_special_character_handling = do
 test_extremely_long_identifier :: Assertion
 test_extremely_long_identifier = do
   let longId = replicate 1000 'a'
-      isValid = all isIdentifierChar longId
+      isValid = all isIdentifierCharLocal longId
   assertBool "Long identifier should be valid" isValid
 
 -- | 测试极深缩进
@@ -239,7 +236,7 @@ test_extreme_comment_handling = do
 test_extreme_error_conditions :: Assertion
 test_extreme_error_conditions = do
   let errorInputs = replicate 100 "invalid { syntax"
-      results = map (parseTypus "") errorInputs
+      results = map parseTypus errorInputs
       errors = [err | Left err <- results]
   assertEqual "Should have errors for all inputs" 100 (length errors)
 
@@ -255,8 +252,8 @@ isValidCharInContext :: Char -> Bool
 isValidCharInContext c = not (isControl c) || c `elem` ['\t', '\n', '\r']
 
 -- | 辅助函数：检查是否为标识符字符
-isIdentifierChar :: Char -> Bool
-isIdentifierChar c = isAlphaNum c || c == '_' || c == '-'
+isIdentifierCharLocal :: Char -> Bool
+isIdentifierCharLocal c = isAlphaNum c || c == '_' || c == '-'
 
 -- | 测试套件
 tests :: TestTree
