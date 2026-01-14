@@ -17,7 +17,9 @@ module Utils
   , breakOn               -- 更高效的实现
     -- String processing
   , safeProcessString,    -- 安全处理字符串
-    isValidChar           -- 检查字符是否有效
+    isValidChar,          -- 检查字符是否有效
+    -- Either utilities
+    isRight               -- 检查 Either 是否为 Right
   ) where
 
 import Data.Char (isSpace, isAlpha, isAlphaNum)
@@ -342,4 +344,9 @@ safeProcessString s =
 -- | 检查字符是否有效（非控制字符）
 isValidChar :: Char -> Bool
 isValidChar c = c >= ' ' || c == '\n' || c == '\r' || c == '\t'
+
+-- | 检查 Either 是否为 Right
+isRight :: Either a b -> Bool
+isRight (Right _) = True
+isRight (Left _) = False
 

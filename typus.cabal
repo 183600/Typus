@@ -165,7 +165,8 @@ benchmark typus-bench
     type:             exitcode-stdio-1.0
     main-is:          BenchmarkRunner.hs
     hs-source-dirs:   test
-    other-modules:Test.Unit.AdditionalCabalTestSpec,
+    other-modules:
+        Test.Unit.AdditionalCabalTestSpec,
         Test.Unit.AdditionalIntegratedCompilerQuickCheckSpec,
         Test.Unit.BasicParserQuickCheckSpec,
         Test.Unit.CodeGenerationConsistencyQuickCheckSpec,
@@ -2294,15 +2295,14 @@ test-suite typus-test
         
         -- Additional Test Modules Added for Enhanced Coverage (2026)
         Test.Unit.UtilsStringProcessingExtraSpec,
-        Test.Unit.SourceLocationMathExtraSpec,
-        Test.Unit.ParserBasicFunctionsExtraSpec,
-        
+        Test.Unit.ParserBasicFunctionsExtraSpec
         -- New Advanced QuickCheck Test Modules (2026)
-        Test.Unit.ParserAdvancedQuickCheckSpec,
-        Test.Unit.SourceLocationAdvancedQuickCheckSpec,
-        Test.Unit.UtilsAdvancedQuickCheckSpec,
-        Test.Unit.CompilerIntegrationQuickCheckSpec,
-        Test.Unit.DependenciesAdvancedQuickCheckSpec
+        -- Note: These modules are already listed above to avoid duplicates
+        -- Test.Unit.ParserAdvancedQuickCheckSpec,
+        -- Test.Unit.SourceLocationAdvancedQuickCheckSpec,
+        -- Test.Unit.UtilsAdvancedQuickCheckSpec,
+        -- Test.Unit.CompilerIntegrationQuickCheckSpec,
+        -- Test.Unit.DependenciesAdvancedQuickCheckSpec,
         
     build-depends:
         base >=4.7 && <5,

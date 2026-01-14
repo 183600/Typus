@@ -8,6 +8,7 @@ import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import SourceLocation
 import Data.List (minimum, maximum)
+import qualified Data.Text as T
 
 -- | 测试SourceLocation模块中的高级位置计算功能
 tests :: TestTree
@@ -140,23 +141,23 @@ tests = testGroup "SourceLocationAdvancedQuickCheckSpec Tests"
   
   , testGroup "Located值属性测试"
     [ testProperty "locatedAt preserves position and value" $
-        \pos value ->
+        \pos (value :: String) ->
           let located = locatedAt pos value
           in property (locatedPos located == pos && locatedValue located == value)
     
     , testProperty "locatedWithSpan preserves span and value" $
-        \span value ->
+        \span (value :: String) ->
           let located = locatedWithSpan span value
           in property (locatedSpan located == span && locatedValue located == value)
     
     , testProperty "mapLocated preserves position" $
-        \pos value f ->
+        \pos value ->
           let located = locatedAt pos value
-              mapped = mapLocated f located
+              mapped = mapLocated (++ " mapped") located
           in property (locatedPos mapped == pos)
     
     , testProperty "mapLocated applies function correctly" $
-        \pos value ->
+        \pos (value :: String) ->
           let located = locatedAt pos value
               mapped = mapLocated (++ " mapped") located
           in property (locatedValue mapped == value ++ " mapped")
@@ -186,24 +187,24 @@ tests = testGroup "SourceLocationAdvancedQuickCheckSpec Tests"
     [ testProperty "advancePos advances correctly for normal characters" $
         \pos c ->
           not (c `elem` ['\n', '\t']) ==> 
-            let newPos = advancePos pos c
+            let newPos = advancePos c pos
             in property (posColumn newPos == posColumn pos + 1 && 
                         posOffset newPos == posOffset pos + 1 &&
                         posLine newPos == posLine pos)
     
     , testProperty "advancePosBy advances correctly for multiple characters" $
         \pos chars ->
-          let newPos = advancePosBy pos chars
+          let newPos = advancePosBy chars pos
           in property (posOffset newPos == posOffset pos + length chars)
     
     , testProperty "advancePosByText advances correctly for text" $
         \pos text ->
-          let newPos = advancePosByText pos text
+          let newPos = advancePosByText text pos
           in property (posOffset newPos >= posOffset pos)
     
     , testProperty "advancePosByLine advances to next line" $
         \pos ->
-          let newPos = advancePosByLine pos
+          let newPos = advancePosByLine 1 pos
           in property (posLine newPos == posLine pos + 1 && posColumn newPos == 1)
     ]
   
@@ -224,3 +225,22 @@ tests = testGroup "SourceLocationAdvancedQuickCheckSpec Tests"
         assertBool "Zero-width span should not be a valid block span" (not (isValidBlockSpan span))
     ]
   ]
+
+-- | Arbitrary instance for SourcePos
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- arbitrary `suchThat` (> 0)
+    col <- arbitrary `suchThat` (> 0)
+    offset <- arbitrary `suchThat` (>= 0)
+    return $ SourcePos { posLine = line, posColumn = col, posOffset = offset }
+
+-- | Arbitrary instance for Text
+instance Arbitrary T.Text where
+  arbitrary = T.pack <$> arbitrary
+
+-- | Arbitrary instance for SourceSpan
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    return $ SourceSpan start end

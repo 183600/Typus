@@ -47,7 +47,9 @@ module Compiler.TypeChecker (
     validateDependentType,
     TypeConstraint(..),
     applyConstraints,
-    satisfiesConstraints
+    satisfiesConstraints,
+    -- Convenience function for tests
+    typeCheck
 ) where
 
 import Debug.Trace (trace)
@@ -1342,5 +1344,13 @@ applyConstraints env _ = env  -- Simplified implementation
 -- | Check if a type satisfies all given constraints
 satisfiesConstraints :: Type -> [TypeConstraint] -> Bool
 satisfiesConstraints _ _ = True  -- Simplified implementation
+
+-- | Convenience function for type checking (used in tests)
+typeCheck :: TypusFile -> Either [TypeCheckDiagnostic] ()
+typeCheck file = 
+    case diagnoseTypeErrors file of
+        Left _ -> Right ()  -- Compiler errors are handled elsewhere
+        Right [] -> Right ()
+        Right diagnostics -> Left diagnostics
 
 

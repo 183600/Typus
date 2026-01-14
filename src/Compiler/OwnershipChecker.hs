@@ -1,7 +1,9 @@
 module Compiler.OwnershipChecker (
     checkOwnership,
     checkOwnershipWithValueInfo,
-    extractOwnershipContent
+    extractOwnershipContent,
+    -- Convenience function for tests
+    ownershipCheck
 ) where
 
 import qualified Data.Text as T
@@ -185,3 +187,10 @@ isIgnorableOwnershipError valueCopyVars err = case err of
 
 trim :: String -> String
 trim = dropWhile isSpace . reverse . dropWhile isSpace . reverse
+
+-- | Convenience function for ownership checking (used in tests)
+ownershipCheck :: TypusFile -> Either [CompilerError] ()
+ownershipCheck file = 
+    case checkOwnership file of
+        Left errs -> Left errs
+        Right () -> Right ()

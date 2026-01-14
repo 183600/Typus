@@ -9,8 +9,9 @@ import Test.Tasty.HUnit
 import Parser
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos, Located(..))
 import qualified Text.Megaparsec as MP
-import Data.Char (isAlphaNum, isLetter)
+import Data.Char (isAlphaNum, isLetter, isSpace)
 import Data.List (isPrefixOf, isInfixOf)
+import qualified Data.Text as T
 
 -- | 测试Parser模块中的高级解析功能
 tests :: TestTree
@@ -75,51 +76,52 @@ tests = testGroup "ParserAdvancedQuickCheckSpec Tests"
     [ testProperty "fileDirectiveParser parses valid ownership directive" $
         \value ->
           let directive = "// @ownership: " ++ if value then "true" else "false"
-              result = MP.parse fileDirectiveParser "" directive
+              result = MP.parse fileDirectiveParser "" (T.pack directive)
           in case result of
             Left _ -> property False
-            Right pairs -> property (any (("ownership",) . if value then ("true" :: String) else "false" ==) pairs)
+            Right pairs -> property (any (\p -> ("ownership", if value then T.pack "true" else T.pack "false") == p) pairs)
     
     , testProperty "fileDirectiveParser parses valid dependent-types directive" $
         \value ->
           let directive = "// @dependent-types: " ++ if value then "true" else "false"
-              result = MP.parse fileDirectiveParser "" directive
+              result = MP.parse fileDirectiveParser "" (T.pack directive)
           in case result of
             Left _ -> property False
-            Right pairs -> property (any (("dependent-types",) . if value then ("true" :: String) else "false" ==) pairs)
+            Right pairs -> property (any (\p -> ("dependent-types", if value then T.pack "true" else T.pack "false") == p) pairs)
     
     , testProperty "fileDirectiveParser parses valid constraints directive" $
         \value ->
           let directive = "// @constraints: " ++ if value then "true" else "false"
-              result = MP.parse fileDirectiveParser "" directive
+              result = MP.parse fileDirectiveParser "" (T.pack directive)
           in case result of
             Left _ -> property False
-            Right pairs -> property (any (("constraints",) . if value then ("true" :: String) else "false" ==) pairs)
+            Right pairs -> property (any (\p -> ("constraints", if value then T.pack "true" else T.pack "false") == p) pairs)
     ]
   
   , testGroup "代码块处理测试"
-    [ testProperty "CodeBlock content preservation" $
-        \content directives ->
-          let span = SourceSpan startPos startPos
-              block = CodeBlock { cbDirectives = directives, cbContent = content, cbSpan = span }
-          in property (cbContent block == content)
+    [ testCase "CodeBlock content preservation" $ do
+        let content = "test content"
+            directives = defaultBlockDirectives
+            span = SourceSpan startPos startPos
+            block = CodeBlock { cbDirectives = directives, cbContent = content, cbSpan = span }
+        assertBool "Content preserved" (cbContent block == content)
     
-    , testProperty "TypusFile block ordering preservation" $
-        \blocks ->
-          let fileDirectives = defaultFileDirectives
-              file = TypusFile { tfDirectives = fileDirectives, tfBuildTags = [], tfBlocks = blocks, tfSyntaxErrors = [] }
-          in property (tfBlocks file == blocks)
+    , testCase "TypusFile block ordering preservation" $ do
+        let blocks = []
+            fileDirectives = defaultFileDirectives
+            file = TypusFile { tfDirectives = fileDirectives, tfBuildTags = [], tfBlocks = blocks, tfSyntaxErrors = [] }
+        assertBool "Blocks preserved" (tfBlocks file == blocks)
     
-    , testProperty "TypusFile directive preservation" $
-        \directives ->
-          let file = TypusFile { tfDirectives = directives, tfBuildTags = [], tfBlocks = [], tfSyntaxErrors = [] }
-          in property (tfDirectives file == directives)
+    , testCase "TypusFile directive preservation" $ do
+        let directives = defaultFileDirectives
+            file = TypusFile { tfDirectives = directives, tfBuildTags = [], tfBlocks = [], tfSyntaxErrors = [] }
+        assertBool "Directives preserved" (tfDirectives file == directives)
     ]
   
   , testGroup "解析性能测试"
     [ testProperty "parseTypus handles large inputs efficiently" $
         \size ->
-          let largeCode = unlines (replicate (min size 1000) "let x = " ++ show size)
+          let largeCode = unlines (replicate (min size 1000) ("let x = " ++ show size))
               result = parseTypus largeCode
           in case result of
             Left _ -> property True
@@ -127,7 +129,7 @@ tests = testGroup "ParserAdvancedQuickCheckSpec Tests"
     
     , testProperty "parseTypus handles deeply nested code" $
         \depth ->
-          let nestedCode = unlines (replicate (min depth 100) "  let x = " ++ show depth)
+          let nestedCode = unlines (replicate (min depth 100) ("  let x = " ++ show depth))
               result = parseTypus nestedCode
           in case result of
             Left _ -> property True

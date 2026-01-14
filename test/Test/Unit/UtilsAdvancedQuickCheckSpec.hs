@@ -175,30 +175,30 @@ tests = testGroup "UtilsAdvancedQuickCheckSpec Tests"
         \() -> removeLineComments "" == ""
     
     , testProperty "removeLineComments handles string without comments" $
-        \code -> not ("//" `isInfixOf` code) ==> removeLineComments code == code
+        \(code :: String) -> not ("//" `isInfixOf` code) ==> removeLineComments code == code
     ]
   
   , testGroup "removeComments属性测试"
     [ testProperty "removeComments removes line comments" $
-        \code comment ->
+        \(code :: String) (comment :: String) ->
           let input = code ++ "// " ++ comment
               cleaned = removeComments input
           in not ("//" `isInfixOf` cleaned)
     
     , testProperty "removeComments removes block comments" $
-        \code comment ->
+        \(code :: String) (comment :: String) ->
           let input = code ++ "/* " ++ comment ++ " */" ++ code
               cleaned = removeComments input
           in not ("/*" `isInfixOf` cleaned) && not ("*/" `isInfixOf` cleaned)
     
     , testProperty "removeComments preserves string literals" $
-        \code comment ->
-          let input = code ++ "\"// not a comment\" /* not a comment */ \"/* not a comment */\"
+        \(code :: String) (comment :: String) ->
+          let input = code ++ "\"// not a comment\" /* not a comment */ \"/* not a comment */\""
               cleaned = removeComments input
           in property ("\"// not a comment\"" `isInfixOf` cleaned && "\"/* not a comment */\"" `isInfixOf` cleaned)
     
     , testProperty "removeComments handles nested block comments" $
-        \code comment1 comment2 ->
+        \(code :: String) (comment1 :: String) (comment2 :: String) ->
           let input = code ++ "/* outer " ++ comment1 ++ " /* inner " ++ comment2 ++ " */ outer */" ++ code
               cleaned = removeComments input
           in not ("/*" `isInfixOf` cleaned) && not ("*/" `isInfixOf` cleaned)
@@ -207,7 +207,7 @@ tests = testGroup "UtilsAdvancedQuickCheckSpec Tests"
         \() -> removeComments "" == ""
     
     , testProperty "removeComments handles string without comments" $
-        \code -> not ("//" `isInfixOf` code) && not ("/*" `isInfixOf` code) ==> removeComments code == code
+        \(code :: String) -> not ("//" `isInfixOf` code) && not ("/*" `isInfixOf` code) ==> removeComments code == code
     ]
   
   , testGroup "normalizeIndentation属性测试"
