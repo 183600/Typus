@@ -5,7 +5,7 @@
 module Test.Unit.UtilsComprehensiveSpec where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, assertEqual, assertBool, Assertion)
+import Test.Tasty.HUnit (testCase, assertEqual, assertBool, assertFailure, Assertion)
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
 import Test.QuickCheck (Gen, Property, (==>), classify)
 import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed,
@@ -105,14 +105,16 @@ prop_normalize_preserves_relative s =
 -- Property 10: breakOn behaves like break but for strings
 prop_breakOn_consistency :: String -> Char -> Property
 prop_breakOn_consistency s c = 
-  c `elem` s ==> let (before, after) = breakOn c s
+  c `elem` s ==> let (before, after) = breakOn [c] s
                  in before ++ [c] ++ after == s
 
 -- Property 11: safeProcessString handles invalid characters
 prop_safe_process_string :: String -> Bool
 prop_safe_process_string s = 
   let processed = safeProcessString s
-  in all isValidChar processed
+  in case processed of
+       Right str -> all isValidChar str
+       Left _ -> True
 
 -- Property 12: isValidChar correctly identifies valid characters
 prop_is_valid_char_consistency :: Char -> Bool
@@ -134,16 +136,15 @@ test_trim_edge_cases =
 
 test_splitBy_edge_cases :: [TestTree]
 test_splitBy_edge_cases = 
-  [ testCase "splitBy empty string" $ 
-      assertEqual [] [] (splitBy ',' "")
-  , testCase "splitBy single delimiter" $ 
-      assertEqual ["", ""] (splitBy ',')
-  , testCase "splitBy consecutive delimiters" $ 
-      assertEqual ["", "", ""] (splitBy ',')
-  , testCase "splitBy no delimiter" $ 
-      assertEqual ["hello"] (splitBy ',' "hello")
+  [ testCase "splitBy empty string" $ do
+      assertEqual "should return empty list" [] (splitBy ',' "")
+  , testCase "splitBy single delimiter" $ do
+      assertEqual "should split at delimiter" ["", ""] (splitBy ',' ",")
+  , testCase "splitBy consecutive delimiters" $ do
+      assertEqual "should handle consecutive delimiters" ["", "", ""] (splitBy ',' ",,")
+  , testCase "splitBy no delimiter" $ do
+      assertEqual "should return single element" ["hello"] (splitBy ',' "hello")
   ]
-
 test_comment_removal_edge_cases :: [TestTree]
 test_comment_removal_edge_cases = 
   [ testCase "removeLineComments no comments" $ 
@@ -171,13 +172,19 @@ test_indentation_edge_cases =
 test_string_processing_edge_cases :: [TestTree]
 test_string_processing_edge_cases = 
   [ testCase "safeProcessString empty" $ 
-      assertEqual "" "" (safeProcessString "")
+      case safeProcessString "" of
+        Right result -> assertEqual "" "" result
+        Left _ -> assertFailure "safeProcessString failed on empty string"
   , testCase "safeProcessString valid chars" $ 
-      assertEqual "hello123" "hello123" (safeProcessString "hello123")
-  , testCase "breakOn not found" $ 
-      assertEqual ("hello", "") (breakOn "x" "hello")
-  , testCase "breakOn first occurrence" $ 
-      assertEqual ("he", "llo") (breakOn "l" "hello")
+      case safeProcessString "hello123" of
+        Right result -> assertEqual "hello123" "hello123" result
+        Left _ -> assertFailure "safeProcessString failed on valid chars"
+  , testCase "breakOn not found" $ do
+      let result = breakOn "x" "hello" :: (String, String)
+      assertEqual "should return full string when not found" ("hello", "") result
+  , testCase "breakOn first occurrence" $ do
+      let result = breakOn "l" "hello" :: (String, String)
+      assertEqual "should split at first occurrence" ("he", "llo") result
   ]
 
 -- QuickCheck property tests

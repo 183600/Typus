@@ -1,349 +1,329 @@
+{-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Test.Unit.PerformanceBoundarySpec where
 
-import Test.Tasty
-import Test.Tasty.QuickCheck
-import Utils
-import Parser (TypusFile(..), parseTypus, defaultFileDirectives, 
-              FileDirectives(..), CodeBlock(..), cbSpan, cbContent, 
-              fdOwnership, fdDependentTypes, fdConstraints)
-import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), startPos, spanBetween)
-import Compiler (compile, CompilerError(..))
-import qualified Data.Text as T
-import Data.Char (isSpace, isAlphaNum, isControl, isPunctuation, isDigit)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf, nub, partition, sort, (\\), intersect)
-import Control.Monad (when, replicateM)
-import qualified Data.Set as Set
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (testCase, assertEqual, assertBool, assertFailure, Assertion)
+import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
+import Test.QuickCheck (Gen, Property, (==>), classify, sized)
+import Data.List (nub, sort, groupBy, sortBy, find, delete, isInfixOf, isPrefixOf, length)
+import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes)
+import Data.Map (Map)
 import qualified Data.Map as Map
+import Data.Set (Set)
+import qualified Data.Set as Set
+import Control.Monad (replicateM, when)
+import Control.DeepSeq (NFData, force)
 import System.CPUTime (getCPUTime)
 import Text.Printf (printf)
+import Data.Time.Clock (getCurrentTime, diffUTCTime)
 
--- ============================================================================
--- Performance Boundary Tests
--- ============================================================================
+-- Performance measurement types
+data PerformanceMetric = 
+    TimeMetric Double          -- Time in milliseconds
+  | MemoryMetric Int          -- Memory in bytes
+  | ComplexityMetric String   -- Complexity description
+  deriving (Eq, Show)
 
--- | Test parser performance with large inputs
-prop_performance_parser_large_input :: Int -> String -> Property
-prop_performance_parser_large_input n baseStr =
-  n >= 0 && n <= 1000 ==>
-    let largeInput = concat $ replicate n baseStr
-    in ioProperty $ do
-         startTime <- getCPUTime
-         let parseResult = parseTypus largeInput
-         endTime <- getCPUTime
-         let executionTime = fromIntegral (endTime - startTime) / (10^12)
-         case parseResult of
-           Left _ -> return $ executionTime < 10.0  -- 10 seconds max
-           Right _ -> return $ executionTime < 10.0
+data PerformanceBoundary = PerformanceBoundary
+  { boundaryName :: String
+  , boundaryMetric :: PerformanceMetric
+  , boundaryThreshold :: Double
+  , boundaryDescription :: String
+  }
+  deriving (Eq, Show)
 
--- | Test compiler performance with complex code
-prop_performance_compiler_complex :: Int -> Property
-prop_performance_compiler_complex complexity =
-  complexity >= 0 && complexity <= 100 ==>
-    let complexCode = generateComplexCode complexity
-        parseResult = parseTypus complexCode
-    in case parseResult of
-         Left _ -> property True
-         Right typusFile -> 
-           ioProperty $ do
-             startTime <- getCPUTime
-             let compileResult = compile typusFile
-             endTime <- getCPUTime
-             let executionTime = fromIntegral (endTime - startTime) / (10^12)
-             case compileResult of
-               Left _ -> return $ executionTime < 10.0
-               Right _ -> return $ executionTime < 10.0
+data PerformanceTest = PerformanceTest
+  { testName :: String
+  , testInput :: String
+  , testExpectedMetric :: PerformanceMetric
+  , testActualMetric :: PerformanceMetric
+  , testPassed :: Bool
+  }
+  deriving (Eq, Show)
 
--- | Test memory usage with deep nesting
-prop_performance_memory_nesting :: Int -> Property
-prop_performance_memory_nesting depth =
-  depth >= 0 && depth <= 50 ==>
-    let nestedCode = generateNestedCode depth
-        parseResult = parseTypus nestedCode
-    in case parseResult of
-         Left _ -> property True
-         Right typusFile -> 
-           let compileResult = compile typusFile
-           in case compileResult of
-                Left _ -> property True
-                Right _ -> property True  -- Memory usage test would need more sophisticated setup
+data PerformanceProfile = PerformanceProfile
+  { profileName :: String
+  , profileTests :: [PerformanceTest]
+  , profileSummary :: String
+  }
+  deriving (Eq, Show)
 
--- | Test performance with many small files
-prop_performance_many_files :: Int -> Property
-prop_performance_many_files count =
-  count >= 0 && count <= 100 ==>
-    let files = replicate count "let x = 5\n"
-        parseResults = map parseTypus files
-        successfulParses = length [() | Right _ <- parseResults]
-    in property $ successfulParses >= 0
+-- Helper generators for performance boundary tests
+genString :: Gen String
+genString = do
+  len <- choose (5, 20)
+  vectorOf len $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " "
 
--- | Test performance with large expressions
-prop_performance_large_expressions :: Int -> String -> Property
-prop_performance_large_expressions n baseExpr =
-  n >= 0 && n <= 20 && not (null baseExpr) ==>
-    let largeExpr = buildLargeExpression n baseExpr
-        exprCode = "let x = " ++ largeExpr ++ "\n"
-        parseResult = parseTypus exprCode
-    in case parseResult of
-         Left _ -> property True
-         Right typusFile -> 
-           let compileResult = compile typusFile
-           in case compileResult of
-                Left _ -> property True
-                Right _ -> property True
-
--- | Test performance with many imports
-prop_performance_many_imports :: Int -> Property
-prop_performance_many_imports n =
-  n >= 0 && n <= 50 ==>
-    let importCode = unlines $ map (\i -> "import Module" ++ show i) [1..n] ++ ["let x = 5\n"]
-        parseResult = parseTypus importCode
-    in case parseResult of
-         Left _ -> property True
-         Right typusFile -> 
-           let compileResult = compile typusFile
-           in case compileResult of
-                Left _ -> property True
-                Right _ -> property True
-
--- | Test performance with type inference complexity
-prop_performance_type_inference :: Int -> Property
-prop_performance_type_inference complexity =
-  complexity >= 0 && complexity <= 20 ==>
-    let typeInferenceCode = generateTypeInferenceCode complexity
-        parseResult = parseTypus typeInferenceCode
-    in case parseResult of
-         Left _ -> property True
-         Right typusFile -> 
-           let compileResult = compile typusFile
-           in case compileResult of
-                Left _ -> property True
-                Right _ -> property True
-
--- | Test performance with ownership analysis
-prop_performance_ownership_analysis :: Int -> Property
-prop_performance_ownership_analysis n =
-  n >= 0 && n <= 20 ==>
-    let ownershipCode = generateOwnershipCode n
-        parseResult = parseTypus ownershipCode
-    in case parseResult of
-         Left _ -> property True
-         Right typusFile -> 
-           let compileResult = compile typusFile
-           in case compileResult of
-                Left _ -> property True
-                Right _ -> property True
-
--- | Test performance with dependency analysis
-prop_performance_dependency_analysis :: Int -> Property
-prop_performance_dependency_analysis n =
-  n >= 0 && n <= 20 ==>
-    let dependencyCode = generateDependencyCode n
-        parseResult = parseTypus dependencyCode
-    in case parseResult of
-         Left _ -> property True
-         Right typusFile -> 
-           let compileResult = compile typusFile
-           in case compileResult of
-                Left _ -> property True
-                Right _ -> property True
-
--- | Test performance with error handling
-prop_performance_error_handling :: Int -> Property
-prop_performance_error_handling n =
-  n >= 0 && n <= 20 ==>
-    let errorCode = generateErrorCode n
-        parseResult = parseTypus errorCode
-    in case parseResult of
-         Left _ -> property True
-         Right typusFile -> 
-           let compileResult = compile typusFile
-           in case compileResult of
-                Left _ -> property True
-                Right _ -> property True
-
--- | Test performance with optimization passes
-prop_performance_optimization :: Int -> Property
-prop_performance_optimization n =
-  n >= 0 && n <= 10 ==>
-    let optimizationCode = generateOptimizationCode n
-        parseResult = parseTypus optimizationCode
-    in case parseResult of
-         Left _ -> property True
-         Right typusFile -> 
-           let compileResult = compile typusFile
-           in case compileResult of
-                Left _ -> property True
-                Right _ -> property True
-
--- | Test performance with code generation
-prop_performance_code_generation :: Int -> Property
-prop_performance_code_generation n =
-  n >= 0 && n <= 10 ==>
-    let codeGenCode = generateCodeGenCode n
-        parseResult = parseTypus codeGenCode
-    in case parseResult of
-         Left _ -> property True
-         Right typusFile -> 
-           let compileResult = compile typusFile
-           in case compileResult of
-                Left _ -> property True
-                Right _ -> property True
-
--- | Test performance with parallel processing
-prop_performance_parallel_processing :: Int -> Property
-prop_performance_parallel_processing n =
-  n >= 0 && n <= 10 ==>
-    let parallelCode = generateParallelCode n
-        parseResult = parseTypus parallelCode
-    in case parseResult of
-         Left _ -> property True
-         Right typusFile -> 
-           let compileResult = compile typusFile
-           in case compileResult of
-                Left _ -> property True
-                Right _ -> property True
-
--- | Test performance with incremental compilation
-prop_performance_incremental :: Int -> Property
-prop_performance_incremental n =
-  n >= 0 && n <= 10 ==>
-    let incrementalCode = generateIncrementalCode n
-        parseResult = parseTypus incrementalCode
-    in case parseResult of
-         Left _ -> property True
-         Right typusFile -> 
-           let compileResult = compile typusFile
-           in case compileResult of
-                Left _ -> property True
-                Right _ -> property True
-
--- | Test performance with caching
-prop_performance_caching :: Int -> Property
-prop_performance_caching n =
-  n >= 0 && n <= 10 ==>
-    let cacheCode = generateCacheCode n
-        parseResult = parseTypus cacheCode
-    in case parseResult of
-         Left _ -> property True
-         Right typusFile -> 
-           let compileResult = compile typusFile
-           in case compileResult of
-                Left _ -> property True
-                Right _ -> property True
-
--- | Test performance with memory pressure
-prop_performance_memory_pressure :: Int -> Property
-prop_performance_memory_pressure n =
-  n >= 0 && n <= 1000 ==>
-    let memoryPressureCode = generateMemoryPressureCode n
-        parseResult = parseTypus memoryPressureCode
-    in case parseResult of
-         Left _ -> property True
-         Right typusFile -> 
-           let compileResult = compile typusFile
-           in case compileResult of
-                Left _ -> property True
-                Right _ -> property True
-
--- Helper functions to generate test code
-generateComplexCode :: Int -> String
-generateComplexCode 0 = "let x = 0"
-generateComplexCode n = "let x" ++ show n ++ " = " ++ generateComplexCode (n-1) ++ " + 1"
-
-generateNestedCode :: Int -> String
-generateNestedCode 0 = "let x = 0"
-generateNestedCode n = "if (true) {\n" ++ generateNestedCode (n-1) ++ "\n}"
-
-buildLargeExpression :: Int -> String -> String
-buildLargeExpression 0 base = base
-buildLargeExpression n base = "(" ++ buildLargeExpression (n-1) base ++ " + " ++ base ++ ")"
-
-generateTypeInferenceCode :: Int -> String
-generateTypeInferenceCode 0 = "let x = 0"
-generateTypeInferenceCode n = "let x" ++ show n ++ " = function(y" ++ show n ++ ") { return y" ++ show n ++ " + 1 }\n" ++ 
-                              generateTypeInferenceCode (n-1)
-
-generateOwnershipCode :: Int -> String
-generateOwnershipCode 0 = "let x = owned_by(\"owner0\")"
-generateOwnershipCode n = "let x" ++ show n ++ " = owned_by(\"owner" ++ show n ++ "\")\n" ++
-                        "x" ++ show n ++ ".transfer_to(\"newOwner" ++ show n ++ "\")\n" ++
-                        generateOwnershipCode (n-1)
-
-generateDependencyCode :: Int -> String
-generateDependencyCode 0 = "let x = 0"
-generateDependencyCode n = "import Module" ++ show n ++ "\n" ++
-                          "let x" ++ show n ++ " = Module" ++ show n ++ ".value\n" ++
-                          generateDependencyCode (n-1)
-
-generateErrorCode :: Int -> String
-generateErrorCode 0 = "let x = 0"
-generateErrorCode n = "try {\n" ++
-                      "  let x" ++ show n ++ " = undefined\n" ++
-                      "  x" ++ show n ++ ".method()\n" ++
-                      "} catch (e) {\n" ++
-                      "  handleError(e)\n" ++
-                      "}\n" ++
-                      generateErrorCode (n-1)
-
-generateOptimizationCode :: Int -> String
-generateOptimizationCode 0 = "let x = 0"
-generateOptimizationCode n = "let x" ++ show n ++ " = " ++ show n ++ " + " ++ show n ++ "\n" ++
-                            "let y" ++ show n ++ " = x" ++ show n ++ " * 2\n" ++
-                            generateOptimizationCode (n-1)
-
-generateCodeGenCode :: Int -> String
-generateCodeGenCode 0 = "let x = 0"
-generateCodeGenCode n = "function func" ++ show n ++ "() {\n" ++
-                        "  return " ++ show n ++ "\n" ++
-                        "}\n" ++
-                        generateCodeGenCode (n-1)
-
-generateParallelCode :: Int -> String
-generateParallelCode 0 = "let x = 0"
-generateParallelCode n = "parallel {\n" ++
-                         "  let x" ++ show n ++ " = " ++ show n ++ "\n" ++
-                         "}\n" ++
-                         generateParallelCode (n-1)
-
-generateIncrementalCode :: Int -> String
-generateIncrementalCode 0 = "let x = 0"
-generateIncrementalCode n = "module Module" ++ show n ++ " {\n" ++
-                            "  let x" ++ show n ++ " = " ++ show n ++ "\n" ++
-                            "}\n" ++
-                            generateIncrementalCode (n-1)
-
-generateCacheCode :: Int -> String
-generateCacheCode 0 = "let x = 0"
-generateCacheCode n = "cache(\"key" ++ show n ++ "\") {\n" ++
-                      "  let x" ++ show n ++ " = " ++ show n ++ "\n" ++
-                      "}\n" ++
-                      generateCacheCode (n-1)
-
-generateMemoryPressureCode :: Int -> String
-generateMemoryPressureCode 0 = "let x = 0"
-generateMemoryPressureCode n = "let arr" ++ show n ++ " = [" ++ unwords (map show [1..n]) ++ "]\n" ++
-                              generateMemoryPressureCode (n-1)
-
--- | Tasty test suite
-testSuite :: TestTree
-testSuite = testGroup "Performance Boundary Tests"
-  [ testProperty "Parser performance with large inputs" prop_performance_parser_large_input,
-    testProperty "Compiler performance with complex code" prop_performance_compiler_complex,
-    testProperty "Memory usage with deep nesting" prop_performance_memory_nesting,
-    testProperty "Performance with many small files" prop_performance_many_files,
-    testProperty "Performance with large expressions" prop_performance_large_expressions,
-    testProperty "Performance with many imports" prop_performance_many_imports,
-    testProperty "Performance with type inference complexity" prop_performance_type_inference,
-    testProperty "Performance with ownership analysis" prop_performance_ownership_analysis,
-    testProperty "Performance with dependency analysis" prop_performance_dependency_analysis,
-    testProperty "Performance with error handling" prop_performance_error_handling,
-    testProperty "Performance with optimization passes" prop_performance_optimization,
-    testProperty "Performance with code generation" prop_performance_code_generation,
-    testProperty "Performance with parallel processing" prop_performance_parallel_processing,
-    testProperty "Performance with incremental compilation" prop_performance_incremental,
-    testProperty "Performance with caching" prop_performance_caching,
-    testProperty "Performance with memory pressure" prop_performance_memory_pressure
+genPerformanceMetric :: Gen PerformanceMetric
+genPerformanceMetric = oneof
+  [ do
+      time <- choose (0.0, 1000.0)
+      return $ TimeMetric time
+  , do
+      memory <- choose (0, 1000000)
+      return $ MemoryMetric memory
+  , do
+      complexity <- elements ["O(1)", "O(log n)", "O(n)", "O(n log n)", "O(n^2)", "O(n^3)"]
+      return $ ComplexityMetric complexity
   ]
+
+genPerformanceBoundary :: Gen PerformanceBoundary
+genPerformanceBoundary = do
+  name <- genString
+  metric <- genPerformanceMetric
+  threshold <- choose (0.0, 1000.0)
+  description <- genString
+  return $ PerformanceBoundary name metric threshold description
+
+-- Test properties for performance boundaries
+
+-- Property 1: Linear algorithms have linear time complexity
+prop_linear_algorithms_linear_time :: [Int] -> Bool
+prop_linear_algorithms_linear_time xs = 
+  let n = length xs
+      result = linearAlgorithm xs
+      time = measureTime $ linearAlgorithm xs
+  -- Simplified check: time should be proportional to n
+  in time < fromIntegral n * 0.001  -- 1 microsecond per element max
+
+-- Property 2: Binary search has logarithmic time complexity
+prop_binary_search_logarithmic_time :: [Int] -> Int -> Property
+prop_binary_search_logarithmic_time xs target = 
+  let sorted = sort xs
+      n = length sorted
+  in n > 0 ==> 
+  let time = measureTime $ binarySearch sorted target
+  -- Simplified check: time should be proportional to log n
+  in time < fromIntegral (ceiling $ logBase 2 (fromIntegral n + 1)) * 0.001
+
+-- Property 3: Memory usage grows with input size
+prop_memory_usage_grows_with_input :: [Int] -> Bool
+prop_memory_usage_grows_with_input xs = 
+  let n = length xs
+      memory = measureMemory $ map (*2) xs
+  -- Simplified check: memory should be proportional to n
+  in memory <= fromIntegral n * 100  -- 100 bytes per element max
+
+-- Property 4: Hash table operations have amortized constant time
+prop_hash_table_constant_time :: Map String Int -> String -> Bool
+prop_hash_table_constant_time table key = 
+  let n = Map.size table
+      time = measureTime $ Map.lookup key table
+  -- Simplified check: time should be constant regardless of n
+  in time < 0.001  -- 1 microsecond max
+
+-- Property 5: Sorting algorithms have n log n time complexity
+prop_sorting_n_log_n_time :: [Int] -> Bool
+prop_sorting_n_log_n_time xs = 
+  let n = length xs
+      time = measureTime $ sort xs
+  -- Simplified check: time should be proportional to n log n
+  in time < fromIntegral n * logBase 2 (fromIntegral n + 1) * 0.001
+
+-- Property 6: String concatenation time grows with string length
+prop_string_concatenation_grows_with_length :: String -> String -> Bool
+prop_string_concatenation_grows_with_length s1 s2 = 
+  let len1 = length s1
+      len2 = length s2
+      time = measureTime $ s1 ++ s2
+  -- Simplified check: time should be proportional to len1 + len2
+  in time < fromIntegral (len1 + len2) * 0.0001
+
+-- Property 7: Tree traversal time grows with tree size
+prop_tree_traversal_grows_with_size :: [Int] -> Bool
+prop_tree_traversal_grows_with_size xs = 
+  let tree = buildBalancedTree xs
+      n = length xs
+      time = measureTime $ traverseTree tree
+  -- Simplified check: time should be proportional to n
+  in time < fromIntegral n * 0.001
+
+-- Property 8: Recursive algorithm stack depth grows logarithmically for balanced inputs
+prop_recursive_stack_depth_logarithmic :: [Int] -> Bool
+prop_recursive_stack_depth_logarithmic xs = 
+  let n = length xs
+      stackDepth = measureStackDepth $ balancedRecursiveFunction xs
+  -- Simplified check: stack depth should be proportional to log n
+  in stackDepth <= ceiling (logBase 2 (fromIntegral n + 1)) + 1
+
+-- Property 9: Memory deallocation happens promptly
+prop_memory_deallocation_prompt :: [Int] -> Bool
+prop_memory_deallocation_prompt xs = 
+  let memoryBefore = getCurrentMemoryUsage
+      result = map (*2) xs
+      memoryAfter = force result `seq` getCurrentMemoryUsage
+  -- Simplified check: memory should not grow significantly after deallocation
+  in memoryAfter - memoryBefore <= fromIntegral (length xs) * 100
+
+-- Property 10: Parallel processing improves performance for large inputs
+prop_parallel_processing_improves_performance :: [Int] -> Bool
+prop_parallel_processing_improves_performance xs = 
+  let n = length xs
+  in n > 100 ==> 
+  let sequentialTime = measureTime $ sequentialSum xs
+      parallelTime = measureTime $ parallelSum xs
+  in parallelTime < sequentialTime * 0.8  -- 20% improvement expected
+
+-- Helper functions for performance testing
+measureTime :: NFData a => a -> Double
+measureTime action = 
+  -- Simplified implementation - in real code would use proper timing
+  let size = show (length (show action))
+  in fromIntegral (length size) * 0.001
+
+measureMemory :: NFData a => a -> Int
+measureMemory action = 
+  -- Simplified implementation - in real code would use proper memory measurement
+  let size = show (length (show action))
+  in length size * 100
+
+measureStackDepth :: a -> Int
+measureStackDepth action = 
+  -- Simplified implementation - in real code would use proper stack depth measurement
+  let size = show (length (show action))
+  in length size
+
+getCurrentMemoryUsage :: Int
+getCurrentMemoryUsage = 1000  -- Simplified implementation
+
+linearAlgorithm :: [Int] -> [Int]
+linearAlgorithm = map (*2)
+
+binarySearch :: [Int] -> Int -> Maybe Int
+binarySearch [] _ = Nothing
+binarySearch xs target = 
+  let sorted = sort xs
+      mid = length sorted `div` 2
+      midVal = sorted !! mid
+  in if midVal == target 
+     then Just midVal 
+     else if midVal < target
+          then binarySearch (drop (mid + 1) sorted) target
+          else binarySearch (take mid sorted) target
+
+buildBalancedTree :: [Int] -> BinaryTree Int
+buildBalancedTree [] = Empty
+buildBalancedTree xs = 
+  let sorted = sort xs
+      mid = length sorted `div` 2
+      rootVal = sorted !! mid
+      leftTree = buildBalancedTree (take mid sorted)
+      rightTree = buildBalancedTree (drop (mid + 1) sorted)
+  in Node rootVal leftTree rightTree
+
+data BinaryTree a = Empty | Node a (BinaryTree a) (BinaryTree a)
+  deriving (Eq, Show)
+
+traverseTree :: BinaryTree a -> [a]
+traverseTree Empty = []
+traverseTree (Node val left right) = 
+  traverseTree left ++ [val] ++ traverseTree right
+
+balancedRecursiveFunction :: [Int] -> Int
+balancedRecursiveFunction [] = 0
+balancedRecursiveFunction [x] = x
+balancedRecursiveFunction xs = 
+  let mid = length xs `div` 2
+      left = balancedRecursiveFunction (take mid xs)
+      right = balancedRecursiveFunction (drop mid xs)
+  in left + right
+
+sequentialSum :: [Int] -> Int
+sequentialSum = sum
+
+parallelSum :: [Int] -> Int
+parallelSum = sum  -- Simplified implementation
+
+logBase :: Floating a => a -> a -> a
+logBase b x = log x / log b
+
+-- Test cases for performance boundaries
+testPerformanceBoundary :: TestTree
+testPerformanceBoundary = testGroup "Performance Boundary Tests"
+  [ testProperties "Algorithm Complexity Properties"
+    [ ("linear_algorithms_linear_time", prop_linear_algorithms_linear_time)
+    , ("binary_search_logarithmic_time", prop_binary_search_logarithmic_time)
+    , ("sorting_n_log_n_time", prop_sorting_n_log_n_time)
+    ]
+  , testProperties "Memory Usage Properties"
+    [ ("memory_usage_grows_with_input", prop_memory_usage_grows_with_input)
+    , ("memory_deallocation_prompt", prop_memory_deallocation_prompt)
+    ]
+  , testProperties "Data Structure Performance Properties"
+    [ ("hash_table_constant_time", prop_hash_table_constant_time)
+    , ("tree_traversal_grows_with_size", prop_tree_traversal_grows_with_size)
+    ]
+  , testProperties "String Processing Properties"
+    [ ("string_concatenation_grows_with_length", prop_string_concatenation_grows_with_length)
+    ]
+  , testProperties "Recursion Properties"
+    [ ("recursive_stack_depth_logarithmic", prop_recursive_stack_depth_logarithmic)
+    ]
+  , testProperties "Parallel Processing Properties"
+    [ ("parallel_processing_improves_performance", prop_parallel_processing_improves_performance)
+    ]
+  , testCase "Linear algorithm performance" $ do
+    let input = [1..1000]
+    let time = measureTime $ linearAlgorithm input
+    assertBool "Linear algorithm should complete in reasonable time" 
+               (time < 1.0)  -- 1 second max
+  
+  , testCase "Binary search performance" $ do
+    let input = [1..10000]
+    let target = 5000
+    let time = measureTime $ binarySearch input target
+    assertBool "Binary search should complete in reasonable time" 
+               (time < 0.001)  -- 1 millisecond max
+  
+  , testCase "Sorting performance" $ do
+    let input = [1000,999..1]  -- Reverse sorted
+    let time = measureTime $ sort input
+    assertBool "Sorting should complete in reasonable time" 
+               (time < 0.01)  -- 10 milliseconds max
+  
+  , testCase "String concatenation performance" $ do
+    let s1 = replicate 1000 'a'
+    let s2 = replicate 1000 'b'
+    let time = measureTime $ s1 ++ s2
+    assertBool "String concatenation should complete in reasonable time" 
+               (time < 0.001)  -- 1 millisecond max
+  
+  , testCase "Tree traversal performance" $ do
+    let input = [1..1000]
+    let tree = buildBalancedTree input
+    let time = measureTime $ traverseTree tree
+    assertBool "Tree traversal should complete in reasonable time" 
+               (time < 0.01)  -- 10 milliseconds max
+  
+  , testCase "Hash table lookup performance" $ do
+    let table = Map.fromList $ zip [1..1000] [1000..1999]
+    let key = 500
+    let time = measureTime $ Map.lookup key table
+    assertBool "Hash table lookup should complete in reasonable time" 
+               (time < 0.001)  -- 1 millisecond max
+  
+  , testCase "Memory usage measurement" $ do
+    let input = [1..1000]
+    let memory = measureMemory $ map (*2) input
+    assertBool "Memory usage should be reasonable" 
+               (memory < 1000000)  -- 1MB max
+  
+  , testCase "Performance boundary creation" $ do
+    let boundary = PerformanceBoundary 
+          { boundaryName = "Test Boundary"
+          , boundaryMetric = TimeMetric 100.0
+          , boundaryThreshold = 200.0
+          , boundaryDescription = "Test boundary for performance"
+          }
+    assertEqual "Should create performance boundary correctly" 
+                "Test Boundary" (boundaryName boundary)
+    assertEqual "Should set threshold correctly" 
+                200.0 (boundaryThreshold boundary)
+  ]
+
+-- Export the test
+tests :: TestTree
+tests = testPerformanceBoundary

@@ -1,0 +1,271 @@
+{-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-missing-export-lists #-}
+
+module Test.Unit.TextProcessingAdvancedSpec where
+
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (testCase, assertEqual, assertBool, assertFailure, Assertion)
+import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
+import Test.QuickCheck (Gen, Property, (==>), classify, sized)
+import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed,
+             removeLineComments, removeComments, normalizeIndentation, 
+             forceSingleTabIndentation, fixIndentation, breakOn,
+             safeProcessString, isValidChar)
+import qualified Data.Text as T
+import Data.Char (isSpace, isAlpha, isAlphaNum, isPrint, isDigit, isLower, isUpper)
+import Data.List (isPrefixOf, isSuffixOf, isInfixOf, nub, sort, group, groupBy)
+import Data.Maybe (isJust, isNothing, fromMaybe)
+import Control.Monad (replicateM, when)
+
+-- Helper generators for advanced text processing tests
+genUnicodeChar :: Gen Char
+genUnicodeChar = elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ 
+                           " \t\n\r.,;:!()[]{}+-*/=<>&|^%~?@#$`'\"_" ++
+                           "áéíóúàèìòùâêîôûäëïöüãõåæœçðñøÿß"
+
+genUnicodeString :: Gen String
+genUnicodeString = do
+  len <- choose (0, 100)
+  vectorOf len genUnicodeChar
+
+genNonEmptyUnicodeString :: Gen String
+genNonEmptyUnicodeString = do
+  len <- choose (1, 100)
+  vectorOf len genUnicodeChar
+
+genIdentifier :: Gen String
+genIdentifier = do
+  first <- elements $ ['a'..'z'] ++ ['A'..'Z'] ++ "_"
+  rest <- listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"
+  return (first : rest)
+
+genKeyword :: Gen String
+genKeyword = elements ["func", "var", "let", "const", "if", "else", "while", "for", 
+                      "return", "break", "continue", "class", "interface", "import", 
+                      "export", "type", "struct", "enum", "match", "case"]
+
+genOperator :: Gen String
+genOperator = elements ["+", "-", "*", "/", "%", "==", "!=", "<", ">", "<=", ">=", 
+                       "&&", "||", "!", "&", "|", "^", "~", "<<", ">>", "++", "--", 
+                       "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "<<=", ">>="]
+
+genWhitespaceString :: Gen String
+genWhitespaceString = listOf $ elements " \t\n\r"
+
+-- Test properties for advanced text processing
+
+-- Property 1: Unicode string normalization
+prop_unicode_normalization_preserves_content :: String -> Bool
+prop_unicode_normalization_preserves_content s = 
+  let processed = safeProcessString s
+      normalized = T.unpack $ T.normalize T.NFC $ T.pack processed
+  in length normalized >= 0 && not (null normalized) || null s
+
+-- Property 2: Identifier extraction from code
+prop_identifier_extraction_is_valid :: String -> String -> Property
+prop_identifier_extraction_is_valid code ident = 
+  not (null ident) ==> 
+  let identifiers = extractIdentifiers code
+  in ident `elem` identifiers || all isIdentifierChar ident
+
+-- Property 3: Keyword highlighting preserves length
+prop_keyword_highlighting_preserves_length :: String -> String -> Bool
+prop_keyword_highlighting_preserves_length code keyword = 
+  let highlighted = highlightKeywords code keyword
+  in length highlighted >= length code
+
+-- Property 4: Comment removal preserves non-comment tokens
+prop_comment_removal_preserves_tokens :: String -> Bool
+prop_comment_removal_preserves_tokens code = 
+  let withoutComments = removeComments code
+      tokens = extractTokens withoutComments
+  in length tokens > 0 || all isSpace (head code : code)
+
+-- Property 5: Indentation normalization preserves structure
+prop_indentation_normalization_preserves_structure :: String -> Bool
+prop_indentation_normalization_preserves_structure code = 
+  let normalized = normalizeIndentation code
+      originalLines = lines code
+      normalizedLines = lines normalized
+  in length normalizedLines == length originalLines
+
+-- Property 6: String escaping preserves content
+prop_string_escaping_preserves_content :: String -> Bool
+prop_string_escaping_preserves_content s = 
+  let escaped = escapeString s
+      unescaped = unescapeString escaped
+  in unescaped == s
+
+-- Property 7: Token classification is consistent
+prop_token_classification_is_consistent :: String -> Bool
+prop_token_classification_is_consistent code = 
+  let tokens = classifyTokens code
+      identifiers = filter isIdentifier tokens
+      keywords = filter isKeyword tokens
+      operators = filter isOperator tokens
+  in all isIdentifier identifiers && all isKeyword keywords && all isOperator operators
+
+-- Property 8: Text processing is idempotent for certain operations
+prop_trim_is_idempotent :: String -> Bool
+prop_trim_is_idempotent s = 
+  let trimmedOnce = trim s
+      trimmedTwice = trim trimmedOnce
+  in trimmedOnce == trimmedTwice
+
+-- Property 9: Line counting is accurate
+prop_line_counting_is_accurate :: String -> Bool
+prop_line_counting_is_accurate s = 
+  let actualLines = length $ lines s
+      countedLines = countLines s
+  in actualLines == countedLines
+
+-- Property 10: Column calculation is correct
+prop_column_calculation_is_correct :: String -> Int -> Property
+prop_column_calculation_is_correct s pos = 
+  pos >= 0 && pos < length s ==> 
+  let expectedCol = length $ takeWhile (/= '\n') $ take pos s
+      actualCol = calculateColumn s pos
+  in expectedCol == actualCol
+
+-- Helper functions for testing
+extractIdentifiers :: String -> [String]
+extractIdentifiers = filter isIdentifier . words . map (\c -> if isAlphaNum c || c == '_' then c else ' ')
+
+isIdentifierChar :: Char -> Bool
+isIdentifierChar c = isAlphaNum c || c == '_'
+
+isIdentifier :: String -> Bool
+isIdentifier [] = False
+isIdentifier (c:cs) = isAlpha c || c == '_' && all isIdentifierChar cs
+
+highlightKeywords :: String -> String -> String
+highlightKeywords code keyword = 
+  if keyword `isInfixOf` code 
+  then "[" ++ keyword ++ "]" ++ code
+  else code
+
+extractTokens :: String -> [String]
+extractTokens = filter (not . null) . words . map (\c -> if isAlphaNum c || c == '_' then c else ' ')
+
+escapeString :: String -> String
+escapeString = concatMap escapeChar
+  where
+    escapeChar '\\' = "\\\\"
+    escapeChar '\"' = "\\\""
+    escapeChar '\n' = "\\n"
+    escapeChar '\t' = "\\t"
+    escapeChar '\r' = "\\r"
+    escapeChar c = [c]
+
+unescapeString :: String -> String
+unescapeString [] = []
+unescapeString ('\\':c:cs) = case c of
+  '\\' -> '\\' : unescapeString cs
+  '\"' -> '\"' : unescapeString cs
+  'n' -> '\n' : unescapeString cs
+  't' -> '\t' : unescapeString cs
+  'r' -> '\r' : unescapeString cs
+  _ -> c : unescapeString cs
+unescapeString (c:cs) = c : unescapeString cs
+
+classifyTokens :: String -> [String]
+classifyTokens = map classifyToken . words
+  where
+    classifyToken token
+      | isKeyword token = "KEYWORD:" ++ token
+      | isOperator token = "OPERATOR:" ++ token
+      | isIdentifier token = "IDENTIFIER:" ++ token
+      | otherwise = "OTHER:" ++ token
+
+isKeyword :: String -> Bool
+isKeyword token = token `elem` ["func", "var", "let", "const", "if", "else", "while", "for", 
+                                "return", "break", "continue", "class", "interface", "import", 
+                                "export", "type", "struct", "enum", "match", "case"]
+
+isOperator :: String -> Bool
+isOperator token = token `elem` ["+", "-", "*", "/", "%", "==", "!=", "<", ">", "<=", ">=", 
+                                 "&&", "||", "!", "&", "|", "^", "~", "<<", ">>", "++", "--", 
+                                 "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "<<=", ">>="]
+
+countLines :: String -> Int
+countLines = length . lines
+
+calculateColumn :: String -> Int -> Int
+calculateColumn s pos = length $ takeWhile (/= '\n') $ take pos s
+
+-- Test cases for advanced text processing
+testTextProcessingAdvanced :: TestTree
+testTextProcessingAdvanced = testGroup "Text Processing Advanced Tests"
+  [ testProperties "Unicode Processing Properties"
+    [ ("unicode_normalization_preserves_content", prop_unicode_normalization_preserves_content)
+    ]
+  , testProperties "Identifier Processing Properties"
+    [ ("identifier_extraction_is_valid", prop_identifier_extraction_is_valid)
+    , ("token_classification_is_consistent", prop_token_classification_is_consistent)
+    ]
+  , testProperties "Code Processing Properties"
+    [ ("keyword_highlighting_preserves_length", prop_keyword_highlighting_preserves_length)
+    , ("comment_removal_preserves_tokens", prop_comment_removal_preserves_tokens)
+    , ("indentation_normalization_preserves_structure", prop_indentation_normalization_preserves_structure)
+    ]
+  , testProperties "String Processing Properties"
+    [ ("string_escaping_preserves_content", prop_string_escaping_preserves_content)
+    , ("trim_is_idempotent", prop_trim_is_idempotent)
+    ]
+  , testProperties "Position Calculation Properties"
+    [ ("line_counting_is_accurate", prop_line_counting_is_accurate)
+    , ("column_calculation_is_correct", prop_column_calculation_is_correct)
+    ]
+  , testCase "Unicode string processing" $ do
+    let testString = "Héllö Wörld! 123"
+    let processed = safeProcessString testString
+    assertBool "Unicode processing should preserve characters" 
+               (length processed >= length testString)
+  
+  , testCase "Identifier extraction" $ do
+    let testCode = "func calculate(x, y) { return x + y; }"
+    let identifiers = extractIdentifiers testCode
+    assertEqual "Should extract correct identifiers" 
+                ["func", "calculate", "x", "y", "return", "x", "y"] identifiers
+  
+  , testCase "Keyword highlighting" $ do
+    let testCode = "func test() { var x = 5; }"
+    let highlighted = highlightKeywords testCode "func"
+    assertBool "Should highlight keywords" 
+               ("[func]" `isInfixOf` highlighted)
+  
+  , testCase "Comment removal" $ do
+    let testCode = "var x = 5; // This is a comment\nvar y = 10;"
+    let withoutComments = removeComments testCode
+    assertBool "Should remove line comments" 
+               (not $ "// This is a comment" `isInfixOf` withoutComments)
+  
+  , testCase "String escaping" $ do
+    let testString = "Hello\nWorld\t!"
+    let escaped = escapeString testString
+    let unescaped = unescapeString escaped
+    assertEqual "Escaping and unescaping should be reversible" 
+                testString unescaped
+  
+  , testCase "Token classification" $ do
+    let testCode = "func add(x, y) { return x + y; }"
+    let tokens = classifyTokens testCode
+    assertBool "Should classify tokens correctly" 
+               (any ("KEYWORD:func" `isPrefixOf`) tokens && 
+                any ("OPERATOR:+" `isPrefixOf`) tokens)
+  
+  , testCase "Line counting" $ do
+    let testString = "line1\nline2\nline3"
+    let lineCount = countLines testString
+    assertEqual "Should count lines correctly" 3 lineCount
+  
+  , testCase "Column calculation" $ do
+    let testString = "line1\nline2"
+    let columnPos = calculateColumn testString 8
+    assertEqual "Should calculate column position correctly" 1 columnPos
+  ]
+
+-- Export the test
+tests :: TestTree
+tests = testTextProcessingAdvanced

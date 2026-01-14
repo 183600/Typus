@@ -2253,7 +2253,19 @@ test-suite typus-test
         Test.Unit.IntegrationTestSpec,
         
         -- New QuickCheck Test Modules (2026) - Additional comprehensive tests
-        Test.Unit.NewSimpleQuickCheckSpec
+        Test.Unit.NewSimpleQuickCheckSpec,
+        
+        -- New Comprehensive Test Modules (2026) - 10 additional test modules
+        Test.Unit.TextProcessingAdvancedSpec,
+        Test.Unit.TypeInferenceQuickCheckSpec,
+        Test.Unit.CompilerOptimizationAdvancedSpec,
+        Test.Unit.ErrorReportingQuickCheckSpec,
+        Test.Unit.PerformanceBoundarySpec,
+        Test.Unit.SymbolTableAdvancedSpec,
+        Test.Unit.ParserCombinatorsSpec,
+        Test.Unit.CodeGenerationSpec,
+        Test.Unit.DependencyResolutionSpec,
+        Test.Unit.OwnershipTransferSpec
         
     build-depends:
         base >=4.7 && <5,

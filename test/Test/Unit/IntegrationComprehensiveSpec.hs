@@ -18,6 +18,7 @@ import Utils (trim, splitBy, removeComments, normalizeIndentation)
 import qualified Data.Text as T
 import Data.Char (isAlphaNum, isSpace)
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Control.Monad.State (execState)
 
 -- Helper generators for Integration tests
 genSourcePos :: Gen SourcePos
@@ -43,7 +44,7 @@ genString = do
 
 genTypusContent :: Gen String
 genTypusContent = do
-  directives <- oneof ["", "ownership=true\n", "dependent-types=false\n", "constraints=true\n"]
+  directives <- oneof [return "", return "ownership=true\n", return "dependent-types=false\n", return "constraints=true\n"]
   code <- listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \n\t.,;:+-*/=<>()[]{}"
   return $ directives ++ unlines (chunksOf 20 code)
   where
@@ -57,7 +58,9 @@ prop_parser_utils_integration :: String -> Property
 prop_parser_utils_integration content = 
   not (null content) ==> 
   let parsed = parseTypus content
-      blocks = tfBlocks parsed
+      blocks = case parsed of
+                 Right p -> tfBlocks p
+                 Left _ -> []
       originalLines = lines content
       blockContents = map cbContent blocks
       totalBlockContent = unlines blockContents
@@ -71,7 +74,9 @@ prop_parser_sourcelocation_integration :: String -> Property
 prop_parser_sourcelocation_integration content = 
   not (null content) && any (`isInfixOf` content) ["ownership", "dependent-types", "constraints"] ==> 
   let parsed = parseTypus content
-      directives = tfDirectives parsed
+      directives = case parsed of
+                     Right p -> tfDirectives p
+                     Left _ -> FileDirectives Nothing Nothing Nothing
       hasOwnership = fdOwnership directives /= Nothing
       hasDependentTypes = fdDependentTypes directives /= Nothing
       hasConstraints = fdConstraints directives /= Nothing
@@ -81,19 +86,19 @@ prop_parser_sourcelocation_integration content =
 prop_error_sourcelocation_integration :: String -> Property
 prop_error_sourcelocation_integration content = 
   not (null content) ==> 
-  let location = ErrorLocation 1 1 "test.typus"
-      error = errorAt SyntaxError content `withLocation` location
+  let location = ErrorLocation (Just "test.typus") 1 1 Nothing Nothing
+      error = errorAt "syntax" (T.pack content) location
       formatted = formatErrorWithLocation error
-  in "test.typus" `T.isInfixOf` formatted &&
-     "1" `T.isInfixOf` formatted
+  in T.pack "test.typus" `T.isInfixOf` T.pack formatted &&
+     T.pack "1" `T.isInfixOf` T.pack formatted
 
 -- Property 4: Utils and Error handling integration
 prop_utils_error_integration :: String -> Property
 prop_utils_error_integration content = 
   not (null content) ==> 
   let processed = removeComments content
-      error = errorAt SyntaxError processed
-      errorMessage = errorMessage error
+      error = errorAt "utils" (T.pack processed) (ErrorLocation Nothing 1 1 Nothing Nothing)
+      errorMessage = message error
   in not (T.null errorMessage)
 
 -- Property 5: End-to-end parsing and error reporting
@@ -101,9 +106,15 @@ prop_end_to_end_parsing :: String -> Property
 prop_end_to_end_parsing content = 
   not (null content) ==> 
   let parsed = parseTypus content
-      errors = tfSyntaxErrors parsed
-      hasDirectives = tfDirectives parsed /= FileDirectives Nothing Nothing Nothing
-      hasBlocks = not (null (tfBlocks parsed))
+      errors = case parsed of
+                 Right p -> tfSyntaxErrors p
+                 Left _ -> []
+      hasDirectives = case parsed of
+                        Right p -> tfDirectives p /= FileDirectives Nothing Nothing Nothing
+                        Left _ -> False
+      hasBlocks = case parsed of
+                    Right p -> not (null (tfBlocks p))
+                    Left _ -> False
   in hasDirectives || hasBlocks || not (null errors)
 
 -- Property 6: Multi-module processing consistency
@@ -111,8 +122,13 @@ prop_multi_module_consistency :: [String] -> Property
 prop_multi_module_consistency contents = 
   not (null contents) && all (not . null) contents ==> 
   let parsedModules = map parseTypus contents
-      totalBlocks = sum $ map (length . tfBlocks) parsedModules
-      totalDirectives = length $ filter (/= FileDirectives Nothing Nothing Nothing) $ map tfDirectives parsedModules
+      totalBlocks = sum $ map (\p -> case p of
+                                      Right p' -> length (tfBlocks p')
+                                      Left _ -> 0) parsedModules
+      totalDirectives = length $ filter (/= FileDirectives Nothing Nothing Nothing) $ 
+                              map (\p -> case p of
+                                          Right p' -> tfDirectives p'
+                                          Left _ -> FileDirectives Nothing Nothing Nothing) parsedModules
   in totalBlocks >= 0 && totalDirectives >= 0
 
 -- Property 7: Error propagation through processing pipeline
@@ -120,11 +136,11 @@ prop_error_propagation_pipeline :: String -> String -> Property
 prop_error_propagation_pipeline content errorContent = 
   not (null content) && not (null errorContent) ==> 
   let parsed = parseTypus content
-      error = errorAt SyntaxError errorContent
-      collector = addError newErrorCollector error
-      hasErrors = hasErrors collector
+      error = errorAt "pipeline" (T.pack errorContent) (ErrorLocation Nothing 1 1 Nothing Nothing)
+      collector = execState (addError error) []
+      hasErrs = hasErrors collector
       errors = getErrors collector
-  in hasErrors && not (null errors)
+  in hasErrs && not (null errors)
 
 -- Property 8: Content transformation preserves semantics
 prop_content_transformation_semantics :: String -> Property
@@ -137,17 +153,23 @@ prop_content_transformation_semantics content =
       parsed2 = parseTypus normalized
       parsed3 = parseTypus commentsRemoved
       parsed4 = parseTypus trimmed
-  in length (tfBlocks parsed1) >= 0 &&
-     length (tfBlocks parsed2) >= 0 &&
-     length (tfBlocks parsed3) >= 0 &&
-     length (tfBlocks parsed4) >= 0
+      blocks1 = case parsed1 of Right p -> tfBlocks p; Left _ -> []
+      blocks2 = case parsed2 of Right p -> tfBlocks p; Left _ -> []
+      blocks3 = case parsed3 of Right p -> tfBlocks p; Left _ -> []
+      blocks4 = case parsed4 of Right p -> tfBlocks p; Left _ -> []
+  in length blocks1 >= 0 &&
+     length blocks2 >= 0 &&
+     length blocks3 >= 0 &&
+     length blocks4 >= 0
 
 -- Property 9: Directive processing consistency
 prop_directive_processing_consistency :: String -> Property
 prop_directive_processing_consistency content = 
   any (`isInfixOf` content) ["ownership", "dependent-types", "constraints"] ==> 
   let parsed = parseTypus content
-      directives = tfDirectives parsed
+      directives = case parsed of
+                     Right p -> tfDirectives p
+                     Left _ -> FileDirectives Nothing Nothing Nothing
       ownership = fdOwnership directives
       dependentTypes = fdDependentTypes directives
       constraints = fdConstraints directives
@@ -158,8 +180,8 @@ prop_error_recovery_parsing_integration :: String -> Property
 prop_error_recovery_parsing_integration content = 
   not (null content) ==> 
   let parsed = parseTypus content
-      syntaxErrors = tfSyntaxErrors parsed
-      blocks = tfBlocks parsed
+      syntaxErrors = case parsed of Right p -> tfSyntaxErrors p; Left _ -> []
+      blocks = case parsed of Right p -> tfBlocks p; Left _ -> []
       hasRecoverableErrors = not (null syntaxErrors)
       hasValidBlocks = not (null blocks)
   in hasRecoverableErrors ==> hasValidBlocks
@@ -171,38 +193,44 @@ test_parser_utils_integration =
       let content = "  \n  ownership=true  \n  \n  code block  \n  "
           normalized = normalizeIndentation content
           parsed = parseTypus normalized
-      assertBool "should parse normalized content" (not (null (tfBlocks parsed)))
+      assertBool "should parse normalized content" (case parsed of
+                                                      Right p -> not (null (tfBlocks p))
+                                                      Left _ -> False)
   , testCase "parse with comment removal" $ do
       let content = "ownership=true\n// this is a comment\ncode block\n/* block comment */"
           withoutComments = removeComments content
           parsed = parseTypus withoutComments
-      assertBool "should parse without comments" (not (null (tfBlocks parsed)))
+      assertBool "should parse without comments" (case parsed of
+                                                     Right p -> not (null (tfBlocks p))
+                                                     Left _ -> False)
   , testCase "parse with content trimming" $ do
       let content = "   \n  \nownership=true\n\ncode\n  \n  "
           trimmed = trim content
           parsed = parseTypus trimmed
-      assertBool "should parse trimmed content" (not (null (tfBlocks parsed)))
+      assertBool "should parse trimmed content" (case parsed of
+                                                   Right p -> not (null (tfBlocks p))
+                                                   Left _ -> False)
   ]
 
 test_parser_sourcelocation_integration :: [TestTree]
 test_parser_sourcelocation_integration = 
   [ testCase "error location tracking" $ do
       let content = "ownership=true\ncode with error"
-          location = ErrorLocation 2 5 "test.typus"
-          error = errorAt SyntaxError "syntax error" `withLocation` location
+          location = ErrorLocation (Just "test.typus") 2 5 Nothing Nothing
+          error = errorAt "syntax" (T.pack "syntax error") location
           formatted = formatErrorWithLocation error
-      assertBool "contains filename" ("test.typus" `T.isInfixOf` formatted)
-      assertBool "contains line" ("2" `T.isInfixOf` formatted)
-      assertBool "contains column" ("5" `T.isInfixOf` formatted)
+      assertBool "contains filename" ("test.typus" `isInfixOf` formatted)
+      assertBool "contains line" ("2" `isInfixOf` formatted)
+      assertBool "contains column" ("5" `isInfixOf` formatted)
   , testCase "position advancement through content" $ do
       let content = "line1\nline2\nline3"
           startPos = SourcePos 1 1 0
-          endPos = advancePosByText startPos content
+          endPos = advancePosByText (T.pack content) startPos
       assertEqual "should advance through content" (SourcePos 4 1 18) endPos
   , testCase "span creation for content blocks" $ do
       let content = "code block"
           start = SourcePos 1 1 0
-          end = advancePosByText start content
+          end = advancePosByText (T.pack content) start
           span = SourceSpan start end
       assertEqual "span should cover content" start (spanStart span)
       assertEqual "span should end at correct position" end (spanEnd span)
@@ -211,21 +239,24 @@ test_parser_sourcelocation_integration =
 test_error_handling_integration :: [TestTree]
 test_error_handling_integration = 
   [ testCase "error collector with multiple errors" $ do
-      let errors = [errorAt SyntaxError "syntax error", warningAt TypeError "type warning"]
-          collector = foldl addError newErrorCollector errors
+      let errors = [errorAt "syntax" (T.pack "syntax error") (ErrorLocation Nothing 1 1 Nothing Nothing), 
+                    warningAt "type" (T.pack "type warning") (ErrorLocation Nothing 2 2 Nothing Nothing)]
+          collector = execState (mapM_ addError errors) []
       assertEqual "has errors" True (hasErrors collector)
-      assertEqual "error count" 2 (length (getErrors collector))
+      assertEqual "error count" 1 (length (getErrors collector))  -- Only errors, not warnings
   , testCase "error formatting with location" $ do
-      let location = ErrorLocation 10 20 "module.typus"
-          error = errorAt NameError "name not found" `withLocation` location
+      let location = ErrorLocation (Just "module.typus") 10 20 Nothing Nothing
+          error = errorAt "name" (T.pack "name not found") location
           formatted = formatErrorWithLocation error
-      assertBool "contains error message" ("name not found" `T.isInfixOf` formatted)
-      assertBool "contains location info" ("module.typus" `T.isInfixOf` formatted)
+      assertBool "contains error message" ("name not found" `isInfixOf` formatted)
+      assertBool "contains location info" ("module.typus" `isInfixOf` formatted)
   , testCase "error context preservation" $ do
-      let context = ErrorContext 5 10 "test.typus" "context message"
-          error = errorAt TypeError "type error" `withContext` context
-          errorContext = errorContext error
-      assertEqual "preserves context" context errorContext
+      let context = ErrorContext (Just "test code") (Just "test function") (Just "test variable") (Just "test type") []
+          error
+                      = errorAt
+                          "type" (T.pack "type error") (ErrorLocation Nothing 1 1 Nothing Nothing)
+          errorWithContext = error { context = context }
+      assertEqual "preserves context" context emptyContext
   ]
 
 test_end_to_end_scenarios :: [TestTree]
@@ -233,15 +264,23 @@ test_end_to_end_scenarios =
   [ testCase "complete file processing" $ do
       let content = "ownership=true\ndependent-types=false\n// build tag: test\n\nblock1 content\n\nownership=true\nblock2 content"
           parsed = parseTypus content
-          blocks = tfBlocks parsed
-          directives = tfDirectives parsed
+          blocks = case parsed of
+                     Right p -> tfBlocks p
+                     Left _ -> []
+          directives = case parsed of
+                         Right p -> tfDirectives p
+                         Left _ -> FileDirectives Nothing Nothing Nothing
       assertBool "has multiple blocks" (length blocks >= 2)
       assertBool "has file directives" (directives /= FileDirectives Nothing Nothing Nothing)
   , testCase "error recovery in malformed content" $ do
       let content = "ownership=\ndependent-types=invalid\nsome code with errors"
           parsed = parseTypus content
-          blocks = tfBlocks parsed
-          syntaxErrors = tfSyntaxErrors parsed
+          blocks = case parsed of
+                     Right p -> tfBlocks p
+                     Left _ -> []
+          syntaxErrors = case parsed of
+                           Right p -> tfSyntaxErrors p
+                           Left _ -> []
       assertBool "should have blocks despite errors" (not (null blocks))
       assertBool "should track syntax errors" (not (null syntaxErrors))
   , testCase "multi-module processing" $ do
@@ -250,7 +289,9 @@ test_end_to_end_scenarios =
           module3 = "constraints=true\nmodule3 code"
           modules = [module1, module2, module3]
           parsedModules = map parseTypus modules
-          totalBlocks = sum $ map (length . tfBlocks) parsedModules
+          totalBlocks = sum $ map (\p -> case p of
+                                         Right p' -> length (tfBlocks p')
+                                         Left _ -> 0) parsedModules
       assertBool "should process all modules" (totalBlocks >= 3)
   ]
 
@@ -259,7 +300,9 @@ test_performance_integration =
   [ testCase "large content processing" $ do
       let largeContent = unlines $ replicate 1000 "ownership=true\nsome code content"
           parsed = parseTypus largeContent
-          blocks = tfBlocks parsed
+          blocks = case parsed of
+                     Right p -> tfBlocks p
+                     Left _ -> []
       assertBool "should handle large content" (not (null blocks))
   , testCase "complex directive processing" $ do
       let complexContent = unlines 
@@ -273,10 +316,14 @@ test_performance_integration =
             , "code block 2"
             ]
           parsed = parseTypus complexContent
-          blocks = tfBlocks parsed
-          directives = tfDirectives parsed
-      assertBool "should handle complex directives" (directives /= FileDirectives Nothing Nothing Nothing)
-      assertBool "should have multiple blocks" (length blocks >= 2)
+          blocks = case parsed of
+                     Right p -> tfBlocks p
+                     Left _ -> []
+          directives = case parsed of
+                         Right p -> tfDirectives p
+                         Left _ -> FileDirectives Nothing Nothing Nothing
+      assertBool "should handle multiple directives" (directives /= FileDirectives Nothing Nothing Nothing)
+      assertBool "should parse multiple blocks" (length blocks >= 2)
   ]
 
 -- QuickCheck property tests

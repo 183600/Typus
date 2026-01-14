@@ -8,7 +8,7 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool, Assertion)
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
 import Test.QuickCheck (Gen, Property, (==>), classify)
-import Parser (parseTypus, FileDirectives(..), BlockDirectives(..), CodeBlock(..), TypusFile(..))
+import Parser (parseTypus, FileDirectives(..), BlockDirectives(..), CodeBlock(..), TypusFile(..), defaultFileDirectives)
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), locatedAt, advancePosByText, startPos)
 import Compiler.Errors.Core (TypeError(..), ErrorSeverity(..), ErrorCategory(..), 
                             ErrorLocation(..), ErrorContext(..), emptyContext,
@@ -19,7 +19,22 @@ import Utils (trim, splitBy, removeComments, normalizeIndentation, safeProcessSt
 import qualified Data.Text as T
 import Data.Char (isAlphaNum, isSpace, isPrint, isControl, chr)
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Control.Monad (foldM)
+import Control.Monad.State (execState, State)
 import Control.Exception (evaluate, try, SomeException)
+
+-- Arbitrary instance for SourcePos
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- choose (1, 1000)
+    column <- choose (1, 1000)
+    return $ SourcePos { posLine = line, posColumn = column, posOffset = 0 }
+
+-- Arbitrary instance for ErrorSeverity
+instance Arbitrary ErrorSeverity where
+  arbitrary = elements [Fatal, Error, Warning, Info]
+
+
 
 -- Helper generators for Boundary Condition tests
 genLargeString :: Int -> Gen String
@@ -57,14 +72,16 @@ prop_parser_large_input size =
   size > 1000 && size <= 10000 ==> 
   let content = replicate size 'a' ++ "\nownership=true"
       result = parseTypus content
-  in not (null (tfBlocks result))
+  in case result of
+       Right p -> not (null (tfBlocks p))
+       Left _ -> False
 
 -- Property 2: Parser handles deeply nested structures
 prop_parser_deeply_nested :: Int -> Property
 prop_parser_deeply_nested depth = 
   depth > 0 && depth <= 100 ==> 
-  let content = genDeeplyNestedStructure depth
-      result = parseTypus content
+  forAll (genDeeplyNestedStructure depth) $ \content ->
+  let result = parseTypus content
   in case result of
        Right parsed -> not (null (tfBlocks parsed))
        Left _ -> False
@@ -80,7 +97,7 @@ prop_sourcelocation_extreme_positions pos1 pos2 =
 -- Property 4: Error handling with extreme severity levels
 prop_error_extreme_severity :: String -> ErrorSeverity -> Bool
 prop_error_extreme_severity message severity = 
-  let error = errorAt Parsing message (ErrorLocation 1 1 0)
+  let error = errorAt "Parsing" (T.pack message) (ErrorLocation Nothing 1 1 Nothing Nothing)
       errorWithSeverity = error { severity = severity }
       canRecover = canRecoverFrom errorWithSeverity
       shouldContinue = shouldContinueAfter errorWithSeverity
@@ -99,16 +116,16 @@ prop_utils_extreme_inputs input =
   in not (null trimmed) || null input &&
      length split >= 0 &&
      length commentsRemoved >= 0 &&
-     length normalized >= 0 &&
-     all isValidChar safe
+     case safe of Right s -> all isValidChar s; Left _ -> False
 
 -- Property 6: Error collector handles large numbers of errors
 prop_error_collector_large_numbers :: Int -> Property
 prop_error_collector_large_numbers numErrors = 
   numErrors > 0 && numErrors <= 1000 ==> 
-  let errors = replicate numErrors (errorAt Parsing "test error" (ErrorLocation 1 1 0))
+  let errors = replicate numErrors (errorAt "test" (T.pack "test error") (ErrorLocation Nothing 1 1 Nothing Nothing))
       collector = execState (foldM (\acc err -> addError err) () errors) []
-          retrievedErrors = getErrors collector  in length retrievedErrors == numErrors && hasErrors collector
+      retrievedErrors = getErrors collector  
+  in length retrievedErrors == numErrors && hasErrors collector
 
 -- Property 7: Memory efficiency with repeated operations
 prop_memory_efficiency_repeated_operations :: Int -> Property
@@ -117,7 +134,9 @@ prop_memory_efficiency_repeated_operations iterations =
   let content = "ownership=true\ntest content"
       results = replicate iterations (parseTypus content)
       totalBlocks = sum $ map (either (const 0) (length . tfBlocks)) results
-  in totalBlocks == iterations * length (tfBlocks (parseTypus content))
+  in totalBlocks == iterations * case parseTypus content of
+                                  Right p -> length (tfBlocks p)
+                                  Left _ -> 0
 
 -- Property 8: Handling of special characters and unicode
 prop_special_characters_handling :: String -> Bool
@@ -133,34 +152,36 @@ prop_large_directives_handling directiveSize =
   let largeDirective = "ownership=" ++ replicate directiveSize 'a'
       content = largeDirective ++ "\nsome code"
       result = parseTypus content
-  in not (null (tfBlocks result))
+  in case result of 
+       Right p -> not (null (tfBlocks p))
+       Left _ -> False
 
 -- Property 10: Error formatting with extreme content
 prop_error_formatting_extreme_content :: String -> Property
 prop_error_formatting_extreme_content content = 
   length content > 100 ==> 
-  let error = errorAt Parsing content (ErrorLocation 1 1 0)
+  let error = errorAt "Parsing" (T.pack content) (ErrorLocation Nothing 1 1 Nothing Nothing)
       formatted = formatErrorWithLocation error
-  in not (T.null formatted)
+  in not (T.null (T.pack formatted))
 
 -- Unit tests for boundary conditions
 test_extreme_input_sizes :: [TestTree]
 test_extreme_input_sizes = 
   [ testCase "parser with empty input" $ do
       let result = parseTypus ""
-      assertEqual "should handle empty input" 0 (length (tfBlocks result))
+      assertEqual "should handle empty input" 0 (case result of Right p -> length (tfBlocks p); Left _ -> 0)
   , testCase "parser with single character" $ do
       let result = parseTypus "a"
-      assertBool "should handle single character" (not (null (tfBlocks result)))
+      assertBool "should handle single character" (case result of Right p -> not (null (tfBlocks p)); Left _ -> False)
   , testCase "parser with very large input" $ do
       let largeContent = replicate 50000 'a' ++ "\nownership=true"
           result = parseTypus largeContent
-      assertBool "should handle large input" (not (null (tfBlocks result)))
+      assertBool "should handle large input" (case result of Right p -> not (null (tfBlocks p)); Left _ -> False)
   , testCase "parser with very long lines" $ do
       let longLine = replicate 10000 'a'
           content = longLine ++ "\n" ++ longLine
           result = parseTypus content
-      assertBool "should handle long lines" (not (null (tfBlocks result)))
+      assertBool "should handle long lines" (case result of Right p -> not (null (tfBlocks p)); Left _ -> False)
   ]
 
 test_extreme_positions :: [TestTree]
@@ -175,28 +196,29 @@ test_extreme_positions =
       assertEqual "should handle min position" minPos (spanStart span)
   , testCase "position advancement with large content" $ do
       let largeContent = replicate 10000 'a'
-          endPos = advancePosByText largeContent startPos
+          endPos = advancePosByText (T.pack largeContent) startPos
       assertBool "should advance correctly" (posLine endPos == 1 && posColumn endPos > 10000)
   ]
 
 test_extreme_error_conditions :: [TestTree]
 test_extreme_error_conditions = 
   [ testCase "error collector with many errors" $ do
-      let manyErrors = replicate 1000 (errorAt Parsing "test error" (ErrorLocation 1 1 0))
+      let manyErrors = replicate 1000 (errorAt "Parsing" (T.pack "test error") (ErrorLocation Nothing 1 1 Nothing Nothing))
           collector = execState (foldM (\acc err -> addError err) () manyErrors) []
       assertEqual "should handle many errors" 1000 (length (getErrors collector))
   , testCase "error with very long message" $ do
       let longMessage = replicate 10000 'a'
-          error = errorAt Parsing longMessage (ErrorLocation 1 1 0)
+          error = errorAt "Parsing" (T.pack longMessage) (ErrorLocation Nothing 1 1 Nothing Nothing)
           formatted = formatErrorWithLocation error
-      assertBool "should format long message" (not (T.null formatted))
+      assertBool "should format long message" (not (T.null (T.pack formatted)))
   , testCase "fatal error handling" $ do
       let fatal = fatalError "fatal error message"
+      let fatal = fatalError "fatal" (T.pack "fatal error") (ErrorLocation Nothing 1 1 Nothing Nothing)
       assertEqual "should not recover from fatal" False (canRecoverFrom fatal)
       assertEqual "should not continue after fatal" False (shouldContinueAfter fatal)
   , testCase "error with extreme severity" $ do
       let severities = [Fatal, Error, Warning, Info]
-          errors = map (\sev -> errorAt Parsing "test" (ErrorLocation 1 1 0) { severity = sev }) severities
+          errors = map (\sev -> (errorAt "Parsing" (T.pack "test") (ErrorLocation Nothing 1 1 Nothing Nothing)) { severity = sev }) severities
           recoverable = map canRecoverFrom errors
           continue = map shouldContinueAfter errors
       assertEqual "fatal not recoverable" False (head recoverable)
@@ -208,19 +230,19 @@ test_special_characters_and_unicode =
   [ testCase "parser with control characters" $ do
       let controlContent = "\0\1\2\3\4\5ownership=true"
           result = parseTypus controlContent
-      assertBool "should handle control characters" (not (null (tfBlocks result)))
+      assertBool "should handle control characters" (case result of Right p -> not (null (tfBlocks p)); Left _ -> False)
   , testCase "parser with unicode characters" $ do
       let unicodeContent = "ownership=true\ncode with unicode: αβγδεζηθ"
           result = parseTypus unicodeContent
-      assertBool "should handle unicode" (not (null (tfBlocks result)))
+      assertBool "should handle unicode" (case result of Right p -> not (null (tfBlocks p)); Left _ -> False)
   , testCase "utils with special characters" $ do
       let specialContent = "\0\1\2\3\4\5\6\7\8\9\10\11\12\13\14\15"
           safe = safeProcessString specialContent
-      assertBool "should process safely" (all isValidChar safe)
+      assertBool "should process safely" (case safe of Right s -> all isValidChar s; Left _ -> False)
   , testCase "parser with mixed content types" $ do
       let mixedContent = "ownership=true\n" ++ [chr 0, chr 255] ++ "\n正常内容"
           result = parseTypus mixedContent
-      assertBool "should handle mixed content" (not (null (tfBlocks result)))
+      assertBool "should handle mixed content" (case result of Right p -> not (null (tfBlocks p)); Left _ -> False)
   ]
 
 test_resource_limits :: [TestTree]
@@ -233,12 +255,12 @@ test_resource_limits =
       let deeplyNested = concat $ replicate 100 "outer("
           nestedContent = deeplyNested ++ "base" ++ concat (replicate 100 ")")
           result = parseTypus nestedContent
-      assertBool "should handle deep nesting" (not (null (tfBlocks result)))
+      assertBool "should handle deep nesting" (case result of Right p -> not (null (tfBlocks p)); Left _ -> False)
   , testCase "large directive values" $ do
       let largeDirectiveValue = replicate 5000 'a'
           content = "ownership=" ++ largeDirectiveValue ++ "\nsome code"
           result = parseTypus content
-      assertBool "should handle large directive values" (not (null (tfBlocks result)))
+      assertBool "should handle large directive values" (case result of Right p -> not (null (tfBlocks p)); Left _ -> False)
   ]
 
 test_concurrent_safety :: [TestTree]
@@ -249,12 +271,14 @@ test_concurrent_safety =
           result1 = parseTypus content1
           result2 = parseTypus content2
       assertBool "should isolate parsing state" 
-         (tfDirectives result1 /= tfDirectives result2)
+         ((case result1 of Right p1 -> show (tfDirectives p1); Left _ -> show defaultFileDirectives) /= 
+          (case result2 of Right p2 -> show (tfDirectives p2); Left _ -> show defaultFileDirectives))
   , testCase "error collector isolation" $ do
-      let error1 = errorAt Parsing "error1" (ErrorLocation 1 1 0)
-          error2 = errorAt TypeChecking "error2" (ErrorLocation 1 1 0)
+      let error1 = errorAt "Parsing" (T.pack "error1") (ErrorLocation Nothing 1 1 Nothing Nothing)
+          error2 = errorAt "TypeChecking" (T.pack "error2") (ErrorLocation Nothing 1 1 Nothing Nothing)
           collector1 = execState (addError error1) []
-                collector2 = execState (addError error2) []      assertBool "should isolate error collectors" 
+          collector2 = execState (addError error2) []
+      assertBool "should isolate error collectors" 
          (getErrors collector1 /= getErrors collector2)
   ]
 
@@ -263,9 +287,9 @@ test_performance_boundaries =
   [ testCase "parsing performance with large files" $ do
       let largeFileContent = unlines $ replicate 1000 "ownership=true\nsome code content"
           result = parseTypus largeFileContent
-      assertBool "should handle large files efficiently" (not (null (tfBlocks result)))
+      assertBool "should handle large files efficiently" (case result of Right p -> not (null (tfBlocks p)); Left _ -> False)
   , testCase "error formatting performance" $ do
-      let errors = replicate 100 (errorAt Parsing "test error message" (ErrorLocation 1 1 0))
+      let errors = replicate 100 (errorAt "Parsing" (T.pack "test error message") (ErrorLocation Nothing 1 1 Nothing Nothing))
           formatted = map formatErrorWithLocation errors
       assertEqual "should format many errors" 100 (length formatted)
   , testCase "utils performance with large strings" $ do

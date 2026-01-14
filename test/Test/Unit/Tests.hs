@@ -60,6 +60,18 @@ import qualified Test.Unit.NewAdditionalErrorHandlerQuickCheckTestSpec as NewAdd
 import qualified Test.Unit.NewAdditionalDependenciesQuickCheckTestSpec as NewAdditionalDependenciesQuickCheckTest
 
 -- Import new comprehensive test modules (2026)
+import qualified Test.Unit.TextProcessingAdvancedSpec as TextProcessingAdvanced
+import qualified Test.Unit.TypeInferenceQuickCheckSpec as TypeInferenceQuickCheck
+import qualified Test.Unit.CompilerOptimizationAdvancedSpec as CompilerOptimizationAdvanced
+import qualified Test.Unit.ErrorReportingQuickCheckSpec as ErrorReportingQuickCheck
+import qualified Test.Unit.PerformanceBoundarySpec as PerformanceBoundary
+import qualified Test.Unit.SymbolTableAdvancedSpec as SymbolTableAdvanced
+import qualified Test.Unit.ParserCombinatorsSpec as ParserCombinators
+import qualified Test.Unit.CodeGenerationSpec as CodeGeneration
+import qualified Test.Unit.DependencyResolutionSpec as DependencyResolution
+import qualified Test.Unit.OwnershipTransferSpec as OwnershipTransfer
+
+-- Import new comprehensive test modules (2026)
 import qualified Test.Unit.CompilerCoreFunctionalityTestSpec as CompilerCoreFunctionalityTest
 import qualified Test.Unit.ParserBoundaryConditionTestSpec as ParserBoundaryConditionTest
 import qualified Test.Unit.TypeSystemTestSpec as TypeSystemTest
@@ -176,5 +188,17 @@ tests = testGroup "Test.Unit.Tests Tests"
     SourceLocationComprehensive.sourceLocationComprehensiveTests,
     ErrorHandlerCoreComprehensive.errorHandlerCoreComprehensiveTests,
     IntegrationComprehensive.integrationComprehensiveTests,
-    BoundaryConditionComprehensive.boundaryConditionComprehensiveTests
+    BoundaryConditionComprehensive.boundaryConditionComprehensiveTests,
+    
+    -- New comprehensive test modules (2026)
+    TextProcessingAdvanced.tests,
+    TypeInferenceQuickCheck.tests,
+    CompilerOptimizationAdvanced.tests,
+    ErrorReportingQuickCheck.tests,
+    PerformanceBoundary.tests,
+    SymbolTableAdvanced.tests,
+    ParserCombinators.tests,
+    CodeGeneration.tests,
+    DependencyResolution.tests,
+    OwnershipTransfer.tests
   ]
