@@ -95,6 +95,16 @@ genOwnershipState = do
   time <- choose (1, 1000)
   return $ OwnershipState ownersMap resourceMap transfers time
 
+-- Arbitrary instances
+instance Arbitrary Resource where
+  arbitrary = genResource
+
+instance Arbitrary OwnershipTransfer where
+  arbitrary = genOwnershipTransfer
+
+instance Arbitrary OwnershipState where
+  arbitrary = genOwnershipState
+
 -- Test properties for ownership transfer
 
 -- Property 1: Ownership transfer preserves resource integrity
@@ -166,8 +176,8 @@ prop_ownership_transfer_handles_concurrent state transfer1 transfer2 =
 -- Property 8: Ownership transfer validates resource existence
 prop_ownership_transfer_validates_resource :: OwnershipState -> OwnershipTransfer -> Bool
 prop_ownership_transfer_validates_resource state transfer = 
-  let resourceId = resourceId (transferResource transfer)
-      resourceExists = Map.member resourceId (stateResources state)
+  let resId = resourceId (transferResource transfer)
+      resourceExists = Map.member resId (stateResources state)
       result = executeTransfer state transfer
   in resourceExists || isLeft result
   where
@@ -181,12 +191,12 @@ prop_ownership_transfer_respects_type_constraints state transfer =
       result = executeTransfer state transfer
   in case (transferType', result) of
        (MovedOwnership, Right newState) -> 
-         let resourceId = resourceId (transferResource transfer)
-             newOwner = Map.lookup resourceId (stateOwners newState)
+         let resId = resourceId (transferResource transfer)
+             newOwner = Map.lookup resId (stateOwners newState)
          in newOwner == Just (transferTo transfer)
        (BorrowedOwnership, Right newState) -> 
-         let resourceId = resourceId (transferResource transfer)
-             newOwner = Map.lookup resourceId (stateOwners newState)
+         let resId = resourceId (transferResource transfer)
+             newOwner = Map.lookup resId (stateOwners newState)
              originalOwner = transferFrom transfer
          in newOwner == Just originalOwner
        _ -> True
@@ -210,24 +220,24 @@ prop_ownership_transfer_is_reversible state transfer =
 -- Helper functions for ownership transfer
 executeTransfer :: OwnershipState -> OwnershipTransfer -> Either OwnershipError OwnershipState
 executeTransfer state transfer = 
-  let resourceId = resourceId (transferResource transfer)
-      resource = Map.lookup resourceId (stateResources state)
-      currentOwner = Map.lookup resourceId (stateOwners state)
+  let resId = resourceId (transferResource transfer)
+      resource = Map.lookup resId (stateResources state)
+      currentOwner = Map.lookup resId (stateOwners state)
   in case resource of
-       Nothing -> Left $ ResourceNotFound resourceId
+       Nothing -> Left $ ResourceNotFound resId
        Just _ -> case currentOwner of
          Nothing -> Left $ OwnershipViolation "Resource has no owner"
          Just owner -> if owner /= transferFrom transfer 
                        then Left $ OwnershipViolation "Transfer from non-owner"
-                       else if transferType transfer == MovedOwnership && hasOtherReferences state resourceId
+                       else if transferType transfer == MovedOwnership && hasOtherReferences state resId
                             then Left $ OwnershipViolation "Cannot move resource with active references"
                             else Right $ applyTransfer state transfer
 
 isValidTransfer :: OwnershipState -> OwnershipTransfer -> Bool
 isValidTransfer state transfer = 
-  let resourceId = resourceId (transferResource transfer)
-      resource = Map.lookup resourceId (stateResources state)
-      currentOwner = Map.lookup resourceId (stateOwners state)
+  let resId = resourceId (transferResource transfer)
+      resource = Map.lookup resId (stateResources state)
+      currentOwner = Map.lookup resId (stateOwners state)
   in case resource of
        Nothing -> False
        Just _ -> case currentOwner of
@@ -236,15 +246,15 @@ isValidTransfer state transfer =
 
 applyTransfer :: OwnershipState -> OwnershipTransfer -> OwnershipState
 applyTransfer state transfer = 
-  let resourceId = resourceId (transferResource transfer)
+  let resId = resourceId (transferResource transfer)
       resource = transferResource transfer
       updatedResource = resource { resourceOwner = transferTo transfer }
-      updatedResources = Map.insert resourceId updatedResource (stateResources state)
+      updatedResources = Map.insert resId updatedResource (stateResources state)
       updatedOwners = case transferType transfer of
-                        MovedOwnership -> Map.insert resourceId (transferTo transfer) (stateOwners state)
-                        SharedOwnership -> Map.insert resourceId (transferTo transfer) (stateOwners state)
-                        BorrowedOwnership -> Map.insert resourceId (transferFrom transfer) (stateOwners state)
-                        UniqueOwnership -> Map.insert resourceId (transferTo transfer) (stateOwners state)
+                        MovedOwnership -> Map.insert resId (transferTo transfer) (stateOwners state)
+                        SharedOwnership -> Map.insert resId (transferTo transfer) (stateOwners state)
+                        BorrowedOwnership -> Map.insert resId (transferFrom transfer) (stateOwners state)
+                        UniqueOwnership -> Map.insert resId (transferTo transfer) (stateOwners state)
       updatedTransfers = transfer : stateTransfers state
       updatedTime = max (stateCurrentTime state) (transferTime transfer + 1)
   in OwnershipState updatedOwners updatedResources updatedTransfers updatedTime
@@ -256,14 +266,14 @@ isConsistent :: OwnershipState -> Bool
 isConsistent state = 
   let ownerResources = Map.keys (stateOwners state)
       definedResources = Map.keys (stateResources state)
-      allOwnersValid = all (`Map.member` definedResources) ownerResources
+      allOwnersValid = all (\r -> r `elem` definedResources) ownerResources
       allResourcesHaveOwners = all (`Map.member` (stateOwners state)) definedResources
   in allOwnersValid && allResourcesHaveOwners
 
 hasOtherReferences :: OwnershipState -> String -> Bool
-hasOtherReferences state resourceId = 
+hasOtherReferences state resId = 
   let transfers = stateTransfers state
-      resourceTransfers = filter (\t -> resourceId (transferResource t) == resourceId) transfers
+      resourceTransfers = filter (\t -> resourceId (transferResource t) == resId) transfers
       sharedOwners = filter (\t -> transferType t == SharedOwnership) resourceTransfers
   in not (null sharedOwners)
 
@@ -271,20 +281,20 @@ hasOtherReferences state resourceId =
 testOwnershipTransfer :: TestTree
 testOwnershipTransfer = testGroup "Ownership Transfer Tests"
   [ testProperties "Ownership Transfer Properties"
-    [ ("ownership_transfer_preserves_integrity", prop_ownership_transfer_preserves_integrity)
-    , ("ownership_transfer_respects_rules", prop_ownership_transfer_respects_rules)
-    , ("ownership_transfer_is_atomic", prop_ownership_transfer_is_atomic)
-    , ("ownership_transfer_maintains_consistency", prop_ownership_transfer_maintains_consistency)
+    [ ("ownership_transfer_preserves_integrity", property prop_ownership_transfer_preserves_integrity)
+    , ("ownership_transfer_respects_rules", property prop_ownership_transfer_respects_rules)
+    , ("ownership_transfer_is_atomic", property prop_ownership_transfer_is_atomic)
+    , ("ownership_transfer_maintains_consistency", property prop_ownership_transfer_maintains_consistency)
     ]
   , testProperties "Ownership Transfer Behavior Properties"
-    [ ("ownership_transfer_preserves_history", prop_ownership_transfer_preserves_history)
-    , ("ownership_transfer_respects_temporal_ordering", prop_ownership_transfer_respects_temporal_ordering)
-    , ("ownership_transfer_handles_concurrent", prop_ownership_transfer_handles_concurrent)
-    , ("ownership_transfer_validates_resource", prop_ownership_transfer_validates_resource)
+    [ ("ownership_transfer_preserves_history", property prop_ownership_transfer_preserves_history)
+    , ("ownership_transfer_respects_temporal_ordering", property prop_ownership_transfer_respects_temporal_ordering)
+    , ("ownership_transfer_handles_concurrent", property prop_ownership_transfer_handles_concurrent)
+    , ("ownership_transfer_validates_resource", property prop_ownership_transfer_validates_resource)
     ]
   , testProperties "Ownership Transfer Advanced Properties"
-    [ ("ownership_transfer_respects_type_constraints", prop_ownership_transfer_respects_type_constraints)
-    , ("ownership_transfer_is_reversible", prop_ownership_transfer_is_reversible)
+    [ ("ownership_transfer_respects_type_constraints", property prop_ownership_transfer_respects_type_constraints)
+    , ("ownership_transfer_is_reversible", property prop_ownership_transfer_is_reversible)
     ]
   , testCase "Basic ownership transfer" $ do
     let resource = Resource "res1" "TypeA" 42 "owner1"

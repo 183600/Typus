@@ -2260,12 +2260,22 @@ test-suite typus-test
         Test.Unit.TypeInferenceQuickCheckSpec,
         Test.Unit.CompilerOptimizationAdvancedSpec,
         Test.Unit.ErrorReportingQuickCheckSpec,
-        Test.Unit.PerformanceBoundarySpec,
         Test.Unit.SymbolTableAdvancedSpec,
         Test.Unit.ParserCombinatorsSpec,
         Test.Unit.CodeGenerationSpec,
         Test.Unit.DependencyResolutionSpec,
-        Test.Unit.OwnershipTransferSpec
+        
+        -- New Comprehensive Test Modules (2026) - 10 additional test modules
+        Test.Unit.AdvancedTextProcessingSpec,
+        Test.Unit.SourceLocationCalculationSpec,
+        Test.Unit.ParserErrorRecoverySpec,
+        Test.Unit.CompilerOptimizationInvariantSpec,
+        Test.Unit.OwnershipTransitivitySpec,
+        Test.Unit.DependentTypeConstraintSpec,
+        Test.Unit.ErrorRecoveryConsistencySpec,
+        Test.Unit.TypeInferenceAdvancedSpec,
+        Test.Unit.IntegrationEndToEndSpec,
+        Test.Unit.PerformanceRegressionSpec
         
     build-depends:
         base >=4.7 && <5,

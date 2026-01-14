@@ -62,9 +62,9 @@ genString = do
 
 genVersion :: Gen String
 genVersion = do
-  major <- choose (0, 10)
-  minor <- choose (0, 10)
-  patch <- choose (0, 10)
+  major <- choose (0, 10) :: Gen Int
+  minor <- choose (0, 10) :: Gen Int
+  patch <- choose (0, 10) :: Gen Int
   return $ show major ++ "." ++ show minor ++ "." ++ show patch
 
 genDependencyType :: Gen DependencyType
@@ -92,6 +92,10 @@ genDependencyGraph = do
   let reverseEdges = buildReverseEdges edges
   
   return $ DependencyGraph nodeMap edges reverseEdges
+
+-- Arbitrary instances
+instance Arbitrary DependencyGraph where
+  arbitrary = genDependencyGraph
 
 buildReverseEdges :: Map String [String] -> Map String [String]
 buildReverseEdges edges = 
@@ -183,6 +187,15 @@ prop_resolution_produces_minimal_graph graph =
   in isMinimalGraph resolvedGraph
 
 -- Helper functions for dependency resolution
+toIndices :: [String] -> (String, String) -> (Int, Int)
+toIndices nodes (from, to) = 
+  let fromIndex = maybe 0 id $ findIndex (== from) nodes
+      toIndex = maybe 0 id $ findIndex (== to) nodes
+  in (fromIndex, toIndex)
+  
+findIndex :: (a -> Bool) -> [a] -> Maybe Int
+findIndex p xs = fmap fst $ find (\(i, v) -> p v) (zip [0..] xs)
+
 topologicalSort :: DependencyGraph -> [String]
 topologicalSort graph = 
   let nodes = Map.keys (graphNodes graph)
@@ -192,13 +205,6 @@ topologicalSort graph =
       sorted = topSort graph'
       indexToNode = Map.fromList $ zip [0..] nodes
   in map (fromMaybe "" . (`Map.lookup` indexToNode)) sorted
-  where
-    toIndices nodes (from, to) = 
-      let fromIndex = maybe 0 id $ findIndex (== from) nodes
-          toIndex = maybe 0 id $ findIndex (== to) nodes
-      in (fromIndex, toIndex)
-    
-    findIndex x xs = fmap fst $ find (\(i, v) -> v == x) (zip [0..] xs)
 
 hasCircularDependencies :: DependencyGraph -> Bool
 hasCircularDependencies graph = 
@@ -206,11 +212,9 @@ hasCircularDependencies graph =
       edges = Map.toList (graphEdges graph)
       edgeList = concatMap (\(from, tos) -> map (\to -> (from, to)) tos) edges
       graph' = buildG (0, length nodes - 1) (map (toIndices nodes) edgeList)
-      hasCycle node = node `elem` concatMap (reachable graph') [toIndex node]
-      toIndex node = maybe 0 id $ findIndex (== node) nodes
-  in any hasCycle nodes
-  where
-    findIndex x xs = fmap fst $ find (\(i, v) -> v == x) (zip [0..] xs)
+      nodeIndices = [0..length nodes - 1]
+      hasCycle vertex = vertex `elem` concatMap (reachable graph') [vertex]
+  in any hasCycle nodeIndices
 
 detectCircularDependencies :: DependencyGraph -> Bool
 detectCircularDependencies = hasCircularDependencies
@@ -257,20 +261,20 @@ isMinimalGraph graph =
 testDependencyResolution :: TestTree
 testDependencyResolution = testGroup "Dependency Resolution Tests"
   [ testProperties "Dependency Graph Properties"
-    [ ("dependency_graph_consistent", prop_dependency_graph_consistent)
-    , ("topological_sort_respects_dependencies", prop_topological_sort_respects_dependencies)
-    , ("circular_dependencies_detected", prop_circular_dependencies_detected)
+    [ ("dependency_graph_consistent", property prop_dependency_graph_consistent)
+    , ("topological_sort_respects_dependencies", property prop_topological_sort_respects_dependencies)
+    , ("circular_dependencies_detected", property prop_circular_dependencies_detected)
     ]
   , testProperties "Dependency Resolution Properties"
-    [ ("resolution_preserves_dependencies", prop_resolution_preserves_dependencies)
-    , ("resolution_eliminates_redundant", prop_resolution_eliminates_redundant)
-    , ("resolution_minimizes_conflicts", prop_resolution_minimizes_conflicts)
+    [ ("resolution_preserves_dependencies", property prop_resolution_preserves_dependencies)
+    , ("resolution_eliminates_redundant", property prop_resolution_eliminates_redundant)
+    , ("resolution_minimizes_conflicts", property prop_resolution_minimizes_conflicts)
     ]
   , testProperties "Dependency Resolution Behavior Properties"
-    [ ("resolution_is_deterministic", prop_resolution_is_deterministic)
-    , ("resolution_handles_version_conflicts", prop_resolution_handles_version_conflicts)
-    , ("resolution_respects_dependency_types", prop_resolution_respects_dependency_types)
-    , ("resolution_produces_minimal_graph", prop_resolution_produces_minimal_graph)
+    [ ("resolution_is_deterministic", property prop_resolution_is_deterministic)
+    , ("resolution_handles_version_conflicts", property prop_resolution_handles_version_conflicts)
+    , ("resolution_respects_dependency_types", property prop_resolution_respects_dependency_types)
+    , ("resolution_produces_minimal_graph", property prop_resolution_produces_minimal_graph)
     ]
   , testCase "Simple dependency graph" $ do
     let dep1 = Dependency "package1" "1.0.0" DirectDependency "runtime"

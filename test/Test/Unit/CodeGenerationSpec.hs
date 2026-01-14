@@ -179,12 +179,22 @@ genModule = do
   stmts <- replicateM numStmts (genStmt 2)
   return $ Module name imports exports stmts
 
+-- Arbitrary instances
+instance Arbitrary Expr where
+  arbitrary = sized genExpr
+
+instance Arbitrary Module where
+  arbitrary = genModule
+
+instance Arbitrary TargetLanguage where
+  arbitrary = genTargetLanguage
+
 -- Test properties for code generation
 
 -- Property 1: Generated code is syntactically valid for target language
 prop_generated_code_syntactically_valid :: Module -> TargetLanguage -> Bool
-prop_generated_code_syntactically_valid module lang = 
-  let generated = generateCode module lang
+prop_generated_code_syntactically_valid module_ lang = 
+  let generated = generateCode module_ lang
       isValid = validateSyntax generated lang
   in isValid
 
@@ -198,24 +208,24 @@ prop_code_generation_preserves_semantics expr lang =
 
 -- Property 3: Generated code includes necessary imports
 prop_generated_code_includes_imports :: Module -> TargetLanguage -> Bool
-prop_generated_code_includes_imports module lang = 
-  let generated = generateCode module lang
-      requiredImports = extractRequiredImports module lang
+prop_generated_code_includes_imports module_ lang = 
+  let generated = generateCode module_ lang
+      requiredImports = extractRequiredImports module_ lang
       hasImports = all (`isInfixOf` generated) requiredImports
   in null requiredImports || hasImports
 
 -- Property 4: Generated code respects target language conventions
 prop_generated_code_respects_conventions :: Module -> TargetLanguage -> Bool
-prop_generated_code_respects_conventions module lang = 
-  let generated = generateCode module lang
+prop_generated_code_respects_conventions module_ lang = 
+  let generated = generateCode module_ lang
       conventions = getLanguageConventions lang
   in all (`isInfixOf` generated) conventions
 
 -- Property 5: Code generation is deterministic
 prop_code_generation_is_deterministic :: Module -> TargetLanguage -> Bool
-prop_code_generation_is_deterministic module lang = 
-  let generated1 = generateCode module lang
-      generated2 = generateCode module lang
+prop_code_generation_is_deterministic module_ lang = 
+  let generated1 = generateCode module_ lang
+      generated2 = generateCode module_ lang
   in generated1 == generated2
 
 -- Property 6: Generated code handles edge cases
@@ -227,24 +237,24 @@ prop_generated_code_handles_edge_cases expr lang =
 
 -- Property 7: Generated code is optimized for target language
 prop_generated_code_is_optimized :: Module -> TargetLanguage -> Bool
-prop_generated_code_is_optimized module lang = 
-  let generated = generateCode module lang
-      optimized = generateOptimizedCode module lang
+prop_generated_code_is_optimized module_ lang = 
+  let generated = generateCode module_ lang
+      optimized = generateOptimizedCode module_ lang
   in length optimized <= length generated
 
 -- Property 8: Code generation respects configuration
 prop_code_generation_respects_config :: Module -> Map String String -> TargetLanguage -> Bool
-prop_code_generation_respects_config module config lang = 
+prop_code_generation_respects_config module_ config lang = 
   let generator = CodeGenerator lang config Map.empty
-      generated = generateWithConfig module generator
+      generated = generateWithConfig module_ generator
       configApplied = checkConfigApplied generated config
   in configApplied
 
 -- Property 9: Generated code handles dependencies correctly
 prop_generated_code_handles_dependencies :: Module -> TargetLanguage -> Bool
-prop_generated_code_handles_dependencies module lang = 
-  let generated = generateCode module lang
-      dependencies = extractDependencies module
+prop_generated_code_handles_dependencies module_ lang = 
+  let generated = generateCode module_ lang
+      dependencies = extractDependencies module_
       hasDependencies = all (`isInfixOf` generated) dependencies
   in null dependencies || hasDependencies
 
@@ -258,12 +268,12 @@ prop_equivalent_inputs_produce_equivalent_output module1 module2 lang =
 
 -- Helper functions for code generation
 generateCode :: Module -> TargetLanguage -> String
-generateCode module lang = case lang of
-  Go -> generateGoCode module
-  Rust -> generateRustCode module
-  JavaScript -> generateJavaScriptCode module
-  C -> generateCCode module
-  Python -> generatePythonCode module
+generateCode module_ lang = case lang of
+  Go -> generateGoCode module_
+  Rust -> generateRustCode module_
+  JavaScript -> generateJavaScriptCode module_
+  C -> generateCCode module_
+  Python -> generatePythonCode module_
 
 generateExprCode :: Expr -> TargetLanguage -> String
 generateExprCode expr lang = case lang of
@@ -274,9 +284,9 @@ generateExprCode expr lang = case lang of
   Python -> generatePythonExpr expr
 
 generateGoCode :: Module -> String
-generateGoCode module = 
-  let imports = unlines $ map (\i -> "import \"" ++ i ++ "\"") (moduleImports module)
-      statements = unlines $ map generateGoStmt (moduleStatements module)
+generateGoCode module_ = 
+  let imports = unlines $ map (\i -> "import \"" ++ i ++ "\"") (moduleImports module_)
+      statements = unlines $ map generateGoStmt (moduleStatements module_)
   in "package main\n\n" ++ imports ++ "\n" ++ statements
 
 generateGoStmt :: Stmt -> String
@@ -302,9 +312,9 @@ generateGoExpr expr = case expr of
   Lambda params body -> "func(" ++ unwords params ++ ") {\n return " ++ generateGoExpr body ++ "\n}"
 
 generateRustCode :: Module -> String
-generateRustCode module = 
-  let imports = unlines $ map (\i -> "use " ++ i ++ ";") (moduleImports module)
-      statements = unlines $ map generateRustStmt (moduleStatements module)
+generateRustCode module_ = 
+  let imports = unlines $ map (\i -> "use " ++ i ++ ";") (moduleImports module_)
+      statements = unlines $ map generateRustStmt (moduleStatements module_)
   in imports ++ "\n" ++ statements
 
 generateRustStmt :: Stmt -> String
@@ -330,9 +340,9 @@ generateRustExpr expr = case expr of
   Lambda params body -> "|" ++ unwords params ++ "| " ++ generateRustExpr body
 
 generateJavaScriptCode :: Module -> String
-generateJavaScriptCode module = 
-  let imports = unlines $ map (\i -> "import \"" ++ i ++ "\";") (moduleImports module)
-      statements = unlines $ map generateJavaScriptStmt (moduleStatements module)
+generateJavaScriptCode module_ = 
+  let imports = unlines $ map (\i -> "import \"" ++ i ++ "\";") (moduleImports module_)
+      statements = unlines $ map generateJavaScriptStmt (moduleStatements module_)
   in imports ++ "\n" ++ statements
 
 generateJavaScriptStmt :: Stmt -> String
@@ -358,9 +368,9 @@ generateJavaScriptExpr expr = case expr of
   Lambda params body -> "(" ++ unwords params ++ ") => " ++ generateJavaScriptExpr body
 
 generateCCode :: Module -> String
-generateCCode module = 
-  let imports = unlines $ map (\i -> "#include <" ++ i ++ ">") (moduleImports module)
-      statements = unlines $ map generateCStmt (moduleStatements module)
+generateCCode module_ = 
+  let imports = unlines $ map (\i -> "#include <" ++ i ++ ">") (moduleImports module_)
+      statements = unlines $ map generateCStmt (moduleStatements module_)
   in imports ++ "\n" ++ statements
 
 generateCStmt :: Stmt -> String
@@ -386,9 +396,9 @@ generateCExpr expr = case expr of
   Lambda _ _ -> "/* Lambda not supported in C */"
 
 generatePythonCode :: Module -> String
-generatePythonCode module = 
-  let imports = unlines $ map (\i -> "import " ++ i) (moduleImports module)
-      statements = unlines $ map generatePythonStmt (moduleStatements module)
+generatePythonCode module_ = 
+  let imports = unlines $ map (\i -> "import " ++ i) (moduleImports module_)
+      statements = unlines $ map generatePythonStmt (moduleStatements module_)
   in imports ++ "\n" ++ statements
 
 generatePythonStmt :: Stmt -> String
@@ -445,11 +455,11 @@ interpretGeneratedCode code Python =
   if "1 + 2" `isInfixOf` code then 3 else 0
 
 extractRequiredImports :: Module -> TargetLanguage -> [String]
-extractRequiredImports module Go = moduleImports module
-extractRequiredImports module Rust = moduleImports module
-extractRequiredImports module JavaScript = moduleImports module
-extractRequiredImports module C = moduleImports module
-extractRequiredImports module Python = moduleImports module
+extractRequiredImports module_ Go = moduleImports module_
+extractRequiredImports module_ Rust = moduleImports module_
+extractRequiredImports module_ JavaScript = moduleImports module_
+extractRequiredImports module_ C = moduleImports module_
+extractRequiredImports module_ Python = moduleImports module_
 
 getLanguageConventions :: TargetLanguage -> [String]
 getLanguageConventions Go = ["package", "func", "var"]
@@ -471,20 +481,20 @@ needsErrorHandling (FunctionCall _ _) = True
 needsErrorHandling _ = False
 
 generateOptimizedCode :: Module -> TargetLanguage -> String
-generateOptimizedCode module lang = 
-  let code = generateCode module lang
+generateOptimizedCode module_ lang = 
+  let code = generateCode module_ lang
   in code  -- Simplified optimization
 
 generateWithConfig :: Module -> CodeGenerator -> String
-generateWithConfig module generator = 
-  generateCode module (generatorTarget generator)  -- Simplified config application
+generateWithConfig module_ generator = 
+  generateCode module_ (generatorTarget generator)  -- Simplified config application
 
 checkConfigApplied :: String -> Map String String -> Bool
 checkConfigApplied code config = 
   if Map.null config then True else "config" `isInfixOf` code
 
 extractDependencies :: Module -> [String]
-extractDependencies module = moduleImports module
+extractDependencies module_ = moduleImports module_
 
 areModulesEquivalent :: Module -> Module -> Bool
 areModulesEquivalent module1 module2 = 
@@ -498,20 +508,20 @@ normalizeCode code lang =
 testCodeGeneration :: TestTree
 testCodeGeneration = testGroup "Code Generation Tests"
   [ testProperties "Code Generation Properties"
-    [ ("generated_code_syntactically_valid", prop_generated_code_syntactically_valid)
-    , ("code_generation_preserves_semantics", prop_code_generation_preserves_semantics)
-    , ("generated_code_includes_imports", prop_generated_code_includes_imports)
-    , ("generated_code_respects_conventions", prop_generated_code_respects_conventions)
+    [ ("generated_code_syntactically_valid", property prop_generated_code_syntactically_valid)
+    , ("code_generation_preserves_semantics", property prop_code_generation_preserves_semantics)
+    , ("generated_code_includes_imports", property prop_generated_code_includes_imports)
+    , ("generated_code_respects_conventions", property prop_generated_code_respects_conventions)
     ]
   , testProperties "Code Generation Behavior Properties"
-    [ ("code_generation_is_deterministic", prop_code_generation_is_deterministic)
-    , ("generated_code_handles_edge_cases", prop_generated_code_handles_edge_cases)
-    , ("generated_code_is_optimized", prop_generated_code_is_optimized)
-    , ("code_generation_respects_config", prop_code_generation_respects_config)
+    [ ("code_generation_is_deterministic", property prop_code_generation_is_deterministic)
+    , ("generated_code_handles_edge_cases", property prop_generated_code_handles_edge_cases)
+    , ("generated_code_is_optimized", property prop_generated_code_is_optimized)
+    , ("code_generation_respects_config", property prop_code_generation_respects_config)
     ]
   , testProperties "Code Generation Advanced Properties"
-    [ ("generated_code_handles_dependencies", prop_generated_code_handles_dependencies)
-    , ("equivalent_inputs_produce_equivalent_output", prop_equivalent_inputs_produce_equivalent_output)
+    [ ("generated_code_handles_dependencies", property prop_generated_code_handles_dependencies)
+    , ("equivalent_inputs_produce_equivalent_output", property prop_equivalent_inputs_produce_equivalent_output)
     ]
   , testCase "Go code generation" $ do
     let expr = BinaryOp "+" (IntLiteral 1) (IntLiteral 2)
@@ -544,13 +554,13 @@ testCodeGeneration = testGroup "Code Generation Tests"
                ("def add(a, b):" `isInfixOf` generated)
   
   , testCase "Module code generation" $ do
-    let module = Module 
+    let module_ = Module 
           { moduleName = "test"
           , moduleImports = ["fmt"]
           , moduleExports = ["add"]
           , moduleStatements = [FunctionDef "add" ["a", "b"] (Return (BinaryOp "+" (Variable "a") (Variable "b")))]
           }
-    let generated = generateGoCode module
+    let generated = generateGoCode module_
     assertBool "Should generate module code" 
                ("package main" `isInfixOf` generated)
     assertBool "Should include imports" 

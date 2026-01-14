@@ -8,21 +8,26 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool, assertFailure, Assertion)
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
 import Test.QuickCheck (Gen, Property, (==>), classify, sized)
-import Data.List (nub, sort, groupBy, sortBy, find, delete, isInfixOf, isPrefixOf)
+import Data.List (nub, nubBy, sort, groupBy, sortBy, find, delete, isInfixOf, isPrefixOf)
 import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Control.Monad (replicateM, when)
-import SourceLocation (SourceLocation(..))
 
 -- Error reporting types for testing
+
+-- Local SourceLocation type for testing
+data SourceLocation = SourceLocation
+  { sourceLine :: Int
+  , sourceColumn :: Int
+  } deriving (Eq, Show)
 data ErrorSeverity = Error | Warning | Info | Hint
                    deriving (Eq, Ord, Show)
 
 data ErrorCategory = SyntaxError | TypeError | NameError | SemanticError | InternalError
-                   deriving (Eq, Show)
+                   deriving (Eq, Ord, Show)
 
 data ErrorMessage = ErrorMessage
   { errorMsg :: String
@@ -46,6 +51,9 @@ data ErrorFormatter = PlainFormatter | ColoredFormatter | JsonFormatter
                    deriving (Eq, Show)
 
 -- Helper generators for error reporting tests
+genErrorFormatter :: Gen ErrorFormatter
+genErrorFormatter = elements [PlainFormatter, ColoredFormatter, JsonFormatter]
+
 genErrorSeverity :: Gen ErrorSeverity
 genErrorSeverity = elements [Error, Warning, Info, Hint]
 
@@ -56,7 +64,7 @@ genSourceLocation :: Gen SourceLocation
 genSourceLocation = do
   line <- choose (1, 100)
   column <- choose (1, 100)
-  return $ SourceLocation line column
+  return $ SourceLocation { sourceLine = line, sourceColumn = column }
 
 genString :: Gen String
 genString = do
@@ -88,6 +96,22 @@ genErrorReport = do
   hints <- replicateM hintSize genErrorMessage
   
   return $ ErrorReport errors warnings info hints
+
+-- Arbitrary instances
+instance Arbitrary SourceLocation where
+  arbitrary = genSourceLocation
+
+instance Arbitrary ErrorMessage where
+  arbitrary = genErrorMessage
+
+instance Arbitrary ErrorReport where
+  arbitrary = genErrorReport
+
+instance Arbitrary ErrorFormatter where
+  arbitrary = genErrorFormatter
+
+instance Arbitrary ErrorSeverity where
+  arbitrary = genErrorSeverity
 
 -- Test properties for error reporting
 
@@ -291,27 +315,27 @@ filterByContext report context =
 testErrorReporting :: TestTree
 testErrorReporting = testGroup "Error Reporting QuickCheck Tests"
   [ testProperties "Error Formatting Properties"
-    [ ("error_formatting_preserves_content", prop_error_formatting_preserves_content)
+    [ ("error_formatting_preserves_content", property prop_error_formatting_preserves_content)
     ]
   , testProperties "Error Filtering Properties"
-    [ ("error_filtering_by_severity", prop_error_filtering_by_severity)
-    , ("error_filtering_by_context", prop_error_filtering_by_context)
+    [ ("error_filtering_by_severity", property prop_error_filtering_by_severity)
+    , ("error_filtering_by_context", property prop_error_filtering_by_context)
     ]
   , testProperties "Error Organization Properties"
-    [ ("error_sorting_by_location", prop_error_sorting_by_location)
-    , ("error_grouping_by_category", prop_error_grouping_by_category)
-    , ("error_deduplication_removes_duplicates", prop_error_deduplication_removes_duplicates)
+    [ ("error_sorting_by_location", property prop_error_sorting_by_location)
+    , ("error_grouping_by_category", property prop_error_grouping_by_category)
+    , ("error_deduplication_removes_duplicates", property prop_error_deduplication_removes_duplicates)
     ]
   , testProperties "Error Content Properties"
-    [ ("error_context_preserved", prop_error_context_preserved)
-    , ("error_suggestions_relevant", prop_error_suggestions_relevant)
-    , ("error_location_highlighting_accurate", prop_error_location_highlighting_accurate)
+    [ ("error_context_preserved", property prop_error_context_preserved)
+    , ("error_suggestions_relevant", property prop_error_suggestions_relevant)
+    , ("error_location_highlighting_accurate", property prop_error_location_highlighting_accurate)
     ]
   , testProperties "Error Report Properties"
-    [ ("error_report_summary_accurate", prop_error_report_summary_accurate)
+    [ ("error_report_summary_accurate", property prop_error_report_summary_accurate)
     ]
   , testCase "Plain error formatting" $ do
-    let location = SourceLocation 10 5
+    let location = SourceLocation { sourceLine = 10, sourceColumn = 5 }
     let msg = ErrorMessage "Undefined variable" NameError Error location [] ["Declare the variable first"]
     let formatted = formatErrorMessage msg PlainFormatter
     assertBool "Should include error message" 
@@ -322,14 +346,14 @@ testErrorReporting = testGroup "Error Reporting QuickCheck Tests"
                ("NameError" `isInfixOf` formatted)
   
   , testCase "Colored error formatting" $ do
-    let location = SourceLocation 10 5
+    let location = SourceLocation { sourceLine = 10, sourceColumn = 5 }
     let msg = ErrorMessage "Type mismatch" TypeError Error location [] ["Use compatible types"]
     let formatted = formatErrorMessage msg ColoredFormatter
     assertBool "Should include color codes" 
                ("\x1b[31m" `isInfixOf` formatted)
   
   , testCase "JSON error formatting" $ do
-    let location = SourceLocation 10 5
+    let location = SourceLocation { sourceLine = 10, sourceColumn = 5 }
     let msg = ErrorMessage "Syntax error" SyntaxError Error location [] ["Add semicolon"]
     let formatted = formatErrorMessage msg JsonFormatter
     assertBool "Should include JSON structure" 
@@ -348,9 +372,9 @@ testErrorReporting = testGroup "Error Reporting QuickCheck Tests"
     assertEqual "Should filter warnings correctly" [warningMsg] warnings
   
   , testCase "Error sorting by location" $ do
-    let loc1 = SourceLocation 5 10
-    let loc2 = SourceLocation 3 20
-    let loc3 = SourceLocation 7 5
+    let loc1 = SourceLocation { sourceLine = 5, sourceColumn = 10 }
+    let loc2 = SourceLocation { sourceLine = 3, sourceColumn = 20 }
+    let loc3 = SourceLocation { sourceLine = 7, sourceColumn = 5 }
     let msg1 = ErrorMessage "Message 1" SyntaxError Error loc1 [] []
     let msg2 = ErrorMessage "Message 2" SyntaxError Error loc2 [] []
     let msg3 = ErrorMessage "Message 3" SyntaxError Error loc3 [] []
@@ -358,7 +382,7 @@ testErrorReporting = testGroup "Error Reporting QuickCheck Tests"
     assertEqual "Should sort by location correctly" [msg2, msg1, msg3] sorted
   
   , testCase "Error grouping by category" $ do
-    let loc = SourceLocation 10 5
+    let loc = SourceLocation { sourceLine = 10, sourceColumn = 5 }
     let syntaxMsg = ErrorMessage "Syntax error" SyntaxError Error loc [] []
     let typeMsg = ErrorMessage "Type error" TypeError Error loc [] []
     let grouped = groupByCategory [syntaxMsg, typeMsg]
@@ -366,7 +390,7 @@ testErrorReporting = testGroup "Error Reporting QuickCheck Tests"
                 (Map.fromList [(SyntaxError, [syntaxMsg]), (TypeError, [typeMsg])]) grouped
   
   , testCase "Error deduplication" $ do
-    let loc = SourceLocation 10 5
+    let loc = SourceLocation { sourceLine = 10, sourceColumn = 5 }
     let msg1 = ErrorMessage "Same message" SyntaxError Error loc [] []
     let msg2 = ErrorMessage "Same message" SyntaxError Error loc [] []
     let msg3 = ErrorMessage "Different message" SyntaxError Error loc [] []
@@ -374,7 +398,7 @@ testErrorReporting = testGroup "Error Reporting QuickCheck Tests"
     assertEqual "Should remove duplicates" [msg1, msg3] deduplicated
   
   , testCase "Error report summary" $ do
-    let loc = SourceLocation 10 5
+    let loc = SourceLocation { sourceLine = 10, sourceColumn = 5 }
     let errorMsg = ErrorMessage "Error message" SyntaxError Error loc [] []
     let warningMsg = ErrorMessage "Warning message" SyntaxError Warning loc [] []
     let infoMsg = ErrorMessage "Info message" SyntaxError Info loc [] []

@@ -64,7 +64,8 @@ genSymbolType depth = oneof
       name <- genString
       return $ CustomType name
   , do
-      paramTypes <- replicateM (choose (0, 3)) (genSymbolType (depth - 1))
+      numParams <- choose (0, 3) :: Gen Int
+      paramTypes <- replicateM numParams (genSymbolType (depth - 1))
       returnType <- genSymbolType (depth - 1)
       return $ FunctionType paramTypes returnType
   ]
@@ -85,11 +86,25 @@ genSymbolTable depth = do
   symbols <- replicateM numSymbols genSymbol
   let symbolMap = Map.fromList $ map (\s -> (symbolName s, s)) symbols
   
+  numChildren <- choose (0, 2) :: Gen Int
   children <- if depth > 0 
-              then replicateM (choose (0, 2)) (genSymbolTable (depth - 1))
+              then replicateM numChildren (genSymbolTable (depth - 1))
               else return []
   
   return $ SymbolTable symbolMap scope Nothing children
+
+-- Arbitrary instances
+instance Arbitrary SymbolKind where
+  arbitrary = genSymbolKind
+
+instance Arbitrary SymbolType where
+  arbitrary = genSymbolType 2
+
+instance Arbitrary Symbol where
+  arbitrary = genSymbol
+
+instance Arbitrary SymbolTable where
+  arbitrary = genSymbolTable 2
 
 -- Test properties for symbol tables
 
@@ -239,24 +254,24 @@ calculateTotalSize table =
 testSymbolTableAdvanced :: TestTree
 testSymbolTableAdvanced = testGroup "Symbol Table Advanced Tests"
   [ testProperties "Symbol Lookup Properties"
-    [ ("symbol_lookup_consistent", prop_symbol_lookup_consistent)
-    , ("scope_resolution_respects_hierarchy", prop_scope_resolution_respects_hierarchy)
+    [ ("symbol_lookup_consistent", property prop_symbol_lookup_consistent)
+    , ("scope_resolution_respects_hierarchy", property prop_scope_resolution_respects_hierarchy)
     ]
   , testProperties "Symbol Manipulation Properties"
-    [ ("symbol_insertion_preserves_existing", prop_symbol_insertion_preserves_existing)
-    , ("shadowing_works_correctly", prop_shadowing_works_correctly)
-    , ("symbol_removal_maintains_integrity", prop_symbol_removal_maintains_integrity)
+    [ ("symbol_insertion_preserves_existing", property prop_symbol_insertion_preserves_existing)
+    , ("shadowing_works_correctly", property prop_shadowing_works_correctly)
+    , ("symbol_removal_maintains_integrity", property prop_symbol_removal_maintains_integrity)
     ]
   , testProperties "Scope Management Properties"
-    [ ("scope_traversal_respects_hierarchy", prop_scope_traversal_respects_hierarchy)
+    [ ("scope_traversal_respects_hierarchy", property prop_scope_traversal_respects_hierarchy)
     ]
   , testProperties "Type System Properties"
-    [ ("symbol_type_checking_consistent", prop_symbol_type_checking_consistent)
+    [ ("symbol_type_checking_consistent", property prop_symbol_type_checking_consistent)
     ]
   , testProperties "Symbol Table Operations Properties"
-    [ ("symbol_table_merging_preserves_symbols", prop_symbol_table_merging_preserves_symbols)
-    , ("symbol_table_filtering_respects_criteria", prop_symbol_table_filtering_respects_criteria)
-    , ("symbol_table_size_calculation_accurate", prop_symbol_table_size_calculation_accurate)
+    [ ("symbol_table_merging_preserves_symbols", property prop_symbol_table_merging_preserves_symbols)
+    , ("symbol_table_filtering_respects_criteria", property prop_symbol_table_filtering_respects_criteria)
+    , ("symbol_table_size_calculation_accurate", property prop_symbol_table_size_calculation_accurate)
     ]
   , testCase "Basic symbol insertion and lookup" $ do
     let symbol = Symbol "x" Variable IntType "global" 1

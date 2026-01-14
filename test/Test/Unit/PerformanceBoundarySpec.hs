@@ -20,6 +20,8 @@ import System.CPUTime (getCPUTime)
 import Text.Printf (printf)
 import Data.Time.Clock (getCurrentTime, diffUTCTime)
 
+-- Int already has Arbitrary instance in QuickCheck
+
 -- Performance measurement types
 data PerformanceMetric = 
     TimeMetric Double          -- Time in milliseconds
@@ -81,8 +83,8 @@ genPerformanceBoundary = do
 -- Test properties for performance boundaries
 
 -- Property 1: Linear algorithms have linear time complexity
-prop_linear_algorithms_linear_time :: [Int] -> Bool
-prop_linear_algorithms_linear_time xs = 
+prop_linear_algorithms_linear_time :: [Int] -> Property
+prop_linear_algorithms_linear_time xs = property $
   let n = length xs
       result = linearAlgorithm xs
       time = measureTime $ linearAlgorithm xs
@@ -97,35 +99,35 @@ prop_binary_search_logarithmic_time xs target =
   in n > 0 ==> 
   let time = measureTime $ binarySearch sorted target
   -- Simplified check: time should be proportional to log n
-  in time < fromIntegral (ceiling $ logBase 2 (fromIntegral n + 1)) * 0.001
+  in property $ time < fromIntegral (ceiling $ logBase' 2 (fromIntegral n + 1)) * 0.001
 
 -- Property 3: Memory usage grows with input size
-prop_memory_usage_grows_with_input :: [Int] -> Bool
-prop_memory_usage_grows_with_input xs = 
+prop_memory_usage_grows_with_input :: [Int] -> Property
+prop_memory_usage_grows_with_input xs = property $
   let n = length xs
       memory = measureMemory $ map (*2) xs
   -- Simplified check: memory should be proportional to n
   in memory <= fromIntegral n * 100  -- 100 bytes per element max
 
 -- Property 4: Hash table operations have amortized constant time
-prop_hash_table_constant_time :: Map String Int -> String -> Bool
-prop_hash_table_constant_time table key = 
+prop_hash_table_constant_time :: Map String Int -> String -> Property
+prop_hash_table_constant_time table key = property $
   let n = Map.size table
       time = measureTime $ Map.lookup key table
   -- Simplified check: time should be constant regardless of n
   in time < 0.001  -- 1 microsecond max
 
 -- Property 5: Sorting algorithms have n log n time complexity
-prop_sorting_n_log_n_time :: [Int] -> Bool
-prop_sorting_n_log_n_time xs = 
+prop_sorting_n_log_n_time :: [Int] -> Property
+prop_sorting_n_log_n_time xs = property $
   let n = length xs
       time = measureTime $ sort xs
   -- Simplified check: time should be proportional to n log n
-  in time < fromIntegral n * logBase 2 (fromIntegral n + 1) * 0.001
+  in time < fromIntegral n * logBase' 2 (fromIntegral n + 1) * 0.001
 
 -- Property 6: String concatenation time grows with string length
-prop_string_concatenation_grows_with_length :: String -> String -> Bool
-prop_string_concatenation_grows_with_length s1 s2 = 
+prop_string_concatenation_grows_with_length :: String -> String -> Property
+prop_string_concatenation_grows_with_length s1 s2 = property $
   let len1 = length s1
       len2 = length s2
       time = measureTime $ s1 ++ s2
@@ -133,8 +135,8 @@ prop_string_concatenation_grows_with_length s1 s2 =
   in time < fromIntegral (len1 + len2) * 0.0001
 
 -- Property 7: Tree traversal time grows with tree size
-prop_tree_traversal_grows_with_size :: [Int] -> Bool
-prop_tree_traversal_grows_with_size xs = 
+prop_tree_traversal_grows_with_size :: [Int] -> Property
+prop_tree_traversal_grows_with_size xs = property $
   let tree = buildBalancedTree xs
       n = length xs
       time = measureTime $ traverseTree tree
@@ -142,16 +144,16 @@ prop_tree_traversal_grows_with_size xs =
   in time < fromIntegral n * 0.001
 
 -- Property 8: Recursive algorithm stack depth grows logarithmically for balanced inputs
-prop_recursive_stack_depth_logarithmic :: [Int] -> Bool
-prop_recursive_stack_depth_logarithmic xs = 
+prop_recursive_stack_depth_logarithmic :: [Int] -> Property
+prop_recursive_stack_depth_logarithmic xs = property $
   let n = length xs
       stackDepth = measureStackDepth $ balancedRecursiveFunction xs
   -- Simplified check: stack depth should be proportional to log n
-  in stackDepth <= ceiling (logBase 2 (fromIntegral n + 1)) + 1
+  in stackDepth <= ceiling (logBase' 2 (fromIntegral n + 1)) + 1
 
 -- Property 9: Memory deallocation happens promptly
-prop_memory_deallocation_prompt :: [Int] -> Bool
-prop_memory_deallocation_prompt xs = 
+prop_memory_deallocation_prompt :: [Int] -> Property
+prop_memory_deallocation_prompt xs = property $
   let memoryBefore = getCurrentMemoryUsage
       result = map (*2) xs
       memoryAfter = force result `seq` getCurrentMemoryUsage
@@ -159,28 +161,33 @@ prop_memory_deallocation_prompt xs =
   in memoryAfter - memoryBefore <= fromIntegral (length xs) * 100
 
 -- Property 10: Parallel processing improves performance for large inputs
-prop_parallel_processing_improves_performance :: [Int] -> Bool
+prop_parallel_processing_improves_performance :: [Int] -> Property
 prop_parallel_processing_improves_performance xs = 
   let n = length xs
   in n > 100 ==> 
   let sequentialTime = measureTime $ sequentialSum xs
       parallelTime = measureTime $ parallelSum xs
-  in parallelTime < sequentialTime * 0.8  -- 20% improvement expected
+  in property $ parallelTime < sequentialTime * 0.8  -- 20% improvement expected
+
+-- Monomorphic version for QuickCheck
+prop_parallel_processing_improves_performance_mono :: Property
+prop_parallel_processing_improves_performance_mono = 
+  forAll arbitrary $ \xs -> prop_parallel_processing_improves_performance xs
 
 -- Helper functions for performance testing
-measureTime :: NFData a => a -> Double
+measureTime :: (NFData a, Show a) => a -> Double
 measureTime action = 
   -- Simplified implementation - in real code would use proper timing
   let size = show (length (show action))
   in fromIntegral (length size) * 0.001
 
-measureMemory :: NFData a => a -> Int
+measureMemory :: (NFData a, Show a) => a -> Int
 measureMemory action = 
   -- Simplified implementation - in real code would use proper memory measurement
   let size = show (length (show action))
   in length size * 100
 
-measureStackDepth :: a -> Int
+measureStackDepth :: Show a => a -> Int
 measureStackDepth action = 
   -- Simplified implementation - in real code would use proper stack depth measurement
   let size = show (length (show action))
@@ -237,33 +244,33 @@ sequentialSum = sum
 parallelSum :: [Int] -> Int
 parallelSum = sum  -- Simplified implementation
 
-logBase :: Floating a => a -> a -> a
-logBase b x = log x / log b
+
+logBase' b x = log x / log b
 
 -- Test cases for performance boundaries
 testPerformanceBoundary :: TestTree
 testPerformanceBoundary = testGroup "Performance Boundary Tests"
   [ testProperties "Algorithm Complexity Properties"
-    [ ("linear_algorithms_linear_time", prop_linear_algorithms_linear_time)
-    , ("binary_search_logarithmic_time", prop_binary_search_logarithmic_time)
-    , ("sorting_n_log_n_time", prop_sorting_n_log_n_time)
+    [ ("linear_algorithms_linear_time", property prop_linear_algorithms_linear_time)
+    , ("binary_search_logarithmic_time", property prop_binary_search_logarithmic_time)
+    , ("sorting_n_log_n_time", property prop_sorting_n_log_n_time)
     ]
   , testProperties "Memory Usage Properties"
-    [ ("memory_usage_grows_with_input", prop_memory_usage_grows_with_input)
-    , ("memory_deallocation_prompt", prop_memory_deallocation_prompt)
+    [ ("memory_usage_grows_with_input", property prop_memory_usage_grows_with_input)
+    , ("memory_deallocation_prompt", property prop_memory_deallocation_prompt)
     ]
   , testProperties "Data Structure Performance Properties"
-    [ ("hash_table_constant_time", prop_hash_table_constant_time)
-    , ("tree_traversal_grows_with_size", prop_tree_traversal_grows_with_size)
+    [ ("hash_table_constant_time", property prop_hash_table_constant_time)
+    , ("tree_traversal_grows_with_size", property prop_tree_traversal_grows_with_size)
     ]
   , testProperties "String Processing Properties"
-    [ ("string_concatenation_grows_with_length", prop_string_concatenation_grows_with_length)
+    [ ("string_concatenation_grows_with_length", property prop_string_concatenation_grows_with_length)
     ]
   , testProperties "Recursion Properties"
-    [ ("recursive_stack_depth_logarithmic", prop_recursive_stack_depth_logarithmic)
+    [ ("recursive_stack_depth_logarithmic", property prop_recursive_stack_depth_logarithmic)
     ]
   , testProperties "Parallel Processing Properties"
-    [ ("parallel_processing_improves_performance", prop_parallel_processing_improves_performance)
+    [ ("parallel_processing_improves_performance", prop_parallel_processing_improves_performance_mono)
     ]
   , testCase "Linear algorithm performance" $ do
     let input = [1..1000]
@@ -279,7 +286,7 @@ testPerformanceBoundary = testGroup "Performance Boundary Tests"
                (time < 0.001)  -- 1 millisecond max
   
   , testCase "Sorting performance" $ do
-    let input = [1000,999..1]  -- Reverse sorted
+    let input = [1000,999..1] :: [Int]  -- Reverse sorted
     let time = measureTime $ sort input
     assertBool "Sorting should complete in reasonable time" 
                (time < 0.01)  -- 10 milliseconds max
@@ -299,14 +306,14 @@ testPerformanceBoundary = testGroup "Performance Boundary Tests"
                (time < 0.01)  -- 10 milliseconds max
   
   , testCase "Hash table lookup performance" $ do
-    let table = Map.fromList $ zip [1..1000] [1000..1999]
+    let table = Map.fromList $ zip [1..1000] [1000..1999] :: Map Int Int
     let key = 500
     let time = measureTime $ Map.lookup key table
     assertBool "Hash table lookup should complete in reasonable time" 
                (time < 0.001)  -- 1 millisecond max
   
   , testCase "Memory usage measurement" $ do
-    let input = [1..1000]
+    let input = [1..1000] :: [Int]
     let memory = measureMemory $ map (*2) input
     assertBool "Memory usage should be reasonable" 
                (memory < 1000000)  -- 1MB max

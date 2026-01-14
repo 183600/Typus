@@ -50,10 +50,22 @@ genType depth = oneof
       returnType <- genType (depth - 1)
       return $ TFunc argType returnType
   , do
-      numElements <- choose (2, 3)
-      elementTypes <- replicateM numElements (genType (depth - 1))
-      return $ TTuple elementTypes
+      numTypes <- choose (0, 3)
+      types <- replicateM numTypes (genType (depth - 1))
+      return $ TTuple types
   ]
+
+-- Arbitrary instances
+instance Arbitrary Type where
+  arbitrary = genType 3
+
+instance Arbitrary TypeEnv where
+  arbitrary = do
+    numBindings <- choose (0, 5)
+    names <- replicateM numBindings (elements ["x", "y", "z", "f", "g", "h"])
+    types <- replicateM numBindings arbitrary
+    let bindings = Map.fromList $ zip names types
+    return $ TypeEnv bindings
 
 genTypeEnv :: Gen TypeEnv
 genTypeEnv = do
@@ -131,7 +143,7 @@ prop_most_general_unifier_is_most_general t1 t2 =
   in case mgu of
        Just subst -> 
          let specialized = specializeSubstitution subst
-         in isMoreGeneral subst specialized
+         in property $ isMoreGeneral subst specialized
        Nothing -> property True
 
 -- Property 10: Type inference preserves well-typedness
@@ -139,7 +151,7 @@ prop_type_inference_preserves_well_typedness :: TypeEnv -> String -> Type -> Pro
 prop_type_inference_preserves_well_typedness env var expectedType = 
   let extendedEnv = extendTypeEnv env var expectedType
       inferredType = inferType extendedEnv var
-  in inferredType == Just expectedType
+  in property $ inferredType == Just expectedType
 
 -- Helper functions for type inference
 isFunctionType :: Type -> Bool
@@ -160,7 +172,7 @@ substituteType (TFunc argType returnType) varName replacement =
   TFunc (substituteType argType varName replacement) 
         (substituteType returnType varName replacement)
 substituteType (TTuple types) varName replacement = 
-  TTuple $ map (`substituteType` varName replacement) types
+  TTuple $ map (\t -> substituteType t varName replacement) types
 substituteType t _ _ = t
 
 containsTypeVar :: Type -> String -> Bool
@@ -238,29 +250,22 @@ inferType env var = Map.lookup var (envBindings env)
 testTypeInference :: TestTree
 testTypeInference = testGroup "Type Inference QuickCheck Tests"
   [ testProperties "Type Environment Properties"
-    [ ("type_env_lookup_consistent", prop_type_env_lookup_consistent)
-    ]
+    [ ("type_env_lookup_consistent", property prop_type_env_lookup_consistent) ]
   , testProperties "Type Equality Properties"
-    [ ("type_equality_reflexive", prop_type_equality_reflexive)
-    , ("type_equality_symmetric", prop_type_equality_symmetric)
-    , ("type_equality_transitive", prop_type_equality_transitive)
-    ]
+    [ ("type_equality_reflexive", property prop_type_equality_reflexive)
+        , ("type_equality_symmetric", property prop_type_equality_symmetric)
+        , ("type_equality_transitive", property prop_type_equality_transitive) ]
   , testProperties "Function Type Properties"
-    [ ("func_type_composition", prop_func_type_composition)
-    ]
+    [ ("func_type_composition", property prop_func_type_composition) ]
   , testProperties "Tuple Type Properties"
-    [ ("tuple_type_projection", prop_tuple_type_projection)
-    ]
+    [ ("tuple_type_projection", property prop_tuple_type_projection) ]
   , testProperties "Type Substitution Properties"
-    [ ("type_substitution_preserves_structure", prop_type_substitution_preserves_structure)
-    ]
+    [ ("type_substitution_preserves_structure", property prop_type_substitution_preserves_structure) ]
   , testProperties "Type Unification Properties"
-    [ ("type_unification_symmetric", prop_type_unification_symmetric)
-    , ("most_general_unifier_is_most_general", prop_most_general_unifier_is_most_general)
-    ]
+    [ ("type_unification_symmetric", property prop_type_unification_symmetric)
+        , ("most_general_unifier_is_most_general", property prop_most_general_unifier_is_most_general) ]
   , testProperties "Type Inference Properties"
-    [ ("type_inference_preserves_well_typedness", prop_type_inference_preserves_well_typedness)
-    ]
+    [ ("type_inference_preserves_well_typedness", property prop_type_inference_preserves_well_typedness) ]
   , testCase "Basic type unification" $ do
     let t1 = TInt
     let t2 = TInt

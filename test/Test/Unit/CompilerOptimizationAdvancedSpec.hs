@@ -56,12 +56,12 @@ data OptimizationPass =
 -- Helper generators for compiler optimization tests
 genRegister :: Gen String
 genRegister = do
-  num <- choose (1, 10)
+  num <- choose (1, 10) :: Gen Int
   return $ "r" ++ show num
 
 genLabel :: Gen String
 genLabel = do
-  num <- choose (1, 10)
+  num <- choose (1, 10) :: Gen Int
   return $ "L" ++ show num
 
 genConstant :: Gen Int
@@ -137,12 +137,27 @@ genCFG = do
   numBlocks <- choose (1, 5)
   blockLabels <- replicateM numBlocks genLabel
   blocks <- mapM (\label -> do
-    instrs <- replicateM (choose (1, 3)) genIRInstruction
-    succs <- replicateM (choose (0, 2)) (elements blockLabels)
+    numInstrs <- choose (1, 3)
+    instrs <- replicateM numInstrs genIRInstruction
+    numSuccs <- choose (0, 2)
+    succs <- replicateM numSuccs (elements blockLabels)
     return (label, BasicBlock label instrs succs)) blockLabels
   let entry = head blockLabels
   let exit = last blockLabels
   return $ CFG (Map.fromList blocks) entry exit
+
+-- Arbitrary instances
+instance Arbitrary IRInstruction where
+  arbitrary = genIRInstruction
+
+instance Arbitrary BasicBlock where
+  arbitrary = genBasicBlock
+
+instance Arbitrary ControlFlowGraph where
+  arbitrary = genCFG
+
+instance Arbitrary OptimizationPass where
+  arbitrary = oneof [pure ConstantFolding, pure DeadCodeElimination, pure CommonSubexpressionElimination, pure StrengthReduction]
 
 -- Test properties for compiler optimization
 
@@ -416,26 +431,26 @@ countPeepholePatterns instrs = length instrs  -- Simplified implementation
 testCompilerOptimization :: TestTree
 testCompilerOptimization = testGroup "Compiler Optimization Advanced Tests"
   [ testProperties "Constant Folding Properties"
-    [ ("constant_folding_preserves_semantics", prop_constant_folding_preserves_semantics)
+    [ ("constant_folding_preserves_semantics", property prop_constant_folding_preserves_semantics)
     ]
   , testProperties "Dead Code Elimination Properties"
-    [ ("dead_code_elimination_removes_unused", prop_dead_code_elimination_removes_unused)
+    [ ("dead_code_elimination_removes_unused", property prop_dead_code_elimination_removes_unused)
     ]
   , testProperties "Common Subexpression Elimination Properties"
-    [ ("cse_reduces_redundancy", prop_cse_reduces_redundancy)
+    [ ("cse_reduces_redundancy", property prop_cse_reduces_redundancy)
     ]
   , testProperties "Strength Reduction Properties"
-    [ ("strength_reduction_preserves_functionality", prop_strength_reduction_preserves_functionality)
+    [ ("strength_reduction_preserves_functionality", property prop_strength_reduction_preserves_functionality)
     ]
   , testProperties "Optimization Properties"
-    [ ("optimization_is_idempotent", prop_optimization_is_idempotent)
-    , ("cfg_structure_preserved", prop_cfg_structure_preserved)
+    [ ("optimization_is_idempotent", property prop_optimization_is_idempotent)
+    , ("cfg_structure_preserved", property prop_cfg_structure_preserved)
     ]
   , testProperties "Advanced Optimization Properties"
-    [ ("register_allocation_pressure", prop_register_allocation_pressure)
-    , ("loop_invariant_motion", prop_loop_invariant_motion)
-    , ("function_inlining_preserves_behavior", prop_function_inlining_preserves_behavior)
-    , ("peephole_improves_patterns", prop_peephole_improves_patterns)
+    [ ("register_allocation_pressure", property prop_register_allocation_pressure)
+    , ("loop_invariant_motion", property prop_loop_invariant_motion)
+    , ("function_inlining_preserves_behavior", property prop_function_inlining_preserves_behavior)
+    , ("peephole_improves_patterns", property prop_peephole_improves_patterns)
     ]
   , testCase "Constant folding basic arithmetic" $ do
     let instr = Add "r1" "10" "20"
