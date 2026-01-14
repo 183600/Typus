@@ -2290,7 +2290,12 @@ test-suite typus-test
         
         -- New Test Modules Added (2026) - 60 comprehensive test cases
         Test.Unit.CoreUtilsPropertiesSpec,
-        Test.Unit.IntegratedCompilerConsistencySpec
+        Test.Unit.IntegratedCompilerConsistencySpec,
+        
+        -- Additional Test Modules Added for Enhanced Coverage (2026)
+        Test.Unit.UtilsStringProcessingExtraSpec,
+        Test.Unit.SourceLocationMathExtraSpec,
+        Test.Unit.ParserBasicFunctionsExtraSpec
         
     build-depends:
         base >=4.7 && <5,
