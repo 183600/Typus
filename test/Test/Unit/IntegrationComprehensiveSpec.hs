@@ -87,7 +87,7 @@ prop_error_sourcelocation_integration :: String -> Property
 prop_error_sourcelocation_integration content = 
   not (null content) ==> 
   let location = ErrorLocation (Just "test.typus") 1 1 Nothing Nothing
-      error = errorAt "syntax" (T.pack content) location
+      error = errorAt "syntax" Error (T.pack content) location
       formatted = formatErrorWithLocation error
   in T.pack "test.typus" `T.isInfixOf` T.pack formatted &&
      T.pack "1" `T.isInfixOf` T.pack formatted
@@ -97,7 +97,7 @@ prop_utils_error_integration :: String -> Property
 prop_utils_error_integration content = 
   not (null content) ==> 
   let processed = removeComments content
-      error = errorAt "utils" (T.pack processed) (ErrorLocation Nothing 1 1 Nothing Nothing)
+      error = errorAt "utils" Error (T.pack processed) (ErrorLocation Nothing 1 1 Nothing Nothing)
       errorMessage = message error
   in not (T.null errorMessage)
 
@@ -136,7 +136,7 @@ prop_error_propagation_pipeline :: String -> String -> Property
 prop_error_propagation_pipeline content errorContent = 
   not (null content) && not (null errorContent) ==> 
   let parsed = parseTypus content
-      error = errorAt "pipeline" (T.pack errorContent) (ErrorLocation Nothing 1 1 Nothing Nothing)
+      error = errorAt "pipeline" Error (T.pack errorContent) (ErrorLocation Nothing 1 1 Nothing Nothing)
       collector = execState (addError error) []
       hasErrs = hasErrors collector
       errors = getErrors collector
@@ -217,7 +217,7 @@ test_parser_sourcelocation_integration =
   [ testCase "error location tracking" $ do
       let content = "ownership=true\ncode with error"
           location = ErrorLocation (Just "test.typus") 2 5 Nothing Nothing
-          error = errorAt "syntax" (T.pack "syntax error") location
+          error = errorAt "syntax" Error (T.pack "syntax error") location
           formatted = formatErrorWithLocation error
       assertBool "contains filename" ("test.typus" `isInfixOf` formatted)
       assertBool "contains line" ("2" `isInfixOf` formatted)
@@ -239,22 +239,21 @@ test_parser_sourcelocation_integration =
 test_error_handling_integration :: [TestTree]
 test_error_handling_integration = 
   [ testCase "error collector with multiple errors" $ do
-      let errors = [errorAt "syntax" (T.pack "syntax error") (ErrorLocation Nothing 1 1 Nothing Nothing), 
+      let errors = [errorAt "syntax" Error (T.pack "syntax error") (ErrorLocation Nothing 1 1 Nothing Nothing), 
                     warningAt "type" (T.pack "type warning") (ErrorLocation Nothing 2 2 Nothing Nothing)]
           collector = execState (mapM_ addError errors) []
       assertEqual "has errors" True (hasErrors collector)
       assertEqual "error count" 1 (length (getErrors collector))  -- Only errors, not warnings
   , testCase "error formatting with location" $ do
       let location = ErrorLocation (Just "module.typus") 10 20 Nothing Nothing
-          error = errorAt "name" (T.pack "name not found") location
+          error = errorAt "name" Error (T.pack "name not found") location
           formatted = formatErrorWithLocation error
       assertBool "contains error message" ("name not found" `isInfixOf` formatted)
       assertBool "contains location info" ("module.typus" `isInfixOf` formatted)
   , testCase "error context preservation" $ do
       let context = ErrorContext (Just "test code") (Just "test function") (Just "test variable") (Just "test type") []
           error
-                      = errorAt
-                          "type" (T.pack "type error") (ErrorLocation Nothing 1 1 Nothing Nothing)
+                      = errorAt "type" Error (T.pack "type error") (ErrorLocation Nothing 1 1 Nothing Nothing)
           errorWithContext = error { context = context }
       assertEqual "preserves context" context emptyContext
   ]

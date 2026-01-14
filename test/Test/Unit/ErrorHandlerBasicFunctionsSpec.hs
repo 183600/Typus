@@ -133,8 +133,8 @@ tests = testGroup "C.Error Handler Basic Functions Tests"
 -- 简化的辅助函数
 createError :: String -> C.ErrorSeverity -> C.ErrorLocation -> C.TypeError
 createError message severity location = 
-  let err = C.errorAt message (T.pack message) location
-  in err { C.severity = severity }
+  let err = C.errorAt message severity (T.pack message) location
+  in err
 
 createWarning :: String -> C.ErrorLocation -> C.TypeError
 createWarning message location = createError message C.Warning location

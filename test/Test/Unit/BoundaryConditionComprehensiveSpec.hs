@@ -97,7 +97,7 @@ prop_sourcelocation_extreme_positions pos1 pos2 =
 -- Property 4: Error handling with extreme severity levels
 prop_error_extreme_severity :: String -> ErrorSeverity -> Bool
 prop_error_extreme_severity message severity = 
-  let error = errorAt "Parsing" (T.pack message) (ErrorLocation Nothing 1 1 Nothing Nothing)
+  let error = errorAt "Parsing" Error (T.pack message) (ErrorLocation Nothing 1 1 Nothing Nothing)
       errorWithSeverity = error { severity = severity }
       canRecover = canRecoverFrom errorWithSeverity
       shouldContinue = shouldContinueAfter errorWithSeverity
@@ -122,7 +122,7 @@ prop_utils_extreme_inputs input =
 prop_error_collector_large_numbers :: Int -> Property
 prop_error_collector_large_numbers numErrors = 
   numErrors > 0 && numErrors <= 1000 ==> 
-  let errors = replicate numErrors (errorAt "test" (T.pack "test error") (ErrorLocation Nothing 1 1 Nothing Nothing))
+  let errors = replicate numErrors (errorAt "test" Error (T.pack "test error") (ErrorLocation Nothing 1 1 Nothing Nothing))
       collector = execState (foldM (\acc err -> addError err) () errors) []
       retrievedErrors = getErrors collector  
   in length retrievedErrors == numErrors && hasErrors collector
@@ -160,7 +160,7 @@ prop_large_directives_handling directiveSize =
 prop_error_formatting_extreme_content :: String -> Property
 prop_error_formatting_extreme_content content = 
   length content > 100 ==> 
-  let error = errorAt "Parsing" (T.pack content) (ErrorLocation Nothing 1 1 Nothing Nothing)
+  let error = errorAt "Parsing" Error (T.pack content) (ErrorLocation Nothing 1 1 Nothing Nothing)
       formatted = formatErrorWithLocation error
   in not (T.null (T.pack formatted))
 
@@ -203,12 +203,12 @@ test_extreme_positions =
 test_extreme_error_conditions :: [TestTree]
 test_extreme_error_conditions = 
   [ testCase "error collector with many errors" $ do
-      let manyErrors = replicate 1000 (errorAt "Parsing" (T.pack "test error") (ErrorLocation Nothing 1 1 Nothing Nothing))
+      let manyErrors = replicate 1000 (errorAt "Parsing" Error (T.pack "test error") (ErrorLocation Nothing 1 1 Nothing Nothing))
           collector = execState (foldM (\acc err -> addError err) () manyErrors) []
       assertEqual "should handle many errors" 1000 (length (getErrors collector))
   , testCase "error with very long message" $ do
       let longMessage = replicate 10000 'a'
-          error = errorAt "Parsing" (T.pack longMessage) (ErrorLocation Nothing 1 1 Nothing Nothing)
+          error = errorAt "Parsing" Error (T.pack longMessage) (ErrorLocation Nothing 1 1 Nothing Nothing)
           formatted = formatErrorWithLocation error
       assertBool "should format long message" (not (T.null (T.pack formatted)))
   , testCase "fatal error handling" $ do
@@ -218,7 +218,7 @@ test_extreme_error_conditions =
       assertEqual "should not continue after fatal" False (shouldContinueAfter fatal)
   , testCase "error with extreme severity" $ do
       let severities = [Fatal, Error, Warning, Info]
-          errors = map (\sev -> (errorAt "Parsing" (T.pack "test") (ErrorLocation Nothing 1 1 Nothing Nothing)) { severity = sev }) severities
+          errors = map (\sev -> errorAt "Parsing" sev (T.pack "test") (ErrorLocation Nothing 1 1 Nothing Nothing)) severities
           recoverable = map canRecoverFrom errors
           continue = map shouldContinueAfter errors
       assertEqual "fatal not recoverable" False (head recoverable)
@@ -274,8 +274,8 @@ test_concurrent_safety =
          ((case result1 of Right p1 -> show (tfDirectives p1); Left _ -> show defaultFileDirectives) /= 
           (case result2 of Right p2 -> show (tfDirectives p2); Left _ -> show defaultFileDirectives))
   , testCase "error collector isolation" $ do
-      let error1 = errorAt "Parsing" (T.pack "error1") (ErrorLocation Nothing 1 1 Nothing Nothing)
-          error2 = errorAt "TypeChecking" (T.pack "error2") (ErrorLocation Nothing 1 1 Nothing Nothing)
+      let error1 = errorAt "Parsing" Error (T.pack "error1") (ErrorLocation Nothing 1 1 Nothing Nothing)
+          error2 = errorAt "TypeChecking" Error (T.pack "error2") (ErrorLocation Nothing 1 1 Nothing Nothing)
           collector1 = execState (addError error1) []
           collector2 = execState (addError error2) []
       assertBool "should isolate error collectors" 
@@ -289,7 +289,7 @@ test_performance_boundaries =
           result = parseTypus largeFileContent
       assertBool "should handle large files efficiently" (case result of Right p -> not (null (tfBlocks p)); Left _ -> False)
   , testCase "error formatting performance" $ do
-      let errors = replicate 100 (errorAt "Parsing" (T.pack "test error message") (ErrorLocation Nothing 1 1 Nothing Nothing))
+      let errors = replicate 100 (errorAt "Parsing" Error (T.pack "test error message") (ErrorLocation Nothing 1 1 Nothing Nothing))
           formatted = map formatErrorWithLocation errors
       assertEqual "should format many errors" 100 (length formatted)
   , testCase "utils performance with large strings" $ do

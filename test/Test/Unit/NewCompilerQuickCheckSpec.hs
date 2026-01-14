@@ -167,7 +167,7 @@ prop_compile_error_contains_message msg =
       errors = [error]
       result = Left errors :: CompilerResult String
   in case result of
-    Left errs -> property $ any (\e -> msg `T.isInfixOf` errorMessage e) errs
+    Left errs -> property $ any (\e -> msg `T.isInfixOf` Compiler.Errors.errorMessage e) errs
     Right _ -> property $ False
 
 prop_compile_error_has_phase :: CompilationPhase -> Property

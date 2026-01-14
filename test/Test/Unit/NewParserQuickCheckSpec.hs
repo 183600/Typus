@@ -135,7 +135,7 @@ prop_parse_simple_content content =
 -- Test directive parsing with various formats
 prop_parse_directive_with_spaces :: String -> String -> Property
 prop_parse_directive_with_spaces key value = 
-  let input = "  " ++ key ++ "  =  " ++ value ++ "  "
+  let input = T.pack ("  " ++ key ++ "  =  " ++ value ++ "  ")
       result = parse fileDirectiveParser "" input
   in case result of
     Left _ -> property $ False  -- Should succeed with spaces
@@ -143,7 +143,7 @@ prop_parse_directive_with_spaces key value =
 
 prop_parse_directive_empty_value :: String -> Property
 prop_parse_directive_empty_value key = 
-  let input = key ++ "="
+  let input = T.pack (key ++ "=")
       result = parse fileDirectiveParser "" input
   in case result of
     Left _ -> property $ False  -- Should succeed with empty value
@@ -151,7 +151,7 @@ prop_parse_directive_empty_value key =
 
 prop_parse_directive_empty_key :: String -> Property
 prop_parse_directive_empty_key value = 
-  let input = "=" ++ value
+  let input = T.pack ("=" ++ value)
       result = parse fileDirectiveParser "" input
   in case result of
     Left _ -> property $ True  -- Empty key might fail
@@ -220,13 +220,13 @@ test_parser_edge_cases = testGroup "Parser Edge Cases"
       assertBool "constraints is Nothing" $ isNothing (bdConstraints bd)
     
   , testCase "parse simple directive" $ do
-      let result = parse fileDirectiveParser "" "key=value"
+      let result = parse fileDirectiveParser "" (T.pack "key=value")
       case result of
         Left err -> assertFailure $ "Failed to parse simple directive: " ++ errorBundlePretty err
         Right pairs -> assertEqual "parsed directive" [(T.pack "key", T.pack "value")] pairs
     
   , testCase "parse multiple directives" $ do
-      let result = parse fileDirectiveParser "" "key1=value1,key2=value2"
+      let result = parse fileDirectiveParser "" (T.pack "key1=value1,key2=value2")
       case result of
         Left err -> assertFailure $ "Failed to parse multiple directives: " ++ errorBundlePretty err
         Right pairs -> assertEqual "parsed directives" 

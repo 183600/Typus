@@ -38,7 +38,7 @@ prop_defaultErrorHandler_no_errors =
 prop_handleError_increases_count :: String -> Property
 prop_handleError_increases_count msg = 
   let location = ErrorLocation Nothing 0 0 Nothing Nothing
-      error = errorAt "test" (T.pack msg) location
+      error = errorAt "test" Error (T.pack msg) location
       errors = execState (addError error) []
   in property $ hasErrors errors
 
@@ -46,8 +46,8 @@ prop_handleError_increases_count msg =
 prop_handleError_preserves_errors :: String -> String -> Property
 prop_handleError_preserves_errors msg1 msg2 = 
   let unknownLocation = ErrorLocation Nothing 0 0 Nothing Nothing
-      error1 = errorAt "test1" (T.pack msg1) unknownLocation
-      error2 = errorAt "test2" (T.pack msg2) unknownLocation
+      error1 = errorAt "test1" Error (T.pack msg1) unknownLocation
+      error2 = errorAt "test2" Error (T.pack msg2) unknownLocation
       errors = execState (addError error1 >> addError error2) []
   in property $ length errors >= 2
 
@@ -55,7 +55,7 @@ prop_handleError_preserves_errors msg1 msg2 =
 prop_collectErrors_returns_all :: [String] -> Property
 prop_collectErrors_returns_all msgs = 
   let location = ErrorLocation Nothing 0 0 Nothing Nothing
-      errors = map (\(i, msg) -> errorAt ("test" ++ show i) (T.pack msg) location) (zip [1..] msgs)
+      errors = map (\(i, msg) -> errorAt ("test" ++ show i) Error (T.pack msg) location) (zip [1..] msgs)
       collected = execState (mapM_ addError errors) []
   in property $ length collected == length msgs &&
                 all (\msg -> any (\e -> T.pack msg == message e) collected) msgs
@@ -64,7 +64,7 @@ prop_collectErrors_returns_all msgs =
 prop_error_severity_preserved :: ErrorSeverity -> String -> Property
 prop_error_severity_preserved sev msg = 
   let location = ErrorLocation Nothing 0 0 Nothing Nothing
-      error = (errorAt "test" (T.pack msg) location) { severity = sev }
+      error = (errorAt "test" Error (T.pack msg) location) { severity = sev }
       errors = execState (addError error) []
   in property $ case errors of
     [e] -> severity e == sev
@@ -74,7 +74,7 @@ prop_error_severity_preserved sev msg =
 prop_error_message_preserved :: ErrorSeverity -> String -> Property
 prop_error_message_preserved sev msg = 
   let location = ErrorLocation Nothing 0 0 Nothing Nothing
-      error = (errorAt "test" (T.pack msg) location) { severity = sev }
+      error = (errorAt "test" Error (T.pack msg) location) { severity = sev }
       errors = execState (addError error) []
   in property $ case errors of
     [e] -> message e == T.pack msg
@@ -89,21 +89,21 @@ test_defaultErrorHandler = do
 test_handleError_error :: Assertion
 test_handleError_error = do
   let location = ErrorLocation Nothing 0 0 Nothing Nothing
-  let error = errorAt "test" "Test error" location
+  let error = errorAt "test" Error "Test error" location
   let errors = execState (addError error) []
   assertBool "addError has errors" (hasErrors errors)
 
 test_handleError_warning :: Assertion
 test_handleError_warning = do
   let location = ErrorLocation Nothing 0 0 Nothing Nothing
-  let error = (errorAt "test" "Test warning" location) { severity = Warning }
+  let error = (errorAt "test" Error "Test warning" location) { severity = Warning }
   let errors = execState (addError error) []
   assertBool "addWarning has warnings" (hasErrors errors)
 
 test_clearErrors :: Assertion
 test_clearErrors = do
   let location = ErrorLocation Nothing 0 0 Nothing Nothing
-  let error = errorAt "test" "Test error" location
+  let error = errorAt "test" Error "Test error" location
   let errors = execState (addError error) []
   -- Note: There's no clearErrors function in the actual interface
   assertBool "addError has errors" (hasErrors errors)
@@ -111,16 +111,16 @@ test_clearErrors = do
 test_getErrors :: Assertion
 test_getErrors = do
   let location = ErrorLocation Nothing 0 0 Nothing Nothing
-  let error1 = errorAt "test1" "Error 1" location
-  let error2 = (errorAt "test2" "Warning 1" location) { severity = Warning }
+  let error1 = errorAt "test1" Error "Error 1" location
+  let error2 = (errorAt "test2" Error "Warning 1" location) { severity = Warning }
   let errors = execState (addError error1 >> addError error2) []
   assertBool "getErrors returns errors" (length errors >= 2)
 
 test_collectErrors :: Assertion
 test_collectErrors = do
   let location = ErrorLocation Nothing 0 0 Nothing Nothing
-  let error1 = errorAt "test1" "Error 1" location
-  let error2 = (errorAt "test2" "Warning 1" location) { severity = Warning }
+  let error1 = errorAt "test1" Error "Error 1" location
+  let error2 = (errorAt "test2" Error "Warning 1" location) { severity = Warning }
   let messages = execState (addError error1 >> addError error2) []
   assertBool "getAllMessages returns messages" (length messages >= 2)
 
@@ -128,7 +128,7 @@ test_hasErrors :: Assertion
 test_hasErrors = do
   let errors1 = execState newErrorCollector []
   let location = ErrorLocation Nothing 0 0 Nothing Nothing
-  let error = errorAt "test" "Test error" location
+  let error = errorAt "test" Error "Test error" location
   let errors2 = execState (addError error) []
   assertBool "newErrorCollector has no errors" (not $ hasErrors errors1)
   assertBool "collector with error has errors" (hasErrors errors2)
@@ -138,16 +138,16 @@ test_error_location = do
   let pos = posAt 1 1
   let span = spanTo pos
   let location = ErrorLocation Nothing 1 1 (Just 1) (Just 10)
-  let error = (errorAt "test" "Test error" location) { location = location }
+  let error = (errorAt "test" Error "Test error" location) { location = location }
   let errors = execState (addError error) []
   assertEqual "error location" location (Compiler.Errors.Core.location (head errors))
 
 test_error_severity_filtering :: Assertion
 test_error_severity_filtering = do
   let location = ErrorLocation Nothing 0 0 Nothing Nothing
-  let error1 = errorAt "test1" "Error 1" location
-  let error2 = (errorAt "test2" "Warning 1" location) { severity = Warning }
-  let error3 = (errorAt "test3" "Info 1" location) { severity = Info }
+  let error1 = errorAt "test1" Error "Error 1" location
+  let error2 = (errorAt "test2" Error "Warning 1" location) { severity = Warning }
+  let error3 = (errorAt "test3" Error "Info 1" location) { severity = Info }
   let allErrors = execState (addError error1 >> addError error2 >> addError error3) []
   let errorErrors = filterBySeverity Error allErrors
   let warningErrors = filterBySeverity Warning allErrors

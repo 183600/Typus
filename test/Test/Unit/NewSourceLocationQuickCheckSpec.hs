@@ -281,9 +281,9 @@ prop_located_nfdata located = property $ rnf located === ()
 -- Unit tests for edge cases
 test_source_location_edge_cases :: TestTree
 test_source_location_edge_cases = testGroup "SourceLocation Edge Cases"
-  [ testCase "startPos properties" $
-      assertEqual "startPos line" 1 (posLine startPos) >>
-      assertEqual "startPos column" 1 (posColumn startPos) >>
+  [ testCase "startPos properties" $ do
+      assertEqual "startPos line" 1 (posLine startPos)
+      assertEqual "startPos column" 1 (posColumn startPos)
       assertEqual "startPos offset" 0 (posOffset startPos)
     
   , testCase "posAfter with special chars" $ do
@@ -293,23 +293,23 @@ test_source_location_edge_cases = testGroup "SourceLocation Edge Cases"
       assertEqual "newline offset" 1 (posOffset posNL)
       
       let posTab = posAfter '\t' startPos
-      assertEqual "tab line" 1 (posLine posTab) >>
-      assertEqual "tab column" 9 (posColumn posTab) >>
+      assertEqual "tab line" 1 (posLine posTab)
+      assertEqual "tab column" 9 (posColumn posTab)
       assertEqual "tab offset" 1 (posOffset posTab)
     
   , testCase "spanBetween ordering" $ do
       let pos1 = SourcePos 1 5 0
           pos2 = SourcePos 2 3 10
           span = spanBetween pos1 pos2
-      assertEqual "span start" pos1 (spanStart span) >>
+      assertEqual "span start" pos1 (spanStart span)
       assertEqual "span end" pos2 (spanEnd span)
       
       let spanOrdered = spanBetweenOrdered pos1 pos2
-      assertEqual "ordered span start" pos1 (spanStart spanOrdered) >>
+      assertEqual "ordered span start" pos1 (spanStart spanOrdered)
       assertEqual "ordered span end" pos2 (spanEnd spanOrdered)
       
       let spanReversed = spanBetweenOrdered pos2 pos1
-      assertEqual "reversed span start" pos1 (spanStart spanReversed) >>
+      assertEqual "reversed span start" pos1 (spanStart spanReversed)
       assertEqual "reversed span end" pos2 (spanEnd spanReversed)
     
   , testCase "mergeSpans coverage" $ do

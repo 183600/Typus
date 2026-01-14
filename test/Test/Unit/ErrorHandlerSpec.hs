@@ -371,7 +371,7 @@ test_filter_combined_errors_by_severity = do
 test_error_with_suggestions :: Assertion
 test_error_with_suggestions = do
   let suggestionsList = [T.pack "Check types", T.pack "Verify syntax"]
-      error = errorWithSuggestions "E1001" (T.pack "Type mismatch") suggestionsList 
+      error = errorWithSuggestions "E1001" Error suggestionsList 
                       (ErrorLocation Nothing 1 1 Nothing Nothing)
   assertEqual "Should have suggestions" suggestionsList (suggestions error)
 
@@ -379,7 +379,7 @@ test_error_with_suggestions = do
 test_error_with_location :: Assertion
 test_error_with_location = do
   let errorLocation = ErrorLocation (Just "test.typus") 10 5 Nothing Nothing
-      error = errorAt "E1002" (T.pack "Syntax error") errorLocation
+      error = errorAt "E1002" Error (T.pack "Syntax error") errorLocation
   assertEqual "Should have location" errorLocation (location error)
 
 -- Test 22: Create warning with category

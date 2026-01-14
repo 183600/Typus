@@ -15,6 +15,16 @@ module Compiler.Errors.Core (
     -- Helper functions for testing
     getErrorLine,
     getErrorColumn,
+    
+    -- Accessor functions for CompilerError compatibility
+    errorPhase,
+    errorCategory,
+    errorSeverity,
+    errorMessage,
+    
+    -- Utility functions
+    unknownLocation,
+    chooseBestRecovery,
 
     -- Error collection and management
     ErrorCollector,
@@ -683,10 +693,10 @@ shouldContinueAfter = shouldContinue . recovery
 -- ============================================================================
 
 -- Create error at specific location
-errorAt :: String -> Text -> ErrorLocation -> TypeError
-errorAt errId msg loc = TypeError
+errorAt :: String -> ErrorSeverity -> Text -> ErrorLocation -> TypeError
+errorAt errId sev msg loc = TypeError
     { errorId = errId
-    , severity = Error
+    , severity = sev
     , category = Unknown
     , message = msg
     , location = loc
@@ -700,7 +710,7 @@ errorAt errId msg loc = TypeError
 
 -- Create error at specific location with provided timestamp
 errorAtWithTimestamp :: String -> String -> Text -> ErrorLocation -> TypeError
-errorAtWithTimestamp ts errId msg loc = (errorAt errId msg loc) { timestamp = Just ts }
+errorAtWithTimestamp ts errId msg loc = (errorAt errId Error msg loc) { timestamp = Just ts }
 
 -- Create error at specific location with a UTCTime timestamp
 errorAtWithUTCTime :: UTCTime -> String -> Text -> ErrorLocation -> TypeError
@@ -716,16 +726,16 @@ withUTCTimestamp time err = withTimestamp (formatTimestamp time) err
 
 -- Create error with category
 errorWithCategory :: String -> ErrorCategory -> Text -> ErrorLocation -> TypeError
-errorWithCategory errId errCategory msg loc = (errorAt errId msg loc) { category = errCategory }
+errorWithCategory errId errCategory msg loc = (errorAt errId Error msg loc) { category = errCategory }
 
 warningAt :: String -> Text -> ErrorLocation -> TypeError
-warningAt errId msg loc = (errorAt errId msg loc) { severity = Warning }
+warningAt errId msg loc = errorAt errId Warning msg loc
 
 warningWithCategory :: String -> ErrorCategory -> Text -> ErrorLocation -> TypeError
 warningWithCategory errId errCategory msg loc = (errorWithCategory errId errCategory msg loc) { severity = Warning }
 
 infoAt :: String -> Text -> ErrorLocation -> TypeError
-infoAt errId msg loc = (errorAt errId msg loc) { severity = Info }
+infoAt errId msg loc = errorAt errId Info msg loc
 
 infoWithCategory :: String -> ErrorCategory -> Text -> ErrorLocation -> TypeError
 infoWithCategory errId errCategory msg loc = (errorWithCategory errId errCategory msg loc) { severity = Info }
@@ -760,13 +770,17 @@ withRelatedErrors :: [TypeError] -> TypeError -> TypeError
 withRelatedErrors relatedList err = err { relatedErrors = relatedList ++ relatedErrors err }
 
 -- Create error with suggestions
-errorWithSuggestions :: String -> Text -> [Text] -> ErrorLocation -> TypeError
-errorWithSuggestions errId msg suggestionsList loc =
-    (errorAt errId msg loc) { suggestions = suggestionsList }
+errorWithSuggestions :: String -> ErrorSeverity -> [Text] -> ErrorLocation -> TypeError
+errorWithSuggestions errId sev suggestionsList loc =
+    (errorAt errId sev (T.pack "test") loc) { suggestions = suggestionsList }
 
 -- Check if error has specific category
 hasCategory :: ErrorCategory -> TypeError -> Bool
 hasCategory cat err = cat == category err
+
+-- Check if any error in list has specific category
+hasCategoryList :: ErrorCategory -> [TypeError] -> Bool
+hasCategoryList cat errors = any (hasCategory cat) errors
 
 -- Filter errors by category
 filterByCategory :: ErrorCategory -> [TypeError] -> [TypeError]
@@ -829,8 +843,54 @@ generateErrorReportWithUTCTime time =
 -- Generate an error report including the current timestamp
 generateErrorReportIO :: [TypeError] -> IO String
 generateErrorReportIO errors = do
-    ts <- getCurrentTimestamp
-    pure $ generateErrorReportWithTimestamp (Just ts) errors
+    time <- getCurrentTime
+    return $ generateErrorReportWithUTCTime time errors
+
+-- ============================================================================
+-- Accessor Functions for CompilerError Compatibility
+-- ============================================================================
+
+-- Extract phase from TypeError (for compatibility with CompilerError)
+errorPhase :: TypeError -> String
+errorPhase err = case category err of
+    Parsing -> "Parsing"
+    TypeChecking -> "TypeChecking"
+    Ownership -> "Ownership"
+    Semantic -> "Semantic"
+    Runtime -> "Runtime"
+    Constraint -> "Constraint"
+    Inference -> "Inference"
+    Integration -> "Integration"
+    Unknown -> "Unknown"
+
+-- Extract category from TypeError (alias for category field)
+errorCategory :: TypeError -> ErrorCategory
+errorCategory = category
+
+-- Extract severity from TypeError (alias for severity field)
+errorSeverity :: TypeError -> ErrorSeverity
+errorSeverity = severity
+
+-- Extract message from TypeError (alias for message field)
+errorMessage :: TypeError -> Text
+errorMessage = message
+
+-- Export unknownLocation (renamed from _unknownLocation)
+unknownLocation :: ErrorLocation
+unknownLocation = ErrorLocation Nothing 0 0 Nothing Nothing
+
+-- Export chooseBestRecovery (renamed from _chooseBestRecovery)
+chooseBestRecovery :: [ErrorRecovery] -> ErrorRecovery
+chooseBestRecovery [] = fatalRecovery
+chooseBestRecovery strategies = foldl1 chooseBest strategies
+  where
+    chooseBest r1 r2
+        | not (canRecover r1) = r2
+        | not (canRecover r2) = r1
+        | recoveryConfidence r1 > recoveryConfidence r2 = r1
+        | recoveryConfidence r2 > recoveryConfidence r1 = r2
+        | recoveryCost r1 < recoveryCost r2 = r1
+        | otherwise = r2
 
 -- Enhanced error recovery strategies
 createRecoveryStrategy :: Bool -> Bool -> Maybe String -> Maybe String -> ErrorRecovery
@@ -838,14 +898,8 @@ createRecoveryStrategy canRec shouldCont recAction recHint = RecoveryStrategy ca
 
 -- Create fatal error
 fatalError :: String -> Text -> ErrorLocation -> TypeError
-fatalError errId msg loc = (errorAt errId msg loc)
-    { severity = Fatal
-    , recovery = fatalRecovery
-    }
+fatalError errId msg loc = errorAt errId Fatal msg loc
 
 -- Create fatal error with category
 fatalErrorWithCategory :: String -> ErrorCategory -> Text -> ErrorLocation -> TypeError
-fatalErrorWithCategory errId errCategory msg loc = (errorWithCategory errId errCategory msg loc)
-    { severity = Fatal
-    , recovery = fatalRecovery
-    }
+fatalErrorWithCategory errId errCategory msg loc = (errorAt errId Fatal msg loc) { category = errCategory }

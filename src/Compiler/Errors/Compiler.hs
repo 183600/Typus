@@ -522,3 +522,23 @@ exampleErrors =
           ["Add bounds check", "Use slice bounds"]
       )
     ]
+
+-- ============================================================================
+-- Accessor Functions for CompilerError
+-- ============================================================================
+
+-- Extract phase from CompilerError
+compilerErrorPhase :: CompilerError -> CompilationPhase
+compilerErrorPhase = cePhase
+
+-- Extract category from CompilerError
+compilerErrorCategory :: CompilerError -> ErrorCategory
+compilerErrorCategory = category . ceError
+
+-- Extract severity from CompilerError
+compilerErrorSeverity :: CompilerError -> ErrorSeverity
+compilerErrorSeverity = severity . ceError
+
+-- Extract message from CompilerError
+compilerErrorMessage :: CompilerError -> Text
+compilerErrorMessage = message . ceError

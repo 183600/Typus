@@ -122,7 +122,7 @@ genTypeError = do
 -- genCombinedError :: Gen CombinedError
 -- genCombinedError = do
 --   errors <- listOf1 genTypeError
---   return $ errorAt "test" (T.pack "test") (ErrorLocation Nothing 1 1 Nothing Nothing)
+--   return $ errorAt "test" Error (T.pack "test") (ErrorLocation Nothing 1 1 Nothing Nothing)
 
 -- Test properties for ErrorHandlerCore module
 
@@ -271,13 +271,13 @@ test_error_collector_edge_cases =
       assertEqual "getWarnings" [] (getWarnings (execState collector []))
       assertEqual "getInfo" [] (getInfo (execState collector []))
   , testCase "collector with single error" $ do
-      let error = errorAt "test" (T.pack "test error") (ErrorLocation Nothing 1 1 Nothing Nothing)
+      let error = errorAt "test" Error (T.pack "test error") (ErrorLocation Nothing 1 1 Nothing Nothing)
           collector = execState (addError error) []
       assertEqual "hasErrors" True (hasErrors collector)
       assertEqual "getErrors" [error] (getErrors collector)
   , testCase "collector with multiple errors" $ do
-      let errors = [errorAt "test1" (T.pack "error1") (ErrorLocation Nothing 1 1 Nothing Nothing), 
-                    errorAt "test2" (T.pack "error2") (ErrorLocation Nothing 2 2 Nothing Nothing)]
+      let errors = [errorAt "test1" Error (T.pack "error1") (ErrorLocation Nothing 1 1 Nothing Nothing), 
+                    errorAt "test2" Error (T.pack "error2") (ErrorLocation Nothing 2 2 Nothing Nothing)]
           collector = execState (mapM_ addError errors) []
       assertEqual "hasErrors" True (hasErrors collector)
       assertEqual "getErrors count" 2 (length (getErrors collector))
@@ -289,12 +289,12 @@ test_error_formatting_edge_cases =
       let formatted = formatErrors []
       assertEqual "empty list formatting" "" (T.unpack (T.pack formatted))
   , testCase "format single error" $ do
-      let error = errorAt "test" (T.pack "test error") (ErrorLocation Nothing 1 1 Nothing Nothing)
+      let error = errorAt "test" Error (T.pack "test error") (ErrorLocation Nothing 1 1 Nothing Nothing)
           formatted = formatError error
       assertBool "contains error message" (T.pack "test error" `T.isInfixOf` (T.pack formatted))
   , testCase "format error with location" $ do
       let location = ErrorLocation (Just "test.typus") 10 5 Nothing Nothing
-          error = errorAt "test" (T.pack "test error") location
+          error = errorAt "test" Error (T.pack "test error") location
           formatted = formatErrorWithLocation error
       assertBool "contains line number" (T.pack "10" `T.isInfixOf` (T.pack formatted))
       assertBool "contains column number" (T.pack "5" `T.isInfixOf` (T.pack formatted))
@@ -308,7 +308,7 @@ test_error_recovery_edge_cases =
       assertEqual "can recover" False (canRecoverFrom error)
       assertEqual "should continue" False (shouldContinueAfter error)
   , testCase "regular error can recover" $ do
-      let error = errorAt "syntax" (T.pack "syntax error") (ErrorLocation Nothing 1 1 Nothing Nothing)
+      let error = errorAt "syntax" Error (T.pack "syntax error") (ErrorLocation Nothing 1 1 Nothing Nothing)
       assertEqual "can recover" True (canRecoverFrom error)
       assertEqual "should continue" True (shouldContinueAfter error)
   , testCase "warning can recover" $ do
@@ -324,14 +324,14 @@ test_error_recovery_edge_cases =
 test_combined_error_edge_cases :: [TestTree]
 test_combined_error_edge_cases = 
   [ testCase "combine single error" $ do
-      let error = errorAt "test" (T.pack "test error") (ErrorLocation Nothing 1 1 Nothing Nothing)
+      let error = errorAt "test" Error (T.pack "test error") (ErrorLocation Nothing 1 1 Nothing Nothing)
       assertEqual "error severity" (severity error) (severity error)
   , testCase "combine multiple errors with different severities" $ do
-      let errors = [errorAt "syntax" (T.pack "syntax error") (ErrorLocation Nothing 1 1 Nothing Nothing), 
+      let errors = [errorAt "syntax" Error (T.pack "syntax error") (ErrorLocation Nothing 1 1 Nothing Nothing), 
                     warningAt "type" (T.pack "type warning") (ErrorLocation Nothing 2 2 Nothing Nothing)]
       assertEqual "highest severity" Error (maximum [severity (head errors), severity (last errors)])
   , testCase "filter errors by severity" $ do
-      let errors = [errorAt "syntax" (T.pack "syntax error") (ErrorLocation Nothing 1 1 Nothing Nothing), 
+      let errors = [errorAt "syntax" Error (T.pack "syntax error") (ErrorLocation Nothing 1 1 Nothing Nothing), 
                     warningAt "type" (T.pack "type warning") (ErrorLocation Nothing 2 2 Nothing Nothing),
                     infoAt "semantic" (T.pack "name info") (ErrorLocation Nothing 3 3 Nothing Nothing)]
           filtered = filterBySeverity Warning errors

@@ -8,6 +8,8 @@ module Parser
   , TypusFile(..)
   , defaultFileDirectives
   , defaultBlockDirectives
+  , fileDirectiveParser
+  , isIdentifierChar
   ) where
 
 import Control.Applicative (empty)

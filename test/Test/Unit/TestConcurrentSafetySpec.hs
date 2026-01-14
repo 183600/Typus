@@ -94,7 +94,7 @@ testConcurrentSafety = testGroup "Concurrent Safety Tests"
       results <- readIORef resultsRef
       all (\span -> SL.spanStart span == SL.spanStart span1 && SL.spanEnd span == SL.spanEnd span2) results @?= True
          
-  , testCase "ErrorHandler: errorAt is thread-safe" $ do
+  , testCase "ErrorHandler: errorAt is Error (T.pack is) thread-safe" $ do
       let pos = posAt 5 10
           message = "Test error"
           numThreads = 10

@@ -172,7 +172,7 @@ prop_break_on_pattern_in_middle :: String -> String -> String -> Property
 prop_break_on_pattern_in_middle pat before after = 
   let input = before ++ pat ++ after
       (prefix, suffix) = breakOn pat input
-  in property $ prefix === before && suffix === after
+  in (prefix === before) .&&. (suffix === after)
 
 -- Test safeProcessString function
 prop_safe_process_string_preserves_valid :: String -> Property

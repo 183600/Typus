@@ -178,11 +178,11 @@ prop_custom_recovery_properties canRec shouldCont action hint cost confidence =
 -- Error Construction Properties
 -- ============================================================================
 
--- Property: errorAt should create error with provided values
+-- Property: errorAt should Error (T.pack should) create error with provided values
 prop_error_at_properties :: String -> Text -> Int -> Int -> Property
 prop_error_at_properties errId msg line col = 
   let loc = ErrorLocation Nothing line col Nothing Nothing
-      err = errorAt errId msg loc
+      err = errorAt errId Error msg loc
   in property $ 
     errorId err == errId && 
     message err == msg && 
@@ -231,7 +231,7 @@ prop_with_location_properties :: String -> Text -> Int -> Int -> Int -> Int -> P
 prop_with_location_properties errId msg line1 col1 line2 col2 = 
   let loc1 = ErrorLocation Nothing line1 col1 Nothing Nothing
       loc2 = ErrorLocation Nothing line2 col2 Nothing Nothing
-      err = errorAt errId msg loc1
+      err = errorAt errId Error msg loc1
       updatedErr = withLocation err loc2
   in property $ 
     errorId updatedErr == errId && 
@@ -243,7 +243,7 @@ prop_with_context_properties :: String -> Text -> Int -> Int -> String -> String
 prop_with_context_properties errId msg line col func var typ = 
   let loc = ErrorLocation Nothing line col Nothing Nothing
       ctx = ErrorContext Nothing (Just func) (Just var) (Just typ) []
-      err = errorAt errId msg loc
+      err = errorAt errId Error msg loc
       updatedErr = withContext err ctx
   in property $ 
     errorId updatedErr == errId && 
@@ -284,9 +284,9 @@ prop_filter_by_category targetCat cats errId msg line col =
 prop_filter_by_severity :: ErrorSeverity -> [ErrorSeverity] -> String -> Text -> Int -> Int -> Property
 prop_filter_by_severity targetSev sevs errId msg line col = 
   let loc = ErrorLocation Nothing line col Nothing Nothing
-      errors = [errorAt (errId ++ show i) msg loc {line = i} | (i, sev) <- zip [0..] sevs] ++
-                [warningAt (errId ++ show i) msg loc {line = i} | (i, sev) <- zip [0..] sevs] ++
-                [infoAt (errId ++ show i) msg loc {line = i} | (i, sev) <- zip [0..] sevs]
+      errors = [errorAt ("error" ++ show i) Error msg loc {line = i} | (i, sev) <- zip [0..] sevs] ++
+                [warningAt ("warning" ++ show i) msg loc {line = i} | (i, sev) <- zip [0..] sevs] ++
+                [infoAt ("info" ++ show i) msg loc {line = i} | (i, sev) <- zip [0..] sevs]
       adjustedErrors = [err {severity = sev} | (err, sev) <- zip errors sevs]
       filtered = filterBySeverity targetSev adjustedErrors
   in property $ all (\e -> severity e == targetSev) filtered
@@ -299,9 +299,9 @@ prop_filter_by_severity targetSev sevs errId msg line col =
 prop_error_statistics_total :: [ErrorSeverity] -> [ErrorCategory] -> String -> Text -> Int -> Int -> Property
 prop_error_statistics_total sevs cats errId msg line col = 
   let loc = ErrorLocation Nothing line col Nothing Nothing
-      errors = [errorAt (errId ++ show i) msg loc {line = i} | (i, sev) <- zip [0..] sevs] ++
-                [warningAt (errId ++ show i) msg loc {line = i} | (i, sev) <- zip [0..] sevs] ++
-                [infoAt (errId ++ show i) msg loc {line = i} | (i, sev) <- zip [0..] sevs]
+      errors = [errorAt ("error" ++ show i) Error msg loc {line = i} | (i, sev) <- zip [0..] sevs] ++
+                [warningAt ("warning" ++ show i) msg loc {line = i} | (i, sev) <- zip [0..] sevs] ++
+                [infoAt ("info" ++ show i) msg loc {line = i} | (i, sev) <- zip [0..] sevs]
       adjustedErrors = [err {severity = sev, category = cat} | (err, (sev, cat)) <- zip errors (zip sevs cats)]
       stats = getErrorStatistics adjustedErrors
       totalCount = Map.findWithDefault 0 "total" stats
@@ -311,7 +311,7 @@ prop_error_statistics_total sevs cats errId msg line col =
 prop_error_statistics_by_severity :: [ErrorSeverity] -> String -> Text -> Int -> Int -> Property
 prop_error_statistics_by_severity sevs errId msg line col = 
   let loc = ErrorLocation Nothing line col Nothing Nothing
-      errors = [errorAt (errId ++ show i) msg loc {line = i} | (i, sev) <- zip [0..] sevs] ++
+      errors = [errorAt (errId ++ show i) Error msg loc {line = i} | (i, sev) <- zip [0..] sevs] ++
                 [warningAt (errId ++ show i) msg loc {line = i} | (i, sev) <- zip [0..] sevs] ++
                 [infoAt (errId ++ show i) msg loc {line = i} | (i, sev) <- zip [0..] sevs]
       adjustedErrors = [err {severity = sev} | (err, sev) <- zip errors sevs]
@@ -341,7 +341,7 @@ prop_can_recover_from :: Bool -> Bool -> String -> Text -> Int -> Int -> Propert
 prop_can_recover_from canRec shouldCont errId msg line col = 
   let loc = ErrorLocation Nothing line col Nothing Nothing
       recovery = RecoveryStrategy canRec shouldCont Nothing Nothing 50 0.5
-      err = (errorAt errId msg loc) {recovery = recovery}
+      err = (errorAt errId Error msg loc) {recovery = recovery}
   in property $ canRecoverFrom err == canRec
 
 -- Property: shouldContinueAfter should return recovery.shouldContinue
@@ -349,7 +349,7 @@ prop_should_continue_after :: Bool -> Bool -> String -> Text -> Int -> Int -> Pr
 prop_should_continue_after canRec shouldCont errId msg line col = 
   let loc = ErrorLocation Nothing line col Nothing Nothing
       recovery = RecoveryStrategy canRec shouldCont Nothing Nothing 50 0.5
-      err = (errorAt errId msg loc) {recovery = recovery}
+      err = (errorAt errId Error msg loc) {recovery = recovery}
   in property $ shouldContinueAfter err == shouldCont
 
 tests :: TestTree

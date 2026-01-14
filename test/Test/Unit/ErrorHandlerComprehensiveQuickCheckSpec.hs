@@ -50,11 +50,11 @@ prop_get_error_column line col =
   let loc = ErrorLocation Nothing line col Nothing Nothing
   in property $ getErrorColumn loc == col
 
--- | Test that errorAt creates an error with correct properties
+-- | Test that errorAt creates Error (T.pack creates) an error with correct properties
 prop_error_at_creates_correct_error :: String -> String -> Int -> Int -> Property
 prop_error_at_creates_correct_error errId msg line col = 
   let loc = ErrorLocation Nothing line col Nothing Nothing
-      err = errorAt errId (T.pack msg) loc
+      err = errorAt errId Error (T.pack msg) loc
   in property $ 
     errorId err == errId &&
     message err == T.pack msg &&
@@ -103,7 +103,7 @@ prop_with_location_updates_location :: String -> String -> Int -> Int -> Int -> 
 prop_with_location_updates_location errId msg line1 col1 line2 col2 = 
   let loc1 = ErrorLocation Nothing line1 col1 Nothing Nothing
       loc2 = ErrorLocation Nothing line2 col2 Nothing Nothing
-      err = errorAt errId (T.pack msg) loc1
+      err = errorAt errId Error (T.pack msg) loc1
       updatedErr = withLocation err loc2
   in property $ 
     location updatedErr == loc2 &&
@@ -115,7 +115,7 @@ prop_with_context_updates_context :: String -> String -> Int -> Int -> Property
 prop_with_context_updates_context errId msg line col = 
   let loc = ErrorLocation Nothing line col Nothing Nothing
       ctx = ErrorContext (Just "code") (Just "function") (Just "variable") (Just "type") []
-      err = errorAt errId (T.pack msg) loc
+      err = errorAt errId Error (T.pack msg) loc
       updatedErr = withContext err ctx
   in property $ 
     context updatedErr == ctx &&
@@ -126,7 +126,7 @@ prop_with_context_updates_context errId msg line col =
 prop_with_suggestions_adds_suggestions :: String -> String -> Int -> Int -> [String] -> Property
 prop_with_suggestions_adds_suggestions errId msg line col suggestions = 
   let loc = ErrorLocation Nothing line col Nothing Nothing
-      err = errorAt errId (T.pack msg) loc
+      err = errorAt errId Error (T.pack msg) loc
       suggestionsText = map T.pack suggestions
       updatedErr = withSuggestions suggestionsText err
   in property $ 
@@ -139,7 +139,7 @@ prop_with_suggestions_adds_suggestions errId msg line col suggestions =
 prop_wrap_error_wraps_message :: String -> String -> String -> Int -> Int -> Property
 prop_wrap_error_wraps_message errId msg wrapper line col = 
   let loc = ErrorLocation Nothing line col Nothing Nothing
-      err = errorAt errId (T.pack msg) loc
+      err = errorAt errId Error (T.pack msg) loc
       wrappedErr = wrapError (T.pack wrapper) err
   in property $ 
     message wrappedErr == T.pack wrapper <> T.pack ": " <> T.pack msg &&
@@ -149,14 +149,14 @@ prop_wrap_error_wraps_message errId msg wrapper line col =
 -- | Test that hasCategory correctly identifies error category
 prop_has_category :: ErrorCategory -> ErrorCategory -> Property
 prop_has_category cat1 cat2 = 
-  let err = errorAt "test" (T.pack "message") (ErrorLocation Nothing 0 0 Nothing Nothing)
+  let err = errorAt "test" Error (T.pack "message") (ErrorLocation Nothing 0 0 Nothing Nothing)
       categorizedErr = err { category = cat1 }
   in property $ hasCategory cat1 categorizedErr == (cat1 == cat2)
 
 -- | Test that filterByCategory filters errors correctly
 prop_filter_by_category :: ErrorCategory -> [ErrorCategory] -> Property
 prop_filter_by_category targetCat cats = 
-  let errors = [(\err -> err { category = cat }) $ errorAt ("test" ++ show i) (T.pack "message") (ErrorLocation Nothing i 0 Nothing Nothing) 
+  let errors = [(\err -> err { category = cat }) $ errorAt ("test" ++ show i) Error (T.pack "message") (ErrorLocation Nothing i 0 Nothing Nothing) 
                 | (i, cat) <- zip [1..] cats]
       filtered = filterByCategory targetCat errors
   in property $ all (\e -> category e == targetCat) filtered
@@ -164,7 +164,7 @@ prop_filter_by_category targetCat cats =
 -- | Test that filterBySeverity filters errors correctly
 prop_filter_by_severity :: ErrorSeverity -> [ErrorSeverity] -> Property
 prop_filter_by_severity targetSev severities = 
-  let errors = [(\err -> err { severity = sev }) $ errorAt ("test" ++ show i) (T.pack "message") (ErrorLocation Nothing i 0 Nothing Nothing) 
+  let errors = [(\err -> err { severity = sev }) $ errorAt ("test" ++ show i) Error (T.pack "message") (ErrorLocation Nothing i 0 Nothing Nothing) 
                 | (i, sev) <- zip [1..] severities]
       filtered = filterBySeverity targetSev errors
   in property $ all (\e -> severity e == targetSev) filtered
@@ -172,7 +172,7 @@ prop_filter_by_severity targetSev severities =
 -- | Test that getErrorStatistics returns correct statistics
 prop_get_error_statistics :: [ErrorSeverity] -> [ErrorCategory] -> Property
 prop_get_error_statistics severities categories = 
-  let errors = [(\err -> err { severity = sev, category = cat }) $ errorAt ("test" ++ show i) (T.pack "message") (ErrorLocation Nothing i 0 Nothing Nothing) 
+  let errors = [(\err -> err { severity = sev, category = cat }) $ errorAt ("test" ++ show i) Error (T.pack "message") (ErrorLocation Nothing i 0 Nothing Nothing) 
                 | (i, (sev, cat)) <- zip [1..] (zip severities categories)]
       stats = getErrorStatistics errors
   in property $ 
@@ -186,14 +186,14 @@ prop_get_error_statistics severities categories =
 prop_can_recover_from :: Bool -> Bool -> Property
 prop_can_recover_from canRec shouldCont = 
   let recovery = RecoveryStrategy canRec shouldCont Nothing Nothing 50 0.7
-      err = (\e -> e { recovery = recovery }) $ errorAt "test" (T.pack "message") (ErrorLocation Nothing 0 0 Nothing Nothing)
+      err = (\e -> e { recovery = recovery }) $ errorAt "test" Error (T.pack "message") (ErrorLocation Nothing 0 0 Nothing Nothing)
   in property $ canRecoverFrom err == canRec
 
 -- | Test that shouldContinueAfter returns recovery.shouldContinue
 prop_should_continue_after :: Bool -> Bool -> Property
 prop_should_continue_after canRec shouldCont = 
   let recovery = RecoveryStrategy canRec shouldCont Nothing Nothing 50 0.7
-      err = (\e -> e { recovery = recovery }) $ errorAt "test" (T.pack "message") (ErrorLocation Nothing 0 0 Nothing Nothing)
+      err = (\e -> e { recovery = recovery }) $ errorAt "test" Error (T.pack "message") (ErrorLocation Nothing 0 0 Nothing Nothing)
   in property $ shouldContinueAfter err == shouldCont
 
 -- | Test that fatalRecovery has correct properties
@@ -251,7 +251,7 @@ tests = testGroup "ErrorHandler Comprehensive QuickCheck Tests"
   , testProperty "isAtLeast severity check" prop_is_at_least
   , testProperty "getErrorLine returns line" prop_get_error_line
   , testProperty "getErrorColumn returns column" prop_get_error_column
-  , testProperty "errorAt creates correct error" prop_error_at_creates_correct_error
+  , testProperty "errorAt creates Error (T.pack creates) correct error" prop_error_at_creates_correct_error
   , testProperty "warningAt creates correct warning" prop_warning_at_creates_correct_warning
   , testProperty "infoAt creates correct info" prop_info_at_creates_correct_info
   , testProperty "errorWithCategory creates error with category" prop_error_with_category

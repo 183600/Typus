@@ -61,9 +61,9 @@ testQuickCheckProperties = testGroup "QuickCheck Properties Tests"
       \start end -> let span = SourceLocation.spanBetween start end
                     in SourceLocation.spanStart span <= SourceLocation.spanEnd span
                     
-  , testProperty "ErrorHandler: ErrorHandler.EH.errorAt creates error with correct Error.location" $
+  , testProperty "ErrorHandler: ErrorHandler.EH.errorAt creates Error (T.pack creates) error with correct Error.location" $
       \(pos :: SourceLocation.SourcePos) message -> 
-        let err = Error.errorAt "test" (T.pack message) (Error.ErrorLocation Nothing 1 1 Nothing Nothing)
+        let err = Error.errorAt "test" Error.Error (T.pack message) (Error.ErrorLocation Nothing 1 1 Nothing Nothing)
         in Error.line (Error.location err) == 1 && 
            Error.column (Error.location err) == 1
            

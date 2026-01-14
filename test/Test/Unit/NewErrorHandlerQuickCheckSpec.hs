@@ -113,7 +113,7 @@ prop_predefined_recovery_strategies =
 
 prop_choose_best_recovery :: [ErrorRecovery] -> Property
 prop_choose_best_recovery strategies = 
-  let best = _chooseBestRecovery strategies
+  let best = chooseBestRecovery strategies
   in if null strategies
      then property $ best == fatalRecovery
      else property $ canRecover best == any canRecover strategies
@@ -150,14 +150,14 @@ prop_error_with_suggestions errId sev suggs =
 
 prop_error_with_location :: String -> ErrorSeverity -> ErrorLocation -> Property
 prop_error_with_location errId sev loc = 
-  let error = errorAt errId sev (T.pack "test") loc
+  let error = errorAt errId Error (T.pack errId) sev (T.pack "test") loc
   in property $ errorId error == errId &&
                 severity error == sev &&
                 location error == loc
 
 prop_error_with_context :: String -> ErrorSeverity -> ErrorContext -> Property
 prop_error_with_context errId sev ctx = 
-  let error = withContext (errorAt errId sev (T.pack "test") _unknownLocation) ctx
+  let error = withContext (errorAt errId Error (T.pack errId) sev (T.pack "test") unknownLocation) ctx
   in property $ errorId error == errId &&
                 severity error == sev &&
                 context error == ctx
@@ -221,7 +221,7 @@ prop_filter_by_severity sev errors =
 
 prop_has_category :: ErrorCategory -> [TypeError] -> Property
 prop_has_category cat errors = 
-  let hasCat = hasCategory cat errors
+  let hasCat = any (hasCategory cat) errors
       anyCat = any (\e -> category e == cat) errors
   in property $ hasCat == anyCat
 
@@ -239,15 +239,15 @@ prop_filter_combined_errors minSev errors =
 -- Test error formatting
 prop_format_error_includes_message :: String -> String -> Property
 prop_format_error_includes_message errId msg = 
-  let err = errorAt errId Error (T.pack msg) _unknownLocation
+  let err = errorAt errId Error (T.pack errId) Error (T.pack msg) unknownLocation
       formatted = formatError err
-  in property $ msg `isInfixOf` formatted
+  in property $ T.pack msg `T.isInfixOf` T.pack formatted
 
 prop_format_error_includes_severity :: String -> Property
 prop_format_error_includes_severity msg = 
-  let err = errorAt "test" Error (T.pack msg) _unknownLocation
+  let err = errorAt "test" Error (T.pack msg) unknownLocation
       formatted = formatError err
-  in property $ "ERROR" `isInfixOf` formatted
+  in property $ "ERROR" `T.isInfixOf` T.pack formatted
 
 -- Unit tests for edge cases
 test_error_handler_edge_cases :: TestTree
@@ -297,7 +297,7 @@ test_error_handler_edge_cases = testGroup "ErrorHandler Edge Cases"
       assertBool "infoRecovery should continue" $ shouldContinue infoRecovery
     
   , testCase "TypeError creation" $ do
-      let loc = _unknownLocation
+      let loc = unknownLocation
           ctx = emptyContext
           err = errorAt "test-001" Error (T.pack "Test error") loc
       assertEqual "errorId" "test-001" $ errorId err
@@ -307,9 +307,9 @@ test_error_handler_edge_cases = testGroup "ErrorHandler Edge Cases"
       assertEqual "context" ctx $ context err
     
   , testCase "ErrorCollector" $ do
-      let err1 = errorAt "err1" Error (T.pack "Error 1") _unknownLocation
-          err2 = errorAt "err2" Warning (T.pack "Warning 1") _unknownLocation
-          err3 = errorAt "err3" Info (T.pack "Info 1") _unknownLocation
+      let err1 = errorAt "err1" Error (T.pack "Error 1") unknownLocation
+          err2 = errorAt "err2" Warning (T.pack "Warning 1") unknownLocation
+          err3 = errorAt "err3" Info (T.pack "Info 1") unknownLocation
           errors = [err1, err2, err3]
       
       assertEqual "getErrors" [err1] $ getErrors errors
@@ -319,9 +319,9 @@ test_error_handler_edge_cases = testGroup "ErrorHandler Edge Cases"
       assertBool "hasWarnings" $ hasWarnings errors
     
   , testCase "filterByCategory" $ do
-      let err1 = errorAt "err1" Error (T.pack "Error 1") _unknownLocation { category = TypeChecking }
-          err2 = errorAt "err2" Error (T.pack "Error 2") _unknownLocation { category = Ownership }
-          err3 = errorAt "err3" Error (T.pack "Error 3") _unknownLocation { category = TypeChecking }
+      let err1 = errorAt "err1" Error (T.pack "Error 1") unknownLocation { category = TypeChecking }
+          err2 = errorAt "err2" Error (T.pack "Error 2") unknownLocation { category = Ownership }
+          err3 = errorAt "err3" Error (T.pack "Error 3") unknownLocation { category = TypeChecking }
           errors = [err1, err2, err3]
       
       assertEqual "TypeChecking errors" [err1, err3] $ filterByCategory TypeChecking errors
@@ -329,10 +329,10 @@ test_error_handler_edge_cases = testGroup "ErrorHandler Edge Cases"
       assertEqual "Parsing errors" [] $ filterByCategory Parsing errors
     
   , testCase "filterBySeverity" $ do
-      let err1 = errorAt "err1" Fatal (T.pack "Fatal") _unknownLocation
-          err2 = errorAt "err2" Error (T.pack "Error") _unknownLocation
-          err3 = errorAt "err3" Warning (T.pack "Warning") _unknownLocation
-          err4 = errorAt "err4" Info (T.pack "Info") _unknownLocation
+      let err1 = errorAt "err1" Fatal (T.pack "Fatal") unknownLocation
+          err2 = errorAt "err2" Error (T.pack "Error") unknownLocation
+          err3 = errorAt "err3" Warning (T.pack "Warning") unknownLocation
+          err4 = errorAt "err4" Info (T.pack "Info") unknownLocation
           errors = [err1, err2, err3, err4]
       
       assertEqual "Fatal errors" [err1] $ filterBySeverity Fatal errors
@@ -341,7 +341,7 @@ test_error_handler_edge_cases = testGroup "ErrorHandler Edge Cases"
       assertEqual "Info errors" [err4] $ filterBySeverity Info errors
     
   , testCase "formatError" $ do
-      let err = errorAt "test-001" Error (T.pack "Something went wrong") _unknownLocation
+      let err = errorAt "test-001" Error (T.pack "Something went wrong") unknownLocation
           formatted = formatError err
       assertBool "contains ERROR" $ "ERROR" `isInfixOf` formatted
       assertBool "contains message" $ "Something went wrong" `isInfixOf` formatted

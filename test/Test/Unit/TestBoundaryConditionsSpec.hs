@@ -90,7 +90,7 @@ testBoundaryConditions = testGroup "Boundary Conditions Tests"
         null warnings @?= True
            
   , testCase "ErrorHandler: error collector with many errors" $
-      let errors = [ErrorHandler.errorAt ("error" ++ show i) (T.pack ("Error " ++ show i)) (ErrorHandler.ErrorLocation Nothing i 1 Nothing Nothing) | i <- [1..1000]]
+      let errors = [ErrorHandler.errorAt ("error" ++ show i) ErrorHandler.Error (T.pack ("Error " ++ show i)) (ErrorHandler.ErrorLocation Nothing i 1 Nothing Nothing) | i <- [1..1000]]
           -- Simplified: just create a collector and verify it can handle errors
           collector = ErrorHandler.newErrorCollector
           errorCount = length errors

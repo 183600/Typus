@@ -23,7 +23,7 @@ formatTimestampHelper = formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S.%3q"
 test_error_collector_basic :: Assertion
 test_error_collector_basic = do
   let location = ErrorLocation Nothing 1 10 Nothing Nothing
-      error = errorAt "Test" "Test error" location
+      error = errorAt "Test" Error "Test error" location
       errors = execState (addError error) []
   assertEqual "Should have one error" 1 (length errors)
   let error' = case errors of
@@ -59,7 +59,7 @@ test_info_collection = do
 test_error_detection :: Assertion
 test_error_detection = do
   let location = ErrorLocation Nothing 1 10 Nothing Nothing
-      error = errorAt "Test" "Test error" location
+      error = errorAt "Test" Error "Test error" location
       errors = execState (addError error) []
   assertBool "Should detect errors" (hasErrors errors)
   assertBool "Should not detect warnings" (not $ hasWarnings errors)
@@ -77,7 +77,7 @@ test_warning_detection = do
 test_error_formatting :: Assertion
 test_error_formatting = do
   let location = ErrorLocation Nothing 5 15 Nothing Nothing
-      error = errorAt "Test" "Test error message" location
+      error = errorAt "Test" Error "Test error message" location
       formatted = formatError error
   assertBool "Formatted error should contain line number" ("5:" `isInfixOf` formatted)
   assertBool "Formatted error should contain column number" (":15" `isInfixOf` formatted)
@@ -87,7 +87,7 @@ test_error_formatting = do
 test_error_formatting_with_location :: Assertion
 test_error_formatting_with_location = do
   let location = ErrorLocation Nothing 10 25 Nothing Nothing
-      error = errorAt "Test" "Location test error" location
+      error = errorAt "Test" Error "Location test error" location
       formatted = formatErrorWithLocation error
   assertBool "Formatted error should contain location info" ("10:25" `isInfixOf` formatted)
   assertBool "Formatted error should contain error message" ("Location test error" `isInfixOf` formatted)
@@ -98,8 +98,8 @@ test_multiple_errors_formatting = do
   let location1 = ErrorLocation Nothing 1 10 Nothing Nothing
       location2 = ErrorLocation Nothing 2 20 Nothing Nothing
       location3 = ErrorLocation Nothing 3 30 Nothing Nothing
-      error1 = errorAt "Test" "First error" location1
-      error2 = errorAt "Test" "Second error" location2
+      error1 = errorAt "Test" Error "First error" location1
+      error2 = errorAt "Test" Error "Second error" location2
       warning = warningAt "Test" "A warning" location3
       errors = execState (addError error1 >> addError error2 >> addWarning warning) []
       formatted = formatErrors errors
@@ -112,8 +112,8 @@ test_error_recovery :: Assertion
 test_error_recovery = do
   let location1 = ErrorLocation Nothing 1 10 Nothing Nothing
       location2 = ErrorLocation Nothing 2 20 Nothing Nothing
-      recoverableError = errorAt "Test" "Recoverable error" location1
-      nonRecoverableError = errorAt "Test" "Non-recoverable error" location2
+      recoverableError = errorAt "Test" Error "Recoverable error" location1
+      nonRecoverableError = errorAt "Test" Error "Non-recoverable error" location2
   assertBool "Should be able to recover from recoverable error" (canRecoverFrom recoverableError)
   assertBool "Should continue after recoverable error" (shouldContinueAfter recoverableError)
 
@@ -136,7 +136,7 @@ test_error_severity = do
   let location1 = ErrorLocation Nothing 1 10 Nothing Nothing
       location2 = ErrorLocation Nothing 2 20 Nothing Nothing
       location3 = ErrorLocation Nothing 3 30 Nothing Nothing
-      error = errorAt "Test" "Error" location1
+      error = errorAt "Test" Error "Error" location1
       warning = warningAt "Test" "Warning" location2
       info = infoAt "Test" "Info" location3
   assertEqual "Error should have Error severity" Error (severity error)
@@ -148,7 +148,7 @@ test_error_context :: Assertion
 test_error_context = do
   let context = emptyContext
       location = ErrorLocation Nothing 1 10 Nothing Nothing
-      error = errorAt "Test" "Context test error" location
+      error = errorAt "Test" Error "Context test error" location
   assertEqual "Error context should be empty" context (Compiler.Errors.Core.context error)
 
 -- | 测试时间戳错误
@@ -164,14 +164,14 @@ test_timestamped_errors = do
 prop_error_collector_counts :: [String] -> Property
 prop_error_collector_counts messages =
   let location = ErrorLocation Nothing 1 1 Nothing Nothing
-      errors = execState (mapM_ (\msg -> addError (errorAt "Test" (T.pack msg) location)) messages) []
+      errors = execState (mapM_ (\msg -> addError (errorAt "Test" Error (T.pack msg) location)) messages) []
   in length errors === length messages
 
 -- | QuickCheck属性：错误格式化应该包含所有必要信息
 prop_error_formatting_contains_info :: String -> Positive Int -> Positive Int -> Property
 prop_error_formatting_contains_info msg (Positive line) (Positive col) =
   let location = ErrorLocation Nothing line col Nothing Nothing
-      error = errorAt "Test" (T.pack msg) location
+      error = errorAt "Test" Error (T.pack msg) location
       formatted = formatError error
   in if line > 0 && col > 0 && not (null msg)
      then (show line `isInfixOf` formatted) .&&. 
@@ -183,7 +183,7 @@ prop_error_formatting_contains_info msg (Positive line) (Positive col) =
 prop_error_recovery_consistent :: String -> Property
 prop_error_recovery_consistent msg =
   let location = ErrorLocation Nothing 1 1 Nothing Nothing
-      error = errorAt "Test" (T.pack msg) location
+      error = errorAt "Test" Error (T.pack msg) location
       canRecover = canRecoverFrom error
       shouldContinue = shouldContinueAfter error
   in property (canRecover == shouldContinue)  -- 简化假设：可恢复性应该与继续性一致
@@ -192,7 +192,7 @@ prop_error_recovery_consistent msg =
 test_error_location_extraction :: Assertion
 test_error_location_extraction = do
   let location = ErrorLocation Nothing 10 25 Nothing Nothing
-      error = errorAt "Test" "Location test" location
+      error = errorAt "Test" Error "Location test" location
       line = getErrorLine location
       column = getErrorColumn location
   assertEqual "Should extract correct line" 10 line
@@ -203,8 +203,8 @@ test_combined_errors :: Assertion
 test_combined_errors = do
   let location1 = ErrorLocation Nothing 1 10 Nothing Nothing
       location2 = ErrorLocation Nothing 2 20 Nothing Nothing
-      error1 = errorAt "Test" "First error" location1
-      error2 = errorAt "Test" "Second error" location2
+      error1 = errorAt "Test" Error "First error" location1
+      error2 = errorAt "Test" Error "Second error" location2
       combined = combineErrors [error1, error2]
   assertEqual "Combined error should contain both errors" 2 (length combined)
 
@@ -213,8 +213,8 @@ test_error_sorting :: Assertion
 test_error_sorting = do
   let location1 = ErrorLocation Nothing 2 20 Nothing Nothing
       location2 = ErrorLocation Nothing 1 10 Nothing Nothing
-      error1 = errorAt "Test" "Later error" location1
-      error2 = errorAt "Test" "Earlier error" location2
+      error1 = errorAt "Test" Error "Later error" location1
+      error2 = errorAt "Test" Error "Earlier error" location2
       errors = [error1, error2]
       sortedErrors = formatErrors errors
   assertBool "Earlier error should appear before later error" 
@@ -226,7 +226,7 @@ test_error_sorting = do
 test_error_message_internationalization :: Assertion
 test_error_message_internationalization = do
   let location = ErrorLocation Nothing 1 10 Nothing Nothing
-      chineseError = errorAt "Test" (T.pack "这是一个错误") location
+      chineseError = errorAt "Test" Error (T.pack "这是一个错误") location
       formatted = formatError chineseError
   assertBool "Should handle Chinese error messages" ("这是一个错误" `isInfixOf` formatted)
 

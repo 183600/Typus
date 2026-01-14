@@ -390,7 +390,7 @@ prop_filterBySeverity_preservesOrder sev errors =
 -- | Test combineErrors idempotency with same error
 prop_combineErrors_idempotent :: Int -> Bool
 prop_combineErrors_idempotent errorIndex = 
-  let error = errorAt ("error-" ++ show errorIndex) (T.pack "test message") (ErrorLocation Nothing errorIndex 0 Nothing Nothing)
+  let error = errorAt ("error-" ++ show errorIndex) Error (T.pack "test message") (ErrorLocation Nothing errorIndex 0 Nothing Nothing)
       combined = combineErrors [error, error]
   in length combined >= 1
 

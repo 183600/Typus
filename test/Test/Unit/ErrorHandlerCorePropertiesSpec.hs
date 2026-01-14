@@ -324,10 +324,10 @@ prop_filter_combined_errors_by_severity =
 -- Error Creation Properties
 -- ============================================================================
 
--- Property: errorAt creates error with location
+-- Property: errorAt creates Error (T.pack creates) error with location
 prop_error_at_creates_with_location :: Text -> ErrorLocation -> Property
 prop_error_at_creates_with_location msg loc = 
-  let err = errorAt "TEST" msg loc
+  let err = errorAt "TEST" Error msg loc
   in property (message err === msg) .&&. property (location err === loc)
 
 -- Property: errorWithCategory creates error with category
@@ -355,7 +355,7 @@ prop_fatal_error_with_category_has_fatal_and_category msg cat =
 prop_error_with_suggestions_includes_suggestions :: Text -> [Text] -> Property
 prop_error_with_suggestions_includes_suggestions msg suggs = 
   let loc = ErrorLocation Nothing 0 0 Nothing Nothing
-      err = errorWithSuggestions "TEST" msg suggs loc
+      err = errorWithSuggestions "TEST" Error suggs loc
   in property (suggestions err === suggs)
 
 -- ============================================================================
@@ -450,7 +450,7 @@ tests = testGroup "Error Handler Core Properties Tests"
     , testProperty "filterCombinedErrorsBySeverity filters correctly" prop_filter_combined_errors_by_severity
     ]
   , testGroup "Error Creation Properties"
-    [ testProperty "errorAt creates error with location" prop_error_at_creates_with_location
+    [ testProperty "errorAt creates Error (T.pack creates) error with location" prop_error_at_creates_with_location
     , testProperty "errorWithCategory creates error with category" prop_error_with_category_creates_with_category
     , testProperty "fatalError has Fatal severity" prop_fatal_error_has_fatal_severity
     , testProperty "fatalErrorWithCategory has Fatal severity and category" prop_fatal_error_with_category_has_fatal_and_category
