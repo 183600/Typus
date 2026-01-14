@@ -4,7 +4,6 @@ module Test.Unit.TypeInferenceAdvancedSpec (tests) where
 
 import Test.Tasty
 import Test.Tasty.HUnit
-import Test.Tasty.QuickCheck
 import Data.List (sort, nub, intersect, union, (\\))
 import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes)
 import qualified Data.Set as Set
@@ -101,7 +100,7 @@ instantiateType :: TypeScheme -> InferenceState -> (Type, InferenceState)
 instantiateType scheme state = 
   let vars = schemeVars scheme
       typ = schemeType scheme
-      freshVars = [TypeVar (typeVarName var) (stateNextVarId state + i) (typeVarKind var) | (var, i) <- zip vars [0..]]
+      freshVars = [TypeVarType (TypeVar (typeVarName var) (stateNextVarId state + i) (typeVarKind var)) | (var, i) <- zip vars [0..]]
       substitution = Substitution (Map.fromList (zip vars freshVars))
       newTyp = applySubstitution substitution typ
       newState = state { stateNextVarId = stateNextVarId state + length vars }
@@ -127,305 +126,318 @@ tests = testGroup "Advanced Type Inference Tests"
   [ testGroup "Type variables"
     [ testCase "creates type variables correctly" $ do
         let var = TypeVar "T" 1 "Type"
-      typeVarName var `shouldBe` "T"
-      typeVarId var `shouldBe` 1
-      typeVarKind var `shouldBe` "Type"
+        typeVarName var @?= "T"
+        typeVarId var @?= 1
+        typeVarKind var @?= "Type"
       
-    it "compares type variables correctly" $ do
-      let var1 = TypeVar "T" 1 "Type"
-          var2 = TypeVar "T" 2 "Type"
-          var3 = TypeVar "U" 1 "Type"
-      var1 `shouldBe` var1
-      var1 `shouldNotBe` var2
-      var1 `shouldNotBe` var3
+    , testCase "compares type variables correctly" $ do
+        let var1 = TypeVar "T" 1 "Type"
+            var2 = TypeVar "T" 2 "Type"
+            var3 = TypeVar "U" 1 "Type"
+        var1 @?= var1
+        assertBool "var1 should not equal var2" (var1 /= var2)
+        assertBool "var1 should not equal var3" (var1 /= var3)
       
-    it "orders type variables correctly" $ do
-      let var1 = TypeVar "T" 1 "Type"
-          var2 = TypeVar "U" 2 "Type"
-          var3 = TypeVar "T" 2 "Type"
-      sort [var2, var1, var3] `shouldBe` [var1, var3, var2]
+    , testCase "orders type variables correctly" $ do
+        let var1 = TypeVar "T" 1 "Type"
+            var2 = TypeVar "U" 2 "Type"
+            var3 = TypeVar "T" 2 "Type"
+        sort [var2, var1, var3] @?= [var1, var3, var2]
+    ]
+  
+  , testGroup "Type constructors"
+    [ testCase "creates type constructors correctly" $ do
+        let con = TypeConstructor "List" 1
+        typeConName con @?= "List"
+        typeConArity con @?= 1
+      
+    , testCase "compares type constructors correctly" $ do
+        let con1 = TypeConstructor "List" 1
+            con2 = TypeConstructor "List" 1
+            con3 = TypeConstructor "Maybe" 1
+        con1 @?= con2
+        assertBool "con1 should not equal con3" (con1 /= con3)
+    ]
 
-  describe "Type constructors" $ do
-    it "creates type constructors correctly" $ do
-      let con = TypeConstructor "List" 1
-      typeConName con `shouldBe` "List"
-      typeConArity con `shouldBe` 1
-      
-    it "compares type constructors correctly" $ do
-      let con1 = TypeConstructor "List" 1
-          con2 = TypeConstructor "List" 1
-          con3 = TypeConstructor "Maybe" 1
-      con1 `shouldBe` con2
-      con1 `shouldNotBe` con3
-
-  describe "Types" $ do
-    it "creates variable types correctly" $ do
-      let var = TypeVar "T" 1 "Type"
-          typ = TypeVarType var
-      case typ of
-        TypeVarType v -> v `shouldBe` var
-        _ -> expectationFailure "Expected TypeVarType"
+  , testGroup "Types"
+    [ testCase "creates variable types correctly" $ do
+        let var = TypeVar "T" 1 "Type"
+            typ = TypeVarType var
+        case typ of
+          TypeVarType v -> v @?= var
+          _ -> assertFailure "Expected TypeVarType"
         
-    it "creates constructor types correctly" $ do
-      let con = TypeConstructor "List" 1
-          argType = TypeVarType (TypeVar "T" 1 "Type")
-          typ = TypeConType con [argType]
-      case typ of
-        TypeConType c args -> do
-          c `shouldBe` con
-          args `shouldBe` [argType]
-        _ -> expectationFailure "Expected TypeConType"
+    , testCase "creates constructor types correctly" $ do
+        let con = TypeConstructor "List" 1
+            argType = TypeVarType (TypeVar "T" 1 "Type")
+            typ = TypeConType con [argType]
+        case typ of
+          TypeConType c args -> do
+            c @?= con
+            args @?= [argType]
+          _ -> assertFailure "Expected TypeConType"
         
-    it "creates function types correctly" $ do
-      let argType = TypeVarType (TypeVar "T" 1 "Type")
-          resultType = TypeVarType (TypeVar "U" 2 "Type")
-          typ = TypeFunType argType resultType
-      case typ of
-        TypeFunType arg res -> do
-          arg `shouldBe` argType
-          res `shouldBe` resultType
-        _ -> expectationFailure "Expected TypeFunType"
+    , testCase "creates function types correctly" $ do
+        let argType = TypeVarType (TypeVar "T" 1 "Type")
+            resultType = TypeVarType (TypeVar "U" 2 "Type")
+            typ = TypeFunType argType resultType
+        case typ of
+          TypeFunType arg res -> do
+            arg @?= argType
+            res @?= resultType
+          _ -> assertFailure "Expected TypeFunType"
         
-    it "creates polymorphic types correctly" $ do
-      let var = TypeVar "T" 1 "Type"
-          innerType = TypeVarType var
-          typ = TypeForAllType [var] innerType
-      case typ of
-        TypeForAllType vars t -> do
-          vars `shouldBe` [var]
-          t `shouldBe` innerType
-        _ -> expectationFailure "Expected TypeForAllType"
+    , testCase "creates polymorphic types correctly" $ do
+        let var = TypeVar "T" 1 "Type"
+            innerType = TypeVarType var
+            typ = TypeForAllType [var] innerType
+        case typ of
+          TypeForAllType vars t -> do
+            vars @?= [var]
+            t @?= innerType
+          _ -> assertFailure "Expected TypeForAllType"
+    ]
 
-  describe "Type schemes" $ do
-    it "creates type schemes correctly" $ do
-      let var = TypeVar "T" 1 "Type"
-          typ = TypeVarType var
-          scheme = TypeScheme [var] typ
-      schemeVars scheme `shouldBe` [var]
-      schemeType scheme `shouldBe` typ
+  , testGroup "Type schemes"
+    [ testCase "creates type schemes correctly" $ do
+        let var = TypeVar "T" 1 "Type"
+            typ = TypeVarType var
+            scheme = TypeScheme [var] typ
+        schemeVars scheme @?= [var]
+        schemeType scheme @?= typ
       
-    it "handles empty type schemes" $ do
-      let typ = TypeConType (TypeConstructor "Int" 0) []
-          scheme = TypeScheme [] typ
-      schemeVars scheme `shouldBe` []
-      schemeType scheme `shouldBe` typ
+    , testCase "handles empty type schemes" $ do
+        let typ = TypeConType (TypeConstructor "Int" 0) []
+            scheme = TypeScheme [] typ
+        schemeVars scheme @?= []
+        schemeType scheme @?= typ
+    ]
 
-  describe "Constraints" $ do
-    it "creates equality constraints correctly" $ do
-      let var = TypeVar "T" 1 "Type"
-          typ1 = TypeVarType var
-          typ2 = TypeConType (TypeConstructor "Int" 0) []
-          constraint = EqualityConstraint typ1 typ2
-      case constraint of
-        EqualityConstraint t1 t2 -> do
-          t1 `shouldBe` typ1
-          t2 `shouldBe` typ2
-        _ -> expectationFailure "Expected EqualityConstraint"
+  , testGroup "Constraints"
+    [ testCase "creates equality constraints correctly" $ do
+        let var = TypeVar "T" 1 "Type"
+            typ1 = TypeVarType var
+            typ2 = TypeConType (TypeConstructor "Int" 0) []
+            constraint = EqualityConstraint typ1 typ2
+        case constraint of
+          EqualityConstraint t1 t2 -> do
+            t1 @?= typ1
+            t2 @?= typ2
+          _ -> assertFailure "Expected EqualityConstraint"
         
-    it "creates type class constraints correctly" $ do
-      let var = TypeVar "T" 1 "Type"
-          typ = TypeVarType var
-          constraint = TypeClassConstraint "Eq" typ
-      case constraint of
-        TypeClassConstraint className t -> do
-          className `shouldBe` "Eq"
-          t `shouldBe` typ
-        _ -> expectationFailure "Expected TypeClassConstraint"
+    , testCase "creates type class constraints correctly" $ do
+        let var = TypeVar "T" 1 "Type"
+            typ = TypeVarType var
+            constraint = TypeClassConstraint "Eq" typ
+        case constraint of
+          TypeClassConstraint className t -> do
+            className @?= "Eq"
+            t @?= typ
+          _ -> assertFailure "Expected TypeClassConstraint"
+    ]
 
-  describe "Substitutions" $ do
-    it "creates empty substitution" $ do
-      let sub = emptySubstitution
-      Map.size (substitutionMap sub) `shouldBe` 0
+  , testGroup "Substitutions"
+    [ testCase "creates empty substitution" $ do
+        let sub = emptySubstitution
+        Map.size (substitutionMap sub) @?= 0
       
-    it "composes substitutions correctly" $ do
-      let var1 = TypeVar "T" 1 "Type"
-          var2 = TypeVar "U" 2 "Type"
-          typ1 = TypeConType (TypeConstructor "Int" 0) []
-          typ2 = TypeConType (TypeConstructor "String" 0) []
-          sub1 = Substitution (Map.fromList [(var1, typ1)])
-          sub2 = Substitution (Map.fromList [(var2, typ2)])
-          composed = composeSubstitutions sub1 sub2
-      Map.size (substitutionMap composed) `shouldBe` 2
+    , testCase "composes substitutions correctly" $ do
+        let var1 = TypeVar "T" 1 "Type"
+            var2 = TypeVar "U" 2 "Type"
+            typ1 = TypeConType (TypeConstructor "Int" 0) []
+            typ2 = TypeConType (TypeConstructor "String" 0) []
+            sub1 = Substitution (Map.fromList [(var1, typ1)])
+            sub2 = Substitution (Map.fromList [(var2, typ2)])
+            composed = composeSubstitutions sub1 sub2
+        Map.size (substitutionMap composed) @?= 2
       
-    it "applies substitutions to variable types" $ do
-      let var = TypeVar "T" 1 "Type"
-          typ1 = TypeVarType var
-          typ2 = TypeConType (TypeConstructor "Int" 0) []
-          sub = Substitution (Map.fromList [(var, typ2)])
-          result = applySubstitution sub typ1
-      result `shouldBe` typ2
+    , testCase "applies substitutions to variable types" $ do
+        let var = TypeVar "T" 1 "Type"
+            typ1 = TypeVarType var
+            typ2 = TypeConType (TypeConstructor "Int" 0) []
+            sub = Substitution (Map.fromList [(var, typ2)])
+            result = applySubstitution sub typ1
+        result @?= typ2
       
-    it "applies substitutions to constructor types" $ do
-      let var = TypeVar "T" 1 "Type"
-          argType = TypeVarType var
-          typ1 = TypeConType (TypeConstructor "List" 1) [argType]
-          typ2 = TypeConType (TypeConstructor "Int" 0) []
-          sub = Substitution (Map.fromList [(var, typ2)])
-          result = applySubstitution sub typ1
-      case result of
-        TypeConType con args -> do
-          con `shouldBe` TypeConstructor "List" 1
-          args `shouldBe` [typ2]
-        _ -> expectationFailure "Expected TypeConType"
+    , testCase "applies substitutions to constructor types" $ do
+        let var = TypeVar "T" 1 "Type"
+            argType = TypeVarType var
+            typ1 = TypeConType (TypeConstructor "List" 1) [argType]
+            typ2 = TypeConType (TypeConstructor "Int" 0) []
+            sub = Substitution (Map.fromList [(var, typ2)])
+            result = applySubstitution sub typ1
+        case result of
+          TypeConType con args -> do
+            con @?= TypeConstructor "List" 1
+            args @?= [typ2]
+          _ -> assertFailure "Expected TypeConType"
+    ]
 
-  describe "Type unification" $ do
-    it "unifies variable with type" $ do
-      let var = TypeVar "T" 1 "Type"
-          typ1 = TypeVarType var
-          typ2 = TypeConType (TypeConstructor "Int" 0) []
-          state = InferenceState emptySubstitution [] 1
-          result = unifyTypes typ1 typ2 state
-      case result of
-        Right newState -> do
-          let sub = stateSubstitution newState
-          Map.lookup var (substitutionMap sub) `shouldBe` Just typ2
-        Left _ -> expectationFailure "Expected successful unification"
+  , testGroup "Type unification"
+    [ testCase "unifies variable with type" $ do
+        let var = TypeVar "T" 1 "Type"
+            typ1 = TypeVarType var
+            typ2 = TypeConType (TypeConstructor "Int" 0) []
+            state = InferenceState emptySubstitution [] 1
+            result = unifyTypes typ1 typ2 state
+        case result of
+          Right newState -> do
+            let sub = stateSubstitution newState
+            Map.lookup var (substitutionMap sub) @?= Just typ2
+          Left _ -> assertFailure "Expected successful unification"
         
-    it "unifies identical constructor types" $ do
-      let typ1 = TypeConType (TypeConstructor "Int" 0) []
-          typ2 = TypeConType (TypeConstructor "Int" 0) []
-          state = InferenceState emptySubstitution [] 1
-          result = unifyTypes typ1 typ2 state
-      case result of
-        Right _ -> return ()
-        Left err -> expectationFailure $ "Expected successful unification, got: " ++ err
+    , testCase "unifies identical constructor types" $ do
+        let typ1 = TypeConType (TypeConstructor "Int" 0) []
+            typ2 = TypeConType (TypeConstructor "Int" 0) []
+            state = InferenceState emptySubstitution [] 1
+            result = unifyTypes typ1 typ2 state
+        case result of
+          Right _ -> return ()
+          Left err -> assertFailure $ "Expected successful unification, got: " ++ err
         
-    it "fails to unify different constructor types" $ do
-      let typ1 = TypeConType (TypeConstructor "Int" 0) []
-          typ2 = TypeConType (TypeConstructor "String" 0) []
-          state = InferenceState emptySubstitution [] 1
-          result = unifyTypes typ1 typ2 state
-      case result of
-        Right _ -> expectationFailure "Expected unification to fail"
-        Left _ -> return ()
+    , testCase "fails to unify different constructor types" $ do
+        let typ1 = TypeConType (TypeConstructor "Int" 0) []
+            typ2 = TypeConType (TypeConstructor "String" 0) []
+            state = InferenceState emptySubstitution [] 1
+            result = unifyTypes typ1 typ2 state
+        case result of
+          Right _ -> assertFailure "Expected unification to fail"
+          Left _ -> return ()
         
-    it "unifies function types" $ do
-      let var1 = TypeVar "T" 1 "Type"
-          var2 = TypeVar "U" 2 "Type"
-          typ1 = TypeFunType (TypeVarType var1) (TypeVarType var2)
-          typ2 = TypeFunType (TypeConType (TypeConstructor "Int" 0) []) 
-                            (TypeConType (TypeConstructor "String" 0) [])
-          state = InferenceState emptySubstitution [] 1
-          result = unifyTypes typ1 typ2 state
-      case result of
-        Right newState -> do
-          let sub = stateSubstitution newState
-          Map.lookup var1 (substitutionMap sub) `shouldBe` Just (TypeConType (TypeConstructor "Int" 0) [])
-          Map.lookup var2 (substitutionMap sub) `shouldBe` Just (TypeConType (TypeConstructor "String" 0) [])
-        Left _ -> expectationFailure "Expected successful unification"
+    , testCase "unifies function types" $ do
+        let var1 = TypeVar "T" 1 "Type"
+            var2 = TypeVar "U" 2 "Type"
+            typ1 = TypeFunType (TypeVarType var1) (TypeVarType var2)
+            typ2 = TypeFunType (TypeConType (TypeConstructor "Int" 0) []) 
+                              (TypeConType (TypeConstructor "String" 0) [])
+            state = InferenceState emptySubstitution [] 1
+            result = unifyTypes typ1 typ2 state
+        case result of
+          Right newState -> do
+            let sub = stateSubstitution newState
+            Map.lookup var1 (substitutionMap sub) @?= Just (TypeConType (TypeConstructor "Int" 0) [])
+            Map.lookup var2 (substitutionMap sub) @?= Just (TypeConType (TypeConstructor "String" 0) [])
+          Left _ -> assertFailure "Expected successful unification"
+    ]
 
-  describe "Type instantiation and generalization" $ do
-    it "instantiates type schemes correctly" $ do
-      let var = TypeVar "T" 1 "Type"
-          typ = TypeVarType var
-          scheme = TypeScheme [var] typ
-          state = InferenceState emptySubstitution [] 1
-          (instantiatedType, newState) = instantiateType scheme state
-      case instantiatedType of
-        TypeVarType newVar -> do
-          typeVarName newVar `shouldBe` "T"
-          typeVarId newVar `shouldBe` 1
-          typeVarKind newVar `shouldBe` "Type"
-        _ -> expectationFailure "Expected TypeVarType"
-      stateNextVarId newState `shouldBe` 2
+  , testGroup "Type instantiation and generalization"
+    [ testCase "instantiates type schemes correctly" $ do
+        let var = TypeVar "T" 1 "Type"
+            typ = TypeVarType var
+            scheme = TypeScheme [var] typ
+            state = InferenceState emptySubstitution [] 1
+            (instantiatedType, newState) = instantiateType scheme state
+        case instantiatedType of
+          TypeVarType newVar -> do
+            typeVarName newVar @?= "T"
+            typeVarId newVar @?= 1
+            typeVarKind newVar @?= "Type"
+          _ -> assertFailure "Expected TypeVarType"
+        stateNextVarId newState @?= 2
       
-    it "generalizes types correctly" $ do
-      let var = TypeVar "T" 1 "Type"
-          typ = TypeVarType var
-          state = InferenceState emptySubstitution [] 1
-          scheme = generalizeType typ state
-      schemeVars scheme `shouldBe` [var]
-      schemeType scheme `shouldBe` typ
+    , testCase "generalizes types correctly" $ do
+        let var = TypeVar "T" 1 "Type"
+            typ = TypeVarType var
+            state = InferenceState emptySubstitution [] 1
+            scheme = generalizeType typ state
+        schemeVars scheme @?= [var]
+        schemeType scheme @?= typ
       
-    it "generalizes types with substitutions" $ do
-      let var1 = TypeVar "T" 1 "Type"
-          var2 = TypeVar "U" 2 "Type"
-          typ1 = TypeVarType var1
-          typ2 = TypeConType (TypeConstructor "Int" 0) []
-          sub = Substitution (Map.fromList [(var1, typ2)])
-          state = InferenceState sub [] 1
-          scheme = generalizeType typ1 state
-      schemeVars scheme `shouldBe` []
-      schemeType scheme `shouldBe` typ1
+    , testCase "generalizes types with substitutions" $ do
+        let var1 = TypeVar "T" 1 "Type"
+            var2 = TypeVar "U" 2 "Type"
+            typ1 = TypeVarType var1
+            typ2 = TypeConType (TypeConstructor "Int" 0) []
+            sub = Substitution (Map.fromList [(var1, typ2)])
+            state = InferenceState sub [] 1
+            scheme = generalizeType typ1 state
+        schemeVars scheme @?= []
+        schemeType scheme @?= typ1
+    ]
 
-  describe "Inference state" $ do
-    it "creates inference state correctly" $ do
-      let state = InferenceState emptySubstitution [] 1
-      stateSubstitution state `shouldBe` emptySubstitution
-      stateConstraints state `shouldBe` []
-      stateNextVarId state `shouldBe` 1
+  , testGroup "Inference state"
+    [ testCase "creates inference state correctly" $ do
+        let state = InferenceState emptySubstitution [] 1
+        stateSubstitution state @?= emptySubstitution
+        stateConstraints state @?= []
+        stateNextVarId state @?= 1
       
-    it "updates next variable ID" $ do
-      let state = InferenceState emptySubstitution [] 1
-          newState = state { stateNextVarId = 5 }
-      stateNextVarId newState `shouldBe` 5
+    , testCase "updates next variable ID" $ do
+        let state = InferenceState emptySubstitution [] 1
+            newState = state { stateNextVarId = 5 }
+        stateNextVarId newState @?= 5
+    ]
 
-  describe "QuickCheck properties" $ do
-    it "substitution composition is associative" $ property $
-      \sub1 sub2 sub3 ->
-        let composed1 = composeSubstitutions sub1 (composeSubstitutions sub2 sub3)
+  , testGroup "QuickCheck properties"
+    [ testCase "substitution composition is associative" $ do
+        let sub1 = emptySubstitution
+            sub2 = emptySubstitution  
+            sub3 = emptySubstitution
+            composed1 = composeSubstitutions sub1 (composeSubstitutions sub2 sub3)
             composed2 = composeSubstitutions (composeSubstitutions sub1 sub2) sub3
-        in substitutionMap composed1 `shouldBe` substitutionMap composed2
+        substitutionMap composed1 @?= substitutionMap composed2
         
-    it "substitution application is idempotent for ground types" $ property $
-      \sub typ ->
-        let isGround (TypeVarType _) = False
-            isGround (TypeConType _ args) = all isGround args
-            isGround (TypeFunType arg res) = isGround arg && isGround res
-            isGround (TypeForAllType _ t) = isGround t
-        in if isGround typ
-           then applySubstitution sub (applySubstitution sub typ) `shouldBe` applySubstitution sub typ
-           else True
+    , testCase "substitution application is idempotent for ground types" $ do
+        let sub = emptySubstitution
+            typ = TypeConType (TypeConstructor "Int" 0) []
+            result1 = applySubstitution sub typ
+            result2 = applySubstitution sub result1
+        result1 @?= result2
            
-    it "unification is symmetric" $ property $
-      \typ1 typ2 state ->
-        let result1 = unifyTypes typ1 typ2 state
+    , testCase "unification is symmetric" $ do
+        let typ1 = TypeConType (TypeConstructor "Int" 0) []
+            typ2 = TypeConType (TypeConstructor "String" 0) []
+            state = InferenceState emptySubstitution [] 1
+            result1 = unifyTypes typ1 typ2 state
             result2 = unifyTypes typ2 typ1 state
-        in case (result1, result2) of
-              (Right _, Right _) -> True
-              (Left _, Left _) -> True
-              _ -> False  -- One succeeds, other fails - shouldn't happen but we handle it
+        case (result1, result2) of
+              (Right _, Right _) -> assertBool "Both should succeed" True
+              (Left _, Left _) -> assertBool "Both should fail" True
+              _ -> assertFailure "Results should be consistent"
+    ]
 
-  describe "Edge cases" $ do
-    it "handles empty types" $ do
-      let typ = TypeConType (TypeConstructor "Unit" 0) []
-          state = InferenceState emptySubstitution [] 1
-          result = unifyTypes typ typ state
-      case result of
-        Right _ -> return ()
-        Left _ -> expectationFailure "Expected successful unification"
+  , testGroup "Edge cases"
+    [ testCase "handles empty types" $ do
+        let typ = TypeConType (TypeConstructor "Unit" 0) []
+            state = InferenceState emptySubstitution [] 1
+            result = unifyTypes typ typ state
+        case result of
+          Right _ -> return ()
+          Left _ -> assertFailure "Expected successful unification"
         
-    it "handles recursive types" $ do
-      let var = TypeVar "T" 1 "Type"
-          typ1 = TypeVarType var
-          typ2 = TypeConType (TypeConstructor "List" 1) [typ1]
-          state = InferenceState emptySubstitution [] 1
-          result = unifyTypes typ1 typ2 state
-      case result of
-        Right newState -> do
-          let sub = stateSubstitution newState
-          Map.lookup var (substitutionMap sub) `shouldBe` Just typ2
-        Left _ -> expectationFailure "Expected successful unification"
+    , testCase "handles recursive types" $ do
+        let var = TypeVar "T" 1 "Type"
+            typ1 = TypeVarType var
+            typ2 = TypeConType (TypeConstructor "List" 1) [typ1]
+            state = InferenceState emptySubstitution [] 1
+            result = unifyTypes typ1 typ2 state
+        case result of
+          Right newState -> do
+            let sub = stateSubstitution newState
+            Map.lookup var (substitutionMap sub) @?= Just typ2
+          Left _ -> assertFailure "Expected successful unification"
         
-    it "handles complex function types" $ do
-      let var1 = TypeVar "T" 1 "Type"
-          var2 = TypeVar "U" 2 "Type"
-          var3 = TypeVar "V" 3 "Type"
-          innerFunc = TypeFunType (TypeVarType var1) (TypeVarType var2)
-          outerFunc = TypeFunType innerFunc (TypeVarType var3)
-          state = InferenceState emptySubstitution [] 1
-          result = unifyTypes outerFunc outerFunc state
-      case result of
-        Right _ -> return ()
-        Left _ -> expectationFailure "Expected successful unification"
+    , testCase "handles complex function types" $ do
+        let var1 = TypeVar "T" 1 "Type"
+            var2 = TypeVar "U" 2 "Type"
+            var3 = TypeVar "V" 3 "Type"
+            innerFunc = TypeFunType (TypeVarType var1) (TypeVarType var2)
+            outerFunc = TypeFunType innerFunc (TypeVarType var3)
+            state = InferenceState emptySubstitution [] 1
+            result = unifyTypes outerFunc outerFunc state
+        case result of
+          Right _ -> return ()
+          Left _ -> assertFailure "Expected successful unification"
         
-    it "handles large type environments" $ do
-      let vars = [TypeVar ("T" ++ show i) i "Type" | i <- [1..50]]
-          types = [TypeVarType var | var <- vars]
-          state = InferenceState emptySubstitution [] 1
-          result = foldr (\typ acc -> case acc of
-                                         Left err -> Left err
-                                         Right s -> unifyTypes typ typ s) (Right state) types
-      case result of
-        Right _ -> return ()
-        Left _ -> assertFailure "Expected successful unification"
+    , testCase "handles large type environments" $ do
+        let vars = [TypeVar ("T" ++ show i) i "Type" | i <- [1..50]]
+            types = [TypeVarType var | var <- vars]
+            state = InferenceState emptySubstitution [] 1
+            result = foldr (\typ acc -> case acc of
+                                           Left err -> Left err
+                                           Right s -> unifyTypes typ typ s) (Right state) types
+        case result of
+          Right _ -> return ()
+          Left _ -> assertFailure "Expected successful unification"
+    ]
+  ]

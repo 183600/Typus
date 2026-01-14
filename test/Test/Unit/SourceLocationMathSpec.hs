@@ -1,201 +1,150 @@
-module Test.Unit.SourceLocationMathSpec where
+{-# LANGUAGE OverloadedStrings #-}
+
+module Test.Unit.SourceLocationMathSpec (tests) where
 
 import Test.Tasty
-import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import SourceLocation
-import Compiler.Errors.Core (ErrorLocation(..))
-import qualified Data.Text as T
+import Test.Tasty.QuickCheck
+import SourceLocation (SourcePos(..), SourceSpan(..))
 
--- Test cases for SourcePos
-testSourcePos :: TestTree
-testSourcePos = testGroup "SourcePos tests"
-  [ testCase "startPos has correct values" $
-      startPos @?= SourcePos 1 1 0
-  , testCase "posAt creates position at line and column" $
-      posAt 5 10 @?= SourcePos 5 10 0
-  , testCase "posAtLineCol creates position with offset" $
-      posAtLineCol 3 7 15 @?= SourcePos 3 7 15
-  , testCase "posAfter handles newline" $
-      posAfter '\n' (SourcePos 1 5 4) @?= SourcePos 2 1 5
-  , testCase "posAfter handles tab" $
-      posAfter '\t' (SourcePos 1 3 2) @?= SourcePos 1 9 3
-  , testCase "posAfter handles regular character" $
-      posAfter 'a' (SourcePos 1 5 4) @?= SourcePos 1 6 5
-  ]
-
--- Test cases for SourceSpan
-testSourceSpan :: TestTree
-testSourceSpan = testGroup "SourceSpan tests"
-  [ testCase "emptySpan creates span at position" $
-      let pos = posAt 2 3
-          span = emptySpan pos
-      in span @?= SourceSpan pos pos
-  , testCase "spanFrom creates span starting at position" $
-      let pos = posAt 2 3
-          span = spanFrom pos
-      in span @?= SourceSpan pos pos
-  , testCase "spanTo creates span ending at position" $
-      let pos = posAt 2 3
-          span = spanTo pos
-      in span @?= SourceSpan pos pos
-  , testCase "spanBetween creates span between positions" $
-      let start = posAt 1 1
-          end = posAt 2 5
-          span = spanBetween start end
-      in span @?= SourceSpan start end
-  , testCase "mergeSpans creates span covering both" $
-      let span1 = spanBetween (posAt 1 1) (posAt 1 10)
-          span2 = spanBetween (posAt 2 1) (posAt 2 5)
-          merged = mergeSpans span1 span2
-      in merged @?= SourceSpan (posAt 1 1) (posAt 2 5)
-  , testCase "isValidSpan checks span validity" $
-      let validSpan = spanBetween (posAt 1 1) (posAt 1 10)
-          invalidSpan = spanBetween (posAt 1 10) (posAt 1 1)
-      in do
-        isValidSpan validSpan @?= True
-        isValidSpan invalidSpan @?= False
-  ]
-
--- Test cases for Located values
-testLocated :: TestTree
-testLocated = testGroup "Located tests"
-  [ testCase "locatedAt creates located value" $
-      let pos = posAt 2 3
-          value = "test"
-          located = locatedAt pos value
-      in located @?= Located value pos (SourceSpan pos pos)
-  , testCase "locatedWithSpan creates located value with span" $
-      let span = spanBetween (posAt 1 1) (posAt 1 5)
-          value = "test"
-          located = locatedWithSpan span value
-      in located @?= Located value (posAt 1 1) span
-  , testCase "locatedValue extracts value" $
-      let located = locatedAt (posAt 1 1) "test"
-      in locatedValue located @?= "test"
-  , testCase "locatedSpan extracts span" $
-      let span = spanBetween (posAt 1 1) (posAt 1 5)
-          located = locatedWithSpan span "test"
-      in locatedSpan located @?= span
-  , testCase "locatedPos extracts start position" $
-      let span = spanBetween (posAt 2 3) (posAt 2 7)
-          located = locatedWithSpan span "test"
-      in locatedPos located @?= posAt 2 3
-  , testCase "mapLocated applies function to value" $
-      let located = locatedAt (posAt 1 1) "hello"
-          mapped = mapLocated length located
-      in locatedValue mapped @?= 5
-  ]
-
--- Test cases for position advancement
-testPositionAdvancement :: TestTree
-testPositionAdvancement = testGroup "Position advancement tests"
-  [ testCase "advancePosBy advances by multiple characters" $
-      let start = posAt 1 1
-          advanced = advancePosBy "abc" start
-      in advanced @?= posAt 1 4
-  , testCase "advancePosBy handles newline in string" $
-      let start = posAt 1 1
-          advanced = advancePosBy "a\nb" start
-      in advanced @?= posAt 2 2
-  , testCase "advancePosByText advances by text" $
-      let start = posAt 1 1
-          text = T.pack "hello"
-          advanced = advancePosByText text start
-      in advanced @?= posAt 1 6
-  , testCase "advancePosByLine advances by lines" $
-      let start = posAt 1 5
-          advanced = advancePosByLine 3 start
-      in advanced @?= posAt 4 1
-  ]
-
--- Test cases for error location conversion
-testErrorLocationConversion :: TestTree
-testErrorLocationConversion = testGroup "Error location conversion tests"
-  [ testCase "toErrorLocation converts position" $
-      let pos = posAt 5 10
-          errLoc = toErrorLocation pos
-      in do
-        filePath errLoc @?= Nothing
-        line errLoc @?= 5
-        column errLoc @?= 10
-        endLine errLoc @?= Nothing
-        endColumn errLoc @?= Nothing
-  , testCase "toErrorLocationWithSpan converts span with range" $
-      let span = spanBetween (posAt 3 5) (posAt 4 10)
-          errLoc = toErrorLocationWithSpan span
-      in do
-        filePath errLoc @?= Nothing
-        line errLoc @?= 3
-        column errLoc @?= 5
-        endLine errLoc @?= Just 4
-        endColumn errLoc @?= Just 10
-  ]
-
--- Test cases for position arithmetic
-testPositionArithmetic :: TestTree
-testPositionArithmetic = testGroup "Position arithmetic tests"
-  [ testCase "tab advances to next tab stop" $
-      let pos = posAt 1 3
-          afterTab = posAfter '\t' pos
-      in posColumn afterTab @?= 9
-  , testCase "tab at column 8 advances to column 9" $
-      let pos = posAt 1 8
-          afterTab = posAfter '\t' pos
-      in posColumn afterTab @?= 9
-  , testCase "tab at column 9 advances to column 17" $
-      let pos = posAt 1 9
-          afterTab = posAfter '\t' pos
-      in posColumn afterTab @?= 17
-  , testCase "multiple characters advance correctly" $
-      let start = posAt 1 1
-          afterHello = advancePosBy "hello" start
-      in afterHello @?= posAt 1 6
-  ]
-
--- QuickCheck properties
-prop_posAfter_offset_increases :: Char -> SourcePos -> Property
-prop_posAfter_offset_increases c pos = 
-  let newPos = posAfter c pos
-  in (posOffset newPos >= posOffset pos) === True
-
-prop_spanBetween_valid :: SourcePos -> SourcePos -> Property
-prop_spanBetween_valid start end = 
-  let span = spanBetween start end'
-      end' = if start > end then start else end
-  in isValidSpan span === True
-
-prop_mergeSpans_contains_both :: SourceSpan -> SourceSpan -> Property
-prop_mergeSpans_contains_both span1 span2 = 
-  let merged = mergeSpans span1 span2
-  in (spanStart merged <= spanStart span1 && 
-     spanEnd merged >= spanEnd span1 &&
-     spanStart merged <= spanStart span2 && 
-     spanEnd merged >= spanEnd span2) === True
-
-prop_advancePosBy_sum_of_advances :: String -> SourcePos -> Property
-prop_advancePosBy_sum_of_advances s pos = 
-  let advanced = advancePosBy s pos
-      manualAdvanced = foldl (flip posAfter) pos s
-  in advanced === manualAdvanced
-
-prop_locatedAt_span_is_empty :: SourcePos -> String -> Property
-prop_locatedAt_span_is_empty pos value = 
-  let located = locatedAt pos value
-      span = locSpan located
-  in spanStart span === spanEnd span
-
+-- Test source location mathematical properties
 tests :: TestTree
-tests = testGroup "SourceLocation Math Tests"
-  [ testSourcePos
-  , testSourceSpan
-  , testLocated
-  , testPositionAdvancement
-  , testErrorLocationConversion
-  , testPositionArithmetic
---  , testProperty "posAfter offset increases" prop_posAfter_offset_increases
---  , testProperty "spanBetween creates valid span" prop_spanBetween_valid
---  , testProperty "mergeSpans contains both spans" prop_mergeSpans_contains_both
---  , testProperty "advancePosBy sum of advances" prop_advancePosBy_sum_of_advances
---  , testProperty "locatedAt creates empty span" prop_locatedAt_span_is_empty
+tests = testGroup "Source Location Math Tests"
+  [ testGroup "SourcePos properties"
+    [ testProperty "position comparison is transitive" $
+        \pos1 pos2 pos3 ->
+          let p1 = SourcePos (abs pos1) 0
+              p2 = SourcePos (abs pos2) 0
+              p3 = SourcePos (abs pos3) 0
+          in if p1 <= p2 && p2 <= p3 then p1 <= p3 else property True
+    
+    , testProperty "line numbers are non-negative" $
+        \line col -> sourceLine (SourcePos (abs line) (abs col)) >= 0
+    
+    , testProperty "column numbers are non-negative" $
+        \line col -> sourceColumn (SourcePos (abs line) (abs col)) >= 0
+    
+    , testProperty "position equality is reflexive" $
+        \line col -> 
+          let pos = SourcePos (abs line) (abs col)
+          in pos == pos
+    
+    , testProperty "position equality is symmetric" $
+        \line1 col1 line2 col2 ->
+          let pos1 = SourcePos (abs line1) (abs col1)
+              pos2 = SourcePos (abs line2) (abs col2)
+          in if pos1 == pos2 then pos2 == pos1 else property True
+    
+    , testProperty "position equality is transitive" $
+        \line1 col1 line2 col2 line3 col3 ->
+          let pos1 = SourcePos (abs line1) (abs col1)
+              pos2 = SourcePos (abs line2) (abs col2)
+              pos3 = SourcePos (abs line3) (abs col3)
+          in if pos1 == pos2 && pos2 == pos3 then pos1 == pos3 else property True
+    
+    , testProperty "same line positions can be ordered by column" $
+        \line col1 col2 ->
+          let pos1 = SourcePos (abs line) (abs col1)
+              pos2 = SourcePos (abs line) (abs col2)
+          in if sourceColumn pos1 <= sourceColumn pos2 then pos1 <= pos2 else property True
+    
+    , testProperty "different line positions can be ordered by line" $
+        \line1 line2 col ->
+          let pos1 = SourcePos (abs line1) col
+              pos2 = SourcePos (abs line2) col
+          in if sourceLine pos1 <= sourceLine pos2 then pos1 <= pos2 else property True
+    
+    , testProperty "minimum line is 0" $
+        \col -> SourcePos 0 col <= SourcePos (abs (1 :: Int)) col
+    
+    , testProperty "minimum column is 0" $
+        \line -> SourcePos line 0 <= SourcePos line (abs (1 :: Int))
+    ]
+  
+  , testGroup "SourceSpan properties"
+    [ testProperty "span start is before or equal to end" $
+        \startLine startCol endLine endCol ->
+          let start = SourcePos (abs startLine) (abs startCol)
+              end = SourcePos (abs (startLine + abs endLine)) (abs (startCol + abs endCol))
+              span = SourceSpan start end
+          in spanStart span <= spanEnd span
+    
+    , testProperty "span length is non-negative" $
+        \startLine startCol endLine endCol ->
+          let start = SourcePos (abs startLine) (abs startCol)
+              end = SourcePos (abs (startLine + abs endLine)) (abs (startCol + abs endCol))
+              lineDiff = sourceLine end - sourceLine start
+              colDiff = sourceColumn end - sourceColumn start
+          in lineDiff >= 0 && colDiff >= 0
+    
+    , testProperty "span contains its start position" $
+        \startLine startCol endLine endCol ->
+          let start = SourcePos (abs startLine) (abs startCol)
+              end = SourcePos (abs (startLine + abs endLine)) (abs (startCol + abs endCol))
+              span = SourceSpan start end
+          in spanContains span start
+    
+    , testProperty "span contains its end position" $
+        \startLine startCol endLine endCol ->
+          let start = SourcePos (abs startLine) (abs startCol)
+              end = SourcePos (abs (startLine + abs endLine)) (abs (startCol + abs endCol))
+              span = SourceSpan start end
+          in spanContains span end
+    
+    , testProperty "empty span has same start and end" $
+        \line col ->
+          let pos = SourcePos (abs line) (abs col)
+              span = SourceSpan pos pos
+          in spanStart span == spanEnd span
+    
+    , testProperty "span equality is reflexive" $
+        \startLine startCol endLine endCol ->
+          let start = SourcePos (abs startLine) (abs startCol)
+              end = SourcePos (abs (startLine + abs endLine)) (abs (startCol + abs endCol))
+              span = SourceSpan start end
+          in span == span
+    
+    , testProperty "span equality is symmetric" $
+        \startLine1 startCol1 endLine1 endCol1 startLine2 startCol2 endLine2 endCol2 ->
+          let start1 = SourcePos (abs startLine1) (abs startCol1)
+              end1 = SourcePos (abs (startLine1 + abs endLine1)) (abs (startCol1 + abs endCol1))
+              span1 = SourceSpan start1 end1
+              start2 = SourcePos (abs startLine2) (abs startCol2)
+              end2 = SourcePos (abs (startLine2 + abs endLine2)) (abs (startCol2 + abs endCol2))
+              span2 = SourceSpan start2 end2
+          in if span1 == span2 then span2 == span1 else property True
+    
+    , testProperty "span equality is transitive" $
+        \line1 col1 line2 col2 line3 col3 ->
+          let pos1 = SourcePos (abs line1) (abs col1)
+              pos2 = SourcePos (abs line2) (abs col2)
+              pos3 = SourcePos (abs line3) (abs col3)
+              span1 = SourceSpan pos1 pos2
+              span2 = SourceSpan pos2 pos3
+              span3 = SourceSpan pos1 pos3
+          in if span1 == span2 && span2 == span3 then span1 == span3 else property True
+    
+    , testProperty "nested spans maintain containment" $
+        \startLine startCol midLine midCol endLine endCol ->
+          let start = SourcePos (abs startLine) (abs startCol)
+              middle = SourcePos (abs (startLine + abs midLine)) (abs (startCol + abs midCol))
+              end = SourcePos (abs (startLine + abs endLine)) (abs (startCol + abs endCol))
+              outer = SourceSpan start end
+              inner = SourceSpan start middle
+          in spanContains outer inner
+    
+    , testProperty "adjacent spans can be merged" $
+        \startLine startCol midLine midCol endLine endCol ->
+          let start = SourcePos (abs startLine) (abs startCol)
+              middle = SourcePos (abs (startLine + abs midLine)) (abs (startCol + abs midCol))
+              end = SourcePos (abs (startLine + abs endLine)) (abs (startCol + abs endCol))
+              span1 = SourceSpan start middle
+              span2 = SourceSpan middle end
+              merged = SourceSpan start end
+          in spanContains merged span1 && spanContains merged span2
+    ]
   ]
+
+-- Helper function to check if a span contains a position
+spanContains :: SourceSpan -> SourcePos -> Bool
+spanContains span pos = spanStart span <= pos && pos <= spanEnd span

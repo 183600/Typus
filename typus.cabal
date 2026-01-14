@@ -2273,7 +2273,15 @@ test-suite typus-test
         Test.Unit.ErrorRecoveryConsistencySpec,
         Test.Unit.TypeInferenceAdvancedSpec,
         Test.Unit.IntegrationEndToEndSpec,
-        Test.Unit.PerformanceRegressionSpec
+        Test.Unit.PerformanceRegressionSpec,
+        
+        -- New Test Modules Added (2026) - 60 comprehensive test cases
+        Test.Unit.CoreUtilsPropertiesSpec,
+        Test.Unit.SourceLocationMathSpec,
+        Test.Unit.SyntaxValidatorBoundarySpec,
+        Test.Unit.EmbedAssetsExtractionSpec,
+        Test.Unit.ErrorHandlerRecoverySpec,
+        Test.Unit.IntegratedCompilerConsistencySpec
         
     build-depends:
         base >=4.7 && <5,

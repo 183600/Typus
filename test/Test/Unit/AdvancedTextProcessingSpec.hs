@@ -6,9 +6,6 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 import Utils
-import Data.List (isInfixOf, isPrefixOf, isSuffixOf)
-import Data.Char (isSpace, isControl)
-import qualified Data.Text as T
 
 tests :: TestTree
 tests = testGroup "Advanced Text Processing Tests"
@@ -47,7 +44,7 @@ tests = testGroup "Advanced Text Processing Tests"
         splitBy ',' ",a," @?= ["", "a", ""]
       
     , testProperty "preserves empty segments" $
-        \delim str -> splitBy delim (delim:str:delim:[]) === ["", str, ""]
+        \delim -> splitBy delim [delim] === ["", ""]
     ]
 
   , testGroup "removeLineComments function"
@@ -174,14 +171,27 @@ tests = testGroup "Advanced Text Processing Tests"
     ]
 
   , testGroup "QuickCheck properties"
-    [ testProperty "trim idempotence" $
-        \str -> trim (trim str) === trim str
-      
-    , testProperty "splitBy consistency" $
-        \delim str -> concat (splitBy delim str) `shouldSatisfy` (\s -> length s >= length str - length (filter (== delim) str))
-      
-    , testProperty "breakOn consistency" $
-        \pat str -> let (before, after) = breakOn pat str
-                   in if null pat then before @?= "" else before ++ pat ++ after @?= str
-    ]
-  ]
+
+      [ testProperty "trim idempotence" $
+
+          \str -> trim (trim str) === trim str
+
+        
+
+      , testProperty "splitBy consistency" $
+
+          \delim str -> length (concat (splitBy delim str)) >= length str - length (filter (== delim) str)
+
+        
+
+      , testProperty "breakOn consistency" $
+
+        
+
+              \pat str -> let (before, afterStr) = breakOn pat str
+
+        
+
+                         in if null pat then before == "" else before ++ pat ++ afterStr == str
+
+      ]]
