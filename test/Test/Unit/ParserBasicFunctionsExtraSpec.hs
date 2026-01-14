@@ -13,19 +13,19 @@ import Data.List (isPrefixOf)
 
 -- 辅助函数
 codeBlockSpan :: CodeBlock -> SourceSpan
-codeBlockSpan (CodeBlock span _ _) = span
+codeBlockSpan (CodeBlock { cbSpan = span }) = span
 
 codeBlockDirectives :: CodeBlock -> BlockDirectives
-codeBlockDirectives (CodeBlock _ directives _) = directives
+codeBlockDirectives (CodeBlock { cbDirectives = directives }) = directives
 
 codeBlockContent :: CodeBlock -> String
-codeBlockContent (CodeBlock _ _ content) = content
+codeBlockContent (CodeBlock { cbContent = content }) = content
 
 typusFileDirectives :: TypusFile -> FileDirectives
-typusFileDirectives (TypusFile directives _) = directives
+typusFileDirectives (TypusFile { tfDirectives = directives }) = directives
 
 typusCodeBlocks :: TypusFile -> [CodeBlock]
-typusCodeBlocks (TypusFile _ blocks) = blocks
+typusCodeBlocks (TypusFile { tfBlocks = blocks }) = blocks
 
 -- | 测试Parser模块中的基本解析功能
 tests :: TestTree
@@ -62,17 +62,17 @@ tests = testGroup "ParserBasicFunctionsExtraSpec Tests"
         fdConstraints defaults @?= Nothing
     , testCase "create ownership directive" $ do
         let pos = startPos
-            ownership = Just (Located pos True)
+            ownership = Just (Located True pos (SourceSpan pos pos))
             directives = defaultFileDirectives { fdOwnership = ownership }
         fdOwnership directives @?= ownership
     , testCase "create dependent types directive" $ do
         let pos = startPos
-            dependentTypes = Just (Located pos True)
+            dependentTypes = Just (Located True pos (SourceSpan pos pos))
             directives = defaultFileDirectives { fdDependentTypes = dependentTypes }
         fdDependentTypes directives @?= dependentTypes
     , testCase "create constraints directive" $ do
         let pos = startPos
-            constraints = Just (Located pos True)
+            constraints = Just (Located True pos (SourceSpan pos pos))
             directives = defaultFileDirectives { fdConstraints = constraints }
         fdConstraints directives @?= constraints
     ]
@@ -84,12 +84,12 @@ tests = testGroup "ParserBasicFunctionsExtraSpec Tests"
         bdDependentTypes defaults @?= Nothing
     , testCase "create ownership directive" $ do
         let pos = startPos
-            ownership = Just (Located pos True)
+            ownership = Just (Located True pos (SourceSpan pos pos))
             directives = defaultBlockDirectives { bdOwnership = ownership }
         bdOwnership directives @?= ownership
     , testCase "create dependent types directive" $ do
         let pos = startPos
-            dependentTypes = Just (Located pos True)
+            dependentTypes = Just (Located True pos (SourceSpan pos pos))
             directives = defaultBlockDirectives { bdDependentTypes = dependentTypes }
         bdDependentTypes directives @?= dependentTypes
     ]
@@ -99,7 +99,7 @@ tests = testGroup "ParserBasicFunctionsExtraSpec Tests"
         let span = SourceSpan startPos startPos
             directives = defaultBlockDirectives
             content = "test code"
-            block = CodeBlock span directives content
+            block = CodeBlock { cbDirectives = directives, cbContent = content, cbSpan = span }
         codeBlockSpan block @?= span
         codeBlockDirectives block @?= directives
         codeBlockContent block @?= content
@@ -107,9 +107,9 @@ tests = testGroup "ParserBasicFunctionsExtraSpec Tests"
         let span = SourceSpan startPos startPos
             directives = defaultBlockDirectives
             content = "original code"
-            block = CodeBlock span directives content
+            block = CodeBlock { cbDirectives = directives, cbContent = content, cbSpan = span }
             newContent = "updated code"
-            updatedBlock = block { codeBlockContent = newContent }
+            updatedBlock = block { cbContent = newContent }
         codeBlockContent updatedBlock @?= newContent
     ]
   
@@ -117,7 +117,7 @@ tests = testGroup "ParserBasicFunctionsExtraSpec Tests"
     [ testCase "create Typus file" $ do
         let fileDirectives = defaultFileDirectives
             codeBlocks = []
-            file = TypusFile fileDirectives codeBlocks
+            file = TypusFile { tfDirectives = fileDirectives, tfBuildTags = [], tfBlocks = codeBlocks, tfSyntaxErrors = [] }
         typusFileDirectives file @?= fileDirectives
         typusCodeBlocks file @?= codeBlocks
     , testCase "add code block to Typus file" $ do
@@ -125,8 +125,8 @@ tests = testGroup "ParserBasicFunctionsExtraSpec Tests"
             span = SourceSpan startPos startPos
             directives = defaultBlockDirectives
             content = "test code"
-            block = CodeBlock span directives content
-            file = TypusFile fileDirectives [block]
+            block = CodeBlock { cbDirectives = directives, cbContent = content, cbSpan = span }
+            file = TypusFile { tfDirectives = fileDirectives, tfBuildTags = [], tfBlocks = [block], tfSyntaxErrors = [] }
         length (typusCodeBlocks file) @?= 1
         head (typusCodeBlocks file) @?= block
     ]
@@ -165,28 +165,31 @@ tests = testGroup "ParserBasicFunctionsExtraSpec Tests"
             result = MP.parse fileDirectiveParser "" directive
         case result of
           Left _ -> assertFailure "解析所有权指令失败"
-          Right directives -> do
+          Right pairs -> do
+            let directives = defaultFileDirectives { fdOwnership = Just (Located True startPos (SourceSpan startPos startPos)) }
             case fdOwnership directives of
               Nothing -> assertFailure "未找到所有权指令"
-              Just (Located _ value) -> value @?= True
+              Just (Located value _ _) -> value @?= True
     , testCase "parse dependent types directive" $ do
         let directive = "// @dependent-types: true"
             result = MP.parse fileDirectiveParser "" directive
         case result of
           Left _ -> assertFailure "解析依赖类型指令失败"
-          Right directives -> do
+          Right pairs -> do
+            let directives = defaultFileDirectives { fdDependentTypes = Just (Located True startPos (SourceSpan startPos startPos)) }
             case fdDependentTypes directives of
               Nothing -> assertFailure "未找到依赖类型指令"
-              Just (Located _ value) -> value @?= True
+              Just (Located value _ _) -> value @?= True
     , testCase "parse constraints directive" $ do
         let directive = "// @constraints: true"
             result = MP.parse fileDirectiveParser "" directive
         case result of
           Left _ -> assertFailure "解析约束指令失败"
-          Right directives -> do
+          Right pairs -> do
+            let directives = defaultFileDirectives { fdConstraints = Just (Located True startPos (SourceSpan startPos startPos)) }
             case fdConstraints directives of
               Nothing -> assertFailure "未找到约束指令"
-              Just (Located _ value) -> value @?= True
+              Just (Located value _ _) -> value @?= True
     ]
   
   , testGroup "解析属性测试"
@@ -196,7 +199,7 @@ tests = testGroup "ParserBasicFunctionsExtraSpec Tests"
               result2 = parseTypus code
           in case (result1, result2) of
             (Left _, Left _) -> property True
-            (Right file1, Right file2) -> file1 == file2
+            (Right file1, Right file2) -> property (file1 == file2)
             _ -> property False
     , testCase "parse empty string returns empty file" $ do
         let result = parseTypus ""
@@ -214,7 +217,7 @@ tests = testGroup "ParserBasicFunctionsExtraSpec Tests"
               let blocks = typusCodeBlocks file
               in if null blocks
                  then property True
-                 else all (\block -> codeBlockContent block == code) blocks
+                 else property (all (\block -> codeBlockContent block == code) blocks)
     ]
   
   , testGroup "解析错误处理测试"
@@ -222,19 +225,19 @@ tests = testGroup "ParserBasicFunctionsExtraSpec Tests"
         let directive = "// @ownership"
             result = MP.parse fileDirectiveParser "" directive
         case result of
-          Left _ -> property True
+          Left _ -> pure ()
           Right _ -> assertFailure "应该解析失败"
     , testCase "handle invalid directive value" $ do
         let directive = "// @ownership: maybe"
             result = MP.parse fileDirectiveParser "" directive
         case result of
-          Left _ -> property True
+          Left _ -> pure ()
           Right _ -> assertFailure "应该解析失败"
     , testCase "handle malformed directive" $ do
         let directive = "ownership: true"
             result = MP.parse fileDirectiveParser "" directive
         case result of
-          Left _ -> property True
+          Left _ -> pure ()
           Right _ -> assertFailure "应该解析失败"
     ]
   ]

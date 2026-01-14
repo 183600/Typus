@@ -6,20 +6,10 @@ import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import Utils
-import Data.List (isPrefixOf, isSuffixOf)
+import Data.List (isPrefixOf, isSuffixOf, intercalate, isInfixOf)
 import Data.Char (isSpace, isAlphaNum)
 
--- 辅助函数
-intercalate :: String -> [String] -> String
-intercalate _ [] = ""
-intercalate _ [x] = x
-intercalate sep (x:xs) = x ++ sep ++ intercalate sep xs
-
-isInfixOf :: Eq a => [a] -> [a] -> Bool
-isInfixOf needle haystack = any (isPrefixOf needle) (tails haystack)
-  where
-    tails [] = [[]]
-    tails xs@(_:ys) = xs : tails ys
+-- 辅助函数已在Utils模块中导入
 
 -- | 测试Utils模块中的字符串处理函数
 tests :: TestTree
@@ -156,15 +146,19 @@ tests = testGroup "UtilsStringProcessingExtraSpec Tests"
   
   , testGroup "safeProcessString函数测试"
     [ testCase "safeProcessString empty string" $ 
-        safeProcessString "" @?= ""
+        safeProcessString "" @?= Right ""
     , testCase "safeProcessString normal string" $
-        safeProcessString "hello world" @?= "hello world"
+        safeProcessString "hello world" @?= Right "hello world"
     , testCase "safeProcessString special characters" $
-        safeProcessString "hello\n\tworld" @?= "hello\n\tworld"
+        safeProcessString "hello\n\tworld" @?= Right "hello\n\tworld"
     , testCase "safeProcessString unicode" $
-        safeProcessString "你好世界" @?= "你好世界"
+        safeProcessString "你好世界" @?= Right "你好世界"
+    , testCase "safeProcessString control characters" $
+        safeProcessString "hello\x00world" @?= Right "hello world"
     , testProperty "safeProcessString is idempotent" $
-        \s -> safeProcessString (safeProcessString s) === safeProcessString s
+        \s -> case safeProcessString s of
+                Right s' -> property (safeProcessString s' == Right s')
+                Left _ -> property True
     ]
   
   , testGroup "isValidChar函数测试"
