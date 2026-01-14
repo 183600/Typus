@@ -1,18 +1,38 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
+{-# LANGUAGE FlexibleInstances #-}
 module Test.Unit.NewParserQuickCheckSpec where
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import Parser
-import SourceLocation (SourcePos(..), SourceSpan(..), Located(..))
+import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), emptySpan, spanBetween)
 import Data.Char (isAlphaNum, isSpace)
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Maybe (isJust, isNothing)
 import qualified Data.Text as T
 import Text.Megaparsec (parse, errorBundlePretty)
 import qualified Text.Megaparsec as MP
+
+-- Arbitrary instances for QuickCheck
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    return $ spanBetween start end
+
+instance Arbitrary BlockDirectives where
+  arbitrary = return defaultBlockDirectives
+
+instance Arbitrary FileDirectives where
+  arbitrary = return defaultFileDirectives
+
+instance Arbitrary (Located String) where
+  arbitrary = do
+    str <- arbitrary
+    span <- arbitrary
+    return $ Located str (spanStart span) span
 
 -- ============================================================================
 -- Parser Module QuickCheck Tests
@@ -68,7 +88,7 @@ prop_typus_file_empty =
 -- Test directive parsing properties
 prop_parse_simple_directive :: String -> String -> Property
 prop_parse_simple_directive key value = 
-  let input = key ++ "=" ++ value
+  let input = T.pack (key ++ "=" ++ value)
       result = parse fileDirectiveParser "" input
   in case result of
     Left _ -> property $ False  -- Should succeed for simple key=value pairs
@@ -76,7 +96,7 @@ prop_parse_simple_directive key value =
 
 prop_parse_multiple_directives :: String -> String -> String -> String -> Property
 prop_parse_multiple_directives key1 value1 key2 value2 = 
-  let input = key1 ++ "=" ++ value1 ++ "," ++ key2 ++ "=" ++ value2
+  let input = T.pack (key1 ++ "=" ++ value1 ++ "," ++ key2 ++ "=" ++ value2)
       result = parse fileDirectiveParser "" input
   in case result of
     Left _ -> property $ False  -- Should succeed for simple key=value pairs
@@ -235,7 +255,7 @@ test_parser_edge_cases = testGroup "Parser Edge Cases"
   , testCase "parse empty input" $ do
       let result = parseTypus ""
       case result of
-        Left err -> assertFailure $ "Failed to parse empty input: " ++ errorBundlePretty err
+        Left err -> assertFailure $ "Failed to parse empty input: " ++ show err
         Right file -> do
           assertBool "no blocks" $ null $ tfBlocks file
           assertBool "no syntax errors" $ null $ tfSyntaxErrors file
@@ -243,35 +263,35 @@ test_parser_edge_cases = testGroup "Parser Edge Cases"
   , testCase "parse whitespace only" $ do
       let result = parseTypus "   \n  \t  \n   "
       case result of
-        Left err -> assertFailure $ "Failed to parse whitespace: " ++ errorBundlePretty err
+        Left err -> assertFailure $ "Failed to parse whitespace: " ++ show err
         Right file -> assertBool "no blocks" $ null $ tfBlocks file
     
   , testCase "parse simple content" $ do
       let content = "let x = 42"
           result = parseTypus content
       case result of
-        Left err -> assertFailure $ "Failed to parse simple content: " ++ errorBundlePretty err
+        Left err -> assertFailure $ "Failed to parse simple content: " ++ show err
         Right file -> assertBool "has blocks" $ not $ null $ tfBlocks file
     
   , testCase "parse with line comments" $ do
       let content = "let x = 42 // comment\nlet y = 24"
           result = parseTypus content
       case result of
-        Left err -> assertFailure $ "Failed to parse with comments: " ++ errorBundlePretty err
+        Left err -> assertFailure $ "Failed to parse with comments: " ++ show err
         Right file -> assertBool "has blocks" $ not $ null $ tfBlocks file
     
   , testCase "parse with block comments" $ do
       let content = "let x = 42 /* comment */\nlet y = 24"
           result = parseTypus content
       case result of
-        Left err -> assertFailure $ "Failed to parse with block comments: " ++ errorBundlePretty err
+        Left err -> assertFailure $ "Failed to parse with block comments: " ++ show err
         Right file -> assertBool "has blocks" $ not $ null $ tfBlocks file
     
   , testCase "parse with build tags" $ do
       let content = "+tag1 +tag2\nlet x = 42"
           result = parseTypus content
       case result of
-        Left err -> assertFailure $ "Failed to parse with build tags: " ++ errorBundlePretty err
+        Left err -> assertFailure $ "Failed to parse with build tags: " ++ show err
         Right file -> do
           assertBool "has build tags" $ not $ null $ tfBuildTags file
           assertBool "has blocks" $ not $ null $ tfBlocks file

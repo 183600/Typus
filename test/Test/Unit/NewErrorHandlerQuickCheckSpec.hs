@@ -5,10 +5,37 @@ module Test.Unit.NewErrorHandlerQuickCheckSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import Compiler.Errors.Core
+import Compiler.Errors.Core hiding (line, column)
 import SourceLocation (SourcePos(..), SourceSpan(..))
 import Data.Time (UTCTime)
-import Data.List (sort)
+import Data.List (sort, isInfixOf)
+import Control.Monad.State (execState)
+import qualified Compiler.Errors.Core as Error
+import qualified Dependencies.TypeSystem as Dep
+import qualified Ownership.Common.Types as Own
+
+-- Arbitrary instances for QuickCheck
+instance Arbitrary ErrorSeverity where
+  arbitrary = elements [Fatal, Error, Warning, Info]
+
+instance Arbitrary ErrorCategory where
+  arbitrary = elements [TypeChecking, Ownership, Parsing, Semantic, Runtime, Constraint, Inference, Integration, Unknown]
+
+instance Arbitrary ErrorLocation where
+  arbitrary = ErrorLocation <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+
+instance Arbitrary ErrorRecovery where
+  arbitrary = RecoveryStrategy <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+
+instance Arbitrary ErrorContext where
+  arbitrary = ErrorContext <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+
+instance Arbitrary TypeError where
+  arbitrary = TypeError <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+
+instance Arbitrary CombinedError where
+  arbitrary = oneof [IntegrationError <$> arbitrary <*> arbitrary]
+
 import Data.Maybe (isJust, isNothing)
 import qualified Data.Text as T
 import qualified Data.Map.Strict as Map
@@ -46,8 +73,8 @@ prop_error_location_creation :: Maybe String -> Positive Int -> Positive Int -> 
 prop_error_location_creation mfile (Positive line) (Positive col) = 
   let loc = ErrorLocation mfile line col Nothing Nothing
   in property $ filePath loc == mfile &&
-                line loc == line &&
-                column loc == col &&
+                Error.line loc == line &&
+                Error.column loc == col &&
                 isNothing (endLine loc) &&
                 isNothing (endColumn loc)
 
@@ -57,9 +84,9 @@ prop_error_location_with_range mfile (Positive line) (Positive col)
                               (Positive endLine) (Positive endCol) = 
   let loc = ErrorLocation mfile line col (Just endLine) (Just endCol)
   in property $ filePath loc == mfile &&
-                line loc == line &&
-                column loc == col &&
-                endLine loc == Just endLine &&
+                Error.line loc == line &&
+                Error.column loc == col &&
+                Error.endLine loc == Just endLine &&
                 endColumn loc == Just endCol
 
 prop_get_error_line :: Positive Int -> Property
@@ -128,7 +155,7 @@ prop_error_category_ordering cat1 cat2 =
 prop_error_creation :: String -> ErrorSeverity -> ErrorCategory -> String -> 
                      ErrorLocation -> ErrorContext -> Property
 prop_error_creation errId sev cat msg loc ctx = 
-  let error = TypeError errId sev cat (T.pack msg) loc ctx errorRecovery [] [] Nothing Nothing
+  let error = TypeError errId sev cat (T.pack msg) loc ctx errorRecovery [] [] [] Nothing
   in property $ errorId error == errId &&
                 severity error == sev &&
                 category error == cat &&
@@ -143,21 +170,21 @@ prop_error_creation errId sev cat msg loc ctx =
 
 prop_error_with_suggestions :: String -> ErrorSeverity -> [String] -> Property
 prop_error_with_suggestions errId sev suggs = 
-  let error = errorWithSuggestions errId sev (T.pack "test") suggs
+  let error = errorWithSuggestions errId sev (map T.pack suggs) unknownLocation
   in property $ errorId error == errId &&
                 severity error == sev &&
                 suggestions error == map T.pack suggs
 
 prop_error_with_location :: String -> ErrorSeverity -> ErrorLocation -> Property
 prop_error_with_location errId sev loc = 
-  let error = errorAt errId Error (T.pack errId) sev (T.pack "test") loc
+  let error = errorAt errId sev (T.pack "test") loc
   in property $ errorId error == errId &&
                 severity error == sev &&
                 location error == loc
 
 prop_error_with_context :: String -> ErrorSeverity -> ErrorContext -> Property
 prop_error_with_context errId sev ctx = 
-  let error = withContext (errorAt errId Error (T.pack errId) sev (T.pack "test") unknownLocation) ctx
+  let error = withContext (errorAt errId sev (T.pack "test") unknownLocation) ctx
   in property $ errorId error == errId &&
                 severity error == sev &&
                 context error == ctx
@@ -165,19 +192,19 @@ prop_error_with_context errId sev ctx =
 -- Test ErrorCollector properties
 prop_collector_add_error :: TypeError -> [TypeError] -> Property
 prop_collector_add_error err errors = 
-  let newErrors = evalState (addError err) errors
+  let newErrors = execState (addError err) errors
   in property $ length newErrors == length errors + 1 &&
                 head newErrors == err
 
 prop_collector_add_warning :: TypeError -> [TypeError] -> Property
 prop_collector_add_warning err errors = 
-  let newErrors = evalState (addWarning err) errors
+  let newErrors = execState (addWarning err) errors
   in property $ length newErrors == length errors + 1 &&
                 severity (head newErrors) == Warning
 
 prop_collector_add_info :: TypeError -> [TypeError] -> Property
 prop_collector_add_info err errors = 
-  let newErrors = evalState (addInfo err) errors
+  let newErrors = execState (addInfo err) errors
   in property $ length newErrors == length errors + 1 &&
                 severity (head newErrors) == Info
 
@@ -239,7 +266,7 @@ prop_filter_combined_errors minSev errors =
 -- Test error formatting
 prop_format_error_includes_message :: String -> String -> Property
 prop_format_error_includes_message errId msg = 
-  let err = errorAt errId Error (T.pack errId) Error (T.pack msg) unknownLocation
+  let err = errorAt errId Error (T.pack msg) unknownLocation
       formatted = formatError err
   in property $ T.pack msg `T.isInfixOf` T.pack formatted
 
@@ -247,7 +274,7 @@ prop_format_error_includes_severity :: String -> Property
 prop_format_error_includes_severity msg = 
   let err = errorAt "test" Error (T.pack msg) unknownLocation
       formatted = formatError err
-  in property $ "ERROR" `T.isInfixOf` T.pack formatted
+  in property $ "ERROR" `isInfixOf` formatted
 
 -- Unit tests for edge cases
 test_error_handler_edge_cases :: TestTree
@@ -319,9 +346,9 @@ test_error_handler_edge_cases = testGroup "ErrorHandler Edge Cases"
       assertBool "hasWarnings" $ hasWarnings errors
     
   , testCase "filterByCategory" $ do
-      let err1 = errorAt "err1" Error (T.pack "Error 1") unknownLocation { category = TypeChecking }
-          err2 = errorAt "err2" Error (T.pack "Error 2") unknownLocation { category = Ownership }
-          err3 = errorAt "err3" Error (T.pack "Error 3") unknownLocation { category = TypeChecking }
+      let err1 = errorWithCategory "err1" TypeChecking (T.pack "Error 1") unknownLocation
+          err2 = errorWithCategory "err2" Ownership (T.pack "Error 2") unknownLocation
+          err3 = errorWithCategory "err3" TypeChecking (T.pack "Error 3") unknownLocation
           errors = [err1, err2, err3]
       
       assertEqual "TypeChecking errors" [err1, err3] $ filterByCategory TypeChecking errors

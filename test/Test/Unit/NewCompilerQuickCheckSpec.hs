@@ -7,10 +7,21 @@ import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import Compiler
 import Compiler.Errors (CompilerError(..), CompilerResult, CompilationPhase(..), ErrorCategory(..), ErrorSeverity(..), errorPhase, errorCategory, errorSeverity, errorId, errorMessage)
+import qualified Compiler.Errors.Core as Core
 import Parser (TypusFile(..), defaultFileDirectives)
 import qualified Data.Text as T
 import Data.List (isInfixOf, isPrefixOf, isSuffixOf)
 import Data.Maybe (isJust, isNothing)
+
+-- Arbitrary instances for QuickCheck
+instance Arbitrary CompilationPhase where
+  arbitrary = elements [LexingPhase, ParsingPhase, TypeCheckingPhase, OwnershipAnalysisPhase, DependentTypeCheckingPhase, CodeGenerationPhase]
+
+instance Arbitrary ErrorCategory where
+  arbitrary = elements [TypeChecking, Ownership, Parsing, Semantic, Runtime, Constraint, Inference, Integration, Unknown]
+
+instance Arbitrary ErrorSeverity where
+  arbitrary = elements [Fatal, Error, Warning, Info]
 
 -- ============================================================================
 -- Compiler Module QuickCheck Tests
@@ -49,7 +60,7 @@ prop_compile_syntax_error =
     Left errors -> property $ any isErrorType errors
     Right _ -> property $ False  -- Should fail with syntax error
   where
-    isErrorType err = errorPhase err == ParsingPhase
+    isErrorType err = errorPhase (ceError err) == "Parsing"
 
 prop_compile_type_error :: Property
 prop_compile_type_error = 
@@ -61,7 +72,7 @@ prop_compile_type_error =
     Left errors -> property $ any isErrorType errors
     Right _ -> property $ False  -- Should fail with type error
   where
-    isErrorType err = errorPhase err == TypeCheckingPhase
+    isErrorType err = errorPhase (ceError err) == "TypeChecking"
 
 -- Test generateGoCode function
 prop_generate_go_code_empty_input :: Property
@@ -112,25 +123,25 @@ prop_render_compilation_error_multiple errIds =
 prop_malformed_syntax_error_properties :: Property
 prop_malformed_syntax_error_properties = 
   let error = malformedSyntaxError
-  in property $ errorPhase error == ParsingPhase &&
-                errorCategory error == Parsing &&
-                errorSeverity error == Error
+  in property $ errorPhase (ceError error) == "Parsing" &&
+                errorCategory (ceError error) == Parsing &&
+                errorSeverity (ceError error) == Error
 
 prop_type_check_failure_properties :: Property
 prop_type_check_failure_properties = 
   let error = typeCheckFailure
-  in property $ errorPhase error == TypeCheckingPhase &&
-                errorCategory error == TypeChecking &&
-                errorSeverity error == Error
+  in property $ errorPhase (ceError error) == "TypeChecking" &&
+                errorCategory (ceError error) == TypeChecking &&
+                errorSeverity (ceError error) == Error
 
 -- Test typeDiagnosticToCompilerError function
 prop_type_diagnostic_to_compiler_error :: Maybe String -> String -> Property
 prop_type_diagnostic_to_compiler_error context detail = 
   let diagnostic = undefined  -- Would need to create a proper TypeCheckDiagnostic
       error = typeDiagnosticToCompilerError diagnostic
-  in property $ errorPhase error == TypeCheckingPhase &&
-                errorCategory error == TypeChecking &&
-                errorSeverity error == Error
+  in property $ errorPhase (ceError error) == "TypeChecking" &&
+                errorCategory (ceError error) == TypeChecking &&
+                errorSeverity (ceError error) == Error
 
 -- Test ensureSourceIR function
 prop_ensure_source_ir_valid_input :: Property
@@ -149,7 +160,7 @@ prop_ensure_source_ir_invalid_input =
     Left errors -> property $ any isErrorType errors
     Right _ -> property $ False  -- Should fail with malformed syntax
   where
-    isErrorType err = errorPhase err == ParsingPhase
+    isErrorType err = errorPhase (ceError err) == "Parsing"
 
 -- Test error handling properties
 prop_compile_error_contains_id :: String -> Property
@@ -158,7 +169,7 @@ prop_compile_error_contains_id errId =
       errors = [error]
       result = Left errors :: CompilerResult String
   in case result of
-    Left errs -> property $ any (\e -> errorId e == errId) errs
+    Left errs -> property $ any (\e -> errorId (ceError e) == errId) errs
     Right _ -> property $ False
 
 prop_compile_error_contains_message :: String -> Property
@@ -167,7 +178,7 @@ prop_compile_error_contains_message msg =
       errors = [error]
       result = Left errors :: CompilerResult String
   in case result of
-    Left errs -> property $ any (\e -> msg `T.isInfixOf` Compiler.Errors.errorMessage e) errs
+    Left errs -> property $ any (\e -> T.pack msg `T.isInfixOf` Compiler.Errors.errorMessage (ceError e)) errs
     Right _ -> property $ False
 
 prop_compile_error_has_phase :: CompilationPhase -> Property
@@ -176,7 +187,7 @@ prop_compile_error_has_phase phase =
       errors = [error]
       result = Left errors :: CompilerResult String
   in case result of
-    Left errs -> property $ any (\e -> errorPhase e == phase) errs
+    Left errs -> property $ any (\e -> cePhase e == phase) errs
     Right _ -> property $ False
 
 prop_compile_error_has_category :: ErrorCategory -> Property
@@ -185,7 +196,7 @@ prop_compile_error_has_category category =
       errors = [error]
       result = Left errors :: CompilerResult String
   in case result of
-    Left errs -> property $ any (\e -> errorCategory e == category) errs
+    Left errs -> property $ any (\e -> errorCategory (ceError e) == category) errs
     Right _ -> property $ False
 
 prop_compile_error_has_severity :: ErrorSeverity -> Property
@@ -194,7 +205,7 @@ prop_compile_error_has_severity severity =
       errors = [error]
       result = Left errors :: CompilerResult String
   in case result of
-    Left errs -> property $ any (\e -> errorSeverity e == severity) errs
+    Left errs -> property $ any (\e -> errorSeverity (ceError e) == severity) errs
     Right _ -> property $ False
 
 -- Unit tests for edge cases
@@ -211,15 +222,15 @@ test_compiler_edge_cases = testGroup "Compiler Edge Cases"
       -- Since we can't easily create a CodeBlock with syntax errors in this test,
       -- we'll just verify the error handling functions work
       let error = malformedSyntaxError
-      assertEqual "Error phase" ParsingPhase $ errorPhase error
-      assertEqual "Error category" Parsing $ errorCategory error
-      assertEqual "Error severity" Error $ errorSeverity error
+      assertEqual "Error phase" "Parsing" $ errorPhase (ceError error)
+      assertEqual "Error category" Parsing $ errorCategory (ceError error)
+      assertEqual "Error severity" Error $ errorSeverity (ceError error)
     
   , testCase "compile type error" $ do
       let error = typeCheckFailure
-      assertEqual "Error phase" TypeCheckingPhase $ errorPhase error
-      assertEqual "Error category" TypeChecking $ errorCategory error
-      assertEqual "Error severity" Error $ errorSeverity error
+      assertEqual "Error phase" "TypeChecking" $ errorPhase (ceError error)
+      assertEqual "Error category" TypeChecking $ errorCategory (ceError error)
+      assertEqual "Error severity" Error $ errorSeverity (ceError error)
     
   , testCase "generateGoCode empty file" $ do
       let emptyFile = TypusFile defaultFileDirectives [] [] []
@@ -237,7 +248,7 @@ test_compiler_edge_cases = testGroup "Compiler Edge Cases"
           errors = [error]
           rendered = renderCompilationError errors
       assertBool "Non-empty error list renders to non-empty string" $ not $ null rendered
-      assertBool "Contains error ID" $ errorId error `isInfixOf` rendered
+      assertBool "Contains error ID" $ errorId (ceError error) `isInfixOf` rendered
     
   , testCase "ensureSourceIR valid file" $ do
       let file = TypusFile defaultFileDirectives [] [] []
@@ -251,9 +262,9 @@ test_compiler_edge_cases = testGroup "Compiler Edge Cases"
       -- we'll check that the function exists and can be called
       let diagnostic = undefined  -- Would need proper TypeCheckDiagnostic
           error = typeDiagnosticToCompilerError diagnostic
-      assertEqual "Error phase" TypeCheckingPhase $ errorPhase error
-      assertEqual "Error category" TypeChecking $ errorCategory error
-      assertEqual "Error severity" Error $ errorSeverity error
+      assertEqual "Error phase" "TypeChecking" $ errorPhase (ceError error)
+      assertEqual "Error category" TypeChecking $ errorCategory (ceError error)
+      assertEqual "Error severity" Error $ errorSeverity (ceError error)
   ]
 
 -- QuickCheck properties

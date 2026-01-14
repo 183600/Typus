@@ -1,15 +1,70 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
+{-# LANGUAGE FlexibleInstances #-}
 module Test.Unit.NewSourceLocationQuickCheckSpec where
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import SourceLocation
-import Compiler.Errors.Core (ErrorLocation(..))
+import Compiler.Errors.Core (ErrorSeverity(..), ErrorCategory(..), TypeError(..), ErrorLocation(..), ErrorContext(..), ErrorRecovery(..), CombinedError(..))
+import qualified Compiler.Errors.Core as Error
 import Control.DeepSeq (NFData, rnf)
 import Data.Semigroup ((<>))
 import qualified Data.Text as T
+import Test.QuickCheck (Arbitrary(..), oneof, elements)
+
+-- Arbitrary instances for QuickCheck
+instance Arbitrary T.Text where
+  arbitrary = T.pack <$> arbitrary
+
+instance Arbitrary SourcePos where
+  arbitrary = SourcePos <$> arbitrary <*> arbitrary <*> arbitrary
+
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    return $ spanBetween start end
+
+instance Arbitrary (Located String) where
+  arbitrary = do
+    str <- arbitrary
+    span <- arbitrary
+    return $ Located str (spanStart span) span
+
+instance Arbitrary ErrorSeverity where
+  arbitrary = elements [Fatal, Error, Warning, Info]
+
+instance Arbitrary ErrorCategory where
+  arbitrary = elements [TypeChecking, Ownership, Parsing, Semantic, Runtime, Constraint, Inference, Integration, Unknown]
+
+instance Arbitrary ErrorLocation where
+  arbitrary = ErrorLocation <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+
+instance Arbitrary ErrorRecovery where
+  arbitrary = RecoveryStrategy <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+
+instance Arbitrary ErrorContext where
+  arbitrary = ErrorContext <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+
+instance Arbitrary TypeError where
+  arbitrary = do
+    errorId <- arbitrary
+    severity <- arbitrary
+    category <- arbitrary
+    message <- arbitrary
+    location <- arbitrary
+    context <- arbitrary
+    recovery <- arbitrary
+    suggestions <- arbitrary
+    relatedErrors <- arbitrary
+    errorChain <- arbitrary
+    timestamp <- arbitrary
+    return $ TypeError errorId severity category message location context recovery suggestions relatedErrors errorChain timestamp
+
+instance Arbitrary CombinedError where
+  arbitrary = oneof [IntegrationError <$> arbitrary <*> arbitrary]
 
 -- ============================================================================
 -- SourceLocation Module QuickCheck Tests
@@ -235,7 +290,7 @@ prop_compare_pos_column_priority (Positive line) (Positive col1) (Positive col2)
      then property $ comparePos pos1 pos2 == LT
      else property $ comparePos pos1 pos2 == GT
 
-prop_compare_pos_offset_priority :: Positive Int -> Positive Int -> Positive Int -> Property
+prop_compare_pos_offset_priority :: Positive Int -> Positive Int -> Positive Int -> Positive Int -> Property
 prop_compare_pos_offset_priority (Positive line) (Positive col) (Positive offset1) (Positive offset2) = 
   let pos1 = SourcePos line col offset1
       pos2 = SourcePos line col offset2
@@ -249,8 +304,8 @@ prop_to_error_location (Positive line) (Positive col) (Positive offset) =
   let pos = SourcePos line col offset
       errLoc = toErrorLocation pos
   in property $ filePath errLoc == Nothing && 
-                line errLoc == line && 
-                column errLoc == col && 
+                Error.line errLoc == line && 
+                Error.column errLoc == col && 
                 endLine errLoc == Nothing && 
                 endColumn errLoc == Nothing
 
@@ -319,7 +374,7 @@ test_source_location_edge_cases = testGroup "SourceLocation Edge Cases"
           span1 = spanBetween pos1 pos2
           span2 = spanBetween pos2 pos3
           merged = mergeSpans span1 span2
-      assertEqual "merged start" pos1 (spanStart merged) >>
+      assertEqual "merged start" pos1 (spanStart merged)
       assertEqual "merged end" pos3 (spanEnd merged)
     
   , testCase "isValidSpan" $ do
@@ -333,13 +388,13 @@ test_source_location_edge_cases = testGroup "SourceLocation Edge Cases"
       let pos = SourcePos 10 20 100
           value = "test value"
           located = locatedAt pos value
-      assertEqual "located value" value (locValue located) >>
-      assertEqual "located position" pos (locPos located) >>
-      assertEqual "located span start" pos (spanStart $ locSpan located) >>
+      assertEqual "located value" value (locValue located)
+      assertEqual "located position" pos (locPos located)
+      assertEqual "located span start" pos (spanStart $ locSpan located)
       assertEqual "located span end" pos (spanEnd $ locSpan located)
       
       let mapped = mapLocated (++ " modified") located
-      assertEqual "mapped value" "test value modified" (locValue mapped) >>
+      assertEqual "mapped value" "test value modified" (locValue mapped)
       assertEqual "mapped position" pos (locPos mapped)
   ]
 

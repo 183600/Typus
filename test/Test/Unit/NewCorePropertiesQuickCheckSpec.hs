@@ -223,7 +223,7 @@ prop_advancePosByLine_correct line col offset numLines =
 prop_errorAt_correct :: Int -> Int -> Int -> String -> Bool
 prop_errorAt_correct line col offset message = 
   let pos = SourcePos line col offset
-      error = errorAt "test-id" (T.pack message) (toErrorLocation pos)
+      error = errorAt "test-id" Error (T.pack message) (toErrorLocation pos)
       loc = location error
   in Error.line loc == posLine pos && 
      Error.column loc == posColumn pos &&
