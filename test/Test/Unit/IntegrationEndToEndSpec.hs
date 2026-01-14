@@ -1,9 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.Unit.IntegrationEndToEndSpec (spec) where
+module Test.Unit.IntegrationEndToEndSpec (tests) where
 
-import Test.Hspec
-import Test.QuickCheck
+import Test.Tasty
+import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck
 import Data.List (sort, nub, intersect, union, (\\))
 import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes)
 import qualified Data.Set as Set
@@ -128,38 +129,38 @@ isPipelineSuccessful pipeline =
       successfulResults = filter resultSuccess results
   in length successfulResults == length results
 
-spec :: Spec
-spec = describe "End-to-End Integration Tests" $ do
+tests :: TestTree
+tests = testGroup "End-to-End Integration Tests"
+  [ testGroup "Source files"
+    [ testCase "creates source files correctly" $ do
+        let file = SourceFile "test.typus" "content" "UTF-8"
+        filePath file @?= "test.typus"
+        fileContent file @?= "content"
+        fileEncoding file @?= "UTF-8"
+      
+    , testCase "handles empty source files" $ do
+        let file = SourceFile "empty.typus" "" "UTF-8"
+        fileContent file @?= ""
+      
+    , testCase "handles source files with special characters" $ do
+        let content = "特殊字符 & symbols !@#$%^&*()"
+            file = SourceFile "special.typus" content "UTF-8"
+        fileContent file @?= content
+    ]
 
-  describe "Source files" $ do
-    it "creates source files correctly" $ do
-      let file = SourceFile "test.typus" "content" "UTF-8"
-      filePath file `shouldBe` "test.typus"
-      fileContent file `shouldBe` "content"
-      fileEncoding file `shouldBe` "UTF-8"
+  , testGroup "Tokens"
+    [ testCase "creates tokens correctly" $ do
+        let span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 5 4)
+            token = Token "Identifier" "hello" span
+        tokenType token @?= "Identifier"
+        tokenValue token @?= "hello"
+        tokenSpan token @?= span
       
-    it "handles empty source files" $ do
-      let file = SourceFile "empty.typus" "" "UTF-8"
-      fileContent file `shouldBe` ""
-      
-    it "handles source files with special characters" $ do
-      let content = "特殊字符 & symbols !@#$%^&*()"
-          file = SourceFile "special.typus" content "UTF-8"
-      fileContent file `shouldBe` content
-
-  describe "Tokens" $ do
-    it "creates tokens correctly" $ do
-      let span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 5 4)
-          token = Token "Identifier" "hello" span
-      tokenType token `shouldBe` "Identifier"
-      tokenValue token `shouldBe` "hello"
-      tokenSpan token `shouldBe` span
-      
-    it "handles tokens with empty values" $ do
-      let span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 1 0)
-          token = Token "EOF" "" span
-      tokenType token `shouldBe` "EOF"
-      tokenValue token `shouldBe` ""
+    , testCase "handles tokens with empty values" $ do
+        let span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 1 0)
+            token = Token "EOF" "" span
+        tokenType token @?= "EOF"
+        tokenValue token @?= ""
 
   describe "AST nodes" $ do
     it "creates AST nodes correctly" $ do
@@ -399,5 +400,7 @@ spec = describe "End-to-End Integration Tests" $ do
           -- Simulate interruption by modifying results
           interruptedResults = take 3 $ pipelineResults pipeline
           interruptedPipeline = pipeline { pipelineResults = interruptedResults }
-      length (pipelineResults interruptedPipeline) `shouldBe` 3
-      isPipelineSuccessful interruptedPipeline `shouldBe` False
+      length (pipelineResults interruptedPipeline) @?= 3
+      isPipelineSuccessful interruptedPipeline @?= False
+  ]
+  ]

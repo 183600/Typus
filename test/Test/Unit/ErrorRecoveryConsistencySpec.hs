@@ -1,9 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.Unit.ErrorRecoveryConsistencySpec (spec) where
+module Test.Unit.ErrorRecoveryConsistencySpec (tests) where
 
-import Test.Hspec
-import Test.QuickCheck
+import Test.Tasty
+import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck
 import Data.List (sort, nub, intersect, union, (\\))
 import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes)
 import qualified Data.Set as Set
@@ -72,30 +73,29 @@ filterErrorsBySeverity :: ErrorSeverity -> ErrorContext -> [CompilerError]
 filterErrorsBySeverity severity context = 
   filter (\e -> errorSeverity e == severity) $ contextErrors context
 
-spec :: Spec
-spec = describe "Error Recovery Consistency Tests" $ do
-
-  describe "Compiler errors" $ do
-    it "creates compiler errors correctly" $ do
-      let span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)
-          error = CompilerError "E001" Parsing Error "Syntax error" span
-      errorId error `shouldBe` "E001"
-      errorPhase error `shouldBe` Parsing
-      errorSeverity error `shouldBe` Error
-      errorMessage error `shouldBe` "Syntax error"
-      errorSpan error `shouldBe` span
+tests :: TestTree
+tests = testGroup "Error Recovery Consistency Tests"
+  [ testGroup "Compiler errors"
+    [ testCase "creates compiler errors correctly" $ do
+        let span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)
+            error = CompilerError "E001" Parsing Error "Syntax error" span
+        errorId error @?= "E001"
+        errorPhase error @?= Parsing
+        errorSeverity error @?= Error
+        errorMessage error @?= "Syntax error"
+        errorSpan error @?= span
       
-    it "compares errors correctly" $ do
-      let span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)
-          error1 = CompilerError "E001" Parsing Error "Syntax error" span
-          error2 = CompilerError "E001" Parsing Error "Syntax error" span
-          error3 = CompilerError "E002" Parsing Error "Type error" span
-      error1 `shouldBe` error2
-      error1 `shouldNotBe` error3
+    , testCase "compares errors correctly" $ do
+        let span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)
+            error1 = CompilerError "E001" Parsing Error "Syntax error" span
+            error2 = CompilerError "E001" Parsing Error "Syntax error" span
+            error3 = CompilerError "E002" Parsing Error "Type error" span
+        error1 @?= error2
+        assertBool "error1 should not be error3" (error1 /= error3)
       
-    it "orders errors by severity" $ do
-      let errors = [Error, Warning, Info]
-      sort errors `shouldBe` [Info, Warning, Error]
+    , testCase "orders errors by severity" $ do
+        let errors = [Error, Warning, Info]
+        sort errors @?= [Info, Warning, Error]
       
     it "orders errors by phase" $ do
       let phases = [CodeGeneration, Parsing, TypeChecking, Optimization]
@@ -229,7 +229,7 @@ spec = describe "Error Recovery Consistency Tests" $ do
           result = applyRecoveryStrategy Retry context
       resultRemainingErrors result `shouldBe` [error1, error2, error3]
       
-    it "preserves error spans during recovery" $ do
+    testCase "preserves error spans during recovery" $ do
       let span1 = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)
           span2 = SourceSpan (SourcePos 2 1 10) (SourcePos 2 10 19)
           error1 = CompilerError "E001" Parsing Error "Syntax error 1" span1
@@ -237,8 +237,8 @@ spec = describe "Error Recovery Consistency Tests" $ do
           context = ErrorContext [error1, error2] [] False
           result = applyRecoveryStrategy Retry context
           let remainingErrors = resultRemainingErrors result
-          errorSpan (remainingErrors !! 0) `shouldBe` span1
-          errorSpan (remainingErrors !! 1) `shouldBe` span2
+          errorSpan (remainingErrors !! 0) @?= span1
+          errorSpan (remainingErrors !! 1) @?= span2
       
     it "maintains action consistency" $ do
       let span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)
@@ -318,3 +318,5 @@ spec = describe "Error Recovery Consistency Tests" $ do
           result2 = applyRecoveryStrategy Skip $ resultContext result1
       resultSuccess result1 `shouldBe` False
       resultSuccess result2 `shouldBe` True
+  ]
+  ]

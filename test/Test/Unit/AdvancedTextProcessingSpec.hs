@@ -1,177 +1,187 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.Unit.AdvancedTextProcessingSpec (spec) where
+module Test.Unit.AdvancedTextProcessingSpec (tests) where
 
-import Test.Hspec
-import Test.QuickCheck
+import Test.Tasty
+import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck
 import Utils
 import Data.List (isInfixOf, isPrefixOf, isSuffixOf)
 import Data.Char (isSpace, isControl)
 import qualified Data.Text as T
 
-spec :: Spec
-spec = describe "Advanced Text Processing Tests" $ do
+tests :: TestTree
+tests = testGroup "Advanced Text Processing Tests"
+  [ testGroup "trim function edge cases"
+    [ testCase "handles empty strings" $
+        trim "" @?= ""
+      
+    , testCase "handles strings with only whitespace" $ do
+        trim "   " @?= ""
+        trim "\t\n\r " @?= ""
+        trim "\n\t\n\t" @?= ""
+      
+    , testCase "preserves internal whitespace" $ do
+        trim "  hello  world  " @?= "hello  world"
+        trim "\tfoo\tbar\t" @?= "foo\tbar"
+      
+    , testProperty "handles Unicode whitespace" $
+        \str -> trim (unwords [str, str]) === unwords [str, str]
+    ]
+  
+  , testGroup "splitBy function edge cases"
+    [ testCase "handles empty input" $
+        splitBy ',' "" @?= []
+      
+    , testCase "handles single character" $ do
+        splitBy ',' "a" @?= ["a"]
+        splitBy ',' "," @?= ["", ""]
+      
+    , testCase "handles consecutive delimiters" $ do
+        splitBy ',' "a,,b" @?= ["a", "", "b"]
+        splitBy ',' "a,,,b" @?= ["a", "", "", "b"]
+        splitBy ',' ",,," @?= ["", "", "", ""]
+      
+    , testCase "handles leading and trailing delimiters" $ do
+        splitBy ',' ",a,b," @?= ["", "a", "b", ""]
+        splitBy ',' ",a," @?= ["", "a", ""]
+      
+    , testProperty "preserves empty segments" $
+        \delim str -> splitBy delim (delim:str:delim:[]) === ["", str, ""]
+    ]
 
-  describe "trim function edge cases" $ do
-    it "handles empty strings" $ do
-      trim "" `shouldBe` ""
+  , testGroup "removeLineComments function"
+    [ testCase "handles empty strings" $
+        removeLineComments "" @?= ""
       
-    it "handles strings with only whitespace" $ do
-      trim "   " `shouldBe` ""
-      trim "\t\n\r " `shouldBe` ""
-      trim "\n\t\n\t" `shouldBe` ""
+    , testCase "handles strings without comments" $
+        removeLineComments "let x = 42" @?= "let x = 42"
       
-    it "preserves internal whitespace" $ do
-      trim "  hello  world  " `shouldBe` "hello  world"
-      trim "\tfoo\tbar\t" `shouldBe` "foo\tbar"
+    , testCase "removes comments correctly" $ do
+        removeLineComments "let x = 42 // comment" @?= "let x = 42"
+        removeLineComments "// full line comment" @?= ""
       
-    it "handles Unicode whitespace" $ property $
-      \str -> trim (unwords [str, str]) `shouldBe` unwords [str, str]
+    , testCase "preserves comments in string literals" $ do
+        removeLineComments "let s = \"// not a comment\"" @?= "let s = \"// not a comment\""
+        removeLineComments "let s = \"hello // world\"" @?= "let s = \"hello // world\""
+      
+    , testCase "handles escaped quotes in strings" $
+        removeLineComments "let s = \"\\\"// not a comment\"" @?= "let s = \"\\\"// not a comment\""
+      
+    , testCase "handles character literals" $ do
+        removeLineComments "let c = '/' // comment" @?= "let c = '/'"
+        removeLineComments "let c = '\"' // comment" @?= "let c = '\"'"
+    ]
 
-  describe "splitBy function edge cases" $ do
-    it "handles empty input" $ do
-      splitBy ',' "" `shouldBe` []
+  , testGroup "removeComments function"
+    [ testCase "handles empty strings" $
+        removeComments "" @?= ""
       
-    it "handles single character" $ do
-      splitBy ',' "a" `shouldBe` ["a"]
-      splitBy ',' "," `shouldBe` ["", ""]
+    , testCase "handles strings without comments" $
+        removeComments "let x = 42" @?= "let x = 42"
       
-    it "handles consecutive delimiters" $ do
-      splitBy ',' "a,,b" `shouldBe` ["a", "", "b"]
-      splitBy ',' "a,,,b" `shouldBe` ["a", "", "", "b"]
-      splitBy ',' ",,," `shouldBe` ["", "", "", ""]
+    , testCase "removes line comments" $
+        removeComments "let x = 42 // comment" @?= "let x = 42 "
       
-    it "handles leading and trailing delimiters" $ do
-      splitBy ',' ",a,b," `shouldBe` ["", "a", "b", ""]
-      splitBy ',' ",a," `shouldBe` ["", "a", ""]
+    , testCase "removes block comments" $
+        removeComments "let x = 42 /* comment */" @?= "let x = 42 "
       
-    it "preserves empty segments" $ property $
-      \delim str -> splitBy delim (delim:str:delim:[]) `shouldBe` ["", str, ""]
+    , testCase "handles nested block comments" $
+        removeComments "code /* outer /* inner */ still outer */ end" @?= "code  end"
+      
+    , testCase "preserves comments in string literals" $ do
+        removeComments "let s = \"// not a comment\"" @?= "let s = \"// not a comment\""
+        removeComments "let s = \"/* not a comment */\"" @?= "let s = \"/* not a comment */\""
+      
+    , testCase "handles multiline comments" $
+        removeComments "line1\n/* comment\nspanning multiple\nlines */\nline2" 
+          @?= "line1\n\nline2"
+    ]
 
-  describe "removeLineComments function" $ do
-    it "handles empty strings" $ do
-      removeLineComments "" `shouldBe` ""
+  , testGroup "normalizeIndentation function"
+    [ testCase "handles empty strings" $
+        normalizeIndentation "" @?= ""
       
-    it "handles strings without comments" $ do
-      removeLineComments "let x = 42" `shouldBe` "let x = 42"
+    , testCase "handles single lines" $
+        normalizeIndentation "  single line" @?= "  single line"
       
-    it "removes comments correctly" $ do
-      removeLineComments "let x = 42 // comment" `shouldBe` "let x = 42"
-      removeLineComments "// full line comment" `shouldBe` ""
+    , testCase "removes common prefix indentation" $
+        normalizeIndentation "  line1\n    line2\n  line3" @?= "line1\n  line2\nline3"
       
-    it "preserves comments in string literals" $ do
-      removeLineComments "let s = \"// not a comment\"" `shouldBe` "let s = \"// not a comment\""
-      removeLineComments "let s = \"hello // world\"" `shouldBe` "let s = \"hello // world\""
+    , testCase "preserves relative indentation" $
+        normalizeIndentation "    outer\n      inner\n    outer" @?= "outer\n  inner\nouter"
       
-    it "handles escaped quotes in strings" $ do
-      removeLineComments "let s = \"\\\"// not a comment\"" `shouldBe` "let s = \"\\\"// not a comment\""
+    , testCase "handles mixed tabs and spaces" $
+        normalizeIndentation "\t  mixed\n\t    indentation" @?= "mixed\n  indentation"
       
-    it "handles character literals" $ do
-      removeLineComments "let c = '/' // comment" `shouldBe` "let c = '/'"
-      removeLineComments "let c = '\"' // comment" `shouldBe` "let c = '\"'"
+    , testCase "preserves empty lines" $
+        normalizeIndentation "  line1\n\n  line2" @?= "line1\n\nline2"
+    ]
 
-  describe "removeComments function" $ do
-    it "handles empty strings" $ do
-      removeComments "" `shouldBe` ""
+  , testGroup "breakOn function"
+    [ testCase "handles empty pattern" $
+        breakOn "" "hello" @?= ("", "hello")
       
-    it "handles strings without comments" $ do
-      removeComments "let x = 42" `shouldBe` "let x = 42"
+    , testCase "handles empty input" $
+        breakOn "pattern" "" @?= ("", "")
       
-    it "removes line comments" $ do
-      removeComments "let x = 42 // comment" `shouldBe` "let x = 42 "
+    , testCase "finds first occurrence" $ do
+        breakOn "," "a,b,c" @?= ("a", "b,c")
+        breakOn "pattern" "prefix pattern suffix" @?= ("prefix ", " suffix")
       
-    it "removes block comments" $ do
-      removeComments "let x = 42 /* comment */" `shouldBe` "let x = 42 "
+    , testCase "handles pattern at start" $
+        breakOn "pattern" "pattern suffix" @?= ("", " suffix")
       
-    it "handles nested block comments" $ do
-      removeComments "code /* outer /* inner */ still outer */ end" `shouldBe` "code  end"
+    , testCase "handles pattern at end" $
+        breakOn "pattern" "prefix pattern" @?= ("prefix ", "")
       
-    it "preserves comments in string literals" $ do
-      removeComments "let s = \"// not a comment\"" `shouldBe` "let s = \"// not a comment\""
-      removeComments "let s = \"/* not a comment */\"" `shouldBe` "let s = \"/* not a comment */\""
-      
-    it "handles multiline comments" $ do
-      removeComments "line1\n/* comment\nspanning multiple\nlines */\nline2" 
-        `shouldBe` "line1\n\nline2"
+    , testCase "handles non-existent pattern" $
+        breakOn "xyz" "abc" @?= ("abc", "")
+    ]
 
-  describe "normalizeIndentation function" $ do
-    it "handles empty strings" $ do
-      normalizeIndentation "" `shouldBe` ""
+  , testGroup "safeProcessString function"
+    [ testCase "handles normal strings" $
+        safeProcessString "hello world" @?= Right "hello world"
       
-    it "handles single lines" $ do
-      normalizeIndentation "  single line" `shouldBe` "  single line"
+    , testCase "filters control characters" $ do
+        safeProcessString "hello\x00world" @?= Right "hello world"
+        safeProcessString "text\x01\x02end" @?= Right "textend"
       
-    it "removes common prefix indentation" $ do
-      normalizeIndentation "  line1\n    line2\n  line3" `shouldBe` "line1\n  line2\nline3"
+    , testCase "preserves newlines and tabs" $
+        safeProcessString "line1\nline2\ttab" @?= Right "line1\nline2\ttab"
       
-    it "preserves relative indentation" $ do
-      normalizeIndentation "    outer\n      inner\n    outer" `shouldBe` "outer\n  inner\nouter"
-      
-    it "handles mixed tabs and spaces" $ do
-      normalizeIndentation "\t  mixed\n\t    indentation" `shouldBe` "mixed\n  indentation"
-      
-    it "preserves empty lines" $ do
-      normalizeIndentation "  line1\n\n  line2" `shouldBe` "line1\n\nline2"
+    , testCase "preserves carriage returns" $
+        safeProcessString "windows\r\nline" @?= Right "windows\r\nline"
+    ]
 
-  describe "breakOn function" $ do
-    it "handles empty pattern" $ do
-      breakOn "" "hello" `shouldBe` ("", "hello")
+  , testGroup "isValidChar function"
+    [ testCase "accepts printable characters" $ do
+        isValidChar 'a' @?= True
+        isValidChar 'Z' @?= True
+        isValidChar '5' @?= True
+        isValidChar '!' @?= True
       
-    it "handles empty input" $ do
-      breakOn "pattern" "" `shouldBe` ("", "")
+    , testCase "accepts whitespace characters" $ do
+        isValidChar ' ' @?= True
+        isValidChar '\t' @?= True
+        isValidChar '\n' @?= True
+        isValidChar '\r' @?= True
       
-    it "finds first occurrence" $ do
-      breakOn "," "a,b,c" `shouldBe` ("a", "b,c")
-      breakOn "pattern" "prefix pattern suffix" `shouldBe` ("prefix ", " suffix")
-      
-    it "handles pattern at start" $ do
-      breakOn "pattern" "pattern suffix" `shouldBe` ("", " suffix")
-      
-    it "handles pattern at end" $ do
-      breakOn "pattern" "prefix pattern" `shouldBe` ("prefix ", "")
-      
-    it "handles non-existent pattern" $ do
-      breakOn "xyz" "abc" `shouldBe` ("abc", "")
+    , testCase "rejects control characters" $ do
+        isValidChar '\x00' @?= False
+        isValidChar '\x01' @?= False
+        isValidChar '\x1F' @?= False
+    ]
 
-  describe "safeProcessString function" $ do
-    it "handles normal strings" $ do
-      safeProcessString "hello world" `shouldBe` Right "hello world"
+  , testGroup "QuickCheck properties"
+    [ testProperty "trim idempotence" $
+        \str -> trim (trim str) === trim str
       
-    it "filters control characters" $ do
-      safeProcessString "hello\x00world" `shouldBe` Right "hello world"
-      safeProcessString "text\x01\x02end" `shouldBe` Right "textend"
+    , testProperty "splitBy consistency" $
+        \delim str -> concat (splitBy delim str) `shouldSatisfy` (\s -> length s >= length str - length (filter (== delim) str))
       
-    it "preserves newlines and tabs" $ do
-      safeProcessString "line1\nline2\ttab" `shouldBe` Right "line1\nline2\ttab"
-      
-    it "preserves carriage returns" $ do
-      safeProcessString "windows\r\nline" `shouldBe` Right "windows\r\nline"
-
-  describe "isValidChar function" $ do
-    it "accepts printable characters" $ do
-      isValidChar 'a' `shouldBe` True
-      isValidChar 'Z' `shouldBe` True
-      isValidChar '5' `shouldBe` True
-      isValidChar '!' `shouldBe` True
-      
-    it "accepts whitespace characters" $ do
-      isValidChar ' ' `shouldBe` True
-      isValidChar '\t' `shouldBe` True
-      isValidChar '\n' `shouldBe` True
-      isValidChar '\r' `shouldBe` True
-      
-    it "rejects control characters" $ do
-      isValidChar '\x00' `shouldBe` False
-      isValidChar '\x01' `shouldBe` False
-      isValidChar '\x1F' `shouldBe` False
-
-  describe "QuickCheck properties" $ do
-    it "trim idempotence" $ property $
-      \str -> trim (trim str) `shouldBe` trim str
-      
-    it "splitBy consistency" $ property $
-      \delim str -> concat (splitBy delim str) `shouldSatisfy` (\s -> length s >= length str - length (filter (== delim) str))
-      
-    it "breakOn consistency" $ property $
-      \pat str -> let (before, after) = breakOn pat str
-                   in if null pat then before `shouldBe` "" else before ++ pat ++ after `shouldBe` str
+    , testProperty "breakOn consistency" $
+        \pat str -> let (before, after) = breakOn pat str
+                   in if null pat then before @?= "" else before ++ pat ++ after @?= str
+    ]
+  ]

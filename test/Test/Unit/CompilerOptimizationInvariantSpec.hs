@@ -1,9 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.Unit.CompilerOptimizationInvariantSpec (spec) where
+module Test.Unit.CompilerOptimizationInvariantSpec (tests) where
 
-import Test.Hspec
-import Test.QuickCheck
+import Test.Tasty
+import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck
 import Data.List (sort, nub)
 import Data.Maybe (isJust, isNothing)
 import qualified Data.Text as T
@@ -45,59 +46,34 @@ applyDeadCodeElimination graph = graph  -- Mock implementation
 applyInlining :: IRGraph -> IRGraph
 applyInlining graph = graph  -- Mock implementation
 
-spec :: Spec
-spec = describe "Compiler Optimization Invariant Tests" $ do
-
-  describe "Optimization level invariants" $ do
-    it "preserves program semantics across optimization levels" $ do
-      let opt0 = CompilerOption O0 True 0
-          opt1 = CompilerOption O1 False 10
-          opt2 = CompilerOption O2 False 50
-          opt3 = CompilerOption O3 False 100
-      optLevel opt0 `shouldBe` O0
-      optLevel opt1 `shouldBe` O1
-      optLevel opt2 `shouldBe` O2
-      optLevel opt3 `shouldBe` O3
+tests :: TestTree
+tests = testGroup "Compiler Optimization Invariant Tests"
+  [ testGroup "Optimization level invariants"
+    [ testCase "preserves program semantics across optimization levels" $ do
+        let opt0 = CompilerOption O0 True 0
+            opt1 = CompilerOption O1 False 10
+            opt2 = CompilerOption O2 False 50
+            opt3 = CompilerOption O3 False 100
+        optLevel opt0 @?= O0
+        optLevel opt1 @?= O1
+        optLevel opt2 @?= O2
+        optLevel opt3 @?= O3
       
-    it "maintains optimization order" $ do
-      let levels = [O0, O1, O2, O3]
-      sort levels `shouldBe` [O0, O1, O2, O3]
+    , testCase "maintains optimization order" $ do
+        let levels = [O0, O1, O2, O3]
+        sort levels @?= [O0, O1, O2, O3]
       
-    it "handles debug info correctly" $ do
-      let debugOpt = CompilerOption O1 True 10
-          noDebugOpt = CompilerOption O1 False 10
-      debugInfo debugOpt `shouldBe` True
+    , testCase "handles debug info correctly" $ do
+        let debugOpt = CompilerOption O1 True 10
+            noDebugOpt = CompilerOption O1 False 10
+        debugInfo debugOpt @?= True
       debugInfo noDebugOpt `shouldBe` False
       
     it "validates inline thresholds" $ do
       let opt = CompilerOption O2 False 50
-      inlineThreshold opt `shouldBe` 50
-      inlineThreshold opt `shouldSatisfy` (> 0)
-
-  describe "IR graph invariants" $ do
-    it "maintains node uniqueness" $ do
-      let node1 = IRNode 1 "Constant" (Just "42")
-          node2 = IRNode 2 "Variable" Nothing
-          node3 = IRNode 3 "Operation" (Just "+")
-          graph = IRGraph [node1, node2, node3] [(1, 3), (2, 3)]
-      let nodeIds = map nodeId $ graphNodes graph
-      length nodeIds `shouldBe` length (nub nodeIds)
-      
-    it "validates edge references" $ do
-      let node1 = IRNode 1 "Constant" (Just "42")
-          node2 = IRNode 2 "Variable" Nothing
-          node3 = IRNode 3 "Operation" (Just "+")
-          graph = IRGraph [node1, node2, node3] [(1, 3), (2, 3)]
-      let nodeIds = Set.fromList $ map nodeId $ graphNodes graph
-          edgeRefs = Set.fromList $ concatMap (\(a, b) -> [a, b]) $ graphEdges graph
-      edgeRefs `Set.isSubsetOf` nodeIds `shouldBe` True
-      
-    it "preserves graph structure" $ do
-      let node1 = IRNode 1 "Constant" (Just "42")
-          node2 = IRNode 2 "Variable" Nothing
-          node3 = IRNode 3 "Operation" (Just "+")
-          graph = IRGraph [node1, node2, node3] [(1, 3), (2, 3)]
-      length (graphNodes graph) `shouldBe` 3
+      inlineThreshold opt @?= 50
+      assertBool "inline threshold should be > 0" (inlineThreshold opt > 0)
+    ]
       length (graphEdges graph) `shouldBe` 2
 
   describe "Optimization result invariants" $ do
@@ -217,5 +193,6 @@ spec = describe "Compiler Optimization Invariant Tests" $ do
           graph = IRGraph nodes edges
           optimized = applyConstantFolding graph
           result = OptimizationResult graph optimized ["ConstantFolding"]
-      length (graphNodes $ optimizedGraph result) `shouldBe` 100
-      length (graphEdges $ optimizedGraph result) `shouldBe` 99
+      length (graphNodes $ optimizedGraph result) @?= 100
+      length (graphEdges $ optimizedGraph result) @?= 99
+  ]

@@ -1,9 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.Unit.PerformanceRegressionSpec (spec) where
+module Test.Unit.PerformanceRegressionSpec (tests) where
 
-import Test.Hspec
-import Test.QuickCheck
+import Test.Tasty
+import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck
 import Data.List (sort, nub, intersect, union, (\\))
 import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes)
 import qualified Data.Set as Set
@@ -134,29 +135,29 @@ createPerformanceReport oldBaselines newBaselines threshold =
       actualRegressions = filter (\r -> regressionNewValue r > regressionOldValue r) allRegressions
   in PerformanceReport oldBaselines actualRegressions improvements
 
-spec :: Spec
-spec = describe "Performance Regression Tests" $ do
-
-  describe "Performance metrics" $ do
-    it "creates performance metrics correctly" $ do
-      let metric = PerformanceMetric "TestMetric" 1.5 "seconds"
-      metricName metric `shouldBe` "TestMetric"
-      metricValue metric `shouldBe` 1.5
-      metricUnit metric `shouldBe` "seconds"
+tests :: TestTree
+tests = testGroup "Performance Regression Tests"
+  [ testGroup "Performance metrics"
+    [ testCase "creates performance metrics correctly" $ do
+        let metric = PerformanceMetric "TestMetric" 1.5 "seconds"
+        metricName metric @?= "TestMetric"
+        metricValue metric @?= 1.5
+        metricUnit metric @?= "seconds"
       
-    it "compares performance metrics correctly" $ do
-      let metric1 = PerformanceMetric "TestMetric" 1.5 "seconds"
-          metric2 = PerformanceMetric "TestMetric" 1.5 "seconds"
-          metric3 = PerformanceMetric "TestMetric" 2.0 "seconds"
-      metric1 `shouldBe` metric2
-      metric1 `shouldNotBe` metric3
+    , testCase "compares performance metrics correctly" $ do
+        let metric1 = PerformanceMetric "TestMetric" 1.5 "seconds"
+            metric2 = PerformanceMetric "TestMetric" 1.5 "seconds"
+            metric3 = PerformanceMetric "TestMetric" 2.0 "seconds"
+        metric1 @?= metric2
+        assertBool "metric1 should not be metric3" (metric1 /= metric3)
+    ]
 
-  describe "Performance tests" $ do
-    it "creates performance tests correctly" $ do
-      let metric = PerformanceMetric "TestMetric" 1.5 "seconds"
-          test = PerformanceTest "Test" 100 [metric]
-      testName test `shouldBe` "Test"
-      testInputSize test `shouldBe` 100
+  , testGroup "Performance tests"
+    [ testCase "creates performance tests correctly" $ do
+        let metric = PerformanceMetric "TestMetric" 1.5 "seconds"
+            test = PerformanceTest "Test" 100 [metric]
+        testName test @?= "Test"
+        testInputSize test @?= 100
       testMetrics test `shouldBe` [metric]
       
     it "handles performance tests with multiple metrics" $ do

@@ -1,9 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.Unit.TypeInferenceAdvancedSpec (spec) where
+module Test.Unit.TypeInferenceAdvancedSpec (tests) where
 
-import Test.Hspec
-import Test.QuickCheck
+import Test.Tasty
+import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck
 import Data.List (sort, nub, intersect, union, (\\))
 import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes)
 import qualified Data.Set as Set
@@ -121,12 +122,11 @@ generalizeType typ state =
     extractFreeVars (TypeForAllType vars typ) = 
       extractFreeVars typ \\ vars
 
-spec :: Spec
-spec = describe "Advanced Type Inference Tests" $ do
-
-  describe "Type variables" $ do
-    it "creates type variables correctly" $ do
-      let var = TypeVar "T" 1 "Type"
+tests :: TestTree
+tests = testGroup "Advanced Type Inference Tests"
+  [ testGroup "Type variables"
+    [ testCase "creates type variables correctly" $ do
+        let var = TypeVar "T" 1 "Type"
       typeVarName var `shouldBe` "T"
       typeVarId var `shouldBe` 1
       typeVarKind var `shouldBe` "Type"
@@ -428,4 +428,4 @@ spec = describe "Advanced Type Inference Tests" $ do
                                          Right s -> unifyTypes typ typ s) (Right state) types
       case result of
         Right _ -> return ()
-        Left _ -> expectationFailure "Expected successful unification"
+        Left _ -> assertFailure "Expected successful unification"

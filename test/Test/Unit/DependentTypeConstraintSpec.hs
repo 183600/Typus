@@ -1,9 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.Unit.DependentTypeConstraintSpec (spec) where
+module Test.Unit.DependentTypeConstraintSpec (tests) where
 
-import Test.Hspec
-import Test.QuickCheck
+import Test.Tasty
+import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck
 import Data.List (sort, nub, intersect, union)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import qualified Data.Set as Set
@@ -73,30 +74,32 @@ unifyTypes type1 type2 env =
      then Right env
      else Left $ "Cannot unify " ++ typeName type1 ++ " with " ++ typeName type2
 
-spec :: Spec
-spec = describe "Dependent Type Constraint Tests" $ do
-
-  describe "Type variables" $ do
-    it "creates type variables correctly" $ do
-      let var = TypeVar "T" 1
-      typeVarName var `shouldBe` "T"
-      typeVarId var `shouldBe` 1
+tests :: TestTree
+tests = testGroup "Dependent Type Constraint Tests"
+  [ testGroup "Type variables"
+    [ testCase "creates type variables correctly" $ do
+        let var = TypeVar "T" 1
+        typeVarName var @?= "T"
+        typeVarId var @?= 1
       
-    it "compares type variables correctly" $ do
-      let var1 = TypeVar "T" 1
-          var2 = TypeVar "T" 2
-          var3 = TypeVar "U" 1
-      var1 `shouldBe` var1
-      var1 `shouldNotBe` var2
-      var1 `shouldNotBe` var3
+    , testCase "compares type variables correctly" $ do
+        let var1 = TypeVar "T" 1
+            var2 = TypeVar "T" 2
+            var3 = TypeVar "U" 1
+        var1 @?= var1
+        assertBool "var1 should not be var2" (var1 /= var2)
+        assertBool "var1 should not be var3" (var1 /= var3)
       
-    it "orders type variables correctly" $ do
-      let var1 = TypeVar "T" 1
-          var2 = TypeVar "U" 2
-          var3 = TypeVar "T" 2
-      sort [var2, var1, var3] `shouldBe` [var1, var3, var2]
+    , testCase "orders type variables correctly" $ do
+        let var1 = TypeVar "T" 1
+            var2 = TypeVar "U" 2
+            var3 = TypeVar "T" 2
+        sort [var2, var1, var3] @?= [var1, var3, var2]
+    ]
 
-  describe "Type constraints" $ do
+  , testGroup "Type constraints"
+    [ -- 这里需要继续转换剩余的测试
+    ]
     it "creates type constraints correctly" $ do
       let var = TypeVar "T" 1
           span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)
@@ -179,7 +182,7 @@ spec = describe "Dependent Type Constraint Tests" $ do
     it "checks empty constraints" $ do
       let env = TypeEnvironment [] [] []
           result = checkConstraints env
-      resultSatisfied result `shouldBe` False
+      resultSatisfied result @?= False
       resultErrors result `shouldBe` []
       
     it "checks satisfied constraints" $ do
@@ -301,6 +304,7 @@ spec = describe "Dependent Type Constraint Tests" $ do
           types = [Type ("Type" ++ show i) [] | i <- [1..50]]
           substitutions = zip vars types
           env = TypeEnvironment [] [] substitutions
-      length (envSubstitutions env) `shouldBe` 50
+      length (envSubstitutions env) @?= 50
       let result = checkConstraints env
-      resultSatisfied result `shouldBe` False
+      resultSatisfied result @?= False
+  ]

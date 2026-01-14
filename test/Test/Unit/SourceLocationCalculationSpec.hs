@@ -1,38 +1,39 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.Unit.SourceLocationCalculationSpec (spec) where
+module Test.Unit.SourceLocationCalculationSpec (tests) where
 
-import Test.Hspec
-import Test.QuickCheck
+import Test.Tasty
+import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck
 import SourceLocation
 import Compiler.Errors.Core (ErrorLocation(..))
 import Data.List (sort)
 
-spec :: Spec
-spec = describe "Source Location Calculation Tests" $ do
-
-  describe "SourcePos operations" $ do
-    it "creates start position correctly" $ do
-      startPos `shouldBe` SourcePos 1 1 0
+tests :: TestTree
+tests = testGroup "Source Location Calculation Tests"
+  [ testGroup "SourcePos operations"
+    [ testCase "creates start position correctly" $ do
+        startPos @?= SourcePos 1 1 0
       
-    it "advances position with regular characters" $ do
-      let pos = startPos
-      posAfter 'a' pos `shouldBe` SourcePos 1 2 1
-      posAfter 'b' (posAfter 'a' pos) `shouldBe` SourcePos 1 3 2
+    , testCase "advances position with regular characters" $ do
+        let pos = startPos
+        posAfter 'a' pos @?= SourcePos 1 2 1
+        posAfter 'b' (posAfter 'a' pos) @?= SourcePos 1 3 2
       
-    it "advances position with newline" $ do
-      let pos = SourcePos 1 5 4
-      posAfter '\n' pos `shouldBe` SourcePos 2 1 5
+    , testCase "advances position with newline" $ do
+        let pos = SourcePos 1 5 4
+        posAfter '\n' pos @?= SourcePos 2 1 5
       
-    it "advances position with tab" $ do
-      let pos1 = SourcePos 1 1 0
-      posAfter '\t' pos1 `shouldBe` SourcePos 1 9 1  -- Tab to next 8-column boundary
+    , testCase "advances position with tab" $ do
+        let pos1 = SourcePos 1 1 0
+        posAfter '\t' pos1 @?= SourcePos 1 9 1  -- Tab to next 8-column boundary
       
-      let pos2 = SourcePos 1 5 4
-      posAfter '\t' pos2 `shouldBe` SourcePos 1 9 5  -- Tab to next 8-column boundary
+      , testCase "advances position with tab (second example)" $ do
+        let pos2 = SourcePos 1 5 4
+        posAfter '\t' pos2 @?= SourcePos 1 9 5  -- Tab to next 8-column boundary
       
-    it "creates position at specific line and column" $ do
-      posAt 3 5 `shouldBe` SourcePos 3 5 0
+    , testCase "creates position at specific line and column" $
+        posAt 3 5 @?= SourcePos 3 5 0
       posAtLineCol 3 5 10 `shouldBe` SourcePos 3 5 10
       
     it "compares positions correctly" $ do
@@ -196,4 +197,4 @@ spec = describe "Source Location Calculation Tests" $ do
       let empty1 = SourceSpan (SourcePos 1 1 0) (SourcePos 1 1 0)
           empty2 = SourceSpan (SourcePos 2 2 5) (SourcePos 2 2 5)
           expected = SourceSpan (SourcePos 1 1 0) (SourcePos 2 2 5)
-      mergeSpans empty1 empty2 `shouldBe` expected
+      mergeSpans empty1 empty2 @?= expected

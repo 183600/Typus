@@ -1,12 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.Unit.OwnershipTransitivitySpec (spec) where
+module Test.Unit.OwnershipTransitivitySpec (tests) where
 
-import Test.Hspec
-import Test.QuickCheck
+import Test.Tasty
+import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck
 import Data.List (sort, nub, (\\))
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import qualified Data.Set as Set
+import qualified Data.Map as Map
 import SourceLocation (SourcePos(..), SourceSpan(..))
 
 -- Mock data types for ownership testing
@@ -66,70 +68,67 @@ checkTransitivity graph =
       transitiveChains = []
   in transitiveChains  -- Mock implementation
 
--- We need Map for the implementation above
-import qualified Data.Map as Map
-
-spec :: Spec
-spec = describe "Ownership Transitivity Tests" $ do
-
-  describe "Basic ownership relations" $ do
-    it "creates ownership relations correctly" $ do
-      let owner = Owner "owner1" "Alice"
-          resource = Resource "resource1" "Memory"
-          span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)
-          relation = OwnershipRelation owner resource span
-      relationOwner relation `shouldBe` owner
-      relationResource relation `shouldBe` resource
-      relationSpan relation `shouldBe` span
+tests :: TestTree
+tests = testGroup "Ownership Transitivity Tests"
+  [ testGroup "Basic ownership relations"
+    [ testCase "creates ownership relations correctly" $ do
+        let owner = Owner "owner1" "Alice"
+            resource = Resource "resource1" "Memory"
+            span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)
+            relation = OwnershipRelation owner resource span
+        relationOwner relation @?= owner
+        relationResource relation @?= resource
+        relationSpan relation @?= span
       
-    it "adds ownership to graph" $ do
-      let owner = Owner "owner1" "Alice"
-          resource = Resource "resource1" "Memory"
-          span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)
-          graph = OwnershipGraph [] [] []
-          newGraph = addOwnership owner resource span graph
-      length (graphRelations newGraph) `shouldBe` 1
-      relationOwner (head $ graphRelations newGraph) `shouldBe` owner
+    , testCase "adds ownership to graph" $ do
+        let owner = Owner "owner1" "Alice"
+            resource = Resource "resource1" "Memory"
+            span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)
+            graph = OwnershipGraph [] [] []
+            newGraph = addOwnership owner resource span graph
+        length (graphRelations newGraph) @?= 1
+        relationOwner (head $ graphRelations newGraph) @?= owner
       
-    it "handles multiple ownership relations" $ do
-      let owner1 = Owner "owner1" "Alice"
-          owner2 = Owner "owner2" "Bob"
-          resource1 = Resource "resource1" "Memory"
-          resource2 = Resource "resource2" "File"
-          span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)
-          graph = OwnershipGraph [] [] []
-          graph1 = addOwnership owner1 resource1 span graph
-          graph2 = addOwnership owner2 resource2 span graph1
-      length (graphRelations graph2) `shouldBe` 2
+    , testCase "handles multiple ownership relations" $ do
+        let owner1 = Owner "owner1" "Alice"
+            owner2 = Owner "owner2" "Bob"
+            resource1 = Resource "resource1" "Memory"
+            resource2 = Resource "resource2" "File"
+            span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)
+            graph = OwnershipGraph [] [] []
+            graph1 = addOwnership owner1 resource1 span graph
+          let graph2 = addOwnership owner2 resource2 span graph1
+      length (graphRelations graph2) @?= 2
       let relations = graphRelations graph2
-      relationOwner (relations !! 0) `shouldBe` owner1
-      relationOwner (relations !! 1) `shouldBe` owner2
+      relationOwner (relations !! 0) @?= owner1
+      relationOwner (relations !! 1) @?= owner2
+    ]
 
-  describe "Ownership transfer" $ do
-    it "transfers single ownership" $ do
-      let fromOwner = Owner "owner1" "Alice"
-          toOwner = Owner "owner2" "Bob"
-          resource = Resource "resource1" "Memory"
-          span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)
-          graph = OwnershipGraph [OwnershipRelation fromOwner resource span] [fromOwner] [resource]
-          result = transferOwnership fromOwner toOwner [resource] graph
-      length (transferredRelations result) `shouldBe` 1
-      let transferred = head $ transferredRelations result
-      relationOwner transferred `shouldBe` toOwner
-      relationResource transferred `shouldBe` resource
+  , testGroup "Ownership transfer"
+    [ testCase "transfers single ownership" $ do
+        let fromOwner = Owner "owner1" "Alice"
+            toOwner = Owner "owner2" "Bob"
+            resource = Resource "resource1" "Memory"
+            span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)
+            graph = OwnershipGraph [OwnershipRelation fromOwner resource span] [fromOwner] [resource]
+            result = transferOwnership fromOwner toOwner [resource] graph
+        length (transferredRelations result) @?= 1
+        let transferred = head $ transferredRelations result
+        relationOwner transferred @?= toOwner
+        relationResource transferred @?= resource
       
-    it "transfers multiple ownerships" $ do
-      let fromOwner = Owner "owner1" "Alice"
-          toOwner = Owner "owner2" "Bob"
-          resource1 = Resource "resource1" "Memory"
-          resource2 = Resource "resource2" "File"
-          span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)
-          relation1 = OwnershipRelation fromOwner resource1 span
-          relation2 = OwnershipRelation fromOwner resource2 span
-          graph = OwnershipGraph [relation1, relation2] [fromOwner] [resource1, resource2]
-          result = transferOwnership fromOwner toOwner [resource1, resource2] graph
-      length (transferredRelations result) `shouldBe` 2
-      let transferred = transferredRelations result
+    , testCase "transfers multiple ownerships" $ do
+        let fromOwner = Owner "owner1" "Alice"
+            toOwner = Owner "owner2" "Bob"
+            resource1 = Resource "resource1" "Memory"
+            resource2 = Resource "resource2" "File"
+            span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)
+            relation1 = OwnershipRelation fromOwner resource1 span
+            relation2 = OwnershipRelation fromOwner resource2 span
+            graph = OwnershipGraph [relation1, relation2] [fromOwner] [resource1, resource2]
+            result = transferOwnership fromOwner toOwner [resource1, resource2] graph
+        length (transferredRelations result) @?= 2
+        let transferred = transferredRelations result
       map relationOwner transferred `shouldBe` [toOwner, toOwner]
       map relationResource transferred `shouldBe` [resource1, resource2]
       

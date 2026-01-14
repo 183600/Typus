@@ -1,33 +1,33 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.Unit.ParserErrorRecoverySpec (spec) where
+module Test.Unit.ParserErrorRecoverySpec (tests) where
 
-import Test.Hspec
-import Test.QuickCheck
+import Test.Tasty
+import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck
 import Parser
 import SourceLocation (SourcePos(..), SourceSpan(..))
 import qualified Data.Text as T
 import Data.List (isPrefixOf, isInfixOf)
 import Utils (trim)
 
-spec :: Spec
-spec = describe "Parser Error Recovery Tests" $ do
-
-  describe "File directive parsing with errors" $ do
-    it "handles empty file directives" $ do
-      let directives = defaultFileDirectives
-      fdOwnership directives `shouldBe` Nothing
-      fdDependentTypes directives `shouldBe` Nothing
-      fdConstraints directives `shouldBe` Nothing
+tests :: TestTree
+tests = testGroup "Parser Error Recovery Tests"
+  [ testGroup "File directive parsing with errors"
+    [ testCase "handles empty file directives" $ do
+        let directives = defaultFileDirectives
+        fdOwnership directives @?= Nothing
+        fdDependentTypes directives @?= Nothing
+        fdConstraints directives @?= Nothing
       
-    it "handles malformed ownership directive" $ do
-      -- This test would typically involve parsing malformed input
-      -- For now, we test the default behavior
-      let directives = defaultFileDirectives
-      fdOwnership directives `shouldBe` Nothing
+    , testCase "handles malformed ownership directive" $ do
+        -- This test would typically involve parsing malformed input
+        -- For now, we test the default behavior
+        let directives = defaultFileDirectives
+        fdOwnership directives @?= Nothing
       
-    it "handles malformed dependent types directive" $ do
-      let directives = defaultFileDirectives
+    , testCase "handles malformed dependent types directive" $ do
+        let directives = defaultFileDirectives
       fdDependentTypes directives `shouldBe` Nothing
       
     it "handles malformed constraints directive" $ do
@@ -62,10 +62,10 @@ spec = describe "Parser Error Recovery Tests" $ do
       let span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)
           directives = defaultBlockDirectives
           content = "invalid syntax {"
-      block = CodeBlock directives content span
-      cbDirectives block `shouldBe` directives
-      cbContent block `shouldBe` content
-      cbSpan block `shouldBe` span
+      let block = CodeBlock directives content span
+      cbDirectives block @?= directives
+      cbContent block @?= content
+      cbSpan block @?= span
 
   describe "Typus file parsing with errors" $ do
     it "handles empty typus files" $ do
@@ -73,11 +73,11 @@ spec = describe "Parser Error Recovery Tests" $ do
           buildTags = []
           blocks = []
           syntaxErrors = []
-      file = TypusFile directives buildTags blocks syntaxErrors
-      tfDirectives file `shouldBe` directives
-      tfBuildTags file `shouldBe` buildTags
-      tfBlocks file `shouldBe` blocks
-      tfSyntaxErrors file `shouldBe` syntaxErrors
+      let file = TypusFile directives buildTags blocks syntaxErrors
+      tfDirectives file @?= directives
+      tfBuildTags file @?= buildTags
+      tfBlocks file @?= blocks
+      tfSyntaxErrors file @?= syntaxErrors
       
     it "handles files with missing directives" $ do
       let directives = defaultFileDirectives
