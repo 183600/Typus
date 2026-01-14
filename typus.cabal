@@ -2304,6 +2304,14 @@ test-suite typus-test
         -- Test.Unit.CompilerIntegrationQuickCheckSpec,
         -- Test.Unit.DependenciesAdvancedQuickCheckSpec,
         
+        -- Newly created advanced test modules (2026)
+        Test.Unit.SourceLocationAdvancedQuickCheckSpec,
+        Test.Unit.UtilsAdvancedQuickCheckSpec,
+        Test.Unit.ParserAdvancedQuickCheckSpec,
+        Test.Unit.ErrorHandlerAdvancedQuickCheckSpec,
+        Test.Unit.IntegrationAdvancedQuickCheckSpec,
+        Test.Unit.BoundaryConditionAdvancedQuickCheckSpec,
+        
     build-depends:
         base >=4.7 && <5,
         typus,

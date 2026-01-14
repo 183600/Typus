@@ -71,6 +71,14 @@ import qualified Test.Unit.CodeGenerationSpec as CodeGeneration
 import qualified Test.Unit.DependencyResolutionSpec as DependencyResolution
 import qualified Test.Unit.OwnershipTransferSpec as OwnershipTransfer
 
+-- Import newly created advanced test modules (2026)
+import qualified Test.Unit.SourceLocationAdvancedQuickCheckSpec as SourceLocationAdvanced
+import qualified Test.Unit.UtilsAdvancedQuickCheckSpec as UtilsAdvanced
+import qualified Test.Unit.ParserAdvancedQuickCheckSpec as ParserAdvanced
+import qualified Test.Unit.ErrorHandlerAdvancedQuickCheckSpec as ErrorHandlerAdvanced
+import qualified Test.Unit.IntegrationAdvancedQuickCheckSpec as IntegrationAdvanced
+import qualified Test.Unit.BoundaryConditionAdvancedQuickCheckSpec as BoundaryConditionAdvanced
+
 -- Import new comprehensive test modules (2026)
 import qualified Test.Unit.CompilerCoreFunctionalityTestSpec as CompilerCoreFunctionalityTest
 import qualified Test.Unit.ParserBoundaryConditionTestSpec as ParserBoundaryConditionTest
@@ -200,5 +208,13 @@ tests = testGroup "Test.Unit.Tests Tests"
     ParserCombinators.tests,
     CodeGeneration.tests,
     DependencyResolution.tests,
-    OwnershipTransfer.tests
+    OwnershipTransfer.tests,
+    
+    -- Newly created advanced test modules (2026)
+    SourceLocationAdvanced.tests,
+    UtilsAdvanced.tests,
+    ParserAdvanced.tests,
+    ErrorHandlerAdvanced.tests,
+    IntegrationAdvanced.tests,
+    BoundaryConditionAdvanced.tests
   ]

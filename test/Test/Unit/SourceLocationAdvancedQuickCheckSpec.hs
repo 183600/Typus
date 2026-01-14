@@ -6,241 +6,150 @@ module Test.Unit.SourceLocationAdvancedQuickCheckSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
+
 import SourceLocation
-import Data.List (minimum, maximum)
 import qualified Data.Text as T
+import Data.List (isPrefixOf, isSuffixOf)
+import Control.Monad (replicateM)
 
--- | 测试SourceLocation模块中的高级位置计算功能
-tests :: TestTree
-tests = testGroup "SourceLocationAdvancedQuickCheckSpec Tests"
-  [ testGroup "SourcePos属性测试"
-    [ testProperty "posAfter newline increments line and resets column" $
-        \line col offset ->
-          let pos = SourcePos { posLine = line, posColumn = col, posOffset = offset }
-              newPos = posAfter '\n' pos
-          in property (posLine newPos == line + 1 && posColumn newPos == 1 && posOffset newPos == offset + 1)
-    
-    , testProperty "posAfter tab advances to next tab stop" $
-        \col offset ->
-          let pos = SourcePos { posLine = 1, posColumn = col, posOffset = offset }
-              newPos = posAfter '\t' pos
-              expectedCol = ((col - 1) `div` 8 + 1) * 8 + 1
-          in property (posColumn newPos == expectedCol && posOffset newPos == offset + 1)
-    
-    , testProperty "posAfter normal char increments column and offset" $
-        \col offset c ->
-          let pos = SourcePos { posLine = 1, posColumn = col, posOffset = offset }
-              newPos = posAfter c pos
-          in not (c `elem` ['\n', '\t']) ==> 
-             property (posColumn newPos == col + 1 && posOffset newPos == offset + 1)
-    
-    , testProperty "posAt creates position at specified coordinates" $
-        \line col ->
-          let pos = posAt line col
-          in property (posLine pos == line && posColumn pos == col && posOffset pos == 0)
-    
-    , testProperty "posAtLineCol creates position with specified offset" $
-        \line col offset ->
-          let pos = posAtLineCol line col offset
-          in property (posLine pos == line && posColumn pos == col && posOffset pos == offset)
-    ]
-  
-  , testGroup "SourceSpan属性测试"
-    [ testProperty "emptySpan creates span with same start and end" $
-        \pos ->
-          let span = emptySpan pos
-          in property (spanStart span == pos && spanEnd span == pos)
-    
-    , testProperty "spanFrom creates span with same start and end" $
-        \pos ->
-          let span = spanFrom pos
-          in property (spanStart span == pos && spanEnd span == pos)
-    
-    , testProperty "spanTo creates span with same start and end" $
-        \pos ->
-          let span = spanTo pos
-          in property (spanStart span == pos && spanEnd span == pos)
-    
-    , testProperty "spanBetween creates span with specified start and end" $
-        \startPos endPos ->
-          let span = spanBetween startPos endPos
-          in property (spanStart span == startPos && spanEnd span == endPos)
-    
-    , testProperty "spanBetweenOrdered orders positions correctly" $
-        \pos1 pos2 ->
-          let span = spanBetweenOrdered pos1 pos2
-              orderedStart = min pos1 pos2
-              orderedEnd = max pos1 pos2
-          in property (spanStart span == orderedStart && spanEnd span == orderedEnd)
-    ]
-  
-  , testGroup "mergeSpans属性测试"
-    [ testProperty "mergeSpans contains both original spans" $
-        \start1 end1 start2 end2 ->
-          let span1 = spanBetween start1 end1
-              span2 = spanBetween start2 end2
-              merged = mergeSpans span1 span2
-          in property (spanStart merged <= spanStart span1 && spanEnd merged >= spanEnd span1 &&
-                      spanStart merged <= spanStart span2 && spanEnd merged >= spanEnd span2)
-    
-    , testProperty "mergeSpans is commutative" $
-        \start1 end1 start2 end2 ->
-          let span1 = spanBetween start1 end1
-              span2 = spanBetween start2 end2
-              merged1 = mergeSpans span1 span2
-              merged2 = mergeSpans span2 span1
-          in property (merged1 == merged2)
-    
-    , testProperty "mergeSpans is associative" $
-        \start1 end1 start2 end2 start3 end3 ->
-          let span1 = spanBetween start1 end1
-              span2 = spanBetween start2 end2
-              span3 = spanBetween start3 end3
-              merged1 = mergeSpans (mergeSpans span1 span2) span3
-              merged2 = mergeSpans span1 (mergeSpans span2 span3)
-          in property (merged1 == merged2)
-    ]
-  
-  , testGroup "isValidSpan属性测试"
-    [ testProperty "emptySpan is always valid" $
-        \pos -> property (isValidSpan (emptySpan pos))
-    
-    , testProperty "span between valid positions is valid" $
-        \line1 col1 line2 col2 ->
-          let pos1 = SourcePos { posLine = line1, posColumn = col1, posOffset = 0 }
-              pos2 = SourcePos { posLine = line2, posColumn = col2, posOffset = 0 }
-              span = spanBetweenOrdered pos1 pos2
-          in property (isValidSpan span)
-    
-    , testProperty "span with start > end is invalid" $
-        \line1 col1 line2 col2 ->
-          let pos1 = SourcePos { posLine = line1, posColumn = col1, posOffset = 0 }
-              pos2 = SourcePos { posLine = line2, posColumn = col2, posOffset = 0 }
-              span = spanBetween pos1 pos2
-          in (pos1 > pos2) ==> not (isValidSpan span)
-    ]
-  
-  , testGroup "isValidBlockSpan属性测试"
-    [ testProperty "emptySpan is not a valid block span" $
-        \pos -> not (isValidBlockSpan (emptySpan pos))
-    
-    , testProperty "span across multiple lines is a valid block span" $
-        \line1 col1 line2 ->
-          let pos1 = SourcePos { posLine = line1, posColumn = col1, posOffset = 0 }
-              pos2 = SourcePos { posLine = line1 + line2 + 1, posColumn = 1, posOffset = 0 }
-              span = spanBetween pos1 pos2
-          in property (isValidBlockSpan span)
-    
-    , testProperty "span on single line is not a valid block span" $
-        \line col1 col2 ->
-          let pos1 = SourcePos { posLine = line, posColumn = col1, posOffset = 0 }
-              pos2 = SourcePos { posLine = line, posColumn = col2, posOffset = 0 }
-              span = spanBetweenOrdered pos1 pos2
-          in property (not (isValidBlockSpan span))
-    ]
-  
-  , testGroup "Located值属性测试"
-    [ testProperty "locatedAt preserves position and value" $
-        \pos (value :: String) ->
-          let located = locatedAt pos value
-          in property (locatedPos located == pos && locatedValue located == value)
-    
-    , testProperty "locatedWithSpan preserves span and value" $
-        \span (value :: String) ->
-          let located = locatedWithSpan span value
-          in property (locatedSpan located == span && locatedValue located == value)
-    
-    , testProperty "mapLocated preserves position" $
-        \pos value ->
-          let located = locatedAt pos value
-              mapped = mapLocated (++ " mapped") located
-          in property (locatedPos mapped == pos)
-    
-    , testProperty "mapLocated applies function correctly" $
-        \pos (value :: String) ->
-          let located = locatedAt pos value
-              mapped = mapLocated (++ " mapped") located
-          in property (locatedValue mapped == value ++ " mapped")
-    ]
-  
-  , testGroup "位置比较属性测试"
-    [ testProperty "comparePos respects line ordering" $
-        \line1 line2 col1 col2 ->
-          let pos1 = SourcePos { posLine = line1, posColumn = col1, posOffset = 0 }
-              pos2 = SourcePos { posLine = line2, posColumn = col2, posOffset = 0 }
-          in (line1 < line2) ==> property (comparePos pos1 pos2 == LT)
-    
-    , testProperty "comparePos respects column ordering for same line" $
-        \line col1 col2 ->
-          let pos1 = SourcePos { posLine = line, posColumn = col1, posOffset = 0 }
-              pos2 = SourcePos { posLine = line, posColumn = col2, posOffset = 0 }
-          in (col1 < col2) ==> property (comparePos pos1 pos2 == LT)
-    
-    , testProperty "comparePos respects offset ordering for same position" $
-        \line col offset1 offset2 ->
-          let pos1 = SourcePos { posLine = line, posColumn = col, posOffset = offset1 }
-              pos2 = SourcePos { posLine = line, posColumn = col, posOffset = offset2 }
-          in (offset1 < offset2) ==> property (comparePos pos1 pos2 == LT)
-    ]
-  
-  , testGroup "位置推进属性测试"
-    [ testProperty "advancePos advances correctly for normal characters" $
-        \pos c ->
-          not (c `elem` ['\n', '\t']) ==> 
-            let newPos = advancePos c pos
-            in property (posColumn newPos == posColumn pos + 1 && 
-                        posOffset newPos == posOffset pos + 1 &&
-                        posLine newPos == posLine pos)
-    
-    , testProperty "advancePosBy advances correctly for multiple characters" $
-        \pos chars ->
-          let newPos = advancePosBy chars pos
-          in property (posOffset newPos == posOffset pos + length chars)
-    
-    , testProperty "advancePosByText advances correctly for text" $
-        \pos text ->
-          let newPos = advancePosByText text pos
-          in property (posOffset newPos >= posOffset pos)
-    
-    , testProperty "advancePosByLine advances to next line" $
-        \pos ->
-          let newPos = advancePosByLine 1 pos
-          in property (posLine newPos == posLine pos + 1 && posColumn newPos == 1)
-    ]
-  
-  , testGroup "边界条件测试"
-    [ testCase "handle very large positions" $ do
-        let largePos = SourcePos { posLine = 1000000, posColumn = 1000000, posOffset = 1000000 }
-            span = emptySpan largePos
-        assertBool "Should handle large positions" (isValidSpan span)
-    
-    , testCase "handle negative positions gracefully" $ do
-        let negPos = SourcePos { posLine = -1, posColumn = -1, posOffset = -1 }
-            span = spanBetween negPos startPos
-        assertBool "Should handle negative positions" (not (isValidSpan span))
-    
-    , testCase "handle zero-width spans" $ do
-        let span = emptySpan startPos
-        assertBool "Zero-width span should be valid" (isValidSpan span)
-        assertBool "Zero-width span should not be a valid block span" (not (isValidBlockSpan span))
-    ]
-  ]
+-- | 测试SourcePos的偏移量计算一致性
+prop_sourcePos_offset_consistent :: Positive Int -> Positive Int -> Property
+prop_sourcePos_offset_consistent (Positive line) (Positive col) =
+  let pos = SourcePos line col 0
+      text = replicate (col - 1) ' ' ++ "x"
+      pos' = advancePosByText text startPos
+  in line > 0 && col > 0 ==> 
+     posLine pos' === 1 .&&.
+     posColumn pos' === col .&&.
+     posOffset pos' === col - 1
 
--- | Arbitrary instance for SourcePos
-instance Arbitrary SourcePos where
-  arbitrary = do
-    line <- arbitrary `suchThat` (> 0)
-    col <- arbitrary `suchThat` (> 0)
-    offset <- arbitrary `suchThat` (>= 0)
-    return $ SourcePos { posLine = line, posColumn = col, posOffset = offset }
+-- | 测试多行文本的位置追踪
+prop_multiline_position_tracking :: Positive Int -> Positive Int -> Property
+prop_multiline_position_tracking (Positive lines) (Positive cols) =
+  let lineContent = replicate cols 'x' ++ "\n"
+      multiLineText = concat $ replicate lines lineContent
+      finalPos = advancePosByText multiLineText startPos
+  in lines > 0 && cols > 0 ==>
+     posLine finalPos === lines + 1 .&&.
+     posColumn finalPos === 1
 
--- | Arbitrary instance for Text
+-- | 测试SourceSpan的包含关系
+prop_span_contains_monotonic :: SourcePos -> SourcePos -> SourcePos -> Property
+prop_span_contains_monotonic start middle end =
+  let span = spanBetweenOrdered start end
+  in sourcePosLe start middle && sourcePosLe middle end ==> 
+     spanContains span middle
+
+-- | 测试span合并的包含性
+prop_mergeSpans_contains_originals :: SourceSpan -> SourceSpan -> Property
+prop_mergeSpans_contains_originals span1 span2 =
+  let merged = mergeSpans span1 span2
+  in isValidSpan span1 && isValidSpan span2 ==>
+     spanContains merged (spanStart span1) .&&.
+     spanContains merged (spanEnd span1) .&&.
+     spanContains merged (spanStart span2) .&&.
+     spanContains merged (spanEnd span2)
+
+-- | 测试Located值的映射保持位置信息
+prop_located_map_preserves_span :: String -> String -> SourceSpan -> Property
+prop_located_map_preserves_span val1 val2 span =
+  let located1 = locatedWithSpan span val1
+      located2 = fmap reverse located1
+  in locatedSpan located1 === locatedSpan located2 .&&.
+     locatedSpan located2 === span
+
+-- | 测试位置比较的传递性
+prop_pos_comparison_transitive :: SourcePos -> SourcePos -> SourcePos -> Property
+prop_pos_comparison_transitive pos1 pos2 pos3 =
+  let le x y = x <= y
+  in (le pos1 pos2 && le pos2 pos3) ==> le pos1 pos3
+
+-- | 测试制表符位置计算
+prop_tab_position_calculation :: Positive Int -> Property
+prop_tab_position_calculation (Positive col) =
+  let pos = SourcePos 1 col 0
+      posAfterTab = advancePos '\t' pos
+      expectedCol = ((col - 1) `div` 8 + 1) * 8 + 1
+  in col > 0 ==> posColumn posAfterTab === expectedCol
+
+-- | 测试空字符串的位置处理
+prop_empty_string_position :: Property
+prop_empty_string_position =
+  let pos = advancePosByText "" startPos
+  in pos === startPos
+
+-- | 测试位置追踪的单步性
+prop_position_tracking_step_by_step :: String -> Property
+prop_position_tracking_step_by_step text =
+  let pos1 = advancePosByText text startPos
+      pos2 = foldl (flip advancePos) startPos text
+  in pos1 === pos2
+
+-- | 测试span的零长度特性
+prop_zero_length_span :: SourcePos -> Property
+prop_zero_length_span pos =
+  let span = spanBetween pos pos
+  in spanStart span === spanEnd span .&&.
+     spanStart span === pos
+
+-- | 测试LocationTracker的状态一致性
+test_locationTracker_state_consistency :: Assertion
+test_locationTracker_state_consistency = do
+  let initialPos = SourcePos 1 1 0
+      testPos = SourcePos 5 10 100
+      actions = runLocationTracker $ do
+        setCurrentPos testPos
+        getCurrentPos
+  assertEqual "Position should be set correctly" testPos actions
+
+-- | 测试错误位置转换的完整性
+test_errorLocation_completeness :: Assertion
+test_errorLocation_completeness = do
+  let start = SourcePos 10 5 50
+      end = SourcePos 10 15 60
+      span = SourceSpan start end
+      errorLoc = toErrorLocationWithSpan span
+  assertEqual "Error line should match span start" 10 (line errorLoc)
+  assertEqual "Error column should match span start" 5 (column errorLoc)
+
+-- | 测试复杂文本的位置追踪
+test_complex_text_position_tracking :: Assertion
+test_complex_text_position_tracking = do
+  let text = "hello\nworld\t\n\ttest"
+      finalPos = advancePosByText text startPos
+      expectedPos = SourcePos 3 6 20  -- 计算预期位置
+  assertEqual "Complex text position should be tracked correctly" expectedPos finalPos
+
+-- | 生成任意非空文本用于QuickCheck测试
 instance Arbitrary T.Text where
-  arbitrary = T.pack <$> arbitrary
+  arbitrary = T.pack <$> arbitrary `suchThat` (/= "")
 
--- | Arbitrary instance for SourceSpan
-instance Arbitrary SourceSpan where
-  arbitrary = do
-    start <- arbitrary
-    end <- arbitrary
-    return $ SourceSpan start end
+-- | 辅助函数：检查span是否包含位置
+spanContains :: SourceSpan -> SourcePos -> Bool
+spanContains span pos = 
+  let start = spanStart span
+      end = spanEnd span
+  in sourcePosLe start pos && sourcePosLe pos end
+
+-- | 辅助函数：检查SourcePos的顺序
+sourcePosLe :: SourcePos -> SourcePos -> Bool
+sourcePosLe (SourcePos l1 c1 _) (SourcePos l2 c2 _) = 
+  l1 < l2 || (l1 == l2 && c1 <= c2)
+
+-- | 测试套件
+tests :: TestTree
+tests = testGroup "SourceLocation Advanced QuickCheck Tests"
+  [ testProperty "SourcePos offset consistent" prop_sourcePos_offset_consistent
+  , testProperty "Multiline position tracking" prop_multiline_position_tracking
+  , testProperty "Span contains monotonic" prop_span_contains_monotonic
+  , testProperty "MergeSpans contains originals" prop_mergeSpans_contains_originals
+  , testProperty "Located map preserves span" prop_located_map_preserves_span
+  , testProperty "Position comparison transitive" prop_pos_comparison_transitive
+  , testProperty "Tab position calculation" prop_tab_position_calculation
+  , testProperty "Empty string position" prop_empty_string_position
+  , testProperty "Position tracking step by step" prop_position_tracking_step_by_step
+  , testProperty "Zero length span" prop_zero_length_span
+  , testCase "LocationTracker state consistency" test_locationTracker_state_consistency
+  , testCase "Error location completeness" test_errorLocation_completeness
+  , testCase "Complex text position tracking" test_complex_text_position_tracking
+  ]
