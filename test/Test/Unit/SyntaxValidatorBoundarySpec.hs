@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Unit.SyntaxValidatorBoundarySpec (tests) where
 
@@ -6,7 +7,7 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 import Data.List (isPrefixOf, isSuffixOf, isInfixOf)
-import Data.Char (isLetter, isDigit, isSpace)
+import Data.Char (isLetter, isDigit, isSpace, toLower, toUpper)
 
 -- Test syntax validator boundary conditions
 tests :: TestTree
@@ -31,7 +32,10 @@ tests = testGroup "Syntax Validator Boundary Tests"
         \xs -> isValidIdentifier xs ==> length xs == length xs
     
     , testProperty "identifiers are case sensitive" $
-        \xs -> isValidIdentifier xs ==> isValidIdentifier (map toLower xs) || isValidIdentifier (map toUpper xs)
+        \(xs :: String) -> isValidIdentifier xs ==> 
+      let lowerXs = map Data.Char.toLower xs
+          upperXs = map Data.Char.toUpper xs
+      in isValidIdentifier lowerXs || isValidIdentifier upperXs
     
     , testProperty "identifiers with underscores are valid" $
         \xs -> not (null xs) ==> isValidIdentifier (xs ++ "_" ++ xs)

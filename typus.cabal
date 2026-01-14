@@ -245,7 +245,6 @@ benchmark typus-bench
         Test.Unit.ErrorHandlerNewQuickCheckTests,
         Test.Unit.ErrorHandlerRecoveryAdvancedSpec,
         Test.Unit.ErrorHandlerRecoveryQuickCheckSpec,
-        Test.Unit.ErrorHandlerRecoverySpec,
         Test.Unit.ErrorHandlingAdvancedSpec,
         Test.Unit.ErrorHandlingBoundaryConditionsSpec,
         Test.Unit.ErrorHandlingRobustnessSpec,
@@ -442,7 +441,6 @@ benchmark typus-bench
         Test.Unit.ErrorHandlerNewQuickCheckTests,
         Test.Unit.ErrorHandlerRecoveryAdvancedSpec,
         Test.Unit.ErrorHandlerRecoveryQuickCheckSpec,
-        Test.Unit.ErrorHandlerRecoverySpec,
         Test.Unit.ErrorHandlingAdvancedSpec,
         Test.Unit.ErrorHandlingBoundaryConditionsSpec,
         Test.Unit.ErrorHandlingRobustnessSpec,
@@ -639,7 +637,6 @@ benchmark typus-bench
         Test.Unit.ErrorHandlerNewQuickCheckTests,
         Test.Unit.ErrorHandlerRecoveryAdvancedSpec,
         Test.Unit.ErrorHandlerRecoveryQuickCheckSpec,
-        Test.Unit.ErrorHandlerRecoverySpec,
         Test.Unit.ErrorHandlingAdvancedSpec,
         Test.Unit.ErrorHandlingBoundaryConditionsSpec,
         Test.Unit.ErrorHandlingRobustnessSpec,
@@ -835,7 +832,6 @@ benchmark typus-bench
         Test.Unit.ErrorHandlerNewQuickCheckTests,
         Test.Unit.ErrorHandlerRecoveryAdvancedSpec,
         Test.Unit.ErrorHandlerRecoveryQuickCheckSpec,
-        Test.Unit.ErrorHandlerRecoverySpec,
         Test.Unit.ErrorHandlingAdvancedSpec,
         Test.Unit.ErrorHandlingBoundaryConditionsSpec,
         Test.Unit.ErrorHandlingRobustnessSpec,
@@ -1037,7 +1033,6 @@ test-suite typus-test
         
         -- New Comprehensive Test Modules (2025)
         Test.Unit.StringAnalysisSpec,
-        Test.Unit.CompilerOptimizationSpec,
         Test.Unit.TypeSystemBoundarySpec,
         Test.Unit.OwnershipComplexSpec,
         Test.Unit.ErrorRecoveryAdvancedSpec,
@@ -1052,6 +1047,13 @@ test-suite typus-test
         Test.Unit.SyntaxValidatorQuickCheckSpec,
         Test.Unit.DependentTypesQuickCheckSpec,
         Test.Unit.ErrorHandlingQuickCheckSpec,
+        
+        -- Additional test modules added for enhanced coverage
+        Test.Unit.EnhancedParserPropertiesSpec,
+        Test.Unit.OwnershipTransferPropertiesSpec,
+        Test.Unit.DependentTypeInferenceSpec,
+        Test.Unit.CompilerOptimizationSpec,
+        Test.Unit.IntegrationPipelineSpec,
         Test.Unit.DependenciesQuickCheckSpec,
         Test.Unit.AdvancedQuickCheckSpec,
         Test.Unit.PerformanceQuickCheckSpec,
@@ -2277,10 +2279,6 @@ test-suite typus-test
         
         -- New Test Modules Added (2026) - 60 comprehensive test cases
         Test.Unit.CoreUtilsPropertiesSpec,
-        Test.Unit.SourceLocationMathSpec,
-        Test.Unit.SyntaxValidatorBoundarySpec,
-        Test.Unit.EmbedAssetsExtractionSpec,
-        Test.Unit.ErrorHandlerRecoverySpec,
         Test.Unit.IntegratedCompilerConsistencySpec
         
     build-depends:

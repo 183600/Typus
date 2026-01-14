@@ -19,11 +19,11 @@ tests = testGroup "Integrated Compiler Consistency Tests"
     
     , testProperty "parse preserves token count" $
         \code -> isValidCode code ==> 
-          length (getTokens (parse code)) === length (getTokens code)
+          length (getTokensFromAST (parse code)) === length (getTokensFromString code)
     
     , testProperty "parse preserves structure" $
         \code -> isValidCode code ==> 
-          getStructure (parse code) === getStructure code
+          getStructureFromAST (parse code) === getStructureFromString code
     
     , testProperty "parse handles whitespace consistently" $
         \code -> isValidCode code ==> 
@@ -38,19 +38,19 @@ tests = testGroup "Integrated Compiler Consistency Tests"
     
     , testProperty "parse preserves identifiers" $
         \code -> isValidCode code ==> 
-          sort (getIdentifiers (parse code)) === sort (getIdentifiers code)
+          sort (getIdentifiersFromAST (parse code)) === sort (getIdentifiersFromString code)
     
     , testProperty "parse preserves literals" $
         \code -> isValidCode code ==> 
-          sort (getLiterals (parse code)) === sort (getLiterals code)
+          sort (getLiteralsFromAST (parse code)) === sort (getLiteralsFromString code)
     
     , testProperty "parse preserves operators" $
         \code -> isValidCode code ==> 
-          sort (getOperators (parse code)) === sort (getOperators code)
+          sort (getOperatorsFromAST (parse code)) === sort (getOperatorsFromString code)
     
-    , testProperty "parse handles nested structures" $
+    , testProperty "parse preserves nesting level" $
         \code -> isValidCode code ==> 
-          getNestingLevel (parse code) === getNestingLevel code
+          getNestingLevelFromAST (parse code) === getNestingLevelFromString code
     ]
   
   , testGroup "Type checking consistency properties"
@@ -71,7 +71,7 @@ tests = testGroup "Integrated Compiler Consistency Tests"
     
     , testProperty "type check preserves structure" $
         \ast -> isValidAST ast ==> 
-          getStructure (typeCheck ast) === getStructure ast
+          getStructureFromAST (typeCheck ast) === getStructureFromAST ast
     
     , testProperty "type check handles inheritance" $
         \ast -> hasInheritance ast ==> 
@@ -97,42 +97,42 @@ tests = testGroup "Integrated Compiler Consistency Tests"
   , testGroup "Code generation consistency properties"
     [ testProperty "generate . parse . generate is consistent" $
         \code -> isValidCode code ==> 
-          generate (parse (generate code)) === generate code
+          generateFromAST (parse (generateCode code)) === generateCode code
     
     , testProperty "generate preserves semantics" $
         \code -> isValidCode code ==> 
-          getSemantics (generate code) === getSemantics code
+          getSemanticsFromString (generateCode code) === getSemanticsFromString code
     
     , testProperty "generate preserves behavior" $
         \code -> isValidCode code ==> 
-          getBehavior (generate code) === getBehavior code
+          getBehaviorFromString (generateCode code) === getBehaviorFromString code
     
     , testProperty "generate handles optimizations" $
         \code -> isValidCode code ==> 
-          isOptimized (generate (optimize code))
+          isOptimized (generateCode (optimize code))
     
     , testProperty "generate is deterministic" $
-        \code -> generate code === generate code
+        \code -> generateCode code === generateCode code
     
     , testProperty "generate preserves function signatures" $
         \code -> isValidCode code ==> 
-          getFunctionSignatures (generate code) === getFunctionSignatures code
+          getFunctionSignatures (generateCode code) === getFunctionSignatures code
     
     , testProperty "generate preserves variable names" $
         \code -> isValidCode code ==> 
-          sort (getVariableNames (generate code)) === sort (getVariableNames code)
+          sort (getVariableNamesFromString (generateCode code)) === sort (getVariableNamesFromString code)
     
     , testProperty "generate preserves control flow" $
         \code -> isValidCode code ==> 
-          getControlFlow (generate code) === getControlFlow code
+          getControlFlowFromString (generateCode code) === getControlFlowFromString code
     
     , testProperty "generate handles error cases" $
         \code -> hasErrors code ==> 
-          handlesErrors (generate code)
+          handlesErrors (generateCode code)
     
     , testProperty "generate preserves memory layout" $
         \code -> isValidCode code ==> 
-          getMemoryLayout (generate code) === getMemoryLayout code
+          getMemoryLayoutFromString (generateCode code) === getMemoryLayoutFromString code
     ]
   ]
 
@@ -178,41 +178,41 @@ parse code = AST
 unparse :: AST -> String
 unparse ast = unwords (tokens ast)
 
-getTokens :: String -> [String]
-getTokens = words
+getTokensFromString :: String -> [String]
+getTokensFromString = words
 
-getTokens :: AST -> [String]
-getTokens = tokens
+getTokensFromAST :: AST -> [String]
+getTokensFromAST = tokens
 
-getStructure :: String -> String
-getStructure = take 10
+getStructureFromString :: String -> String
+getStructureFromString = take 10
 
-getStructure :: AST -> String
-getStructure = structure
+getStructureFromAST :: AST -> String
+getStructureFromAST = structure
 
-getIdentifiers :: String -> [String]
-getIdentifiers code = filter (all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_")) (words code)
+getIdentifiersFromString :: String -> [String]
+getIdentifiersFromString code = filter (all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_")) (words code)
 
-getIdentifiers :: AST -> [String]
-getIdentifiers = identifiers
+getIdentifiersFromAST :: AST -> [String]
+getIdentifiersFromAST = identifiers
 
-getLiterals :: String -> [String]
-getLiterals code = filter (all (`elem` ['0'..'9'])) (words code)
+getLiteralsFromString :: String -> [String]
+getLiteralsFromString code = filter (all (`elem` ['0'..'9'])) (words code)
 
-getLiterals :: AST -> [String]
-getLiterals = literals
+getLiteralsFromAST :: AST -> [String]
+getLiteralsFromAST = literals
 
-getOperators :: String -> [String]
-getOperators code = filter (`elem` ["+", "-", "*", "/", "==", "!=", "<", ">", "<=", ">="]) (words code)
+getOperatorsFromString :: String -> [String]
+getOperatorsFromString code = filter (`elem` ["+", "-", "*", "/", "==", "!=", "<", ">", "<=", ">="]) (words code)
 
-getOperators :: AST -> [String]
-getOperators = operators
+getOperatorsFromAST :: AST -> [String]
+getOperatorsFromAST = operators
 
-getNestingLevel :: String -> Int
-getNestingLevel code = length (filter (== '{') code)
+getNestingLevelFromString :: String -> Int
+getNestingLevelFromString code = length (filter (== '{') code)
 
-getNestingLevel :: AST -> Int
-getNestingLevel = nestingLevel
+getNestingLevelFromAST :: AST -> Int
+getNestingLevelFromAST = nestingLevel
 
 normalizeWhitespace :: String -> String
 normalizeWhitespace = unwords . words
@@ -262,23 +262,17 @@ handlesRecursiveTypes _ = True
 getVariableTypes :: AST -> [(String, String)]
 getVariableTypes ast = typeInfo ast
 
-generate :: String -> String
-generate code = "generated:" ++ take 50 code
+generateCode :: String -> String
+generateCode code = "generated:" ++ take 50 code
 
-generate :: AST -> String
-generate ast = "generated:" ++ unwords (tokens ast)
+generateFromAST :: AST -> String
+generateFromAST ast = "generated:" ++ unwords (tokens ast)
 
-getSemantics :: String -> String
-getSemantics = take 20
+getSemanticsFromString :: String -> String
+getSemanticsFromString = take 20
 
-getSemantics :: String -> String
-getSemantics = take 20
-
-getBehavior :: String -> String
-getBehavior = take 15
-
-getBehavior :: String -> String
-getBehavior = take 15
+getBehaviorFromString :: String -> String
+getBehaviorFromString = take 15
 
 optimize :: String -> String
 optimize code = "optimized:" ++ code
@@ -289,20 +283,17 @@ isOptimized code = "optimized:" `isPrefixOf` code
 getFunctionSignatures :: String -> [(String, String)]
 getFunctionSignatures _ = []
 
-getFunctionSignatures :: String -> [(String, String)]
-getFunctionSignatures _ = []
+getVariableNamesFromString :: String -> [String]
+getVariableNamesFromString code = filter (all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_")) (words code)
+
+getMemoryLayoutFromString :: String -> String
+getMemoryLayoutFromString = take 30
 
 getVariableNames :: String -> [String]
 getVariableNames code = filter (all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_")) (words code)
 
-getVariableNames :: String -> [String]
-getVariableNames code = filter (all (`elem` ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_")) (words code)
-
-getControlFlow :: String -> String
-getControlFlow = take 25
-
-getControlFlow :: String -> String
-getControlFlow = take 25
+getControlFlowFromString :: String -> String
+getControlFlowFromString = take 25
 
 hasErrors :: String -> Bool
 hasErrors code = "error" `isInfixOf` code
@@ -313,5 +304,6 @@ handlesErrors _ = True
 getMemoryLayout :: String -> String
 getMemoryLayout = take 30
 
-getMemoryLayout :: String -> String
-getMemoryLayout = take 30
+-- Arbitrary instance for AST
+instance Arbitrary AST where
+  arbitrary = AST <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary

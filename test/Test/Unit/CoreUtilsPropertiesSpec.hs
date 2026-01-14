@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Unit.CoreUtilsPropertiesSpec (tests) where
 
@@ -46,19 +47,19 @@ tests = testGroup "Core Utils Properties Tests"
   
   , testGroup "Set properties"
     [ testProperty "Set.fromList . Set.toList is idempotent" $
-        \xs -> Set.fromList (Set.toList (Set.fromList xs)) === Set.fromList xs
+        \(xs :: [Int]) -> Set.fromList (Set.toList (Set.fromList xs)) === Set.fromList xs
     
     , testProperty "Set.size is never negative" $
-        \xs -> Set.size (Set.fromList xs) >= 0
+        \(xs :: [Int]) -> Set.size (Set.fromList xs) >= 0
     
     , testProperty "Set.member after insertion" $
-        \x xs -> Set.member x (Set.insert x (Set.fromList xs))
+        \(x :: Int) (xs :: [Int]) -> Set.member x (Set.insert x (Set.fromList xs))
     
     , testProperty "Set.delete removes element" $
-        \x xs -> not (Set.member x (Set.delete x (Set.fromList xs)))
+        \(x :: Int) (xs :: [Int]) -> not (Set.member x (Set.delete x (Set.fromList xs)))
     
     , testProperty "Set.union contains both sets" $
-        \xs ys -> all (`Set.member` Set.union (Set.fromList xs) (Set.fromList ys)) xs
+        \(xs :: [Int]) (ys :: [Int]) -> all (`Set.member` Set.union (Set.fromList xs) (Set.fromList ys)) xs
     ]
   
   , testGroup "List properties"
