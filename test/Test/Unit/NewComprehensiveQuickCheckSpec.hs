@@ -1,9 +1,11 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
-module Test.Unit.NewComprehensiveQuickCheckSpec where
+module Test.Unit.NewComprehensiveQuickCheckSpec (tests) where
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
+import Test.Tasty.HUnit
 import Test.Unit.NewUtilsQuickCheckSpec (utilsTests)
 import Test.Unit.NewSourceLocationQuickCheckSpec (sourceLocationTests)
 import Test.Unit.NewParserQuickCheckSpec (parserTests)
@@ -114,11 +116,11 @@ testEdgeCasesAndBoundaries = testGroup "Edge Cases and Boundary Conditions"
 -- Property-based integration tests
 testPropertyBasedIntegration :: TestTree
 testPropertyBasedIntegration = testGroup "Property-Based Integration Tests"
-  [ testProperty "Parser-Compiler roundtrip" $ \input -> property $ True
-  , testProperty "ErrorHandler error preservation" $ \errors -> property $ True
-  , testProperty "Ownership transfer consistency" $ \transfers -> property $ True
-  , testProperty "SourceLocation position accuracy" $ \positions -> property $ True
-  , testProperty "Utils function composition" $ \strings -> property $ True
+  [ testProperty "Parser-Compiler roundtrip" $ (\(input :: String) -> property True)
+  , testProperty "ErrorHandler error preservation" $ (\(errors :: [Int]) -> property True)
+  , testProperty "Ownership transfer consistency" $ (\(transfers :: [Int]) -> property True)
+  , testProperty "SourceLocation position accuracy" $ (\(positions :: [Int]) -> property True)
+  , testProperty "Utils function composition" $ (\(strings :: [String]) -> property True)
   ]
 
 -- Main comprehensive test suite
@@ -136,3 +138,7 @@ comprehensiveTests = testGroup "Comprehensive QuickCheck Test Suite"
   , testEdgeCasesAndBoundaries
   , testPropertyBasedIntegration
   ]
+
+-- Export the tests as required by Tests.hs
+tests :: TestTree
+tests = comprehensiveTests

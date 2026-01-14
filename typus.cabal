@@ -947,7 +947,17 @@ benchmark typus-bench
         Test.Unit.NewTypeSystemSubstitutionQuickCheckSpec,
         Test.Unit.NewUtilsBoundaryConditionsSpec,
         Test.Unit.NewUtilsComprehensiveSpec,
-        Test.Unit.NewUtilsEdgeCaseSpec
+        Test.Unit.NewUtilsEdgeCaseSpec,
+        
+        -- New QuickCheck Test Modules (2026)
+        Test.Unit.NewStringProcessingQuickCheckTestSpec,
+        Test.Unit.NewSourceLocationMathQuickCheckTestSpec,
+        Test.Unit.NewParserErrorRecoveryQuickCheckTestSpec,
+        Test.Unit.NewCompilerIRConsistencyQuickCheckTestSpec,
+        Test.Unit.NewOwnershipTransitivityQuickCheckTestSpec,
+        Test.Unit.NewDependencyCycleDetectionQuickCheckTestSpec,
+        Test.Unit.NewErrorHandlerConsistencyQuickCheckTestSpec,
+        Test.Unit.NewIntegrationEndToEndQuickCheckTestSpec
         
     build-depends:
         base >=4.7 && <5, typus, containers, mtl, directory >= 1.3.0, filepath >= 1.4.0, criterion >= 1.6, deepseq >= 1.4.0
@@ -1324,6 +1334,7 @@ test-suite typus-test
         Test.Unit.NewSourceLocationQuickCheckSpec,
         Test.Unit.NewErrorHandlerQuickCheckSpec,
         Test.Unit.NewParserQuickCheckSpec,
+        Test.Unit.NewCompilerQuickCheckSpec,
         Test.Unit.NewFreshComprehensiveQuickCheckSpec,
         Test.Unit.CustomParserQuickCheckSpec,
         Test.Unit.CustomUtilsQuickCheckSpec,

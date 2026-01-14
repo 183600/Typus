@@ -16,6 +16,9 @@ import Text.Megaparsec (parse, errorBundlePretty)
 import qualified Text.Megaparsec as MP
 
 -- Arbitrary instances for QuickCheck
+instance Arbitrary SourcePos where
+  arbitrary = SourcePos <$> choose (1, 100) <*> choose (1, 100) <*> choose (0, 10000)
+
 instance Arbitrary SourceSpan where
   arbitrary = do
     start <- arbitrary
@@ -33,6 +36,9 @@ instance Arbitrary (Located String) where
     str <- arbitrary
     span <- arbitrary
     return $ Located str (spanStart span) span
+
+instance Arbitrary CodeBlock where
+  arbitrary = CodeBlock <$> arbitrary <*> arbitrary <*> arbitrary
 
 -- ============================================================================
 -- Parser Module QuickCheck Tests

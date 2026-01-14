@@ -9,10 +9,17 @@ import Compiler.Errors.Core hiding (line, column)
 import SourceLocation (SourcePos(..), SourceSpan(..))
 import Data.Time (UTCTime)
 import Data.List (sort, isInfixOf)
-import Control.Monad.State (execState)
+import Control.Monad.State (execState, evalState)
+import Data.Maybe (isJust, isNothing)
+import qualified Data.Text as T
+import qualified Data.Map.Strict as Map
 import qualified Compiler.Errors.Core as Error
 import qualified Dependencies.TypeSystem as Dep
 import qualified Ownership.Common.Types as Own
+
+-- Additional Arbitrary instances
+instance Arbitrary T.Text where
+  arbitrary = T.pack <$> arbitrary
 
 -- Arbitrary instances for QuickCheck
 instance Arbitrary ErrorSeverity where
@@ -31,15 +38,10 @@ instance Arbitrary ErrorContext where
   arbitrary = ErrorContext <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 instance Arbitrary TypeError where
-  arbitrary = TypeError <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = TypeError <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 instance Arbitrary CombinedError where
   arbitrary = oneof [IntegrationError <$> arbitrary <*> arbitrary]
-
-import Data.Maybe (isJust, isNothing)
-import qualified Data.Text as T
-import qualified Data.Map.Strict as Map
-import Control.Monad.State (evalState)
 
 -- ============================================================================
 -- ErrorHandler Module QuickCheck Tests
