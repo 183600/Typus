@@ -161,7 +161,7 @@ while true; do
   fi
 
   if [[ "$CABAL_STATUS" -eq 0 ]]; then
-    iflow "给这个项目增加一些cabal test测试用例，不要超过60个，如果需要使用QuickCheck就使用QuickCheck think:high" --yolo || true
+    iflow "给这个项目增加一些cabal test测试用例，不要超过200个，在这些新测试用例里面，如果需要添加使用QuickCheck的测试用例就添加 think:high" --yolo || true
 
     # 门禁：防止 iflow 生成乱码路径被提交
     guard_bad_paths || exit $?
