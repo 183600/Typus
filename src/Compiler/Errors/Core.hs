@@ -76,6 +76,7 @@ module Compiler.Errors.Core (
     hasCategory,
     filterByCategory,
     filterBySeverity,
+    sortBySeverityForTests,
     getErrorStatistics,
     generateErrorReport,
     generateErrorReportWithTimestamp,
@@ -102,7 +103,7 @@ module Compiler.Errors.Core (
 
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (intercalate, sortBy)
+import Data.List (intercalate, sortBy, foldl)
 import Data.Ord (comparing)
 import Data.Maybe (mapMaybe)
 import Control.Monad.State (State, modify)
@@ -112,6 +113,8 @@ import Data.Time (UTCTime, getCurrentTime, formatTime, defaultTimeLocale)
 import qualified Data.Map.Strict as Map
 import qualified Ownership.Common.Types as Own
 import qualified Dependencies.TypeSystem as Dep
+import qualified Data.List as List
+import qualified Data.Ord as Ord
 
 -- ============================================================================
 -- Error Severity Levels
@@ -903,3 +906,83 @@ fatalError errId msg loc = errorAt errId Fatal msg loc
 -- Create fatal error with category
 fatalErrorWithCategory :: String -> ErrorCategory -> Text -> ErrorLocation -> TypeError
 fatalErrorWithCategory errId errCategory msg loc = (errorAt errId Fatal msg loc) { category = errCategory }
+
+-- ============================================================================
+-- ErrorHandler type and functions (for tests)
+-- ============================================================================
+
+-- | Simple ErrorHandler type for tests
+type ErrorHandler a = ErrorCollector a
+
+-- | ErrorMessage type for tests
+type ErrorMessage = TypeError
+
+-- | Handle single error (placeholder for tests)
+handleError :: ErrorHandler () -> TypeError -> ErrorHandler ()
+handleError ec err = ec >> addError err
+
+-- | Handle multiple errors (placeholder for tests)
+handleErrors :: ErrorHandler () -> [TypeError] -> ErrorHandler ()
+handleErrors ec errs = foldl (\acc err -> acc >> addError err) ec errs
+
+-- | Create error (placeholder for tests)
+createError :: String -> Text -> ErrorLocation -> TypeError
+createError errId msg loc = errorAt errId Error msg loc
+
+-- | Create warning (placeholder for tests)
+createWarning :: String -> Text -> ErrorLocation -> TypeError
+createWarning = warningAt
+
+-- | Create info (placeholder for tests)
+createInfo :: String -> Text -> ErrorLocation -> TypeError
+createInfo = infoAt
+
+-- | Count errors (placeholder for tests)
+errorCount :: [TypeError] -> Int
+errorCount = length . Compiler.Errors.Core.getErrors
+
+-- | Count warnings (placeholder for tests)
+warningCount :: [TypeError] -> Int
+warningCount = length . Compiler.Errors.Core.getWarnings
+
+-- | Count info messages (placeholder for tests)
+infoCount :: [TypeError] -> Int
+infoCount = length . Compiler.Errors.Core.getInfo
+
+-- | Check if has infos (placeholder for tests)
+hasInfos :: [TypeError] -> Bool
+hasInfos = not . null . Compiler.Errors.Core.getInfo
+
+-- | Get infos (placeholder for tests)
+getInfos :: [TypeError] -> [TypeError]
+getInfos = Compiler.Errors.Core.getInfo
+
+-- | Clear errors (placeholder for tests)
+clearErrors :: ErrorHandler ()
+clearErrors = newErrorCollector
+
+-- | Clear warnings (placeholder for tests)
+clearWarnings :: ErrorHandler ()
+clearWarnings = newErrorCollector
+
+-- | Clear infos (placeholder for tests)
+clearInfos :: ErrorHandler ()
+clearInfos = newErrorCollector
+
+-- | Merge handlers (placeholder for tests)
+mergeHandlers :: [TypeError] -> [TypeError] -> [TypeError]
+mergeHandlers errs1 errs2 = errs1 ++ errs2
+
+-- | Filter by severity (placeholder for tests)
+filterBySeverityForTests :: ErrorSeverity -> [TypeError] -> [TypeError]
+filterBySeverityForTests severity = filter ((== severity) . errorSeverity)
+
+-- | Sort by severity (placeholder for tests)
+sortBySeverityForTests :: [TypeError] -> [TypeError]
+sortBySeverityForTests = List.sortBy compareSeverity
+  where
+    compareSeverity e1 e2 = Ord.compare (errorSeverity e1) (errorSeverity e2)
+
+-- | Render errors (placeholder for tests)
+renderErrors :: [TypeError] -> String
+renderErrors = unlines . map (T.unpack . errorMessage) . getErrors

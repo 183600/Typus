@@ -5,121 +5,151 @@
 module Test.Unit.ConciseUtilsQuickCheckSpec where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
-import Test.QuickCheck (Gen, Property, (==>))
-import qualified Data.Text as T
-import Data.List (isPrefixOf, isSuffixOf, isInfixOf)
-import Data.Char (isSpace, isAlpha, isAlphaNum, toLower, toUpper, isDigit, isLetter)
+import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), Gen)
 import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed, 
-             removeLineComments, removeComments, normalizeIndentation, 
-             forceSingleTabIndentation, fixIndentation, breakOn, 
-             safeProcessString, isValidChar)
-
--- Helper generators for Utils tests
-genSmallString :: Gen String
-genSmallString = do
-  len <- choose (0, 20)
-  vectorOf len $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t\n"
-
-genStringWithSpaces :: Gen String
-genStringWithSpaces = do
-  len <- choose (0, 20)
-  vectorOf len $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t"
-
-genStringWithComments :: Gen String
-genStringWithComments = do
-  len <- choose (0, 20)
-  vectorOf len $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t\n\"'/"
-
-genIndentedString :: Gen String
-genIndentedString = do
-  numLines <- choose (1, 5)
-  indent <- choose (0, 4)
-  lines <- vectorOf numLines $ do
-    lineLen <- choose (0, 10)
-    line <- vectorOf lineLen $ elements $ ['a'..'z'] ++ ['0'..'9'] ++ " "
-    return $ replicate indent ' ' ++ line
-  return $ unlines lines
-
-genChar :: Gen Char
-genChar = elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t\n\"'/"
-
-genDelimiter :: Gen Char
-genDelimiter = elements $ ",;:|"
-
--- Test properties for Utils module
-
--- Trim tests
-prop_trim_idempotent :: String -> Property
-prop_trim_idempotent s = trim (trim s) === trim s
-
-prop_trim_no_leading_trailing_spaces :: String -> Property
-prop_trim_no_leading_trailing_spaces s = 
-  not (null (trim s)) ==> 
-  not (isSpace (head (trim s))) && not (isSpace (last (trim s)))
-
--- Split tests
-prop_split_by_length :: String -> Char -> Property
-prop_split_by_length s c = length (splitBy c s) >= 0
-
-prop_split_by_comma_consistency :: String -> Property
-prop_split_by_comma_consistency s = splitBy ',' s === splitByComma s
-
-prop_split_by_collapsed_no_empty_adjacent :: String -> Char -> Property
-prop_split_by_collapsed_no_empty_adjacent s c = 
-  not (null c) ==> 
-  not (elem "" (take (length (splitByCollapsed c s) - 1) (splitByCollapsed c s)))
-
--- Comment removal tests
-prop_remove_line_comments_no_crash :: String -> Property
-prop_remove_line_comments_no_crash s = property $ length (removeLineComments s) >= 0
-
-prop_remove_comments_no_crash :: String -> Property
-prop_remove_comments_no_crash s = property $ length (removeComments s) >= 0
-
--- Indentation tests
-prop_normalize_indentation_no_crash :: String -> Property
-prop_normalize_indentation_no_crash s = property $ length (normalizeIndentation s) >= 0
-
-prop_fix_indentation_consistency :: String -> Property
-prop_fix_indentation_consistency s = fixIndentation s === normalizeIndentation s
-
--- Break on tests
-prop_break_on_finds_delimiter :: String -> String -> Property
-prop_break_on_finds_delimiter s delim = 
-  not (null delim) && delim `isInfixOf` s ==>
-  let (left, right) = breakOn delim s
-  in delim `isSuffixOf` left && delim `isPrefixOf` right
-
--- String processing tests
-prop_safe_process_string_idempotent :: String -> Property
-prop_safe_process_string_idempotent s = safeProcessString (safeProcessString s) === safeProcessString s
-
-prop_is_valid_char_check :: Char -> Property
-prop_is_valid_char_check c = property $ isValidChar c == isAlpha c || isDigit c || c `elem` "_-"
+             removeLineComments, removeComments, normalizeIndentation, breakOn, 
+             safeProcessString, isValidChar, isRight)
+import Data.Char (isSpace)
+import Data.List (isPrefixOf, isInfixOf)
+import Control.Arrow (first)
 
 tests :: TestTree
 tests = testGroup "Concise Utils QuickCheck Tests"
-  [ testProperties "Trim Tests"
-    [ ("trim idempotent", prop_trim_idempotent)
-    , ("trim no leading/trailing spaces", prop_trim_no_leading_trailing_spaces)
+  [ testProperties "String Processing"
+    [ prop_trim_idempotent
+    , prop_trim_removes_whitespace
+    , prop_splitBy_properties
+    , prop_splitByCollapsed_properties
+    , prop_splitByComma_equals_splitBy
+    , prop_splitByCommaCollapsed_equals_splitByCollapsed
+    , prop_breakOn_properties
+    , prop_safeProcessString_filters_control_chars
+    , prop_isValidChar_properties
+    , prop_isRight_properties
     ]
-  , testProperties "Split Tests"
-    [ ("split by length", prop_split_by_length)
-    , ("split by comma consistency", prop_split_by_comma_consistency)
-    , ("split by collapsed no empty adjacent", prop_split_by_collapsed_no_empty_adjacent)
+  , testProperties "Comment Processing"
+    [ prop_removeLineComments_properties
+    , prop_removeComments_properties
+    , prop_removeLineComments_preserves_strings
+    , prop_removeComments_preserves_strings
     ]
-  , testProperties "Comment Removal Tests"
-    [ ("remove line comments no crash", prop_remove_line_comments_no_crash)
-    , ("remove comments no crash", prop_remove_comments_no_crash)
-    ]
-  , testProperties "Indentation Tests"
-    [ ("normalize indentation no crash", prop_normalize_indentation_no_crash)
-    , ("fix indentation consistency", prop_fix_indentation_consistency)
-    ]
-  , testProperties "String Processing Tests"
-    [ ("break on finds delimiter", prop_break_on_finds_delimiter)
-    , ("safe process string idempotent", prop_safe_process_string_idempotent)
-    , ("is valid char check", prop_is_valid_char_check)
+  , testProperties "Indentation Processing"
+    [ prop_normalizeIndentation_preserves_relative_indentation
+    , prop_normalizeIndentation_removes_common_prefix
     ]
   ]
+
+-- | Test that trim is idempotent (trimming twice is same as trimming once)
+prop_trim_idempotent :: String -> Bool
+prop_trim_idempotent s = trim (trim s) == trim s
+
+-- | Test that trim removes leading and trailing whitespace
+prop_trim_removes_whitespace :: String -> Bool
+prop_trim_removes_whitespace s = 
+  let trimmed = trim s
+      hasLeadingSpace = not (null trimmed) && isSpace (head trimmed)
+      hasTrailingSpace = not (null trimmed) && isSpace (last trimmed)
+  in not (hasLeadingSpace || hasTrailingSpace)
+
+-- | Test properties of splitBy
+prop_splitBy_properties :: Char -> String -> Bool
+prop_splitBy_properties delim s = 
+  let parts = splitBy delim s
+      rejoined = if null parts then "" else concat parts ++ [delim | length parts > 1]
+  in length parts >= 0 && 
+     (if null s then null parts else True) &&
+     (if all (== delim) s then length parts == length s + 1 else True)
+
+-- | Test properties of splitByCollapsed
+prop_splitByCollapsed_properties :: Char -> String -> Bool
+prop_splitByCollapsed_properties delim s = 
+  let parts = splitByCollapsed delim
+  in all (not . null) parts
+
+-- | Test that splitByComma equals splitBy with comma
+prop_splitByComma_equals_splitBy :: String -> Bool
+prop_splitByComma_equals_splitBy s = splitByComma s == splitBy ',' s
+
+-- | Test that splitByCommaCollapsed equals splitByCollapsed with comma
+prop_splitByCommaCollapsed_equals_splitByCollapsed :: String -> Bool
+prop_splitByCommaCollapsed_equals_splitByCollapsed s = 
+  splitByCommaCollapsed s == splitByCollapsed ',' s
+
+-- | Test properties of breakOn
+prop_breakOn_properties :: String -> String -> Bool
+prop_breakOn_properties pat s = 
+  let (before, after) = breakOn pat s
+      combined = before ++ pat ++ after
+  in if null pat 
+     then before == "" && after == s
+     else if pat `isInfixOf` s
+          then combined == s
+          else before == s && after == ""
+
+-- | Test that safeProcessString filters control characters
+prop_safeProcessString_filters_control_chars :: String -> Bool
+prop_safeProcessString_filters_control_chars s = 
+  case safeProcessString s of
+    Left _ -> True  -- Any error is acceptable
+    Right filtered -> all isValidChar filtered
+
+-- | Test properties of isValidChar
+prop_isValidChar_properties :: Char -> Bool
+prop_isValidChar_properties c = 
+  isValidChar c == (c >= ' ' || c == '\n' || c == '\r' || c == '\t')
+
+-- | Test properties of isRight
+prop_isRight_properties :: Either Int String -> Bool
+prop_isRight_properties e = isRight e == case e of
+  Right _ -> True
+  Left _ -> False
+
+-- | Test properties of removeLineComments
+prop_removeLineComments_properties :: String -> Bool
+prop_removeLineComments_properties s = 
+  let result = removeLineComments s
+      hasLineComment = "//" `isInfixOf` result
+  in not hasLineComment
+
+-- | Test properties of removeComments
+prop_removeComments_properties :: String -> Bool
+prop_removeComments_properties s = 
+  let result = removeComments s
+      hasLineComment = "//" `isInfixOf` result
+      hasBlockComment = "/*" `isInfixOf` result
+  in not (hasLineComment || hasBlockComment)
+
+-- | Test that removeLineComments preserves string literals
+prop_removeLineComments_preserves_strings :: String -> Bool
+prop_removeLineComments_preserves_strings s = 
+  let result = removeLineComments s
+      countQuotes s' = length $ filter (== '"') s'
+  in countQuotes s == countQuotes result
+
+-- | Test that removeComments preserves string literals
+prop_removeComments_preserves_strings :: String -> Bool
+prop_removeComments_preserves_strings s = 
+  let result = removeComments s
+      countQuotes s' = length $ filter (== '"') s'
+  in countQuotes s == countQuotes result
+
+-- | Test that normalizeIndentation preserves relative indentation
+prop_normalizeIndentation_preserves_relative_indentation :: String -> Bool
+prop_normalizeIndentation_preserves_relative_indentation s = 
+  let lines' = lines s
+      result = normalizeIndentation s
+      resultLines = lines result
+  in length lines' == length resultLines
+
+-- | Test that normalizeIndentation removes common prefix
+prop_normalizeIndentation_removes_common_prefix :: String -> Bool
+prop_normalizeIndentation_removes_common_prefix s = 
+  let result = normalizeIndentation s
+      lines' = lines s
+      resultLines = lines result
+      -- Check that at least one line has had its indentation reduced
+      hasReducedIndentation = if length lines' > 1 && length resultLines > 1
+                             then any (\l -> length (takeWhile isSpace (head resultLines)) < 
+                                       length (takeWhile isSpace (head lines'))) [True]
+                             else True
+  in hasReducedIndentation

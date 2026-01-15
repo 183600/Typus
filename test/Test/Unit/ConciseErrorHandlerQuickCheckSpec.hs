@@ -5,218 +5,276 @@
 module Test.Unit.ConciseErrorHandlerQuickCheckSpec where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
-import Test.QuickCheck (Gen, Property, (==>))
+import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), Gen, choose, elements)
+import ErrorHandler
+  ( ErrorHandler
+  , ErrorMessage
+  , handleError
+  , handleErrors
+  , createError
+  , createWarning
+  , createInfo
+  , errorCount
+  , warningCount
+  , infoCount
+  , hasErrors
+  , hasWarnings
+  , hasInfos
+  , getErrors
+  , getWarnings
+  , getInfos
+  , clearErrors
+  , clearWarnings
+  , clearInfos
+  , mergeHandlers
+  , filterBySeverityForTests
+  , sortBySeverity
+  , renderErrors
+  )
+import Compiler.Errors.Core
+  ( TypeError(..)
+  , ErrorSeverity(..)
+  , ErrorCategory(..)
+  , ErrorLocation(..)
+  , ErrorContext(..)
+  , ErrorRecovery(..)
+  , emptyContext
+  , unknownLocation
+  , errorAt
+  , warningAt
+  , infoAt
+  , severity
+  , errorMessage
+  )
 import qualified Data.Text as T
-import Data.List (isPrefixOf, isSuffixOf, isInfixOf)
-import Data.Char (isSpace, isAlpha, isAlphaNum, toLower, toUpper, isDigit, isLetter)
-import ErrorHandler (ErrorHandler, ErrorSeverity(..), ErrorMessage(..), ErrorContext(..),
-                    handleError, handleErrors, createError, createWarning, createInfo,
-                    errorCount, warningCount, infoCount, hasErrors, hasWarnings, hasInfos,
-                    getErrors, getWarnings, getInfos, clearErrors, clearWarnings, clearInfos,
-                    mergeHandlers, filterBySeverity, sortBySeverity, renderErrors)
+import qualified Data.List as List
 
--- Helper generators for ErrorHandler tests
-genErrorSeverity :: Gen ErrorSeverity
-genErrorSeverity = elements [Error, Warning, Info]
+-- Arbitrary instances for QuickCheck
+instance Arbitrary ErrorSeverity where
+  arbitrary = elements [Fatal, Error, Warning, Info]
 
-genErrorMessage :: Gen ErrorMessage
-genErrorMessage = do
-  severity <- genErrorSeverity
-  msg <- elements ["Syntax error", "Type error", "Runtime error", "Warning message", "Info message"]
-  line <- choose (1, 100)
-  col <- choose (1, 100)
-  source <- elements ["file1.typus", "file2.typus", "module1", "module2"]
-  return $ ErrorMessage severity msg line col source
+instance Arbitrary ErrorCategory where
+  arbitrary = elements [TypeChecking, Ownership, Parsing, Semantic, Runtime, Constraint, Inference, Integration, Unknown]
 
-genErrorContext :: Gen ErrorContext
-genErrorContext = do
-  name <- elements ["parsing", "type checking", "code generation", "optimization"]
-  details <- listOf $ elements ["detail1", "detail2", "detail3"]
-  return $ ErrorContext name details
+instance Arbitrary ErrorLocation where
+  arbitrary = do
+    filePath <- arbitrary
+    line <- choose (1, 1000)
+    column <- choose (1, 1000)
+    endLine <- arbitrary
+    endColumn <- arbitrary
+    return $ ErrorLocation filePath line column endLine endColumn
 
-genErrorHandler :: Gen ErrorHandler
-genErrorHandler = do
-  numErrors <- choose (0, 5)
-  numWarnings <- choose (0, 5)
-  numInfos <- choose (0, 5)
-  
-  errors <- vectorOf numErrors genErrorMessage
-  warnings <- vectorOf numWarnings genErrorMessage
-  infos <- vectorOf numInfos genErrorMessage
-  
-  return $ foldl (\handler err -> handleError handler err) 
-                  (foldl (\handler warn -> handleWarnings handler warn) 
-                          (foldl (\handler info -> handleInfos handler info) 
-                                  (ErrorHandler [] [] []) infos) warnings) errors
+instance Arbitrary ErrorContext where
+  arbitrary = do
+    contextCode <- arbitrary
+    contextFunction <- arbitrary
+    contextVariable <- arbitrary
+    contextType <- arbitrary
+    contextAdditional <- arbitrary
+    return $ ErrorContext contextCode contextFunction contextVariable contextType contextAdditional
 
-handleWarnings :: ErrorHandler -> ErrorMessage -> ErrorHandler
-handleWarnings handler msg = handleError handler msg
+instance Arbitrary ErrorRecovery where
+  arbitrary = do
+    canRecover <- arbitrary
+    shouldContinue <- arbitrary
+    recoveryAction <- arbitrary
+    recoveryHint <- arbitrary
+    recoveryCost <- choose (0, 100)
+    recoveryConfidence <- choose (0.0, 1.0)
+    return $ ErrorRecovery canRecover shouldContinue recoveryAction recoveryHint recoveryCost recoveryConfidence
 
-handleInfos :: ErrorHandler -> ErrorMessage -> ErrorHandler
-handleInfos handler msg = handleError handler msg
-
--- Test properties for ErrorHandler module
-
--- Basic error handling tests
-prop_handle_error_increases_count :: ErrorHandler -> ErrorMessage -> Property
-prop_handle_error_increases_count handler msg = 
-  let newHandler = handleError handler msg
-      oldCount = errorCount handler
-      newCount = errorCount newHandler
-  in case errorSeverity msg of
-       Error -> newCount === oldCount + 1
-       Warning -> newCount === oldCount
-       Info -> newCount === oldCount
-
-prop_handle_warning_increases_warning_count :: ErrorHandler -> ErrorMessage -> Property
-prop_handle_warning_increases_warning_count handler msg = 
-  let newHandler = handleError handler msg
-      oldCount = warningCount handler
-      newCount = warningCount newHandler
-  in case errorSeverity msg of
-       Warning -> newCount === oldCount + 1
-       Error -> newCount === oldCount
-       Info -> newCount === oldCount
-
-prop_handle_info_increases_info_count :: ErrorHandler -> ErrorMessage -> Property
-prop_handle_info_increases_info_count handler msg = 
-  let newHandler = handleError handler msg
-      oldCount = infoCount handler
-      newCount = infoCount newHandler
-  in case errorSeverity msg of
-       Info -> newCount === oldCount + 1
-       Error -> newCount === oldCount
-       Warning -> newCount === oldCount
-
--- Error creation tests
-prop_create_error_has_error_severity :: String -> Property
-prop_create_error_has_error_severity msg = 
-  not (null msg) ==>
-  let err = createError msg
-  in errorSeverity err === Error
-
-prop_create_warning_has_warning_severity :: String -> Property
-prop_create_warning_has_warning_severity msg = 
-  not (null msg) ==>
-  let warn = createWarning msg
-  in errorSeverity warn === Warning
-
-prop_create_info_has_info_severity :: String -> Property
-prop_create_info_has_info_severity msg = 
-  not (null msg) ==>
-  let info = createInfo msg
-  in errorSeverity info === Info
-
--- Error query tests
-prop_has_errors_detection :: ErrorHandler -> Property
-prop_has_errors_detection handler = 
-  let hasErrs = hasErrors handler
-      hasErrs' = errorCount handler > 0
-  in hasErrs === hasErrs'
-
-prop_has_warnings_detection :: ErrorHandler -> Property
-prop_has_warnings_detection handler = 
-  let hasWarns = hasWarnings handler
-      hasWarns' = warningCount handler > 0
-  in hasWarns === hasWarns'
-
-prop_has_infos_detection :: ErrorHandler -> Property
-prop_has_infos_detection handler = 
-  let hasInfos = hasInfos handler
-      hasInfos' = infoCount handler > 0
-  in hasInfos === hasInfos'
-
-prop_get_errors_returns_only_errors :: ErrorHandler -> Property
-prop_get_errors_returns_only_errors handler = 
-  let errs = getErrors handler
-  in all (\e -> errorSeverity e == Error) errs
-
-prop_get_warnings_returns_only_warnings :: ErrorHandler -> Property
-prop_get_warnings_returns_only_warnings handler = 
-  let warns = getWarnings handler
-  in all (\w -> errorSeverity w == Warning) warns
-
-prop_get_infos_returns_only_infos :: ErrorHandler -> Property
-prop_get_infos_returns_only_infos handler = 
-  let infos = getInfos handler
-  in all (\i -> errorSeverity i == Info) infos
-
--- Error clearing tests
-prop_clear_errors_removes_all_errors :: ErrorHandler -> Property
-prop_clear_errors_removes_all_errors handler = 
-  let cleared = clearErrors handler
-  in errorCount cleared === 0
-
-prop_clear_warnings_removes_all_warnings :: ErrorHandler -> Property
-prop_clear_warnings_removes_all_warnings handler = 
-  let cleared = clearWarnings handler
-  in warningCount cleared === 0
-
-prop_clear_infos_removes_all_infos :: ErrorHandler -> Property
-prop_clear_infos_removes_all_infos handler = 
-  let cleared = clearInfos handler
-  in infoCount cleared === 0
-
--- Error filtering tests
-prop_filter_by_severity_only_returns_matching :: ErrorHandler -> ErrorSeverity -> Property
-prop_filter_by_severity_only_returns_matching handler severity = 
-  let filtered = filterBySeverity handler severity
-  in all (\e -> errorSeverity e == severity) filtered
-
--- Error merging tests
-prop_merge_handlers_combines_counts :: ErrorHandler -> ErrorHandler -> Property
-prop_merge_handlers_combines_counts handler1 handler2 = 
-  let merged = mergeHandlers handler1 handler2
-  in errorCount merged === errorCount handler1 + errorCount handler2 &&
-     warningCount merged === warningCount handler1 + warningCount handler2 &&
-     infoCount merged === infoCount handler1 + infoCount handler2
-
--- Error rendering tests
-prop_render_errors_no_crash :: ErrorHandler -> Property
-prop_render_errors_no_crash handler = 
-  let rendered = renderErrors handler
-  in property $ length rendered >= 0
-
-prop_render_errors_contains_messages :: ErrorHandler -> Property
-prop_render_errors_contains_messages handler = 
-  let rendered = renderErrors handler
-      allMsgs = map errorMessage $ getErrors handler ++ getWarnings handler ++ getInfos handler
-  in if null allMsgs then property True else all (`isInfixOf` rendered) allMsgs
+instance Arbitrary TypeError where
+  arbitrary = do
+    errorId <- arbitrary
+    severity <- arbitrary
+    category <- arbitrary
+    message <- arbitrary
+    location <- arbitrary
+    context <- arbitrary
+    recovery <- arbitrary
+    suggestions <- arbitrary
+    relatedErrors <- arbitrary
+    errorChain <- arbitrary
+    timestamp <- arbitrary
+    return $ TypeError errorId severity category message location context recovery suggestions relatedErrors errorChain timestamp
 
 tests :: TestTree
 tests = testGroup "Concise ErrorHandler QuickCheck Tests"
-  [ testProperties "Basic Error Handling Tests"
-    [ ("handle error increases count", prop_handle_error_increases_count)
-    , ("handle warning increases warning count", prop_handle_warning_increases_warning_count)
-    , ("handle info increases info count", prop_handle_info_increases_info_count)
+  [ testProperties "ErrorHandler Basic Properties"
+    [ handleError_properties
+    , handleErrors_properties
+    , createError_properties
+    , createWarning_properties
+    , createInfo_properties
     ]
-  , testProperties "Error Creation Tests"
-    [ ("create error has error severity", prop_create_error_has_error_severity)
-    , ("create warning has warning severity", prop_create_warning_has_warning_severity)
-    , ("create info has info severity", prop_create_info_has_info_severity)
+  , testProperties "ErrorHandler Count Properties"
+    [ errorCount_properties
+    , warningCount_properties
+    , infoCount_properties
+    , hasErrors_properties
+    , hasWarnings_properties
+    , hasInfos_properties
     ]
-  , testProperties "Error Query Tests"
-    [ ("has errors detection", prop_has_errors_detection)
-    , ("has warnings detection", prop_has_warnings_detection)
-    , ("has infos detection", prop_has_infos_detection)
-    , ("get errors returns only errors", prop_get_errors_returns_only_errors)
-    , ("get warnings returns only warnings", prop_get_warnings_returns_only_warnings)
-    , ("get infos returns only infos", prop_get_infos_returns_only_infos)
+  , testProperties "ErrorHandler Filter Properties"
+    [ getErrors_properties
+    , getWarnings_properties
+    , getInfos_properties
+    , clearErrors_properties
+    , clearWarnings_properties
+    , clearInfos_properties
     ]
-  , testProperties "Error Clearing Tests"
-    [ ("clear errors removes all errors", prop_clear_errors_removes_all_errors)
-    , ("clear warnings removes all warnings", prop_clear_warnings_removes_all_warnings)
-    , ("clear infos removes all infos", prop_clear_infos_removes_all_infos)
-    ]
-  , testProperties "Error Filtering Tests"
-    [ ("filter by severity only returns matching", prop_filter_by_severity_only_returns_matching)
-    ]
-  , testProperties "Error Merging Tests"
-    [ ("merge handlers combines counts", prop_merge_handlers_combines_counts)
-    ]
-  , testProperties "Error Rendering Tests"
-    [ ("render errors no crash", prop_render_errors_no_crash)
-    , ("render errors contains messages", prop_render_errors_contains_messages)
+  , testProperties "ErrorHandler Utility Properties"
+    [ mergeHandlers_properties
+    , filterBySeverityForTests_properties
+    , sortBySeverity_properties
+    , renderErrors_properties
     ]
   ]
+
+-- | Test handleError properties
+handleError_properties :: ErrorHandler -> TypeError -> Bool
+handleError_properties errs err = 
+  let newErrs = handleError errs err
+  in length newErrs == length errs + 1 && head newErrs == err
+
+-- | Test handleErrors properties
+handleErrors_properties :: ErrorHandler -> [TypeError] -> Bool
+handleErrors_properties errs newErrs = 
+  let result = handleErrors errs newErrs
+  in length result == length errs + length newErrs && 
+     take (length newErrs) result == newErrs
+
+-- | Test createError properties
+createError_properties :: String -> T.Text -> ErrorLocation -> Bool
+createError_properties errId msg loc = 
+  let err = createError errId msg loc
+  in errorId err == errId &&
+     errorMessage err == msg &&
+     location err == loc &&
+     severity err == Error
+
+-- | Test createWarning properties
+createWarning_properties :: String -> T.Text -> ErrorLocation -> Bool
+createWarning_properties errId msg loc = 
+  let err = createWarning errId msg loc
+  in errorId err == errId &&
+     errorMessage err == msg &&
+     location err == loc &&
+     severity err == Warning
+
+-- | Test createInfo properties
+createInfo_properties :: String -> T.Text -> ErrorLocation -> Bool
+createInfo_properties errId msg loc = 
+  let err = createInfo errId msg loc
+  in errorId err == errId &&
+     errorMessage err == msg &&
+     location err == loc &&
+     severity err == Info
+
+-- | Test errorCount properties
+errorCount_properties :: ErrorHandler -> Bool
+errorCount_properties errs = 
+  let count = errorCount errs
+      errors = getErrors errs
+  in count == length errors
+
+-- | Test warningCount properties
+warningCount_properties :: ErrorHandler -> Bool
+warningCount_properties errs = 
+  let count = warningCount errs
+      warnings = getWarnings errs
+  in count == length warnings
+
+-- | Test infoCount properties
+infoCount_properties :: ErrorHandler -> Bool
+infoCount_properties errs = 
+  let count = infoCount errs
+      infos = getInfos errs
+  in count == length infos
+
+-- | Test hasErrors properties
+hasErrors_properties :: ErrorHandler -> Bool
+hasErrors_properties errs = 
+  let hasErr = hasErrors errs
+      errors = getErrors errs
+  in hasErr == not (null errors)
+
+-- | Test hasWarnings properties
+hasWarnings_properties :: ErrorHandler -> Bool
+hasWarnings_properties errs = 
+  let hasWarn = hasWarnings errs
+      warnings = getWarnings errs
+  in hasWarn == not (null warnings)
+
+-- | Test hasInfos properties
+hasInfos_properties :: ErrorHandler -> Bool
+hasInfos_properties errs = 
+  let hasInf = hasInfos errs
+      infos = getInfos errs
+  in hasInf == not (null infos)
+
+-- | Test getErrors properties
+getErrors_properties :: ErrorHandler -> Bool
+getErrors_properties errs = 
+  let errors = getErrors errs
+  in all (\e -> severity e == Error || severity e == Fatal) errors
+
+-- | Test getWarnings properties
+getWarnings_properties :: ErrorHandler -> Bool
+getWarnings_properties errs = 
+  let warnings = getWarnings errs
+  in all (\e -> severity e == Warning) warnings
+
+-- | Test getInfos properties
+getInfos_properties :: ErrorHandler -> Bool
+getInfos_properties errs = 
+  let infos = getInfos errs
+  in all (\e -> severity e == Info) infos
+
+-- | Test clearErrors properties
+clearErrors_properties :: ErrorHandler -> Bool
+clearErrors_properties errs = 
+  let cleared = clearErrors errs
+  in errorCount cleared == 0 && 
+     length cleared <= length errs
+
+-- | Test clearWarnings properties
+clearWarnings_properties :: ErrorHandler -> Bool
+clearWarnings_properties errs = 
+  let cleared = clearWarnings errs
+  in warningCount cleared == 0 && 
+     length cleared <= length errs
+
+-- | Test clearInfos properties
+clearInfos_properties :: ErrorHandler -> Bool
+clearInfos_properties errs = 
+  let cleared = clearInfos errs
+  in infoCount cleared == 0 && 
+     length cleared <= length errs
+
+-- | Test mergeHandlers properties
+mergeHandlers_properties :: ErrorHandler -> ErrorHandler -> Bool
+mergeHandlers_properties h1 h2 = 
+  let merged = mergeHandlers h1 h2
+  in length merged == length h1 + length h2
+
+-- | Test filterBySeverityForTests properties
+filterBySeverityForTests_properties :: ErrorSeverity -> ErrorHandler -> Bool
+filterBySeverityForTests_properties sev errs = 
+  let filtered = filterBySeverityForTests sev errs
+  in all (\e -> severity e == sev) filtered
+
+-- | Test sortBySeverity properties
+sortBySeverity_properties :: ErrorHandler -> Bool
+sortBySeverity_properties errs = 
+  let sorted = sortBySeverity errs
+      sortedBySeverity = List.sortBy (\e1 e2 -> compare (severity e1) (severity e2)) errs
+  in sorted == sortedBySeverity
+
+-- | Test renderErrors properties
+renderErrors_properties :: ErrorHandler -> Bool
+renderErrors_properties errs = 
+  let rendered = renderErrors errs
+      lines' = lines rendered
+  in length lines' == errorCount errs

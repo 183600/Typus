@@ -18,7 +18,7 @@ tests = testGroup "Ownership Basic Functions Tests"
   , testCase "transfer ownership" $ do
       let resource = "resource"  -- 简化资源
       let newOwner = "new_owner"
-      let result = transferOwnership resource newOwner  -- 简化函数调用
+      let result = transferOwnership' resource newOwner  -- 简化函数调用
       case result of
         Left err -> assertBool "Transfer should succeed" False
         Right transferred -> assertBool "Resource should have new owner" True  -- 简化测试
@@ -119,8 +119,8 @@ tests = testGroup "Ownership Basic Functions Tests"
 createOwnedResource :: String -> Either ErrorLocation String
 createOwnedResource resourceType = Right ("owned_" ++ resourceType)  -- 简化实现
 
-transferOwnership :: String -> String -> Either ErrorLocation String
-transferOwnership resource newOwner = Right ("transferred_" ++ resource)  -- 简化实现
+transferOwnership' :: String -> String -> Either ErrorLocation String
+transferOwnership' resource newOwner = Right ("transferred_" ++ resource)  -- 简化实现
 
 borrowResource :: String -> Either ErrorLocation String
 borrowResource resource = Right ("borrowed_" ++ resource)  -- 简化实现

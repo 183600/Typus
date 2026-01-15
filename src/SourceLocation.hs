@@ -54,7 +54,11 @@ module SourceLocation (
     advancePosByLine,
     
     -- Position comparison
-    comparePos
+    comparePos,
+    
+    -- Functions for tests
+    sourceLine,
+    sourceColumn
 ) where
 
 import Data.Text (Text)
@@ -440,3 +444,15 @@ _toErrorLocationPosWithFile mfile pos = ErrorLocation
     , endLine = Nothing
     , endColumn = Nothing
     }
+
+-- ============================================================================
+-- Functions for tests
+-- ============================================================================
+
+-- | Get line number from SourcePos (for tests)
+sourceLine :: SourcePos -> Int
+sourceLine = posLine
+
+-- | Get column number from SourcePos (for tests)
+sourceColumn :: SourcePos -> Int
+sourceColumn = posColumn

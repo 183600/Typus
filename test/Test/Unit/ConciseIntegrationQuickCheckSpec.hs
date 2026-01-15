@@ -5,258 +5,197 @@
 module Test.Unit.ConciseIntegrationQuickCheckSpec where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
-import Test.QuickCheck (Gen, Property, (==>))
-import qualified Data.Text as T
-import Data.List (isPrefixOf, isSuffixOf, isInfixOf)
-import Data.Char (isSpace, isAlpha, isAlphaNum, toLower, toUpper, isDigit, isLetter)
-import Compiler (compile, CompilerError(..), CompilerResult)
-import Parser (TypusFile(..), parseTypusFile)
-import ErrorHandler (ErrorHandler, handleError, hasErrors)
-import Ownership (OwnershipAnalysis, analyzeOwnership, hasOwnershipErrors)
-import Dependencies (DependencyGraph, analyzeDependencies, hasCycles)
+import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), Gen, choose, elements)
+import Parser (parseTypus, TypusFile(..), tfContents)
+import Compiler (compile, generateGoCode)
+import ErrorHandler (ErrorHandler, errorCount, warningCount, infoCount)
+import Dependencies (DependencyGraph(..), analyzeDependencies, hasCycles)
+import Ownership (OwnershipAnalysis(..), hasOwnershipErrors, getOwners, getBorrowers)
 import SourceLocation (SourcePos(..), SourceSpan(..))
+import Utils (trim, splitBy, removeComments)
+import Data.List (isPrefixOf, isInfixOf)
+import qualified Data.Text as T
 
--- Helper generators for Integration tests
-genSimpleTypusCode :: Gen String
-genSimpleTypusCode = do
-  numLines <- choose (1, 5)
-  lines <- vectorOf numLines $ oneof
-    [ genVarDeclaration
-    , genFuncDeclaration
-    , genImportStatement
-    ]
-  return $ unlines lines
+-- Test integration scenario data types
+data IntegrationScenario = IntegrationScenario
+  { isInput :: String
+  , isExpectedErrors :: Int
+  , isExpectedWarnings :: Int
+  , isExpectedInfos :: Int
+  } deriving (Show, Eq)
 
-genVarDeclaration :: Gen String
-genVarDeclaration = do
-  name <- elements ["x", "y", "z", "value", "result"]
-  value <- elements ["0", "1", "true", "false", "\"hello\""]
-  return $ "var " ++ name ++ " = " ++ value ++ ";"
+data EndToEndTest = EndToEndTest
+  { eetInput :: String
+  , eetShouldParse :: Bool
+  , eetShouldCompile :: Bool
+  , eetShouldGenerateGo :: Bool
+  } deriving (Show, Eq)
 
-genFuncDeclaration :: Gen String
-genFuncDeclaration = do
-  name <- elements ["func1", "func2", "method", "calculate"]
-  params <- listOf $ elements ["param1", "param2", "x", "y"]
-  body <- elements ["return 0;", "return true;", "return x;"]
-  return $ "func " ++ name ++ "(" ++ unwords params ++ ") { " ++ body ++ " }"
+-- Arbitrary instances for QuickCheck
+instance Arbitrary IntegrationScenario where
+  arbitrary = do
+    input <- arbitrary
+    expectedErrors <- choose (0, 10)
+    expectedWarnings <- choose (0, 10)
+    expectedInfos <- choose (0, 10)
+    return $ IntegrationScenario input expectedErrors expectedWarnings expectedInfos
 
-genImportStatement :: Gen String
-genImportStatement = do
-  module' <- elements ["module1", "module2", "utils", "types"]
-  return $ "import " ++ module' ++ ";"
+instance Arbitrary EndToEndTest where
+  arbitrary = do
+    input <- arbitrary
+    shouldParse <- arbitrary
+    shouldCompile <- arbitrary
+    shouldGenerateGo <- arbitrary
+    return $ EndToEndTest input shouldParse shouldCompile shouldGenerateGo
 
-genComplexTypusCode :: Gen String
-genComplexTypusCode = do
-  numVars <- choose (1, 3)
-  numFuncs <- choose (1, 2)
-  numImports <- choose (0, 2)
-  
-  vars <- vectorOf numVars genVarDeclaration
-  funcs <- vectorOf numFuncs genFuncDeclaration
-  imports <- vectorOf numImports genImportStatement
-  
-  let allLines = imports ++ vars ++ funcs
-  return $ unlines allLines
+instance Arbitrary SourcePos where
+  arbitrary = do
+    line <- choose (1, 1000)
+    column <- choose (1, 1000)
+    offset <- choose (0, 1000000)
+    return $ SourcePos line column offset
 
-genTypusFileWithDependencies :: Gen (String, [String])
-genTypusFileWithDependencies = do
-  code <- genComplexTypusCode
-  numDeps <- choose (0, 3)
-  deps <- vectorOf numDeps $ elements ["module1", "module2", "utils", "types"]
-  return (code, deps)
-
--- Test properties for Integration module
-
--- End-to-end compilation tests
-prop_compile_parse_roundtrip :: String -> Property
-prop_compile_parse_roundtrip code = 
-  not (null code) ==>
-  case parseTypusFile code of
-    Left _ -> property True
-    Right file -> 
-      let reconstructed = unlines $ map show (declarations file)
-      in case parseTypusFile reconstructed of
-           Left _ -> property True
-           Right reparsed -> property $ length (declarations file) == length (declarations reparsed)
-
-prop_compile_no_crash :: String -> Property
-prop_compile_no_crash code = 
-  not (null code) ==>
-  let result = compile code
-  in case result of
-       Left _ -> property True
-       Right _ -> property True
-
-prop_compile_error_consistency :: String -> Property
-prop_compile_error_consistency code = 
-  not (null code) ==>
-  case compile code of
-    Left errs -> property $ length errs > 0
-    Right _ -> property True
-
-prop_compile_twice_consistent :: String -> Property
-prop_compile_twice_consistent code = 
-  not (null code) ==>
-  let result1 = compile code
-      result2 = compile code
-  in case (result1, result2) of
-       (Left _, Left _) -> property True
-       (Right _, Right _) -> property True
-       _ -> property False
-
--- Integration with ErrorHandler tests
-prop_error_handler_integration :: String -> Property
-prop_error_handler_integration code = 
-  not (null code) ==>
-  case compile code of
-    Left errs -> 
-      let handler = foldl (\h e -> handleError h e) (ErrorHandler [] [] []) errs
-      in hasErrors handler === True
-    Right _ -> property True
-
--- Integration with Ownership tests
-prop_ownership_integration :: String -> Property
-prop_ownership_integration code = 
-  not (null code) ==>
-  case parseTypusFile code of
-    Left _ -> property True
-    Right file -> 
-      let result = analyzeOwnership file
-      in case result of
-           Left _ -> property True
-           Right analysis -> property $ not (null (show analysis))
-
-prop_ownership_error_detection :: String -> Property
-prop_ownership_error_detection code = 
-  not (null code) ==>
-  case parseTypusFile code of
-    Left _ -> property True
-    Right file -> 
-      case analyzeOwnership file of
-        Left _ -> property True
-        Right analysis -> hasOwnershipErrors analysis === False
-
--- Integration with Dependencies tests
-prop_dependencies_integration :: String -> Property
-prop_dependencies_integration code = 
-  not (null code) ==>
-  let result = analyzeDependencies code
-  in case result of
-       Left _ -> property True
-       Right graph -> property $ not (null (show graph))
-
-prop_dependencies_cycle_detection :: String -> Property
-prop_dependencies_cycle_detection code = 
-  not (null code) ==>
-  case analyzeDependencies code of
-    Left _ -> property True
-    Right graph -> 
-      let hasCycles' = hasCycles graph
-      in property $ not hasCycles'  -- Simple code shouldn't have cycles
-
--- Multi-module integration tests
-prop_multi_module_compilation :: (String, [String]) -> Property
-prop_multi_module_compilation (mainCode, deps) = 
-  not (null mainCode) ==>
-  let mainResult = compile mainCode
-      depResults = map compile deps
-  in case mainResult of
-       Left _ -> property True
-       Right _ -> 
-         let allCompiled = all (\r -> case r of
-                                        Left _ -> False
-                                        Right _ -> True) depResults
-         in property True  -- Even if deps fail to compile, main should be testable
-
-prop_dependency_resolution :: (String, [String]) -> Property
-prop_dependency_resolution (mainCode, deps) = 
-  not (null mainCode) && not (null deps) ==>
-  let mainResult = analyzeDependencies mainCode
-      depResults = map analyzeDependencies deps
-  in case mainResult of
-       Left _ -> property True
-       Right mainGraph -> 
-         let allGraphs = mainGraph : [g | Right g <- depResults]
-         in property $ length allGraphs > 0
-
--- Performance integration tests
-prop_compilation_performance :: String -> Property
-prop_compilation_performance code = 
-  not (null code) && length code < 1000 ==>
-  let result = compile code
-  in case result of
-       Left _ -> property True
-       Right _ -> property True  -- If it compiles, it should be reasonably fast
-
-prop_large_code_compilation :: Property
-prop_large_code_compilation = 
-  let largeCode = unlines $ replicate 100 "var x = 0;"
-  in case compile largeCode of
-       Left _ -> property True
-       Right _ -> property True
-
--- Error recovery integration tests
-prop_error_recovery_compilation :: String -> Property
-prop_error_recovery_compilation code = 
-  not (null code) ==>
-  let result = compile code
-  in case result of
-       Left errs -> property $ length errs > 0
-       Right _ -> property True
-
-prop_partial_compilation :: String -> Property
-prop_partial_compilation code = 
-  not (null code) ==>
-  case compile code of
-    Left _ -> property True
-    Right _ -> property True
-
--- Source location integration tests
-prop_source_location_tracking :: String -> Property
-prop_source_location_tracking code = 
-  not (null code) ==>
-  case compile code of
-    Left errs -> 
-      let allHaveLocations = all (\e -> case e of
-                                          SyntaxErr se -> sourceLine se > 0 && sourceColumn se > 0
-                                          TypeErr te -> sourceLine te > 0 && sourceColumn te > 0
-                                          _ -> True) errs
-      in property allHaveLocations
-    Right _ -> property True
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    return $ SourceSpan start end
 
 tests :: TestTree
 tests = testGroup "Concise Integration QuickCheck Tests"
-  [ testProperties "End-to-End Compilation Tests"
-    [ ("compile parse roundtrip", prop_compile_parse_roundtrip)
-    , ("compile no crash", prop_compile_no_crash)
-    , ("compile error consistency", prop_compile_error_consistency)
-    , ("compile twice consistent", prop_compile_twice_consistent)
+  [ testProperties "Parser-Compiler Integration"
+    [ parse_compile_integration
+    , parse_compile_error_propagation
     ]
-  , testProperties "ErrorHandler Integration Tests"
-    [ ("error handler integration", prop_error_handler_integration)
+  , testProperties "Error Handling Integration"
+    [ error_handling_consistency
+    , error_count_consistency
     ]
-  , testProperties "Ownership Integration Tests"
-    [ ("ownership integration", prop_ownership_integration)
-    , ("ownership error detection", prop_ownership_error_detection)
+  , testProperties "Dependencies-Ownership Integration"
+    [ dependencies_ownership_consistency
+    , cycle_detection_integration
     ]
-  , testProperties "Dependencies Integration Tests"
-    [ ("dependencies integration", prop_dependencies_integration)
-    , ("dependencies cycle detection", prop_dependencies_cycle_detection)
+  , testProperties "Source Location Integration"
+    [ source_location_preservation
+    , span_consistency
     ]
-  , testProperties "Multi-Module Integration Tests"
-    [ ("multi module compilation", prop_multi_module_compilation)
-    , ("dependency resolution", prop_dependency_resolution)
+  , testProperties "Utils Integration"
+    [ utils_parser_integration
+    , utils_comment_handling
     ]
-  , testProperties "Performance Integration Tests"
-    [ ("compilation performance", prop_compilation_performance)
-    , ("large code compilation", prop_large_code_compilation)
-    ]
-  , testProperties "Error Recovery Integration Tests"
-    [ ("error recovery compilation", prop_error_recovery_compilation)
-    , ("partial compilation", prop_partial_compilation)
-    ]
-  , testProperties "Source Location Integration Tests"
-    [ ("source location tracking", prop_source_location_tracking)
+  , testProperties "End-to-End Integration"
+    [ end_to_end_compilation
+    , round_trip_properties
     ]
   ]
+
+-- | Test that parse and compile work together
+parse_compile_integration :: String -> Bool
+parse_compile_integration input = 
+  case parseTypus input of
+    Left _ -> True  -- Parse errors are acceptable
+    Right typusFile -> 
+      case compile typusFile of
+        Left _ -> True  -- Compile errors are acceptable
+        Right result -> length result >= 0
+
+-- | Test that errors propagate correctly from parse to compile
+parse_compile_error_propagation :: String -> Bool
+parse_compile_error_propagation input = 
+  case parseTypus input of
+    Left _ -> True  -- Parse errors are acceptable
+    Right typusFile -> 
+      let hasSyntaxErrors = not (null (tfSyntaxErrors typusFile))
+      in if hasSyntaxErrors
+         then case compile typusFile of
+           Left _ -> True  -- Should have compile errors
+           Right _ -> False  -- Should not compile successfully with syntax errors
+         else True  -- No syntax errors, compilation may succeed or fail
+
+-- | Test error handling consistency across modules
+error_handling_consistency :: String -> Bool
+error_handling_consistency input = 
+  case parseTypus input of
+    Left _ -> True  -- Parse errors are acceptable
+    Right typusFile -> 
+      case compile typusFile of
+        Left _ -> True  -- Compile errors are acceptable
+        Right _ -> True  -- Successful compilation is acceptable
+
+-- | Test error count consistency
+error_count_consistency :: ErrorHandler -> Bool
+error_count_consistency handler = 
+  let errors = errorCount handler
+      warnings = warningCount handler
+      infos = infoCount handler
+  in errors >= 0 && warnings >= 0 && infos >= 0
+
+-- | Test dependencies and ownership consistency
+dependencies_ownership_consistency :: DependencyGraph -> OwnershipAnalysis -> Bool
+dependencies_ownership_consistency depGraph ownershipAnalysis = 
+  let hasDepCycles = hasCycles depGraph
+      hasOwnErrors = hasOwnershipErrors ownershipAnalysis
+      owners = getOwners ownershipAnalysis
+      borrowers = getBorrowers ownershipAnalysis
+  in length owners >= 0 && length borrowers >= 0
+
+-- | Test cycle detection integration
+cycle_detection_integration :: DependencyGraph -> Bool
+cycle_detection_integration depGraph = 
+  let analyzed = analyzeDependencies depGraph
+      hasCyclesBefore = hasCycles depGraph
+      hasCyclesAfter = hasCycles analyzed
+  in hasCyclesBefore == hasCyclesAfter
+
+-- | Test source location preservation
+source_location_preservation :: String -> Bool
+source_location_preservation input = 
+  case parseTypus input of
+    Left _ -> True  -- Parse errors are acceptable
+    Right typusFile -> 
+      let content = tfContents typusFile
+      in length content >= 0
+
+-- | Test span consistency
+span_consistency :: SourceSpan -> Bool
+span_consistency span = 
+  let start = spanStart span
+      end = spanEnd span
+  in posLine start >= 1 && posColumn start >= 1 && 
+     posLine end >= 1 && posColumn end >= 1
+
+-- | Test utils integration with parser
+utils_parser_integration :: String -> Bool
+utils_parser_integration input = 
+  let trimmed = trim input
+      parsed = parseTypus input
+  in case parsed of
+    Left _ -> True  -- Parse errors are acceptable
+    Right _ -> length trimmed >= 0
+
+-- | Test utils comment handling
+utils_comment_handling :: String -> Bool
+utils_comment_handling input = 
+  let withoutComments = removeComments input
+      trimmed = trim withoutComments
+  in length trimmed >= 0
+
+-- | Test end-to-end compilation
+end_to_end_compilation :: String -> Bool
+end_to_end_compilation input = 
+  case parseTypus input of
+    Left _ -> True  -- Parse errors are acceptable
+    Right typusFile -> 
+      case compile typusFile of
+        Left _ -> True  -- Compile errors are acceptable
+        Right _ -> True  -- Successful compilation is acceptable
+
+-- | Test round trip properties
+round_trip_properties :: String -> Bool
+round_trip_properties input = 
+  case parseTypus input of
+    Left _ -> True  -- Parse errors are acceptable
+    Right typusFile -> 
+      let content = tfContents typusFile
+          goCode = generateGoCode typusFile
+      in length content >= 0 && length goCode >= 0

@@ -44,8 +44,8 @@ prop_error_message_formatting title message =
 -- | 测试错误处理的幂等性
 prop_error_handling_idempotent :: String -> Property
 prop_error_handling_idempotent input =
-  let result1 = handleError input
-      result2 = handleError result1
+  let result1 = handleError' input
+      result2 = handleError' result1
   in result1 === result2
 
 -- | 测试错误恢复机制的一致性
@@ -119,7 +119,7 @@ prop_error_report_completeness errors =
 test_basic_error_handling :: Assertion
 test_basic_error_handling = do
   let input = "test input"
-      result = handleError input
+      result = handleError' input
   assertEqual "Basic error handling should return input" input result
 
 -- | 测试错误位置跟踪
@@ -221,8 +221,8 @@ formatErrorMessage :: String -> String -> String
 formatErrorMessage title message = title ++ ": " ++ message
 
 -- | 辅助函数：处理错误
-handleError :: String -> String
-handleError input = input
+handleError' :: String -> String
+handleError' input = input
 
 -- | 辅助函数：从错误中恢复
 recoverFromError :: String -> String
