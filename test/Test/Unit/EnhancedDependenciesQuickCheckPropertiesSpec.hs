@@ -70,7 +70,7 @@ import Control.Monad (replicateM)
 
 -- 生成标识符
 genIdentifier :: Gen String
-genIdentifier = suchThat (listOf1 $ elements ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_") (not . null)
+genIdentifier = suchThat (listOf1 $ elements (['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_")) (not . null)
 
 -- 生成文本标识符
 genTextIdentifier :: Gen Text
@@ -166,8 +166,10 @@ genStatement = oneof
           paramName <- genTextIdentifier
           paramType <- genTypeExpr
           return (paramName, paramType)
-      returnType <- elements [Just <$> genTypeExpr, return Nothing]
-      return $ SFuncDecl name params =<< returnType
+      returnType <- oneof [Just <$> genTypeExpr, return Nothing]
+      return $ case returnType of
+                 Just rt -> SFuncDecl name params (Just rt)
+                 Nothing -> SFuncDecl name params Nothing
   , do
       name <- genTextIdentifier
       constraint <- genConstraint
@@ -273,15 +275,17 @@ prop_type_var_compares_correctly =
   let tv1 = TVCon name1
       tv2 = TVCon name2
       tv3 = TVVar name1
-  in property $ (tv1 == tv2) === (name1 == name2) &&
-                (tv1 /= tv3)  -- 不同构造函数的值不相等
+  in property $ conjoin 
+                [ (tv1 == tv2) === (name1 == name2)
+                , (tv1 /= tv3) === True  -- 不同构造函数的值不相等
+                ]
 
 -- 属性13: 解析简单程序应该成功
 prop_parse_simple_program_succeeds :: Property
 prop_parse_simple_program_succeeds = 
   forAll genIdentifier $ \name ->
   let program = "let " ++ name ++ " = 42"
-  in case runParser (parseProgram program) of
+  in case runParser program of
        Right _ -> property True
        Left _ -> property True  -- 解析失败也是可能的
 

@@ -25,7 +25,7 @@ import Utils
   , isRight
   )
 
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf, intercalate)
 import Data.Char (isAlphaNum, isAlpha, isSpace, isControl)
 import Data.Either (isLeft, isRight)
 import Control.Monad (replicateM)
@@ -36,22 +36,22 @@ genDelimiter = elements ",;:|"
 
 -- 生成字符串
 genString :: Gen String
-genString = listOf $ elements ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t\n\r.,!?-;:|"
+genString = listOf $ elements (['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t\n\r.,!?-;:|")
 
 -- 生成非空字符串
 genNonEmptyString :: Gen String
-genNonEmptyString = listOf1 $ elements ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t\n\r.,!?-;:|"
+genNonEmptyString = listOf1 $ elements (['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ " \t\n\r.,!?-;:|")
 
 -- 生成包含空白字符的字符串
 genStringWithWhitespace :: Gen String
 genStringWithWhitespace = do
-  parts <- listOf1 $ listOf $ elements ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9']
+  parts <- listOf1 $ listOf $ elements (['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'])
   whitespaces <- listOf $ elements " \t\n\r"
   return $ interleave parts whitespaces
   where
     interleave [] _ = []
-    interleave [x] _ = [x]
-    interleave (x:xs) (w:ws) = x ++ w : interleave xs ws
+    interleave [x] _ = x
+    interleave (x:xs) (w:ws) = x ++ [w] ++ interleave xs ws
 
 -- 生成包含注释的字符串
 genStringWithComments :: Gen String
@@ -68,9 +68,9 @@ genStringWithComments = do
 genIndentedString :: Gen String
 genIndentedString = do
   n <- choose (1, 5)
-  indent <- replicate n $ elements " \t"
+  indentChars <- replicateM n $ elements (' ' : '\t' : [])
   content <- genNonEmptyString
-  return $ concat indent ++ content
+  return $ indentChars ++ content
 
 -- 属性1: trim空字符串应该返回空字符串
 prop_trim_empty_string :: Property
@@ -149,7 +149,7 @@ prop_remove_line_comments_removes_comments :: Property
 prop_remove_line_comments_removes_comments = forAll genStringWithComments $ \s ->
   let result = removeLineComments s
       hasComment = "//" `isInfixOf` s
-  in property $ if hasComment then not ("//" `isInfixOf` result) else result === s
+  in property $ if hasComment then not ("//" `isInfixOf` result) === True else result === s
 
 -- 属性14: removeComments应该移除所有注释
 prop_remove_comments_removes_all_comments :: Property
@@ -158,7 +158,7 @@ prop_remove_comments_removes_all_comments = forAll genStringWithComments $ \s ->
       hasLineComment = "//" `isInfixOf` s
       hasBlockComment = "/*" `isInfixOf` s
   in property $ if hasLineComment || hasBlockComment 
-                then not ("//" `isInfixOf` result) && not ("/*" `isInfixOf` result)
+                then (not ("//" `isInfixOf` result) && not ("/*" `isInfixOf` result)) === True
                 else result === s
 
 -- 属性15: normalizeIndentation应该保留相对缩进
@@ -182,7 +182,10 @@ prop_break_on_finds_first_match =
   forAll genNonEmptyString $ \content ->
   let input = content ++ delim ++ content ++ delim
       (before, after) = breakOn delim input
-  in property $ before === content && delim `isPrefixOf` after
+  in property $ conjoin 
+                [ before === content
+                , delim `isPrefixOf` after === True
+                ]
 
 -- 属性18: safeProcessString应该处理特殊字符
 prop_safe_process_string_handles_special :: Property
