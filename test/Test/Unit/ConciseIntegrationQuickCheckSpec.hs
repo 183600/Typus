@@ -9,12 +9,61 @@ import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), Gen, choo
 import Parser (parseTypus, TypusFile(..), tfContents)
 import Compiler (compile, generateGoCode)
 import ErrorHandler (ErrorHandler, errorCount, warningCount, infoCount)
-import Dependencies (DependencyGraph(..), analyzeDependencies, hasCycles)
+import Dependencies (DependencyGraph(..), TestDependencyGraph(..), analyzeDependencies, hasCycles)
 import Ownership (OwnershipAnalysis(..), hasOwnershipErrors, getOwners, getBorrowers)
+import qualified Ownership.Common.Types as Own
 import SourceLocation (SourcePos(..), SourceSpan(..))
 import Utils (trim, splitBy, removeComments)
+import Compiler.Errors.Core (TypeError(..), ErrorSeverity(..), ErrorCategory(..), ErrorLocation(..), ErrorContext(..), ErrorRecovery(..), emptyContext, unknownLocation, fatalRecovery)
 import Data.List (isPrefixOf, isInfixOf)
 import qualified Data.Text as T
+
+-- Arbitrary instances for QuickCheck
+instance Arbitrary T.Text where
+  arbitrary = T.pack <$> arbitrary
+
+-- Add Arbitrary instance for TestDependencyGraph
+instance Arbitrary TestDependencyGraph where
+  arbitrary = do
+    nodes <- arbitrary
+    edges <- arbitrary
+    return $ TestDependencyGraph nodes edges
+
+-- Add Arbitrary instance for Ownership.Common.Types.OwnershipError
+instance Arbitrary Own.OwnershipError where
+  arbitrary = elements 
+    [ Own.UseAfterMove "placeholder"
+    , Own.DoubleMove "placeholder" "placeholder"
+    , Own.BorrowWhileMoved "placeholder"
+    , Own.MutBorrowWhileBorrowed "placeholder"
+    , Own.BorrowWhileMutBorrowed "placeholder"
+    , Own.MultipleMutBorrows "placeholder"
+    , Own.UseWhileMutBorrowed "placeholder"
+    , Own.OutOfScope "placeholder"
+    , Own.BorrowError "placeholder"
+    , Own.ParseError "placeholder"
+    , Own.CrossFunctionMove "placeholder" "placeholder"
+    , Own.ParameterMoveMismatch "placeholder"
+    , Own.ControlFlowError "placeholder"
+    , Own.PathSensitiveError "placeholder"
+    , Own.LoopOwnershipError "placeholder"
+    , Own.OwnershipError "placeholder"
+    ]
+
+-- Add Arbitrary instance for OwnershipAnalysis
+instance Arbitrary OwnershipAnalysis where
+  arbitrary = do
+    owners <- arbitrary
+    borrowers <- arbitrary
+    errors <- arbitrary
+    return $ OwnershipAnalysis owners borrowers errors
+
+-- Dummy instance for Compiler.Errors.Core.TypeError
+-- This is a minimal implementation for testing purposes
+instance Arbitrary TypeError where
+  arbitrary = do
+    errorId <- arbitrary
+    return $ TypeError errorId Error TypeChecking T.empty unknownLocation emptyContext fatalRecovery [] [] [] Nothing
 
 -- Test integration scenario data types
 data IntegrationScenario = IntegrationScenario
@@ -64,28 +113,28 @@ instance Arbitrary SourceSpan where
 tests :: TestTree
 tests = testGroup "Concise Integration QuickCheck Tests"
   [ testProperties "Parser-Compiler Integration"
-    [ parse_compile_integration
-    , parse_compile_error_propagation
+    [ ("parse_compile_integration", property parse_compile_integration)
+    , ("parse_compile_error_propagation", property parse_compile_error_propagation)
     ]
   , testProperties "Error Handling Integration"
-    [ error_handling_consistency
-    , error_count_consistency
+    [ ("error_handling_consistency", property error_handling_consistency)
+    , ("error_count_consistency", property error_count_consistency)
     ]
   , testProperties "Dependencies-Ownership Integration"
-    [ dependencies_ownership_consistency
-    , cycle_detection_integration
+    [ ("dependencies_ownership_consistency", property dependencies_ownership_consistency)
+    , ("cycle_detection_integration", property cycle_detection_integration)
     ]
   , testProperties "Source Location Integration"
-    [ source_location_preservation
-    , span_consistency
+    [ ("source_location_preservation", property source_location_preservation)
+    , ("span_consistency", property span_consistency)
     ]
   , testProperties "Utils Integration"
-    [ utils_parser_integration
-    , utils_comment_handling
+    [ ("utils_parser_integration", property utils_parser_integration)
+    , ("utils_comment_handling", property utils_comment_handling)
     ]
   , testProperties "End-to-End Integration"
-    [ end_to_end_compilation
-    , round_trip_properties
+    [ ("end_to_end_compilation", property end_to_end_compilation)
+    , ("round_trip_properties", property round_trip_properties)
     ]
   ]
 

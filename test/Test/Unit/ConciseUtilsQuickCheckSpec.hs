@@ -16,26 +16,26 @@ import Control.Arrow (first)
 tests :: TestTree
 tests = testGroup "Concise Utils QuickCheck Tests"
   [ testProperties "String Processing"
-    [ prop_trim_idempotent
-    , prop_trim_removes_whitespace
-    , prop_splitBy_properties
-    , prop_splitByCollapsed_properties
-    , prop_splitByComma_equals_splitBy
-    , prop_splitByCommaCollapsed_equals_splitByCollapsed
-    , prop_breakOn_properties
-    , prop_safeProcessString_filters_control_chars
-    , prop_isValidChar_properties
-    , prop_isRight_properties
+    [ ("prop_trim_idempotent", property prop_trim_idempotent)
+    , ("prop_trim_removes_whitespace", property prop_trim_removes_whitespace)
+    , ("prop_splitBy_properties", property prop_splitBy_properties)
+    , ("prop_splitByCollapsed_properties", property prop_splitByCollapsed_properties)
+    , ("prop_splitByComma_equals_splitBy", property prop_splitByComma_equals_splitBy)
+    , ("prop_splitByCommaCollapsed_equals_splitByCollapsed", property prop_splitByCommaCollapsed_equals_splitByCollapsed)
+    , ("prop_breakOn_properties", property prop_breakOn_properties)
+    , ("prop_safeProcessString_filters_control_chars", property prop_safeProcessString_filters_control_chars)
+    , ("prop_isValidChar_properties", property prop_isValidChar_properties)
+    , ("prop_isRight_properties", property prop_isRight_properties)
     ]
   , testProperties "Comment Processing"
-    [ prop_removeLineComments_properties
-    , prop_removeComments_properties
-    , prop_removeLineComments_preserves_strings
-    , prop_removeComments_preserves_strings
+    [ ("prop_removeLineComments_properties", property prop_removeLineComments_properties)
+    , ("prop_removeComments_properties", property prop_removeComments_properties)
+    , ("prop_removeLineComments_preserves_strings", property prop_removeLineComments_preserves_strings)
+    , ("prop_removeComments_preserves_strings", property prop_removeComments_preserves_strings)
     ]
   , testProperties "Indentation Processing"
-    [ prop_normalizeIndentation_preserves_relative_indentation
-    , prop_normalizeIndentation_removes_common_prefix
+    [ ("prop_normalizeIndentation_preserves_relative_indentation", property prop_normalizeIndentation_preserves_relative_indentation)
+    , ("prop_normalizeIndentation_removes_common_prefix", property prop_normalizeIndentation_removes_common_prefix)
     ]
   ]
 
@@ -63,7 +63,7 @@ prop_splitBy_properties delim s =
 -- | Test properties of splitByCollapsed
 prop_splitByCollapsed_properties :: Char -> String -> Bool
 prop_splitByCollapsed_properties delim s = 
-  let parts = splitByCollapsed delim
+  let parts = splitByCollapsed delim s
   in all (not . null) parts
 
 -- | Test that splitByComma equals splitBy with comma

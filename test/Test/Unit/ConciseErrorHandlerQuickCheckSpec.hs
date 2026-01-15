@@ -50,6 +50,8 @@ import qualified Data.Text as T
 import qualified Data.List as List
 
 -- Arbitrary instances for QuickCheck
+instance Arbitrary T.Text where
+  arbitrary = T.pack <$> arbitrary
 instance Arbitrary ErrorSeverity where
   arbitrary = elements [Fatal, Error, Warning, Info]
 
@@ -82,7 +84,7 @@ instance Arbitrary ErrorRecovery where
     recoveryHint <- arbitrary
     recoveryCost <- choose (0, 100)
     recoveryConfidence <- choose (0.0, 1.0)
-    return $ ErrorRecovery canRecover shouldContinue recoveryAction recoveryHint recoveryCost recoveryConfidence
+    return $ RecoveryStrategy canRecover shouldContinue recoveryAction recoveryHint recoveryCost recoveryConfidence
 
 instance Arbitrary TypeError where
   arbitrary = do
@@ -102,33 +104,33 @@ instance Arbitrary TypeError where
 tests :: TestTree
 tests = testGroup "Concise ErrorHandler QuickCheck Tests"
   [ testProperties "ErrorHandler Basic Properties"
-    [ handleError_properties
-    , handleErrors_properties
-    , createError_properties
-    , createWarning_properties
-    , createInfo_properties
+    [ ("handleError_properties", property handleError_properties)
+    , ("handleErrors_properties", property handleErrors_properties)
+    , ("createError_properties", property createError_properties)
+    , ("createWarning_properties", property createWarning_properties)
+    , ("createInfo_properties", property createInfo_properties)
     ]
   , testProperties "ErrorHandler Count Properties"
-    [ errorCount_properties
-    , warningCount_properties
-    , infoCount_properties
-    , hasErrors_properties
-    , hasWarnings_properties
-    , hasInfos_properties
+    [ ("errorCount_properties", property errorCount_properties)
+    , ("warningCount_properties", property warningCount_properties)
+    , ("infoCount_properties", property infoCount_properties)
+    , ("hasErrors_properties", property hasErrors_properties)
+    , ("hasWarnings_properties", property hasWarnings_properties)
+    , ("hasInfos_properties", property hasInfos_properties)
     ]
   , testProperties "ErrorHandler Filter Properties"
-    [ getErrors_properties
-    , getWarnings_properties
-    , getInfos_properties
-    , clearErrors_properties
-    , clearWarnings_properties
-    , clearInfos_properties
+    [ ("getErrors_properties", property getErrors_properties)
+    , ("getWarnings_properties", property getWarnings_properties)
+    , ("getInfos_properties", property getInfos_properties)
+    , ("clearErrors_properties", property clearErrors_properties)
+    , ("clearWarnings_properties", property clearWarnings_properties)
+    , ("clearInfos_properties", property clearInfos_properties)
     ]
   , testProperties "ErrorHandler Utility Properties"
-    [ mergeHandlers_properties
-    , filterBySeverityForTests_properties
-    , sortBySeverity_properties
-    , renderErrors_properties
+    [ ("mergeHandlers_properties", property mergeHandlers_properties)
+    , ("filterBySeverityForTests_properties", property filterBySeverityForTests_properties)
+    , ("sortBySeverity_properties", property sortBySeverity_properties)
+    , ("renderErrors_properties", property renderErrors_properties)
     ]
   ]
 

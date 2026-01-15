@@ -5,7 +5,7 @@
 module Test.Unit.ConciseParserQuickCheckSpec where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), Gen, choose, elements)
+import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), Gen, choose, elements, oneof)
 import Parser
   ( parseTypus
   , parseTypusFile
@@ -22,7 +22,8 @@ import Parser
   , defaultBlockDirectives
   , isIdentifierChar
   )
-import SourceLocation (SourceSpan(..), SourcePos(..), spanStart, spanEnd, posLine, posColumn)
+import SourceLocation (SourceSpan(..), SourcePos(..), Located(..), locatedWithSpan, spanStart, spanEnd, posLine, posColumn)
+import qualified SyntaxValidator
 import Data.List (isPrefixOf, isInfixOf)
 import Data.Char (isAlphaNum)
 
@@ -56,6 +57,44 @@ instance Arbitrary SourceSpan where
     end <- arbitrary
     return $ SourceSpan start end
 
+instance Arbitrary a => Arbitrary (Located a) where
+  arbitrary = do
+    value <- arbitrary
+    span <- arbitrary
+    return $ locatedWithSpan span value
+
+instance Arbitrary SyntaxValidator.ErrorType where
+  arbitrary = elements 
+    [ SyntaxValidator.MissingBrace
+    , SyntaxValidator.MissingParenthesis
+    , SyntaxValidator.MissingBracket
+    , SyntaxValidator.UnclosedString
+    , SyntaxValidator.UnclosedComment
+    , SyntaxValidator.InvalidIdentifier
+    , SyntaxValidator.InvalidTypeDeclaration
+    , SyntaxValidator.InvalidFunctionDeclaration
+    , SyntaxValidator.InvalidImport
+    , SyntaxValidator.InvalidStatement
+    , SyntaxValidator.UnterminatedBlock
+    , SyntaxValidator.InvalidOperator
+    , SyntaxValidator.MissingSemicolon
+    , SyntaxValidator.UnexpectedToken
+    , SyntaxValidator.MissingPackageDeclaration
+    , SyntaxValidator.DuplicateDeclaration
+    , SyntaxValidator.InvalidBlockStructure
+    , SyntaxValidator.UndeclaredVariable
+    , SyntaxValidator.SyntaxWarning
+    ]
+
+instance Arbitrary SyntaxValidator.SyntaxError where
+  arbitrary = do
+    errorType <- arbitrary
+    errorMessage <- arbitrary
+    lineNumber <- choose (1, 1000)
+    columnNumber <- choose (1, 1000)
+    lineContent <- arbitrary
+    return $ SyntaxValidator.SyntaxError errorType errorMessage lineNumber columnNumber lineContent
+
 instance Arbitrary FileDirectives where
   arbitrary = do
     ownership <- arbitrary
@@ -88,22 +127,22 @@ instance Arbitrary TypusFile where
 tests :: TestTree
 tests = testGroup "Concise Parser QuickCheck Tests"
   [ testProperties "Parser Basic Properties"
-    [ parseTypus_equals_parseTypusFile
-    , parseExpression_returns_right
-    , parseDeclaration_returns_right
+    [ ("parseTypus_equals_parseTypusFile", property parseTypus_equals_parseTypusFile)
+    , ("parseExpression_returns_right", property parseExpression_returns_right)
+    , ("parseDeclaration_returns_right", property parseDeclaration_returns_right)
     ]
   , testProperties "TypusFile Properties"
-    [ tfContents_properties
-    , defaultFileDirectives_properties
-    , defaultBlockDirectives_properties
+    [ ("tfContents_properties", property tfContents_properties)
+    , ("defaultFileDirectives_properties", property defaultFileDirectives_properties)
+    , ("defaultBlockDirectives_properties", property defaultBlockDirectives_properties)
     ]
   , testProperties "Identifier Properties"
-    [ isIdentifierChar_properties
+    [ ("isIdentifierChar_properties", property isIdentifierChar_properties)
     ]
   , testProperties "Parser Roundtrip Properties"
-    [ parseTypus_roundtrip_simple
-    , parseTypus_empty_input
-    , parseTypus_single_line
+    [ ("parseTypus_roundtrip_simple", property parseTypus_roundtrip_simple)
+    , ("parseTypus_empty_input", property parseTypus_empty_input)
+    , ("parseTypus_single_line", property parseTypus_single_line)
     ]
   ]
 

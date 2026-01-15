@@ -40,6 +40,8 @@ import qualified Data.Text as T
 import Data.Char (isSpace)
 
 -- Arbitrary instances for QuickCheck
+instance Arbitrary T.Text where
+  arbitrary = T.pack <$> arbitrary
 instance Arbitrary SourcePos where
   arbitrary = do
     line <- choose (1, 1000)
@@ -63,35 +65,35 @@ instance Arbitrary a => Arbitrary (Located a) where
 tests :: TestTree
 tests = testGroup "Concise SourceLocation QuickCheck Tests"
   [ testProperties "SourcePos Properties"
-    [ pos_properties
-    , posAfter_properties
-    , posAt_properties
-    , posAtLineCol_properties
-    , advancePos_properties
-    , advancePosBy_properties
-    , advancePosByText_properties
-    , comparePos_properties
-    , sourceLine_properties
-    , sourceColumn_properties
+    [ ("pos_properties", property pos_properties)
+    , ("posAfter_properties", property posAfter_properties)
+    , ("posAt_properties", property posAt_properties)
+    , ("posAtLineCol_properties", property posAtLineCol_properties)
+    , ("advancePos_properties", property advancePos_properties)
+    , ("advancePosBy_properties", property advancePosBy_properties)
+    , ("advancePosByText_properties", property advancePosByText_properties)
+    , ("comparePos_properties", property comparePos_properties)
+    , ("sourceLine_properties", property sourceLine_properties)
+    , ("sourceColumn_properties", property sourceColumn_properties)
     ]
   , testProperties "SourceSpan Properties"
-    [ span_properties
-    , emptySpan_properties
-    , spanFrom_properties
-    , spanTo_properties
-    , spanBetween_properties
-    , spanBetweenOrdered_properties
-    , mergeSpans_properties
-    , isValidSpan_properties
-    , isValidBlockSpan_properties
+    [ ("span_properties", property span_properties)
+    , ("emptySpan_properties", property emptySpan_properties)
+    , ("spanFrom_properties", property spanFrom_properties)
+    , ("spanTo_properties", property spanTo_properties)
+    , ("spanBetween_properties", property spanBetween_properties)
+    , ("spanBetweenOrdered_properties", property spanBetweenOrdered_properties)
+    , ("mergeSpans_properties", property mergeSpans_properties)
+    , ("isValidSpan_properties", property isValidSpan_properties)
+    , ("isValidBlockSpan_properties", property isValidBlockSpan_properties)
     ]
   , testProperties "Located Properties"
-    [ locatedAt_properties
-    , locatedWithSpan_properties
-    , locatedValue_properties
-    , locatedSpan_properties
-    , locatedPos_properties
-    , mapLocated_properties
+    [ ("locatedAt_properties", property locatedAt_properties)
+    , ("locatedWithSpan_properties", property locatedWithSpan_properties)
+    , ("locatedValue_properties", property locatedValue_properties)
+    , ("locatedSpan_properties", property locatedSpan_properties)
+    , ("locatedPos_properties", property locatedPos_properties)
+    , ("mapLocated_properties", property mapLocated_properties)
     ]
   ]
 

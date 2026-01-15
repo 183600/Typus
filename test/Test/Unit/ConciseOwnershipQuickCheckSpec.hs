@@ -5,7 +5,7 @@
 module Test.Unit.ConciseOwnershipQuickCheckSpec where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), Gen, choose, elements)
+import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), Gen, choose, elements, oneof)
 import Ownership
   ( OwnershipType(..)
   , OwnershipError(..)
@@ -34,16 +34,34 @@ import Data.List (nub, sort)
 
 -- Arbitrary instances for QuickCheck
 instance Arbitrary OwnershipType where
-  arbitrary = elements [Owned, Borrowed, Shared, Moved]
+  arbitrary = do
+    name <- arbitrary
+    elements [Owned name, Borrowed name, MutBorrowed name]
 
 instance Arbitrary OwnershipTransfer where
-  arbitrary = elements [Move, Copy, Borrow, Return]
+  arbitrary = do
+    from <- arbitrary
+    to <- arbitrary
+    return $ OwnershipTransfer from to
 
 instance Arbitrary OwnershipError where
   arbitrary = oneof
-    [ OwnershipTransferError <$> arbitrary <*> arbitrary
-    , OwnershipBorrowError <$> arbitrary <*> arbitrary
-    , OwnershipConstraintError <$> arbitrary
+    [ UseAfterMove <$> arbitrary
+    , DoubleMove <$> arbitrary <*> arbitrary
+    , BorrowWhileMoved <$> arbitrary
+    , MutBorrowWhileBorrowed <$> arbitrary
+    , BorrowWhileMutBorrowed <$> arbitrary
+    , MultipleMutBorrows <$> arbitrary
+    , UseWhileMutBorrowed <$> arbitrary
+    , OutOfScope <$> arbitrary
+    , BorrowError <$> arbitrary
+    , ParseError <$> arbitrary
+    , CrossFunctionMove <$> arbitrary <*> arbitrary
+    , ParameterMoveMismatch <$> arbitrary
+    , ControlFlowError <$> arbitrary
+    , PathSensitiveError <$> arbitrary
+    , LoopOwnershipError <$> arbitrary
+    , OwnershipError <$> arbitrary
     ]
 
 instance Arbitrary OwnershipAnalysis where
@@ -63,32 +81,32 @@ instance Arbitrary OwnershipConstraint where
 tests :: TestTree
 tests = testGroup "Concise Ownership QuickCheck Tests"
   [ testProperties "OwnershipAnalysis Properties"
-    [ oaOwners_properties
-    , oaBorrowers_properties
-    , oaErrors_properties
+    [ ("oaOwners_properties", property oaOwners_properties)
+    , ("oaBorrowers_properties", property oaBorrowers_properties)
+    , ("oaErrors_properties", property oaErrors_properties)
     ]
   , testProperties "Ownership Query Properties"
-    [ getOwners_properties
-    , getBorrowers_properties
-    , getOwnedResources_properties
-    , isOwner_properties
-    , isBorrower_properties
+    [ ("getOwners_properties", property getOwners_properties)
+    , ("getBorrowers_properties", property getBorrowers_properties)
+    , ("getOwnedResources_properties", property getOwnedResources_properties)
+    , ("isOwner_properties", property isOwner_properties)
+    , ("isBorrower_properties", property isBorrower_properties)
     ]
   , testProperties "Ownership Transfer Properties"
-    [ checkOwnershipTransfer_properties
-    , canTransferOwnership_properties
-    , transferOwnership_properties
+    [ ("checkOwnershipTransfer_properties", property checkOwnershipTransfer_properties)
+    , ("canTransferOwnership_properties", property canTransferOwnership_properties)
+    , ("transferOwnership_properties", property transferOwnership_properties)
     ]
   , testProperties "Ownership Constraint Properties"
-    [ validateOwnershipConstraints_properties
+    [ ("validateOwnershipConstraints_properties", property validateOwnershipConstraints_properties)
     ]
   , testProperties "Ownership Error Properties"
-    [ hasOwnershipErrors_properties
-    , getOwnershipErrors_properties
-    , clearOwnershipErrors_properties
+    [ ("hasOwnershipErrors_properties", property hasOwnershipErrors_properties)
+    , ("getOwnershipErrors_properties", property getOwnershipErrors_properties)
+    , ("clearOwnershipErrors_properties", property clearOwnershipErrors_properties)
     ]
   , testProperties "Ownership Analysis Properties"
-    [ mergeOwnershipAnalyses_properties
+    [ ("mergeOwnershipAnalyses_properties", property mergeOwnershipAnalyses_properties)
     ]
   ]
 

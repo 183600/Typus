@@ -3,7 +3,7 @@ module Ownership
   , OwnershipError(..)
   , OwnershipAnalyzer
   , OwnershipTransfer(..)
-  , OwnershipAnalysis
+  , OwnershipAnalysis(..)
   , OwnershipConstraint(..)
   , newOwnershipAnalyzer
   , analyzeOwnership

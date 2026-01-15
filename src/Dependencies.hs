@@ -63,6 +63,9 @@ module Dependencies (
   DependencyGraph,
   DependencyError(..),
   DependencyType(..),
+  TestDependencyGraph(..),
+  TestDependencyError(..),
+  TestDependencyType(..),
   
   -- Dependency analysis functions (for tests)
   analyzeDependencies,

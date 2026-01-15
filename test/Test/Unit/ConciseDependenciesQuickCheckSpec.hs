@@ -1,15 +1,19 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
 
 module Test.Unit.ConciseDependenciesQuickCheckSpec where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), Gen, choose, elements)
+import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), Gen, choose, elements, oneof)
 import Dependencies
   ( DependencyGraph(..)
   , DependencyError(..)
   , DependencyType(..)
+  , TestDependencyGraph(..)
+  , TestDependencyError(..)
+  , TestDependencyType(..)
   , analyzeDependencies
   , detectCycles
   , resolveDependencies
@@ -29,8 +33,9 @@ import Dependencies
   , dgEdges
   , inferTypes
   )
-import Dependencies.AST (AST(..), Statement(..), TypeExpr(..))
+import Dependencies.AST (AST(..), Statement(..), TypeExpr(..), Constraint(..))
 import Data.List (nub, sort)
+import qualified Data.Text as T
 
 -- Arbitrary instances for QuickCheck
 instance Arbitrary DependencyGraph where
@@ -51,53 +56,65 @@ instance Arbitrary DependencyType where
 instance Arbitrary AST where
   arbitrary = do
     statements <- arbitrary
-    return $ AST statements
+    return $ Program statements
 
 instance Arbitrary Statement where
   arbitrary = oneof
-    [ VarDecl <$> arbitrary <*> arbitrary
-    , FuncDecl <$> arbitrary <*> arbitrary <*> arbitrary
-    , TypeDecl <$> arbitrary <*> arbitrary
+    [ SVarDecl <$> arbitrary <*> arbitrary
+    , SFuncDecl <$> arbitrary <*> arbitrary <*> arbitrary
+    , STypeDef <$> arbitrary <*> arbitrary <*> arbitrary
+    ]
+
+-- Add Arbitrary instance for Text
+instance Arbitrary T.Text where
+  arbitrary = T.pack <$> arbitrary
+
+instance Arbitrary Constraint where
+  arbitrary = oneof
+    [ SizeGT <$> arbitrary <*> arbitrary
+    , SizeGE <$> arbitrary <*> arbitrary
+    , RangeC <$> arbitrary <*> arbitrary <*> arbitrary
+    , PredC <$> arbitrary <*> arbitrary
     ]
 
 instance Arbitrary TypeExpr where
   arbitrary = oneof
-    [ TypeVar <$> arbitrary
-    , TypeConstructor <$> arbitrary <*> arbitrary
-    , FunctionType <$> arbitrary <*> arbitrary
+    [ SimpleT <$> arbitrary
+    , GenericT <$> arbitrary <*> arbitrary
+    , FuncT <$> arbitrary <*> arbitrary
     ]
 
 tests :: TestTree
 tests = testGroup "Concise Dependencies QuickCheck Tests"
   [ testProperties "DependencyGraph Properties"
-    [ dgNodes_properties
-    , dgEdges_properties
-    , getNodes_properties
+    [ ("dgNodes_properties", property dgNodes_properties)
+    , ("dgEdges_properties", property dgEdges_properties)
+    , ("getNodes_properties", property getNodes_properties)
     ]
   , testProperties "Dependency Analysis Properties"
-    [ analyzeDependencies_properties
-    , detectCycles_properties
-    , hasCycles_properties
+    [ ("analyzeDependencies_properties", property analyzeDependencies_properties)
+    , ("detectCycles_properties", property detectCycles_properties)
+    , ("hasCycles_properties", property hasCycles_properties)
     ]
   , testProperties "Dependency Resolution Properties"
-    [ resolveDependencies_properties
-    , getDependencyErrors_properties
-    , clearDependencyErrors_properties
+    [ ("resolveDependencies_properties", property resolveDependencies_properties)
+    , ("getDependencyErrors_properties", property getDependencyErrors_properties)
+    , ("clearDependencyErrors_properties", property clearDependencyErrors_properties)
     ]
   , testProperties "Dependency Manipulation Properties"
-    [ addDependency_properties
-    , removeDependency_properties
-    , hasDependency_properties
-    , mergeDependencyGraphs_properties
+    [ ("addDependency_properties", property addDependency_properties)
+    , ("removeDependency_properties", property removeDependency_properties)
+    , ("hasDependency_properties", property hasDependency_properties)
+    , ("mergeDependencyGraphs_properties", property mergeDependencyGraphs_properties)
     ]
   , testProperties "Dependency Query Properties"
-    [ getDirectDependencies_properties
-    , getTransitiveDependencies_properties
-    , getDependencyPath_properties
-    , topologicalSort_properties
+    [ ("getDirectDependencies_properties", property getDirectDependencies_properties)
+    , ("getTransitiveDependencies_properties", property getTransitiveDependencies_properties)
+    , ("getDependencyPath_properties", property getDependencyPath_properties)
+    , ("topologicalSort_properties", property topologicalSort_properties)
     ]
   , testProperties "Type Inference Properties"
-    [ inferTypes_properties
+    [ ("inferTypes_properties", property inferTypes_properties)
     ]
   ]
 
