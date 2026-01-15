@@ -71,13 +71,20 @@ import qualified Test.Unit.CodeGenerationSpec as CodeGeneration
 import qualified Test.Unit.DependencyResolutionSpec as DependencyResolution
 import qualified Test.Unit.OwnershipTransferSpec as OwnershipTransfer
 
--- Import newly created advanced test modules (2026)
+-- Newly created advanced test modules (2026)
 import qualified Test.Unit.SourceLocationAdvancedQuickCheckSpec as SourceLocationAdvanced
 import qualified Test.Unit.UtilsAdvancedQuickCheckSpec as UtilsAdvanced
 import qualified Test.Unit.ParserAdvancedQuickCheckSpec as ParserAdvanced
 import qualified Test.Unit.ErrorHandlerAdvancedQuickCheckSpec as ErrorHandlerAdvanced
 import qualified Test.Unit.IntegrationAdvancedQuickCheckSpec as IntegrationAdvanced
 import qualified Test.Unit.BoundaryConditionAdvancedQuickCheckSpec as BoundaryConditionAdvanced
+
+-- New Additional QuickCheck Test Modules (2026)
+import qualified Test.Unit.NewAdditionalUtilsQuickCheckSpec as NewAdditionalUtilsQuickCheck
+import qualified Test.Unit.NewAdditionalSourceLocationQuickCheckSpec as NewAdditionalSourceLocationQuickCheck
+import qualified Test.Unit.NewAdditionalParserQuickCheckSpec as NewAdditionalParserQuickCheck
+import qualified Test.Unit.NewAdditionalErrorHandlerQuickCheckSpec as NewAdditionalErrorHandlerQuickCheck
+import qualified Test.Unit.NewAdditionalDependenciesQuickCheckSpec as NewAdditionalDependenciesQuickCheck
 
 -- Import new comprehensive test modules (2026)
 import qualified Test.Unit.CompilerCoreFunctionalityTestSpec as CompilerCoreFunctionalityTest
@@ -216,5 +223,12 @@ tests = testGroup "Test.Unit.Tests Tests"
     ParserAdvanced.tests,
     ErrorHandlerAdvanced.tests,
     IntegrationAdvanced.tests,
-    BoundaryConditionAdvanced.tests
+    BoundaryConditionAdvanced.tests,
+    
+    -- New Additional QuickCheck Test Modules (2026)
+    NewAdditionalUtilsQuickCheck.tests,
+    NewAdditionalSourceLocationQuickCheck.tests,
+    NewAdditionalParserQuickCheck.tests,
+    NewAdditionalErrorHandlerQuickCheck.tests,
+    NewAdditionalDependenciesQuickCheck.tests
   ]

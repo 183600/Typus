@@ -6,20 +6,70 @@ module Test.Unit.SourceLocationMathPropertiesQuickCheckSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
+import Test.QuickCheck (conjoin, Arbitrary(..), choose)
+import qualified Test.QuickCheck as QC
 
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos, advancePosByText)
+
 import qualified Data.Text as T
+
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+
 import Control.Monad (replicateM)
+
 import Data.Char (isAlphaNum, isAlpha, isSpace, isControl)
+
 import Data.Either (isLeft, isRight)
+
+
+
+-- | Arbitrary instance for SourcePos
+
+instance Arbitrary SourcePos where
+
+  arbitrary = do
+
+    line <- choose (0, 100)
+
+    column <- choose (0, 100)
+
+    offset <- choose (0, 1000)
+
+    return $ SourcePos line column offset
+
+
+
+-- | Arbitrary instance for SourceSpan  
+
+
+
+instance Arbitrary SourceSpan where
+
+
+
+  arbitrary = do
+
+
+
+    start <- arbitrary
+
+
+
+    end <- arbitrary
+
+
+
+    return $ SourceSpan start end
 
 -- | 测试SourcePos的基本属性
 prop_sourcepos_basic :: Int -> Int -> Property
 prop_sourcepos_basic line column =
   line >= 0 && column >= 0 ==>
   let pos = SourcePos line column 0
-  in posLine pos === line && posColumn pos === column
+  in conjoin 
+     [ posLine pos === line
+     , posColumn pos === column
+     ]
 
 -- | 测试SourcePos的比较
 prop_sourcepos_comparison :: SourcePos -> SourcePos -> Property
@@ -43,14 +93,20 @@ prop_sourcepos_order pos1 pos2 =
 prop_sourcespan_basic :: SourcePos -> SourcePos -> Property
 prop_sourcespan_basic pos1 pos2 =
   let span = SourceSpan pos1 pos2
-  in spanStart span === pos1 && spanEnd span === pos2
+  in conjoin 
+     [ spanStart span === pos1
+     , spanEnd span === pos2
+     ]
 
 -- | 测试advancePosByText的基本属性
 prop_advancepos_basic :: Char -> Property
 prop_advancepos_basic c =
   let pos = startPos
       result = advancePosByText (T.pack [c]) pos
-  in posLine result >= posLine pos && posColumn result >= posColumn pos
+  in conjoin 
+     [ property $ posLine result >= posLine pos
+     , property $ posColumn result >= posColumn pos
+     ]
 
 -- | 测试advancePosByText对于换行符的处理
 prop_advancepos_newline :: Positive Int -> Property
@@ -59,7 +115,10 @@ prop_advancepos_newline (Positive n) =
   let pos = startPos
       text = T.pack $ replicate n '\n'
       result = advancePosByText text pos
-  in posLine result === posLine pos + n && posColumn result === 0
+  in conjoin 
+     [ posLine result === posLine pos + n
+     , posColumn result === 0
+     ]
 
 -- | 测试advancePosByText对于制表符的处理
 prop_advancepos_tab :: Positive Int -> Property
@@ -68,7 +127,10 @@ prop_advancepos_tab (Positive n) =
   let pos = startPos
       text = T.pack $ replicate n '\t'
       result = advancePosByText text pos
-  in posLine result === posLine pos && posColumn result >= posColumn pos
+  in conjoin 
+     [ posLine result === posLine pos
+     , property $ posColumn result >= posColumn pos
+     ]
 
 -- | 测试advancePosByText对于普通字符的处理
 prop_advancepos_regular :: Positive Int -> Property

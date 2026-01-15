@@ -2314,6 +2314,13 @@ test-suite typus-test
         -- Final QuickCheck Test Suite (2026)
         Test.Unit.FinalQuickCheckTestSuite
         
+        -- New Additional QuickCheck Test Modules (2026)
+        Test.Unit.NewAdditionalUtilsQuickCheckSpec,
+        Test.Unit.NewAdditionalSourceLocationQuickCheckSpec,
+        Test.Unit.NewAdditionalParserQuickCheckSpec,
+        Test.Unit.NewAdditionalErrorHandlerQuickCheckSpec,
+        Test.Unit.NewAdditionalDependenciesQuickCheckSpec
+        
     build-depends:
         base >=4.7 && <5,
         typus,
