@@ -2106,11 +2106,7 @@ test-suite typus-test
         Test.Unit.DependencyAnalysisQuickCheckSpec,
 
         -- New Enhanced QuickCheck Test Modules (2025) - Core Functionality Tests
-        Test.Unit.UtilsQuickCheckPropertiesSpec,
-        Test.Unit.SourceLocationQuickCheckPropertiesSpec,
-        Test.Unit.ParserQuickCheckPropertiesSpec,
-        Test.Unit.ErrorHandlerQuickCheckPropertiesSpec,
-        Test.Unit.DependenciesQuickCheckPropertiesSpec,
+        -- These modules are now listed below with Enhanced prefix to avoid duplicates
         
         -- New QuickCheck Test Suite Modules (2026)
         Test.Unit.AdditionalQuickCheckTestSuiteSpec,
@@ -2319,7 +2315,16 @@ test-suite typus-test
         Test.Unit.NewAdditionalSourceLocationQuickCheckSpec,
         Test.Unit.NewAdditionalParserQuickCheckSpec,
         Test.Unit.NewAdditionalErrorHandlerQuickCheckSpec,
-        Test.Unit.NewAdditionalDependenciesQuickCheckSpec
+        Test.Unit.NewAdditionalDependenciesQuickCheckSpec,
+        
+        -- New Core Module QuickCheck Properties Tests (2026)
+        Test.Unit.EnhancedParserQuickCheckPropertiesSpec,
+        Test.Unit.EnhancedCompilerQuickCheckPropertiesSpec,
+        Test.Unit.EnhancedErrorHandlerQuickCheckPropertiesSpec,
+        Test.Unit.EnhancedSourceLocationQuickCheckPropertiesSpec,
+        Test.Unit.EnhancedUtilsQuickCheckPropertiesSpec,
+        Test.Unit.EnhancedOwnershipQuickCheckPropertiesSpec,
+        Test.Unit.EnhancedDependenciesQuickCheckPropertiesSpec
         
     build-depends:
         base >=4.7 && <5,

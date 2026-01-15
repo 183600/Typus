@@ -6,6 +6,7 @@ module Parser
   , BlockDirectives(..)
   , CodeBlock(..)
   , TypusFile(..)
+  , tfContents
   , defaultFileDirectives
   , defaultBlockDirectives
   , fileDirectiveParser
@@ -63,6 +64,10 @@ data TypusFile = TypusFile
     , tfBlocks :: [CodeBlock]
     , tfSyntaxErrors :: [SyntaxValidator.SyntaxError]
     } deriving (Show, Eq)
+
+-- 从TypusFile中提取内容字符串
+tfContents :: TypusFile -> String
+tfContents file = concatMap cbContent (tfBlocks file)
 
 -- Default values
 defaultFileDirectives :: FileDirectives

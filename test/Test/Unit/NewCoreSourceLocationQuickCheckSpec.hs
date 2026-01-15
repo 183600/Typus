@@ -6,7 +6,7 @@ module Test.Unit.NewCoreSourceLocationQuickCheckSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import Test.QuickCheck (conjoin, (===), Property, property, forAll, choose, listOf1, elements)
+import Test.QuickCheck (conjoin, (===), Property, property, forAll, choose, listOf1, elements, Positive(..))
 
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), startPos, posAfter, 
                        posAt, emptySpan, spanFrom, spanTo, spanBetween, mergeSpans, 
@@ -36,25 +36,17 @@ prop_posAfter_characters c (Positive line) (Positive col) (Positive offset) =
       newPos = posAfter c pos
   in conjoin 
      [ property $ posOffset newPos === offset + 1
-     , c === '\n' ==> conjoin 
-         [ property $ posLine newPos === line + 1
-         , property $ posColumn newPos === 1
-         ]
-     , c === '\t' ==> conjoin 
-         [ property $ posLine newPos === line
-         , property $ posColumn newPos === ((col - 1) `div` 8 + 1) * 8 + 1
-         ]
-     , c /= '\n' && c /= '\t' ==> conjoin 
-         [ property $ posLine newPos === line
-         , property $ posColumn newPos === col + 1
-         ]
+     , property $ (c == '\n') ==> (posLine newPos == line + 1 && posColumn newPos == 1)
+     , property $ (c == '\t') ==> (posLine newPos == line && posColumn newPos == ((col - 1) `div` 8 + 1) * 8 + 1)
+     , property $ (c /= '\n' && c /= '\t') ==> (posLine newPos == line && posColumn newPos == col + 1)
      ]
 
 -- Test 3: 测试advancePosByText函数
 prop_advancePosByText :: String -> Positive Int -> Positive Int -> Positive Int -> Property
 prop_advancePosByText text (Positive line) (Positive col) (Positive offset) =
   let pos = SourcePos line col offset
-      finalPos = advancePosByText text pos
+      textText = T.pack text
+      finalPos = advancePosByText textText pos
   in conjoin 
      [ property $ posOffset finalPos >= offset
      , null text ==> property $ finalPos === pos

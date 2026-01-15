@@ -9,8 +9,9 @@ import Test.Tasty.HUnit
 import Test.QuickCheck (conjoin, (===), Property, property, forAll, choose, listOf1, elements)
 
 import ErrorHandler
-import Compiler.Errors.Core (TypeError(..), ErrorSeverity(..), formatError)
-import SourceLocation (SourcePos(..), SourceSpan(..), startPos, advancePosByText)
+import Compiler.Errors.Core (TypeError(..), ErrorSeverity(..), formatError, errorAt)
+import TestSupport.ExtendedArbitrary ()  -- Import Arbitrary instances
+import SourceLocation (SourcePos(..), SourceSpan(..), startPos, advancePosByText, toErrorLocationWithSpan)
 import qualified Data.Text as T
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Char (isAlphaNum, isAlpha, isSpace, isControl)
@@ -23,14 +24,15 @@ prop_error_severity_consistency :: ErrorSeverity -> ErrorSeverity -> Property
 prop_error_severity_consistency sev1 sev2 =
   let pos = startPos
       span = SourceSpan pos pos
-      error1 = TypeError "test1" sev1 span
-      error2 = TypeError "test2" sev2 span
+      errorLoc = toErrorLocationWithSpan span
+      error1 = errorAt "test1" sev1 "test1" errorLoc
+      error2 = errorAt "test2" sev2 "test2" errorLoc
   in conjoin 
      [ property $ errorSeverity error1 === sev1
      , property $ errorSeverity error2 === sev2
-     , sev1 === sev2 ==> property $ compare sev1 sev2 === EQ
-     , sev1 === ErrorError && sev2 === ErrorWarning ==> property $ compare sev1 sev2 === GT
-     , sev1 === ErrorWarning && sev2 === ErrorError ==> property $ compare sev1 sev2 === LT
+     , property $ (sev1 == sev2) ==> (compare sev1 sev2 == EQ)
+     , property $ (sev1 == Error && sev2 == Warning) ==> (compare sev1 sev2 == GT)
+     , property $ (sev1 == Warning && sev2 == Error) ==> (compare sev1 sev2 == LT)
      ]
 
 -- Test 2: 测试错误位置信息的准确性
@@ -41,7 +43,8 @@ prop_error_location_accuracy (Positive startLine) (Positive startCol) (Positive 
   let startPos' = SourcePos startLine startCol startOffset
       endPos' = SourcePos endLine endCol endOffset
       span = SourceSpan startPos' endPos'
-      error = TypeError "test" ErrorError span
+      errorLoc = toErrorLocationWithSpan span
+      error = errorAt "test" Error "test" errorLoc
       formatted = formatError error
   in conjoin 
      [ property $ show startLine `isInfixOf` formatted
@@ -58,7 +61,8 @@ prop_error_message_escaping msg =
   in hasSpecialChars ==>
   let pos = startPos
       span = SourceSpan pos pos
-      error = TypeError msg ErrorWarning span
+      errorLoc = toErrorLocationWithSpan span
+      error = errorAt "test" Warning (T.pack msg) errorLoc
       formatted = formatError error
   in conjoin 
      [ property $ length formatted > 0
@@ -71,7 +75,8 @@ prop_error_context context message =
   not (null context) && not (null message) ==>
   let pos = startPos
       span = SourceSpan pos pos
-      error = TypeError (context ++ ": " ++ message) ErrorError span
+      errorLoc = toErrorLocationWithSpan span
+      error = errorAt "test" Error (T.pack (context ++ ": " ++ message)) errorLoc
       formatted = formatError error
   in conjoin 
      [ property $ context `isInfixOf` formatted
@@ -99,7 +104,8 @@ prop_error_recovery_suggestions errorMsg =
   not (null errorMsg) ==>
   let pos = startPos
       span = SourceSpan pos pos
-      error = TypeError errorMsg ErrorError span
+      errorLoc = toErrorLocationWithSpan span
+      error = errorAt "test" Error (T.pack errorMsg) errorLoc
       -- 假设有一个生成恢复建议的函数
       -- suggestions = generateRecoverySuggestions error
       formatted = formatError error

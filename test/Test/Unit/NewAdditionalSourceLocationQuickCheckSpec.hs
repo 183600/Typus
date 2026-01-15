@@ -6,12 +6,12 @@ module Test.Unit.NewAdditionalSourceLocationQuickCheckSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import Test.QuickCheck (conjoin, (===), Property, property, forAll, choose, listOf1, elements)
+import Test.QuickCheck (conjoin, (===), Property, property, forAll, choose, listOf1, elements, Positive(..))
 
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), startPos, posAfter, 
                        posAt, emptySpan, spanFrom, spanTo, spanBetween, mergeSpans, 
                        isValidSpan, advancePosByText, comparePos, locatedAt, 
-                       locatedWithSpan, locatedValue, locatedSpan, mapLocated)
+                       locatedWithSpan, locatedValue, locatedSpan, locatedPos, mapLocated)
 import qualified Data.Text as T
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Char (isAlphaNum, isAlpha, isSpace, isControl)
@@ -28,13 +28,13 @@ prop_sourcepos_comparison (Positive line1) (Positive col1) (Positive offset1)
       pos2 = SourcePos line2 col2 offset2
       comparison = comparePos pos1 pos2
   in conjoin 
-     [ line1 < line2 ==> property $ comparison === LT
-     , line1 > line2 ==> property $ comparison === GT
-     , line1 === line2 && col1 < col2 ==> property $ comparison === LT
-     , line1 === line2 && col1 > col2 ==> property $ comparison === GT
-     , line1 === line2 && col1 === col2 && offset1 < offset2 ==> property $ comparison === LT
-     , line1 === line2 && col1 === col2 && offset1 > offset2 ==> property $ comparison === GT
-     , line1 === line2 && col1 === col2 && offset1 === offset2 ==> property $ comparison === EQ
+     [ property $ line1 < line2 ==> comparison === LT
+     , property $ line1 > line2 ==> comparison === GT
+     , property $ (line1 == line2 && col1 < col2) ==> comparison === LT
+     , property $ (line1 == line2 && col1 > col2) ==> comparison === GT
+     , property $ (line1 == line2 && col1 == col2 && offset1 < offset2) ==> comparison === LT
+     , property $ (line1 == line2 && col1 == col2 && offset1 > offset2) ==> comparison === GT
+     , property $ (line1 == line2 && col1 == col2 && offset1 == offset2) ==> comparison === EQ
      ]
 
 -- Test 2: 测试SourceSpan的有效性
@@ -47,10 +47,10 @@ prop_sourcespan_validity (Positive startLine) (Positive startCol) (Positive star
       span = SourceSpan startPos' endPos'
       valid = isValidSpan span
   in conjoin 
-     [ startLine < endLine ==> property $ valid === True
-     , startLine > endLine ==> property $ valid === False
-     , startLine === endLine && startCol <= endCol ==> property $ valid === True
-     , startLine === endLine && startCol > endCol ==> property $ valid === False
+     [ property $ startLine < endLine ==> valid === True
+     , property $ startLine > endLine ==> valid === False
+     , property $ (startLine == endLine && startCol <= endCol) ==> valid === True
+     , property $ (startLine == endLine && startCol > endCol) ==> valid === False
      ]
 
 -- Test 3: 测试advancePosByText对换行符的处理
@@ -58,11 +58,12 @@ prop_advanceposbytext_newlines :: String -> Positive Int -> Positive Int -> Posi
 prop_advanceposbytext_newlines text (Positive line) (Positive col) (Positive offset) =
   let newlineCount = length $ filter (== '\n') text
       pos = SourcePos line col offset
-      finalPos = advancePosByText text pos
+      textText = T.pack text
+      finalPos = advancePosByText textText pos
   in conjoin 
      [ property $ posLine finalPos >= line
-     , newlineCount === 0 ==> property $ posLine finalPos === line
-     , newlineCount > 0 ==> property $ posLine finalPos > line
+     , property $ (newlineCount == 0) ==> posLine finalPos === line
+     , property $ (newlineCount > 0) ==> posLine finalPos > line
      , property $ posOffset finalPos >= offset
      ]
 
@@ -111,8 +112,8 @@ prop_located_basic :: String -> Positive Int -> Positive Int -> Positive Int -> 
 prop_located_basic value (Positive line) (Positive col) (Positive offset) =
   let pos = SourcePos line col offset
       span = SourceSpan pos pos
-      locatedValue' = locatedAt value pos
-      locatedWithSpan' = locatedWithSpan value span
+      locatedValue' = locatedAt pos value
+      locatedWithSpan' = locatedWithSpan span value
   in conjoin 
      [ property $ locatedValue locatedValue' === value
      , property $ locatedPos locatedValue' === pos

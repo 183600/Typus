@@ -8,7 +8,7 @@ import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import Test.QuickCheck (conjoin, (===), Property, property, forAll, choose, listOf1, elements)
 
-import Parser (TypusFile(..), parseTypus)
+import Parser (TypusFile(..), parseTypus, tfContents)
 import Utils (trim, splitBy, removeLineComments, removeComments, normalizeIndentation)
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos, advancePosByText)
 import qualified Data.Text as T

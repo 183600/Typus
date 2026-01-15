@@ -393,7 +393,7 @@ instance Arbitrary SymbolInfo where
 
 -- Arbitrary instances for Compiler.Errors.Core
 instance Arbitrary ErrorSeverity where
-  arbitrary = elements [Core.Error, Core.Warning, Core.Info]
+  arbitrary = elements [Core.Fatal, Core.Error, Core.Warning, Core.Info]
 
 instance Arbitrary Core.ErrorCategory where
   arbitrary = elements [Core.TypeChecking, Core.Ownership, Core.Parsing, Core.Semantic, Core.Runtime, Core.Constraint, Core.Inference, Core.Integration, Core.Unknown]

@@ -40,7 +40,7 @@ prop_splitBy_relationship c s =
   in conjoin 
      [ property $ concat parts === s
      , property $ length collapsed <= length parts
-     , all (not . null) collapsed  -- collapsed不应有空段
+     , property $ all (not . null) collapsed  -- collapsed不应有空段
      ]
 
 -- Test 3: 测试splitByComma和splitByCommaCollapsed的一致性
@@ -51,7 +51,7 @@ prop_splitByComma_consistency s =
   in conjoin 
      [ property $ concat parts === s
      , property $ length collapsed <= length parts
-     , not (',' `elem` s) ==> parts === ["s"] && collapsed === ["s"]
+     , property $ not (',' `elem` s) ==> (parts == [s] && collapsed == [s])
      ]
 
 -- Test 4: 测试removeLineComments的字符串字面量处理
