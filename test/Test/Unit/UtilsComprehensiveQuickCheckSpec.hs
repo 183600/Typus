@@ -9,7 +9,7 @@ import Test.Tasty.HUnit
 
 import Utils
 import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixate, isSuffixOf)
+import Data.List (isPrefixOf, isInfixOf, isSuffixOf, intercalate)
 import Data.Char (isSpace, isAlphaNum, isAlpha)
 import Control.Monad (replicateM)
 import Data.Either (isLeft, isRight)
@@ -45,14 +45,14 @@ prop_removeLineComments_basic :: String -> String -> Property
 prop_removeLineComments_basic code comment =
   let codeWithComment = code ++ "// " ++ comment ++ "\nmore code"
       withoutComments = removeLineComments codeWithComment
-  in property ("//" `notElem` withoutComments)
+  in property (not (isInfixOf "// " withoutComments))
 
 -- | 测试removeComments函数处理多行注释
 prop_removeComments_multiline :: String -> String -> Property
 prop_removeComments_multiline before after =
   let codeWithComment = before ++ "/* " ++ "comment" ++ " */" ++ after
       withoutComments = removeComments codeWithComment
-  in property ("/*" `notElem` withoutComments && "*/" `notElem` withoutComments)
+  in property (not (isInfixOf "/*" withoutComments) && not (isInfixOf "*/" withoutComments))
 
 -- | 测试normalizeIndentation函数保持相对缩进
 prop_normalizeIndentation_preserves_relative :: Positive Int -> String -> Property
@@ -73,7 +73,7 @@ prop_safeProcessString_special_chars s =
 prop_isValidChar_basic :: Char -> Property
 prop_isValidChar_basic c =
   let valid = isValidChar c
-  in valid ==> (isAlpha c || isAlphaNum c || c `elem` " _-")
+  in valid ==> (isAlpha c || isAlphaNum c || c `elem` (" _-" :: String))
 
 -- | 测试isRight函数
 prop_isRight_basic :: Either String Int -> Property
@@ -146,9 +146,9 @@ test_normalizeIndentation_basic = do
 -- | 测试safeProcessString函数
 test_safeProcessString_basic :: Assertion
 test_safeProcessString_basic = do
-  let input = "normal string"
+  let input = "normal string" :: String
       result = safeProcessString input
-  assertEqual "Safe process normal string" input result
+  assertEqual "Safe process normal string" (Right input) result
 
 -- | 测试isValidChar函数
 test_isValid_char_valid :: Assertion

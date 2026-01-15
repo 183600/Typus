@@ -63,7 +63,7 @@ prop_removeLineComments_basic :: String -> String -> Property
 prop_removeLineComments_basic code comment =
   let codeWithComment = code ++ "// " ++ comment ++ "\nmore code"
       withoutComments = removeLineComments codeWithComment
-  in property ("//" `notElem` withoutComments)
+  in property (not (isInfixOf "// " withoutComments))
 
 -- | 测试removeLineComments对空代码的处理
 prop_removeLineComments_empty :: Property
@@ -79,7 +79,7 @@ prop_removeComments_basic :: String -> String -> Property
 prop_removeComments_basic before after =
   let codeWithComment = before ++ "/* " ++ "comment" ++ " */" ++ after
       withoutComments = removeComments codeWithComment
-  in property ("/*" `notElem` withoutComments && "*/" `notElem` withoutComments)
+  in property (not (isInfixOf "/*" withoutComments) && not (isInfixOf "*/" withoutComments))
 
 -- | 测试removeComments对空代码的处理
 prop_removeComments_empty :: Property

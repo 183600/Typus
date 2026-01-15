@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import re
 
-# 修复 AnalyzerSymbolTableQuickCheckTestSpec.hs
+# 修复 AnalyzerSymbolTableQuickCheckTest.hs
 with open('/home/runner/work/Typus/Typus/test/Test/Unit/AnalyzerSymbolTableQuickCheckTestSpec.hs', 'r') as f:
     content = f.read()
 
@@ -53,7 +53,7 @@ content = re.sub(r'in property \(pos1 === pos1 && pos2 === pos2\)', 'in conjoin 
 
 # 修复其他 Property 类型错误
 content = re.sub(r'in property \(length formatted >= 0\)', 'in property (length formatted >= 0)', content)
-content = re.sub(r'in property \(all \\e -> length e >= 0\) formatted\)', 'in property (all (\\e -> length e >= 0) formatted)', content)
+content = re.sub(r'in all \\e -> length e >= 0\) formatted', 'in property (all (\\e -> length e >= 0) formatted)', content)
 
 with open('/home/runner/work/Typus/Typus/test/Test/Unit/ErrorHandlerConsistencyQuickCheckSpec.hs', 'w') as f:
     f.write(content)

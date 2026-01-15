@@ -19,9 +19,10 @@ import qualified Data.Map.Strict as Map
 prop_trim_basic :: String -> Property
 prop_trim_basic s =
   let trimmed = trim s
-  in property $ length trimmed <= length s && 
-     (null s ==> null trimmed) &&
-     (all isSpace s ==> null trimmed)
+  in property $ 
+    (length trimmed <= length s) && 
+    (if null s then null trimmed else True) &&
+    (if all isSpace s then null trimmed else True)
 
 -- | 测试trim对空字符串的处理
 prop_trim_empty :: Property
@@ -31,7 +32,7 @@ prop_trim_empty = trim "" === ""
 prop_trim_whitespace :: String -> Property
 prop_trim_whitespace s =
   let trimmed = trim s
-  in all isSpace (trim s) ==> property $ null trimmed
+  in all isSpace (trim s) ==> null trimmed
 
 -- | 测试trim对普通字符的处理
 prop_trim_regular :: Char -> String -> Property
@@ -39,7 +40,7 @@ prop_trim_regular c s =
   not (isSpace c) ==>
   let s' = c : s
       trimmed = trim s'
-  in property $ head trimmed === c && length trimmed >= 1
+  in conjoin [property (not (null trimmed)), property (head trimmed === c), property (length trimmed >= 1)]
 
 -- | 测试trim的幂等性
 prop_trim_idempotent :: String -> Property
@@ -73,7 +74,7 @@ prop_removeLineComments_basic :: String -> String -> Property
 prop_removeLineComments_basic code comment =
   let codeWithComment = code ++ "// " ++ comment ++ "\nmore code"
       withoutComments = removeLineComments codeWithComment
-  in property ("//" `notElem` withoutComments)
+  in property (not (isInfixOf "// " withoutComments))
 
 -- | 测试removeLineComments对空代码的处理
 prop_removeLineComments_empty :: Property
@@ -89,7 +90,7 @@ prop_removeComments_basic :: String -> String -> Property
 prop_removeComments_basic before after =
   let codeWithComment = before ++ "/* " ++ "comment" ++ " */" ++ after
       withoutComments = removeComments codeWithComment
-  in property ("/*" `notElem` withoutComments && "*/" `notElem` withoutComments)
+  in property (not (isInfixOf "/*" withoutComments) && not (isInfixOf "*/" withoutComments))
 
 -- | 测试removeComments对空代码的处理
 prop_removeComments_empty :: Property

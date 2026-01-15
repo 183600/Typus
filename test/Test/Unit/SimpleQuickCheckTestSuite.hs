@@ -7,14 +7,14 @@ import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 
-import Utils (trim, splitBy, splitByComma, removeLineComments, removeComments, normalizeIndentation, isRight)
+import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed, removeLineComments, removeComments, normalizeIndentation, safeProcessString, breakOn, isRight)
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos, advancePosByText)
 import Parser (TypusFile(..), parseTypus)
 import ErrorHandler
 import Compiler.Errors.Core (TypeError(..), ErrorSeverity(..), formatError)
 import qualified Data.Text as T
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
-import Data.Char (isAlphaNum, isAlpha, isSpace)
+import Data.Char (isAlphaNum, isAlpha, isSpace, isControl)
 import Data.Either (isLeft, isRight)
 import Control.Monad (replicateM)
 import qualified Data.Map.Strict as Map
@@ -135,7 +135,7 @@ prop_removeComments_no_comments code =
 prop_removeComments_multiline :: Positive Int -> String -> String -> Property
 prop_removeComments_multiline (Positive n) before after =
   n < 10 ==>
-  let commentLines = replicate n "/* comment line " ++ show i ++ " */"
+  let commentLines = [ "/* comment line " ++ show i ++ " */" | i <- [1..n] ]
       comments = unlines commentLines
       codeWithComment = unlines [before, comments, after]
       withoutComments = removeComments codeWithComment
@@ -188,11 +188,11 @@ prop_isLeft_basic e = Data.Either.isLeft e === (case e of Left _ -> True; Right 
 
 -- | 测试isRight对Right值的处理
 prop_isRight_right :: Int -> Property
-prop_isRight_right x = isRight (Right x)
+prop_isRight_right x = Data.Either.isRight (Right x)
 
 -- | 测试isRight对Left值的处理
 prop_isRight_left :: String -> Property
-prop_isRight_left msg = not $ isRight (Left msg)
+prop_isRight_left msg = not $ Data.Either.isRight (Left msg)
 
 -- | 测试isLeft对Right值的处理
 prop_isLeft_right :: Int -> Property
@@ -204,7 +204,7 @@ prop_isLeft_left msg = isLeft (Left msg)
 
 -- | 测试isRight对Either的对称性
 prop_isRight_either_symmetry :: Either String Int -> Property
-prop_isRight_either_symmetry e = isRight e === (case e of Right _ -> True; Left _ -> False)
+prop_isRight_either_symmetry e = Data.Either.isRight e === (case e of Right _ -> True; Left _ -> False)
 
 -- | 测试isLeft对Either的对称性
 prop_isLeft_either_symmetry :: Either String Int -> Property
@@ -239,7 +239,7 @@ prop_safeProcessString_control c =
 prop_safeProcessString_unicode :: Property
 prop_safeProcessString_unicode =
   let unicodeChars = ['\0'..'\255']
-      processed = map safeProcessString [c] unicodeChars
+      processed = map safeProcessString unicodeChars
   in all (\p -> length p >= 0) processed
 
 -- | 测试safeProcessString对极长字符串的处理
@@ -345,8 +345,8 @@ test_normalizeIndentation_edge_cases = do
 -- | 测试isRight的边界情况
 test_isRight_edge_cases :: Assertion
 test_isRight_edge_cases = do
-  assertBool "Right value is right" (isRight (Right 42))
-  assertBool "Left value is not right" (not $ isRight (Left "error"))
+  assertBool "Right value is right" (Data.Either.isRight (Right 42))
+  assertBool "Left value is not right" (not $ Data.Either.isRight (Left "error"))
 
 -- | 测试isLeft的边界情况
 test_isLeft_edge_cases :: Assertion

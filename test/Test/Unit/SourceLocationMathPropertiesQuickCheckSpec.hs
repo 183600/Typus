@@ -77,7 +77,7 @@ prop_advancepos_regular (Positive n) =
   let pos = startPos
       text = T.pack $ replicate n 'x'
       result = advancePosByText text pos
-  in posLine result === posLine pos && posColumn result === posColumn pos + n
+  in conjoin [posLine result === posLine pos, posColumn result === posColumn pos + n]
 
 -- | 测试advancePosByText的组合性
 prop_advancepos_composition :: String -> String -> Property
@@ -103,7 +103,7 @@ prop_advancepos_special c =
   let pos = startPos
       text = T.pack [c]
       result = advancePosByText text pos
-  in posLine result >= posLine pos && posColumn result >= posColumn pos
+  in conjoin [property (posLine result >= posLine pos), property (posColumn result >= posColumn pos)]
 
 -- | 测试advancePosByText对于Unicode字符的处理
 prop_advancepos_unicode :: Property
@@ -123,7 +123,7 @@ prop_advancepos_long (Positive n) =
   let pos = startPos
       text = T.pack $ replicate n 'x'
       result = advancePosByText text pos
-  in posLine result === posLine pos && posColumn result === posColumn pos + n
+  in conjoin [posLine result === posLine pos, posColumn result === posColumn pos + n]
 
 -- | 测试advancePosByText对于多行文本的处理
 prop_advancepos_multiline :: Positive Int -> Positive Int -> Property
@@ -133,7 +133,7 @@ prop_advancepos_multiline (Positive lines) (Positive chars) =
       line = T.pack $ replicate chars 'x'
       text = T.unlines $ replicate lines line
       result = advancePosByText text pos
-  in posLine result === lines && posColumn result === 0
+  in conjoin [posLine result === lines, posColumn result === 0]
 
 -- | 测试SourcePos的有效性
 prop_sourcepos_valid :: Int -> Int -> Property
@@ -148,8 +148,8 @@ prop_sourcespan_valid pos1 pos2 =
   let span = SourceSpan pos1 pos2
       start = spanStart span
       end = spanEnd span
-  in posLine start >= 0 && posColumn start >= 0 && 
-     posLine end >= 0 && posColumn end >= 0
+  in conjoin [property (posLine start >= 0), property (posColumn start >= 0), 
+            property (posLine end >= 0), property (posColumn end >= 0)]
 
 -- | 测试SourceSpan的长度
 prop_sourcespan_length :: SourcePos -> Positive Int -> Property
