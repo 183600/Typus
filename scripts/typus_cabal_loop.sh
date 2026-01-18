@@ -180,6 +180,7 @@ while true; do
     fi
   else
     echo "调用 iflow 修复..."
+iflow '确保代码中没有死循环 think:high' --yolo
 iflow '解决GHCRTS="-M2G -A16m" cabal test -j1 \
   --flags="fast -production" \
   --ghc-options="-O0 -rtsopts" \
