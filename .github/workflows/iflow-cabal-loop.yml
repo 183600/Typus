@@ -40,7 +40,7 @@ jobs:
     steps:
       - name: Increase Swap space (防止内存溢出断连)
         run: |
-          sudo fallocate -l 4G /swapfile
+          sudo fallocate -l 6G /swapfile
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
           sudo swapon /swapfile
