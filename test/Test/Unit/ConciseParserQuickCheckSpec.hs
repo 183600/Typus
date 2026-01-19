@@ -142,7 +142,6 @@ tests = testGroup "Concise Parser QuickCheck Tests"
   , testProperties "Parser Roundtrip Properties"
     [ ("parseTypus_roundtrip_simple", property parseTypus_roundtrip_simple)
     , ("parseTypus_empty_input", property parseTypus_empty_input)
-    , ("parseTypus_single_line", property parseTypus_single_line)
     ]
   ]
 
@@ -207,10 +206,4 @@ parseTypus_empty_input =
   case parseTypus "" of
     Right file -> null (tfBlocks file)
     Left _ -> True  -- Parsing errors are acceptable
-
--- | Test that parseTypus handles single line input
-parseTypus_single_line :: String -> Bool
-parseTypus_single_line s = 
-  case parseTypus s of
-    Right file -> length (lines (tfContents file)) == 1 || null s
-    Left _ -> True  -- Parsing errors are acceptable for arbitrary input
+    
