@@ -294,6 +294,9 @@ isValidType _ = True
 areEqual :: Type -> Type -> Bool
 areEqual = (==)
 
+quantifier :: Quantifier
+typeVar :: String
+bodyType :: Type
 QuantifiedType quantifier typeVar bodyType = QuantifiedType quantifier typeVar bodyType
 
 instantiateType :: Type -> Type

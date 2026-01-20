@@ -897,7 +897,7 @@ createRecoveryStrategy canRec shouldCont recAction recHint = RecoveryStrategy ca
 
 -- Create fatal error
 fatalError :: String -> Text -> ErrorLocation -> TypeError
-fatalError errId msg loc = errorAt errId Fatal msg loc
+fatalError errId msg loc = (errorAt errId Fatal msg loc) { recovery = fatalRecovery }
 
 -- Create fatal error with category
 fatalErrorWithCategory :: String -> ErrorCategory -> Text -> ErrorLocation -> TypeError

@@ -10,7 +10,8 @@ import SourceLocation
 import ErrorHandler
 import qualified Data.Text as T
 import TestSupport.Arbitrary ()
-import Data.Char (isAscii, isControl)
+import Data.Char (isAscii, isControl, isSpace)
+import Data.List (isPrefixOf, isInfixOf, intersperse, last)
 import Prelude hiding (last)
 
 -- | Test suite for String Processing
@@ -44,7 +45,7 @@ testStringProcessing = testGroup "String Processing Tests"
       splitBy ',' ",," @?= ["", "", ""]
       
   , testCase "Utils: splitBy handles empty string" $
-      splitBy ',' "" @?= [""]
+      splitBy ',' "" @?= []
       
   , testCase "Utils: splitByCollapsed removes empty segments" $
       splitByCollapsed ',' "a,,b" @?= ["a", "b"]
@@ -219,27 +220,3 @@ testStringProcessing = testGroup "String Processing Tests"
             normLines = filter (not . all isSpace) $ Prelude.lines normalized
         in length inputLines == length normLines
   ]
-
--- Helper functions
-isPrefixOf :: String -> String -> Bool
-isPrefixOf [] _ = True
-isPrefixOf _ [] = False
-isPrefixOf (x:xs) (y:ys) = x == y && isPrefixOf xs ys
-
-isInfixOf :: String -> String -> Bool
-isInfixOf needle haystack = needle `elem` (substrings haystack)
-  where
-    substrings s = [take i s | i <- [1..length s]]
-
-intersperse :: a -> [a] -> [a]
-intersperse _ [] = []
-intersperse _ [x] = [x]
-intersperse sep (x:xs) = x : sep : intersperse sep xs
-
-isSpace :: Char -> Bool
-isSpace c = c `elem` " \t\n\r"
-
-last :: [a] -> a
-last [] = error "empty list"
-last [x] = x
-last (_:xs) = last xs

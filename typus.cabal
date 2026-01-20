@@ -2432,3 +2432,34 @@ test-suite typus-concise-test
         Test.Unit.ConciseIntegrationQuickCheckSpec
     default-language: Haskell2010
 
+-- Simple Test Suite
+test-suite typus-simple-test
+    type:             exitcode-stdio-1.0
+    main-is:          SimpleMain.hs
+    hs-source-dirs:   test
+    ghc-options:      -Wall -Wcompat
+                      -Wno-unused-top-binds -Wno-unused-matches 
+                      -Wno-orphans -Wno-name-shadowing
+                      -Wno-type-defaults -Wno-unused-local-binds
+                      -Wno-unused-imports -rtsopts
+    build-depends:
+        base >=4.7 && <5,
+        typus,
+        tasty >= 1.2 && <2,
+        tasty-quickcheck >= 0.10 && <1,
+        tasty-hunit >= 0.10 && <1,
+        QuickCheck >= 2.14 && <3,
+        text >= 1.2.0 && <3,
+        containers >= 0.6 && <1,
+        megaparsec >= 9.0.0 && <10
+    other-modules:
+        Test.Unit.ConciseUtilsQuickCheckSpec,
+        Test.Unit.ConciseSourceLocationQuickCheckSpec,
+        Test.Unit.ConciseParserQuickCheckSpec,
+        Test.Unit.ConciseCompilerQuickCheckSpec,
+        Test.Unit.ConciseErrorHandlerQuickCheckSpec,
+        Test.Unit.ConciseOwnershipQuickCheckSpec,
+        Test.Unit.ConciseDependenciesQuickCheckSpec,
+        Test.Unit.ConciseIntegrationQuickCheckSpec
+    default-language: Haskell2010
+

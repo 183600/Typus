@@ -232,7 +232,7 @@ findConflicts graph =
       grouped = groupBy (\d1 d2 -> dependencyName d1 == dependencyName d2) $ sortBy (\d1 d2 -> compare (dependencyName d1) (dependencyName d2)) nodes
       conflicts = filter (\group -> length group > 1) grouped
   in map (\group -> 
-    let name = dependencyName (head group)
+    let name = case group of (x:_) -> dependencyName x; [] -> error "empty group"
         versions = map dependencyVersion group
     in DependencyConflict name versions "Version conflict") conflicts
 

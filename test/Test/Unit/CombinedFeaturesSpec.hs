@@ -18,7 +18,7 @@ prop_trim_after_split_no_empty_ends c s =
   let parts = splitBy c s
       trimmedParts = map trim parts
   in property $ 
-       (null trimmedParts || not (null (head trimmedParts))) &&
+       (null trimmedParts || case trimmedParts of (x:_) -> not (null x); [] -> True) &&
        (null trimmedParts || not (null (last trimmedParts)))
 
 -- Property: normalizeIndentation after removeComments should preserve line count

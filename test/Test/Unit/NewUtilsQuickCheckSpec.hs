@@ -55,10 +55,10 @@ prop_split_by_all_delimiters delim (Positive n) =
 prop_split_by_roundtrip :: Char -> String -> Property
 prop_split_by_roundtrip delim s = 
   let parts = splitBy delim s
-      reconstructed = concat $ map (\p -> p ++ [delim]) (init parts) ++ [last parts]
   in if null parts
-     then property $ reconstructed === ""
-     else property $ take (length s + length parts - 1) reconstructed === s
+     then property $ "" === s
+     else let reconstructed = concat $ map (\p -> p ++ [delim]) (init parts) ++ [last parts]
+          in property $ take (length s + length parts - 1) reconstructed === s
 
 prop_split_by_collapsed_consistency :: Char -> String -> Property
 prop_split_by_collapsed_consistency delim s = 
@@ -172,7 +172,9 @@ prop_break_on_pattern_in_middle :: String -> String -> String -> Property
 prop_break_on_pattern_in_middle pat before after = 
   let input = before ++ pat ++ after
       (prefix, suffix) = breakOn pat input
-  in (prefix === before) .&&. (suffix === after)
+  in if null pat
+     then (prefix === "") .&&. (suffix === input)
+     else (prefix === before) .&&. (suffix === after)
 
 -- Test safeProcessString function
 prop_safe_process_string_preserves_valid :: String -> Property

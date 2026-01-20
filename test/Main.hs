@@ -1,8 +1,7 @@
 module Main where
-import Utils
+
+import Test.Tasty
+import Test.Unit.Tests (tests)
 
 main :: IO ()
-main = do
-    let input = "' // comment"
-    putStrLn $ "Input: " ++ show input
-    putStrLn $ "Output: " ++ show (removeLineComments input)
+main = defaultMain tests

@@ -142,8 +142,8 @@ genCFG = do
     numSuccs <- choose (0, 2)
     succs <- replicateM numSuccs (elements blockLabels)
     return (label, BasicBlock label instrs succs)) blockLabels
-  let entry = head blockLabels
-  let exit = last blockLabels
+  let entry = case blockLabels of (x:_) -> x; [] -> error "empty blockLabels"
+  let exit = case blockLabels of [] -> error "empty blockLabels"; _ -> last blockLabels
   return $ CFG (Map.fromList blocks) entry exit
 
 -- Arbitrary instances

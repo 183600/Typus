@@ -22,7 +22,7 @@ prop_trim_idempotent s =
 prop_trim_no_leading_trailing_whitespace :: String -> Property
 prop_trim_no_leading_trailing_whitespace s = 
   let trimmed = trim s
-      hasLeading = not (null trimmed) && head trimmed `elem` " \t\n\r"
+      hasLeading = not (null trimmed) && case trimmed of (x:_) -> x `elem` " \t\n\r"; [] -> False
       hasTrailing = not (null trimmed) && last trimmed `elem` " \t\n\r"
   in not (hasLeading || hasTrailing) === True
 

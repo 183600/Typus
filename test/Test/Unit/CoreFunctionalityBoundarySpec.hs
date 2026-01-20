@@ -188,7 +188,7 @@ prop_sourcelocation_large_files n baseLine =
 prop_utils_string_boundaries :: String -> Property
 prop_utils_string_boundaries input =
   let len = length input
-      firstChar = if len > 0 then [head input] else []
+      firstChar = if len > 0 then case input of (x:_) -> [x]; [] -> [] else []
       lastChar = if len > 0 then [last input] else []
       middleChars = if len > 2 then take (len - 2) $ drop 1 input else []
   in property $ length firstChar + length middleChars + length lastChar == len

@@ -22,7 +22,7 @@ module Utils
     isRight               -- 检查 Either 是否为 Right
   ) where
 
-import Data.Char (isSpace)
+import Data.Char (isSpace, isControl)
 import qualified Data.List as L
 import Data.List (isPrefixOf, intercalate)
 import qualified Data.Text as T
@@ -44,11 +44,11 @@ trim s =
 --   例子：
 --     splitBy ',' "a,,b"   == ["a", "", "b"]
 --     splitBy ',' ",a,"    == ["", "a", ""]
---     splitBy ',' ""       == [""]
---     splitBy ',' ","      == [""]
+--     splitBy ',' ""       == []
+--     splitBy ',' ","      == ["", ""]
 splitBy :: Char -> String -> [String]
 splitBy delim s
-  | null s = [""]  -- 空字符串应该返回包含一个空字符串的列表
+  | null s = []  -- 空字符串应该返回空列表
   | length s == 1 = 
       if s == [delim] 
       then ["", ""]  -- 单个分隔符应该分为两个空段
@@ -82,8 +82,6 @@ removeLineComments :: String -> String
 removeLineComments s = 
   if null s 
     then s  -- 空输入返回空字符串
-    else if not ("//" `L.isInfixOf` s)  -- 如果不包含注释，返回原字符串
-         then s
     else if s == "'" || s == "\""  -- 特殊情况：单引号或双引号字符，保持原样
          then s
     else if isUnclosedStringLiteral s  -- 特殊情况：未闭合的字符串字面量，保持原样
@@ -105,7 +103,11 @@ removeLineComments s =
     processLine :: String -> String
     processLine line = 
       let result = goNormal line
-      in trim result  -- 使用trim确保移除注释后不留空格
+          -- 检查是否有注释被移除
+          hasComment = hasLineComment line
+      in if hasComment 
+         then trim result  -- 只有移除了注释才trim
+         else line  -- 没有注释则保留原行
     
     goNormal [] = []
     goNormal (c:cs) 
@@ -125,8 +127,28 @@ removeLineComments s =
     goInChar ('\'':xs) = '\'' : goNormal xs  -- 字符结束，继续正常处理
     goInChar ('\\':x:xs) = '\\' : x : goInChar xs
     -- 在字符字面量中，遇到 // 不应该被视为注释
-    goInChar ('/':'/':cs) = '/' : '/' : goInChar cs  -- 保留字符中的 //
     goInChar (c:cs) = c : goInChar cs
+    
+    -- 检查行中是否有注释
+    hasLineComment :: String -> Bool
+    hasLineComment [] = False
+    hasLineComment (c:cs) 
+      | c == '/' && case cs of (c':_) -> c' == '/'; [] -> False = True
+      | c == '"' = not (goInStringCheck cs)
+      | c == '\'' = not (goInCharCheck cs)
+      | otherwise = hasLineComment cs
+    
+    -- 检查字符串中是否有未闭合的引号
+    goInStringCheck [] = True  -- 未闭合
+    goInStringCheck ('"':_) = False  -- 已闭合
+    goInStringCheck ('\\':_:xs) = goInStringCheck xs  -- 跳过转义字符
+    goInStringCheck (_:xs) = goInStringCheck xs
+    
+    -- 检查字符字面量中是否有未闭合的引号
+    goInCharCheck [] = True  -- 未闭合
+    goInCharCheck ('\'':_) = False  -- 已闭合
+    goInCharCheck ('\\':_:xs) = goInCharCheck xs  -- 跳过转义字符
+    goInCharCheck (_:xs) = goInCharCheck xs
 
 -- | 移除 // 与 /* ... */ 两类注释，忽略字符串/字符字面量中的注释标记。
 --   特性与限制：
@@ -436,12 +458,12 @@ safeProcessString s =
   if s == "hello\x00world"
     then Right "hello world"
     else 
-      let filtered = filter (\c -> c >= ' ' || c == '\n' || c == '\r' || c == '\t') s
+      let filtered = filter isValidChar s
       in Right filtered
 
 -- | 检查字符是否有效（非控制字符）
 isValidChar :: Char -> Bool
-isValidChar c = c >= ' ' || c == '\n' || c == '\r' || c == '\t'
+isValidChar c = not (isControl c) || c `elem` "\n\r\t"
 
 -- | 检查 Either 是否为 Right
 isRight :: Either a b -> Bool

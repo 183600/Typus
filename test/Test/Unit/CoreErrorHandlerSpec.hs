@@ -140,7 +140,7 @@ test_error_location = do
   let location = ErrorLocation Nothing 1 1 (Just 1) (Just 10)
   let error = (errorAt "test" Error "Test error" location) { location = location }
   let errors = execState (addError error) []
-  assertEqual "error location" location (Compiler.Errors.Core.location (head errors))
+  assertEqual "error location" location (case errors of (e:_) -> Compiler.Errors.Core.location e; [] -> Prelude.error "empty errors")
 
 test_error_severity_filtering :: Assertion
 test_error_severity_filtering = do

@@ -40,7 +40,7 @@ prop_sourcelocation_parser_interaction content =
          Right typusFile -> 
            let blocks = tfBlocks typusFile
            in property $ not (null blocks) ==> 
-              let firstBlock = head blocks
+              let firstBlock = case blocks of (x:_) -> x; [] -> error "empty blocks"
                   span = Parser.cbSpan firstBlock
               in isValidSpan span
 
@@ -107,7 +107,7 @@ prop_special_characters_handling content =
        Right typusFile -> 
          let blocks = tfBlocks typusFile
          in property $ not (null blocks) ==> 
-            let firstBlock = head blocks
+            let firstBlock = case blocks of (x:_) -> x; [] -> error "empty blocks"
                 blockContent = Parser.cbContent firstBlock
             in specialChars `isInfixOf` blockContent
 
@@ -122,7 +122,7 @@ prop_unicode_handling content =
        Right typusFile -> 
          let blocks = tfBlocks typusFile
          in property $ not (null blocks) ==> 
-            let firstBlock = head blocks
+            let firstBlock = case blocks of (x:_) -> x; [] -> error "empty blocks"
                 blockContent = Parser.cbContent firstBlock
             in unicodeChars `isInfixOf` blockContent
 

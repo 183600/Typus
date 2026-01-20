@@ -116,7 +116,6 @@ prop_astStatementOrder statements =
   let ast = Dep.Program statements
   in case ast of
     Dep.Program stmts -> stmts == statements
-    _ -> False
 
 -- Property 2: Variable declarations preserve variable names
 prop_varDeclPreservesName :: String -> Dep.TypeExpr -> Bool
@@ -124,7 +123,11 @@ prop_varDeclPreservesName varName typeExpr =
   let stmt = Dep.SVarDecl (T.pack varName) typeExpr
   in case stmt of
     Dep.SVarDecl name t -> T.unpack name == varName && t == typeExpr
-    _ -> False
+    Dep.STypeDef _ _ _ -> False
+    Dep.STypeAlias _ _ _ -> False
+    Dep.SFuncDecl _ _ _ -> False
+    Dep.SConstraintDef _ _ -> False
+    Dep.SExistsDecl _ _ -> False
 
 -- Property 3: Function declarations preserve function names
 prop_funDeclPreservesName :: String -> [(String, Dep.TypeExpr)] -> Dep.TypeExpr -> Bool

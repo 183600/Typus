@@ -18,7 +18,7 @@ module Parser
   , isIdentifierChar
   ) where
 
-import Control.Applicative (empty)
+import Control.Applicative (empty, (<|>))
 import Control.DeepSeq (NFData(..), deepseq)
 import Control.Monad (foldM)
 import Data.Char (isAlphaNum, isSpace)
@@ -111,7 +111,7 @@ fileDirectiveParser = do
   where
     directive = do
       key <- identifier
-      _ <- symbol ":"
+      _ <- symbol ":" <|> symbol "="
       value <- identifier
       pure (key, value)
 
@@ -124,7 +124,7 @@ blockDirectiveParser = do
   where
     directive = do
       key <- identifier
-      _ <- symbol ":"
+      _ <- symbol ":" <|> symbol "="
       value <- identifier
       pure (key, value)
 
@@ -552,11 +552,11 @@ parseBlockDirectiveLine' ParsedLine{..} = do
                  Left err      -> Left err
                  Right boolVal -> Right [(T.unpack keyText, locatedWithSpan plSpan boolVal)]
 
--- Parser for a single directive (key: value)
+-- Parser for a single directive (key: value or key=value)
 singleDirectiveParser :: DirectiveParser (T.Text, T.Text)
 singleDirectiveParser = do
   key <- identifier
-  _ <- symbol ":"
+  _ <- symbol ":" <|> symbol "="
   value <- identifier
   pure (key, value)
 

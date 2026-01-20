@@ -280,7 +280,9 @@ prop_compare_pos_line_priority (Positive line1) (Positive line2) =
       pos2 = SourcePos line2 1 0
   in if line1 < line2
      then property $ comparePos pos1 pos2 == LT
-     else property $ comparePos pos1 pos2 == GT
+     else if line1 > line2
+          then property $ comparePos pos1 pos2 == GT
+          else property $ comparePos pos1 pos2 == EQ
 
 prop_compare_pos_column_priority :: Positive Int -> Positive Int -> Positive Int -> Property
 prop_compare_pos_column_priority (Positive line) (Positive col1) (Positive col2) = 
@@ -288,7 +290,9 @@ prop_compare_pos_column_priority (Positive line) (Positive col1) (Positive col2)
       pos2 = SourcePos line col2 0
   in if col1 < col2
      then property $ comparePos pos1 pos2 == LT
-     else property $ comparePos pos1 pos2 == GT
+     else if col1 > col2
+          then property $ comparePos pos1 pos2 == GT
+          else property $ comparePos pos1 pos2 == EQ
 
 prop_compare_pos_offset_priority :: Positive Int -> Positive Int -> Positive Int -> Positive Int -> Property
 prop_compare_pos_offset_priority (Positive line) (Positive col) (Positive offset1) (Positive offset2) = 
@@ -296,7 +300,9 @@ prop_compare_pos_offset_priority (Positive line) (Positive col) (Positive offset
       pos2 = SourcePos line col offset2
   in if offset1 < offset2
      then property $ comparePos pos1 pos2 == LT
-     else property $ comparePos pos1 pos2 == GT
+     else if offset1 > offset2
+          then property $ comparePos pos1 pos2 == GT
+          else property $ comparePos pos1 pos2 == EQ
 
 -- Test error location conversion
 prop_to_error_location :: Positive Int -> Positive Int -> Positive Int -> Property

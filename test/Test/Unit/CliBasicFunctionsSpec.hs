@@ -51,11 +51,14 @@ tests = testGroup "CLI Basic Functions Tests"
       let config = CliConfig {
           command = "compile",
           inputFile = "input.typus",
+          inputFiles = ["input.typus"],
           outputFile = Just "output.go",
           optimize = False,
           debug = False,
+          verbose = False,
           showHelp = False,
-          showVersion = False
+          showVersion = False,
+          configFile = Nothing
         }
       let result = executeCommand config  -- 简化函数调用
       case result of
@@ -66,11 +69,14 @@ tests = testGroup "CLI Basic Functions Tests"
       let config = CliConfig {
           command = "compile",
           inputFile = "input.typus",
+          inputFiles = ["input.typus"],
           outputFile = Just "output.go",
           optimize = True,
           debug = False,
+          verbose = False,
           showHelp = False,
-          showVersion = False
+          showVersion = False,
+          configFile = Nothing
         }
       let result = executeCommand config  -- 简化函数调用
       case result of
@@ -81,11 +87,14 @@ tests = testGroup "CLI Basic Functions Tests"
       let config = CliConfig {
           command = "compile",
           inputFile = "input.typus",
+          inputFiles = ["input.typus"],
           outputFile = Just "output.go",
           optimize = False,
           debug = True,
+          verbose = False,
           showHelp = False,
-          showVersion = False
+          showVersion = False,
+          configFile = Nothing
         }
       let result = executeCommand config  -- 简化函数调用
       case result of
@@ -96,11 +105,14 @@ tests = testGroup "CLI Basic Functions Tests"
       let config = CliConfig {
           command = "",
           inputFile = "",
+          inputFiles = [],
           outputFile = Nothing,
           optimize = False,
           debug = False,
+          verbose = False,
           showHelp = True,
-          showVersion = False
+          showVersion = False,
+          configFile = Nothing
         }
       let result = executeCommand config  -- 简化函数调用
       case result of
@@ -111,11 +123,14 @@ tests = testGroup "CLI Basic Functions Tests"
       let config = CliConfig {
           command = "",
           inputFile = "",
+          inputFiles = [],
           outputFile = Nothing,
           optimize = False,
           debug = False,
+          verbose = False,
           showHelp = False,
-          showVersion = True
+          showVersion = True,
+          configFile = Nothing
         }
       let result = executeCommand config  -- 简化函数调用
       case result of
@@ -126,11 +141,14 @@ tests = testGroup "CLI Basic Functions Tests"
       let config = CliConfig {
           command = "compile",
           inputFile = "nonexistent.typus",
+          inputFiles = ["nonexistent.typus"],
           outputFile = Just "output.go",
           optimize = False,
           debug = False,
+          verbose = False,
           showHelp = False,
-          showVersion = False
+          showVersion = False,
+          configFile = Nothing
         }
       let result = executeCommand config  -- 简化函数调用
       case result of
@@ -141,11 +159,14 @@ tests = testGroup "CLI Basic Functions Tests"
       let config = CliConfig {
           command = "compile",
           inputFile = "input.typus",
+          inputFiles = ["input.typus"],
           outputFile = Just "nonexistent/output.go",
           optimize = False,
           debug = False,
+          verbose = False,
           showHelp = False,
-          showVersion = False
+          showVersion = False,
+          configFile = Nothing
         }
       let result = executeCommand config  -- 简化函数调用
       case result of
@@ -209,7 +230,7 @@ parseArgsTest args =
   then Right $ CliConfig "" "" [] Nothing False False False True False Nothing
   else if "--version" `elem` args
   then Right $ CliConfig "" "" [] Nothing False False False False True Nothing
-  else if length args >= 2 && head args == "compile"
+  else if length args >= 2 && case args of (x:_) -> x == "compile"; [] -> False
   then Right $ CliConfig {
     command = "compile",
     inputFile = if length args >= 2 then args !! 1 else "",

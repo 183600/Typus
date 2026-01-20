@@ -10,7 +10,7 @@ import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollaps
              removeLineComments, removeComments, normalizeIndentation, breakOn, 
              safeProcessString, isValidChar, isRight)
 import Data.Char (isSpace)
-import Data.List (isPrefixOf, isInfixOf)
+import Data.List (isPrefixOf, isInfixOf, last)
 import Data.Maybe (listToMaybe)
 import Control.Arrow (first)
 
@@ -59,11 +59,8 @@ prop_splitBy_properties :: Char -> String -> Bool
 prop_splitBy_properties delim s = 
   let parts = splitBy delim s
       rejoined = if null parts then "" else concat parts ++ [delim | length parts > 1]
-      firstPartIsEmpty = case listToMaybe parts of
-                           Nothing -> False
-                           Just p -> p == ""
   in length parts >= 0 && 
-     (if null s then length parts == 1 && firstPartIsEmpty else True) &&
+     (if null s then null parts else True) &&
      (if not (null s) && all (== delim) s then length parts == length s + 1 else True)
 
 -- | Test properties of splitByCollapsed
