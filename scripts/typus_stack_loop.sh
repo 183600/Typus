@@ -3,7 +3,7 @@ set -u
 set -o pipefail
 
 RELEASE_WINDOW_SECONDS=604800
-CABAL_LOG="/tmp/typus_cabal_last.log"
+STACK_LOG="/tmp/typus_stack_last.log"
 
 WORK_BRANCH="${WORK_BRANCH:-master}"
 
@@ -27,9 +27,9 @@ guard_bad_paths() {
 extract_cabal_version() {
   local f ver
 
-  # 避免从 dist-newstyle/.git 等目录误选到 cabal 文件
+  # 避免从 .stack-work/.git 等目录误选到 cabal 文件
   f="$(find . -name '*.cabal' \
-        -not -path './dist-newstyle/*' \
+        -not -path './.stack-work/*' \
         -not -path './.git/*' \
         -print -quit 2>/dev/null || true)"
   [[ -n "${f:-}" ]] || return 1
@@ -142,26 +142,32 @@ trap 'echo; echo "已终止."; exit 0' INT TERM
 
 while true; do
   echo "===================="
-  echo "$(date '+%F %T') 运行测试：cabal test --flags=\"-fast production\" --test-show-details=direct"
+  echo "$(date '+%F %T') 运行测试：stack test --flag "*:fast" --flag "*:-production" ..."
   echo "===================="
 
-  : > "$CABAL_LOG"
+  : > "$STACK_LOG"
 
-  GHCRTS="-M2G -A16m" cabal test -j1 \
-  --flags="fast -production" \
-  --ghc-options="-O0 -rtsopts" \
-  --test-options="+RTS -M1024m -A16m -RTS" \
-  --test-show-details=direct 2>&1 | tee "$CABAL_LOG"
+  # Stack 对应的测试命令
+  # 注意：stack 的 flag 语法是 --flag "package:flag"，这里用通配符 "*"
+  # --test-arguments 对应 cabal 的 --test-options
+  # --test-details 对应 cabal 的 --test-show-details
+  GHCRTS="-M2G -A16m" stack test \
+    --flag "*:fast" \
+    --flag "*:-production" \
+    --ghc-options="-O0 -rtsopts" \
+    --test-arguments="+RTS -M1024m -A16m -RTS" \
+    --jobs=1 \
+    --test-details=direct 2>&1 | tee "$STACK_LOG"
   ps=("${PIPESTATUS[@]}")
-  CABAL_STATUS="${ps[0]:-255}"
+  STACK_STATUS="${ps[0]:-255}"
 
   HAS_ERROR=0
-  if has_error_in_log "$CABAL_LOG"; then
+  if has_error_in_log "$STACK_LOG"; then
     HAS_ERROR=1
   fi
 
-  if [[ "$CABAL_STATUS" -eq 0 ]]; then
-    iflow "给这个项目增加一些cabal test测试用例，不要超过200个，在这些新测试用例里面，如果需要添加使用QuickCheck的测试用例就添加 think:high" --yolo || true
+  if [[ "$STACK_STATUS" -eq 0 ]]; then
+    iflow "给这个项目增加一些stack test测试用例，不要超过200个，在这些新测试用例里面，如果需要添加使用QuickCheck的测试用例就添加 think:high" --yolo || true
 
     # 门禁：防止 iflow 生成乱码路径被提交
     guard_bad_paths || exit $?
@@ -176,16 +182,18 @@ while true; do
     if [[ "$HAS_ERROR" -eq 0 ]]; then
       attempt_bump_and_tag || true
     else
-      echo "cabal 退出码为 0，但日志检测到 error 关键词，跳过发布准备。"
+      echo "stack 退出码为 0，但日志检测到 error 关键词，跳过发布准备。"
     fi
   else
     echo "调用 iflow 修复..."
-#iflow '确保代码中没有死循环 think:high' --yolo
-iflow '解决GHCRTS="-M2G -A16m" cabal test -j1 \
-  --flags="fast -production" \
-  --ghc-options="-O0 -rtsopts" \
-  --test-options="+RTS -M1024m -A16m -RTS" \
-  --test-show-details=direct显示的所有问题（除了warning），除非测试用例本身有编译错误，否则只修改测试用例以外的代码，debug时可通过加日志和打断点 think:high' --yolo || true
+    # 注意：这里将 cabal 命令文本替换为了 stack 命令文本
+    iflow '解决GHCRTS="-M2G -A16m" stack test \
+      --flag "*:fast" \
+      --flag "*:-production" \
+      --ghc-options="-O0 -rtsopts" \
+      --test-arguments="+RTS -M1024m -A16m -RTS" \
+      --jobs=1 \
+      --test-details=direct显示的所有问题（除了warning），除非测试用例本身有编译错误，否则只修改测试用例以外的代码，debug时可通过加日志和打断点 think:high' --yolo || true
 
     # 门禁：即使修复失败也清理掉工作区可能出现的乱码路径，避免下轮被 add
     guard_bad_paths || exit $?
