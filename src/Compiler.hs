@@ -33,7 +33,6 @@ import qualified Data.Text as T
 import Data.List (isInfixOf)
 
 import Parser (TypusFile(..))
-import Compiler.GoAst (renderGoModule)
 import qualified Compiler.IR as IR
 import Compiler.DependentTypeChecker (checkDependentTypes)
 import Compiler.OwnershipChecker (checkOwnership, checkOwnershipWithValueInfo)

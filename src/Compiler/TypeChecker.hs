@@ -862,7 +862,7 @@ normalizeTypeName = normalizeType . collapseSpaces . trim
 stripVariadic :: String -> (Bool, String)
 stripVariadic raw =
     let t = trim raw
-        t' = if ":" `isPrefixOf` t then trim (tail t) else t
+        t' = if ":" `isPrefixOf` t then trim (drop 1 t) else t
     in if "..." `isPrefixOf` t'
         then (True, trim (drop 3 t'))
         else (False, t')

@@ -47,7 +47,13 @@ module Compiler.Errors.Compiler (
     suggestFix,
     
     -- Examples and documentation
-    exampleErrors
+    exampleErrors,
+    
+    -- Accessor functions
+    compilerErrorPhase,
+    compilerErrorCategory,
+    compilerErrorSeverity,
+    compilerErrorMessage
 ) where
 
 import Compiler.Errors.Core

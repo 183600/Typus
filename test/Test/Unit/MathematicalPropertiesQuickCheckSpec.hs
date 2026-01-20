@@ -70,14 +70,16 @@ prop_power_associative x y z =
 prop_gcd_properties :: Int -> Int -> Property
 prop_gcd_properties x y =
   let g = gcd x y
+      divisors = filter (\d -> d `divides` x && d `divides` y) [1..min (abs x) (abs y)]
   in property (g `divides` x && g `divides` y) .&&.
-     property (forall [d | d <- [1..min (abs x) (abs y)], d `divides` x && d `divides` y] (\d -> d <= g))
+     property (forallPred divisors (\d -> d <= g))
 
 prop_lcm_properties :: Int -> Int -> Property
 prop_lcm_properties x y =
   let l = lcm x y
+      multiples = filter (\m -> x `divides` m && y `divides` m) [max (abs x) (abs y)..abs x * abs y]
   in property (x `divides` l && y `divides` l) .&&.
-     property (forall [m | m <- [max (abs x) (abs y)..abs x * abs y], x `divides` m && y `divides` m] (\m -> l <= m))
+     property (forallPred multiples (\m -> l <= m))
 
 prop_gcd_lcm_relation :: Int -> Int -> Property
 prop_gcd_lcm_relation x y =
@@ -138,8 +140,8 @@ prop_signum_multiplicative x y =
 divides :: Int -> Int -> Bool
 x `divides` y = y `mod` x == 0
 
-forall :: [a] -> (a -> Bool) -> Bool
-forall xs p = all p xs
+forallPred :: [a] -> (a -> Bool) -> Bool
+forallPred xs p = all p xs
 
 tests :: TestTree
 tests = testGroup "Mathematical Properties QuickCheck Tests"

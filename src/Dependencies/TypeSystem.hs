@@ -50,16 +50,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 
 import Dependencies.AST (TypeExpr(SimpleT, GenericT, RefineT, FuncT), Constraint(RangeC, PredC, SizeGE, SizeGT))
-import Control.Monad (unless)
-import Control.Monad.Except (ExceptT)
-import Control.Monad.IO.Class (liftIO)
-import Control.Monad.State (StateT, gets, modify)
 import Data.IORef
-import Data.List (nub)
-import qualified Data.Map.Strict as Map
-import Data.Maybe (catMaybes)
-import qualified Data.Set as Set
-import qualified Data.Text as T
 
 -- Hindley-Milner style type inference -----------------------------------------
 
@@ -88,8 +79,6 @@ data TypeInferenceError
   | OccursCheckFailed String TypeVar
   | GenericEscape String TypeVar
   deriving (Show, Eq)
-
-type TypeInference = StateT TypeInferenceState (ExceptT TypeInferenceError IO)
 
 data TypeVar
   = TVCon String

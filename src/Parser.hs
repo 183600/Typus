@@ -290,7 +290,9 @@ validateCodeBlocks blocks =
 
       in if not (null incompleteLines)
 
-         then Just (block, head incompleteLines)
+         then case incompleteLines of
+         (x:_) -> Just (block, x)
+         [] -> Nothing
 
          else findIncompleteExpression rest
 
@@ -375,7 +377,9 @@ parseFileDirectivesFromParsedLines = go defaultFileDirectives []
           isDirectiveLine = isPrefixOf "//!" trimmed || 
                            isPrefixOf "// @" trimmed || 
                            (isPrefixOf "//" trimmed && "@" `isInfixOf` trimmed && not (isBuildTagLine' trimmed))
-      in if trimmed == ""
+          -- Check if the line contains only whitespace
+          isOnlyWhitespace = all (`elem` [' ', '\t']) text
+      in if trimmed == "" && not isOnlyWhitespace
            then go acc buildTagsRev rest
            else if isDirectiveLine
              then do
@@ -495,16 +499,21 @@ flushCodeBuf linesRev =
       firstLine : restLines ->
         let forwardLines = firstLine : restLines
             contentRaw = concatMap lineTextWithEnding forwardLines
-            content = trimRight contentRaw
+            -- Only trim carriage returns, preserve newlines
+            content = T.unpack . T.dropWhileEnd (== '\r') . T.pack $ contentRaw
             lastLine = foldLast firstLine restLines
-        in if null content
+            -- Check if all lines contain only whitespace
+            allWhitespace = all (all (`elem` [' ', '\t'])) (map plText forwardLines)
+        in if null content && not allWhitespace
              then Nothing
              else let spanStart' = spanStart (plSpan firstLine)
                       spanEnd'   = spanEnd (plSpan lastLine)
                       blockSpan = SourceSpan spanStart' spanEnd'
+                      -- For all-whitespace content, use the original content
+                      finalContent = if allWhitespace && null content then contentRaw else content
                   in Just CodeBlock
                         { cbDirectives = defaultBlockDirectives
-                        , cbContent = content
+                        , cbContent = finalContent
                         , cbSpan = blockSpan
                         }
   where
@@ -678,8 +687,8 @@ parseBool s = case trim s of
 -- Utility Functions
 -- ============================================================================
 
-trimRight :: String -> String
-trimRight = T.unpack . T.dropWhileEnd (`elem` ['\r', '\n']) . T.pack
+-- trimRight :: String -> String
+-- trimRight = T.unpack . T.dropWhileEnd (`elem` ['\r', '\n']) . T.pack  -- Unused function
 
 -- Compute net curly-brace delta for a line, ignoring braces inside strings and line-comments.
 curlyDelta :: String -> Int

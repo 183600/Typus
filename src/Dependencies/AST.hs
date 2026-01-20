@@ -50,10 +50,10 @@ data DependencyNode = DependencyNode
 -- | Arbitrary instance for QuickCheck testing
 instance Arbitrary DependencyNode where
   arbitrary = do
-    nodeName <- elements ["module", "function", "type", "variable"]
+    name <- elements ["module", "function", "type", "variable"]
     numDeps <- choose (0, 5)
-    nodeDependencies <- vectorOf numDeps (elements ["module", "function", "type", "variable"])
-    return $ DependencyNode nodeName nodeDependencies
+    deps <- vectorOf numDeps (elements ["module", "function", "type", "variable"])
+    return $ DependencyNode name deps
 
 -- | Dependency graph containing all nodes and their relationships
 newtype DependencyGraph = DependencyGraph

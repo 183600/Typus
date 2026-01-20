@@ -61,8 +61,8 @@ module Dependencies (
   
   -- Dependency graph types (for tests)
   DependencyGraph,
-  DependencyError(..),
-  DependencyType(..),
+  DependencyError,
+  DependencyType,
   TestDependencyGraph(..),
   TestDependencyError(..),
   TestDependencyType(..),
@@ -83,8 +83,6 @@ module Dependencies (
   getNodes,
   getDependencyPath,
   topologicalSort,
-  dgNodes,
-  dgEdges,
   simplifyConstraints,
 
   -- Scope management

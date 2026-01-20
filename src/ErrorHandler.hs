@@ -24,7 +24,6 @@ module ErrorHandler (
 ) where
 
 import Compiler.Errors.Core
-import Compiler.Errors.Core hiding (ErrorHandler)
 import qualified Data.Text as T
 import qualified Data.List as List
 import qualified Data.Ord as Ord
@@ -50,57 +49,37 @@ createInfo :: String -> T.Text -> ErrorLocation -> TypeError
 createInfo = infoAt
 
 errorCount :: ErrorHandler -> Int
-errorCount = length . Compiler.Errors.Core.getErrors
+errorCount = length . filter (\e -> errorSeverity e == Error)
 
 warningCount :: ErrorHandler -> Int
-warningCount = length . Compiler.Errors.Core.getWarnings
+warningCount = length . filter (\e -> errorSeverity e == Warning)
 
 infoCount :: ErrorHandler -> Int
-infoCount = length . Compiler.Errors.Core.getInfo
-
-hasErrors :: ErrorHandler -> Bool
-hasErrors = not . null . Compiler.Errors.Core.getErrors
-
-hasWarnings :: ErrorHandler -> Bool
-hasWarnings = not . null . Compiler.Errors.Core.getWarnings
+infoCount = length . filter (\e -> errorSeverity e == Info)
 
 hasInfos :: ErrorHandler -> Bool
 hasInfos = not . null . Compiler.Errors.Core.getInfo
 
-getErrors :: ErrorHandler -> [TypeError]
-getErrors errs = Compiler.Errors.Core.getErrors errs
-
-getWarnings :: ErrorHandler -> [TypeError]
-getWarnings errs = Compiler.Errors.Core.getWarnings errs
-
-getInfos :: ErrorHandler -> [TypeError]
-getInfos errs = Compiler.Errors.Core.getInfo errs
+getInfos :: ErrorHandler -> ErrorHandler
+getInfos = Compiler.Errors.Core.getInfo
 
 clearErrors :: ErrorHandler -> ErrorHandler
-clearErrors = filter (not . isError)
-  where
-    isError err = errorSeverity err == Error
+clearErrors = filter (\e -> errorSeverity e /= Error)
 
 clearWarnings :: ErrorHandler -> ErrorHandler
-clearWarnings = filter (not . isWarning)
-  where
-    isWarning err = errorSeverity err == Warning
+clearWarnings = filter (\e -> errorSeverity e /= Warning)
 
 clearInfos :: ErrorHandler -> ErrorHandler
-clearInfos = filter (not . isInfo)
-  where
-    isInfo err = errorSeverity err == Info
+clearInfos = filter (\e -> errorSeverity e /= Info)
 
 mergeHandlers :: ErrorHandler -> ErrorHandler -> ErrorHandler
 mergeHandlers h1 h2 = h1 ++ h2
 
 filterBySeverityForTests :: ErrorSeverity -> ErrorHandler -> ErrorHandler
-filterBySeverityForTests severity = filter ((== severity) . errorSeverity)
+filterBySeverityForTests sev = filter (\e -> errorSeverity e == sev)
 
 sortBySeverity :: ErrorHandler -> ErrorHandler
-sortBySeverity = List.sortBy compareSeverity
-  where
-    compareSeverity e1 e2 = Ord.compare (errorSeverity e1) (errorSeverity e2)
+sortBySeverity = List.sortBy (\e1 e2 -> Ord.compare (errorSeverity e1) (errorSeverity e2))
 
 renderErrors :: ErrorHandler -> String
 renderErrors = unlines . map (T.unpack . errorMessage) . Compiler.Errors.Core.getErrors

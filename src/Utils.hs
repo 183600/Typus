@@ -22,10 +22,9 @@ module Utils
     isRight               -- 检查 Either 是否为 Right
   ) where
 
-import Data.Char (isSpace, isAlpha, isAlphaNum)
+import Data.Char (isSpace)
 import qualified Data.List as L
-import Data.List (isSuffixOf, isPrefixOf, isInfixOf, intercalate)
-import Data.List (isPrefixOf)
+import Data.List (isPrefixOf, intercalate)
 import qualified Data.Text as T
 
 -- | 去掉字符串两端的空白字符。
@@ -45,17 +44,16 @@ trim s =
 --   例子：
 --     splitBy ',' "a,,b"   == ["a", "", "b"]
 --     splitBy ',' ",a,"    == ["", "a", ""]
---     splitBy ',' ""       == []
+--     splitBy ',' ""       == [""]
 --     splitBy ',' ","      == [""]
 splitBy :: Char -> String -> [String]
 splitBy delim s
-  | null s = []
+  | null s = [""]  -- 空字符串应该返回包含一个空字符串的列表
   | length s == 1 = 
-      if head s == delim 
+      if s == [delim] 
       then ["", ""]  -- 单个分隔符应该分为两个空段
       else [s]   -- 单个非分隔符字符应该作为单独的段
   | all (== delim) s = replicate (length s + 1) ""  -- n个分隔符应该分成n+1个空段
-  | length s == 1 && head s /= delim = [s]  -- 单个非分隔符字符应该作为单独的段
   | otherwise = map T.unpack . T.split (== delim) . T.pack $ s
 
 -- | 按分隔字符切分，并折叠连续分隔符（丢弃空段）。
@@ -88,7 +86,7 @@ removeLineComments s =
          then s
     else if s == "'" || s == "\""  -- 特殊情况：单引号或双引号字符，保持原样
          then s
-    else if head s == '\''  -- 特殊情况：单引号字符串，保持原样包括注释
+    else if case s of (c:_) -> c == '\''; [] -> False  -- 特殊情况：单引号字符串，保持原样包括注释
          then s
     else if '\n' `elem` s
          then let ls = lines s
@@ -109,7 +107,7 @@ removeLineComments s =
     
     goNormal [] = []
     goNormal (c:cs) 
-      | c == '/' && not (null cs) && head cs == '/' = []  -- 找到注释，丢弃后续
+      | c == '/' && case cs of (c':_) -> c' == '/'; [] -> False = []  -- 找到注释，丢弃后续
       | c == '"' = '"' : goInString cs
       | c == '\'' = '\'' : goInChar cs
       | otherwise = c : goNormal cs
@@ -171,8 +169,8 @@ removeComments s =
             in if length lines' > 1
                then unlines processedLines
                else if not (null processedLines) && last s == '\n'
-                    then head processedLines ++ "\n"
-                    else head processedLines
+                    then case processedLines of (x:_) -> x ++ "\n"; [] -> ""
+                    else case processedLines of (x:_) -> x; [] -> ""
          else
            -- 使用通用的注释处理逻辑
            goNormal s
@@ -328,7 +326,7 @@ breakOn pat s
             | null originalStr = Nothing
             | length originalStr < len = Nothing  -- 剩余字符串长度不足
             | p `isPrefixOf` originalStr = Just n
-            | otherwise = go (n + 1) (tail originalStr)
+            | otherwise = go (n + 1) (drop 1 originalStr)
       in go 0 str
 
 -- | 安全处理字符串，过滤掉控制字符
