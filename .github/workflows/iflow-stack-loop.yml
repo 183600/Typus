@@ -1,4 +1,4 @@
-name: iflow-cabal-autoloop
+name: iflow-stack-autoloop
 
 on:
   workflow_dispatch:
@@ -28,8 +28,7 @@ jobs:
 
       GH_TOKEN: ${{ github.token }}
       GITEE_REMOTE_URL: ${{ secrets.GITEE_REMOTE_URL }}
-      CABAL_MIRROR_URL: ""
-      CABAL_TRANSPORT: "curl"
+      # Stack 不需要 CABAL_TRANSPORT 或 CABAL_MIRROR_URL
 
       # 门禁开关：
       # clean：自动清理坏路径后继续；fail：发现坏路径直接失败退出
@@ -86,77 +85,40 @@ jobs:
           set -euo pipefail
           test -n "${GITEE_REMOTE_URL:-}" || { echo "Missing GITEE_REMOTE_URL secret"; exit 1; }
 
-      - name: Setup Haskell (GHC + Cabal)
+      - name: Setup Haskell (GHC + Stack)
         uses: haskell-actions/setup@v2
         with:
-          ghc-version: '9.6.3'
-          cabal-version: '3.10.2.0'
-          cabal-update: false
+          enable-stack: true
+          stack-version: 'latest'
 
       - name: Show tool versions
         shell: bash
         run: |
           set -euo pipefail
-          ghc --version
-          cabal --version
+          stack --version
 
-      - name: Cache cabal (store + index) and dist-newstyle
+      - name: Cache Stack global and project
         uses: actions/cache@v4
         with:
           path: |
-            ~/.cabal/store
-            ~/.cabal/packages
-            dist-newstyle
-          key: cabal-${{ runner.os }}-${{ hashFiles('**/*.cabal','cabal.project*') }}
+            ~/.stack
+            .stack-work
+          key: stack-${{ runner.os }}-${{ hashFiles('stack.yaml', '**/*.cabal') }}
           restore-keys: |
-            cabal-${{ runner.os }}-
-
-      - name: Configure cabal (http-transport + optional mirror)
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          mkdir -p ~/.cabal
-          if [ ! -f ~/.cabal/config ]; then
-            cabal user-config init
-          fi
-
-          if [ "${CABAL_TRANSPORT:-}" = "curl" ]; then
-            if ! grep -qE '^[[:space:]]*http-transport:[[:space:]]*curl[[:space:]]*$' ~/.cabal/config; then
-              printf '\nhttp-transport: curl\n' >> ~/.cabal/config
-            fi
-          fi
-
-          if [ -n "${CABAL_MIRROR_URL:-}" ]; then
-            sed -i -E "s#^([[:space:]]*url:[[:space:]]*).*(hackage\\.haskell\\.org).*#\\1${CABAL_MIRROR_URL}#g" ~/.cabal/config || true
-          fi
-
-      - name: Cabal update (retry, ignore project)
-        shell: bash
-        run: |
-          set -euo pipefail
-          for i in 1 2 3 4 5; do
-            echo "cabal update attempt $i"
-            if cabal update --ignore-project; then
-              exit 0
-            fi
-            sleep $((i * 5))
-          done
-          echo "cabal update failed after retries" >&2
-          exit 1
+            stack-${{ runner.os }}-
 
       - name: Make scripts executable
         shell: bash
         run: |
           set -euo pipefail
-          chmod +x scripts/typus_cabal_loop.sh
+          chmod +x scripts/typus_stack_loop.sh
           chmod +x scripts/guard_bad_paths.py
 
       - name: Run for ${{ env.RUN_HOURS }} hours
         shell: bash
         run: |
           set -euo pipefail
-          timeout --signal=TERM $(( RUN_HOURS * 3600 )) bash scripts/typus_cabal_loop.sh || true
+          timeout --signal=TERM $(( RUN_HOURS * 3600 )) bash scripts/typus_stack_loop.sh || true
 
       - name: Guard bad/garbled paths (final gate)
         if: always()
