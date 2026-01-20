@@ -83,13 +83,15 @@ prop_normalizeIndentation_relative s1 s2 =
   let indentedCode = "  " ++ s1 ++ "\n    " ++ s2 ++ "\n  " ++ s1
       normalized = normalizeIndentation indentedCode
       lines' = lines normalized
-  in conjoin 
-     [ property $ length lines' === 3
-     , property $ all (\line -> not (all isSpace (takeWhile isSpace line))) lines'
-     , property $ s1 `isInfixOf` head lines'
-     , property $ s2 `isInfixOf` (lines' !! 1)
-     , property $ s1 `isInfixOf` (last lines')
-     ]
+  in case lines' of
+        (first:second:rest) -> conjoin 
+                               [ property $ length lines' === 3
+                               , property $ all (\line -> not (all isSpace (takeWhile isSpace line))) lines'
+                               , property $ s1 `isInfixOf` first
+                               , property $ s2 `isInfixOf` second
+                               , property $ s1 `isInfixOf` (last (first:second:rest))
+                               ]
+        _ -> property False
 
 -- 测试套件
 tests :: TestTree

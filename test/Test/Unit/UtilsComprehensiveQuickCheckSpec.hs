@@ -67,7 +67,9 @@ prop_normalizeIndentation_preserves_relative (Positive n) code =
 prop_safeProcessString_special_chars :: String -> Property
 prop_safeProcessString_special_chars s =
   let processed = safeProcessString s
-  in property (length processed >= 0)
+  in case processed of
+       Right str -> property (length str >= 0)
+       Left _ -> property False
 
 -- | 测试isValidChar函数
 prop_isValidChar_basic :: Char -> Property

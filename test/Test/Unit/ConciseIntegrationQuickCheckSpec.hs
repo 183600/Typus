@@ -9,7 +9,7 @@ import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), Gen, choo
 import Parser (parseTypus, TypusFile(..), tfContents)
 import Compiler (compile, generateGoCode)
 import ErrorHandler (ErrorHandler, errorCount, warningCount, infoCount)
-import Dependencies (DependencyGraph(..), TestDependencyGraph(..), analyzeDependencies, hasCycles)
+import Dependencies (DependencyGraph, TestDependencyGraph(..), analyzeDependencies, hasCycles)
 import Ownership (OwnershipAnalysis(..), hasOwnershipErrors, getOwners, getBorrowers)
 import qualified Ownership.Common.Types as Own
 import SourceLocation (SourcePos(..), SourceSpan(..))

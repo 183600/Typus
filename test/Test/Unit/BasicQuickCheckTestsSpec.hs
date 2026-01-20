@@ -7,16 +7,23 @@ import SourceLocation (SourcePos(..), startPos)
 import qualified Data.Text as T
 import Data.Char (isSpace, isAlphaNum)
 import Data.List (intercalate, isInfixOf, isPrefixOf, isSuffixOf)
+import Data.Maybe (listToMaybe)
 
 -- | Test that trim removes leading and trailing whitespace
 prop_trim_removes_whitespace :: String -> Property
 prop_trim_removes_whitespace s = 
   let trimmed = trim s
-      hasLeadingSpace = not (null s) && isSpace (head s)
+      hasLeadingSpace = case listToMaybe s of
+                          Nothing -> False
+                          Just h -> isSpace h
       hasTrailingSpace = not (null s) && isSpace (last s)
+      trimmedHasNoLeadingSpace = case listToMaybe trimmed of
+                                   Nothing -> True
+                                   Just h -> not (isSpace h)
+      trimmedHasNoTrailingSpace = not (null trimmed) && not (isSpace (last trimmed))
   in property $ 
     if hasLeadingSpace || hasTrailingSpace
-    then not (null trimmed) ==> (not (isSpace (head trimmed)) && not (isSpace (last trimmed)))
+    then not (null trimmed) ==> (trimmedHasNoLeadingSpace && trimmedHasNoTrailingSpace)
     else property (trimmed == s)
 
 -- | Test that trim doesn't change non-whitespace characters
@@ -67,7 +74,9 @@ prop_split_by_comma_preserves_empty :: String -> Property
 prop_split_by_comma_preserves_empty s = 
   let parts = splitByComma s
       hasConsecutiveCommas = ",," `isInfixOf` s
-      startsWithComma = not (null s) && head s == ','
+      startsWithComma = case listToMaybe s of
+                          Nothing -> False
+                          Just h -> h == ','
       endsWithComma = not (null s) && last s == ','
   in property $ 
     if hasConsecutiveCommas || startsWithComma || endsWithComma
@@ -89,7 +98,9 @@ prop_safe_process_string_handles_special s =
   let specialChars = "\n\t\r\\\"'"
       withSpecial = s ++ specialChars
       processed = safeProcessString withSpecial
-  in property $ length processed >= length s
+  in case processed of
+       Right str -> property $ length str >= length s
+       Left _ -> property False
 
 -- | Test that isValidChar correctly identifies valid characters
 prop_is_valid_char_properties :: Char -> Property

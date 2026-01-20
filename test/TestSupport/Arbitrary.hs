@@ -44,6 +44,7 @@ import Analyzer.Types
   )
 import qualified Ownership.Common.Types as Own (OwnershipType(..), OwnershipError(..), OwnershipAnalyzer(..), OwnershipTransfer(..), newOwnershipAnalyzer)
 import qualified Dependencies.TypeSystem as Dep
+import Dependencies.AST (DependencyNode(..))
 import qualified Dependencies.AST as Dep (AST(..), Statement(..), TypeExpr(..), Constraint(..))
 import qualified Dependencies.TypeSystem as Dep (TypeConstraint(..))
 import qualified Dependencies.TypeSystem as Dep (TypeScheme(..))
@@ -207,6 +208,13 @@ instance Arbitrary SymbolKind where
 
 -- Dependencies type generators
 -- TypeVar instance moved to ExtendedArbitrary to avoid conflicts
+
+instance Arbitrary DependencyNode where
+  arbitrary = do
+    name <- elements ["module", "function", "type", "variable"]
+    numDeps <- choose (0, 5)
+    deps <- vectorOf numDeps (elements ["module", "function", "type", "variable"])
+    return $ DependencyNode name deps
 
 -- Value system generators
 instance Arbitrary ValueKind where

@@ -38,7 +38,7 @@ import Compiler
   )
 import Compiler.Errors (mkCompilerError, ErrorStatistics(..), message, ErrorCategory(..), ErrorSeverity(..), ErrorRecovery(..))
 import qualified SourceLocation
-import Parser (TypusFile(..), FileDirectives(..), BlockDirectives(..), CodeBlock(..))
+import Parser (TypusFile(..), FileDirectives(..), BlockDirectives(..), CodeBlock(..), defaultFileDirectives)
 import SyntaxValidator (SyntaxError(..), ErrorType(..))
 import SourceLocation (SourceSpan(..), SourcePos(..))
 import qualified Data.Text as T

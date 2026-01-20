@@ -79,11 +79,11 @@ prop_compile_syntax_error =
   let block = CodeBlock defaultBlockDirectives "let x = +" (emptySpan startPos)
       typusFile = TypusFile defaultFileDirectives [] [block] []
   in case compile typusFile of
-    Left errs -> property $ 
-      not (null errs) &&
-      let typeErr = ceError (head errs) in
+    Left (err:_) -> property $ 
+      let typeErr = ceError err in
       errorId typeErr == "CP0001" &&
       "syntax error" `isInfixOf` T.unpack (message typeErr)
+    Left [] -> property False
     Right _ -> property False
 
 -- | Test that compile handles type error case (string as int)
@@ -92,11 +92,11 @@ prop_compile_type_error_string_int =
   let block = CodeBlock defaultBlockDirectives "var x int = \"string\"" (emptySpan startPos)
       typusFile = TypusFile defaultFileDirectives [] [block] []
   in case compile typusFile of
-    Left errs -> property $ 
-      not (null errs) &&
-      let typeErr = ceError (head errs) in
+    Left (err:_) -> property $ 
+      let typeErr = ceError err in
       errorId typeErr == "CP0003" &&
       "type error" `isInfixOf` T.unpack (message typeErr)
+    Left [] -> property False
     Right _ -> property False
 
 -- | Test that compile handles type error case (string as Int)
@@ -105,11 +105,11 @@ prop_compile_type_error_string_Int =
   let block = CodeBlock defaultBlockDirectives "let x: Int = \"hello\"" (emptySpan startPos)
       typusFile = TypusFile defaultFileDirectives [] [block] []
   in case compile typusFile of
-    Left errs -> property $ 
-      not (null errs) &&
-      let typeErr = ceError (head errs) in
+    Left (err:_) -> property $ 
+      let typeErr = ceError err in
       errorId typeErr == "CP0003" &&
       "type error" `isInfixOf` T.unpack (message typeErr)
+    Left [] -> property False
     Right _ -> property False
 
 -- | Test that compile handles missing return statement
@@ -118,11 +118,11 @@ prop_compile_missing_return =
   let block = CodeBlock defaultBlockDirectives "func missingReturn() int {" (emptySpan startPos)
       typusFile = TypusFile defaultFileDirectives [] [block] []
   in case compile typusFile of
-    Left errs -> property $ 
-      not (null errs) &&
-      let typeErr = ceError (head errs) in
+    Left (err:_) -> property $ 
+      let typeErr = ceError err in
       errorId typeErr == "CP0004" &&
       "missing return statement" `isInfixOf` T.unpack (message typeErr)
+    Left [] -> property False
     Right _ -> property False
 
 -- | Test that compile handles valid simple code

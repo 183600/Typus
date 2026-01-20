@@ -14,7 +14,9 @@ tests :: TestTree
 tests = testGroup "Syntax Validator Boundary Tests"
   [ testGroup "Identifier validation"
     [ testProperty "valid identifiers start with letter" $
-        \xs -> not (null xs) ==> isLetter (head xs) ==> isValidIdentifier xs
+        \xs -> case xs of 
+                [] -> property $ True
+                (h:_) -> isLetter h ==> isValidIdentifier xs
     
     , testProperty "valid identifiers contain only letters and digits" $
         \xs -> isValidIdentifier xs ==> all (\c -> isLetter c || isDigit c) (tail xs)

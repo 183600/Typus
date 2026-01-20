@@ -26,8 +26,10 @@ tests = testGroup "Debug Basic Functions Tests"
         Right newSession -> do
           let breakpoints = getBreakpoints newSession
           length breakpoints @?= 1
-          assertBool "Breakpoint should be at correct location" $ 
-            breakpointLocation (head breakpoints) == location
+          case breakpoints of
+            (bp:_) -> assertBool "Breakpoint should be at correct location" $ 
+                        breakpointLocation bp == location
+            [] -> assertBool "Should have at least one breakpoint" False
             
   , testCase "remove breakpoint" $ do
       let session = createDebugSession
@@ -134,8 +136,12 @@ tests = testGroup "Debug Basic Functions Tests"
       let debuggingSession = session { isDebugging = True, callStack = ["func3", "func2", "func1"] }
       let callStack = getCallStack debuggingSession  -- 简化函数调用
       length callStack @?= 3
-      head callStack @?= "func3"
-      last callStack @?= "func1"
+      case callStack of
+        (first:rest) -> do
+          first @?= "func3"
+          case rest of
+            _ -> last callStack @?= "func1"
+        [] -> assertBool "Call stack should not be empty" False
       
   , testCase "show local variables" $ do
       let session = createDebugSession
@@ -159,10 +165,12 @@ tests = testGroup "Debug Basic Functions Tests"
         Right newSession -> do
           let breakpoints = getBreakpoints newSession
           length breakpoints @?= 1
-          let bp = head breakpoints
-          assertBool "Breakpoint should have condition" $ 
-            isJust (breakpointCondition bp)
-          breakpointCondition bp @?= Just condition
+          case breakpoints of
+            (bp:_) -> do
+              assertBool "Breakpoint should have condition" $ 
+                isJust (breakpointCondition bp)
+              breakpointCondition bp @?= Just condition
+            [] -> assertBool "Should have at least one breakpoint" False
           
   , testCase "watch expressions" $ do
       let session = createDebugSession
@@ -173,7 +181,9 @@ tests = testGroup "Debug Basic Functions Tests"
         Right newSession -> do
           let watches = getWatchExpressions newSession
           length watches @?= 1
-          head watches @?= expression
+          case watches of
+            (watch:_) -> watch @?= expression
+            [] -> assertBool "Should have at least one watch expression" False
   ]
 
 -- 简化的数据类型和函数
@@ -257,9 +267,9 @@ stepInto session =
 stepOut :: DebugSession -> Either String DebugSession
 stepOut session = 
   Right $ session {
-    callStack = if not (null (callStack session)) 
-                then tail (callStack session)
-                else callStack session
+    callStack = case callStack session of
+                  [] -> []
+                  (_:rest) -> rest
   }
 
 continue :: DebugSession -> Either String DebugSession

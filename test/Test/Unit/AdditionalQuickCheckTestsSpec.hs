@@ -24,7 +24,7 @@ import qualified Data.Text as T
 import Data.Char (isSpace, isAlphaNum, isAlpha, toLower, toUpper)
 import Data.List (isPrefixOf, isInfixOf, sort, nub, group, intercalate)
 import Control.Monad (foldM, when)
-import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes)
+import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes, listToMaybe)
 import qualified Compiler.Errors.Core as Error
 import Compiler.Errors.Core (ErrorSeverity(..), ErrorCategory(..), TypeError(..), ErrorLocation(..), ErrorContext(..),
                             errorAt, errorWithCategory, warningAt, infoAt, 
@@ -74,7 +74,10 @@ prop_group_preserves_length xs =
 prop_sort_group_equal :: [Int] -> Bool
 prop_sort_group_equal xs = 
   let groups = group (sort xs)
-  in all (\g -> all (== head g) g) groups
+      allEqualInGroup g = case listToMaybe g of
+                            Nothing -> True
+                            Just h -> all (== h) g
+  in all allEqualInGroup groups
 
 -- ============================================================================
 -- List and Collection Tests

@@ -220,7 +220,10 @@ inferType (Application func arg) =
     FunctionType _ returnType -> returnType
     _ -> BaseType "Error"
 inferType (Let _ value body) = inferType body
-inferType (Match _ _ branches) = inferType (head [expr | Branch _ expr <- branches])
+inferType (Match _ _ branches) = 
+  case [expr | Branch _ expr <- branches] of
+    (expr:_) -> inferType expr
+    [] -> BaseType "Error"
 
 inferTypeWithContext :: Expression -> TypeContext -> Type
 inferTypeWithContext expr (TypeContext context) = 

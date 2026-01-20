@@ -92,7 +92,9 @@ prop_safe_process_string_handles_special s =
   let specialChars = "\n\t\r\\\"'"
       withSpecial = s ++ specialChars
       processed = safeProcessString withSpecial
-  in property $ length processed >= length s
+  in case processed of
+       Right str -> property $ length str >= length s
+       Left _ -> property False
 
 -- | Test that isValidChar correctly identifies valid characters
 prop_is_valid_char_properties :: Char -> Property

@@ -71,11 +71,16 @@ recoverFromErrors :: String -> [Int] -> String
 recoverFromErrors s _ = take (length s) s
 
 aggregateErrors :: [Int] -> [Int]
-aggregateErrors = map head . groupSort
+aggregateErrors = map safeHead . groupSort
   where
+    safeHead [] = error "Empty group in aggregateErrors"
+    safeHead (h:_) = h
     groupSort [] = []
-    groupSort xs = let (group, rest) = span (== head xs) (sort xs)
-                   in group : groupSort rest
+    groupSort [] = []
+    groupSort xs = case xs of
+                     [] -> []
+                     (h:_) -> let (group, rest) = span (== h) (sort xs)
+                              in group : groupSort rest
 
 getLocation :: Int -> Int
 getLocation = (*10)

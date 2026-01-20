@@ -90,7 +90,9 @@ prop_comment_removal_preserves_tokens :: String -> Property
 prop_comment_removal_preserves_tokens code = property $
   let withoutComments = removeComments code
       tokens = extractTokens withoutComments
-  in length tokens > 0 || all isSpace (head code : code)
+  in case code of
+       [] -> length tokens > 0
+       (h:_) -> length tokens > 0 || all isSpace [h]
 
 -- Property 5: Indentation normalization preserves structure
 prop_indentation_normalization_preserves_structure :: String -> Property
@@ -230,8 +232,10 @@ testTextProcessingAdvanced = testGroup "Text Processing Advanced Tests"
   , testCase "Unicode string processing" $ do
     let testString = "Héllö Wörld! 123"
     let processed = safeProcessString testString
-    assertBool "Unicode processing should preserve characters" 
-               (length processed >= length testString)
+    case processed of
+      Right str -> assertBool "Unicode processing should preserve characters" 
+                             (length str >= length testString)
+      Left _ -> assertFailure "Unicode processing failed"
   
   , testCase "Identifier extraction" $ do
     let testCode = "func calculate(x, y) { return x + y; }"

@@ -121,8 +121,11 @@ prop_sourcelocation_span_merge_performance :: Int -> Property
 prop_sourcelocation_span_merge_performance n = 
   n >= 0 && n <= 1000 ==>
     let spans = [spanBetween (SourcePos i i i) (SourcePos (i+1) (i+1) (i+1)) | i <- [0..n]]
-        merged = foldl mergeSpans (head spans) (tail spans)
-    in isValidSpan merged
+    in case spans of
+         [] -> property $ True
+         firstSpan:restSpans -> 
+           let merged = foldl mergeSpans firstSpan restSpans
+           in property $ isValidSpan merged
 
 -- | Test Parser performance properties
 prop_parser_large_content_performance :: Int -> Property
@@ -177,8 +180,11 @@ prop_sourcelocation_memory_efficiency n =
   n >= 0 && n <= 1000 ==>
     let positions = [SourcePos i i i | i <- [0..n]]
         spans = [spanBetween p (SourcePos (i+1) (i+1) (i+1)) | (p, i) <- zip positions [0..]]
-        merged = foldl mergeSpans (head spans) (tail spans)
-    in force merged == merged  -- Ensure it can be fully evaluated
+    in case spans of
+         [] -> property $ True
+         firstSpan:restSpans -> 
+           let merged = foldl mergeSpans firstSpan restSpans
+           in property $ force merged == merged  -- Ensure it can be fully evaluated
 
 prop_parser_memory_efficiency :: Int -> Property
 prop_parser_memory_efficiency n = 

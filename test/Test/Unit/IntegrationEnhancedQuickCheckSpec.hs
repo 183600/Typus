@@ -71,9 +71,11 @@ prop_utils_parser_comment_handling content comments =
        Right typusFile ->
          let blocks = tfBlocks typusFile
          in property $ not (null blocks) ==> 
-            let firstBlock = head blocks
-                blockContent = cbContent firstBlock
-            in content `isInfixOf` blockContent
+            case blocks of
+              (firstBlock:_) -> 
+                let blockContent = cbContent firstBlock
+                in property $ content `isInfixOf` blockContent
+              [] -> property False
 
 prop_utils_parser_whitespace_handling :: String -> Property
 prop_utils_parser_whitespace_handling content = 
@@ -85,9 +87,11 @@ prop_utils_parser_whitespace_handling content =
        Right typusFile ->
          let blocks = tfBlocks typusFile
          in property $ not (null blocks) ==> 
-            let firstBlock = head blocks
-                blockContent = cbContent firstBlock
-            in content `isInfixOf` blockContent
+            case blocks of
+              (firstBlock:_) -> 
+                let blockContent = cbContent firstBlock
+                in property $ content `isInfixOf` blockContent
+              [] -> property False
 
 prop_utils_parser_directive_parsing :: String -> Bool -> Property
 prop_utils_parser_directive_parsing content flag = 
@@ -111,9 +115,11 @@ prop_sourcelocation_parser_span_tracking content =
        Right typusFile ->
          let blocks = tfBlocks typusFile
          in property $ not (null blocks) ==> 
-            let firstBlock = head blocks
-                span = cbSpan firstBlock
-            in isValidSpan span
+            case blocks of
+              (firstBlock:_) -> 
+                let span = cbSpan firstBlock
+                in property $ isValidSpan span
+              [] -> property False
 prop_sourcelocation_parser_position_extraction :: String -> Property
 prop_sourcelocation_parser_position_extraction content = 
   let result = parseTypus content
@@ -122,12 +128,14 @@ prop_sourcelocation_parser_position_extraction content =
        Right typusFile ->
          let blocks = tfBlocks typusFile
          in property $ not (null blocks) ==>
-            let firstBlock = head blocks
-                span = cbSpan firstBlock
-                start = spanStart span
-                end = spanEnd span
-            in posLine start >= 1 && posColumn start >= 1 && 
-               posLine end >= posLine start
+            case blocks of
+              (firstBlock:_) ->
+                let span = cbSpan firstBlock
+                    start = spanStart span
+                    end = spanEnd span
+                in property $ posLine start >= 1 && posColumn start >= 1 && 
+                   posLine end >= posLine start
+              [] -> property False
 
 -- | Test three-way integration
 prop_utils_sourcelocation_parser_complex_content :: String -> String -> String -> Property
@@ -143,10 +151,12 @@ prop_utils_sourcelocation_parser_complex_content directives content comments =
        Right typusFile ->
          let blocks = tfBlocks typusFile
          in property $ not (null blocks) ==> 
-            let firstBlock = head blocks
-                blockContent = cbContent firstBlock
-                span = cbSpan firstBlock
-            in content `isInfixOf` blockContent && isValidSpan span
+            case blocks of
+              (firstBlock:_) ->
+                let blockContent = cbContent firstBlock
+                    span = cbSpan firstBlock
+                in property $ content `isInfixOf` blockContent && isValidSpan span
+              [] -> property False
 
 -- | Test error handling integration
 prop_integration_error_recovery :: String -> String -> Property
@@ -171,7 +181,7 @@ prop_integration_malformed_directive_recovery content =
          in property $ not (null blocks) ==> 
             let firstBlock = head blocks
                 blockContent = cbContent firstBlock
-            in content `isInfixOf` blockContent
+            in property $ content `isInfixOf` blockContent
 
 -- | Test content preservation across processing pipeline
 prop_integration_content_preservation :: String -> Property
@@ -199,9 +209,11 @@ prop_integration_directive_content_interaction directive content flag =
          let directives = tfDirectives typusFile
              blocks = tfBlocks typusFile
          in property $ not (null blocks) ==> 
-            let firstBlock = head blocks
-                blockContent = cbContent firstBlock
-            in content `isInfixOf` blockContent
+            case blocks of
+              (firstBlock:_) ->
+                let blockContent = cbContent firstBlock
+                in property $ content `isInfixOf` blockContent
+              [] -> property False
 
 -- | Test multi-block processing
 prop_integration_multi_block_handling :: [String] -> Property
@@ -228,10 +240,12 @@ prop_integration_directive_position_tracking directive flag =
        Right typusFile ->
          let blocks = tfBlocks typusFile
          in property $ not (null blocks) ==>
-            let firstBlock = head blocks
-                span = cbSpan firstBlock
-                start = spanStart span
-            in posLine start >= 2  -- Should be after directive line
+            case blocks of
+              (firstBlock:_) ->
+                let span = cbSpan firstBlock
+                    start = spanStart span
+                in property $ posLine start >= 2  -- Should be after directive line
+              [] -> property False
 
 -- | Test comment removal with position tracking
 prop_integration_comment_position_tracking :: String -> String -> Property
@@ -260,10 +274,12 @@ prop_integration_whitespace_position_tracking content =
        Right typusFile ->
          let blocks = tfBlocks typusFile
          in property $ not (null blocks) ==>
-            let firstBlock = head blocks
-                span = cbSpan firstBlock
-                start = spanStart span
-            in posColumn start <= posColumn startPos + 4  -- Should be reasonably positioned
+            case blocks of
+              (firstBlock:_) ->
+                let span = cbSpan firstBlock
+                    start = spanStart span
+                in property $ posColumn start <= posColumn startPos + 4  -- Should be reasonably positioned
+              [] -> property False
 
 -- | Test complex parsing scenarios
 prop_integration_complex_scenario :: String -> String -> String -> Bool -> Bool -> Property
@@ -280,9 +296,11 @@ prop_integration_complex_scenario directive1 directive2 content flag1 flag2 =
          let directives = tfDirectives typusFile
              blocks = tfBlocks typusFile
          in property $ not (null blocks) ==> 
-            let firstBlock = head blocks
-                blockContent = cbContent firstBlock
-            in content `isInfixOf` blockContent
+            case blocks of
+              (firstBlock:_) ->
+                let blockContent = cbContent firstBlock
+                in property $ content `isInfixOf` blockContent
+              [] -> property False
 
 -- | Test round-trip processing
 prop_integration_round_trip :: String -> Property

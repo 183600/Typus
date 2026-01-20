@@ -57,7 +57,9 @@ tests = testGroup "C.Error Handler Basic Functions Tests"
       let errors = [error1, error2, error3]
       let filtered = C.filterBySeverity C.Error errors
       length filtered @?= 1
-      C.severity (head filtered) @?= C.Error
+      case filtered of
+        (f:_) -> C.severity f @?= C.Error
+        [] -> assertBool "Should have at least one filtered error" False
       
   , testCase "error sorting by severity" $ do
       let error1 = createInfo "C.Info 1" (C.ErrorLocation (Just "test") 1 1 Nothing Nothing)
@@ -175,7 +177,10 @@ updateLocation :: C.TypeError -> C.ErrorLocation -> C.TypeError
 updateLocation error location = error { C.location = location }
 
 cascadeErrors :: C.TypeError -> [C.TypeError] -> C.TypeError
-cascadeErrors primary secondaries = head secondaries  -- 简化实现
+cascadeErrors primary secondaries = 
+  case secondaries of
+    (s:_) -> s  -- 简化实现
+    [] -> primary
 
 groupErrorsByModule :: [C.TypeError] -> [(String, [C.TypeError])]
 groupErrorsByModule errors = [("module1", errors)]  -- 简化实现

@@ -37,7 +37,9 @@ prop_split_comma_equivalence s =
 prop_split_collapsed_no_consecutive_empty :: Char -> String -> Property
 prop_split_collapsed_no_consecutive_empty c s = 
   let parts = splitByCollapsed c s
-      hasConsecutiveEmpty = any (\(x, y) -> null x && null y) $ zip parts (tail parts)
+      hasConsecutiveEmpty = case parts of
+                             [] -> False
+                             (_:rest) -> any (\(x, y) -> null x && null y) $ zip parts rest
   in property $ not hasConsecutiveEmpty
 
 -- Property: removeLineComments should only remove // comments
@@ -79,7 +81,9 @@ prop_break_on_finds_or_original s substr =
 prop_safe_process_always_succeeds :: String -> Property
 prop_safe_process_always_succeeds s = 
   let processed = safeProcessString s
-  in property $ length processed >= 0
+  in case processed of
+       Right str -> property $ length str >= 0
+       Left _ -> property False
 
 -- Property: isValidChar should be consistent with isControl
 prop_valid_char_consistency :: Char -> Property

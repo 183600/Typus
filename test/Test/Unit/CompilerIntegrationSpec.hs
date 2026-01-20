@@ -74,7 +74,9 @@ prop_nested_structure_handling depth =
       closed = concat $ replicate depth "}"
       input = nested ++ "code" ++ closed
       processed = safeProcessString input
-  in property $ length processed >= 5  -- "code" length
+  in case processed of
+       Right str -> property $ length str >= 5  -- "code" length
+       Left _ -> property False
 
 -- Property: Indentation normalization should preserve code blocks
 prop_normalize_preserves_blocks :: String -> Property
@@ -137,7 +139,9 @@ test_compiler_integration_unicode :: Assertion
 test_compiler_integration_unicode = do
   let input = "函数 测试() { return 结果; }"
   let processed = safeProcessString input
-  length processed @?= length input
+  case processed of
+    Right str -> length str @?= length input
+    Left _ -> assertFailure "safeProcessString failed on unicode input"
 
 test_compiler_integration_nested_comments :: Assertion
 test_compiler_integration_nested_comments = do

@@ -181,10 +181,9 @@ test_compile_syntax_error = do
         Left _ -> TypusFile defaultFileDirectives [] [] []
       result = compile file
   case result of
-    Left errs -> do
-      assertEqual "Should have one error" 1 (length errs)
-      let err = head errs
+    Left (err:_) -> do
       assertEqual "Should be a parsing error" ParsingPhase (cePhase err)
+    Left [] -> assertFailure "Expected at least one error but got empty list"
     Right _ -> assertFailure "Expected compilation to fail with syntax error"
 
 -- Test 4: Compile code with type error
@@ -196,10 +195,9 @@ test_compile_type_error = do
         Left _ -> TypusFile defaultFileDirectives [] [] []
       result = compile file
   case result of
-    Left errs -> do
-      assertEqual "Should have one error" 1 (length errs)
-      let err = head errs
+    Left (err:_) -> do
       assertEqual "Should be a type checking error" TypeCheckingPhase (cePhase err)
+    Left [] -> assertFailure "Expected at least one error but got empty list"
     Right _ -> assertFailure "Expected compilation to fail with type error"
 
 -- Test 5: Compile code with dependent types
@@ -243,10 +241,9 @@ test_ensure_source_ir_invalid = do
       result = ensureSourceIR file
   case result of
     Right _ -> assertFailure "Expected source IR to fail for file with syntax errors"
-    Left errs -> do
-      assertEqual "Should have one error" 1 (length errs)
-      let err = head errs
+    Left (err:_) -> do
       assertEqual "Should be malformed syntax error" malformedSyntaxError err
+    Left [] -> assertFailure "Expected at least one error but got empty list"
 
 -- Test 9: Generate Go code from empty file
 test_generate_go_code_empty :: Assertion

@@ -195,20 +195,26 @@ prop_error_with_context errId sev ctx =
 prop_collector_add_error :: TypeError -> [TypeError] -> Property
 prop_collector_add_error err errors = 
   let newErrors = execState (addError err) errors
-  in property $ length newErrors == length errors + 1 &&
-                head newErrors == err
+  in case newErrors of
+       (first:_) -> property $ length newErrors == length errors + 1 &&
+                           first == err
+       [] -> property False
 
 prop_collector_add_warning :: TypeError -> [TypeError] -> Property
 prop_collector_add_warning err errors = 
   let newErrors = execState (addWarning err) errors
-  in property $ length newErrors == length errors + 1 &&
-                severity (head newErrors) == Warning
+  in case newErrors of
+       (first:_) -> property $ length newErrors == length errors + 1 &&
+                           severity first == Warning
+       [] -> property False
 
 prop_collector_add_info :: TypeError -> [TypeError] -> Property
 prop_collector_add_info err errors = 
   let newErrors = execState (addInfo err) errors
-  in property $ length newErrors == length errors + 1 &&
-                severity (head newErrors) == Info
+  in case newErrors of
+       (first:_) -> property $ length newErrors == length errors + 1 &&
+                           severity first == Info
+       [] -> property False
 
 prop_collector_get_errors :: [TypeError] -> Property
 prop_collector_get_errors errors = 

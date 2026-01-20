@@ -3,7 +3,7 @@
 module Test.Unit.ParserCoreFunctionalitySpec where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, assertBool, assertEqual)
+import Test.Tasty.HUnit (testCase, assertBool, assertEqual, assertFailure)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, elements, listOf, chooseInt, Property, (===), counterexample, property, conjoin)
 
 import Parser (parseTypus, TypusFile(..), CodeBlock(..), BlockDirectives(..), FileDirectives(..))
@@ -133,12 +133,13 @@ parserCoreFunctionalityTests = testGroup "Parser Core Functionality Tests"
         Left err -> assertBool ("Should parse code block with directives: " ++ err) False
         Right typusFile -> do
           let blocks = tfBlocks typusFile
-          assertBool "Should have at least one block" (not $ null blocks)
-          let firstBlock = head blocks
-          let directives = cbDirectives firstBlock
-          case bdOwnership directives of
-            Nothing -> assertBool "Should have ownership directive in block" False
-            Just (Located value _ _) -> assertEqual "Block ownership should be on" True value
+          case blocks of
+            [] -> assertFailure "Should have at least one block"
+            firstBlock:_ -> do
+              let directives = cbDirectives firstBlock
+              case bdOwnership directives of
+                Nothing -> assertBool "Should have ownership directive in block" False
+                Just (Located value _ _) -> assertEqual "Block ownership should be on" True value
 
   , -- Build tag tests
     testCase "Parse file with build tags" $ do
@@ -159,9 +160,10 @@ parserCoreFunctionalityTests = testGroup "Parser Core Functionality Tests"
         Left err -> assertBool ("Should parse markdown code block: " ++ err) False
         Right typusFile -> do
           let blocks = tfBlocks typusFile
-          assertBool "Should have at least one block" (not $ null blocks)
-          let firstBlock = head blocks
-          assertBool "Block should contain content" (not $ null $ cbContent firstBlock)
+          case blocks of
+            [] -> assertFailure "Should have at least one block"
+            firstBlock:_ -> do
+              assertBool "Block should contain content" (not $ null $ cbContent firstBlock)
 
   , testCase "Parse markdown code block with directives" $ do
       let content = "```typus\n// @ ownership: on\nlet x = 42\n```\n"
@@ -170,12 +172,13 @@ parserCoreFunctionalityTests = testGroup "Parser Core Functionality Tests"
         Left err -> assertBool ("Should parse markdown code block with directives: " ++ err) False
         Right typusFile -> do
           let blocks = tfBlocks typusFile
-          assertBool "Should have at least one block" (not $ null blocks)
-          let firstBlock = head blocks
-          let directives = cbDirectives firstBlock
-          case bdOwnership directives of
-            Nothing -> assertBool "Should have ownership directive in block" False
-            Just (Located value _ _) -> assertEqual "Block ownership should be on" True value
+          case blocks of
+            [] -> assertFailure "Should have at least one block"
+            firstBlock:_ -> do
+              let directives = cbDirectives firstBlock
+              case bdOwnership directives of
+                Nothing -> assertBool "Should have ownership directive in block" False
+                Just (Located value _ _) -> assertEqual "Block ownership should be on" True value
 
   , -- Error handling tests
     testCase "Handle malformed directive" $ do
@@ -249,10 +252,9 @@ parserCoreFunctionalityTests = testGroup "Parser Core Functionality Tests"
         Left _ -> property True  -- It's OK if it fails to parse
         Right typusFile -> do
           let blocks = tfBlocks typusFile
-          if null blocks
-            then property True
-            else do
-              let firstBlock = head blocks
+          case blocks of
+            [] -> property True
+            firstBlock:_ -> do
               let blockDirectives = cbDirectives firstBlock
               case bdOwnership blockDirectives of
                 Nothing -> property True

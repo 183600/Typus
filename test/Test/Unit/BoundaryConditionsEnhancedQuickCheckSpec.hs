@@ -35,6 +35,7 @@ import Parser
   )
 import Data.Char (isSpace, isControl)
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
 
 -- Arbitrary instances for testing
@@ -176,7 +177,9 @@ prop_parser_very_long_line n =
          Right typusFile ->
            let blocks = tfBlocks typusFile
            in not (null blocks) ==> 
-              let firstBlock = head blocks
+              let firstBlock = case listToMaybe blocks of
+                                 Nothing -> error "Impossible: blocks is not null"
+                                 Just b -> b
                   blockContent = cbContent firstBlock
               in length blockContent >= n
 
@@ -198,7 +201,10 @@ prop_utils_special_characters_trim s =
       withSpecial = specialChars ++ s ++ specialChars
       result = trim withSpecial
   in property $ not (null result) ==> 
-      not (isSpace (head result)) && not (isSpace (last result))
+      let firstCharIsNotSpace = case listToMaybe result of
+                                   Nothing -> True
+                                   Just c -> not (isSpace c)
+      in firstCharIsNotSpace && not (isSpace (last result))
 
 prop_utils_unicode_characters :: String -> Property
 prop_utils_unicode_characters s = 
@@ -255,7 +261,10 @@ prop_utils_large_string_processing n =
     let largeString = concat (replicate n "test ")
         trimmed = trim largeString
         parts = splitBy ' ' largeString
-    in length parts >= n && head trimmed == 't'
+        firstCharIsT = case listToMaybe trimmed of
+                        Nothing -> False
+                        Just c -> c == 't'
+    in length parts >= n && firstCharIsT
 
 prop_sourcelocation_large_span_operations :: Int -> Property
 prop_sourcelocation_large_span_operations n = 

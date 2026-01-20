@@ -55,7 +55,9 @@ validateType :: String -> String
 validateType typeExpr = if isWellTyped typeExpr then typeExpr else "Invalid"
 
 isWellTyped :: String -> Bool
-isWellTyped typeExpr = not (null typeExpr) && head typeExpr /= 'I'  -- Mock: types starting with 'I' are invalid
+isWellTyped typeExpr = case typeExpr of
+                         [] -> False
+                         (h:_) -> h /= 'I'  -- Mock: types starting with 'I' are invalid
 
 checkConstraints :: String -> Bool
 checkConstraints constraint = not (null constraint) && last constraint /= 'X'  -- Mock: constraints ending with 'X' are unsatisfied

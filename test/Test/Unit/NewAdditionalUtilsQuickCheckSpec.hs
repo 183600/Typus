@@ -71,11 +71,13 @@ prop_normalizeIndentation_mixed s =
   let mixedIndentCode = "  " ++ s ++ "\n\t" ++ s ++ "\n    " ++ s ++ "\n" ++ s
       normalized = normalizeIndentation mixedIndentCode
       lines' = lines normalized
-  in conjoin 
-     [ property $ length lines' === 4
-     , property $ all (\line -> not (all isSpace (takeWhile isSpace line))) lines'
-     , property $ s `isInfixOf` head lines'
-     ]
+  in case lines' of
+        (first:_) -> conjoin 
+                     [ property $ length lines' === 4
+                     , property $ all (\line -> not (all isSpace (takeWhile isSpace line))) lines'
+                     , property $ s `isInfixOf` first
+                     ]
+        [] -> property False
 
 -- Test 6: 测试safeProcessString对特殊字符的处理
 prop_safeProcessString_special :: String -> Property

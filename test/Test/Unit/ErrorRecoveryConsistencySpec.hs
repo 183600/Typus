@@ -160,7 +160,9 @@ tests = testGroup "Error Recovery Consistency Tests"
             context = ErrorContext [] [] False
             newContext = addRecoveryAction action context
         length (contextActions newContext) @?= 1
-        head (contextActions newContext) @?= action
+        case contextActions newContext of
+          (a:_) -> a @?= action
+          [] -> assertBool "Should have at least one action" False
       
     , testCase "handles multiple recovery actions" $ do
         let span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)
@@ -186,7 +188,9 @@ tests = testGroup "Error Recovery Consistency Tests"
             context = ErrorContext [] [] False
             newContext = addError error context
         length (contextErrors newContext) @?= 1
-        head (contextErrors newContext) @?= error
+        case contextErrors newContext of
+          (e:_) -> e @?= error
+          [] -> assertBool "Should have at least one error" False
       
     , testCase "handles multiple errors" $ do
         let span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)

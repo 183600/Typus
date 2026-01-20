@@ -46,10 +46,12 @@ prop_trim_regular c s =
   not (isSpace c) ==>
   let s' = c : s
       trimmed = trim s'
-  in conjoin 
-     [ head trimmed === c
-     , property $ length trimmed >= 1
-     ]
+  in case trimmed of
+       [] -> property False
+       (h:_) -> conjoin 
+                 [ h === c
+                 , property $ length trimmed >= 1
+                 ]
 
 -- | 测试trim的幂等性
 prop_trim_idempotent :: String -> Property
@@ -301,12 +303,15 @@ prop_breakOn_not_found s =
 -- | 测试breakOn对多个分隔符的处理
 prop_breakOn_multiple :: String -> String -> Property
 prop_breakOn_multiple sep s =
-  let parts = splitBy (head sep) s  -- Convert String to Char
-      (before, after) = breakOn sep (concat parts)
-  in conjoin 
-     [ before === concat (init parts)
-     , after === last parts
-     ]
+  case sep of
+    [] -> property $ True  -- Empty separator is a special case
+    (h:_) -> 
+      let parts = splitBy h s  -- Use first char as separator
+          (before, after) = breakOn sep (concat parts)
+      in conjoin 
+         [ before === concat (init parts)
+         , after === last parts
+         ]
 
 -- | 测试breakOn对分隔符在开头的情况
 prop_breakOn_prefix :: String -> String -> Property

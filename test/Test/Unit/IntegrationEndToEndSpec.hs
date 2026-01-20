@@ -240,7 +240,9 @@ tests = testGroup "End-to-End Integration Tests"
             child = ASTNode "Parameter" (Just "x") [] (SourceSpan (SourcePos 1 10 9) (SourcePos 1 15 14))
             node = ASTNode "Function" (Just "main") [child] span
         length (nodeChildren node) @?= 1
-        head (nodeChildren node) @?= child
+        case nodeChildren node of
+          (c:_) -> c @?= child
+          [] -> assertBool "Should have at least one child" False
       
     , testCase "handles empty AST nodes" $ do
         let span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 1 0)

@@ -2375,7 +2375,7 @@ test-suite typus-enhanced-test
                       -Wno-unused-top-binds -Wno-unused-matches 
                       -Wno-orphans -Wno-name-shadowing
                       -Wno-type-defaults -Wno-unused-local-binds
-                      -Wno-unused-imports
+                      -Wno-unused-imports -rtsopts
     build-depends:
         base >=4.7 && <5,
         typus,
@@ -2409,7 +2409,7 @@ test-suite typus-concise-test
                       -Wno-unused-top-binds -Wno-unused-matches 
                       -Wno-orphans -Wno-name-shadowing
                       -Wno-type-defaults -Wno-unused-local-binds
-                      -Wno-unused-imports
+                      -Wno-unused-imports -rtsopts
     build-depends:
         base >=4.7 && <5,
         typus,

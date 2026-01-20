@@ -111,7 +111,9 @@ tests = testGroup "Dependent Type Constraint Tests"
             env = TypeEnvironment [] [] []
             newEnv = addConstraint constraint env
         length (envConstraints newEnv) @?= 1
-        head (envConstraints newEnv) @?= constraint
+        case envConstraints newEnv of
+          (c:_) -> c @?= constraint
+          [] -> assertBool "Should have at least one constraint" False
       
     , testCase "handles multiple constraints" $ do
         let var1 = TypeVar "T" 1
@@ -162,7 +164,9 @@ tests = testGroup "Dependent Type Constraint Tests"
             env = TypeEnvironment [] [] []
             newEnv = addSubstitution var typ env
         length (envSubstitutions newEnv) @?= 1
-        head (envSubstitutions newEnv) @?= (var, typ)
+        case envSubstitutions newEnv of
+          (s:_) -> s @?= (var, typ)
+          [] -> assertBool "Should have at least one substitution" False
       
     , testCase "handles multiple substitutions" $ do
         let var1 = TypeVar "T" 1

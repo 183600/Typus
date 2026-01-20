@@ -99,9 +99,15 @@ genErrorContext = do
   typ <- listOf genErrorMessage
   return $ ErrorContext 
     { contextCode = if null code then Nothing else Just (unlines code)
-    , contextFunction = if null func then Nothing else Just (head func)
-    , contextVariable = if null var then Nothing else Just (head var)
-    , contextType = if null typ then Nothing else Just (head typ)
+    , contextFunction = case func of
+                          (f:_) -> Just f
+                          [] -> Nothing
+    , contextVariable = case var of
+                         (v:_) -> Just v
+                         [] -> Nothing
+    , contextType = case typ of
+                     (t:_) -> Just t
+                     [] -> Nothing
     , contextAdditional = []
     }
 
@@ -117,8 +123,12 @@ genErrorRecovery = do
   return $ RecoveryStrategy
     { canRecover = canRec
     , shouldContinue = shouldCont
-    , recoveryAction = if null action then Nothing else Just (head action)
-    , recoveryHint = if null hint then Nothing else Just (head hint)
+    , recoveryAction = case action of
+                        (a:_) -> Just a
+                        [] -> Nothing
+    , recoveryHint = case hint of
+                     (h:_) -> Just h
+                     [] -> Nothing
     , recoveryCost = cost
     , recoveryConfidence = confidence
     }

@@ -329,7 +329,11 @@ test_combined_error_edge_cases =
   , testCase "combine multiple errors with different severities" $ do
       let errors = [errorAt "syntax" Error (T.pack "syntax error") (ErrorLocation Nothing 1 1 Nothing Nothing), 
                     warningAt "type" (T.pack "type warning") (ErrorLocation Nothing 2 2 Nothing Nothing)]
-      assertEqual "highest severity" Error (maximum [severity (head errors), severity (last errors)])
+      case errors of
+        (e:es) -> case es of
+                    (e2:_) -> assertEqual "highest severity" Error (maximum [severity e, severity e2])
+                    [] -> assertEqual "highest severity" Error (severity e)
+        [] -> assertEqual "highest severity" Error Error
   , testCase "filter errors by severity" $ do
       let errors = [errorAt "syntax" Error (T.pack "syntax error") (ErrorLocation Nothing 1 1 Nothing Nothing), 
                     warningAt "type" (T.pack "type warning") (ErrorLocation Nothing 2 2 Nothing Nothing),

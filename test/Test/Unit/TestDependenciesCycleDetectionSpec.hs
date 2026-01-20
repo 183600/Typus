@@ -41,10 +41,12 @@ prop_removing_edges_eliminate_cycles deps = property $
   let graph = buildDependencyGraph deps
   in if hasCycle graph
      then let edges = getEdges graph
-              edgeToRemove = head edges  -- Remove first edge
-              acyclicGraph = removeEdge edgeToRemove graph
-          in not (hasCycle acyclicGraph) || length edges == 1
-     else True
+          in case edges of
+               [] -> property $ True
+               (e:_) -> 
+                 let acyclicGraph = removeEdge e graph
+                 in property $ not (hasCycle acyclicGraph) || length edges == 1
+     else property $ True
 
 -- Property: Cycle detection should handle complex graphs
 prop_cycle_detection_complex_graph :: [(String, String)] -> Property

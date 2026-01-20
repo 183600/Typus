@@ -267,7 +267,12 @@ extractCyclePath cycle = cycleNodes cycle
 breakCycles :: Map.Map DependencyNode [DependencyNode] -> Map.Map DependencyNode [DependencyNode]
 breakCycles dependencies = 
   let cycles = detectCycles dependencies
-      edgesToRemove = concatMap (\cycle -> zip (cycleNodes cycle) (tail (cycleNodes cycle) ++ [head (cycleNodes cycle)])) cycles
+      edgesToRemove = concatMap (\cycle -> 
+                                  let nodes = cycleNodes cycle
+                                  in case nodes of
+                                       [] -> []
+                                       (first:rest) -> zip nodes (rest ++ [first])
+                              ) cycles
       removeEdge (node, dep) deps = filter (/= dep) deps
   in Map.mapWithKey (\node deps -> foldr removeEdge deps (filter (\(n, _) -> n == node) edgesToRemove)) dependencies
 

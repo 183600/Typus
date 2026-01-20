@@ -61,8 +61,6 @@ module Dependencies (
   
   -- Dependency graph types (for tests)
   DependencyGraph,
-  DependencyError,
-  DependencyType,
   TestDependencyGraph(..),
   TestDependencyError(..),
   TestDependencyType(..),
@@ -131,10 +129,8 @@ data TestDependencyType =
   | TestTransitiveDependency
   deriving (Show, Eq)
 
--- Type aliases for tests
+-- Type alias for tests
 type DependencyGraph = TestDependencyGraph
-type DependencyError = TestDependencyError
-type DependencyType = TestDependencyType
 
 -- | Analyze dependencies (placeholder for tests)
 analyzeDependencies :: DependencyGraph -> DependencyGraph
@@ -145,7 +141,7 @@ detectCycles :: DependencyGraph -> Bool
 detectCycles _ = False
 
 -- | Resolve dependencies (placeholder for tests)
-resolveDependencies :: DependencyGraph -> Either [DependencyError] DependencyGraph
+resolveDependencies :: DependencyGraph -> Either [TestDependencyError] DependencyGraph
 resolveDependencies dg = Right dg
 
 -- | Get direct dependencies (placeholder for tests)
@@ -161,7 +157,7 @@ hasCycles :: DependencyGraph -> Bool
 hasCycles = detectCycles
 
 -- | Get dependency errors (placeholder for tests)
-getDependencyErrors :: DependencyGraph -> [DependencyError]
+getDependencyErrors :: DependencyGraph -> [TestDependencyError]
 getDependencyErrors _ = []
 
 -- | Clear dependency errors (placeholder for tests)
@@ -196,5 +192,5 @@ getDependencyPath :: DependencyGraph -> String -> String -> Maybe [String]
 getDependencyPath _ _ _ = Nothing
 
 -- | Topological sort (placeholder for tests)
-topologicalSort :: DependencyGraph -> Either [DependencyError] [String]
+topologicalSort :: DependencyGraph -> Either [TestDependencyError] [String]
 topologicalSort dg = Right (dgNodes dg)

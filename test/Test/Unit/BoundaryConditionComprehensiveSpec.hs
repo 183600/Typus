@@ -19,6 +19,7 @@ import Utils (trim, splitBy, removeComments, normalizeIndentation, safeProcessSt
 import qualified Data.Text as T
 import Data.Char (isAlphaNum, isSpace, isPrint, isControl, chr)
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
+import Data.Maybe (listToMaybe)
 import Control.Monad (foldM)
 import Control.Monad.State (execState, State)
 import Control.Exception (evaluate, try, SomeException)
@@ -221,8 +222,12 @@ test_extreme_error_conditions =
           errors = map (\sev -> errorAt "Parsing" sev (T.pack "test") (ErrorLocation Nothing 1 1 Nothing Nothing)) severities
           recoverable = map canRecoverFrom errors
           continue = map shouldContinueAfter errors
-      assertEqual "fatal not recoverable" False (head recoverable)
-      assertEqual "fatal not continue" False (head continue)
+      assertEqual "fatal not recoverable" False (case listToMaybe recoverable of
+                                                Nothing -> True
+                                                Just r -> r)
+      assertEqual "fatal not continue" False (case listToMaybe continue of
+                                             Nothing -> True
+                                             Just c -> c)
   ]
 
 test_special_characters_and_unicode :: [TestTree]

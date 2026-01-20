@@ -12,6 +12,7 @@ import qualified Data.Text as T
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Char (isAlphaNum, isAlpha, isSpace, isControl)
 import Data.Either (isLeft, isRight)
+import Data.Maybe (listToMaybe)
 import Control.Monad (replicateM)
 import qualified Data.Map.Strict as Map
 
@@ -40,7 +41,10 @@ prop_trim_regular c s =
   not (isSpace c) ==>
   let s' = c : s
       trimmed = trim s'
-  in conjoin [property (not (null trimmed)), property (head trimmed === c), property (length trimmed >= 1)]
+      firstCharIsC = case listToMaybe trimmed of
+                       Nothing -> property False
+                       Just h -> h === c
+  in conjoin [property (not (null trimmed)), firstCharIsC, property (length trimmed >= 1)]
 
 -- | 测试trim的幂等性
 prop_trim_idempotent :: String -> Property

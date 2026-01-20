@@ -17,7 +17,9 @@ prop_trim_no_leading_trailing_spaces :: String -> Property
 prop_trim_no_leading_trailing_spaces s = 
   let trimmed = trim s
   in not (null trimmed) ==> 
-     not (isSpace (head trimmed)) && not (isSpace (last trimmed))
+     let firstChar = trimmed !! 0
+         lastChar = trimmed !! (length trimmed - 1)
+     in not (isSpace firstChar) && not (isSpace lastChar)
 
 prop_trim_empty_string :: Bool
 prop_trim_empty_string = trim "" == ""

@@ -19,7 +19,9 @@ prop_trim_no_leading_trailing_spaces s =
   in property $ 
     if null trimmed 
     then True 
-    else not (isSpace (head trimmed)) && not (isSpace (last trimmed))
+    else case trimmed of
+           (h:t) -> not (isSpace h) && not (isSpace (last t))
+           [] -> True
 
 -- | Test splitBy function
 prop_split_by_empty :: Char -> Property
@@ -92,7 +94,9 @@ prop_break_on_not_found needle haystack =
 prop_safe_process_string_roundtrip :: String -> Property
 prop_safe_process_string_roundtrip s = 
   let processed = safeProcessString s
-  in property $ length processed <= length s
+  in case processed of
+       Right str -> property $ length str <= length s
+       Left _ -> property False
 
 -- | Test isValidChar function
 prop_is_valid_char_ascii :: Char -> Property

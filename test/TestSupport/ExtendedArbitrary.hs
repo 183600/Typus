@@ -73,6 +73,7 @@ import qualified Compiler.Errors.Core as Core
 import qualified Dependencies as Dep
 import qualified Dependencies.TypeSystem as DepT (TypeEnv(..), TypeDef(..), DependentTypeChecker(..))
 import qualified Dependencies.AST as DepAST (DependencyGraph(..), DependencyNode(..))
+
 import SyntaxValidator (SyntaxError(..), ErrorType(..))
 import qualified Ownership.Parser as Own
   ( Expr(..)

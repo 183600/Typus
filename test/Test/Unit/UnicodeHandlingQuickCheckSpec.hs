@@ -28,10 +28,11 @@ prop_chinese_characters content =
        Left _ -> property True
        Right typusFile -> 
          let blocks = tfBlocks typusFile
-         in property $ not (null blocks) ==> 
-            let firstBlock = head blocks
-                blockContent = Parser.cbContent firstBlock
-            in chineseChars `isInfixOf` blockContent
+         in case blocks of
+         [] -> property $ True
+         firstBlock:_ -> 
+           let blockContent = Parser.cbContent firstBlock
+           in property $ chineseChars `isInfixOf` blockContent
 
 -- | Test parsing with European accented characters
 prop_accented_characters :: String -> Property
