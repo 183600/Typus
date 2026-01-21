@@ -62,7 +62,12 @@ testComplexCycleDetection = testGroup "Complex cycle detection tests"
       in length cycles @?= 2
   , testCase "detect cycle in complex graph" $
       let nodes = map (`createNode` startPos) ["A", "B", "C", "D", "E", "F"]
-          [nodeA, nodeB, nodeC, nodeD, nodeE, nodeF] = take 6 nodes
+          nodeA = nodes !! 0
+          nodeB = nodes !! 1
+          nodeC = nodes !! 2
+          nodeD = nodes !! 3
+          nodeE = nodes !! 4
+          nodeF = nodes !! 5
           dependencies = Map.fromList 
             [ (nodeA, [nodeB, nodeC])
             , (nodeB, [nodeD])

@@ -107,7 +107,7 @@ prop_text_find pattern s =
   not (null pattern) ==> property $
     let patternText = T.pack pattern
         text = T.pack s
-        result = T.find (== head pattern) text
+        result = case pattern of (c:_) -> T.find (== c) text; [] -> Nothing
     in case result of
          Nothing -> not (pattern `isInfixOf` s)
          Just foundText -> T.singleton foundText `T.isInfixOf` T.pack s
@@ -288,7 +288,6 @@ splitByString pattern s =
   if pattern `isPrefixOf` s
   then "" : splitByString pattern (drop (length pattern) s)
   else case s of
-    [] -> [""]
     (c:cs) -> case splitByString pattern cs of
       [] -> [[c]]
       (x:xs) -> (c:x) : xs
@@ -303,7 +302,7 @@ replaceString _ _ [] = []
 replaceString old new s = 
   if old `isPrefixOf` s
   then new ++ replaceString old new (drop (length old) s)
-  else head s : replaceString old new (tail s)
+  else case s of (c:cs) -> c : replaceString old new cs; [] -> []
 
 -- Note: Using Data.List intercalate function
 

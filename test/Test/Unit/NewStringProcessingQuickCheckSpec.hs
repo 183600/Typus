@@ -77,7 +77,9 @@ prop_trim_noLeadingTrailingWhitespace :: String -> Bool
 prop_trim_noLeadingTrailingWhitespace s = 
   let trimmed = trim s
   in null trimmed || 
-     (not (isSpace (head trimmed)) && not (isSpace (last trimmed)))
+     (case trimmed of 
+        (c:cs) -> not (isSpace c) && not (isSpace (last trimmed))
+        [] -> True)
 
 -- | Test splitBy function: splitting by delimiter and rejoining
 prop_splitBy_join :: Char -> String -> Bool

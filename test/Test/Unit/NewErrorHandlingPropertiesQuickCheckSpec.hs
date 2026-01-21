@@ -53,6 +53,7 @@ prop_format_compiler_error_contains_message msg sev (Positive line) (Positive co
       formatted = show compError
   in property $ msg `isInfixOf` formatted
 
+prop_format_compiler_error_contains_location :: String -> ErrorSeverity -> Positive Int -> Positive Int -> Property
 prop_format_compiler_error_contains_location msg sev (Positive line) (Positive col) =
   let errorLoc = ErrorLocation Nothing line col Nothing Nothing
       compError = IntegrationError msg sev

@@ -228,7 +228,9 @@ prop_stringSplitPreservesCharacters s delimiter =
         splitOn' _ [] acc = [reverse acc]
         splitOn' sep str acc
           | sep `isPrefixOf` str = reverse acc : splitOn' sep (drop (length sep) str) []
-          | otherwise = splitOn' sep (tail str) (head str : acc)
+          | otherwise = case str of 
+                         (c:cs) -> splitOn' sep cs (c : acc)
+                         [] -> [reverse acc]
     
     intercalate _ [] = ""
     intercalate _ [x] = x

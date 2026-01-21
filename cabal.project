@@ -11,7 +11,8 @@ package *
   ghc-options: -optl-Wl,-s
 
 -- 解决base版本冲突
-constraints: indexed-traversable-instances >=0.1.1
+constraints: indexed-traversable-instances >=0.1.1.2, base >=4.12 && <4.23
+allow-newer: indexed-traversable-instances:base, time-compat:base
 
 -- 设置环境变量以解决locale警告
 -- 注意：这些设置需要在运行测试前在shell中设置

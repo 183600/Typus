@@ -179,7 +179,7 @@ prop_integration_malformed_directive_recovery content =
        Right typusFile ->
          let blocks = tfBlocks typusFile
          in property $ not (null blocks) ==> 
-            let firstBlock = head blocks
+            let (firstBlock:_) = blocks
                 blockContent = cbContent firstBlock
             in property $ content `isInfixOf` blockContent
 
@@ -259,7 +259,7 @@ prop_integration_comment_position_tracking content comment =
        Right typusFile ->
          let blocks = tfBlocks typusFile
          in property $ not (null blocks) ==>
-            let firstBlock = head blocks
+            let (firstBlock:_) = blocks
                 blockContent = cbContent firstBlock
             in content `isInfixOf` blockContent
 

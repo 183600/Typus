@@ -46,7 +46,9 @@ prop_parser_empty_line_handling part1 part2 part3 =
 prop_parser_identifier_validation :: String -> Property
 prop_parser_identifier_validation ident = 
   let isValidIdentifier = not (null ident) && 
-                          isAlpha (head ident) && 
+                          (case ident of
+                             (c:_) -> isAlpha c
+                             [] -> False) &&
                           all (\c -> isAlpha c || isDigit c || c == '_') ident
   in property $ if isValidIdentifier
     then case parseTypus (ident ++ " = 42") of
@@ -148,7 +150,9 @@ prop_parser_syntax_strictness input =
 prop_parser_boundary_conditions :: String -> Property
 prop_parser_boundary_conditions input =
   let emptyInput = ""
-      singleChar = if null input then "x" else [head input]
+      singleChar = if null input then "x" else case input of
+                                                (c:_) -> [c]
+                                                [] -> "x"
       veryLongInput = take 10000 $ cycle input
   in property $ case (parseTypus emptyInput, parseTypus singleChar, parseTypus veryLongInput) of
     (Left _, Left _, Left _) -> True

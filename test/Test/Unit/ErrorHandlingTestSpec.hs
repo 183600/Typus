@@ -128,7 +128,6 @@ prop_typeErrorPreservation message severity location context recovery =
   let typeError = TypeError "test-id" severity TypeChecking (T.pack message) location context recovery [] [] [] Nothing
   in case typeError of
     TypeError _ _ cat msg l c r _ _ _ _ -> cat == TypeChecking && msg == T.pack message && l == location && c == context && r == recovery
-    _ -> False
 
 -- Property 8: Type errors with different severities preserve their components
 prop_typeErrorSeverityPreservation :: String -> ErrorSeverity -> Bool

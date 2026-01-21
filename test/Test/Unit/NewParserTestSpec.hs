@@ -34,7 +34,7 @@ test_parse_simple_code_block = do
     Right typusFile -> do
       let blocks = tfBlocks typusFile
       assertEqual "Should have one code block" 1 (length blocks)
-      let block = head blocks
+      let (block:_) = blocks
       assertEqual "Block content should match" "let x = 42\n" (cbContent block)
 
 -- | 测试解析文件指令
@@ -62,7 +62,7 @@ test_parse_block_directives = do
     Left err -> assertFailure $ "Failed to parse block directives: " ++ show err
     Right typusFile -> do
       let blocks = tfBlocks typusFile
-          block = head blocks
+          (block:_) = blocks
           directives = cbDirectives block
           ownership = bdOwnership directives
           constraints = bdConstraints directives
@@ -123,8 +123,8 @@ prop_file_directives_parsing_consistent content =
              ownership = fdOwnership directives
              dependentTypes = fdDependentTypes directives
          in isJust ownership .&&. isJust dependentTypes .&&.
-            locatedValue (head [v | Just v <- [ownership]]) == True .&&.
-            locatedValue (head [v | Just v <- [dependentTypes]]) == False
+            locatedValue (case [v | Just v <- [ownership]] of (v:_) -> v; [] -> error "No ownership value") == True .&&.
+            locatedValue (case [v | Just v <- [dependentTypes]] of (v:_) -> v; [] -> error "No dependentTypes value") == False
 
 -- | QuickCheck属性：代码块内容应该被正确提取
 prop_code_block_content_preserved :: String -> Property
@@ -137,7 +137,7 @@ prop_code_block_content_preserved content =
          let blocks = tfBlocks typusFile
          in if null blocks
             then property True
-            else let block = head blocks
+            else let (block:_) = blocks
                      extractedContent = cbContent block
                  in (not (null content) ==> extractedContent == content ++ "\n")
 
@@ -165,7 +165,7 @@ test_nested_code_blocks = do
     Right typusFile -> do
       let blocks = tfBlocks typusFile
       assertEqual "Should handle nested code blocks correctly" 2 (length blocks)
-      assertBool "Content should include nested markers" ("// ```typus" `isInfixOf` cbContent (head blocks))
+      assertBool "Content should include nested markers" ("// ```typus" `isInfixOf` cbContent (case blocks of (b:_) -> b; [] -> error "No blocks"))
 
 -- | 测试Unicode字符处理
 test_unicode_handling :: Assertion
@@ -176,7 +176,7 @@ test_unicode_handling = do
     Left err -> assertFailure $ "Failed to parse Unicode content: " ++ show err
     Right typusFile -> do
       let blocks = tfBlocks typusFile
-          block = head blocks
+          (block:_) = blocks
       assertBool "Should preserve Unicode characters" ("测试" `isInfixOf` cbContent block)
       assertBool "Should preserve Chinese characters" ("你好世界" `isInfixOf` cbContent block)
 

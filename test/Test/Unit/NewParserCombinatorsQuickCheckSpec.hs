@@ -97,8 +97,8 @@ parseNumber s = case reads s of
 -- | Simple string literal parser
 parseStringLiteral :: String -> Either String String
 parseStringLiteral s 
-  | length s >= 2 && head s == '"' && last s == '"' = 
-      Right (init (tail s))
+  | length s >= 2 && case s of (c:_) -> c == '"'; [] -> False && last s == '"' = 
+      Right (init (case s of (_:cs) -> cs; [] -> []))
   | otherwise = Left "Invalid string literal"
 
 -- | Simple comment parser
@@ -247,7 +247,7 @@ prop_sequential_parsing s1 s2 =
   let combined = s1 ++ " " ++ s2
   in case parseSimple combined of
     Left _ -> False
-    Right words -> length words >= 2 && head words == s1 && last words == s2
+    Right words -> length words >= 2 && case words of (w:_) -> w == s1; [] -> False && last words == s2
 
 -- | Test parser composition: alternative parsing
 prop_alternative_parsing :: String -> String -> Bool
@@ -376,7 +376,7 @@ prop_single_character c =
   let s = [c]
   in case parseSimple s of
     Left _ -> False
-    Right words -> length words == 1 && head words == s
+    Right words -> length words == 1 && case words of (w:_) -> w == s; [] -> False
 
 -- | Test parser performance: whitespace only
 prop_whitespace_only :: String -> Property

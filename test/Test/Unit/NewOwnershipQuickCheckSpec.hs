@@ -278,13 +278,13 @@ prop_sort_ownership_types :: [OwnershipType] -> Property
 prop_sort_ownership_types ownTypes = 
   let sorted = sort ownTypes
   in property $ length sorted == length ownTypes &&
-                all (\(x, y) -> compare x y /= GT) (zip sorted (tail sorted))
+                all (\(x, y) -> compare x y /= GT) (zip sorted (drop 1 sorted))
 
 prop_sort_ownership_errors :: [OwnershipError] -> Property
 prop_sort_ownership_errors ownErrors = 
   let sorted = sort ownErrors
   in property $ length sorted == length ownErrors &&
-                all (\(x, y) -> compare x y /= GT) (zip sorted (tail sorted))
+                all (\(x, y) -> compare x y /= GT) (zip sorted (drop 1 sorted))
 
 -- Unit tests for edge cases
 test_ownership_edge_cases :: TestTree

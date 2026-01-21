@@ -114,7 +114,7 @@ prop_number_parsing_properties n =
 prop_identifier_validation_properties :: String -> Property
 prop_identifier_validation_properties ident =
   let isValid = isValidIdentifier ident
-      hasValidStart = not (null ident) && isAlpha (head ident)
+      hasValidStart = not (null ident) && case ident of (c:_) -> isAlpha c; [] -> False
       hasValidChars = all (\c -> isAlpha c || isDigit c || c == '_') ident
   in property $ isValid == (hasValidStart && hasValidChars)
 

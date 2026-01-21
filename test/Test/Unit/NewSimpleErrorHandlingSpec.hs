@@ -28,7 +28,7 @@ prop_reverse_reverse s = property $ reverse (reverse s) == s
 
 -- Property 4: Head of non-empty list is in list
 prop_head_in_list :: [Int] -> Property
-prop_head_in_list xs = not (null xs) ==> property $ head xs `elem` xs
+prop_head_in_list xs = not (null xs) ==> property $ case xs of (x:_) -> x `elem` xs; [] -> False
 
 -- Property 5: Sum of list is non-negative for non-negative elements
 prop_sum_non_negative :: [Int] -> Property
@@ -77,7 +77,8 @@ test_reverse_property =
 test_head_property :: Assertion
 test_head_property = 
   let xs = [1,2,3]
-  in assertEqual "Head should be first element" 1 (head xs)
+      (x:_) = xs
+  in assertEqual "Head should be first element" 1 x
 
 test_sum_property :: Assertion
 test_sum_property = 

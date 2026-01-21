@@ -266,7 +266,6 @@ isRelevantToCategory SemanticError suggestion =
   any (`isInfixOf` suggestion) ["semantic", "meaning", "logic", "behavior"]
 isRelevantToCategory InternalError suggestion = 
   any (`isInfixOf` suggestion) ["internal", "compiler", "bug", "report"]
-isRelevantToCategory _ _ = True  -- Default to true for unknown categories
 
 highlightErrorLocation :: String -> SourceLocation -> String
 highlightErrorLocation source loc = 

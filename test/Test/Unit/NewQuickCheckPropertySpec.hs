@@ -96,7 +96,7 @@ prop_nub_empty = property $ nub ([] :: [Int]) == []
 
 -- Property 21: Head of non-empty list exists
 prop_head_non_empty :: [Int] -> Property
-prop_head_non_empty xs = not (null xs) ==> property $ head xs `elem` xs
+prop_head_non_empty xs = not (null xs) ==> property $ case xs of (x:_) -> x `elem` xs; [] -> False
 
 -- Property 22: Last of non-empty list exists
 prop_last_non_empty :: [Int] -> Property

@@ -1,22 +1,28 @@
-import Utils (removeComments)
-import Data.List (isInfixOf)
+-- 导入修复后的Utils模块
+import Utils
 
 main :: IO ()
 main = do
-    let testCase = "\"string // not comment\" // real comment"
-        result = removeComments testCase
-        hasLineComment = "//" `isInfixOf` result
-        hasBlockComment = "/*" `isInfixOf` result
-    
-    putStrLn $ "Input: " ++ show testCase
-    putStrLn $ "Output: " ++ show result
-    putStrLn $ "Has // in output: " ++ show hasLineComment
-    putStrLn $ "Has /* in output: " ++ show hasBlockComment
-    
-    -- 测试简单的removeComments
-    let simpleTest = "code // comment"
-        simpleResult = removeComments simpleTest
-    putStrLn $ "\nSimple test:"
-    putStrLn $ "Input: " ++ show simpleTest
-    putStrLn $ "Output: " ++ show simpleResult
-    putStrLn $ "Has // in output: " ++ show ("//" `isInfixOf` simpleResult)
+  let input = "//\""
+  let result = removeComments input
+  putStrLn $ "Input: " ++ show input
+  putStrLn $ "Result: " ++ show result
+  putStrLn $ "Input quotes: " ++ show (length $ filter (== '"') input)
+  putStrLn $ "Result quotes: " ++ show (length $ filter (== '"') result)
+  
+  -- 测试更多案例
+  let testCases = 
+        [ "//\""
+        , "\"//\""
+        , "code // comment"
+        , "\"code // not comment\""
+        , "/* block comment */"
+        , "\"/* not comment */\""
+        ]
+  
+  putStrLn "\n--- Test Cases ---"
+  mapM_ (\tc -> do
+            let r = removeComments tc
+            putStrLn $ "Input:  " ++ show tc
+            putStrLn $ "Output: " ++ show r
+            putStrLn "") testCases
