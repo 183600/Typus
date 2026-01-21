@@ -62,7 +62,7 @@ testComplexCycleDetection = testGroup "Complex cycle detection tests"
       in length cycles @?= 2
   , testCase "detect cycle in complex graph" $
       let nodes = map (`createNode` startPos) ["A", "B", "C", "D", "E", "F"]
-          [nodeA, nodeB, nodeC, nodeD, nodeE, nodeF] = if length nodes >= 6 then take 6 nodes else error "Expected at least 6 nodes"
+          (nodeA:nodeB:nodeC:nodeD:nodeE:nodeF:_) = nodes
           dependencies = Map.fromList 
             [ (nodeA, [nodeB, nodeC])
             , (nodeB, [nodeD])

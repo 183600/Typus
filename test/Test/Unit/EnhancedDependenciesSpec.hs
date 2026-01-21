@@ -9,7 +9,7 @@ import Data.Maybe (isJust, isNothing)
 import Control.Monad (void)
 
 -- Import Dependencies module
-import Dependencies (DependentTypeChecker(..), newDependentTypeChecker, 
+import Dependencies (newDependentTypeChecker, 
                     analyzeDependentTypes, analyzeAST, validateASTSemantics, validateStatement,
                     TypeVar(..), TypeConstraint(..), Substitution, TypeScheme(..),
                     TypeEnvironment(..), TypeInferenceState(..), TypeInferenceError(..))

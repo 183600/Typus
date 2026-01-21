@@ -166,7 +166,6 @@ prop_type_check_failure :: Property
 prop_type_check_failure = 
   case Left "type check failed" of
     Left _ -> property True
-    Right _ -> property False
 
 -- | 测试 typeDiagnosticToCompilerError 的属性：转换后的错误保留原始信息
 prop_type_diagnostic_to_compiler_error :: Property
@@ -176,7 +175,6 @@ prop_type_diagnostic_to_compiler_error =
       error = CompilerError typeError Nothing [] TypeCheckingPhase
   in case error of
     CompilerError _ _ _ _ -> property True
-    _ -> property False
 
 -- | 测试 generateGoCode 的属性：generateGoCode 总是返回非空字符串
 prop_generate_go_code_nonempty :: Property
