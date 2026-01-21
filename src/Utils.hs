@@ -9,6 +9,7 @@ module Utils
     -- Comments
   , removeLineComments    -- 仅移除 //（忽略字符串/字符字面量）
   , removeComments        -- 移除 // 与 /* ... */（忽略字符串/字符字面量）
+  , isCompleteStringLiteral -- 检查是否是完整的字符串字面量
     -- Indentation
   , normalizeIndentation  -- 保留相对缩进，去掉公共前缀（推荐）
   , forceSingleTabIndentation -- 旧行为（不推荐）
@@ -85,7 +86,7 @@ removeLineComments s =
          then ""  -- 特殊情况：只有注释符号
          else if s == " "
          then " "  -- 特殊情况：单个空格
-         else if length s == 1 && isControl (head s)
+         else if length s == 1 && case s of [c] -> isControl c; _ -> False
          then s  -- 特殊情况：单个控制字符
          else if '\n' `elem` s
               then let ls = lines s
