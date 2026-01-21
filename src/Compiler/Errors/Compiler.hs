@@ -301,11 +301,13 @@ addLineNumbers code =
 -- Format multiple compiler errors
 formatCompilerErrors :: [CompilerError] -> String
 formatCompilerErrors errs =
-    let grouped = groupErrorsByPhase errs
-        sections = map formatPhaseErrors (Map.toList grouped)
-    in unlines $ 
-        ["=== Compilation Errors ===", ""] ++ 
-        sections
+    if null errs
+      then ""
+      else let grouped = groupErrorsByPhase errs
+               sections = map formatPhaseErrors (Map.toList grouped)
+           in unlines $ 
+               ["=== Compilation Errors ===", ""] ++ 
+               sections
 
 -- Group errors by compilation phase
 groupErrorsByPhase :: [CompilerError] -> Map.Map CompilationPhase [CompilerError]

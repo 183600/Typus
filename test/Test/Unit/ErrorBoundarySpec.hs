@@ -21,9 +21,12 @@ prop_split_delimiter_at_boundaries :: Char -> String -> Property
 prop_split_delimiter_at_boundaries c s = 
   let sWithDelim = c : s ++ [c]
       parts = splitBy c sWithDelim
+      firstPart = case parts of
+                   [] -> ""
+                   (x:_) -> x
   in property $ 
        not (null parts) &&
-       head parts == "" &&
+       firstPart == "" &&
        last parts == ""
 
 -- Property: removeComments should handle strings without comments

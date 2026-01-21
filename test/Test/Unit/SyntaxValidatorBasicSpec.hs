@@ -6,7 +6,7 @@ import SyntaxValidator
 import Compiler.Errors.Core (ErrorLocation(..))
 import SourceLocation (SourcePos(..), startPos, SourceSpan(..))
 import qualified Data.List as L
-import Prelude hiding (all, elem, isPrefixOf, isSuffixOf)
+import Prelude hiding (all, elem)
 
 tests :: TestTree
 tests = testGroup "Syntax Validator Basic Tests"

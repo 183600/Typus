@@ -76,7 +76,6 @@ aggregateErrors = map safeHead . groupSort
     safeHead [] = error "Empty group in aggregateErrors"
     safeHead (h:_) = h
     groupSort [] = []
-    groupSort [] = []
     groupSort xs = case xs of
                      [] -> []
                      (h:_) -> let (group, rest) = span (== h) (sort xs)

@@ -19,7 +19,9 @@ tests = testGroup "Syntax Validator Boundary Tests"
                 (h:_) -> isLetter h ==> isValidIdentifier xs
     
     , testProperty "valid identifiers contain only letters and digits" $
-        \xs -> isValidIdentifier xs ==> all (\c -> isLetter c || isDigit c) (tail xs)
+        \xs -> isValidIdentifier xs ==> all (\c -> isLetter c || isDigit c) (case xs of
+                                                                        [] -> []
+                                                                        (_:rest) -> rest)
     
     , testProperty "empty string is not a valid identifier" $
         not (isValidIdentifier "")

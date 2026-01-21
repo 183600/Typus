@@ -16,20 +16,20 @@ def fix_all_files():
     
     # Add type annotations
     content = re.sub(
-        r"testProperty \"Error messages contain useful information\" \$\s+\\ errorMsg ->",
-        "testProperty \"Error messages contain useful information\" $ \\(errorMsg :: T.Text) ->",
+        r'testProperty "Error messages contain useful information" \$\s+\\ errorMsg ->',
+        'testProperty "Error messages contain useful information" $ \\(errorMsg :: T.Text) ->',
         content
     )
     
     content = re.sub(
-        r"testProperty \"Error severity levels are correctly ordered\" \$\s+\\ severity1 severity2 ->",
-        "testProperty \"Error severity levels are correctly ordered\" $ \\(severity1 :: ErrorSeverity) (severity2 :: ErrorSeverity) ->",
+        r'testProperty "Error severity levels are correctly ordered" \$\s+\\ severity1 severity2 ->',
+        'testProperty "Error severity levels are correctly ordered" $ \\(severity1 :: ErrorSeverity) (severity2 :: ErrorSeverity) ->',
         content
     )
     
     content = re.sub(
-        r"testProperty \"Error filtering preserves important errors\" \$\s+\\ errors ->",
-        "testProperty \"Error filtering preserves important errors\" $ \\(errors :: [String]) ->",
+        r'testProperty "Error filtering preserves important errors" \$\s+\\ errors ->',
+        'testProperty "Error filtering preserves important errors" $ \\(errors :: [String]) ->',
         content
     )
     
@@ -43,20 +43,20 @@ def fix_all_files():
     
     # Add type annotations
     content = re.sub(
-        r"testProperty \"Go module generation preserves structure\" \$\s+\\ \\(moduleName :: T\.Text\) ->",
-        "testProperty \"Go module generation preserves structure\" $ \\(moduleName :: T.Text) ->",
+        r'testProperty "Go module generation preserves structure" \$\s+\\ \\\(moduleName :: T\.Text\\\) ->',
+        'testProperty "Go module generation preserves structure" $ \\(moduleName :: T.Text) ->',
         content
     )
     
     content = re.sub(
-        r"testProperty \"Go function signatures are valid\" \$\s+\\ funcName params ->",
-        "testProperty \"Go function signatures are valid\" $ \\(funcName :: T.Text) (params :: [T.Text]) ->",
+        r'testProperty "Go function signatures are valid" \$\s+\\ funcName params ->',
+        'testProperty "Go function signatures are valid" $ \\(funcName :: T.Text) (params :: [T.Text]) ->',
         content
     )
     
     content = re.sub(
-        r"testProperty \"Go module dependencies are resolved correctly\" \$\s+\\ \\(modules :: \[String]\) ->",
-        "testProperty \"Go module dependencies are resolved correctly\" $ \\(modules :: [String]) ->",
+        r'testProperty "Go module dependencies are resolved correctly" \$\s+\\ \\\(modules :: \[String]\\\) ->',
+        'testProperty "Go module dependencies are resolved correctly" $ \\(modules :: [String]) ->',
         content
     )
     
@@ -85,8 +85,8 @@ def fix_all_files():
     
     # Fix string operations
     content = re.sub(
-        r"not \(T\.null f\) && not \(T\.null t\)",
-        "not (null (T.unpack f)) && not (null (T.unpack t))",
+        r'not \\(T\.null f\\) && not \\(T\.null t\\)',
+        'not (null (T.unpack f)) && not (null (T.unpack t))',
         content
     )
     
@@ -100,8 +100,8 @@ def fix_all_files():
     
     # Fix Located constructor
     content = re.sub(
-        r"Located \\(SourcePos 0 0 0\) True undefined",
-        "Located (SourcePos 0 0 0) True",
+        r'Located \\(SourcePos 0 0 0\\) True undefined',
+        'Located (SourcePos 0 0 0) True',
         content
     )
     

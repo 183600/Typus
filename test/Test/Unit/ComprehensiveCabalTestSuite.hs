@@ -118,7 +118,7 @@ prop_split_by_collapsed_idempotent delim s =
 prop_trim_commutative :: String -> String -> Property
 prop_trim_commutative s1 s2 =
   let combined1 = trim (s1 ++ s2)
-      combined2 = trim (trim s1 ++ trim s2)
+      combined2 = trim (s2 ++ s1)
   in property $ combined1 === combined2
 
 -- QuickCheck属性：removeLineComments的幂等性

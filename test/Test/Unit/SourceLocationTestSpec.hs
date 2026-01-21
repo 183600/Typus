@@ -56,13 +56,12 @@ instance Arbitrary SourceSpan where
 
 -- Test properties for source location
 
--- Property 1: Source position components are preserved
+-- Property 1: Source position preserves line, column, and offset
 prop_sourcePosPreservation :: Int -> Int -> Int -> Bool
 prop_sourcePosPreservation line col offset =
   let pos = SourcePos line col offset
   in case pos of
     SourcePos l c o -> l == line && c == col && o == offset
-    _ -> False
 
 -- Property 2: Source span preserves start and end positions
 prop_sourceSpanPreservation :: SourcePos -> SourcePos -> Bool
@@ -70,7 +69,6 @@ prop_sourceSpanPreservation start end =
   let span = SourceSpan start end
   in case span of
     SourceSpan s e -> s == start && e == end
-    _ -> False
 
 -- Property 3: Source position ordering is consistent
 prop_sourcePosOrdering :: SourcePos -> SourcePos -> Bool
@@ -97,14 +95,12 @@ prop_emptySpanEquality line col offset =
       span = SourceSpan pos pos
   in case span of
     SourceSpan s e -> s == e
-    _ -> False
 
 -- Property 6: Span start is less than or equal to span end
 prop_spanStartLessThanEnd :: SourceSpan -> Bool
 prop_spanStartLessThanEnd span =
   case span of
     SourceSpan start end -> start <= end
-    _ -> False
 
 -- Helper function to check if span contains position
 contains :: SourceSpan -> SourcePos -> Bool
@@ -115,14 +111,12 @@ prop_spanContainsStart :: SourceSpan -> Bool
 prop_spanContainsStart span =
   case span of
     SourceSpan start _ -> contains span start
-    _ -> False
 
 -- Property 8: Span contains its end position
 prop_spanContainsEnd :: SourceSpan -> Bool
 prop_spanContainsEnd span =
   case span of
     SourceSpan _ end -> contains span end
-    _ -> False
 
 sourceLocationTests :: TestTree
 sourceLocationTests = testGroup "Source Location Tests"

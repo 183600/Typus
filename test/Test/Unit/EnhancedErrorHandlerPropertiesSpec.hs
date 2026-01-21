@@ -47,7 +47,9 @@ prop_error_categorization_consistent errorMsg =
 -- Test error severity calculation
 prop_severity_calculation_monotonic :: [String] -> Property
 prop_severity_calculation_monotonic errorMessages =
-  let singleSeverity = calculateErrorSeverity (head errorMessages)
+  let singleSeverity = case errorMessages of
+                        [] -> calculateErrorSeverity ""
+                        (x:_) -> calculateErrorSeverity x
       multipleSeverity = calculateErrorSeverity (unwords errorMessages)
   in property $ 
     if null errorMessages 

@@ -8,7 +8,8 @@ import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import Test.QuickCheck (conjoin)
 
-import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed, removeLineComments, removeComments, normalizeIndentation, safeProcessString, breakOn, isRight)
+import qualified Utils as Utils
+import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed, removeLineComments, removeComments, normalizeIndentation, safeProcessString, breakOn)
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos, advancePosByText)
 import Parser (TypusFile(..), parseTypus)
 import ErrorHandler
@@ -23,7 +24,7 @@ import qualified Data.Map.Strict as Map
 -- | 测试trim函数的基本属性
 prop_trim_basic :: String -> Property
 prop_trim_basic s =
-  let trimmed = trim s
+  let trimmed = Utils.trim s
   in conjoin 
      [ property $ length trimmed <= length s
      , null s ==> null trimmed
@@ -32,20 +33,20 @@ prop_trim_basic s =
 
 -- | 测试trim对空字符串的处理
 prop_trim_empty :: Property
-prop_trim_empty = trim "" === ""
+prop_trim_empty = Utils.trim "" === ""
 
 -- | 测试trim对空白字符的处理
 prop_trim_whitespace :: String -> Property
 prop_trim_whitespace s =
-  let trimmed = trim s
-  in all isSpace (trim s) ==> null trimmed
+  let trimmed = Utils.trim s
+  in all isSpace (Utils.trim s) ==> null trimmed
 
 -- | 测试trim对普通字符的处理
 prop_trim_regular :: Char -> String -> Property
 prop_trim_regular c s =
   not (isSpace c) ==>
   let s' = c : s
-      trimmed = trim s'
+      trimmed = Utils.trim s'
   in case trimmed of
        [] -> property False
        (h:_) -> conjoin 
@@ -56,25 +57,25 @@ prop_trim_regular c s =
 -- | 测试trim的幂等性
 prop_trim_idempotent :: String -> Property
 prop_trim_idempotent s =
-  let trimmed1 = trim s
-      trimmed2 = trim trimmed1
+  let trimmed1 = Utils.trim s
+      trimmed2 = Utils.trim trimmed1
   in trimmed1 === trimmed2
 
 -- | 测试splitBy的基本属性
 prop_splitBy_basic :: Char -> String -> Property
 prop_splitBy_basic c s =
-  let parts = splitBy c s
+  let parts = Utils.splitBy c s
   in concat parts === s
 
 -- | 测试splitBy对空字符串的处理
 prop_splitBy_empty :: Char -> Property
-prop_splitBy_empty c = splitBy c "" === []
+prop_splitBy_empty c = Utils.splitBy c "" === []
 
 -- | 测试splitBy对连续分隔符的处理
 prop_splitBy_collapsed :: Char -> String -> Property
 prop_splitBy_collapsed c s =
-  let parts = splitBy c s
-      collapsed = splitByCollapsed c s
+  let parts = Utils.splitBy c s
+      collapsed = Utils.splitByCollapsed c s
   in conjoin 
      [ property $ length collapsed <= length parts
      , property $ length collapsed >= 0
@@ -83,18 +84,18 @@ prop_splitBy_collapsed c s =
 -- | 测试splitByComma的基本属性
 prop_splitByComma_basic :: String -> Property
 prop_splitByComma_basic s =
-  let parts = splitByComma s
+  let parts = Utils.splitByComma s
   in concat parts === s
 
 -- | 测试splitByComma对空字符串的处理
 prop_splitByComma_empty :: Property
-prop_splitByComma_empty = splitByComma "" === []
+prop_splitByComma_empty = Utils.splitByComma "" === []
 
 -- | 测试splitByComma对连续逗号的处理
 prop_splitByComma_collapsed :: String -> Property
 prop_splitByComma_collapsed s =
-  let parts = splitByComma s
-      collapsed = splitByCommaCollapsed s
+  let parts = Utils.splitByComma s
+      collapsed = Utils.splitByCommaCollapsed s
   in conjoin 
      [ property $ length collapsed <= length parts
      , not (null s) ==> property $ length collapsed >= 0
@@ -104,17 +105,17 @@ prop_splitByComma_collapsed s =
 prop_removeLineComments_basic :: String -> String -> Property
 prop_removeLineComments_basic code comment =
   let codeWithComment = code ++ "// " ++ comment ++ "\nmore code"
-      withoutComments = removeLineComments codeWithComment
+      withoutComments = Utils.removeLineComments codeWithComment
   in property (not $ "//" `isInfixOf` withoutComments)
 
 -- | 测试removeLineComments对空代码的处理
 prop_removeLineComments_empty :: Property
-prop_removeLineComments_empty = removeLineComments "" === ""
+prop_removeLineComments_empty = Utils.removeLineComments "" === ""
 
 -- | 测试removeLineComments对没有注释的处理
 prop_removeLineComments_no_comments :: String -> Property
 prop_removeLineComments_no_comments code =
-  not ("//" `isInfixOf` code) ==> removeLineComments code === code
+  not ("//" `isInfixOf` code) ==> Utils.removeLineComments code === code
 
 -- | 测试removeLineComments对多行注释的处理
 prop_removeLineComments_multiline :: Positive Int -> String -> Property
@@ -123,25 +124,25 @@ prop_removeLineComments_multiline (Positive n) code =
   let commentLines = replicate n "// comment line"
       comments = unlines commentLines
       codeWithComments = unlines [code, comments, "more code"]
-      withoutComments = removeLineComments codeWithComments
+      withoutComments = Utils.removeLineComments codeWithComments
   in all (not . isPrefixOf "//") (lines withoutComments)
 
 -- | 测试removeComments的基本属性
 prop_removeComments_basic :: String -> String -> Property
 prop_removeComments_basic before after =
   let codeWithComment = before ++ "/* " ++ "comment" ++ " */" ++ after
-      withoutComments = removeComments codeWithComment
+      withoutComments = Utils.removeComments codeWithComment
   in property (not $ "/*" `isInfixOf` withoutComments && "*/" `isInfixOf` withoutComments)
 
 -- | 测试removeComments对空代码的处理
 prop_removeComments_empty :: Property
-prop_removeComments_empty = removeComments "" === ""
+prop_removeComments_empty = Utils.removeComments "" === ""
 
 -- | 测试removeComments对没有注释的处理
 prop_removeComments_no_comments :: String -> Property
 prop_removeComments_no_comments code =
   not ("/*" `isInfixOf` code) && not ("*/" `isInfixOf` code) ==> 
-  removeComments code === code
+  Utils.removeComments code === code
 
 -- | 测试removeComments对多行注释的处理
 prop_removeComments_multiline :: Positive Int -> String -> String -> Property
@@ -150,29 +151,29 @@ prop_removeComments_multiline (Positive n) before after =
   let commentLines = [ "/* comment line " ++ show i ++ " */" | i <- [1..n] ]
       comments = unlines commentLines
       codeWithComment = unlines [before, comments, after]
-      withoutComments = removeComments codeWithComment
+      withoutComments = Utils.removeComments codeWithComment
   in all (not . isPrefixOf "/*") (lines withoutComments)
 
 -- | 测试normalizeIndentation的基本属性
 prop_normalizeIndentation_basic :: String -> Property
 prop_normalizeIndentation_basic s =
-  let normalized = normalizeIndentation s
+  let normalized = Utils.normalizeIndentation s
   in property $ length normalized >= 0
 
 -- | 测试normalizeIndentation对空字符串的处理
 prop_normalizeIndentation_empty :: Property
-prop_normalizeIndentation_empty = normalizeIndentation "" === ""
+prop_normalizeIndentation_empty = Utils.normalizeIndentation "" === ""
 
 -- | 测试normalizeIndentation对无缩进的处理
 prop_normalizeIndentation_no_indent :: String -> Property
 prop_normalizeIndentation_no_indent s =
-  not (any isSpace s) ==> normalizeIndentation s === s
+  not (any isSpace s) ==> Utils.normalizeIndentation s === s
 
 -- | 测试normalizeIndentation对一致缩进的处理
 prop_normalizeIndentation_consistent :: String -> Property
 prop_normalizeIndentation_consistent s =
   let indented = "  " ++ s
-      normalized = normalizeIndentation indented
+      normalized = Utils.normalizeIndentation indented
   in conjoin 
      [ property $ length normalized >= 0
      , property $ all (\line -> not (all isSpace (takeWhile isSpace line))) (lines normalized)
@@ -182,7 +183,7 @@ prop_normalizeIndentation_consistent s =
 prop_normalizeIndentation_inconsistent :: String -> Property
 prop_normalizeIndentation_inconsistent s =
   let indented = "  " ++ s ++ "\n    " ++ s
-      normalized = normalizeIndentation indented
+      normalized = Utils.normalizeIndentation indented
   in conjoin 
      [ property $ length normalized >= 0
      , property $ all (\line -> not (all isSpace (takeWhile isSpace line))) (lines normalized)
@@ -193,12 +194,12 @@ prop_normalizeIndentation_deep :: Positive Int -> Property
 prop_normalizeIndentation_deep (Positive n) =
   n < 50 ==>
   let deepIndent = replicate n ' ' ++ "code"
-      normalized = normalizeIndentation deepIndent
+      normalized = Utils.normalizeIndentation deepIndent
   in length normalized >= 0
 
 -- | 测试isRight的基本属性
 prop_isRight_basic :: Either String Int -> Property
-prop_isRight_basic e = Data.Either.isRight e === (case e of Right _ -> True; Left _ -> False)
+prop_isRight_basic e = Utils.isRight e === (case e of Right _ -> True; Left _ -> False)
 
 -- | 测试isLeft的基本属性
 prop_isLeft_basic :: Either String Int -> Property
@@ -206,7 +207,7 @@ prop_isLeft_basic e = Data.Either.isLeft e === (case e of Left _ -> True; Right 
 
 -- | 测试isRight对Right值的处理
 prop_isRight_right :: Int -> Property
-prop_isRight_right x = property $ Data.Either.isRight (Right x)
+prop_isRight_right x = property $ Utils.isRight (Right x)
 
 -- | 测试isRight对Left值的处理
 prop_isRight_left :: String -> Property
@@ -222,7 +223,7 @@ prop_isLeft_left msg = property $ isLeft (Left msg)
 
 -- | 测试isRight对Either的对称性
 prop_isRight_either_symmetry :: Either String Int -> Property
-prop_isRight_either_symmetry e = Data.Either.isRight e === (case e of Right _ -> True; Left _ -> False)
+prop_isRight_either_symmetry e = Utils.isRight e === (case e of Right _ -> True; Left _ -> False)
 
 -- | 测试isLeft对Either的对称性
 prop_isLeft_either_symmetry :: Either String Int -> Property
@@ -231,7 +232,7 @@ prop_isLeft_either_symmetry e = isLeft e === (case e of Left _ -> True; Right _ 
 -- | 测试safeProcessString的基本属性
 prop_safeProcessString_basic :: String -> Property
 prop_safeProcessString_basic s =
-  let processed = safeProcessString s
+  let processed = Utils.safeProcessString s
   in case processed of
        Right p -> property $ length p >= 0
        Left _ -> property True
@@ -239,7 +240,7 @@ prop_safeProcessString_basic s =
 -- | 测试safeProcessString对空字符串的处理
 prop_safeProcessString_empty :: Property
 prop_safeProcessString_empty = 
-  case safeProcessString "" of
+  case Utils.safeProcessString "" of
     Right "" -> property True
     _ -> property False
 
@@ -247,7 +248,7 @@ prop_safeProcessString_empty =
 prop_safeProcessString_special :: Char -> Property
 prop_safeProcessString_special c =
   let s = [c]
-      processed = safeProcessString s
+      processed = Utils.safeProcessString s
   in case processed of
        Right p -> property $ length p >= 0
        Left _ -> property True
@@ -257,7 +258,7 @@ prop_safeProcessString_control :: Char -> Property
 prop_safeProcessString_control c =
   isControl c ==> 
   let s = [c]
-      processed = safeProcessString s
+      processed = Utils.safeProcessString s
   in case processed of
        Right p -> property $ length p >= 0
        Left _ -> property True
@@ -266,7 +267,7 @@ prop_safeProcessString_control c =
 prop_safeProcessString_unicode :: Property
 prop_safeProcessString_unicode =
   let unicodeChars = map (: "") ['\0'..'\255']  -- Convert chars to strings
-      processed = map safeProcessString unicodeChars
+      processed = map Utils.safeProcessString unicodeChars
       checkResult (Right p) = length p >= 0
       checkResult (Left _) = True
   in property $ all checkResult processed
@@ -276,7 +277,7 @@ prop_safeProcessString_long :: Positive Int -> Property
 prop_safeProcessString_long (Positive n) =
   n < 10000 ==>
   let longString = replicate n 'x'
-      processed = safeProcessString longString
+      processed = Utils.safeProcessString longString
   in case processed of
        Right p -> property $ length p >= 0
        Left _ -> property True
@@ -284,17 +285,17 @@ prop_safeProcessString_long (Positive n) =
 -- | 测试breakOn的基本属性
 prop_breakOn_basic :: String -> String -> Property
 prop_breakOn_basic sep s =
-  let (before, after) = breakOn sep s
+  let (before, after) = Utils.breakOn sep s
   in before ++ sep ++ after === s
 
 -- | 测试breakOn对空分隔符的处理
 prop_breakOn_empty :: String -> Property
-prop_breakOn_empty s = breakOn "" s === (s, "")
+prop_breakOn_empty s = Utils.breakOn "" s === (s, "")
 
 -- | 测试breakOn对不存在的分隔符的处理
 prop_breakOn_not_found :: String -> Property
 prop_breakOn_not_found s =
-  let (before, after) = breakOn ":" s
+  let (before, after) = Utils.breakOn ":" s
   in conjoin 
      [ before === s
      , after === ""
@@ -306,8 +307,8 @@ prop_breakOn_multiple sep s =
   case sep of
     [] -> property $ True  -- Empty separator is a special case
     (h:_) -> 
-      let parts = splitBy h s  -- Use first char as separator
-          (before, after) = breakOn sep (concat parts)
+      let parts = Utils.splitBy h s  -- Use first char as separator
+          (before, after) = Utils.breakOn sep (concat parts)
       in conjoin 
          [ before === concat (init parts)
          , after === last parts
@@ -317,7 +318,7 @@ prop_breakOn_multiple sep s =
 prop_breakOn_prefix :: String -> String -> Property
 prop_breakOn_prefix sep s =
   let s' = sep ++ "content"
-      (before, after) = breakOn sep s'
+      (before, after) = Utils.breakOn sep s'
   in conjoin 
      [ before === ""
      , after === "content"
@@ -327,7 +328,7 @@ prop_breakOn_prefix sep s =
 prop_breakOn_suffix :: String -> String -> Property
 prop_breakOn_suffix sep s =
   let s' = "content" ++ sep
-      (before, after) = breakOn sep s'
+      (before, after) = Utils.breakOn sep s'
   in conjoin 
      [ before === "content"
      , after === ""
@@ -336,7 +337,7 @@ prop_breakOn_suffix sep s =
 -- | 测试breakOn对没有分隔符的情况
 prop_breakOn_no_separator :: String -> Property
 prop_breakOn_no_separator s =
-  let (before, after) = breakOn ":" s
+  let (before, after) = Utils.breakOn ":" s
   in conjoin 
      [ before === s
      , after === ""
@@ -345,56 +346,56 @@ prop_breakOn_no_separator s =
 -- | 测试trim的边界情况
 test_trim_edge_cases :: Assertion
 test_trim_edge_cases = do
-  assertEqual "Empty string" "" (trim "")
-  assertEqual "Single space" "" (trim " ")
-  assertEqual "Single tab" "" (trim "\t")
-  assertEqual "Multiple spaces" "" (trim "   ")
-  assertEqual "Mixed whitespace" "content" (trim "  \t  content  ")
+  assertEqual "Empty string" "" (Utils.trim "")
+  assertEqual "Single space" "" (Utils.trim " ")
+  assertEqual "Single tab" "" (Utils.trim "\t")
+  assertEqual "Multiple spaces" "" (Utils.trim "   ")
+  assertEqual "Mixed whitespace" "content" (Utils.trim "  \t  content  ")
 
 -- | 测试splitBy的边界情况
 test_splitBy_edge_cases :: Assertion
 test_splitBy_edge_cases = do
-  assertEqual "Empty string" [] (splitBy ',' "")
-  assertEqual "No separator" ["single"] (splitBy 'x' "single")
-  assertEqual "Single separator" ["", ""] (splitBy ',' ",")
-  assertEqual "Multiple separators" ["a", "", "b"] (splitBy ',' "a,,b")
+  assertEqual "Empty string" [] (Utils.splitBy ',' "")
+  assertEqual "No separator" ["single"] (Utils.splitBy 'x' "single")
+  assertEqual "Single separator" ["", ""] (Utils.splitBy ',' ",")
+  assertEqual "Multiple separators" ["a", "", "b"] (Utils.splitBy ',' "a,,b")
 
 -- | 测试splitByComma的边界情况
 test_splitByComma_edge_cases :: Assertion
 test_splitByComma_edge_cases = do
-  assertEqual "Empty string" [] (splitByComma "")
-  assertEqual "No commas" ["single"] (splitByComma "single")
-  assertEqual "Single comma" ["", ""] (splitByComma ",")
-  assertEqual "Multiple commas" ["a", "", "b"] (splitByComma "a,,b")
+  assertEqual "Empty string" [] (Utils.splitByComma "")
+  assertEqual "No commas" ["single"] (Utils.splitByComma "single")
+  assertEqual "Single comma" ["", ""] (Utils.splitByComma ",")
+  assertEqual "Multiple commas" ["a", "", "b"] (Utils.splitByComma "a,,b")
 
 -- | 测试removeLineComments的边界情况
 test_removeLineComments_edge_cases :: Assertion
 test_removeLineComments_edge_cases = do
-  assertEqual "Empty code" "" (removeLineComments "")
-  assertEqual "No comments" "code" (removeLineComments "code")
-  assertEqual "Single line comment" "code " (removeLineComments "code // comment")
-  assertEqual "Multiple line comments" "code\nmore code" (removeLineComments "code\n// comment1\n// comment2\nmore code")
+  assertEqual "Empty code" "" (Utils.removeLineComments "")
+  assertEqual "No comments" "code" (Utils.removeLineComments "code")
+  assertEqual "Single line comment" "code " (Utils.removeLineComments "code // comment")
+  assertEqual "Multiple line comments" "code\nmore code" (Utils.removeLineComments "code\n// comment1\n// comment2\nmore code")
 
 -- | 测试removeComments的边界情况
 test_removeComments_edge_cases :: Assertion
 test_removeComments_edge_cases = do
-  assertEqual "Empty code" "" (removeComments "")
-  assertEqual "No comments" "code" (removeComments "code")
-  assertEqual "Single line comment" "code " (removeComments "code /* comment */")
-  assertEqual "Multiple line comments" "code\nmore code" (removeComments "code /* comment1 */\nmore code")
+  assertEqual "Empty code" "" (Utils.removeComments "")
+  assertEqual "No comments" "code" (Utils.removeComments "code")
+  assertEqual "Single line comment" "code " (Utils.removeComments "code /* comment */")
+  assertEqual "Multiple line comments" "code\nmore code" (Utils.removeComments "code /* comment1 */\nmore code")
 
 -- | 测试normalizeIndentation的边界情况
 test_normalizeIndentation_edge_cases :: Assertion
 test_normalizeIndentation_edge_cases = do
-  assertEqual "Empty string" "" (normalizeIndentation "")
-  assertEqual "No indentation" "code" (normalizeIndentation "code")
-  assertEqual "Single indentation" "code" (normalizeIndentation "  code")
-  assertEqual "Multiple indentation" "code" (normalizeIndentation "    code")
+  assertEqual "Empty string" "" (Utils.normalizeIndentation "")
+  assertEqual "No indentation" "code" (Utils.normalizeIndentation "code")
+  assertEqual "Single indentation" "code" (Utils.normalizeIndentation "  code")
+  assertEqual "Multiple indentation" "code" (Utils.normalizeIndentation "    code")
 
 -- | 测试isRight的边界情况
 test_isRight_edge_cases :: Assertion
 test_isRight_edge_cases = do
-  assertBool "Right value is right" (Data.Either.isRight (Right 42))
+  assertBool "Right value is right" (Utils.isRight (Right 42))
   assertBool "Left value is not right" (not $ Data.Either.isRight (Left "error"))
 
 -- | 测试isLeft的边界情况
@@ -406,26 +407,26 @@ test_isLeft_edge_cases = do
 -- | 测试safeProcessString的边界情况
 test_safeProcessString_edge_cases :: Assertion
 test_safeProcessString_edge_cases = do
-  case safeProcessString "" of
+  case Utils.safeProcessString "" of
     Right "" -> return ()
     _ -> assertFailure "Empty string should return Right \"\""
-  case safeProcessString "\0\1\2\3" of
+  case Utils.safeProcessString "\0\1\2\3" of
     Right "" -> return ()
     _ -> return ()  -- Control characters might be filtered
-  case safeProcessString "\t\n\r" of
+  case Utils.safeProcessString "\t\n\r" of
     Right _ -> return ()  -- Newlines and tabs should be preserved
     _ -> assertFailure "Newlines and tabs should be preserved"
-  case safeProcessString "中文测试" of
+  case Utils.safeProcessString "中文测试" of
     Right _ -> return ()  -- Unicode characters should be preserved
     _ -> return ()  -- Or they might be filtered depending on implementation
 
 -- | 测试breakOn的边界情况
 test_breakOn_edge_cases :: Assertion
 test_breakOn_edge_cases = do
-  assertEqual "Empty string" ("", "") (breakOn "" "")
-  assertEqual "No separator found" ("test", "") (breakOn ":" "test")
-  assertEqual "Separator at start" ("", "content") (breakOn ":" ":content")
-  assertEqual "Separator at end" ("content", "") (breakOn ":" "content:")
+  assertEqual "Empty string" ("", "") (Utils.breakOn "" "")
+  assertEqual "No separator found" ("test", "") (Utils.breakOn ":" "test")
+  assertEqual "Separator at start" ("", "content") (Utils.breakOn ":" ":content")
+  assertEqual "Separator at end" ("content", "") (Utils.breakOn ":" "content:")
 
 -- | 测试套件
 tests :: TestTree

@@ -250,6 +250,7 @@ addErrorContext error context = error ++ " (" ++ context ++ ")"
 
 -- | 辅助函数：提升错误严重程度
 elevateErrorSeverity :: ErrorSeverity -> ErrorSeverity
+elevateErrorSeverity Info = Warning
 elevateErrorSeverity Warning = Error
 elevateErrorSeverity Error = Fatal
 elevateErrorSeverity Fatal = Fatal

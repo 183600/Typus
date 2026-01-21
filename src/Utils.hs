@@ -25,7 +25,7 @@ module Utils
 
 import Data.Char (isSpace, isControl)
 import qualified Data.List as L
-import Data.List (isPrefixOf, intercalate)
+import Data.List (isPrefixOf, intercalate, isInfixOf)
 import qualified Data.Text as T
 
 -- | 去掉字符串两端的空白字符。
@@ -188,38 +188,7 @@ isCompleteStringLiteral str =
             | otherwise = (state, p + 1, end)
       in foundEnd && not inChar
 
--- | 检查字符串是否包含在字符串字面量之外的注释
-hasCommentOutsideStrings :: String -> Bool
-hasCommentOutsideStrings s = hasLineCommentOutsideStrings || hasBlockCommentOutsideStrings
-  where
-    hasLineCommentOutsideStrings = any (not . isInStringAt) $ findAllIndices "//" s
-    hasBlockCommentOutsideStrings = any (not . isInStringAt) $ findAllIndices "/*" s
-    
-    findAllIndices pat str = 
-      let go _ [] = []
-          go n s' = if pat `L.isPrefixOf` s'
-                   then n : go (n + length pat) (drop (length pat) s')
-                   else go (n + 1) (drop 1 s')
-      in go (0 :: Int) str
-    
-    isInStringAt idx = 
-      let before = take idx s
-          inString = scanForStringState before
-      in inString
-      where
-        scanForStringState [] = False
-        scanForStringState str = 
-          let (inString, _) = foldl trackState (False, 0) str
-              trackState (state, count) c
-                | c == '"' && not (isEscaped str (count - 1)) = (not state, count + 1)
-                | otherwise = (state, count + 1)
-              isEscaped str' pos = 
-                if pos < 0 then False
-                else 
-                  let beforePos = take (pos + 1) str'
-                      countBackslashes = length $ takeWhile (== '\\') $ reverse beforePos
-                  in countBackslashes `mod` 2 == 1
-          in inString
+
 
 removeComments :: String -> String
 removeComments s = 
@@ -227,7 +196,7 @@ removeComments s =
   if isUnclosedStringLiteral s
     then s
   -- 如果字符串不包含注释，直接返回原字符串
-  else if not (hasCommentOutsideStrings s)
+  else if not ("//" `isInfixOf` s || "/*" `isInfixOf` s)
     then s
   else if all isSpace s
     then s
@@ -240,20 +209,24 @@ removeComments s =
     goNormal s
   where
     -- 通用的注释处理函数
+    goNormal :: String -> String
     goNormal [] = []
     goNormal ('"':xs) = '"' : goInString xs
     goNormal ('\'':xs) = '\'' : goInChar xs
     goNormal ('/':'/':'*':xs) = '/' : skipBlock xs 0  -- 处理 //+/* 的情况
     goNormal ('/':'/':xs) = skipLine xs
     goNormal ('/':'*':xs) = skipBlock xs 0
+    goNormal ('/':xs) = '/' : goNormal xs  -- 处理单个/的情况
     goNormal (c:cs) = c : goNormal cs
 
     -- 跳过行注释直到换行，保留换行
+    skipLine :: String -> String
     skipLine [] = []
     skipLine ('\n':xs) = '\n' : goNormal xs
     skipLine (_:xs) = skipLine xs
 
     -- 跳过块注释直到 */，支持嵌套
+    skipBlock :: String -> Int -> String
     skipBlock [] _depth = []  -- 注释未闭合，返回空
     skipBlock ('\n':xs) _depth = '\n' : skipBlock xs _depth  -- 保留换行
     skipBlock ('/':'*':xs) depth = skipBlock xs (depth + (1 :: Int))  -- 嵌套块注释
@@ -263,16 +236,19 @@ removeComments s =
     skipBlock (_:xs) _depth = skipBlock xs _depth  -- 跳过其他字符
     
     -- 字符串字面量（保留内容与转义）
+    goInString :: String -> String
     goInString [] = []  -- 非严格：未闭合字符串
     goInString ('\n':xs) = '\n' : goNormal xs  -- 换行时结束字符串字面量
-    -- 在字符串中，/* 和 */ 应该作为普通字符处理，不是注释
-    goInString ('/':'*':xs) = '/' : '*' : goInString xs
-    goInString ('*':'/':xs) = '*' : '/' : goInString xs
+    -- 在字符串中，保留所有字符包括注释标记
+    goInString ('/':'/':xs) = '/' : '/' : goInString xs  -- 保留 //
+    goInString ('/':'*':xs) = '/' : '*' : goInString xs  -- 保留 /*
+    goInString ('*':'/':xs) = '*' : '/' : goInString xs  -- 保留 */
     goInString ('\\':x:xs) = '\\' : x : goInString xs
     goInString ('"':xs) = '"' : goNormal xs
     goInString (c:cs) = c : goInString cs
 
     -- 字符字面量（保留内容与转义）
+    goInChar :: String -> String
     goInChar [] = []  -- 非严格：未闭合字符，返回到正常模式
     goInChar ('\n':xs) = '\n' : goNormal xs  -- 换行时结束字符字面量
     goInChar ('\\':x:xs) = '\\' : x : goInChar xs

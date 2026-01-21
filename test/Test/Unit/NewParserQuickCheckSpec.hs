@@ -94,19 +94,27 @@ prop_typus_file_empty =
 -- Test directive parsing properties
 prop_parse_simple_directive :: String -> String -> Property
 prop_parse_simple_directive key value = 
-  let input = T.pack (key ++ "=" ++ value)
+  let -- Only use valid identifier characters
+      validKey = filter (\c -> isAlphaNum c || c == '_' || c == '-') $ take 10 key
+      validValue = filter (\c -> isAlphaNum c || c == '_' || c == '-') $ take 10 value
+      input = T.pack (validKey ++ "=" ++ validValue)
       result = parse fileDirectiveParser "" input
-  in if null key || null value
+  in if null validKey || null validValue
      then property $ True  -- Allow empty key or value
      else case result of
             Left _ -> property $ False  -- Should succeed for simple key=value pairs
-            Right pairs -> property $ pairs == [(T.pack key, T.pack value)]
+            Right pairs -> property $ pairs == [(T.pack validKey, T.pack validValue)]
 
 prop_parse_multiple_directives :: String -> String -> String -> String -> Property
 prop_parse_multiple_directives key1 value1 key2 value2 = 
-  let input = T.pack (key1 ++ "=" ++ value1 ++ "," ++ key2 ++ "=" ++ value2)
+  let -- Only use valid identifier characters
+      validKey1 = filter (\c -> isAlphaNum c || c == '_' || c == '-') $ take 10 key1
+      validValue1 = filter (\c -> isAlphaNum c || c == '_' || c == '-') $ take 10 value1
+      validKey2 = filter (\c -> isAlphaNum c || c == '_' || c == '-') $ take 10 key2
+      validValue2 = filter (\c -> isAlphaNum c || c == '_' || c == '-') $ take 10 value2
+      input = T.pack (validKey1 ++ "=" ++ validValue1 ++ "," ++ validKey2 ++ "=" ++ validValue2)
       result = parse fileDirectiveParser "" input
-  in if null key1 || null value1 || null key2 || null value2
+  in if null validKey1 || null validValue1 || null validKey2 || null validValue2
      then property $ True  -- Allow empty keys or values
      else case result of
             Left _ -> property $ False  -- Should succeed for simple key=value pairs

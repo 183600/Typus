@@ -258,9 +258,8 @@ test_compiler_edge_cases = testGroup "Compiler Edge Cases"
         Right ir -> assertBool "IR created" $ True  -- Can't easily check IR internals
     
   , testCase "typeDiagnosticToCompilerError" $ do
-      -- Since we can't easily create a TypeCheckDiagnostic in this test,
-      -- we'll check that the function exists and can be called
-      let diagnostic = undefined  -- Would need proper TypeCheckDiagnostic
+      -- Create a proper TypeCheckDiagnostic
+      let diagnostic = TypeCheckDiagnostic (Just "testContext") "test error message"
           error = typeDiagnosticToCompilerError diagnostic
       assertEqual "Error phase" "TypeChecking" $ errorPhase (ceError error)
       assertEqual "Error category" TypeChecking $ errorCategory (ceError error)

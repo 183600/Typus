@@ -88,7 +88,6 @@ prop_malformed_syntax_error =
       error = CompilerError typeError Nothing [] ParsingPhase
   in case error of
     CompilerError _ _ _ _ -> property True
-    _ -> property False
 
 -- | 测试 renderCompilationError 的属性：renderCompilationError 总是返回非空字符串
 prop_render_compilation_error_nonempty :: Property

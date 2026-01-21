@@ -51,6 +51,7 @@ genStringWithWhitespace = do
   where
     interleave [] _ = []
     interleave [x] _ = x
+    interleave (x:xs) [] = x
     interleave (x:xs) (w:ws) = x ++ [w] ++ interleave xs ws
 
 -- 生成包含注释的字符串
@@ -92,7 +93,9 @@ prop_trim_preserves_non_whitespace = forAll genNonEmptyString $ \s ->
 prop_trim_removes_leading_whitespace :: Property
 prop_trim_removes_leading_whitespace = forAll genStringWithWhitespace $ \s ->
   let trimmed = trim s
-  in property $ null trimmed || not (isSpace $ head trimmed)
+  in property $ null trimmed || case trimmed of
+                               [] -> True
+                               (c:_) -> not (isSpace c)
 
 -- 属性5: trim应该移除尾随空白
 prop_trim_removes_trailing_whitespace :: Property

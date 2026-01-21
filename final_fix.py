@@ -65,8 +65,8 @@ def fix_all_files():
     
     # Fix generateLargeType
     content = re.sub(
-        r"generateLargeType size = T\.pack \(\"type Large struct \{ \" \+\+ replicate size \"Field int; \" \+\+ \" \}\")",
-        "generateLargeType size = T.pack (\"type Large struct { \" ++ concat (replicate size \"Field int; \") ++ \" }\")",
+        r'generateLargeType size = T\.pack \\("type Large struct \\{ " \\+\\+ replicate size "Field int; " \\+\\+ " \\}"\\)',
+        'generateLargeType size = T.pack ("type Large struct { " ++ concat (replicate size "Field int; ") ++ " }")',
         content
     )
     

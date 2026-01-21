@@ -74,7 +74,10 @@ prop_error_deduplication =
       typeError = TypeError "test-001" Error Parsing (T.pack "test message") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
       errors = [CompilerError typeError Nothing [] ParsingPhase, CompilerError typeError Nothing [] ParsingPhase]
       deduplicated = deduplicateErrors errors
-  in property (all isUnique (zip deduplicated (tail deduplicated)))
+      deduplicatedTail = case deduplicated of
+                          [] -> []
+                          (_:xs) -> xs
+  in property (all isUnique (zip deduplicated deduplicatedTail))
   where
     isUnique (e1, e2) = e1 /= e2
 

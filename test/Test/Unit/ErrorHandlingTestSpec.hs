@@ -114,7 +114,6 @@ prop_errorLocationPreservation line col =
   let location = ErrorLocation Nothing line col Nothing Nothing
   in case location of
     ErrorLocation _ l c _ _ -> l == line && c == col
-    _ -> False
 
 -- Property 6: Error contexts preserve function and variable
 prop_errorContextPreservation :: String -> String -> Bool
@@ -122,7 +121,6 @@ prop_errorContextPreservation func var =
   let context = ErrorContext Nothing (Just func) (Just var) Nothing []
   in case context of
     ErrorContext _ f v _ _ -> f == Just func && v == Just var
-    _ -> False
 
 -- Property 7: Type errors preserve all their components
 prop_typeErrorPreservation :: String -> ErrorSeverity -> ErrorLocation -> ErrorContext -> ErrorRecovery -> Bool

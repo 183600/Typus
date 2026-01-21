@@ -98,6 +98,7 @@ prop_incremental_performance original modified =
     _ -> property True
 
 -- | 测试错误恢复性能：处理错误不应该显著降低性能
+prop_error_recovery_performance :: [Char] -> Property
 prop_error_recovery_performance input = 
   let erroneousInput = input ++ "\nlet x = " -- 故意引入语法错误
       result = case parseTypus erroneousInput of
@@ -108,6 +109,7 @@ prop_error_recovery_performance input =
     Right _ -> property True
 
 -- | 测试优化性能：优化不应该过度增加编译时间
+prop_optimization_performance :: [Char] -> Property
 prop_optimization_performance input = 
   let normalResult = case parseTypus input of
                       Left _ -> Left []
