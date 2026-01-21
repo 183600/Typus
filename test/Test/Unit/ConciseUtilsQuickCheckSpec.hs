@@ -126,22 +126,18 @@ prop_removeLineComments_properties s =
       _ -> False
       
     hasCommentInStringLiteral [] = False
-    hasCommentInStringLiteral ('"':rest) = hasInString '"' rest
-    hasCommentInStringLiteral ('\'':rest) = hasInString '\'' rest
-    hasCommentInStringLiteral ('/':'/':rest) = null rest || not (isCommentInString rest)
-    hasCommentInStringLiteral (_:rest) = hasCommentInStringLiteral rest
+    hasCommentInStringLiteral str = checkForCommentInString str False False
     
-    -- Check if the // is inside a string literal
-    isCommentInString [] = False
-    isCommentInString ('"':rest) = not (hasInString '"' rest)
-    isCommentInString ('\'':rest) = not (hasInString '\'' rest)
-    isCommentInString (_:rest) = isCommentInString rest
-    
-    hasInString _ [] = False
-    hasInString delim ('\\':c:rest) = hasInString delim rest  -- Skip escaped chars
-    hasInString delim (c:rest) 
-      | c == delim = False  -- End of string
-      | otherwise = hasInString delim rest
+    -- Check if // appears inside string or character literals
+    -- Takes the string and flags for being inside string or char literal
+    checkForCommentInString [] _ _ = False
+    checkForCommentInString ('"':rest) _ inChar = checkForCommentInString rest True False
+    checkForCommentInString ('\'':rest) inString _ = checkForCommentInString rest False True
+    checkForCommentInString ('\\':c:rest) inString inChar = 
+      checkForCommentInString rest inString inChar  -- Skip escaped characters
+    checkForCommentInString ('/':'/':rest) inString inChar = inString || inChar
+    checkForCommentInString (_:rest) inString inChar = 
+      checkForCommentInString rest inString inChar
 
 -- | Test properties of removeComments
 prop_removeComments_properties :: String -> Bool
