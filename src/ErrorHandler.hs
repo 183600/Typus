@@ -19,14 +19,11 @@ module ErrorHandler (
   clearInfos,
   mergeHandlers,
   filterBySeverityForTests,
-  sortBySeverity,
   renderErrors
 ) where
 
 import Compiler.Errors.Core
 import qualified Data.Text as T
-import qualified Data.List as List
-import qualified Data.Ord as Ord
 
 -- Type aliases for tests
 type ErrorHandler = [TypeError]
@@ -49,37 +46,36 @@ createInfo :: String -> T.Text -> ErrorLocation -> TypeError
 createInfo = infoAt
 
 errorCount :: ErrorHandler -> Int
-errorCount = length . filter (\e -> errorSeverity e == Error)
+errorCount = length . filter (\e -> severity e == Error)
 
 warningCount :: ErrorHandler -> Int
-warningCount = length . filter (\e -> errorSeverity e == Warning)
+warningCount = length . filter (\e -> severity e == Warning)
 
 infoCount :: ErrorHandler -> Int
-infoCount = length . filter (\e -> errorSeverity e == Info)
+infoCount = length . filter (\e -> severity e == Info)
 
 hasInfos :: ErrorHandler -> Bool
-hasInfos = not . null . filter (\e -> errorSeverity e == Info)
+hasInfos = not . null . filter (\e -> severity e == Info)
 
 getInfos :: ErrorHandler -> ErrorHandler
-getInfos = filter (\e -> errorSeverity e == Info)
+getInfos = filter (\e -> severity e == Info)
 
 clearErrors :: ErrorHandler -> ErrorHandler
-clearErrors = filter (\e -> errorSeverity e /= Error)
+clearErrors = filter (\e -> severity e /= Error)
 
 clearWarnings :: ErrorHandler -> ErrorHandler
-clearWarnings = filter (\e -> errorSeverity e /= Warning)
+clearWarnings = filter (\e -> severity e /= Warning)
 
 clearInfos :: ErrorHandler -> ErrorHandler
-clearInfos = filter (\e -> errorSeverity e /= Info)
+clearInfos = filter (\e -> severity e /= Info)
 
 mergeHandlers :: ErrorHandler -> ErrorHandler -> ErrorHandler
 mergeHandlers h1 h2 = h1 ++ h2
 
 filterBySeverityForTests :: ErrorSeverity -> ErrorHandler -> ErrorHandler
-filterBySeverityForTests sev = filter (\e -> errorSeverity e == sev)
+filterBySeverityForTests sev = filter (\e -> severity e == sev)
 
-sortBySeverity :: ErrorHandler -> ErrorHandler
-sortBySeverity = List.sortBy (\e1 e2 -> Ord.compare (errorSeverity e1) (errorSeverity e2))
+-- Use sortBySeverity from Compiler.Errors.Core
 
 renderErrors :: ErrorHandler -> String
 renderErrors = unlines . map (T.unpack . errorMessage) . Compiler.Errors.Core.getErrors

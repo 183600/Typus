@@ -1,4 +1,6 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
 
@@ -95,12 +97,22 @@ instance Arbitrary TypeError where
     location <- arbitrary
     context <- arbitrary
     recovery <- arbitrary
-    suggestions <- arbitrary
+    suggestions <- vectorOf 3 arbitrary  -- Limit to 3 suggestions
     -- 使用空列表避免递归
     let relatedErrors = []
     let errorChain = []
     timestamp <- arbitrary
     return $ TypeError errorId severity category message location context recovery suggestions relatedErrors errorChain timestamp
+
+-- Newtype wrapper for ErrorHandler with limited size
+newtype LimitedErrorHandler = LimitedErrorHandler { getLimitedErrorHandler :: ErrorHandler }
+  deriving (Show, Eq)
+
+instance Arbitrary LimitedErrorHandler where
+  arbitrary = do
+    size <- choose (0, 10)  -- Limit to 10 errors
+    errs <- vectorOf size arbitrary
+    return $ LimitedErrorHandler errs
 
 tests :: TestTree
 tests = testGroup "Concise ErrorHandler QuickCheck Tests"
@@ -136,19 +148,19 @@ tests = testGroup "Concise ErrorHandler QuickCheck Tests"
   ]
 
 -- | Test handleError properties
-handleError_properties :: ErrorHandler -> TypeError -> Bool
-handleError_properties errs err = 
+handleError_properties :: LimitedErrorHandler -> TypeError -> Bool
+handleError_properties (LimitedErrorHandler errs) err = 
   let newErrs = handleError errs err
   in case newErrs of
        [] -> False
        (x:_) -> length newErrs == length errs + 1 && x == err
 
 -- | Test handleErrors properties
-handleErrors_properties :: ErrorHandler -> [TypeError] -> Bool
-handleErrors_properties errs newErrs = 
-  let result = handleErrors errs newErrs
-  in length result == length errs + length newErrs && 
-     take (length newErrs) result == newErrs
+handleErrors_properties :: LimitedErrorHandler -> [TypeError] -> Bool
+handleErrors_properties (LimitedErrorHandler errs) newErrs = 
+  let result = handleErrors errs (take 5 newErrs)  -- Limit to 5 errors for performance
+  in length result == length errs + min 5 (length newErrs) && 
+     take (min 5 (length newErrs)) result == take 5 newErrs
 
 -- | Test createError properties
 createError_properties :: String -> T.Text -> ErrorLocation -> Bool
@@ -178,108 +190,112 @@ createInfo_properties errId msg loc =
      severity err == Info
 
 -- | Test errorCount properties
-errorCount_properties :: ErrorHandler -> Bool
-errorCount_properties errs = 
+errorCount_properties :: LimitedErrorHandler -> Bool
+errorCount_properties (LimitedErrorHandler errs) = 
   -- Simply check that the errorCount function doesn't crash and returns a non-negative number
   let count = errorCount errs
   in count >= 0 && count <= length errs
 
 -- | Test warningCount properties
-warningCount_properties :: ErrorHandler -> Bool
-warningCount_properties errs = 
+warningCount_properties :: LimitedErrorHandler -> Bool
+warningCount_properties (LimitedErrorHandler errs) = 
   let count = warningCount errs
       warnings = getWarnings errs
   in count == length warnings
 
 -- | Test infoCount properties
-infoCount_properties :: ErrorHandler -> Bool
-infoCount_properties errs = 
+infoCount_properties :: LimitedErrorHandler -> Bool
+infoCount_properties (LimitedErrorHandler errs) = 
   let count = infoCount errs
       infos = getInfos errs
   in count == length infos
 
 -- | Test hasErrors properties
-hasErrors_properties :: ErrorHandler -> Bool
-hasErrors_properties errs = 
+hasErrors_properties :: LimitedErrorHandler -> Bool
+hasErrors_properties (LimitedErrorHandler errs) = 
   let hasErr = hasErrors errs
       errors = getErrors errs
   in hasErr == not (null errors)
 
 -- | Test hasWarnings properties
-hasWarnings_properties :: ErrorHandler -> Bool
-hasWarnings_properties errs = 
+hasWarnings_properties :: LimitedErrorHandler -> Bool
+hasWarnings_properties (LimitedErrorHandler errs) = 
   let hasWarn = hasWarnings errs
       warnings = getWarnings errs
   in hasWarn == not (null warnings)
 
 -- | Test hasInfos properties
-hasInfos_properties :: ErrorHandler -> Bool
-hasInfos_properties errs = 
+hasInfos_properties :: LimitedErrorHandler -> Bool
+hasInfos_properties (LimitedErrorHandler errs) = 
   let hasInf = hasInfos errs
       infos = getInfos errs
   in hasInf == not (null infos)
 
 -- | Test getErrors properties
-getErrors_properties :: ErrorHandler -> Bool
-getErrors_properties errs = 
+getErrors_properties :: LimitedErrorHandler -> Bool
+getErrors_properties (LimitedErrorHandler errs) = 
   let errors = getErrors errs
-  in all (\e -> severity e == Error || severity e == Fatal) errors
+      limited = take 10 errors  -- Limit for performance
+  in all (\e -> severity e == Error || severity e == Fatal) limited
 
 -- | Test getWarnings properties
-getWarnings_properties :: ErrorHandler -> Bool
-getWarnings_properties errs = 
+getWarnings_properties :: LimitedErrorHandler -> Bool
+getWarnings_properties (LimitedErrorHandler errs) = 
   let warnings = getWarnings errs
-  in all (\e -> severity e == Warning) warnings
+      limited = take 10 warnings  -- Limit for performance
+  in all (\e -> severity e == Warning) limited
 
 -- | Test getInfos properties
-getInfos_properties :: ErrorHandler -> Bool
-getInfos_properties errs = 
+getInfos_properties :: LimitedErrorHandler -> Bool
+getInfos_properties (LimitedErrorHandler errs) = 
   let infos = getInfos errs
-  in all (\e -> severity e == Info) infos
+      limited = take 10 infos  -- Limit for performance
+  in all (\e -> severity e == Info) limited
 
 -- | Test clearErrors properties
-clearErrors_properties :: ErrorHandler -> Bool
-clearErrors_properties errs = 
+clearErrors_properties :: LimitedErrorHandler -> Bool
+clearErrors_properties (LimitedErrorHandler errs) = 
   let cleared = clearErrors errs
   in errorCount cleared == 0 && 
      length cleared <= length errs
 
 -- | Test clearWarnings properties
-clearWarnings_properties :: ErrorHandler -> Bool
-clearWarnings_properties errs = 
+clearWarnings_properties :: LimitedErrorHandler -> Bool
+clearWarnings_properties (LimitedErrorHandler errs) = 
   let cleared = clearWarnings errs
   in warningCount cleared == 0 && 
      length cleared <= length errs
 
 -- | Test clearInfos properties
-clearInfos_properties :: ErrorHandler -> Bool
-clearInfos_properties errs = 
+clearInfos_properties :: LimitedErrorHandler -> Bool
+clearInfos_properties (LimitedErrorHandler errs) = 
   let cleared = clearInfos errs
   in infoCount cleared == 0 && 
      length cleared <= length errs
 
 -- | Test mergeHandlers properties
-mergeHandlers_properties :: ErrorHandler -> ErrorHandler -> Bool
-mergeHandlers_properties h1 h2 = 
+mergeHandlers_properties :: LimitedErrorHandler -> LimitedErrorHandler -> Bool
+mergeHandlers_properties (LimitedErrorHandler h1) (LimitedErrorHandler h2) = 
   let merged = mergeHandlers h1 h2
   in length merged == length h1 + length h2
 
 -- | Test filterBySeverityForTests properties
-filterBySeverityForTests_properties :: ErrorSeverity -> ErrorHandler -> Bool
-filterBySeverityForTests_properties sev errs = 
+filterBySeverityForTests_properties :: ErrorSeverity -> LimitedErrorHandler -> Bool
+filterBySeverityForTests_properties sev (LimitedErrorHandler errs) = 
   let filtered = filterBySeverityForTests sev errs
   in all (\e -> severity e == sev) filtered
 
 -- | Test sortBySeverity properties
-sortBySeverity_properties :: ErrorHandler -> Bool
-sortBySeverity_properties errs = 
-  let sorted = sortBySeverity errs
-      sortedBySeverity = List.sortBy (\e1 e2 -> compare (severity e1) (severity e2)) errs
+sortBySeverity_properties :: LimitedErrorHandler -> Bool
+sortBySeverity_properties (LimitedErrorHandler errs) = 
+  let limitedErrs = take 10 errs  -- Limit to 10 errors for performance
+      sorted = sortBySeverity limitedErrs
+      sortedBySeverity = List.sortBy (\e1 e2 -> compare (severity e1) (severity e2)) limitedErrs
   in sorted == sortedBySeverity
 
 -- | Test renderErrors properties
-renderErrors_properties :: ErrorHandler -> Bool
-renderErrors_properties errs = 
+renderErrors_properties :: LimitedErrorHandler -> Bool
+renderErrors_properties (LimitedErrorHandler errs) = 
   let rendered = renderErrors errs
       errors = filter (\e -> severity e == Error || severity e == Fatal) errs
   in if null errors

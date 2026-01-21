@@ -93,7 +93,8 @@ module Compiler.Errors.Core (
     -- Severity comparison utilities
     isAtLeast,
     severityPriority,
-    compareSeverity
+    compareSeverity,
+    sortBySeverity
 ) where
 
 import Compiler.Errors.Types
