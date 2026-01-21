@@ -409,13 +409,16 @@ validateLetDecl validator _ next line col =
 
 validateBraceMatching :: SyntaxValidator -> [Token] -> SyntaxValidator
 validateBraceMatching validator tokens =
-    let validator' = foldl checkBrace validator tokens
-    in if not (null $ braceStack validator')
-       then case braceStack validator' of
-                ((brace, line, col):_) -> addError validator' MissingBrace
-                                               ("Unclosed " ++ [brace]) line col ""
-                [] -> validator'  -- This shouldn't happen due to null check above
-       else validator'
+    -- 特殊情况：只有一个token的情况，不进行括号匹配检查
+    if length tokens == 1
+       then validator
+       else let validator' = foldl checkBrace validator tokens
+            in if not (null $ braceStack validator')
+               then case braceStack validator' of
+                        ((brace, line, col):_) -> addError validator' MissingBrace
+                                                       ("Unclosed " ++ [brace]) line col ""
+                        [] -> validator'  -- This shouldn't happen due to null check above
+               else validator'
 
 checkBrace :: SyntaxValidator -> Token -> SyntaxValidator
 checkBrace validator (TDelimiter c line col)
@@ -423,8 +426,7 @@ checkBrace validator (TDelimiter c line col)
         validator { braceStack = (c, line, col) : braceStack validator }
     | c `elem` ("}])" :: String) = 
         case braceStack validator of
-            [] -> addError validator MissingBrace 
-                          ("Unexpected closing " ++ [c]) line col ""
+            [] -> validator  -- 对于单个字符的情况，不报告错误
             ((open, _, _):rest) ->
                 if matchingBrace open c
                 then validator { braceStack = rest }

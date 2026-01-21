@@ -168,7 +168,7 @@ instance Arbitrary ErrorRecovery where
     recoveryHint <- arbitrary
     recoveryCost <- arbitrary
     recoveryConfidence <- arbitrary
-    return $ RecoveryStrategy canRecover shouldContinue recoveryAction recoveryHint recoveryCost recoveryConfidence
+    return $ ErrorRecovery canRecover shouldContinue recoveryAction recoveryHint recoveryCost recoveryConfidence
 
 instance Arbitrary a => Arbitrary (SourceLocation.Located a) where
   arbitrary = arbitrary

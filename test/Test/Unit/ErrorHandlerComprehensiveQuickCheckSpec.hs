@@ -185,14 +185,14 @@ prop_get_error_statistics severities categories =
 -- | Test that canRecoverFrom returns recovery.canRecover
 prop_can_recover_from :: Bool -> Bool -> Property
 prop_can_recover_from canRec shouldCont = 
-  let recovery = RecoveryStrategy canRec shouldCont Nothing Nothing 50 0.7
+  let recovery = ErrorRecovery canRec shouldCont Nothing Nothing 50 0.7
       err = (\e -> e { recovery = recovery }) $ errorAt "test" Error (T.pack "message") (ErrorLocation Nothing 0 0 Nothing Nothing)
   in property $ canRecoverFrom err == canRec
 
 -- | Test that shouldContinueAfter returns recovery.shouldContinue
 prop_should_continue_after :: Bool -> Bool -> Property
 prop_should_continue_after canRec shouldCont = 
-  let recovery = RecoveryStrategy canRec shouldCont Nothing Nothing 50 0.7
+  let recovery = ErrorRecovery canRec shouldCont Nothing Nothing 50 0.7
       err = (\e -> e { recovery = recovery }) $ errorAt "test" Error (T.pack "message") (ErrorLocation Nothing 0 0 Nothing Nothing)
   in property $ shouldContinueAfter err == shouldCont
 

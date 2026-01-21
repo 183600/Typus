@@ -49,7 +49,7 @@ instance Arbitrary ErrorRecovery where
     recoveryHint <- arbitrary
     recoveryCost <- choose (0, 100)
     recoveryConfidence <- choose (0.0, 1.0)
-    return $ RecoveryStrategy canRecover shouldContinue recoveryAction recoveryHint recoveryCost recoveryConfidence
+    return $ ErrorRecovery canRecover shouldContinue recoveryAction recoveryHint recoveryCost recoveryConfidence
 
 instance Arbitrary CombinedError where
   arbitrary = oneof
@@ -111,7 +111,7 @@ genErrorRecovery = do
   recoveryHint <- elements [Nothing, Just "check input", Just "verify configuration"]
   recoveryCost <- choose (0, 100)
   recoveryConfidence <- choose (0.0, 1.0)
-  return $ RecoveryStrategy canRecover shouldContinue recoveryAction recoveryHint recoveryCost recoveryConfidence
+  return $ ErrorRecovery canRecover shouldContinue recoveryAction recoveryHint recoveryCost recoveryConfidence
 
 genTypeError :: Gen TypeError
 genTypeError = do

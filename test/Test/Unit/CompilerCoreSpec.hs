@@ -100,7 +100,7 @@ instance Arbitrary ErrorRecovery where
     recoveryHint <- arbitrary
     recoveryCost <- choose (0, 100)
     recoveryConfidence <- choose (0.0, 1.0)
-    return $ RecoveryStrategy canRecover shouldContinue recoveryAction recoveryHint recoveryCost recoveryConfidence
+    return $ ErrorRecovery canRecover shouldContinue recoveryAction recoveryHint recoveryCost recoveryConfidence
 
 -- Helper generators for Compiler tests
 genTypusFile :: Gen TypusFile

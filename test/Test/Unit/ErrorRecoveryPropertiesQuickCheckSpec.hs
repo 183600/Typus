@@ -51,7 +51,7 @@ instance Arbitrary ErrorRecovery where
     recHint <- arbitrary
     cost <- choose (0, 100)
     confidence <- choose (0.0, 1.0)
-    return $ RecoveryStrategy canRec shouldCont recAction recHint cost confidence
+    return $ ErrorRecovery canRec shouldCont recAction recHint cost confidence
 
 instance Arbitrary ErrorLocation where
   arbitrary = do

@@ -120,8 +120,7 @@ genErrorRecovery = do
   hint <- listOf genErrorMessage
   cost <- choose (0, 100)
   confidence <- choose (0.0, 1.0)
-  return $ RecoveryStrategy
-    { canRecover = canRec
+  return $ ErrorRecovery { canRecover = canRec
     , shouldContinue = shouldCont
     , recoveryAction = case action of
                         (a:_) -> Just a

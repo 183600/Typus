@@ -155,7 +155,7 @@ instance Arbitrary Compiler.Errors.Core.ErrorRecovery where
     recHint <- arbitrary
     recCost <- arbitrary
     recConfidence <- arbitrary
-    return $ Compiler.Errors.Core.RecoveryStrategy canRec shouldCont recAction recHint recCost recConfidence
+    return $ Compiler.Errors.Core.ErrorRecovery canRec shouldCont recAction recHint recCost recConfidence
 
 instance Arbitrary FileDirectives where
   arbitrary = do

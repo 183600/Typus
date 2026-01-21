@@ -110,9 +110,9 @@ fileDirectiveParser = do
   pure pairs
   where
     directive = do
-      key <- identifier
+      key <- identifier <|> pure (T.pack "")
       _ <- symbol ":" <|> symbol "="
-      value <- identifier
+      value <- identifier <|> pure (T.pack "")
       pure (key, value)
 
 blockDirectiveParser :: DirectiveParser [(T.Text, T.Text)]
@@ -123,9 +123,9 @@ blockDirectiveParser = do
   pure pairs
   where
     directive = do
-      key <- identifier
+      key <- identifier <|> pure (T.pack "")
       _ <- symbol ":" <|> symbol "="
-      value <- identifier
+      value <- identifier <|> pure (T.pack "")
       pure (key, value)
 
 parseTypus :: String -> Either String TypusFile

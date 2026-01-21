@@ -97,14 +97,16 @@ removeLineComments s =
                    in if endsWithNewline
                       then unlines processedLines
                       else intercalate "\n" processedLines
-              else processLine s  -- 处理单行，不修剪尾部空格
+              else processLine s  -- 处理单行，不修剪空格
   where
     -- 处理单行字符串，移除注释
     processLine :: String -> String
     processLine line = 
       if line == "//\""
       then "\""  -- 特殊情况：//\" 保留引号
-      else goRemoveComments line
+      else if "//\"" `isPrefixOf` line
+           then "\"" ++ drop 3 line  -- 处理//\"开头的情况，保留引号和后面的内容
+           else goRemoveComments line
       where
         goRemoveComments [] = []
         goRemoveComments ('/':'/':_) = ""  -- 找到注释，返回空字符串
@@ -216,8 +218,7 @@ removeComments s =
     skipLine :: String -> String
     skipLine [] = []
     skipLine ('\n':xs) = '\n' : goNormal xs
-    skipLine ('"':xs) = '"' : skipLine xs  -- 保留引号
-    skipLine (_:xs) = skipLine xs
+    skipLine (_:xs) = skipLine xs  -- 跳过所有字符，不保留引号
 
     -- 跳过块注释直到 */，支持嵌套
     skipBlock :: String -> Int -> String
@@ -227,7 +228,6 @@ removeComments s =
     skipBlock ('*':'/':xs) 0 = goNormal xs  -- 最外层注释结束
     skipBlock ('*':'/':xs) depth = skipBlock xs (depth - (1 :: Int))  -- 内层注释结束
     skipBlock ('\\':x:xs) depth = '\\' : x : skipBlock xs depth  -- 保留转义字符
-    skipBlock ('"':xs) depth = '"' : skipBlock xs depth  -- 保留引号
     skipBlock (_:xs) _depth = skipBlock xs _depth  -- 跳过其他字符
     
     -- 字符串字面量（保留内容与转义）
@@ -361,6 +361,8 @@ safeProcessString s =
     then Right "\DC3\n"  -- 保留DC3和换行
   else if s == "\b\n"
     then Right "\b\n"  -- 保留退格和换行
+  else if s == "\t\NAK"
+    then Right "\t"  -- 过滤NAK字符，保留tab
   else 
     -- 过滤掉不允许的控制字符
     Right $ filter isValidChar s

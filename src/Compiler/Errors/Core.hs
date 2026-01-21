@@ -2,15 +2,11 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
 module Compiler.Errors.Core (
+    -- Re-export from Types module
+    module Compiler.Errors.Types,
+    
     -- Error types
     TypeError(..),
-    CombinedError(..),
-    ErrorSeverity(..),
-    ErrorCategory(..),
-    ErrorLocation(..),
-    ErrorContext(..),
-    emptyContext,
-    ErrorRecovery(..),
     
     -- Helper functions for testing
     getErrorLine,
@@ -100,6 +96,7 @@ module Compiler.Errors.Core (
     compareSeverity
 ) where
 
+import Compiler.Errors.Types
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.List (intercalate, sortBy)
@@ -110,16 +107,10 @@ import GHC.Generics (Generic)
 import Data.Aeson (ToJSON, FromJSON)
 import Data.Time (UTCTime, getCurrentTime, formatTime, defaultTimeLocale)
 import qualified Data.Map.Strict as Map
-import qualified Ownership.Common.Types as Own
-import qualified Dependencies.TypeSystem as Dep
-
 
 -- ============================================================================
--- Error Severity Levels
+-- Error Severity Utilities
 -- ============================================================================
-
-data ErrorSeverity = Fatal | Error | Warning | Info
-    deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 -- Error priority for ordering and filtering (higher number = higher priority)
 severityPriority :: ErrorSeverity -> Int
@@ -296,16 +287,8 @@ _getLeastSevere errors = Just $ minimumBy (severityPriority . severity) errors
     minimumBy f = foldl1 (\x y -> if f x <= f y then x else y)
 
 -- ============================================================================
--- Error Location Tracking
+-- Error Location Utilities
 -- ============================================================================
-
-data ErrorLocation = ErrorLocation
-    { filePath :: Maybe String
-    , line :: Int
-    , column :: Int
-    , endLine :: Maybe Int
-    , endColumn :: Maybe Int
-    } deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- Default location (unknown)
 _unknownLocation :: ErrorLocation
@@ -340,79 +323,59 @@ _atRange startLine startCol endLineNum endCol =
     ErrorLocation Nothing startLine startCol (Just endLineNum) (Just endCol)
 
 -- ============================================================================
--- Error Context Information
+-- Error Context Utilities
 -- ============================================================================
 
-data ErrorContext = ErrorContext
-    { contextCode :: Maybe String
-    , contextFunction :: Maybe String
-    , contextVariable :: Maybe String
-    , contextType :: Maybe String
-    , contextAdditional :: [(String, String)]
-    } deriving (Show, Eq, Generic, ToJSON, FromJSON)
-
-emptyContext :: ErrorContext
-emptyContext = ErrorContext Nothing Nothing Nothing Nothing []
-
 -- ============================================================================
--- Error Recovery Strategy
+-- Error Recovery Utilities
 -- ============================================================================
-
-data ErrorRecovery = RecoveryStrategy
-    { canRecover :: Bool
-    , shouldContinue :: Bool
-    , recoveryAction :: Maybe String
-    , recoveryHint :: Maybe String
-    , recoveryCost :: Int              -- Cost of recovery (0-100)
-    , recoveryConfidence :: Float        -- Confidence in recovery (0.0-1.0)
-    } deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- Recovery strategies with enhanced information
 fatalRecovery :: ErrorRecovery
-fatalRecovery = RecoveryStrategy False False Nothing Nothing 100 0.0
+fatalRecovery = ErrorRecovery False False Nothing Nothing 100 0.0
 
 errorRecovery :: ErrorRecovery
-errorRecovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+errorRecovery = ErrorRecovery True True Nothing Nothing 50 0.7
 
 warningRecovery :: ErrorRecovery
-warningRecovery = RecoveryStrategy True True Nothing Nothing 10 0.9
+warningRecovery = ErrorRecovery True True Nothing Nothing 10 0.9
 
 infoRecovery :: ErrorRecovery
-infoRecovery = RecoveryStrategy True True Nothing Nothing 0 1.0
+infoRecovery = ErrorRecovery True True Nothing Nothing 0 1.0
 
 -- Create custom recovery strategy
 customRecovery :: Bool -> Bool -> Maybe String -> Maybe String -> Int -> Float -> ErrorRecovery
-customRecovery canRec shouldCont recAction recHint cost confidence = RecoveryStrategy
+customRecovery canRec shouldCont recAction recHint cost confidence = ErrorRecovery
     canRec shouldCont recAction recHint cost confidence
 
 -- Recovery strategy for specific scenarios
 _retryRecovery :: Int -> ErrorRecovery
-_retryRecovery maxAttempts = RecoveryStrategy
+_retryRecovery maxAttempts = ErrorRecovery
     True True (Just $ "Retry operation (max " ++ show maxAttempts ++ " attempts)")
     (Just "Consider increasing timeout or checking network connectivity")
     (20 * maxAttempts) 0.8
 
 _skipRecovery :: ErrorRecovery
-_skipRecovery = RecoveryStrategy
+_skipRecovery = ErrorRecovery
     True True (Just "Skip current operation")
     (Just "This operation can be safely skipped")
     5 0.95
 
 _fallbackRecovery :: String -> ErrorRecovery
-_fallbackRecovery fallbackMsg = RecoveryStrategy
+_fallbackRecovery fallbackMsg = ErrorRecovery
     True True (Just $ "Use fallback: " ++ fallbackMsg)
     (Just "Using alternative implementation")
     15 0.75
 
 _manualRecovery :: String -> ErrorRecovery
-_manualRecovery instruction = RecoveryStrategy
+_manualRecovery instruction = ErrorRecovery
     True False (Just "Manual intervention required")
     (Just instruction)
     80 0.5
 
 -- Recovery strategy combinators
 _sequenceRecovery :: ErrorRecovery -> ErrorRecovery -> ErrorRecovery
-_sequenceRecovery r1 r2 = RecoveryStrategy
+_sequenceRecovery r1 r2 = ErrorRecovery
     (canRecover r1 && canRecover r2)
     (shouldContinue r1 && shouldContinue r2)
     (case (recoveryAction r1, recoveryAction r2) of
@@ -522,15 +485,8 @@ data TypeError = TypeError
     } deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- ============================================================================
--- Combined Analyzer Errors
+-- CombinedError Utilities
 -- ============================================================================
-
-data CombinedError
-    = OwnershipErrorCombined ErrorSeverity Own.OwnershipError
-    | DependentTypeErrorCombined ErrorSeverity Dep.DependentTypeError
-    | IntegrationError String ErrorSeverity
-    | CrossAnalyzerError String ErrorSeverity [CombinedError]
-    deriving (Show, Eq)
 
 combinedErrorSeverity :: CombinedError -> ErrorSeverity
 combinedErrorSeverity (OwnershipErrorCombined sev _) = sev
@@ -541,19 +497,6 @@ combinedErrorSeverity (CrossAnalyzerError _ sev _) = sev
 filterCombinedErrorsBySeverity :: ErrorSeverity -> [CombinedError] -> [CombinedError]
 filterCombinedErrorsBySeverity minimumSeverity =
     filter (\err -> isAtLeast minimumSeverity (combinedErrorSeverity err))
-
--- Error categories for better organization
-data ErrorCategory
-    = TypeChecking
-    | Ownership
-    | Parsing
-    | Semantic
-    | Runtime
-    | Constraint
-    | Inference
-    | Integration
-    | Unknown
-    deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 -- ============================================================================
 -- Error Collector Monad
@@ -893,7 +836,7 @@ chooseBestRecovery strategies = foldl1 chooseBest strategies
 
 -- Enhanced error recovery strategies
 createRecoveryStrategy :: Bool -> Bool -> Maybe String -> Maybe String -> ErrorRecovery
-createRecoveryStrategy canRec shouldCont recAction recHint = RecoveryStrategy canRec shouldCont recAction recHint 50 0.5
+createRecoveryStrategy canRec shouldCont recAction recHint = ErrorRecovery canRec shouldCont recAction recHint 50 0.5
 
 -- Create fatal error
 fatalError :: String -> Text -> ErrorLocation -> TypeError

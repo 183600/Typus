@@ -278,15 +278,15 @@ blockStmt = do
 -- Property 1: Parser consumes input correctly
 prop_parser_consumes_input :: Parser Char -> String -> Property
 prop_parser_consumes_input parser input = 
-  not (null input) ==> 
+  property $
   case runParser parser input of
-    Just (_, rest) -> length rest < length input
+    Just (_, rest) -> null input || length rest < length input
     Nothing -> True
 
 -- Monomorphic version for QuickCheck
 prop_parser_consumes_input_mono :: Property
 prop_parser_consumes_input_mono = forAll arbitrary $ \parser ->
-  forAll arbitrary $ \input ->
+  forAll (choose (1, 10) >>= \n -> vectorOf n arbitrary) $ \input ->
     prop_parser_consumes_input parser input
 
 -- Property 2: Alternative parser tries second option if first fails

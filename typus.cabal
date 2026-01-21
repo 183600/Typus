@@ -43,6 +43,7 @@ library
         Compiler.DependentTypeChecker,
         Compiler.Errors,
         Compiler.Errors.Core,
+        Compiler.Errors.Types,
         Compiler.GoAst,
         Compiler.GoLexer,
         Compiler.GoParsing,

@@ -71,7 +71,7 @@ prop_compile_simple_comment =
 -- | 测试编译 error "Malformed syntax" 的属性
 prop_malformed_syntax_error :: Property
 prop_malformed_syntax_error = 
-  let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+  let recovery = ErrorRecovery True True Nothing Nothing 50 0.7
       typeError = Compiler.Errors.Core.TypeError 
         { errorId = "syntax-001"
         , severity = Error
@@ -169,7 +169,7 @@ prop_type_check_failure =
 -- | 测试 typeDiagnosticToCompilerError 的属性：转换后的错误保留原始信息
 prop_type_diagnostic_to_compiler_error :: Property
 prop_type_diagnostic_to_compiler_error = 
-  let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+  let recovery = ErrorRecovery True True Nothing Nothing 50 0.7
       typeError = Compiler.Errors.Core.TypeError "type-001" Error Parsing (T.pack "typeDiagnosticToCompilerError") (ErrorLocation Nothing 0 0 Nothing Nothing) emptyContext recovery [] [] [] Nothing
       error = CompilerError typeError Nothing [] TypeCheckingPhase
   in case error of

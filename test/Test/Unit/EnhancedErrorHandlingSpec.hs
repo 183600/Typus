@@ -34,7 +34,7 @@ prop_error_location_tracking input =
 -- | 测试错误消息格式化
 prop_error_message_formatting :: Property
 prop_error_message_formatting = 
-  let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+  let recovery = ErrorRecovery True True Nothing Nothing 50 0.7
       typeError = TypeError "test-001" Error Parsing (T.pack "test message") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
       error = CompilerError typeError Nothing [] ParsingPhase
       formatted = formatErrorMessage error
@@ -43,7 +43,7 @@ prop_error_message_formatting =
 -- | 测试错误分类
 prop_error_classification :: Property
 prop_error_classification = 
-  let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+  let recovery = ErrorRecovery True True Nothing Nothing 50 0.7
       typeError = TypeError "test-001" Error Parsing (T.pack "test message") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
       error = CompilerError typeError Nothing [] ParsingPhase
       category = classifyError error
@@ -52,7 +52,7 @@ prop_error_classification =
 -- | 测试错误严重性级别
 prop_error_severity_level :: Property
 prop_error_severity_level = 
-  let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+  let recovery = ErrorRecovery True True Nothing Nothing 50 0.7
       typeError = TypeError "test-001" Error Parsing (T.pack "test message") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
       error = CompilerError typeError Nothing [] ParsingPhase
       severity = getErrorSeverity error
@@ -61,7 +61,7 @@ prop_error_severity_level =
 -- | 测试错误聚合
 prop_error_aggregation :: Property
 prop_error_aggregation = 
-  let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+  let recovery = ErrorRecovery True True Nothing Nothing 50 0.7
       typeError = TypeError "test-001" Error Parsing (T.pack "test message") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
       errors = [CompilerError typeError Nothing [] ParsingPhase]
       aggregated = aggregateErrors errors
@@ -70,7 +70,7 @@ prop_error_aggregation =
 -- | 测试错误去重
 prop_error_deduplication :: Property
 prop_error_deduplication = 
-  let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+  let recovery = ErrorRecovery True True Nothing Nothing 50 0.7
       typeError = TypeError "test-001" Error Parsing (T.pack "test message") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
       errors = [CompilerError typeError Nothing [] ParsingPhase, CompilerError typeError Nothing [] ParsingPhase]
       deduplicated = deduplicateErrors errors
@@ -93,7 +93,7 @@ prop_error_context_collection =
 -- | 测试错误建议生成
 prop_error_suggestion_generation :: Property
 prop_error_suggestion_generation = 
-  let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+  let recovery = ErrorRecovery True True Nothing Nothing 50 0.7
       typeError = TypeError "test-001" Error Parsing (T.pack "test message") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
       error = CompilerError typeError Nothing [] ParsingPhase
       suggestions = generateErrorSuggestions error
@@ -102,7 +102,7 @@ prop_error_suggestion_generation =
 -- | 测试错误恢复策略
 prop_error_recovery_strategy :: Property
 prop_error_recovery_strategy = 
-  let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+  let recovery = ErrorRecovery True True Nothing Nothing 50 0.7
       typeError = TypeError "test-001" Error Parsing (T.pack "test message") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
       error = CompilerError typeError Nothing [] ParsingPhase
       strategy = selectRecoveryStrategy error
@@ -111,7 +111,7 @@ prop_error_recovery_strategy =
 -- | 测试错误报告生成
 prop_error_report_generation :: Property
 prop_error_report_generation = 
-  let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+  let recovery = ErrorRecovery True True Nothing Nothing 50 0.7
       typeError = TypeError "test-001" Error Parsing (T.pack "test message") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
       errors = [CompilerError typeError Nothing [] ParsingPhase]
       report = ErrorHandler.generateErrorReport (map (\(CompilerError te _ _ _) -> te) errors)
@@ -120,7 +120,7 @@ prop_error_report_generation =
 -- | 测试错误统计
 prop_error_statistics :: Property
 prop_error_statistics = 
-  let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+  let recovery = ErrorRecovery True True Nothing Nothing 50 0.7
       typeError = TypeError "test-001" Error Parsing (T.pack "test message") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
       errors = [CompilerError typeError Nothing [] ParsingPhase]
       stats = calculateErrorStatistics errors
@@ -129,7 +129,7 @@ prop_error_statistics =
 -- | 测试错误过滤
 prop_error_filtering :: Property
 prop_error_filtering = 
-  let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+  let recovery = ErrorRecovery True True Nothing Nothing 50 0.7
       typeError1 = TypeError "test-001" Error Parsing (T.pack "test message 1") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
       typeError2 = TypeError "test-002" Warning Parsing (T.pack "test message 2") (ErrorLocation Nothing 2 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
       errors = [CompilerError typeError1 Nothing [] ParsingPhase, CompilerError typeError2 Nothing [] ParsingPhase]
@@ -141,7 +141,7 @@ prop_error_filtering =
 -- | 测试错误排序
 prop_error_sorting :: Property
 prop_error_sorting = 
-  let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+  let recovery = ErrorRecovery True True Nothing Nothing 50 0.7
       typeError1 = TypeError "test-001" Error Parsing (T.pack "test message 1") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
       typeError2 = TypeError "test-002" Warning Parsing (T.pack "test message 2") (ErrorLocation Nothing 2 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
       errors = [CompilerError typeError1 Nothing [] ParsingPhase, CompilerError typeError2 Nothing [] ParsingPhase]
@@ -152,7 +152,7 @@ prop_error_sorting =
 prop_error_highlighting :: Property
 prop_error_highlighting = 
   let source = "test source code"
-      recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+      recovery = ErrorRecovery True True Nothing Nothing 50 0.7
       typeError = TypeError "test-001" Error Parsing (T.pack "test message") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
       error = CompilerError typeError Nothing [] ParsingPhase
       highlighted = highlightErrorInSource source error
@@ -161,7 +161,7 @@ prop_error_highlighting =
 -- | 测试错误修复建议
 prop_error_fix_suggestion :: Property
 prop_error_fix_suggestion = 
-  let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+  let recovery = ErrorRecovery True True Nothing Nothing 50 0.7
       typeError = TypeError "test-001" Error Parsing (T.pack "test message") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
       error = CompilerError typeError Nothing [] ParsingPhase
       fixes = suggestErrorFixes error
@@ -170,7 +170,7 @@ prop_error_fix_suggestion =
 -- | 测试错误代码生成
 prop_error_code_generation :: Property
 prop_error_code_generation = 
-  let recovery = RecoveryStrategy True True Nothing Nothing 50 0.7
+  let recovery = ErrorRecovery True True Nothing Nothing 50 0.7
       typeError = TypeError "test-001" Error Parsing (T.pack "test message") (ErrorLocation Nothing 1 1 Nothing Nothing) emptyContext recovery [] [] [] Nothing
       error = CompilerError typeError Nothing [] ParsingPhase
       code = generateErrorCode error
