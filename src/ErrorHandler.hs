@@ -58,10 +58,10 @@ infoCount :: ErrorHandler -> Int
 infoCount = length . filter (\e -> errorSeverity e == Info)
 
 hasInfos :: ErrorHandler -> Bool
-hasInfos = not . null . Compiler.Errors.Core.getInfo
+hasInfos = not . null . filter (\e -> errorSeverity e == Info)
 
 getInfos :: ErrorHandler -> ErrorHandler
-getInfos = Compiler.Errors.Core.getInfo
+getInfos = filter (\e -> errorSeverity e == Info)
 
 clearErrors :: ErrorHandler -> ErrorHandler
 clearErrors = filter (\e -> errorSeverity e /= Error)

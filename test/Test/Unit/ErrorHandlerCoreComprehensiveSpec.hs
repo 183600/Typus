@@ -7,7 +7,7 @@ module Test.Unit.ErrorHandlerCoreComprehensiveSpec where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool, Assertion)
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
-import Test.QuickCheck (Gen, Property, (==>), classify, listOf1)
+import Test.QuickCheck (Gen, Property, (==>), classify, listOf1, resize, sized)
 import Compiler.Errors.Core (TypeError(..), CombinedError(..), ErrorSeverity(..), 
                             ErrorCategory(..), ErrorLocation(..), ErrorContext(..), 
                             emptyContext, ErrorRecovery(..),
@@ -105,7 +105,7 @@ genText :: Gen T.Text
 genText = T.pack <$> genString
 
 genTypeError :: Gen TypeError
-genTypeError = do
+genTypeError = sized $ \size -> do
   n <- choose (1000, 9999) :: Gen Int
   let errorId = "E" ++ show n
   severity <- genErrorSeverity
@@ -114,7 +114,9 @@ genTypeError = do
   context <- genErrorContext
   message <- genText
   suggestions <- listOf genText
-  relatedErrors <- listOf genTypeError
+  -- 限制递归深度，避免无限递归
+  let relatedErrorsSize = max 0 (size - 2)
+  relatedErrors <- resize relatedErrorsSize $ listOf genTypeError
   timestamp <- genText
   recovery <- genErrorRecovery
   return $ TypeError errorId severity category message location context recovery suggestions relatedErrors [] Nothing

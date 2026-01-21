@@ -3,7 +3,8 @@
 module Test.Unit.NewErrorHandlerQuickCheckSpec where
 
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck hiding (resize)
+import Test.QuickCheck (resize, sized)
 import Test.Tasty.HUnit
 import Compiler.Errors.Core hiding (line, column)
 import SourceLocation (SourcePos(..), SourceSpan(..))
@@ -38,7 +39,12 @@ instance Arbitrary ErrorContext where
   arbitrary = ErrorContext <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 instance Arbitrary TypeError where
-  arbitrary = TypeError <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = sized $ \n -> do
+      let relatedErrorsSize = min 2 (n `div` 3)
+          errorChainSize = min 2 (n `div` 3)
+      TypeError <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary 
+                <*> arbitrary <*> arbitrary <*> (resize relatedErrorsSize $ listOf arbitrary) 
+                <*> (resize errorChainSize $ listOf arbitrary) <*> arbitrary
 
 instance Arbitrary CombinedError where
   arbitrary = oneof [IntegrationError <$> arbitrary <*> arbitrary]

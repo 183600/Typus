@@ -12,7 +12,7 @@ import qualified Compiler.Errors.Core as Error
 import Control.DeepSeq (NFData, rnf)
 import Data.Semigroup ((<>))
 import qualified Data.Text as T
-import Test.QuickCheck (Arbitrary(..), oneof, elements)
+import Test.QuickCheck (Arbitrary(..), oneof, elements, resize, sized)
 
 -- Arbitrary instances for QuickCheck
 instance Arbitrary T.Text where
@@ -49,7 +49,7 @@ instance Arbitrary ErrorContext where
   arbitrary = ErrorContext <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 instance Arbitrary TypeError where
-  arbitrary = do
+  arbitrary = sized $ \size -> do
     errorId <- arbitrary
     severity <- arbitrary
     category <- arbitrary
@@ -58,8 +58,11 @@ instance Arbitrary TypeError where
     context <- arbitrary
     recovery <- arbitrary
     suggestions <- arbitrary
-    relatedErrors <- arbitrary
-    errorChain <- arbitrary
+    -- 限制递归深度，避免无限递归
+    let relatedErrorsSize = max 0 (size `div` 3)
+        errorChainSize = max 0 (size `div` 3)
+    relatedErrors <- resize relatedErrorsSize $ listOf arbitrary
+    errorChain <- resize errorChainSize $ listOf arbitrary
     timestamp <- arbitrary
     return $ TypeError errorId severity category message location context recovery suggestions relatedErrors errorChain timestamp
 
@@ -196,7 +199,7 @@ prop_located_with_span (Positive line1) (Positive col1) (Positive offset1)
       span = spanBetweenOrdered pos1 pos2
       located = locatedWithSpan span value
   in property $ locValue located == value && locSpan located == span && 
-                locPos located == pos1
+                locPos located == spanStart span
 
 prop_located_value :: String -> Property
 prop_located_value value = 
@@ -322,12 +325,14 @@ prop_to_error_location_with_span (Positive line1) (Positive col1) (Positive offs
   let pos1 = SourcePos line1 col1 offset1
       pos2 = SourcePos line2 col2 offset2
       span = spanBetweenOrdered pos1 pos2
+      start = spanStart span
+      end = spanEnd span
       errLoc = toErrorLocationWithSpan span
   in property $ filePath errLoc == Nothing && 
-                line errLoc == line1 && 
-                column errLoc == col1 && 
-                endLine errLoc == Just line2 && 
-                endColumn errLoc == Just col2
+                line errLoc == posLine start && 
+                column errLoc == posColumn start && 
+                endLine errLoc == Just (posLine end) && 
+                endColumn errLoc == Just (posColumn end)
 
 -- Test NFData instances
 prop_sourcepos_nfdata :: SourcePos -> Property

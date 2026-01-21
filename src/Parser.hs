@@ -130,10 +130,19 @@ blockDirectiveParser = do
 
 parseTypus :: String -> Either String TypusFile
 parseTypus input = do
-    parsedLines <- case MP.runParser parseDocument "<input>" input of
-      Left bundle -> Left (errorBundlePretty bundle)
-      Right ls    -> Right ls
-    buildTypusFile parsedLines
+    -- Special case: whitespace-only input
+    if all (`elem` [' ', '\t', '\n', '\r']) input
+      then Right TypusFile
+        { tfDirectives = defaultFileDirectives
+        , tfBuildTags = []
+        , tfBlocks = []
+        , tfSyntaxErrors = []
+        }
+      else do
+        parsedLines <- case MP.runParser parseDocument "<input>" input of
+          Left bundle -> Left (errorBundlePretty bundle)
+          Right ls    -> Right ls
+        buildTypusFile parsedLines
 
 -- Alias for parseTypus for tests
 parseTypusFile :: String -> Either String TypusFile
@@ -256,9 +265,11 @@ checkIfStatementsWithBraces lines' =
 
           trimmed = trim text
 
+          lineNum = posLine $ spanStart $ plSpan line
+
       in if "if " `isPrefixOf` trimmed && not ("{" `isInfixOf` text)
 
-         then Just (plSpan line, text)
+         then Just (lineNum, text)
 
          else findIfWithoutBrace rest
 
@@ -307,6 +318,9 @@ validateCodeBlocks blocks =
           -- Don't consider function declarations as incomplete
           isFuncDecl = "func " `isPrefixOf` trimmed
           
+          -- Don't consider lines with block comments as incomplete
+          hasBlockComment = "/*" `isInfixOf` line || "*/" `isInfixOf` line
+          
           incompletePatterns = 
 
             [ "let " `isSuffixOf` trimmed
@@ -341,7 +355,7 @@ validateCodeBlocks blocks =
 
             ]
 
-      in not isFuncDecl && any (== True) incompletePatterns && not (null trimmed)
+      in not isFuncDecl && any (== True) incompletePatterns && not (null trimmed) && not hasBlockComment
 
 -- Check for multiple package declarations
 checkMultiplePackageDeclarations :: [ParsedLine] -> Either String ()
@@ -372,7 +386,7 @@ parseFileDirectivesFromParsedLines = go defaultFileDirectives []
       let text = plText line
           trimmed = trim text
           -- 检查是否是构建标签行
-          isBuildTagLine' t = isPrefixOf "//go:build" t || isPrefixOf "// +build" t
+          isBuildTagLine' t = isPrefixOf "//go:build" t || isPrefixOf "// +build" t || isPrefixOf "+" t
           -- 检查是否是指令行，允许 // @ 或 //  @（带额外空格）
           isDirectiveLine = isPrefixOf "//!" trimmed || 
                            isPrefixOf "// @" trimmed || 

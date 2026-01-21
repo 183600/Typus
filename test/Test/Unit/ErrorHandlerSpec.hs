@@ -7,7 +7,7 @@ module Test.Unit.ErrorHandlerSpec where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, assertEqual, assertFailure, assertBool, Assertion)
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
-import Test.QuickCheck (Gen, Property, (==>))
+import Test.QuickCheck (Gen, Property, (==>), resize, sized)
 import ErrorHandler
 import Compiler.Errors.Core (context, category, ErrorSeverity(..), ErrorCategory(..), ErrorLocation(..), ErrorContext(..), ErrorRecovery(..), CombinedError(..))
 import qualified Data.Text as T
@@ -58,7 +58,7 @@ instance Arbitrary CombinedError where
     ]
 
 instance Arbitrary TypeError where
-  arbitrary = do
+  arbitrary = sized $ \size -> do
     errorId <- choose (1000, 9999 :: Int) >>= \n -> return ("E" ++ show n)
     severity <- arbitrary
     category <- arbitrary
@@ -67,8 +67,11 @@ instance Arbitrary TypeError where
     context <- arbitrary
     recovery <- arbitrary
     suggestions <- listOf arbitrary
-    relatedErrors <- listOf arbitrary
-    errorChain <- listOf arbitrary
+    -- 限制递归深度，避免无限递归
+    let relatedErrorsSize = max 0 (size `div` 3)
+        errorChainSize = max 0 (size `div` 3)
+    relatedErrors <- resize relatedErrorsSize $ listOf arbitrary
+    errorChain <- resize errorChainSize $ listOf arbitrary
     timestamp <- arbitrary
     return $ TypeError errorId severity category message location context recovery suggestions relatedErrors errorChain timestamp
 

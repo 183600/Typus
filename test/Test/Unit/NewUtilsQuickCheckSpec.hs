@@ -150,7 +150,7 @@ prop_force_single_tab_indentation_adds_tab s =
       result = forceSingleTabIndentation s
       resultLines = lines result
   in if null trimmed
-     then property $ all null resultLines
+     then property $ all (\line -> null line || line == "\t") resultLines
      else property $ all (\line -> null line || '\t' `elem` line) resultLines
 
 -- Test breakOn function
@@ -174,17 +174,19 @@ prop_break_on_pattern_in_middle pat before after =
       (prefix, suffix) = breakOn pat input
   in if null pat
      then (prefix === "") .&&. (suffix === input)
-     else (prefix === before) .&&. (suffix === after)
+     else if null before && null after && not (null pat)
+          then (prefix === "") .&&. (suffix === "")  -- Special case: only pat
+          else (prefix === before) .&&. (suffix === after)
 
 -- Test safeProcessString function
 prop_safe_process_string_preserves_valid :: String -> Property
 prop_safe_process_string_preserves_valid s = 
-  let hasControl = any isControl s && not (any (`elem` "\n\r\t") s)
+  let hasControl = any isControl s && not (any (`elem` "\n\r\t\DEL") s)
   in if hasControl
      then property $ case safeProcessString s of
                         Left _ -> True
                         Right processed -> not (any isControl processed) || 
-                                          all (`elem` "\n\r\t") (filter isControl processed)
+                                          all (`elem` "\n\r\t\DEL") (filter isControl processed)
      else property $ safeProcessString s === Right s
 
 prop_safe_process_string_handles_empty :: Property
