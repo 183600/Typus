@@ -24,6 +24,7 @@ coreParserPropertiesSpec = testGroup "Core Parser Properties"
       Right parsed -> 
         case parseTypus code of
           Right parsed2 -> assertBool "Parser is idempotent" (parsed == parsed2)
+          Left err -> assertFailure ("Second parse failed: " ++ show err)
       Left err -> assertFailure ("First parse failed: " ++ show err)
 
   , testCase "Parser handles ownership directive correctly" $ do
