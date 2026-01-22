@@ -29,3 +29,6 @@ conciseTestSuite = testGroup "Concise Typus Test Suite (48 tests)"
     [ Integration.tests
     ]
   ]
+
+tests :: TestTree
+tests = conciseTestSuite
