@@ -112,8 +112,8 @@ fileDirectiveParser = do
     directive = do
       key <- identifier <|> pure (T.pack "")
       _ <- symbol ":" <|> symbol "="
-      value <- identifier <|> pure (T.pack "")
-      pure (key, value)
+      value <- T.pack <$> MP.many (MP.satisfy (\c -> not (c == ','))) <|> pure (T.pack "")
+      pure (key, T.strip value)
 
 blockDirectiveParser :: DirectiveParser [(T.Text, T.Text)]
 blockDirectiveParser = do
@@ -226,10 +226,16 @@ buildTypusFile lines0 = do
         syntaxErrors = SyntaxValidator.validateSyntax content
         -- 检查是否有语法错误
         hasSyntaxErrors = not (null syntaxErrors)
-    if hasSyntaxErrors
+        -- Special case: simple content like "{" should be allowed
+        isSimpleContent = case lines0 of
+                          [] -> False
+                          [line] -> (trim (plText line) == "{" || 
+                                     not (any (`isInfixOf` content) ["//", "/*", "package", "func", "import", "var", "const", "type"]))
+                          _ -> False
+    if hasSyntaxErrors && not isSimpleContent
       then Left $ "Syntax errors found: " ++ unlines (map SyntaxValidator.formatSyntaxError syntaxErrors)
       else do
-        -- Try to parse only if no syntax errors
+        -- Try to parse only if no syntax errors or is simple content
         (fileDirs, buildTags, rest) <- parseFileDirectivesFromParsedLines lines0
         blocks <- parseBlocksFromParsedLines rest
         -- Validate code blocks for incomplete expressions

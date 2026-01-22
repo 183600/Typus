@@ -551,6 +551,7 @@ formatError err =
           Warning -> "WARNING"
           Info -> "INFO"
         categoryStr = "[" ++ show (category err) ++ "]"
+        idStr = "[" ++ errorId err ++ "]"
         msg = T.unpack (message err)
         locStr = formatLocation (location err)
         suggestionsStr = if null (suggestions err)
@@ -559,7 +560,7 @@ formatError err =
         chainStr = if null (errorChain err)
                    then ""
                    else "\nError Chain:\n" ++ unlines (map ("  " ++) (map formatError (errorChain err)))
-    in locStr ++ "[" ++ severityStr ++ "] " ++ categoryStr ++ " " ++ msg ++ suggestionsStr ++ chainStr
+    in locStr ++ "[" ++ severityStr ++ "] " ++ categoryStr ++ " " ++ idStr ++ " " ++ msg ++ suggestionsStr ++ chainStr
 
 -- Format single error with location
 formatErrorWithLocation :: TypeError -> String
@@ -846,9 +847,5 @@ fatalError errId msg loc = (errorAt errId Fatal msg loc) { recovery = fatalRecov
 -- Create fatal error with category
 fatalErrorWithCategory :: String -> ErrorCategory -> Text -> ErrorLocation -> TypeError
 fatalErrorWithCategory errId errCategory msg loc = (errorAt errId Fatal msg loc) { category = errCategory }
-
--- ============================================================================
--- ErrorHandler type and functions (for tests)
--- ============================================================================
 
 
