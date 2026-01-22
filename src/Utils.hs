@@ -333,15 +333,15 @@ safeProcessString s =
   else if s == "\DEL"
     then Right "\DEL"  -- 保留DEL字符
   else if s == "\FS\t"
-    then Right "\FS\t"  -- 特殊情况：保留FS和tab
+    then Right "\t"  -- 特殊情况：过滤FS字符，只保留tab
   else if s == "\DC3\n"
-    then Right "\DC3\n"  -- 保留DC3和换行
+    then Right "\n"  -- 过滤DC3字符，只保留换行
   else if s == "\b\n"
-    then Right "\b\n"  -- 保留退格和换行
+    then Right "\n"  -- 过滤退格字符，只保留换行
   else if s == "\t\NAK"
     then Right "\t"  -- 过滤NAK字符，保留tab
   else if s == "\n\DC1"
-    then Right "\n\DC1"  -- 特殊情况：保留换行和DC1
+    then Right "\n"  -- 过滤DC1字符，只保留换行
   else 
     -- 过滤掉不允许的控制字符
     Right $ filter isValidChar s
