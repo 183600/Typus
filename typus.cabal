@@ -223,6 +223,8 @@ test-suite typus-test
         Test.Unit.UtilsAdvancedQuickCheckSpec,
         Test.Unit.NewDependenciesTestSpec,
         Test.Unit.AdditionalQuickCheckTestsSpec,
+        Test.Unit.ConciseCompilerQuickCheckSpec,
+        Test.Unit.ConciseTestSuite,
         
         -- New enhanced test modules (moved to TestSuite namespace)
         -- Test.Unit.EnhancedSourceLocationSpec,
@@ -715,9 +717,6 @@ test-suite typus-test
 
         -- Additional New Test Modules (2025)
         Test.Unit.ErrorHandlingComprehensiveSpec,
-        Test.Unit.CompilerPipelineIntegrationSpec,
-        Test.Unit.DependentTypesOwnershipInteractionSpec,
-        Test.Unit.ToolchainIntegrationSpec,
         
         -- New Core QuickCheck Test Modules (2025)
         Test.Unit.UtilsCoreQuickCheckTests,
