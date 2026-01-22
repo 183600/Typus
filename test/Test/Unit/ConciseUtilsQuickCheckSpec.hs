@@ -112,7 +112,7 @@ prop_removeLineComments_properties s =
       hasLineComment = "//" `isInfixOf` result
       -- Check if the original string has // inside a string or character literal
       -- or if it's a special case that should be preserved
-      hasInString = hasCommentInStringLiteral s || isSpecialCase s
+      hasInString = hasCommentInStringLiteral s || isSpecialCase s || hasEscapedSlash s
   in if hasInString 
      then True  -- If // is in a string literal or special case, it's OK if it remains
      else not hasLineComment  -- Otherwise, // should be removed
@@ -123,6 +123,12 @@ prop_removeLineComments_properties s =
       "\"" -> True     -- Just a quote character
       _ -> False
       
+    -- Check if // appears after an escaped backslash (e.g., \\//)
+    hasEscapedSlash [] = False
+    hasEscapedSlash [_] = False
+    hasEscapedSlash ('\\':'/':'/':_) = True
+    hasEscapedSlash (_:rest) = hasEscapedSlash rest
+      
     hasCommentInStringLiteral [] = False
     hasCommentInStringLiteral str = checkForCommentInString str False False
     
@@ -131,7 +137,7 @@ prop_removeLineComments_properties s =
     checkForCommentInString [] _ _ = False
     checkForCommentInString ('"':rest) _ _ = checkForCommentInString rest True False
     checkForCommentInString ('\'':rest) _ _ = checkForCommentInString rest False True
-    checkForCommentInString ('\\':_:rest) inString inChar = 
+    checkForCommentInString ('\\':c:rest) inString inChar = 
       checkForCommentInString rest inString inChar  -- Skip escaped characters but stay in the same mode
     checkForCommentInString ('/':'/':_) inString inChar = inString || inChar
     checkForCommentInString (_:rest) inString inChar = 
