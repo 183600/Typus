@@ -60,11 +60,13 @@ tests = testGroup "Ownership Transfer Properties Tests"
     
     , testProperty "transfer chain preserves final owner" $
         \owners resource -> 
-          let initialOwner = head owners
-              finalOwner = last owners
+          let (initialOwner, restOwners) = case owners of 
+                [] -> error "owners cannot be empty"
+                (x:xs) -> (x, xs)
+              finalOwner = if null restOwners then initialOwner else last restOwners
               ownership = foldl (\acc newOwner -> 
                 transferOwnership acc resource newOwner) 
-                (assignOwnership initialOwner resource) (tail owners)
+                (assignOwnership initialOwner resource) restOwners
           in getOwner ownership resource === Just finalOwner
     
     , testProperty "transfer preserves resource integrity" $

@@ -124,8 +124,9 @@ tests = testGroup "Ownership Transitivity Tests"
             span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)
             graph = OwnershipGraph [] [] []
             newGraph = addOwnership owner resource span graph
-        length (graphRelations newGraph) @?= 1
-        relationOwner (head $ graphRelations newGraph) @?= owner
+        let relations = graphRelations newGraph
+        length relations @?= 1
+        case relations of (r:_) -> relationOwner r @?= owner; [] -> assertFailure "Expected at least one relation"
       
     , testCase "handles multiple ownership relations" $ do
         let owner1 = Owner "owner1" "Alice"
@@ -150,10 +151,13 @@ tests = testGroup "Ownership Transitivity Tests"
             span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)
             graph = OwnershipGraph [OwnershipRelation fromOwner resource span] [fromOwner] [resource]
             result = transferOwnership fromOwner toOwner [resource] graph
-        length (transferredRelations result) @?= 1
-        let transferred = head $ transferredRelations result
-        relationOwner transferred @?= toOwner
-        relationResource transferred @?= resource
+        let transferred = transferredRelations result
+        length transferred @?= 1
+        case transferred of 
+          (r:_) -> do
+            relationOwner r @?= toOwner
+            relationResource r @?= resource
+          [] -> assertFailure "Expected at least one transferred relation"
       
     , testCase "transfers multiple ownerships" $ do
         let fromOwner = Owner "owner1" "Alice"
@@ -186,7 +190,7 @@ tests = testGroup "Ownership Transitivity Tests"
         length (graphRelations $ newGraph result) @?= 3
         let remainingRelations = filter (\r -> relationOwner r == fromOwner) $ graphRelations $ newGraph result
         length remainingRelations @?= 1
-        relationResource (head remainingRelations) @?= resource3
+        case remainingRelations of (r:_) -> relationResource r @?= resource3; [] -> assertFailure "Expected at least one remaining relation"
     ]
 
   , testGroup "Ownership transitivity"
@@ -234,10 +238,13 @@ tests = testGroup "Ownership Transitivity Tests"
             span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 9)
             relation = OwnershipRelation owner resource span
             graph = OwnershipGraph [relation] [owner] [resource]
-        length (graphRelations graph) @?= 1
-        let rel = head $ graphRelations graph
-        relationOwner rel @?= owner
-        relationResource rel @?= resource
+        let relations = graphRelations graph
+        length relations @?= 1
+        case relations of 
+          (r:_) -> do
+            relationOwner r @?= owner
+            relationResource r @?= resource
+          [] -> assertFailure "Expected at least one relation"
       
     , testCase "validates owner and resource existence" $ do
         let owner = Owner "owner1" "Alice"

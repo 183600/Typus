@@ -127,8 +127,9 @@ tests = testGroup "ParserBasicFunctionsExtraSpec Tests"
             content = "test code"
             block = CodeBlock { cbDirectives = directives, cbContent = content, cbSpan = span }
             file = TypusFile { tfDirectives = fileDirectives, tfBuildTags = [], tfBlocks = [block], tfSyntaxErrors = [] }
-        length (typusCodeBlocks file) @?= 1
-        head (typusCodeBlocks file) @?= block
+        let blocks = typusCodeBlocks file
+        length blocks @?= 1
+        case blocks of (b:_) -> b @?= block; [] -> assertFailure "Expected at least one block"
     ]
   
   , testGroup "parseTypus函数测试"
@@ -145,18 +146,18 @@ tests = testGroup "ParserBasicFunctionsExtraSpec Tests"
         case result of
           Left _ -> assertFailure "解析简单代码失败"
           Right file -> do
-            length (typusCodeBlocks file) @?= 1
-            let block = head (typusCodeBlocks file)
-            codeBlockContent block @?= code
+            let blocks = typusCodeBlocks file
+            length blocks @?= 1
+            case blocks of (b:_) -> codeBlockContent b @?= code; [] -> assertFailure "Expected at least one block"
     , testCase "parse multiline code" $ do
         let code = "let x = 5\nlet y = 10"
             result = parseTypus code
         case result of
           Left _ -> assertFailure "解析多行代码失败"
           Right file -> do
-            length (typusCodeBlocks file) @?= 1
-            let block = head (typusCodeBlocks file)
-            codeBlockContent block @?= code
+            let blocks = typusCodeBlocks file
+            length blocks @?= 1
+            case blocks of (b:_) -> codeBlockContent b @?= code; [] -> assertFailure "Expected at least one block"
     ]
   
   , testGroup "fileDirectiveParser测试"

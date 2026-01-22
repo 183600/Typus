@@ -45,9 +45,11 @@ prop_accented_characters content =
        Right typusFile -> 
          let blocks = tfBlocks typusFile
          in property $ not (null blocks) ==> 
-            let firstBlock = head blocks
-                blockContent = Parser.cbContent firstBlock
-            in accentedChars `isInfixOf` blockContent
+            case blocks of 
+              (firstBlock:_) -> 
+                let blockContent = Parser.cbContent firstBlock
+                in accentedChars `isInfixOf` blockContent
+              [] -> False
 
 -- | Test parsing with mathematical symbols
 prop_mathematical_symbols :: String -> Property
@@ -60,9 +62,11 @@ prop_mathematical_symbols content =
        Right typusFile -> 
          let blocks = tfBlocks typusFile
          in property $ not (null blocks) ==> 
-            let firstBlock = head blocks
-                blockContent = Parser.cbContent firstBlock
-            in mathSymbols `isInfixOf` blockContent
+            case blocks of 
+              (firstBlock:_) ->
+                let blockContent = Parser.cbContent firstBlock
+                in mathSymbols `isInfixOf` blockContent
+              [] -> False
 
 -- | Test parsing with currency symbols
 prop_currency_symbols :: String -> Property
@@ -75,9 +79,11 @@ prop_currency_symbols content =
        Right typusFile -> 
          let blocks = tfBlocks typusFile
          in property $ not (null blocks) ==> 
-            let firstBlock = head blocks
-                blockContent = cbContent firstBlock
-            in currencySymbols `isInfixOf` blockContent
+            case blocks of 
+              (firstBlock:_) ->
+                let blockContent = cbContent firstBlock
+                in currencySymbols `isInfixOf` blockContent
+              [] -> False
 
 -- | Test parsing with emojis
 prop_emoji_characters :: String -> Property
@@ -90,9 +96,11 @@ prop_emoji_characters content =
        Right typusFile -> 
          let blocks = tfBlocks typusFile
          in property $ not (null blocks) ==> 
-            let firstBlock = head blocks
-                blockContent = cbContent firstBlock
-            in emojis `isInfixOf` blockContent
+            case blocks of 
+              (firstBlock:_) ->
+                let blockContent = cbContent firstBlock
+                in emojis `isInfixOf` blockContent
+              [] -> False
 
 -- | Test parsing with right-to-left scripts
 prop_rtl_scripts :: String -> Property
@@ -105,9 +113,11 @@ prop_rtl_scripts content =
        Right typusFile -> 
          let blocks = tfBlocks typusFile
          in property $ not (null blocks) ==> 
-            let firstBlock = head blocks
-                blockContent = cbContent firstBlock
-            in rtlChars `isInfixOf` blockContent
+            case blocks of 
+              (firstBlock:_) ->
+                let blockContent = cbContent firstBlock
+                in rtlChars `isInfixOf` blockContent
+              [] -> False
 
 -- | Test string processing with Unicode
 prop_unicode_string_processing :: String -> Property
@@ -149,8 +159,9 @@ prop_unicode_directives content =
        Right typusFile -> 
          let buildTags = tfBuildTags typusFile
          in property $ not (null buildTags) ==> 
-            let firstTag = head buildTags
-            in "中文测试" `isInfixOf` locValue firstTag
+            case buildTags of 
+              (firstTag:_) -> "中文测试" `isInfixOf` locValue firstTag
+              [] -> False
 
 -- | Test Unicode in identifiers
 prop_unicode_identifiers :: String -> Property
@@ -163,9 +174,11 @@ prop_unicode_identifiers content =
        Right typusFile -> 
          let blocks = tfBlocks typusFile
          in property $ not (null blocks) ==> 
-            let firstBlock = head blocks
-                blockContent = cbContent firstBlock
-            in unicodeId `isInfixOf` blockContent
+            case blocks of 
+              (firstBlock:_) ->
+                let blockContent = cbContent firstBlock
+                in unicodeId `isInfixOf` blockContent
+              [] -> False
 
 -- | Test Unicode string literals
 prop_unicode_string_literals :: String -> Property
@@ -178,9 +191,11 @@ prop_unicode_string_literals content =
        Right typusFile -> 
          let blocks = tfBlocks typusFile
          in property $ not (null blocks) ==> 
-            let firstBlock = head blocks
-                blockContent = cbContent firstBlock
-            in unicodeString `isInfixOf` blockContent
+            case blocks of 
+              (firstBlock:_) ->
+                let blockContent = cbContent firstBlock
+                in unicodeString `isInfixOf` blockContent
+              [] -> False
 
 -- | Test Unicode comments
 prop_unicode_comments :: String -> Property
@@ -192,9 +207,11 @@ prop_unicode_comments content =
        Right typusFile -> 
          let blocks = tfBlocks typusFile
          in property $ not (null blocks) ==> 
-            let firstBlock = head blocks
-                blockContent = cbContent firstBlock
-            in content `isInfixOf` blockContent
+            case blocks of 
+              (firstBlock:_) ->
+                let blockContent = cbContent firstBlock
+                in content `isInfixOf` blockContent
+              [] -> False
 
 -- | Test mixed Unicode and ASCII
 prop_mixed_unicode_ascii :: String -> Property

@@ -135,8 +135,11 @@ test_parse_file_build_tags = do
     Right file -> do
       let buildTags = tfBuildTags file
       assertEqual "Should have 2 build tags" 2 (length buildTags)
-      assertEqual "First tag" "//go:build linux" (locValue $ head buildTags)
-      assertEqual "Second tag" "// +build amd64" (locValue $ buildTags !! 1)
+      case buildTags of 
+        (firstTag:secondTag:_) -> do
+          assertEqual "First tag" "//go:build linux" (locValue firstTag)
+          assertEqual "Second tag" "// +build amd64" (locValue secondTag)
+        _ -> assertFailure "Expected at least 2 build tags"
     Left err -> assertFailure $ "Failed to parse file with build tags: " ++ err
 
 -- Test 8: Parse block with directives
@@ -148,14 +151,15 @@ test_parse_block_with_directives = do
     Right file -> do
       let blocks = tfBlocks file
       assertEqual "Should have 2 blocks" 2 (length blocks)
-      let firstBlock = head blocks
-          directives = cbDirectives firstBlock
-      case bdOwnership directives of
-        Just loc | locValue loc == True -> return ()
-        _ -> assertFailure "Expected block ownership directive to be on"
-      case bdDependentTypes directives of
-        Just loc | locValue loc == True -> return ()
-        _ -> assertFailure "Expected block dependent_types directive to be true"
+      case blocks of 
+        (firstBlock:_) -> do
+          let directives = cbDirectives firstBlock
+          case bdOwnership directives of
+            Just loc | locValue loc == True -> return ()
+            _ -> assertFailure "Expected block ownership directive to be on"
+          case bdDependentTypes directives of
+            Just loc | locValue loc == True -> return ()
+            _ -> assertFailure "Expected block dependent_types directive to be true"
     Left err -> assertFailure $ "Failed to parse block with directives: " ++ err
 
 -- Test 9: Parse markdown block with directives
@@ -167,14 +171,15 @@ test_parse_markdown_block_with_directives = do
     Right file -> do
       let blocks = tfBlocks file
       assertEqual "Should have 2 blocks" 2 (length blocks)
-      let firstBlock = head blocks
-          directives = cbDirectives firstBlock
-      case bdOwnership directives of
-        Just loc | locValue loc == True -> return ()
-        _ -> assertFailure "Expected block ownership directive to be on"
-      case bdDependentTypes directives of
-        Just loc | locValue loc == True -> return ()
-        _ -> assertFailure "Expected block dependent_types directive to be true"
+      case blocks of 
+        (firstBlock:_) -> do
+          let directives = cbDirectives firstBlock
+          case bdOwnership directives of
+            Just loc | locValue loc == True -> return ()
+            _ -> assertFailure "Expected block ownership directive to be on"
+          case bdDependentTypes directives of
+            Just loc | locValue loc == True -> return ()
+            _ -> assertFailure "Expected block dependent_types directive to be true"
     Left err -> assertFailure $ "Failed to parse markdown block with directives: " ++ err
 
 -- Test 10: Parse code with if statement and braces

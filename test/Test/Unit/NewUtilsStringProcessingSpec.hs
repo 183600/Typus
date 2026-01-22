@@ -25,8 +25,8 @@ prop_trim_no_addition s =
 prop_trim_removes_spaces :: String -> Property
 prop_trim_removes_spaces s =
   let trimmed = trim s
-      hasLeadingSpace = not (null s) && isSpace (head s)
-      hasTrailingSpace = not (null s) && isSpace (last s)
+      hasLeadingSpace = case s of (x:_) -> isSpace x; [] -> False
+      hasTrailingSpace = case reverse s of (x:_) -> isSpace x; [] -> False
   in property $ if hasLeadingSpace || hasTrailingSpace
                 then length trimmed < length s || null trimmed
                 else True
@@ -73,7 +73,9 @@ prop_break_on_finds_or_original s substr =
 prop_safe_process_string_no_crash :: String -> Property
 prop_safe_process_string_no_crash s =
   let result = safeProcessString s
-  in property $ length result >= 0
+  in case result of
+       Right r -> property $ length r >= 0
+       Left _ -> property True
 
 -- Property 10: Valid character check should be boolean
 prop_is_valid_char_boolean :: Char -> Property
@@ -203,7 +205,9 @@ test_safe_process_string :: Assertion
 test_safe_process_string = 
   let s = "test string"
       result = safeProcessString s
-  in assertBool "Safe process string should not crash" $ length result >= 0
+  in case result of
+       Right r -> assertBool "Safe process string should not crash" $ length r >= 0
+       Left _ -> assertBool "Safe process string should not crash" True
 
 tests :: TestTree
 tests = testGroup "Test.Unit.NewUtilsStringProcessingSpec Tests"

@@ -194,9 +194,9 @@ prop_break_on_correctness :: String -> String -> Property
 prop_break_on_correctness delim s =
   let (before, after) = breakOn delim s
       expected = if not (null delim) && delim `isInfixOf` s
-                    then let parts = splitBy (head delim) s
+                    then let parts = splitBy (case delim of (x:_) -> x; [] -> error "unreachable") s
                          in if length parts >= 2
-                            then let b = head parts
+                            then let b = case parts of (x:_) -> x; [] -> error "unreachable"
                                      rest = drop 1 parts
                                  in (b, intercalate delim rest)
                             else (s, "")

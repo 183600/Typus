@@ -23,8 +23,8 @@ prop_trim_idempotent s = trim (trim s) === trim s
 prop_trim_removes_leading_trailing_spaces :: String -> Property
 prop_trim_removes_leading_trailing_spaces s = 
   let trimmed = trim s
-      hasLeadingSpace = not (null s) && isSpace (head s)
-      hasTrailingSpace = not (null s) && isSpace (last s)
+      hasLeadingSpace = case s of (x:_) -> isSpace x; [] -> False
+      hasTrailingSpace = case reverse s of (x:_) -> isSpace x; [] -> False
   in if hasLeadingSpace || hasTrailingSpace
      then property $ not (isPrefixOf " " trimmed || isSuffixOf " " trimmed)
      else property $ trimmed === s
