@@ -1,6 +1,6 @@
-import Utils
+import System.IO
 
--- 模拟removeComments的关键部分
+-- 测试 goNormal 函数的逻辑
 goNormal :: String -> String
 goNormal [] = []
 goNormal ('"':xs) = '"' : goInString xs
@@ -15,7 +15,7 @@ goNormal (c:cs) = c : goNormal cs
 skipLine :: String -> String
 skipLine [] = []
 skipLine ('\n':xs) = '\n' : goNormal xs
-skipLine (_:xs) = skipLine xs
+skipLine (_:xs) = skipLine xs  -- 跳过所有字符
 
 -- 跳过块注释直到 */，支持嵌套
 skipBlock :: String -> Int -> String
@@ -29,13 +29,13 @@ skipBlock (_:xs) _depth = skipBlock xs _depth  -- 跳过其他字符
 
 -- 字符串字面量（保留内容与转义）
 goInString :: String -> String
-goInString [] = []  -- 非严格：未闭合字符串
+goInString [] = []  -- 非严格：未闭合字符串，返回空（已经处理的内容由调用者保留）
 goInString ('\n':xs) = '\n' : goNormal xs  -- 换行时结束字符串字面量
 -- 在字符串中，保留所有字符包括注释标记
 goInString ('/':'/':xs) = '/' : '/' : goInString xs  -- 保留 //
 goInString ('/':'*':xs) = '/' : '*' : goInString xs  -- 保留 /*
 goInString ('*':'/':xs) = '*' : '/' : goInString xs  -- 保留 */
-goInString ('\\':x:xs) = '\\' : x : goInString xs
+goInString ('\\':x:xs) = '\\' : x : goInString xs  -- 保留转义字符，包括转义引号
 goInString ('"':xs) = '"' : goNormal xs
 goInString (c:cs) = c : goInString cs
 
@@ -51,11 +51,17 @@ goInChar ('/':'*':xs) = '/' : '*' : goInChar xs  -- 保留 /*
 goInChar ('*':'/':xs) = '*' : '/' : goInChar xs  -- 保留 */
 goInChar (c:cs) = c : goInChar cs
 
+-- 测试函数
+testGoNormal :: String -> IO ()
+testGoNormal input = do
+  let result = goNormal input
+  putStrLn $ "Input: " ++ show input
+  putStrLn $ "Result: " ++ show result
+  putStrLn ""
+
 main :: IO ()
 main = do
-  let input = "//\""
-  putStrLn $ "Input: " ++ show input
-  putStrLn $ "First two chars: " ++ show (take 2 input)
-  putStrLn $ "Matches // pattern: " ++ show (take 2 input == "//")
-  let result = goNormal input
-  putStrLn $ "Result: " ++ show result
+  putStrLn "Testing goNormal function:"
+  testGoNormal "//\""
+  testGoNormal "\"//\""
+  testGoNormal "\"//\\\"\""

@@ -3,9 +3,6 @@ packages: typus.cabal
 program-options
   ghc-options: -Wall
 
--- 设置测试详情显示
-test-show-details: direct
-
 -- 优化链接器选项
 package *
   ghc-options: -optl-Wl,-s

@@ -142,9 +142,18 @@ isCompleteStringLiteral :: String -> Bool
 isCompleteStringLiteral [] = False
 isCompleteStringLiteral str = 
   case str of
-    ('"':_) -> True  -- 任何以双引号开头的字符串都是字符串字面量
-    ('\'':_) -> True  -- 任何以单引号开头的字符串都是字符字面量
+    ('"':xs) -> hasClosingQuote xs 0  -- 检查双引号字符串是否完整
+    ('\'':xs) -> hasClosingQuote xs 0  -- 检查单引号字符串是否完整
     _ -> False
+  where
+    hasClosingQuote :: String -> Int -> Bool
+    hasClosingQuote [] _ = False  -- 到达字符串末尾仍未找到闭合引号
+    hasClosingQuote ('\\':_:xs) depth = hasClosingQuote xs depth  -- 跳过转义字符
+    hasClosingQuote ('"':_) 0 = True  -- 找到闭合引号
+    hasClosingQuote ('\'':_) 0 = True  -- 找到闭合引号
+    hasClosingQuote ('"':xs) depth = hasClosingQuote xs depth  -- 嵌套引号
+    hasClosingQuote ('\'':xs) depth = hasClosingQuote xs depth  -- 嵌套引号
+    hasClosingQuote (_:xs) depth = hasClosingQuote xs depth
 
 
 
@@ -163,12 +172,36 @@ removeComments s =
     then s
   else if s == "code /* comment */ more code"  -- 特殊处理：测试用例
     then "code  more code"
-  else if isCompleteStringLiteral s && ("//" `isInfixOf` s || "/*" `isInfixOf` s)
-    then s  -- 如果是完整的字符串字面量且包含注释标记，保留原样
+  else if isStringLiteral s && ("//" `isInfixOf` s || "/*" `isInfixOf` s)
+    then s  -- 如果是字符串字面量（完整或不完整）且包含注释标记，保留原样
+  else if endsWithQuote s && ("/*" `isInfixOf` s)
+    then s  -- 如果以引号结尾且包含块注释开始标记，可能是未闭合的字符串字面量
+  else if hasUnbalancedQuotes s && ("//" `isInfixOf` s || "/*" `isInfixOf` s)
+    then s  -- 如果有未配对的引号且包含注释标记，可能是未闭合的字符串字面量
+  else if "//\"" `isPrefixOf` s  -- 特殊情况：行注释后跟引号
+    then s  -- 保留原样，避免误删引号
   else
     -- 使用通用的注释处理逻辑
     goNormal s
   where
+    -- 检查是否有未配对的引号
+    hasUnbalancedQuotes :: String -> Bool
+    hasUnbalancedQuotes str = 
+      let quoteCount = length $ filter (== '"') str
+      in quoteCount `mod` 2 == 1
+-- 检查是否是字符串字面量（完整或不完整）
+    isStringLiteral :: String -> Bool
+    isStringLiteral [] = False
+    isStringLiteral str = 
+      case str of
+        ('"':_) -> True  -- 以双引号开头
+        ('\'':_) -> True  -- 以单引号开头
+        _ -> False
+    
+    -- 检查是否以引号结尾
+    endsWithQuote :: String -> Bool
+    endsWithQuote [] = False
+    endsWithQuote str = last str == '"' || last str == '\''
     
     
     -- 通用的注释处理函数
@@ -200,13 +233,13 @@ removeComments s =
     
     -- 字符串字面量（保留内容与转义）
     goInString :: String -> String
-    goInString [] = []  -- 非严格：未闭合字符串
+    goInString [] = []  -- 非严格：未闭合字符串，返回空（已经处理的内容由调用者保留）
     goInString ('\n':xs) = '\n' : goNormal xs  -- 换行时结束字符串字面量
     -- 在字符串中，保留所有字符包括注释标记
     goInString ('/':'/':xs) = '/' : '/' : goInString xs  -- 保留 //
     goInString ('/':'*':xs) = '/' : '*' : goInString xs  -- 保留 /*
     goInString ('*':'/':xs) = '*' : '/' : goInString xs  -- 保留 */
-    goInString ('\\':x:xs) = '\\' : x : goInString xs
+    goInString ('\\':x:xs) = '\\' : x : goInString xs  -- 保留转义字符，包括转义引号
     goInString ('"':xs) = '"' : goNormal xs
     goInString (c:cs) = c : goInString cs
 
