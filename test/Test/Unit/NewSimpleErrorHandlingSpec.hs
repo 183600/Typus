@@ -77,7 +77,9 @@ test_reverse_property =
 test_head_property :: Assertion
 test_head_property = 
   let xs = [1,2,3]
-      (x:_) = xs
+      x = case xs of
+            (v:_) -> v
+            [] -> error "Impossible: xs is not empty"
   in assertEqual "Head should be first element" 1 x
 
 test_sum_property :: Assertion

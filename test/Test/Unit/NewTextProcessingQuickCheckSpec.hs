@@ -299,10 +299,10 @@ trim = dropWhile isSpace . reverse . dropWhile isSpace . reverse
 
 replaceString :: String -> String -> String -> String
 replaceString _ _ [] = []
-replaceString old new s = 
-  if old `isPrefixOf` s
-  then new ++ replaceString old new (drop (length old) s)
-  else case s of (c:cs) -> c : replaceString old new cs; [] -> []
+replaceString old new (c:cs) = 
+  if old `isPrefixOf` (c:cs)
+  then new ++ replaceString old new (drop (length old) (c:cs))
+  else c : replaceString old new cs
 
 -- Note: Using Data.List intercalate function
 

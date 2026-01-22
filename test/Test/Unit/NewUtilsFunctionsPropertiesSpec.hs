@@ -166,10 +166,12 @@ splitString :: String -> String -> [String]
 splitString _ [] = [""]
 splitString sep str = splitString' sep str []
   where
-    splitString' _ [] acc = [reverse acc]
     splitString' sep str acc
       | sep `isPrefixOf` str = reverse acc : splitString' sep (drop (length sep) str) []
-      | otherwise = splitString' sep (tail str) (head str : acc)
+      | null str = [reverse acc]
+      | otherwise = case str of
+                      (c:cs) -> splitString' sep cs (c : acc)
+                      [] -> [reverse acc]
 
 -- 辅助函数：去重字符串
 deduplicateString :: String -> String
@@ -178,10 +180,12 @@ deduplicateString (x:xs) = x : deduplicateString (filter (/= x) xs)
 
 -- 辅助函数：替换字符串
 replaceString :: String -> String -> String -> String
-replaceString _ _ [] = []
 replaceString old new str
+  | null str = []
   | old `isPrefixOf` str = new ++ replaceString old new (drop (length old) str)
-  | otherwise = head str : replaceString old new (tail str)
+  | otherwise = case str of
+                  (c:cs) -> c : replaceString old new cs
+                  [] -> []
 
 -- 辅助函数：检查子串
 isInfixOf :: String -> String -> Bool

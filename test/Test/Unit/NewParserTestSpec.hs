@@ -34,7 +34,9 @@ test_parse_simple_code_block = do
     Right typusFile -> do
       let blocks = tfBlocks typusFile
       assertEqual "Should have one code block" 1 (length blocks)
-      let (block:_) = blocks
+      let block = case blocks of
+                    (b:_) -> b
+                    [] -> error "Impossible: length check ensures non-empty"
       assertEqual "Block content should match" "let x = 42\n" (cbContent block)
 
 -- | 测试解析文件指令
@@ -62,7 +64,9 @@ test_parse_block_directives = do
     Left err -> assertFailure $ "Failed to parse block directives: " ++ show err
     Right typusFile -> do
       let blocks = tfBlocks typusFile
-          (block:_) = blocks
+          block = case blocks of
+                    (b:_) -> b
+                    [] -> error "Impossible: blocks should not be empty"
           directives = cbDirectives block
           ownership = bdOwnership directives
           constraints = bdConstraints directives
@@ -137,7 +141,9 @@ prop_code_block_content_preserved content =
          let blocks = tfBlocks typusFile
          in if null blocks
             then property True
-            else let (block:_) = blocks
+            else let block = case blocks of
+                              (b:_) -> b
+                              [] -> error "Impossible: null check ensures non-empty"
                      extractedContent = cbContent block
                  in (not (null content) ==> extractedContent == content ++ "\n")
 
@@ -176,7 +182,9 @@ test_unicode_handling = do
     Left err -> assertFailure $ "Failed to parse Unicode content: " ++ show err
     Right typusFile -> do
       let blocks = tfBlocks typusFile
-          (block:_) = blocks
+          block = case blocks of
+                    (b:_) -> b
+                    [] -> error "Impossible: blocks should not be empty"
       assertBool "Should preserve Unicode characters" ("测试" `isInfixOf` cbContent block)
       assertBool "Should preserve Chinese characters" ("你好世界" `isInfixOf` cbContent block)
 

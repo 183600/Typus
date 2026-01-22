@@ -225,16 +225,17 @@ prop_stringSplitPreservesCharacters s delimiter =
     splitOn [] s = [s]
     splitOn sep str = splitOn' sep str []
       where
-        splitOn' _ [] acc = [reverse acc]
         splitOn' sep str acc
           | sep `isPrefixOf` str = reverse acc : splitOn' sep (drop (length sep) str) []
+          | null str = [reverse acc]
           | otherwise = case str of 
                          (c:cs) -> splitOn' sep cs (c : acc)
                          [] -> [reverse acc]
     
-    intercalate _ [] = ""
-    intercalate _ [x] = x
-    intercalate sep (x:xs) = x ++ sep ++ intercalate sep xs
+    intercalate sep xs = case xs of
+                           [] -> ""
+                           [x] -> x
+                           (h:t) -> h ++ sep ++ intercalate sep t
 
 -- Property 33: String isPrefixOf/isSuffixOf are consistent
 prop_stringPrefixSuffixConsistent :: String -> String -> Bool
