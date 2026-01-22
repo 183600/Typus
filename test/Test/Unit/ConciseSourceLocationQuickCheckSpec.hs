@@ -10,7 +10,6 @@ import SourceLocation
   ( SourcePos(..)
   , SourceSpan(..)
   , Located(..)
-  , startPos
   , posAfter
   , posAt
   , posAtLineCol
@@ -37,30 +36,29 @@ import SourceLocation
   )
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.Char (isSpace)
 
 -- Arbitrary instances for QuickCheck
 instance Arbitrary T.Text where
   arbitrary = T.pack <$> arbitrary
 instance Arbitrary SourcePos where
   arbitrary = do
-    lineNum <- choose (1, 1000)
-    columnNum <- choose (1, 1000)
-    offset <- choose (0, 1000000)
-    return $ SourcePos lineNum columnNum offset
+    lineNum' <- choose (1, 1000)
+    columnNum' <- choose (1, 1000)
+    offset' <- choose (0, 1000000)
+    return $ SourcePos lineNum' columnNum' offset'
 
 instance Arbitrary SourceSpan where
   arbitrary = do
-    startPos <- arbitrary
-    endPos <- arbitrary
-    return $ SourceSpan startPos endPos
+    startPos' <- arbitrary
+    endPos' <- arbitrary
+    return $ SourceSpan startPos' endPos'
 
 instance Arbitrary a => Arbitrary (Located a) where
   arbitrary = do
-    value <- arbitrary
-    position <- arbitrary
-    span <- arbitrary
-    return $ Located value position span
+    value' <- arbitrary
+    position' <- arbitrary
+    span' <- arbitrary
+    return $ Located value' position' span'
 
 tests :: TestTree
 tests = testGroup "Concise SourceLocation QuickCheck Tests"
@@ -168,9 +166,9 @@ sourceColumn_properties pos = sourceColumn pos == posColumn pos
 
 -- | Test basic SourceSpan properties
 span_properties :: SourceSpan -> Bool
-span_properties span = 
-  let start = spanStart span
-      end = spanEnd span
+span_properties testSpan = 
+  let start = spanStart testSpan
+      end = spanEnd testSpan
   in posLine start >= 1 && 
       posColumn start >= 1 && 
       posOffset start >= 0 &&
@@ -181,33 +179,33 @@ span_properties span =
 -- | Test emptySpan properties
 emptySpan_properties :: SourcePos -> Bool
 emptySpan_properties pos = 
-  let span = emptySpan pos
-  in spanStart span == pos && spanEnd span == pos
+  let testSpan = emptySpan pos
+  in spanStart testSpan == pos && spanEnd testSpan == pos
 
 -- | Test spanFrom properties
 spanFrom_properties :: SourcePos -> Bool
 spanFrom_properties pos = 
-  let span = spanFrom pos
-  in spanStart span == pos && spanEnd span == pos
+  let testSpan = spanFrom pos
+  in spanStart testSpan == pos && spanEnd testSpan == pos
 
 -- | Test spanTo properties
 spanTo_properties :: SourcePos -> Bool
 spanTo_properties pos = 
-  let span = spanTo pos
-  in spanStart span == pos && spanEnd span == pos
+  let testSpan = spanTo pos
+  in spanStart testSpan == pos && spanEnd testSpan == pos
 
 -- | Test spanBetween properties
 spanBetween_properties :: SourcePos -> SourcePos -> Bool
 spanBetween_properties pos1 pos2 = 
-  let span = spanBetween pos1 pos2
-  in spanStart span == pos1 && spanEnd span == pos2
+  let testSpan = spanBetween pos1 pos2
+  in spanStart testSpan == pos1 && spanEnd testSpan == pos2
 
 -- | Test spanBetweenOrdered properties
 spanBetweenOrdered_properties :: SourcePos -> SourcePos -> Bool
 spanBetweenOrdered_properties pos1 pos2 = 
-  let span = spanBetweenOrdered pos1 pos2
-      start = spanStart span
-      end = spanEnd span
+  let testSpan = spanBetweenOrdered pos1 pos2
+      start = spanStart testSpan
+      end = spanEnd testSpan
   in (comparePos start end /= GT) && 
      (start == pos1 || start == pos2) &&
      (end == pos1 || end == pos2)
@@ -231,14 +229,14 @@ mergeSpans_properties span1 span2 =
 
 -- | Test isValidSpan properties
 isValidSpan_properties :: SourceSpan -> Bool
-isValidSpan_properties span = 
-  let start = spanStart span
-      end = spanEnd span
-  in isValidSpan span == (comparePos start end /= GT)
+isValidSpan_properties testSpan = 
+  let start = spanStart testSpan
+      end = spanEnd testSpan
+  in isValidSpan testSpan == (comparePos start end /= GT)
 
 -- | Test isValidBlockSpan properties
 isValidBlockSpan_properties :: SourceSpan -> Bool
-isValidBlockSpan_properties span = isValidBlockSpan span == isValidSpan span
+isValidBlockSpan_properties testSpan = isValidBlockSpan testSpan == isValidSpan testSpan
 
 -- | Test locatedAt properties
 locatedAt_properties :: SourcePos -> Int -> Bool
@@ -251,11 +249,11 @@ locatedAt_properties pos value =
 
 -- | Test locatedWithSpan properties
 locatedWithSpan_properties :: SourceSpan -> Int -> Bool
-locatedWithSpan_properties span value = 
-  let located = locatedWithSpan span value
+locatedWithSpan_properties testSpan value = 
+  let located = locatedWithSpan testSpan value
   in locatedValue located == value &&
-     locatedSpan located == span &&
-     locatedPos located == spanStart span
+     locatedSpan located == testSpan &&
+     locatedPos located == spanStart testSpan
 
 -- | Test locatedValue properties
 locatedValue_properties :: Located Int -> Bool

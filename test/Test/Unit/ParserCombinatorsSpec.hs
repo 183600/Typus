@@ -67,10 +67,11 @@ instance Eq a => Eq (Parser a) where
 string :: String -> Parser String
 string [] = return []
 string (c:cs) = do
-  char c
+  _ <- char c
   rest <- string cs
   return (c:rest)
 
+many' :: Parser a -> Parser [a]
 many' p = many1 p <|> return []
 
 many1 :: Parser a -> Parser [a]
@@ -246,28 +247,28 @@ ifStmt = do
 
 whileStmt :: Parser Stmt
 whileStmt = do
-  string "while"
-  many' (char ' ')
+  _ <- string "while"
+  _ <- many' (char ' ')
   cond <- between (char '(') (char ')') expr
-  many' (char ' ')
+  _ <- many' (char ' ')
   body <- stmt
   return $ While cond body
 
 assignStmt :: Parser Stmt
 assignStmt = do
   var <- identifier
-  many' (char ' ')
-  char '='
-  many' (char ' ')
+  _ <- many' (char ' ')
+  _ <- char '='
+  _ <- many' (char ' ')
   e <- expr
   return $ Assign var e
 
 blockStmt :: Parser Stmt
 blockStmt = do
-  char '{'
-  many' (char ' ' <|> char '\n')
+  _ <- char '{'
+  _ <- many' (char ' ' <|> char '\n')
   stmts <- many' (stmt <* many' (char ' ' <|> char '\n'))
-  char '}'
+  _ <- char '}'
   return $ case stmts of
     [] -> Seq []
     [s] -> s

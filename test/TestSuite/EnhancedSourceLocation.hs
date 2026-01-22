@@ -6,8 +6,7 @@ module TestSuite.EnhancedSourceLocation where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import Test.QuickCheck (Positive(..), NonNegative(..))
-import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), spanStart, spanEnd, locatedWithSpan, locatedValue, locatedSpan)
+import SourceLocation (SourcePos(..), SourceSpan(..), spanStart, spanEnd, locatedWithSpan, locatedValue, locatedSpan)
 
 -- | Test properties for SourceLocation module
 
@@ -16,10 +15,9 @@ prop_sourcepos_ordering :: SourcePos -> SourcePos -> Property
 prop_sourcepos_ordering pos1 pos2 =
   let line1 = posLine pos1
       col1 = posColumn pos1
-      offset1 = posOffset pos1
       line2 = posLine pos2
       col2 = posColumn pos2
-      offset2 = posOffset pos2
+      _ = (posOffset pos1, posOffset pos2)  -- offsets not used in comparison
   in property $ 
     if line1 < line2 then pos1 < pos2
     else if line1 > line2 then pos1 > pos2
@@ -33,14 +31,14 @@ prop_sourcespan_consistency (Positive line) (Positive col) (Positive len) =
   let start = SourcePos line col 0
       endCol = col + len
       end = SourcePos line endCol (0 :: Int)
-      span = SourceSpan start end
-  in property $ spanStart span <= spanEnd span
+      testSpan = SourceSpan start end
+  in property $ spanStart testSpan <= spanEnd testSpan
 
 -- | locatedWithSpan should preserve the value and set the span
 prop_located_with_span_preserves_value :: String -> SourceSpan -> Property
-prop_located_with_span_preserves_value val span =
-  let located = locatedWithSpan span val
-  in property $ locatedValue located == val && locatedSpan located == span
+prop_located_with_span_preserves_value val testSpan =
+  let located = locatedWithSpan testSpan val
+  in property $ locatedValue located == val && locatedSpan located == testSpan
 
 -- Unit tests
 test_sourcepos_creation :: Assertion
@@ -54,19 +52,19 @@ test_sourcespan_single_line :: Assertion
 test_sourcespan_single_line = do
   let start = SourcePos 5 10 0
       end = SourcePos 5 15 0
-      span = SourceSpan start end
-  assertEqual "start line" 5 (posLine $ spanStart span)
-  assertEqual "end line" 5 (posLine $ spanEnd span)
-  assertEqual "start column" 10 (posColumn $ spanStart span)
-  assertEqual "end column" 15 (posColumn $ spanEnd span)
+      testSpan = SourceSpan start end
+  assertEqual "start line" 5 (posLine $ spanStart testSpan)
+  assertEqual "end line" 5 (posLine $ spanEnd testSpan)
+  assertEqual "start column" 10 (posColumn $ spanStart testSpan)
+  assertEqual "end column" 15 (posColumn $ spanEnd testSpan)
 
 test_located_with_span_preserves_value :: Assertion
 test_located_with_span_preserves_value = do
-  let span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 0)
+  let testSpan = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 0)
       val = "test value"
-      located = locatedWithSpan span val
+      located = locatedWithSpan testSpan val
   assertEqual "located value" val (locatedValue located)
-  assertEqual "located span" span (locatedSpan located)
+  assertEqual "located span" testSpan (locatedSpan located)
 
 -- | Test suite for SourceLocation module
 tests :: TestTree

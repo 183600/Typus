@@ -22,9 +22,8 @@ import Parser
   , defaultBlockDirectives
   , isIdentifierChar
   )
-import SourceLocation (SourceSpan(..), SourcePos(..), Located(..), locatedWithSpan, spanStart, spanEnd, posLine, posColumn)
+import SourceLocation (SourceSpan(..), SourcePos(..), Located(..), locatedWithSpan)
 import qualified SyntaxValidator
-
 import Data.Char (isAlphaNum)
 
 -- Arbitrary instances for QuickCheck
@@ -111,10 +110,10 @@ instance Arbitrary BlockDirectives where
 
 instance Arbitrary CodeBlock where
   arbitrary = do
-    directives <- arbitrary
-    content <- arbitrary
-    span <- arbitrary
-    return $ CodeBlock directives content span
+    directives' <- arbitrary
+    content' <- arbitrary
+    span' <- arbitrary
+    return $ CodeBlock directives' content' span'
 
 instance Arbitrary TypusFile where
   arbitrary = do
@@ -197,11 +196,10 @@ isIdentifierChar_properties c =
 parseTypus_roundtrip_simple :: String -> Bool
 parseTypus_roundtrip_simple s = 
   case parseTypus s of
-    Right file -> 
+    Right _ -> 
       -- For inputs that contain control characters, the parser might normalize them
       -- This is acceptable behavior as long as the parsing succeeds
-      let content = tfContents file
-      in True  -- If parsing succeeds, the test passes
+      True  -- If parsing succeeds, the test passes
     Left _ -> True  -- Parsing errors are acceptable for arbitrary input
 
 -- | Test that parseTypus handles empty input

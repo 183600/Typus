@@ -175,10 +175,13 @@ prop_parse_simple_content content =
          Left _ -> property True
          Right typusFile ->
            let blocks = tfBlocks typusFile
-           in property $ not (null blocks) ==> 
-              let firstBlock = head blocks
-                  blockContent = cbContent firstBlock
-              in content `isInfixOf` blockContent
+           in if null blocks
+               then property False
+               else case blocks of
+                      (firstBlock:_) -> 
+                        let blockContent = cbContent firstBlock
+                        in property $ content `isInfixOf` blockContent
+                      [] -> property False
 
 prop_parse_preserves_content :: String -> Property
 prop_parse_preserves_content content = 
@@ -199,10 +202,13 @@ prop_parse_handles_whitespace content =
        Left _ -> property True
        Right typusFile ->
          let blocks = tfBlocks typusFile
-         in property $ not (null blocks) ==> 
-            let firstBlock = head blocks
-                blockContent = cbContent firstBlock
-            in content `isInfixOf` blockContent
+         in if null blocks
+             then property False
+             else case blocks of
+                    (firstBlock:_) ->
+                      let blockContent = cbContent firstBlock
+                      in property $ content `isInfixOf` blockContent
+                    [] -> property False
 
 -- | Test directive parsing properties
 prop_parse_ownership_directive :: Bool -> Property
@@ -251,7 +257,12 @@ prop_parse_single_build_tag tag =
          Left _ -> property True
          Right typusFile ->
            let buildTags = tfBuildTags typusFile
-           in property $ not (null buildTags) && locValue (head buildTags) == tag
+           in if null buildTags
+               then property False
+               else property $ 
+                 case buildTags of
+                   (firstTag:_) -> locValue firstTag == tag
+                   [] -> False
 
 prop_parse_multiple_build_tags :: [String] -> Property
 prop_parse_multiple_build_tags tags = 
@@ -275,12 +286,16 @@ prop_parse_block_ownership_directive fileOwnership blockOwnership =
        Left _ -> property True
        Right typusFile ->
          let blocks = tfBlocks typusFile
-         in property $ not (null blocks) ==>
-            let firstBlock = head blocks
-                directives = cbDirectives firstBlock
-            in case bdOwnership directives of
-                 Nothing -> property False
-                 Just locatedValue -> property $ locValue locatedValue == blockOwnership
+         in if null blocks
+             then property False
+             else property $
+               case blocks of
+                 (firstBlock:_) ->
+                   let directives = cbDirectives firstBlock
+                   in case bdOwnership directives of
+                        Nothing -> property False
+                        Just locatedValue -> property $ locValue locatedValue == blockOwnership
+                 [] -> property False
 
 -- | Test parsing error recovery properties
 prop_parse_handles_malformed_directives :: String -> Property
@@ -335,10 +350,13 @@ prop_parse_special_characters content =
        Left _ -> property True
        Right typusFile ->
          let blocks = tfBlocks typusFile
-         in property $ not (null blocks) ==>
-            let firstBlock = head blocks
-                blockContent = cbContent firstBlock
-            in specialChars `isInfixOf` blockContent
+         in if null blocks
+             then property False
+             else case blocks of
+                    (firstBlock:_) ->
+                      let blockContent = cbContent firstBlock
+                      in property $ specialChars `isInfixOf` blockContent
+                    [] -> property False
 
 prop_parse_unicode_characters :: String -> Property
 prop_parse_unicode_characters content = 
@@ -349,10 +367,13 @@ prop_parse_unicode_characters content =
        Left _ -> property True
        Right typusFile ->
          let blocks = tfBlocks typusFile
-         in property $ not (null blocks) ==>
-            let firstBlock = head blocks
-                blockContent = cbContent firstBlock
-            in unicodeChars `isInfixOf` blockContent
+         in if null blocks 
+             then property False
+             else case blocks of
+                    (firstBlock:_) ->
+                      let blockContent = cbContent firstBlock
+                      in property $ unicodeChars `isInfixOf` blockContent
+                    [] -> property False
 
 -- | Test parsing edge cases
 prop_parse_empty_lines :: String -> Property
@@ -363,10 +384,13 @@ prop_parse_empty_lines content =
        Left _ -> property True
        Right typusFile ->
          let blocks = tfBlocks typusFile
-         in property $ not (null blocks) ==>
-            let firstBlock = head blocks
-                blockContent = cbContent firstBlock
-            in content `isInfixOf` blockContent
+         in if null blocks 
+             then property False
+             else case blocks of
+                    (firstBlock:_) ->
+                      let blockContent = cbContent firstBlock
+                      in property $ content `isInfixOf` blockContent
+                    [] -> property False
 
 prop_parse_only_whitespace :: String -> Property
 prop_parse_only_whitespace content = 
@@ -411,10 +435,13 @@ prop_parse_mixed_content directive content code =
          Left _ -> property True
          Right typusFile ->
            let blocks = tfBlocks typusFile
-           in property $ not (null blocks) ==>
-              let firstBlock = head blocks
-                  blockContent = cbContent firstBlock
-              in content `isInfixOf` blockContent && code `isInfixOf` blockContent
+           in if null blocks
+               then property False
+               else case blocks of
+                      (firstBlock:_) ->
+                        let blockContent = cbContent firstBlock
+                        in property $ content `isInfixOf` blockContent && code `isInfixOf` blockContent
+                      [] -> property False
 
 -- | Tasty test suite
 testSuite :: TestTree

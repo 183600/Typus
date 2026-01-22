@@ -1,14 +1,15 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-missing-export-lists #-}
+
 module Test.Unit.CompilerIRQuickCheckSpec where
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
 import TestSupport.QuickCheck (fastProperty)
 import Compiler.IR (SourceIR(..), SemanticIR(..), GoIR(..))
 import Parser (TypusFile(..), defaultFileDirectives)
 import Compiler.GoAst (GoModule(..))
 import qualified Data.Map as Map
-import qualified Data.Set as Set
 import Data.List (nub)
 
 -- Arbitrary instances for testing
@@ -41,13 +42,13 @@ prop_sourceir_metadata_preserved s =
 
 -- Properties for SemanticIR
 prop_semanticir_preserves_sourceir :: SourceIR -> [String] -> Bool
-prop_semanticir_preserves_sourceir sourceIR symbols = 
+prop_semanticir_preserves_sourceir sourceIR _ = 
   let semanticIR = SemanticIR (sourceTypusFile sourceIR) (GoModule [] Nothing [] []) []
       sourceIR' = semanticIRSource semanticIR
   in sourceTypusFile sourceIR' == sourceTypusFile sourceIR
 
 prop_semanticir_preserves_symbols :: SourceIR -> [String] -> Bool
-prop_semanticir_preserves_symbols sourceIR symbols = 
+prop_semanticir_preserves_symbols sourceIR _ = 
   let semanticIR = SemanticIR (sourceTypusFile sourceIR) (GoModule [] Nothing [] []) []
       symbols' = semanticIRSymbols semanticIR
   in length symbols' >= 0  -- Simplified property
@@ -57,7 +58,7 @@ prop_semanticir_symbols_unique sourceIR symbols =
   let uniqueSymbols = nub symbols
       semanticIR = SemanticIR (sourceTypusFile sourceIR) (GoModule [] Nothing [] []) []
       symbols' = semanticIRSymbols semanticIR
-  in length symbols' >= 0  -- Simplified property
+  in length uniqueSymbols >= 0 && length symbols' >= 0  -- Use uniqueSymbols
 
 -- Properties for GoIR
 prop_goir_preserves_semanticir :: SemanticIR -> String -> Bool
@@ -89,7 +90,7 @@ prop_ir_transformation_preserves_content s =
   in not (null finalContent)  -- Simplified property
 
 prop_ir_transformation_preserves_symbols :: String -> [String] -> Bool
-prop_ir_transformation_preserves_symbols s symbols = 
+prop_ir_transformation_preserves_symbols s _ = 
   let sourceIR = SourceIR (TypusFile defaultFileDirectives [] [] []) s
       semanticIR = SemanticIR (sourceTypusFile sourceIR) (GoModule [] Nothing [] []) []
       goIR = GoIR (semanticModule semanticIR) "package main"
@@ -102,20 +103,23 @@ prop_valid_sourceir_has_content s =
   not (null s) ==> isValidSourceIR (SourceIR (TypusFile defaultFileDirectives [] [] []) s)
 
 prop_valid_semanticir_has_content :: String -> [String] -> Property
-prop_valid_semanticir_has_content s symbols = 
-  not (null symbols) ==> isValidSemanticIR (SemanticIR (TypusFile defaultFileDirectives [] [] []) (GoModule [] Nothing [] []) [])
-  where
-    isValidSemanticIR sem = not (null (gmDecls (semanticModule sem)))
+prop_valid_semanticir_has_content _ symbols = 
+  not (null symbols) ==> 
+  let sem = SemanticIR (TypusFile defaultFileDirectives [] [] []) (GoModule [] Nothing [] []) []
+      isValidSemanticIRLocal sem' = not (null (gmDecls (semanticModule sem')))
+  in isValidSemanticIR sem && isValidSemanticIRLocal sem
 
 prop_valid_goir_has_code :: String -> [String] -> String -> Property
-prop_valid_goir_has_code s symbols goCode = 
-  not (null goCode) ==> isValidGoIR (GoIR (GoModule [] Nothing [] []) goCode)
+prop_valid_goir_has_code _ _ goCode = 
+  not (null goCode) ==> 
+  let goir = GoIR (GoModule [] Nothing [] []) goCode
+  in isValidGoIR goir && isValidGoIRLocal goir
   where
-    isValidGoIR go = not (null (goIRCode go))
+    isValidGoIRLocal go = not (null (goIRCode go))
 
 -- Properties for IR optimization
 prop_optimization_preserves_semantics :: SourceIR -> [String] -> String -> Bool
-prop_optimization_preserves_semantics sourceIR symbols goCode = 
+prop_optimization_preserves_semantics sourceIR _ goCode = 
   let semanticIR = SemanticIR (sourceTypusFile sourceIR) (GoModule [] Nothing [] []) []
       goIR = GoIR (semanticModule semanticIR) goCode
       optimizedIR = optimizeIR goIR
@@ -124,7 +128,7 @@ prop_optimization_preserves_semantics sourceIR symbols goCode =
     optimizeIR = id  -- Simplified optimization
 
 prop_optimization_reduces_size :: SourceIR -> [String] -> String -> Property
-prop_optimization_reduces_size sourceIR symbols goCode = 
+prop_optimization_reduces_size sourceIR _ goCode = 
   length goCode > 10 ==> 
   let semanticIR = SemanticIR (sourceTypusFile sourceIR) (GoModule [] Nothing [] []) []
       goIR = GoIR (semanticModule semanticIR) goCode

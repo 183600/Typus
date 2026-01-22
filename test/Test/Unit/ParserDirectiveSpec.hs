@@ -104,7 +104,9 @@ testDirectiveParsing = testGroup "Directive parsing tests"
         Left _ -> assertFailure "Should parse simple content successfully"
         Right file -> do
           length (tfBlocks file) @?= 1
-          cbContent (head (tfBlocks file)) @?= input
+          case tfBlocks file of
+            [] -> assertFailure "Should have at least one block"
+            (firstBlock:_) -> cbContent firstBlock @?= input
   , testCase "parseTypus handles file directives" $
       let input = "//! ownership=true\ntest code"
           result = parseTypus input
@@ -152,10 +154,12 @@ testBlockDirectiveParsing = testGroup "Block directive tests"
         Left _ -> assertFailure "Should parse block directives"
         Right file -> do
           length (tfBlocks file) @?= 1
-          let block = head (tfBlocks file)
-          case bdOwnership (cbDirectives block) of
-            Nothing -> assertFailure "Should have block ownership directive"
-            Just located -> locValue located @?= True
+          case tfBlocks file of
+            [] -> assertFailure "Should have at least one block"
+            (block:_) -> 
+              case bdOwnership (cbDirectives block) of
+                Nothing -> assertFailure "Should have block ownership directive"
+                Just located -> locValue located @?= True
   ]
 
 -- Test cases for error handling

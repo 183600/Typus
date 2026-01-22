@@ -5,14 +5,13 @@
 module Test.Unit.ConciseUtilsQuickCheckSpec where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..))
+import Test.Tasty.QuickCheck (testProperties, property)
 import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed, 
              removeLineComments, removeComments, normalizeIndentation, breakOn, 
              safeProcessString, isValidChar, isRight)
 import Data.Char (isSpace)
-import Data.List (isInfixOf, last)
+import Data.List (isInfixOf)
 import Data.Maybe (listToMaybe)
-import Control.Arrow (first)
 
 tests :: TestTree
 tests = testGroup "Concise Utils QuickCheck Tests"
@@ -58,7 +57,6 @@ prop_trim_removes_whitespace s =
 prop_splitBy_properties :: Char -> String -> Bool
 prop_splitBy_properties delim s = 
   let parts = splitBy delim s
-      rejoined = if null parts then "" else concat parts ++ [delim | length parts > 1]
   in length parts >= 0 && 
      (if null s then null parts else True) &&
      (if not (null s) && all (== delim) s then length parts == length s + 1 else True)
@@ -131,12 +129,12 @@ prop_removeLineComments_properties s =
     -- Check if // appears inside string or character literals
     -- Takes the string and flags for being inside string or char literal
     checkForCommentInString [] _ _ = False
-    checkForCommentInString ('"':rest) _ inChar = checkForCommentInString rest True False
-    checkForCommentInString ('\'':rest) inString _ = checkForCommentInString rest False True
-    checkForCommentInString ('\\':c:rest) inString inChar = 
+    checkForCommentInString ('"':rest) _ _ = checkForCommentInString rest True False
+    checkForCommentInString ('\'':rest) _ _ = checkForCommentInString rest False True
+    checkForCommentInString ('\\':_:rest) inString inChar = 
       checkForCommentInString rest inString inChar  -- Skip escaped characters but stay in the same mode
     checkForCommentInString ('/':'/':_) inString inChar = inString || inChar
-    checkForCommentInString (c:rest) inString inChar = 
+    checkForCommentInString (_:rest) inString inChar = 
       checkForCommentInString rest inString inChar
 
 -- | Test properties of removeComments
@@ -156,10 +154,15 @@ prop_removeComments_properties s =
     
     -- Check if // or block comment start appears inside string or character literals
     checkForCommentInString [] _ _ = False
-    checkForCommentInString ('"':rest) _ _ = checkForCommentInString rest True False
-    checkForCommentInString ('\'':rest) _ _ = checkForCommentInString rest False True
+    checkForCommentInString ('"':rest) inString inChar 
+      | inString = checkForCommentInString rest False inChar  -- End of string literal
+      | otherwise = checkForCommentInString rest True inChar
+    checkForCommentInString ('\'':rest) inString inChar
+      | inChar = checkForCommentInString rest inString False  -- End of char literal
+      | otherwise = checkForCommentInString rest inString True
     checkForCommentInString ('\\':_:rest) inString inChar = 
-        checkForCommentInString rest inString inChar  -- Skip escaped characters    checkForCommentInString ('/':'/':_) inString inChar = inString || inChar
+        checkForCommentInString rest inString inChar  -- Skip escaped characters
+    checkForCommentInString ('/':'/':_) inString inChar = inString || inChar
     checkForCommentInString ('/':'*':_) inString inChar = inString || inChar
     checkForCommentInString (_:rest) inString inChar = 
       checkForCommentInString rest inString inChar

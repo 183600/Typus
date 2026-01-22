@@ -7,11 +7,9 @@ module TestSuite.ParserBoundary where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import Test.QuickCheck (Positive(..), NonEmptyList(..))
 import Parser (FileDirectives(..), BlockDirectives(..), CodeBlock(..), TypusFile(..), defaultFileDirectives, defaultBlockDirectives)
-import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), locatedValue, locatedSpan, locatedWithSpan)
-import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf)
+import SourceLocation (SourcePos(..), SourceSpan(..), locatedWithSpan, locatedValue, locatedSpan)
+import Data.List (isInfixOf)
 
 -- | Test properties for Parser module boundary conditions
 
@@ -58,17 +56,17 @@ test_sourcespan_creation :: Assertion
 test_sourcespan_creation = do
   let start = SourcePos 5 10 0
       end = SourcePos 5 15 0
-      span = SourceSpan start end
-  assertEqual "start position" start (spanStart span)
-  assertEqual "end position" end (spanEnd span)
+      testSpan = SourceSpan start end
+  assertEqual "start position" start (spanStart testSpan)
+  assertEqual "end position" end (spanEnd testSpan)
 
 test_located_value :: Assertion
 test_located_value = do
-  let span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 5 0)
+  let testSpan = SourceSpan (SourcePos 1 1 0) (SourcePos 1 5 0)
       value = "test"
-      located = locatedWithSpan span value
+      located = locatedWithSpan testSpan value
   assertEqual "located value" value (locatedValue located)
-  assertEqual "located span" span (locatedSpan located)
+  assertEqual "located span" testSpan (locatedSpan located)
 
 test_typus_file_creation :: Assertion
 test_typus_file_creation = do
@@ -80,17 +78,17 @@ test_typus_file_creation = do
 
 test_code_block_creation :: Assertion
 test_code_block_creation = do
-  let span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 0)
-      block = CodeBlock defaultBlockDirectives "test content" span
+  let testSpan = SourceSpan (SourcePos 1 1 0) (SourcePos 1 10 0)
+      block = CodeBlock defaultBlockDirectives "test content" testSpan
   assertEqual "Block should have default directives" defaultBlockDirectives (cbDirectives block)
   assertEqual "Block should have content" "test content" (cbContent block)
-  assertEqual "Block should have span" span (cbSpan block)
+  assertEqual "Block should have span" testSpan (cbSpan block)
 
 test_unicode_handling :: Assertion
 test_unicode_handling = do
   let unicodeString = "测试函数 with unicode: 你好世界"
-      span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 30 0)
-      located = locatedWithSpan span unicodeString
+      testSpan = SourceSpan (SourcePos 1 1 0) (SourcePos 1 30 0)
+      located = locatedWithSpan testSpan unicodeString
   assertBool "Should handle unicode characters" $ 
     "测试函数" `isInfixOf` locatedValue located && 
     "你好世界" `isInfixOf` locatedValue located

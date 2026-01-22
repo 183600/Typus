@@ -39,8 +39,6 @@ import Compiler.Errors.Core
   , ErrorLocation(..)
   , ErrorContext(..)
   , ErrorRecovery(..)
-  , emptyContext
-  , unknownLocation
   , severity
   , errorMessage
   )
@@ -59,47 +57,47 @@ instance Arbitrary ErrorCategory where
 
 instance Arbitrary ErrorLocation where
   arbitrary = do
-    filePath <- arbitrary
-    lineNum <- choose (1, 1000)
-    columnNum <- choose (1, 1000)
-    endLineNum <- arbitrary
-    endColumnNum <- arbitrary
-    return $ ErrorLocation filePath lineNum columnNum endLineNum endColumnNum
+    filePath' <- arbitrary
+    lineNum' <- choose (1, 1000)
+    columnNum' <- choose (1, 1000)
+    endLineNum' <- arbitrary
+    endColumnNum' <- arbitrary
+    return $ ErrorLocation filePath' lineNum' columnNum' endLineNum' endColumnNum'
 
 instance Arbitrary ErrorContext where
   arbitrary = do
-    ctxCode <- arbitrary
-    ctxFunction <- arbitrary
-    ctxVariable <- arbitrary
-    ctxType <- arbitrary
-    ctxAdditional <- arbitrary
-    return $ ErrorContext ctxCode ctxFunction ctxVariable ctxType ctxAdditional
+    ctxCode' <- arbitrary
+    ctxFunction' <- arbitrary
+    ctxVariable' <- arbitrary
+    ctxType' <- arbitrary
+    ctxAdditional' <- arbitrary
+    return $ ErrorContext ctxCode' ctxFunction' ctxVariable' ctxType' ctxAdditional'
 
 instance Arbitrary ErrorRecovery where
   arbitrary = do
-    canRec <- arbitrary
-    shouldCont <- arbitrary
-    recoveryAct <- arbitrary
-    recoveryHint <- arbitrary
-    recoveryCost <- choose (0, 100)
-    recoveryConf <- choose (0.0, 1.0)
-    return $ ErrorRecovery canRec shouldCont recoveryAct recoveryHint recoveryCost recoveryConf
+    canRec' <- arbitrary
+    shouldCont' <- arbitrary
+    recoveryAct' <- arbitrary
+    recoveryHint' <- arbitrary
+    recoveryCost' <- choose (0, 100)
+    recoveryConf' <- choose (0.0, 1.0)
+    return $ ErrorRecovery canRec' shouldCont' recoveryAct' recoveryHint' recoveryCost' recoveryConf'
 
 instance Arbitrary TypeError where
   arbitrary = do
-    errorId <- arbitrary
-    severity <- arbitrary
-    category <- arbitrary
-    errorMsg <- arbitrary
-    location <- arbitrary
-    context <- arbitrary
-    recovery <- arbitrary
-    suggestions <- vectorOf 3 arbitrary  -- Limit to 3 suggestions
+    errorId' <- arbitrary
+    severity' <- arbitrary
+    category' <- arbitrary
+    errorMsg' <- arbitrary
+    location' <- arbitrary
+    context' <- arbitrary
+    recovery' <- arbitrary
+    suggestions' <- vectorOf 3 arbitrary  -- Limit to 3 suggestions
     -- 使用空列表避免递归
-    let relatedErrors = []
-    let errorChain = []
-    timestamp <- arbitrary
-    return $ TypeError errorId severity category errorMsg location context recovery suggestions relatedErrors errorChain timestamp
+    let relatedErrors' = []
+    let errorChain' = []
+    timestamp' <- arbitrary
+    return $ TypeError errorId' severity' category' errorMsg' location' context' recovery' suggestions' relatedErrors' errorChain' timestamp'
 
 -- Newtype wrapper for ErrorHandler with limited size
 newtype LimitedErrorHandler = LimitedErrorHandler { getLimitedErrorHandler :: ErrorHandler }

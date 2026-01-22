@@ -1581,7 +1581,8 @@ test-suite typus-enhanced-test
                       -Wno-unused-top-binds -Wno-unused-matches 
                       -Wno-orphans -Wno-name-shadowing
                       -Wno-type-defaults -Wno-unused-local-binds
-                      -Wno-unused-imports -rtsopts
+                      -Wno-unused-imports
+                      -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-M4G
     build-depends:
         base >=4.7 && <5,
         typus,
@@ -1603,7 +1604,11 @@ test-suite typus-enhanced-test
         Test.Unit.ConciseErrorHandlerQuickCheckSpec,
         Test.Unit.ConciseOwnershipQuickCheckSpec,
         Test.Unit.ConciseDependenciesQuickCheckSpec,
-        Test.Unit.ConciseIntegrationQuickCheckSpec
+        Test.Unit.ConciseIntegrationQuickCheckSpec,
+        TestSupport.Verbosity,
+        TestSupport.QuickCheck,
+        TestSupport.Arbitrary,
+        TestSupport.ExtendedArbitrary
     default-language: Haskell2010
 
 -- Concise Test Suite (48 QuickCheck tests)
@@ -1615,7 +1620,8 @@ test-suite typus-concise-test
                       -Wno-unused-top-binds -Wno-unused-matches 
                       -Wno-orphans -Wno-name-shadowing
                       -Wno-type-defaults -Wno-unused-local-binds
-                      -Wno-unused-imports -rtsopts
+                      -Wno-unused-imports
+                      -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-M4G
     build-depends:
         base >=4.7 && <5,
         typus,
@@ -1635,7 +1641,11 @@ test-suite typus-concise-test
         Test.Unit.ConciseErrorHandlerQuickCheckSpec,
         Test.Unit.ConciseOwnershipQuickCheckSpec,
         Test.Unit.ConciseDependenciesQuickCheckSpec,
-        Test.Unit.ConciseIntegrationQuickCheckSpec
+        Test.Unit.ConciseIntegrationQuickCheckSpec,
+        TestSupport.Verbosity,
+        TestSupport.QuickCheck,
+        TestSupport.Arbitrary,
+        TestSupport.ExtendedArbitrary
     default-language: Haskell2010
 
 -- Simple Test Suite
@@ -1647,7 +1657,8 @@ test-suite typus-simple-test
                       -Wno-unused-top-binds -Wno-unused-matches 
                       -Wno-orphans -Wno-name-shadowing
                       -Wno-type-defaults -Wno-unused-local-binds
-                      -Wno-unused-imports -rtsopts
+                      -Wno-unused-imports
+                      -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-M4G
     build-depends:
         base >=4.7 && <5,
         typus,
@@ -1666,6 +1677,10 @@ test-suite typus-simple-test
         Test.Unit.ConciseErrorHandlerQuickCheckSpec,
         Test.Unit.ConciseOwnershipQuickCheckSpec,
         Test.Unit.ConciseDependenciesQuickCheckSpec,
-        Test.Unit.ConciseIntegrationQuickCheckSpec
+        Test.Unit.ConciseIntegrationQuickCheckSpec,
+        TestSupport.Verbosity,
+        TestSupport.QuickCheck,
+        TestSupport.Arbitrary,
+        TestSupport.ExtendedArbitrary
     default-language: Haskell2010
 

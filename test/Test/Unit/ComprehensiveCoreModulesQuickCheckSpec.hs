@@ -6,6 +6,7 @@ import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import TestSupport.QuickCheck (fastProperty)
 import TestSupport.Arbitrary
+import Data.List (uncons)
 
 import qualified Utils
 import SourceLocation
@@ -60,7 +61,9 @@ prop_trim_no_leading_trailing_spaces :: String -> Property
 prop_trim_no_leading_trailing_spaces s = 
   let trimmed = Utils.trim s
   in property $ not (null trimmed) ==> 
-    not (isSpace (head trimmed)) && not (isSpace (last trimmed))
+    case uncons trimmed of
+      Just (firstChar, _) -> not (isSpace firstChar) && not (isSpace (last trimmed))
+      Nothing -> False
 
 -- Test splitBy function
 prop_splitBy_empty_segments :: Char -> String -> Property
@@ -163,45 +166,45 @@ prop_posAt_creates_correct_position line col =
     ]
 
 prop_posAtLineCol_creates_correct_position :: Int -> Int -> Int -> Property
-prop_posAtLineCol_creates_correct_position line col offset = 
-  let pos = posAtLineCol line col offset
+prop_posAtLineCol_creates_correct_position lineNum colNum offsetVal = 
+  let pos = posAtLineCol lineNum colNum offsetVal
   in conjoin
-    [ property $ posLine pos === line
-    , property $ posColumn pos === col
-    , property $ posOffset pos === offset
+    [ property $ posLine pos === lineNum
+    , property $ posColumn pos === colNum
+    , property $ posOffset pos === offsetVal
     ]
 
 -- Test SourceSpan operations
 prop_empty_span_has_same_start_and_end :: SourcePos -> Property
 prop_empty_span_has_same_start_and_end pos = 
-  let span = emptySpan pos
+  let testSpan = emptySpan pos
   in conjoin
-    [ property $ spanStart span === pos
-    , property $ spanEnd span === pos
+    [ property $ spanStart testSpan === pos
+    , property $ spanEnd testSpan === pos
     ]
 
 prop_spanFrom_creates_empty_span :: SourcePos -> Property
 prop_spanFrom_creates_empty_span pos = 
-  let span = spanFrom pos
+  let testSpan = spanFrom pos
   in conjoin
-    [ property $ spanStart span === pos
-    , property $ spanEnd span === pos
+    [ property $ spanStart testSpan === pos
+    , property $ spanEnd testSpan === pos
     ]
 
 prop_spanTo_creates_empty_span :: SourcePos -> Property
 prop_spanTo_creates_empty_span pos = 
-  let span = spanTo pos
+  let testSpan = spanTo pos
   in conjoin
-    [ property $ spanStart span === pos
-    , property $ spanEnd span === pos
+    [ property $ spanStart testSpan === pos
+    , property $ spanEnd testSpan === pos
     ]
 
 prop_spanBetween_creates_correct_span :: SourcePos -> SourcePos -> Property
 prop_spanBetween_creates_correct_span start end = 
-  let span = spanBetween start end
+  let testSpan = spanBetween start end
   in conjoin
-    [ property $ spanStart span === start
-    , property $ spanEnd span === end
+    [ property $ spanStart testSpan === start
+    , property $ spanEnd testSpan === end
     ]
 
 prop_mergeSpans_contains_both_spans :: SourceSpan -> SourceSpan -> Property
@@ -216,9 +219,9 @@ prop_mergeSpans_contains_both_spans span1 span2 =
 
 prop_isValidSpan_check_order :: SourcePos -> SourcePos -> Property
 prop_isValidSpan_check_order pos1 pos2 = 
-  let span = spanBetween pos1 pos2
+  let testSpan = spanBetween pos1 pos2
       valid = pos1 <= pos2
-  in property $ isValidSpan span === valid
+  in property $ isValidSpan testSpan === valid
 
 -- Test Located operations
 prop_locatedAt_creates_correct_location :: SourcePos -> Int -> Property
@@ -231,12 +234,12 @@ prop_locatedAt_creates_correct_location pos value =
     ]
 
 prop_locatedWithSpan_creates_correct_location :: SourceSpan -> String -> Property
-prop_locatedWithSpan_creates_correct_location span value = 
-  let located = locatedWithSpan span value
+prop_locatedWithSpan_creates_correct_location testSpan value = 
+  let located = locatedWithSpan testSpan value
   in conjoin
     [ property $ locValue located === value
-    , property $ locSpan located === span
-    , property $ locPos located === spanStart span
+    , property $ locSpan located === testSpan
+    , property $ locPos located === spanStart testSpan
     ]
 
 prop_locatedValue_extracts_value :: SourcePos -> Int -> Property
@@ -250,9 +253,9 @@ prop_locatedSpan_extracts_span pos value =
   in property $ locatedSpan located === emptySpan pos
 
 prop_locatedPos_returns_start_position :: SourceSpan -> String -> Property
-prop_locatedPos_returns_start_position span value = 
-  let located = locatedWithSpan span value
-  in property $ locatedPos located === spanStart span
+prop_locatedPos_returns_start_position testSpan value = 
+  let located = locatedWithSpan testSpan value
+  in property $ locatedPos located === spanStart testSpan
 
 prop_mapLocated_applies_function :: SourcePos -> Int -> Property
 prop_mapLocated_applies_function pos value = 
@@ -317,9 +320,9 @@ prop_defaultBlockDirectives_has_nothing =
 
 -- Test CodeBlock
 prop_codeBlock_equality :: BlockDirectives -> String -> SourceSpan -> Property
-prop_codeBlock_equality directives content span = 
-  let cb1 = CodeBlock directives content span
-      cb2 = CodeBlock directives content span
+prop_codeBlock_equality directives content testSpan = 
+  let cb1 = CodeBlock directives content testSpan
+      cb2 = CodeBlock directives content testSpan
   in property $ cb1 === cb2
 
 -- Test TypusFile
@@ -357,10 +360,10 @@ prop_toErrorLocation_preserves_position pos =
     ]
 
 prop_toErrorLocationWithSpan_preserves_range :: SourceSpan -> Property
-prop_toErrorLocationWithSpan_preserves_range span = 
-  let errLoc = toErrorLocationWithSpan span
-      start = spanStart span
-      end = spanEnd span
+prop_toErrorLocationWithSpan_preserves_range testSpan = 
+  let errLoc = toErrorLocationWithSpan testSpan
+      start = spanStart testSpan
+      end = spanEnd testSpan
   in conjoin
     [ property $ line errLoc === posLine start
     , property $ column errLoc === posColumn start
