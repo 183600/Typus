@@ -20,12 +20,10 @@ coreParserPropertiesSpec = testGroup "Core Parser Properties"
 
   , testCase "Parser is idempotent for valid code" $ do
     let code = "func test() { return 42; }"
-    case parseTypus code of
-      Right parsed -> 
-        case parseTypus code of
-          Right parsed2 -> assertBool "Parser is idempotent" (parsed == parsed2)
-          Left err -> assertFailure ("Second parse failed: " ++ show err)
-      Left err -> assertFailure ("First parse failed: " ++ show err)
+    case (parseTypus code, parseTypus code) of
+      (Right parsed, Right parsed2) -> assertBool "Parser is idempotent" (parsed == parsed2)
+      (Right _, Left err) -> assertFailure ("Second parse failed: " ++ show err)
+      (Left err, _) -> assertFailure ("First parse failed: " ++ show err)
 
   , testCase "Parser handles ownership directive correctly" $ do
     let input = "#ownership true"

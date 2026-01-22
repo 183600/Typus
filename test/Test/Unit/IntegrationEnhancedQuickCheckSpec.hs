@@ -179,9 +179,11 @@ prop_integration_malformed_directive_recovery content =
        Right typusFile ->
          let blocks = tfBlocks typusFile
          in property $ not (null blocks) ==> 
-            let (firstBlock:_) = blocks
-                blockContent = cbContent firstBlock
-            in property $ content `isInfixOf` blockContent
+            case blocks of
+              (firstBlock:_) -> 
+                let blockContent = cbContent firstBlock
+                in property $ content `isInfixOf` blockContent
+              [] -> property False
 
 -- | Test content preservation across processing pipeline
 prop_integration_content_preservation :: String -> Property
@@ -259,9 +261,11 @@ prop_integration_comment_position_tracking content comment =
        Right typusFile ->
          let blocks = tfBlocks typusFile
          in property $ not (null blocks) ==>
-            let (firstBlock:_) = blocks
-                blockContent = cbContent firstBlock
-            in content `isInfixOf` blockContent
+            case blocks of
+              (firstBlock:_) -> 
+                let blockContent = cbContent firstBlock
+                in content `isInfixOf` blockContent
+              [] -> False  -- This case shouldn't happen due to the condition
 
 -- | Test whitespace normalization with position tracking
 prop_integration_whitespace_position_tracking :: String -> Property

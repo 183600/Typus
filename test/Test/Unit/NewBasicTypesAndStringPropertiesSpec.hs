@@ -110,9 +110,10 @@ prop_string_split_join s sep =
     splitOn' _ [] acc = [reverse acc]
     splitOn' sep str acc
       | sep `isPrefixOf` str = reverse acc : splitOn' sep (drop (length sep) str) []
+      | null str = reverse acc : []
       | otherwise = case str of
-                      [] -> reverse acc : []
                       (first:rest) -> splitOn' sep rest (first : acc)
+                      [] -> reverse acc : []
 
 -- | 测试字符串排序的稳定性
 prop_string_sort_preserves_multiset :: String -> Property
@@ -152,16 +153,16 @@ prop_string_replace_preserves_length old new s =
     countOccurrences _ [] = 0
     countOccurrences pat str
       | pat `isPrefixOf` str = 1 + countOccurrences pat (drop (length pat) str)
-      | otherwise = case str of
-                      [] -> 0
-                      (_:rest) -> countOccurrences pat rest
+      | null str = 0
+      | otherwise = countOccurrences pat (tail str)
     
     replace _ _ [] = []
     replace old new str
       | old `isPrefixOf` str = new ++ replace old new (drop (length old) str)
+      | null str = []
       | otherwise = case str of
-                      [] -> []
                       (first:rest) -> first : replace old new rest
+                      [] -> []
 
 tests :: TestTree
 tests = testGroup "New Basic Types and String Properties Tests"

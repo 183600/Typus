@@ -179,12 +179,17 @@ removeComments s =
     then s  -- 如果是字符串字面量（完整或不完整）且包含注释标记，保留原样
   else if endsWithQuote s && ("/*" `isInfixOf` s) && hasOpeningQuoteBeforeComment s
     then s  -- 如果以引号结尾且包含块注释开始标记，并且注释前有开引号，可能是未闭合的字符串字面量
-  else if hasUnbalancedQuotes s && ("//" `isInfixOf` s || "/*" `isInfixOf` s)
-    then s  -- 如果有未配对的引号且包含注释标记，可能是未闭合的字符串字面量
+  else if hasUnbalancedQuotes s && ("//" `isInfixOf` s || "/*" `isInfixOf` s) && not (startsWithLineComment s)
+    then s  -- 如果有未配对的引号且包含注释标记，且不以行注释开头，可能是未闭合的字符串字面量
   else
     -- 使用通用的注释处理逻辑
     goNormal s
   where
+    -- 检查是否以行注释开头
+    startsWithLineComment :: String -> Bool
+    startsWithLineComment [] = False
+    startsWithLineComment ('/':'/':_) = True
+    startsWithLineComment _ = False
     -- 检查是否有未配对的引号（考虑转义引号）
     hasUnbalancedQuotes :: String -> Bool
     hasUnbalancedQuotes str = go str (0 :: Int)

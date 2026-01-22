@@ -160,6 +160,7 @@ test_parse_block_with_directives = do
           case bdDependentTypes directives of
             Just loc | locValue loc == True -> return ()
             _ -> assertFailure "Expected block dependent_types directive to be true"
+        [] -> assertFailure "Expected at least one block"
     Left err -> assertFailure $ "Failed to parse block with directives: " ++ err
 
 -- Test 9: Parse markdown block with directives
@@ -180,6 +181,7 @@ test_parse_markdown_block_with_directives = do
           case bdDependentTypes directives of
             Just loc | locValue loc == True -> return ()
             _ -> assertFailure "Expected block dependent_types directive to be true"
+        [] -> assertFailure "Expected at least one block"
     Left err -> assertFailure $ "Failed to parse markdown block with directives: " ++ err
 
 -- Test 10: Parse code with if statement and braces

@@ -68,8 +68,8 @@ string :: String -> Parser String
 string [] = return []
 string (c:cs) = do
   char c
-  string cs
-  return (c:cs)
+  rest <- string cs
+  return (c:rest)
 
 many' p = many1 p <|> return []
 
@@ -93,9 +93,9 @@ sepBy1 p sep = do
 
 between :: Parser open -> Parser close -> Parser a -> Parser a
 between open close p = do
-  open
+  _ <- open
   x <- p
-  close
+  _ <- close
   return x
 
 chainl1 :: Parser a -> Parser (a -> a -> a) -> Parser a
@@ -211,7 +211,7 @@ baseFactor = (Const <$> number) <|> (Var <$> identifier)
 
 negFactor :: Parser Expr
 negFactor = do
-  char '-'
+  _ <- char '-'
   e <- factor
   return $ Neg e
 
@@ -220,12 +220,12 @@ parens p = between (char '(') (char ')') p
 
 addOp :: Parser (Expr -> Expr -> Expr)
 addOp = do
-  char '+'
+  _ <- char '+'
   return Add
 
 mulOp :: Parser (Expr -> Expr -> Expr)
 mulOp = do
-  char '*'
+  _ <- char '*'
   return Mul
 
 stmt :: Parser Stmt
@@ -233,14 +233,14 @@ stmt = ifStmt <|> whileStmt <|> assignStmt <|> blockStmt
 
 ifStmt :: Parser Stmt
 ifStmt = do
-  string "if"
-  many' (char ' ')
+  _ <- string "if"
+  _ <- many' (char ' ')
   cond <- between (char '(') (char ')') expr
-  many' (char ' ')
+  _ <- many' (char ' ')
   thenStmt <- stmt
-  many' (char ' ')
-  string "else"
-  many' (char ' ')
+  _ <- many' (char ' ')
+  _ <- string "else"
+  _ <- many' (char ' ')
   elseStmt <- stmt
   return $ If cond thenStmt elseStmt
 

@@ -20,12 +20,10 @@ prop_parse_empty_string =
 
 prop_parse_idempotent :: String -> Property
 prop_parse_idempotent s = 
-  case parseTypus s of
-    Right parsed -> 
-      case parseTypus s of
-        Right parsed2 -> parsed === parsed2
-        Left _ -> property False
-    Left _ -> property True  -- Both should fail consistently
+  case (parseTypus s, parseTypus s) of
+    (Right parsed, Right parsed2) -> parsed === parsed2
+    (Right _, Left _) -> property False
+    (Left _, _) -> property True  -- Both should fail consistently
 
 prop_parse_whitespace_handling :: String -> Property
 prop_parse_whitespace_handling s = 
