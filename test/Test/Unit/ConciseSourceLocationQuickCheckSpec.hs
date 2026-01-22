@@ -5,7 +5,7 @@
 module Test.Unit.ConciseSourceLocationQuickCheckSpec where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), Gen, choose)
+import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), choose)
 import SourceLocation
   ( SourcePos(..)
   , SourceSpan(..)
@@ -44,23 +44,23 @@ instance Arbitrary T.Text where
   arbitrary = T.pack <$> arbitrary
 instance Arbitrary SourcePos where
   arbitrary = do
-    line <- choose (1, 1000)
-    column <- choose (1, 1000)
+    lineNum <- choose (1, 1000)
+    columnNum <- choose (1, 1000)
     offset <- choose (0, 1000000)
-    return $ SourcePos line column offset
+    return $ SourcePos lineNum columnNum offset
 
 instance Arbitrary SourceSpan where
   arbitrary = do
-    start <- arbitrary
-    end <- arbitrary
-    return $ SourceSpan start end
+    startPos <- arbitrary
+    endPos <- arbitrary
+    return $ SourceSpan startPos endPos
 
 instance Arbitrary a => Arbitrary (Located a) where
   arbitrary = do
     value <- arbitrary
-    pos <- arbitrary
+    position <- arbitrary
     span <- arbitrary
-    return $ Located value pos span
+    return $ Located value position span
 
 tests :: TestTree
 tests = testGroup "Concise SourceLocation QuickCheck Tests"

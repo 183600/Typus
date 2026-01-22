@@ -5,12 +5,12 @@
 module Test.Unit.ConciseUtilsQuickCheckSpec where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), Gen)
+import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..))
 import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed, 
              removeLineComments, removeComments, normalizeIndentation, breakOn, 
              safeProcessString, isValidChar, isRight)
 import Data.Char (isSpace)
-import Data.List (isPrefixOf, isInfixOf, last)
+import Data.List (isInfixOf, last)
 import Data.Maybe (listToMaybe)
 import Control.Arrow (first)
 
@@ -135,7 +135,7 @@ prop_removeLineComments_properties s =
     checkForCommentInString ('\'':rest) inString _ = checkForCommentInString rest False True
     checkForCommentInString ('\\':c:rest) inString inChar = 
       checkForCommentInString rest inString inChar  -- Skip escaped characters but stay in the same mode
-    checkForCommentInString ('/':'/':rest) inString inChar = inString || inChar
+    checkForCommentInString ('/':'/':_) inString inChar = inString || inChar
     checkForCommentInString (c:rest) inString inChar = 
       checkForCommentInString rest inString inChar
 
@@ -156,12 +156,11 @@ prop_removeComments_properties s =
     
     -- Check if // or block comment start appears inside string or character literals
     checkForCommentInString [] _ _ = False
-    checkForCommentInString ('"':rest) _ inChar = checkForCommentInString rest True False
-    checkForCommentInString ('\'':rest) inString _ = checkForCommentInString rest False True
-    checkForCommentInString ('\\':c:rest) inString inChar = 
-      checkForCommentInString rest inString inChar  -- Skip escaped characters
-    checkForCommentInString ('/':'/':rest) inString inChar = inString || inChar
-    checkForCommentInString ('/':'*':rest) inString inChar = inString || inChar
+    checkForCommentInString ('"':rest) _ _ = checkForCommentInString rest True False
+    checkForCommentInString ('\'':rest) _ _ = checkForCommentInString rest False True
+    checkForCommentInString ('\\':_:rest) inString inChar = 
+        checkForCommentInString rest inString inChar  -- Skip escaped characters    checkForCommentInString ('/':'/':_) inString inChar = inString || inChar
+    checkForCommentInString ('/':'*':_) inString inChar = inString || inChar
     checkForCommentInString (_:rest) inString inChar = 
       checkForCommentInString rest inString inChar
 
@@ -197,7 +196,6 @@ prop_normalizeIndentation_removes_common_prefix :: String -> Bool
 prop_normalizeIndentation_removes_common_prefix s = 
   let result = normalizeIndentation s
       lines' = lines s
-      resultLines = lines result
       -- Check that the function works correctly
       -- For inputs with no indentation, the function should return the input unchanged
       hasCorrectBehavior = if length lines' <= 1 || all (all isSpace) lines'

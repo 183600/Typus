@@ -5,16 +5,12 @@
 module Test.Unit.ConciseOwnershipQuickCheckSpec where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), Gen, choose, elements, oneof)
+import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), elements, oneof)
 import Ownership
-  ( OwnershipType(..)
-  , OwnershipError(..)
-  , OwnershipAnalyzer
-  , OwnershipTransfer(..)
-  , OwnershipAnalysis(..)
+  ( OwnershipAnalysis(..)
   , OwnershipConstraint(..)
-  , newOwnershipAnalyzer
-  , analyzeOwnership
+  , OwnershipType(..)
+  , OwnershipTransfer(..)
   , checkOwnershipTransfer
   , validateOwnershipConstraints
   , hasOwnershipErrors
@@ -29,8 +25,9 @@ import Ownership
   , canTransferOwnership
   , transferOwnership
   )
-import Ownership.Common.Types (OwnershipError(..), OwnershipType(..), OwnershipTransfer(..))
-import Data.List (nub, sort)
+import Ownership.Common.Types (OwnershipError(..))
+import Data.List (sort, nub)
+
 
 -- Arbitrary instances for QuickCheck
 instance Arbitrary OwnershipType where
@@ -40,9 +37,9 @@ instance Arbitrary OwnershipType where
 
 instance Arbitrary OwnershipTransfer where
   arbitrary = do
-    from <- arbitrary
-    to <- arbitrary
-    return $ OwnershipTransfer from to
+    fromOwner <- arbitrary
+    toOwner <- arbitrary
+    return $ OwnershipTransfer fromOwner toOwner
 
 instance Arbitrary OwnershipError where
   arbitrary = oneof

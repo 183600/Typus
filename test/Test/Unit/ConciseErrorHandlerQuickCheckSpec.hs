@@ -7,10 +7,9 @@
 module Test.Unit.ConciseErrorHandlerQuickCheckSpec where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), Gen, choose, elements, vectorOf)
+import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), choose, elements, vectorOf)
 import ErrorHandler
   ( ErrorHandler
-  , ErrorMessage
   , handleError
   , handleErrors
   , createError
@@ -42,14 +41,12 @@ import Compiler.Errors.Core
   , ErrorRecovery(..)
   , emptyContext
   , unknownLocation
-  , errorAt
-  , warningAt
-  , infoAt
   , severity
   , errorMessage
   )
 import qualified Data.Text as T
-import qualified Data.List as List
+import Data.List (sortBy)
+
 
 -- Arbitrary instances for QuickCheck
 instance Arbitrary T.Text where
@@ -63,37 +60,37 @@ instance Arbitrary ErrorCategory where
 instance Arbitrary ErrorLocation where
   arbitrary = do
     filePath <- arbitrary
-    line <- choose (1, 1000)
-    column <- choose (1, 1000)
-    endLine <- arbitrary
-    endColumn <- arbitrary
-    return $ ErrorLocation filePath line column endLine endColumn
+    lineNum <- choose (1, 1000)
+    columnNum <- choose (1, 1000)
+    endLineNum <- arbitrary
+    endColumnNum <- arbitrary
+    return $ ErrorLocation filePath lineNum columnNum endLineNum endColumnNum
 
 instance Arbitrary ErrorContext where
   arbitrary = do
-    contextCode <- arbitrary
-    contextFunction <- arbitrary
-    contextVariable <- arbitrary
-    contextType <- arbitrary
-    contextAdditional <- arbitrary
-    return $ ErrorContext contextCode contextFunction contextVariable contextType contextAdditional
+    ctxCode <- arbitrary
+    ctxFunction <- arbitrary
+    ctxVariable <- arbitrary
+    ctxType <- arbitrary
+    ctxAdditional <- arbitrary
+    return $ ErrorContext ctxCode ctxFunction ctxVariable ctxType ctxAdditional
 
 instance Arbitrary ErrorRecovery where
   arbitrary = do
-    canRecover <- arbitrary
-    shouldContinue <- arbitrary
-    recoveryAction <- arbitrary
+    canRec <- arbitrary
+    shouldCont <- arbitrary
+    recoveryAct <- arbitrary
     recoveryHint <- arbitrary
     recoveryCost <- choose (0, 100)
-    recoveryConfidence <- choose (0.0, 1.0)
-    return $ ErrorRecovery canRecover shouldContinue recoveryAction recoveryHint recoveryCost recoveryConfidence
+    recoveryConf <- choose (0.0, 1.0)
+    return $ ErrorRecovery canRec shouldCont recoveryAct recoveryHint recoveryCost recoveryConf
 
 instance Arbitrary TypeError where
   arbitrary = do
     errorId <- arbitrary
     severity <- arbitrary
     category <- arbitrary
-    message <- arbitrary
+    errorMsg <- arbitrary
     location <- arbitrary
     context <- arbitrary
     recovery <- arbitrary
@@ -102,7 +99,7 @@ instance Arbitrary TypeError where
     let relatedErrors = []
     let errorChain = []
     timestamp <- arbitrary
-    return $ TypeError errorId severity category message location context recovery suggestions relatedErrors errorChain timestamp
+    return $ TypeError errorId severity category errorMsg location context recovery suggestions relatedErrors errorChain timestamp
 
 -- Newtype wrapper for ErrorHandler with limited size
 newtype LimitedErrorHandler = LimitedErrorHandler { getLimitedErrorHandler :: ErrorHandler }
@@ -290,7 +287,7 @@ sortBySeverity_properties :: LimitedErrorHandler -> Bool
 sortBySeverity_properties (LimitedErrorHandler errs) = 
   let limitedErrs = take 10 errs  -- Limit to 10 errors for performance
       sorted = sortBySeverity limitedErrs
-      sortedBySeverity = List.sortBy (\e1 e2 -> compare (severity e1) (severity e2)) limitedErrs
+      sortedBySeverity = sortBy (\e1 e2 -> compare (severity e1) (severity e2)) limitedErrs
   in sorted == sortedBySeverity
 
 -- | Test renderErrors properties

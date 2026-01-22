@@ -5,7 +5,7 @@
 module Test.Unit.ConciseParserQuickCheckSpec where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), Gen, choose, elements, oneof)
+import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), choose, elements, oneof)
 import Parser
   ( parseTypus
   , parseTypusFile
@@ -24,7 +24,7 @@ import Parser
   )
 import SourceLocation (SourceSpan(..), SourcePos(..), Located(..), locatedWithSpan, spanStart, spanEnd, posLine, posColumn)
 import qualified SyntaxValidator
-import Data.List (isPrefixOf, isInfixOf)
+
 import Data.Char (isAlphaNum)
 
 -- Arbitrary instances for QuickCheck
@@ -46,22 +46,22 @@ instance Arbitrary Declaration where
 
 instance Arbitrary SourcePos where
   arbitrary = do
-    line <- choose (1, 1000)
-    column <- choose (1, 1000)
+    lineNum <- choose (1, 1000)
+    columnNum <- choose (1, 1000)
     offset <- choose (0, 1000000)
-    return $ SourcePos line column offset
+    return $ SourcePos lineNum columnNum offset
 
 instance Arbitrary SourceSpan where
   arbitrary = do
-    start <- arbitrary
-    end <- arbitrary
-    return $ SourceSpan start end
+    startPos <- arbitrary
+    endPos <- arbitrary
+    return $ SourceSpan startPos endPos
 
 instance Arbitrary a => Arbitrary (Located a) where
   arbitrary = do
     value <- arbitrary
-    span <- arbitrary
-    return $ locatedWithSpan span value
+    valueSpan <- arbitrary
+    return $ locatedWithSpan valueSpan value
 
 instance Arbitrary SyntaxValidator.ErrorType where
   arbitrary = elements 

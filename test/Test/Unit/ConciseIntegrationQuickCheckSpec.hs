@@ -5,17 +5,17 @@
 module Test.Unit.ConciseIntegrationQuickCheckSpec where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), Gen, choose, elements)
+import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), choose, elements)
 import Parser (parseTypus, TypusFile(..), tfContents)
 import Compiler (compile, generateGoCode)
 import ErrorHandler (ErrorHandler, errorCount, warningCount, infoCount)
 import Dependencies (DependencyGraph, TestDependencyGraph(..), analyzeDependencies, hasCycles)
-import Ownership (OwnershipAnalysis(..), hasOwnershipErrors, getOwners, getBorrowers)
+import Ownership (OwnershipAnalysis(..), getOwners, getBorrowers)
 import qualified Ownership.Common.Types as Own
 import SourceLocation (SourcePos(..), SourceSpan(..))
-import Utils (trim, splitBy, removeComments)
-import Compiler.Errors.Core (TypeError(..), ErrorSeverity(..), ErrorCategory(..), ErrorLocation(..), ErrorContext(..), ErrorRecovery(..), emptyContext, unknownLocation, fatalRecovery)
-import Data.List (isPrefixOf, isInfixOf)
+import Utils (trim, removeComments)
+import Compiler.Errors.Core (TypeError(..), ErrorSeverity(..), ErrorCategory(..), unknownLocation, emptyContext, fatalRecovery)
+
 import qualified Data.Text as T
 
 -- Arbitrary instances for QuickCheck
@@ -62,8 +62,8 @@ instance Arbitrary OwnershipAnalysis where
 -- This is a minimal implementation for testing purposes
 instance Arbitrary TypeError where
   arbitrary = do
-    errorId <- arbitrary
-    return $ TypeError errorId Error TypeChecking T.empty unknownLocation emptyContext fatalRecovery [] [] [] Nothing
+    errId <- arbitrary
+    return $ TypeError errId Error TypeChecking T.empty unknownLocation emptyContext fatalRecovery [] [] [] Nothing
 
 -- Test integration scenario data types
 data IntegrationScenario = IntegrationScenario
@@ -99,16 +99,16 @@ instance Arbitrary EndToEndTest where
 
 instance Arbitrary SourcePos where
   arbitrary = do
-    line <- choose (1, 1000)
-    column <- choose (1, 1000)
+    lineNum <- choose (1, 1000)
+    columnNum <- choose (1, 1000)
     offset <- choose (0, 1000000)
-    return $ SourcePos line column offset
+    return $ SourcePos lineNum columnNum offset
 
 instance Arbitrary SourceSpan where
   arbitrary = do
-    start <- arbitrary
-    end <- arbitrary
-    return $ SourceSpan start end
+    startPos <- arbitrary
+    endPos <- arbitrary
+    return $ SourceSpan startPos endPos
 
 tests :: TestTree
 tests = testGroup "Concise Integration QuickCheck Tests"
@@ -181,10 +181,8 @@ error_count_consistency handler =
 
 -- | Test dependencies and ownership consistency
 dependencies_ownership_consistency :: DependencyGraph -> OwnershipAnalysis -> Bool
-dependencies_ownership_consistency depGraph ownershipAnalysis = 
-  let hasDepCycles = hasCycles depGraph
-      hasOwnErrors = hasOwnershipErrors ownershipAnalysis
-      owners = getOwners ownershipAnalysis
+dependencies_ownership_consistency _ ownershipAnalysis = 
+  let owners = getOwners ownershipAnalysis
       borrowers = getBorrowers ownershipAnalysis
   in length owners >= 0 && length borrowers >= 0
 
@@ -207,11 +205,11 @@ source_location_preservation input =
 
 -- | Test span consistency
 span_consistency :: SourceSpan -> Bool
-span_consistency span = 
-  let start = spanStart span
-      end = spanEnd span
-  in posLine start >= 1 && posColumn start >= 1 && 
-     posLine end >= 1 && posColumn end >= 1
+span_consistency testSpan = 
+  let startPos = spanStart testSpan
+      endPos = spanEnd testSpan
+  in posLine startPos >= 1 && posColumn startPos >= 1 && 
+     posLine endPos >= 1 && posColumn endPos >= 1
 
 -- | Test utils integration with parser
 utils_parser_integration :: String -> Bool

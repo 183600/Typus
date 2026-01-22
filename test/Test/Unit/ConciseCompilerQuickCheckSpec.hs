@@ -5,11 +5,9 @@
 module Test.Unit.ConciseCompilerQuickCheckSpec where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), Gen, choose, elements, resize)
+import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), choose, elements, resize)
 import Compiler
-  ( compile
-  , CompilerError(..)
-  , CompilerResult
+  ( CompilerError(..)
   , CompilationPhase(..)
   , SyntaxError(..)
   , TypeError(..)
@@ -23,11 +21,8 @@ import Compiler
   , diagnoseTypeErrors
   , extractDeclarations
   , extractFunctionCalls
-  , buildTypeEnv
   , buildTypeEnvFromPairs
-  , createTypusFileFromErrors
   , isMethodDeclaration
-  , checkTypeError
   , hasMalformedSyntax
   , checkDependentTypes
   , checkOwnership
@@ -39,10 +34,10 @@ import Compiler
 import Compiler.Errors (mkCompilerError, ErrorStatistics(..), message, ErrorCategory(..), ErrorSeverity(..), ErrorRecovery(..))
 import qualified SourceLocation
 import Parser (TypusFile(..), FileDirectives(..), BlockDirectives(..), CodeBlock(..), defaultFileDirectives)
-import SyntaxValidator (SyntaxError(..), ErrorType(..))
+import SyntaxValidator (ErrorType(..))
 import SourceLocation (SourceSpan(..), SourcePos(..))
 import qualified Data.Text as T
-import qualified Data.List as List
+
 import qualified Compiler.IR as IR
 
 -- Arbitrary instances for QuickCheck
@@ -52,7 +47,7 @@ instance Arbitrary CompilationPhase where
 instance Arbitrary CompilerError where
   arbitrary = do
     errorId <- arbitrary
-    message <- arbitrary
+    errorMsg <- arbitrary
     phase <- arbitrary
     category <- arbitrary
     severity <- arbitrary
@@ -61,22 +56,22 @@ instance Arbitrary CompilerError where
     suggestions <- arbitrary
     stackTrace <- arbitrary
     timestamp <- arbitrary
-    return $ mkCompilerError errorId message phase category severity location context suggestions stackTrace timestamp
+    return $ mkCompilerError errorId errorMsg phase category severity location context suggestions stackTrace timestamp
 
 instance Arbitrary SyntaxError where
   arbitrary = do
-    errorType <- arbitrary
-    message <- arbitrary
+    errType <- arbitrary
+    errorMsg <- arbitrary
     line <- arbitrary
     column <- arbitrary
-    lineContent <- arbitrary
-    return $ SyntaxError errorType message line column lineContent
+    lineContentText <- arbitrary
+    return $ SyntaxError errType errorMsg line column lineContentText
 
 instance Arbitrary TypeError where
   arbitrary = do
     context <- arbitrary
-    message <- arbitrary
-    return $ TypeError context message
+    errorMsg <- arbitrary
+    return $ TypeError context errorMsg
 
 instance Arbitrary TypeCheckDiagnostic where
   arbitrary = do
@@ -93,9 +88,9 @@ instance Arbitrary SourcePos where
 
 instance Arbitrary SourceSpan where
   arbitrary = do
-    start <- arbitrary
-    end <- arbitrary
-    return $ SourceSpan start end
+    startPos <- arbitrary
+    endPos <- arbitrary
+    return $ SourceSpan startPos endPos
 
 instance Arbitrary FileDirectives where
   arbitrary = do
@@ -115,8 +110,8 @@ instance Arbitrary CodeBlock where
   arbitrary = do
     directives <- arbitrary
     content <- resize 100 arbitrary  -- Limit content length to prevent large inputs
-    span <- arbitrary
-    return $ CodeBlock directives content span
+    blockSpan <- arbitrary
+    return $ CodeBlock directives content blockSpan
 
 instance Arbitrary ErrorType where
   arbitrary = elements 
@@ -162,13 +157,13 @@ instance Arbitrary ErrorSeverity where
 
 instance Arbitrary ErrorRecovery where
   arbitrary = do
-    canRecover <- arbitrary
-    shouldContinue <- arbitrary
-    recoveryAction <- arbitrary
-    recoveryHint <- arbitrary
-    recoveryCost <- arbitrary
-    recoveryConfidence <- arbitrary
-    return $ ErrorRecovery canRecover shouldContinue recoveryAction recoveryHint recoveryCost recoveryConfidence
+    canRec <- arbitrary
+    shouldCont <- arbitrary
+    recoveryAct <- arbitrary
+    recHint <- arbitrary
+    recCost <- arbitrary
+    recoveryConf <- arbitrary
+    return $ ErrorRecovery canRec shouldCont recoveryAct recHint recCost recoveryConf
 
 instance Arbitrary a => Arbitrary (SourceLocation.Located a) where
   arbitrary = arbitrary
@@ -272,12 +267,10 @@ diagnoseTypeErrors_properties typusFile =
 
 -- | Test checkTypeError properties
 checkTypeError_properties :: TypeError -> Bool
-checkTypeError_properties err = 
+checkTypeError_properties _ = 
   -- checkTypeError expects a TypeEnv, not a TypeError
   -- So we'll just test that TypeError can be created and accessed
-  let context = teContext err
-      message = teMessage err
-  in True  -- Simple test that TypeError can be created and accessed
+  True  -- Simple test that TypeError can be created and accessed
 
 -- | Test hasMalformedSyntax properties
 hasMalformedSyntax_properties :: TypusFile -> Bool
@@ -287,17 +280,17 @@ hasMalformedSyntax_properties typusFile =
 
 -- | Test buildTypeEnv properties
 buildTypeEnv_properties :: TypusFile -> Bool
-buildTypeEnv_properties typusFile = 
+buildTypeEnv_properties _ = 
   -- buildTypeEnv expects a GoModule, not a TypusFile
   -- So we'll just test that the function exists
   True  -- Placeholder test since we can't easily create a GoModule
 
 -- | Test buildTypeEnvFromPairs properties
 buildTypeEnvFromPairs_properties :: [(String, String)] -> Bool
-buildTypeEnvFromPairs_properties pairs = 
+buildTypeEnvFromPairs_properties _ = 
   -- buildTypeEnvFromPairs expects (String, Type) pairs and returns a TypeEnv
   -- We'll just test that it doesn't crash with empty input
-  let env = buildTypeEnvFromPairs []
+  let _ = buildTypeEnvFromPairs []
   in True  -- Simple test that it doesn't crash
 
 -- | Test extractDeclarations properties
@@ -350,7 +343,7 @@ ensureSourceIR_properties :: TypusFile -> Bool
 ensureSourceIR_properties typusFile = 
   case ensureSourceIR typusFile of
     Left _ -> True  -- Errors are acceptable
-    Right ir -> True  -- Success is acceptable
+    Right _ -> True  -- Success is acceptable
 
 -- | Test generateGoCode properties
 generateGoCode_properties :: Bool -> Bool

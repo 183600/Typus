@@ -6,7 +6,7 @@
 module Test.Unit.ConciseDependenciesQuickCheckSpec where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), Gen, choose, elements, oneof, vectorOf)
+import Test.Tasty.QuickCheck (testProperties, property, Arbitrary(..), choose, elements, oneof, vectorOf)
 import Dependencies
   ( DependencyGraph
   , TestDependencyGraph(..)
@@ -32,7 +32,7 @@ import Dependencies
   , inferTypes
   )
 import Dependencies.AST (AST(..), Statement(..), TypeExpr(..), Constraint(..))
-import Data.List (nub, sort)
+
 import qualified Data.Text as T
 
 -- Arbitrary instances for QuickCheck
@@ -168,7 +168,6 @@ getDependencyErrors_properties dg =
 clearDependencyErrors_properties :: DependencyGraph -> Bool
 clearDependencyErrors_properties dg = 
   let cleared = clearDependencyErrors dg
-      errorsBefore = getDependencyErrors dg
       errorsAfter = getDependencyErrors cleared
   in errorsAfter == [] && cleared == dg  -- Placeholder implementation returns input unchanged
 
