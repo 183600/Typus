@@ -7,16 +7,11 @@ module Test.Unit.NewTypeSystemQuickCheckSpec where
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
-import Test.QuickCheck ((==>), conjoin, counterexample)
-import qualified Data.Text as T
+import Test.QuickCheck ((==>), Property, Positive(..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.List (nub, sort, (\\))
-import Data.Maybe (isJust, isNothing, fromMaybe)
-import Control.Monad (foldM)
 
 -- Mock type system types (since we don't have the actual imports)
 data Type = BaseType String
@@ -94,7 +89,7 @@ prop_typeEquality_sameBase name =
   in typ1 == typ2
 
 -- | Test type equality: different base types
-prop_typeEquality_differentBase :: String -> String -> Bool
+prop_typeEquality_differentBase :: String -> String -> Property
 prop_typeEquality_differentBase name1 name2 = 
   name1 /= name2 ==> 
   let typ1 = BaseType name1
@@ -217,21 +212,19 @@ prop_typeInference_unbound name =
 prop_typeSubstitution_base :: String -> String -> String -> Bool
 prop_typeSubstitution_base name from to = 
   let typ = BaseType name
-      fromType = BaseType from
       toType = BaseType to
-      subs = Map.singleton from to
+      subs = Map.singleton from toType
       result = substituteType typ subs
   in if name == from then result == toType else result == typ
 
 -- | Test type substitution: function type
-prop_typeSubstitution_function :: String -> String -> String -> String -> Bool
-prop_typeSubstitution_function name from to fromArg toArg = 
+prop_typeSubstitution_function :: String -> String -> String -> Bool
+prop_typeSubstitution_function from to fromArg = 
   let fromType = BaseType from
       toType = BaseType to
       fromArgType = BaseType fromArg
-      toArgType = BaseType toArg
       funcType = FunctionType fromArgType fromType
-      subs = Map.singleton from to
+      subs = Map.singleton from toType
       result = substituteType funcType subs
   in case result of
     FunctionType arg res -> arg == fromArgType && res == toType
@@ -251,7 +244,7 @@ prop_typeUnification_same name =
     Nothing -> False
 
 -- | Test type unification: different base types
-prop_typeUnification_different :: String -> String -> Bool
+prop_typeUnification_different :: String -> String -> Property
 prop_typeUnification_different name1 name2 = 
   name1 /= name2 ==> 
   let typ1 = BaseType name1
@@ -281,7 +274,7 @@ prop_typeConsistency_consistent name typeName =
   in typeConsistent env
 
 -- | Test type consistency: inconsistent constraints
-prop_typeConsistency_inconsistent :: String -> String -> Bool
+prop_typeConsistency_inconsistent :: String -> String -> Property
 prop_typeConsistency_inconsistent name1 name2 = 
   name1 /= name2 ==> 
   let typ1 = BaseType name1
@@ -326,10 +319,10 @@ prop_type_unicode name =
   in Map.lookup name (typeBindings env) == Just typ
 
 -- | Test types with very long names
-prop_type_longNames :: Int -> String -> Bool
-prop_type_longNames n baseName = 
-  n > 0 && n < 100 ==> 
-  let longName = concat (replicate n baseName)
+prop_type_longNames :: Positive Int -> String -> Bool
+prop_type_longNames (Positive n) baseName = 
+  let n' = min n 99  -- Ensure n < 100
+      longName = concat (replicate n' baseName)
       typ = BaseType longName
       env = TypeEnvironment (Map.singleton longName typ) Set.empty Set.empty
   in Map.lookup longName (typeBindings env) == Just typ

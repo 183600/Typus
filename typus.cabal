@@ -853,7 +853,7 @@ test-suite typus-test
         -- New comprehensive QuickCheck test modules (2025)
         Test.Unit.NewCompilerIRQuickCheckSpec,
         Test.Unit.NewDependenciesQuickCheckSpec,
-        -- Test.Unit.NewTypeSystemQuickCheckSpec, -- Temporarily disabled
+        Test.Unit.NewTypeSystemQuickCheckSpec,
         Test.Unit.NewFreshIntegrationQuickCheckSpec,
         Test.Unit.NewFreshPerformanceQuickCheckSpec,
 
@@ -977,7 +977,7 @@ test-suite typus-test
         Test.Unit.CabalMemorySafetySpec,
         Test.Unit.CabalRegressionSpec,
         Test.Unit.CabalEndToEndSpec,
-        -- , Test.Unit.CompilerIRConsistencyQuickCheckSpec -- Temporarily disabled
+        Test.Unit.CompilerIRConsistencyQuickCheckSpec,
         Test.Unit.ErrorLocationTrackingQuickCheckSpec,
         Test.Unit.SyntaxValidatorBoundaryQuickCheckSpec,
         
@@ -1178,7 +1178,7 @@ test-suite typus-test
         Test.Unit.NewUtilsStringBoundaryQuickCheckSpec,
         Test.Unit.NewOwnershipTransitivityQuickCheckSpec,
         Test.Unit.NewDependenciesCycleDetectionQuickCheckSpec,
-        -- , Test.Unit.NewCompilerIRConsistencyQuickCheckSpec -- Temporarily disabled
+        Test.Unit.NewCompilerIRConsistencyQuickCheckSpec,
         Test.Unit.NewSyntaxValidatorValidationQuickCheckSpec,
         Test.Unit.NewGoToolchainIntegrationQuickCheckSpec,
         Test.Unit.NewEndToEndIntegrationQuickCheckSpec,
@@ -1434,7 +1434,6 @@ test-suite typus-test
         Test.Unit.UtilsStringPropertiesQuickCheckSpec,
         Test.Unit.SourceLocationPositionQuickCheckSpec,
         Test.Unit.SourceLocationSpanQuickCheckSpec,
-        Test.Unit.CompilerIRConsistencyQuickCheckSpec,
         Test.Unit.OwnershipTransitivityQuickCheckSpec,
         Test.Unit.DependenciesCycleDetectionQuickCheckSpec,
         Test.Unit.ErrorHandlerConsistencyQuickCheckSpec,
