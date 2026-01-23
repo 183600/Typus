@@ -21,8 +21,14 @@ prop_trim_idempotent s = trim (trim s) == trim s
 prop_trim_no_leading_trailing_spaces :: String -> Bool
 prop_trim_no_leading_trailing_spaces s = 
   let trimmed = trim s
+      firstChar str = case str of
+                        (c:_) -> c
+                        [] -> ' '
+      lastChar str = case reverse str of
+                       (c:_) -> c
+                       [] -> ' '
   in null trimmed || 
-     (not (isSpace (head trimmed)) && not (isSpace (last trimmed)))
+     (not (isSpace (firstChar trimmed)) && not (isSpace (lastChar trimmed)))
 
 prop_trim_preserves_internal_spaces :: String -> Bool
 prop_trim_preserves_internal_spaces s =

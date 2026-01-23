@@ -29,7 +29,13 @@ tests = testGroup "UtilsStringProcessingExtraSpec Tests"
     , testProperty "trim removes whitespace from ends" $
         \s -> not (null (trim s)) ==> 
           let trimmed = trim s
-          in not (isSpace (head trimmed)) && not (isSpace (last trimmed))
+              firstChar str = case str of
+                                (c:_) -> c
+                                [] -> ' '
+              lastChar str = case reverse str of
+                               (c:_) -> c
+                               [] -> ' '
+          in not (isSpace (firstChar trimmed)) && not (isSpace (lastChar trimmed))
     , testProperty "trim is idempotent" $
         \s -> trim (trim s) == trim s
     ]

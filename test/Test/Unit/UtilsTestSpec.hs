@@ -23,7 +23,8 @@ splitOn sep str = splitOn' sep str []
     splitOn' _ [] acc = [reverse acc]
     splitOn' sep str acc
       | sep `isPrefixOf` str = reverse acc : splitOn' sep (drop (length sep) str) []
-      | otherwise = splitOn' sep (tail str) (head str : acc)
+      | otherwise = case str of
+                      (c:cs) -> splitOn' sep cs (c : acc)
 
 joinWith :: String -> [String] -> String
 joinWith _ [] = ""
@@ -70,7 +71,13 @@ prop_trimRemovesWhitespace leading middle trailing =
         leadingWhitespace = all isSpace leading
         trailingWhitespace = all isSpace trailing
     in leadingWhitespace && trailingWhitespace ==> 
-       not (null result) && not (isSpace $ head result) && not (isSpace $ last result)
+       let firstChar str = case str of
+                             (c:_) -> c
+                             [] -> ' '
+           lastChar str = case reverse str of
+                            (c:_) -> c
+                            [] -> ' '
+       in not (null result) && not (isSpace $ firstChar result) && not (isSpace $ lastChar result)
 
 -- Property 2: trim preserves non-whitespace content
 prop_trimPreservesContent :: String -> Property
@@ -97,8 +104,12 @@ prop_splitOnPreservesDelimiters prefix delimiter suffix =
     let input = prefix ++ delimiter ++ suffix
         parts = splitOn delimiter input
     in length parts >= 2 && 
-       head parts == prefix && 
-       last parts == suffix
+       (case parts of
+          (p:_) -> p == prefix
+          [] -> False) &&
+       (case reverse parts of
+          (l:_) -> l == suffix
+          [] -> False)
 
 -- Property 6: splitOn with non-existent delimiter returns single-element list
 prop_splitOnNonExistentDelimiter :: String -> String -> Property

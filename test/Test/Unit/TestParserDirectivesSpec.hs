@@ -11,7 +11,6 @@ import ErrorHandler
 import Utils
 import qualified Data.Text as T
 import TestSupport.Arbitrary ()
-import Prelude hiding (spanBetween)
 
 -- | Test suite for Parser Directives
 testParserDirectives :: TestTree

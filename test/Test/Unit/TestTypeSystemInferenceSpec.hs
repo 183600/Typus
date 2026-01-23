@@ -146,7 +146,6 @@ testTypeSystemInference = testGroup "Type System Inference Tests"
           scheme = testGeneralize typeVar checker
       in case scheme of
            TestTypeScheme vars _ -> length vars @?= 1
-           _ -> assertFailure "Generalization should create TypeScheme"
            
   , testCase "instantiate: creates fresh instance of type scheme" $
       let typeVar = TestTypeVar "a"

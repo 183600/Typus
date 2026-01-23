@@ -114,15 +114,21 @@ prop_empty_input_boundary =
 prop_single_element_boundary :: Int -> Property
 prop_single_element_boundary x =
   let singleList = [x]
+      firstElement = case singleList of
+        (y:_) -> y
+        [] -> error "Impossible: singleList is not empty"
   in length singleList === 1 .&&.
-     head singleList === x
+     firstElement === x
 
 prop_large_input_boundary :: Int -> Property
 prop_large_input_boundary n =
   n >= 0 && n <= 10000 ==> 
   let largeList = [1..n]
+      firstElement = case largeList of
+        (y:_) -> y
+        [] -> error "Impossible: largeList is not empty when n >= 0"
   in length largeList === n .&&.
-     head largeList === 1 .&&.
+     firstElement === 1 .&&.
      last largeList === n
 
 -- | 测试资源使用边界

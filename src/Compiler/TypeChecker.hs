@@ -265,7 +265,9 @@ extractFunctionCalls content =
         let -- Find function call patterns using regex-like approach
             words' = words line
             -- Find words that end with '('
-            callWords = filter (\w -> length w > 1 && last w == '(') words'
+            callWords = filter (\w -> length w > 1 && case reverse w of
+                                                   (c:_) -> c == '('
+                                                   [] -> False) words'
             -- Keep function names with '(' for the test
             functionNames = callWords
             -- Also look for patterns like "add(" in the line
@@ -598,7 +600,9 @@ checkCall TypeEnv{..} context CallExpr{..} =
                                    then ([], Just single)
                                    else ([single], Nothing)
                     _ ->
-                        let lastParam = last params
+                        let lastParam = case reverse params of
+                                        (p:_) -> p
+                                        [] -> error "Impossible: params is not empty in this context"
                         in if fpVariadic lastParam
                               then (init params, Just lastParam)
                               else (params, Nothing)
@@ -622,7 +626,9 @@ checkCall TypeEnv{..} context CallExpr{..} =
                 case params of
                     [] -> ([], Nothing)
                     _ ->
-                        let lp = last params
+                        let lp = case reverse params of
+                                (p:_) -> p
+                                [] -> error "Impossible: params is not empty in this context"
                         in if fpVariadic lp then (init params, Just lp) else (params, Nothing)
             expectedForIdx idx
                 | idx < length fixedParams = Just (fpType (fixedParams !! idx))
@@ -674,7 +680,9 @@ parseFunctionInfo (FuncDecl (header:bodyLines))
   where
     dropClosingBrace [] = []
     dropClosingBrace ls =
-        let trimmed = trim (last ls)
+        let trimmed = case reverse ls of
+                        (l:_) -> trim l
+                        [] -> ""
         in if trimmed == "}"
               then init ls
               else ls

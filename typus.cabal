@@ -47,6 +47,7 @@ library
         Compiler.GoAst,
         Compiler.GoLexer,
         Compiler.GoParsing,
+        Compiler.GoVarSpec,
         Compiler.IR,
         Compiler.OwnershipChecker,
         Compiler.TypeChecker,
@@ -85,7 +86,6 @@ library
         Utils
     other-modules:
         Compiler.Error,
-        Compiler.GoVarSpec,
         Compiler.Errors.Compiler
     build-depends:
         base >=4.7 && <5,

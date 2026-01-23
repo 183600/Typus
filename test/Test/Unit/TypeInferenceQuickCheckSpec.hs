@@ -213,6 +213,7 @@ unifyTypes t1 t2
     
     bindTypeVar (TVar var) t = 
       if containsTypeVar t var then Nothing else Just (Map.singleton var t)
+    bindTypeVar _ _ = Nothing
 
 applySubstitution :: Map String Type -> Type -> Type
 applySubstitution subst (TVar v) = 
@@ -232,7 +233,8 @@ specializeSubstitution :: Map String Type -> Map String Type
 specializeSubstitution subst = 
   Map.map (\t -> case t of
                   TVar v -> TVar (v ++ "'")
-                  _ -> t) subst
+                  TFunc argType returnType -> TFunc argType returnType
+                  TTuple types -> TTuple types) subst
 
 isMoreGeneral :: Map String Type -> Map String Type -> Bool
 isMoreGeneral subst1 subst2 = 

@@ -223,7 +223,9 @@ prop_mixed_unicode_ascii content =
        Right typusFile -> 
          let blocks = tfBlocks typusFile
          in property $ not (null blocks) ==> 
-            let firstBlock = head blocks
+            let firstBlock = case blocks of
+                               (b:_) -> b
+                               [] -> error "Impossible: blocks is not empty"
                 blockContent = cbContent firstBlock
             in "Hello 中文测试 World 🌍" `isInfixOf` blockContent
 

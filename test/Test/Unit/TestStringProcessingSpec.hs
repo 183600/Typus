@@ -210,8 +210,14 @@ testStringProcessing = testGroup "String Processing Tests"
         in collapsed == nonEmptySegments
         
   , testProperty "Utils: trim does not change string without leading/trailing whitespace" $
-      \s -> not (null s) && not (isSpace (head s)) && not (isSpace (last s)) ==> 
-        trim s == s
+      \s -> let firstChar str = case str of
+                                   (c:_) -> c
+                                   [] -> ' '
+                lastChar str = case reverse str of
+                                  (c:_) -> c
+                                  [] -> ' '
+            in not (null s) && not (isSpace (firstChar s)) && not (isSpace (lastChar s)) ==> 
+               trim s == s
         
   , testProperty "Utils: normalizeIndentation preserves relative indentation" $
       \s -> 

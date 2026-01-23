@@ -53,10 +53,16 @@ genDelimiter = elements $ ",;:|"
 prop_trim_removes_leading_trailing_spaces :: String -> Property
 prop_trim_removes_leading_trailing_spaces s = 
   let trimmed = trim s
-      hasLeadingSpace = not (null s) && isSpace (head s)
-      hasTrailingSpace = not (null s) && isSpace (last s)
+      firstChar str = case str of
+                        (c:_) -> c
+                        [] -> ' '
+      lastChar str = case reverse str of
+                       (c:_) -> c
+                       [] -> ' '
+      hasLeadingSpace = not (null s) && isSpace (firstChar s)
+      hasTrailingSpace = not (null s) && isSpace (lastChar s)
   in if hasLeadingSpace || hasTrailingSpace
-     then not (null trimmed) ==> (not (isSpace (head trimmed)) && not (isSpace (last trimmed)))
+     then not (null trimmed) ==> (not (isSpace (firstChar trimmed)) && not (isSpace (lastChar trimmed)))
      else property (trimmed == s)
 
 -- Property 2: trim preserves non-space characters
@@ -321,8 +327,9 @@ prop_forceSingleTabIndentation_trims_content s =
       tabbed = forceSingleTabIndentation s
       tabbedLines = lines tabbed
     in all (\line -> null line || 
-                     (head line == '\t' && 
-                      drop 1 line == trim (dropWhile isSpace line))) tabbedLines
+                     (case line of
+                        (c:_) -> c == '\t' && drop 1 line == trim (dropWhile isSpace line)
+                        [] -> False)) tabbedLines
 
 -- Property 39: safeProcessString handles empty string
 prop_safeProcessString_empty_string :: Bool

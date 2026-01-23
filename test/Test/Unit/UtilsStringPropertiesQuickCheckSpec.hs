@@ -10,20 +10,32 @@ import Data.List (isPrefixOf, isSuffixOf)
 -- | 测试trim函数的属性
 prop_trim_removes_leading_whitespace :: String -> Property
 prop_trim_removes_leading_whitespace s =
-  not (null s) && isSpace (head s) ==> 
-  not (null (trim s)) || all isSpace s
+  let firstChar str = case str of
+                        (c:_) -> c
+                        [] -> ' '
+  in not (null s) && isSpace (firstChar s) ==> 
+     not (null (trim s)) || all isSpace s
 
 prop_trim_removes_trailing_whitespace :: String -> Property
 prop_trim_removes_trailing_whitespace s =
-  not (null s) && isSpace (last s) ==> 
-  not (null (trim s)) || all isSpace s
+  let lastChar str = case reverse str of
+                       (c:_) -> c
+                       [] -> ' '
+  in not (null s) && isSpace (lastChar s) ==> 
+     not (null (trim s)) || all isSpace s
 
 prop_trim_preserves_internal_whitespace :: String -> Property
 prop_trim_preserves_internal_whitespace s =
   let trimmed = trim s
+      firstChar str = case str of
+                        (c:_) -> c
+                        [] -> ' '
+      lastChar str = case reverse str of
+                       (c:_) -> c
+                       [] -> ' '
       hasInternal = not (null s) && 
                     not (all isSpace s) &&
-                    (isSpace (head s) || isSpace (last s))
+                    (isSpace (firstChar s) || isSpace (lastChar s))
   in whenFail (print (show s)) $ 
      if hasInternal then
                      property (not (null trimmed) && not (all isSpace trimmed))

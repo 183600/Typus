@@ -27,8 +27,14 @@ import Data.String (IsString(..))
 prop_string_trim :: String -> Property
 prop_string_trim input =
   let trimmedInput = trim input
-      hasLeadingSpace = not (null input) && isSpace (head input)
-      hasTrailingSpace = not (null input) && isSpace (last input)
+      firstChar str = case str of
+                        (c:_) -> c
+                        [] -> ' '
+      lastChar str = case reverse str of
+                       (c:_) -> c
+                       [] -> ' '
+      hasLeadingSpace = not (null input) && isSpace (firstChar input)
+      hasTrailingSpace = not (null input) && isSpace (lastChar input)
       expectedTrimmed = dropWhile isSpace $ dropWhileEnd isSpace input
   in property $ trimmedInput == expectedTrimmed
 
@@ -348,9 +354,11 @@ longestCommonSubsequence (x:xs) (y:ys)
 
 soundex :: String -> String
 soundex [] = []
-soundex (c:_) = take 4 $ c : map soundexDigit (filterSoundex (tail input))
+soundex (c:rest) = take 4 $ c : map soundexDigit (filterSoundex (tail input))
   where
-    input = map toUpper (c:tail input)
+    input = map toUpper (c:rest)
+    tail [] = []
+    tail (x:xs) = xs
     soundexDigit ch
       | ch `elem` "BFPV" = '1'
       | ch `elem` "CGJKQSXZ" = '2'
@@ -403,7 +411,8 @@ interpolateTemplate template values = foldl' replacePlaceholder template values
     replace _ _ [] = []
     replace pat repl s
       | pat `isPrefixOf` s = repl ++ replace pat repl (drop (length pat) s)
-      | otherwise = head s : replace pat repl (tail s)
+      | otherwise = case s of
+                      (x:xs) -> x : replace pat repl xs
 
 padString :: Int -> Char -> String -> String
 padString targetLen padChar s

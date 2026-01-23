@@ -269,9 +269,11 @@ tests = testGroup "Performance Regression Tests"
             newMetric = PerformanceMetric "Time" 1.5 "seconds"
             regression = comparePerformanceMetrics oldMetric newMetric 10.0
         assertBool "regression should be Just" (isJust regression)
-        let Just r = regression
-        regressionOldValue r @?= 1.0
-        regressionNewValue r @?= 1.5
+        case regression of
+          Just r -> do
+            regressionOldValue r @?= 1.0
+            regressionNewValue r @?= 1.5
+          Nothing -> assertFailure "Expected Just regression"
       
     , testCase "does not detect regressions within threshold" $ do
         let oldMetric = PerformanceMetric "Time" 1.0 "seconds"
@@ -284,9 +286,11 @@ tests = testGroup "Performance Regression Tests"
             newMetric = PerformanceMetric "Time" 1.0 "seconds"
             regression = comparePerformanceMetrics oldMetric newMetric 10.0
         assertBool "regression should be Just" (isJust regression)
-        let Just r = regression
-        regressionOldValue r @?= 1.5
-        regressionNewValue r @?= 1.0
+        case regression of
+          Just r -> do
+            regressionOldValue r @?= 1.5
+            regressionNewValue r @?= 1.0
+          Nothing -> assertFailure "Expected Just regression"
     ]
 
   , testGroup "Regression detection"

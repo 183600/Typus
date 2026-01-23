@@ -36,10 +36,12 @@ testListProperties = testGroup "List Properties Tests"
       \(xs :: [Int]) -> length (reverse xs) == length xs
       
   , testProperty "List: head of cons is the first element" $
-      \(x :: Int) (xs :: [Int]) -> head (x : xs) == x
+      \(x :: Int) (xs :: [Int]) -> case (x : xs) of
+                                      (y:_) -> y == x
       
   , testProperty "List: tail of cons is the rest" $
-      \(x :: Int) (xs :: [Int]) -> tail (x : xs) == xs
+      \(x :: Int) (xs :: [Int]) -> case (x : xs) of
+                                      (_:ys) -> ys == xs
       
   , testProperty "List: last of singleton is the element" $
       \(x :: Int) -> last [x] == x

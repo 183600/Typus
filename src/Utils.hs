@@ -93,7 +93,9 @@ removeLineComments s =
                        -- 处理每一行，移除注释
                        processedLines = map processLine ls
                        -- 检查原始字符串是否以换行符结尾
-                       endsWithNewline = not (null s) && last s == '\n'
+                       endsWithNewline = not (null s) && case reverse s of
+                                        (c:_) -> c == '\n'
+                                        [] -> False
                    in if endsWithNewline
                       then unlines processedLines
                       else intercalate "\n" processedLines
@@ -278,7 +280,9 @@ removeComments s =
 normalizeIndentation :: String -> String
 normalizeIndentation input =
   let ls = lines input
-      endsWithNewline = not (null input) && last input == '\n'
+      endsWithNewline = not (null input) && case reverse input of
+                                              (c:_) -> c == '\n'
+                                              [] -> False
   in if null input 
      then input  -- 空输入时保持原样
      else if length ls <= 1

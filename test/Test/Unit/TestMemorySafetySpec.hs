@@ -60,7 +60,9 @@ testMemorySafety = testGroup "Memory Safety Tests"
       
   , testCase "SourceLocation: merging many spans doesn't cause memory leaks" $
       let spans = [SourceLocation.spanBetween (SourceLocation.posAt i 1) (SourceLocation.posAt i 100) | i <- [1..1000]]
-          merged = foldl SourceLocation.mergeSpans (head spans) (tail spans)
+          merged = case spans of
+                    (s:rest) -> foldl SourceLocation.mergeSpans s rest
+                    [] -> error "Impossible: spans is not empty"
       in force merged `seq` return ()
       
   , testCase "ErrorHandler: creating many errors doesn't cause memory leaks" $

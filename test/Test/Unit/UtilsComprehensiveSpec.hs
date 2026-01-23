@@ -44,9 +44,15 @@ genAlphaNum = do
 prop_trim_removes_whitespace :: String -> Bool
 prop_trim_removes_whitespace s = 
   let trimmed = trim s
-      hasLeadingOrTrailing = not (null s) && (isSpace (head s) || isSpace (last s))
+      firstChar s' = case s' of
+                       (c:_) -> c
+                       [] -> ' '
+      lastChar s' = case reverse s' of
+                      (c:_) -> c
+                      [] -> ' '
+      hasLeadingOrTrailing = not (null s) && (isSpace (firstChar s) || isSpace (lastChar s))
   in if hasLeadingOrTrailing
-     then not (isSpace (head trimmed)) && not (isSpace (last trimmed))
+     then not (isSpace (firstChar trimmed)) && not (isSpace (lastChar trimmed))
      else trimmed == s
 
 -- Property 2: trim is idempotent

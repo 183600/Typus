@@ -75,7 +75,9 @@ testParserErrorRecovery = testGroup "Parser Error Recovery Tests"
            Right typusFile -> do
              let blocks = tfBlocks typusFile
              length blocks @?= 1
-             let block = head blocks
+             let block = case blocks of
+                           (b:_) -> b
+                           [] -> error "Impossible: blocks is not empty"
              bdOwnership (cbDirectives block) @?= Just (locatedAt (SourcePos 2 1 0) False)
              
   , testCase "parseTypus: handles multiple file directives" $
@@ -97,7 +99,10 @@ testParserErrorRecovery = testGroup "Parser Error Recovery Tests"
            Right typusFile -> do
              let buildTags = tfBuildTags typusFile
              length buildTags @?= 1
-             getLocValue (head buildTags) @?= "+build linux,amd64"
+             let tag = case buildTags of
+                         (t:_) -> t
+                         [] -> error "Impossible: buildTags is not empty"
+             getLocValue tag @?= "+build linux,amd64"
              
   , testCase "parseTypus: preserves syntax errors for later processing" $
       let input = "//! ownership=true\n```go\nfunc invalid_syntax(\n```"

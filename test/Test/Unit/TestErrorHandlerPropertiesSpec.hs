@@ -75,11 +75,10 @@ aggregateErrors = map safeHead . groupSort
   where
     safeHead [] = error "Empty group in aggregateErrors"
     safeHead (h:_) = h
-    groupSort [] = []
     groupSort xs = case xs of
-                     [] -> []
-                     (h:_) -> let (group, rest) = span (== h) (sort xs)
-                              in group : groupSort rest
+                   [] -> []
+                   (h:_) -> let (group, rest) = span (== h) (sort xs)
+                            in group : groupSort rest
 
 getLocation :: Int -> Int
 getLocation = (*10)

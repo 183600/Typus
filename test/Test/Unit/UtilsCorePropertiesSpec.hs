@@ -30,8 +30,14 @@ import Data.Char (isSpace)
 prop_trim_removes_whitespace :: String -> Property
 prop_trim_removes_whitespace s = 
   let trimmed = trim s
-      hasLeadingSpace = not (null s) && isSpace (head s)
-      hasTrailingSpace = not (null s) && isSpace (last s)
+      firstChar str = case str of
+                        (c:_) -> c
+                        [] -> ' '
+      lastChar str = case reverse str of
+                       (c:_) -> c
+                       [] -> ' '
+      hasLeadingSpace = not (null s) && isSpace (firstChar s)
+      hasTrailingSpace = not (null s) && isSpace (lastChar s)
   in if hasLeadingSpace || hasTrailingSpace
      then property (length trimmed < length s)
      else trimmed === s
@@ -128,10 +134,15 @@ prop_normalizeIndentation_preserves_relative =
   let input = "    line1\n      line2\n    line3"
       result = normalizeIndentation input
       lines' = lines result
+      firstChar str = case str of
+                        (c:_) -> c
+                        [] -> ' '
   in length lines' === 3 .&&.
-     not (null (head lines')) .&&.
-     property (head (lines' !! 1) == ' ') .&&.
-     not (isSpace (head (lines' !! 2)))
+     case lines' of
+       (l:_) -> not (null l) .&&.
+                property (firstChar (lines' !! 1) == ' ') .&&.
+                not (isSpace (firstChar (lines' !! 2)))
+       [] -> property False
 
 -- Property: normalizeIndentation of empty string returns empty string
 prop_normalizeIndentation_empty :: Property
@@ -149,9 +160,14 @@ prop_forceSingleTabIndentation_adds_tab =
   let input = "line1\n\nline2"
       result = forceSingleTabIndentation input
       lines' = lines result
-  in head (head lines') === '\t' .&&.
-     head (lines' !! 1) === '\t' .&&.
-     null (lines' !! 2)
+      firstChar str = case str of
+                        (c:_) -> c
+                        [] -> ' '
+  in case lines' of
+       (l1:l2:l3:_) -> firstChar l1 === '\t' .&&.
+                         firstChar l2 === '\t' .&&.
+                         null l3
+       _ -> property False
 
 -- ============================================================================
 -- Search Properties

@@ -230,6 +230,7 @@ validateExportStatement exportStmt =
 isPrefixOf :: String -> String -> Bool
 isPrefixOf prefix str = take (length prefix) str == prefix
 
+isInfixOf :: Eq a => [a] -> [a] -> Bool
 isInfixOf needle haystack = needle `L.isInfixOf` haystack
 
 elem :: Eq a => a -> [a] -> Bool

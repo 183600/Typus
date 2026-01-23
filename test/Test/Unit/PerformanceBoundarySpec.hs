@@ -245,6 +245,7 @@ parallelSum :: [Int] -> Int
 parallelSum = sum  -- Simplified implementation
 
 
+logBase' :: (Floating a) => a -> a -> a
 logBase' b x = log x / log b
 
 -- Test cases for performance boundaries

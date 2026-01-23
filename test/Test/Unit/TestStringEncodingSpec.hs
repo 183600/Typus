@@ -86,7 +86,9 @@ testStringEncoding = testGroup "String Encoding Tests"
              let blocks = tfBlocks typusFile
              if not (null blocks)
                then do
-                 let block = head blocks
+                 let block = case blocks of
+                               (b:_) -> b
+                               [] -> error "Impossible: blocks is not empty"
                  "你好, 世界!" `isInfixOf` (cbContent block) @?= True
                else return ()
                
@@ -99,7 +101,9 @@ testStringEncoding = testGroup "String Encoding Tests"
              let blocks = tfBlocks typusFile
              if not (null blocks)
                then do
-                 let block = head blocks
+                 let block = case blocks of
+                               (b:_) -> b
+                               [] -> error "Impossible: blocks is not empty"
                  "Hello 你好 World 世界!" `isInfixOf` (cbContent block) @?= True
                else return ()
                
@@ -112,7 +116,9 @@ testStringEncoding = testGroup "String Encoding Tests"
              let buildTags = tfBuildTags typusFile
              if not (null buildTags)
                then do
-                 let tag = head buildTags
+                 let tag = case buildTags of
+                             (t:_) -> t
+                             [] -> error "Impossible: buildTags is not empty"
                  locValue tag `isInfixOf` "你好,世界" @?= True
                else return ()
                
