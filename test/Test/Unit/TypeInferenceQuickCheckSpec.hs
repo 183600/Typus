@@ -234,7 +234,10 @@ specializeSubstitution subst =
   Map.map (\t -> case t of
                   TVar v -> TVar (v ++ "'")
                   TFunc argType returnType -> TFunc argType returnType
-                  TTuple types -> TTuple types) subst
+                  TTuple types -> TTuple types
+                  TInt -> TInt
+                  TBool -> TBool
+                  TString -> TString) subst
 
 isMoreGeneral :: Map String Type -> Map String Type -> Bool
 isMoreGeneral subst1 subst2 = 

@@ -108,7 +108,11 @@ prop_typeConstraintPreservation :: Dep.TypeConstraint -> Bool
 prop_typeConstraintPreservation constraint =
   case constraint of
     Dep.Equal t1 t2 -> True
+    Dep.Subtype t1 t2 -> True
     Dep.Predicate className t -> True
+    Dep.TypeSizeGE t n -> True
+    Dep.TypeSizeGT t n -> True
+    Dep.TypeRange t min max -> True
 
 -- Property 8: Type equality is reflexive (simplified)
 prop_typeVarEqualityReflexive :: Dep.TypeVar -> Bool

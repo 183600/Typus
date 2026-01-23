@@ -12,7 +12,7 @@ import Test.Tasty.HUnit
 import Parser hiding (FileDirectives, CodeBlock, TypusFile, parseTypus)
 import SourceLocation hiding (Located, SourceSpan, SourcePos)
 import ErrorHandler hiding (ErrorLocation, TypeError, errorAt)
-import Compiler.IR hiding (IRExpression, IRBinaryOp, BinaryOp)
+import Compiler.IR hiding (IRExpression)
 import Ownership
 import Dependencies hiding (TypeExpr, TypeEnvironment, DependentTypeChecker, newDependentTypeChecker, addType, addConstraint, solveConstraints, typeEnv, TypeConstraint)
 import Utils
