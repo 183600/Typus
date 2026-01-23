@@ -10,6 +10,7 @@ import Control.Monad.State (State, modify, get, put, execState)
 import Data.List (isInfixOf)
 import Data.Maybe (isJust, listToMaybe, fromMaybe)
 import qualified Data.Map.Strict as Map
+import Data.Foldable (foldl')
 
 import Ownership.Common.Lexer (Token(..), TokenKind(..))
 import Ownership.Common.Types (OwnershipError(..))
@@ -240,7 +241,7 @@ popScope = do
         case Map.lookup borrowName (aBorrows st) of
           Just (BorrowInfo src isM) -> Map.adjust (releaseFrom src borrowName isM) src vars
           Nothing -> vars
-      updatedVars = foldl releaseBorrow keepVars borrowedAtCurrentScope
+      updatedVars = foldl' releaseBorrow keepVars borrowedAtCurrentScope
   put st { aVars = updatedVars, aBorrows = keepBorrows, aScope = cur - 1 }
   where
     popByScope :: Int -> [VarState] -> Either [VarState] [VarState]

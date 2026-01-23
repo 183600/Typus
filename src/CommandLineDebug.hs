@@ -33,6 +33,7 @@ module CommandLineDebug
     ) where
 
 import Control.Monad (when)
+import Control.Exception (throwIO)
 import Data.IORef (IORef, newIORef, readIORef, writeIORef, modifyIORef')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -153,8 +154,8 @@ processDebugCommandWithOutput enableOutput config _ tokens =
         ["disable"] -> disableDebugging >> return AwaitMoreInput
         ["e"] -> enableDebugging >> return AwaitMoreInput
         ["enable"] -> enableDebugging >> return AwaitMoreInput
-        ["q"] -> error "Program terminated by user at breakpoint"
-        ["quit"] -> error "Program terminated by user at breakpoint"
+        ["q"] -> throwIO $ userError "Program terminated by user at breakpoint"
+        ["quit"] -> throwIO $ userError "Program terminated by user at breakpoint"
         ["h"] -> do
             when enableOutput $ showDebugHelp
             return AwaitMoreInput

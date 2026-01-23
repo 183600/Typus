@@ -68,6 +68,7 @@ import Data.Char (isAlphaNum, isDigit, isSpace)
 import Data.List (intercalate, intersperse, isInfixOf, isPrefixOf, stripPrefix, (\\))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Foldable (foldl')
 import Data.Maybe (mapMaybe)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -165,7 +166,6 @@ diagnoseTypeErrors typusFile =
         Right goModule ->
             let env = buildTypeEnv goModule
                 errors = gatherTypeErrors env goModule
-                -- Debug: let _ = trace ("Errors found: " ++ show errors) ()
             in Right (map toDiagnostic errors)
   where
     toDiagnostic TypeError{..} = TypeCheckDiagnostic
@@ -425,9 +425,6 @@ gatherTypeErrors env GoModule{..} =
         topVarErrors = concatMap (checkTopLevelVar env) gmDecls
         circularDeps = checkCircularDependencies functionInfos
         allErrors = functionErrors ++ statementErrors ++ topVarErrors ++ circularDeps
-        -- Debug: let _ = trace ("Function infos: " ++ show functionInfos) ()
-        -- Debug: let _ = trace ("Function errors: " ++ show functionErrors) ()
-        -- Debug: let _ = trace ("All errors: " ++ show allErrors) ()
     in allErrors
 
 checkFunction :: TypeEnv -> FunctionInfo -> [TypeError]
@@ -435,7 +432,7 @@ checkFunction env FunctionInfo{..} =
     let -- Extract variable declarations from the function body
         varDecls = extractVariableDeclarations fiBody
         -- Update environment with local variables
-        envWithLocals = foldl addLocalVars env varDecls
+        envWithLocals = foldl' addLocalVars env varDecls
         calls = extractCallExpressions fiBody
     in concatMap (checkCall envWithLocals (Just fiName)) calls
   where
@@ -481,7 +478,7 @@ checkStatement env lines0 =
         -- Extract variable declarations from the statement
         varDecls = extractVariableDeclarationsFromStatement text
         -- Update environment with local variables
-        envWithLocals = foldl addLocalVars env varDecls
+        envWithLocals = foldl' addLocalVars env varDecls
         calls = extractCallExpressions text
         baseErrors = concatMap (checkCall envWithLocals Nothing) calls
         -- Add nested context if needed
@@ -597,6 +594,9 @@ checkCall TypeEnv{..} context CallExpr{..} =
             (fixedParams, variadicParam) =
                 case params of
                     [] -> ([], Nothing)
+                    [single] -> if fpVariadic single
+                                   then ([], Just single)
+                                   else ([single], Nothing)
                     _ ->
                         let lastParam = last params
                         in if fpVariadic lastParam
@@ -1196,7 +1196,7 @@ checkCircularDependencies functionInfos =
                 recStack' = Set.insert node recStack
                 neighbors = Map.findWithDefault [] node graph
                 (allCycles, visited'', recStack'') = 
-                    foldl (\(cycles, vis, rs) neighbor ->
+                    foldl' (\(cycles, vis, rs) neighbor ->
                         let (newCycles, vis', rs') = dfs neighbor vis rs (node:path) graph
                         in (cycles ++ newCycles, vis', rs')
                     ) ([], visited', recStack') neighbors

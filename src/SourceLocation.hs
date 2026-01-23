@@ -67,6 +67,7 @@ import Control.Monad.State (State, get, put, runState, evalState)
 import Compiler.Errors.Core (ErrorLocation(..))
 import Control.DeepSeq (NFData)
 import GHC.Generics (Generic)
+import Data.Foldable (foldl')
 
 -- ============================================================================
 -- Source Position
@@ -262,7 +263,7 @@ advancePos = posAfter
 
 -- Advance position by multiple characters
 advancePosBy :: String -> SourcePos -> SourcePos
-advancePosBy chars pos = foldl (flip advancePos) pos chars
+advancePosBy chars pos = foldl' (flip advancePos) pos chars
 
 -- Advance position by text
 advancePosByText :: Text -> SourcePos -> SourcePos

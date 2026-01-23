@@ -26,7 +26,7 @@ module EnhancedDebug
     , resetDebugStats
     ) where
 
-import Control.Exception (evaluate)
+import Control.Exception (evaluate, throwIO)
 import Control.Monad (when)
 import Data.IORef (IORef, newIORef, readIORef, writeIORef, modifyIORef')
 import Data.Map.Strict (Map)
@@ -247,8 +247,8 @@ handleBreakpointCommands config location = do
         ["help"] -> do
             showBreakpointHelp
             handleBreakpointCommands config location
-        ["q"] -> error "Program terminated by user at breakpoint"
-        ["quit"] -> error "Program terminated by user at breakpoint"
+        ["q"] -> throwIO $ userError "Program terminated by user at breakpoint"
+        ["quit"] -> throwIO $ userError "Program terminated by user at breakpoint"
         _ -> do
             putStrLn "Unknown command. Type 'h' for help."
             handleBreakpointCommands config location

@@ -8,6 +8,7 @@ module SimpleSyntaxValidator (
 
 import Data.List (isInfixOf, isPrefixOf)
 import Data.Char (isSpace)
+import Data.Foldable (foldl')
 
 -- Error types
 data ErrorType = 
@@ -67,7 +68,7 @@ validateSyntaxSimple content =
 -- Context-aware bracket validation
 validateBracketsWithContext :: String -> [SyntaxError]
 validateBracketsWithContext content = 
-    let finalState = foldl processChar initialState (zip content [0..])
+    let finalState = foldl' processChar initialState (zip content [0..])
         unclosedErrors = map makeUnclosedError (reverse $ bracketStack finalState)
     in unclosedErrors
   where
@@ -285,7 +286,7 @@ validateGeneralStatement lineNum fullLine trimmed =
 -- Count braces with context awareness
 countBraces :: String -> Int
 countBraces content = 
-    let _ = foldl processChar initialState (zip content [0..])
+    let _ = foldl' processChar initialState (zip content [0..])
         -- Also count braces that were properly closed
         (opens, closes) = countBracesInState content initialState 0 0
     in opens - closes
