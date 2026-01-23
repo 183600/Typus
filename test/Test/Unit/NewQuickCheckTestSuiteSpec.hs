@@ -37,7 +37,10 @@ prop_trim_no_leading_trailing_spaces :: String -> Property
 prop_trim_no_leading_trailing_spaces s = 
   let trimmed = trim s
   in property $ not (null trimmed) ==> 
-    (not (isSpace (head trimmed)) && not (isSpace (last trimmed)))
+    property $ case trimmed of
+               [] -> False
+               [x] -> not (isSpace x)
+               (x:xs) -> not (isSpace x) && not (isSpace (last xs))
 
 -- Test splitBy function
 prop_split_by_length :: Char -> String -> Property

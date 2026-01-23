@@ -194,7 +194,11 @@ prop_analyzeOwnershipHandlesMultipleStatements =
 prop_analyzeOwnershipHandlesOwnershipTransferChains :: Property
 prop_analyzeOwnershipHandlesOwnershipTransferChains =
   forAll (listOf1 arbitraryIdentifier) $ \varNames ->
-    let transfers = zipWith (\src dst -> dst ++ " = move(" ++ src ++ ")") varNames (tail varNames ++ ["result"])
+    let rest [] = []
+        rest (_:ys) = ys
+        transfers = case varNames of
+                      [] -> []
+                      xs -> zipWith (\src dst -> dst ++ " = move(" ++ src ++ ")") xs (rest xs ++ ["result"])
         code = unlines transfers
         result = analyzeOwnership code
     in property $ True  -- Basic sanity check

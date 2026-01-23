@@ -38,7 +38,9 @@ prop_trim_all_whitespace s =
       sWithWs = ws ++ s ++ ws
       trimmed = trim sWithWs
   in property $ not (null s) && not (all isSpace s) && not (null trimmed) ==> 
-    head trimmed `notElem` ws && last trimmed `notElem` ws
+    case trimmed of
+    [] -> True
+    (x:xs) -> x `notElem` ws && last xs `notElem` ws
 
 -- Test splitBy with empty string
 prop_split_by_empty_string :: Char -> Property
@@ -116,7 +118,9 @@ prop_break_on_first_occurrence :: Char -> String -> Property
 prop_break_on_first_occurrence c s = 
   let (before, after) = breakOn [c] s
   in if c `elem` s
-     then let firstPos = head $ L.elemIndices c s
+     then let firstPos = case L.elemIndices c s of
+                    [] -> -1  -- Should not happen since we check c `elem` s
+                    (x:_) -> x
               expectedBefore = take firstPos s
               expectedAfter = drop (firstPos + 1) s
           in before === expectedBefore .&&. after === expectedAfter
@@ -296,11 +300,15 @@ prop_length_reverse xs = length (reverse xs) === length xs
 -- Test list head/tail properties
 prop_head_element :: [Int] -> Property
 prop_head_element xs = 
-  property $ not (null xs) ==> head xs `elem` xs
+  property $ case xs of
+                [] -> property True
+                (x:_) -> property (x `elem` xs)
 
 prop_tail_subset :: [Int] -> Property
 prop_tail_subset xs = 
-  property $ not (null xs) ==> all (`elem` xs) (tail xs)
+  property $ case xs of
+                [] -> property True
+                (_:rest) -> property (all (`elem` xs) rest)
 
 -- Test list element properties
 prop_elem_consistency :: Int -> [Int] -> Property

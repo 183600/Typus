@@ -26,11 +26,16 @@ prop_trimRemovesWhitespace :: Property
 prop_trimRemovesWhitespace =
   forAll arbitraryString $ \s ->
     let trimmed = trim s
-        hasLeadingSpace = not (null s) && isSpace (head s)
+        hasLeadingSpace = case s of
+                    [] -> False
+                    (x:_) -> isSpace x
         hasTrailingSpace = not (null s) && isSpace (last s)
     in if hasLeadingSpace || hasTrailingSpace
        then property $ not (null trimmed) ==> 
-                (not (isSpace (head trimmed)) && not (isSpace (last trimmed)))
+                property $ case trimmed of
+                           [] -> False
+                           [x] -> not (isSpace x)
+                           (x:xs) -> not (isSpace x) && not (isSpace (last xs))
        else property $ trimmed == s
 
 -- | Test that trim doesn't add characters
