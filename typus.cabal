@@ -42,6 +42,7 @@ library
         Compiler,
         Compiler.DependentTypeChecker,
         Compiler.Errors,
+        Compiler.Errors.Compiler,
         Compiler.Errors.Core,
         Compiler.Errors.Types,
         Compiler.GoAst,
@@ -85,8 +86,7 @@ library
         Tooling.Error,
         Utils
     other-modules:
-        Compiler.Error,
-        Compiler.Errors.Compiler
+        Compiler.Error
     build-depends:
         base >=4.7 && <5,
         aeson >= 2.2 && <3,
