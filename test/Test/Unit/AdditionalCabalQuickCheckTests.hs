@@ -9,12 +9,9 @@ import Test.Tasty.HUnit
 
 import Utils
 import SourceLocation (SourcePos(..))
-import Parser (parseTypus, TypusFile(..), FileDirectives(..), defaultFileDirectives)
+import Parser (parseTypus, TypusFile(..), defaultFileDirectives)
 import Compiler (compile)
-import qualified Data.Text as T
-import Data.List (isPrefixOf, isSuffixOf, isInfixOf)
-import Data.Char (isSpace, isAlpha, isDigit, isLetter)
-import Control.Exception (try, SomeException)
+import Data.Char (isSpace)
 
 -- ============================================================================
 -- 高级QuickCheck测试 (10个测试用例)
@@ -89,8 +86,8 @@ prop_normalize_indentation_relative s indent =
 -- QuickCheck属性：SourceLocation的向量运算
 prop_source_location_vector :: Int -> Int -> Int -> Int -> Property
 prop_source_location_vector line1 col1 line2 col2 =
-  let loc1 = SourcePos (abs line1) (abs col1) 0
-      loc2 = SourcePos (abs line2) (abs col2) 0
+  let _ = SourcePos (abs line1) (abs col1) 0 :: SourcePos
+      _ = SourcePos (abs line2) (abs col2) 0 :: SourcePos
       distance = abs ((abs line1) - (abs line2)) + abs ((abs col1) - (abs col2))
   in property $ distance >= 0
 

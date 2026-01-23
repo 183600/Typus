@@ -1,7 +1,6 @@
 module Test.Unit.AdvancedTextProcessingSpec (tests) where
 
 import Test.Tasty
-import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 import Utils
 import Data.List (isInfixOf, isPrefixOf, isSuffixOf)

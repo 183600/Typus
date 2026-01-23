@@ -7,35 +7,11 @@ module Test.Unit.AdditionalQuickCheckTestsSpec where
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
-import Test.QuickCheck ((==>), conjoin, counterexample)
 import Utils
-import SourceLocation
-import Parser
-  ( parseTypus
-  , FileDirectives(..)
-  , BlockDirectives(..)
-  , CodeBlock(..)
-  , TypusFile(..)
-  , defaultFileDirectives
-  , defaultBlockDirectives
-  )
-import qualified Data.Text as T
-import Data.Char (isSpace, isAlphaNum, isAlpha, toLower, toUpper)
-import Data.List (isPrefixOf, isInfixOf, sort, nub, group, intercalate)
-import Control.Monad (foldM, when)
+
+import Data.Char (isAlpha, toLower, toUpper)
+import Data.List (sort, nub, group, intercalate)
 import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes, listToMaybe)
-import qualified Compiler.Errors.Core as Error
-import Compiler.Errors.Core (ErrorSeverity(..), ErrorCategory(..), TypeError(..), ErrorLocation(..), ErrorContext(..),
-                            errorAt, errorWithCategory, warningAt, infoAt, 
-                            fatalError, withLocation, withContext, combineErrors,
-                            combinedErrorSeverity, filterByCategory, filterBySeverity,
-                            hasCategory, isAtLeast, severityPriority, location, line, column, 
-                            fatalRecovery, emptyContext, contextCode)
-import SourceLocation (toErrorLocation)
-import Data.Time (UTCTime, getCurrentTime)
-import Data.Ord (comparing)
-import Data.Function (on)
 import qualified Data.Set as Set
 
 -- ============================================================================
@@ -225,71 +201,71 @@ prop_catMaybes_preserves_order ms =
 
 -- | Test that either isLeft or isRight holds for any Either
 prop_either_left_or_right :: Either Int String -> Bool
-prop_either_left_or_right e = isLeft e || isRight e
+prop_either_left_or_right e = isLeft' e || isRight' e
   where
-    isLeft (Left _) = True
-    isLeft _ = False
-    isRight (Right _) = True
-    isRight _ = False
+    isLeft' (Left _) = True
+    isLeft' _ = False
+    isRight' (Right _) = True
+    isRight' _ = False
 
 -- | Test that isLeft and isRight are complementary
 prop_either_left_right_complementary :: Either Int String -> Bool
-prop_either_left_right_complementary e = isLeft e == not (isRight e)
+prop_either_left_right_complementary e = isLeft' e == not (isRight' e)
   where
-    isLeft (Left _) = True
-    isLeft _ = False
-    isRight (Right _) = True
-    isRight _ = False
+    isLeft' (Left _) = True
+    isLeft' _ = False
+    isRight' (Right _) = True
+    isRight' _ = False
 
 -- | Test that lefts returns only Left values
 prop_either_lefts :: [Either Int String] -> Bool
 prop_either_lefts es = 
-  let ls = lefts es
-  in all isLeft (map Left ls)
+  let ls = lefts' es
+  in all isLeft' (map Left ls)
   where
-    isLeft (Left _) = True
-    isLeft _ = False
-    lefts :: [Either a b] -> [a]
-    lefts [] = []
-    lefts (Left x : es) = x : lefts es
-    lefts (Right _ : es) = lefts es
+    isLeft' (Left _) = True
+    isLeft' _ = False
+    lefts' :: [Either a b] -> [a]
+    lefts' [] = []
+    lefts' (Left x : xs) = x : lefts' xs
+    lefts' (Right _ : xs) = lefts' xs
 
 -- | Test that rights returns only Right values
 prop_either_rights :: [Either Int String] -> Bool
 prop_either_rights es = 
-  let rs = rights es
-  in all isRight (map Right rs)
+  let rs = rights' es
+  in all isRight' (map Right rs)
   where
-    isRight (Right _) = True
-    isRight _ = False
-    rights :: [Either a b] -> [b]
-    rights [] = []
-    rights (Left _ : es) = rights es
-    rights (Right x : es) = x : rights es
+    isRight' (Right _) = True
+    isRight' _ = False
+    rights' :: [Either a b] -> [b]
+    rights' [] = []
+    rights' (Left _ : xs) = rights' xs
+    rights' (Right x : xs) = x : rights' xs
 
 -- | Test that partitionEithers separates Left and Right values
 prop_either_partition :: [Either Int String] -> Bool
 prop_either_partition es = 
-  let (ls, rs) = partitionEithers es
-  in lefts es == ls && rights es == rs
+  let (ls, rs) = partitionEithers' es
+  in lefts' es == ls && rights' es == rs
   where
-    lefts :: [Either a b] -> [a]
-    lefts [] = []
-    lefts (Left x : es) = x : lefts es
-    lefts (Right _ : es) = lefts es
+    lefts' :: [Either a b] -> [a]
+    lefts' [] = []
+    lefts' (Left x : xs) = x : lefts' xs
+    lefts' (Right _ : xs) = lefts' xs
     
-    rights :: [Either a b] -> [b]
-    rights [] = []
-    rights (Left _ : es) = rights es
-    rights (Right x : es) = x : rights es
+    rights' :: [Either a b] -> [b]
+    rights' [] = []
+    rights' (Left _ : xs) = rights' xs
+    rights' (Right x : xs) = x : rights' xs
     
-    partitionEithers :: [Either a b] -> ([a], [b])
-    partitionEithers [] = ([], [])
-    partitionEithers (Left x : es) = 
-      let (ls, rs) = partitionEithers es
+    partitionEithers' :: [Either a b] -> ([a], [b])
+    partitionEithers' [] = ([], [])
+    partitionEithers' (Left x : xs) = 
+      let (ls, rs) = partitionEithers' xs
       in (x : ls, rs)
-    partitionEithers (Right x : es) = 
-      let (ls, rs) = partitionEithers es
+    partitionEithers' (Right x : xs) = 
+      let (ls, rs) = partitionEithers' xs
       in (ls, x : rs)
 
 -- ============================================================================
@@ -346,7 +322,7 @@ prop_bool_or_false x = x || False == x
 
 -- | Test that function composition is associative
 prop_comp_associative :: Int -> Int -> Int -> Bool
-prop_comp_associative x y z = ((+1) . (*2)) ((+3) z) == ((+1) . ((*2) . (+3))) z
+prop_comp_associative _ _ z = ((+1) . (*2)) ((+3) z) == ((+1) . ((*2) . (+3))) z
 
 -- | Test that id is the identity for composition
 prop_comp_id_left :: Int -> Bool
@@ -362,7 +338,7 @@ prop_const x y = const x y == x
 
 -- | Test that flip f x y = f y x
 prop_flip :: Int -> Int -> Int -> Bool
-prop_flip x y z = flip (+) x y == (+) y x
+prop_flip x y _ = flip (+) x y == (+) y x
 
 -- ============================================================================
 -- Numeric Tests

@@ -7,16 +7,11 @@ import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 
-import Analyzer.SymbolTable (collectSymbolsAndTypes, collectSymbolsFromAST)
-import Analyzer.Types (SymbolInfo(..), SymbolKind(..), AnalyzerState(..), AnalysisContext(..), AnalysisPhase(..))
-import Dependencies.AST (AST(..), Statement(..), TypeExpr(..))
-import Dependencies.Parser (runParser)
+import Analyzer.SymbolTable (collectSymbolsAndTypes)
+import Analyzer.Types (AnalyzerState(..), AnalysisContext(..), AnalysisPhase(..))
 import Dependencies.TypeSystem (newDependentTypeChecker)
 import Ownership.Common.Types (newOwnershipAnalyzer)
 import qualified Data.Map.Strict as Map
-import qualified Data.Text as T
-import Data.List (nub, sort)
-import Data.Either (isLeft, isRight)
 import Control.Monad.State
 import Control.Monad.Except
 import System.IO.Unsafe (unsafePerformIO)

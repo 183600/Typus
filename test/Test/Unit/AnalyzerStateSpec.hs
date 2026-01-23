@@ -2,15 +2,11 @@ module Test.Unit.AnalyzerStateSpec where
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
-import qualified Analyzer.State as AS
-import qualified Analyzer.Types as AT
-import qualified Analyzer.SymbolTable as ST
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Maybe (isJust, isNothing, fromMaybe)
+import Data.Maybe (fromMaybe)
 
 -- 测试AnalyzerState的属性
 prop_analyzerstate_initial :: Property
@@ -74,7 +70,7 @@ prop_symboltable_scope_management :: String -> Property
 prop_symboltable_scope_management scopeName = 
   let table = testEmptySymbolTable
       table' = testEnterScope scopeName table
-      table'' = testAddSymbolToTable "test" "String" table'
+      _ = testAddSymbolToTable "test" "String" table'
       table''' = testExitScope table'
   in property $ testCurrentScope table' == Just scopeName &&
      testCurrentScope table''' == Nothing
@@ -219,7 +215,7 @@ prop_staterollback_consistency name symbolType =
   let state = testEmptyAnalyzerState
       state' = testAddSymbol name symbolType state
       checkpoint = testCreateCheckpoint state'
-      state'' = testAddSymbol "other" "OtherType" state'
+      _ = testAddSymbol "other" "OtherType" state'
       rolledBack = testRollbackToCheckpoint checkpoint
   in property $ Map.size (testAnalyzerSymbols rolledBack) == Map.size (testAnalyzerSymbols state')
 
@@ -343,7 +339,7 @@ testFunctionInput :: TestFunctionType -> String
 testFunctionInput (TestFunctionType input _) = input
 
 testFunctionOutput :: TestFunctionType -> String
-testFunctionOutput (TestFunctionType _ output) = output
+testFunctionOutput (TestFunctionType _ output') = output'
 
 testDependentBase :: TestDependentType -> String
 testDependentBase (TestDependentType base _) = base
@@ -352,10 +348,10 @@ testDependentConstraint :: TestDependentType -> String
 testDependentConstraint (TestDependentType _ constraint) = constraint
 
 testInferType :: String -> TestAnalyzerState -> Maybe (String, TestAnalyzerState)
-testInferType expr state = Just ("String", state)
+testInferType _ state = Just ("String", state)
 
 testCheckConstraint :: String -> String -> TestAnalyzerState -> Bool
-testCheckConstraint typeName constraint state = 
+testCheckConstraint typeName _ state = 
   Map.member typeName (testAnalyzerTypes state)
 
 testFindTransitiveDependencies :: String -> TestAnalyzerState -> [String]
@@ -386,7 +382,7 @@ testResolveSymbol :: String -> TestAnalyzerState -> Maybe String
 testResolveSymbol name state = Map.lookup name (testAnalyzerSymbols state)
 
 testTypeCheck :: String -> String -> TestAnalyzerState -> Either String TestAnalyzerState
-testTypeCheck expr expectedType state = 
+testTypeCheck expr _ state = 
   if null expr then Left "Empty expression" else Right state
 
 testMergeStates :: TestAnalyzerState -> TestAnalyzerState -> TestAnalyzerState

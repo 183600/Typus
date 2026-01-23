@@ -137,7 +137,7 @@ prop_removeLineComments_properties s =
     checkForCommentInString [] _ _ = False
     checkForCommentInString ('"':rest) _ _ = checkForCommentInString rest True False
     checkForCommentInString ('\'':rest) _ _ = checkForCommentInString rest False True
-    checkForCommentInString ('\\':c:rest) inString inChar = 
+    checkForCommentInString ('\\':_:rest) inString inChar = 
       checkForCommentInString rest inString inChar  -- Skip escaped characters but stay in the same mode
     checkForCommentInString ('/':'/':_) inString inChar = inString || inChar
     checkForCommentInString (_:rest) inString inChar = 

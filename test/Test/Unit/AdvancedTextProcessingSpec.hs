@@ -3,8 +3,8 @@
 module Test.Unit.AdvancedTextProcessingSpec (tests) where
 
 import Test.Tasty
-import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
+import Test.Tasty.HUnit
 import Utils
 
 tests :: TestTree

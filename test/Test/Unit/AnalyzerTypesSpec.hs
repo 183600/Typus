@@ -2,11 +2,9 @@ module Test.Unit.AnalyzerTypesSpec where
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
 import Analyzer.Types
 import qualified Data.Map.Strict as Map
-import qualified Ownership as Own
-import qualified Dependencies as Dep
+
 
 -- Test implementation for createAnalyzerState
 createAnalyzerState :: AnalyzerState
@@ -55,8 +53,8 @@ createAnalysisError errorMsg = errorMsg
 
 -- Test implementation for addAnalysisError
 addAnalysisError :: AnalyzerState -> String -> AnalyzerState
-addAnalysisError state error = 
-  let newError = IntegrationError error Error
+addAnalysisError state errMsg = 
+  let newError = IntegrationError errMsg Error
   in state { combinedErrorsAcc = combinedErrorsAcc state ++ [newError] }
 
 -- Test implementation for getAnalysisErrors
@@ -112,10 +110,10 @@ prop_analysis_result_accumulation results =
 prop_analysis_error_handling :: String -> Property
 prop_analysis_error_handling errorMsg =
   let state = createAnalyzerState
-      error = createAnalysisError errorMsg
-      stateWithError = addAnalysisError state error
+      err = createAnalysisError errorMsg
+      stateWithError = addAnalysisError state err
       errors = getAnalysisErrors stateWithError
-  in property $ error `elem` errors
+  in property $ err `elem` errors
 
 -- Test analysis warnings
 prop_analysis_warnings :: [String] -> Property
