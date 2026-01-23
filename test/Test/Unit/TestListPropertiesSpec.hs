@@ -72,7 +72,7 @@ testListProperties = testGroup "List Properties Tests"
       \(xs :: [Int]) -> map ((+1) . (*2)) xs == map (+1) (map (*2) xs)
       
   , testProperty "List: filter preserves order" $
-      \(xs :: [Int]) -> isOrdered (filter (>0) xs)
+      \(xs :: [Int]) -> preservesOrder (filter (>0) xs) xs
       
   , testProperty "List: filter of empty list is empty" $
       \() -> filter (>0) ([] :: [Int]) == []
@@ -80,8 +80,8 @@ testListProperties = testGroup "List Properties Tests"
   , testProperty "List: filter of cons with predicate true is cons of filter with predicate true" $
       \(x :: Int) (xs :: [Int]) -> filter (>0) (x:xs) == (if x > 0 then x : filter (>0) xs else filter (>0) xs)
       
-  , testProperty "List: filter of cons with predicate false is filter of tail" $
-      \(x :: Int) (xs :: [Int]) -> filter (<0) (x:xs) == filter (<0) xs
+  , testProperty "List: filter of cons with predicate false excludes the head" $
+      \(x :: Int) (xs :: [Int]) -> not (x < 0) ==> filter (<0) (x:xs) == filter (<0) xs
       
   , testProperty "List: all of empty list is true" $
       \() -> all (>0) ([] :: [Int]) == True
@@ -283,7 +283,16 @@ testListProperties = testGroup "List Properties Tests"
 
 -- Helper functions
 isOrdered :: Ord a => [a] -> Bool
-isOrdered xs = all (uncurry (<=)) (zip xs (tail xs))
+isOrdered [] = True
+isOrdered [_] = True
+isOrdered (x:y:xs) = x <= y && isOrdered (y:xs)
+
+preservesOrder :: Eq a => [a] -> [a] -> Bool
+preservesOrder [] _ = True
+preservesOrder _ [] = False
+preservesOrder (y:ys) (x:xs) 
+  | y == x = preservesOrder ys xs
+  | otherwise = preservesOrder (y:ys) xs
 
 isPrefix :: Eq a => [a] -> [a] -> Bool
 isPrefix [] _ = True
@@ -321,7 +330,7 @@ inits xs = inits (init xs) ++ [xs]
 
 tails :: [a] -> [[a]]
 tails [] = [[]]
-tails xs = xs : tails (tail xs)
+tails xs@(x:xs') = xs : tails xs'
 
 isPrefixOf :: Eq a => [a] -> [a] -> Bool
 isPrefixOf = isPrefix
