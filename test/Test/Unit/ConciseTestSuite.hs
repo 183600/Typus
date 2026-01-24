@@ -13,6 +13,7 @@ import qualified Test.Unit.ConciseErrorHandlerQuickCheckSpec as ErrorHandler
 import qualified Test.Unit.ConciseOwnershipQuickCheckSpec as Ownership
 import qualified Test.Unit.ConciseDependenciesQuickCheckSpec as Dependencies
 import qualified Test.Unit.ConciseIntegrationQuickCheckSpec as Integration
+import qualified Test.Unit.CodeGenerationQuickCheckSpec as CodeGeneration
 
 conciseTestSuite :: TestTree
 conciseTestSuite = testGroup "Concise Typus Test Suite (48 tests)"
@@ -24,6 +25,7 @@ conciseTestSuite = testGroup "Concise Typus Test Suite (48 tests)"
     , ErrorHandler.tests
     , Ownership.tests
     , Dependencies.tests
+    , CodeGeneration.tests
     ]
   , testGroup "Integration Tests"
     [ Integration.tests

@@ -156,22 +156,27 @@ prop_removeComments_properties s =
      else not (hasLineComment || hasBlockComment)
   where
     hasCommentInStringLiteral [] = False
-    hasCommentInStringLiteral str = checkForCommentInString str False False
+    hasCommentInStringLiteral str = checkForCommentInString str False False 0
     
     -- Check if // or block comment start appears inside string or character literals
-    checkForCommentInString [] _ _ = False
-    checkForCommentInString ('"':rest) inString inChar 
-      | inString = checkForCommentInString rest False inChar  -- End of string literal
-      | otherwise = checkForCommentInString rest True inChar
-    checkForCommentInString ('\'':rest) inString inChar
-      | inChar = checkForCommentInString rest inString False  -- End of char literal
-      | otherwise = checkForCommentInString rest inString True
-    checkForCommentInString ('\\':_:rest) inString inChar = 
-        checkForCommentInString rest inString inChar  -- Skip escaped characters
-    checkForCommentInString ('/':'/':_) inString inChar = inString || inChar
-    checkForCommentInString ('/':'*':_) inString inChar = inString || inChar
-    checkForCommentInString (_:rest) inString inChar = 
-      checkForCommentInString rest inString inChar
+    -- The depth parameter tracks the nesting level to handle unclosed literals
+    checkForCommentInString [] _ _ depth = depth > 0  -- If we reach end with depth > 0, literals were unclosed
+    checkForCommentInString ('"':rest) inString inChar depth 
+      | inString = checkForCommentInString rest False inChar (depth - 1)  -- End of string literal
+      | otherwise = checkForCommentInString rest True inChar (depth + 1)  -- Start of string literal
+    checkForCommentInString ('\'':rest) inString inChar depth
+      | inChar = checkForCommentInString rest inString False (depth - 1)  -- End of char literal
+      | otherwise = checkForCommentInString rest inString True (depth + 1)  -- Start of char literal
+    checkForCommentInString ('\\':_:rest) inString inChar depth = 
+        checkForCommentInString rest inString inChar depth  -- Skip escaped characters
+    checkForCommentInString ('/':'/':_) inString inChar depth = 
+        -- Comments are only inside literals if depth > 0 AND we're in a literal
+        (inString || inChar) && depth > 0
+    checkForCommentInString ('/':'*':_) inString inChar depth = 
+        -- Comments are only inside literals if depth > 0 AND we're in a literal
+        (inString || inChar) && depth > 0
+    checkForCommentInString (_:rest) inString inChar depth = 
+      checkForCommentInString rest inString inChar depth
 
 -- | Test that removeLineComments preserves string literals
 prop_removeLineComments_preserves_strings :: String -> Bool

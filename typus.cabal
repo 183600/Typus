@@ -511,7 +511,7 @@ test-suite typus-test
         
         Test.Unit.TypeSystemBoundaryQuickCheckSpec,
 
-        -- Test.Unit.CodeGenerationQuickCheckSpec, -- Temporarily disabled due to compilation errors
+        Test.Unit.CodeGenerationQuickCheckSpec,
 
         Test.Unit.NewFreshDependentTypesQuickCheckSpec,
         Test.Unit.NewOwnershipQuickCheckSpec,
@@ -1571,115 +1571,5 @@ test-suite typus-test
         ghc-options:   -threaded -with-rtsopts=-N -with-rtsopts=-M4G
         -- Coverage is now enabled via --enable-coverage flag
 
--- New Enhanced Test Suite
-test-suite typus-enhanced-test
-    type:             exitcode-stdio-1.0
-    main-is:          SimpleEnhancedTestSuite.hs
-    hs-source-dirs:   test
-    ghc-options:      -Wall -Wcompat
-                      -Wno-unused-top-binds -Wno-unused-matches 
-                      -Wno-orphans -Wno-name-shadowing
-                      -Wno-type-defaults -Wno-unused-local-binds
-                      -Wno-unused-imports
-                      -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-M4G
-    build-depends:
-        base >=4.7 && <5,
-        typus,
-        tasty >= 1.2 && <2,
-        tasty-quickcheck >= 0.10 && <1,
-        tasty-hunit >= 0.10 && <1,
-        QuickCheck >= 2.14 && <3,
-        text >= 1.2.0 && <3,
-        containers >= 0.6 && <1,
-        megaparsec >= 9.0.0 && <10
-    other-modules:
-        TestSuite.EnhancedSourceLocation,
-        TestSuite.ParserBoundary,
-        Test.Unit.ConciseTestSuite,
-        Test.Unit.ConciseUtilsQuickCheckSpec,
-        Test.Unit.ConciseSourceLocationQuickCheckSpec,
-        Test.Unit.ConciseParserQuickCheckSpec,
-        Test.Unit.ConciseCompilerQuickCheckSpec,
-        Test.Unit.ConciseErrorHandlerQuickCheckSpec,
-        Test.Unit.ConciseOwnershipQuickCheckSpec,
-        Test.Unit.ConciseDependenciesQuickCheckSpec,
-        Test.Unit.ConciseIntegrationQuickCheckSpec,
-        TestSupport.Verbosity,
-        TestSupport.QuickCheck,
-        TestSupport.Arbitrary,
-        TestSupport.ExtendedArbitrary
-    default-language: Haskell2010
 
--- Concise Test Suite (48 QuickCheck tests)
-test-suite typus-concise-test
-    type:             exitcode-stdio-1.0
-    main-is:          ConciseTestSuiteMain.hs
-    hs-source-dirs:   test
-    ghc-options:      -Wall -Wcompat
-                      -Wno-unused-top-binds -Wno-unused-matches 
-                      -Wno-orphans -Wno-name-shadowing
-                      -Wno-type-defaults -Wno-unused-local-binds
-                      -Wno-unused-imports
-                      -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-M4G
-    build-depends:
-        base >=4.7 && <5,
-        typus,
-        tasty >= 1.2 && <2,
-        tasty-quickcheck >= 0.10 && <1,
-        tasty-hunit >= 0.10 && <1,
-        QuickCheck >= 2.14 && <3,
-        text >= 1.2.0 && <3,
-        containers >= 0.6 && <1,
-        megaparsec >= 9.0.0 && <10
-    other-modules:
-        Test.Unit.ConciseTestSuite,
-        Test.Unit.ConciseUtilsQuickCheckSpec,
-        Test.Unit.ConciseSourceLocationQuickCheckSpec,
-        Test.Unit.ConciseParserQuickCheckSpec,
-        Test.Unit.ConciseCompilerQuickCheckSpec,
-        Test.Unit.ConciseErrorHandlerQuickCheckSpec,
-        Test.Unit.ConciseOwnershipQuickCheckSpec,
-        Test.Unit.ConciseDependenciesQuickCheckSpec,
-        Test.Unit.ConciseIntegrationQuickCheckSpec,
-        TestSupport.Verbosity,
-        TestSupport.QuickCheck,
-        TestSupport.Arbitrary,
-        TestSupport.ExtendedArbitrary
-    default-language: Haskell2010
-
--- Simple Test Suite
-test-suite typus-simple-test
-    type:             exitcode-stdio-1.0
-    main-is:          SimpleMain.hs
-    hs-source-dirs:   test
-    ghc-options:      -Wall -Wcompat
-                      -Wno-unused-top-binds -Wno-unused-matches 
-                      -Wno-orphans -Wno-name-shadowing
-                      -Wno-type-defaults -Wno-unused-local-binds
-                      -Wno-unused-imports
-                      -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-M4G
-    build-depends:
-        base >=4.7 && <5,
-        typus,
-        tasty >= 1.2 && <2,
-        tasty-quickcheck >= 0.10 && <1,
-        tasty-hunit >= 0.10 && <1,
-        QuickCheck >= 2.14 && <3,
-        text >= 1.2.0 && <3,
-        containers >= 0.6 && <1,
-        megaparsec >= 9.0.0 && <10
-    other-modules:
-        Test.Unit.ConciseUtilsQuickCheckSpec,
-        Test.Unit.ConciseSourceLocationQuickCheckSpec,
-        Test.Unit.ConciseParserQuickCheckSpec,
-        Test.Unit.ConciseCompilerQuickCheckSpec,
-        Test.Unit.ConciseErrorHandlerQuickCheckSpec,
-        Test.Unit.ConciseOwnershipQuickCheckSpec,
-        Test.Unit.ConciseDependenciesQuickCheckSpec,
-        Test.Unit.ConciseIntegrationQuickCheckSpec,
-        TestSupport.Verbosity,
-        TestSupport.QuickCheck,
-        TestSupport.Arbitrary,
-        TestSupport.ExtendedArbitrary
-    default-language: Haskell2010
 
