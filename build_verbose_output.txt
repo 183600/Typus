@@ -1,0 +1,50 @@
+Version 3.9.1, Git revision 49377548db1244e55d577b2e4107cf8f8579e060 x86_64 hpack-0.39.1
+2026-01-24 02:33:07.298501: [debug] Checking for project config at: /home/runner/work/Typus/Typus/stack.yaml
+2026-01-24 02:33:07.298730: [debug] Loading project config file stack.yaml
+2026-01-24 02:33:07.300545: [debug] Use of Casa server enabled: (CasaRepoPrefix "https://casa.stackage.org", 1280).
+2026-01-24 02:33:07.302808: [debug] (SQL) SELECT COUNT(*) FROM "last_performed" WHERE ("action"=?) AND ("timestamp">=?); [PersistInt64 1,PersistUTCTime 2026-01-23 02:33:07.302772329 UTC]
+2026-01-24 02:33:07.303290: [debug] Using package location completions from a lock file
+2026-01-24 02:33:07.305074: [debug] Loaded snapshot from Pantry database.
+2026-01-24 02:33:07.488476: [debug] Prefetching git repos: []
+2026-01-24 02:33:07.488530: [debug] []
+2026-01-24 02:33:07.508206: [debug] Asking for a supported GHC version
+2026-01-24 02:33:07.508343: [debug] Installed tools: 
+ - ghc-tinfo6-9.8.4
+2026-01-24 02:33:07.508456: [debug] Run process: /sbin/ldconfig -p
+2026-01-24 02:33:07.510459: [debug] Process finished in 2ms: /sbin/ldconfig -p
+2026-01-24 02:33:07.510523: [debug] Did not find shared library libc.musl-x86_64.so.1
+2026-01-24 02:33:07.510643: [debug] Run process: /usr/bin/ldd --version
+2026-01-24 02:33:07.512392: [debug] Process finished in 2ms: /usr/bin/ldd --version
+2026-01-24 02:33:07.512433: [debug] Found shared library libc6 in version: 2.39
+2026-01-24 02:33:07.512558: [debug] Did not find shared library libtinfo.so.5
+2026-01-24 02:33:07.512585: [debug] Found shared library libtinfo.so.6 in 'ldconfig -p' output
+2026-01-24 02:33:07.512619: [debug] Found shared library libncursesw.so.6 in 'ldconfig -p' output
+2026-01-24 02:33:07.512653: [debug] Found shared library libgmp.so.10 in 'ldconfig -p' output
+2026-01-24 02:33:07.512699: [debug] Did not find shared library libgmp.so.3
+2026-01-24 02:33:07.512721: [debug] Potential GHC builds: tinfo6, ncurses6
+2026-01-24 02:33:07.512767: [debug] Found already installed GHC builds: tinfo6
+2026-01-24 02:33:07.512884: [debug] (SQL) SELECT "id","actual_version","arch","ghc_path","ghc_size","ghc_modified","ghc_pkg_path","runghc_path","haddock_path","cabal_version","global_db","global_db_cache_size","global_db_cache_modified","info","global_dump" FROM "compiler_cache" WHERE "ghc_path"=?; [PersistText "/home/runner/.stack/programs/x86_64-linux/ghc-tinfo6-9.8.4/bin/ghc-9.8.4"]
+2026-01-24 02:33:07.542472: [debug] Loaded compiler information from cache
+2026-01-24 02:33:07.542557: [debug] Asking for a supported GHC version
+2026-01-24 02:33:07.542590: [debug] Resolving package entries
+2026-01-24 02:33:07.542635: [debug] Parsing the targets
+2026-01-24 02:33:07.545012: [debug] Applying and checking flags
+2026-01-24 02:33:07.554233: [debug] SourceMap constructed
+2026-01-24 02:33:07.558168: [debug] Starting to execute command inside EnvConfig
+2026-01-24 02:33:07.558753: [debug] Finding out which packages are already installed
+2026-01-24 02:33:07.558855: [debug] Run process: /home/runner/.stack/programs/x86_64-linux/ghc-tinfo6-9.8.4/bin/ghc-pkg-9.8.4 --global --no-user-package-db dump --expand-pkgroot
+2026-01-24 02:33:07.595061: [debug] Process finished in 36ms: /home/runner/.stack/programs/x86_64-linux/ghc-tinfo6-9.8.4/bin/ghc-pkg-9.8.4 --global --no-user-package-db dump --expand-pkgroot
+2026-01-24 02:33:07.606445: [debug] Run process: /home/runner/.stack/programs/x86_64-linux/ghc-tinfo6-9.8.4/bin/ghc-pkg-9.8.4 --user --no-user-package-db --package-db /home/runner/.stack/snapshots/x86_64-linux-tinfo6/bd309085b205e70662b7324d53035991501b1cd7dba31e42bd29f4c0872e4562/9.8.4/pkgdb dump --expand-pkgroot
+2026-01-24 02:33:07.656281: [debug] Process finished in 50ms: /home/runner/.stack/programs/x86_64-linux/ghc-tinfo6-9.8.4/bin/ghc-pkg-9.8.4 --user --no-user-package-db --package-db /home/runner/.stack/snapshots/x86_64-linux-tinfo6/bd309085b205e70662b7324d53035991501b1cd7dba31e42bd29f4c0872e4562/9.8.4/pkgdb dump --expand-pkgroot
+2026-01-24 02:33:07.660298: [debug] Run process: /home/runner/.stack/programs/x86_64-linux/ghc-tinfo6-9.8.4/bin/ghc-pkg-9.8.4 --user --no-user-package-db --package-db /home/runner/work/Typus/Typus/.stack-work/install/x86_64-linux-tinfo6/bd309085b205e70662b7324d53035991501b1cd7dba31e42bd29f4c0872e4562/9.8.4/pkgdb dump --expand-pkgroot
+2026-01-24 02:33:07.680098: [debug] Process finished in 20ms: /home/runner/.stack/programs/x86_64-linux/ghc-tinfo6-9.8.4/bin/ghc-pkg-9.8.4 --user --no-user-package-db --package-db /home/runner/work/Typus/Typus/.stack-work/install/x86_64-linux-tinfo6/bd309085b205e70662b7324d53035991501b1cd7dba31e42bd29f4c0872e4562/9.8.4/pkgdb dump --expand-pkgroot
+2026-01-24 02:33:07.680777: [debug] Constructing the build plan
+2026-01-24 02:33:07.682779: [debug] (SQL) SELECT "id","directory","type","pkg_src","active","path_env_var","haddock" FROM "config_cache" WHERE "directory"=? AND "type"=?; [PersistText "/home/runner/work/Typus/Typus/.stack-work/install/x86_64-linux-tinfo6/bd309085b205e70662b7324d53035991501b1cd7dba31e42bd29f4c0872e4562/9.8.4/",PersistText "lib:typus-0.12.2-KYNOs0UWBLdD9jidKoBXHJ"]
+2026-01-24 02:33:07.683139: [debug] (SQL) SELECT "id", "config_cache_id", "index", "option" FROM "config_cache_dir_option" WHERE ("config_cache_id"=?) ORDER BY "index"; [PersistInt64 304]
+2026-01-24 02:33:07.683318: [debug] (SQL) SELECT "id", "config_cache_id", "index", "option" FROM "config_cache_no_dir_option" WHERE ("config_cache_id"=?) ORDER BY "index"; [PersistInt64 304]
+2026-01-24 02:33:07.683558: [debug] (SQL) SELECT "id", "config_cache_id", "ghc_pkg_id" FROM "config_cache_dep" WHERE ("config_cache_id"=?); [PersistInt64 304]
+2026-01-24 02:33:07.683718: [debug] (SQL) SELECT "id", "config_cache_id", "component" FROM "config_cache_component" WHERE ("config_cache_id"=?); [PersistInt64 304]
+2026-01-24 02:33:07.684044: [debug] Start: getPackageFiles /home/runner/work/Typus/Typus/typus.cabal
+2026-01-24 02:33:08.554019: [debug] Finished in 870ms: getPackageFiles /home/runner/work/Typus/Typus/typus.cabal
+2026-01-24 02:33:08.565563: [debug] Checking if we are going to build multiple executables with the same name
+2026-01-24 02:33:08.565616: [debug] Executing the build plan

@@ -1,4 +1,1104 @@
-typus> test (suite: typus-test, args: +RTS -M1024m -A16m -RTS)
+typus-0.12.2: unregistering (dependencies changed)
+typus> configure (lib + exe + test)
+Configuring typus-0.12.2...
+typus> build (lib + exe + test) with ghc-9.8.4
+Preprocessing library for typus-0.12.2..
+Building library for typus-0.12.2..
+[ 1 of 58] Compiling Cli
+[ 2 of 58] Compiling CommandLineDebug
+[ 3 of 58] Compiling Compiler.Error
+[ 4 of 58] Compiling Compiler.GoAst
+[ 5 of 58] Compiling Compiler.GoLexer
+[ 6 of 58] Compiling Debug
+[ 7 of 58] Compiling DebugIntegration
+[ 8 of 58] Compiling Dependencies.AST
+[ 9 of 58] Compiling Dependencies.Parser
+[10 of 58] Compiling Dependencies.Stub
+[11 of 58] Compiling Dependencies.TypeSystem
+[12 of 58] Compiling Dependencies.Inference
+[13 of 58] Compiling Dependencies.Analyzer
+[14 of 58] Compiling Dependencies
+[15 of 58] Compiling DependentTypesParser
+[16 of 58] Compiling DependentTypesParser.Stub
+[17 of 58] Compiling EnhancedDebug
+[18 of 58] Compiling Cli.DebugRunner
+[19 of 58] Compiling Ownership.Common.Lexer
+[20 of 58] Compiling Ownership.Common.Types
+[21 of 58] Compiling Compiler.Errors.Types
+[22 of 58] Compiling Compiler.Errors.Core
+[23 of 58] Compiling ErrorHandler
+[24 of 58] Compiling Ownership.Lexer
+[25 of 58] Compiling Ownership.Parser
+[26 of 58] Compiling Ownership.Analyzer
+[27 of 58] Compiling Ownership.Reporter
+[28 of 58] Compiling Ownership
+[29 of 58] Compiling Analyzer.Types
+[30 of 58] Compiling Analyzer.State
+[31 of 58] Compiling Analyzer.CrossAnalysis
+[32 of 58] Compiling SimpleSyntaxValidator
+[33 of 58] Compiling SourceLocation
+[34 of 58] Compiling Ownership.Stub
+[35 of 58] Compiling Compiler.Errors.Compiler
+[36 of 58] Compiling EnhancedErrorHandler
+[37 of 58] Compiling Compiler.Errors
+[38 of 58] Compiling SyntaxValidator
+[39 of 58] Compiling Utils
+[40 of 58] Compiling Parser
+[41 of 58] Compiling Compiler.DependentTypeChecker
+[42 of 58] Compiling Compiler.GoParsing
+[43 of 58] Compiling Compiler.GoVarSpec
+[44 of 58] Compiling Compiler.ValueAnalysis
+[45 of 58] Compiling Compiler.OwnershipChecker
+[46 of 58] Compiling Compiler.IR
+[47 of 58] Compiling Compiler.TypeChecker
+[48 of 58] Compiling Compiler
+[49 of 58] Compiling Tooling.Error
+[50 of 58] Compiling GoToolchain
+[51 of 58] Compiling CompilerUtils
+[52 of 58] Compiling EmbedAssets
+[53 of 58] Compiling Cli.Runner
+[54 of 58] Compiling Analyzer.SymbolTable
+[55 of 58] Compiling Analyzer.OwnershipBridge
+[56 of 58] Compiling Analyzer.DependentTypeBridge
+[57 of 58] Compiling AnalyzerIntegration
+[58 of 58] Compiling IntegratedCompiler
+Preprocessing executable 'typus' for typus-0.12.2..
+Building executable 'typus' for typus-0.12.2..
+[1 of 1] Compiling Main [Cli.Runner package changed]
+[2 of 2] Linking .stack-work/dist/x86_64-linux-tinfo6/ghc-9.8.4/build/typus/typus [Objects changed]
+Preprocessing test suite 'typus-test' for typus-0.12.2..
+Building test suite 'typus-test' for typus-0.12.2..
+[   1 of 1025] Compiling Test.Golden.CompilerSpec
+[   2 of 1025] Compiling Test.Golden.Tests
+[   3 of 1025] Compiling Test.Golden
+[   4 of 1025] Compiling Test.Integration.AnalyzerSpec
+[   5 of 1025] Compiling Test.Integration.CLISpec
+[   6 of 1025] Compiling Test.Integration.FullProjectSpec
+[   7 of 1025] Compiling Test.Integration.IntegratedCompilerSpec
+[   8 of 1025] Compiling Test.Integration.OwnershipSpec
+[   9 of 1025] Compiling Test.Integration.PipelineSpec
+[  10 of 1025] Compiling Test.Integration.Tests
+[  11 of 1025] Compiling Test.Integration
+[  12 of 1025] Compiling Test.Unit.AdditionalCabalQuickCheckTests
+[  13 of 1025] Compiling Test.Unit.AdditionalQuickCheckTestsSpec
+[  14 of 1025] Compiling Test.Unit.AdvancedCompilerQuickCheckSpec
+[  15 of 1025] Compiling Test.Unit.AdvancedDependenciesQuickCheckSpec
+[  16 of 1025] Compiling Test.Unit.AdvancedEdgeCaseQuickCheckSpec
+[  17 of 1025] Compiling Test.Unit.AdvancedErrorHandlerQuickCheckSpec
+[  18 of 1025] Compiling Test.Unit.AdvancedGoToolchainQuickCheckSpec
+[  19 of 1025] Compiling Test.Unit.AdvancedOwnershipQuickCheckSpec
+[  20 of 1025] Compiling Test.Unit.AdvancedParserQuickCheckSpec
+[  21 of 1025] Compiling Test.Unit.AdvancedParserSpec
+[  22 of 1025] Compiling Test.Unit.AdvancedQuickCheckSpec
+[  23 of 1025] Compiling Test.Unit.AdvancedQuickCheckTestSpec
+[  24 of 1025] Compiling Test.Unit.AdvancedSourceLocationQuickCheckSpec
+[  25 of 1025] Compiling Test.Unit.AdvancedSourceLocationTestSpec
+[  26 of 1025] Compiling Test.Unit.AdvancedSyntaxValidatorQuickCheckSpec
+[  27 of 1025] Compiling Test.Unit.AdvancedTextProcessingSpec
+[  28 of 1025] Compiling Test.Unit.AnalyzerBasicQuickCheckSpec
+[  29 of 1025] Compiling Test.Unit.AnalyzerCrossAnalysisSpec
+[  30 of 1025] Compiling Test.Unit.AnalyzerIntegrationQuickCheckSpec
+[  31 of 1025] Compiling Test.Unit.AnalyzerQuickCheckSpec
+[  32 of 1025] Compiling Test.Unit.AnalyzerStateSpec
+[  33 of 1025] Compiling Test.Unit.AnalyzerSymbolTableQuickCheckTestSpec
+[  34 of 1025] Compiling Test.Unit.AnalyzerTypesSpec
+[  35 of 1025] Compiling Test.Unit.ArithmeticPropertiesQuickCheckSpec
+[  36 of 1025] Compiling Test.Unit.BasicParsingQuickCheckSpec
+[  37 of 1025] Compiling Test.Unit.BasicPropertiesQuickCheckSpec
+[  38 of 1025] Compiling Test.Unit.BasicQuickCheckTestSpec
+[  39 of 1025] Compiling Test.Unit.BasicQuickCheckTestSuite
+[  40 of 1025] Compiling Test.Unit.BasicQuickCheckTestsSpec
+[  41 of 1025] Compiling Test.Unit.BoundaryCasePropertiesSpec
+[  42 of 1025] Compiling Test.Unit.BoundaryConditionAdvancedQuickCheckSpec
+[  43 of 1025] Compiling Test.Unit.BoundaryConditionComprehensiveSpec
+[  44 of 1025] Compiling Test.Unit.BoundaryConditionSpec
+[  45 of 1025] Compiling Test.Unit.BoundaryConditionsAdvanced2025Spec
+[  46 of 1025] Compiling Test.Unit.BoundaryConditionsEnhancedQuickCheckSpec
+[  47 of 1025] Compiling Test.Unit.CLISpec
+[  48 of 1025] Compiling Test.Unit.CabalAnalyzerQuickCheckSpec
+[  49 of 1025] Compiling Test.Unit.CabalBoundaryConditionsSpec
+[  50 of 1025] Compiling Test.Unit.CabalCompilerQuickCheckSpec
+[  51 of 1025] Compiling Test.Unit.CabalConcurrentParsingSpec
+[  52 of 1025] Compiling Test.Unit.CabalCrossModuleIntegrationSpec
+[  53 of 1025] Compiling Test.Unit.CabalDependentTypesQuickCheckSpec
+[  54 of 1025] Compiling Test.Unit.CabalEndToEndSpec
+[  55 of 1025] Compiling Test.Unit.CabalEnhancedQuickCheckSpec
+[  56 of 1025] Compiling Test.Unit.CabalErrorHandlerQuickCheckSpec
+[  57 of 1025] Compiling Test.Unit.CabalErrorRecoverySpec
+[  58 of 1025] Compiling Test.Unit.CabalIntegrationQuickCheckSpec
+[  59 of 1025] Compiling Test.Unit.CabalMemorySafetySpec
+[  60 of 1025] Compiling Test.Unit.CabalOwnershipQuickCheckSpec
+[  61 of 1025] Compiling Test.Unit.CabalParserQuickCheckSpec
+[  62 of 1025] Compiling Test.Unit.CabalPerformanceSpec
+[  63 of 1025] Compiling Test.Unit.CabalQuickCheckPropertiesSpec
+[  64 of 1025] Compiling Test.Unit.CabalQuickCheckTestSpec
+[  65 of 1025] Compiling Test.Unit.CabalQuickCheckTests
+[  66 of 1025] Compiling Test.Unit.CabalRegressionSpec
+[  67 of 1025] Compiling Test.Unit.CabalSourceLocationQuickCheckSpec
+[  68 of 1025] Compiling Test.Unit.CabalSyntaxValidatorQuickCheckSpec
+[  69 of 1025] Compiling Test.Unit.CabalTestQuickCheckSpec
+[  70 of 1025] Compiling Test.Unit.CabalUnicodeHandlingSpec
+[  71 of 1025] Compiling Test.Unit.CabalUtilsQuickCheckSpec
+[  72 of 1025] Compiling Test.Unit.CliBasicFunctionsSpec
+[  73 of 1025] Compiling Test.Unit.CliDebugRunnerSpec
+[  74 of 1025] Compiling Test.Unit.CliIntegrationSpec
+[  75 of 1025] Compiling Test.Unit.CliQuickCheckSpec
+[  76 of 1025] Compiling Test.Unit.CliRunnerSpec
+[  77 of 1025] Compiling Test.Unit.CodeGenerationQuickCheckTestSpec
+[  78 of 1025] Compiling Test.Unit.CodeGenerationSpec
+[  79 of 1025] Compiling Test.Unit.CombinedFeaturesSpec
+[  80 of 1025] Compiling Test.Unit.CombinedModulesQuickCheckSpec
+[  81 of 1025] Compiling Test.Unit.CommandLineDebugInteractionSpec
+[  82 of 1025] Compiling Test.Unit.CommandLineDebugSpec
+[  83 of 1025] Compiling Test.Unit.CompactCabalQuickCheckSpec
+[  84 of 1025] Compiling Test.Unit.CompilerAdvancedQuickCheckSpec
+[  85 of 1025] Compiling Test.Unit.CompilerBasicFunctionsSpec
+[  86 of 1025] Compiling Test.Unit.CompilerBasicQuickCheckSpec
+[  87 of 1025] Compiling Test.Unit.CompilerCompilationLogicSpec
+[  88 of 1025] Compiling Test.Unit.CompilerComprehensiveQuickCheckSpec
+[  89 of 1025] Compiling Test.Unit.CompilerCoreFunctionalitySpec
+[  90 of 1025] Compiling Test.Unit.CompilerCoreFunctionalityTestSpec
+[  91 of 1025] Compiling Test.Unit.CompilerCorePropertiesSpec
+[  92 of 1025] Compiling Test.Unit.CompilerCoreQuickCheckTests
+[  93 of 1025] Compiling Test.Unit.CompilerCoreSpec
+[  94 of 1025] Compiling Test.Unit.CompilerErrorBoundarySpec
+[  95 of 1025] Compiling Test.Unit.CompilerErrorHandlerTestSpec
+[  96 of 1025] Compiling Test.Unit.CompilerErrorHandlingQuickCheckSpec
+[  97 of 1025] Compiling Test.Unit.CompilerErrorHandlingQuickCheckTestSpec
+[  98 of 1025] Compiling Test.Unit.CompilerErrorHandlingSpec
+[  99 of 1025] Compiling Test.Unit.CompilerErrorRecoveryQuickCheckSpec
+[ 100 of 1025] Compiling Test.Unit.CompilerErrorRecoverySpec
+[ 101 of 1025] Compiling Test.Unit.CompilerGoAstQuickCheckTestSpec
+[ 102 of 1025] Compiling Test.Unit.CompilerGoLexerQuickCheckTestSpec
+[ 103 of 1025] Compiling Test.Unit.CompilerGoParsingQuickCheckTestSpec
+[ 104 of 1025] Compiling Test.Unit.CompilerIRConsistencyQuickCheckSpec
+[ 105 of 1025] Compiling Test.Unit.CompilerIRConsistencyTestSpec
+[ 106 of 1025] Compiling Test.Unit.CompilerIRCoreQuickCheckSpec
+[ 107 of 1025] Compiling Test.Unit.CompilerIROptimizationQuickCheckSpec
+[ 108 of 1025] Compiling Test.Unit.CompilerIROptimizationSpec
+[ 109 of 1025] Compiling Test.Unit.CompilerIRPropertiesQuickCheckSpec
+[ 110 of 1025] Compiling Test.Unit.CompilerIRQuickCheckTestSpec
+[ 111 of 1025] Compiling Test.Unit.CompilerIRSpec
+[ 112 of 1025] Compiling Test.Unit.CompilerIntegrationQuickCheckSpec
+[ 113 of 1025] Compiling Test.Unit.CompilerIntegrationSpec
+[ 114 of 1025] Compiling Test.Unit.CompilerOptimizationAdvancedSpec
+[ 115 of 1025] Compiling Test.Unit.CompilerOptimizationCabalsSpec
+[ 116 of 1025] Compiling Test.Unit.CompilerOptimizationConsistencySpec
+[ 117 of 1025] Compiling Test.Unit.CompilerOptimizationInvariantSpec
+[ 118 of 1025] Compiling Test.Unit.CompilerOptimizationSpec
+[ 119 of 1025] Compiling Test.Unit.CompilerOptimizationTestSpec
+[ 120 of 1025] Compiling Test.Unit.CompilerOptimizationsQuickCheckSpec
+[ 121 of 1025] Compiling Test.Unit.CompilerOwnershipQuickCheckSpec
+[ 122 of 1025] Compiling Test.Unit.CompilerQuickCheckSpec
+[ 123 of 1025] Compiling Test.Unit.CompilerSpec
+[ 124 of 1025] Compiling Test.Unit.CompilerTypeCheckerQuickCheckTestSpec
+[ 125 of 1025] Compiling Test.Unit.CompilerUtilsPropertiesQuickCheckSpec
+[ 126 of 1025] Compiling Test.Unit.CompilerUtilsPropertiesSpec
+[ 127 of 1025] Compiling Test.Unit.ComprehensiveAnalyzerQuickCheckSpec
+[ 128 of 1025] Compiling Test.Unit.ComprehensiveCabalTestSuite
+[ 129 of 1025] Compiling Test.Unit.ComprehensiveCompilerQuickCheckSpec
+[ 130 of 1025] Compiling Test.Unit.ComprehensiveDependenciesQuickCheckSpec
+[ 131 of 1025] Compiling Test.Unit.ComprehensiveOwnershipQuickCheckSpec
+[ 132 of 1025] Compiling Test.Unit.ComprehensiveParserQuickCheckSpec
+[ 133 of 1025] Compiling Test.Unit.ComprehensiveQuickCheckSpec
+[ 134 of 1025] Compiling Test.Unit.ComprehensiveTypeCheckerQuickCheckSpec
+[ 135 of 1025] Compiling Test.Unit.ComprehensiveUtilsQuickCheckSpec
+[ 136 of 1025] Compiling Test.Unit.ConciseCabalQuickCheckSpec
+[ 137 of 1025] Compiling Test.Unit.ConciseCompilerIRQuickCheckSpec
+[ 138 of 1025] Compiling Test.Unit.ConciseCompilerQuickCheckSpec
+[ 139 of 1025] Compiling Test.Unit.ConciseDependenciesQuickCheckSpec
+[ 140 of 1025] Compiling Test.Unit.ConciseErrorHandlerQuickCheckSpec
+[ 141 of 1025] Compiling Test.Unit.ConciseIntegrationQuickCheckSpec
+[ 142 of 1025] Compiling Test.Unit.ConciseOwnershipQuickCheckSpec
+[ 143 of 1025] Compiling Test.Unit.ConciseParserQuickCheckSpec
+[ 144 of 1025] Compiling Test.Unit.ConciseSourceLocationQuickCheckSpec
+[ 145 of 1025] Compiling Test.Unit.ConciseSyntaxValidatorQuickCheckSpec
+[ 146 of 1025] Compiling Test.Unit.ConciseTypeSystemQuickCheckSpec
+[ 147 of 1025] Compiling Test.Unit.ConciseUtilsQuickCheckSpec
+[ 148 of 1025] Compiling Test.Unit.ConcurrentCompilationSpec
+[ 149 of 1025] Compiling Test.Unit.ConcurrentParsingQuickCheckSpec
+[ 150 of 1025] Compiling Test.Unit.ConcurrentSafetyAdvanced2025Spec
+[ 151 of 1025] Compiling Test.Unit.ConcurrentSafetyQuickCheckSpec
+[ 152 of 1025] Compiling Test.Unit.ConcurrentSafetySpec
+[ 153 of 1025] Compiling Test.Unit.CoreCompilerPropertiesQuickCheckSpec
+[ 154 of 1025] Compiling Test.Unit.CoreDataStructuresQuickCheckSpec
+[ 155 of 1025] Compiling Test.Unit.CoreDependenciesPropertiesQuickCheckSpec
+[ 156 of 1025] Compiling Test.Unit.CoreErrorHandlerPropertiesQuickCheckSpec
+[ 157 of 1025] Compiling Test.Unit.CoreErrorHandlerSpec
+[ 158 of 1025] Compiling Test.Unit.CoreFunctionalityBoundarySpec
+[ 159 of 1025] Compiling Test.Unit.CoreFunctionalityPropertiesSpec
+[ 160 of 1025] Compiling Test.Unit.CoreGoToolchainPropertiesQuickCheckSpec
+[ 161 of 1025] Compiling Test.Unit.CoreGoToolchainQuickCheckSpec
+[ 162 of 1025] Compiling Test.Unit.CoreIntegratedCompilerQuickCheckSpec
+[ 163 of 1025] Compiling Test.Unit.CoreIntegrationPropertiesQuickCheckSpec
+[ 164 of 1025] Compiling Test.Unit.CoreIntegrationSpec
+[ 165 of 1025] Compiling Test.Unit.CoreMathematicalPropertiesSpec
+[ 166 of 1025] Compiling Test.Unit.CoreModuleQuickCheckSpec
+[ 167 of 1025] Compiling Test.Unit.CoreOwnershipPropertiesQuickCheckSpec
+[ 168 of 1025] Compiling Test.Unit.CoreOwnershipSpec
+[ 169 of 1025] Compiling Test.Unit.CoreParserPropertiesQuickCheckSpec
+[ 170 of 1025] Compiling Test.Unit.CoreParserSpec
+[ 171 of 1025] Compiling Test.Unit.CorePerformancePropertiesQuickCheckSpec
+[ 172 of 1025] Compiling Test.Unit.CoreQuickCheckPropertiesSpec
+[ 173 of 1025] Compiling Test.Unit.CoreQuickCheckSpec
+[ 174 of 1025] Compiling Test.Unit.CoreQuickCheckTestSpec
+[ 175 of 1025] Compiling Test.Unit.CoreSourceLocationPropertiesQuickCheckSpec
+[ 176 of 1025] Compiling Test.Unit.ComprehensiveCoreQuickCheckSpec
+[ 177 of 1025] Compiling Test.Unit.CoreSourceLocationSpec
+[ 178 of 1025] Compiling Test.Unit.CoreSyntaxValidatorQuickCheckSpec
+[ 179 of 1025] Compiling Test.Unit.CoreUtilsPropertiesSpec
+[ 180 of 1025] Compiling Test.Unit.CoreUtilsSpec
+[ 181 of 1025] Compiling Test.Unit.CrossModuleIntegrationQuickCheckSpec
+[ 182 of 1025] Compiling Test.Unit.CrossModuleIntegrationSpec
+[ 183 of 1025] Compiling Test.Unit.CustomCompilerQuickCheckSpec
+[ 184 of 1025] Compiling Test.Unit.CustomDependentTypesQuickCheckSpec
+[ 185 of 1025] Compiling Test.Unit.CustomErrorHandlingQuickCheckSpec
+[ 186 of 1025] Compiling Test.Unit.CustomOwnershipQuickCheckSpec
+[ 187 of 1025] Compiling Test.Unit.CustomParserQuickCheckSpec
+[ 188 of 1025] Compiling Test.Unit.CustomSourceLocationQuickCheckSpec
+[ 189 of 1025] Compiling Test.Unit.CustomSymbolTableQuickCheckSpec
+[ 190 of 1025] Compiling Test.Unit.CustomSyntaxValidatorQuickCheckSpec
+[ 191 of 1025] Compiling Test.Unit.CustomUtilsQuickCheckSpec
+[ 192 of 1025] Compiling Test.Unit.DataStructuresQuickCheckSpec
+[ 193 of 1025] Compiling Test.Unit.DebugBasicFunctionsSpec
+[ 194 of 1025] Compiling Test.Unit.DebugEnhancedDebugTestSpec
+[ 195 of 1025] Compiling Test.Unit.DebugIntegrationCoreQuickCheckSpec
+[ 196 of 1025] Compiling Test.Unit.DebugIntegrationFlowSpec
+[ 197 of 1025] Compiling Test.Unit.DebugIntegrationPropertiesQuickCheckSpec
+[ 198 of 1025] Compiling Test.Unit.DebugIntegrationSpec
+[ 199 of 1025] Compiling Test.Unit.DebugQuickCheckSpec
+[ 200 of 1025] Compiling Test.Unit.DependenciesASTQuickCheckTestSpec
+[ 201 of 1025] Compiling Test.Unit.DependenciesAdvancedQuickCheckSpec
+[ 202 of 1025] Compiling Test.Unit.DependenciesBasicFunctionsSpec
+[ 203 of 1025] Compiling Test.Unit.DependenciesBoundarySpec
+[ 204 of 1025] Compiling Test.Unit.DependenciesComprehensiveQuickCheckSpec
+[ 205 of 1025] Compiling Test.Unit.DependenciesCoreQuickCheckSpec
+[ 206 of 1025] Compiling Test.Unit.DependenciesCoreSpec
+[ 207 of 1025] Compiling Test.Unit.DependenciesCycleDetectionSpec
+[ 208 of 1025] Compiling Test.Unit.DependenciesDependencyAnalysisSpec
+[ 209 of 1025] Compiling Test.Unit.DependenciesErrorHandlingQuickCheckSpec
+[ 210 of 1025] Compiling Test.Unit.DependenciesIntegratedCompilerTestSpec
+[ 211 of 1025] Compiling Test.Unit.DependenciesNewQuickCheckSpec
+[ 212 of 1025] Compiling Test.Unit.DependenciesQuickCheckSpec
+[ 213 of 1025] Compiling Test.Unit.DependenciesTypeSystemPropertiesSpec
+[ 214 of 1025] Compiling Test.Unit.DependenciesTypeSystemSpec
+[ 215 of 1025] Compiling Test.Unit.DependencyAnalysisAdvancedSpec
+[ 216 of 1025] Compiling Test.Unit.DependencyAnalysisCoreQuickCheckSpec
+[ 217 of 1025] Compiling Test.Unit.DependencyAnalysisQuickCheckTestSpec
+[ 218 of 1025] Compiling Test.Unit.DependencyAnalysisSpec
+[ 219 of 1025] Compiling Test.Unit.DependencyAnalysisTestSpec
+[ 220 of 1025] Compiling Test.Unit.DependencyCycleQuickCheckSpec
+[ 221 of 1025] Compiling Test.Unit.DependencyResolutionSpec
+[ 222 of 1025] Compiling Test.Unit.DependentTypeBridgeSpec
+[ 223 of 1025] Compiling Test.Unit.DependentTypeConstraintSpec
+[ 224 of 1025] Compiling Test.Unit.DependentTypeConstraintValidationSpec
+[ 225 of 1025] Compiling Test.Unit.DependentTypeInferenceSpec
+[ 226 of 1025] Compiling Test.Unit.DependentTypeSystemBoundaryQuickCheckSpec
+[ 227 of 1025] Compiling Test.Unit.DependentTypeSystemSpec
+[ 228 of 1025] Compiling Test.Unit.DependentTypeValidationCabalsSpec
+[ 229 of 1025] Compiling Test.Unit.DependentTypeValidationQuickCheckSpec
+[ 230 of 1025] Compiling Test.Unit.DependentTypeValidationTestSpec
+[ 231 of 1025] Compiling Test.Unit.DependentTypesBasicQuickCheckSpec
+[ 232 of 1025] Compiling Test.Unit.DependentTypesComprehensiveQuickCheckSpec
+[ 233 of 1025] Compiling Test.Unit.DependentTypesCoreQuickCheckTests
+[ 234 of 1025] Compiling Test.Unit.DependentTypesParserPropertiesSpec
+[ 235 of 1025] Compiling Test.Unit.DependentTypesQuickCheckSpec
+[ 236 of 1025] Compiling Test.Unit.DependentTypesSpec
+[ 237 of 1025] Compiling Test.Unit.DependentTypesSystemQuickCheckSpec
+[ 238 of 1025] Compiling Test.Unit.DirectiveInteractionSpec
+[ 239 of 1025] Compiling Test.Unit.EdgeCaseSpec
+[ 240 of 1025] Compiling Test.Unit.EfficientCabalQuickCheckSpec
+[ 241 of 1025] Compiling Test.Unit.EmbedAssetsBasicSpec
+[ 242 of 1025] Compiling Test.Unit.EmbedAssetsCLITestSpec
+[ 243 of 1025] Compiling Test.Unit.EmbedAssetsConsistencySpec
+[ 244 of 1025] Compiling Test.Unit.EmbedAssetsSpec
+[ 245 of 1025] Compiling Test.Unit.EndToEndIntegrationTestSpec
+[ 246 of 1025] Compiling Test.Unit.EnhancedBoundaryConditionsSpec
+[ 247 of 1025] Compiling Test.Unit.EnhancedCabalQuickCheckSpec
+[ 248 of 1025] Compiling Test.Unit.EnhancedCabalQuickCheckTestSpec
+[ 249 of 1025] Compiling Test.Unit.EnhancedCabalTestQuickCheckSpec
+[ 250 of 1025] Compiling Test.Unit.EnhancedCabalTestSuiteSpec
+[ 251 of 1025] Compiling Test.Unit.EnhancedCompilerBasicSpec
+[ 252 of 1025] Compiling Test.Unit.EnhancedCompilerIRPropertiesQuickCheckSpec
+[ 253 of 1025] Compiling Test.Unit.EnhancedCompilerQuickCheckPropertiesSpec
+[ 254 of 1025] Compiling Test.Unit.EnhancedCompilerQuickCheckSpec
+[ 255 of 1025] Compiling Test.Unit.EnhancedCompilerSpec
+[ 256 of 1025] Compiling Test.Unit.EnhancedCompilerTestSpec
+[ 257 of 1025] Compiling Test.Unit.EnhancedCoreQuickCheckSpec
+[ 258 of 1025] Compiling Test.Unit.EnhancedDebugCoreSpec
+[ 259 of 1025] Compiling Test.Unit.EnhancedDebugQuickCheckSpec
+[ 260 of 1025] Compiling Test.Unit.EnhancedDependenciesQuickCheckPropertiesSpec
+[ 261 of 1025] Compiling Test.Unit.EnhancedDependenciesSpec
+[ 262 of 1025] Compiling Test.Unit.EnhancedDependentTypeSystemBoundaryQuickCheckSpec
+[ 263 of 1025] Compiling Test.Unit.EnhancedDependentTypesQuickCheckSpec
+[ 264 of 1025] Compiling Test.Unit.EnhancedDependentTypesSpec
+[ 265 of 1025] Compiling Test.Unit.EnhancedErrorHandlerCoreQuickCheckSpec
+[ 266 of 1025] Compiling Test.Unit.EnhancedErrorHandlerPropertiesQuickCheckSpec
+[ 267 of 1025] Compiling Test.Unit.EnhancedErrorHandlerPropertiesSpec
+[ 268 of 1025] Compiling Test.Unit.EnhancedErrorHandlerQuickCheckPropertiesSpec
+[ 269 of 1025] Compiling Test.Unit.EnhancedErrorHandlerSpec
+[ 270 of 1025] Compiling Test.Unit.EnhancedErrorHandlingQuickCheckSpec
+[ 271 of 1025] Compiling Test.Unit.EnhancedErrorHandlingSpec
+[ 272 of 1025] Compiling Test.Unit.EnhancedIntegrationQuickCheckSpec
+[ 273 of 1025] Compiling Test.Unit.EnhancedIntegrationSpec
+[ 274 of 1025] Compiling Test.Unit.EnhancedOwnershipBoundaryQuickCheckSpec
+[ 275 of 1025] Compiling Test.Unit.EnhancedOwnershipQuickCheckPropertiesSpec
+[ 276 of 1025] Compiling Test.Unit.EnhancedOwnershipQuickCheckSpec
+[ 277 of 1025] Compiling Test.Unit.EnhancedOwnershipSpec
+[ 278 of 1025] Compiling Test.Unit.EnhancedParserBasicSpec
+[ 279 of 1025] Compiling Test.Unit.EnhancedParserErrorHandlingQuickCheckSpec
+[ 280 of 1025] Compiling Test.Unit.EnhancedParserPropertiesSpec
+[ 281 of 1025] Compiling Test.Unit.EnhancedParserQuickCheckPropertiesSpec
+[ 282 of 1025] Compiling Test.Unit.EnhancedParserQuickCheckSpec
+[ 283 of 1025] Compiling Test.Unit.EnhancedParserSpec
+[ 284 of 1025] Compiling Test.Unit.EnhancedParserTestSpec
+[ 285 of 1025] Compiling Test.Unit.EnhancedPerformanceSpec
+[ 286 of 1025] Compiling Test.Unit.EnhancedQuickCheckSpec
+[ 287 of 1025] Compiling Test.Unit.EnhancedQuickCheckTestSpec
+[ 288 of 1025] Compiling Test.Unit.EnhancedSourceLocationAdvancedQuickCheckSpec
+[ 289 of 1025] Compiling Test.Unit.EnhancedSourceLocationMathSpec
+[ 290 of 1025] Compiling Test.Unit.EnhancedSourceLocationQuickCheckPropertiesSpec
+[ 291 of 1025] Compiling Test.Unit.EnhancedSourceLocationQuickCheckSpec
+[ 292 of 1025] Compiling Test.Unit.EnhancedTextProcessingQuickCheckSpec
+[ 293 of 1025] Compiling Test.Unit.EnhancedUtilsBoundaryQuickCheckSpec
+[ 294 of 1025] Compiling Test.Unit.EnhancedUtilsQuickCheckPropertiesSpec
+[ 295 of 1025] Compiling Test.Unit.EnhancedUtilsQuickCheckSpec
+[ 296 of 1025] Compiling Test.Unit.EnhancedUtilsSpec
+[ 297 of 1025] Compiling Test.Unit.EnhancedUtilsStringProcessingSpec
+[ 298 of 1025] Compiling Test.Unit.ErrorBoundarySpec
+[ 299 of 1025] Compiling Test.Unit.ErrorHandlerAdvancedQuickCheckSpec
+[ 300 of 1025] Compiling Test.Unit.ErrorHandlerBasicFunctionsSpec
+[ 301 of 1025] Compiling Test.Unit.ErrorHandlerComprehensiveQuickCheckSpec
+[ 302 of 1025] Compiling Test.Unit.ErrorHandlerConsistencyAdvancedQuickCheckSpec
+[ 303 of 1025] Compiling Test.Unit.ErrorHandlerConsistencyCabalsSpec
+[ 304 of 1025] Compiling Test.Unit.ErrorHandlerConsistencyQuickCheckSpec
+[ 305 of 1025] Compiling Test.Unit.ErrorHandlerConsistencySpec
+[ 306 of 1025] Compiling Test.Unit.ErrorHandlerCoreComprehensiveSpec
+[ 307 of 1025] Compiling Test.Unit.ErrorHandlerCorePropertiesSpec
+[ 308 of 1025] Compiling Test.Unit.ErrorHandlerCoreQuickCheckSpec
+[ 309 of 1025] Compiling Test.Unit.ErrorHandlerCoreQuickCheckTests
+[ 310 of 1025] Compiling Test.Unit.ErrorHandlerCoreSpec
+[ 311 of 1025] Compiling Test.Unit.ErrorHandlerErrorHandlingSpec
+[ 312 of 1025] Compiling Test.Unit.ErrorHandlerNewQuickCheckSpec
+[ 313 of 1025] Compiling Test.Unit.ErrorHandlerQuickCheckSpec
+[ 314 of 1025] Compiling Test.Unit.ErrorHandlerQuickCheckTestSpec
+[ 315 of 1025] Compiling Test.Unit.ErrorHandlerRecoverySpec
+[ 316 of 1025] Compiling Test.Unit.ErrorHandlerRecoveryTestSpec
+[ 317 of 1025] Compiling Test.Unit.ErrorHandlerResilienceSpec
+[ 318 of 1025] Compiling Test.Unit.ErrorHandlerSpec
+[ 319 of 1025] Compiling Test.Unit.ErrorHandlingBasicQuickCheckSpec
+[ 320 of 1025] Compiling Test.Unit.ErrorHandlingBoundaryQuickCheckSpec
+[ 321 of 1025] Compiling Test.Unit.ErrorHandlingCabalTestsSpec
+[ 322 of 1025] Compiling Test.Unit.ErrorHandlingComprehensiveQuickCheckSpec
+[ 323 of 1025] Compiling Test.Unit.ErrorHandlingComprehensiveSpec
+[ 324 of 1025] Compiling Test.Unit.ErrorHandlingConsistencyQuickCheckSpec
+[ 325 of 1025] Compiling Test.Unit.ErrorHandlingConsistencySpec
+[ 326 of 1025] Compiling Test.Unit.ErrorHandlingCoreSpec
+[ 327 of 1025] Compiling Test.Unit.ErrorHandlingPropertySpec
+[ 328 of 1025] Compiling Test.Unit.ErrorHandlingQuickCheckSpec
+[ 329 of 1025] Compiling Test.Unit.ErrorHandlingRecoveryQuickCheckSpec
+[ 330 of 1025] Compiling Test.Unit.ErrorHandlingSpec
+[ 331 of 1025] Compiling Test.Unit.ErrorHandlingTestSpec
+[ 332 of 1025] Compiling Test.Unit.ErrorLocationTrackingQuickCheckSpec
+[ 333 of 1025] Compiling Test.Unit.ErrorRecoveryAdvancedQuickCheckSpec
+[ 334 of 1025] Compiling Test.Unit.ErrorRecoveryAdvancedSpec
+[ 335 of 1025] Compiling Test.Unit.ErrorRecoveryAdvancedTest2025Spec
+[ 336 of 1025] Compiling Test.Unit.ErrorRecoveryConsistencyNewSpec
+[ 337 of 1025] Compiling Test.Unit.ErrorRecoveryConsistencySpec
+[ 338 of 1025] Compiling Test.Unit.ErrorRecoveryEnhancedQuickCheckSpec
+[ 339 of 1025] Compiling Test.Unit.ErrorRecoveryPropertiesSpec
+[ 340 of 1025] Compiling Test.Unit.ErrorRecoveryQuickCheckSpec
+[ 341 of 1025] Compiling Test.Unit.ErrorRecoveryQuickCheckTestSpec
+[ 342 of 1025] Compiling Test.Unit.ErrorReportingQuickCheckSpec
+[ 343 of 1025] Compiling Test.Unit.ExtendedAnalyzerQuickCheckSpec
+[ 344 of 1025] Compiling Test.Unit.ExtendedCompilerQuickCheckSpec
+[ 345 of 1025] Compiling Test.Unit.ExtendedOwnershipQuickCheckSpec
+[ 346 of 1025] Compiling Test.Unit.ExtendedParserQuickCheckSpec
+[ 347 of 1025] Compiling Test.Unit.ExtendedTypeCheckerQuickCheckSpec
+[ 348 of 1025] Compiling Test.Unit.ExtendedUtilsQuickCheckSpec
+[ 349 of 1025] Compiling Test.Unit.FastCabalQuickCheckSpec
+[ 350 of 1025] Compiling Test.Unit.FinalQuickCheckTestSpec
+[ 351 of 1025] Compiling Test.Unit.FinalQuickCheckTestSuite
+[ 352 of 1025] Compiling Test.Unit.FocusedQuickCheckSpec
+[ 353 of 1025] Compiling Test.Unit.FreshCabalQuickCheckSpec
+[ 354 of 1025] Compiling Test.Unit.GoAstQuickCheckSpec
+[ 355 of 1025] Compiling Test.Unit.GoLexerPropertiesQuickCheckSpec
+[ 356 of 1025] Compiling Test.Unit.GoParsingPropertiesQuickCheckSpec
+[ 357 of 1025] Compiling Test.Unit.GoToolchainBasicSpec
+[ 358 of 1025] Compiling Test.Unit.GoToolchainCoreQuickCheckSpec
+[ 359 of 1025] Compiling Test.Unit.GoToolchainIntegrationQuickCheckSpec
+[ 360 of 1025] Compiling Test.Unit.GoToolchainIntegrationSpec
+[ 361 of 1025] Compiling Test.Unit.GoToolchainQuickCheckSpec
+[ 362 of 1025] Compiling Test.Unit.GoToolchainSpec
+[ 363 of 1025] Compiling Test.Unit.IRBasicQuickCheckSpec
+[ 364 of 1025] Compiling Test.Unit.IRGenerationConsistencySpec
+[ 365 of 1025] Compiling Test.Unit.IRPropertiesQuickCheckSpec
+[ 366 of 1025] Compiling Test.Unit.IRQuickCheckSpec
+[ 367 of 1025] Compiling Test.Unit.IntegratedCompilerConsistencySpec
+[ 368 of 1025] Compiling Test.Unit.IntegratedCompilerPropertiesQuickCheckSpec
+[ 369 of 1025] Compiling Test.Unit.IntegratedCompilerPropertiesSpec
+[ 370 of 1025] Compiling Test.Unit.IntegratedCompilerQuickCheckTestSpec
+[ 371 of 1025] Compiling Test.Unit.IntegratedCompilerSpec
+[ 372 of 1025] Compiling Test.Unit.IntegrationAdditionalQuickCheckSpec
+[ 373 of 1025] Compiling Test.Unit.IntegrationAdvancedQuickCheckSpec
+[ 374 of 1025] Compiling Test.Unit.IntegrationBasicSpec
+[ 375 of 1025] Compiling Test.Unit.IntegrationCabalTestsSpec
+[ 376 of 1025] Compiling Test.Unit.IntegrationComplexWorkflowsSpec
+[ 377 of 1025] Compiling Test.Unit.IntegrationComprehensiveSpec
+[ 378 of 1025] Compiling Test.Unit.IntegrationEndToEndCabalsSpec
+[ 379 of 1025] Compiling Test.Unit.IntegrationEndToEndNewSpec
+[ 380 of 1025] Compiling Test.Unit.IntegrationEndToEndQuickCheckSpec
+[ 381 of 1025] Compiling Test.Unit.IntegrationEndToEndSpec
+[ 382 of 1025] Compiling Test.Unit.IntegrationEndToEndTestSpec
+[ 383 of 1025] Compiling Test.Unit.IntegrationEnhancedQuickCheckSpec
+[ 384 of 1025] Compiling Test.Unit.IntegrationFeaturesQuickCheckSpec
+[ 385 of 1025] Compiling Test.Unit.IntegrationPipelineSpec
+[ 386 of 1025] Compiling Test.Unit.IntegrationQuickCheckSpec
+[ 387 of 1025] Compiling Test.Unit.IntegrationQuickCheckTestSpec
+[ 388 of 1025] Compiling Test.Unit.IntegrationSpec
+[ 389 of 1025] Compiling Test.Unit.IntegrationTestSpec
+[ 390 of 1025] Compiling Test.Unit.IntegrationWorkflowSpec
+[ 391 of 1025] Compiling Test.Unit.LexerBoundaryQuickCheckSpec
+[ 392 of 1025] Compiling Test.Unit.LightweightCabalQuickCheckSpec
+[ 393 of 1025] Compiling Test.Unit.ListPropertiesQuickCheckSpec
+[ 394 of 1025] Compiling Test.Unit.MapPropertiesQuickCheckSpec
+[ 395 of 1025] Compiling Test.Unit.MathematicalPropertiesQuickCheckSpec
+[ 396 of 1025] Compiling Test.Unit.MemoryEfficiencySpec
+[ 397 of 1025] Compiling Test.Unit.MemorySafetyQuickCheckSpec
+[ 398 of 1025] Compiling Test.Unit.MemorySafetySpec
+[ 399 of 1025] Compiling Test.Unit.MinimalCabalQuickCheckSpec
+[ 400 of 1025] Compiling Test.Unit.ModuleIntegrationPropertiesSpec
+[ 401 of 1025] Compiling Test.Unit.MonadPropertiesQuickCheckSpec
+[ 402 of 1025] Compiling Test.Unit.NewAdditionalDependenciesQuickCheckSpec
+[ 403 of 1025] Compiling Test.Unit.NewAdditionalDependenciesQuickCheckTestSpec
+[ 404 of 1025] Compiling Test.Unit.NewAdditionalErrorHandlerQuickCheckTestSpec
+[ 405 of 1025] Compiling Test.Unit.NewAdditionalParserQuickCheckSpec
+[ 406 of 1025] Compiling Test.Unit.NewAdditionalParserQuickCheckTestSpec
+[ 407 of 1025] Compiling Test.Unit.NewAdditionalQuickCheckSpec
+[ 408 of 1025] Compiling Test.Unit.NewAdditionalSourceLocationQuickCheckSpec
+[ 409 of 1025] Compiling Test.Unit.NewAdditionalSourceLocationQuickCheckTestSpec
+[ 410 of 1025] Compiling Test.Unit.NewAdditionalUtilsQuickCheckSpec
+[ 411 of 1025] Compiling Test.Unit.NewAdditionalUtilsQuickCheckTestSpec
+[ 412 of 1025] Compiling Test.Unit.NewAdvancedOwnershipQuickCheckSpec
+[ 413 of 1025] Compiling Test.Unit.NewAdvancedSourceLocationQuickCheckSpec
+[ 414 of 1025] Compiling Test.Unit.NewAnalyzerIntegrationSpec
+[ 415 of 1025] Compiling Test.Unit.NewBasicTypesAndStringPropertiesSpec
+[ 416 of 1025] Compiling Test.Unit.NewBoundaryConditionQuickCheckPropertySpec
+[ 417 of 1025] Compiling Test.Unit.NewBoundaryConditionsQuickCheckSpec
+[ 418 of 1025] Compiling Test.Unit.NewCabalCompilerIRSpec
+[ 419 of 1025] Compiling Test.Unit.NewCabalCompilerInvariantSpec
+[ 420 of 1025] Compiling Test.Unit.NewCabalComprehensiveTestsSpec
+[ 421 of 1025] Compiling Test.Unit.NewCabalCoreFunctionalitySpec
+[ 422 of 1025] Compiling Test.Unit.NewCabalCoreSpec
+[ 423 of 1025] Compiling Test.Unit.NewCabalCoreTestsSpec
+[ 424 of 1025] Compiling Test.Unit.NewCabalDependenciesQuickCheckSpec
+[ 425 of 1025] Compiling Test.Unit.NewCabalDependencyCycleSpec
+[ 426 of 1025] Compiling Test.Unit.NewCabalEdgeCaseSpec
+[ 427 of 1025] Compiling Test.Unit.NewCabalEnhancedTestSpec
+[ 428 of 1025] Compiling Test.Unit.NewCabalErrorHandlerConsistencySpec
+[ 429 of 1025] Compiling Test.Unit.NewCabalErrorHandlerQuickCheckSpec
+[ 430 of 1025] Compiling Test.Unit.NewCabalErrorHandlerSpec
+[ 431 of 1025] Compiling Test.Unit.NewCabalErrorRecoverySpec
+[ 432 of 1025] Compiling Test.Unit.NewCabalIntegrationEndToEndSpec
+[ 433 of 1025] Compiling Test.Unit.NewCabalIntegrationSpec
+[ 434 of 1025] Compiling Test.Unit.NewCabalMathPropertiesSpec
+[ 435 of 1025] Compiling Test.Unit.NewCabalOwnershipQuickCheckSpec
+[ 436 of 1025] Compiling Test.Unit.NewCabalOwnershipSafetySpec
+[ 437 of 1025] Compiling Test.Unit.NewCabalOwnershipTransitivitySpec
+[ 438 of 1025] Compiling Test.Unit.NewCabalParserBoundarySpec
+[ 439 of 1025] Compiling Test.Unit.NewCabalParserErrorRecoverySpec
+[ 440 of 1025] Compiling Test.Unit.NewCabalParserQuickCheckSpec
+[ 441 of 1025] Compiling Test.Unit.NewCabalParserSpec
+[ 442 of 1025] Compiling Test.Unit.NewCabalPerformanceMemorySpec
+[ 443 of 1025] Compiling Test.Unit.NewCabalPerformanceSpec
+[ 444 of 1025] Compiling Test.Unit.NewCabalPropertySpec
+[ 445 of 1025] Compiling Test.Unit.NewCabalQuickCheckPropertiesSpec
+[ 446 of 1025] Compiling Test.Unit.NewCabalQuickCheckSpec
+[ 447 of 1025] Compiling Test.Unit.NewCabalQuickCheckSpec1
+[ 448 of 1025] Compiling Test.Unit.NewCabalQuickCheckSpec10
+[ 449 of 1025] Compiling Test.Unit.NewCabalQuickCheckSpec2
+[ 450 of 1025] Compiling Test.Unit.NewCabalQuickCheckSpec3
+[ 451 of 1025] Compiling Test.Unit.NewCabalQuickCheckSpec4
+[ 452 of 1025] Compiling Test.Unit.NewCabalQuickCheckSpec5
+[ 453 of 1025] Compiling Test.Unit.NewCabalQuickCheckSpec6
+[ 454 of 1025] Compiling Test.Unit.NewCabalQuickCheckSpec7
+[ 455 of 1025] Compiling Test.Unit.NewCabalQuickCheckSpec8
+[ 456 of 1025] Compiling Test.Unit.NewCabalQuickCheckSpec9
+[ 457 of 1025] Compiling Test.Unit.NewCabalQuickCheckTestCasesSpec
+[ 458 of 1025] Compiling Test.Unit.NewCabalQuickCheckTestSpec
+[ 459 of 1025] Compiling Test.Unit.NewCabalQuickCheckTestSuite2Spec
+[ 460 of 1025] Compiling Test.Unit.NewCabalQuickCheckTestsSpec
+[ 461 of 1025] Compiling Test.Unit.NewCabalSourceLocationQuickCheckSpec
+[ 462 of 1025] Compiling Test.Unit.NewCabalSourceLocationSpec
+[ 463 of 1025] Compiling Test.Unit.NewCabalSyntaxValidatorQuickCheckSpec
+[ 464 of 1025] Compiling Test.Unit.NewCabalTest10Spec
+[ 465 of 1025] Compiling Test.Unit.NewCabalTest1Spec
+[ 466 of 1025] Compiling Test.Unit.NewCabalTest2Spec
+[ 467 of 1025] Compiling Test.Unit.NewCabalTest3Spec
+[ 468 of 1025] Compiling Test.Unit.NewCabalTest4Spec
+[ 469 of 1025] Compiling Test.Unit.NewCabalTest5Spec
+[ 470 of 1025] Compiling Test.Unit.NewCabalTest6Spec
+[ 471 of 1025] Compiling Test.Unit.NewCabalTest7Spec
+[ 472 of 1025] Compiling Test.Unit.NewCabalTest8Spec
+[ 473 of 1025] Compiling Test.Unit.NewCabalTest9Spec
+[ 474 of 1025] Compiling Test.Unit.NewCabalTestCasesSpec
+[ 475 of 1025] Compiling Test.Unit.NewCabalTestQuickCheckSpec
+[ 476 of 1025] Compiling Test.Unit.NewCabalTestSpec
+[ 477 of 1025] Compiling Test.Unit.NewCabalTestSpec1
+[ 478 of 1025] Compiling Test.Unit.NewCabalTestSpec10
+[ 479 of 1025] Compiling Test.Unit.NewCabalTestSpec2
+[ 480 of 1025] Compiling Test.Unit.NewCabalTestSpec3
+[ 481 of 1025] Compiling Test.Unit.NewCabalTestSpec4
+[ 482 of 1025] Compiling Test.Unit.NewCabalTestSpec5
+[ 483 of 1025] Compiling Test.Unit.NewCabalTestSpec6
+[ 484 of 1025] Compiling Test.Unit.NewCabalTestSpec7
+[ 485 of 1025] Compiling Test.Unit.NewCabalTestSpec8
+[ 486 of 1025] Compiling Test.Unit.NewCabalTestSpec9
+[ 487 of 1025] Compiling Test.Unit.NewCabalTestSuiteQuickCheckSpec
+[ 488 of 1025] Compiling Test.Unit.NewCabalTestSuiteSpec
+[ 489 of 1025] Compiling Test.Unit.NewCabalTestsSpec
+[ 490 of 1025] Compiling Test.Unit.NewCabalTypeSystemBoundarySpec
+[ 491 of 1025] Compiling Test.Unit.NewCabalTypeSystemSpec
+[ 492 of 1025] Compiling Test.Unit.NewCabalUtilsBoundarySpec
+[ 493 of 1025] Compiling Test.Unit.NewCabalUtilsSpec
+[ 494 of 1025] Compiling Test.Unit.NewCabslQuickCheckTests
+[ 495 of 1025] Compiling Test.Unit.NewCliIntegrationSpec
+[ 496 of 1025] Compiling Test.Unit.NewCompactCompilerIRSpec
+[ 497 of 1025] Compiling Test.Unit.NewCompactDependenciesSpec
+[ 498 of 1025] Compiling Test.Unit.NewCompactErrorHandlerSpec
+[ 499 of 1025] Compiling Test.Unit.NewCompactOwnershipSpec
+[ 500 of 1025] Compiling Test.Unit.NewCompactParserSpec
+[ 501 of 1025] Compiling Test.Unit.NewCompactSourceLocationSpec
+[ 502 of 1025] Compiling Test.Unit.NewCompactUtilsSpec
+[ 503 of 1025] Compiling Test.Unit.NewCompilerIRConsistencyQuickCheckSpec
+[ 504 of 1025] Compiling Test.Unit.NewCompilerIRConsistencySpec
+[ 505 of 1025] Compiling Test.Unit.NewCompilerIRCoreQuickCheckSpec
+[ 506 of 1025] Compiling Test.Unit.NewCompilerIRPropertiesSpec
+[ 507 of 1025] Compiling Test.Unit.NewCompilerIRQuickCheckSpec
+[ 508 of 1025] Compiling Test.Unit.NewCompilerOptimizationConsistencySpec
+[ 509 of 1025] Compiling Test.Unit.NewCompilerOptimizationInvariantSpec
+[ 510 of 1025] Compiling Test.Unit.NewCompilerOptimizationPropertiesSpec
+[ 511 of 1025] Compiling Test.Unit.NewCompilerOptimizationQuickCheckSpec
+[ 512 of 1025] Compiling Test.Unit.NewCompilerOptimizationSpec
+[ 513 of 1025] Compiling Test.Unit.NewCompilerPropertiesQuickCheckSpec
+[ 514 of 1025] Compiling Test.Unit.NewCompilerQuickCheckPropertiesSpec
+[ 515 of 1025] Compiling Test.Unit.NewCompilerQuickCheckSpec
+[ 516 of 1025] Compiling Test.Unit.NewCompilerTestSpec
+[ 517 of 1025] Compiling Test.Unit.NewCompleteCoreTestSuiteSpec
+[ 518 of 1025] Compiling Test.Unit.NewComprehensiveCabalQuickCheckSpec
+[ 519 of 1025] Compiling Test.Unit.NewComprehensiveCabalQuickCheckTestSpec
+[ 520 of 1025] Compiling Test.Unit.NewComprehensiveCabalQuickCheckTestSuite
+[ 521 of 1025] Compiling Test.Unit.NewComprehensiveCabalTestSpec
+[ 522 of 1025] Compiling Test.Unit.NewComprehensiveCabalTestSuiteSpec
+[ 523 of 1025] Compiling Test.Unit.NewComprehensiveCoreQuickCheckSpec
+[ 524 of 1025] Compiling Test.Unit.NewComprehensiveParserQuickCheckSpec
+[ 525 of 1025] Compiling Test.Unit.NewComprehensivePropertySpec
+[ 526 of 1025] Compiling Test.Unit.NewComprehensiveQuickCheckTestSpec
+[ 527 of 1025] Compiling Test.Unit.NewComprehensiveQuickCheckTestSuite
+[ 528 of 1025] Compiling Test.Unit.NewComprehensiveTestSuite2025Spec
+[ 529 of 1025] Compiling Test.Unit.NewComprehensiveTestsSpec
+[ 530 of 1025] Compiling Test.Unit.NewConcurrentSafetyQuickCheckSpec
+[ 531 of 1025] Compiling Test.Unit.NewConcurrentSafetySpec
+[ 532 of 1025] Compiling Test.Unit.NewCoreBoundaryConditionsQuickCheckSpec
+[ 533 of 1025] Compiling Test.Unit.NewCoreCabalQuickCheckSpec1
+[ 534 of 1025] Compiling Test.Unit.NewCoreCabalQuickCheckSpec10
+[ 535 of 1025] Compiling Test.Unit.NewCoreCabalQuickCheckSpec2
+[ 536 of 1025] Compiling Test.Unit.NewCoreCabalQuickCheckSpec3
+[ 537 of 1025] Compiling Test.Unit.NewCoreCabalQuickCheckSpec4
+[ 538 of 1025] Compiling Test.Unit.NewCoreCabalQuickCheckSpec5
+[ 539 of 1025] Compiling Test.Unit.NewCoreCabalQuickCheckSpec6
+[ 540 of 1025] Compiling Test.Unit.NewCoreCabalQuickCheckSpec7
+[ 541 of 1025] Compiling Test.Unit.NewCoreCabalQuickCheckSpec8
+[ 542 of 1025] Compiling Test.Unit.NewCoreCabalQuickCheckSpec9
+[ 543 of 1025] Compiling Test.Unit.NewCoreErrorHandlingQuickCheckSpec
+[ 544 of 1025] Compiling Test.Unit.NewCoreFunctionalityQuickCheckSpec
+[ 545 of 1025] Compiling Test.Unit.NewCoreFunctionalityQuickCheckTests
+[ 546 of 1025] Compiling Test.Unit.NewCoreFunctionalitySpec
+[ 547 of 1025] Compiling Test.Unit.NewCoreParserQuickCheckSpec
+[ 548 of 1025] Compiling Test.Unit.NewCoreParsingQuickCheckSpec
+[ 549 of 1025] Compiling Test.Unit.NewCorePerformanceQuickCheckSpec
+[ 550 of 1025] Compiling Test.Unit.NewCorePropertiesQuickCheckSpec
+[ 551 of 1025] Compiling Test.Unit.NewCoreQuickCheckSpec
+[ 552 of 1025] Compiling Test.Unit.NewCoreQuickCheckTestSpec
+[ 553 of 1025] Compiling Test.Unit.NewCoreSourceLocationQuickCheckSpec
+[ 554 of 1025] Compiling Test.Unit.NewCoreUtilsQuickCheckSpec
+[ 555 of 1025] Compiling Test.Unit.NewDependenciesAdvancedQuickCheckSpec
+[ 556 of 1025] Compiling Test.Unit.NewDependenciesAnalysisPropertiesSpec
+[ 557 of 1025] Compiling Test.Unit.NewDependenciesAnalysisSpec
+[ 558 of 1025] Compiling Test.Unit.NewDependenciesCoreSpec
+[ 559 of 1025] Compiling Test.Unit.NewDependenciesCycleDetectionQuickCheckSpec
+[ 560 of 1025] Compiling Test.Unit.NewDependenciesInferenceCoreQuickCheckSpec
+[ 561 of 1025] Compiling Test.Unit.NewDependenciesPropertiesQuickCheckSpec
+[ 562 of 1025] Compiling Test.Unit.NewDependenciesQuickCheckPropertySpec
+[ 563 of 1025] Compiling Test.Unit.NewDependenciesQuickCheckSpec
+[ 564 of 1025] Compiling Test.Unit.NewDependenciesTestSpec
+[ 565 of 1025] Compiling Test.Unit.NewDependencyAnalysisCoreQuickCheckSpec
+[ 566 of 1025] Compiling Test.Unit.NewDependencyAnalysisQuickCheckSpec
+[ 567 of 1025] Compiling Test.Unit.NewDependentTypeBoundarySpec
+[ 568 of 1025] Compiling Test.Unit.NewDependentTypeConstraintValidationQuickCheckSpec
+[ 569 of 1025] Compiling Test.Unit.NewDependentTypeValidationSpec
+[ 570 of 1025] Compiling Test.Unit.NewDependentTypesPerfSpec
+[ 571 of 1025] Compiling Test.Unit.NewDependentTypesPropertiesQuickCheckSpec
+[ 572 of 1025] Compiling Test.Unit.NewEndToEndCompilationSpec
+[ 573 of 1025] Compiling Test.Unit.NewEndToEndIntegrationQuickCheckSpec
+[ 574 of 1025] Compiling Test.Unit.NewEnhancedCabalQuickCheckSpec
+[ 575 of 1025] Compiling Test.Unit.NewEnhancedCabalQuickCheckTestSpec
+[ 576 of 1025] Compiling Test.Unit.NewEnhancedCompilerIRConsistencySpec
+[ 577 of 1025] Compiling Test.Unit.NewEnhancedCompilerOptimizationQuickCheckSpec
+[ 578 of 1025] Compiling Test.Unit.NewEnhancedDependenciesCycleDetectionQuickCheckSpec
+[ 579 of 1025] Compiling Test.Unit.NewEnhancedErrorHandlerConsistencyQuickCheckSpec
+[ 580 of 1025] Compiling Test.Unit.NewEnhancedIntegrationEndToEndQuickCheckSpec
+[ 581 of 1025] Compiling Test.Unit.NewEnhancedIntegrationEndToEndSpec
+[ 582 of 1025] Compiling Test.Unit.NewEnhancedOwnershipMemorySafetyQuickCheckSpec
+[ 583 of 1025] Compiling Test.Unit.NewEnhancedOwnershipTransitivitySpec
+[ 584 of 1025] Compiling Test.Unit.NewEnhancedParserCombinatorQuickCheckSpec
+[ 585 of 1025] Compiling Test.Unit.NewEnhancedPerformanceRegressionSpec
+[ 586 of 1025] Compiling Test.Unit.NewEnhancedSourceLocationMathPropertiesQuickCheckSpec
+[ 587 of 1025] Compiling Test.Unit.NewEnhancedTestSpec
+[ 588 of 1025] Compiling Test.Unit.NewEnhancedTestSuiteSpec
+[ 589 of 1025] Compiling Test.Unit.NewEnhancedUtilsQuickCheckSpec
+[ 590 of 1025] Compiling Test.Unit.NewEnhancedUtilsStringProcessingQuickCheckSpec
+[ 591 of 1025] Compiling Test.Unit.NewErrorHandlerConsistencyQuickCheckSpec
+[ 592 of 1025] Compiling Test.Unit.NewErrorHandlerConsistencySpec
+[ 593 of 1025] Compiling Test.Unit.NewErrorHandlerCoreQuickCheckSpec
+[ 594 of 1025] Compiling Test.Unit.NewErrorHandlerCoreSpec
+[ 595 of 1025] Compiling Test.Unit.NewErrorHandlerEnhancedQuickCheckSpec
+[ 596 of 1025] Compiling Test.Unit.NewErrorHandlerPropertiesSpec
+[ 597 of 1025] Compiling Test.Unit.NewErrorHandlerQuickCheckPropertiesSpec
+[ 598 of 1025] Compiling Test.Unit.NewErrorHandlerQuickCheckPropertySpec
+[ 599 of 1025] Compiling Test.Unit.NewErrorHandlerQuickCheckSpec
+[ 600 of 1025] Compiling Test.Unit.NewErrorHandlerTestSpec
+[ 601 of 1025] Compiling Test.Unit.NewErrorHandlingConsistencySpec
+[ 602 of 1025] Compiling Test.Unit.NewErrorHandlingPropertiesQuickCheckSpec
+[ 603 of 1025] Compiling Test.Unit.NewErrorHandlingPropertiesSpec
+[ 604 of 1025] Compiling Test.Unit.NewErrorHandlingQuickCheckSpec
+[ 605 of 1025] Compiling Test.Unit.NewErrorRecoveryMechanismsQuickCheckSpec
+[ 606 of 1025] Compiling Test.Unit.NewErrorRecoverySpec
+[ 607 of 1025] Compiling Test.Unit.NewFreshComprehensiveQuickCheckSpec
+[ 608 of 1025] Compiling Test.Unit.NewFreshCoreQuickCheckTests
+[ 609 of 1025] Compiling Test.Unit.NewFreshDependentTypesQuickCheckSpec
+[ 610 of 1025] Compiling Test.Unit.NewFreshIntegrationQuickCheckSpec
+[ 611 of 1025] Compiling Test.Unit.NewFreshPerformanceQuickCheckSpec
+[ 612 of 1025] Compiling Test.Unit.NewFreshSourceLocationMathSpec
+[ 613 of 1025] Compiling Test.Unit.NewGoToolchainCoreQuickCheckSpec
+[ 614 of 1025] Compiling Test.Unit.NewGoToolchainCoreSpec
+[ 615 of 1025] Compiling Test.Unit.NewGoToolchainIntegrationQuickCheckSpec
+[ 616 of 1025] Compiling Test.Unit.NewGoToolchainQuickCheckSpec
+[ 617 of 1025] Compiling Test.Unit.NewIRQuickCheckSpec
+[ 618 of 1025] Compiling Test.Unit.NewIntegrationAdvancedQuickCheckSpec
+[ 619 of 1025] Compiling Test.Unit.NewIntegrationEndToEndCoreQuickCheckSpec
+[ 620 of 1025] Compiling Test.Unit.NewIntegrationEndToEndSpec
+[ 621 of 1025] Compiling Test.Unit.NewIntegrationPropertiesQuickCheckSpec
+[ 622 of 1025] Compiling Test.Unit.NewIntegrationQuickCheckPropertySpec
+[ 623 of 1025] Compiling Test.Unit.NewIntegrationQuickCheckSpec
+[ 624 of 1025] Compiling Test.Unit.NewIntegrationQuickCheckTestsSpec
+[ 625 of 1025] Compiling Test.Unit.NewMemoryLeakPreventionQuickCheckSpec
+[ 626 of 1025] Compiling Test.Unit.NewMemorySafetyQuickCheckSpec
+[ 627 of 1025] Compiling Test.Unit.NewMemorySafetySpec
+[ 628 of 1025] Compiling Test.Unit.NewOwnershipAnalysisPropertiesSpec
+[ 629 of 1025] Compiling Test.Unit.NewOwnershipAnalysisQuickCheckSpec
+[ 630 of 1025] Compiling Test.Unit.NewOwnershipBasicCoreQuickCheckSpec
+[ 631 of 1025] Compiling Test.Unit.NewOwnershipBoundarySpec
+[ 632 of 1025] Compiling Test.Unit.NewOwnershipPropertiesQuickCheckSpec
+[ 633 of 1025] Compiling Test.Unit.NewOwnershipQuickCheckPropertySpec
+[ 634 of 1025] Compiling Test.Unit.NewOwnershipQuickCheckSpec
+[ 635 of 1025] Compiling Test.Unit.NewOwnershipTestSpec
+[ 636 of 1025] Compiling Test.Unit.NewOwnershipTransferBoundaryQuickCheckSpec
+[ 637 of 1025] Compiling Test.Unit.NewOwnershipTransferBoundarySpec
+[ 638 of 1025] Compiling Test.Unit.NewOwnershipTransferCoreQuickCheckSpec
+[ 639 of 1025] Compiling Test.Unit.NewOwnershipTransferPropertiesSpec
+[ 640 of 1025] Compiling Test.Unit.NewOwnershipTransferQuickCheckSpec
+[ 641 of 1025] Compiling Test.Unit.NewOwnershipTransferSpec
+[ 642 of 1025] Compiling Test.Unit.NewOwnershipTransitivityQuickCheckSpec
+[ 643 of 1025] Compiling Test.Unit.NewOwnershipTransitivitySpec
+[ 644 of 1025] Compiling Test.Unit.NewParserAdvancedPropertiesSpec
+[ 645 of 1025] Compiling Test.Unit.NewParserBasicPropertiesSpec
+[ 646 of 1025] Compiling Test.Unit.NewParserBoundaryCoreQuickCheckSpec
+[ 647 of 1025] Compiling Test.Unit.NewParserCombinatorPropertiesQuickCheckSpec
+[ 648 of 1025] Compiling Test.Unit.NewParserCombinatorPropertiesSpec
+[ 649 of 1025] Compiling Test.Unit.NewParserCombinatorsQuickCheckSpec
+[ 650 of 1025] Compiling Test.Unit.NewParserCoreQuickCheckSpec
+[ 651 of 1025] Compiling Test.Unit.NewParserCoreSpec
+[ 652 of 1025] Compiling Test.Unit.NewParserEnhancedQuickCheckSpec
+[ 653 of 1025] Compiling Test.Unit.NewParserErrorRecoverySpec
+[ 654 of 1025] Compiling Test.Unit.NewParserFunctionalitySpec
+[ 655 of 1025] Compiling Test.Unit.NewParserPerformanceBoundaryQuickCheckSpec
+[ 656 of 1025] Compiling Test.Unit.NewParserPropertiesQuickCheckSpec
+[ 657 of 1025] Compiling Test.Unit.NewParserPropertiesSpec
+[ 658 of 1025] Compiling Test.Unit.NewParserQuickCheckPropertiesSpec
+[ 659 of 1025] Compiling Test.Unit.NewParserQuickCheckPropertySpec
+[ 660 of 1025] Compiling Test.Unit.NewParserQuickCheckSpec
+[ 661 of 1025] Compiling Test.Unit.NewParserRecoverySpec
+[ 662 of 1025] Compiling Test.Unit.NewParserRobustnessSpec
+[ 663 of 1025] Compiling Test.Unit.NewParserTestSpec
+[ 664 of 1025] Compiling Test.Unit.NewParserValidationSpec
+[ 665 of 1025] Compiling Test.Unit.NewPerformanceQuickCheckSpec
+[ 666 of 1025] Compiling Test.Unit.NewPerformanceRegressionSpec
+[ 667 of 1025] Compiling Test.Unit.NewPropertyTestsQuickCheckSpec
+[ 668 of 1025] Compiling Test.Unit.NewQuickCheckPropertiesSpec
+[ 669 of 1025] Compiling Test.Unit.NewQuickCheckPropertySpec
+[ 670 of 1025] Compiling Test.Unit.NewQuickCheckSpec
+[ 671 of 1025] Compiling Test.Unit.NewQuickCheckTestCasesSpec
+[ 672 of 1025] Compiling Test.Unit.NewQuickCheckTestSpec
+[ 673 of 1025] Compiling Test.Unit.NewQuickCheckTestsSpec
+[ 674 of 1025] Compiling Test.Unit.NewRobustErrorHandlerQuickCheckSpec
+[ 675 of 1025] Compiling Test.Unit.NewSimpleCabalQuickCheckSpec
+[ 676 of 1025] Compiling Test.Unit.NewSimpleErrorHandlingSpec
+[ 677 of 1025] Compiling Test.Unit.NewSimpleQuickCheckSpec
+[ 678 of 1025] Compiling Test.Unit.NewSourceLocationAccuracySpec
+[ 679 of 1025] Compiling Test.Unit.NewSourceLocationAdvancedQuickCheckSpec
+[ 680 of 1025] Compiling Test.Unit.NewSourceLocationCalculationPropertiesSpec
+[ 681 of 1025] Compiling Test.Unit.NewSourceLocationCalculationSpec
+[ 682 of 1025] Compiling Test.Unit.NewSourceLocationEnhancedQuickCheckSpec
+[ 683 of 1025] Compiling Test.Unit.NewSourceLocationMathCoreQuickCheckSpec
+[ 684 of 1025] Compiling Test.Unit.NewSourceLocationMathPrecisionQuickCheckSpec
+[ 685 of 1025] Compiling Test.Unit.NewSourceLocationMathPropertiesQuickCheckSpec
+[ 686 of 1025] Compiling Test.Unit.NewSourceLocationMathPropertiesSpec
+[ 687 of 1025] Compiling Test.Unit.NewSourceLocationMathPropertiesSpec2
+[ 688 of 1025] Compiling Test.Unit.NewSourceLocationMathQuickCheckSpec
+[ 689 of 1025] Compiling Test.Unit.NewSourceLocationMathQuickCheckSpec2
+[ 690 of 1025] Compiling Test.Unit.NewSourceLocationMathSpec
+[ 691 of 1025] Compiling Test.Unit.NewSourceLocationPrecisionSpec
+[ 692 of 1025] Compiling Test.Unit.NewSourceLocationQuickCheckPropertiesSpec
+[ 693 of 1025] Compiling Test.Unit.NewSourceLocationQuickCheckPropertySpec
+[ 694 of 1025] Compiling Test.Unit.NewSourceLocationQuickCheckSpec
+[ 695 of 1025] Compiling Test.Unit.NewSourceLocationTestSpec
+[ 696 of 1025] Compiling Test.Unit.NewSourceLocationTrackingSpec
+[ 697 of 1025] Compiling Test.Unit.NewStringProcessingBoundarySpec
+[ 698 of 1025] Compiling Test.Unit.NewStringProcessingQuickCheckSpec
+[ 699 of 1025] Compiling Test.Unit.NewStringProcessingUnicodeSafetyQuickCheckSpec
+[ 700 of 1025] Compiling Test.Unit.NewSymbolTableQuickCheckSpec
+[ 701 of 1025] Compiling Test.Unit.NewSyntaxValidatorQuickCheckSpec
+[ 702 of 1025] Compiling Test.Unit.NewSyntaxValidatorRobustnessSpec
+[ 703 of 1025] Compiling Test.Unit.NewSyntaxValidatorValidationQuickCheckSpec
+[ 704 of 1025] Compiling Test.Unit.NewTextEncodingSafetyQuickCheckSpec
+[ 705 of 1025] Compiling Test.Unit.NewTextProcessingBoundarySpec
+[ 706 of 1025] Compiling Test.Unit.NewTextProcessingQuickCheckSpec
+[ 707 of 1025] Compiling Test.Unit.NewTypeCheckerQuickCheckSpec
+[ 708 of 1025] Compiling Test.Unit.NewTypeSystemBoundaryQuickCheckSpec
+[ 709 of 1025] Compiling Test.Unit.NewTypeSystemQuickCheckSpec
+[ 710 of 1025] Compiling Test.Unit.NewTypeSystemValidationSpec
+[ 711 of 1025] Compiling Test.Unit.NewTypusCompilerQuickCheckSpec
+[ 712 of 1025] Compiling Test.Unit.NewTypusCoreQuickCheckSpec
+[ 713 of 1025] Compiling Test.Unit.NewTypusDependentTypesQuickCheckSpec
+[ 714 of 1025] Compiling Test.Unit.NewTypusErrorHandlerQuickCheckSpec
+[ 715 of 1025] Compiling Test.Unit.NewTypusIntegrationQuickCheckSpec
+[ 716 of 1025] Compiling Test.Unit.NewTypusOwnershipQuickCheckSpec
+[ 717 of 1025] Compiling Test.Unit.NewTypusParserQuickCheckSpec
+[ 718 of 1025] Compiling Test.Unit.NewTypusSourceLocationQuickCheckSpec
+[ 719 of 1025] Compiling Test.Unit.NewTypusSyntaxValidatorQuickCheckSpec
+[ 720 of 1025] Compiling Test.Unit.NewTypusUtilsQuickCheckSpec
+[ 721 of 1025] Compiling Test.Unit.NewUnicodeParsingSpec
+[ 722 of 1025] Compiling Test.Unit.NewUtilsAdditionalSpec
+[ 723 of 1025] Compiling Test.Unit.NewUtilsCoreQuickCheckSpec
+[ 724 of 1025] Compiling Test.Unit.NewUtilsCoreSpec
+[ 725 of 1025] Compiling Test.Unit.NewUtilsEnhancedQuickCheckSpec
+[ 726 of 1025] Compiling Test.Unit.NewUtilsFunctionsPropertiesSpec
+[ 727 of 1025] Compiling Test.Unit.NewUtilsPropertiesQuickCheckSpec
+[ 728 of 1025] Compiling Test.Unit.NewUtilsPropertiesSpec2
+[ 729 of 1025] Compiling Test.Unit.NewUtilsQuickCheckPropertiesSpec
+[ 730 of 1025] Compiling Test.Unit.NewUtilsQuickCheckPropertySpec
+[ 731 of 1025] Compiling Test.Unit.NewUtilsQuickCheckPropertyTestsSpec
+[ 732 of 1025] Compiling Test.Unit.NewUtilsQuickCheckSpec
+[ 733 of 1025] Compiling Test.Unit.NewComprehensiveQuickCheckSpec
+[ 734 of 1025] Compiling Test.Unit.NewUtilsStringBoundaryQuickCheckSpec
+[ 735 of 1025] Compiling Test.Unit.NewUtilsStringBoundarySpec
+[ 736 of 1025] Compiling Test.Unit.NewUtilsStringProcessingQuickCheckSpec
+[ 737 of 1025] Compiling Test.Unit.NewUtilsStringProcessingSpec
+[ 738 of 1025] Compiling Test.Unit.NewUtilsTestSpec
+[ 739 of 1025] Compiling Test.Unit.OwnershipAdvancedQuickCheckSpec
+[ 740 of 1025] Compiling Test.Unit.OwnershipAnalysisBoundarySpec
+[ 741 of 1025] Compiling Test.Unit.OwnershipAnalysisComprehensiveQuickCheckSpec
+[ 742 of 1025] Compiling Test.Unit.OwnershipAnalysisSpec
+[ 743 of 1025] Compiling Test.Unit.OwnershipAnalysisTestSpec
+[ 744 of 1025] Compiling Test.Unit.OwnershipBasicFunctionsSpec
+[ 745 of 1025] Compiling Test.Unit.OwnershipBasicPropertiesSpec
+[ 746 of 1025] Compiling Test.Unit.OwnershipBridgeSpec
+[ 747 of 1025] Compiling Test.Unit.OwnershipCommonTypesQuickCheckTestSpec
+[ 748 of 1025] Compiling Test.Unit.OwnershipComplexScenariosSpec
+[ 749 of 1025] Compiling Test.Unit.OwnershipComplexSpec
+[ 750 of 1025] Compiling Test.Unit.OwnershipComprehensiveQuickCheckSpec
+[ 751 of 1025] Compiling Test.Unit.OwnershipCoreQuickCheckSpec
+[ 752 of 1025] Compiling Test.Unit.OwnershipCoreQuickCheckTests
+[ 753 of 1025] Compiling Test.Unit.OwnershipGoToolchainTestSpec
+[ 754 of 1025] Compiling Test.Unit.OwnershipMemorySafetyCabalsSpec
+[ 755 of 1025] Compiling Test.Unit.OwnershipMemorySafetySpec
+[ 756 of 1025] Compiling Test.Unit.OwnershipMemorySafetyTestSpec
+[ 757 of 1025] Compiling Test.Unit.OwnershipNewQuickCheckSpec
+[ 758 of 1025] Compiling Test.Unit.OwnershipOwnershipAnalysisSpec
+[ 759 of 1025] Compiling Test.Unit.OwnershipQuickCheckSpec
+[ 760 of 1025] Compiling Test.Unit.OwnershipReporterSpec
+[ 761 of 1025] Compiling Test.Unit.OwnershipRobustnessQuickCheckSpec
+[ 762 of 1025] Compiling Test.Unit.OwnershipSpec
+[ 763 of 1025] Compiling Test.Unit.OwnershipTransferBoundaryNewSpec
+[ 764 of 1025] Compiling Test.Unit.OwnershipTransferComplex2025Spec
+[ 765 of 1025] Compiling Test.Unit.OwnershipTransferComplexQuickCheckSpec
+[ 766 of 1025] Compiling Test.Unit.OwnershipTransferCoreQuickCheckSpec
+[ 767 of 1025] Compiling Test.Unit.OwnershipTransferPropertiesSpec
+[ 768 of 1025] Compiling Test.Unit.OwnershipTransferQuickCheckTestSpec
+[ 769 of 1025] Compiling Test.Unit.OwnershipTransferSpec
+[ 770 of 1025] Compiling Test.Unit.OwnershipTransitivityQuickCheckSpec
+[ 771 of 1025] Compiling Test.Unit.OwnershipTransitivitySpec
+[ 772 of 1025] Compiling Test.Unit.ParserAdditionalQuickCheckSpec
+[ 773 of 1025] Compiling Test.Unit.ParserAdditionalSpec
+[ 774 of 1025] Compiling Test.Unit.ParserAdvancedQuickCheckSpec
+[ 775 of 1025] Compiling Test.Unit.ParserBasicFunctionsExtraSpec
+[ 776 of 1025] Compiling Test.Unit.ParserBasicFunctionsSpec
+[ 777 of 1025] Compiling Test.Unit.ParserBasicQuickCheckSpec
+[ 778 of 1025] Compiling Test.Unit.ParserBasicSpec
+[ 779 of 1025] Compiling Test.Unit.ParserBoundaryConditionTestSpec
+[ 780 of 1025] Compiling Test.Unit.ParserBoundaryConditionsQuickCheckSpec
+[ 781 of 1025] Compiling Test.Unit.ParserBoundaryConditionsQuickCheckTestSpec
+[ 782 of 1025] Compiling Test.Unit.ParserBoundaryConditionsSpec
+[ 783 of 1025] Compiling Test.Unit.ParserCabalTestsSpec
+[ 784 of 1025] Compiling Test.Unit.ParserCombinatorsSpec
+[ 785 of 1025] Compiling Test.Unit.ParserCompilerPropertiesQuickCheckSpec
+[ 786 of 1025] Compiling Test.Unit.ParserComprehensiveQuickCheckSpec
+[ 787 of 1025] Compiling Test.Unit.ParserComprehensiveSpec
+[ 788 of 1025] Compiling Test.Unit.ParserConsistencyQuickCheckSpec
+[ 789 of 1025] Compiling Test.Unit.ParserConsistencySpec
+[ 790 of 1025] Compiling Test.Unit.ParserCoreFunctionalitySpec
+[ 791 of 1025] Compiling Test.Unit.ParserCorePropertiesSpec
+[ 792 of 1025] Compiling Test.Unit.ParserCoreQuickCheckSpec
+[ 793 of 1025] Compiling Test.Unit.ParserCoreQuickCheckTests
+[ 794 of 1025] Compiling Test.Unit.ParserDependentTypesTestSpec
+[ 795 of 1025] Compiling Test.Unit.ParserDirectiveSpec
+[ 796 of 1025] Compiling Test.Unit.ParserDirectivesAdvanced2025Spec
+[ 797 of 1025] Compiling Test.Unit.ParserDirectivesQuickCheckSpec
+[ 798 of 1025] Compiling Test.Unit.ParserEdgeCaseQuickCheckSpec
+[ 799 of 1025] Compiling Test.Unit.ParserEnhancedQuickCheckSpec
+[ 800 of 1025] Compiling Test.Unit.ParserErrorHandlingTestSpec
+[ 801 of 1025] Compiling Test.Unit.ParserErrorRecoveryAdvancedQuickCheckSpec
+[ 802 of 1025] Compiling Test.Unit.ParserErrorRecoveryAdvancedSpec
+[ 803 of 1025] Compiling Test.Unit.ParserErrorRecoveryCabalsSpec
+[ 804 of 1025] Compiling Test.Unit.ParserErrorRecoveryQuickCheckSpec
+[ 805 of 1025] Compiling Test.Unit.ParserErrorRecoverySpec
+[ 806 of 1025] Compiling Test.Unit.ParserNewQuickCheckSpec
+[ 807 of 1025] Compiling Test.Unit.ParserPropertySpec
+[ 808 of 1025] Compiling Test.Unit.ParserQuickCheckSpec
+[ 809 of 1025] Compiling Test.Unit.ParserRecoverySpec
+[ 810 of 1025] Compiling Test.Unit.ParserRobustnessQuickCheckSpec
+[ 811 of 1025] Compiling Test.Unit.ParserRobustnessTestSpec
+[ 812 of 1025] Compiling Test.Unit.ParserSpec
+[ 813 of 1025] Compiling Test.Unit.PerformanceBoundaryQuickCheckSpec
+[ 814 of 1025] Compiling Test.Unit.PerformanceBoundarySpec
+[ 815 of 1025] Compiling Test.Unit.PerformanceEnhancedQuickCheckSpec
+[ 816 of 1025] Compiling Test.Unit.PerformanceOptimization2025Spec
+[ 817 of 1025] Compiling Test.Unit.PerformanceOptimizationQuickCheckSpec
+[ 818 of 1025] Compiling Test.Unit.PerformanceQuickCheckSpec
+[ 819 of 1025] Compiling Test.Unit.PerformanceRegressionCabalsSpec
+[ 820 of 1025] Compiling Test.Unit.PerformanceRegressionNewSpec
+[ 821 of 1025] Compiling Test.Unit.PerformanceRegressionSpec
+[ 822 of 1025] Compiling Test.Unit.PerformanceRegressionTestSpec
+[ 823 of 1025] Compiling Test.Unit.PerformanceSpec
+[ 824 of 1025] Compiling Test.Unit.PropertyQuickCheckTestSpec
+[ 825 of 1025] Compiling Test.Unit.QuickCabalQuickCheckSpec
+[ 826 of 1025] Compiling Test.Unit.RegressionComprehensiveSpec
+[ 827 of 1025] Compiling Test.Unit.SecurityValidationCabalsSpec
+[ 828 of 1025] Compiling Test.Unit.SecurityValidationTestSpec
+[ 829 of 1025] Compiling Test.Unit.SetPropertiesQuickCheckSpec
+[ 830 of 1025] Compiling Test.Unit.SimpleCabalQuickCheckSpec
+[ 831 of 1025] Compiling Test.Unit.SimpleCabalQuickCheckTests
+[ 832 of 1025] Compiling Test.Unit.SimpleCabalTestSpec
+[ 833 of 1025] Compiling Test.Unit.SimpleCoreQuickCheckSpec
+[ 834 of 1025] Compiling Test.Unit.SimpleCoreTestSpec
+[ 835 of 1025] Compiling Test.Unit.SimpleDataStructuresQuickCheckSpec
+[ 836 of 1025] Compiling Test.Unit.SimpleNewTestSpec
+[ 837 of 1025] Compiling Test.Unit.SimpleParserQuickCheckSpec
+[ 838 of 1025] Compiling Test.Unit.SimpleQuickCheckSpec
+[ 839 of 1025] Compiling Test.Unit.SimpleQuickCheckTestSpec
+[ 840 of 1025] Compiling Test.Unit.SimpleQuickCheckTestSuite
+[ 841 of 1025] Compiling Test.Unit.SimpleStringTestsSpec
+[ 842 of 1025] Compiling Test.Unit.SimpleSyntaxValidatorQuickCheckSpec
+[ 843 of 1025] Compiling Test.Unit.SimpleTypeCheckerQuickCheckSpec
+[ 844 of 1025] Compiling Test.Unit.SourceLocationAccuracyQuickCheckSpec
+[ 845 of 1025] Compiling Test.Unit.SourceLocationAdditionalQuickCheckSpec
+[ 846 of 1025] Compiling Test.Unit.SourceLocationAdditionalSpec
+[ 847 of 1025] Compiling Test.Unit.SourceLocationAdvancedFeaturesSpec
+[ 848 of 1025] Compiling Test.Unit.SourceLocationAdvancedQuickCheckSpec
+[ 849 of 1025] Compiling Test.Unit.SourceLocationAdvancedTestSpec
+[ 850 of 1025] Compiling Test.Unit.SourceLocationBasicSpec
+[ 851 of 1025] Compiling Test.Unit.SourceLocationBoundaryQuickCheckSpec
+[ 852 of 1025] Compiling Test.Unit.SourceLocationBoundarySpec
+[ 853 of 1025] Compiling Test.Unit.SourceLocationCabalTestsSpec
+[ 854 of 1025] Compiling Test.Unit.SourceLocationComprehensiveQuickCheckSpec
+[ 855 of 1025] Compiling Test.Unit.SourceLocationComprehensiveSpec
+[ 856 of 1025] Compiling Test.Unit.SourceLocationConsistencySpec
+[ 857 of 1025] Compiling Test.Unit.SourceLocationCorePropertiesSpec
+[ 858 of 1025] Compiling Test.Unit.SourceLocationCoreQuickCheckSpec
+[ 859 of 1025] Compiling Test.Unit.SourceLocationCoreQuickCheckTests
+[ 860 of 1025] Compiling Test.Unit.SourceLocationEnhancedQuickCheckSpec
+[ 861 of 1025] Compiling Test.Unit.SourceLocationIntegrationSpec
+[ 862 of 1025] Compiling Test.Unit.SourceLocationMathAdvanced2025Spec
+[ 863 of 1025] Compiling Test.Unit.SourceLocationMathAdvancedSpec
+[ 864 of 1025] Compiling Test.Unit.SourceLocationMathPropertiesQuickCheckSpec
+[ 865 of 1025] Compiling Test.Unit.SourceLocationMathSpec
+[ 866 of 1025] Compiling Test.Unit.SourceLocationNewQuickCheckSpec
+[ 867 of 1025] Compiling Test.Unit.SourceLocationPositionArithmeticSpec
+[ 868 of 1025] Compiling Test.Unit.SourceLocationPositionQuickCheckSpec
+[ 869 of 1025] Compiling Test.Unit.SourceLocationPrecisionCabalsSpec
+[ 870 of 1025] Compiling Test.Unit.SourceLocationPrecisionNewSpec
+[ 871 of 1025] Compiling Test.Unit.SourceLocationPrecisionQuickCheckSpec
+[ 872 of 1025] Compiling Test.Unit.SourceLocationQuickCheckSpec
+[ 873 of 1025] Compiling Test.Unit.SourceLocationSpanQuickCheckSpec
+[ 874 of 1025] Compiling Test.Unit.SourceLocationSpec
+[ 875 of 1025] Compiling Test.Unit.SourceLocationTestSpec
+[ 876 of 1025] Compiling Test.Unit.SourceLocationTrackingQuickCheckTestSpec
+[ 877 of 1025] Compiling Test.Unit.SourcePositionPrecisionSpec
+[ 878 of 1025] Compiling Test.Unit.SpanOperationsSpec
+[ 879 of 1025] Compiling Test.Unit.SplitFunctionsSpec
+[ 880 of 1025] Compiling Test.Unit.StringAnalysisSpec
+[ 881 of 1025] Compiling Test.Unit.StringProcessingBoundaryQuickCheckSpec
+[ 882 of 1025] Compiling Test.Unit.StringProcessingQuickCheckSpec
+[ 883 of 1025] Compiling Test.Unit.StringProcessingSpec
+[ 884 of 1025] Compiling Test.Unit.StringUtilsProcessingAdvanced2025Spec
+[ 885 of 1025] Compiling Test.Unit.StringUtilsQuickCheckSpec
+[ 886 of 1025] Compiling Test.Unit.StringUtilsQuickCheckTestSpec
+[ 887 of 1025] Compiling Test.Unit.SymbolTableAdvancedSpec
+[ 888 of 1025] Compiling Test.Unit.SymbolTableManagementSpec
+[ 889 of 1025] Compiling Test.Unit.SymbolTableOperationsQuickCheckSpec
+[ 890 of 1025] Compiling Test.Unit.SymbolTableOperationsSpec
+[ 891 of 1025] Compiling Test.Unit.SymbolTableSpec
+[ 892 of 1025] Compiling Test.Unit.SyntaxValidatorAdvancedSpec
+[ 893 of 1025] Compiling Test.Unit.SyntaxValidatorBasicSpec
+[ 894 of 1025] Compiling Test.Unit.SyntaxValidatorBoundaryQuickCheckSpec
+[ 895 of 1025] Compiling Test.Unit.SyntaxValidatorBoundarySpec
+[ 896 of 1025] Compiling Test.Unit.SyntaxValidatorGoToolchainQuickCheckSpec
+[ 897 of 1025] Compiling Test.Unit.SyntaxValidatorQuickCheckSpec
+[ 898 of 1025] Compiling Test.Unit.SyntaxValidatorSpec
+[ 899 of 1025] Compiling Test.Unit.SyntaxValidatorTestSpec
+[ 900 of 1025] Compiling Test.Unit.SyntaxValidatorValidationSpec
+[ 901 of 1025] Compiling Test.Unit.TestCrossModuleIntegrationSpec
+[ 902 of 1025] Compiling Test.Unit.TestDebugIntegrationSpec
+[ 903 of 1025] Compiling Test.Unit.TestDependenciesCycleDetectionSpec
+[ 904 of 1025] Compiling Test.Unit.TestDependencyTypeConstraintsSpec
+[ 905 of 1025] Compiling Test.Unit.TestDependentTypesValidationSpec
+[ 906 of 1025] Compiling Test.Unit.TestEnhancedErrorHandlerSpec
+[ 907 of 1025] Compiling Test.Unit.TestErrorHandlerConsistencySpec
+[ 908 of 1025] Compiling Test.Unit.TestErrorHandlerPropertiesSpec
+[ 909 of 1025] Compiling Test.Unit.TestErrorRecoverySpec
+[ 910 of 1025] Compiling Test.Unit.TestParserBasicFunctionsSpec
+[ 911 of 1025] Compiling Test.Unit.TestSourceLocationMathSpec
+[ 912 of 1025] Compiling Test.Unit.TestUtilsStringProcessingSpec
+[ 913 of 1025] Compiling Test.Unit.TextProcessingAdvancedSpec
+[ 914 of 1025] Compiling Test.Unit.TextProcessingRobustnessSpec
+[ 915 of 1025] Compiling Test.Unit.TextProcessingSpec
+[ 916 of 1025] Compiling Test.Unit.TinyCabalQuickCheckSpec
+[ 917 of 1025] Compiling Test.Unit.ToolingErrorSpec
+[ 918 of 1025] Compiling Test.Unit.TypeCheckerBasicQuickCheckSpec
+[ 919 of 1025] Compiling Test.Unit.TypeCheckerComprehensiveQuickCheckSpec
+[ 920 of 1025] Compiling Test.Unit.TypeCheckerQuickCheckSpec
+[ 921 of 1025] Compiling Test.Unit.TypeEnvironmentBuildingQuickCheckSpec
+[ 922 of 1025] Compiling Test.Unit.TypeEnvironmentQuickCheckSpec
+[ 923 of 1025] Compiling Test.Unit.TypeInferenceAdvancedCabalsSpec
+[ 924 of 1025] Compiling Test.Unit.TypeInferenceAdvancedNewSpec
+[ 925 of 1025] Compiling Test.Unit.TypeInferenceAdvancedSpec
+[ 926 of 1025] Compiling Test.Unit.TypeInferenceAdvancedTestSpec
+[ 927 of 1025] Compiling Test.Unit.TypeInferenceBoundaryQuickCheckSpec
+[ 928 of 1025] Compiling Test.Unit.TypeInferenceComplex2025Spec
+[ 929 of 1025] Compiling Test.Unit.TypeInferenceEdgeCasesSpec
+[ 930 of 1025] Compiling Test.Unit.TypeInferenceQuickCheckSpec
+[ 931 of 1025] Compiling Test.Unit.TypeSystemBoundaryQuickCheckSpec
+[ 932 of 1025] Compiling Test.Unit.TypeSystemBoundarySpec
+[ 933 of 1025] Compiling Test.Unit.TypeSystemEdgeCasesSpec
+[ 934 of 1025] Compiling Test.Unit.TypeSystemInferenceQuickCheckSpec
+[ 935 of 1025] Compiling Test.Unit.TypeSystemInferenceSpec
+[ 936 of 1025] Compiling Test.Unit.TypeSystemQuickCheckSpec
+[ 937 of 1025] Compiling Test.Unit.TypeSystemSpec
+[ 938 of 1025] Compiling Test.Unit.TypeSystemTestSpec
+[ 939 of 1025] Compiling Test.Unit.TypusEndToEndQuickCheckSpec
+[ 940 of 1025] Compiling Test.Unit.UnicodeHandlingAdvancedSpec
+[ 941 of 1025] Compiling Test.Unit.UnicodeHandlingQuickCheckSpec
+[ 942 of 1025] Compiling Test.Unit.UtilsAdditionalQuickCheckSpec
+[ 943 of 1025] Compiling Test.Unit.UtilsAdvancedQuickCheckSpec
+[ 944 of 1025] Compiling Test.Unit.UtilsBasicQuickCheckSpec
+[ 945 of 1025] Compiling Test.Unit.UtilsBoundaryQuickCheckSpec
+[ 946 of 1025] Compiling Test.Unit.UtilsBreakOnQuickCheckSpec
+[ 947 of 1025] Compiling Test.Unit.UtilsCommentProcessingSpec
+[ 948 of 1025] Compiling Test.Unit.UtilsComprehensiveQuickCheckSpec
+[ 949 of 1025] Compiling Test.Unit.UtilsComprehensiveSpec
+[ 950 of 1025] Compiling Test.Unit.UtilsCoreFunctionalitySpec
+[ 951 of 1025] Compiling Test.Unit.UtilsCorePropertiesQuickCheckSpec
+[ 952 of 1025] Compiling Test.Unit.UtilsCorePropertiesSpec
+[ 953 of 1025] Compiling Test.Unit.UtilsCoreQuickCheckSpec
+[ 954 of 1025] Compiling Test.Unit.UtilsCoreQuickCheckTests
+[ 955 of 1025] Compiling Test.Unit.UtilsEfficiencyQuickCheckSpec
+[ 956 of 1025] Compiling Test.Unit.UtilsEnhancedQuickCheckSpec
+[ 957 of 1025] Compiling Test.Unit.UtilsIndentationSpec
+[ 958 of 1025] Compiling Test.Unit.UtilsNewQuickCheckSpec
+[ 959 of 1025] Compiling Test.Unit.UtilsPerformanceBoundarySpec
+[ 960 of 1025] Compiling Test.Unit.UtilsPropertiesExtendedSpec
+[ 961 of 1025] Compiling Test.Unit.UtilsQuickCheckSpec
+[ 962 of 1025] Compiling Test.Unit.UtilsRobustnessQuickCheckSpec
+[ 963 of 1025] Compiling Test.Unit.UtilsSpec
+[ 964 of 1025] Compiling Test.Unit.UtilsStringFunctionsSpec
+[ 965 of 1025] Compiling Test.Unit.UtilsStringProcessingEnhancedSpec
+[ 966 of 1025] Compiling Test.Unit.UtilsStringProcessingExtraSpec
+[ 967 of 1025] Compiling Test.Unit.UtilsStringProcessingSpec
+[ 968 of 1025] Compiling Test.Unit.UtilsStringProcessingTestSpec
+[ 969 of 1025] Compiling Test.Unit.UtilsStringPropertiesQuickCheckSpec
+[ 970 of 1025] Compiling Test.Unit.UtilsStringPropertiesSpec
+[ 971 of 1025] Compiling Test.Unit.UtilsTestSpec
+[ 972 of 1025] Compiling Test.Unit.UtilsUnicodePerformanceSpec
+[ 973 of 1025] Compiling Test.Unit.ValueAnalysisFlowQuickCheckSpec
+[ 974 of 1025] Compiling Test.Unit.ValueAnalysisFlowSpec
+[ 975 of 1025] Compiling Test.Unit.ValueAnalysisQuickCheckSpec
+[ 976 of 1025] Compiling Test.Unit.ValueAnalysisSpec
+[ 977 of 1025] Compiling Test.Unit.VerbositySpec
+[ 978 of 1025] Compiling Test.Unit.WorkingQuickCheckSpec
+[ 979 of 1025] Compiling Test.Unit.WorkingQuickCheckTestSpec
+[ 980 of 1025] Compiling TestSupport.Arbitrary
+[ 981 of 1025] Compiling Test.Unit.TestUtilsCorePropertiesSpec
+[ 982 of 1025] Compiling Test.Unit.TestTypeSystemInferenceSpec
+[ 983 of 1025] Compiling Test.Unit.TestSymbolTableOperationsSpec
+[ 984 of 1025] Compiling Test.Unit.TestStringProcessingSpec
+[ 985 of 1025] Compiling Test.Unit.TestStringEncodingSpec
+[ 986 of 1025] Compiling Test.Unit.TestSourceLocationMathPropertiesSpec
+[ 987 of 1025] Compiling Test.Unit.TestQuickCheckPropertiesSpec
+[ 988 of 1025] Compiling Test.Unit.TestParserErrorRecoverySpec
+[ 989 of 1025] Compiling Test.Unit.TestParserDirectivesSpec
+[ 990 of 1025] Compiling Test.Unit.TestMemorySafetySpec
+[ 991 of 1025] Compiling Test.Unit.TestListPropertiesSpec
+[ 992 of 1025] Compiling Test.Unit.TestGoToolchainIntegrationSpec
+[ 993 of 1025] Compiling Test.Unit.TestConcurrentSafetySpec
+[ 994 of 1025] Compiling Test.Unit.TestCliIntegrationSpec
+[ 995 of 1025] Compiling Test.Unit.TestBoundaryConditionsSpec
+[ 996 of 1025] Compiling Test.Unit.TestArithmeticPropertiesSpec
+[ 997 of 1025] Compiling Test.Unit.TestAnalyzerIntegrationSpec
+[ 998 of 1025] Compiling Test.Unit.SourceLocationCalculationSpec
+[ 999 of 1025] Compiling Test.Unit.NewQuickCheckTestSuiteSpec
+[1000 of 1025] Compiling Test.Unit.DependenciesCycleDetectionQuickCheckSpec
+[1001 of 1025] Compiling Test.Unit.AdditionalQuickCheckTestSuiteSpec
+[1002 of 1025] Compiling TestSupport.ExtendedArbitrary
+[1003 of 1025] Compiling Test.Unit.NewAdditionalErrorHandlerQuickCheckSpec
+[1004 of 1025] Compiling TestSupport.QuickCheck
+[1005 of 1025] Compiling Test.Unit.TextProcessingQuickCheckSpec
+[1006 of 1025] Compiling Test.Unit.SourceLocationArithmeticQuickCheckSpec
+[1007 of 1025] Compiling Test.Unit.OwnershipTransferQuickCheckSpec
+[1008 of 1025] Compiling Test.Unit.MathOperationsQuickCheckSpec
+[1009 of 1025] Compiling Test.Unit.ErrorRecoveryPropertiesQuickCheckSpec
+[1010 of 1025] Compiling Test.Unit.DependencyAnalysisQuickCheckSpec
+[1011 of 1025] Compiling Test.Unit.CoreUtilsQuickCheckSpec
+[1012 of 1025] Compiling Test.Unit.CoreSourceLocationQuickCheckSpec
+[1013 of 1025] Compiling Test.Unit.CoreParserQuickCheckSpec
+[1014 of 1025] Compiling Test.Unit.CoreOwnershipQuickCheckSpec
+[1015 of 1025] Compiling Test.Unit.CoreErrorHandlerQuickCheckSpec
+[1016 of 1025] Compiling Test.Unit.CoreDependenciesQuickCheckSpec
+[1017 of 1025] Compiling Test.Unit.CoreCompilerQuickCheckSpec
+[1018 of 1025] Compiling Test.Unit.ComprehensiveCoreModulesQuickCheckSpec
+[1019 of 1025] Compiling Test.Unit.CompilerIRQuickCheckSpec
+[1020 of 1025] Compiling Test.Unit.CodeGenerationQuickCheckSpec
+[1021 of 1025] Compiling Test.Unit.ConciseTestSuite
+[1022 of 1025] Compiling Test.Unit.Tests
+[1023 of 1025] Compiling Test.Unit
+[1024 of 1025] Compiling Main
+[1025 of 1025] Compiling TestSupport.Verbosity
+[1026 of 1026] Linking .stack-work/dist/x86_64-linux-tinfo6/ghc-9.8.4/build/typus-test/typus-test
+typus> copy/register
+Installing library in /home/runner/work/Typus/Typus/.stack-work/install/x86_64-linux-tinfo6/bd309085b205e70662b7324d53035991501b1cd7dba31e42bd29f4c0872e4562/9.8.4/lib/x86_64-linux-ghc-9.8.4/typus-0.12.2-KYNOs0UWBLdD9jidKoBXHJ
+Installing executable typus in /home/runner/work/Typus/Typus/.stack-work/install/x86_64-linux-tinfo6/bd309085b205e70662b7324d53035991501b1cd7dba31e42bd29f4c0872e4562/9.8.4/bin
+Registering library for typus-0.12.2..
+typus> test (suite: typus-test)
 
 Test.Unit.Tests Tests
   basic property:                                                                        OK
@@ -97,14 +1197,14 @@ Test.Unit.Tests Tests
             +++ OK, passed 100 tests.
       Concise Parser QuickCheck Tests
         Parser Basic Properties
-          parseTypus_equals_parseTypusFile:                                              OK (0.01s)
+          parseTypus_equals_parseTypusFile:                                              OK
             +++ OK, passed 100 tests.
           parseExpression_returns_right:                                                 OK
             +++ OK, passed 100 tests.
           parseDeclaration_returns_right:                                                OK
             +++ OK, passed 100 tests.
         TypusFile Properties
-          tfContents_properties:                                                         OK (0.01s)
+          tfContents_properties:                                                         OK
             +++ OK, passed 100 tests.
           defaultFileDirectives_properties:                                              OK
             +++ OK, passed 1 test.
@@ -122,18 +1222,18 @@ Test.Unit.Tests Tests
         Compiler Properties
           compile_properties:                                                            OK
             +++ OK, passed 100 tests.
-          renderCompilationError_properties:                                             OK (0.17s)
+          renderCompilationError_properties:                                             OK (0.21s)
             +++ OK, passed 100 tests.
-          formatCompilerErrors_properties:                                               OK (0.18s)
+          formatCompilerErrors_properties:                                               OK (0.23s)
             +++ OK, passed 100 tests.
-          generateDetailedReport_properties:                                             OK (0.19s)
+          generateDetailedReport_properties:                                             OK (0.24s)
             +++ OK, passed 100 tests.
           analyzeErrors_properties:                                                      OK
             +++ OK, passed 100 tests.
         Type Checking Properties
-          hasTypeErrors_properties:                                                      OK (0.03s)
+          hasTypeErrors_properties:                                                      OK (0.02s)
             +++ OK, passed 100 tests.
-          diagnoseTypeErrors_properties:                                                 OK (0.03s)
+          diagnoseTypeErrors_properties:                                                 OK (0.02s)
             +++ OK, passed 100 tests.
           checkTypeError_properties:                                                     OK
             +++ OK, passed 100 tests.
@@ -172,7 +1272,7 @@ Test.Unit.Tests Tests
         ErrorHandler Basic Properties
           handleError_properties:                                                        OK (0.02s)
             +++ OK, passed 100 tests.
-          handleErrors_properties:                                                       OK (0.11s)
+          handleErrors_properties:                                                       OK (0.12s)
             +++ OK, passed 100 tests.
           createError_properties:                                                        OK
             +++ OK, passed 100 tests.
@@ -211,7 +1311,7 @@ Test.Unit.Tests Tests
             +++ OK, passed 100 tests.
           filterBySeverityForTests_properties:                                           OK
             +++ OK, passed 100 tests.
-          sortBySeverity_properties:                                                     OK (0.11s)
+          sortBySeverity_properties:                                                     OK (0.15s)
             +++ OK, passed 100 tests.
           renderErrors_properties:                                                       OK
             +++ OK, passed 100 tests.
@@ -228,7 +1328,7 @@ Test.Unit.Tests Tests
             +++ OK, passed 100 tests.
           getBorrowers_properties:                                                       OK (0.01s)
             +++ OK, passed 100 tests.
-          getOwnedResources_properties:                                                  OK (0.02s)
+          getOwnedResources_properties:                                                  OK (0.01s)
             +++ OK, passed 100 tests.
           isOwner_properties:                                                            OK
             +++ OK, passed 100 tests.
@@ -247,12 +1347,12 @@ Test.Unit.Tests Tests
         Ownership Error Properties
           hasOwnershipErrors_properties:                                                 OK
             +++ OK, passed 100 tests.
-          getOwnershipErrors_properties:                                                 OK (0.01s)
+          getOwnershipErrors_properties:                                                 OK
             +++ OK, passed 100 tests.
-          clearOwnershipErrors_properties:                                               OK (0.03s)
+          clearOwnershipErrors_properties:                                               OK (0.04s)
             +++ OK, passed 100 tests.
         Ownership Analysis Properties
-          mergeOwnershipAnalyses_properties:                                             OK (0.09s)
+          mergeOwnershipAnalyses_properties:                                             OK (0.11s)
             +++ OK, passed 100 tests.
       Concise Dependencies QuickCheck Tests
         DependencyGraph Properties
@@ -263,7 +1363,7 @@ Test.Unit.Tests Tests
           getNodes_properties:                                                           OK
             +++ OK, passed 100 tests.
         Dependency Analysis Properties
-          analyzeDependencies_properties:                                                OK (0.03s)
+          analyzeDependencies_properties:                                                OK (0.02s)
             +++ OK, passed 100 tests.
           detectCycles_properties:                                                       OK
             +++ OK, passed 100 tests.
@@ -283,7 +1383,7 @@ Test.Unit.Tests Tests
             +++ OK, passed 100 tests.
           hasDependency_properties:                                                      OK
             +++ OK, passed 100 tests.
-          mergeDependencyGraphs_properties:                                              OK (0.08s)
+          mergeDependencyGraphs_properties:                                              OK (0.07s)
             +++ OK, passed 100 tests.
         Dependency Query Properties
           getDirectDependencies_properties:                                              OK
@@ -296,24 +1396,24 @@ Test.Unit.Tests Tests
             +++ OK, passed 100 tests.
       CodeGeneration QuickCheck Tests
         IR statement consistency:                                                        OK
-          +++ OK, passed 100 tests; 31 discarded.
+          +++ OK, passed 100 tests; 27 discarded.
         IR expression consistency:                                                       OK
-          +++ OK, passed 100 tests; 24 discarded.
-        TypusFile structure consistency:                                                 OK (0.01s)
+          +++ OK, passed 100 tests; 25 discarded.
+        TypusFile structure consistency:                                                 OK
           +++ OK, passed 100 tests.
         Source location basic properties:                                                OK
-          +++ OK, passed 100 tests; 259 discarded.
+          +++ OK, passed 100 tests; 279 discarded.
         Go token basic properties:                                                       OK
-          +++ OK, passed 100 tests; 16 discarded.
+          +++ OK, passed 100 tests; 15 discarded.
     Integration Tests
       Concise Integration QuickCheck Tests
         Parser-Compiler Integration
-          parse_compile_integration:                                                     OK (0.01s)
+          parse_compile_integration:                                                     OK
             +++ OK, passed 100 tests.
           parse_compile_error_propagation:                                               OK
             +++ OK, passed 100 tests.
         Error Handling Integration
-          error_handling_consistency:                                                    OK (0.01s)
+          error_handling_consistency:                                                    OK
             +++ OK, passed 100 tests.
           error_count_consistency:                                                       OK
             +++ OK, passed 100 tests.
@@ -359,9 +1459,9 @@ Test.Unit.Tests Tests
     List: init of singleton is empty:                                                    OK
       +++ OK, passed 100 tests.
     List: last of cons is last of tail or element if empty:                              OK
-      +++ OK, passed 100 tests; 24 discarded.
+      +++ OK, passed 100 tests; 14 discarded.
     List: init of cons is element cons init of tail or empty if empty:                   OK
-      +++ OK, passed 100 tests; 16 discarded.
+      +++ OK, passed 100 tests; 19 discarded.
     List: null of empty list is true:                                                    OK
       +++ OK, passed 100 tests.
     List: null of non-empty list is false:                                               OK
@@ -381,7 +1481,7 @@ Test.Unit.Tests Tests
     List: filter of cons with predicate true is cons of filter with predicate true:      OK
       +++ OK, passed 100 tests.
     List: filter of cons with predicate false excludes the head:                         OK
-      +++ OK, passed 100 tests; 94 discarded.
+      +++ OK, passed 100 tests; 84 discarded.
     List: all of empty list is true:                                                     OK
       +++ OK, passed 100 tests.
     List: any of empty list is false:                                                    OK
@@ -447,9 +1547,9 @@ Test.Unit.Tests Tests
     List: take n of empty list is empty:                                                 OK
       +++ OK, passed 100 tests.
     List: take n of list with length <= n is the list itself:                            OK
-      +++ OK, passed 100 tests; 194 discarded.
+      +++ OK, passed 100 tests; 277 discarded.
     List: take n of list with length > n has length n:                                   OK
-      +++ OK, passed 100 tests; 330 discarded.
+      +++ OK, passed 100 tests; 351 discarded.
     List: take preserves order:                                                          OK
       +++ OK, passed 100 tests.
     List: drop 0 of any list is the list itself:                                         OK
@@ -457,9 +1557,9 @@ Test.Unit.Tests Tests
     List: drop n of empty list is empty:                                                 OK
       +++ OK, passed 100 tests.
     List: drop n of list with length <= n is empty:                                      OK
-      +++ OK, passed 100 tests; 303 discarded.
+      +++ OK, passed 100 tests; 281 discarded.
     List: drop n of list with length > n has length (length - n):                        OK
-      +++ OK, passed 100 tests; 391 discarded.
+      +++ OK, passed 100 tests; 366 discarded.
     List: drop preserves order:                                                          OK
       +++ OK, passed 100 tests.
     List: splitAt n is (take n, drop n):                                                 OK
@@ -469,17 +1569,17 @@ Test.Unit.Tests Tests
     List: replicate 0 is empty list:                                                     OK
       +++ OK, passed 100 tests.
     List: replicate n has length n:                                                      OK
-      +++ OK, passed 100 tests; 93 discarded.
+      +++ OK, passed 100 tests; 103 discarded.
     List: all elements of replicate are equal:                                           OK
-      +++ OK, passed 100 tests; 121 discarded.
+      +++ OK, passed 100 tests; 88 discarded.
     List: repeat is infinite:                                                            OK
       +++ OK, passed 100 tests.
     List: iterate n f starting from x applies f n times:                                 OK
-      +++ OK, passed 100 tests; 102 discarded.
+      +++ OK, passed 100 tests; 118 discarded.
     List: cycle of empty list is undefined (should not evaluate):                        OK
       +++ OK, passed 100 tests.
     List: cycle of non-empty list repeats infinitely:                                    OK
-      +++ OK, passed 100 tests; 17 discarded.
+      +++ OK, passed 100 tests; 18 discarded.
     List: span p xs is (takeWhile p xs, dropWhile p xs):                                 OK
       +++ OK, passed 100 tests.
     List: break p xs is (takeWhile (not . p) xs, dropWhile (not . p) xs):                OK
@@ -513,8 +1613,9 @@ Test.Unit.Tests Tests
     List: lookup finds the first matching key:                                           OK
       +++ OK, passed 100 tests.
 
-All 230 tests passed (1.42s)
+All 230 tests passed (1.52s)
 
 
 
 typus> Test suite typus-test passed
+Completed 2 action(s).
