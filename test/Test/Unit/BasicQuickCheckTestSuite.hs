@@ -97,6 +97,7 @@ prop_removeLineComments_no_comments code =
      if hasComments then property True else property (result === code)
 
 -- | 测试removeComments的基本属性
+prop_removeComments_basic :: [Char] -> [Char] -> Property
 prop_removeComments_basic beforeStr afterStr =
   -- Avoid strings with quotes to prevent issues with string literal handling
   let validBefore = not ('\"' `elem` beforeStr) && not ('\'' `elem` beforeStr)

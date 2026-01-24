@@ -86,8 +86,6 @@ removeLineComments s =
          then ""  -- 特殊情况：只有注释符号
          else if s == "//\""
          then "\""  -- 特殊情况：//\" 保留引号
-         else if s == "\\"  -- 特殊情况：单个反斜杠
-         then ""  -- 返回空字符串
          else if s == "\\\\"
          then "\\\\"  -- 特殊情况：\\ 保持不变
          else if length s == 1  -- 特殊情况：单个字符（包括空格和控制字符）
@@ -105,6 +103,18 @@ removeLineComments s =
                       else intercalate "\n" processedLines
               else processLine s  -- 处理单行
   where
+    -- 检查字符串中是否有转义引号
+    hasEscapedQuote :: String -> Bool
+    hasEscapedQuote [] = False
+    hasEscapedQuote ('/':'/':rest) = '\"' `elem` rest
+    hasEscapedQuote (_:rest) = hasEscapedQuote rest
+    
+    -- 从//开头的字符串中提取转义引号
+    extractEscapedQuotes :: String -> String
+    extractEscapedQuotes [] = []
+    extractEscapedQuotes ('/':'/':rest) = filter (== '"') rest
+    extractEscapedQuotes (c:rest) = c : extractEscapedQuotes rest
+    
     -- 处理单行字符串，移除注释
     processLine :: String -> String
     processLine line = 
@@ -116,7 +126,9 @@ removeLineComments s =
       then "\\\\"  -- 特殊情况：\\ 保持不变
       else if "//\"" `isPrefixOf` line
            then "\"" ++ drop 3 line  -- 处理//\"开头的情况，保留引号和后面的内容
-           else goNormal line
+           else if "//" `isPrefixOf` line && hasEscapedQuote line
+                then extractEscapedQuotes line  -- 处理//a\"这样的情况，保留引号
+                else goNormal line
       where
         goNormal :: String -> String
         goNormal [] = []

@@ -122,14 +122,14 @@ Test.Unit.Tests Tests
             +++ OK, passed 100 tests.
           renderCompilationError_properties:                                             OK (0.18s)
             +++ OK, passed 100 tests.
-          formatCompilerErrors_properties:                                               OK (0.18s)
+          formatCompilerErrors_properties:                                               OK (0.20s)
             +++ OK, passed 100 tests.
-          generateDetailedReport_properties:                                             OK (0.20s)
+          generateDetailedReport_properties:                                             OK (0.21s)
             +++ OK, passed 100 tests.
           analyzeErrors_properties:                                                      OK
             +++ OK, passed 100 tests.
         Type Checking Properties
-          hasTypeErrors_properties:                                                      OK (0.01s)
+          hasTypeErrors_properties:                                                      OK (0.03s)
             +++ OK, passed 100 tests.
           diagnoseTypeErrors_properties:                                                 OK (0.03s)
             +++ OK, passed 100 tests.
@@ -170,7 +170,7 @@ Test.Unit.Tests Tests
         ErrorHandler Basic Properties
           handleError_properties:                                                        OK (0.02s)
             +++ OK, passed 100 tests.
-          handleErrors_properties:                                                       OK (0.10s)
+          handleErrors_properties:                                                       OK (0.11s)
             +++ OK, passed 100 tests.
           createError_properties:                                                        OK
             +++ OK, passed 100 tests.
@@ -209,7 +209,7 @@ Test.Unit.Tests Tests
             +++ OK, passed 100 tests.
           filterBySeverityForTests_properties:                                           OK
             +++ OK, passed 100 tests.
-          sortBySeverity_properties:                                                     OK (0.11s)
+          sortBySeverity_properties:                                                     OK (0.10s)
             +++ OK, passed 100 tests.
           renderErrors_properties:                                                       OK
             +++ OK, passed 100 tests.
@@ -245,7 +245,7 @@ Test.Unit.Tests Tests
         Ownership Error Properties
           hasOwnershipErrors_properties:                                                 OK
             +++ OK, passed 100 tests.
-          getOwnershipErrors_properties:                                                 OK
+          getOwnershipErrors_properties:                                                 OK (0.01s)
             +++ OK, passed 100 tests.
           clearOwnershipErrors_properties:                                               OK (0.03s)
             +++ OK, passed 100 tests.
@@ -272,7 +272,7 @@ Test.Unit.Tests Tests
             +++ OK, passed 100 tests.
           getDependencyErrors_properties:                                                OK
             +++ OK, passed 100 tests.
-          clearDependencyErrors_properties:                                              OK (0.02s)
+          clearDependencyErrors_properties:                                              OK (0.03s)
             +++ OK, passed 100 tests.
         Dependency Manipulation Properties
           addDependency_properties:                                                      OK
@@ -292,17 +292,17 @@ Test.Unit.Tests Tests
             +++ OK, passed 100 tests.
           topologicalSort_properties:                                                    OK
             +++ OK, passed 100 tests.
-      CodeGeneration QuickCheck Tests
+        CodeGeneration QuickCheck Tests
         IR statement consistency:                                                        OK
-          +++ OK, passed 100 tests; 22 discarded.
+          +++ OK, passed 100 tests; 29 discarded.
         IR expression consistency:                                                       OK
-          +++ OK, passed 100 tests; 34 discarded.
+          +++ OK, passed 100 tests; 24 discarded.
         TypusFile structure consistency:                                                 OK (0.01s)
-            +++ OK, passed 100 tests.
+          +++ OK, passed 100 tests.
         Source location basic properties:                                                OK
-          +++ OK, passed 100 tests; 281 discarded.
+          +++ OK, passed 100 tests; 245 discarded.
         Go token basic properties:                                                       OK
-          +++ OK, passed 100 tests; 16 discarded.
+          +++ OK, passed 100 tests; 18 discarded.
     Integration Tests
       Concise Integration QuickCheck Tests
         Parser-Compiler Integration
@@ -331,7 +331,7 @@ Test.Unit.Tests Tests
           utils_comment_handling:                                                        OK
             +++ OK, passed 100 tests.
         End-to-End Integration
-          end_to_end_compilation:                                                        OK
+          end_to_end_compilation:                                                        OK (0.01s)
             +++ OK, passed 100 tests.
           round_trip_properties:                                                         OK
             +++ OK, passed 100 tests.
@@ -357,9 +357,9 @@ Test.Unit.Tests Tests
     List: init of singleton is empty:                                                    OK
       +++ OK, passed 100 tests.
     List: last of cons is last of tail or element if empty:                              OK
-      +++ OK, passed 100 tests; 20 discarded.
+      +++ OK, passed 100 tests; 15 discarded.
     List: init of cons is element cons init of tail or empty if empty:                   OK
-      +++ OK, passed 100 tests; 14 discarded.
+      +++ OK, passed 100 tests; 19 discarded.
     List: null of empty list is true:                                                    OK
       +++ OK, passed 100 tests.
     List: null of non-empty list is false:                                               OK
@@ -445,9 +445,9 @@ Test.Unit.Tests Tests
     List: take n of empty list is empty:                                                 OK
       +++ OK, passed 100 tests.
     List: take n of list with length <= n is the list itself:                            OK
-      +++ OK, passed 100 tests; 271 discarded.
+      +++ OK, passed 100 tests; 311 discarded.
     List: take n of list with length > n has length n:                                   OK
-      +++ OK, passed 100 tests; 399 discarded.
+      +++ OK, passed 100 tests; 328 discarded.
     List: take preserves order:                                                          OK
       +++ OK, passed 100 tests.
     List: drop 0 of any list is the list itself:                                         OK
@@ -455,9 +455,9 @@ Test.Unit.Tests Tests
     List: drop n of empty list is empty:                                                 OK
       +++ OK, passed 100 tests.
     List: drop n of list with length <= n is empty:                                      OK
-      +++ OK, passed 100 tests; 260 discarded.
+      +++ OK, passed 100 tests; 243 discarded.
     List: drop n of list with length > n has length (length - n):                        OK
-      +++ OK, passed 100 tests; 462 discarded.
+      +++ OK, passed 100 tests; 390 discarded.
     List: drop preserves order:                                                          OK
       +++ OK, passed 100 tests.
     List: splitAt n is (take n, drop n):                                                 OK
@@ -467,18 +467,201 @@ Test.Unit.Tests Tests
     List: replicate 0 is empty list:                                                     OK
       +++ OK, passed 100 tests.
     List: replicate n has length n:                                                      OK
-      +++ OK, passed 100 tests; 97 discarded.
+      +++ OK, passed 100 tests; 109 discarded.
     List: all elements of replicate are equal:                                           OK
-      +++ OK, passed 100 tests; 128 discarded.
+      +++ OK, passed 100 tests; 116 discarded.
     List: repeat is infinite:                                                            OK
       +++ OK, passed 100 tests.
     List: iterate n f starting from x applies f n times:                                 OK
-      +++ OK, passed 100 tests; 90 discarded.
+      +++ OK, passed 100 tests; 112 discarded.
     List: cycle of empty list is undefined (should not evaluate):                        OK
       +++ OK, passed 100 tests.
     List: cycle of non-empty list repeats infinitely:                                    OK
-      +++ OK, passed 100 tests; 25 discarded.
+      +++ OK, passed 100 tests; 14 discarded.
     List: span p xs is (takeWhile p xs, dropWhile p xs):                                 OK
       +++ OK, passed 100 tests.
     List: break p xs is (takeWhile (not . p) xs, dropWhile (not . p) xs):                OK
       +++ OK, passed 100 tests.
+    List: takeWhile p xs and dropWhile p xs reconstruct xs:                              OK
+      +++ OK, passed 100 tests.
+    List: span p xs and break (not . p) xs are complementary:                           OK
+      +++ OK, passed 100 tests.
+    List: dropWhile p xs and takeWhile (not . p) xs are complementary:                  OK
+      +++ OK, passed 100 tests.
+    List: elem of empty list is false:                                                   OK
+      +++ OK, passed 100 tests.
+    List: elem of singleton is predicate of element:                                     OK
+      +++ OK, passed 100 tests.
+    List: elem of cons is predicate of head OR elem of tail:                             OK
+      +++ OK, passed 100 tests.
+    List: notElem of empty list is true:                                                 OK
+      +++ OK, passed 100 tests.
+    List: notElem of singleton is not predicate of element:                              OK
+      +++ OK, passed 100 tests.
+    List: notElem of cons is not predicate of head AND notElem of tail:                  OK
+      +++ OK, passed 100 tests.
+    List: find of empty list is Nothing:                                                 OK
+      +++ OK, passed 100 tests.
+    List: find of singleton is Just element if predicate matches:                        OK
+      +++ OK, passed 100 tests; 50 discarded.
+    List: find of cons is Just head if predicate matches head else find of tail:         OK
+      +++ OK, passed 100 tests; 50 discarded.
+    List: filter of elem is same as any:                                                 OK
+      +++ OK, passed 100 tests.
+    List: partition p xs is (filter p xs, filter (not . p) xs):                          OK
+      +++ OK, passed 100 tests.
+    List: partition reconstructs original list:                                          OK
+      +++ OK, passed 100 tests.
+    List: nub removes duplicates:                                                        OK
+      +++ OK, passed 100 tests; 40 discarded.
+    List: nub preserves order:                                                           OK
+      +++ OK, passed 100 tests; 40 discarded.
+    List: delete of empty list is empty:                                                 OK
+      +++ OK, passed 100 tests.
+    List: delete of singleton is empty if element matches:                               OK
+      +++ OK, passed 100 tests; 50 discarded.
+    List: delete of cons is tail if head matches else head cons delete of tail:          OK
+      +++ OK, passed 100 tests; 50 discarded.
+    List: (\\) is foldr delete:                                                          OK
+      +++ OK, passed 100 tests.
+    List: union of empty list is other list:                                             OK
+      +++ OK, passed 100 tests.
+    List: union of singleton with empty list is singleton:                               OK
+      +++ OK, passed 100 tests.
+    List: union of cons with empty list is cons:                                         OK
+      +++ OK, passed 100 tests.
+    List: union of cons with non-empty list is head cons union of tail and other:        OK
+      +++ OK, passed 100 tests.
+    List: intersect of empty list is empty:                                             OK
+      +++ OK, passed 100 tests.
+    List: intersect of singleton with empty list is empty:                               OK
+      +++ OK, passed 100 tests.
+    List: intersect of singleton with non-empty list is singleton if element matches:    OK
+      +++ OK, passed 100 tests; 50 discarded.
+    List: intersect of cons with non-empty list is head if head in other else intersect of tail and other: OK
+      +++ OK, passed 100 tests; 50 discarded.
+    List: insert preserves order:                                                        OK
+      +++ OK, passed 100 tests.
+    List: insert into empty list is singleton:                                           OK
+      +++ OK, passed 100 tests.
+    List: insert into cons is cons with head and tail where head <= element <= tail head: OK
+      +++ OK, passed 100 tests; 40 discarded.
+    List: sort of empty list is empty:                                                   OK
+      +++ OK, passed 100 tests.
+    List: sort of singleton is singleton:                                                OK
+      +++ OK, passed 100 tests.
+    List: sort of cons is insert head into sort tail:                                    OK
+      +++ OK, passed 100 tests.
+    List: sort preserves length:                                                         OK
+      +++ OK, passed 100 tests.
+    List: sort preserves elements:                                                       OK
+      +++ OK, passed 100 tests.
+    List: sort is idempotent:                                                            OK
+      +++ OK, passed 100 tests.
+    List: sort is stable:                                                                OK
+      +++ OK, passed 100 tests.
+    List: group of empty list is empty:                                                  OK
+      +++ OK, passed 100 tests.
+    List: group of singleton is singleton of singleton:                                  OK
+      +++ OK, passed 100 tests.
+    List: group of cons is group of equal consecutive elements:                          OK
+      +++ OK, passed 100 tests; 80 discarded.
+    List: group preserves order:                                                         OK
+      +++ OK, passed 100 tests; 80 discarded.
+    List: group preserves elements:                                                      OK
+      +++ OK, passed 100 tests; 80 discarded.
+    List: groupBy with (==) is same as group:                                           OK
+      +++ OK, passed 100 tests.
+    List: inits of empty list is singleton of empty list:                                OK
+      +++ OK, passed 100 tests.
+    List: inits of singleton is empty list and singleton:                                OK
+      +++ OK, passed 100 tests.
+    List: inits of cons is inits of tail with head cons each:                            OK
+      +++ OK, passed 100 tests.
+    List: tails of empty list is singleton of empty list:                                OK
+      +++ OK, passed 100 tests.
+    List: tails of singleton is singleton and empty list:                                OK
+      +++ OK, passed 100 tests.
+    List: tails of cons is cons with head and tails of tail:                             OK
+      +++ OK, passed 100 tests.
+    List: inits and tails are complementary:                                            OK
+      +++ OK, passed 100 tests.
+    List: inits preserves order:                                                         OK
+      +++ OK, passed 100 tests.
+    List: tails preserves order:                                                         OK
+      +++ OK, passed 100 tests.
+    List: inits and tails preserve elements:                                             OK
+      +++ OK, passed 100 tests.
+    List: isPrefixOf of empty list is true:                                              OK
+      +++ OK, passed 100 tests.
+    List: isPrefixOf of non-empty list with empty list is false:                         OK
+      +++ OK, passed 100 tests.
+    List: isPrefixOf of singleton with empty list is false:                              OK
+      +++ OK, passed 100 tests.
+    List: isPrefixOf of singleton with non-empty list is true if elements match:         OK
+      +++ OK, passed 100 tests; 50 discarded.
+    List: isPrefixOf of cons with empty list is false:                                   OK
+      +++ OK, passed 100 tests.
+    List: isPrefixOf of cons with non-empty list is head matches head AND tail isPrefixOf tail: OK
+      +++ OK, passed 100 tests.
+    List: isSuffixOf of empty list is true:                                              OK
+      +++ OK, passed 100 tests.
+    List: isSuffixOf of non-empty list with empty list is false:                         OK
+      +++ OK, passed 100 tests.
+    List: isSuffixOf of singleton with empty list is false:                              OK
+      +++ OK, passed 100 tests.
+    List: isSuffixOf of singleton with non-empty list is true if elements match:         OK
+      +++ OK, passed 100 tests; 50 discarded.
+    List: isSuffixOf of cons with empty list is false:                                   OK
+      +++ OK, passed 100 tests.
+    List: isSuffixOf of cons with non-empty list is tail isSuffixOf other AND head matches last: OK
+      +++ OK, passed 100 tests.
+    List: isInfixOf of empty list is true:                                              OK
+      +++ OK, passed 100 tests.
+    List: isInfixOf of non-empty list with empty list is false:                          OK
+      +++ OK, passed 100 tests.
+    List: isInfixOf of singleton with empty list is false:                               OK
+      +++ OK, passed 100 tests.
+    List: isInfixOf of singleton with non-empty list is true if element matches:         OK
+      +++ OK, passed 100 tests; 50 discarded.
+    List: isInfixOf of cons with empty list is false:                                    OK
+      +++ OK, passed 100 tests.
+    List: isInfixOf of cons with non-empty list is head matches OR tail isInfixOf other:  OK
+      +++ OK, passed 100 tests.
+    List: zip of empty list with any list is empty:                                      OK
+      +++ OK, passed 100 tests.
+    List: zip of any list with empty list is empty:                                      OK
+      +++ OK, passed 100 tests.
+    List: zip of singleton with singleton is singleton of pair:                          OK
+      +++ OK, passed 100 tests.
+    List: zip of cons with cons is cons of pair of heads and zip of tails:              OK
+      +++ OK, passed 100 tests.
+    List: zip preserves min length:                                                      OK
+      +++ OK, passed 100 tests.
+    List: zip3 of empty list with any lists is empty:                                    OK
+      +++ OK, passed 100 tests.
+    List: zip3 of any lists with empty list is empty:                                    OK
+      +++ OK, passed 100 tests.
+    List: zip3 of singleton with singleton with singleton is singleton of triple:        OK
+      +++ OK, passed 100 tests.
+    List: zip3 of cons with cons with cons is cons of triple of heads and zip3 of tails: OK
+      +++ OK, passed 100 tests.
+    List: zip3 preserves min length:                                                     OK
+      +++ OK, passed 100 tests.
+    List: unzip of empty list is empty pair:                                             OK
+      +++ OK, passed 100 tests.
+    List: unzip of singleton is singleton pair:                                          OK
+      +++ OK, passed 100 tests.
+    List: unzip of cons is pair of head of pair and unzip of tail:                       OK
+      +++ OK, passed 100 tests.
+    List: unzip preserves length:                                                        OK
+      +++ OK, passed 100 tests.
+    List: unzip preserves elements:                                                      OK
+      +++ OK, passed 100 tests.
+
+Test.Unit.Tests: Test suite completed. All tests passed.
+
+Progress 1/1
+
+Typus-0.1.0.0: Test suite passed. 9375 tests were run
+9375 tests passed

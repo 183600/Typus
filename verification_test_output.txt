@@ -1,0 +1,200 @@
+typus-0.12.2: unregistering (local file changes: src/Analyzer/OwnershipBridge.hs
+src/Compiler/TypeChecker.hs src/Ownership/Analyzer.hs src/SimpleS...)
+typus> configure (lib + exe + test)
+Configuring typus-0.12.2...
+typus> build (lib + exe + test) with ghc-9.8.4
+Preprocessing library for typus-0.12.2..
+Building library for typus-0.12.2..
+[ 1 of 58] Compiling Cli
+[ 2 of 58] Compiling CommandLineDebug
+[ 3 of 58] Compiling Compiler.Error
+[ 4 of 58] Compiling Compiler.GoAst
+[ 5 of 58] Compiling Compiler.GoLexer
+[ 6 of 58] Compiling Debug
+[ 7 of 58] Compiling DebugIntegration
+[ 8 of 58] Compiling Dependencies.AST
+[ 9 of 58] Compiling Dependencies.Parser
+[10 of 58] Compiling Dependencies.Stub
+[11 of 58] Compiling Dependencies.TypeSystem
+[12 of 58] Compiling Dependencies.Inference
+[13 of 58] Compiling Dependencies.Analyzer
+[14 of 58] Compiling Dependencies
+[15 of 58] Compiling DependentTypesParser
+[16 of 58] Compiling DependentTypesParser.Stub
+[17 of 58] Compiling EnhancedDebug
+[18 of 58] Compiling Cli.DebugRunner
+[19 of 58] Compiling Ownership.Common.Lexer
+[20 of 58] Compiling Ownership.Common.Types
+[21 of 58] Compiling Compiler.Errors.Types
+[22 of 58] Compiling Compiler.Errors.Core
+[23 of 58] Compiling ErrorHandler
+[24 of 58] Compiling Ownership.Lexer
+[25 of 58] Compiling Ownership.Parser
+[26 of 58] Compiling Ownership.Analyzer
+
+/home/runner/work/Typus/Typus/src/Ownership/Analyzer.hs:244:21: error: [GHC-88464]
+    Variable not in scope:
+      foldl'
+        :: (Map.Map Name [VarState] -> Name -> Map.Map Name [VarState])
+           -> Map.Map Name [VarState] -> [Name] -> t
+    Suggested fixes:
+      • Perhaps use one of these:
+          ‘Map.foldl'’ (imported from Data.Map.Strict),
+          ‘foldl’ (imported from Prelude),
+          ‘Map.foldl’ (imported from Data.Map.Strict)
+      • Add ‘foldl'’ to one of these import lists:
+          ‘Data.Foldable’ (at src/Ownership/Analyzer.hs:13:1-23)
+          ‘Data.List’ (at src/Ownership/Analyzer.hs:10:1-28)
+    |
+244 |       updatedVars = foldl' releaseBorrow keepVars borrowedAtCurrentScope
+    |                     ^^^^^^
+[27 of 58] Compiling Ownership.Reporter
+[32 of 58] Compiling SimpleSyntaxValidator
+
+/home/runner/work/Typus/Typus/src/SimpleSyntaxValidator.hs:70:22: error: [GHC-88464]
+    Variable not in scope:
+      foldl'
+        :: (ParseState -> (Char, Int) -> ParseState)
+           -> ParseState -> [(Char, b0)] -> t
+    Suggested fixes:
+      • Perhaps use one of these:
+          ‘foldl’ (imported from Prelude), ‘foldl1’ (imported from Prelude),
+          ‘foldr’ (imported from Prelude)
+      • Add ‘foldl'’ to the import list in the import of ‘Data.List’
+        (at src/SimpleSyntaxValidator.hs:9:1-40).
+   |
+70 |     let finalState = foldl' processChar initialState (zip content [0..])
+   |                      ^^^^^^
+
+/home/runner/work/Typus/Typus/src/SimpleSyntaxValidator.hs:288:13: error: [GHC-88464]
+    Variable not in scope:
+      foldl'
+        :: (ParseState -> (Char, Int) -> ParseState)
+           -> ParseState -> [(Char, b1)] -> t0
+    Suggested fixes:
+      • Perhaps use one of these:
+          ‘foldl’ (imported from Prelude), ‘foldl1’ (imported from Prelude),
+          ‘foldr’ (imported from Prelude)
+      • Add ‘foldl'’ to the import list in the import of ‘Data.List’
+        (at src/SimpleSyntaxValidator.hs:9:1-40).
+    |
+288 |     let _ = foldl' processChar initialState (zip content [0..])
+    |             ^^^^^^
+[33 of 58] Compiling SourceLocation
+
+/home/runner/work/Typus/Typus/src/SourceLocation.hs:266:26: error: [GHC-88464]
+    Variable not in scope:
+      foldl'
+        :: (SourcePos -> Char -> SourcePos)
+           -> SourcePos -> String -> SourcePos
+    Suggested fixes:
+      • Perhaps use one of these:
+          ‘T.foldl'’ (imported from Data.Text),
+          ‘foldl’ (imported from Prelude),
+          ‘T.foldl’ (imported from Data.Text)
+      • Add ‘foldl'’ to one of these import lists:
+          ‘Data.Foldable’ (at src/SourceLocation.hs:70:1-23)
+          ‘Data.Text’ (at src/SourceLocation.hs:64:1-23)
+    |
+266 | advancePosBy chars pos = foldl' (flip advancePos) pos chars
+    |                          ^^^^^^
+[38 of 58] Compiling SyntaxValidator
+
+/home/runner/work/Typus/Typus/src/SyntaxValidator.hs:321:5: error: [GHC-88464]
+    Variable not in scope:
+      foldl'
+        :: (SyntaxValidator -> (Token, Token) -> SyntaxValidator)
+           -> SyntaxValidator -> [(Token, Token)] -> SyntaxValidator
+    Suggested fixes:
+      • Perhaps use one of these:
+          ‘Set.foldl'’ (imported from Data.Set),
+          ‘foldl’ (imported from Prelude),
+          ‘Set.foldl’ (imported from Data.Set)
+      • Add ‘foldl'’ to one of these import lists:
+          ‘Data.Foldable’ (at src/SyntaxValidator.hs:17:1-23)
+          ‘Data.List’ (at src/SyntaxValidator.hs:15:1-47)
+    |
+321 |     foldl' validateToken validator (zip tokens nextTokens)
+    |     ^^^^^^
+
+/home/runner/work/Typus/Typus/src/SyntaxValidator.hs:416:30: error: [GHC-88464]
+    Variable not in scope:
+      foldl'
+        :: (SyntaxValidator -> Token -> SyntaxValidator)
+           -> SyntaxValidator -> [Token] -> t
+    Suggested fixes:
+      • Perhaps use one of these:
+          ‘Set.foldl'’ (imported from Data.Set),
+          ‘foldl’ (imported from Prelude),
+          ‘Set.foldl’ (imported from Data.Set)
+      • Add ‘foldl'’ to one of these import lists:
+          ‘Data.Foldable’ (at src/SyntaxValidator.hs:17:1-23)
+          ‘Data.List’ (at src/SyntaxValidator.hs:15:1-47)
+    |
+416 |        else let validator' = foldl' checkBrace validator tokens
+    |                              ^^^^^^
+
+/home/runner/work/Typus/Typus/src/SyntaxValidator.hs:447:5: error: [GHC-88464]
+    Variable not in scope:
+      foldl'
+        :: (SyntaxValidator -> Token -> SyntaxValidator)
+           -> SyntaxValidator -> [Token] -> SyntaxValidator
+    Suggested fixes:
+      • Perhaps use one of these:
+          ‘Set.foldl'’ (imported from Data.Set),
+          ‘foldl’ (imported from Prelude),
+          ‘Set.foldl’ (imported from Data.Set)
+      • Add ‘foldl'’ to one of these import lists:
+          ‘Data.Foldable’ (at src/SyntaxValidator.hs:17:1-23)
+          ‘Data.List’ (at src/SyntaxValidator.hs:15:1-47)
+    |
+447 |     foldl' checkVariableUsage validator (filterIdentifiers tokens)
+    |     ^^^^^^
+
+/home/runner/work/Typus/Typus/src/SyntaxValidator.hs:498:22: error: [GHC-88464]
+    Variable not in scope:
+      foldl'
+        :: (SyntaxValidator -> Token -> SyntaxValidator)
+           -> SyntaxValidator -> [Token] -> t
+    Suggested fixes:
+      • Perhaps use one of these:
+          ‘Set.foldl'’ (imported from Data.Set),
+          ‘foldl’ (imported from Prelude),
+          ‘Set.foldl’ (imported from Data.Set)
+      • Add ‘foldl'’ to one of these import lists:
+          ‘Data.Foldable’ (at src/SyntaxValidator.hs:17:1-23)
+          ‘Data.List’ (at src/SyntaxValidator.hs:15:1-47)
+    |
+498 |     let validator1 = foldl' checkTypusDirective validator (filterComments tokens)
+    |                      ^^^^^^
+
+/home/runner/work/Typus/Typus/src/SyntaxValidator.hs:556:5: error: [GHC-88464]
+    Variable not in scope:
+      foldl'
+        :: (SyntaxValidator -> (Token, Token, Token) -> SyntaxValidator)
+           -> SyntaxValidator -> [(Token, Token, Token)] -> SyntaxValidator
+    Suggested fixes:
+      • Perhaps use one of these:
+          ‘Set.foldl'’ (imported from Data.Set),
+          ‘foldl’ (imported from Prelude),
+          ‘Set.foldl’ (imported from Data.Set)
+      • Add ‘foldl'’ to one of these import lists:
+          ‘Data.Foldable’ (at src/SyntaxValidator.hs:17:1-23)
+          ‘Data.List’ (at src/SyntaxValidator.hs:15:1-47)
+    |
+556 |     foldl' checkControlStructure validator (zip3 tokens (drop 1 tokens ++ [TNewline 0]) (drop 2 tokens ++ [TNewline 0, TNewline 0]))
+    |     ^^^^^^
+[39 of 58] Compiling Utils
+[42 of 58] Compiling Compiler.GoParsing
+[43 of 58] Compiling Compiler.GoVarSpec
+[44 of 58] Compiling Compiler.ValueAnalysis
+
+Error: [S-7282]
+       Stack failed to execute the build plan.
+       
+       While executing the build plan, Stack encountered the error:
+       
+       [S-7011]
+       While building package typus-0.12.2 (scroll up to its section to see the error) using:
+       /home/runner/.stack/setup-exe-cache/x86_64-linux-tinfo6/Cabal-simple_w2MFVN35_3.10.3.0_ghc-9.8.4 --verbose=1 --builddir=.stack-work/dist/x86_64-linux-tinfo6/ghc-9.8.4 build lib:typus exe:typus test:typus-test --ghc-options ""
+       Process exited with code: ExitFailure 1 
