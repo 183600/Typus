@@ -88,7 +88,7 @@ prop_removeComments_empty = removeComments "" === ""
 -- | 测试removeComments对没有注释的处理
 prop_removeComments_no_comments :: String -> Property
 prop_removeComments_no_comments code =
-  not ("/*" `isInfixOf` code) && not ("*/" `isInfixOf` code) ==> 
+  not ("/*" `isInfixOf` code) && not ("*/" `isInfixOf` code) && not ("//" `isInfixOf` code) ==> 
   removeComments code === code
 
 -- | 测试normalizeIndentation的基本属性

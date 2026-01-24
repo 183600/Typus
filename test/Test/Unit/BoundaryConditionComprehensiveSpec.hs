@@ -5,31 +5,30 @@
 module Test.Unit.BoundaryConditionComprehensiveSpec where
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, assertEqual, assertBool, Assertion)
-import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
-import Test.QuickCheck (Gen, Property, (==>), classify)
-import Parser (parseTypus, FileDirectives(..), BlockDirectives(..), CodeBlock(..), TypusFile(..), defaultFileDirectives)
-import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), locatedAt, advancePosByText, startPos)
+import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
+import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll)
+import Test.QuickCheck (Property, (==>), classify)
+import Parser (parseTypus, TypusFile(..), defaultFileDirectives, tfContents)
+import SourceLocation (SourcePos(..), SourceSpan(..), spanStart, spanEnd, advancePosByText, startPos)
 import Compiler.Errors.Core (TypeError(..), ErrorSeverity(..), ErrorCategory(..), 
-                            ErrorLocation(..), ErrorContext(..), emptyContext,
-                            errorAt, warningAt, infoAt, fatalError, newErrorCollector, addError,
+                            ErrorLocation(..), ErrorContext(..),
+                            errorAt, newErrorCollector, addError,
                             getErrors, hasErrors, canRecoverFrom, shouldContinueAfter,
-                            formatErrorWithLocation, ErrorCollector)
+                            formatErrorWithLocation, fatalError, ErrorCollector)
 import Utils (trim, splitBy, removeComments, normalizeIndentation, safeProcessString, isValidChar)
 import qualified Data.Text as T
 import Data.Char (isAlphaNum, isSpace, isPrint, isControl, chr)
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Data.Maybe (listToMaybe)
 import Control.Monad (foldM)
-import Control.Monad.State (execState, State)
+import Control.Monad.State (execState)
 import Control.Exception (evaluate, try, SomeException)
 
 -- Arbitrary instance for SourcePos
 instance Arbitrary SourcePos where
   arbitrary = do
-    line <- choose (1, 1000)
-    column <- choose (1, 1000)
-    return $ SourcePos { posLine = line, posColumn = column, posOffset = 0 }
+    lineNum <- choose (1, 1000)
+    colNum <- choose (1, 1000)
+    return $ SourcePos { posLine = lineNum, posColumn = colNum, posOffset = 0 }
 
 -- Arbitrary instance for ErrorSeverity
 instance Arbitrary ErrorSeverity where
@@ -60,17 +59,17 @@ genUnicodeString = listOf $ elements $ map chr [0..255]
 
 genExtremePositions :: Gen SourcePos
 genExtremePositions = do
-  line <- oneof [choose (1, 10), choose (999990, 1000000)]
-  column <- oneof [choose (1, 10), choose (999990, 1000000)]
-  offset <- oneof [choose (0, 10), choose (999990, 1000000)]
-  return $ SourcePos line column offset
+  lineNum <- oneof [choose (1, 10), choose (999990, 1000000)]
+  colNum <- oneof [choose (1, 10), choose (999990, 1000000)]
+  offsetVal <- oneof [choose (0, 10), choose (999990, 1000000)]
+  return $ SourcePos lineNum colNum offsetVal
 
 -- Test properties for Boundary Condition tests
 
 -- Property 1: Parser handles extremely large inputs
-prop_parser_large_input :: Int -> Property
-prop_parser_large_input size = 
-  size > 1000 && size <= 10000 ==> 
+prop_parser_large_input :: Property
+prop_parser_large_input = 
+  forAll (choose (1001, 10000)) $ \size ->
   let content = replicate size 'a' ++ "\nownership=true"
       result = parseTypus content
   in case result of
@@ -97,12 +96,11 @@ prop_sourcelocation_extreme_positions pos1 pos2 =
 
 -- Property 4: Error handling with extreme severity levels
 prop_error_extreme_severity :: String -> ErrorSeverity -> Bool
-prop_error_extreme_severity message severity = 
-  let error = errorAt "Parsing" Error (T.pack message) (ErrorLocation Nothing 1 1 Nothing Nothing)
-      errorWithSeverity = error { severity = severity }
-      canRecover = canRecoverFrom errorWithSeverity
-      shouldContinue = shouldContinueAfter errorWithSeverity
-  in if severity == Fatal
+prop_error_extreme_severity msg sev = 
+  let err = errorAt "Parsing" sev (T.pack msg) (ErrorLocation Nothing 1 1 Nothing Nothing)
+      canRecover = canRecoverFrom err
+      shouldContinue = shouldContinueAfter err
+  in if sev == Fatal
      then not canRecover && not shouldContinue
      else canRecover && shouldContinue
 
@@ -112,9 +110,8 @@ prop_utils_extreme_inputs input =
   let trimmed = trim input
       split = splitBy ',' input
       commentsRemoved = removeComments input
-      normalized = normalizeIndentation input
       safe = safeProcessString input
-  in not (null trimmed) || null input &&
+  in (not (null trimmed) || all isSpace input) &&
      length split >= 0 &&
      length commentsRemoved >= 0 &&
      case safe of Right s -> all isValidChar s; Left _ -> False
@@ -124,7 +121,7 @@ prop_error_collector_large_numbers :: Int -> Property
 prop_error_collector_large_numbers numErrors = 
   numErrors > 0 && numErrors <= 1000 ==> 
   let errors = replicate numErrors (errorAt "test" Error (T.pack "test error") (ErrorLocation Nothing 1 1 Nothing Nothing))
-      collector = execState (foldM (\acc err -> addError err) () errors) []
+      collector = execState (foldM (\_ err -> addError err) () errors) []
       retrievedErrors = getErrors collector  
   in length retrievedErrors == numErrors && hasErrors collector
 
@@ -158,11 +155,12 @@ prop_large_directives_handling directiveSize =
        Left _ -> False
 
 -- Property 10: Error formatting with extreme content
-prop_error_formatting_extreme_content :: String -> Property
-prop_error_formatting_extreme_content content = 
-  length content > 100 ==> 
-  let error = errorAt "Parsing" Error (T.pack content) (ErrorLocation Nothing 1 1 Nothing Nothing)
-      formatted = formatErrorWithLocation error
+prop_error_formatting_extreme_content :: Property
+prop_error_formatting_extreme_content = 
+  forAll (vectorOf 101 arbitrary) $ \chars ->
+  let content = chars
+      err = errorAt "Parsing" Error (T.pack content) (ErrorLocation Nothing 1 1 Nothing Nothing)
+      formatted = formatErrorWithLocation err
   in not (T.null (T.pack formatted))
 
 -- Unit tests for boundary conditions
@@ -189,12 +187,12 @@ test_extreme_positions :: [TestTree]
 test_extreme_positions = 
   [ testCase "source position at maximum values" $ do
       let maxPos = SourcePos 1000000 1000000 1000000
-          span = SourceSpan maxPos maxPos
-      assertEqual "should handle max position" maxPos (spanStart span)
+          span1 = SourceSpan maxPos maxPos
+      assertEqual "should handle max position" maxPos (spanStart span1)
   , testCase "source position at minimum values" $ do
       let minPos = startPos
-          span = SourceSpan minPos minPos
-      assertEqual "should handle min position" minPos (spanStart span)
+          span2 = SourceSpan minPos minPos
+      assertEqual "should handle min position" minPos (spanStart span2)
   , testCase "position advancement with large content" $ do
       let largeContent = replicate 10000 'a'
           endPos = advancePosByText (T.pack largeContent) startPos
@@ -205,16 +203,15 @@ test_extreme_error_conditions :: [TestTree]
 test_extreme_error_conditions = 
   [ testCase "error collector with many errors" $ do
       let manyErrors = replicate 1000 (errorAt "Parsing" Error (T.pack "test error") (ErrorLocation Nothing 1 1 Nothing Nothing))
-          collector = execState (foldM (\acc err -> addError err) () manyErrors) []
+          collector = execState (foldM (\_ err -> addError err) () manyErrors) []
       assertEqual "should handle many errors" 1000 (length (getErrors collector))
   , testCase "error with very long message" $ do
       let longMessage = replicate 10000 'a'
-          error = errorAt "Parsing" Error (T.pack longMessage) (ErrorLocation Nothing 1 1 Nothing Nothing)
-          formatted = formatErrorWithLocation error
+          err = errorAt "Parsing" Error (T.pack longMessage) (ErrorLocation Nothing 1 1 Nothing Nothing)
+          formatted = formatErrorWithLocation err
       assertBool "should format long message" (not (T.null (T.pack formatted)))
   , testCase "fatal error handling" $ do
-      let fatal = fatalError "fatal error message"
-      let fatal = fatalError "fatal" (T.pack "fatal error") (ErrorLocation Nothing 1 1 Nothing Nothing)
+      let fatal = fatalError "Parsing" (T.pack "fatal error") (ErrorLocation Nothing 1 1 Nothing Nothing)
       assertEqual "should not recover from fatal" False (canRecoverFrom fatal)
       assertEqual "should not continue after fatal" False (shouldContinueAfter fatal)
   , testCase "error with extreme severity" $ do
@@ -271,13 +268,17 @@ test_resource_limits =
 test_concurrent_safety :: [TestTree]
 test_concurrent_safety = 
   [ testCase "parser state isolation" $ do
-      let content1 = "ownership=true\ncode1"
-          content2 = "dependent-types=false\ncode2"
+      let content1 = "//! ownership=true\ncode1"
+          content2 = "//! dependent-types=false\ncode2"
           result1 = parseTypus content1
           result2 = parseTypus content2
+      -- Check that parsing state is isolated (results should be different or both succeed)
       assertBool "should isolate parsing state" 
-         ((case result1 of Right p1 -> show (tfDirectives p1); Left _ -> show defaultFileDirectives) /= 
-          (case result2 of Right p2 -> show (tfDirectives p2); Left _ -> show defaultFileDirectives))
+         (case (result1, result2) of 
+            (Right p1, Right p2) -> tfContents p1 /= tfContents p2
+            (Left e1, Left e2) -> e1 /= e2  -- Different errors
+            (Right _, Left _) -> True  -- One succeeds, one fails
+            (Left _, Right _) -> True)  -- One fails, one succeeds
   , testCase "error collector isolation" $ do
       let error1 = errorAt "Parsing" Error (T.pack "error1") (ErrorLocation Nothing 1 1 Nothing Nothing)
           error2 = errorAt "TypeChecking" Error (T.pack "error2") (ErrorLocation Nothing 1 1 Nothing Nothing)

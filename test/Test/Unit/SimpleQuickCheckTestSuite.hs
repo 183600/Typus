@@ -141,8 +141,13 @@ prop_removeComments_empty = Utils.removeComments "" === ""
 -- | 测试removeComments对没有注释的处理
 prop_removeComments_no_comments :: String -> Property
 prop_removeComments_no_comments code =
-  not ("/*" `isInfixOf` code) && not ("*/" `isInfixOf` code) ==> 
-  Utils.removeComments code === code
+  let hasStartComment = "/*" `isInfixOf` code
+      hasEndComment = "*/" `isInfixOf` code
+      hasLineComment = "//" `isInfixOf` code
+      hasComments = hasStartComment || hasEndComment || hasLineComment
+      result = removeComments code
+  in classify hasComments "has comments" $
+     if hasComments then property True else property (result === code)
 
 -- | 测试removeComments对多行注释的处理
 prop_removeComments_multiline :: Positive Int -> String -> String -> Property

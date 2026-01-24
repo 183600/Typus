@@ -647,7 +647,11 @@ errorAt errId sev msg loc = TypeError
     , message = msg
     , location = loc
     , context = emptyContext
-    , recovery = errorRecovery
+    , recovery = case sev of
+                    Fatal -> fatalRecovery
+                    Error -> errorRecovery
+                    Warning -> warningRecovery
+                    Info -> infoRecovery
     , suggestions = []
     , relatedErrors = []
     , errorChain = []

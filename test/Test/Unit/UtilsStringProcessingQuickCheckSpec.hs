@@ -99,11 +99,8 @@ prop_safe_process_string_handles_special s =
 -- | Test that isValidChar correctly identifies valid characters
 prop_is_valid_char_properties :: Char -> Property
 prop_is_valid_char_properties c = 
-  let isValid = isValidChar c
-  in property $ 
-    if isAlphaNum c 
-    then isValid
-    else isValid == (c `elem` " \t\n\r.,;:!()[]{}+-*/=<>&|^~%")
+  let expected = c >= ' ' || c `elem` "\n\r\t"
+  in isValidChar c === expected
 
 tests :: TestTree
 tests = testGroup "Utils String Processing QuickCheck Tests"

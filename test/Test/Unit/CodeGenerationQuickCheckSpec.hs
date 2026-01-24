@@ -4,15 +4,11 @@ module Test.Unit.CodeGenerationQuickCheckSpec where
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
-import TestSupport.QuickCheck
-import TestSupport.Arbitrary
 
 import Compiler.IR
 import Compiler.GoLexer (GoToken(..), GoTokenKind(..))
-import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..), defaultFileDirectives, defaultBlockDirectives, tfContents)
+import Parser (TypusFile(..), CodeBlock(..), defaultFileDirectives, defaultBlockDirectives, tfContents)
 import SourceLocation (SourcePos(..), emptySpan, sourceLine, sourceColumn)
-import qualified Data.Text as T
 
 
 
