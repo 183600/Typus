@@ -1,13 +1,18 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+module Test.Unit.NewOwnershipAnalysisQuickCheckSpec where
 
+
+
+import Test.Tasty.HUnit
+import Test.Tasty
+import Test.Tasty.QuickCheck
 -- | Ownership analysis QuickCheck tests for the Typus compiler
 -- This module contains property-based tests for ownership analysis utilities
-module Test.Unit.NewOwnershipAnalysisQuickCheckSpec where
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Test.QuickCheck ((==>), conjoin, counterexample)
 import Utils
   ( trim

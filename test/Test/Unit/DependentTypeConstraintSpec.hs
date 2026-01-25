@@ -1,9 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
+module Test.Unit.DependentTypeConstraintSpec where
 
-module Test.Unit.DependentTypeConstraintSpec (tests) where
 
-import Test.Tasty
+
 import Test.Tasty.HUnit
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
 import Test.Tasty.QuickCheck
 import Data.List (sort, isInfixOf)
 import SourceLocation (SourcePos(..), SourceSpan(..))

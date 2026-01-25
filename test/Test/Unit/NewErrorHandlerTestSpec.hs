@@ -1,11 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
 module Test.Unit.NewErrorHandlerTestSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
 
 import Compiler.Errors.Core
 import SourceLocation (SourcePos(..), Located(..), locatedAt)

@@ -1,7 +1,10 @@
 module Test.Unit.UtilsStringFunctionsSpec where
 
-import Test.Tasty
+
+
 import Test.Tasty.HUnit
+import Test.Tasty
+
 import Utils (trim, splitBy, splitByComma, splitByCommaCollapsed)
 import Data.Char (isSpace)
 

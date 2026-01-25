@@ -2,8 +2,10 @@
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 module Test.Unit.TestErrorHandlerConsistencySpec where
 
-import Test.Tasty
+
+
 import Test.Tasty.HUnit
+import Test.Tasty
 
 -- | Test suite for ErrorHandler Consistency
 testErrorHandlerConsistency :: TestTree

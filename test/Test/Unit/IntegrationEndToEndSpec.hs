@@ -1,9 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
+module Test.Unit.IntegrationEndToEndSpec where
 
-module Test.Unit.IntegrationEndToEndSpec (tests) where
+
+import Test.Tasty.HUnit
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
+
 
 import Test.Tasty
-import Test.Tasty.HUnit
+
 import Test.Tasty.QuickCheck
 import Data.List (sort)
 import SourceLocation (SourcePos(..), SourceSpan(..))

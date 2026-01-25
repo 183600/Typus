@@ -1,6 +1,7 @@
 {-# LANGUAGE RecordWildCards #-}
-
 module Test.Unit.CodeGenerationQuickCheckSpec where
+
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck

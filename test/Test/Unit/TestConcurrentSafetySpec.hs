@@ -3,9 +3,12 @@
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 module Test.Unit.TestConcurrentSafetySpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import qualified Parser as P
 import qualified SourceLocation as SL
 import qualified ErrorHandler as EH

@@ -1,5 +1,7 @@
 module Test.Unit.ErrorHandlerBoundaryQuickCheckSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Compiler.Errors.Core

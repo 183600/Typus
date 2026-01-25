@@ -1,9 +1,11 @@
 module Test.Unit.DebugIntegrationFlowSpec where
 
+
+
 import Test.Tasty
 import qualified Data.Text as T
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import DebugIntegration
 
 -- Test debug level type

@@ -1,11 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
 module Test.Unit.NewDependenciesTestSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
 
 import Dependencies
 import Dependencies.AST

@@ -1,8 +1,11 @@
 module Test.Unit.ErrorBoundarySpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import qualified Data.Text as T
 import Data.List (isPrefixOf, isSuffixOf, isInfixOf)
 import Utils (trim, splitBy, removeComments, normalizeIndentation, isValidChar)

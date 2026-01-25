@@ -1,8 +1,10 @@
 module Test.Unit.StringProcessingQuickCheckSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Data.Char (isAlpha, isDigit, isSpace, toLower, toUpper)
 import Data.List (isPrefixOf, isSuffixOf, isInfixOf, sort, nub)
 import qualified Data.Text as T

@@ -1,10 +1,12 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-
 module Test.Unit.CoreDependenciesPropertiesQuickCheckSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Dependencies.TypeSystem (TypeVar(..), TypeConstraint(..), Substitution)
 import qualified Data.Text as T
 import Data.List (nub)

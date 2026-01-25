@@ -1,9 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
+module Test.Unit.IntegratedCompilerConsistencySpec where
 
-module Test.Unit.IntegratedCompilerConsistencySpec (tests) where
+
 
 import Test.Tasty
-import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck
+
 import Test.Tasty.QuickCheck
 import Data.List (sort, nub, group, isPrefixOf, isInfixOf)
 import Data.Maybe (isJust, isNothing, fromMaybe)

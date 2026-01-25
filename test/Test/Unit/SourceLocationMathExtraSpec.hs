@@ -1,11 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
 module Test.Unit.SourceLocationMathExtraSpec where
+
+
+import Test.Tasty.HUnit
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import SourceLocation
 import Data.List (minimum, maximum)
 

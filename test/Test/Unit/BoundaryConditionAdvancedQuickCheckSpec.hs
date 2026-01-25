@@ -1,18 +1,18 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
 module Test.Unit.BoundaryConditionAdvancedQuickCheckSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
 
 import Parser
 import SourceLocation (SourcePos(..), startPos, advancePosByText)
 import Utils (trim, removeLineComments, normalizeIndentation)
 import Data.List (isInfixOf)
-import Data.Char (isAlphaNum, isSpace, isControl)
-import Data.Either (isLeft, isRight)
+import Data.Char (isAlphaNum, isControl)
 
 -- | 测试极长字符串的处理
 prop_extremely_long_string_handling :: Positive Int -> Property

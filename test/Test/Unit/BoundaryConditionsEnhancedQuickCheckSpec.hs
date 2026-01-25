@@ -1,7 +1,14 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Test.Unit.BoundaryConditionsEnhancedQuickCheckSpec where
+
+
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
@@ -141,8 +148,8 @@ prop_sourcelocation_large_positions n =
 
 prop_sourcelocation_span_same_position :: SourcePos -> Bool
 prop_sourcelocation_span_same_position pos = 
-  let span = spanBetween pos pos
-  in spanStart span == pos && spanEnd span == pos
+  let sourceSpan = spanBetween pos pos
+  in spanStart sourceSpan == pos && spanEnd sourceSpan == pos
 
 prop_sourcelocation_merge_empty_spans :: SourcePos -> SourcePos -> Bool
 prop_sourcelocation_merge_empty_spans pos1 pos2 = 
@@ -239,8 +246,8 @@ prop_utils_invalid_split_char delim s =
 
 prop_sourcelocation_invalid_span :: SourcePos -> SourcePos -> Bool
 prop_sourcelocation_invalid_span start end = 
-  let span = spanBetween end start  -- Swapped order
-      valid = isValidSpan span
+  let sourceSpan = spanBetween end start  -- Swapped order
+      valid = isValidSpan sourceSpan
   in if start > end then not valid else valid  -- Should be invalid if start > end
 
 prop_parser_malformed_directives :: String -> Property
@@ -271,8 +278,8 @@ prop_sourcelocation_large_span_operations n =
   n >= 0 && n <= 1000 ==>
     let start = SourcePos 1 1 0
         end = SourcePos n n (n * n)
-        span = spanBetween start end
-        merged = mergeSpans span span
+        sourceSpan = spanBetween start end
+        merged = mergeSpans sourceSpan sourceSpan
     in spanStart merged == start && spanEnd merged == end
 
 -- | Test consistency under stress

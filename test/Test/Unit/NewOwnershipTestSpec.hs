@@ -1,11 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
 module Test.Unit.NewOwnershipTestSpec where
+
+
+import Test.Tasty.HUnit
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
 
 import Ownership
 import Ownership.Common.Types

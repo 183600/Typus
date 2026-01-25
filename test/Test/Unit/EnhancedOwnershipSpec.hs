@@ -1,8 +1,11 @@
 module Test.Unit.EnhancedOwnershipSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Data.Char (isAlpha, isAlphaNum)
 import Data.List (isPrefixOf, isInfixOf)
 import Data.Maybe (isJust, isNothing)

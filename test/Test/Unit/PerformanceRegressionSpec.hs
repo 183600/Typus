@@ -1,9 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
+module Test.Unit.PerformanceRegressionSpec where
 
-module Test.Unit.PerformanceRegressionSpec (tests) where
 
-import Test.Tasty
+
 import Test.Tasty.HUnit
+import Test.Tasty
+
 import Test.Tasty.QuickCheck
 import Data.Maybe (isJust, catMaybes)
 import SourceLocation (SourcePos(..), SourceSpan(..))

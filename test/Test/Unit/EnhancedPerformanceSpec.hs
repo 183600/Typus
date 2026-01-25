@@ -1,8 +1,10 @@
 module Test.Unit.EnhancedPerformanceSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Compiler (compile, checkOwnership, checkDependentTypes)
 import Parser (parseTypus, TypusFile(..))
 import Compiler.DependentTypeChecker

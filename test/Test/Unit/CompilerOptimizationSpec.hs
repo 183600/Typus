@@ -1,10 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+module Test.Unit.CompilerOptimizationSpec where
 
-module Test.Unit.CompilerOptimizationSpec (tests) where
 
 import Test.Tasty
-import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck
+
+
+
+import Test.Tasty
+
 import Test.Tasty.QuickCheck
 import Data.List (sort, nub, intersect, union, delete)
 import qualified Data.Map as Map

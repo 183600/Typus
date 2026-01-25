@@ -1,0 +1,416 @@
+typus> build (lib + exe + test) with ghc-9.8.4
+Preprocessing library for typus-0.12.2..
+Building library for typus-0.12.2..
+Warning: -rtsopts and -with-rtsopts have no effect with -shared.
+    Call hs_init_ghc() from your main() function to set these options.
+Preprocessing executable 'typus' for typus-0.12.2..
+Building executable 'typus' for typus-0.12.2..
+Preprocessing test suite 'typus-test' for typus-0.12.2..
+Building test suite 'typus-test' for typus-0.12.2..
+[  43 of 1025] Compiling Test.Unit.BoundaryConditionComprehensiveSpec [Source file changed]
+
+/home/runner/work/Typus/Typus/test/Test/Unit/BoundaryConditionComprehensiveSpec.hs:14:41: error: [GHC-61689]
+    Module ‘Test.Tasty’ does not export ‘testCase’.
+   |
+14 | import Test.Tasty (TestTree, testGroup, testCase, assertEqual, assertBool)
+   |                                         ^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/BoundaryConditionComprehensiveSpec.hs:14:51: error: [GHC-61689]
+    Module ‘Test.Tasty’ does not export ‘assertEqual’.
+   |
+14 | import Test.Tasty (TestTree, testGroup, testCase, assertEqual, assertBool)
+   |                                                   ^^^^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/BoundaryConditionComprehensiveSpec.hs:14:64: error: [GHC-61689]
+    Module ‘Test.Tasty’ does not export ‘assertBool’.
+   |
+14 | import Test.Tasty (TestTree, testGroup, testCase, assertEqual, assertBool)
+   |                                                                ^^^^^^^^^^
+[  46 of 1025] Compiling Test.Unit.BoundaryConditionsEnhancedQuickCheckSpec [Source file changed]
+
+/home/runner/work/Typus/Typus/test/Test/Unit/BoundaryConditionsEnhancedQuickCheckSpec.hs:282:29: error: [GHC-83865]
+    • Couldn't match expected type ‘SourceSpan’
+                  with actual type ‘(a0 -> Bool) -> [a0] -> ([a0], [a0])’
+    • Probable cause: ‘span’ is applied to too few arguments
+      In the first argument of ‘mergeSpans’, namely ‘span’
+      In the expression: mergeSpans span span
+      In an equation for ‘merged’: merged = mergeSpans span span
+    |
+282 |         merged = mergeSpans span span
+    |                             ^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/BoundaryConditionsEnhancedQuickCheckSpec.hs:282:34: error: [GHC-83865]
+    • Couldn't match expected type ‘SourceSpan’
+                  with actual type ‘(a1 -> Bool) -> [a1] -> ([a1], [a1])’
+    • Probable cause: ‘span’ is applied to too few arguments
+      In the second argument of ‘mergeSpans’, namely ‘span’
+      In the expression: mergeSpans span span
+      In an equation for ‘merged’: merged = mergeSpans span span
+    |
+282 |         merged = mergeSpans span span
+    |                                  ^^^^
+[  79 of 1025] Compiling Test.Unit.CodeGenerationSpec [Source file changed]
+
+/home/runner/work/Typus/Typus/test/Test/Unit/CodeGenerationSpec.hs:11:31: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘testCase’.
+   |
+11 | import Test.Tasty.QuickCheck (testCase, assertEqual, assertBool, assertFailure, Assertion)
+   |                               ^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/CodeGenerationSpec.hs:11:41: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘assertEqual’.
+   |
+11 | import Test.Tasty.QuickCheck (testCase, assertEqual, assertBool, assertFailure, Assertion)
+   |                                         ^^^^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/CodeGenerationSpec.hs:11:54: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘assertBool’.
+   |
+11 | import Test.Tasty.QuickCheck (testCase, assertEqual, assertBool, assertFailure, Assertion)
+   |                                                      ^^^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/CodeGenerationSpec.hs:11:66: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘assertFailure’.
+   |
+11 | import Test.Tasty.QuickCheck (testCase, assertEqual, assertBool, assertFailure, Assertion)
+   |                                                                  ^^^^^^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/CodeGenerationSpec.hs:11:81: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘Assertion’.
+   |
+11 | import Test.Tasty.QuickCheck (testCase, assertEqual, assertBool, assertFailure, Assertion)
+   |                                                                                 ^^^^^^^^^
+[  90 of 1025] Compiling Test.Unit.CompilerCoreFunctionalitySpec [Source file changed]
+
+/home/runner/work/Typus/Typus/test/Test/Unit/CompilerCoreFunctionalitySpec.hs:12:41: error: [GHC-58481]
+    parse error on input ‘(’
+   |
+12 | import Test.Tasty (TestTree, testGroup) (testCase, assertBool, assertEqual)
+   |                                         ^
+[  94 of 1025] Compiling Test.Unit.CompilerCoreSpec [Source file changed]
+
+/home/runner/work/Typus/Typus/test/Test/Unit/CompilerCoreSpec.hs:13:41: error: [GHC-58481]
+    parse error on input ‘(’
+   |
+13 | import Test.Tasty (TestTree, testGroup) (testCase, assertEqual, assertFailure, Assertion, assertBool)
+   |                                         ^
+[ 105 of 1025] Compiling Test.Unit.CompilerIRConsistencyQuickCheckSpec [Source file changed]
+[ 115 of 1025] Compiling Test.Unit.CompilerOptimizationAdvancedSpec [Source file changed]
+
+/home/runner/work/Typus/Typus/test/Test/Unit/CompilerOptimizationAdvancedSpec.hs:13:41: error: [GHC-58481]
+    parse error on input ‘(’
+   |
+13 | import Test.Tasty (TestTree, testGroup) (testCase, assertEqual, assertBool, assertFailure, Assertion)
+   |                                         ^
+[ 223 of 1025] Compiling Test.Unit.DependencyResolutionSpec [Source file changed]
+
+/home/runner/work/Typus/Typus/test/Test/Unit/DependencyResolutionSpec.hs:13:41: error: [GHC-58481]
+    parse error on input ‘(’
+   |
+13 | import Test.Tasty (TestTree, testGroup) (testCase, assertEqual, assertBool, assertFailure, Assertion)
+   |                                         ^
+[ 308 of 1025] Compiling Test.Unit.ErrorHandlerCoreComprehensiveSpec [Source file changed]
+
+/home/runner/work/Typus/Typus/test/Test/Unit/ErrorHandlerCoreComprehensiveSpec.hs:13:41: error: [GHC-58481]
+    parse error on input ‘(’
+   |
+13 | import Test.Tasty (TestTree, testGroup) (testCase, assertEqual, assertBool, Assertion)
+   |                                         ^
+[ 320 of 1025] Compiling Test.Unit.ErrorHandlerSpec [Source file changed]
+
+/home/runner/work/Typus/Typus/test/Test/Unit/ErrorHandlerSpec.hs:11:31: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘testCase’.
+   |
+11 | import Test.Tasty.QuickCheck (testCase, assertEqual, assertFailure, assertBool, Assertion)
+   |                               ^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/ErrorHandlerSpec.hs:11:41: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘assertEqual’.
+   |
+11 | import Test.Tasty.QuickCheck (testCase, assertEqual, assertFailure, assertBool, Assertion)
+   |                                         ^^^^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/ErrorHandlerSpec.hs:11:54: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘assertFailure’.
+   |
+11 | import Test.Tasty.QuickCheck (testCase, assertEqual, assertFailure, assertBool, Assertion)
+   |                                                      ^^^^^^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/ErrorHandlerSpec.hs:11:69: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘assertBool’.
+   |
+11 | import Test.Tasty.QuickCheck (testCase, assertEqual, assertFailure, assertBool, Assertion)
+   |                                                                     ^^^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/ErrorHandlerSpec.hs:11:81: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘Assertion’.
+   |
+11 | import Test.Tasty.QuickCheck (testCase, assertEqual, assertFailure, assertBool, Assertion)
+   |                                                                                 ^^^^^^^^^
+[ 344 of 1025] Compiling Test.Unit.ErrorReportingQuickCheckSpec [Source file changed]
+
+/home/runner/work/Typus/Typus/test/Test/Unit/ErrorReportingQuickCheckSpec.hs:13:41: error: [GHC-58481]
+    parse error on input ‘(’
+   |
+13 | import Test.Tasty (TestTree, testGroup) (testCase, assertEqual, assertBool, assertFailure, Assertion)
+   |                                         ^
+[ 379 of 1025] Compiling Test.Unit.IntegrationComprehensiveSpec [Source file changed]
+
+/home/runner/work/Typus/Typus/test/Test/Unit/IntegrationComprehensiveSpec.hs:11:31: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘testCase’.
+   |
+11 | import Test.Tasty.QuickCheck (testCase, assertEqual, assertBool, Assertion)
+   |                               ^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/IntegrationComprehensiveSpec.hs:11:41: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘assertEqual’.
+   |
+11 | import Test.Tasty.QuickCheck (testCase, assertEqual, assertBool, Assertion)
+   |                                         ^^^^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/IntegrationComprehensiveSpec.hs:11:54: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘assertBool’.
+   |
+11 | import Test.Tasty.QuickCheck (testCase, assertEqual, assertBool, Assertion)
+   |                                                      ^^^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/IntegrationComprehensiveSpec.hs:11:66: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘Assertion’.
+   |
+11 | import Test.Tasty.QuickCheck (testCase, assertEqual, assertBool, Assertion)
+   |                                                                  ^^^^^^^^^
+[ 388 of 1025] Compiling Test.Unit.IntegrationQuickCheckSpec [Source file changed]
+
+/home/runner/work/Typus/Typus/test/Test/Unit/IntegrationQuickCheckSpec.hs:11:41: error: [GHC-58481]
+    parse error on input ‘(’
+   |
+11 | import Test.Tasty (TestTree, testGroup) (testCase, assertBool, assertEqual)
+   |                                         ^
+[ 662 of 1025] Compiling Test.Unit.NewParserQuickCheckSpec [Source file changed]
+
+/home/runner/work/Typus/Typus/test/Test/Unit/NewParserQuickCheckSpec.hs:41:37: error: [GHC-88464]
+    Variable not in scope: sourceSpan :: SourceSpan
+    Suggested fix:
+      Perhaps use data constructor ‘SourceSpan’ (imported from SourceLocation)
+   |
+41 |     return $ Located str (spanStart sourceSpan) span
+   |                                     ^^^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/NewParserQuickCheckSpec.hs:72:33: error: [GHC-83865]
+    • Couldn't match expected type ‘SourceSpan’
+                  with actual type ‘(a0 -> Bool) -> [a0] -> ([a0], [a0])’
+    • Probable cause: ‘span’ is applied to too few arguments
+      In the second argument of ‘(==)’, namely ‘span’
+      In the second argument of ‘(&&)’, namely ‘cbSpan block == span’
+      In the second argument of ‘(&&)’, namely
+        ‘cbContent block == content && cbSpan block == span’
+   |
+72 |                 cbSpan block == span
+   |                                 ^^^^
+[ 771 of 1025] Compiling Test.Unit.OwnershipTransferSpec [Source file changed]
+
+/home/runner/work/Typus/Typus/test/Test/Unit/OwnershipTransferSpec.hs:13:41: error: [GHC-58481]
+    parse error on input ‘(’
+   |
+13 | import Test.Tasty (TestTree, testGroup) (testCase, assertEqual, assertBool, assertFailure, Assertion)
+   |                                         ^
+[ 780 of 1025] Compiling Test.Unit.ParserBasicSpec [Source file changed]
+
+/home/runner/work/Typus/Typus/test/Test/Unit/ParserBasicSpec.hs:13:41: error: [GHC-58481]
+    parse error on input ‘(’
+   |
+13 | import Test.Tasty (TestTree, testGroup) (testCase, assertEqual, Assertion, assertFailure)
+   |                                         ^
+[ 786 of 1025] Compiling Test.Unit.ParserCombinatorsSpec [Source file changed]
+
+/home/runner/work/Typus/Typus/test/Test/Unit/ParserCombinatorsSpec.hs:14:41: error: [GHC-58481]
+    parse error on input ‘(’
+   |
+14 | import Test.Tasty (TestTree, testGroup) (testCase, assertEqual, assertBool, assertFailure, Assertion)
+   |                                         ^
+[ 789 of 1025] Compiling Test.Unit.ParserComprehensiveSpec [Source file changed]
+
+/home/runner/work/Typus/Typus/test/Test/Unit/ParserComprehensiveSpec.hs:13:41: error: [GHC-58481]
+    parse error on input ‘(’
+   |
+13 | import Test.Tasty (TestTree, testGroup) (testCase, assertEqual, assertBool, assertFailure, Assertion)
+   |                                         ^
+[ 792 of 1025] Compiling Test.Unit.ParserCoreFunctionalitySpec [Source file changed]
+
+/home/runner/work/Typus/Typus/test/Test/Unit/ParserCoreFunctionalitySpec.hs:9:31: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘testCase’.
+  |
+9 | import Test.Tasty.QuickCheck (testCase, assertBool, assertEqual, assertFailure)
+  |                               ^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/ParserCoreFunctionalitySpec.hs:9:41: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘assertBool’.
+  |
+9 | import Test.Tasty.QuickCheck (testCase, assertBool, assertEqual, assertFailure)
+  |                                         ^^^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/ParserCoreFunctionalitySpec.hs:9:53: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘assertEqual’.
+  |
+9 | import Test.Tasty.QuickCheck (testCase, assertBool, assertEqual, assertFailure)
+  |                                                     ^^^^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/ParserCoreFunctionalitySpec.hs:9:66: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘assertFailure’.
+  |
+9 | import Test.Tasty.QuickCheck (testCase, assertBool, assertEqual, assertFailure)
+  |                                                                  ^^^^^^^^^^^^^
+[ 816 of 1025] Compiling Test.Unit.PerformanceBoundarySpec [Source file changed]
+
+/home/runner/work/Typus/Typus/test/Test/Unit/PerformanceBoundarySpec.hs:11:31: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘testCase’.
+   |
+11 | import Test.Tasty.QuickCheck (testCase, assertEqual, assertBool, assertFailure, Assertion)
+   |                               ^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/PerformanceBoundarySpec.hs:11:41: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘assertEqual’.
+   |
+11 | import Test.Tasty.QuickCheck (testCase, assertEqual, assertBool, assertFailure, Assertion)
+   |                                         ^^^^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/PerformanceBoundarySpec.hs:11:54: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘assertBool’.
+   |
+11 | import Test.Tasty.QuickCheck (testCase, assertEqual, assertBool, assertFailure, Assertion)
+   |                                                      ^^^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/PerformanceBoundarySpec.hs:11:66: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘assertFailure’.
+   |
+11 | import Test.Tasty.QuickCheck (testCase, assertEqual, assertBool, assertFailure, Assertion)
+   |                                                                  ^^^^^^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/PerformanceBoundarySpec.hs:11:81: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘Assertion’.
+   |
+11 | import Test.Tasty.QuickCheck (testCase, assertEqual, assertBool, assertFailure, Assertion)
+   |                                                                                 ^^^^^^^^^
+[ 857 of 1025] Compiling Test.Unit.SourceLocationComprehensiveSpec [Source file changed]
+
+/home/runner/work/Typus/Typus/test/Test/Unit/SourceLocationComprehensiveSpec.hs:13:41: error: [GHC-58481]
+    parse error on input ‘(’
+   |
+13 | import Test.Tasty (TestTree, testGroup) (testCase, assertEqual, assertBool, Assertion)
+   |                                         ^
+[ 875 of 1025] Compiling Test.Unit.SourceLocationSpanQuickCheckSpec [Source file changed]
+[ 877 of 1025] Compiling Test.Unit.SourceLocationTestSpec [Source file changed]
+
+/home/runner/work/Typus/Typus/test/Test/Unit/SourceLocationTestSpec.hs:99:11: error: [GHC-88464]
+    Variable not in scope: sourceSpan :: SourceSpan
+    Suggested fix:
+      Perhaps use data constructor ‘SourceSpan’ (imported from SourceLocation)
+   |
+99 |   in case sourceSpan of SourceSpan s e -> s == e
+   |           ^^^^^^^^^^
+[ 889 of 1025] Compiling Test.Unit.SymbolTableAdvancedSpec [Source file changed]
+
+/home/runner/work/Typus/Typus/test/Test/Unit/SymbolTableAdvancedSpec.hs:13:41: error: [GHC-58481]
+    parse error on input ‘(’
+   |
+13 | import Test.Tasty (TestTree, testGroup) (testCase, assertEqual, assertBool, assertFailure, Assertion)
+   |                                         ^
+[ 915 of 1025] Compiling Test.Unit.TextProcessingAdvancedSpec [Source file changed]
+
+/home/runner/work/Typus/Typus/test/Test/Unit/TextProcessingAdvancedSpec.hs:13:41: error: [GHC-58481]
+    parse error on input ‘(’
+   |
+13 | import Test.Tasty (TestTree, testGroup) (testCase, assertEqual, assertBool, assertFailure, Assertion)
+   |                                         ^
+[ 932 of 1025] Compiling Test.Unit.TypeInferenceQuickCheckSpec [Source file changed]
+
+/home/runner/work/Typus/Typus/test/Test/Unit/TypeInferenceQuickCheckSpec.hs:11:31: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘testCase’.
+   |
+11 | import Test.Tasty.QuickCheck (testCase, assertEqual, assertBool, assertFailure, Assertion)
+   |                               ^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/TypeInferenceQuickCheckSpec.hs:11:41: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘assertEqual’.
+   |
+11 | import Test.Tasty.QuickCheck (testCase, assertEqual, assertBool, assertFailure, Assertion)
+   |                                         ^^^^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/TypeInferenceQuickCheckSpec.hs:11:54: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘assertBool’.
+   |
+11 | import Test.Tasty.QuickCheck (testCase, assertEqual, assertBool, assertFailure, Assertion)
+   |                                                      ^^^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/TypeInferenceQuickCheckSpec.hs:11:66: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘assertFailure’.
+   |
+11 | import Test.Tasty.QuickCheck (testCase, assertEqual, assertBool, assertFailure, Assertion)
+   |                                                                  ^^^^^^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/TypeInferenceQuickCheckSpec.hs:11:81: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘Assertion’.
+   |
+11 | import Test.Tasty.QuickCheck (testCase, assertEqual, assertBool, assertFailure, Assertion)
+   |                                                                                 ^^^^^^^^^
+[ 951 of 1025] Compiling Test.Unit.UtilsComprehensiveSpec [Source file changed]
+
+/home/runner/work/Typus/Typus/test/Test/Unit/UtilsComprehensiveSpec.hs:11:31: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘testCase’.
+   |
+11 | import Test.Tasty.QuickCheck (testCase, assertEqual, assertBool, assertFailure, Assertion)
+   |                               ^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/UtilsComprehensiveSpec.hs:11:41: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘assertEqual’.
+   |
+11 | import Test.Tasty.QuickCheck (testCase, assertEqual, assertBool, assertFailure, Assertion)
+   |                                         ^^^^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/UtilsComprehensiveSpec.hs:11:54: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘assertBool’.
+   |
+11 | import Test.Tasty.QuickCheck (testCase, assertEqual, assertBool, assertFailure, Assertion)
+   |                                                      ^^^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/UtilsComprehensiveSpec.hs:11:66: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘assertFailure’.
+   |
+11 | import Test.Tasty.QuickCheck (testCase, assertEqual, assertBool, assertFailure, Assertion)
+   |                                                                  ^^^^^^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/UtilsComprehensiveSpec.hs:11:81: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘Assertion’.
+   |
+11 | import Test.Tasty.QuickCheck (testCase, assertEqual, assertBool, assertFailure, Assertion)
+   |                                                                                 ^^^^^^^^^
+[ 952 of 1025] Compiling Test.Unit.UtilsCoreFunctionalitySpec [Source file changed]
+
+/home/runner/work/Typus/Typus/test/Test/Unit/UtilsCoreFunctionalitySpec.hs:9:31: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘testCase’.
+  |
+9 | import Test.Tasty.QuickCheck (testCase, assertBool, assertEqual)
+  |                               ^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/UtilsCoreFunctionalitySpec.hs:9:41: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘assertBool’.
+  |
+9 | import Test.Tasty.QuickCheck (testCase, assertBool, assertEqual)
+  |                                         ^^^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/UtilsCoreFunctionalitySpec.hs:9:53: error: [GHC-61689]
+    Module ‘Test.Tasty.QuickCheck’ does not export ‘assertEqual’.
+  |
+9 | import Test.Tasty.QuickCheck (testCase, assertBool, assertEqual)
+  |                                                     ^^^^^^^^^^^
+[ 997 of 1025] Compiling Test.Unit.TestGoToolchainIntegrationSpec [Source file changed]
+
+Error: [S-7282]
+       Stack failed to execute the build plan.
+       
+       While executing the build plan, Stack encountered the error:
+       
+       [S-7011]
+       While building package typus-0.12.2 (scroll up to its section to see the error) using:
+       /home/runner/.stack/setup-exe-cache/x86_64-linux-tinfo6/Cabal-simple_w2MFVN35_3.10.3.0_ghc-9.8.4 --verbose=1 --builddir=.stack-work/dist/x86_64-linux-tinfo6/ghc-9.8.4 build lib:typus exe:typus test:typus-test --ghc-options ""
+       Process exited with code: ExitFailure 1 

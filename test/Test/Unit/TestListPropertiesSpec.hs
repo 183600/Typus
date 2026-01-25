@@ -4,9 +4,11 @@
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 module Test.Unit.TestListPropertiesSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Utils
 import SourceLocation
 import ErrorHandler

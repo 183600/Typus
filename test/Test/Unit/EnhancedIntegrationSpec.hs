@@ -1,15 +1,16 @@
 module Test.Unit.EnhancedIntegrationSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Compiler (compile)
 import Parser (parseTypus)
 import Compiler.DependentTypeChecker (checkDependentTypes)
 import Compiler.OwnershipChecker (checkOwnership)
 import Compiler (formatCompilerErrors)
 import qualified Data.Text as T
-import Data.Maybe (isJust, isNothing)
 
 -- | 测试解析-编译流水线
 prop_parse_compile_pipeline :: String -> Property
@@ -105,7 +106,7 @@ prop_full_compilation_pipeline input =
         Left _ -> Left []  -- 解析失败
         Right typusFile -> compile typusFile
   in case (parseResult, compileResult) of
-    (Right parseFile, Right compileResult) -> 
+    (Right _, Right _) -> 
       property True -- 成功完成整个流水线
     (Left _, Left _) -> 
       property True -- 在早期阶段失败是预期的
@@ -168,7 +169,7 @@ prop_type_inference_integration input =
         Left _ -> Left []  -- 解析失败
         Right typusFile -> compile typusFile
   in case compileResult of
-    Right result -> property True -- 类型推断成功
+    Right _ -> property True -- 类型推断成功
     Left _ -> property True -- 类型推断可能失败
 
 -- | 测试符号表集成
@@ -179,7 +180,7 @@ prop_symbol_table_integration input =
         Left _ -> Left []  -- 解析失败
         Right typusFile -> compile typusFile
   in case (parseResult, compileResult) of
-    (Right parseFile, Right compileResult) -> 
+    (Right _, Right _) -> 
       property True -- 符号表构建成功
     _ -> property True
 
@@ -223,7 +224,7 @@ prop_resource_management_integration input =
         Left _ -> Left []  -- 解析失败
         Right typusFile -> compile typusFile
   in case compileResult of
-    Right result -> property True -- 资源管理成功
+    Right _ -> property True -- 资源管理成功
     Left _ -> property True -- 资源管理可能失败
 
 tests :: TestTree

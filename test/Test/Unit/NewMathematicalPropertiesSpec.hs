@@ -1,9 +1,11 @@
 {-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
-
 module Test.Unit.NewMathematicalPropertiesSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
 import Test.QuickCheck (Gen, Property, (==>))
@@ -16,6 +18,8 @@ import Data.Maybe (isJust, isNothing, fromMaybe)
 import Control.Monad (replicateM)
 import Data.Word (Word8, Word16, Word32, Word64)
 import Data.Int (Int8, Int16, Int32, Int64)
+import Test.Tasty
+import Test.Tasty.QuickCheck
 
 import SourceLocation
 import Utils

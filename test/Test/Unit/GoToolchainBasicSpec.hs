@@ -1,7 +1,10 @@
 module Test.Unit.GoToolchainBasicSpec where
 
-import Test.Tasty
+
+
 import Test.Tasty.HUnit
+import Test.Tasty
+
 import GoToolchain
 import qualified Data.ByteString as BS
 import Data.List (isInfixOf)

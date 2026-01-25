@@ -1,13 +1,18 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
--- | Source location math QuickCheck tests for the Typus compiler
--- This module contains property-based tests for source location mathematical operations
 module Test.Unit.NewSourceLocationMathQuickCheckSpec where
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
+-- | Source location math QuickCheck tests for the Typus compiler
+-- This module contains property-based tests for source location mathematical operations
+
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
 import Test.QuickCheck ((==>), conjoin, counterexample)
 import SourceLocation
   ( SourcePos(..)

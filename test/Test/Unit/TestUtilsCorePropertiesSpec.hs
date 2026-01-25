@@ -2,9 +2,12 @@
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 module Test.Unit.TestUtilsCorePropertiesSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Utils
 import TestSupport.Arbitrary ()
 

@@ -1,11 +1,17 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
-
 module Test.Unit.CoreErrorHandlerSpec where
+
+
+import Test.Tasty.HUnit
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Compiler.Errors.Core
   ( ErrorSeverity(..)
   , ErrorLocation(..)

@@ -2,12 +2,17 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
-
 module Test.Unit.UtilsAdvancedQuickCheckSpec where
+
+
+import Test.Tasty.HUnit
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
 
 import Utils
 import Data.List (intercalate, isPrefixOf, isSuffixOf, isInfixOf)

@@ -1,8 +1,10 @@
 module Test.Unit.EnhancedErrorHandlerPropertiesSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import EnhancedErrorHandler
 import Data.List (isInfixOf)
 

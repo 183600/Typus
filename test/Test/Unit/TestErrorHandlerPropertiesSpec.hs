@@ -1,8 +1,11 @@
 module Test.Unit.TestErrorHandlerPropertiesSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Data.List (sort)
 
 -- Test Properties for Error Handler

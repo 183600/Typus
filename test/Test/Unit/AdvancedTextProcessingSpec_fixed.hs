@@ -1,11 +1,37 @@
-module Test.Unit.AdvancedTextProcessingSpec (tests) where
+module Test.Unit.AdvancedTextProcessingSpec_fixed where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Utils
-import Data.List (isInfixOf, isPrefixOf, isSuffixOf)
-import Data.Char (isSpace, isControl)
+import Data.List (isInfixOf, isPrefixOf, isSuffixOf, intercalate)
+import Data.Char (isSpace, isControl, toUpper, toLower)
 import qualified Data.Text as T
+
+-- Helper function for joining strings with a delimiter
+joinWith :: Char -> [String] -> String
+joinWith c = intercalate [c]
+
+-- Helper function to normalize whitespace
+normalizeWhitespace :: String -> String
+normalizeWhitespace = unwords . words
+
+-- Helper function to extract lines
+extractLines :: String -> [String]
+extractLines = lines
+
+-- Helper function to indent a string by n spaces
+indent :: Int -> String -> String
+indent n s = replicate n ' ' ++ s
+
+-- Helper functions for string case conversion
+toUpperStr :: String -> String
+toUpperStr = map toUpper
+
+toLowerStr :: String -> String
+toLowerStr = map toLower
 
 tests :: TestTree
 tests = testGroup "Advanced Text Processing Tests"
@@ -44,12 +70,12 @@ tests = testGroup "Advanced Text Processing Tests"
         splitBy ',' ",a," @?= ["", "a", ""]
       
     , testProperty "preserves empty segments" $
-        \delim str -> splitBy delim (delim:str:delim:[]) === ["", str, ""]
+        \delim (str :: Char) -> splitBy delim (delim:str:delim:[]) === ["", [str], ""]
     ]
   
   , testGroup "joinWith function edge cases"
     [ testCase "handles empty input" $
-        joinWith ',' "" @?= ""
+        joinWith ',' [""] @?= ""
       
     , testCase "handles single element" $
         joinWith ',' ["a"] @?= "a"
@@ -134,20 +160,20 @@ tests = testGroup "Advanced Text Processing Tests"
   
   , testGroup "text transformation edge cases"
     [ testCase "handles empty strings in transformations" $ do
-        toUpper "" @?= ""
-        toLower "" @?= ""
+        toUpperStr "" @?= ""
+        toLowerStr "" @?= ""
         reverse "" @?= ""
       
     , testCase "handles Unicode transformations" $ do
-        toUpper "hello" @?= "HELLO"
-        toLower "WORLD" @?= "world"
+        toUpperStr "hello" @?= "HELLO"
+        toLowerStr "WORLD" @?= "world"
         reverse "abc" @?= "cba"
       
     , testProperty "toUpper is idempotent" $
-        \str -> toUpper (toUpper str) === toUpper str
+        \str -> toUpperStr (toUpperStr str) === toUpperStr str
       
     , testProperty "toLower is idempotent" $
-        \str -> toLower (toLower str) === toLower str
+        \str -> toLowerStr (toLowerStr str) === toLowerStr str
     ]
   
   , testGroup "string searching edge cases"
@@ -167,10 +193,10 @@ tests = testGroup "Advanced Text Processing Tests"
         isSuffixOf "hello" "hello" @?= True
       
     , testProperty "isPrefixOf implies isInfixOf" $
-        \pat str -> isPrefixOf pat str ==> isInfixOf pat str
+        \(pat :: String) (str :: String) -> isPrefixOf pat str ==> isInfixOf pat str
       
     , testProperty "isSuffixOf implies isInfixOf" $
-        \pat str -> isSuffixOf pat str ==> isInfixOf pat str
+        \(pat :: String) (str :: String) -> isSuffixOf pat str ==> isInfixOf pat str
     ]
   
   , testGroup "text processing performance edge cases"
@@ -191,8 +217,16 @@ tests = testGroup "Advanced Text Processing Tests"
         \delim str -> concat (splitBy delim str) `shouldSatisfy` (\s -> length s >= length str - length (filter (== delim) str))
       
     , testProperty "breakOn consistency" $
-        \pat str -> let (before, after) = breakOn pat str
-                   in if null pat then before @?= "" else before ++ pat ++ after @?= str
+      
+            \pat str -> 
+      
+              let (before, after) = breakOn pat str
+      
+              in if null pat 
+      
+                 then before === ""
+      
+                 else before ++ pat ++ after === str
   ]
   ]
 

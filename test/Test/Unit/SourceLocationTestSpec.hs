@@ -1,13 +1,17 @@
 {-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
-
 module Test.Unit.SourceLocationTestSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
 import Test.QuickCheck (Gen)
 import Data.List (sort)
+import Test.Tasty
+import Test.Tasty.QuickCheck
 
 import SourceLocation
 
@@ -66,9 +70,7 @@ prop_sourcePosPreservation line col offset =
 -- Property 2: Source span preserves start and end positions
 prop_sourceSpanPreservation :: SourcePos -> SourcePos -> Bool
 prop_sourceSpanPreservation start end =
-  let span = SourceSpan start end
-  in case span of
-    SourceSpan s e -> s == start && e == end
+  let sourceSpan = SourceSpan start end in case sourceSpan of SourceSpan s e -> s == start && e == end
 
 -- Property 3: Source position ordering is consistent
 prop_sourcePosOrdering :: SourcePos -> SourcePos -> Bool
@@ -93,8 +95,7 @@ prop_emptySpanEquality :: Int -> Int -> Int -> Bool
 prop_emptySpanEquality line col offset =
   let pos = SourcePos line col offset
       span = SourceSpan pos pos
-  in case span of
-    SourceSpan s e -> s == e
+  in case span of SourceSpan s e -> s == e
 
 -- Property 6: Span start is less than or equal to span end
 prop_spanStartLessThanEnd :: SourceSpan -> Bool

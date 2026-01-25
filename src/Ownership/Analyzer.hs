@@ -7,10 +7,9 @@ module Ownership.Analyzer
 
 import Control.Monad (when)
 import Control.Monad.State (State, modify, get, put, execState)
-import Data.List (isInfixOf)
+import Data.List (isInfixOf, foldl')
 import Data.Maybe (isJust, listToMaybe, fromMaybe)
 import qualified Data.Map.Strict as Map
-import Data.Foldable (foldl')
 
 import Ownership.Common.Lexer (Token(..), TokenKind(..))
 import Ownership.Common.Types (OwnershipError(..))

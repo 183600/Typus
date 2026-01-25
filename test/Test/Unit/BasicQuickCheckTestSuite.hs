@@ -1,15 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
 module Test.Unit.BasicQuickCheckTestSuite where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
 
 import Utils (trim, splitBy, splitByComma, removeLineComments, removeComments, normalizeIndentation)
 import Data.List (isInfixOf, intercalate)
-import Data.Char (isAlphaNum, isSpace, isControl)
+import Data.Char (isSpace)
 import Data.Either (isLeft, isRight)
 import Data.Maybe (listToMaybe)
 

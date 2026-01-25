@@ -1,8 +1,11 @@
 module Test.Unit.ErrorHandlerCoreSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import ErrorHandler ()
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), locatedAt, startPos, posAt)
 

@@ -2,12 +2,12 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Test.Unit.AdditionalQuickCheckTestSuiteSpec where
+
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
 
 import qualified Data.Text as T
 import qualified Data.List as L
@@ -116,15 +116,15 @@ prop_break_on_not_found c s =
 
 prop_break_on_first_occurrence :: Char -> String -> Property
 prop_break_on_first_occurrence c s = 
-  let (before, after) = breakOn [c] s
+  let (before, afterStr) = breakOn [c] s
   in if c `elem` s
      then let firstPos = case L.elemIndices c s of
                     [] -> -1  -- Should not happen since we check c `elem` s
                     (x:_) -> x
               expectedBefore = take firstPos s
               expectedAfter = drop (firstPos + 1) s
-          in before === expectedBefore .&&. after === expectedAfter
-     else before === s .&&. after === ""
+          in before === expectedBefore .&&. afterStr === expectedAfter
+     else before === s .&&. afterStr === ""
 
 -- Test string processing with edge cases
 prop_safe_process_string_empty :: Property
@@ -165,8 +165,8 @@ prop_source_span_merge_associative span1 span2 span3 =
 -- Test Located with different operations
 prop_located_map :: Int -> SourcePos -> SourcePos -> Property
 prop_located_map x start end = 
-  let span = SourceSpan start end
-      located = Located x start span
+  let sourceSpan = SourceSpan start end
+      located = Located x start sourceSpan
       mapped = mapLocated (+1) located
   in locatedValue mapped === x + 1
 
@@ -266,7 +266,6 @@ prop_split_join_roundtrip c s =
 prop_split_collapsed_join_roundtrip :: Char -> String -> Property
 prop_split_collapsed_join_roundtrip c s = 
   let parts = splitByCollapsed c s
-      rejoined = L.intercalate [c] parts
       expectedParts = filter (not . null) (splitBy c s)
   in property $ parts === expectedParts
 

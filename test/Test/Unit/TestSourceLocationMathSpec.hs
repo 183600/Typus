@@ -1,8 +1,10 @@
 module Test.Unit.TestSourceLocationMathSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import SourceLocation
 
 -- Test Properties for Source Location Math

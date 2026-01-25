@@ -1,7 +1,10 @@
 module Test.Unit.ParserBasicFunctionsSpec where
 
-import Test.Tasty
+
+
 import Test.Tasty.HUnit
+import Test.Tasty
+
 import Parser
 import Compiler.Errors.Core (ErrorLocation(..))
 import SourceLocation (SourcePos(..), startPos, SourceSpan(..))

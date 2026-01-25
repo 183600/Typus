@@ -1,8 +1,11 @@
 module Test.Unit.NewSimpleErrorHandlingSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Data.Char (isSpace)
 
 -- Simple tests that don't require complex error handling

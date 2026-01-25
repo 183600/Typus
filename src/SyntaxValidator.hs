@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+
 module SyntaxValidator (
     SyntaxValidator,
     SyntaxError(..),
@@ -12,9 +13,8 @@ module SyntaxValidator (
 ) where
 
 import qualified Data.Set as Set
-import Data.List (isInfixOf, isPrefixOf, tails)
+import Data.List (isInfixOf, isPrefixOf, tails, foldl')
 import Data.Char (isSpace, isAlphaNum, isAlpha, isDigit)
-import Data.Foldable (foldl')
 
 -- ================== Helper Functions ==================
 

@@ -1,8 +1,10 @@
 module Test.Unit.EnhancedUtilsSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Data.Char (isSpace)
 import Data.List (isInfixOf)
 import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed, 

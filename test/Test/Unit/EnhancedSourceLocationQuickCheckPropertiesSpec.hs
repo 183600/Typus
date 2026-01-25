@@ -1,6 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
-
 module Test.Unit.EnhancedSourceLocationQuickCheckPropertiesSpec where
+
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck

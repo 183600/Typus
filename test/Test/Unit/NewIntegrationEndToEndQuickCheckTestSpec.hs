@@ -2,9 +2,11 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Test.Unit.NewIntegrationEndToEndQuickCheckTestSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Parser (parseTypus, TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..))
 import Compiler.IR (buildSourceIR, buildSemanticIR, emitGo, SourceIR(..), SemanticIR(..), GoIR(..))
 import Ownership (analyzeOwnership, OwnershipError(..))

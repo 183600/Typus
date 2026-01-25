@@ -1,12 +1,17 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
--- | Core Compiler module QuickCheck tests
 module Test.Unit.CoreCompilerQuickCheckSpec where
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
+-- | Core Compiler module QuickCheck tests
+
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
 import TestSupport.Arbitrary
 import TestSupport.QuickCheck
 import qualified Data.Text as T
@@ -29,7 +34,7 @@ prop_compilerBasic =
     let parsed = parseTypus code
     in case parsed of
       Left _ -> property True  -- Parsing failed
-      Right file -> property $ True  -- Basic sanity check for successful parse
+      Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles empty code
 prop_compilerEmpty :: Property
@@ -45,7 +50,7 @@ prop_compilerWhitespace =
     let parsed = parseTypus ws
     in case parsed of
       Left _ -> property True  -- Parsing failed, which is expected for whitespace only
-      Right file -> property $ True  -- Basic sanity check for successful parse
+      Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles simple expressions
 prop_compilerSimpleExpressions :: Property
@@ -55,7 +60,7 @@ prop_compilerSimpleExpressions =
         parsed = parseTypus code
     in case parsed of
       Left _ -> property True  -- Parsing failed
-      Right file -> property $ True  -- Basic sanity check for successful parse
+      Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles numeric literals
 prop_compilerNumericLiterals :: Property
@@ -65,7 +70,7 @@ prop_compilerNumericLiterals =
         parsed = parseTypus code
     in case parsed of
       Left _ -> property True  -- Parsing failed
-      Right file -> property $ True  -- Basic sanity check for successful parse
+      Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles string literals
 prop_compilerStringLiterals :: Property
@@ -75,7 +80,7 @@ prop_compilerStringLiterals =
         parsed = parseTypus code
     in case parsed of
       Left _ -> property True  -- Parsing failed
-      Right file -> property $ True  -- Basic sanity check for successful parse
+      Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles boolean literals
 prop_compilerBooleanLiterals :: Property
@@ -85,7 +90,7 @@ prop_compilerBooleanLiterals =
         parsed = parseTypus code
     in case parsed of
       Left _ -> property True  -- Parsing failed
-      Right file -> property $ True  -- Basic sanity check for successful parse
+      Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles variable declarations
 prop_compilerVariableDeclarations :: Property
@@ -96,7 +101,7 @@ prop_compilerVariableDeclarations =
           parsed = parseTypus code
       in case parsed of
         Left _ -> property True  -- Parsing failed
-        Right file -> property $ True  -- Basic sanity check for successful parse
+        Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles function declarations
 prop_compilerFunctionDeclarations :: Property
@@ -108,7 +113,7 @@ prop_compilerFunctionDeclarations =
           parsed = parseTypus code
       in case parsed of
         Left _ -> property True  -- Parsing failed
-        Right file -> property $ True  -- Basic sanity check for successful parse
+        Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles function calls
 prop_compilerFunctionCalls :: Property
@@ -120,7 +125,7 @@ prop_compilerFunctionCalls =
           parsed = parseTypus code
       in case parsed of
         Left _ -> property True  -- Parsing failed
-        Right file -> property $ True  -- Basic sanity check for successful parse
+        Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles if statements
 prop_compilerIfStatements :: Property
@@ -131,7 +136,7 @@ prop_compilerIfStatements =
           parsed = parseTypus code
     in case parsed of
       Left _ -> property True  -- Parsing failed
-      Right file -> property $ True  -- Basic sanity check for successful parse
+      Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles if-else statements
 prop_compilerIfElseStatements :: Property
@@ -142,7 +147,7 @@ prop_compilerIfElseStatements =
           parsed = parseTypus code
     in case parsed of
       Left _ -> property True  -- Parsing failed
-      Right file -> property $ True  -- Basic sanity check for successful parse
+      Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles while loops
 prop_compilerWhileLoops :: Property
@@ -152,7 +157,7 @@ prop_compilerWhileLoops =
         parsed = parseTypus code
     in case parsed of
       Left _ -> property True  -- Parsing failed
-      Right file -> property $ True  -- Basic sanity check for successful parse
+      Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles for loops
 prop_compilerForLoops :: Property
@@ -164,7 +169,7 @@ prop_compilerForLoops =
             parsed = parseTypus code
     in case parsed of
       Left _ -> property True  -- Parsing failed
-      Right file -> property $ True  -- Basic sanity check for successful parse
+      Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles return statements
 prop_compilerReturnStatements :: Property
@@ -174,7 +179,7 @@ prop_compilerReturnStatements =
         parsed = parseTypus code
     in case parsed of
       Left _ -> property True  -- Parsing failed
-      Right file -> property $ True  -- Basic sanity check for successful parse
+      Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles assignments
 prop_compilerAssignments :: Property
@@ -185,7 +190,7 @@ prop_compilerAssignments =
           parsed = parseTypus code
     in case parsed of
       Left _ -> property True  -- Parsing failed
-      Right file -> property $ True  -- Basic sanity check for successful parse
+      Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles binary operations
 prop_compilerBinaryOperations :: Property
@@ -197,7 +202,7 @@ prop_compilerBinaryOperations =
             parsed = parseTypus code
         in case parsed of
           Left _ -> property True  -- Parsing failed
-          Right file -> property $ True  -- Basic sanity check for successful parse
+          Right _ -> property $ True  -- Basic sanity check for successful parse
 -- | Test that compiler handles unary operations
 prop_compilerUnaryOperations :: Property
 prop_compilerUnaryOperations =
@@ -207,7 +212,7 @@ prop_compilerUnaryOperations =
           parsed = parseTypus code
     in case parsed of
       Left _ -> property True  -- Parsing failed
-      Right file -> property $ True  -- Basic sanity check for successful parse
+      Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles arrays
 prop_compilerArrays :: Property
@@ -218,7 +223,7 @@ prop_compilerArrays =
         parsed = parseTypus code
     in case parsed of
       Left _ -> property True  -- Parsing failed
-      Right file -> property $ True  -- Basic sanity check for successful parse
+      Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles array access
 prop_compilerArrayAccess :: Property
@@ -229,7 +234,7 @@ prop_compilerArrayAccess =
           parsed = parseTypus code
     in case parsed of
       Left _ -> property True  -- Parsing failed
-      Right file -> property $ True  -- Basic sanity check for successful parse
+      Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles struct declarations
 prop_compilerStructDeclarations :: Property
@@ -241,7 +246,7 @@ prop_compilerStructDeclarations =
           parsed = parseTypus code
     in case parsed of
       Left _ -> property True  -- Parsing failed
-      Right file -> property $ True  -- Basic sanity check for successful parse
+      Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles struct instantiation
 prop_compilerStructInstantiation :: Property
@@ -253,7 +258,7 @@ prop_compilerStructInstantiation =
           parsed = parseTypus code
     in case parsed of
       Left _ -> property True  -- Parsing failed
-      Right file -> property $ True  -- Basic sanity check for successful parse
+      Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles field access
 prop_compilerFieldAccess :: Property
@@ -264,7 +269,7 @@ prop_compilerFieldAccess =
           parsed = parseTypus code
     in case parsed of
       Left _ -> property True  -- Parsing failed
-      Right file -> property $ True  -- Basic sanity check for successful parse
+      Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles comments
 prop_compilerComments :: Property
@@ -274,7 +279,7 @@ prop_compilerComments =
         parsed = parseTypus code
     in case parsed of
       Left _ -> property True  -- Parsing failed
-      Right file -> property $ True  -- Basic sanity check for successful parse
+      Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles block comments
 prop_compilerBlockComments :: Property
@@ -284,7 +289,7 @@ prop_compilerBlockComments =
         parsed = parseTypus code
     in case parsed of
       Left _ -> property True  -- Parsing failed
-      Right file -> property $ True  -- Basic sanity check for successful parse
+      Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles ownership annotations
 prop_compilerOwnershipAnnotations :: Property
@@ -294,7 +299,7 @@ prop_compilerOwnershipAnnotations =
         parsed = parseTypus code
     in case parsed of
       Left _ -> property True  -- Parsing failed
-      Right file -> property $ True  -- Basic sanity check for successful parse
+      Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles dependent types
 prop_compilerDependentTypes :: Property
@@ -305,7 +310,7 @@ prop_compilerDependentTypes =
           parsed = parseTypus code
     in case parsed of
       Left _ -> property True  -- Parsing failed
-      Right file -> property $ True  -- Basic sanity check for successful parse
+      Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles type constraints
 prop_compilerTypeConstraints :: Property
@@ -316,7 +321,7 @@ prop_compilerTypeConstraints =
           parsed = parseTypus code
     in case parsed of
       Left _ -> property True  -- Parsing failed
-      Right file -> property $ True  -- Basic sanity check for successful parse
+      Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles imports
 prop_compilerImports :: Property
@@ -326,7 +331,7 @@ prop_compilerImports =
         parsed = parseTypus code
     in case parsed of
       Left _ -> property True  -- Parsing failed
-      Right file -> property $ True  -- Basic sanity check for successful parse
+      Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles exports
 prop_compilerExports :: Property
@@ -336,7 +341,7 @@ prop_compilerExports =
         parsed = parseTypus code
     in case parsed of
       Left _ -> property True  -- Parsing failed
-      Right file -> property $ True  -- Basic sanity check for successful parse
+      Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles modules
 prop_compilerModules :: Property
@@ -347,7 +352,7 @@ prop_compilerModules =
           parsed = parseTypus code
     in case parsed of
       Left _ -> property True  -- Parsing failed
-      Right file -> property $ True  -- Basic sanity check for successful parse
+      Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles multiple statements
 prop_compilerMultipleStatements :: Property
@@ -358,7 +363,7 @@ prop_compilerMultipleStatements =
         parsed = parseTypus code
     in case parsed of
       Left _ -> property True  -- Parsing failed
-      Right file -> property $ True  -- Basic sanity check for successful parse
+      Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles nested blocks
 prop_compilerNestedBlocks :: Property
@@ -368,7 +373,7 @@ prop_compilerNestedBlocks =
         parsed = parseTypus code
     in case parsed of
       Left _ -> property True  -- Parsing failed
-      Right file -> property $ True  -- Basic sanity check for successful parse
+      Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- | Test that compiler handles Unicode characters
 prop_compilerUnicode :: Property
@@ -378,7 +383,7 @@ prop_compilerUnicode =
         parsed = parseTypus code
     in case parsed of
       Left _ -> property True  -- Parsing failed
-      Right file -> property $ True  -- Basic sanity check for successful parse
+      Right _ -> property $ True  -- Basic sanity check for successful parse
 
 -- ============================================================================
 -- Test Suite

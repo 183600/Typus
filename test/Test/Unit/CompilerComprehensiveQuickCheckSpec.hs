@@ -1,8 +1,10 @@
 module Test.Unit.CompilerComprehensiveQuickCheckSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Compiler
 import Compiler.Errors (errorId, severity, message, mkCompilerError, ErrorCategory(..), ErrorSeverity(..), CompilationPhase(..))
 import Compiler.TypeChecker (TypeCheckDiagnostic(..))

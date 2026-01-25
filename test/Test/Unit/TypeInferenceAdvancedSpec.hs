@@ -1,9 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
+module Test.Unit.TypeInferenceAdvancedSpec where
 
-module Test.Unit.TypeInferenceAdvancedSpec (tests) where
 
-import Test.Tasty
+
 import Test.Tasty.HUnit
+import Test.Tasty
+
 import Data.List (sort, nub, intersect, union, (\\))
 import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes)
 import qualified Data.Set as Set

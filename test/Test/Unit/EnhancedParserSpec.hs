@@ -1,8 +1,11 @@
 module Test.Unit.EnhancedParserSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Data.Char (isAlpha, isAlphaNum, isDigit, isSpace)
 import Data.List (isPrefixOf, isSuffixOf, isInfixOf)
 import Data.Maybe (isJust, isNothing)

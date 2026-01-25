@@ -1,8 +1,10 @@
 module Test.Unit.MathOperationsQuickCheckSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import TestSupport.QuickCheck (fastProperty)
 import Data.List (sort)
 

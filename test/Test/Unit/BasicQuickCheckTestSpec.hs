@@ -1,5 +1,7 @@
 module Test.Unit.BasicQuickCheckTestSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
 

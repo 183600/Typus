@@ -1,7 +1,10 @@
 module Test.Unit.EmbedAssetsBasicSpec where
 
-import Test.Tasty
+
+
 import Test.Tasty.HUnit
+import Test.Tasty
+
 import EmbedAssets
 import qualified Data.ByteString as BS
 import qualified Data.List as Data.List

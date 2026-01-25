@@ -1,8 +1,10 @@
 module Test.Unit.ParserBoundaryQuickCheckSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Parser
 import SourceLocation (SourcePos(..), SourceSpan(..), emptySpan, startPos)
 import qualified Data.Text as T

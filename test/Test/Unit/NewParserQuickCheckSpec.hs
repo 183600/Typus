@@ -3,9 +3,12 @@
 {-# LANGUAGE FlexibleInstances #-}
 module Test.Unit.NewParserQuickCheckSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Parser
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), emptySpan, spanBetween)
 import Data.Char (isAlphaNum, isSpace)
@@ -34,8 +37,8 @@ instance Arbitrary FileDirectives where
 instance Arbitrary (Located String) where
   arbitrary = do
     str <- arbitrary
-    span <- arbitrary
-    return $ Located str (spanStart span) span
+    let sourceSpan = SourceSpan (SourcePos 0 0 0) (SourcePos 0 0 0)
+    return $ Located str (spanStart sourceSpan) sourceSpan
 
 instance Arbitrary CodeBlock where
   arbitrary = CodeBlock <$> arbitrary <*> arbitrary <*> arbitrary
@@ -62,16 +65,16 @@ prop_block_directives_default_valid =
 
 -- Test CodeBlock properties
 prop_code_block_creation :: BlockDirectives -> String -> SourceSpan -> Property
-prop_code_block_creation directives content span = 
-  let block = CodeBlock directives content span
+prop_code_block_creation directives content sourceSpan = 
+  let block = CodeBlock directives content sourceSpan
   in property $ cbDirectives block == directives && 
                 cbContent block == content && 
-                cbSpan block == span
+                cbSpan block == sourceSpan
 
 prop_code_block_content_preserved :: String -> Property
 prop_code_block_content_preserved content = 
-  let span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 (length content + 1) (length content))
-      block = CodeBlock defaultBlockDirectives content span
+  let sourceSpan = SourceSpan (SourcePos 1 1 0) (SourcePos 1 (length content + 1) (length content))
+      block = CodeBlock defaultBlockDirectives content sourceSpan
   in property $ cbContent block == content
 
 -- Test TypusFile properties

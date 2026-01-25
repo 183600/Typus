@@ -1,10 +1,15 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-
 module Test.Unit.CoreParserPropertiesQuickCheckSpec where
+
+
+import Test.Tasty.HUnit
+import Test.Tasty
+
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Parser (parseTypus, TypusFile(..), FileDirectives(..), BlockDirectives(..), defaultFileDirectives)
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..))
 import qualified Data.Text as T

@@ -1,11 +1,14 @@
 {-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
-
 module Test.Unit.ErrorHandlerSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, assertEqual, assertFailure, assertBool, Assertion)
+import Test.Tasty
+-- Removed empty QuickCheck import
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
 import Test.QuickCheck (Gen, Property, (==>), resize, sized)
 import ErrorHandler

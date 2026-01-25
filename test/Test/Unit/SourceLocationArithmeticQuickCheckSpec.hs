@@ -1,8 +1,10 @@
 module Test.Unit.SourceLocationArithmeticQuickCheckSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import TestSupport.QuickCheck (fastProperty)
 import SourceLocation (SourcePos(..), SourceSpan(..))
 

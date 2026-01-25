@@ -1,5 +1,7 @@
 module Test.Unit.ArithmeticPropertiesQuickCheckSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
 

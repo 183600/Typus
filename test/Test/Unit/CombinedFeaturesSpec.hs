@@ -1,13 +1,14 @@
 module Test.Unit.CombinedFeaturesSpec where
 
+
+
 import Test.Tasty
-import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
-import qualified Data.Text as T
-import Data.List (isPrefixOf, isSuffixOf, isInfixOf)
+import Test.Tasty.QuickCheck
+
+import Data.List (isInfixOf)
 import Utils (trim, splitBy, removeComments, normalizeIndentation)
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos, posAt, spanBetween, spanStart, spanEnd)
-import Data.Char (isSpace)
 
 -- Test properties for combined features
 

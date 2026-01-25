@@ -2,9 +2,11 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Test.Unit.NewParserErrorRecoveryQuickCheckTestSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Parser
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos)
 import Data.Char (isAlphaNum, isSpace)

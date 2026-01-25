@@ -3,9 +3,12 @@
 {-# LANGUAGE FlexibleInstances #-}
 module Test.Unit.NewSourceLocationQuickCheckSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import SourceLocation
 import Compiler.Errors.Core (ErrorSeverity(..), ErrorCategory(..), TypeError(..), ErrorLocation(..), ErrorContext(..), ErrorRecovery(..), CombinedError(..))
 import qualified Compiler.Errors.Core as Error

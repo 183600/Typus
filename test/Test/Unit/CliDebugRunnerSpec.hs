@@ -1,9 +1,11 @@
 module Test.Unit.CliDebugRunnerSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
-import Cli.DebugRunner
+
+
 import qualified Data.Map.Strict as Map
 
 -- Test debug runner type
@@ -105,12 +107,12 @@ prop_debug_variable_inspection varName varValue =
 
 -- Test debug stepping
 prop_debug_stepping :: String -> Property
-prop_debug_stepping sourceFile =
+prop_debug_stepping sourcePath =
   let runner = initializeDebugRunner
-      loadedRunner = loadDebugSource runner sourceFile
+      loadedRunner = loadDebugSource runner sourcePath
       steppedRunner = performDebugStep loadedRunner
-      currentLine = getCurrentDebugLine steppedRunner
-  in property $ currentLine >= 1
+      debugLine = getCurrentDebugLine steppedRunner
+  in property $ debugLine >= 1
 
 tests :: TestTree
 tests = testGroup "CLI Debug Runner Tests"

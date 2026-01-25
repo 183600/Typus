@@ -1,6 +1,12 @@
 {-# LANGUAGE LambdaCase #-}
-
 module Test.Unit.IntegrationQuickCheckSpec where
+
+
+import Test.Tasty.HUnit
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
+
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, assertBool, assertEqual)

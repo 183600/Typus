@@ -1,8 +1,11 @@
 module Test.Unit.CompilerIROptimizationSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck hiding (Function)
-import Test.Tasty.HUnit
+
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), locatedAt, startPos)
 import qualified Data.Map as Map
 import qualified Data.Set as Set

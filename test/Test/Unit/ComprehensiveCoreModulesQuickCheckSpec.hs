@@ -1,9 +1,10 @@
 {-# LANGUAGE CPP #-}
 module Test.Unit.ComprehensiveCoreModulesQuickCheckSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
 import TestSupport.QuickCheck (fastProperty)
 import TestSupport.Arbitrary
 import Data.List (uncons)
@@ -44,7 +45,6 @@ import Parser
   )
 import Data.Char (isSpace)
 import Data.List (isPrefixOf, isSuffixOf)
-import qualified Data.Text as T
 import Compiler.Errors.Core (ErrorLocation(..))
 
 -- ============================================================================
@@ -91,8 +91,8 @@ prop_removeLineComments_preserves_non_comment_lines s =
 
 prop_removeLineComments_removes_comment_content :: Property
 prop_removeLineComments_removes_comment_content = 
-  let line = "code // comment"
-      result = Utils.removeLineComments line
+  let codeLine = "code // comment"
+      result = Utils.removeLineComments codeLine
   in property $ result === "code"
 
 -- Test removeComments function
@@ -157,10 +157,10 @@ prop_posAfter_regular_char_increments_column pos =
     ]
 
 prop_posAt_creates_correct_position :: Int -> Int -> Property
-prop_posAt_creates_correct_position line col = 
-  let pos = posAt line col
+prop_posAt_creates_correct_position lineNum col = 
+  let pos = posAt lineNum col
   in conjoin
-    [ property $ posLine pos === line
+    [ property $ posLine pos === lineNum
     , property $ posColumn pos === col
     , property $ posOffset pos === 0
     ]

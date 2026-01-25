@@ -1,8 +1,10 @@
 module Test.Unit.EnhancedDependentTypesSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Compiler.DependentTypeChecker
 import Parser (parseTypus)
 import Parser (TypusFile(..))

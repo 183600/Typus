@@ -1,8 +1,11 @@
 module Test.Unit.NewErrorHandlingSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Control.Exception (try, SomeException)
 import Data.Either (isLeft, isRight)
 

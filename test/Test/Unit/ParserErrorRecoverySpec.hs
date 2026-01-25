@@ -1,9 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
+module Test.Unit.ParserErrorRecoverySpec where
 
-module Test.Unit.ParserErrorRecoverySpec (tests) where
+
+import Test.Tasty.HUnit
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
+
 
 import Test.Tasty
-import Test.Tasty.HUnit
+
 import Test.Tasty.QuickCheck
 import Parser (FileDirectives(..), BlockDirectives(..), CodeBlock(..), TypusFile(..), 
                defaultFileDirectives, defaultBlockDirectives)

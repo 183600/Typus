@@ -1,11 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
 module Test.Unit.NewDependenciesPropertiesQuickCheckSpec where
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
+
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
 import qualified Data.Text as T
 import Dependencies
 import Dependencies.TypeSystem

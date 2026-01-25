@@ -1,10 +1,11 @@
 module Test.Unit.DebugBasicFunctionsSpec where
 
-import Test.Tasty
+
+
 import Test.Tasty.HUnit
-import Debug
-import DebugIntegration
-import SourceLocation (SourcePos(..), startPos, SourceSpan(..))
+import Test.Tasty
+
+import SourceLocation (SourcePos(..))
 
 -- | 简化的类型推断函数
 valueType :: String -> String
@@ -22,11 +23,11 @@ tests = testGroup "Debug Basic Functions Tests"
       let location = SourceLocation (SourcePos 5 10 0) (SourcePos 5 15 5)
       let result = setBreakpoint session location  -- 简化函数调用
       case result of
-        Left err -> assertBool "Setting breakpoint should succeed" False
+        Left _ -> assertBool "Setting breakpoint should succeed" False
         Right newSession -> do
-          let breakpoints = getBreakpoints newSession
-          length breakpoints @?= 1
-          case breakpoints of
+          let sessionBreakpoints = getBreakpoints newSession
+          length sessionBreakpoints @?= 1
+          case sessionBreakpoints of
             (bp:_) -> assertBool "Breakpoint should be at correct location" $ 
                         breakpointLocation bp == location
             [] -> assertBool "Should have at least one breakpoint" False
@@ -36,21 +37,21 @@ tests = testGroup "Debug Basic Functions Tests"
       let location = SourceLocation (SourcePos 5 10 0) (SourcePos 5 15 5)
       let withBreakpoint = setBreakpoint session location
       case withBreakpoint of
-        Left err -> assertBool "Setting breakpoint should succeed" False
+        Left _ -> assertBool "Setting breakpoint should succeed" False
         Right sessionWithBreakpoint -> do
           let result = removeBreakpoint sessionWithBreakpoint location  -- 简化函数调用
           case result of
-            Left err -> assertBool "Removing breakpoint should succeed" False
+            Left _ -> assertBool "Removing breakpoint should succeed" False
             Right sessionWithoutBreakpoint -> do
-              let breakpoints = getBreakpoints sessionWithoutBreakpoint
-              length breakpoints @?= 0
+              let remainingBreakpoints = getBreakpoints sessionWithoutBreakpoint
+              length remainingBreakpoints @?= 0
               
   , testCase "start debugging" $ do
       let session = createDebugSession
       let program = "test_program"
       let result = startDebugging session program  -- 简化函数调用
       case result of
-        Left err -> assertBool "Starting debugging should succeed" False
+        Left _ -> assertBool "Starting debugging should succeed" False
         Right debuggingSession -> do
           assertBool "Session should be debugging" $ isDebugging debuggingSession
           debugProgram debuggingSession @?= program
@@ -60,7 +61,7 @@ tests = testGroup "Debug Basic Functions Tests"
       let debuggingSession = session { isDebugging = True }
       let result = stepOver debuggingSession  -- 简化函数调用
       case result of
-        Left err -> assertBool "Step over should succeed" False
+        Left _ -> assertBool "Step over should succeed" False
         Right steppedSession -> do
           assertBool "Session should still be debugging" $ isDebugging steppedSession
           currentLine steppedSession @?= 2  -- 简化测试
@@ -70,7 +71,7 @@ tests = testGroup "Debug Basic Functions Tests"
       let debuggingSession = session { isDebugging = True }
       let result = stepInto debuggingSession  -- 简化函数调用
       case result of
-        Left err -> assertBool "Step into should succeed" False
+        Left _ -> assertBool "Step into should succeed" False
         Right steppedSession -> do
           assertBool "Session should still be debugging" $ isDebugging steppedSession
           currentLine steppedSession @?= 3  -- 简化测试
@@ -80,7 +81,7 @@ tests = testGroup "Debug Basic Functions Tests"
       let debuggingSession = session { isDebugging = True, callStack = ["func2", "func1"] }
       let result = stepOut debuggingSession  -- 简化函数调用
       case result of
-        Left err -> assertBool "Step out should succeed" False
+        Left _ -> assertBool "Step out should succeed" False
         Right steppedSession -> do
           assertBool "Session should still be debugging" $ isDebugging steppedSession
           callStack steppedSession @?= ["func1"]  -- 简化测试
@@ -90,7 +91,7 @@ tests = testGroup "Debug Basic Functions Tests"
       let debuggingSession = session { isDebugging = True }
       let result = continue debuggingSession  -- 简化函数调用
       case result of
-        Left err -> assertBool "Continue should succeed" False
+        Left _ -> assertBool "Continue should succeed" False
         Right continuedSession -> do
           assertBool "Session should still be debugging" $ isDebugging continuedSession
           isRunning continuedSession @?= True  -- 简化测试
@@ -101,7 +102,7 @@ tests = testGroup "Debug Basic Functions Tests"
       let expression = "x + y"
       let result = evaluateExpression debuggingSession expression  -- 简化函数调用
       case result of
-        Left err -> assertBool "Expression evaluation should succeed" False
+        Left _ -> assertBool "Expression evaluation should succeed" False
         Right value -> do
           assertBool "Value should not be null" $ not (null value)
           valueType value @?= "integer"  -- 简化测试
@@ -112,7 +113,7 @@ tests = testGroup "Debug Basic Functions Tests"
       let variable = "x"
       let result = inspectVariable debuggingSession variable  -- 简化函数调用
       case result of
-        Left err -> assertBool "Variable inspection should succeed" False
+        Left _ -> assertBool "Variable inspection should succeed" False
         Right value -> do
           assertBool "Value should not be null" $ not (null value)
           value @?= "42"
@@ -124,7 +125,7 @@ tests = testGroup "Debug Basic Functions Tests"
       let newValue = "100"
       let result = modifyVariable debuggingSession variable newValue  -- 简化函数调用
       case result of
-        Left err -> assertBool "Variable modification should succeed" False
+        Left _ -> assertBool "Variable modification should succeed" False
         Right modifiedSession -> do
           let updatedValue = lookup variable (variables modifiedSession)
           case updatedValue of
@@ -134,13 +135,13 @@ tests = testGroup "Debug Basic Functions Tests"
   , testCase "show call stack" $ do
       let session = createDebugSession
       let debuggingSession = session { isDebugging = True, callStack = ["func3", "func2", "func1"] }
-      let callStack = getCallStack debuggingSession  -- 简化函数调用
-      length callStack @?= 3
-      case callStack of
+      let stack = getCallStack debuggingSession  -- 简化函数调用
+      length stack @?= 3
+      case stack of
         (first:rest) -> do
           first @?= "func3"
           case rest of
-            _ -> last callStack @?= "func1"
+            _ -> last stack @?= "func1"
         [] -> assertBool "Call stack should not be empty" False
       
   , testCase "show local variables" $ do
@@ -161,11 +162,11 @@ tests = testGroup "Debug Basic Functions Tests"
       let condition = "x > 0"
       let result = setConditionalBreakpoint session location condition  -- 简化函数调用
       case result of
-        Left err -> assertBool "Setting conditional breakpoint should succeed" False
+        Left _ -> assertBool "Setting conditional breakpoint should succeed" False
         Right newSession -> do
-          let breakpoints = getBreakpoints newSession
-          length breakpoints @?= 1
-          case breakpoints of
+          let conditionalBreakpoints = getBreakpoints newSession
+          length conditionalBreakpoints @?= 1
+          case conditionalBreakpoints of
             (bp:_) -> do
               assertBool "Breakpoint should have condition" $ 
                 isJust (breakpointCondition bp)
@@ -177,7 +178,7 @@ tests = testGroup "Debug Basic Functions Tests"
       let expression = "x + y"
       let result = addWatchExpression session expression  -- 简化函数调用
       case result of
-        Left err -> assertBool "Adding watch expression should succeed" False
+        Left _ -> assertBool "Adding watch expression should succeed" False
         Right newSession -> do
           let watches = getWatchExpressions newSession
           length watches @?= 1
@@ -279,7 +280,7 @@ continue session =
   }
 
 evaluateExpression :: DebugSession -> String -> Either String String
-evaluateExpression session expression = Right "42"  -- 简化实现
+evaluateExpression _ _ = Right "42"  -- 简化实现
 
 inspectVariable :: DebugSession -> String -> Either String String
 inspectVariable session variable = 

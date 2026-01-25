@@ -1,9 +1,12 @@
 {-# LANGUAGE LambdaCase #-}
-
 module Test.Unit.ParserCoreFunctionalitySpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, assertBool, assertEqual, assertFailure)
+import Test.Tasty
+-- Removed empty QuickCheck import
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, elements, listOf, chooseInt, Property, (===), counterexample, property, conjoin)
 
 import Parser (parseTypus, TypusFile(..), CodeBlock(..), BlockDirectives(..), FileDirectives(..))

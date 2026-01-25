@@ -1,8 +1,10 @@
 module Test.Unit.DependentTypeBridgeSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Analyzer.DependentTypeBridge
 
 -- Test dependent type bridge type

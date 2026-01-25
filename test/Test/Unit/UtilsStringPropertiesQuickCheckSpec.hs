@@ -1,8 +1,10 @@
 module Test.Unit.UtilsStringPropertiesQuickCheckSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Utils (trim, splitBy, splitByComma, splitByCommaCollapsed)
 import Data.Char (isSpace)
 import Data.List (isPrefixOf, isSuffixOf)

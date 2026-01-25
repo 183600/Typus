@@ -1,0 +1,34 @@
+typus> test (suite: typus-test, args: --match=isolated)
+
+Invalid option `--match=isolated'
+
+Usage: typus-test [(-p|--pattern PATTERN)] [-t|--timeout DURATION] 
+                  [--hide-progress] [-l|--list-tests] [-j|--num-threads NUMBER] 
+                  [-q|--quiet] [--hide-successes] 
+                  [--min-duration-to-report DURATION] 
+                  [--color never|always|auto] [--ansi-tricks ARG] 
+                  [--quickcheck-tests NUMBER] [--quickcheck-replay SEED] 
+                  [--quickcheck-show-replay] [--quickcheck-max-size NUMBER] 
+                  [--quickcheck-max-ratio NUMBER] [--quickcheck-verbose] 
+                  [--quickcheck-shrinks NUMBER]
+
+
+
+typus> Test suite typus-test failed
+
+Error: [S-7282]
+       Stack failed to execute the build plan.
+       
+       While executing the build plan, Stack encountered the error:
+       
+       Error: [S-1995]
+       Test suite failure for package typus-0.12.2
+           typus-test:  exited with: ExitFailure 1
+       Logs printed to console
+       
+       HasCallStack backtrace:
+         collectBacktraces, called at libraries/ghc-internal/src/GHC/Internal/Exception.hs:169:13 in ghc-internal:GHC.Internal.Exception
+         toExceptionWithBacktrace, called at libraries/ghc-internal/src/GHC/Internal/IO.hs:260:11 in ghc-internal:GHC.Internal.IO
+         throwIO, called at libraries/ghc-internal/src/GHC/Internal/Control/Exception/Base.hs:195:43 in ghc-internal:GHC.Internal.Control.Exception.Base
+       
+       

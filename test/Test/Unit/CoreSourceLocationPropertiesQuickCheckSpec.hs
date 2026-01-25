@@ -1,10 +1,15 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-
 module Test.Unit.CoreSourceLocationPropertiesQuickCheckSpec where
+
+
+import Test.Tasty.HUnit
+import Test.Tasty
+
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), startPos, emptySpan, spanFrom, mergeSpans, posAfter, locatedValue)
 import qualified Data.Text as T
 

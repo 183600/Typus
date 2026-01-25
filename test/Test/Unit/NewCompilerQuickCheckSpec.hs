@@ -2,9 +2,12 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Test.Unit.NewCompilerQuickCheckSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Compiler
 import Compiler.Errors (CompilerError(..), CompilerResult, CompilationPhase(..), ErrorCategory(..), ErrorSeverity(..), errorPhase, errorCategory, errorSeverity, errorId, errorMessage)
 import qualified Compiler.Errors.Core as Core

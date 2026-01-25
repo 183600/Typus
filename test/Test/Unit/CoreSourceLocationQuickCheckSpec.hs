@@ -1,12 +1,16 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
--- | Core SourceLocation module QuickCheck tests
 module Test.Unit.CoreSourceLocationQuickCheckSpec where
+
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+-- | Core SourceLocation module QuickCheck tests
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
 import TestSupport.Arbitrary
 import TestSupport.QuickCheck
 import qualified Data.Text as T
@@ -60,41 +64,41 @@ prop_posAtLineColSpecific =
 -- | Test that emptySpan creates a valid empty span
 prop_emptySpanValid :: Property
 prop_emptySpanValid =
-  let span = emptySpan startPos
-  in property $ ssStart span == ssEnd span
+  let sourceSpan = emptySpan startPos
+  in property $ ssStart sourceSpan == ssEnd sourceSpan
 
 -- | Test that spanFrom creates span from position
 prop_spanFromValid :: Property
 prop_spanFromValid =
   forAll arbitrarySourcePos $ \pos ->
-    let span = spanFrom pos
-    in property $ ssStart span == pos && ssEnd span == pos
+    let sourceSpan = spanFrom pos
+    in property $ ssStart sourceSpan == pos && ssEnd sourceSpan == pos
 
 -- | Test that spanTo creates span to position
 prop_spanToValid :: Property
 prop_spanToValid =
   forAll arbitrarySourcePos $ \start ->
     forAll arbitrarySourcePos $ \end ->
-      let span = spanBetween start end
-      in property $ ssStart span == start && ssEnd span == end
+      let sourceSpan = spanBetween start end
+      in property $ ssStart sourceSpan == start && ssEnd sourceSpan == end
 
 -- | Test that spanBetween creates span between positions
 prop_spanBetweenValid :: Property
 prop_spanBetweenValid =
   forAll arbitrarySourcePos $ \start ->
     forAll arbitrarySourcePos $ \end ->
-      let span = spanBetween start end
-      in property $ ssStart span == start && ssEnd span == end
+      let sourceSpan = spanBetween start end
+      in property $ ssStart sourceSpan == start && ssEnd sourceSpan == end
 
 -- | Test that spanBetweenOrdered orders positions correctly
 prop_spanBetweenOrdered :: Property
 prop_spanBetweenOrdered =
   forAll arbitrarySourcePos $ \pos1 ->
     forAll arbitrarySourcePos $ \pos2 ->
-      let span = spanBetweenOrdered pos1 pos2
+      let sourceSpan = spanBetweenOrdered pos1 pos2
           orderedStart = min pos1 pos2
           orderedEnd = max pos1 pos2
-      in property $ ssStart span == orderedStart && ssEnd span == orderedEnd
+      in property $ ssStart sourceSpan == orderedStart && ssEnd sourceSpan == orderedEnd
 
 -- | Test that mergeSpans creates span covering both spans
 prop_mergeSpansValid :: Property

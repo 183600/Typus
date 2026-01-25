@@ -1,8 +1,10 @@
 module Test.Unit.OwnershipBridgeSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Analyzer.OwnershipBridge
 
 -- Test ownership bridge type

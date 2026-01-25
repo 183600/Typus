@@ -1,8 +1,10 @@
 module Test.Unit.GoToolchainIntegrationSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import GoToolchain
 import Compiler.GoAst
 import Data.List (isInfixOf)

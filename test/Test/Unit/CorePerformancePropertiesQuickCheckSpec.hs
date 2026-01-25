@@ -1,10 +1,16 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-
 module Test.Unit.CorePerformancePropertiesQuickCheckSpec where
+
+
+import Test.Tasty.HUnit
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Parser (parseTypus)
 import Compiler (compile)
 import qualified Data.Text as T

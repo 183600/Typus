@@ -2,9 +2,12 @@
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 module Test.Unit.TestParserErrorRecoverySpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Parser
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), spanBetween)
 import qualified Data.Text as T

@@ -1,8 +1,10 @@
 module Test.Unit.NewEnhancedOwnershipTransitivitySpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Data.List (nub)
 
 -- Test Properties for Ownership Transitivity

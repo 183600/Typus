@@ -1,8 +1,10 @@
 module Test.Unit.ErrorRecoveryPropertiesQuickCheckSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import TestSupport.QuickCheck (fastProperty)
 import Compiler.Errors.Core (ErrorSeverity(..), ErrorLocation(..), ErrorContext(..), ErrorRecovery(..))
 import Compiler.Errors (CompilationPhase(..))

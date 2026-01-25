@@ -1,10 +1,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-
 module Test.Unit.NewAdditionalDependenciesQuickCheckTestSpec where
+
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Dependencies (TypeVar(..), TypeConstraint(..), Substitution)
 import qualified Data.Map as Map
 import qualified Data.Set as Set

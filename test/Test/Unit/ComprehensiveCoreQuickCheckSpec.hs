@@ -1,10 +1,16 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-
 module Test.Unit.ComprehensiveCoreQuickCheckSpec where
+
+
+import Test.Tasty.HUnit
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Test.Unit.CoreParserPropertiesQuickCheckSpec (coreParserPropertiesSpec)
 import Test.Unit.CoreCompilerPropertiesQuickCheckSpec (coreCompilerPropertiesSpec)
 import Test.Unit.CoreOwnershipPropertiesQuickCheckSpec (coreOwnershipPropertiesSpec)

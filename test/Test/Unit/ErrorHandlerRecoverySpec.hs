@@ -1,9 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
+module Test.Unit.ErrorHandlerRecoverySpec where
 
-module Test.Unit.ErrorHandlerRecoverySpec (tests) where
 
 import Test.Tasty
-import Test.Tasty.HUnit
+
+
+
+import Test.Tasty
+
 import Test.Tasty.QuickCheck
 import Data.List (isPrefixOf, isSuffixOf, isInfixOf)
 import Data.Maybe (isJust, isNothing, fromMaybe)

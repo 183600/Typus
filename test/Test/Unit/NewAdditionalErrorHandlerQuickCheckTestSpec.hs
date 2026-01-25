@@ -1,10 +1,15 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-
 module Test.Unit.NewAdditionalErrorHandlerQuickCheckTestSpec where
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
+
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
 import Compiler.Errors.Core (ErrorSeverity(..), ErrorCollector, newErrorCollector, 
                              addError, addWarning, getErrors, getWarnings, hasErrors, hasWarnings)
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..))

@@ -1,8 +1,11 @@
 module Test.Unit.CompilerIRConsistencyQuickCheckSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Compiler.IR
 import Compiler.TypeChecker
 import SourceLocation (SourcePos(..), startPos, SourceSpan(..))
@@ -49,18 +52,18 @@ prop_ir_node_types_valid node =
 -- | 测试IR节点的源位置有效性
 prop_ir_node_spans_valid :: IRNode -> Property
 prop_ir_node_spans_valid node =
-  let span = nodeSpan node
-      start = spanStart span
-      end = spanEnd span
+  let sourceSpan = nodeSpan node
+      start = spanStart sourceSpan
+      end = spanEnd sourceSpan
   in posLine start >= 1 && posColumn start >= 1 && posOffset start >= 0 .&&.
      posLine end >= 1 && posColumn end >= 1 && posOffset end >= 0
 
 -- | 测试IR节点的跨度一致性
 prop_ir_node_span_consistency :: IRNode -> Property
 prop_ir_node_span_consistency node =
-  let span = nodeSpan node
-      start = spanStart span
-      end = spanEnd span
+  let sourceSpan = nodeSpan node
+      start = spanStart sourceSpan
+      end = spanEnd sourceSpan
   in property (start <= end)
 
 -- | 测试IR节点的类型一致性

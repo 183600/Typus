@@ -1,8 +1,10 @@
 module Test.Unit.PerformanceBoundaryQuickCheckSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Data.List (sort, nub)
 import qualified Data.Text as T
 

@@ -1,60 +1,76 @@
 #!/usr/bin/env python3
+"""
+Fix import statement issues in test files
+"""
+
 import os
 import re
 
-def fix_import_errors(file_path):
-    """Fix import errors in Haskell files"""
+# List of files with import issues
+files_to_fix = [
+    "/home/runner/work/Typus/Typus/test/Test/Unit/CompilerCoreFunctionalitySpec.hs",
+    "/home/runner/work/Typus/Typus/test/Test/Unit/CompilerCoreSpec.hs",
+    "/home/runner/work/Typus/Typus/test/Test/Unit/CompilerOptimizationAdvancedSpec.hs",
+    "/home/runner/work/Typus/Typus/test/Test/Unit/DependencyResolutionSpec.hs",
+    "/home/runner/work/Typus/Typus/test/Test/Unit/ErrorHandlerCoreComprehensiveSpec.hs",
+    "/home/runner/work/Typus/Typus/test/Test/Unit/ErrorHandlerSpec.hs",
+    "/home/runner/work/Typus/Typus/test/Test/Unit/ErrorReportingQuickCheckSpec.hs",
+    "/home/runner/work/Typus/Typus/test/Test/Unit/IntegrationComprehensiveSpec.hs",
+    "/home/runner/work/Typus/Typus/test/Test/Unit/IntegrationQuickCheckSpec.hs",
+    "/home/runner/work/Typus/Typus/test/Test/Unit/OwnershipTransferSpec.hs",
+    "/home/runner/work/Typus/Typus/test/Test/Unit/ParserBasicSpec.hs",
+    "/home/runner/work/Typus/Typus/test/Test/Unit/ParserCombinatorsSpec.hs",
+    "/home/runner/work/Typus/Typus/test/Test/Unit/ParserComprehensiveSpec.hs",
+    "/home/runner/work/Typus/Typus/test/Test/Unit/ParserCoreFunctionalitySpec.hs",
+    "/home/runner/work/Typus/Typus/test/Test/Unit/PerformanceBoundarySpec.hs",
+    "/home/runner/work/Typus/Typus/test/Test/Unit/SourceLocationComprehensiveSpec.hs",
+    "/home/runner/work/Typus/Typus/test/Test/Unit/SymbolTableAdvancedSpec.hs",
+    "/home/runner/work/Typus/Typus/test/Test/Unit/TextProcessingAdvancedSpec.hs",
+    "/home/runner/work/Typus/Typus/test/Test/Unit/TypeInferenceQuickCheckSpec.hs",
+    "/home/runner/work/Typus/Typus/test/Test/Unit/UtilsComprehensiveSpec.hs",
+    "/home/runner/work/Typus/Typus/test/Test/Unit/UtilsCoreFunctionalitySpec.hs"
+]
+
+def fix_imports_in_file(filepath):
+    """Fix broken import statements in a file"""
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(filepath, 'r') as f:
             content = f.read()
         
-        # Fix common import patterns
-        # Pattern 1: Missing closing parenthesis
-        content = re.sub(r'import Test\.Tasty\.HUnit \(testCase, assertFailure, assertBool, \(@\?=\)', 
-                        'import Test.Tasty.HUnit (testCase, assertFailure, assertBool, (@?=))', content)
+        # Pattern to match broken import statements
+        # Matches: import Module\n(symbol list)
+        pattern = r'import\s+([^\n]+)\n\(([^)]+)\)'
         
-        # Pattern 2: Empty import
-        content = re.sub(r'^(import TestSupport\.QuickCheck)$', 
-                        r'\1 ()', content, flags=re.MULTILINE)
+        def replacement(match):
+            module = match.group(1).strip()
+            symbols = match.group(2).strip()
+            return f'import {module} ({symbols})'
         
-        # Pattern 3: Import with trailing comma and parenthesis
-        content = re.sub(r'import Test\.QuickCheck \(Gen, choose, vectorOf, elements, Arbitrary\(\.\.\), \(==\>\), forAll, counterexample, classify, property, \(\.&&\.\), \)', 
-                        'import Test.QuickCheck (Gen, choose, vectorOf, elements, Arbitrary(..), (==>), forAll, counterexample, classify, property, (.&&.))', content)
-        
-        # Pattern 4: Missing closing parenthesis
-        content = re.sub(r'import Test\.QuickCheck\.Arbitrary \(Arbitrary\(\.\.\)', 
-                        'import Test.QuickCheck.Arbitrary (Arbitrary(..))', content)
-        
-        # Pattern 5: Extra closing parenthesis
-        content = re.sub(r'^import Data\.Char\s+\)', 
-                        'import Data.Char', content, flags=re.MULTILINE)
-        
-        # Pattern 6: Complex import with duplicates and extra closing
-        content = re.sub(r'import Test\.QuickCheck \(Gen, choose, vectorOf, elements, Arbitrary\(\.\.\), \(==\>\), forAll, counterexample, classify, property, \(\.&&\.\), \(\.\|\.\), Arbitrary\(\.\.\), Gen, oneof, elements, listOf, choose\)', 
-                        'import Test.QuickCheck (Gen, choose, vectorOf, elements, Arbitrary(..), (==>), forAll, counterexample, classify, property, (.&&.), (.||.), oneof, listOf)', content)
+        # Apply the replacement
+        fixed_content = re.sub(pattern, replacement, content)
         
         # Write back if changed
-        with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(content)
-        
-        print(f"Fixed import errors in {file_path}")
-        return True
+        if fixed_content != content:
+            with open(filepath, 'w') as f:
+                f.write(fixed_content)
+            print(f"Fixed imports in {filepath}")
+            return True
+        else:
+            print(f"No changes needed for {filepath}")
+            return False
+            
     except Exception as e:
-        print(f"Error processing {file_path}: {e}")
+        print(f"Error processing {filepath}: {e}")
         return False
 
 def main():
-    # Get list of files with errors
-    result = os.popen('cabal test --test-show-details=never 2>&1 | grep -i "error:" | cut -d: -f1 | sort | uniq').read()
-    error_files = [f.strip() for f in result.split('\n') if f.strip()]
+    """Main function to fix all files"""
+    fixed_count = 0
+    for filepath in files_to_fix:
+        if fix_imports_in_file(filepath):
+            fixed_count += 1
     
-    print(f"Found {len(error_files)} files with errors")
-    
-    for file_path in error_files:
-        if os.path.exists(file_path):
-            fix_import_errors(file_path)
-    
-    print("Fixed all error files")
+    print(f"\nFixed imports in {fixed_count} files")
 
 if __name__ == "__main__":
     main()

@@ -1,8 +1,11 @@
 module Test.Unit.SourceLocationComprehensiveQuickCheckSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import SourceLocation
 import Compiler.Errors.Core (ErrorLocation(..))
 import qualified Data.Text as T

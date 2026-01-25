@@ -2,8 +2,10 @@
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 module Test.Unit.TestCrossModuleIntegrationSpec where
 
-import Test.Tasty
+
+
 import Test.Tasty.HUnit
+import Test.Tasty
 
 -- | Test suite for Cross Module Integration
 testCrossModuleIntegration :: TestTree

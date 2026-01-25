@@ -1,8 +1,10 @@
 module Test.Unit.CrossModuleIntegrationSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Analyzer.CrossAnalysis
 
 -- Test cross-module analysis type

@@ -1,8 +1,10 @@
 module Test.Unit.SymbolTableOperationsSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Analyzer.SymbolTable
 import Analyzer.Types
 import qualified Data.Map.Strict as Map

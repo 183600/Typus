@@ -2,9 +2,11 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Test.Unit.NewCompilerIRConsistencyQuickCheckTestSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Compiler.IR
 import Parser (TypusFile(..), CodeBlock(..), FileDirectives(..), BlockDirectives(..))
 import Compiler.GoAst

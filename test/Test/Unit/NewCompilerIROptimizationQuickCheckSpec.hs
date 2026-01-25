@@ -1,13 +1,18 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
--- | Compiler IR optimization QuickCheck tests
--- This module contains property-based tests for compiler IR optimization functions
 module Test.Unit.NewCompilerIROptimizationQuickCheckSpec where
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
+-- | Compiler IR optimization QuickCheck tests
+-- This module contains property-based tests for compiler IR optimization functions
+
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
 import Test.QuickCheck ((==>), conjoin, counterexample)
 import Compiler.IR
   ( IRInstruction(..)

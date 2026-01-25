@@ -1,8 +1,10 @@
 module Test.Unit.CommandLineDebugInteractionSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import CommandLineDebug
 import Data.List (isInfixOf)
 import Test.QuickCheck (Arbitrary(..), oneof)

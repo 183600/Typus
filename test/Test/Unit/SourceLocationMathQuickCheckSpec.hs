@@ -1,8 +1,10 @@
 module Test.Unit.SourceLocationMathQuickCheckSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import SourceLocation
 import Data.Text (Text)
 import qualified Data.Text as T

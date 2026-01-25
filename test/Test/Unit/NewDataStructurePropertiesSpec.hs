@@ -1,8 +1,13 @@
 {-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
-
 module Test.Unit.NewDataStructurePropertiesSpec where
+
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
+
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)

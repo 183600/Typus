@@ -1,8 +1,10 @@
 module Test.Unit.ParserComprehensiveQuickCheckSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Parser
 import SourceLocation
 import Utils (trim)

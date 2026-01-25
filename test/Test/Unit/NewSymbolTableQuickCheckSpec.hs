@@ -2,14 +2,19 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeSynonymInstances #-}
-
--- | Symbol table QuickCheck tests for the Typus compiler
--- This module contains property-based tests for symbol table utilities
 module Test.Unit.NewSymbolTableQuickCheckSpec where
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
+-- | Symbol table QuickCheck tests for the Typus compiler
+-- This module contains property-based tests for symbol table utilities
+
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
 import Test.QuickCheck ((==>), conjoin, counterexample)
 import Utils
   ( trim

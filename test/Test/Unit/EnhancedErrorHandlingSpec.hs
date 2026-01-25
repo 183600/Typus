@@ -1,8 +1,10 @@
 module Test.Unit.EnhancedErrorHandlingSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import ErrorHandler
 import SourceLocation (Located(..))
 import Compiler (CompilerError(..), CompilationPhase(ParsingPhase))

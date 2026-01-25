@@ -1,13 +1,18 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
--- | Error handling QuickCheck tests for the Typus compiler
--- This module contains property-based tests for error handling utilities
 module Test.Unit.NewErrorHandlingQuickCheckSpec where
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
+-- | Error handling QuickCheck tests for the Typus compiler
+-- This module contains property-based tests for error handling utilities
+
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
 import Test.QuickCheck ((==>), conjoin, counterexample)
 import Utils
   ( trim

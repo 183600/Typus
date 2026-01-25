@@ -1,11 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
 module Test.Unit.NewUtilsFunctionsPropertiesSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import qualified Data.Text as T
 import Utils
 import Data.Char (isAlpha, isDigit, isSpace, toLower, toUpper)

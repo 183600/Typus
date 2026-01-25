@@ -1,9 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
+module Test.Unit.SourceLocationCalculationSpec where
 
-module Test.Unit.SourceLocationCalculationSpec (tests) where
+
+import Test.Tasty.HUnit
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
+
 
 import Test.Tasty
-import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 import TestSupport.Arbitrary ()
 import SourceLocation

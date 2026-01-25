@@ -1,11 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
 module Test.Unit.DependenciesCycleDetectionQuickCheckTestSpec where
+
+
+import Test.Tasty.HUnit
+import Test.Tasty
+
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
 
 import Dependencies.AST
 import Dependencies.Analyzer

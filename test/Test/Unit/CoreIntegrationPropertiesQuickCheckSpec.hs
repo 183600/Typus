@@ -1,10 +1,12 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-
 module Test.Unit.CoreIntegrationPropertiesQuickCheckSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Parser (parseTypus, TypusFile(..))
 import Compiler (compile)
 import qualified Ownership as Ownership (analyzeOwnership)

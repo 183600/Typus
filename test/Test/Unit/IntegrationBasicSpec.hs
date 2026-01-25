@@ -1,7 +1,10 @@
 module Test.Unit.IntegrationBasicSpec where
 
-import Test.Tasty
+
+
 import Test.Tasty.HUnit
+import Test.Tasty
+
 import IntegratedCompiler
 import Parser
 import Compiler

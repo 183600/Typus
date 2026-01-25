@@ -1,10 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+module Test.Unit.IntegrationPipelineSpec where
 
-module Test.Unit.IntegrationPipelineSpec (tests) where
 
 import Test.Tasty
-import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck
+
+
+
+import Test.Tasty
+
 import Test.Tasty.QuickCheck
 import Data.List (sort, nub, intersect, union, partition)
 import qualified Data.Map as Map

@@ -1,9 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
+module Test.Unit.EmbedAssetsExtractionSpec where
 
-module Test.Unit.EmbedAssetsExtractionSpec (tests) where
 
-import Test.Tasty
+
 import Test.Tasty.HUnit
+import Test.Tasty
+
 import Test.Tasty.QuickCheck
 import Data.List (isPrefixOf, isSuffixOf, isInfixOf)
 import qualified Data.ByteString as BS

@@ -1,10 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+module Test.Unit.OwnershipTransferPropertiesSpec where
 
-module Test.Unit.OwnershipTransferPropertiesSpec (tests) where
 
 import Test.Tasty
-import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck
+
+
+
+import Test.Tasty
+
 import Test.Tasty.QuickCheck
 import Data.List (sort, nub, (\\), intersect)
 import qualified Data.Map as Map

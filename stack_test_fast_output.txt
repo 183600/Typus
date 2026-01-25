@@ -1,0 +1,1817 @@
+typus> configure (lib + exe + test)
+Configuring typus-0.12.2...
+typus> build (lib + exe + test) with ghc-9.8.4
+Preprocessing library for typus-0.12.2..
+Building library for typus-0.12.2..
+[ 1 of 58] Compiling Cli [Optimisation flags changed]
+[ 2 of 58] Compiling CommandLineDebug [Optimisation flags changed]
+[ 3 of 58] Compiling Compiler.Error [Optimisation flags changed]
+[ 4 of 58] Compiling Compiler.GoAst [Optimisation flags changed]
+[ 5 of 58] Compiling Compiler.GoLexer [Optimisation flags changed]
+[ 6 of 58] Compiling Debug [Optimisation flags changed]
+[ 7 of 58] Compiling DebugIntegration [Optimisation flags changed]
+[ 8 of 58] Compiling Dependencies.AST [Optimisation flags changed]
+[ 9 of 58] Compiling Dependencies.Parser [Optimisation flags changed]
+[10 of 58] Compiling Dependencies.Stub [Optimisation flags changed]
+[11 of 58] Compiling Dependencies.TypeSystem [Optimisation flags changed]
+[12 of 58] Compiling Dependencies.Inference [Optimisation flags changed]
+[13 of 58] Compiling Dependencies.Analyzer [Optimisation flags changed]
+[14 of 58] Compiling Dependencies [Optimisation flags changed]
+[15 of 58] Compiling DependentTypesParser [Optimisation flags changed]
+[16 of 58] Compiling DependentTypesParser.Stub [Optimisation flags changed]
+[17 of 58] Compiling EnhancedDebug [Optimisation flags changed]
+[18 of 58] Compiling Cli.DebugRunner [Optimisation flags changed]
+[19 of 58] Compiling Ownership.Common.Lexer [Optimisation flags changed]
+[20 of 58] Compiling Ownership.Common.Types [Optimisation flags changed]
+[21 of 58] Compiling Compiler.Errors.Types [Optimisation flags changed]
+[22 of 58] Compiling Compiler.Errors.Core [Optimisation flags changed]
+[23 of 58] Compiling ErrorHandler [Optimisation flags changed]
+[24 of 58] Compiling Ownership.Lexer [Optimisation flags changed]
+[25 of 58] Compiling Ownership.Parser [Optimisation flags changed]
+[26 of 58] Compiling Ownership.Analyzer [Optimisation flags changed]
+[27 of 58] Compiling Ownership.Reporter [Optimisation flags changed]
+[28 of 58] Compiling Ownership [Optimisation flags changed]
+[29 of 58] Compiling Analyzer.Types [Optimisation flags changed]
+[30 of 58] Compiling Analyzer.State [Optimisation flags changed]
+[31 of 58] Compiling Analyzer.CrossAnalysis [Optimisation flags changed]
+[32 of 58] Compiling SimpleSyntaxValidator [Optimisation flags changed]
+[33 of 58] Compiling SourceLocation [Optimisation flags changed]
+[34 of 58] Compiling Ownership.Stub [Optimisation flags changed]
+[35 of 58] Compiling Compiler.Errors.Compiler [Optimisation flags changed]
+[36 of 58] Compiling EnhancedErrorHandler [Optimisation flags changed]
+[37 of 58] Compiling Compiler.Errors [Optimisation flags changed]
+[38 of 58] Compiling SyntaxValidator [Optimisation flags changed]
+[39 of 58] Compiling Utils [Optimisation flags changed]
+[40 of 58] Compiling Parser [Optimisation flags changed]
+[41 of 58] Compiling Compiler.DependentTypeChecker [Optimisation flags changed]
+[42 of 58] Compiling Compiler.GoParsing [Optimisation flags changed]
+[43 of 58] Compiling Compiler.GoVarSpec [Optimisation flags changed]
+[44 of 58] Compiling Compiler.ValueAnalysis [Optimisation flags changed]
+[45 of 58] Compiling Compiler.OwnershipChecker [Optimisation flags changed]
+[46 of 58] Compiling Compiler.IR [Optimisation flags changed]
+[47 of 58] Compiling Compiler.TypeChecker [Optimisation flags changed]
+[48 of 58] Compiling Compiler [Optimisation flags changed]
+[49 of 58] Compiling Tooling.Error [Optimisation flags changed]
+[50 of 58] Compiling GoToolchain [Optimisation flags changed]
+[51 of 58] Compiling CompilerUtils [Optimisation flags changed]
+[52 of 58] Compiling EmbedAssets [Optimisation flags changed]
+[53 of 58] Compiling Cli.Runner [Optimisation flags changed]
+[54 of 58] Compiling Analyzer.SymbolTable [Optimisation flags changed]
+[55 of 58] Compiling Analyzer.OwnershipBridge [Optimisation flags changed]
+[56 of 58] Compiling Analyzer.DependentTypeBridge [Optimisation flags changed]
+[57 of 58] Compiling AnalyzerIntegration [Optimisation flags changed]
+[58 of 58] Compiling IntegratedCompiler [Optimisation flags changed]
+Preprocessing executable 'typus' for typus-0.12.2..
+Building executable 'typus' for typus-0.12.2..
+[1 of 1] Compiling Main [Optimisation flags changed]
+[2 of 2] Linking .stack-work/dist/x86_64-linux-tinfo6/ghc-9.8.4/build/typus/typus [Objects changed]
+Preprocessing test suite 'typus-test' for typus-0.12.2..
+Building test suite 'typus-test' for typus-0.12.2..
+[   1 of 1025] Compiling Test.Golden.CompilerSpec [Optimisation flags changed]
+[   2 of 1025] Compiling Test.Golden.Tests [Optimisation flags changed]
+[   3 of 1025] Compiling Test.Golden [Optimisation flags changed]
+[   4 of 1025] Compiling Test.Integration.AnalyzerSpec [Optimisation flags changed]
+[   5 of 1025] Compiling Test.Integration.CLISpec [Optimisation flags changed]
+[   6 of 1025] Compiling Test.Integration.FullProjectSpec [Optimisation flags changed]
+[   7 of 1025] Compiling Test.Integration.IntegratedCompilerSpec [Optimisation flags changed]
+[   8 of 1025] Compiling Test.Integration.OwnershipSpec [Optimisation flags changed]
+[   9 of 1025] Compiling Test.Integration.PipelineSpec [Optimisation flags changed]
+[  10 of 1025] Compiling Test.Integration.Tests [Optimisation flags changed]
+[  11 of 1025] Compiling Test.Integration [Optimisation flags changed]
+[  12 of 1025] Compiling Test.Unit.AdditionalCabalQuickCheckTests [Optimisation flags changed]
+[  13 of 1025] Compiling Test.Unit.AdditionalQuickCheckTestsSpec [Optimisation flags changed]
+[  14 of 1025] Compiling Test.Unit.AdvancedCompilerQuickCheckSpec [Optimisation flags changed]
+[  15 of 1025] Compiling Test.Unit.AdvancedDependenciesQuickCheckSpec [Optimisation flags changed]
+[  16 of 1025] Compiling Test.Unit.AdvancedEdgeCaseQuickCheckSpec [Optimisation flags changed]
+[  17 of 1025] Compiling Test.Unit.AdvancedErrorHandlerQuickCheckSpec [Optimisation flags changed]
+[  18 of 1025] Compiling Test.Unit.AdvancedGoToolchainQuickCheckSpec [Optimisation flags changed]
+[  19 of 1025] Compiling Test.Unit.AdvancedOwnershipQuickCheckSpec [Optimisation flags changed]
+[  20 of 1025] Compiling Test.Unit.AdvancedParserQuickCheckSpec [Optimisation flags changed]
+[  21 of 1025] Compiling Test.Unit.AdvancedParserSpec [Optimisation flags changed]
+[  22 of 1025] Compiling Test.Unit.AdvancedQuickCheckSpec [Optimisation flags changed]
+[  23 of 1025] Compiling Test.Unit.AdvancedQuickCheckTestSpec [Optimisation flags changed]
+[  24 of 1025] Compiling Test.Unit.AdvancedSourceLocationQuickCheckSpec [Optimisation flags changed]
+[  25 of 1025] Compiling Test.Unit.AdvancedSourceLocationTestSpec [Optimisation flags changed]
+[  26 of 1025] Compiling Test.Unit.AdvancedSyntaxValidatorQuickCheckSpec [Optimisation flags changed]
+[  27 of 1025] Compiling Test.Unit.AdvancedTextProcessingSpec [Optimisation flags changed]
+[  28 of 1025] Compiling Test.Unit.AnalyzerBasicQuickCheckSpec [Optimisation flags changed]
+[  29 of 1025] Compiling Test.Unit.AnalyzerCrossAnalysisSpec [Optimisation flags changed]
+[  30 of 1025] Compiling Test.Unit.AnalyzerIntegrationQuickCheckSpec [Optimisation flags changed]
+[  31 of 1025] Compiling Test.Unit.AnalyzerQuickCheckSpec [Optimisation flags changed]
+[  32 of 1025] Compiling Test.Unit.AnalyzerStateSpec [Optimisation flags changed]
+[  33 of 1025] Compiling Test.Unit.AnalyzerSymbolTableQuickCheckTestSpec [Optimisation flags changed]
+[  34 of 1025] Compiling Test.Unit.AnalyzerTypesSpec [Optimisation flags changed]
+[  35 of 1025] Compiling Test.Unit.ArithmeticPropertiesQuickCheckSpec [Optimisation flags changed]
+[  36 of 1025] Compiling Test.Unit.BasicParsingQuickCheckSpec [Optimisation flags changed]
+[  37 of 1025] Compiling Test.Unit.BasicPropertiesQuickCheckSpec [Optimisation flags changed]
+[  38 of 1025] Compiling Test.Unit.BasicQuickCheckTestSpec [Optimisation flags changed]
+[  39 of 1025] Compiling Test.Unit.BasicQuickCheckTestSuite [Optimisation flags changed]
+[  40 of 1025] Compiling Test.Unit.BasicQuickCheckTestsSpec [Optimisation flags changed]
+[  41 of 1025] Compiling Test.Unit.BoundaryCasePropertiesSpec [Optimisation flags changed]
+[  42 of 1025] Compiling Test.Unit.BoundaryConditionAdvancedQuickCheckSpec [Optimisation flags changed]
+[  43 of 1025] Compiling Test.Unit.BoundaryConditionComprehensiveSpec [Optimisation flags changed]
+[  44 of 1025] Compiling Test.Unit.BoundaryConditionSpec [Optimisation flags changed]
+[  45 of 1025] Compiling Test.Unit.BoundaryConditionsAdvanced2025Spec [Optimisation flags changed]
+[  46 of 1025] Compiling Test.Unit.BoundaryConditionsEnhancedQuickCheckSpec [Optimisation flags changed]
+[  47 of 1025] Compiling Test.Unit.CLISpec [Optimisation flags changed]
+[  48 of 1025] Compiling Test.Unit.CabalAnalyzerQuickCheckSpec [Optimisation flags changed]
+[  49 of 1025] Compiling Test.Unit.CabalBoundaryConditionsSpec [Optimisation flags changed]
+[  50 of 1025] Compiling Test.Unit.CabalCompilerQuickCheckSpec [Optimisation flags changed]
+[  51 of 1025] Compiling Test.Unit.CabalConcurrentParsingSpec [Optimisation flags changed]
+[  52 of 1025] Compiling Test.Unit.CabalCrossModuleIntegrationSpec [Optimisation flags changed]
+[  53 of 1025] Compiling Test.Unit.CabalDependentTypesQuickCheckSpec [Optimisation flags changed]
+[  54 of 1025] Compiling Test.Unit.CabalEndToEndSpec [Optimisation flags changed]
+[  55 of 1025] Compiling Test.Unit.CabalEnhancedQuickCheckSpec [Optimisation flags changed]
+[  56 of 1025] Compiling Test.Unit.CabalErrorHandlerQuickCheckSpec [Optimisation flags changed]
+[  57 of 1025] Compiling Test.Unit.CabalErrorRecoverySpec [Optimisation flags changed]
+[  58 of 1025] Compiling Test.Unit.CabalIntegrationQuickCheckSpec [Optimisation flags changed]
+[  59 of 1025] Compiling Test.Unit.CabalMemorySafetySpec [Optimisation flags changed]
+[  60 of 1025] Compiling Test.Unit.CabalOwnershipQuickCheckSpec [Optimisation flags changed]
+[  61 of 1025] Compiling Test.Unit.CabalParserQuickCheckSpec [Optimisation flags changed]
+[  62 of 1025] Compiling Test.Unit.CabalPerformanceSpec [Optimisation flags changed]
+[  63 of 1025] Compiling Test.Unit.CabalQuickCheckPropertiesSpec [Optimisation flags changed]
+[  64 of 1025] Compiling Test.Unit.CabalQuickCheckTestSpec [Optimisation flags changed]
+[  65 of 1025] Compiling Test.Unit.CabalQuickCheckTests [Optimisation flags changed]
+[  66 of 1025] Compiling Test.Unit.CabalRegressionSpec [Optimisation flags changed]
+[  67 of 1025] Compiling Test.Unit.CabalSourceLocationQuickCheckSpec [Optimisation flags changed]
+[  68 of 1025] Compiling Test.Unit.CabalSyntaxValidatorQuickCheckSpec [Optimisation flags changed]
+[  69 of 1025] Compiling Test.Unit.CabalTestQuickCheckSpec [Optimisation flags changed]
+[  70 of 1025] Compiling Test.Unit.CabalUnicodeHandlingSpec [Optimisation flags changed]
+[  71 of 1025] Compiling Test.Unit.CabalUtilsQuickCheckSpec [Optimisation flags changed]
+[  72 of 1025] Compiling Test.Unit.CliBasicFunctionsSpec [Optimisation flags changed]
+[  73 of 1025] Compiling Test.Unit.CliDebugRunnerSpec [Optimisation flags changed]
+[  74 of 1025] Compiling Test.Unit.CliIntegrationSpec [Optimisation flags changed]
+[  75 of 1025] Compiling Test.Unit.CliQuickCheckSpec [Optimisation flags changed]
+[  76 of 1025] Compiling Test.Unit.CliRunnerSpec [Optimisation flags changed]
+[  77 of 1025] Compiling Test.Unit.CodeGenerationQuickCheckSpec [Optimisation flags changed]
+[  78 of 1025] Compiling Test.Unit.CodeGenerationQuickCheckTestSpec [Optimisation flags changed]
+[  79 of 1025] Compiling Test.Unit.CodeGenerationSpec [Optimisation flags changed]
+[  80 of 1025] Compiling Test.Unit.CombinedFeaturesSpec [Optimisation flags changed]
+[  81 of 1025] Compiling Test.Unit.CombinedModulesQuickCheckSpec [Optimisation flags changed]
+[  82 of 1025] Compiling Test.Unit.CommandLineDebugInteractionSpec [Optimisation flags changed]
+[  83 of 1025] Compiling Test.Unit.CommandLineDebugSpec [Optimisation flags changed]
+[  84 of 1025] Compiling Test.Unit.CompactCabalQuickCheckSpec [Optimisation flags changed]
+[  85 of 1025] Compiling Test.Unit.CompilerAdvancedQuickCheckSpec [Optimisation flags changed]
+[  86 of 1025] Compiling Test.Unit.CompilerBasicFunctionsSpec [Optimisation flags changed]
+[  87 of 1025] Compiling Test.Unit.CompilerBasicQuickCheckSpec [Optimisation flags changed]
+[  88 of 1025] Compiling Test.Unit.CompilerCompilationLogicSpec [Optimisation flags changed]
+[  89 of 1025] Compiling Test.Unit.CompilerComprehensiveQuickCheckSpec [Optimisation flags changed]
+[  90 of 1025] Compiling Test.Unit.CompilerCoreFunctionalitySpec [Optimisation flags changed]
+[  91 of 1025] Compiling Test.Unit.CompilerCoreFunctionalityTestSpec [Optimisation flags changed]
+[  92 of 1025] Compiling Test.Unit.CompilerCorePropertiesSpec [Optimisation flags changed]
+[  93 of 1025] Compiling Test.Unit.CompilerCoreQuickCheckTests [Optimisation flags changed]
+[  94 of 1025] Compiling Test.Unit.CompilerCoreSpec [Optimisation flags changed]
+[  95 of 1025] Compiling Test.Unit.CompilerErrorBoundarySpec [Optimisation flags changed]
+[  96 of 1025] Compiling Test.Unit.CompilerErrorHandlerTestSpec [Optimisation flags changed]
+[  97 of 1025] Compiling Test.Unit.CompilerErrorHandlingQuickCheckSpec [Optimisation flags changed]
+[  98 of 1025] Compiling Test.Unit.CompilerErrorHandlingQuickCheckTestSpec [Optimisation flags changed]
+[  99 of 1025] Compiling Test.Unit.CompilerErrorHandlingSpec [Optimisation flags changed]
+[ 100 of 1025] Compiling Test.Unit.CompilerErrorRecoveryQuickCheckSpec [Optimisation flags changed]
+[ 101 of 1025] Compiling Test.Unit.CompilerErrorRecoverySpec [Optimisation flags changed]
+[ 102 of 1025] Compiling Test.Unit.CompilerGoAstQuickCheckTestSpec [Optimisation flags changed]
+[ 103 of 1025] Compiling Test.Unit.CompilerGoLexerQuickCheckTestSpec [Optimisation flags changed]
+[ 104 of 1025] Compiling Test.Unit.CompilerGoParsingQuickCheckTestSpec [Optimisation flags changed]
+[ 105 of 1025] Compiling Test.Unit.CompilerIRConsistencyQuickCheckSpec [Optimisation flags changed]
+[ 106 of 1025] Compiling Test.Unit.CompilerIRConsistencyTestSpec [Optimisation flags changed]
+[ 107 of 1025] Compiling Test.Unit.CompilerIRCoreQuickCheckSpec [Optimisation flags changed]
+[ 108 of 1025] Compiling Test.Unit.CompilerIROptimizationQuickCheckSpec [Optimisation flags changed]
+[ 109 of 1025] Compiling Test.Unit.CompilerIROptimizationSpec [Optimisation flags changed]
+[ 110 of 1025] Compiling Test.Unit.CompilerIRPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 111 of 1025] Compiling Test.Unit.CompilerIRQuickCheckTestSpec [Optimisation flags changed]
+[ 112 of 1025] Compiling Test.Unit.CompilerIRSpec [Optimisation flags changed]
+[ 113 of 1025] Compiling Test.Unit.CompilerIntegrationQuickCheckSpec [Optimisation flags changed]
+[ 114 of 1025] Compiling Test.Unit.CompilerIntegrationSpec [Optimisation flags changed]
+[ 115 of 1025] Compiling Test.Unit.CompilerOptimizationAdvancedSpec [Optimisation flags changed]
+[ 116 of 1025] Compiling Test.Unit.CompilerOptimizationCabalsSpec [Optimisation flags changed]
+[ 117 of 1025] Compiling Test.Unit.CompilerOptimizationConsistencySpec [Optimisation flags changed]
+[ 118 of 1025] Compiling Test.Unit.CompilerOptimizationInvariantSpec [Optimisation flags changed]
+[ 119 of 1025] Compiling Test.Unit.CompilerOptimizationSpec [Optimisation flags changed]
+[ 120 of 1025] Compiling Test.Unit.CompilerOptimizationTestSpec [Optimisation flags changed]
+[ 121 of 1025] Compiling Test.Unit.CompilerOptimizationsQuickCheckSpec [Optimisation flags changed]
+[ 122 of 1025] Compiling Test.Unit.CompilerOwnershipQuickCheckSpec [Optimisation flags changed]
+[ 123 of 1025] Compiling Test.Unit.CompilerQuickCheckSpec [Optimisation flags changed]
+[ 124 of 1025] Compiling Test.Unit.CompilerSpec [Optimisation flags changed]
+[ 125 of 1025] Compiling Test.Unit.CompilerTypeCheckerQuickCheckTestSpec [Optimisation flags changed]
+[ 126 of 1025] Compiling Test.Unit.CompilerUtilsPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 127 of 1025] Compiling Test.Unit.CompilerUtilsPropertiesSpec [Optimisation flags changed]
+[ 128 of 1025] Compiling Test.Unit.ComprehensiveAnalyzerQuickCheckSpec [Optimisation flags changed]
+[ 129 of 1025] Compiling Test.Unit.ComprehensiveCabalTestSuite [Optimisation flags changed]
+[ 130 of 1025] Compiling Test.Unit.ComprehensiveCompilerQuickCheckSpec [Optimisation flags changed]
+[ 131 of 1025] Compiling Test.Unit.ComprehensiveDependenciesQuickCheckSpec [Optimisation flags changed]
+[ 132 of 1025] Compiling Test.Unit.ComprehensiveOwnershipQuickCheckSpec [Optimisation flags changed]
+[ 133 of 1025] Compiling Test.Unit.ComprehensiveParserQuickCheckSpec [Optimisation flags changed]
+[ 134 of 1025] Compiling Test.Unit.ComprehensiveQuickCheckSpec [Optimisation flags changed]
+[ 135 of 1025] Compiling Test.Unit.ComprehensiveTypeCheckerQuickCheckSpec [Optimisation flags changed]
+[ 136 of 1025] Compiling Test.Unit.ComprehensiveUtilsQuickCheckSpec [Optimisation flags changed]
+[ 137 of 1025] Compiling Test.Unit.ConciseCabalQuickCheckSpec [Optimisation flags changed]
+[ 138 of 1025] Compiling Test.Unit.ConciseCompilerIRQuickCheckSpec [Optimisation flags changed]
+[ 139 of 1025] Compiling Test.Unit.ConciseCompilerQuickCheckSpec [Optimisation flags changed]
+[ 140 of 1025] Compiling Test.Unit.ConciseDependenciesQuickCheckSpec [Optimisation flags changed]
+[ 141 of 1025] Compiling Test.Unit.ConciseErrorHandlerQuickCheckSpec [Optimisation flags changed]
+[ 142 of 1025] Compiling Test.Unit.ConciseIntegrationQuickCheckSpec [Optimisation flags changed]
+[ 143 of 1025] Compiling Test.Unit.ConciseOwnershipQuickCheckSpec [Optimisation flags changed]
+[ 144 of 1025] Compiling Test.Unit.ConciseParserQuickCheckSpec [Optimisation flags changed]
+[ 145 of 1025] Compiling Test.Unit.ConciseSourceLocationQuickCheckSpec [Optimisation flags changed]
+[ 146 of 1025] Compiling Test.Unit.ConciseSyntaxValidatorQuickCheckSpec [Optimisation flags changed]
+[ 147 of 1025] Compiling Test.Unit.ConciseTypeSystemQuickCheckSpec [Optimisation flags changed]
+[ 148 of 1025] Compiling Test.Unit.ConciseUtilsQuickCheckSpec [Optimisation flags changed]
+[ 149 of 1025] Compiling Test.Unit.ConciseTestSuite [Optimisation flags changed]
+[ 150 of 1025] Compiling Test.Unit.ConcurrentCompilationSpec [Optimisation flags changed]
+[ 151 of 1025] Compiling Test.Unit.ConcurrentParsingQuickCheckSpec [Optimisation flags changed]
+[ 152 of 1025] Compiling Test.Unit.ConcurrentSafetyAdvanced2025Spec [Optimisation flags changed]
+[ 153 of 1025] Compiling Test.Unit.ConcurrentSafetyQuickCheckSpec [Optimisation flags changed]
+[ 154 of 1025] Compiling Test.Unit.ConcurrentSafetySpec [Optimisation flags changed]
+[ 155 of 1025] Compiling Test.Unit.CoreCompilerPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 156 of 1025] Compiling Test.Unit.CoreDataStructuresQuickCheckSpec [Optimisation flags changed]
+[ 157 of 1025] Compiling Test.Unit.CoreDependenciesPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 158 of 1025] Compiling Test.Unit.CoreErrorHandlerPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 159 of 1025] Compiling Test.Unit.CoreErrorHandlerSpec [Optimisation flags changed]
+[ 160 of 1025] Compiling Test.Unit.CoreFunctionalityBoundarySpec [Optimisation flags changed]
+[ 161 of 1025] Compiling Test.Unit.CoreFunctionalityPropertiesSpec [Optimisation flags changed]
+[ 162 of 1025] Compiling Test.Unit.CoreGoToolchainPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 163 of 1025] Compiling Test.Unit.CoreGoToolchainQuickCheckSpec [Optimisation flags changed]
+[ 164 of 1025] Compiling Test.Unit.CoreIntegratedCompilerQuickCheckSpec [Optimisation flags changed]
+[ 165 of 1025] Compiling Test.Unit.CoreIntegrationPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 166 of 1025] Compiling Test.Unit.CoreIntegrationSpec [Optimisation flags changed]
+[ 167 of 1025] Compiling Test.Unit.CoreMathematicalPropertiesSpec [Optimisation flags changed]
+[ 168 of 1025] Compiling Test.Unit.CoreModuleQuickCheckSpec [Optimisation flags changed]
+[ 169 of 1025] Compiling Test.Unit.CoreOwnershipPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 170 of 1025] Compiling Test.Unit.CoreOwnershipSpec [Optimisation flags changed]
+[ 171 of 1025] Compiling Test.Unit.CoreParserPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 172 of 1025] Compiling Test.Unit.CoreParserSpec [Optimisation flags changed]
+[ 173 of 1025] Compiling Test.Unit.CorePerformancePropertiesQuickCheckSpec [Optimisation flags changed]
+[ 174 of 1025] Compiling Test.Unit.CoreQuickCheckPropertiesSpec [Optimisation flags changed]
+[ 175 of 1025] Compiling Test.Unit.CoreQuickCheckSpec [Optimisation flags changed]
+[ 176 of 1025] Compiling Test.Unit.CoreQuickCheckTestSpec [Optimisation flags changed]
+[ 177 of 1025] Compiling Test.Unit.CoreSourceLocationPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 178 of 1025] Compiling Test.Unit.ComprehensiveCoreQuickCheckSpec [Optimisation flags changed]
+[ 179 of 1025] Compiling Test.Unit.CoreSourceLocationSpec [Optimisation flags changed]
+[ 180 of 1025] Compiling Test.Unit.CoreSyntaxValidatorQuickCheckSpec [Optimisation flags changed]
+[ 181 of 1025] Compiling Test.Unit.CoreUtilsPropertiesSpec [Optimisation flags changed]
+[ 182 of 1025] Compiling Test.Unit.CoreUtilsSpec [Optimisation flags changed]
+[ 183 of 1025] Compiling Test.Unit.CrossModuleIntegrationQuickCheckSpec [Optimisation flags changed]
+[ 184 of 1025] Compiling Test.Unit.CrossModuleIntegrationSpec [Optimisation flags changed]
+[ 185 of 1025] Compiling Test.Unit.CustomCompilerQuickCheckSpec [Optimisation flags changed]
+[ 186 of 1025] Compiling Test.Unit.CustomDependentTypesQuickCheckSpec [Optimisation flags changed]
+[ 187 of 1025] Compiling Test.Unit.CustomErrorHandlingQuickCheckSpec [Optimisation flags changed]
+[ 188 of 1025] Compiling Test.Unit.CustomOwnershipQuickCheckSpec [Optimisation flags changed]
+[ 189 of 1025] Compiling Test.Unit.CustomParserQuickCheckSpec [Optimisation flags changed]
+[ 190 of 1025] Compiling Test.Unit.CustomSourceLocationQuickCheckSpec [Optimisation flags changed]
+[ 191 of 1025] Compiling Test.Unit.CustomSymbolTableQuickCheckSpec [Optimisation flags changed]
+[ 192 of 1025] Compiling Test.Unit.CustomSyntaxValidatorQuickCheckSpec [Optimisation flags changed]
+[ 193 of 1025] Compiling Test.Unit.CustomUtilsQuickCheckSpec [Optimisation flags changed]
+[ 194 of 1025] Compiling Test.Unit.DataStructuresQuickCheckSpec [Optimisation flags changed]
+[ 195 of 1025] Compiling Test.Unit.DebugBasicFunctionsSpec [Optimisation flags changed]
+[ 196 of 1025] Compiling Test.Unit.DebugEnhancedDebugTestSpec [Optimisation flags changed]
+[ 197 of 1025] Compiling Test.Unit.DebugIntegrationCoreQuickCheckSpec [Optimisation flags changed]
+[ 198 of 1025] Compiling Test.Unit.DebugIntegrationFlowSpec [Optimisation flags changed]
+[ 199 of 1025] Compiling Test.Unit.DebugIntegrationPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 200 of 1025] Compiling Test.Unit.DebugIntegrationSpec [Optimisation flags changed]
+[ 201 of 1025] Compiling Test.Unit.DebugQuickCheckSpec [Optimisation flags changed]
+[ 202 of 1025] Compiling Test.Unit.DependenciesASTQuickCheckTestSpec [Optimisation flags changed]
+[ 203 of 1025] Compiling Test.Unit.DependenciesAdvancedQuickCheckSpec [Optimisation flags changed]
+[ 204 of 1025] Compiling Test.Unit.DependenciesBasicFunctionsSpec [Optimisation flags changed]
+[ 205 of 1025] Compiling Test.Unit.DependenciesBoundarySpec [Optimisation flags changed]
+[ 206 of 1025] Compiling Test.Unit.DependenciesComprehensiveQuickCheckSpec [Optimisation flags changed]
+[ 207 of 1025] Compiling Test.Unit.DependenciesCoreQuickCheckSpec [Optimisation flags changed]
+[ 208 of 1025] Compiling Test.Unit.DependenciesCoreSpec [Optimisation flags changed]
+[ 209 of 1025] Compiling Test.Unit.DependenciesCycleDetectionSpec [Optimisation flags changed]
+[ 210 of 1025] Compiling Test.Unit.DependenciesDependencyAnalysisSpec [Optimisation flags changed]
+[ 211 of 1025] Compiling Test.Unit.DependenciesErrorHandlingQuickCheckSpec [Optimisation flags changed]
+[ 212 of 1025] Compiling Test.Unit.DependenciesIntegratedCompilerTestSpec [Optimisation flags changed]
+[ 213 of 1025] Compiling Test.Unit.DependenciesNewQuickCheckSpec [Optimisation flags changed]
+[ 214 of 1025] Compiling Test.Unit.DependenciesQuickCheckSpec [Optimisation flags changed]
+[ 215 of 1025] Compiling Test.Unit.DependenciesTypeSystemPropertiesSpec [Optimisation flags changed]
+[ 216 of 1025] Compiling Test.Unit.DependenciesTypeSystemSpec [Optimisation flags changed]
+[ 217 of 1025] Compiling Test.Unit.DependencyAnalysisAdvancedSpec [Optimisation flags changed]
+[ 218 of 1025] Compiling Test.Unit.DependencyAnalysisCoreQuickCheckSpec [Optimisation flags changed]
+[ 219 of 1025] Compiling Test.Unit.DependencyAnalysisQuickCheckTestSpec [Optimisation flags changed]
+[ 220 of 1025] Compiling Test.Unit.DependencyAnalysisSpec [Optimisation flags changed]
+[ 221 of 1025] Compiling Test.Unit.DependencyAnalysisTestSpec [Optimisation flags changed]
+[ 222 of 1025] Compiling Test.Unit.DependencyCycleQuickCheckSpec [Optimisation flags changed]
+[ 223 of 1025] Compiling Test.Unit.DependencyResolutionSpec [Optimisation flags changed]
+[ 224 of 1025] Compiling Test.Unit.DependentTypeBridgeSpec [Optimisation flags changed]
+[ 225 of 1025] Compiling Test.Unit.DependentTypeConstraintSpec [Optimisation flags changed]
+[ 226 of 1025] Compiling Test.Unit.DependentTypeConstraintValidationSpec [Optimisation flags changed]
+[ 227 of 1025] Compiling Test.Unit.DependentTypeInferenceSpec [Optimisation flags changed]
+[ 228 of 1025] Compiling Test.Unit.DependentTypeSystemBoundaryQuickCheckSpec [Optimisation flags changed]
+[ 229 of 1025] Compiling Test.Unit.DependentTypeSystemSpec [Optimisation flags changed]
+[ 230 of 1025] Compiling Test.Unit.DependentTypeValidationCabalsSpec [Optimisation flags changed]
+[ 231 of 1025] Compiling Test.Unit.DependentTypeValidationQuickCheckSpec [Optimisation flags changed]
+[ 232 of 1025] Compiling Test.Unit.DependentTypeValidationTestSpec [Optimisation flags changed]
+[ 233 of 1025] Compiling Test.Unit.DependentTypesBasicQuickCheckSpec [Optimisation flags changed]
+[ 234 of 1025] Compiling Test.Unit.DependentTypesComprehensiveQuickCheckSpec [Optimisation flags changed]
+[ 235 of 1025] Compiling Test.Unit.DependentTypesCoreQuickCheckTests [Optimisation flags changed]
+[ 236 of 1025] Compiling Test.Unit.DependentTypesParserPropertiesSpec [Optimisation flags changed]
+[ 237 of 1025] Compiling Test.Unit.DependentTypesQuickCheckSpec [Optimisation flags changed]
+[ 238 of 1025] Compiling Test.Unit.DependentTypesSpec [Optimisation flags changed]
+[ 239 of 1025] Compiling Test.Unit.DependentTypesSystemQuickCheckSpec [Optimisation flags changed]
+[ 240 of 1025] Compiling Test.Unit.DirectiveInteractionSpec [Optimisation flags changed]
+[ 241 of 1025] Compiling Test.Unit.EdgeCaseSpec [Optimisation flags changed]
+[ 242 of 1025] Compiling Test.Unit.EfficientCabalQuickCheckSpec [Optimisation flags changed]
+[ 243 of 1025] Compiling Test.Unit.EmbedAssetsBasicSpec [Optimisation flags changed]
+[ 244 of 1025] Compiling Test.Unit.EmbedAssetsCLITestSpec [Optimisation flags changed]
+[ 245 of 1025] Compiling Test.Unit.EmbedAssetsConsistencySpec [Optimisation flags changed]
+[ 246 of 1025] Compiling Test.Unit.EmbedAssetsSpec [Optimisation flags changed]
+[ 247 of 1025] Compiling Test.Unit.EndToEndIntegrationTestSpec [Optimisation flags changed]
+[ 248 of 1025] Compiling Test.Unit.EnhancedBoundaryConditionsSpec [Optimisation flags changed]
+[ 249 of 1025] Compiling Test.Unit.EnhancedCabalQuickCheckSpec [Optimisation flags changed]
+[ 250 of 1025] Compiling Test.Unit.EnhancedCabalQuickCheckTestSpec [Optimisation flags changed]
+[ 251 of 1025] Compiling Test.Unit.EnhancedCabalTestQuickCheckSpec [Optimisation flags changed]
+[ 252 of 1025] Compiling Test.Unit.EnhancedCabalTestSuiteSpec [Optimisation flags changed]
+[ 253 of 1025] Compiling Test.Unit.EnhancedCompilerBasicSpec [Optimisation flags changed]
+[ 254 of 1025] Compiling Test.Unit.EnhancedCompilerIRPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 255 of 1025] Compiling Test.Unit.EnhancedCompilerQuickCheckPropertiesSpec [Optimisation flags changed]
+[ 256 of 1025] Compiling Test.Unit.EnhancedCompilerQuickCheckSpec [Optimisation flags changed]
+[ 257 of 1025] Compiling Test.Unit.EnhancedCompilerSpec [Optimisation flags changed]
+[ 258 of 1025] Compiling Test.Unit.EnhancedCompilerTestSpec [Optimisation flags changed]
+[ 259 of 1025] Compiling Test.Unit.EnhancedCoreQuickCheckSpec [Optimisation flags changed]
+[ 260 of 1025] Compiling Test.Unit.EnhancedDebugCoreSpec [Optimisation flags changed]
+[ 261 of 1025] Compiling Test.Unit.EnhancedDebugQuickCheckSpec [Optimisation flags changed]
+[ 262 of 1025] Compiling Test.Unit.EnhancedDependenciesQuickCheckPropertiesSpec [Optimisation flags changed]
+[ 263 of 1025] Compiling Test.Unit.EnhancedDependenciesSpec [Optimisation flags changed]
+[ 264 of 1025] Compiling Test.Unit.EnhancedDependentTypeSystemBoundaryQuickCheckSpec [Optimisation flags changed]
+[ 265 of 1025] Compiling Test.Unit.EnhancedDependentTypesQuickCheckSpec [Optimisation flags changed]
+[ 266 of 1025] Compiling Test.Unit.EnhancedDependentTypesSpec [Optimisation flags changed]
+[ 267 of 1025] Compiling Test.Unit.EnhancedErrorHandlerCoreQuickCheckSpec [Optimisation flags changed]
+[ 268 of 1025] Compiling Test.Unit.EnhancedErrorHandlerPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 269 of 1025] Compiling Test.Unit.EnhancedErrorHandlerPropertiesSpec [Optimisation flags changed]
+[ 270 of 1025] Compiling Test.Unit.EnhancedErrorHandlerQuickCheckPropertiesSpec [Optimisation flags changed]
+[ 271 of 1025] Compiling Test.Unit.EnhancedErrorHandlerSpec [Optimisation flags changed]
+[ 272 of 1025] Compiling Test.Unit.EnhancedErrorHandlingQuickCheckSpec [Optimisation flags changed]
+[ 273 of 1025] Compiling Test.Unit.EnhancedErrorHandlingSpec [Optimisation flags changed]
+[ 274 of 1025] Compiling Test.Unit.EnhancedIntegrationQuickCheckSpec [Optimisation flags changed]
+[ 275 of 1025] Compiling Test.Unit.EnhancedIntegrationSpec [Optimisation flags changed]
+[ 276 of 1025] Compiling Test.Unit.EnhancedOwnershipBoundaryQuickCheckSpec [Optimisation flags changed]
+[ 277 of 1025] Compiling Test.Unit.EnhancedOwnershipQuickCheckPropertiesSpec [Optimisation flags changed]
+[ 278 of 1025] Compiling Test.Unit.EnhancedOwnershipQuickCheckSpec [Optimisation flags changed]
+[ 279 of 1025] Compiling Test.Unit.EnhancedOwnershipSpec [Optimisation flags changed]
+[ 280 of 1025] Compiling Test.Unit.EnhancedParserBasicSpec [Optimisation flags changed]
+[ 281 of 1025] Compiling Test.Unit.EnhancedParserErrorHandlingQuickCheckSpec [Optimisation flags changed]
+[ 282 of 1025] Compiling Test.Unit.EnhancedParserPropertiesSpec [Optimisation flags changed]
+[ 283 of 1025] Compiling Test.Unit.EnhancedParserQuickCheckPropertiesSpec [Optimisation flags changed]
+[ 284 of 1025] Compiling Test.Unit.EnhancedParserQuickCheckSpec [Optimisation flags changed]
+[ 285 of 1025] Compiling Test.Unit.EnhancedParserSpec [Optimisation flags changed]
+[ 286 of 1025] Compiling Test.Unit.EnhancedParserTestSpec [Optimisation flags changed]
+[ 287 of 1025] Compiling Test.Unit.EnhancedPerformanceSpec [Optimisation flags changed]
+[ 288 of 1025] Compiling Test.Unit.EnhancedQuickCheckSpec [Optimisation flags changed]
+[ 289 of 1025] Compiling Test.Unit.EnhancedQuickCheckTestSpec [Optimisation flags changed]
+[ 290 of 1025] Compiling Test.Unit.EnhancedSourceLocationAdvancedQuickCheckSpec [Optimisation flags changed]
+[ 291 of 1025] Compiling Test.Unit.EnhancedSourceLocationMathSpec [Optimisation flags changed]
+[ 292 of 1025] Compiling Test.Unit.EnhancedSourceLocationQuickCheckPropertiesSpec [Optimisation flags changed]
+[ 293 of 1025] Compiling Test.Unit.EnhancedSourceLocationQuickCheckSpec [Optimisation flags changed]
+[ 294 of 1025] Compiling Test.Unit.EnhancedTextProcessingQuickCheckSpec [Optimisation flags changed]
+[ 295 of 1025] Compiling Test.Unit.EnhancedUtilsBoundaryQuickCheckSpec [Optimisation flags changed]
+[ 296 of 1025] Compiling Test.Unit.EnhancedUtilsQuickCheckPropertiesSpec [Optimisation flags changed]
+[ 297 of 1025] Compiling Test.Unit.EnhancedUtilsQuickCheckSpec [Optimisation flags changed]
+[ 298 of 1025] Compiling Test.Unit.EnhancedUtilsSpec [Optimisation flags changed]
+[ 299 of 1025] Compiling Test.Unit.EnhancedUtilsStringProcessingSpec [Optimisation flags changed]
+[ 300 of 1025] Compiling Test.Unit.ErrorBoundarySpec [Optimisation flags changed]
+[ 301 of 1025] Compiling Test.Unit.ErrorHandlerAdvancedQuickCheckSpec [Optimisation flags changed]
+[ 302 of 1025] Compiling Test.Unit.ErrorHandlerBasicFunctionsSpec [Optimisation flags changed]
+[ 303 of 1025] Compiling Test.Unit.ErrorHandlerComprehensiveQuickCheckSpec [Optimisation flags changed]
+[ 304 of 1025] Compiling Test.Unit.ErrorHandlerConsistencyAdvancedQuickCheckSpec [Optimisation flags changed]
+[ 305 of 1025] Compiling Test.Unit.ErrorHandlerConsistencyCabalsSpec [Optimisation flags changed]
+[ 306 of 1025] Compiling Test.Unit.ErrorHandlerConsistencyQuickCheckSpec [Optimisation flags changed]
+[ 307 of 1025] Compiling Test.Unit.ErrorHandlerConsistencySpec [Optimisation flags changed]
+[ 308 of 1025] Compiling Test.Unit.ErrorHandlerCoreComprehensiveSpec [Optimisation flags changed]
+[ 309 of 1025] Compiling Test.Unit.ErrorHandlerCorePropertiesSpec [Optimisation flags changed]
+[ 310 of 1025] Compiling Test.Unit.ErrorHandlerCoreQuickCheckSpec [Optimisation flags changed]
+[ 311 of 1025] Compiling Test.Unit.ErrorHandlerCoreQuickCheckTests [Optimisation flags changed]
+[ 312 of 1025] Compiling Test.Unit.ErrorHandlerCoreSpec [Optimisation flags changed]
+[ 313 of 1025] Compiling Test.Unit.ErrorHandlerErrorHandlingSpec [Optimisation flags changed]
+[ 314 of 1025] Compiling Test.Unit.ErrorHandlerNewQuickCheckSpec [Optimisation flags changed]
+[ 315 of 1025] Compiling Test.Unit.ErrorHandlerQuickCheckSpec [Optimisation flags changed]
+[ 316 of 1025] Compiling Test.Unit.ErrorHandlerQuickCheckTestSpec [Optimisation flags changed]
+[ 317 of 1025] Compiling Test.Unit.ErrorHandlerRecoverySpec [Optimisation flags changed]
+[ 318 of 1025] Compiling Test.Unit.ErrorHandlerRecoveryTestSpec [Optimisation flags changed]
+[ 319 of 1025] Compiling Test.Unit.ErrorHandlerResilienceSpec [Optimisation flags changed]
+[ 320 of 1025] Compiling Test.Unit.ErrorHandlerSpec [Optimisation flags changed]
+[ 321 of 1025] Compiling Test.Unit.ErrorHandlingBasicQuickCheckSpec [Optimisation flags changed]
+[ 322 of 1025] Compiling Test.Unit.ErrorHandlingBoundaryQuickCheckSpec [Optimisation flags changed]
+[ 323 of 1025] Compiling Test.Unit.ErrorHandlingCabalTestsSpec [Optimisation flags changed]
+[ 324 of 1025] Compiling Test.Unit.ErrorHandlingComprehensiveQuickCheckSpec [Optimisation flags changed]
+[ 325 of 1025] Compiling Test.Unit.ErrorHandlingComprehensiveSpec [Optimisation flags changed]
+[ 326 of 1025] Compiling Test.Unit.ErrorHandlingConsistencyQuickCheckSpec [Optimisation flags changed]
+[ 327 of 1025] Compiling Test.Unit.ErrorHandlingConsistencySpec [Optimisation flags changed]
+[ 328 of 1025] Compiling Test.Unit.ErrorHandlingCoreSpec [Optimisation flags changed]
+[ 329 of 1025] Compiling Test.Unit.ErrorHandlingPropertySpec [Optimisation flags changed]
+[ 330 of 1025] Compiling Test.Unit.ErrorHandlingQuickCheckSpec [Optimisation flags changed]
+[ 331 of 1025] Compiling Test.Unit.ErrorHandlingRecoveryQuickCheckSpec [Optimisation flags changed]
+[ 332 of 1025] Compiling Test.Unit.ErrorHandlingSpec [Optimisation flags changed]
+[ 333 of 1025] Compiling Test.Unit.ErrorHandlingTestSpec [Optimisation flags changed]
+[ 334 of 1025] Compiling Test.Unit.ErrorLocationTrackingQuickCheckSpec [Optimisation flags changed]
+[ 335 of 1025] Compiling Test.Unit.ErrorRecoveryAdvancedQuickCheckSpec [Optimisation flags changed]
+[ 336 of 1025] Compiling Test.Unit.ErrorRecoveryAdvancedSpec [Optimisation flags changed]
+[ 337 of 1025] Compiling Test.Unit.ErrorRecoveryAdvancedTest2025Spec [Optimisation flags changed]
+[ 338 of 1025] Compiling Test.Unit.ErrorRecoveryConsistencyNewSpec [Optimisation flags changed]
+[ 339 of 1025] Compiling Test.Unit.ErrorRecoveryConsistencySpec [Optimisation flags changed]
+[ 340 of 1025] Compiling Test.Unit.ErrorRecoveryEnhancedQuickCheckSpec [Optimisation flags changed]
+[ 341 of 1025] Compiling Test.Unit.ErrorRecoveryPropertiesSpec [Optimisation flags changed]
+[ 342 of 1025] Compiling Test.Unit.ErrorRecoveryQuickCheckSpec [Optimisation flags changed]
+[ 343 of 1025] Compiling Test.Unit.ErrorRecoveryQuickCheckTestSpec [Optimisation flags changed]
+[ 344 of 1025] Compiling Test.Unit.ErrorReportingQuickCheckSpec [Optimisation flags changed]
+[ 345 of 1025] Compiling Test.Unit.ExtendedAnalyzerQuickCheckSpec [Optimisation flags changed]
+[ 346 of 1025] Compiling Test.Unit.ExtendedCompilerQuickCheckSpec [Optimisation flags changed]
+[ 347 of 1025] Compiling Test.Unit.ExtendedOwnershipQuickCheckSpec [Optimisation flags changed]
+[ 348 of 1025] Compiling Test.Unit.ExtendedParserQuickCheckSpec [Optimisation flags changed]
+[ 349 of 1025] Compiling Test.Unit.ExtendedTypeCheckerQuickCheckSpec [Optimisation flags changed]
+[ 350 of 1025] Compiling Test.Unit.ExtendedUtilsQuickCheckSpec [Optimisation flags changed]
+[ 351 of 1025] Compiling Test.Unit.FastCabalQuickCheckSpec [Optimisation flags changed]
+[ 352 of 1025] Compiling Test.Unit.FinalQuickCheckTestSpec [Optimisation flags changed]
+[ 353 of 1025] Compiling Test.Unit.FinalQuickCheckTestSuite [Optimisation flags changed]
+[ 354 of 1025] Compiling Test.Unit.FocusedQuickCheckSpec [Optimisation flags changed]
+[ 355 of 1025] Compiling Test.Unit.FreshCabalQuickCheckSpec [Optimisation flags changed]
+[ 356 of 1025] Compiling Test.Unit.GoAstQuickCheckSpec [Optimisation flags changed]
+[ 357 of 1025] Compiling Test.Unit.GoLexerPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 358 of 1025] Compiling Test.Unit.GoParsingPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 359 of 1025] Compiling Test.Unit.GoToolchainBasicSpec [Optimisation flags changed]
+[ 360 of 1025] Compiling Test.Unit.GoToolchainCoreQuickCheckSpec [Optimisation flags changed]
+[ 361 of 1025] Compiling Test.Unit.GoToolchainIntegrationQuickCheckSpec [Optimisation flags changed]
+[ 362 of 1025] Compiling Test.Unit.GoToolchainIntegrationSpec [Optimisation flags changed]
+[ 363 of 1025] Compiling Test.Unit.GoToolchainQuickCheckSpec [Optimisation flags changed]
+[ 364 of 1025] Compiling Test.Unit.GoToolchainSpec [Optimisation flags changed]
+[ 365 of 1025] Compiling Test.Unit.IRBasicQuickCheckSpec [Optimisation flags changed]
+[ 366 of 1025] Compiling Test.Unit.IRGenerationConsistencySpec [Optimisation flags changed]
+[ 367 of 1025] Compiling Test.Unit.IRPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 368 of 1025] Compiling Test.Unit.IRQuickCheckSpec [Optimisation flags changed]
+[ 369 of 1025] Compiling Test.Unit.IntegratedCompilerConsistencySpec [Optimisation flags changed]
+[ 370 of 1025] Compiling Test.Unit.IntegratedCompilerPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 371 of 1025] Compiling Test.Unit.IntegratedCompilerPropertiesSpec [Optimisation flags changed]
+[ 372 of 1025] Compiling Test.Unit.IntegratedCompilerQuickCheckTestSpec [Optimisation flags changed]
+[ 373 of 1025] Compiling Test.Unit.IntegratedCompilerSpec [Optimisation flags changed]
+[ 374 of 1025] Compiling Test.Unit.IntegrationAdditionalQuickCheckSpec [Optimisation flags changed]
+[ 375 of 1025] Compiling Test.Unit.IntegrationAdvancedQuickCheckSpec [Optimisation flags changed]
+[ 376 of 1025] Compiling Test.Unit.IntegrationBasicSpec [Optimisation flags changed]
+[ 377 of 1025] Compiling Test.Unit.IntegrationCabalTestsSpec [Optimisation flags changed]
+[ 378 of 1025] Compiling Test.Unit.IntegrationComplexWorkflowsSpec [Optimisation flags changed]
+[ 379 of 1025] Compiling Test.Unit.IntegrationComprehensiveSpec [Optimisation flags changed]
+[ 380 of 1025] Compiling Test.Unit.IntegrationEndToEndCabalsSpec [Optimisation flags changed]
+[ 381 of 1025] Compiling Test.Unit.IntegrationEndToEndNewSpec [Optimisation flags changed]
+[ 382 of 1025] Compiling Test.Unit.IntegrationEndToEndQuickCheckSpec [Optimisation flags changed]
+[ 383 of 1025] Compiling Test.Unit.IntegrationEndToEndSpec [Optimisation flags changed]
+[ 384 of 1025] Compiling Test.Unit.IntegrationEndToEndTestSpec [Optimisation flags changed]
+[ 385 of 1025] Compiling Test.Unit.IntegrationEnhancedQuickCheckSpec [Optimisation flags changed]
+[ 386 of 1025] Compiling Test.Unit.IntegrationFeaturesQuickCheckSpec [Optimisation flags changed]
+[ 387 of 1025] Compiling Test.Unit.IntegrationPipelineSpec [Optimisation flags changed]
+[ 388 of 1025] Compiling Test.Unit.IntegrationQuickCheckSpec [Optimisation flags changed]
+[ 389 of 1025] Compiling Test.Unit.IntegrationQuickCheckTestSpec [Optimisation flags changed]
+[ 390 of 1025] Compiling Test.Unit.IntegrationSpec [Optimisation flags changed]
+[ 391 of 1025] Compiling Test.Unit.IntegrationTestSpec [Optimisation flags changed]
+[ 392 of 1025] Compiling Test.Unit.IntegrationWorkflowSpec [Optimisation flags changed]
+[ 393 of 1025] Compiling Test.Unit.LexerBoundaryQuickCheckSpec [Optimisation flags changed]
+[ 394 of 1025] Compiling Test.Unit.LightweightCabalQuickCheckSpec [Optimisation flags changed]
+[ 395 of 1025] Compiling Test.Unit.ListPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 396 of 1025] Compiling Test.Unit.MapPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 397 of 1025] Compiling Test.Unit.MathematicalPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 398 of 1025] Compiling Test.Unit.MemoryEfficiencySpec [Optimisation flags changed]
+[ 399 of 1025] Compiling Test.Unit.MemorySafetyQuickCheckSpec [Optimisation flags changed]
+[ 400 of 1025] Compiling Test.Unit.MemorySafetySpec [Optimisation flags changed]
+[ 401 of 1025] Compiling Test.Unit.MinimalCabalQuickCheckSpec [Optimisation flags changed]
+[ 402 of 1025] Compiling Test.Unit.ModuleIntegrationPropertiesSpec [Optimisation flags changed]
+[ 403 of 1025] Compiling Test.Unit.MonadPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 404 of 1025] Compiling Test.Unit.NewAdditionalDependenciesQuickCheckSpec [Optimisation flags changed]
+[ 405 of 1025] Compiling Test.Unit.NewAdditionalDependenciesQuickCheckTestSpec [Optimisation flags changed]
+[ 406 of 1025] Compiling Test.Unit.NewAdditionalErrorHandlerQuickCheckTestSpec [Optimisation flags changed]
+[ 407 of 1025] Compiling Test.Unit.NewAdditionalParserQuickCheckSpec [Optimisation flags changed]
+[ 408 of 1025] Compiling Test.Unit.NewAdditionalParserQuickCheckTestSpec [Optimisation flags changed]
+[ 409 of 1025] Compiling Test.Unit.NewAdditionalQuickCheckSpec [Optimisation flags changed]
+[ 410 of 1025] Compiling Test.Unit.NewAdditionalSourceLocationQuickCheckSpec [Optimisation flags changed]
+[ 411 of 1025] Compiling Test.Unit.NewAdditionalSourceLocationQuickCheckTestSpec [Optimisation flags changed]
+[ 412 of 1025] Compiling Test.Unit.NewAdditionalUtilsQuickCheckSpec [Optimisation flags changed]
+[ 413 of 1025] Compiling Test.Unit.NewAdditionalUtilsQuickCheckTestSpec [Optimisation flags changed]
+[ 414 of 1025] Compiling Test.Unit.NewAdvancedOwnershipQuickCheckSpec [Optimisation flags changed]
+[ 415 of 1025] Compiling Test.Unit.NewAdvancedSourceLocationQuickCheckSpec [Optimisation flags changed]
+[ 416 of 1025] Compiling Test.Unit.NewAnalyzerIntegrationSpec [Optimisation flags changed]
+[ 417 of 1025] Compiling Test.Unit.NewBasicTypesAndStringPropertiesSpec [Optimisation flags changed]
+[ 418 of 1025] Compiling Test.Unit.NewBoundaryConditionQuickCheckPropertySpec [Optimisation flags changed]
+[ 419 of 1025] Compiling Test.Unit.NewBoundaryConditionsQuickCheckSpec [Optimisation flags changed]
+[ 420 of 1025] Compiling Test.Unit.NewCabalCompilerIRSpec [Optimisation flags changed]
+[ 421 of 1025] Compiling Test.Unit.NewCabalCompilerInvariantSpec [Optimisation flags changed]
+[ 422 of 1025] Compiling Test.Unit.NewCabalComprehensiveTestsSpec [Optimisation flags changed]
+[ 423 of 1025] Compiling Test.Unit.NewCabalCoreFunctionalitySpec [Optimisation flags changed]
+[ 424 of 1025] Compiling Test.Unit.NewCabalCoreSpec [Optimisation flags changed]
+[ 425 of 1025] Compiling Test.Unit.NewCabalCoreTestsSpec [Optimisation flags changed]
+[ 426 of 1025] Compiling Test.Unit.NewCabalDependenciesQuickCheckSpec [Optimisation flags changed]
+[ 427 of 1025] Compiling Test.Unit.NewCabalDependencyCycleSpec [Optimisation flags changed]
+[ 428 of 1025] Compiling Test.Unit.NewCabalEdgeCaseSpec [Optimisation flags changed]
+[ 429 of 1025] Compiling Test.Unit.NewCabalEnhancedTestSpec [Optimisation flags changed]
+[ 430 of 1025] Compiling Test.Unit.NewCabalErrorHandlerConsistencySpec [Optimisation flags changed]
+[ 431 of 1025] Compiling Test.Unit.NewCabalErrorHandlerQuickCheckSpec [Optimisation flags changed]
+[ 432 of 1025] Compiling Test.Unit.NewCabalErrorHandlerSpec [Optimisation flags changed]
+[ 433 of 1025] Compiling Test.Unit.NewCabalErrorRecoverySpec [Optimisation flags changed]
+[ 434 of 1025] Compiling Test.Unit.NewCabalIntegrationEndToEndSpec [Optimisation flags changed]
+[ 435 of 1025] Compiling Test.Unit.NewCabalIntegrationSpec [Optimisation flags changed]
+[ 436 of 1025] Compiling Test.Unit.NewCabalMathPropertiesSpec [Optimisation flags changed]
+[ 437 of 1025] Compiling Test.Unit.NewCabalOwnershipQuickCheckSpec [Optimisation flags changed]
+[ 438 of 1025] Compiling Test.Unit.NewCabalOwnershipSafetySpec [Optimisation flags changed]
+[ 439 of 1025] Compiling Test.Unit.NewCabalOwnershipTransitivitySpec [Optimisation flags changed]
+[ 440 of 1025] Compiling Test.Unit.NewCabalParserBoundarySpec [Optimisation flags changed]
+[ 441 of 1025] Compiling Test.Unit.NewCabalParserErrorRecoverySpec [Optimisation flags changed]
+[ 442 of 1025] Compiling Test.Unit.NewCabalParserQuickCheckSpec [Optimisation flags changed]
+[ 443 of 1025] Compiling Test.Unit.NewCabalParserSpec [Optimisation flags changed]
+[ 444 of 1025] Compiling Test.Unit.NewCabalPerformanceMemorySpec [Optimisation flags changed]
+[ 445 of 1025] Compiling Test.Unit.NewCabalPerformanceSpec [Optimisation flags changed]
+[ 446 of 1025] Compiling Test.Unit.NewCabalPropertySpec [Optimisation flags changed]
+[ 447 of 1025] Compiling Test.Unit.NewCabalQuickCheckPropertiesSpec [Optimisation flags changed]
+[ 448 of 1025] Compiling Test.Unit.NewCabalQuickCheckSpec [Optimisation flags changed]
+[ 449 of 1025] Compiling Test.Unit.NewCabalQuickCheckSpec1 [Optimisation flags changed]
+[ 450 of 1025] Compiling Test.Unit.NewCabalQuickCheckSpec10 [Optimisation flags changed]
+[ 451 of 1025] Compiling Test.Unit.NewCabalQuickCheckSpec2 [Optimisation flags changed]
+[ 452 of 1025] Compiling Test.Unit.NewCabalQuickCheckSpec3 [Optimisation flags changed]
+[ 453 of 1025] Compiling Test.Unit.NewCabalQuickCheckSpec4 [Optimisation flags changed]
+[ 454 of 1025] Compiling Test.Unit.NewCabalQuickCheckSpec5 [Optimisation flags changed]
+[ 455 of 1025] Compiling Test.Unit.NewCabalQuickCheckSpec6 [Optimisation flags changed]
+[ 456 of 1025] Compiling Test.Unit.NewCabalQuickCheckSpec7 [Optimisation flags changed]
+[ 457 of 1025] Compiling Test.Unit.NewCabalQuickCheckSpec8 [Optimisation flags changed]
+[ 458 of 1025] Compiling Test.Unit.NewCabalQuickCheckSpec9 [Optimisation flags changed]
+[ 459 of 1025] Compiling Test.Unit.NewCabalQuickCheckTestCasesSpec [Optimisation flags changed]
+[ 460 of 1025] Compiling Test.Unit.NewCabalQuickCheckTestSpec [Optimisation flags changed]
+[ 461 of 1025] Compiling Test.Unit.NewCabalQuickCheckTestSuite2Spec [Optimisation flags changed]
+[ 462 of 1025] Compiling Test.Unit.NewCabalQuickCheckTestsSpec [Optimisation flags changed]
+[ 463 of 1025] Compiling Test.Unit.NewCabalSourceLocationQuickCheckSpec [Optimisation flags changed]
+[ 464 of 1025] Compiling Test.Unit.NewCabalSourceLocationSpec [Optimisation flags changed]
+[ 465 of 1025] Compiling Test.Unit.NewCabalSyntaxValidatorQuickCheckSpec [Optimisation flags changed]
+[ 466 of 1025] Compiling Test.Unit.NewCabalTest10Spec [Optimisation flags changed]
+[ 467 of 1025] Compiling Test.Unit.NewCabalTest1Spec [Optimisation flags changed]
+[ 468 of 1025] Compiling Test.Unit.NewCabalTest2Spec [Optimisation flags changed]
+[ 469 of 1025] Compiling Test.Unit.NewCabalTest3Spec [Optimisation flags changed]
+[ 470 of 1025] Compiling Test.Unit.NewCabalTest4Spec [Optimisation flags changed]
+[ 471 of 1025] Compiling Test.Unit.NewCabalTest5Spec [Optimisation flags changed]
+[ 472 of 1025] Compiling Test.Unit.NewCabalTest6Spec [Optimisation flags changed]
+[ 473 of 1025] Compiling Test.Unit.NewCabalTest7Spec [Optimisation flags changed]
+[ 474 of 1025] Compiling Test.Unit.NewCabalTest8Spec [Optimisation flags changed]
+[ 475 of 1025] Compiling Test.Unit.NewCabalTest9Spec [Optimisation flags changed]
+[ 476 of 1025] Compiling Test.Unit.NewCabalTestCasesSpec [Optimisation flags changed]
+[ 477 of 1025] Compiling Test.Unit.NewCabalTestQuickCheckSpec [Optimisation flags changed]
+[ 478 of 1025] Compiling Test.Unit.NewCabalTestSpec [Optimisation flags changed]
+[ 479 of 1025] Compiling Test.Unit.NewCabalTestSpec1 [Optimisation flags changed]
+[ 480 of 1025] Compiling Test.Unit.NewCabalTestSpec10 [Optimisation flags changed]
+[ 481 of 1025] Compiling Test.Unit.NewCabalTestSpec2 [Optimisation flags changed]
+[ 482 of 1025] Compiling Test.Unit.NewCabalTestSpec3 [Optimisation flags changed]
+[ 483 of 1025] Compiling Test.Unit.NewCabalTestSpec4 [Optimisation flags changed]
+[ 484 of 1025] Compiling Test.Unit.NewCabalTestSpec5 [Optimisation flags changed]
+[ 485 of 1025] Compiling Test.Unit.NewCabalTestSpec6 [Optimisation flags changed]
+[ 486 of 1025] Compiling Test.Unit.NewCabalTestSpec7 [Optimisation flags changed]
+[ 487 of 1025] Compiling Test.Unit.NewCabalTestSpec8 [Optimisation flags changed]
+[ 488 of 1025] Compiling Test.Unit.NewCabalTestSpec9 [Optimisation flags changed]
+[ 489 of 1025] Compiling Test.Unit.NewCabalTestSuiteQuickCheckSpec [Optimisation flags changed]
+[ 490 of 1025] Compiling Test.Unit.NewCabalTestSuiteSpec [Optimisation flags changed]
+[ 491 of 1025] Compiling Test.Unit.NewCabalTestsSpec [Optimisation flags changed]
+[ 492 of 1025] Compiling Test.Unit.NewCabalTypeSystemBoundarySpec [Optimisation flags changed]
+[ 493 of 1025] Compiling Test.Unit.NewCabalTypeSystemSpec [Optimisation flags changed]
+[ 494 of 1025] Compiling Test.Unit.NewCabalUtilsBoundarySpec [Optimisation flags changed]
+[ 495 of 1025] Compiling Test.Unit.NewCabalUtilsSpec [Optimisation flags changed]
+[ 496 of 1025] Compiling Test.Unit.NewCabslQuickCheckTests [Optimisation flags changed]
+[ 497 of 1025] Compiling Test.Unit.NewCliIntegrationSpec [Optimisation flags changed]
+[ 498 of 1025] Compiling Test.Unit.NewCompactCompilerIRSpec [Optimisation flags changed]
+[ 499 of 1025] Compiling Test.Unit.NewCompactDependenciesSpec [Optimisation flags changed]
+[ 500 of 1025] Compiling Test.Unit.NewCompactErrorHandlerSpec [Optimisation flags changed]
+[ 501 of 1025] Compiling Test.Unit.NewCompactOwnershipSpec [Optimisation flags changed]
+[ 502 of 1025] Compiling Test.Unit.NewCompactParserSpec [Optimisation flags changed]
+[ 503 of 1025] Compiling Test.Unit.NewCompactSourceLocationSpec [Optimisation flags changed]
+[ 504 of 1025] Compiling Test.Unit.NewCompactUtilsSpec [Optimisation flags changed]
+[ 505 of 1025] Compiling Test.Unit.NewCompilerIRConsistencyQuickCheckSpec [Optimisation flags changed]
+[ 506 of 1025] Compiling Test.Unit.NewCompilerIRConsistencySpec [Optimisation flags changed]
+[ 507 of 1025] Compiling Test.Unit.NewCompilerIRCoreQuickCheckSpec [Optimisation flags changed]
+[ 508 of 1025] Compiling Test.Unit.NewCompilerIRPropertiesSpec [Optimisation flags changed]
+[ 509 of 1025] Compiling Test.Unit.NewCompilerIRQuickCheckSpec [Optimisation flags changed]
+[ 510 of 1025] Compiling Test.Unit.NewCompilerOptimizationConsistencySpec [Optimisation flags changed]
+[ 511 of 1025] Compiling Test.Unit.NewCompilerOptimizationInvariantSpec [Optimisation flags changed]
+[ 512 of 1025] Compiling Test.Unit.NewCompilerOptimizationPropertiesSpec [Optimisation flags changed]
+[ 513 of 1025] Compiling Test.Unit.NewCompilerOptimizationQuickCheckSpec [Optimisation flags changed]
+[ 514 of 1025] Compiling Test.Unit.NewCompilerOptimizationSpec [Optimisation flags changed]
+[ 515 of 1025] Compiling Test.Unit.NewCompilerPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 516 of 1025] Compiling Test.Unit.NewCompilerQuickCheckPropertiesSpec [Optimisation flags changed]
+[ 517 of 1025] Compiling Test.Unit.NewCompilerQuickCheckSpec [Optimisation flags changed]
+[ 518 of 1025] Compiling Test.Unit.NewCompilerTestSpec [Optimisation flags changed]
+[ 519 of 1025] Compiling Test.Unit.NewCompleteCoreTestSuiteSpec [Optimisation flags changed]
+[ 520 of 1025] Compiling Test.Unit.NewComprehensiveCabalQuickCheckSpec [Optimisation flags changed]
+[ 521 of 1025] Compiling Test.Unit.NewComprehensiveCabalQuickCheckTestSpec [Optimisation flags changed]
+[ 522 of 1025] Compiling Test.Unit.NewComprehensiveCabalQuickCheckTestSuite [Optimisation flags changed]
+[ 523 of 1025] Compiling Test.Unit.NewComprehensiveCabalTestSpec [Optimisation flags changed]
+[ 524 of 1025] Compiling Test.Unit.NewComprehensiveCabalTestSuiteSpec [Optimisation flags changed]
+[ 525 of 1025] Compiling Test.Unit.NewComprehensiveCoreQuickCheckSpec [Optimisation flags changed]
+[ 526 of 1025] Compiling Test.Unit.NewComprehensiveParserQuickCheckSpec [Optimisation flags changed]
+[ 527 of 1025] Compiling Test.Unit.NewComprehensivePropertySpec [Optimisation flags changed]
+[ 528 of 1025] Compiling Test.Unit.NewComprehensiveQuickCheckTestSpec [Optimisation flags changed]
+[ 529 of 1025] Compiling Test.Unit.NewComprehensiveQuickCheckTestSuite [Optimisation flags changed]
+[ 530 of 1025] Compiling Test.Unit.NewComprehensiveTestSuite2025Spec [Optimisation flags changed]
+[ 531 of 1025] Compiling Test.Unit.NewComprehensiveTestsSpec [Optimisation flags changed]
+[ 532 of 1025] Compiling Test.Unit.NewConcurrentSafetyQuickCheckSpec [Optimisation flags changed]
+[ 533 of 1025] Compiling Test.Unit.NewConcurrentSafetySpec [Optimisation flags changed]
+[ 534 of 1025] Compiling Test.Unit.NewCoreBoundaryConditionsQuickCheckSpec [Optimisation flags changed]
+[ 535 of 1025] Compiling Test.Unit.NewCoreCabalQuickCheckSpec1 [Optimisation flags changed]
+[ 536 of 1025] Compiling Test.Unit.NewCoreCabalQuickCheckSpec10 [Optimisation flags changed]
+[ 537 of 1025] Compiling Test.Unit.NewCoreCabalQuickCheckSpec2 [Optimisation flags changed]
+[ 538 of 1025] Compiling Test.Unit.NewCoreCabalQuickCheckSpec3 [Optimisation flags changed]
+[ 539 of 1025] Compiling Test.Unit.NewCoreCabalQuickCheckSpec4 [Optimisation flags changed]
+[ 540 of 1025] Compiling Test.Unit.NewCoreCabalQuickCheckSpec5 [Optimisation flags changed]
+[ 541 of 1025] Compiling Test.Unit.NewCoreCabalQuickCheckSpec6 [Optimisation flags changed]
+[ 542 of 1025] Compiling Test.Unit.NewCoreCabalQuickCheckSpec7 [Optimisation flags changed]
+[ 543 of 1025] Compiling Test.Unit.NewCoreCabalQuickCheckSpec8 [Optimisation flags changed]
+[ 544 of 1025] Compiling Test.Unit.NewCoreCabalQuickCheckSpec9 [Optimisation flags changed]
+[ 545 of 1025] Compiling Test.Unit.NewCoreErrorHandlingQuickCheckSpec [Optimisation flags changed]
+[ 546 of 1025] Compiling Test.Unit.NewCoreFunctionalityQuickCheckSpec [Optimisation flags changed]
+[ 547 of 1025] Compiling Test.Unit.NewCoreFunctionalityQuickCheckTests [Optimisation flags changed]
+[ 548 of 1025] Compiling Test.Unit.NewCoreFunctionalitySpec [Optimisation flags changed]
+[ 549 of 1025] Compiling Test.Unit.NewCoreParserQuickCheckSpec [Optimisation flags changed]
+[ 550 of 1025] Compiling Test.Unit.NewCoreParsingQuickCheckSpec [Optimisation flags changed]
+[ 551 of 1025] Compiling Test.Unit.NewCorePerformanceQuickCheckSpec [Optimisation flags changed]
+[ 552 of 1025] Compiling Test.Unit.NewCorePropertiesQuickCheckSpec [Optimisation flags changed]
+[ 553 of 1025] Compiling Test.Unit.NewCoreQuickCheckSpec [Optimisation flags changed]
+[ 554 of 1025] Compiling Test.Unit.NewCoreQuickCheckTestSpec [Optimisation flags changed]
+[ 555 of 1025] Compiling Test.Unit.NewCoreSourceLocationQuickCheckSpec [Optimisation flags changed]
+[ 556 of 1025] Compiling Test.Unit.NewCoreUtilsQuickCheckSpec [Optimisation flags changed]
+[ 557 of 1025] Compiling Test.Unit.NewDependenciesAdvancedQuickCheckSpec [Optimisation flags changed]
+[ 558 of 1025] Compiling Test.Unit.NewDependenciesAnalysisPropertiesSpec [Optimisation flags changed]
+[ 559 of 1025] Compiling Test.Unit.NewDependenciesAnalysisSpec [Optimisation flags changed]
+[ 560 of 1025] Compiling Test.Unit.NewDependenciesCoreSpec [Optimisation flags changed]
+[ 561 of 1025] Compiling Test.Unit.NewDependenciesCycleDetectionQuickCheckSpec [Optimisation flags changed]
+[ 562 of 1025] Compiling Test.Unit.NewDependenciesInferenceCoreQuickCheckSpec [Optimisation flags changed]
+[ 563 of 1025] Compiling Test.Unit.NewDependenciesPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 564 of 1025] Compiling Test.Unit.NewDependenciesQuickCheckPropertySpec [Optimisation flags changed]
+[ 565 of 1025] Compiling Test.Unit.NewDependenciesQuickCheckSpec [Optimisation flags changed]
+[ 566 of 1025] Compiling Test.Unit.NewDependenciesTestSpec [Optimisation flags changed]
+[ 567 of 1025] Compiling Test.Unit.NewDependencyAnalysisCoreQuickCheckSpec [Optimisation flags changed]
+[ 568 of 1025] Compiling Test.Unit.NewDependencyAnalysisQuickCheckSpec [Optimisation flags changed]
+[ 569 of 1025] Compiling Test.Unit.NewDependentTypeBoundarySpec [Optimisation flags changed]
+[ 570 of 1025] Compiling Test.Unit.NewDependentTypeConstraintValidationQuickCheckSpec [Optimisation flags changed]
+[ 571 of 1025] Compiling Test.Unit.NewDependentTypeValidationSpec [Optimisation flags changed]
+[ 572 of 1025] Compiling Test.Unit.NewDependentTypesPerfSpec [Optimisation flags changed]
+[ 573 of 1025] Compiling Test.Unit.NewDependentTypesPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 574 of 1025] Compiling Test.Unit.NewEndToEndCompilationSpec [Optimisation flags changed]
+[ 575 of 1025] Compiling Test.Unit.NewEndToEndIntegrationQuickCheckSpec [Optimisation flags changed]
+[ 576 of 1025] Compiling Test.Unit.NewEnhancedCabalQuickCheckSpec [Optimisation flags changed]
+[ 577 of 1025] Compiling Test.Unit.NewEnhancedCabalQuickCheckTestSpec [Optimisation flags changed]
+[ 578 of 1025] Compiling Test.Unit.NewEnhancedCompilerIRConsistencySpec [Optimisation flags changed]
+[ 579 of 1025] Compiling Test.Unit.NewEnhancedCompilerOptimizationQuickCheckSpec [Optimisation flags changed]
+[ 580 of 1025] Compiling Test.Unit.NewEnhancedDependenciesCycleDetectionQuickCheckSpec [Optimisation flags changed]
+[ 581 of 1025] Compiling Test.Unit.NewEnhancedErrorHandlerConsistencyQuickCheckSpec [Optimisation flags changed]
+[ 582 of 1025] Compiling Test.Unit.NewEnhancedIntegrationEndToEndQuickCheckSpec [Optimisation flags changed]
+[ 583 of 1025] Compiling Test.Unit.NewEnhancedIntegrationEndToEndSpec [Optimisation flags changed]
+[ 584 of 1025] Compiling Test.Unit.NewEnhancedOwnershipMemorySafetyQuickCheckSpec [Optimisation flags changed]
+[ 585 of 1025] Compiling Test.Unit.NewEnhancedOwnershipTransitivitySpec [Optimisation flags changed]
+[ 586 of 1025] Compiling Test.Unit.NewEnhancedParserCombinatorQuickCheckSpec [Optimisation flags changed]
+[ 587 of 1025] Compiling Test.Unit.NewEnhancedPerformanceRegressionSpec [Optimisation flags changed]
+[ 588 of 1025] Compiling Test.Unit.NewEnhancedSourceLocationMathPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 589 of 1025] Compiling Test.Unit.NewEnhancedTestSpec [Optimisation flags changed]
+[ 590 of 1025] Compiling Test.Unit.NewEnhancedTestSuiteSpec [Optimisation flags changed]
+[ 591 of 1025] Compiling Test.Unit.NewEnhancedUtilsQuickCheckSpec [Optimisation flags changed]
+[ 592 of 1025] Compiling Test.Unit.NewEnhancedUtilsStringProcessingQuickCheckSpec [Optimisation flags changed]
+[ 593 of 1025] Compiling Test.Unit.NewErrorHandlerConsistencyQuickCheckSpec [Optimisation flags changed]
+[ 594 of 1025] Compiling Test.Unit.NewErrorHandlerConsistencySpec [Optimisation flags changed]
+[ 595 of 1025] Compiling Test.Unit.NewErrorHandlerCoreQuickCheckSpec [Optimisation flags changed]
+[ 596 of 1025] Compiling Test.Unit.NewErrorHandlerCoreSpec [Optimisation flags changed]
+[ 597 of 1025] Compiling Test.Unit.NewErrorHandlerEnhancedQuickCheckSpec [Optimisation flags changed]
+[ 598 of 1025] Compiling Test.Unit.NewErrorHandlerPropertiesSpec [Optimisation flags changed]
+[ 599 of 1025] Compiling Test.Unit.NewErrorHandlerQuickCheckPropertiesSpec [Optimisation flags changed]
+[ 600 of 1025] Compiling Test.Unit.NewErrorHandlerQuickCheckPropertySpec [Optimisation flags changed]
+[ 601 of 1025] Compiling Test.Unit.NewErrorHandlerQuickCheckSpec [Optimisation flags changed]
+[ 602 of 1025] Compiling Test.Unit.NewErrorHandlerTestSpec [Optimisation flags changed]
+[ 603 of 1025] Compiling Test.Unit.NewErrorHandlingConsistencySpec [Optimisation flags changed]
+[ 604 of 1025] Compiling Test.Unit.NewErrorHandlingPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 605 of 1025] Compiling Test.Unit.NewErrorHandlingPropertiesSpec [Optimisation flags changed]
+[ 606 of 1025] Compiling Test.Unit.NewErrorHandlingQuickCheckSpec [Optimisation flags changed]
+[ 607 of 1025] Compiling Test.Unit.NewErrorRecoveryMechanismsQuickCheckSpec [Optimisation flags changed]
+[ 608 of 1025] Compiling Test.Unit.NewErrorRecoverySpec [Optimisation flags changed]
+[ 609 of 1025] Compiling Test.Unit.NewFreshComprehensiveQuickCheckSpec [Optimisation flags changed]
+[ 610 of 1025] Compiling Test.Unit.NewFreshCoreQuickCheckTests [Optimisation flags changed]
+[ 611 of 1025] Compiling Test.Unit.NewFreshDependentTypesQuickCheckSpec [Optimisation flags changed]
+[ 612 of 1025] Compiling Test.Unit.NewFreshIntegrationQuickCheckSpec [Optimisation flags changed]
+[ 613 of 1025] Compiling Test.Unit.NewFreshPerformanceQuickCheckSpec [Optimisation flags changed]
+[ 614 of 1025] Compiling Test.Unit.NewFreshSourceLocationMathSpec [Optimisation flags changed]
+[ 615 of 1025] Compiling Test.Unit.NewGoToolchainCoreQuickCheckSpec [Optimisation flags changed]
+[ 616 of 1025] Compiling Test.Unit.NewGoToolchainCoreSpec [Optimisation flags changed]
+[ 617 of 1025] Compiling Test.Unit.NewGoToolchainIntegrationQuickCheckSpec [Optimisation flags changed]
+[ 618 of 1025] Compiling Test.Unit.NewGoToolchainQuickCheckSpec [Optimisation flags changed]
+[ 619 of 1025] Compiling Test.Unit.NewIRQuickCheckSpec [Optimisation flags changed]
+[ 620 of 1025] Compiling Test.Unit.NewIntegrationAdvancedQuickCheckSpec [Optimisation flags changed]
+[ 621 of 1025] Compiling Test.Unit.NewIntegrationEndToEndCoreQuickCheckSpec [Optimisation flags changed]
+[ 622 of 1025] Compiling Test.Unit.NewIntegrationEndToEndSpec [Optimisation flags changed]
+[ 623 of 1025] Compiling Test.Unit.NewIntegrationPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 624 of 1025] Compiling Test.Unit.NewIntegrationQuickCheckPropertySpec [Optimisation flags changed]
+[ 625 of 1025] Compiling Test.Unit.NewIntegrationQuickCheckSpec [Optimisation flags changed]
+[ 626 of 1025] Compiling Test.Unit.NewIntegrationQuickCheckTestsSpec [Optimisation flags changed]
+[ 627 of 1025] Compiling Test.Unit.NewMemoryLeakPreventionQuickCheckSpec [Optimisation flags changed]
+[ 628 of 1025] Compiling Test.Unit.NewMemorySafetyQuickCheckSpec [Optimisation flags changed]
+[ 629 of 1025] Compiling Test.Unit.NewMemorySafetySpec [Optimisation flags changed]
+[ 630 of 1025] Compiling Test.Unit.NewOwnershipAnalysisPropertiesSpec [Optimisation flags changed]
+[ 631 of 1025] Compiling Test.Unit.NewOwnershipAnalysisQuickCheckSpec [Optimisation flags changed]
+[ 632 of 1025] Compiling Test.Unit.NewOwnershipBasicCoreQuickCheckSpec [Optimisation flags changed]
+[ 633 of 1025] Compiling Test.Unit.NewOwnershipBoundarySpec [Optimisation flags changed]
+[ 634 of 1025] Compiling Test.Unit.NewOwnershipPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 635 of 1025] Compiling Test.Unit.NewOwnershipQuickCheckPropertySpec [Optimisation flags changed]
+[ 636 of 1025] Compiling Test.Unit.NewOwnershipQuickCheckSpec [Optimisation flags changed]
+[ 637 of 1025] Compiling Test.Unit.NewOwnershipTestSpec [Optimisation flags changed]
+[ 638 of 1025] Compiling Test.Unit.NewOwnershipTransferBoundaryQuickCheckSpec [Optimisation flags changed]
+[ 639 of 1025] Compiling Test.Unit.NewOwnershipTransferBoundarySpec [Optimisation flags changed]
+[ 640 of 1025] Compiling Test.Unit.NewOwnershipTransferCoreQuickCheckSpec [Optimisation flags changed]
+[ 641 of 1025] Compiling Test.Unit.NewOwnershipTransferPropertiesSpec [Optimisation flags changed]
+[ 642 of 1025] Compiling Test.Unit.NewOwnershipTransferQuickCheckSpec [Optimisation flags changed]
+[ 643 of 1025] Compiling Test.Unit.NewOwnershipTransferSpec [Optimisation flags changed]
+[ 644 of 1025] Compiling Test.Unit.NewOwnershipTransitivityQuickCheckSpec [Optimisation flags changed]
+[ 645 of 1025] Compiling Test.Unit.NewOwnershipTransitivitySpec [Optimisation flags changed]
+[ 646 of 1025] Compiling Test.Unit.NewParserAdvancedPropertiesSpec [Optimisation flags changed]
+[ 647 of 1025] Compiling Test.Unit.NewParserBasicPropertiesSpec [Optimisation flags changed]
+[ 648 of 1025] Compiling Test.Unit.NewParserBoundaryCoreQuickCheckSpec [Optimisation flags changed]
+[ 649 of 1025] Compiling Test.Unit.NewParserCombinatorPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 650 of 1025] Compiling Test.Unit.NewParserCombinatorPropertiesSpec [Optimisation flags changed]
+[ 651 of 1025] Compiling Test.Unit.NewParserCombinatorsQuickCheckSpec [Optimisation flags changed]
+[ 652 of 1025] Compiling Test.Unit.NewParserCoreQuickCheckSpec [Optimisation flags changed]
+[ 653 of 1025] Compiling Test.Unit.NewParserCoreSpec [Optimisation flags changed]
+[ 654 of 1025] Compiling Test.Unit.NewParserEnhancedQuickCheckSpec [Optimisation flags changed]
+[ 655 of 1025] Compiling Test.Unit.NewParserErrorRecoverySpec [Optimisation flags changed]
+[ 656 of 1025] Compiling Test.Unit.NewParserFunctionalitySpec [Optimisation flags changed]
+[ 657 of 1025] Compiling Test.Unit.NewParserPerformanceBoundaryQuickCheckSpec [Optimisation flags changed]
+[ 658 of 1025] Compiling Test.Unit.NewParserPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 659 of 1025] Compiling Test.Unit.NewParserPropertiesSpec [Optimisation flags changed]
+[ 660 of 1025] Compiling Test.Unit.NewParserQuickCheckPropertiesSpec [Optimisation flags changed]
+[ 661 of 1025] Compiling Test.Unit.NewParserQuickCheckPropertySpec [Optimisation flags changed]
+[ 662 of 1025] Compiling Test.Unit.NewParserQuickCheckSpec [Optimisation flags changed]
+[ 663 of 1025] Compiling Test.Unit.NewParserRecoverySpec [Optimisation flags changed]
+[ 664 of 1025] Compiling Test.Unit.NewParserRobustnessSpec [Optimisation flags changed]
+[ 665 of 1025] Compiling Test.Unit.NewParserTestSpec [Optimisation flags changed]
+[ 666 of 1025] Compiling Test.Unit.NewParserValidationSpec [Optimisation flags changed]
+[ 667 of 1025] Compiling Test.Unit.NewPerformanceQuickCheckSpec [Optimisation flags changed]
+[ 668 of 1025] Compiling Test.Unit.NewPerformanceRegressionSpec [Optimisation flags changed]
+[ 669 of 1025] Compiling Test.Unit.NewPropertyTestsQuickCheckSpec [Optimisation flags changed]
+[ 670 of 1025] Compiling Test.Unit.NewQuickCheckPropertiesSpec [Optimisation flags changed]
+[ 671 of 1025] Compiling Test.Unit.NewQuickCheckPropertySpec [Optimisation flags changed]
+[ 672 of 1025] Compiling Test.Unit.NewQuickCheckSpec [Optimisation flags changed]
+[ 673 of 1025] Compiling Test.Unit.NewQuickCheckTestCasesSpec [Optimisation flags changed]
+[ 674 of 1025] Compiling Test.Unit.NewQuickCheckTestSpec [Optimisation flags changed]
+[ 675 of 1025] Compiling Test.Unit.NewQuickCheckTestsSpec [Optimisation flags changed]
+[ 676 of 1025] Compiling Test.Unit.NewRobustErrorHandlerQuickCheckSpec [Optimisation flags changed]
+[ 677 of 1025] Compiling Test.Unit.NewSimpleCabalQuickCheckSpec [Optimisation flags changed]
+[ 678 of 1025] Compiling Test.Unit.NewSimpleErrorHandlingSpec [Optimisation flags changed]
+[ 679 of 1025] Compiling Test.Unit.NewSimpleQuickCheckSpec [Optimisation flags changed]
+[ 680 of 1025] Compiling Test.Unit.NewSourceLocationAccuracySpec [Optimisation flags changed]
+[ 681 of 1025] Compiling Test.Unit.NewSourceLocationAdvancedQuickCheckSpec [Optimisation flags changed]
+[ 682 of 1025] Compiling Test.Unit.NewSourceLocationCalculationPropertiesSpec [Optimisation flags changed]
+[ 683 of 1025] Compiling Test.Unit.NewSourceLocationCalculationSpec [Optimisation flags changed]
+[ 684 of 1025] Compiling Test.Unit.NewSourceLocationEnhancedQuickCheckSpec [Optimisation flags changed]
+[ 685 of 1025] Compiling Test.Unit.NewSourceLocationMathCoreQuickCheckSpec [Optimisation flags changed]
+[ 686 of 1025] Compiling Test.Unit.NewSourceLocationMathPrecisionQuickCheckSpec [Optimisation flags changed]
+[ 687 of 1025] Compiling Test.Unit.NewSourceLocationMathPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 688 of 1025] Compiling Test.Unit.NewSourceLocationMathPropertiesSpec [Optimisation flags changed]
+[ 689 of 1025] Compiling Test.Unit.NewSourceLocationMathPropertiesSpec2 [Optimisation flags changed]
+[ 690 of 1025] Compiling Test.Unit.NewSourceLocationMathQuickCheckSpec [Optimisation flags changed]
+[ 691 of 1025] Compiling Test.Unit.NewSourceLocationMathQuickCheckSpec2 [Optimisation flags changed]
+[ 692 of 1025] Compiling Test.Unit.NewSourceLocationMathSpec [Optimisation flags changed]
+[ 693 of 1025] Compiling Test.Unit.NewSourceLocationPrecisionSpec [Optimisation flags changed]
+[ 694 of 1025] Compiling Test.Unit.NewSourceLocationQuickCheckPropertiesSpec [Optimisation flags changed]
+[ 695 of 1025] Compiling Test.Unit.NewSourceLocationQuickCheckPropertySpec [Optimisation flags changed]
+[ 696 of 1025] Compiling Test.Unit.NewSourceLocationQuickCheckSpec [Optimisation flags changed]
+[ 697 of 1025] Compiling Test.Unit.NewSourceLocationTestSpec [Optimisation flags changed]
+[ 698 of 1025] Compiling Test.Unit.NewSourceLocationTrackingSpec [Optimisation flags changed]
+[ 699 of 1025] Compiling Test.Unit.NewStringProcessingBoundarySpec [Optimisation flags changed]
+[ 700 of 1025] Compiling Test.Unit.NewStringProcessingQuickCheckSpec [Optimisation flags changed]
+[ 701 of 1025] Compiling Test.Unit.NewStringProcessingUnicodeSafetyQuickCheckSpec [Optimisation flags changed]
+[ 702 of 1025] Compiling Test.Unit.NewSymbolTableQuickCheckSpec [Optimisation flags changed]
+[ 703 of 1025] Compiling Test.Unit.NewSyntaxValidatorQuickCheckSpec [Optimisation flags changed]
+[ 704 of 1025] Compiling Test.Unit.NewSyntaxValidatorRobustnessSpec [Optimisation flags changed]
+[ 705 of 1025] Compiling Test.Unit.NewSyntaxValidatorValidationQuickCheckSpec [Optimisation flags changed]
+[ 706 of 1025] Compiling Test.Unit.NewTextEncodingSafetyQuickCheckSpec [Optimisation flags changed]
+[ 707 of 1025] Compiling Test.Unit.NewTextProcessingBoundarySpec [Optimisation flags changed]
+[ 708 of 1025] Compiling Test.Unit.NewTextProcessingQuickCheckSpec [Optimisation flags changed]
+[ 709 of 1025] Compiling Test.Unit.NewTypeCheckerQuickCheckSpec [Optimisation flags changed]
+[ 710 of 1025] Compiling Test.Unit.NewTypeSystemBoundaryQuickCheckSpec [Optimisation flags changed]
+[ 711 of 1025] Compiling Test.Unit.NewTypeSystemQuickCheckSpec [Optimisation flags changed]
+[ 712 of 1025] Compiling Test.Unit.NewTypeSystemValidationSpec [Optimisation flags changed]
+[ 713 of 1025] Compiling Test.Unit.NewTypusCompilerQuickCheckSpec [Optimisation flags changed]
+[ 714 of 1025] Compiling Test.Unit.NewTypusCoreQuickCheckSpec [Optimisation flags changed]
+[ 715 of 1025] Compiling Test.Unit.NewTypusDependentTypesQuickCheckSpec [Optimisation flags changed]
+[ 716 of 1025] Compiling Test.Unit.NewTypusErrorHandlerQuickCheckSpec [Optimisation flags changed]
+[ 717 of 1025] Compiling Test.Unit.NewTypusIntegrationQuickCheckSpec [Optimisation flags changed]
+[ 718 of 1025] Compiling Test.Unit.NewTypusOwnershipQuickCheckSpec [Optimisation flags changed]
+[ 719 of 1025] Compiling Test.Unit.NewTypusParserQuickCheckSpec [Optimisation flags changed]
+[ 720 of 1025] Compiling Test.Unit.NewTypusSourceLocationQuickCheckSpec [Optimisation flags changed]
+[ 721 of 1025] Compiling Test.Unit.NewTypusSyntaxValidatorQuickCheckSpec [Optimisation flags changed]
+[ 722 of 1025] Compiling Test.Unit.NewTypusUtilsQuickCheckSpec [Optimisation flags changed]
+[ 723 of 1025] Compiling Test.Unit.NewUnicodeParsingSpec [Optimisation flags changed]
+[ 724 of 1025] Compiling Test.Unit.NewUtilsAdditionalSpec [Optimisation flags changed]
+[ 725 of 1025] Compiling Test.Unit.NewUtilsCoreQuickCheckSpec [Optimisation flags changed]
+[ 726 of 1025] Compiling Test.Unit.NewUtilsCoreSpec [Optimisation flags changed]
+[ 727 of 1025] Compiling Test.Unit.NewUtilsEnhancedQuickCheckSpec [Optimisation flags changed]
+[ 728 of 1025] Compiling Test.Unit.NewUtilsFunctionsPropertiesSpec [Optimisation flags changed]
+[ 729 of 1025] Compiling Test.Unit.NewUtilsPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 730 of 1025] Compiling Test.Unit.NewUtilsPropertiesSpec2 [Optimisation flags changed]
+[ 731 of 1025] Compiling Test.Unit.NewUtilsQuickCheckPropertiesSpec [Optimisation flags changed]
+[ 732 of 1025] Compiling Test.Unit.NewUtilsQuickCheckPropertySpec [Optimisation flags changed]
+[ 733 of 1025] Compiling Test.Unit.NewUtilsQuickCheckPropertyTestsSpec [Optimisation flags changed]
+[ 734 of 1025] Compiling Test.Unit.NewUtilsQuickCheckSpec [Optimisation flags changed]
+[ 735 of 1025] Compiling Test.Unit.NewComprehensiveQuickCheckSpec [Optimisation flags changed]
+[ 736 of 1025] Compiling Test.Unit.NewUtilsStringBoundaryQuickCheckSpec [Optimisation flags changed]
+[ 737 of 1025] Compiling Test.Unit.NewUtilsStringBoundarySpec [Optimisation flags changed]
+[ 738 of 1025] Compiling Test.Unit.NewUtilsStringProcessingQuickCheckSpec [Optimisation flags changed]
+[ 739 of 1025] Compiling Test.Unit.NewUtilsStringProcessingSpec [Optimisation flags changed]
+[ 740 of 1025] Compiling Test.Unit.NewUtilsTestSpec [Optimisation flags changed]
+[ 741 of 1025] Compiling Test.Unit.OwnershipAdvancedQuickCheckSpec [Optimisation flags changed]
+[ 742 of 1025] Compiling Test.Unit.OwnershipAnalysisBoundarySpec [Optimisation flags changed]
+[ 743 of 1025] Compiling Test.Unit.OwnershipAnalysisComprehensiveQuickCheckSpec [Optimisation flags changed]
+[ 744 of 1025] Compiling Test.Unit.OwnershipAnalysisSpec [Optimisation flags changed]
+[ 745 of 1025] Compiling Test.Unit.OwnershipAnalysisTestSpec [Optimisation flags changed]
+[ 746 of 1025] Compiling Test.Unit.OwnershipBasicFunctionsSpec [Optimisation flags changed]
+[ 747 of 1025] Compiling Test.Unit.OwnershipBasicPropertiesSpec [Optimisation flags changed]
+[ 748 of 1025] Compiling Test.Unit.OwnershipBridgeSpec [Optimisation flags changed]
+[ 749 of 1025] Compiling Test.Unit.OwnershipCommonTypesQuickCheckTestSpec [Optimisation flags changed]
+[ 750 of 1025] Compiling Test.Unit.OwnershipComplexScenariosSpec [Optimisation flags changed]
+[ 751 of 1025] Compiling Test.Unit.OwnershipComplexSpec [Optimisation flags changed]
+[ 752 of 1025] Compiling Test.Unit.OwnershipComprehensiveQuickCheckSpec [Optimisation flags changed]
+[ 753 of 1025] Compiling Test.Unit.OwnershipCoreQuickCheckSpec [Optimisation flags changed]
+[ 754 of 1025] Compiling Test.Unit.OwnershipCoreQuickCheckTests [Optimisation flags changed]
+[ 755 of 1025] Compiling Test.Unit.OwnershipGoToolchainTestSpec [Optimisation flags changed]
+[ 756 of 1025] Compiling Test.Unit.OwnershipMemorySafetyCabalsSpec [Optimisation flags changed]
+[ 757 of 1025] Compiling Test.Unit.OwnershipMemorySafetySpec [Optimisation flags changed]
+[ 758 of 1025] Compiling Test.Unit.OwnershipMemorySafetyTestSpec [Optimisation flags changed]
+[ 759 of 1025] Compiling Test.Unit.OwnershipNewQuickCheckSpec [Optimisation flags changed]
+[ 760 of 1025] Compiling Test.Unit.OwnershipOwnershipAnalysisSpec [Optimisation flags changed]
+[ 761 of 1025] Compiling Test.Unit.OwnershipQuickCheckSpec [Optimisation flags changed]
+[ 762 of 1025] Compiling Test.Unit.OwnershipReporterSpec [Optimisation flags changed]
+[ 763 of 1025] Compiling Test.Unit.OwnershipRobustnessQuickCheckSpec [Optimisation flags changed]
+[ 764 of 1025] Compiling Test.Unit.OwnershipSpec [Optimisation flags changed]
+[ 765 of 1025] Compiling Test.Unit.OwnershipTransferBoundaryNewSpec [Optimisation flags changed]
+[ 766 of 1025] Compiling Test.Unit.OwnershipTransferComplex2025Spec [Optimisation flags changed]
+[ 767 of 1025] Compiling Test.Unit.OwnershipTransferComplexQuickCheckSpec [Optimisation flags changed]
+[ 768 of 1025] Compiling Test.Unit.OwnershipTransferCoreQuickCheckSpec [Optimisation flags changed]
+[ 769 of 1025] Compiling Test.Unit.OwnershipTransferPropertiesSpec [Optimisation flags changed]
+[ 770 of 1025] Compiling Test.Unit.OwnershipTransferQuickCheckTestSpec [Optimisation flags changed]
+[ 771 of 1025] Compiling Test.Unit.OwnershipTransferSpec [Optimisation flags changed]
+[ 772 of 1025] Compiling Test.Unit.OwnershipTransitivityQuickCheckSpec [Optimisation flags changed]
+[ 773 of 1025] Compiling Test.Unit.OwnershipTransitivitySpec [Optimisation flags changed]
+[ 774 of 1025] Compiling Test.Unit.ParserAdditionalQuickCheckSpec [Optimisation flags changed]
+[ 775 of 1025] Compiling Test.Unit.ParserAdditionalSpec [Optimisation flags changed]
+[ 776 of 1025] Compiling Test.Unit.ParserAdvancedQuickCheckSpec [Optimisation flags changed]
+[ 777 of 1025] Compiling Test.Unit.ParserBasicFunctionsExtraSpec [Optimisation flags changed]
+[ 778 of 1025] Compiling Test.Unit.ParserBasicFunctionsSpec [Optimisation flags changed]
+[ 779 of 1025] Compiling Test.Unit.ParserBasicQuickCheckSpec [Optimisation flags changed]
+[ 780 of 1025] Compiling Test.Unit.ParserBasicSpec [Optimisation flags changed]
+[ 781 of 1025] Compiling Test.Unit.ParserBoundaryConditionTestSpec [Optimisation flags changed]
+[ 782 of 1025] Compiling Test.Unit.ParserBoundaryConditionsQuickCheckSpec [Optimisation flags changed]
+[ 783 of 1025] Compiling Test.Unit.ParserBoundaryConditionsQuickCheckTestSpec [Optimisation flags changed]
+[ 784 of 1025] Compiling Test.Unit.ParserBoundaryConditionsSpec [Optimisation flags changed]
+[ 785 of 1025] Compiling Test.Unit.ParserCabalTestsSpec [Optimisation flags changed]
+[ 786 of 1025] Compiling Test.Unit.ParserCombinatorsSpec [Optimisation flags changed]
+[ 787 of 1025] Compiling Test.Unit.ParserCompilerPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 788 of 1025] Compiling Test.Unit.ParserComprehensiveQuickCheckSpec [Optimisation flags changed]
+[ 789 of 1025] Compiling Test.Unit.ParserComprehensiveSpec [Optimisation flags changed]
+[ 790 of 1025] Compiling Test.Unit.ParserConsistencyQuickCheckSpec [Optimisation flags changed]
+[ 791 of 1025] Compiling Test.Unit.ParserConsistencySpec [Optimisation flags changed]
+[ 792 of 1025] Compiling Test.Unit.ParserCoreFunctionalitySpec [Optimisation flags changed]
+[ 793 of 1025] Compiling Test.Unit.ParserCorePropertiesSpec [Optimisation flags changed]
+[ 794 of 1025] Compiling Test.Unit.ParserCoreQuickCheckSpec [Optimisation flags changed]
+[ 795 of 1025] Compiling Test.Unit.ParserCoreQuickCheckTests [Optimisation flags changed]
+[ 796 of 1025] Compiling Test.Unit.ParserDependentTypesTestSpec [Optimisation flags changed]
+[ 797 of 1025] Compiling Test.Unit.ParserDirectiveSpec [Optimisation flags changed]
+[ 798 of 1025] Compiling Test.Unit.ParserDirectivesAdvanced2025Spec [Optimisation flags changed]
+[ 799 of 1025] Compiling Test.Unit.ParserDirectivesQuickCheckSpec [Optimisation flags changed]
+[ 800 of 1025] Compiling Test.Unit.ParserEdgeCaseQuickCheckSpec [Optimisation flags changed]
+[ 801 of 1025] Compiling Test.Unit.ParserEnhancedQuickCheckSpec [Optimisation flags changed]
+[ 802 of 1025] Compiling Test.Unit.ParserErrorHandlingTestSpec [Optimisation flags changed]
+[ 803 of 1025] Compiling Test.Unit.ParserErrorRecoveryAdvancedQuickCheckSpec [Optimisation flags changed]
+[ 804 of 1025] Compiling Test.Unit.ParserErrorRecoveryAdvancedSpec [Optimisation flags changed]
+[ 805 of 1025] Compiling Test.Unit.ParserErrorRecoveryCabalsSpec [Optimisation flags changed]
+[ 806 of 1025] Compiling Test.Unit.ParserErrorRecoveryQuickCheckSpec [Optimisation flags changed]
+[ 807 of 1025] Compiling Test.Unit.ParserErrorRecoverySpec [Optimisation flags changed]
+[ 808 of 1025] Compiling Test.Unit.ParserNewQuickCheckSpec [Optimisation flags changed]
+[ 809 of 1025] Compiling Test.Unit.ParserPropertySpec [Optimisation flags changed]
+[ 810 of 1025] Compiling Test.Unit.ParserQuickCheckSpec [Optimisation flags changed]
+[ 811 of 1025] Compiling Test.Unit.ParserRecoverySpec [Optimisation flags changed]
+[ 812 of 1025] Compiling Test.Unit.ParserRobustnessQuickCheckSpec [Optimisation flags changed]
+[ 813 of 1025] Compiling Test.Unit.ParserRobustnessTestSpec [Optimisation flags changed]
+[ 814 of 1025] Compiling Test.Unit.ParserSpec [Optimisation flags changed]
+[ 815 of 1025] Compiling Test.Unit.PerformanceBoundaryQuickCheckSpec [Optimisation flags changed]
+[ 816 of 1025] Compiling Test.Unit.PerformanceBoundarySpec [Optimisation flags changed]
+[ 817 of 1025] Compiling Test.Unit.PerformanceEnhancedQuickCheckSpec [Optimisation flags changed]
+[ 818 of 1025] Compiling Test.Unit.PerformanceOptimization2025Spec [Optimisation flags changed]
+[ 819 of 1025] Compiling Test.Unit.PerformanceOptimizationQuickCheckSpec [Optimisation flags changed]
+[ 820 of 1025] Compiling Test.Unit.PerformanceQuickCheckSpec [Optimisation flags changed]
+[ 821 of 1025] Compiling Test.Unit.PerformanceRegressionCabalsSpec [Optimisation flags changed]
+[ 822 of 1025] Compiling Test.Unit.PerformanceRegressionNewSpec [Optimisation flags changed]
+[ 823 of 1025] Compiling Test.Unit.PerformanceRegressionSpec [Optimisation flags changed]
+[ 824 of 1025] Compiling Test.Unit.PerformanceRegressionTestSpec [Optimisation flags changed]
+[ 825 of 1025] Compiling Test.Unit.PerformanceSpec [Optimisation flags changed]
+[ 826 of 1025] Compiling Test.Unit.PropertyQuickCheckTestSpec [Optimisation flags changed]
+[ 827 of 1025] Compiling Test.Unit.QuickCabalQuickCheckSpec [Optimisation flags changed]
+[ 828 of 1025] Compiling Test.Unit.RegressionComprehensiveSpec [Optimisation flags changed]
+[ 829 of 1025] Compiling Test.Unit.SecurityValidationCabalsSpec [Optimisation flags changed]
+[ 830 of 1025] Compiling Test.Unit.SecurityValidationTestSpec [Optimisation flags changed]
+[ 831 of 1025] Compiling Test.Unit.SetPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 832 of 1025] Compiling Test.Unit.SimpleCabalQuickCheckSpec [Optimisation flags changed]
+[ 833 of 1025] Compiling Test.Unit.SimpleCabalQuickCheckTests [Optimisation flags changed]
+[ 834 of 1025] Compiling Test.Unit.SimpleCabalTestSpec [Optimisation flags changed]
+[ 835 of 1025] Compiling Test.Unit.SimpleCoreQuickCheckSpec [Optimisation flags changed]
+[ 836 of 1025] Compiling Test.Unit.SimpleCoreTestSpec [Optimisation flags changed]
+[ 837 of 1025] Compiling Test.Unit.SimpleDataStructuresQuickCheckSpec [Optimisation flags changed]
+[ 838 of 1025] Compiling Test.Unit.SimpleNewTestSpec [Optimisation flags changed]
+[ 839 of 1025] Compiling Test.Unit.SimpleParserQuickCheckSpec [Optimisation flags changed]
+[ 840 of 1025] Compiling Test.Unit.SimpleQuickCheckSpec [Optimisation flags changed]
+[ 841 of 1025] Compiling Test.Unit.SimpleQuickCheckTestSpec [Optimisation flags changed]
+[ 842 of 1025] Compiling Test.Unit.SimpleQuickCheckTestSuite [Optimisation flags changed]
+[ 843 of 1025] Compiling Test.Unit.SimpleStringTestsSpec [Optimisation flags changed]
+[ 844 of 1025] Compiling Test.Unit.SimpleSyntaxValidatorQuickCheckSpec [Optimisation flags changed]
+[ 845 of 1025] Compiling Test.Unit.SimpleTypeCheckerQuickCheckSpec [Optimisation flags changed]
+[ 846 of 1025] Compiling Test.Unit.SourceLocationAccuracyQuickCheckSpec [Optimisation flags changed]
+[ 847 of 1025] Compiling Test.Unit.SourceLocationAdditionalQuickCheckSpec [Optimisation flags changed]
+[ 848 of 1025] Compiling Test.Unit.SourceLocationAdditionalSpec [Optimisation flags changed]
+[ 849 of 1025] Compiling Test.Unit.SourceLocationAdvancedFeaturesSpec [Optimisation flags changed]
+[ 850 of 1025] Compiling Test.Unit.SourceLocationAdvancedQuickCheckSpec [Optimisation flags changed]
+[ 851 of 1025] Compiling Test.Unit.SourceLocationAdvancedTestSpec [Optimisation flags changed]
+[ 852 of 1025] Compiling Test.Unit.SourceLocationBasicSpec [Optimisation flags changed]
+[ 853 of 1025] Compiling Test.Unit.SourceLocationBoundaryQuickCheckSpec [Optimisation flags changed]
+[ 854 of 1025] Compiling Test.Unit.SourceLocationBoundarySpec [Optimisation flags changed]
+[ 855 of 1025] Compiling Test.Unit.SourceLocationCabalTestsSpec [Optimisation flags changed]
+[ 856 of 1025] Compiling Test.Unit.SourceLocationComprehensiveQuickCheckSpec [Optimisation flags changed]
+[ 857 of 1025] Compiling Test.Unit.SourceLocationComprehensiveSpec [Optimisation flags changed]
+[ 858 of 1025] Compiling Test.Unit.SourceLocationConsistencySpec [Optimisation flags changed]
+[ 859 of 1025] Compiling Test.Unit.SourceLocationCorePropertiesSpec [Optimisation flags changed]
+[ 860 of 1025] Compiling Test.Unit.SourceLocationCoreQuickCheckSpec [Optimisation flags changed]
+[ 861 of 1025] Compiling Test.Unit.SourceLocationCoreQuickCheckTests [Optimisation flags changed]
+[ 862 of 1025] Compiling Test.Unit.SourceLocationEnhancedQuickCheckSpec [Optimisation flags changed]
+[ 863 of 1025] Compiling Test.Unit.SourceLocationIntegrationSpec [Optimisation flags changed]
+[ 864 of 1025] Compiling Test.Unit.SourceLocationMathAdvanced2025Spec [Optimisation flags changed]
+[ 865 of 1025] Compiling Test.Unit.SourceLocationMathAdvancedSpec [Optimisation flags changed]
+[ 866 of 1025] Compiling Test.Unit.SourceLocationMathPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 867 of 1025] Compiling Test.Unit.SourceLocationMathSpec [Optimisation flags changed]
+[ 868 of 1025] Compiling Test.Unit.SourceLocationNewQuickCheckSpec [Optimisation flags changed]
+[ 869 of 1025] Compiling Test.Unit.SourceLocationPositionArithmeticSpec [Optimisation flags changed]
+[ 870 of 1025] Compiling Test.Unit.SourceLocationPositionQuickCheckSpec [Optimisation flags changed]
+[ 871 of 1025] Compiling Test.Unit.SourceLocationPrecisionCabalsSpec [Optimisation flags changed]
+[ 872 of 1025] Compiling Test.Unit.SourceLocationPrecisionNewSpec [Optimisation flags changed]
+[ 873 of 1025] Compiling Test.Unit.SourceLocationPrecisionQuickCheckSpec [Optimisation flags changed]
+[ 874 of 1025] Compiling Test.Unit.SourceLocationQuickCheckSpec [Optimisation flags changed]
+[ 875 of 1025] Compiling Test.Unit.SourceLocationSpanQuickCheckSpec [Optimisation flags changed]
+[ 876 of 1025] Compiling Test.Unit.SourceLocationSpec [Optimisation flags changed]
+[ 877 of 1025] Compiling Test.Unit.SourceLocationTestSpec [Optimisation flags changed]
+[ 878 of 1025] Compiling Test.Unit.SourceLocationTrackingQuickCheckTestSpec [Optimisation flags changed]
+[ 879 of 1025] Compiling Test.Unit.SourcePositionPrecisionSpec [Optimisation flags changed]
+[ 880 of 1025] Compiling Test.Unit.SpanOperationsSpec [Optimisation flags changed]
+[ 881 of 1025] Compiling Test.Unit.SplitFunctionsSpec [Optimisation flags changed]
+[ 882 of 1025] Compiling Test.Unit.StringAnalysisSpec [Optimisation flags changed]
+[ 883 of 1025] Compiling Test.Unit.StringProcessingBoundaryQuickCheckSpec [Optimisation flags changed]
+[ 884 of 1025] Compiling Test.Unit.StringProcessingQuickCheckSpec [Optimisation flags changed]
+[ 885 of 1025] Compiling Test.Unit.StringProcessingSpec [Optimisation flags changed]
+[ 886 of 1025] Compiling Test.Unit.StringUtilsProcessingAdvanced2025Spec [Optimisation flags changed]
+[ 887 of 1025] Compiling Test.Unit.StringUtilsQuickCheckSpec [Optimisation flags changed]
+[ 888 of 1025] Compiling Test.Unit.StringUtilsQuickCheckTestSpec [Optimisation flags changed]
+[ 889 of 1025] Compiling Test.Unit.SymbolTableAdvancedSpec [Optimisation flags changed]
+[ 890 of 1025] Compiling Test.Unit.SymbolTableManagementSpec [Optimisation flags changed]
+[ 891 of 1025] Compiling Test.Unit.SymbolTableOperationsQuickCheckSpec [Optimisation flags changed]
+[ 892 of 1025] Compiling Test.Unit.SymbolTableOperationsSpec [Optimisation flags changed]
+[ 893 of 1025] Compiling Test.Unit.SymbolTableSpec [Optimisation flags changed]
+[ 894 of 1025] Compiling Test.Unit.SyntaxValidatorAdvancedSpec [Optimisation flags changed]
+[ 895 of 1025] Compiling Test.Unit.SyntaxValidatorBasicSpec [Optimisation flags changed]
+[ 896 of 1025] Compiling Test.Unit.SyntaxValidatorBoundaryQuickCheckSpec [Optimisation flags changed]
+[ 897 of 1025] Compiling Test.Unit.SyntaxValidatorBoundarySpec [Optimisation flags changed]
+[ 898 of 1025] Compiling Test.Unit.SyntaxValidatorGoToolchainQuickCheckSpec [Optimisation flags changed]
+[ 899 of 1025] Compiling Test.Unit.SyntaxValidatorQuickCheckSpec [Optimisation flags changed]
+[ 900 of 1025] Compiling Test.Unit.SyntaxValidatorSpec [Optimisation flags changed]
+[ 901 of 1025] Compiling Test.Unit.SyntaxValidatorTestSpec [Optimisation flags changed]
+[ 902 of 1025] Compiling Test.Unit.SyntaxValidatorValidationSpec [Optimisation flags changed]
+[ 903 of 1025] Compiling Test.Unit.TestCrossModuleIntegrationSpec [Optimisation flags changed]
+[ 904 of 1025] Compiling Test.Unit.TestDebugIntegrationSpec [Optimisation flags changed]
+[ 905 of 1025] Compiling Test.Unit.TestDependenciesCycleDetectionSpec [Optimisation flags changed]
+[ 906 of 1025] Compiling Test.Unit.TestDependencyTypeConstraintsSpec [Optimisation flags changed]
+[ 907 of 1025] Compiling Test.Unit.TestDependentTypesValidationSpec [Optimisation flags changed]
+[ 908 of 1025] Compiling Test.Unit.TestEnhancedErrorHandlerSpec [Optimisation flags changed]
+[ 909 of 1025] Compiling Test.Unit.TestErrorHandlerConsistencySpec [Optimisation flags changed]
+[ 910 of 1025] Compiling Test.Unit.TestErrorHandlerPropertiesSpec [Optimisation flags changed]
+[ 911 of 1025] Compiling Test.Unit.TestErrorRecoverySpec [Optimisation flags changed]
+[ 912 of 1025] Compiling Test.Unit.TestParserBasicFunctionsSpec [Optimisation flags changed]
+[ 913 of 1025] Compiling Test.Unit.TestSourceLocationMathSpec [Optimisation flags changed]
+[ 914 of 1025] Compiling Test.Unit.TestUtilsStringProcessingSpec [Optimisation flags changed]
+[ 915 of 1025] Compiling Test.Unit.TextProcessingAdvancedSpec [Optimisation flags changed]
+[ 916 of 1025] Compiling Test.Unit.TextProcessingRobustnessSpec [Optimisation flags changed]
+[ 917 of 1025] Compiling Test.Unit.TextProcessingSpec [Optimisation flags changed]
+[ 918 of 1025] Compiling Test.Unit.TinyCabalQuickCheckSpec [Optimisation flags changed]
+[ 919 of 1025] Compiling Test.Unit.ToolingErrorSpec [Optimisation flags changed]
+[ 920 of 1025] Compiling Test.Unit.TypeCheckerBasicQuickCheckSpec [Optimisation flags changed]
+[ 921 of 1025] Compiling Test.Unit.TypeCheckerComprehensiveQuickCheckSpec [Optimisation flags changed]
+[ 922 of 1025] Compiling Test.Unit.TypeCheckerQuickCheckSpec [Optimisation flags changed]
+[ 923 of 1025] Compiling Test.Unit.TypeEnvironmentBuildingQuickCheckSpec [Optimisation flags changed]
+[ 924 of 1025] Compiling Test.Unit.TypeEnvironmentQuickCheckSpec [Optimisation flags changed]
+[ 925 of 1025] Compiling Test.Unit.TypeInferenceAdvancedCabalsSpec [Optimisation flags changed]
+[ 926 of 1025] Compiling Test.Unit.TypeInferenceAdvancedNewSpec [Optimisation flags changed]
+[ 927 of 1025] Compiling Test.Unit.TypeInferenceAdvancedSpec [Optimisation flags changed]
+[ 928 of 1025] Compiling Test.Unit.TypeInferenceAdvancedTestSpec [Optimisation flags changed]
+[ 929 of 1025] Compiling Test.Unit.TypeInferenceBoundaryQuickCheckSpec [Optimisation flags changed]
+[ 930 of 1025] Compiling Test.Unit.TypeInferenceComplex2025Spec [Optimisation flags changed]
+[ 931 of 1025] Compiling Test.Unit.TypeInferenceEdgeCasesSpec [Optimisation flags changed]
+[ 932 of 1025] Compiling Test.Unit.TypeInferenceQuickCheckSpec [Optimisation flags changed]
+[ 933 of 1025] Compiling Test.Unit.TypeSystemBoundaryQuickCheckSpec [Optimisation flags changed]
+[ 934 of 1025] Compiling Test.Unit.TypeSystemBoundarySpec [Optimisation flags changed]
+[ 935 of 1025] Compiling Test.Unit.TypeSystemEdgeCasesSpec [Optimisation flags changed]
+[ 936 of 1025] Compiling Test.Unit.TypeSystemInferenceQuickCheckSpec [Optimisation flags changed]
+[ 937 of 1025] Compiling Test.Unit.TypeSystemInferenceSpec [Optimisation flags changed]
+[ 938 of 1025] Compiling Test.Unit.TypeSystemQuickCheckSpec [Optimisation flags changed]
+[ 939 of 1025] Compiling Test.Unit.TypeSystemSpec [Optimisation flags changed]
+[ 940 of 1025] Compiling Test.Unit.TypeSystemTestSpec [Optimisation flags changed]
+[ 941 of 1025] Compiling Test.Unit.TypusEndToEndQuickCheckSpec [Optimisation flags changed]
+[ 942 of 1025] Compiling Test.Unit.UnicodeHandlingAdvancedSpec [Optimisation flags changed]
+[ 943 of 1025] Compiling Test.Unit.UnicodeHandlingQuickCheckSpec [Optimisation flags changed]
+[ 944 of 1025] Compiling Test.Unit.UtilsAdditionalQuickCheckSpec [Optimisation flags changed]
+[ 945 of 1025] Compiling Test.Unit.UtilsAdvancedQuickCheckSpec [Optimisation flags changed]
+[ 946 of 1025] Compiling Test.Unit.UtilsBasicQuickCheckSpec [Optimisation flags changed]
+[ 947 of 1025] Compiling Test.Unit.UtilsBoundaryQuickCheckSpec [Optimisation flags changed]
+[ 948 of 1025] Compiling Test.Unit.UtilsBreakOnQuickCheckSpec [Optimisation flags changed]
+[ 949 of 1025] Compiling Test.Unit.UtilsCommentProcessingSpec [Optimisation flags changed]
+[ 950 of 1025] Compiling Test.Unit.UtilsComprehensiveQuickCheckSpec [Optimisation flags changed]
+[ 951 of 1025] Compiling Test.Unit.UtilsComprehensiveSpec [Optimisation flags changed]
+[ 952 of 1025] Compiling Test.Unit.UtilsCoreFunctionalitySpec [Optimisation flags changed]
+[ 953 of 1025] Compiling Test.Unit.UtilsCorePropertiesQuickCheckSpec [Optimisation flags changed]
+[ 954 of 1025] Compiling Test.Unit.UtilsCorePropertiesSpec [Optimisation flags changed]
+[ 955 of 1025] Compiling Test.Unit.UtilsCoreQuickCheckSpec [Optimisation flags changed]
+[ 956 of 1025] Compiling Test.Unit.UtilsCoreQuickCheckTests [Optimisation flags changed]
+[ 957 of 1025] Compiling Test.Unit.UtilsEfficiencyQuickCheckSpec [Optimisation flags changed]
+[ 958 of 1025] Compiling Test.Unit.UtilsEnhancedQuickCheckSpec [Optimisation flags changed]
+[ 959 of 1025] Compiling Test.Unit.UtilsIndentationSpec [Optimisation flags changed]
+[ 960 of 1025] Compiling Test.Unit.UtilsNewQuickCheckSpec [Optimisation flags changed]
+[ 961 of 1025] Compiling Test.Unit.UtilsPerformanceBoundarySpec [Optimisation flags changed]
+[ 962 of 1025] Compiling Test.Unit.UtilsPropertiesExtendedSpec [Optimisation flags changed]
+[ 963 of 1025] Compiling Test.Unit.UtilsQuickCheckSpec [Optimisation flags changed]
+[ 964 of 1025] Compiling Test.Unit.UtilsRobustnessQuickCheckSpec [Optimisation flags changed]
+[ 965 of 1025] Compiling Test.Unit.UtilsSpec [Optimisation flags changed]
+[ 966 of 1025] Compiling Test.Unit.UtilsStringFunctionsSpec [Optimisation flags changed]
+[ 967 of 1025] Compiling Test.Unit.UtilsStringProcessingEnhancedSpec [Optimisation flags changed]
+[ 968 of 1025] Compiling Test.Unit.UtilsStringProcessingExtraSpec [Optimisation flags changed]
+[ 969 of 1025] Compiling Test.Unit.UtilsStringProcessingSpec [Optimisation flags changed]
+[ 970 of 1025] Compiling Test.Unit.UtilsStringProcessingTestSpec [Optimisation flags changed]
+[ 971 of 1025] Compiling Test.Unit.UtilsStringPropertiesQuickCheckSpec [Optimisation flags changed]
+[ 972 of 1025] Compiling Test.Unit.UtilsStringPropertiesSpec [Optimisation flags changed]
+[ 973 of 1025] Compiling Test.Unit.UtilsTestSpec [Optimisation flags changed]
+[ 974 of 1025] Compiling Test.Unit.UtilsUnicodePerformanceSpec [Optimisation flags changed]
+[ 975 of 1025] Compiling Test.Unit.ValueAnalysisFlowQuickCheckSpec [Optimisation flags changed]
+[ 976 of 1025] Compiling Test.Unit.ValueAnalysisFlowSpec [Optimisation flags changed]
+[ 977 of 1025] Compiling Test.Unit.ValueAnalysisQuickCheckSpec [Optimisation flags changed]
+[ 978 of 1025] Compiling Test.Unit.ValueAnalysisSpec [Optimisation flags changed]
+[ 979 of 1025] Compiling Test.Unit.VerbositySpec [Optimisation flags changed]
+[ 980 of 1025] Compiling Test.Unit.WorkingQuickCheckSpec [Optimisation flags changed]
+[ 981 of 1025] Compiling Test.Unit.WorkingQuickCheckTestSpec [Optimisation flags changed]
+[ 982 of 1025] Compiling TestSupport.Arbitrary [Optimisation flags changed]
+[ 983 of 1025] Compiling Test.Unit.TestUtilsCorePropertiesSpec [Optimisation flags changed]
+[ 984 of 1025] Compiling Test.Unit.TestTypeSystemInferenceSpec [Optimisation flags changed]
+[ 985 of 1025] Compiling Test.Unit.TestSymbolTableOperationsSpec [Optimisation flags changed]
+[ 986 of 1025] Compiling Test.Unit.TestStringProcessingSpec [Optimisation flags changed]
+[ 987 of 1025] Compiling Test.Unit.TestStringEncodingSpec [Optimisation flags changed]
+[ 988 of 1025] Compiling Test.Unit.TestSourceLocationMathPropertiesSpec [Optimisation flags changed]
+[ 989 of 1025] Compiling Test.Unit.TestQuickCheckPropertiesSpec [Optimisation flags changed]
+[ 990 of 1025] Compiling Test.Unit.TestParserErrorRecoverySpec [Optimisation flags changed]
+[ 991 of 1025] Compiling Test.Unit.TestParserDirectivesSpec [Optimisation flags changed]
+[ 992 of 1025] Compiling Test.Unit.TestMemorySafetySpec [Optimisation flags changed]
+[ 993 of 1025] Compiling Test.Unit.TestListPropertiesSpec [Optimisation flags changed]
+[ 994 of 1025] Compiling Test.Unit.Tests [Optimisation flags changed]
+[ 995 of 1025] Compiling Test.Unit [Optimisation flags changed]
+[ 996 of 1025] Compiling Main [Optimisation flags changed]
+[ 997 of 1025] Compiling Test.Unit.TestGoToolchainIntegrationSpec [Optimisation flags changed]
+[ 998 of 1025] Compiling Test.Unit.TestConcurrentSafetySpec [Optimisation flags changed]
+[ 999 of 1025] Compiling Test.Unit.TestCliIntegrationSpec [Optimisation flags changed]
+[1000 of 1025] Compiling Test.Unit.TestBoundaryConditionsSpec [Optimisation flags changed]
+[1001 of 1025] Compiling Test.Unit.TestArithmeticPropertiesSpec [Optimisation flags changed]
+[1002 of 1025] Compiling Test.Unit.TestAnalyzerIntegrationSpec [Optimisation flags changed]
+[1003 of 1025] Compiling Test.Unit.SourceLocationCalculationSpec [Optimisation flags changed]
+[1004 of 1025] Compiling Test.Unit.NewQuickCheckTestSuiteSpec [Optimisation flags changed]
+[1005 of 1025] Compiling Test.Unit.DependenciesCycleDetectionQuickCheckSpec [Optimisation flags changed]
+[1006 of 1025] Compiling Test.Unit.AdditionalQuickCheckTestSuiteSpec [Optimisation flags changed]
+[1007 of 1025] Compiling TestSupport.ExtendedArbitrary [Optimisation flags changed]
+[1008 of 1025] Compiling Test.Unit.NewAdditionalErrorHandlerQuickCheckSpec [Optimisation flags changed]
+[1009 of 1025] Compiling TestSupport.QuickCheck [Optimisation flags changed]
+[1010 of 1025] Compiling Test.Unit.TextProcessingQuickCheckSpec [Optimisation flags changed]
+[1011 of 1025] Compiling Test.Unit.SourceLocationArithmeticQuickCheckSpec [Optimisation flags changed]
+[1012 of 1025] Compiling Test.Unit.OwnershipTransferQuickCheckSpec [Optimisation flags changed]
+[1013 of 1025] Compiling Test.Unit.MathOperationsQuickCheckSpec [Optimisation flags changed]
+[1014 of 1025] Compiling Test.Unit.ErrorRecoveryPropertiesQuickCheckSpec [Optimisation flags changed]
+[1015 of 1025] Compiling Test.Unit.DependencyAnalysisQuickCheckSpec [Optimisation flags changed]
+[1016 of 1025] Compiling Test.Unit.CoreUtilsQuickCheckSpec [Optimisation flags changed]
+[1017 of 1025] Compiling Test.Unit.CoreSourceLocationQuickCheckSpec [Optimisation flags changed]
+[1018 of 1025] Compiling Test.Unit.CoreParserQuickCheckSpec [Optimisation flags changed]
+[1019 of 1025] Compiling Test.Unit.CoreOwnershipQuickCheckSpec [Optimisation flags changed]
+[1020 of 1025] Compiling Test.Unit.CoreErrorHandlerQuickCheckSpec [Optimisation flags changed]
+[1021 of 1025] Compiling Test.Unit.CoreDependenciesQuickCheckSpec [Optimisation flags changed]
+[1022 of 1025] Compiling Test.Unit.CoreCompilerQuickCheckSpec [Optimisation flags changed]
+[1023 of 1025] Compiling Test.Unit.ComprehensiveCoreModulesQuickCheckSpec [Optimisation flags changed]
+[1024 of 1025] Compiling Test.Unit.CompilerIRQuickCheckSpec [Optimisation flags changed]
+[1025 of 1025] Compiling TestSupport.Verbosity [Optimisation flags changed]
+[1026 of 1026] Linking .stack-work/dist/x86_64-linux-tinfo6/ghc-9.8.4/build/typus-test/typus-test [Objects changed]
+typus> copy/register
+Installing library in /home/runner/work/Typus/Typus/.stack-work/install/x86_64-linux-tinfo6/bd309085b205e70662b7324d53035991501b1cd7dba31e42bd29f4c0872e4562/9.8.4/lib/x86_64-linux-ghc-9.8.4/typus-0.12.2-KYNOs0UWBLdD9jidKoBXHJ
+Installing executable typus in /home/runner/work/Typus/Typus/.stack-work/install/x86_64-linux-tinfo6/bd309085b205e70662b7324d53035991501b1cd7dba31e42bd29f4c0872e4562/9.8.4/bin
+Registering library for typus-0.12.2..
+typus> test (suite: typus-test)
+
+Test.Unit.Tests Tests
+  basic property:                                                                        OK
+    +++ OK, passed 100 tests.
+  Concise Typus Test Suite (48 tests)
+    Core Modules
+      Concise Utils QuickCheck Tests
+        String Processing
+          prop_trim_idempotent:                                                          OK
+            +++ OK, passed 100 tests.
+          prop_trim_removes_whitespace:                                                  OK
+            +++ OK, passed 100 tests.
+          prop_splitBy_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          prop_splitByCollapsed_properties:                                              OK
+            +++ OK, passed 100 tests.
+          prop_splitByComma_equals_splitBy:                                              OK
+            +++ OK, passed 100 tests.
+          prop_splitByCommaCollapsed_equals_splitByCollapsed:                            OK
+            +++ OK, passed 100 tests.
+          prop_breakOn_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          prop_safeProcessString_filters_control_chars:                                  OK
+            +++ OK, passed 100 tests.
+          prop_isValidChar_properties:                                                   OK
+            +++ OK, passed 100 tests.
+          prop_isRight_properties:                                                       OK
+            +++ OK, passed 100 tests.
+        Comment Processing
+          prop_removeLineComments_properties:                                            OK
+            +++ OK, passed 100 tests.
+          prop_removeComments_properties:                                                OK
+            +++ OK, passed 100 tests.
+          prop_removeLineComments_preserves_strings:                                     OK
+            +++ OK, passed 100 tests.
+          prop_removeComments_preserves_strings:                                         OK
+            +++ OK, passed 100 tests.
+        Indentation Processing
+          prop_normalizeIndentation_preserves_relative_indentation:                      OK
+            +++ OK, passed 100 tests.
+          prop_normalizeIndentation_removes_common_prefix:                               OK
+            +++ OK, passed 100 tests.
+      Concise SourceLocation QuickCheck Tests
+        SourcePos Properties
+          pos_properties:                                                                OK
+            +++ OK, passed 100 tests.
+          posAfter_properties:                                                           OK
+            +++ OK, passed 100 tests.
+          posAt_properties:                                                              OK
+            +++ OK, passed 100 tests.
+          posAtLineCol_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          advancePos_properties:                                                         OK
+            +++ OK, passed 100 tests.
+          advancePosBy_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          advancePosByText_properties:                                                   OK
+            +++ OK, passed 100 tests.
+          comparePos_properties:                                                         OK
+            +++ OK, passed 100 tests.
+          sourceLine_properties:                                                         OK
+            +++ OK, passed 100 tests.
+          sourceColumn_properties:                                                       OK
+            +++ OK, passed 100 tests.
+        SourceSpan Properties
+          span_properties:                                                               OK
+            +++ OK, passed 100 tests.
+          emptySpan_properties:                                                          OK
+            +++ OK, passed 100 tests.
+          spanFrom_properties:                                                           OK
+            +++ OK, passed 100 tests.
+          spanTo_properties:                                                             OK
+            +++ OK, passed 100 tests.
+          spanBetween_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          spanBetweenOrdered_properties:                                                 OK
+            +++ OK, passed 100 tests.
+          mergeSpans_properties:                                                         OK
+            +++ OK, passed 100 tests.
+          isValidSpan_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          isValidBlockSpan_properties:                                                   OK
+            +++ OK, passed 100 tests.
+        Located Properties
+          locatedAt_properties:                                                          OK
+            +++ OK, passed 100 tests.
+          locatedWithSpan_properties:                                                    OK
+            +++ OK, passed 100 tests.
+          locatedValue_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          locatedSpan_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          locatedPos_properties:                                                         OK
+            +++ OK, passed 100 tests.
+          mapLocated_properties:                                                         OK
+            +++ OK, passed 100 tests.
+      Concise Parser QuickCheck Tests
+        Parser Basic Properties
+          parseTypus_equals_parseTypusFile:                                              OK (0.01s)
+            +++ OK, passed 100 tests.
+          parseExpression_returns_right:                                                 OK
+            +++ OK, passed 100 tests.
+          parseDeclaration_returns_right:                                                OK
+            +++ OK, passed 100 tests.
+        TypusFile Properties
+          tfContents_properties:                                                         OK (0.01s)
+            +++ OK, passed 100 tests.
+          defaultFileDirectives_properties:                                              OK
+            +++ OK, passed 1 test.
+          defaultBlockDirectives_properties:                                             OK
+            +++ OK, passed 1 test.
+        Identifier Properties
+          isIdentifierChar_properties:                                                   OK
+            +++ OK, passed 100 tests.
+        Parser Roundtrip Properties
+          parseTypus_roundtrip_simple:                                                   OK
+            +++ OK, passed 100 tests.
+          parseTypus_empty_input:                                                        OK
+            +++ OK, passed 1 test.
+      Concise Compiler QuickCheck Tests
+        Compiler Properties
+          compile_properties:                                                            OK
+            +++ OK, passed 100 tests.
+          renderCompilationError_properties:                                             OK (0.26s)
+            +++ OK, passed 100 tests.
+          formatCompilerErrors_properties:                                               OK (0.23s)
+            +++ OK, passed 100 tests.
+          generateDetailedReport_properties:                                             OK (0.26s)
+            +++ OK, passed 100 tests.
+          analyzeErrors_properties:                                                      OK
+            +++ OK, passed 100 tests.
+        Type Checking Properties
+          hasTypeErrors_properties:                                                      OK (0.03s)
+            +++ OK, passed 100 tests.
+          diagnoseTypeErrors_properties:                                                 OK (0.03s)
+            +++ OK, passed 100 tests.
+          checkTypeError_properties:                                                     OK
+            +++ OK, passed 100 tests.
+          hasMalformedSyntax_properties:                                                 OK
+            +++ OK, passed 100 tests.
+        Type Environment Properties
+          buildTypeEnv_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          buildTypeEnvFromPairs_properties:                                              OK
+            +++ OK, passed 100 tests.
+        Declaration and Function Properties
+          extractDeclarations_properties:                                                OK
+            +++ OK, passed 100 tests.
+          extractFunctionCalls_properties:                                               OK
+            +++ OK, passed 100 tests.
+          isMethodDeclaration_properties:                                                OK
+            +++ OK, passed 100 tests.
+        Error Handling Properties
+          malformedSyntaxError_properties:                                               OK
+            +++ OK, passed 1 test.
+          typeCheckFailure_properties:                                                   OK
+            +++ OK, passed 1 test.
+          typeDiagnosticToCompilerError_properties:                                      OK
+            +++ OK, passed 100 tests.
+        Code Generation Properties
+          ensureSourceIR_properties:                                                     OK
+            +++ OK, passed 100 tests.
+          generateGoCode_properties:                                                     OK
+            +++ OK, passed 100 tests.
+        Specialized Analysis Properties
+          checkDependentTypes_properties:                                                OK
+            +++ OK, passed 100 tests.
+          checkOwnership_properties:                                                     OK
+            +++ OK, passed 100 tests.
+      Concise ErrorHandler QuickCheck Tests
+        ErrorHandler Basic Properties
+          handleError_properties:                                                        OK (0.02s)
+            +++ OK, passed 100 tests.
+          handleErrors_properties:                                                       OK (0.13s)
+            +++ OK, passed 100 tests.
+          createError_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          createWarning_properties:                                                      OK
+            +++ OK, passed 100 tests.
+          createInfo_properties:                                                         OK
+            +++ OK, passed 100 tests.
+        ErrorHandler Count Properties
+          errorCount_properties:                                                         OK
+            +++ OK, passed 100 tests.
+          warningCount_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          infoCount_properties:                                                          OK
+            +++ OK, passed 100 tests.
+          hasErrors_properties:                                                          OK
+            +++ OK, passed 100 tests.
+          hasWarnings_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          hasInfos_properties:                                                           OK
+            +++ OK, passed 100 tests.
+        ErrorHandler Filter Properties
+          getErrors_properties:                                                          OK
+            +++ OK, passed 100 tests.
+          getWarnings_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          getInfos_properties:                                                           OK
+            +++ OK, passed 100 tests.
+          clearErrors_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          clearWarnings_properties:                                                      OK
+            +++ OK, passed 100 tests.
+          clearInfos_properties:                                                         OK
+            +++ OK, passed 100 tests.
+        ErrorHandler Utility Properties
+          mergeHandlers_properties:                                                      OK
+            +++ OK, passed 100 tests.
+          filterBySeverityForTests_properties:                                           OK
+            +++ OK, passed 100 tests.
+          sortBySeverity_properties:                                                     OK (0.12s)
+            +++ OK, passed 100 tests.
+          renderErrors_properties:                                                       OK
+            +++ OK, passed 100 tests.
+      Concise Ownership QuickCheck Tests
+        OwnershipAnalysis Properties
+          oaOwners_properties:                                                           OK
+            +++ OK, passed 100 tests.
+          oaBorrowers_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          oaErrors_properties:                                                           OK
+            +++ OK, passed 100 tests.
+        Ownership Query Properties
+          getOwners_properties:                                                          OK (0.02s)
+            +++ OK, passed 100 tests.
+          getBorrowers_properties:                                                       OK (0.01s)
+            +++ OK, passed 100 tests.
+          getOwnedResources_properties:                                                  OK (0.01s)
+            +++ OK, passed 100 tests.
+          isOwner_properties:                                                            OK
+            +++ OK, passed 100 tests.
+          isBorrower_properties:                                                         OK
+            +++ OK, passed 100 tests.
+        Ownership Transfer Properties
+          checkOwnershipTransfer_properties:                                             OK
+            +++ OK, passed 100 tests.
+          canTransferOwnership_properties:                                               OK
+            +++ OK, passed 100 tests.
+          transferOwnership_properties:                                                  OK
+            +++ OK, passed 100 tests.
+        Ownership Constraint Properties
+          validateOwnershipConstraints_properties:                                       OK
+            +++ OK, passed 100 tests.
+        Ownership Error Properties
+          hasOwnershipErrors_properties:                                                 OK
+            +++ OK, passed 100 tests.
+          getOwnershipErrors_properties:                                                 OK (0.01s)
+            +++ OK, passed 100 tests.
+          clearOwnershipErrors_properties:                                               OK (0.03s)
+            +++ OK, passed 100 tests.
+        Ownership Analysis Properties
+          mergeOwnershipAnalyses_properties:                                             OK (0.12s)
+            +++ OK, passed 100 tests.
+      Concise Dependencies QuickCheck Tests
+        DependencyGraph Properties
+          dgNodes_properties:                                                            OK
+            +++ OK, passed 100 tests.
+          dgEdges_properties:                                                            OK
+            +++ OK, passed 100 tests.
+          getNodes_properties:                                                           OK (0.01s)
+            +++ OK, passed 100 tests.
+        Dependency Analysis Properties
+          analyzeDependencies_properties:                                                OK (0.03s)
+            +++ OK, passed 100 tests.
+          detectCycles_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          hasCycles_properties:                                                          OK
+            +++ OK, passed 100 tests.
+        Dependency Resolution Properties
+          resolveDependencies_properties:                                                OK (0.03s)
+            +++ OK, passed 100 tests.
+          getDependencyErrors_properties:                                                OK
+            +++ OK, passed 100 tests.
+          clearDependencyErrors_properties:                                              OK (0.01s)
+            +++ OK, passed 100 tests.
+        Dependency Manipulation Properties
+          addDependency_properties:                                                      OK
+            +++ OK, passed 100 tests.
+          removeDependency_properties:                                                   OK
+            +++ OK, passed 100 tests.
+          hasDependency_properties:                                                      OK
+            +++ OK, passed 100 tests.
+          mergeDependencyGraphs_properties:                                              OK (0.07s)
+            +++ OK, passed 100 tests.
+        Dependency Query Properties
+          getDirectDependencies_properties:                                              OK
+            +++ OK, passed 100 tests.
+          getTransitiveDependencies_properties:                                          OK
+            +++ OK, passed 100 tests.
+          getDependencyPath_properties:                                                  OK
+            +++ OK, passed 100 tests.
+          topologicalSort_properties:                                                    OK
+            +++ OK, passed 100 tests.
+      CodeGeneration QuickCheck Tests
+        IR statement consistency:                                                        OK
+          +++ OK, passed 100 tests; 24 discarded.
+        IR expression consistency:                                                       OK
+          +++ OK, passed 100 tests; 25 discarded.
+        TypusFile structure consistency:                                                 OK (0.01s)
+          +++ OK, passed 100 tests.
+        Source location basic properties:                                                OK
+          +++ OK, passed 100 tests; 285 discarded.
+        Go token basic properties:                                                       OK
+          +++ OK, passed 100 tests; 21 discarded.
+    Integration Tests
+      Concise Integration QuickCheck Tests
+        Parser-Compiler Integration
+          parse_compile_integration:                                                     OK (0.01s)
+            +++ OK, passed 100 tests.
+          parse_compile_error_propagation:                                               OK
+            +++ OK, passed 100 tests.
+        Error Handling Integration
+          error_handling_consistency:                                                    OK
+            +++ OK, passed 100 tests.
+          error_count_consistency:                                                       OK
+            +++ OK, passed 100 tests.
+        Dependencies-Ownership Integration
+          dependencies_ownership_consistency:                                            OK
+            +++ OK, passed 100 tests.
+          cycle_detection_integration:                                                   OK
+            +++ OK, passed 100 tests.
+        Source Location Integration
+          source_location_preservation:                                                  OK
+            +++ OK, passed 100 tests.
+          span_consistency:                                                              OK
+            +++ OK, passed 100 tests.
+        Utils Integration
+          utils_parser_integration:                                                      OK
+            +++ OK, passed 100 tests.
+          utils_comment_handling:                                                        OK
+            +++ OK, passed 100 tests.
+        End-to-End Integration
+          end_to_end_compilation:                                                        OK (0.01s)
+            +++ OK, passed 100 tests.
+          round_trip_properties:                                                         OK
+            +++ OK, passed 100 tests.
+  List Properties Tests
+    List: length of empty list is 0:                                                     OK
+      +++ OK, passed 100 tests.
+    List: length of singleton list is 1:                                                 OK
+      +++ OK, passed 100 tests.
+    List: length of cons is length + 1:                                                  OK
+      +++ OK, passed 100 tests.
+    List: length of append is sum of lengths:                                            OK
+      +++ OK, passed 100 tests.
+    List: reverse is involutive:                                                         OK
+      +++ OK, passed 100 tests.
+    List: reverse preserves length:                                                      OK
+      +++ OK, passed 100 tests.
+    List: head of cons is the first element:                                             OK
+      +++ OK, passed 100 tests.
+    List: tail of cons is the rest:                                                      OK
+      +++ OK, passed 100 tests.
+    List: last of singleton is the element:                                              OK
+      +++ OK, passed 100 tests.
+    List: init of singleton is empty:                                                    OK
+      +++ OK, passed 100 tests.
+    List: last of cons is last of tail or element if empty:                              OK
+      +++ OK, passed 100 tests; 12 discarded.
+    List: init of cons is element cons init of tail or empty if empty:                   OK
+      +++ OK, passed 100 tests; 14 discarded.
+    List: null of empty list is true:                                                    OK
+      +++ OK, passed 100 tests.
+    List: null of non-empty list is false:                                               OK
+      +++ OK, passed 100 tests.
+    List: map preserves length:                                                          OK
+      +++ OK, passed 100 tests.
+    List: map of cons is cons of map:                                                    OK
+      +++ OK, passed 100 tests.
+    List: map of identity is identity:                                                   OK
+      +++ OK, passed 100 tests.
+    List: map of composition is composition of maps:                                     OK
+      +++ OK, passed 100 tests.
+    List: filter preserves order:                                                        OK
+      +++ OK, passed 100 tests.
+    List: filter of empty list is empty:                                                 OK
+      +++ OK, passed 100 tests.
+    List: filter of cons with predicate true is cons of filter with predicate true:      OK
+      +++ OK, passed 100 tests.
+    List: filter of cons with predicate false excludes the head:                         OK
+      +++ OK, passed 100 tests; 95 discarded.
+    List: all of empty list is true:                                                     OK
+      +++ OK, passed 100 tests.
+    List: any of empty list is false:                                                    OK
+      +++ OK, passed 100 tests.
+    List: all of singleton is predicate of element:                                      OK
+      +++ OK, passed 100 tests.
+    List: any of singleton is predicate of element:                                      OK
+      +++ OK, passed 100 tests.
+    List: all of cons is predicate of head AND all of tail:                              OK
+      +++ OK, passed 100 tests.
+    List: any of cons is predicate of head OR any of tail:                               OK
+      +++ OK, passed 100 tests.
+    List: sum of empty list is 0:                                                        OK
+      +++ OK, passed 100 tests.
+    List: sum of singleton is element:                                                   OK
+      +++ OK, passed 100 tests.
+    List: sum of cons is head plus sum of tail:                                          OK
+      +++ OK, passed 100 tests.
+    List: sum of append is sum of parts:                                                 OK
+      +++ OK, passed 100 tests.
+    List: product of empty list is 1:                                                    OK
+      +++ OK, passed 100 tests.
+    List: product of singleton is element:                                               OK
+      +++ OK, passed 100 tests.
+    List: product of cons is head times product of tail:                                 OK
+      +++ OK, passed 100 tests.
+    List: product of append is product of parts:                                         OK
+      +++ OK, passed 100 tests.
+    List: concat of empty list of lists is empty:                                        OK
+      +++ OK, passed 100 tests.
+    List: concat of singleton list of lists is the list:                                 OK
+      +++ OK, passed 100 tests.
+    List: concat of cons of lists is head list concat concat of tail:                    OK
+      +++ OK, passed 100 tests.
+    List: concat of map is same as concatMap:                                            OK
+      +++ OK, passed 100 tests.
+    List: concat of append is concat of parts:                                           OK (0.02s)
+      +++ OK, passed 100 tests.
+    List: concatMap of empty list is empty:                                              OK
+      +++ OK, passed 1 test.
+    List: concatMap of singleton is function applied to element:                         OK
+      +++ OK, passed 100 tests.
+    List: concatMap of cons is function applied to head concat concatMap of tail:        OK
+      +++ OK, passed 100 tests.
+    List: foldr of empty list is initial value:                                          OK
+      +++ OK, passed 100 tests.
+    List: foldr of singleton is function applied to element and initial value:           OK
+      +++ OK, passed 100 tests.
+    List: foldr of cons is function applied to head and foldr of tail:                   OK
+      +++ OK, passed 100 tests.
+    List: foldl of empty list is initial value:                                          OK
+      +++ OK, passed 100 tests.
+    List: foldl of singleton is function applied to initial value and element:           OK
+      +++ OK, passed 100 tests.
+    List: foldl of cons is function applied to foldl of initial value and head and tail: OK
+      +++ OK, passed 100 tests.
+    List: foldr and foldl are equivalent for associative operations:                     OK
+      +++ OK, passed 100 tests.
+    List: foldr and foldl are equivalent for commutative operations:                     OK
+      +++ OK, passed 100 tests.
+    List: take 0 of any list is empty:                                                   OK
+      +++ OK, passed 100 tests.
+    List: take n of empty list is empty:                                                 OK
+      +++ OK, passed 100 tests.
+    List: take n of list with length <= n is the list itself:                            OK
+      +++ OK, passed 100 tests; 264 discarded.
+    List: take n of list with length > n has length n:                                   OK
+      +++ OK, passed 100 tests; 433 discarded.
+    List: take preserves order:                                                          OK
+      +++ OK, passed 100 tests.
+    List: drop 0 of any list is the list itself:                                         OK
+      +++ OK, passed 100 tests.
+    List: drop n of empty list is empty:                                                 OK
+      +++ OK, passed 100 tests.
+    List: drop n of list with length <= n is empty:                                      OK
+      +++ OK, passed 100 tests; 225 discarded.
+    List: drop n of list with length > n has length (length - n):                        OK
+      +++ OK, passed 100 tests; 389 discarded.
+    List: drop preserves order:                                                          OK
+      +++ OK, passed 100 tests.
+    List: splitAt n is (take n, drop n):                                                 OK
+      +++ OK, passed 100 tests.
+    List: take and drop reconstruct original list:                                       OK
+      +++ OK, passed 100 tests.
+    List: replicate 0 is empty list:                                                     OK
+      +++ OK, passed 100 tests.
+    List: replicate n has length n:                                                      OK
+      +++ OK, passed 100 tests; 98 discarded.
+    List: all elements of replicate are equal:                                           OK
+      +++ OK, passed 100 tests; 92 discarded.
+    List: repeat is infinite:                                                            OK
+      +++ OK, passed 100 tests.
+    List: iterate n f starting from x applies f n times:                                 OK
+      +++ OK, passed 100 tests; 94 discarded.
+    List: cycle of empty list is undefined (should not evaluate):                        OK
+      +++ OK, passed 100 tests.
+    List: cycle of non-empty list repeats infinitely:                                    OK
+      +++ OK, passed 100 tests; 16 discarded.
+    List: span p xs is (takeWhile p xs, dropWhile p xs):                                 OK
+      +++ OK, passed 100 tests.
+    List: break p xs is (takeWhile (not . p) xs, dropWhile (not . p) xs):                OK
+      +++ OK, passed 100 tests.
+    List: group sorts consecutive equal elements:                                        OK
+      +++ OK, passed 100 tests.
+    List: inits of empty list is list containing empty list:                             OK
+      +++ OK, passed 100 tests.
+    List: inits of non-empty list includes empty list and full list:                     OK
+      +++ OK, passed 100 tests.
+    List: tails of empty list is list containing empty list:                             OK
+      +++ OK, passed 100 tests.
+    List: tails of non-empty list includes empty list and full list:                     OK
+      +++ OK, passed 100 tests.
+    List: isPrefixOf is reflexive:                                                       OK
+      +++ OK, passed 100 tests.
+    List: empty list is prefix of any list:                                              OK
+      +++ OK, passed 100 tests.
+    List: isSuffixOf is reflexive:                                                       OK
+      +++ OK, passed 100 tests.
+    List: empty list is suffix of any list:                                              OK
+      +++ OK, passed 100 tests.
+    List: isInfixOf is reflexive:                                                        OK
+      +++ OK, passed 100 tests.
+    List: empty list is sublist of any list:                                             OK
+      +++ OK, passed 100 tests.
+    List: elem is equivalent to any (==):                                                OK
+      +++ OK, passed 100 tests.
+    List: notElem is equivalent to not . elem:                                           OK
+      +++ OK, passed 100 tests.
+    List: lookup finds the first matching key:                                           OK
+      +++ OK, passed 100 tests.
+  Basic QuickCheck Test Suite
+    Trim basic:                                                                          OK
+      +++ OK, passed 100 tests.
+    Trim empty:                                                                          OK
+      +++ OK, passed 1 test.
+    Trim whitespace:                                                                     OK
+      +++ OK, passed 100 tests (8% all whitespace).
+    Trim regular:                                                                        OK
+      +++ OK, passed 100 tests; 3 discarded.
+    Trim idempotent:                                                                     OK
+      +++ OK, passed 100 tests.
+    SplitBy basic:                                                                       OK
+      +++ OK, passed 100 tests.
+    SplitBy empty:                                                                       OK
+      +++ OK, passed 100 tests.
+    SplitByComma basic:                                                                  OK
+      +++ OK, passed 100 tests.
+    SplitByComma empty:                                                                  OK
+      +++ OK, passed 1 test.
+    RemoveLineComments basic:                                                            OK
+      +++ OK, passed 100 tests.
+    RemoveLineComments empty:                                                            OK
+      +++ OK, passed 1 test.
+    RemoveLineComments no comments:                                                      OK
+      +++ OK, passed 100 tests.
+    RemoveComments basic:                                                                OK
+      +++ OK, passed 100 tests.
+    RemoveComments empty:                                                                OK
+      +++ OK, passed 1 test.
+    RemoveComments no comments:                                                          OK
+      +++ OK, passed 100 tests.
+    NormalizeIndentation basic:                                                          OK
+      +++ OK, passed 100 tests.
+    NormalizeIndentation empty:                                                          OK
+      +++ OK, passed 1 test.
+    NormalizeIndentation no indent:                                                      OK
+      +++ OK, passed 100 tests (41% has indentation).
+    isRight basic:                                                                       OK
+      +++ OK, passed 100 tests.
+    isLeft basic:                                                                        OK
+      +++ OK, passed 100 tests.
+    isRight right:                                                                       OK
+      +++ OK, passed 100 tests.
+    isRight left:                                                                        OK
+      +++ OK, passed 100 tests.
+    isLeft right:                                                                        OK
+      +++ OK, passed 100 tests.
+    isLeft left:                                                                         OK
+      +++ OK, passed 100 tests.
+    Trim edge cases:                                                                     OK
+    SplitBy edge cases:                                                                  OK
+    SplitByComma edge cases:                                                             OK
+    RemoveLineComments edge cases:                                                       OK
+    RemoveComments edge cases:                                                           OK
+    NormalizeIndentation edge cases:                                                     OK
+    isRight edge cases:                                                                  OK
+    isLeft edge cases:                                                                   OK
+  Basic QuickCheck Tests
+    trim removes whitespace:                                                             OK
+      +++ OK, passed 100 tests.
+    trim preserves content:                                                              OK
+      +++ OK, passed 100 tests.
+    splitBy preserves content:                                                           OK
+      +++ OK, passed 100 tests.
+    startPos values:                                                                     OK
+      +++ OK, passed 1 test.
+    removeLineComments removes comments:                                                 OK
+      +++ OK, passed 100 tests.
+    removeLineComments preserves before:                                                 OK
+      +++ OK, passed 100 tests.
+    splitByCommaCollapsed removes empty parts:                                           OK
+      +++ OK, passed 100 tests.
+    splitByComma preserves empty parts:                                                  OK
+      +++ OK, passed 100 tests.
+    normalizeIndentation preserves relative:                                             OK
+      +++ OK, passed 100 tests.
+    safeProcessString handles special:                                                   OK
+      +++ OK, passed 100 tests.
+    isValidChar properties:                                                              OK
+      +++ OK, passed 100 tests.
+    removeLineComments handles multiple lines:                                           OK
+      +++ OK, passed 100 tests.
+  Boundary Condition Advanced QuickCheck Tests
+    Extremely long string handling:                                                      OK
+      +++ OK, passed 100 tests.
+    Deeply nested structure:                                                             OK
+      +++ OK, passed 100 tests.
+    Repeated character handling:                                                         OK
+      +++ OK, passed 100 tests.
+    Unicode character handling:                                                          OK
+      +++ OK, passed 1 test.
+    Empty and boundary input:                                                            OK
+      +++ OK, passed 100 tests.
+    Large file handling:                                                                 OK (0.05s)
+      +++ OK, passed 100 tests.
+    Extremely long identifier:                                                           OK
+      +++ OK, passed 100 tests.
+    Extreme indentation:                                                                 OK
+      +++ OK, passed 100 tests.
+    Extreme comment handling:                                                            OK
+      +++ OK, passed 100 tests.
+    Extreme error conditions:                                                            OK (0.08s)
+      +++ OK, passed 100 tests.
+    Memory boundary conditions:                                                          OK
+      +++ OK, passed 100 tests.
+    Recursion boundary:                                                                  OK
+      +++ OK, passed 100 tests; 21 discarded.
+    Numeric boundary:                                                                    OK
+      +++ OK, passed 1 test.
+    String boundary:                                                                     OK
+      +++ OK, passed 1 test.
+    Parser boundary:                                                                     OK
+      +++ OK, passed 100 tests.
+    Position tracking boundary:                                                          OK
+      +++ OK, passed 100 tests.
+    Error handling boundary:                                                             OK
+      +++ OK, passed 1 test.
+    Empty string handling:                                                               OK
+    Single character handling:                                                           OK
+    Extremely long string handling:                                                      OK
+    Deeply nested structure:                                                             OK
+    Special character handling:                                                          OK
+    Extremely long identifier:                                                           OK
+    Extreme indentation:                                                                 OK
+    Extreme comment handling:                                                            OK
+    Extreme error conditions:                                                            OK
+    Memory boundary conditions:                                                          OK
+  Boundary Condition Comprehensive Tests
+    Unit Tests
+      Extreme Input Sizes
+        parser with empty input:                                                         OK
+        parser with single character:                                                    OK
+        parser with very large input:                                                    OK (0.04s)
+        parser with very long lines:                                                     OK (0.01s)
+      Extreme Positions
+        source position at maximum values:                                               OK
+        source position at minimum values:                                               OK
+        position advancement with large content:                                         OK
+      Extreme Error Conditions
+        error collector with many errors:                                                OK
+        error with very long message:                                                    OK
+        fatal error handling:                                                            OK
+        error with extreme severity:                                                     OK
+      Special Characters and Unicode
+        parser with control characters:                                                  OK
+        parser with unicode characters:                                                  OK
+        utils with special characters:                                                   OK
+        parser with mixed content types:                                                 OK
+      Resource Limits
+        memory usage with repeated parsing:                                              OK
+        deep nesting handling:                                                           OK
+        large directive values:                                                          OK
+      Concurrent Safety
+        parser state isolation:                                                          OK
+        error collector isolation:                                                       OK
+      Performance Boundaries
+        parsing performance with large files:                                            OK (0.04s)
+        error formatting performance:                                                    OK
+        utils performance with large strings:                                            OK (0.03s)
+    QuickCheck Properties
+      Extreme Input Sizes
+        parser large input:                                                              OK (0.30s)
+          +++ OK, passed 100 tests.
+        parser deeply nested:                                                            OK (0.02s)
+          +++ OK, passed 100 tests; 125 discarded.
+        large directives handling:                                                       OK
+          +++ OK, passed 100 tests; 86 discarded.
+      Extreme Positions
+        sourcelocation extreme positions:                                                OK
+          +++ OK, passed 100 tests.
+      Extreme Error Conditions
+        error extreme severity:                                                          OK
+          +++ OK, passed 100 tests.
+        error collector large numbers:                                                   OK
+          +++ OK, passed 100 tests; 104 discarded.
+        error formatting extreme content:                                                OK
+          +++ OK, passed 100 tests.
+      Utils Extreme Inputs
+        utils extreme inputs:                                                            OK
+          +++ OK, passed 100 tests.
+      Special Characters
+        special characters handling:                                                     OK
+          +++ OK, passed 100 tests.
+      Performance Boundaries
+        memory efficiency repeated operations:                                           OK (0.01s)
+          +++ OK, passed 100 tests; 128 discarded.
+  CodeGeneration QuickCheck Tests
+    IR statement consistency:                                                            OK
+      +++ OK, passed 100 tests; 29 discarded.
+    IR expression consistency:                                                           OK
+      +++ OK, passed 100 tests; 27 discarded.
+    TypusFile structure consistency:                                                     OK (0.01s)
+      +++ OK, passed 100 tests.
+    Source location basic properties:                                                    OK
+      +++ OK, passed 100 tests; 345 discarded.
+    Go token basic properties:                                                           OK
+      +++ OK, passed 100 tests; 20 discarded.
+
+All 339 tests passed (2.37s)
+
+
+
+typus> Test suite typus-test passed
+Completed 2 action(s).

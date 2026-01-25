@@ -1,7 +1,10 @@
 module Test.Unit.OwnershipBasicFunctionsSpec where
 
-import Test.Tasty
+
+
 import Test.Tasty.HUnit
+import Test.Tasty
+
 import Ownership
 import Ownership.Common.Types
 import Compiler.Errors.Core (ErrorLocation(..))

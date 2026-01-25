@@ -2,9 +2,11 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Test.Unit.NewDependencyCycleDetectionQuickCheckTestSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Dependencies.AST
 import Data.List (nub, sort, find)
 import Data.Map.Strict (Map, fromList, toList, keys, elems, member, insert, empty)

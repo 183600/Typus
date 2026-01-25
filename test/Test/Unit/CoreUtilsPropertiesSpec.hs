@@ -1,10 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+module Test.Unit.CoreUtilsPropertiesSpec where
 
-module Test.Unit.CoreUtilsPropertiesSpec (tests) where
 
 import Test.Tasty
-import Test.Tasty.HUnit
+
+
+
+import Test.Tasty
+
 import Test.Tasty.QuickCheck
 import Data.List (sort, nub, group, intercalate)
 import Data.Char (toLower, toUpper, isSpace)

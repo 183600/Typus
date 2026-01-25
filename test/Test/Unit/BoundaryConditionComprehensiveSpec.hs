@@ -1,27 +1,27 @@
 {-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
-
 module Test.Unit.BoundaryConditionComprehensiveSpec where
 
+
+
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, assertEqual, assertBool)
-import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll)
-import Test.QuickCheck (Property, (==>), classify)
-import Parser (parseTypus, TypusFile(..), defaultFileDirectives, tfContents)
+import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, forAll)
+import Test.QuickCheck (Property, (==>))
+import Parser (parseTypus, TypusFile(..), tfContents)
 import SourceLocation (SourcePos(..), SourceSpan(..), spanStart, spanEnd, advancePosByText, startPos)
-import Compiler.Errors.Core (TypeError(..), ErrorSeverity(..), ErrorCategory(..), 
-                            ErrorLocation(..), ErrorContext(..),
-                            errorAt, newErrorCollector, addError,
+import Compiler.Errors.Core (ErrorSeverity(..), 
+                            ErrorLocation(..),
+                            errorAt, addError,
                             getErrors, hasErrors, canRecoverFrom, shouldContinueAfter,
-                            formatErrorWithLocation, fatalError, ErrorCollector)
+                            formatErrorWithLocation, fatalError)
 import Utils (trim, splitBy, removeComments, normalizeIndentation, safeProcessString, isValidChar)
 import qualified Data.Text as T
-import Data.Char (isAlphaNum, isSpace, isPrint, isControl, chr)
+import Data.Char (isSpace, chr)
 import Data.Maybe (listToMaybe)
 import Control.Monad (foldM)
 import Control.Monad.State (execState)
-import Control.Exception (evaluate, try, SomeException)
 
 -- Arbitrary instance for SourcePos
 instance Arbitrary SourcePos where
@@ -89,9 +89,9 @@ prop_parser_deeply_nested depth =
 -- Property 3: SourceLocation handles extreme positions
 prop_sourcelocation_extreme_positions :: SourcePos -> SourcePos -> Bool
 prop_sourcelocation_extreme_positions pos1 pos2 = 
-  let span = SourceSpan pos1 pos2
-      start = spanStart span
-      end = spanEnd span
+  let sourceSpan = SourceSpan pos1 pos2
+      start = spanStart sourceSpan
+      end = spanEnd sourceSpan
   in start == pos1 && end == pos2
 
 -- Property 4: Error handling with extreme severity levels

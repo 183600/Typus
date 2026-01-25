@@ -1,8 +1,11 @@
 module Test.Unit.ParserDirectiveSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Parser
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), locatedAt, startPos)
 import qualified Data.Text as T

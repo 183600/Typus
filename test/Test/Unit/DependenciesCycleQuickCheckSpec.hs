@@ -1,8 +1,10 @@
 module Test.Unit.DependenciesCycleQuickCheckSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Dependencies.AST
 import Dependencies.TypeSystem
 import Dependencies.Analyzer

@@ -1,8 +1,9 @@
 module Test.Unit.NewCompleteCoreTestSuiteSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
 
 -- Basic test properties
 prop_basic_property :: String -> Property

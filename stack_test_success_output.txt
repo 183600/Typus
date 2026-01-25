@@ -1,0 +1,48 @@
+typus> build (lib + exe + test) with ghc-9.8.4
+Preprocessing library for typus-0.12.2..
+Building library for typus-0.12.2..
+Warning: -rtsopts and -with-rtsopts have no effect with -shared.
+    Call hs_init_ghc() from your main() function to set these options.
+Preprocessing executable 'typus' for typus-0.12.2..
+Building executable 'typus' for typus-0.12.2..
+Preprocessing test suite 'typus-test' for typus-0.12.2..
+Building test suite 'typus-test' for typus-0.12.2..
+[ 223 of 1025] Compiling Test.Unit.DependencyResolutionSpec [Source file changed]
+[ 662 of 1025] Compiling Test.Unit.NewParserQuickCheckSpec [Source file changed]
+
+/home/runner/work/Typus/Typus/test/Test/Unit/NewParserQuickCheckSpec.hs:41:34: error: [GHC-88464]
+    Variable not in scope: startPos :: String -> SourcePos
+    Suggested fix:
+      Add ‘startPos’ to the import list in the import of ‘SourceLocation’
+      (at test/Test/Unit/NewParserQuickCheckSpec.hs:13:1-90).
+   |
+41 |     let sourceSpan = SourceSpan (startPos str) (startPos str)
+   |                                  ^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/NewParserQuickCheckSpec.hs:41:49: error: [GHC-88464]
+    Variable not in scope: startPos :: String -> SourcePos
+    Suggested fix:
+      Add ‘startPos’ to the import list in the import of ‘SourceLocation’
+      (at test/Test/Unit/NewParserQuickCheckSpec.hs:13:1-90).
+   |
+41 |     let sourceSpan = SourceSpan (startPos str) (startPos str)
+   |                                                 ^^^^^^^^
+[ 877 of 1025] Compiling Test.Unit.SourceLocationTestSpec [Source file changed]
+
+/home/runner/work/Typus/Typus/test/Test/Unit/SourceLocationTestSpec.hs:98:6: error: [GHC-88464]
+    Variable not in scope: sourceSpan :: Bool
+    Suggested fix:
+      Perhaps use data constructor ‘SourceSpan’ (imported from SourceLocation)
+   |
+98 |   in sourceSpan
+   |      ^^^^^^^^^^
+
+Error: [S-7282]
+       Stack failed to execute the build plan.
+       
+       While executing the build plan, Stack encountered the error:
+       
+       [S-7011]
+       While building package typus-0.12.2 (scroll up to its section to see the error) using:
+       /home/runner/.stack/setup-exe-cache/x86_64-linux-tinfo6/Cabal-simple_w2MFVN35_3.10.3.0_ghc-9.8.4 --verbose=1 --builddir=.stack-work/dist/x86_64-linux-tinfo6/ghc-9.8.4 build lib:typus exe:typus test:typus-test --ghc-options ""
+       Process exited with code: ExitFailure 1 

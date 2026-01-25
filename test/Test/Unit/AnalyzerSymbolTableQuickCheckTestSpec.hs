@@ -1,11 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
 module Test.Unit.AnalyzerSymbolTableQuickCheckTestSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
 
 import Analyzer.SymbolTable (collectSymbolsAndTypes)
 import Analyzer.Types (AnalyzerState(..), AnalysisContext(..), AnalysisPhase(..))

@@ -1,8 +1,10 @@
 module Test.Unit.TestParserBasicFunctionsSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Data.Char (isSpace)
 import Utils (removeLineComments, normalizeIndentation)
 

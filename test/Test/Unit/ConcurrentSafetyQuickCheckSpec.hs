@@ -1,8 +1,10 @@
 module Test.Unit.ConcurrentSafetyQuickCheckSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Control.Concurrent (forkIO, threadDelay)
 import Control.Concurrent.MVar
 import Data.List (sort, nub)

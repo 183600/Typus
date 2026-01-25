@@ -2,8 +2,11 @@
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 module Test.Unit.TestDependencyTypeConstraintsSpec where
 
-import Test.Tasty
+
+
 import Test.Tasty.HUnit
+import Test.Tasty
+
 import Dependencies
 
 -- | Test suite for Dependencies type constraints

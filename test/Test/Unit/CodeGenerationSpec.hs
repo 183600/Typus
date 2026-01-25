@@ -1,15 +1,15 @@
 {-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
-
 module Test.Unit.CodeGenerationSpec where
 
+
+
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, assertEqual, assertBool, assertFailure, Assertion)
-import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
-import Test.QuickCheck (Gen, Property, (==>), classify, sized)
-import Data.List (nub, sort, groupBy, sortBy, find, delete, isInfixOf, isPrefixOf)
-import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes)
+import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, forAll)
+import Test.QuickCheck (Property, (==>), classify, sized)
+import Data.List (groupBy, sortBy, isInfixOf, isPrefixOf)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)

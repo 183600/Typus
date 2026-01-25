@@ -1,8 +1,11 @@
 module Test.Unit.NewParserFunctionalitySpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Data.Char (isAlpha, isAlphaNum)
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import Control.Monad (void)

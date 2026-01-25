@@ -1,8 +1,10 @@
 module Test.Unit.NewEnhancedCompilerIRConsistencySpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Data.List (nub)
 
 -- Test Properties for Compiler IR Consistency

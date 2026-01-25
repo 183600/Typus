@@ -1,8 +1,10 @@
 module Test.Unit.EnhancedBoundaryConditionsSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Compiler (compile)
 import Parser (parseTypus)
 import Compiler.DependentTypeChecker (checkDependentTypes)

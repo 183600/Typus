@@ -1,10 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
-
 module Test.Unit.UtilsCorePropertiesSpec where
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
+
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
 import Utils
   ( trim
   , splitBy

@@ -1,9 +1,14 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+module Test.Unit.NewTypeSystemQuickCheckSpec where
 
+
+
+import Test.Tasty.HUnit
+import Test.Tasty
+import Test.Tasty.QuickCheck
 -- | Type system QuickCheck tests
 -- This module contains property-based tests for type system functions
-module Test.Unit.NewTypeSystemQuickCheckSpec where
 
 import Test.Tasty
 import Test.Tasty.QuickCheck

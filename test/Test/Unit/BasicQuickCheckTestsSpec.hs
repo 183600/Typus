@@ -1,11 +1,13 @@
 module Test.Unit.BasicQuickCheckTestsSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Utils
 import SourceLocation (SourcePos(..), startPos)
-import Data.Char (isSpace, isAlphaNum)
-import Data.List (intercalate, isInfixOf, isPrefixOf, isSuffixOf)
+import Data.Char (isSpace)
+import Data.List (intercalate, isInfixOf, isPrefixOf)
 import Data.Maybe (listToMaybe)
 
 -- | Test that trim removes leading and trailing whitespace

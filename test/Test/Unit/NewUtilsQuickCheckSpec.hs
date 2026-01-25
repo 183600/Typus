@@ -2,9 +2,12 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Test.Unit.NewUtilsQuickCheckSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Utils
 import SourceLocation (SourcePos(..))
 import Data.Char (isSpace, isControl)

@@ -65,10 +65,10 @@ import qualified Compiler.IR as IR
 import Control.Applicative ((<|>))
 import Control.Monad (forM)
 import Data.Char (isAlphaNum, isDigit, isSpace)
-import Data.List (intercalate, intersperse, isInfixOf, isPrefixOf, stripPrefix, (\\))
+import Data.List (intercalate, intersperse, isInfixOf, isPrefixOf, stripPrefix, (\\), foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Foldable (foldl')
+
 import Data.Maybe (mapMaybe)
 import Data.Set (Set)
 import qualified Data.Set as Set

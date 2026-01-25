@@ -2,9 +2,12 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Test.Unit.NewOwnershipQuickCheckSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Ownership
 import Ownership.Common.Types
 import Data.List (sort)

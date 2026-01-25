@@ -1,12 +1,16 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
--- | Core Dependencies module QuickCheck tests
 module Test.Unit.CoreDependenciesQuickCheckSpec where
+
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+-- | Core Dependencies module QuickCheck tests
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
 import TestSupport.Arbitrary
 import TestSupport.QuickCheck
 import qualified Data.Text as T

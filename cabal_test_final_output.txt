@@ -1,0 +1,150 @@
+Build profile: -w ghc-9.14.1 -O1
+In order, the following will be built (use -v for more details):
+ - typus-0.12.2 (test:typus-test) (file test/Test/Unit/AdvancedTextProcessingSpec.hs changed)
+Preprocessing test suite 'typus-test' for typus-0.12.2...
+Building test suite 'typus-test' for typus-0.12.2...
+[  27 of 1025] Compiling Test.Unit.AdvancedTextProcessingSpec ( test/Test/Unit/AdvancedTextProcessingSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/AdvancedTextProcessingSpec.o ) [Source file changed]
+[  43 of 1025] Compiling Test.Unit.BoundaryConditionComprehensiveSpec ( test/Test/Unit/BoundaryConditionComprehensiveSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/BoundaryConditionComprehensiveSpec.o ) [Source file changed]
+[  79 of 1025] Compiling Test.Unit.CodeGenerationSpec ( test/Test/Unit/CodeGenerationSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/CodeGenerationSpec.o ) [Source file changed]
+test/Test/Unit/CodeGenerationSpec.hs:525:5: error: [GHC-88464]
+    Variable not in scope: testCase :: [Char] -> t6 -> TestTree
+    |
+525 |   , testCase "Go code generation" $ do
+    |     ^^^^^^^^
+
+test/Test/Unit/CodeGenerationSpec.hs:528:5: error: [GHC-88464]
+    Variable not in scope: assertBool :: [Char] -> Bool -> t6
+    |
+528 |     assertBool "Should generate Go code" 
+    |     ^^^^^^^^^^
+
+test/Test/Unit/CodeGenerationSpec.hs:531:5: error: [GHC-88464]
+    Variable not in scope: testCase :: [Char] -> t5 -> TestTree
+    |
+531 |   , testCase "Rust code generation" $ do
+    |     ^^^^^^^^
+
+test/Test/Unit/CodeGenerationSpec.hs:534:5: error: [GHC-88464]
+    Variable not in scope: assertBool :: [Char] -> Bool -> t5
+    |
+534 |     assertBool "Should generate Rust code" 
+    |     ^^^^^^^^^^
+
+test/Test/Unit/CodeGenerationSpec.hs:537:5: error: [GHC-88464]
+    Variable not in scope: testCase :: [Char] -> t4 -> TestTree
+    |
+537 |   , testCase "JavaScript code generation" $ do
+    |     ^^^^^^^^
+
+test/Test/Unit/CodeGenerationSpec.hs:540:5: error: [GHC-88464]
+    Variable not in scope: assertBool :: [Char] -> Bool -> t4
+    |
+540 |     assertBool "Should generate JavaScript code" 
+    |     ^^^^^^^^^^
+
+test/Test/Unit/CodeGenerationSpec.hs:543:5: error: [GHC-88464]
+    Variable not in scope: testCase :: [Char] -> t3 -> TestTree
+    |
+543 |   , testCase "C code generation" $ do
+    |     ^^^^^^^^
+
+test/Test/Unit/CodeGenerationSpec.hs:546:5: error: [GHC-88464]
+    Variable not in scope: assertBool :: [Char] -> Bool -> t3
+    |
+546 |     assertBool "Should generate C code" 
+    |     ^^^^^^^^^^
+
+test/Test/Unit/CodeGenerationSpec.hs:549:5: error: [GHC-88464]
+    Variable not in scope: testCase :: [Char] -> t2 -> TestTree
+    |
+549 |   , testCase "Python code generation" $ do
+    |     ^^^^^^^^
+
+test/Test/Unit/CodeGenerationSpec.hs:552:5: error: [GHC-88464]
+    Variable not in scope: assertBool :: [Char] -> Bool -> t2
+    |
+552 |     assertBool "Should generate Python code" 
+    |     ^^^^^^^^^^
+
+test/Test/Unit/CodeGenerationSpec.hs:555:5: error: [GHC-88464]
+    Variable not in scope: testCase :: [Char] -> m0 b0 -> TestTree
+    |
+555 |   , testCase "Module code generation" $ do
+    |     ^^^^^^^^
+
+test/Test/Unit/CodeGenerationSpec.hs:563:5: error: [GHC-88464]
+    Variable not in scope: assertBool :: [Char] -> Bool -> m0 a1
+    |
+563 |     assertBool "Should generate module code" 
+    |     ^^^^^^^^^^
+
+test/Test/Unit/CodeGenerationSpec.hs:565:5: error: [GHC-88464]
+    Variable not in scope: assertBool :: [Char] -> Bool -> m0 a0
+    |
+565 |     assertBool "Should include imports" 
+    |     ^^^^^^^^^^
+
+test/Test/Unit/CodeGenerationSpec.hs:567:5: error: [GHC-88464]
+    Variable not in scope: assertBool :: [Char] -> Bool -> m0 b0
+    |
+567 |     assertBool "Should include function definition" 
+    |     ^^^^^^^^^^
+
+test/Test/Unit/CodeGenerationSpec.hs:570:5: error: [GHC-88464]
+    Variable not in scope: testCase :: [Char] -> t1 -> TestTree
+    |
+570 |   , testCase "Lambda expression generation" $ do
+    |     ^^^^^^^^
+
+test/Test/Unit/CodeGenerationSpec.hs:573:5: error: [GHC-88464]
+    Variable not in scope: assertBool :: [Char] -> Bool -> t1
+    |
+573 |     assertBool "Should generate lambda expression" 
+    |     ^^^^^^^^^^
+
+test/Test/Unit/CodeGenerationSpec.hs:576:5: error: [GHC-88464]
+    Variable not in scope: testCase :: [Char] -> t0 -> TestTree
+    |
+576 |   , testCase "Conditional statement generation" $ do
+    |     ^^^^^^^^
+
+test/Test/Unit/CodeGenerationSpec.hs:581:5: error: [GHC-88464]
+    Variable not in scope: assertBool :: [Char] -> Bool -> t0
+    |
+581 |     assertBool "Should generate conditional statement" 
+    |     ^^^^^^^^^^
+
+[  80 of 1025] Compiling Test.Unit.CombinedFeaturesSpec ( test/Test/Unit/CombinedFeaturesSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/CombinedFeaturesSpec.o ) [Source file changed]
+test/Test/Unit/CombinedFeaturesSpec.hs:65:34: error: [GHC-76037]
+    Not in scope: type constructor or class ‘Assertion’
+   |
+65 | test_source_position_creation :: Assertion
+   |                                  ^^^^^^^^^
+
+test/Test/Unit/CombinedFeaturesSpec.hs:71:25: error: [GHC-76037]
+    Not in scope: type constructor or class ‘Assertion’
+   |
+71 | test_trim_edge_cases :: Assertion
+   |                         ^^^^^^^^^
+
+test/Test/Unit/CombinedFeaturesSpec.hs:78:26: error: [GHC-76037]
+    Not in scope: type constructor or class ‘Assertion’
+   |
+78 | test_split_edge_cases :: Assertion
+   |                          ^^^^^^^^^
+
+test/Test/Unit/CombinedFeaturesSpec.hs:85:31: error: [GHC-76037]
+    Not in scope: type constructor or class ‘Assertion’
+   |
+85 | test_remove_comments_basic :: Assertion
+   |                               ^^^^^^^^^
+
+test/Test/Unit/CombinedFeaturesSpec.hs:90:31: error: [GHC-76037]
+    Not in scope: type constructor or class ‘Assertion’
+   |
+90 | test_normalize_indentation :: Assertion
+   |                               ^^^^^^^^^
+
+[ 994 of 1025] Compiling Test.Unit.Tests  ( test/Test/Unit/Tests.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/Tests.o ) [Test.Unit.BoundaryConditionComprehensiveSpec changed]
+[ 995 of 1025] Compiling Test.Unit        ( test/Test/Unit.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit.o ) [Test.Unit.Tests changed]
+[ 996 of 1025] Compiling Main             ( test/Main.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Main.o ) [Test.Unit.Tests changed]

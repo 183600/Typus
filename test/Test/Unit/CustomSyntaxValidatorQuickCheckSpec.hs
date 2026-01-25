@@ -1,8 +1,10 @@
 module Test.Unit.CustomSyntaxValidatorQuickCheckSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
 
 -- Basic test properties
 prop_basic_property :: String -> Property

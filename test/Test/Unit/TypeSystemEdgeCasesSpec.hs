@@ -1,8 +1,12 @@
 module Test.Unit.TypeSystemEdgeCasesSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, Property, (===), forAll, counterexample, conjoin, testProperty, (==>))
-import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck
+
 import Test.QuickCheck (Gen, cover)
 import qualified Data.Text as T
 import Data.List (isPrefixOf, isSuffixOf, isInfixOf, sort, nub)

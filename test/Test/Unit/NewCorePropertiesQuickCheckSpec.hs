@@ -1,13 +1,18 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
--- | Core module properties QuickCheck tests
--- This module contains property-based tests for the core modules of the Typus compiler
 module Test.Unit.NewCorePropertiesQuickCheckSpec where
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
+-- | Core module properties QuickCheck tests
+-- This module contains property-based tests for the core modules of the Typus compiler
+
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
 import Test.QuickCheck ((==>), conjoin, counterexample)
 import Utils
 import SourceLocation

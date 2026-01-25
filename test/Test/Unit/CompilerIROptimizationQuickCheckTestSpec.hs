@@ -1,14 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
 module Test.Unit.CompilerIROptimizationQuickCheckTestSpec where
+
+
+import Test.Tasty.HUnit
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
 
 import Compiler.IR
-import Parser (TypusFile(..), CodeBlock(..))
+import Parser (TypusFile(..), CodeBlock(..), parseTypus)
 import qualified Data.Text as T
 import Data.List (nub, sort)
 import Data.Either (isLeft, isRight)
@@ -17,17 +22,21 @@ import Data.Either (isLeft, isRight)
 prop_sourceir_creation :: String -> Property
 prop_sourceir_creation code =
   not (null code) ==>
-  let sourceIR = rawSourceFromTypus code
-  in length sourceIR >= 0
+  case Parser.parseTypus code of
+    Right typusFile ->
+      let sourceIR = rawSourceFromTypus typusFile
+      in property $ length sourceIR >= 0
+    Left _ -> property False
 
 -- | 测试SourceIR的构建
 prop_sourceir_build :: String -> Property
 prop_sourceir_build code =
   not (null code) ==>
-  let sourceIR = buildSourceIR code
-  in case sourceIR of
-    Left _ -> property True
-    Right ir -> length ir >= 0
+  case Parser.parseTypus code of
+    Right typusFile ->
+      let ir = buildSourceIR typusFile
+      in property $ length (sourceTypusFile ir) >= 0
+    Left _ -> property False
 
 -- | 测试SemanticIR的构建
 prop_semanticir_build :: String -> Property

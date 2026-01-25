@@ -1,10 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+module Test.Unit.EnhancedParserPropertiesSpec where
 
-module Test.Unit.EnhancedParserPropertiesSpec (tests) where
+
 
 import Test.Tasty
-import Test.Tasty.HUnit
+
 import Test.Tasty.QuickCheck
 import Data.List (isPrefixOf, isSuffixOf, isInfixOf, sort, nub)
 import Data.Char (isAlpha, isDigit, isSpace, toLower, toUpper)

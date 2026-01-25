@@ -1,8 +1,11 @@
 module Test.Unit.CliBasicFunctionsSpec where
 
-import Test.Tasty
+
+
 import Test.Tasty.HUnit
-import qualified Cli as C
+import Test.Tasty
+
+
 import System.Exit (ExitCode(..))
 
 tests :: TestTree
@@ -11,7 +14,7 @@ tests = testGroup "CLI Basic Functions Tests"
       let args = ["compile", "input.typus", "--output", "output.go"]
       let result = parseArgsTest args  -- 简化函数调用
       case result of
-        Left err -> assertBool "Argument parsing should succeed" False
+        Left _ -> assertBool "Argument parsing should succeed" False
         Right config -> do
           command config @?= "compile"
           inputFile config @?= "input.typus"
@@ -21,7 +24,7 @@ tests = testGroup "CLI Basic Functions Tests"
       let args = ["compile", "input.typus", "--optimize", "--debug"]
       let result = parseArgsTest args  -- 简化函数调用
       case result of
-        Left err -> assertBool "Argument parsing should succeed" False
+        Left _ -> assertBool "Argument parsing should succeed" False
         Right config -> do
           optimize config @?= True
           debug config @?= True
@@ -30,22 +33,22 @@ tests = testGroup "CLI Basic Functions Tests"
       let args = ["--help"]
       let result = parseArgsTest args  -- 简化函数调用
       case result of
-        Left err -> assertBool "Argument parsing should succeed" False
+        Left _ -> assertBool "Argument parsing should succeed" False
         Right config -> showHelp config @?= True
         
   , testCase "parse version command" $ do
       let args = ["--version"]
       let result = parseArgsTest args  -- 简化函数调用
       case result of
-        Left err -> assertBool "Argument parsing should succeed" False
+        Left _ -> assertBool "Argument parsing should succeed" False
         Right config -> showVersion config @?= True
         
   , testCase "parse invalid arguments" $ do
       let args = ["invalid", "arguments"]
       let result = parseArgsTest args  -- 简化函数调用
       case result of
-        Left err -> assertBool "Invalid arguments should error" True
-        Right config -> assertBool "Should not parse invalid arguments" False
+        Left _ -> assertBool "Invalid arguments should error" True
+        Right _ -> assertBool "Should not parse invalid arguments" False
         
   , testCase "execute compile command" $ do
       let config = CliConfig {
@@ -177,7 +180,7 @@ tests = testGroup "CLI Basic Functions Tests"
       let args = ["compile", "input.typus", "--verbose"]
       let result = parseArgsTest args  -- 简化函数调用
       case result of
-        Left err -> assertBool "Verbose argument parsing should succeed" False
+        Left _ -> assertBool "Verbose argument parsing should succeed" False
         Right config -> do
           verbose config @?= True
           let execResult = executeCommand config  -- 简化函数调用
@@ -189,7 +192,7 @@ tests = testGroup "CLI Basic Functions Tests"
       let args = ["compile", "input1.typus", "input2.typus", "--output", "output.go"]
       let result = parseArgsTest args  -- 简化函数调用
       case result of
-        Left err -> assertBool "Multiple input files parsing should succeed" False
+        Left _ -> assertBool "Multiple input files parsing should succeed" False
         Right config -> do
           inputFiles config @?= ["input1.typus", "input2.typus"]
           let execResult = executeCommand config  -- 简化函数调用
@@ -201,7 +204,7 @@ tests = testGroup "CLI Basic Functions Tests"
       let args = ["compile", "--config", "config.toml"]
       let result = parseArgsTest args  -- 简化函数调用
       case result of
-        Left err -> assertBool "Config file parsing should succeed" False
+        Left _ -> assertBool "Config file parsing should succeed" False
         Right config -> do
           configFile config @?= Just "config.toml"
           let execResult = executeCommand config  -- 简化函数调用

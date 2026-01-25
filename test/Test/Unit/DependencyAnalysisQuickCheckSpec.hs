@@ -1,8 +1,10 @@
 module Test.Unit.DependencyAnalysisQuickCheckSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import TestSupport.QuickCheck (fastProperty)
 import qualified Data.Map as Map
 import qualified Data.Set as Set

@@ -2,10 +2,14 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Test.Unit.NewErrorHandlerQuickCheckSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck hiding (resize)
 import Test.QuickCheck (resize, sized)
-import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck
+
 import Compiler.Errors.Core hiding (line, column)
 import SourceLocation (SourcePos(..), SourceSpan(..))
 import Data.Time (UTCTime)

@@ -1,8 +1,11 @@
 module Test.Unit.EnhancedParserBasicSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Parser 
   ( parseTypus
   , FileDirectives(..)

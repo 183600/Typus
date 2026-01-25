@@ -2,8 +2,11 @@
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 module Test.Unit.TestErrorRecoverySpec where
 
-import Test.Tasty
+
+
 import Test.Tasty.HUnit
+import Test.Tasty
+
 import qualified Data.Text as T
 
 -- | Test suite for Error Recovery

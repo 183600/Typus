@@ -1,7 +1,10 @@
 module Test.Unit.ErrorHandlerBasicFunctionsSpec where
 
-import Test.Tasty
+
+
 import Test.Tasty.HUnit
+import Test.Tasty
+
 import qualified Compiler.Errors.Core as C
 import qualified Data.Text as T
 import Data.List (isInfixOf, sortBy, lookup)

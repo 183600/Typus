@@ -1,9 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
+module Test.Unit.OwnershipTransitivitySpec where
 
-module Test.Unit.OwnershipTransitivitySpec (tests) where
+
+import Test.Tasty.HUnit
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
+
 
 import Test.Tasty
-import Test.Tasty.HUnit
+
 import Test.Tasty.QuickCheck
 import Data.List (nub)
 import qualified Data.Map as Map

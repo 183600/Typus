@@ -1,11 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
 module Test.Unit.AdditionalCabalQuickCheckTests where
 
+
+
+
 import Test.Tasty
-import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck
 
 import Utils
 import SourceLocation (SourcePos(..))

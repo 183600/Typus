@@ -1,12 +1,14 @@
-
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
+
 module Test.Unit.TestGoToolchainIntegrationSpec where
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
+
 import Parser
 import SourceLocation
 import ErrorHandler

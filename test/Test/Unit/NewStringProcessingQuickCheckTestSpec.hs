@@ -2,9 +2,11 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Test.Unit.NewStringProcessingQuickCheckTestSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Utils
 import Data.Char (isSpace, isControl, toLower, toUpper)
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf, sort)

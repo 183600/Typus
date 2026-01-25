@@ -1,10 +1,12 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-
 module Test.Unit.CoreCompilerPropertiesQuickCheckSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Compiler (compile, CompilerError(..), CompilationPhase(..), SyntaxError(..))
 import Parser (TypusFile(..), FileDirectives(..), defaultFileDirectives)
 import qualified Data.Text as T

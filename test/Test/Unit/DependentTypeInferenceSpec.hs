@@ -1,10 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+module Test.Unit.DependentTypeInferenceSpec where
 
-module Test.Unit.DependentTypeInferenceSpec (tests) where
 
-import Test.Tasty
+
 import Test.Tasty.HUnit
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
 import Test.Tasty.QuickCheck
 import Data.List (sort, nub, intersect, union)
 import qualified Data.Map as Map

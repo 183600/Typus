@@ -1,8 +1,11 @@
 module Test.Unit.DependenciesCycleDetectionSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), locatedAt, startPos)
 import qualified Data.Map as Map
 import qualified Data.Set as Set

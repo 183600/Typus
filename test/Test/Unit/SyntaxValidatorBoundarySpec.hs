@@ -1,10 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+module Test.Unit.SyntaxValidatorBoundarySpec where
 
-module Test.Unit.SyntaxValidatorBoundarySpec (tests) where
 
 import Test.Tasty
-import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck
+
+
+
+import Test.Tasty
+
 import Test.Tasty.QuickCheck
 import Data.List (isPrefixOf, isSuffixOf, isInfixOf)
 import Data.Char (isLetter, isDigit, isSpace, toLower, toUpper)

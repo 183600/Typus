@@ -1,8 +1,10 @@
 module Test.Unit.IntegratedCompilerPropertiesSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import IntegratedCompiler
 
 -- Test compilation result type

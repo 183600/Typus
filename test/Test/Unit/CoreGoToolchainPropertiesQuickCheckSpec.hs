@@ -1,10 +1,16 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-
 module Test.Unit.CoreGoToolchainPropertiesQuickCheckSpec where
+
+
+import Test.Tasty.HUnit
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import GoToolchain (GoExecutor(..), defaultGoExecutor, runGoCommand)
 import qualified Data.Text as T
 import Data.List (isInfixOf)

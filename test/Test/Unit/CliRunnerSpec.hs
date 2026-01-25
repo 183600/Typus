@@ -1,9 +1,11 @@
 module Test.Unit.CliRunnerSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
-import Cli.Runner
+
+
 
 -- Test CLI runner type
 data TestCliRunner = TestCliRunner

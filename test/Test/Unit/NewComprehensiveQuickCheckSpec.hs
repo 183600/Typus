@@ -1,11 +1,14 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
-module Test.Unit.NewComprehensiveQuickCheckSpec (tests) where
+module Test.Unit.NewComprehensiveQuickCheckSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Test.Unit.NewUtilsQuickCheckSpec (utilsTests)
 import Test.Unit.NewSourceLocationQuickCheckSpec (sourceLocationTests)
 import Test.Unit.NewParserQuickCheckSpec (parserTests)

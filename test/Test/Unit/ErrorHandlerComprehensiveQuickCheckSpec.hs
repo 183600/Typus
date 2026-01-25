@@ -1,8 +1,10 @@
 module Test.Unit.ErrorHandlerComprehensiveQuickCheckSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Compiler.Errors.Core
 import SourceLocation (SourcePos(..), SourceSpan(..))
 import qualified Data.Map.Strict as Map

@@ -1,10 +1,12 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-
 module Test.Unit.CoreUtilsSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Test.QuickCheck (NonEmptyList(..))
 import Utils (trim, splitBy, splitByComma, removeLineComments, normalizeIndentation)
 import Data.Char (isSpace)

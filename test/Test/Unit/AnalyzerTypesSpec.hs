@@ -1,5 +1,7 @@
 module Test.Unit.AnalyzerTypesSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Analyzer.Types

@@ -1,13 +1,18 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
--- | Text processing QuickCheck tests
--- This module contains property-based tests for text processing functions
 module Test.Unit.NewTextProcessingQuickCheckSpec where
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
+-- | Text processing QuickCheck tests
+-- This module contains property-based tests for text processing functions
+
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
 import Test.QuickCheck ((==>), conjoin, counterexample)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO

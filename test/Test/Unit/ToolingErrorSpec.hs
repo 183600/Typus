@@ -1,8 +1,10 @@
 module Test.Unit.ToolingErrorSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Tooling.Error
 import Data.List (isInfixOf)
 

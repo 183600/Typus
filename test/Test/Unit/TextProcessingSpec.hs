@@ -1,8 +1,11 @@
 module Test.Unit.TextProcessingSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import qualified Data.Text as T
 import Data.List (isPrefixOf, isSuffixOf, isInfixOf, sort)
 import Utils (trim, splitBy, splitByComma, splitByCollapsed, removeLineComments, 

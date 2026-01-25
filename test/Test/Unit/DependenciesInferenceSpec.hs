@@ -1,8 +1,10 @@
 module Test.Unit.DependenciesInferenceSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import qualified Dependencies.Inference as DI
 import qualified Dependencies.AST as AST
 import qualified Dependencies.TypeSystem as TS

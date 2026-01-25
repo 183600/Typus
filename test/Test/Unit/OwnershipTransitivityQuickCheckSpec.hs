@@ -1,8 +1,10 @@
 module Test.Unit.OwnershipTransitivityQuickCheckSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Ownership.Common.Types
 import SourceLocation (SourcePos(..), startPos, SourceSpan(..))
 import Data.List (nub, sort)

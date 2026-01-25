@@ -1,10 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
-
 module Test.Unit.UtilsStringProcessingExtraSpec where
+
+
+
+import Test.Tasty
+import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Utils
 import Data.List (isPrefixOf, isSuffixOf, intercalate, isInfixOf)
 import Data.Char (isSpace, isAlphaNum)

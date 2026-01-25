@@ -1,8 +1,10 @@
 module Test.Unit.SourceLocationPositionQuickCheckSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import SourceLocation
   ( SourcePos(..), startPos, posAfter, posAt, posAtLineCol
   , advancePos, advancePosBy, advancePosByText

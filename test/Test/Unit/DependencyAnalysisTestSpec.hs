@@ -1,8 +1,9 @@
 {-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
-
 module Test.Unit.DependencyAnalysisTestSpec where
+
+
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
@@ -13,6 +14,8 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Data.Map as Map
+import Test.Tasty
+import Test.Tasty.QuickCheck
 
 import qualified Dependencies.AST as Dep
 import qualified Dependencies.TypeSystem as Dep

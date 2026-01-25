@@ -1,8 +1,10 @@
 module Test.Unit.EnhancedCompilerBasicSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Compiler 
   ( compile
   , CompilerError(..)

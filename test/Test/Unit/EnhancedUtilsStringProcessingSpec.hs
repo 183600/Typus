@@ -1,8 +1,11 @@
 module Test.Unit.EnhancedUtilsStringProcessingSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed, 
              removeLineComments, removeComments, normalizeIndentation)
 import Data.Char (isSpace)

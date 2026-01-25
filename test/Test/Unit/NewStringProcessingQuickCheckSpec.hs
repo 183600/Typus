@@ -1,13 +1,18 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
--- | String processing QuickCheck tests for the Typus compiler
--- This module contains property-based tests for string processing utilities
 module Test.Unit.NewStringProcessingQuickCheckSpec where
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
+-- | String processing QuickCheck tests for the Typus compiler
+-- This module contains property-based tests for string processing utilities
+
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
 import Test.QuickCheck ((==>), conjoin, counterexample)
 import Utils
   ( trim

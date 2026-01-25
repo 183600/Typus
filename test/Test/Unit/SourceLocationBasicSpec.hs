@@ -1,7 +1,10 @@
 module Test.Unit.SourceLocationBasicSpec where
 
-import Test.Tasty
+
+
 import Test.Tasty.HUnit
+import Test.Tasty
+
 import SourceLocation
   ( SourcePos(..), SourceSpan(..), startPos
   , posAfter, posAt, posAtLineCol

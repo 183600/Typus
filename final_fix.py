@@ -1,146 +1,124 @@
 #!/usr/bin/env python3
 """
-Final script to fix all remaining compilation errors.
+Final fix for all test files
 """
 
-import re
 import os
+import re
 
-def fix_all_files():
-    """Fix all remaining compilation errors"""
-    
-    # Fix CoreErrorHandlerPropertiesQuickCheckSpec.hs
-    file_path = "test/Test/Unit/CoreErrorHandlerPropertiesQuickCheckSpec.hs"
-    with open(file_path, 'r') as f:
+def fix_test_file(filepath):
+    """Fix all issues in a test file"""
+    with open(filepath, 'r') as f:
         content = f.read()
     
-    # Fix ErrorContext
-    content = re.sub(
-        r"ErrorContext Nothing Nothing Nothing \[\]",
-        "ErrorContext Nothing Nothing Nothing []",
-        content
-    )
+    # Extract module name from filepath
+    module_match = re.search(r'test/Test/Unit/(.+)\.hs$', filepath)
+    if not module_match:
+        return False
     
-    with open(file_path, 'w') as f:
-        f.write(content)
+    module_name = module_match.group(1).replace('/', '.')
+    full_module_name = f'Test.Unit.{module_name}'
     
-    # Fix CoreGoToolchainPropertiesQuickCheckSpec.hs
-    file_path = "test/Test/Unit/CoreGoToolchainPropertiesQuickCheckSpec.hs"
-    with open(file_path, 'r') as f:
-        content = f.read()
+    modified = False
     
-    # Add type annotations
-    content = re.sub(
-        r"testProperty \"Go module generation preserves structure\" \$\s+\\ moduleName ->",
-        "testProperty \"Go module generation preserves structure\" $ \\(moduleName :: T.Text) ->",
-        content
-    )
+    # Check if module declaration exists
+    if not re.search(r'^module ', content, flags=re.MULTILINE):
+        # Find where to insert the module declaration
+        lines = content.split('\n')
+        insert_idx = 0
+        
+        # Skip pragmas at the top
+        i = 0
+        while i < len(lines) and lines[i].startswith('{-#'):
+            i += 1
+        
+        insert_idx = i
+        
+        # Insert the module declaration
+        lines.insert(insert_idx, f'module {full_module_name} where')
+        content = '\n'.join(lines)
+        modified = True
     
-    content = re.sub(
-        r"testProperty \"Go code generation is deterministic\" \$\s+\\ ast ->",
-        "testProperty \"Go code generation is deterministic\" $ \\(ast :: String) ->",
-        content
-    )
+    # Fix any misplaced imports
+    lines = content.split('\n')
+    new_lines = []
+    imports_to_add = []
     
-    content = re.sub(
-        r"testProperty \"Go module dependencies are resolved correctly\" \$\s+\\ modules ->",
-        "testProperty \"Go module dependencies are resolved correctly\" $ \\(modules :: [String]) ->",
-        content
-    )
+    # Collect pragmas and module
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        if line.startswith('{-#'):
+            new_lines.append(line)
+        elif line.startswith('module '):
+            new_lines.append(line)
+            # Skip exports
+            i += 1
+            while i < len(lines) and (lines[i].startswith(' ') or lines[i].startswith('\t')):
+                new_lines.append(lines[i])
+                i += 1
+            # Skip blank lines
+            while i < len(lines) and lines[i].strip() == '':
+                i += 1
+            break
+        else:
+            break
+        i += 1
     
-    with open(file_path, 'w') as f:
-        f.write(content)
+    # Add blank line after module
+    if new_lines and not new_lines[-1].strip() == '':
+        new_lines.append('')
     
-    # Fix CoreIntegrationPropertiesQuickCheckSpec.hs
-    file_path = "test/Test/Unit/CoreIntegrationPropertiesQuickCheckSpec.hs"
-    with open(file_path, 'r') as f:
-        content = f.read()
+    # Collect imports
+    while i < len(lines):
+        line = lines[i]
+        if line.startswith('import '):
+            imports_to_add.append(line)
+            i += 1
+        else:
+            break
     
-    # Fix property return type
-    content = re.sub(
-        r"Left _ -> property True",
-        "Left _ -> property True",
-        content
-    )
+    # Add imports in proper order
+    if 'import Test.Tasty' not in imports_to_add and ('testCase' in content or 'testGroup' in content):
+        imports_to_add.append('import Test.Tasty')
     
-    # Fix generateLargeType
-    content = re.sub(
-        r'generateLargeType size = T\.pack \\("type Large struct \\{ " \\+\\+ replicate size "Field int; " \\+\\+ " \\}"\\)',
-        'generateLargeType size = T.pack ("type Large struct { " ++ concat (replicate size "Field int; ") ++ " }")',
-        content
-    )
+    if 'import Test.Tasty.HUnit' not in imports_to_add and ('testCase' in content or '@?=' in content or 'Assertion' in content):
+        imports_to_add.append('import Test.Tasty.HUnit')
     
-    with open(file_path, 'w') as f:
-        f.write(content)
+    if 'import Test.Tasty.QuickCheck' not in imports_to_add and ('property' in content or 'forAll' in content or 'Arbitrary' in content):
+        imports_to_add.append('import Test.Tasty.QuickCheck')
     
-    # Fix CoreOwnershipPropertiesQuickCheckSpec.hs
-    file_path = "test/Test/Unit/CoreOwnershipPropertiesQuickCheckSpec.hs"
-    with open(file_path, 'r') as f:
-        content = f.read()
+    # Add imports
+    for imp in imports_to_add:
+        new_lines.append(imp)
     
-    # Fix string operations
-    content = re.sub(
-        r"f /= t && not \(T\.null f\) && not \(T\.null t\)",
-        "f /= t && not (null (T.unpack f)) && not (null (T.unpack t))",
-        content
-    )
+    # Add the rest of the file
+    while i < len(lines):
+        new_lines.append(lines[i])
+        i += 1
     
-    # Fix Owned pattern
-    content = re.sub(
-        r"Owned -> property True",
-        "Owned _ -> property True",
-        content
-    )
+    content = '\n'.join(new_lines)
     
-    # Fix analyzeVariable
-    content = re.sub(
-        r"analyzeVariable _ = Owned",
-        "analyzeVariable _ = Owned undefined",
-        content
-    )
+    if modified or len(imports_to_add) > 0:
+        with open(filepath, 'w') as f:
+            f.write(content)
+        return True
     
-    with open(file_path, 'w') as f:
-        f.write(content)
-    
-    # Fix CoreParserPropertiesQuickCheckSpec.hs
-    file_path = "test/Test/Unit/CoreParserPropertiesQuickCheckSpec.hs"
-    with open(file_path, 'r') as f:
-        content = f.read()
-    
-    # Fix Located constructor
-    content = re.sub(
-        r"Located \(SourcePos 0 0 0\) True",
-        "Located (SourcePos 0 0 0) True undefined",
-        content
-    )
-    
-    with open(file_path, 'w') as f:
-        f.write(content)
-    
-    # Fix CoreSourceLocationPropertiesQuickCheckSpec.hs
-    file_path = "test/Test/Unit/CoreSourceLocationPropertiesQuickCheckSpec.hs"
-    with open(file_path, 'r') as f:
-        content = f.read()
-    
-    # Fix posAfter call
-    content = re.sub(
-        r"nextPos = posAfter \(posColumn pos\) 5",
-        "nextPos = SourcePos (posLine pos) (posColumn pos + 5) (posOffset pos + 5)",
-        content
-    )
-    
-    # Fix located call
-    content = re.sub(
-        r"locatedValue located == pos",
-        "locatedValue (Located (SourceSpan pos pos) value) == pos",
-        content
-    )
-    
-    with open(file_path, 'w') as f:
-        f.write(content)
-    
-    print("All files have been fixed!")
+    return False
 
-if __name__ == "__main__":
-    os.chdir("/home/runner/work/Typus/Typus")
-    fix_all_files()
+def main():
+    test_dir = 'test/Test/Unit'
+    modified = 0
+    
+    for root, dirs, files in os.walk(test_dir):
+        for file in files:
+            if file.endswith('.hs'):
+                filepath = os.path.join(root, file)
+                if fix_test_file(filepath):
+                    print(f"Fixed {filepath}")
+                    modified += 1
+    
+    print(f"Modified {modified} files")
+
+if __name__ == '__main__':
+    main()

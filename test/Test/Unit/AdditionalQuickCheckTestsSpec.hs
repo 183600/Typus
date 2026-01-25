@@ -1,12 +1,14 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
--- | Additional QuickCheck tests for Typus compiler
--- This module contains additional property-based tests for various components
 module Test.Unit.AdditionalQuickCheckTestsSpec where
+
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
+
+-- | Additional QuickCheck tests for Typus compiler
+-- This module contains additional property-based tests for various components
 import Utils
 
 import Data.Char (isAlpha, toLower, toUpper)

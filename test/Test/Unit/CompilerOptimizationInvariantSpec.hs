@@ -1,9 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
+module Test.Unit.CompilerOptimizationInvariantSpec where
 
-module Test.Unit.CompilerOptimizationInvariantSpec (tests) where
+
+import Test.Tasty.HUnit
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
+
 
 import Test.Tasty
-import Test.Tasty.HUnit
+
 import Test.Tasty.QuickCheck
 import Data.List (sort)
 import qualified Data.Set as Set

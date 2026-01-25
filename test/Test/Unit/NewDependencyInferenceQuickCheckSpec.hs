@@ -1,13 +1,18 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
--- | Dependency inference QuickCheck tests
--- This module contains property-based tests for dependency inference functions
 module Test.Unit.NewDependencyInferenceQuickCheckSpec where
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
+-- | Dependency inference QuickCheck tests
+-- This module contains property-based tests for dependency inference functions
+
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
 import Test.QuickCheck ((==>), conjoin, counterexample)
 import Dependencies
   ( DependencyGraph(..)

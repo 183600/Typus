@@ -1,11 +1,17 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
-
 module Test.Unit.CoreQuickCheckPropertiesSpec where
+
+
+import Test.Tasty.HUnit
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Test.QuickCheck (NonEmptyList(..))
 import Utils (trim, splitBy, removeLineComments)
 import SourceLocation (SourcePos(..), SourceSpan(..), spanTo, spanBetween, startPos, posAfter, mergeSpans, posAt)

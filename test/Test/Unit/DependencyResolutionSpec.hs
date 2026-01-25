@@ -1,8 +1,14 @@
 {-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
-
 module Test.Unit.DependencyResolutionSpec where
+
+
+import Test.Tasty.HUnit
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
+
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, assertEqual, assertBool, assertFailure, Assertion)
@@ -28,7 +34,7 @@ data DependencyType =
 data Dependency = Dependency
   { dependencyName :: String
   , dependencyVersion :: String
-  , dependencyType :: DependencyType
+  , dependencyType :: Test.Unit.DependencyResolutionSpec.DependencyType
   , dependencyScope :: String
   }
   deriving (Eq, Show)
@@ -67,7 +73,7 @@ genVersion = do
   patch <- choose (0, 10) :: Gen Int
   return $ show major ++ "." ++ show minor ++ "." ++ show patch
 
-genDependencyType :: Gen DependencyType
+genDependencyType :: Gen Test.Unit.DependencyResolutionSpec.DependencyType
 genDependencyType = elements [DirectDependency, TransitiveDependency, OptionalDependency, DevelopmentDependency]
 
 genDependency :: Gen Dependency

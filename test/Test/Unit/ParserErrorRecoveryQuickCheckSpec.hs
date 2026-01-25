@@ -1,8 +1,10 @@
 module Test.Unit.ParserErrorRecoveryQuickCheckSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Parser
 import Compiler.Errors.Core (ErrorLocation(..))
 import SourceLocation (SourcePos(..), startPos, SourceSpan(..))

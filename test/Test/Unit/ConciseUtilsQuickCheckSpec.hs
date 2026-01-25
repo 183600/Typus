@@ -1,7 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
-
 module Test.Unit.ConciseUtilsQuickCheckSpec where
 
 import Test.Tasty (TestTree, testGroup)
@@ -156,7 +155,7 @@ prop_removeComments_properties s =
      else not (hasLineComment || hasBlockComment)
   where
     hasCommentInStringLiteral [] = False
-    hasCommentInStringLiteral str = checkForCommentInString str False False 0
+    hasCommentInStringLiteral str = checkForCommentInString str False False (0 :: Int)
     
     -- Check if // or block comment start appears inside string or character literals
     -- The depth parameter tracks the nesting level to handle unclosed literals

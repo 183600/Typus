@@ -1,13 +1,18 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
--- | Parser combinators QuickCheck tests for the Typus compiler
--- This module contains property-based tests for parser combinator utilities
 module Test.Unit.NewParserCombinatorsQuickCheckSpec where
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
+-- | Parser combinators QuickCheck tests for the Typus compiler
+-- This module contains property-based tests for parser combinator utilities
+
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
 import Test.QuickCheck ((==>), conjoin, counterexample)
 import Parser
   ( parseTypus

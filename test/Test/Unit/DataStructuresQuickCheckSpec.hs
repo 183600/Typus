@@ -1,8 +1,10 @@
 module Test.Unit.DataStructuresQuickCheckSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Test.QuickCheck.Gen (Gen(..))
 import qualified Data.List as L
 import qualified Data.Map as Map

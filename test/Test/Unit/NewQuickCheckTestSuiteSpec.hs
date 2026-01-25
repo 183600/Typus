@@ -2,12 +2,16 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Test.Unit.NewQuickCheckTestSuiteSpec where
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
+
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
 
 import qualified Data.Text as T
 import qualified Data.List as L

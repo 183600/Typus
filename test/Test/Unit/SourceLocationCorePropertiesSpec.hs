@@ -1,11 +1,16 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-
 module Test.Unit.SourceLocationCorePropertiesSpec where
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
+
+
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
 import SourceLocation
   ( SourcePos(..)
   , SourceSpan(..)

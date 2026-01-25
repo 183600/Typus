@@ -1,8 +1,9 @@
 {-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
-
 module Test.Unit.IntegrationTestSpec where
+
+
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
@@ -12,6 +13,8 @@ import qualified Data.Map as Map
 import Data.List (nub, sort, intersect)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Test.Tasty
+import Test.Tasty.QuickCheck
 
 import Parser
 import Compiler.TypeChecker

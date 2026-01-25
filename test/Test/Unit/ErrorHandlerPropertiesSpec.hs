@@ -1,8 +1,10 @@
 module Test.Unit.ErrorHandlerPropertiesSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import qualified ErrorHandler
 import qualified ErrorHandler.Core as EH
 import qualified ErrorHandler.Types as ET

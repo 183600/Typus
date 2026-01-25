@@ -1,8 +1,10 @@
 module Test.Unit.NewSourceLocationMathSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
 
 -- Import SourceLocation module
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..),

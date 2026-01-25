@@ -1,8 +1,10 @@
 module Test.Unit.OwnershipTransferQuickCheckSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import TestSupport.QuickCheck (fastProperty)
 import qualified Ownership.Common.Types as Own
 import qualified Data.Map as Map

@@ -1,8 +1,11 @@
 module Test.Unit.EnhancedErrorHandlerSpec where
 
+
+
+import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import qualified Data.Text as T
 import Control.Monad.State
 

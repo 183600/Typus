@@ -1,10 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
-
 module Test.Unit.ParserBasicFunctionsExtraSpec where
+
+
+import Test.Tasty.HUnit
+import Test.Tasty
+import Test.Tasty.QuickCheck
+
+
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import Parser
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos, Located(..))
 import qualified Text.Megaparsec as MP

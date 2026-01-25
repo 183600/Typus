@@ -1,8 +1,10 @@
 module Test.Unit.CompilerUtilsPropertiesSpec where
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.Tasty.HUnit
+
 import CompilerUtils
 import Data.List (isInfixOf)
 
