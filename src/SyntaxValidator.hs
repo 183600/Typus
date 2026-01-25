@@ -13,8 +13,8 @@ module SyntaxValidator (
 ) where
 
 import qualified Data.Set as Set
-import Data.Foldable
 import Data.List (isInfixOf, isPrefixOf, tails)
+import Data.Foldable (foldl')
 import Data.Char (isSpace, isAlphaNum, isAlpha, isDigit)
 
 -- ================== Helper Functions ==================

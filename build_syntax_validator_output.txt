@@ -1,0 +1,12 @@
+
+Error: [S-8506]
+       Stack failed to parse the target(s).
+       
+       While parsing, Stack encountered the error:
+       
+           Directory not found: src/SyntaxValidator.hs.
+       
+       Stack expects a target to be a package name (e.g. my-package), a package identifier (e.g.
+       my-package-0.1.2.3), a package component (e.g. my-package:test:my-test-suite), or, failing
+       that, a relative path to a local directory for a package or a parent directory of one or more
+       such directories.

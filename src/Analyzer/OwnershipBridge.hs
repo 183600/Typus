@@ -10,8 +10,9 @@ import qualified Ownership as Own
 
 import Control.Monad.State
 import Data.Char (isAlphaNum, isLetter, isSpace, isUpper)
-import Data.Foldable (foldl')
+
 import Data.List (find, findIndex, isInfixOf, isPrefixOf, stripPrefix, tails)
+import Data.Foldable (foldl')
 import Data.Maybe (listToMaybe, mapMaybe)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set

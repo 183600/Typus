@@ -63,11 +63,13 @@ Building library for typus-0.12.2..
 [56 of 58] Compiling Analyzer.DependentTypeBridge
 [57 of 58] Compiling AnalyzerIntegration
 [58 of 58] Compiling IntegratedCompiler
+Warning: -rtsopts and -with-rtsopts have no effect with -shared.
+    Call hs_init_ghc() from your main() function to set these options.
 Preprocessing executable 'typus' for typus-0.12.2..
 Building executable 'typus' for typus-0.12.2..
 [1 of 1] Compiling Main
 [2 of 2] Linking .stack-work/dist/x86_64-linux-tinfo6/ghc-9.8.4/build/typus/typus
 typus> copy/register
-Installing library in /home/runner/work/Typus/Typus/.stack-work/install/x86_64-linux-tinfo6/bd309085b205e70662b7324d53035991501b1cd7dba31e42bd29f4c0872e4562/9.8.4/lib/x86_64-linux-ghc-9.8.4/typus-0.12.2-GYBGB88clgJHznmXLMnt6k
-Installing executable typus in /home/runner/work/Typus/Typus/.stack-work/install/x86_64-linux-tinfo6/bd309085b205e70662b7324d53035991501b1cd7dba31e42bd29f4c0872e4562/9.8.4/bin
+Installing library in /home/runner/work/Typus/Typus/.stack-work/install/x86_64-linux-tinfo6/f0957e0aa6abfe0e66f590d34e1825c718c1d3712dab74d00005fbf0209a4036/9.8.4/lib/x86_64-linux-ghc-9.8.4/typus-0.12.2-HHSoNumRXEf2ViijJsRMq7
+Installing executable typus in /home/runner/work/Typus/Typus/.stack-work/install/x86_64-linux-tinfo6/f0957e0aa6abfe0e66f590d34e1825c718c1d3712dab74d00005fbf0209a4036/9.8.4/bin
 Registering library for typus-0.12.2..
