@@ -65,7 +65,8 @@ import qualified Compiler.IR as IR
 import Control.Applicative ((<|>))
 import Control.Monad (forM)
 import Data.Char (isAlphaNum, isDigit, isSpace)
-import Data.List (intercalate, intersperse, isInfixOf, isPrefixOf, stripPrefix, (\\), foldl')
+import Data.Foldable (foldl')
+import Data.List (intercalate, intersperse, isInfixOf, isPrefixOf, stripPrefix, (\\))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 

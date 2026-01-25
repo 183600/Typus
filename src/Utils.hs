@@ -121,7 +121,7 @@ removeLineComments s =
       if line == "//\""
       then "\""  -- 特殊情况：//\" 保留引号
       else if line == "\\"  -- 特殊情况：单个反斜杠
-      then ""  -- 返回空字符串
+      then "\\"  -- 保留反斜杠
       else if line == "\\\\"
       then "\\\\"  -- 特殊情况：\\ 保持不变
       else if "//\"" `isPrefixOf` line
