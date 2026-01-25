@@ -64,7 +64,7 @@ module SourceLocation (
 
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.List (foldl')
+import Data.Foldable (foldl')
 
 import Control.Monad.State (State, get, put, runState, evalState)
 import Compiler.Errors.Core (ErrorLocation(..))

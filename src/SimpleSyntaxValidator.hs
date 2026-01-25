@@ -7,7 +7,8 @@ module SimpleSyntaxValidator (
     ErrorType(..)
 ) where
 
-import Data.List (isInfixOf, isPrefixOf, foldl')
+import Data.Foldable (foldl')
+import Data.List (isInfixOf, isPrefixOf)
 import Data.Char (isSpace)
 
 -- Error types
