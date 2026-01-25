@@ -5,7 +5,7 @@ module Test.Unit.TestDependentTypesValidationSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 
-import Data.List (nub)
+
 
 -- Test Properties for Dependent Types Validation
 

@@ -3,24 +3,17 @@
 module Test.Unit.CoreOwnershipQuickCheckSpec where
 
 
-import Test.Tasty
-import Test.Tasty.QuickCheck
 
 -- | Core Ownership module QuickCheck tests
 
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-
-import TestSupport.Arbitrary
-import TestSupport.QuickCheck
-import qualified Data.Text as T
-import Data.List (isPrefixOf, isSuffixOf, isInfixOf, intercalate)
-import Data.Maybe (isJust, isNothing)
-import Control.Monad (when)
-import Data.Char (isSpace, isAlpha, isAlphaNum)
-
 import Ownership
+import TestSupport.Arbitrary (arbitraryShortString, arbitraryIdentifier, arbitraryOwnershipError, arbitraryOwnershipType, arbitraryOwnershipTransfer)
+import qualified Ownership.Common.Types as Own (OwnershipError(..), OwnershipType(..), OwnershipTransfer(..))
 
 -- ============================================================================
 -- Ownership QuickCheck Tests
@@ -29,28 +22,28 @@ import Ownership
 -- | Test that newOwnershipAnalyzer creates a valid analyzer
 prop_newOwnershipAnalyzerValid :: Property
 prop_newOwnershipAnalyzerValid =
-  let analyzer = newOwnershipAnalyzer
+  let _ = newOwnershipAnalyzer
   in property $ True  -- Basic sanity check
 
 -- | Test that analyzeOwnership processes basic code
 prop_analyzeOwnershipBasic :: Property
 prop_analyzeOwnershipBasic =
   forAll arbitraryShortString $ \code ->
-    let result = analyzeOwnership code
+    let _ = analyzeOwnership code
     in property $ True  -- Basic sanity check
 
 -- | Test that analyzeOwnershipFile processes file
 prop_analyzeOwnershipFile :: Property
 prop_analyzeOwnershipFile =
   forAll arbitraryShortString $ \filename ->
-    let result = analyzeOwnershipFile filename
+    let _ = analyzeOwnershipFile filename
     in property $ True  -- Basic sanity check
 
 -- | Test that analyzeOwnershipDebug provides debug info
 prop_analyzeOwnershipDebug :: Property
 prop_analyzeOwnershipDebug =
   forAll arbitraryShortString $ \code ->
-    let result = analyzeOwnershipDebug True code
+    let _ = analyzeOwnershipDebug True code
     in property $ True  -- Basic sanity check
 
 -- | Test that formatOwnershipErrors formats errors
@@ -64,15 +57,15 @@ prop_formatOwnershipErrors =
 prop_lexAllBasic :: Property
 prop_lexAllBasic =
   forAll arbitraryShortString $ \code ->
-    let result = lexAll code
+    let _ = lexAll code
     in property $ True  -- Basic sanity check
 
 -- | Test that parseProgram processes basic code
 prop_parseProgramBasic :: Property
 prop_parseProgramBasic =
   forAll arbitraryShortString $ \code ->
-    let tokens = lexAll code
-        result = parseProgram tokens
+    let _ = lexAll code
+        _ = parseProgram (lexAll code)
     in property $ True  -- Basic sanity check
 
 -- | Test that builtInFunctions contains functions
@@ -84,27 +77,26 @@ prop_builtInFunctionsContainsFunctions =
 -- | Test that ownership types are valid
 prop_ownershipTypeValid :: Property
 prop_ownershipTypeValid =
-  forAll arbitraryOwnershipType $ \ownershipType ->
+  forAll arbitraryOwnershipType $ \_ ->
     property $ True  -- Basic sanity check
 
 -- | Test that ownership errors are valid
 prop_ownershipErrorValid :: Property
 prop_ownershipErrorValid =
-  forAll arbitraryOwnershipError $ \error ->
+  forAll arbitraryOwnershipError $ \_ ->
     property $ True  -- Basic sanity check
 
 -- | Test that ownership transfers are valid
 prop_ownershipTransferValid :: Property
 prop_ownershipTransferValid =
-  forAll arbitraryOwnershipTransfer $ \transfer ->
+  forAll arbitraryOwnershipTransfer $ \_ ->
     property $ True  -- Basic sanity check
 
 -- | Test that ownership analysis handles variables
 prop_analyzeOwnershipHandlesVariables :: Property
 prop_analyzeOwnershipHandlesVariables =
   forAll arbitraryIdentifier $ \varName ->
-    let code = "let " ++ varName ++ " = 42"
-        result = analyzeOwnership code
+    let _ = analyzeOwnership ("let " ++ varName ++ " = 42")
     in property $ True  -- Basic sanity check
 
 -- | Test that ownership analysis handles assignments
@@ -112,8 +104,7 @@ prop_analyzeOwnershipHandlesAssignments :: Property
 prop_analyzeOwnershipHandlesAssignments =
   forAll arbitraryIdentifier $ \varName ->
     forAll arbitraryIdentifier $ \value ->
-      let code = varName ++ " = " ++ value
-          result = analyzeOwnership code
+      let _ = analyzeOwnership (varName ++ " = " ++ value)
       in property $ True  -- Basic sanity check
 
 -- | Test that ownership analysis handles function calls
@@ -121,9 +112,7 @@ prop_analyzeOwnershipHandlesFunctionCalls :: Property
 prop_analyzeOwnershipHandlesFunctionCalls =
   forAll arbitraryIdentifier $ \funcName ->
     forAll (listOf arbitraryIdentifier) $ \args ->
-      let argsStr = unwords args
-          code = funcName ++ "(" ++ argsStr ++ ")"
-          result = analyzeOwnership code
+      let _ = analyzeOwnership (funcName ++ "(" ++ unwords args ++ ")")
       in property $ True  -- Basic sanity check
 
 -- | Test that ownership analysis handles ownership transfer
@@ -131,8 +120,7 @@ prop_analyzeOwnershipHandlesOwnershipTransfer :: Property
 prop_analyzeOwnershipHandlesOwnershipTransfer =
   forAll arbitraryIdentifier $ \var1 ->
     forAll arbitraryIdentifier $ \var2 ->
-      let code = var1 ++ " = move(" ++ var2 ++ ")"
-          result = analyzeOwnership code
+      let _ = analyzeOwnership (var1 ++ " = move(" ++ var2 ++ ")")
       in property $ True  -- Basic sanity check
 
 -- | Test that ownership analysis handles borrowing
@@ -140,32 +128,28 @@ prop_analyzeOwnershipHandlesBorrowing :: Property
 prop_analyzeOwnershipHandlesBorrowing =
   forAll arbitraryIdentifier $ \var1 ->
     forAll arbitraryIdentifier $ \var2 ->
-      let code = var1 ++ " = borrow(" ++ var2 ++ ")"
-          result = analyzeOwnership code
+      let _ = analyzeOwnership (var1 ++ " = borrow(" ++ var2 ++ ")")
       in property $ True  -- Basic sanity check
 
 -- | Test that ownership analysis handles references
 prop_analyzeOwnershipHandlesReferences :: Property
 prop_analyzeOwnershipHandlesReferences =
   forAll arbitraryIdentifier $ \varName ->
-    let code = "&" ++ varName
-        result = analyzeOwnership code
+    let _ = analyzeOwnership ("&" ++ varName)
     in property $ True  -- Basic sanity check
 
 -- | Test that ownership analysis handles dereferencing
 prop_analyzeOwnershipHandlesDereferencing :: Property
 prop_analyzeOwnershipHandlesDereferencing =
   forAll arbitraryIdentifier $ \varName ->
-    let code = "*" ++ varName
-        result = analyzeOwnership code
+    let _ = analyzeOwnership ("*" ++ varName)
     in property $ True  -- Basic sanity check
 
 -- | Test that ownership analysis handles scopes
 prop_analyzeOwnershipHandlesScopes :: Property
 prop_analyzeOwnershipHandlesScopes =
   forAll arbitraryIdentifier $ \varName ->
-    let code = "{\n  let " ++ varName ++ " = 42\n}"
-        result = analyzeOwnership code
+    let _ = analyzeOwnership ("{\n  let " ++ varName ++ " = 42\n}")
     in property $ True  -- Basic sanity check
 
 -- | Test that ownership analysis handles lifetimes
@@ -173,8 +157,7 @@ prop_analyzeOwnershipHandlesLifetimes :: Property
 prop_analyzeOwnershipHandlesLifetimes =
   forAll arbitraryIdentifier $ \varName ->
     forAll arbitraryIdentifier $ \lifetime ->
-      let code = varName ++ ":" ++ lifetime
-          result = analyzeOwnership code
+      let _ = analyzeOwnership (varName ++ ":" ++ lifetime)
       in property $ True  -- Basic sanity check
 
 -- | Test that ownership analysis handles ownership types
@@ -182,17 +165,14 @@ prop_analyzeOwnershipHandlesOwnershipTypes :: Property
 prop_analyzeOwnershipHandlesOwnershipTypes =
   forAll arbitraryIdentifier $ \varName ->
     forAll arbitraryOwnershipType $ \ownershipType ->
-      let code = varName ++ ": " ++ show ownershipType
-          result = analyzeOwnership code
+      let _ = analyzeOwnership (varName ++ ": " ++ show ownershipType)
       in property $ True  -- Basic sanity check
 
 -- | Test that ownership analysis handles multiple statements
 prop_analyzeOwnershipHandlesMultipleStatements :: Property
 prop_analyzeOwnershipHandlesMultipleStatements =
   forAll (listOf1 arbitraryIdentifier) $ \varNames ->
-    let statements = map (\name -> "let " ++ name ++ " = 42") varNames
-        code = unlines statements
-        result = analyzeOwnership code
+    let _ = analyzeOwnership (unlines (map (\name -> "let " ++ name ++ " = 42") varNames))
     in property $ True  -- Basic sanity check
 
 -- | Test that ownership analysis handles ownership transfer chains
@@ -204,16 +184,14 @@ prop_analyzeOwnershipHandlesOwnershipTransferChains =
         transfers = case varNames of
                       [] -> []
                       xs -> zipWith (\src dst -> dst ++ " = move(" ++ src ++ ")") xs (rest xs ++ ["result"])
-        code = unlines transfers
-        result = analyzeOwnership code
-    in property $ True  -- Basic sanity check
+    in let _ = analyzeOwnership (unlines transfers)
+       in property $ True  -- Basic sanity check
 
 -- | Test that ownership analysis handles ownership errors
 prop_analyzeOwnershipHandlesOwnershipErrors :: Property
 prop_analyzeOwnershipHandlesOwnershipErrors =
   forAll arbitraryIdentifier $ \varName ->
-    let code = "use(" ++ varName ++ ")\nuse(" ++ varName ++ ")"  -- Double use
-        result = analyzeOwnership code
+    let _ = analyzeOwnership ("use(" ++ varName ++ ")\nuse(" ++ varName ++ ")")  -- Double use
     in property $ True  -- Basic sanity check
 
 -- ============================================================================

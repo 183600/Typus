@@ -6,11 +6,11 @@ module Test.Unit.TestParserErrorRecoverySpec where
 
 import Test.Tasty.HUnit
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck ()
 
 import Parser
-import SourceLocation (SourcePos(..), SourceSpan(..), Located(..), spanBetween)
-import qualified Data.Text as T
+import SourceLocation (SourcePos(..), Located(..), spanBetween)
+import qualified Data.Text as T ()
 import TestSupport.Arbitrary ()
 
 -- | Test suite for Parser error recovery

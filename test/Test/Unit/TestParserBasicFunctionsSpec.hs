@@ -74,7 +74,7 @@ isInfixOf needle haystack = any (isPrefixOf needle) (tails haystack)
     
     tails :: [a] -> [[a]]
     tails [] = [[]]
-    tails xs@(x:xs') = xs : tails xs'
+    tails xs@(_:xs') = xs : tails xs'
 
 parse :: String -> [String]
 parse = words

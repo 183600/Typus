@@ -1,0 +1,65 @@
+typus-0.12.2: unregistering (local file changes: test/Test/Unit/CoreCompilerQuickCheckSpec.hs
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs tes...)
+typus> build (lib + exe + test) with ghc-9.8.4
+Preprocessing library for typus-0.12.2..
+Building library for typus-0.12.2..
+Warning: -rtsopts and -with-rtsopts have no effect with -shared.
+    Call hs_init_ghc() from your main() function to set these options.
+Preprocessing executable 'typus' for typus-0.12.2..
+Building executable 'typus' for typus-0.12.2..
+Preprocessing test suite 'typus-test' for typus-0.12.2..
+Building test suite 'typus-test' for typus-0.12.2..
+[1006 of 1025] Compiling Test.Unit.CoreParserQuickCheckSpec [Source file changed]
+[1007 of 1025] Compiling Test.Unit.CoreOwnershipQuickCheckSpec [Source file changed]
+
+/home/runner/work/Typus/Typus/test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:184:33: warning: [GHC-62161] [-Wincomplete-patterns]
+    Pattern match(es) are non-exhaustive
+    In an equation for ‘rest’: Patterns of type ‘[a]’ not matched: []
+    |
+184 |                       xs -> let rest (_:ys) = ys
+    |                                 ^^^^^^^^^^^^^^^^
+[1008 of 1025] Compiling Test.Unit.CoreDependenciesQuickCheckSpec [Source file changed]
+
+/home/runner/work/Typus/Typus/test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:55:24: error: [GHC-88464]
+    Variable not in scope: ast :: AST
+    Suggested fix:
+      Perhaps use one of these:
+        ‘fst’ (imported from Prelude), ‘last’ (imported from Prelude)
+   |
+55 |     let _ = analyzeAST ast
+   |                        ^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:69:42: error: [GHC-88464]
+    Variable not in scope: stmt :: Statement
+   |
+69 |     let _ = evalState (validateStatement stmt) newDependentTypeChecker
+   |                                          ^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:125:41: error: [GHC-88464]
+    Variable not in scope: typeExpr :: TypeExpr
+    |
+125 |     let _ = runTypeInference (inferType typeExpr)
+    |                                         ^^^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:153:43: error: [GHC-88464]
+    Variable not in scope: scheme :: TypeScheme
+    |
+153 |     let _ = runTypeInference (instantiate scheme)
+    |                                           ^^^^^^
+
+/home/runner/work/Typus/Typus/test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:169:37: error: [GHC-88464]
+    Variable not in scope: substitution :: Substitution
+    |
+169 |       let _ = applyTypeSubstitution substitution typeExpr
+    |                                     ^^^^^^^^^^^^
+[1009 of 1025] Compiling Test.Unit.CoreCompilerQuickCheckSpec [Source file changed]
+
+Error: [S-7282]
+       Stack failed to execute the build plan.
+       
+       While executing the build plan, Stack encountered the error:
+       
+       [S-7011]
+       While building package typus-0.12.2 (scroll up to its section to see the error) using:
+       /home/runner/.stack/setup-exe-cache/x86_64-linux-tinfo6/Cabal-simple_w2MFVN35_3.10.3.0_ghc-9.8.4 --verbose=1 --builddir=.stack-work/dist/x86_64-linux-tinfo6/ghc-9.8.4 build lib:typus exe:typus test:typus-test --ghc-options ""
+       Process exited with code: ExitFailure 1 

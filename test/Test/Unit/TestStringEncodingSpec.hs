@@ -6,7 +6,7 @@ module Test.Unit.TestStringEncodingSpec where
 
 import Test.Tasty.HUnit
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck ()
 
 import Utils
 import Parser
@@ -15,8 +15,8 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.ByteString as BS
 import TestSupport.Arbitrary ()
-import Data.Char (ord, chr)
-import Data.Word (Word8)
+import Data.Char (chr)
+import Data.Word ()
 
 -- | Test suite for string encoding
 testStringEncoding :: TestTree
@@ -78,7 +78,7 @@ testStringEncoding = testGroup "String Encoding Tests"
           result = parseTypus input
       in case result of
            Left err -> assertFailure $ "Parse failed: " ++ show err
-           Right typusFile -> return ()
+           Right _typusFile -> return ()
            
   , testCase "Parser: parseTypus handles Unicode in code blocks" $
       let input = "//! ownership=true\n```go\nfmt.Println(\"你好, 世界!\")\n```"
@@ -130,7 +130,7 @@ testStringEncoding = testGroup "String Encoding Tests"
           result = parseTypus input
       in case result of
            Left err -> assertFailure $ "Parse failed: " ++ show err
-           Right typusFile -> return ()
+           Right _typusFile -> return ()
            
   , testCase "Encoding: Text to ByteString conversion preserves Unicode" $
       let text = T.pack "你好, 世界!"

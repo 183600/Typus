@@ -7,14 +7,12 @@ module Test.Unit.CodeGenerationSpec where
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit
-import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, forAll)
-import Test.QuickCheck (Property, (==>), classify, sized)
-import Data.List (groupBy, sortBy, isInfixOf, isPrefixOf)
+import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property)
+import Test.QuickCheck (Property, (==>), sized)
+import Data.List (isInfixOf)
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Set (Set)
-import qualified Data.Set as Set
-import Control.Monad (replicateM, when)
+import Control.Monad (replicateM)
 
 -- Code generation types for testing
 data TargetLanguage = Go | Rust | JavaScript | C | Python
@@ -501,7 +499,7 @@ areModulesEquivalent module1 module2 =
   length (moduleStatements module1) == length (moduleStatements module2)
 
 normalizeCode :: String -> TargetLanguage -> String
-normalizeCode code lang = 
+normalizeCode code _ = 
   unlines $ filter (not . null) $ lines code  -- Simple normalization
 
 -- Test cases for code generation

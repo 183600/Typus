@@ -4,26 +4,17 @@ module Test.Unit.CompilerIntegrationQuickCheckSpec where
 
 
 import Test.Tasty.HUnit
-import Test.Tasty
 import Test.Tasty.QuickCheck
-
-
-
-import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty (TestTree, testGroup)
 
 import Compiler
 import qualified Compiler.IR as IR
 import Compiler.TypeChecker
 import Compiler.OwnershipChecker
 import Parser
-import SourceLocation (SourcePos(..), SourceSpan(..), startPos, Located(..))
-import Data.List (isPrefixOf, isInfixOf)
-import Data.Maybe (isJust, isNothing)
-import Control.Monad (when)
-import Utils (isRight)
+import SourceLocation ()
 import qualified Data.Text as T
-import Compiler.Errors (CompilerError, CompilationPhase(..), ErrorCategory(..), ErrorSeverity(..), mkCompilerError)
+import Compiler.Errors (ErrorCategory(..), ErrorSeverity(..), mkCompilerError)
 
 -- | 测试编译器集成功能
 tests :: TestTree
@@ -84,7 +75,7 @@ tests = testGroup "CompilerIntegrationQuickCheckSpec Tests"
               let result = compile file
               in case result of
                 Left _ -> property True
-                Right code -> property (isValidCode code)
+                Right generatedCode -> property (isValidCode generatedCode)
     ]
   
   , testGroup "类型检查集成测试"
@@ -356,7 +347,7 @@ tests = testGroup "CompilerIntegrationQuickCheckSpec Tests"
   
   , testGroup "边界条件测试"
     [ testCase "compile handles very large input" $ do
-        let largeCode = unlines (replicate 1000 ("let x = " ++ show 1000))
+        let largeCode = unlines (replicate 1000 ("let x = " ++ show (1000 :: Int)))
             parseResult = parseTypus largeCode
         case parseResult of
           Left _ -> pure ()
@@ -367,7 +358,7 @@ tests = testGroup "CompilerIntegrationQuickCheckSpec Tests"
               Right code -> assertBool "Should handle large input" (not (null code))
     
     , testCase "compile handles deeply nested code" $ do
-        let nestedCode = unlines (replicate 100 ("  " ++ "let x = " ++ show 100))
+        let nestedCode = unlines (replicate 100 ("  " ++ "let x = " ++ show (100 :: Int)))
             parseResult = parseTypus nestedCode
         case parseResult of
           Left _ -> pure ()
@@ -413,9 +404,9 @@ fullPipeline code = do
 
 -- 假设的辅助函数，实际实现可能需要导入更多模块
 emptyTypusFile :: TypusFile
-emptyTypusFile = TypusFile { tfDirectives = defaultFileDirectives, tfBuildTags = [], tfBlocks = [], tfSyntaxErrors = [] }
+emptyTypusFile = TypusFile { tfDirectives = defaultDirectives, tfBuildTags = [], tfBlocks = [], tfSyntaxErrors = [] }
   where
-    defaultFileDirectives = FileDirectives Nothing Nothing Nothing
+    defaultDirectives = FileDirectives Nothing Nothing Nothing
 
 validateIR :: String -> Bool
 validateIR = not . null  -- 简化实现

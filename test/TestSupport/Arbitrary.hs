@@ -1,9 +1,36 @@
 {-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-missing-export-lists #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module TestSupport.Arbitrary where
+module TestSupport.Arbitrary (
+  -- Arbitrary instances
+  arbitraryString,
+  arbitraryChar,
+  arbitraryShortString,
+  arbitraryWhitespace,
+  arbitraryIdentifier,
+  arbitraryInt,
+  arbitraryUnicodeString,
+  arbitraryEscapeString,
+  arbitraryStringLiteral,
+  arbitraryNumericLiteral,
+  arbitraryOperator,
+  arbitraryAST,
+  arbitraryStatement,
+  arbitraryTypeVar,
+  arbitraryTypeExpr,
+  arbitraryTypeConstraint,
+  arbitraryTypeScheme,
+  arbitrarySubstitution,
+  arbitraryTypeEnvironment,
+  arbitrarySourcePos,
+  arbitrarySourceSpan,
+  arbitraryPositiveInt,
+  arbitraryOwnershipError,
+  arbitraryOwnershipType,
+  arbitraryOwnershipTransfer,
+  validTypusCode
+) where
 
 import Test.QuickCheck (Arbitrary(..), Gen, oneof, elements, listOf, frequency, choose, getPositive, arbitraryUnicodeChar, vectorOf)
 import qualified Data.Text as T
@@ -81,8 +108,7 @@ genBool = elements [True, False]
 genInt :: Gen Int
 genInt = choose (0, 100)
 
-genSmallInt :: Gen Int
-genSmallInt = choose (0, 10)
+
 
 -- Source location generators
 instance Arbitrary SourcePos where
@@ -323,38 +349,11 @@ instance Arbitrary CompilationPhase where
 --       }
 
 -- String generators for testing edge cases
-genValidIdentifier :: Gen String
-genValidIdentifier = do
-  first <- elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['_']
-  rest <- listOf $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ ['_']
-  return (first : rest)
 
-genValidDirective :: Gen String
-genValidDirective = oneof
-  [ pure "//! ownership: on"
-  , pure "//! ownership: off"
-  , pure "//! dependent_types: on"
-  , pure "//! dependent_types: off"
-  , pure "//! constraints: on"
-  , pure "//! constraints: off"
-  , do
-      own <- elements ["on", "off"]
-      dep <- elements ["on", "off"]
-      return $ "//! ownership: " ++ own ++ ", dependent_types: " ++ dep
-  ]
 
-genValidGoCode :: Gen String
-genValidGoCode = do
-  codeLines <- listOf $ oneof
-    [ pure "package main"
-    , pure "import \"fmt\""
-    , pure "func main() {"
-    , pure "fmt.Println(\"Hello, World!\")"
-    , pure "}"
-    , genIdentifier >>= \ident -> return $ "var " ++ ident ++ " int"
-    , genIdentifier >>= \ident -> return $ "func " ++ ident ++ "() {}"
-    ]
-  return $ unlines codeLines
+
+
+
 
 -- Property test helpers
 class WellFormed a where
@@ -372,15 +371,9 @@ instance WellFormed GoModule where
   -- Simplified implementation
 
 -- Generators for well-formed values
-genWellFormedImportDecl :: Gen ImportDecl
-genWellFormedImportDecl = ImportDecl <$> frequency [(1, pure Nothing), (2, Just <$> genIdentifier)] <*> genIdentifier
 
-genWellFormedGoModule :: Gen GoModule
-genWellFormedGoModule = GoModule
-  <$> listOf genIdentifier
-  <*> frequency [(1, pure Nothing), (2, Just <$> (PackageDecl <$> genIdentifier))]
-  <*> listOf genWellFormedImportDecl
-  <*> listOf arbitrary
+
+
 
 -- | Generator for arbitrary strings
 arbitraryString :: Gen String
@@ -402,19 +395,7 @@ arbitrarySourcePos = SourcePos <$> arbitraryPositiveInt <*> arbitraryPositiveInt
 arbitrarySourceSpan :: Gen SourceSpan
 arbitrarySourceSpan = SourceSpan <$> arbitrarySourcePos <*> arbitrarySourcePos
 
--- | Accessor functions for SourcePos
-spLine :: SourcePos -> Int
-spLine = posLine
 
-spColumn :: SourcePos -> Int
-spColumn = posColumn
-
--- | Accessor functions for SourceSpan
-ssStart :: SourceSpan -> SourcePos
-ssStart = SourceLocation.spanStart
-
-ssEnd :: SourceSpan -> SourcePos
-ssEnd = SourceLocation.spanEnd
 
 arbitraryInt :: Gen Int
 arbitraryInt = arbitrary

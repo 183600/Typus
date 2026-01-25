@@ -70,7 +70,6 @@ hasCycle (DependencyGraph deps) =
         else case lookup current deps of
                Nothing -> False
                Just next -> checkCycle (current:visited) next
-      nodes = map fst deps
   in any (checkCycle [] . fst) deps
 
 addDependency :: String -> String -> DependencyGraph -> DependencyGraph

@@ -1,0 +1,2520 @@
+Build profile: -w ghc-9.14.1 -O1
+In order, the following will be built (use -v for more details):
+ - typus-0.12.2 (test:typus-test) (file /home/runner/work/Typus/Typus/dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/cache/build changed)
+Preprocessing test suite 'typus-test' for typus-0.12.2...
+Building test suite 'typus-test' for typus-0.12.2...
+[ 908 of 1025] Compiling Test.Unit.TestDependentTypesValidationSpec ( test/Test/Unit/TestDependentTypesValidationSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TestDependentTypesValidationSpec.o ) [Optimisation flags changed]
+[ 911 of 1025] Compiling Test.Unit.TestErrorHandlerPropertiesSpec ( test/Test/Unit/TestErrorHandlerPropertiesSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TestErrorHandlerPropertiesSpec.o ) [Optimisation flags changed]
+[ 912 of 1025] Compiling Test.Unit.TestErrorRecoverySpec ( test/Test/Unit/TestErrorRecoverySpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TestErrorRecoverySpec.o ) [Optimisation flags changed]
+[ 913 of 1025] Compiling Test.Unit.TestParserBasicFunctionsSpec ( test/Test/Unit/TestParserBasicFunctionsSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TestParserBasicFunctionsSpec.o ) [Optimisation flags changed]
+[ 914 of 1025] Compiling Test.Unit.TestSourceLocationMathSpec ( test/Test/Unit/TestSourceLocationMathSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TestSourceLocationMathSpec.o ) [Optimisation flags changed]
+[ 916 of 1025] Compiling Test.Unit.TextProcessingAdvancedSpec ( test/Test/Unit/TextProcessingAdvancedSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TextProcessingAdvancedSpec.o ) [Optimisation flags changed]
+test/Test/Unit/TextProcessingAdvancedSpec.hs:9:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.QuickCheck’ is redundant
+      except perhaps to import instances from ‘Test.QuickCheck’
+    To import instances alone, use: import Test.QuickCheck()
+  |
+9 | import Test.QuickCheck (Gen, Property, (==>), classify, sized)
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TextProcessingAdvancedSpec.hs:10:21: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘breakOn, fixIndentation, forceSingleTabIndentation,
+                   isValidChar, removeLineComments, splitBy, splitByCollapsed,
+                   splitByComma, splitByCommaCollapsed’
+    from module ‘Utils’ is redundant
+   |
+10 | import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed,
+   |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+[ 920 of 1025] Compiling Test.Unit.ToolingErrorSpec ( test/Test/Unit/ToolingErrorSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/ToolingErrorSpec.o ) [Optimisation flags changed]
+test/Test/Unit/ToolingErrorSpec.hs:5:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.QuickCheck’ is redundant
+      except perhaps to import instances from ‘Test.QuickCheck’
+    To import instances alone, use: import Test.QuickCheck()
+  |
+5 | import Test.QuickCheck (Arbitrary(..), elements)
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[ 928 of 1025] Compiling Test.Unit.TypeInferenceAdvancedSpec ( test/Test/Unit/TypeInferenceAdvancedSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TypeInferenceAdvancedSpec.o ) [Optimisation flags changed]
+test/Test/Unit/TypeInferenceAdvancedSpec.hs:7:1: warning: [GHC-66111] [-Wunused-imports]
+    The qualified import of ‘Data.Set’ is redundant
+      except perhaps to import instances from ‘Data.Set’
+    To import instances alone, use: import Data.Set()
+  |
+7 | import qualified Data.Set as Set
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TypeInferenceAdvancedSpec.hs:71:44: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘resultType’ shadows the existing binding
+      defined at test/Test/Unit/TypeInferenceAdvancedSpec.hs:48:5
+   |
+71 | applySubstitution sub (TypeFunType argType resultType) = 
+   |                                            ^^^^^^^^^^
+
+test/Test/Unit/TypeInferenceAdvancedSpec.hs:92:21: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘vars1’
+   |
+92 |     (TypeForAllType vars1 typ1, TypeForAllType vars2 typ2) -> 
+   |                     ^^^^^
+
+test/Test/Unit/TypeInferenceAdvancedSpec.hs:92:48: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘vars2’
+   |
+92 |     (TypeForAllType vars1 typ1, TypeForAllType vars2 typ2) -> 
+   |                                                ^^^^^
+
+test/Test/Unit/TypeInferenceAdvancedSpec.hs:116:42: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘resultType’ shadows the existing binding
+      defined at test/Test/Unit/TypeInferenceAdvancedSpec.hs:48:5
+    |
+116 |     extractFreeVars (TypeFunType argType resultType) = 
+    |                                          ^^^^^^^^^^
+
+test/Test/Unit/TypeInferenceAdvancedSpec.hs:118:42: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘typ’ shadows the existing binding
+      bound at test/Test/Unit/TypeInferenceAdvancedSpec.hs:107:16
+    |
+118 |     extractFreeVars (TypeForAllType vars typ) = 
+    |                                          ^^^
+
+test/Test/Unit/TypeInferenceAdvancedSpec.hs:179:13: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘resultType’ shadows the existing binding
+      defined at test/Test/Unit/TypeInferenceAdvancedSpec.hs:48:5
+    |
+179 |             resultType = TypeVarType (TypeVar "U" 2 "Type")
+    |             ^^^^^^^^^^
+
+test/Test/Unit/TypeInferenceAdvancedSpec.hs:345:13: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘var2’
+    |
+345 |             var2 = TypeVar "U" 2 "Type"
+    |             ^^^^
+
+<no location info>: error:
+    renameFile:renamePath:rename 'dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TypeInferenceAdvancedSpec.o.tmp' to 'dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TypeInferenceAdvancedSpec.o': does not exist (No such file or directory)
+
+[ 930 of 1025] Compiling Test.Unit.TypeInferenceBoundaryQuickCheckSpec ( test/Test/Unit/TypeInferenceBoundaryQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TypeInferenceBoundaryQuickCheckSpec.o ) [Optimisation flags changed]
+test/Test/Unit/TypeInferenceBoundaryQuickCheckSpec.hs:5:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty.HUnit’ is redundant
+      except perhaps to import instances from ‘Test.Tasty.HUnit’
+    To import instances alone, use: import Test.Tasty.HUnit()
+  |
+5 | import Test.Tasty.HUnit
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+
+[ 931 of 1025] Compiling Test.Unit.TypeInferenceComplex2025Spec ( test/Test/Unit/TypeInferenceComplex2025Spec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TypeInferenceComplex2025Spec.o ) [Optimisation flags changed]
+[ 932 of 1025] Compiling Test.Unit.TypeInferenceEdgeCasesSpec ( test/Test/Unit/TypeInferenceEdgeCasesSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TypeInferenceEdgeCasesSpec.o ) [Optimisation flags changed]
+<no location info>: error:
+    renameFile:renamePath:rename 'dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TypeInferenceEdgeCasesSpec.o.tmp' to 'dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TypeInferenceEdgeCasesSpec.o': does not exist (No such file or directory)
+
+[ 933 of 1025] Compiling Test.Unit.TypeInferenceQuickCheckSpec ( test/Test/Unit/TypeInferenceQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TypeInferenceQuickCheckSpec.o ) [Optimisation flags changed]
+test/Test/Unit/TypeInferenceQuickCheckSpec.hs:9:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty’ is redundant
+      except perhaps to import instances from ‘Test.Tasty’
+    To import instances alone, use: import Test.Tasty()
+  |
+9 | import Test.Tasty (TestTree, testGroup)
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TypeInferenceQuickCheckSpec.hs:12:75: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘===, counterexample, forAll, listOf, vectorOf’
+    from module ‘Test.Tasty.QuickCheck’ is redundant
+   |
+12 | import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
+   |                                                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TypeInferenceQuickCheckSpec.hs:13:25: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘Gen, classify, sized’
+    from module ‘Test.QuickCheck’ is redundant
+   |
+13 | import Test.QuickCheck (Gen, Property, (==>), classify, sized)
+   |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TypeInferenceQuickCheckSpec.hs:14:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Data.List’ is redundant
+      except perhaps to import instances from ‘Data.List’
+    To import instances alone, use: import Data.List()
+   |
+14 | import Data.List (nub, sort, groupBy, sortBy)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TypeInferenceQuickCheckSpec.hs:15:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Data.Maybe’ is redundant
+      except perhaps to import instances from ‘Data.Maybe’
+    To import instances alone, use: import Data.Maybe()
+   |
+15 | import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TypeInferenceQuickCheckSpec.hs:18:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Data.Set’ is redundant
+      except perhaps to import instances from ‘Data.Set’
+    To import instances alone, use: import Data.Set()
+   |
+18 | import Data.Set (Set)
+   | ^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TypeInferenceQuickCheckSpec.hs:19:1: warning: [GHC-66111] [-Wunused-imports]
+    The qualified import of ‘Data.Set’ is redundant
+      except perhaps to import instances from ‘Data.Set’
+    To import instances alone, use: import Data.Set()
+   |
+19 | import qualified Data.Set as Set
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TypeInferenceQuickCheckSpec.hs:20:35: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘when’ from module ‘Control.Monad’ is redundant
+   |
+20 | import Control.Monad (replicateM, when)
+   |                                   ^^^^
+
+test/Test/Unit/TypeInferenceQuickCheckSpec.hs:113:7: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘f1’
+    |
+113 |   let f1 = TFunc t1 t2
+    |       ^^
+
+test/Test/Unit/TypeInferenceQuickCheckSpec.hs:114:7: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘f2’
+    |
+114 |       f2 = TFunc t2 t3
+    |       ^^
+
+[ 934 of 1025] Compiling Test.Unit.TypeSystemBoundaryQuickCheckSpec ( test/Test/Unit/TypeSystemBoundaryQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TypeSystemBoundaryQuickCheckSpec.o ) [Optimisation flags changed]
+[ 935 of 1025] Compiling Test.Unit.TypeSystemBoundarySpec ( test/Test/Unit/TypeSystemBoundarySpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TypeSystemBoundarySpec.o ) [Optimisation flags changed]
+[ 936 of 1025] Compiling Test.Unit.TypeSystemEdgeCasesSpec ( test/Test/Unit/TypeSystemEdgeCasesSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TypeSystemEdgeCasesSpec.o ) [Optimisation flags changed]
+test/Test/Unit/TypeSystemEdgeCasesSpec.hs:7:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty.QuickCheck’ is redundant
+      except perhaps to import instances from ‘Test.Tasty.QuickCheck’
+    To import instances alone, use: import Test.Tasty.QuickCheck()
+  |
+7 | import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, Property, (===), forAll, counterexample, conjoin, testProperty, (==>))
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TypeSystemEdgeCasesSpec.hs:10:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.QuickCheck’ is redundant
+      except perhaps to import instances from ‘Test.QuickCheck’
+    To import instances alone, use: import Test.QuickCheck()
+   |
+10 | import Test.QuickCheck (Gen, cover)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TypeSystemEdgeCasesSpec.hs:11:1: warning: [GHC-66111] [-Wunused-imports]
+    The qualified import of ‘Data.Text’ is redundant
+      except perhaps to import instances from ‘Data.Text’
+    To import instances alone, use: import Data.Text()
+   |
+11 | import qualified Data.Text as T
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TypeSystemEdgeCasesSpec.hs:12:19: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘isPrefixOf, isSuffixOf, nub, sort’
+    from module ‘Data.List’ is redundant
+   |
+12 | import Data.List (isPrefixOf, isSuffixOf, isInfixOf, sort, nub)
+   |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TypeSystemEdgeCasesSpec.hs:14:55: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘startPos’ from module ‘SourceLocation’ is redundant
+   |
+14 | import SourceLocation (SourcePos(..), SourceSpan(..), startPos, posAt, spanBetween, spanStart, spanEnd)
+   |                                                       ^^^^^^^^
+
+test/Test/Unit/TypeSystemEdgeCasesSpec.hs:15:19: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘isSpace’ from module ‘Data.Char’ is redundant
+   |
+15 | import Data.Char (isSpace, isAlpha, isAlphaNum, isDigit, isLetter, toLower, toUpper)
+   |                   ^^^^^^^
+
+test/Test/Unit/TypeSystemEdgeCasesSpec.hs:81:7: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘span’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/TypeSystemEdgeCasesSpec.hs:1:8-40
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
+   |
+81 |       span = spanBetween pos1 pos2
+   |       ^^^^
+
+test/Test/Unit/TypeSystemEdgeCasesSpec.hs:173:7: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘span’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/TypeSystemEdgeCasesSpec.hs:1:8-40
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
+    |
+173 |   let span = spanBetween pos1 pos2
+    |       ^^^^
+
+[ 937 of 1025] Compiling Test.Unit.TypeSystemInferenceQuickCheckSpec ( test/Test/Unit/TypeSystemInferenceQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TypeSystemInferenceQuickCheckSpec.o ) [Optimisation flags changed]
+[ 938 of 1025] Compiling Test.Unit.TypeSystemInferenceSpec ( test/Test/Unit/TypeSystemInferenceSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TypeSystemInferenceSpec.o ) [Optimisation flags changed]
+[ 939 of 1025] Compiling Test.Unit.TypeSystemQuickCheckSpec ( test/Test/Unit/TypeSystemQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TypeSystemQuickCheckSpec.o ) [Optimisation flags changed]
+[ 940 of 1025] Compiling Test.Unit.TypeSystemSpec ( test/Test/Unit/TypeSystemSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TypeSystemSpec.o ) [Optimisation flags changed]
+[ 941 of 1025] Compiling Test.Unit.TypeSystemTestSpec ( test/Test/Unit/TypeSystemTestSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TypeSystemTestSpec.o ) [Optimisation flags changed]
+test/Test/Unit/TypeSystemTestSpec.hs:8:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty’ is redundant
+      except perhaps to import instances from ‘Test.Tasty’
+    To import instances alone, use: import Test.Tasty()
+  |
+8 | import Test.Tasty (TestTree, testGroup)
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TypeSystemTestSpec.hs:9:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty.QuickCheck’ is redundant
+      except perhaps to import instances from ‘Test.Tasty.QuickCheck’
+    To import instances alone, use: import Test.Tasty.QuickCheck()
+  |
+9 | import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TypeSystemTestSpec.hs:10:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.QuickCheck’ is redundant
+      except perhaps to import instances from ‘Test.QuickCheck’
+    To import instances alone, use: import Test.QuickCheck()
+   |
+10 | import Test.QuickCheck (Gen, Property, (==>))
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TypeSystemTestSpec.hs:12:1: warning: [GHC-66111] [-Wunused-imports]
+    The qualified import of ‘Data.Map’ is redundant
+      except perhaps to import instances from ‘Data.Map’
+    To import instances alone, use: import Data.Map()
+   |
+12 | import qualified Data.Map as Map
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TypeSystemTestSpec.hs:13:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Data.List’ is redundant
+      except perhaps to import instances from ‘Data.List’
+    To import instances alone, use: import Data.List()
+   |
+13 | import Data.List (nub, intersect)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TypeSystemTestSpec.hs:14:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Data.Set’ is redundant
+      except perhaps to import instances from ‘Data.Set’
+    To import instances alone, use: import Data.Set()
+   |
+14 | import Data.Set (Set)
+   | ^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TypeSystemTestSpec.hs:15:1: warning: [GHC-66111] [-Wunused-imports]
+    The qualified import of ‘Data.Set’ is redundant
+      except perhaps to import instances from ‘Data.Set’
+    To import instances alone, use: import Data.Set()
+   |
+15 | import qualified Data.Set as Set
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TypeSystemTestSpec.hs:19:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Compiler.TypeChecker’ is redundant
+      except perhaps to import instances from ‘Compiler.TypeChecker’
+    To import instances alone, use: import Compiler.TypeChecker()
+   |
+19 | import Compiler.TypeChecker
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TypeSystemTestSpec.hs:20:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Compiler.GoAst’ is redundant
+      except perhaps to import instances from ‘Compiler.GoAst’
+    To import instances alone, use: import Compiler.GoAst()
+   |
+20 | import Compiler.GoAst
+   | ^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TypeSystemTestSpec.hs:113:15: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘t1’
+    |
+113 |     Dep.Equal t1 t2 -> True
+    |               ^^
+
+test/Test/Unit/TypeSystemTestSpec.hs:113:18: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘t2’
+    |
+113 |     Dep.Equal t1 t2 -> True
+    |                  ^^
+
+test/Test/Unit/TypeSystemTestSpec.hs:114:17: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘t1’
+    |
+114 |     Dep.Subtype t1 t2 -> True
+    |                 ^^
+
+test/Test/Unit/TypeSystemTestSpec.hs:114:20: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘t2’
+    |
+114 |     Dep.Subtype t1 t2 -> True
+    |                    ^^
+
+test/Test/Unit/TypeSystemTestSpec.hs:115:19: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘className’
+    |
+115 |     Dep.Predicate className t -> True
+    |                   ^^^^^^^^^
+
+test/Test/Unit/TypeSystemTestSpec.hs:115:29: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘t’
+    |
+115 |     Dep.Predicate className t -> True
+    |                             ^
+
+test/Test/Unit/TypeSystemTestSpec.hs:116:20: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘t’
+    |
+116 |     Dep.TypeSizeGE t n -> True
+    |                    ^
+
+test/Test/Unit/TypeSystemTestSpec.hs:116:22: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘n’
+    |
+116 |     Dep.TypeSizeGE t n -> True
+    |                      ^
+
+test/Test/Unit/TypeSystemTestSpec.hs:117:20: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘t’
+    |
+117 |     Dep.TypeSizeGT t n -> True
+    |                    ^
+
+test/Test/Unit/TypeSystemTestSpec.hs:117:22: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘n’
+    |
+117 |     Dep.TypeSizeGT t n -> True
+    |                      ^
+
+test/Test/Unit/TypeSystemTestSpec.hs:118:19: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘t’
+    |
+118 |     Dep.TypeRange t min max -> True
+    |                   ^
+
+test/Test/Unit/TypeSystemTestSpec.hs:118:21: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘min’
+    |
+118 |     Dep.TypeRange t min max -> True
+    |                     ^^^
+
+test/Test/Unit/TypeSystemTestSpec.hs:118:21: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘min’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/TypeSystemTestSpec.hs:4:8-35
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.Classes’)
+    |
+118 |     Dep.TypeRange t min max -> True
+    |                     ^^^
+
+test/Test/Unit/TypeSystemTestSpec.hs:118:25: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘max’
+    |
+118 |     Dep.TypeRange t min max -> True
+    |                         ^^^
+
+test/Test/Unit/TypeSystemTestSpec.hs:118:25: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘max’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/TypeSystemTestSpec.hs:4:8-35
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.Classes’)
+    |
+118 |     Dep.TypeRange t min max -> True
+    |                         ^^^
+
+[ 942 of 1025] Compiling Test.Unit.TypusEndToEndQuickCheckSpec ( test/Test/Unit/TypusEndToEndQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TypusEndToEndQuickCheckSpec.o ) [Optimisation flags changed]
+[ 943 of 1025] Compiling Test.Unit.UnicodeHandlingAdvancedSpec ( test/Test/Unit/UnicodeHandlingAdvancedSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UnicodeHandlingAdvancedSpec.o ) [Optimisation flags changed]
+[ 944 of 1025] Compiling Test.Unit.UnicodeHandlingQuickCheckSpec ( test/Test/Unit/UnicodeHandlingQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UnicodeHandlingQuickCheckSpec.o ) [Optimisation flags changed]
+test/Test/Unit/UnicodeHandlingQuickCheckSpec.hs:132:7: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘splitResult’
+    |
+132 |       splitResult = splitBy ' ' unicodeContent
+    |       ^^^^^^^^^^^
+
+test/Test/Unit/UnicodeHandlingQuickCheckSpec.hs:133:7: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘commentRemoved’
+    |
+133 |       commentRemoved = removeComments unicodeContent
+    |       ^^^^^^^^^^^^^^
+
+test/Test/Unit/UnicodeHandlingQuickCheckSpec.hs:141:32: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘content’
+    |
+141 |       positions = map (\(line, content) -> SourcePos line 1 0) (zip [1..] linesContent)
+    |                                ^^^^^^^
+
+test/Test/Unit/UnicodeHandlingQuickCheckSpec.hs:141:32: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘content’ shadows the existing binding
+      bound at test/Test/Unit/UnicodeHandlingQuickCheckSpec.hs:138:30
+    |
+141 |       positions = map (\(line, content) -> SourcePos line 1 0) (zip [1..] linesContent)
+    |                                ^^^^^^^
+
+test/Test/Unit/UnicodeHandlingQuickCheckSpec.hs:146:26: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘content’
+    |
+146 | prop_unicode_compilation content = 
+    |                          ^^^^^^^
+
+test/Test/Unit/UnicodeHandlingQuickCheckSpec.hs:173:26: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘content’
+    |
+173 | prop_unicode_identifiers content = 
+    |                          ^^^^^^^
+
+test/Test/Unit/UnicodeHandlingQuickCheckSpec.hs:190:30: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘content’
+    |
+190 | prop_unicode_string_literals content = 
+    |                              ^^^^^^^
+
+test/Test/Unit/UnicodeHandlingQuickCheckSpec.hs:223:26: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘content’
+    |
+223 | prop_mixed_unicode_ascii content = 
+    |                          ^^^^^^^
+
+[ 945 of 1025] Compiling Test.Unit.UtilsAdditionalQuickCheckSpec ( test/Test/Unit/UtilsAdditionalQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsAdditionalQuickCheckSpec.o ) [Optimisation flags changed]
+[ 946 of 1025] Compiling Test.Unit.UtilsAdvancedQuickCheckSpec ( test/Test/Unit/UtilsAdvancedQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsAdvancedQuickCheckSpec.o ) [Optimisation flags changed]
+test/Test/Unit/UtilsAdvancedQuickCheckSpec.hs:14:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty’ is redundant
+      except perhaps to import instances from ‘Test.Tasty’
+    To import instances alone, use: import Test.Tasty()
+   |
+14 | import Test.Tasty
+   | ^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsAdvancedQuickCheckSpec.hs:15:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty.QuickCheck’ is redundant
+      except perhaps to import instances from ‘Test.Tasty.QuickCheck’
+    To import instances alone, use: import Test.Tasty.QuickCheck()
+   |
+15 | import Test.Tasty.QuickCheck
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsAdvancedQuickCheckSpec.hs:18:44: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘isSuffixOf’ from module ‘Data.List’ is redundant
+   |
+18 | import Data.List (intercalate, isPrefixOf, isSuffixOf, isInfixOf)
+   |                                            ^^^^^^^^^^
+
+test/Test/Unit/UtilsAdvancedQuickCheckSpec.hs:20:1: warning: [GHC-66111] [-Wunused-imports]
+    The qualified import of ‘Data.Text’ is redundant
+      except perhaps to import instances from ‘Data.Text’
+    To import instances alone, use: import Data.Text()
+   |
+20 | import qualified Data.Text as T
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsAdvancedQuickCheckSpec.hs:21:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Control.Monad’ is redundant
+      except perhaps to import instances from ‘Control.Monad’
+    To import instances alone, use: import Control.Monad()
+   |
+21 | import Control.Monad (replicateM)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsAdvancedQuickCheckSpec.hs:22:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Data.Either’ is redundant
+      except perhaps to import instances from ‘Data.Either’
+    To import instances alone, use: import Data.Either()
+   |
+22 | import Data.Either (isRight)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsAdvancedQuickCheckSpec.hs:80:10: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘indentDiff’
+   |
+80 |      let indentDiff = abs (indent1 - indent2)
+   |          ^^^^^^^^^^
+
+test/Test/Unit/UtilsAdvancedQuickCheckSpec.hs:87:16: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘after’ shadows the existing binding
+      imported from ‘Test.Tasty’ at test/Test/Unit/UtilsAdvancedQuickCheckSpec.hs:14:1-17
+      (and originally defined in ‘tasty-1.5.3:Test.Tasty.Core’)
+   |
+87 |   let (before, after) = breakOn needle haystack
+   |                ^^^^^
+
+[ 947 of 1025] Compiling Test.Unit.UtilsBasicQuickCheckSpec ( test/Test/Unit/UtilsBasicQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsBasicQuickCheckSpec.o ) [Optimisation flags changed]
+test/Test/Unit/UtilsBasicQuickCheckSpec.hs:5:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty.HUnit’ is redundant
+      except perhaps to import instances from ‘Test.Tasty.HUnit’
+    To import instances alone, use: import Test.Tasty.HUnit()
+  |
+5 | import Test.Tasty.HUnit
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+
+[ 948 of 1025] Compiling Test.Unit.UtilsBoundaryQuickCheckSpec ( test/Test/Unit/UtilsBoundaryQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsBoundaryQuickCheckSpec.o ) [Optimisation flags changed]
+[ 949 of 1025] Compiling Test.Unit.UtilsBreakOnQuickCheckSpec ( test/Test/Unit/UtilsBreakOnQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsBreakOnQuickCheckSpec.o ) [Optimisation flags changed]
+[ 950 of 1025] Compiling Test.Unit.UtilsCommentProcessingSpec ( test/Test/Unit/UtilsCommentProcessingSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsCommentProcessingSpec.o ) [Optimisation flags changed]
+<no location info>: error:
+    renameFile:renamePath:rename 'dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsCommentProcessingSpec.o.tmp' to 'dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsCommentProcessingSpec.o': does not exist (No such file or directory)
+
+[ 951 of 1025] Compiling Test.Unit.UtilsComprehensiveQuickCheckSpec ( test/Test/Unit/UtilsComprehensiveQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsComprehensiveQuickCheckSpec.o ) [Optimisation flags changed]
+test/Test/Unit/UtilsComprehensiveQuickCheckSpec.hs:12:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty’ is redundant
+      except perhaps to import instances from ‘Test.Tasty’
+    To import instances alone, use: import Test.Tasty()
+   |
+12 | import Test.Tasty
+   | ^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsComprehensiveQuickCheckSpec.hs:13:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty.QuickCheck’ is redundant
+      except perhaps to import instances from ‘Test.Tasty.QuickCheck’
+    To import instances alone, use: import Test.Tasty.QuickCheck()
+   |
+13 | import Test.Tasty.QuickCheck
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsComprehensiveQuickCheckSpec.hs:16:1: warning: [GHC-66111] [-Wunused-imports]
+    The qualified import of ‘Data.Text’ is redundant
+      except perhaps to import instances from ‘Data.Text’
+    To import instances alone, use: import Data.Text()
+   |
+16 | import qualified Data.Text as T
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsComprehensiveQuickCheckSpec.hs:17:42: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘isSuffixOf’ from module ‘Data.List’ is redundant
+   |
+17 | import Data.List (isPrefixOf, isInfixOf, isSuffixOf, intercalate)
+   |                                          ^^^^^^^^^^
+
+test/Test/Unit/UtilsComprehensiveQuickCheckSpec.hs:19:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Control.Monad’ is redundant
+      except perhaps to import instances from ‘Control.Monad’
+    To import instances alone, use: import Control.Monad()
+   |
+19 | import Control.Monad (replicateM)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsComprehensiveQuickCheckSpec.hs:20:21: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘isLeft’ from module ‘Data.Either’ is redundant
+   |
+20 | import Data.Either (isLeft, isRight)
+   |                     ^^^^^^
+
+test/Test/Unit/UtilsComprehensiveQuickCheckSpec.hs:37:7: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘rejoined’
+   |
+37 |       rejoined = intercalate [c] parts
+   |       ^^^^^^^^
+
+test/Test/Unit/UtilsComprehensiveQuickCheckSpec.hs:57:38: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘after’ shadows the existing binding
+      imported from ‘Test.Tasty’ at test/Test/Unit/UtilsComprehensiveQuickCheckSpec.hs:12:1-17
+      (and originally defined in ‘tasty-1.5.3:Test.Tasty.Core’)
+   |
+57 | prop_removeComments_multiline before after =
+   |                                      ^^^^^
+
+test/Test/Unit/UtilsComprehensiveQuickCheckSpec.hs:177:84: warning: [GHC-18042] [-Wtype-defaults]
+    • Defaulting the type variable ‘b0’ to type ‘Integer’ in the following constraint
+        Num b0 arising from the literal ‘42’
+    • In the first argument of ‘Right’, namely ‘42’
+      In the first argument of ‘Data.Either.isRight’, namely ‘(Right 42)’
+      In the second argument of ‘assertBool’, namely
+        ‘(Data.Either.isRight (Right 42))’
+    |
+177 | test_isRight_right = assertBool "Right value is right" (Data.Either.isRight (Right 42))
+    |                                                                                    ^^
+
+test/Test/Unit/UtilsComprehensiveQuickCheckSpec.hs:181:91: warning: [GHC-18042] [-Wtype-defaults]
+    • Defaulting the type variable ‘a0’ to type ‘[Char]’ in the following constraint
+        ghc-internal-9.1401.0:GHC.Internal.Data.String.IsString a0
+          arising from the literal ‘"error"’
+    • In the first argument of ‘Left’, namely ‘"error"’
+      In the first argument of ‘Data.Either.isRight’, namely
+        ‘(Left "error")’
+      In the second argument of ‘($)’, namely
+        ‘Data.Either.isRight (Left "error")’
+    |
+181 | test_isRight_left = assertBool "Left value is not right" (not $ Data.Either.isRight (Left "error"))
+    |                                                                                           ^^^^^^^
+
+test/Test/Unit/UtilsComprehensiveQuickCheckSpec.hs:187:16: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘after’ shadows the existing binding
+      imported from ‘Test.Tasty’ at test/Test/Unit/UtilsComprehensiveQuickCheckSpec.hs:12:1-17
+      (and originally defined in ‘tasty-1.5.3:Test.Tasty.Core’)
+    |
+187 |       (before, after) = breakOn ":" input
+    |                ^^^^^
+
+test/Test/Unit/UtilsComprehensiveQuickCheckSpec.hs:194:16: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘after’ shadows the existing binding
+      imported from ‘Test.Tasty’ at test/Test/Unit/UtilsComprehensiveQuickCheckSpec.hs:12:1-17
+      (and originally defined in ‘tasty-1.5.3:Test.Tasty.Core’)
+    |
+194 |       (before, after) = breakOn ":" input
+    |                ^^^^^
+
+[ 952 of 1025] Compiling Test.Unit.UtilsComprehensiveSpec ( test/Test/Unit/UtilsComprehensiveSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsComprehensiveSpec.o ) [Optimisation flags changed]
+test/Test/Unit/UtilsComprehensiveSpec.hs:9:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty’ is redundant
+      except perhaps to import instances from ‘Test.Tasty’
+    To import instances alone, use: import Test.Tasty()
+  |
+9 | import Test.Tasty (TestTree, testGroup)
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsComprehensiveSpec.hs:12:47: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘===, Arbitrary, counterexample, forAll, oneof’
+    from module ‘Test.Tasty.QuickCheck’ is redundant
+   |
+12 | import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
+   |                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsComprehensiveSpec.hs:13:25: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘Gen, classify’
+    from module ‘Test.QuickCheck’ is redundant
+   |
+13 | import Test.QuickCheck (Gen, Property, (==>), classify)
+   |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsComprehensiveSpec.hs:14:30: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘fixIndentation, forceSingleTabIndentation,
+                   splitByCollapsed, splitByComma’
+    from module ‘Utils’ is redundant
+   |
+14 | import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed,
+   |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+test/Test/Unit/UtilsComprehensiveSpec.hs:18:1: warning: [GHC-66111] [-Wunused-imports]
+    The qualified import of ‘Data.Text’ is redundant
+      except perhaps to import instances from ‘Data.Text’
+    To import instances alone, use: import Data.Text()
+   |
+18 | import qualified Data.Text as T
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsComprehensiveSpec.hs:19:28: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘isAlpha, isAlphaNum’
+    from module ‘Data.Char’ is redundant
+   |
+19 | import Data.Char (isSpace, isAlpha, isAlphaNum, isPrint)
+   |                            ^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsComprehensiveSpec.hs:20:19: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘isPrefixOf, isSuffixOf’
+    from module ‘Data.List’ is redundant
+   |
+20 | import Data.List (isPrefixOf, isSuffixOf, isInfixOf)
+   |                   ^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsComprehensiveSpec.hs:117:31: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘after’ shadows the existing binding
+      imported from ‘Test.Tasty’ at test/Test/Unit/UtilsComprehensiveSpec.hs:10:1-17
+      (and originally defined in ‘tasty-1.5.3:Test.Tasty.Core’)
+    |
+117 |   c `elem` s ==> let (before, after) = breakOn [c] s
+    |                               ^^^^^
+
+[ 953 of 1025] Compiling Test.Unit.UtilsCoreFunctionalitySpec ( test/Test/Unit/UtilsCoreFunctionalitySpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsCoreFunctionalitySpec.o ) [Optimisation flags changed]
+test/Test/Unit/UtilsCoreFunctionalitySpec.hs:7:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty’ is redundant
+      except perhaps to import instances from ‘Test.Tasty’
+    To import instances alone, use: import Test.Tasty()
+  |
+7 | import Test.Tasty (TestTree, testGroup)
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsCoreFunctionalitySpec.hs:10:45: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘Arbitrary, Gen, Property, chooseInt, counterexample,
+                   elements, listOf, oneof’
+    from module ‘Test.Tasty.QuickCheck’ is redundant
+   |
+10 | import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, elements, listOf, chooseInt, Property, (===), counterexample, property)
+   |                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsCoreFunctionalitySpec.hs:16:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Data.Char’ is redundant
+      except perhaps to import instances from ‘Data.Char’
+    To import instances alone, use: import Data.Char()
+   |
+16 | import Data.Char (isSpace)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsCoreFunctionalitySpec.hs:17:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Data.List’ is redundant
+      except perhaps to import instances from ‘Data.List’
+    To import instances alone, use: import Data.List()
+   |
+17 | import Data.List (lines)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsCoreFunctionalitySpec.hs:119:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘parts’
+    |
+119 |       let parts = splitBy ',' s
+    |           ^^^^^
+
+[ 954 of 1025] Compiling Test.Unit.UtilsCorePropertiesQuickCheckSpec ( test/Test/Unit/UtilsCorePropertiesQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsCorePropertiesQuickCheckSpec.o ) [Optimisation flags changed]
+[ 955 of 1025] Compiling Test.Unit.UtilsCorePropertiesSpec ( test/Test/Unit/UtilsCorePropertiesSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsCorePropertiesSpec.o ) [Optimisation flags changed]
+test/Test/Unit/UtilsCorePropertiesSpec.hs:10:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty’ is redundant
+      except perhaps to import instances from ‘Test.Tasty’
+    To import instances alone, use: import Test.Tasty()
+   |
+10 | import Test.Tasty
+   | ^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsCorePropertiesSpec.hs:11:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty.QuickCheck’ is redundant
+      except perhaps to import instances from ‘Test.Tasty.QuickCheck’
+    To import instances alone, use: import Test.Tasty.QuickCheck()
+   |
+11 | import Test.Tasty.QuickCheck
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsCorePropertiesSpec.hs:185:16: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘after’ shadows the existing binding
+      imported from ‘Test.Tasty’ at test/Test/Unit/UtilsCorePropertiesSpec.hs:10:1-17
+      (and originally defined in ‘tasty-1.5.3:Test.Tasty.Core’)
+    |
+185 |   let (before, after) = breakOn pat s
+    |                ^^^^^
+
+test/Test/Unit/UtilsCorePropertiesSpec.hs:247:19: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘needle’ shadows the existing binding
+      bound at test/Test/Unit/UtilsCorePropertiesSpec.hs:243:11
+    |
+247 |     isSubstringOf needle@(n:ns) (h:hs)
+    |                   ^^^^^^
+
+[ 956 of 1025] Compiling Test.Unit.UtilsCoreQuickCheckSpec ( test/Test/Unit/UtilsCoreQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsCoreQuickCheckSpec.o ) [Optimisation flags changed]
+[ 957 of 1025] Compiling Test.Unit.UtilsCoreQuickCheckTests ( test/Test/Unit/UtilsCoreQuickCheckTests.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsCoreQuickCheckTests.o ) [Optimisation flags changed]
+[ 958 of 1025] Compiling Test.Unit.UtilsEfficiencyQuickCheckSpec ( test/Test/Unit/UtilsEfficiencyQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsEfficiencyQuickCheckSpec.o ) [Optimisation flags changed]
+[ 959 of 1025] Compiling Test.Unit.UtilsEnhancedQuickCheckSpec ( test/Test/Unit/UtilsEnhancedQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsEnhancedQuickCheckSpec.o ) [Optimisation flags changed]
+test/Test/Unit/UtilsEnhancedQuickCheckSpec.hs:167:18: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘after’ shadows the existing binding
+      imported from ‘Test.Tasty’ at test/Test/Unit/UtilsEnhancedQuickCheckSpec.hs:11:1-17
+      (and originally defined in ‘tasty-1.5.3:Test.Tasty.Core’)
+    |
+167 |     let (before, after) = breakOn pat s
+    |                  ^^^^^
+
+test/Test/Unit/UtilsEnhancedQuickCheckSpec.hs:173:16: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘after’ shadows the existing binding
+      imported from ‘Test.Tasty’ at test/Test/Unit/UtilsEnhancedQuickCheckSpec.hs:11:1-17
+      (and originally defined in ‘tasty-1.5.3:Test.Tasty.Core’)
+    |
+173 |   let (before, after) = breakOn pat s
+    |                ^^^^^
+
+test/Test/Unit/UtilsEnhancedQuickCheckSpec.hs:213:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘withCommentsRemoved’
+    |
+213 |         withCommentsRemoved = removeComments normalized
+    |         ^^^^^^^^^^^^^^^^^^^
+
+<no location info>: error:
+    renameFile:renamePath:rename 'dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsEnhancedQuickCheckSpec.o.tmp' to 'dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsEnhancedQuickCheckSpec.o': does not exist (No such file or directory)
+
+[ 960 of 1025] Compiling Test.Unit.UtilsIndentationSpec ( test/Test/Unit/UtilsIndentationSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsIndentationSpec.o ) [Optimisation flags changed]
+[ 961 of 1025] Compiling Test.Unit.UtilsNewQuickCheckSpec ( test/Test/Unit/UtilsNewQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsNewQuickCheckSpec.o ) [Optimisation flags changed]
+[ 962 of 1025] Compiling Test.Unit.UtilsPerformanceBoundarySpec ( test/Test/Unit/UtilsPerformanceBoundarySpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsPerformanceBoundarySpec.o ) [Optimisation flags changed]
+<no location info>: error:
+    renameFile:renamePath:rename 'dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsPerformanceBoundarySpec.o.tmp' to 'dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsPerformanceBoundarySpec.o': does not exist (No such file or directory)
+
+[ 963 of 1025] Compiling Test.Unit.UtilsPropertiesExtendedSpec ( test/Test/Unit/UtilsPropertiesExtendedSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsPropertiesExtendedSpec.o ) [Optimisation flags changed]
+[ 964 of 1025] Compiling Test.Unit.UtilsQuickCheckSpec ( test/Test/Unit/UtilsQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsQuickCheckSpec.o ) [Optimisation flags changed]
+test/Test/Unit/UtilsQuickCheckSpec.hs:12:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty’ is redundant
+      except perhaps to import instances from ‘Test.Tasty’
+    To import instances alone, use: import Test.Tasty()
+   |
+12 | import Test.Tasty (TestTree, testGroup)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsQuickCheckSpec.hs:13:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty.QuickCheck’ is redundant
+      except perhaps to import instances from ‘Test.Tasty.QuickCheck’
+    To import instances alone, use: import Test.Tasty.QuickCheck()
+   |
+13 | import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsQuickCheckSpec.hs:14:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.QuickCheck’ is redundant
+      except perhaps to import instances from ‘Test.QuickCheck’
+    To import instances alone, use: import Test.QuickCheck()
+   |
+14 | import Test.QuickCheck (Gen, Property, (==>))
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsQuickCheckSpec.hs:15:1: warning: [GHC-66111] [-Wunused-imports]
+    The qualified import of ‘Data.Text’ is redundant
+      except perhaps to import instances from ‘Data.Text’
+    To import instances alone, use: import Data.Text()
+   |
+15 | import qualified Data.Text as T
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsQuickCheckSpec.hs:16:19: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘isPrefixOf, isSuffixOf’
+    from module ‘Data.List’ is redundant
+   |
+16 | import Data.List (isPrefixOf, isSuffixOf, isInfixOf)
+   |                   ^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsQuickCheckSpec.hs:17:28: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘isAlpha, isAlphaNum, isDigit, isLetter, toLower,
+                   toUpper’
+    from module ‘Data.Char’ is redundant
+   |
+17 | import Data.Char (isSpace, isAlpha, isAlphaNum, toLower, toUpper, isDigit, isLetter)
+   |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsQuickCheckSpec.hs:43:3: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘lines’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/UtilsQuickCheckSpec.hs:4:8-36
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.Data.OldList’)
+   |
+43 |   lines <- vectorOf numLines $ do
+   |   ^^^^^
+
+test/Test/Unit/UtilsQuickCheckSpec.hs:109:7: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘normal’
+    |
+109 |   let normal = splitBy delim s
+    |       ^^^^^^
+
+test/Test/Unit/UtilsQuickCheckSpec.hs:180:7: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘lines'’
+    |
+180 |   let lines' = lines s
+    |       ^^^^^^
+
+test/Test/Unit/UtilsQuickCheckSpec.hs:205:20: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘after’ shadows the existing binding
+      imported from ‘Test.Tasty’ at test/Test/Unit/UtilsQuickCheckSpec.hs:7:1-17
+      (and originally defined in ‘tasty-1.5.3:Test.Tasty.Core’)
+    |
+205 |       let (before, after) = breakOn pat s
+    |                    ^^^^^
+
+test/Test/Unit/UtilsQuickCheckSpec.hs:270:18: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘after’ shadows the existing binding
+      imported from ‘Test.Tasty’ at test/Test/Unit/UtilsQuickCheckSpec.hs:7:1-17
+      (and originally defined in ‘tasty-1.5.3:Test.Tasty.Core’)
+    |
+270 |     let (before, after) = breakOn pat s
+    |                  ^^^^^
+
+test/Test/Unit/UtilsQuickCheckSpec.hs:331:7: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘lines'’
+    |
+331 |   let lines' = lines s
+    |       ^^^^^^
+
+<no location info>: error:
+    renameFile:renamePath:rename 'dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsQuickCheckSpec.o.tmp' to 'dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsQuickCheckSpec.o': does not exist (No such file or directory)
+
+[ 965 of 1025] Compiling Test.Unit.UtilsRobustnessQuickCheckSpec ( test/Test/Unit/UtilsRobustnessQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsRobustnessQuickCheckSpec.o ) [Optimisation flags changed]
+[ 967 of 1025] Compiling Test.Unit.UtilsStringFunctionsSpec ( test/Test/Unit/UtilsStringFunctionsSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsStringFunctionsSpec.o ) [Optimisation flags changed]
+test/Test/Unit/UtilsStringFunctionsSpec.hs:9:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Data.Char’ is redundant
+      except perhaps to import instances from ‘Data.Char’
+    To import instances alone, use: import Data.Char()
+  |
+9 | import Data.Char (isSpace)
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[ 968 of 1025] Compiling Test.Unit.UtilsStringProcessingEnhancedSpec ( test/Test/Unit/UtilsStringProcessingEnhancedSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsStringProcessingEnhancedSpec.o ) [Optimisation flags changed]
+[ 969 of 1025] Compiling Test.Unit.UtilsStringProcessingExtraSpec ( test/Test/Unit/UtilsStringProcessingExtraSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsStringProcessingExtraSpec.o ) [Optimisation flags changed]
+test/Test/Unit/UtilsStringProcessingExtraSpec.hs:10:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty’ is redundant
+      except perhaps to import instances from ‘Test.Tasty’
+    To import instances alone, use: import Test.Tasty()
+   |
+10 | import Test.Tasty
+   | ^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsStringProcessingExtraSpec.hs:11:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty.QuickCheck’ is redundant
+      except perhaps to import instances from ‘Test.Tasty.QuickCheck’
+    To import instances alone, use: import Test.Tasty.QuickCheck()
+   |
+11 | import Test.Tasty.QuickCheck
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsStringProcessingExtraSpec.hs:14:31: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘isSuffixOf’ from module ‘Data.List’ is redundant
+   |
+14 | import Data.List (isPrefixOf, isSuffixOf, intercalate, isInfixOf)
+   |                               ^^^^^^^^^^
+
+test/Test/Unit/UtilsStringProcessingExtraSpec.hs:154:24: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘after’ shadows the existing binding
+      imported from ‘Test.Tasty’ at test/Test/Unit/UtilsStringProcessingExtraSpec.hs:10:1-17
+      (and originally defined in ‘tasty-1.5.3:Test.Tasty.Core’)
+    |
+154 |           let (before, after) = breakOn delim s
+    |                        ^^^^^
+
+[ 970 of 1025] Compiling Test.Unit.UtilsStringProcessingSpec ( test/Test/Unit/UtilsStringProcessingSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsStringProcessingSpec.o ) [Optimisation flags changed]
+test/Test/Unit/UtilsStringProcessingSpec.hs:35:7: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘firstChar’
+   |
+35 |       firstChar str = case str of
+   |       ^^^^^^^^^
+
+test/Test/Unit/UtilsStringProcessingSpec.hs:38:7: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘lastChar’
+   |
+38 |       lastChar str = case reverse str of
+   |       ^^^^^^^^
+
+test/Test/Unit/UtilsStringProcessingSpec.hs:41:7: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘hasLeadingSpace’
+   |
+41 |       hasLeadingSpace = not (null input) && isSpace (firstChar input)
+   |       ^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsStringProcessingSpec.hs:42:7: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘hasTrailingSpace’
+   |
+42 |       hasTrailingSpace = not (null input) && isSpace (lastChar input)
+   |       ^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsStringProcessingSpec.hs:74:7: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘titleInput’
+   |
+74 |       titleInput = toTitle input
+   |       ^^^^^^^^^^
+
+test/Test/Unit/UtilsStringProcessingSpec.hs:113:9: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘lines’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/UtilsStringProcessingSpec.hs:3:8-42
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.Data.OldList’)
+    |
+113 |         lines = splitBy '\n' wrapped
+    |         ^^^^^
+
+test/Test/Unit/UtilsStringProcessingSpec.hs:136:7: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘words’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/UtilsStringProcessingSpec.hs:3:8-42
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.Data.OldList’)
+    |
+136 |       words = filter (not . null) $ splitBy ' ' $ normalizeWhitespace input
+    |       ^^^^^
+
+test/Test/Unit/UtilsStringProcessingSpec.hs:144:7: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘lines’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/UtilsStringProcessingSpec.hs:3:8-42
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.Data.OldList’)
+    |
+144 |       lines = splitBy '\n' input
+    |       ^^^^^
+
+test/Test/Unit/UtilsStringProcessingSpec.hs:161:7: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘distanceZeroForIdentical’
+    |
+161 |       distanceZeroForIdentical = property $ (s1 == s2) ==> distance == 0
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsStringProcessingSpec.hs:170:7: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘lcsLength’
+    |
+170 |       lcsLength = length lcs
+    |       ^^^^^^^^^
+
+test/Test/Unit/UtilsStringProcessingSpec.hs:185:7: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘identicalStrings’
+    |
+185 |       identicalStrings = property $ (s1 == s2) ==> similarity == 1.0
+    |       ^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsStringProcessingSpec.hs:194:7: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘tokensReconstruct’
+    |
+194 |       tokensReconstruct = unwords tokens
+    |       ^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsStringProcessingSpec.hs:314:17: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘words’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/UtilsStringProcessingSpec.hs:3:8-42
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.Data.OldList’)
+    |
+314 |     wrapWords w words = go w words []
+    |                 ^^^^^
+
+test/Test/Unit/UtilsStringProcessingSpec.hs:365:5: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘tail’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/UtilsStringProcessingSpec.hs:3:8-42
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
+    |
+365 |     tail [] = []
+    |     ^^^^
+
+test/Test/Unit/UtilsStringProcessingSpec.hs:366:11: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘x’
+    |
+366 |     tail (x:xs) = xs
+    |           ^
+
+test/Test/Unit/UtilsStringProcessingSpec.hs:377:24: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘rest’ shadows the existing binding
+      bound at test/Test/Unit/UtilsStringProcessingSpec.hs:362:12
+    |
+377 |     filterSoundex (x:y:rest)
+    |                        ^^^^
+
+test/Test/Unit/UtilsStringProcessingSpec.hs:408:5: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘foldl'’ shadows the existing binding
+      imported from ‘Data.List’ at test/Test/Unit/UtilsStringProcessingSpec.hs:21:131-136
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.Data.Foldable’)
+    |
+408 |     foldl' f z [] = z
+    |     ^^^^^^
+
+test/Test/Unit/UtilsStringProcessingSpec.hs:408:12: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘f’
+    |
+408 |     foldl' f z [] = z
+    |            ^
+
+[ 971 of 1025] Compiling Test.Unit.UtilsStringProcessingTestSpec ( test/Test/Unit/UtilsStringProcessingTestSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsStringProcessingTestSpec.o ) [Optimisation flags changed]
+[ 972 of 1025] Compiling Test.Unit.UtilsStringPropertiesQuickCheckSpec ( test/Test/Unit/UtilsStringPropertiesQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsStringPropertiesQuickCheckSpec.o ) [Optimisation flags changed]
+test/Test/Unit/UtilsStringPropertiesQuickCheckSpec.hs:10:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Data.List’ is redundant
+      except perhaps to import instances from ‘Data.List’
+    To import instances alone, use: import Data.List()
+   |
+10 | import Data.List (isPrefixOf, isSuffixOf)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[ 973 of 1025] Compiling Test.Unit.UtilsStringPropertiesSpec ( test/Test/Unit/UtilsStringPropertiesSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsStringPropertiesSpec.o ) [Optimisation flags changed]
+[ 974 of 1025] Compiling Test.Unit.UtilsTestSpec ( test/Test/Unit/UtilsTestSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsTestSpec.o ) [Optimisation flags changed]
+test/Test/Unit/UtilsTestSpec.hs:12:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty’ is redundant
+      except perhaps to import instances from ‘Test.Tasty’
+    To import instances alone, use: import Test.Tasty()
+   |
+12 | import Test.Tasty (TestTree, testGroup)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsTestSpec.hs:13:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty.QuickCheck’ is redundant
+      except perhaps to import instances from ‘Test.Tasty.QuickCheck’
+    To import instances alone, use: import Test.Tasty.QuickCheck()
+   |
+13 | import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsTestSpec.hs:14:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.QuickCheck’ is redundant
+      except perhaps to import instances from ‘Test.QuickCheck’
+    To import instances alone, use: import Test.QuickCheck()
+   |
+14 | import Test.QuickCheck (Gen, Property, (==>))
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsTestSpec.hs:15:1: warning: [GHC-66111] [-Wunused-imports]
+    The qualified import of ‘Data.Text’ is redundant
+      except perhaps to import instances from ‘Data.Text’
+    To import instances alone, use: import Data.Text()
+   |
+15 | import qualified Data.Text as T
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsTestSpec.hs:16:28: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘isAlpha, isAlphaNum, toLower, toUpper’
+    from module ‘Data.Char’ is redundant
+   |
+16 | import Data.Char (isSpace, isAlpha, isAlphaNum, toLower, toUpper)
+   |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsTestSpec.hs:17:25: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘group, isSuffixOf, nub’
+    from module ‘Data.List’ is redundant
+   |
+17 | import Data.List (sort, nub, group, isInfixOf, isPrefixOf, isSuffixOf)
+   |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsTestSpec.hs:18:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Data.String’ is redundant
+      except perhaps to import instances from ‘Data.String’
+    To import instances alone, use: import Data.String()
+   |
+18 | import Data.String (IsString)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/UtilsTestSpec.hs:29:14: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘sep’ shadows the existing binding
+      bound at test/Test/Unit/UtilsTestSpec.hs:26:9
+   |
+29 |     splitOn' sep str acc
+   |              ^^^
+
+test/Test/Unit/UtilsTestSpec.hs:29:18: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘str’ shadows the existing binding
+      bound at test/Test/Unit/UtilsTestSpec.hs:26:13
+   |
+29 |     splitOn' sep str acc
+   |                  ^^^
+
+[ 975 of 1025] Compiling Test.Unit.UtilsUnicodePerformanceSpec ( test/Test/Unit/UtilsUnicodePerformanceSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsUnicodePerformanceSpec.o ) [Optimisation flags changed]
+[ 976 of 1025] Compiling Test.Unit.ValueAnalysisFlowQuickCheckSpec ( test/Test/Unit/ValueAnalysisFlowQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/ValueAnalysisFlowQuickCheckSpec.o ) [Optimisation flags changed]
+[ 977 of 1025] Compiling Test.Unit.ValueAnalysisFlowSpec ( test/Test/Unit/ValueAnalysisFlowSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/ValueAnalysisFlowSpec.o ) [Optimisation flags changed]
+[ 978 of 1025] Compiling Test.Unit.ValueAnalysisQuickCheckSpec ( test/Test/Unit/ValueAnalysisQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/ValueAnalysisQuickCheckSpec.o ) [Optimisation flags changed]
+[ 979 of 1025] Compiling Test.Unit.ValueAnalysisSpec ( test/Test/Unit/ValueAnalysisSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/ValueAnalysisSpec.o ) [Optimisation flags changed]
+[ 980 of 1025] Compiling Test.Unit.VerbositySpec ( test/Test/Unit/VerbositySpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/VerbositySpec.o ) [Optimisation flags changed]
+test/Test/Unit/VerbositySpec.hs:5:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty.HUnit’ is redundant
+      except perhaps to import instances from ‘Test.Tasty.HUnit’
+    To import instances alone, use: import Test.Tasty.HUnit()
+  |
+5 | import Test.Tasty.HUnit
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+
+[ 981 of 1025] Compiling Test.Unit.WorkingQuickCheckSpec ( test/Test/Unit/WorkingQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/WorkingQuickCheckSpec.o ) [Optimisation flags changed]
+[ 982 of 1025] Compiling Test.Unit.WorkingQuickCheckTestSpec ( test/Test/Unit/WorkingQuickCheckTestSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/WorkingQuickCheckTestSpec.o ) [Optimisation flags changed]
+<no location info>: error:
+    renameFile:renamePath:rename 'dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/WorkingQuickCheckTestSpec.o.tmp' to 'dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/WorkingQuickCheckTestSpec.o': does not exist (No such file or directory)
+
+[ 983 of 1025] Compiling TestSupport.Arbitrary ( test/TestSupport/Arbitrary.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/TestSupport/Arbitrary.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/TestSupport/Arbitrary.dyn_o ) [Optimisation flags changed]
+[ 984 of 1025] Compiling Test.Unit.TestUtilsCorePropertiesSpec ( test/Test/Unit/TestUtilsCorePropertiesSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TestUtilsCorePropertiesSpec.o ) [Optimisation flags changed]
+[ 985 of 1025] Compiling Test.Unit.TestTypeSystemInferenceSpec ( test/Test/Unit/TestTypeSystemInferenceSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TestTypeSystemInferenceSpec.o ) [Optimisation flags changed]
+[ 986 of 1025] Compiling Test.Unit.TestSymbolTableOperationsSpec ( test/Test/Unit/TestSymbolTableOperationsSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TestSymbolTableOperationsSpec.o ) [Optimisation flags changed]
+[ 987 of 1025] Compiling Test.Unit.TestStringProcessingSpec ( test/Test/Unit/TestStringProcessingSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TestStringProcessingSpec.o ) [Optimisation flags changed]
+[ 988 of 1025] Compiling Test.Unit.TestStringEncodingSpec ( test/Test/Unit/TestStringEncodingSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TestStringEncodingSpec.o ) [Optimisation flags changed]
+[ 989 of 1025] Compiling Test.Unit.TestSourceLocationMathPropertiesSpec ( test/Test/Unit/TestSourceLocationMathPropertiesSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TestSourceLocationMathPropertiesSpec.o ) [Optimisation flags changed]
+[ 990 of 1025] Compiling Test.Unit.TestQuickCheckPropertiesSpec ( test/Test/Unit/TestQuickCheckPropertiesSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TestQuickCheckPropertiesSpec.o ) [Optimisation flags changed]
+[ 991 of 1025] Compiling Test.Unit.TestParserErrorRecoverySpec ( test/Test/Unit/TestParserErrorRecoverySpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TestParserErrorRecoverySpec.o ) [Optimisation flags changed]
+[ 992 of 1025] Compiling Test.Unit.TestParserDirectivesSpec ( test/Test/Unit/TestParserDirectivesSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TestParserDirectivesSpec.o ) [Optimisation flags changed]
+[ 993 of 1025] Compiling Test.Unit.TestMemorySafetySpec ( test/Test/Unit/TestMemorySafetySpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TestMemorySafetySpec.o ) [Optimisation flags changed]
+test/Test/Unit/TestMemorySafetySpec.hs:15:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Parser’ is redundant
+      except perhaps to import instances from ‘Parser’
+    To import instances alone, use: import Parser()
+   |
+15 | import Parser hiding (FileDirectives, CodeBlock, TypusFile, parseTypus)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestMemorySafetySpec.hs:17:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘ErrorHandler’ is redundant
+      except perhaps to import instances from ‘ErrorHandler’
+    To import instances alone, use: import ErrorHandler()
+   |
+17 | import ErrorHandler hiding (ErrorLocation, TypeError, errorAt)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestMemorySafetySpec.hs:18:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Compiler.IR’ is redundant
+      except perhaps to import instances from ‘Compiler.IR’
+    To import instances alone, use: import Compiler.IR()
+   |
+18 | import Compiler.IR hiding (IRExpression)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestMemorySafetySpec.hs:20:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Dependencies’ is redundant
+      except perhaps to import instances from ‘Dependencies’
+    To import instances alone, use: import Dependencies()
+   |
+20 | import Dependencies hiding (TypeExpr, TypeEnvironment, DependentTypeChecker, newDependentTypeChecker, addType, addConstraint, solveConstraints, typeEnv, TypeConstraint)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestMemorySafetySpec.hs:23:1: warning: [GHC-66111] [-Wunused-imports]
+    The qualified import of ‘Data.Text.Encoding’ is redundant
+      except perhaps to import instances from ‘Data.Text.Encoding’
+    To import instances alone, use: import Data.Text.Encoding()
+   |
+23 | import qualified Data.Text.Encoding as TE
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestMemorySafetySpec.hs:29:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Data.List’ is redundant
+      except perhaps to import instances from ‘Data.List’
+    To import instances alone, use: import Data.List()
+   |
+29 | import Data.List (isInfixOf)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestMemorySafetySpec.hs:100:75: warning: [GHC-18042] [-Wtype-defaults]
+    • Defaulting the type variable ‘a0’ to type ‘Integer’ in the following constraints
+        (Num a0)
+          arising from the literal ‘1’
+          at test/Test/Unit/TestMemorySafetySpec.hs:100:75
+        (Enum a0)
+          arising from the arithmetic sequence ‘1 .. 1000’
+          at test/Test/Unit/TestMemorySafetySpec.hs:100:74-82
+        (Show a0)
+          arising from a use of ‘show’
+          at test/Test/Unit/TestMemorySafetySpec.hs:100:31-34
+    • In the expression: 1
+      In the expression: [1 .. 1000]
+      In a stmt of a list comprehension: i <- [1 .. 1000]
+    |
+100 |           types = [("type" ++ show i, TypeVar ("Type" ++ show i)) | i <- [1..1000]]
+    |                                                                           ^
+
+test/Test/Unit/TestMemorySafetySpec.hs:106:105: warning: [GHC-18042] [-Wtype-defaults]
+    • Defaulting the type variable ‘a0’ to type ‘Integer’ in the following constraints
+        (Num a0)
+          arising from the literal ‘1’
+          at test/Test/Unit/TestMemorySafetySpec.hs:106:105
+        (Enum a0)
+          arising from the arithmetic sequence ‘1 .. 1000’
+          at test/Test/Unit/TestMemorySafetySpec.hs:106:104-112
+        (Show a0)
+          arising from a use of ‘show’
+          at test/Test/Unit/TestMemorySafetySpec.hs:106:62-65
+    • In the expression: 1
+      In the expression: [1 .. 1000]
+      In a stmt of a list comprehension: i <- [1 .. 1000]
+    |
+106 |           constraints = [EqualityConstraint (TypeVar ("a" ++ show i)) (TypeVar ("b" ++ show i)) | i <- [1..1000]]
+    |                                                                                                         ^
+
+test/Test/Unit/TestMemorySafetySpec.hs:113:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘largeInput’
+    |
+113 |       let largeInput = concat (replicate 1000 "package main\n\nfunc main() {\n    data := make([]byte, 100)\n    processData(data)\n}\n\nfunc processData(d []byte) {\n    // Process data\n}\n")
+    |           ^^^^^^^^^^
+
+test/Test/Unit/TestMemorySafetySpec.hs:114:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+    |
+114 |           result = Ownership.analyzeOwnership largeInput
+    |           ^^^^^^
+
+test/Test/Unit/TestMemorySafetySpec.hs:118:59: warning: [GHC-18042] [-Wtype-defaults]
+    • Defaulting the type variable ‘a0’ to type ‘Integer’ in the following constraints
+        (Num a0)
+          arising from the literal ‘1’
+          at test/Test/Unit/TestMemorySafetySpec.hs:118:59
+        (Enum a0)
+          arising from the arithmetic sequence ‘1 .. 1000’
+          at test/Test/Unit/TestMemorySafetySpec.hs:118:58-66
+        (Show a0)
+          arising from a use of ‘show’
+          at test/Test/Unit/TestMemorySafetySpec.hs:118:37-40
+    • In the expression: 1
+      In the expression: [1 .. 1000]
+      In a stmt of a list comprehension: i <- [1 .. 1000]
+    |
+118 |       let params = [IRParam ("x" ++ show i) IRInt | i <- [1..1000]]
+    |                                                           ^
+
+test/Test/Unit/TestMemorySafetySpec.hs:119:103: warning: [GHC-18042] [-Wtype-defaults]
+    • Defaulting the type variable ‘a0’ to type ‘Integer’ in the following constraints
+        (Enum a0)
+          arising from the arithmetic sequence ‘1 .. 999’
+          at test/Test/Unit/TestMemorySafetySpec.hs:119:103-110
+        (Show a0)
+          arising from a use of ‘show’
+          at test/Test/Unit/TestMemorySafetySpec.hs:119:54-57
+        (Num a0)
+          arising from a use of ‘+’
+          at test/Test/Unit/TestMemorySafetySpec.hs:119:90
+    • In the expression: [1 .. 999]
+      In a stmt of a list comprehension: i <- [1 .. 999]
+      In the expression:
+        [IRBinaryOp
+           Add (IRVariable ("x" ++ show i))
+           (IRVariable ("x" ++ show (i + 1))) |
+           i <- [1 .. 999]]
+    |
+119 |           body = [IRBinaryOp Add (IRVariable ("x" ++ show i)) (IRVariable ("x" ++ show (i+1))) | i <- [1..999]]
+    |                                                                                                       ^^^^^^^^
+
+test/Test/Unit/TestMemorySafetySpec.hs:158:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘circularRef’
+    |
+158 |           circularRef = error "Circular reference not implemented in this test"
+    |           ^^^^^^^^^^^
+
+test/Test/Unit/TestMemorySafetySpec.hs:171:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘concurrentOps’
+    |
+171 |           concurrentOps = error "Concurrent operations not implemented in this test"
+    |           ^^^^^^^^^^^^^
+
+test/Test/Unit/TestMemorySafetySpec.hs:199:15: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘constraint’
+    |
+199 | addConstraint constraint checker = checker  -- Simplified
+    |               ^^^^^^^^^^
+
+test/Test/Unit/TestMemorySafetySpec.hs:247:17: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘span’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/TestMemorySafetySpec.hs:7:8-37
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
+    |
+247 | locatedWithSpan span value = Located value span
+    |                 ^^^^
+
+test/Test/Unit/TestMemorySafetySpec.hs:261:20: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘line’ shadows the existing bindings
+      imported from ‘ErrorHandler’ at test/Test/Unit/TestMemorySafetySpec.hs:17:1-62
+      (and originally defined in ‘Compiler.Errors.Types’)
+      defined at test/Test/Unit/TestMemorySafetySpec.hs:251:5
+    |
+261 | errorAt (SourcePos line column) message = TypeError message (ErrorLocation line column)
+    |                    ^^^^
+
+test/Test/Unit/TestMemorySafetySpec.hs:261:25: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘column’ shadows the existing bindings
+      imported from ‘ErrorHandler’ at test/Test/Unit/TestMemorySafetySpec.hs:17:1-62
+      (and originally defined in ‘Compiler.Errors.Types’)
+      defined at test/Test/Unit/TestMemorySafetySpec.hs:252:5
+    |
+261 | errorAt (SourcePos line column) message = TypeError message (ErrorLocation line column)
+    |                         ^^^^^^
+
+test/Test/Unit/TestMemorySafetySpec.hs:261:33: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘message’ shadows the existing binding
+      imported from ‘ErrorHandler’ at test/Test/Unit/TestMemorySafetySpec.hs:17:1-62
+      (and originally defined in ‘Compiler.Errors.Core’)
+    |
+261 | errorAt (SourcePos line column) message = TypeError message (ErrorLocation line column)
+    |                                 ^^^^^^^
+
+test/Test/Unit/TestMemorySafetySpec.hs:264:24: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘message’ shadows the existing binding
+      imported from ‘ErrorHandler’ at test/Test/Unit/TestMemorySafetySpec.hs:17:1-62
+      (and originally defined in ‘Compiler.Errors.Core’)
+    |
+264 | formatError (TypeError message (ErrorLocation line column)) = "Error at " ++ show line ++ ":" ++ 
+    |                        ^^^^^^^
+
+test/Test/Unit/TestMemorySafetySpec.hs:264:47: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘line’ shadows the existing bindings
+      imported from ‘ErrorHandler’ at test/Test/Unit/TestMemorySafetySpec.hs:17:1-62
+      (and originally defined in ‘Compiler.Errors.Types’)
+      defined at test/Test/Unit/TestMemorySafetySpec.hs:251:5
+    |
+264 | formatError (TypeError message (ErrorLocation line column)) = "Error at " ++ show line ++ ":" ++ 
+    |                                               ^^^^
+
+test/Test/Unit/TestMemorySafetySpec.hs:264:52: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘column’ shadows the existing bindings
+      imported from ‘ErrorHandler’ at test/Test/Unit/TestMemorySafetySpec.hs:17:1-62
+      (and originally defined in ‘Compiler.Errors.Types’)
+      defined at test/Test/Unit/TestMemorySafetySpec.hs:252:5
+    |
+264 | formatError (TypeError message (ErrorLocation line column)) = "Error at " ++ show line ++ ":" ++ 
+    |                                                    ^^^^^^
+
+[ 994 of 1025] Compiling Test.Unit.TestListPropertiesSpec ( test/Test/Unit/TestListPropertiesSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TestListPropertiesSpec.o ) [Optimisation flags changed]
+test/Test/Unit/TestListPropertiesSpec.hs:12:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Utils’ is redundant
+      except perhaps to import instances from ‘Utils’
+    To import instances alone, use: import Utils()
+   |
+12 | import Utils
+   | ^^^^^^^^^^^^
+
+test/Test/Unit/TestListPropertiesSpec.hs:13:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘SourceLocation’ is redundant
+      except perhaps to import instances from ‘SourceLocation’
+    To import instances alone, use: import SourceLocation()
+   |
+13 | import SourceLocation
+   | ^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestListPropertiesSpec.hs:14:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘ErrorHandler’ is redundant
+      except perhaps to import instances from ‘ErrorHandler’
+    To import instances alone, use: import ErrorHandler()
+   |
+14 | import ErrorHandler
+   | ^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestListPropertiesSpec.hs:15:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Dependencies’ is redundant
+      except perhaps to import instances from ‘Dependencies’
+    To import instances alone, use: import Dependencies()
+   |
+15 | import Dependencies
+   | ^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestListPropertiesSpec.hs:16:1: warning: [GHC-66111] [-Wunused-imports]
+    The qualified import of ‘Data.Text’ is redundant
+      except perhaps to import instances from ‘Data.Text’
+    To import instances alone, use: import Data.Text()
+   |
+16 | import qualified Data.Text as T
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestListPropertiesSpec.hs:337:11: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘x’
+    |
+337 | tails xs@(x:xs') = xs : tails xs'
+    |           ^
+
+[ 995 of 1025] Compiling Test.Unit.Tests  ( test/Test/Unit/Tests.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/Tests.o ) [Optimisation flags changed]
+[ 996 of 1025] Compiling Test.Unit        ( test/Test/Unit.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit.o ) [Optimisation flags changed]
+[ 997 of 1025] Compiling Main             ( test/Main.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Main.o ) [Optimisation flags changed]
+[ 998 of 1025] Compiling Test.Unit.TestGoToolchainIntegrationSpec ( test/Test/Unit/TestGoToolchainIntegrationSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TestGoToolchainIntegrationSpec.o ) [Optimisation flags changed]
+test/Test/Unit/TestGoToolchainIntegrationSpec.hs:9:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty.QuickCheck’ is redundant
+      except perhaps to import instances from ‘Test.Tasty.QuickCheck’
+    To import instances alone, use: import Test.Tasty.QuickCheck()
+  |
+9 | import Test.Tasty.QuickCheck
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestGoToolchainIntegrationSpec.hs:12:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Parser’ is redundant
+      except perhaps to import instances from ‘Parser’
+    To import instances alone, use: import Parser()
+   |
+12 | import Parser
+   | ^^^^^^^^^^^^^
+
+test/Test/Unit/TestGoToolchainIntegrationSpec.hs:13:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘SourceLocation’ is redundant
+      except perhaps to import instances from ‘SourceLocation’
+    To import instances alone, use: import SourceLocation()
+   |
+13 | import SourceLocation
+   | ^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestGoToolchainIntegrationSpec.hs:14:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘ErrorHandler’ is redundant
+      except perhaps to import instances from ‘ErrorHandler’
+    To import instances alone, use: import ErrorHandler()
+   |
+14 | import ErrorHandler
+   | ^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestGoToolchainIntegrationSpec.hs:15:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Compiler.IR’ is redundant
+      except perhaps to import instances from ‘Compiler.IR’
+    To import instances alone, use: import Compiler.IR()
+   |
+15 | import Compiler.IR
+   | ^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestGoToolchainIntegrationSpec.hs:16:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Ownership’ is redundant
+      except perhaps to import instances from ‘Ownership’
+    To import instances alone, use: import Ownership()
+   |
+16 | import Ownership
+   | ^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestGoToolchainIntegrationSpec.hs:17:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Dependencies’ is redundant
+      except perhaps to import instances from ‘Dependencies’
+    To import instances alone, use: import Dependencies()
+   |
+17 | import Dependencies
+   | ^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestGoToolchainIntegrationSpec.hs:18:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Utils’ is redundant
+      except perhaps to import instances from ‘Utils’
+    To import instances alone, use: import Utils()
+   |
+18 | import Utils
+   | ^^^^^^^^^^^^
+
+test/Test/Unit/TestGoToolchainIntegrationSpec.hs:19:1: warning: [GHC-66111] [-Wunused-imports]
+    The qualified import of ‘Data.Text’ is redundant
+      except perhaps to import instances from ‘Data.Text’
+    To import instances alone, use: import Data.Text()
+   |
+19 | import qualified Data.Text as T
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestGoToolchainIntegrationSpec.hs:50:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘moduleName’
+   |
+50 |       let moduleName = "example.com/mymodule"
+   |           ^^^^^^^^^^
+
+test/Test/Unit/TestGoToolchainIntegrationSpec.hs:51:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘goCode’
+   |
+51 |           goCode = "package main\n\nfunc main() {}"
+   |           ^^^^^^
+
+test/Test/Unit/TestGoToolchainIntegrationSpec.hs:56:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘goCode’
+   |
+56 |       let goCode = "package main\n\nfunc main() {}"
+   |           ^^^^^^
+
+test/Test/Unit/TestGoToolchainIntegrationSpec.hs:69:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘goCode’
+   |
+69 |       let goCode = "package main\n\n// main is the entry point\nfunc main() {}"
+   |           ^^^^^^
+
+[ 999 of 1025] Compiling Test.Unit.TestConcurrentSafetySpec ( test/Test/Unit/TestConcurrentSafetySpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TestConcurrentSafetySpec.o ) [Optimisation flags changed]
+test/Test/Unit/TestConcurrentSafetySpec.hs:10:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty.QuickCheck’ is redundant
+      except perhaps to import instances from ‘Test.Tasty.QuickCheck’
+    To import instances alone, use: import Test.Tasty.QuickCheck()
+   |
+10 | import Test.Tasty.QuickCheck
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestConcurrentSafetySpec.hs:12:1: warning: [GHC-66111] [-Wunused-imports]
+    The qualified import of ‘Parser’ is redundant
+      except perhaps to import instances from ‘Parser’
+    To import instances alone, use: import Parser()
+   |
+12 | import qualified Parser as P
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestConcurrentSafetySpec.hs:14:1: warning: [GHC-66111] [-Wunused-imports]
+    The qualified import of ‘ErrorHandler’ is redundant
+      except perhaps to import instances from ‘ErrorHandler’
+    To import instances alone, use: import ErrorHandler()
+   |
+14 | import qualified ErrorHandler as EH
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestConcurrentSafetySpec.hs:15:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Compiler.IR’ is redundant
+      except perhaps to import instances from ‘Compiler.IR’
+    To import instances alone, use: import Compiler.IR()
+   |
+15 | import Compiler.IR
+   | ^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestConcurrentSafetySpec.hs:16:1: warning: [GHC-66111] [-Wunused-imports]
+    The qualified import of ‘Ownership’ is redundant
+      except perhaps to import instances from ‘Ownership’
+    To import instances alone, use: import Ownership()
+   |
+16 | import qualified Ownership as O
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestConcurrentSafetySpec.hs:19:1: warning: [GHC-66111] [-Wunused-imports]
+    The qualified import of ‘Data.Text’ is redundant
+      except perhaps to import instances from ‘Data.Text’
+    To import instances alone, use: import Data.Text()
+   |
+19 | import qualified Data.Text as T
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestConcurrentSafetySpec.hs:21:36: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘MVar’ from module ‘Control.Concurrent’ is redundant
+   |
+21 | import Control.Concurrent (forkIO, MVar, newEmptyMVar, putMVar, takeMVar)
+   |                                    ^^^^
+
+test/Test/Unit/TestConcurrentSafetySpec.hs:98:13: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘span’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/TestConcurrentSafetySpec.hs:4:8-41
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
+   |
+98 |       all (\span -> SL.spanStart span == SL.spanStart span1 && SL.spanEnd span == SL.spanEnd span2) results @?= True
+   |             ^^^^
+
+test/Test/Unit/TestConcurrentSafetySpec.hs:262:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘numThreads’
+    |
+262 |           numThreads = 10
+    |           ^^^^^^^^^^
+
+test/Test/Unit/TestConcurrentSafetySpec.hs:264:27: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘i’
+    |
+264 |       zipWithM_ (\checker i -> do
+    |                           ^
+
+test/Test/Unit/TestConcurrentSafetySpec.hs:267:15: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘checker'’
+    |
+267 |           let checker' = checker  -- Simplified test
+    |               ^^^^^^^^
+
+test/Test/Unit/TestConcurrentSafetySpec.hs:272:21: warning: [GHC-18042] [-Wtype-defaults]
+    • Defaulting the type variable ‘b0’ to type ‘Integer’ in the following constraints
+        (Num b0)
+          arising from the literal ‘0’
+          at test/Test/Unit/TestConcurrentSafetySpec.hs:272:21
+        (Enum b0)
+          arising from the arithmetic sequence ‘0 .. 9’
+          at test/Test/Unit/TestConcurrentSafetySpec.hs:272:20-25
+    • In the expression: 0
+      In the third argument of ‘zipWithM_’, namely ‘[0 .. 9]’
+      In a stmt of a 'do' block:
+        zipWithM_
+          (\ checker i
+             -> do result <- newEmptyMVar
+                   void
+                     $ forkIO
+                         $ do let ...
+                              ....
+                   r <- takeMVar result
+                   ....)
+          checkers [0 .. 9]
+    |
+272 |         ) checkers [0..9]
+    |                     ^
+
+test/Test/Unit/TestConcurrentSafetySpec.hs:344:21: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘span’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/TestConcurrentSafetySpec.hs:4:8-41
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
+    |
+344 | testLocatedWithSpan span value = TestLocated value span
+    |                     ^^^^
+
+test/Test/Unit/TestConcurrentSafetySpec.hs:360:7: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘line’ shadows the existing binding
+      defined at test/Test/Unit/TestConcurrentSafetySpec.hs:393:1
+    |
+360 | posAt line column = TestSourcePos line column
+    |       ^^^^
+
+test/Test/Unit/TestConcurrentSafetySpec.hs:360:12: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘column’ shadows the existing binding
+      defined at test/Test/Unit/TestConcurrentSafetySpec.hs:396:1
+    |
+360 | posAt line column = TestSourcePos line column
+    |            ^^^^^^
+
+test/Test/Unit/TestConcurrentSafetySpec.hs:381:13: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘span’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/TestConcurrentSafetySpec.hs:4:8-41
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
+    |
+381 | isValidSpan span = testPosLine (testSpanStart span) > 0 && testPosLine (testSpanEnd span) > 0
+    |             ^^^^
+
+test/Test/Unit/TestConcurrentSafetySpec.hs:440:17: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘span’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/TestConcurrentSafetySpec.hs:4:8-41
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
+    |
+440 | testIsValidSpan span = testPosLine (testSpanStart span) > 0 && testPosLine (testSpanEnd span) > 0
+    |                 ^^^^
+
+[1000 of 1025] Compiling Test.Unit.TestCliIntegrationSpec ( test/Test/Unit/TestCliIntegrationSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TestCliIntegrationSpec.o ) [Optimisation flags changed]
+test/Test/Unit/TestCliIntegrationSpec.hs:9:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty.QuickCheck’ is redundant
+      except perhaps to import instances from ‘Test.Tasty.QuickCheck’
+    To import instances alone, use: import Test.Tasty.QuickCheck()
+  |
+9 | import Test.Tasty.QuickCheck
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestCliIntegrationSpec.hs:11:1: warning: [GHC-66111] [-Wunused-imports]
+    The qualified import of ‘Parser’ is redundant
+      except perhaps to import instances from ‘Parser’
+    To import instances alone, use: import Parser()
+   |
+11 | import qualified Parser as P
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestCliIntegrationSpec.hs:12:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘SourceLocation’ is redundant
+      except perhaps to import instances from ‘SourceLocation’
+    To import instances alone, use: import SourceLocation()
+   |
+12 | import SourceLocation
+   | ^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestCliIntegrationSpec.hs:13:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘ErrorHandler’ is redundant
+      except perhaps to import instances from ‘ErrorHandler’
+    To import instances alone, use: import ErrorHandler()
+   |
+13 | import ErrorHandler
+   | ^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestCliIntegrationSpec.hs:14:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Compiler.IR’ is redundant
+      except perhaps to import instances from ‘Compiler.IR’
+    To import instances alone, use: import Compiler.IR()
+   |
+14 | import Compiler.IR
+   | ^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestCliIntegrationSpec.hs:15:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Ownership’ is redundant
+      except perhaps to import instances from ‘Ownership’
+    To import instances alone, use: import Ownership()
+   |
+15 | import Ownership
+   | ^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestCliIntegrationSpec.hs:16:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Dependencies’ is redundant
+      except perhaps to import instances from ‘Dependencies’
+    To import instances alone, use: import Dependencies()
+   |
+16 | import Dependencies
+   | ^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestCliIntegrationSpec.hs:17:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Utils’ is redundant
+      except perhaps to import instances from ‘Utils’
+    To import instances alone, use: import Utils()
+   |
+17 | import Utils
+   | ^^^^^^^^^^^^
+
+test/Test/Unit/TestCliIntegrationSpec.hs:18:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Cli’ is redundant
+      except perhaps to import instances from ‘Cli’
+    To import instances alone, use: import Cli()
+   |
+18 | import Cli
+   | ^^^^^^^^^^
+
+test/Test/Unit/TestCliIntegrationSpec.hs:19:1: warning: [GHC-66111] [-Wunused-imports]
+    The qualified import of ‘Data.Text’ is redundant
+      except perhaps to import instances from ‘Data.Text’
+    To import instances alone, use: import Data.Text()
+   |
+19 | import qualified Data.Text as T
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestCliIntegrationSpec.hs:109:18: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘opts’
+    |
+109 |            Right opts -> do
+    |                  ^^^^
+
+test/Test/Unit/TestCliIntegrationSpec.hs:121:18: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘opts’
+    |
+121 |            Right opts -> do
+    |                  ^^^^
+
+test/Test/Unit/TestCliIntegrationSpec.hs:122:18: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+    |
+122 |              let result = testAnalyzeOwnership input
+    |                  ^^^^^^
+
+test/Test/Unit/TestCliIntegrationSpec.hs:129:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘checker’
+    |
+129 |           checker = testNewDependentTypeChecker ()
+    |           ^^^^^^^
+
+test/Test/Unit/TestCliIntegrationSpec.hs:131:18: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘opts’
+    |
+131 |            Right opts -> do
+    |                  ^^^^
+
+test/Test/Unit/TestCliIntegrationSpec.hs:132:18: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+    |
+132 |              let result = return ()  -- Simplified test
+    |                  ^^^^^^
+
+test/Test/Unit/TestCliIntegrationSpec.hs:217:22: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘ownershipResult’
+    |
+217 |                  let ownershipResult = testAnalyzeOwnership input
+    |                      ^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestCliIntegrationSpec.hs:220:22: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘checker’
+    |
+220 |                  let checker = testNewDependentTypeChecker ()
+    |                      ^^^^^^^
+
+test/Test/Unit/TestCliIntegrationSpec.hs:221:22: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘typeCheckResult’
+    |
+221 |                      typeCheckResult = return ()  -- Simplified test
+    |                      ^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestCliIntegrationSpec.hs:255:5: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘parseArgs’ shadows the existing binding
+      imported from ‘Cli’ at test/Test/Unit/TestCliIntegrationSpec.hs:18:1-10
+    |
+255 |     parseArgs [] opts = opts
+    |     ^^^^^^^^^
+
+test/Test/Unit/TestCliIntegrationSpec.hs:268:28: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘timeout’ shadows the existing binding
+      defined at test/Test/Unit/TestCliIntegrationSpec.hs:240:5
+    |
+268 |     parseArgs ("--timeout":timeout:rest) opts = 
+    |                            ^^^^^^^
+
+[1001 of 1025] Compiling Test.Unit.TestBoundaryConditionsSpec ( test/Test/Unit/TestBoundaryConditionsSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TestBoundaryConditionsSpec.o ) [Optimisation flags changed]
+test/Test/Unit/TestBoundaryConditionsSpec.hs:9:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty.QuickCheck’ is redundant
+      except perhaps to import instances from ‘Test.Tasty.QuickCheck’
+    To import instances alone, use: import Test.Tasty.QuickCheck()
+  |
+9 | import Test.Tasty.QuickCheck
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestBoundaryConditionsSpec.hs:14:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Compiler.IR’ is redundant
+      except perhaps to import instances from ‘Compiler.IR’
+    To import instances alone, use: import Compiler.IR()
+   |
+14 | import Compiler.IR
+   | ^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestBoundaryConditionsSpec.hs:98:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘collector’
+   |
+98 |           collector = ErrorHandler.newErrorCollector
+   |           ^^^^^^^^^
+
+test/Test/Unit/TestBoundaryConditionsSpec.hs:117:11: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘span’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/TestBoundaryConditionsSpec.hs:3:8-43
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
+    |
+117 |           span = SourceLocation.spanBetween pos pos
+    |           ^^^^
+
+test/Test/Unit/TestBoundaryConditionsSpec.hs:125:11: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘span’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/TestBoundaryConditionsSpec.hs:3:8-43
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
+    |
+125 |           span = SourceLocation.spanBetween start end
+    |           ^^^^
+
+test/Test/Unit/TestBoundaryConditionsSpec.hs:161:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘checker’
+    |
+161 |       let checker = Dependencies.newDependentTypeChecker
+    |           ^^^^^^^
+
+test/Test/Unit/TestBoundaryConditionsSpec.hs:195:21: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘span’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/TestBoundaryConditionsSpec.hs:3:8-43
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
+    |
+195 | testLocatedWithSpan span value = TestLocated value span
+    |                     ^^^^
+
+[1002 of 1025] Compiling Test.Unit.TestArithmeticPropertiesSpec ( test/Test/Unit/TestArithmeticPropertiesSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TestArithmeticPropertiesSpec.o ) [Optimisation flags changed]
+test/Test/Unit/TestArithmeticPropertiesSpec.hs:11:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.QuickCheck’ is redundant
+      except perhaps to import instances from ‘Test.QuickCheck’
+    To import instances alone, use: import Test.QuickCheck()
+   |
+11 | import Test.QuickCheck
+   | ^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestArithmeticPropertiesSpec.hs:12:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Utils’ is redundant
+      except perhaps to import instances from ‘Utils’
+    To import instances alone, use: import Utils()
+   |
+12 | import Utils
+   | ^^^^^^^^^^^^
+
+test/Test/Unit/TestArithmeticPropertiesSpec.hs:13:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘SourceLocation’ is redundant
+      except perhaps to import instances from ‘SourceLocation’
+    To import instances alone, use: import SourceLocation()
+   |
+13 | import SourceLocation
+   | ^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestArithmeticPropertiesSpec.hs:14:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘ErrorHandler’ is redundant
+      except perhaps to import instances from ‘ErrorHandler’
+    To import instances alone, use: import ErrorHandler()
+   |
+14 | import ErrorHandler
+   | ^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestArithmeticPropertiesSpec.hs:15:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Compiler.IR’ is redundant
+      except perhaps to import instances from ‘Compiler.IR’
+    To import instances alone, use: import Compiler.IR()
+   |
+15 | import Compiler.IR
+   | ^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestArithmeticPropertiesSpec.hs:16:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Ownership’ is redundant
+      except perhaps to import instances from ‘Ownership’
+    To import instances alone, use: import Ownership()
+   |
+16 | import Ownership
+   | ^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestArithmeticPropertiesSpec.hs:17:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Dependencies’ is redundant
+      except perhaps to import instances from ‘Dependencies’
+    To import instances alone, use: import Dependencies()
+   |
+17 | import Dependencies
+   | ^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestArithmeticPropertiesSpec.hs:18:1: warning: [GHC-66111] [-Wunused-imports]
+    The qualified import of ‘Data.Text’ is redundant
+      except perhaps to import instances from ‘Data.Text’
+    To import instances alone, use: import Data.Text()
+   |
+18 | import qualified Data.Text as T
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1003 of 1025] Compiling Test.Unit.TestAnalyzerIntegrationSpec ( test/Test/Unit/TestAnalyzerIntegrationSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TestAnalyzerIntegrationSpec.o ) [Optimisation flags changed]
+test/Test/Unit/TestAnalyzerIntegrationSpec.hs:9:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty.QuickCheck’ is redundant
+      except perhaps to import instances from ‘Test.Tasty.QuickCheck’
+    To import instances alone, use: import Test.Tasty.QuickCheck()
+  |
+9 | import Test.Tasty.QuickCheck
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestAnalyzerIntegrationSpec.hs:12:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘SourceLocation’ is redundant
+      except perhaps to import instances from ‘SourceLocation’
+    To import instances alone, use: import SourceLocation()
+   |
+12 | import SourceLocation
+   | ^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestAnalyzerIntegrationSpec.hs:13:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘ErrorHandler’ is redundant
+      except perhaps to import instances from ‘ErrorHandler’
+    To import instances alone, use: import ErrorHandler()
+   |
+13 | import ErrorHandler
+   | ^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestAnalyzerIntegrationSpec.hs:14:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Compiler.IR’ is redundant
+      except perhaps to import instances from ‘Compiler.IR’
+    To import instances alone, use: import Compiler.IR()
+   |
+14 | import Compiler.IR
+   | ^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestAnalyzerIntegrationSpec.hs:16:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Dependencies’ is redundant
+      except perhaps to import instances from ‘Dependencies’
+    To import instances alone, use: import Dependencies()
+   |
+16 | import Dependencies
+   | ^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/TestAnalyzerIntegrationSpec.hs:17:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Utils’ is redundant
+      except perhaps to import instances from ‘Utils’
+    To import instances alone, use: import Utils()
+   |
+17 | import Utils
+   | ^^^^^^^^^^^^
+
+test/Test/Unit/TestAnalyzerIntegrationSpec.hs:18:1: warning: [GHC-66111] [-Wunused-imports]
+    The qualified import of ‘Data.Text’ is redundant
+      except perhaps to import instances from ‘Data.Text’
+    To import instances alone, use: import Data.Text()
+   |
+18 | import qualified Data.Text as T
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1004 of 1025] Compiling Test.Unit.SourceLocationCalculationSpec ( test/Test/Unit/SourceLocationCalculationSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/SourceLocationCalculationSpec.o ) [Optimisation flags changed]
+test/Test/Unit/SourceLocationCalculationSpec.hs:11:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty’ is redundant
+      except perhaps to import instances from ‘Test.Tasty’
+    To import instances alone, use: import Test.Tasty()
+   |
+11 | import Test.Tasty
+   | ^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/SourceLocationCalculationSpec.hs:12:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty.QuickCheck’ is redundant
+      except perhaps to import instances from ‘Test.Tasty.QuickCheck’
+    To import instances alone, use: import Test.Tasty.QuickCheck()
+   |
+12 | import Test.Tasty.QuickCheck
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1005 of 1025] Compiling Test.Unit.NewQuickCheckTestSuiteSpec ( test/Test/Unit/NewQuickCheckTestSuiteSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/NewQuickCheckTestSuiteSpec.o ) [Optimisation flags changed]
+test/Test/Unit/NewQuickCheckTestSuiteSpec.hs:114:16: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘after’ shadows the existing binding
+      imported from ‘Test.Tasty’ at test/Test/Unit/NewQuickCheckTestSuiteSpec.hs:13:1-17
+      (and originally defined in ‘tasty-1.5.3:Test.Tasty.Core’)
+    |
+114 |   let (before, after) = breakOn [c] s
+    |                ^^^^^
+
+test/Test/Unit/NewQuickCheckTestSuiteSpec.hs:151:40: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘span’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/NewQuickCheckTestSuiteSpec.hs:5:8-43
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
+    |
+151 | prop_located_preserves_value val start span = locatedValue (Located val start span) === val
+    |                                        ^^^^
+
+test/Test/Unit/NewQuickCheckTestSuiteSpec.hs:154:39: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘span’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/NewQuickCheckTestSuiteSpec.hs:5:8-43
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
+    |
+154 | prop_located_preserves_span val start span = locatedSpan (Located val start span) === span
+    |                                       ^^^^
+
+test/Test/Unit/NewQuickCheckTestSuiteSpec.hs:182:40: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘code’
+    |
+182 | prop_code_block_non_empty (CodeBlock _ code _) = property $ True -- Allow empty code blocks
+    |                                        ^^^^
+
+test/Test/Unit/NewQuickCheckTestSuiteSpec.hs:197:26: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘span’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/NewQuickCheckTestSuiteSpec.hs:5:8-43
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
+    |
+197 |     all (\(CodeBlock _ _ span) -> isValidSpan span) blocks
+    |                          ^^^^
+
+[1006 of 1025] Compiling Test.Unit.CoreParserQuickCheckSpec ( test/Test/Unit/CoreParserQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/CoreParserQuickCheckSpec.o ) [Optimisation flags changed]
+test/Test/Unit/CoreParserQuickCheckSpec.hs:57:17: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘file’
+   |
+57 |           Right file -> property $ True
+   |                 ^^^^
+
+test/Test/Unit/CoreParserQuickCheckSpec.hs:70:17: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘file’
+   |
+70 |           Right file -> property $ True
+   |                 ^^^^
+
+test/Test/Unit/CoreParserQuickCheckSpec.hs:80:13: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘file’
+   |
+80 |       Right file -> property $ True
+   |             ^^^^
+
+test/Test/Unit/CoreParserQuickCheckSpec.hs:100:13: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘file’
+    |
+100 |       Right file -> property $ True
+    |             ^^^^
+
+test/Test/Unit/CoreParserQuickCheckSpec.hs:114:19: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘file’
+    |
+114 |             Right file -> property $ True
+    |                   ^^^^
+
+test/Test/Unit/CoreParserQuickCheckSpec.hs:124:13: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘file’
+    |
+124 |       Right file -> property $ True
+    |             ^^^^
+
+test/Test/Unit/CoreParserQuickCheckSpec.hs:134:13: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘file’
+    |
+134 |       Right file -> property $ True
+    |             ^^^^
+
+test/Test/Unit/CoreParserQuickCheckSpec.hs:144:13: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘file’
+    |
+144 |       Right file -> property $ True
+    |             ^^^^
+
+test/Test/Unit/CoreParserQuickCheckSpec.hs:154:13: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘file’
+    |
+154 |       Right file -> property $ True
+    |             ^^^^
+
+test/Test/Unit/CoreParserQuickCheckSpec.hs:164:13: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘file’
+    |
+164 |       Right file -> property $ True
+    |             ^^^^
+
+test/Test/Unit/CoreParserQuickCheckSpec.hs:174:13: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘file’
+    |
+174 |       Right file -> property $ True
+    |             ^^^^
+
+[1007 of 1025] Compiling Test.Unit.CoreOwnershipQuickCheckSpec ( test/Test/Unit/CoreOwnershipQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/CoreOwnershipQuickCheckSpec.o ) [Optimisation flags changed]
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:16:1: warning: [GHC-66111] [-Wunused-imports]
+    The qualified import of ‘Ownership.Common.Types’ is redundant
+      except perhaps to import instances from ‘Ownership.Common.Types’
+    To import instances alone, use: import Ownership.Common.Types()
+   |
+16 | import qualified Ownership.Common.Types as Own (OwnershipError(..), OwnershipType(..), OwnershipTransfer(..))
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1008 of 1025] Compiling Test.Unit.CoreDependenciesQuickCheckSpec ( test/Test/Unit/CoreDependenciesQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/CoreDependenciesQuickCheckSpec.o ) [Optimisation flags changed]
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:83:33: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘typeExpr’
+   |
+83 |     forAll arbitraryTypeExpr $ \typeExpr ->
+   |                                 ^^^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:98:33: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘typeExpr’
+   |
+98 |     forAll arbitraryTypeExpr $ \typeExpr ->
+   |                                 ^^^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:118:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+    |
+118 |       let result = unify [(type1, type2)]
+    |           ^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:193:31: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘typeExpr’
+    |
+193 |   forAll arbitraryTypeExpr $ \typeExpr ->
+    |                               ^^^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:205:33: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘scheme’
+    |
+205 |   forAll arbitraryTypeScheme $ \scheme ->
+    |                                 ^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:217:35: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘substitution’
+    |
+217 |   forAll arbitrarySubstitution $ \substitution ->
+    |                                   ^^^^^^^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:223:26: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘ast’
+    |
+223 |   forAll arbitraryAST $ \ast ->
+    |                          ^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:229:32: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘stmt’
+    |
+229 |   forAll arbitraryStatement $ \stmt ->
+    |                                ^^^^
+
+[1009 of 1025] Compiling Test.Unit.CoreCompilerQuickCheckSpec ( test/Test/Unit/CoreCompilerQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/CoreCompilerQuickCheckSpec.o ) [Optimisation flags changed]
+[1010 of 1025] Compiling Test.Unit.AdditionalQuickCheckTestSuiteSpec ( test/Test/Unit/AdditionalQuickCheckTestSuiteSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/AdditionalQuickCheckTestSuiteSpec.o ) [Optimisation flags changed]
+[1011 of 1025] Compiling TestSupport.ExtendedArbitrary ( test/TestSupport/ExtendedArbitrary.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/TestSupport/ExtendedArbitrary.o ) [Optimisation flags changed]
+[1012 of 1025] Compiling Test.Unit.NewAdditionalErrorHandlerQuickCheckSpec ( test/Test/Unit/NewAdditionalErrorHandlerQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/NewAdditionalErrorHandlerQuickCheckSpec.o ) [Optimisation flags changed]
+test/Test/Unit/NewAdditionalErrorHandlerQuickCheckSpec.hs:14:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Data.Either’ is redundant
+      except perhaps to import instances from ‘Data.Either’
+    To import instances alone, use: import Data.Either()
+   |
+14 | import Data.Either (isLeft, isRight)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/NewAdditionalErrorHandlerQuickCheckSpec.hs:15:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.QuickCheck.Modifiers’ is redundant
+      except perhaps to import instances from ‘Test.QuickCheck.Modifiers’
+    To import instances alone, use: import Test.QuickCheck.Modifiers()
+   |
+15 | import Test.QuickCheck.Modifiers (Positive(..))
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/NewAdditionalErrorHandlerQuickCheckSpec.hs:25:7: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘span’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/NewAdditionalErrorHandlerQuickCheckSpec.hs:3:8-56
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
+   |
+25 |       span = SourceSpan pos pos
+   |       ^^^^
+
+test/Test/Unit/NewAdditionalErrorHandlerQuickCheckSpec.hs:44:7: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘span’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/NewAdditionalErrorHandlerQuickCheckSpec.hs:3:8-56
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
+   |
+44 |       span = SourceSpan startPos' endPos'
+   |       ^^^^
+
+test/Test/Unit/NewAdditionalErrorHandlerQuickCheckSpec.hs:46:7: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘error’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/NewAdditionalErrorHandlerQuickCheckSpec.hs:3:8-56
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.Err’)
+   |
+46 |       error = errorAt "test" Error "test" errorLoc
+   |       ^^^^^
+
+test/Test/Unit/NewAdditionalErrorHandlerQuickCheckSpec.hs:62:7: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘span’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/NewAdditionalErrorHandlerQuickCheckSpec.hs:3:8-56
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
+   |
+62 |       span = SourceSpan pos pos
+   |       ^^^^
+
+test/Test/Unit/NewAdditionalErrorHandlerQuickCheckSpec.hs:64:7: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘error’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/NewAdditionalErrorHandlerQuickCheckSpec.hs:3:8-56
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.Err’)
+   |
+64 |       error = errorAt "test" Warning (T.pack msg) errorLoc
+   |       ^^^^^
+
+test/Test/Unit/NewAdditionalErrorHandlerQuickCheckSpec.hs:76:7: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘span’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/NewAdditionalErrorHandlerQuickCheckSpec.hs:3:8-56
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
+   |
+76 |       span = SourceSpan pos pos
+   |       ^^^^
+
+test/Test/Unit/NewAdditionalErrorHandlerQuickCheckSpec.hs:78:7: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘error’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/NewAdditionalErrorHandlerQuickCheckSpec.hs:3:8-56
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.Err’)
+   |
+78 |       error = errorAt "test" Error (T.pack (context ++ ": " ++ message)) errorLoc
+   |       ^^^^^
+
+test/Test/Unit/NewAdditionalErrorHandlerQuickCheckSpec.hs:90:7: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘pos’
+   |
+90 |   let pos = startPos
+   |       ^^^
+
+test/Test/Unit/NewAdditionalErrorHandlerQuickCheckSpec.hs:91:7: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘span’
+   |
+91 |       span = SourceSpan pos pos
+   |       ^^^^
+
+test/Test/Unit/NewAdditionalErrorHandlerQuickCheckSpec.hs:91:7: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘span’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/NewAdditionalErrorHandlerQuickCheckSpec.hs:3:8-56
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
+   |
+91 |       span = SourceSpan pos pos
+   |       ^^^^
+
+test/Test/Unit/NewAdditionalErrorHandlerQuickCheckSpec.hs:105:7: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘span’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/NewAdditionalErrorHandlerQuickCheckSpec.hs:3:8-56
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
+    |
+105 |       span = SourceSpan pos pos
+    |       ^^^^
+
+test/Test/Unit/NewAdditionalErrorHandlerQuickCheckSpec.hs:107:7: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘error’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/NewAdditionalErrorHandlerQuickCheckSpec.hs:3:8-56
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.Err’)
+    |
+107 |       error = errorAt "test" Error (T.pack errorMsg) errorLoc
+    |       ^^^^^
+
+[1020 of 1025] Compiling Test.Unit.CoreUtilsQuickCheckSpec ( test/Test/Unit/CoreUtilsQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/CoreUtilsQuickCheckSpec.o ) [Optimisation flags changed]
+test/Test/Unit/CoreUtilsQuickCheckSpec.hs:16:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘TestSupport.QuickCheck’ is redundant
+      except perhaps to import instances from ‘TestSupport.QuickCheck’
+    To import instances alone, use: import TestSupport.QuickCheck()
+   |
+16 | import TestSupport.QuickCheck (fastProperty)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1021 of 1025] Compiling Test.Unit.CoreSourceLocationQuickCheckSpec ( test/Test/Unit/CoreSourceLocationQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/CoreSourceLocationQuickCheckSpec.o ) [Optimisation flags changed]
+test/Test/Unit/CoreSourceLocationQuickCheckSpec.hs:13:101: warning: [GHC-38856] [-Wunused-imports]
+    The import of ‘spanTo, toErrorLocation’
+    from module ‘SourceLocation’ is redundant
+   |
+13 | import SourceLocation (SourcePos(..), startPos, posAfter, posAt, posAtLineCol, emptySpan, spanFrom, spanTo, spanBetween, spanBetweenOrdered, mergeSpans, isValidSpan, isValidBlockSpan, locatedAt, locatedWithSpan, locatedValue, locatedSpan, locatedPos, mapLocated, posLine, posColumn, spanStart, spanEnd, toErrorLocation, toErrorLocationWithSpan)
+   |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CoreSourceLocationQuickCheckSpec.hs:15:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘TestSupport.QuickCheck’ is redundant
+      except perhaps to import instances from ‘TestSupport.QuickCheck’
+    To import instances alone, use: import TestSupport.QuickCheck()
+   |
+15 | import TestSupport.QuickCheck (fastProperty)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CoreSourceLocationQuickCheckSpec.hs:113:33: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘span’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/CoreSourceLocationQuickCheckSpec.hs:3:8-49
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
+    |
+113 |   forAll arbitrarySourceSpan $ \span ->
+    |                                 ^^^^
+
+test/Test/Unit/CoreSourceLocationQuickCheckSpec.hs:122:33: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘span’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/CoreSourceLocationQuickCheckSpec.hs:3:8-49
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
+    |
+122 |   forAll arbitrarySourceSpan $ \span ->
+    |                                 ^^^^
+
+test/Test/Unit/CoreSourceLocationQuickCheckSpec.hs:142:35: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘span’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/CoreSourceLocationQuickCheckSpec.hs:3:8-49
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
+    |
+142 |     forAll arbitrarySourceSpan $ \span ->
+    |                                   ^^^^
+
+test/Test/Unit/CoreSourceLocationQuickCheckSpec.hs:150:35: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘span’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/CoreSourceLocationQuickCheckSpec.hs:3:8-49
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
+    |
+150 |     forAll arbitrarySourceSpan $ \span ->
+    |                                   ^^^^
+
+test/Test/Unit/CoreSourceLocationQuickCheckSpec.hs:158:33: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘span’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/CoreSourceLocationQuickCheckSpec.hs:3:8-49
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
+    |
+158 |   forAll arbitrarySourceSpan $ \span ->
+    |                                 ^^^^
+
+test/Test/Unit/CoreSourceLocationQuickCheckSpec.hs:164:33: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘span’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/CoreSourceLocationQuickCheckSpec.hs:3:8-49
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
+    |
+164 |   forAll arbitrarySourceSpan $ \span ->
+    |                                 ^^^^
+
+test/Test/Unit/CoreSourceLocationQuickCheckSpec.hs:171:35: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘span’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/CoreSourceLocationQuickCheckSpec.hs:3:8-49
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
+    |
+171 |     forAll arbitrarySourceSpan $ \span ->
+    |                                   ^^^^
+
+test/Test/Unit/CoreSourceLocationQuickCheckSpec.hs:179:35: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘span’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/CoreSourceLocationQuickCheckSpec.hs:3:8-49
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
+    |
+179 |     forAll arbitrarySourceSpan $ \span ->
+    |                                   ^^^^
+
+test/Test/Unit/CoreSourceLocationQuickCheckSpec.hs:194:33: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘span’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/CoreSourceLocationQuickCheckSpec.hs:3:8-49
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
+    |
+194 |   forAll arbitrarySourceSpan $ \span ->
+    |                                 ^^^^
+
+test/Test/Unit/CoreSourceLocationQuickCheckSpec.hs:201:33: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘span’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/CoreSourceLocationQuickCheckSpec.hs:3:8-49
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
+    |
+201 |   forAll arbitrarySourceSpan $ \span ->
+    |                                 ^^^^
+
+[1022 of 1025] Compiling Test.Unit.CoreErrorHandlerQuickCheckSpec ( test/Test/Unit/CoreErrorHandlerQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/CoreErrorHandlerQuickCheckSpec.o ) [Optimisation flags changed]
+test/Test/Unit/CoreErrorHandlerQuickCheckSpec.hs:7:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty.HUnit’ is redundant
+      except perhaps to import instances from ‘Test.Tasty.HUnit’
+    To import instances alone, use: import Test.Tasty.HUnit()
+  |
+7 | import Test.Tasty.HUnit
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CoreErrorHandlerQuickCheckSpec.hs:12:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty’ is redundant
+      except perhaps to import instances from ‘Test.Tasty’
+    To import instances alone, use: import Test.Tasty()
+   |
+12 | import Test.Tasty
+   | ^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CoreErrorHandlerQuickCheckSpec.hs:13:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Test.Tasty.QuickCheck’ is redundant
+      except perhaps to import instances from ‘Test.Tasty.QuickCheck’
+    To import instances alone, use: import Test.Tasty.QuickCheck()
+   |
+13 | import Test.Tasty.QuickCheck
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CoreErrorHandlerQuickCheckSpec.hs:15:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘TestSupport.Arbitrary’ is redundant
+      except perhaps to import instances from ‘TestSupport.Arbitrary’
+    To import instances alone, use: import TestSupport.Arbitrary()
+   |
+15 | import TestSupport.Arbitrary
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CoreErrorHandlerQuickCheckSpec.hs:16:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘TestSupport.QuickCheck’ is redundant
+      except perhaps to import instances from ‘TestSupport.QuickCheck’
+    To import instances alone, use: import TestSupport.QuickCheck()
+   |
+16 | import TestSupport.QuickCheck
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CoreErrorHandlerQuickCheckSpec.hs:17:1: warning: [GHC-66111] [-Wunused-imports]
+    The qualified import of ‘Data.Text’ is redundant
+      except perhaps to import instances from ‘Data.Text’
+    To import instances alone, use: import Data.Text()
+   |
+17 | import qualified Data.Text as T
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CoreErrorHandlerQuickCheckSpec.hs:18:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Data.List’ is redundant
+      except perhaps to import instances from ‘Data.List’
+    To import instances alone, use: import Data.List()
+   |
+18 | import Data.List (isPrefixOf, isSuffixOf, isInfixOf, intercalate)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CoreErrorHandlerQuickCheckSpec.hs:19:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Data.Maybe’ is redundant
+      except perhaps to import instances from ‘Data.Maybe’
+    To import instances alone, use: import Data.Maybe()
+   |
+19 | import Data.Maybe (isJust, isNothing)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CoreErrorHandlerQuickCheckSpec.hs:20:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Control.Monad’ is redundant
+      except perhaps to import instances from ‘Control.Monad’
+    To import instances alone, use: import Control.Monad()
+   |
+20 | import Control.Monad (when)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CoreErrorHandlerQuickCheckSpec.hs:21:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Control.Monad.State’ is redundant
+      except perhaps to import instances from ‘Control.Monad.State’
+    To import instances alone, use: import Control.Monad.State()
+   |
+21 | import Control.Monad.State (execState)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CoreErrorHandlerQuickCheckSpec.hs:22:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Data.Char’ is redundant
+      except perhaps to import instances from ‘Data.Char’
+    To import instances alone, use: import Data.Char()
+   |
+22 | import Data.Char (isSpace, isAlpha, isAlphaNum)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CoreErrorHandlerQuickCheckSpec.hs:23:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Data.Time’ is redundant
+      except perhaps to import instances from ‘Data.Time’
+    To import instances alone, use: import Data.Time()
+   |
+23 | import Data.Time (UTCTime)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[1023 of 1025] Compiling Test.Unit.ComprehensiveCoreModulesQuickCheckSpec ( test/Test/Unit/ComprehensiveCoreModulesQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/ComprehensiveCoreModulesQuickCheckSpec.o ) [Optimisation flags changed]
+test/Test/Unit/ComprehensiveCoreModulesQuickCheckSpec.hs:12:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Parser’ is redundant
+      except perhaps to import instances from ‘Parser’
+    To import instances alone, use: import Parser()
+   |
+12 | import Parser
+   | ^^^^^^^^^^^^^...
+
+test/Test/Unit/ComprehensiveCoreModulesQuickCheckSpec.hs:24:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘TestSupport.Arbitrary’ is redundant
+      except perhaps to import instances from ‘TestSupport.Arbitrary’
+    To import instances alone, use: import TestSupport.Arbitrary()
+   |
+24 | import TestSupport.Arbitrary (arbitrarySourcePos, arbitrarySourceSpan)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+

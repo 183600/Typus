@@ -6,8 +6,6 @@ import Test.Tasty.HUnit
 import Test.Tasty
 
 import SyntaxValidator
-import Compiler.Errors.Core (ErrorLocation(..))
-import SourceLocation (SourcePos(..), startPos, SourceSpan(..))
 import qualified Data.List as L
 import Prelude hiding (all, elem)
 
@@ -17,36 +15,36 @@ tests = testGroup "Syntax Validator Basic Tests"
       let identifier = "validIdentifier"
       let result = validateIdentifier identifier  -- 简化函数调用
       case result of
-        Left err -> assertBool "Valid identifier should pass validation" False
+        Left _err -> assertBool "Valid identifier should pass validation" False
         Right valid -> assertBool "Identifier should be valid" valid
         
   , testCase "validate invalid identifier" $ do
       let identifier = "123invalid"  -- 以数字开头
       let result = validateIdentifier identifier  -- 简化函数调用
       case result of
-        Left err -> assertBool "Invalid identifier should fail validation" True
-        Right valid -> assertBool "Identifier should not be valid" False
+        Left _err -> assertBool "Invalid identifier should fail validation" True
+        Right _valid -> assertBool "Identifier should not be valid" False
         
   , testCase "validate reserved keyword" $ do
       let identifier = "if"  -- 保留关键字
       let result = validateIdentifier identifier  -- 简化函数调用
       case result of
-        Left err -> assertBool "Reserved keyword should fail validation" True
-        Right valid -> assertBool "Keyword should not be valid" False
+        Left _err -> assertBool "Reserved keyword should fail validation" True
+        Right _valid -> assertBool "Keyword should not be valid" False
         
   , testCase "validate valid function declaration" $ do
       let declaration = "fun add(x, y) { return x + y; }"
       let result = validateFunctionDeclaration declaration  -- 简化函数调用
       case result of
-        Left err -> assertBool "Valid function declaration should pass validation" False
+        Left _err -> assertBool "Valid function declaration should pass validation" False
         Right valid -> assertBool "Function declaration should be valid" valid
         
   , testCase "validate invalid function declaration" $ do
       let declaration = "fun add(x, y) return x + y; }"  -- 缺少左大括号
       let result = validateFunctionDeclaration declaration  -- 简化函数调用
       case result of
-        Left err -> assertBool "Invalid function declaration should fail validation" True
-        Right valid -> assertBool "Function declaration should not be valid" False
+        Left _err -> assertBool "Invalid function declaration should fail validation" True
+        Right _valid -> assertBool "Function declaration should not be valid" False
         
   , testCase "validate valid variable declaration" $ do
       let declaration = "let x = 42;"

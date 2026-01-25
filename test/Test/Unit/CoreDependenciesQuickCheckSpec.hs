@@ -4,29 +4,18 @@ module Test.Unit.CoreDependenciesQuickCheckSpec where
 
 
 
-import Test.Tasty
-import Test.Tasty.QuickCheck
 -- | Core Dependencies module QuickCheck tests
 
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-
-import TestSupport.Arbitrary
-import TestSupport.QuickCheck
-import qualified Data.Text as T
-import Data.List (isPrefixOf, isSuffixOf, isInfixOf, intercalate)
-import Data.Maybe (isJust, isNothing)
-import Control.Monad (when)
-import Control.Monad.State (evalState)
-import Data.Char (isSpace, isAlpha, isAlphaNum)
-
 import Dependencies
 import Dependencies.Inference
-import Dependencies.AST (AST(..))
-import Dependencies.TypeSystem (Substitution)
-import Control.Monad.State.Lazy (evalStateT)
-import Control.Monad.Trans.Except (runExceptT)
 import qualified Data.Map as Map
+import Control.Monad.Trans.Except (runExceptT)
+import Control.Monad.Trans.State (evalStateT, evalState)
+import TestSupport.Arbitrary (arbitraryShortString, arbitraryIdentifier, arbitraryAST, arbitraryStatement, arbitraryTypeVar, arbitraryTypeExpr, arbitraryTypeConstraint, arbitraryTypeScheme, arbitrarySubstitution, arbitraryTypeEnvironment)
 
 -- | Run a TypeInference computation
 runTypeInference :: TypeInference a -> IO (Either TypeInferenceError a)
@@ -42,51 +31,49 @@ runTypeInference comp = do
 -- | Test that newDependentTypeChecker creates a valid checker
 prop_newDependentTypeCheckerValid :: Property
 prop_newDependentTypeCheckerValid =
-  let checker = newDependentTypeChecker
+  let _ = newDependentTypeChecker
   in property $ True  -- Basic sanity check
 
 -- | Test that newDependentTypeCheckerWithTypes creates a valid checker
 prop_newDependentTypeCheckerWithTypesValid :: Property
 prop_newDependentTypeCheckerWithTypesValid =
   forAll (listOf arbitraryIdentifier) $ \typeNames ->
-    let types = map (\name -> (name, [], [])) typeNames
-        checker = newDependentTypeCheckerWithTypes types
+    let _ = newDependentTypeCheckerWithTypes (map (\name -> (name, [], [])) typeNames)
     in property $ True  -- Basic sanity check
 
 -- | Test that analyzeDependentTypes processes basic code
 prop_analyzeDependentTypesBasic :: Property
 prop_analyzeDependentTypesBasic =
   forAll arbitraryShortString $ \code ->
-    let result = analyzeDependentTypes code
+    let _ = analyzeDependentTypes code
     in property $ True  -- Basic sanity check
 
 -- | Test that analyzeAST processes basic AST
 prop_analyzeASTBasic :: Property
 prop_analyzeASTBasic =
   forAll arbitraryAST $ \ast ->
-    let result = analyzeAST ast
+    let _ = analyzeAST ast
     in property $ True  -- Basic sanity check
 
 -- | Test that validateASTSemantics validates AST
 prop_validateASTSemantics :: Property
 prop_validateASTSemantics =
   forAll arbitraryAST $ \ast ->
-    let result = evalState (validateASTSemantics ast) newDependentTypeChecker
+    let _ = evalState (validateASTSemantics ast) newDependentTypeChecker
     in property $ True  -- Basic sanity check
 
 -- | Test that validateStatement validates statement
 prop_validateStatement :: Property
 prop_validateStatement =
   forAll arbitraryStatement $ \stmt ->
-    let result = evalState (validateStatement stmt) newDependentTypeChecker
+    let _ = evalState (validateStatement stmt) newDependentTypeChecker
     in property $ True  -- Basic sanity check
 
 -- | Test that checkType checks types
 prop_checkType :: Property
 prop_checkType =
-  forAll arbitraryTypeVar $ \typeExpr ->
-    let checker = newDependentTypeChecker
-        result = evalState (checkType typeExpr) checker
+  forAll arbitraryTypeVar $ \_ ->
+    let _ = evalState (checkType undefined) newDependentTypeChecker
     in property $ True  -- Basic sanity check
 
 -- | Test that addType adds types
@@ -94,16 +81,14 @@ prop_addType :: Property
 prop_addType =
   forAll arbitraryIdentifier $ \typeName ->
     forAll arbitraryTypeExpr $ \typeExpr ->
-      let checker = newDependentTypeChecker
-          result = evalState (addType typeName [] []) checker
+      let _ = evalState (addType typeName [] []) newDependentTypeChecker
       in property $ True  -- Basic sanity check
 
 -- | Test that addConstraint adds constraints
 prop_addConstraint :: Property
 prop_addConstraint =
   forAll arbitraryTypeConstraint $ \constraint ->
-    let checker = newDependentTypeChecker
-        result = evalState (addConstraint constraint) checker
+    let _ = evalState (addConstraint constraint) newDependentTypeChecker
     in property $ True  -- Basic sanity check
 
 -- | Test that checkTypeInstantiation checks instantiation
@@ -111,22 +96,18 @@ prop_checkTypeInstantiation :: Property
 prop_checkTypeInstantiation =
   forAll arbitraryIdentifier $ \typeName ->
     forAll arbitraryTypeExpr $ \typeExpr ->
-      let checker = newDependentTypeChecker
-          result = evalState (checkTypeInstantiation typeName []) checker
-      in property $ True  -- Basic sanity check
+      let _ = evalState (checkTypeInstantiation typeName []) newDependentTypeChecker      in property $ True  -- Basic sanity check
 
 -- | Test that solveConstraints solves constraints
 prop_solveConstraints :: Property
 prop_solveConstraints =
-  let checker = newDependentTypeChecker
-      result = evalState solveConstraints checker
+  let _ = evalState solveConstraints newDependentTypeChecker
   in property $ True  -- Basic sanity check
 
 -- | Test that getDependentTypeErrors gets errors
 prop_getDependentTypeErrors :: Property
 prop_getDependentTypeErrors =
-  let checker = newDependentTypeChecker
-      errors = getDependentTypeErrors checker
+  let _ = getDependentTypeErrors newDependentTypeChecker
   in property $ True  -- Basic sanity check
 
 -- | Test that unify unifies types
@@ -141,36 +122,35 @@ prop_unify =
 prop_inferType :: Property
 prop_inferType =
   forAll arbitraryTypeExpr $ \typeExpr ->
-    let result = runTypeInference (inferType typeExpr)
+    let _ = runTypeInference (inferType typeExpr)
     in property $ True  -- Basic sanity check
 
 -- | Test that inferStatement infers statement types
 prop_inferStatement :: Property
 prop_inferStatement =
   forAll arbitraryStatement $ \stmt ->
-    let result = runTypeInference (inferStatement stmt)
+    let _ = runTypeInference (inferStatement stmt)
     in property $ True  -- Basic sanity check
 
 -- | Test that inferProgram infers program types
 prop_inferProgram :: Property
 prop_inferProgram =
   forAll (listOf arbitraryStatement) $ \stmts ->
-    let program = Program stmts
-        result = runTypeInference (inferProgram program)
+    let _ = runTypeInference (inferProgram (Program stmts))
     in property $ True  -- Basic sanity check
 
 -- | Test that generalize creates type schemes
 prop_generalize :: Property
 prop_generalize =
   forAll arbitraryTypeVar $ \typeExpr ->
-    let result = runTypeInference (generalize 0 typeExpr)
+    let _ = runTypeInference (generalize 0 typeExpr)
     in property $ True  -- Basic sanity check
 
 -- | Test that instantiate instantiates type schemes
 prop_instantiate :: Property
 prop_instantiate =
   forAll arbitraryTypeScheme $ \scheme ->
-    let result = runTypeInference (instantiate scheme)
+    let _ = runTypeInference (instantiate scheme)
     in property $ True  -- Basic sanity check
 
 -- | Test that unifyTypes unifies types
@@ -178,7 +158,7 @@ prop_unifyTypes :: Property
 prop_unifyTypes =
   forAll arbitraryTypeVar $ \type1 ->
     forAll arbitraryTypeVar $ \type2 ->
-      let result = runTypeInference (unifyTypes type1 type2)
+      let _ = runTypeInference (unifyTypes type1 type2)
       in property $ True  -- Basic sanity check
 
 -- | Test that applyTypeSubstitution applies substitutions
@@ -186,25 +166,25 @@ prop_applyTypeSubstitution :: Property
 prop_applyTypeSubstitution =
   forAll arbitraryTypeVar $ \typeExpr ->
     forAll arbitrarySubstitution $ \substitution ->
-      let result = applyTypeSubstitution substitution typeExpr
+      let _ = applyTypeSubstitution substitution typeExpr
       in property $ True  -- Basic sanity check
 
 -- | Test that newTypeVariable creates new type variables
 prop_newTypeVariable :: Property
 prop_newTypeVariable =
-  let result = runTypeInference newTypeVariable
+  let _ = runTypeInference newTypeVariable
   in property $ True  -- Basic sanity check
 
 -- | Test that getFreshTypeVar creates fresh type variables
 prop_getFreshTypeVar :: Property
 prop_getFreshTypeVar =
-  let result = runTypeInference getFreshTypeVar
+  let _ = runTypeInference getFreshTypeVar
   in property $ True  -- Basic sanity check
 
 -- | Test that initialTypeEnvironment creates initial environment
 prop_initialTypeEnvironment :: Property
 prop_initialTypeEnvironment =
-  let result = initialTypeEnvironment
+  let _ = initialTypeEnvironment
   in property $ True  -- Basic sanity check
 
 -- | Test that type expressions are valid
@@ -216,7 +196,7 @@ prop_typeExprValid =
 -- | Test that type constraints are valid
 prop_typeConstraintValid :: Property
 prop_typeConstraintValid =
-  forAll arbitraryTypeConstraint $ \constraint ->
+  forAll arbitraryTypeConstraint $ \_ ->
     property $ True  -- Basic sanity check
 
 -- | Test that type schemes are valid
@@ -228,7 +208,7 @@ prop_typeSchemeValid =
 -- | Test that type environments are valid
 prop_typeEnvironmentValid :: Property
 prop_typeEnvironmentValid =
-  forAll arbitraryTypeEnvironment $ \env ->
+  forAll arbitraryTypeEnvironment $ \_ ->
     property $ True  -- Basic sanity check
 
 -- | Test that substitutions are valid

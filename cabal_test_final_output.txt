@@ -1,150 +1,1386 @@
 Build profile: -w ghc-9.14.1 -O1
 In order, the following will be built (use -v for more details):
- - typus-0.12.2 (test:typus-test) (file test/Test/Unit/AdvancedTextProcessingSpec.hs changed)
+ - typus-0.12.2 (test:typus-test) (file test/Test/Unit/DependenciesCycleDetectionQuickCheckSpec.hs changed)
 Preprocessing test suite 'typus-test' for typus-0.12.2...
 Building test suite 'typus-test' for typus-0.12.2...
-[  27 of 1025] Compiling Test.Unit.AdvancedTextProcessingSpec ( test/Test/Unit/AdvancedTextProcessingSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/AdvancedTextProcessingSpec.o ) [Source file changed]
-[  43 of 1025] Compiling Test.Unit.BoundaryConditionComprehensiveSpec ( test/Test/Unit/BoundaryConditionComprehensiveSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/BoundaryConditionComprehensiveSpec.o ) [Source file changed]
-[  79 of 1025] Compiling Test.Unit.CodeGenerationSpec ( test/Test/Unit/CodeGenerationSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/CodeGenerationSpec.o ) [Source file changed]
-test/Test/Unit/CodeGenerationSpec.hs:525:5: error: [GHC-88464]
-    Variable not in scope: testCase :: [Char] -> t6 -> TestTree
-    |
-525 |   , testCase "Go code generation" $ do
-    |     ^^^^^^^^
-
-test/Test/Unit/CodeGenerationSpec.hs:528:5: error: [GHC-88464]
-    Variable not in scope: assertBool :: [Char] -> Bool -> t6
-    |
-528 |     assertBool "Should generate Go code" 
-    |     ^^^^^^^^^^
-
-test/Test/Unit/CodeGenerationSpec.hs:531:5: error: [GHC-88464]
-    Variable not in scope: testCase :: [Char] -> t5 -> TestTree
-    |
-531 |   , testCase "Rust code generation" $ do
-    |     ^^^^^^^^
-
-test/Test/Unit/CodeGenerationSpec.hs:534:5: error: [GHC-88464]
-    Variable not in scope: assertBool :: [Char] -> Bool -> t5
-    |
-534 |     assertBool "Should generate Rust code" 
-    |     ^^^^^^^^^^
-
-test/Test/Unit/CodeGenerationSpec.hs:537:5: error: [GHC-88464]
-    Variable not in scope: testCase :: [Char] -> t4 -> TestTree
-    |
-537 |   , testCase "JavaScript code generation" $ do
-    |     ^^^^^^^^
-
-test/Test/Unit/CodeGenerationSpec.hs:540:5: error: [GHC-88464]
-    Variable not in scope: assertBool :: [Char] -> Bool -> t4
-    |
-540 |     assertBool "Should generate JavaScript code" 
-    |     ^^^^^^^^^^
-
-test/Test/Unit/CodeGenerationSpec.hs:543:5: error: [GHC-88464]
-    Variable not in scope: testCase :: [Char] -> t3 -> TestTree
-    |
-543 |   , testCase "C code generation" $ do
-    |     ^^^^^^^^
-
-test/Test/Unit/CodeGenerationSpec.hs:546:5: error: [GHC-88464]
-    Variable not in scope: assertBool :: [Char] -> Bool -> t3
-    |
-546 |     assertBool "Should generate C code" 
-    |     ^^^^^^^^^^
-
-test/Test/Unit/CodeGenerationSpec.hs:549:5: error: [GHC-88464]
-    Variable not in scope: testCase :: [Char] -> t2 -> TestTree
-    |
-549 |   , testCase "Python code generation" $ do
-    |     ^^^^^^^^
-
-test/Test/Unit/CodeGenerationSpec.hs:552:5: error: [GHC-88464]
-    Variable not in scope: assertBool :: [Char] -> Bool -> t2
-    |
-552 |     assertBool "Should generate Python code" 
-    |     ^^^^^^^^^^
-
-test/Test/Unit/CodeGenerationSpec.hs:555:5: error: [GHC-88464]
-    Variable not in scope: testCase :: [Char] -> m0 b0 -> TestTree
-    |
-555 |   , testCase "Module code generation" $ do
-    |     ^^^^^^^^
-
-test/Test/Unit/CodeGenerationSpec.hs:563:5: error: [GHC-88464]
-    Variable not in scope: assertBool :: [Char] -> Bool -> m0 a1
-    |
-563 |     assertBool "Should generate module code" 
-    |     ^^^^^^^^^^
-
-test/Test/Unit/CodeGenerationSpec.hs:565:5: error: [GHC-88464]
-    Variable not in scope: assertBool :: [Char] -> Bool -> m0 a0
-    |
-565 |     assertBool "Should include imports" 
-    |     ^^^^^^^^^^
-
-test/Test/Unit/CodeGenerationSpec.hs:567:5: error: [GHC-88464]
-    Variable not in scope: assertBool :: [Char] -> Bool -> m0 b0
-    |
-567 |     assertBool "Should include function definition" 
-    |     ^^^^^^^^^^
-
-test/Test/Unit/CodeGenerationSpec.hs:570:5: error: [GHC-88464]
-    Variable not in scope: testCase :: [Char] -> t1 -> TestTree
-    |
-570 |   , testCase "Lambda expression generation" $ do
-    |     ^^^^^^^^
-
-test/Test/Unit/CodeGenerationSpec.hs:573:5: error: [GHC-88464]
-    Variable not in scope: assertBool :: [Char] -> Bool -> t1
-    |
-573 |     assertBool "Should generate lambda expression" 
-    |     ^^^^^^^^^^
-
-test/Test/Unit/CodeGenerationSpec.hs:576:5: error: [GHC-88464]
-    Variable not in scope: testCase :: [Char] -> t0 -> TestTree
-    |
-576 |   , testCase "Conditional statement generation" $ do
-    |     ^^^^^^^^
-
-test/Test/Unit/CodeGenerationSpec.hs:581:5: error: [GHC-88464]
-    Variable not in scope: assertBool :: [Char] -> Bool -> t0
-    |
-581 |     assertBool "Should generate conditional statement" 
-    |     ^^^^^^^^^^
-
-[  80 of 1025] Compiling Test.Unit.CombinedFeaturesSpec ( test/Test/Unit/CombinedFeaturesSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/CombinedFeaturesSpec.o ) [Source file changed]
-test/Test/Unit/CombinedFeaturesSpec.hs:65:34: error: [GHC-76037]
-    Not in scope: type constructor or class ‘Assertion’
+[ 983 of 1025] Compiling TestSupport.Arbitrary ( test/TestSupport/Arbitrary.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/TestSupport/Arbitrary.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/TestSupport/Arbitrary.dyn_o ) [Source file changed]
+[ 990 of 1025] Compiling Test.Unit.TestQuickCheckPropertiesSpec ( test/Test/Unit/TestQuickCheckPropertiesSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TestQuickCheckPropertiesSpec.o ) [Source file changed]
+[ 991 of 1025] Compiling Test.Unit.TestParserErrorRecoverySpec ( test/Test/Unit/TestParserErrorRecoverySpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TestParserErrorRecoverySpec.o ) [Source file changed]
+[1018 of 1025] Compiling Test.Unit.CoreParserQuickCheckSpec ( test/Test/Unit/CoreParserQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/CoreParserQuickCheckSpec.o ) [TestSupport.Arbitrary changed]
+test/Test/Unit/CoreParserQuickCheckSpec.hs:15:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘TestSupport.QuickCheck’ is redundant
+      except perhaps to import instances from ‘TestSupport.QuickCheck’
+    To import instances alone, use: import TestSupport.QuickCheck()
    |
-65 | test_source_position_creation :: Assertion
-   |                                  ^^^^^^^^^
+15 | import TestSupport.QuickCheck (fastProperty)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-test/Test/Unit/CombinedFeaturesSpec.hs:71:25: error: [GHC-76037]
-    Not in scope: type constructor or class ‘Assertion’
+test/Test/Unit/CoreParserQuickCheckSpec.hs:60:17: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘file’
    |
-71 | test_trim_edge_cases :: Assertion
-   |                         ^^^^^^^^^
+60 |           Right file -> property $ True
+   |                 ^^^^
 
-test/Test/Unit/CombinedFeaturesSpec.hs:78:26: error: [GHC-76037]
-    Not in scope: type constructor or class ‘Assertion’
+test/Test/Unit/CoreParserQuickCheckSpec.hs:73:17: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘file’
    |
-78 | test_split_edge_cases :: Assertion
-   |                          ^^^^^^^^^
+73 |           Right file -> property $ True
+   |                 ^^^^
 
-test/Test/Unit/CombinedFeaturesSpec.hs:85:31: error: [GHC-76037]
-    Not in scope: type constructor or class ‘Assertion’
+test/Test/Unit/CoreParserQuickCheckSpec.hs:78:69: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘lines’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/CoreParserQuickCheckSpec.hs:3:8-41
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.Data.OldList’)
    |
-85 | test_remove_comments_basic :: Assertion
-   |                               ^^^^^^^^^
+78 |   forAll (listOf (arbitraryShortString `suchThat` (not . null))) $ \lines ->
+   |                                                                     ^^^^^
 
-test/Test/Unit/CombinedFeaturesSpec.hs:90:31: error: [GHC-76037]
-    Not in scope: type constructor or class ‘Assertion’
+test/Test/Unit/CoreParserQuickCheckSpec.hs:83:13: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘file’
    |
-90 | test_normalize_indentation :: Assertion
-   |                               ^^^^^^^^^
+83 |       Right file -> property $ True
+   |             ^^^^
 
-[ 994 of 1025] Compiling Test.Unit.Tests  ( test/Test/Unit/Tests.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/Tests.o ) [Test.Unit.BoundaryConditionComprehensiveSpec changed]
-[ 995 of 1025] Compiling Test.Unit        ( test/Test/Unit.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit.o ) [Test.Unit.Tests changed]
-[ 996 of 1025] Compiling Main             ( test/Main.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Main.o ) [Test.Unit.Tests changed]
+test/Test/Unit/CoreParserQuickCheckSpec.hs:94:15: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘file’
+   |
+94 |         Right file -> property $ True
+   |               ^^^^
+
+test/Test/Unit/CoreParserQuickCheckSpec.hs:103:13: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘file’
+    |
+103 |       Right file -> property $ True
+    |             ^^^^
+
+test/Test/Unit/CoreParserQuickCheckSpec.hs:117:19: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘file’
+    |
+117 |             Right file -> property $ True
+    |                   ^^^^
+
+test/Test/Unit/CoreParserQuickCheckSpec.hs:127:13: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘file’
+    |
+127 |       Right file -> property $ True
+    |             ^^^^
+
+test/Test/Unit/CoreParserQuickCheckSpec.hs:137:13: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘file’
+    |
+137 |       Right file -> property $ True
+    |             ^^^^
+
+test/Test/Unit/CoreParserQuickCheckSpec.hs:147:13: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘file’
+    |
+147 |       Right file -> property $ True
+    |             ^^^^
+
+test/Test/Unit/CoreParserQuickCheckSpec.hs:157:13: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘file’
+    |
+157 |       Right file -> property $ True
+    |             ^^^^
+
+test/Test/Unit/CoreParserQuickCheckSpec.hs:167:13: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘file’
+    |
+167 |       Right file -> property $ True
+    |             ^^^^
+
+test/Test/Unit/CoreParserQuickCheckSpec.hs:177:13: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘file’
+    |
+177 |       Right file -> property $ True
+    |             ^^^^
+
+test/Test/Unit/CoreParserQuickCheckSpec.hs:185:25: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘directives’
+    |
+185 | buildFileDirectiveInput directives ownership dependentTypes constraints =
+    |                         ^^^^^^^^^^
+
+test/Test/Unit/CoreParserQuickCheckSpec.hs:195:26: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘directives’
+    |
+195 | buildBlockDirectiveInput directives ownership dependentTypes constraints =
+    |                          ^^^^^^^^^^
+
+[1019 of 1025] Compiling Test.Unit.CoreOwnershipQuickCheckSpec ( test/Test/Unit/CoreOwnershipQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/CoreOwnershipQuickCheckSpec.o ) [TestSupport.Arbitrary changed]
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:16:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘TestSupport.QuickCheck’ is redundant
+      except perhaps to import instances from ‘TestSupport.QuickCheck’
+    To import instances alone, use: import TestSupport.QuickCheck()
+   |
+16 | import TestSupport.QuickCheck (fastProperty)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:17:1: warning: [GHC-66111] [-Wunused-imports]
+    The qualified import of ‘Ownership.Common.Types’ is redundant
+      except perhaps to import instances from ‘Ownership.Common.Types’
+    To import instances alone, use: import Ownership.Common.Types()
+   |
+17 | import qualified Ownership.Common.Types as Own (OwnershipError(..), OwnershipType(..), OwnershipTransfer(..))
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:26:7: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘analyzer’
+   |
+26 |   let analyzer = newOwnershipAnalyzer
+   |       ^^^^^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:33:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+   |
+33 |     let result = analyzeOwnership code
+   |         ^^^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:40:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+   |
+40 |     let result = analyzeOwnershipFile filename
+   |         ^^^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:47:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+   |
+47 |     let result = analyzeOwnershipDebug True code
+   |         ^^^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:61:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+   |
+61 |     let result = lexAll code
+   |         ^^^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:68:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘tokens’
+   |
+68 |     let tokens = lexAll code
+   |         ^^^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:69:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+   |
+69 |         result = parseProgram tokens
+   |         ^^^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:81:36: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘ownershipType’
+   |
+81 |   forAll arbitraryOwnershipType $ \ownershipType ->
+   |                                    ^^^^^^^^^^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:87:37: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘error’
+   |
+87 |   forAll arbitraryOwnershipError $ \error ->
+   |                                     ^^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:87:37: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘error’ shadows the existing binding
+      imported from ‘Prelude’ at test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:3:8-44
+      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.Err’)
+   |
+87 |   forAll arbitraryOwnershipError $ \error ->
+   |                                     ^^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:93:40: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘transfer’
+   |
+93 |   forAll arbitraryOwnershipTransfer $ \transfer ->
+   |                                        ^^^^^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:100:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘code’
+    |
+100 |     let code = "let " ++ varName ++ " = 42"
+    |         ^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:101:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+    |
+101 |         result = analyzeOwnership code
+    |         ^^^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:109:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘code’
+    |
+109 |       let code = varName ++ " = " ++ value
+    |           ^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:110:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+    |
+110 |           result = analyzeOwnership code
+    |           ^^^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:118:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘argsStr’
+    |
+118 |       let argsStr = unwords args
+    |           ^^^^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:119:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘code’
+    |
+119 |           code = funcName ++ "(" ++ argsStr ++ ")"
+    |           ^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:120:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+    |
+120 |           result = analyzeOwnership code
+    |           ^^^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:128:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘code’
+    |
+128 |       let code = var1 ++ " = move(" ++ var2 ++ ")"
+    |           ^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:129:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+    |
+129 |           result = analyzeOwnership code
+    |           ^^^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:137:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘code’
+    |
+137 |       let code = var1 ++ " = borrow(" ++ var2 ++ ")"
+    |           ^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:138:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+    |
+138 |           result = analyzeOwnership code
+    |           ^^^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:145:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘code’
+    |
+145 |     let code = "&" ++ varName
+    |         ^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:146:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+    |
+146 |         result = analyzeOwnership code
+    |         ^^^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:153:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘code’
+    |
+153 |     let code = "*" ++ varName
+    |         ^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:154:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+    |
+154 |         result = analyzeOwnership code
+    |         ^^^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:161:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘code’
+    |
+161 |     let code = "{\n  let " ++ varName ++ " = 42\n}"
+    |         ^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:162:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+    |
+162 |         result = analyzeOwnership code
+    |         ^^^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:170:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘code’
+    |
+170 |       let code = varName ++ ":" ++ lifetime
+    |           ^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:171:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+    |
+171 |           result = analyzeOwnership code
+    |           ^^^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:179:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘code’
+    |
+179 |       let code = varName ++ ": " ++ show ownershipType
+    |           ^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:180:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+    |
+180 |           result = analyzeOwnership code
+    |           ^^^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:187:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘statements’
+    |
+187 |     let statements = map (\name -> "let " ++ name ++ " = 42") varNames
+    |         ^^^^^^^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:188:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘code’
+    |
+188 |         code = unlines statements
+    |         ^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:189:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+    |
+189 |         result = analyzeOwnership code
+    |         ^^^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:196:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘rest’
+    |
+196 |     let rest [] = []
+    |         ^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:198:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘transfers’
+    |
+198 |         transfers = case varNames of
+    |         ^^^^^^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:201:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘code’
+    |
+201 |         code = unlines transfers
+    |         ^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:202:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+    |
+202 |         result = analyzeOwnership code
+    |         ^^^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:209:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘code’
+    |
+209 |     let code = "use(" ++ varName ++ ")\nuse(" ++ varName ++ ")"  -- Double use
+    |         ^^^^
+
+test/Test/Unit/CoreOwnershipQuickCheckSpec.hs:210:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+    |
+210 |         result = analyzeOwnership code
+    |         ^^^^^^
+
+[1021 of 1025] Compiling Test.Unit.CoreDependenciesQuickCheckSpec ( test/Test/Unit/CoreDependenciesQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/CoreDependenciesQuickCheckSpec.o ) [TestSupport.Arbitrary changed]
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:15:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Dependencies.AST’ is redundant
+      except perhaps to import instances from ‘Dependencies.AST’
+    To import instances alone, use: import Dependencies.AST()
+   |
+15 | import Dependencies.AST (AST(..), Statement(..), TypeExpr(..))
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:16:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Dependencies.TypeSystem’ is redundant
+      except perhaps to import instances from ‘Dependencies.TypeSystem’
+    To import instances alone, use: import Dependencies.TypeSystem()
+   |
+16 | import Dependencies.TypeSystem (Substitution, TypeVar(..), TypeConstraint(..), TypeScheme(..))
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:21:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘TestSupport.QuickCheck’ is redundant
+      except perhaps to import instances from ‘TestSupport.QuickCheck’
+    To import instances alone, use: import TestSupport.QuickCheck()
+   |
+21 | import TestSupport.QuickCheck (fastProperty)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:37:7: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘checker’
+   |
+37 |   let checker = newDependentTypeChecker
+   |       ^^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:44:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘types’
+   |
+44 |     let types = map (\name -> (name, [], [])) typeNames
+   |         ^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:45:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘checker’
+   |
+45 |         checker = newDependentTypeCheckerWithTypes types
+   |         ^^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:52:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+   |
+52 |     let result = analyzeDependentTypes code
+   |         ^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:59:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+   |
+59 |     let result = analyzeAST ast
+   |         ^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:66:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+   |
+66 |     let result = evalState (validateASTSemantics ast) newDependentTypeChecker
+   |         ^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:73:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+   |
+73 |     let result = evalState (validateStatement stmt) newDependentTypeChecker
+   |         ^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:80:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘checker’
+   |
+80 |     let checker = newDependentTypeChecker
+   |         ^^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:81:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+   |
+81 |         result = evalState (checkType typeExpr) checker
+   |         ^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:88:33: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘typeExpr’
+   |
+88 |     forAll arbitraryTypeExpr $ \typeExpr ->
+   |                                 ^^^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:89:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘checker’
+   |
+89 |       let checker = newDependentTypeChecker
+   |           ^^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:90:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+   |
+90 |           result = evalState (addType typeName [] []) checker
+   |           ^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:97:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘checker’
+   |
+97 |     let checker = newDependentTypeChecker
+   |         ^^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:98:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+   |
+98 |         result = evalState (addConstraint constraint) checker
+   |         ^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:105:33: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘typeExpr’
+    |
+105 |     forAll arbitraryTypeExpr $ \typeExpr ->
+    |                                 ^^^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:106:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘checker’
+    |
+106 |       let checker = newDependentTypeChecker
+    |           ^^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:107:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+    |
+107 |           result = evalState (checkTypeInstantiation typeName []) checker
+    |           ^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:113:7: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘checker’
+    |
+113 |   let checker = newDependentTypeChecker
+    |       ^^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:114:7: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+    |
+114 |       result = evalState solveConstraints checker
+    |       ^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:120:7: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘checker’
+    |
+120 |   let checker = newDependentTypeChecker
+    |       ^^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:121:7: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘errors’
+    |
+121 |       errors = getDependentTypeErrors checker
+    |       ^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:129:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+    |
+129 |       let result = unify [(type1, type2)]
+    |           ^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:136:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+    |
+136 |     let result = runTypeInference (inferType typeExpr)
+    |         ^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:143:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+    |
+143 |     let result = runTypeInference (inferStatement stmt)
+    |         ^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:150:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘program’
+    |
+150 |     let program = Program stmts
+    |         ^^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:151:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+    |
+151 |         result = runTypeInference (inferProgram program)
+    |         ^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:158:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+    |
+158 |     let result = runTypeInference (generalize 0 typeExpr)
+    |         ^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:165:9: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+    |
+165 |     let result = runTypeInference (instantiate scheme)
+    |         ^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:173:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+    |
+173 |       let result = runTypeInference (unifyTypes type1 type2)
+    |           ^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:181:11: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+    |
+181 |       let result = applyTypeSubstitution substitution typeExpr
+    |           ^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:187:7: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+    |
+187 |   let result = runTypeInference newTypeVariable
+    |       ^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:193:7: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+    |
+193 |   let result = runTypeInference getFreshTypeVar
+    |       ^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:199:7: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+    |
+199 |   let result = initialTypeEnvironment
+    |       ^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:205:31: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘typeExpr’
+    |
+205 |   forAll arbitraryTypeExpr $ \typeExpr ->
+    |                               ^^^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:211:37: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘constraint’
+    |
+211 |   forAll arbitraryTypeConstraint $ \constraint ->
+    |                                     ^^^^^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:217:33: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘scheme’
+    |
+217 |   forAll arbitraryTypeScheme $ \scheme ->
+    |                                 ^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:223:38: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘env’
+    |
+223 |   forAll arbitraryTypeEnvironment $ \env ->
+    |                                      ^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:229:35: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘substitution’
+    |
+229 |   forAll arbitrarySubstitution $ \substitution ->
+    |                                   ^^^^^^^^^^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:235:26: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘ast’
+    |
+235 |   forAll arbitraryAST $ \ast ->
+    |                          ^^^
+
+test/Test/Unit/CoreDependenciesQuickCheckSpec.hs:241:32: warning: [GHC-40910] [-Wunused-matches]
+    Defined but not used: ‘stmt’
+    |
+241 |   forAll arbitraryStatement $ \stmt ->
+    |                                ^^^^
+
+[1022 of 1025] Compiling Test.Unit.CoreCompilerQuickCheckSpec ( test/Test/Unit/CoreCompilerQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/CoreCompilerQuickCheckSpec.o ) [TestSupport.Arbitrary changed]
+test/Test/Unit/CoreCompilerQuickCheckSpec.hs:14:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘SourceLocation’ is redundant
+      except perhaps to import instances from ‘SourceLocation’
+    To import instances alone, use: import SourceLocation()
+   |
+14 | import SourceLocation
+   | ^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CoreCompilerQuickCheckSpec.hs:16:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘TestSupport.QuickCheck’ is redundant
+      except perhaps to import instances from ‘TestSupport.QuickCheck’
+    To import instances alone, use: import TestSupport.QuickCheck()
+   |
+16 | import TestSupport.QuickCheck (fastProperty)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/CoreCompilerQuickCheckSpec.hs:34:7: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘emptyFile’
+   |
+34 |   let emptyFile = TypusFile (FileDirectives Nothing Nothing Nothing) [] [] []
+   |       ^^^^^^^^^
+
+test/Test/Unit/CoreCompilerQuickCheckSpec.hs:35:7: warning: [GHC-40910] [-Wunused-local-binds]
+    Defined but not used: ‘result’
+   |
+35 |       result = compile emptyFile
+   |       ^^^^^^
+
+[1026 of 1026] Linking dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test [Objects changed]
+Running 1 test suites...
+Test suite typus-test: RUNNING...
+Test.Unit.Tests Tests
+  basic property:                                                                        OK
+    +++ OK, passed 100 tests.
+  Concise Typus Test Suite (48 tests)
+    Core Modules
+      Concise Utils QuickCheck Tests
+        String Processing
+          prop_trim_idempotent:                                                          OK
+            +++ OK, passed 100 tests.
+          prop_trim_removes_whitespace:                                                  OK
+            +++ OK, passed 100 tests.
+          prop_splitBy_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          prop_splitByCollapsed_properties:                                              OK
+            +++ OK, passed 100 tests.
+          prop_splitByComma_equals_splitBy:                                              OK
+            +++ OK, passed 100 tests.
+          prop_splitByCommaCollapsed_equals_splitByCollapsed:                            OK
+            +++ OK, passed 100 tests.
+          prop_breakOn_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          prop_safeProcessString_filters_control_chars:                                  OK
+            +++ OK, passed 100 tests.
+          prop_isValidChar_properties:                                                   OK
+            +++ OK, passed 100 tests.
+          prop_isRight_properties:                                                       OK
+            +++ OK, passed 100 tests.
+        Comment Processing
+          prop_removeLineComments_properties:                                            OK
+            +++ OK, passed 100 tests.
+          prop_removeComments_properties:                                                OK
+            +++ OK, passed 100 tests.
+          prop_removeLineComments_preserves_strings:                                     OK
+            +++ OK, passed 100 tests.
+          prop_removeComments_preserves_strings:                                         OK
+            +++ OK, passed 100 tests.
+        Indentation Processing
+          prop_normalizeIndentation_preserves_relative_indentation:                      OK
+            +++ OK, passed 100 tests.
+          prop_normalizeIndentation_removes_common_prefix:                               OK
+            +++ OK, passed 100 tests.
+      Concise SourceLocation QuickCheck Tests
+        SourcePos Properties
+          pos_properties:                                                                OK
+            +++ OK, passed 100 tests.
+          posAfter_properties:                                                           OK
+            +++ OK, passed 100 tests.
+          posAt_properties:                                                              OK
+            +++ OK, passed 100 tests.
+          posAtLineCol_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          advancePos_properties:                                                         OK
+            +++ OK, passed 100 tests.
+          advancePosBy_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          advancePosByText_properties:                                                   OK
+            +++ OK, passed 100 tests.
+          comparePos_properties:                                                         OK
+            +++ OK, passed 100 tests.
+          sourceLine_properties:                                                         OK
+            +++ OK, passed 100 tests.
+          sourceColumn_properties:                                                       OK
+            +++ OK, passed 100 tests.
+        SourceSpan Properties
+          span_properties:                                                               OK
+            +++ OK, passed 100 tests.
+          emptySpan_properties:                                                          OK
+            +++ OK, passed 100 tests.
+          spanFrom_properties:                                                           OK
+            +++ OK, passed 100 tests.
+          spanTo_properties:                                                             OK
+            +++ OK, passed 100 tests.
+          spanBetween_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          spanBetweenOrdered_properties:                                                 OK
+            +++ OK, passed 100 tests.
+          mergeSpans_properties:                                                         OK
+            +++ OK, passed 100 tests.
+          isValidSpan_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          isValidBlockSpan_properties:                                                   OK
+            +++ OK, passed 100 tests.
+        Located Properties
+          locatedAt_properties:                                                          OK
+            +++ OK, passed 100 tests.
+          locatedWithSpan_properties:                                                    OK
+            +++ OK, passed 100 tests.
+          locatedValue_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          locatedSpan_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          locatedPos_properties:                                                         OK
+            +++ OK, passed 100 tests.
+          mapLocated_properties:                                                         OK
+            +++ OK, passed 100 tests.
+      Concise Parser QuickCheck Tests
+        Parser Basic Properties
+          parseTypus_equals_parseTypusFile:                                              OK
+            +++ OK, passed 100 tests.
+          parseExpression_returns_right:                                                 OK
+            +++ OK, passed 100 tests.
+          parseDeclaration_returns_right:                                                OK
+            +++ OK, passed 100 tests.
+        TypusFile Properties
+          tfContents_properties:                                                         OK (0.01s)
+            +++ OK, passed 100 tests.
+          defaultFileDirectives_properties:                                              OK
+            +++ OK, passed 100 tests.
+          defaultBlockDirectives_properties:                                             OK
+            +++ OK, passed 100 tests.
+        Identifier Properties
+          isIdentifierChar_properties:                                                   OK
+            +++ OK, passed 100 tests.
+        Parser Roundtrip Properties
+          parseTypus_roundtrip_simple:                                                   OK
+            +++ OK, passed 100 tests.
+          parseTypus_empty_input:                                                        OK
+            +++ OK, passed 100 tests.
+      Concise Compiler QuickCheck Tests
+        Compiler Properties
+          compile_properties:                                                            OK
+            +++ OK, passed 100 tests.
+          renderCompilationError_properties:                                             OK (0.26s)
+            +++ OK, passed 100 tests.
+          formatCompilerErrors_properties:                                               OK (0.27s)
+            +++ OK, passed 100 tests.
+          generateDetailedReport_properties:                                             OK (0.29s)
+            +++ OK, passed 100 tests.
+          analyzeErrors_properties:                                                      OK
+            +++ OK, passed 100 tests.
+        Type Checking Properties
+          hasTypeErrors_properties:                                                      OK (0.02s)
+            +++ OK, passed 100 tests.
+          diagnoseTypeErrors_properties:                                                 OK (0.02s)
+            +++ OK, passed 100 tests.
+          checkTypeError_properties:                                                     OK
+            +++ OK, passed 100 tests.
+          hasMalformedSyntax_properties:                                                 OK
+            +++ OK, passed 100 tests.
+        Type Environment Properties
+          buildTypeEnv_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          buildTypeEnvFromPairs_properties:                                              OK
+            +++ OK, passed 100 tests.
+        Declaration and Function Properties
+          extractDeclarations_properties:                                                OK
+            +++ OK, passed 100 tests.
+          extractFunctionCalls_properties:                                               OK
+            +++ OK, passed 100 tests.
+          isMethodDeclaration_properties:                                                OK
+            +++ OK, passed 100 tests.
+        Error Handling Properties
+          malformedSyntaxError_properties:                                               OK
+            +++ OK, passed 100 tests.
+          typeCheckFailure_properties:                                                   OK
+            +++ OK, passed 100 tests.
+          typeDiagnosticToCompilerError_properties:                                      OK
+            +++ OK, passed 100 tests.
+        Code Generation Properties
+          ensureSourceIR_properties:                                                     OK
+            +++ OK, passed 100 tests.
+          generateGoCode_properties:                                                     OK
+            +++ OK, passed 100 tests.
+        Specialized Analysis Properties
+          checkDependentTypes_properties:                                                OK
+            +++ OK, passed 100 tests.
+          checkOwnership_properties:                                                     OK
+            +++ OK, passed 100 tests.
+      Concise ErrorHandler QuickCheck Tests
+        ErrorHandler Basic Properties
+          handleError_properties:                                                        OK (0.03s)
+            +++ OK, passed 100 tests.
+          handleErrors_properties:                                                       OK (0.15s)
+            +++ OK, passed 100 tests.
+          createError_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          createWarning_properties:                                                      OK
+            +++ OK, passed 100 tests.
+          createInfo_properties:                                                         OK
+            +++ OK, passed 100 tests.
+        ErrorHandler Count Properties
+          errorCount_properties:                                                         OK
+            +++ OK, passed 100 tests.
+          warningCount_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          infoCount_properties:                                                          OK
+            +++ OK, passed 100 tests.
+          hasErrors_properties:                                                          OK
+            +++ OK, passed 100 tests.
+          hasWarnings_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          hasInfos_properties:                                                           OK
+            +++ OK, passed 100 tests.
+        ErrorHandler Filter Properties
+          getErrors_properties:                                                          OK
+            +++ OK, passed 100 tests.
+          getWarnings_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          getInfos_properties:                                                           OK
+            +++ OK, passed 100 tests.
+          clearErrors_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          clearWarnings_properties:                                                      OK
+            +++ OK, passed 100 tests.
+          clearInfos_properties:                                                         OK
+            +++ OK, passed 100 tests.
+        ErrorHandler Utility Properties
+          mergeHandlers_properties:                                                      OK
+            +++ OK, passed 100 tests.
+          filterBySeverityForTests_properties:                                           OK
+            +++ OK, passed 100 tests.
+          sortBySeverity_properties:                                                     OK (0.16s)
+            +++ OK, passed 100 tests.
+          renderErrors_properties:                                                       OK
+            +++ OK, passed 100 tests.
+      Concise Ownership QuickCheck Tests
+        OwnershipAnalysis Properties
+          oaOwners_properties:                                                           OK
+            +++ OK, passed 100 tests.
+          oaBorrowers_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          oaErrors_properties:                                                           OK
+            +++ OK, passed 100 tests.
+        Ownership Query Properties
+          getOwners_properties:                                                          OK (0.01s)
+            +++ OK, passed 100 tests.
+          getBorrowers_properties:                                                       OK (0.01s)
+            +++ OK, passed 100 tests.
+          getOwnedResources_properties:                                                  OK (0.01s)
+            +++ OK, passed 100 tests.
+          isOwner_properties:                                                            OK
+            +++ OK, passed 100 tests.
+          isBorrower_properties:                                                         OK
+            +++ OK, passed 100 tests.
+        Ownership Transfer Properties
+          checkOwnershipTransfer_properties:                                             OK
+            +++ OK, passed 100 tests.
+          canTransferOwnership_properties:                                               OK
+            +++ OK, passed 100 tests.
+          transferOwnership_properties:                                                  OK
+            +++ OK, passed 100 tests.
+        Ownership Constraint Properties
+          validateOwnershipConstraints_properties:                                       OK
+            +++ OK, passed 100 tests.
+        Ownership Error Properties
+          hasOwnershipErrors_properties:                                                 OK
+            +++ OK, passed 100 tests.
+          getOwnershipErrors_properties:                                                 OK (0.01s)
+            +++ OK, passed 100 tests.
+          clearOwnershipErrors_properties:                                               OK (0.03s)
+            +++ OK, passed 100 tests.
+        Ownership Analysis Properties
+          mergeOwnershipAnalyses_properties:                                             OK (0.13s)
+            +++ OK, passed 100 tests.
+      Concise Dependencies QuickCheck Tests
+        DependencyGraph Properties
+          dgNodes_properties:                                                            OK
+            +++ OK, passed 100 tests.
+          dgEdges_properties:                                                            OK
+            +++ OK, passed 100 tests.
+          getNodes_properties:                                                           OK
+            +++ OK, passed 100 tests.
+        Dependency Analysis Properties
+          analyzeDependencies_properties:                                                OK (0.03s)
+            +++ OK, passed 100 tests.
+          detectCycles_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          hasCycles_properties:                                                          OK
+            +++ OK, passed 100 tests.
+        Dependency Resolution Properties
+          resolveDependencies_properties:                                                OK (0.03s)
+            +++ OK, passed 100 tests.
+          getDependencyErrors_properties:                                                OK
+            +++ OK, passed 100 tests.
+          clearDependencyErrors_properties:                                              OK (0.03s)
+            +++ OK, passed 100 tests.
+        Dependency Manipulation Properties
+          addDependency_properties:                                                      OK
+            +++ OK, passed 100 tests.
+          removeDependency_properties:                                                   OK
+            +++ OK, passed 100 tests.
+          hasDependency_properties:                                                      OK
+            +++ OK, passed 100 tests.
+          mergeDependencyGraphs_properties:                                              OK (0.09s)
+            +++ OK, passed 100 tests.
+        Dependency Query Properties
+          getDirectDependencies_properties:                                              OK
+            +++ OK, passed 100 tests.
+          getTransitiveDependencies_properties:                                          OK
+            +++ OK, passed 100 tests.
+          getDependencyPath_properties:                                                  OK
+            +++ OK, passed 100 tests.
+          topologicalSort_properties:                                                    OK
+            +++ OK, passed 100 tests.
+      CodeGeneration QuickCheck Tests
+        IR statement consistency:                                                        OK
+          +++ OK, passed 100 tests; 38 discarded.
+        IR expression consistency:                                                       OK
+          +++ OK, passed 100 tests; 17 discarded.
+        TypusFile structure consistency:                                                 OK (0.01s)
+          +++ OK, passed 100 tests.
+        Source location basic properties:                                                OK
+          +++ OK, passed 100 tests; 268 discarded.
+        Go token basic properties:                                                       OK
+          +++ OK, passed 100 tests; 20 discarded.
+    Integration Tests
+      Concise Integration QuickCheck Tests
+        Parser-Compiler Integration
+          parse_compile_integration:                                                     OK
+            +++ OK, passed 100 tests.
+          parse_compile_error_propagation:                                               OK
+            +++ OK, passed 100 tests.
+        Error Handling Integration
+          error_handling_consistency:                                                    OK
+            +++ OK, passed 100 tests.
+          error_count_consistency:                                                       OK
+            +++ OK, passed 100 tests.
+        Dependencies-Ownership Integration
+          dependencies_ownership_consistency:                                            OK
+            +++ OK, passed 100 tests.
+          cycle_detection_integration:                                                   OK
+            +++ OK, passed 100 tests.
+        Source Location Integration
+          source_location_preservation:                                                  OK
+            +++ OK, passed 100 tests.
+          span_consistency:                                                              OK
+            +++ OK, passed 100 tests.
+        Utils Integration
+          utils_parser_integration:                                                      OK
+            +++ OK, passed 100 tests.
+          utils_comment_handling:                                                        OK
+            +++ OK, passed 100 tests.
+        End-to-End Integration
+          end_to_end_compilation:                                                        OK
+            +++ OK, passed 100 tests.
+          round_trip_properties:                                                         OK
+            +++ OK, passed 100 tests.
+  List Properties Tests
+    List: length of empty list is 0:                                                     OK
+      +++ OK, passed 100 tests.
+    List: length of singleton list is 1:                                                 OK
+      +++ OK, passed 100 tests.
+    List: length of cons is length + 1:                                                  OK
+      +++ OK, passed 100 tests.
+    List: length of append is sum of lengths:                                            OK
+      +++ OK, passed 100 tests.
+    List: reverse is involutive:                                                         OK
+      +++ OK, passed 100 tests.
+    List: reverse preserves length:                                                      OK
+      +++ OK, passed 100 tests.
+    List: head of cons is the first element:                                             OK
+      +++ OK, passed 100 tests.
+    List: tail of cons is the rest:                                                      OK
+      +++ OK, passed 100 tests.
+    List: last of singleton is the element:                                              OK
+      +++ OK, passed 100 tests.
+    List: init of singleton is empty:                                                    OK
+      +++ OK, passed 100 tests.
+    List: last of cons is last of tail or element if empty:                              OK
+      +++ OK, passed 100 tests; 18 discarded.
+    List: init of cons is element cons init of tail or empty if empty:                   OK
+      +++ OK, passed 100 tests; 17 discarded.
+    List: null of empty list is true:                                                    OK
+      +++ OK, passed 100 tests.
+    List: null of non-empty list is false:                                               OK
+      +++ OK, passed 100 tests.
+    List: map preserves length:                                                          OK
+      +++ OK, passed 100 tests.
+    List: map of cons is cons of map:                                                    OK
+      +++ OK, passed 100 tests.
+    List: map of identity is identity:                                                   OK
+      +++ OK, passed 100 tests.
+    List: map of composition is composition of maps:                                     OK
+      +++ OK, passed 100 tests.
+    List: filter preserves order:                                                        OK
+      +++ OK, passed 100 tests.
+    List: filter of empty list is empty:                                                 OK
+      +++ OK, passed 100 tests.
+    List: filter of cons with predicate true is cons of filter with predicate true:      OK
+      +++ OK, passed 100 tests.
+    List: filter of cons with predicate false excludes the head:                         OK
+      +++ OK, passed 100 tests; 91 discarded.
+    List: all of empty list is true:                                                     OK
+      +++ OK, passed 100 tests.
+    List: any of empty list is false:                                                    OK
+      +++ OK, passed 100 tests.
+    List: all of singleton is predicate of element:                                      OK
+      +++ OK, passed 100 tests.
+    List: any of singleton is predicate of element:                                      OK
+      +++ OK, passed 100 tests.
+    List: all of cons is predicate of head AND all of tail:                              OK
+      +++ OK, passed 100 tests.
+    List: any of cons is predicate of head OR any of tail:                               OK
+      +++ OK, passed 100 tests.
+    List: sum of empty list is 0:                                                        OK
+      +++ OK, passed 100 tests.
+    List: sum of singleton is element:                                                   OK
+      +++ OK, passed 100 tests.
+    List: sum of cons is head plus sum of tail:                                          OK
+      +++ OK, passed 100 tests.
+    List: sum of append is sum of parts:                                                 OK
+      +++ OK, passed 100 tests.
+    List: product of empty list is 1:                                                    OK
+      +++ OK, passed 100 tests.
+    List: product of singleton is element:                                               OK
+      +++ OK, passed 100 tests.
+    List: product of cons is head times product of tail:                                 OK
+      +++ OK, passed 100 tests.
+    List: product of append is product of parts:                                         OK
+      +++ OK, passed 100 tests.
+    List: concat of empty list of lists is empty:                                        OK
+      +++ OK, passed 100 tests.
+    List: concat of singleton list of lists is the list:                                 OK
+      +++ OK, passed 100 tests.
+    List: concat of cons of lists is head list concat concat of tail:                    OK
+      +++ OK, passed 100 tests.
+    List: concat of map is same as concatMap:                                            OK
+      +++ OK, passed 100 tests.
+    List: concat of append is concat of parts:                                           OK (0.02s)
+      +++ OK, passed 100 tests.
+    List: concatMap of empty list is empty:                                              OK
+      +++ OK, passed 100 tests.
+    List: concatMap of singleton is function applied to element:                         OK
+      +++ OK, passed 100 tests.
+    List: concatMap of cons is function applied to head concat concatMap of tail:        OK
+      +++ OK, passed 100 tests.
+    List: foldr of empty list is initial value:                                          OK
+      +++ OK, passed 100 tests.
+    List: foldr of singleton is function applied to element and initial value:           OK
+      +++ OK, passed 100 tests.
+    List: foldr of cons is function applied to head and foldr of tail:                   OK
+      +++ OK, passed 100 tests.
+    List: foldl of empty list is initial value:                                          OK
+      +++ OK, passed 100 tests.
+    List: foldl of singleton is function applied to initial value and element:           OK
+      +++ OK, passed 100 tests.
+    List: foldl of cons is function applied to foldl of initial value and head and tail: OK
+      +++ OK, passed 100 tests.
+    List: foldr and foldl are equivalent for associative operations:                     OK
+      +++ OK, passed 100 tests.
+    List: foldr and foldl are equivalent for commutative operations:                     OK
+      +++ OK, passed 100 tests.
+    List: take 0 of any list is empty:                                                   OK
+      +++ OK, passed 100 tests.
+    List: take n of empty list is empty:                                                 OK
+      +++ OK, passed 100 tests.
+    List: take n of list with length <= n is the list itself:                            OK
+      +++ OK, passed 100 tests; 274 discarded.
+    List: take n of list with length > n has length n:                                   OK
+      +++ OK, passed 100 tests; 382 discarded.
+    List: take preserves order:                                                          OK
+      +++ OK, passed 100 tests.
+    List: drop 0 of any list is the list itself:                                         OK
+      +++ OK, passed 100 tests.
+    List: drop n of empty list is empty:                                                 OK
+      +++ OK, passed 100 tests.
+    List: drop n of list with length <= n is empty:                                      OK
+      +++ OK, passed 100 tests; 219 discarded.
+    List: drop n of list with length > n has length (length - n):                        OK
+      +++ OK, passed 100 tests; 302 discarded.
+    List: drop preserves order:                                                          OK
+      +++ OK, passed 100 tests.
+    List: splitAt n is (take n, drop n):                                                 OK
+      +++ OK, passed 100 tests.
+    List: take and drop reconstruct original list:                                       OK
+      +++ OK, passed 100 tests.
+    List: replicate 0 is empty list:                                                     OK
+      +++ OK, passed 100 tests.
+    List: replicate n has length n:                                                      OK
+      +++ OK, passed 100 tests; 96 discarded.
+    List: all elements of replicate are equal:                                           OK
+      +++ OK, passed 100 tests; 119 discarded.
+    List: repeat is infinite:                                                            OK
+      +++ OK, passed 100 tests.
+    List: iterate n f starting from x applies f n times:                                 OK
+      +++ OK, passed 100 tests; 67 discarded.
+    List: cycle of empty list is undefined (should not evaluate):                        OK
+      +++ OK, passed 100 tests.
+    List: cycle of non-empty list repeats infinitely:                                    OK
+      +++ OK, passed 100 tests; 17 discarded.
+    List: span p xs is (takeWhile p xs, dropWhile p xs):                                 OK
+      +++ OK, passed 100 tests.
+    List: break p xs is (takeWhile (not . p) xs, dropWhile (not . p) xs):                OK
+      +++ OK, passed 100 tests.
+    List: group sorts consecutive equal elements:                                        OK
+      +++ OK, passed 100 tests.
+    List: inits of empty list is list containing empty list:                             OK
+      +++ OK, passed 100 tests.
+    List: inits of non-empty list includes empty list and full list:                     OK
+      +++ OK, passed 100 tests.
+    List: tails of empty list is list containing empty list:                             OK
+      +++ OK, passed 100 tests.
+    List: tails of non-empty list includes empty list and full list:                     OK
+      +++ OK, passed 100 tests.
+    List: isPrefixOf is reflexive:                                                       OK
+      +++ OK, passed 100 tests.
+    List: empty list is prefix of any list:                                              OK
+      +++ OK, passed 100 tests.
+    List: isSuffixOf is reflexive:                                                       OK
+      +++ OK, passed 100 tests.
+    List: empty list is suffix of any list:                                              OK
+      +++ OK, passed 100 tests.
+    List: isInfixOf is reflexive:                                                        OK
+      +++ OK, passed 100 tests.
+    List: empty list is sublist of any list:                                             OK
+      +++ OK, passed 100 tests.
+    List: elem is equivalent to any (==):                                                OK
+      +++ OK, passed 100 tests.
+    List: notElem is equivalent to not . elem:                                           OK
+      +++ OK, passed 100 tests.
+    List: lookup finds the first matching key:                                           OK
+      +++ OK, passed 100 tests.
+  Basic QuickCheck Test Suite
+    Trim basic:                                                                          OK
+      +++ OK, passed 100 tests.
+    Trim empty:                                                                          OK
+      +++ OK, passed 100 tests.
+    Trim whitespace:                                                                     OK
+      +++ OK, passed 100 tests (3% all whitespace).
+    Trim regular:                                                                        OK
+      +++ OK, passed 100 tests; 5 discarded.
+    Trim idempotent:                                                                     OK
+      +++ OK, passed 100 tests.
+    SplitBy basic:                                                                       OK
+      +++ OK, passed 100 tests.
+    SplitBy empty:                                                                       OK
+      +++ OK, passed 100 tests.
+    SplitByComma basic:                                                                  OK
+      +++ OK, passed 100 tests.
+    SplitByComma empty:                                                                  OK
+      +++ OK, passed 100 tests.
+    RemoveLineComments basic:                                                            OK
+      +++ OK, passed 100 tests.
+    RemoveLineComments empty:                                                            OK
+      +++ OK, passed 100 tests.
+    RemoveLineComments no comments:                                                      OK
+      +++ OK, passed 100 tests (0% has comments).
+    RemoveComments basic:                                                                OK
+      +++ OK, passed 100 tests.
+    RemoveComments empty:                                                                OK
+      +++ OK, passed 100 tests.
+    RemoveComments no comments:                                                          OK
+      +++ OK, passed 100 tests (0% has comments).
+    NormalizeIndentation basic:                                                          OK
+      +++ OK, passed 100 tests.
+    NormalizeIndentation empty:                                                          OK
+      +++ OK, passed 100 tests.
+    NormalizeIndentation no indent:                                                      OK
+      +++ OK, passed 100 tests (51% has indentation).
+    isRight basic:                                                                       OK
+      +++ OK, passed 100 tests.
+    isLeft basic:                                                                        OK
+      +++ OK, passed 100 tests.
+    isRight right:                                                                       OK
+      +++ OK, passed 100 tests.
+    isRight left:                                                                        OK
+      +++ OK, passed 100 tests.
+    isLeft right:                                                                        OK
+      +++ OK, passed 100 tests.
+    isLeft left:                                                                         OK
+      +++ OK, passed 100 tests.
+    Trim edge cases:                                                                     OK
+    SplitBy edge cases:                                                                  OK
+    SplitByComma edge cases:                                                             OK
+    RemoveLineComments edge cases:                                                       OK
+    RemoveComments edge cases:                                                           OK
+    NormalizeIndentation edge cases:                                                     OK
+    isRight edge cases:                                                                  OK
+    isLeft edge cases:                                                                   OK
+  Basic QuickCheck Tests
+    trim removes whitespace:                                                             OK
+      +++ OK, passed 100 tests.
+    trim preserves content:                                                              OK
+      +++ OK, passed 100 tests.
+    splitBy preserves content:                                                           OK
+      +++ OK, passed 100 tests.
+    startPos values:                                                                     OK
+      +++ OK, passed 100 tests.
+    removeLineComments removes comments:                                                 OK
+      +++ OK, passed 100 tests.
+    removeLineComments preserves before:                                                 OK
+      +++ OK, passed 100 tests.
+    splitByCommaCollapsed removes empty parts:                                           OK
+      +++ OK, passed 100 tests.
+    splitByComma preserves empty parts:                                                  OK
+      +++ OK, passed 100 tests.
+    normalizeIndentation preserves relative:                                             OK
+      +++ OK, passed 100 tests.
+    safeProcessString handles special:                                                   OK
+      +++ OK, passed 100 tests.
+    isValidChar properties:                                                              OK
+      +++ OK, passed 100 tests.
+    removeLineComments handles multiple lines:                                           OK
+      +++ OK, passed 100 tests.
+  Boundary Condition Advanced QuickCheck Tests
+    Extremely long string handling:                                                      OK
+      +++ OK, passed 100 tests.
+    Deeply nested structure:                                                             OK
+      +++ OK, passed 100 tests.
+    Repeated character handling:                                                         OK
+      +++ OK, passed 100 tests.
+    Unicode character handling:                                                          OK
+      +++ OK, passed 100 tests.
+    Empty and boundary input:                                                            OK
+      +++ OK, passed 100 tests.
+    Large file handling:                                                                 OK (0.02s)
+      +++ OK, passed 100 tests.
+    Extremely long identifier:                                                           OK
+      +++ OK, passed 100 tests.
+    Extreme indentation:                                                                 OK
+      +++ OK, passed 100 tests.
+    Extreme comment handling:                                                            OK
+      +++ OK, passed 100 tests.
+    Extreme error conditions:                                                            OK
+      +++ OK, passed 100 tests.
+    Memory boundary conditions:                                                          OK
+      +++ OK, passed 100 tests.
+    Recursion boundary:                                                                  OK
+      +++ OK, passed 100 tests; 42 discarded.
+    Numeric boundary:                                                                    OK
+      +++ OK, passed 100 tests.
+    String boundary:                                                                     OK
+      +++ OK, passed 100 tests.
+    Parser boundary:                                                                     OK
+      +++ OK, passed 100 tests.
+    Position tracking boundary:                                                          OK
+      +++ OK, passed 100 tests.
+    Error handling boundary:                                                             OK
+      +++ OK, passed 100 tests.
+    Empty string handling:                                                               OK
+    Single character handling:                                                           OK
+    Extremely long string handling:                                                      OK
+    Deeply nested structure:                                                             OK
+    Special character handling:                                                          OK
+    Extremely long identifier:                                                           OK
+    Extreme indentation:                                                                 OK
+    Extreme comment handling:                                                            OK
+    Extreme error conditions:                                                            OK
+    Memory boundary conditions:                                                          OK
+  Boundary Condition Comprehensive Tests
+    Unit Tests
+      Extreme Input Sizes
+        parser with empty input:                                                         OK
+        parser with single character:                                                    OK
+        parser with very large input:                                                    OK (0.03s)
+        parser with very long lines:                                                     OK (0.01s)
+      Extreme Positions
+        source position at maximum values:                                               OK
+        source position at minimum values:                                               OK
+        position advancement with large content:                                         OK
+      Extreme Error Conditions
+        error collector with many errors:                                                OK
+        error with very long message:                                                    OK
+        fatal error handling:                                                            OK
+        error with extreme severity:                                                     OK
+      Special Characters and Unicode
+        parser with control characters:                                                  OK
+        parser with unicode characters:                                                  OK
+        utils with special characters:                                                   OK
+        parser with mixed content types:                                                 OK
+      Resource Limits
+        memory usage with repeated parsing:                                              OK
+        deep nesting handling:                                                           OK
+        large directive values:                                                          OK
+      Concurrent Safety
+        parser state isolation:                                                          OK
+        error collector isolation:                                                       OK
+      Performance Boundaries
+        parsing performance with large files:                                            OK (0.03s)
+        error formatting performance:                                                    OK
+        utils performance with large strings:                                            OK (0.03s)
+    QuickCheck Properties
+      Extreme Input Sizes
+        parser large input:                                                              OK (0.26s)
+          +++ OK, passed 100 tests.
+        parser deeply nested:                                                            OK (0.02s)
+          +++ OK, passed 100 tests; 128 discarded.
+        large directives handling:                                                       OK
+          +++ OK, passed 100 tests; 112 discarded.
+      Extreme Positions
+        sourcelocation extreme positions:                                                OK
+          +++ OK, passed 100 tests.
+      Extreme Error Conditions
+        error extreme severity:                                                          OK
+          +++ OK, passed 100 tests.
+        error collector large numbers:                                                   OK
+          +++ OK, passed 100 tests; 98 discarded.
+        error formatting extreme content:                                                OK
+          +++ OK, passed 100 tests.
+      Utils Extreme Inputs
+        utils extreme inputs:                                                            OK
+          +++ OK, passed 100 tests.
+      Special Characters
+        special characters handling:                                                     OK
+          +++ OK, passed 100 tests.
+      Performance Boundaries
+        memory efficiency repeated operations:                                           OK
+          +++ OK, passed 100 tests; 103 discarded.
+  CodeGeneration QuickCheck Tests
+    IR statement consistency:                                                            OK
+      +++ OK, passed 100 tests; 28 discarded.
+    IR expression consistency:                                                           OK
+      +++ OK, passed 100 tests; 20 discarded.
+    TypusFile structure consistency:                                                     OK (0.01s)
+      +++ OK, passed 100 tests.
+    Source location basic properties:                                                    OK
+      +++ OK, passed 100 tests; 225 discarded.
+    Go token basic properties:                                                           OK
+      +++ OK, passed 100 tests; 15 discarded.
+
+All 339 tests passed (2.26s)
+Test suite typus-test: PASS
+Test suite logged to:
+/home/runner/work/Typus/Typus/./dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/test/typus-0.12.2-typus-test.log
+1 of 1 test suites (1 of 1 test cases) passed.

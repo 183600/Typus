@@ -2,7 +2,7 @@ module Test.Unit.TestErrorHandlerPropertiesSpec where
 
 
 
-import Test.Tasty.HUnit
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
 

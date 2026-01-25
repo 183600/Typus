@@ -6,13 +6,13 @@ module Test.Unit.TestParserDirectivesSpec where
 
 import Test.Tasty.HUnit
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck ()
 
 import qualified Parser as Parser
 import SourceLocation
-import ErrorHandler
-import Utils
-import qualified Data.Text as T
+import ErrorHandler ()
+import Utils ()
+import qualified Data.Text as T ()
 import TestSupport.Arbitrary ()
 
 -- | Test suite for Parser Directives

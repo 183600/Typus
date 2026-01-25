@@ -6,16 +6,16 @@ module Test.Unit.TestSymbolTableOperationsSpec where
 
 import Test.Tasty.HUnit
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck ()
 
-import Parser
+import Parser ()
 import SourceLocation
-import ErrorHandler
-import Compiler.IR
-import Ownership
-import Dependencies
-import Utils
-import qualified Data.Text as T
+import ErrorHandler ()
+import Compiler.IR ()
+import Ownership ()
+import Dependencies ()
+import Utils ()
+import qualified Data.Text as T ()
 import qualified Data.Map as Map
 import TestSupport.Arbitrary ()
 
@@ -312,4 +312,4 @@ data TestSourcePos = TestSourcePos
   } deriving (Eq, Show)
 
 testPosAt :: Int -> Int -> TestSourcePos
-testPosAt line column = TestSourcePos line column
+testPosAt lineNum columnNum = TestSourcePos lineNum columnNum

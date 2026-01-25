@@ -10,10 +10,10 @@ import Test.Tasty.QuickCheck
 
 import Utils
 import SourceLocation
-import qualified ErrorHandler as EH
+import qualified ErrorHandler as EH ()
 import qualified Compiler.Errors.Core as Error
-import Dependencies
-import qualified Dependencies.TypeSystem as Dependencies
+import Dependencies ()
+import qualified Dependencies.TypeSystem as Dependencies ()
 import qualified Data.Text as T
 import TestSupport.Arbitrary ()
 
@@ -60,11 +60,11 @@ testQuickCheckProperties = testGroup "QuickCheck Properties Tests"
         SourceLocation.mergeSpans (SourceLocation.mergeSpans span1 span2) span3
         
   , testProperty "SourceLocation: SourceLocation.SourceLocation.spanBetween start and end is valid" $
-      \start end -> let span = SourceLocation.spanBetween start end
-                    in SourceLocation.spanStart span <= SourceLocation.spanEnd span
+      \start end -> let sp = SourceLocation.spanBetween start end
+                    in SourceLocation.spanStart sp <= SourceLocation.spanEnd sp
                     
   , testProperty "ErrorHandler: ErrorHandler.EH.errorAt creates Error (T.pack creates) error with correct Error.location" $
-      \(pos :: SourceLocation.SourcePos) message -> 
+      \(_pos :: SourceLocation.SourcePos) message -> 
         let err = Error.errorAt "test" Error.Error (T.pack message) (Error.ErrorLocation Nothing 1 1 Nothing Nothing)
         in Error.line (Error.location err) == 1 && 
            Error.column (Error.location err) == 1

@@ -2,7 +2,6 @@ module Test.Unit.CompactCabalQuickCheckSpec where
 
 
 
-import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
 

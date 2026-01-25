@@ -5,22 +5,10 @@ module Test.Unit.CompilerCoreFunctionalityTestSpec where
 
 
 
-import Test.Tasty.HUnit
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll)
-import Test.QuickCheck (Gen, Property, (==>))
-import qualified Data.Text as T
-import qualified Data.Map as Map
-import Data.List (nub)
-import Data.Char (isAlpha, isAlphaNum)
-import Test.Tasty
-import Test.Tasty.QuickCheck
-
-import Compiler.TypeChecker
-import Compiler.GoAst
-import Compiler.IR
-import Parser
-import SourceLocation
+import Test.QuickCheck (Property, (==>))
+import Compiler.TypeChecker (Type(..), FunctionParam(..), FunctionSignature(..), TypeCheckDiagnostic(..))
 
 -- Helper generators
 genTypeName :: Gen String

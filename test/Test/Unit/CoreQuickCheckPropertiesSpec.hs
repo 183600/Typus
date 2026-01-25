@@ -4,22 +4,16 @@ module Test.Unit.CoreQuickCheckPropertiesSpec where
 
 
 import Test.Tasty.HUnit
-import Test.Tasty
 import Test.Tasty.QuickCheck
+import Test.Tasty (TestTree, testGroup)
 
-
-
-import Test.Tasty
-import Test.Tasty.QuickCheck
-
-import Test.QuickCheck (NonEmptyList(..))
+import Test.QuickCheck ()
 import Utils (trim, splitBy, removeLineComments)
-import SourceLocation (SourcePos(..), SourceSpan(..), spanTo, spanBetween, startPos, posAfter, mergeSpans, posAt)
-import Data.Char (isSpace, isAlphaNum)
-import Data.List (sort, intercalate, isInfixOf, nub, (\\), isPrefixOf)
-import qualified Data.Map as Map (Map, empty, insert, toList, keys)
-import qualified Data.Set as Set (Set, empty, insert, toList, member, size)
-import Control.Monad (foldM)
+import SourceLocation (SourcePos(..), SourceSpan(..), spanBetween, posAfter, mergeSpans, posAt)
+import Data.Char (isSpace)
+import Data.List (sort, intercalate, nub, (\\), isPrefixOf)
+import qualified Data.Map as Map (Map, empty, insert, keys)
+import qualified Data.Set as Set (Set, insert, size)
 
 -- Core QuickCheck property tests
 

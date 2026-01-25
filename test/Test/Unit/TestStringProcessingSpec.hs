@@ -9,12 +9,12 @@ import Test.Tasty
 import Test.Tasty.QuickCheck
 
 import Utils
-import SourceLocation
-import ErrorHandler
-import qualified Data.Text as T
+import SourceLocation ()
+import ErrorHandler ()
+import qualified Data.Text as T ()
 import TestSupport.Arbitrary ()
 import Data.Char (isAscii, isControl, isSpace)
-import Data.List (isPrefixOf, isInfixOf, intersperse, last)
+import Data.List (isPrefixOf, isInfixOf, intersperse)
 import Prelude hiding (last)
 
 -- | Test suite for String Processing
@@ -187,7 +187,7 @@ testStringProcessing = testGroup "String Processing Tests"
   , testProperty "Utils: breakOn pattern not found returns original string" $
       \pat s -> not (pat `isInfixOf` s) ==> 
         case breakOn pat s of
-          (before, after) -> before == s && after == ""
+          (before, afterStr) -> before == s && afterStr == ""
           
   , testProperty "Utils: isValidChar is true for printable ASCII" $
       \c -> isAscii c && not (isControl c) ==> isValidChar c

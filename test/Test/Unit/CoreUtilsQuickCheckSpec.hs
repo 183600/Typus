@@ -3,24 +3,18 @@
 module Test.Unit.CoreUtilsQuickCheckSpec where
 
 
-import Test.Tasty
-import Test.Tasty.QuickCheck
 
 -- | Core Utils module QuickCheck tests
 
 
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-
-import TestSupport.Arbitrary
-import TestSupport.QuickCheck
-import qualified Data.Text as T
-import Data.List (isPrefixOf, isSuffixOf, isInfixOf, intercalate)
-import Data.Maybe (isJust, isNothing)
-import Control.Monad (when)
+import Utils (trim, splitBy, splitByComma, splitByCommaCollapsed, removeLineComments, removeComments, normalizeIndentation, breakOn, splitByCollapsed, safeProcessString, isValidChar)
 import Data.Char (isSpace, isAlpha, isAlphaNum)
-
-import Utils
+import Data.List (intercalate, isInfixOf, isPrefixOf)
+import TestSupport.QuickCheck (fastProperty)
+import TestSupport.Arbitrary (arbitraryString, arbitraryChar)
 
 -- ============================================================================
 -- Utils QuickCheck Tests
@@ -167,8 +161,8 @@ prop_breakOnWhenPresent =
   forAll arbitraryString $ \s ->
     forAll (arbitraryChar `suchThat` (`elem` s)) $ \c ->
       let result = breakOn [c] s
-          (before, after) = span (/= c) s
-      in property $ result == (before, [c] ++ after)
+          (before, after') = span (/= c) s
+      in property $ result == (before, [c] ++ after')
 
 -- | Test that safeProcessString handles special characters
 prop_safeProcessString :: Property

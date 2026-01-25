@@ -5,11 +5,6 @@ module Test.Unit.UtilsEnhancedQuickCheckSpec where
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-
-
-
-import Test.Tasty
-import Test.Tasty.QuickCheck
 import Utils
 import Data.Char (isSpace)
 import Data.List (isPrefixOf, isSuffixOf)

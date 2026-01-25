@@ -32,8 +32,8 @@ prop_span_between_ordered :: Int -> Int -> Int -> Int -> Property
 prop_span_between_ordered line1 col1 line2 col2 = property $ 
   let pos1 = SourcePos line1 col1 0
       pos2 = SourcePos line2 col2 0
-      span = spanBetweenOrdered pos1 pos2
-  in spanStart span <= spanEnd span
+      span' = spanBetweenOrdered pos1 pos2
+  in spanStart span' <= spanEnd span'
 
 -- Property: mergeSpans should contain both original spans
 prop_merge_spans_contains_both :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Property
@@ -53,8 +53,8 @@ prop_invalid_span :: Int -> Int -> Int -> Int -> Property
 prop_invalid_span line1 col1 line2 col2 = property $ 
   let pos1 = SourcePos (line1 + 10) (col1 + 10) 0  -- Ensure pos1 > pos2
       pos2 = SourcePos line2 col2 0
-      span = spanBetween pos1 pos2
-  in not (isValidSpan span)
+      span' = spanBetween pos1 pos2
+  in not (isValidSpan span')
 
 tests :: TestTree
 tests = testGroup "Test.Unit.TestSourceLocationMathSpec Tests"

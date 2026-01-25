@@ -3,26 +3,20 @@
 module Test.Unit.NewAdditionalErrorHandlerQuickCheckSpec where
 
 
+
+
+
+
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-
-
-
-import Test.Tasty
-import Test.Tasty.QuickCheck
-
-import Test.QuickCheck (conjoin, (===), Property, property, forAll, choose, listOf1, elements)
-
-import ErrorHandler
-import Compiler.Errors.Core (TypeError(..), ErrorSeverity(..), formatError, errorAt)
 import TestSupport.ExtendedArbitrary ()  -- Import Arbitrary instances
-import SourceLocation (SourcePos(..), SourceSpan(..), startPos, advancePosByText, toErrorLocationWithSpan)
-import qualified Data.Text as T
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
-import Data.Char (isAlphaNum, isAlpha, isSpace, isControl)
 import Data.Either (isLeft, isRight)
-import Control.Monad (replicateM)
-import qualified Data.Map.Strict as Map
+import Test.QuickCheck.Modifiers (Positive(..))
+import qualified Data.Text as T
+import SourceLocation (SourcePos(..), SourceSpan(..), startPos, toErrorLocationWithSpan)
+import ErrorHandler (ErrorSeverity(..), errorAt, errorSeverity, formatError)
+import Data.List (isInfixOf)
 
 -- Test 1: 测试错误严重性排序的一致性
 prop_error_severity_consistency :: ErrorSeverity -> ErrorSeverity -> Property

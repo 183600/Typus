@@ -1,12 +1,13 @@
 module Test.Unit.ToolingErrorSpec where
 
-
-
 import Test.Tasty
 import Test.Tasty.QuickCheck
-
-import Tooling.Error
+import Test.QuickCheck (Arbitrary(..), elements)
 import Data.List (isInfixOf)
+
+
+
+
 
 -- Define missing ErrorSeverity type
 data ErrorSeverity = ErrorInfo | ErrorWarning | ErrorError | ErrorFatal
@@ -46,16 +47,16 @@ getErrorSeverity :: TestToolingError -> ErrorSeverity
 getErrorSeverity = testErrorSeverity
 
 addErrorContext :: TestToolingError -> String -> TestToolingError
-addErrorContext error context = error { testErrorContext = testErrorContext error ++ [context] }
+addErrorContext err context = err { testErrorContext = testErrorContext err ++ [context] }
 
 getErrorContext :: TestToolingError -> String
-getErrorContext error = unwords $ testErrorContext error
+getErrorContext err = unwords $ testErrorContext err
 
 formatToolingError :: TestToolingError -> String
-formatToolingError error = 
-  "Error: " ++ testErrorMessage error ++ 
-  " (Code: " ++ show (testErrorCode error) ++ 
-  ", Severity: " ++ show (testErrorSeverity error) ++ ")"
+formatToolingError err = 
+  "Error: " ++ testErrorMessage err ++ 
+  " (Code: " ++ show (testErrorCode err) ++ 
+  ", Severity: " ++ show (testErrorSeverity err) ++ ")"
 
 -- Test tooling error creation
 prop_tooling_error_creation :: String -> Property
@@ -67,8 +68,8 @@ prop_tooling_error_creation errorMsg =
 -- Test error code assignment
 prop_error_code_assignment :: String -> Int -> Property
 prop_error_code_assignment errorMsg errorCode =
-  let error = createToolingErrorWithCode errorMsg errorCode
-      retrievedCode = getErrorCode error
+  let err = createToolingErrorWithCode errorMsg errorCode
+      retrievedCode = getErrorCode err
   in property $ retrievedCode === errorCode
 
 -- Test error context chaining
@@ -83,15 +84,15 @@ prop_error_context_chaining context1 context2 =
 -- Test error severity levels
 prop_error_severity_levels :: ErrorSeverity -> Property
 prop_error_severity_levels severity =
-  let error = createToolingErrorWithSeverity "test error" severity
-      retrievedSeverity = getErrorSeverity error
+  let err = createToolingErrorWithSeverity "test error" severity
+      retrievedSeverity = getErrorSeverity err
   in property $ retrievedSeverity === severity
 
 -- Test error formatting
 prop_error_formatting_includes_all_info :: String -> Int -> ErrorSeverity -> Property
 prop_error_formatting_includes_all_info errorMsg errorCode severity =
-  let error = createToolingErrorWithCodeAndSeverity errorMsg errorCode severity
-      formatted = formatToolingError error
+  let err = createToolingErrorWithCodeAndSeverity errorMsg errorCode severity
+      formatted = formatToolingError err
   in property $ 
     errorMsg `isInfixOf` formatted && 
     show errorCode `isInfixOf` formatted &&

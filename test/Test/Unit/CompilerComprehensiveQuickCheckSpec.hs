@@ -6,10 +6,9 @@ import Test.Tasty
 import Test.Tasty.QuickCheck
 
 import Compiler
-import Compiler.Errors (errorId, severity, message, mkCompilerError, ErrorCategory(..), ErrorSeverity(..), CompilationPhase(..))
-import Compiler.TypeChecker (TypeCheckDiagnostic(..))
+import Compiler.Errors (errorId, severity, message, mkCompilerError, ErrorCategory(..), ErrorSeverity(..))
 import Parser (TypusFile(..), defaultFileDirectives, CodeBlock(..), defaultBlockDirectives)
-import SourceLocation (SourcePos(..), SourceSpan(..), emptySpan, startPos)
+import SourceLocation (emptySpan, startPos)
 import qualified Data.Text as T
 import Data.List (isInfixOf)
 

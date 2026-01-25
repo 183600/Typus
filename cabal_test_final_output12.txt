@@ -1,0 +1,90 @@
+Build profile: -w ghc-9.14.1 -O1
+In order, the following will be built (use -v for more details):
+ - typus-0.12.2 (test:typus-test) (file test/Test/Unit/CoreFunctionalityBoundarySpec.hs changed)
+Preprocessing test suite 'typus-test' for typus-0.12.2...
+Building test suite 'typus-test' for typus-0.12.2...
+[ 113 of 1025] Compiling Test.Unit.CompilerIntegrationQuickCheckSpec ( test/Test/Unit/CompilerIntegrationQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/CompilerIntegrationQuickCheckSpec.o ) [Source file changed]
+test/Test/Unit/CompilerIntegrationQuickCheckSpec.hs:19:10: error: [GHC-76037]
+    Not in scope: type constructor or class ‘TestTree’
+   |
+19 | tests :: TestTree
+   |          ^^^^^^^^
+
+[ 129 of 1025] Compiling Test.Unit.ComprehensiveCabalTestSuite ( test/Test/Unit/ComprehensiveCabalTestSuite.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/ComprehensiveCabalTestSuite.o ) [Source file changed]
+test/Test/Unit/ComprehensiveCabalTestSuite.hs:229:34: error: [GHC-88464]
+    Variable not in scope:
+      defaultFileDirectives :: Parser.FileDirectives
+    Suggested fix:
+      Add ‘defaultFileDirectives’ to the import list in the import of
+      ‘Parser’
+      (at test/Test/Unit/ComprehensiveCabalTestSuite.hs:12:1-41).
+    |
+229 |     defaultTypusFile = TypusFile defaultFileDirectives [] [] []
+    |                                  ^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/ComprehensiveCabalTestSuite.hs:236:34: error: [GHC-88464]
+    Variable not in scope:
+      defaultFileDirectives :: Parser.FileDirectives
+    Suggested fix:
+      Add ‘defaultFileDirectives’ to the import list in the import of
+      ‘Parser’
+      (at test/Test/Unit/ComprehensiveCabalTestSuite.hs:12:1-41).
+    |
+236 |     defaultTypusFile = TypusFile defaultFileDirectives [] [] []
+    |                                  ^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/ComprehensiveCabalTestSuite.hs:275:36: error: [GHC-88464]
+    Variable not in scope:
+      defaultFileDirectives :: Parser.FileDirectives
+    Suggested fix:
+      Add ‘defaultFileDirectives’ to the import list in the import of
+      ‘Parser’
+      (at test/Test/Unit/ComprehensiveCabalTestSuite.hs:12:1-41).
+    |
+275 |       defaultTypusFile = TypusFile defaultFileDirectives [] [] []
+    |                                    ^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/ComprehensiveCabalTestSuite.hs:311:29: error: [GHC-88464]
+    Variable not in scope:
+      defaultFileDirectives :: Parser.FileDirectives
+    Suggested fix:
+      Add ‘defaultFileDirectives’ to the import list in the import of
+      ‘Parser’
+      (at test/Test/Unit/ComprehensiveCabalTestSuite.hs:12:1-41).
+    |
+311 |   let emptyFile = TypusFile defaultFileDirectives [] [] []
+    |                             ^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/ComprehensiveCabalTestSuite.hs:317:29: error: [GHC-88464]
+    Variable not in scope:
+      defaultFileDirectives :: Parser.FileDirectives
+    Suggested fix:
+      Add ‘defaultFileDirectives’ to the import list in the import of
+      ‘Parser’
+      (at test/Test/Unit/ComprehensiveCabalTestSuite.hs:12:1-41).
+    |
+317 |   let emptyFile = TypusFile defaultFileDirectives [] [] []
+    |                             ^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/ComprehensiveCabalTestSuite.hs:356:29: error: [GHC-88464]
+    Variable not in scope:
+      defaultFileDirectives :: Parser.FileDirectives
+    Suggested fix:
+      Add ‘defaultFileDirectives’ to the import list in the import of
+      ‘Parser’
+      (at test/Test/Unit/ComprehensiveCabalTestSuite.hs:12:1-41).
+    |
+356 |   let emptyFile = TypusFile defaultFileDirectives [] [] []
+    |                             ^^^^^^^^^^^^^^^^^^^^^
+
+test/Test/Unit/ComprehensiveCabalTestSuite.hs:430:34: error: [GHC-88464]
+    Variable not in scope:
+      defaultFileDirectives :: Parser.FileDirectives
+    Suggested fix:
+      Add ‘defaultFileDirectives’ to the import list in the import of
+      ‘Parser’
+      (at test/Test/Unit/ComprehensiveCabalTestSuite.hs:12:1-41).
+    |
+430 |     defaultTypusFile = TypusFile defaultFileDirectives [] [] []
+    |                                  ^^^^^^^^^^^^^^^^^^^^^
+

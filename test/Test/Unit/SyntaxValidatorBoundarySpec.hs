@@ -5,14 +5,7 @@ module Test.Unit.SyntaxValidatorBoundarySpec where
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-
-
-
-import Test.Tasty
-
-import Test.Tasty.QuickCheck
-import Data.List (isPrefixOf, isSuffixOf, isInfixOf)
-import Data.Char (isLetter, isDigit, isSpace, toLower, toUpper)
+import Data.Char (isLetter, isDigit, toLower, toUpper)
 
 -- Test syntax validator boundary conditions
 tests :: TestTree
@@ -140,7 +133,7 @@ isValidExpression "" = False
 isValidExpression expr = not (null expr) && balancedParens expr
   where
     balancedParens [] = True
-    balancedParens ('(' : xs) = balancedParens xs && count '(' xs == count ')' xs
+    balancedParens ('(' : xs) = balancedParens xs && (count '(' xs :: Int) == count ')' xs
     balancedParens (')' : _) = False
     balancedParens (_ : xs) = balancedParens xs
     count _ [] = 0

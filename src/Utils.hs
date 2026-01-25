@@ -128,30 +128,39 @@ removeLineComments s =
            then "\"" ++ drop 3 line  -- 处理//\"开头的情况，保留引号和后面的内容
            else if "//" `isPrefixOf` line && hasEscapedQuote line
                 then extractEscapedQuotes line  -- 处理//a\"这样的情况，保留引号
-                else goNormal line
+                else if "//" `isPrefixOf` line
+                     then ""  -- 完全是注释行，移除
+                     else goNormal' line
       where
-        goNormal :: String -> String
-        goNormal [] = []
-        goNormal ('\\':'\\':cs) = '\\' : '\\' : goNormal cs  -- 保留转义的\
-        goNormal ('\\':'/':cs) = case cs of
+        -- 新的goNormal函数，保留前面的字符
+        goNormal' :: String -> String
+        goNormal' [] = []
+        goNormal' ('\\':'\\':cs) = '\\' : '\\' : goNormal' cs  -- 保留转义的\
+        goNormal' ('\\':'/':cs) = case cs of
                                     ('/':_) -> '\\' : []  -- 反斜杠后跟注释，保留反斜杠但忽略注释
-                                    _ -> '\\' : '/' : goNormal cs  -- 保留转义的/
-        goNormal ('"':xs) = '"' : goInString xs  -- 进入字符串模式
-        goNormal ('\'':xs) = '\'' : goInChar xs  -- 进入字符模式
-        goNormal ('/':'/':_rest) = []  -- 遇到注释，停止处理
-        goNormal (c:cs) = c : goNormal cs
+                                    _ -> '\\' : '/' : goNormal' cs  -- 保留转义的/
+        goNormal' ('"':xs) = '"' : goInString xs  -- 进入字符串模式
+        goNormal' ('\'':xs) = '\'' : goInChar xs  -- 进入字符模式
+        goNormal' (c:cs) = 
+          case cs of
+            ('/':'/':rest) -> 
+              -- 遇到注释，检查后面是否有转义引号
+              case rest of
+                ('\"':xs) -> [c, '\"'] ++ xs  -- 保留当前字符和转义引号及其后面的内容
+                _ -> [c]  -- 只保留当前字符
+            _ -> c : goNormal' cs
         
         goInString :: String -> String
         goInString [] = []  -- 未闭合的字符串，不添加额外引号
         goInString ('\\':x:xs) = '\\' : x : goInString xs  -- 处理转义字符
-        goInString ('"':xs) = '"' : goNormal xs  -- 字符串结束，继续正常处理
+        goInString ('"':xs) = '"' : goNormal' xs  -- 字符串结束，继续正常处理
         -- 在字符串字面量中，遇到 // 不应该被视为注释
         goInString ('/':'/':cs) = '/' : '/' : goInString cs  -- 保留字符串中的 //
         goInString (c:cs) = c : goInString cs
             
         goInChar :: String -> String
         goInChar [] = []  -- 未闭合的字符，已经保留了开头的单引号
-        goInChar ('\'':xs) = '\'' : goNormal xs  -- 字符结束，继续正常处理
+        goInChar ('\'':xs) = '\'' : goNormal' xs  -- 字符结束，继续正常处理
         goInChar ('\\':x:xs) = '\\' : x : goInChar xs
         -- 在字符字面量中，遇到 // 不应该被视为注释
         goInChar ('/':'/':cs) = '/' : '/' : goInChar cs  -- 保留字符中的 //

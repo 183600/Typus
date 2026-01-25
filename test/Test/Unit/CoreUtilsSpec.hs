@@ -4,16 +4,13 @@ module Test.Unit.CoreUtilsSpec where
 
 
 import Test.Tasty.HUnit
-import Test.Tasty
 import Test.Tasty.QuickCheck
+import Test.Tasty (TestTree, testGroup)
 
-import Test.QuickCheck (NonEmptyList(..))
+import Test.QuickCheck ()
 import Utils (trim, splitBy, splitByComma, removeLineComments, normalizeIndentation)
 import Data.Char (isSpace)
-import Data.List (isPrefixOf)
-import Data.List (intercalate)
-import Test.QuickCheck (Positive(..))
-import Data.List (isInfixOf)
+import Data.List (intercalate, isInfixOf)
 
 -- Test properties for Utils module
 

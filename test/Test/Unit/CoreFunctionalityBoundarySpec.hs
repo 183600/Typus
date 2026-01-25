@@ -51,7 +51,7 @@ prop_sourcelocation_extreme_positions :: Int -> Int -> Property
 prop_sourcelocation_extreme_positions line col =
   line >= 0 && col >= 0 && line <= 10000 && col <= 10000 ==>
     let pos = SourcePos line col 0
-        span = SourceSpan pos pos
+        _ = SourceSpan pos pos
     in posLine pos == line && posColumn pos == col
 
 -- | Test compiler with empty directives
@@ -62,14 +62,12 @@ prop_compiler_empty_directives =
   in case parseResult of
        Left _ -> property True
        Right typusFile -> 
-         let directives = tfDirectives typusFile
-         in property $ directives == defaultFileDirectives
+         property $ tfDirectives typusFile == defaultFileDirectives
 
 -- | Test utils with control characters
 prop_utils_control_characters :: String -> Property
 prop_utils_control_characters input =
-  let hasControl = any isControl input
-      filtered = filter (not . isControl) input
+  let filtered = filter (not . isControl) input
       trimmed = trim filtered
   in property $ length trimmed <= length filtered
 
@@ -80,7 +78,7 @@ prop_parser_mixed_whitespace ws1 ws2 =
       parseResult = parseTypus mixedWS
   in case parseResult of
        Left _ -> property True
-       Right typusFile -> property $ True
+       Right _ -> property $ True
 
 -- | Test compiler with minimal valid input
 prop_compiler_minimal_input :: String -> Property
@@ -98,8 +96,7 @@ prop_compiler_minimal_input c =
 -- | Test source location with negative positions (should handle gracefully)
 prop_sourcelocation_negative_positions :: Int -> Int -> Property
 prop_sourcelocation_negative_positions line col =
-  let pos = SourcePos line col 0
-      normalizedPos = SourcePos (max 0 line) (max 0 col) 0
+  let normalizedPos = SourcePos (max 0 line) (max 0 col) 0
   in property $ posLine normalizedPos >= 0 && posColumn normalizedPos >= 0
 
 -- | Test utils with empty strings
@@ -117,7 +114,7 @@ prop_parser_only_comments comment =
       parseResult = parseTypus commentContent
   in case parseResult of
        Left _ -> property True
-       Right typusFile -> property $ True
+       Right _ -> property $ True
 
 -- | Test compiler with syntax errors
 prop_compiler_syntax_errors :: String -> Property
@@ -136,9 +133,7 @@ prop_compiler_syntax_errors malformed =
 prop_sourcelocation_span_arithmetic :: Int -> Int -> Int -> Int -> Property
 prop_sourcelocation_span_arithmetic l1 c1 l2 c2 =
   l1 >= 0 && c1 >= 0 && l2 >= 0 && c2 >= 0 ==>
-    let pos1 = SourcePos l1 c1 0
-        pos2 = SourcePos l2 c2 0
-        span = spanBetween pos1 pos2
+    let _ = spanBetween (SourcePos l1 c1 0) (SourcePos l2 c2 0)
     in property $ True  -- Basic test that span creation doesn't crash
 
 -- | Test utils with duplicate characters
@@ -209,7 +204,7 @@ prop_parser_directive_boundaries ownership deps constraints =
   in case parseResult of
        Left _ -> property True
        Right typusFile -> 
-         let directives = tfDirectives typusFile
+         let _ = tfDirectives typusFile
          in property $ True  -- Basic test that directives are parsed
 
 -- | Tasty test suite

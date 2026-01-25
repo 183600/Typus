@@ -3,25 +3,15 @@
 module Test.Unit.CoreCompilerQuickCheckSpec where
 
 
-import Test.Tasty
-import Test.Tasty.QuickCheck
 
 -- | Core Compiler module QuickCheck tests
 
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-
-import TestSupport.Arbitrary
-import TestSupport.QuickCheck
-import qualified Data.Text as T
-import Data.List (isPrefixOf, isSuffixOf, isInfixOf, intercalate)
-import Data.Maybe (isJust, isNothing)
-import Control.Monad (when)
-import Data.Char (isSpace, isAlpha, isAlphaNum)
-
 import Compiler
 import Parser (parseTypus, FileDirectives(..), TypusFile(..))
+import TestSupport.Arbitrary (arbitraryShortString, arbitraryWhitespace, arbitraryIdentifier, arbitraryInt, arbitraryOperator, arbitraryUnicodeString)
 
 -- ============================================================================
 -- Compiler QuickCheck Tests
@@ -39,8 +29,7 @@ prop_compilerBasic =
 -- | Test that compiler handles empty code
 prop_compilerEmpty :: Property
 prop_compilerEmpty =
-  let emptyFile = TypusFile (FileDirectives Nothing Nothing Nothing) [] [] []
-      result = compile emptyFile
+  let _ = compile (TypusFile (FileDirectives Nothing Nothing Nothing) [] [] [])
   in property $ True  -- Basic sanity check
 
 -- | Test that compiler handles whitespace only

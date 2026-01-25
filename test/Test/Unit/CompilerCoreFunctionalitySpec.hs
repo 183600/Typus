@@ -3,18 +3,16 @@
 module Test.Unit.CompilerCoreFunctionalitySpec where
 
 
-import Test.Tasty.HUnit
 import Test.Tasty
+import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
-
-
 
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, assertBool, assertEqual)
 import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, elements, listOf, chooseInt, Property, (===), counterexample, property)
 
 import Compiler (compile, CompilerError(..), CompilationPhase(..), generateGoCode)
-import Compiler.Errors.Core (ErrorSeverity(..), errorWithCategory, ErrorCategory(..), ErrorLocation(..), message)
+import Compiler.Errors.Core (errorWithCategory, ErrorCategory(..), ErrorLocation(..), message)
 import Parser (parseTypus)
 import qualified Data.Text as T
 import qualified Data.List as L
@@ -197,6 +195,6 @@ compilerCoreFunctionalityTests = testGroup "Compiler Core Functionality Tests"
   , testProperty "Error messages contain expected phases" $ property $ \phase -> do
       let defaultLoc = ErrorLocation Nothing 0 0 Nothing Nothing
       let typeError = errorWithCategory "TEST001" Parsing (T.pack "Test error") defaultLoc
-      let error = CompilerError typeError Nothing [] phase
-      property $ cePhase error === phase
+      let compError = CompilerError typeError Nothing [] phase
+      property $ cePhase compError === phase
   ]

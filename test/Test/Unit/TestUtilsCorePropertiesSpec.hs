@@ -34,9 +34,9 @@ testUtilsCoreProperties = testGroup "Utils Core Properties Tests"
       
   , testProperty "breakOn: if pattern found, concatenating parts with pattern = original" $
       \pat s -> case breakOn pat s of
-                  (before, after) -> if pat `isInfixOf` s
-                                     then before ++ pat ++ after == s
-                                     else True
+                  (before, afterStr) -> if pat `isInfixOf` s
+                                        then before ++ pat ++ afterStr == s
+                                        else True
                                      
   , testProperty "safeProcessString: valid characters are preserved" $
       \s -> let filtered = filter isValidChar s

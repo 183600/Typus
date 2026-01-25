@@ -1,16 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Test.Unit.TypeInferenceAdvancedSpec where
 
-
-
-import Test.Tasty.HUnit
 import Test.Tasty
-
-import Data.List (sort, nub, intersect, union, (\\))
-import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes)
+import Test.Tasty.HUnit
+import Data.List (sort, (\\))
 import qualified Data.Set as Set
 import qualified Data.Map as Map
-import SourceLocation (SourcePos(..), SourceSpan(..))
 
 -- Mock data types for advanced type inference testing
 data TypeVar = TypeVar
@@ -73,8 +68,8 @@ applySubstitution sub (TypeVarType var) =
     Nothing -> TypeVarType var
 applySubstitution sub (TypeConType con args) = 
   TypeConType con (map (applySubstitution sub) args)
-applySubstitution sub (TypeFunType argType resultType) = 
-  TypeFunType (applySubstitution sub argType) (applySubstitution sub resultType)
+applySubstitution sub (TypeFunType argType resType) = 
+  TypeFunType (applySubstitution sub argType) (applySubstitution sub resType)
 applySubstitution sub (TypeForAllType vars typ) = 
   TypeForAllType vars (applySubstitution sub typ)
 
@@ -94,7 +89,7 @@ unifyTypes type1 type2 state =
     (TypeFunType arg1 res1, TypeFunType arg2 res2) -> do
       state1 <- unifyTypes arg1 arg2 state
       unifyTypes res1 res2 state1
-    (TypeForAllType vars1 typ1, TypeForAllType vars2 typ2) -> 
+    (TypeForAllType _ typ1, TypeForAllType _ typ2) -> 
       unifyTypes typ1 typ2 state
     _ -> Left "Cannot unify types"
 
@@ -118,8 +113,8 @@ generalizeType typ state =
   where
     extractFreeVars (TypeVarType var) = [var]
     extractFreeVars (TypeConType _ args) = concatMap extractFreeVars args
-    extractFreeVars (TypeFunType argType resultType) = 
-      extractFreeVars argType ++ extractFreeVars resultType
+    extractFreeVars (TypeFunType argType resType) = 
+      extractFreeVars argType ++ extractFreeVars resType
     extractFreeVars (TypeForAllType vars typ) = 
       extractFreeVars typ \\ vars
 
@@ -181,12 +176,12 @@ tests = testGroup "Advanced Type Inference Tests"
         
     , testCase "creates function types correctly" $ do
         let argType = TypeVarType (TypeVar "T" 1 "Type")
-            resultType = TypeVarType (TypeVar "U" 2 "Type")
-            typ = TypeFunType argType resultType
+            resType = TypeVarType (TypeVar "U" 2 "Type")
+            typ = TypeFunType argType resType
         case typ of
           TypeFunType arg res -> do
             arg @?= argType
-            res @?= resultType
+            res @?= resType
           _ -> assertFailure "Expected TypeFunType"
         
     , testCase "creates polymorphic types correctly" $ do
@@ -347,7 +342,6 @@ tests = testGroup "Advanced Type Inference Tests"
       
     , testCase "generalizes types with substitutions" $ do
         let var1 = TypeVar "T" 1 "Type"
-            var2 = TypeVar "U" 2 "Type"
             typ1 = TypeVarType var1
             typ2 = TypeConType (TypeConstructor "Int" 0) []
             sub = Substitution (Map.fromList [(var1, typ2)])

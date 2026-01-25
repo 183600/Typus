@@ -3,38 +3,12 @@ module Test.Unit.ComprehensiveCoreModulesQuickCheckSpec where
 
 
 
+
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import TestSupport.QuickCheck (fastProperty)
-import TestSupport.Arbitrary
-import Data.List (uncons)
-
 import qualified Utils
 import SourceLocation
-  ( SourcePos(..)
-  , SourceSpan(..)
-  , Located(..)
-  , startPos
-  , posAfter
-  , posAt
-  , posAtLineCol
-  , emptySpan
-  , spanFrom
-  , spanTo
-  , spanBetween
-  , mergeSpans
-  , isValidSpan
-  , locatedAt
-  , locatedWithSpan
-  , locatedValue
-  , locatedSpan
-  , locatedPos
-  , mapLocated
-  , advancePos
-  , advancePosBy
-  , toErrorLocation
-  , toErrorLocationWithSpan
-  )
+import Parser (FileDirectives(..), BlockDirectives(..), CodeBlock(..), TypusFile(..), defaultFileDirectives, defaultBlockDirectives)
 import Parser
   ( FileDirectives(..)
   , BlockDirectives(..)
@@ -43,9 +17,11 @@ import Parser
   , defaultFileDirectives
   , defaultBlockDirectives
   )
+import TestSupport.QuickCheck (fastProperty)
+import Data.List (uncons, isPrefixOf, isSuffixOf)
 import Data.Char (isSpace)
-import Data.List (isPrefixOf, isSuffixOf)
-import Compiler.Errors.Core (ErrorLocation(..))
+import Compiler.Errors.Types (ErrorLocation(..))
+import TestSupport.Arbitrary (arbitrarySourcePos, arbitrarySourceSpan)
 
 -- ============================================================================
 -- Utils Module Tests
@@ -355,8 +331,8 @@ prop_toErrorLocation_preserves_position :: SourcePos -> Property
 prop_toErrorLocation_preserves_position pos = 
   let errLoc = toErrorLocation pos
   in conjoin
-    [ property $ line errLoc === posLine pos
-    , property $ column errLoc === posColumn pos
+    [ property $ Compiler.Errors.Types.line errLoc === posLine pos
+    , property $ Compiler.Errors.Types.column errLoc === posColumn pos
     ]
 
 prop_toErrorLocationWithSpan_preserves_range :: SourceSpan -> Property
@@ -365,10 +341,10 @@ prop_toErrorLocationWithSpan_preserves_range testSpan =
       start = spanStart testSpan
       end = spanEnd testSpan
   in conjoin
-    [ property $ line errLoc === posLine start
-    , property $ column errLoc === posColumn start
-    , property $ endLine errLoc === Just (posLine end)
-    , property $ endColumn errLoc === Just (posColumn end)
+    [ property $ Compiler.Errors.Types.line errLoc === posLine start
+    , property $ Compiler.Errors.Types.column errLoc === posColumn start
+    , property $ Compiler.Errors.Types.endLine errLoc === Just (posLine end)
+    , property $ Compiler.Errors.Types.endColumn errLoc === Just (posColumn end)
     ]
 
 -- ============================================================================

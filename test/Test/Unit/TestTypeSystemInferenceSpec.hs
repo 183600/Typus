@@ -6,13 +6,13 @@ module Test.Unit.TestTypeSystemInferenceSpec where
 
 import Test.Tasty.HUnit
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck ()
 
-import Dependencies
-import Dependencies.AST
-import Dependencies.TypeSystem
-import SourceLocation (SourcePos(..))
-import qualified Data.Text as T
+import Dependencies ()
+import Dependencies.AST ()
+import Dependencies.TypeSystem ()
+import SourceLocation ()
+import qualified Data.Text as T ()
 import TestSupport.Arbitrary ()
 import Control.Monad (foldM)
 
@@ -117,7 +117,7 @@ testTypeSystemInference = testGroup "Type System Inference Tests"
       let stmt = TestVarDeclStmt "x" (Just (TestTypeVar "Int")) (TestLiteralExpr (TestIntLiteral 42))
           checker = testNewDependentTypeChecker ()
       in case testInferStatement stmt checker of
-           Right (checker', inferred) -> inferred @?= TestTypeVar "Int"
+           Right (_checker', inferred) -> inferred @?= TestTypeVar "Int"
            Left err -> assertFailure $ "Statement type inference failed: " ++ show err
            
   , testCase "inferStatement: infers type for function declaration" $
@@ -127,7 +127,7 @@ testTypeSystemInference = testGroup "Type System Inference Tests"
                               (TestBinaryOpExpr TestAdd (TestVarExpr "x") (TestVarExpr "y"))
           checker = testNewDependentTypeChecker ()
       in case testInferStatement stmt checker of
-           Right (checker', inferred) -> 
+           Right (_checker', inferred) -> 
              case inferred of
                TestTypeArrow (TestTypeArrow (TestTypeVar "Int") (TestTypeVar "Int")) (TestTypeVar "Int") -> return ()
                _ -> assertFailure "Expected function type"
@@ -140,7 +140,7 @@ testTypeSystemInference = testGroup "Type System Inference Tests"
           program = [stmt1, stmt2, stmt3]
           checker = testNewDependentTypeChecker ()
       in case testInferProgram program checker of
-           Right (checker', types) -> length types @?= 3
+           Right (_checker', types) -> length types @?= 3
            Left err -> assertFailure $ "Program type inference failed: " ++ show err
            
   , testCase "generalize: creates polymorphic type scheme" $
@@ -165,7 +165,7 @@ testTypeSystemInference = testGroup "Type System Inference Tests"
           type2 = TestTypeVar "Int"
           checker = testNewDependentTypeChecker ()
       in case testUnifyTypes type1 type2 checker of
-           Right (checker', substitution) -> length substitution @?= 1
+           Right (_checker', substitution) -> length substitution @?= 1
            Left err -> assertFailure $ "Type unification failed: " ++ show err
            
   , testCase "unifyTypes: fails for incompatible types" $
@@ -319,7 +319,7 @@ testInferType (TestLambdaExpr params body) checker = do
   bodyType <- testInferType body checker
   Right $ foldr TestTypeArrow bodyType paramTypes
 testInferType (TestLetExpr (_, _, valueExpr) bodyExpr) checker = do
-  valueType <- testInferType valueExpr checker
+  _valueType <- testInferType valueExpr checker
   testInferType bodyExpr checker
 testInferType (TestIfExpr condition thenExpr elseExpr) checker = do
   conditionType <- testInferType condition checker

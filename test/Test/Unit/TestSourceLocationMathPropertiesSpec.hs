@@ -33,8 +33,8 @@ testSourceLocationMathProperties = testGroup "SourceLocation Math Properties Tes
       \pos c -> posOffset (posAfter c pos) == posOffset pos + 1
         
   , testProperty "spanBetween: start <= end for valid positions" $
-      \pos1 pos2 -> let span = spanBetween pos1 pos2
-                    in spanStart span <= spanEnd span
+      \pos1 pos2 -> let sp = spanBetween pos1 pos2
+                    in spanStart sp <= spanEnd sp
                     
   , testProperty "mergeSpans: start is minimum of both starts" $
       \span1 span2 -> spanStart (mergeSpans span1 span2) == min (spanStart span1) (spanStart span2)
@@ -56,7 +56,7 @@ testSourceLocationMathProperties = testGroup "SourceLocation Math Properties Tes
       \(pos :: SourcePos) (val :: String) -> locatedPos (locatedAt pos val) == pos
       
   , testProperty "locatedWithSpan: span is preserved" $
-      \(span :: SourceSpan) (val :: String) -> locatedSpan (locatedWithSpan span val) == span
+      \(sp :: SourceSpan) (val :: String) -> locatedSpan (locatedWithSpan sp val) == sp
       
   , testCase "mapLocated: preserves position" $
       let loc = locatedAt (posAt 1 1) "test"
@@ -77,15 +77,15 @@ testSourceLocationMathProperties = testGroup "SourceLocation Math Properties Tes
       
   , testCase "spanTo: creates span with same start and end" $ do
       let pos = posAt 5 10
-          span = spanTo pos
-      spanStart span @?= pos
-      spanEnd span @?= pos
+          sp = spanTo pos
+      spanStart sp @?= pos
+      spanEnd sp @?= pos
       
   , testCase "emptySpan: creates span with same start and end" $ do
       let pos = posAt 5 10
-          span = emptySpan pos
-      spanStart span @?= pos
-      spanEnd span @?= pos
+          sp = emptySpan pos
+      spanStart sp @?= pos
+      spanEnd sp @?= pos
       
   , testCase "toErrorLocation: converts position correctly" $ do
       let pos = posAt 5 10
@@ -96,8 +96,8 @@ testSourceLocationMathProperties = testGroup "SourceLocation Math Properties Tes
   , testCase "toErrorLocationWithSpan: converts span with range correctly" $ do
       let start = posAt 5 10
           end = posAt 7 15
-          span = spanBetween start end
-          errLoc = toErrorLocationWithSpan span
+          sp = spanBetween start end
+          errLoc = toErrorLocationWithSpan sp
       Error.line errLoc @?= 5
       Error.column errLoc @?= 10
       -- These may not exist, so we'll skip them for now

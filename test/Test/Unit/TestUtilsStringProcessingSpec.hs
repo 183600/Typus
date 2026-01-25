@@ -37,8 +37,8 @@ prop_normalize_indentation_preserve_lines s = property $
 prop_break_on_finds_substring :: String -> String -> Property
 prop_break_on_finds_substring s pat = property $ 
   not (null pat) && pat `isInfixOf` s ==> 
-  let (before, after) = breakOn pat s
-  in before ++ pat ++ after == s
+  let (before, after') = breakOn pat s
+  in before ++ pat ++ after' == s
 
 -- Helper function
 isInfixOf :: Eq a => [a] -> [a] -> Bool
@@ -50,7 +50,7 @@ isInfixOf needle haystack = any (isPrefixOf needle) (tails haystack)
     
     tails :: [a] -> [[a]]
     tails [] = [[]]
-    tails xs@(x:xs') = xs : tails xs'
+    tails xs@(_:xs') = xs : tails xs'
 
 tests :: TestTree
 tests = testGroup "Test.Unit.TestUtilsStringProcessingSpec Tests"

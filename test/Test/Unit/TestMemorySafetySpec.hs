@@ -10,7 +10,7 @@ module Test.Unit.TestMemorySafetySpec where
 
 import Test.Tasty.HUnit
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck ()
 
 import Parser hiding (FileDirectives, CodeBlock, TypusFile, parseTypus)
 import SourceLocation hiding (Located, SourceSpan, SourcePos)

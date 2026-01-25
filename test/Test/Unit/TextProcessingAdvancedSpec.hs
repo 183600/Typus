@@ -3,26 +3,16 @@
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
 module Test.Unit.TextProcessingAdvancedSpec where
 
-
-import Test.Tasty.HUnit
 import Test.Tasty
+import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
-
-
-
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, assertEqual, assertBool, assertFailure, Assertion)
-import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
 import Test.QuickCheck (Gen, Property, (==>), classify, sized)
 import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed,
              removeLineComments, removeComments, normalizeIndentation, 
              forceSingleTabIndentation, fixIndentation, breakOn,
              safeProcessString, isValidChar)
-import qualified Data.Text as T
-import Data.Char (isSpace, isAlpha, isAlphaNum, isPrint, isDigit, isLower, isUpper)
-import Data.List (isPrefixOf, isSuffixOf, isInfixOf, nub, sort, group, groupBy)
-import Data.Maybe (isJust, isNothing, fromMaybe)
-import Control.Monad (replicateM, when)
+import Data.List (isPrefixOf, isInfixOf)
+import Data.Char (isAlphaNum, isAlpha, isSpace)
 
 -- Helper generators for advanced text processing tests
 genUnicodeChar :: Gen Char

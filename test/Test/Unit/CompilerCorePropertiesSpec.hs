@@ -5,11 +5,6 @@ module Test.Unit.CompilerCorePropertiesSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 
-
-
-import Test.Tasty
-import Test.Tasty.QuickCheck
-
 import Compiler
   ( compile
   , CompilerError(..)
@@ -21,21 +16,18 @@ import Compiler
   , generateDetailedReport
   , analyzeErrors
   , hasTypeErrors
-  , TypeCheckDiagnostic(..)
   , diagnoseTypeErrors
-  , extractDeclarations
-  , extractFunctionCalls
-  , buildTypeEnvFromPairs
-  , createTypusFileFromErrors
-  , isMethodDeclaration
   , checkTypeError
   , hasMalformedSyntax
   , checkDependentTypes
   , checkOwnership
   , ensureSourceIR
-  , typeCheckFailure
-  , typeDiagnosticToCompilerError
   , generateGoCode
+  , typeDiagnosticToCompilerError
+  , createTypusFileFromErrors
+  , isMethodDeclaration
+  , extractDeclarations
+  , extractFunctionCalls
   )
 import Compiler.Errors.Core
   ( TypeError(..)
@@ -49,17 +41,11 @@ import Compiler.TypeChecker
   ( TypeEnv(..)
   , buildTypeEnv
   , buildTypeEnvFromPairs
-  , createTypusFileFromErrors
-  , isMethodDeclaration
   , checkTypeError
   , hasMalformedSyntax
-  , extractDeclarations
-  , extractFunctionCalls
-  , TypeCheckDiagnostic(..)
-  , diagnoseTypeErrors
-  , hasTypeErrors
   , TypeError(..)
   , Type(..)
+  , TypeCheckDiagnostic(..)
   )
 import Parser (TypusFile(..), CodeBlock(..), BlockDirectives(..), FileDirectives(..), defaultFileDirectives, defaultBlockDirectives)
 import SourceLocation (SourceSpan(..), SourcePos(..), startPos, Located(..))
@@ -67,7 +53,7 @@ import qualified SyntaxValidator as SyntaxValidator
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.List (isInfixOf)
-import Control.Monad (when)
+
 
 -- ============================================================================
 -- Arbitrary Instances
@@ -75,29 +61,29 @@ import Control.Monad (when)
 
 instance Arbitrary Compiler.Errors.Core.TypeError where
   arbitrary = do
-    errorId <- arbitrary
-    message <- arbitrary
-    severity <- arbitrary
-    category <- arbitrary
-    location <- arbitrary
-    context <- arbitrary
-    recovery <- arbitrary
-    suggestions <- arbitrary
-    relatedErrors <- arbitrary
-    errorChain <- arbitrary
-    timestamp <- arbitrary
+    _errorId <- arbitrary
+    _message <- arbitrary
+    _severity <- arbitrary
+    _category <- arbitrary
+    _location <- arbitrary
+    _context <- arbitrary
+    _recovery <- arbitrary
+    _suggestions <- arbitrary
+    _relatedErrors <- arbitrary
+    _errorChain <- arbitrary
+    _timestamp <- arbitrary
     return $ Compiler.Errors.Core.TypeError
-      { Compiler.Errors.Core.errorId = errorId
-      , Compiler.Errors.Core.message = message
-      , Compiler.Errors.Core.severity = severity
-      , Compiler.Errors.Core.category = category
-      , Compiler.Errors.Core.location = location
-      , Compiler.Errors.Core.context = context
-      , Compiler.Errors.Core.recovery = recovery
-      , Compiler.Errors.Core.suggestions = suggestions
-      , Compiler.Errors.Core.relatedErrors = relatedErrors
-      , Compiler.Errors.Core.errorChain = errorChain
-      , Compiler.Errors.Core.timestamp = timestamp
+      { Compiler.Errors.Core.errorId = _errorId
+      , Compiler.Errors.Core.message = _message
+      , Compiler.Errors.Core.severity = _severity
+      , Compiler.Errors.Core.category = _category
+      , Compiler.Errors.Core.location = _location
+      , Compiler.Errors.Core.context = _context
+      , Compiler.Errors.Core.recovery = _recovery
+      , Compiler.Errors.Core.suggestions = _suggestions
+      , Compiler.Errors.Core.relatedErrors = _relatedErrors
+      , Compiler.Errors.Core.errorChain = _errorChain
+      , Compiler.Errors.Core.timestamp = _timestamp
       }
 
 instance Arbitrary Compiler.TypeChecker.TypeError where

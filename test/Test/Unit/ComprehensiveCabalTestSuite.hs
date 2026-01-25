@@ -4,22 +4,14 @@ module Test.Unit.ComprehensiveCabalTestSuite where
 
 
 import Test.Tasty.HUnit
-import Test.Tasty
 import Test.Tasty.QuickCheck
-
-
-
-import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty (TestTree, testGroup)
 
 import Utils
 import SourceLocation (SourcePos(..))
-import Parser (parseTypus, TypusFile(..), FileDirectives(..), defaultFileDirectives)
+import Parser (parseTypus, TypusFile(..), defaultFileDirectives)
 import Compiler (compile)
-import qualified Data.Text as T
-import Data.List (isPrefixOf, isSuffixOf, isInfixOf, intercalate)
-import Data.Char (isSpace, isAlpha, isDigit, isLetter)
-import Control.Exception (try, SomeException)
+import Data.List (isPrefixOf, isInfixOf, intercalate)
 
 -- ============================================================================
 -- Utils模块测试 (15个测试用例)
@@ -106,18 +98,18 @@ prop_normalize_indentation_preserve_lines s =
 -- QuickCheck属性：breakOn的正确性
 prop_break_on_correctness :: String -> String -> Property
 prop_break_on_correctness delim s =
-  let (before, after) = breakOn delim s
-      combined = before ++ delim ++ after
+  let (beforeStr, afterStr) = breakOn delim s
+      combined = beforeStr ++ delim ++ afterStr
   in if null delim || not (delim `isInfixOf` s)
-     then property $ (before, after) === (s, "")
+     then property $ (beforeStr, afterStr) === (s, "")
      else property $ combined === s
 
 -- QuickCheck属性：splitByCollapsed的幂等性
 prop_split_by_collapsed_idempotent :: Char -> String -> Property
 prop_split_by_collapsed_idempotent delim s =
-  let once = splitByCollapsed delim s
-      twice = splitByCollapsed delim (intercalate [delim] once)
-  in property $ once === twice
+  let firstResult = splitByCollapsed delim s
+      secondResult = splitByCollapsed delim (intercalate [delim] firstResult)
+  in property $ firstResult === secondResult
 
 -- QuickCheck属性：trim的交换律
 prop_trim_commutative :: String -> String -> Property
@@ -129,22 +121,22 @@ prop_trim_commutative s1 s2 =
 -- QuickCheck属性：removeLineComments的幂等性
 prop_remove_line_comments_idempotent :: String -> Property
 prop_remove_line_comments_idempotent s =
-  let once = removeLineComments s
-      twice = removeLineComments once
-  in property $ once === twice
+  let firstResult = removeLineComments s
+      secondResult = removeLineComments firstResult
+  in property $ firstResult === secondResult
 
 -- QuickCheck属性：normalizeIndentation的幂等性
 prop_normalize_indentation_idempotent :: String -> Property
 prop_normalize_indentation_idempotent s =
-  let once = normalizeIndentation s
-      twice = normalizeIndentation once
-  in property $ once === twice
+  let firstResult = normalizeIndentation s
+      secondResult = normalizeIndentation firstResult
+  in property $ firstResult === secondResult
 
 -- QuickCheck属性：breakOn的交换律
 prop_break_on_commutative :: String -> String -> String -> Property
 prop_break_on_commutative delim1 delim2 s =
   let (before1, after1) = breakOn delim1 s
-      (before2, after2) = breakOn delim2 s
+      _ = breakOn delim2 s
   in property $ length before1 + length after1 + length delim1 <= length s + 10
 
 -- ============================================================================
@@ -208,8 +200,8 @@ prop_source_location_transformation line col lineOffset colOffset =
 -- QuickCheck属性：SourceLocation的距离
 prop_source_location_distance :: Int -> Int -> Int -> Int -> Property
 prop_source_location_distance line1 col1 line2 col2 =
-  let loc1 = SourcePos (abs line1) (abs col1) 0
-      loc2 = SourcePos (abs line2) (abs col2) 0
+  let _ = SourcePos (abs line1) (abs col1) 0
+      _ = SourcePos (abs line2) (abs col2) 0
   in property $ abs (line1 - line2) + abs (col1 - col2) >= 0
 
 -- QuickCheck属性：SourceLocation的有效性
@@ -364,7 +356,7 @@ prop_compiler_empty_input =
   let emptyFile = TypusFile defaultFileDirectives [] [] []
       result = compile emptyFile
   in property $ case result of
-    Right output -> property $ null output
+    Right compiledOutput -> property $ null compiledOutput
     Left _ -> property True
 
 -- QuickCheck属性：Compiler的注释处理
@@ -420,7 +412,7 @@ prop_compiler_unicode_handling s =
         Right typusFile -> compile typusFile
         Left _ -> Left (error "Parse error")
   in property $ case result of
-    Right output -> property $ length output >= 0
+    Right compiledOutput -> property $ length compiledOutput >= 0
     Left _ -> property True
 
 -- ============================================================================
@@ -480,7 +472,7 @@ test_unicode_handling = do
         Right typusFile -> compile typusFile
         Left _ -> Left (error "Parse error")
   case result of
-    Right output -> assertBool "Unicode handled" (not $ null output)
+    Right compiledOutput -> assertBool "Unicode handled" (not $ null compiledOutput)
     Left _ -> assertFailure "Failed to handle Unicode"
 
 -- QuickCheck属性：完整流程的一致性

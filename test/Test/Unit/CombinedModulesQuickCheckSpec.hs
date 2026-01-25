@@ -42,8 +42,8 @@ prop_sourcelocation_parser_interaction content =
            let blocks = tfBlocks typusFile
            in property $ not (null blocks) ==> 
               let firstBlock = case blocks of (x:_) -> x; [] -> error "empty blocks"
-                  span = Parser.cbSpan firstBlock
-              in isValidSpan span
+                  span' = cbSpan firstBlock
+              in isValidSpan span'
 
 -- | Test Compiler and Parser interaction
 prop_compiler_parser_interaction :: String -> Property
@@ -88,8 +88,6 @@ prop_data_consistency :: String -> Property
 prop_data_consistency content = 
   not (null content) ==>
     let parseResult = parseTypus content
-        trimmedContent = trim content
-        splitContent = splitBy '\n' trimmedContent
     in case parseResult of
          Left _ -> property True
          Right typusFile -> 
@@ -109,7 +107,7 @@ prop_special_characters_handling content =
          let blocks = tfBlocks typusFile
          in property $ not (null blocks) ==> 
             let firstBlock = case blocks of (x:_) -> x; [] -> error "empty blocks"
-                blockContent = Parser.cbContent firstBlock
+                blockContent = cbContent firstBlock
             in specialChars `isInfixOf` blockContent
 
 -- | Test module interaction with Unicode
@@ -124,7 +122,7 @@ prop_unicode_handling content =
          let blocks = tfBlocks typusFile
          in property $ not (null blocks) ==> 
             let firstBlock = case blocks of (x:_) -> x; [] -> error "empty blocks"
-                blockContent = Parser.cbContent firstBlock
+                blockContent = cbContent firstBlock
             in unicodeChars `isInfixOf` blockContent
 
 -- | Test module interaction with large inputs
@@ -168,14 +166,14 @@ prop_directive_processing ownership deps constraints =
        Left _ -> property True
        Right typusFile -> 
          let directives = tfDirectives typusFile
-         in case (Parser.fdOwnership directives, Parser.fdDependentTypes directives, Parser.fdConstraints directives) of
+         in case (fdOwnership directives, fdDependentTypes directives, fdConstraints directives) of
               (Just o, Just d, Just c) -> 
                 property $ locValue o == ownership && locValue d == deps && locValue c == constraints
               _ -> property False
 
 -- Helper function to check if a span is valid
 isValidSpan :: SourceSpan -> Bool
-isValidSpan span = True  -- Simplified for this example
+isValidSpan _ = True  -- Simplified for this example
 
 -- | Tasty test suite
 testSuite :: TestTree

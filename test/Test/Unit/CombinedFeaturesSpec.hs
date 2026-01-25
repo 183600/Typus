@@ -6,9 +6,8 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 
-import Data.List (isInfixOf)
 import Utils (trim, splitBy, removeComments, normalizeIndentation)
-import SourceLocation (SourcePos(..), SourceSpan(..), startPos, posAt, spanBetween, spanStart, spanEnd)
+import SourceLocation (SourcePos(..), SourceSpan(..), posAt, spanBetween, spanStart, spanEnd)
 
 -- Test properties for combined features
 
@@ -38,12 +37,12 @@ prop_source_span_consistency line1 col1 line2 col2 =
   (line1 < line2 || (line1 == line2 && col1 <= col2)) ==>
   let pos1 = posAt line1 col1
       pos2 = posAt line2 col2
-      span = spanBetween pos1 pos2
+      span' = spanBetween pos1 pos2
   in property $ 
-       posLine (spanStart span) == line1 && 
-       posColumn (spanStart span) == col1 &&
-       posLine (spanEnd span) == line2 &&
-       posColumn (spanEnd span) == col2
+       posLine (spanStart span') == line1 && 
+       posColumn (spanStart span') == col1 &&
+       posLine (spanEnd span') == line2 &&
+       posColumn (spanEnd span') == col2
 
 -- Property: String processing roundtrip
 prop_string_processing_roundtrip :: String -> Property

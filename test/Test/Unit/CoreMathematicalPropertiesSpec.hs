@@ -70,8 +70,8 @@ prop_normalize_indentation_preserves_relative_structure s =
 
 prop_break_on_finds_pattern :: String -> String -> Property
 prop_break_on_finds_pattern pat s = 
-  let (before, after) = breakOn pat s
-      combined = before ++ pat ++ after
+  let (beforeStr, afterStr) = breakOn pat s
+      combined = beforeStr ++ pat ++ afterStr
   in null pat ==> combined === s
 
 prop_safe_process_string_removes_control_chars :: String -> Property
@@ -119,8 +119,8 @@ prop_pos_after_regular_char_increases_column c pos =
 -- Source span properties
 prop_span_between_valid :: SourcePos -> SourcePos -> Property
 prop_span_between_valid start end = 
-  let span = spanBetween start (max start end)
-  in isValidSpan span === True
+  let sourceSpan = spanBetween start (max start end)
+  in isValidSpan sourceSpan === True
 
 prop_merge_spans_contains_both :: SourceSpan -> SourceSpan -> Property
 prop_merge_spans_contains_both span1 span2 = 
@@ -132,15 +132,15 @@ prop_merge_spans_contains_both span1 span2 =
 
 prop_empty_span_same_start_end :: SourcePos -> Property
 prop_empty_span_same_start_end pos = 
-  let span = emptySpan pos
-  in (spanStart span == pos && spanEnd span == pos) === True
+  let sourceSpan = emptySpan pos
+  in (spanStart sourceSpan == pos && spanEnd sourceSpan == pos) === True
 
 -- Located values properties
 prop_located_at_creates_empty_span :: SourcePos -> String -> Property
 prop_located_at_creates_empty_span pos value = 
   let located = locatedAt pos value
-      span = locSpan located
-  in spanStart span === spanEnd span
+      sourceSpan = locSpan located
+  in spanStart sourceSpan === spanEnd sourceSpan
 
 prop_map_located_preserves_location :: SourcePos -> String -> Property
 prop_map_located_preserves_location pos value = 
@@ -189,8 +189,8 @@ prop_split_by_associative delim s1 s2 =
       combinedParts = splitBy delim combined
   in combinedParts === parts1 ++ parts2
 
-prop_split_by_empty_delimiter :: String -> Property
-prop_split_by_empty_delimiter s = 
+prop_split_by_empty_delimiter :: Property
+prop_split_by_empty_delimiter = 
   splitBy ',' "" === [""]
 
 prop_split_by_single_char :: Char -> Property
@@ -218,8 +218,8 @@ prop_position_ordering pos1 pos2 =
 
 prop_span_length_calculation :: SourcePos -> SourcePos -> Property
 prop_span_length_calculation start end = 
-  let span = spanBetween start (max start end)
-      expectedLength = posOffset (spanEnd span) - posOffset (spanStart span)
+  let sourceSpan = spanBetween start (max start end)
+      expectedLength = posOffset (spanEnd sourceSpan) - posOffset (spanStart sourceSpan)
   in (expectedLength >= 0) === True
 
 prop_merge_spans_commutative :: SourceSpan -> SourceSpan -> Property
@@ -238,16 +238,16 @@ prop_merge_spans_associative span1 span2 span3 =
 -- Error Handling Properties
 -- ============================================================================
 
-prop_error_location_preserves_position :: SourcePos -> String -> Property
-prop_error_location_preserves_position pos msg = 
+prop_error_location_preserves_position :: SourcePos -> Property
+prop_error_location_preserves_position pos = 
   let errLoc = toErrorLocation pos
   in (line errLoc == posLine pos && 
      column errLoc == posColumn pos) === True
 
 prop_error_location_with_span_preserves_range :: SourcePos -> SourcePos -> Property
 prop_error_location_with_span_preserves_range start end = 
-  let span = spanBetween start end
-      errLoc = toErrorLocationWithSpan span
+  let sourceSpan = spanBetween start end
+      errLoc = toErrorLocationWithSpan sourceSpan
   in (line errLoc == posLine start && 
      column errLoc == posColumn start &&
      endLine errLoc == Just (posLine end) &&

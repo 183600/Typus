@@ -6,12 +6,11 @@ import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
 
-import qualified Data.Text as T
-import Data.List (isPrefixOf, isSuffixOf, isInfixOf, sort)
-import Utils (trim, splitBy, removeComments, normalizeIndentation, safeProcessString)
-import SourceLocation (SourcePos(..), SourceSpan(..), startPos, posAt, spanBetween, 
-                       locatedAt, locatedValue, locatedSpan, locPos, spanStart, spanEnd)
-import Data.Char (isSpace, isAlpha, isAlphaNum)
+import Data.List (isPrefixOf, isInfixOf)
+import Utils (trim, removeComments, normalizeIndentation, safeProcessString)
+import SourceLocation (SourcePos(..), SourceSpan(..), posAt, spanBetween, 
+                       locatedAt, locatedValue, locPos, spanStart, spanEnd)
+import Data.Char (isSpace)
 
 -- Test properties for compiler integration
 
@@ -37,12 +36,12 @@ prop_span_contains_positions line1 col1 line2 col2 =
   (line1 < line2 || (line1 == line2 && col1 <= col2)) ==>
   let pos1 = posAt line1 col1
       pos2 = posAt line2 col2
-      span = spanBetween pos1 pos2
+      sourceSpan = spanBetween pos1 pos2
   in property $ 
-       posLine (spanStart span) == line1 && 
-       posColumn (spanStart span) == col1 &&
-       posLine (spanEnd span) == line2 &&
-       posColumn (spanEnd span) == col2
+       posLine (spanStart sourceSpan) == line1 && 
+       posColumn (spanStart sourceSpan) == col1 &&
+       posLine (spanEnd sourceSpan) == line2 &&
+       posColumn (spanEnd sourceSpan) == col2
 
 -- Property: Processing pipeline should be consistent
 prop_processing_pipeline_consistent :: String -> Property
@@ -94,10 +93,8 @@ prop_normalize_preserves_blocks s =
 prop_location_monotonic :: Int -> Int -> Int -> Property
 prop_location_monotonic startLine startCol offset = 
   startLine >= 1 && startCol >= 1 && offset >= 0 ==>
-  let pos = posAt startLine startCol
-      newLine = startLine + offset `div` 100
+  let newLine = startLine + offset `div` 100
       newCol = startCol + offset `mod` 100
-      newPos = posAt newLine newCol
   in property $ 
        newLine > startLine || (newLine == startLine && newCol >= startCol)
 
@@ -114,11 +111,11 @@ test_compiler_integration_span :: Assertion
 test_compiler_integration_span = do
   let pos1 = posAt 1 1
   let pos2 = posAt 1 5
-  let span = spanBetween pos1 pos2
-  posLine (spanStart span) @?= 1
-  posColumn (spanStart span) @?= 1
-  posLine (spanEnd span) @?= 1
-  posColumn (spanEnd span) @?= 5
+  let sourceSpan = spanBetween pos1 pos2
+  posLine (spanStart sourceSpan) @?= 1
+  posColumn (spanStart sourceSpan) @?= 1
+  posLine (spanEnd sourceSpan) @?= 1
+  posColumn (spanEnd sourceSpan) @?= 5
 
 test_compiler_integration_pipeline :: Assertion
 test_compiler_integration_pipeline = do

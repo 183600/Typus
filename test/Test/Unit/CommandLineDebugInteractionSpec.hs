@@ -5,9 +5,7 @@ module Test.Unit.CommandLineDebugInteractionSpec where
 import Test.Tasty
 import Test.Tasty.QuickCheck
 
-import CommandLineDebug
 import Data.List (isInfixOf)
-import Test.QuickCheck (Arbitrary(..), oneof)
 
 -- Add Arbitrary instance for DebugConfig
 instance Arbitrary DebugConfig where
@@ -76,11 +74,11 @@ prop_cli_parsing_consistent commandLine =
 prop_debug_flag_activation :: [String] -> Property
 prop_debug_flag_activation flags =
   let config = parseDebugFlags flags
-      debugEnabled = isDebugEnabled config
+      debugEnabled' = isDebugEnabled config
   in property $ 
     if "--debug" `elem` flags || "-d" `elem` flags
-    then debugEnabled
-    else not debugEnabled
+    then debugEnabled'
+    else not debugEnabled'
 
 -- Test verbosity level setting
 prop_verbosity_level_setting :: Int -> Property

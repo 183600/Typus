@@ -1,89 +1,131 @@
 #!/usr/bin/env python3
-"""
-Fix compilation warnings in test files
-"""
-
 import os
 import re
-import sys
 
-def fix_unused_imports(filepath):
-    """Remove unused imports from a file"""
-    with open(filepath, 'r') as f:
-        content = f.read()
-    
-    # Remove unused Test.Tasty.HUnit imports
-    content = re.sub(r'^import Test\.Tasty\.HUnit\s*$', '', content, flags=re.MULTILINE)
-    
-    # Remove unused TypeError import from BoundaryConditionComprehensiveSpec
-    if 'BoundaryConditionComprehensiveSpec' in filepath:
-        content = re.sub(
-            r'import Compiler\.Errors\.Core \(TypeError\(\.\.\.\), ErrorSeverity\(\.\.\.\),',
-            'import Compiler.Errors.Core (ErrorSeverity(..),',
-            content
-        )
-    
-    # Write back
-    with open(filepath, 'w') as f:
-        f.write(content)
+# 需要处理的文件列表
+files_to_fix = [
+    "test/Test/Unit/TextProcessingAdvancedSpec.hs",
+    "test/Test/Unit/ToolingErrorSpec.hs",
+    "test/Test/Unit/TypeInferenceAdvancedSpec.hs",
+    "test/Test/Unit/DependenciesCycleDetectionQuickCheckSpec.hs",
+    "test/Test/Unit/NewAdditionalErrorHandlerQuickCheckSpec.hs",
+    "test/Test/Unit/CoreUtilsQuickCheckSpec.hs",
+    "test/Test/Unit/CoreSourceLocationQuickCheckSpec.hs",
+    "test/Test/Unit/CoreParserQuickCheckSpec.hs",
+    "test/Test/Unit/CoreOwnershipQuickCheckSpec.hs",
+    "test/Test/Unit/CoreDependenciesQuickCheckSpec.hs",
+    "test/Test/Unit/CoreCompilerQuickCheckSpec.hs",
+    "test/Test/Unit/ComprehensiveCoreModulesQuickCheckSpec.hs"
+]
 
-def fix_span_shadowing(filepath):
-    """Fix span name shadowing"""
-    with open(filepath, 'r') as f:
-        content = f.read()
-    
-    # Replace 'let span =' with 'let sourceSpan =' (but be careful not to replace function calls)
-    lines = content.split('\n')
-    new_lines = []
-    for line in lines:
-        if 'let span =' in line:
-            line = line.replace('let span =', 'let sourceSpan =')
-        new_lines.append(line)
-    
-    with open(filepath, 'w') as f:
-        f.write('\n'.join(new_lines))
-
-def fix_orphan_instances(filepath):
-    """Add OPTIONS_GHC pragma to suppress orphan warnings"""
-    with open(filepath, 'r') as f:
-        content = f.read()
-    
-    # Add pragma at the top if not present
-    if 'OPTIONS_GHC -Wno-orphans' not in content:
-        lines = content.split('\n')
-        # Find the language pragmas
-        insert_idx = 0
-        for i, line in enumerate(lines):
-            if line.startswith('{-# LANGUAGE'):
-                insert_idx = i + 1
-            elif line.startswith('module'):
-                break
+def fix_unused_imports(file_path):
+    """移除未使用的导入"""
+    try:
+        with open(file_path, 'r') as f:
+            content = f.read()
         
-        lines.insert(insert_idx, '{-# OPTIONS_GHC -Wno-orphans #-}')
-        content = '\n'.join(lines)
-    
-    with open(filepath, 'w') as f:
-        f.write(content)
+        # 移除常见的未使用导入
+        unused_imports = [
+            "import Test.Tasty",
+            "import Test.Tasty.QuickCheck",
+            "import Test.Tasty.HUnit",
+            "import Test.QuickCheck",
+            "import Data.List",
+            "import Data.Maybe",
+            "import Data.Char",
+            "import Control.Monad",
+            "import qualified Data.Text as T",
+            "import qualified Data.Map.Strict as Map",
+            "import SourceLocation",
+            "import Compiler.Errors.Core",
+            "import TestSupport.QuickCheck",
+            "import TestSupport.Arbitrary",
+            "import ErrorHandler",
+            "import Utils",
+            "import Tooling.Error"
+        ]
+        
+        for imp in unused_imports:
+            # 移除导入行，包括可能的类型导入
+            pattern = rf"{imp}.*?\n"
+            content = re.sub(pattern, "", content, flags=re.MULTILINE)
+        
+        with open(file_path, 'w') as f:
+            f.write(content)
+        print(f"Fixed unused imports in {file_path}")
+    except Exception as e:
+        print(f"Error fixing {file_path}: {e}")
 
-def main():
-    test_dir = 'test/Test/Unit'
-    
-    for root, dirs, files in os.walk(test_dir):
-        for file in files:
-            if file.endswith('.hs'):
-                filepath = os.path.join(root, file)
-                print(f"Processing {filepath}")
-                
-                # Fix common issues
-                fix_unused_imports(filepath)
-                
-                # Fix span shadowing in specific files
-                if 'BoundaryConditionsEnhancedQuickCheckSpec' in file:
-                    fix_span_shadowing(filepath)
-                
-                # Fix orphan instances
-                if 'BoundaryConditionsEnhancedQuickCheckSpec' in file:
-                    fix_orphan_instances(filepath)
+def fix_unused_variables(file_path):
+    """修复未使用的变量"""
+    try:
+        with open(file_path, 'r') as f:
+            content = f.read()
+        
+        # 将未使用的变量添加下划线前缀
+        # 处理 Left err 模式
+        content = re.sub(r"Left\s+(err|error|result|valid|typeExpr|constraint|ast|stmt|directives|nodes|checker|substitution|scheme|env|program)", r"Left _\1", content)
+        
+        # 处理 Right valid 模式
+        content = re.sub(r"Right\s+(valid|err|error|result|file|typeExpr)", r"Right _\1", content)
+        
+        # 处理 let 绑定
+        content = re.sub(r"(\s+)(err|error|result|valid|typeExpr|constraint|ast|stmt|directives|nodes|checker|substitution|scheme|env|program|cache|cachedResult|pos|span|var2|vars1|vars2|context|message|endLine|endCol|endOffset|after)\s+=", r"\1_\2 =", content)
+        
+        # 处理 forAll 模式
+        content = re.sub(r"forAll\s+\w+\s+\$\\(\w+)\s+->", r"forAll \w+ $ \\\1 ->", content)
+        
+        with open(file_path, 'w') as f:
+            f.write(content)
+        print(f"Fixed unused variables in {file_path}")
+    except Exception as e:
+        print(f"Error fixing {file_path}: {e}")
 
-if __name__ == '__main__':
-    main()
+def fix_name_shadowing(file_path):
+    """修复名称遮蔽"""
+    try:
+        with open(file_path, 'r') as f:
+            content = f.read()
+        
+        # 处理 span 变量遮蔽
+        content = re.sub(r"(\\s+)(span)\s+=", r"\1span' =", content)
+        content = re.sub(r"forAll\s+\w+\s+\$\\(span\)\s+->", r"forAll \w+ $ \\span' ->", content)
+        
+        # 处理 error 变量遮蔽
+        content = re.sub(r"(\\s+)(error)\s+=", r"\1error' =", content)
+        
+        # 处理 context 和 message 变量遮蔽
+        content = re.sub(r"prop_error_context\s+(context)\s+(message)\s+", r"prop_error_context context' message' ", content)
+        
+        with open(file_path, 'w') as f:
+            f.write(content)
+        print(f"Fixed name shadowing in {file_path}")
+    except Exception as e:
+        print(f"Error fixing {file_path}: {e}")
+
+def fix_type_defaults(file_path):
+    """修复类型默认化"""
+    try:
+        with open(file_path, 'r') as f:
+            content = f.read()
+        
+        # 添加类型注解
+        content = re.sub(r"count\s+'(\w)'\s+xs\s+==\s+count\s+'\1'\s+xs", r"count '\1' xs == (count '\1' xs :: Int)", content)
+        
+        with open(file_path, 'w') as f:
+            f.write(content)
+        print(f"Fixed type defaults in {file_path}")
+    except Exception as e:
+        print(f"Error fixing {file_path}: {e}")
+
+# 处理所有文件
+for file_path in files_to_fix:
+    if os.path.exists(file_path):
+        fix_unused_imports(file_path)
+        fix_unused_variables(file_path)
+        fix_name_shadowing(file_path)
+        fix_type_defaults(file_path)
+    else:
+        print(f"File not found: {file_path}")
+
+print("All fixes completed!")
