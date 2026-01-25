@@ -7,17 +7,11 @@ module Test.Unit.TypeInferenceQuickCheckSpec where
 
 import Test.Tasty.HUnit
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty
--- Removed empty QuickCheck import
-import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
-import Test.QuickCheck (Gen, Property, (==>), classify, sized)
-import Data.List (nub, sort, groupBy, sortBy)
-import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes)
+import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, elements, oneof, property)
+import Test.QuickCheck (Property, (==>))
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Set (Set)
-import qualified Data.Set as Set
-import Control.Monad (replicateM, when)
+import Control.Monad (replicateM)
 
 -- Simple type system for testing
 data Type = TInt | TBool | TString | TFunc Type Type | TVar String | TTuple [Type]
@@ -110,8 +104,8 @@ prop_type_equality_transitive t1 t2 t3 =
 -- Property 5: Function type composition
 prop_func_type_composition :: Type -> Type -> Type -> Bool
 prop_func_type_composition t1 t2 t3 = 
-  let f1 = TFunc t1 t2
-      f2 = TFunc t2 t3
+  let _f1 = TFunc t1 t2
+      _f2 = TFunc t2 t3
       composed = TFunc t1 t3
   in isFunctionType composed
 

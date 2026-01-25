@@ -21,14 +21,11 @@ import Test.QuickCheck (Arbitrary(..), oneof, elements, resize, sized)
 instance Arbitrary T.Text where
   arbitrary = T.pack <$> arbitrary
 
-instance Arbitrary SourcePos where
-  arbitrary = SourcePos <$> arbitrary <*> arbitrary <*> arbitrary
+-- Arbitrary instance for SourcePos is now defined in SourceLocation module
 
-instance Arbitrary SourceSpan where
-  arbitrary = do
-    start <- arbitrary
-    end <- arbitrary
-    return $ spanBetween start end
+
+-- Arbitrary instance for SourceSpan is now defined in SourceLocation module
+
 
 instance Arbitrary (Located String) where
   arbitrary = do

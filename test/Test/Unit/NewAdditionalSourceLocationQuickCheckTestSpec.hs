@@ -15,8 +15,8 @@ import SourceLocation (SourcePos(..), startPos, posAfter, advancePos, advancePos
                        SourceSpan(..), emptySpan, spanFrom, spanTo, mergeSpans, isValidSpan)
 
 -- Arbitrary instance for SourcePos
-instance Arbitrary SourcePos where
-  arbitrary = SourcePos <$> arbitrary <*> arbitrary <*> arbitrary
+-- Arbitrary instance for SourcePos is now defined in SourceLocation module
+
 
 -- | Test SourcePos properties
 prop_start_pos_consistent :: Bool

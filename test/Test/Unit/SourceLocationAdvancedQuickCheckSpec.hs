@@ -143,12 +143,12 @@ sourcePosLe (SourcePos l1 c1 _) (SourcePos l2 c2 _) =
   l1 < l2 || (l1 == l2 && c1 <= c2)
 
 -- | 为SourcePos添加Arbitrary实例
-instance Arbitrary SourcePos where
-  arbitrary = SourcePos <$> arbitrary <*> arbitrary <*> arbitrary
+-- Arbitrary instance for SourcePos is now defined in SourceLocation module
+
 
 -- | 为SourceSpan添加Arbitrary实例
-instance Arbitrary SourceSpan where
-  arbitrary = SourceSpan <$> arbitrary <*> arbitrary
+-- Arbitrary instance for SourceSpan is now defined in SourceLocation module
+
 
 -- | 测试套件
 tests :: TestTree

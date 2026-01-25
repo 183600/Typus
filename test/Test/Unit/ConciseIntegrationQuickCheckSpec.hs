@@ -97,18 +97,11 @@ instance Arbitrary EndToEndTest where
     shouldGenerateGo <- arbitrary
     return $ EndToEndTest input shouldParse shouldCompile shouldGenerateGo
 
-instance Arbitrary SourcePos where
-  arbitrary = do
-    lineNum <- choose (1, 1000)
-    columnNum <- choose (1, 1000)
-    offset <- choose (0, 1000000)
-    return $ SourcePos lineNum columnNum offset
+-- Arbitrary instance for SourcePos is now defined in SourceLocation module
 
-instance Arbitrary SourceSpan where
-  arbitrary = do
-    startPos <- arbitrary
-    endPos <- arbitrary
-    return $ SourceSpan startPos endPos
+
+-- Arbitrary instance for SourceSpan is now defined in SourceLocation module
+
 
 tests :: TestTree
 tests = testGroup "Concise Integration QuickCheck Tests"

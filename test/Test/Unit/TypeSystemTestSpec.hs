@@ -6,18 +6,11 @@ module Test.Unit.TypeSystemTestSpec where
 
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
-import Test.QuickCheck (Gen, Property, (==>))
+import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), elements, oneof, vectorOf, property)
+import Test.QuickCheck (Property, Gen, (==>))
 import qualified Data.Text as T
-import qualified Data.Map as Map
-import Data.List (nub, intersect)
-import Data.Set (Set)
-import qualified Data.Set as Set
-import Test.Tasty
-import Test.Tasty.QuickCheck
-
-import Compiler.TypeChecker
-import Compiler.GoAst
+import Dependencies.TypeSystem as Dep
+import qualified Dependencies.AST as Dep
 import Dependencies.TypeSystem as Dep
 import qualified Dependencies.AST as Dep
 
@@ -110,12 +103,12 @@ prop_typeEqualityTransitive t1 t2 t3 =
 prop_typeConstraintPreservation :: Dep.TypeConstraint -> Bool
 prop_typeConstraintPreservation constraint =
   case constraint of
-    Dep.Equal t1 t2 -> True
-    Dep.Subtype t1 t2 -> True
-    Dep.Predicate className t -> True
-    Dep.TypeSizeGE t n -> True
-    Dep.TypeSizeGT t n -> True
-    Dep.TypeRange t min max -> True
+    Dep.Equal _t1 _t2 -> True
+    Dep.Subtype _t1 _t2 -> True
+    Dep.Predicate _className _t -> True
+    Dep.TypeSizeGE _t _n -> True
+    Dep.TypeSizeGT _t _n -> True
+    Dep.TypeRange _t _minVal _maxVal -> True
 
 -- Property 8: Type equality is reflexive (simplified)
 prop_typeVarEqualityReflexive :: Dep.TypeVar -> Bool

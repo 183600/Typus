@@ -1,0 +1,163 @@
+typus-0.12.2: unregistering (local file changes: src/Analyzer/OwnershipBridge.hs
+src/Compiler/TypeChecker.hs src/Ownership/Analyzer.hs src/SimpleS...)
+typus> configure (lib + exe + test)
+Configuring typus-0.12.2...
+typus> build (lib + exe + test) with ghc-9.8.4
+Preprocessing library for typus-0.12.2..
+Building library for typus-0.12.2..
+[26 of 58] Compiling Ownership.Analyzer [Source file changed]
+
+/home/runner/work/Typus/Typus/src/Ownership/Analyzer.hs:245:21: error: [GHC-88464]
+    Variable not in scope:
+      foldl'
+        :: (Map.Map Name [VarState] -> Name -> Map.Map Name [VarState])
+           -> Map.Map Name [VarState] -> [Name] -> t
+    Suggested fixes:
+      • Perhaps use one of these:
+          ‘Map.foldl'’ (imported from Data.Map.Strict),
+          ‘foldl’ (imported from Prelude),
+          ‘Map.foldl’ (imported from Data.Map.Strict)
+      • Add ‘foldl'’ to the import list in the import of ‘Data.List’
+        (at src/Ownership/Analyzer.hs:12:1-28).
+    |
+245 |       updatedVars = foldl' releaseBorrow keepVars borrowedAtCurrentScope
+    |                     ^^^^^^
+[32 of 58] Compiling SimpleSyntaxValidator [Source file changed]
+
+/home/runner/work/Typus/Typus/src/SimpleSyntaxValidator.hs:73:22: error: [GHC-88464]
+    Variable not in scope:
+      foldl'
+        :: (ParseState -> (Char, Int) -> ParseState)
+           -> ParseState -> [(Char, b0)] -> t
+    Suggested fixes:
+      • Perhaps use one of these:
+          ‘foldl’ (imported from Prelude), ‘foldl1’ (imported from Prelude),
+          ‘foldr’ (imported from Prelude)
+      • Add ‘foldl'’ to the import list in the import of ‘Data.List’
+        (at src/SimpleSyntaxValidator.hs:12:1-40).
+   |
+73 |     let finalState = foldl' processChar initialState (zip content [0..])
+   |                      ^^^^^^
+
+/home/runner/work/Typus/Typus/src/SimpleSyntaxValidator.hs:291:13: error: [GHC-88464]
+    Variable not in scope:
+      foldl'
+        :: (ParseState -> (Char, Int) -> ParseState)
+           -> ParseState -> [(Char, b1)] -> t0
+    Suggested fixes:
+      • Perhaps use one of these:
+          ‘foldl’ (imported from Prelude), ‘foldl1’ (imported from Prelude),
+          ‘foldr’ (imported from Prelude)
+      • Add ‘foldl'’ to the import list in the import of ‘Data.List’
+        (at src/SimpleSyntaxValidator.hs:12:1-40).
+    |
+291 |     let _ = foldl' processChar initialState (zip content [0..])
+    |             ^^^^^^
+[33 of 58] Compiling SourceLocation [Source file changed]
+
+/home/runner/work/Typus/Typus/src/SourceLocation.hs:275:26: error: [GHC-88464]
+    Variable not in scope:
+      foldl'
+        :: (SourcePos -> Char -> SourcePos)
+           -> SourcePos -> String -> SourcePos
+    Suggested fixes:
+      • Perhaps use one of these:
+          ‘T.foldl'’ (imported from Data.Text),
+          ‘foldl’ (imported from Prelude),
+          ‘T.foldl’ (imported from Data.Text)
+      • Add ‘foldl'’ to the import list in the import of ‘Data.Text’
+        (at src/SourceLocation.hs:65:1-23).
+    |
+275 | advancePosBy chars pos = foldl' (flip advancePos) pos chars
+    |                          ^^^^^^
+[38 of 58] Compiling SyntaxValidator [Source file changed]
+
+/home/runner/work/Typus/Typus/src/SyntaxValidator.hs:324:5: error: [GHC-88464]
+    Variable not in scope:
+      foldl'
+        :: (SyntaxValidator -> (Token, Token) -> SyntaxValidator)
+           -> SyntaxValidator -> [(Token, Token)] -> SyntaxValidator
+    Suggested fixes:
+      • Perhaps use one of these:
+          ‘Set.foldl'’ (imported from Data.Set),
+          ‘foldl’ (imported from Prelude),
+          ‘Set.foldl’ (imported from Data.Set)
+      • Add ‘foldl'’ to the import list in the import of ‘Data.List’
+        (at src/SyntaxValidator.hs:18:1-47).
+    |
+324 |     foldl' validateToken validator (zip tokens nextTokens)
+    |     ^^^^^^
+
+/home/runner/work/Typus/Typus/src/SyntaxValidator.hs:419:30: error: [GHC-88464]
+    Variable not in scope:
+      foldl'
+        :: (SyntaxValidator -> Token -> SyntaxValidator)
+           -> SyntaxValidator -> [Token] -> t
+    Suggested fixes:
+      • Perhaps use one of these:
+          ‘Set.foldl'’ (imported from Data.Set),
+          ‘foldl’ (imported from Prelude),
+          ‘Set.foldl’ (imported from Data.Set)
+      • Add ‘foldl'’ to the import list in the import of ‘Data.List’
+        (at src/SyntaxValidator.hs:18:1-47).
+    |
+419 |        else let validator' = foldl' checkBrace validator tokens
+    |                              ^^^^^^
+
+/home/runner/work/Typus/Typus/src/SyntaxValidator.hs:450:5: error: [GHC-88464]
+    Variable not in scope:
+      foldl'
+        :: (SyntaxValidator -> Token -> SyntaxValidator)
+           -> SyntaxValidator -> [Token] -> SyntaxValidator
+    Suggested fixes:
+      • Perhaps use one of these:
+          ‘Set.foldl'’ (imported from Data.Set),
+          ‘foldl’ (imported from Prelude),
+          ‘Set.foldl’ (imported from Data.Set)
+      • Add ‘foldl'’ to the import list in the import of ‘Data.List’
+        (at src/SyntaxValidator.hs:18:1-47).
+    |
+450 |     foldl' checkVariableUsage validator (filterIdentifiers tokens)
+    |     ^^^^^^
+
+/home/runner/work/Typus/Typus/src/SyntaxValidator.hs:501:22: error: [GHC-88464]
+    Variable not in scope:
+      foldl'
+        :: (SyntaxValidator -> Token -> SyntaxValidator)
+           -> SyntaxValidator -> [Token] -> t
+    Suggested fixes:
+      • Perhaps use one of these:
+          ‘Set.foldl'’ (imported from Data.Set),
+          ‘foldl’ (imported from Prelude),
+          ‘Set.foldl’ (imported from Data.Set)
+      • Add ‘foldl'’ to the import list in the import of ‘Data.List’
+        (at src/SyntaxValidator.hs:18:1-47).
+    |
+501 |     let validator1 = foldl' checkTypusDirective validator (filterComments tokens)
+    |                      ^^^^^^
+
+/home/runner/work/Typus/Typus/src/SyntaxValidator.hs:559:5: error: [GHC-88464]
+    Variable not in scope:
+      foldl'
+        :: (SyntaxValidator -> (Token, Token, Token) -> SyntaxValidator)
+           -> SyntaxValidator -> [(Token, Token, Token)] -> SyntaxValidator
+    Suggested fixes:
+      • Perhaps use one of these:
+          ‘Set.foldl'’ (imported from Data.Set),
+          ‘foldl’ (imported from Prelude),
+          ‘Set.foldl’ (imported from Data.Set)
+      • Add ‘foldl'’ to the import list in the import of ‘Data.List’
+        (at src/SyntaxValidator.hs:18:1-47).
+    |
+559 |     foldl' checkControlStructure validator (zip3 tokens (drop 1 tokens ++ [TNewline 0]) (drop 2 tokens ++ [TNewline 0, TNewline 0]))
+    |     ^^^^^^
+
+Error: [S-7282]
+       Stack failed to execute the build plan.
+       
+       While executing the build plan, Stack encountered the error:
+       
+       [S-7011]
+       While building package typus-0.12.2 (scroll up to its section to see the error) using:
+       /home/runner/.stack/setup-exe-cache/x86_64-linux-tinfo6/Cabal-simple_w2MFVN35_3.10.3.0_ghc-9.8.4 --verbose=1 --builddir=.stack-work/dist/x86_64-linux-tinfo6/ghc-9.8.4 build lib:typus exe:typus test:typus-test --ghc-options ""
+       Process exited with code: ExitFailure 1 

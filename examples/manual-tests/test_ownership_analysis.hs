@@ -1,5 +1,4 @@
 import qualified Ownership
-import System.IO
 
 main :: IO ()
 main = do

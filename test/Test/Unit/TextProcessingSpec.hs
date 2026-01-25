@@ -6,13 +6,11 @@ import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
 
-import qualified Data.Text as T
-import Data.List (isPrefixOf, isSuffixOf, isInfixOf, sort)
+import Data.List (isPrefixOf, isSuffixOf, isInfixOf)
 import Utils (trim, splitBy, splitByComma, splitByCollapsed, removeLineComments, 
              removeComments, normalizeIndentation, breakOn, safeProcessString, 
              isValidChar)
-import Data.Char (isSpace, isAlpha, isAlphaNum, toLower, toUpper, isDigit, 
-                 isLetter, isPunctuation, isSymbol, isControl)
+import Data.Char (isSpace, isControl)
 
 -- Test properties for text processing
 
@@ -54,8 +52,8 @@ prop_remove_line_comments code comment =
 
 -- Property: removeComments should handle both // and /* */ comments
 prop_remove_comments_both_types :: String -> String -> String -> Property
-prop_remove_comments_both_types before middle after = 
-  let input = before ++ "/* comment */" ++ middle ++ "// line comment\n" ++ after
+prop_remove_comments_both_types before middle afterStr = 
+  let input = before ++ "/* comment */" ++ middle ++ "// line comment\n" ++ afterStr
       result = removeComments input
   in property $ 
     not ("/*" `isInfixOf` result) &&
@@ -74,11 +72,11 @@ prop_normalize_preserves_relative s =
 -- Property: breakOn should find substring or return original
 prop_break_on_finds_or_original :: String -> String -> Property
 prop_break_on_finds_or_original s substr = 
-  let (before, after) = breakOn substr s
+  let (before, afterStr) = breakOn substr s
   in property $ 
     if substr `isInfixOf` s
     then (before ++ substr) `isPrefixOf` s
-    else before == s && after == ""
+    else before == s && afterStr == ""
 
 -- Property: safeProcessString should handle all inputs
 prop_safe_process_always_succeeds :: String -> Property

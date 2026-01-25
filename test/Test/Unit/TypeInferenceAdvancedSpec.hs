@@ -4,7 +4,6 @@ module Test.Unit.TypeInferenceAdvancedSpec where
 import Test.Tasty
 import Test.Tasty.HUnit
 import Data.List (sort, (\\))
-import qualified Data.Set as Set
 import qualified Data.Map as Map
 
 -- Mock data types for advanced type inference testing
@@ -115,8 +114,8 @@ generalizeType typ state =
     extractFreeVars (TypeConType _ args) = concatMap extractFreeVars args
     extractFreeVars (TypeFunType argType resType) = 
       extractFreeVars argType ++ extractFreeVars resType
-    extractFreeVars (TypeForAllType vars typ) = 
-      extractFreeVars typ \\ vars
+    extractFreeVars (TypeForAllType vars typType) = 
+      extractFreeVars typType \\ vars
 
 tests :: TestTree
 tests = testGroup "Advanced Type Inference Tests"

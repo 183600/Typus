@@ -52,11 +52,11 @@ genEmptySourceSpan = do
   let pos = SourcePos line col offset
   return $ SourceSpan pos pos
 
-instance Arbitrary SourcePos where
-  arbitrary = genSourcePos
+-- Arbitrary instance for SourcePos is now defined in SourceLocation module
 
-instance Arbitrary SourceSpan where
-  arbitrary = oneof [genValidSourceSpan, genEmptySourceSpan]
+
+-- Arbitrary instance for SourceSpan is now defined in SourceLocation module
+
 
 -- Test properties for source location
 

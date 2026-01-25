@@ -63,8 +63,16 @@ module SourceLocation (
 ) where
 
 import Data.Text (Text)
-import qualified Data.Text as T
 import Data.Foldable (foldl')
+import Test.QuickCheck (Arbitrary(..), suchThat)
+
+import qualified Data.Text as T
+
+
+
+
+
+
 
 import Control.Monad.State (State, get, put, runState, evalState)
 import Compiler.Errors.Core (ErrorLocation(..))
@@ -460,3 +468,22 @@ sourceLine = posLine
 -- | Get column number from SourcePos (for tests)
 sourceColumn :: SourcePos -> Int
 sourceColumn = posColumn
+
+-- ============================================================================
+-- Arbitrary instances for testing
+-- ============================================================================
+
+-- | Arbitrary instance for SourcePos
+instance Arbitrary SourcePos where
+  arbitrary = do
+    lineNum <- arbitrary `suchThat` (> 0)
+    colNum <- arbitrary `suchThat` (> 0)
+    offsetVal <- arbitrary `suchThat` (>= 0)
+    return $ SourcePos lineNum colNum offsetVal
+
+-- | Arbitrary instance for SourceSpan
+instance Arbitrary SourceSpan where
+  arbitrary = do
+    start <- arbitrary
+    end <- arbitrary
+    return $ spanBetween start end

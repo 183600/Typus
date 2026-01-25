@@ -11,13 +11,7 @@ import SourceLocation
   )
 import qualified Data.Text as T (pack)
 
--- | SourcePos 的 Arbitrary 实例
-instance Arbitrary SourcePos where
-  arbitrary = do
-    line <- choose (1, 100)
-    column <- choose (1, 100)
-    offset <- choose (0, 1000)
-    return $ SourcePos line column offset
+-- Arbitrary instances are now defined in SourceLocation module
 
 -- | 测试SourcePos的基本属性
 prop_start_pos_properties :: Property

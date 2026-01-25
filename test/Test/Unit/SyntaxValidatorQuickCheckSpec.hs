@@ -2,7 +2,7 @@ module Test.Unit.SyntaxValidatorQuickCheckSpec where
 
 
 
-import Test.Tasty.HUnit
+import Test.Tasty.HUnit()
 import Test.Tasty
 import Test.Tasty.QuickCheck
 

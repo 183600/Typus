@@ -11,12 +11,8 @@ import Data.List (nub, sort)
 import Data.Maybe (isJust, isNothing)
 
 -- | SourcePos 的 Arbitrary 实例
-instance Arbitrary SourcePos where
-  arbitrary = do
-    line <- choose (1, 100)
-    column <- choose (1, 100)
-    offset <- choose (0, 1000)
-    return $ SourcePos line column offset
+-- Arbitrary instance for SourcePos is now defined in SourceLocation module
+
 
 -- | 简化的所有权实体定义用于测试
 data OwnershipEntity = OwnershipEntity

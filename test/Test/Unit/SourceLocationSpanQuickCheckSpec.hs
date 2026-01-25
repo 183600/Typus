@@ -13,19 +13,12 @@ import SourceLocation
   )
 
 -- | 生成有效的SourcePos
-instance Arbitrary SourcePos where
-  arbitrary = do
-    line <- choose (1, 1000)
-    column <- choose (1, 1000)
-    offset <- choose (0, 10000)
-    return $ SourcePos line column offset
+-- Arbitrary instance for SourcePos is now defined in SourceLocation module
+
 
 -- | 生成有效的SourceSpan
-instance Arbitrary SourceSpan where
-  arbitrary = do
-    start <- arbitrary
-    end <- arbitrary
-    return $ SourceSpan start end
+-- Arbitrary instance for SourceSpan is now defined in SourceLocation module
+
 
 -- | 测试emptySpan的属性
 prop_empty_span_properties :: Property

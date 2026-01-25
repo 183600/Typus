@@ -5,9 +5,10 @@ module Main where
 
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
-import Data.List (intercalate, nub, (\))
+import Data.List (intercalate, nub)
 import Data.Char (isSpace, isDigit, isAlpha, isAlphaNum)
 import Data.Maybe (isJust, fromMaybe)
+import Control.Monad.State
 
 -- 所有权错误类型
 data OwnershipError
@@ -87,15 +88,13 @@ parseOwnershipCode code =
               let funcStmt = SFunc name params body
               in funcStmt : parseTokens rest'
     parseTokens (TIdent var : TSymbol '=' : rest) =
-      case parseExpr rest of
-        (expr, remaining) ->
-          let assignStmt = SAssign var expr
-          in assignStmt : parseTokens remaining
+      let expr = parseSimpleExpr rest
+          assignStmt = SAssign var expr
+      in assignStmt : parseTokens (dropTokensForExpr rest)
     parseTokens (TKeyword "var" : TIdent var : TSymbol '=' : rest) =
-      case parseExpr rest of
-        (expr, remaining) ->
-          let varStmt = SVarDecl var (Just expr)
-          in varStmt : parseTokens remaining
+      let expr = parseSimpleExpr rest
+          varStmt = SVarDecl var (Just expr)
+      in varStmt : parseTokens (dropTokensForExpr rest)
     parseTokens (TKeyword "if" : rest) =
       case parseCondition rest of
         (cond, remaining) ->
@@ -156,21 +155,21 @@ parseOwnershipCode code =
     parseFuncBody tokens = 
       let (bodyTokens, remaining) = span (/= TSymbol '}') tokens
           body = parseTokens bodyTokens
-      in (body, if null remaining then [] else tail remaining)
+      in (body, if null remaining then [] else drop 1 remaining)
     
     parseCondition :: [Token] -> (Expr, [Token])
     parseCondition (TSymbol '(' : rest) =
       let (condTokens, remaining) = span (/= TSymbol ')') rest
           cond = parseSimpleExpr condTokens
-      in (cond, if null remaining then [] else tail remaining)
-    parseCondition rest = parseSimpleExpr rest
+      in (cond, if null remaining then [] else drop 1 remaining)
+    parseCondition rest = (parseSimpleExpr rest, dropTokensForExpr rest)
     
     parseOptionalLoopVar :: [Token] -> (Maybe String, [Token])
     parseOptionalLoopVar (TIdent name : TKeyword "in" : rest) = (Just name, rest)
     parseOptionalLoopVar rest = (Nothing, rest)
     
     parseCollection :: [Token] -> (Expr, [Token])
-    parseCollection tokens = parseSimpleExpr tokens
+    parseCollection tokens = (parseSimpleExpr tokens, dropTokensForExpr tokens)
     
     parseOptionalElse :: [Token] -> ([Stmt], [Token])
     parseOptionalElse (TKeyword "else" : rest) = parseBlockBody rest
@@ -180,17 +179,17 @@ parseOwnershipCode code =
     parseBlockBody (TSymbol '{' : rest) =
       let (bodyTokens, remaining) = span (/= TSymbol '}') rest
           body = parseTokens bodyTokens
-      in (body, if null remaining then [] else tail remaining)
-    parseBlockBody rest = parseTokens rest
+      in (body, if null remaining then [] else drop 1 remaining)
+    parseBlockBody rest = (parseTokens rest, [])
     
     parseArgs :: [Token] -> ([Expr], [Token])
     parseArgs [] = ([], [])
     parseArgs (TSymbol ')' : rest) = ([], rest)
     parseArgs tokens =
       let (arg, rest) = parseSingleArg tokens
-          (moreArgs, remaining) = if not (null rest) && head rest == TSymbol ','
-                                 then parseArgs (tail rest)
-                                 else parseArgs rest
+          (moreArgs, remaining) = case rest of
+                                    (TSymbol ',' : xs) -> parseArgs xs
+                                    _ -> parseArgs rest
       in (arg : moreArgs, remaining)
     
     parseSingleArg :: [Token] -> (Expr, [Token])
@@ -207,6 +206,13 @@ parseOwnershipCode code =
     parseSimpleExpr (TString s : _) = ELitStr s
     parseSimpleExpr (TNum n : _) = ELitStr n
     parseSimpleExpr _ = ELitStr "unknown"
+    
+    dropTokensForExpr :: [Token] -> [Token]
+    dropTokensForExpr [] = []
+    dropTokensForExpr (TIdent _ : rest) = rest
+    dropTokensForExpr (TString _ : rest) = rest
+    dropTokensForExpr (TNum _ : rest) = rest
+    dropTokensForExpr (_ : rest) = rest
 
 -- 变量状态 - 使用列表表示变量栈（处理遮蔽）
 type VarStack = [VarState]  -- 栈顶是最近声明的

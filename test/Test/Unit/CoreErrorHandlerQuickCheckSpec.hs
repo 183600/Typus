@@ -4,23 +4,9 @@ module Test.Unit.CoreErrorHandlerQuickCheckSpec where
 
 
 
-import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
--- | Core ErrorHandler module QuickCheck tests
-
-import Test.Tasty
-import Test.Tasty.QuickCheck
-
-import TestSupport.Arbitrary
-import TestSupport.QuickCheck
-import qualified Data.Text as T
-import Data.List (isPrefixOf, isSuffixOf, isInfixOf, intercalate)
-import Data.Maybe (isJust, isNothing)
-import Control.Monad (when)
-import Control.Monad.State (execState)
-import Data.Char (isSpace, isAlpha, isAlphaNum)
-import Data.Time (UTCTime)
+import Compiler.Errors.Core
 
 import Compiler.Errors.Core
 

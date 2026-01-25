@@ -134,18 +134,11 @@ isPipelineSuccessful pipeline =
   in length successfulResults == length results
 
 -- Arbitrary instances for QuickCheck testing
-instance Arbitrary SourcePos where
-  arbitrary = do
-    line <- arbitrary `suchThat` (> 0)
-    col <- arbitrary `suchThat` (> 0)
-    offset <- arbitrary
-    return $ SourcePos line col offset
+-- Arbitrary instance for SourcePos is now defined in SourceLocation module
 
-instance Arbitrary SourceSpan where
-  arbitrary = do
-    start <- arbitrary
-    end <- arbitrary
-    return $ SourceSpan start end
+
+-- Arbitrary instance for SourceSpan is now defined in SourceLocation module
+
 
 instance Arbitrary SourceFile where
   arbitrary = do

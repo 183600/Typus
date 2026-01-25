@@ -15,19 +15,7 @@ import Compiler.Errors.Core (ErrorLocation(..))
 import Data.List (sort)
 import Control.Monad.State (runState)
 
--- Arbitrary instances for testing
-instance Arbitrary SourcePos where
-  arbitrary = do
-    line <- arbitrary `suchThat` (> 0)
-    column <- arbitrary `suchThat` (> 0)
-    offset <- arbitrary `suchThat` (>= 0)
-    return $ SourcePos line column offset
-
-instance Arbitrary SourceSpan where
-  arbitrary = do
-    start <- arbitrary
-    end <- arbitrary
-    return $ spanBetween start end
+-- Arbitrary instances are now defined in SourceLocation module
 
 -- ============================================================================
 -- SourceLocation Module QuickCheck Tests
@@ -60,41 +48,41 @@ prop_sourcePos_posAfter_regular_char pos c =
        posOffset newPos == posOffset pos + 1
 
 prop_sourcePos_posAt :: Int -> Int -> Bool
-prop_sourcePos_posAt line col = 
-  let pos = posAt line col
-  in posLine pos == line && posColumn pos == col && posOffset pos == 0
+prop_sourcePos_posAt lineNum colNum = 
+  let pos = posAt lineNum colNum
+  in posLine pos == lineNum && posColumn pos == colNum && posOffset pos == 0
 
 prop_sourcePos_posAtLineCol :: Int -> Int -> Int -> Bool
-prop_sourcePos_posAtLineCol line col offset = 
-  let pos = posAtLineCol line col offset
-  in posLine pos == line && posColumn pos == col && posOffset pos == offset
+prop_sourcePos_posAtLineCol lineNum colNum offsetVal = 
+  let pos = posAtLineCol lineNum colNum offsetVal
+  in posLine pos == lineNum && posColumn pos == colNum && posOffset pos == offsetVal
 
 -- | Test SourceSpan properties
 prop_sourceSpan_emptySpan :: SourcePos -> Bool
 prop_sourceSpan_emptySpan pos = 
-  let span = emptySpan pos
-  in spanStart span == pos && spanEnd span == pos
+  let sourceSpan = emptySpan pos
+  in spanStart sourceSpan == pos && spanEnd sourceSpan == pos
 
 prop_sourceSpan_spanFrom :: SourcePos -> Bool
 prop_sourceSpan_spanFrom pos = 
-  let span = spanFrom pos
-  in spanStart span == pos && spanEnd span == pos
+  let sourceSpan = spanFrom pos
+  in spanStart sourceSpan == pos && spanEnd sourceSpan == pos
 
 prop_sourceSpan_spanTo :: SourcePos -> Bool
 prop_sourceSpan_spanTo pos = 
-  let span = spanTo pos
-  in spanStart span == pos && spanEnd span == pos
+  let sourceSpan = spanTo pos
+  in spanStart sourceSpan == pos && spanEnd sourceSpan == pos
 
 prop_sourceSpan_spanBetween :: SourcePos -> SourcePos -> Bool
 prop_sourceSpan_spanBetween pos1 pos2 = 
-  let span = spanBetween pos1 pos2
-  in spanStart span == pos1 && spanEnd span == pos2
+  let sourceSpan = spanBetween pos1 pos2
+  in spanStart sourceSpan == pos1 && spanEnd sourceSpan == pos2
 
 prop_sourceSpan_spanBetween_ordered :: SourcePos -> SourcePos -> Bool
 prop_sourceSpan_spanBetween_ordered pos1 pos2 = 
-  let span = spanBetweenOrdered pos1 pos2
+  let sourceSpan = spanBetweenOrdered pos1 pos2
       (start, end) = if pos1 <= pos2 then (pos1, pos2) else (pos2, pos1)
-  in spanStart span == start && spanEnd span == end
+  in spanStart sourceSpan == start && spanEnd sourceSpan == end
 
 prop_sourceSpan_mergeSpans :: SourcePos -> SourcePos -> SourcePos -> SourcePos -> Bool
 prop_sourceSpan_mergeSpans start1 end1 start2 end2 = 
@@ -115,13 +103,13 @@ prop_sourceSpan_mergeSpans start1 end1 start2 end2 =
 
 prop_sourceSpan_isValidSpan :: SourcePos -> SourcePos -> Bool
 prop_sourceSpan_isValidSpan start end = 
-  let span = SourceSpan start end
-  in isValidSpan span == (start <= end)
+  let sourceSpan = SourceSpan start end
+  in isValidSpan sourceSpan == (start <= end)
 
 prop_sourceSpan_isValidBlockSpan :: SourcePos -> SourcePos -> Bool
 prop_sourceSpan_isValidBlockSpan start end = 
-  let span = SourceSpan start end
-  in isValidBlockSpan span == isValidSpan span
+  let sourceSpan = SourceSpan start end
+  in isValidBlockSpan sourceSpan == isValidSpan sourceSpan
 
 -- | Test Located properties
 prop_located_at :: SourcePos -> Int -> Bool
@@ -132,30 +120,30 @@ prop_located_at pos value =
      locSpan located == emptySpan pos
 
 prop_located_with_span :: SourceSpan -> Int -> Bool
-prop_located_with_span span value = 
-  let located = locatedWithSpan span value
+prop_located_with_span sourceSpan value = 
+  let located = locatedWithSpan sourceSpan value
   in locValue located == value && 
-     locPos located == spanStart span && 
-     locSpan located == span
+     locPos located == spanStart sourceSpan && 
+     locSpan located == sourceSpan
 
 prop_located_value :: SourceSpan -> Int -> Bool
-prop_located_value span value = 
-  let located = locatedWithSpan span value
+prop_located_value sourceSpan value = 
+  let located = locatedWithSpan sourceSpan value
   in locatedValue located == value
 
 prop_located_span :: SourceSpan -> Int -> Bool
-prop_located_span span value = 
-  let located = locatedWithSpan span value
-  in locatedSpan located == span
+prop_located_span sourceSpan value = 
+  let located = locatedWithSpan sourceSpan value
+  in locatedSpan located == sourceSpan
 
 prop_located_pos :: SourceSpan -> Int -> Bool
-prop_located_pos span value = 
-  let located = locatedWithSpan span value
-  in locatedPos located == spanStart span
+prop_located_pos sourceSpan value = 
+  let located = locatedWithSpan sourceSpan value
+  in locatedPos located == spanStart sourceSpan
 
 prop_map_located :: SourceSpan -> Int -> Bool
-prop_map_located span value = 
-  let located = locatedWithSpan span value
+prop_map_located sourceSpan value = 
+  let located = locatedWithSpan sourceSpan value
       doubled = mapLocated (*2) located
   in locValue doubled == value * 2 && 
      locPos doubled == locPos located && 
@@ -182,9 +170,9 @@ prop_location_tracker_mark_span startPos text =
         _ <- mapM_ (\c -> setCurrentPos (posAfter c startPos)) text
         end <- markSpanEnd start
         return end
-      span = runLocationTracker action
+      sourceSpan = runLocationTracker action
       expectedEnd = foldl (flip posAfter) startPos text
-  in spanStart span == startPos && spanEnd span == expectedEnd
+  in spanStart sourceSpan == startPos && spanEnd sourceSpan == expectedEnd
 
 -- | Test position advancement properties
 prop_advance_pos_equals_posAfter :: Char -> SourcePos -> Bool
@@ -211,10 +199,10 @@ prop_to_error_location pos =
      endColumn errLoc == Nothing
 
 prop_to_error_location_with_span :: SourceSpan -> Bool
-prop_to_error_location_with_span span = 
-  let errLoc = toErrorLocationWithSpan span
-      start = spanStart span
-      end = spanEnd span
+prop_to_error_location_with_span sourceSpan = 
+  let errLoc = toErrorLocationWithSpan sourceSpan
+      start = spanStart sourceSpan
+      end = spanEnd sourceSpan
   in line errLoc == posLine start && 
      column errLoc == posColumn start && 
      endLine errLoc == Just (posLine end) && 
@@ -257,9 +245,9 @@ prop_merge_spans_commutative span1 span2 =
   in result1 == result2
 
 prop_merge_spans_idempotent :: SourceSpan -> Bool
-prop_merge_spans_idempotent span = 
-  let result = mergeSpans span span
-  in result == span
+prop_merge_spans_idempotent sourceSpan = 
+  let result = mergeSpans sourceSpan sourceSpan
+  in result == sourceSpan
 
 -- | Test location tracking properties
 prop_with_location_tracking :: SourcePos -> Int -> Bool
@@ -274,10 +262,10 @@ prop_with_location_tracking pos value =
 -- | Test span coverage properties
 prop_span_between_ordered_covers_both :: SourcePos -> SourcePos -> Bool
 prop_span_between_ordered_covers_both pos1 pos2 = 
-  let span = spanBetweenOrdered pos1 pos2
-  in spanStart span <= spanEnd span && 
-     (spanStart span == pos1 || spanStart span == pos2) && 
-     (spanEnd span == pos1 || spanEnd span == pos2)
+  let sourceSpan = spanBetweenOrdered pos1 pos2
+  in spanStart sourceSpan <= spanEnd sourceSpan && 
+     (spanStart sourceSpan == pos1 || spanStart sourceSpan == pos2) && 
+     (spanEnd sourceSpan == pos1 || spanEnd sourceSpan == pos2)
 
 -- | Test position distance properties
 prop_pos_distance_symmetric :: SourcePos -> SourcePos -> Bool
@@ -298,10 +286,10 @@ prop_line_distance_non_negative pos1 pos2 =
 
 -- | Test span validity properties
 prop_valid_span_start_end :: SourceSpan -> Bool
-prop_valid_span_start_end span = 
-  let start = spanStart span
-      end = spanEnd span
-  in if isValidSpan span 
+prop_valid_span_start_end sourceSpan = 
+  let start = spanStart sourceSpan
+      end = spanEnd sourceSpan
+  in if isValidSpan sourceSpan 
      then start <= end
      else True  -- Invalid spans can have any order
 

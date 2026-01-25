@@ -26,11 +26,11 @@ import qualified Data.Text as T
 import Data.Char (isSpace)
 
 -- Arbitrary instances
-instance Arbitrary SourcePos where
-  arbitrary = genSourcePos
+-- Arbitrary instance for SourcePos is now defined in SourceLocation module
 
-instance Arbitrary SourceSpan where
-  arbitrary = genSourceSpan
+
+-- Arbitrary instance for SourceSpan is now defined in SourceLocation module
+
 
 instance Arbitrary a => Arbitrary (Located a) where
   arbitrary = do

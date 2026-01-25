@@ -3,6 +3,9 @@ import Data.List (intercalate)
 import Parser (CodeBlock(..), BlockDirectives(..))
 import SourceLocation (Located, locatedValue)
 
+main :: IO ()
+main = putStrLn "Compiler fix module loaded successfully"
+
 flagEnabled :: Maybe (Located Bool) -> Bool
 flagEnabled = maybe False locatedValue
 

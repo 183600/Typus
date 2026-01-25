@@ -45,18 +45,11 @@ instance Arbitrary CodeBlock where
     span <- arbitrary
     return $ CodeBlock directives content span
 
-instance Arbitrary SourceSpan where
-  arbitrary = do
-    start <- arbitrary
-    end <- arbitrary
-    return $ SourceSpan start end
+-- Arbitrary instance for SourceSpan is now defined in SourceLocation module
 
-instance Arbitrary SourcePos where
-  arbitrary = do
-    line <- chooseInt (1, 1000)
-    column <- chooseInt (1, 1000)
-    offset <- chooseInt (0, 10000)
-    return $ SourcePos line column offset
+
+-- Arbitrary instance for SourcePos is now defined in SourceLocation module
+
 
 instance Arbitrary a => Arbitrary (Located a) where
   arbitrary = do

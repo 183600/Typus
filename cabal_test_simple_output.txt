@@ -1,0 +1,4 @@
+Error: cabal: invalid argument to option `--flag': Invalid flag assignment:
+*:fast
+
+invalid argument to option `--flag': Invalid flag assignment: *:-production

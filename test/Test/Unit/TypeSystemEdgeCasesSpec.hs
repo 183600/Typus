@@ -4,15 +4,13 @@ module Test.Unit.TypeSystemEdgeCasesSpec where
 
 import Test.Tasty.HUnit
 import Test.Tasty
-import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, Property, (===), forAll, counterexample, conjoin, testProperty, (==>))
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck (property, Property, testProperty, (==>))
 
-import Test.QuickCheck (Gen, cover)
-import qualified Data.Text as T
-import Data.List (isPrefixOf, isSuffixOf, isInfixOf, sort, nub)
+import Test.QuickCheck()
+import Data.List (isInfixOf)
 import Utils (trim, splitBy, removeComments, normalizeIndentation, safeProcessString)
-import SourceLocation (SourcePos(..), SourceSpan(..), startPos, posAt, spanBetween, spanStart, spanEnd)
-import Data.Char (isSpace, isAlpha, isAlphaNum, isDigit, isLetter, toLower, toUpper)
+import SourceLocation (SourcePos(..), SourceSpan(..), posAt, spanBetween, spanStart, spanEnd)
+import Data.Char (isAlpha, isAlphaNum, isDigit, isLetter, toLower, toUpper)
 
 -- Test properties for type system edge cases
 
@@ -78,11 +76,11 @@ prop_span_ordered_positions line1 col1 line2 col2 =
   (line1 < line2 || (line1 == line2 && col1 <= col2)) ==>
   let pos1 = posAt line1 col1
       pos2 = posAt line2 col2
-      span = spanBetween pos1 pos2
+      spanRange = spanBetween pos1 pos2
   in property $ 
-       posLine (spanStart span) <= posLine (spanEnd span) &&
-       (posLine (spanStart span) < posLine (spanEnd span) || 
-        posColumn (spanStart span) <= posColumn (spanEnd span))
+       posLine (spanStart spanRange) <= posLine (spanEnd spanRange) &&
+       (posLine (spanStart spanRange) < posLine (spanEnd spanRange) || 
+        posColumn (spanStart spanRange) <= posColumn (spanEnd spanRange))
 
 -- Property: String operations should handle empty strings
 prop_string_operations_empty :: String -> Property
@@ -170,11 +168,11 @@ test_typesystem_edge_positions :: Assertion
 test_typesystem_edge_positions = do
   let pos1 = posAt 1 1
   let pos2 = posAt 100 100
-  let span = spanBetween pos1 pos2
-  posLine (spanStart span) @?= 1
-  posColumn (spanStart span) @?= 1
-  posLine (spanEnd span) @?= 100
-  posColumn (spanEnd span) @?= 100
+  let spanRange = spanBetween pos1 pos2
+  posLine (spanStart spanRange) @?= 1
+  posColumn (spanStart spanRange) @?= 1
+  posLine (spanEnd spanRange) @?= 100
+  posColumn (spanEnd spanRange) @?= 100
 
 test_typesystem_edge_mixed_content :: Assertion
 test_typesystem_edge_mixed_content = do

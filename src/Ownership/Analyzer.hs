@@ -6,7 +6,9 @@ module Ownership.Analyzer
   ) where
 
 import Control.Monad (when)
+
 import Control.Monad.State (State, modify, get, put, execState)
+
 import Data.Foldable (foldl')
 import Data.List (isInfixOf)
 import Data.Maybe (isJust, listToMaybe, fromMaybe)

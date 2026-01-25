@@ -79,18 +79,11 @@ instance Arbitrary TypeCheckDiagnostic where
     detail <- arbitrary
     return $ TypeCheckDiagnostic context detail
 
-instance Arbitrary SourcePos where
-  arbitrary = do
-    line <- choose (1, 1000)
-    column <- choose (1, 1000)
-    offset <- choose (0, 1000000)
-    return $ SourcePos line column offset
+-- Arbitrary instance for SourcePos is now defined in SourceLocation module
 
-instance Arbitrary SourceSpan where
-  arbitrary = do
-    startPos <- arbitrary
-    endPos <- arbitrary
-    return $ SourceSpan startPos endPos
+
+-- Arbitrary instance for SourceSpan is now defined in SourceLocation module
+
 
 instance Arbitrary FileDirectives where
   arbitrary = do

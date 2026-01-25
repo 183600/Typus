@@ -43,18 +43,11 @@ instance Arbitrary Declaration where
     , TypeDeclaration <$> arbitrary <*> arbitrary
     ]
 
-instance Arbitrary SourcePos where
-  arbitrary = do
-    lineNum <- choose (1, 1000)
-    columnNum <- choose (1, 1000)
-    offset <- choose (0, 1000000)
-    return $ SourcePos lineNum columnNum offset
+-- Arbitrary instance for SourcePos is now defined in SourceLocation module
 
-instance Arbitrary SourceSpan where
-  arbitrary = do
-    startPos <- arbitrary
-    endPos <- arbitrary
-    return $ SourceSpan startPos endPos
+
+-- Arbitrary instance for SourceSpan is now defined in SourceLocation module
+
 
 instance Arbitrary a => Arbitrary (Located a) where
   arbitrary = do

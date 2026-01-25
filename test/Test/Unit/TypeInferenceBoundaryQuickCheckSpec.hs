@@ -2,7 +2,7 @@ module Test.Unit.TypeInferenceBoundaryQuickCheckSpec where
 
 
 
-import Test.Tasty.HUnit
+import Test.Tasty.HUnit()
 import Test.Tasty
 import Test.Tasty.QuickCheck
 

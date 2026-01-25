@@ -111,24 +111,11 @@ genInt = choose (0, 100)
 
 
 -- Source location generators
-instance Arbitrary SourcePos where
-  arbitrary = SourcePos <$> choose (1, 100) <*> choose (1, 100) <*> choose (0, 10000)
+-- Arbitrary instance for SourcePos is now defined in SourceLocation module
 
-instance Arbitrary SourceSpan where
-  arbitrary = do
-    startLine <- choose (1, 100)
-    startCol <- choose (1, 100)
-    startOffset <- choose (0, 10000)
-    let startPos = SourcePos startLine startCol startOffset
-    
-    endLine' <- choose (startLine, startLine + 10)  -- End line >= start line
-    endCol <- if endLine' == startLine 
-              then choose (startCol, startCol + 50)  -- Same line: end column >= start column
-              else choose (1, 100)  -- Different line: any column
-    endOffset <- choose (startOffset, startOffset + 1000)
-    let endPos = SourcePos endLine' endCol endOffset
-    
-    return $ SourceSpan startPos endPos
+
+-- Arbitrary instance for SourceSpan is now defined in SourceLocation module
+
 
 -- Located wrapper generator
 genLocated :: Gen a -> Gen (Located a)

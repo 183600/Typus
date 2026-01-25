@@ -41,18 +41,11 @@ import qualified Data.Text as T
 import Control.DeepSeq (NFData, force)
 
 -- Arbitrary instances for testing
-instance Arbitrary SourcePos where
-  arbitrary = do
-    line <- arbitrary `suchThat` (> 0)
-    column <- arbitrary `suchThat` (> 0)
-    offset <- arbitrary `suchThat` (>= 0)
-    return $ SourcePos line column offset
+-- Arbitrary instance for SourcePos is now defined in SourceLocation module
 
-instance Arbitrary SourceSpan where
-  arbitrary = do
-    start <- arbitrary
-    end <- arbitrary
-    return $ spanBetween start end
+
+-- Arbitrary instance for SourceSpan is now defined in SourceLocation module
+
 
 -- Skip NFData instance for TypusFile for now
 

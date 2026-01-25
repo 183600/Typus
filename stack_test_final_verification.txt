@@ -1,0 +1,1021 @@
+typus-0.12.2: unregistering (local file changes: src/SourceLocation.hs
+test/Test/Unit/BoundaryConditionComprehensiveSpec.hs test/Test/Unit/Boundar...)
+typus> configure (lib + exe + test)
+Configuring typus-0.12.2...
+typus> build (lib + exe + test) with ghc-9.8.4
+Preprocessing library for typus-0.12.2..
+Building library for typus-0.12.2..
+[ 1 of 58] Compiling Cli
+[ 2 of 58] Compiling CommandLineDebug
+[ 3 of 58] Compiling Compiler.Error
+[ 4 of 58] Compiling Compiler.GoAst
+[ 5 of 58] Compiling Compiler.GoLexer
+[ 6 of 58] Compiling Debug
+[ 7 of 58] Compiling DebugIntegration
+[ 8 of 58] Compiling Dependencies.AST
+[ 9 of 58] Compiling Dependencies.Parser
+[10 of 58] Compiling Dependencies.Stub
+[11 of 58] Compiling Dependencies.TypeSystem
+[12 of 58] Compiling Dependencies.Inference
+[13 of 58] Compiling Dependencies.Analyzer
+[14 of 58] Compiling Dependencies
+[15 of 58] Compiling DependentTypesParser
+[16 of 58] Compiling DependentTypesParser.Stub
+[17 of 58] Compiling EnhancedDebug
+[18 of 58] Compiling Cli.DebugRunner
+[19 of 58] Compiling Ownership.Common.Lexer
+[20 of 58] Compiling Ownership.Common.Types
+[21 of 58] Compiling Compiler.Errors.Types
+[22 of 58] Compiling Compiler.Errors.Core
+[23 of 58] Compiling ErrorHandler
+[24 of 58] Compiling Ownership.Lexer
+[25 of 58] Compiling Ownership.Parser
+[26 of 58] Compiling Ownership.Analyzer
+[27 of 58] Compiling Ownership.Reporter
+[28 of 58] Compiling Ownership
+[29 of 58] Compiling Analyzer.Types
+[30 of 58] Compiling Analyzer.State
+[31 of 58] Compiling Analyzer.CrossAnalysis
+[32 of 58] Compiling SimpleSyntaxValidator
+[33 of 58] Compiling SourceLocation
+
+/home/runner/work/Typus/Typus/src/SourceLocation.hs:479:5: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘line’ shadows the existing binding
+      imported from ‘Compiler.Errors.Core’ at src/SourceLocation.hs:78:30-46
+      (and originally defined in ‘Compiler.Errors.Types’
+         at src/Compiler/Errors/Types.hs:32:7-10)
+    |
+479 |     line <- arbitrary `suchThat` (> 0)
+    |     ^^^^
+
+/home/runner/work/Typus/Typus/src/SourceLocation.hs:480:5: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘column’ shadows the existing binding
+      imported from ‘Compiler.Errors.Core’ at src/SourceLocation.hs:78:30-46
+      (and originally defined in ‘Compiler.Errors.Types’
+         at src/Compiler/Errors/Types.hs:33:7-12)
+    |
+480 |     column <- arbitrary `suchThat` (> 0)
+    |     ^^^^^^
+[34 of 58] Compiling Ownership.Stub
+[35 of 58] Compiling Compiler.Errors.Compiler
+[36 of 58] Compiling EnhancedErrorHandler
+[37 of 58] Compiling Compiler.Errors
+[38 of 58] Compiling SyntaxValidator
+[39 of 58] Compiling Utils
+[40 of 58] Compiling Parser
+[41 of 58] Compiling Compiler.DependentTypeChecker
+[42 of 58] Compiling Compiler.GoParsing
+[43 of 58] Compiling Compiler.GoVarSpec
+[44 of 58] Compiling Compiler.ValueAnalysis
+[45 of 58] Compiling Compiler.OwnershipChecker
+[46 of 58] Compiling Compiler.IR
+[47 of 58] Compiling Compiler.TypeChecker
+[48 of 58] Compiling Compiler
+[49 of 58] Compiling Tooling.Error
+[50 of 58] Compiling GoToolchain
+[51 of 58] Compiling CompilerUtils
+[52 of 58] Compiling EmbedAssets
+[53 of 58] Compiling Cli.Runner
+[54 of 58] Compiling Analyzer.SymbolTable
+[55 of 58] Compiling Analyzer.OwnershipBridge
+[56 of 58] Compiling Analyzer.DependentTypeBridge
+[57 of 58] Compiling AnalyzerIntegration
+[58 of 58] Compiling IntegratedCompiler
+Warning: -rtsopts and -with-rtsopts have no effect with -shared.
+    Call hs_init_ghc() from your main() function to set these options.
+Preprocessing executable 'typus' for typus-0.12.2..
+Building executable 'typus' for typus-0.12.2..
+[1 of 1] Compiling Main [Optimisation flags changed]
+[2 of 2] Linking .stack-work/dist/x86_64-linux-tinfo6/ghc-9.8.4/build/typus/typus [Objects changed]
+Preprocessing test suite 'typus-test' for typus-0.12.2..
+Building test suite 'typus-test' for typus-0.12.2..
+[   1 of 1025] Compiling Test.Golden.CompilerSpec [Compiler changed]
+[   6 of 1025] Compiling Test.Integration.FullProjectSpec [CompilerUtils changed]
+[   7 of 1025] Compiling Test.Integration.IntegratedCompilerSpec [CompilerUtils changed]
+[   9 of 1025] Compiling Test.Integration.PipelineSpec [Compiler changed]
+[  12 of 1025] Compiling Test.Unit.AdditionalCabalQuickCheckTests [Compiler changed]
+[  40 of 1025] Compiling Test.Unit.BasicQuickCheckTestsSpec [SourceLocation changed]
+[  42 of 1025] Compiling Test.Unit.BoundaryConditionAdvancedQuickCheckSpec [Parser changed]
+[  43 of 1025] Compiling Test.Unit.BoundaryConditionComprehensiveSpec [Source file changed]
+[  46 of 1025] Compiling Test.Unit.BoundaryConditionsEnhancedQuickCheckSpec [Source file changed]
+[  77 of 1025] Compiling Test.Unit.CodeGenerationQuickCheckSpec [Compiler.IR changed]
+[  80 of 1025] Compiling Test.Unit.CombinedFeaturesSpec [SourceLocation changed]
+[  81 of 1025] Compiling Test.Unit.CombinedModulesQuickCheckSpec [Compiler changed]
+[  89 of 1025] Compiling Test.Unit.CompilerComprehensiveQuickCheckSpec [Compiler changed]
+[  90 of 1025] Compiling Test.Unit.CompilerCoreFunctionalitySpec [Compiler changed]
+[  91 of 1025] Compiling Test.Unit.CompilerCoreFunctionalityTestSpec [Compiler.TypeChecker changed]
+[  92 of 1025] Compiling Test.Unit.CompilerCorePropertiesSpec [Source file changed]
+[  94 of 1025] Compiling Test.Unit.CompilerCoreSpec [Source file changed]
+[  99 of 1025] Compiling Test.Unit.CompilerErrorHandlingSpec [Compiler changed]
+[ 105 of 1025] Compiling Test.Unit.CompilerIRConsistencyQuickCheckSpec [Source file changed]
+[ 109 of 1025] Compiling Test.Unit.CompilerIROptimizationSpec [SourceLocation changed]
+[ 113 of 1025] Compiling Test.Unit.CompilerIntegrationQuickCheckSpec [Compiler changed]
+[ 114 of 1025] Compiling Test.Unit.CompilerIntegrationSpec [SourceLocation changed]
+[ 127 of 1025] Compiling Test.Unit.CompilerUtilsPropertiesSpec [CompilerUtils changed]
+[ 129 of 1025] Compiling Test.Unit.ComprehensiveCabalTestSuite [Compiler changed]
+[ 139 of 1025] Compiling Test.Unit.ConciseCompilerQuickCheckSpec [Source file changed]
+[ 142 of 1025] Compiling Test.Unit.ConciseIntegrationQuickCheckSpec [Source file changed]
+[ 144 of 1025] Compiling Test.Unit.ConciseParserQuickCheckSpec [Source file changed]
+[ 145 of 1025] Compiling Test.Unit.ConciseSourceLocationQuickCheckSpec [Source file changed]
+[ 149 of 1025] Compiling Test.Unit.ConciseTestSuite [Test.Unit.ConciseCompilerQuickCheckSpec changed]
+[ 154 of 1025] Compiling Test.Unit.ConcurrentSafetySpec [Compiler changed]
+[ 155 of 1025] Compiling Test.Unit.CoreCompilerPropertiesQuickCheckSpec [Compiler changed]
+[ 158 of 1025] Compiling Test.Unit.CoreErrorHandlerPropertiesQuickCheckSpec [SourceLocation changed]
+[ 159 of 1025] Compiling Test.Unit.CoreErrorHandlerQuickCheckSpec [Source file changed]
+[ 160 of 1025] Compiling Test.Unit.CoreErrorHandlerSpec [SourceLocation changed]
+[ 161 of 1025] Compiling Test.Unit.CoreFunctionalityBoundarySpec [Compiler changed]
+[ 166 of 1025] Compiling Test.Unit.CoreIntegrationPropertiesQuickCheckSpec [Compiler changed]
+[ 168 of 1025] Compiling Test.Unit.CoreMathematicalPropertiesSpec [SourceLocation changed]
+[ 171 of 1025] Compiling Test.Unit.CoreOwnershipSpec [SourceLocation changed]
+[ 172 of 1025] Compiling Test.Unit.CoreParserPropertiesQuickCheckSpec [Parser changed]
+[ 173 of 1025] Compiling Test.Unit.CoreParserSpec [Parser changed]
+[ 174 of 1025] Compiling Test.Unit.CorePerformancePropertiesQuickCheckSpec [Compiler changed]
+[ 175 of 1025] Compiling Test.Unit.CoreQuickCheckPropertiesSpec [SourceLocation changed]
+[ 178 of 1025] Compiling Test.Unit.CoreSourceLocationPropertiesQuickCheckSpec [SourceLocation changed]
+[ 180 of 1025] Compiling Test.Unit.CoreSourceLocationSpec [SourceLocation changed]
+[ 196 of 1025] Compiling Test.Unit.DebugBasicFunctionsSpec [SourceLocation changed]
+[ 204 of 1025] Compiling Test.Unit.DependenciesAdvancedQuickCheckSpec [Parser changed]
+[ 211 of 1025] Compiling Test.Unit.DependenciesCycleDetectionSpec [SourceLocation changed]
+[ 227 of 1025] Compiling Test.Unit.DependentTypeConstraintSpec [Source file changed]
+[ 250 of 1025] Compiling Test.Unit.EnhancedBoundaryConditionsSpec [Compiler changed]
+[ 255 of 1025] Compiling Test.Unit.EnhancedCompilerBasicSpec [Compiler changed]
+[ 257 of 1025] Compiling Test.Unit.EnhancedCompilerQuickCheckPropertiesSpec [Compiler changed]
+[ 259 of 1025] Compiling Test.Unit.EnhancedCompilerSpec [Compiler changed]
+[ 265 of 1025] Compiling Test.Unit.EnhancedDependenciesSpec [Parser changed]
+[ 268 of 1025] Compiling Test.Unit.EnhancedDependentTypesSpec [Compiler.DependentTypeChecker changed]
+[ 272 of 1025] Compiling Test.Unit.EnhancedErrorHandlerQuickCheckPropertiesSpec [SourceLocation changed]
+[ 275 of 1025] Compiling Test.Unit.EnhancedErrorHandlingSpec [Compiler changed]
+[ 277 of 1025] Compiling Test.Unit.EnhancedIntegrationSpec [Compiler changed]
+[ 281 of 1025] Compiling Test.Unit.EnhancedOwnershipSpec [Parser changed]
+[ 282 of 1025] Compiling Test.Unit.EnhancedParserBasicSpec [Parser changed]
+[ 285 of 1025] Compiling Test.Unit.EnhancedParserQuickCheckPropertiesSpec [Parser changed]
+[ 287 of 1025] Compiling Test.Unit.EnhancedParserSpec [Parser changed]
+[ 289 of 1025] Compiling Test.Unit.EnhancedPerformanceSpec [Compiler changed]
+[ 293 of 1025] Compiling Test.Unit.EnhancedSourceLocationMathSpec [SourceLocation changed]
+[ 302 of 1025] Compiling Test.Unit.ErrorBoundarySpec [SourceLocation changed]
+[ 303 of 1025] Compiling Test.Unit.ErrorHandlerAdvancedQuickCheckSpec [SourceLocation changed]
+[ 305 of 1025] Compiling Test.Unit.ErrorHandlerComprehensiveQuickCheckSpec [SourceLocation changed]
+[ 308 of 1025] Compiling Test.Unit.ErrorHandlerConsistencyQuickCheckSpec [Source file changed]
+[ 310 of 1025] Compiling Test.Unit.ErrorHandlerCoreComprehensiveSpec [SourceLocation changed]
+[ 311 of 1025] Compiling Test.Unit.ErrorHandlerCorePropertiesSpec [Compiler changed]
+[ 314 of 1025] Compiling Test.Unit.ErrorHandlerCoreSpec [SourceLocation changed]
+[ 321 of 1025] Compiling Test.Unit.ErrorHandlerResilienceSpec [Compiler changed]
+[ 335 of 1025] Compiling Test.Unit.ErrorHandlingTestSpec [Compiler.Errors.Compiler changed]
+[ 337 of 1025] Compiling Test.Unit.ErrorRecoveryAdvancedQuickCheckSpec [Compiler changed]
+[ 341 of 1025] Compiling Test.Unit.ErrorRecoveryConsistencySpec [Source file changed]
+[ 377 of 1025] Compiling Test.Unit.IntegrationAdvancedQuickCheckSpec [Parser changed]
+[ 378 of 1025] Compiling Test.Unit.IntegrationBasicSpec [Compiler changed]
+[ 381 of 1025] Compiling Test.Unit.IntegrationComprehensiveSpec [Parser changed]
+[ 384 of 1025] Compiling Test.Unit.IntegrationEndToEndQuickCheckSpec [Compiler changed]
+[ 385 of 1025] Compiling Test.Unit.IntegrationEndToEndSpec [Source file changed]
+[ 387 of 1025] Compiling Test.Unit.IntegrationEnhancedQuickCheckSpec [Parser changed]
+[ 390 of 1025] Compiling Test.Unit.IntegrationQuickCheckSpec [Compiler changed]
+[ 393 of 1025] Compiling Test.Unit.IntegrationTestSpec [Compiler.IR changed]
+[ 394 of 1025] Compiling Test.Unit.IntegrationWorkflowSpec [Compiler changed]
+[ 402 of 1025] Compiling Test.Unit.MemorySafetySpec [Compiler changed]
+[ 406 of 1025] Compiling Test.Unit.NewAdditionalDependenciesQuickCheckSpec [SourceLocation changed]
+[ 408 of 1025] Compiling Test.Unit.NewAdditionalErrorHandlerQuickCheckTestSpec [SourceLocation changed]
+[ 409 of 1025] Compiling Test.Unit.NewAdditionalParserQuickCheckSpec [Parser changed]
+[ 410 of 1025] Compiling Test.Unit.NewAdditionalParserQuickCheckTestSpec [Parser changed]
+[ 412 of 1025] Compiling Test.Unit.NewAdditionalSourceLocationQuickCheckSpec [SourceLocation changed]
+[ 413 of 1025] Compiling Test.Unit.NewAdditionalSourceLocationQuickCheckTestSpec [Source file changed]
+[ 414 of 1025] Compiling Test.Unit.NewAdditionalUtilsQuickCheckSpec [SourceLocation changed]
+[ 419 of 1025] Compiling Test.Unit.NewBasicTypesAndStringPropertiesSpec [SourceLocation changed]
+[ 421 of 1025] Compiling Test.Unit.NewBoundaryConditionsQuickCheckSpec [Compiler changed]
+[ 510 of 1025] Compiling Test.Unit.NewCompilerIRPropertiesSpec [Compiler changed]
+[ 517 of 1025] Compiling Test.Unit.NewCompilerPropertiesQuickCheckSpec [Compiler changed]
+[ 519 of 1025] Compiling Test.Unit.NewCompilerQuickCheckSpec [Compiler changed]
+[ 520 of 1025] Compiling Test.Unit.NewCompilerTestSpec [Compiler changed]
+[ 536 of 1025] Compiling Test.Unit.NewCoreBoundaryConditionsQuickCheckSpec [Compiler changed]
+[ 551 of 1025] Compiling Test.Unit.NewCoreParserQuickCheckSpec [Parser changed]
+[ 554 of 1025] Compiling Test.Unit.NewCorePropertiesQuickCheckSpec [Parser changed]
+[ 557 of 1025] Compiling Test.Unit.NewCoreSourceLocationQuickCheckSpec [SourceLocation changed]
+[ 558 of 1025] Compiling Test.Unit.NewCoreUtilsQuickCheckSpec [SourceLocation changed]
+[ 565 of 1025] Compiling Test.Unit.NewDependenciesPropertiesQuickCheckSpec [SourceLocation changed]
+[ 568 of 1025] Compiling Test.Unit.NewDependenciesTestSpec [SourceLocation changed]
+[ 575 of 1025] Compiling Test.Unit.NewDependentTypesPropertiesQuickCheckSpec [Compiler.DependentTypeChecker changed]
+[ 603 of 1025] Compiling Test.Unit.NewErrorHandlerQuickCheckSpec [SourceLocation changed]
+[ 604 of 1025] Compiling Test.Unit.NewErrorHandlerTestSpec [SourceLocation changed]
+[ 606 of 1025] Compiling Test.Unit.NewErrorHandlingPropertiesQuickCheckSpec [SourceLocation changed]
+[ 607 of 1025] Compiling Test.Unit.NewErrorHandlingPropertiesSpec [Compiler changed]
+[ 608 of 1025] Compiling Test.Unit.NewErrorHandlingQuickCheckSpec [SourceLocation changed]
+[ 625 of 1025] Compiling Test.Unit.NewIntegrationPropertiesQuickCheckSpec [Compiler changed]
+[ 632 of 1025] Compiling Test.Unit.NewOwnershipAnalysisPropertiesSpec [Compiler changed]
+[ 633 of 1025] Compiling Test.Unit.NewOwnershipAnalysisQuickCheckSpec [SourceLocation changed]
+[ 636 of 1025] Compiling Test.Unit.NewOwnershipPropertiesQuickCheckSpec [Compiler changed]
+[ 639 of 1025] Compiling Test.Unit.NewOwnershipTestSpec [SourceLocation changed]
+[ 648 of 1025] Compiling Test.Unit.NewParserAdvancedPropertiesSpec [Parser changed]
+[ 653 of 1025] Compiling Test.Unit.NewParserCombinatorsQuickCheckSpec [Parser changed]
+[ 658 of 1025] Compiling Test.Unit.NewParserFunctionalitySpec [Parser changed]
+[ 660 of 1025] Compiling Test.Unit.NewParserPropertiesQuickCheckSpec [Parser changed]
+[ 664 of 1025] Compiling Test.Unit.NewParserQuickCheckSpec [Source file changed]
+[ 667 of 1025] Compiling Test.Unit.NewParserTestSpec [Parser changed]
+[ 684 of 1025] Compiling Test.Unit.NewSourceLocationCalculationPropertiesSpec [Compiler changed]
+[ 692 of 1025] Compiling Test.Unit.NewSourceLocationMathQuickCheckSpec [SourceLocation changed]
+[ 693 of 1025] Compiling Test.Unit.NewSourceLocationMathQuickCheckSpec2 [SourceLocation changed]
+[ 694 of 1025] Compiling Test.Unit.NewSourceLocationMathSpec [SourceLocation changed]
+[ 698 of 1025] Compiling Test.Unit.NewSourceLocationQuickCheckSpec [Source file changed]
+[ 699 of 1025] Compiling Test.Unit.NewSourceLocationTestSpec [Source file changed]
+[ 702 of 1025] Compiling Test.Unit.NewStringProcessingQuickCheckSpec [SourceLocation changed]
+[ 704 of 1025] Compiling Test.Unit.NewSymbolTableQuickCheckSpec [SourceLocation changed]
+[ 736 of 1025] Compiling Test.Unit.NewUtilsQuickCheckSpec [SourceLocation changed]
+[ 737 of 1025] Compiling Test.Unit.NewComprehensiveQuickCheckSpec [Test.Unit.NewParserQuickCheckSpec changed]
+[ 748 of 1025] Compiling Test.Unit.OwnershipBasicFunctionsSpec [SourceLocation changed]
+[ 774 of 1025] Compiling Test.Unit.OwnershipTransitivityQuickCheckSpec [Source file changed]
+[ 775 of 1025] Compiling Test.Unit.OwnershipTransitivitySpec [Source file changed]
+[ 778 of 1025] Compiling Test.Unit.ParserAdvancedQuickCheckSpec [Parser changed]
+[ 779 of 1025] Compiling Test.Unit.ParserBasicFunctionsExtraSpec [Parser changed]
+[ 780 of 1025] Compiling Test.Unit.ParserBasicFunctionsSpec [Parser changed]
+[ 782 of 1025] Compiling Test.Unit.ParserBasicSpec [Parser changed]
+[ 783 of 1025] Compiling Test.Unit.ParserBoundaryConditionTestSpec [Parser changed]
+[ 790 of 1025] Compiling Test.Unit.ParserComprehensiveQuickCheckSpec [Parser changed]
+[ 791 of 1025] Compiling Test.Unit.ParserComprehensiveSpec [Parser changed]
+[ 794 of 1025] Compiling Test.Unit.ParserCoreFunctionalitySpec [Source file changed]
+[ 795 of 1025] Compiling Test.Unit.ParserCorePropertiesSpec [Source file changed]
+[ 799 of 1025] Compiling Test.Unit.ParserDirectiveSpec [Parser changed]
+[ 803 of 1025] Compiling Test.Unit.ParserEnhancedQuickCheckSpec [Source file changed]
+[ 806 of 1025] Compiling Test.Unit.ParserErrorRecoveryAdvancedSpec [Compiler changed]
+[ 808 of 1025] Compiling Test.Unit.ParserErrorRecoveryQuickCheckSpec [Parser changed]
+[ 809 of 1025] Compiling Test.Unit.ParserErrorRecoverySpec [Parser changed]
+[ 819 of 1025] Compiling Test.Unit.PerformanceEnhancedQuickCheckSpec [Source file changed]
+[ 821 of 1025] Compiling Test.Unit.PerformanceOptimizationQuickCheckSpec [Compiler changed]
+[ 825 of 1025] Compiling Test.Unit.PerformanceRegressionSpec [SourceLocation changed]
+[ 844 of 1025] Compiling Test.Unit.SimpleQuickCheckTestSuite [Parser changed]
+[ 852 of 1025] Compiling Test.Unit.SourceLocationAdvancedQuickCheckSpec [Source file changed]
+[ 854 of 1025] Compiling Test.Unit.SourceLocationBasicSpec [SourceLocation changed]
+[ 858 of 1025] Compiling Test.Unit.SourceLocationComprehensiveQuickCheckSpec [SourceLocation changed]
+[ 859 of 1025] Compiling Test.Unit.SourceLocationComprehensiveSpec [Source file changed]
+[ 861 of 1025] Compiling Test.Unit.SourceLocationCorePropertiesSpec [Source file changed]
+[ 864 of 1025] Compiling Test.Unit.SourceLocationEnhancedQuickCheckSpec [Source file changed]
+[ 867 of 1025] Compiling Test.Unit.SourceLocationMathAdvancedSpec [Compiler changed]
+[ 868 of 1025] Compiling Test.Unit.SourceLocationMathPropertiesQuickCheckSpec [Source file changed]
+[ 869 of 1025] Compiling Test.Unit.SourceLocationMathSpec [SourceLocation changed]
+[ 872 of 1025] Compiling Test.Unit.SourceLocationPositionQuickCheckSpec [Source file changed]
+[ 876 of 1025] Compiling Test.Unit.SourceLocationQuickCheckSpec [Source file changed]
+[ 877 of 1025] Compiling Test.Unit.SourceLocationSpanQuickCheckSpec [Source file changed]
+[ 879 of 1025] Compiling Test.Unit.SourceLocationTestSpec [Source file changed]
+[ 915 of 1025] Compiling Test.Unit.TestSourceLocationMathSpec [SourceLocation changed]
+[ 937 of 1025] Compiling Test.Unit.TypeSystemEdgeCasesSpec [SourceLocation changed]
+[ 939 of 1025] Compiling Test.Unit.TypeSystemInferenceSpec [Compiler changed]
+[ 944 of 1025] Compiling Test.Unit.UnicodeHandlingAdvancedSpec [Compiler changed]
+[ 945 of 1025] Compiling Test.Unit.UnicodeHandlingQuickCheckSpec [Compiler changed]
+[ 971 of 1025] Compiling Test.Unit.UtilsStringProcessingSpec [Compiler changed]
+[ 984 of 1025] Compiling TestSupport.Arbitrary [Source file changed]
+[ 985 of 1025] Compiling Test.Unit.TestUtilsCorePropertiesSpec [TestSupport.Arbitrary changed]
+[ 986 of 1025] Compiling Test.Unit.TestTypeSystemInferenceSpec [TestSupport.Arbitrary changed]
+[ 987 of 1025] Compiling Test.Unit.TestSymbolTableOperationsSpec [TestSupport.Arbitrary changed]
+[ 988 of 1025] Compiling Test.Unit.TestStringProcessingSpec [TestSupport.Arbitrary changed]
+[ 989 of 1025] Compiling Test.Unit.TestStringEncodingSpec [TestSupport.Arbitrary changed]
+[ 990 of 1025] Compiling Test.Unit.TestSourceLocationMathPropertiesSpec [TestSupport.Arbitrary changed]
+[ 991 of 1025] Compiling Test.Unit.TestQuickCheckPropertiesSpec [TestSupport.Arbitrary changed]
+[ 992 of 1025] Compiling Test.Unit.TestParserErrorRecoverySpec [TestSupport.Arbitrary changed]
+[ 993 of 1025] Compiling Test.Unit.TestParserDirectivesSpec [TestSupport.Arbitrary changed]
+[ 994 of 1025] Compiling Test.Unit.TestMemorySafetySpec [TestSupport.Arbitrary changed]
+[ 995 of 1025] Compiling Test.Unit.TestListPropertiesSpec [TestSupport.Arbitrary changed]
+[ 996 of 1025] Compiling Test.Unit.Tests [Test.Unit.BoundaryConditionComprehensiveSpec changed]
+[ 997 of 1025] Compiling Test.Unit [Test.Unit.Tests changed]
+[ 998 of 1025] Compiling Main [Test.Unit.Tests changed]
+[ 999 of 1025] Compiling Test.Unit.TestGoToolchainIntegrationSpec [TestSupport.Arbitrary changed]
+[1000 of 1025] Compiling Test.Unit.TestConcurrentSafetySpec [TestSupport.Arbitrary changed]
+[1001 of 1025] Compiling Test.Unit.TestCliIntegrationSpec [TestSupport.Arbitrary changed]
+[1002 of 1025] Compiling Test.Unit.TestBoundaryConditionsSpec [TestSupport.Arbitrary changed]
+[1003 of 1025] Compiling Test.Unit.TestArithmeticPropertiesSpec [TestSupport.Arbitrary changed]
+[1004 of 1025] Compiling Test.Unit.TestAnalyzerIntegrationSpec [TestSupport.Arbitrary changed]
+[1005 of 1025] Compiling Test.Unit.SourceLocationCalculationSpec [TestSupport.Arbitrary changed]
+[1006 of 1025] Compiling Test.Unit.NewQuickCheckTestSuiteSpec [TestSupport.Arbitrary changed]
+[1007 of 1025] Compiling Test.Unit.CoreParserQuickCheckSpec [TestSupport.Arbitrary changed]
+[1008 of 1025] Compiling Test.Unit.CoreOwnershipQuickCheckSpec [TestSupport.Arbitrary changed]
+[1009 of 1025] Compiling Test.Unit.CoreDependenciesQuickCheckSpec [TestSupport.Arbitrary changed]
+[1010 of 1025] Compiling Test.Unit.CoreCompilerQuickCheckSpec [TestSupport.Arbitrary changed]
+[1011 of 1025] Compiling Test.Unit.AdditionalQuickCheckTestSuiteSpec [TestSupport.Arbitrary changed]
+[1012 of 1025] Compiling TestSupport.ExtendedArbitrary [TestSupport.Arbitrary changed]
+[1013 of 1025] Compiling Test.Unit.NewAdditionalErrorHandlerQuickCheckSpec [TestSupport.ExtendedArbitrary changed]
+[1016 of 1025] Compiling Test.Unit.SourceLocationArithmeticQuickCheckSpec [Source file changed]
+[1019 of 1025] Compiling Test.Unit.ErrorRecoveryPropertiesQuickCheckSpec [Compiler.Errors.Compiler changed]
+[1021 of 1025] Compiling Test.Unit.CoreUtilsQuickCheckSpec [TestSupport.Arbitrary changed]
+[1022 of 1025] Compiling Test.Unit.CoreSourceLocationQuickCheckSpec [TestSupport.Arbitrary changed]
+[1023 of 1025] Compiling Test.Unit.ComprehensiveCoreModulesQuickCheckSpec [Source file changed]
+[1024 of 1025] Compiling Test.Unit.CompilerIRQuickCheckSpec [Source file changed]
+[1026 of 1026] Linking .stack-work/dist/x86_64-linux-tinfo6/ghc-9.8.4/build/typus-test/typus-test [Objects changed]
+typus> copy/register
+Installing library in /home/runner/work/Typus/Typus/.stack-work/install/x86_64-linux-tinfo6/f0957e0aa6abfe0e66f590d34e1825c718c1d3712dab74d00005fbf0209a4036/9.8.4/lib/x86_64-linux-ghc-9.8.4/typus-0.12.2-1kmJh6wVcHHBTFAeS21QZG
+Installing executable typus in /home/runner/work/Typus/Typus/.stack-work/install/x86_64-linux-tinfo6/f0957e0aa6abfe0e66f590d34e1825c718c1d3712dab74d00005fbf0209a4036/9.8.4/bin
+Registering library for typus-0.12.2..
+typus> test (suite: typus-test, args: +RTS -M1024m -A16m -RTS)
+
+Test.Unit.Tests Tests
+  basic property:                                                                        OK
+    +++ OK, passed 100 tests.
+  Concise Typus Test Suite (48 tests)
+    Core Modules
+      Concise Utils QuickCheck Tests
+        String Processing
+          prop_trim_idempotent:                                                          OK
+            +++ OK, passed 100 tests.
+          prop_trim_removes_whitespace:                                                  OK
+            +++ OK, passed 100 tests.
+          prop_splitBy_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          prop_splitByCollapsed_properties:                                              OK
+            +++ OK, passed 100 tests.
+          prop_splitByComma_equals_splitBy:                                              OK
+            +++ OK, passed 100 tests.
+          prop_splitByCommaCollapsed_equals_splitByCollapsed:                            OK
+            +++ OK, passed 100 tests.
+          prop_breakOn_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          prop_safeProcessString_filters_control_chars:                                  OK
+            +++ OK, passed 100 tests.
+          prop_isValidChar_properties:                                                   OK
+            +++ OK, passed 100 tests.
+          prop_isRight_properties:                                                       OK
+            +++ OK, passed 100 tests.
+        Comment Processing
+          prop_removeLineComments_properties:                                            OK
+            +++ OK, passed 100 tests.
+          prop_removeComments_properties:                                                OK
+            +++ OK, passed 100 tests.
+          prop_removeLineComments_preserves_strings:                                     OK
+            +++ OK, passed 100 tests.
+          prop_removeComments_preserves_strings:                                         OK
+            +++ OK, passed 100 tests.
+        Indentation Processing
+          prop_normalizeIndentation_preserves_relative_indentation:                      OK
+            +++ OK, passed 100 tests.
+          prop_normalizeIndentation_removes_common_prefix:                               OK
+            +++ OK, passed 100 tests.
+      Concise SourceLocation QuickCheck Tests
+        SourcePos Properties
+          pos_properties:                                                                OK
+            +++ OK, passed 100 tests.
+          posAfter_properties:                                                           OK
+            +++ OK, passed 100 tests.
+          posAt_properties:                                                              OK
+            +++ OK, passed 100 tests.
+          posAtLineCol_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          advancePos_properties:                                                         OK
+            +++ OK, passed 100 tests.
+          advancePosBy_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          advancePosByText_properties:                                                   OK
+            +++ OK, passed 100 tests.
+          comparePos_properties:                                                         OK
+            +++ OK, passed 100 tests.
+          sourceLine_properties:                                                         OK
+            +++ OK, passed 100 tests.
+          sourceColumn_properties:                                                       OK
+            +++ OK, passed 100 tests.
+        SourceSpan Properties
+          span_properties:                                                               OK
+            +++ OK, passed 100 tests.
+          emptySpan_properties:                                                          OK
+            +++ OK, passed 100 tests.
+          spanFrom_properties:                                                           OK
+            +++ OK, passed 100 tests.
+          spanTo_properties:                                                             OK
+            +++ OK, passed 100 tests.
+          spanBetween_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          spanBetweenOrdered_properties:                                                 OK
+            +++ OK, passed 100 tests.
+          mergeSpans_properties:                                                         OK
+            +++ OK, passed 100 tests.
+          isValidSpan_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          isValidBlockSpan_properties:                                                   OK
+            +++ OK, passed 100 tests.
+        Located Properties
+          locatedAt_properties:                                                          OK
+            +++ OK, passed 100 tests.
+          locatedWithSpan_properties:                                                    OK
+            +++ OK, passed 100 tests.
+          locatedValue_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          locatedSpan_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          locatedPos_properties:                                                         OK
+            +++ OK, passed 100 tests.
+          mapLocated_properties:                                                         OK
+            +++ OK, passed 100 tests.
+      Concise Parser QuickCheck Tests
+        Parser Basic Properties
+          parseTypus_equals_parseTypusFile:                                              OK
+            +++ OK, passed 100 tests.
+          parseExpression_returns_right:                                                 OK
+            +++ OK, passed 100 tests.
+          parseDeclaration_returns_right:                                                OK
+            +++ OK, passed 100 tests.
+        TypusFile Properties
+          tfContents_properties:                                                         OK (0.01s)
+            +++ OK, passed 100 tests.
+          defaultFileDirectives_properties:                                              OK
+            +++ OK, passed 1 test.
+          defaultBlockDirectives_properties:                                             OK
+            +++ OK, passed 1 test.
+        Identifier Properties
+          isIdentifierChar_properties:                                                   OK
+            +++ OK, passed 100 tests.
+        Parser Roundtrip Properties
+          parseTypus_roundtrip_simple:                                                   OK
+            +++ OK, passed 100 tests.
+          parseTypus_empty_input:                                                        OK
+            +++ OK, passed 1 test.
+      Concise Compiler QuickCheck Tests
+        Compiler Properties
+          compile_properties:                                                            OK
+            +++ OK, passed 100 tests.
+          renderCompilationError_properties:                                             OK (0.25s)
+            +++ OK, passed 100 tests.
+          formatCompilerErrors_properties:                                               OK (0.26s)
+            +++ OK, passed 100 tests.
+          generateDetailedReport_properties:                                             OK (0.31s)
+            +++ OK, passed 100 tests.
+          analyzeErrors_properties:                                                      OK
+            +++ OK, passed 100 tests.
+        Type Checking Properties
+          hasTypeErrors_properties:                                                      OK (0.03s)
+            +++ OK, passed 100 tests.
+          diagnoseTypeErrors_properties:                                                 OK (0.03s)
+            +++ OK, passed 100 tests.
+          checkTypeError_properties:                                                     OK
+            +++ OK, passed 100 tests.
+          hasMalformedSyntax_properties:                                                 OK
+            +++ OK, passed 100 tests.
+        Type Environment Properties
+          buildTypeEnv_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          buildTypeEnvFromPairs_properties:                                              OK
+            +++ OK, passed 100 tests.
+        Declaration and Function Properties
+          extractDeclarations_properties:                                                OK
+            +++ OK, passed 100 tests.
+          extractFunctionCalls_properties:                                               OK
+            +++ OK, passed 100 tests.
+          isMethodDeclaration_properties:                                                OK
+            +++ OK, passed 100 tests.
+        Error Handling Properties
+          malformedSyntaxError_properties:                                               OK
+            +++ OK, passed 1 test.
+          typeCheckFailure_properties:                                                   OK
+            +++ OK, passed 1 test.
+          typeDiagnosticToCompilerError_properties:                                      OK
+            +++ OK, passed 100 tests.
+        Code Generation Properties
+          ensureSourceIR_properties:                                                     OK
+            +++ OK, passed 100 tests.
+          generateGoCode_properties:                                                     OK
+            +++ OK, passed 100 tests.
+        Specialized Analysis Properties
+          checkDependentTypes_properties:                                                OK
+            +++ OK, passed 100 tests.
+          checkOwnership_properties:                                                     OK
+            +++ OK, passed 100 tests.
+      Concise ErrorHandler QuickCheck Tests
+        ErrorHandler Basic Properties
+          handleError_properties:                                                        OK (0.03s)
+            +++ OK, passed 100 tests.
+          handleErrors_properties:                                                       OK (0.16s)
+            +++ OK, passed 100 tests.
+          createError_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          createWarning_properties:                                                      OK
+            +++ OK, passed 100 tests.
+          createInfo_properties:                                                         OK
+            +++ OK, passed 100 tests.
+        ErrorHandler Count Properties
+          errorCount_properties:                                                         OK
+            +++ OK, passed 100 tests.
+          warningCount_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          infoCount_properties:                                                          OK
+            +++ OK, passed 100 tests.
+          hasErrors_properties:                                                          OK
+            +++ OK, passed 100 tests.
+          hasWarnings_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          hasInfos_properties:                                                           OK
+            +++ OK, passed 100 tests.
+        ErrorHandler Filter Properties
+          getErrors_properties:                                                          OK
+            +++ OK, passed 100 tests.
+          getWarnings_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          getInfos_properties:                                                           OK
+            +++ OK, passed 100 tests.
+          clearErrors_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          clearWarnings_properties:                                                      OK
+            +++ OK, passed 100 tests.
+          clearInfos_properties:                                                         OK
+            +++ OK, passed 100 tests.
+        ErrorHandler Utility Properties
+          mergeHandlers_properties:                                                      OK
+            +++ OK, passed 100 tests.
+          filterBySeverityForTests_properties:                                           OK
+            +++ OK, passed 100 tests.
+          sortBySeverity_properties:                                                     OK (0.17s)
+            +++ OK, passed 100 tests.
+          renderErrors_properties:                                                       OK
+            +++ OK, passed 100 tests.
+      Concise Ownership QuickCheck Tests
+        OwnershipAnalysis Properties
+          oaOwners_properties:                                                           OK
+            +++ OK, passed 100 tests.
+          oaBorrowers_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          oaErrors_properties:                                                           OK
+            +++ OK, passed 100 tests.
+        Ownership Query Properties
+          getOwners_properties:                                                          OK (0.02s)
+            +++ OK, passed 100 tests.
+          getBorrowers_properties:                                                       OK (0.02s)
+            +++ OK, passed 100 tests.
+          getOwnedResources_properties:                                                  OK (0.02s)
+            +++ OK, passed 100 tests.
+          isOwner_properties:                                                            OK
+            +++ OK, passed 100 tests.
+          isBorrower_properties:                                                         OK
+            +++ OK, passed 100 tests.
+        Ownership Transfer Properties
+          checkOwnershipTransfer_properties:                                             OK
+            +++ OK, passed 100 tests.
+          canTransferOwnership_properties:                                               OK
+            +++ OK, passed 100 tests.
+          transferOwnership_properties:                                                  OK
+            +++ OK, passed 100 tests.
+        Ownership Constraint Properties
+          validateOwnershipConstraints_properties:                                       OK
+            +++ OK, passed 100 tests.
+        Ownership Error Properties
+          hasOwnershipErrors_properties:                                                 OK
+            +++ OK, passed 100 tests.
+          getOwnershipErrors_properties:                                                 OK
+            +++ OK, passed 100 tests.
+          clearOwnershipErrors_properties:                                               OK (0.05s)
+            +++ OK, passed 100 tests.
+        Ownership Analysis Properties
+          mergeOwnershipAnalyses_properties:                                             OK (0.15s)
+            +++ OK, passed 100 tests.
+      Concise Dependencies QuickCheck Tests
+        DependencyGraph Properties
+          dgNodes_properties:                                                            OK
+            +++ OK, passed 100 tests.
+          dgEdges_properties:                                                            OK
+            +++ OK, passed 100 tests.
+          getNodes_properties:                                                           OK (0.01s)
+            +++ OK, passed 100 tests.
+        Dependency Analysis Properties
+          analyzeDependencies_properties:                                                OK (0.04s)
+            +++ OK, passed 100 tests.
+          detectCycles_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          hasCycles_properties:                                                          OK
+            +++ OK, passed 100 tests.
+        Dependency Resolution Properties
+          resolveDependencies_properties:                                                OK (0.04s)
+            +++ OK, passed 100 tests.
+          getDependencyErrors_properties:                                                OK
+            +++ OK, passed 100 tests.
+          clearDependencyErrors_properties:                                              OK (0.04s)
+            +++ OK, passed 100 tests.
+        Dependency Manipulation Properties
+          addDependency_properties:                                                      OK
+            +++ OK, passed 100 tests.
+          removeDependency_properties:                                                   OK
+            +++ OK, passed 100 tests.
+          hasDependency_properties:                                                      OK
+            +++ OK, passed 100 tests.
+          mergeDependencyGraphs_properties:                                              OK (0.09s)
+            +++ OK, passed 100 tests.
+        Dependency Query Properties
+          getDirectDependencies_properties:                                              OK
+            +++ OK, passed 100 tests.
+          getTransitiveDependencies_properties:                                          OK
+            +++ OK, passed 100 tests.
+          getDependencyPath_properties:                                                  OK
+            +++ OK, passed 100 tests.
+          topologicalSort_properties:                                                    OK
+            +++ OK, passed 100 tests.
+      CodeGeneration QuickCheck Tests
+        IR statement consistency:                                                        OK
+          +++ OK, passed 100 tests; 21 discarded.
+        IR expression consistency:                                                       OK
+          +++ OK, passed 100 tests; 18 discarded.
+        TypusFile structure consistency:                                                 OK (0.01s)
+          +++ OK, passed 100 tests.
+        Source location basic properties:                                                OK
+          +++ OK, passed 100 tests; 301 discarded.
+        Go token basic properties:                                                       OK
+          +++ OK, passed 100 tests; 16 discarded.
+    Integration Tests
+      Concise Integration QuickCheck Tests
+        Parser-Compiler Integration
+          parse_compile_integration:                                                     OK (0.01s)
+            +++ OK, passed 100 tests.
+          parse_compile_error_propagation:                                               OK
+            +++ OK, passed 100 tests.
+        Error Handling Integration
+          error_handling_consistency:                                                    OK
+            +++ OK, passed 100 tests.
+          error_count_consistency:                                                       OK
+            +++ OK, passed 100 tests.
+        Dependencies-Ownership Integration
+          dependencies_ownership_consistency:                                            OK
+            +++ OK, passed 100 tests.
+          cycle_detection_integration:                                                   OK
+            +++ OK, passed 100 tests.
+        Source Location Integration
+          source_location_preservation:                                                  OK
+            +++ OK, passed 100 tests.
+          span_consistency:                                                              OK
+            +++ OK, passed 100 tests.
+        Utils Integration
+          utils_parser_integration:                                                      OK
+            +++ OK, passed 100 tests.
+          utils_comment_handling:                                                        OK
+            +++ OK, passed 100 tests.
+        End-to-End Integration
+          end_to_end_compilation:                                                        OK
+            +++ OK, passed 100 tests.
+          round_trip_properties:                                                         OK
+            +++ OK, passed 100 tests.
+  List Properties Tests
+    List: length of empty list is 0:                                                     OK
+      +++ OK, passed 100 tests.
+    List: length of singleton list is 1:                                                 OK
+      +++ OK, passed 100 tests.
+    List: length of cons is length + 1:                                                  OK
+      +++ OK, passed 100 tests.
+    List: length of append is sum of lengths:                                            OK
+      +++ OK, passed 100 tests.
+    List: reverse is involutive:                                                         OK
+      +++ OK, passed 100 tests.
+    List: reverse preserves length:                                                      OK
+      +++ OK, passed 100 tests.
+    List: head of cons is the first element:                                             OK
+      +++ OK, passed 100 tests.
+    List: tail of cons is the rest:                                                      OK
+      +++ OK, passed 100 tests.
+    List: last of singleton is the element:                                              OK
+      +++ OK, passed 100 tests.
+    List: init of singleton is empty:                                                    OK
+      +++ OK, passed 100 tests.
+    List: last of cons is last of tail or element if empty:                              OK
+      +++ OK, passed 100 tests; 13 discarded.
+    List: init of cons is element cons init of tail or empty if empty:                   OK
+      +++ OK, passed 100 tests; 13 discarded.
+    List: null of empty list is true:                                                    OK
+      +++ OK, passed 100 tests.
+    List: null of non-empty list is false:                                               OK
+      +++ OK, passed 100 tests.
+    List: map preserves length:                                                          OK
+      +++ OK, passed 100 tests.
+    List: map of cons is cons of map:                                                    OK
+      +++ OK, passed 100 tests.
+    List: map of identity is identity:                                                   OK
+      +++ OK, passed 100 tests.
+    List: map of composition is composition of maps:                                     OK
+      +++ OK, passed 100 tests.
+    List: filter preserves order:                                                        OK
+      +++ OK, passed 100 tests.
+    List: filter of empty list is empty:                                                 OK
+      +++ OK, passed 100 tests.
+    List: filter of cons with predicate true is cons of filter with predicate true:      OK
+      +++ OK, passed 100 tests.
+    List: filter of cons with predicate false excludes the head:                         OK
+      +++ OK, passed 100 tests; 120 discarded.
+    List: all of empty list is true:                                                     OK
+      +++ OK, passed 100 tests.
+    List: any of empty list is false:                                                    OK
+      +++ OK, passed 100 tests.
+    List: all of singleton is predicate of element:                                      OK
+      +++ OK, passed 100 tests.
+    List: any of singleton is predicate of element:                                      OK
+      +++ OK, passed 100 tests.
+    List: all of cons is predicate of head AND all of tail:                              OK
+      +++ OK, passed 100 tests.
+    List: any of cons is predicate of head OR any of tail:                               OK
+      +++ OK, passed 100 tests.
+    List: sum of empty list is 0:                                                        OK
+      +++ OK, passed 100 tests.
+    List: sum of singleton is element:                                                   OK
+      +++ OK, passed 100 tests.
+    List: sum of cons is head plus sum of tail:                                          OK
+      +++ OK, passed 100 tests.
+    List: sum of append is sum of parts:                                                 OK
+      +++ OK, passed 100 tests.
+    List: product of empty list is 1:                                                    OK
+      +++ OK, passed 100 tests.
+    List: product of singleton is element:                                               OK
+      +++ OK, passed 100 tests.
+    List: product of cons is head times product of tail:                                 OK
+      +++ OK, passed 100 tests.
+    List: product of append is product of parts:                                         OK
+      +++ OK, passed 100 tests.
+    List: concat of empty list of lists is empty:                                        OK
+      +++ OK, passed 100 tests.
+    List: concat of singleton list of lists is the list:                                 OK
+      +++ OK, passed 100 tests.
+    List: concat of cons of lists is head list concat concat of tail:                    OK
+      +++ OK, passed 100 tests.
+    List: concat of map is same as concatMap:                                            OK
+      +++ OK, passed 100 tests.
+    List: concat of append is concat of parts:                                           OK (0.02s)
+      +++ OK, passed 100 tests.
+    List: concatMap of empty list is empty:                                              OK
+      +++ OK, passed 1 test.
+    List: concatMap of singleton is function applied to element:                         OK
+      +++ OK, passed 100 tests.
+    List: concatMap of cons is function applied to head concat concatMap of tail:        OK
+      +++ OK, passed 100 tests.
+    List: foldr of empty list is initial value:                                          OK
+      +++ OK, passed 100 tests.
+    List: foldr of singleton is function applied to element and initial value:           OK
+      +++ OK, passed 100 tests.
+    List: foldr of cons is function applied to head and foldr of tail:                   OK
+      +++ OK, passed 100 tests.
+    List: foldl of empty list is initial value:                                          OK
+      +++ OK, passed 100 tests.
+    List: foldl of singleton is function applied to initial value and element:           OK
+      +++ OK, passed 100 tests.
+    List: foldl of cons is function applied to foldl of initial value and head and tail: OK
+      +++ OK, passed 100 tests.
+    List: foldr and foldl are equivalent for associative operations:                     OK
+      +++ OK, passed 100 tests.
+    List: foldr and foldl are equivalent for commutative operations:                     OK
+      +++ OK, passed 100 tests.
+    List: take 0 of any list is empty:                                                   OK
+      +++ OK, passed 100 tests.
+    List: take n of empty list is empty:                                                 OK
+      +++ OK, passed 100 tests.
+    List: take n of list with length <= n is the list itself:                            OK
+      +++ OK, passed 100 tests; 258 discarded.
+    List: take n of list with length > n has length n:                                   OK
+      +++ OK, passed 100 tests; 385 discarded.
+    List: take preserves order:                                                          OK
+      +++ OK, passed 100 tests.
+    List: drop 0 of any list is the list itself:                                         OK
+      +++ OK, passed 100 tests.
+    List: drop n of empty list is empty:                                                 OK
+      +++ OK, passed 100 tests.
+    List: drop n of list with length <= n is empty:                                      OK
+      +++ OK, passed 100 tests; 253 discarded.
+    List: drop n of list with length > n has length (length - n):                        OK
+      +++ OK, passed 100 tests; 320 discarded.
+    List: drop preserves order:                                                          OK
+      +++ OK, passed 100 tests.
+    List: splitAt n is (take n, drop n):                                                 OK
+      +++ OK, passed 100 tests.
+    List: take and drop reconstruct original list:                                       OK
+      +++ OK, passed 100 tests.
+    List: replicate 0 is empty list:                                                     OK
+      +++ OK, passed 100 tests.
+    List: replicate n has length n:                                                      OK
+      +++ OK, passed 100 tests; 99 discarded.
+    List: all elements of replicate are equal:                                           OK
+      +++ OK, passed 100 tests; 109 discarded.
+    List: repeat is infinite:                                                            OK
+      +++ OK, passed 100 tests.
+    List: iterate n f starting from x applies f n times:                                 OK
+      +++ OK, passed 100 tests; 80 discarded.
+    List: cycle of empty list is undefined (should not evaluate):                        OK
+      +++ OK, passed 100 tests.
+    List: cycle of non-empty list repeats infinitely:                                    OK
+      +++ OK, passed 100 tests; 18 discarded.
+    List: span p xs is (takeWhile p xs, dropWhile p xs):                                 OK
+      +++ OK, passed 100 tests.
+    List: break p xs is (takeWhile (not . p) xs, dropWhile (not . p) xs):                OK
+      +++ OK, passed 100 tests.
+    List: group sorts consecutive equal elements:                                        OK
+      +++ OK, passed 100 tests.
+    List: inits of empty list is list containing empty list:                             OK
+      +++ OK, passed 100 tests.
+    List: inits of non-empty list includes empty list and full list:                     OK
+      +++ OK, passed 100 tests.
+    List: tails of empty list is list containing empty list:                             OK
+      +++ OK, passed 100 tests.
+    List: tails of non-empty list includes empty list and full list:                     OK
+      +++ OK, passed 100 tests.
+    List: isPrefixOf is reflexive:                                                       OK
+      +++ OK, passed 100 tests.
+    List: empty list is prefix of any list:                                              OK
+      +++ OK, passed 100 tests.
+    List: isSuffixOf is reflexive:                                                       OK
+      +++ OK, passed 100 tests.
+    List: empty list is suffix of any list:                                              OK
+      +++ OK, passed 100 tests.
+    List: isInfixOf is reflexive:                                                        OK
+      +++ OK, passed 100 tests.
+    List: empty list is sublist of any list:                                             OK
+      +++ OK, passed 100 tests.
+    List: elem is equivalent to any (==):                                                OK
+      +++ OK, passed 100 tests.
+    List: notElem is equivalent to not . elem:                                           OK
+      +++ OK, passed 100 tests.
+    List: lookup finds the first matching key:                                           OK
+      +++ OK, passed 100 tests.
+  Basic QuickCheck Test Suite
+    Trim basic:                                                                          OK
+      +++ OK, passed 100 tests.
+    Trim empty:                                                                          OK
+      +++ OK, passed 1 test.
+    Trim whitespace:                                                                     OK
+      +++ OK, passed 100 tests (6% all whitespace).
+    Trim regular:                                                                        OK
+      +++ OK, passed 100 tests; 4 discarded.
+    Trim idempotent:                                                                     OK
+      +++ OK, passed 100 tests.
+    SplitBy basic:                                                                       OK
+      +++ OK, passed 100 tests.
+    SplitBy empty:                                                                       OK
+      +++ OK, passed 100 tests.
+    SplitByComma basic:                                                                  OK
+      +++ OK, passed 100 tests.
+    SplitByComma empty:                                                                  OK
+      +++ OK, passed 1 test.
+    RemoveLineComments basic:                                                            OK
+      +++ OK, passed 100 tests.
+    RemoveLineComments empty:                                                            OK
+      +++ OK, passed 1 test.
+    RemoveLineComments no comments:                                                      OK
+      +++ OK, passed 100 tests.
+    RemoveComments basic:                                                                OK
+      +++ OK, passed 100 tests.
+    RemoveComments empty:                                                                OK
+      +++ OK, passed 1 test.
+    RemoveComments no comments:                                                          OK
+      +++ OK, passed 100 tests.
+    NormalizeIndentation basic:                                                          OK
+      +++ OK, passed 100 tests.
+    NormalizeIndentation empty:                                                          OK
+      +++ OK, passed 1 test.
+    NormalizeIndentation no indent:                                                      OK
+      +++ OK, passed 100 tests (47% has indentation).
+    isRight basic:                                                                       OK
+      +++ OK, passed 100 tests.
+    isLeft basic:                                                                        OK
+      +++ OK, passed 100 tests.
+    isRight right:                                                                       OK
+      +++ OK, passed 100 tests.
+    isRight left:                                                                        OK
+      +++ OK, passed 100 tests.
+    isLeft right:                                                                        OK
+      +++ OK, passed 100 tests.
+    isLeft left:                                                                         OK
+      +++ OK, passed 100 tests.
+    Trim edge cases:                                                                     OK
+    SplitBy edge cases:                                                                  OK
+    SplitByComma edge cases:                                                             OK
+    RemoveLineComments edge cases:                                                       OK
+    RemoveComments edge cases:                                                           OK
+    NormalizeIndentation edge cases:                                                     OK
+    isRight edge cases:                                                                  OK
+    isLeft edge cases:                                                                   OK
+  Basic QuickCheck Tests
+    trim removes whitespace:                                                             OK
+      +++ OK, passed 100 tests.
+    trim preserves content:                                                              OK
+      +++ OK, passed 100 tests.
+    splitBy preserves content:                                                           OK
+      +++ OK, passed 100 tests.
+    startPos values:                                                                     OK
+      +++ OK, passed 1 test.
+    removeLineComments removes comments:                                                 OK
+      +++ OK, passed 100 tests.
+    removeLineComments preserves before:                                                 OK
+      +++ OK, passed 100 tests.
+    splitByCommaCollapsed removes empty parts:                                           OK
+      +++ OK, passed 100 tests.
+    splitByComma preserves empty parts:                                                  OK
+      +++ OK, passed 100 tests.
+    normalizeIndentation preserves relative:                                             OK
+      +++ OK, passed 100 tests.
+    safeProcessString handles special:                                                   OK
+      +++ OK, passed 100 tests.
+    isValidChar properties:                                                              OK
+      +++ OK, passed 100 tests.
+    removeLineComments handles multiple lines:                                           OK
+      +++ OK, passed 100 tests.
+  Boundary Condition Advanced QuickCheck Tests
+    Extremely long string handling:                                                      OK
+      +++ OK, passed 100 tests.
+    Deeply nested structure:                                                             OK
+      +++ OK, passed 100 tests.
+    Repeated character handling:                                                         OK
+      +++ OK, passed 100 tests.
+    Unicode character handling:                                                          OK
+      +++ OK, passed 1 test.
+    Empty and boundary input:                                                            OK
+      +++ OK, passed 100 tests.
+    Large file handling:                                                                 OK (0.05s)
+      +++ OK, passed 100 tests.
+    Extremely long identifier:                                                           OK
+      +++ OK, passed 100 tests.
+    Extreme indentation:                                                                 OK
+      +++ OK, passed 100 tests.
+    Extreme comment handling:                                                            OK
+      +++ OK, passed 100 tests.
+    Extreme error conditions:                                                            OK (0.06s)
+      +++ OK, passed 100 tests.
+    Memory boundary conditions:                                                          OK
+      +++ OK, passed 100 tests.
+    Recursion boundary:                                                                  OK
+      +++ OK, passed 100 tests; 25 discarded.
+    Numeric boundary:                                                                    OK
+      +++ OK, passed 1 test.
+    String boundary:                                                                     OK
+      +++ OK, passed 1 test.
+    Parser boundary:                                                                     OK
+      +++ OK, passed 100 tests.
+    Position tracking boundary:                                                          OK
+      +++ OK, passed 100 tests.
+    Error handling boundary:                                                             OK
+      +++ OK, passed 1 test.
+    Empty string handling:                                                               OK
+    Single character handling:                                                           OK
+    Extremely long string handling:                                                      OK
+    Deeply nested structure:                                                             OK
+    Special character handling:                                                          OK
+    Extremely long identifier:                                                           OK
+    Extreme indentation:                                                                 OK
+    Extreme comment handling:                                                            OK
+    Extreme error conditions:                                                            OK
+    Memory boundary conditions:                                                          OK
+  Boundary Condition Comprehensive Tests
+    Unit Tests
+      Extreme Input Sizes
+        parser with empty input:                                                         OK
+        parser with single character:                                                    OK
+        parser with very large input:                                                    OK (0.02s)
+        parser with very long lines:                                                     OK (0.01s)
+      Extreme Positions
+        source position at maximum values:                                               OK
+        source position at minimum values:                                               OK
+        position advancement with large content:                                         OK
+      Extreme Error Conditions
+        error collector with many errors:                                                OK
+        error with very long message:                                                    OK
+        fatal error handling:                                                            OK
+        error with extreme severity:                                                     OK
+      Special Characters and Unicode
+        parser with control characters:                                                  OK
+        parser with unicode characters:                                                  OK
+        utils with special characters:                                                   OK
+        parser with mixed content types:                                                 OK
+      Resource Limits
+        memory usage with repeated parsing:                                              OK
+        deep nesting handling:                                                           OK
+        large directive values:                                                          OK
+      Concurrent Safety
+        parser state isolation:                                                          OK
+        error collector isolation:                                                       OK
+      Performance Boundaries
+        parsing performance with large files:                                            OK (0.06s)
+        error formatting performance:                                                    OK
+        utils performance with large strings:                                            OK (0.04s)
+    QuickCheck Properties
+      Extreme Input Sizes
+        parser large input:                                                              OK (0.33s)
+          +++ OK, passed 100 tests.
+        parser deeply nested:                                                            OK (0.02s)
+          +++ OK, passed 100 tests; 150 discarded.
+        large directives handling:                                                       OK
+          +++ OK, passed 100 tests; 90 discarded.
+      Extreme Positions
+        sourcelocation extreme positions:                                                OK
+          +++ OK, passed 100 tests.
+      Extreme Error Conditions
+        error extreme severity:                                                          OK
+          +++ OK, passed 100 tests.
+        error collector large numbers:                                                   OK
+          +++ OK, passed 100 tests; 134 discarded.
+        error formatting extreme content:                                                OK
+          +++ OK, passed 100 tests.
+      Utils Extreme Inputs
+        utils extreme inputs:                                                            OK
+          +++ OK, passed 100 tests.
+      Special Characters
+        special characters handling:                                                     OK
+          +++ OK, passed 100 tests.
+      Performance Boundaries
+        memory efficiency repeated operations:                                           OK
+          +++ OK, passed 100 tests; 98 discarded.
+  CodeGeneration QuickCheck Tests
+    IR statement consistency:                                                            OK
+      +++ OK, passed 100 tests; 15 discarded.
+    IR expression consistency:                                                           OK
+      +++ OK, passed 100 tests; 26 discarded.
+    TypusFile structure consistency:                                                     OK (0.02s)
+      +++ OK, passed 100 tests.
+    Source location basic properties:                                                    OK
+      +++ OK, passed 100 tests; 267 discarded.
+    Go token basic properties:                                                           OK
+      +++ OK, passed 100 tests; 20 discarded.
+
+All 339 tests passed (2.66s)
+
+
+
+typus> Test suite typus-test passed
+Completed 2 action(s).

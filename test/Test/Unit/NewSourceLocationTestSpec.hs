@@ -91,19 +91,12 @@ test_emptySpan_properties = do
   assertBool "Empty span should be valid" (isValidSpan empty)
 
 -- | 生成任意SourcePos用于QuickCheck测试
-instance Arbitrary SourcePos where
-  arbitrary = SourcePos <$> arbitraryPositive <*> arbitraryPositive <*> arbitrary
-    where
-      arbitraryPositive = getPositive <$> arbitrary
+-- Arbitrary instance for SourcePos is now defined in SourceLocation module
+
 
 -- | 生成任意SourceSpan用于QuickCheck测试
-instance Arbitrary SourceSpan where
-  arbitrary = do
-    start <- arbitrary
-    end <- arbitrary
-    if sourcePosLe start end
-      then return $ SourceSpan start end
-      else return $ SourceSpan end start
+-- Arbitrary instance for SourceSpan is now defined in SourceLocation module
+
 
 -- | 生成任意Located值用于QuickCheck测试
 instance Arbitrary a => Arbitrary (Located a) where

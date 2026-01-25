@@ -1,6 +1,5 @@
 module Main where
 import Parser
-import System.IO
 
 main :: IO ()
 main = do
@@ -11,4 +10,6 @@ main = do
             putStrLn $ "Parse successful!"
             putStrLn $ "Number of blocks: " ++ show (length (tfBlocks typusFile))
             putStrLn $ "File directives: " ++ show (tfDirectives typusFile)
-            putStrLn $ "First block content: " ++ take 100 (cbContent (head (tfBlocks typusFile)))
+            case tfBlocks typusFile of
+                [] -> putStrLn "No blocks found"
+                (firstBlock:_) -> putStrLn $ "First block content: " ++ take 100 (cbContent firstBlock)

@@ -8,21 +8,14 @@ import Test.Tasty.QuickCheck
 import Compiler
   ( compile
   , CompilerError(..)
-  , CompilerResult
   , CompilationPhase(..)
-  , malformedSyntaxError
   , renderCompilationError
   , formatCompilerErrors
   , generateDetailedReport
   , analyzeErrors
   , hasTypeErrors
-  , diagnoseTypeErrors
   , checkTypeError
   , hasMalformedSyntax
-  , checkDependentTypes
-  , checkOwnership
-  , ensureSourceIR
-  , generateGoCode
   , typeDiagnosticToCompilerError
   , createTypusFileFromErrors
   , isMethodDeclaration
@@ -39,13 +32,10 @@ import Compiler.Errors.Core
   )
 import Compiler.TypeChecker
   ( TypeEnv(..)
-  , buildTypeEnv
   , buildTypeEnvFromPairs
-  , checkTypeError
-  , hasMalformedSyntax
-  , TypeError(..)
   , Type(..)
   , TypeCheckDiagnostic(..)
+  , TypeError(..)
   )
 import Parser (TypusFile(..), CodeBlock(..), BlockDirectives(..), FileDirectives(..), defaultFileDirectives, defaultBlockDirectives)
 import SourceLocation (SourceSpan(..), SourcePos(..), startPos, Located(..))
@@ -88,18 +78,18 @@ instance Arbitrary Compiler.Errors.Core.TypeError where
 
 instance Arbitrary Compiler.TypeChecker.TypeError where
   arbitrary = do
-    context <- arbitrary
-    message <- arbitrary
+    ctx <- arbitrary
+    msg <- arbitrary
     return $ Compiler.TypeChecker.TypeError
-      { Compiler.TypeChecker.teContext = context
-      , Compiler.TypeChecker.teMessage = message
+      { Compiler.TypeChecker.teContext = ctx
+      , Compiler.TypeChecker.teMessage = msg
       }
 
 instance Arbitrary TypeCheckDiagnostic where
   arbitrary = do
-    context <- arbitrary
-    message <- arbitrary
-    return $ TypeCheckDiagnostic context message
+    ctx <- arbitrary
+    msg <- arbitrary
+    return $ TypeCheckDiagnostic ctx msg
 
 instance Arbitrary Text where
   arbitrary = T.pack <$> arbitrary
@@ -122,12 +112,12 @@ instance Arbitrary Compiler.Errors.Core.ErrorCategory where
 
 instance Arbitrary Compiler.Errors.Core.ErrorLocation where
   arbitrary = do
-    filePath <- arbitrary
-    line <- arbitrary
-    column <- arbitrary
-    endLine <- arbitrary
-    endColumn <- arbitrary
-    return $ ErrorLocation filePath line column endLine endColumn
+    filePath' <- arbitrary
+    line' <- arbitrary
+    column' <- arbitrary
+    endLine' <- arbitrary
+    endColumn' <- arbitrary
+    return $ ErrorLocation filePath' line' column' endLine' endColumn'
 
 instance Arbitrary Compiler.Errors.Core.ErrorContext where
   arbitrary = do
@@ -170,18 +160,11 @@ instance Arbitrary BlockDirectives where
     constraints <- arbitrary
     return $ BlockDirectives ownership dependentTypes constraints
 
-instance Arbitrary SourceSpan where
-  arbitrary = do
-    start <- arbitrary
-    end <- arbitrary
-    return $ SourceSpan start end
+-- Arbitrary instance for SourceSpan is now defined in SourceLocation module
 
-instance Arbitrary SourcePos where
-  arbitrary = do
-    line <- arbitrary
-    column <- arbitrary
-    offset <- arbitrary
-    return $ SourcePos line column offset
+
+-- Arbitrary instance for SourcePos is now defined in SourceLocation module
+
 
 instance Arbitrary a => Arbitrary (Located a) where
   arbitrary = do

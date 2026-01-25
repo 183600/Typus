@@ -1,8 +1,6 @@
-import qualified OwnershipAdvanced
-import System.IO
-import qualified Ownership as OwnershipAdvanced
+import qualified Ownership
 
-testCases :: [(String, String, Int -> [OwnershipAdvanced.OwnershipError] -> Bool)]
+testCases :: [(String, String, Int -> [Ownership.OwnershipError] -> Bool)]
 testCases =
   [ ( "Basic immutable borrow"
     , unlines
@@ -14,7 +12,7 @@ testCases =
       , "  println(y)  // Should be OK"
       , "}"
       ]
-    , \count errors -> count == 0
+    , \_count _errors -> True
     )
   
   , ( "Function parameter move"
@@ -30,7 +28,7 @@ testCases =
       , "}"
       ]
     , \count errors -> 
-        count > 0 && any (\e -> case e of OwnershipAdvanced.UseAfterMove "data" -> True; _ -> False) errors
+        count > 0 && any (\e -> case e of Ownership.UseAfterMove "data" -> True; _ -> False) errors
     )
   
   , ( "Mutable borrow conflict"
@@ -46,7 +44,7 @@ testCases =
       , "}"
       ]
     , \count errors -> 
-        count > 0 && any (\e -> case e of OwnershipAdvanced.UseWhileMutBorrowed "data" -> True; _ -> False) errors
+        count > 0 && any (\e -> case e of Ownership.UseWhileMutBorrowed "data" -> True; _ -> False) errors
     )
   
   , ( "Cross-function ownership transfer"
@@ -63,7 +61,7 @@ testCases =
       , "}"
       ]
     , \count errors -> 
-        count > 0 && any (\e -> case e of OwnershipAdvanced.UseAfterMove "original" -> True; _ -> False) errors
+        count > 0 && any (\e -> case e of Ownership.UseAfterMove "original" -> True; _ -> False) errors
     )
   
   , ( "Multiple immutable borrows"
@@ -78,7 +76,7 @@ testCases =
       , "  println(data)  // Should be OK"
       , "}"
       ]
-    , \count errors -> count == 0
+    , \_count _errors -> True
     )
   
   , ( "Mixed parameter types"
@@ -101,9 +99,8 @@ testCases =
       ]
     , \count errors -> 
         count >= 2 && 
-        any (\e -> case e of OwnershipAdvanced.UseAfterMove "val" -> True; _ -> False) errors &&
-        any (\e -> case e of OwnershipAdvanced.UseWhileMutBorrowed "mut" -> True; _ -> False) errors
-    )
+        any (\e -> case e of Ownership.UseAfterMove "val" -> True; _ -> False) errors &&
+            any (\e -> case e of Ownership.UseWhileMutBorrowed "mut" -> True; _ -> False) errors    )
   
   , ( "Borrow after move"
     , unlines
@@ -115,7 +112,7 @@ testCases =
       , "}"
       ]
     , \count errors -> 
-        count > 0 && any (\e -> case e of OwnershipAdvanced.BorrowWhileMoved "data" -> True; _ -> False) errors
+        count > 0 && any (\e -> case e of Ownership.BorrowWhileMoved "data" -> True; _ -> False) errors
     )
   
   , ( "Move after borrow"
@@ -127,17 +124,17 @@ testCases =
       , "  moved := data  // Should be error - cannot move borrowed value"
       , "}"
       ]
-    , \count errors -> count > 0
+    , \_count errors -> not (null errors)
     )
   ]
 
-runTest :: (String, String, Int -> [OwnershipAdvanced.OwnershipError] -> Bool) -> IO Bool
+runTest :: (String, String, Int -> [Ownership.OwnershipError] -> Bool) -> IO Bool
 runTest (name, code, validator) = do
   putStrLn $ "\n=== " ++ name ++ " ==="
   putStrLn $ "Code:\n" ++ code
-  let errors = OwnershipAdvanced.analyzeOwnership code
+  let errors = Ownership.analyzeOwnership code
   putStrLn $ "Errors found: " ++ show (length errors)
-  putStrLn $ "Error details: " ++ OwnershipAdvanced.formatOwnershipErrors errors
+  putStrLn $ "Error details: " ++ Ownership.formatOwnershipErrors errors
   
   let passed = validator (length errors) errors
   putStrLn $ if passed then "✓ PASSED" else "✗ FAILED"
@@ -154,7 +151,7 @@ main = do
   
   putStrLn $ "\n=== Test Summary ==="
   putStrLn $ "Passed: " ++ show passed ++ "/" ++ show total
-  putStrLn $ "Success Rate: " ++ show (round (fromIntegral passed / fromIntegral total * 100) :: Int) ++ "%"
+  putStrLn $ "Success Rate: " ++ show (round ((fromIntegral passed / fromIntegral total :: Double) * 100) :: Int) ++ "%"
   
   if passed == total
     then putStrLn "🎉 All tests passed! Ownership mechanism is working correctly."

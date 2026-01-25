@@ -6,9 +6,9 @@ module Test.Unit.CompilerCoreFunctionalityTestSpec where
 
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll)
+import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property)
 import Test.QuickCheck (Property, (==>))
-import Compiler.TypeChecker (Type(..), FunctionParam(..), FunctionSignature(..), TypeCheckDiagnostic(..))
+import Compiler.TypeChecker (Type(..), FunctionParam(..), FunctionSignature(..))
 
 -- Helper generators
 genTypeName :: Gen String

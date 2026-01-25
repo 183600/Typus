@@ -1,8 +1,7 @@
 #!/usr/bin/env runhaskell
 
 import System.Environment (getArgs)
-import System.Exit (exitFailure, exitSuccess)
-import Data.List (intercalate)
+import System.Exit (exitFailure)
 
 -- Import the canonical ownership analyzer
 import Ownership
@@ -234,3 +233,4 @@ formatOwnershipError err = case err of
     ControlFlowError msg -> "Control flow error: " ++ msg
     PathSensitiveError msg -> "Path sensitive error: " ++ msg
     LoopOwnershipError msg -> "Loop ownership error: " ++ msg
+    OwnershipError msg -> "Ownership error: " ++ msg

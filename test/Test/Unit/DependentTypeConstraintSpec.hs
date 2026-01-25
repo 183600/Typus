@@ -351,8 +351,7 @@ instance Arbitrary TypeEnvironment where
     substitutions <- listOf arbitrary
     return $ TypeEnvironment types constraints substitutions
 
-instance Arbitrary SourcePos where
-  arbitrary = SourcePos <$> arbitrary <*> arbitrary <*> arbitrary
+-- Arbitrary instance for SourcePos is now defined in SourceLocation module
 
-instance Arbitrary SourceSpan where
-  arbitrary = SourceSpan <$> arbitrary <*> arbitrary
+
+-- Arbitrary instance for SourceSpan is now defined in SourceLocation module

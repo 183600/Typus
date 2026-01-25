@@ -6,11 +6,9 @@ module Test.Unit.TextProcessingAdvancedSpec where
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
-import Test.QuickCheck (Gen, Property, (==>), classify, sized)
-import Utils (trim, splitBy, splitByCollapsed, splitByComma, splitByCommaCollapsed,
-             removeLineComments, removeComments, normalizeIndentation, 
-             forceSingleTabIndentation, fixIndentation, breakOn,
-             safeProcessString, isValidChar)
+import Test.QuickCheck()
+import Utils (trim, removeComments, normalizeIndentation, 
+             safeProcessString)
 import Data.List (isPrefixOf, isInfixOf)
 import Data.Char (isAlphaNum, isAlpha, isSpace)
 

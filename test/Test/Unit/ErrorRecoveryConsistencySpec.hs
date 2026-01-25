@@ -82,18 +82,11 @@ instance Arbitrary ErrorSeverity where
 instance Arbitrary ErrorPhase where
   arbitrary = elements [Parsing, TypeChecking, CodeGeneration, Optimization]
 
-instance Arbitrary SourcePos where
-  arbitrary = do
-    line <- arbitrary
-    col <- arbitrary
-    offset <- arbitrary
-    return $ SourcePos line col offset
+-- Arbitrary instance for SourcePos is now defined in SourceLocation module
 
-instance Arbitrary SourceSpan where
-  arbitrary = do
-    start <- arbitrary
-    end <- arbitrary
-    return $ SourceSpan start end
+
+-- Arbitrary instance for SourceSpan is now defined in SourceLocation module
+
 
 instance Arbitrary CompilerError where
   arbitrary = do

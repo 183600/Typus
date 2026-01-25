@@ -3,7 +3,7 @@ module Main where
 
 import System.Environment (getArgs)
 import System.Exit (exitFailure, exitSuccess)
-import Data.List (intercalate)
+import Data.List (intercalate, nub)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Char (isSpace, isDigit, isAlpha, isAlphaNum)
@@ -163,21 +163,21 @@ parseOwnershipCode code =
     parseFuncBody tokens = 
       let (bodyTokens, remaining) = span (/= TSymbol '}') tokens
           body = parseTokens bodyTokens 0
-      in (body, if null remaining then [] else tail remaining)
+      in (body, if null remaining then [] else drop 1 remaining)
     
     parseCondition :: [Token] -> (Expr, [Token])
     parseCondition (TSymbol '(' : rest) =
       let (condTokens, remaining) = span (/= TSymbol ')') rest
           cond = parseSimpleExpr condTokens
-      in (cond, if null remaining then [] else tail remaining)
-    parseCondition rest = parseSimpleExpr rest
+      in (cond, if null remaining then [] else drop 1 remaining)
+    parseCondition rest = (parseSimpleExpr rest, [])
     
     parseOptionalLoopVar :: [Token] -> (Maybe String, [Token])
     parseOptionalLoopVar (TIdent name : TKeyword "in" : rest) = (Just name, rest)
     parseOptionalLoopVar rest = (Nothing, rest)
     
     parseCollection :: [Token] -> (Expr, [Token])
-    parseCollection tokens = parseSimpleExpr tokens
+    parseCollection tokens = (parseSimpleExpr tokens, [])
     
     parseOptionalElse :: [Token] -> ([Stmt], [Token])
     parseOptionalElse (TKeyword "else" : rest) = parseBlockBody rest
@@ -187,17 +187,17 @@ parseOwnershipCode code =
     parseBlockBody (TSymbol '{' : rest) =
       let (bodyTokens, remaining) = span (/= TSymbol '}') rest
           body = parseTokens bodyTokens 0
-      in (body, if null remaining then [] else tail remaining)
-    parseBlockBody rest = parseTokens rest 0
+      in (body, if null remaining then [] else drop 1 remaining)
+    parseBlockBody rest = (parseTokens rest 0, [])
     
     parseArgs :: [Token] -> ([Expr], [Token])
     parseArgs [] = ([], [])
     parseArgs (TSymbol ')' : rest) = ([], rest)
     parseArgs tokens =
       let (arg, rest) = parseSingleArg tokens
-          (moreArgs, remaining) = if not (null rest) && head rest == TSymbol ','
-                                 then parseArgs (tail rest)
-                                 else parseArgs rest
+          (moreArgs, remaining) = case rest of
+                                    (TSymbol ',' : xs) -> parseArgs xs
+                                    _ -> parseArgs rest
       in (arg : moreArgs, remaining)
     
     parseSingleArg :: [Token] -> (Expr, [Token])

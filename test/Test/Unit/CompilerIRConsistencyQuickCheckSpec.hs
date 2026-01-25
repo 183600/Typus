@@ -12,12 +12,8 @@ import SourceLocation (SourcePos(..), startPos, SourceSpan(..))
 import Data.List (nub, sortBy, sort)
 
 -- | SourcePos 的 Arbitrary 实例
-instance Arbitrary SourcePos where
-  arbitrary = do
-    line <- choose (1, 1000)
-    column <- choose (1, 1000)
-    offset <- choose (0, 100000)
-    return $ SourcePos line column offset
+-- Arbitrary instance for SourcePos is now defined in SourceLocation module
+
 
 -- | 简化的IR节点定义用于测试
 data IRNode = IRNode

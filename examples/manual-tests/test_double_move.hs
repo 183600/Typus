@@ -1,8 +1,6 @@
 #!/usr/bin/env stack
 {-# LANGUAGE OverloadedStrings #-}
 
-import Test.Tasty
-import Test.Tasty.QuickCheck
 import qualified Ownership as Own
 
 main :: IO ()

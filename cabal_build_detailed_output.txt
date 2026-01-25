@@ -1,83 +1,124 @@
+Resolving dependencies...
 Build profile: -w ghc-9.14.1 -O1
 In order, the following will be built (use -v for more details):
- - typus-0.12.2 (lib) (file src/SyntaxValidator.hs changed)
- - typus-0.12.2 (exe:typus) (dependency rebuilt)
- - typus-0.12.2 (test:typus-test) (dependency rebuilt)
+ - typus-0.12.2 (lib) (configuration changed)
+ - typus-0.12.2 (exe:typus) (configuration changed)
+Configuring library for typus-0.12.2...
 Preprocessing library for typus-0.12.2...
 Building library for typus-0.12.2...
-[26 of 58] Compiling Ownership.Analyzer ( src/Ownership/Analyzer.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Analyzer.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Analyzer.dyn_o ) [Source file changed]
-src/Ownership/Analyzer.hs:10:30: warning: [GHC-38856] [-Wunused-imports]
-    The import of ‘foldl'’ from module ‘Data.List’ is redundant
+[ 1 of 58] Compiling Cli              ( src/Cli.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Cli.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Cli.dyn_o ) [Optimisation flags changed]
+[ 2 of 58] Compiling CommandLineDebug ( src/CommandLineDebug.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/CommandLineDebug.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/CommandLineDebug.dyn_o ) [Optimisation flags changed]
+[ 3 of 58] Compiling Compiler.Error   ( src/Compiler/Error.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/Error.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/Error.dyn_o ) [Optimisation flags changed]
+[ 4 of 58] Compiling Compiler.GoAst   ( src/Compiler/GoAst.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/GoAst.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/GoAst.dyn_o ) [Optimisation flags changed]
+[ 5 of 58] Compiling Compiler.GoLexer ( src/Compiler/GoLexer.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/GoLexer.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/GoLexer.dyn_o ) [Optimisation flags changed]
+[ 6 of 58] Compiling Debug            ( src/Debug.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Debug.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Debug.dyn_o ) [Optimisation flags changed]
+[ 7 of 58] Compiling DebugIntegration ( src/DebugIntegration.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/DebugIntegration.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/DebugIntegration.dyn_o ) [Optimisation flags changed]
+[ 8 of 58] Compiling Dependencies.AST ( src/Dependencies/AST.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Dependencies/AST.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Dependencies/AST.dyn_o ) [Optimisation flags changed]
+[ 9 of 58] Compiling Dependencies.Parser ( src/Dependencies/Parser.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Dependencies/Parser.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Dependencies/Parser.dyn_o ) [Optimisation flags changed]
+[10 of 58] Compiling Dependencies.Stub ( src/Dependencies/Stub.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Dependencies/Stub.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Dependencies/Stub.dyn_o ) [Optimisation flags changed]
+[11 of 58] Compiling Dependencies.TypeSystem ( src/Dependencies/TypeSystem.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Dependencies/TypeSystem.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Dependencies/TypeSystem.dyn_o ) [Optimisation flags changed]
+[12 of 58] Compiling Dependencies.Inference ( src/Dependencies/Inference.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Dependencies/Inference.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Dependencies/Inference.dyn_o ) [Optimisation flags changed]
+[13 of 58] Compiling Dependencies.Analyzer ( src/Dependencies/Analyzer.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Dependencies/Analyzer.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Dependencies/Analyzer.dyn_o ) [Optimisation flags changed]
+[14 of 58] Compiling Dependencies     ( src/Dependencies.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Dependencies.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Dependencies.dyn_o ) [Optimisation flags changed]
+[15 of 58] Compiling DependentTypesParser ( src/DependentTypesParser.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/DependentTypesParser.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/DependentTypesParser.dyn_o ) [Optimisation flags changed]
+[16 of 58] Compiling DependentTypesParser.Stub ( src/DependentTypesParser/Stub.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/DependentTypesParser/Stub.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/DependentTypesParser/Stub.dyn_o ) [Optimisation flags changed]
+[17 of 58] Compiling EnhancedDebug    ( src/EnhancedDebug.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/EnhancedDebug.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/EnhancedDebug.dyn_o ) [Optimisation flags changed]
+[18 of 58] Compiling Cli.DebugRunner  ( src/Cli/DebugRunner.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Cli/DebugRunner.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Cli/DebugRunner.dyn_o ) [Optimisation flags changed]
+[19 of 58] Compiling Ownership.Common.Lexer ( src/Ownership/Common/Lexer.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Common/Lexer.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Common/Lexer.dyn_o ) [Optimisation flags changed]
+[20 of 58] Compiling Ownership.Common.Types ( src/Ownership/Common/Types.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Common/Types.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Common/Types.dyn_o ) [Optimisation flags changed]
+[21 of 58] Compiling Compiler.Errors.Types ( src/Compiler/Errors/Types.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/Errors/Types.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/Errors/Types.dyn_o ) [Optimisation flags changed]
+[22 of 58] Compiling Compiler.Errors.Core ( src/Compiler/Errors/Core.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/Errors/Core.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/Errors/Core.dyn_o ) [Optimisation flags changed]
+[23 of 58] Compiling ErrorHandler     ( src/ErrorHandler.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/ErrorHandler.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/ErrorHandler.dyn_o ) [Optimisation flags changed]
+[24 of 58] Compiling Ownership.Lexer  ( src/Ownership/Lexer.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Lexer.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Lexer.dyn_o ) [Optimisation flags changed]
+[25 of 58] Compiling Ownership.Parser ( src/Ownership/Parser.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Parser.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Parser.dyn_o ) [Optimisation flags changed]
+[26 of 58] Compiling Ownership.Analyzer ( src/Ownership/Analyzer.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Analyzer.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Analyzer.dyn_o ) [Optimisation flags changed]
+src/Ownership/Analyzer.hs:10:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Data.Foldable’ is redundant
+      except perhaps to import instances from ‘Data.Foldable’
+    To import instances alone, use: import Data.Foldable()
    |
-10 | import Data.List (isInfixOf, foldl')
-   |                              ^^^^^^
+10 | import Data.Foldable (foldl')
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-[32 of 58] Compiling SimpleSyntaxValidator ( src/SimpleSyntaxValidator.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/SimpleSyntaxValidator.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/SimpleSyntaxValidator.dyn_o ) [Source file changed]
-src/SimpleSyntaxValidator.hs:10:42: warning: [GHC-38856] [-Wunused-imports]
-    The import of ‘foldl'’ from module ‘Data.List’ is redundant
+[27 of 58] Compiling Ownership.Reporter ( src/Ownership/Reporter.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Reporter.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Reporter.dyn_o ) [Optimisation flags changed]
+[28 of 58] Compiling Ownership        ( src/Ownership.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership.dyn_o ) [Optimisation flags changed]
+[29 of 58] Compiling Analyzer.Types   ( src/Analyzer/Types.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Analyzer/Types.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Analyzer/Types.dyn_o ) [Optimisation flags changed]
+[30 of 58] Compiling Analyzer.State   ( src/Analyzer/State.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Analyzer/State.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Analyzer/State.dyn_o ) [Optimisation flags changed]
+[31 of 58] Compiling Analyzer.CrossAnalysis ( src/Analyzer/CrossAnalysis.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Analyzer/CrossAnalysis.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Analyzer/CrossAnalysis.dyn_o ) [Optimisation flags changed]
+[32 of 58] Compiling SimpleSyntaxValidator ( src/SimpleSyntaxValidator.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/SimpleSyntaxValidator.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/SimpleSyntaxValidator.dyn_o ) [Optimisation flags changed]
+src/SimpleSyntaxValidator.hs:10:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Data.Foldable’ is redundant
+      except perhaps to import instances from ‘Data.Foldable’
+    To import instances alone, use: import Data.Foldable()
    |
-10 | import Data.List (isInfixOf, isPrefixOf, foldl')
-   |                                          ^^^^^^
+10 | import Data.Foldable (foldl')
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-[33 of 58] Compiling SourceLocation   ( src/SourceLocation.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/SourceLocation.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/SourceLocation.dyn_o ) [Source file changed]
+[33 of 58] Compiling SourceLocation   ( src/SourceLocation.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/SourceLocation.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/SourceLocation.dyn_o ) [Optimisation flags changed]
 src/SourceLocation.hs:67:1: warning: [GHC-66111] [-Wunused-imports]
-    The import of ‘Data.List’ is redundant
-      except perhaps to import instances from ‘Data.List’
-    To import instances alone, use: import Data.List()
+    The import of ‘Data.Foldable’ is redundant
+      except perhaps to import instances from ‘Data.Foldable’
+    To import instances alone, use: import Data.Foldable()
    |
-67 | import Data.List (foldl')
-   | ^^^^^^^^^^^^^^^^^^^^^^^^^
+67 | import Data.Foldable (foldl')
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-[38 of 58] Compiling SyntaxValidator  ( src/SyntaxValidator.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/SyntaxValidator.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/SyntaxValidator.dyn_o ) [Source file changed]
-src/SyntaxValidator.hs:16:49: warning: [GHC-38856] [-Wunused-imports]
-    The import of ‘foldl'’ from module ‘Data.List’ is redundant
+[34 of 58] Compiling Ownership.Stub   ( src/Ownership/Stub.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Stub.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Stub.dyn_o ) [Optimisation flags changed]
+[35 of 58] Compiling Compiler.Errors.Compiler ( src/Compiler/Errors/Compiler.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/Errors/Compiler.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/Errors/Compiler.dyn_o ) [Optimisation flags changed]
+[36 of 58] Compiling EnhancedErrorHandler ( src/EnhancedErrorHandler.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/EnhancedErrorHandler.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/EnhancedErrorHandler.dyn_o ) [Optimisation flags changed]
+[37 of 58] Compiling Compiler.Errors  ( src/Compiler/Errors.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/Errors.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/Errors.dyn_o ) [Optimisation flags changed]
+[38 of 58] Compiling SyntaxValidator  ( src/SyntaxValidator.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/SyntaxValidator.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/SyntaxValidator.dyn_o ) [Optimisation flags changed]
+src/SyntaxValidator.hs:17:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Data.Foldable’ is redundant
+      except perhaps to import instances from ‘Data.Foldable’
+    To import instances alone, use: import Data.Foldable()
    |
-16 | import Data.List (isInfixOf, isPrefixOf, tails, foldl')
-   |                                                 ^^^^^^
+17 | import Data.Foldable (foldl')
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-[47 of 58] Compiling Compiler.TypeChecker ( src/Compiler/TypeChecker.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/TypeChecker.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/TypeChecker.dyn_o ) [Source file changed]
-src/Compiler/TypeChecker.hs:68:87: warning: [GHC-38856] [-Wunused-imports]
-    The import of ‘foldl'’ from module ‘Data.List’ is redundant
+[39 of 58] Compiling Utils            ( src/Utils.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Utils.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Utils.dyn_o ) [Optimisation flags changed]
+[40 of 58] Compiling Parser           ( src/Parser.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Parser.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Parser.dyn_o ) [Optimisation flags changed]
+[41 of 58] Compiling Compiler.DependentTypeChecker ( src/Compiler/DependentTypeChecker.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/DependentTypeChecker.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/DependentTypeChecker.dyn_o ) [Optimisation flags changed]
+[42 of 58] Compiling Compiler.GoParsing ( src/Compiler/GoParsing.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/GoParsing.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/GoParsing.dyn_o ) [Optimisation flags changed]
+[43 of 58] Compiling Compiler.GoVarSpec ( src/Compiler/GoVarSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/GoVarSpec.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/GoVarSpec.dyn_o ) [Optimisation flags changed]
+[44 of 58] Compiling Compiler.ValueAnalysis ( src/Compiler/ValueAnalysis.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/ValueAnalysis.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/ValueAnalysis.dyn_o ) [Optimisation flags changed]
+[45 of 58] Compiling Compiler.OwnershipChecker ( src/Compiler/OwnershipChecker.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/OwnershipChecker.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/OwnershipChecker.dyn_o ) [Optimisation flags changed]
+[46 of 58] Compiling Compiler.IR      ( src/Compiler/IR.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/IR.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/IR.dyn_o ) [Optimisation flags changed]
+[47 of 58] Compiling Compiler.TypeChecker ( src/Compiler/TypeChecker.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/TypeChecker.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/TypeChecker.dyn_o ) [Optimisation flags changed]
+src/Compiler/TypeChecker.hs:70:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Data.Foldable’ is redundant
+      except perhaps to import instances from ‘Data.Foldable’
+    To import instances alone, use: import Data.Foldable()
    |
-68 | import Data.List (intercalate, intersperse, isInfixOf, isPrefixOf, stripPrefix, (\\), foldl')
-   |                                                                                       ^^^^^^
+70 | import Data.Foldable (foldl')
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-[55 of 58] Compiling Analyzer.OwnershipBridge ( src/Analyzer/OwnershipBridge.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Analyzer/OwnershipBridge.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Analyzer/OwnershipBridge.dyn_o ) [Source file changed]
-src/Analyzer/OwnershipBridge.hs:13:79: warning: [GHC-38856] [-Wunused-imports]
-    The import of ‘foldl'’ from module ‘Data.List’ is redundant
+[48 of 58] Compiling Compiler         ( src/Compiler.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler.dyn_o ) [Optimisation flags changed]
+[49 of 58] Compiling Tooling.Error    ( src/Tooling/Error.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Tooling/Error.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Tooling/Error.dyn_o ) [Optimisation flags changed]
+[50 of 58] Compiling GoToolchain      ( src/GoToolchain.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/GoToolchain.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/GoToolchain.dyn_o ) [Optimisation flags changed]
+[51 of 58] Compiling CompilerUtils    ( src/CompilerUtils.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/CompilerUtils.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/CompilerUtils.dyn_o ) [Optimisation flags changed]
+[52 of 58] Compiling EmbedAssets      ( src/EmbedAssets.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/EmbedAssets.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/EmbedAssets.dyn_o ) [Optimisation flags changed]
+[53 of 58] Compiling Cli.Runner       ( src/Cli/Runner.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Cli/Runner.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Cli/Runner.dyn_o ) [Optimisation flags changed]
+[54 of 58] Compiling Analyzer.SymbolTable ( src/Analyzer/SymbolTable.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Analyzer/SymbolTable.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Analyzer/SymbolTable.dyn_o ) [Optimisation flags changed]
+[55 of 58] Compiling Analyzer.OwnershipBridge ( src/Analyzer/OwnershipBridge.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Analyzer/OwnershipBridge.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Analyzer/OwnershipBridge.dyn_o ) [Optimisation flags changed]
+src/Analyzer/OwnershipBridge.hs:15:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Data.Foldable’ is redundant
+      except perhaps to import instances from ‘Data.Foldable’
+    To import instances alone, use: import Data.Foldable()
    |
-13 | import Data.List (find, findIndex, isInfixOf, isPrefixOf, stripPrefix, tails, foldl')
-   |                                                                               ^^^^^^
+15 | import Data.Foldable (foldl')
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+[56 of 58] Compiling Analyzer.DependentTypeBridge ( src/Analyzer/DependentTypeBridge.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Analyzer/DependentTypeBridge.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Analyzer/DependentTypeBridge.dyn_o ) [Optimisation flags changed]
+[57 of 58] Compiling AnalyzerIntegration ( src/AnalyzerIntegration.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/AnalyzerIntegration.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/AnalyzerIntegration.dyn_o ) [Optimisation flags changed]
+[58 of 58] Compiling IntegratedCompiler ( src/IntegratedCompiler.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/IntegratedCompiler.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/IntegratedCompiler.dyn_o ) [Optimisation flags changed]
+Warning: -rtsopts and -with-rtsopts have no effect with -shared.
+    Call hs_init_ghc() from your main() function to set these options.
+/usr/bin/ld: warning: type and size of dynamic symbol `deepseqzm1zi5zi1zi0zmf671_ControlziDeepSeq_zdfNFDataInt_closure' are not defined
+/usr/bin/ld: warning: type and size of dynamic symbol `aesonzm2zi2zi3zi0zmf7b67ac57426cc03ac2252767166225ef1be83a1daea96f71035bea37629bd3b_DataziAesonziTypesziInternal_zdfIsStringValue_closure' are not defined
+/usr/bin/ld: warning: type and size of dynamic symbol `deepseqzm1zi5zi1zi0zmf671_ControlziDeepSeq_zdfNFDataBool_closure' are not defined
+Configuring executable 'typus' for typus-0.12.2...
 Preprocessing executable 'typus' for typus-0.12.2...
 Building executable 'typus' for typus-0.12.2...
-[2 of 2] Linking dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/x/typus/build/typus/typus [Library changed]
-Preprocessing test suite 'typus-test' for typus-0.12.2...
-Building test suite 'typus-test' for typus-0.12.2...
-[ 195 of 1025] Compiling Test.Unit.DebugBasicFunctionsSpec ( test/Test/Unit/DebugBasicFunctionsSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/DebugBasicFunctionsSpec.o ) [Source file changed]
-[ 204 of 1025] Compiling Test.Unit.DependenciesBasicFunctionsSpec ( test/Test/Unit/DependenciesBasicFunctionsSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/DependenciesBasicFunctionsSpec.o ) [Source file changed]
-[ 275 of 1025] Compiling Test.Unit.EnhancedIntegrationSpec ( test/Test/Unit/EnhancedIntegrationSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/EnhancedIntegrationSpec.o ) [Source file changed]
-[1006 of 1025] Compiling Test.Unit.AdditionalQuickCheckTestSuiteSpec ( test/Test/Unit/AdditionalQuickCheckTestSuiteSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/AdditionalQuickCheckTestSuiteSpec.o ) [Source file changed]
-test/Test/Unit/AdditionalQuickCheckTestSuiteSpec.hs:119:16: warning: [GHC-63397] [-Wname-shadowing]
-    This binding for ‘after’ shadows the existing binding
-      imported from ‘Test.Tasty’ at test/Test/Unit/AdditionalQuickCheckTestSuiteSpec.hs:9:1-17
-      (and originally defined in ‘tasty-1.5.3:Test.Tasty.Core’)
-    |
-119 |   let (before, after) = breakOn [c] s
-    |                ^^^^^
-
-test/Test/Unit/AdditionalQuickCheckTestSuiteSpec.hs:168:7: warning: [GHC-63397] [-Wname-shadowing]
-    This binding for ‘span’ shadows the existing binding
-      imported from ‘Prelude’ at test/Test/Unit/AdditionalQuickCheckTestSuiteSpec.hs:5:8-50
-      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.List’)
-    |
-168 |   let span = SourceSpan start end
-    |       ^^^^
-
-test/Test/Unit/AdditionalQuickCheckTestSuiteSpec.hs:269:7: warning: [GHC-40910] [-Wunused-local-binds]
-    Defined but not used: ‘rejoined’
-    |
-269 |       rejoined = L.intercalate [c] parts
-    |       ^^^^^^^^
-
-[1026 of 1026] Linking dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test [Objects changed]
+[1 of 1] Compiling Main             ( app/Main.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/x/typus/build/typus/typus-tmp/Main.o ) [Optimisation flags changed]
+[2 of 2] Linking dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/x/typus/build/typus/typus [Objects changed]

@@ -41,23 +41,11 @@ import SourceLocation
 -- Arbitrary Instances
 -- ============================================================================
 
-instance Arbitrary SourcePos where
-  arbitrary = do
-    line <- choose (1, 1000)
-    col <- choose (1, 1000)
-    offset <- choose (0, 100000)
-    return $ SourcePos line col offset
+-- Arbitrary instance for SourcePos is now defined in SourceLocation module
 
-instance Arbitrary SourceSpan where
-  arbitrary = do
-    start <- arbitrary
-    -- Ensure end is after or equal to start
-    endLine <- choose (posLine start, posLine start + 100)
-    endCol <- if endLine == posLine start 
-              then choose (posColumn start, posColumn start + 100)
-              else choose (1, 1000)
-    endOffset <- choose (posOffset start, posOffset start + 10000)
-    return $ SourceSpan start (SourcePos endLine endCol endOffset)
+
+-- Arbitrary instance for SourceSpan is now defined in SourceLocation module
+
 
 instance Arbitrary a => Arbitrary (Located a) where
   arbitrary = do

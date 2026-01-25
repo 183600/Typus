@@ -3,13 +3,9 @@
 module Test.Unit.CompilerCoreFunctionalitySpec where
 
 
-import Test.Tasty
-import Test.Tasty.HUnit
-import Test.Tasty.QuickCheck
-
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, assertBool, assertEqual)
-import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), Gen, oneof, elements, listOf, chooseInt, Property, (===), counterexample, property)
+import Test.Tasty.HUnit (testCase, assertBool)
+import Test.Tasty.QuickCheck (testProperty, Arbitrary(..), oneof, (===), property)
 
 import Compiler (compile, CompilerError(..), CompilationPhase(..), generateGoCode)
 import Compiler.Errors.Core (errorWithCategory, ErrorCategory(..), ErrorLocation(..), message)

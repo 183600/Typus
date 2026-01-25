@@ -8,19 +8,7 @@ import Test.Tasty.QuickCheck
 import TestSupport.QuickCheck (fastProperty)
 import SourceLocation (SourcePos(..), SourceSpan(..))
 
--- Arbitrary instances for testing
-instance Arbitrary SourcePos where
-  arbitrary = do
-    line <- choose (1, 100)
-    column <- choose (1, 100)
-    offset <- choose (0, 1000)
-    return $ SourcePos line column offset
-
-instance Arbitrary SourceSpan where
-  arbitrary = do
-    start <- arbitrary
-    end <- arbitrary
-    return $ SourceSpan start end
+-- Arbitrary instances are now defined in SourceLocation module
 
 -- Properties for SourcePos arithmetic
 prop_pos_line_non_negative :: SourcePos -> Bool

@@ -19,14 +19,11 @@ import Text.Megaparsec (parse, errorBundlePretty)
 import qualified Text.Megaparsec as MP
 
 -- Arbitrary instances for QuickCheck
-instance Arbitrary SourcePos where
-  arbitrary = SourcePos <$> choose (1, 100) <*> choose (1, 100) <*> choose (0, 10000)
+-- Arbitrary instance for SourcePos is now defined in SourceLocation module
 
-instance Arbitrary SourceSpan where
-  arbitrary = do
-    start <- arbitrary
-    end <- arbitrary
-    return $ spanBetween start end
+
+-- Arbitrary instance for SourceSpan is now defined in SourceLocation module
+
 
 instance Arbitrary BlockDirectives where
   arbitrary = return defaultBlockDirectives

@@ -9,19 +9,24 @@ import Test.Tasty.QuickCheck
 import qualified Utils
 import SourceLocation
 import Parser (FileDirectives(..), BlockDirectives(..), CodeBlock(..), TypusFile(..), defaultFileDirectives, defaultBlockDirectives)
-import Parser
-  ( FileDirectives(..)
-  , BlockDirectives(..)
-  , CodeBlock(..)
-  , TypusFile(..)
-  , defaultFileDirectives
-  , defaultBlockDirectives
-  )
 import TestSupport.QuickCheck (fastProperty)
-import Data.List (uncons, isPrefixOf, isSuffixOf)
 import Data.Char (isSpace)
-import Compiler.Errors.Types (ErrorLocation(..))
-import TestSupport.Arbitrary (arbitrarySourcePos, arbitrarySourceSpan)
+import Data.List (isPrefixOf, isSuffixOf, uncons)
+import Compiler.Errors.Types (line, column, endLine, endColumn)
+
+-- Arbitrary instances for Parser types
+instance Arbitrary FileDirectives where
+  arbitrary = return defaultFileDirectives
+
+instance Arbitrary BlockDirectives where
+  arbitrary = return defaultBlockDirectives
+
+instance Arbitrary CodeBlock where
+  arbitrary = do
+    fileDirectives <- arbitrary
+    blockDirectives <- arbitrary
+    content <- arbitrary
+    return $ CodeBlock fileDirectives blockDirectives content
 
 -- ============================================================================
 -- Utils Module Tests

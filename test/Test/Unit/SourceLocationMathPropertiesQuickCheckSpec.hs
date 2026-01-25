@@ -6,66 +6,15 @@ module Test.Unit.SourceLocationMathPropertiesQuickCheckSpec where
 import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
-
-
-
-import Test.Tasty
-import Test.Tasty.QuickCheck
-
 import Test.QuickCheck (conjoin, Arbitrary(..), choose)
 import qualified Test.QuickCheck as QC
-
 import SourceLocation (SourcePos(..), SourceSpan(..), startPos, advancePosByText)
-
 import qualified Data.Text as T
-
-import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
-
-import Control.Monad (replicateM)
-
 import Data.Char (isAlphaNum, isAlpha, isSpace, isControl)
 
-import Data.Either (isLeft, isRight)
 
 
-
--- | Arbitrary instance for SourcePos
-
-instance Arbitrary SourcePos where
-
-  arbitrary = do
-
-    line <- choose (0, 100)
-
-    column <- choose (0, 100)
-
-    offset <- choose (0, 1000)
-
-    return $ SourcePos line column offset
-
-
-
--- | Arbitrary instance for SourceSpan  
-
-
-
-instance Arbitrary SourceSpan where
-
-
-
-  arbitrary = do
-
-
-
-    start <- arbitrary
-
-
-
-    end <- arbitrary
-
-
-
-    return $ SourceSpan start end
+-- Arbitrary instances are now defined in SourceLocation module
 
 -- | 测试SourcePos的基本属性
 prop_sourcepos_basic :: Int -> Int -> Property
@@ -98,10 +47,10 @@ prop_sourcepos_order pos1 pos2 =
 -- | 测试SourceSpan的基本属性
 prop_sourcespan_basic :: SourcePos -> SourcePos -> Property
 prop_sourcespan_basic pos1 pos2 =
-  let span = SourceSpan pos1 pos2
+  let sourceSpan = SourceSpan pos1 pos2
   in conjoin 
-     [ spanStart span === pos1
-     , spanEnd span === pos2
+     [ spanStart sourceSpan === pos1
+     , spanEnd sourceSpan === pos2
      ]
 
 -- | 测试advancePosByText的基本属性
@@ -213,9 +162,9 @@ prop_sourcepos_valid line column =
 -- | 测试SourceSpan的有效性
 prop_sourcespan_valid :: SourcePos -> SourcePos -> Property
 prop_sourcespan_valid pos1 pos2 =
-  let span = SourceSpan pos1 pos2
-      start = spanStart span
-      end = spanEnd span
+  let sourceSpan = SourceSpan pos1 pos2
+      start = spanStart sourceSpan
+      end = spanEnd sourceSpan
   in conjoin [property (posLine start >= 0), property (posColumn start >= 0), 
             property (posLine end >= 0), property (posColumn end >= 0)]
 
@@ -225,10 +174,10 @@ prop_sourcespan_length pos (Positive n) =
   n < 100 ==>
   let text = T.pack $ replicate n 'x'
       end = advancePosByText text pos
-      span = SourceSpan pos end
-  in posLine (spanEnd span) >= posLine (spanStart span) || 
-     (posLine (spanEnd span) == posLine (spanStart span) && 
-      posColumn (spanEnd span) >= posColumn (spanStart span))
+      sourceSpan = SourceSpan pos end
+  in posLine (spanEnd sourceSpan) >= posLine (spanStart sourceSpan) || 
+     (posLine (spanEnd sourceSpan) == posLine (spanStart sourceSpan) && 
+      posColumn (spanEnd sourceSpan) >= posColumn (spanStart sourceSpan))
 
 -- | 测试SourcePos的相等性
 test_sourcepos_equality :: Assertion
@@ -245,17 +194,17 @@ test_sourcepos_order = do
   let pos1 = SourcePos 1 1 0
       pos2 = SourcePos 1 2 0
       pos3 = SourcePos 2 1 0
-  assertBool "Same line, earlier column is before" (True)  -- We would need an actual comparison function
-  assertBool "Earlier line is before later line" (True)   -- We would need an actual comparison function
+  assertBool "Same line, earlier column is before" (pos1 < pos2)  -- We would need an actual comparison function
+  assertBool "Earlier line is before later line" (pos1 < pos3)   -- We would need an actual comparison function
 
 -- | 测试SourceSpan的基本属性
 test_sourcespan_basic :: Assertion
 test_sourcespan_basic = do
   let start = SourcePos 1 1 0
       end = SourcePos 1 5 0
-      span = SourceSpan start end
-  assertEqual "Span start is correct" start (spanStart span)
-  assertEqual "Span end is correct" end (spanEnd span)
+      sourceSpan = SourceSpan start end
+  assertEqual "Span start is correct" start (spanStart sourceSpan)
+  assertEqual "Span end is correct" end (spanEnd sourceSpan)
 
 -- | 测试advancePosByText对于单个字符
 test_advancepos_single_char :: Assertion
@@ -323,9 +272,9 @@ test_sourcespan_valid :: Assertion
 test_sourcespan_valid = do
   let start = SourcePos 1 1 0
       end = SourcePos 1 5 0
-      span = SourceSpan start end
-  assertBool "Span start is valid" (posLine (spanStart span) >= 0 && posColumn (spanStart span) >= 0)
-  assertBool "Span end is valid" (posLine (spanEnd span) >= 0 && posColumn (spanEnd span) >= 0)
+      sourceSpan = SourceSpan start end
+  assertBool "Span start is valid" (posLine (spanStart sourceSpan) >= 0 && posColumn (spanStart sourceSpan) >= 0)
+  assertBool "Span end is valid" (posLine (spanEnd sourceSpan) >= 0 && posColumn (spanEnd sourceSpan) >= 0)
 
 -- | 测试SourceSpan的长度
 test_sourcespan_length :: Assertion
@@ -333,7 +282,7 @@ test_sourcespan_length = do
   let start = SourcePos 1 1 0
       text = T.pack "hello"
       end = advancePosByText text start
-      span = SourceSpan start end
+      sourceSpan = SourceSpan start end
   assertEqual "Span length matches text length" (T.length text) (posColumn end - posColumn start)
 
 -- | 测试套件

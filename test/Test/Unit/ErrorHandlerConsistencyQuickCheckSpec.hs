@@ -24,12 +24,8 @@ import Test.QuickCheck.Arbitrary (Arbitrary(..))
 import Test.QuickCheck.Gen (choose)
 
 -- | SourcePos 的 Arbitrary 实例
-instance Arbitrary SourcePos where
-  arbitrary = do
-    line <- choose (1, 1000)
-    column <- choose (1, 1000)
-    offset <- choose (0, 10000)
-    return $ SourcePos line column offset
+-- Arbitrary instance for SourcePos is now defined in SourceLocation module
+
 
 -- | 测试错误格式化的一致性
 prop_error_formatting_consistency :: String -> Property

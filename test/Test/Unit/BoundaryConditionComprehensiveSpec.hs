@@ -24,11 +24,8 @@ import Control.Monad (foldM)
 import Control.Monad.State (execState)
 
 -- Arbitrary instance for SourcePos
-instance Arbitrary SourcePos where
-  arbitrary = do
-    lineNum <- choose (1, 1000)
-    colNum <- choose (1, 1000)
-    return $ SourcePos { posLine = lineNum, posColumn = colNum, posOffset = 0 }
+-- Arbitrary instance for SourcePos is now defined in SourceLocation module
+
 
 -- Arbitrary instance for ErrorSeverity
 instance Arbitrary ErrorSeverity where

@@ -51,18 +51,11 @@ instance Arbitrary Resource where
     resourceType <- elements ["Memory", "File", "Socket", "Network", "Database"]
     return $ Resource resourceId resourceType
 
-instance Arbitrary SourcePos where
-  arbitrary = do
-    line <- choose (1, 100)
-    col <- choose (1, 100)
-    offset <- choose (0, 1000)
-    return $ SourcePos line col offset
+-- Arbitrary instance for SourcePos is now defined in SourceLocation module
 
-instance Arbitrary SourceSpan where
-  arbitrary = do
-    start <- arbitrary
-    end <- arbitrary
-    return $ SourceSpan start end
+
+-- Arbitrary instance for SourceSpan is now defined in SourceLocation module
+
 
 instance Arbitrary OwnershipRelation where
   arbitrary = do

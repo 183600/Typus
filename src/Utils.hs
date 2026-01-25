@@ -144,11 +144,15 @@ removeLineComments s =
         goNormal' (c:cs) = 
           case cs of
             ('/':'/':rest) -> 
-              -- 遇到注释，检查后面是否有转义引号
-              case rest of
-                ('\"':xs) -> [c, '\"'] ++ xs  -- 保留当前字符和转义引号及其后面的内容
-                _ -> [c]  -- 只保留当前字符
+              -- 遇到注释，从注释中提取引号
+              [c] ++ extractQuotesFromComment rest
             _ -> c : goNormal' cs
+          where
+            -- 从注释中提取引号
+            extractQuotesFromComment :: String -> String
+            extractQuotesFromComment [] = []
+            extractQuotesFromComment ('"':xs) = '"' : extractQuotesFromComment xs
+            extractQuotesFromComment (_:xs) = extractQuotesFromComment xs
         
         goInString :: String -> String
         goInString [] = []  -- 未闭合的字符串，不添加额外引号

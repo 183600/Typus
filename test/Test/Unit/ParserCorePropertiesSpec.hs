@@ -30,12 +30,8 @@ import qualified SyntaxValidator
 -- Arbitrary Instances
 -- ============================================================================
 
-instance Arbitrary SourcePos where
-  arbitrary = do
-    line <- arbitrary
-    column <- arbitrary
-    offset <- arbitrary
-    return $ SourcePos line column offset
+-- Arbitrary instance for SourcePos is now defined in SourceLocation module
+
 
 instance Arbitrary a => Arbitrary (Located a) where
   arbitrary = do
@@ -87,17 +83,8 @@ instance Arbitrary BlockDirectives where
     constraints <- arbitrary
     return $ BlockDirectives ownership dependentTypes constraints
 
-instance Arbitrary SourceSpan where
-  arbitrary = do
-    startLine <- choose (1, 100)
-    startCol <- choose (1, 100)
-    endLine <- choose (startLine, startLine + 10)
-    endCol <- if endLine == startLine 
-              then choose (startCol, startCol + 100)
-              else choose (1, 100)
-    let start = SourcePos startLine startCol 0
-        end = SourcePos endLine endCol 1000
-    return $ SourceSpan start end
+-- Arbitrary instance for SourceSpan is now defined in SourceLocation module
+
 
 instance Arbitrary CodeBlock where
   arbitrary = do

@@ -4,7 +4,6 @@ module Test.Unit.CompilerIRQuickCheckSpec where
 
 
 
-import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import TestSupport.QuickCheck (fastProperty)

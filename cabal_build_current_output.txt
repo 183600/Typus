@@ -1,0 +1,511 @@
+Resolving dependencies...
+Build profile: -w ghc-9.14.1 -O1
+In order, the following will be built (use -v for more details):
+ - OneTuple-0.4.2.1 (lib) (requires download & build)
+ - StateVar-1.2.2 (lib) (requires download & build)
+ - assoc-1.1.1 (lib) (requires download & build)
+ - base-orphans-0.9.4 (lib) (requires download & build)
+ - character-ps-0.1 (lib) (requires download & build)
+ - colour-2.3.6 (lib) (requires download & build)
+ - dlist-1.0 (lib) (requires download & build)
+ - generically-0.1.1 (lib) (requires download & build)
+ - hashable-1.5.1.0 (lib) (requires download & build)
+ - indexed-traversable-0.1.4 (lib) (requires download & build)
+ - integer-logarithms-1.0.5 (lib) (requires download & build)
+ - parser-combinators-1.3.1 (lib) (requires download & build)
+ - prettyprinter-1.7.1 (lib) (requires download & build)
+ - primitive-0.9.1.0 (lib) (requires download & build)
+ - splitmix-0.1.3.2 (lib) (requires download & build)
+ - tagged-0.8.10 (lib) (requires download & build)
+ - th-abstraction-0.7.2.0 (lib) (requires download & build)
+ - th-compat-0.1.7 (lib) (requires download & build)
+ - time-1.14 (lib) (requires download & build)
+ - transformers-compat-0.8 (lib) (requires download & build)
+ - vector-stream-0.1.0.1 (lib) (requires download & build)
+ - contravariant-1.5.6 (lib) (requires download & build)
+ - ansi-terminal-types-1.1.3 (lib) (requires download & build)
+ - unordered-containers-0.2.21 (lib) (requires download & build)
+ - these-1.2.1 (lib) (requires download & build)
+ - text-short-0.1.6.1 (lib) (requires download & build)
+ - data-fix-0.3.4 (lib) (requires download & build)
+ - case-insensitive-1.2.1.0 (lib) (requires download & build)
+ - scientific-0.3.8.1 (lib) (requires download & build)
+ - integer-conversion-0.1.1 (lib) (requires download & build)
+ - random-1.3.1 (lib) (requires download & build)
+ - distributive-0.6.3 (lib) (requires download & build)
+ - network-uri-2.6.4.2 (lib) (requires download & build)
+ - unix-2.8.8.0 (lib) (requires download & build)
+ - time-compat-1.9.8 (lib) (requires download & build)
+ - vector-0.13.2.0 (lib) (requires download & build)
+ - ansi-terminal-1.1.5 (lib) (requires download & build)
+ - strict-0.5.1 (lib) (requires download & build)
+ - megaparsec-9.7.0 (lib) (requires download & build)
+ - uuid-types-1.0.6 (lib) (requires download & build)
+ - QuickCheck-2.16.0.0 (lib) (requires download & build)
+ - comonad-5.0.10 (lib) (requires download & build)
+ - file-io-0.1.5 (lib) (requires download & build)
+ - text-iso8601-0.1.1 (lib) (requires download & build)
+ - indexed-traversable-instances-0.1.2 (lib) (requires download & build)
+ - prettyprinter-ansi-terminal-1.1.3 (lib) (requires download & build)
+ - bifunctors-5.6.3 (lib) (requires download & build)
+ - directory-1.3.10.1 (lib) (requires download & build)
+ - witherable-0.5 (lib) (requires download & build)
+ - semigroupoids-6.0.2 (lib) (requires download & build)
+ - temporary-1.3 (lib) (requires download & build)
+ - process-1.6.26.1 (lib) (requires download & build)
+ - Glob-0.10.2 (lib) (requires download & build)
+ - semialign-1.3.1 (lib) (requires download & build)
+ - optparse-applicative-0.19.0.0 (lib) (requires download & build)
+ - aeson-2.2.3.0 (lib) (requires download & build)
+ - typus-0.12.2 (lib) (first run)
+ - typus-0.12.2 (exe:typus) (first run)
+Downloading  base-orphans-0.9.4
+Downloaded   base-orphans-0.9.4
+Downloading  character-ps-0.1
+Starting     base-orphans-0.9.4 (lib)
+Downloaded   character-ps-0.1
+Downloading  colour-2.3.6
+Downloaded   colour-2.3.6
+Downloading  dlist-1.0
+Downloaded   dlist-1.0
+Downloading  generically-0.1.1
+Downloaded   generically-0.1.1
+Downloading  parser-combinators-1.3.1
+Downloaded   parser-combinators-1.3.1
+Downloading  splitmix-0.1.3.2
+Building     base-orphans-0.9.4 (lib)
+Downloaded   splitmix-0.1.3.2
+Downloading  tagged-0.8.10
+Downloaded   tagged-0.8.10
+Downloading  th-compat-0.1.7
+Downloaded   th-compat-0.1.7
+Downloading  time-1.14
+Downloaded   time-1.14
+Downloading  distributive-0.6.3
+Downloaded   distributive-0.6.3
+Downloading  primitive-0.9.1.0
+Downloaded   primitive-0.9.1.0
+Downloading  random-1.3.1
+Installing   base-orphans-0.9.4 (lib)
+Downloaded   random-1.3.1
+Downloading  transformers-compat-0.8
+Completed    base-orphans-0.9.4 (lib)
+Starting     character-ps-0.1 (lib)
+Downloaded   transformers-compat-0.8
+Downloading  vector-stream-0.1.0.1
+Downloaded   vector-stream-0.1.0.1
+Downloading  vector-0.13.2.0
+Downloaded   vector-0.13.2.0
+Downloading  assoc-1.1.1
+Building     character-ps-0.1 (lib)
+Downloaded   assoc-1.1.1
+Downloading  th-abstraction-0.7.2.0
+Starting     assoc-1.1.1 (lib)
+Downloaded   th-abstraction-0.7.2.0
+Downloading  indexed-traversable-0.1.4
+Downloaded   indexed-traversable-0.1.4
+Downloading  comonad-5.0.10
+Building     assoc-1.1.1 (lib)
+Downloaded   comonad-5.0.10
+Downloading  bifunctors-5.6.3
+Downloaded   bifunctors-5.6.3
+Downloading  integer-logarithms-1.0.5
+Installing   assoc-1.1.1 (lib)
+Installing   character-ps-0.1 (lib)
+Downloaded   integer-logarithms-1.0.5
+Downloading  unix-2.8.8.0
+Completed    assoc-1.1.1 (lib)
+Starting     colour-2.3.6 (lib)
+Completed    character-ps-0.1 (lib)
+Starting     dlist-1.0 (lib)
+Building     colour-2.3.6 (lib)
+Building     dlist-1.0 (lib)
+Downloaded   unix-2.8.8.0
+Downloading  file-io-0.1.5
+Downloaded   file-io-0.1.5
+Downloading  directory-1.3.10.1
+Downloaded   directory-1.3.10.1
+Downloading  process-1.6.26.1
+Downloaded   process-1.6.26.1
+Downloading  temporary-1.3
+Downloaded   temporary-1.3
+Downloading  hashable-1.5.1.0
+Downloaded   hashable-1.5.1.0
+Downloading  case-insensitive-1.2.1.0
+Downloaded   case-insensitive-1.2.1.0
+Downloading  data-fix-0.3.4
+Downloaded   data-fix-0.3.4
+Downloading  these-1.2.1
+Downloaded   these-1.2.1
+Downloading  time-compat-1.9.8
+Downloaded   time-compat-1.9.8
+Downloading  unordered-containers-0.2.21
+Downloaded   unordered-containers-0.2.21
+Downloading  integer-conversion-0.1.1
+Downloaded   integer-conversion-0.1.1
+Downloading  network-uri-2.6.4.2
+Downloaded   network-uri-2.6.4.2
+Downloading  prettyprinter-1.7.1
+Downloaded   prettyprinter-1.7.1
+Downloading  scientific-0.3.8.1
+Downloaded   scientific-0.3.8.1
+Downloading  megaparsec-9.7.0
+Downloaded   megaparsec-9.7.0
+Downloading  strict-0.5.1
+Downloaded   strict-0.5.1
+Downloading  text-iso8601-0.1.1
+Installing   dlist-1.0 (lib)
+Downloaded   text-iso8601-0.1.1
+Downloading  text-short-0.1.6.1
+Downloaded   text-short-0.1.6.1
+Downloading  uuid-types-1.0.6
+Downloaded   uuid-types-1.0.6
+Downloading  ansi-terminal-types-1.1.3
+Completed    dlist-1.0 (lib)
+Starting     generically-0.1.1 (lib)
+Downloaded   ansi-terminal-types-1.1.3
+Downloading  ansi-terminal-1.1.5
+Downloaded   ansi-terminal-1.1.5
+Downloading  prettyprinter-ansi-terminal-1.1.3
+Building     generically-0.1.1 (lib)
+Downloaded   prettyprinter-ansi-terminal-1.1.3
+Downloading  optparse-applicative-0.19.0.0
+Downloaded   optparse-applicative-0.19.0.0
+Downloading  StateVar-1.2.2
+Installing   generically-0.1.1 (lib)
+Downloaded   StateVar-1.2.2
+Downloading  contravariant-1.5.6
+Starting     StateVar-1.2.2 (lib)
+Completed    generically-0.1.1 (lib)
+Installing   colour-2.3.6 (lib)
+Starting     hashable-1.5.1.0 (lib)
+Downloaded   contravariant-1.5.6
+Downloading  semigroupoids-6.0.2
+Downloaded   semigroupoids-6.0.2
+Downloading  QuickCheck-2.16.0.0
+Completed    colour-2.3.6 (lib)
+Starting     indexed-traversable-0.1.4 (lib)
+Downloaded   QuickCheck-2.16.0.0
+Downloading  OneTuple-0.4.2.1
+Building     StateVar-1.2.2 (lib)
+Downloaded   OneTuple-0.4.2.1
+Downloading  indexed-traversable-instances-0.1.2
+Starting     OneTuple-0.4.2.1 (lib)
+Downloaded   indexed-traversable-instances-0.1.2
+Downloading  semialign-1.3.1
+Downloaded   semialign-1.3.1
+Downloading  witherable-0.5
+Building     indexed-traversable-0.1.4 (lib)
+Building     hashable-1.5.1.0 (lib)
+Downloaded   witherable-0.5
+Downloading  aeson-2.2.3.0
+Building     OneTuple-0.4.2.1 (lib)
+Downloaded   aeson-2.2.3.0
+Downloading  Glob-0.10.2
+Downloaded   Glob-0.10.2
+Installing   StateVar-1.2.2 (lib)
+Completed    StateVar-1.2.2 (lib)
+Starting     integer-logarithms-1.0.5 (lib)
+Installing   OneTuple-0.4.2.1 (lib)
+Completed    OneTuple-0.4.2.1 (lib)
+Starting     parser-combinators-1.3.1 (lib)
+Building     integer-logarithms-1.0.5 (lib)
+Building     parser-combinators-1.3.1 (lib)
+Installing   integer-logarithms-1.0.5 (lib)
+Completed    integer-logarithms-1.0.5 (lib)
+Starting     prettyprinter-1.7.1 (lib)
+Installing   parser-combinators-1.3.1 (lib)
+Completed    parser-combinators-1.3.1 (lib)
+Starting     primitive-0.9.1.0 (lib)
+Building     prettyprinter-1.7.1 (lib)
+Building     primitive-0.9.1.0 (lib)
+Installing   indexed-traversable-0.1.4 (lib)
+Installing   hashable-1.5.1.0 (lib)
+Completed    indexed-traversable-0.1.4 (lib)
+Starting     splitmix-0.1.3.2 (lib)
+Completed    hashable-1.5.1.0 (lib)
+Starting     tagged-0.8.10 (lib)
+Building     splitmix-0.1.3.2 (lib)
+Building     tagged-0.8.10 (lib)
+Installing   splitmix-0.1.3.2 (lib)
+Completed    splitmix-0.1.3.2 (lib)
+Starting     th-abstraction-0.7.2.0 (lib)
+Installing   tagged-0.8.10 (lib)
+Completed    tagged-0.8.10 (lib)
+Starting     th-compat-0.1.7 (lib)
+Building     th-abstraction-0.7.2.0 (lib)
+Building     th-compat-0.1.7 (lib)
+Installing   th-compat-0.1.7 (lib)
+Completed    th-compat-0.1.7 (lib)
+Starting     time-1.14 (lib)
+Building     time-1.14 (lib)
+Installing   primitive-0.9.1.0 (lib)
+Installing   th-abstraction-0.7.2.0 (lib)
+Completed    primitive-0.9.1.0 (lib)
+Starting     transformers-compat-0.8 (lib)
+Completed    th-abstraction-0.7.2.0 (lib)
+Starting     vector-stream-0.1.0.1 (lib)
+Installing   prettyprinter-1.7.1 (lib)
+Building     transformers-compat-0.8 (lib)
+Building     vector-stream-0.1.0.1 (lib)
+Completed    prettyprinter-1.7.1 (lib)
+Starting     ansi-terminal-types-1.1.3 (lib)
+Building     ansi-terminal-types-1.1.3 (lib)
+Installing   transformers-compat-0.8 (lib)
+Completed    transformers-compat-0.8 (lib)
+Starting     contravariant-1.5.6 (lib)
+Building     contravariant-1.5.6 (lib)
+Installing   ansi-terminal-types-1.1.3 (lib)
+Completed    ansi-terminal-types-1.1.3 (lib)
+Starting     unordered-containers-0.2.21 (lib)
+Building     unordered-containers-0.2.21 (lib)
+Installing   vector-stream-0.1.0.1 (lib)
+Completed    vector-stream-0.1.0.1 (lib)
+Starting     these-1.2.1 (lib)
+Installing   contravariant-1.5.6 (lib)
+Completed    contravariant-1.5.6 (lib)
+Starting     text-short-0.1.6.1 (lib)
+Building     these-1.2.1 (lib)
+Building     text-short-0.1.6.1 (lib)
+Installing   time-1.14 (lib)
+Completed    time-1.14 (lib)
+Starting     data-fix-0.3.4 (lib)
+Building     data-fix-0.3.4 (lib)
+Installing   these-1.2.1 (lib)
+Installing   text-short-0.1.6.1 (lib)
+Completed    these-1.2.1 (lib)
+Starting     case-insensitive-1.2.1.0 (lib)
+Completed    text-short-0.1.6.1 (lib)
+Starting     random-1.3.1 (lib)
+Installing   data-fix-0.3.4 (lib)
+Building     case-insensitive-1.2.1.0 (lib)
+Building     random-1.3.1 (lib)
+Completed    data-fix-0.3.4 (lib)
+Starting     distributive-0.6.3 (lib)
+Building     distributive-0.6.3 (lib)
+Installing   case-insensitive-1.2.1.0 (lib)
+Installing   distributive-0.6.3 (lib)
+Completed    case-insensitive-1.2.1.0 (lib)
+Starting     network-uri-2.6.4.2 (lib)
+Completed    distributive-0.6.3 (lib)
+Starting     scientific-0.3.8.1 (lib)
+Building     network-uri-2.6.4.2 (lib)
+Building     scientific-0.3.8.1 (lib)
+Installing   scientific-0.3.8.1 (lib)
+Completed    scientific-0.3.8.1 (lib)
+Starting     integer-conversion-0.1.1 (lib)
+Building     integer-conversion-0.1.1 (lib)
+Installing   integer-conversion-0.1.1 (lib)
+Completed    integer-conversion-0.1.1 (lib)
+Starting     ansi-terminal-1.1.5 (lib)
+Building     ansi-terminal-1.1.5 (lib)
+Installing   ansi-terminal-1.1.5 (lib)
+Completed    ansi-terminal-1.1.5 (lib)
+Starting     vector-0.13.2.0 (lib)
+Installing   network-uri-2.6.4.2 (lib)
+Completed    network-uri-2.6.4.2 (lib)
+Starting     unix-2.8.8.0 (lib)
+Building     vector-0.13.2.0 (lib)
+Installing   unordered-containers-0.2.21 (lib)
+Completed    unordered-containers-0.2.21 (lib)
+Starting     time-compat-1.9.8 (lib)
+Building     time-compat-1.9.8 (lib)
+Installing   random-1.3.1 (lib)
+Installing   time-compat-1.9.8 (lib)
+Completed    random-1.3.1 (lib)
+Starting     strict-0.5.1 (lib)
+Completed    time-compat-1.9.8 (lib)
+Starting     comonad-5.0.10 (lib)
+Building     strict-0.5.1 (lib)
+Building     comonad-5.0.10 (lib)
+Building     unix-2.8.8.0 (lib)
+Installing   comonad-5.0.10 (lib)
+Completed    comonad-5.0.10 (lib)
+Starting     megaparsec-9.7.0 (lib)
+Building     megaparsec-9.7.0 (lib)
+Installing   strict-0.5.1 (lib)
+Completed    strict-0.5.1 (lib)
+Starting     prettyprinter-ansi-terminal-1.1.3 (lib)
+Building     prettyprinter-ansi-terminal-1.1.3 (lib)
+Installing   prettyprinter-ansi-terminal-1.1.3 (lib)
+Completed    prettyprinter-ansi-terminal-1.1.3 (lib)
+Starting     uuid-types-1.0.6 (lib)
+Building     uuid-types-1.0.6 (lib)
+Installing   uuid-types-1.0.6 (lib)
+Completed    uuid-types-1.0.6 (lib)
+Starting     QuickCheck-2.16.0.0 (lib)
+Building     QuickCheck-2.16.0.0 (lib)
+Installing   megaparsec-9.7.0 (lib)
+Completed    megaparsec-9.7.0 (lib)
+Starting     text-iso8601-0.1.1 (lib)
+Building     text-iso8601-0.1.1 (lib)
+Installing   unix-2.8.8.0 (lib)
+Completed    unix-2.8.8.0 (lib)
+Starting     bifunctors-5.6.3 (lib)
+Building     bifunctors-5.6.3 (lib)
+Installing   text-iso8601-0.1.1 (lib)
+Completed    text-iso8601-0.1.1 (lib)
+Starting     file-io-0.1.5 (lib)
+Building     file-io-0.1.5 (lib)
+Installing   file-io-0.1.5 (lib)
+Completed    file-io-0.1.5 (lib)
+Starting     directory-1.3.10.1 (lib)
+Installing   QuickCheck-2.16.0.0 (lib)
+Completed    QuickCheck-2.16.0.0 (lib)
+Building     directory-1.3.10.1 (lib)
+Installing   bifunctors-5.6.3 (lib)
+Completed    bifunctors-5.6.3 (lib)
+Starting     semigroupoids-6.0.2 (lib)
+Installing   directory-1.3.10.1 (lib)
+Completed    directory-1.3.10.1 (lib)
+Starting     temporary-1.3 (lib)
+Starting     process-1.6.26.1 (lib)
+Building     semigroupoids-6.0.2 (lib)
+Building     temporary-1.3 (lib)
+Installing   temporary-1.3 (lib)
+Completed    temporary-1.3 (lib)
+Starting     Glob-0.10.2 (lib)
+Building     process-1.6.26.1 (lib)
+Building     Glob-0.10.2 (lib)
+Installing   Glob-0.10.2 (lib)
+Installing   process-1.6.26.1 (lib)
+Completed    Glob-0.10.2 (lib)
+Completed    process-1.6.26.1 (lib)
+Starting     optparse-applicative-0.19.0.0 (lib)
+Building     optparse-applicative-0.19.0.0 (lib)
+Installing   semigroupoids-6.0.2 (lib)
+Completed    semigroupoids-6.0.2 (lib)
+Installing   optparse-applicative-0.19.0.0 (lib)
+Completed    optparse-applicative-0.19.0.0 (lib)
+Installing   vector-0.13.2.0 (lib)
+Completed    vector-0.13.2.0 (lib)
+Starting     indexed-traversable-instances-0.1.2 (lib)
+Building     indexed-traversable-instances-0.1.2 (lib)
+Installing   indexed-traversable-instances-0.1.2 (lib)
+Completed    indexed-traversable-instances-0.1.2 (lib)
+Starting     witherable-0.5 (lib)
+Starting     semialign-1.3.1 (lib)
+Building     semialign-1.3.1 (lib)
+Building     witherable-0.5 (lib)
+Installing   witherable-0.5 (lib)
+Installing   semialign-1.3.1 (lib)
+Completed    witherable-0.5 (lib)
+Completed    semialign-1.3.1 (lib)
+Starting     aeson-2.2.3.0 (lib)
+Building     aeson-2.2.3.0 (lib)
+Installing   aeson-2.2.3.0 (lib)
+Completed    aeson-2.2.3.0 (lib)
+Configuring library for typus-0.12.2...
+Preprocessing library for typus-0.12.2...
+Building library for typus-0.12.2...
+[ 1 of 58] Compiling Cli              ( src/Cli.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Cli.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Cli.dyn_o )
+[ 2 of 58] Compiling CommandLineDebug ( src/CommandLineDebug.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/CommandLineDebug.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/CommandLineDebug.dyn_o )
+[ 3 of 58] Compiling Compiler.Error   ( src/Compiler/Error.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/Error.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/Error.dyn_o )
+[ 4 of 58] Compiling Compiler.GoAst   ( src/Compiler/GoAst.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/GoAst.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/GoAst.dyn_o )
+[ 5 of 58] Compiling Compiler.GoLexer ( src/Compiler/GoLexer.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/GoLexer.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/GoLexer.dyn_o )
+[ 6 of 58] Compiling Debug            ( src/Debug.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Debug.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Debug.dyn_o )
+[ 7 of 58] Compiling DebugIntegration ( src/DebugIntegration.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/DebugIntegration.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/DebugIntegration.dyn_o )
+[ 8 of 58] Compiling Dependencies.AST ( src/Dependencies/AST.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Dependencies/AST.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Dependencies/AST.dyn_o )
+[ 9 of 58] Compiling Dependencies.Parser ( src/Dependencies/Parser.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Dependencies/Parser.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Dependencies/Parser.dyn_o )
+[10 of 58] Compiling Dependencies.Stub ( src/Dependencies/Stub.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Dependencies/Stub.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Dependencies/Stub.dyn_o )
+[11 of 58] Compiling Dependencies.TypeSystem ( src/Dependencies/TypeSystem.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Dependencies/TypeSystem.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Dependencies/TypeSystem.dyn_o )
+[12 of 58] Compiling Dependencies.Inference ( src/Dependencies/Inference.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Dependencies/Inference.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Dependencies/Inference.dyn_o )
+[13 of 58] Compiling Dependencies.Analyzer ( src/Dependencies/Analyzer.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Dependencies/Analyzer.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Dependencies/Analyzer.dyn_o )
+[14 of 58] Compiling Dependencies     ( src/Dependencies.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Dependencies.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Dependencies.dyn_o )
+[15 of 58] Compiling DependentTypesParser ( src/DependentTypesParser.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/DependentTypesParser.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/DependentTypesParser.dyn_o )
+[16 of 58] Compiling DependentTypesParser.Stub ( src/DependentTypesParser/Stub.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/DependentTypesParser/Stub.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/DependentTypesParser/Stub.dyn_o )
+[17 of 58] Compiling EnhancedDebug    ( src/EnhancedDebug.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/EnhancedDebug.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/EnhancedDebug.dyn_o )
+[18 of 58] Compiling Cli.DebugRunner  ( src/Cli/DebugRunner.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Cli/DebugRunner.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Cli/DebugRunner.dyn_o )
+[19 of 58] Compiling Ownership.Common.Lexer ( src/Ownership/Common/Lexer.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Common/Lexer.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Common/Lexer.dyn_o )
+[20 of 58] Compiling Ownership.Common.Types ( src/Ownership/Common/Types.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Common/Types.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Common/Types.dyn_o )
+[21 of 58] Compiling Compiler.Errors.Types ( src/Compiler/Errors/Types.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/Errors/Types.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/Errors/Types.dyn_o )
+[22 of 58] Compiling Compiler.Errors.Core ( src/Compiler/Errors/Core.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/Errors/Core.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/Errors/Core.dyn_o )
+[23 of 58] Compiling ErrorHandler     ( src/ErrorHandler.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/ErrorHandler.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/ErrorHandler.dyn_o )
+[24 of 58] Compiling Ownership.Lexer  ( src/Ownership/Lexer.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Lexer.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Lexer.dyn_o )
+[25 of 58] Compiling Ownership.Parser ( src/Ownership/Parser.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Parser.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Parser.dyn_o )
+[26 of 58] Compiling Ownership.Analyzer ( src/Ownership/Analyzer.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Analyzer.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Analyzer.dyn_o )
+src/Ownership/Analyzer.hs:10:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Data.Foldable’ is redundant
+      except perhaps to import instances from ‘Data.Foldable’
+    To import instances alone, use: import Data.Foldable()
+   |
+10 | import Data.Foldable (foldl')
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[27 of 58] Compiling Ownership.Reporter ( src/Ownership/Reporter.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Reporter.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Reporter.dyn_o )
+[28 of 58] Compiling Ownership        ( src/Ownership.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership.dyn_o )
+[29 of 58] Compiling Analyzer.Types   ( src/Analyzer/Types.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Analyzer/Types.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Analyzer/Types.dyn_o )
+[30 of 58] Compiling Analyzer.State   ( src/Analyzer/State.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Analyzer/State.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Analyzer/State.dyn_o )
+[31 of 58] Compiling Analyzer.CrossAnalysis ( src/Analyzer/CrossAnalysis.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Analyzer/CrossAnalysis.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Analyzer/CrossAnalysis.dyn_o )
+[32 of 58] Compiling SimpleSyntaxValidator ( src/SimpleSyntaxValidator.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/SimpleSyntaxValidator.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/SimpleSyntaxValidator.dyn_o )
+src/SimpleSyntaxValidator.hs:10:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Data.Foldable’ is redundant
+      except perhaps to import instances from ‘Data.Foldable’
+    To import instances alone, use: import Data.Foldable()
+   |
+10 | import Data.Foldable (foldl')
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[33 of 58] Compiling SourceLocation   ( src/SourceLocation.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/SourceLocation.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/SourceLocation.dyn_o )
+src/SourceLocation.hs:67:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Data.Foldable’ is redundant
+      except perhaps to import instances from ‘Data.Foldable’
+    To import instances alone, use: import Data.Foldable()
+   |
+67 | import Data.Foldable (foldl')
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[34 of 58] Compiling Ownership.Stub   ( src/Ownership/Stub.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Stub.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Stub.dyn_o )
+[35 of 58] Compiling Compiler.Errors.Compiler ( src/Compiler/Errors/Compiler.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/Errors/Compiler.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/Errors/Compiler.dyn_o )
+[36 of 58] Compiling EnhancedErrorHandler ( src/EnhancedErrorHandler.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/EnhancedErrorHandler.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/EnhancedErrorHandler.dyn_o )
+[37 of 58] Compiling Compiler.Errors  ( src/Compiler/Errors.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/Errors.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/Errors.dyn_o )
+[38 of 58] Compiling SyntaxValidator  ( src/SyntaxValidator.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/SyntaxValidator.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/SyntaxValidator.dyn_o )
+src/SyntaxValidator.hs:17:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Data.Foldable’ is redundant
+      except perhaps to import instances from ‘Data.Foldable’
+    To import instances alone, use: import Data.Foldable()
+   |
+17 | import Data.Foldable (foldl')
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[39 of 58] Compiling Utils            ( src/Utils.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Utils.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Utils.dyn_o )
+[40 of 58] Compiling Parser           ( src/Parser.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Parser.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Parser.dyn_o )
+[41 of 58] Compiling Compiler.DependentTypeChecker ( src/Compiler/DependentTypeChecker.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/DependentTypeChecker.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/DependentTypeChecker.dyn_o )
+[42 of 58] Compiling Compiler.GoParsing ( src/Compiler/GoParsing.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/GoParsing.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/GoParsing.dyn_o )
+[43 of 58] Compiling Compiler.GoVarSpec ( src/Compiler/GoVarSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/GoVarSpec.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/GoVarSpec.dyn_o )
+[44 of 58] Compiling Compiler.ValueAnalysis ( src/Compiler/ValueAnalysis.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/ValueAnalysis.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/ValueAnalysis.dyn_o )
+[45 of 58] Compiling Compiler.OwnershipChecker ( src/Compiler/OwnershipChecker.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/OwnershipChecker.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/OwnershipChecker.dyn_o )
+[46 of 58] Compiling Compiler.IR      ( src/Compiler/IR.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/IR.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/IR.dyn_o )
+[47 of 58] Compiling Compiler.TypeChecker ( src/Compiler/TypeChecker.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/TypeChecker.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/TypeChecker.dyn_o )
+src/Compiler/TypeChecker.hs:70:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Data.Foldable’ is redundant
+      except perhaps to import instances from ‘Data.Foldable’
+    To import instances alone, use: import Data.Foldable()
+   |
+70 | import Data.Foldable (foldl')
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[48 of 58] Compiling Compiler         ( src/Compiler.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler.dyn_o )
+[49 of 58] Compiling Tooling.Error    ( src/Tooling/Error.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Tooling/Error.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Tooling/Error.dyn_o )
+[50 of 58] Compiling GoToolchain      ( src/GoToolchain.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/GoToolchain.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/GoToolchain.dyn_o )
+[51 of 58] Compiling CompilerUtils    ( src/CompilerUtils.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/CompilerUtils.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/CompilerUtils.dyn_o )
+[52 of 58] Compiling EmbedAssets      ( src/EmbedAssets.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/EmbedAssets.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/EmbedAssets.dyn_o )
+[53 of 58] Compiling Cli.Runner       ( src/Cli/Runner.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Cli/Runner.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Cli/Runner.dyn_o )
+[54 of 58] Compiling Analyzer.SymbolTable ( src/Analyzer/SymbolTable.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Analyzer/SymbolTable.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Analyzer/SymbolTable.dyn_o )
+[55 of 58] Compiling Analyzer.OwnershipBridge ( src/Analyzer/OwnershipBridge.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Analyzer/OwnershipBridge.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Analyzer/OwnershipBridge.dyn_o )
+src/Analyzer/OwnershipBridge.hs:15:1: warning: [GHC-66111] [-Wunused-imports]
+    The import of ‘Data.Foldable’ is redundant
+      except perhaps to import instances from ‘Data.Foldable’
+    To import instances alone, use: import Data.Foldable()
+   |
+15 | import Data.Foldable (foldl')
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[56 of 58] Compiling Analyzer.DependentTypeBridge ( src/Analyzer/DependentTypeBridge.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Analyzer/DependentTypeBridge.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Analyzer/DependentTypeBridge.dyn_o )
+[57 of 58] Compiling AnalyzerIntegration ( src/AnalyzerIntegration.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/AnalyzerIntegration.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/AnalyzerIntegration.dyn_o )
+[58 of 58] Compiling IntegratedCompiler ( src/IntegratedCompiler.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/IntegratedCompiler.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/IntegratedCompiler.dyn_o )
+Configuring executable 'typus' for typus-0.12.2...
+Preprocessing executable 'typus' for typus-0.12.2...
+Building executable 'typus' for typus-0.12.2...
+[1 of 1] Compiling Main             ( app/Main.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/x/typus/build/typus/typus-tmp/Main.o )
+[2 of 2] Linking dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/x/typus/build/typus/typus
