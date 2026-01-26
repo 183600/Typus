@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-orphans  -Wno-unused-imports -Wno-name-shadowing  -Wno-unused-matches #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 {-# LANGUAGE FlexibleInstances #-}
 module Test.Unit.NewParserQuickCheckSpec where

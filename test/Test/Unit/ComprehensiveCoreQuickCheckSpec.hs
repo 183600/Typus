@@ -7,17 +7,13 @@ import Test.Tasty
 import Test.Tasty.QuickCheck
 
 
-
-import Test.Tasty
-import Test.Tasty.QuickCheck
-
 import Test.Unit.CoreParserPropertiesQuickCheckSpec (coreParserPropertiesSpec)
 import Test.Unit.CoreCompilerPropertiesQuickCheckSpec (coreCompilerPropertiesSpec)
 import Test.Unit.CoreOwnershipPropertiesQuickCheckSpec (coreOwnershipPropertiesSpec)
 import Test.Unit.CoreDependenciesPropertiesQuickCheckSpec (coreDependenciesPropertiesSpec)
 import Test.Unit.CoreSourceLocationPropertiesQuickCheckSpec (coreSourceLocationPropertiesSpec)
-import Test.Unit.CoreIntegrationPropertiesQuickCheckSpec (coreIntegrationPropertiesSpec)
-import Test.Unit.CorePerformancePropertiesQuickCheckSpec (corePerformancePropertiesSpec)
+
+
 
 -- | Comprehensive test suite for all core modules
 comprehensiveCoreQuickCheckSpec :: TestTree
@@ -33,21 +29,21 @@ comprehensiveCoreQuickCheckSpec = testGroup "Comprehensive Core QuickCheck Tests
 crossModuleIntegrationSpec :: TestTree
 crossModuleIntegrationSpec = testGroup "Cross-Module Integration Tests"
   [ testProperty "Parser-Compiler-Ownership pipeline consistency" $
-      \(code :: String) -> 
-        let parseResult = parseCode code
-            compileResult = compileCode parseResult
-            ownershipResult = analyzeOwnershipCode parseResult
+      \(_ :: String) -> 
+        let _parseResult = parseCode ""
+            _compileResult = compileCode _parseResult
+            _ownershipResult = analyzeOwnershipCode _parseResult
         in property True
 
   , testProperty "Error handling across all modules is consistent" $
-      \(errorInput :: String) -> 
-        let parserErrors = extractParserErrors errorInput
-            compilerErrors = extractCompilerErrors errorInput
-            ownershipErrors = extractOwnershipErrors errorInput
+      \(_ :: String) -> 
+        let _parserErrors = extractParserErrors ""
+            _compilerErrors = extractCompilerErrors ""
+            _ownershipErrors = extractOwnershipErrors ""
         in property True
 
   , testCase "Full end-to-end workflow" $ do
-    let input = "func test() { let x = 42; return x; }"
+    let _input = "func test() { let x = 42; return x; }"
     assertBool "End-to-end workflow succeeds" True
   ]
 

@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-orphans  -Wno-unused-imports -Wno-name-shadowing -Wno-unused-local-binds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Test.Unit.ErrorHandlerAdvancedQuickCheckSpec where
 

@@ -119,11 +119,11 @@ testEdgeCasesAndBoundaries = testGroup "Edge Cases and Boundary Conditions"
 -- Property-based integration tests
 testPropertyBasedIntegration :: TestTree
 testPropertyBasedIntegration = testGroup "Property-Based Integration Tests"
-  [ testProperty "Parser-Compiler roundtrip" $ (\(input :: String) -> property True)
-  , testProperty "ErrorHandler error preservation" $ (\(errors :: [Int]) -> property True)
-  , testProperty "Ownership transfer consistency" $ (\(transfers :: [Int]) -> property True)
-  , testProperty "SourceLocation position accuracy" $ (\(positions :: [Int]) -> property True)
-  , testProperty "Utils function composition" $ (\(strings :: [String]) -> property True)
+  [ testProperty "Parser-Compiler roundtrip" $ (\(_ :: String) -> property True)
+  , testProperty "ErrorHandler error preservation" $ (\(_ :: [Int]) -> property True)
+  , testProperty "Ownership transfer consistency" $ (\(_ :: [Int]) -> property True)
+  , testProperty "SourceLocation position accuracy" $ (\(_ :: [Int]) -> property True)
+  , testProperty "Utils function composition" $ (\(_ :: [String]) -> property True)
   ]
 
 -- Main comprehensive test suite

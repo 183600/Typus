@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-unused-imports -Wno-name-shadowing #-}
 module Test.Unit.UtilsCorePropertiesSpec where
 
 

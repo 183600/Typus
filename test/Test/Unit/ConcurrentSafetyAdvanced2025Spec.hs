@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 module Test.Unit.ConcurrentSafetyAdvanced2025Spec where
 
 

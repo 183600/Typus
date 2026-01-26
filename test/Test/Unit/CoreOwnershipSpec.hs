@@ -1,4 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# OPTIONS_GHC -Wno-unused-imports  -Wno-type-defaults #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Test.Unit.CoreOwnershipSpec where
 
@@ -149,10 +150,10 @@ test_multiple_ownership_transfers = do
 test_ownership_validation_chain :: Assertion
 test_ownership_validation_chain = do
   let ownershipMap = Map.insert "x" (Owned "x") (Map.insert "y" (Borrowed "x") (Map.insert "z" (MutBorrowed "x") Map.empty))
-  let xValid = Map.member "x" ownershipMap
-  let yValid = Map.member "y" ownershipMap
-  let zValid = Map.member "z" ownershipMap
-  let wValid = Map.member "w" ownershipMap
+  let xValid = Map.member ("x" :: String) ownershipMap
+  let yValid = Map.member ("y" :: String) ownershipMap
+  let zValid = Map.member ("z" :: String) ownershipMap
+  let wValid = Map.member ("w" :: String) ownershipMap
   assertBool "x should have valid ownership" xValid
   assertBool "y should have valid ownership" yValid
   assertBool "z should have valid ownership" zValid

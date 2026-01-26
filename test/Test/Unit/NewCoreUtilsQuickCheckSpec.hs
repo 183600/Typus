@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-unused-imports -Wno-name-shadowing #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Test.Unit.NewCoreUtilsQuickCheckSpec where
 

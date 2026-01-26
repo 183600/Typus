@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-unused-imports -Wno-unused-local-binds #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
 module Test.Unit.ConcurrentSafetyQuickCheckSpec where
 
 
@@ -37,7 +39,7 @@ prop_concurrent_read_write n =
 prop_concurrent_mvar_access :: Int -> Property
 prop_concurrent_mvar_access n =
   n >= 0 && n <= 20 ==> 
-  let initialValues = replicate n 0
+  let initialValues = replicate n (0 :: Int)
   in whenFail (print ("Values: " ++ show (length initialValues))) $
      property True  -- 简化测试，实际应该测试MVar并发访问
 
@@ -77,7 +79,7 @@ prop_concurrent_condition_variables n =
 prop_concurrent_atomic_increment :: Int -> Property
 prop_concurrent_atomic_increment n =
   n >= 0 && n <= 100 ==> 
-  let initialValue = 0
+  let initialValue = (0 :: Int)
       increments = replicate n 1
   in whenFail (print ("Increments: " ++ show (length increments))) $
      property True  -- 简化测试，实际应该测试原子递增
@@ -85,7 +87,7 @@ prop_concurrent_atomic_increment n =
 prop_concurrent_atomic_compare_swap :: Int -> Property
 prop_concurrent_atomic_compare_swap n =
   n >= 0 && n <= 50 ==> 
-  let initialValue = 0
+  let initialValue = (0 :: Int)
       operations = replicate n 1
   in whenFail (print ("Operations: " ++ show (length operations))) $
      property True  -- 简化测试，实际应该测试原子比较交换
@@ -119,7 +121,7 @@ prop_concurrent_throughput n =
 prop_concurrent_scalability :: Int -> Property
 prop_concurrent_scalability n =
   n >= 1 && n <= 8 ==> 
-  let workload = 1000
+  let workload = (1000 :: Int)
   in whenFail (print ("Threads: " ++ show n ++ 
                ", Workload: " ++ show workload)) $
      property True  -- 简化测试，实际应该测试可扩展性
@@ -145,7 +147,7 @@ prop_concurrent_resource_cleanup n =
 prop_memory_consistency_across_threads :: Int -> Property
 prop_memory_consistency_across_threads n =
   n >= 2 && n <= 10 ==> 
-  let sharedValue = 42
+  let sharedValue = (42 :: Int)
       readers = n - 1
   in whenFail (print ("Shared value: " ++ show sharedValue ++ 
                ", Readers: " ++ show readers)) $

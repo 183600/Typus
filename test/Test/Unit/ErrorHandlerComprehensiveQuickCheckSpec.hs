@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unused-imports -Wno-name-shadowing #-}
 module Test.Unit.ErrorHandlerComprehensiveQuickCheckSpec where
 
 

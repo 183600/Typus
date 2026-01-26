@@ -1,4 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# OPTIONS_GHC -Wno-unused-imports -Wno-name-shadowing -Wno-unused-local-binds  -Wno-type-defaults #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Test.Unit.CoreErrorHandlerSpec where
 
@@ -43,7 +44,7 @@ prop_defaultErrorHandler_no_errors =
 -- | addError should mark hasErrors as true
 prop_handleError_increases_count :: String -> Property
 prop_handleError_increases_count msg = 
-  let location = ErrorLocation Nothing 0 0 Nothing Nothing
+  let location = ErrorLocation Nothing (0 :: Int) (0 :: Int) Nothing Nothing
       error = errorAt "test" Error (T.pack msg) location
       errors = execState (addError error) []
   in property $ hasErrors errors

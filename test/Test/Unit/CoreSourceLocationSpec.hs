@@ -1,4 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# OPTIONS_GHC -Wno-unused-imports -Wno-name-shadowing  -Wno-type-defaults #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Test.Unit.CoreSourceLocationSpec where
 

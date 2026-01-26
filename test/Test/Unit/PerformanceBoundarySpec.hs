@@ -1,5 +1,5 @@
 {-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-orphans  -Wno-unused-imports -Wno-unused-local-binds  -Wno-type-defaults #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
 module Test.Unit.PerformanceBoundarySpec where
 

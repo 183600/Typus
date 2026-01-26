@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-unused-imports -Wno-name-shadowing #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Test.Unit.CoreSourceLocationQuickCheckSpec where
 
@@ -191,15 +192,15 @@ prop_locatedPosValid =
 -- | Test that toErrorLocation converts span to error location
 prop_toErrorLocationValid :: Property
 prop_toErrorLocationValid =
-  forAll arbitrarySourceSpan $ \span ->
-    let _errLoc = toErrorLocationWithSpan span
+  forAll arbitrarySourceSpan $ \sourceSpan ->
+    let _errLoc = toErrorLocationWithSpan sourceSpan
     in property $ True  -- Basic sanity check
 
 -- | Test that toErrorLocationWithSpan converts span to error location with span
 prop_toErrorLocationWithSpanValid :: Property
 prop_toErrorLocationWithSpanValid =
-  forAll arbitrarySourceSpan $ \span ->
-    let _errLoc = toErrorLocationWithSpan span
+  forAll arbitrarySourceSpan $ \sourceSpan ->
+    let _errLoc = toErrorLocationWithSpan sourceSpan
     in property $ True  -- Basic sanity check
 
 -- ============================================================================

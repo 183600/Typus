@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-unused-imports -Wno-name-shadowing -Wno-unused-local-binds  -Wno-unused-matches -Wno-type-defaults #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Test.Unit.NewStringProcessingQuickCheckSpec where
 

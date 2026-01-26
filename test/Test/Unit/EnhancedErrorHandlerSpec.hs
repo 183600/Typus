@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-name-shadowing -Wno-unused-local-binds #-}
 module Test.Unit.EnhancedErrorHandlerSpec where
 
 

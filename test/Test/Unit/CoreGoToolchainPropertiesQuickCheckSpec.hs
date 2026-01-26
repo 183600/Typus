@@ -1,4 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# OPTIONS_GHC -Wno-orphans  -Wno-unused-imports -Wno-unused-local-binds  -Wno-unused-matches #-}
 module Test.Unit.CoreGoToolchainPropertiesQuickCheckSpec where
 
 
@@ -51,7 +52,7 @@ coreGoToolchainPropertiesSpec = testGroup "Core Go Toolchain Properties"
 
 -- Helper functions for testing
 createGoModule :: T.Text -> String
-createGoModule name = undefined
+createGoModule _ = undefined
 
 createGoFunction_ :: T.Text -> [T.Text] -> String
 createGoFunction_ _ _ = undefined

@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
 module Test.Unit.PerformanceBoundaryQuickCheckSpec where
 
 

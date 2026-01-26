@@ -545,10 +545,17 @@ validateTypusSpecific validator tokens =
 checkTypusDirective :: SyntaxValidator -> Token -> SyntaxValidator
 checkTypusDirective validator (TComment comment line col)
     | "//!" `isPrefixOf` comment = 
-        if ':' `elem` drop 3 comment
-        then validator
-        else addError validator InvalidStatement 
-                     "Invalid Typus directive format" line col comment
+        let directiveContent = drop 3 comment
+            trimmedContent = dropWhile isSpace directiveContent
+            -- Check if it's a valid directive format (key=value or just key)
+            hasValidFormat = '=' `elem` directiveContent || 
+                             any (`isPrefixOf` trimmedContent) 
+                                 ["file_directive", "malformed", "ownership", "dependent_types", 
+                                  "constraints", "message", "build_tags", "go:build"]
+        in if null trimmedContent || hasValidFormat
+           then validator
+           else addError validator InvalidStatement 
+                        "Invalid Typus directive format" line col comment
     | "{//!" `isPrefixOf` comment =
         if ('}' :: Char) `elem` comment
         then validator

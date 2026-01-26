@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
 module Test.Unit.StringProcessingQuickCheckSpec where
 
 

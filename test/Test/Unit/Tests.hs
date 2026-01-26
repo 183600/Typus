@@ -15,6 +15,8 @@ import qualified Test.Unit.BasicQuickCheckTestsSpec as BasicQuickCheckTestsSpec
 import qualified Test.Unit.BoundaryConditionAdvancedQuickCheckSpec as BoundaryConditionAdvancedQuickCheckSpec
 import qualified Test.Unit.BoundaryConditionComprehensiveSpec as BoundaryConditionComprehensiveSpec
 import qualified Test.Unit.CodeGenerationQuickCheckSpec as CodeGenerationQuickCheckSpec
+import Test.Unit.TestParserErrorRecoverySpec (testParserErrorRecovery)
+import Test.Unit.TestParserDirectivesSpec (testParserDirectives)
 
 -- Basic test properties
 prop_basic_property :: String -> Property
@@ -29,5 +31,7 @@ tests = testGroup "Test.Unit.Tests Tests"
     BasicQuickCheckTestsSpec.tests,
     BoundaryConditionAdvancedQuickCheckSpec.tests,
     BoundaryConditionComprehensiveSpec.boundaryConditionComprehensiveTests,
-    CodeGenerationQuickCheckSpec.tests
+    CodeGenerationQuickCheckSpec.tests,
+    testParserErrorRecovery,
+    testParserDirectives
   ]

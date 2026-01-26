@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures  -Wno-unused-imports -Wno-unused-local-binds #-}
 
 module Test.Unit.TestGoToolchainIntegrationSpec where
 

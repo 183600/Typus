@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-unused-imports -Wno-unused-local-binds  -Wno-type-defaults #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Test.Unit.DependenciesAdvancedQuickCheckSpec where
 

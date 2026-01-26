@@ -1,15 +1,1 @@
-Build profile: -w ghc-9.14.1 -O1
-In order, the following will be built (use -v for more details):
- - typus-0.12.2 (lib) (file src/SyntaxValidator.hs changed)
- - typus-0.12.2 (exe:typus) (dependency rebuilt)
-Preprocessing library for typus-0.12.2...
-Building library for typus-0.12.2...
-[26 of 58] Compiling Ownership.Analyzer ( src/Ownership/Analyzer.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Analyzer.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Ownership/Analyzer.dyn_o ) [Source file changed]
-[32 of 58] Compiling SimpleSyntaxValidator ( src/SimpleSyntaxValidator.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/SimpleSyntaxValidator.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/SimpleSyntaxValidator.dyn_o ) [Source file changed]
-[33 of 58] Compiling SourceLocation   ( src/SourceLocation.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/SourceLocation.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/SourceLocation.dyn_o ) [Source file changed]
-[38 of 58] Compiling SyntaxValidator  ( src/SyntaxValidator.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/SyntaxValidator.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/SyntaxValidator.dyn_o ) [Source file changed]
-[47 of 58] Compiling Compiler.TypeChecker ( src/Compiler/TypeChecker.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/TypeChecker.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/TypeChecker.dyn_o ) [Source file changed]
-[55 of 58] Compiling Analyzer.OwnershipBridge ( src/Analyzer/OwnershipBridge.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Analyzer/OwnershipBridge.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Analyzer/OwnershipBridge.dyn_o ) [Source file changed]
-Preprocessing executable 'typus' for typus-0.12.2...
-Building executable 'typus' for typus-0.12.2...
-[2 of 2] Linking dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/x/typus/build/typus/typus [Flags changed]
+Up to date

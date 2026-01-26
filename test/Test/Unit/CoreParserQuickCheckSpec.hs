@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Test.Unit.CoreParserQuickCheckSpec where
 

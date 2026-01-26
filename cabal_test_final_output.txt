@@ -1,17 +1,18 @@
 Build profile: -w ghc-9.14.1 -O1
 In order, the following will be built (use -v for more details):
- - typus-0.12.2 (lib) (file src/SourceLocation.hs changed)
- - typus-0.12.2 (exe:typus) (dependency rebuilt)
+ - typus-0.12.2 (lib) (configuration changed)
+ - typus-0.12.2 (exe:typus) (configuration changed)
  - typus-0.12.2 (test:typus-test) (dependency rebuilt)
+Configuring library for typus-0.12.2...
 Preprocessing library for typus-0.12.2...
 Building library for typus-0.12.2...
-[33 of 58] Compiling SourceLocation   ( src/SourceLocation.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/SourceLocation.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/SourceLocation.dyn_o ) [Source file changed]
+Configuring executable 'typus' for typus-0.12.2...
 Preprocessing executable 'typus' for typus-0.12.2...
 Building executable 'typus' for typus-0.12.2...
 [2 of 2] Linking dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/x/typus/build/typus/typus [Flags changed]
 Preprocessing test suite 'typus-test' for typus-0.12.2...
 Building test suite 'typus-test' for typus-0.12.2...
-[1026 of 1026] Linking dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test [Flags changed]
+[1027 of 1027] Linking dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test [Flags changed]
 Running 1 test suites...
 Test suite typus-test: RUNNING...
 Test.Unit.Tests Tests
@@ -136,11 +137,11 @@ Test.Unit.Tests Tests
         Compiler Properties
           compile_properties:                                                            OK
             +++ OK, passed 100 tests.
-          renderCompilationError_properties:                                             OK (0.27s)
+          renderCompilationError_properties:                                             OK (0.23s)
             +++ OK, passed 100 tests.
           formatCompilerErrors_properties:                                               OK (0.27s)
             +++ OK, passed 100 tests.
-          generateDetailedReport_properties:                                             OK (0.31s)
+          generateDetailedReport_properties:                                             OK (0.27s)
             +++ OK, passed 100 tests.
           analyzeErrors_properties:                                                      OK
             +++ OK, passed 100 tests.
@@ -225,7 +226,7 @@ Test.Unit.Tests Tests
             +++ OK, passed 100 tests.
           filterBySeverityForTests_properties:                                           OK
             +++ OK, passed 100 tests.
-          sortBySeverity_properties:                                                     OK (0.19s)
+          sortBySeverity_properties:                                                     OK (0.18s)
             +++ OK, passed 100 tests.
           renderErrors_properties:                                                       OK
             +++ OK, passed 100 tests.
@@ -238,11 +239,11 @@ Test.Unit.Tests Tests
           oaErrors_properties:                                                           OK
             +++ OK, passed 100 tests.
         Ownership Query Properties
-          getOwners_properties:                                                          OK (0.02s)
+          getOwners_properties:                                                          OK (0.01s)
             +++ OK, passed 100 tests.
-          getBorrowers_properties:                                                       OK
+          getBorrowers_properties:                                                       OK (0.02s)
             +++ OK, passed 100 tests.
-          getOwnedResources_properties:                                                  OK (0.01s)
+          getOwnedResources_properties:                                                  OK (0.02s)
             +++ OK, passed 100 tests.
           isOwner_properties:                                                            OK
             +++ OK, passed 100 tests.
@@ -263,10 +264,10 @@ Test.Unit.Tests Tests
             +++ OK, passed 100 tests.
           getOwnershipErrors_properties:                                                 OK (0.01s)
             +++ OK, passed 100 tests.
-          clearOwnershipErrors_properties:                                               OK (0.05s)
+          clearOwnershipErrors_properties:                                               OK (0.04s)
             +++ OK, passed 100 tests.
         Ownership Analysis Properties
-          mergeOwnershipAnalyses_properties:                                             OK (0.15s)
+          mergeOwnershipAnalyses_properties:                                             OK (0.14s)
             +++ OK, passed 100 tests.
       Concise Dependencies QuickCheck Tests
         DependencyGraph Properties
@@ -274,10 +275,10 @@ Test.Unit.Tests Tests
             +++ OK, passed 100 tests.
           dgEdges_properties:                                                            OK
             +++ OK, passed 100 tests.
-          getNodes_properties:                                                           OK (0.01s)
+          getNodes_properties:                                                           OK
             +++ OK, passed 100 tests.
         Dependency Analysis Properties
-          analyzeDependencies_properties:                                                OK (0.03s)
+          analyzeDependencies_properties:                                                OK (0.04s)
             +++ OK, passed 100 tests.
           detectCycles_properties:                                                       OK
             +++ OK, passed 100 tests.
@@ -297,7 +298,7 @@ Test.Unit.Tests Tests
             +++ OK, passed 100 tests.
           hasDependency_properties:                                                      OK
             +++ OK, passed 100 tests.
-          mergeDependencyGraphs_properties:                                              OK (0.08s)
+          mergeDependencyGraphs_properties:                                              OK (0.09s)
             +++ OK, passed 100 tests.
         Dependency Query Properties
           getDirectDependencies_properties:                                              OK
@@ -310,15 +311,15 @@ Test.Unit.Tests Tests
             +++ OK, passed 100 tests.
       CodeGeneration QuickCheck Tests
         IR statement consistency:                                                        OK
-          +++ OK, passed 100 tests; 21 discarded.
+          +++ OK, passed 100 tests; 15 discarded.
         IR expression consistency:                                                       OK
-          +++ OK, passed 100 tests; 43 discarded.
+          +++ OK, passed 100 tests; 18 discarded.
         TypusFile structure consistency:                                                 OK (0.01s)
           +++ OK, passed 100 tests.
         Source location basic properties:                                                OK
-          +++ OK, passed 100 tests; 331 discarded.
+          +++ OK, passed 100 tests; 251 discarded.
         Go token basic properties:                                                       OK
-          +++ OK, passed 100 tests; 14 discarded.
+          +++ OK, passed 100 tests; 19 discarded.
     Integration Tests
       Concise Integration QuickCheck Tests
         Parser-Compiler Integration
@@ -373,9 +374,9 @@ Test.Unit.Tests Tests
     List: init of singleton is empty:                                                    OK
       +++ OK, passed 100 tests.
     List: last of cons is last of tail or element if empty:                              OK
-      +++ OK, passed 100 tests; 17 discarded.
+      +++ OK, passed 100 tests; 14 discarded.
     List: init of cons is element cons init of tail or empty if empty:                   OK
-      +++ OK, passed 100 tests; 16 discarded.
+      +++ OK, passed 100 tests; 23 discarded.
     List: null of empty list is true:                                                    OK
       +++ OK, passed 100 tests.
     List: null of non-empty list is false:                                               OK
@@ -395,7 +396,7 @@ Test.Unit.Tests Tests
     List: filter of cons with predicate true is cons of filter with predicate true:      OK
       +++ OK, passed 100 tests.
     List: filter of cons with predicate false excludes the head:                         OK
-      +++ OK, passed 100 tests; 80 discarded.
+      +++ OK, passed 100 tests; 99 discarded.
     List: all of empty list is true:                                                     OK
       +++ OK, passed 100 tests.
     List: any of empty list is false:                                                    OK
@@ -461,9 +462,9 @@ Test.Unit.Tests Tests
     List: take n of empty list is empty:                                                 OK
       +++ OK, passed 100 tests.
     List: take n of list with length <= n is the list itself:                            OK
-      +++ OK, passed 100 tests; 304 discarded.
+      +++ OK, passed 100 tests; 318 discarded.
     List: take n of list with length > n has length n:                                   OK
-      +++ OK, passed 100 tests; 391 discarded.
+      +++ OK, passed 100 tests; 354 discarded.
     List: take preserves order:                                                          OK
       +++ OK, passed 100 tests.
     List: drop 0 of any list is the list itself:                                         OK
@@ -471,9 +472,9 @@ Test.Unit.Tests Tests
     List: drop n of empty list is empty:                                                 OK
       +++ OK, passed 100 tests.
     List: drop n of list with length <= n is empty:                                      OK
-      +++ OK, passed 100 tests; 320 discarded.
+      +++ OK, passed 100 tests; 276 discarded.
     List: drop n of list with length > n has length (length - n):                        OK
-      +++ OK, passed 100 tests; 421 discarded.
+      +++ OK, passed 100 tests; 290 discarded.
     List: drop preserves order:                                                          OK
       +++ OK, passed 100 tests.
     List: splitAt n is (take n, drop n):                                                 OK
@@ -483,17 +484,17 @@ Test.Unit.Tests Tests
     List: replicate 0 is empty list:                                                     OK
       +++ OK, passed 100 tests.
     List: replicate n has length n:                                                      OK
-      +++ OK, passed 100 tests; 129 discarded.
+      +++ OK, passed 100 tests; 86 discarded.
     List: all elements of replicate are equal:                                           OK
-      +++ OK, passed 100 tests; 94 discarded.
+      +++ OK, passed 100 tests; 101 discarded.
     List: repeat is infinite:                                                            OK
       +++ OK, passed 100 tests.
     List: iterate n f starting from x applies f n times:                                 OK
-      +++ OK, passed 100 tests; 101 discarded.
+      +++ OK, passed 100 tests; 84 discarded.
     List: cycle of empty list is undefined (should not evaluate):                        OK
       +++ OK, passed 100 tests.
     List: cycle of non-empty list repeats infinitely:                                    OK
-      +++ OK, passed 100 tests; 18 discarded.
+      +++ OK, passed 100 tests; 14 discarded.
     List: span p xs is (takeWhile p xs, dropWhile p xs):                                 OK
       +++ OK, passed 100 tests.
     List: break p xs is (takeWhile (not . p) xs, dropWhile (not . p) xs):                OK
@@ -532,9 +533,9 @@ Test.Unit.Tests Tests
     Trim empty:                                                                          OK
       +++ OK, passed 100 tests.
     Trim whitespace:                                                                     OK
-      +++ OK, passed 100 tests (4% all whitespace).
+      +++ OK, passed 100 tests (5% all whitespace).
     Trim regular:                                                                        OK
-      +++ OK, passed 100 tests; 5 discarded.
+      +++ OK, passed 100 tests; 8 discarded.
     Trim idempotent:                                                                     OK
       +++ OK, passed 100 tests.
     SplitBy basic:                                                                       OK
@@ -562,7 +563,7 @@ Test.Unit.Tests Tests
     NormalizeIndentation empty:                                                          OK
       +++ OK, passed 100 tests.
     NormalizeIndentation no indent:                                                      OK
-      +++ OK, passed 100 tests (51% has indentation).
+      +++ OK, passed 100 tests (43% has indentation).
     isRight basic:                                                                       OK
       +++ OK, passed 100 tests.
     isLeft basic:                                                                        OK
@@ -632,7 +633,7 @@ Test.Unit.Tests Tests
     Memory boundary conditions:                                                          OK
       +++ OK, passed 100 tests.
     Recursion boundary:                                                                  OK
-      +++ OK, passed 100 tests; 19 discarded.
+      +++ OK, passed 100 tests; 26 discarded.
     Numeric boundary:                                                                    OK
       +++ OK, passed 100 tests.
     String boundary:                                                                     OK
@@ -658,8 +659,8 @@ Test.Unit.Tests Tests
       Extreme Input Sizes
         parser with empty input:                                                         OK
         parser with single character:                                                    OK
-        parser with very large input:                                                    OK (0.04s)
-        parser with very long lines:                                                     OK
+        parser with very large input:                                                    OK (0.03s)
+        parser with very long lines:                                                     OK (0.01s)
       Extreme Positions
         source position at maximum values:                                               OK
         source position at minimum values:                                               OK
@@ -684,15 +685,15 @@ Test.Unit.Tests Tests
       Performance Boundaries
         parsing performance with large files:                                            OK (0.03s)
         error formatting performance:                                                    OK
-        utils performance with large strings:                                            OK (0.04s)
+        utils performance with large strings:                                            OK (0.03s)
     QuickCheck Properties
       Extreme Input Sizes
         parser large input:                                                              OK (0.25s)
           +++ OK, passed 100 tests.
         parser deeply nested:                                                            OK (0.01s)
-          +++ OK, passed 100 tests; 92 discarded.
+          +++ OK, passed 100 tests; 122 discarded.
         large directives handling:                                                       OK
-          +++ OK, passed 100 tests; 108 discarded.
+          +++ OK, passed 100 tests; 126 discarded.
       Extreme Positions
         sourcelocation extreme positions:                                                OK
           +++ OK, passed 100 tests.
@@ -700,7 +701,7 @@ Test.Unit.Tests Tests
         error extreme severity:                                                          OK
           +++ OK, passed 100 tests.
         error collector large numbers:                                                   OK
-          +++ OK, passed 100 tests; 104 discarded.
+          +++ OK, passed 100 tests; 132 discarded.
         error formatting extreme content:                                                OK
           +++ OK, passed 100 tests.
       Utils Extreme Inputs
@@ -711,20 +712,20 @@ Test.Unit.Tests Tests
           +++ OK, passed 100 tests.
       Performance Boundaries
         memory efficiency repeated operations:                                           OK
-          +++ OK, passed 100 tests; 132 discarded.
+          +++ OK, passed 100 tests; 115 discarded.
   CodeGeneration QuickCheck Tests
     IR statement consistency:                                                            OK
-      +++ OK, passed 100 tests; 23 discarded.
+      +++ OK, passed 100 tests; 18 discarded.
     IR expression consistency:                                                           OK
-      +++ OK, passed 100 tests; 28 discarded.
+      +++ OK, passed 100 tests; 35 discarded.
     TypusFile structure consistency:                                                     OK (0.01s)
       +++ OK, passed 100 tests.
     Source location basic properties:                                                    OK
-      +++ OK, passed 100 tests; 235 discarded.
+      +++ OK, passed 100 tests; 231 discarded.
     Go token basic properties:                                                           OK
-      +++ OK, passed 100 tests; 17 discarded.
+      +++ OK, passed 100 tests; 19 discarded.
 
-All 339 tests passed (2.34s)
+All 339 tests passed (2.25s)
 Test suite typus-test: PASS
 Test suite logged to:
 /home/runner/work/Typus/Typus/./dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/test/typus-0.12.2-typus-test.log

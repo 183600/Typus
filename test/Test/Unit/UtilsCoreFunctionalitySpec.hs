@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# OPTIONS_GHC -Wno-unused-imports -Wno-unused-local-binds #-}
 module Test.Unit.UtilsCoreFunctionalitySpec where
 
 

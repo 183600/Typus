@@ -1,4 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# OPTIONS_GHC -Wno-unused-imports -Wno-unused-local-binds #-}
 module Test.Unit.CorePerformancePropertiesQuickCheckSpec where
 
 

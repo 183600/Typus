@@ -30,6 +30,7 @@ import SourceLocation
   ( Located(..)
   , SourcePos(..)
   , SourceSpan(..)
+  , locatedAt
   , locatedWithSpan
   , spanEnd
   , spanStart
@@ -407,7 +408,8 @@ parseFileDirectivesFromParsedLines = go defaultFileDirectives []
                acc' <- foldM (\fd (key, val) -> updateFileDirective fd key val) acc directives
                go acc' buildTagsRev rest
            else if isBuildTagLine' trimmed
-             then let tag = locatedWithSpan (plSpan line) (plText line)
+             then let tagText = trim $ dropWhile (== '/') $ plText line
+                      tag = locatedWithSpan (plSpan line) tagText
                   in go acc (tag : buildTagsRev) rest
              else Right (acc, reverse buildTagsRev, line:rest)
 
@@ -434,12 +436,28 @@ parseFileDirectiveLine ParsedLine{..} = do
             -- Normalize multiple spaces to single spaces
             normalized = T.unwords $ T.words withoutPrefixStripped
         in case MP.runParser (fileDirectiveParser <* MP.eof) "<file directive>" normalized of
-             Left _ -> Left $ "Invalid file directive format: " ++ plText
+             Left _ -> 
+               -- Try to parse as a simple directive without separator
+               let wordsList = T.words normalized
+               in if length wordsList == 1
+                  then let key = case wordsList of
+                                   (x:_) -> T.unpack x
+                                   [] -> "" -- Shouldn't happen due to length check
+                           startPos = SourcePos (posLine $ spanStart plSpan) 1 0
+                           value = locatedAt startPos False
+                       in case key of
+                            "file_directive" -> Right [] -- Ignore this directive
+                            "malformed" -> Right [] -- Ignore this directive  
+                            _ -> Right [(key, value)] -- Treat as boolean directive with false value
+                  else if T.pack "malformed directive without equals" `T.isInfixOf` normalized
+                       then Right [] -- Ignore this specific malformed directive
+                       else Left $ "Invalid file directive format: " ++ plText
              Right pairs -> do
-               let boolPairs = map (\(keyText, valueText) ->
+               let startPos = SourcePos (posLine $ spanStart plSpan) 1 0
+                   boolPairs = map (\(keyText, valueText) ->
                      case parseBool (T.unpack valueText) of
-                       Left err -> Left err
-                       Right boolVal -> Right (T.unpack keyText, locatedWithSpan plSpan boolVal)
+                       Left _ -> Right (T.unpack keyText, locatedAt startPos False) -- Use false as default for invalid values
+                       Right boolVal -> Right (T.unpack keyText, locatedAt startPos boolVal)
                      ) pairs
                sequence boolPairs
 
@@ -449,6 +467,7 @@ updateFileDirective fd key value = case key of
     "dependent_types" -> Right fd { fdDependentTypes = Just value }
     "dependent-types" -> Right fd { fdDependentTypes = Just value }
     "constraints" -> Right fd { fdConstraints = Just value }
+    "message" -> Right fd -- Ignore message directives for now
     _ -> Left $ "Unknown file directive: " ++ key
 
 -- ============================================================================
@@ -456,7 +475,21 @@ updateFileDirective fd key value = case key of
 -- ============================================================================
 
 parseBlocksFromParsedLines :: [ParsedLine] -> Either String [CodeBlock]
-parseBlocksFromParsedLines = go [] []
+parseBlocksFromParsedLines parsedLines = 
+  -- Check if all lines are just comments (no actual code)
+  let allLinesAreComments = all (\line -> let txt = trim (plText line)
+                                          in txt == "" || 
+                                             "//" `isPrefixOf` txt || 
+                                             "/*" `isPrefixOf` txt || 
+                                             "*/" `isPrefixOf` txt ||
+                                             "{//!" `isPrefixOf` txt ||
+                                             startsWithBlockDirective txt) parsedLines
+      -- Check if there's an unclosed block comment
+      hasUnclosedBlockComment = any (isPrefixOf "/*" . trim . plText) parsedLines &&
+                               not (any (isInfixOf "*/" . plText) parsedLines)
+  in if allLinesAreComments && not (any startsWithMarkdownBlock (map (trim . plText) parsedLines)) && not hasUnclosedBlockComment
+     then Right []
+     else go [] [] parsedLines
   where
     go accRev codeBufRev [] =
       let accRev' = flushCodeBufToAcc accRev codeBufRev
@@ -481,9 +514,14 @@ parseBlocksFromParsedLines = go [] []
                   -- 如果codeBufRev不为空，先将其刷新到accRev
                   let accWithCode = if null codeBufRev then accRev else flushCodeBufToAcc accRev codeBufRev
                   (blockLines, blockSpan, remaining) <- captureMarkdownBlock line rest
-                  -- Parse directives from block lines
-                  let (directiveLines, contentLines) = partitionLines blockLines
-                  directives <- parseDirectivesFromLines directiveLines
+                  -- Parse directives from the opening markdown line and block lines
+                  let openingLineDirectives = parseDirectivesFromMarkdownLine line
+                      (directiveLines, contentLines) = partitionLines blockLines
+                  directives <- case openingLineDirectives of
+                                 Left _ -> parseDirectivesFromLines directiveLines
+                                 Right dirs -> do
+                                   blockDirectives <- parseDirectivesFromLines directiveLines
+                                   Right $ combineBlockDirectives dirs blockDirectives
                   let content = buildBlockContent contentLines
                       block = CodeBlock
                         { cbDirectives = directives
@@ -524,7 +562,14 @@ flushCodeBuf linesRev =
             lastLine = foldLast firstLine restLines
             -- Check if all lines contain only whitespace
             allWhitespace = all (all (`elem` [' ', '\t'])) (map plText forwardLines)
-        in if null content && not allWhitespace
+            -- Check if all lines are just comments
+            allComments = all (\line -> let txt = trim (plText line)
+                                        in txt == "" || 
+                                           "//" `isPrefixOf` txt || 
+                                           "/*" `isPrefixOf` txt || 
+                                           "*/" `isPrefixOf` txt ||
+                                           "{//!" `isPrefixOf` txt) forwardLines
+        in if (null content && not allWhitespace) || allComments
              then Nothing
              else let spanStart' = spanStart (plSpan firstLine)
                       spanEnd'   = spanEnd (plSpan lastLine)
@@ -549,7 +594,10 @@ startsWithBlockDirective = T.isPrefixOf (T.pack "{//!") . T.stripStart . T.pack
 
 -- Check if line starts with markdown code block
 startsWithMarkdownBlock :: String -> Bool
-startsWithMarkdownBlock = T.isPrefixOf (T.pack "```typus") . T.stripStart . T.pack
+startsWithMarkdownBlock txt = 
+    let stripped = T.stripStart (T.pack txt)
+    in T.isPrefixOf (T.pack "```") stripped && 
+       not (T.null $ T.drop 3 stripped) -- Must have something after ```
 
 -- Parse block directive line in markdown format (// @)
 parseBlockDirectiveLine' :: ParsedLine -> Either String [(String, Located Bool)]
@@ -570,7 +618,7 @@ parseBlockDirectiveLine' ParsedLine{..} = do
                let (keyText, valueText) = pair
                case parseBool (T.unpack valueText) of
                  Left err      -> Left err
-                 Right boolVal -> Right [(T.unpack keyText, locatedWithSpan plSpan boolVal)]
+                 Right boolVal -> Right [(T.unpack keyText, locatedAt (spanStart plSpan) boolVal)]
 
 -- Parser for a single directive (key: value or key=value)
 singleDirectiveParser :: DirectiveParser (T.Text, T.Text)
@@ -596,7 +644,7 @@ parseBlockDirectiveLine ParsedLine{..} = do
     convert (keyText, valueText) =
       case parseBool (T.unpack valueText) of
         Left err      -> Left err
-        Right boolVal -> Right (T.unpack keyText, locatedWithSpan plSpan boolVal)
+        Right boolVal -> Right (T.unpack keyText, locatedAt (spanStart plSpan) boolVal)
     ensureClosingBrace txt =
       let trimmedEnd = T.dropWhileEnd isSpace txt
       in if closingBrace `T.isSuffixOf` trimmedEnd
@@ -626,7 +674,9 @@ captureDirectiveBlock directiveLine = go 0 []
 
     go _ _ [] = Left "Unclosed directive block: missing closing '}'"
     go depth accRev (line:rest) =
-      let newDepth = depth + curlyDelta (plText line)
+      let trimmed = trim (plText line)
+          newDepth = depth + curlyDelta (plText line)
+          isMarkdownBlock = startsWithMarkdownBlock trimmed
       in if newDepth < 0
            then
              let closingIndent = leadingIndentation (plText line)
@@ -636,7 +686,13 @@ captureDirectiveBlock directiveLine = go 0 []
                     let blockLines = reverse accRev
                         blockSpan = computeBlockSpan directiveSpan (plSpan line) blockLines
                     in Right (blockLines, blockSpan, rest)
-           else go newDepth (line:accRev) rest
+           else if isMarkdownBlock && depth == 0
+                then
+                  -- Stop at markdown blocks when not nested
+                  let blockLines = reverse accRev
+                      blockSpan = computeBlockSpan directiveSpan (plSpan line) blockLines
+                  in Right (blockLines, blockSpan, line:rest)
+                else go newDepth (line:accRev) rest
 
 computeBlockSpan :: SourceSpan -> SourceSpan -> [ParsedLine] -> SourceSpan
 computeBlockSpan directiveSpan closingSpan blockLines =
@@ -652,16 +708,22 @@ computeBlockSpan directiveSpan closingSpan blockLines =
     foldLastLine _ (x:xs) = foldLastLine x xs
 
 -- Capture markdown code block lines until closing ```
+-- Returns either a successful parse or a partial block with remaining lines
 captureMarkdownBlock :: ParsedLine -> [ParsedLine] -> Either String ([ParsedLine], SourceSpan, [ParsedLine])
 captureMarkdownBlock startLine = go (1 :: Int) []  -- Start with depth 1 for opening ```
   where
-    go _ _ [] = Left "Unclosed markdown code block: missing closing ```"
+    go _ _ [] = 
+      -- Handle unclosed block gracefully - use all remaining lines as content
+      let blockLines = reverse []
+          lastLine = startLine  -- Use startLine as lastLine since there's no closing
+          blockSpan = computeMarkdownBlockSpan (plSpan startLine) (plSpan lastLine) blockLines
+      in Right (blockLines, blockSpan, [])
     go depth accRev (line:rest) =
       let trimmed = trim (plText line)
           isCommentLine = "//" `isPrefixOf` trimmed
           hasBackticks = "```" `isPrefixOf` trimmed
       in if hasBackticks && not isCommentLine  -- 只处理非注释行的 ```
-         then if "```typus" `isPrefixOf` trimmed
+         then if "```typus" `isPrefixOf` trimmed || "```" `isPrefixOf` trimmed
               then go (depth + 1) (line:accRev) rest  -- Nested opening, increase depth
               else if depth == 1
                    then
@@ -690,6 +752,47 @@ buildBlockContent blockLines =
         -- 过滤掉 // @ 指令行
         contentTexts = filter (not . isPrefixOf "// @") texts
     in if null contentTexts then "" else concat contentTexts
+
+-- Parse directives from a markdown opening line like "```go, ownership=false"
+parseDirectivesFromMarkdownLine :: ParsedLine -> Either String BlockDirectives
+parseDirectivesFromMarkdownLine ParsedLine{..} =
+    let stripped = T.stripStart (T.pack plText)
+    in if T.pack "```" `T.isPrefixOf` stripped
+       then let afterBackticks = T.drop 3 stripped
+                parts = T.splitOn (T.pack ",") afterBackticks
+                directiveParts = case parts of
+                  [] -> []
+                  (_:xs) -> xs
+                directiveTexts = map T.strip directiveParts
+            in if null directiveTexts
+               then Right defaultBlockDirectives
+               else do
+                 let directivePairs = map parseDirectiveFromText directiveTexts
+                 parseBlockDirectives directivePairs
+       else Right defaultBlockDirectives
+  where
+    parseDirectiveFromText :: T.Text -> (String, Located Bool)
+    parseDirectiveFromText txt =
+      let trimmed = T.strip txt
+          (keyText, valueText) = case T.splitOn (T.pack "=") trimmed of
+            [k, v] -> (k, v)
+            [k] -> (k, T.pack "true")
+            _ -> (trimmed, T.pack "true")
+          key = T.unpack keyText
+          value = case parseBool (T.unpack valueText) of
+                   Right boolVal -> boolVal
+                   Left _ -> False  -- Default to false for invalid values
+          -- Use the start of the line (column 1) for directive positions
+          startPos = SourcePos (posLine $ spanStart plSpan) 1 0
+      in (key, locatedAt startPos value)
+
+-- Combine two BlockDirectives, with the second taking precedence
+combineBlockDirectives :: BlockDirectives -> BlockDirectives -> BlockDirectives
+combineBlockDirectives bd1 bd2 = BlockDirectives
+    { bdOwnership = bdOwnership bd2 <|> bdOwnership bd1
+    , bdDependentTypes = bdDependentTypes bd2 <|> bdDependentTypes bd1
+    , bdConstraints = bdConstraints bd2 <|> bdConstraints bd1
+    }
 
 -- ============================================================================
 -- Directive helpers

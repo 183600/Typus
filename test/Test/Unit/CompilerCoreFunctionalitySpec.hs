@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Test.Unit.CompilerCoreFunctionalitySpec where
 
@@ -12,22 +13,7 @@ import Compiler.Errors.Core (errorWithCategory, ErrorCategory(..), ErrorLocation
 import Parser (parseTypus)
 import qualified Data.Text as T
 import qualified Data.List as L
-
--- Test data generators
-instance Arbitrary CompilationPhase where
-  arbitrary = oneof 
-    [ return ParsingPhase
-    , return TypeCheckingPhase
-    , return CodeGenerationPhase
-    ]
-
-instance Arbitrary CompilerError where
-  arbitrary = do
-    phase <- arbitrary
-    -- Generate a minimal CompilerError for testing
-    let defaultLoc = ErrorLocation Nothing 0 0 Nothing Nothing
-    let typeError = errorWithCategory "TEST001" Parsing (T.pack "Test error") defaultLoc
-    return $ CompilerError typeError Nothing [] phase
+import Test.ArbitraryInstances ()
 
 -- Test cases
 compilerCoreFunctionalityTests :: TestTree

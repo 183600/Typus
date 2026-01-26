@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-orphans  -Wno-unused-imports -Wno-name-shadowing -Wno-unused-local-binds  -Wno-unused-matches #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Test.Unit.NewCompilerQuickCheckSpec where
 

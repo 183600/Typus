@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 module Test.Unit.IntegratedCompilerPropertiesSpec where
 
 

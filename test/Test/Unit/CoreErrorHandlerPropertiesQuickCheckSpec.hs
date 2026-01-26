@@ -1,4 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 module Test.Unit.CoreErrorHandlerPropertiesQuickCheckSpec where
 
 

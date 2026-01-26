@@ -1,5 +1,5 @@
 {-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-orphans  -Wno-unused-imports -Wno-name-shadowing -Wno-unused-local-binds #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
 module Test.Unit.ErrorHandlerSpec where
 

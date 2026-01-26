@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 module Test.Unit.ComprehensiveCoreModulesQuickCheckSpec where
 
 

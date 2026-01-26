@@ -1,4 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# OPTIONS_GHC -Wno-orphans  -Wno-unused-imports -Wno-unused-local-binds #-}
 module Test.Unit.CoreDependenciesPropertiesQuickCheckSpec where
 
 

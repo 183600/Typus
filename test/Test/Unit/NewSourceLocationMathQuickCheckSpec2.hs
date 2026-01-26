@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-unused-imports -Wno-name-shadowing -Wno-unused-local-binds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Test.Unit.NewSourceLocationMathQuickCheckSpec2 where
 

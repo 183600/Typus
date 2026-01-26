@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures  -Wno-unused-imports #-}
 module Test.Unit.TestAnalyzerIntegrationSpec where
 
 

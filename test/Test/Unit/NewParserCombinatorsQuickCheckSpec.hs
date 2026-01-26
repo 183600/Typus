@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-unused-imports -Wno-name-shadowing  -Wno-type-defaults #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Test.Unit.NewParserCombinatorsQuickCheckSpec where
 

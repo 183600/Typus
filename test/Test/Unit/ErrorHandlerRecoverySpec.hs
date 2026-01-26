@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-unused-imports -Wno-name-shadowing  -Wno-unused-matches #-}
 module Test.Unit.ErrorHandlerRecoverySpec where
 
 

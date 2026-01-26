@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-unused-imports -Wno-name-shadowing -Wno-unused-local-binds  -Wno-unused-matches #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Test.Unit.DependentTypeInferenceSpec where
 

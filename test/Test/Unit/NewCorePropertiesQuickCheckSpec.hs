@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-unused-imports -Wno-name-shadowing #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Test.Unit.NewCorePropertiesQuickCheckSpec where
 

@@ -1,5 +1,7 @@
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-name-shadowing -Wno-unused-local-binds #-}
+{-# OPTIONS_GHC -Wno-unused-matches -Wno-type-defaults #-}
 module Test.Unit.PerformanceOptimizationQuickCheckSpec where
 
 

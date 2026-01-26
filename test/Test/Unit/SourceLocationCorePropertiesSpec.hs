@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# OPTIONS_GHC -Wno-orphans  -Wno-unused-imports -Wno-name-shadowing #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Test.Unit.SourceLocationCorePropertiesSpec where
 

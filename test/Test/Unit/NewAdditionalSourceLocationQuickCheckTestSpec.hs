@@ -1,4 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# OPTIONS_GHC -Wno-unused-imports -Wno-name-shadowing #-}
 module Test.Unit.NewAdditionalSourceLocationQuickCheckTestSpec where
 
 

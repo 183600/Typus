@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-unused-imports  -Wno-unused-matches #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Test.Unit.NewCoreParserQuickCheckSpec where
 

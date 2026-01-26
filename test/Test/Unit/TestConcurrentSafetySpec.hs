@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE LambdaCase #-}
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures  -Wno-unused-imports -Wno-name-shadowing -Wno-unused-local-binds  -Wno-unused-matches -Wno-type-defaults #-}
 module Test.Unit.TestConcurrentSafetySpec where
 
 

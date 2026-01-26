@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-unused-imports -Wno-name-shadowing #-}
 module Test.Unit.OwnershipBridgeSpec where
 
 

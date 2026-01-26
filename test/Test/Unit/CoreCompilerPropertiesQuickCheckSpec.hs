@@ -1,4 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# OPTIONS_GHC -Wno-unused-imports -Wno-unused-local-binds  -Wno-unused-matches #-}
 module Test.Unit.CoreCompilerPropertiesQuickCheckSpec where
 
 
@@ -31,11 +32,11 @@ coreCompilerPropertiesSpec = testGroup "Core Compiler Properties"
     let simpleCode = "func test() { return 42; }"
         input = TypusFile defaultFileDirectives [] [] []
     case compile input of
-      Right result -> assertBool "Compilation succeeded" True
+      Right _ -> assertBool "Compilation succeeded" True
       Left _ -> assertFailure "Compilation failed unexpectedly"
 
   , testProperty "Compiler is deterministic" $
-      \(code :: String) -> 
+      \(_ :: String) -> 
         let input = TypusFile defaultFileDirectives [] [] []
             result1 = compile input
             result2 = compile input

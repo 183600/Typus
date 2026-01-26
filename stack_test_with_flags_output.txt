@@ -1,0 +1,713 @@
+Test.Unit.Tests Tests
+  basic property:                                                                        OK
+    +++ OK, passed 100 tests.
+  Concise Typus Test Suite (48 tests)
+    Core Modules
+      Concise Utils QuickCheck Tests
+        String Processing
+          prop_trim_idempotent:                                                          OK
+            +++ OK, passed 100 tests.
+          prop_trim_removes_whitespace:                                                  OK
+            +++ OK, passed 100 tests.
+          prop_splitBy_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          prop_splitByCollapsed_properties:                                              OK
+            +++ OK, passed 100 tests.
+          prop_splitByComma_equals_splitBy:                                              OK
+            +++ OK, passed 100 tests.
+          prop_splitByCommaCollapsed_equals_splitByCollapsed:                            OK
+            +++ OK, passed 100 tests.
+          prop_breakOn_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          prop_safeProcessString_filters_control_chars:                                  OK
+            +++ OK, passed 100 tests.
+          prop_isValidChar_properties:                                                   OK
+            +++ OK, passed 100 tests.
+          prop_isRight_properties:                                                       OK
+            +++ OK, passed 100 tests.
+        Comment Processing
+          prop_removeLineComments_properties:                                            OK
+            +++ OK, passed 100 tests.
+          prop_removeComments_properties:                                                OK
+            +++ OK, passed 100 tests.
+          prop_removeLineComments_preserves_strings:                                     OK
+            +++ OK, passed 100 tests.
+          prop_removeComments_preserves_strings:                                         OK
+            +++ OK, passed 100 tests.
+        Indentation Processing
+          prop_normalizeIndentation_preserves_relative_indentation:                      OK
+            +++ OK, passed 100 tests.
+          prop_normalizeIndentation_removes_common_prefix:                               OK
+            +++ OK, passed 100 tests.
+      Concise SourceLocation QuickCheck Tests
+        SourcePos Properties
+          pos_properties:                                                                OK
+            +++ OK, passed 100 tests.
+          posAfter_properties:                                                           OK
+            +++ OK, passed 100 tests.
+          posAt_properties:                                                              OK
+            +++ OK, passed 100 tests.
+          posAtLineCol_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          advancePos_properties:                                                         OK
+            +++ OK, passed 100 tests.
+          advancePosBy_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          advancePosByText_properties:                                                   OK
+            +++ OK, passed 100 tests.
+          comparePos_properties:                                                         OK
+            +++ OK, passed 100 tests.
+          sourceLine_properties:                                                         OK
+            +++ OK, passed 100 tests.
+          sourceColumn_properties:                                                       OK
+            +++ OK, passed 100 tests.
+        SourceSpan Properties
+          span_properties:                                                               OK
+            +++ OK, passed 100 tests.
+          emptySpan_properties:                                                          OK
+            +++ OK, passed 100 tests.
+          spanFrom_properties:                                                           OK
+            +++ OK, passed 100 tests.
+          spanTo_properties:                                                             OK
+            +++ OK, passed 100 tests.
+          spanBetween_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          spanBetweenOrdered_properties:                                                 OK
+            +++ OK, passed 100 tests.
+          mergeSpans_properties:                                                         OK
+            +++ OK, passed 100 tests.
+          isValidSpan_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          isValidBlockSpan_properties:                                                   OK
+            +++ OK, passed 100 tests.
+        Located Properties
+          locatedAt_properties:                                                          OK
+            +++ OK, passed 100 tests.
+          locatedWithSpan_properties:                                                    OK
+            +++ OK, passed 100 tests.
+          locatedValue_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          locatedSpan_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          locatedPos_properties:                                                         OK
+            +++ OK, passed 100 tests.
+          mapLocated_properties:                                                         OK
+            +++ OK, passed 100 tests.
+      Concise Parser QuickCheck Tests
+        Parser Basic Properties
+          parseTypus_equals_parseTypusFile:                                              OK
+            +++ OK, passed 100 tests.
+          parseExpression_returns_right:                                                 OK
+            +++ OK, passed 100 tests.
+          parseDeclaration_returns_right:                                                OK
+            +++ OK, passed 100 tests.
+        TypusFile Properties
+          tfContents_properties:                                                         OK (0.01s)
+            +++ OK, passed 100 tests.
+          defaultFileDirectives_properties:                                              OK
+            +++ OK, passed 1 test.
+          defaultBlockDirectives_properties:                                             OK
+            +++ OK, passed 1 test.
+        Identifier Properties
+          isIdentifierChar_properties:                                                   OK
+            +++ OK, passed 100 tests.
+        Parser Roundtrip Properties
+          parseTypus_roundtrip_simple:                                                   OK
+            +++ OK, passed 100 tests.
+          parseTypus_empty_input:                                                        OK
+            +++ OK, passed 1 test.
+      Concise Compiler QuickCheck Tests
+        Compiler Properties
+          compile_properties:                                                            OK
+            +++ OK, passed 100 tests.
+          renderCompilationError_properties:                                             OK (0.18s)
+            +++ OK, passed 100 tests.
+          formatCompilerErrors_properties:                                               OK (0.18s)
+            +++ OK, passed 100 tests.
+          generateDetailedReport_properties:                                             OK (0.20s)
+            +++ OK, passed 100 tests.
+          analyzeErrors_properties:                                                      OK
+            +++ OK, passed 100 tests.
+        Type Checking Properties
+          hasTypeErrors_properties:                                                      OK (0.02s)
+            +++ OK, passed 100 tests.
+          diagnoseTypeErrors_properties:                                                 OK (0.02s)
+            +++ OK, passed 100 tests.
+          checkTypeError_properties:                                                     OK
+            +++ OK, passed 100 tests.
+          hasMalformedSyntax_properties:                                                 OK
+            +++ OK, passed 100 tests.
+        Type Environment Properties
+          buildTypeEnv_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          buildTypeEnvFromPairs_properties:                                              OK
+            +++ OK, passed 100 tests.
+        Declaration and Function Properties
+          extractDeclarations_properties:                                                OK
+            +++ OK, passed 100 tests.
+          extractFunctionCalls_properties:                                               OK
+            +++ OK, passed 100 tests.
+          isMethodDeclaration_properties:                                                OK
+            +++ OK, passed 100 tests.
+        Error Handling Properties
+          malformedSyntaxError_properties:                                               OK
+            +++ OK, passed 1 test.
+          typeCheckFailure_properties:                                                   OK
+            +++ OK, passed 1 test.
+          typeDiagnosticToCompilerError_properties:                                      OK
+            +++ OK, passed 100 tests.
+        Code Generation Properties
+          ensureSourceIR_properties:                                                     OK
+            +++ OK, passed 100 tests.
+          generateGoCode_properties:                                                     OK
+            +++ OK, passed 100 tests.
+        Specialized Analysis Properties
+          checkDependentTypes_properties:                                                OK
+            +++ OK, passed 100 tests.
+          checkOwnership_properties:                                                     OK
+            +++ OK, passed 100 tests.
+      Concise ErrorHandler QuickCheck Tests
+        ErrorHandler Basic Properties
+          handleError_properties:                                                        OK (0.02s)
+            +++ OK, passed 100 tests.
+          handleErrors_properties:                                                       OK (0.09s)
+            +++ OK, passed 100 tests.
+          createError_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          createWarning_properties:                                                      OK
+            +++ OK, passed 100 tests.
+          createInfo_properties:                                                         OK
+            +++ OK, passed 100 tests.
+        ErrorHandler Count Properties
+          errorCount_properties:                                                         OK
+            +++ OK, passed 100 tests.
+          warningCount_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          infoCount_properties:                                                          OK
+            +++ OK, passed 100 tests.
+          hasErrors_properties:                                                          OK
+            +++ OK, passed 100 tests.
+          hasWarnings_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          hasInfos_properties:                                                           OK
+            +++ OK, passed 100 tests.
+        ErrorHandler Filter Properties
+          getErrors_properties:                                                          OK
+            +++ OK, passed 100 tests.
+          getWarnings_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          getInfos_properties:                                                           OK
+            +++ OK, passed 100 tests.
+          clearErrors_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          clearWarnings_properties:                                                      OK
+            +++ OK, passed 100 tests.
+          clearInfos_properties:                                                         OK
+            +++ OK, passed 100 tests.
+        ErrorHandler Utility Properties
+          mergeHandlers_properties:                                                      OK
+            +++ OK, passed 100 tests.
+          filterBySeverityForTests_properties:                                           OK
+            +++ OK, passed 100 tests.
+          sortBySeverity_properties:                                                     OK (0.13s)
+            +++ OK, passed 100 tests.
+          renderErrors_properties:                                                       OK
+            +++ OK, passed 100 tests.
+      Concise Ownership QuickCheck Tests
+        OwnershipAnalysis Properties
+          oaOwners_properties:                                                           OK
+            +++ OK, passed 100 tests.
+          oaBorrowers_properties:                                                        OK
+            +++ OK, passed 100 tests.
+          oaErrors_properties:                                                           OK
+            +++ OK, passed 100 tests.
+        Ownership Query Properties
+          getOwners_properties:                                                          OK (0.01s)
+            +++ OK, passed 100 tests.
+          getBorrowers_properties:                                                       OK (0.01s)
+            +++ OK, passed 100 tests.
+          getOwnedResources_properties:                                                  OK (0.01s)
+            +++ OK, passed 100 tests.
+          isOwner_properties:                                                            OK
+            +++ OK, passed 100 tests.
+          isBorrower_properties:                                                         OK
+            +++ OK, passed 100 tests.
+        Ownership Transfer Properties
+          checkOwnershipTransfer_properties:                                             OK
+            +++ OK, passed 100 tests.
+          canTransferOwnership_properties:                                               OK
+            +++ OK, passed 100 tests.
+          transferOwnership_properties:                                                  OK
+            +++ OK, passed 100 tests.
+        Ownership Constraint Properties
+          validateOwnershipConstraints_properties:                                       OK
+            +++ OK, passed 100 tests.
+        Ownership Error Properties
+          hasOwnershipErrors_properties:                                                 OK
+            +++ OK, passed 100 tests.
+          getOwnershipErrors_properties:                                                 OK (0.01s)
+            +++ OK, passed 100 tests.
+          clearOwnershipErrors_properties:                                               OK (0.03s)
+            +++ OK, passed 100 tests.
+        Ownership Analysis Properties
+          mergeOwnershipAnalyses_properties:                                             OK (0.08s)
+            +++ OK, passed 100 tests.
+      Concise Dependencies QuickCheck Tests
+        DependencyGraph Properties
+          dgNodes_properties:                                                            OK
+            +++ OK, passed 100 tests.
+          dgEdges_properties:                                                            OK
+            +++ OK, passed 100 tests.
+          getNodes_properties:                                                           OK
+            +++ OK, passed 100 tests.
+        Dependency Analysis Properties
+          analyzeDependencies_properties:                                                OK (0.03s)
+            +++ OK, passed 100 tests.
+          detectCycles_properties:                                                       OK
+            +++ OK, passed 100 tests.
+          hasCycles_properties:                                                          OK
+            +++ OK, passed 100 tests.
+        Dependency Resolution Properties
+          resolveDependencies_properties:                                                OK (0.03s)
+            +++ OK, passed 100 tests.
+          getDependencyErrors_properties:                                                OK
+            +++ OK, passed 100 tests.
+          clearDependencyErrors_properties:                                              OK (0.03s)
+            +++ OK, passed 100 tests.
+        Dependency Manipulation Properties
+          addDependency_properties:                                                      OK
+            +++ OK, passed 100 tests.
+          removeDependency_properties:                                                   OK
+            +++ OK, passed 100 tests.
+          hasDependency_properties:                                                      OK
+            +++ OK, passed 100 tests.
+          mergeDependencyGraphs_properties:                                              OK (0.08s)
+            +++ OK, passed 100 tests.
+        Dependency Query Properties
+          getDirectDependencies_properties:                                              OK
+            +++ OK, passed 100 tests.
+          getTransitiveDependencies_properties:                                          OK
+            +++ OK, passed 100 tests.
+          getDependencyPath_properties:                                                  OK
+            +++ OK, passed 100 tests.
+          topologicalSort_properties:                                                    OK
+            +++ OK, passed 100 tests.
+      CodeGeneration QuickCheck Tests
+        IR statement consistency:                                                        OK
+          +++ OK, passed 100 tests; 22 discarded.
+        IR expression consistency:                                                       OK
+          +++ OK, passed 100 tests; 25 discarded.
+        TypusFile structure consistency:                                                 OK
+          +++ OK, passed 100 tests.
+        Source location basic properties:                                                OK
+          +++ OK, passed 100 tests; 237 discarded.
+        Go token basic properties:                                                       OK
+          +++ OK, passed 100 tests; 14 discarded.
+    Integration Tests
+      Concise Integration QuickCheck Tests
+        Parser-Compiler Integration
+          parse_compile_integration:                                                     OK
+            +++ OK, passed 100 tests.
+          parse_compile_error_propagation:                                               OK
+            +++ OK, passed 100 tests.
+        Error Handling Integration
+          error_handling_consistency:                                                    OK
+            +++ OK, passed 100 tests.
+          error_count_consistency:                                                       OK
+            +++ OK, passed 100 tests.
+        Dependencies-Ownership Integration
+          dependencies_ownership_consistency:                                            OK
+            +++ OK, passed 100 tests.
+          cycle_detection_integration:                                                   OK
+            +++ OK, passed 100 tests.
+        Source Location Integration
+          source_location_preservation:                                                  OK
+            +++ OK, passed 100 tests.
+          span_consistency:                                                              OK
+            +++ OK, passed 100 tests.
+        Utils Integration
+          utils_parser_integration:                                                      OK
+            +++ OK, passed 100 tests.
+          utils_comment_handling:                                                        OK
+            +++ OK, passed 100 tests.
+        End-to-End Integration
+          end_to_end_compilation:                                                        OK
+            +++ OK, passed 100 tests.
+          round_trip_properties:                                                         OK
+            +++ OK, passed 100 tests.
+  List Properties Tests
+    List: length of empty list is 0:                                                     OK
+      +++ OK, passed 100 tests.
+    List: length of singleton list is 1:                                                 OK
+      +++ OK, passed 100 tests.
+    List: length of cons is length + 1:                                                  OK
+      +++ OK, passed 100 tests.
+    List: length of append is sum of lengths:                                            OK
+      +++ OK, passed 100 tests.
+    List: reverse is involutive:                                                         OK
+      +++ OK, passed 100 tests.
+    List: reverse preserves length:                                                      OK
+      +++ OK, passed 100 tests.
+    List: head of cons is the first element:                                             OK
+      +++ OK, passed 100 tests.
+    List: tail of cons is the rest:                                                      OK
+      +++ OK, passed 100 tests.
+    List: last of singleton is the element:                                              OK
+      +++ OK, passed 100 tests.
+    List: init of singleton is empty:                                                    OK
+      +++ OK, passed 100 tests.
+    List: last of cons is last of tail or element if empty:                              OK
+      +++ OK, passed 100 tests; 20 discarded.
+    List: init of cons is element cons init of tail or empty if empty:                   OK
+      +++ OK, passed 100 tests; 15 discarded.
+    List: null of empty list is true:                                                    OK
+      +++ OK, passed 100 tests.
+    List: null of non-empty list is false:                                               OK
+      +++ OK, passed 100 tests.
+    List: map preserves length:                                                          OK
+      +++ OK, passed 100 tests.
+    List: map of cons is cons of map:                                                    OK
+      +++ OK, passed 100 tests.
+    List: map of identity is identity:                                                   OK
+      +++ OK, passed 100 tests.
+    List: map of composition is composition of maps:                                     OK
+      +++ OK, passed 100 tests.
+    List: filter preserves order:                                                        OK
+      +++ OK, passed 100 tests.
+    List: filter of empty list is empty:                                                 OK
+      +++ OK, passed 100 tests.
+    List: filter of cons with predicate true is cons of filter with predicate true:      OK
+      +++ OK, passed 100 tests.
+    List: filter of cons with predicate false excludes the head:                         OK
+      +++ OK, passed 100 tests; 100 discarded.
+    List: all of empty list is true:                                                     OK
+      +++ OK, passed 100 tests.
+    List: any of empty list is false:                                                    OK
+      +++ OK, passed 100 tests.
+    List: all of singleton is predicate of element:                                      OK
+      +++ OK, passed 100 tests.
+    List: any of singleton is predicate of element:                                      OK
+      +++ OK, passed 100 tests.
+    List: all of cons is predicate of head AND all of tail:                              OK
+      +++ OK, passed 100 tests.
+    List: any of cons is predicate of head OR any of tail:                               OK
+      +++ OK, passed 100 tests.
+    List: sum of empty list is 0:                                                        OK
+      +++ OK, passed 100 tests.
+    List: sum of singleton is element:                                                   OK
+      +++ OK, passed 100 tests.
+    List: sum of cons is head plus sum of tail:                                          OK
+      +++ OK, passed 100 tests.
+    List: sum of append is sum of parts:                                                 OK
+      +++ OK, passed 100 tests.
+    List: product of empty list is 1:                                                    OK
+      +++ OK, passed 100 tests.
+    List: product of singleton is element:                                               OK
+      +++ OK, passed 100 tests.
+    List: product of cons is head times product of tail:                                 OK
+      +++ OK, passed 100 tests.
+    List: product of append is product of parts:                                         OK
+      +++ OK, passed 100 tests.
+    List: concat of empty list of lists is empty:                                        OK
+      +++ OK, passed 100 tests.
+    List: concat of singleton list of lists is the list:                                 OK
+      +++ OK, passed 100 tests.
+    List: concat of cons of lists is head list concat concat of tail:                    OK
+      +++ OK, passed 100 tests.
+    List: concat of map is same as concatMap:                                            OK
+      +++ OK, passed 100 tests.
+    List: concat of append is concat of parts:                                           OK (0.01s)
+      +++ OK, passed 100 tests.
+    List: concatMap of empty list is empty:                                              OK
+      +++ OK, passed 1 test.
+    List: concatMap of singleton is function applied to element:                         OK
+      +++ OK, passed 100 tests.
+    List: concatMap of cons is function applied to head concat concatMap of tail:        OK
+      +++ OK, passed 100 tests.
+    List: foldr of empty list is initial value:                                          OK
+      +++ OK, passed 100 tests.
+    List: foldr of singleton is function applied to element and initial value:           OK
+      +++ OK, passed 100 tests.
+    List: foldr of cons is function applied to head and foldr of tail:                   OK
+      +++ OK, passed 100 tests.
+    List: foldl of empty list is initial value:                                          OK
+      +++ OK, passed 100 tests.
+    List: foldl of singleton is function applied to initial value and element:           OK
+      +++ OK, passed 100 tests.
+    List: foldl of cons is function applied to foldl of initial value and head and tail: OK
+      +++ OK, passed 100 tests.
+    List: foldr and foldl are equivalent for associative operations:                     OK
+      +++ OK, passed 100 tests.
+    List: foldr and foldl are equivalent for commutative operations:                     OK
+      +++ OK, passed 100 tests.
+    List: take 0 of any list is empty:                                                   OK
+      +++ OK, passed 100 tests.
+    List: take n of empty list is empty:                                                 OK
+      +++ OK, passed 100 tests.
+    List: take n of list with length <= n is the list itself:                            OK
+      +++ OK, passed 100 tests; 268 discarded.
+    List: take n of list with length > n has length n:                                   OK
+      +++ OK, passed 100 tests; 339 discarded.
+    List: take preserves order:                                                          OK
+      +++ OK, passed 100 tests.
+    List: drop 0 of any list is the list itself:                                         OK
+      +++ OK, passed 100 tests.
+    List: drop n of empty list is empty:                                                 OK
+      +++ OK, passed 100 tests.
+    List: drop n of list with length <= n is empty:                                      OK
+      +++ OK, passed 100 tests; 232 discarded.
+    List: drop n of list with length > n has length (length - n):                        OK
+      +++ OK, passed 100 tests; 399 discarded.
+    List: drop preserves order:                                                          OK
+      +++ OK, passed 100 tests.
+    List: splitAt n is (take n, drop n):                                                 OK
+      +++ OK, passed 100 tests.
+    List: take and drop reconstruct original list:                                       OK
+      +++ OK, passed 100 tests.
+    List: replicate 0 is empty list:                                                     OK
+      +++ OK, passed 100 tests.
+    List: replicate n has length n:                                                      OK
+      +++ OK, passed 100 tests; 97 discarded.
+    List: all elements of replicate are equal:                                           OK
+      +++ OK, passed 100 tests; 105 discarded.
+    List: repeat is infinite:                                                            OK
+      +++ OK, passed 100 tests.
+    List: iterate n f starting from x applies f n times:                                 OK
+      +++ OK, passed 100 tests; 97 discarded.
+    List: cycle of empty list is undefined (should not evaluate):                        OK
+      +++ OK, passed 100 tests.
+    List: cycle of non-empty list repeats infinitely:                                    OK
+      +++ OK, passed 100 tests; 19 discarded.
+    List: span p xs is (takeWhile p xs, dropWhile p xs):                                 OK
+      +++ OK, passed 100 tests.
+    List: break p xs is (takeWhile (not . p) xs, dropWhile (not . p) xs):                OK
+      +++ OK, passed 100 tests.
+    List: group sorts consecutive equal elements:                                        OK
+      +++ OK, passed 100 tests.
+    List: inits of empty list is list containing empty list:                             OK
+      +++ OK, passed 100 tests.
+    List: inits of non-empty list includes empty list and full list:                     OK
+      +++ OK, passed 100 tests.
+    List: tails of empty list is list containing empty list:                             OK
+      +++ OK, passed 100 tests.
+    List: tails of non-empty list includes empty list and full list:                     OK
+      +++ OK, passed 100 tests.
+    List: isPrefixOf is reflexive:                                                       OK
+      +++ OK, passed 100 tests.
+    List: empty list is prefix of any list:                                              OK
+      +++ OK, passed 100 tests.
+    List: isSuffixOf is reflexive:                                                       OK
+      +++ OK, passed 100 tests.
+    List: empty list is suffix of any list:                                              OK
+      +++ OK, passed 100 tests.
+    List: isInfixOf is reflexive:                                                        OK
+      +++ OK, passed 100 tests.
+    List: empty list is sublist of any list:                                             OK
+      +++ OK, passed 100 tests.
+    List: elem is equivalent to any (==):                                                OK
+      +++ OK, passed 100 tests.
+    List: notElem is equivalent to not . elem:                                           OK
+      +++ OK, passed 100 tests.
+    List: lookup finds the first matching key:                                           OK
+      +++ OK, passed 100 tests.
+  Basic QuickCheck Test Suite
+    Trim basic:                                                                          OK
+      +++ OK, passed 100 tests.
+    Trim empty:                                                                          OK
+      +++ OK, passed 100 tests.
+    Trim whitespace:                                                                     OK
+      +++ OK, passed 100 tests (7% all whitespace).
+    Trim regular:                                                                        OK
+      +++ OK, passed 100 tests; 3 discarded.
+    Trim idempotent:                                                                     OK
+      +++ OK, passed 100 tests.
+    SplitBy basic:                                                                       OK
+      +++ OK, passed 100 tests.
+    SplitBy empty:                                                                       OK
+      +++ OK, passed 100 tests.
+    SplitByComma basic:                                                                  OK
+      +++ OK, passed 100 tests.
+    SplitByComma empty:                                                                  OK
+      +++ OK, passed 100 tests.
+    RemoveLineComments basic:                                                            OK
+      +++ OK, passed 100 tests.
+    RemoveLineComments empty:                                                            OK
+      +++ OK, passed 100 tests.
+    RemoveLineComments no comments:                                                      OK
+      +++ OK, passed 100 tests (0% has comments).
+    RemoveComments basic:                                                                OK
+      +++ OK, passed 100 tests.
+    RemoveComments empty:                                                                OK
+      +++ OK, passed 100 tests.
+    RemoveComments no comments:                                                          OK
+      +++ OK, passed 100 tests (0% has comments).
+    NormalizeIndentation basic:                                                          OK
+      +++ OK, passed 100 tests.
+    NormalizeIndentation empty:                                                          OK
+      +++ OK, passed 100 tests.
+    NormalizeIndentation no indent:                                                      OK
+      +++ OK, passed 100 tests (45% has indentation).
+    isRight basic:                                                                       OK
+      +++ OK, passed 100 tests.
+    isLeft basic:                                                                        OK
+      +++ OK, passed 100 tests.
+    isRight right:                                                                       OK
+      +++ OK, passed 100 tests.
+    isRight left:                                                                        OK
+      +++ OK, passed 100 tests.
+    isLeft right:                                                                        OK
+      +++ OK, passed 100 tests.
+    isLeft left:                                                                         OK
+      +++ OK, passed 100 tests.
+    Trim edge cases:                                                                     OK
+    SplitBy edge cases:                                                                  OK
+    SplitByComma edge cases:                                                             OK
+    RemoveLineComments edge cases:                                                       OK
+    RemoveComments edge cases:                                                           OK
+    NormalizeIndentation edge cases:                                                     OK
+    isRight edge cases:                                                                  OK
+    isLeft edge cases:                                                                   OK
+  Basic QuickCheck Tests
+    trim removes whitespace:                                                             OK
+      +++ OK, passed 100 tests.
+    trim preserves content:                                                              OK
+      +++ OK, passed 100 tests.
+    splitBy preserves content:                                                           OK
+      +++ OK, passed 100 tests.
+    startPos values:                                                                     OK
+      +++ OK, passed 100 tests.
+    removeLineComments removes comments:                                                 OK
+      +++ OK, passed 100 tests.
+    removeLineComments preserves before:                                                 OK
+      +++ OK, passed 100 tests.
+    splitByCommaCollapsed removes empty parts:                                           OK
+      +++ OK, passed 100 tests.
+    splitByComma preserves empty parts:                                                  OK
+      +++ OK, passed 100 tests.
+    normalizeIndentation preserves relative:                                             OK
+      +++ OK, passed 100 tests.
+    safeProcessString handles special:                                                   OK
+      +++ OK, passed 100 tests.
+    isValidChar properties:                                                              OK
+      +++ OK, passed 100 tests.
+    removeLineComments handles multiple lines:                                           OK
+      +++ OK, passed 100 tests.
+  Boundary Condition Advanced QuickCheck Tests
+    Extremely long string handling:                                                      OK
+      +++ OK, passed 100 tests.
+    Deeply nested structure:                                                             OK
+      +++ OK, passed 100 tests.
+    Repeated character handling:                                                         OK
+      +++ OK, passed 100 tests.
+    Unicode character handling:                                                          OK
+      +++ OK, passed 100 tests.
+    Empty and boundary input:                                                            OK
+      +++ OK, passed 100 tests.
+    Large file handling:                                                                 OK (0.02s)
+      +++ OK, passed 100 tests.
+    Extremely long identifier:                                                           OK
+      +++ OK, passed 100 tests.
+    Extreme indentation:                                                                 OK
+      +++ OK, passed 100 tests.
+    Extreme comment handling:                                                            OK
+      +++ OK, passed 100 tests.
+    Extreme error conditions:                                                            OK
+      +++ OK, passed 100 tests.
+    Memory boundary conditions:                                                          OK
+      +++ OK, passed 100 tests.
+    Recursion boundary:                                                                  OK
+      +++ OK, passed 100 tests; 22 discarded.
+    Numeric boundary:                                                                    OK
+      +++ OK, passed 100 tests.
+    String boundary:                                                                     OK
+      +++ OK, passed 100 tests.
+    Parser boundary:                                                                     OK
+      +++ OK, passed 100 tests.
+    Position tracking boundary:                                                          OK
+      +++ OK, passed 100 tests.
+    Error handling boundary:                                                             OK
+      +++ OK, passed 100 tests.
+    Empty string handling:                                                               OK
+    Single character handling:                                                           OK
+    Extremely long string handling:                                                      OK
+    Deeply nested structure:                                                             OK
+    Special character handling:                                                          OK
+    Extremely long identifier:                                                           OK
+    Extreme indentation:                                                                 OK
+    Extreme comment handling:                                                            OK
+    Extreme error conditions:                                                            OK
+    Memory boundary conditions:                                                          OK
+  Boundary Condition Comprehensive Tests
+    Unit Tests
+      Extreme Input Sizes
+        parser with empty input:                                                         OK
+        parser with single character:                                                    OK
+        parser with very large input:                                                    OK (0.03s)
+        parser with very long lines:                                                     OK
+      Extreme Positions
+        source position at maximum values:                                               OK
+        source position at minimum values:                                               OK
+        position advancement with large content:                                         OK
+      Extreme Error Conditions
+        error collector with many errors:                                                OK
+        error with very long message:                                                    OK
+        fatal error handling:                                                            OK
+        error with extreme severity:                                                     OK
+      Special Characters and Unicode
+        parser with control characters:                                                  OK
+        parser with unicode characters:                                                  OK
+        utils with special characters:                                                   OK
+        parser with mixed content types:                                                 OK
+      Resource Limits
+        memory usage with repeated parsing:                                              OK
+        deep nesting handling:                                                           OK
+        large directive values:                                                          OK
+      Concurrent Safety
+        parser state isolation:                                                          OK
+        error collector isolation:                                                       OK
+      Performance Boundaries
+        parsing performance with large files:                                            OK (0.03s)
+        error formatting performance:                                                    OK
+        utils performance with large strings:                                            OK (0.03s)
+    QuickCheck Properties
+      Extreme Input Sizes
+        parser large input:                                                              OK (0.21s)
+          +++ OK, passed 100 tests.
+        parser deeply nested:                                                            OK (0.01s)
+          +++ OK, passed 100 tests; 118 discarded.
+        large directives handling:                                                       OK
+          +++ OK, passed 100 tests; 122 discarded.
+      Extreme Positions
+        sourcelocation extreme positions:                                                OK
+          +++ OK, passed 100 tests.
+      Extreme Error Conditions
+        error extreme severity:                                                          OK
+          +++ OK, passed 100 tests.
+        error collector large numbers:                                                   OK
+          +++ OK, passed 100 tests; 100 discarded.
+        error formatting extreme content:                                                OK
+          +++ OK, passed 100 tests.
+      Utils Extreme Inputs
+        utils extreme inputs:                                                            OK
+          +++ OK, passed 100 tests.
+      Special Characters
+        special characters handling:                                                     OK
+          +++ OK, passed 100 tests.
+      Performance Boundaries
+        memory efficiency repeated operations:                                           OK
+          +++ OK, passed 100 tests; 137 discarded.
+  CodeGeneration QuickCheck Tests
+    IR statement consistency:                                                            OK
+      +++ OK, passed 100 tests; 19 discarded.
+    IR expression consistency:                                                           OK
+      +++ OK, passed 100 tests; 17 discarded.
+    TypusFile structure consistency:                                                     OK (0.01s)
+      +++ OK, passed 100 tests.
+    Source location basic properties:                                                    OK
+      +++ OK, passed 100 tests; 212 discarded.
+    Go token basic properties:                                                           OK
+      +++ OK, passed 100 tests; 23 discarded.
+
+All 339 tests passed (1.71s)
+
+typus> Test suite typus-test passed

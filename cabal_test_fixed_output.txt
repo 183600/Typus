@@ -1,138 +1,14 @@
 Build profile: -w ghc-9.14.1 -O1
 In order, the following will be built (use -v for more details):
- - typus-0.12.2 (test:typus-test) (file test/Test/Unit/TypeInferenceAdvancedSpec.hs changed)
+ - typus-0.12.2 (test:typus-test) (file test/Test/Unit/TestParserDirectivesSpec.hs changed)
 Preprocessing test suite 'typus-test' for typus-0.12.2...
 Building test suite 'typus-test' for typus-0.12.2...
-[ 928 of 1025] Compiling Test.Unit.TypeInferenceAdvancedSpec ( test/Test/Unit/TypeInferenceAdvancedSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TypeInferenceAdvancedSpec.o ) [Source file changed]
-test/Test/Unit/TypeInferenceAdvancedSpec.hs:7:1: warning: [GHC-66111] [-Wunused-imports]
-    The qualified import of ‘Data.Set’ is redundant
-      except perhaps to import instances from ‘Data.Set’
-    To import instances alone, use: import Data.Set()
-  |
-7 | import qualified Data.Set as Set
-  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-test/Test/Unit/TypeInferenceAdvancedSpec.hs:118:42: warning: [GHC-63397] [-Wname-shadowing]
-    This binding for ‘typ’ shadows the existing binding
-      bound at test/Test/Unit/TypeInferenceAdvancedSpec.hs:107:16
-    |
-118 |     extractFreeVars (TypeForAllType vars typ) = 
-    |                                          ^^^
-
-[ 959 of 1025] Compiling Test.Unit.UtilsEnhancedQuickCheckSpec ( test/Test/Unit/UtilsEnhancedQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsEnhancedQuickCheckSpec.o ) [Source file changed]
-test/Test/Unit/UtilsEnhancedQuickCheckSpec.hs:162:18: warning: [GHC-63397] [-Wname-shadowing]
-    This binding for ‘after’ shadows the existing binding
-      imported from ‘Test.Tasty’ at test/Test/Unit/UtilsEnhancedQuickCheckSpec.hs:6:1-17
-      (and originally defined in ‘tasty-1.5.3:Test.Tasty.Core’)
-    |
-162 |     let (before, after) = breakOn pat s
-    |                  ^^^^^
-
-test/Test/Unit/UtilsEnhancedQuickCheckSpec.hs:168:16: warning: [GHC-63397] [-Wname-shadowing]
-    This binding for ‘after’ shadows the existing binding
-      imported from ‘Test.Tasty’ at test/Test/Unit/UtilsEnhancedQuickCheckSpec.hs:6:1-17
-      (and originally defined in ‘tasty-1.5.3:Test.Tasty.Core’)
-    |
-168 |   let (before, after) = breakOn pat s
-    |                ^^^^^
-
-test/Test/Unit/UtilsEnhancedQuickCheckSpec.hs:208:9: warning: [GHC-40910] [-Wunused-local-binds]
-    Defined but not used: ‘withCommentsRemoved’
-    |
-208 |         withCommentsRemoved = removeComments normalized
-    |         ^^^^^^^^^^^^^^^^^^^
-
-[ 964 of 1025] Compiling Test.Unit.UtilsQuickCheckSpec ( test/Test/Unit/UtilsQuickCheckSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/UtilsQuickCheckSpec.o ) [Source file changed]
-test/Test/Unit/UtilsQuickCheckSpec.hs:9:1: warning: [GHC-66111] [-Wunused-imports]
-    The import of ‘Test.Tasty’ is redundant
-      except perhaps to import instances from ‘Test.Tasty’
-    To import instances alone, use: import Test.Tasty()
-  |
-9 | import Test.Tasty (TestTree, testGroup)
-  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-test/Test/Unit/UtilsQuickCheckSpec.hs:10:1: warning: [GHC-66111] [-Wunused-imports]
-    The import of ‘Test.Tasty.QuickCheck’ is redundant
-      except perhaps to import instances from ‘Test.Tasty.QuickCheck’
-    To import instances alone, use: import Test.Tasty.QuickCheck()
-   |
-10 | import Test.Tasty.QuickCheck (testProperties, Arbitrary(..), Gen, choose, listOf, elements, oneof, vectorOf, property, (===), forAll, counterexample)
-   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-test/Test/Unit/UtilsQuickCheckSpec.hs:11:1: warning: [GHC-66111] [-Wunused-imports]
-    The import of ‘Test.QuickCheck’ is redundant
-      except perhaps to import instances from ‘Test.QuickCheck’
-    To import instances alone, use: import Test.QuickCheck()
-   |
-11 | import Test.QuickCheck (Gen, Property, (==>))
-   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-test/Test/Unit/UtilsQuickCheckSpec.hs:12:1: warning: [GHC-66111] [-Wunused-imports]
-    The qualified import of ‘Data.Text’ is redundant
-      except perhaps to import instances from ‘Data.Text’
-    To import instances alone, use: import Data.Text()
-   |
-12 | import qualified Data.Text as T
-   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-test/Test/Unit/UtilsQuickCheckSpec.hs:13:19: warning: [GHC-38856] [-Wunused-imports]
-    The import of ‘isPrefixOf, isSuffixOf’
-    from module ‘Data.List’ is redundant
-   |
-13 | import Data.List (isPrefixOf, isSuffixOf, isInfixOf)
-   |                   ^^^^^^^^^^^^^^^^^^^^^^
-
-test/Test/Unit/UtilsQuickCheckSpec.hs:14:28: warning: [GHC-38856] [-Wunused-imports]
-    The import of ‘isAlpha, isAlphaNum, isDigit, isLetter, toLower,
-                   toUpper’
-    from module ‘Data.Char’ is redundant
-   |
-14 | import Data.Char (isSpace, isAlpha, isAlphaNum, toLower, toUpper, isDigit, isLetter)
-   |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-test/Test/Unit/UtilsQuickCheckSpec.hs:40:3: warning: [GHC-63397] [-Wname-shadowing]
-    This binding for ‘lines’ shadows the existing binding
-      imported from ‘Prelude’ at test/Test/Unit/UtilsQuickCheckSpec.hs:4:8-36
-      (and originally defined in ‘ghc-internal-9.1401.0:GHC.Internal.Data.OldList’)
-   |
-40 |   lines <- vectorOf numLines $ do
-   |   ^^^^^
-
-test/Test/Unit/UtilsQuickCheckSpec.hs:106:7: warning: [GHC-40910] [-Wunused-local-binds]
-    Defined but not used: ‘normal’
-    |
-106 |   let normal = splitBy delim s
-    |       ^^^^^^
-
-test/Test/Unit/UtilsQuickCheckSpec.hs:177:7: warning: [GHC-40910] [-Wunused-local-binds]
-    Defined but not used: ‘lines'’
-    |
-177 |   let lines' = lines s
-    |       ^^^^^^
-
-test/Test/Unit/UtilsQuickCheckSpec.hs:202:20: warning: [GHC-63397] [-Wname-shadowing]
-    This binding for ‘after’ shadows the existing binding
-      imported from ‘Test.Tasty’ at test/Test/Unit/UtilsQuickCheckSpec.hs:7:1-17
-      (and originally defined in ‘tasty-1.5.3:Test.Tasty.Core’)
-    |
-202 |       let (before, after) = breakOn pat s
-    |                    ^^^^^
-
-test/Test/Unit/UtilsQuickCheckSpec.hs:267:18: warning: [GHC-63397] [-Wname-shadowing]
-    This binding for ‘after’ shadows the existing binding
-      imported from ‘Test.Tasty’ at test/Test/Unit/UtilsQuickCheckSpec.hs:7:1-17
-      (and originally defined in ‘tasty-1.5.3:Test.Tasty.Core’)
-    |
-267 |     let (before, after) = breakOn pat s
-    |                  ^^^^^
-
-test/Test/Unit/UtilsQuickCheckSpec.hs:328:7: warning: [GHC-40910] [-Wunused-local-binds]
-    Defined but not used: ‘lines'’
-    |
-328 |   let lines' = lines s
-    |       ^^^^^^
-
-[1026 of 1026] Linking dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test [Objects changed]
+[ 993 of 1026] Compiling Test.Unit.TestParserErrorRecoverySpec ( test/Test/Unit/TestParserErrorRecoverySpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TestParserErrorRecoverySpec.o ) [Source file changed]
+[ 994 of 1026] Compiling Test.Unit.TestParserDirectivesSpec ( test/Test/Unit/TestParserDirectivesSpec.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/TestParserDirectivesSpec.o ) [Source file changed]
+[ 997 of 1026] Compiling Test.Unit.Tests  ( test/Test/Unit/Tests.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit/Tests.o ) [Test.Unit.TestParserDirectivesSpec changed]
+[ 998 of 1026] Compiling Test.Unit        ( test/Test/Unit.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Test/Unit.o ) [Test.Unit.Tests changed]
+[ 999 of 1026] Compiling Main             ( test/Main.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test-tmp/Main.o ) [Test.Unit.Tests changed]
+[1027 of 1027] Linking dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/build/typus-test/typus-test [Objects changed]
 Running 1 test suites...
 Test suite typus-test: RUNNING...
 Test.Unit.Tests Tests
@@ -257,9 +133,9 @@ Test.Unit.Tests Tests
         Compiler Properties
           compile_properties:                                                            OK
             +++ OK, passed 100 tests.
-          renderCompilationError_properties:                                             OK (0.25s)
+          renderCompilationError_properties:                                             OK (0.28s)
             +++ OK, passed 100 tests.
-          formatCompilerErrors_properties:                                               OK (0.25s)
+          formatCompilerErrors_properties:                                               OK (0.26s)
             +++ OK, passed 100 tests.
           generateDetailedReport_properties:                                             OK (0.27s)
             +++ OK, passed 100 tests.
@@ -361,7 +237,7 @@ Test.Unit.Tests Tests
         Ownership Query Properties
           getOwners_properties:                                                          OK (0.01s)
             +++ OK, passed 100 tests.
-          getBorrowers_properties:                                                       OK (0.02s)
+          getBorrowers_properties:                                                       OK (0.01s)
             +++ OK, passed 100 tests.
           getOwnedResources_properties:                                                  OK (0.01s)
             +++ OK, passed 100 tests.
@@ -395,7 +271,7 @@ Test.Unit.Tests Tests
             +++ OK, passed 100 tests.
           dgEdges_properties:                                                            OK
             +++ OK, passed 100 tests.
-          getNodes_properties:                                                           OK
+          getNodes_properties:                                                           OK (0.01s)
             +++ OK, passed 100 tests.
         Dependency Analysis Properties
           analyzeDependencies_properties:                                                OK (0.03s)
@@ -405,7 +281,7 @@ Test.Unit.Tests Tests
           hasCycles_properties:                                                          OK
             +++ OK, passed 100 tests.
         Dependency Resolution Properties
-          resolveDependencies_properties:                                                OK (0.03s)
+          resolveDependencies_properties:                                                OK (0.04s)
             +++ OK, passed 100 tests.
           getDependencyErrors_properties:                                                OK
             +++ OK, passed 100 tests.
@@ -433,13 +309,13 @@ Test.Unit.Tests Tests
         IR statement consistency:                                                        OK
           +++ OK, passed 100 tests; 27 discarded.
         IR expression consistency:                                                       OK
-          +++ OK, passed 100 tests; 25 discarded.
+          +++ OK, passed 100 tests; 21 discarded.
         TypusFile structure consistency:                                                 OK (0.01s)
           +++ OK, passed 100 tests.
         Source location basic properties:                                                OK
-          +++ OK, passed 100 tests; 256 discarded.
+          +++ OK, passed 100 tests; 239 discarded.
         Go token basic properties:                                                       OK
-          +++ OK, passed 100 tests; 16 discarded.
+          +++ OK, passed 100 tests; 19 discarded.
     Integration Tests
       Concise Integration QuickCheck Tests
         Parser-Compiler Integration
@@ -494,9 +370,9 @@ Test.Unit.Tests Tests
     List: init of singleton is empty:                                                    OK
       +++ OK, passed 100 tests.
     List: last of cons is last of tail or element if empty:                              OK
-      +++ OK, passed 100 tests; 26 discarded.
-    List: init of cons is element cons init of tail or empty if empty:                   OK
       +++ OK, passed 100 tests; 19 discarded.
+    List: init of cons is element cons init of tail or empty if empty:                   OK
+      +++ OK, passed 100 tests; 18 discarded.
     List: null of empty list is true:                                                    OK
       +++ OK, passed 100 tests.
     List: null of non-empty list is false:                                               OK
@@ -516,7 +392,7 @@ Test.Unit.Tests Tests
     List: filter of cons with predicate true is cons of filter with predicate true:      OK
       +++ OK, passed 100 tests.
     List: filter of cons with predicate false excludes the head:                         OK
-      +++ OK, passed 100 tests; 86 discarded.
+      +++ OK, passed 100 tests; 85 discarded.
     List: all of empty list is true:                                                     OK
       +++ OK, passed 100 tests.
     List: any of empty list is false:                                                    OK
@@ -549,7 +425,7 @@ Test.Unit.Tests Tests
       +++ OK, passed 100 tests.
     List: concat of singleton list of lists is the list:                                 OK
       +++ OK, passed 100 tests.
-    List: concat of cons of lists is head list concat concat of tail:                    OK
+    List: concat of cons of lists is head list concat concat of tail:                    OK (0.01s)
       +++ OK, passed 100 tests.
     List: concat of map is same as concatMap:                                            OK
       +++ OK, passed 100 tests.
@@ -582,9 +458,9 @@ Test.Unit.Tests Tests
     List: take n of empty list is empty:                                                 OK
       +++ OK, passed 100 tests.
     List: take n of list with length <= n is the list itself:                            OK
-      +++ OK, passed 100 tests; 261 discarded.
+      +++ OK, passed 100 tests; 230 discarded.
     List: take n of list with length > n has length n:                                   OK
-      +++ OK, passed 100 tests; 337 discarded.
+      +++ OK, passed 100 tests; 383 discarded.
     List: take preserves order:                                                          OK
       +++ OK, passed 100 tests.
     List: drop 0 of any list is the list itself:                                         OK
@@ -592,9 +468,9 @@ Test.Unit.Tests Tests
     List: drop n of empty list is empty:                                                 OK
       +++ OK, passed 100 tests.
     List: drop n of list with length <= n is empty:                                      OK
-      +++ OK, passed 100 tests; 302 discarded.
+      +++ OK, passed 100 tests; 272 discarded.
     List: drop n of list with length > n has length (length - n):                        OK
-      +++ OK, passed 100 tests; 383 discarded.
+      +++ OK, passed 100 tests; 409 discarded.
     List: drop preserves order:                                                          OK
       +++ OK, passed 100 tests.
     List: splitAt n is (take n, drop n):                                                 OK
@@ -604,17 +480,17 @@ Test.Unit.Tests Tests
     List: replicate 0 is empty list:                                                     OK
       +++ OK, passed 100 tests.
     List: replicate n has length n:                                                      OK
-      +++ OK, passed 100 tests; 93 discarded.
+      +++ OK, passed 100 tests; 85 discarded.
     List: all elements of replicate are equal:                                           OK
-      +++ OK, passed 100 tests; 103 discarded.
+      +++ OK, passed 100 tests; 121 discarded.
     List: repeat is infinite:                                                            OK
       +++ OK, passed 100 tests.
     List: iterate n f starting from x applies f n times:                                 OK
-      +++ OK, passed 100 tests; 89 discarded.
+      +++ OK, passed 100 tests; 124 discarded.
     List: cycle of empty list is undefined (should not evaluate):                        OK
       +++ OK, passed 100 tests.
     List: cycle of non-empty list repeats infinitely:                                    OK
-      +++ OK, passed 100 tests; 17 discarded.
+      +++ OK, passed 100 tests; 19 discarded.
     List: span p xs is (takeWhile p xs, dropWhile p xs):                                 OK
       +++ OK, passed 100 tests.
     List: break p xs is (takeWhile (not . p) xs, dropWhile (not . p) xs):                OK
@@ -655,7 +531,7 @@ Test.Unit.Tests Tests
     Trim whitespace:                                                                     OK
       +++ OK, passed 100 tests (5% all whitespace).
     Trim regular:                                                                        OK
-      +++ OK, passed 100 tests; 5 discarded.
+      +++ OK, passed 100 tests; 4 discarded.
     Trim idempotent:                                                                     OK
       +++ OK, passed 100 tests.
     SplitBy basic:                                                                       OK
@@ -683,7 +559,7 @@ Test.Unit.Tests Tests
     NormalizeIndentation empty:                                                          OK
       +++ OK, passed 100 tests.
     NormalizeIndentation no indent:                                                      OK
-      +++ OK, passed 100 tests (48% has indentation).
+      +++ OK, passed 100 tests (43% has indentation).
     isRight basic:                                                                       OK
       +++ OK, passed 100 tests.
     isLeft basic:                                                                        OK
@@ -753,7 +629,7 @@ Test.Unit.Tests Tests
     Memory boundary conditions:                                                          OK
       +++ OK, passed 100 tests.
     Recursion boundary:                                                                  OK
-      +++ OK, passed 100 tests; 23 discarded.
+      +++ OK, passed 100 tests; 15 discarded.
     Numeric boundary:                                                                    OK
       +++ OK, passed 100 tests.
     String boundary:                                                                     OK
@@ -779,7 +655,7 @@ Test.Unit.Tests Tests
       Extreme Input Sizes
         parser with empty input:                                                         OK
         parser with single character:                                                    OK
-        parser with very large input:                                                    OK (0.03s)
+        parser with very large input:                                                    OK (0.04s)
         parser with very long lines:                                                     OK
       Extreme Positions
         source position at maximum values:                                               OK
@@ -808,12 +684,12 @@ Test.Unit.Tests Tests
         utils performance with large strings:                                            OK (0.03s)
     QuickCheck Properties
       Extreme Input Sizes
-        parser large input:                                                              OK (0.25s)
+        parser large input:                                                              OK (0.26s)
           +++ OK, passed 100 tests.
         parser deeply nested:                                                            OK (0.01s)
-          +++ OK, passed 100 tests; 109 discarded.
+          +++ OK, passed 100 tests; 110 discarded.
         large directives handling:                                                       OK
-          +++ OK, passed 100 tests; 125 discarded.
+          +++ OK, passed 100 tests; 98 discarded.
       Extreme Positions
         sourcelocation extreme positions:                                                OK
           +++ OK, passed 100 tests.
@@ -821,7 +697,7 @@ Test.Unit.Tests Tests
         error extreme severity:                                                          OK
           +++ OK, passed 100 tests.
         error collector large numbers:                                                   OK
-          +++ OK, passed 100 tests; 123 discarded.
+          +++ OK, passed 100 tests; 116 discarded.
         error formatting extreme content:                                                OK
           +++ OK, passed 100 tests.
       Utils Extreme Inputs
@@ -832,20 +708,43 @@ Test.Unit.Tests Tests
           +++ OK, passed 100 tests.
       Performance Boundaries
         memory efficiency repeated operations:                                           OK
-          +++ OK, passed 100 tests; 115 discarded.
+          +++ OK, passed 100 tests; 123 discarded.
   CodeGeneration QuickCheck Tests
     IR statement consistency:                                                            OK
-      +++ OK, passed 100 tests; 22 discarded.
+      +++ OK, passed 100 tests; 30 discarded.
     IR expression consistency:                                                           OK
-      +++ OK, passed 100 tests; 24 discarded.
+      +++ OK, passed 100 tests; 21 discarded.
     TypusFile structure consistency:                                                     OK (0.01s)
       +++ OK, passed 100 tests.
     Source location basic properties:                                                    OK
-      +++ OK, passed 100 tests; 298 discarded.
+      +++ OK, passed 100 tests; 242 discarded.
     Go token basic properties:                                                           OK
-      +++ OK, passed 100 tests; 15 discarded.
+      +++ OK, passed 100 tests; 18 discarded.
+  Parser Error Recovery Tests
+    parseTypus: handles empty input gracefully:                                          OK
+    parseTypus: handles only whitespace gracefully:                                      OK
+    parseTypus: handles only comments gracefully:                                        OK
+    parseTypus: recovers from malformed directive:                                       OK
+    parseTypus: handles unclosed block comment:                                          OK
+    parseTypus: handles unclosed string literal in directive:                            OK
+    parseTypus: handles malformed code block markers:                                    OK
+    parseTypus: handles missing closing code block marker:                               OK
+    parseTypus: handles nested block directives correctly:                               OK
+    parseTypus: handles multiple file directives:                                        OK
+    parseTypus: handles build tags correctly:                                            OK
+    parseTypus: preserves syntax errors for later processing:                            OK
+    parseTypus: handles Unicode content correctly:                                       OK
+    parseTypus: handles very long lines:                                                 OK
+    parseTypus: handles mixed line endings:                                              OK
+  Parser Directives Tests
+    Parser: default file directives:                                                     OK
+    Parser: default block directives:                                                    OK
+    Parser: FileDirectives structure:                                                    OK
+    Parser: BlockDirectives structure:                                                   OK
+    Parser: CodeBlock structure:                                                         OK
+    Parser: TypusFile structure:                                                         OK
 
-All 339 tests passed (2.22s)
+All 360 tests passed (2.31s)
 Test suite typus-test: PASS
 Test suite logged to:
 /home/runner/work/Typus/Typus/./dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/t/typus-test/test/typus-0.12.2-typus-test.log

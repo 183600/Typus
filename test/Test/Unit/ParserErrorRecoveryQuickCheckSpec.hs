@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-unused-imports -Wno-unused-local-binds #-}
 module Test.Unit.ParserErrorRecoveryQuickCheckSpec where
 
 

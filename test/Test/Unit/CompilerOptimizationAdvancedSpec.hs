@@ -1,5 +1,5 @@
 {-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-orphans  -Wno-unused-imports -Wno-name-shadowing  -Wno-unused-matches #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
 module Test.Unit.CompilerOptimizationAdvancedSpec where
 
@@ -277,20 +277,20 @@ parseConstant :: String -> Int
 parseConstant s = read s
 
 evaluateInstruction :: IRInstruction -> Map String Int -> Maybe Int
-evaluateInstruction (Const dest value) _ = Just value
-evaluateInstruction (Add dest op1 op2) env = do
+evaluateInstruction (Const _ value) _ = Just value
+evaluateInstruction (Add _ op1 op2) env = do
   val1 <- Map.lookup op1 env
   val2 <- Map.lookup op2 env
   return (val1 + val2)
-evaluateInstruction (Sub dest op1 op2) env = do
+evaluateInstruction (Sub _ op1 op2) env = do
   val1 <- Map.lookup op1 env
   val2 <- Map.lookup op2 env
   return (val1 - val2)
-evaluateInstruction (Mul dest op1 op2) env = do
+evaluateInstruction (Mul _ op1 op2) env = do
   val1 <- Map.lookup op1 env
   val2 <- Map.lookup op2 env
   return (val1 * val2)
-evaluateInstruction (Div dest op1 op2) env = do
+evaluateInstruction (Div _ op1 op2) env = do
   val1 <- Map.lookup op1 env
   val2 <- Map.lookup op2 env
   if val2 /= 0 then return (val1 `div` val2) else Nothing
@@ -409,10 +409,10 @@ allocateRegisters :: BasicBlock -> BasicBlock
 allocateRegisters block = block  -- Simplified implementation
 
 findLoops :: ControlFlowGraph -> [[String]]
-findLoops cfg = []  -- Simplified implementation
+findLoops _ = []  -- Simplified implementation
 
 hasInvariantMoved :: ControlFlowGraph -> ControlFlowGraph -> [String] -> Bool
-hasInvariantMoved original optimized loop = True  -- Simplified implementation
+hasInvariantMoved _ _ _ = True  -- Simplified implementation
 
 moveLoopInvariants :: ControlFlowGraph -> ControlFlowGraph
 moveLoopInvariants cfg = cfg  -- Simplified implementation
