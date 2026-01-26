@@ -608,11 +608,13 @@ checkCall TypeEnv{..} context CallExpr{..} =
                                    else ([single], Nothing)
                     _ ->
                         let lastParam = case reverse params of
-                                        (p:_) -> p
-                                        [] -> error "Impossible: params is not empty in this context"
-                        in if fpVariadic lastParam
-                              then (init params, Just lastParam)
-                              else (params, Nothing)
+                                        (p:_) -> Just p
+                                        [] -> Nothing
+                        in case lastParam of
+                             Just lp -> if fpVariadic lp
+                                          then (init params, Just lp)
+                                          else (params, Nothing)
+                             Nothing -> (params, Nothing)
             minCount = length fixedParams
             actualCount = length callArgs
             tooFew = actualCount < minCount
@@ -634,9 +636,13 @@ checkCall TypeEnv{..} context CallExpr{..} =
                     [] -> ([], Nothing)
                     _ ->
                         let lp = case reverse params of
-                                (p:_) -> p
-                                [] -> error "Impossible: params is not empty in this context"
-                        in if fpVariadic lp then (init params, Just lp) else (params, Nothing)
+                                (p:_) -> Just p
+                                [] -> Nothing
+                        in case lp of
+                             Just lastParam -> if fpVariadic lastParam
+                                                 then (init params, Just lastParam)
+                                                 else (params, Nothing)
+                             Nothing -> (params, Nothing)
             expectedForIdx idx
                 | idx < length fixedParams = Just (fpType (fixedParams !! idx))
                 | otherwise = fpType <$> variadicParam
@@ -838,8 +844,8 @@ parseShortVarDeclSpecs VarDecl{..} =
     
     splitOn [] s = [s]
     splitOn sep s = case break (== sep !! 0) s of
-        (a, c:b) -> a : splitOn sep (dropWhile (== c) b)
-        (a, "") -> [a]
+                     (a, c:b) -> a : splitOn sep (dropWhile (== c) b)
+                     (a, "") -> [a]
         
     inferLiteralType value
         | isNumericLiteral value = numericType value
