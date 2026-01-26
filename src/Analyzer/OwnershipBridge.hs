@@ -12,8 +12,11 @@ import Control.Monad.State
 import Data.Char (isAlphaNum, isLetter, isSpace, isUpper)
 
 
-import Data.Foldable (foldl')
+import qualified Data.Foldable as Foldable (foldl')
+
+
 import Data.List (find, findIndex, isInfixOf, isPrefixOf, stripPrefix, tails)
+
 
 import Data.Maybe (listToMaybe, mapMaybe)
 import qualified Data.Map.Strict as Map
@@ -39,7 +42,7 @@ updateSymbolTableWithOwnership ownershipErrs =
     modify $ \s -> s { symbolTable = updateOwnershipSymbols (symbolTable s) ownershipErrs }
   where
     updateOwnershipSymbols :: Map.Map String SymbolInfo -> [Own.OwnershipError] -> Map.Map String SymbolInfo
-    updateOwnershipSymbols symbols errors = foldl' updateSymbolForOwnership symbols errors
+    updateOwnershipSymbols symbols errors = Foldable.foldl' updateSymbolForOwnership symbols errors
 
     updateSymbolForOwnership :: Map.Map String SymbolInfo -> Own.OwnershipError -> Map.Map String SymbolInfo
     updateSymbolForOwnership symbols (Own.UseAfterMove varName) =

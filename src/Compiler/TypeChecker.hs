@@ -67,8 +67,11 @@ import Control.Monad (forM)
 import Data.Char (isAlphaNum, isDigit, isSpace)
 
 
-import Data.Foldable (foldl')
+import qualified Data.Foldable as Foldable (foldl')
+
+
 import Data.List (intercalate, intersperse, isInfixOf, isPrefixOf, stripPrefix, (\\))
+
 
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -438,7 +441,7 @@ checkFunction env FunctionInfo{..} =
     let -- Extract variable declarations from the function body
         varDecls = extractVariableDeclarations fiBody
         -- Update environment with local variables
-        envWithLocals = foldl' addLocalVars env varDecls
+        envWithLocals = Foldable.foldl' addLocalVars env varDecls
         calls = extractCallExpressions fiBody
     in concatMap (checkCall envWithLocals (Just fiName)) calls
   where
@@ -484,7 +487,7 @@ checkStatement env lines0 =
         -- Extract variable declarations from the statement
         varDecls = extractVariableDeclarationsFromStatement text
         -- Update environment with local variables
-        envWithLocals = foldl' addLocalVars env varDecls
+        envWithLocals = Foldable.foldl' addLocalVars env varDecls
         calls = extractCallExpressions text
         baseErrors = concatMap (checkCall envWithLocals Nothing) calls
         -- Add nested context if needed
@@ -1208,7 +1211,7 @@ checkCircularDependencies functionInfos =
                 recStack' = Set.insert node recStack
                 neighbors = Map.findWithDefault [] node graph
                 (allCycles, visited'', recStack'') = 
-                    foldl' (\(cycles, vis, rs) neighbor ->
+                    Foldable.foldl' (\(cycles, vis, rs) neighbor ->
                         let (newCycles, vis', rs') = dfs neighbor vis rs (node:path) graph
                         in (cycles ++ newCycles, vis', rs')
                     ) ([], visited', recStack') neighbors

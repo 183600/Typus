@@ -15,8 +15,11 @@ module SyntaxValidator (
 import qualified Data.Set as Set
 
 
-import Data.Foldable (foldl')
+import qualified Data.Foldable as Foldable (foldl')
+
+
 import Data.List (isInfixOf, isPrefixOf, tails)
+
 
 import Data.Char (isSpace, isAlphaNum, isAlpha, isDigit)
 
@@ -322,7 +325,7 @@ performValidation validator tokens =
 validateTokenSequence :: SyntaxValidator -> [Token] -> SyntaxValidator
 validateTokenSequence validator [] = validator
 validateTokenSequence validator tokens =
-    foldl' validateToken validator (zip tokens nextTokens)
+    Foldable.foldl' validateToken validator (zip tokens nextTokens)
   where
     nextTokens = map nextSignificant (tails tokens)
 
@@ -417,7 +420,7 @@ validateBraceMatching validator tokens =
     -- 特殊情况：只有一个token的情况，不进行括号匹配检查
     if length tokens == 1
        then validator
-       else let validator' = foldl' checkBrace validator tokens
+       else let validator' = Foldable.foldl' checkBrace validator tokens
             in if not (null $ braceStack validator')
                then case braceStack validator' of
                         ((brace, line, col):_) -> addError validator' MissingBrace
@@ -448,7 +451,7 @@ matchingBrace _ _ = False
 
 validateDeclarations :: SyntaxValidator -> [Token] -> SyntaxValidator
 validateDeclarations validator tokens = 
-    foldl' checkVariableUsage validator (filterIdentifiers tokens)
+    Foldable.foldl' checkVariableUsage validator (filterIdentifiers tokens)
   where
     filterIdentifiers = filter isIdentifierToken
     isIdentifierToken (TIdentifier _ _ _) = True
@@ -499,7 +502,7 @@ validateGoSpecific validator tokens =
 
 validateTypusSpecific :: SyntaxValidator -> [Token] -> SyntaxValidator
 validateTypusSpecific validator tokens =
-    let validator1 = foldl' checkTypusDirective validator (filterComments tokens)
+    let validator1 = Foldable.foldl' checkTypusDirective validator (filterComments tokens)
         validator2 = checkLetDeclarations validator1 tokens
     in validator2
   where
@@ -557,7 +560,7 @@ checkTypusDirective validator _ = validator
 validateControlFlow :: SyntaxValidator -> [Token] -> SyntaxValidator
 validateControlFlow validator tokens = 
     -- Re-enabled with proper logic to detect missing braces
-    foldl' checkControlStructure validator (zip3 tokens (drop 1 tokens ++ [TNewline 0]) (drop 2 tokens ++ [TNewline 0, TNewline 0]))
+    Foldable.foldl' checkControlStructure validator (zip3 tokens (drop 1 tokens ++ [TNewline 0]) (drop 2 tokens ++ [TNewline 0, TNewline 0]))
 
 checkControlStructure :: SyntaxValidator -> (Token, Token, Token) -> SyntaxValidator
 checkControlStructure validator (TKeyword kw line col, next1, next2)

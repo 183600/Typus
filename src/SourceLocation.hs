@@ -62,8 +62,9 @@ module SourceLocation (
     sourceColumn
 ) where
 
+
+import qualified Data.Foldable as Foldable (foldl')
 import Data.Text (Text)
-import Data.Foldable (foldl')
 import Test.QuickCheck (Arbitrary(..), suchThat)
 
 import qualified Data.Text as T
@@ -274,7 +275,7 @@ advancePos = posAfter
 
 -- Advance position by multiple characters
 advancePosBy :: String -> SourcePos -> SourcePos
-advancePosBy chars pos = foldl' (flip advancePos) pos chars
+advancePosBy chars pos = Foldable.foldl' (flip advancePos) pos chars
 
 -- Advance position by text
 advancePosByText :: Text -> SourcePos -> SourcePos

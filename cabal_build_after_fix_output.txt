@@ -10,6 +10,11 @@ Building library for typus-0.12.2...
 [38 of 58] Compiling SyntaxValidator  ( src/SyntaxValidator.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/SyntaxValidator.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/SyntaxValidator.dyn_o ) [Source file changed]
 [47 of 58] Compiling Compiler.TypeChecker ( src/Compiler/TypeChecker.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/TypeChecker.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Compiler/TypeChecker.dyn_o ) [Source file changed]
 [55 of 58] Compiling Analyzer.OwnershipBridge ( src/Analyzer/OwnershipBridge.hs, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Analyzer/OwnershipBridge.o, dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/build/Analyzer/OwnershipBridge.dyn_o ) [Source file changed]
+Warning: -rtsopts and -with-rtsopts have no effect with -shared.
+    Call hs_init_ghc() from your main() function to set these options.
+/usr/bin/ld: warning: type and size of dynamic symbol `deepseqzm1zi5zi1zi0zmf671_ControlziDeepSeq_zdfNFDataInt_closure' are not defined
+/usr/bin/ld: warning: type and size of dynamic symbol `aesonzm2zi2zi3zi0zmf7b67ac57426cc03ac2252767166225ef1be83a1daea96f71035bea37629bd3b_DataziAesonziTypesziInternal_zdfIsStringValue_closure' are not defined
+/usr/bin/ld: warning: type and size of dynamic symbol `deepseqzm1zi5zi1zi0zmf671_ControlziDeepSeq_zdfNFDataBool_closure' are not defined
 Preprocessing executable 'typus' for typus-0.12.2...
 Building executable 'typus' for typus-0.12.2...
-[2 of 2] Linking dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/x/typus/build/typus/typus [Flags changed]
+[2 of 2] Linking dist-newstyle/build/x86_64-linux/ghc-9.14.1/typus-0.12.2/x/typus/build/typus/typus [Library changed]
