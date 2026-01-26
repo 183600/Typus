@@ -5,7 +5,7 @@ import Cli.DebugRunner (processDebugArgs)
 import CompilerUtils (CompilerContext(..), Logger(..), defaultLogger, newCompilerContext)
 import qualified CompilerUtils as CU
 import Control.Monad (forM_, unless)
-import Control.Monad.Except
+import Control.Monad.Except (runExceptT, throwError)
 import Control.Monad.IO.Class (liftIO)
 import Data.List (partition)
 import EmbedAssets (copyEmbeddedForBuild, handleMissingEmbeds, mirrorEmbeddedResources)
