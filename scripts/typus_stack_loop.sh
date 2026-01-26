@@ -168,6 +168,7 @@ while true; do
 
   if [[ "$STACK_STATUS" -eq 0 ]]; then
     iflow "给这个项目增加一些stack test测试用例，不要超过200个，在这些新测试用例里面，如果需要添加使用QuickCheck的测试用例就添加 think:high" --yolo || true
+    iflow '删除项目根目录多余的.md文件或者.txt文件（像TEST_ENHANCEMENT_SUMMARY.md和test_wall_production.txt这样的）' --yolo || true
 
     # 门禁：防止 iflow 生成乱码路径被提交
     guard_bad_paths || exit $?
@@ -194,6 +195,7 @@ while true; do
       --test-arguments="+RTS -M1024m -A16m -RTS" \
       --jobs=1 \
       --test-details=direct显示的所有问题（除了warning），除非测试用例本身有编译错误，否则只修改测试用例以外的代码，debug时可通过加日志和打断点 think:high' --yolo || true
+    iflow '删除项目根目录多余的.md文件或者.txt文件（像TEST_ENHANCEMENT_SUMMARY.md和test_wall_production.txt这样的）' --yolo || true
 
     # 门禁：即使修复失败也清理掉工作区可能出现的乱码路径，避免下轮被 add
     guard_bad_paths || exit $?
