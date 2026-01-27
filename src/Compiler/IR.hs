@@ -204,7 +204,7 @@ replaceGenericAngles input =
                (ltTok:afterLt)
                  | isLessToken ltTok ->
                      let (inside, restAfter, success) = consumeGenericTokens 0 [] afterLt
-                     in if success && hasNonTrivial inside
+                     in if success && hasNonTrivial inside && isGenericContext inside
                            then
                              let innerConverted = rewriteTokens inside
                                  prefix = tok : mkSymbol "[" : innerConverted
@@ -212,6 +212,15 @@ replaceGenericAngles input =
                            else tok : (spaces ++ (ltTok : rewriteTokens afterLt))
                _ -> tok : rewriteTokens rest
       | otherwise = tok : rewriteTokens rest
+    
+    -- Check if this looks like a generic type parameter context
+    -- Generic types typically contain identifiers, commas, and whitespace
+    -- but not comparison operators, arithmetic operators, or literals
+    isGenericContext tokens = 
+      let tokenTexts = map tokenText tokens
+          hasInvalidTokens = any (`elem` ["<", ">", "==", "!=", "<=", ">=", "+", "-", "*", "/", "&&", "||", "true", "false"]) tokenTexts
+          hasIdentifiers = any ((== TokIdentifier) . tokenKind) tokens
+      in hasIdentifiers && not hasInvalidTokens
 
     spanInlineWhitespace = span isInlineSpace
 

@@ -1,0 +1,66 @@
+package main
+
+import "fmt"
+
+// Simple type definitions
+type Vector struct {
+    elements []int
+}
+
+type BoundedInt struct {
+    val int
+    min int
+    max int
+}
+
+// Simple functions
+func NewVector(elements []int) *Vector {
+    return &Vector{elements: elements}
+}
+
+func NewBoundedInt(val, min, max int) *BoundedInt {
+    if val < min || val > max {
+        fmt.Printf("Error: Value out of bounds\n")
+        return nil
+    }
+    return &BoundedInt{val: val, min: min, max: max}
+}
+
+func VectorGet(v *Vector, index int) int {
+    if index < 0 || index >= len(v.elements) {
+        fmt.Printf("Error: Index out of bounds\n")
+        return 0
+    }
+    return v.elements[index]
+}
+
+func BoundedIntAdd(b1, b2 *BoundedInt) *BoundedInt {
+    newVal := b1.val + b2.val
+    if newVal < b1.min || newVal > b1.max {
+        fmt.Printf("Error: Result out of bounds\n")
+        return nil
+    }
+    return &BoundedInt{val: newVal, min: b1.min, max: b1.max}
+}
+
+func main() {
+    fmt.Println("=== Simple Type System Test ===")
+    
+    // Test Vector
+    v1 := NewVector([]int{1, 2, 3})
+    fmt.Printf("Vector v1: %v\n", v1.elements)
+    fmt.Printf("v1.Get(1): %d\n", VectorGet(v1, 1))
+    
+    // Test BoundedInt
+    b1 := NewBoundedInt(50, 0, 100)
+    b2 := NewBoundedInt(25, 0, 100)
+    fmt.Printf("BoundedInt b1: %d\n", b1.val)
+    fmt.Printf("BoundedInt b2: %d\n", b2.val)
+    
+    b3 := BoundedIntAdd(b1, b2)
+    if b3 != nil {
+        fmt.Printf("b1 + b2: %d\n", b3.val)
+    }
+    
+    fmt.Println("=== Test Complete ===")
+}

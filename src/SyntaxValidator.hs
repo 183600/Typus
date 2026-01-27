@@ -348,7 +348,11 @@ validateToken validator (current, next) =
         TKeyword "func" l c -> validateFunctionDecl validator current next l c
         TKeyword "var" l c -> validateVarDecl validator current next l c
         TKeyword "const" l c -> validateConstDecl validator current next l c
-        TKeyword "type" l c -> validateTypeDecl validator current next l c
+        TKeyword "type" l c -> 
+            -- Check if this is part of a type switch (i.(type))
+            case next of
+                TDelimiter ')' _ _ -> validator  -- Part of type switch, don't validate as type declaration
+                _ -> validateTypeDecl validator current next l c
         TKeyword "import" l c -> validateImportDecl validator current next l c
         TKeyword "package" _ _ ->
             validator { hasPackageDecl = True }
@@ -365,9 +369,11 @@ validateFunctionDecl validator _ next line col =
         TIdentifier name _ _ -> 
             let newScope = Scope name Set.empty Set.empty (Just $ currentScope validator)
                 validator' = validator { currentScope = newScope, scopeStack = currentScope validator : scopeStack validator }
-            in if name `Set.member` scopeFunctions (currentScope validator)
-               then addError validator' DuplicateDeclaration 
-                            ("Duplicate function declaration: " ++ name) line col ""
+            in if name == "init" || name `Set.member` scopeFunctions (currentScope validator)
+               then if name == "init" 
+                    then validator'  -- Allow duplicate init functions
+                    else addError validator' DuplicateDeclaration 
+                                ("Duplicate function declaration: " ++ name) line col ""
                else validator' { currentScope = (currentScope validator') 
                                 { scopeFunctions = Set.insert name (scopeFunctions $ currentScope validator') }}
         _ -> addError validator InvalidFunctionDeclaration 
@@ -382,6 +388,7 @@ validateVarDecl validator _ next line col =
                          ("Duplicate variable declaration: " ++ name) line col ""
             else validator { currentScope = (currentScope validator) 
                            { scopeVariables = Set.insert name (scopeVariables $ currentScope validator) }}
+        TDelimiter '(' _ _ -> validator  -- Allow var group declarations like "var ("
         _ -> addError validator InvalidStatement 
                      "Expected variable name after 'var'" line col ""
 
@@ -392,6 +399,7 @@ validateTypeDecl :: SyntaxValidator -> Token -> Token -> Int -> Int -> SyntaxVal
 validateTypeDecl validator _ next line col =
     case next of
         TIdentifier _ _ _ -> validator
+        TDelimiter '(' _ _ -> validator  -- Allow type group declarations like "type ("
         _ -> addError validator InvalidTypeDeclaration 
                      "Expected type name after 'type'" line col ""
 
@@ -567,20 +575,22 @@ checkTypusDirective validator _ = validator
 validateControlFlow :: SyntaxValidator -> [Token] -> SyntaxValidator
 validateControlFlow validator tokens = 
     -- Re-enabled with proper logic to detect missing braces
-    Foldable.foldl' checkControlStructure validator (zip3 tokens (drop 1 tokens ++ [TNewline 0]) (drop 2 tokens ++ [TNewline 0, TNewline 0]))
+    Foldable.foldl' checkControlStructure validator (zip tokens (tails tokens))
 
-checkControlStructure :: SyntaxValidator -> (Token, Token, Token) -> SyntaxValidator
-checkControlStructure validator (TKeyword kw line col, next1, next2)
+checkControlStructure :: SyntaxValidator -> (Token, [Token]) -> SyntaxValidator
+checkControlStructure validator (TKeyword kw line col, remainingTokens)
     | kw `elem` ["if", "for", "while", "switch"] =
-        case findNextBrace next1 next2 of
+        case findNextBrace remainingTokens of
             Nothing -> addError validator UnterminatedBlock 
                                (kw ++ " statement missing opening brace") line col ""
             Just _ -> validator
     | otherwise = validator
   where
-    findNextBrace (TDelimiter '{' _ _) _ = Just True
-    findNextBrace _ (TDelimiter '{' _ _) = Just True
-    findNextBrace _ _ = Nothing
+    findNextBrace [] = Nothing
+    findNextBrace (TDelimiter '{' _ _:_) = Just True
+    findNextBrace (TNewline _:rest) = findNextBrace rest
+    findNextBrace (TWhitespace _ _:rest) = findNextBrace rest
+    findNextBrace (_:rest) = findNextBrace rest
 
 -- checkControlStructure :: SyntaxValidator -> (Token, Token, Token) -> SyntaxValidator
 -- checkControlStructure validator (TKeyword kw line col, next1, next2)

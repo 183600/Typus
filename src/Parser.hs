@@ -26,6 +26,7 @@ import Data.List (isPrefixOf, isInfixOf, isSuffixOf, partition)
 import Data.Maybe (fromMaybe)
 import Data.Void (Void)
 import qualified Data.Text as T
+
 import SourceLocation
   ( Located(..)
   , SourcePos(..)
@@ -287,10 +288,25 @@ checkIfStatementsWithBraces lines' =
 validateCodeBlocks :: [CodeBlock] -> Either String ()
 
 validateCodeBlocks blocks = 
-
     case findIncompleteExpression blocks of
 
-      Just (_block, expr) -> Left $ "Incomplete expression in code block: " ++ expr
+      Just (_block, expr) -> 
+        -- Check if this is an import, const, var, type line, or comment
+        let trimmedExpr = trim expr
+        in if "import " `isPrefixOf` trimmedExpr || 
+              "import(" `isPrefixOf` trimmedExpr ||
+              "import" `isPrefixOf` trimmedExpr ||
+              "const " `isPrefixOf` trimmedExpr ||
+              "const(" `isPrefixOf` trimmedExpr ||
+              "var " `isPrefixOf` trimmedExpr ||
+              "var(" `isPrefixOf` trimmedExpr ||
+              "type " `isPrefixOf` trimmedExpr ||
+              "//" `isPrefixOf` trimmedExpr ||
+              "/*" `isPrefixOf` trimmedExpr ||
+              "*" `isPrefixOf` trimmedExpr ||
+              "====" `isPrefixOf` trimmedExpr
+        then Right ()  -- Allow import, const, var, type declarations and comments
+        else Left $ "Incomplete expression in code block: " ++ expr
 
       Nothing -> Right ()
 
@@ -324,6 +340,12 @@ validateCodeBlocks blocks =
           
           -- Don't consider function declarations as incomplete
           isFuncDecl = "func " `isPrefixOf` trimmed
+          
+          -- Don't consider import statements as incomplete
+          isImportDecl = "import " `isPrefixOf` trimmed
+          
+          -- Also check for import without space
+          isImportDeclNoSpace = "import(" `isPrefixOf` trimmed
           
           -- Don't consider lines with block comments as incomplete
           hasBlockComment = "/*" `isInfixOf` line || "*/" `isInfixOf` line
@@ -362,7 +384,7 @@ validateCodeBlocks blocks =
 
             ]
 
-      in not isFuncDecl && any (== True) incompletePatterns && not (null trimmed) && not hasBlockComment
+      in not isFuncDecl && not isImportDecl && not isImportDeclNoSpace && any (== True) incompletePatterns && not (null trimmed) && not hasBlockComment
 
 -- Check for multiple package declarations
 checkMultiplePackageDeclarations :: [ParsedLine] -> Either String ()

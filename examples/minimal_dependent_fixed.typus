@@ -3,7 +3,7 @@ package main
 import "fmt"
 
 func main() {
-    fmt.Println("Hello from Typus\!")
+    fmt.Println("Hello from Typus!")
     
     // Simple dependent type test
     vec := make([]int, 3)

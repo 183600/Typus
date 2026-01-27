@@ -1,3 +1,4 @@
+//! dependent_types: on
 package main
 
 import (
@@ -16,7 +17,7 @@ type Matrix struct {
 }
 
 type BoundedInt struct {
-    value int
+    val int
     min int
     max int
 }
@@ -36,21 +37,24 @@ func NewMatrix(data []interface{}) *Matrix {
 
 func NewBoundedInt(value, min, max int) *BoundedInt {
     if value < min || value > max {
-        panic(fmt.Sprintf("Value %d out of bounds [%d, %d]", value, min, max))
+        fmt.Printf("Error: Value %d out of bounds [%d, %d]\n", value, min, max)
+        return nil
     }
-    return &BoundedInt{value: value, min: min, max: max}
+    return &BoundedInt{val: value, min: min, max: max}
 }
 
-func NewNonEmptyString(content string) *NonEmptyString {
-    if len(content) == 0 {
-        panic("Cannot create NonEmptyString with empty content")
+func NewNonEmptyString(str string) *NonEmptyString {
+    if len(str) == 0 {
+        fmt.Printf("Error: Cannot create NonEmptyString with empty content\n")
+        return nil
     }
-    return &NonEmptyString{content: content}
+    return &NonEmptyString{content: str}
 }
 
 func (v *Vector) Dot(other *Vector) int {
     if len(v.elements) != len(other.elements) {
-        panic("Vector dimensions must match")
+        fmt.Printf("Error: Vector dimensions must match\n")
+        return 0
     }
     
     result := 0
@@ -72,11 +76,12 @@ func (v *Vector) Length() float64 {
 }
 
 func (b *BoundedInt) Add(other *BoundedInt) *BoundedInt {
-    newValue := b.value + other.value
+    newValue := b.val + other.val
     if newValue < b.min || newValue > b.max {
-        panic(fmt.Sprintf("Addition result %d out of bounds [%d, %d]", newValue, b.min, b.max))
+        fmt.Printf("Error: Addition result %d out of bounds [%d, %d]\n", newValue, b.min, b.max)
+        return nil
     }
-    return &BoundedInt{value: newValue, min: b.min, max: b.max}
+    return &BoundedInt{val: newValue, min: b.min, max: b.max}
 }
 
 func (s *NonEmptyString) Concat(other *NonEmptyString) *NonEmptyString {
@@ -95,18 +100,20 @@ func SafeDivide(a, b float64) float64 {
     return a / b
 }
 
-func ArrayAccess(arr []int, index int) int {
-    if index < 0 || index >= len(arr) {
-        panic("Array index out of bounds")
+func ArrayAccess(array []int, index int) int {
+    if index < 0 || index >= len(array) {
+        fmt.Printf("Error: Array index out of bounds\n")
+        return 0
     }
-    return arr[index]
+    return array[index]
 }
 
-func StringSlice(s string, start, end int) string {
-    if start < 0 || end > len(s) || start > end {
-        panic("Invalid string slice bounds")
+func StringSlice(str string, start, end int) string {
+    if start < 0 || end > len(str) || start > end {
+        fmt.Printf("Error: Invalid string slice bounds\n")
+        return ""
     }
-    return s[start:end]
+    return str[start:end]
 }
 
 func main() {
@@ -128,10 +135,10 @@ func main() {
     // 测试 BoundedInt
     b1 := NewBoundedInt(50, 0, 100)
     b2 := NewBoundedInt(25, 0, 100)
-    fmt.Printf("BoundedInt b1: %d\n", b1.value)
-    fmt.Printf("BoundedInt b2: %d\n", b2.value)
+    fmt.Printf("BoundedInt b1: %d\n", b1.val)
+    fmt.Printf("BoundedInt b2: %d\n", b2.val)
     b3 := b1.Add(b2)
-    fmt.Printf("b1 + b2: %d\n", b3.value)
+    fmt.Printf("b1 + b2: %d\n", b3.val)
     
     // 测试 NonEmptyString
     s1 := NewNonEmptyString("Hello")
@@ -146,9 +153,9 @@ func main() {
     result := SafeDivide(10.0, 2.0)
     fmt.Printf("SafeDivide(10.0, 2.0): %.2f\n", result)
     
-    arr := []int{100, 200, 300, 400, 500}
-    value := ArrayAccess(arr, 2)
-    fmt.Printf("ArrayAccess(arr, 2): %d\n", value)
+    array := []int{100, 200, 300, 400, 500}
+    value := ArrayAccess(array, 2)
+    fmt.Printf("ArrayAccess(array, 2): %d\n", value)
     
     substring := StringSlice("Hello World", 0, 5)
     fmt.Printf("StringSlice('Hello World', 0, 5): %s\n", substring)

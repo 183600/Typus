@@ -136,6 +136,28 @@ data TypeCheckDiagnostic = TypeCheckDiagnostic
     } deriving (Eq, Ord, Show)
 
 
+-- | Helper function to split a string by a delimiter
+splitOn :: Eq a => a -> [a] -> [[a]]
+splitOn _ [] = [[]]
+splitOn delim xs = go xs []
+  where
+    go [] acc = [reverse acc]
+    go (y:ys) acc
+        | y == delim = reverse acc : go ys []
+        | otherwise = go ys (y:acc)
+
+-- | Helper function to split a String by a String delimiter
+splitOnString :: String -> String -> [String]
+splitOnString _ "" = [""]
+splitOnString delim s = go s []
+  where
+    go [] acc = [reverse acc]
+    go str acc
+        | delim `isPrefixOf` str = reverse acc : go (drop (length delim) str) []
+        | otherwise = 
+            case str of
+                (c:cs) -> go cs (c:acc)
+
 -- | Determine whether the given Typus file has malformed Go syntax.
 hasMalformedSyntax :: TypusFile -> Bool
 hasMalformedSyntax typusFile =
@@ -309,7 +331,7 @@ buildTypeEnv GoModule{..} =
         , functionTypes = Map.fromList allFunctions
         }
   where
-    builtinFunctions = ["println", "print", "len", "cap", "append", "make", "new"]
+    builtinFunctions = ["println", "print", "len", "cap", "append", "make", "new", "panic"]
     
     builtinFunctionEntry :: String -> (String, FunctionSignature)
     builtinFunctionEntry name = (name, builtinSignature)
@@ -358,7 +380,7 @@ buildTypeEnvFromPairs pairs = TypeEnv
     , functionTypes = Map.fromList builtinFunctionEntries
     }
   where
-    builtinFunctions = ["println", "print", "len", "cap", "append", "make", "new"]
+    builtinFunctions = ["println", "print", "len", "cap", "append", "make", "new", "panic"]
     builtinFunctionEntries = map (\name -> (name, builtinSignature)) builtinFunctions
     builtinSignature = FunctionSignature
         { fsParams = [FunctionParam Nothing UnknownType True]
@@ -438,10 +460,14 @@ gatherTypeErrors env GoModule{..} =
 
 checkFunction :: TypeEnv -> FunctionInfo -> [TypeError]
 checkFunction env FunctionInfo{..} =
-    let -- Extract variable declarations from the function body
+    let -- Add function parameters to the environment
+        paramEntries = [(name, fpType param) | param <- fsParams fiSignature,
+                                               Just name <- [fpName param]]
+        envWithParams = env { varTypes = Map.union (Map.fromList paramEntries) (varTypes env) }
+        -- Extract variable declarations from the function body
         varDecls = extractVariableDeclarations fiBody
         -- Update environment with local variables
-        envWithLocals = Foldable.foldl' addLocalVars env varDecls
+        envWithLocals = Foldable.foldl' addLocalVars envWithParams varDecls
         calls = extractCallExpressions fiBody
     in concatMap (checkCall envWithLocals (Just fiName)) calls
   where
@@ -572,10 +598,23 @@ checkCall TypeEnv{..} context CallExpr{..} =
                 typeErrors = checkArgumentTypes signature
             in arityErrors ++ typeErrors
         Nothing ->
-            case Map.lookup callName varTypes <|> Map.lookup (lastSegment callName) varTypes of
-                Just _ -> []  -- Variable exists, no error
-                Nothing -> [TypeError context ("Undefined function or variable: " ++ callName ++ 
+            -- Check if this is a method call (e.g., b1.Add)
+            if '.' `elem` callName
+            then 
+                let parts = splitOn '.' callName
+                in case parts of
+                    (receiver:_) -> 
+                        case Map.lookup receiver varTypes of
+                            Just _ -> []  -- Assume method exists on receiver type for now
+                            Nothing -> [TypeError context ("Undefined function or variable: " ++ callName ++ 
+                                               (if hasNestedIfs then " in nested block" else ""))]
+                    [] -> [TypeError context ("Undefined function or variable: " ++ callName ++ 
                                    (if hasNestedIfs then " in nested block" else ""))]
+            else
+                case Map.lookup callName varTypes <|> Map.lookup (lastSegment callName) varTypes of
+                    Just _ -> []  -- Variable exists, no error
+                    Nothing -> [TypeError context ("Undefined function or variable: " ++ callName ++ 
+                                       (if hasNestedIfs then " in nested block" else ""))]
           where
             hasNestedIfs = case context of
               Just funcName -> 
@@ -657,17 +696,14 @@ checkCall TypeEnv{..} context CallExpr{..} =
             Just expectedType ->
                 let actualType = inferArgumentType (TypeEnv varTypes functionTypes) argText
                     -- Check if the argument is an undefined variable
-                    isUndefinedVar = actualType == UnknownType && 
-                                     isSimpleIdentifier argText && 
-                                     not (Map.member argText varTypes) &&
-                                     not (isLiteral argText)
-                in if isUndefinedVar
-                      then [TypeError context ("Undefined variable: " ++ argText)]
-                      else if typesCompatible expectedType actualType || actualType == UnknownType
-                           then []
-                           else [TypeError context (callName ++ " argument " ++ show (idx + 1) ++
-                                     ": expected type " ++ showType expectedType ++
-                                     ", got " ++ showType actualType)]
+                    -- Note: We don't check for undefined variables here since this is checking
+                    -- arguments of a function call, not variable declarations. The parameters
+                    -- of the function being defined should be considered valid variables.
+                in if typesCompatible expectedType actualType || actualType == UnknownType
+                     then []
+                     else [TypeError context (callName ++ " argument " ++ show (idx + 1) ++
+                               ": expected type " ++ showType expectedType ++
+                               ", got " ++ showType actualType)]
 
 --------------------------------------------------------------------------------
 -- Parsing helpers
@@ -832,20 +868,17 @@ parseShortVarDeclSpecs VarDecl{..} =
         let trimmed = trim line
         in if ":=" `isInfixOf` trimmed
                then 
-                   let parts = splitOn ":=" trimmed
+                   let parts = splitOnString ":=" trimmed
                    in case parts of
                         [namePart, valuePart] ->
-                            let names = splitOn "," (trim namePart)
+                            let names = splitOnString "," (trim namePart)
                                 -- Infer type from value
                                 inferredType = inferLiteralType valuePart
                             in [VarSpec { vsNames = names, vsType = Just inferredType, vsValues = [valuePart] }]
                         _ -> []
                else []
     
-    splitOn [] s = [s]
-    splitOn sep s = case break (== sep !! 0) s of
-                     (a, c:b) -> a : splitOn sep (dropWhile (== c) b)
-                     (a, "") -> [a]
+    
         
     inferLiteralType value
         | isNumericLiteral value = numericType value

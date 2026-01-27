@@ -426,7 +426,7 @@ safeProcessString s =
 
 -- | 检查字符是否有效（非控制字符）
 isValidChar :: Char -> Bool
-isValidChar c = c >= ' ' || c `elem` "\n\r\t"
+isValidChar c = c >= ' ' || c `elem` "\n\r\t<>"
 
 -- | 检查 Either 是否为 Right
 isRight :: Either a b -> Bool
