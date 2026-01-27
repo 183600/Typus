@@ -1560,16 +1560,16 @@ test-suite typus-test
         deepseq >= 1.4.0,
         megaparsec >= 9.0.0 && <10
     default-language: Haskell2010
-    ghc-options:      -threaded -rtsopts
+    ghc-options:      -threaded
     if flag(fast)
         cpp-options:   -DFAST_TESTS
     if flag(full)
         cpp-options:   -DFULL_TESTS
     if flag(production)
         cpp-options:   -DPRODUCTION_TESTS
-        ghc-options:   -threaded -rtsopts
+        ghc-options:   -threaded
     else
-        ghc-options:   -threaded -rtsopts
+        ghc-options:   -threaded
         -- Coverage is now enabled via --enable-coverage flag
 
 

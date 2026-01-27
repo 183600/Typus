@@ -18,6 +18,9 @@ import qualified Test.Unit.CodeGenerationQuickCheckSpec as CodeGenerationQuickCh
 import Test.Unit.TestParserErrorRecoverySpec (testParserErrorRecovery)
 import Test.Unit.TestParserDirectivesSpec (testParserDirectives)
 
+-- Import AdvancedTextProcessingSpec
+import qualified Test.Unit.AdvancedTextProcessingSpec as AdvancedTextProcessingSpec
+
 -- Basic test properties
 prop_basic_property :: String -> Property
 prop_basic_property s = property $ length s >= 0
@@ -33,5 +36,6 @@ tests = testGroup "Test.Unit.Tests Tests"
     BoundaryConditionComprehensiveSpec.boundaryConditionComprehensiveTests,
     CodeGenerationQuickCheckSpec.tests,
     testParserErrorRecovery,
-    testParserDirectives
+    testParserDirectives,
+    AdvancedTextProcessingSpec.tests  -- AdvancedTextProcessingSpec tests
   ]
