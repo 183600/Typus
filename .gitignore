@@ -197,3 +197,8 @@ go.work.sum
 *.sqlite
 *.sqlite-journal
 *.sqlite3
+
+# Test output files
+test_output*.txt
+TEST_*.md
+test_*.txt
