@@ -68,8 +68,8 @@ prop_read_show x = property $
     Just dnx -> toNonEmpty dnx === x
   where
     readMaybe :: Read a => String -> Maybe a
-    readMaybe s = case [x | (x, "") <- reads s] of
-      [x] -> Just x
+    readMaybe s = case [result | (result, "") <- reads s] of
+      [result] -> Just result
       _ -> Nothing
 
 exampleList :: [Int]

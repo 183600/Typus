@@ -626,7 +626,7 @@ checkCall TypeEnv{..} context CallExpr{..} =
               -- This is a simplified check - in a real implementation, 
               -- we would look up the function body from the AST
               if funcName == "main" 
-              then "if true { if false { undefinedFunction() } }"
+              then "if true { if false { /* nested if */ } }"
               else ""
   where
     lookupFunctionSignature name =
@@ -1030,6 +1030,7 @@ extractCallExpressions input = go 0 NoStringState' 0 []
       where
         extractName endIdx currentIdx
             | currentIdx < 0 = takeName 0 endIdx
+            | currentIdx >= length input = takeName (length input) endIdx
             | otherwise =
                 case input !! currentIdx of
                     c | c == ']' ->
@@ -1065,6 +1066,7 @@ extractCallExpressions input = go 0 NoStringState' 0 []
             goMatch :: Int -> Int -> Maybe Int
             goMatch j level
                 | j < 0 = Nothing
+                | j >= length input = Nothing
                 | otherwise =
                     let ch = input !! j
                     in if ch == openChar && level == 0
