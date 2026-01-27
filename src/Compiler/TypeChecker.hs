@@ -1263,9 +1263,7 @@ checkCircularDependencies functionInfos =
             [] -> TypeError Nothing "Circular dependency detected: empty cycle"
             (firstNode:_) -> TypeError Nothing ("Circular dependency detected: " ++ intercalate " -> " cyclePath ++ " -> " ++ firstNode)
 
--- | Check if a string is a simple identifier (no dots, no parentheses, etc.)
-isSimpleIdentifier :: String -> Bool
-isSimpleIdentifier s = all (\c -> isAlphaNum c || c == '_') s && not (null s)
+
 
 -- | Check if a string is a literal value
 isLiteral :: String -> Bool
