@@ -187,14 +187,36 @@ while true; do
     fi
   else
     echo "调用 iflow 修复..."
-    # 注意：这里将 cabal 命令文本替换为了 stack 命令文本
-    iflow '解决GHCRTS="-M2G -A16m" stack test \
-      --flag "*:fast" \
-      --flag "*:-production" \
-      --ghc-options="-O0 -rtsopts" \
-      --test-arguments="+RTS -M1024m -A16m -RTS" \
-      --jobs=1 \
-      --test-details=direct显示的所有问题（除了warning），除非测试用例本身有编译错误，否则只修改测试用例以外的代码，debug时可通过加日志和打断点 think:high' --yolo || true
+
+    # 尝试提取具体的报错行，格式通常为: path/file.hs:line:col: error:
+    # 如果能提取到，则拆分为多次调用，每次修复一个具体的错误
+    local error_logs
+    error_logs=$(grep -E '^[^[:space:]]+\.hs:[0-9]+:[0-9]+: error:' "$STACK_LOG" 2>/dev/null | sort -u)
+
+    if [[ -n "$error_logs" ]]; then
+      echo "发现 ${#error_logs} 个具体编译错误，将逐个修复..."
+      while IFS= read -r err; do
+        if [[ -n "$err" ]]; then
+          echo ">>> 正在修复问题: $err"
+          # 针对单行报错构造 iflow 指令
+          iflow "修复这个具体的错误：$err
+上下文：项目使用 GHCRTS=\"-M2G -A16m\" stack test --flag \"*:fast\" --flag \"*:-production\" --ghc-options=\"-O0 -rtsopts\" --test-arguments=\"+RTS -M1024m -A16m -RTS\" --jobs=1 --test-details=direct 进行测试。
+除非该错误位于测试文件中（如 Spec.hs），否则只修改测试用例以外的代码。如果是在测试文件中，请修复测试代码。
+debug时可通过加日志和打断点。think:high" --yolo || true
+        fi
+      done <<< "$error_logs"
+    else
+      # 如果没有匹配到标准的编译错误行（例如运行时错误），则回退到全量修复
+      echo "未发现标准格式的编译错误，尝试全量修复..."
+      iflow '解决GHCRTS="-M2G -A16m" stack test \
+        --flag "*:fast" \
+        --flag "*:-production" \
+        --ghc-options="-O0 -rtsopts" \
+        --test-arguments="+RTS -M1024m -A16m -RTS" \
+        --jobs=1 \
+        --test-details=direct显示的所有问题（除了warning），除非测试用例本身有编译错误，否则只修改测试用例以外的代码，debug时可通过加日志和打断点 think:high' --yolo || true
+    fi
+
     iflow '删除项目根目录多余的.md文件或者.txt文件（像TEST_ENHANCEMENT_SUMMARY.md和test_wall_production.txt这样的）' --yolo || true
 
     # 门禁：即使修复失败也清理掉工作区可能出现的乱码路径，避免下轮被 add
