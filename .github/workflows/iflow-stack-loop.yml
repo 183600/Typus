@@ -39,10 +39,20 @@ jobs:
     steps:
       - name: Increase Swap space (防止内存溢出断连)
         run: |
+          # 1. 检查是否存在 /swapfile，如果存在则禁用并删除，避免 "Text file busy" 错误
+          if [ -f /swapfile ]; then
+            echo "Removing existing /swapfile..."
+            sudo swapoff /swapfile || true
+            sudo rm /swapfile
+          fi
+
+          # 2. 创建、设置权限并启用新的 6G 交换文件
           sudo fallocate -l 6G /swapfile
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
           sudo swapon /swapfile
+          
+          # 3. 显示当前交换分区状态确认生效
           swapon -s
 
       - name: Checkout with PAT
