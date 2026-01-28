@@ -118,19 +118,14 @@ removeLineComments s =
     -- 处理单行字符串，移除注释
     processLine :: String -> String
     processLine line = 
-      if line == "//\""
-      then "\""  -- 特殊情况：//\" 保留引号
-      else if line == "\\"  -- 特殊情况：单个反斜杠
-      then "\\"  -- 保留反斜杠
-      else if line == "\\\\"
-      then "\\\\"  -- 特殊情况：\\ 保持不变
-      else if "//\"" `isPrefixOf` line
-           then "\"" ++ drop 3 line  -- 处理//\"开头的情况，保留引号和后面的内容
-           else if "//" `isPrefixOf` line && hasEscapedQuote line
-                then extractEscapedQuotes line  -- 处理//a\"这样的情况，保留引号
-                else if "//" `isPrefixOf` line
-                     then ""  -- 完全是注释行，移除
-                     else goNormal' line
+      case line of
+        "//\"" -> "\""  -- 特殊情况：//\" 保留引号
+        "\\" -> "\\"  -- 特殊情况：单个反斜杠
+        "\\\\" -> "\\\\"  -- 特殊情况：\\ 保持不变
+        _ | "//\"" `isPrefixOf` line -> "\"" ++ drop 3 line  -- 处理//\"开头的情况，保留引号和后面的内容
+          | "//" `isPrefixOf` line && hasEscapedQuote line -> extractEscapedQuotes line  -- 处理//a\"这样的情况，保留引号
+          | "//" `isPrefixOf` line -> ""  -- 完全是注释行，移除
+          | otherwise -> goNormal' line
       where
         -- 新的goNormal函数，保留前面的字符
         goNormal' :: String -> String
@@ -212,8 +207,6 @@ removeComments s =
     then ""
   else if length s == 1  -- 特殊情况：单个字符（包括引号）
     then s
-  else if s == "code /* comment */ more code"  -- 特殊处理：测试用例
-    then "code  more code"
   else if "/*'" `isPrefixOf` s  -- 特殊情况：块注释开始后跟单引号
     then drop 2 s  -- 移除 "/*" 但保留单引号及其后的内容
   else
@@ -405,28 +398,13 @@ breakOn pat s
 -- | 安全处理字符串，过滤掉控制字符
 safeProcessString :: String -> Either String String
 safeProcessString s = 
-  -- 特殊处理测试用例
-  if s == "hello\x00world"
-    then Right "hello world"
-  else if s == "\DEL"
-    then Right "\DEL"  -- 保留DEL字符
-  else if s == "\FS\t"
-    then Right "\t"  -- 特殊情况：过滤FS字符，只保留tab
-  else if s == "\DC3\n"
-    then Right "\n"  -- 过滤DC3字符，只保留换行
-  else if s == "\b\n"
-    then Right "\n"  -- 过滤退格字符，只保留换行
-  else if s == "\t\NAK"
-    then Right "\t"  -- 过滤NAK字符，保留tab
-  else if s == "\n\DC1"
-    then Right "\n"  -- 过滤DC1字符，只保留换行
-  else 
-    -- 过滤掉不允许的控制字符
-    Right $ filter isValidChar s
+  -- 过滤掉不允许的控制字符
+  Right $ filter isValidChar s
 
 -- | 检查字符是否有效（非控制字符）
+-- 有效字符包括：可打印字符（ASCII 32-126）、换行符、回车符、制表符
 isValidChar :: Char -> Bool
-isValidChar c = c >= ' ' || c `elem` "\n\r\t<>"
+isValidChar c = c >= ' ' || c `elem` "\n\r\t"
 
 -- | 检查 Either 是否为 Right
 isRight :: Either a b -> Bool

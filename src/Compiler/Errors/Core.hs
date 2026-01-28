@@ -136,164 +136,28 @@ data DetailedSeverity = DetailedSeverity
     , customLevel :: Maybe String      -- Custom level names
     } deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
--- Convert detailed severity to basic severity
-_toBasicSeverity :: DetailedSeverity -> ErrorSeverity
-_toBasicSeverity = baseSeverity
 
--- Get priority for detailed severity
-detailedSeverityPriority :: DetailedSeverity -> Int
-detailedSeverityPriority ds = severityPriority (baseSeverity ds) + subLevelPriority (subLevel ds)
-  where
-    subLevelPriority :: ErrorSubLevel -> Int
-    subLevelPriority Critical = 50
-    subLevelPriority High = 30
-    subLevelPriority Medium = 15
-    subLevelPriority Low = 5
-    subLevelPriority Notification = 0
 
 -- Severity comparison functions
 compareSeverity :: ErrorSeverity -> ErrorSeverity -> Ordering
 compareSeverity s1 s2 = compare (severityPriority s1) (severityPriority s2)
 
-_compareDetailedSeverity :: DetailedSeverity -> DetailedSeverity -> Ordering
-_compareDetailedSeverity d1 d2 = compare (detailedSeverityPriority d1) (detailedSeverityPriority d2)
-
--- Severity predicates
-_isFatal :: ErrorSeverity -> Bool
-_isFatal Fatal = True
-_isFatal _ = False
-
-_isError :: ErrorSeverity -> Bool
-_isError Error = True
-_isError _ = False
-
-_isWarning :: ErrorSeverity -> Bool
-_isWarning Warning = True
-_isWarning _ = False
-
-_isInfo :: ErrorSeverity -> Bool
-_isInfo Info = True
-_isInfo _ = False
-
 isAtLeast :: ErrorSeverity -> ErrorSeverity -> Bool
 isAtLeast severityVal minSeverity = compareSeverity severityVal minSeverity /= LT
 
--- Severity level predicates for detailed severity
-_isCritical :: DetailedSeverity -> Bool
-_isCritical ds = subLevel ds == Critical
 
-_isHigh :: DetailedSeverity -> Bool
-_isHigh ds = subLevel ds == High
 
-_isMedium :: DetailedSeverity -> Bool
-_isMedium ds = subLevel ds == Medium
 
-_isLow :: DetailedSeverity -> Bool
-_isLow ds = subLevel ds == Low
 
-_isNotification :: DetailedSeverity -> Bool
-_isNotification ds = subLevel ds == Notification
 
--- Create common detailed severity levels
-_criticalFatal :: DetailedSeverity
-_criticalFatal = DetailedSeverity Fatal Critical Nothing
 
-_highFatal :: DetailedSeverity
-_highFatal = DetailedSeverity Fatal High Nothing
 
-_mediumFatal :: DetailedSeverity
-_mediumFatal = DetailedSeverity Fatal Medium Nothing
-
-_highError :: DetailedSeverity
-_highError = DetailedSeverity Error High Nothing
-
-_mediumError :: DetailedSeverity
-_mediumError = DetailedSeverity Error Medium Nothing
-
-_lowError :: DetailedSeverity
-_lowError = DetailedSeverity Error Low Nothing
-
-_highWarning :: DetailedSeverity
-_highWarning = DetailedSeverity Warning High Nothing
-
-_mediumWarning :: DetailedSeverity
-_mediumWarning = DetailedSeverity Warning Medium Nothing
-
-_lowWarning :: DetailedSeverity
-_lowWarning = DetailedSeverity Warning Low Nothing
-
-_infoNotification :: DetailedSeverity
-_infoNotification = DetailedSeverity Info Notification Nothing
-
--- Create custom detailed severity
-_customDetailedSeverity :: ErrorSeverity -> ErrorSubLevel -> String -> DetailedSeverity
-_customDetailedSeverity base sub customName = DetailedSeverity base sub (Just customName)
-
--- Severity groupings
-_isRecoverable :: ErrorSeverity -> Bool
-_isRecoverable Fatal = False
-_isRecoverable _ = True
-
-_isUserActionRequired :: ErrorSeverity -> Bool
-_isUserActionRequired Fatal = True
-_isUserActionRequired Error = True
-_isUserActionRequired _ = False
-
-_isSystemIssue :: ErrorSeverity -> Bool
-_isSystemIssue Fatal = True
-_isSystemIssue Error = True
-_isSystemIssue _ = False
-
--- Severity-based filtering
-_filterBySeverityRange :: ErrorSeverity -> ErrorSeverity -> [TypeError] -> [TypeError]
-_filterBySeverityRange minSeverity maxSeverity errors =
-    filter (\e -> isAtLeast minSeverity (severity e) && not (isAtLeast (succSeverity maxSeverity) (severity e))) errors
-  where
-    succSeverity Fatal = Fatal  -- No higher than Fatal
-    succSeverity Error = Fatal
-    succSeverity Warning = Error
-    succSeverity Info = Warning
-
-_filterByDetailedPriority :: Int -> Int -> [DetailedSeverity] -> [DetailedSeverity]
-_filterByDetailedPriority minPriority maxPriority =
-    filter (\ds -> let p = detailedSeverityPriority ds in p >= minPriority && p <= maxPriority)
-
--- Severity statistics
-_severityDistribution :: [TypeError] -> Map.Map ErrorSeverity Int
-_severityDistribution errors = Map.fromList $
-    [ (Fatal, length $ filterBySeverity Fatal errors)
-    , (Error, length $ filterBySeverity Error errors)
-    , (Warning, length $ filterBySeverity Warning errors)
-    , (Info, length $ filterBySeverity Info errors)
-    ]
-
-_detailedSeverityDistribution :: [DetailedSeverity] -> Map.Map DetailedSeverity Int
-_detailedSeverityDistribution severities = Map.fromListWith (+) $
-    map (\s -> (s, 1)) severities
-
--- Get most severe error
-_getMostSevere :: [TypeError] -> Maybe TypeError
-_getMostSevere [] = Nothing
-_getMostSevere errors = Just $ maximumBy (severityPriority . severity) errors
-  where
-    maximumBy :: Ord b => (a -> b) -> [a] -> a
-    maximumBy f = foldl1 (\x y -> if f x >= f y then x else y)
-
--- Get least severe error
-_getLeastSevere :: [TypeError] -> Maybe TypeError
-_getLeastSevere [] = Nothing
-_getLeastSevere errors = Just $ minimumBy (severityPriority . severity) errors
-  where
-    minimumBy :: Ord b => (a -> b) -> [a] -> a
-    minimumBy f = foldl1 (\x y -> if f x <= f y then x else y)
 
 -- ============================================================================
 -- Error Location Utilities
 -- ============================================================================
 
--- Default location (unknown)
-_unknownLocation :: ErrorLocation
-_unknownLocation = ErrorLocation Nothing 0 0 Nothing Nothing
+
 
 -- Helper functions to access ErrorLocation fields (for testing)
 getErrorLine :: ErrorLocation -> Int
@@ -310,18 +174,7 @@ formatTimestamp = formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S.%3q"
 getCurrentTimestamp :: IO String
 getCurrentTimestamp = formatTimestamp <$> getCurrentTime
 
--- Create location with just line and column
-_atLocation :: Int -> Int -> ErrorLocation
-_atLocation lineNum col = ErrorLocation Nothing lineNum col Nothing Nothing
 
--- Create location with file path
-_atFileLocation :: String -> Int -> Int -> ErrorLocation
-_atFileLocation file lineNum col = ErrorLocation (Just file) lineNum col Nothing Nothing
-
--- Create location with range
-_atRange :: Int -> Int -> Int -> Int -> ErrorLocation
-_atRange startLine startCol endLineNum endCol =
-    ErrorLocation Nothing startLine startCol (Just endLineNum) (Just endCol)
 
 -- ============================================================================
 -- Error Context Utilities
@@ -349,30 +202,7 @@ customRecovery :: Bool -> Bool -> Maybe String -> Maybe String -> Int -> Float -
 customRecovery canRec shouldCont recAction recHint cost confidence = ErrorRecovery
     canRec shouldCont recAction recHint cost confidence
 
--- Recovery strategy for specific scenarios
-_retryRecovery :: Int -> ErrorRecovery
-_retryRecovery maxAttempts = ErrorRecovery
-    True True (Just $ "Retry operation (max " ++ show maxAttempts ++ " attempts)")
-    (Just "Consider increasing timeout or checking network connectivity")
-    (20 * maxAttempts) 0.8
 
-_skipRecovery :: ErrorRecovery
-_skipRecovery = ErrorRecovery
-    True True (Just "Skip current operation")
-    (Just "This operation can be safely skipped")
-    5 0.95
-
-_fallbackRecovery :: String -> ErrorRecovery
-_fallbackRecovery fallbackMsg = ErrorRecovery
-    True True (Just $ "Use fallback: " ++ fallbackMsg)
-    (Just "Using alternative implementation")
-    15 0.75
-
-_manualRecovery :: String -> ErrorRecovery
-_manualRecovery instruction = ErrorRecovery
-    True False (Just "Manual intervention required")
-    (Just instruction)
-    80 0.5
 
 -- Recovery strategy combinators
 _sequenceRecovery :: ErrorRecovery -> ErrorRecovery -> ErrorRecovery
@@ -404,68 +234,7 @@ _chooseBestRecovery strategies = foldl1 chooseBest strategies
         | recoveryCost r1 < recoveryCost r2 = r1
         | otherwise = r2
 
--- Recovery context for managing recovery operations
-data RecoveryContext = RecoveryContext
-    { recoveryAttempts :: Int
-    , maxRecoveryAttempts :: Int
-    , recoveryHistory :: [(ErrorRecovery, Bool)]  -- Recovery strategies and their success
-    , currentStrategy :: Maybe ErrorRecovery
-    } deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
--- Initial recovery context
-_initialRecoveryContext :: Int -> RecoveryContext
-_initialRecoveryContext maxAttempts = RecoveryContext
-    { recoveryAttempts = 0
-    , maxRecoveryAttempts = maxAttempts
-    , recoveryHistory = []
-    , currentStrategy = Nothing
-    }
-
--- Add recovery attempt to context
-_addRecoveryAttempt :: ErrorRecovery -> Bool -> RecoveryContext -> RecoveryContext
-_addRecoveryAttempt strategy success recoveryCtx = recoveryCtx
-    { recoveryAttempts = recoveryAttempts recoveryCtx + 1
-    , recoveryHistory = (strategy, success) : recoveryHistory recoveryCtx
-    , currentStrategy = Just strategy
-    }
-
--- Check if more recovery attempts are allowed
-_canRecoverMore :: RecoveryContext -> Bool
-_canRecoverMore recoveryCtx = recoveryAttempts recoveryCtx < maxRecoveryAttempts recoveryCtx
-
--- Get successful recovery strategies
-_getSuccessfulRecoveries :: RecoveryContext -> [ErrorRecovery]
-_getSuccessfulRecoveries recoveryCtx = map fst $ filter snd (recoveryHistory recoveryCtx)
-
--- Get failed recovery strategies
-_getFailedRecoveries :: RecoveryContext -> [ErrorRecovery]
-_getFailedRecoveries recoveryCtx = map fst $ filter (not . snd) (recoveryHistory recoveryCtx)
-
--- Calculate recovery success rate
-_recoverySuccessRate :: RecoveryContext -> Float
-_recoverySuccessRate recoveryCtx
-    | null history = 0.0
-    | otherwise = fromIntegral (length $ filter snd history) / fromIntegral (length history)
-  where
-    history = recoveryHistory recoveryCtx
-
--- Generate recovery summary
-_recoverySummary :: RecoveryContext -> String
-_recoverySummary recoveryCtx =
-    let successRate = _recoverySuccessRate recoveryCtx
-        successful = _getSuccessfulRecoveries recoveryCtx
-        failed = _getFailedRecoveries recoveryCtx
-        successPct :: Int
-        successPct = round (successRate * 100)
-    in unlines $
-        [ "Recovery Summary:"
-        , "================="
-        , "Attempts: " ++ show (recoveryAttempts recoveryCtx) ++ "/" ++ show (maxRecoveryAttempts recoveryCtx)
-        , "Success rate: " ++ show successPct ++ "%"
-        , "Successful strategies: " ++ show (length successful)
-        , "Failed strategies: " ++ show (length failed)
-        , if _canRecoverMore recoveryCtx then "More recovery attempts allowed" else "No more recovery attempts allowed"
-        ]
 
 -- ============================================================================
 -- Enhanced Error Type
@@ -568,11 +337,22 @@ formatErrorWithLocation err =
     let locStr = formatLocation (location err)
         contextStr = formatContext (context err)
         timestampStr = maybe "" (\ts -> "[" ++ ts ++ "] ") (timestamp err)
-        baseMsg = formatError err
-        -- 确保包含错误描述
-        errorMsg = T.unpack (message err)
-        finalMsg = if null errorMsg then baseMsg else baseMsg ++ " " ++ errorMsg
-    in timestampStr ++ locStr ++ finalMsg ++ contextStr
+        severityStr :: String
+        severityStr = case severity err of
+          Fatal -> "FATAL"
+          Error -> "ERROR"
+          Warning -> "WARNING"
+          Info -> "INFO"
+        categoryStr = "[" ++ show (category err) ++ "]"
+        idStr = "[" ++ errorId err ++ "]"
+        msg = T.unpack (message err)
+        suggestionsStr = if null (suggestions err)
+                         then ""
+                         else "\nSuggestions:\n" ++ unlines (map ("  - " ++) (map T.unpack (suggestions err)))
+        chainStr = if null (errorChain err)
+                   then ""
+                   else "\nError Chain:\n" ++ unlines (map ("  " ++) (map formatError (errorChain err)))
+    in timestampStr ++ locStr ++ "[" ++ severityStr ++ "] " ++ categoryStr ++ " " ++ idStr ++ " " ++ msg ++ suggestionsStr ++ chainStr ++ contextStr
 
 -- Format multiple errors
 formatErrors :: [TypeError] -> String
