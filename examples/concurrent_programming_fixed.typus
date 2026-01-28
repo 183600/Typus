@@ -1,0 +1,61 @@
+package main
+
+import "fmt"
+
+type Channel struct {
+    ch chan int
+}
+
+func NewChannel(bufferSize int) *Channel {
+    return &Channel{
+        ch: make(chan int, bufferSize),
+    }
+}
+
+func (c *Channel) Send(value int) bool {
+    select {
+    case c.ch <- value:
+        return true
+    default:
+        return false
+    }
+}
+
+func (c *Channel) Receive() (int, bool) {
+    select {
+    case value, ok := <-c.ch:
+        return value, ok
+    default:
+        return 0, false
+    }
+}
+
+func testChannel() {
+    fmt.Println("=== 测试Channel ===")
+    
+    ch := NewChannel(3)
+    
+    for i := 0; i < 5; i++ {
+        if ch.Send(i) {
+            fmt.Printf("发送: %d\n", i)
+        } else {
+            fmt.Printf("发送失败: %d\n", i)
+        }
+    }
+    
+    for i := 0; i < 5; i++ {
+        if value, ok := ch.Receive(); ok {
+            fmt.Printf("接收: %d\n", value)
+        } else {
+            fmt.Printf("接收失败\n")
+        }
+    }
+}
+
+func main() {
+    fmt.Println("=== 并发编程特性测试 ===")
+    
+    testChannel()
+    
+    fmt.Println("\n=== 所有并发测试完成 ===")
+}

@@ -241,7 +241,11 @@ popScope = do
       keepBorrows = Map.filterWithKey (\b _ -> not (isBorrowAtCurLevel st b)) (aBorrows st)
       releaseBorrow vars borrowName =
         case Map.lookup borrowName (aBorrows st) of
-          Just (BorrowInfo src isM) -> Map.adjust (releaseFrom src borrowName isM) src vars
+          Just (BorrowInfo src isM) -> 
+            -- Only try to release the borrow if the source variable still exists in scope
+            if Map.member src vars
+              then Map.adjust (releaseFrom src borrowName isM) src vars
+              else vars
           Nothing -> vars
       updatedVars = Foldable.foldl' releaseBorrow keepVars borrowedAtCurrentScope
   put st { aVars = updatedVars, aBorrows = keepBorrows, aScope = cur - 1 }
@@ -255,7 +259,7 @@ popScope = do
     isBorrowAtCurLevel :: AState -> Name -> Bool
     isBorrowAtCurLevel s b = case Map.lookup b (aVars s) of
       Just (top:_) -> vsScope top == aScope s
-      _            -> False
+      _            -> False  -- Variable not found, likely out of scope, so not at current level
 
     releaseFrom :: Name -> Name -> Bool -> [VarState] -> [VarState]
     releaseFrom _ _ _ [] = []
@@ -592,9 +596,7 @@ useVar name = do
           debugLog $ "Regular variable usage: " ++ name
           mv <- lookupVarTop name
           case mv of
-            Nothing -> do
-              debugLog $ "Variable not found in scope: " ++ name
-              pushError (OutOfScope name)
+            Nothing -> pushError (OutOfScope name)
             Just v ->
               if vsMoved v
                 then pushError (UseAfterMove name)

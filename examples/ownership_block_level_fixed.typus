@@ -1,0 +1,25 @@
+package main
+
+import "fmt"
+
+type MyString struct {
+    data string
+}
+
+func NewMyString(s string) MyString {
+    return MyString{data: s}
+}
+
+func main() {
+    // 常规 Go 代码
+    x := 10
+    fmt.Println("Regular x:", x)
+
+    // 测试块级作用域（不启用所有权）
+    {
+        s1 := NewMyString("block-owned string")
+        s2 := s1
+        fmt.Println("Owned s2 in block:", s2.data)
+        fmt.Println(s1.data)
+    }
+}

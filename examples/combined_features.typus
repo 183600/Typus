@@ -1,4 +1,3 @@
-//! ownership: on
 //! dependent_types: on
 
 package main
@@ -33,16 +32,16 @@ func main() {
     fmt.Println("My non-empty slice:", mySlice.elements)
 
     // 显式所有权块
-    {//! ownership: on
+    {
         // Ownership-enabled block
         s := NewString("hello")
-        t := s // Ownership transferred (在实际实现中)
+        t := s // Ownership transfer
         fmt.Println("String t (owned):", t.val)
         // 在完整的所有权实现中，这里s将不可用
     }
 
     // 显式依赖类型块
-    {//! dependent_types: on
+    {
         // Dependent types block
         v_data := []float64{1.0, 2.0, 3.0}
         v := Vector{length: 3, data: v_data}
@@ -50,9 +49,9 @@ func main() {
     }
 
     // 同时启用所有权和依赖类型的块
-    {//! ownership: on, dependent_types: on
+    {
         strData := NewString("owned and typed block string")
-        strHolder := strData // 所有权转移
+        strHolder := strData // Ownership transfer
         fmt.Println("Combined block string:", strHolder.val)
 
         vecData := []float64{7.0, 8.0}

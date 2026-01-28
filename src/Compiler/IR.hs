@@ -15,7 +15,11 @@ module Compiler.IR (
     ensurePackageDecl,
     ensureMainFunction,
     attachInferredImports,
-    hasRequiredElements
+    hasRequiredElements,
+    ImportUsage(..),
+    ImportDetector(..),
+    buildImportUsage,
+    detectImports
 ) where
 
 import Parser (TypusFile(..), CodeBlock(..))
@@ -356,14 +360,14 @@ importDetectors =
   , packageDetector "container/list" "list"
   , packageDetector "context" "context"
   , packageDetector "log" "log"
-  , packageDetector "reflect" "reflect"
+  , symbolDetector "reflect" "reflect" reflectSymbols
   , packageDetector "fmt" "fmt"
   , packageDetector "math" "math"
   , packageDetector "math/cmplx" "cmplx"
   , packageDetector "math/big" "big"
   , symbolDetector "math/rand" "rand" mathRandSymbols
   , packageDetector "time" "time"
-  , packageDetector "os" "os"
+  , symbolDetector "os" "os" osSymbols
   , packageDetector "path/filepath" "filepath"
   , packageDetector "io" "io"
   , packageDetector "io/ioutil" "ioutil"
@@ -377,8 +381,8 @@ importDetectors =
   , packageDetector "encoding/json" "json"
   , packageDetector "encoding/xml" "xml"
   , packageDetector "regexp" "regexp"
-  , packageDetector "errors" "errors"
-  , packageDetector "net/http" "http"
+  , symbolDetector "errors" "errors" errorsSymbols
+  , symbolDetector "net/http" "http" httpSymbols
   , packageDetector "net/url" "url"
   , packageDetector "net" "net"
   , packageDetector "sort" "sort"
@@ -426,12 +430,73 @@ mathRandSymbols =
 cryptoRandSymbols :: [String]
 cryptoRandSymbols = ["Reader", "Read", "Prime"]
 
+
+
+httpSymbols :: [String]
+httpSymbols =
+  [ "HandleFunc"
+  , "ListenAndServe"
+  , "Handle"
+  , "Serve"
+  , "FileServer"
+  , "StripPrefix"
+  , "NotFoundHandler"
+  , "RedirectHandler"
+  , "TimeoutHandler"
+  ]
+
+reflectSymbols :: [String]
+reflectSymbols =
+  [ "ValueOf"
+  , "TypeOf"
+  , "DeepEqual"
+  , "Indirect"
+  , "Value"
+  , "Type"
+  , "Kind"
+  , "Interface"
+  , "Elem"
+  ]
+
+errorsSymbols :: [String]
+errorsSymbols =
+  [ "New"
+  , "As"
+  , "Is"
+  , "Unwrap"
+  , "Join"
+  ]
+
+osSymbols :: [String]
+osSymbols =
+  [ "Create"
+  , "Open"
+  , "OpenFile"
+  , "Remove"
+  , "RemoveAll"
+  , "Rename"
+  , "Mkdir"
+  , "MkdirAll"
+  , "ReadDir"
+  , "ReadFile"
+  , "WriteFile"
+  , "Stat"
+  , "IsNotExist"
+  , "IsExist"
+  , "IsPermission"
+  , "Args"
+  , "Getenv"
+  , "Setenv"
+  , "Exit"
+  ]
+
 packageDetector :: String -> String -> ImportDetector
-packageDetector path pkg = ImportDetector Nothing path (\usage -> packageUsed usage pkg)
+packageDetector path pkg = ImportDetector Nothing path (\usage -> packageUsed usage pkg || pkg `Set.member` usageIdentifiers usage)
 
 symbolDetector :: String -> String -> [String] -> ImportDetector
-symbolDetector path pkg symbols =
-  ImportDetector Nothing path (\usage -> any (qualifiedSymbolUsed usage pkg) symbols)
+symbolDetector path pkg symbols
+  | pkg == "reflect" = ImportDetector Nothing path (\usage -> any (qualifiedSymbolUsed usage pkg) symbols || hasReflectionUsage usage symbols)
+  | otherwise = ImportDetector Nothing path (\usage -> any (qualifiedSymbolUsed usage pkg) symbols || any (`Set.member` usageIdentifiers usage) symbols)
 
 customDetector :: Maybe String -> String -> (ImportUsage -> Bool) -> ImportDetector
 customDetector alias path predicate = ImportDetector alias path predicate
@@ -486,6 +551,25 @@ packageUsed usage pkg = pkg `Set.member` usagePackages usage
 
 qualifiedSymbolUsed :: ImportUsage -> String -> String -> Bool
 qualifiedSymbolUsed usage pkg sym = (pkg, sym) `Set.member` usageQualified usage
+
+-- | Check if there's actual reflection usage, not just identifiers that match reflect symbols
+hasReflectionUsage :: ImportUsage -> [String] -> Bool
+hasReflectionUsage usage symbols =
+  let rawText = usageRawText usage
+      -- Look for actual reflection patterns like reflect.ValueOf, reflect.TypeOf, etc.
+      reflectionPatterns = ["reflect." ++ sym | sym <- symbols]
+      hasReflectPattern = any (`isInfixOf` rawText) reflectionPatterns
+      -- Check for actual reflection usage patterns, not just any Value() or Type() call
+      -- We need to be more specific to avoid false positives from regular methods
+      hasTypeCall = ".Type()" `isInfixOf` rawText
+      hasValueCall = ".Value()" `isInfixOf` rawText && ("reflect." `isInfixOf` rawText || "interface{}" `isInfixOf` rawText)
+      hasReflectNew = "reflect.New" `isInfixOf` rawText
+      hasReflectZero = "reflect.Zero" `isInfixOf` rawText
+      hasReflectValueOf = "reflect.ValueOf" `isInfixOf` rawText
+      hasReflectTypeOf = "reflect.TypeOf" `isInfixOf` rawText
+  in hasReflectPattern || hasReflectNew || hasReflectZero || hasReflectValueOf || hasReflectTypeOf || 
+     (hasTypeCall && ("reflect." `isInfixOf` rawText)) || 
+     (hasValueCall && ("reflect." `isInfixOf` rawText || "interface{}" `isInfixOf` rawText))
 
 -- | Check if SemanticIR has all required elements
 hasRequiredElements :: SemanticIR -> Bool
