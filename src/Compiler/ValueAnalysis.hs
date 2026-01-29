@@ -202,8 +202,12 @@ selectExprForIndex names values idx =
         [] -> ""
         [single] -> single
         _
-            | sameLength && idx < valueCount -> values !! idx
-            | idx < valueCount -> values !! idx
+            | sameLength && idx < valueCount -> case drop idx values of
+                (v:_) -> v
+                [] -> intercalate ", " values
+            | idx < valueCount -> case drop idx values of
+                (v:_) -> v
+                [] -> intercalate ", " values
             | otherwise -> intercalate ", " values
   where
     valueCount = length values
@@ -217,27 +221,31 @@ findShortVarIndex text = go 0 NoStringState
     go idx state
         | idx >= len - 1 = Nothing
         | otherwise =
-            let c = text !! idx
-                next = text !! (idx + 1)
-            in case state of
-                NoStringState ->
-                    case c of
-                        '"' -> go (idx + 1) (DoubleStringState False)
-                        '\'' -> go (idx + 1) (SingleStringState False)
-                        '`' -> go (idx + 1) BacktickState
-                        ':' | next == '=' -> Just idx
-                        _ -> go (idx + 1) NoStringState
-                DoubleStringState escaped ->
-                    let escaped' = if escaped then False else c == '\\'
-                        nextState = if not escaped && c == '"' then NoStringState else DoubleStringState escaped'
-                    in go (idx + 1) nextState
-                SingleStringState escaped ->
-                    let escaped' = if escaped then False else c == '\\'
-                        nextState = if not escaped && c == '\'' then NoStringState else SingleStringState escaped'
-                    in go (idx + 1) nextState
-                BacktickState ->
-                    let nextState = if c == '`' then NoStringState else BacktickState
-                    in go (idx + 1) nextState
+            case drop idx text of
+                (c:rest) ->
+                    let next = case rest of
+                                (n:_) -> n
+                                [] -> '\0'
+                    in case state of
+                        NoStringState ->
+                            case c of
+                                '"' -> go (idx + 1) (DoubleStringState False)
+                                '\'' -> go (idx + 1) (SingleStringState False)
+                                '`' -> go (idx + 1) BacktickState
+                                ':' | next == '=' -> Just idx
+                                _ -> go (idx + 1) NoStringState
+                        DoubleStringState escaped ->
+                            let escaped' = if escaped then False else c == '\\'
+                                nextState = if not escaped && c == '"' then NoStringState else DoubleStringState escaped'
+                            in go (idx + 1) nextState
+                        SingleStringState escaped ->
+                            let escaped' = if escaped then False else c == '\\'
+                                nextState = if not escaped && c == '\'' then NoStringState else SingleStringState escaped'
+                            in go (idx + 1) nextState
+                        BacktickState ->
+                            let nextState = if c == '`' then NoStringState else BacktickState
+                            in go (idx + 1) nextState
+                [] -> go (idx + 1) state
 
 determineValueKind :: ValueTypeSet -> String -> ValueKind
 determineValueKind valueTypes expr

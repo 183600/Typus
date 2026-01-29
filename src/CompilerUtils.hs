@@ -194,8 +194,9 @@ batchConvert ctx inputDir outputDir = do
                 -- 只匹配以"package"开头的非注释行
                 packageLines = filter isPackageDeclaration linesList
             in case packageLines of
-                (line:_) -> let wordsList = words line
-                            in if length wordsList >= 2 then wordsList !! 1 else ""
+                (line:_) -> case words line of
+                    ("package":name:_) -> name
+                    _ -> ""
                 [] -> ""
           where
             isPackageDeclaration line = 
@@ -340,8 +341,9 @@ findTypusFilesInPackage file = do
             -- 只匹配以"package"开头的非注释行
             packageLines = filter isPackageDeclaration linesList
         in case packageLines of
-            (line:_) -> let wordsList = words line
-                        in if length wordsList >= 2 then wordsList !! 1 else ""
+            (line:_) -> case words line of
+                ("package":name:_) -> name
+                _ -> ""
             [] -> ""
       where
         isPackageDeclaration line = 

@@ -150,12 +150,18 @@ findAssignmentIndex s = go 0
     go idx
         | idx >= length s = Nothing
         | otherwise =
-            let c = s !! idx
-                prev = if idx == 0 then ' ' else s !! (idx - 1)
-                next = if idx + 1 < length s then s !! (idx + 1) else ' '
-            in if c == '=' && next /= '=' && prev `notElem` "=<>!"
-                  then Just idx
-                  else go (idx + 1)
+            case drop idx s of
+                (c:_) -> 
+                    let prev = if idx == 0 then ' ' else case drop (idx - 1) s of
+                                (p:_) -> p
+                                [] -> ' '
+                        next = case drop (idx + 1) s of
+                                (n:_) -> n
+                                [] -> ' '
+                    in if c == '=' && next /= '=' && prev `notElem` "=<>!"
+                          then Just idx
+                          else go (idx + 1)
+                [] -> go (idx + 1)
 
 -- | Consume comma-separated identifier names from the start of the string.
 consumeNames :: String -> ([String], String)

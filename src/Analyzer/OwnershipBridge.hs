@@ -152,8 +152,16 @@ detectUseAfterMove source declared =
       where
         pattern = "=" ++ name
         patternLength = length pattern
+        safeIndex :: Int -> [a] -> Maybe a
+        safeIndex i xs
+            | i < 0 = Nothing
+            | null xs = Nothing
+            | i == 0 = listToMaybe xs
+            | otherwise = case xs of
+                            (_:rest) -> safeIndex (i - 1) rest
+                            [] -> Nothing
         isValidRhsMatch txt idx =
-            let preceding = if idx == 0 then Nothing else Just (txt !! (idx - 1))
+            let preceding = if idx == 0 then Nothing else safeIndex (idx - 1) txt
                 following = drop (idx + patternLength) txt
             in preceding /= Just '=' && not (maybe False isIdentifierChar (listToMaybe following))
 

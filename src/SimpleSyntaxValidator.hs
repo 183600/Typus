@@ -129,7 +129,10 @@ updateState state char content idx
     
     -- Handle multi-line comments
     | inMultiComment state = 
-        if char == '*' && idx + 1 < length content && content !! (idx + 1) == '/'
+        if char == '*' && idx + 1 < length content && 
+           case drop (idx + 1) content of
+               ('/':_) -> True
+               _ -> False
         then state { inMultiComment = False }
         else state
     
@@ -142,9 +145,15 @@ updateState state char content idx
             '`' -> state { inRawString = True, inString = True }
             
             -- Comment starts
-            '/' | idx + 1 < length content && content !! (idx + 1) == '/' -> 
+            '/' | idx + 1 < length content && 
+                   case drop (idx + 1) content of
+                       ('/':_) -> True
+                       _ -> False -> 
                 state { inSingleComment = True }
-            '/' | idx + 1 < length content && content !! (idx + 1) == '*' -> 
+            '/' | idx + 1 < length content && 
+                   case drop (idx + 1) content of
+                       ('*':_) -> True
+                       _ -> False -> 
                 state { inMultiComment = True }
             
             -- Opening brackets
@@ -252,7 +261,9 @@ validateFunctionLine lineNum fullLine trimmed =
 validateVarLine :: Int -> String -> String -> [SyntaxError]  
 validateVarLine lineNum fullLine trimmed = 
     let parts = words trimmed
-        isBlockDecl = length parts >= 2 && parts !! 1 == "("
+        isBlockDecl = case parts of
+                        (_:"(":_) -> True
+                        _ -> False
     in if not isBlockDecl && length parts < 3
        then [SyntaxError InvalidStatement 
              "Variable declaration incomplete" lineNum 1 fullLine]

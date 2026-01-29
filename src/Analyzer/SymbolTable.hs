@@ -428,9 +428,9 @@ trim = dropWhile isSpace . reverse . dropWhile isSpace . reverse
 extractFunctionNameFromLine :: String -> String
 extractFunctionNameFromLine line =
     let parts = words line
-     in if length parts >= 2 && parts !! 0 == "func"
-            then takeWhile (\c -> c /= '(' && c /= '[') (parts !! 1)
-            else ""
+     in case parts of
+            "func" : namePart : _ -> takeWhile (\c -> c /= '(' && c /= '[') namePart
+            _ -> ""
 
 isReservedName :: String -> Bool
 isReservedName name =

@@ -169,7 +169,7 @@ hasMalformedSyntax typusFile =
     in if hasCriticalErrors
        then True
        else if hasSyntaxErrors
-            then True  -- 有语法错误
+            then True  -- has syntax errors
             else case parseGoModule (lines source) of
                    Left _ -> True
                    Right _ -> False
@@ -683,7 +683,9 @@ checkCall TypeEnv{..} context CallExpr{..} =
                                                  else (params, Nothing)
                              Nothing -> (params, Nothing)
             expectedForIdx idx
-                | idx < length fixedParams = Just (fpType (fixedParams !! idx))
+                | idx < length fixedParams = case drop idx fixedParams of
+                    (p:_) -> Just (fpType p)
+                    [] -> fpType <$> variadicParam
                 | otherwise = fpType <$> variadicParam
             indexedArgs :: [(Int, String)]
             indexedArgs = zip [0..] callArgs
@@ -733,7 +735,8 @@ parseFunctionInfo (FuncDecl (header:bodyLines))
                         (l:_) -> trim l
                         [] -> ""
         in if trimmed == "}"
-              then init ls
+              then case ls of
+                      (x:xs) -> x : init xs
               else ls
 
 extractFunctionName :: String -> Maybe String
@@ -991,7 +994,9 @@ extractCallExpressions input = go 0 NoStringState' 0 []
     go idx state depth acc
         | idx >= len = reverse acc
         | otherwise =
-            let ch = input !! idx
+            let ch = case drop idx input of
+                        (c:_) -> c
+                        [] -> '\0' -- Should not happen due to idx >= len check
             in case state of
                 NoStringState' ->
                     case ch of
@@ -1032,14 +1037,18 @@ extractCallExpressions input = go 0 NoStringState' 0 []
             | currentIdx < 0 = takeName 0 endIdx
             | currentIdx >= length input = takeName (length input) endIdx
             | otherwise =
-                case input !! currentIdx of
-                    c | c == ']' ->
-                            case findMatching '[' currentIdx of
+                case drop currentIdx input of
+                    [] -> takeName (currentIdx + 1) endIdx
+                    (c:_) -> 
+                        if c == ']'
+                            then case findMatching '[' currentIdx of
                                 Nothing -> Nothing
                                 Just start -> extractName (endIdx) (start - 1)
-                      | isValidNameChar c -> extractName endIdx (currentIdx - 1)
-                      | isSpace c -> takeName (currentIdx + 1) endIdx
-                      | otherwise -> takeName (currentIdx + 1) endIdx
+                            else if isValidNameChar c
+                                then extractName endIdx (currentIdx - 1)
+                                else if isSpace c
+                                    then takeName (currentIdx + 1) endIdx
+                                    else takeName (currentIdx + 1) endIdx
 
         takeName start end
             | start > end = Nothing
@@ -1068,8 +1077,10 @@ extractCallExpressions input = go 0 NoStringState' 0 []
                 | j < 0 = Nothing
                 | j >= length input = Nothing
                 | otherwise =
-                    let ch = input !! j
-                    in if ch == openChar && level == 0
+                    case drop j input of
+                        [] -> Nothing
+                        (ch:_) ->
+                            if ch == openChar && level == 0
                         then Just j
                         else if ch == openChar
                             then goMatch (j - 1) (level - 1)
@@ -1081,30 +1092,32 @@ extractCallExpressions input = go 0 NoStringState' 0 []
     collectArgs idx depth state acc
         | idx >= len = Nothing
         | otherwise =
-            let ch = input !! idx
-            in case state of
-                NoStringState' ->
-                    case ch of
-                        '"' -> collectArgs (idx + 1) depth (DoubleState False) (ch:acc)
-                        '\'' -> collectArgs (idx + 1) depth (SingleState False) (ch:acc)
-                        '`' -> collectArgs (idx + 1) depth BacktickState' (ch:acc)
-                        '(' -> collectArgs (idx + 1) (depth + 1) state (ch:acc)
-                        ')' ->
-                            if depth == 1
-                                then Just (reverse acc, idx)
-                                else collectArgs (idx + 1) (depth - 1) state (ch:acc)
-                        _ -> collectArgs (idx + 1) depth state (ch:acc)
-                DoubleState esc ->
-                    let esc' = (not esc && ch == '\\')
-                        nextState = if not esc && ch == '"' then NoStringState' else DoubleState esc'
-                    in collectArgs (idx + 1) depth nextState (ch:acc)
-                SingleState esc ->
-                    let esc' = (not esc && ch == '\\')
-                        nextState = if not esc && ch == '\'' then NoStringState' else SingleState esc'
-                    in collectArgs (idx + 1) depth nextState (ch:acc)
-                BacktickState' ->
-                    let nextState = if ch == '`' then NoStringState' else BacktickState'
-                    in collectArgs (idx + 1) depth nextState (ch:acc)
+            case drop idx input of
+                [] -> Nothing
+                (ch:_) ->
+                    case state of
+                        NoStringState' ->
+                            case ch of
+                                '"' -> collectArgs (idx + 1) depth (DoubleState False) (ch:acc)
+                                '\'' -> collectArgs (idx + 1) depth (SingleState False) (ch:acc)
+                                '`' -> collectArgs (idx + 1) depth BacktickState' (ch:acc)
+                                '(' -> collectArgs (idx + 1) (depth + 1) state (ch:acc)
+                                ')' ->
+                                    if depth == 1
+                                        then Just (reverse acc, idx)
+                                        else collectArgs (idx + 1) (depth - 1) state (ch:acc)
+                                _ -> collectArgs (idx + 1) depth state (ch:acc)
+                        DoubleState esc ->
+                            let esc' = (not esc && ch == '\\')
+                                nextState = if not esc && ch == '"' then NoStringState' else DoubleState esc'
+                            in collectArgs (idx + 1) depth nextState (ch:acc)
+                        SingleState esc ->
+                            let esc' = (not esc && ch == '\\')
+                                nextState = if not esc && ch == '\'' then NoStringState' else SingleState esc'
+                            in collectArgs (idx + 1) depth nextState (ch:acc)
+                        BacktickState' ->
+                            let nextState = if ch == '`' then NoStringState' else BacktickState'
+                            in collectArgs (idx + 1) depth nextState (ch:acc)
 
 --------------------------------------------------------------------------------
 -- Type inference helpers
