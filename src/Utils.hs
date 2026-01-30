@@ -254,7 +254,7 @@ removeComments s =
     skipBlockAcc [] _depth acc = reverse acc  -- 注释未闭合，返回累积的字符
     skipBlockAcc ('\n':xs) depth acc = '\n' : skipBlockAcc xs depth acc  -- 保留换行
     skipBlockAcc ('/':'*':xs) depth acc = skipBlockAcc xs (depth + (1 :: Int)) acc  -- 嵌套块注释
-    skipBlockAcc ('*':'/':xs) 0 acc = goNormal xs  -- 最外层注释结束，丢弃累积的字符
+    skipBlockAcc ('*':'/':xs) 0 _ = goNormal xs  -- 最外层注释结束，丢弃累积的字符
     skipBlockAcc ('*':'/':xs) depth acc = skipBlockAcc xs (depth - (1 :: Int)) acc  -- 内层注释结束
     skipBlockAcc ('\\':'"':xs) depth acc = skipBlockAcc xs depth ('"':'\\':acc)  -- 保留转义引号
     skipBlockAcc ('"':xs) depth acc = skipBlockAcc xs depth ('"':acc)  -- 保留普通引号
@@ -262,27 +262,9 @@ removeComments s =
     skipBlockAcc ('\\':_:xs) depth acc = skipBlockAcc xs depth acc  -- 跳过其他转义字符
     skipBlockAcc (_:xs) depth acc = skipBlockAcc xs depth acc  -- 跳过其他字符
     
-    -- 在块注释中跳过字符串字面量（不保留）
-    skipInStringBlock :: String -> Int -> String
-    skipInStringBlock xs depth = skipInStringBlockAcc xs depth []
     
-    skipInStringBlockAcc :: String -> Int -> String -> String
-    skipInStringBlockAcc [] _depth acc = reverse acc  -- 返回累积的换行符
-    skipInStringBlockAcc ('\n':xs) depth acc = '\n' : skipInStringBlockAcc xs depth acc  -- 保留换行
-    skipInStringBlockAcc ('\\':_:xs) depth acc = skipInStringBlockAcc xs depth acc  -- 跳过转义字符
-    skipInStringBlockAcc ('"':xs) depth acc = skipBlockAcc xs depth acc  -- 字符串结束，继续跳过注释
-    skipInStringBlockAcc (_:cs) depth acc = skipInStringBlockAcc cs depth acc  -- 跳过其他字符
     
-    -- 在块注释中跳过字符字面量（不保留）
-    skipInCharBlock :: String -> Int -> String
-    skipInCharBlock xs depth = skipInCharBlockAcc xs depth []
     
-    skipInCharBlockAcc :: String -> Int -> String -> String
-    skipInCharBlockAcc [] _depth acc = reverse acc  -- 返回累积的换行符
-    skipInCharBlockAcc ('\n':xs) depth acc = '\n' : skipInCharBlockAcc xs depth acc  -- 保留换行
-    skipInCharBlockAcc ('\\':_:xs) depth acc = skipInCharBlockAcc xs depth acc  -- 跳过转义字符
-    skipInCharBlockAcc ('\'':xs) depth acc = skipBlockAcc xs depth acc  -- 字符结束，继续跳过注释
-    skipInCharBlockAcc (_:cs) depth acc = skipInCharBlockAcc cs depth acc  -- 跳过其他字符
     
     -- 字符串字面量（保留内容与转义）
     goInString :: String -> String
