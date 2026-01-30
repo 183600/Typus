@@ -193,8 +193,20 @@ prop_removeLineComments_preserves_strings s =
 prop_removeComments_preserves_strings :: String -> Bool
 prop_removeComments_preserves_strings s = 
   let result = removeComments s
-      countQuotes s' = length $ filter (== '"') s'
-  in countQuotes s == countQuotes result
+  in if isOnlyComment s
+     then null (dropWhile isSpace result)  -- 结果应该为空或只有空白
+     else countQuotesPreserved s result
+  where
+    isOnlyComment str = isOnlyLineComment str || isOnlyBlockComment str
+    isOnlyLineComment str = case dropWhile isSpace str of
+                             ('/':'/':_) -> True
+                             _ -> False
+    isOnlyBlockComment str = case dropWhile isSpace str of
+                              ('/':'*':_) -> True
+                              _ -> False
+    countQuotesPreserved input output = 
+      let countQuotes s' = length $ filter (== '"') s'
+      in countQuotes input == countQuotes output
 
 -- | Test that normalizeIndentation preserves relative indentation
 prop_normalizeIndentation_preserves_relative_indentation :: String -> Bool

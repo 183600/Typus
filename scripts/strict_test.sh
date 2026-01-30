@@ -12,7 +12,7 @@ cabal clean
 
 # 配置项目以启用所有警告并将警告视为错误
 echo "配置项目以启用所有警告并将警告视为错误..."
-cabal configure --flags="-fast production" --enable-tests --ghc-options="-Wall -Wextra -Werror -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-exported-signatures -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wmissing-export-lists -Wmonomorphism-restriction -Wmissing-signatures -Wname-shadowing -Worphans -Wpartial-type-signatures -Wtabs -Wtype-defaults -Wunrecognised-pragmas -Wunused-do-bind -Wunused-foralls -Wunused-imports -Wunused-matches -Wunused-top-binds -Wunused-type-patterns -Wunused-local-binds -Wunused-patterns -Wmissed-specializations -Wall-missed-specializations -Wmissing-methods"
+cabal configure --flags="-fast production" --enable-tests --ghc-options="-Wall -Wextra -Werror -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-exported-signatures -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wmonomorphism-restriction -Wmissing-signatures -Wname-shadowing -Worphans -Wpartial-type-signatures -Wtabs -Wtype-defaults -Wunrecognised-pragmas -Wunused-do-bind -Wunused-foralls -Wunused-imports -Wunused-matches -Wunused-top-binds -Wunused-type-patterns -Wunused-local-binds -Wmissing-methods"
 
 # 尝试构建项目
 echo

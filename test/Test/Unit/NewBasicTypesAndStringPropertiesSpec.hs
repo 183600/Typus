@@ -58,7 +58,7 @@ prop_text_string_conversion s =
 prop_text_length :: String -> Property
 prop_text_length s = 
   let t = T.pack s
-  in property $ T.length t == fromIntegral (length s)
+  in property $ T.length t == length s
 
 -- | 测试SourcePos的基本属性
 prop_sourcepos_line_positive :: Int -> Int -> Property

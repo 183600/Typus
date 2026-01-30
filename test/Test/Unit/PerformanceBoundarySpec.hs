@@ -110,7 +110,7 @@ prop_memory_usage_grows_with_input xs = property $
   let n = length xs
       memory = measureMemory $ map (*2) xs
   -- Simplified check: memory should be proportional to n
-  in memory <= fromIntegral n * 100  -- 100 bytes per element max
+  in memory <= n * 100  -- 100 bytes per element max
 
 -- Property 4: Hash table operations have amortized constant time
 prop_hash_table_constant_time :: Map String Int -> String -> Property
@@ -161,7 +161,7 @@ prop_memory_deallocation_prompt xs = property $
       result = map (*2) xs
       memoryAfter = force result `seq` getCurrentMemoryUsage
   -- Simplified check: memory should not grow significantly after deallocation
-  in memoryAfter - memoryBefore <= fromIntegral (length xs) * 100
+  in memoryAfter - memoryBefore <= (length xs) * 100
 
 -- Property 10: Parallel processing improves performance for large inputs
 prop_parallel_processing_improves_performance :: [Int] -> Property
@@ -178,13 +178,13 @@ prop_parallel_processing_improves_performance_mono =
   forAll arbitrary $ \xs -> prop_parallel_processing_improves_performance xs
 
 -- Helper functions for performance testing
-measureTime :: (NFData a, Show a) => a -> Double
+measureTime :: Show a => a -> Double
 measureTime action = 
   -- Simplified implementation - in real code would use proper timing
   let size = show (length (show action))
   in fromIntegral (length size) * 0.001
 
-measureMemory :: (NFData a, Show a) => a -> Int
+measureMemory :: Show a => a -> Int
 measureMemory action = 
   -- Simplified implementation - in real code would use proper memory measurement
   let size = show (length (show action))

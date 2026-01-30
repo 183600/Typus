@@ -67,7 +67,7 @@ instance Arbitrary (Parser Char) where
 instance Show (Parser Char) where
   show _ = "Parser"
 
-instance Eq a => Eq (Parser a) where
+instance Eq (Parser a) where
   _ == _ = True  -- Simplified equality for testing
 
 string :: String -> Parser String

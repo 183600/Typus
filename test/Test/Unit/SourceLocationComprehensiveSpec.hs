@@ -174,7 +174,7 @@ prop_is_valid_span_correct pos1 pos2 =
   in isValid == (comparePos pos1 pos2 /= GT)
 
 -- Property 14: locatedAt creates located values with correct position
-prop_located_at_correct :: (Eq a, Show a) => a -> SourcePos -> Bool
+prop_located_at_correct :: Eq a => a -> SourcePos -> Bool
 prop_located_at_correct value pos = 
   let located = locatedAt pos value
   in locatedValue located == value && 
@@ -183,7 +183,7 @@ prop_located_at_correct value pos =
      spanEnd (locatedSpan located) == pos
 
 -- Property 15: mapLocated preserves location information
-prop_map_located_preserves_location :: (Show a, Show b) => (a -> b) -> Located a -> Bool
+prop_map_located_preserves_location :: (a -> b) -> Located a -> Bool
 prop_map_located_preserves_location f located = 
   let mapped = mapLocated f located
   in locatedSpan mapped == locatedSpan located
