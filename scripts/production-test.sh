@@ -19,7 +19,7 @@ cabal update
 
 # 2. 构建项目
 echo "步骤 2: 构建项目..."
-cabal build --enable-tests --enable-benchmarks --enable-coverage
+cabal build --enable-tests --enable-coverage
 BUILD_RESULT=$?
 if [ $BUILD_RESULT -ne 0 ]; then
     echo "错误: 构建失败"

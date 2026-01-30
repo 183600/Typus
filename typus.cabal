@@ -160,17 +160,17 @@ flag werror
 -- Original test files remain in app/ for historical reference but are no
 -- longer built by default.
 
--- Benchmark suite for performance testing
-benchmark typus-bench
-    import:           warnings
-    type:             exitcode-stdio-1.0
-    main-is:          BenchmarkRunner.hs
-    hs-source-dirs:   test/benchmark
-    other-modules:
-    build-depends:
-        base >=4.7 && <5, typus, containers, mtl, directory >= 1.3.0, filepath >= 1.4.0, criterion >= 1.6, deepseq >= 1.4.0
-    default-language: Haskell2010
-    ghc-options:      -threaded -rtsopts -with-rtsopts=-N
+-- Benchmark suite for performance testing (temporarily disabled due to dependency conflicts)
+-- benchmark typus-bench
+--     import:           warnings
+--     type:             exitcode-stdio-1.0
+--     main-is:          BenchmarkRunner.hs
+--     hs-source-dirs:   test/benchmark
+--     other-modules:
+--     build-depends:
+--         base >=4.7 && <5, typus, containers, mtl, directory >= 1.3.0, filepath >= 1.4.0, criterion >= 1.6, deepseq >= 1.4.0
+--     default-language: Haskell2010
+--     ghc-options:      -threaded -rtsopts -with-rtsopts=-N
 
 -- Canonical test-suite
 test-suite typus-test

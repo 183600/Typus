@@ -28,7 +28,9 @@ prop_parse_idempotent :: String -> Property
 prop_parse_idempotent s = 
   case (parseTypus s, parseTypus s) of
     (Right parsed, Right parsed2) -> parsed === parsed2
-    (Left _, _) -> property True  -- Both should fail consistently
+    (Left _, Left _) -> property True  -- Both should fail consistently
+    (Right _, Left _) -> property False -- Inconsistent results
+    (Left _, Right _) -> property False -- Inconsistent results
 
 prop_parse_whitespace_handling :: String -> Property
 prop_parse_whitespace_handling s = 
