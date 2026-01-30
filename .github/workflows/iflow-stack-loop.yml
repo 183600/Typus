@@ -47,7 +47,7 @@ jobs:
           fi
 
           # 2. 创建、设置权限并启用新的 6G 交换文件
-          sudo fallocate -l 6G /swapfile
+          sudo fallocate -l 8G /swapfile
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
           sudo swapon /swapfile
