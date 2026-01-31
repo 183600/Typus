@@ -25,7 +25,7 @@ module Utils
 
 import Data.Char (isSpace)
 import qualified Data.List as L
-import Data.List (isInfixOf, isPrefixOf, intercalate)
+import Data.List (isPrefixOf, intercalate)
 import qualified Data.Text as T
 
 -- | 去掉字符串两端的空白字符。
@@ -196,10 +196,8 @@ isCompleteStringLiteral str =
 
 removeComments :: String -> String
 removeComments s = 
-  -- 如果字符串不包含注释，直接返回原字符串
-  if not ("//" `isInfixOf` s || "/*" `isInfixOf` s)
-    then s
-  else if all isSpace s
+  -- 直接使用通用的注释处理逻辑，这样可以正确处理字符串中的注释标记
+  if all isSpace s
     then s
   else if s == "//"  -- 特殊情况：只有注释符号
     then ""
@@ -269,14 +267,13 @@ removeComments s =
     -- 字符串字面量（保留内容与转义）
     goInString :: String -> String
     goInString [] = []  -- 非严格：未闭合字符串，返回空（已经处理的内容由调用者保留）
-    goInString ('\n':xs) = '\n' : goNormal xs  -- 换行时结束字符串字面量
-    -- 在字符串中，保留所有字符包括注释标记
+    goInString ('\\':x:xs) = '\\' : x : goInString xs  -- 保留转义字符，包括转义引号（最具体的模式）
     goInString ('/':'/':xs) = '/' : '/' : goInString xs  -- 保留 //
     goInString ('/':'*':xs) = '/' : '*' : goInString xs  -- 保留 /*
     goInString ('*':'/':xs) = '*' : '/' : goInString xs  -- 保留 */
-    goInString ('\\':x:xs) = '\\' : x : goInString xs  -- 保留转义字符，包括转义引号
-    goInString ('"':xs) = '"' : goNormal xs
-    goInString (c:cs) = c : goInString cs
+    goInString ('"':xs) = '"' : goNormal xs  -- 结束字符串
+    goInString ('\n':xs) = '\n' : goNormal xs  -- 换行时结束字符串字面量
+    goInString (c:cs) = c : goInString cs  -- 其他字符
     
     -- 字符字面量（保留内容与转义）
     goInChar :: String -> String
