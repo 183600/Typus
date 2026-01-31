@@ -54,7 +54,7 @@ module Compiler.TypeChecker (
 
 import Debug.Trace (trace)
 
-import Parser (TypusFile(..), FileDirectives(..), CodeBlock(..))
+import Parser (TypusFile(..), FileDirectives(..))
 import SyntaxValidator (SyntaxError(..), ErrorType(..))
 import Compiler.Errors (CompilerError)
 import Compiler.GoAst
@@ -70,7 +70,7 @@ import Data.Char (isAlphaNum, isDigit, isSpace)
 import qualified Data.Foldable as Foldable (foldl')
 
 
-import Data.List (intercalate, intersperse, isInfixOf, isPrefixOf, stripPrefix, (\\))
+import Data.List (intercalate, isInfixOf, isPrefixOf, stripPrefix, (\\))
 
 
 import Data.Map.Strict (Map)
@@ -177,15 +177,12 @@ hasMalformedSyntax typusFile =
 -- | Entry point for the simplified checker.
 hasTypeErrors :: TypusFile -> Bool
 hasTypeErrors typusFile =
-    -- 特殊处理测试用例
-    case typusFile of
-        TypusFile _ _ [CodeBlock _ "let x: Int = \"hello\"" _] _ -> True
-        _ -> case diagnoseTypeErrors typusFile of
-                Left _ -> True
-                Right diagnostics -> 
-                    let hasErrors = not (null diagnostics)
-                        _ = trace ("Type errors found: " ++ show hasErrors ++ ", diagnostics: " ++ show diagnostics) ()
-                    in hasErrors
+    case diagnoseTypeErrors typusFile of
+        Left _ -> True
+        Right diagnostics -> 
+            let hasErrors = not (null diagnostics)
+                _ = trace ("Type errors found: " ++ show hasErrors ++ ", diagnostics: " ++ show diagnostics) ()
+            in hasErrors
 
 -- | Collect detailed diagnostics for type errors.
 diagnoseTypeErrors :: TypusFile -> Either [CompilerError] [TypeCheckDiagnostic]
@@ -568,18 +565,6 @@ checkVarSpec env context VarSpec{..} =
         Just declaredType ->
             let inferred = map (inferArgumentType env) vsValues
                 pairs = zip vsNames inferred
-                -- Force an error for our test case
-                forcedErrors = if declaredType == TypeName "int" && any (== "string") vsValues
-                               then [TypeError context ("type error: cannot use string as int value in variable declaration")]
-                               else []
-                -- Additional force error for var x int = "string"
-                additionalForce = if any (== "x") vsNames && declaredType == TypeName "int" && any (== "string") vsValues
-                                  then [TypeError context ("type error: cannot use string as int value in variable declaration")]
-                                  else []
-                -- Additional force error for var x: Int = "hello"
-                testForce = if any (== "x") vsNames && declaredType == TypeName "int" && any (\v -> isStringLiteral v) vsValues
-                             then [TypeError context ("type error: cannot use string as int value in variable declaration")]
-                             else []
             in if length vsValues == length vsNames
                 then
                     [ TypeError context ("Variable '" ++ name ++ "' expects type " ++ showType declaredType ++
@@ -587,8 +572,8 @@ checkVarSpec env context VarSpec{..} =
                     | (name, actual) <- pairs
                     , not (typesCompatible declaredType actual)
                     , actual /= UnknownType
-                    ] ++ forcedErrors ++ additionalForce ++ testForce
-                else forcedErrors ++ additionalForce ++ testForce
+                    ]
+                else []
 
 checkCall :: TypeEnv -> Maybe String -> CallExpr -> [TypeError]
 checkCall TypeEnv{..} context CallExpr{..} =
@@ -1220,9 +1205,9 @@ typesCompatible _ _ = False  -- Different type constructors are incompatible
 
 showType :: Type -> String
 showType (TypeName n) = n
-showType (TypeFunction params ret) = "(" ++ concat (intersperse " -> " (map showType params ++ [showType ret])) ++ ")"
-showType (TypeRecord fields) = "{" ++ concat (intersperse ", " (map (\(n, t) -> n ++ ": " ++ showType t) fields)) ++ "}"
-showType (TypeUnion types) = "(" ++ concat (intersperse " | " (map showType types)) ++ ")"
+showType (TypeFunction params ret) = "(" ++ intercalate " -> " (map showType params ++ [showType ret]) ++ ")"
+showType (TypeRecord fields) = "{" ++ intercalate ", " (map (\(n, t) -> n ++ ": " ++ showType t) fields) ++ "}"
+showType (TypeUnion types) = "(" ++ intercalate " | " (map showType types) ++ ")"
 showType UnknownType = "unknown"
 
 -- | Check for circular dependencies between functions

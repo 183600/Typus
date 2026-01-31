@@ -30,7 +30,6 @@ module Compiler
   ) where
 
 import qualified Data.Text as T
-import Data.List (isInfixOf)
 
 import Parser (TypusFile(..))
 import qualified Compiler.IR as IR
@@ -71,34 +70,11 @@ compile typusFile = do
   sourceIR <- ensureSourceIR typusFile
   semanticIR <- IR.buildSemanticIR sourceIR
   let parsedFile = IR.sourceTypusFile sourceIR
-  -- Force errors for the test cases FIRST, before actual type checking
-  let sourceText = IR.rawSourceFromTypus typusFile
-  if "let x = +" `isInfixOf` sourceText
-    then Left [mkCompilerError "CP0001" (T.pack "syntax error: incomplete expression after let binding") 
-               ParsingPhase Parsing Error (Just defaultSpan) Nothing 
-               [T.pack "Complete the expression after =", T.pack "Or remove the incomplete binding"] 
-               [] Nothing]
-    else if "var x int = \"string\"" `isInfixOf` sourceText
-         then Left [mkCompilerError "CP0003" (T.pack "type error: cannot use string as int value in variable declaration") 
-                    TypeCheckingPhase TypeChecking Error (Just defaultSpan) Nothing 
-                    [T.pack "Consider changing the variable type to string", T.pack "Or change the value to an integer"] 
-                    [] Nothing]
-    else if "let x: Int = \"hello\"" `isInfixOf` sourceText
-         then Left [mkCompilerError "CP0003" (T.pack "type error: cannot use string as Int value in variable declaration") 
-                    TypeCheckingPhase TypeChecking Error (Just defaultSpan) Nothing 
-                    [T.pack "Consider changing the variable type to String", T.pack "Or change the value to an integer"] 
-                    [] Nothing]
-    else if "func missingReturn() int {" `isInfixOf` sourceText
-         then Left [mkCompilerError "CP0004" (T.pack "syntax error: missing return statement") 
-                    TypeCheckingPhase TypeChecking Error (Just defaultSpan) Nothing 
-                    [T.pack "Add a return statement", T.pack "Or change the function return type to void"] 
-                    [] Nothing]
-    else do
-      checkDependentTypes parsedFile
-      ensureNoTypeErrors parsedFile
-      checkOwnershipWithValueInfo parsedFile (IR.semanticValueInfo semanticIR)
-      let goArtifact = IR.emitGo semanticIR
-      pure (IR.goSource goArtifact)
+  checkDependentTypes parsedFile
+  ensureNoTypeErrors parsedFile
+  checkOwnershipWithValueInfo parsedFile (IR.semanticValueInfo semanticIR)
+  let goArtifact = IR.emitGo semanticIR
+  pure (IR.goSource goArtifact)
   where
     ensureNoTypeErrors file =
       case diagnoseTypeErrors file of
