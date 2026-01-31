@@ -21,6 +21,9 @@ import Test.Unit.TestParserDirectivesSpec (testParserDirectives)
 -- Import AdvancedTextProcessingSpec
 import qualified Test.Unit.AdvancedTextProcessingSpec as AdvancedTextProcessingSpec
 
+-- Import NewAdditionalParserQuickCheckTestSpec
+import qualified Test.Unit.NewAdditionalParserQuickCheckTestSpec as NewAdditionalParserQuickCheckTestSpec
+
 -- Basic test properties
 prop_basic_property :: String -> Property
 prop_basic_property s = property $ length s >= 0
@@ -37,5 +40,6 @@ tests = testGroup "Test.Unit.Tests Tests"
     CodeGenerationQuickCheckSpec.tests,
     testParserErrorRecovery,
     testParserDirectives,
-    AdvancedTextProcessingSpec.tests  -- AdvancedTextProcessingSpec tests
+    AdvancedTextProcessingSpec.tests,  -- AdvancedTextProcessingSpec tests
+    NewAdditionalParserQuickCheckTestSpec.newAdditionalParserQuickCheckTestSpec  -- New Additional Parser QuickCheck Tests
   ]
