@@ -249,7 +249,7 @@ prop_group_concat s = concat (group s) === s
 prop_group_all_same :: String -> Property
 prop_group_all_same s = 
   let groups = group s
-      allGroupsHaveSameChars = all (\g -> all (== head g) g) groups
+      allGroupsHaveSameChars = all (\g -> null g || all (== head g) g) groups
   in property $ allGroupsHaveSameChars
 
 -- Test string intercalate operations
@@ -292,8 +292,8 @@ prop_nub_removes_duplicates s =
 
 prop_nub_preserves_order :: String -> Property
 prop_nub_preserves_order s = 
-  let nubbed = nub s
-      originalOrder = map head $ group s
+  let groups = group s
+      originalOrder = map head $ filter (not . null) groups
       nubbedOrder = nubbed
   in property $ nubbedOrder === originalOrder
 
@@ -593,7 +593,7 @@ prop_group_by_concat s = concat (groupBy (==) s) === s
 prop_group_by_all_same :: String -> Property
 prop_group_by_all_same s = 
   let groups = groupBy (==) s
-      allGroupsHaveSameChars = all (\g -> all (== head g) g) groups
+      allGroupsHaveSameChars = all (\g -> null g || all (== head g) g) groups
   in property $ allGroupsHaveSameChars
 
 -- Test string inits operations

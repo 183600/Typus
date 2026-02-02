@@ -39,6 +39,7 @@ prop_error_context_addition message context =
 
 prop_error_chain_formation :: [String] -> Property
 prop_error_chain_formation messages = 
+  not (null messages) ==>
   let baseError = EH.createError (head messages) (SL.SourceLocation 1 1)
       chainedError = foldr EH.chainError baseError (tail messages)
   in property $ length (ET.errorChain chainedError) === length messages
@@ -161,6 +162,7 @@ prop_error_transformation message =
 
 prop_error_accumulation :: [String] -> Property
 prop_error_accumulation messages = 
+  not (null messages) ==>
   let baseError = EH.createError (head messages) (SL.SourceLocation 1 1)
       accumulated = foldr (\msg err -> EH.accumulateError err msg) baseError (tail messages)
   in property $ length (ET.errorAccumulations accumulated) === length messages - 1

@@ -161,11 +161,14 @@ prop_ownership_transfer_cycle_detection vars =
     
     detectCycle [] _ = False
     detectCycle _ [] = False
-    detectCycle transfers allVars = 
-      let firstVar = head allVars
-          lastVar = last allVars
-          hasDirectCycle = any (\t -> transferFrom t == lastVar && transferTo t == firstVar) transfers
-      in hasDirectCycle || length allVars > 3
+    detectCycle transfers allVars 
+      | null allVars = False
+      | length allVars == 1 = False
+      | otherwise = 
+          let firstVar = head allVars
+              lastVar = last allVars
+              hasDirectCycle = any (\t -> transferFrom t == lastVar && transferTo t == firstVar) transfers
+          in hasDirectCycle || length allVars > 3
 
 -- Test ownership transfer validation
 prop_ownership_transfer_valid :: String -> String -> Property
@@ -265,9 +268,9 @@ prop_ownership_transfer_reachability vars =
     createTransferChain (x:y:xs) = OwnershipTransfer x y : createTransferChain (y:xs)
     
     computeReachable [] allVars = allVars
-    computeReachable transfers allVars = 
-      let reachableFromStart = findReachable (head allVars) transfers
-      in if null allVars then [] else reachableFromStart
+    computeReachable transfers allVars 
+      | null allVars = []
+      | otherwise = findReachable (head allVars) transfers
     
     findReachable _ [] = []
     findReachable current transfers = 
@@ -420,11 +423,12 @@ prop_ownership_transfer_graph_connected vars =
     
     isGraphConnected [] _ = True
     isGraphConnected _ [] = True
-    isGraphConnected transfers allVars = 
-      if null allVars then True else
-      let startVar = head allVars
-          reachable = findReachable startVar transfers
-      in all (`elem` reachable) allVars
+    isGraphConnected transfers allVars 
+      | null allVars = True
+      | otherwise = 
+          let startVar = head allVars
+              reachable = findReachable startVar transfers
+          in all (`elem` reachable) allVars
     
     findReachable _ [] = []
     findReachable current transfers = 

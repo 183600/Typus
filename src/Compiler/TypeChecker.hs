@@ -636,7 +636,10 @@ checkCall TypeEnv{..} context CallExpr{..} =
                                         [] -> Nothing
                         in case lastParam of
                              Just lp -> if fpVariadic lp
-                                          then (init params, Just lp)
+                                          then case params of
+                                                  [] -> ([], Just lp)
+                                                  [_] -> ([], Just lp)
+                                                  _ -> (init params, Just lp)
                                           else (params, Nothing)
                              Nothing -> (params, Nothing)
             minCount = length fixedParams
@@ -664,7 +667,10 @@ checkCall TypeEnv{..} context CallExpr{..} =
                                 [] -> Nothing
                         in case lp of
                              Just lastParam -> if fpVariadic lastParam
-                                                 then (init params, Just lastParam)
+                                                 then case params of
+                                                         [] -> ([], Just lastParam)
+                                                         [_] -> ([], Just lastParam)
+                                                         _ -> (init params, Just lastParam)
                                                  else (params, Nothing)
                              Nothing -> (params, Nothing)
             expectedForIdx idx
@@ -721,6 +727,8 @@ parseFunctionInfo (FuncDecl (header:bodyLines))
                         [] -> ""
         in if trimmed == "}"
               then case ls of
+                      [] -> []
+                      [_] -> []
                       (x:xs) -> x : init xs
               else ls
 

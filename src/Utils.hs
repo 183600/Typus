@@ -219,46 +219,57 @@ removeComments s =
     goNormal ('/':xs) = '/' : goNormal xs  -- 处理单个/的情况
     goNormal (c:cs) = c : goNormal cs
 
-    -- 跳过行注释直到换行，只保留换行
+    -- 跳过行注释直到换行，保留换行和字符串字面量
     skipLine :: String -> String
     skipLine [] = []
     skipLine ('\n':xs) = '\n' : goNormal xs
-    skipLine ('"':xs) = skipInString xs  -- 跳过字符串字面量
-    skipLine ('\'':xs) = skipInChar xs  -- 跳过字符字面量
+    skipLine ('"':xs) = '"' : goInStringComment xs  -- 保留字符串字面量
+    skipLine ('\'':xs) = '\'' : goInCharComment xs  -- 保留字符字面量
     skipLine (_:xs) = skipLine xs  -- 跳过其他字符
     
-    -- 在行注释中跳过字符串字面量（不保留）
-    skipInString :: String -> String
-    skipInString [] = []
-    skipInString ('\n':xs) = '\n' : goNormal xs  -- 换行时结束注释
-    skipInString ('\\':_:xs) = skipInString xs  -- 跳过转义字符
-    skipInString ('"':xs) = skipLine xs  -- 字符串结束，继续跳过注释
-    skipInString (_:xs) = skipInString xs  -- 跳过其他字符
+    -- 在行注释中处理字符串字面量
+    goInStringComment :: String -> String
+    goInStringComment [] = []
+    goInStringComment ('\n':xs) = '\n' : goNormal xs  -- 换行时结束注释
+    goInStringComment ('\\':x:xs) = '\\' : x : goInStringComment xs  -- 保留转义字符
+    goInStringComment ('"':xs) = '"' : skipLine xs  -- 字符串结束，继续跳过注释
+    goInStringComment (c:cs) = c : goInStringComment cs
     
-    -- 在行注释中跳过字符字面量（不保留）
-    skipInChar :: String -> String
-    skipInChar [] = []
-    skipInChar ('\n':xs) = '\n' : goNormal xs  -- 换行时结束注释
-    skipInChar ('\\':_:xs) = skipInChar xs  -- 跳过转义字符
-    skipInChar ('\'':xs) = skipLine xs  -- 字符结束，继续跳过注释
-    skipInChar (_:xs) = skipInChar xs  -- 跳过其他字符
+    -- 在行注释中处理字符字面量
+    goInCharComment :: String -> String
+    goInCharComment [] = []
+    goInCharComment ('\n':xs) = '\n' : goNormal xs  -- 换行时结束注释
+    goInCharComment ('\\':x:xs) = '\\' : x : goInCharComment xs  -- 保留转义字符
+    goInCharComment ('\'':xs) = '\'' : skipLine xs  -- 字符结束，继续跳过注释
+    goInCharComment (c:cs) = c : goInCharComment cs
 
-    -- 跳过块注释直到 */，支持嵌套，只保留换行和转义引号
+    -- 跳过块注释直到 */，支持嵌套，保留字符串字面量
     skipBlock :: String -> Int -> String
-    skipBlock xs depth = skipBlockAcc xs depth []
+    skipBlock [] _depth = []  -- 注释未闭合，返回空
+    skipBlock ('\n':xs) _depth = '\n' : skipBlock xs _depth  -- 保留换行
+    skipBlock ('/':'*':xs) depth = skipBlock xs (depth + (1 :: Int))  -- 嵌套块注释
+    skipBlock ('*':'/':xs) 0 = goNormal xs  -- 最外层注释结束
+    skipBlock ('*':'/':xs) depth = skipBlock xs (depth - (1 :: Int))  -- 内层注释结束
+    skipBlock ('"':xs) depth = '"' : goInStringBlock xs depth  -- 保留字符串字面量
+    skipBlock ('\'':xs) depth = '\'' : goInCharBlock xs depth  -- 保留字符字面量
+    skipBlock ('\\':x:xs) depth = '\\' : x : skipBlock xs depth  -- 保留转义字符
+    skipBlock (_:xs) depth = skipBlock xs depth  -- 跳过其他字符
     
-    -- 辅助函数，累积需要保留的字符
-    skipBlockAcc :: String -> Int -> String -> String
-    skipBlockAcc [] _depth acc = reverse acc  -- 注释未闭合，返回累积的字符
-    skipBlockAcc ('\n':xs) depth acc = '\n' : skipBlockAcc xs depth acc  -- 保留换行
-    skipBlockAcc ('/':'*':xs) depth acc = skipBlockAcc xs (depth + (1 :: Int)) acc  -- 嵌套块注释
-    skipBlockAcc ('*':'/':xs) 0 _ = goNormal xs  -- 最外层注释结束，丢弃累积的字符
-    skipBlockAcc ('*':'/':xs) depth acc = skipBlockAcc xs (depth - (1 :: Int)) acc  -- 内层注释结束
-    skipBlockAcc ('\\':'"':xs) depth acc = skipBlockAcc xs depth ('"':'\\':acc)  -- 保留转义引号
-    skipBlockAcc ('"':xs) depth acc = skipBlockAcc xs depth ('"':acc)  -- 保留普通引号
-    skipBlockAcc ('\'':xs) depth acc = skipBlockAcc xs depth ('\'':acc)  -- 保留普通单引号
-    skipBlockAcc ('\\':_:xs) depth acc = skipBlockAcc xs depth acc  -- 跳过其他转义字符
-    skipBlockAcc (_:xs) depth acc = skipBlockAcc xs depth acc  -- 跳过其他字符
+    -- 在块注释中处理字符串字面量
+    goInStringBlock :: String -> Int -> String
+    goInStringBlock [] _depth = []
+    goInStringBlock ('\n':xs) depth = '\n' : goInStringBlock xs depth  -- 保留换行
+    goInStringBlock ('\\':x:xs) depth = '\\' : x : goInStringBlock xs depth  -- 保留转义字符
+    goInStringBlock ('"':xs) depth = '"' : skipBlock xs depth  -- 字符串结束，继续跳过注释
+    goInStringBlock (c:cs) depth = c : goInStringBlock cs depth
+    
+    -- 在块注释中处理字符字面量
+    goInCharBlock :: String -> Int -> String
+    goInCharBlock [] _depth = []
+    goInCharBlock ('\n':xs) depth = '\n' : goInCharBlock xs depth  -- 保留换行
+    goInCharBlock ('\\':x:xs) depth = '\\' : x : goInCharBlock xs depth  -- 保留转义字符
+    goInCharBlock ('\'':xs) depth = '\'' : skipBlock xs depth  -- 字符结束，继续跳过注释
+    goInCharBlock (c:cs) depth = c : goInCharBlock cs depth
     
     
     
