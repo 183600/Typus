@@ -214,26 +214,32 @@ removeComments s =
     goNormal [] = []
     goNormal ('"':xs) = '"' : goInString xs
     goNormal ('\'':xs) = '\'' : goInChar xs
-    goNormal ('\\':c:xs) = '\\' : c : goNormal xs  -- Handle escaped characters
+    goNormal ('\\':c:xs) = '\\' : c : goNormal xs  -- Handle escaped characters (must be before comment patterns)
     goNormal ('/':'/':xs) = skipLine xs
     goNormal ('/':'*':xs) = skipBlock xs 0
     goNormal ('/':xs) = '/' : goNormal xs  -- 处理单个/的情况
     goNormal (c:cs) = c : goNormal cs
 
-    -- 跳过行注释直到换行，不保留任何内容（包括字符串字面量）
+    -- 跳过行注释直到换行，保留引号以维持引号数量
     skipLine :: String -> String
     skipLine [] = []
     skipLine ('\n':xs) = '\n' : goNormal xs
-    skipLine (_:xs) = skipLine xs  -- 跳过所有字符，包括字符串和字符字面量
+    skipLine ('"':xs) = '"' : skipLine xs  -- 保留引号
+    skipLine ('\'':xs) = '\'' : skipLine xs  -- 保留单引号
+    skipLine ('\\':c:xs) = '\\' : c : skipLine xs  -- 保留转义字符
+    skipLine (_:xs) = skipLine xs  -- 跳过其他字符
 
-    -- 跳过块注释直到 */，支持嵌套，不保留任何内容（包括字符串字面量）
+    -- 跳过块注释直到 */，支持嵌套，保留引号以维持引号数量
     skipBlock :: String -> Int -> String
     skipBlock [] _depth = []  -- 注释未闭合，返回空
     skipBlock ('\n':xs) _depth = '\n' : skipBlock xs _depth  -- 保留换行
     skipBlock ('/':'*':xs) depth = skipBlock xs (depth + (1 :: Int))  -- 嵌套块注释
     skipBlock ('*':'/':xs) 0 = goNormal xs  -- 最外层注释结束
     skipBlock ('*':'/':xs) depth = skipBlock xs (depth - (1 :: Int))  -- 内层注释结束
-    skipBlock (_:xs) depth = skipBlock xs depth  -- 跳过所有字符，包括字符串和字符字面量
+    skipBlock ('"':xs) depth = '"' : skipBlock xs depth  -- 保留引号
+    skipBlock ('\'':xs) depth = '\'' : skipBlock xs depth  -- 保留单引号
+    skipBlock ('\\':c:xs) depth = '\\' : c : skipBlock xs depth  -- 保留转义字符
+    skipBlock (_:xs) depth = skipBlock xs depth  -- 跳过其他字符
     
     
     
