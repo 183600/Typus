@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# OPTIONS_GHC -Wno-overlapping-patterns #-}
 module Compiler.TypeChecker (
     Type(..),
     BasicType(..),
@@ -635,13 +636,13 @@ checkCall TypeEnv{..} context CallExpr{..} =
                                         (p:_) -> Just p
                                         [] -> Nothing
                         in case lastParam of
-                             Just lp -> if fpVariadic lp
-                                          then case params of
-                                                  [] -> ([], Just lp)
-                                                  [_] -> ([], Just lp)
-                                                  _ -> (init params, Just lp)
-                                          else (params, Nothing)
-                             Nothing -> (params, Nothing)
+                                                     Just lp -> if fpVariadic lp
+                                                                  then let paramCount = length params
+                                                                           in if paramCount <= 1
+                                                                                  then ([], Just lp)
+                                                                                  else (init params, Just lp)
+                                                                   else (params, Nothing)
+                                                     Nothing -> (params, Nothing)
             minCount = length fixedParams
             actualCount = length callArgs
             tooFew = actualCount < minCount
@@ -666,13 +667,13 @@ checkCall TypeEnv{..} context CallExpr{..} =
                                 (p:_) -> Just p
                                 [] -> Nothing
                         in case lp of
-                             Just lastParam -> if fpVariadic lastParam
-                                                 then case params of
-                                                         [] -> ([], Just lastParam)
-                                                         [_] -> ([], Just lastParam)
-                                                         _ -> (init params, Just lastParam)
-                                                 else (params, Nothing)
-                             Nothing -> (params, Nothing)
+                                                     Just lastParam -> if fpVariadic lastParam
+                                                                         then let paramCount = length params
+                                                                                  in if paramCount <= 1
+                                                                                         then ([], Just lastParam)
+                                                                                         else (init params, Just lastParam)
+                                                                          else (params, Nothing)
+                                                     Nothing -> (params, Nothing)
             expectedForIdx idx
                 | idx < length fixedParams = case drop idx fixedParams of
                     (p:_) -> Just (fpType p)
