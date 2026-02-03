@@ -214,6 +214,7 @@ removeComments s =
     goNormal [] = []
     goNormal ('"':xs) = '"' : goInString xs
     goNormal ('\'':xs) = '\'' : goInChar xs
+    goNormal ('\\':c:xs) = '\\' : c : goNormal xs  -- Handle escaped characters
     goNormal ('/':'/':xs) = skipLine xs
     goNormal ('/':'*':xs) = skipBlock xs 0
     goNormal ('/':xs) = '/' : goNormal xs  -- 处理单个/的情况
