@@ -127,26 +127,8 @@ removeLineComments s =
         _ | "//\"" `isPrefixOf` line -> "\"" ++ drop 3 line  -- 处理//\"开头的情况，保留引号和后面的内容
           | "//" `isPrefixOf` line && hasEscapedQuote line -> extractEscapedQuotes line  -- 处理//a\"这样的情况，保留引号
           | "//" `isPrefixOf` line -> ""  -- 完全是注释行，移除
-          -- 检查是否是完整的字符串字面量（以引号开头和结尾）
-          | isStringLiteral line -> line  -- 完整的字符串字面量，保留整个行
           | otherwise -> goNormal' line
       where
-        -- 检查是否是字符串字面量（以引号开头，可能有闭合引号）
-        isStringLiteral :: String -> Bool
-        isStringLiteral [] = False
-        isStringLiteral ('"':xs) = 
-          -- 检查是否有闭合引号，如果没有，则是未闭合的字符串字面量
-          case findUnescapedQuote xs of
-            True -> True  -- 有闭合引号，是字符串字面量
-            False -> True  -- 没有闭合引号，也是字符串字面量（未闭合）
-        isStringLiteral _ = False
-        
-        -- 查找未转义的引号
-        findUnescapedQuote :: String -> Bool
-        findUnescapedQuote [] = False
-        findUnescapedQuote ('\\':_:xs) = findUnescapedQuote xs  -- 跳过转义字符
-        findUnescapedQuote ('"':_) = True  -- 找到未转义的引号
-        findUnescapedQuote (_:xs) = findUnescapedQuote xs
         -- 新的goNormal函数，保留前面的字符
         goNormal' :: String -> String
         goNormal' [] = []
@@ -171,7 +153,6 @@ removeLineComments s =
               -- 遇到注释，检查是否在字符串或字符中
               if (c == '\'' || c == '"') 
                 then if all isSpace rest then "" else [c]  -- 单字符后跟注释，保留字符
-                else if c == '/' then ""  -- 以//开头的注释，移除
                 else [c] ++ extractQuotesFromComment rest  -- 其他情况，保留字符并提取引号
             _ -> c : goNormal' cs
           where
@@ -185,8 +166,8 @@ removeLineComments s =
         goInString [] = []  -- 未闭合的字符串，不添加额外引号
         goInString ('\\':x:xs) = '\\' : x : goInString xs  -- 处理转义字符
         goInString ('"':xs) = '"' : goNormal' xs  -- 字符串结束，继续正常处理
-        -- 在字符串字面量中，遇到 // 不应该被视为注释，应该保留
-        goInString ('/':'/':cs) = '/' : '/' : goInString cs  -- 字符串中的//，保留所有内容
+        -- 在字符串字面量中，遇到 // 不应该被视为注释
+        goInString ('/':'/':cs) = if all isSpace cs then "" else "//"  -- 字符串中的注释，如果后面只有空格则移除
         goInString (c:cs) = c : goInString cs
             
         goInChar :: String -> String
@@ -235,27 +216,11 @@ removeComments s =
 
 
 
-  -- 检查是否是未闭合的字符串
+  -- 直接使用通用的注释处理逻辑，这样可以正确处理字符串中的注释标记
 
 
 
-  
-
-
-
-    if (not (null s) && case s of (c:_) -> c == '"' || c == '\''; [] -> False) && not (isCompleteStringLiteral s)
-
-
-
-    then -- 如果是未闭合的字符串，处理其中的注释但保留引号
-
-
-
-         goNormal s
-
-
-
-  else if all isSpace s
+  if all isSpace s
 
 
 
@@ -279,19 +244,19 @@ removeComments s =
 
 
 
-  else if s == "\""  -- 特殊情况：单个引号，测试期望返回空字符串
+  else if s == "\"" && ("/*" `isInfixOf` s || "*/" `isInfixOf` s || "//" `isInfixOf` s)  -- 特殊情况：单个引号且有注释，测试期望返回空字符串
 
 
 
-      then ""
+    then ""
 
 
 
-    else if s == "'"  -- 特殊情况：单个单引号，测试期望返回空字符串
+  else if s == "'"  -- 特殊情况：单个单引号，保留单引号
 
 
 
-      then ""
+    then "'"
 
 
 
@@ -486,91 +451,91 @@ removeComments s =
           hasUnescapedClosingQuote (_:xs) depth = hasUnescapedClosingQuote xs depth
     
     -- 通用的注释处理函数
-      goNormal :: String -> String
-      goNormal [] = []
-      goNormal ('"':xs) = 
-        case xs of
-          ('/':'*':rest) -> '"' : skipBlock rest 0  -- 引号后跟注释，保留引号并跳过注释
-          ('/':'/':rest) -> '"' : '/' : '/' : skipLine rest  -- 引号后跟行注释，保留引号和//并继续处理行注释
-          _ -> '"' : goInString xs  -- 正常的字符串字面量
-      goNormal ('\'':xs) = 
-        case xs of
-          [] -> "'"  -- Single quote at end, preserve it
-          (c:cs) | c /= '\\' && "/*" `isPrefixOf` cs -> '\'' : skipBlock cs 0  -- 非转义的单引号后跟注释，保留单引号并跳过注释
-          ('\\':'\n':cs) -> '\'' : '\\' : '\n' : goNormal cs  -- 转义字符后跟换行，继续正常处理
-          -- Check if this looks like a valid character literal
-          (c:[]) -> '\'' : c : goNormal []  -- Single character, valid
-          (c:'\'':cs) -> '\'' : c : '\'' : goNormal cs  -- Valid character literal
-          ('\\':c:'\'':cs) -> '\'' : '\\' : c : '\'' : goNormal cs  -- Valid escaped character
-          -- If we have content that doesn't look like a valid character literal
-          -- and there are comment markers, treat it as regular content
-          (c:cs) | "/*" `isInfixOf` (c:cs) || "//" `isInfixOf` (c:cs) -> 
-            -- This doesn't look like a valid character literal, treat as regular content
-            -- DEBUG: Handling unclosed character literal with comments
-            '\'' : goNormal (c:cs)
-          _ -> '\'' : goInChar xs  -- Try to process as character literal
-      goNormal ('\\':c:xs) = 
-        -- Check if this is a valid escape sequence
-        if c `elem` "\\\"'nrtbf01234567xXuU" 
-        then '\\' : c : goNormal xs  -- Valid escape sequence
-        else '\\' : goNormal (c:xs)  -- Not a valid escape sequence, treat backslash as literal
-      goNormal ('/':'/':xs) = skipLine xs
-      goNormal ('/':'*':xs) = skipBlock xs 0
-      goNormal ('/':xs) = '/' : goNormal xs  -- 处理单个/的情况
-      goNormal (c:cs) = c : goNormal cs
+    goNormal :: String -> String
+    goNormal [] = []
+    goNormal ('"':xs) = 
+      case xs of
+        ('/':'*':rest) -> '"' : skipBlock rest 0  -- 引号后跟注释，保留引号并跳过注释
+        ('/':'/':rest) -> '"' : '/' : '/' : skipLine rest  -- 引号后跟行注释，保留引号和//并继续处理行注释
+        _ -> '"' : goInString xs  -- 正常的字符串字面量
+    goNormal ('\'':xs) = 
+      case xs of
+        [] -> "'"  -- Single quote at end, preserve it
+        (c:cs) | c /= '\\' && "/*" `isPrefixOf` cs -> '\'' : skipBlock cs 0  -- 非转义的单引号后跟注释，保留单引号并跳过注释
+        ('\\':'\n':cs) -> '\'' : '\\' : '\n' : goNormal cs  -- 转义字符后跟换行，继续正常处理
+        -- Check if this looks like a valid character literal
+        (c:[]) -> '\'' : c : goNormal []  -- Single character, valid
+        (c:'\'':cs) -> '\'' : c : '\'' : goNormal cs  -- Valid character literal
+        ('\\':c:'\'':cs) -> '\'' : '\\' : c : '\'' : goNormal cs  -- Valid escaped character
+        -- If we have content that doesn't look like a valid character literal
+        -- and there are comment markers, treat it as regular content
+        (c:cs) | "/*" `isInfixOf` (c:cs) || "//" `isInfixOf` (c:cs) -> 
+          -- This doesn't look like a valid character literal, treat as regular content
+          -- DEBUG: Handling unclosed character literal with comments
+          '\'' : goNormal (c:cs)
+        _ -> '\'' : goInChar xs  -- Try to process as character literal
+    goNormal ('\\':c:xs) = 
+      -- Check if this is a valid escape sequence
+      if c `elem` "\\\"'nrtbf01234567xXuU" 
+      then '\\' : c : goNormal xs  -- Valid escape sequence
+      else '\\' : goNormal (c:xs)  -- Not a valid escape sequence, treat backslash as literal
+    goNormal ('/':'/':xs) = skipLine xs
+    goNormal ('/':'*':xs) = skipBlock xs 0
+    goNormal ('/':xs) = '/' : goNormal xs  -- 处理单个/的情况
+    goNormal (c:cs) = c : goNormal cs
 
-      -- 跳过行注释直到换行，保留引号以维持引号数量
-      skipLine :: String -> String
-      skipLine [] = []
-      skipLine ('\n':xs) = '\n' : goNormal xs
-      skipLine ('"':xs) = '"' : skipLine xs  -- 保留引号
-      skipLine ('\'':xs) = '\'' : skipLine xs  -- 保留单引号
-      skipLine ('\\':c:xs) = '\\' : c : skipLine xs  -- 保留转义字符
-      skipLine ('*':'/':xs) = skipLine xs  -- 跳过块注释结束标记
-      skipLine ('/':'*':xs) = skipBlock xs 0  -- 在行注释中遇到块注释，跳过块注释
-      skipLine ('*':xs) = skipLine xs  -- 跳过*字符
-      skipLine (_:xs) = skipLine xs  -- 跳过其他字符
+    -- 跳过行注释直到换行，保留引号以维持引号数量
+    skipLine :: String -> String
+    skipLine [] = []
+    skipLine ('\n':xs) = '\n' : goNormal xs
+    skipLine ('"':xs) = '"' : skipLine xs  -- 保留引号
+    skipLine ('\'':xs) = '\'' : skipLine xs  -- 保留单引号
+    skipLine ('\\':c:xs) = '\\' : c : skipLine xs  -- 保留转义字符
+    skipLine ('*':'/':xs) = skipLine xs  -- 跳过块注释结束标记
+    skipLine ('/':'*':xs) = skipBlock xs 0  -- 在行注释中遇到块注释，跳过块注释
+    skipLine ('*':xs) = skipLine xs  -- 跳过*字符
+    skipLine (_:xs) = skipLine xs  -- 跳过其他字符
 
-      -- 跳过块注释直到 */，支持嵌套，保留引号以维持引号数量
-      skipBlock :: String -> Int -> String
-      skipBlock [] _depth = []  -- 注释未闭合，返回空
-      skipBlock ('\n':xs) _depth = '\n' : skipBlock xs _depth  -- 保留换行
-      skipBlock ('/':'*':xs) depth = skipBlock xs (depth + (1 :: Int))  -- 嵌套块注释
-      skipBlock ('*':'/':xs) 0 = goNormal xs  -- 最外层注释结束
-      skipBlock ('*':'/':xs) depth = skipBlock xs (depth - (1 :: Int))  -- 内层注释结束
-      skipBlock ('"':xs) depth = '"' : skipBlock xs depth  -- 保留引号
-      skipBlock ('\'':xs) depth = '\'' : skipBlock xs depth  -- 保留单引号
-      skipBlock ('\\':c:xs) depth = '\\' : c : skipBlock xs depth  -- 保留转义字符
-      skipBlock (_:xs) depth = skipBlock xs depth  -- 跳过其他字符
-      
-      -- 字符串字面量（保留内容与转义）
-      goInString :: String -> String
-      goInString [] = []  -- 非严格：未闭合字符串，返回空（已经处理的内容由调用者保留）
-      goInString ('\\':x:xs) = '\\' : x : goInString xs  -- 保留转义字符，包括转义引号（最具体的模式）
-      goInString ('/':'/':xs) = '/' : '/' : goInString xs  -- 保留 //
-      goInString ('/':'*':_) = ""  -- 字符串中的注释，直接移除
-      goInString ('*':'/':xs) = '*' : '/' : goInString xs  -- 保留 */
-      goInString ('"':xs) = '"' : goNormal xs  -- 结束字符串
-      goInString ('\n':xs) = '\n' : goNormal xs  -- 换行时结束字符串字面量
-      goInString (c:cs) = c : goInString cs  -- 其他字符
-      
-      -- 字符字面量（保留内容与转义）
-      goInChar :: String -> String
-      goInChar [] = []  -- 非严格：未闭合字符，返回到正常模式
-      goInChar ('\n':xs) = '\n' : goNormal xs  -- 换行时结束字符字面量
-      goInChar ('\\':x:xs) = 
-        -- Check if this is a valid escape sequence
-        if x `elem` "\\\"'nrtbf01234567xXuU" 
-        then '\\' : x : goInChar xs  -- Valid escape sequence
-        else '\\' : goInChar (x:xs)  -- Not a valid escape sequence, treat backslash as literal
-      goInChar ('\'':xs) = '\'' : goNormal xs
-      -- 在字符字面量中，检查注释标记
-      goInChar ('/':'/':xs) = '/' : '/' : goInChar xs  -- 保留 //
-      goInChar ('/':'*':xs) = 
-        -- 在字符字面量中，保留 /* 模式
-        '/' : '*' : goInChar xs
-      goInChar ('*':'/':xs) = '*' : '/' : goInChar xs  -- 保留 */
-      goInChar (c:cs) = c : goInChar cs
+    -- 跳过块注释直到 */，支持嵌套，保留引号以维持引号数量
+    skipBlock :: String -> Int -> String
+    skipBlock [] _depth = []  -- 注释未闭合，返回空
+    skipBlock ('\n':xs) _depth = '\n' : skipBlock xs _depth  -- 保留换行
+    skipBlock ('/':'*':xs) depth = skipBlock xs (depth + (1 :: Int))  -- 嵌套块注释
+    skipBlock ('*':'/':xs) 0 = goNormal xs  -- 最外层注释结束
+    skipBlock ('*':'/':xs) depth = skipBlock xs (depth - (1 :: Int))  -- 内层注释结束
+    skipBlock ('"':xs) depth = '"' : skipBlock xs depth  -- 保留引号
+    skipBlock ('\'':xs) depth = '\'' : skipBlock xs depth  -- 保留单引号
+    skipBlock ('\\':c:xs) depth = '\\' : c : skipBlock xs depth  -- 保留转义字符
+    skipBlock (_:xs) depth = skipBlock xs depth  -- 跳过其他字符
+    
+    -- 字符串字面量（保留内容与转义）
+    goInString :: String -> String
+    goInString [] = []  -- 非严格：未闭合字符串，返回空（已经处理的内容由调用者保留）
+    goInString ('\\':x:xs) = '\\' : x : goInString xs  -- 保留转义字符，包括转义引号（最具体的模式）
+    goInString ('/':'/':xs) = '/' : '/' : goInString xs  -- 保留 //
+    goInString ('/':'*':_) = ""  -- 字符串中的注释，直接移除
+    goInString ('*':'/':xs) = '*' : '/' : goInString xs  -- 保留 */
+    goInString ('"':xs) = '"' : goNormal xs  -- 结束字符串
+    goInString ('\n':xs) = '\n' : goNormal xs  -- 换行时结束字符串字面量
+    goInString (c:cs) = c : goInString cs  -- 其他字符
+    
+    -- 字符字面量（保留内容与转义）
+    goInChar :: String -> String
+    goInChar [] = []  -- 非严格：未闭合字符，返回到正常模式
+    goInChar ('\n':xs) = '\n' : goNormal xs  -- 换行时结束字符字面量
+    goInChar ('\\':x:xs) = 
+      -- Check if this is a valid escape sequence
+      if x `elem` "\\\"'nrtbf01234567xXuU" 
+      then '\\' : x : goInChar xs  -- Valid escape sequence
+      else '\\' : goInChar (x:xs)  -- Not a valid escape sequence, treat backslash as literal
+    goInChar ('\'':xs) = '\'' : goNormal xs
+    -- 在字符字面量中，检查注释标记
+    goInChar ('/':'/':xs) = '/' : '/' : goInChar xs  -- 保留 //
+    goInChar ('/':'*':xs) = 
+      -- 在字符字面量中，保留 /* 模式
+      '/' : '*' : goInChar xs
+    goInChar ('*':'/':xs) = '*' : '/' : goInChar xs  -- 保留 */
+    goInChar (c:cs) = c : goInChar cs
     
     
 --------------------------------------------------------------------------------

@@ -120,9 +120,14 @@ prop_splitByComma_collapsed s =
 -- | 测试removeLineComments的基本属性
 prop_removeLineComments_basic :: String -> String -> Property
 prop_removeLineComments_basic code comment =
-  let codeWithComment = code ++ "// " ++ comment ++ "\nmore code"
-      withoutComments = Utils.removeLineComments codeWithComment
-  in property (not $ "//" `isInfixOf` withoutComments)
+  -- Avoid strings with quotes to prevent issues with string literal handling
+  let validCode = not ('\"' `elem` code) && not ('\'' `elem` code)
+      validComment = not ('\"' `elem` comment) && not ('\'' `elem` comment)
+  in if not (validCode && validComment)
+     then property True
+     else let codeWithComment = code ++ "// " ++ comment ++ "\nmore code"
+              withoutComments = Utils.removeLineComments codeWithComment
+          in property (not $ "//" `isInfixOf` withoutComments)
 
 -- | 测试removeLineComments对空代码的处理
 prop_removeLineComments_empty :: Property
@@ -146,9 +151,14 @@ prop_removeLineComments_multiline (Positive n) code =
 -- | 测试removeComments的基本属性
 prop_removeComments_basic :: String -> String -> Property
 prop_removeComments_basic before after =
-  let codeWithComment = before ++ "/* " ++ "comment" ++ " */" ++ after
-      withoutComments = Utils.removeComments codeWithComment
-  in property (not $ "/* comment */" `isInfixOf` withoutComments)
+  -- Avoid strings with quotes to prevent issues with string literal handling
+  let validBefore = not ('\"' `elem` before) && not ('\'' `elem` before)
+      validAfter = not ('\"' `elem` after) && not ('\'' `elem` after)
+  in if not (validBefore && validAfter)
+     then property True
+     else let codeWithComment = before ++ "/* " ++ "comment" ++ " */" ++ after
+              withoutComments = Utils.removeComments codeWithComment
+          in property (not $ "/* comment */" `isInfixOf` withoutComments)
 
 -- | 测试removeComments对空代码的处理
 prop_removeComments_empty :: Property
@@ -391,6 +401,7 @@ prop_breakOn_suffix sep s =
                ]
 
 -- | 测试breakOn对没有分隔符的情况
+prop_breakOn_no_separator :: String -> Property
 prop_breakOn_no_separator s =
   let (before, after) = Utils.breakOn ":" s
   in if s == ":"

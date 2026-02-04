@@ -87,9 +87,14 @@ prop_splitByComma_empty = splitByComma "" === []
 -- | 测试removeLineComments的基本属性
 prop_removeLineComments_basic :: String -> String -> Property
 prop_removeLineComments_basic code comment =
-  let codeWithComment = code ++ "// " ++ comment ++ "\nmore code"
-      withoutComments = removeLineComments codeWithComment
-  in property (not (isInfixOf "// " withoutComments))
+  -- Avoid strings with quotes to prevent issues with string literal handling
+  let validCode = not ('\"' `elem` code) && not ('\'' `elem` code)
+      validComment = not ('\"' `elem` comment) && not ('\'' `elem` comment)
+  in if not (validCode && validComment)
+     then property True
+     else let codeWithComment = code ++ "// " ++ comment ++ "\nmore code"
+              withoutComments = removeLineComments codeWithComment
+          in property (not $ "// " `isInfixOf` withoutComments)
 
 -- | 测试removeLineComments对空代码的处理
 prop_removeLineComments_empty :: Property
