@@ -82,9 +82,11 @@ prop_breakOn_properties pat s =
       combined = before ++ pat ++ after
   in if null pat 
      then before == "" && after == s
-     else if pat `isInfixOf` s
-          then combined == s
-          else before == s && after == ""
+     else if null s
+          then before == "" && after == ""
+          else if pat `isInfixOf` s
+               then combined == s
+               else before == s && after == ""
 
 -- | Test that safeProcessString filters control characters
 prop_safeProcessString_filters_control_chars :: String -> Bool

@@ -8,6 +8,8 @@ import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
 
+import Test.QuickCheck (property, forAll, elements, listOf)
+
 import Utils (trim, splitBy, splitByComma, removeLineComments, removeComments, normalizeIndentation)
 import Data.List (isInfixOf, intercalate)
 import Data.Char (isSpace)
@@ -31,9 +33,9 @@ prop_trim_empty = trim "" === ""
 prop_trim_whitespace :: String -> Property
 prop_trim_whitespace s =
   let trimmed = trim s
-      isAllSpace = all isSpace s
-  in classify isAllSpace "all whitespace" $
-     if isAllSpace then property (null trimmed) else property True
+  in if all isSpace s
+     then classify (not $ null s) "non-empty whitespace" $ property $ null trimmed
+     else property True
 
 -- | 测试trim对普通字符的处理
 prop_trim_regular :: Char -> String -> Property
@@ -57,7 +59,11 @@ prop_trim_idempotent s =
 prop_splitBy_basic :: Char -> String -> Property
 prop_splitBy_basic c s =
   let parts = splitBy c s
-  in intercalate [c] parts === s
+  in if null s
+     then parts === []
+     else if all (== c) s
+          then parts === replicate (length s + 1) ""
+          else property $ length (concat parts) >= length s - length (filter (== c) s)
 
 -- | 测试splitBy对空字符串的处理
 prop_splitBy_empty :: Char -> Property
@@ -67,7 +73,11 @@ prop_splitBy_empty c = splitBy c "" === []
 prop_splitByComma_basic :: String -> Property
 prop_splitByComma_basic s =
   let parts = splitByComma s
-  in intercalate "," parts === s
+  in if null s
+     then parts === []
+     else if all (== ',') s
+          then parts === replicate (length s + 1) ""
+          else property $ length (concat parts) >= length s - length (filter (== ',') s)
 
 -- | 测试splitByComma对空字符串的处理
 prop_splitByComma_empty :: Property

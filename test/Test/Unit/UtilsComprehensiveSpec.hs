@@ -114,8 +114,8 @@ prop_normalize_preserves_relative s =
 -- Property 10: breakOn behaves like break but for strings
 prop_breakOn_consistency :: String -> Char -> Property
 prop_breakOn_consistency s c = 
-  c `elem` s ==> let (before, after) = breakOn [c] s
-                 in before ++ [c] ++ after == s
+  not (null s) && c `elem` s ==> let (before, after) = breakOn [c] s
+                                 in before ++ [c] ++ after == s
 
 -- Property 11: safeProcessString handles invalid characters
 prop_safe_process_string :: String -> Bool

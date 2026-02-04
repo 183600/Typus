@@ -24,6 +24,10 @@ import qualified Test.Unit.AdvancedTextProcessingSpec as AdvancedTextProcessingS
 -- Import NewAdditionalParserQuickCheckTestSpec
 import qualified Test.Unit.NewAdditionalParserQuickCheckTestSpec as NewAdditionalParserQuickCheckTestSpec
 
+-- Import modified test modules
+import qualified Test.Unit.FinalQuickCheckTestSuite as FinalQuickCheckTestSuite
+import qualified Test.Unit.SimpleQuickCheckTestSuite as SimpleQuickCheckTestSuite
+
 -- Basic test properties
 prop_basic_property :: String -> Property
 prop_basic_property s = property $ length s >= 0
@@ -41,5 +45,7 @@ tests = testGroup "Test.Unit.Tests Tests"
     testParserErrorRecovery,
     testParserDirectives,
     AdvancedTextProcessingSpec.tests,  -- AdvancedTextProcessingSpec tests
-    NewAdditionalParserQuickCheckTestSpec.newAdditionalParserQuickCheckTestSpec  -- New Additional Parser QuickCheck Tests
+    NewAdditionalParserQuickCheckTestSpec.newAdditionalParserQuickCheckTestSpec,  -- New Additional Parser QuickCheck Tests
+    FinalQuickCheckTestSuite.tests,  -- Final QuickCheck Test Suite
+    SimpleQuickCheckTestSuite.tests  -- Simple QuickCheck Test Suite
   ]
