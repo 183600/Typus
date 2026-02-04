@@ -29,7 +29,7 @@ prop_parse_whitespace_handling :: String -> Property
 prop_parse_whitespace_handling s = 
   let withWhitespace = "  \n  \t  " ++ s ++ "  \n  \t  "
   in case (parseTypus s, parseTypus withWhitespace) of
-       (Right parsed, Right parsedWithWs) -> 
+       (Right _parsed, Right _parsedWithWs) -> 
          -- Both should succeed and have the same directives
          property True
        (Left _, Left _) -> property True  -- Both should fail consistently
@@ -77,7 +77,7 @@ prop_parse_simple_function funcName =
        Left _ -> property True  -- May fail due to syntax issues
 
 prop_parse_function_with_parameters :: String -> String -> Property
-prop_parse_function_with_parameters funcName param = 
+prop_parse_function_with_parameters _funcName _param = 
   let input = "func test(param) { return 42; }"  -- Use fixed function name and param
   in case parseTypus input of
        Right _ -> property True
@@ -139,11 +139,11 @@ prop_parse_line_endings s =
        (Left _, Left _, Left _) -> property True
        -- Allow for the case where \r alone might be handled differently
        -- since it can be interpreted as part of the content rather than a line ending
-       (Right unixRes, Right winRes, Left macErr) -> 
+       (Right unixRes, Right winRes, Left _macErr) -> 
          -- If \r alone fails but the others succeed, that's acceptable
          -- as long as the successful results are consistent
          unixRes === winRes
-       (Left unixErr, Left winErr, Right macRes) -> 
+       (Left _unixErr, Left _winErr, Right _macRes) -> 
          -- If \r alone succeeds but the others fail, that's acceptable
          property True
        _ -> property False

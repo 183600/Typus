@@ -170,7 +170,9 @@ prop_safeProcessString :: Property
 prop_safeProcessString =
   forAll arbitraryString $ \s ->
     let result = safeProcessString s
-    in property $ length result >= 0  -- Basic sanity check
+    in case result of
+         Right r -> property $ length r >= 0  -- Basic sanity check
+         Left _ -> property True  -- Should not happen with new implementation, but handle gracefully
 
 -- | Test that isValidChar correctly identifies valid characters
 prop_isValidChar :: Property

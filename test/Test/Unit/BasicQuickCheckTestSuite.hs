@@ -8,10 +8,10 @@ import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
 
-import Test.QuickCheck (property, forAll, elements, listOf)
+
 
 import Utils (trim, splitBy, splitByComma, removeLineComments, removeComments, normalizeIndentation)
-import Data.List (isInfixOf, intercalate)
+import Data.List (isInfixOf)
 import Data.Char (isSpace)
 import Data.Either (isLeft, isRight)
 import Data.Maybe (listToMaybe)
