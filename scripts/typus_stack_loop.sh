@@ -140,6 +140,8 @@ attempt_bump_and_tag() {
 
 trap 'echo; echo "已终止."; exit 0' INT TERM
 
+iflow "确保测试用例不会消耗大量内存，尽量不要删除测试用例 think:high" --yolo || true
+
 while true; do
   echo "===================="
   echo "$(date '+%F %T') 运行测试：stack test --flag "*:fast" --flag "*:-production" ..."
