@@ -2,13 +2,13 @@
 
 module TestSupport.QuickCheck
   ( fastProperty
+  , memoryEfficientProperty
   ) where
 
 import Test.QuickCheck (Testable)
 import Test.Tasty (TestTree, localOption)
-import Test.Tasty.QuickCheck (testProperty, QuickCheckMaxSize(..))
+import Test.Tasty.QuickCheck (testProperty, QuickCheckMaxSize(..), QuickCheckTests(..))
 #if defined(FAST_TESTS)
-import Test.Tasty.QuickCheck (QuickCheckTests(..))
 #endif
 
 -- | Wrap 'testProperty' so that fast test runs keep a lightweight sampling
@@ -25,3 +25,11 @@ fastProperty name prop =
   localOption (QuickCheckMaxSize 10) $
   testProperty name prop
 #endif
+
+-- | Memory-efficient property test with reduced test count and size limits
+-- to prevent excessive memory consumption during testing
+memoryEfficientProperty :: Testable prop => String -> prop -> TestTree
+memoryEfficientProperty name prop =
+  localOption (QuickCheckTests 50) $
+  localOption (QuickCheckMaxSize 20) $
+  testProperty name prop

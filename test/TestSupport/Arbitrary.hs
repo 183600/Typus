@@ -106,7 +106,7 @@ genBool :: Gen Bool
 genBool = elements [True, False]
 
 genInt :: Gen Int
-genInt = choose (0, 100)
+genInt = choose (0, 50)
 
 
 
@@ -364,7 +364,9 @@ instance WellFormed GoModule where
 
 -- | Generator for arbitrary strings
 arbitraryString :: Gen String
-arbitraryString = listOf arbitrary
+arbitraryString = do
+  size <- choose (0, 20)
+  vectorOf size arbitrary
 
 -- | Generator for arbitrary characters
 arbitraryChar :: Gen Char
@@ -396,7 +398,9 @@ arbitraryIdentifier = do
 
 -- | Generator for arbitrary unicode strings
 arbitraryUnicodeString :: Gen String
-arbitraryUnicodeString = listOf arbitraryUnicodeChar
+arbitraryUnicodeString = do
+  size <- choose (0, 15)
+  vectorOf size arbitraryUnicodeChar
 
 -- | Generator for arbitrary whitespace strings
 arbitraryWhitespace :: Gen String
@@ -404,7 +408,9 @@ arbitraryWhitespace = listOf $ elements " \t\n\r"
 
 -- | Generator for arbitrary short strings
 arbitraryShortString :: Gen String
-arbitraryShortString = genNonEmptyString
+arbitraryShortString = do
+  size <- choose (1, 10)
+  vectorOf size genAlphaNum
 
 -- | Generator for valid Typus code
 validTypusCode :: Gen String

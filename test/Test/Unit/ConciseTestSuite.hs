@@ -6,6 +6,7 @@ module Test.Unit.ConciseTestSuite where
 
 
 import Test.Tasty (TestTree, testGroup)
+import TestSupport.MemoryLimits (withMemoryLimits, memoryLimitedTestGroup)
 import qualified Test.Unit.ConciseUtilsQuickCheckSpec as Utils
 import qualified Test.Unit.ConciseSourceLocationQuickCheckSpec as SourceLocation
 import qualified Test.Unit.ConciseParserQuickCheckSpec as Parser
@@ -17,19 +18,19 @@ import qualified Test.Unit.ConciseIntegrationQuickCheckSpec as Integration
 import qualified Test.Unit.CodeGenerationQuickCheckSpec as CodeGeneration
 
 conciseTestSuite :: TestTree
-conciseTestSuite = testGroup "Concise Typus Test Suite (48 tests)"
-  [ testGroup "Core Modules"
-    [ Utils.tests
-    , SourceLocation.tests
-    , Parser.tests
-    , Compiler.tests
-    , ErrorHandler.tests
-    , Ownership.tests
-    , Dependencies.tests
-    , CodeGeneration.tests
+conciseTestSuite = memoryLimitedTestGroup "Concise Typus Test Suite (48 tests)"
+  [ memoryLimitedTestGroup "Core Modules"
+    [ withMemoryLimits Utils.tests
+    , withMemoryLimits SourceLocation.tests
+    , withMemoryLimits Parser.tests
+    , withMemoryLimits Compiler.tests
+    , withMemoryLimits ErrorHandler.tests
+    , withMemoryLimits Ownership.tests
+    , withMemoryLimits Dependencies.tests
+    , withMemoryLimits CodeGeneration.tests
     ]
-  , testGroup "Integration Tests"
-    [ Integration.tests
+  , memoryLimitedTestGroup "Integration Tests"
+    [ withMemoryLimits Integration.tests
     ]
   ]
 
