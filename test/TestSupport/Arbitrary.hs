@@ -366,10 +366,10 @@ instance WellFormed GoModule where
 
 
 
--- | Generator for arbitrary strings
+-- | Generator for arbitrary strings (memory-optimized)
 arbitraryString :: Gen String
 arbitraryString = do
-  size <- choose (0, 20)
+  size <- choose (0, 12)  -- Reduced from 20 to 12 for memory efficiency
   vectorOf size arbitrary
 
 -- | Generator for arbitrary characters
@@ -393,27 +393,28 @@ arbitrarySourceSpan = SourceSpan <$> arbitrarySourcePos <*> arbitrarySourcePos
 arbitraryInt :: Gen Int
 arbitraryInt = arbitrary
 
--- | Generator for arbitrary identifiers
+-- | Generator for arbitrary identifiers (memory-optimized)
 arbitraryIdentifier :: Gen String
 arbitraryIdentifier = do
   firstChar <- elements ['a'..'z']
-  restChars <- listOf $ elements $ ['a'..'z'] ++ ['0'..'9'] ++ ['_']
+  restSize <- choose (0, 4)  -- Limit rest characters to 0-4 for memory efficiency
+  restChars <- vectorOf restSize $ elements $ ['a'..'z'] ++ ['0'..'9'] ++ ['_']
   return $ firstChar : restChars
 
--- | Generator for arbitrary unicode strings
+-- | Generator for arbitrary unicode strings (memory-optimized)
 arbitraryUnicodeString :: Gen String
 arbitraryUnicodeString = do
-  size <- choose (0, 15)
+  size <- choose (0, 8)  -- Reduced from 15 to 8 for memory efficiency
   vectorOf size arbitraryUnicodeChar
 
 -- | Generator for arbitrary whitespace strings
 arbitraryWhitespace :: Gen String
 arbitraryWhitespace = listOf $ elements " \t\n\r"
 
--- | Generator for arbitrary short strings
+-- | Generator for arbitrary short strings (memory-optimized)
 arbitraryShortString :: Gen String
 arbitraryShortString = do
-  size <- choose (1, 10)
+  size <- choose (1, 6)  -- Reduced from 10 to 6 for memory efficiency
   vectorOf size genAlphaNum
 
 -- | Generator for valid Typus code

@@ -25,6 +25,9 @@ import qualified Test.Unit.AdvancedTextProcessingSpec as AdvancedTextProcessingS
 -- Import NewAdditionalParserQuickCheckTestSpec
 import qualified Test.Unit.NewAdditionalParserQuickCheckTestSpec as NewAdditionalParserQuickCheckTestSpec
 
+-- Import EnhancedMemoryOptimizedTestSuite
+import qualified Test.Unit.EnhancedMemoryOptimizedTestSuite as EnhancedMemoryOptimizedTestSuite
+
 -- Import modified test modules
 import qualified Test.Unit.FinalQuickCheckTestSuite as FinalQuickCheckTestSuite
 import qualified Test.Unit.SimpleQuickCheckTestSuite as SimpleQuickCheckTestSuite
@@ -47,6 +50,7 @@ tests = aggressiveMemoryLimitedTestGroup "Test.Unit.Tests Tests (Memory Optimize
     withAggressiveMemoryLimits testParserDirectives,
     withAggressiveMemoryLimits AdvancedTextProcessingSpec.tests,  -- AdvancedTextProcessingSpec tests
     withAggressiveMemoryLimits NewAdditionalParserQuickCheckTestSpec.newAdditionalParserQuickCheckTestSpec,  -- New Additional Parser QuickCheck Tests
+    withAggressiveMemoryLimits EnhancedMemoryOptimizedTestSuite.tests,  -- Enhanced Memory Optimized Test Suite
     withAggressiveMemoryLimits FinalQuickCheckTestSuite.tests,  -- Final QuickCheck Test Suite
     withAggressiveMemoryLimits SimpleQuickCheckTestSuite.tests  -- Simple QuickCheck Test Suite
   ]

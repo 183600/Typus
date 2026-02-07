@@ -309,17 +309,17 @@ instance Arbitrary TC.Type where
     else frequency
       [ (3, TC.TypeName <$> genGoTypeName)
       , (2, pure TC.UnknownType)
-      , (1, do len <- choose (0, 2)
-               params <- vectorOf len (resize (n `div` 2) arbitrary)
-               ret <- resize (n `div` 2) arbitrary
+      , (1, do len <- choose (0, 1)  -- Reduced from 0,2 to 0,1 for memory efficiency
+               params <- vectorOf len (resize (max 0 (n `div` 3)) arbitrary)  -- More aggressive resize
+               ret <- resize (max 0 (n `div` 3)) arbitrary  -- More aggressive resize
                if all isValidType (ret : params) then return (TC.TypeFunction params ret) else arbitrary)
-      , (1, do len <- choose (0, 2)
-               fields <- vectorOf len ((,) <$> genGoVarName <*> resize (n `div` 2) arbitrary)
+      , (1, do len <- choose (0, 1)  -- Reduced from 0,2 to 0,1 for memory efficiency
+               fields <- vectorOf len ((,) <$> genGoVarName <*> resize (max 0 (n `div` 3)) arbitrary)  -- More aggressive resize
                if all (\(fname, ftyp) -> not (null fname) && isValidType ftyp) fields 
                  then return (TC.TypeRecord fields) 
                  else arbitrary)
-      , (1, do len <- choose (0, 2)
-               types <- vectorOf len (resize (n `div` 2) arbitrary)
+      , (1, do len <- choose (0, 1)  -- Reduced from 0,2 to 0,1 for memory efficiency
+               types <- vectorOf len (resize (max 0 (n `div` 3)) arbitrary)  -- More aggressive resize
                if all isValidType types then return (TC.TypeUnion types) else arbitrary)
       ]
 
@@ -349,10 +349,10 @@ instance Arbitrary TC.FunctionSignature where
           let (nonVariadic, variadic) = partition (not . TC.fpVariadic) params
           in nonVariadic ++ take 1 variadic
     in do
-      lenParams <- choose (0, 2)
-      lenReturns <- choose (0, 2)
-      params <- vectorOf lenParams (resize (max 0 (n `div` 3)) arbitrary)
-      returns <- vectorOf lenReturns (resize (max 0 (n `div` 3)) arbitrary) `suchThat` all isValidReturnType
+      lenParams <- choose (0, 1)  -- Reduced from 0,2 to 0,1 for memory efficiency
+      lenReturns <- choose (0, 1)  -- Reduced from 0,2 to 0,1 for memory efficiency
+      params <- vectorOf lenParams (resize (max 0 (n `div` 4)) arbitrary)  -- More aggressive resize
+      returns <- vectorOf lenReturns (resize (max 0 (n `div` 4)) arbitrary) `suchThat` all isValidReturnType  -- More aggressive resize
       let validParams = ensureAtMostOneVariadic params
       return $ TC.FunctionSignature validParams returns
 

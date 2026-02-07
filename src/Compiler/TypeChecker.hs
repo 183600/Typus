@@ -640,7 +640,7 @@ checkCall TypeEnv{..} context CallExpr{..} =
                                                                   then let paramCount = length params
                                                                            in if paramCount <= 1
                                                                                   then ([], Just lp)
-                                                                                  else (init params, Just lp)
+                                                                                  else (take (paramCount - 1) params, Just lp)
                                                                    else (params, Nothing)
                                                      Nothing -> (params, Nothing)
             minCount = length fixedParams
@@ -671,7 +671,7 @@ checkCall TypeEnv{..} context CallExpr{..} =
                                                                          then let paramCount = length params
                                                                                   in if paramCount <= 1
                                                                                          then ([], Just lastParam)
-                                                                                         else (init params, Just lastParam)
+                                                                                         else (take (paramCount - 1) params, Just lastParam)
                                                                           else (params, Nothing)
                                                      Nothing -> (params, Nothing)
             expectedForIdx idx
@@ -730,7 +730,7 @@ parseFunctionInfo (FuncDecl (header:bodyLines))
               then case ls of
                       [] -> []
                       [_] -> []
-                      (x:xs) -> x : init xs
+                      (x:xs) -> x : take (length xs - 1) xs
               else ls
 
 extractFunctionName :: String -> Maybe String

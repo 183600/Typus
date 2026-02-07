@@ -439,7 +439,9 @@ safeProcessString s =
 
 -- | 检查字符是否有效（可打印或控制字符）
 isValidChar :: Char -> Bool
-isValidChar c = c >= ' ' || c `elem` "\n\r\t"
+isValidChar c = 
+  let ordC = fromEnum c
+  in ordC >= 32 || c == '\n' || c == '\r' || c == '\t'
 
 -- | 检查 Either 是否为 Right
 isRight :: Either a b -> Bool

@@ -18,6 +18,7 @@ tests = testGroup "Concise Utils QuickCheck Tests"
     [ ("prop_trim_idempotent", property prop_trim_idempotent)
     , ("prop_trim_removes_whitespace", property prop_trim_removes_whitespace)
     , ("prop_splitBy_properties", property prop_splitBy_properties)
+    , ("prop_splitBy_empty", property prop_splitBy_empty)
     , ("prop_splitByCollapsed_properties", property prop_splitByCollapsed_properties)
     , ("prop_splitByComma_equals_splitBy", property prop_splitByComma_equals_splitBy)
     , ("prop_splitByCommaCollapsed_equals_splitByCollapsed", property prop_splitByCommaCollapsed_equals_splitByCollapsed)
@@ -58,7 +59,9 @@ prop_splitBy_properties delim s =
   let parts = splitBy delim s
   in length parts >= 0 && 
      (if null s then null parts else True) &&
-     (if not (null s) && all (== delim) s then length parts == length s + 1 else True)
+     (if not (null s) && all (== delim) s then length parts == length s + 1 else True) &&
+     (if s == [delim] then parts == ["", ""] else True) &&
+     (if s == "" then parts == [] else True)
 
 -- | Test properties of splitByCollapsed
 prop_splitByCollapsed_properties :: Char -> String -> Bool
@@ -66,9 +69,15 @@ prop_splitByCollapsed_properties delim s =
   let parts = splitByCollapsed delim s
   in all (not . null) parts
 
+-- | Test splitBy with empty string
+prop_splitBy_empty :: Char -> Bool
+prop_splitBy_empty delim = splitBy delim "" == []
+
 -- | Test that splitByComma equals splitBy with comma
 prop_splitByComma_equals_splitBy :: String -> Bool
-prop_splitByComma_equals_splitBy s = splitByComma s == splitBy ',' s
+prop_splitByComma_equals_splitBy s = 
+  let result = splitByComma s == splitBy ',' s
+  in result && (if null s then splitByComma s == [] else True)
 
 -- | Test that splitByCommaCollapsed equals splitByCollapsed with comma
 prop_splitByCommaCollapsed_equals_splitByCollapsed :: String -> Bool
@@ -82,11 +91,9 @@ prop_breakOn_properties pat s =
       combined = before ++ pat ++ after
   in if null pat 
      then before == "" && after == s
-     else if null s
-          then before == "" && after == ""
-          else if pat `isInfixOf` s
-               then combined == s
-               else before == s && after == ""
+     else if pat `isInfixOf` s
+          then combined == s
+          else before == s && after == ""
 
 -- | Test that safeProcessString filters control characters
 prop_safeProcessString_filters_control_chars :: String -> Bool
@@ -98,7 +105,8 @@ prop_safeProcessString_filters_control_chars s =
 -- | Test properties of isValidChar
 prop_isValidChar_properties :: Char -> Bool
 prop_isValidChar_properties c = 
-  isValidChar c == (c >= ' ' || c == '\n' || c == '\r' || c == '\t')
+  let ordC = fromEnum c
+  in isValidChar c == (ordC >= 32 || c == '\n' || c == '\r' || c == '\t')
 
 -- | Test properties of isRight
 prop_isRight_properties :: Either Int String -> Bool
