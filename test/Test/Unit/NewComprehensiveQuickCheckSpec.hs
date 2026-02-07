@@ -128,7 +128,7 @@ testPropertyBasedIntegration = testGroup "Property-Based Integration Tests"
 
 -- Main comprehensive test suite
 comprehensiveTests :: TestTree
-comprehensiveTests = testGroup "Comprehensive QuickCheck Test Suite"
+comprehensiveTests = testGroup "Comprehensive QuickCheck Test Suite (Memory Optimized)"
   [ utilsTests
   , sourceLocationTests
   , parserTests

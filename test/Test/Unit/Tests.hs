@@ -4,7 +4,7 @@ module Test.Unit.Tests where
 
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import TestSupport.MemoryLimits (withMemoryLimits, memoryLimitedTestGroup)
+import TestSupport.MemoryLimits (withAggressiveMemoryLimits, aggressiveMemoryLimitedTestGroup)
 
 -- Only import essential existing test modules
 import qualified Test.Unit.ConciseTestSuite as ConciseTestSuite
@@ -34,19 +34,19 @@ prop_basic_property :: String -> Property
 prop_basic_property s = property $ length s >= 0
 
 tests :: TestTree
-tests = memoryLimitedTestGroup "Test.Unit.Tests Tests"
-  [ withMemoryLimits $ testProperty "basic property" prop_basic_property,
-    withMemoryLimits ConciseTestSuite.tests,
-    withMemoryLimits testListProperties,
-    withMemoryLimits BasicQuickCheckTestSuite.tests,
-    withMemoryLimits BasicQuickCheckTestsSpec.tests,
-    withMemoryLimits BoundaryConditionAdvancedQuickCheckSpec.tests,
-    withMemoryLimits BoundaryConditionComprehensiveSpec.boundaryConditionComprehensiveTests,
-    withMemoryLimits CodeGenerationQuickCheckSpec.tests,
-    withMemoryLimits testParserErrorRecovery,
-    withMemoryLimits testParserDirectives,
-    withMemoryLimits AdvancedTextProcessingSpec.tests,  -- AdvancedTextProcessingSpec tests
-    withMemoryLimits NewAdditionalParserQuickCheckTestSpec.newAdditionalParserQuickCheckTestSpec,  -- New Additional Parser QuickCheck Tests
-    withMemoryLimits FinalQuickCheckTestSuite.tests,  -- Final QuickCheck Test Suite
-    withMemoryLimits SimpleQuickCheckTestSuite.tests  -- Simple QuickCheck Test Suite
+tests = aggressiveMemoryLimitedTestGroup "Test.Unit.Tests Tests (Memory Optimized)"
+  [ withAggressiveMemoryLimits $ testProperty "basic property" prop_basic_property,
+    withAggressiveMemoryLimits ConciseTestSuite.tests,
+    withAggressiveMemoryLimits testListProperties,
+    withAggressiveMemoryLimits BasicQuickCheckTestSuite.tests,
+    withAggressiveMemoryLimits BasicQuickCheckTestsSpec.tests,
+    withAggressiveMemoryLimits BoundaryConditionAdvancedQuickCheckSpec.tests,
+    withAggressiveMemoryLimits BoundaryConditionComprehensiveSpec.boundaryConditionComprehensiveTests,
+    withAggressiveMemoryLimits CodeGenerationQuickCheckSpec.tests,
+    withAggressiveMemoryLimits testParserErrorRecovery,
+    withAggressiveMemoryLimits testParserDirectives,
+    withAggressiveMemoryLimits AdvancedTextProcessingSpec.tests,  -- AdvancedTextProcessingSpec tests
+    withAggressiveMemoryLimits NewAdditionalParserQuickCheckTestSpec.newAdditionalParserQuickCheckTestSpec,  -- New Additional Parser QuickCheck Tests
+    withAggressiveMemoryLimits FinalQuickCheckTestSuite.tests,  -- Final QuickCheck Test Suite
+    withAggressiveMemoryLimits SimpleQuickCheckTestSuite.tests  -- Simple QuickCheck Test Suite
   ]

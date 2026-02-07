@@ -82,10 +82,15 @@ cabal test --flags="-fast coverage"
 # 运行特定测试模块
 cabal test --test-options="--pattern \"Parser\""
 
+# 内存优化的测试选项
+./scripts/run_memory_optimized_tests.sh      # 标准内存优化 (256MB)
+./scripts/run_ultra_memory_optimized_tests.sh # 极限内存优化 (128MB)
+
 更多测试相关信息请参考:
 - [QUICK_TEST_GUIDE.md](QUICK_TEST_GUIDE.md) - 快速测试指南
 - [COVERAGE_MATRIX.md](COVERAGE_MATRIX.md) - 测试覆盖率矩阵
 - [TEST_CONSOLIDATION.md](TEST_CONSOLIDATION.md) - 测试整合说明
+- [MEMORY_OPTIMIZATION.md](docs/MEMORY_OPTIMIZATION.md) - 内存优化指南
 
 ## Fixture 与示例资源
 

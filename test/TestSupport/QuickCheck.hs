@@ -3,6 +3,8 @@
 module TestSupport.QuickCheck
   ( fastProperty
   , memoryEfficientProperty
+  , ultraMemoryEfficientProperty
+  , stringProcessingProperty
   ) where
 
 import Test.QuickCheck (Testable)
@@ -32,4 +34,18 @@ memoryEfficientProperty :: Testable prop => String -> prop -> TestTree
 memoryEfficientProperty name prop =
   localOption (QuickCheckTests 50) $
   localOption (QuickCheckMaxSize 20) $
+  testProperty name prop
+
+-- | Ultra memory-efficient property test for very memory-constrained environments
+ultraMemoryEfficientProperty :: Testable prop => String -> prop -> TestTree
+ultraMemoryEfficientProperty name prop =
+  localOption (QuickCheckTests 25) $
+  localOption (QuickCheckMaxSize 10) $
+  testProperty name prop
+
+-- | Memory-efficient property test for string processing (reduces large string generation)
+stringProcessingProperty :: Testable prop => String -> prop -> TestTree
+stringProcessingProperty name prop =
+  localOption (QuickCheckTests 30) $
+  localOption (QuickCheckMaxSize 15) $
   testProperty name prop

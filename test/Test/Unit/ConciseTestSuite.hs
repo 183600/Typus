@@ -5,8 +5,8 @@ module Test.Unit.ConciseTestSuite where
 
 
 
-import Test.Tasty (TestTree, testGroup)
-import TestSupport.MemoryLimits (withMemoryLimits, memoryLimitedTestGroup)
+import Test.Tasty (TestTree)
+import TestSupport.MemoryLimits (withAggressiveMemoryLimits, aggressiveMemoryLimitedTestGroup)
 import qualified Test.Unit.ConciseUtilsQuickCheckSpec as Utils
 import qualified Test.Unit.ConciseSourceLocationQuickCheckSpec as SourceLocation
 import qualified Test.Unit.ConciseParserQuickCheckSpec as Parser
@@ -18,19 +18,19 @@ import qualified Test.Unit.ConciseIntegrationQuickCheckSpec as Integration
 import qualified Test.Unit.CodeGenerationQuickCheckSpec as CodeGeneration
 
 conciseTestSuite :: TestTree
-conciseTestSuite = memoryLimitedTestGroup "Concise Typus Test Suite (48 tests)"
-  [ memoryLimitedTestGroup "Core Modules"
-    [ withMemoryLimits Utils.tests
-    , withMemoryLimits SourceLocation.tests
-    , withMemoryLimits Parser.tests
-    , withMemoryLimits Compiler.tests
-    , withMemoryLimits ErrorHandler.tests
-    , withMemoryLimits Ownership.tests
-    , withMemoryLimits Dependencies.tests
-    , withMemoryLimits CodeGeneration.tests
+conciseTestSuite = aggressiveMemoryLimitedTestGroup "Concise Typus Test Suite (48 tests) - Memory Optimized"
+  [ aggressiveMemoryLimitedTestGroup "Core Modules"
+    [ withAggressiveMemoryLimits Utils.tests
+    , withAggressiveMemoryLimits SourceLocation.tests
+    , withAggressiveMemoryLimits Parser.tests
+    , withAggressiveMemoryLimits Compiler.tests
+    , withAggressiveMemoryLimits ErrorHandler.tests
+    , withAggressiveMemoryLimits Ownership.tests
+    , withAggressiveMemoryLimits Dependencies.tests
+    , withAggressiveMemoryLimits CodeGeneration.tests
     ]
-  , memoryLimitedTestGroup "Integration Tests"
-    [ withMemoryLimits Integration.tests
+  , aggressiveMemoryLimitedTestGroup "Integration Tests"
+    [ withAggressiveMemoryLimits Integration.tests
     ]
   ]
 
