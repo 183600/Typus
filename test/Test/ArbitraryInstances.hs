@@ -2,13 +2,13 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 module Test.ArbitraryInstances where
 
-import Test.Tasty.QuickCheck (Arbitrary(..), oneof, elements, choose, listOf)
+import Test.Tasty.QuickCheck (Arbitrary(..), oneof, elements, choose, listOf, resize)
 import qualified Data.Text as T
 
 import Compiler (CompilerError(..), CompilationPhase(..))
-import Compiler.Errors.Core (errorWithCategory, ErrorCategory(..), ErrorLocation(..), message, TypeError(..))
-import Compiler.TypeChecker (TypeCheckDiagnostic(..), TypeError(..))
-import Compiler.Errors.Types (ErrorSeverity(..), ErrorContext(..), ErrorRecovery(..))
+import qualified Compiler.Errors.Core as Core (errorWithCategory, ErrorCategory(..), ErrorLocation(..), message, TypeError(..), ErrorSeverity(..), ErrorContext(..), ErrorRecovery(..))
+import qualified Compiler.TypeChecker as TC (TypeCheckDiagnostic(..), TypeError(..))
+import Compiler.Errors.Types ()
 import SourceLocation (SourcePos(..), SourceSpan(..), Located(..))
 import Parser (TypusFile(..), CodeBlock(..), BlockDirectives(..), FileDirectives(..))
 import qualified SyntaxValidator as SyntaxValidator
@@ -28,11 +28,11 @@ instance Arbitrary CompilerError where
   arbitrary = do
     phase <- arbitrary
     -- Generate a minimal CompilerError for testing
-    let defaultLoc = ErrorLocation Nothing 0 0 Nothing Nothing
-    let typeError = errorWithCategory "TEST001" Parsing (T.pack "Test error") defaultLoc
+    let defaultLoc = Core.ErrorLocation Nothing 0 0 Nothing Nothing
+    let typeError = Core.errorWithCategory "TEST001" Core.Parsing (T.pack "Test error") defaultLoc
     return $ CompilerError typeError Nothing [] phase
 
-instance Arbitrary Compiler.Errors.Core.TypeError where
+instance Arbitrary Core.TypeError where
   arbitrary = do
     errId <- choose (1000, 9999 :: Int) >>= \n -> return ("E" ++ show n)
     errSeverity <- arbitrary
@@ -41,68 +41,70 @@ instance Arbitrary Compiler.Errors.Core.TypeError where
     errLocation <- arbitrary
     errContext <- arbitrary
     errRecovery <- arbitrary
-    errSuggestions <- listOf arbitrary
-    errRelatedErrors <- listOf arbitrary
-    errErrorChain <- listOf arbitrary
+    -- Memory optimization: limit list sizes to prevent excessive memory usage
+    errSuggestions <- resize 3 $ listOf arbitrary
+    errRelatedErrors <- resize 2 $ listOf arbitrary
+    errErrorChain <- resize 2 $ listOf arbitrary
     errTimestamp <- arbitrary
-    return $ Compiler.Errors.Core.TypeError
-      { Compiler.Errors.Core.errorId = errId
-      , Compiler.Errors.Core.severity = errSeverity
-      , Compiler.Errors.Core.category = errCategory
-      , Compiler.Errors.Core.message = errMsg
-      , Compiler.Errors.Core.location = errLocation
-      , Compiler.Errors.Core.context = errContext
-      , Compiler.Errors.Core.recovery = errRecovery
-      , Compiler.Errors.Core.suggestions = errSuggestions
-      , Compiler.Errors.Core.relatedErrors = errRelatedErrors
-      , Compiler.Errors.Core.errorChain = errErrorChain
-      , Compiler.Errors.Core.timestamp = errTimestamp
+    return $ Core.TypeError
+      { Core.errorId = errId
+      , Core.severity = errSeverity
+      , Core.category = errCategory
+      , Core.message = errMsg
+      , Core.location = errLocation
+      , Core.context = errContext
+      , Core.recovery = errRecovery
+      , Core.suggestions = errSuggestions
+      , Core.relatedErrors = errRelatedErrors
+      , Core.errorChain = errErrorChain
+      , Core.timestamp = errTimestamp
       }
 
-instance Arbitrary Compiler.TypeChecker.TypeError where
+instance Arbitrary TC.TypeError where
   arbitrary = do
     ctx <- arbitrary
     msg <- elements ["Type mismatch", "Undefined variable", "Invalid operation"]
-    return $ Compiler.TypeChecker.TypeError
-      { teContext = ctx
-      , teMessage = msg
+    return $ TC.TypeError
+      { TC.teContext = ctx
+      , TC.teMessage = msg
       }
 
-instance Arbitrary TypeCheckDiagnostic where
+instance Arbitrary TC.TypeCheckDiagnostic where
   arbitrary = do
     hasErrs <- arbitrary
     ctx <- if hasErrs then return (Just "context") else return Nothing
     detail <- arbitrary
-    return $ TypeCheckDiagnostic ctx detail
+    return $ TC.TypeCheckDiagnostic ctx detail
 
 instance Arbitrary T.Text where
   arbitrary = T.pack <$> arbitrary
 
-instance Arbitrary ErrorSeverity where
-  arbitrary = elements [Fatal, Error, Warning, Info]
+instance Arbitrary Core.ErrorSeverity where
+  arbitrary = elements [Core.Fatal, Core.Error, Core.Warning, Core.Info]
 
-instance Arbitrary ErrorCategory where
-  arbitrary = elements [Parsing, TypeChecking, Semantic, Runtime]
+instance Arbitrary Core.ErrorCategory where
+  arbitrary = elements [Core.Parsing, Core.TypeChecking, Core.Semantic, Core.Runtime]
 
-instance Arbitrary ErrorLocation where
+instance Arbitrary Core.ErrorLocation where
   arbitrary = do
     filePath' <- arbitrary
     line' <- choose (1, 100)
     column' <- choose (1, 100)
     endLine' <- arbitrary
     endColumn' <- arbitrary
-    return $ ErrorLocation filePath' line' column' endLine' endColumn'
+    return $ Core.ErrorLocation filePath' line' column' endLine' endColumn'
 
-instance Arbitrary ErrorContext where
+instance Arbitrary Core.ErrorContext where
   arbitrary = do
     ctxCode <- arbitrary
     ctxFunction <- arbitrary
     ctxVariable <- arbitrary
     ctxType <- arbitrary
-    ctxAdditional <- listOf arbitrary
-    return $ ErrorContext ctxCode ctxFunction ctxVariable ctxType ctxAdditional
+    -- Memory optimization: limit additional context to prevent excessive memory usage
+    ctxAdditional <- resize 3 $ listOf arbitrary
+    return $ Core.ErrorContext ctxCode ctxFunction ctxVariable ctxType ctxAdditional
 
-instance Arbitrary ErrorRecovery where
+instance Arbitrary Core.ErrorRecovery where
   arbitrary = do
     canRec <- arbitrary
     shouldCont <- arbitrary
@@ -110,7 +112,7 @@ instance Arbitrary ErrorRecovery where
     recHint <- arbitrary
     recCost <- choose (0, 100)
     recConfidence <- choose (0.0, 1.0)
-    return $ ErrorRecovery canRec shouldCont recAction recHint recCost recConfidence
+    return $ Core.ErrorRecovery canRec shouldCont recAction recHint recCost recConfidence
 
 -- Additional Arbitrary instances
 instance Arbitrary Parser.FileDirectives where

@@ -32,7 +32,7 @@ module TestSupport.Arbitrary (
   validTypusCode
 ) where
 
-import Test.QuickCheck (Arbitrary(..), Gen, oneof, elements, listOf, frequency, choose, getPositive, arbitraryUnicodeChar, vectorOf)
+import Test.QuickCheck (Arbitrary(..), Gen, oneof, elements, listOf, frequency, choose, getPositive, arbitraryUnicodeChar, vectorOf, resize)
 import qualified Data.Text as T
 import qualified Data.Map as Map
 
@@ -86,7 +86,7 @@ import qualified Compiler.TypeChecker as TC
   )
 import Compiler.ValueAnalysis (ValueInfo(..), ValueKind(..))
 import qualified Compiler.ValueAnalysis as ValueAnalysis
-import Compiler.Errors.Core (ErrorSeverity(..), ErrorLocation(..), ErrorContext(..), ErrorRecovery(..), emptyContext, TypeError(..))
+import qualified Compiler.Errors.Core as Core (ErrorSeverity(..), ErrorLocation(..), ErrorContext(..), ErrorRecovery(..), emptyContext, TypeError(..))
 import Compiler.Errors (CompilationPhase(..))
 
 -- Helper generators
@@ -143,8 +143,10 @@ instance Arbitrary CodeBlock where
 instance Arbitrary TypusFile where
   arbitrary = do
     directives <- arbitrary
-    buildTags <- listOf (genLocated genNonEmptyString)
-    blocks <- listOf arbitrary
+    -- Memory optimization: limit buildTags to prevent excessive memory usage
+    buildTags <- resize 3 $ listOf (genLocated genNonEmptyString)
+    -- Memory optimization: limit blocks to prevent excessive memory usage
+    blocks <- resize 5 $ listOf arbitrary
     syntaxErrors <- pure [] -- Simplified for now
     return $ TypusFile directives buildTags blocks syntaxErrors
 
@@ -193,10 +195,12 @@ instance Arbitrary GoToken where
 
 instance Arbitrary GoModule where
   arbitrary = GoModule
-    <$> listOf genIdentifier
+    -- Memory optimization: limit module dependencies to prevent excessive memory usage
+    <$> resize 3 (listOf genIdentifier)
     <*> frequency [(1, pure Nothing), (2, Just <$> (PackageDecl <$> genIdentifier))]
-    <*> listOf arbitrary
-    <*> listOf arbitrary
+    -- Memory optimization: limit declarations and imports to prevent excessive memory usage
+    <*> resize 5 (listOf arbitrary)
+    <*> resize 5 (listOf arbitrary)
 
 -- IR generators
 instance Arbitrary SourceIR where
@@ -295,7 +299,7 @@ instance Arbitrary CompilationPhase where
 
 -- ErrorRecovery and ErrorCategory instances moved to ExtendedArbitrary to avoid conflicts
 
--- CompilerError instance requires ErrorSeverity and ErrorLocation which are now in ExtendedArbitrary
+-- CompilerError instance requires Core.ErrorSeverity and Core.ErrorLocation which are now in ExtendedArbitrary
 -- instance Arbitrary CompilerError where
 --   arbitrary = do
 --     errorId <- genIdentifier
@@ -303,7 +307,7 @@ instance Arbitrary CompilationPhase where
 --     category <- arbitrary
 --     message <- T.pack <$> genNonEmptyString
 --     location <- arbitrary
---     context <- pure emptyContext
+--     context <- pure Core.emptyContext
 --     recovery <- arbitrary
 --     suggestions <- listOf (T.pack <$> genNonEmptyString)
 --     relatedErrors <- pure []
@@ -515,9 +519,10 @@ arbitraryTypeVar :: Gen Dep.TypeVar
 arbitraryTypeVar = oneof
   [ Dep.TVCon <$> genIdentifier
   , Dep.TVVar <$> genIdentifier
-  , Dep.TVApp <$> genIdentifier <*> listOf arbitraryTypeVar
-  , Dep.TVFun <$> listOf arbitraryTypeVar <*> arbitraryTypeVar
-  , Dep.TVTuple <$> listOf arbitraryTypeVar
+  -- Memory optimization: limit recursive type construction to prevent excessive memory usage
+  , Dep.TVApp <$> genIdentifier <*> resize 2 (listOf arbitraryTypeVar)
+  , Dep.TVFun <$> resize 2 (listOf arbitraryTypeVar) <*> arbitraryTypeVar
+  , Dep.TVTuple <$> resize 3 (listOf arbitraryTypeVar)
   ]
 
 -- | Generator for arbitrary constraints
@@ -528,15 +533,18 @@ arbitraryConstraint = Dep.SizeGT <$> (T.pack <$> genIdentifier) <*> arbitrary
 arbitraryTypeExpr :: Gen Dep.TypeExpr
 arbitraryTypeExpr = oneof
   [ Dep.SimpleT <$> (T.pack <$> genIdentifier)
-  , Dep.GenericT <$> (T.pack <$> genIdentifier) <*> listOf arbitraryTypeExpr
-  , Dep.FuncT <$> (listOf ((,) <$> (T.pack <$> genIdentifier) <*> arbitraryTypeExpr)) <*> arbitraryTypeExpr
-  , Dep.RefineT <$> arbitraryTypeExpr <*> (listOf arbitraryConstraint)
+  -- Memory optimization: limit generic type parameters to prevent excessive memory usage
+  , Dep.GenericT <$> (T.pack <$> genIdentifier) <*> resize 2 (listOf arbitraryTypeExpr)
+  -- Memory optimization: limit function parameters and constraints to prevent excessive memory usage
+  , Dep.FuncT <$> resize 3 (listOf ((,) <$> (T.pack <$> genIdentifier) <*> arbitraryTypeExpr)) <*> arbitraryTypeExpr
+  , Dep.RefineT <$> arbitraryTypeExpr <*> resize 2 (listOf arbitraryConstraint)
   ]
 
 -- | Generator for arbitrary AST
 arbitraryAST :: Gen Dep.AST
 arbitraryAST = do
-  statements <- listOf arbitraryStatement
+  -- Memory optimization: limit number of statements to prevent excessive memory usage
+  statements <- resize 5 $ listOf arbitraryStatement
   return $ Dep.Program statements
 
 -- | Generator for arbitrary statements
@@ -555,7 +563,8 @@ arbitraryTypeConstraint :: Gen Dep.TypeConstraint
 arbitraryTypeConstraint = oneof
   [ Dep.Equal <$> arbitraryTypeVar <*> arbitraryTypeVar
   , Dep.Subtype <$> arbitraryTypeVar <*> arbitraryTypeVar
-  , Dep.Predicate <$> genIdentifier <*> listOf arbitraryTypeVar
+  -- Memory optimization: limit predicate parameters to prevent excessive memory usage
+  , Dep.Predicate <$> genIdentifier <*> resize 3 (listOf arbitraryTypeVar)
   , Dep.TypeSizeGE <$> arbitraryTypeVar <*> arbitrary
   , Dep.TypeSizeGT <$> arbitraryTypeVar <*> arbitrary
   , Dep.TypeRange <$> arbitraryTypeVar <*> arbitrary <*> arbitrary

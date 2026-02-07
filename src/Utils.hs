@@ -101,10 +101,7 @@ removeLineComments s =
             else intercalate "\n" processedLines
   else
     -- 处理单行内容
-    let result = goLine s
-    in if all isSpace result
-       then ""
-       else result
+    goLine s
   where
     goLine [] = []
     goLine ('"':xs) = '"' : goInString xs

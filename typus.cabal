@@ -1499,7 +1499,7 @@ test-suite typus-test
         
         -- Additional Test Modules Added for Enhanced Coverage (2026)
         Test.Unit.UtilsStringProcessingExtraSpec,
-        Test.Unit.ParserBasicFunctionsExtraSpec
+        Test.Unit.ParserBasicFunctionsExtraSpec,
         
         -- New Advanced QuickCheck Test Modules (2026)
         -- Note: These modules are already listed above to avoid duplicates
@@ -1510,16 +1510,19 @@ test-suite typus-test
         -- Test.Unit.DependenciesAdvancedQuickCheckSpec,
         
         -- Newly created advanced test modules (2026)
-        Test.Unit.BoundaryConditionAdvancedQuickCheckSpec
+        Test.Unit.BoundaryConditionAdvancedQuickCheckSpec,
         
         -- Simple QuickCheck Test Suite (2026)
-        Test.Unit.SimpleQuickCheckTestSuite
+        Test.Unit.SimpleQuickCheckTestSuite,
         
         -- Basic QuickCheck Test Suite (2026)
-        Test.Unit.BasicQuickCheckTestSuite
+        Test.Unit.BasicQuickCheckTestSuite,
+        
+        -- Memory Optimized Test Suite (2026)
+        Test.Unit.MemoryOptimizedTestSuite,
         
         -- Final QuickCheck Test Suite (2026)
-        Test.Unit.FinalQuickCheckTestSuite
+        Test.Unit.FinalQuickCheckTestSuite,
         
         -- New Additional QuickCheck Test Modules (2026)
         Test.Unit.NewAdditionalUtilsQuickCheckSpec,
