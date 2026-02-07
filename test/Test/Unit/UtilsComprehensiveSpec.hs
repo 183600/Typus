@@ -73,7 +73,7 @@ prop_trim_idempotent s = trim (trim s) == trim s
 -- Property 3: splitBy with comma behaves correctly
 prop_splitBy_comma_basic :: String -> Property
 prop_splitBy_comma_basic s = 
-  not (',' `elem` s) && not (null s) ==> splitBy ',' s == [s]
+  not (',' `elem` s) ==> if null s then splitBy ',' s == [] else splitBy ',' s == [s]
 
 -- Property 4: splitBy preserves empty segments
 prop_splitBy_preserves_empty :: String -> Bool

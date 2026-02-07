@@ -316,6 +316,8 @@ test-suite typus-test
         TestSupport.Arbitrary,
         TestSupport.ExtendedArbitrary,
         TestSupport.MemoryLimits,
+        TestSupport.AdvancedMemoryLimits,
+        Test.Unit.AdvancedMemoryOptimizedTestSuite,
 
         -- Additional Test Modules Created for Enhanced Coverage        -- New Cabal QuickCheck Test Modules (2025)
         Test.Unit.NewCabalParserQuickCheckSpec,

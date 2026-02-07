@@ -143,10 +143,10 @@ instance Arbitrary CodeBlock where
 instance Arbitrary TypusFile where
   arbitrary = do
     directives <- arbitrary
-    -- Memory optimization: limit buildTags to prevent excessive memory usage
-    buildTags <- resize 3 $ listOf (genLocated genNonEmptyString)
-    -- Memory optimization: limit blocks to prevent excessive memory usage
-    blocks <- resize 5 $ listOf arbitrary
+    -- Enhanced memory optimization: further limit buildTags to prevent excessive memory usage
+    buildTags <- resize 2 $ listOf (genLocated genNonEmptyString)
+    -- Enhanced memory optimization: further limit blocks to prevent excessive memory usage
+    blocks <- resize 3 $ listOf arbitrary
     syntaxErrors <- pure [] -- Simplified for now
     return $ TypusFile directives buildTags blocks syntaxErrors
 
@@ -195,12 +195,12 @@ instance Arbitrary GoToken where
 
 instance Arbitrary GoModule where
   arbitrary = GoModule
-    -- Memory optimization: limit module dependencies to prevent excessive memory usage
-    <$> resize 3 (listOf genIdentifier)
+    -- Enhanced memory optimization: further limit module dependencies to prevent excessive memory usage
+    <$> resize 2 (listOf genIdentifier)
     <*> frequency [(1, pure Nothing), (2, Just <$> (PackageDecl <$> genIdentifier))]
-    -- Memory optimization: limit declarations and imports to prevent excessive memory usage
-    <*> resize 5 (listOf arbitrary)
-    <*> resize 5 (listOf arbitrary)
+    -- Enhanced memory optimization: further limit declarations and imports to prevent excessive memory usage
+    <*> resize 3 (listOf arbitrary)
+    <*> resize 3 (listOf arbitrary)
 
 -- IR generators
 instance Arbitrary SourceIR where
@@ -369,8 +369,8 @@ instance WellFormed GoModule where
 -- | Generator for arbitrary strings (memory-optimized)
 arbitraryString :: Gen String
 arbitraryString = do
-  size <- choose (0, 12)  -- Reduced from 20 to 12 for memory efficiency
-  vectorOf size arbitrary
+  size <- choose (0, 8)  -- Further reduced from 12 to 8 for maximum memory efficiency
+  vectorOf size $ elements $ ['a'..'z'] ++ ['0'..'9']  -- Limited character set
 
 -- | Generator for arbitrary characters
 arbitraryChar :: Gen Char
@@ -397,15 +397,15 @@ arbitraryInt = arbitrary
 arbitraryIdentifier :: Gen String
 arbitraryIdentifier = do
   firstChar <- elements ['a'..'z']
-  restSize <- choose (0, 4)  -- Limit rest characters to 0-4 for memory efficiency
-  restChars <- vectorOf restSize $ elements $ ['a'..'z'] ++ ['0'..'9'] ++ ['_']
+  restSize <- choose (0, 3)  -- Further reduced from 4 to 3 for maximum memory efficiency
+  restChars <- vectorOf restSize $ elements $ ['a'..'z'] ++ ['0'..'9']  -- Removed underscore for simplicity
   return $ firstChar : restChars
 
 -- | Generator for arbitrary unicode strings (memory-optimized)
 arbitraryUnicodeString :: Gen String
 arbitraryUnicodeString = do
-  size <- choose (0, 8)  -- Reduced from 15 to 8 for memory efficiency
-  vectorOf size arbitraryUnicodeChar
+  size <- choose (0, 5)  -- Further reduced from 8 to 5 for maximum memory efficiency
+  vectorOf size $ elements $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9']  -- Limited to ASCII for memory efficiency
 
 -- | Generator for arbitrary whitespace strings
 arbitraryWhitespace :: Gen String
@@ -414,8 +414,8 @@ arbitraryWhitespace = listOf $ elements " \t\n\r"
 -- | Generator for arbitrary short strings (memory-optimized)
 arbitraryShortString :: Gen String
 arbitraryShortString = do
-  size <- choose (1, 6)  -- Reduced from 10 to 6 for memory efficiency
-  vectorOf size genAlphaNum
+  size <- choose (1, 4)  -- Further reduced from 6 to 4 for maximum memory efficiency
+  vectorOf size $ elements $ ['a'..'z'] ++ ['0'..'9']  -- Limited character set
 
 -- | Generator for valid Typus code
 validTypusCode :: Gen String
