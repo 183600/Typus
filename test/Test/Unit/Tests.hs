@@ -31,6 +31,9 @@ import qualified Test.Unit.EnhancedMemoryOptimizedTestSuite as EnhancedMemoryOpt
 -- Import AdvancedMemoryOptimizedTestSuite
 import qualified Test.Unit.AdvancedMemoryOptimizedTestSuite as AdvancedMemoryOptimizedTestSuite
 
+-- Import UltraMemoryOptimizedTestSuite
+import qualified Test.Unit.UltraMemoryOptimizedTestSuite as UltraMemoryOptimizedTestSuite
+
 -- Import modified test modules
 import qualified Test.Unit.FinalQuickCheckTestSuite as FinalQuickCheckTestSuite
 import qualified Test.Unit.SimpleQuickCheckTestSuite as SimpleQuickCheckTestSuite
@@ -55,6 +58,7 @@ tests = aggressiveMemoryLimitedTestGroup "Test.Unit.Tests Tests (Memory Optimize
     withAggressiveMemoryLimits NewAdditionalParserQuickCheckTestSpec.newAdditionalParserQuickCheckTestSpec,  -- New Additional Parser QuickCheck Tests
     withAggressiveMemoryLimits EnhancedMemoryOptimizedTestSuite.tests,  -- Enhanced Memory Optimized Test Suite
     withAggressiveMemoryLimits AdvancedMemoryOptimizedTestSuite.tests,  -- Advanced Memory Optimized Test Suite
+    withAggressiveMemoryLimits UltraMemoryOptimizedTestSuite.tests,  -- Ultra Memory Optimized Test Suite
     withAggressiveMemoryLimits FinalQuickCheckTestSuite.tests,  -- Final QuickCheck Test Suite
     withAggressiveMemoryLimits SimpleQuickCheckTestSuite.tests  -- Simple QuickCheck Test Suite
   ]

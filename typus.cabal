@@ -1544,7 +1544,11 @@ test-suite typus-test
         
         -- Enhanced Memory-Optimized Test Modules
         Test.Unit.EnhancedMemoryOptimizedTestSuite,
-        TestSupport.EnhancedMemoryLimits
+        TestSupport.EnhancedMemoryLimits,
+        
+        -- Ultra Memory-Optimized Test Modules
+        Test.Unit.UltraMemoryOptimizedTestSuite,
+        TestSupport.UltraMemoryOptimized
         
     build-depends:
         base >=4.7 && <5,

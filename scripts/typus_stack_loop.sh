@@ -152,14 +152,12 @@ while true; do
   # Stack 对应的测试命令
   # 注意：stack 的 flag 语法是 --flag "package:flag"，这里用通配符 "*"
   # --test-arguments 对应 cabal 的 --test-options
-  # --test-details 对应 cabal 的 --test-show-details
   GHCRTS="-M2G -A16m" stack test \
     --flag "*:fast" \
     --flag "*:-production" \
     --ghc-options="-O0 -rtsopts" \
     --test-arguments="+RTS -M1024m -A16m -RTS" \
-    --jobs=1 \
-    --test-details=direct 2>&1 | tee "$STACK_LOG"
+    --jobs=1 2>&1 | tee "$STACK_LOG"
   ps=("${PIPESTATUS[@]}")
   STACK_STATUS="${ps[0]:-255}"
 
@@ -202,7 +200,7 @@ while true; do
           echo ">>> 正在修复问题: $err"
           # 针对单行报错构造 iflow 指令
           iflow "修复这个具体的错误：$err
-上下文：项目使用 GHCRTS=\"-M2G -A16m\" stack test --flag \"*:fast\" --flag \"*:-production\" --ghc-options=\"-O0 -rtsopts\" --test-arguments=\"+RTS -M1024m -A16m -RTS\" --jobs=1 --test-details=direct 进行测试。
+上下文：项目使用 GHCRTS=\"-M2G -A16m\" stack test --flag \"*:fast\" --flag \"*:-production\" --ghc-options=\"-O0 -rtsopts\" --test-arguments=\"+RTS -M1024m -A16m -RTS\" --jobs=1 进行测试。
 除非该错误位于测试文件中（如 Spec.hs），否则只修改测试用例以外的代码。如果是在测试文件中，请修复测试代码。
 debug时可通过加日志和打断点，运行测试用例时要节省内存。think:high" --yolo || true
         fi
@@ -215,8 +213,7 @@ debug时可通过加日志和打断点，运行测试用例时要节省内存。
         --flag "*:-production" \
         --ghc-options="-O0 -rtsopts" \
         --test-arguments="+RTS -M1024m -A16m -RTS" \
-        --jobs=1 \
-        --test-details=direct显示的所有问题（除了warning），除非测试用例本身有编译错误，否则只修改测试用例以外的代码，debug时可通过加日志和打断点 think:high' --yolo || true
+        --jobs=1显示的所有问题（除了warning），除非测试用例本身有编译错误，否则只修改测试用例以外的代码，debug时可通过加日志和打断点 think:high' --yolo || true
     fi
 
     iflow '删除项目根目录多余的.md文件或者.txt文件（像TEST_ENHANCEMENT_SUMMARY.md和test_wall_production.txt这样的）' --yolo || true
