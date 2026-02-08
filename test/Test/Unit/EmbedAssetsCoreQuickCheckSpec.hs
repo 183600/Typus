@@ -186,14 +186,14 @@ prop_quoted_embed_pattern_extraction :: Property
 prop_quoted_embed_pattern_extraction =
   let content = "//go:embed \"quoted file.txt\""
       extractedPatterns = extractEmbeddedPatterns content
-  in property $ extractedPatterns == ["\"quoted", "file.txt\""]
+  in property $ extractedPatterns == ["quoted file.txt"]
 
 -- | 测试带反引号的嵌入模式提取
 prop_backtick_embed_pattern_extraction :: Property
 prop_backtick_embed_pattern_extraction =
   let content = "//go:embed `backtick file.txt`"
       extractedPatterns = extractEmbeddedPatterns content
-  in property $ extractedPatterns == ["`backtick", "file.txt`"]
+  in property $ extractedPatterns == ["backtick file.txt"]
 
 -- | 测试多个嵌入模式提取
 prop_multiple_embed_pattern_extraction :: Property

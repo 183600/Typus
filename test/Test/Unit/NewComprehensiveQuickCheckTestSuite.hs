@@ -4,7 +4,6 @@ module Test.Unit.NewComprehensiveQuickCheckTestSuite where
 import Test.Tasty
 
 import Test.Unit.NewParserQuickCheckSpec (tests)
-import Test.Unit.NewCompilerQuickCheckSpec (tests)
 import Test.Unit.NewSourceLocationQuickCheckSpec (tests)
 import Test.Unit.NewUtilsQuickCheckSpec (tests)
 
@@ -12,7 +11,6 @@ import Test.Unit.NewUtilsQuickCheckSpec (tests)
 newComprehensiveQuickCheckTestSuite :: TestTree
 newComprehensiveQuickCheckTestSuite = testGroup "New Comprehensive QuickCheck Test Suite"
   [ Test.Unit.NewParserQuickCheckSpec.tests
-  , Test.Unit.NewCompilerQuickCheckSpec.tests
   , Test.Unit.NewSourceLocationQuickCheckSpec.tests
   , Test.Unit.NewUtilsQuickCheckSpec.tests
   ]

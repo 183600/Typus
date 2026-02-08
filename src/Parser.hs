@@ -104,7 +104,7 @@ identifier :: DirectiveParser T.Text
 identifier = lexeme (T.pack <$> MP.some (MP.satisfy isIdentifierChar))
 
 isIdentifierChar :: Char -> Bool
-isIdentifierChar c = isAlphaNum c || c == '_' || c == '-'
+isIdentifierChar c = isAlphaNum c || c == '_'
 
 fileDirectiveParser :: DirectiveParser [(T.Text, T.Text)]
 fileDirectiveParser = do
@@ -132,19 +132,21 @@ blockDirectiveParser = do
 
 parseTypus :: String -> Either String TypusFile
 parseTypus input = do
-    -- Special case: whitespace-only input
-    if all (`elem` [' ', '\t', '\n', '\r']) input
-      then Right TypusFile
-        { tfDirectives = defaultFileDirectives
-        , tfBuildTags = []
-        , tfBlocks = []
-        , tfSyntaxErrors = []
-        }
-      else do
-        parsedLines <- case MP.runParser parseDocument "<input>" input of
-          Left bundle -> Left (errorBundlePretty bundle)
-          Right ls    -> Right ls
-        buildTypusFile parsedLines
+    -- Special case: empty input should fail
+    if null input
+      then Left "Empty input is not allowed"
+      else if all (`elem` [' ', '\t', '\n', '\r']) input
+        then Right TypusFile
+          { tfDirectives = defaultFileDirectives
+          , tfBuildTags = []
+          , tfBlocks = []
+          , tfSyntaxErrors = []
+          }
+        else do
+          parsedLines <- case MP.runParser parseDocument "<input>" input of
+            Left bundle -> Left (errorBundlePretty bundle)
+            Right ls    -> Right ls
+          buildTypusFile parsedLines
 
 -- Alias for parseTypus for tests
 parseTypusFile :: String -> Either String TypusFile

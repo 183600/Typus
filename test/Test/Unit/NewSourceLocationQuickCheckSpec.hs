@@ -51,7 +51,7 @@ prop_source_position_inequality line1 col1 line2 col2 =
       offset2 = 0
       pos1 = SourcePos limitedLine1 limitedCol1 offset1
       pos2 = SourcePos limitedLine2 limitedCol2 offset2
-  in (limitedLine1 /= limitedLine2 || limitedCol1 /= limitedCol2) ==> (pos1 /= pos2)
+  in (limitedLine1 /= limitedLine2 || limitedCol1 /= limitedCol2) ==> property (pos1 /= pos2)
 
 -- | 测试源位置比较
 prop_source_position_comparison :: Int -> Int -> Int -> Int -> Property
@@ -103,7 +103,7 @@ prop_source_span_equality startLine startCol endLine endCol =
   in span1 === span2
 
 -- | 测试源跨度不等性
-prop_source_span_inequality :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Property
+prop_source_span_inequality :: Int -> Int -> Int -> Int -> Int -> Int -> Int -> Int -> Property
 prop_source_span_inequality sLine1 sCol1 eLine1 eCol1 sLine2 sCol2 eLine2 eCol2 =
   let limitedSLine1 = max 1 (min 20 sLine1)
       limitedSCol1 = max 1 (min 20 sCol1)
@@ -127,8 +127,10 @@ prop_source_span_inequality sLine1 sCol1 eLine1 eCol1 sLine2 sCol2 eLine2 eCol2 
       endPos2 = SourcePos limitedELine2 limitedECol2 endOffset2
       span1 = SourceSpan startPos1 endPos1
       span2 = SourceSpan startPos2 endPos2
-  in (limitedSLine1 /= limitedSLine2 || limitedSCol1 /= limitedSCol2 || 
-      limitedELine1 /= limitedELine2 || limitedECol1 /= limitedECol2) ==> (span1 /= span2)
+      spansDiffer = span1 /= span2
+      condition = limitedSLine1 /= limitedSLine2 || limitedSCol1 /= limitedSCol2 || 
+                  limitedELine1 /= limitedELine2 || limitedECol1 /= limitedECol2
+  in condition ==> property spansDiffer
 
 -- | 测试位置包装器
 prop_located_wrapper :: Int -> Int -> String -> Property
@@ -153,7 +155,7 @@ prop_located_with_span_wrapper startLine startCol endLine endCol value =
       limitedEndCol = if limitedEndLine == limitedStartLine 
                      then max limitedStartCol (min 30 endCol)
                      else max 1 (min 30 endCol)
-      limitedValue = take 40 value
+      limitedValue = take 40 value :: String
       startOffset = 0
       endOffset = 0
       startPos = SourcePos limitedStartLine limitedStartCol startOffset
@@ -161,8 +163,8 @@ prop_located_with_span_wrapper startLine startCol endLine endCol value =
       span = SourceSpan startPos endPos
       located = locatedWithSpan span limitedValue
   in conjoin
-    [ locatedPos located === startPos
-    , locValue located === limitedValue
+    [ property $ locatedPos located === startPos
+    , property $ locValue located === limitedValue
     ]
 
 -- | 测试默认跨度
@@ -224,18 +226,19 @@ prop_located_show line col value =
       pos = SourcePos limitedLine limitedCol offset
       located = locatedAt pos limitedValue
       locatedStr = show located
-  in conjoin
-    [ show limitedLine `isInfixOf` locatedStr
-    , show limitedCol `isInfixOf` locatedStr
-    , limitedValue `isInfixOf` locatedStr
-    ]
+      -- 对于特殊字符，检查它们的转义形式
+      escapedValue = show limitedValue
+  in property $ limitedLine >= 1 && limitedCol >= 1 &&  -- 确保值有效
+              show limitedLine `isInfixOf` locatedStr &&
+              show limitedCol `isInfixOf` locatedStr &&
+              (null limitedValue || limitedValue `isInfixOf` locatedStr || escapedValue `isInfixOf` locatedStr)
 
 -- | 测试单行跨度
-prop_single_line_span :: Int -> Int -> Int -> Property
+prop_single_line_span :: Int -> Int -> String -> Property
 prop_single_line_span startCol endCol value =
   let limitedStartCol = max 1 (min 30 startCol)
       limitedEndCol = max limitedStartCol (min 30 endCol)
-      limitedValue = take 40 value
+      limitedValue = take 40 value :: String
       line = 5
       offset = 0
       startPos = SourcePos line limitedStartCol offset
@@ -243,10 +246,10 @@ prop_single_line_span startCol endCol value =
       span = SourceSpan startPos endPos
       located = locatedWithSpan span limitedValue
   in conjoin
-    [ posLine (spanStart span) === line
-    , posLine (spanEnd span) === line
-    , posColumn (spanStart span) === limitedStartCol
-    , posColumn (spanEnd span) === limitedEndCol
+    [ property $ posLine (spanStart span) === line
+    , property $ posLine (spanEnd span) === line
+    , property $ posColumn (spanStart span) === limitedStartCol
+    , property $ posColumn (spanEnd span) === limitedEndCol
     ]
 
 -- | 测试多行跨度
@@ -262,11 +265,11 @@ prop_multi_line_span startLine startCol endLine endCol =
       endPos = SourcePos limitedEndLine limitedEndCol endOffset
       span = SourceSpan startPos endPos
   in conjoin
-    [ posLine (spanStart span) === limitedStartLine
-    , posColumn (spanStart span) === limitedStartCol
-    , posLine (spanEnd span) === limitedEndLine
-    , posColumn (spanEnd span) === limitedEndCol
-    , posLine (spanStart span) < posLine (spanEnd span)
+    [ property $ posLine (spanStart span) === limitedStartLine
+    , property $ posColumn (spanStart span) === limitedStartCol
+    , property $ posLine (spanEnd span) === limitedEndLine
+    , property $ posColumn (spanEnd span) === limitedEndCol
+    , property $ posLine (spanStart span) < posLine (spanEnd span)
     ]
 
 -- | 测试源位置边界情况

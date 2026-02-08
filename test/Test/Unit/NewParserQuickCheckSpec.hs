@@ -15,7 +15,7 @@ import TestSupport.MemoryLimits
   )
 
 import Parser
-import SourceLocation (SourcePos(..), SourceSpan(..))
+import SourceLocation (SourcePos(..), SourceSpan(..), locatedAt)
 import Data.Char (isAlphaNum, isLetter)
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
 import qualified Data.Text as T
@@ -31,12 +31,13 @@ prop_identifier_char_valid c =
 prop_identifier_char_edge_cases :: Property
 prop_identifier_char_edge_cases = 
   conjoin
-    [ testProperty "Letters are valid" $ \c -> isLetter c ==> isIdentifierChar c
-    , testProperty "Numbers after first char are valid" $ \c -> isAlphaNum c && not (isLetter c) ==> isIdentifierChar c
-    , testProperty "Underscore is valid" $ isIdentifierChar '_'
-    , testProperty "Spaces are not valid" $ not $ isIdentifierChar ' '
-    , testProperty "Special chars are not valid" $ \c -> 
-        not (isLetter c) && not (isAlphaNum c) && c /= '_' ==> not (isIdentifierChar c)
+    [ property $ isIdentifierChar '_'
+    , property $ not $ isIdentifierChar '-'
+    , property $ not $ isIdentifierChar ' '
+    , property $ isIdentifierChar 'a'
+    , property $ isIdentifierChar 'Z'
+    , property $ isIdentifierChar '0'
+    , property $ not $ isIdentifierChar '@'
     ]
 
 -- | 测试默认文件指令
@@ -62,22 +63,28 @@ prop_default_block_directives =
 -- | 测试文件指令相等性
 prop_file_directives_equality :: Maybe Bool -> Maybe Bool -> Maybe Bool -> Property
 prop_file_directives_equality ownership dependent constraints =
-  let directives1 = FileDirectives ownership dependent constraints
-      directives2 = FileDirectives ownership dependent constraints
+  let locatedOwnership = fmap (\b -> locatedAt (SourcePos 1 1 0) b) ownership
+      locatedDependent = fmap (\b -> locatedAt (SourcePos 1 1 0) b) dependent
+      locatedConstraints = fmap (\b -> locatedAt (SourcePos 1 1 0) b) constraints
+      directives1 = FileDirectives locatedOwnership locatedDependent locatedConstraints
+      directives2 = FileDirectives locatedOwnership locatedDependent locatedConstraints
   in directives1 === directives2
 
 -- | 测试块指令相等性
 prop_block_directives_equality :: Maybe Bool -> Maybe Bool -> Maybe Bool -> Property
 prop_block_directives_equality ownership dependent constraints =
-  let directives1 = BlockDirectives ownership dependent constraints
-      directives2 = BlockDirectives ownership dependent constraints
+  let locatedOwnership = fmap (\b -> locatedAt (SourcePos 1 1 0) b) ownership
+      locatedDependent = fmap (\b -> locatedAt (SourcePos 1 1 0) b) dependent
+      locatedConstraints = fmap (\b -> locatedAt (SourcePos 1 1 0) b) constraints
+      directives1 = BlockDirectives locatedOwnership locatedDependent locatedConstraints
+      directives2 = BlockDirectives locatedOwnership locatedDependent locatedConstraints
   in directives1 === directives2
 
 -- | 测试代码块内容提取
 prop_codeblock_content_extraction :: String -> Property
 prop_codeblock_content_extraction content =
   let limitedContent = take 100 content  -- 限制内容大小
-      span = SourceSpan (SourcePos 1 1) (SourcePos 1 (length limitedContent + 1))
+      span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 (length limitedContent + 1) 0)
       directives = defaultBlockDirectives
       codeBlock = CodeBlock directives limitedContent span
   in cbContent codeBlock === limitedContent
@@ -87,8 +94,8 @@ prop_typus_file_content_extraction :: String -> String -> Property
 prop_typus_file_content_extraction content1 content2 =
   let limitedContent1 = take 50 content1
       limitedContent2 = take 50 content2
-      span1 = SourceSpan (SourcePos 1 1) (SourcePos 1 (length limitedContent1 + 1))
-      span2 = SourceSpan (SourcePos 2 1) (SourcePos 2 (length limitedContent2 + 1))
+      span1 = SourceSpan (SourcePos 1 1 0) (SourcePos 1 (length limitedContent1 + 1) 0)
+      span2 = SourceSpan (SourcePos 2 1 0) (SourcePos 2 (length limitedContent2 + 1) 0)
       directives = defaultBlockDirectives
       block1 = CodeBlock directives limitedContent1 span1
       block2 = CodeBlock directives limitedContent2 span2
@@ -105,7 +112,7 @@ prop_empty_typus_file_content =
 prop_single_block_typus_file_content :: String -> Property
 prop_single_block_typus_file_content content =
   let limitedContent = take 75 content
-      span = SourceSpan (SourcePos 1 1) (SourcePos 1 (length limitedContent + 1))
+      span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 (length limitedContent + 1) 0)
       directives = defaultBlockDirectives
       block = CodeBlock directives limitedContent span
       typusFile = TypusFile defaultFileDirectives [] [block] []
@@ -114,21 +121,24 @@ prop_single_block_typus_file_content content =
 -- | 测试代码块指令的获取
 prop_codeblock_directives :: Maybe Bool -> Maybe Bool -> Maybe Bool -> Property
 prop_codeblock_directives ownership dependent constraints =
-  let directives = BlockDirectives ownership dependent constraints
-      span = SourceSpan (SourcePos 1 1) (SourcePos 1 1)
+  let locatedOwnership = fmap (\b -> locatedAt (SourcePos 1 1 0) b) ownership
+      locatedDependent = fmap (\b -> locatedAt (SourcePos 1 1 0) b) dependent
+      locatedConstraints = fmap (\b -> locatedAt (SourcePos 1 1 0) b) constraints
+      directives = BlockDirectives locatedOwnership locatedDependent locatedConstraints
+      span = SourceSpan (SourcePos 1 1 0) (SourcePos 1 1 0)
       codeBlock = CodeBlock directives "" span
   in conjoin
-    [ cbDirectives codeBlock === directives
-    , bdOwnership (cbDirectives codeBlock) === ownership
-    , bdDependentTypes (cbDirectives codeBlock) === dependent
-    , bdConstraints (cbDirectives codeBlock) === constraints
+    [ property $ cbDirectives codeBlock === directives
+    , property $ bdOwnership (cbDirectives codeBlock) === locatedOwnership
+    , property $ bdDependentTypes (cbDirectives codeBlock) === locatedDependent
+    , property $ bdConstraints (cbDirectives codeBlock) === locatedConstraints
     ]
 
 -- | 测试TypusFile构建标签
 prop_typus_file_build_tags :: [String] -> Property
 prop_typus_file_build_tags tags =
   let limitedTags = take 10 tags  -- 限制标签数量
-      locatedTags = map (\tag -> locatedAt (SourcePos 1 1) tag) limitedTags
+      locatedTags = map (\tag -> locatedAt (SourcePos 1 1 0) tag) limitedTags
       typusFile = TypusFile defaultFileDirectives locatedTags [] []
   in tfBuildTags typusFile === locatedTags
 
@@ -153,7 +163,7 @@ test_parser_error_handling = do
 test_parser_basic_functionality :: Assertion
 test_parser_basic_functionality = do
   -- 测试简单内容解析
-  let simpleContent = "func main() { return 42 }"
+  let simpleContent = "package main\n\nfunc main() { return 42 }"
       result = parseTypus simpleContent
   case result of
     Left err -> assertFailure $ "Failed to parse simple content: " ++ show err
@@ -163,7 +173,7 @@ test_parser_basic_functionality = do
 test_parser_directive_handling :: Assertion
 test_parser_directive_handling = do
   -- 测试带有指令的内容
-  let contentWithDirectives = "// @ownership true\nfunc test() {}"
+  let contentWithDirectives = "package main\n\n// @ownership true\nfunc test() {}"
       result = parseTypus contentWithDirectives
   case result of
     Left err -> assertFailure $ "Failed to parse content with directives: " ++ show err
@@ -173,7 +183,7 @@ test_parser_directive_handling = do
 test_parser_multiple_blocks :: Assertion
 test_parser_multiple_blocks = do
   -- 测试多个代码块
-  let multiBlockContent = "func first() {}\n\nfunc second() {}"
+  let multiBlockContent = "package main\n\nfunc first() {}\n\nfunc second() {}"
       result = parseTypus multiBlockContent
   case result of
     Left err -> assertFailure $ "Failed to parse multiple blocks: " ++ show err
@@ -183,7 +193,7 @@ test_parser_multiple_blocks = do
 test_parser_comment_handling :: Assertion
 test_parser_comment_handling = do
   -- 测试带有注释的内容
-  let contentWithComments = "// This is a comment\nfunc main() { /* block comment */ return 0 }"
+  let contentWithComments = "package main\n\n// This is a comment\nfunc main() { /* block comment */ return 0 }"
       result = parseTypus contentWithComments
   case result of
     Left err -> assertFailure $ "Failed to parse content with comments: " ++ show err
@@ -193,7 +203,7 @@ test_parser_comment_handling = do
 test_parser_string_handling :: Assertion
 test_parser_string_handling = do
   -- 测试带有字符串的内容
-  let contentWithStrings = "func main() { s := \"hello world\"; return s }"
+  let contentWithStrings = "package main\n\nfunc main() { s := \"hello world\"; return s }"
       result = parseTypus contentWithStrings
   case result of
     Left err -> assertFailure $ "Failed to parse content with strings: " ++ show err

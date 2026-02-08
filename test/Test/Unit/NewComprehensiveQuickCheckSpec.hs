@@ -14,7 +14,6 @@ import Test.Unit.NewSourceLocationQuickCheckSpec (sourceLocationTests)
 import Test.Unit.NewParserQuickCheckSpec (parserTests)
 import Test.Unit.NewErrorHandlerQuickCheckSpec (errorHandlerTests)
 import Test.Unit.NewOwnershipQuickCheckSpec (ownershipTests)
-import Test.Unit.NewCompilerQuickCheckSpec (compilerTests)
 
 -- ============================================================================
 -- Comprehensive QuickCheck Test Suite

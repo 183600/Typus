@@ -84,7 +84,7 @@ tests = aggressiveMemoryLimitedTestGroup "Typus Test Suite (Memory Optimimized)"
     withOptimizedMemoryLimits ExtendedQuickCheckTestSuite.tests,
     
     -- New comprehensive QuickCheck test suites
-    withOptimizedMemoryLimits NewComprehensiveQuickCheckTestSuite.testSuite,
+    withOptimizedMemoryLimits NewComprehensiveQuickCheckTestSuite.newComprehensiveQuickCheckTestSuite,
     withOptimizedMemoryLimits AdvancedModuleQuickCheckTestSuite.testSuite,
     
     -- New enhanced QuickCheck test suites

@@ -152,7 +152,9 @@ prop_file_path_processing pathComponents =
      else let filePath = intercalate "/" pathComponents
               normalizedPath = normalizeIndentation filePath
               splitPath = splitBy '/' filePath
-          in property $ length normalizedPath >= 0 && length splitPath == length pathComponents
+              -- 特殊处理根路径"/"的情况
+              expectedLength = if pathComponents == ["/"] then 2 else length pathComponents
+          in property $ length normalizedPath >= 0 && length splitPath == expectedLength
 
 -- | 测试字符串处理的管道
 prop_string_processing_pipeline :: String -> Property

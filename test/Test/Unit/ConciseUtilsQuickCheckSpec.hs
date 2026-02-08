@@ -235,5 +235,5 @@ prop_normalizeIndentation_removes_common_prefix s =
       -- For inputs with no indentation, the function should return the input unchanged
       hasCorrectBehavior = if length lines' <= 1 || all (all isSpace) lines'
                           then result == s  -- Single line or all whitespace lines should remain unchanged
-                          else result /= s || result == s  -- For multi-line inputs, either changed or unchanged is acceptable
+                          else True  -- For multi-line inputs, any behavior is acceptable as long as it doesn't crash
   in hasCorrectBehavior

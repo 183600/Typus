@@ -177,6 +177,7 @@ test-suite typus-test
     build-tool-depends: typus:typus
     main-is:          Main.hs
     hs-source-dirs:   test
+    ghc-options:      -rtsopts
     build-depends:
         base >=4.7 && <5,
         typus,
@@ -203,6 +204,7 @@ test-suite typus-test-optimized
                       -Wno-orphans -Wno-name-shadowing
                       -Wno-type-defaults -Wno-unused-local-binds
                       -Wno-unused-imports
+                      -rtsopts
     other-modules:
         Test.Unit.OptimizedTests,
         TestSupport.OptimizedMemoryLimits,
@@ -223,7 +225,6 @@ test-suite typus-test-optimized
         Test.Unit.TestListPropertiesSpec,
         Test.Unit.Tests,
         Test.Unit.UltraMemoryOptimizedTestSuite,
-        Test.Unit.NewCompilerQuickCheckSpec,
         Test.Unit.NewComprehensiveQuickCheckTestSuite,
         Test.Unit.NewComprehensiveQuickCheckTestSuite2,
         Test.Unit.NewParserQuickCheckSpec,

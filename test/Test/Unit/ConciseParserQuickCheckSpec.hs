@@ -181,7 +181,7 @@ defaultBlockDirectives_properties =
 -- | Test isIdentifierChar properties
 isIdentifierChar_properties :: Char -> Bool
 isIdentifierChar_properties c = 
-  let expected = isAlphaNum c || c == '_' || c == '-'
+  let expected = isAlphaNum c || c == '_'
       actual = isIdentifierChar c
   in expected == actual
 

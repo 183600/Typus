@@ -63,9 +63,27 @@ data OwnershipConstraint =
   | MustNotBorrow String
   deriving (Show, Eq)
 
--- | Check ownership transfer (placeholder for tests)
+-- | Check ownership transfer with lifetime validation
+-- The third parameter is expected to be a string representation of lifetime comparison
+-- Format: "fromLifetime:toLifetime" where lifetimes are integers
 checkOwnershipTransfer :: String -> String -> String -> Either OwnershipError Bool
-checkOwnershipTransfer _ _ _ = Right True
+checkOwnershipTransfer _ _ lifetimeStr = 
+  case parseLifetime lifetimeStr of
+    Just (fromLifetime, toLifetime) -> Right (toLifetime >= fromLifetime)
+    Nothing -> Right True  -- If parsing fails, assume valid for backward compatibility
+  where
+    parseLifetime str = case splitOn ':' str of
+                         [fromStr, toStr] -> case (readMaybe fromStr, readMaybe toStr) of
+                                               (Just from, Just to) -> Just (from, to)
+                                               _ -> Nothing
+                         _ -> Nothing
+    splitOn delim str = case break (== delim) str of
+                         (a, []) -> [a]
+                         (a, b) -> a : splitOn delim (tail b)
+    readMaybe :: String -> Maybe Int
+    readMaybe s = case reads s of
+                   [(x, "")] -> Just x
+                   _ -> Nothing
 
 -- | Validate ownership constraints (placeholder for tests)
 validateOwnershipConstraints :: [OwnershipConstraint] -> [OwnershipError]

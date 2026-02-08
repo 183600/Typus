@@ -72,7 +72,7 @@ extractEmbeddedPatterns content =
     , let trimmed = dropWhile isSpace line
     , directive `isPrefixOf` trimmed
     , let rest = dropWhile isSpace (drop (length directive) trimmed)
-    , token <- words rest
+    , token <- if null rest then [] else [rest]  -- 保留整个rest作为单个token，包括前导空格
     , not (null token)
     ]
   where
