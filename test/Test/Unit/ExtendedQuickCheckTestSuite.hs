@@ -8,7 +8,7 @@ import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 
-import Data.List (isInfixOf, nub, sort, group, intercalate)
+import Data.List (isInfixOf, nub, sort, group, intercalate, isPrefixOf)
 import Data.Char (isSpace, isAlpha, isDigit, isAlphaNum, toLower, toUpper)
 import Data.Either (isLeft, isRight)
 import Data.Maybe (isJust, isNothing, fromMaybe)
@@ -3381,7 +3381,10 @@ testCreateDebugInfo :: String -> String
 testCreateDebugInfo msg = "Debug: " ++ msg
 
 testGetDebugMessage :: String -> String
-testGetDebugMessage info = info
+testGetDebugMessage info = 
+  if "Debug: " `isPrefixOf` info
+  then drop 7 info  -- 移除"Debug: "前缀（7个字符）
+  else info
 
 -- | 测试套件
 tests :: TestTree

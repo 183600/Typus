@@ -27,6 +27,10 @@ import qualified Test.Unit.UltraMemoryOptimizedTestSuite as UltraMemoryOptimized
 -- Import the new extended QuickCheck test suite
 import qualified Test.Unit.ExtendedQuickCheckTestSuite as ExtendedQuickCheckTestSuite
 
+-- Import the new comprehensive QuickCheck test suites
+import qualified Test.Unit.NewComprehensiveQuickCheckTestSuite as NewComprehensiveQuickCheckTestSuite
+import qualified Test.Unit.AdvancedModuleQuickCheckTestSuite as AdvancedModuleQuickCheckTestSuite
+
 -- Memory-efficient test properties with controlled generator sizes
 prop_optimized_basic_property :: String -> Property
 prop_optimized_basic_property s = 
@@ -60,6 +64,10 @@ tests = aggressiveMemoryLimitedTestGroup "Typus Test Suite (Memory Optimimized)"
     
     -- Extended QuickCheck test suite with comprehensive test cases
     withOptimizedMemoryLimits ExtendedQuickCheckTestSuite.tests,
+    
+    -- New comprehensive QuickCheck test suites
+    withOptimizedMemoryLimits NewComprehensiveQuickCheckTestSuite.testSuite,
+    withOptimizedMemoryLimits AdvancedModuleQuickCheckTestSuite.testSuite,
     
     -- Create additional optimized test suite
     createOptimizedMemorySuite optimizedMemoryConfig "Additional Optimized Tests"
