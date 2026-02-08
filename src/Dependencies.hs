@@ -36,6 +36,16 @@ module Dependencies (
   solveConstraints,
   getDependentTypeErrors,
   unify,
+  
+  -- Wrapper functions for tests
+  addType',
+  addTypes',
+  addTypeWrapper,
+  addConstraint',
+  solveConstraints',
+  lookupTypeDef',
+  convertTypeExpr',
+  unify',
 
   -- Inference operations
   inferType,

@@ -6,6 +6,7 @@ module ErrorHandler (
   ErrorMessage,
   handleError,
   handleErrors,
+  handleErrorsList,
   createError,
   createWarning,
   createInfo,
@@ -35,6 +36,10 @@ handleError errs err = err : errs
 
 handleErrors :: ErrorHandler -> [TypeError] -> ErrorHandler
 handleErrors errs newErrs = newErrs ++ errs
+
+-- Additional function to handle list of errors directly
+handleErrorsList :: ErrorHandler -> [TypeError] -> ErrorHandler
+handleErrorsList errs = handleErrors errs
 
 createError :: String -> T.Text -> ErrorLocation -> TypeError
 createError errId msg loc = errorAt errId Error msg loc

@@ -48,6 +48,7 @@ module Compiler.TypeChecker (
     validateDependentType,
     TypeConstraint(..),
     applyConstraints,
+    applyConstraintsToType,
     satisfiesConstraints,
     -- Convenience function for tests
     typeCheck
@@ -1401,6 +1402,10 @@ validateDependentType typ = Right typ
 -- | Apply type constraints to an environment
 applyConstraints :: TypeEnv -> [TypeConstraint] -> TypeEnv
 applyConstraints env _ = env  -- Simplified implementation
+
+-- | Apply type constraints to a type (for tests)
+applyConstraintsToType :: [TypeConstraint] -> Type -> Type
+applyConstraintsToType constraints typ = typ  -- Simplified implementation
 
 -- | Check if a type satisfies all given constraints
 satisfiesConstraints :: Type -> [TypeConstraint] -> Bool

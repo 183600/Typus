@@ -48,8 +48,8 @@ prop_error_handling_idempotence errorMsg =
      then property True
      else let error1 = ErrorHandler.createError "test" (T.pack errorMsg) (ErrorLocation Nothing 0 0 Nothing Nothing)
               error2 = ErrorHandler.createError "test" (T.pack errorMsg) (ErrorLocation Nothing 0 0 Nothing Nothing)
-              handler1 = ErrorHandler.handleError [] [error1]
-              handler2 = ErrorHandler.handleError [] [error2]
+              handler1 = ErrorHandler.handleError [] error1
+              handler2 = ErrorHandler.handleError [] error2
           in property $ ErrorHandler.errorCount handler1 == ErrorHandler.errorCount handler2
 
 -- | 测试错误处理的构建
@@ -71,8 +71,8 @@ prop_error_handling_consistency errorMsg =
      then property True
      else let error1 = ErrorHandler.createError "test" (T.pack errorMsg) (ErrorLocation Nothing 0 0 Nothing Nothing)
               error2 = ErrorHandler.createError "test" (T.pack errorMsg) (ErrorLocation Nothing 0 0 Nothing Nothing)
-              handler1 = ErrorHandler.handleError [] [error1]
-              handler2 = ErrorHandler.handleError [] [error2]
+              handler1 = ErrorHandler.handleError [] error1
+              handler2 = ErrorHandler.handleError [] error2
           in property $ ErrorHandler.errorCount handler1 == ErrorHandler.errorCount handler2
 
 -- | 测试错误严重性排序

@@ -13,15 +13,20 @@ module SourceLocation (
 
     -- Position utilities
     startPos,
+    empty,
     posAfter,
     posAt,
     posAtLineCol,
+    posAtWithOffset,
+    posAdvanceBy,
 
     -- Span utilities
     emptySpan,
     spanFrom,
     spanTo,
     spanBetween,
+    spanStartPos,
+    spanEndPos,
     spanBetweenOrdered,
     mergeSpans,
     isValidSpan,
@@ -59,7 +64,8 @@ module SourceLocation (
     
     -- Functions for tests
     sourceLine,
-    sourceColumn
+    sourceColumn,
+    sourcePosOffset
 ) where
 
 
@@ -104,6 +110,10 @@ instance Ord SourcePos where
 startPos :: SourcePos
 startPos = SourcePos 1 1 0
 
+-- Empty position (alias for startPos, for tests)
+empty :: SourcePos
+empty = startPos
+
 -- Position after a character
 posAfter :: Char -> SourcePos -> SourcePos
 posAfter '\n' pos = pos
@@ -120,6 +130,10 @@ posAfter _ pos = pos
     , posOffset = posOffset pos + 1
     }
 
+-- Position advanced by offset amount (for tests)
+posAdvanceBy :: SourcePos -> Int -> SourcePos
+posAdvanceBy pos amount = pos { posOffset = posOffset pos + amount }
+
 -- Position at specific line and column
 posAt :: Int -> Int -> SourcePos
 posAt lineNum col = SourcePos lineNum col 0
@@ -127,6 +141,14 @@ posAt lineNum col = SourcePos lineNum col 0
 -- Position at specific line, column, and offset
 posAtLineCol :: Int -> Int -> Int -> SourcePos
 posAtLineCol = SourcePos
+
+-- Helper function for tests that takes 3 arguments
+posAtWithOffset :: Int -> Int -> Int -> SourcePos
+posAtWithOffset = posAtLineCol
+
+-- Get offset from SourcePos (for tests)
+sourcePosOffset :: SourcePos -> Int
+sourcePosOffset = posOffset
 
 -- ============================================================================
 -- Source Span
@@ -149,6 +171,14 @@ spanFrom = emptySpan
 -- Span ending at a position
 spanTo :: SourcePos -> SourceSpan
 spanTo pos = SourceSpan pos pos
+
+-- Extract start position from span (for tests)
+spanStartPos :: SourceSpan -> SourcePos
+spanStartPos = spanStart
+
+-- Extract end position from span (for tests)
+spanEndPos :: SourceSpan -> SourcePos
+spanEndPos = spanEnd
 
 -- Span between two positions (preserves order as expected by some tests)
 spanBetween :: SourcePos -> SourcePos -> SourceSpan

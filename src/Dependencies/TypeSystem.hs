@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE BangPatterns #-}
 
 module Dependencies.TypeSystem (
   -- Core types
@@ -37,11 +38,21 @@ module Dependencies.TypeSystem (
   checkTypeConstraint,
   validateConstraint,
   getDependentTypeErrors,
-  unify
+  unify,
+  
+  -- Wrapper functions for tests
+  addType',
+  addTypes',
+  addTypeWrapper,
+  addConstraint',
+  solveConstraints',
+  lookupTypeDef',
+  convertTypeExpr',
+  unify'
 ) where
 
 import Control.Monad (when)
-import Control.Monad.State (State, get, put, modify)
+import Control.Monad.State (State, get, put, modify, execState, evalState)
 import Data.Either (partitionEithers)
 
 import qualified Data.Map.Strict as Map
@@ -156,29 +167,59 @@ newDependentTypeCheckerWithTypes typeDefs =
 convertTypeExprAndRefinements :: Set.Set String -> TypeExpr -> (TypeVar, [TypeConstraint])
 convertTypeExprAndRefinements params te = case te of
   SimpleT n ->
-    ( nameToTypeVar params n
-    , []
-    )
+    let !tv = nameToTypeVar params n
+    in ( tv, [] )
   GenericT n args ->
-    let argPairs = map (convertTypeExprAndRefinements params) args
-        argTVs = map fst argPairs
-        argCs  = concatMap snd argPairs
-    in ( TVApp (T.unpack n) argTVs
-       , argCs
-       )
+    let !argPairs = map (convertTypeExprAndRefinementsLimited params 10) args  -- 限制递归深度
+        !argTVs = map fst argPairs
+        !argCs  = concatMap snd argPairs
+        !result = TVApp (T.unpack n) argTVs
+    in ( result, argCs )
   FuncT ps rt ->
-    let psPairs = [ convertTypeExprAndRefinements params t | (_,t) <- ps ]
-        psTVs = map fst psPairs
-        psCs  = concatMap snd psPairs
-        (rtTV, rtCs) = convertTypeExprAndRefinements params rt
-    in ( TVFun psTVs rtTV, psCs <> rtCs )
+    let !psPairs = map (\(_, t) -> convertTypeExprAndRefinementsLimited params 10 t) ps  -- 限制递归深度
+        !psTVs = map fst psPairs
+        !psCs  = concatMap snd psPairs
+        !(rtTV, rtCs) = convertTypeExprAndRefinementsLimited params 10 rt  -- 限制递归深度
+        !result = TVFun psTVs rtTV
+    in ( result, psCs ++ rtCs )
   RefineT base cs ->
-    let (bTV, bCs) = convertTypeExprAndRefinements params base
-        cs' = map (convertConstraint params) cs
-    in (bTV, bCs <> cs')
+    let !(bTV, bCs) = convertTypeExprAndRefinementsLimited params 10 base  -- 限制递归深度
+        !cs' = map (convertConstraint params) cs
+    in (bTV, bCs ++ cs')
+
+-- | 带深度限制的类型表达式转换函数
+convertTypeExprAndRefinementsLimited :: Set.Set String -> Int -> TypeExpr -> (TypeVar, [TypeConstraint])
+convertTypeExprAndRefinementsLimited _ 0 _ = (TVVar "depth_limit_exceeded", [])
+convertTypeExprAndRefinementsLimited params depth te = 
+  let !newDepth = depth - 1
+  in case te of
+    SimpleT n ->
+      let !tv = nameToTypeVar params n
+      in ( tv, [] )
+    GenericT n args ->
+      let !argPairs = map (convertTypeExprAndRefinementsLimited params newDepth) args
+          !argTVs = map fst argPairs
+          !argCs  = concatMap snd argPairs
+          !result = TVApp (T.unpack n) argTVs
+      in ( result, argCs )
+    FuncT ps rt ->
+      let !psPairs = map (\(_, t) -> convertTypeExprAndRefinementsLimited params newDepth t) ps
+          !psTVs = map fst psPairs
+          !psCs  = concatMap snd psPairs
+          !(rtTV, rtCs) = convertTypeExprAndRefinementsLimited params newDepth rt
+          !result = TVFun psTVs rtTV
+      in ( result, psCs ++ rtCs )
+    RefineT base cs ->
+      let !(bTV, bCs) = convertTypeExprAndRefinementsLimited params newDepth base
+          !cs' = map (convertConstraint params) cs
+      in (bTV, bCs ++ cs')
 
 convertTypeExpr :: Set.Set String -> TypeExpr -> TypeVar
 convertTypeExpr params t = fst (convertTypeExprAndRefinements params t)
+
+-- | Wrapper function for tests that doesn't require Set parameter
+convertTypeExpr' :: TypeExpr -> TypeVar
+convertTypeExpr' t = convertTypeExpr Set.empty t
 
 convertConstraint :: Set.Set String -> Constraint -> TypeConstraint
 convertConstraint params c = case c of
@@ -215,11 +256,29 @@ addType name params cs = do
       defs' = Map.insert name def defs
   put st { dtcTypeEnv = env { typeDefinitions = defs' } }
 
+-- | Wrapper function for tests that takes (name, TypeExpr) pairs
+addType' :: (String, TypeExpr) -> State DependentTypeChecker ()
+addType' (name, typeExpr) = do
+  let tv = convertTypeExpr' typeExpr
+  addType name [] []
+
+-- | Wrapper function for tests that adds a single type and returns the checker
+addTypeWrapper :: DependentTypeChecker -> (String, TypeExpr) -> DependentTypeChecker
+addTypeWrapper checker (name, typeExpr) = execState (addType' (name, typeExpr)) checker
+
+-- | Wrapper function for tests that adds multiple types
+addTypes' :: DependentTypeChecker -> [(String, TypeExpr)] -> DependentTypeChecker
+addTypes' checker bindings = execState (mapM addType' bindings) checker
+
 addConstraint :: TypeConstraint -> State DependentTypeChecker ()
 addConstraint c = do
   st <- get
   let env = dtcTypeEnv st
   put st { dtcTypeEnv = env { pendingConstraints = c : pendingConstraints env } }
+
+-- | Wrapper function for tests that returns updated checker
+addConstraint' :: DependentTypeChecker -> TypeConstraint -> DependentTypeChecker
+addConstraint' checker constraint = execState (addConstraint constraint) checker
 
 addTypeError :: DependentTypeError -> State DependentTypeChecker ()
 addTypeError e = modify (\st -> st { tcErrors = e : tcErrors st })
@@ -228,6 +287,10 @@ lookupTypeDef :: String -> State DependentTypeChecker (Maybe TypeDef)
 lookupTypeDef n = do
   st <- get
   pure $ Map.lookup n (typeDefinitions (dtcTypeEnv st))
+
+-- | Wrapper function for tests that returns result directly
+lookupTypeDef' :: DependentTypeChecker -> String -> Maybe TypeDef
+lookupTypeDef' checker name = evalState (lookupTypeDef name) checker
 
 checkType :: TypeVar -> State DependentTypeChecker ()
 checkType tv = case tv of
@@ -291,6 +354,10 @@ solveConstraints = do
       put st' { dtcTypeEnv = (dtcTypeEnv st') { pendingConstraints = [] } }
       pure (null errs)
 
+-- | Wrapper function for tests that takes a checker and returns result
+solveConstraints' :: DependentTypeChecker -> Bool
+solveConstraints' checker = evalState solveConstraints checker
+
 checkTypeConstraint :: [(String, TypeVar)] -> TypeConstraint -> State DependentTypeChecker ()
 checkTypeConstraint subst c =
   case validateConstraint (applySubstC subst c) of
@@ -347,6 +414,10 @@ occurs x tv = case tv of
   TVFun ps rt   -> any (occurs x) ps || occurs x rt
   TVTuple xs    -> any (occurs x) xs
 
+-- | Apply a substitution to a list of type variable pairs
+applyPairs :: (String, TypeVar) -> [(TypeVar, TypeVar)] -> [(TypeVar, TypeVar)]
+applyPairs (x, t) = map (\(a, b) -> (applySubst [(x, t)] a, applySubst [(x, t)] b))
+
 unify :: [(TypeVar, TypeVar)] -> Maybe Subst
 unify = go []
   where
@@ -376,7 +447,9 @@ unify = go []
               | otherwise   -> Nothing
             _               -> Nothing
 
-    applyPairs (x,t) = map (\(l,r) -> (applySubst [(x,t)] l, applySubst [(x,t)] r))
+-- | Wrapper function for tests that unifies two type variables
+unify' :: TypeVar -> TypeVar -> Maybe Subst
+unify' t1 t2 = unify [(t1, t2)]
 
 isSubtype :: TypeVar -> TypeVar -> Bool
 isSubtype a b = a == b

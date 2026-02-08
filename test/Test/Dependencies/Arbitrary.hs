@@ -6,7 +6,7 @@ module Test.Dependencies.Arbitrary () where
 
 import Test.QuickCheck (Arbitrary(..), oneof, elements, listOf1, choose)
 
-import Dependencies.AST (AST(..), Statement(..), TypeExpr(..))
+import Dependencies.AST (AST(..), Statement(..), TypeExpr(..), Constraint(..))
 import Dependencies.TypeSystem (TypeVar(..), TypeConstraint(..))
 
 instance Arbitrary TypeVar where
@@ -19,6 +19,22 @@ instance Arbitrary TypeConstraint where
     , TypeRange <$> arbitrary <*> choose (0, 50) <*> choose (51, 100)
     , Equal <$> arbitrary <*> arbitrary
     , Predicate <$> elements ["Ord", "Eq", "Show"] <*> listOf1 arbitrary
+    ]
+
+instance Arbitrary TypeExpr where
+  arbitrary = oneof
+    [ SimpleT <$> elements ["int", "string", "bool", "float"]
+    , GenericT <$> elements ["List", "Map", "Set"] <*> listOf1 arbitrary
+    , FuncT <$> listOf1 ((,) <$> elements ["x", "y", "z"] <*> arbitrary) <*> arbitrary
+    , RefineT <$> arbitrary <*> listOf1 arbitrary
+    ]
+
+instance Arbitrary Constraint where
+  arbitrary = oneof
+    [ SizeGT <$> elements ["x", "y", "z"] <*> choose (0, 100)
+    , SizeGE <$> elements ["x", "y", "z"] <*> choose (0, 100)
+    , RangeC <$> elements ["x", "y", "z"] <*> choose (0, 50) <*> choose (51, 100)
+    , PredC <$> elements ["Ord", "Eq", "Show"] <*> listOf1 arbitrary
     ]
 
 instance Arbitrary Statement where

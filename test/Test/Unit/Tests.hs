@@ -39,6 +39,16 @@ import qualified Test.Unit.ComprehensiveSourceLocationQuickCheckSpec as Comprehe
 import qualified Test.Unit.AdvancedParserCombinatorsQuickCheckSpec as AdvancedParserCombinatorsQuickCheckSpec
 import qualified Test.Unit.EnhancedTypeCheckerQuickCheckSpec as EnhancedTypeCheckerQuickCheckSpec
 
+-- Import the new core module QuickCheck test suites
+import qualified Test.Unit.AnalyzerCoreQuickCheckSpec as AnalyzerCoreQuickCheckSpec
+import qualified Test.Unit.CliCoreQuickCheckSpec as CliCoreQuickCheckSpec
+import qualified Test.Unit.DebugCoreQuickCheckSpec as DebugCoreQuickCheckSpec
+import qualified Test.Unit.EmbedAssetsCoreQuickCheckSpec as EmbedAssetsCoreQuickCheckSpec
+import qualified Test.Unit.GoToolchainCoreQuickCheckSpec as GoToolchainCoreQuickCheckSpec
+import qualified Test.Unit.SyntaxValidatorCoreQuickCheckSpec as SyntaxValidatorCoreQuickCheckSpec
+import qualified Test.Unit.UtilsCoreQuickCheckSpec as UtilsCoreQuickCheckSpec
+import qualified Test.Unit.ComprehensiveIntegrationQuickCheckSpec as ComprehensiveIntegrationQuickCheckSpec
+
 -- Memory-efficient test properties with controlled generator sizes
 prop_optimized_basic_property :: String -> Property
 prop_optimized_basic_property s = 
@@ -84,6 +94,16 @@ tests = aggressiveMemoryLimitedTestGroup "Typus Test Suite (Memory Optimimized)"
     withOptimizedMemoryLimits ComprehensiveSourceLocationQuickCheckSpec.testSuite,
     withOptimizedMemoryLimits AdvancedParserCombinatorsQuickCheckSpec.testSuite,
     withOptimizedMemoryLimits EnhancedTypeCheckerQuickCheckSpec.testSuite,
+    
+    -- New core module QuickCheck test suites
+    withOptimizedMemoryLimits AnalyzerCoreQuickCheckSpec.testSuite,
+    withOptimizedMemoryLimits CliCoreQuickCheckSpec.testSuite,
+    withOptimizedMemoryLimits DebugCoreQuickCheckSpec.testSuite,
+    withOptimizedMemoryLimits EmbedAssetsCoreQuickCheckSpec.testSuite,
+    withOptimizedMemoryLimits GoToolchainCoreQuickCheckSpec.testSuite,
+    withOptimizedMemoryLimits SyntaxValidatorCoreQuickCheckSpec.testSuite,
+    withOptimizedMemoryLimits UtilsCoreQuickCheckSpec.testSuite,
+    withOptimizedMemoryLimits ComprehensiveIntegrationQuickCheckSpec.testSuite,
     
     -- Create additional optimized test suite
     createOptimizedMemorySuite optimizedMemoryConfig "Additional Optimized Tests"

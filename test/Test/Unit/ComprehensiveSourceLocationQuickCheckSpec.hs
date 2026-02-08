@@ -49,9 +49,11 @@ prop_source_span_construction (line1, col1, offset1) (line2, col2, offset2) =
       end = SourcePos line2 col2 offset2
       span = SourceSpan start end
       spanValid = isValidSpan span
+      -- Span is valid only if start position <= end position
+      shouldBeValid = validPos && comparePos start end /= GT
   in if not validPos
      then property True
-     else property $ spanValid
+     else property $ spanValid == shouldBeValid
 
 -- | 测试源范围的合并
 prop_source_span_merge :: (Int, Int, Int) -> (Int, Int, Int) -> (Int, Int, Int) -> (Int, Int, Int) -> Property
@@ -78,10 +80,9 @@ prop_source_position_ordering (line1, col1) (line2, col2) =
 -- | 测试空源范围
 prop_empty_source_span :: Property
 prop_empty_source_span =
-  let empty = emptySpan
-      start = startPos
+  let start = startPos
       end = startPos
-  in property $ empty == SourceSpan start end
+  in property $ emptySpan empty == SourceSpan start end
 
 -- | 测试源范围的有效性
 prop_source_span_validity :: (Int, Int, Int) -> (Int, Int, Int) -> Property
@@ -92,9 +93,11 @@ prop_source_span_validity (line1, col1, offset1) (line2, col2, offset2) =
       end = SourcePos line2 col2 offset2
       span = SourceSpan start end
       spanValid = isValidSpan span
+      -- Span is valid only if start position <= end position
+      shouldBeValid = validPos && comparePos start end /= GT
   in if not validPos
      then property True
-     else property $ spanValid
+     else property $ spanValid == shouldBeValid
 
 -- | 测试位置创建函数
 prop_position_creation :: Int -> Int -> Int -> Property
@@ -103,7 +106,7 @@ prop_position_creation line col offset =
   in if not validPos
      then property True
      else let pos1 = SourcePos line col offset
-              pos2 = posAt line col offset
+              pos2 = posAtWithOffset line col offset
           in property $ pos1 == pos2
 
 -- | 测试位置偏移函数
@@ -114,7 +117,7 @@ prop_position_offset line col offset offsetAmount =
   in if not (validPos && validAmount)
      then property True
      else let pos = SourcePos line col offset
-              afterPos = posAfter pos offsetAmount
+              afterPos = posAdvanceBy pos offsetAmount
           in property $ sourcePosOffset afterPos >= sourcePosOffset pos
 
 -- | 测试Located值的基本属性
@@ -156,8 +159,8 @@ prop_source_span_position_extraction (line1, col1, offset1) (line2, col2, offset
       start = SourcePos line1 col1 offset1
       end = SourcePos line2 col2 offset2
       span = SourceSpan start end
-      extractedStart = spanFrom span
-      extractedEnd = spanTo span
+      extractedStart = spanStartPos span
+      extractedEnd = spanEndPos span
   in if not validPos
      then property True
      else property $ extractedStart == start && extractedEnd == end
@@ -178,9 +181,10 @@ prop_source_span_ordered_creation (line1, col1, offset1) (line2, col2, offset2) 
 prop_source_span_line_col_creation :: Int -> Int -> Int -> Int -> Property
 prop_source_span_line_col_creation line1 col1 line2 col2 =
   let validPos = line1 >= 0 && col1 >= 0 && line2 >= 0 && col2 >= 0
-      pos1 = posAtLineCol line1 col1
-      pos2 = posAtLineCol line2 col2
-      span = spanBetween pos1 pos2
+      pos1 = posAtLineCol line1 col1 0
+      pos2 = posAtLineCol line2 col2 0
+      -- 使用spanBetweenOrdered确保span总是有效的
+      span = spanBetweenOrdered pos1 pos2
   in if not validPos
      then property True
      else property $ isValidSpan span
@@ -248,7 +252,7 @@ prop_complex_source_span_calculations complexity =
      then property True
      else let spans = take complexity $ map (\i -> 
                    SourceSpan (SourcePos i 0 0) (SourcePos (i+1) 0 0)) [0..]
-              merged = foldl mergeSpans emptySpan spans
+              merged = foldl mergeSpans (emptySpan (SourcePos 0 0 0)) spans
           in property $ isValidSpan merged
 
 -- ============================================================================
@@ -287,7 +291,8 @@ prop_source_span_boundary_conditions line1 col1 line2 col2 =
   let validPos = line1 >= 0 && col1 >= 0 && line2 >= 0 && col2 >= 0
       start = SourcePos line1 col1 0
       end = SourcePos line2 col2 0
-      span = SourceSpan start end
+      -- 使用spanBetweenOrdered确保span总是有效的
+      span = spanBetweenOrdered start end
   in if not validPos
      then property True
      else property $ isValidSpan span

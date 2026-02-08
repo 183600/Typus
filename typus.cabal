@@ -180,6 +180,7 @@ test-suite typus-test
     build-depends:
         base >=4.7 && <5,
         typus,
+        mtl >= 2.2 && <3,
         tasty >= 1.4 && <2,
         tasty-quickcheck >= 0.10 && <1,
         tasty-hunit >= 0.10 && <1,
