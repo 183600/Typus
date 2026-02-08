@@ -7,6 +7,14 @@ module Test.Unit.BasicQuickCheckTestSuite where
 import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
+import TestSupport.MemoryLimits 
+  ( withMemoryLimits
+  , memoryLimitedTestGroup
+  , memoryLevelTestGroup
+  , MemoryLevel(..)
+  , withMemoryLevel
+  , gcBetweenTests
+  )
 
 
 
@@ -19,11 +27,12 @@ import Data.Maybe (listToMaybe)
 -- | 测试trim函数的基本属性
 prop_trim_basic :: String -> Property
 prop_trim_basic s =
-  let trimmed = trim s
+  let limitedString = take 50 s  -- 限制字符串大小防止内存消耗过大
+      trimmed = trim limitedString
   in property $ 
-    (length trimmed <= length s) && 
-    (if null s then null trimmed else True) &&
-    (if all isSpace s then null trimmed else True)
+    (length trimmed <= length limitedString) && 
+    (if null limitedString then null trimmed else True) &&
+    (if all isSpace limitedString then null trimmed else True)
 
 -- | 测试trim对空字符串的处理
 prop_trim_empty :: Property
@@ -41,29 +50,33 @@ prop_trim_whitespace s =
 prop_trim_regular :: Char -> String -> Property
 prop_trim_regular c s =
   not (isSpace c) ==>
-  let s' = c : s
+  let limitedS = take 30 s  -- 限制字符串大小
+      s' = c : limitedS
       trimmed = trim s'
       firstCharIsC = case listToMaybe trimmed of
                        Nothing -> property False
                        Just h -> h === c
-  in conjoin [property (not (null trimmed)), firstCharIsC, property (length trimmed >= 1)]
+  in conjoin [property (not (null trimmed)), firstCharIsC, property (length trimmed >= 1 && length trimmed <= 31)]
 
 -- | 测试trim的幂等性
 prop_trim_idempotent :: String -> Property
 prop_trim_idempotent s =
-  let trimmed1 = trim s
+  let limitedString = take 40 s  -- 限制字符串大小
+      trimmed1 = trim limitedString
       trimmed2 = trim trimmed1
   in trimmed1 === trimmed2
 
 -- | 测试splitBy的基本属性
 prop_splitBy_basic :: Char -> String -> Property
 prop_splitBy_basic c s =
-  let parts = splitBy c s
-  in if null s
+  let limitedS = take 60 s  -- 限制字符串大小
+      parts = splitBy c limitedS
+  in if null limitedS
      then parts === []
-     else if all (== c) s
-          then parts === replicate (length s + 1) ""
-          else property $ length (concat parts) >= length s - length (filter (== c) s)
+     else if all (== c) limitedS
+          then parts === replicate (length limitedS + 1) ""
+          else property $ length (concat parts) >= length limitedS - length (filter (== c) limitedS) &&
+                     length parts <= 20  -- 限制分割后的部分数量
 
 -- | 测试splitBy对空字符串的处理
 prop_splitBy_empty :: Char -> Property
@@ -239,31 +252,31 @@ test_isLeft_edge_cases = do
 
 -- | 测试套件
 tests :: TestTree
-tests = testGroup "Basic QuickCheck Test Suite"
-  [ testProperty "Trim basic" prop_trim_basic
-  , testProperty "Trim empty" prop_trim_empty
-  , testProperty "Trim whitespace" prop_trim_whitespace
-  , testProperty "Trim regular" prop_trim_regular
-  , testProperty "Trim idempotent" prop_trim_idempotent
-  , testProperty "SplitBy basic" prop_splitBy_basic
-  , testProperty "SplitBy empty" prop_splitBy_empty
-  , testProperty "SplitByComma basic" prop_splitByComma_basic
-  , testProperty "SplitByComma empty" prop_splitByComma_empty
-  , testProperty "RemoveLineComments basic" prop_removeLineComments_basic
-  , testProperty "RemoveLineComments empty" prop_removeLineComments_empty
-  , testProperty "RemoveLineComments no comments" prop_removeLineComments_no_comments
-  , testProperty "RemoveComments basic" prop_removeComments_basic
-  , testProperty "RemoveComments empty" prop_removeComments_empty
-  , testProperty "RemoveComments no comments" prop_removeComments_no_comments
-  , testProperty "NormalizeIndentation basic" prop_normalizeIndentation_basic
-  , testProperty "NormalizeIndentation empty" prop_normalizeIndentation_empty
-  , testProperty "NormalizeIndentation no indent" prop_normalizeIndentation_no_indent
-  , testProperty "isRight basic" prop_isRight_basic
-  , testProperty "isLeft basic" prop_isLeft_basic
-  , testProperty "isRight right" prop_isRight_right
-  , testProperty "isRight left" prop_isRight_left
-  , testProperty "isLeft right" prop_isLeft_right
-  , testProperty "isLeft left" prop_isLeft_left
+tests = memoryLevelTestGroup Moderate "Basic QuickCheck Test Suite (Memory Optimized)"
+  [ withMemoryLevel Moderate $ testProperty "Trim basic" prop_trim_basic
+  , withMemoryLevel Moderate $ testProperty "Trim empty" prop_trim_empty
+  , withMemoryLevel Moderate $ testProperty "Trim whitespace" prop_trim_whitespace
+  , withMemoryLevel Moderate $ testProperty "Trim regular" prop_trim_regular
+  , withMemoryLevel Moderate $ testProperty "Trim idempotent" prop_trim_idempotent
+  , withMemoryLevel Moderate $ testProperty "SplitBy basic" prop_splitBy_basic
+  , withMemoryLevel Moderate $ testProperty "SplitBy empty" prop_splitBy_empty
+  , withMemoryLevel Moderate $ testProperty "SplitByComma basic" prop_splitByComma_basic
+  , withMemoryLevel Moderate $ testProperty "SplitByComma empty" prop_splitByComma_empty
+  , withMemoryLevel Moderate $ testProperty "RemoveLineComments basic" prop_removeLineComments_basic
+  , withMemoryLevel Moderate $ testProperty "RemoveLineComments empty" prop_removeLineComments_empty
+  , withMemoryLevel Moderate $ testProperty "RemoveLineComments no comments" prop_removeLineComments_no_comments
+  , withMemoryLevel Moderate $ testProperty "RemoveComments basic" prop_removeComments_basic
+  , withMemoryLevel Moderate $ testProperty "RemoveComments empty" prop_removeComments_empty
+  , withMemoryLevel Moderate $ testProperty "RemoveComments no comments" prop_removeComments_no_comments
+  , withMemoryLevel Moderate $ testProperty "NormalizeIndentation basic" prop_normalizeIndentation_basic
+  , withMemoryLevel Moderate $ testProperty "NormalizeIndentation empty" prop_normalizeIndentation_empty
+  , withMemoryLevel Moderate $ testProperty "NormalizeIndentation no indent" prop_normalizeIndentation_no_indent
+  , withMemoryLevel Moderate $ testProperty "isRight basic" prop_isRight_basic
+  , withMemoryLevel Moderate $ testProperty "isLeft basic" prop_isLeft_basic
+  , withMemoryLevel Moderate $ testProperty "isRight right" prop_isRight_right
+  , withMemoryLevel Moderate $ testProperty "isRight left" prop_isRight_left
+  , withMemoryLevel Moderate $ testProperty "isLeft right" prop_isLeft_right
+  , withMemoryLevel Moderate $ testProperty "isLeft left" prop_isLeft_left
   , testCase "Trim edge cases" test_trim_edge_cases
   , testCase "SplitBy edge cases" test_splitBy_edge_cases
   , testCase "SplitByComma edge cases" test_splitByComma_edge_cases
@@ -272,4 +285,15 @@ tests = testGroup "Basic QuickCheck Test Suite"
   , testCase "NormalizeIndentation edge cases" test_normalizeIndentation_edge_cases
   , testCase "isRight edge cases" test_isRight_edge_cases
   , testCase "isLeft edge cases" test_isLeft_edge_cases
+  ]
+
+-- | 轻量级测试套件，用于内存受限环境
+essentialTests :: TestTree
+essentialTests = memoryLevelTestGroup Minimal "Basic QuickCheck Essential Tests"
+  [ withMemoryLevel Minimal $ testProperty "Trim basic" prop_trim_basic
+  , withMemoryLevel Minimal $ testProperty "Trim idempotent" prop_trim_idempotent
+  , withMemoryLevel Minimal $ testProperty "SplitBy basic" prop_splitBy_basic
+  , withMemoryLevel Minimal $ testProperty "RemoveLineComments basic" prop_removeLineComments_basic
+  , withMemoryLevel Minimal $ testCase "Trim edge cases" test_trim_edge_cases
+  , withMemoryLevel Minimal $ testCase "SplitBy edge cases" test_splitBy_edge_cases
   ]

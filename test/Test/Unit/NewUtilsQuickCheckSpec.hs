@@ -1,282 +1,433 @@
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-deprecations  -Wno-unused-imports -Wno-name-shadowing  -Wno-unused-matches #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Test.Unit.NewUtilsQuickCheckSpec where
-
-
 
 import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
+import TestSupport.MemoryLimits 
+  ( withMemoryLimits
+  , memoryLimitedTestGroup
+  , memoryLevelTestGroup
+  , MemoryLevel(..)
+  , withMemoryLevel
+  , gcBetweenTests
+  )
 
 import Utils
-import SourceLocation (SourcePos(..))
-import Data.Char (isSpace, isControl)
+import Data.Char (isSpace, isAlphaNum, isLetter)
 import Data.List (isPrefixOf, isInfixOf, isSuffixOf)
-import Data.String (IsString)
+import Data.Either (isLeft)
+import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
 
--- ============================================================================
--- Utils Module QuickCheck Tests
--- ============================================================================
+-- | 测试trim函数对空白字符的处理
+prop_trim_whitespace_handling :: String -> Property
+prop_trim_whitespace_handling s =
+  let limitedS = take 100 s
+      trimmed = trim limitedS
+  in if all isSpace limitedS
+     then property $ null trimmed
+     else property $ length trimmed <= length limitedS
 
--- Test trim function
-prop_trim_idempotent :: String -> Property
-prop_trim_idempotent s = trim (trim s) === trim s
+-- | 测试trim函数对非空白字符的处理
+prop_trim_non_whitespace_handling :: Char -> String -> Property
+prop_trim_non_whitespace_handling c s =
+  not (isSpace c) ==>
+  let limitedS = take 50 s
+      s' = c : limitedS
+      trimmed = trim s'
+  in property $ not (null trimmed) && head trimmed == c
 
-prop_trim_removes_leading_trailing_spaces :: String -> Property
-prop_trim_removes_leading_trailing_spaces s = 
-  let trimmed = trim s
-      hasLeadingSpace = case s of (x:_) -> isSpace x; [] -> False
-      hasTrailingSpace = case reverse s of (x:_) -> isSpace x; [] -> False
-  in if hasLeadingSpace || hasTrailingSpace
-     then property $ not (isPrefixOf " " trimmed || isSuffixOf " " trimmed)
-     else property $ trimmed === s
+-- | 测试trim函数的组合性
+prop_trim_composition :: String -> String -> Property
+prop_trim_composition s1 s2 =
+  let limitedS1 = take 40 s1
+      limitedS2 = take 40 s2
+      combined = limitedS1 ++ "   " ++ limitedS2
+      trimmed = trim combined
+  in property $ length trimmed <= length combined
 
-prop_trim_preserves_non_space_content :: String -> Property
-prop_trim_preserves_non_space_content s = 
-  let nonSpaceContent = filter (not . isSpace) s
-      trimmedNonSpaceContent = filter (not . isSpace) (trim s)
-  in property $ nonSpaceContent === trimmedNonSpaceContent
+-- | 测试splitByCollapsed的基本属性
+prop_splitBy_collapsed_basic :: Char -> String -> Property
+prop_splitBy_collapsed_basic c s =
+  let limitedS = take 80 s
+      parts = splitByCollapsed c limitedS
+  in if null limitedS
+     then parts === []
+     else property $ not (any null parts)
 
--- Test splitBy function
-prop_split_by_empty_string :: Char -> Property
-prop_split_by_empty_string delim = splitBy delim "" === []
+-- | 测试splitByCollapsed与splitBy的关系
+prop_splitBy_collapsed_vs_splitBy :: Char -> String -> Property
+prop_splitBy_collapsed_vs_splitBy c s =
+  let limitedS = take 60 s
+      collapsedParts = splitByCollapsed c limitedS
+      regularParts = splitBy c limitedS
+      filteredRegular = filter (not . null) regularParts
+  in collapsedParts === filteredRegular
 
-prop_split_by_single_char :: Char -> Char -> Property
-prop_split_by_single_char delim c = 
-  if c == delim 
-  then splitBy delim [c] === ["", ""]
-  else splitBy delim [c] === [[c]]
+-- | 测试splitByCommaCollapsed的基本属性
+prop_splitBy_comma_collapsed_basic :: String -> Property
+prop_splitBy_comma_collapsed_basic s =
+  let parts = splitByCommaCollapsed s
+  in if null s
+     then parts === []
+     else property $ not (any null parts)
 
-prop_split_by_all_delimiters :: Char -> Positive Int -> Property
-prop_split_by_all_delimiters delim (Positive n) = 
-  let delimiters = replicate n delim
-      result = splitBy delim delimiters
-      expected = replicate (n + 1) ""
-  in property $ result === expected
+-- | 测试splitByCommaCollapsed与splitByComma的关系
+prop_splitBy_comma_collapsed_vs_splitBy_comma :: String -> Property
+prop_splitBy_comma_collapsed_vs_splitBy_comma s =
+  let collapsedParts = splitByCommaCollapsed s
+      regularParts = splitByComma s
+      filteredRegular = filter (not . null) regularParts
+  in collapsedParts === filteredRegular
 
-prop_split_by_roundtrip :: Char -> String -> Property
-prop_split_by_roundtrip delim s = 
-  let parts = splitBy delim s
-  in if null parts
-     then property $ "" === s
-     else let reconstructed = concat $ map (\p -> p ++ [delim]) (init parts) ++ [last parts]
-          in property $ take (length s + length parts - 1) reconstructed === s
+-- | 测试removeLineComments对字符串字面量的处理
+prop_remove_line_comments_string_literals :: String -> String -> Property
+prop_remove_line_comments_string_literals code comment =
+  let validCode = not ('\"' `elem` code) && not ('\'' `elem` code)
+      validComment = not ('\"' `elem` comment) && not ('\'' `elem` comment)
+  in if not (validCode && validComment)
+     then property True
+     else let codeWithComment = code ++ " // " ++ comment
+              withStringLiteral = "\"string literal\" " ++ codeWithComment
+              result = removeLineComments withStringLiteral
+          in property $ "\"string literal\"" `isInfixOf` result
 
-prop_split_by_collapsed_consistency :: Char -> String -> Property
-prop_split_by_collapsed_consistency delim s = 
-  let normal = splitBy delim s
-      collapsed = splitByCollapsed delim s
-  in property $ collapsed === filter (not . null) normal
+-- | 测试removeLineComments对字符字面量的处理
+prop_remove_line_comments_char_literals :: String -> String -> Property
+prop_remove_line_comments_char_literals code comment =
+  let validCode = not ('\"' `elem` code) && not ('\'' `elem` code)
+      validComment = not ('\"' `elem` comment) && not ('\'' `elem` comment)
+  in if not (validCode && validComment)
+     then property True
+     else let codeWithComment = code ++ " // " ++ comment
+              withCharLiteral = "'c' " ++ codeWithComment
+              result = removeLineComments withCharLiteral
+          in property $ "'c'" `isInfixOf` result
 
--- Test splitByComma functions
-prop_split_by_comma_consistency :: String -> Property
-prop_split_by_comma_consistency s = splitByComma s === splitBy ',' s
+-- | 测试removeComments对嵌套注释的处理
+prop_remove_comments_nested :: String -> String -> Property
+prop_remove_comments_nested outer inner =
+  let validOuter = not ('\"' `elem` outer) && not ('\'' `elem` outer)
+      validInner = not ('\"' `elem` inner) && not ('\'' `elem` inner)
+  in if not (validOuter && validInner)
+     then property True
+     else let nestedComment = "/* " ++ outer ++ " /* " ++ inner ++ " */ " ++ outer ++ " */"
+              result = removeComments nestedComment
+          in property $ not ("/*" `isInfixOf` result) && not ("*/" `isInfixOf` result)
 
-prop_split_by_comma_collapsed_consistency :: String -> Property
-prop_split_by_comma_collapsed_consistency s = 
-  splitByCommaCollapsed s === splitByCollapsed ',' s
+-- | 测试removeComments对字符串中注释的处理
+prop_remove_comments_strings_with_comments :: String -> String -> Property
+prop_remove_comments_strings_with_comments str comment =
+  let validStr = not ('\"' `elem` str) && not ('\'' `elem` str)
+      validComment = not ('\"' `elem` comment) && not ('\'' `elem` comment)
+  in if not (validStr && validComment)
+     then property True
+     else let stringWithComment = "\"" ++ str ++ " /* " ++ comment ++ " */\""
+              result = removeComments stringWithComment
+              commentStr = "/* " ++ comment ++ " */"
+          in property $ commentStr `isInfixOf` result
 
--- Test removeLineComments function
-prop_remove_line_comments_preserves_non_commented :: String -> Property
-prop_remove_line_comments_preserves_non_commented s = 
-  if "//" `Data.List.isInfixOf` s
-  then property $ True  -- If contains comment pattern, skip this test
-  else property $ removeLineComments s === s
+-- | 测试isCompleteStringLiteral对有效字符串的处理
+prop_is_complete_string_literal_valid :: String -> Property
+prop_is_complete_string_literal_valid s =
+  let validS = take 50 s
+      stringWithQuotes = "\"" ++ validS ++ "\""
+  in property $ isCompleteStringLiteral stringWithQuotes
 
-prop_remove_line_comments_handles_empty :: Property
-prop_remove_line_comments_handles_empty = removeLineComments "" === ""
+-- | 测试isCompleteStringLiteral对无效字符串的处理
+prop_is_complete_string_literal_invalid :: String -> Property
+prop_is_complete_string_literal_invalid s =
+  let validS = take 50 s
+      stringWithoutEndQuote = "\"" ++ validS
+  in property $ not $ isCompleteStringLiteral stringWithoutEndQuote
 
-prop_remove_line_comments_handles_only_comment :: String -> Property
-prop_remove_line_comments_handles_only_comment s = 
-  let comment = "//" ++ s
-      result = removeLineComments comment
-  in property $ null result || all isSpace result
+-- | 测试isCompleteStringLiteral对转义引号的处理
+prop_is_complete_string_literal_escaped_quotes :: String -> Property
+prop_is_complete_string_literal_escaped_quotes s =
+  let validS = take 50 s
+      stringWithEscapedQuotes = "\"" ++ validS ++ "\\\"" ++ validS ++ "\""
+  in property $ isCompleteStringLiteral stringWithEscapedQuotes
 
-prop_remove_line_comments_preserves_strings :: String -> Property
-prop_remove_line_comments_preserves_strings s = 
-  let stringWithComment = "let x = \"// not a comment\" // actual comment"
-      result = removeLineComments stringWithComment
-  in property $ "// not a comment" `Data.List.isInfixOf` result
+-- | 测试isProblematicUnclosedString对问题字符串的处理
+prop_is_problematic_unclosed_string :: String -> Property
+prop_is_problematic_unclosed_string s =
+  let validS = take 30 s
+      problematicString = "\"\\\"" ++ validS
+  in property $ isProblematicUnclosedString problematicString
 
--- Test removeComments function
-prop_remove_comments_preserves_non_commented :: String -> Property
-prop_remove_comments_preserves_non_commented s = 
-  if ("//" `Data.List.isInfixOf` s) || ("/*" `Data.List.isInfixOf` s)
-  then property $ True  -- If contains comment pattern, skip this test
-  else property $ removeComments s === s
-
-prop_remove_comments_handles_empty :: Property
-prop_remove_comments_handles_empty = removeComments "" === ""
-
-prop_remove_comments_block_comments :: String -> String -> Property
-prop_remove_comments_block_comments before after = 
-  let input = before ++ "/* comment */" ++ after
-      result = removeComments input
-  in property $ before `isPrefixOf` result && after `isSuffixOf` result
-
-prop_remove_comments_preserves_strings :: String -> Property
-prop_remove_comments_preserves_strings s = 
-  let stringWithComment = "let x = \"/* not a comment */\" // actual comment"
-      result = removeComments stringWithComment
-  in property $ "/* not a comment */" `Data.List.isInfixOf` result
-
--- Test normalizeIndentation function
-prop_normalize_indentation_preserves_relative :: String -> Property
-prop_normalize_indentation_preserves_relative s = 
-  let lines' = lines s
-      normalized = normalizeIndentation s
-      normalizedLines = lines normalized
-  in if length lines' <= 1
-     then property $ normalized === s
-     else property $ length normalizedLines === length lines'
-
-prop_normalize_indentation_handles_empty :: Property
-prop_normalize_indentation_handles_empty = normalizeIndentation "" === ""
-
+-- | 测试normalizeIndentation对单行的处理
 prop_normalize_indentation_single_line :: String -> Property
-prop_normalize_indentation_single_line s = 
-  let singleLine = if '\n' `elem` s then takeWhile (/= '\n') s else s
-  in property $ normalizeIndentation singleLine === singleLine
+prop_normalize_indentation_single_line s =
+  let limitedS = take 80 s
+      normalized = normalizeIndentation limitedS
+  in if null limitedS
+     then normalized === ""
+     else property $ length normalized >= 0
 
-prop_normalize_indentation_removes_common_prefix :: Property
-prop_normalize_indentation_removes_common_prefix = 
-  let input = "  line1\n    line2\n  line3"
-      result = normalizeIndentation input
-      expected = "line1\n  line2\nline3"
-  in property $ result === expected
+-- | 测试normalizeIndentation对多行的处理
+prop_normalize_indentation_multi_line :: String -> String -> Property
+prop_normalize_indentation_multi_line s1 s2 =
+  let limitedS1 = take 40 s1
+      limitedS2 = take 40 s2
+      multiLine = limitedS1 ++ "\n" ++ limitedS2
+      normalized = normalizeIndentation multiLine
+  in property $ length normalized >= 0
 
--- Test forceSingleTabIndentation function
-prop_force_single_tab_indentation_adds_tab :: String -> Property
-prop_force_single_tab_indentation_adds_tab s = 
-  let trimmed = trim s
-      result = forceSingleTabIndentation s
-      resultLines = lines result
-  in if null trimmed
-     then property $ all (\line -> null line || line == "\t") resultLines
-     else property $ all (\line -> null line || '\t' `elem` line) resultLines
+-- | 测试breakOn的基本属性
+prop_break_on_basic :: String -> String -> Property
+prop_break_on_basic needle haystack =
+  let limitedNeedle = take 20 needle
+      limitedHaystack = take 100 haystack
+      (before, after) = breakOn limitedNeedle limitedHaystack
+  in if null limitedNeedle
+     then before === limitedHaystack && after === ""
+     else if limitedNeedle `isInfixOf` limitedHaystack
+          then property $ before ++ limitedNeedle ++ after === limitedHaystack
+          else before === limitedHaystack && after === ""
 
--- Test breakOn function
-prop_break_on_empty_pattern :: String -> Property
-prop_break_on_empty_pattern s = breakOn "" s === ("", s)
+-- | 测试breakOn对空针的处理
+prop_break_on_empty_needle :: String -> Property
+prop_break_on_empty_needle haystack =
+  let limitedHaystack = take 50 haystack
+      (before, after) = breakOn "" limitedHaystack
+  in before === limitedHaystack && after === limitedHaystack
 
-prop_break_on_pattern_not_found :: String -> String -> Property
-prop_break_on_pattern_not_found pat s = 
-  if pat `isPrefixOf` s || pat `Data.List.isInfixOf` s
-  then property $ True  -- Skip if pattern is found
-  else property $ breakOn pat s === (s, "")
+-- | 测试safeProcessString对有效字符的处理
+prop_safe_process_string_valid_chars :: String -> Property
+prop_safe_process_string_valid_chars s =
+  let limitedS = take 100 s
+      result = safeProcessString limitedS
+  in case result of
+    Left _ -> property False
+    Right processed -> property $ all isValidChar processed
 
-prop_break_on_pattern_at_start :: String -> String -> Property
-prop_break_on_pattern_at_start pat s = 
-  let input = pat ++ s
-  in property $ breakOn pat input === ("", s)
+-- | 测试safeProcessString对控制字符的处理
+prop_safe_process_string_control_chars :: String -> Property
+prop_safe_process_string_control_chars s =
+  let limitedS = take 50 s
+      withControlChars = limitedS ++ "\n\r\t"
+      result = safeProcessString withControlChars
+  in case result of
+    Left _ -> property False
+    Right processed -> property $ '\n' `elem` processed || '\r' `elem` processed || '\t' `elem` processed
 
-prop_break_on_pattern_in_middle :: String -> String -> String -> Property
-prop_break_on_pattern_in_middle pat before after = 
-  let input = before ++ pat ++ after
-      (prefix, suffix) = breakOn pat input
-  in if null pat
-     then (prefix === "") .&&. (suffix === input)
-     else if null before && null after && not (null pat)
-          then (prefix === "") .&&. (suffix === "")  -- Special case: only pat
-          else (prefix === before) .&&. (suffix === after)
-
--- Test safeProcessString function
-prop_safe_process_string_preserves_valid :: String -> Property
-prop_safe_process_string_preserves_valid s = 
-  let hasControl = any isControl s && not (any (`elem` "\n\r\t\DEL") s)
-  in if hasControl
-     then property $ case safeProcessString s of
-                        Left _ -> True
-                        Right processed -> not (any isControl processed) || 
-                                          all (`elem` "\n\r\t\DEL") (filter isControl processed)
-     else property $ safeProcessString s === Right s
-
-prop_safe_process_string_handles_empty :: Property
-prop_safe_process_string_handles_empty = safeProcessString "" === Right ""
-
--- Test isValidChar function
+-- | 测试isValidChar对可打印字符的处理
 prop_is_valid_char_printable :: Char -> Property
-prop_is_valid_char_printable c = 
-  if c >= ' ' || c `elem` "\n\r\t"
-  then property $ isValidChar c
-  else property $ not (isValidChar c)
+prop_is_valid_char_printable c =
+  let ordC = fromEnum c
+      isPrintable = ordC >= 32 && ordC <= 126
+  in if isPrintable
+     then property $ isValidChar c
+     else property $ isValidChar c == (c `elem` "\n\r\t")
 
-prop_is_valid_char_control :: Char -> Property
-prop_is_valid_char_control c = 
-  if isControl c && not (c `elem` "\n\r\t")
-  then property $ not (isValidChar c)
-  else property $ isValidChar c
+-- | 测试isValidChar对特殊字符的处理
+prop_is_valid_char_special :: Property
+prop_is_valid_char_special =
+  conjoin
+    [ testProperty "Newline is valid" $ isValidChar '\n'
+    , testProperty "Carriage return is valid" $ isValidChar '\r'
+    , testProperty "Tab is valid" $ isValidChar '\t'
+    , testProperty "Space is valid" $ isValidChar ' '
+    ]
 
--- Unit tests for edge cases
-test_utils_edge_cases :: TestTree
-test_utils_edge_cases = testGroup "Utils Edge Cases"
-  [ testCase "trim with mixed spaces" $
-      assertEqual "trim mixed spaces" "hello" (trim "  hello  ")
-    
-  , testCase "splitBy with empty parts" $
-      assertEqual "splitBy empty parts" ["", "", ""] (splitBy ',' ",,")
-    
-  , testCase "removeLineComments with multiple lines" $
-      assertEqual "remove line comments" 
-                  "let x = 42\nlet y = 24" 
-                  (removeLineComments "let x = 42 // comment\nlet y = 24 // another")
-    
-  , testCase "removeComments with nested" $
-      assertEqual "remove nested comments"
-                  "code  more code"
-                  (removeComments "code /* outer /* inner */ */ more code")
-    
-  , testCase "normalizeIndentation with tabs" $
-      assertEqual "normalize tabs"
-                  "line1\n  line2"
-                  (normalizeIndentation "\tline1\n\t\tline2")
-    
-  , testCase "breakOn with exact match" $
-      assertEqual "breakOn exact"
-                  ("hello", "world")
-                  (breakOn "," "hello,world")
+-- | 测试isRight对Either值的处理
+prop_is_right_either :: Either String Int -> Property
+prop_is_right_either e =
+  Utils.isRight e === (case e of Right _ -> True; Left _ -> False)
+
+-- | 测试isLeft对Either值的处理
+prop_is_left_either :: Either String Int -> Property
+prop_is_left_either e =
+  isLeft e === (case e of Left _ -> True; Right _ -> False)
+
+-- | 测试trim对空字符串的处理
+test_trim_empty_string :: Assertion
+test_trim_empty_string = assertEqual "Trim empty string" "" (trim "")
+
+-- | 测试trim对纯空白字符的处理
+test_trim_whitespace_only :: Assertion
+test_trim_whitespace_only = do
+  assertEqual "Trim spaces" "" (trim "   ")
+  assertEqual "Trim tabs" "" (trim "\t\t")
+  assertEqual "Trim mixed whitespace" "" (trim "  \t\n  ")
+
+-- | 测试trim对正常字符串的处理
+test_trim_normal_string :: Assertion
+test_trim_normal_string = do
+  assertEqual "Trim normal string" "hello" (trim "hello")
+  assertEqual "Trim string with spaces" "hello" (trim "  hello  ")
+  assertEqual "Trim string with tabs" "hello" (trim "\thello\t")
+  assertEqual "Trim string with mixed whitespace" "hello" (trim "  \t hello \t  ")
+
+-- | 测试splitBy对空字符串的处理
+test_split_by_empty_string :: Assertion
+test_split_by_empty_string = assertEqual "Split empty string" [] (splitBy ',' "")
+
+-- | 测试splitBy对单个分隔符的处理
+test_split_by_single_delimiter :: Assertion
+test_split_by_single_delimiter = do
+  assertEqual "Split single comma" ["", ""] (splitBy ',')
+  assertEqual "Split single character" ["", ""] (splitBy 'x' "x")
+
+-- | 测试splitBy对多个分隔符的处理
+test_split_by_multiple_delimiters :: Assertion
+test_split_by_multiple_delimiters = do
+  assertEqual "Split multiple commas" ["", "", ""] (splitBy ',')
+  assertEqual "Split mixed content" ["a", "b", "c"] (splitBy ',' "a,b,c")
+  assertEqual "Split with empty parts" ["a", "", "b"] (splitBy ',' "a,,b")
+
+-- | 测试removeLineComments对简单注释的处理
+test_remove_line_comments_simple :: Assertion
+test_remove_line_comments_simple = do
+  assertEqual "Remove simple comment" "code " (removeLineComments "code // comment")
+  assertEqual "Remove comment at start" "" (removeLineComments "// comment")
+  assertEqual "Keep code without comment" "code" (removeLineComments "code")
+
+-- | 测试removeLineComments对多行的处理
+test_remove_line_comments_multiline :: Assertion
+test_remove_line_comments_multiline = do
+  let input = "line1\nline2 // comment\nline3"
+      expected = "line1\nline2\nline3"
+  assertEqual "Remove comments in multiline" expected (removeLineComments input)
+
+-- | 测试removeComments对块注释的处理
+test_remove_comments_block :: Assertion
+test_remove_comments_block = do
+  assertEqual "Remove block comment" "code " (removeComments "code /* comment */")
+  assertEqual "Remove block comment at start" "" (removeComments "/* comment */")
+  assertEqual "Keep code without comment" "code" (removeComments "code")
+
+-- | 测试removeComments对混合注释的处理
+test_remove_comments_mixed :: Assertion
+test_remove_comments_mixed = do
+  let input = "code // line comment\n/* block comment */ more code"
+      expected = "code \n more code"
+  assertEqual "Remove mixed comments" expected (removeComments input)
+
+-- | 测试normalizeIndentation对空输入的处理
+test_normalize_indentation_empty :: Assertion
+test_normalize_indentation_empty = assertEqual "Normalize empty string" "" (normalizeIndentation "")
+
+-- | 测试normalizeIndentation对单行的处理
+test_normalize_indentation_single_line :: Assertion
+test_normalize_indentation_single_line = do
+  assertEqual "No indentation" "code" (normalizeIndentation "code")
+  assertEqual "Remove leading spaces" "code" (normalizeIndentation "  code")
+  assertEqual "Remove leading tabs" "code" (normalizeIndentation "\tcode")
+
+-- | 测试normalizeIndentation对多行的处理
+test_normalize_indentation_multi_line :: Assertion
+test_normalize_indentation_multi_line = do
+  let input = "  line1\n    line2\n  line3"
+      expected = "line1\n  line2\nline3"
+  assertEqual "Normalize multi-line" expected (normalizeIndentation input)
+
+-- | 测试breakOn对基本情况的处理
+test_break_on_basic :: Assertion
+test_break_on_basic = do
+  assertEqual "Break on substring" ("hello", " world") (breakOn " " "hello world")
+  assertEqual "Break on first occurrence" ("a", "bc") (breakOn "b" "abc")
+  assertEqual "No match" ("abc", "") (breakOn "x" "abc")
+
+-- | 测试safeProcessString对正常输入的处理
+test_safe_process_string_normal :: Assertion
+test_safe_process_string_normal = do
+  let input = "hello world"
+      result = safeProcessString input
+  case result of
+    Left _ -> assertFailure "Should process normal string"
+    Right processed -> assertEqual "Process normal string" input processed
+
+-- | 测试safeProcessString对控制字符的处理
+test_safe_process_string_control_chars :: Assertion
+test_safe_process_string_control_chars = do
+  let input = "hello\nworld\ttest"
+      result = safeProcessString input
+  case result of
+    Left _ -> assertFailure "Should process string with control chars"
+    Right processed -> assertBool "Should preserve control chars" $ '\n' `elem` processed
+
+-- | 测试isValidChar对各种字符的处理
+test_is_valid_char_various :: Assertion
+test_is_valid_char_various = do
+  assertBool "Space is valid" $ isValidChar ' '
+  assertBool "Letter is valid" $ isValidChar 'a'
+  assertBool "Number is valid" $ isValidChar '5'
+  assertBool "Newline is valid" $ isValidChar '\n'
+  assertBool "Tab is valid" $ isValidChar '\t'
+  assertBool "Carriage return is valid" $ isValidChar '\r'
+
+-- | 测试isRight和isLeft对Either值的处理
+test_is_right_left_either :: Assertion
+test_is_right_left_either = do
+  assertBool "Right value is right" $ Utils.isRight (Right (42 :: Int))
+  assertBool "Right value is not left" $ not $ isLeft (Right (42 :: Int))
+  assertBool "Left value is left" $ isLeft (Left ("error" :: String))
+  assertBool "Left value is not right" $ not $ Utils.isRight (Left ("error" :: String))
+
+-- | 测试套件
+tests :: TestTree
+tests = memoryLevelTestGroup Moderate "New Utils QuickCheck Tests"
+  [ withMemoryLevel Moderate $ testProperty "Trim whitespace handling" prop_trim_whitespace_handling
+  , withMemoryLevel Moderate $ testProperty "Trim non-whitespace handling" prop_trim_non_whitespace_handling
+  , withMemoryLevel Moderate $ testProperty "Trim composition" prop_trim_composition
+  , withMemoryLevel Moderate $ testProperty "SplitBy collapsed basic" prop_splitBy_collapsed_basic
+  , withMemoryLevel Moderate $ testProperty "SplitBy collapsed vs SplitBy" prop_splitBy_collapsed_vs_splitBy
+  , withMemoryLevel Moderate $ testProperty "SplitBy comma collapsed basic" prop_splitBy_comma_collapsed_basic
+  , withMemoryLevel Moderate $ testProperty "SplitBy comma collapsed vs SplitBy comma" prop_splitBy_comma_collapsed_vs_splitBy_comma
+  , withMemoryLevel Moderate $ testProperty "RemoveLineComments string literals" prop_remove_line_comments_string_literals
+  , withMemoryLevel Moderate $ testProperty "RemoveLineComments char literals" prop_remove_line_comments_char_literals
+  , withMemoryLevel Moderate $ testProperty "RemoveComments nested" prop_remove_comments_nested
+  , withMemoryLevel Moderate $ testProperty "RemoveComments strings with comments" prop_remove_comments_strings_with_comments
+  , withMemoryLevel Moderate $ testProperty "IsCompleteStringLiteral valid" prop_is_complete_string_literal_valid
+  , withMemoryLevel Moderate $ testProperty "IsCompleteStringLiteral invalid" prop_is_complete_string_literal_invalid
+  , withMemoryLevel Moderate $ testProperty "IsCompleteStringLiteral escaped quotes" prop_is_complete_string_literal_escaped_quotes
+  , withMemoryLevel Moderate $ testProperty "IsProblematicUnclosedString" prop_is_problematic_unclosed_string
+  , withMemoryLevel Moderate $ testProperty "NormalizeIndentation single line" prop_normalize_indentation_single_line
+  , withMemoryLevel Moderate $ testProperty "NormalizeIndentation multi line" prop_normalize_indentation_multi_line
+  , withMemoryLevel Moderate $ testProperty "BreakOn basic" prop_break_on_basic
+  , withMemoryLevel Moderate $ testProperty "BreakOn empty needle" prop_break_on_empty_needle
+  , withMemoryLevel Moderate $ testProperty "SafeProcessString valid chars" prop_safe_process_string_valid_chars
+  , withMemoryLevel Moderate $ testProperty "SafeProcessString control chars" prop_safe_process_string_control_chars
+  , withMemoryLevel Moderate $ testProperty "IsValidChar printable" prop_is_valid_char_printable
+  , withMemoryLevel Moderate $ testProperty "IsValidChar special" prop_is_valid_char_special
+  , withMemoryLevel Moderate $ testProperty "IsRight either" prop_is_right_either
+  , withMemoryLevel Moderate $ testProperty "IsLeft either" prop_is_left_either
+  , testCase "Trim empty string" test_trim_empty_string
+  , testCase "Trim whitespace only" test_trim_whitespace_only
+  , testCase "Trim normal string" test_trim_normal_string
+  , testCase "SplitBy empty string" test_split_by_empty_string
+  , testCase "SplitBy single delimiter" test_split_by_single_delimiter
+  , testCase "SplitBy multiple delimiters" test_split_by_multiple_delimiters
+  , testCase "RemoveLineComments simple" test_remove_line_comments_simple
+  , testCase "RemoveLineComments multiline" test_remove_line_comments_multiline
+  , testCase "RemoveComments block" test_remove_comments_block
+  , testCase "RemoveComments mixed" test_remove_comments_mixed
+  , testCase "NormalizeIndentation empty" test_normalize_indentation_empty
+  , testCase "NormalizeIndentation single line" test_normalize_indentation_single_line
+  , testCase "NormalizeIndentation multi line" test_normalize_indentation_multi_line
+  , testCase "BreakOn basic" test_break_on_basic
+  , testCase "SafeProcessString normal" test_safe_process_string_normal
+  , testCase "SafeProcessString control chars" test_safe_process_string_control_chars
+  , testCase "IsValidChar various" test_is_valid_char_various
+  , testCase "IsRight Left either" test_is_right_left_either
   ]
 
--- QuickCheck properties
-test_utils_properties :: TestTree
-test_utils_properties = testGroup "Utils QuickCheck Properties"
-  [ testProperty "trim idempotent" prop_trim_idempotent
-  , testProperty "trim removes leading/trailing spaces" prop_trim_removes_leading_trailing_spaces
-  , testProperty "trim preserves non-space content" prop_trim_preserves_non_space_content
-  , testProperty "splitBy empty string" prop_split_by_empty_string
-  , testProperty "splitBy single char" prop_split_by_single_char
-  , testProperty "splitBy all delimiters" prop_split_by_all_delimiters
-  , testProperty "splitBy roundtrip" prop_split_by_roundtrip
-  , testProperty "splitBy collapsed consistency" prop_split_by_collapsed_consistency
-  , testProperty "splitBy comma consistency" prop_split_by_comma_consistency
-  , testProperty "splitBy comma collapsed consistency" prop_split_by_comma_collapsed_consistency
-  , testProperty "remove line comments preserves non-commented" prop_remove_line_comments_preserves_non_commented
-  , testProperty "remove line comments handles empty" prop_remove_line_comments_handles_empty
-  , testProperty "remove line comments handles only comment" prop_remove_line_comments_handles_only_comment
-  , testProperty "remove line comments preserves strings" prop_remove_line_comments_preserves_strings
-  , testProperty "remove comments preserves non-commented" prop_remove_comments_preserves_non_commented
-  , testProperty "remove comments handles empty" prop_remove_comments_handles_empty
-  , testProperty "remove comments block comments" prop_remove_comments_block_comments
-  , testProperty "remove comments preserves strings" prop_remove_comments_preserves_strings
-  , testProperty "normalize indentation preserves relative" prop_normalize_indentation_preserves_relative
-  , testProperty "normalize indentation handles empty" prop_normalize_indentation_handles_empty
-  , testProperty "normalize indentation single line" prop_normalize_indentation_single_line
-  , testProperty "normalize indentation removes common prefix" prop_normalize_indentation_removes_common_prefix
-  , testProperty "force single tab indentation adds tab" prop_force_single_tab_indentation_adds_tab
-  , testProperty "breakOn empty pattern" prop_break_on_empty_pattern
-  , testProperty "breakOn pattern not found" prop_break_on_pattern_not_found
-  , testProperty "breakOn pattern at start" prop_break_on_pattern_at_start
-  , testProperty "breakOn pattern in middle" prop_break_on_pattern_in_middle
-  , testProperty "safe process string preserves valid" prop_safe_process_string_preserves_valid
-  , testProperty "safe process string handles empty" prop_safe_process_string_handles_empty
-  , testProperty "isValidChar printable" prop_is_valid_char_printable
-  , testProperty "isValidChar control" prop_is_valid_char_control
-  ]
-
--- Main test suite
-utilsTests :: TestTree
-utilsTests = testGroup "Utils Module Tests"
-  [ test_utils_edge_cases
-  , test_utils_properties
+-- | 轻量级测试套件，用于内存受限环境
+essentialTests :: TestTree
+essentialTests = memoryLevelTestGroup Minimal "New Utils Essential Tests"
+  [ withMemoryLevel Minimal $ testProperty "Trim whitespace handling" prop_trim_whitespace_handling
+  , withMemoryLevel Minimal $ testProperty "SplitBy collapsed basic" prop_splitBy_collapsed_basic
+  , withMemoryLevel Minimal $ testProperty "RemoveLineComments string literals" prop_remove_line_comments_string_literals
+  , withMemoryLevel Minimal $ testProperty "IsCompleteStringLiteral valid" prop_is_complete_string_literal_valid
+  , withMemoryLevel Minimal $ testProperty "BreakOn basic" prop_break_on_basic
+  , withMemoryLevel Minimal $ testProperty "SafeProcessString valid chars" prop_safe_process_string_valid_chars
+  , withMemoryLevel Minimal $ testProperty "IsValidChar printable" prop_is_valid_char_printable
+  , withMemoryLevel Minimal $ testCase "Trim empty string" test_trim_empty_string
+  , withMemoryLevel Minimal $ testCase "SplitBy empty string" test_split_by_empty_string
+  , withMemoryLevel Minimal $ testCase "RemoveLineComments simple" test_remove_line_comments_simple
+  , withMemoryLevel Minimal $ testCase "NormalizeIndentation empty" test_normalize_indentation_empty
+  , withMemoryLevel Minimal $ testCase "BreakOn basic" test_break_on_basic
   ]

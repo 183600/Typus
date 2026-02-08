@@ -223,6 +223,12 @@ test-suite typus-test-optimized
         Test.Unit.TestListPropertiesSpec,
         Test.Unit.Tests,
         Test.Unit.UltraMemoryOptimizedTestSuite,
+        Test.Unit.NewCompilerQuickCheckSpec,
+        Test.Unit.NewComprehensiveQuickCheckTestSuite,
+        Test.Unit.NewComprehensiveQuickCheckTestSuite2,
+        Test.Unit.NewParserQuickCheckSpec,
+        Test.Unit.NewSourceLocationQuickCheckSpec,
+        Test.Unit.NewUtilsQuickCheckSpec,
         TestSupport.Arbitrary,
         TestSupport.MemoryLimits
     build-depends:
