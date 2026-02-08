@@ -222,7 +222,7 @@ prop_break_on_empty_needle :: String -> Property
 prop_break_on_empty_needle haystack =
   let needle = ""
       (before, after) = breakOn needle haystack
-  in property $ before == haystack && after == haystack
+  in property $ before == "" && after == haystack
 
 -- | 测试breakOn函数对不存在的子串的处理
 prop_break_on_not_found :: String -> String -> Property

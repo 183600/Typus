@@ -234,7 +234,7 @@ prop_debug_config_wrapper enabled logLevel showTime showLocation =
                   , dcShowTime = showTime
                   , dcShowLocation = showLocation
                   }
-              action = return ()
+              action = return () :: IO ()
           in property $ True  -- 简化的测试，实际应该检查withDebugConfig的行为
 
 -- | 测试调试日志的级别过滤

@@ -20,6 +20,14 @@ import SyntaxValidator (SyntaxValidator(..), SyntaxError(..), ErrorType(..),
                        getSyntaxErrors, formatSyntaxError)
 import TestSupport.Arbitrary
 
+-- | Arbitrary instance for ErrorType
+instance Arbitrary ErrorType where
+  arbitrary = elements [ MissingBrace, MissingParenthesis, MissingBracket, UnclosedString
+                       , UnclosedComment, InvalidIdentifier, InvalidTypeDeclaration
+                       , InvalidFunctionDeclaration, InvalidImport, InvalidStatement
+                       , UnterminatedBlock, InvalidOperator, MissingSemicolon
+                       , UnexpectedToken, MissingPackageDeclaration ]
+
 -- ============================================================================
 -- SyntaxValidator Core Properties
 -- ============================================================================
@@ -330,11 +338,11 @@ prop_single_char_content char =
 
 -- | 测试极长的代码行
 prop_extremely_long_line :: Int -> Property
-prop_extremely_long_line length =
-  let validLength = length >= 0 && length <= 10000
+prop_extremely_long_line lineLen =
+  let validLength = lineLen >= 0 && lineLen <= 10000
   in if not validLength
      then property True
-     else let longLine = replicate length 'a'
+     else let longLine = replicate lineLen 'a'
               content = longLine
               errors = validateSyntax content
           in property $ length errors >= 0

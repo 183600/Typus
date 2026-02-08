@@ -1,6 +1,7 @@
 module EmbedAssets
     ( MissingEmbed(..)
     , formatMissingMessage
+    , extractEmbeddedPatterns
     , handleMissingEmbeds
     , mirrorEmbeddedResources
     , copyEmbeddedForBuild

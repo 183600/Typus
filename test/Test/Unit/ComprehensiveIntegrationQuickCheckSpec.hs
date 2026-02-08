@@ -15,13 +15,14 @@ import Data.Maybe (isJust, isNothing, fromMaybe)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 
-import Analyzer.Types
-import Cli (Args(..))
+import Analyzer.Types (AnalysisResult(..), emptyAnalysisResult)
+import Cli (Args(..), Args(Convert, Check, Build, Run, DebugMode, Version))
 import Debug (DebugConfig(..))
 import EmbedAssets (MissingEmbed(..))
 import GoToolchain (GoExecutor(..))
 import SyntaxValidator (SyntaxError(..), ErrorType(..), validateSyntax, validateFile)
 import Utils (trim, splitBy, removeComments, normalizeIndentation, breakOn)
+import qualified Dependencies as Dep
 
 import TestSupport.Arbitrary
 
@@ -91,8 +92,8 @@ prop_analyzer_utils_integration identifier =
   in if not validIdentifier
      then property True
      else let trimmedIdentifier = trim identifier
-               analysisResult = emptyAnalysisResult
-             in property $ length trimmedIdentifier >= 0 {-- 简化的集成测试 --}
+              analysisResult = emptyAnalysisResult
+          in property $ length trimmedIdentifier >= 0  -- 简化的集成测试
 -- | 测试CLI与Debug的集成
 prop_cli_debug_integration :: String -> Bool -> Property
 prop_cli_debug_integration command debugEnabled =
@@ -321,13 +322,13 @@ prop_unicode_integration testData =
 
 -- | 测试极长数据的集成处理
 prop_extremely_long_data_integration :: Int -> Property
-prop_extremely_long_data_integration length =
-  let validLength = length >= 0 && length <= 10000
+prop_extremely_long_data_integration dataLen =
+  let validLength = dataLen >= 0 && dataLen <= 10000
   in if not validLength
      then property True
-     else let longData = replicate len 'a'
+     else let longData = replicate dataLen 'a'
               processedData = normalizeIndentation longData
-          in property $ length processedData == len
+          in property $ length processedData == dataLen
 
 -- ============================================================================
 -- Test Suite Collection

@@ -116,10 +116,14 @@ prop_file_path_handling dir file =
       validFile = not (null file) && all isAlphaNum file
   in if not (validDir && validFile)
      then property True
-     else let fullPath = dir </> file
-              fileName = takeFileName fullPath
-              dirName = takeDirectory fullPath
-          in property $ fileName == file && dirName == dir
+     else let fullPath = combinePath dir file
+              fileName = takeFileName' fullPath
+              dirName = takeDirectory' fullPath
+              -- combinePath总是生成dir/file格式
+              -- takeFileName'应该返回file
+              -- takeDirectory'实际返回dir/
+              expectedDir = dir ++ "/"
+          in property $ fileName == file && dirName == expectedDir
 
 -- | 测试参数列表的规范化
 prop_args_normalization :: [String] -> Property

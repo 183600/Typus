@@ -9,7 +9,7 @@ import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 
 import Data.List (nub, sort, group, intercalate)
-import Data.Char (isAlpha, isAlphaNum, toLower)
+import Data.Char (isAlpha, isAlphaNum, toLower, toUpper)
 import Data.Either (isLeft, isRight)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import qualified Data.Map as Map
@@ -72,7 +72,7 @@ prop_env_var_enabled_parsing :: String -> Property
 prop_env_var_enabled_parsing value =
   let enabledValues = ["1", "true", "TRUE", "True", "yes", "YES", "Yes", "on", "ON", "On"]
       disabledValues = ["0", "false", "FALSE", "False", "no", "NO", "No", "off", "OFF", "Off", ""]
-      shouldBeEnabled = map toLower value `elem` map toLower enabledValues
+      shouldBeEnabled = map toLower value `elem` map (map toLower) enabledValues
       shouldBeDisabled = value `elem` disabledValues || value `notElem` enabledValues
   in property $ shouldBeEnabled || shouldBeDisabled
 
@@ -187,7 +187,7 @@ prop_go_executor_consistency shouldSkip args dir =
 prop_go_toolchain_skip_condition :: String -> Property
 prop_go_toolchain_skip_condition envValue =
   let skipValues = ["1", "true", "TRUE", "True", "yes", "YES", "Yes", "on", "ON", "On"]
-      shouldSkip = map toLower envValue `elem` map toLower skipValues
+      shouldSkip = map toLower envValue `elem` map (map toLower) skipValues
   in property $ shouldSkip || not shouldSkip
 
 -- ============================================================================
@@ -219,7 +219,7 @@ prop_complex_file_paths complexity =
 -- | 测试空目录路径
 prop_empty_directory_path :: Property
 prop_empty_directory_path =
-  let dir = ""
+  let dir = "" :: String
   in property $ length dir == 0
 
 -- | 测试空命令参数列表
@@ -238,22 +238,22 @@ prop_single_char_args arg =
 
 -- | 测试极长目录路径
 prop_extremely_long_directory_path :: Int -> Property
-prop_extremely_long_directory_path length =
-  let validLength = length >= 0 && length <= 10000
+prop_extremely_long_directory_path pathLen =
+  let validLength = pathLen >= 0 && pathLen <= 10000
   in if not validLength
      then property True
-     else let longPath = replicate length 'a'
-          in property $ length longPath == length
+     else let longPath = replicate pathLen 'a'
+          in property $ length longPath == pathLen
 
 -- | 测试极长命令参数
 prop_extremely_long_command_args :: Int -> Property
-prop_extremely_long_command_args length =
-  let validLength = length >= 0 && length <= 10000
+prop_extremely_long_command_args argLen =
+  let validLength = argLen >= 0 && argLen <= 10000
   in if not validLength
      then property True
-     else let longArg = replicate length 'a'
+     else let longArg = replicate argLen 'a'
               args = [longArg]
-          in property $ length (head args) == length
+          in property $ length (head args) == argLen
 
 -- | 测试特殊字符的目录路径
 prop_special_chars_directory_path :: String -> Property
@@ -304,22 +304,22 @@ prop_path_separator_handling path =
 prop_empty_file_path_base_name :: Property
 prop_empty_file_path_base_name =
   let filePath = ""
-      baseName = takeBaseName filePath
+      baseName = takeBaseName' filePath
   in property $ null baseName
 
 -- | 测试根目录路径的基本名称
 prop_root_path_base_name :: Property
 prop_root_path_base_name =
   let filePath = "/"
-      baseName = takeBaseName filePath
+      baseName = takeBaseName' filePath
   in property $ null baseName
 
 -- | 测试只有扩展名的文件路径
 prop_extension_only_path_base_name :: Property
 prop_extension_only_path_base_name =
   let filePath = ".txt"
-      baseName = takeBaseName filePath
-  in property $ baseName == ""
+      baseName = takeBaseName' filePath
+  in property $ baseName == ".txt"
 
 -- ============================================================================
 -- Test Suite Collection

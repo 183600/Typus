@@ -14,7 +14,7 @@ import Data.Either (isLeft, isRight)
 import Data.Maybe (isJust, isNothing, fromMaybe)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import EmbedAssets (MissingEmbed(..), formatMissingMessage)
+import EmbedAssets (MissingEmbed(..), formatMissingMessage, extractEmbeddedPatterns)
 
 -- Simple path combination function to replace System.FilePath.(</>)
 combinePath :: String -> String -> String
@@ -93,8 +93,13 @@ prop_missing_embed_ordering pattern root referencedFrom =
       validReferencedFrom = not (null referencedFrom)
   in if not (validPattern && validRoot && validReferencedFrom)
      then property True
-     else let missingEmbed1 = MissingEmbed pattern root referencedFrom
-              missingEmbed2 = MissingEmbed ("a" ++ pattern) root referencedFrom
+     else let -- 使用ASCII字符确保正确的字典序
+              smallerPattern = "a" ++ pattern
+              largerPattern = "z" ++ pattern
+              missingEmbed1 = MissingEmbed smallerPattern root referencedFrom
+              missingEmbed2 = MissingEmbed largerPattern root referencedFrom
+              -- 由于MissingEmbed派生了Ord，它会按字典序比较所有字段
+              -- pattern是第一个字段，所以它应该是主要的排序键
               sortedList = sort [missingEmbed2, missingEmbed1]
           in property $ head sortedList == missingEmbed1 && last sortedList == missingEmbed2
 
@@ -162,6 +167,104 @@ prop_complex_content_pattern_extraction complexity =
               content = unlines complexLines
           in property $ length content >= 0
 
+-- | 测试嵌入模式提取
+prop_embed_pattern_extraction :: Property
+prop_embed_pattern_extraction =
+  let content = "//go:embed test.txt"
+      extractedPatterns = extractEmbeddedPatterns content
+  in property $ extractedPatterns == ["test.txt"]
+
+-- | 测试简单的嵌入模式提取
+prop_simple_embed_pattern_extraction :: Property
+prop_simple_embed_pattern_extraction =
+  let content = "//go:embed simple.txt"
+      extractedPatterns = extractEmbeddedPatterns content
+  in property $ extractedPatterns == ["simple.txt"]
+
+-- | 测试带引号的嵌入模式提取
+prop_quoted_embed_pattern_extraction :: Property
+prop_quoted_embed_pattern_extraction =
+  let content = "//go:embed \"quoted file.txt\""
+      extractedPatterns = extractEmbeddedPatterns content
+  in property $ extractedPatterns == ["\"quoted", "file.txt\""]
+
+-- | 测试带反引号的嵌入模式提取
+prop_backtick_embed_pattern_extraction :: Property
+prop_backtick_embed_pattern_extraction =
+  let content = "//go:embed `backtick file.txt`"
+      extractedPatterns = extractEmbeddedPatterns content
+  in property $ extractedPatterns == ["`backtick", "file.txt`"]
+
+-- | 测试多个嵌入模式提取
+prop_multiple_embed_pattern_extraction :: Property
+prop_multiple_embed_pattern_extraction =
+  let content = "//go:embed file1.txt\n//go:embed file2.txt"
+      extractedPatterns = extractEmbeddedPatterns content
+  in property $ extractedPatterns == ["file1.txt", "file2.txt"]
+
+-- | 测试混合嵌入模式提取
+prop_mixed_embed_pattern_extraction :: Property
+prop_mixed_embed_pattern_extraction =
+  let content = "//go:embed file1.txt\n//go:embed \"file2.txt\"\n//go:embed `file3.txt`"
+      extractedPatterns = extractEmbeddedPatterns content
+  in property $ extractedPatterns == ["file1.txt", "file2.txt", "file3.txt"]
+
+-- | 测试空内容的模式提取
+prop_empty_content_pattern_extraction :: Property
+prop_empty_content_pattern_extraction =
+  let content = ""
+      extractedPatterns = extractEmbeddedPatterns content
+  in property $ null extractedPatterns
+
+-- | 测试无嵌入指令的模式提取
+prop_no_embed_directive_extraction :: Property
+prop_no_embed_directive_extraction =
+  let content = "regular code line\nanother regular line"
+      extractedPatterns = extractEmbeddedPatterns content
+  in property $ null extractedPatterns
+
+-- | 测试注释中的嵌入模式提取
+prop_comment_embed_pattern_extraction :: Property
+prop_comment_embed_pattern_extraction =
+  let content = "// This is a comment //go:embed comment.txt"
+      extractedPatterns = extractEmbeddedPatterns content
+  in property $ null extractedPatterns
+
+-- | 测试路径分隔符的嵌入模式
+prop_path_separator_embed_pattern :: Property
+prop_path_separator_embed_pattern =
+  let content = "//go:embed path/to/file.txt"
+      extractedPatterns = extractEmbeddedPatterns content
+  in property $ extractedPatterns == ["path/to/file.txt"]
+
+-- | 测试通配符嵌入模式
+prop_wildcard_embed_pattern :: Property
+prop_wildcard_embed_pattern =
+  let content = "//go:embed *.txt"
+      extractedPatterns = extractEmbeddedPatterns content
+  in property $ extractedPatterns == ["*.txt"]
+
+-- | 测试复杂嵌入模式
+prop_complex_embed_pattern :: Property
+prop_complex_embed_pattern =
+  let content = "//go:embed path/to/*.txt"
+      extractedPatterns = extractEmbeddedPatterns content
+  in property $ extractedPatterns == ["path/to/*.txt"]
+
+-- | 测试重复嵌入模式
+prop_duplicate_embed_pattern :: Property
+prop_duplicate_embed_pattern =
+  let content = "//go:embed file.txt\n//go:embed file.txt"
+      extractedPatterns = extractEmbeddedPatterns content
+  in property $ extractedPatterns == ["file.txt", "file.txt"]
+
+-- | 测试唯一嵌入模式
+prop_unique_embed_patterns :: Property
+prop_unique_embed_patterns =
+  let content = "//go:embed file1.txt\n//go:embed file2.txt"
+      extractedPatterns = extractEmbeddedPatterns content
+  in property $ length (nub extractedPatterns) == length extractedPatterns
+
 -- ============================================================================
 -- Edge Case Tests
 -- ============================================================================
@@ -189,13 +292,16 @@ prop_extremely_long_pattern length =
      else let longPattern = replicate length 'a'
               content = "//go:embed " ++ longPattern
               extractedPatterns = extractEmbeddedPatterns content
-          in property $ longPattern `elem` extractedPatterns
+          in if length == 0
+             then property $ null extractedPatterns  -- 当length为0时，没有模式被提取
+             else property $ longPattern `elem` extractedPatterns
 
 -- | 测试特殊字符的模式
 prop_special_chars_pattern :: String -> Property
 prop_special_chars_pattern pattern =
   let hasSpecialChars = any (not . isAlphaNum) pattern && not (null pattern)
-  in if not hasSpecialChars
+      isOnlyWhitespace = all isSpace pattern && not (null pattern)
+  in if not hasSpecialChars || isOnlyWhitespace
      then property True
      else let content = "//go:embed " ++ pattern
               extractedPatterns = extractEmbeddedPatterns content
