@@ -31,6 +31,14 @@ import qualified Test.Unit.ExtendedQuickCheckTestSuite as ExtendedQuickCheckTest
 import qualified Test.Unit.NewComprehensiveQuickCheckTestSuite as NewComprehensiveQuickCheckTestSuite
 import qualified Test.Unit.AdvancedModuleQuickCheckTestSuite as AdvancedModuleQuickCheckTestSuite
 
+-- Import the new enhanced QuickCheck test suites
+import qualified Test.Unit.EnhancedOwnershipTransferQuickCheckSpec as EnhancedOwnershipTransferQuickCheckSpec
+import qualified Test.Unit.AdvancedDependentTypesQuickCheckSpec as AdvancedDependentTypesQuickCheckSpec
+import qualified Test.Unit.RobustErrorHandlingQuickCheckSpec as RobustErrorHandlingQuickCheckSpec
+import qualified Test.Unit.ComprehensiveSourceLocationQuickCheckSpec as ComprehensiveSourceLocationQuickCheckSpec
+import qualified Test.Unit.AdvancedParserCombinatorsQuickCheckSpec as AdvancedParserCombinatorsQuickCheckSpec
+import qualified Test.Unit.EnhancedTypeCheckerQuickCheckSpec as EnhancedTypeCheckerQuickCheckSpec
+
 -- Memory-efficient test properties with controlled generator sizes
 prop_optimized_basic_property :: String -> Property
 prop_optimized_basic_property s = 
@@ -68,6 +76,14 @@ tests = aggressiveMemoryLimitedTestGroup "Typus Test Suite (Memory Optimimized)"
     -- New comprehensive QuickCheck test suites
     withOptimizedMemoryLimits NewComprehensiveQuickCheckTestSuite.testSuite,
     withOptimizedMemoryLimits AdvancedModuleQuickCheckTestSuite.testSuite,
+    
+    -- New enhanced QuickCheck test suites
+    withOptimizedMemoryLimits EnhancedOwnershipTransferQuickCheckSpec.testSuite,
+    withOptimizedMemoryLimits AdvancedDependentTypesQuickCheckSpec.testSuite,
+    withOptimizedMemoryLimits RobustErrorHandlingQuickCheckSpec.testSuite,
+    withOptimizedMemoryLimits ComprehensiveSourceLocationQuickCheckSpec.testSuite,
+    withOptimizedMemoryLimits AdvancedParserCombinatorsQuickCheckSpec.testSuite,
+    withOptimizedMemoryLimits EnhancedTypeCheckerQuickCheckSpec.testSuite,
     
     -- Create additional optimized test suite
     createOptimizedMemorySuite optimizedMemoryConfig "Additional Optimized Tests"
