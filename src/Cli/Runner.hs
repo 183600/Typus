@@ -87,7 +87,7 @@ dispatch _ (DebugMode debugArgs) = do
   pure ()
 
 dispatch _ Version =
-  liftIO $ putStrLn "typus version 0.12.0"
+  liftIO $ putStrLn "typus version 0.12.3"
 
 prepareSingleFileProject :: CompilerContext -> Bool -> FilePath -> FilePath -> IOResult FilePath
 prepareSingleFileProject ctx strict sourcePath tempDir = do

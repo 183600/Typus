@@ -1,6 +1,6 @@
 {
   "name": "typus-compiler",
-  "version": "0.12.2",
+  "version": "0.12.3",
   "description": "Typus compiler with dependent types and ownership analysis",
   "main": "index.js",
   "scripts": {
