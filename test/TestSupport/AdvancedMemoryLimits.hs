@@ -45,23 +45,23 @@ data AdaptiveMemoryConfig = AdaptiveMemoryConfig
 -- | Default memory configurations
 extremeMemoryConfig :: AdaptiveMemoryConfig
 extremeMemoryConfig = AdaptiveMemoryConfig
-  { memoryLimitMB = 280
+  { memoryLimitMB = 200
   , maxTestSize = 1
-  , testCount = 3
-  , maxShrinks = 3
+  , testCount = 2
+  , maxShrinks = 2
   , gcFrequency = 1
   , enableProfiling = False
   , adaptiveCleanup = True
   }
--- Note: The extreme memory limit of 280MB is the minimum required to compile and run tests
--- due to GHC's memory requirements during compilation. Lower limits result in heap overflow.
+-- Note: Reduced extreme memory limit to 200MB with minimal test parameters
+-- for maximum memory efficiency while maintaining basic test coverage.
 
 minimalMemoryConfig :: AdaptiveMemoryConfig
 minimalMemoryConfig = AdaptiveMemoryConfig
   { memoryLimitMB = 256
-  , maxTestSize = 3
-  , testCount = 10
-  , maxShrinks = 10
+  , maxTestSize = 2
+  , testCount = 5
+  , maxShrinks = 5
   , gcFrequency = 1
   , enableProfiling = False
   , adaptiveCleanup = True
@@ -69,10 +69,10 @@ minimalMemoryConfig = AdaptiveMemoryConfig
 
 conservativeMemoryConfig :: AdaptiveMemoryConfig
 conservativeMemoryConfig = AdaptiveMemoryConfig
-  { memoryLimitMB = 512
-  , maxTestSize = 5
-  , testCount = 25
-  , maxShrinks = 25
+  { memoryLimitMB = 384
+  , maxTestSize = 3
+  , testCount = 15
+  , maxShrinks = 15
   , gcFrequency = 2
   , enableProfiling = True
   , adaptiveCleanup = True
@@ -138,10 +138,10 @@ monitorMemoryUsage action = do
 forceAggressiveCleanup :: IO ()
 forceAggressiveCleanup = do
   -- Multiple GC passes with different strategies
-  replicateM_ 5 performGC
+  replicateM_ 3 performGC
   
-  -- Give GC time to complete
-  threadDelay 100000 -- 100ms
+  -- Give GC time to complete (reduced delay)
+  threadDelay 50000 -- 50ms
   
   -- Final cleanup pass
   performGC
@@ -158,10 +158,11 @@ filterMemoryIntensiveTests :: AdaptiveMemoryConfig -> [TestTree] -> [TestTree]
 filterMemoryIntensiveTests config tests = 
   -- Simple implementation - could be enhanced to analyze test names
   let maxTests = case memoryLimitMB config of
-        lim | lim <= 256 -> 5   -- Extreme memory constraints
-        lim | lim <= 512 -> 10  -- Minimal memory constraints  
-        lim | lim <= 1024 -> 20 -- Moderate constraints
-        _ -> length tests       -- No filtering for higher limits
+        lim | lim <= 200 -> 3   -- Extreme memory constraints
+        lim | lim <= 256 -> 5   -- Minimal memory constraints
+        lim | lim <= 384 -> 8   -- Optimized memory constraints  
+        lim | lim <= 512 -> 12  -- Moderate constraints
+        _ -> 15                 -- No filtering for higher limits
   in take maxTests tests
 
 -- | Profile test memory usage

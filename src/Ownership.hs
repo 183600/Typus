@@ -79,7 +79,7 @@ checkOwnershipTransfer _ _ lifetimeStr =
                          _ -> Nothing
     splitOn delim str = case break (== delim) str of
                          (a, []) -> [a]
-                         (a, b) -> a : splitOn delim (tail b)
+                         (a, b) -> a : splitOn delim (drop 1 b)
     readMaybe :: String -> Maybe Int
     readMaybe s = case reads s of
                    [(x, "")] -> Just x

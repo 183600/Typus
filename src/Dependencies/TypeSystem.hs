@@ -258,8 +258,7 @@ addType name params cs = do
 
 -- | Wrapper function for tests that takes (name, TypeExpr) pairs
 addType' :: (String, TypeExpr) -> State DependentTypeChecker ()
-addType' (name, typeExpr) = do
-  let tv = convertTypeExpr' typeExpr
+addType' (name, _typeExpr) = do
   addType name [] []
 
 -- | Wrapper function for tests that adds a single type and returns the checker

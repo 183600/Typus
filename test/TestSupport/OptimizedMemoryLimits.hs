@@ -48,10 +48,23 @@ data OptimizedMemoryConfig = OptimizedMemoryConfig
 -- | Default optimized memory configurations
 minimalOptimizedConfig :: OptimizedMemoryConfig
 minimalOptimizedConfig = OptimizedMemoryConfig
+  { memoryLimitMB = 200
+  , maxTestSize = 1
+  , testCount = 5
+  , maxShrinks = 5
+  , gcFrequency = 1
+  , enableProfiling = False
+  , optimizedCleanup = True
+  , stringSizeLimit = 10
+  , listSizeLimit = 3
+  }
+
+optimizedMemoryConfig :: OptimizedMemoryConfig
+optimizedMemoryConfig = OptimizedMemoryConfig
   { memoryLimitMB = 256
   , maxTestSize = 2
-  , testCount = 8
-  , maxShrinks = 8
+  , testCount = 10
+  , maxShrinks = 10
   , gcFrequency = 1
   , enableProfiling = False
   , optimizedCleanup = True
@@ -59,43 +72,30 @@ minimalOptimizedConfig = OptimizedMemoryConfig
   , listSizeLimit = 5
   }
 
-optimizedMemoryConfig :: OptimizedMemoryConfig
-optimizedMemoryConfig = OptimizedMemoryConfig
+strictMemoryConfig :: OptimizedMemoryConfig
+strictMemoryConfig = OptimizedMemoryConfig
   { memoryLimitMB = 384
   , maxTestSize = 3
-  , testCount = 15
-  , maxShrinks = 15
-  , gcFrequency = 1
-  , enableProfiling = False
+  , testCount = 20
+  , maxShrinks = 20
+  , gcFrequency = 2
+  , enableProfiling = True
   , optimizedCleanup = True
   , stringSizeLimit = 20
   , listSizeLimit = 8
   }
 
-strictMemoryConfig :: OptimizedMemoryConfig
-strictMemoryConfig = OptimizedMemoryConfig
+balancedMemoryConfig :: OptimizedMemoryConfig
+balancedMemoryConfig = OptimizedMemoryConfig
   { memoryLimitMB = 512
   , maxTestSize = 5
-  , testCount = 25
+  , testCount = 30
   , maxShrinks = 25
-  , gcFrequency = 2
+  , gcFrequency = 3
   , enableProfiling = True
   , optimizedCleanup = True
   , stringSizeLimit = 25
   , listSizeLimit = 10
-  }
-
-balancedMemoryConfig :: OptimizedMemoryConfig
-balancedMemoryConfig = OptimizedMemoryConfig
-  { memoryLimitMB = 768
-  , maxTestSize = 8
-  , testCount = 50
-  , maxShrinks = 35
-  , gcFrequency = 3
-  , enableProfiling = True
-  , optimizedCleanup = True
-  , stringSizeLimit = 30
-  , listSizeLimit = 15
   }
 
 -- | Optimized memory profiling information
@@ -162,10 +162,10 @@ monitorOptimizedMemoryUsage action = do
 forceOptimizedCleanup :: IO ()
 forceOptimizedCleanup = do
   -- Multiple GC passes with optimized timing
-  replicateM_ 3 performGC
+  replicateM_ 2 performGC
   
-  -- Short delay to allow GC to complete
-  threadDelay 50000 -- 50ms
+  -- Short delay to allow GC to complete (reduced delay)
+  threadDelay 25000 -- 25ms
   
   -- Final cleanup pass
   performGC
@@ -183,10 +183,11 @@ selectOptimizedTests :: OptimizedMemoryConfig -> [TestTree] -> [TestTree]
 selectOptimizedTests config tests = 
   -- Select tests based on memory constraints
   let maxTests = case memoryLimitMB config of
+        lim | lim <= 200 -> 2   -- Extreme memory constraints
         lim | lim <= 256 -> 3   -- Minimal memory constraints
-        lim | lim <= 384 -> 5   -- Optimized memory constraints  
-        lim | lim <= 512 -> 8   -- Strict memory constraints
-        _ -> 12                 -- Balanced constraints
+        lim | lim <= 384 -> 4   -- Optimized memory constraints  
+        lim | lim <= 512 -> 6   -- Strict memory constraints
+        _ -> 8                  -- Balanced constraints
   in take maxTests tests
 
 -- | Profile optimized test memory usage

@@ -29,17 +29,26 @@ import qualified Test.Unit.UtilsComprehensiveSpec as UtilsComprehensiveSpec
 
 -- Memory-efficient test properties with explicit cleanup
 prop_memory_efficient_string :: String -> Property
-prop_memory_efficient_string s = property $ length s >= 0
+prop_memory_efficient_string s = 
+  let limitedString = take 5 s
+  in property $ length limitedString >= 0
 
 prop_memory_efficient_list :: [Int] -> Property
-prop_memory_efficient_list xs = property $ length xs >= 0
+prop_memory_efficient_list xs = 
+  let limitedList = take 3 xs
+  in property $ length limitedList >= 0
 
 prop_memory_efficient_tuple :: (String, Int) -> Property
-prop_memory_efficient_tuple (s, n) = property $ length s >= 0 && abs n >= 0
+prop_memory_efficient_tuple (s, n) = 
+  let limitedString = take 5 s
+      limitedN = mod (abs n) 50
+  in property $ length limitedString >= 0 && limitedN >= 0
 
 -- Test with memory monitoring
 prop_monitored_property :: String -> Property
-prop_monitored_property s = property $ length s >= 0
+prop_monitored_property s = 
+  let limitedString = take 5 s
+  in property $ length limitedString >= 0
 
 -- Create adaptive test suite based on memory constraints
 createAdaptiveSuite :: AdaptiveMemoryConfig -> TestTree

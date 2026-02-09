@@ -5,6 +5,7 @@ module Test.Unit.NewUtilsQuickCheckSpec where
 import Test.Tasty.HUnit
 import Test.Tasty
 import Test.Tasty.QuickCheck
+import Test.QuickCheck ((===))
 import TestSupport.MemoryLimits 
   ( withMemoryLimits
   , memoryLimitedTestGroup
@@ -136,7 +137,7 @@ prop_is_complete_string_literal_valid :: String -> Property
 prop_is_complete_string_literal_valid s =
   let validS = take 50 s
       stringWithQuotes = "\"" ++ validS ++ "\""
-  in property $ isCompleteStringLiteral stringWithQuotes
+  in property $ isCompleteStringLiteral stringWithQuotes === True
 
 -- | 测试isCompleteStringLiteral对无效字符串的处理
 prop_is_complete_string_literal_invalid :: String -> Property
@@ -159,8 +160,8 @@ prop_is_complete_string_literal_escaped_quotes s =
                                then "\"\\\"\""  -- 最小有效字符串
                                else "\"" ++ validS ++ "\\\"" ++ validS ++ "\""
   in if null validS
-     then property $ isCompleteStringLiteral "\"\\\"\""  -- 最小有效字符串应该是完整的
-     else property $ isCompleteStringLiteral stringWithEscapedQuotes
+     then property $ isCompleteStringLiteral "\"\\\"\"" === True  -- 最小有效字符串应该是完整的
+     else property $ isCompleteStringLiteral stringWithEscapedQuotes === True
 
 -- | 测试isProblematicUnclosedString对问题字符串的处理
 prop_is_problematic_unclosed_string :: String -> Property
@@ -169,7 +170,8 @@ prop_is_problematic_unclosed_string s =
       -- 确保字符串以引号开头，后跟反斜杠，并且不是完整的字符串字面量
       problematicString = "\"\\\"" ++ validS  -- 不添加结尾引号，确保不完整
   in if null validS
-     then property $ isProblematicUnclosedString "\"\\\""  -- 包含转义引号但不完整的字符串
+     then property $ isProblematicUnclosedString "\"\\\"" &&  -- 包含转义引号但不完整的字符串
+                 isProblematicUnclosedString ""  -- 空字符串也应该被认为是问题性的
      else property $ isProblematicUnclosedString problematicString
 
 -- | 测试normalizeIndentation对单行的处理

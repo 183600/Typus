@@ -1405,7 +1405,7 @@ applyConstraints env _ = env  -- Simplified implementation
 
 -- | Apply type constraints to a type (for tests)
 applyConstraintsToType :: [TypeConstraint] -> Type -> Type
-applyConstraintsToType constraints typ = typ  -- Simplified implementation
+applyConstraintsToType _constraints typ = typ  -- Simplified implementation
 
 -- | Check if a type satisfies all given constraints
 satisfiesConstraints :: Type -> [TypeConstraint] -> Bool

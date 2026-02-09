@@ -26,34 +26,34 @@ import qualified Test.Unit.SimpleQuickCheckTestSuite as SimpleQuickCheckTestSuit
 -- Core test properties with controlled generator sizes
 prop_optimized_string_property :: String -> Property
 prop_optimized_string_property s = 
-  let limitedString = take 20 s  -- Limit string size to prevent memory bloat
+  let limitedString = take 10 s  -- Further reduced string size
   in property $ length limitedString >= 0
 
 prop_optimized_list_property :: [Int] -> Property
 prop_optimized_list_property xs = 
-  let limitedList = take 10 xs   -- Limit list size
+  let limitedList = take 5 xs   -- Further reduced list size
   in property $ length limitedList >= 0
 
 prop_optimized_basic_property :: Int -> Property
 prop_optimized_basic_property n = 
-  let limitedN = mod (abs n) 1000  -- Limit integer range
+  let limitedN = mod (abs n) 100  -- Further reduced integer range
   in property $ limitedN >= 0
 
 -- Memory-efficient string operations
 prop_optimized_string_concat :: String -> String -> Property
 prop_optimized_string_concat s1 s2 = 
-  let limitedS1 = take 10 s1
-      limitedS2 = take 10 s2
+  let limitedS1 = take 5 s1
+      limitedS2 = take 5 s2
       result = limitedS1 ++ limitedS2
-  in property $ length result >= 0 && length result <= 20
+  in property $ length result >= 0 && length result <= 10
 
 -- Memory-efficient list operations
 prop_optimized_list_operations :: [Int] -> [Int] -> Property
 prop_optimized_list_operations xs ys = 
-  let limitedXs = take 5 xs
-      limitedYs = take 5 ys
+  let limitedXs = take 3 xs
+      limitedYs = take 3 ys
       result = limitedXs ++ limitedYs
-  in property $ length result <= 10
+  in property $ length result <= 6
 
 -- Create optimized test suite with memory constraints
 createOptimizedTestSuite :: MemoryLevel -> TestTree

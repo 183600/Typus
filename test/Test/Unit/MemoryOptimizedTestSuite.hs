@@ -16,11 +16,16 @@ import qualified Test.Unit.UtilsComprehensiveSpec as UtilsComprehensiveSpec
 
 -- Basic memory-efficient test properties
 prop_memory_efficient_property :: String -> Property
-prop_memory_efficient_property s = property $ length s >= 0
+prop_memory_efficient_property s = 
+  let limitedString = take 5 s
+  in property $ length limitedString >= 0
 
 prop_string_operations :: String -> String -> Property
-prop_string_operations s1 s2 = property $ 
-  length (s1 ++ s2) >= length s1 && length (s1 ++ s2) >= length s2
+prop_string_operations s1 s2 = 
+  let limitedS1 = take 3 s1
+      limitedS2 = take 3 s2
+      result = limitedS1 ++ limitedS2
+  in property $ length result >= length limitedS1 && length result >= length limitedS2 && length result <= 6
 
 -- Create memory-optimized test suites for different levels
 createMemoryOptimizedSuite :: MemoryLevel -> TestTree

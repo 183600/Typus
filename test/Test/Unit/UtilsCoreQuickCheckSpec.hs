@@ -155,7 +155,7 @@ prop_is_complete_string_literal_complete content =
      then property True
      else let s = "\"" ++ content ++ "\""
               isComplete = isCompleteStringLiteral s
-          in property $ isComplete
+          in property $ isComplete === True
 
 -- | 测试isProblematicUnclosedString函数的基本功能
 prop_is_problematic_unclosed_string_basic :: String -> Property
@@ -354,7 +354,7 @@ prop_is_complete_string_literal_escape content =
      then property True
      else let s = "\"" ++ content ++ "\\\"" ++ "\""  -- 包含转义引号
               isComplete = isCompleteStringLiteral s
-          in property $ isComplete
+          in property $ isComplete === True
 
 -- | 测试normalizeIndentation函数对混合缩进的处理
 prop_normalize_indentation_mixed :: String -> Property

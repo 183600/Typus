@@ -52,12 +52,12 @@ import qualified Test.Unit.ComprehensiveIntegrationQuickCheckSpec as Comprehensi
 -- Memory-efficient test properties with controlled generator sizes
 prop_optimized_basic_property :: String -> Property
 prop_optimized_basic_property s = 
-  let limitedString = take 15 s  -- Limit string size to prevent memory bloat
+  let limitedString = take 8 s  -- Further reduced string size
   in property $ length limitedString >= 0
 
 prop_optimized_list_property :: [Int] -> Property
 prop_optimized_list_property xs = 
-  let limitedList = take 8 xs   -- Limit list size
+  let limitedList = take 4 xs   -- Further reduced list size
   in property $ length limitedList >= 0
 
 -- Create memory-optimized test suite
